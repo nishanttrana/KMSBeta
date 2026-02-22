@@ -261,6 +261,13 @@ func (s *Service) ListCAs(ctx context.Context, tenantID string) ([]CA, error) {
 	if tenantID == "" {
 		return nil, errors.New("tenant_id is required")
 	}
+	// Ensure the runtime root CA exists for the tenant currently being viewed in UI.
+	// This keeps Certificates/PKI consistent across tenants.
+	rootName := strings.TrimSpace(os.Getenv("CERTS_RUNTIME_ROOT_CA_NAME"))
+	if rootName == "" {
+		rootName = "vecta-runtime-root"
+	}
+	_, _ = s.ensureRuntimeRootCA(ctx, tenantID, rootName)
 	return s.store.ListCAs(ctx, tenantID)
 }
 
