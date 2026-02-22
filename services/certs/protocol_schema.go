@@ -37,6 +37,7 @@ func protocolSchemas() []ProtocolSchema {
 	estDefaults := defaultESTProtocolOptions()
 	scepDefaults := defaultSCEPProtocolOptions()
 	cmpDefaults := defaultCMPv2ProtocolOptions()
+	runtimeDefaults := defaultRuntimeMTLSProtocolOptions()
 
 	return []ProtocolSchema{
 		{
@@ -196,6 +197,34 @@ func protocolSchemas() []ProtocolSchema {
 					"message type allowlist (IR/CR/KUR/RR)",
 				},
 				Notes: "CMPv2 route processes policy-gated message types and supports PKIX-CMP content-type interoperability (application/pkixcmp).",
+			},
+		},
+		{
+			Protocol:    protocolRTMTLS,
+			Title:       "Runtime mTLS",
+			RFC:         "Internal",
+			Description: "Tenant runtime root CA policy for internal service certificate materialization.",
+			Defaults: map[string]interface{}{
+				"mode":                 runtimeDefaults.Mode,
+				"runtime_root_ca_name": runtimeDefaults.RuntimeRootCAName,
+			},
+			Options: []ProtocolOptionSchema{
+				{Key: "mode", Type: "string", Required: true, DefaultValue: runtimeDefaults.Mode, Allowed: []string{"default", "custom"}, Description: "default uses vecta-runtime-root; custom uses runtime_root_ca_name."},
+				{Key: "runtime_root_ca_name", Type: "string", Required: false, DefaultValue: runtimeDefaults.RuntimeRootCAName, Description: "Required only when mode=custom. Root CA is ensured per tenant."},
+			},
+			Implementation: ProtocolImplementationSchema{
+				Engine:   "native-go",
+				Language: "go",
+				OSSOnly:  true,
+				SDKs: []string{
+					"Go standard library",
+				},
+				Hardening: []string{
+					"tenant-scoped runtime root resolution",
+					"safe fallback to default runtime root",
+					"policy-gated custom root selection",
+				},
+				Notes: "This config controls runtime CA selection only. Certificate private material remains encrypted-at-rest and materialized into tmpfs at runtime.",
 			},
 		},
 	}

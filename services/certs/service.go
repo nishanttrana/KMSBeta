@@ -41,10 +41,11 @@ var (
 )
 
 const (
-	protocolACME  = "acme"
-	protocolEST   = "est"
-	protocolSCEP  = "scep"
-	protocolCMPv2 = "cmpv2"
+	protocolACME   = "acme"
+	protocolEST    = "est"
+	protocolSCEP   = "scep"
+	protocolCMPv2  = "cmpv2"
+	protocolRTMTLS = "runtime-mtls"
 )
 
 type EventPublisher interface {
@@ -261,12 +262,9 @@ func (s *Service) ListCAs(ctx context.Context, tenantID string) ([]CA, error) {
 	if tenantID == "" {
 		return nil, errors.New("tenant_id is required")
 	}
-	// Ensure the runtime root CA exists for the tenant currently being viewed in UI.
-	// This keeps Certificates/PKI consistent across tenants.
-	rootName := strings.TrimSpace(os.Getenv("CERTS_RUNTIME_ROOT_CA_NAME"))
-	if rootName == "" {
-		rootName = "vecta-runtime-root"
-	}
+	// Ensure a runtime root CA exists per tenant. The tenant can choose default
+	// root naming or a custom runtime root through runtime-mtls configuration.
+	rootName := s.runtimeRootCAName(ctx, tenantID)
 	_, _ = s.ensureRuntimeRootCA(ctx, tenantID, rootName)
 	return s.store.ListCAs(ctx, tenantID)
 }
@@ -1126,8 +1124,8 @@ func (s *Service) ListProtocolConfigs(ctx context.Context, tenantID string) ([]P
 	for _, it := range items {
 		byProtocol[normalizeProtocol(it.Protocol)] = it
 	}
-	out := make([]ProtocolConfig, 0, 4)
-	for _, protocol := range []string{protocolACME, protocolEST, protocolSCEP, protocolCMPv2} {
+	out := make([]ProtocolConfig, 0, 5)
+	for _, protocol := range []string{protocolACME, protocolEST, protocolSCEP, protocolCMPv2, protocolRTMTLS} {
 		if cfg, ok := byProtocol[protocol]; ok {
 			if strings.TrimSpace(cfg.ConfigJSON) == "" {
 				cfg.ConfigJSON = "{}"
@@ -1748,6 +1746,19 @@ func (s *Service) IssueInternalMTLS(ctx context.Context, serviceName string, req
 	if serviceName == "" {
 		return Certificate{}, "", errors.New("service name is required")
 	}
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	if req.TenantID == "" {
+		return Certificate{}, "", errors.New("tenant_id is required")
+	}
+	req.CAID = strings.TrimSpace(req.CAID)
+	if req.CAID == "" {
+		rootName := s.runtimeRootCAName(ctx, req.TenantID)
+		ca, err := s.ensureRuntimeRootCA(ctx, req.TenantID, rootName)
+		if err != nil {
+			return Certificate{}, "", err
+		}
+		req.CAID = ca.ID
+	}
 	cn := "kms-" + serviceName
 	sans := []string{cn, cn + ".svc", cn + ".svc.cluster.local"}
 	out, keyPEM, err := s.IssueCertificate(ctx, IssueCertificateRequest{
@@ -1977,6 +1988,44 @@ func (s *Service) cmpv2Options(ctx context.Context, tenantID string) (CMPv2Proto
 	return parseCMPv2ProtocolOptions(raw)
 }
 
+func (s *Service) runtimeMTLSOptions(ctx context.Context, tenantID string) (RuntimeMTLSProtocolOptions, bool, error) {
+	cfg, err := s.store.GetProtocolConfig(ctx, tenantID, protocolRTMTLS)
+	if errors.Is(err, errStoreNotFound) {
+		return defaultRuntimeMTLSProtocolOptions(), true, nil
+	}
+	if err != nil {
+		return RuntimeMTLSProtocolOptions{}, false, err
+	}
+	opts, err := parseRuntimeMTLSProtocolOptions(cfg.ConfigJSON)
+	if err != nil {
+		return RuntimeMTLSProtocolOptions{}, false, err
+	}
+	return opts, cfg.Enabled, nil
+}
+
+func defaultRuntimeRootCANameFromEnv() string {
+	rootName := strings.TrimSpace(os.Getenv("CERTS_RUNTIME_ROOT_CA_NAME"))
+	if rootName == "" {
+		rootName = "vecta-runtime-root"
+	}
+	return rootName
+}
+
+func (s *Service) runtimeRootCAName(ctx context.Context, tenantID string) string {
+	fallback := defaultRuntimeRootCANameFromEnv()
+	opts, enabled, err := s.runtimeMTLSOptions(ctx, tenantID)
+	if err != nil || !enabled {
+		return fallback
+	}
+	if strings.EqualFold(strings.TrimSpace(opts.Mode), "custom") {
+		custom := strings.TrimSpace(opts.RuntimeRootCAName)
+		if custom != "" {
+			return custom
+		}
+	}
+	return fallback
+}
+
 func validateESTAuth(authMethod string, authToken string, requiredMode string) error {
 	mode := strings.ToLower(strings.TrimSpace(requiredMode))
 	method := strings.ToLower(strings.TrimSpace(authMethod))
@@ -2014,13 +2063,15 @@ func normalizeProtocol(v string) string {
 		return protocolSCEP
 	case "cmp", protocolCMPv2:
 		return protocolCMPv2
+	case protocolRTMTLS, "runtime_mtls", "internal-mtls":
+		return protocolRTMTLS
 	default:
 		return ""
 	}
 }
 
 func isKnownProtocol(v string) bool {
-	return v == protocolACME || v == protocolEST || v == protocolSCEP || v == protocolCMPv2
+	return v == protocolACME || v == protocolEST || v == protocolSCEP || v == protocolCMPv2 || v == protocolRTMTLS
 }
 
 func defaultProtocolConfig(tenantID string, protocol string) ProtocolConfig {
@@ -2244,7 +2295,7 @@ func (s *Service) MaterializeRuntimeCerts(ctx context.Context, cfg RuntimeCertMa
 	}
 	rootName := strings.TrimSpace(cfg.RootCAName)
 	if rootName == "" {
-		rootName = "vecta-runtime-root"
+		rootName = s.runtimeRootCAName(ctx, tenantID)
 	}
 	materializeDir := strings.TrimSpace(cfg.MaterializeDir)
 	if materializeDir == "" {

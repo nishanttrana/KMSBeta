@@ -51,6 +51,11 @@ type CMPv2ProtocolOptions struct {
 	DefaultValidityDays      int64    `json:"default_validity_days"`
 }
 
+type RuntimeMTLSProtocolOptions struct {
+	Mode              string `json:"mode"`
+	RuntimeRootCAName string `json:"runtime_root_ca_name"`
+}
+
 func defaultACMEProtocolOptions() ACMEProtocolOptions {
 	return ACMEProtocolOptions{
 		RFC:                 "8555",
@@ -104,6 +109,13 @@ func defaultCMPv2ProtocolOptions() CMPv2ProtocolOptions {
 	}
 }
 
+func defaultRuntimeMTLSProtocolOptions() RuntimeMTLSProtocolOptions {
+	return RuntimeMTLSProtocolOptions{
+		Mode:              "default",
+		RuntimeRootCAName: "",
+	}
+}
+
 func normalizeProtocolConfigJSON(protocol string, raw string) (string, error) {
 	switch normalizeProtocol(protocol) {
 	case protocolACME:
@@ -130,6 +142,12 @@ func normalizeProtocolConfigJSON(protocol string, raw string) (string, error) {
 			return "", err
 		}
 		return mustJSON(cfg), nil
+	case protocolRTMTLS:
+		cfg, err := parseRuntimeMTLSProtocolOptions(raw)
+		if err != nil {
+			return "", err
+		}
+		return mustJSON(cfg), nil
 	default:
 		return "", fmt.Errorf("unsupported protocol")
 	}
@@ -145,6 +163,8 @@ func defaultProtocolConfigJSON(protocol string) string {
 		return mustJSON(defaultSCEPProtocolOptions())
 	case protocolCMPv2:
 		return mustJSON(defaultCMPv2ProtocolOptions())
+	case protocolRTMTLS:
+		return mustJSON(defaultRuntimeMTLSProtocolOptions())
 	default:
 		return "{}"
 	}
@@ -259,6 +279,29 @@ func parseCMPv2ProtocolOptions(raw string) (CMPv2ProtocolOptions, error) {
 	}
 	if cfg.DefaultValidityDays > 3650 {
 		return CMPv2ProtocolOptions{}, fmt.Errorf("default_validity_days exceeds 3650")
+	}
+	return cfg, nil
+}
+
+func parseRuntimeMTLSProtocolOptions(raw string) (RuntimeMTLSProtocolOptions, error) {
+	cfg := defaultRuntimeMTLSProtocolOptions()
+	if err := applyKnownJSON(raw, &cfg, map[string]struct{}{
+		"mode": {}, "runtime_root_ca_name": {},
+	}); err != nil {
+		return RuntimeMTLSProtocolOptions{}, err
+	}
+	cfg.Mode = strings.ToLower(strings.TrimSpace(cfg.Mode))
+	switch cfg.Mode {
+	case "", "default":
+		cfg.Mode = "default"
+		cfg.RuntimeRootCAName = ""
+	case "custom":
+		cfg.RuntimeRootCAName = strings.TrimSpace(cfg.RuntimeRootCAName)
+		if cfg.RuntimeRootCAName == "" {
+			return RuntimeMTLSProtocolOptions{}, fmt.Errorf("runtime_root_ca_name is required when mode=custom")
+		}
+	default:
+		return RuntimeMTLSProtocolOptions{}, fmt.Errorf("unsupported runtime-mtls mode")
 	}
 	return cfg, nil
 }

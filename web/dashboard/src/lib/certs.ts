@@ -68,7 +68,7 @@ export type InventoryCertificateItem = {
 
 export type ProtocolConfig = {
   tenant_id: string;
-  protocol: "acme" | "est" | "scep" | "cmpv2";
+  protocol: "acme" | "est" | "scep" | "cmpv2" | "runtime-mtls";
   enabled: boolean;
   config_json: string;
   updated_by?: string;
@@ -114,7 +114,7 @@ export type CertSecurityStatus = {
 };
 
 export type ProtocolSchema = {
-  protocol: "acme" | "est" | "scep" | "cmpv2";
+  protocol: "acme" | "est" | "scep" | "cmpv2" | "runtime-mtls";
   title: string;
   rfc: string;
   description: string;
@@ -491,7 +491,7 @@ export async function listProtocolSchemas(session: AuthSession): Promise<Protoco
 
 export async function updateProtocolConfig(
   session: AuthSession,
-  protocol: "acme" | "est" | "scep" | "cmpv2",
+  protocol: "acme" | "est" | "scep" | "cmpv2" | "runtime-mtls",
   input: UpdateProtocolConfigInput
 ): Promise<ProtocolConfig> {
   const out = await serviceRequest<ConfigResponse>(

@@ -225,7 +225,7 @@ func TestHandlerProtocolSchemas(t *testing.T) {
 		t.Fatalf("schema status=%d body=%s", rr.Code, rr.Body.String())
 	}
 	body := rr.Body.String()
-	for _, protocol := range []string{"\"protocol\":\"acme\"", "\"protocol\":\"est\"", "\"protocol\":\"scep\"", "\"protocol\":\"cmpv2\""} {
+	for _, protocol := range []string{"\"protocol\":\"acme\"", "\"protocol\":\"est\"", "\"protocol\":\"scep\"", "\"protocol\":\"cmpv2\"", "\"protocol\":\"runtime-mtls\""} {
 		if !strings.Contains(body, protocol) {
 			t.Fatalf("expected %s in schema response body=%s", protocol, body)
 		}

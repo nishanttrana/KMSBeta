@@ -4627,7 +4627,7 @@ const Certs=({session,onToast})=>{
     void refresh();
   },[session?.tenantId]);
 
-  const protocolOrder=useMemo(()=>["acme","est","scep","cmpv2"],[]);
+  const protocolOrder=useMemo(()=>["acme","est","scep","cmpv2","runtime-mtls"],[]);
 
   const protocolSchemaByName=useMemo(()=>{
     const out={};
@@ -4646,11 +4646,14 @@ const Certs=({session,onToast})=>{
       const fallback=(name==="acme"?{title:"ACME",rfc:"RFC 8555",desc:"HTTP-01, DNS-01"}:
         name==="est"?{title:"EST",rfc:"RFC 7030",desc:"IoT enrollment"}:
         name==="scep"?{title:"SCEP",rfc:"RFC 8894",desc:"MDM / Legacy"}:
-        {title:"CMPv2",rfc:"RFC 4210",desc:"Enterprise PKI"});
+        name==="cmpv2"?{title:"CMPv2",rfc:"RFC 4210",desc:"Enterprise PKI"}:
+        {title:"Runtime mTLS",rfc:"Internal",desc:"Tenant runtime root CA selection"});
+      const rfcRaw=String(schema?.rfc||fallback.rfc||"").trim();
+      const rfcLabel=/^rfc\s*/i.test(rfcRaw)?`RFC ${rfcRaw.replace(/^rfc\s*/i,"")}`:rfcRaw;
       return {
         name,
         title:String(schema?.title||fallback.title),
-        rfc:`RFC ${String(schema?.rfc||fallback.rfc).replace(/^RFC\s*/i,"")}`,
+        rfc:rfcLabel,
         desc:String(schema?.description||fallback.desc)
       };
     });
@@ -4661,7 +4664,8 @@ const Certs=({session,onToast})=>{
       acme:{rfc:"8555",challenge_types:["http-01","dns-01"],auto_renew:true,require_eab:false,allow_wildcard:true,allow_ip_identifiers:false,max_sans:100,default_validity_days:397,rate_limit_per_hour:1000},
       est:{rfc:"7030",device_enrollment:true,server_keygen:true,auth_mode:"mtls",require_csr_pop:true,allow_reenroll:true,default_validity_days:397,max_csr_bytes:32768},
       scep:{rfc:"8894",legacy_mdm:true,challenge_password_required:false,challenge_password:"",allow_renewal:true,default_validity_days:397,max_csr_bytes:32768,digest_algorithms:["sha256","sha384"],encryption_algorithms:["aes256","aes128","des3"]},
-      cmpv2:{rfc:"4210",enterprise_pki:true,message_types:["ir","cr","kur","rr"],require_message_protection:true,require_transaction_id:true,allow_implicit_confirm:true,default_validity_days:397}
+      cmpv2:{rfc:"4210",enterprise_pki:true,message_types:["ir","cr","kur","rr"],require_message_protection:true,require_transaction_id:true,allow_implicit_confirm:true,default_validity_days:397},
+      "runtime-mtls":{mode:"default",runtime_root_ca_name:""}
     };
     const out={...fallback};
     protocolOrder.forEach((name)=>{
@@ -4678,7 +4682,8 @@ const Certs=({session,onToast})=>{
       acme:["challenge_types: http-01 | dns-01 | tls-alpn-01","require_eab: enforce external account binding","allow_wildcard / allow_ip_identifiers","max_sans / default_validity_days / rate_limit_per_hour"],
       est:["auth_mode: mtls | basic | bearer | none","require_csr_pop: CSR proof-of-possession required","server_keygen and allow_reenroll toggles","default_validity_days and max_csr_bytes guardrails"],
       scep:["challenge_password_required + challenge_password","allow_renewal toggle","digest_algorithms and encryption_algorithms policies","default_validity_days and max_csr_bytes guardrails"],
-      cmpv2:["message_types: ir | cr | kur | rr","require_message_protection and require_transaction_id","allow_implicit_confirm toggle","default_validity_days policy"]
+      cmpv2:["message_types: ir | cr | kur | rr","require_message_protection and require_transaction_id","allow_implicit_confirm toggle","default_validity_days policy"],
+      "runtime-mtls":["mode: default | custom","runtime_root_ca_name is required only when mode=custom","Controls per-tenant runtime root CA selection for internal mTLS issuance"]
     };
     const out={...fallback};
     protocolOrder.forEach((name)=>{
@@ -5578,6 +5583,7 @@ const Certs=({session,onToast})=>{
         {protocolMeta.map((meta)=>{
           const cfg=protocolByName[meta.name];
           const enabled=cfg?Boolean(cfg.enabled):true;
+          const canTest=meta.name!=="runtime-mtls";
           return <Card key={meta.name} style={{padding:12}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
               <div style={{fontSize:16,fontWeight:700,color:C.text}}>{meta.title}</div>
@@ -5590,10 +5596,10 @@ const Certs=({session,onToast})=>{
               <Btn
                 small
                 primary
-                disabled={!enabled||testingProtocol===meta.name}
+                disabled={!enabled||testingProtocol===meta.name||!canTest}
                 onClick={()=>void runProtocolTest(meta.name)}
               >
-                {testingProtocol===meta.name?"Testing...":"Test Enroll"}
+                {!canTest?"N/A":testingProtocol===meta.name?"Testing...":"Test Enroll"}
               </Btn>
             </div>
           </Card>;

@@ -401,3 +401,92 @@ func TestSCEPChallengePolicyEnforcement(t *testing.T) {
 		t.Fatalf("expected scep challenge policy error, got %v", err)
 	}
 }
+
+func TestRuntimeMTLSTenantDefaultRootAutoCreated(t *testing.T) {
+	svc, _ := newCertsService(t)
+	ctx := context.Background()
+
+	cas, err := svc.ListCAs(ctx, "trt-default")
+	if err != nil {
+		t.Fatalf("list cas: %v", err)
+	}
+	found := false
+	for _, ca := range cas {
+		if strings.EqualFold(strings.TrimSpace(ca.Name), "vecta-runtime-root") && strings.EqualFold(strings.TrimSpace(ca.CALevel), "root") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected default runtime root CA to be auto-created")
+	}
+}
+
+func TestRuntimeMTLSTenantCustomRootAutoCreated(t *testing.T) {
+	svc, _ := newCertsService(t)
+	ctx := context.Background()
+
+	_, err := svc.UpsertProtocolConfig(ctx, UpsertProtocolConfigRequest{
+		TenantID:   "trt-custom",
+		Protocol:   "runtime-mtls",
+		Enabled:    true,
+		ConfigJSON: `{"mode":"custom","runtime_root_ca_name":"tenant-runtime-root"}`,
+		UpdatedBy:  "test",
+	})
+	if err != nil {
+		t.Fatalf("upsert runtime-mtls config: %v", err)
+	}
+
+	cas, err := svc.ListCAs(ctx, "trt-custom")
+	if err != nil {
+		t.Fatalf("list cas: %v", err)
+	}
+	customFound := false
+	defaultFound := false
+	for _, ca := range cas {
+		name := strings.ToLower(strings.TrimSpace(ca.Name))
+		switch name {
+		case "tenant-runtime-root":
+			customFound = true
+		case "vecta-runtime-root":
+			defaultFound = true
+		}
+	}
+	if !customFound {
+		t.Fatalf("expected custom runtime root CA to be auto-created")
+	}
+	if defaultFound {
+		t.Fatalf("did not expect default runtime root when custom mode is active")
+	}
+}
+
+func TestIssueInternalMTLSUsesTenantRuntimeRootWhenCAIDMissing(t *testing.T) {
+	svc, store := newCertsService(t)
+	ctx := context.Background()
+
+	_, err := svc.UpsertProtocolConfig(ctx, UpsertProtocolConfigRequest{
+		TenantID:   "trt-issue",
+		Protocol:   "runtime-mtls",
+		Enabled:    true,
+		ConfigJSON: `{"mode":"custom","runtime_root_ca_name":"issuer-runtime-root"}`,
+		UpdatedBy:  "test",
+	})
+	if err != nil {
+		t.Fatalf("upsert runtime-mtls config: %v", err)
+	}
+
+	issued, _, err := svc.IssueInternalMTLS(ctx, "auth", InternalMTLSRequest{
+		TenantID: "trt-issue",
+		CAID:     "",
+	})
+	if err != nil {
+		t.Fatalf("issue internal mtls: %v", err)
+	}
+	ca, err := store.GetCA(ctx, "trt-issue", issued.CAID)
+	if err != nil {
+		t.Fatalf("get issuing ca: %v", err)
+	}
+	if !strings.EqualFold(strings.TrimSpace(ca.Name), "issuer-runtime-root") {
+		t.Fatalf("expected issuer-runtime-root, got %s", ca.Name)
+	}
+}
