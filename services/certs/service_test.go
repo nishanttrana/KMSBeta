@@ -105,6 +105,45 @@ func TestDeleteCertificate(t *testing.T) {
 	}
 }
 
+func TestDeleteInternalMTLSCertificateBlocked(t *testing.T) {
+	svc, _ := newCertsService(t)
+	ctx := context.Background()
+	ca, err := svc.CreateCA(ctx, CreateCARequest{
+		TenantID:   "timtls",
+		Name:       "runtime-root",
+		CALevel:    "root",
+		Algorithm:  "ECDSA-P384",
+		KeyBackend: "software",
+		Subject:    "CN=Runtime Root,O=Vecta",
+	})
+	if err != nil {
+		t.Fatalf("create root: %v", err)
+	}
+	issued, _, err := svc.IssueCertificate(ctx, IssueCertificateRequest{
+		TenantID:  "timtls",
+		CAID:      ca.ID,
+		SubjectCN: "kms-envoy",
+		CertType:  "tls-client",
+		Algorithm: "ECDSA-P384",
+		CertClass: "internal-mtls",
+		Protocol:  "internal-mtls",
+	})
+	if err != nil {
+		t.Fatalf("issue: %v", err)
+	}
+	err = svc.DeleteCertificate(ctx, "timtls", issued.ID)
+	if err == nil || !strings.Contains(strings.ToLower(err.Error()), "internal-mtls") {
+		t.Fatalf("expected internal-mtls delete block, got %v", err)
+	}
+	got, err := svc.GetCertificate(ctx, "timtls", issued.ID)
+	if err != nil {
+		t.Fatalf("get after failed delete: %v", err)
+	}
+	if strings.ToLower(got.Status) == CertStatusDeleted {
+		t.Fatalf("internal-mtls certificate must not be marked deleted")
+	}
+}
+
 func TestStatefulOTSBudget(t *testing.T) {
 	svc, _ := newCertsService(t)
 	ctx := context.Background()

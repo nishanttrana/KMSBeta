@@ -5705,11 +5705,14 @@ const Certs=({session,onToast})=>{
                   const certID=String(c.id||"");
                   const statusRaw=String(c.status||"unknown");
                   const status=statusRaw.toLowerCase();
+                  const certClass=String(c.cert_class||"").toLowerCase();
+                  const certProtocol=String(c.protocol||"").toLowerCase();
                   const busy=String(rowActionBusy||"");
                   const showMenu=openCertActionMenuId===certID;
                   const canRenew=status==="active"||status==="expired";
                   const canRevoke=status==="active"||status==="expired";
-                  const canDelete=status!=="deleted";
+                  const isInternalMTLS=certClass==="internal-mtls"||certProtocol.includes("internal-mtls");
+                  const canDelete=status!=="deleted"&&!isInternalMTLS;
                   return <>
                 <button
                   onClick={(e)=>openCertActionMenu(e,certID)}
@@ -5796,7 +5799,9 @@ const Certs=({session,onToast})=>{
                     style={{background:"transparent",border:"none",color:C.red,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`delete-${certID}`?"not-allowed":"pointer",borderRadius:6}}
                   >
                     {busy===`delete-${certID}`?"Deleting...":"Delete"}
-                  </button>:<div style={{padding:"6px 8px",fontSize:10,color:C.muted}}>Already deleted</div>}
+                  </button>:<div style={{padding:"6px 8px",fontSize:10,color:C.muted}}>
+                    {status==="deleted"?"Already deleted":"Managed runtime mTLS cert (renew/rotate only)"}
+                  </div>}
                 </div>}
                 </>;
                 })()}

@@ -797,6 +797,12 @@ func (s *Service) DeleteCertificate(ctx context.Context, tenantID string, certID
 	if err != nil {
 		return err
 	}
+	// Runtime/internal mTLS certificates are managed lifecycle objects.
+	// They must not be deleted manually across any tenant.
+	if strings.EqualFold(strings.TrimSpace(current.CertClass), "internal-mtls") ||
+		strings.Contains(strings.ToLower(strings.TrimSpace(current.Protocol)), "internal-mtls") {
+		return errors.New("cannot delete internal-mtls certificate; use renew or rotate")
+	}
 	if strings.EqualFold(strings.TrimSpace(current.Status), CertStatusDeleted) {
 		return nil
 	}
