@@ -169,15 +169,15 @@ func loadKMIPTLSConfig() (*tls.Config, error) {
 	if certFile != "" && keyFile != "" && caFile != "" {
 		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 		if err != nil {
-			return nil, err
+			return devKMIPTLSConfig()
 		}
 		caRaw, err := os.ReadFile(caFile)
 		if err != nil {
-			return nil, err
+			return devKMIPTLSConfig()
 		}
 		cp := x509.NewCertPool()
 		if !cp.AppendCertsFromPEM(caRaw) {
-			return nil, errors.New("failed to parse KMIP_TLS_CLIENT_CA_FILE")
+			return devKMIPTLSConfig()
 		}
 		return &tls.Config{
 			MinVersion:   tls.VersionTLS12,

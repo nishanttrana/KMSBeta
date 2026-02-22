@@ -108,16 +108,31 @@ services:
   envoy:
     restart: unless-stopped
     image: envoyproxy/envoy:v1.31-latest
-    command: ["-c", "/etc/envoy/envoy.yaml", "--service-cluster", "vecta-edge"]
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        for i in $(seq 1 120); do
+          [ -s /run/vecta/runtime-certs/envoy/tls.crt ] && [ -s /run/vecta/runtime-certs/envoy/tls.key ] && break
+          sleep 1
+        done
+        mkdir -p /tmp/envoy-certs
+        cp /run/vecta/runtime-certs/envoy/tls.crt /tmp/envoy-certs/tls.crt
+        cp /run/vecta/runtime-certs/envoy/tls.key /tmp/envoy-certs/tls.key
+        chmod 0644 /tmp/envoy-certs/tls.crt
+        chmod 0644 /tmp/envoy-certs/tls.key
+        exec /usr/local/bin/envoy -c /etc/envoy/envoy.yaml --service-cluster vecta-edge
     volumes:
       - ./infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
-      - ${VECTA_CERTS_OUT:-./infra/certs/out}/envoy:/etc/envoy/certs:ro
+      - runtime-certs:/run/vecta/runtime-certs:ro
     ports:
       - "80:80"
       - "443:443"
       - "5696:5696"
       - "9901:9901"
     depends_on:
+      certs:
+        condition: service_healthy
       auth:
         condition: service_started
       keycore:
@@ -326,15 +341,27 @@ services:
       CERTS_CRWK_ARGON_PARALLEL: ${CERTS_CRWK_ARGON_PARALLEL:-2}
       CERTS_CRWK_MLOCK_REQUIRED: ${CERTS_CRWK_MLOCK_REQUIRED:-false}
       CERTS_CRWK_USE_TPM_SEAL: ${CERTS_CRWK_USE_TPM_SEAL:-false}
+      CERTS_RUNTIME_MATERIALIZER_ENABLED: ${CERTS_RUNTIME_MATERIALIZER_ENABLED:-true}
+      CERTS_RUNTIME_MATERIALIZER_DIR: ${CERTS_RUNTIME_MATERIALIZER_DIR:-/run/vecta/certs}
+      CERTS_RUNTIME_MATERIALIZER_INTERVAL: ${CERTS_RUNTIME_MATERIALIZER_INTERVAL:-5m}
+      CERTS_RUNTIME_MATERIALIZER_RENEW_BEFORE: ${CERTS_RUNTIME_MATERIALIZER_RENEW_BEFORE:-24h}
+      CERTS_RUNTIME_TENANT_ID: ${CERTS_RUNTIME_TENANT_ID:-bank-alpha}
+      CERTS_RUNTIME_ROOT_CA_NAME: ${CERTS_RUNTIME_ROOT_CA_NAME:-vecta-runtime-root}
+      CERTS_RUNTIME_VALIDITY_DAYS: ${CERTS_RUNTIME_VALIDITY_DAYS:-90}
+      CERTS_RUNTIME_ENVOY_CN: ${CERTS_RUNTIME_ENVOY_CN:-vecta-envoy}
+      CERTS_RUNTIME_ENVOY_SANS: ${CERTS_RUNTIME_ENVOY_SANS:-localhost,envoy,127.0.0.1}
+      CERTS_RUNTIME_KMIP_CN: ${CERTS_RUNTIME_KMIP_CN:-vecta-kmip}
+      CERTS_RUNTIME_KMIP_SANS: ${CERTS_RUNTIME_KMIP_SANS:-localhost,kmip,127.0.0.1}
       HTTP_PORT: "8030"
       GRPC_PORT: "18030"
     volumes:
       - certs-key-data:/var/lib/vecta/certs
+      - runtime-certs:/run/vecta/certs
     ports:
       - "8030:8030"
       - "18030:18030"
     healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18030"]
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18030 && test -s /run/vecta/certs/envoy/tls.crt && test -s /run/vecta/certs/envoy/tls.key && test -s /run/vecta/certs/kmip/tls.crt && test -s /run/vecta/certs/kmip/tls.key && test -s /run/vecta/certs/ca/ca.crt"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -423,8 +450,7 @@ services:
       KMIP_TLS_KEY_FILE: /etc/vecta-certs/kmip/tls.key
       KMIP_TLS_CLIENT_CA_FILE: /etc/vecta-certs/ca/ca.crt
     volumes:
-      - ${VECTA_CERTS_OUT:-./infra/certs/out}/kmip:/etc/vecta-certs/kmip:ro
-      - ${VECTA_CERTS_OUT:-./infra/certs/out}/ca:/etc/vecta-certs/ca:ro
+      - runtime-certs:/etc/vecta-certs:ro
     ports:
       - "8160:8160"
       - "15696:15696"
@@ -757,3 +783,9 @@ volumes:
   auth-data:
   keycore-data:
   certs-key-data:
+  runtime-certs:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: "size=32m,mode=0700,uid=100,gid=101"

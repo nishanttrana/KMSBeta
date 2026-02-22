@@ -11,8 +11,6 @@ $parser = Join-Path $PSScriptRoot "parse-deployment.ps1"
 $healthScript = Join-Path $PSScriptRoot "healthcheck-enabled-services.ps1"
 $stopScript = Join-Path $PSScriptRoot "stop-kms.ps1"
 $composeFile = Join-Path $root "docker-compose.yml"
-$envoyCert = Join-Path $root "infra\certs\out\envoy\tls.crt"
-$envoyKey = Join-Path $root "infra\certs\out\envoy\tls.key"
 $projectName = "vecta-kms"
 
 function Wait-DockerDaemon {
@@ -69,22 +67,6 @@ function Set-ComposeEnvironment {
     }
 }
 
-function Ensure-MtlsCerts {
-    if ((Test-Path -LiteralPath $envoyCert) -and (Test-Path -LiteralPath $envoyKey)) {
-        return
-    }
-
-    $gitBash = "C:\Program Files\Git\bin\bash.exe"
-    if (!(Test-Path -LiteralPath $gitBash)) {
-        throw "missing Envoy TLS certs at infra/certs/out/envoy and Git Bash is unavailable to generate them"
-    }
-
-    & $gitBash -lc "./infra/certs/generate-mtls.sh infra/certs/out"
-    if ($LASTEXITCODE -ne 0) {
-        throw "failed to generate mTLS certs"
-    }
-}
-
 function Invoke-ComposeUp {
     docker compose -f $composeFile up -d --remove-orphans
     if ($LASTEXITCODE -ne 0) {
@@ -120,7 +102,6 @@ function Recover-Once {
 
 $resolvedDeploymentFile = Resolve-DeploymentPath -InputPath $DeploymentFile
 Wait-DockerDaemon -TimeoutSeconds $DockerWaitSeconds
-Ensure-MtlsCerts
 Set-ComposeEnvironment -DeploymentPath $resolvedDeploymentFile
 
 Write-Host "starting KMS with COMPOSE_PROFILES=$($env:COMPOSE_PROFILES)"

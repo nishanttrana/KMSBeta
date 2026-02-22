@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -60,6 +62,20 @@ type Service struct {
 	securityInitError string
 	fipsStrict        bool
 	keycoreFailClosed bool
+}
+
+type RuntimeCertMaterializerConfig struct {
+	Enabled        bool
+	MaterializeDir string
+	TenantID       string
+	RootCAName     string
+	ValidityDays   int64
+	Interval       time.Duration
+	RenewBefore    time.Duration
+	EnvoyCN        string
+	EnvoySANs      []string
+	KMIPCN         string
+	KMIPSANs       []string
 }
 
 func NewService(store Store, events EventPublisher, keycore KeyCoreSigner, mek []byte, fipsStrict bool, keycoreFailClosed bool) *Service {
@@ -2211,6 +2227,199 @@ func (s *Service) RewrapLegacyCASigners(ctx context.Context) (int, error) {
 	return rewrapped, nil
 }
 
+func (s *Service) MaterializeRuntimeCerts(ctx context.Context, cfg RuntimeCertMaterializerConfig) error {
+	if !cfg.Enabled {
+		return nil
+	}
+	tenantID := strings.TrimSpace(cfg.TenantID)
+	if tenantID == "" {
+		tenantID = "bank-alpha"
+	}
+	rootName := strings.TrimSpace(cfg.RootCAName)
+	if rootName == "" {
+		rootName = "vecta-runtime-root"
+	}
+	materializeDir := strings.TrimSpace(cfg.MaterializeDir)
+	if materializeDir == "" {
+		materializeDir = "/run/vecta/certs"
+	}
+	if cfg.ValidityDays <= 0 {
+		cfg.ValidityDays = 90
+	}
+	if cfg.RenewBefore <= 0 {
+		cfg.RenewBefore = 24 * time.Hour
+	}
+	envoyCN := strings.TrimSpace(cfg.EnvoyCN)
+	if envoyCN == "" {
+		envoyCN = "vecta-envoy"
+	}
+	envoySANs := dedupStrings(append([]string{}, cfg.EnvoySANs...))
+	if len(envoySANs) == 0 {
+		envoySANs = []string{"localhost", "envoy", "127.0.0.1"}
+	}
+	kmipCN := strings.TrimSpace(cfg.KMIPCN)
+	if kmipCN == "" {
+		kmipCN = "vecta-kmip"
+	}
+	kmipSANs := dedupStrings(append([]string{}, cfg.KMIPSANs...))
+	if len(kmipSANs) == 0 {
+		kmipSANs = []string{"localhost", "kmip", "127.0.0.1"}
+	}
+
+	ca, err := s.ensureRuntimeRootCA(ctx, tenantID, rootName)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Join(materializeDir, "ca"), 0o700); err != nil {
+		return err
+	}
+	if err := writeFileAtomically(filepath.Join(materializeDir, "ca", "ca.crt"), []byte(strings.TrimSpace(ca.CertPEM)+"\n"), 0o600); err != nil {
+		return err
+	}
+	if err := s.ensureRuntimeEndpointCert(ctx, tenantID, ca, filepath.Join(materializeDir, "envoy"), "RSA-3072", envoyCN, envoySANs, cfg.ValidityDays, cfg.RenewBefore); err != nil {
+		return err
+	}
+	if err := s.ensureRuntimeEndpointCert(ctx, tenantID, ca, filepath.Join(materializeDir, "kmip"), "RSA-3072", kmipCN, kmipSANs, cfg.ValidityDays, cfg.RenewBefore); err != nil {
+		return err
+	}
+	_ = s.publishAudit(ctx, "audit.cert.runtime_materialized", tenantID, map[string]interface{}{
+		"materialize_dir": materializeDir,
+		"root_ca_name":    rootName,
+		"envoy_cn":        envoyCN,
+		"kmip_cn":         kmipCN,
+	})
+	return nil
+}
+
+func (s *Service) ensureRuntimeRootCA(ctx context.Context, tenantID string, name string) (CA, error) {
+	cas, err := s.store.ListCAs(ctx, tenantID)
+	if err != nil {
+		return CA{}, err
+	}
+	for _, ca := range cas {
+		if strings.EqualFold(strings.TrimSpace(ca.Name), strings.TrimSpace(name)) && strings.ToLower(strings.TrimSpace(ca.Status)) == CAStatusActive {
+			return ca, nil
+		}
+	}
+	created, err := s.CreateCA(ctx, CreateCARequest{
+		TenantID:     tenantID,
+		Name:         name,
+		CALevel:      "root",
+		Algorithm:    "ECDSA-P384",
+		CAType:       "classical",
+		KeyBackend:   "software",
+		Subject:      fmt.Sprintf("CN=%s,O=Vecta KMS Runtime", name),
+		ValidityDays: 3650,
+	})
+	if err == nil {
+		return created, nil
+	}
+	// Handle race on initial startup by re-reading.
+	cas, listErr := s.store.ListCAs(ctx, tenantID)
+	if listErr != nil {
+		return CA{}, err
+	}
+	for _, ca := range cas {
+		if strings.EqualFold(strings.TrimSpace(ca.Name), strings.TrimSpace(name)) && strings.ToLower(strings.TrimSpace(ca.Status)) == CAStatusActive {
+			return ca, nil
+		}
+	}
+	return CA{}, err
+}
+
+func (s *Service) ensureRuntimeEndpointCert(ctx context.Context, tenantID string, ca CA, outDir string, algorithm string, cn string, sans []string, validityDays int64, renewBefore time.Duration) error {
+	if err := os.MkdirAll(outDir, 0o700); err != nil {
+		return err
+	}
+	certPath := filepath.Join(outDir, "tls.crt")
+	keyPath := filepath.Join(outDir, "tls.key")
+	if !runtimeCertNeedsRenew(certPath, keyPath, renewBefore) {
+		return nil
+	}
+	issued, keyPEM, err := s.IssueCertificate(ctx, IssueCertificateRequest{
+		TenantID:     tenantID,
+		CAID:         ca.ID,
+		CertType:     "tls-server",
+		Algorithm:    algorithm,
+		CertClass:    "internal-mtls",
+		SubjectCN:    cn,
+		SANs:         dedupStrings(sans),
+		ServerKeygen: true,
+		ValidityDays: validityDays,
+		Protocol:     "internal-mtls",
+		MetadataJSON: `{"runtime_materializer":true}`,
+	})
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(keyPEM) == "" {
+		return errors.New("runtime materializer received empty private key")
+	}
+	keyBytes := []byte(keyPEM)
+	defer pkgcrypto.Zeroize(keyBytes)
+	if err := writeFileAtomically(certPath, []byte(strings.TrimSpace(issued.CertPEM)+"\n"), 0o600); err != nil {
+		return err
+	}
+	if err := writeFileAtomically(keyPath, keyBytes, 0o600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func runtimeCertNeedsRenew(certPath string, keyPath string, renewBefore time.Duration) bool {
+	if renewBefore <= 0 {
+		renewBefore = 24 * time.Hour
+	}
+	keyInfo, err := os.Stat(keyPath)
+	if err != nil || keyInfo.Size() == 0 {
+		return true
+	}
+	raw, err := os.ReadFile(certPath)
+	if err != nil || len(raw) == 0 {
+		return true
+	}
+	cert, err := parseCertificatePEM(string(raw))
+	if err != nil {
+		return true
+	}
+	now := time.Now().UTC()
+	if now.After(cert.NotAfter) {
+		return true
+	}
+	if cert.NotBefore.After(now.Add(5 * time.Minute)) {
+		return true
+	}
+	return cert.NotAfter.Sub(now) <= renewBefore
+}
+
+func writeFileAtomically(path string, data []byte, mode os.FileMode) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer func() { _ = os.Remove(tmpName) }()
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(mode); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
+}
+
 func (s *Service) signWithKeyCoreIfConfigured(ctx context.Context, tenantID string, keyBackend string, keyRef string, payload []byte) ([]byte, error) {
 	backend := normalizeKeyBackend(keyBackend)
 	if backend != "keycore" && backend != "hsm" {
@@ -2310,6 +2519,18 @@ func parseSignerPEM(raw []byte) (crypto.Signer, error) {
 		return key, nil
 	}
 	return nil, errors.New("unsupported private key type")
+}
+
+func normalizePrivateKeyToPKCS8PEM(raw string) (string, error) {
+	signer, err := parseSignerPEM([]byte(raw))
+	if err != nil {
+		return "", err
+	}
+	der, err := x509.MarshalPKCS8PrivateKey(signer)
+	if err != nil {
+		return "", err
+	}
+	return string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: der})), nil
 }
 
 func parseAnyPrivateKeyPEM(raw string) (crypto.Signer, error) {

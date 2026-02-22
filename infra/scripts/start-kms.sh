@@ -20,13 +20,6 @@ PARSER="${ROOT_DIR}/infra/scripts/parse-deployment.sh"
 STOP_SCRIPT="${ROOT_DIR}/infra/scripts/stop-kms.sh"
 MESH_BOOTSTRAP="${ROOT_DIR}/infra/consul/bootstrap-mesh.sh"
 HEALTH_SCRIPT="${ROOT_DIR}/infra/scripts/healthcheck-enabled-services.sh"
-CERT_SCRIPT="${ROOT_DIR}/infra/certs/generate-mtls.sh"
-CERTS_OUT_DIR="${VECTA_CERTS_OUT:-infra/certs/out}"
-if [[ "${CERTS_OUT_DIR}" != /* ]]; then
-  CERTS_OUT_DIR="${ROOT_DIR}/${CERTS_OUT_DIR#./}"
-fi
-ENVOY_CERT="${CERTS_OUT_DIR}/envoy/tls.crt"
-ENVOY_KEY="${CERTS_OUT_DIR}/envoy/tls.key"
 
 wait_docker() {
   local timeout_seconds="${1:-90}"
@@ -69,15 +62,6 @@ extract_cert_security_field() {
     }
   ' "${DEPLOYMENT_FILE}" 2>/dev/null || true
 }
-
-if [[ ! -f "${ENVOY_CERT}" || ! -f "${ENVOY_KEY}" ]]; then
-  if command -v openssl >/dev/null 2>&1; then
-    bash "${CERT_SCRIPT}" "${CERTS_OUT_DIR}"
-  else
-    echo "missing envoy TLS certs and openssl is unavailable; run ${CERT_SCRIPT} on a machine with openssl" >&2
-    exit 1
-  fi
-fi
 
 COMPOSE_PROFILES="$("${PARSER}" "${DEPLOYMENT_FILE}")"
 export COMPOSE_PROFILES

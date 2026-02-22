@@ -88,6 +88,33 @@ func main() {
 		envBool("FIPS_STRICT", false),
 		envBool("CERTS_KEYCORE_FAIL_CLOSED", true),
 	)
+	runtimeCfg := loadRuntimeMaterializerConfig()
+	if runtimeCfg.Enabled {
+		go func() {
+			run := func() {
+				mCtx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+				defer cancel()
+				if err := svc.MaterializeRuntimeCerts(mCtx, runtimeCfg); err != nil {
+					logger.Printf("runtime cert materializer warning: %v", err)
+				}
+			}
+			run()
+			interval := runtimeCfg.Interval
+			if interval <= 0 {
+				interval = 5 * time.Minute
+			}
+			ticker := time.NewTicker(interval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					run()
+				}
+			}
+		}()
+	}
 	go func() {
 		migrateCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
@@ -245,6 +272,22 @@ func loadCertRootKeyConfig() CertRootKeyConfig {
 	}
 }
 
+func loadRuntimeMaterializerConfig() RuntimeCertMaterializerConfig {
+	return RuntimeCertMaterializerConfig{
+		Enabled:        envBool("CERTS_RUNTIME_MATERIALIZER_ENABLED", true),
+		MaterializeDir: envOr("CERTS_RUNTIME_MATERIALIZER_DIR", "/run/vecta/certs"),
+		TenantID:       envOr("CERTS_RUNTIME_TENANT_ID", "bank-alpha"),
+		RootCAName:     envOr("CERTS_RUNTIME_ROOT_CA_NAME", "vecta-runtime-root"),
+		ValidityDays:   int64(envInt("CERTS_RUNTIME_VALIDITY_DAYS", 90)),
+		Interval:       envDuration("CERTS_RUNTIME_MATERIALIZER_INTERVAL", 5*time.Minute),
+		RenewBefore:    envDuration("CERTS_RUNTIME_MATERIALIZER_RENEW_BEFORE", 24*time.Hour),
+		EnvoyCN:        envOr("CERTS_RUNTIME_ENVOY_CN", "vecta-envoy"),
+		EnvoySANs:      splitCSV(envOr("CERTS_RUNTIME_ENVOY_SANS", "localhost,envoy,127.0.0.1")),
+		KMIPCN:         envOr("CERTS_RUNTIME_KMIP_CN", "vecta-kmip"),
+		KMIPSANs:       splitCSV(envOr("CERTS_RUNTIME_KMIP_SANS", "localhost,kmip,127.0.0.1")),
+	}
+}
+
 func envOr(k string, d string) string {
 	v := strings.TrimSpace(os.Getenv(k))
 	if v == "" {
@@ -271,6 +314,33 @@ func envInt(k string, d int) int {
 		return d
 	}
 	return n
+}
+
+func envDuration(k string, d time.Duration) time.Duration {
+	v := strings.TrimSpace(os.Getenv(k))
+	if v == "" {
+		return d
+	}
+	if parsed, err := time.ParseDuration(v); err == nil {
+		return parsed
+	}
+	if seconds, err := strconv.Atoi(v); err == nil && seconds > 0 {
+		return time.Duration(seconds) * time.Second
+	}
+	return d
+}
+
+func splitCSV(raw string) []string {
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
 }
 
 func errString(err error) string {
