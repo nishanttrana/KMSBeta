@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OUT_DIR="${1:-infra/certs/out}"
+umask 077
+
+OUT_DIR="${1:-${VECTA_CERTS_OUT:-infra/certs/out}}"
 DAYS="${DAYS:-825}"
 CA_DAYS="${CA_DAYS:-3650}"
 ORG="${ORG:-Vecta KMS}"
@@ -46,6 +48,7 @@ SERVICES=(
 )
 
 mkdir -p "${OUT_DIR}/ca" "${OUT_DIR}/trust"
+chmod 700 "${OUT_DIR}" "${OUT_DIR}/ca" "${OUT_DIR}/trust" || true
 
 CA_KEY="${OUT_DIR}/ca/ca.key"
 CA_CRT="${OUT_DIR}/ca/ca.crt"
@@ -57,10 +60,13 @@ if [[ ! -f "${CA_KEY}" || ! -f "${CA_CRT}" ]]; then
     -subj "/C=CH/O=${ORG_DN}/CN=vecta-kms-internal-ca" \
     -out "${CA_CRT}"
 fi
+chmod 600 "${CA_KEY}" "${CA_SRL}" 2>/dev/null || true
+chmod 644 "${CA_CRT}" 2>/dev/null || true
 
 for svc in "${SERVICES[@]}"; do
   svc_dir="${OUT_DIR}/${svc}"
   mkdir -p "${svc_dir}"
+  chmod 700 "${svc_dir}" || true
 
   key_file="${svc_dir}/tls.key"
   csr_file="${svc_dir}/tls.csr"
@@ -86,7 +92,9 @@ EOF
   cat "${crt_file}" "${CA_CRT}" >"${chain_file}"
   rm -f "${csr_file}" "${ext_file}"
   chmod 600 "${key_file}"
+  chmod 644 "${crt_file}" "${chain_file}" 2>/dev/null || true
 done
 
 cp "${CA_CRT}" "${OUT_DIR}/trust/ca-bundle.pem"
+chmod 644 "${OUT_DIR}/trust/ca-bundle.pem" 2>/dev/null || true
 echo "generated mTLS materials in ${OUT_DIR}"

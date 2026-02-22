@@ -111,7 +111,7 @@ services:
     command: ["-c", "/etc/envoy/envoy.yaml", "--service-cluster", "vecta-edge"]
     volumes:
       - ./infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
-      - ./infra/certs/out/envoy:/etc/envoy/certs:ro
+      - ${VECTA_CERTS_OUT:-./infra/certs/out}/envoy:/etc/envoy/certs:ro
     ports:
       - "80:80"
       - "443:443"
@@ -411,8 +411,8 @@ services:
       KMIP_TLS_KEY_FILE: /etc/vecta-certs/kmip/tls.key
       KMIP_TLS_CLIENT_CA_FILE: /etc/vecta-certs/ca/ca.crt
     volumes:
-      - ./infra/certs/out/kmip:/etc/vecta-certs/kmip:ro
-      - ./infra/certs/out/ca:/etc/vecta-certs/ca:ro
+      - ${VECTA_CERTS_OUT:-./infra/certs/out}/kmip:/etc/vecta-certs/kmip:ro
+      - ${VECTA_CERTS_OUT:-./infra/certs/out}/ca:/etc/vecta-certs/ca:ro
     ports:
       - "8160:8160"
       - "15696:15696"

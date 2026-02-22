@@ -1,0 +1,10 @@
+# Generated runtime TLS materials (must never be committed)
+infra/certs/out/**
+!infra/certs/out/
+!infra/certs/out/.gitkeep
+!infra/certs/out/README.md
+
+# Local environment overrides
+.env.local
+.env.*.local
+

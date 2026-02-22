@@ -6,6 +6,12 @@ Generate internal CA + per-service certs:
 ./infra/certs/generate-mtls.sh
 ```
 
+Or write certs outside the repo (recommended):
+
+```bash
+VECTA_CERTS_OUT=/var/lib/vecta-kms/certs ./infra/certs/generate-mtls.sh
+```
+
 Generate a KMIP client cert (CN must be `tenant:role`, for example `bank-alpha:kmip-client`):
 
 ```bash

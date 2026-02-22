@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OUT_DIR="${1:-infra/certs/out/kmip-client}"
+umask 077
+
+CERTS_ROOT="${VECTA_CERTS_OUT:-infra/certs/out}"
+OUT_DIR="${1:-${CERTS_ROOT}/kmip-client}"
 CLIENT_CN="${2:-bank-alpha:kmip-client}"
 ORG="${ORG:-Vecta KMS}"
 ORG_DN="${ORG// /\\ }"
@@ -12,7 +15,7 @@ if ! command -v openssl >/dev/null 2>&1; then
   exit 1
 fi
 
-CA_DIR="infra/certs/out/ca"
+CA_DIR="${CA_DIR:-${CERTS_ROOT}/ca}"
 CA_CRT="${CA_DIR}/ca.crt"
 CA_KEY="${CA_DIR}/ca.key"
 CA_SRL="${CA_DIR}/ca.srl"
@@ -23,6 +26,7 @@ if [[ ! -f "${CA_CRT}" || ! -f "${CA_KEY}" ]]; then
 fi
 
 mkdir -p "${OUT_DIR}"
+chmod 700 "${OUT_DIR}" || true
 
 KEY_FILE="${OUT_DIR}/tls.key"
 CSR_FILE="${OUT_DIR}/tls.csr"
@@ -48,5 +52,6 @@ openssl x509 -req -in "${CSR_FILE}" -CA "${CA_CRT}" -CAkey "${CA_KEY}" \
 cat "${CRT_FILE}" "${CA_CRT}" >"${CHAIN_FILE}"
 rm -f "${CSR_FILE}" "${EXT_FILE}"
 chmod 600 "${KEY_FILE}"
+chmod 644 "${CRT_FILE}" "${CHAIN_FILE}" 2>/dev/null || true
 
 echo "generated KMIP client cert in ${OUT_DIR} with CN=${CLIENT_CN}"
