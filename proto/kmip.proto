@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package vecta.kmip.v1;
+
+option go_package = "vecta-kms/proto/kmip;kmippb";
+
+service KmipService {
+  rpc ProcessTTLV (ProcessTTLVRequest) returns (ProcessTTLVResponse);
+  rpc QueryCapabilities (QueryCapabilitiesRequest) returns (QueryCapabilitiesResponse);
+}
+
+message ProcessTTLVRequest {
+  string tenant_id = 1;
+  bytes ttlv_request = 2;
+  string client_cn = 3;
+  string client_role = 4;
+}
+
+message ProcessTTLVResponse {
+  bytes ttlv_response = 1;
+  string operation = 2;
+  string result_status = 3;
+  string object_id = 4;
+  string message = 5;
+}
+
+message QueryCapabilitiesRequest {
+  string tenant_id = 1;
+}
+
+message QueryCapabilitiesResponse {
+  string kmip_version = 1;
+  repeated string operations = 2;
+  repeated string object_types = 3;
+  repeated string profiles = 4;
+}

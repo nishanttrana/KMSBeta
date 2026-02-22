@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package vecta.ai.v1;
+
+option go_package = "vecta-kms/proto/ai;aipb";
+
+service AiService {
+  rpc Query (QueryRequest) returns (QueryResponse);
+  rpc AnalyzeIncident (AnalyzeIncidentRequest) returns (AnalyzeIncidentResponse);
+  rpc RecommendPosture (RecommendPostureRequest) returns (RecommendPostureResponse);
+  rpc ExplainPolicy (ExplainPolicyRequest) returns (ExplainPolicyResponse);
+  rpc GetConfig (GetConfigRequest) returns (GetConfigResponse);
+  rpc UpdateConfig (UpdateConfigRequest) returns (UpdateConfigResponse);
+}
+
+message JsonObject {
+  map<string, string> fields = 1;
+}
+
+message ContextKeysConfig {
+  bool enabled = 1;
+  int32 limit = 2;
+  repeated string fields = 3;
+}
+
+message ContextPoliciesConfig {
+  bool enabled = 1;
+  bool all = 2;
+  int32 limit = 3;
+}
+
+message ContextAuditConfig {
+  bool enabled = 1;
+  int32 last_hours = 2;
+  int32 limit = 3;
+}
+
+message ContextPostureConfig {
+  bool enabled = 1;
+  bool current = 2;
+}
+
+message ContextAlertsConfig {
+  bool enabled = 1;
+  bool unresolved = 2;
+  int32 limit = 3;
+}
+
+message ContextSources {
+  ContextKeysConfig keys = 1;
+  ContextPoliciesConfig policies = 2;
+  ContextAuditConfig audit = 3;
+  ContextPostureConfig posture = 4;
+  ContextAlertsConfig alerts = 5;
+}
+
+message AiConfig {
+  string tenant_id = 1;
+  string backend = 2;
+  string endpoint = 3;
+  string model = 4;
+  string api_key_secret = 5;
+  int32 max_context_tokens = 6;
+  double temperature = 7;
+  ContextSources context_sources = 8;
+  repeated string redaction_fields = 9;
+  string updated_at = 10;
+}
+
+message AiResponse {
+  string action = 1;
+  string tenant_id = 2;
+  string answer = 3;
+  string backend = 4;
+  string model = 5;
+  int32 redactions_applied = 6;
+  map<string, string> context_summary = 7;
+  JsonObject context = 8;
+  repeated string warnings = 9;
+  string generated_at = 10;
+}
+
+message QueryRequest {
+  string tenant_id = 1;
+  string query = 2;
+  bool include_context = 3;
+}
+
+message QueryResponse {
+  AiResponse result = 1;
+}
+
+message AnalyzeIncidentRequest {
+  string tenant_id = 1;
+  string incident_id = 2;
+  string title = 3;
+  string description = 4;
+  JsonObject details = 5;
+}
+
+message AnalyzeIncidentResponse {
+  AiResponse result = 1;
+}
+
+message RecommendPostureRequest {
+  string tenant_id = 1;
+  string focus = 2;
+}
+
+message RecommendPostureResponse {
+  AiResponse result = 1;
+}
+
+message ExplainPolicyRequest {
+  string tenant_id = 1;
+  string policy_id = 2;
+  JsonObject policy = 3;
+}
+
+message ExplainPolicyResponse {
+  AiResponse result = 1;
+}
+
+message GetConfigRequest {
+  string tenant_id = 1;
+}
+
+message GetConfigResponse {
+  AiConfig config = 1;
+}
+
+message UpdateConfigRequest {
+  string tenant_id = 1;
+  AiConfig update = 2;
+}
+
+message UpdateConfigResponse {
+  AiConfig config = 1;
+}

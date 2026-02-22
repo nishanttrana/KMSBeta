@@ -1,0 +1,250 @@
+syntax = "proto3";
+
+package vecta.ekm.v1;
+
+option go_package = "vecta-kms/proto/ekm;ekmpb";
+
+service EkmService {
+  rpc RegisterAgent (RegisterAgentRequest) returns (RegisterAgentResponse);
+  rpc ListAgents (ListAgentsRequest) returns (ListAgentsResponse);
+  rpc GetAgentStatus (GetAgentStatusRequest) returns (GetAgentStatusResponse);
+  rpc AgentHeartbeat (AgentHeartbeatRequest) returns (AgentHeartbeatResponse);
+
+  rpc CreateTDEKey (CreateTDEKeyRequest) returns (CreateTDEKeyResponse);
+  rpc WrapDEK (WrapDEKRequest) returns (WrapDEKResponse);
+  rpc UnwrapDEK (UnwrapDEKRequest) returns (UnwrapDEKResponse);
+  rpc RotateTDEKey (RotateTDEKeyRequest) returns (RotateTDEKeyResponse);
+  rpc GetTDEPublicKey (GetTDEPublicKeyRequest) returns (GetTDEPublicKeyResponse);
+
+  rpc RegisterDatabase (RegisterDatabaseRequest) returns (RegisterDatabaseResponse);
+  rpc ListDatabases (ListDatabasesRequest) returns (ListDatabasesResponse);
+  rpc GetDatabase (GetDatabaseRequest) returns (GetDatabaseResponse);
+}
+
+message Agent {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string role = 4;
+  string db_engine = 5;
+  string host = 6;
+  string version = 7;
+  string status = 8;
+  string tde_state = 9;
+  int32 heartbeat_interval_sec = 10;
+  string last_heartbeat_at = 11;
+  string assigned_key_id = 12;
+  string assigned_key_version = 13;
+  int32 config_version = 14;
+  int32 config_version_ack = 15;
+  string metadata_json = 16;
+  string tls_client_cn = 17;
+  string created_at = 18;
+  string updated_at = 19;
+}
+
+message AgentStatus {
+  Agent agent = 1;
+  int32 managed_databases = 2;
+  int32 tde_enabled_databases = 3;
+  int64 last_heartbeat_age_sec = 4;
+}
+
+message RegisterAgentRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+  string name = 3;
+  string role = 4;
+  string db_engine = 5;
+  string host = 6;
+  string version = 7;
+  int32 heartbeat_interval_sec = 8;
+  string metadata_json = 9;
+  bool auto_provision_tde = 10;
+}
+
+message RegisterAgentResponse {
+  Agent agent = 1;
+  TDEKey auto_provisioned_key = 2;
+}
+
+message ListAgentsRequest {
+  string tenant_id = 1;
+}
+
+message ListAgentsResponse {
+  repeated Agent items = 1;
+}
+
+message GetAgentStatusRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+}
+
+message GetAgentStatusResponse {
+  AgentStatus status = 1;
+}
+
+message AgentHeartbeatRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+  string status = 3;
+  string tde_state = 4;
+  string active_key_id = 5;
+  string active_key_version = 6;
+  int32 config_version_ack = 7;
+  string metadata_json = 8;
+}
+
+message AgentHeartbeatResponse {
+  Agent agent = 1;
+}
+
+message TDEKey {
+  string id = 1;
+  string tenant_id = 2;
+  string keycore_key_id = 3;
+  string name = 4;
+  string algorithm = 5;
+  string status = 6;
+  string current_version = 7;
+  string public_key = 8;
+  string public_key_format = 9;
+  string created_by = 10;
+  bool auto_provisioned = 11;
+  string metadata_json = 12;
+  string created_at = 13;
+  string updated_at = 14;
+  string rotated_at = 15;
+  string last_accessed_at = 16;
+}
+
+message CreateTDEKeyRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string algorithm = 3;
+  string created_by = 4;
+  string agent_id = 5;
+  string database_id = 6;
+  string metadata_json = 7;
+}
+
+message CreateTDEKeyResponse {
+  TDEKey key = 1;
+}
+
+message WrapDEKRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string plaintext = 3;
+  string iv = 4;
+  string reference_id = 5;
+  string agent_id = 6;
+  string database_id = 7;
+}
+
+message WrapDEKResponse {
+  string key_id = 1;
+  int32 version = 2;
+  string ciphertext = 3;
+  string iv = 4;
+}
+
+message UnwrapDEKRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string ciphertext = 3;
+  string iv = 4;
+  string agent_id = 5;
+  string database_id = 6;
+}
+
+message UnwrapDEKResponse {
+  string key_id = 1;
+  int32 version = 2;
+  string plaintext = 3;
+}
+
+message RotateTDEKeyRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string reason = 3;
+}
+
+message RotateTDEKeyResponse {
+  string key_id = 1;
+  string version_id = 2;
+  repeated string affected_agent_ids = 3;
+}
+
+message GetTDEPublicKeyRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+}
+
+message GetTDEPublicKeyResponse {
+  string key_id = 1;
+  string algorithm = 2;
+  string public_key = 3;
+  string format = 4;
+  string key_version = 5;
+}
+
+message Database {
+  string id = 1;
+  string tenant_id = 2;
+  string agent_id = 3;
+  string name = 4;
+  string engine = 5;
+  string host = 6;
+  int32 port = 7;
+  string database_name = 8;
+  bool tde_enabled = 9;
+  string tde_state = 10;
+  string key_id = 11;
+  bool auto_provisioned = 12;
+  string metadata_json = 13;
+  string last_seen_at = 14;
+  string created_at = 15;
+  string updated_at = 16;
+}
+
+message RegisterDatabaseRequest {
+  string tenant_id = 1;
+  string database_id = 2;
+  string agent_id = 3;
+  string name = 4;
+  string engine = 5;
+  string host = 6;
+  int32 port = 7;
+  string database_name = 8;
+  bool tde_enabled = 9;
+  string tde_state = 10;
+  string key_id = 11;
+  string metadata_json = 12;
+  bool auto_provision_key = 13;
+}
+
+message RegisterDatabaseResponse {
+  Database database = 1;
+  TDEKey auto_provisioned_key = 2;
+}
+
+message ListDatabasesRequest {
+  string tenant_id = 1;
+  string agent_id = 2;
+}
+
+message ListDatabasesResponse {
+  repeated Database items = 1;
+}
+
+message GetDatabaseRequest {
+  string tenant_id = 1;
+  string database_id = 2;
+}
+
+message GetDatabaseResponse {
+  Database database = 1;
+}
+

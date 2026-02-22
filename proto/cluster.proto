@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package vecta.cluster.v1;
+
+option go_package = "vecta-kms/proto/cluster;clusterpb";
+
+service ClusterService {
+  rpc Ping (PingRequest) returns (PingResponse);
+}
+
+message PingRequest {
+  string tenant_id = 1;
+}
+
+message PingResponse {
+  string status = 1;
+}

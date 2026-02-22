@@ -1,0 +1,370 @@
+syntax = "proto3";
+
+package vecta.certs.v1;
+
+option go_package = "vecta-kms/proto/certs;certspb";
+
+service CertsService {
+  rpc CreateCA (CreateCARequest) returns (CreateCAResponse);
+  rpc ListCAs (ListCAsRequest) returns (ListCAsResponse);
+
+  rpc IssueCertificate (IssueCertificateRequest) returns (IssueCertificateResponse);
+  rpc ListCertificates (ListCertificatesRequest) returns (ListCertificatesResponse);
+  rpc GetCertificate (GetCertificateRequest) returns (GetCertificateResponse);
+  rpc DownloadCertificate (DownloadCertificateRequest) returns (DownloadCertificateResponse);
+  rpc RenewCertificate (RenewCertificateRequest) returns (RenewCertificateResponse);
+  rpc RevokeCertificate (RevokeCertificateRequest) returns (RevokeCertificateResponse);
+
+  rpc CreateProfile (CreateProfileRequest) returns (CreateProfileResponse);
+  rpc ListProfiles (ListProfilesRequest) returns (ListProfilesResponse);
+  rpc GetProfile (GetProfileRequest) returns (GetProfileResponse);
+
+  rpc ValidatePQCChain (ValidatePQCChainRequest) returns (ValidatePQCChainResponse);
+  rpc MigrateToPQC (MigrateToPQCRequest) returns (IssueCertificateResponse);
+  rpc GetOTSStatus (GetOTSStatusRequest) returns (GetOTSStatusResponse);
+  rpc GetPQCReadiness (GetPQCReadinessRequest) returns (GetPQCReadinessResponse);
+
+  rpc GenerateCRL (GenerateCRLRequest) returns (GenerateCRLResponse);
+  rpc CheckOCSP (CheckOCSPRequest) returns (CheckOCSPResponse);
+
+  rpc AcmeNewAccount (AcmeNewAccountRequest) returns (AcmeNewAccountResponse);
+  rpc AcmeNewOrder (AcmeNewOrderRequest) returns (AcmeNewOrderResponse);
+  rpc AcmeFinalize (AcmeFinalizeRequest) returns (IssueCertificateResponse);
+
+  rpc EstSimpleEnroll (EstSimpleEnrollRequest) returns (IssueCertificateResponse);
+  rpc EstSimpleReenroll (EstSimpleReenrollRequest) returns (IssueCertificateResponse);
+  rpc EstServerKeygen (EstServerKeygenRequest) returns (IssueCertificateResponse);
+
+  rpc ScepPKIOperation (ScepPKIOperationRequest) returns (IssueCertificateResponse);
+  rpc Cmpv2Request (Cmpv2RequestMessage) returns (IssueCertificateResponse);
+}
+
+message CA {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string parent_ca_id = 4;
+  string ca_level = 5;
+  string algorithm = 6;
+  string ca_type = 7;
+  string key_backend = 8;
+  string key_ref = 9;
+  string cert_pem = 10;
+  string subject = 11;
+  string status = 12;
+  int64 ots_current = 13;
+  int64 ots_max = 14;
+  int64 ots_alert_threshold = 15;
+  string created_at = 16;
+  string updated_at = 17;
+}
+
+message Certificate {
+  string id = 1;
+  string tenant_id = 2;
+  string ca_id = 3;
+  string serial_number = 4;
+  string subject_cn = 5;
+  repeated string sans = 6;
+  string cert_type = 7;
+  string algorithm = 8;
+  string profile_id = 9;
+  string protocol = 10;
+  string cert_class = 11;
+  string cert_pem = 12;
+  string status = 13;
+  string not_before = 14;
+  string not_after = 15;
+  string revoked_at = 16;
+  string revocation_reason = 17;
+  string created_at = 18;
+}
+
+message CertificateProfile {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string cert_type = 4;
+  string algorithm = 5;
+  string cert_class = 6;
+  string profile_json = 7;
+  bool is_default = 8;
+  string created_at = 9;
+}
+
+message CreateCARequest {
+  string tenant_id = 1;
+  string name = 2;
+  string parent_ca_id = 3;
+  string ca_level = 4;
+  string algorithm = 5;
+  string ca_type = 6;
+  string key_backend = 7;
+  string key_ref = 8;
+  string subject = 9;
+  int64 validity_days = 10;
+  int64 ots_max = 11;
+  int64 ots_alert_threshold = 12;
+}
+
+message CreateCAResponse {
+  CA ca = 1;
+}
+
+message ListCAsRequest {
+  string tenant_id = 1;
+}
+
+message ListCAsResponse {
+  repeated CA items = 1;
+}
+
+message IssueCertificateRequest {
+  string tenant_id = 1;
+  string ca_id = 2;
+  string profile_id = 3;
+  string cert_type = 4;
+  string algorithm = 5;
+  string cert_class = 6;
+  string subject_cn = 7;
+  repeated string sans = 8;
+  string csr_pem = 9;
+  bool server_keygen = 10;
+  int64 validity_days = 11;
+  string protocol = 12;
+  string metadata_json = 13;
+}
+
+message IssueCertificateResponse {
+  Certificate certificate = 1;
+  string private_key_pem = 2;
+}
+
+message ListCertificatesRequest {
+  string tenant_id = 1;
+  string status = 2;
+  string cert_class = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message ListCertificatesResponse {
+  repeated Certificate items = 1;
+}
+
+message GetCertificateRequest {
+  string tenant_id = 1;
+  string cert_id = 2;
+}
+
+message GetCertificateResponse {
+  Certificate certificate = 1;
+}
+
+message DownloadCertificateRequest {
+  string tenant_id = 1;
+  string cert_id = 2;
+  string format = 3;
+}
+
+message DownloadCertificateResponse {
+  string content = 1;
+  string content_type = 2;
+}
+
+message RenewCertificateRequest {
+  string tenant_id = 1;
+  string cert_id = 2;
+  int64 validity_days = 3;
+}
+
+message RenewCertificateResponse {
+  Certificate certificate = 1;
+}
+
+message RevokeCertificateRequest {
+  string tenant_id = 1;
+  string cert_id = 2;
+  string reason = 3;
+}
+
+message RevokeCertificateResponse {
+  string status = 1;
+}
+
+message CreateProfileRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string cert_type = 3;
+  string algorithm = 4;
+  string cert_class = 5;
+  string profile_json = 6;
+  bool is_default = 7;
+}
+
+message CreateProfileResponse {
+  CertificateProfile profile = 1;
+}
+
+message ListProfilesRequest {
+  string tenant_id = 1;
+}
+
+message ListProfilesResponse {
+  repeated CertificateProfile items = 1;
+}
+
+message GetProfileRequest {
+  string tenant_id = 1;
+  string profile_id = 2;
+}
+
+message GetProfileResponse {
+  CertificateProfile profile = 1;
+}
+
+message ValidatePQCChainRequest {
+  string tenant_id = 1;
+  repeated string cert_ids = 2;
+}
+
+message ValidatePQCChainResponse {
+  bool valid = 1;
+  repeated string issues = 2;
+}
+
+message MigrateToPQCRequest {
+  string tenant_id = 1;
+  string cert_id = 2;
+  string target_algorithm = 3;
+  string target_profile_id = 4;
+}
+
+message GetOTSStatusRequest {
+  string tenant_id = 1;
+  string ca_id = 2;
+}
+
+message GetOTSStatusResponse {
+  int64 current_index = 1;
+  int64 max_index = 2;
+  int64 remaining = 3;
+  bool alert = 4;
+}
+
+message GetPQCReadinessRequest {
+  string tenant_id = 1;
+}
+
+message GetPQCReadinessResponse {
+  int64 total = 1;
+  int64 classical = 2;
+  int64 hybrid = 3;
+  int64 pqc = 4;
+}
+
+message GenerateCRLRequest {
+  string tenant_id = 1;
+  string ca_id = 2;
+}
+
+message GenerateCRLResponse {
+  string crl_pem = 1;
+  string generated_at = 2;
+}
+
+message CheckOCSPRequest {
+  string tenant_id = 1;
+  string cert_id = 2;
+  string serial_number = 3;
+}
+
+message CheckOCSPResponse {
+  string status = 1;
+  string reason = 2;
+  string produced_at = 3;
+}
+
+message AcmeNewAccountRequest {
+  string tenant_id = 1;
+  string email = 2;
+}
+
+message AcmeNewAccountResponse {
+  string account_id = 1;
+  string status = 2;
+}
+
+message AcmeNewOrderRequest {
+  string tenant_id = 1;
+  string ca_id = 2;
+  string subject_cn = 3;
+  repeated string sans = 4;
+}
+
+message AcmeNewOrderResponse {
+  string order_id = 1;
+  string challenge_id = 2;
+  string status = 3;
+}
+
+message AcmeFinalizeRequest {
+  string tenant_id = 1;
+  string order_id = 2;
+  string csr_pem = 3;
+}
+
+message EstSimpleEnrollRequest {
+  string tenant_id = 1;
+  string ca_id = 2;
+  string csr_pem = 3;
+  string profile_id = 4;
+}
+
+message EstSimpleReenrollRequest {
+  string tenant_id = 1;
+  string cert_id = 2;
+  string csr_pem = 3;
+}
+
+message EstServerKeygenRequest {
+  string tenant_id = 1;
+  string ca_id = 2;
+  string subject_cn = 3;
+  repeated string sans = 4;
+  string profile_id = 5;
+}
+
+message ScepPKIOperationRequest {
+  string tenant_id = 1;
+  string ca_id = 2;
+  string csr_pem = 3;
+  string transaction_id = 4;
+}
+
+message Cmpv2RequestMessage {
+  string tenant_id = 1;
+  string ca_id = 2;
+  string message_type = 3;
+  string csr_pem = 4;
+  string cert_id = 5;
+  string payload_json = 6;
+}
+
+message InventoryCertificateItem {
+  string cert_id = 1;
+  string ca_id = 2;
+  string cert_type = 3;
+  string cert_class = 4;
+  string status = 5;
+  string not_after = 6;
+  string profile_id = 7;
+}
+
+message InventoryResponse {
+  repeated InventoryCertificateItem items = 1;
+}
+
+message StatusResponse {
+  string status = 1;
+}

@@ -1,0 +1,189 @@
+syntax = "proto3";
+
+package vecta.byok.v1;
+
+option go_package = "vecta-kms/proto/byok;byokpb";
+
+service ByokService {
+  rpc RegisterCloudAccount (RegisterCloudAccountRequest) returns (RegisterCloudAccountResponse);
+  rpc ListCloudAccounts (ListCloudAccountsRequest) returns (ListCloudAccountsResponse);
+
+  rpc SetRegionMapping (SetRegionMappingRequest) returns (SetRegionMappingResponse);
+  rpc ListRegionMappings (ListRegionMappingsRequest) returns (ListRegionMappingsResponse);
+
+  rpc ImportKeyToCloud (ImportKeyToCloudRequest) returns (ImportKeyToCloudResponse);
+  rpc RotateCloudKey (RotateCloudKeyRequest) returns (RotateCloudKeyResponse);
+  rpc SyncCloudKeys (SyncCloudKeysRequest) returns (SyncCloudKeysResponse);
+  rpc DiscoverInventory (DiscoverInventoryRequest) returns (DiscoverInventoryResponse);
+
+  rpc ListCloudBindings (ListCloudBindingsRequest) returns (ListCloudBindingsResponse);
+  rpc GetCloudBinding (GetCloudBindingRequest) returns (GetCloudBindingResponse);
+}
+
+message CloudAccount {
+  string id = 1;
+  string tenant_id = 2;
+  string provider = 3;
+  string name = 4;
+  string default_region = 5;
+  string status = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+
+message RegionMapping {
+  string tenant_id = 1;
+  string provider = 2;
+  string vecta_region = 3;
+  string cloud_region = 4;
+}
+
+message CloudKeyBinding {
+  string id = 1;
+  string tenant_id = 2;
+  string key_id = 3;
+  string provider = 4;
+  string account_id = 5;
+  string cloud_key_id = 6;
+  string cloud_key_ref = 7;
+  string region = 8;
+  string sync_status = 9;
+  string last_synced_at = 10;
+  string created_at = 11;
+  string updated_at = 12;
+  string metadata_json = 13;
+}
+
+message SyncJob {
+  string id = 1;
+  string tenant_id = 2;
+  string provider = 3;
+  string account_id = 4;
+  string mode = 5;
+  string status = 6;
+  string summary_json = 7;
+  string error_message = 8;
+  string started_at = 9;
+  string completed_at = 10;
+}
+
+message RegisterCloudAccountRequest {
+  string tenant_id = 1;
+  string provider = 2;
+  string name = 3;
+  string default_region = 4;
+  string credentials_json = 5;
+}
+
+message RegisterCloudAccountResponse {
+  CloudAccount account = 1;
+}
+
+message ListCloudAccountsRequest {
+  string tenant_id = 1;
+  string provider = 2;
+}
+
+message ListCloudAccountsResponse {
+  repeated CloudAccount items = 1;
+}
+
+message SetRegionMappingRequest {
+  string tenant_id = 1;
+  string provider = 2;
+  string vecta_region = 3;
+  string cloud_region = 4;
+}
+
+message SetRegionMappingResponse {
+  RegionMapping mapping = 1;
+}
+
+message ListRegionMappingsRequest {
+  string tenant_id = 1;
+  string provider = 2;
+}
+
+message ListRegionMappingsResponse {
+  repeated RegionMapping items = 1;
+}
+
+message ImportKeyToCloudRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string provider = 3;
+  string account_id = 4;
+  string vecta_region = 5;
+  string cloud_region = 6;
+  string metadata_json = 7;
+}
+
+message ImportKeyToCloudResponse {
+  CloudKeyBinding binding = 1;
+}
+
+message RotateCloudKeyRequest {
+  string tenant_id = 1;
+  string binding_id = 2;
+  string reason = 3;
+}
+
+message RotateCloudKeyResponse {
+  CloudKeyBinding binding = 1;
+  string version_id = 2;
+}
+
+message SyncCloudKeysRequest {
+  string tenant_id = 1;
+  string provider = 2;
+  string account_id = 3;
+  string mode = 4;
+}
+
+message SyncCloudKeysResponse {
+  SyncJob job = 1;
+}
+
+message DiscoverInventoryRequest {
+  string tenant_id = 1;
+  string provider = 2;
+  string account_id = 3;
+  string cloud_region = 4;
+}
+
+message InventoryItem {
+  string cloud_key_id = 1;
+  string cloud_key_ref = 2;
+  string provider = 3;
+  string account_id = 4;
+  string region = 5;
+  string state = 6;
+  string algorithm = 7;
+  bool managed_by_vecta = 8;
+}
+
+message DiscoverInventoryResponse {
+  repeated InventoryItem items = 1;
+}
+
+message ListCloudBindingsRequest {
+  string tenant_id = 1;
+  string provider = 2;
+  string account_id = 3;
+  string key_id = 4;
+  int32 limit = 5;
+  int32 offset = 6;
+}
+
+message ListCloudBindingsResponse {
+  repeated CloudKeyBinding items = 1;
+}
+
+message GetCloudBindingRequest {
+  string tenant_id = 1;
+  string binding_id = 2;
+}
+
+message GetCloudBindingResponse {
+  CloudKeyBinding binding = 1;
+}

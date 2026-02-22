@@ -1,0 +1,147 @@
+syntax = "proto3";
+
+package vecta.hyok.v1;
+
+option go_package = "vecta-kms/proto/hyok;hyokpb";
+
+service HyokService {
+  rpc DKEDecrypt (HyokCryptoRequest) returns (HyokCryptoResponse);
+  rpc GetDKEPublicKey (DKEPublicKeyRequest) returns (DKEPublicKeyResponse);
+
+  rpc SalesforceWrap (HyokCryptoRequest) returns (HyokCryptoResponse);
+  rpc SalesforceUnwrap (HyokCryptoRequest) returns (HyokCryptoResponse);
+
+  rpc GoogleWrap (HyokCryptoRequest) returns (HyokCryptoResponse);
+  rpc GoogleUnwrap (HyokCryptoRequest) returns (HyokCryptoResponse);
+
+  rpc GenericEncrypt (HyokCryptoRequest) returns (HyokCryptoResponse);
+  rpc GenericDecrypt (HyokCryptoRequest) returns (HyokCryptoResponse);
+  rpc GenericWrap (HyokCryptoRequest) returns (HyokCryptoResponse);
+  rpc GenericUnwrap (HyokCryptoRequest) returns (HyokCryptoResponse);
+
+  rpc ConfigureEndpoint (ConfigureEndpointRequest) returns (ConfigureEndpointResponse);
+  rpc ListEndpoints (ListEndpointsRequest) returns (ListEndpointsResponse);
+  rpc DeleteEndpoint (DeleteEndpointRequest) returns (DeleteEndpointResponse);
+
+  rpc ListRequestLogs (ListRequestLogsRequest) returns (ListRequestLogsResponse);
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+message HyokCryptoRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string plaintext = 3;
+  string ciphertext = 4;
+  string iv = 5;
+  string reference_id = 6;
+  string requester_id = 7;
+  string requester_email = 8;
+  repeated string approver_emails = 9;
+}
+
+message HyokCryptoResponse {
+  string status = 1;
+  string key_id = 2;
+  string protocol = 3;
+  string operation = 4;
+  int32 version = 5;
+  string ciphertext = 6;
+  string plaintext = 7;
+  string iv = 8;
+  string approval_request_id = 9;
+}
+
+message DKEPublicKeyRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+}
+
+message DKEPublicKeyResponse {
+  string key_id = 1;
+  string algorithm = 2;
+  string public_key = 3;
+  string format = 4;
+  int32 key_version = 5;
+}
+
+message EndpointConfig {
+  string tenant_id = 1;
+  string protocol = 2;
+  bool enabled = 3;
+  string auth_mode = 4;
+  string policy_id = 5;
+  bool governance_required = 6;
+  string metadata_json = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}
+
+message ConfigureEndpointRequest {
+  EndpointConfig endpoint = 1;
+}
+
+message ConfigureEndpointResponse {
+  EndpointConfig endpoint = 1;
+}
+
+message ListEndpointsRequest {
+  string tenant_id = 1;
+}
+
+message ListEndpointsResponse {
+  repeated EndpointConfig items = 1;
+}
+
+message DeleteEndpointRequest {
+  string tenant_id = 1;
+  string protocol = 2;
+}
+
+message DeleteEndpointResponse {
+  string status = 1;
+}
+
+message RequestLog {
+  string id = 1;
+  string tenant_id = 2;
+  string protocol = 3;
+  string operation = 4;
+  string key_id = 5;
+  string endpoint = 6;
+  string auth_mode = 7;
+  string auth_subject = 8;
+  string requester_id = 9;
+  string requester_email = 10;
+  string policy_decision = 11;
+  bool governance_required = 12;
+  string approval_request_id = 13;
+  string status = 14;
+  string request_json = 15;
+  string response_json = 16;
+  string error_message = 17;
+  string created_at = 18;
+  string completed_at = 19;
+}
+
+message ListRequestLogsRequest {
+  string tenant_id = 1;
+  string protocol = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListRequestLogsResponse {
+  repeated RequestLog items = 1;
+}
+
+message HealthCheckRequest {
+  string tenant_id = 1;
+}
+
+message HealthCheckResponse {
+  string status = 1;
+  int32 endpoint_count = 2;
+  int32 enabled_endpoints = 3;
+  bool policy_fail_closed = 4;
+  string checked_at = 5;
+}

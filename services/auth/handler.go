@@ -1,0 +1,1241 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	pkgauth "vecta-kms/pkg/auth"
+	pkgcrypto "vecta-kms/pkg/crypto"
+	"vecta-kms/pkg/metering"
+)
+
+type AuditPublisher interface {
+	Publish(ctx context.Context, subject string, payload []byte) error
+}
+
+type Handler struct {
+	store         Store
+	logic         *AuthLogic
+	events        AuditPublisher
+	meter         *metering.Meter
+	logger        *log.Logger
+	healthChecker *SystemHealthChecker
+	mux           *http.ServeMux
+}
+
+func NewHandler(store Store, logic *AuthLogic, events AuditPublisher, meter *metering.Meter, logger *log.Logger, healthChecker ...*SystemHealthChecker) *Handler {
+	var checker *SystemHealthChecker
+	if len(healthChecker) > 0 {
+		checker = healthChecker[0]
+	}
+	h := &Handler{
+		store:         store,
+		logic:         logic,
+		events:        events,
+		meter:         meter,
+		logger:        logger,
+		healthChecker: checker,
+	}
+	h.mux = h.routes()
+	return h
+}
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) { h.mux.ServeHTTP(w, r) }
+
+func (h *Handler) routes() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /auth/register", h.handleRegister)
+	mux.HandleFunc("GET /auth/register/{id}/status", h.handleRegistrationStatus)
+	mux.HandleFunc("POST /auth/login", h.handleLogin)
+	mux.HandleFunc("GET /auth/system-health", h.withAuth(h.handleSystemHealth, "auth.self.read"))
+	mux.HandleFunc("POST /auth/system-health/restart", h.withAuth(h.handleRestartSystemService, "auth.service.restart"))
+	mux.HandleFunc("POST /auth/refresh", h.withAuth(h.handleRefresh, "auth.token.refresh"))
+	mux.HandleFunc("POST /auth/change-password", h.withAuth(h.handleChangePassword, ""))
+
+	mux.HandleFunc("POST /auth/register/{id}/activate", h.withAuth(h.handleActivateRegistration, "auth.client.activate"))
+	mux.HandleFunc("POST /auth/logout", h.withAuth(h.handleLogout, "auth.session.logout"))
+	mux.HandleFunc("GET /auth/me", h.withAuth(h.handleMe, "auth.self.read"))
+
+	mux.HandleFunc("POST /tenants", h.withAuth(h.handleCreateTenant, "auth.tenant.write", "super-admin"))
+	mux.HandleFunc("GET /tenants", h.withAuth(h.handleListTenants, "auth.tenant.read", "super-admin"))
+	mux.HandleFunc("GET /tenants/{id}", h.withAuth(h.handleGetTenant, "auth.tenant.read", "super-admin"))
+	mux.HandleFunc("PUT /tenants/{id}", h.withAuth(h.handleUpdateTenant, "auth.tenant.write", "super-admin"))
+	mux.HandleFunc("POST /tenants/{id}/roles", h.withAuth(h.handleCreateTenantRole, "auth.role.write", "super-admin"))
+	mux.HandleFunc("PUT /tenants/{id}/roles/{name}", h.withAuth(h.handleUpdateTenantRole, "auth.role.write", "super-admin"))
+	mux.HandleFunc("DELETE /tenants/{id}/roles/{name}", h.withAuth(h.handleDeleteTenantRole, "auth.role.write", "super-admin"))
+
+	mux.HandleFunc("GET /auth/users", h.withAuth(h.handleListUsers, "auth.user.read"))
+	mux.HandleFunc("POST /auth/users", h.withAuth(h.handleCreateUser, "auth.user.write"))
+	mux.HandleFunc("PUT /auth/users/{id}/role", h.withAuth(h.handleUpdateUserRole, "auth.user.write"))
+	mux.HandleFunc("PUT /auth/users/{id}/status", h.withAuth(h.handleUpdateUserStatus, "auth.user.write"))
+	mux.HandleFunc("POST /auth/users/{id}/reset-password", h.withAuth(h.handleResetUserPassword, "auth.user.write"))
+	mux.HandleFunc("GET /auth/password-policy", h.withAuth(h.handleGetPasswordPolicy, "auth.user.read"))
+	mux.HandleFunc("PUT /auth/password-policy", h.withAuth(h.handleUpdatePasswordPolicy, "auth.user.write"))
+	mux.HandleFunc("GET /auth/cli/status", h.withAuth(h.handleCLIStatus, "auth.user.read"))
+	mux.HandleFunc("POST /auth/cli/session", h.withAuth(h.handleCLISession, "auth.user.read"))
+	mux.HandleFunc("POST /auth/api-keys", h.withAuth(h.handleCreateAPIKey, "auth.api_key.write"))
+	mux.HandleFunc("DELETE /auth/api-keys/{id}", h.withAuth(h.handleDeleteAPIKey, "auth.api_key.write"))
+
+	mux.HandleFunc("GET /auth/clients", h.withAuth(h.handleListClients, "auth.client.read"))
+	mux.HandleFunc("GET /auth/clients/{id}", h.withAuth(h.handleGetClient, "auth.client.read"))
+	mux.HandleFunc("PUT /auth/clients/{id}", h.withAuth(h.handleUpdateClient, "auth.client.write"))
+	mux.HandleFunc("POST /auth/clients/{id}/revoke", h.withAuth(h.handleRevokeClient, "auth.client.write"))
+	mux.HandleFunc("POST /auth/clients/{id}/rotate-key", h.withAuth(h.handleRotateClientKey, "auth.client.write"))
+	return mux
+}
+
+func (h *Handler) withAuth(next http.HandlerFunc, permission string, roles ...string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		reqID := requestID(r)
+		raw := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
+		if raw == "" {
+			writeErr(w, http.StatusUnauthorized, "unauthorized", "missing bearer token", reqID, "")
+			return
+		}
+		claims, err := h.logic.ParseJWT(raw)
+		if err != nil {
+			writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid token", reqID, "")
+			return
+		}
+		if permission != "" && !contains(roles, claims.Role) && !hasPermission(claims.Permissions, permission) {
+			writeErr(w, http.StatusForbidden, "forbidden", "insufficient permissions", reqID, claims.TenantID)
+			return
+		}
+		next(w, r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims)))
+	}
+}
+
+func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req struct {
+		TenantID      string `json:"tenant_id"`
+		ClientName    string `json:"client_name"`
+		ClientType    string `json:"client_type"`
+		Description   string `json:"description"`
+		ContactEmail  string `json:"contact_email"`
+		RequestedRole string `json:"requested_role"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
+		return
+	}
+	reg := ClientRegistration{
+		ID:            NewID("reg"),
+		TenantID:      strings.TrimSpace(req.TenantID),
+		ClientName:    strings.TrimSpace(req.ClientName),
+		ClientType:    strings.TrimSpace(req.ClientType),
+		Description:   req.Description,
+		ContactEmail:  req.ContactEmail,
+		RequestedRole: req.RequestedRole,
+		Status:        "pending",
+		RateLimit:     1000,
+	}
+	if reg.TenantID == "" || reg.ClientName == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id and client_name are required", reqID, reg.TenantID)
+		return
+	}
+	if err := h.store.CreateClientRegistration(r.Context(), reg); err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to create registration", reqID, reg.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.client_registered", reqID, reg.TenantID, map[string]any{"registration_id": reg.ID}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, reg.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"registration_id": reg.ID, "status": "pending", "message": "Awaiting admin approval", "request_id": reqID})
+}
+
+func (h *Handler) handleRegistrationStatus(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
+	if tenantID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id query parameter is required", reqID, "")
+		return
+	}
+	reg, err := h.store.GetClientRegistration(r.Context(), tenantID, r.PathValue("id"))
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "registration not found", reqID, tenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read registration", reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"registration_id": reg.ID, "status": reg.Status, "request_id": reqID})
+}
+
+func (h *Handler) handleActivateRegistration(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	var req struct {
+		TenantID          string   `json:"tenant_id"`
+		ApprovalID        string   `json:"approval_id"`
+		GovernanceEnabled bool     `json:"governance_enabled"`
+		IPWhitelist       []string `json:"ip_whitelist"`
+		RateLimit         int      `json:"rate_limit"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	tenantID := claims.TenantID
+	if req.TenantID != "" {
+		tenantID = req.TenantID
+	}
+	if req.GovernanceEnabled && req.ApprovalID == "" {
+		// TODO: call governance service for M-of-N approval workflow.
+		req.ApprovalID = "TODO-GOVERNANCE-HOOK"
+	}
+	if req.RateLimit <= 0 {
+		req.RateLimit = 1000
+	}
+	if err := h.store.UpdateClientRegistrationSettings(r.Context(), tenantID, r.PathValue("id"), req.IPWhitelist, req.RateLimit); err != nil && !errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusBadRequest, "activation_failed", "failed to apply client settings", reqID, tenantID)
+		return
+	}
+	rawKey, hash, prefix, err := GenerateAPIKey()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "key_generation_failed", "failed to generate api key", reqID, tenantID)
+		return
+	}
+	defer pkgcrypto.Zeroize(hash)
+	apiKey := APIKey{
+		ID:          NewID("api"),
+		TenantID:    tenantID,
+		ClientID:    r.PathValue("id"),
+		KeyHash:     hash,
+		KeyPrefix:   prefix,
+		Name:        "client:" + r.PathValue("id"),
+		Permissions: []string{"kms.read", "kms.write"},
+	}
+	if err := h.store.ActivateClientRegistration(r.Context(), tenantID, r.PathValue("id"), apiKey, claims.UserID, req.ApprovalID); err != nil {
+		writeErr(w, http.StatusBadRequest, "activation_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.client_activated", reqID, tenantID, map[string]any{"registration_id": r.PathValue("id"), "api_key_prefix": prefix}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"registration_id": r.PathValue("id"), "status": "approved", "api_key": rawKey, "api_key_prefix": prefix, "request_id": reqID})
+}
+
+func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req struct {
+		TenantID string `json:"tenant_id"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+		TOTPCode string `json:"totp_code"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
+		return
+	}
+	rlKey := req.TenantID + "|" + clientIP(r)
+	if _, locked := h.logic.limiter.IsLocked(rlKey, time.Now().UTC()); locked {
+		writeErr(w, http.StatusTooManyRequests, "rate_limited", "too many failed attempts", reqID, req.TenantID)
+		return
+	}
+	u, err := h.store.GetUserByUsername(r.Context(), req.TenantID, req.Username)
+	if err != nil || !VerifyPassword(u.Password, req.Password) {
+		_, _ = h.logic.limiter.Fail(rlKey, time.Now().UTC())
+		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid credentials", reqID, req.TenantID)
+		return
+	}
+	if normalizeUserStatus(u.Status) != "active" {
+		_, _ = h.logic.limiter.Fail(rlKey, time.Now().UTC())
+		writeErr(w, http.StatusUnauthorized, "unauthorized", "user is disabled", reqID, req.TenantID)
+		return
+	}
+	if len(u.TOTPSecret) > 0 && !ValidateTOTP(string(u.TOTPSecret), req.TOTPCode, time.Now().UTC()) {
+		_, _ = h.logic.limiter.Fail(rlKey, time.Now().UTC())
+		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid mfa code", reqID, req.TenantID)
+		return
+	}
+	perms, err := h.store.GetRolePermissions(r.Context(), req.TenantID, u.Role)
+	if err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "role not configured", reqID, req.TenantID)
+		return
+	}
+	tokenPerms := perms
+	if u.MustChangePassword {
+		tokenPerms = []string{"auth.password.change"}
+	}
+	token, exp, err := h.logic.IssueJWT(req.TenantID, u.Role, tokenPerms, u.ID, u.MustChangePassword)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "jwt_issue_failed", "failed to issue token", reqID, req.TenantID)
+		return
+	}
+	sHash := tokenHash(token)
+	defer pkgcrypto.Zeroize(sHash)
+	if err := h.store.CreateSession(r.Context(), Session{ID: NewID("sess"), TenantID: req.TenantID, UserID: u.ID, TokenHash: sHash, IPAddress: clientIP(r), UserAgent: r.UserAgent(), ExpiresAt: exp}); err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to create session", reqID, req.TenantID)
+		return
+	}
+	h.logic.limiter.Reset(rlKey)
+	if h.meter != nil {
+		_ = h.meter.IncrementOps()
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.login", reqID, req.TenantID, map[string]any{"user_id": u.ID}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"access_token":         token,
+		"token_type":           "Bearer",
+		"expires_at":           exp.UTC().Format(time.RFC3339),
+		"must_change_password": u.MustChangePassword,
+		"request_id":           reqID,
+	})
+}
+
+func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	token, exp, err := h.logic.IssueJWT(claims.TenantID, claims.Role, claims.Permissions, claims.UserID, claims.MustChangePassword)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "jwt_issue_failed", "failed to refresh token", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.refresh", reqID, claims.TenantID, map[string]any{"user_id": claims.UserID}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"access_token": token, "expires_at": exp.UTC().Format(time.RFC3339), "request_id": reqID})
+}
+
+func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	var req struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	user, err := h.store.GetUserByID(r.Context(), claims.TenantID, claims.UserID)
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "user not found", reqID, claims.TenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read user", reqID, claims.TenantID)
+		return
+	}
+	if !VerifyPassword(user.Password, req.CurrentPassword) {
+		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid current password", reqID, claims.TenantID)
+		return
+	}
+	if err := h.enforcePasswordPolicy(r.Context(), claims.TenantID, req.NewPassword, user.Username, user.Email); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	hash, err := HashPassword(req.NewPassword)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "hash_error", "failed to hash password", reqID, claims.TenantID)
+		return
+	}
+	defer pkgcrypto.Zeroize(hash)
+	if err := h.store.UpdateUserPassword(r.Context(), claims.TenantID, claims.UserID, hash, false); err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "store_error", "failed to update password", reqID, claims.TenantID)
+		return
+	}
+	perms, err := h.store.GetRolePermissions(r.Context(), claims.TenantID, user.Role)
+	if err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "role not configured", reqID, claims.TenantID)
+		return
+	}
+	token, exp, err := h.logic.IssueJWT(claims.TenantID, user.Role, perms, claims.UserID, false)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "jwt_issue_failed", "failed to issue token", reqID, claims.TenantID)
+		return
+	}
+	sHash := tokenHash(token)
+	defer pkgcrypto.Zeroize(sHash)
+	if err := h.store.CreateSession(r.Context(), Session{
+		ID:        NewID("sess"),
+		TenantID:  claims.TenantID,
+		UserID:    claims.UserID,
+		TokenHash: sHash,
+		IPAddress: clientIP(r),
+		UserAgent: r.UserAgent(),
+		ExpiresAt: exp,
+	}); err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to create session", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.password_changed", reqID, claims.TenantID, map[string]any{"user_id": claims.UserID}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":               "ok",
+		"access_token":         token,
+		"expires_at":           exp.UTC().Format(time.RFC3339),
+		"must_change_password": false,
+		"request_id":           reqID,
+	})
+}
+
+func (h *Handler) handleLogout(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	var req struct {
+		SessionID string `json:"session_id"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	if err := h.store.DeleteSession(r.Context(), claims.TenantID, req.SessionID); err != nil && !errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to invalidate session", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.logout", reqID, claims.TenantID, map[string]any{"user_id": claims.UserID, "session_id": req.SessionID}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleMe(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	writeJSON(w, http.StatusOK, map[string]any{
+		"tenant_id":            claims.TenantID,
+		"user_id":              claims.UserID,
+		"role":                 claims.Role,
+		"permissions":          claims.Permissions,
+		"must_change_password": claims.MustChangePassword,
+		"request_id":           reqID,
+	})
+}
+
+func (h *Handler) handleCreateTenant(w http.ResponseWriter, r *http.Request) {
+	h.tenantWrite(w, r, "create")
+}
+func (h *Handler) handleUpdateTenant(w http.ResponseWriter, r *http.Request) {
+	h.tenantWrite(w, r, "update")
+}
+func (h *Handler) handleCreateTenantRole(w http.ResponseWriter, r *http.Request) {
+	h.roleWrite(w, r, "create")
+}
+func (h *Handler) handleUpdateTenantRole(w http.ResponseWriter, r *http.Request) {
+	h.roleWrite(w, r, "update")
+}
+
+func (h *Handler) handleListTenants(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	items, err := h.store.ListTenants(r.Context())
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to list tenants", reqID, "")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleGetTenant(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	t, err := h.store.GetTenant(r.Context(), r.PathValue("id"))
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "tenant not found", reqID, r.PathValue("id"))
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to get tenant", reqID, r.PathValue("id"))
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"tenant": t, "request_id": reqID})
+}
+
+func (h *Handler) tenantWrite(w http.ResponseWriter, r *http.Request, mode string) {
+	reqID := requestID(r)
+	var req struct {
+		ID     string `json:"id"`
+		Name   string `json:"name"`
+		Status string `json:"status"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.ID)
+		return
+	}
+	if req.Status == "" {
+		req.Status = "active"
+	}
+	tenantID := req.ID
+	if mode == "update" {
+		tenantID = r.PathValue("id")
+	}
+	t := Tenant{ID: tenantID, Name: req.Name, Status: req.Status}
+	var err error
+	if mode == "create" {
+		err = h.store.CreateTenant(r.Context(), t)
+	} else {
+		err = h.store.UpdateTenant(r.Context(), t)
+	}
+	if err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "store_error", "tenant write failed", reqID, tenantID)
+		return
+	}
+	subject := "audit.auth.tenant_created"
+	if mode == "update" {
+		subject = "audit.auth.tenant_updated"
+	}
+	if err := h.publishAudit(r.Context(), subject, reqID, tenantID, map[string]any{"tenant_id": tenantID}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "tenant_id": tenantID, "request_id": reqID})
+}
+
+func (h *Handler) roleWrite(w http.ResponseWriter, r *http.Request, mode string) {
+	reqID := requestID(r)
+	var req struct {
+		RoleName    string   `json:"role_name"`
+		Permissions []string `json:"permissions"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, r.PathValue("id"))
+		return
+	}
+	roleName := r.PathValue("name")
+	if roleName == "" {
+		roleName = req.RoleName
+	}
+	role := TenantRole{TenantID: r.PathValue("id"), RoleName: roleName, Permissions: req.Permissions}
+	var err error
+	if mode == "create" {
+		err = h.store.CreateTenantRole(r.Context(), role)
+	} else {
+		err = h.store.UpdateTenantRole(r.Context(), role)
+	}
+	if err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "store_error", "role write failed", reqID, role.TenantID)
+		return
+	}
+	subject := "audit.auth.role_created"
+	if mode == "update" {
+		subject = "audit.auth.role_updated"
+	}
+	if err := h.publishAudit(r.Context(), subject, reqID, role.TenantID, map[string]any{"role_name": role.RoleName}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, role.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteTenantRole(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := r.PathValue("id")
+	roleName := r.PathValue("name")
+	if err := h.store.DeleteTenantRole(r.Context(), tenantID, roleName); err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "store_error", "failed to delete role", reqID, tenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.role_deleted", reqID, tenantID, map[string]any{"role_name": roleName}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleListUsers(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	items, err := h.store.ListUsers(r.Context(), claims.TenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to list users", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleCreateUser(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	var req struct {
+		Username           string `json:"username"`
+		Email              string `json:"email"`
+		Password           string `json:"password"`
+		Role               string `json:"role"`
+		Status             string `json:"status"`
+		TOTPSecret         string `json:"totp_secret"`
+		MustChangePassword bool   `json:"must_change_password"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	req.Username = strings.TrimSpace(req.Username)
+	req.Email = strings.TrimSpace(req.Email)
+	req.Role = strings.TrimSpace(req.Role)
+	if req.Username == "" || req.Email == "" || req.Role == "" || req.Password == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "username, email, role and password are required", reqID, claims.TenantID)
+		return
+	}
+	status := normalizeUserStatus(req.Status)
+	if err := h.enforcePasswordPolicy(r.Context(), claims.TenantID, req.Password, req.Username, req.Email); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	hash, err := HashPassword(req.Password)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "hash_error", "failed to hash password", reqID, claims.TenantID)
+		return
+	}
+	defer pkgcrypto.Zeroize(hash)
+	u := User{
+		ID:                 NewID("usr"),
+		TenantID:           claims.TenantID,
+		Username:           req.Username,
+		Email:              req.Email,
+		Password:           hash,
+		TOTPSecret:         []byte(req.TOTPSecret),
+		Role:               req.Role,
+		Status:             status,
+		MustChangePassword: req.MustChangePassword,
+	}
+	if err := h.store.CreateUser(r.Context(), u); err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to create user", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.user_created", reqID, claims.TenantID, map[string]any{"user_id": u.ID}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"user_id": u.ID, "request_id": reqID})
+}
+
+func (h *Handler) handleUpdateUserRole(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	var req struct {
+		Role string `json:"role"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	user, err := h.store.GetUserByID(r.Context(), claims.TenantID, r.PathValue("id"))
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "user not found", reqID, claims.TenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read user", reqID, claims.TenantID)
+		return
+	}
+	req.Role = strings.TrimSpace(req.Role)
+	if req.Role == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "role is required", reqID, claims.TenantID)
+		return
+	}
+	cliUsername := strings.TrimSpace(envOr("AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user"))
+	if strings.EqualFold(user.Username, cliUsername) && strings.TrimSpace(strings.ToLower(user.Role)) == "cli-user" && req.Role != user.Role {
+		writeErr(w, http.StatusBadRequest, "bad_request", "default CLI user role cannot be changed", reqID, claims.TenantID)
+		return
+	}
+	if err := h.store.UpdateUserRole(r.Context(), claims.TenantID, r.PathValue("id"), req.Role); err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "store_error", "failed to update user role", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.user_role_updated", reqID, claims.TenantID, map[string]any{"user_id": r.PathValue("id"), "role": req.Role}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleUpdateUserStatus(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	status := normalizeUserStatus(req.Status)
+	if err := h.store.UpdateUserStatus(r.Context(), claims.TenantID, r.PathValue("id"), status); err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "store_error", "failed to update user status", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.user_status_updated", reqID, claims.TenantID, map[string]any{"user_id": r.PathValue("id"), "status": status}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleResetUserPassword(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	var req struct {
+		NewPassword        string `json:"new_password"`
+		MustChangePassword *bool  `json:"must_change_password"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	if strings.TrimSpace(req.NewPassword) == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "new_password is required", reqID, claims.TenantID)
+		return
+	}
+	targetUser, err := h.store.GetUserByID(r.Context(), claims.TenantID, r.PathValue("id"))
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "user not found", reqID, claims.TenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read user", reqID, claims.TenantID)
+		return
+	}
+	cliUsername := strings.TrimSpace(envOr("AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user"))
+	if strings.EqualFold(targetUser.Username, cliUsername) && !isAdminRole(claims.Role) {
+		writeErr(w, http.StatusForbidden, "forbidden", "default CLI user password can only be reset by admin", reqID, claims.TenantID)
+		return
+	}
+	if err := h.enforcePasswordPolicy(r.Context(), claims.TenantID, req.NewPassword, targetUser.Username, targetUser.Email); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	hash, err := HashPassword(req.NewPassword)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "hash_error", "failed to hash password", reqID, claims.TenantID)
+		return
+	}
+	defer pkgcrypto.Zeroize(hash)
+	mustChange := true
+	if req.MustChangePassword != nil {
+		mustChange = *req.MustChangePassword
+	}
+	if err := h.store.UpdateUserPassword(r.Context(), claims.TenantID, targetUser.ID, hash, mustChange); err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "store_error", "failed to reset password", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.user_password_reset", reqID, claims.TenantID, map[string]any{
+		"user_id":              targetUser.ID,
+		"must_change_password": mustChange,
+	}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleGetPasswordPolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	policy, err := h.resolvePasswordPolicy(r.Context(), claims.TenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read password policy", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"policy": policy, "request_id": reqID})
+}
+
+func (h *Handler) handleUpdatePasswordPolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	existing, err := h.resolvePasswordPolicy(r.Context(), claims.TenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read current password policy", reqID, claims.TenantID)
+		return
+	}
+	var req struct {
+		MinLength      *int  `json:"min_length"`
+		MaxLength      *int  `json:"max_length"`
+		RequireUpper   *bool `json:"require_upper"`
+		RequireLower   *bool `json:"require_lower"`
+		RequireDigit   *bool `json:"require_digit"`
+		RequireSpecial *bool `json:"require_special"`
+		RequireNoSpace *bool `json:"require_no_whitespace"`
+		DenyUsername   *bool `json:"deny_username"`
+		DenyEmailLocal *bool `json:"deny_email_local_part"`
+		MinUniqueChars *int  `json:"min_unique_chars"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	policy := existing
+	if req.MinLength != nil {
+		policy.MinLength = *req.MinLength
+	}
+	if req.MaxLength != nil {
+		policy.MaxLength = *req.MaxLength
+	}
+	if req.RequireUpper != nil {
+		policy.RequireUpper = *req.RequireUpper
+	}
+	if req.RequireLower != nil {
+		policy.RequireLower = *req.RequireLower
+	}
+	if req.RequireDigit != nil {
+		policy.RequireDigit = *req.RequireDigit
+	}
+	if req.RequireSpecial != nil {
+		policy.RequireSpecial = *req.RequireSpecial
+	}
+	if req.RequireNoSpace != nil {
+		policy.RequireNoSpace = *req.RequireNoSpace
+	}
+	if req.DenyUsername != nil {
+		policy.DenyUsername = *req.DenyUsername
+	}
+	if req.DenyEmailLocal != nil {
+		policy.DenyEmailLocal = *req.DenyEmailLocal
+	}
+	if req.MinUniqueChars != nil {
+		policy.MinUniqueChars = *req.MinUniqueChars
+	}
+	policy = NormalizePasswordPolicy(policy, claims.TenantID)
+	if policy.MinLength < 8 {
+		policy.MinLength = 8
+	}
+	if policy.MaxLength > 256 {
+		policy.MaxLength = 256
+	}
+	if policy.MaxLength < policy.MinLength {
+		policy.MaxLength = policy.MinLength
+	}
+	if policy.MinUniqueChars > policy.MinLength {
+		policy.MinUniqueChars = policy.MinLength
+	}
+	policy.UpdatedBy = claims.UserID
+
+	updated, err := h.store.UpsertPasswordPolicy(r.Context(), policy)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to update password policy", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.password_policy_updated", reqID, claims.TenantID, map[string]any{
+		"min_length":       updated.MinLength,
+		"max_length":       updated.MaxLength,
+		"min_unique_chars": updated.MinUniqueChars,
+	}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"policy": updated, "request_id": reqID})
+}
+
+func (h *Handler) handleCLIStatus(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	cliUsername := strings.TrimSpace(envOr("AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user"))
+	cliHost := strings.TrimSpace(envOr("AUTH_CLI_HOST", "127.0.0.1"))
+	cliPort := parseCLIPort()
+	enabled := false
+
+	if user, err := h.store.GetUserByUsername(r.Context(), claims.TenantID, cliUsername); err == nil {
+		enabled = normalizeUserStatus(user.Status) == "active" && strings.EqualFold(strings.TrimSpace(user.Role), "cli-user")
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"enabled":                      enabled,
+		"cli_username":                 cliUsername,
+		"host":                         cliHost,
+		"port":                         cliPort,
+		"transport":                    "ssh",
+		"requires_additional_auth":     true,
+		"default_cli_user_protected":   true,
+		"request_id":                   reqID,
+		"fips_boundary_aware_transport": true,
+	})
+}
+
+func (h *Handler) handleCLISession(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	if !isAdminRole(claims.Role) {
+		writeErr(w, http.StatusForbidden, "forbidden", "admin role required for CLI launch", reqID, claims.TenantID)
+		return
+	}
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	cliUsername := strings.TrimSpace(envOr("AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user"))
+	if strings.TrimSpace(req.Username) == "" || strings.TrimSpace(req.Password) == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "username and password are required", reqID, claims.TenantID)
+		return
+	}
+	if !strings.EqualFold(strings.TrimSpace(req.Username), cliUsername) {
+		writeErr(w, http.StatusForbidden, "forbidden", "only the configured CLI user is allowed", reqID, claims.TenantID)
+		return
+	}
+	cliUser, err := h.store.GetUserByUsername(r.Context(), claims.TenantID, cliUsername)
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusBadRequest, "bad_request", "configured CLI user does not exist", reqID, claims.TenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read CLI user", reqID, claims.TenantID)
+		return
+	}
+	if !strings.EqualFold(strings.TrimSpace(cliUser.Role), "cli-user") {
+		writeErr(w, http.StatusBadRequest, "bad_request", "configured CLI user role mismatch", reqID, claims.TenantID)
+		return
+	}
+	if normalizeUserStatus(cliUser.Status) != "active" {
+		writeErr(w, http.StatusForbidden, "forbidden", "CLI user is disabled", reqID, claims.TenantID)
+		return
+	}
+	if !VerifyPassword(cliUser.Password, req.Password) {
+		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid CLI credentials", reqID, claims.TenantID)
+		return
+	}
+	host := strings.TrimSpace(envOr("AUTH_CLI_HOST", "127.0.0.1"))
+	port := parseCLIPort()
+	sshCommand := fmt.Sprintf("ssh %s@%s -p %d", cliUsername, host, port)
+	puttyURI := fmt.Sprintf("putty://%s@%s:%d", cliUsername, host, port)
+	sessionID := NewID("clisess")
+	expiresAt := time.Now().UTC().Add(5 * time.Minute)
+
+	if err := h.publishAudit(r.Context(), "audit.auth.cli_session_opened", reqID, claims.TenantID, map[string]any{
+		"initiator_user_id": claims.UserID,
+		"cli_username":      cliUsername,
+		"cli_session_id":    sessionID,
+		"expires_at":        expiresAt.Format(time.RFC3339),
+	}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":          "ok",
+		"cli_session_id":  sessionID,
+		"expires_at":      expiresAt.Format(time.RFC3339),
+		"putty_uri":       puttyURI,
+		"ssh_command":     sshCommand,
+		"host":            host,
+		"port":            port,
+		"username":        cliUsername,
+		"request_id":      reqID,
+		"additional_auth": true,
+	})
+}
+
+func (h *Handler) handleCreateAPIKey(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	var req struct {
+		Name        string   `json:"name"`
+		Permissions []string `json:"permissions"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	rawKey, hash, prefix, err := GenerateAPIKey()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "key_generation_failed", "failed to create api key", reqID, claims.TenantID)
+		return
+	}
+	defer pkgcrypto.Zeroize(hash)
+	key := APIKey{
+		ID:          NewID("api"),
+		TenantID:    claims.TenantID,
+		UserID:      claims.UserID,
+		KeyHash:     hash,
+		KeyPrefix:   prefix,
+		Name:        req.Name,
+		Permissions: req.Permissions,
+	}
+	if err := h.store.CreateAPIKey(r.Context(), key); err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to create api key", reqID, claims.TenantID)
+		return
+	}
+	if h.meter != nil {
+		_ = h.meter.IncrementOps()
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.api_key_created", reqID, claims.TenantID, map[string]any{"api_key_id": key.ID, "api_key_prefix": prefix}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"api_key_id": key.ID, "api_key": rawKey, "api_key_prefix": prefix, "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteAPIKey(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	if err := h.store.DeleteAPIKey(r.Context(), claims.TenantID, r.PathValue("id")); err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "store_error", "failed to delete api key", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.api_key_revoked", reqID, claims.TenantID, map[string]any{"api_key_id": r.PathValue("id")}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleListClients(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	items, err := h.store.ListClientRegistrations(r.Context(), claims.TenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to list clients", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleGetClient(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	item, err := h.store.GetClientRegistration(r.Context(), claims.TenantID, r.PathValue("id"))
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "client not found", reqID, claims.TenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to get client", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"client": item, "request_id": reqID})
+}
+
+func (h *Handler) handleUpdateClient(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	var req struct {
+		IPWhitelist []string `json:"ip_whitelist"`
+		RateLimit   int      `json:"rate_limit"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	if req.RateLimit <= 0 {
+		req.RateLimit = 1000
+	}
+	if err := h.store.UpdateClientRegistrationSettings(r.Context(), claims.TenantID, r.PathValue("id"), req.IPWhitelist, req.RateLimit); err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "store_error", "failed to update client", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.client_updated", reqID, claims.TenantID, map[string]any{"client_id": r.PathValue("id")}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleRevokeClient(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	if err := h.store.RevokeClientRegistration(r.Context(), claims.TenantID, r.PathValue("id")); err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "store_error", "failed to revoke client", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.client_revoked", reqID, claims.TenantID, map[string]any{"client_id": r.PathValue("id")}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleRotateClientKey(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	rawKey, hash, prefix, err := GenerateAPIKey()
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "key_generation_failed", "failed to rotate key", reqID, claims.TenantID)
+		return
+	}
+	defer pkgcrypto.Zeroize(hash)
+	if err := h.store.RotateClientAPIKey(r.Context(), claims.TenantID, r.PathValue("id"), hash, prefix); err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "store_error", "failed to rotate key", reqID, claims.TenantID)
+		return
+	}
+	if h.meter != nil {
+		_ = h.meter.IncrementOps()
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.client_key_rotated", reqID, claims.TenantID, map[string]any{"client_id": r.PathValue("id"), "api_key_prefix": prefix}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"api_key": rawKey, "api_key_prefix": prefix, "request_id": reqID})
+}
+
+func (h *Handler) publishAudit(ctx context.Context, subject string, requestID string, tenantID string, data map[string]any) error {
+	if h.events == nil {
+		return nil
+	}
+	raw, err := json.Marshal(map[string]any{
+		"request_id": requestID,
+		"tenant_id":  tenantID,
+		"timestamp":  time.Now().UTC().Format(time.RFC3339Nano),
+		"data":       data,
+	})
+	if err != nil {
+		return err
+	}
+	return h.events.Publish(ctx, subject, raw)
+}
+
+func decodeJSON(r *http.Request, out interface{}) error {
+	defer r.Body.Close() //nolint:errcheck
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	return dec.Decode(out)
+}
+
+func requestID(r *http.Request) string {
+	id := strings.TrimSpace(r.Header.Get("X-Request-ID"))
+	if id != "" {
+		return id
+	}
+	return NewID("req")
+}
+
+func clientIP(r *http.Request) string {
+	if xff := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); xff != "" {
+		return strings.TrimSpace(strings.Split(xff, ",")[0])
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err == nil {
+		return host
+	}
+	return r.RemoteAddr
+}
+
+func hasPermission(perms []string, needed string) bool {
+	for _, p := range perms {
+		if p == needed || p == "*" {
+			return true
+		}
+	}
+	return false
+}
+
+func normalizeUserStatus(status string) string {
+	switch strings.TrimSpace(strings.ToLower(status)) {
+	case "active", "":
+		return "active"
+	case "inactive", "disabled", "locked", "suspended":
+		return "inactive"
+	default:
+		return "inactive"
+	}
+}
+
+func isAdminRole(role string) bool {
+	r := strings.TrimSpace(strings.ToLower(role))
+	return r == "admin" || r == "tenant-admin" || r == "super-admin"
+}
+
+func parseCLIPort() int {
+	raw := strings.TrimSpace(envOr("AUTH_CLI_PORT", "22"))
+	port, err := strconv.Atoi(raw)
+	if err != nil || port <= 0 || port > 65535 {
+		return 22
+	}
+	return port
+}
+
+func (h *Handler) resolvePasswordPolicy(ctx context.Context, tenantID string) (PasswordPolicy, error) {
+	policy, err := h.store.GetPasswordPolicy(ctx, tenantID)
+	if errors.Is(err, errNotFound) {
+		return NormalizePasswordPolicy(DefaultPasswordPolicy(tenantID), tenantID), nil
+	}
+	if err != nil {
+		return PasswordPolicy{}, err
+	}
+	return NormalizePasswordPolicy(policy, tenantID), nil
+}
+
+func (h *Handler) enforcePasswordPolicy(ctx context.Context, tenantID string, password string, username string, email string) error {
+	policy, err := h.resolvePasswordPolicy(ctx, tenantID)
+	if err != nil {
+		return err
+	}
+	return ValidatePasswordAgainstPolicy(policy, password, username, email)
+}
+
+func contains(values []string, target string) bool {
+	for _, v := range values {
+		if v == target {
+			return true
+		}
+	}
+	return false
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload map[string]any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func writeErr(w http.ResponseWriter, status int, code string, message string, requestID string, tenantID string) {
+	writeJSON(w, status, map[string]any{
+		"error": map[string]any{
+			"code":       code,
+			"message":    message,
+			"request_id": requestID,
+			"tenant_id":  tenantID,
+		},
+	})
+}

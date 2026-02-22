@@ -1,0 +1,19 @@
+[Unit]
+Description=Vecta KMS Container (qkd)
+After=docker.service network-online.target
+Wants=network-online.target
+PartOf=vecta-containers.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/vecta
+EnvironmentFile=-/etc/vecta/vecta.env
+ExecStart=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml up -d qkd
+ExecStop=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml stop qkd
+ExecReload=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml up -d qkd
+TimeoutStartSec=300
+TimeoutStopSec=120
+
+[Install]
+WantedBy=vecta-containers.target

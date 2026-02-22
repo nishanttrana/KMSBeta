@@ -1,0 +1,6 @@
+[Match]
+Name=__IFACE__
+
+[Network]
+Address=__ADDR__
+MTUBytes=__MTU__

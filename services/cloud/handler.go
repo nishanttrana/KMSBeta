@@ -1,0 +1,250 @@
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"net/http"
+	"strconv"
+	"strings"
+)
+
+type Handler struct {
+	svc *Service
+	mux *http.ServeMux
+}
+
+func NewHandler(svc *Service) *Handler {
+	h := &Handler{svc: svc}
+	h.mux = h.routes()
+	return h
+}
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.mux.ServeHTTP(w, r)
+}
+
+func (h *Handler) routes() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /cloud/accounts", h.handleRegisterAccount)
+	mux.HandleFunc("GET /cloud/accounts", h.handleListAccounts)
+	mux.HandleFunc("POST /cloud/region-mappings", h.handleSetRegionMapping)
+	mux.HandleFunc("GET /cloud/region-mappings", h.handleListRegionMappings)
+	mux.HandleFunc("POST /cloud/import", h.handleImportKey)
+	mux.HandleFunc("POST /cloud/bindings/{id}/rotate", h.handleRotateBinding)
+	mux.HandleFunc("POST /cloud/sync", h.handleSync)
+	mux.HandleFunc("GET /cloud/inventory", h.handleInventory)
+	mux.HandleFunc("GET /cloud/bindings", h.handleListBindings)
+	mux.HandleFunc("GET /cloud/bindings/{id}", h.handleGetBinding)
+	return mux
+}
+
+func (h *Handler) handleRegisterAccount(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req RegisterCloudAccountRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	out, err := h.svc.RegisterAccount(r.Context(), req)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "register_failed", err.Error(), reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{"account": out, "request_id": reqID})
+}
+
+func (h *Handler) handleListAccounts(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.svc.ListAccounts(r.Context(), tenantID, r.URL.Query().Get("provider"))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "list_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleSetRegionMapping(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req SetRegionMappingRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	out, err := h.svc.SetRegionMapping(r.Context(), req)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "mapping_failed", err.Error(), reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"mapping": out, "request_id": reqID})
+}
+
+func (h *Handler) handleListRegionMappings(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.svc.ListRegionMappings(r.Context(), tenantID, r.URL.Query().Get("provider"))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "list_mappings_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleImportKey(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req ImportKeyToCloudRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	out, err := h.svc.ImportKeyToCloud(r.Context(), req)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "import_failed", err.Error(), reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{"binding": out, "request_id": reqID})
+}
+
+func (h *Handler) handleRotateBinding(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	var body struct {
+		Reason string `json:"reason"`
+	}
+	_ = decodeJSON(r, &body)
+	out, versionID, err := h.svc.RotateCloudKey(r.Context(), RotateCloudKeyRequest{
+		TenantID:  tenantID,
+		BindingID: r.PathValue("id"),
+		Reason:    body.Reason,
+	})
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "rotate_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"binding":    out,
+		"version_id": versionID,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleSync(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req SyncCloudKeysRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	out, err := h.svc.SyncCloudKeys(r.Context(), req)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "sync_failed", err.Error(), reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"job": out, "request_id": reqID})
+}
+
+func (h *Handler) handleInventory(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.svc.DiscoverInventory(r.Context(), DiscoverInventoryRequest{
+		TenantID:    tenantID,
+		Provider:    r.URL.Query().Get("provider"),
+		AccountID:   r.URL.Query().Get("account_id"),
+		CloudRegion: r.URL.Query().Get("cloud_region"),
+	})
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "inventory_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleListBindings(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	limit, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("limit")))
+	offset, _ := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("offset")))
+	items, err := h.svc.ListBindings(r.Context(), tenantID, r.URL.Query().Get("provider"), r.URL.Query().Get("account_id"), r.URL.Query().Get("key_id"), limit, offset)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "list_bindings_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleGetBinding(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	out, err := h.svc.GetBinding(r.Context(), tenantID, r.PathValue("id"))
+	if err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "get_binding_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"binding": out, "request_id": reqID})
+}
+
+func decodeJSON(r *http.Request, out interface{}) error {
+	defer r.Body.Close() //nolint:errcheck
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	return dec.Decode(out)
+}
+
+func mustTenant(r *http.Request, w http.ResponseWriter, requestID string) string {
+	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
+	if tenantID == "" {
+		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	}
+	if tenantID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", requestID, "")
+		return ""
+	}
+	return tenantID
+}
+
+func requestID(r *http.Request) string {
+	id := strings.TrimSpace(r.Header.Get("X-Request-ID"))
+	if id != "" {
+		return id
+	}
+	return newID("req")
+}
+
+func writeJSON(w http.ResponseWriter, code int, payload map[string]interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func writeErr(w http.ResponseWriter, code int, errCode string, msg string, requestID string, tenantID string) {
+	writeJSON(w, code, map[string]interface{}{
+		"error": map[string]interface{}{
+			"code":       errCode,
+			"message":    msg,
+			"request_id": requestID,
+			"tenant_id":  tenantID,
+		},
+	})
+}

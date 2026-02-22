@@ -1,0 +1,189 @@
+syntax = "proto3";
+
+package vecta.audit.v1;
+
+option go_package = "vecta-kms/proto/audit;auditpb";
+
+service AuditService {
+  rpc PublishAudit (PublishAuditRequest) returns (PublishAuditResponse);
+  rpc GetEvent (GetEventRequest) returns (GetEventResponse);
+  rpc ListEvents (ListEventsRequest) returns (ListEventsResponse);
+  rpc VerifyChain (VerifyChainRequest) returns (VerifyChainResponse);
+
+  rpc GetAlert (GetAlertRequest) returns (GetAlertResponse);
+  rpc ListAlerts (ListAlertsRequest) returns (ListAlertsResponse);
+  rpc AcknowledgeAlert (AcknowledgeAlertRequest) returns (AlertActionResponse);
+  rpc ResolveAlert (ResolveAlertRequest) returns (AlertActionResponse);
+  rpc SuppressAlert (SuppressAlertRequest) returns (AlertActionResponse);
+  rpc AlertStats (AlertStatsRequest) returns (AlertStatsResponse);
+
+  rpc CreateRule (CreateRuleRequest) returns (RuleActionResponse);
+  rpc ListRules (ListRulesRequest) returns (ListRulesResponse);
+  rpc UpdateRule (UpdateRuleRequest) returns (RuleActionResponse);
+  rpc DeleteRule (DeleteRuleRequest) returns (RuleActionResponse);
+}
+
+message PublishAuditRequest {
+  string tenant_id = 1;
+  string subject = 2;
+  string payload_json = 3;
+}
+
+message PublishAuditResponse {
+  string status = 1;
+  string request_id = 2;
+}
+
+message Event {
+  string id = 1;
+  string tenant_id = 2;
+  int64 sequence = 3;
+  string chain_hash = 4;
+  string previous_hash = 5;
+  string timestamp = 6;
+  string service = 7;
+  string action = 8;
+  string actor_id = 9;
+  string actor_type = 10;
+  string target_type = 11;
+  string target_id = 12;
+  string result = 13;
+  int32 status_code = 14;
+  int32 risk_score = 15;
+  string details_json = 16;
+}
+
+message GetEventRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+message GetEventResponse {
+  Event event = 1;
+}
+
+message ListEventsRequest {
+  string tenant_id = 1;
+  string action = 2;
+  string actor_id = 3;
+  string result = 4;
+  string target_id = 5;
+  string session_id = 6;
+  string correlation_id = 7;
+  int32 risk_min = 8;
+  string from = 9;
+  string to = 10;
+  int32 limit = 11;
+  int32 offset = 12;
+}
+message ListEventsResponse {
+  repeated Event items = 1;
+}
+
+message VerifyChainRequest {
+  string tenant_id = 1;
+}
+message ChainBreak {
+  int64 sequence = 1;
+  string event_id = 2;
+  string reason = 3;
+}
+message VerifyChainResponse {
+  bool ok = 1;
+  repeated ChainBreak breaks = 2;
+}
+
+message Alert {
+  string id = 1;
+  string tenant_id = 2;
+  string audit_event_id = 3;
+  string severity = 4;
+  string category = 5;
+  string title = 6;
+  string description = 7;
+  string status = 8;
+  int32 occurrence_count = 9;
+  string created_at = 10;
+}
+
+message GetAlertRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+message GetAlertResponse {
+  Alert alert = 1;
+}
+
+message ListAlertsRequest {
+  string tenant_id = 1;
+  string severity = 2;
+  string category = 3;
+  string status = 4;
+  string from = 5;
+  string to = 6;
+  int32 limit = 7;
+  int32 offset = 8;
+}
+message ListAlertsResponse {
+  repeated Alert items = 1;
+}
+
+message AcknowledgeAlertRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string actor = 3;
+  string note = 4;
+}
+message ResolveAlertRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string actor = 3;
+  string resolution_note = 4;
+}
+message SuppressAlertRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string actor = 3;
+  string note = 4;
+  string suppress_until = 5;
+}
+message AlertActionResponse {
+  string status = 1;
+}
+
+message AlertStatsRequest {
+  string tenant_id = 1;
+}
+message AlertStatsResponse {
+  int32 total_open = 1;
+  int32 total_acknowledged = 2;
+  int32 total_resolved = 3;
+}
+
+message AlertRule {
+  string id = 1;
+  string name = 2;
+  string condition = 3;
+  string severity = 4;
+  string title = 5;
+}
+message CreateRuleRequest {
+  string tenant_id = 1;
+  AlertRule rule = 2;
+}
+message UpdateRuleRequest {
+  string tenant_id = 1;
+  AlertRule rule = 2;
+}
+message DeleteRuleRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+message RuleActionResponse {
+  string status = 1;
+}
+message ListRulesRequest {
+  string tenant_id = 1;
+}
+message ListRulesResponse {
+  repeated AlertRule items = 1;
+}

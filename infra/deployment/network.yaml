@@ -1,0 +1,59 @@
+cluster:
+    enabled: false
+    interface: eth1
+    ipv4:
+        address: ""
+        gateway: ""
+        dns: []
+    mtu: 9000
+firewall:
+    enabled: true
+    allowedports:
+        cluster:
+            - 2379
+            - 2380
+            - 5432
+            - 4222
+            - 8160
+        hsm:
+            - 2300
+            - 2310
+        management:
+            - 443
+            - 5696
+            - 9443
+    metadata: {}
+    overrides: {}
+hsm:
+    enabled: false
+    interface: eth2
+    ipv4:
+        address: ""
+        gateway: ""
+        dns: []
+management:
+    interface: eth0
+    mode: static
+    ipv4:
+        address: 10.0.1.100/24
+        gateway: 10.0.1.1
+        dns:
+            - 10.0.1.2
+            - 8.8.8.8
+    ipv6:
+        enabled: false
+        address: ""
+    hostname: vecta-kms-dev-01
+    domain: local
+ntp:
+    servers:
+        - pool.ntp.org
+syslog:
+    enabled: true
+    server: syslog.local:514
+    protocol: tcp+tls
+tls:
+    mode: custom
+    certpath: /etc/vecta/tls/server.crt
+    keypath: /etc/vecta/tls/server.key
+    capath: /etc/vecta/tls/ca.crt

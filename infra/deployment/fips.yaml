@@ -1,0 +1,35 @@
+mode: strict
+standard:
+    allow_legacy_algorithms: true
+    default_tls_version: "1.2"
+    tag_non_fips_keys: true
+    warn_non_fips_algorithms: true
+strict:
+    allowed_hashes:
+        - SHA-224
+        - SHA-256
+        - SHA-384
+        - SHA-512
+        - SHA3-224
+        - SHA3-256
+        - SHA3-384
+        - SHA3-512
+        - SHAKE128
+        - SHAKE256
+    allowed_symmetric:
+        - AES-128
+        - AES-192
+        - AES-256
+        - 3DES
+    allowed_tls_ciphers:
+        - TLS_AES_128_GCM_SHA256
+        - TLS_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+    block_non_fips_algorithms: true
+    go_boringcrypto: true
+    min_ec_bits: 224
+    min_rsa_bits: 2048
+    reject_non_fips_imports: true
+    require_drbg: true
+    require_fips_tls: true

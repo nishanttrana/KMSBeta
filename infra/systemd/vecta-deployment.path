@@ -1,0 +1,9 @@
+[Unit]
+Description=Watch Vecta deployment config and trigger stack startup
+
+[Path]
+PathExists=/etc/vecta/deployment.yaml
+Unit=vecta-stack.service
+
+[Install]
+WantedBy=multi-user.target

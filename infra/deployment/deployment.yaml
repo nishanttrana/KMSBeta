@@ -1,0 +1,39 @@
+apiVersion: kms.securosys.com/v1
+kind: DeploymentConfig
+metadata:
+    appliance_id: kms-dev-01
+    created_at: "2026-02-19T16:06:36Z"
+spec:
+    core:
+        audit: true
+        auth: true
+        keycore: true
+        policy: true
+    features:
+        ai_llm: false
+        certs: true
+        cloud_byok: false
+        clustering: false
+        compliance_dashboard: true
+        crypto_discovery: false
+        data_protection: true
+        ekm_database: false
+        governance: true
+        hyok_proxy: false
+        kmip_server: true
+        mpc_engine: false
+        payment_crypto: true
+        pqc_migration: true
+        qkd_interface: false
+        reporting_alerting: true
+        sbom_cbom: true
+        secrets: true
+    hsm_mode: software
+    license:
+        activated_at: "2026-02-19T16:06:36Z"
+        features_allowed:
+            - '*'
+        key: SEC-KMS-ENT-2026-ABCD
+        max_keys: 5000000
+        max_tenants: 50
+        status: active

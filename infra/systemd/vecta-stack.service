@@ -1,0 +1,20 @@
+[Unit]
+Description=Vecta KMS Container Stack
+After=docker.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/vecta/deployment.yaml
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/vecta
+EnvironmentFile=-/etc/vecta/vecta.env
+ExecStartPre=-/usr/bin/docker compose -f /opt/vecta/docker-compose.yml stop firstboot
+ExecStart=/bin/bash /opt/vecta/infra/scripts/start-kms.sh /etc/vecta/deployment.yaml
+ExecStop=/bin/bash /opt/vecta/infra/scripts/stop-kms.sh /etc/vecta/deployment.yaml --force
+ExecReload=/bin/bash /opt/vecta/infra/scripts/start-kms.sh /etc/vecta/deployment.yaml
+TimeoutStartSec=600
+TimeoutStopSec=300
+
+[Install]
+WantedBy=multi-user.target

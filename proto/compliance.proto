@@ -1,0 +1,267 @@
+syntax = "proto3";
+
+package vecta.compliance.v1;
+
+option go_package = "vecta-kms/proto/compliance;compliancepb";
+
+service ComplianceService {
+  rpc GetPosture (GetPostureRequest) returns (PostureResponse);
+  rpc GetPostureHistory (GetPostureHistoryRequest) returns (PostureHistoryResponse);
+  rpc GetPostureBreakdown (GetPostureBreakdownRequest) returns (PostureBreakdownResponse);
+
+  rpc ListFrameworks (ListFrameworksRequest) returns (ListFrameworksResponse);
+  rpc GetFrameworkControls (GetFrameworkControlsRequest) returns (FrameworkControlsResponse);
+  rpc GetFrameworkGaps (GetFrameworkGapsRequest) returns (FrameworkGapsResponse);
+
+  rpc GetKeyHygiene (GetKeyHygieneRequest) returns (KeyHygieneResponse);
+  rpc GetOrphanedKeys (GetOrphanedKeysRequest) returns (KeysResponse);
+  rpc GetExpiredKeys (GetExpiredKeysRequest) returns (KeysResponse);
+
+  rpc GetAuditCorrelations (GetAuditCorrelationsRequest) returns (AuditCorrelationsResponse);
+  rpc GetAuditAnomalies (GetAuditAnomaliesRequest) returns (AuditAnomaliesResponse);
+
+  rpc GenerateSBOM (GenerateSBOMRequest) returns (SBOMResponse);
+  rpc ListSBOMServices (ListSBOMServicesRequest) returns (ListSBOMServicesResponse);
+  rpc GetSBOMService (GetSBOMServiceRequest) returns (SBOMServiceResponse);
+  rpc GetSBOMVulnerabilities (GetSBOMVulnerabilitiesRequest) returns (SBOMVulnerabilitiesResponse);
+
+  rpc GenerateCBOM (GenerateCBOMRequest) returns (CBOMResponse);
+  rpc GetCBOMSummary (GetCBOMSummaryRequest) returns (CBOMSummaryResponse);
+  rpc GetCBOMPQCReadiness (GetCBOMPQCReadinessRequest) returns (CBOMPQCReadinessResponse);
+  rpc GetCBOMDiff (GetCBOMDiffRequest) returns (CBOMDiffResponse);
+}
+
+message PostureSnapshot {
+  string id = 1;
+  string tenant_id = 2;
+  int32 overall_score = 3;
+  int32 key_hygiene = 4;
+  int32 policy_compliance = 5;
+  int32 access_security = 6;
+  int32 crypto_posture = 7;
+  int32 pqc_readiness = 8;
+  map<string, int32> framework_scores = 9;
+  map<string, double> metrics = 10;
+  int32 gap_count = 11;
+  string created_at = 12;
+}
+
+message Framework {
+  string id = 1;
+  string name = 2;
+  string version = 3;
+  string description = 4;
+}
+
+message FrameworkControl {
+  string id = 1;
+  string title = 2;
+  string category = 3;
+  string requirement = 4;
+  string status = 5;
+  int32 score = 6;
+  string evidence = 7;
+}
+
+message ComplianceGap {
+  string id = 1;
+  string tenant_id = 2;
+  string framework_id = 3;
+  string control_id = 4;
+  string severity = 5;
+  string title = 6;
+  string description = 7;
+  string resource_id = 8;
+  string status = 9;
+  string detected_at = 10;
+  string resolved_at = 11;
+}
+
+message JsonObject {
+  map<string, string> fields = 1;
+}
+
+message KeyHygieneReport {
+  string tenant_id = 1;
+  int32 total_keys = 2;
+  double approved_algorithm_pct = 3;
+  double rotation_coverage_pct = 4;
+  double policy_coverage_pct = 5;
+  int32 orphaned_count = 6;
+  int32 expiring_count = 7;
+  int32 deprecated_count = 8;
+  int32 unused_90_days_count = 9;
+  double pqc_ready_pct = 10;
+  map<string, int32> algorithm_distribution = 11;
+}
+
+message CorrelationItem {
+  string correlation_id = 1;
+  int32 count = 2;
+  string first_seen = 3;
+  string last_seen = 4;
+  repeated string top_actions = 5;
+}
+
+message AnomalyItem {
+  string id = 1;
+  string type = 2;
+  string severity = 3;
+  string description = 4;
+  int32 count = 5;
+  string detected_at = 6;
+}
+
+message GetPostureRequest {
+  string tenant_id = 1;
+  bool refresh = 2;
+}
+
+message PostureResponse {
+  PostureSnapshot posture = 1;
+}
+
+message GetPostureHistoryRequest {
+  string tenant_id = 1;
+  int32 limit = 2;
+}
+
+message PostureHistoryResponse {
+  repeated PostureSnapshot items = 1;
+}
+
+message GetPostureBreakdownRequest {
+  string tenant_id = 1;
+}
+
+message PostureBreakdownResponse {
+  PostureSnapshot posture = 1;
+}
+
+message ListFrameworksRequest {}
+
+message ListFrameworksResponse {
+  repeated Framework items = 1;
+}
+
+message GetFrameworkControlsRequest {
+  string tenant_id = 1;
+  string framework_id = 2;
+}
+
+message FrameworkControlsResponse {
+  string framework_id = 1;
+  int32 score = 2;
+  string status = 3;
+  repeated FrameworkControl controls = 4;
+}
+
+message GetFrameworkGapsRequest {
+  string tenant_id = 1;
+  string framework_id = 2;
+}
+
+message FrameworkGapsResponse {
+  repeated ComplianceGap items = 1;
+}
+
+message GetKeyHygieneRequest {
+  string tenant_id = 1;
+}
+
+message KeyHygieneResponse {
+  KeyHygieneReport report = 1;
+}
+
+message GetOrphanedKeysRequest {
+  string tenant_id = 1;
+}
+
+message GetExpiredKeysRequest {
+  string tenant_id = 1;
+}
+
+message KeysResponse {
+  repeated JsonObject items = 1;
+}
+
+message GetAuditCorrelationsRequest {
+  string tenant_id = 1;
+  int32 limit = 2;
+}
+
+message AuditCorrelationsResponse {
+  repeated CorrelationItem items = 1;
+}
+
+message GetAuditAnomaliesRequest {
+  string tenant_id = 1;
+}
+
+message AuditAnomaliesResponse {
+  repeated AnomalyItem items = 1;
+}
+
+message GenerateSBOMRequest {
+  string format = 1;
+}
+
+message SBOMResponse {
+  map<string, string> sbom = 1;
+}
+
+message ListSBOMServicesRequest {}
+
+message ListSBOMServicesResponse {
+  repeated JsonObject items = 1;
+}
+
+message GetSBOMServiceRequest {
+  string name = 1;
+}
+
+message SBOMServiceResponse {
+  map<string, string> item = 1;
+}
+
+message GetSBOMVulnerabilitiesRequest {
+  string tenant_id = 1;
+}
+
+message SBOMVulnerabilitiesResponse {
+  repeated JsonObject items = 1;
+}
+
+message GenerateCBOMRequest {
+  string tenant_id = 1;
+}
+
+message CBOMResponse {
+  map<string, string> cbom = 1;
+}
+
+message GetCBOMSummaryRequest {
+  string tenant_id = 1;
+}
+
+message CBOMSummaryResponse {
+  map<string, string> summary = 1;
+}
+
+message GetCBOMPQCReadinessRequest {
+  string tenant_id = 1;
+}
+
+message CBOMPQCReadinessResponse {
+  map<string, string> readiness = 1;
+}
+
+message GetCBOMDiffRequest {
+  string tenant_id = 1;
+  string from = 2;
+  string to = 3;
+}
+
+message CBOMDiffResponse {
+  map<string, string> diff = 1;
+}

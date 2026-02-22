@@ -1,0 +1,13 @@
+# Build-blocking license identifiers and patterns.
+GPL-2.0
+GPL-3.0
+AGPL-3.0
+SSPL
+LGPL
+EUPL
+OSL
+Sleepycat
+source available
+server side public license
+gnu general public license
+gnu affero general public license

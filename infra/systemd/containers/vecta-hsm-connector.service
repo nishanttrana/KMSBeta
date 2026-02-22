@@ -1,0 +1,19 @@
+[Unit]
+Description=Vecta KMS Container (hsm-connector)
+After=docker.service network-online.target
+Wants=network-online.target
+PartOf=vecta-containers.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/vecta
+EnvironmentFile=-/etc/vecta/vecta.env
+ExecStart=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml up -d hsm-connector
+ExecStop=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml stop hsm-connector
+ExecReload=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml up -d hsm-connector
+TimeoutStartSec=300
+TimeoutStopSec=120
+
+[Install]
+WantedBy=vecta-containers.target

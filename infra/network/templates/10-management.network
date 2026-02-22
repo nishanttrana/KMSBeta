@@ -1,0 +1,11 @@
+[Match]
+Name=__IFACE__
+
+[Network]
+DHCP=__MODE__
+__ADDRESS_LINE__
+__GATEWAY_LINE__
+DNS=__DNS__
+
+[DHCPv4]
+UseDNS=true

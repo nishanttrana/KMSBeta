@@ -1,0 +1,200 @@
+syntax = "proto3";
+
+package vecta.governance.v1;
+
+option go_package = "vecta-kms/proto/governance;governancepb";
+
+service GovernanceService {
+  rpc CreateApprovalPolicy (CreateApprovalPolicyRequest) returns (CreateApprovalPolicyResponse);
+  rpc UpdateApprovalPolicy (UpdateApprovalPolicyRequest) returns (UpdateApprovalPolicyResponse);
+  rpc DeleteApprovalPolicy (DeleteApprovalPolicyRequest) returns (DeleteApprovalPolicyResponse);
+  rpc ListApprovalPolicies (ListApprovalPoliciesRequest) returns (ListApprovalPoliciesResponse);
+
+  rpc CreateApprovalRequest (CreateApprovalRequestRequest) returns (CreateApprovalRequestResponse);
+  rpc GetApprovalRequest (GetApprovalRequestRequest) returns (GetApprovalRequestResponse);
+  rpc ListApprovalRequests (ListApprovalRequestsRequest) returns (ListApprovalRequestsResponse);
+  rpc CancelApprovalRequest (CancelApprovalRequestRequest) returns (CancelApprovalRequestResponse);
+  rpc VoteApprovalRequest (VoteApprovalRequestRequest) returns (VoteApprovalRequestResponse);
+
+  rpc CreateKeyApproval (CreateKeyApprovalRequest) returns (CreateApprovalRequestResponse);
+  rpc GetKeyApprovalStatus (GetKeyApprovalStatusRequest) returns (GetKeyApprovalStatusResponse);
+}
+
+message ApprovalPolicy {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string description = 4;
+  string scope = 5;
+  repeated string trigger_actions = 6;
+  int32 required_approvals = 7;
+  int32 total_approvers = 8;
+  repeated string approver_roles = 9;
+  repeated string approver_users = 10;
+  int32 timeout_hours = 11;
+  int32 escalation_hours = 12;
+  repeated string escalation_to = 13;
+  int32 retention_days = 14;
+  repeated string notification_channels = 15;
+  string status = 16;
+  string created_at = 17;
+}
+
+message ApprovalRequest {
+  string id = 1;
+  string tenant_id = 2;
+  string policy_id = 3;
+  string action = 4;
+  string target_type = 5;
+  string target_id = 6;
+  string requester_id = 7;
+  string requester_email = 8;
+  string status = 9;
+  int32 required_approvals = 10;
+  int32 current_approvals = 11;
+  int32 current_denials = 12;
+  string created_at = 13;
+  string expires_at = 14;
+  string resolved_at = 15;
+  string callback_service = 16;
+  string callback_action = 17;
+}
+
+message ApprovalVote {
+  string id = 1;
+  string request_id = 2;
+  string tenant_id = 3;
+  string approver_id = 4;
+  string approver_email = 5;
+  string vote = 6;
+  string vote_method = 7;
+  string comment = 8;
+  string voted_at = 9;
+}
+
+message CreateApprovalPolicyRequest {
+  ApprovalPolicy policy = 1;
+}
+
+message CreateApprovalPolicyResponse {
+  ApprovalPolicy policy = 1;
+}
+
+message UpdateApprovalPolicyRequest {
+  ApprovalPolicy policy = 1;
+}
+
+message UpdateApprovalPolicyResponse {
+  ApprovalPolicy policy = 1;
+}
+
+message DeleteApprovalPolicyRequest {
+  string tenant_id = 1;
+  string policy_id = 2;
+}
+
+message DeleteApprovalPolicyResponse {
+  string status = 1;
+}
+
+message ListApprovalPoliciesRequest {
+  string tenant_id = 1;
+  string scope = 2;
+  string status = 3;
+}
+
+message ListApprovalPoliciesResponse {
+  repeated ApprovalPolicy items = 1;
+}
+
+message CreateApprovalRequestRequest {
+  string tenant_id = 1;
+  string policy_id = 2;
+  string action = 3;
+  string target_type = 4;
+  string target_id = 5;
+  string target_details_json = 6;
+  string requester_id = 7;
+  string requester_email = 8;
+  string requester_ip = 9;
+  string callback_service = 10;
+  string callback_action = 11;
+  string callback_payload_json = 12;
+}
+
+message CreateApprovalRequestResponse {
+  ApprovalRequest request = 1;
+}
+
+message GetApprovalRequestRequest {
+  string tenant_id = 1;
+  string request_id = 2;
+}
+
+message GetApprovalRequestResponse {
+  ApprovalRequest request = 1;
+  repeated ApprovalVote votes = 2;
+}
+
+message ListApprovalRequestsRequest {
+  string tenant_id = 1;
+  string status = 2;
+  string target_type = 3;
+  string target_id = 4;
+  string approver_email = 5;
+}
+
+message ListApprovalRequestsResponse {
+  repeated ApprovalRequest items = 1;
+}
+
+message CancelApprovalRequestRequest {
+  string tenant_id = 1;
+  string request_id = 2;
+  string requester_id = 3;
+}
+
+message CancelApprovalRequestResponse {
+  string status = 1;
+}
+
+message VoteApprovalRequestRequest {
+  string tenant_id = 1;
+  string request_id = 2;
+  string vote = 3; // approved|denied
+  string comment = 4;
+  string token = 5;
+  string approver_id = 6;
+  string approver_email = 7;
+  string vote_method = 8; // email_link|api|dashboard
+  string ip_address = 9;
+}
+
+message VoteApprovalRequestResponse {
+  ApprovalRequest request = 1;
+}
+
+message CreateKeyApprovalRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string operation = 3;
+  string payload_hash = 4;
+  string requester_id = 5;
+  string requester_email = 6;
+  string requester_ip = 7;
+  string callback_service = 8;
+  string callback_action = 9;
+  string callback_payload_json = 10;
+}
+
+message GetKeyApprovalStatusRequest {
+  string tenant_id = 1;
+  string request_id = 2;
+}
+
+message GetKeyApprovalStatusResponse {
+  string status = 1;
+  int32 current_approvals = 2;
+  int32 current_denials = 3;
+  string expires_at = 4;
+}

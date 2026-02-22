@@ -1,0 +1,8 @@
+{
+  "tenant_id": "bank-alpha",
+  "admin_username": "admin",
+  "admin_password": "VectaAdmin@2026",
+  "force_password_change": true,
+  "prefer_backend_auth": true,
+  "allow_local_fallback": false
+}

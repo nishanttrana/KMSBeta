@@ -1,0 +1,19 @@
+[Unit]
+Description=Vecta KMS Container (cloud)
+After=docker.service network-online.target
+Wants=network-online.target
+PartOf=vecta-containers.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/vecta
+EnvironmentFile=-/etc/vecta/vecta.env
+ExecStart=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml up -d cloud
+ExecStop=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml stop cloud
+ExecReload=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml up -d cloud
+TimeoutStartSec=300
+TimeoutStopSec=120
+
+[Install]
+WantedBy=vecta-containers.target

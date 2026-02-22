@@ -1,0 +1,5 @@
+[Match]
+Name=__IFACE__
+
+[Network]
+Address=__ADDR__

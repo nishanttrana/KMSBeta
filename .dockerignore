@@ -1,0 +1,7 @@
+**/node_modules
+web/dashboard/dist
+packer_cache
+postgres-data
+consul-data
+.DS_Store
+Thumbs.db

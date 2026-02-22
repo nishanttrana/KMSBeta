@@ -1,0 +1,245 @@
+syntax = "proto3";
+
+package vecta.auth.v1;
+
+option go_package = "vecta-kms/proto/auth;authpb";
+
+service AuthService {
+  rpc Login (LoginRequest) returns (LoginResponse);
+  rpc Refresh (RefreshRequest) returns (RefreshResponse);
+  rpc Logout (LogoutRequest) returns (LogoutResponse);
+  rpc Me (MeRequest) returns (MeResponse);
+
+  rpc RegisterClient (RegisterClientRequest) returns (RegisterClientResponse);
+  rpc GetRegistrationStatus (RegistrationStatusRequest) returns (RegistrationStatusResponse);
+  rpc ActivateRegistration (ActivateRegistrationRequest) returns (ActivateRegistrationResponse);
+  rpc ListClients (ListClientsRequest) returns (ListClientsResponse);
+  rpc RevokeClient (RevokeClientRequest) returns (RevokeClientResponse);
+  rpc RotateClientKey (RotateClientKeyRequest) returns (RotateClientKeyResponse);
+
+  rpc CreateTenant (CreateTenantRequest) returns (CreateTenantResponse);
+  rpc ListTenants (ListTenantsRequest) returns (ListTenantsResponse);
+  rpc GetTenant (GetTenantRequest) returns (GetTenantResponse);
+  rpc UpdateTenant (UpdateTenantRequest) returns (UpdateTenantResponse);
+
+  rpc CreateRole (CreateRoleRequest) returns (CreateRoleResponse);
+  rpc UpdateRole (UpdateRoleRequest) returns (UpdateRoleResponse);
+  rpc DeleteRole (DeleteRoleRequest) returns (DeleteRoleResponse);
+
+  rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
+  rpc CreateUser (CreateUserRequest) returns (CreateUserResponse);
+  rpc UpdateUserRole (UpdateUserRoleRequest) returns (UpdateUserRoleResponse);
+
+  rpc CreateAPIKey (CreateAPIKeyRequest) returns (CreateAPIKeyResponse);
+  rpc DeleteAPIKey (DeleteAPIKeyRequest) returns (DeleteAPIKeyResponse);
+}
+
+message LoginRequest {
+  string tenant_id = 1;
+  string username = 2;
+  string password = 3;
+  string totp_code = 4;
+}
+
+message LoginResponse {
+  string access_token = 1;
+  string token_type = 2;
+  string expires_at = 3;
+}
+
+message RefreshRequest {}
+message RefreshResponse {
+  string access_token = 1;
+  string expires_at = 2;
+}
+
+message LogoutRequest {
+  string session_id = 1;
+}
+message LogoutResponse {
+  string status = 1;
+}
+
+message MeRequest {}
+message MeResponse {
+  string tenant_id = 1;
+  string user_id = 2;
+  string role = 3;
+  repeated string permissions = 4;
+}
+
+message RegisterClientRequest {
+  string tenant_id = 1;
+  string client_name = 2;
+  string client_type = 3;
+  string description = 4;
+  string contact_email = 5;
+  string requested_role = 6;
+}
+message RegisterClientResponse {
+  string registration_id = 1;
+  string status = 2;
+}
+
+message RegistrationStatusRequest {
+  string tenant_id = 1;
+  string registration_id = 2;
+}
+message RegistrationStatusResponse {
+  string registration_id = 1;
+  string status = 2;
+}
+
+message ActivateRegistrationRequest {
+  string tenant_id = 1;
+  string registration_id = 2;
+  string approval_id = 3;
+  bool governance_enabled = 4;
+}
+message ActivateRegistrationResponse {
+  string registration_id = 1;
+  string status = 2;
+  string api_key = 3;
+  string api_key_prefix = 4;
+}
+
+message ListClientsRequest {
+  string tenant_id = 1;
+}
+message Client {
+  string id = 1;
+  string tenant_id = 2;
+  string client_name = 3;
+  string client_type = 4;
+  string contact_email = 5;
+  string requested_role = 6;
+  string status = 7;
+  int32 rate_limit = 8;
+  string api_key_prefix = 9;
+}
+message ListClientsResponse {
+  repeated Client items = 1;
+}
+message RevokeClientRequest {
+  string tenant_id = 1;
+  string client_id = 2;
+}
+message RevokeClientResponse {
+  string status = 1;
+}
+message RotateClientKeyRequest {
+  string tenant_id = 1;
+  string client_id = 2;
+}
+message RotateClientKeyResponse {
+  string api_key = 1;
+  string api_key_prefix = 2;
+}
+
+message CreateTenantRequest {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+}
+message CreateTenantResponse {
+  string tenant_id = 1;
+}
+message ListTenantsRequest {}
+message Tenant {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+}
+message ListTenantsResponse {
+  repeated Tenant items = 1;
+}
+message GetTenantRequest {
+  string id = 1;
+}
+message GetTenantResponse {
+  Tenant tenant = 1;
+}
+message UpdateTenantRequest {
+  string id = 1;
+  string name = 2;
+  string status = 3;
+}
+message UpdateTenantResponse {
+  string status = 1;
+}
+
+message CreateRoleRequest {
+  string tenant_id = 1;
+  string role_name = 2;
+  repeated string permissions = 3;
+}
+message CreateRoleResponse {
+  string status = 1;
+}
+message UpdateRoleRequest {
+  string tenant_id = 1;
+  string role_name = 2;
+  repeated string permissions = 3;
+}
+message UpdateRoleResponse {
+  string status = 1;
+}
+message DeleteRoleRequest {
+  string tenant_id = 1;
+  string role_name = 2;
+}
+message DeleteRoleResponse {
+  string status = 1;
+}
+
+message ListUsersRequest {
+  string tenant_id = 1;
+}
+message User {
+  string id = 1;
+  string tenant_id = 2;
+  string username = 3;
+  string email = 4;
+  string role = 5;
+  string status = 6;
+}
+message ListUsersResponse {
+  repeated User items = 1;
+}
+message CreateUserRequest {
+  string tenant_id = 1;
+  string username = 2;
+  string email = 3;
+  string password = 4;
+  string role = 5;
+  string totp_secret = 6;
+}
+message CreateUserResponse {
+  string user_id = 1;
+}
+message UpdateUserRoleRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+  string role = 3;
+}
+message UpdateUserRoleResponse {
+  string status = 1;
+}
+
+message CreateAPIKeyRequest {
+  string tenant_id = 1;
+  string name = 2;
+  repeated string permissions = 3;
+}
+message CreateAPIKeyResponse {
+  string api_key_id = 1;
+  string api_key = 2;
+  string api_key_prefix = 3;
+}
+message DeleteAPIKeyRequest {
+  string tenant_id = 1;
+  string api_key_id = 2;
+}
+message DeleteAPIKeyResponse {
+  string status = 1;
+}

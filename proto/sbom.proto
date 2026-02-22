@@ -1,0 +1,230 @@
+syntax = "proto3";
+
+package vecta.sbom.v1;
+
+option go_package = "vecta-kms/proto/sbom;sbompb";
+
+service SbomService {
+  rpc GenerateSBOM (GenerateSBOMRequest) returns (GenerateSBOMResponse);
+  rpc GetLatestSBOM (GetLatestSBOMRequest) returns (GetSBOMResponse);
+  rpc ListSBOMHistory (ListSBOMHistoryRequest) returns (ListSBOMHistoryResponse);
+  rpc GetSBOM (GetSBOMRequest) returns (GetSBOMResponse);
+  rpc ExportSBOM (ExportSBOMRequest) returns (ExportBOMResponse);
+  rpc GetSBOMVulnerabilities (GetSBOMVulnerabilitiesRequest) returns (GetSBOMVulnerabilitiesResponse);
+  rpc DiffSBOM (DiffSBOMRequest) returns (DiffBOMResponse);
+
+  rpc GenerateCBOM (GenerateCBOMRequest) returns (GenerateCBOMResponse);
+  rpc GetLatestCBOM (GetLatestCBOMRequest) returns (GetCBOMResponse);
+  rpc ListCBOMHistory (ListCBOMHistoryRequest) returns (ListCBOMHistoryResponse);
+  rpc GetCBOM (GetCBOMRequest) returns (GetCBOMResponse);
+  rpc ExportCBOM (ExportCBOMRequest) returns (ExportBOMResponse);
+  rpc GetCBOMSummary (GetCBOMSummaryRequest) returns (GetCBOMSummaryResponse);
+  rpc GetCBOMPQCReadiness (GetCBOMPQCReadinessRequest) returns (GetCBOMPQCReadinessResponse);
+  rpc DiffCBOM (DiffCBOMRequest) returns (DiffBOMResponse);
+}
+
+message BOMComponent {
+  string name = 1;
+  string version = 2;
+  string type = 3;
+  string purl = 4;
+  string supplier = 5;
+  repeated string licenses = 6;
+  map<string, string> hashes = 7;
+  map<string, string> metadata = 8;
+  string ecosystem = 9;
+}
+
+message CryptoAsset {
+  string id = 1;
+  string tenant_id = 2;
+  string source = 3;
+  string asset_type = 4;
+  string name = 5;
+  string algorithm = 6;
+  int32 strength_bits = 7;
+  string status = 8;
+  bool pqc_ready = 9;
+  bool deprecated = 10;
+  map<string, string> metadata = 11;
+}
+
+message SBOMDocument {
+  string format = 1;
+  string spec_version = 2;
+  string generated_at = 3;
+  string appliance = 4;
+  repeated BOMComponent components = 5;
+}
+
+message CBOMDocument {
+  string format = 1;
+  string spec_version = 2;
+  string tenant_id = 3;
+  string generated_at = 4;
+  repeated CryptoAsset assets = 5;
+  map<string, int32> algorithm_distribution = 6;
+  map<string, int32> strength_histogram = 7;
+  int32 deprecated_count = 8;
+  int32 pqc_ready_count = 9;
+  int32 total_asset_count = 10;
+  double pqc_readiness_percent = 11;
+  map<string, int32> source_count = 12;
+}
+
+message SBOMSnapshot {
+  string id = 1;
+  string source_hash = 2;
+  string created_at = 3;
+  SBOMDocument document = 4;
+  map<string, string> summary = 5;
+}
+
+message CBOMSnapshot {
+  string id = 1;
+  string tenant_id = 2;
+  string source_hash = 3;
+  string created_at = 4;
+  CBOMDocument document = 5;
+  map<string, string> summary = 6;
+}
+
+message VulnerabilityMatch {
+  string id = 1;
+  string source = 2;
+  string severity = 3;
+  string component = 4;
+  string installed_version = 5;
+  string fixed_version = 6;
+  string summary = 7;
+  string reference = 8;
+}
+
+message JsonObject {
+  map<string, string> fields = 1;
+}
+
+message BOMDiff {
+  string from_id = 1;
+  string to_id = 2;
+  repeated JsonObject added = 3;
+  repeated JsonObject removed = 4;
+  repeated JsonObject changed = 5;
+  map<string, string> metrics = 6;
+  string compared_at = 7;
+}
+
+message GenerateSBOMRequest {
+  string trigger = 1;
+}
+
+message GenerateSBOMResponse {
+  string status = 1;
+  SBOMSnapshot snapshot = 2;
+}
+
+message GetLatestSBOMRequest {}
+
+message ListSBOMHistoryRequest {
+  int32 limit = 1;
+}
+
+message ListSBOMHistoryResponse {
+  repeated SBOMSnapshot items = 1;
+}
+
+message GetSBOMRequest {
+  string id = 1;
+}
+
+message GetSBOMResponse {
+  SBOMSnapshot item = 1;
+}
+
+message ExportSBOMRequest {
+  string id = 1;
+  string format = 2;
+  string encoding = 3;
+}
+
+message ExportCBOMRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string format = 3;
+}
+
+message ExportBOMResponse {
+  string format = 1;
+  string content_type = 2;
+  string encoding = 3;
+  string content = 4;
+}
+
+message GetSBOMVulnerabilitiesRequest {}
+
+message GetSBOMVulnerabilitiesResponse {
+  repeated VulnerabilityMatch items = 1;
+}
+
+message DiffSBOMRequest {
+  string from = 1;
+  string to = 2;
+}
+
+message DiffCBOMRequest {
+  string tenant_id = 1;
+  string from = 2;
+  string to = 3;
+}
+
+message DiffBOMResponse {
+  BOMDiff diff = 1;
+}
+
+message GenerateCBOMRequest {
+  string tenant_id = 1;
+  string trigger = 2;
+}
+
+message GenerateCBOMResponse {
+  string status = 1;
+  CBOMSnapshot snapshot = 2;
+}
+
+message GetLatestCBOMRequest {
+  string tenant_id = 1;
+}
+
+message ListCBOMHistoryRequest {
+  string tenant_id = 1;
+  int32 limit = 2;
+}
+
+message ListCBOMHistoryResponse {
+  repeated CBOMSnapshot items = 1;
+}
+
+message GetCBOMRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetCBOMResponse {
+  CBOMSnapshot item = 1;
+}
+
+message GetCBOMSummaryRequest {
+  string tenant_id = 1;
+}
+
+message GetCBOMSummaryResponse {
+  map<string, string> summary = 1;
+}
+
+message GetCBOMPQCReadinessRequest {
+  string tenant_id = 1;
+}
+
+message GetCBOMPQCReadinessResponse {
+  map<string, string> readiness = 1;
+}

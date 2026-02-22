@@ -1,0 +1,355 @@
+syntax = "proto3";
+
+package vecta.dataprotect.v1;
+
+option go_package = "vecta-kms/proto/dataprotect;dataprotectpb";
+
+service DataprotectService {
+  rpc Tokenize (TokenizeRequest) returns (TokenizeResponse);
+  rpc Detokenize (DetokenizeRequest) returns (DetokenizeResponse);
+  rpc BatchTokenize (TokenizeRequest) returns (TokenizeResponse);
+  rpc BatchDetokenize (DetokenizeRequest) returns (DetokenizeResponse);
+
+  rpc ListTokenVaults (ListTokenVaultsRequest) returns (ListTokenVaultsResponse);
+  rpc CreateTokenVault (CreateTokenVaultRequest) returns (TokenVaultResponse);
+  rpc GetTokenVault (GetTokenVaultRequest) returns (TokenVaultDetailsResponse);
+  rpc DeleteTokenVault (DeleteTokenVaultRequest) returns (StatusResponse);
+
+  rpc FPEEncrypt (FPEEncryptRequest) returns (FPEEncryptResponse);
+  rpc FPEDecrypt (FPEDecryptRequest) returns (FPEDecryptResponse);
+
+  rpc Mask (MaskRequest) returns (MaskResponse);
+  rpc MaskPreview (MaskRequest) returns (MaskResponse);
+  rpc ListMaskingPolicies (ListMaskingPoliciesRequest) returns (ListMaskingPoliciesResponse);
+  rpc CreateMaskingPolicy (CreateMaskingPolicyRequest) returns (MaskingPolicyResponse);
+  rpc UpdateMaskingPolicy (UpdateMaskingPolicyRequest) returns (StatusResponse);
+  rpc DeleteMaskingPolicy (DeleteMaskingPolicyRequest) returns (StatusResponse);
+
+  rpc Redact (RedactRequest) returns (RedactResponse);
+  rpc DetectPII (RedactRequest) returns (RedactResponse);
+  rpc ListRedactionPolicies (ListRedactionPoliciesRequest) returns (ListRedactionPoliciesResponse);
+  rpc CreateRedactionPolicy (CreateRedactionPolicyRequest) returns (RedactionPolicyResponse);
+
+  rpc EncryptFields (EncryptFieldsRequest) returns (EncryptFieldsResponse);
+  rpc DecryptFields (DecryptFieldsRequest) returns (DecryptFieldsResponse);
+  rpc EnvelopeEncrypt (EnvelopeEncryptRequest) returns (EnvelopeEncryptResponse);
+  rpc EnvelopeDecrypt (EnvelopeDecryptRequest) returns (EnvelopeDecryptResponse);
+  rpc SearchableEncrypt (SearchableEncryptRequest) returns (SearchableEncryptResponse);
+  rpc SearchableDecrypt (SearchableDecryptRequest) returns (SearchableDecryptResponse);
+}
+
+message JsonObject {
+  map<string, string> fields = 1;
+}
+
+message TokenVault {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string token_type = 4;
+  string format = 5;
+  string key_id = 6;
+  string custom_regex = 7;
+  string created_at = 8;
+}
+
+message TokenizationItem {
+  string input = 1;
+  string token = 2;
+  string error = 3;
+  bool reused = 4;
+  string vault_id = 5;
+  string expires_at = 6;
+}
+
+message DetokenizationItem {
+  string token = 1;
+  string value = 2;
+  string error = 3;
+  string vault_id = 4;
+  string created_at = 5;
+}
+
+message TokenizeRequest {
+  string tenant_id = 1;
+  string vault_id = 2;
+  repeated string values = 3;
+  int32 ttl_hours = 4;
+}
+
+message TokenizeResponse {
+  repeated TokenizationItem items = 1;
+}
+
+message DetokenizeRequest {
+  string tenant_id = 1;
+  repeated string tokens = 2;
+}
+
+message DetokenizeResponse {
+  repeated DetokenizationItem items = 1;
+}
+
+message ListTokenVaultsRequest {
+  string tenant_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListTokenVaultsResponse {
+  repeated TokenVault items = 1;
+}
+
+message CreateTokenVaultRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string token_type = 3;
+  string format = 4;
+  string key_id = 5;
+  string custom_regex = 6;
+}
+
+message GetTokenVaultRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message DeleteTokenVaultRequest {
+  string tenant_id = 1;
+  string id = 2;
+  bool governance_approved = 3;
+}
+
+message TokenVaultResponse {
+  TokenVault item = 1;
+}
+
+message TokenVaultDetailsResponse {
+  TokenVault vault = 1;
+  int32 token_count = 2;
+}
+
+message StatusResponse {
+  string status = 1;
+}
+
+message FPEEncryptRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string algorithm = 3;
+  int32 radix = 4;
+  string tweak = 5;
+  string plaintext = 6;
+}
+
+message FPEEncryptResponse {
+  string ciphertext = 1;
+}
+
+message FPEDecryptRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string algorithm = 3;
+  int32 radix = 4;
+  string tweak = 5;
+  string ciphertext = 6;
+}
+
+message FPEDecryptResponse {
+  string plaintext = 1;
+}
+
+message MaskingPolicy {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string target_type = 4;
+  string field_path = 5;
+  string mask_pattern = 6;
+  repeated string roles_full = 7;
+  repeated string roles_partial = 8;
+  repeated string roles_redacted = 9;
+  bool consistent = 10;
+  string key_id = 11;
+  string created_at = 12;
+}
+
+message MaskRequest {
+  string tenant_id = 1;
+  string policy_id = 2;
+  JsonObject data = 3;
+  string role = 4;
+  bool preview = 5;
+}
+
+message MaskResponse {
+  JsonObject masked = 1;
+}
+
+message ListMaskingPoliciesRequest {
+  string tenant_id = 1;
+}
+
+message ListMaskingPoliciesResponse {
+  repeated MaskingPolicy items = 1;
+}
+
+message CreateMaskingPolicyRequest {
+  string tenant_id = 1;
+  MaskingPolicy item = 2;
+}
+
+message UpdateMaskingPolicyRequest {
+  string tenant_id = 1;
+  string id = 2;
+  MaskingPolicy item = 3;
+}
+
+message DeleteMaskingPolicyRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message MaskingPolicyResponse {
+  MaskingPolicy item = 1;
+}
+
+message RedactionPattern {
+  string type = 1;
+  string pattern = 2;
+  string label = 3;
+}
+
+message RedactionPolicy {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  repeated RedactionPattern patterns = 4;
+  string scope = 5;
+  string action = 6;
+  string placeholder = 7;
+  repeated string applies_to = 8;
+  string created_at = 9;
+}
+
+message RedactionMatch {
+  int32 start = 1;
+  int32 end = 2;
+  string label = 3;
+  string match = 4;
+}
+
+message RedactRequest {
+  string tenant_id = 1;
+  string policy_id = 2;
+  string content = 3;
+  string content_type = 4;
+  bool detect_only = 5;
+  string endpoint_name = 6;
+}
+
+message RedactResponse {
+  string content = 1;
+  repeated RedactionMatch matches = 2;
+}
+
+message ListRedactionPoliciesRequest {
+  string tenant_id = 1;
+}
+
+message ListRedactionPoliciesResponse {
+  repeated RedactionPolicy items = 1;
+}
+
+message CreateRedactionPolicyRequest {
+  string tenant_id = 1;
+  RedactionPolicy item = 2;
+}
+
+message RedactionPolicyResponse {
+  RedactionPolicy item = 1;
+}
+
+message EncryptFieldsRequest {
+  string tenant_id = 1;
+  string document_id = 2;
+  string document_json = 3;
+  repeated string fields = 4;
+  string key_id = 5;
+  string algorithm = 6;
+  bool searchable = 7;
+  string aad = 8;
+}
+
+message EncryptFieldsResponse {
+  string document_id = 1;
+  string document_json = 2;
+  repeated string fields_encrypted = 3;
+}
+
+message DecryptFieldsRequest {
+  string tenant_id = 1;
+  string document_id = 2;
+  string document_json = 3;
+  repeated string fields = 4;
+  string key_id = 5;
+  string aad = 6;
+}
+
+message DecryptFieldsResponse {
+  string document_json = 1;
+  repeated string fields_decrypted = 2;
+}
+
+message EnvelopeEncryptRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string algorithm = 3;
+  string plaintext = 4;
+  string aad = 5;
+}
+
+message EnvelopeEncryptResponse {
+  string ciphertext = 1;
+  string iv = 2;
+  string wrapped_dek = 3;
+  string wrapped_dek_iv = 4;
+  string algorithm = 5;
+}
+
+message EnvelopeDecryptRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string algorithm = 3;
+  string ciphertext = 4;
+  string iv = 5;
+  string wrapped_dek = 6;
+  string wrapped_dek_iv = 7;
+  string aad = 8;
+}
+
+message EnvelopeDecryptResponse {
+  string plaintext = 1;
+}
+
+message SearchableEncryptRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string plaintext = 3;
+  string aad = 4;
+}
+
+message SearchableEncryptResponse {
+  string ciphertext = 1;
+}
+
+message SearchableDecryptRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string ciphertext = 3;
+  string aad = 4;
+}
+
+message SearchableDecryptResponse {
+  string plaintext = 1;
+}

@@ -1,0 +1,207 @@
+syntax = "proto3";
+
+package vecta.mpc.v1;
+
+option go_package = "vecta-kms/proto/mpc;mpcpb";
+
+service MpcService {
+  rpc InitiateDKG (InitiateDKGRequest) returns (CeremonyResponse);
+  rpc GetDKGStatus (GetCeremonyRequest) returns (CeremonyResponse);
+  rpc ContributeDKG (ContributeDKGRequest) returns (CeremonyResponse);
+  rpc GetDKGResult (GetCeremonyRequest) returns (CeremonyResultResponse);
+
+  rpc InitiateSign (InitiateSignRequest) returns (CeremonyResponse);
+  rpc ContributeSign (ContributeSignRequest) returns (CeremonyResponse);
+  rpc GetSignResult (GetCeremonyRequest) returns (CeremonyResultResponse);
+
+  rpc InitiateDecrypt (InitiateDecryptRequest) returns (CeremonyResponse);
+  rpc ContributeDecrypt (ContributeDecryptRequest) returns (CeremonyResponse);
+  rpc GetDecryptResult (GetCeremonyRequest) returns (CeremonyResultResponse);
+
+  rpc ListShares (ListSharesRequest) returns (ListSharesResponse);
+  rpc GetShareMetadata (GetShareMetadataRequest) returns (ListSharesResponse);
+  rpc RefreshShares (RefreshSharesRequest) returns (KeyResponse);
+  rpc BackupShare (BackupShareRequest) returns (JsonResponse);
+
+  rpc ListKeys (ListKeysRequest) returns (ListKeysResponse);
+  rpc GetKey (GetKeyRequest) returns (KeyResponse);
+  rpc RotateKey (RotateKeyRequest) returns (KeyResponse);
+}
+
+message JsonObject {
+  map<string, string> fields = 1;
+}
+
+message Ceremony {
+  string id = 1;
+  string tenant_id = 2;
+  string type = 3;
+  string key_id = 4;
+  string algorithm = 5;
+  int32 threshold = 6;
+  int32 participant_count = 7;
+  repeated string participants = 8;
+  string message_hash = 9;
+  string ciphertext = 10;
+  string status = 11;
+  JsonObject result = 12;
+  string created_by = 13;
+  int32 required_contributors = 14;
+  string created_at = 15;
+  string updated_at = 16;
+  string completed_at = 17;
+}
+
+message MpcKey {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string algorithm = 4;
+  int32 threshold = 5;
+  int32 participant_count = 6;
+  repeated string participants = 7;
+  string keycore_key_id = 8;
+  repeated string public_commitments = 9;
+  string status = 10;
+  int32 share_version = 11;
+  JsonObject metadata = 12;
+  string created_at = 13;
+  string updated_at = 14;
+  string last_rotated_at = 15;
+}
+
+message MpcShare {
+  string id = 1;
+  string tenant_id = 2;
+  string key_id = 3;
+  string node_id = 4;
+  int32 share_x = 5;
+  string share_y_hash = 6;
+  int32 share_version = 7;
+  string status = 8;
+  JsonObject metadata = 9;
+  string created_at = 10;
+  string updated_at = 11;
+  string refreshed_at = 12;
+  string last_backup_at = 13;
+  string backup_artifact = 14;
+}
+
+message CeremonyResponse {
+  Ceremony ceremony = 1;
+}
+
+message CeremonyResultResponse {
+  JsonObject result = 1;
+}
+
+message KeyResponse {
+  MpcKey item = 1;
+}
+
+message ListKeysResponse {
+  repeated MpcKey items = 1;
+}
+
+message ListSharesResponse {
+  repeated MpcShare items = 1;
+}
+
+message JsonResponse {
+  JsonObject result = 1;
+}
+
+message InitiateDKGRequest {
+  string tenant_id = 1;
+  string key_name = 2;
+  string algorithm = 3;
+  int32 threshold = 4;
+  repeated string participants = 5;
+  string created_by = 6;
+  string keycore_key_id = 7;
+}
+
+message GetCeremonyRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message ContributeDKGRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string party_id = 3;
+  JsonObject payload = 4;
+}
+
+message InitiateSignRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string message_hash = 3;
+  repeated string participants = 4;
+  string created_by = 5;
+}
+
+message ContributeSignRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string party_id = 3;
+  string partial_signature = 4;
+}
+
+message InitiateDecryptRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string ciphertext = 3;
+  repeated string participants = 4;
+  string created_by = 5;
+}
+
+message ContributeDecryptRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string party_id = 3;
+}
+
+message ListSharesRequest {
+  string tenant_id = 1;
+  string node_id = 2;
+  int32 limit = 3;
+}
+
+message GetShareMetadataRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+}
+
+message RefreshSharesRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string actor = 3;
+}
+
+message BackupShareRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string node_id = 3;
+  string destination = 4;
+  string requested_by = 5;
+  bool include_proof = 6;
+}
+
+message ListKeysRequest {
+  string tenant_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message GetKeyRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message RotateKeyRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string actor = 3;
+  string algorithm = 4;
+}

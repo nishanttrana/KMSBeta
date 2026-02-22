@@ -1,0 +1,217 @@
+syntax = "proto3";
+
+package vecta.keycore.v1;
+
+option go_package = "vecta-kms/proto/keycore;keycorepb";
+
+service KeycoreService {
+  rpc CreateKey (CreateKeyRequest) returns (CreateKeyResponse);
+  rpc ImportKey (ImportKeyRequest) returns (CreateKeyResponse);
+  rpc GetKey (GetKeyRequest) returns (GetKeyResponse);
+  rpc ListKeys (ListKeysRequest) returns (ListKeysResponse);
+  rpc RotateKey (RotateKeyRequest) returns (RotateKeyResponse);
+  rpc SetKeyStatus (SetKeyStatusRequest) returns (SetKeyStatusResponse);
+  rpc GetUsage (GetUsageRequest) returns (GetUsageResponse);
+  rpc SetUsageLimit (SetUsageLimitRequest) returns (SetUsageLimitResponse);
+  rpc ResetUsage (ResetUsageRequest) returns (ResetUsageResponse);
+  rpc SetApproval (SetApprovalRequest) returns (SetApprovalResponse);
+  rpc GetApproval (GetApprovalRequest) returns (GetApprovalResponse);
+
+  rpc Encrypt (EncryptRequest) returns (EncryptResponse);
+  rpc Decrypt (DecryptRequest) returns (DecryptResponse);
+  rpc Sign (SignRequest) returns (SignResponse);
+  rpc Verify (VerifyRequest) returns (VerifyResponse);
+}
+
+message CreateKeyRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string algorithm = 3;
+  string key_type = 4;
+  string purpose = 5;
+  string owner = 6;
+  string iv_mode = 7;
+  string created_by = 8;
+  int64 ops_limit = 9;
+  string ops_limit_window = 10;
+  bool approval_required = 11;
+  string approval_policy_id = 12;
+}
+
+message ImportKeyRequest {
+  CreateKeyRequest base = 1;
+  string material = 2;
+  string expected_kcv = 3;
+}
+
+message CreateKeyResponse {
+  string key_id = 1;
+  string tenant_id = 2;
+  string kcv = 3;
+}
+
+message GetKeyRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+}
+
+message Key {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string algorithm = 4;
+  string key_type = 5;
+  string purpose = 6;
+  string status = 7;
+  int32 current_version = 8;
+  string kcv = 9;
+  string iv_mode = 10;
+  int64 ops_total = 11;
+  int64 ops_encrypt = 12;
+  int64 ops_decrypt = 13;
+  int64 ops_sign = 14;
+  int64 ops_limit = 15;
+}
+
+message GetKeyResponse {
+  Key key = 1;
+}
+
+message ListKeysRequest {
+  string tenant_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListKeysResponse {
+  repeated Key items = 1;
+}
+
+message RotateKeyRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string reason = 3;
+}
+
+message RotateKeyResponse {
+  string key_id = 1;
+  string version_id = 2;
+  string kcv = 3;
+}
+
+message SetKeyStatusRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string status = 3;
+}
+
+message SetKeyStatusResponse {
+  string status = 1;
+}
+
+message GetUsageRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+}
+
+message GetUsageResponse {
+  int64 ops_total = 1;
+  int64 ops_encrypt = 2;
+  int64 ops_decrypt = 3;
+  int64 ops_sign = 4;
+  int64 ops_limit = 5;
+  int64 remaining = 6;
+}
+
+message SetUsageLimitRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  int64 ops_limit = 3;
+  string window = 4;
+}
+
+message SetUsageLimitResponse {
+  string status = 1;
+}
+
+message ResetUsageRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+}
+
+message ResetUsageResponse {
+  string status = 1;
+}
+
+message SetApprovalRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  bool required = 3;
+  string policy_id = 4;
+}
+
+message SetApprovalResponse {
+  string status = 1;
+}
+
+message GetApprovalRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+}
+
+message GetApprovalResponse {
+  bool required = 1;
+  string policy_id = 2;
+}
+
+message EncryptRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string plaintext = 3;
+  string iv = 4;
+  string reference_id = 5;
+}
+
+message EncryptResponse {
+  string key_id = 1;
+  int32 version = 2;
+  string ciphertext = 3;
+  string iv = 4;
+  string kcv = 5;
+}
+
+message DecryptRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string ciphertext = 3;
+  string iv = 4;
+}
+
+message DecryptResponse {
+  string key_id = 1;
+  int32 version = 2;
+  string plaintext = 3;
+}
+
+message SignRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string data = 3;
+}
+
+message SignResponse {
+  string key_id = 1;
+  int32 version = 2;
+  string signature = 3;
+}
+
+message VerifyRequest {
+  string tenant_id = 1;
+  string key_id = 2;
+  string data = 3;
+  string signature = 4;
+}
+
+message VerifyResponse {
+  bool verified = 1;
+}

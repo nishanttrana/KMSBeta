@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package vecta.hsm.v1;
+
+option go_package = "vecta-kms/proto/hsm;hsmpb";
+
+service HsmConnectorService {
+  rpc WrapKey (WrapKeyRequest) returns (WrapKeyResponse);
+  rpc UnwrapKey (UnwrapKeyRequest) returns (UnwrapKeyResponse);
+  rpc Sign (SignRequest) returns (SignResponse);
+  rpc GenerateRandom (GenerateRandomRequest) returns (GenerateRandomResponse);
+  rpc GetKeyInfo (GetKeyInfoRequest) returns (GetKeyInfoResponse);
+}
+
+message WrapKeyRequest {
+  bytes plaintext_dek = 1;
+  string tenant_id = 2;
+  string key_label = 3;
+}
+
+message WrapKeyResponse {
+  bytes wrapped_dek = 1;
+  bytes wrapped_dek_iv = 2;
+  string provider = 3;
+}
+
+message UnwrapKeyRequest {
+  bytes wrapped_dek = 1;
+  bytes wrapped_dek_iv = 2;
+  string tenant_id = 3;
+  string key_label = 4;
+}
+
+message UnwrapKeyResponse {
+  bytes plaintext_dek = 1;
+}
+
+message SignRequest {
+  bytes data = 1;
+  string key_label = 2;
+  string tenant_id = 3;
+}
+
+message SignResponse {
+  bytes signature = 1;
+  string algorithm = 2;
+  string provider = 3;
+}
+
+message GenerateRandomRequest {
+  int32 length = 1;
+  string tenant_id = 2;
+}
+
+message GenerateRandomResponse {
+  bytes random_bytes = 1;
+  string provider = 2;
+}
+
+message GetKeyInfoRequest {
+  string key_label = 1;
+  string tenant_id = 2;
+}
+
+message GetKeyInfoResponse {
+  map<string, string> metadata = 1;
+}

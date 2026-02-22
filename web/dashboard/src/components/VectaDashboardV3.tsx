@@ -1,0 +1,13376 @@
+﻿// @ts-nocheck
+import { useState, useEffect, useMemo, Component } from "react";
+import {
+  Home as HomeIcon,
+  KeyRound,
+  Plus,
+  ArrowDownToLine,
+  PenTool,
+  Zap,
+  Lock,
+  FileText,
+  Building2,
+  Atom,
+  Clock3,
+  Gauge,
+  Radio as RadioIcon,
+  VenetianMask,
+  CreditCard,
+  Cloud,
+  ShieldCheck,
+  Database,
+  Link,
+  Cpu,
+  GitBranch,
+  CheckCircle2,
+  Bell,
+  ScrollText,
+  ClipboardCheck,
+  BarChart3,
+  Plug,
+  Settings,
+  Cog,
+  MoreVertical,
+  X,
+  Check,
+  RefreshCcw,
+  ExternalLink,
+  Users,
+  TerminalSquare
+} from "lucide-react";
+import { refreshSession, saveSession, type AuthSession } from "../lib/auth";
+import {
+  activateKey,
+  createKey,
+  deactivateKey,
+  decodeOutputFromBase64,
+  decryptData,
+  deleteTag,
+  deriveKey,
+  destroyKey,
+  disableKey,
+  encryptData,
+  exportKey,
+  formKey,
+  hashData,
+  importKey,
+  kemDecapsulate,
+  kemEncapsulate,
+  listKeys,
+  listKeyVersions,
+  listTags,
+  randomBytes,
+  rotateKey,
+  setKeyExportPolicy,
+  setKeyUsageLimit,
+  signData,
+  updateKeyActivation,
+  upsertTag,
+  verifyData
+} from "../lib/keycore";
+import {
+  acmeChallengeComplete,
+  acmeFinalize,
+  acmeNewAccount,
+  acmeNewOrder,
+  cmpv2Request,
+  createCA,
+  deleteCertificate,
+  downloadCertificateAsset,
+  estServerKeygen,
+  getCertExpiryAlertPolicy,
+  getCRL,
+  getOCSP,
+  issueCertificate,
+  listCAs,
+  listCertificates,
+  listInventory,
+  listProfiles,
+  listProtocolConfigs,
+  listProtocolSchemas,
+  renewCertificate,
+  revokeCertificate,
+  scepEnroll,
+  signCertificateCSR,
+  updateCertExpiryAlertPolicy,
+  updateProtocolConfig,
+  uploadThirdPartyCertificate
+} from "../lib/certs";
+import {
+  createSecret,
+  deleteSecret as deleteVaultSecret,
+  generateSSHKeySecret,
+  getSecretValue,
+  listSecrets
+} from "../lib/secrets";
+import {
+  appDecryptFields,
+  appEncryptFields,
+  appEnvelopeDecrypt,
+  appEnvelopeEncrypt,
+  appSearchableDecrypt,
+  appSearchableEncrypt,
+  applyMask,
+  createMaskingPolicy,
+  createRedactionPolicy,
+  createTokenVault,
+  detokenizeValues,
+  fpeDecrypt,
+  fpeEncrypt,
+  listMaskingPolicies,
+  listRedactionPolicies,
+  listTokenVaults,
+  redactContent,
+  tokenizeValues
+} from "../lib/dataprotect";
+import {
+  computeCVV,
+  computeMAC,
+  createTR31,
+  decryptISO20022,
+  encryptISO20022,
+  generateLAU,
+  generatePVV,
+  signISO20022,
+  translatePIN,
+  translateTR31,
+  validateTR31,
+  verifyCVV,
+  verifyISO20022,
+  verifyLAU,
+  verifyMAC,
+  verifyPVV
+} from "../lib/payment";
+import {
+  discoverCloudInventory,
+  importKeyToCloud,
+  listCloudAccounts,
+  listCloudBindings,
+  normalizeCloudProvider,
+  registerCloudAccount,
+  rotateCloudBinding,
+  syncCloudKeys,
+  type CloudAccount,
+  type CloudKeyBinding,
+  type CloudProvider,
+  type CloudSyncJob
+} from "../lib/cloud";
+import {
+  configureHYOKEndpoint,
+  deleteHYOKEndpoint,
+  getHYOKDKEPublicKey,
+  getHYOKHealth,
+  hyokCrypto,
+  listHYOKEndpoints,
+  listHYOKRequests
+} from "../lib/hyok";
+import {
+  createKMIPClient,
+  createKMIPProfile,
+  listKMIPClients,
+  listKMIPProfiles
+} from "../lib/kmip";
+import {
+  getQKDConfig,
+  getQKDOverview,
+  injectQKDKey,
+  listQKDKeys,
+  listQKDLogs,
+  runQKDTestGenerate,
+  updateQKDConfig
+} from "../lib/qkd";
+import {
+  contributeMPCDecrypt,
+  contributeMPCDKG,
+  contributeMPCSign,
+  getMPCDecryptResult,
+  getMPCSignResult,
+  initiateMPCDecrypt,
+  initiateMPCDKG,
+  initiateMPCSign,
+  listMPCKeys
+} from "../lib/mpc";
+import {
+  downloadEKMSDK,
+  deleteEKMAgent,
+  getEKMAgentHealth,
+  getEKMSDKOverview,
+  getEKMAgentStatus,
+  getEKMDeployPackage,
+  getEKMTDEPublicKey,
+  listEKMAgentLogs,
+  listEKMAgents,
+  registerEKMAgent,
+  rotateEKMAgentKey
+} from "../lib/ekm";
+import {
+  acknowledgeAlert,
+  createReportingScheduledReport,
+  createReportingRule,
+  downloadReportingReport,
+  escalateAlert,
+  getReportingAlertStats,
+  getReportingMTTR,
+  getReportingReportJob,
+  getUnreadAlertCounts,
+  listReportingAlerts,
+  listReportingChannels,
+  listReportingReportJobs,
+  listReportingReportTemplates,
+  listReportingRules,
+  listReportingScheduledReports,
+  generateReportingReport
+} from "../lib/reporting";
+import {
+  getComplianceAssessment,
+  getComplianceAssessmentSchedule,
+  listComplianceAssessmentHistory,
+  runComplianceAssessment,
+  updateComplianceAssessmentSchedule
+} from "../lib/compliance";
+import {
+  diffCBOM,
+  exportCBOM,
+  exportSBOM,
+  generateCBOM,
+  generateSBOM,
+  getCBOMSummary,
+  getLatestCBOM,
+  getLatestSBOM,
+  listCBOMHistory,
+  listSBOMVulnerabilities
+} from "../lib/sbom";
+import { serviceRequest } from "../lib/serviceApi";
+import {
+  createAuthUser,
+  getAuthCLIStatus,
+  getAuthPasswordPolicy,
+  listAuthUsers,
+  openAuthCLISession,
+  resetAuthUserPassword,
+  updateAuthPasswordPolicy,
+  updateAuthUserRole,
+  updateAuthUserStatus
+} from "../lib/authAdmin";
+import {
+  createGovernancePolicy,
+  getGovernanceRequest,
+  getGovernanceSettings,
+  listGovernancePolicies,
+  listGovernanceRequests,
+  testGovernanceSMTP,
+  updateGovernancePolicy,
+  updateGovernanceSettings,
+  voteGovernanceRequest
+} from "../lib/governance";
+import type { FeatureKey } from "../config/tabs";
+import type { LiveEvent } from "../store/live";
+
+// 
+// VECTA KMS DASHBOARD v3 - FULLY INTERACTIVE BUILD REFERENCE
+// Every button opens real forms. Every form shows all options.
+// This dashboard IS the development spec.
+// 
+
+const C={bg:"#060a11",sidebar:"#0a0f1a",surface:"#0f1521",card:"#131d2e",cardHover:"#182740",
+border:"#1a2944",borderHi:"#243656",accent:"#06d6e0",accentDim:"rgba(6,214,224,.08)",
+green:"#2dd4a0",greenDim:"rgba(45,212,160,.08)",red:"#ef4444",redDim:"rgba(239,68,68,.08)",
+amber:"#f59e0b",amberDim:"rgba(245,158,11,.08)",purple:"#a78bfa",purpleDim:"rgba(167,139,250,.08)",
+blue:"#3b82f6",blueDim:"rgba(59,130,246,.08)",pink:"#ec4899",text:"#e2e8f0",dim:"#94a3b8",
+muted:"#64748b",white:"#ffffff"};
+
+const TAB_FEATURES = {
+  vault: "secrets",
+  certs: "certs",
+  tokenize: "data_protection",
+  dataenc: "data_protection",
+  payment: "payment_crypto",
+  byok: "cloud_byok",
+  hyok: "hyok_proxy",
+  ekm: "ekm_database",
+  kmip: "kmip_server",
+  hsm: "hsm_hardware_or_software",
+  qkd: "qkd_interface",
+  mpc: "mpc_engine",
+  cluster: "clustering",
+  approvals: "governance",
+  alerts: "reporting_alerting",
+  compliance: "compliance_dashboard",
+  sbom: "sbom_cbom"
+};
+
+function errMsg(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+function formatAgo(value: unknown): string {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "-";
+  }
+  const ts = new Date(raw);
+  if (Number.isNaN(ts.getTime())) {
+    return "-";
+  }
+  const diffSec = Math.max(0, Math.floor((Date.now() - ts.getTime()) / 1000));
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}d ago`;
+}
+
+class TabErrorBoundary extends Component<any, {hasError:boolean; errorMessage:string}> {
+  constructor(props:any){
+    super(props);
+    this.state={hasError:false,errorMessage:""};
+  }
+
+  static getDerivedStateFromError(error:any){
+    return {
+      hasError:true,
+      errorMessage:errMsg(error)
+    };
+  }
+
+  componentDidCatch(error:any){
+    // Keep diagnostics in browser console for quick debugging.
+    console.error("Tab render failed",error);
+  }
+
+  componentDidUpdate(prevProps:any){
+    if(prevProps.resetKey!==this.props.resetKey&&this.state.hasError){
+      this.setState({hasError:false,errorMessage:""});
+    }
+  }
+
+  render(){
+    if(this.state.hasError){
+      return <Card style={{borderColor:C.red}}>
+        <div style={{fontSize:12,color:C.red,fontWeight:700,marginBottom:6}}>This tab failed to render.</div>
+        <div style={{fontSize:10,color:C.dim,marginBottom:8}}>{this.state.errorMessage||"Unexpected runtime error."}</div>
+        <Btn small onClick={()=>this.setState({hasError:false,errorMessage:""})}>Retry</Btn>
+      </Card>;
+    }
+    return this.props.children;
+  }
+}
+
+function sanitizeDisplayText(value: unknown): string {
+  return String(value || "")
+    .replace(/\uFFFD/g, "")
+    .replace(/[^\x20-\x7E]/g, (ch) => {
+      if (ch === "–" || ch === "—") {
+        return "-";
+      }
+      if (ch === "→") {
+        return "->";
+      }
+      if (ch === "•" || ch === "◆" || ch === "◈" || ch === "◊") {
+        return "*";
+      }
+      return "";
+    });
+}
+
+function normalizeKeyState(state: string): string {
+  const raw = String(state || "").toLowerCase().trim();
+  if (raw === "destroyed" || raw === "deleted") {
+    return "deleted";
+  }
+  if (raw === "destroy-pending" || raw === "delete-pending" || raw === "deletion-pending") {
+    return "destroy-pending";
+  }
+  if (raw === "preactive" || raw === "pre-active") {
+    return "pre-active";
+  }
+  if (raw === "retired" || raw === "deactivated") {
+    return "deactivated";
+  }
+  if (raw === "generation" || raw === "generated") {
+    return "pre-active";
+  }
+  return raw || "unknown";
+}
+
+function keyStateLabel(state: string): string {
+  const norm = normalizeKeyState(state);
+  switch (norm) {
+    case "pre-active":
+      return "Pre-active";
+    case "active":
+      return "Active";
+    case "disabled":
+      return "Disabled";
+    case "deactivated":
+      return "Deactivated (Retired)";
+    case "destroy-pending":
+      return "Delete Pending";
+    case "deleted":
+      return "Deleted";
+    default:
+      return norm.split("-").map((part)=>part?part[0].toUpperCase()+part.slice(1):part).join(" ");
+  }
+}
+
+function keyStateTone(state: string): "green" | "amber" | "red" | "blue" {
+  const norm = normalizeKeyState(state);
+  if (norm === "active") {
+    return "green";
+  }
+  if (norm === "pre-active" || norm === "deactivated") {
+    return "amber";
+  }
+  if (norm === "deleted" || norm === "destroy-pending" || norm === "disabled") {
+    return "red";
+  }
+  return "blue";
+}
+
+function normalizeUserStatus(status: string): "active" | "inactive" {
+  const raw = String(status || "").toLowerCase().trim();
+  if (!raw) {
+    return "active";
+  }
+  if (raw === "disabled" || raw === "inactive" || raw === "suspended" || raw === "blocked") {
+    return "inactive";
+  }
+  return "active";
+}
+
+function toViewKey(k: any) {
+  const ver = Number(k.current_version || 0);
+  const labels = (k && typeof k.labels === "object" && k.labels) ? k.labels : {};
+  const componentRole = String(labels.component_role || labels.component || "").toLowerCase();
+  return {
+    id: String(k.id || ""),
+    name: String(k.name || "unnamed-key"),
+    algo: String(k.algorithm || "unknown"),
+    keyType: String(k.key_type || ""),
+    state: normalizeKeyState(String(k.status || "unknown")),
+    ver: ver > 0 ? `v${ver}` : "v1",
+    kcv: String(k.kcv || ""),
+    ops: String(k.ops_total || 0),
+    created: String(k.created_at || "-"),
+    rotated: String(k.updated_at || "-"),
+    expires: String(k.expires_at || k.destroy_date || "Never"),
+    destroyAt: String(k.destroy_date || ""),
+    activationAt: String(k.activation_date || ""),
+    tags: Array.isArray(k.tags)?k.tags.map((t)=>String(t)):[],
+    exportAllowed: Boolean(k.export_allowed),
+    tenant: String(k.tenant_id || ""),
+    purpose: String(k.purpose || "encrypt-decrypt"),
+    labels,
+    pairId: String(labels.pair_id || ""),
+    componentRole: componentRole === "public" ? "public" : componentRole === "private" ? "private" : "",
+    ivMode: String(k.iv_mode || "-"),
+    opsLimit: k.ops_limit ? String(k.ops_limit) : "inf",
+    opsWindow: String(k.ops_limit_window || "total"),
+    approvalReq: Boolean(k.approval_required)
+  };
+}
+
+function canSeeTab(tab: string, enabledFeatures: Set<FeatureKey>): boolean {
+  const need = TAB_FEATURES[tab];
+  if (!need) {
+    return true;
+  }
+  if (need === "hsm_hardware_or_software") {
+    return enabledFeatures.has("hsm_hardware") || enabledFeatures.has("hsm_software");
+  }
+  return enabledFeatures.has(need as FeatureKey);
+}
+
+function toneForSeverity(sev: string): string {
+  const s = (sev || "").toLowerCase();
+  if (s === "critical" || s === "high") {
+    return "red";
+  }
+  if (s === "warning" || s === "medium") {
+    return "amber";
+  }
+  return "green";
+}
+
+function keyChoicesFromCatalog(keyCatalog: any[]): any[] {
+  return Array.isArray(keyCatalog) ? keyCatalog : [];
+}
+
+function isFipsAlgorithm(algorithm: string): boolean {
+  const v = String(algorithm || "").toUpperCase();
+  if (!v) {
+    return false;
+  }
+  if (
+    v.includes("CHACHA20") ||
+    v.includes("CAMELLIA") ||
+    v.includes("ECIES") ||
+    v.includes("BRAINPOOL") ||
+    v.includes("KECCAK") ||
+    v.includes("RIPEMD") ||
+    v.includes("BLAKE") ||
+    v.includes("POLY1305") ||
+    (v.includes("AES") && v.includes("ECB"))
+  ) {
+    return false;
+  }
+  return (
+    v.includes("AES") ||
+    v.includes("RSA") ||
+    v.includes("ECDSA") ||
+    v.includes("ECDH") ||
+    v.includes("HMAC") ||
+    v.includes("CMAC") ||
+    v.includes("GMAC") ||
+    v.includes("ML-KEM") ||
+    v.includes("ML-DSA") ||
+    v.includes("SLH-DSA")
+  );
+}
+
+function normalizeFipsModeValue(mode: string): "enabled" | "disabled" {
+  const raw = String(mode || "").toLowerCase().trim();
+  if (raw === "enabled" || raw === "strict" || raw === "fips" || raw === "on" || raw === "true") {
+    return "enabled";
+  }
+  return "disabled";
+}
+
+function isFipsModeEnabled(mode: string): boolean {
+  return normalizeFipsModeValue(mode) === "enabled";
+}
+
+function isFipsHashAlgorithm(algorithm: string): boolean {
+  const v = String(algorithm || "").toLowerCase().trim();
+  return v === "sha-256" || v === "sha-384" || v === "sha-512" || v === "sha3-256" || v === "sha3-384" || v === "sha3-512";
+}
+
+function isFipsRandomSource(source: string): boolean {
+  const v = String(source || "").toLowerCase().trim();
+  return v === "kms-csprng" || v === "hsm-trng";
+}
+
+function isFipsMechanism(name: string): boolean {
+  const v = String(name || "").toUpperCase();
+  if (!v) {
+    return false;
+  }
+  if (
+    v.includes("CHACHA20") ||
+    v.includes("CAMELLIA") ||
+    v.includes("ECIES") ||
+    v.includes("BRAINPOOL") ||
+    v.includes("KECCAK") ||
+    v.includes("RIPEMD") ||
+    v.includes("BLAKE") ||
+    v.includes("POLY1305") ||
+    (v.includes("AES") && v.includes("ECB"))
+  ) {
+    return false;
+  }
+  return (
+    v.includes("AES") ||
+    v.includes("RSA") ||
+    v.includes("ECDSA") ||
+    v.includes("ECDH") ||
+    v.includes("HMAC") ||
+    v.includes("CMAC") ||
+    v.includes("GMAC") ||
+    v.includes("ML-KEM") ||
+    v.includes("ML-DSA") ||
+    v.includes("SLH-DSA") ||
+    v.includes("SHA-256") ||
+    v.includes("SHA-384") ||
+    v.includes("SHA-512") ||
+    v.includes("SHA3")
+  );
+}
+
+function isAsymmetricKeyLike(key: any): boolean {
+  const keyType = String(key?.keyType || "").toLowerCase();
+  if (keyType.includes("asymmetric") || keyType.includes("public") || keyType.includes("private")) {
+    return true;
+  }
+  const algo = String(key?.algo || "").toUpperCase();
+  return (
+    algo.includes("RSA") ||
+    algo.includes("ECDSA") ||
+    algo.includes("ED25519") ||
+    algo.includes("ED448") ||
+    algo.includes("X25519") ||
+    algo.includes("X448") ||
+    algo.includes("ECDH")
+  );
+}
+
+function isPublicComponentLike(key: any): boolean {
+  const role = String(key?.componentRole || "").toLowerCase();
+  if (role === "public") {
+    return true;
+  }
+  const keyType = String(key?.keyType || "").toLowerCase();
+  return keyType.includes("public");
+}
+
+function isAEADAlgorithm(algorithm: string): boolean {
+  const v = String(algorithm || "").toUpperCase();
+  return (
+    v.includes("GCM") ||
+    v.includes("CCM") ||
+    v.includes("POLY1305")
+  );
+}
+
+function usesIVAlgorithm(algorithm: string): boolean {
+  const v = String(algorithm || "").toUpperCase();
+  if (!v || v.includes("ECB")) {
+    return false;
+  }
+  return (
+    isAEADAlgorithm(v) ||
+    v.includes("CBC") ||
+    v.includes("CTR") ||
+    v.includes("CFB") ||
+    v.includes("OFB") ||
+    v.includes("XTS") ||
+    v.includes("CHACHA20")
+  );
+}
+
+function isHMACAlgorithm(algorithm: string): boolean {
+  return String(algorithm || "").toUpperCase().includes("HMAC");
+}
+
+function isMLKEMAlgorithm(algorithm: string): boolean {
+  return String(algorithm || "").toUpperCase().includes("ML-KEM");
+}
+
+function isRSAAlgorithm(algorithm: string): boolean {
+  return String(algorithm || "").toUpperCase().includes("RSA");
+}
+
+function isECDSAAlgorithm(algorithm: string): boolean {
+  const v = String(algorithm || "").toUpperCase();
+  return v.includes("ECDSA") || v.includes("BRAINPOOL");
+}
+
+function isEd25519Algorithm(algorithm: string): boolean {
+  return String(algorithm || "").toUpperCase().includes("ED25519");
+}
+
+function isSupportedSymmetricCipherAlgorithm(algorithm: string): boolean {
+  const v = String(algorithm || "").toUpperCase();
+  if (!v.includes("AES") && !v.includes("3DES") && !v.includes("TDES") && !v.includes("DES") && !v.includes("CHACHA20") && !v.includes("CAMELLIA")) {
+    return false;
+  }
+  if (v.includes("CHACHA20") || v.includes("CAMELLIA")) {
+    return true;
+  }
+  if (v.includes("AES")) {
+    if (v.includes("ECB") || v.includes("CCM") || v.includes("CFB") || v.includes("OFB") || v.includes("XTS")) {
+      return false;
+    }
+    return true;
+  }
+  if (v.includes("3DES") || v.includes("TDES")) {
+    return v.includes("CBC");
+  }
+  return false;
+}
+
+function isVaultCapableKeyChoice(key: any): boolean {
+  const algo = String(key?.algo || "").toUpperCase();
+  const keyType = String(key?.keyType || "").toLowerCase();
+  const state = String(key?.state || "").toLowerCase();
+  if (state && state !== "active") {
+    return false;
+  }
+  if (isPublicComponentLike(key)) {
+    return false;
+  }
+  if (keyType && keyType !== "symmetric") {
+    return false;
+  }
+  if (algo.includes("HMAC") || algo.includes("CMAC") || algo.includes("GMAC")) {
+    return false;
+  }
+  return isSupportedSymmetricCipherAlgorithm(algo);
+}
+
+function supportedOpsForKey(key: any): string[] {
+  const algo = String(key?.algo || "");
+  const keyType = String(key?.keyType || "").toLowerCase();
+  const ops = new Set<string>(["Hash", "Random"]);
+  if (isSupportedSymmetricCipherAlgorithm(algo)) {
+    ops.add("Encrypt");
+    ops.add("Decrypt");
+    ops.add("Wrap");
+    ops.add("Unwrap");
+    ops.add("Key Derive");
+  }
+  if (isHMACAlgorithm(algo)) {
+    ops.add("Sign");
+    ops.add("Verify");
+    ops.add("MAC");
+    ops.add("Key Derive");
+  }
+  if (isRSAAlgorithm(algo)) {
+    ops.add("Encrypt");
+    ops.add("Wrap");
+    ops.add("Verify");
+    if (!keyType.includes("public")) {
+      ops.add("Decrypt");
+      ops.add("Unwrap");
+      ops.add("Sign");
+    }
+  }
+  if (isECDSAAlgorithm(algo) || isEd25519Algorithm(algo)) {
+    ops.add("Verify");
+    if (!keyType.includes("public")) {
+      ops.add("Sign");
+    }
+  }
+  if (isMLKEMAlgorithm(algo)) {
+    ops.add("KEM Encapsulate");
+    if (!keyType.includes("public")) {
+      ops.add("KEM Decapsulate");
+    }
+  }
+  return Array.from(ops);
+}
+
+function supportsOperationForKey(key: any, op: string): boolean {
+  const keyRequired = op !== "Hash" && op !== "Random";
+  if (!keyRequired) {
+    return true;
+  }
+  return supportedOpsForKey(key).includes(op);
+}
+
+function preferredKEMAlgorithmForKey(key: any): "ml-kem-768" | "ml-kem-1024" {
+  const algo = String(key?.algo || "").toUpperCase();
+  return algo.includes("1024") ? "ml-kem-1024" : "ml-kem-768";
+}
+
+function algorithmFamilyLabel(algorithm: string): string {
+  const v = String(algorithm || "").toUpperCase();
+  if (!v) {
+    return "Other";
+  }
+  if (v.includes("AES")) {
+    return "AES";
+  }
+  if (v.includes("RSA")) {
+    return "RSA";
+  }
+  if (
+    v.includes("ECDSA") ||
+    v.includes("ECDH") ||
+    v.includes("ECIES") ||
+    v.includes("BRAINPOOL") ||
+    v.includes("ED25519") ||
+    v.includes("ED448") ||
+    v.includes("X25519") ||
+    v.includes("X448")
+  ) {
+    return "ECC";
+  }
+  if (
+    v.includes("ML-KEM") ||
+    v.includes("ML-DSA") ||
+    v.includes("SLH-DSA") ||
+    v.includes("HSS-LMS") ||
+    v.includes("XMSS")
+  ) {
+    return "PQC";
+  }
+  if (v.includes("HMAC")) {
+    return "HMAC";
+  }
+  if (v.includes("CMAC") || v.includes("GMAC") || v.includes("POLY1305")) {
+    return "MAC";
+  }
+  if (v.includes("DSA")) {
+    return "DSA";
+  }
+  if (v.includes("3DES") || v.includes("DES")) {
+    return "3DES";
+  }
+  if (v.includes("CHACHA20")) {
+    return "ChaCha20";
+  }
+  if (v.includes("CAMELLIA")) {
+    return "Camellia";
+  }
+  return "Other";
+}
+
+function composeCreateAlgorithm(
+  algoType: string,
+  family: string,
+  keySpec: string,
+  cipherMode: string
+): string {
+  const type = String(algoType || "").toLowerCase();
+  const fam = String(family || "").toUpperCase();
+  const spec = String(keySpec || "").trim();
+  const mode = String(cipherMode || "GCM").toUpperCase();
+  if (type === "symmetric") {
+    if (fam === "AES") {
+      return `AES-${spec || "256"}-${mode}`;
+    }
+    if (fam === "CHACHA20") {
+      return "ChaCha20-Poly1305";
+    }
+    if (fam === "CAMELLIA") {
+      return `Camellia-${spec || "256"}-${mode}`;
+    }
+    if (fam === "3DES") {
+      return "3DES-CBC";
+    }
+    return `AES-${spec || "256"}-${mode}`;
+  }
+  if (type === "asymmetric") {
+    if (fam === "RSA") {
+      return `RSA-${spec || "2048"}`;
+    }
+    if (fam === "ECC") {
+      if (spec === "Brainpool-P256r1" || spec === "Brainpool-P384r1") {
+        return spec;
+      }
+      if (spec === "P-384") {
+        return "ECDSA-P384";
+      }
+      if (spec === "P-521") {
+        return "ECDSA-P521";
+      }
+      return "ECDSA-P256";
+    }
+    if (fam === "EDDSA") {
+      return spec === "Ed448" ? "Ed448" : "Ed25519";
+    }
+    if (fam === "ECDH") {
+      if (spec === "X25519" || spec === "X448") {
+        return spec;
+      }
+      if (spec === "P-384") {
+        return "ECDH-P384";
+      }
+      return "ECDH-P256";
+    }
+    if (fam === "DSA") {
+      return "DSA-3072";
+    }
+    return `RSA-${spec || "2048"}`;
+  }
+  if (type === "pqc") {
+    if (fam === "ML-KEM") {
+      return `ML-KEM-${spec || "768"}`;
+    }
+    if (fam === "ML-DSA") {
+      return `ML-DSA-${spec || "65"}`;
+    }
+    if (fam === "SLH-DSA") {
+      return `SLH-DSA-${spec || "128s"}`;
+    }
+    if (fam === "HSS/LMS") {
+      return `HSS-LMS-${spec || "SHA256-H10"}`;
+    }
+    if (fam === "XMSS") {
+      return `XMSS-${spec || "SHA256-H10"}`;
+    }
+    if (fam === "HYBRID") {
+      return spec || "ECDSA-P384 + ML-DSA-65";
+    }
+    return `ML-KEM-${spec || "768"}`;
+  }
+  if (fam === "CMAC") {
+    return "CMAC-AES-256";
+  }
+  return `HMAC-${spec || "SHA256"}`;
+}
+
+function publicPurposeFromPrivate(purpose: string): string {
+  const p = String(purpose || "").trim().toLowerCase();
+  if (p === "sign-verify") {
+    return "verify";
+  }
+  if (p === "encrypt-decrypt") {
+    return "encrypt";
+  }
+  if (p === "key-agreement") {
+    return "key-agreement";
+  }
+  return p || "verify";
+}
+
+function formatOpsValue(value: number): string {
+  const n = Number(value || 0);
+  if (n >= 1_000_000_000) {
+    return `${(n / 1_000_000_000).toFixed(1).replace(/\.0$/, "")}B`;
+  }
+  if (n >= 1_000_000) {
+    return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if (n >= 1_000) {
+    return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  }
+  return String(n);
+}
+
+function formatDestroyAt(value: string): string {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "-";
+  }
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) {
+    return raw;
+  }
+  return dt.toLocaleString();
+}
+
+function tagColorByName(tagCatalog: any[], name: string): string {
+  const match=(Array.isArray(tagCatalog)?tagCatalog:[]).find((t)=>String(t?.name||"")===String(name||""));
+  return String(match?.color||C.blue);
+}
+
+function toISODateTime(localValue: string): string | undefined {
+  const raw = String(localValue || "").trim();
+  if (!raw) {
+    return undefined;
+  }
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) {
+    return undefined;
+  }
+  return dt.toISOString();
+}
+
+function toLocalDateTime(isoValue: string): string {
+  const raw = String(isoValue || "").trim();
+  if (!raw) {
+    return "";
+  }
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) {
+    return "";
+  }
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+}
+
+function renderKeyOptions(keyChoices: any[]): any[] {
+  if (!keyChoices.length) {
+    return [<option key="no-customer-keys" value="">No customer keys available</option>];
+  }
+  return keyChoices.map((k) => (
+    <option key={k.id} value={k.id}>
+      {k.name} {k.algo ? `(${k.algo})` : ""}
+    </option>
+  ));
+}
+
+// 
+// SHARED COMPONENTS
+// 
+const Modal=({open,onClose,title,wide,width,children})=>!open?null:(
+  <div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
+    <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.7)",backdropFilter:"blur(4px)"}}/>
+    <div onClick={e=>e.stopPropagation()} style={{position:"relative",background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:14,padding:0,width:width||(wide?780:540),maxHeight:"88vh",overflow:"auto",boxShadow:"0 24px 60px rgba(0,0,0,.5)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 20px",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,background:C.surface,zIndex:1,borderRadius:"14px 14px 0 0"}}>
+        <span style={{fontSize:15,fontWeight:700,color:C.text,letterSpacing:-.3}}>{title}</span>
+        <button onClick={onClose} aria-label="Close" style={{background:"transparent",border:"none",color:C.muted,cursor:"pointer",padding:4,lineHeight:1,display:"inline-flex",alignItems:"center",justifyContent:"center"}}>
+          <X size={14} strokeWidth={2}/>
+        </button>
+      </div>
+      <div style={{padding:"16px 20px 20px"}}>{children}</div>
+    </div></div>);
+
+function usePromptDialog(){
+  const [dialog,setDialog]=useState<any>({
+    open:false,
+    mode:"confirm",
+    title:"Confirm Action",
+    message:"",
+    confirmLabel:"Confirm",
+    cancelLabel:"Cancel",
+    danger:false,
+    placeholder:"",
+    value:"",
+    validator:null,
+    resolver:null,
+    error:""
+  });
+
+  const closeWith=(result:any)=>{
+    const resolver=dialog?.resolver;
+    setDialog((prev:any)=>({...prev,open:false,resolver:null,error:""}));
+    if(typeof resolver==="function"){
+      resolver(result);
+    }
+  };
+
+  const confirm=(opts:any={})=>new Promise<boolean>((resolve)=>{
+    setDialog({
+      open:true,
+      mode:"confirm",
+      title:String(opts?.title||"Confirm Action"),
+      message:String(opts?.message||""),
+      confirmLabel:String(opts?.confirmLabel||"Confirm"),
+      cancelLabel:String(opts?.cancelLabel||"Cancel"),
+      danger:Boolean(opts?.danger),
+      placeholder:"",
+      value:"",
+      validator:null,
+      resolver:resolve,
+      error:""
+    });
+  });
+
+  const prompt=(opts:any={})=>new Promise<string|null>((resolve)=>{
+    const initial=String(opts?.defaultValue??"");
+    setDialog({
+      open:true,
+      mode:"prompt",
+      title:String(opts?.title||"Input Required"),
+      message:String(opts?.message||""),
+      confirmLabel:String(opts?.confirmLabel||"Submit"),
+      cancelLabel:String(opts?.cancelLabel||"Cancel"),
+      danger:Boolean(opts?.danger),
+      placeholder:String(opts?.placeholder||""),
+      value:initial,
+      validator:typeof opts?.validate==="function"?opts.validate:null,
+      resolver:resolve,
+      error:""
+    });
+  });
+
+  const submit=()=>{
+    if(dialog?.mode==="prompt"){
+      const value=String(dialog?.value??"");
+      if(typeof dialog?.validator==="function"){
+        const maybeError=dialog.validator(value);
+        if(maybeError){
+          setDialog((prev:any)=>({...prev,error:String(maybeError)}));
+          return;
+        }
+      }
+      closeWith(value);
+      return;
+    }
+    closeWith(true);
+  };
+
+  const cancel=()=>{
+    closeWith(dialog?.mode==="prompt"?null:false);
+  };
+
+  const ui=<Modal open={Boolean(dialog?.open)} onClose={cancel} title={String(dialog?.title||"Confirm Action")} width={460}>
+    {String(dialog?.message||"").trim()?<div style={{fontSize:11,color:C.dim,whiteSpace:"pre-wrap",lineHeight:1.5,marginBottom:dialog?.mode==="prompt"?10:14}}>
+      {dialog.message}
+    </div>:null}
+    {dialog?.mode==="prompt"?<div style={{marginBottom:8}}>
+      <Inp
+        autoFocus
+        value={String(dialog?.value??"")}
+        placeholder={String(dialog?.placeholder||"")}
+        onChange={(e)=>setDialog((prev:any)=>({...prev,value:e.target.value,error:""}))}
+        onKeyDown={(e)=>{
+          if(e.key==="Enter"){
+            e.preventDefault();
+            submit();
+          }
+        }}
+      />
+    </div>:null}
+    {String(dialog?.error||"").trim()?<div style={{fontSize:10,color:C.red,marginBottom:8}}>{dialog.error}</div>:null}
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:4}}>
+      <Btn onClick={cancel}>{String(dialog?.cancelLabel||"Cancel")}</Btn>
+      <Btn primary={!Boolean(dialog?.danger)} danger={Boolean(dialog?.danger)} onClick={submit}>{String(dialog?.confirmLabel||"Confirm")}</Btn>
+    </div>
+  </Modal>;
+
+  return {confirm,prompt,ui};
+}
+
+const FG=({label,children,hint,required})=>(
+  <div style={{marginBottom:12}}>
+    <label style={{display:"block",fontSize:10,fontWeight:600,color:C.dim,marginBottom:4,textTransform:"uppercase",letterSpacing:.8}}>
+      {label}{required&&<span style={{color:C.red}}> *</span>}
+    </label>
+    {children}
+    {hint&&<div style={{fontSize:9,color:C.muted,marginTop:3}}>{hint}</div>}
+  </div>);
+
+const Inp=({placeholder,w,mono,style,...p})=><input placeholder={placeholder} style={{backgroundColor:C.card,border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 10px",color:C.text,fontSize:11,width:w||"100%",outline:"none",fontFamily:mono?"'JetBrains Mono',monospace":"inherit",boxSizing:"border-box",...(style||{})}} {...p}/>;
+
+const Txt=({placeholder,rows,style,...p})=><textarea placeholder={placeholder} rows={rows||3} style={{backgroundColor:C.card,border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 10px",color:C.text,fontSize:11,width:"100%",outline:"none",resize:"vertical",fontFamily:"'JetBrains Mono',monospace",boxSizing:"border-box",...(style||{})}} {...p}/>;
+
+const Sel=({children,w,style,...p})=><select style={{backgroundColor:C.card,border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 30px 8px 10px",color:C.text,fontSize:11,width:w||"100%",outline:"none",cursor:"pointer",boxSizing:"border-box",appearance:"none",WebkitAppearance:"none",MozAppearance:"none",backgroundImage:"linear-gradient(45deg, transparent 50%, #7f93b3 50%), linear-gradient(135deg, #7f93b3 50%, transparent 50%)",backgroundPosition:"calc(100% - 14px) calc(50% - 2px), calc(100% - 9px) calc(50% - 2px)",backgroundSize:"5px 5px, 5px 5px",backgroundRepeat:"no-repeat",...(style||{})}} {...p}>{children}</select>;
+
+const Chk=({label,checked,onChange})=>(
+  <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:C.dim,cursor:"pointer",marginBottom:4}}>
+    <div style={{width:16,height:16,borderRadius:4,border:`1px solid ${checked?C.accent:C.border}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}} onClick={onChange}>
+      {checked&&<Check size={10} strokeWidth={3} color={C.accent}/>}
+    </div>{label}</label>);
+
+const Radio=({label,selected,onSelect})=>(
+  <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:selected?C.text:C.dim,cursor:"pointer",marginBottom:4}} onClick={onSelect}>
+    <div style={{width:14,height:14,borderRadius:7,border:`2px solid ${selected?C.accent:C.border}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+      {selected&&<div style={{width:6,height:6,borderRadius:3,background:C.accent}}/>}
+    </div>{label}</label>);
+
+const Btn=({children,primary,danger,small,onClick,disabled,full,style,...p})=>(
+  <button onClick={onClick} disabled={disabled} {...p} style={{background:danger?C.red:primary?C.accent:"transparent",color:danger||primary?C.bg:C.accent,
+    border:`1px solid ${danger?C.red:primary?C.accent:C.border}`,borderRadius:7,padding:small?"5px 10px":"8px 16px",
+    fontSize:small?10:11,fontWeight:600,cursor:disabled?"not-allowed":"pointer",opacity:disabled?.5:1,
+    width:full?"100%":"auto",letterSpacing:.2,display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,...(style||{})}}>{children}</button>);
+
+const B=({children,c="accent",pulse})=>(
+  <span style={{display:"inline-block",padding:"2px 7px",borderRadius:5,fontSize:9,fontWeight:600,
+    color:C[c],background:C[c+"Dim"]||"rgba(255,255,255,.05)",letterSpacing:.3,
+    animation:pulse?"pulse 2s infinite":"none"}}>{children}</span>);
+
+const Tabs=({tabs,active,onChange})=>(
+  <div style={{display:"flex",gap:2,marginBottom:14,flexWrap:"wrap"}}>
+    {tabs.map(t=><button key={t} onClick={()=>onChange(t)} style={{background:active===t?C.accentDim:"transparent",color:active===t?C.accent:C.muted,border:`1px solid ${active===t?C.accent:C.border}`,borderRadius:6,padding:"5px 10px",fontSize:10,fontWeight:active===t?600:400,cursor:"pointer",letterSpacing:.2}}>{t}</button>)}
+  </div>);
+
+function statIconForLabel(label){
+  const key=String(label||"").toLowerCase();
+  if(key==="cas"){
+    return Building2;
+  }
+  if(key.includes("pqc")){
+    return Atom;
+  }
+  if(key.includes("expiring")){
+    return Clock3;
+  }
+  if(key.includes("ops")){
+    return Zap;
+  }
+  if(key.includes("alert")||key==="open"||key==="today"){
+    return Bell;
+  }
+  if(key.includes("secret")){
+    return Lock;
+  }
+  if(key.includes("cert")){
+    return FileText;
+  }
+  if(key.includes("protocol")||key.includes("channels")){
+    return RadioIcon;
+  }
+  if(key.includes("response")){
+    return Gauge;
+  }
+  if(key.includes("client")){
+    return Link;
+  }
+  if(key.includes("type")){
+    return Database;
+  }
+  if(key.includes("lease")||key==="active"){
+    return CheckCircle2;
+  }
+  if(key.includes("key")){
+    return KeyRound;
+  }
+  return ShieldCheck;
+}
+
+const Stat=({l,v,s,c="accent",i})=>{const Icon=typeof i==="function"?i:statIconForLabel(l);return(
+  <div style={{flex:1,background:C.card,borderRadius:10,border:`1px solid ${C.border}`,padding:"12px 14px"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <span style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.8}}>{l}</span>
+      <span style={{display:"inline-flex",color:C.dim}}><Icon size={14} strokeWidth={2}/></span>
+    </div>
+    <div style={{fontSize:22,fontWeight:700,color:C[c],marginTop:4,letterSpacing:-.5}}>{v}</div>
+    {s&&<div style={{fontSize:9,color:C.dim,marginTop:2}}>{s}</div>}
+  </div>);};
+
+const Bar=({pct,color=C.accent})=>(
+  <div style={{height:6,borderRadius:3,background:C.border,overflow:"hidden"}}>
+    <div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:3,transition:"width .5s"}}/>
+  </div>);
+
+const Section=({title,children,actions})=>(
+  <div style={{marginBottom:16}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+      <span style={{fontSize:12,fontWeight:700,color:C.text,letterSpacing:-.2}}>{title}</span>
+      {actions&&<div style={{display:"flex",gap:4}}>{actions}</div>}
+    </div>{children}</div>);
+
+const Card=({children,onClick,...p})=>(
+  <div onClick={onClick} style={{background:C.card,borderRadius:10,border:`1px solid ${C.border}`,padding:14,
+    cursor:onClick?"pointer":"default",transition:"border-color .15s",
+    ...(p.style||{})}} onMouseEnter={e=>{if(onClick)e.currentTarget.style.borderColor=C.accent}}
+    onMouseLeave={e=>{if(onClick)e.currentTarget.style.borderColor=C.border}}>{children}</div>);
+
+const Row2=({children})=><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{children}</div>;
+const Row3=({children})=><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>{children}</div>;
+
+const NAV=[
+  {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"crypto",icon:Zap,label:"Crypto Console"}]},
+  {g:"SECRETS & CERTS",items:[{id:"vault",icon:Lock,label:"Secret Vault"},{id:"certs",icon:FileText,label:"Certificates / PKI"}]},
+  {g:"DATA PROTECTION",items:[{id:"tokenize",icon:VenetianMask,label:"Tokenize / Mask / Redact"},{id:"dataenc",icon:Database,label:"Data Encryption"},{id:"payment",icon:CreditCard,label:"Payment Crypto"},{id:"pkcs11",icon:Plug,label:"PKCS#11 / JCA"}]},
+  {g:"CLOUD & INTEGRATION",items:[{id:"byok",icon:Cloud,label:"BYOK"},{id:"hyok",icon:ShieldCheck,label:"HYOK"},{id:"ekm",icon:Database,label:"EKM Agent Hub"},{id:"kmip",icon:Link,label:"KMIP"}]},
+  {g:"INFRASTRUCTURE",items:[{id:"hsm",icon:Cpu,label:"HSM / Primus"},{id:"qkd",icon:GitBranch,label:"QKD Interface"},{id:"mpc",icon:Cpu,label:"MPC Engine"},{id:"cluster",icon:GitBranch,label:"Cluster"}]},
+  {g:"GOVERNANCE",items:[{id:"approvals",icon:CheckCircle2,label:"Approvals"},{id:"alerts",icon:Bell,label:"Alert Center"},{id:"audit",icon:ScrollText,label:"Audit Log"},{id:"compliance",icon:ClipboardCheck,label:"Compliance"},{id:"sbom",icon:BarChart3,label:"SBOM / CBOM"}]},
+  {g:"ADMIN",items:[{id:"admin",icon:Settings,label:"Administration"},{id:"users",icon:Users,label:"User Management"},{id:"docs",icon:ScrollText,label:"Documentation"}]},
+];
+
+const DOC_COMPONENTS=[
+  {name:"kms-auth",group:"Core",purpose:"Authentication, tenant RBAC, token lifecycle.",customer:"Controls who can access keys, APIs, and admin workflows."},
+  {name:"kms-keycore",group:"Core",purpose:"Key lifecycle engine: create, rotate, retire, policy binding.",customer:"Primary key management service for customer workloads."},
+  {name:"kms-policy",group:"Core",purpose:"Policy decision point for permissions and controls.",customer:"Enforces governance and approved usage patterns."},
+  {name:"kms-audit",group:"Core",purpose:"Immutable operational audit trail.",customer:"Supports investigations and compliance evidence."},
+  {name:"kms-secrets",group:"Security",purpose:"Secret storage and retrieval APIs.",customer:"Protects application credentials and sensitive secrets."},
+  {name:"kms-certs",group:"Security",purpose:"Certificate issuance and PKI-related operations.",customer:"Manages TLS and certificate lifecycle for trust."},
+  {name:"kms-dataprotect",group:"Data Protection",purpose:"Tokenization, masking, and field protection.",customer:"Protects regulated/sensitive business data."},
+  {name:"kms-payment",group:"Data Protection",purpose:"Payment cryptography operations.",customer:"Secures card/payment data flows and operations."},
+  {name:"kms-cloud",group:"Cloud",purpose:"Cloud BYOK and external KMS integrations.",customer:"Lets customers control keys across cloud providers."},
+  {name:"kms-hyok-proxy",group:"Cloud",purpose:"Hold-your-own-key proxy integration path.",customer:"Keeps key ownership boundary with the customer."},
+  {name:"kms-ekm",group:"Cloud",purpose:"External key manager bridge service.",customer:"Connects external consumers to managed key services."},
+  {name:"kms-governance",group:"Governance",purpose:"Approval workflows and governance controls.",customer:"Implements multi-party approval and segregation of duties."},
+  {name:"kms-compliance",group:"Governance",purpose:"Compliance posture and control reporting.",customer:"Provides compliance visibility and gap tracking."},
+  {name:"kms-reporting",group:"Governance",purpose:"Operational and security reporting.",customer:"Exposes metrics and reports for business/security teams."},
+  {name:"kms-qkd",group:"Advanced",purpose:"Quantum key distribution interface integration.",customer:"Supports advanced future-proof key exchange scenarios."},
+  {name:"kms-pqc",group:"Advanced",purpose:"Post-quantum cryptography operations.",customer:"Enables migration paths to PQC algorithms."},
+  {name:"kms-kmip",group:"Advanced",purpose:"KMIP interoperability service.",customer:"Integrates external KMIP clients and appliances."},
+  {name:"kms-software-vault",group:"HSM",purpose:"Software-backed cryptographic key vault.",customer:"Provides protected key operations without external HSM hardware."},
+  {name:"kms-mpc",group:"Advanced",purpose:"Multi-party computation service.",customer:"Supports distributed cryptographic trust models."},
+  {name:"kms-sbom",group:"Supply Chain",purpose:"Software/crypto bill of materials outputs.",customer:"Supports supply chain transparency and audit needs."},
+  {name:"PostgreSQL",group:"Infrastructure",purpose:"Primary persistent database.",customer:"Stores system state, metadata, and policy data."},
+  {name:"Valkey",group:"Infrastructure",purpose:"Low-latency cache/session data.",customer:"Improves performance and short-lived state handling."},
+  {name:"NATS JetStream",group:"Infrastructure",purpose:"Event bus and durable streams.",customer:"Carries internal service events and async workflows."},
+  {name:"consul",group:"Infrastructure",purpose:"Service discovery and health registry.",customer:"Lets platform components find and validate each other."},
+  {name:"etcd",group:"Infrastructure",purpose:"Consensus/coordination backend (cluster profile).",customer:"Supports distributed coordination when clustering is enabled."},
+  {name:"envoy",group:"Edge",purpose:"Ingress/egress edge proxy.",customer:"Front-door traffic security, routing, and TLS termination."},
+  {name:"dashboard",group:"UI",purpose:"Web management interface.",customer:"Operational UI for administrators and operators."}
+];
+
+const DOC_CAPABILITIES=[
+  {name:"First-Boot Wizard",domain:"Provisioning",summary:"Guided bootstrap for FDE, FIPS mode, network, feature enablement, HSM mode, and license activation.",customer:"Provides secure and consistent Day-0 setup."},
+  {name:"Selective Feature Enablement",domain:"Platform",summary:"Enable or disable KMS modules based on approved deployment profile.",customer:"Reduces attack surface and simplifies operations."},
+  {name:"FDE (LUKS2) Boot Protection",domain:"Security",summary:"Full-disk encryption controls with recovery workflow support.",customer:"Protects data at rest on appliance nodes."},
+  {name:"FIPS Operating Mode",domain:"Compliance",summary:"Runtime cryptographic boundary and approved-mode behavior.",customer:"Supports regulated workloads and certification objectives."},
+  {name:"Key Lifecycle Management",domain:"Core Crypto",summary:"Create, rotate, disable, retire, and recover keys with policy controls.",customer:"Maintains key hygiene and crypto governance."},
+  {name:"Cryptographic Operations",domain:"Core Crypto",summary:"Encrypt, decrypt, sign, verify, MAC, and random generation operations.",customer:"Delivers secure cryptographic primitives for applications."},
+  {name:"Secret Vault",domain:"Secrets",summary:"Centralized secret storage with scoped access controls.",customer:"Protects service credentials and application secrets."},
+  {name:"Certificate and PKI Services",domain:"PKI",summary:"Certificate issuance, renewal, and trust chain operations.",customer:"Supports TLS, mTLS, and machine identity workflows."},
+  {name:"Tokenization and Masking",domain:"Data Protection",summary:"Data de-identification using tokenization, masking, and redaction controls.",customer:"Lowers exposure of regulated data fields."},
+  {name:"Payment Cryptography",domain:"Payments",summary:"Payment-key and cryptographic workflows aligned to card environments.",customer:"Supports secure payment processing integrations."},
+  {name:"BYOK and HYOK Integration",domain:"Cloud",summary:"Bring-your-own-key and hold-your-own-key integration patterns.",customer:"Preserves enterprise control of key ownership."},
+  {name:"External KMS / EKM Interop",domain:"Integration",summary:"Connectors for external key consumers and provider-managed workflows.",customer:"Extends KMS controls across external platforms."},
+  {name:"KMIP 2.1 Service",domain:"Integration",summary:"Standards-based KMIP endpoint for client/application interoperability.",customer:"Simplifies migration from legacy key managers."},
+  {name:"HSM and Primus Mode",domain:"Hardware Security",summary:"Hardware-backed cryptographic boundary and key operation offload.",customer:"Raises assurance for high-trust environments."},
+  {name:"Approvals and Governance",domain:"Governance",summary:"Multi-step authorization and role-based approval flows.",customer:"Enforces separation of duties and controlled change."},
+  {name:"Audit Logging",domain:"Governance",summary:"Tamper-evident audit capture for security and operations activity.",customer:"Supports investigation and compliance evidence."},
+  {name:"Compliance and Reporting",domain:"Governance",summary:"Control-mapped reporting and posture visibility.",customer:"Tracks adherence to internal and external requirements."},
+  {name:"SBOM / CBOM Visibility",domain:"Supply Chain",summary:"Software and cryptographic bill-of-materials output for transparency.",customer:"Strengthens supply-chain risk management."},
+  {name:"Cluster and Service Discovery",domain:"Infrastructure",summary:"Multi-service coordination, health discovery, and internal routing.",customer:"Improves resilience and horizontal scalability."},
+  {name:"Backup and Restore",domain:"Operations",summary:"Scheduled backup, encrypted backup sets, and restore procedures.",customer:"Protects against accidental loss and disaster events."},
+  {name:"OVA Packaging Pipeline",domain:"Delivery",summary:"Repeatable virtual appliance image build and packaging process.",customer:"Accelerates deployment in virtualized enterprise environments."}
+];
+
+const KEY_TABLE_COLUMNS=[
+  {id:"name",label:"Name"},
+  {id:"algorithm",label:"Algorithm"},
+  {id:"status",label:"Status"},
+  {id:"destroyAt",label:"Destroy At"},
+  {id:"fips",label:"FIPS"},
+  {id:"kcv",label:"KCV"},
+  {id:"version",label:"Version"},
+  {id:"operations",label:"Operations"},
+  {id:"tags",label:"Tags"},
+  {id:"actions",label:"Actions"}
+];
+
+const DEFAULT_KEY_COLUMN_VISIBILITY={
+  name:true,
+  algorithm:true,
+  status:true,
+  destroyAt:true,
+  fips:true,
+  kcv:true,
+  version:true,
+  operations:true,
+  tags:true,
+  actions:true
+};
+
+// 
+// TAB: KEY MANAGEMENT (fully interactive)
+// 
+const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})=>{
+  const [modal,setModal]=useState(null);
+  const [selectedKey,setSelectedKey]=useState(null);
+  const [algoType,setAlgoType]=useState("symmetric");
+  const [algo,setAlgo]=useState("AES-256-GCM");
+  const [createAlgorithmFamily,setCreateAlgorithmFamily]=useState("AES");
+  const [createKeySpec,setCreateKeySpec]=useState("256");
+  const [purpose,setPurpose]=useState("encrypt-decrypt");
+  const [opsLimitInput,setOpsLimitInput]=useState("");
+  const [opsLimitWindow,setOpsLimitWindow]=useState("total");
+  const [createActivationMode,setCreateActivationMode]=useState("immediate");
+  const [createActivationDateTime,setCreateActivationDateTime]=useState("");
+  const [createTags,setCreateTags]=useState<string[]>([]);
+  const [showCreateTagPicker,setShowCreateTagPicker]=useState(false);
+  const [approvalReq,setApprovalReq]=useState(false);
+  const [rotationEnabled,setRotationEnabled]=useState(true);
+  const [exportable,setExportable]=useState(false);
+  const [createName,setCreateName]=useState("");
+  const [creating,setCreating]=useState(false);
+  const [rotating,setRotating]=useState(false);
+  const [rotateType,setRotateType]=useState("standard");
+  const [rotateOldVersionAction,setRotateOldVersionAction]=useState("deactivate");
+  const [exporting,setExporting]=useState(false);
+  const [exportWrappingKeyId,setExportWrappingKeyId]=useState("");
+  const [exportMode,setExportMode]=useState("wrapped");
+  const [keyVersions,setKeyVersions]=useState([]);
+  const [statusUpdatingId,setStatusUpdatingId]=useState("");
+  const [openActionMenuId,setOpenActionMenuId]=useState("");
+  const [destroying,setDestroying]=useState(false);
+  const [destroyConfirmName,setDestroyConfirmName]=useState("");
+  const [destroyMode,setDestroyMode]=useState("scheduled");
+  const [destroyAfterDays,setDestroyAfterDays]=useState(30);
+  const [destroyJustification,setDestroyJustification]=useState("");
+  const [destroyCheckWorkloads,setDestroyCheckWorkloads]=useState(false);
+  const [destroyCheckBackup,setDestroyCheckBackup]=useState(false);
+  const [destroyCheckIrreversible,setDestroyCheckIrreversible]=useState(false);
+  const [policySaving,setPolicySaving]=useState(false);
+  const [policyOpsLimitInput,setPolicyOpsLimitInput]=useState("");
+  const [policyOpsWindow,setPolicyOpsWindow]=useState("total");
+  const [policyActivationMode,setPolicyActivationMode]=useState("immediate");
+  const [policyActivationDateTime,setPolicyActivationDateTime]=useState("");
+  const [policyExportAllowed,setPolicyExportAllowed]=useState(false);
+  const [formName,setFormName]=useState("");
+  const [formAlgorithm,setFormAlgorithm]=useState("AES-256-GCM");
+  const [formPurpose,setFormPurpose]=useState("encrypt-decrypt");
+  const [formComponentMode,setFormComponentMode]=useState("clear-generated");
+  const [formParity,setFormParity]=useState("none");
+  const [formComponentCount,setFormComponentCount]=useState(2);
+  const [formActivationMode,setFormActivationMode]=useState("immediate");
+  const [formActivationDateTime,setFormActivationDateTime]=useState("");
+  const [formOpsLimitInput,setFormOpsLimitInput]=useState("");
+  const [formOpsWindow,setFormOpsWindow]=useState("total");
+  const [formExportable,setFormExportable]=useState(false);
+  const [formApprovalReq,setFormApprovalReq]=useState(false);
+  const [formTags,setFormTags]=useState<string[]>([]);
+  const [formComponents,setFormComponents]=useState([
+    {material:"",wrapped_material:"",material_iv:"",wrapping_key_id:""},
+    {material:"",wrapped_material:"",material_iv:"",wrapping_key_id:""}
+  ]);
+  const [forming,setForming]=useState(false);
+  const [importMethod,setImportMethod]=useState("raw");
+  const [importName,setImportName]=useState("");
+  const [importMaterial,setImportMaterial]=useState("");
+  const [importAlgorithm,setImportAlgorithm]=useState("auto");
+  const [importWrappingKeyId,setImportWrappingKeyId]=useState("");
+  const [importMaterialIV,setImportMaterialIV]=useState("");
+  const [importPurpose,setImportPurpose]=useState("encrypt-decrypt");
+  const [importOrigin,setImportOrigin]=useState("external");
+  const [importPassword,setImportPassword]=useState("");
+  const [importExpectedKcv,setImportExpectedKcv]=useState("");
+  const [importing,setImporting]=useState(false);
+  const [search,setSearch]=useState("");
+  const [statusFilter,setStatusFilter]=useState("all");
+  const [algoFilter,setAlgoFilter]=useState("all");
+  const [tagFilter,setTagFilter]=useState("all");
+  const [pageSize,setPageSize]=useState(10);
+  const [pageIndex,setPageIndex]=useState(0);
+  const [refreshingKeys,setRefreshingKeys]=useState(false);
+  const [showColumnMenu,setShowColumnMenu]=useState(false);
+  const [columnMenuPos,setColumnMenuPos]=useState({top:0,left:0});
+  const [actionMenuPos,setActionMenuPos]=useState({top:0,left:0});
+  const [columnVisibility,setColumnVisibility]=useState(()=>{
+    try{
+      const raw=localStorage.getItem("vecta_key_table_columns");
+      if(!raw){
+        return {...DEFAULT_KEY_COLUMN_VISIBILITY};
+      }
+      const parsed=JSON.parse(raw);
+      const next={...DEFAULT_KEY_COLUMN_VISIBILITY};
+      Object.keys(next).forEach((col)=>{
+        if(typeof parsed?.[col]==="boolean"){
+          next[col]=Boolean(parsed[col]);
+        }
+      });
+      return next;
+    }catch{
+      return {...DEFAULT_KEY_COLUMN_VISIBILITY};
+    }
+  });
+  const keys=keyChoicesFromCatalog(keyCatalog);
+  const [pqcAlgorithm,setPqcAlgorithm]=useState("ML-KEM-768");
+  const [pqcHybridMode,setPqcHybridMode]=useState("pure");
+  const [pqcName,setPqcName]=useState("");
+  const [pqcPurpose,setPqcPurpose]=useState("key-agreement");
+  const [pqcGenerating,setPqcGenerating]=useState(false);
+
+  const resetDestroyForm=()=>{
+    setDestroyConfirmName("");
+    setDestroyMode("scheduled");
+    setDestroyAfterDays(30);
+    setDestroyJustification("");
+    setDestroyCheckWorkloads(false);
+    setDestroyCheckBackup(false);
+    setDestroyCheckIrreversible(false);
+  };
+
+  const resetImportForm=()=>{
+    setImportMethod("raw");
+    setImportName("");
+    setImportMaterial("");
+    setImportAlgorithm("auto");
+    setImportWrappingKeyId("");
+    setImportMaterialIV("");
+    setImportPurpose("encrypt-decrypt");
+    setImportOrigin("external");
+    setImportPassword("");
+    setImportExpectedKcv("");
+  };
+
+  const algorithms=useMemo(()=>{
+    const set=new Set<string>(["AES","RSA","ECC","PQC","HMAC","MAC"]);
+    keys.forEach((k)=>{
+      if(k?.algo){
+        set.add(algorithmFamilyLabel(String(k.algo)));
+      }
+    });
+    return Array.from(set).sort((a,b)=>a.localeCompare(b));
+  },[keys]);
+
+  const createAlgorithmFamilies=useMemo(()=>{
+    if(algoType==="symmetric"){
+      return ["AES","ChaCha20","Camellia","3DES"];
+    }
+    if(algoType==="asymmetric"){
+      return ["RSA","ECC","EdDSA","ECDH","DSA"];
+    }
+    if(algoType==="pqc"){
+      return ["ML-KEM","ML-DSA","SLH-DSA","HSS/LMS","XMSS","Hybrid"];
+    }
+    return ["HMAC","CMAC"];
+  },[algoType]);
+
+  const createKeySpecOptions=useMemo(()=>{
+    const fam=String(createAlgorithmFamily||"");
+    if(algoType==="symmetric"){
+      if(fam==="AES"){
+        return ["128","192","256"];
+      }
+      if(fam==="ChaCha20"){
+        return ["256"];
+      }
+      if(fam==="Camellia"){
+        return ["256"];
+      }
+      return ["168"];
+    }
+    if(algoType==="asymmetric"){
+      if(fam==="RSA"){
+        return ["2048","3072","4096","8192"];
+      }
+      if(fam==="ECC"){
+        return ["P-256","P-384","P-521","Brainpool-P256r1","Brainpool-P384r1"];
+      }
+      if(fam==="EdDSA"){
+        return ["Ed25519","Ed448"];
+      }
+      if(fam==="ECDH"){
+        return ["X25519","X448","P-256","P-384"];
+      }
+      return ["3072"];
+    }
+    if(algoType==="pqc"){
+      if(fam==="ML-KEM"){
+        return ["768","1024"];
+      }
+      if(fam==="ML-DSA"){
+        return ["44","65","87"];
+      }
+      if(fam==="SLH-DSA"){
+        return ["128s","128f","192s","192f","256s","256f"];
+      }
+      if(fam==="HSS/LMS"){
+        return ["SHA256-H10","SHA256-H15","SHA256-H20"];
+      }
+      if(fam==="XMSS"){
+        return ["SHA256-H10","SHA256-H16","SHA256-H20"];
+      }
+      return ["ECDSA-P384 + ML-DSA-65","RSA-3072 + ML-DSA-65","Ed25519 + ML-DSA-44","X25519 + ML-KEM-768"];
+    }
+    if(fam==="CMAC"){
+      return ["AES-256"];
+    }
+    return ["SHA256","SHA384","SHA512","SHA3-256"];
+  },[algoType,createAlgorithmFamily]);
+
+  const resolvedCreateCipherMode=useMemo(()=>{
+    if(algoType!=="symmetric"){
+      return "GCM";
+    }
+    if(createAlgorithmFamily==="ChaCha20"){
+      return "Poly1305";
+    }
+    if(createAlgorithmFamily==="3DES"){
+      return "CBC";
+    }
+    return "GCM";
+  },[algoType,createAlgorithmFamily]);
+
+  const availableTags=useMemo(()=>{
+    const seen=new Set<string>();
+    const out:string[]=[];
+    const pushTag=(raw:any)=>{
+      const tag=String(raw||"").trim();
+      if(!tag){
+        return;
+      }
+      const key=tag.toLowerCase();
+      if(seen.has(key)){
+        return;
+      }
+      seen.add(key);
+      out.push(tag);
+    };
+    if(Array.isArray(tagCatalog)&&tagCatalog.length){
+      tagCatalog.forEach((t)=>pushTag(t?.name));
+      return out.sort((a,b)=>a.localeCompare(b));
+    }
+    keys.forEach((k)=>{
+      if(Array.isArray(k?.tags)){
+        k.tags.forEach((tag)=>pushTag(tag));
+      }
+    });
+    return out.sort((a,b)=>a.localeCompare(b));
+  },[tagCatalog,keys]);
+
+  const wrappingKeyChoices=useMemo(()=>{
+    return keys.filter((k)=>{
+      if(!k?.id||k.id===selectedKey?.id){
+        return false;
+      }
+      if(normalizeKeyState(String(k.state||""))!=="active"){
+        return false;
+      }
+      return String(k.purpose||"").toLowerCase().includes("wrap");
+    });
+  },[keys,selectedKey?.id]);
+
+  const selectedAsymmetricComponents=useMemo(()=>{
+    if(!selectedKey?.pairId){
+      return [];
+    }
+    return keys
+      .filter((item)=>String(item?.pairId||"")===String(selectedKey.pairId))
+      .sort((a,b)=>{
+        const ar=a.componentRole==="private"?0:a.componentRole==="public"?1:2;
+        const br=b.componentRole==="private"?0:b.componentRole==="public"?1:2;
+        if(ar!==br){
+          return ar-br;
+        }
+        return String(a.id).localeCompare(String(b.id));
+      });
+  },[keys,selectedKey?.pairId]);
+
+  const placeMenuFromButton=(button:HTMLElement, menuWidth:number, menuHeight:number)=>{
+    const rect=button.getBoundingClientRect();
+    const left=Math.max(8,Math.min(window.innerWidth-menuWidth-8,rect.right-menuWidth));
+    let top=rect.bottom+6;
+    if(top+menuHeight>window.innerHeight-8){
+      top=Math.max(8,rect.top-menuHeight-6);
+    }
+    return {top,left};
+  };
+
+  const filteredKeys=useMemo(()=>{
+    const q=search.trim().toLowerCase();
+    return keys.filter((k)=>{
+      const status=String(k?.state||"").toLowerCase();
+      const algoName=String(k?.algo||"");
+      const passStatus=statusFilter==="all"||status===statusFilter;
+      const passAlgo=algoFilter==="all"||algorithmFamilyLabel(algoName)===algoFilter;
+      const keyTags=Array.isArray(k?.tags)?k.tags.map((t)=>String(t).trim()).filter(Boolean):[];
+      const keyTagsLower=keyTags.map((t)=>t.toLowerCase());
+      const passTag=tagFilter==="all"||keyTagsLower.includes(String(tagFilter||"").toLowerCase());
+      const passSearch=!q||[
+        k?.name,
+        k?.id,
+        k?.algo,
+        k?.kcv,
+        k?.ver,
+        k?.purpose,
+        keyTags.join(" ")
+      ].some((v)=>String(v||"").toLowerCase().includes(q));
+      return passStatus&&passAlgo&&passTag&&passSearch;
+    });
+  },[keys,search,statusFilter,algoFilter,tagFilter]);
+
+  const totalPages=useMemo(()=>{
+    return Math.max(1,Math.ceil(filteredKeys.length/Math.max(1,pageSize)));
+  },[filteredKeys.length,pageSize]);
+
+  const currentPage=useMemo(()=>{
+    return Math.min(Math.max(0,pageIndex),totalPages-1);
+  },[pageIndex,totalPages]);
+
+  const pagedKeys=useMemo(()=>{
+    const start=currentPage*pageSize;
+    const end=start+pageSize;
+    return filteredKeys.slice(start,end);
+  },[filteredKeys,currentPage,pageSize]);
+
+  useEffect(()=>{
+    const closeMenu=()=>{
+      setOpenActionMenuId("");
+      setShowColumnMenu(false);
+    };
+    window.addEventListener("click",closeMenu);
+    return ()=>window.removeEventListener("click",closeMenu);
+  },[]);
+
+  useEffect(()=>{
+    localStorage.setItem("vecta_key_table_columns",JSON.stringify(columnVisibility));
+  },[columnVisibility]);
+
+  useEffect(()=>{
+    if(!session){
+      return;
+    }
+    void refreshTagCatalog();
+  },[session?.tenantId]);
+
+  useEffect(()=>{
+    if(algoType==="symmetric"){
+      setCreateAlgorithmFamily("AES");
+      setCreateKeySpec("256");
+      return;
+    }
+    if(algoType==="asymmetric"){
+      setCreateAlgorithmFamily("RSA");
+      setCreateKeySpec("2048");
+      return;
+    }
+    if(algoType==="pqc"){
+      setCreateAlgorithmFamily("ML-KEM");
+      setCreateKeySpec("768");
+      return;
+    }
+    setCreateAlgorithmFamily("HMAC");
+    setCreateKeySpec("SHA256");
+  },[algoType]);
+
+  useEffect(()=>{
+    setAlgo(composeCreateAlgorithm(algoType,createAlgorithmFamily,createKeySpec,resolvedCreateCipherMode));
+  },[algoType,createAlgorithmFamily,createKeySpec,resolvedCreateCipherMode]);
+
+  useEffect(()=>{
+    if(!createAlgorithmFamilies.includes(createAlgorithmFamily)){
+      setCreateAlgorithmFamily(createAlgorithmFamilies[0]||"");
+      return;
+    }
+    if(!createKeySpecOptions.includes(createKeySpec)){
+      setCreateKeySpec(createKeySpecOptions[0]||"");
+    }
+  },[
+    createAlgorithmFamilies,
+    createAlgorithmFamily,
+    createKeySpecOptions,
+    createKeySpec
+  ]);
+
+  useEffect(()=>{
+    if(modal==="detail"&&selectedKey?.id){
+      void loadVersions(selectedKey.id);
+      return;
+    }
+    if(modal!=="detail"){
+      setKeyVersions([]);
+    }
+  },[modal,selectedKey?.id,session?.tenantId]);
+
+  useEffect(()=>{
+    setPageIndex(0);
+  },[search,statusFilter,algoFilter,tagFilter,pageSize]);
+
+  useEffect(()=>{
+    if(pageIndex>totalPages-1){
+      setPageIndex(Math.max(0,totalPages-1));
+    }
+  },[pageIndex,totalPages]);
+
+  useEffect(()=>{
+    if(modal!=="export"){
+      return;
+    }
+    if(exportWrappingKeyId&&wrappingKeyChoices.some((item)=>item.id===exportWrappingKeyId)){
+      return;
+    }
+    const fallback=wrappingKeyChoices[0]?.id||"";
+    setExportWrappingKeyId(fallback);
+  },[modal,wrappingKeyChoices,exportWrappingKeyId]);
+
+  useEffect(()=>{
+    if(modal!=="export"){
+      return;
+    }
+    if(isPublicComponentLike(selectedKey)){
+      setExportMode("public-plaintext");
+      return;
+    }
+    setExportMode("wrapped");
+  },[modal,selectedKey?.id]);
+
+  useEffect(()=>{
+    if(modal!=="import"){
+      return;
+    }
+    if(importWrappingKeyId&&wrappingKeyChoices.some((item)=>item.id===importWrappingKeyId)){
+      return;
+    }
+    if(importWrappingKeyId){
+      setImportWrappingKeyId("");
+    }
+  },[modal,importWrappingKeyId,wrappingKeyChoices]);
+
+  useEffect(()=>{
+    const count=Math.max(2,Math.min(8,Number(formComponentCount)||2));
+    if(formComponents.length===count){
+      return;
+    }
+    setFormComponents((prev)=>{
+      const next=[...prev];
+      while(next.length<count){
+        next.push({material:"",wrapped_material:"",material_iv:"",wrapping_key_id:""});
+      }
+      return next.slice(0,count);
+    });
+  },[formComponentCount,formComponents.length]);
+
+  const refreshKeyCatalog=async(preferredKeyId)=>{
+    const items=await listKeys(session);
+    const mapped=items.map(toViewKey);
+    setKeyCatalog(mapped);
+    if(preferredKeyId){
+      const updated=mapped.find((k)=>k.id===preferredKeyId);
+      if(updated){
+        setSelectedKey(updated);
+      }
+    }
+    return mapped;
+  };
+
+  const refreshTagCatalog=async()=>{
+    if(!session){
+      return [];
+    }
+    const items=await listTags(session);
+    setTagCatalog(items);
+    return items;
+  };
+
+  const loadVersions=async(keyId)=>{
+    if(!session||!keyId){
+      setKeyVersions([]);
+      return;
+    }
+    try{
+      const items=await listKeyVersions(session,keyId);
+      setKeyVersions(Array.isArray(items)?items:[]);
+    }catch{
+      setKeyVersions([]);
+    }
+  };
+
+  const refreshKeyInventory=async()=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    setRefreshingKeys(true);
+    try{
+      await Promise.all([
+        refreshKeyCatalog(selectedKey?.id),
+        refreshTagCatalog()
+      ]);
+    }catch(error){
+      onToast?.(`Key refresh failed: ${errMsg(error)}`);
+    }finally{
+      setRefreshingKeys(false);
+    }
+  };
+
+  const addCustomerKey=async()=>{
+    const name=createName.trim();
+    if(!name){
+      onToast?.("Enter a key name.");
+      return;
+    }
+    const rawLimit=opsLimitInput.trim();
+    const parsedLimit=rawLimit===""?0:Number(rawLimit);
+    if(!Number.isFinite(parsedLimit)||parsedLimit<0){
+      onToast?.("Operation limit must be 0 or a positive number.");
+      return;
+    }
+    const opsLimit=Math.trunc(parsedLimit);
+    const activationISO=createActivationMode==="scheduled"?toISODateTime(createActivationDateTime):undefined;
+    if(createActivationMode==="scheduled"&&!activationISO){
+      onToast?.("Choose valid activation date and time.");
+      return;
+    }
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    setCreating(true);
+    try{
+      const keyType=algoType==="symmetric"||algoType==="hmac"?"symmetric":"asymmetric";
+      let focusKeyId="";
+      if(algoType==="asymmetric"){
+        const pairId=`pair_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
+        const common={
+          name,
+          algorithm:algo,
+          tags:createTags,
+          activation_mode:createActivationMode==="pre-active"?"pre-active":createActivationMode==="scheduled"?"scheduled":"immediate",
+          activation_date:activationISO,
+          iv_mode:"internal",
+          created_by:session.username||"dashboard-user",
+          ops_limit:opsLimit,
+          ops_limit_window:opsLimitWindow,
+          approval_required:approvalReq
+        };
+        const privateKey=await createKey(session,{
+          ...common,
+          key_type:"asymmetric-private",
+          purpose,
+          export_allowed:exportable,
+          labels:{
+            pair_id:pairId,
+            component_role:"private",
+            pair_name:name
+          }
+        });
+        await createKey(session,{
+          ...common,
+          key_type:"asymmetric-public",
+          purpose:publicPurposeFromPrivate(purpose),
+          export_allowed:false,
+          labels:{
+            pair_id:pairId,
+            component_role:"public",
+            pair_name:name
+          }
+        });
+        focusKeyId=privateKey.key_id;
+      }else{
+        const createdKey=await createKey(session,{
+          name,
+          algorithm:algo,
+          key_type:keyType,
+          purpose,
+          tags:createTags,
+          export_allowed:exportable,
+          activation_mode:createActivationMode==="pre-active"?"pre-active":createActivationMode==="scheduled"?"scheduled":"immediate",
+          activation_date:activationISO,
+          iv_mode:"internal",
+          created_by:session.username||"dashboard-user",
+          ops_limit:opsLimit,
+          ops_limit_window:opsLimitWindow,
+          approval_required:approvalReq
+        });
+        focusKeyId=createdKey.key_id;
+      }
+      const mapped=await refreshKeyCatalog(focusKeyId);
+      const created=mapped.find((k)=>k.id===focusKeyId)||mapped.find((k)=>k.name===name);
+      if(created){
+        setSelectedKey(created);
+      }
+      setCreateName("");
+      setOpsLimitInput("");
+      setOpsLimitWindow("total");
+      setCreateActivationMode("immediate");
+      setCreateActivationDateTime("");
+      setCreateTags([]);
+      setShowCreateTagPicker(false);
+      setApprovalReq(false);
+      setExportable(false);
+      setModal(null);
+      onToast?.(algoType==="asymmetric"?`Asymmetric key pair created: ${name}`:`Key created: ${name}`);
+    }catch(error){
+      onToast?.(`Create key failed: ${errMsg(error)}`);
+    }finally{
+      setCreating(false);
+    }
+  };
+
+  const updateFormComponent=(index:number, field:string, value:string)=>{
+    setFormComponents((prev)=>prev.map((item,i)=>i===index?{...item,[field]:value}:item));
+  };
+
+  const submitFormKey=async()=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    const name=formName.trim();
+    if(!name){
+      onToast?.("Enter key name for formed key.");
+      return;
+    }
+    const mode=String(formComponentMode||"clear-generated");
+    const components=(Array.isArray(formComponents)?formComponents:[]).slice(0,Math.max(2,Math.min(8,Number(formComponentCount)||2)));
+    if(components.length<2){
+      onToast?.("At least two components are required.");
+      return;
+    }
+    if(mode==="clear-user"){
+      const missing=components.findIndex((c)=>!String(c.material||"").trim());
+      if(missing>=0){
+        onToast?.(`Component ${missing+1} clear material is required (hex or base64).`);
+        return;
+      }
+    }
+    if(mode==="encrypted-user"){
+      const missing=components.findIndex((c)=>!String(c.wrapped_material||"").trim()||!String(c.material_iv||"").trim()||!String(c.wrapping_key_id||"").trim());
+      if(missing>=0){
+        onToast?.(`Component ${missing+1} needs wrapped material, IV, and wrapping key.`);
+        return;
+      }
+    }
+    const rawLimit=formOpsLimitInput.trim();
+    const parsedLimit=rawLimit===""?0:Number(rawLimit);
+    if(!Number.isFinite(parsedLimit)||parsedLimit<0){
+      onToast?.("Operation limit must be 0 or a positive number.");
+      return;
+    }
+    const activationISO=formActivationMode==="scheduled"?toISODateTime(formActivationDateTime):undefined;
+    if(formActivationMode==="scheduled"&&!activationISO){
+      onToast?.("Choose valid activation date and time.");
+      return;
+    }
+    setForming(true);
+    try{
+      const response=await formKey(session,{
+        name,
+        algorithm:formAlgorithm,
+        key_type:"symmetric",
+        purpose:formPurpose,
+        tags:formTags,
+        export_allowed:formExportable,
+        activation_mode:formActivationMode==="pre-active"?"pre-active":formActivationMode==="scheduled"?"scheduled":"immediate",
+        activation_date:activationISO,
+        iv_mode:"internal",
+        created_by:session.username||"dashboard-user",
+        ops_limit:Math.trunc(parsedLimit),
+        ops_limit_window:formOpsWindow,
+        approval_required:formApprovalReq,
+        component_mode:mode==="clear-user"?"clear-user":mode==="encrypted-user"?"encrypted-user":"clear-generated",
+        parity:(String(formAlgorithm||"").toUpperCase().includes("DES")?(formParity as any):"none"),
+        components:components.map((component)=>({
+          material:String(component.material||""),
+          wrapped_material:String(component.wrapped_material||""),
+          material_iv:String(component.material_iv||""),
+          wrapping_key_id:String(component.wrapping_key_id||"")
+        }))
+      });
+      const mapped=await refreshKeyCatalog(response.key_id);
+      const created=mapped.find((k)=>k.id===response.key_id);
+      if(created){
+        setSelectedKey(created);
+      }
+      if(Array.isArray(response.generated_components)&&response.generated_components.length){
+        onToast?.(`Key formed: ${name}. ${response.generated_components.length} generated components returned by backend.`);
+      }else{
+        onToast?.(`Key formed: ${name}`);
+      }
+      setFormName("");
+      setFormAlgorithm("AES-256-GCM");
+      setFormPurpose("encrypt-decrypt");
+      setFormComponentMode("clear-generated");
+      setFormParity("none");
+      setFormComponentCount(2);
+      setFormComponents([
+        {material:"",wrapped_material:"",material_iv:"",wrapping_key_id:""},
+        {material:"",wrapped_material:"",material_iv:"",wrapping_key_id:""}
+      ]);
+      setFormActivationMode("immediate");
+      setFormActivationDateTime("");
+      setFormOpsLimitInput("");
+      setFormOpsWindow("total");
+      setFormExportable(false);
+      setFormApprovalReq(false);
+      setFormTags([]);
+      setModal(null);
+    }catch(error){
+      onToast?.(`Form key failed: ${errMsg(error)}`);
+    }finally{
+      setForming(false);
+    }
+  };
+
+  const inferImportKeyType=(algorithmValue:string,methodValue:string)=>{
+    const alg=String(algorithmValue||"").toUpperCase().trim();
+    const method=String(methodValue||"").toLowerCase().trim();
+    if(!alg){
+      if(method==="raw"||method==="tr31"){
+        return "symmetric";
+      }
+      return "";
+    }
+    if(
+      alg.includes("RSA")||
+      alg.includes("ECDSA")||
+      alg.includes("ECDH")||
+      alg.includes("ED25519")||
+      alg.includes("ED448")||
+      alg.includes("X25519")||
+      alg.includes("X448")||
+      alg.includes("ML-DSA")||
+      alg.includes("SLH-DSA")
+    ){
+      return "asymmetric";
+    }
+    return "symmetric";
+  };
+
+  const submitImportKey=async()=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    const name=importName.trim();
+    if(!name){
+      onToast?.("Enter key name for import.");
+      return;
+    }
+    const material=importMaterial.trim();
+    if(!material){
+      onToast?.("Paste key material to import.");
+      return;
+    }
+    const normalizedMethod=(["raw","pem","jwk","tr31","pkcs12"].includes(importMethod)?importMethod:"raw") as any;
+    const algorithmValue=importAlgorithm==="auto"?"":importAlgorithm;
+    const keyTypeValue=inferImportKeyType(algorithmValue,normalizedMethod);
+    setImporting(true);
+    try{
+      const response=await importKey(session,{
+        name,
+        algorithm:algorithmValue,
+        key_type:keyTypeValue,
+        purpose:importPurpose.trim(),
+        created_by:session.username||"dashboard-user",
+        iv_mode:"internal",
+        material,
+        expected_kcv:importExpectedKcv.trim(),
+        import_method:normalizedMethod,
+        import_password:importPassword.trim(),
+        wrapping_key_id:importWrappingKeyId.trim(),
+        material_iv:importMaterialIV.trim(),
+        origin:importOrigin.trim()
+      });
+      const mapped=await refreshKeyCatalog(response.key_id);
+      const imported=mapped.find((k)=>k.id===response.key_id);
+      if(imported){
+        setSelectedKey(imported);
+      }
+      resetImportForm();
+      setModal(null);
+      onToast?.(`Key imported: ${name}`);
+    }catch(error){
+      onToast?.(`Import key failed: ${errMsg(error)}`);
+    }finally{
+      setImporting(false);
+    }
+  };
+
+  const rotateSelectedKey=async()=>{
+    if(!session||!selectedKey?.id){
+      return;
+    }
+    if(rotateType==="pqc-migration"){
+      onToast?.("PQC migration rotation is not available in this build yet.");
+      return;
+    }
+    setRotating(true);
+    try{
+      const reason=rotateType==="rekey"?"rekey":"manual";
+      await rotateKey(session,selectedKey.id,reason,rotateOldVersionAction==="keep-active"?"keep-active":rotateOldVersionAction==="destroy"?"destroy":"deactivate");
+      await refreshKeyCatalog(selectedKey.id);
+      await loadVersions(selectedKey.id);
+      setModal(null);
+      onToast?.(rotateType==="rekey"?`Key re-keyed: ${selectedKey.name}`:`Key rotated: ${selectedKey.name}`);
+    }catch(error){
+      onToast?.(`Rotate key failed: ${errMsg(error)}`);
+    }finally{
+      setRotating(false);
+    }
+  };
+
+  const generatePQCKey=async()=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    const name=String(pqcName||"").trim();
+    if(!name){
+      onToast?.("Enter key name.");
+      return;
+    }
+    const algorithm=String(pqcAlgorithm||"ML-KEM-768");
+    const pairId=`pair_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
+    const labels:any={pqc_hybrid_mode:pqcHybridMode};
+    setPqcGenerating(true);
+    try{
+      if(String(algorithm).toUpperCase().includes("ML-KEM")){
+        const privateKey=await createKey(session,{
+          name,
+          algorithm,
+          key_type:"asymmetric-private",
+          purpose:"key-agreement",
+          tags:[],
+          export_allowed:false,
+          activation_mode:"immediate",
+          iv_mode:"internal",
+          created_by:session.username||"dashboard-user",
+          labels:{...labels,pair_id:pairId,component_role:"private",pair_name:name}
+        });
+        await createKey(session,{
+          name,
+          algorithm,
+          key_type:"asymmetric-public",
+          purpose:"key-agreement",
+          tags:[],
+          export_allowed:false,
+          activation_mode:"immediate",
+          iv_mode:"internal",
+          created_by:session.username||"dashboard-user",
+          labels:{...labels,pair_id:pairId,component_role:"public",pair_name:name}
+        });
+        await refreshKeyCatalog(privateKey.key_id);
+      }else{
+        const out=await createKey(session,{
+          name,
+          algorithm,
+          key_type:"asymmetric",
+          purpose:pqcPurpose,
+          tags:[],
+          export_allowed:false,
+          activation_mode:"immediate",
+          iv_mode:"internal",
+          created_by:session.username||"dashboard-user",
+          labels
+        });
+        await refreshKeyCatalog(out.key_id);
+      }
+      setModal(null);
+      setPqcName("");
+      setPqcAlgorithm("ML-KEM-768");
+      setPqcHybridMode("pure");
+      setPqcPurpose("key-agreement");
+      onToast?.(`PQC key generated: ${name}`);
+    }catch(error){
+      onToast?.(`Generate PQC key failed: ${errMsg(error)}`);
+    }finally{
+      setPqcGenerating(false);
+    }
+  };
+
+  const exportSelectedKey=async()=>{
+    if(!session||!selectedKey?.id){
+      return;
+    }
+    const mode=exportMode==="public-plaintext"?"public-plaintext":"wrapped";
+    const wrappingKeyId=String(exportWrappingKeyId||"").trim();
+    if(mode==="wrapped"){
+      if(!wrappingKeyId){
+        onToast?.("Select a wrapping KEK.");
+        return;
+      }
+      if(wrappingKeyId===selectedKey.id){
+        onToast?.("Wrapping key cannot be the same as exported key.");
+        return;
+      }
+    }
+    setExporting(true);
+    try{
+      const payload=await exportKey(session,selectedKey.id,{
+        export_mode:mode as any,
+        wrapping_key_id:wrappingKeyId
+      });
+      const artifact={
+        key_id:payload.key_id,
+        tenant_id:session.tenantId,
+        kcv:payload.kcv,
+        wrapped_material:payload.wrapped_material,
+        material_iv:payload.material_iv,
+        wrapped_dek:payload.wrapped_dek,
+        public_key_plaintext:payload.public_key_plaintext||"",
+        plaintext_encoding:payload.plaintext_encoding||"",
+        component_type:payload.component_type||"",
+        wrapping_key_id:payload.wrapping_key_id||wrappingKeyId,
+        wrapping_key_kcv:payload.wrapping_key_kcv||"",
+        export_format:payload.export_format||mode,
+        exported_at:new Date().toISOString()
+      };
+      const blob=new Blob([JSON.stringify(artifact,null,2)],{type:"application/json"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      const safeName=String(selectedKey.name||payload.key_id||"key-export").replace(/[^a-z0-9._-]+/gi,"-");
+      a.href=url;
+      a.download=mode==="public-plaintext"?`${safeName}.public.json`:`${safeName}.wrapped.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setModal(null);
+      onToast?.(mode==="public-plaintext"?`Public key exported: ${selectedKey.name}`:`Key exported: ${selectedKey.name}`);
+    }catch(error){
+      onToast?.(`Export key failed: ${errMsg(error)}`);
+    }finally{
+      setExporting(false);
+    }
+  };
+
+  const updateKeyStatus=async(targetKey,nextState)=>{
+    if(!session||!targetKey?.id){
+      return;
+    }
+    setOpenActionMenuId("");
+    setStatusUpdatingId(targetKey.id);
+    try{
+      const next=normalizeKeyState(nextState);
+      if(next==="active"){
+        await activateKey(session,targetKey.id);
+      }else if(next==="disabled"){
+        await disableKey(session,targetKey.id);
+      }else if(next==="deactivated"){
+        await deactivateKey(session,targetKey.id);
+      }else{
+        onToast?.(`Unsupported status transition: ${nextState}`);
+        return;
+      }
+      const mapped=await refreshKeyCatalog(targetKey.id);
+      const updated=mapped.find((k)=>k.id===targetKey.id);
+      if(updated){
+        setSelectedKey(updated);
+      }
+      if(next==="active"){
+        onToast?.(`Key activated: ${targetKey.name}`);
+      }else if(next==="disabled"){
+        onToast?.(`Key disabled: ${targetKey.name}`);
+      }else{
+        onToast?.(`Key deactivated: ${targetKey.name}`);
+      }
+    }catch(error){
+      const next=normalizeKeyState(nextState);
+      const action=next==="active"?"Activate":next==="disabled"?"Disable":"Deactivate";
+      onToast?.(`${action} key failed: ${errMsg(error)}`);
+    }finally{
+      setStatusUpdatingId("");
+    }
+  };
+
+  const openPolicyEditor=(targetKey)=>{
+    if(!targetKey){
+      return;
+    }
+    const rawLimit=String(targetKey.opsLimit||"");
+    setPolicyOpsLimitInput(rawLimit==="inf"?"0":rawLimit);
+    setPolicyOpsWindow(String(targetKey.opsWindow||"total"));
+    const status=normalizeKeyState(String(targetKey.state||""));
+    setPolicyExportAllowed(Boolean(targetKey.exportAllowed));
+    if(status==="pre-active"){
+      if(targetKey.activationAt){
+        setPolicyActivationMode("scheduled");
+        setPolicyActivationDateTime(toLocalDateTime(targetKey.activationAt));
+      }else{
+        setPolicyActivationMode("pre-active");
+        setPolicyActivationDateTime("");
+      }
+    }else{
+      setPolicyActivationMode("immediate");
+      setPolicyActivationDateTime("");
+    }
+    setSelectedKey(targetKey);
+    setOpenActionMenuId("");
+    setModal("edit-policy");
+  };
+
+  const saveKeyPolicy=async()=>{
+    if(!session||!selectedKey?.id){
+      return;
+    }
+    const parsedLimit=Math.trunc(Number(policyOpsLimitInput||0));
+    if(!Number.isFinite(parsedLimit)||parsedLimit<0){
+      onToast?.("Ops limit must be 0 or a positive number.");
+      return;
+    }
+    const status=normalizeKeyState(String(selectedKey.state||""));
+    const canEditActivation=status==="pre-active";
+    const activationISO=canEditActivation&&policyActivationMode==="scheduled"?toISODateTime(policyActivationDateTime):undefined;
+    if(canEditActivation&&policyActivationMode==="scheduled"&&!activationISO){
+      onToast?.("Choose valid activation date and time.");
+      return;
+    }
+    setPolicySaving(true);
+    try{
+      await setKeyUsageLimit(session,selectedKey.id,parsedLimit,policyOpsWindow==="daily"?"daily":policyOpsWindow==="monthly"?"monthly":"total");
+      await setKeyExportPolicy(session,selectedKey.id,policyExportAllowed);
+      if(canEditActivation){
+        await updateKeyActivation(session,selectedKey.id,{
+          mode:policyActivationMode==="pre-active"?"pre-active":policyActivationMode==="scheduled"?"scheduled":"immediate",
+          activation_date:activationISO
+        });
+      }
+      const mapped=await refreshKeyCatalog(selectedKey.id);
+      const updated=mapped.find((k)=>k.id===selectedKey.id);
+      if(updated){
+        setSelectedKey(updated);
+      }
+      setModal(null);
+      onToast?.(`Policy updated: ${selectedKey.name}`);
+    }catch(error){
+      onToast?.(`Update key policy failed: ${errMsg(error)}`);
+    }finally{
+      setPolicySaving(false);
+    }
+  };
+
+  const destroySelectedKey=async()=>{
+    if(!session||!selectedKey?.id){
+      return;
+    }
+    if(destroyConfirmName.trim()!==String(selectedKey.name||"")){
+      onToast?.("Type the exact key name to confirm destruction.");
+      return;
+    }
+    if(!destroyCheckWorkloads||!destroyCheckBackup||!destroyCheckIrreversible){
+      onToast?.("Complete all pre-destroy checks before continuing.");
+      return;
+    }
+    const justification=destroyJustification.trim();
+    if(!justification){
+      onToast?.("Enter justification for key destruction.");
+      return;
+    }
+    const daysNum=Math.trunc(Number(destroyAfterDays||0));
+    if(destroyMode==="scheduled"&&(!Number.isFinite(daysNum)||daysNum<1||daysNum>3650)){
+      onToast?.("Destroy-after days must be between 1 and 3650.");
+      return;
+    }
+    setDestroying(true);
+    try{
+      const out=await destroyKey(session,selectedKey.id,{
+        mode:destroyMode==="immediate"?"immediate":"scheduled",
+        destroy_after_days:destroyMode==="scheduled"?daysNum:undefined,
+        confirm_name:destroyConfirmName.trim(),
+        justification,
+        checks:{
+          no_active_workloads:destroyCheckWorkloads,
+          backup_completed:destroyCheckBackup,
+          irreversible_ack:destroyCheckIrreversible
+        }
+      });
+      await refreshKeyCatalog(selectedKey.id);
+      setModal(null);
+      resetDestroyForm();
+      if(normalizeKeyState(String(out?.status||""))==="deleted"){
+        onToast?.(`Key deleted immediately: ${selectedKey.name}`);
+      }else if(out?.destroy_at){
+        onToast?.(`Key scheduled for deletion on ${new Date(out.destroy_at).toLocaleString()}`);
+      }else{
+        onToast?.(`Key status set to delete-pending: ${selectedKey.name}`);
+      }
+    }catch(error){
+      onToast?.(`Destroy key failed: ${errMsg(error)}`);
+    }finally{
+      setDestroying(false);
+    }
+  };
+
+  const destroyDaysValid=destroyMode==="immediate"||(
+    Number.isFinite(Number(destroyAfterDays||0))&&Number(destroyAfterDays)>=1&&Number(destroyAfterDays)<=3650
+  );
+  const destroyReady=Boolean(
+    !destroying&&
+    selectedKey?.name&&
+    destroyConfirmName.trim()===String(selectedKey?.name||"")&&
+    destroyCheckWorkloads&&destroyCheckBackup&&destroyCheckIrreversible&&
+    destroyJustification.trim()&&
+    destroyDaysValid
+  );
+
+  const visibleColumns=useMemo(()=>{
+    return KEY_TABLE_COLUMNS.filter((col)=>Boolean(columnVisibility?.[col.id]));
+  },[columnVisibility]);
+
+  const toggleColumnVisibility=(columnId:string)=>{
+    setColumnVisibility((prev)=>{
+      const next={...prev,[columnId]:!Boolean(prev?.[columnId])};
+      const anyVisible=Object.values(next).some((v)=>Boolean(v));
+      if(!anyVisible){
+        return prev;
+      }
+      return next;
+    });
+  };
+
+  return <div>
+    <div style={{display:"flex",gap:12,marginBottom:14}}>
+      <Stat l="Total Keys" v={String(keys.length)} s="customer key catalog" c="accent" i="??"/>
+      <Stat l="Active" v={String(keys.filter((k)=>String(k.state||"").toLowerCase()==="active").length)} s="live form entries" c="green" i="?"/>
+      <Stat l="PQC Keys" v={String(keys.filter(k=>String(k.algo).toLowerCase().includes("ml-")||String(k.algo).toLowerCase().includes("slh")).length)} s="from customer keys" c="purple" i="?"/>
+      <Stat l="Ops Today" v={String(keys.reduce((sum,k)=>sum+Number(k.ops||0),0))} s="based on current key set" c="blue" i="?"/>
+    </div>
+
+    <Section title="Key Inventory">
+      <div style={{display:"flex",justifyContent:"space-between",gap:10,marginBottom:10,flexWrap:"wrap",alignItems:"center",position:"relative",zIndex:10}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",flex:"1 1 680px"}}>
+        <Inp
+          placeholder="Search keys by name, ID, algorithm, KCV, tag..."
+          w={360}
+          value={search}
+          onChange={(e)=>setSearch(e.target.value)}
+          style={{height:40,borderRadius:10,fontSize:12}}
+        />
+        <Sel w={170} value={algoFilter} onChange={(e)=>setAlgoFilter(e.target.value)} style={{height:40,borderRadius:10,fontSize:12}}>
+          <option value="all">All Algorithms</option>
+          {algorithms.map((name)=><option key={name} value={name}>{name}</option>)}
+        </Sel>
+        <Sel w={170} value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)} style={{height:40,borderRadius:10,fontSize:12}}>
+          <option value="all">All Status</option>
+          <option value="pre-active">Pre-active</option>
+          <option value="active">Active</option>
+          <option value="disabled">Disabled</option>
+          <option value="deactivated">Deactivated (Retired)</option>
+          <option value="destroy-pending">Delete Pending</option>
+          <option value="deleted">Deleted</option>
+        </Sel>
+        <Sel w={170} value={tagFilter} onChange={(e)=>setTagFilter(e.target.value)} style={{height:40,borderRadius:10,fontSize:12}}>
+          <option value="all">All Tags</option>
+          {availableTags.map((name)=><option key={name} value={name}>{name}</option>)}
+        </Sel>
+        </div>
+        <div style={{display:"flex",gap:8,alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap"}}>
+          <Btn onClick={()=>void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:108,color:"#c9d5e9",border:`1px solid ${C.borderHi}`}} disabled={refreshingKeys}>
+            <span style={{display:"inline-flex",alignItems:"center",gap:7}}><RefreshCcw size={13} strokeWidth={2.1}/>{refreshingKeys?"Refreshing...":"Refresh"}</span>
+          </Btn>
+          <Btn
+            onClick={()=>setModal("create")}
+            primary
+            style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:130}}
+          >
+            <span style={{display:"inline-flex",alignItems:"center",gap:7}}><Plus size={13} strokeWidth={2.2}/>Create Key</span>
+          </Btn>
+          <Btn onClick={()=>setModal("form-key")} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:112,color:"#c9d5e9",border:`1px solid ${C.borderHi}`}}>
+            <span style={{display:"inline-flex",alignItems:"center",gap:7}}><PenTool size={13} strokeWidth={2.1}/>Form Key</span>
+          </Btn>
+          <Btn onClick={()=>{resetImportForm();setModal("import");}} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:96,color:"#c9d5e9",border:`1px solid ${C.borderHi}`}}>
+            <span style={{display:"inline-flex",alignItems:"center",gap:7}}><ArrowDownToLine size={13} strokeWidth={2.1}/>Import</span>
+          </Btn>
+          <Btn onClick={()=>setModal("generate-pqc")} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:110,color:"#c9d5e9",border:`1px solid ${C.borderHi}`}}>
+            <span style={{display:"inline-flex",alignItems:"center",gap:7}}><Atom size={13} strokeWidth={2.1}/>PQC Key</span>
+          </Btn>
+        </div>
+      </div>
+      <div style={{background:C.card,borderRadius:12,border:`1px solid ${C.borderHi}`,overflowX:"auto",overflowY:"visible"}}>
+        <table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr style={{borderBottom:`1px solid ${C.borderHi}`}}>
+          {visibleColumns.map((column)=><th key={column.id} style={{padding:"8px 10px",fontSize:9,color:C.muted,textAlign:"left",textTransform:"uppercase",letterSpacing:.8}}>{column.label}</th>)}
+          <th style={{padding:"8px 10px",fontSize:9,color:C.muted,textAlign:"right",textTransform:"uppercase",letterSpacing:.8,width:48}}>
+            <div style={{display:"inline-flex",position:"relative"}} onClick={(e)=>e.stopPropagation()}>
+              <button
+                onClick={(e)=>{
+                  e.stopPropagation();
+                  const next=!showColumnMenu;
+                  if(next){
+                    const pos=placeMenuFromButton(e.currentTarget as HTMLElement,210,340);
+                    setColumnMenuPos(pos);
+                  }
+                  setShowColumnMenu(next);
+                }}
+                aria-label="Configure columns"
+                style={{
+                  background:"transparent",
+                  border:`1px solid ${C.border}`,
+                  borderRadius:7,
+                  color:C.accent,
+                  width:28,
+                  height:24,
+                  display:"inline-flex",
+                  alignItems:"center",
+                  justifyContent:"center",
+                  cursor:"pointer"
+                }}
+              >
+                <Cog size={13} strokeWidth={2}/>
+              </button>
+              {showColumnMenu&&<div style={{
+                position:"fixed",
+                top:columnMenuPos.top,
+                left:columnMenuPos.left,
+                zIndex:3000,
+                minWidth:190,
+                background:C.surface,
+                border:`1px solid ${C.borderHi}`,
+                borderRadius:8,
+                boxShadow:"0 12px 24px rgba(0,0,0,.35)",
+                padding:8,
+                display:"grid",
+                gap:5
+              }}>
+                <div style={{fontSize:10,color:C.dim,paddingBottom:4,borderBottom:`1px solid ${C.border}`}}>Visible Columns</div>
+                {KEY_TABLE_COLUMNS.map((column)=><label key={column.id} style={{display:"flex",alignItems:"center",gap:7,fontSize:10,color:C.text,cursor:"pointer"}}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(columnVisibility?.[column.id])}
+                    onChange={()=>toggleColumnVisibility(column.id)}
+                  />
+                  <span>{column.label}</span>
+                </label>)}
+              </div>}
+            </div>
+          </th>
+        </tr></thead><tbody>
+          {pagedKeys.map((k)=>{
+            const normState=normalizeKeyState(String(k.state||"unknown"));
+            const stateLabel=keyStateLabel(normState);
+            const tone=keyStateTone(normState);
+            const isDeletePending=normState==="destroy-pending";
+            const isDeletedState=normState==="deleted";
+            const isDeletedLike=isDeletePending||isDeletedState;
+            const canRotate=!isDeletedLike;
+            const canExport=!isDeletedLike&&Boolean(k.exportAllowed);
+            const canEditPolicy=normState==="active"||normState==="deactivated"||normState==="pre-active"||normState==="disabled";
+            const canDelete=!isDeletedLike;
+            const stateBusy=statusUpdatingId===k.id;
+            const opsTotal=Number(k.ops||0);
+            const opsLimit=Number(k.opsLimit||0);
+            const opsWindow=String(k.opsWindow||"total").toLowerCase();
+            const hasLimit=Number.isFinite(opsLimit)&&opsLimit>0;
+            const opsPct=hasLimit?Math.min(100,Math.max(2,(opsTotal/opsLimit)*100)):Math.min(100,opsTotal>0?12:2);
+            const windowLabel=opsWindow==="daily"?" / day":opsWindow==="monthly"?" / month":"";
+            const opsText=hasLimit?`${formatOpsValue(opsTotal)} / ${formatOpsValue(opsLimit)}${windowLabel}`:`${formatOpsValue(opsTotal)} / Unlimited`;
+            const fipsOk=isFipsAlgorithm(String(k.algo||""));
+            const keyTags=Array.isArray(k.tags)?k.tags:[];
+            return <tr key={k.id} style={{borderBottom:`1px solid ${C.border}`,cursor:"pointer"}} onClick={()=>{setSelectedKey(k);setModal("detail");}}>
+              {columnVisibility.name&&<td style={{padding:"8px 10px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{fontSize:11,color:C.text,fontWeight:700}}>{k.name}</div>
+                  {k.componentRole&&<span style={{padding:"1px 6px",borderRadius:999,border:`1px solid ${k.componentRole==="private"?C.pink:C.blue}`,background:`${k.componentRole==="private"?C.pink:C.blue}22`,fontSize:9,color:k.componentRole==="private"?C.pink:C.blue,textTransform:"capitalize"}}>{k.componentRole}</span>}
+                </div>
+                <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{k.id}</div>
+              </td>}
+              {columnVisibility.algorithm&&<td style={{padding:"8px 10px",fontSize:10,color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{k.algo}</td>}
+              {columnVisibility.status&&<td style={{padding:"8px 10px"}}><B c={tone}>{stateLabel}</B></td>}
+              {columnVisibility.destroyAt&&<td style={{padding:"8px 10px",fontSize:10,color:isDeletePending?C.amber:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>
+                {formatDestroyAt(k.destroyAt)}
+              </td>}
+              {columnVisibility.fips&&<td style={{padding:"8px 10px"}}>
+                <span style={{
+                  display:"inline-flex",
+                  alignItems:"center",
+                  justifyContent:"center",
+                  width:22,
+                  height:22,
+                  borderRadius:7,
+                  border:`1px solid ${fipsOk?C.green:C.red}`,
+                  background:fipsOk?C.greenDim:C.redDim,
+                  color:fipsOk?C.green:C.red
+                }}>
+                  {fipsOk?<Check size={12} strokeWidth={2.5}/>:<X size={12} strokeWidth={2.5}/>}
+                </span>
+              </td>}
+              {columnVisibility.kcv&&<td style={{padding:"8px 10px",fontSize:10,color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{k.kcv||"-"}</td>}
+              {columnVisibility.version&&<td style={{padding:"8px 10px",fontSize:10,color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{k.ver}</td>}
+              {columnVisibility.operations&&<td style={{padding:"8px 10px",minWidth:140}}>
+                <div style={{fontSize:10,color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{opsText}</div>
+                <div style={{marginTop:3,height:4,borderRadius:999,background:C.border,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${opsPct}%`,background:C.accent,borderRadius:999}}/>
+                </div>
+              </td>}
+              {columnVisibility.tags&&<td style={{padding:"8px 10px",maxWidth:220}}>
+                <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                  {keyTags.slice(0,3).map((tag)=>(
+                    <span key={`${k.id}-${tag}`} style={{padding:"2px 7px",borderRadius:999,border:`1px solid ${tagColorByName(tagCatalog,tag)}`,background:`${tagColorByName(tagCatalog,tag)}22`,fontSize:9,color:tagColorByName(tagCatalog,tag),whiteSpace:"nowrap"}}>
+                      {tag}
+                    </span>
+                  ))}
+                  {keyTags.length>3&&<span style={{fontSize:9,color:C.muted}}>{`+${keyTags.length-3}`}</span>}
+                  {!keyTags.length&&<span style={{fontSize:9,color:C.muted}}>-</span>}
+                </div>
+              </td>}
+              {columnVisibility.actions&&<td style={{padding:"8px 10px"}}>
+                <div style={{display:"flex",justifyContent:"flex-end",position:"relative"}} onClick={(e)=>e.stopPropagation()}>
+                  <button
+                    onClick={(e)=>{
+                      e.stopPropagation();
+                      const isOpen=openActionMenuId===k.id;
+                      if(isOpen){
+                        setOpenActionMenuId("");
+                        return;
+                      }
+                      const pos=placeMenuFromButton(e.currentTarget as HTMLElement,190,300);
+                      setActionMenuPos(pos);
+                      setOpenActionMenuId(k.id);
+                    }}
+                    aria-label="Key actions"
+                    style={{
+                      background:"transparent",
+                      border:`1px solid ${C.border}`,
+                      borderRadius:7,
+                      color:C.accent,
+                      width:28,
+                      height:24,
+                      display:"inline-flex",
+                      alignItems:"center",
+                      justifyContent:"center",
+                      cursor:"pointer"
+                    }}
+                  >
+                    <MoreVertical size={14} strokeWidth={2}/>
+                  </button>
+                  {openActionMenuId===k.id&&<div style={{
+                    position:"fixed",
+                    top:actionMenuPos.top,
+                    left:actionMenuPos.left,
+                    zIndex:3000,
+                    minWidth:170,
+                    background:C.surface,
+                    border:`1px solid ${C.borderHi}`,
+                    borderRadius:8,
+                    boxShadow:"0 12px 24px rgba(0,0,0,.35)",
+                    padding:4,
+                    display:"grid",
+                    gap:2
+                  }}>
+                    {canEditPolicy&&<button
+                      onClick={(e)=>{
+                        e.stopPropagation();
+                        openPolicyEditor(k);
+                      }}
+                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                    >
+                      Edit Key Policy
+                    </button>}
+                    {canRotate&&<button
+                      onClick={(e)=>{
+                        e.stopPropagation();
+                        setOpenActionMenuId("");
+                        setSelectedKey(k);
+                        setRotateOldVersionAction("deactivate");
+                        setRotateType("standard");
+                        setModal("rotate");
+                      }}
+                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                    >
+                      Rotate
+                    </button>}
+                    {normState==="active"&&<button
+                      onClick={(e)=>{
+                        e.stopPropagation();
+                        updateKeyStatus(k,"deactivated");
+                      }}
+                      disabled={stateBusy}
+                      style={{background:"transparent",border:"none",color:stateBusy?C.muted:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:stateBusy?"not-allowed":"pointer",borderRadius:6}}
+                    >
+                      Deactivate
+                    </button>}
+                    {(normState==="deactivated"||normState==="pre-active"||normState==="disabled")&&<button
+                      onClick={(e)=>{
+                        e.stopPropagation();
+                        updateKeyStatus(k,"active");
+                      }}
+                      disabled={stateBusy}
+                      style={{background:"transparent",border:"none",color:stateBusy?C.muted:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:stateBusy?"not-allowed":"pointer",borderRadius:6}}
+                    >
+                      Activate
+                    </button>}
+                    {(normState==="active"||normState==="deactivated"||normState==="pre-active")&&<button
+                      onClick={(e)=>{
+                        e.stopPropagation();
+                        updateKeyStatus(k,"disabled");
+                      }}
+                      disabled={stateBusy}
+                      style={{background:"transparent",border:"none",color:stateBusy?C.muted:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:stateBusy?"not-allowed":"pointer",borderRadius:6}}
+                    >
+                      Disable
+                    </button>}
+                    {canExport?<button
+                      onClick={(e)=>{
+                        e.stopPropagation();
+                        setOpenActionMenuId("");
+                        setSelectedKey(k);
+                        setExportWrappingKeyId("");
+                        setExportMode(isPublicComponentLike(k)?"public-plaintext":"wrapped");
+                        setModal("export");
+                      }}
+                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                    >
+                      Export
+                    </button>:(!isDeletedLike&&<div style={{padding:"6px 8px",fontSize:10,color:C.muted}}>Export disabled</div>)}
+                    {canDelete?<button
+                      onClick={(e)=>{
+                        e.stopPropagation();
+                        setOpenActionMenuId("");
+                        setSelectedKey(k);
+                        resetDestroyForm();
+                        setModal("destroy");
+                      }}
+                      style={{background:"transparent",border:"none",color:C.red,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                    >
+                      Delete
+                    </button>:<div style={{padding:"6px 8px",fontSize:10,color:C.muted}}>Deleted (forensic record)</div>}
+                  </div>}
+                </div>
+              </td>}
+              <td style={{padding:"8px 10px",width:48}} />
+            </tr>;
+          })}
+          {!keys.length&&<tr><td colSpan={visibleColumns.length+1} style={{padding:"10px",fontSize:10,color:C.muted}}>No keys yet. Create a key with your customer-defined name.</td></tr>}
+          {keys.length>0&&!filteredKeys.length&&<tr><td colSpan={visibleColumns.length+1} style={{padding:"12px 10px",fontSize:10,color:C.muted}}>No keys found for current filters.</td></tr>}
+        </tbody></table>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginTop:8,flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,fontSize:10,color:C.dim}}>
+          <span>Rows per page</span>
+          <Sel w={92} value={String(pageSize)} onChange={(e)=>setPageSize(Number(e.target.value||10))}>
+            <option value="10">10</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </Sel>
+          <span>{filteredKeys.length?`${currentPage*pageSize+1}-${Math.min((currentPage+1)*pageSize,filteredKeys.length)} of ${filteredKeys.length}`:`0 of 0`}</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <Btn small onClick={()=>setPageIndex((prev)=>Math.max(0,prev-1))} disabled={currentPage<=0}>Prev</Btn>
+          <div style={{fontSize:10,color:C.text,minWidth:70,textAlign:"center"}}>{`Page ${currentPage+1} / ${totalPages}`}</div>
+          <Btn small onClick={()=>setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled={currentPage>=totalPages-1}>Next</Btn>
+        </div>
+      </div>
+    </Section>
+
+    {/*  CREATE KEY MODAL  */}
+    <Modal open={modal==="create"} onClose={()=>setModal(null)} title="Create New Key" width={920}>
+      <Row2>
+        <FG label="Key Name" required><Inp placeholder="Enter key name" value={createName} onChange={e=>setCreateName(e.target.value)}/></FG>
+        <FG label="Tenant" required><Sel><option>{session?.tenantId||"tenant"}</option></Sel></FG>
+      </Row2>
+      <FG label="Algorithm Family" required>
+        <div style={{display:"flex",gap:8,marginBottom:8}}>
+          {[["symmetric","Symmetric"],["asymmetric","Asymmetric"],["pqc","Post-Quantum"],["hmac","HMAC"]].map(([v,l])=>
+            <Radio key={v} label={l} selected={algoType===v} onSelect={()=>setAlgoType(v)}/>)}
+        </div>
+      </FG>
+      <Row2>
+        <FG label="Algorithm" required hint={algoType==="pqc"?"NIST FIPS 203/204/205 approved":""}>
+          <Sel value={createAlgorithmFamily} onChange={e=>setCreateAlgorithmFamily(e.target.value)}>
+            {createAlgorithmFamilies.map((family)=><option key={family} value={family}>{family}</option>)}
+          </Sel>
+        </FG>
+        <FG label={algoType==="asymmetric"?"Key Length / Curve":"Key Strength"} required>
+          <Sel value={createKeySpec} onChange={e=>setCreateKeySpec(e.target.value)}>
+            {createKeySpecOptions.map((spec)=><option key={spec} value={spec}>{spec}</option>)}
+          </Sel>
+        </FG>
+      </Row2>
+      <FG label="Purpose" required>
+        <Sel value={purpose} onChange={e=>setPurpose(e.target.value)}>
+          <option value="encrypt-decrypt">Encrypt / Decrypt</option>
+          <option value="sign-verify">Sign / Verify</option>
+          <option value="wrap-unwrap">Wrap / Unwrap (KEK)</option>
+          <option value="mac">MAC Generate / Verify</option>
+          <option value="key-agreement">Key Agreement (DH/ECDH/KEM)</option>
+          <option value="derive">Key Derivation (HKDF)</option>
+          <option value="all">All Operations</option>
+        </Sel>
+      </FG>
+      <FG label="Key Derivation" hint="Optional: derive sub-keys from this master key">
+        <Sel><option value="none">None</option><option value="hkdf-sha256">HKDF-SHA256</option><option value="hkdf-sha384">HKDF-SHA384</option><option value="kdf-counter">NIST SP 800-108 Counter Mode</option></Sel>
+      </FG>
+      <Row2>
+        <FG label="Auto-Rotation">
+          <Chk label="Enable automatic rotation" checked={rotationEnabled} onChange={()=>setRotationEnabled(!rotationEnabled)}/>
+          {rotationEnabled&&<Sel><option>Every 90 days</option><option>Every 30 days</option><option>Every 180 days</option><option>Every 365 days</option><option>Custom...</option></Sel>}
+        </FG>
+        <FG label="Operation Limits" hint="0 = unlimited">
+          <Row2>
+            <Inp
+              placeholder="Max ops total (e.g., 1000000)"
+              type="number"
+              min={0}
+              value={opsLimitInput}
+              onChange={(e)=>setOpsLimitInput(e.target.value)}
+            />
+            <Sel w="100%" value={opsLimitWindow} onChange={(e)=>setOpsLimitWindow(e.target.value)}>
+              <option value="total">Per lifetime</option>
+              <option value="daily">Per day</option>
+              <option value="monthly">Per month</option>
+            </Sel>
+          </Row2>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Security Options">
+          <Chk label="Require governance approval for all operations" checked={approvalReq} onChange={()=>setApprovalReq(!approvalReq)}/>
+          <Chk label="Allow key export (wrapped)" checked={exportable} onChange={()=>setExportable(!exportable)}/>
+          <Chk label="HSM-backed (store in Primus HSM)" checked={false}/>
+          <Chk label="FIPS-only algorithms enforced" checked={true}/>
+        </FG>
+        <FG label="Activation">
+          <Sel value={createActivationMode} onChange={(e)=>setCreateActivationMode(e.target.value)}>
+            <option value="immediate">Activate immediately</option>
+            <option value="pre-active">Pre-active (activate later)</option>
+            <option value="scheduled">Activate on specific date and time...</option>
+          </Sel>
+          {createActivationMode==="scheduled"&&<div style={{marginTop:8}}>
+            <Inp
+              type="datetime-local"
+              value={createActivationDateTime}
+              onChange={(e)=>setCreateActivationDateTime(e.target.value)}
+            />
+          </div>}
+        </FG>
+      </Row2>
+      <FG label="Tags" hint="Select tags from Administration catalog">
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:6}}>
+          {createTags.map((tag)=>(
+            <span
+              key={tag}
+              style={{
+                display:"inline-flex",
+                alignItems:"center",
+                gap:6,
+                padding:"3px 8px",
+                borderRadius:999,
+                background:`${tagColorByName(tagCatalog,tag)}22`,
+                border:`1px solid ${tagColorByName(tagCatalog,tag)}`,
+                color:tagColorByName(tagCatalog,tag),
+                fontSize:10
+              }}
+            >
+              {tag}
+              <button
+                onClick={()=>setCreateTags((prev)=>prev.filter((t)=>t!==tag))}
+                style={{background:"transparent",border:"none",color:"inherit",cursor:"pointer",padding:0,lineHeight:1}}
+              >
+                <X size={10}/>
+              </button>
+            </span>
+          ))}
+          {!createTags.length&&<div style={{fontSize:10,color:C.muted}}>No tags selected.</div>}
+        </div>
+        <Btn small onClick={()=>setShowCreateTagPicker(!showCreateTagPicker)}>Add More Tags</Btn>
+        {showCreateTagPicker&&<div style={{marginTop:8,maxHeight:120,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:8,padding:8,display:"grid",gap:6}}>
+          {availableTags.map((tag)=>(
+            <label key={tag} style={{display:"flex",alignItems:"center",gap:8,fontSize:10,color:C.text,cursor:"pointer"}}>
+              <input
+                type="checkbox"
+                checked={createTags.includes(tag)}
+                onChange={()=>setCreateTags((prev)=>prev.includes(tag)?prev.filter((t)=>t!==tag):[...prev,tag])}
+              />
+              <span style={{display:"inline-block",width:10,height:10,borderRadius:999,background:tagColorByName(tagCatalog,tag)}}/>
+              <span>{tag}</span>
+            </label>
+          ))}
+          {!availableTags.length&&<div style={{fontSize:10,color:C.muted}}>No tags available. Add tags in Administration.</div>}
+        </div>}
+      </FG>
+      <FG label="Description"><Txt placeholder="Optional description for this key..." rows={2}/></FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8,paddingTop:12,borderTop:`1px solid ${C.border}`}}>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+        <Btn primary onClick={addCustomerKey} disabled={creating}>{creating?"Creating...":"Create Key"}</Btn>
+      </div>
+    </Modal>
+
+    {/*  FORM KEY MODAL  */}
+    <Modal open={modal==="form-key"} onClose={()=>setModal(null)} title="Form Key from Components" width={920}>
+      <Row2>
+        <FG label="Key Name" required><Inp placeholder="Enter key name" value={formName} onChange={(e)=>setFormName(e.target.value)}/></FG>
+        <FG label="Tenant" required><Sel><option>{session?.tenantId||"tenant"}</option></Sel></FG>
+      </Row2>
+      <Row2>
+        <FG label="Algorithm" required>
+          <Sel value={formAlgorithm} onChange={(e)=>setFormAlgorithm(e.target.value)}>
+            <optgroup label="AES">
+              <option>AES-128-GCM</option>
+              <option>AES-192-GCM</option>
+              <option>AES-256-GCM</option>
+            </optgroup>
+            <optgroup label="DES / TDES">
+              <option>DES-CBC</option>
+              <option>2DES-CBC</option>
+              <option>3DES-CBC</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option>HMAC-SHA256</option>
+            </optgroup>
+          </Sel>
+        </FG>
+        <FG label="Purpose" required>
+          <Sel value={formPurpose} onChange={(e)=>setFormPurpose(e.target.value)}>
+            <option value="encrypt-decrypt">Encrypt / Decrypt</option>
+            <option value="wrap-unwrap">Wrap / Unwrap (KEK)</option>
+            <option value="sign-verify">Sign / Verify</option>
+            <option value="mac">MAC Generate / Verify</option>
+          </Sel>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Component Input Mode" required hint="Payment-style component entry for key ceremony.">
+          <Sel value={formComponentMode} onChange={(e)=>setFormComponentMode(e.target.value)}>
+            <option value="clear-generated">Generate clear components in KMS entropy</option>
+            <option value="clear-user">Enter clear components (hex/base64)</option>
+            <option value="encrypted-user">Enter encrypted components (payment ceremony)</option>
+          </Sel>
+        </FG>
+        <FG label="Component Count" required hint="Minimum 2 components.">
+          <Inp type="number" min={2} max={8} value={formComponentCount} onChange={(e)=>setFormComponentCount(Number(e.target.value||2))}/>
+        </FG>
+      </Row2>
+      {String(formAlgorithm||"").toUpperCase().includes("DES")&&<FG label="DES Parity Check">
+        <Sel value={formParity} onChange={(e)=>setFormParity(e.target.value)}>
+          <option value="none">None</option>
+          <option value="odd">Odd parity</option>
+          <option value="even">Even parity</option>
+        </Sel>
+      </FG>}
+      <FG label="Components" required>
+        <div style={{display:"grid",gap:8}}>
+          {formComponents.slice(0,Math.max(2,Math.min(8,Number(formComponentCount)||2))).map((component,idx)=>(
+            <div key={`component-${idx}`} style={{border:`1px solid ${C.border}`,borderRadius:8,padding:10}}>
+              <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:6}}>{`Component ${idx+1}`}</div>
+              {formComponentMode==="clear-generated"&&<div style={{fontSize:10,color:C.muted}}>Generated by KMS CSPRNG during submit.</div>}
+              {formComponentMode==="clear-user"&&<Txt rows={2} placeholder="Clear component (hex or base64)" value={component.material} onChange={(e)=>updateFormComponent(idx,"material",e.target.value)}/>}
+              {formComponentMode==="encrypted-user"&&<>
+                <Txt rows={2} placeholder="Encrypted component block (hex or base64)" value={component.wrapped_material} onChange={(e)=>updateFormComponent(idx,"wrapped_material",e.target.value)}/>
+                <Row2>
+                  <Inp placeholder="Component IV / nonce (hex or base64)" value={component.material_iv} onChange={(e)=>updateFormComponent(idx,"material_iv",e.target.value)}/>
+                  <Sel value={component.wrapping_key_id} onChange={(e)=>updateFormComponent(idx,"wrapping_key_id",e.target.value)}>
+                    <option value="">Select wrapping key...</option>
+                    {wrappingKeyChoices.map((item)=><option key={`${idx}-${item.id}`} value={item.id}>{`${item.name} (${item.id})`}</option>)}
+                  </Sel>
+                </Row2>
+                <div style={{marginTop:6,fontSize:9,color:C.muted}}>Each component is decrypted under selected KEK, then all components are XOR-combined with optional DES parity enforcement.</div>
+              </>}
+            </div>
+          ))}
+        </div>
+      </FG>
+      <Row2>
+        <FG label="Activation">
+          <Sel value={formActivationMode} onChange={(e)=>setFormActivationMode(e.target.value)}>
+            <option value="immediate">Activate immediately</option>
+            <option value="pre-active">Pre-active</option>
+            <option value="scheduled">Activate on specific date/time</option>
+          </Sel>
+          {formActivationMode==="scheduled"&&<div style={{marginTop:8}}>
+            <Inp type="datetime-local" value={formActivationDateTime} onChange={(e)=>setFormActivationDateTime(e.target.value)}/>
+          </div>}
+        </FG>
+        <FG label="Operation Limits" hint="0 = unlimited">
+          <Row2>
+            <Inp type="number" min={0} value={formOpsLimitInput} onChange={(e)=>setFormOpsLimitInput(e.target.value)} placeholder="Max operations"/>
+            <Sel value={formOpsWindow} onChange={(e)=>setFormOpsWindow(e.target.value)}>
+              <option value="total">Per lifetime</option>
+              <option value="daily">Per day</option>
+              <option value="monthly">Per month</option>
+            </Sel>
+          </Row2>
+        </FG>
+      </Row2>
+      <FG label="Security Options">
+        <Chk label="Allow key export (wrapped)" checked={formExportable} onChange={()=>setFormExportable(!formExportable)}/>
+        <Chk label="Require governance approval for all operations" checked={formApprovalReq} onChange={()=>setFormApprovalReq(!formApprovalReq)}/>
+      </FG>
+      <FG label="Tags">
+        <div style={{display:"grid",gap:6,maxHeight:140,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:8,padding:8}}>
+          {availableTags.map((tag)=>(
+            <label key={`form-tag-${tag}`} style={{display:"flex",alignItems:"center",gap:8,fontSize:10,color:C.text,cursor:"pointer"}}>
+              <input
+                type="checkbox"
+                checked={formTags.includes(tag)}
+                onChange={()=>setFormTags((prev)=>prev.includes(tag)?prev.filter((item)=>item!==tag):[...prev,tag])}
+              />
+              <span style={{display:"inline-block",width:10,height:10,borderRadius:999,background:tagColorByName(tagCatalog,tag)}}/>
+              <span>{tag}</span>
+            </label>
+          ))}
+          {!availableTags.length&&<div style={{fontSize:10,color:C.muted}}>No tags available. Add tags in Administration.</div>}
+        </div>
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8,paddingTop:12,borderTop:`1px solid ${C.border}`}}>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+        <Btn primary onClick={submitFormKey} disabled={forming}>{forming?"Forming...":"Form Key"}</Btn>
+      </div>
+    </Modal>
+
+    {/*  IMPORT KEY MODAL  */}
+    <Modal open={modal==="import"} onClose={()=>setModal(null)} title="Import Key Material" width={920}>
+      <FG label="Import Method" required>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+          {[
+            {id:"raw",label:"Raw Key Material (Base64/Hex)"},
+            {id:"pem",label:"PKCS#8 / PEM"},
+            {id:"jwk",label:"JWK (JSON Web Key)"},
+            {id:"tr31",label:"TR-31 Key Block"},
+            {id:"pkcs12",label:"PKCS#12 (.p12)"}
+          ].map((item)=><Radio key={item.id} label={item.label} selected={importMethod===item.id} onSelect={()=>setImportMethod(item.id)}/>)}
+        </div>
+      </FG>
+      <Row2>
+        <FG label="Key Name" required><Inp placeholder="Enter key name" value={importName} onChange={(e)=>setImportName(e.target.value)}/></FG>
+        <FG label="Tenant" required><Sel><option>{session?.tenantId||"tenant"}</option></Sel></FG>
+      </Row2>
+      <FG label="Key Material" required hint="Key material is envelope-encrypted immediately upon import. Plaintext never touches disk.">
+        <Txt
+          placeholder={
+            importMethod==="pem"
+              ?"Paste PEM / PKCS#8 key or certificate..."
+              :importMethod==="jwk"
+              ?"Paste full JWK JSON..."
+              :importMethod==="tr31"
+              ?"Paste TR-31 block (or JSON containing tr31/key_block)..."
+              :importMethod==="pkcs12"
+              ?"Paste base64/hex PKCS#12 (.p12) payload..."
+              :"Paste base64/hex key material or wrapped artifact JSON..."
+          }
+          rows={5}
+          value={importMaterial}
+          onChange={(e)=>setImportMaterial(e.target.value)}
+        />
+      </FG>
+      <Row2>
+        <FG label="Algorithm" required hint="Use auto-detect when possible.">
+          <Sel value={importAlgorithm} onChange={(e)=>setImportAlgorithm(e.target.value)}>
+            <option value="auto">Auto-detect from format</option>
+            <optgroup label="Symmetric">
+              <option value="AES-128">AES-128</option>
+              <option value="AES-192">AES-192</option>
+              <option value="AES-256">AES-256</option>
+              <option value="3DES">3DES</option>
+              <option value="DES">DES</option>
+              <option value="HMAC-SHA256">HMAC-SHA256</option>
+            </optgroup>
+            <optgroup label="Asymmetric">
+              <option value="RSA-2048">RSA-2048</option>
+              <option value="RSA-3072">RSA-3072</option>
+              <option value="RSA-4096">RSA-4096</option>
+              <option value="ECDSA-P256">ECDSA-P256</option>
+              <option value="ECDSA-P384">ECDSA-P384</option>
+              <option value="ECDSA-P521">ECDSA-P521</option>
+              <option value="Ed25519">Ed25519</option>
+            </optgroup>
+            <optgroup label="PQC">
+              <option value="ML-KEM-768">ML-KEM-768</option>
+              <option value="ML-DSA-65">ML-DSA-65</option>
+            </optgroup>
+          </Sel>
+        </FG>
+        <FG label="Wrapping Key (if wrapped)" hint="Select KEK only when material is wrapped.">
+          <Sel value={importWrappingKeyId} onChange={(e)=>setImportWrappingKeyId(e.target.value)}>
+            <option value="">Not wrapped (raw import)</option>
+            {wrappingKeyChoices.map((item)=><option key={item.id} value={item.id}>{`${item.name} (${item.id})`}</option>)}
+          </Sel>
+          {!wrappingKeyChoices.length&&<div style={{marginTop:6,fontSize:10,color:C.amber}}>No active wrap/unwrap key available.</div>}
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Purpose">
+          <Sel value={importPurpose} onChange={(e)=>setImportPurpose(e.target.value)}>
+            <option value="encrypt-decrypt">encrypt-decrypt</option>
+            <option value="sign-verify">sign-verify</option>
+            <option value="wrap-unwrap">wrap-unwrap</option>
+            <option value="mac">mac</option>
+            <option value="key-agreement">key-agreement</option>
+            <option value="derive">derive</option>
+          </Sel>
+        </FG>
+        <FG label="Origin">
+          <Sel value={importOrigin} onChange={(e)=>setImportOrigin(e.target.value)}>
+            <option value="external">External - customer imported</option>
+            <option value="byok">Cloud provider (BYOK re-import)</option>
+            <option value="tr31">TR-31 key block</option>
+            <option value="migration">Migration from external HSM/KMS</option>
+          </Sel>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Expected KCV (optional)" hint="Hex KCV used for integrity check during import.">
+          <Inp placeholder="e.g. A1B2C3" value={importExpectedKcv} onChange={(e)=>setImportExpectedKcv(e.target.value)}/>
+        </FG>
+        <FG label="Import Password (optional)" hint="Used for encrypted PEM/PKCS#12 payloads.">
+          <Inp type="password" value={importPassword} onChange={(e)=>setImportPassword(e.target.value)} placeholder="Leave blank if not encrypted"/>
+        </FG>
+      </Row2>
+      {importWrappingKeyId&&<FG label="Material IV / Nonce (optional)" hint="Required if wrapped material does not include JSON fields material_iv/wrapped_material.">
+        <Inp placeholder="Base64 or hex IV/nonce for wrapped payload" value={importMaterialIV} onChange={(e)=>setImportMaterialIV(e.target.value)}/>
+      </FG>}
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8,paddingTop:12,borderTop:`1px solid ${C.border}`}}>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+        <Btn primary onClick={submitImportKey} disabled={importing}>{importing?"Importing...":"Import Key"}</Btn>
+      </div>
+    </Modal>
+
+    {/*  KEY DETAIL MODAL  */}
+    <Modal open={modal==="detail"&&selectedKey} onClose={()=>setModal(null)} title={`Key: ${selectedKey?.name||""}`} wide>
+      {selectedKey&&<>{(()=>{
+        const selectedNormState=normalizeKeyState(String(selectedKey.state||"unknown"));
+        const selectedCanEditPolicy=selectedNormState==="active"||selectedNormState==="deactivated"||selectedNormState==="pre-active"||selectedNormState==="disabled";
+        const selectedDeletedLike=selectedNormState==="deleted"||selectedNormState==="destroy-pending";
+        const selectedCanRotate=!selectedDeletedLike;
+        const selectedCanExport=!selectedDeletedLike&&Boolean(selectedKey.exportAllowed);
+        const selectedStateBusy=statusUpdatingId===selectedKey.id;
+        return <><Row3>
+        <FG label="Key ID"><div style={{fontFamily:"monospace",fontSize:11,color:C.accent}}>{selectedKey.id}</div></FG>
+        <FG label="Algorithm"><div style={{fontSize:11,color:C.text}}>{selectedKey.algo}</div></FG>
+        <FG label="KCV"><div style={{fontFamily:"monospace",fontSize:11,color:C.green}}>{selectedKey.kcv}</div></FG>
+      </Row3>
+      <Row3>
+        <FG label="State"><B c={keyStateTone(selectedNormState)}>{keyStateLabel(selectedNormState)}</B></FG>
+        <FG label="Version"><div style={{fontSize:11,color:C.text}}>{selectedKey.ver}</div></FG>
+        <FG label="Tenant"><div style={{fontSize:11,color:C.text}}>{selectedKey.tenant}</div></FG>
+      </Row3>
+      <Row3>
+        <FG label="Purpose"><B c="blue">{selectedKey.purpose}</B></FG>
+        <FG label="Ops Limit"><div style={{fontSize:11,color:C.text}}>{selectedKey.opsLimit==="inf"?"Unlimited":`${selectedKey.opsLimit} (${selectedKey.opsWindow||"total"})`}</div></FG>
+      </Row3>
+      <Row3>
+        <FG label="Created"><div style={{fontSize:11,color:C.dim}}>{selectedKey.created}</div></FG>
+        <FG label="Last Rotated"><div style={{fontSize:11,color:C.dim}}>{selectedKey.rotated}</div></FG>
+        <FG label="Expires"><div style={{fontSize:11,color:selectedKey.expires==="-"?C.dim:C.amber}}>{selectedKey.expires}</div></FG>
+      </Row3>
+      <FG label="Total Operations"><div style={{fontSize:18,fontWeight:700,color:C.accent}}>{selectedKey.ops}</div></FG>
+      <FG label="Tags">
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {(Array.isArray(selectedKey.tags)?selectedKey.tags:[]).map((tag)=>(
+            <span key={tag} style={{padding:"3px 8px",borderRadius:999,border:`1px solid ${tagColorByName(tagCatalog,tag)}`,background:`${tagColorByName(tagCatalog,tag)}22`,fontSize:10,color:tagColorByName(tagCatalog,tag)}}>{tag}</span>
+          ))}
+          {!Array.isArray(selectedKey.tags)||!selectedKey.tags.length?<span style={{fontSize:10,color:C.muted}}>No tags</span>:null}
+        </div>
+      </FG>
+      {selectedAsymmetricComponents.length>1&&<FG label="Asymmetric Components">
+        <div style={{background:C.surface,borderRadius:7,padding:10,border:`1px solid ${C.border}`,display:"grid",gap:6}}>
+          {selectedAsymmetricComponents.map((comp)=>{
+            const compNorm=normalizeKeyState(String(comp.state||"unknown"));
+            const compBusy=statusUpdatingId===comp.id;
+            return <div key={comp.id} style={{display:"grid",gridTemplateColumns:"1fr auto",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
+              <div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:10,color:C.text,fontWeight:700}}>{comp.name}</span>
+                  <span style={{fontSize:9,color:comp.componentRole==="private"?C.pink:C.blue,textTransform:"capitalize"}}>{comp.componentRole||"component"}</span>
+                </div>
+                <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{comp.id}</div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <B c={keyStateTone(compNorm)}>{keyStateLabel(compNorm)}</B>
+                {compNorm==="active"&&<Btn small onClick={()=>updateKeyStatus(comp,"deactivated")} disabled={compBusy}>{compBusy?"...":"Deactivate"}</Btn>}
+                {(compNorm==="deactivated"||compNorm==="pre-active"||compNorm==="disabled")&&<Btn small onClick={()=>updateKeyStatus(comp,"active")} disabled={compBusy}>{compBusy?"...":"Activate"}</Btn>}
+                {(compNorm==="active"||compNorm==="deactivated"||compNorm==="pre-active")&&<Btn small onClick={()=>updateKeyStatus(comp,"disabled")} disabled={compBusy}>{compBusy?"...":"Disable"}</Btn>}
+              </div>
+            </div>;
+          })}
+        </div>
+      </FG>}
+      <FG label="Key Versions">
+        <div style={{background:C.surface,borderRadius:7,padding:10,border:`1px solid ${C.border}`}}>
+          {[...keyVersions]
+            .sort((a,b)=>Number(b.version||0)-Number(a.version||0))
+            .map((v)=>{
+              const vStatus=keyStateLabel(normalizeKeyState(String(v.status||"unknown")));
+              const isCurrent=String(selectedKey?.ver||"")===(Number(v.version||0)>0?`v${v.version}`:"");
+              const createdAt=v.created_at?new Date(v.created_at).toLocaleString():"-";
+              const line=`v${v.version} - ${vStatus}${isCurrent?" (current)":""} - KCV: ${String(v.kcv||"-")} - Created: ${createdAt}`;
+              return <div key={String(v.id||v.version)} style={{fontSize:10,color:C.dim,padding:"4px 0",borderBottom:`1px solid ${C.border}`,fontFamily:"monospace"}}>{line}</div>;
+            })}
+          {!Array.isArray(keyVersions)||!keyVersions.length?<div style={{fontSize:10,color:C.muted}}>No version history found.</div>:null}
+        </div>
+      </FG>
+      <div style={{display:"flex",gap:6,marginTop:12}}>
+        {selectedCanRotate&&<Btn primary onClick={()=>{setRotateOldVersionAction("deactivate");setRotateType("standard");setModal("rotate");}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>Rotate</span></Btn>}
+        {selectedCanExport&&<Btn onClick={()=>{setExportWrappingKeyId("");setExportMode(isPublicComponentLike(selectedKey)?"public-plaintext":"wrapped");setModal("export");}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><ExternalLink size={12}/>Export</span></Btn>}
+        {selectedCanEditPolicy&&<Btn onClick={()=>openPolicyEditor(selectedKey)}>Edit Key Policy</Btn>}
+        {selectedNormState==="active"&&<Btn onClick={()=>updateKeyStatus(selectedKey,"deactivated")} disabled={selectedStateBusy}>{selectedStateBusy?"Updating...":"Deactivate"}</Btn>}
+        {(selectedNormState==="deactivated"||selectedNormState==="pre-active"||selectedNormState==="disabled")&&<Btn onClick={()=>updateKeyStatus(selectedKey,"active")} disabled={selectedStateBusy}>{selectedStateBusy?"Updating...":"Activate"}</Btn>}
+        {(selectedNormState==="active"||selectedNormState==="deactivated"||selectedNormState==="pre-active")&&<Btn onClick={()=>updateKeyStatus(selectedKey,"disabled")} disabled={selectedStateBusy}>{selectedStateBusy?"Updating...":"Disable"}</Btn>}
+        {!selectedDeletedLike&&<Btn danger onClick={()=>{resetDestroyForm();setModal("destroy");}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><X size={12}/>Delete</span></Btn>}
+      </div></>;
+      })()}</>}
+    </Modal>
+
+    {/*  EDIT KEY POLICY MODAL  */}
+    <Modal open={modal==="edit-policy"&&selectedKey} onClose={()=>setModal(null)} title={`Edit Key Policy: ${selectedKey?.name||""}`}>
+      <FG label="Operation Limits" hint="0 = unlimited">
+        <Row2>
+          <Inp
+            placeholder="Max operations"
+            type="number"
+            min={0}
+            value={policyOpsLimitInput}
+            onChange={(e)=>setPolicyOpsLimitInput(e.target.value)}
+          />
+          <Sel w="100%" value={policyOpsWindow} onChange={(e)=>setPolicyOpsWindow(e.target.value)}>
+            <option value="total">Per lifetime</option>
+            <option value="daily">Per day</option>
+            <option value="monthly">Per month</option>
+          </Sel>
+        </Row2>
+      </FG>
+      <FG label="Export Policy">
+        <Chk label="Allow key export (wrapped)" checked={policyExportAllowed} onChange={()=>setPolicyExportAllowed(!policyExportAllowed)}/>
+      </FG>
+      {normalizeKeyState(String(selectedKey?.state||""))==="pre-active"&&<FG label="Activation Policy">
+        <Sel value={policyActivationMode} onChange={(e)=>setPolicyActivationMode(e.target.value)}>
+          <option value="immediate">Activate immediately</option>
+          <option value="pre-active">Pre-active (activate later)</option>
+          <option value="scheduled">Activate on specific date and time...</option>
+        </Sel>
+        {policyActivationMode==="scheduled"&&<div style={{marginTop:8}}>
+          <Inp
+            type="datetime-local"
+            value={policyActivationDateTime}
+            onChange={(e)=>setPolicyActivationDateTime(e.target.value)}
+          />
+        </div>}
+      </FG>}
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+        <Btn primary onClick={saveKeyPolicy} disabled={policySaving}>{policySaving?"Saving...":"Save Policy"}</Btn>
+      </div>
+    </Modal>
+
+    {/*  ROTATE KEY MODAL  */}
+    <Modal open={modal==="rotate"} onClose={()=>setModal(null)} title={`Rotate Key: ${selectedKey?.name||""}`}>
+      <FG label="Rotation Type">
+        <Radio label="Standard Rotation - Generate new version, deactivate old" selected={rotateType==="standard"} onSelect={()=>setRotateType("standard")}/>
+        <Radio label="Re-key - Generate new key material, same ID (for compromised keys)" selected={rotateType==="rekey"} onSelect={()=>setRotateType("rekey")}/>
+        {isAsymmetricKeyLike(selectedKey)&&<Radio label="PQC Migration - Rotate to post-quantum algorithm (coming soon)" selected={rotateType==="pqc-migration"} onSelect={()=>setRotateType("pqc-migration")}/>}
+      </FG>
+      <FG label="New Algorithm" hint={isAsymmetricKeyLike(selectedKey)?"Usually same as current. Change for PQC migration.":"Symmetric rotation keeps same algorithm family."}>
+        {isAsymmetricKeyLike(selectedKey)?
+          <Sel><option>{selectedKey?.algo} (same)</option><option>ML-DSA-65 (PQC migration)</option><option>ECDSA-P384 + ML-DSA-65 (hybrid)</option></Sel>:
+          <Sel><option>{selectedKey?.algo} (same)</option></Sel>}
+      </FG>
+      <FG label="Old Version Action">
+        <Sel value={rotateOldVersionAction} onChange={(e)=>setRotateOldVersionAction(e.target.value)}>
+          <option value="deactivate">Deactivate old version (recommended)</option>
+          <option value="keep-active">Keep old version active (dual-active period)</option>
+          <option value="destroy">Destroy old version immediately</option>
+        </Sel>
+      </FG>
+      <Chk label="Notify BYOK cloud connectors to sync new version" checked={true}/>
+      <Chk label="Notify HYOK endpoints of rotation" checked={false}/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary onClick={rotateSelectedKey} disabled={rotating}>{rotating?"Rotating...":"Rotate Key"}</Btn></div>
+    </Modal>
+
+    {/*  EXPORT KEY MODAL  */}
+    <Modal open={modal==="export"} onClose={()=>setModal(null)} title={`Export Key: ${selectedKey?.name||""}`}>
+      <div style={{background:C.amberDim,border:`1px solid ${C.amber}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.amber}}>
+        {exportMode==="public-plaintext"
+          ?"Warning: public key will be exported in plaintext (not wrapped)."
+          :"Warning: key material will be exported wrapped. This is a HIGH severity audit event."}
+      </div>
+      <FG label="Export Mode" required>
+        <Sel value={exportMode} onChange={(e)=>setExportMode(e.target.value)}>
+          <option value="wrapped">Wrapped with KEK (default)</option>
+          {isPublicComponentLike(selectedKey)&&<option value="public-plaintext">Public key plaintext export</option>}
+        </Sel>
+      </FG>
+      {exportMode==="wrapped"&&<FG label="Wrapping Key (KEK)" required hint="The exported key material will be encrypted with this KEK. Self-wrapping is blocked.">
+        <Sel value={exportWrappingKeyId} onChange={(e)=>setExportWrappingKeyId(e.target.value)}>
+          <option value="">Select wrapping key...</option>
+          {wrappingKeyChoices.map((item)=><option key={item.id} value={item.id}>{`${item.name} (${item.id})`}</option>)}
+        </Sel>
+        {!wrappingKeyChoices.length&&<div style={{marginTop:6,fontSize:10,color:C.amber}}>No active wrap/unwrap key available.</div>}
+      </FG>}
+      <FG label="Export Format">
+        {exportMode==="public-plaintext"
+          ?<Sel value="public-plaintext" disabled><option>Public key plaintext (base64)</option></Sel>
+          :<Sel value="wrapped" disabled><option>Raw wrapped (base64)</option></Sel>}
+      </FG>
+      <FG label="Justification" required><Txt placeholder="Reason for export (required for audit)..." rows={2}/></FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+        <Btn primary onClick={exportSelectedKey} disabled={exporting}>{exporting?"Exporting...":"Export Key"}</Btn>
+      </div>
+    </Modal>
+
+    {/*  DESTROY KEY MODAL  */}
+    <Modal open={modal==="destroy"} onClose={()=>setModal(null)} title={`Destroy Key: ${selectedKey?.name||""}`}>
+      <div style={{background:C.redDim,border:`1px solid ${C.red}`,borderRadius:8,padding:12,marginBottom:12,fontSize:11,color:C.red}}>
+        <strong>CRITICAL: This action is irreversible.</strong><br/>All key material will be zeroized. Data encrypted with this key will become permanently unrecoverable.
+      </div>
+      <FG label="Destruction Method">
+        <Radio label="Destroy After (days) - mark key pending and auto-delete later" selected={destroyMode==="scheduled"} onSelect={()=>setDestroyMode("scheduled")}/>
+        {destroyMode==="scheduled"&&<div style={{marginTop:8}}>
+          <Inp type="number" min={1} max={3650} value={destroyAfterDays} onChange={(e)=>setDestroyAfterDays(Number(e.target.value)||0)} placeholder="Enter number of days (1-3650)"/>
+          <div style={{fontSize:9,color:C.muted,marginTop:4}}>Key remains blocked immediately and is permanently deleted after this many days.</div>
+        </div>}
+        <Radio label="Destroy Immediately - permanently delete now" selected={destroyMode==="immediate"} onSelect={()=>setDestroyMode("immediate")}/>
+      </FG>
+      <FG label="Pre-Destroy Checks">
+        <Chk label="I confirm no active workloads depend on this key" checked={destroyCheckWorkloads} onChange={()=>setDestroyCheckWorkloads(!destroyCheckWorkloads)}/>
+        <Chk label="I have verified backup/re-encryption is complete" checked={destroyCheckBackup} onChange={()=>setDestroyCheckBackup(!destroyCheckBackup)}/>
+        <Chk label="I understand this is irreversible" checked={destroyCheckIrreversible} onChange={()=>setDestroyCheckIrreversible(!destroyCheckIrreversible)}/>
+      </FG>
+      <FG label="Type key name to confirm" required><Inp placeholder={selectedKey?.name} value={destroyConfirmName} onChange={(e)=>setDestroyConfirmName(e.target.value)}/></FG>
+      <FG label="Justification" required><Txt placeholder="Reason for destruction (required for audit)..." rows={2} value={destroyJustification} onChange={(e)=>setDestroyJustification(e.target.value)}/></FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+        <Btn danger onClick={destroySelectedKey} disabled={!destroyReady}>{destroying?"Destroying...":destroyMode==="immediate"?"Destroy Immediately":"Schedule Destruction"}</Btn>
+      </div>
+    </Modal>
+
+    {/*  GENERATE PQC KEY MODAL  */}
+    <Modal open={modal==="generate-pqc"} onClose={()=>setModal(null)} title="Generate Post-Quantum Key" width={920}>
+      <div style={{background:C.purpleDim,border:`1px solid ${C.purple}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.purple}}>Post-Quantum Cryptography - NIST FIPS 203/204/205 approved algorithms</div>
+      <Row2>
+        <FG label="PQC Algorithm" required>
+          <Sel value={pqcAlgorithm} onChange={(e)=>setPqcAlgorithm(e.target.value)}>
+            <option value="ML-KEM-768">ML-KEM-768 (FIPS 203)</option>
+            <option value="ML-KEM-1024">ML-KEM-1024 (FIPS 203)</option>
+          </Sel>
+        </FG>
+        <FG label="Hybrid Mode" hint="Combine PQC with classical for backward compatibility">
+          <Sel value={pqcHybridMode} onChange={(e)=>setPqcHybridMode(e.target.value)}>
+            <option value="pure">Pure PQC only</option>
+            <option value="hybrid-ecdh">Hybrid: X25519 + ML-KEM-768</option>
+          </Sel>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Key Name" required><Inp placeholder="Enter key name" value={pqcName} onChange={(e)=>setPqcName(e.target.value)}/></FG>
+        <FG label="Purpose"><Sel value={pqcPurpose} onChange={(e)=>setPqcPurpose(e.target.value)}><option value="key-agreement">key-agreement</option><option value="key-encapsulation">key-encapsulation</option></Sel></FG>
+      </Row2>
+      <Chk label="Store in HSM (if HSM supports PQC)" checked={false}/>
+      <Chk label="Auto-generate classical fallback key (for migration period)" checked={true}/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary onClick={generatePQCKey} disabled={pqcGenerating}>{pqcGenerating?"Generating...":"Generate PQC Key"}</Btn></div>
+    </Modal>
+  </div>;
+};
+
+// 
+// TAB: CRYPTO CONSOLE (interactive encrypt/decrypt/sign/verify)
+// 
+const Crypto=({session,keyCatalog,onToast,fipsMode})=>{
+  const [op,setOp]=useState("Encrypt");
+  const [selectedKeyId,setSelectedKeyId]=useState("");
+  const [payloadInput,setPayloadInput]=useState("");
+  const [signatureInput,setSignatureInput]=useState("");
+  const [ivInput,setIVInput]=useState("");
+  const [aadInput,setAadInput]=useState("");
+  const [referenceId,setReferenceId]=useState("");
+  const [inputEncoding,setInputEncoding]=useState("utf-8");
+  const [aadEncoding,setAadEncoding]=useState("utf-8");
+  const [binaryInputEncoding,setBinaryInputEncoding]=useState("base64");
+  const [outputEncoding,setOutputEncoding]=useState("utf-8");
+  const [binaryOutputEncoding,setBinaryOutputEncoding]=useState("base64");
+  const [ivMode,setIVMode]=useState("internal");
+  const [hmacAlgorithm,setHmacAlgorithm]=useState("hmac-sha256");
+  const [hashAlgorithm,setHashAlgorithm]=useState("sha-256");
+  const [kdfAlgorithm,setKdfAlgorithm]=useState("hkdf-sha256");
+  const [kdfLengthBits,setKdfLengthBits]=useState("256");
+  const [kdfInfo,setKdfInfo]=useState("");
+  const [kdfSalt,setKdfSalt]=useState("");
+  const [randomLength,setRandomLength]=useState("32");
+  const [randomSource,setRandomSource]=useState("kms-csprng");
+  const [kemAlgorithm,setKemAlgorithm]=useState("ml-kem-768");
+  const [resultText,setResultText]=useState("// Result will appear here...");
+  const [auditEvent,setAuditEvent]=useState("-");
+  const [durationMs,setDurationMs]=useState("-");
+  const [busy,setBusy]=useState(false);
+  const [errorText,setErrorText]=useState("");
+  const [pickedAlgorithm,setPickedAlgorithm]=useState("");
+
+  const keyChoices=useMemo(()=>keyChoicesFromCatalog(keyCatalog),[keyCatalog]);
+  const keyRequired = op!=="Hash" && op!=="Random";
+  const activeKey = useMemo(()=>keyChoices.find((k)=>k.id===selectedKeyId)||null,[keyChoices,selectedKeyId]);
+  const allowedOps = useMemo(()=>supportedOpsForKey(activeKey),[activeKey]);
+
+  useEffect(()=>{
+    if(!selectedKeyId || !keyChoices.some((k)=>k.id===selectedKeyId)){
+      setSelectedKeyId(keyChoices[0]?.id||"");
+    }
+  },[selectedKeyId,keyChoices]);
+
+  useEffect(()=>{
+    setErrorText("");
+  },[op]);
+
+  useEffect(()=>{
+    if(op==="KEM Encapsulate"||op==="KEM Decapsulate"){
+      setKemAlgorithm(preferredKEMAlgorithmForKey(activeKey));
+    }
+  },[op,activeKey]);
+
+  useEffect(()=>{
+    if(op==="Hash"||op==="Random"){
+      return;
+    }
+    if(!supportsOperationForKey(activeKey,op)){
+      const next=allowedOps.find((item)=>item!=="Hash"&&item!=="Random")||"Hash";
+      setOp(next);
+    }
+  },[op,activeKey,allowedOps]);
+
+  const payloadLabel = useMemo(()=>{
+    if(op==="Encrypt"){
+      return "Plaintext";
+    }
+    if(op==="Decrypt"){
+      return "Ciphertext";
+    }
+    if(op==="Sign"){
+      return "Message";
+    }
+    if(op==="Verify"){
+      return "Message";
+    }
+    if(op==="Wrap"){
+      return "Material to Wrap";
+    }
+    if(op==="Unwrap"){
+      return "Wrapped Material";
+    }
+    if(op==="MAC"){
+      return "Message";
+    }
+    if(op==="Hash"){
+      return "Input";
+    }
+    if(op==="KEM Decapsulate"){
+      return "Encapsulated Key";
+    }
+    return "Input";
+  },[op]);
+
+  const payloadPlaceholder = useMemo(()=>{
+    if(op==="Decrypt"||op==="Unwrap"||op==="KEM Decapsulate"){
+      return "Paste ciphertext / encapsulated key";
+    }
+    if(op==="Hash"){
+      return "Data to hash";
+    }
+    return "Enter input data";
+  },[op]);
+
+  const activeAlgo = String(activeKey?.algo || "");
+  const activeIsAEAD = isAEADAlgorithm(activeAlgo);
+  const activeUsesIV = usesIVAlgorithm(activeAlgo);
+  const signatureModeOptions = useMemo(()=>{
+    if(op==="MAC" || isHMACAlgorithm(activeAlgo)){
+      return [
+        {value:"hmac-sha256",label:"HMAC-SHA256"},
+        {value:"hmac-sha384",label:"HMAC-SHA384"},
+        {value:"hmac-sha512",label:"HMAC-SHA512"}
+      ];
+    }
+    if(isRSAAlgorithm(activeAlgo)){
+      return [
+        {value:"rsa-pss-sha256",label:"RSA-PSS-SHA256"},
+        {value:"rsa-pss-sha384",label:"RSA-PSS-SHA384"},
+        {value:"rsa-pss-sha512",label:"RSA-PSS-SHA512"}
+      ];
+    }
+    if(isECDSAAlgorithm(activeAlgo)){
+      return [
+        {value:"ecdsa-sha256",label:"ECDSA-SHA256"},
+        {value:"ecdsa-sha384",label:"ECDSA-SHA384"},
+        {value:"ecdsa-sha512",label:"ECDSA-SHA512"}
+      ];
+    }
+    if(isEd25519Algorithm(activeAlgo)){
+      return [{value:"ed25519",label:"Ed25519"}];
+    }
+    return [
+      {value:"hmac-sha256",label:"HMAC-SHA256"},
+      {value:"hmac-sha384",label:"HMAC-SHA384"},
+      {value:"hmac-sha512",label:"HMAC-SHA512"}
+    ];
+  },[op,activeAlgo]);
+  const opAllowedForKey = supportsOperationForKey(activeKey, op);
+  const showIVMode = (op==="Encrypt" || op==="Wrap") && activeUsesIV;
+  const needsPayload = op!=="Random" && op!=="Key Derive" && op!=="KEM Encapsulate";
+  const needsSignature = op==="Verify";
+  const needsIV = ((op==="Decrypt" || op==="Unwrap") && activeUsesIV) || (showIVMode && ivMode==="external");
+  const supportsAAD = ((op==="Encrypt" || op==="Decrypt" || op==="Wrap" || op==="Unwrap") && activeIsAEAD);
+  const supportsReference = op==="Encrypt" || op==="Wrap" || op==="Hash" || op==="Random" || op==="Key Derive" || op==="KEM Encapsulate" || op==="KEM Decapsulate";
+  const supportsInputEncoding = op==="Encrypt"||op==="Sign"||op==="Verify"||op==="Wrap"||op==="MAC"||op==="Hash"||op==="Key Derive";
+  const supportsBinaryInputEncoding = needsIV || op==="Decrypt" || op==="Unwrap" || op==="KEM Decapsulate";
+  const supportsPlainOutputEncoding = op==="Decrypt" || op==="Unwrap";
+  const supportsBinaryOutputEncoding = op==="Hash"||op==="Random"||op==="Key Derive"||op==="KEM Encapsulate"||op==="KEM Decapsulate";
+  const runtimeFipsEnabled = isFipsModeEnabled(fipsMode);
+  const selectedKeyFips = activeKey ? isFipsAlgorithm(activeAlgo) : false;
+  const currentMechanismFips = keyRequired
+    ? (!activeKey || selectedKeyFips)
+    : op==="Hash"
+      ? isFipsHashAlgorithm(hashAlgorithm)
+      : op==="Random"
+        ? isFipsRandomSource(randomSource)
+        : true;
+  const fipsExecutionBlocked = runtimeFipsEnabled && !currentMechanismFips;
+  const algorithmContextHint = !keyRequired
+    ? "Operation does not require a key selection."
+    : !activeKey
+    ? "Select a key to validate mechanism-specific fields."
+    : activeIsAEAD
+    ? "AEAD mode selected: AAD is available."
+    : activeUsesIV
+    ? "This mode uses IV/nonce but not AAD."
+    : "This mode does not use IV/AAD.";
+
+  useEffect(()=>{
+    if(op!=="Sign" && op!=="Verify" && op!=="MAC"){
+      return;
+    }
+    if(signatureModeOptions.some((item)=>item.value===hmacAlgorithm)){
+      return;
+    }
+    setHmacAlgorithm(signatureModeOptions[0]?.value||"hmac-sha256");
+  },[op,signatureModeOptions,hmacAlgorithm]);
+
+  const applyResult = (value: any)=>{
+    setResultText(JSON.stringify(value,null,2));
+  };
+
+  const runOperation = async()=>{
+    if(!session){
+      const message = "Session is required.";
+      setErrorText(message);
+      onToast?.(message);
+      return;
+    }
+    if(keyRequired && !selectedKeyId){
+      const message = "Select a key first.";
+      setErrorText(message);
+      onToast?.(message);
+      return;
+    }
+    if(keyRequired && !opAllowedForKey){
+      const message = `${op} is not supported for key algorithm ${activeAlgo || "selected key"}.`;
+      setErrorText(message);
+      onToast?.(message);
+      return;
+    }
+    if(fipsExecutionBlocked){
+      const message = "Blocked by FIPS mode. Select a FIPS-approved key/algorithm.";
+      setErrorText(message);
+      onToast?.(message);
+      return;
+    }
+    if(needsPayload && !String(payloadInput||"").trim()){
+      const message = `${payloadLabel} is required.`;
+      setErrorText(message);
+      onToast?.(message);
+      return;
+    }
+    if(needsIV && !String(ivInput||"").trim()){
+      const message = "IV is required.";
+      setErrorText(message);
+      onToast?.(message);
+      return;
+    }
+    if(needsSignature && !String(signatureInput||"").trim()){
+      const message = "Signature is required.";
+      setErrorText(message);
+      onToast?.(message);
+      return;
+    }
+
+    setBusy(true);
+    setErrorText("");
+    const started = Date.now();
+    const aadValue = supportsAAD ? aadInput : "";
+    const aadValueEncoding = aadEncoding;
+    const ivValue = showIVMode && ivMode==="external" ? ivInput : "";
+    try{
+      let audit = "";
+      if(op==="Encrypt"){
+        const out=await encryptData(session,selectedKeyId,payloadInput,{
+          inputEncoding,
+          ivMode:ivMode as any,
+          iv:ivValue,
+          ivEncoding:binaryInputEncoding==="hex"?"hex":"base64",
+          aad:aadValue,
+          aadEncoding:aadValueEncoding,
+          referenceId
+        });
+        applyResult({ciphertext:out.ciphertext,iv:out.iv,version:out.version,key_id:out.keyId,kcv:out.kcv||"",reference_id:referenceId||""});
+        audit="audit.key.encrypt";
+      }else if(op==="Decrypt"){
+        const out=await decryptData(session,selectedKeyId,payloadInput,ivInput,{
+          inputEncoding:binaryInputEncoding as any,
+          outputEncoding:outputEncoding as any,
+          aad:aadValue,
+          aadEncoding:aadValueEncoding
+        });
+        applyResult({plaintext:out.plaintext,plaintext_base64:out.plaintextBase64,version:out.version,key_id:out.keyId});
+        audit="audit.key.decrypt";
+      }else if(op==="Sign"){
+        const out=await signData(session,selectedKeyId,payloadInput,{inputEncoding:inputEncoding as any,algorithm:hmacAlgorithm as any});
+        applyResult({signature:out.signature,version:out.version,key_id:out.key_id,algorithm:hmacAlgorithm});
+        audit="audit.key.sign";
+      }else if(op==="Verify"){
+        const out=await verifyData(session,selectedKeyId,payloadInput,signatureInput,{inputEncoding:inputEncoding as any,algorithm:hmacAlgorithm as any});
+        applyResult({verified:out.verified,version:out.version,key_id:out.key_id,algorithm:hmacAlgorithm});
+        audit="audit.key.verify";
+      }else if(op==="Wrap"){
+        const out=await encryptData(session,selectedKeyId,payloadInput,{
+          inputEncoding,
+          ivMode:ivMode as any,
+          iv:ivValue,
+          ivEncoding:binaryInputEncoding==="hex"?"hex":"base64",
+          aad:aadValue,
+          aadEncoding:aadValueEncoding,
+          referenceId
+        });
+        applyResult({wrapped_material:out.ciphertext,material_iv:out.iv,version:out.version,key_id:out.keyId,kcv:out.kcv||"",reference_id:referenceId||""});
+        audit="audit.key.wrap";
+      }else if(op==="Unwrap"){
+        const out=await decryptData(session,selectedKeyId,payloadInput,ivInput,{
+          inputEncoding:binaryInputEncoding as any,
+          outputEncoding:outputEncoding as any,
+          aad:aadValue,
+          aadEncoding:aadValueEncoding
+        });
+        applyResult({material:out.plaintext,material_base64:out.plaintextBase64,version:out.version,key_id:out.keyId});
+        audit="audit.key.unwrap";
+      }else if(op==="MAC"){
+        const out=await signData(session,selectedKeyId,payloadInput,{inputEncoding:inputEncoding as any,algorithm:hmacAlgorithm as any});
+        applyResult({mac:out.signature,version:out.version,key_id:out.key_id,algorithm:hmacAlgorithm});
+        audit="audit.key.mac";
+      }else if(op==="Hash"){
+        const out=await hashData(session,payloadInput,hashAlgorithm as any,inputEncoding as any,referenceId);
+        const digestRendered=binaryOutputEncoding==="hex"?decodeOutputFromBase64(out.digestBase64,"hex"):out.digestBase64;
+        applyResult({algorithm:out.algorithm,digest:digestRendered,digest_base64:out.digestBase64,reference_id:referenceId||""});
+        audit="audit.crypto.hash";
+      }else if(op==="KEM Encapsulate"){
+        const out=await kemEncapsulate(session,selectedKeyId,{
+          algorithm:kemAlgorithm as any,
+          referenceId
+        });
+        const sharedRendered=binaryOutputEncoding==="hex"?decodeOutputFromBase64(out.sharedSecretBase64,"hex"):out.sharedSecretBase64;
+        applyResult({algorithm:out.algorithm,shared_secret:sharedRendered,shared_secret_base64:out.sharedSecretBase64,encapsulated_key:out.encapsulatedKeyBase64,key_id:out.keyId,version:out.version,reference_id:referenceId||""});
+        audit="audit.key.kem_encapsulate";
+      }else if(op==="KEM Decapsulate"){
+        const out=await kemDecapsulate(session,selectedKeyId,{
+          algorithm:kemAlgorithm as any,
+          encapsulatedKeyBase64:payloadInput,
+          inputEncoding:binaryInputEncoding as any,
+          referenceId
+        });
+        const sharedRendered=binaryOutputEncoding==="hex"?decodeOutputFromBase64(out.sharedSecretBase64,"hex"):out.sharedSecretBase64;
+        applyResult({algorithm:out.algorithm,shared_secret:sharedRendered,shared_secret_base64:out.sharedSecretBase64,key_id:out.keyId,version:out.version,reference_id:referenceId||""});
+        audit="audit.key.kem_decapsulate";
+      }else if(op==="Key Derive"){
+        const out=await deriveKey(session,selectedKeyId,{
+          algorithm:kdfAlgorithm as any,
+          lengthBits:Number(kdfLengthBits||0),
+          info:kdfInfo,
+          salt:kdfSalt,
+          infoEncoding:inputEncoding as any,
+          saltEncoding:inputEncoding as any,
+          referenceId
+        });
+        const derivedRendered=binaryOutputEncoding==="hex"?decodeOutputFromBase64(out.derivedKeyBase64,"hex"):out.derivedKeyBase64;
+        applyResult({algorithm:out.algorithm,length_bits:out.lengthBits,derived_key:derivedRendered,derived_key_base64:out.derivedKeyBase64,key_id:out.keyId,version:out.version,reference_id:referenceId||""});
+        audit="audit.key.derive";
+      }else if(op==="Random"){
+        const out=await randomBytes(session,Number(randomLength||0),randomSource as any,referenceId);
+        const bytesRendered=binaryOutputEncoding==="hex"?decodeOutputFromBase64(out.bytesBase64,"hex"):out.bytesBase64;
+        applyResult({bytes:bytesRendered,bytes_base64:out.bytesBase64,length:out.length,source:out.source,reference_id:referenceId||""});
+        audit="audit.crypto.random";
+      }
+      setAuditEvent(audit);
+      const elapsed=Math.max(0,Date.now()-started);
+      setDurationMs(`${elapsed} ms`);
+      onToast?.(`${op} completed`);
+    }catch(error){
+      const message=errMsg(error);
+      setErrorText(message);
+      setAuditEvent("failed");
+      const elapsed=Math.max(0,Date.now()-started);
+      setDurationMs(`${elapsed} ms`);
+      applyResult({error:message});
+      onToast?.(`${op} failed: ${message}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const opTabs=[
+    {id:"Encrypt",label:"Encrypt"},
+    {id:"Decrypt",label:"Decrypt"},
+    {id:"Sign",label:"Sign"},
+    {id:"Verify",label:"Verify"},
+    {id:"Wrap",label:"Wrap"},
+    {id:"Unwrap",label:"Unwrap"},
+    {id:"MAC",label:"MAC"},
+    {id:"Key Derive",label:"Derive"},
+    {id:"KEM Encapsulate",label:"KEM Encap"},
+    {id:"KEM Decapsulate",label:"KEM Decap"},
+    {id:"Hash",label:"Hash"},
+    {id:"Random",label:"Random"}
+  ];
+
+  const cryptoAlgorithms=[
+    {group:"Symmetric",items:[["AES-128-GCM",true],["AES-192-GCM",true],["AES-256-GCM",true],["AES-256-CTR",true],["AES-256-CBC",true],["AES-256-ECB",false],["AES-256-CCM",true],["Camellia-256",false],["ChaCha20-Poly1305",false],["3DES",true]]},
+    {group:"MAC",items:[["AES-CMAC",true],["AES-GMAC",true],["HMAC-SHA256",true],["HMAC-SHA3-256",true],["HMAC-SHA512",true],["Poly1305",true]]},
+    {group:"Asymmetric",items:[["RSA-2048-OAEP",true],["RSA-4096-OAEP",true],["RSA-8192",true],["ECIES-P256",false]]},
+    {group:"Signatures",items:[["RSA-PSS-4096",true],["ECDSA-P256",true],["ECDSA-P384",true],["ECDSA-P521",true],["ECDSA-Brainpool256",false],["Ed25519",true],["Ed448",true],["DSA-3072",true]]},
+    {group:"Key Exchange",items:[["DH-2048",true],["DH-4096",true],["ECDH-P384",true],["X25519",true]]},
+    {group:"Hash",items:[["SHA-256",true],["SHA-512",true],["SHA3-256",true],["SHA3-512",true],["SHAKE256",true],["Keccak-256",false],["RIPEMD-160",false],["BLAKE2b",false]]},
+    {group:"PQC",items:[["ML-KEM-768",true],["ML-KEM-1024",true],["ML-DSA-65",true],["ML-DSA-87",true],["SLH-DSA-256f",true],["HSS/LMS",true],["XMSS",true]]},
+    {group:"Hybrid",items:[["ECDH + ML-KEM-768",true],["ECDSA + ML-DSA-65",true]]}
+  ];
+
+  const inferOperationFromAlgorithm=(algorithmName:string):string=>{
+    const value=String(algorithmName||"").toUpperCase();
+    if(!value){
+      return "Encrypt";
+    }
+    if(
+      value.includes("HMAC")||
+      value.includes("CMAC")||
+      value.includes("GMAC")||
+      value==="POLY1305"
+    ){
+      return "MAC";
+    }
+    if(
+      value.includes("SHA")||
+      value.includes("SHAKE")||
+      value.includes("KECCAK")||
+      value.includes("RIPEMD")||
+      value.includes("BLAKE")
+    ){
+      return "Hash";
+    }
+    if(value.includes("ML-KEM")){
+      return "KEM Encapsulate";
+    }
+    if(
+      value.includes("ML-DSA")||
+      value.includes("SLH-DSA")||
+      value.includes("RSA-PSS")||
+      value.includes("ECDSA")||
+      value.includes("ED25519")||
+      value.includes("ED448")
+    ){
+      return "Sign";
+    }
+    if(
+      value.startsWith("DH-")||
+      value.includes("ECDH")||
+      value.includes("X25519")||
+      value.includes("X448")
+    ){
+      return "Key Derive";
+    }
+    return "Encrypt";
+  };
+
+  const selectAlgorithmFromRail=(algorithmName:string,fipsApproved:boolean)=>{
+    if(runtimeFipsEnabled && !fipsApproved){
+      onToast?.(`${algorithmName} is blocked while FIPS mode is enabled.`);
+      return;
+    }
+    setPickedAlgorithm(algorithmName);
+    const nextOp=inferOperationFromAlgorithm(algorithmName);
+    setOp(nextOp);
+    const normalized=String(algorithmName||"").toUpperCase();
+    const matchingKey=keyChoices.find((k)=>{
+      const keyAlgo=String(k?.algo||"").toUpperCase();
+      return keyAlgo===normalized||keyAlgo.includes(normalized)||normalized.includes(keyAlgo);
+    });
+    if(matchingKey){
+      setSelectedKeyId(matchingKey.id);
+    }else if(nextOp!=="Hash"&&nextOp!=="Random"){
+      onToast?.(`No backend key found for ${algorithmName}. Create/import a matching key first.`);
+    }
+  };
+
+  const selectedAlgorithmInRail=String(pickedAlgorithm||activeAlgo||"").toUpperCase();
+
+  const renderResultAsHex=()=>{
+    try{
+      const bytes=new TextEncoder().encode(resultText);
+      const hex=Array.from(bytes).map((b)=>b.toString(16).padStart(2,"0")).join("");
+      setResultText(hex);
+    }catch(error){
+      onToast?.(`Hex render failed: ${errMsg(error)}`);
+    }
+  };
+
+  const renderResultAsBase64=()=>{
+    try{
+      const bytes=new TextEncoder().encode(resultText);
+      let raw="";
+      bytes.forEach((b)=>{raw+=String.fromCharCode(b);});
+      setResultText(btoa(raw));
+    }catch(error){
+      onToast?.(`Base64 render failed: ${errMsg(error)}`);
+    }
+  };
+
+  const downloadResult=()=>{
+    try{
+      const blob=new Blob([resultText],{type:"text/plain;charset=utf-8"});
+      const url=URL.createObjectURL(blob);
+      const anchor=document.createElement("a");
+      anchor.href=url;
+      anchor.download=`crypto-${String(op||"result").toLowerCase().replace(/\s+/g,"-")}.txt`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    }catch(error){
+      onToast?.(`Download failed: ${errMsg(error)}`);
+    }
+  };
+
+  const opButtonLabel=opTabs.find((item)=>item.id===op)?.label||op;
+  const showModeSelector=op==="Sign"||op==="Verify"||op==="MAC"||op==="Hash"||op==="KEM Encapsulate"||op==="KEM Decapsulate"||op==="Key Derive";
+  const topControlColumns=keyRequired&&showModeSelector?"1fr 1fr":"1fr";
+
+  return <div style={{display:"grid",gridTemplateColumns:"270px 1fr",gap:12,alignItems:"start"}}>
+    <div style={{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:12,padding:12,maxHeight:680,overflowY:"auto"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,marginBottom:8}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.dim,textTransform:"uppercase",letterSpacing:1}}>Algorithms</div>
+        <div
+          title={runtimeFipsEnabled?"FIPS mode is enforced globally from Administration":"Standard mode allows all algorithms"}
+          style={{
+            display:"inline-flex",
+            alignItems:"center",
+            gap:5,
+            padding:"4px 8px",
+            borderRadius:999,
+            border:`1px solid ${runtimeFipsEnabled?(currentMechanismFips?C.green:C.red):C.blue}`,
+            background:runtimeFipsEnabled?(currentMechanismFips?C.greenDim:C.redDim):C.blueDim,
+            color:runtimeFipsEnabled?(currentMechanismFips?C.green:C.red):C.blue,
+            fontSize:10,
+            fontWeight:700
+          }}
+        >
+          {runtimeFipsEnabled
+            ?(currentMechanismFips?<Check size={11} strokeWidth={2.5}/>:<X size={11} strokeWidth={2.5}/>)
+            :<Check size={11} strokeWidth={2.5}/>}
+          FIPS
+        </div>
+      </div>
+      <div style={{display:"grid",gap:10}}>
+        {cryptoAlgorithms.map((section)=>(
+          <div key={section.group}>
+            <div style={{fontSize:10,fontWeight:700,color:C.accent,textTransform:"uppercase",letterSpacing:.9,marginBottom:4}}>{section.group}</div>
+            <div style={{display:"grid",gap:2}}>
+              {section.items.map(([name,ok])=>{
+                const fipsApproved=Boolean(ok);
+                const allowedByMode=!runtimeFipsEnabled || fipsApproved;
+                return (
+                <button
+                  key={`${section.group}-${name}`}
+                  onClick={()=>selectAlgorithmFromRail(String(name),fipsApproved)}
+                  disabled={!allowedByMode}
+                  style={{
+                    display:"grid",
+                    gridTemplateColumns:"1fr auto",
+                    alignItems:"center",
+                    gap:8,
+                    padding:"4px 6px",
+                    borderRadius:6,
+                    border:`1px solid ${selectedAlgorithmInRail===String(name).toUpperCase()?C.accent:C.border}`,
+                    background:selectedAlgorithmInRail===String(name).toUpperCase()?C.accentDim:"transparent",
+                    cursor:allowedByMode?"pointer":"not-allowed",
+                    opacity:allowedByMode?1:.75
+                  }}
+                >
+                  <span style={{fontSize:10,color:C.text}}>{name}</span>
+                  <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:4,border:`1px solid ${allowedByMode?C.green:C.red}`,background:allowedByMode?C.greenDim:C.redDim,color:allowedByMode?C.green:C.red}}>
+                    {allowedByMode?<Check size={10} strokeWidth={2.5}/>:<X size={10} strokeWidth={2.5}/>}
+                  </span>
+                </button>
+              )})}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginBottom:10}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          {opTabs.map((item)=>(
+            (()=>{ const tabAllowed = supportsOperationForKey(activeKey,item.id); return (
+            <button
+              key={item.id}
+              onClick={()=>{ if(tabAllowed){ setOp(item.id); } }}
+              disabled={!tabAllowed}
+              style={{
+                background:op===item.id?C.accent:"transparent",
+                color:op===item.id?C.bg:(!tabAllowed?C.muted:C.dim),
+                border:`1px solid ${op===item.id?C.accent:C.border}`,
+                borderRadius:8,
+                padding:"7px 14px",
+                fontSize:11,
+                fontWeight:700,
+                cursor:tabAllowed?"pointer":"not-allowed",
+                opacity:tabAllowed?1:.55
+              }}
+            >
+              {item.label}
+            </button>
+          )})()
+          ))}
+          <div style={{width:1,height:18,background:C.border,marginLeft:2,marginRight:2}}/>
+        </div>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div style={{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:12,padding:12}}>
+          <div style={{fontSize:10,fontWeight:700,color:C.dim,textTransform:"uppercase",letterSpacing:.9,marginBottom:8}}>Input</div>
+          <div style={{display:"grid",gap:9}}>
+            <div style={{display:"grid",gridTemplateColumns:topControlColumns,gap:8}}>
+              {keyRequired&&<Sel value={selectedKeyId} onChange={(e)=>setSelectedKeyId(e.target.value)} style={{height:40,borderRadius:9,fontSize:12}}>
+                {renderKeyOptions(keyChoices)}
+              </Sel>}
+              {showModeSelector&&(
+                op==="Sign"||op==="Verify"||op==="MAC"
+                  ?<Sel value={hmacAlgorithm} onChange={(e)=>setHmacAlgorithm(e.target.value)} style={{height:40,borderRadius:9,fontSize:12}}>
+                    {signatureModeOptions.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
+                  </Sel>
+                  :op==="Hash"
+                  ?<Sel value={hashAlgorithm} onChange={(e)=>setHashAlgorithm(e.target.value)} style={{height:40,borderRadius:9,fontSize:12}}>
+                    <option value="sha-256">SHA-256</option>
+                    <option value="sha-384">SHA-384</option>
+                    <option value="sha-512">SHA-512</option>
+                    <option value="sha3-256">SHA3-256</option>
+                    <option value="sha3-384">SHA3-384</option>
+                    <option value="sha3-512">SHA3-512</option>
+                    <option value="blake2b-256">BLAKE2b-256</option>
+                  </Sel>
+                  :op==="Key Derive"
+                  ?<Sel value={kdfAlgorithm} onChange={(e)=>setKdfAlgorithm(e.target.value)} style={{height:40,borderRadius:9,fontSize:12}}>
+                    <option value="hkdf-sha256">HKDF-SHA256</option>
+                    <option value="hkdf-sha384">HKDF-SHA384</option>
+                    <option value="hkdf-sha512">HKDF-SHA512</option>
+                  </Sel>
+                  :<Sel value={kemAlgorithm} onChange={(e)=>setKemAlgorithm(e.target.value)} style={{height:40,borderRadius:9,fontSize:12}}>
+                    <option value="ml-kem-768">ML-KEM-768</option>
+                    <option value="ml-kem-1024">ML-KEM-1024</option>
+                  </Sel>
+              )}
+            </div>
+
+            <div style={{fontSize:10,color:C.muted}}>
+              {activeKey?`Key: ${activeKey.name} (${activeKey.algo}) - ${keyStateLabel(activeKey.state)} - ${activeKey.ver}`:algorithmContextHint}
+            </div>
+
+            {needsPayload&&<Txt rows={7} placeholder={payloadPlaceholder} value={payloadInput} onChange={(e)=>setPayloadInput(e.target.value)} style={{minHeight:156}}/>}
+
+            {needsSignature&&<Inp placeholder="Signature (base64)" value={signatureInput} onChange={(e)=>setSignatureInput(e.target.value)} mono/>}
+
+            {showIVMode&&<Sel value={ivMode} onChange={(e)=>setIVMode(e.target.value)}>
+              <option value="internal">IV Mode: internal</option>
+              <option value="external">IV Mode: external</option>
+              <option value="deterministic">IV Mode: deterministic</option>
+            </Sel>}
+
+            {needsIV&&<Inp placeholder="IV / nonce" value={ivInput} onChange={(e)=>setIVInput(e.target.value)} mono/>}
+
+            {supportsAAD&&<div style={{display:"grid",gridTemplateColumns:"1fr 140px",gap:8}}>
+              <Inp placeholder="AAD (Additional authenticated data)" value={aadInput} onChange={(e)=>setAadInput(e.target.value)} mono/>
+              <Sel value={aadEncoding} onChange={(e)=>setAadEncoding(e.target.value)}>
+                <option value="utf-8">AAD: UTF-8</option>
+                <option value="base64">AAD: Base64</option>
+                <option value="hex">AAD: Hex</option>
+              </Sel>
+            </div>}
+
+            {op==="Key Derive"&&<div style={{display:"grid",gridTemplateColumns:"140px 1fr 1fr",gap:8}}>
+              <Inp type="number" min="8" step="8" value={kdfLengthBits} onChange={(e)=>setKdfLengthBits(e.target.value)} placeholder="Length (bits)"/>
+              <Inp value={kdfInfo} onChange={(e)=>setKdfInfo(e.target.value)} placeholder="KDF info/context"/>
+              <Inp value={kdfSalt} onChange={(e)=>setKdfSalt(e.target.value)} placeholder="KDF salt"/>
+            </div>}
+
+            {op==="Random"&&<div style={{display:"grid",gridTemplateColumns:"160px 1fr",gap:8}}>
+              <Inp type="number" min="1" max="4096" value={randomLength} onChange={(e)=>setRandomLength(e.target.value)} placeholder="Length (bytes)"/>
+              <Sel value={randomSource} onChange={(e)=>setRandomSource(e.target.value)}>
+                <option value="kms-csprng">KMS CSPRNG</option>
+                <option value="hsm-trng">HSM TRNG</option>
+                <option value="qkd-seeded-csprng">QKD-seeded CSPRNG</option>
+              </Sel>
+            </div>}
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              {supportsInputEncoding&&<Sel value={inputEncoding} onChange={(e)=>setInputEncoding(e.target.value)}>
+                <option value="utf-8">Encoding: UTF-8</option>
+                <option value="base64">Encoding: Base64</option>
+                <option value="hex">Encoding: Hex</option>
+              </Sel>}
+              {supportsBinaryInputEncoding&&<Sel value={binaryInputEncoding} onChange={(e)=>setBinaryInputEncoding(e.target.value)}>
+                <option value="base64">Binary input: Base64</option>
+                <option value="hex">Binary input: Hex</option>
+              </Sel>}
+              {supportsPlainOutputEncoding&&<Sel value={outputEncoding} onChange={(e)=>setOutputEncoding(e.target.value)}>
+                <option value="utf-8">Plain output: UTF-8</option>
+                <option value="base64">Plain output: Base64</option>
+                <option value="hex">Plain output: Hex</option>
+              </Sel>}
+              {supportsBinaryOutputEncoding&&<Sel value={binaryOutputEncoding} onChange={(e)=>setBinaryOutputEncoding(e.target.value)}>
+                <option value="base64">Binary output: Base64</option>
+                <option value="hex">Binary output: Hex</option>
+              </Sel>}
+            </div>
+
+            {supportsReference&&<Inp placeholder="Reference ID (txn-...)" value={referenceId} onChange={(e)=>setReferenceId(e.target.value)} mono/>}
+
+            <button
+              onClick={runOperation}
+              disabled={busy || (keyRequired && !selectedKeyId) || fipsExecutionBlocked || (keyRequired && !opAllowedForKey)}
+              style={{
+                background:"linear-gradient(180deg, rgba(6,214,224,.2), rgba(6,214,224,.14))",
+                color:C.accent,
+                border:`1px solid ${C.accent}`,
+                borderRadius:10,
+                height:38,
+                fontSize:13,
+                fontWeight:700,
+                cursor:busy || (keyRequired && !selectedKeyId) || fipsExecutionBlocked || (keyRequired && !opAllowedForKey)?"not-allowed":"pointer",
+                opacity:busy || (keyRequired && !selectedKeyId) || fipsExecutionBlocked || (keyRequired && !opAllowedForKey)?0.7:1
+              }}
+            >
+              {busy?`Execute ${opButtonLabel}...`:`Execute ${opButtonLabel}`}
+            </button>
+            {fipsExecutionBlocked&&<div style={{fontSize:10,color:C.red}}>This action is blocked by global FIPS mode.</div>}
+            {keyRequired&&!opAllowedForKey&&<div style={{fontSize:10,color:C.red}}>{`${op} is not valid for key algorithm ${activeAlgo || "-"}.`}</div>}
+          </div>
+        </div>
+
+        <div style={{background:C.card,border:`1px solid ${C.borderHi}`,borderRadius:12,padding:12,display:"grid",gap:8}}>
+          <div style={{fontSize:10,fontWeight:700,color:C.dim,textTransform:"uppercase",letterSpacing:.9}}>Output</div>
+          <Txt rows={16} value={resultText} readOnly style={{minHeight:300}}/>
+          <div style={{display:"flex",justifyContent:"space-between",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+            <div style={{fontSize:10,color:errorText?C.red:C.green,fontFamily:"'JetBrains Mono',monospace"}}>{auditEvent} - {durationMs}</div>
+            <div style={{display:"flex",gap:6}}>
+              <Btn small onClick={renderResultAsHex}>Hex</Btn>
+              <Btn small onClick={renderResultAsBase64}>Base64</Btn>
+              <Btn small onClick={downloadResult}>Download</Btn>
+            </div>
+          </div>
+          {errorText&&<div style={{fontSize:10,color:C.red}}>{errorText}</div>}
+        </div>
+      </div>
+    </div>
+  </div>;
+};
+
+// 
+// TAB: SECRET VAULT (interactive)
+// 
+const Vault=({session,onToast})=>{
+  const [modal,setModal]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [loading,setLoading]=useState(false);
+  const [refreshTick,setRefreshTick]=useState(0);
+  const [secrets,setSecrets]=useState([]);
+  const [search,setSearch]=useState("");
+  const [typeFilter,setTypeFilter]=useState("");
+
+  const [createName,setCreateName]=useState("");
+  const [createType,setCreateType]=useState("api_key");
+  const [createValue,setCreateValue]=useState("");
+  const [createDescription,setCreateDescription]=useState("");
+  const [createTTLMode,setCreateTTLMode]=useState("none");
+  const [createTTLCustom,setCreateTTLCustom]=useState("");
+  const [labelA,setLabelA]=useState("");
+  const [labelB,setLabelB]=useState("");
+  const [labelC,setLabelC]=useState("");
+
+  const [generateType,setGenerateType]=useState("ed25519");
+  const [generateName,setGenerateName]=useState("");
+  const [generateDescription,setGenerateDescription]=useState("");
+  const [generatedPublicKey,setGeneratedPublicKey]=useState("");
+
+  const [selectedSecret,setSelectedSecret]=useState(null);
+  const [valueFormat,setValueFormat]=useState("raw");
+  const [retrievedValue,setRetrievedValue]=useState("");
+  const [retrievedType,setRetrievedType]=useState("");
+  const [rotateValue,setRotateValue]=useState("");
+  const promptDialog=usePromptDialog();
+
+  const supportedTypes=[
+    "api_key","password","database_credentials","token","oauth_client_secret",
+    "ssh_private_key","ssh_public_key","pgp_private_key","pgp_public_key","ppk",
+    "x509_certificate","pkcs12","jwk","kerberos_keytab","wireguard_private_key",
+    "wireguard_public_key","age_key","tls_private_key","tls_certificate","binary_blob"
+  ];
+
+  const ttlToSeconds=(mode:string,custom:string)=>{
+    if(mode==="none") return 0;
+    if(mode==="1h") return 3600;
+    if(mode==="24h") return 86400;
+    if(mode==="7d") return 604800;
+    if(mode==="30d") return 2592000;
+    if(mode==="90d") return 7776000;
+    if(mode==="365d") return 31536000;
+    if(mode==="custom"){
+      return Math.max(0,Math.trunc(Number(custom||0)));
+    }
+    return 0;
+  };
+
+  const parseLabels=(pairs:string[])=>{
+    const out:any={};
+    pairs.forEach((p)=>{
+      const raw=String(p||"").trim();
+      if(!raw || !raw.includes("=")) return;
+      const idx=raw.indexOf("=");
+      const k=raw.slice(0,idx).trim();
+      const v=raw.slice(idx+1).trim();
+      if(k) out[k]=v;
+    });
+    return out;
+  };
+
+  const loadSecrets=async()=>{
+    if(!session){
+      return;
+    }
+    setLoading(true);
+    try{
+      const items=await listSecrets(session,{secretType:typeFilter||undefined,limit:500,offset:0});
+      setSecrets(Array.isArray(items)?items:[]);
+    }catch(error){
+      onToast?.(`Secrets load failed: ${errMsg(error)}`);
+    }finally{
+      setLoading(false);
+    }
+  };
+
+  useEffect(()=>{
+    void loadSecrets();
+  },[session,typeFilter,refreshTick]);
+
+  const filteredSecrets=useMemo(()=>{
+    const q=String(search||"").trim().toLowerCase();
+    if(!q){
+      return secrets;
+    }
+    return secrets.filter((s:any)=>{
+      return [s.name,s.id,s.secret_type,s.description].some((v)=>String(v||"").toLowerCase().includes(q));
+    });
+  },[secrets,search]);
+
+  const stats=useMemo(()=>{
+    const total=secrets.length;
+    const typeCount=new Set(secrets.map((s:any)=>String(s.secret_type||""))).size;
+    const now=Date.now();
+    const sevenDays=7*24*60*60*1000;
+    let expiring=0;
+    let leased=0;
+    secrets.forEach((s:any)=>{
+      if(Number(s.lease_ttl_seconds||0)>0){
+        leased+=1;
+      }
+      if(s.expires_at){
+        const ts=new Date(String(s.expires_at)).getTime();
+        if(!Number.isNaN(ts)&&ts>now&&ts<=now+sevenDays){
+          expiring+=1;
+        }
+      }
+    });
+    return {total,typeCount,expiring,leased};
+  },[secrets]);
+
+  const submitCreate=async()=>{
+    if(!session){
+      return;
+    }
+    if(!createName.trim()||!createType.trim()||!createValue){
+      onToast?.("Secret name, type, and value are required.");
+      return;
+    }
+    setBusy(true);
+    try{
+      await createSecret(session,{
+        name:createName.trim(),
+        secret_type:createType,
+        value:createValue,
+        description:createDescription,
+        labels:parseLabels([labelA,labelB,labelC]),
+        lease_ttl_seconds:ttlToSeconds(createTTLMode,createTTLCustom),
+        metadata:{source:"dashboard"}
+      });
+      onToast?.("Secret stored.");
+      setModal(null);
+      setCreateName("");
+      setCreateValue("");
+      setCreateDescription("");
+      setLabelA("");
+      setLabelB("");
+      setLabelC("");
+      setCreateTTLMode("none");
+      setCreateTTLCustom("");
+      setRefreshTick((n)=>n+1);
+    }catch(error){
+      onToast?.(`Store secret failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const submitGenerate=async()=>{
+    if(!session){
+      return;
+    }
+    if(!generateName.trim()){
+      onToast?.("Key name is required.");
+      return;
+    }
+    if(generateType!=="ed25519"){
+      onToast?.("Current backend supports SSH Ed25519 generation in this tab.");
+      return;
+    }
+    setBusy(true);
+    try{
+      const out=await generateSSHKeySecret(session,{
+        name:generateName.trim(),
+        description:generateDescription,
+        labels:{source:"dashboard",algorithm:"ed25519"},
+        lease_ttl_seconds:0
+      });
+      setGeneratedPublicKey(String(out.public_key||""));
+      onToast?.("SSH key pair generated and private key stored in vault.");
+      setRefreshTick((n)=>n+1);
+    }catch(error){
+      onToast?.(`Generate key pair failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const openRetrieve=async(secret:any)=>{
+    if(!session){
+      return;
+    }
+    setSelectedSecret(secret);
+    setValueFormat("raw");
+    setRetrievedValue("");
+    setRetrievedType("");
+    setModal("retrieve");
+    setBusy(true);
+    try{
+      const out=await getSecretValue(session,secret.id,"raw");
+      setRetrievedValue(String(out.value||""));
+      setRetrievedType(String(out.content_type||""));
+    }catch(error){
+      onToast?.(`Read secret failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const fetchFormat=async()=>{
+    if(!session||!selectedSecret){
+      return;
+    }
+    setBusy(true);
+    try{
+      const out=await getSecretValue(session,selectedSecret.id,valueFormat);
+      setRetrievedValue(String(out.value||""));
+      setRetrievedType(String(out.content_type||""));
+      onToast?.(`Secret fetched in ${valueFormat} format.`);
+    }catch(error){
+      onToast?.(`Format retrieval failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const openRotate=(secret:any)=>{
+    setSelectedSecret(secret);
+    setRotateValue("");
+    setModal("rotate");
+  };
+
+  const submitRotate=async()=>{
+    if(!session||!selectedSecret){
+      return;
+    }
+    if(!rotateValue){
+      onToast?.("New value is required.");
+      return;
+    }
+    setBusy(true);
+    try{
+      await serviceRequest(session,"secrets",`/secrets/${encodeURIComponent(selectedSecret.id)}?tenant_id=${encodeURIComponent(session.tenantId)}`,{
+        method:"PUT",
+        body:JSON.stringify({
+          value:rotateValue,
+          updated_by:session.username||"dashboard"
+        })
+      });
+      onToast?.("Secret value rotated.");
+      setModal(null);
+      setRotateValue("");
+      setRefreshTick((n)=>n+1);
+    }catch(error){
+      onToast?.(`Rotate failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const removeSecret=async(secret:any)=>{
+    if(!session){
+      return;
+    }
+    const confirmed=await promptDialog.confirm({
+      title:"Delete Secret",
+      message:`Delete secret ${secret.name}?\n\nThis action cannot be undone.`,
+      confirmLabel:"Delete",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    setBusy(true);
+    try{
+      await deleteVaultSecret(session,secret.id);
+      onToast?.("Secret deleted.");
+      setRefreshTick((n)=>n+1);
+    }catch(error){
+      onToast?.(`Delete failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  return <div>
+    <div style={{display:"flex",gap:12,marginBottom:14}}>
+      <Stat l="Secrets" v={String(stats.total)} c="accent"/><Stat l="Types" v={String(stats.typeCount)} s="Distinct secret types" c="blue"/>
+      <Stat l="Expiring (7d)" v={String(stats.expiring)} s="Lease expiry window" c="amber"/><Stat l="Leases Active" v={String(stats.leased)} c="green"/>
+    </div>
+
+    <Section title="Secrets" actions={<>
+      <Btn small onClick={()=>setRefreshTick((n)=>n+1)} disabled={loading||busy}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>Refresh</span></Btn>
+      <Btn small onClick={()=>setModal("create")}>+ Store Secret</Btn>
+      <Btn small onClick={()=>setModal("generate")}>Generate Key Pair</Btn>
+    </>}>
+      <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:8,marginBottom:8}}>
+        <Inp placeholder="Search by name, id, or type..." value={search} onChange={(e)=>setSearch(e.target.value)}/>
+        <Sel value={typeFilter} onChange={(e)=>setTypeFilter(e.target.value)}>
+          <option value="">All Secret Types</option>
+          {supportedTypes.map((type)=><option key={type} value={type}>{type}</option>)}
+        </Sel>
+      </div>
+      <div style={{border:`1px solid ${C.border}`,borderRadius:8,overflow:"hidden"}}>
+        <table style={{width:"100%",borderCollapse:"collapse"}}>
+          <thead>
+            <tr style={{background:C.surface}}>
+              {["Name","Type","Status","Lease TTL","Version","Expires","Actions"].map((h)=><th key={h} style={{textAlign:"left",padding:"8px 10px",fontSize:10,color:C.muted,borderBottom:`1px solid ${C.border}`}}>{h}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {filteredSecrets.map((s:any)=><tr key={s.id}>
+              <td style={{padding:"8px 10px",borderBottom:`1px solid ${C.border}`,fontSize:11,color:C.text}}>
+                <div style={{fontWeight:600}}>{s.name}</div>
+                <div style={{fontSize:9,color:C.muted}}>{s.id}</div>
+              </td>
+              <td style={{padding:"8px 10px",borderBottom:`1px solid ${C.border}`,fontSize:10,color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{s.secret_type}</td>
+              <td style={{padding:"8px 10px",borderBottom:`1px solid ${C.border}`}}><B c={s.status==="active"?"green":"red"}>{String(s.status||"unknown")}</B></td>
+              <td style={{padding:"8px 10px",borderBottom:`1px solid ${C.border}`,fontSize:10,color:C.dim}}>{Number(s.lease_ttl_seconds||0)>0?`${s.lease_ttl_seconds}s`:"none"}</td>
+              <td style={{padding:"8px 10px",borderBottom:`1px solid ${C.border}`,fontSize:10,color:C.text}}>{`v${s.current_version||1}`}</td>
+              <td style={{padding:"8px 10px",borderBottom:`1px solid ${C.border}`,fontSize:10,color:C.dim}}>{s.expires_at?new Date(String(s.expires_at)).toLocaleString():"-"}</td>
+              <td style={{padding:"8px 10px",borderBottom:`1px solid ${C.border}`,fontSize:10}}>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  <Btn small onClick={()=>void openRetrieve(s)} disabled={busy}>Retrieve</Btn>
+                  <Btn small onClick={()=>openRotate(s)} disabled={busy}>Rotate</Btn>
+                  <Btn small danger onClick={()=>void removeSecret(s)} disabled={busy}>Delete</Btn>
+                </div>
+              </td>
+            </tr>)}
+            {!filteredSecrets.length&&<tr><td colSpan={7} style={{padding:"14px 10px",fontSize:10,color:C.muted}}>{loading?"Loading secrets...":"No secrets found."}</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </Section>
+
+    <Modal open={modal==="create"} onClose={()=>setModal(null)} title="Store New Secret" wide>
+      <Row2>
+        <FG label="Secret Name" required><Inp placeholder="prod-api-key-stripe" value={createName} onChange={(e)=>setCreateName(e.target.value)}/></FG>
+        <FG label="Secret Type" required>
+          <Sel value={createType} onChange={(e)=>setCreateType(e.target.value)}>
+            {supportedTypes.map((type)=><option key={type} value={type}>{type}</option>)}
+          </Sel>
+        </FG>
+      </Row2>
+      <FG label="Secret Value" required hint="Envelope-encrypted at rest.">
+        <Txt placeholder="Paste secret value..." rows={5} value={createValue} onChange={(e)=>setCreateValue(e.target.value)}/>
+      </FG>
+      <Row2>
+        <FG label="TTL (Time to Live)">
+          <Sel value={createTTLMode} onChange={(e)=>setCreateTTLMode(e.target.value)}>
+            <option value="none">No expiry</option>
+            <option value="1h">1 hour</option>
+            <option value="24h">24 hours</option>
+            <option value="7d">7 days</option>
+            <option value="30d">30 days</option>
+            <option value="90d">90 days</option>
+            <option value="365d">365 days</option>
+            <option value="custom">Custom (seconds)</option>
+          </Sel>
+        </FG>
+        <FG label="Custom TTL Seconds">
+          <Inp type="number" min="0" value={createTTLCustom} onChange={(e)=>setCreateTTLCustom(e.target.value)} disabled={createTTLMode!=="custom"}/>
+        </FG>
+      </Row2>
+      <FG label="Description"><Inp placeholder="Optional secret description" value={createDescription} onChange={(e)=>setCreateDescription(e.target.value)}/></FG>
+      <FG label="Labels (key=value)">
+        <Row3><Inp placeholder="environment=production" value={labelA} onChange={(e)=>setLabelA(e.target.value)}/><Inp placeholder="service=payment" value={labelB} onChange={(e)=>setLabelB(e.target.value)}/><Inp placeholder="owner=alice" value={labelC} onChange={(e)=>setLabelC(e.target.value)}/></Row3>
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)} disabled={busy}>Cancel</Btn><Btn primary onClick={()=>void submitCreate()} disabled={busy}>{busy?"Storing...":"Store Secret"}</Btn></div>
+    </Modal>
+
+    <Modal open={modal==="generate"} onClose={()=>setModal(null)} title="Generate Key Pair">
+      <FG label="Key Type" required>
+        <Sel value={generateType} onChange={(e)=>setGenerateType(e.target.value)}>
+          <option value="ed25519">Ed25519 (SSH)</option>
+          <option value="rsa-4096">RSA-4096 (planned)</option>
+          <option value="ecdsa-p384">ECDSA-P384 (planned)</option>
+        </Sel>
+      </FG>
+      <FG label="Key Name" required><Inp placeholder="deployment-ssh-key" value={generateName} onChange={(e)=>setGenerateName(e.target.value)}/></FG>
+      <FG label="Description"><Inp placeholder="Optional description" value={generateDescription} onChange={(e)=>setGenerateDescription(e.target.value)}/></FG>
+      {generatedPublicKey&&<FG label="Generated Public Key"><Txt rows={3} value={generatedPublicKey} readOnly/></FG>}
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)} disabled={busy}>Close</Btn><Btn primary onClick={()=>void submitGenerate()} disabled={busy}>{busy?"Generating...":"Generate Key Pair"}</Btn></div>
+    </Modal>
+
+    <Modal open={modal==="retrieve"} onClose={()=>setModal(null)} title={`Retrieve Secret${selectedSecret?`: ${selectedSecret.name}`:""}`} wide>
+      <Row2>
+        <FG label="Output Format">
+          <Sel value={valueFormat} onChange={(e)=>setValueFormat(e.target.value)}>
+            <option value="raw">raw</option>
+            <option value="pem">pem</option>
+            <option value="openssh">openssh</option>
+            <option value="ppk">ppk</option>
+            <option value="extract">extract</option>
+            <option value="jwk">jwk</option>
+            <option value="armored">armored</option>
+          </Sel>
+        </FG>
+        <FG label="Content Type"><Inp value={retrievedType} readOnly/></FG>
+      </Row2>
+      <FG label="Value"><Txt rows={10} value={retrievedValue} readOnly/></FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)} disabled={busy}>Close</Btn><Btn primary onClick={()=>void fetchFormat()} disabled={busy}>{busy?"Fetching...":"Fetch Format"}</Btn></div>
+    </Modal>
+
+    <Modal open={modal==="rotate"} onClose={()=>setModal(null)} title={`Rotate Secret Value${selectedSecret?`: ${selectedSecret.name}`:""}`} wide>
+      <FG label="New Secret Value" required>
+        <Txt rows={6} placeholder="Enter new secret value" value={rotateValue} onChange={(e)=>setRotateValue(e.target.value)}/>
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)} disabled={busy}>Cancel</Btn><Btn primary onClick={()=>void submitRotate()} disabled={busy}>{busy?"Rotating...":"Rotate Value"}</Btn></div>
+    </Modal>
+    {promptDialog.ui}
+  </div>;
+};
+
+// 
+// TAB: CERTIFICATES / PKI (interactive with PQC)
+// 
+const Certs=({session,onToast})=>{
+  const [modal,setModal]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [submitting,setSubmitting]=useState(false);
+  const [testingProtocol,setTestingProtocol]=useState("");
+  const [cas,setCAs]=useState([]);
+  const [certs,setCerts]=useState([]);
+  const [profiles,setProfiles]=useState([]);
+  const [inventory,setInventory]=useState([]);
+  const [protocols,setProtocols]=useState([]);
+  const [protocolSchemas,setProtocolSchemas]=useState([]);
+
+  const [caType,setCAType]=useState("root");
+  const [caParent,setCAParent]=useState("");
+  const [caAlgorithm,setCAAlgorithm]=useState("RSA-4096-SHA384");
+  const [caSubject,setCASubject]=useState("CN=Vecta Root CA, O=Bank Corp, C=CH");
+  const [caValidity,setCAValidity]=useState("3650");
+  const [caBackend,setCABackend]=useState("keycore");
+  const [caPathLength,setCAPathLength]=useState("1");
+  const [caKeyUsageSign,setCAKeyUsageSign]=useState(true);
+  const [caKeyUsageCRL,setCAKeyUsageCRL]=useState(true);
+  const [caKeyUsageDigital,setCAKeyUsageDigital]=useState(false);
+
+  const [issueCAID,setIssueCAID]=useState("");
+  const [issueProfileID,setIssueProfileID]=useState("");
+  const [issueCertType,setIssueCertType]=useState("tls-server");
+  const [issueAlgorithm,setIssueAlgorithm]=useState("ECDSA-P384");
+  const [issueCN,setIssueCN]=useState("");
+  const [issueSANs,setIssueSANs]=useState("");
+  const [issueOrg,setIssueOrg]=useState("Bank Corp");
+  const [issueValidityMode,setIssueValidityMode]=useState("preset");
+  const [issueValidityDays,setIssueValidityDays]=useState("365");
+  const [issueValidityCustomDays,setIssueValidityCustomDays]=useState("365");
+  const [issueNotAfter,setIssueNotAfter]=useState("");
+  const [issueDigitalSig,setIssueDigitalSig]=useState(true);
+  const [issueKeyEnc,setIssueKeyEnc]=useState(true);
+  const [issueTLSAuth,setIssueTLSAuth]=useState(true);
+  const [issueTLSClient,setIssueTLSClient]=useState(false);
+  const [issueCodeSign,setIssueCodeSign]=useState(false);
+  const [issueAutoRenew,setIssueAutoRenew]=useState(false);
+  const [issueEnableOCSP,setIssueEnableOCSP]=useState(true);
+
+  const [uploadPurpose,setUploadPurpose]=useState("KMS Web Interface (HTTPS:443)");
+  const [uploadCertPEM,setUploadCertPEM]=useState("");
+  const [uploadKeyPEM,setUploadKeyPEM]=useState("");
+  const [uploadBundlePEM,setUploadBundlePEM]=useState("");
+  const [uploadSetActive,setUploadSetActive]=useState(true);
+  const [uploadEnableOCSP,setUploadEnableOCSP]=useState(true);
+  const [uploadAutoRenew,setUploadAutoRenew]=useState(false);
+
+  const [csrCAID,setCSRCAID]=useState("");
+  const [csrProfileID,setCSRProfileID]=useState("");
+  const [csrCertType,setCSRCertType]=useState("tls-server");
+  const [csrAlgorithm,setCSRAlgorithm]=useState("ECDSA-P384");
+  const [csrPEM,setCSRPEM]=useState("");
+  const [csrValidityMode,setCSRValidityMode]=useState("preset");
+  const [csrValidityDays,setCSRValidityDays]=useState("365");
+  const [csrValidityCustomDays,setCSRValidityCustomDays]=useState("365");
+  const [csrNotAfter,setCSRNotAfter]=useState("");
+
+  const [protocolName,setProtocolName]=useState("acme");
+  const [protocolEnabled,setProtocolEnabled]=useState(true);
+  const [protocolConfigText,setProtocolConfigText]=useState("{}");
+  const [caExpanded,setCAExpanded]=useState({});
+  const [issuedExpanded,setIssuedExpanded]=useState({});
+  const [rowActionBusy,setRowActionBusy]=useState("");
+  const [caStatusView,setCAStatusView]=useState("all");
+  const [certStatusView,setCertStatusView]=useState("all");
+  const [certSearch,setCertSearch]=useState("");
+  const [certPageSize,setCertPageSize]=useState(10);
+  const [certPageIndex,setCertPageIndex]=useState(0);
+  const [openCertActionMenuId,setOpenCertActionMenuId]=useState("");
+  const [certActionMenuPos,setCertActionMenuPos]=useState({top:0,left:0});
+  const [downloadTargetCert,setDownloadTargetCert]=useState(null);
+  const [downloadAsset,setDownloadAsset]=useState("certificate");
+  const [downloadFormat,setDownloadFormat]=useState("pem");
+  const [downloadIncludeChain,setDownloadIncludeChain]=useState(true);
+  const [downloadPassword,setDownloadPassword]=useState("");
+  const [alertPolicyDaysBefore,setAlertPolicyDaysBefore]=useState(30);
+  const [alertPolicyIncludeExternal,setAlertPolicyIncludeExternal]=useState(true);
+  const [alertPolicySaving,setAlertPolicySaving]=useState(false);
+  const promptDialog=usePromptDialog();
+
+  const refresh=async()=>{
+    if(!session){
+      return;
+    }
+    setLoading(true);
+    try{
+      const loadAllCertificates=async()=>{
+        const out=[];
+        let offset=0;
+        while(offset<=10000){
+          const batch=await listCertificates(session,{limit:500,offset});
+          out.push(...(Array.isArray(batch)?batch:[]));
+          if(!Array.isArray(batch)||batch.length<500){
+            break;
+          }
+          offset+=500;
+        }
+        return out;
+      };
+      const [caItems,certItems,profileItems,inventoryItems,protocolItems,protocolSchemaItems,alertPolicy]=await Promise.all([
+        listCAs(session),
+        loadAllCertificates(),
+        listProfiles(session),
+        listInventory(session),
+        listProtocolConfigs(session),
+        listProtocolSchemas(session),
+        getCertExpiryAlertPolicy(session)
+      ]);
+      setCAs(Array.isArray(caItems)?caItems:[]);
+      setCerts(Array.isArray(certItems)?certItems:[]);
+      setProfiles(Array.isArray(profileItems)?profileItems:[]);
+      setInventory(Array.isArray(inventoryItems)?inventoryItems:[]);
+      setProtocols(Array.isArray(protocolItems)?protocolItems:[]);
+      setProtocolSchemas(Array.isArray(protocolSchemaItems)?protocolSchemaItems:[]);
+      setAlertPolicyDaysBefore(Math.max(1,Math.min(3650,Number(alertPolicy?.days_before||30))));
+      setAlertPolicyIncludeExternal(Boolean(alertPolicy?.include_external ?? true));
+      if(!issueCAID&&Array.isArray(caItems)&&caItems.length){
+        setIssueCAID(caItems[0].id);
+      }
+      if(!csrCAID&&Array.isArray(caItems)&&caItems.length){
+        setCSRCAID(caItems[0].id);
+      }
+    }catch(e){
+      onToast?.(`PKI refresh failed: ${errMsg(e)}`);
+    }finally{
+      setLoading(false);
+    }
+  };
+
+  useEffect(()=>{
+    if(!session?.tenantId){
+      return;
+    }
+    void refresh();
+  },[session?.tenantId]);
+
+  const protocolOrder=useMemo(()=>["acme","est","scep","cmpv2"],[]);
+
+  const protocolSchemaByName=useMemo(()=>{
+    const out={};
+    (Array.isArray(protocolSchemas)?protocolSchemas:[]).forEach((schema)=>{
+      const key=String(schema?.protocol||"").toLowerCase();
+      if(key){
+        out[key]=schema;
+      }
+    });
+    return out;
+  },[protocolSchemas]);
+
+  const protocolMeta=useMemo(()=>{
+    return protocolOrder.map((name)=>{
+      const schema=protocolSchemaByName[name]||{};
+      const fallback=(name==="acme"?{title:"ACME",rfc:"RFC 8555",desc:"HTTP-01, DNS-01"}:
+        name==="est"?{title:"EST",rfc:"RFC 7030",desc:"IoT enrollment"}:
+        name==="scep"?{title:"SCEP",rfc:"RFC 8894",desc:"MDM / Legacy"}:
+        {title:"CMPv2",rfc:"RFC 4210",desc:"Enterprise PKI"});
+      return {
+        name,
+        title:String(schema?.title||fallback.title),
+        rfc:`RFC ${String(schema?.rfc||fallback.rfc).replace(/^RFC\s*/i,"")}`,
+        desc:String(schema?.description||fallback.desc)
+      };
+    });
+  },[protocolOrder,protocolSchemaByName]);
+
+  const protocolDefaultConfigs=useMemo(()=>{
+    const fallback={
+      acme:{rfc:"8555",challenge_types:["http-01","dns-01"],auto_renew:true,require_eab:false,allow_wildcard:true,allow_ip_identifiers:false,max_sans:100,default_validity_days:397,rate_limit_per_hour:1000},
+      est:{rfc:"7030",device_enrollment:true,server_keygen:true,auth_mode:"mtls",require_csr_pop:true,allow_reenroll:true,default_validity_days:397,max_csr_bytes:32768},
+      scep:{rfc:"8894",legacy_mdm:true,challenge_password_required:false,challenge_password:"",allow_renewal:true,default_validity_days:397,max_csr_bytes:32768,digest_algorithms:["sha256","sha384"],encryption_algorithms:["aes256","aes128","des3"]},
+      cmpv2:{rfc:"4210",enterprise_pki:true,message_types:["ir","cr","kur","rr"],require_message_protection:true,require_transaction_id:true,allow_implicit_confirm:true,default_validity_days:397}
+    };
+    const out={...fallback};
+    protocolOrder.forEach((name)=>{
+      const schema=protocolSchemaByName[name];
+      if(schema&&schema.defaults&&typeof schema.defaults==="object"){
+        out[name]=schema.defaults;
+      }
+    });
+    return out;
+  },[protocolOrder,protocolSchemaByName]);
+
+  const protocolOptionDocs=useMemo(()=>{
+    const fallback={
+      acme:["challenge_types: http-01 | dns-01 | tls-alpn-01","require_eab: enforce external account binding","allow_wildcard / allow_ip_identifiers","max_sans / default_validity_days / rate_limit_per_hour"],
+      est:["auth_mode: mtls | basic | bearer | none","require_csr_pop: CSR proof-of-possession required","server_keygen and allow_reenroll toggles","default_validity_days and max_csr_bytes guardrails"],
+      scep:["challenge_password_required + challenge_password","allow_renewal toggle","digest_algorithms and encryption_algorithms policies","default_validity_days and max_csr_bytes guardrails"],
+      cmpv2:["message_types: ir | cr | kur | rr","require_message_protection and require_transaction_id","allow_implicit_confirm toggle","default_validity_days policy"]
+    };
+    const out={...fallback};
+    protocolOrder.forEach((name)=>{
+      const schema=protocolSchemaByName[name];
+      if(schema&&Array.isArray(schema.options)&&schema.options.length){
+        out[name]=schema.options.map((opt)=>{
+          const allowed=Array.isArray(opt?.allowed)&&opt.allowed.length?` allowed=${opt.allowed.join("|")}`:"";
+          return `${String(opt?.key||"")} (${String(opt?.type||"value")})${allowed} - ${String(opt?.description||"")}`;
+        });
+      }
+    });
+    return out;
+  },[protocolOrder,protocolSchemaByName]);
+
+  const activeProtocolDocs=protocolOptionDocs[String(protocolName||"").toLowerCase()]||[];
+  const activeProtocolImplementation=(protocolSchemaByName[String(protocolName||"").toLowerCase()]||{}).implementation||null;
+
+  const protocolByName=useMemo(()=>{
+    const out={};
+    (Array.isArray(protocols)?protocols:[]).forEach((cfg)=>{
+      out[String(cfg.protocol||"").toLowerCase()]=cfg;
+    });
+    return out;
+  },[protocols]);
+
+  const certByID=useMemo(()=>{
+    const out=new Map();
+    (Array.isArray(certs)?certs:[]).forEach((c)=>out.set(String(c.id),c));
+    return out;
+  },[certs]);
+
+  const certsByCA=useMemo(()=>{
+    const out={};
+    (Array.isArray(certs)?certs:[]).forEach((c)=>{
+      const key=String(c.ca_id||"");
+      if(!out[key]){
+        out[key]=[];
+      }
+      out[key].push(c);
+    });
+    return out;
+  },[certs]);
+
+  const roots=useMemo(()=>{
+    const all=Array.isArray(cas)?cas:[];
+    const ids=new Set(all.map((c)=>String(c.id)));
+    return all.filter((c)=>!String(c.parent_ca_id||"").trim()||!ids.has(String(c.parent_ca_id)));
+  },[cas]);
+
+  const childrenOf=(caID)=>{
+    return (Array.isArray(cas)?cas:[]).filter((c)=>String(c.parent_ca_id||"")===String(caID||""));
+  };
+  useEffect(()=>{
+    const all=Array.isArray(cas)?cas:[];
+    if(!all.length){
+      return;
+    }
+    setCAExpanded((prev)=>{
+      const next={...(prev||{})};
+      all.forEach((ca)=>{
+        const id=String(ca?.id||"");
+        if(id&&!Object.prototype.hasOwnProperty.call(next,id)){
+          next[id]=true;
+        }
+      });
+      return next;
+    });
+    setIssuedExpanded((prev)=>{
+      const next={...(prev||{})};
+      all.forEach((ca)=>{
+        const id=String(ca?.id||"");
+        if(id&&!Object.prototype.hasOwnProperty.call(next,id)){
+          next[id]=true;
+        }
+      });
+      return next;
+    });
+  },[cas]);
+
+  useEffect(()=>{
+    if(!openCertActionMenuId){
+      return;
+    }
+    const close=()=>setOpenCertActionMenuId("");
+    window.addEventListener("click",close);
+    return()=>window.removeEventListener("click",close);
+  },[openCertActionMenuId]);
+
+  useEffect(()=>{
+    setCertPageIndex(0);
+  },[certStatusView,certPageSize,certSearch]);
+
+  useEffect(()=>{
+    if(downloadAsset==="public-key"){
+      if(!["pem","der","pkcs8"].includes(String(downloadFormat||""))){
+        setDownloadFormat("pem");
+      }
+      return;
+    }
+    if(downloadAsset==="pkcs11"){
+      if(downloadFormat!=="pem"){
+        setDownloadFormat("pem");
+      }
+      return;
+    }
+    if(!["pem","der","pkcs12","pfx"].includes(String(downloadFormat||""))){
+      setDownloadFormat("pem");
+    }
+  },[downloadAsset,downloadFormat]);
+
+  const stats=useMemo(()=>{
+    const all=Array.isArray(certs)?certs:[];
+    const active=all.filter((c)=>String(c.status||"").toLowerCase()==="active").length;
+    const revoked=all.filter((c)=>String(c.status||"").toLowerCase()==="revoked").length;
+    const deleted=all.filter((c)=>String(c.status||"").toLowerCase()==="deleted").length;
+    const pqc=all.filter((c)=>{
+      const cls=String(c.cert_class||"").toLowerCase();
+      return cls==="pqc"||cls==="hybrid";
+    }).length;
+    const expiring=(Array.isArray(inventory)?inventory:[]).filter((it)=>{
+      const cert=certByID.get(String(it.cert_id||""));
+      if(!alertPolicyIncludeExternal&&String(cert?.ca_id||"").toLowerCase()==="external-ca"){
+        return false;
+      }
+      const ts=new Date(String(it.not_after||"")).getTime();
+      if(Number.isNaN(ts)){
+        return false;
+      }
+      const left=ts-Date.now();
+      return left>=0&&left<=alertPolicyDaysBefore*24*3600*1000;
+    }).length;
+    return {active,revoked,deleted,pqc,expiring,total:all.length,cas:(Array.isArray(cas)?cas:[]).length};
+  },[cas,certs,inventory,certByID,alertPolicyDaysBefore,alertPolicyIncludeExternal]);
+
+  const expiryItems=useMemo(()=>{
+    const items=(Array.isArray(inventory)?inventory:[]).map((it)=>{
+      const cert=certByID.get(String(it.cert_id||""));
+      if(!alertPolicyIncludeExternal&&String(cert?.ca_id||"").toLowerCase()==="external-ca"){
+        return null;
+      }
+      const notAfterRaw=String(it.not_after||cert?.not_after||"");
+      const ts=new Date(notAfterRaw).getTime();
+      const daysLeft=Number.isNaN(ts)?9999:Math.ceil((ts-Date.now())/(24*3600*1000));
+      return {
+        certId:String(it.cert_id||""),
+        subject:String(cert?.subject_cn||it.cert_id||"certificate"),
+        notAfter:notAfterRaw,
+        daysLeft
+      };
+    }).filter(Boolean);
+    items.sort((a,b)=>a.daysLeft-b.daysLeft);
+    return items.slice(0,5);
+  },[inventory,certByID,alertPolicyIncludeExternal]);
+
+  const filteredCerts=useMemo(()=>{
+    const q=String(certSearch||"").trim().toLowerCase();
+    const out=[...(Array.isArray(certs)?certs:[])].filter((c)=>{
+      if(certStatusView!=="all"&&String(c.status||"").toLowerCase()!==certStatusView){
+        return false;
+      }
+      if(!q){
+        return true;
+      }
+      return [
+        c?.subject_cn,
+        c?.id,
+        c?.algorithm,
+        c?.cert_class,
+        c?.status
+      ].some((value)=>String(value||"").toLowerCase().includes(q));
+    });
+    out.sort((a,b)=>new Date(String(b.created_at||0)).getTime()-new Date(String(a.created_at||0)).getTime());
+    return out;
+  },[certs,certStatusView,certSearch]);
+
+  const certTotalPages=useMemo(()=>{
+    return Math.max(1,Math.ceil(filteredCerts.length/Math.max(1,certPageSize)));
+  },[filteredCerts.length,certPageSize]);
+
+  const certCurrentPage=useMemo(()=>{
+    return Math.min(Math.max(0,certPageIndex),certTotalPages-1);
+  },[certPageIndex,certTotalPages]);
+
+  const pagedCerts=useMemo(()=>{
+    const start=certCurrentPage*certPageSize;
+    const end=start+certPageSize;
+    return filteredCerts.slice(start,end);
+  },[filteredCerts,certCurrentPage,certPageSize]);
+
+  const certStatusCounts=useMemo(()=>{
+    const all=Array.isArray(certs)?certs:[];
+    return {
+      all: all.length,
+      active: all.filter((c)=>String(c.status||"").toLowerCase()==="active").length,
+      revoked: all.filter((c)=>String(c.status||"").toLowerCase()==="revoked").length,
+      deleted: all.filter((c)=>String(c.status||"").toLowerCase()==="deleted").length
+    };
+  },[certs]);
+  const caStatusCounts=useMemo(()=>{
+    const all=Array.isArray(cas)?cas:[];
+    return {
+      all: all.length,
+      active: all.filter((c)=>String(c.status||"").toLowerCase()==="active").length,
+      revoked: all.filter((c)=>String(c.status||"").toLowerCase()==="revoked").length
+    };
+  },[cas]);
+
+  useEffect(()=>{
+    if(certPageIndex>certTotalPages-1){
+      setCertPageIndex(Math.max(0,certTotalPages-1));
+    }
+  },[certPageIndex,certTotalPages]);
+
+  const currentPQCProfiles=useMemo(()=>{
+    return (Array.isArray(profiles)?profiles:[]).filter((p)=>{
+      const cls=String(p.cert_class||"").toLowerCase();
+      return cls==="pqc"||cls==="hybrid";
+    });
+  },[profiles]);
+
+  const inferCAName=(subject:string, fallback:string)=>{
+    const m=String(subject||"").match(/CN\s*=\s*([^,]+)/i);
+    const cn=m&&m[1]?String(m[1]).trim():"";
+    if(cn){
+      return cn;
+    }
+    return fallback;
+  };
+
+  const openProtocolModal=(name:string)=>{
+    const key=String(name||"acme").toLowerCase();
+    const cfg=protocolByName[key];
+    const fallback=protocolDefaultConfigs[key]||{};
+    setProtocolName(String(name||"acme"));
+    setProtocolEnabled(cfg?Boolean(cfg.enabled):true);
+    let formatted="{}";
+    try{
+      const parsed=cfg?.config_json?JSON.parse(String(cfg.config_json)):fallback;
+      formatted=JSON.stringify(parsed||{},null,2);
+    }catch{
+      formatted=JSON.stringify(fallback||{},null,2);
+    }
+    setProtocolConfigText(formatted);
+    setModal("protocol-config");
+  };
+
+  const saveProtocol=async()=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    let parsed={};
+    try{
+      parsed=JSON.parse(String(protocolConfigText||"{}"));
+    }catch{
+      onToast?.("Protocol configuration must be valid JSON.");
+      return;
+    }
+    setSubmitting(true);
+    try{
+      await updateProtocolConfig(session,protocolName as any,{
+        enabled:protocolEnabled,
+        config_json:JSON.stringify(parsed),
+        updated_by:session.username||"dashboard"
+      });
+      onToast?.(`${String(protocolName).toUpperCase()} configuration saved.`);
+      setModal(null);
+      await refresh();
+    }catch(e){
+      onToast?.(`Failed to save protocol config: ${errMsg(e)}`);
+    }finally{
+      setSubmitting(false);
+    }
+  };
+
+  const runProtocolTest=async(name:string)=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    const activeCA=(Array.isArray(cas)?cas:[]).find((c)=>String(c.status||"").toLowerCase()==="active")||cas[0];
+    if(!activeCA?.id){
+      onToast?.("Create an issuing CA first.");
+      return;
+    }
+    const stamp=Date.now();
+    setTestingProtocol(name);
+    try{
+      if(name==="acme"){
+        const account=await acmeNewAccount(session,`pki+${stamp}@example.com`);
+        const cn=`acme-${stamp}.local`;
+        const order=await acmeNewOrder(session,{
+          ca_id:activeCA.id,
+          account_id:account.account_id,
+          subject_cn:cn,
+          sans:[cn]
+        });
+        await acmeChallengeComplete(session,order.challenge_id,order.order_id);
+        await acmeFinalize(session,order.order_id,"");
+      }else if(name==="est"){
+        await estServerKeygen(session,{
+          ca_id:activeCA.id,
+          subject_cn:`est-device-${stamp}.local`,
+          sans:[`est-device-${stamp}.local`]
+        });
+      }else if(name==="scep"){
+        await scepEnroll(session,{
+          ca_id:activeCA.id,
+          transaction_id:`txn-${stamp}`
+        });
+      }else if(name==="cmpv2"){
+        await cmpv2Request(session,{
+          ca_id:activeCA.id,
+          message_type:"ir",
+          transaction_id:`cmp-${stamp}`,
+          protected:true,
+          protection_alg:"pbm-sha256",
+          payload_json:JSON.stringify({
+            subject_cn:`cmp-client-${stamp}.local`,
+            sans:[`cmp-client-${stamp}.local`],
+            cert_type:"tls-client"
+          })
+        });
+      }
+      onToast?.(`${String(name).toUpperCase()} enrollment test succeeded.`);
+      await refresh();
+    }catch(e){
+      onToast?.(`${String(name).toUpperCase()} test failed: ${errMsg(e)}`);
+    }finally{
+      setTestingProtocol("");
+    }
+  };
+
+  const submitCreateCA=async()=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    const validity=Math.max(30,Number(caValidity||"3650"));
+    const subject=String(caSubject||"").trim();
+    if(!subject){
+      onToast?.("Subject DN is required.");
+      return;
+    }
+    setSubmitting(true);
+    try{
+      const name=inferCAName(subject,caType==="root"?"Root CA":"Intermediate CA");
+      await createCA(session,{
+        name,
+        parent_ca_id:caType==="intermediate"?caParent:"",
+        ca_level:caType as any,
+        algorithm:caAlgorithm,
+        key_backend:caBackend==="keycore"?"keycore":"software",
+        subject,
+        validity_days:validity,
+        ots_max:Number(caPathLength||"0")>0&&String(caAlgorithm).toUpperCase().includes("XMSS")?10000:0,
+        ots_alert_threshold:Number(caPathLength||"0")>0&&String(caAlgorithm).toUpperCase().includes("XMSS")?100:0
+      });
+      onToast?.("Certificate Authority created.");
+      setModal(null);
+      await refresh();
+    }catch(e){
+      onToast?.(`Create CA failed: ${errMsg(e)}`);
+    }finally{
+      setSubmitting(false);
+    }
+  };
+
+  const resolveValidityInput=(mode,presetDays,customDays,notAfterValue)=>{
+    if(mode==="custom-date-time"){
+      const raw=String(notAfterValue||"").trim();
+      if(!raw){
+        return {error:"Custom expiry date/time is required."};
+      }
+      const ts=new Date(raw);
+      if(Number.isNaN(ts.getTime())){
+        return {error:"Custom expiry date/time is invalid."};
+      }
+      return {validity_days:0,not_after:ts.toISOString()};
+    }
+    const daySource=mode==="custom-days"?customDays:presetDays;
+    const days=Math.max(1,Number(daySource||"365"));
+    if(!Number.isFinite(days)){
+      return {error:"Validity days must be a valid number."};
+    }
+    return {validity_days:days,not_after:undefined};
+  };
+
+  const submitIssueCert=async(isPQC:boolean)=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    if(!issueCAID||!issueCN.trim()){
+      onToast?.("Issuing CA and Common Name are required.");
+      return;
+    }
+    const sans=String(issueSANs||"").split(",").map((v)=>v.trim()).filter(Boolean);
+    const metadata={
+      organization:issueOrg,
+      key_usage:{
+        digital_signature:issueDigitalSig,
+        key_encipherment:issueKeyEnc,
+        key_cert_sign:caKeyUsageSign,
+        crl_sign:caKeyUsageCRL,
+        digital_signature_ca:caKeyUsageDigital
+      },
+      extended_key_usage:{
+        tls_server:issueTLSAuth,
+        tls_client:issueTLSClient,
+        code_signing:issueCodeSign
+      },
+      auto_renew_acme:issueAutoRenew,
+      enable_ocsp_stapling:issueEnableOCSP
+    };
+    const validity=resolveValidityInput(issueValidityMode,issueValidityDays,issueValidityCustomDays,issueNotAfter);
+    if(validity.error){
+      onToast?.(validity.error);
+      return;
+    }
+    setSubmitting(true);
+    try{
+      const selectedProfile=(Array.isArray(profiles)?profiles:[]).find((p)=>String(p.id)===String(issueProfileID));
+      const selectedAlgorithm=isPQC
+        ? (selectedProfile?.algorithm||issueAlgorithm||"ML-DSA-65")
+        : (selectedProfile?.algorithm||issueAlgorithm||"ECDSA-P384");
+      const out=await issueCertificate(session,{
+        ca_id:issueCAID,
+        profile_id:issueProfileID||undefined,
+        cert_type:issueCertType,
+        algorithm:selectedAlgorithm,
+        cert_class:isPQC?"pqc":undefined,
+        subject_cn:issueCN.trim(),
+        sans,
+        server_keygen:true,
+        validity_days:validity.validity_days,
+        not_after:validity.not_after,
+        protocol:isPQC?"ui-pqc-issue":"ui-issue",
+        metadata_json:JSON.stringify(metadata)
+      });
+      onToast?.(
+        out.privateKeyPEM
+          ?"Certificate issued. Private key generated server-side."
+          :"Certificate issued."
+      );
+      setModal(null);
+      await refresh();
+    }catch(e){
+      onToast?.(`Issue certificate failed: ${errMsg(e)}`);
+    }finally{
+      setSubmitting(false);
+    }
+  };
+
+  const submitSignCSR=async()=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    if(!csrCAID){
+      onToast?.("Issuing CA is required.");
+      return;
+    }
+    if(!String(csrPEM||"").trim()){
+      onToast?.("CSR PEM is required.");
+      return;
+    }
+    const validity=resolveValidityInput(csrValidityMode,csrValidityDays,csrValidityCustomDays,csrNotAfter);
+    if(validity.error){
+      onToast?.(validity.error);
+      return;
+    }
+    setSubmitting(true);
+    try{
+      await signCertificateCSR(session,{
+        ca_id:csrCAID,
+        profile_id:csrProfileID||undefined,
+        cert_type:csrCertType,
+        algorithm:csrAlgorithm,
+        csr_pem:String(csrPEM||"").trim(),
+        validity_days:validity.validity_days,
+        not_after:validity.not_after,
+        protocol:"ui-csr-sign"
+      });
+      onToast?.("CSR signed successfully.");
+      setModal(null);
+      await refresh();
+    }catch(error){
+      onToast?.(`CSR signing failed: ${errMsg(error)}`);
+    }finally{
+      setSubmitting(false);
+    }
+  };
+
+
+  const submitUpload=async()=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    if(!uploadPurpose.trim()||!uploadCertPEM.trim()){
+      onToast?.("Purpose and certificate PEM are required.");
+      return;
+    }
+    setSubmitting(true);
+    try{
+      await uploadThirdPartyCertificate(session,{
+        purpose:uploadPurpose,
+        certificate_pem:uploadCertPEM,
+        private_key_pem:uploadKeyPEM,
+        ca_bundle_pem:uploadBundlePEM,
+        set_active:uploadSetActive,
+        enable_ocsp_stapling:uploadEnableOCSP,
+        auto_renew_acme:uploadAutoRenew,
+        updated_by:session.username||"dashboard"
+      });
+      onToast?.("3rd-party certificate uploaded.");
+      setModal(null);
+      await refresh();
+    }catch(e){
+      onToast?.(`Upload failed: ${errMsg(e)}`);
+    }finally{
+      setSubmitting(false);
+    }
+  };
+
+  const downloadTextFile=(filename,content,mime="text/plain")=>{
+    const blob=new Blob([String(content||"")],{type:mime});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url;
+    link.download=String(filename||"download.txt");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadBase64File=(filename,b64,mime="application/octet-stream")=>{
+    const clean=String(b64||"").replace(/\s+/g,"");
+    const binary=window.atob(clean);
+    const bytes=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i+=1){
+      bytes[i]=binary.charCodeAt(i);
+    }
+    const blob=new Blob([bytes],{type:mime});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url;
+    link.download=String(filename||"download.bin");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const safeFileName=(input,fallback="certificate")=>{
+    const out=String(input||fallback).replace(/[^a-z0-9._-]+/gi,"-").replace(/^-+|-+$/g,"");
+    return out||fallback;
+  };
+
+  const openDownloadModal=(cert)=>{
+    setDownloadTargetCert(cert||null);
+    setDownloadAsset("certificate");
+    setDownloadFormat("pem");
+    setDownloadIncludeChain(true);
+    setDownloadPassword("");
+    setModal("cert-download");
+  };
+
+  const submitDownloadCert=async()=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    if(!downloadTargetCert?.id){
+      onToast?.("Select a certificate first.");
+      return;
+    }
+    if((downloadFormat==="pkcs12"||downloadFormat==="pfx")&&!String(downloadPassword||"").trim()){
+      onToast?.("Password is required for PKCS#12 export.");
+      return;
+    }
+    setSubmitting(true);
+    try{
+      const out=await downloadCertificateAsset(session,String(downloadTargetCert.id||""),{
+        asset:downloadAsset as any,
+        format:downloadFormat as any,
+        include_chain:Boolean(downloadIncludeChain),
+        password:downloadPassword
+      });
+      const baseName=safeFileName(String(downloadTargetCert.subject_cn||downloadTargetCert.id||"certificate"),"certificate");
+      const extension=downloadFormat==="pkcs12"||downloadFormat==="pfx"
+        ?"p12"
+        :downloadFormat==="der"
+          ?"der"
+          :downloadAsset==="pkcs11"
+            ?"json"
+            :downloadAsset==="public-key"&&downloadFormat==="pkcs8"
+              ?"pem"
+              :"pem";
+      const fileName=`${baseName}-${String(downloadAsset||"certificate")}.${extension}`;
+      const content=String(out?.content||"");
+      const isBinaryBase64=(downloadFormat==="pkcs12"||downloadFormat==="pfx")||
+        (downloadFormat==="der"&&!String(content).trim().startsWith("{"));
+      if(isBinaryBase64){
+        downloadBase64File(fileName,content,String(out?.contentType||"application/octet-stream"));
+      }else{
+        downloadTextFile(fileName,content,String(out?.contentType||"text/plain"));
+      }
+      onToast?.(`Downloaded ${String(downloadAsset||"certificate")} (${String(downloadFormat||"pem")}).`);
+      setModal(null);
+    }catch(error){
+      onToast?.(`Download failed: ${errMsg(error)}`);
+    }finally{
+      setSubmitting(false);
+    }
+  };
+
+  const runCertAction=async(actionKey,fn)=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    setRowActionBusy(String(actionKey||""));
+    try{
+      await fn();
+    }catch(e){
+      onToast?.(`Certificate action failed: ${errMsg(e)}`);
+    }finally{
+      setRowActionBusy("");
+    }
+  };
+
+  const toggleCA=(caID)=>{
+    const id=String(caID||"");
+    if(!id){
+      return;
+    }
+    setCAExpanded((prev)=>{
+      const src=prev||{};
+      const cur=Object.prototype.hasOwnProperty.call(src,id)?Boolean(src[id]):true;
+      return {...src,[id]:!cur};
+    });
+  };
+
+  const toggleIssued=(caID)=>{
+    const id=String(caID||"");
+    if(!id){
+      return;
+    }
+    setIssuedExpanded((prev)=>{
+      const src=prev||{};
+      const cur=Object.prototype.hasOwnProperty.call(src,id)?Boolean(src[id]):true;
+      return {...src,[id]:!cur};
+    });
+  };
+
+  const actRenewCert=async(cert)=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    const raw=await promptDialog.prompt({
+      title:"Renew Certificate",
+      message:"Renew certificate validity in days.",
+      defaultValue:"365",
+      placeholder:"365",
+      confirmLabel:"Renew",
+      validate:(value:string)=>{
+        const n=Number(value);
+        if(!Number.isFinite(n)||n<=0){
+          return "Validity days must be a positive number.";
+        }
+        return "";
+      }
+    });
+    if(raw===null){
+      return;
+    }
+    const days=Math.max(1,Math.trunc(Number(raw||"365")));
+    await runCertAction(`renew-${cert.id}`,async()=>{
+      await renewCertificate(session,String(cert.id||""),days);
+      onToast?.(`Certificate renewed: ${String(cert.subject_cn||cert.id)}`);
+      await refresh();
+    });
+  };
+
+  const actRevokeCert=async(cert)=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    if(String(cert.status||"").toLowerCase()==="revoked"){
+      onToast?.("Certificate is already revoked.");
+      return;
+    }
+    const reason=await promptDialog.prompt({
+      title:"Revoke Certificate",
+      message:"Enter revocation reason.",
+      defaultValue:"key_compromise",
+      placeholder:"key_compromise",
+      confirmLabel:"Revoke",
+      danger:true,
+      validate:(value:string)=>String(value||"").trim()? "" : "Revocation reason is required."
+    });
+    if(reason===null){
+      return;
+    }
+    await runCertAction(`revoke-${cert.id}`,async()=>{
+      await revokeCertificate(session,String(cert.id||""),String(reason||"unspecified"));
+      onToast?.(`Certificate revoked: ${String(cert.subject_cn||cert.id)}`);
+      await refresh();
+    });
+  };
+
+  const actDeleteCert=async(cert)=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    const label=String(cert.subject_cn||cert.id||"certificate");
+    const ok=await promptDialog.confirm({
+      title:"Delete Certificate",
+      message:`Delete certificate '${label}'?\n\nMetadata will be retained for forensics and audit.`,
+      confirmLabel:"Delete",
+      danger:true
+    });
+    if(!ok){
+      return;
+    }
+    await runCertAction(`delete-${cert.id}`,async()=>{
+      await deleteCertificate(session,String(cert.id||""));
+      onToast?.(`Certificate moved to Deleted: ${label}`);
+      await refresh();
+    });
+  };
+
+  const actOCSP=async(cert)=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    await runCertAction(`ocsp-${cert.id}`,async()=>{
+      const out=await getOCSP(session,{cert_id:String(cert.id||"")});
+      const reason=String(out?.reason||"").trim();
+      const status=String(out?.status||"unknown").toLowerCase();
+      const statusLabel=status==="good"
+        ?"Good (valid and not revoked)"
+        :status==="revoked"
+          ?"Revoked"
+          :status==="expired"
+            ?"Expired"
+            :"Unknown";
+      onToast?.(`OCSP status for ${String(cert.subject_cn||cert.id)}: ${statusLabel}${reason?` - ${reason}`:""}`);
+    });
+  };
+
+  const actDownloadCert=(cert)=>{
+    openDownloadModal(cert);
+  };
+
+  const actCRL=async(ca)=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    await runCertAction(`crl-${ca.id}`,async()=>{
+      const out=await getCRL(session,String(ca.id||""));
+      const safe=String(ca.name||ca.id||"ca").replace(/[^a-z0-9-_]+/gi,"-").replace(/^-+|-+$/g,"").toLowerCase();
+      const fileName=`${safe||"ca"}-crl.pem`;
+      downloadTextFile(fileName,String(out?.crl_pem||""),"application/x-pem-file");
+      onToast?.(`CRL generated for ${String(ca.name||ca.id)} at ${String(out?.generated_at||"")}`);
+    });
+  };
+
+  const saveAlertPolicy=async()=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    const days=Math.max(1,Math.min(3650,Number(alertPolicyDaysBefore||30)));
+    setAlertPolicySaving(true);
+    try{
+      const out=await updateCertExpiryAlertPolicy(session,{
+        days_before:days,
+        include_external:Boolean(alertPolicyIncludeExternal),
+        updated_by:session.username||"dashboard"
+      });
+      setAlertPolicyDaysBefore(Math.max(1,Math.min(3650,Number(out?.days_before||days))));
+      setAlertPolicyIncludeExternal(Boolean(out?.include_external));
+      onToast?.("Certificate alert policy updated.");
+      setModal(null);
+      await refresh();
+    }catch(error){
+      onToast?.(`Alert policy update failed: ${errMsg(error)}`);
+    }finally{
+      setAlertPolicySaving(false);
+    }
+  };
+
+  const placeCertMenuFromButton=(button,menuWidth,menuHeight)=>{
+    const rect=button.getBoundingClientRect();
+    const left=Math.max(8,Math.min(window.innerWidth-menuWidth-8,rect.right-menuWidth));
+    let top=rect.bottom+6;
+    if(top+menuHeight>window.innerHeight-8){
+      top=Math.max(8,rect.top-menuHeight-6);
+    }
+    return {top,left};
+  };
+
+  const openCertActionMenu=(event,certID)=>{
+    event.stopPropagation();
+    if(openCertActionMenuId===certID){
+      setOpenCertActionMenuId("");
+      return;
+    }
+    const pos=placeCertMenuFromButton(event.currentTarget,210,320);
+    setCertActionMenuPos(pos);
+    setOpenCertActionMenuId(certID);
+  };
+
+  const renderIssuedCertRow=(crt)=>{
+    const certID=String(crt.id||"");
+    const statusRaw=String(crt.status||"unknown");
+    const status=statusRaw.toLowerCase();
+    return <div key={certID} style={{padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:8,background:"rgba(7,13,25,.65)"}}>
+      <div style={{minWidth:0}}>
+        <div style={{fontSize:11,color:C.text,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(crt.subject_cn||crt.id||"certificate")}</div>
+        <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{certID}</div>
+        <div style={{display:"flex",gap:6,marginTop:4,alignItems:"center",flexWrap:"wrap"}}>
+          <B c={status==="active"?"green":status==="revoked"||status==="deleted"?"red":"amber"}>{statusRaw||"unknown"}</B>
+          <span style={{fontSize:9,color:C.dim}}>{String(crt.algorithm||"-")}</span>
+          <span style={{fontSize:9,color:C.dim}}>exp: {formatDestroyAt(String(crt.not_after||"-"))}</span>
+        </div>
+      </div>
+    </div>;
+  };
+
+  const renderCANode=(ca,depth=0)=>{
+    const caID=String(ca.id||"");
+    const children=childrenOf(caID).filter((child)=>{
+      if(caStatusView==="all"){
+        return true;
+      }
+      return String(child?.status||"").toLowerCase()===caStatusView;
+    });
+    const certList=[...((certsByCA[caID]||[]) as any[])].filter((crt)=>{
+      if(certStatusView==="all"){
+        return true;
+      }
+      return String(crt?.status||"").toLowerCase()===certStatusView;
+    });
+    certList.sort((a,b)=>new Date(String(b.created_at||0)).getTime()-new Date(String(a.created_at||0)).getTime());
+    const open=Object.prototype.hasOwnProperty.call(caExpanded||{},caID)?Boolean(caExpanded[caID]):true;
+    const issuedOpen=Object.prototype.hasOwnProperty.call(issuedExpanded||{},caID)?Boolean(issuedExpanded[caID]):true;
+    const status=String(ca.status||"unknown").toLowerCase();
+    const crlBusy=String(rowActionBusy||"")===`crl-${caID}`;
+    return <Card key={caID} style={{padding:8,marginLeft:depth*16,background:depth===0?"rgba(6,214,224,.08)":"rgba(148,163,184,.10)",borderColor:depth===0?C.accentDim:C.border}}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"flex-start"}}>
+        <div style={{minWidth:0}}>
+          <button onClick={()=>toggleCA(caID)} style={{background:"transparent",border:"none",padding:0,margin:0,color:C.accent,cursor:"pointer",fontSize:11,fontWeight:700}}>{open?"v":">"} {depth===0?"Root":"Intermediate"}: {String(ca.name||caID)}</button>
+          <div style={{fontSize:9,color:C.muted,marginTop:3}}>{`${String(ca.algorithm||"-")} | ${String(ca.ca_level||"root")} | ${String(ca.key_backend||"software")}`}</div>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+          <B c={status==="active"?"green":status==="revoked"?"red":"amber"}>{String(ca.status||"unknown")}</B>
+          <Btn small onClick={()=>void actCRL(ca)} disabled={crlBusy}>{crlBusy?"Generating...":"CRL"}</Btn>
+        </div>
+      </div>
+      {open?<>
+        {children.length?<div style={{display:"grid",gap:8,marginTop:8}}>{children.map((child)=>renderCANode(child,depth+1))}</div>:null}
+        <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${C.border}`}}>
+          <button onClick={()=>toggleIssued(caID)} style={{background:"transparent",border:"none",padding:0,color:C.blue,cursor:"pointer",fontSize:10,fontWeight:700}}>{issuedOpen?"v":">"} Issued Certificates ({certList.length})</button>
+          {issuedOpen?<div style={{display:"grid",gap:6,marginTop:6,maxHeight:200,overflowY:"auto",paddingRight:4}}>
+            {certList.length?certList.map((crt)=>renderIssuedCertRow(crt)):<div style={{fontSize:10,color:C.muted}}>No issued certificates under this CA.</div>}
+          </div>:null}
+        </div>
+      </>:null}
+    </Card>;
+  };
+
+  return <div>
+    <div style={{display:"flex",gap:12,marginBottom:14}}>
+      <Stat l="Active Certs" v={String(stats.active)} c="green"/>
+      <Stat l="Revoked" v={String(stats.revoked)} c="red"/>
+      <Stat l="Deleted" v={String(stats.deleted)} c="blue"/>
+      <Stat l="CAs" v={String(stats.cas)} s={`${roots.length} root`} c="accent"/>
+      <Stat l="PQC Certs" v={String(stats.pqc)} s={`${stats.total?Math.round((stats.pqc*100)/stats.total):0}% of total`} c="purple"/>
+      <Stat l={`Expiring (${alertPolicyDaysBefore}d)`} v={String(stats.expiring)} c="amber"/>
+    </div>
+    <div style={{fontSize:9,color:C.muted,marginBottom:10}}>
+      OCSP status meanings: <span style={{color:C.green}}>good</span> = valid and not revoked, <span style={{color:C.red}}>revoked</span> = explicitly revoked, <span style={{color:C.amber}}>expired</span> = validity ended.
+    </div>
+
+    <Section title="Enrollment Protocols">
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        {protocolMeta.map((meta)=>{
+          const cfg=protocolByName[meta.name];
+          const enabled=cfg?Boolean(cfg.enabled):true;
+          return <Card key={meta.name} style={{padding:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <div style={{fontSize:16,fontWeight:700,color:C.text}}>{meta.title}</div>
+              <B c={enabled?"green":"red"}>{enabled?"Active":"Disabled"}</B>
+            </div>
+            <div style={{fontSize:10,color:C.accent,marginBottom:4}}>{meta.rfc}</div>
+            <div style={{fontSize:11,color:C.dim,marginBottom:8}}>{meta.desc}</div>
+            <div style={{display:"flex",gap:6}}>
+              <Btn small onClick={()=>openProtocolModal(meta.name)}>Configure</Btn>
+              <Btn
+                small
+                primary
+                disabled={!enabled||testingProtocol===meta.name}
+                onClick={()=>void runProtocolTest(meta.name)}
+              >
+                {testingProtocol===meta.name?"Testing...":"Test Enroll"}
+              </Btn>
+            </div>
+          </Card>;
+        })}
+      </div>
+    </Section>
+
+    <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:10,marginBottom:12}}>
+      <Card style={{padding:10}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.text}}>CA Hierarchy</div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <Btn small onClick={()=>setCAStatusView("all")} style={{background:caStatusView==="all"?C.accentDim:"transparent",color:caStatusView==="all"?C.accent:C.text}}>{`All ${caStatusCounts.all}`}</Btn>
+            <Btn small onClick={()=>setCAStatusView("active")} style={{background:caStatusView==="active"?C.greenDim:"transparent",color:caStatusView==="active"?C.green:C.text}}>{`Active ${caStatusCounts.active}`}</Btn>
+            <Btn small onClick={()=>setCAStatusView("revoked")} style={{background:caStatusView==="revoked"?C.redDim:"transparent",color:caStatusView==="revoked"?C.red:C.text}}>{`Revoked ${caStatusCounts.revoked}`}</Btn>
+            <Btn small onClick={()=>void refresh()} disabled={loading}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>{loading?"Refreshing...":"Refresh"}</span></Btn>
+            <Btn small primary onClick={()=>setModal("create-ca")}>+ Create CA</Btn>
+          </div>
+        </div>
+        {!roots.length&&!loading?<div style={{fontSize:10,color:C.muted}}>No CA found. Create a root CA to start issuance.</div>:null}
+        <div style={{display:"grid",gap:8,maxHeight:360,overflowY:"auto",paddingRight:4}}>
+          {roots.filter((root)=>{
+            if(caStatusView==="all"){
+              return true;
+            }
+            return String(root?.status||"").toLowerCase()===caStatusView;
+          }).map((root)=>renderCANode(root,0))}
+        </div>
+      </Card>
+
+      <div style={{display:"grid",gap:10}}>
+        <Card style={{padding:10}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.text,marginBottom:4}}>Expiry Calendar</div>
+          <div style={{fontSize:9,color:C.muted,marginBottom:8}}>{`Alert window: ${alertPolicyDaysBefore} day(s)${alertPolicyIncludeExternal?" including":" excluding"} external certs`}</div>
+          <div style={{display:"grid",gap:8}}>
+            {expiryItems.map((it)=>{
+              const c=it.daysLeft<=15?"red":it.daysLeft<=60?"amber":"green";
+              const pct=Math.max(4,Math.min(100,it.daysLeft<=0?100:(365-Math.min(365,it.daysLeft))/3.65));
+              return <div key={it.certId} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div style={{fontSize:11,color:C.text,maxWidth:190,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.subject}</div>
+                  <B c={c}>{it.daysLeft<0?"expired":`${it.daysLeft}d`}</B>
+                </div>
+                <Bar pct={pct} color={c==="red"?C.red:c==="amber"?C.amber:C.green}/>
+              </div>;
+            })}
+            {!expiryItems.length?<div style={{fontSize:10,color:C.muted}}>No certificates available.</div>:null}
+          </div>
+        </Card>
+      </div>
+    </div>
+
+    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+      <Btn small primary onClick={()=>setModal("issue")} style={{height:34,padding:"0 14px"}}>+ Issue</Btn>
+      <Btn small onClick={()=>setModal("sign-csr")} style={{height:34,padding:"0 14px"}}>Sign CSR</Btn>
+      <Btn small onClick={()=>setModal("issue-pqc")} style={{height:34,padding:"0 14px"}}>PQC</Btn>
+      <Btn small onClick={()=>setModal("upload-3p")} style={{height:34,padding:"0 14px"}}>Upload 3rd-Party</Btn>
+      <Btn small onClick={()=>setModal("cert-alert-policy")} style={{height:34,padding:"0 14px"}}>Alert Policy</Btn>
+    </div>
+
+    <Section title="Certificates">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+          <Inp
+            placeholder="Search certificate by name, ID, algorithm..."
+            w={320}
+            value={certSearch}
+            onChange={(e)=>setCertSearch(e.target.value)}
+            style={{height:34,borderRadius:9,fontSize:11}}
+          />
+        <Btn small onClick={()=>setCertStatusView("all")} style={{background:certStatusView==="all"?C.accentDim:"transparent",color:certStatusView==="all"?C.accent:C.text}}>
+          {`All (${certStatusCounts.all})`}
+        </Btn>
+        <Btn small onClick={()=>setCertStatusView("active")} style={{background:certStatusView==="active"?C.greenDim:"transparent",color:certStatusView==="active"?C.green:C.text}}>
+          {`Active (${certStatusCounts.active})`}
+        </Btn>
+        <Btn small onClick={()=>setCertStatusView("revoked")} style={{background:certStatusView==="revoked"?C.redDim:"transparent",color:certStatusView==="revoked"?C.red:C.text}}>
+          {`Revoked (${certStatusCounts.revoked})`}
+        </Btn>
+        <Btn small onClick={()=>setCertStatusView("deleted")} style={{background:certStatusView==="deleted"?C.blueDim:"transparent",color:certStatusView==="deleted"?C.blue:C.text}}>
+          {`Deleted (${certStatusCounts.deleted})`}
+        </Btn>
+        </div>
+        <Btn small onClick={()=>void refresh()} disabled={loading}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>{loading?"Refreshing...":"Refresh"}</span></Btn>
+      </div>
+      <Card style={{padding:0,overflow:"hidden"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1.3fr 1fr .8fr .8fr .9fr .55fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+          <div>Common Name</div><div>Algorithm</div><div>Class</div><div>Status</div><div>Expires</div><div style={{textAlign:"right"}}>Actions</div>
+        </div>
+        <div style={{maxHeight:220,overflowY:"auto"}}>
+          {pagedCerts.map((c)=>(
+            <div key={c.id} style={{display:"grid",gridTemplateColumns:"1.3fr 1fr .8fr .8fr .9fr .55fr",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:11,alignItems:"center"}}>
+              <div>
+                <div style={{color:C.text,fontWeight:600}}>{c.subject_cn||c.id}</div>
+                <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{c.id}</div>
+              </div>
+              <div style={{color:C.accent}}>{c.algorithm}</div>
+              <div style={{color:C.dim,textTransform:"uppercase"}}>{c.cert_class}</div>
+              <div><B c={String(c.status).toLowerCase()==="active"?"green":String(c.status).toLowerCase()==="revoked"||String(c.status).toLowerCase()==="deleted"?"red":"amber"}>{c.status}</B></div>
+              <div style={{color:C.dim}}>{formatDestroyAt(String(c.not_after||"-"))}</div>
+              <div style={{display:"flex",justifyContent:"flex-end",position:"relative"}} onClick={(e)=>e.stopPropagation()}>
+                {(() => {
+                  const certID=String(c.id||"");
+                  const statusRaw=String(c.status||"unknown");
+                  const status=statusRaw.toLowerCase();
+                  const busy=String(rowActionBusy||"");
+                  const showMenu=openCertActionMenuId===certID;
+                  const canRenew=status==="active"||status==="expired";
+                  const canRevoke=status==="active"||status==="expired";
+                  const canDelete=status!=="deleted";
+                  return <>
+                <button
+                  onClick={(e)=>openCertActionMenu(e,certID)}
+                  aria-label="Certificate actions"
+                  style={{
+                    background:"transparent",
+                    border:`1px solid ${C.border}`,
+                    borderRadius:7,
+                    color:C.accent,
+                    width:28,
+                    height:24,
+                    display:"inline-flex",
+                    alignItems:"center",
+                    justifyContent:"center",
+                    cursor:"pointer"
+                  }}
+                >
+                  <MoreVertical size={14} strokeWidth={2}/>
+                </button>
+                {showMenu&&<div style={{
+                  position:"fixed",
+                  top:certActionMenuPos.top,
+                  left:certActionMenuPos.left,
+                  zIndex:3000,
+                  minWidth:190,
+                  background:C.surface,
+                  border:`1px solid ${C.borderHi}`,
+                  borderRadius:8,
+                  boxShadow:"0 12px 24px rgba(0,0,0,.35)",
+                  padding:4,
+                  display:"grid",
+                  gap:2
+                }}>
+                  <button
+                    onClick={(e)=>{
+                      e.stopPropagation();
+                      setOpenCertActionMenuId("");
+                      actDownloadCert(c);
+                    }}
+                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                  >
+                    Download
+                  </button>
+                  {canRenew?<button
+                    onClick={(e)=>{
+                      e.stopPropagation();
+                      setOpenCertActionMenuId("");
+                      void actRenewCert(c);
+                    }}
+                    disabled={busy===`renew-${certID}`}
+                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`renew-${certID}`?"not-allowed":"pointer",borderRadius:6}}
+                  >
+                    {busy===`renew-${certID}`?"Renewing...":"Renew"}
+                  </button>:null}
+                  {canRevoke?<button
+                    onClick={(e)=>{
+                      e.stopPropagation();
+                      setOpenCertActionMenuId("");
+                      void actRevokeCert(c);
+                    }}
+                    disabled={busy===`revoke-${certID}`}
+                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`revoke-${certID}`?"not-allowed":"pointer",borderRadius:6}}
+                  >
+                    {busy===`revoke-${certID}`?"Revoking...":"Revoke"}
+                  </button>:null}
+                  <button
+                    onClick={(e)=>{
+                      e.stopPropagation();
+                      setOpenCertActionMenuId("");
+                      void actOCSP(c);
+                    }}
+                    disabled={busy===`ocsp-${certID}`}
+                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`ocsp-${certID}`?"not-allowed":"pointer",borderRadius:6}}
+                  >
+                    {busy===`ocsp-${certID}`?"Checking...":"OCSP"}
+                  </button>
+                  {canDelete?<button
+                    onClick={(e)=>{
+                      e.stopPropagation();
+                      setOpenCertActionMenuId("");
+                      void actDeleteCert(c);
+                    }}
+                    disabled={busy===`delete-${certID}`}
+                    style={{background:"transparent",border:"none",color:C.red,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`delete-${certID}`?"not-allowed":"pointer",borderRadius:6}}
+                  >
+                    {busy===`delete-${certID}`?"Deleting...":"Delete"}
+                  </button>:<div style={{padding:"6px 8px",fontSize:10,color:C.muted}}>Already deleted</div>}
+                </div>}
+                </>;
+                })()}
+              </div>
+            </div>
+          ))}
+          {!pagedCerts.length&&!loading?<div style={{padding:12,fontSize:10,color:C.muted}}>No certificates for current filter.</div>:null}
+        </div>
+      </Card>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginTop:8,flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,fontSize:10,color:C.dim}}>
+          <span>Rows per page</span>
+          <Sel w={92} value={String(certPageSize)} onChange={(e)=>setCertPageSize(Number(e.target.value||10))}>
+            <option value="10">10</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </Sel>
+          <span>{filteredCerts.length?`${certCurrentPage*certPageSize+1}-${Math.min((certCurrentPage+1)*certPageSize,filteredCerts.length)} of ${filteredCerts.length}`:`0 of 0`}</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <Btn small onClick={()=>setCertPageIndex((prev)=>Math.max(0,prev-1))} disabled={certCurrentPage<=0}>Prev</Btn>
+          <div style={{fontSize:10,color:C.text,minWidth:74,textAlign:"center"}}>{`Page ${certCurrentPage+1} / ${certTotalPages}`}</div>
+          <Btn small onClick={()=>setCertPageIndex((prev)=>Math.min(certTotalPages-1,prev+1))} disabled={certCurrentPage>=certTotalPages-1}>Next</Btn>
+        </div>
+      </div>
+    </Section>
+
+    <Modal open={modal==="create-ca"} onClose={()=>setModal(null)} title="Create Certificate Authority" wide>
+      <Row2>
+        <FG label="CA Type" required>
+          <Sel value={caType} onChange={(e)=>setCAType(e.target.value)}>
+            <option value="root">Root CA (self-signed)</option>
+            <option value="intermediate">Intermediate CA (signed by parent)</option>
+          </Sel>
+        </FG>
+        <FG label="Parent CA" hint="Required for intermediate CAs">
+          <Sel value={caParent} onChange={(e)=>setCAParent(e.target.value)} disabled={caType!=="intermediate"}>
+            <option value="">- None (Root CA) -</option>
+            {cas.map((c)=><option key={c.id} value={c.id}>{c.name} ({c.algorithm})</option>)}
+          </Sel>
+        </FG>
+      </Row2>
+      <FG label="CA Signing Algorithm" required>
+        <Sel value={caAlgorithm} onChange={(e)=>setCAAlgorithm(e.target.value)}>
+          <optgroup label="Classical">
+            <option value="RSA-4096-SHA384">RSA-4096-SHA384</option>
+            <option value="RSA-3072-SHA256">RSA-3072-SHA256</option>
+            <option value="ECDSA-P384-SHA384">ECDSA-P384-SHA384</option>
+            <option value="ECDSA-P256-SHA256">ECDSA-P256-SHA256</option>
+          </optgroup>
+          <optgroup label="Post-Quantum">
+            <option value="ML-DSA-87">ML-DSA-87</option>
+            <option value="ML-DSA-65">ML-DSA-65</option>
+            <option value="SLH-DSA-256f">SLH-DSA-256f</option>
+            <option value="SLH-DSA-128f">SLH-DSA-128f</option>
+            <option value="HSS-LMS-SHA256">HSS/LMS-SHA256</option>
+            <option value="XMSS-SHA256">XMSS-SHA256</option>
+          </optgroup>
+          <optgroup label="Hybrid">
+            <option value="ECDSA-P384+ML-DSA-65">ECDSA-P384 + ML-DSA-65</option>
+            <option value="RSA-3072+ML-DSA-65">RSA-3072 + ML-DSA-65</option>
+          </optgroup>
+        </Sel>
+      </FG>
+      <Row2>
+        <FG label="Subject DN" required><Inp value={caSubject} onChange={(e)=>setCASubject(e.target.value)} placeholder="CN=Vecta Root CA, O=Bank Corp, C=CH"/></FG>
+        <FG label="Validity"><Sel value={caValidity} onChange={(e)=>setCAValidity(e.target.value)}><option value="3650">10 years (Root CA)</option><option value="1825">5 years (Intermediate)</option><option value="1095">3 years</option><option value="365">1 year</option></Sel></FG>
+      </Row2>
+      <FG label="Key Storage">
+        <Radio label="HSM-backed (Primus HSM - FIPS 140-3 Level 3)" selected={caBackend==="keycore"} onSelect={()=>setCABackend("keycore")}/>
+        <Radio label="Software vault (envelope-encrypted)" selected={caBackend==="software"} onSelect={()=>setCABackend("software")}/>
+      </FG>
+      <FG label="Path Length Constraint" hint="Max depth of CA chain below this CA"><Inp value={caPathLength} onChange={(e)=>setCAPathLength(e.target.value)} placeholder="1" type="number"/></FG>
+      <FG label="Key Usage">
+        <Chk label="Key Cert Sign" checked={caKeyUsageSign} onChange={()=>setCAKeyUsageSign((v)=>!v)}/>
+        <Chk label="CRL Sign" checked={caKeyUsageCRL} onChange={()=>setCAKeyUsageCRL((v)=>!v)}/>
+        <Chk label="Digital Signature" checked={caKeyUsageDigital} onChange={()=>setCAKeyUsageDigital((v)=>!v)}/>
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={submitting}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitCreateCA()} disabled={submitting||loading}>{submitting?"Creating...":"Create CA"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="issue"||modal==="issue-pqc"} onClose={()=>setModal(null)} title={modal==="issue-pqc"?"Issue PQC Certificate":"Issue Certificate"} wide>
+      <Row2>
+        <FG label="Issuing CA" required>
+          <Sel value={issueCAID} onChange={(e)=>setIssueCAID(e.target.value)}>
+            <option value="">Select CA</option>
+            {cas.map((c)=><option key={c.id} value={c.id}>{c.name} ({c.algorithm})</option>)}
+          </Sel>
+        </FG>
+        <FG label="Profile">
+          <Sel value={issueProfileID} onChange={(e)=>setIssueProfileID(e.target.value)}>
+            <option value="">Default profile</option>
+            {(modal==="issue-pqc"?currentPQCProfiles:profiles).map((p)=><option key={p.id} value={p.id}>{p.name} ({p.algorithm})</option>)}
+          </Sel>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label={modal==="issue-pqc"?"PQC Algorithm":"Signing Algorithm"} required>
+          <Sel value={issueAlgorithm} onChange={(e)=>setIssueAlgorithm(e.target.value)}>
+            {modal==="issue-pqc"?<>
+              <option value="ML-DSA-65">ML-DSA-65</option>
+              <option value="ML-DSA-87">ML-DSA-87</option>
+              <option value="SLH-DSA-256f">SLH-DSA-256f</option>
+              <option value="ECDSA-P384+ML-DSA-65">ECDSA-P384 + ML-DSA-65</option>
+            </>:<>
+              <option value="ECDSA-P384">ECDSA-P384</option>
+              <option value="ECDSA-P256">ECDSA-P256</option>
+              <option value="RSA-3072">RSA-3072</option>
+              <option value="RSA-4096">RSA-4096</option>
+            </>}
+          </Sel>
+        </FG>
+        <FG label="Profile Type">
+          <Sel value={issueCertType} onChange={(e)=>setIssueCertType(e.target.value)}>
+            <option value="tls-server">TLS Server</option>
+            <option value="tls-client">TLS Client (mTLS)</option>
+            <option value="code-signing">Code Signing</option>
+            <option value="email">Email / S-MIME</option>
+            <option value="device">Device Identity</option>
+          </Sel>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Common Name (CN)" required><Inp value={issueCN} onChange={(e)=>setIssueCN(e.target.value)} placeholder="api.bank.com"/></FG>
+        <FG label="SANs"><Inp value={issueSANs} onChange={(e)=>setIssueSANs(e.target.value)} placeholder="api.bank.com, *.api.bank.com, 10.0.1.100" mono/></FG>
+      </Row2>
+      <Row2>
+        <FG label="Organization"><Inp value={issueOrg} onChange={(e)=>setIssueOrg(e.target.value)} placeholder="Bank Corp"/></FG>
+        <FG label="Validity">
+          <div style={{display:"grid",gap:6}}>
+            <Sel value={issueValidityMode} onChange={(e)=>setIssueValidityMode(e.target.value)}>
+              <option value="preset">Preset days</option>
+              <option value="custom-days">Custom days</option>
+              <option value="custom-date-time">Custom expiry date & time</option>
+            </Sel>
+            {issueValidityMode==="preset"?<Sel value={issueValidityDays} onChange={(e)=>setIssueValidityDays(e.target.value)}>
+              <option value="365">365 days</option>
+              <option value="180">180 days</option>
+              <option value="90">90 days</option>
+              <option value="30">30 days</option>
+              <option value="730">730 days</option>
+            </Sel>:null}
+            {issueValidityMode==="custom-days"?<Inp type="number" min={1} value={issueValidityCustomDays} onChange={(e)=>setIssueValidityCustomDays(e.target.value)} placeholder="Enter validity days"/>:null}
+            {issueValidityMode==="custom-date-time"?<Inp type="datetime-local" value={issueNotAfter} onChange={(e)=>setIssueNotAfter(e.target.value)}/>:null}
+          </div>
+        </FG>
+      </Row2>
+      <FG label="Key Usage">
+        <Chk label="Digital Signature" checked={issueDigitalSig} onChange={()=>setIssueDigitalSig((v)=>!v)}/>
+        <Chk label="Key Encipherment" checked={issueKeyEnc} onChange={()=>setIssueKeyEnc((v)=>!v)}/>
+      </FG>
+      <FG label="Extended Key Usage">
+        <Chk label="TLS Server Auth" checked={issueTLSAuth} onChange={()=>setIssueTLSAuth((v)=>!v)}/>
+        <Chk label="TLS Client Auth" checked={issueTLSClient} onChange={()=>setIssueTLSClient((v)=>!v)}/>
+        <Chk label="Code Signing" checked={issueCodeSign} onChange={()=>setIssueCodeSign((v)=>!v)}/>
+      </FG>
+      <Chk label="Auto-renew via ACME (RFC 8555)" checked={issueAutoRenew} onChange={()=>setIssueAutoRenew((v)=>!v)}/>
+      <Chk label="Enable OCSP stapling" checked={issueEnableOCSP} onChange={()=>setIssueEnableOCSP((v)=>!v)}/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={submitting}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitIssueCert(modal==="issue-pqc")} disabled={submitting||loading}>{submitting?"Issuing...":"Issue Certificate"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="sign-csr"} onClose={()=>setModal(null)} title="Sign External CSR" wide>
+      <Row2>
+        <FG label="Issuing CA" required>
+          <Sel value={csrCAID} onChange={(e)=>setCSRCAID(e.target.value)}>
+            <option value="">Select CA</option>
+            {cas.map((c)=><option key={c.id} value={c.id}>{c.name} ({c.algorithm})</option>)}
+          </Sel>
+        </FG>
+        <FG label="Profile">
+          <Sel value={csrProfileID} onChange={(e)=>setCSRProfileID(e.target.value)}>
+            <option value="">Default profile</option>
+            {profiles.map((p)=><option key={p.id} value={p.id}>{p.name} ({p.algorithm})</option>)}
+          </Sel>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Certificate Type">
+          <Sel value={csrCertType} onChange={(e)=>setCSRCertType(e.target.value)}>
+            <option value="tls-server">TLS Server</option>
+            <option value="tls-client">TLS Client (mTLS)</option>
+            <option value="code-signing">Code Signing</option>
+            <option value="email">Email / S-MIME</option>
+            <option value="device">Device Identity</option>
+          </Sel>
+        </FG>
+        <FG label="Signing Algorithm">
+          <Sel value={csrAlgorithm} onChange={(e)=>setCSRAlgorithm(e.target.value)}>
+            <option value="ECDSA-P384">ECDSA-P384</option>
+            <option value="ECDSA-P256">ECDSA-P256</option>
+            <option value="RSA-3072">RSA-3072</option>
+            <option value="RSA-4096">RSA-4096</option>
+            <option value="ML-DSA-65">ML-DSA-65</option>
+            <option value="ML-DSA-87">ML-DSA-87</option>
+          </Sel>
+        </FG>
+      </Row2>
+      <FG label="CSR (PEM)" required>
+        <Txt value={csrPEM} onChange={(e)=>setCSRPEM(e.target.value)} placeholder="-----BEGIN CERTIFICATE REQUEST-----\n...\n-----END CERTIFICATE REQUEST-----" rows={8}/>
+      </FG>
+      <FG label="Validity">
+        <div style={{display:"grid",gap:6}}>
+          <Sel value={csrValidityMode} onChange={(e)=>setCSRValidityMode(e.target.value)}>
+            <option value="preset">Preset days</option>
+            <option value="custom-days">Custom days</option>
+            <option value="custom-date-time">Custom expiry date & time</option>
+          </Sel>
+          {csrValidityMode==="preset"?<Sel value={csrValidityDays} onChange={(e)=>setCSRValidityDays(e.target.value)}>
+            <option value="365">365 days</option>
+            <option value="180">180 days</option>
+            <option value="90">90 days</option>
+            <option value="30">30 days</option>
+            <option value="730">730 days</option>
+          </Sel>:null}
+          {csrValidityMode==="custom-days"?<Inp type="number" min={1} value={csrValidityCustomDays} onChange={(e)=>setCSRValidityCustomDays(e.target.value)} placeholder="Enter validity days"/>:null}
+          {csrValidityMode==="custom-date-time"?<Inp type="datetime-local" value={csrNotAfter} onChange={(e)=>setCSRNotAfter(e.target.value)}/>:null}
+        </div>
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={submitting}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitSignCSR()} disabled={submitting||loading}>{submitting?"Signing...":"Sign CSR"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="cert-download"} onClose={()=>setModal(null)} title={`Download Certificate Asset${downloadTargetCert?`: ${String(downloadTargetCert.subject_cn||downloadTargetCert.id)}`:""}`}>
+      <FG label="Asset">
+        <Sel value={downloadAsset} onChange={(e)=>setDownloadAsset(e.target.value)}>
+          <option value="certificate">Certificate</option>
+          <option value="chain">Certificate + chain</option>
+          <option value="ca">CA cert / chain</option>
+          <option value="public-key">Public key</option>
+          <option value="pkcs11">PKCS#11 reference</option>
+        </Sel>
+      </FG>
+      <FG label="Format">
+        <Sel value={downloadFormat} onChange={(e)=>setDownloadFormat(e.target.value)}>
+          {(downloadAsset==="public-key")?<><option value="pem">PEM</option><option value="der">DER (base64)</option><option value="pkcs8">PKCS#8 (PEM)</option></>:null}
+          {(downloadAsset!=="public-key"&&downloadAsset!=="pkcs11")?<><option value="pem">PEM</option><option value="der">DER (base64)</option><option value="pkcs12">PKCS#12 (.p12, password protected)</option></>:null}
+          {downloadAsset==="pkcs11"?<option value="pem">JSON (PKCS#11 URI)</option>:null}
+        </Sel>
+      </FG>
+      {(downloadAsset==="certificate"||downloadAsset==="ca")?<Chk label="Include full issuer chain" checked={downloadIncludeChain} onChange={()=>setDownloadIncludeChain((v)=>!v)}/>:null}
+      {(downloadFormat==="pkcs12"||downloadFormat==="pfx")?<FG label="Export Password" required>
+        <Inp type="password" value={downloadPassword} onChange={(e)=>setDownloadPassword(e.target.value)} placeholder="Required for PKCS#12"/>
+      </FG>:null}
+      <div style={{fontSize:10,color:C.muted,marginTop:8}}>
+        Supports PEM/DER/PKCS#12 plus PKCS#8 public key and PKCS#11 reference downloads.
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={submitting}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitDownloadCert()} disabled={submitting}>{submitting?"Preparing...":"Download"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="upload-3p"} onClose={()=>setModal(null)} title="Upload 3rd-Party Web Certificate" wide>
+      <div style={{background:C.blueDim,border:`1px solid ${C.blue}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.blue}}>
+        Upload certificates from external CAs (DigiCert, Let's Encrypt, etc.) for KMS interface or service endpoints.
+      </div>
+      <FG label="Purpose" required>
+        <Sel value={uploadPurpose} onChange={(e)=>setUploadPurpose(e.target.value)}>
+          <option>KMS Web Interface (HTTPS:443)</option>
+          <option>API Gateway TLS termination</option>
+          <option>KMIP Server (TLS)</option>
+          <option>Syslog TLS</option>
+          <option>Custom service endpoint</option>
+        </Sel>
+      </FG>
+      <FG label="Certificate (PEM)" required><Txt value={uploadCertPEM} onChange={(e)=>setUploadCertPEM(e.target.value)} placeholder="-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----" rows={6}/></FG>
+      <FG label="Private Key (PEM)"><Txt value={uploadKeyPEM} onChange={(e)=>setUploadKeyPEM(e.target.value)} placeholder="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----" rows={4}/></FG>
+      <FG label="CA Bundle (PEM)"><Txt value={uploadBundlePEM} onChange={(e)=>setUploadBundlePEM(e.target.value)} placeholder="-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----" rows={3}/></FG>
+      <Chk label="Set as active web interface certificate" checked={uploadSetActive} onChange={()=>setUploadSetActive((v)=>!v)}/>
+      <Chk label="Enable OCSP stapling" checked={uploadEnableOCSP} onChange={()=>setUploadEnableOCSP((v)=>!v)}/>
+      <Chk label="Auto-renew via ACME when expiring" checked={uploadAutoRenew} onChange={()=>setUploadAutoRenew((v)=>!v)}/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={submitting}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitUpload()} disabled={submitting||loading}>{submitting?"Uploading...":"Upload & Apply"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="cert-alert-policy"} onClose={()=>setModal(null)} title="Certificate Expiry Alert Policy">
+      <FG label="Create Alert Before Expiry (days)" required>
+        <Inp
+          type="number"
+          min={1}
+          max={3650}
+          value={String(alertPolicyDaysBefore)}
+          onChange={(e)=>setAlertPolicyDaysBefore(Math.max(1,Math.min(3650,Number(e.target.value||30))))}
+        />
+      </FG>
+      <Chk label="Include external / 3rd-party certificates in monitoring" checked={alertPolicyIncludeExternal} onChange={()=>setAlertPolicyIncludeExternal((v)=>!v)}/>
+      <div style={{fontSize:10,color:C.muted,marginTop:8}}>
+        Alerts are emitted from backend policy sweep and appear in Alert Center + bell count until acknowledged.
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={alertPolicySaving}>Cancel</Btn>
+        <Btn primary onClick={()=>void saveAlertPolicy()} disabled={alertPolicySaving}>{alertPolicySaving?"Saving...":"Save Policy"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="protocol-config"} onClose={()=>setModal(null)} title={`Configure ${String(protocolName||"").toUpperCase()} Protocol`} wide>
+      <FG label="Protocol Enabled">
+        <Radio label="Enabled" selected={protocolEnabled} onSelect={()=>setProtocolEnabled(true)}/>
+        <Radio label="Disabled" selected={!protocolEnabled} onSelect={()=>setProtocolEnabled(false)}/>
+      </FG>
+      <FG label="Supported Options" hint="Use these keys in configuration JSON.">
+        <div style={{display:"grid",gap:4}}>
+          {activeProtocolDocs.map((line,idx)=><div key={`${String(protocolName||"cfg")}-${idx}`} style={{fontSize:10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>- {sanitizeDisplayText(line)}</div>)}
+        </div>
+      </FG>
+      {activeProtocolImplementation?<FG label="Implementation" hint="Open-source runtime details for this protocol engine.">
+        <div style={{display:"grid",gap:4}}>
+          <div style={{fontSize:10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>engine={sanitizeDisplayText(activeProtocolImplementation.engine||"native-go")} language={sanitizeDisplayText(activeProtocolImplementation.language||"go")} oss_only={String(Boolean(activeProtocolImplementation.oss_only))}</div>
+          {Array.isArray(activeProtocolImplementation.sdks)&&activeProtocolImplementation.sdks.length?<div style={{fontSize:10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>sdk: {sanitizeDisplayText(activeProtocolImplementation.sdks.join(" | "))}</div>:null}
+          {Array.isArray(activeProtocolImplementation.hardening)&&activeProtocolImplementation.hardening.length?<div style={{fontSize:10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>hardening: {sanitizeDisplayText(activeProtocolImplementation.hardening.join(" | "))}</div>:null}
+          {String(activeProtocolImplementation.notes||"").trim()?<div style={{fontSize:10,color:C.dim}}>{sanitizeDisplayText(activeProtocolImplementation.notes||"")}</div>:null}
+        </div>
+      </FG>:null}
+      <FG label="Configuration JSON" required hint="Stored as protocol policy. Unknown keys are rejected.">
+        <Txt rows={10} value={protocolConfigText} onChange={(e)=>setProtocolConfigText(e.target.value)} />
+      </FG>
+      <div style={{display:"flex",justifyContent:"space-between",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setProtocolConfigText(JSON.stringify(protocolDefaultConfigs[String(protocolName||"").toLowerCase()]||{},null,2))} disabled={submitting||loading}>Reset Recommended</Btn>
+        <div style={{display:"flex",gap:8}}>
+          <Btn onClick={()=>setModal(null)} disabled={submitting}>Cancel</Btn>
+          <Btn primary onClick={()=>void saveProtocol()} disabled={submitting||loading}>{submitting?"Saving...":"Save Configuration"}</Btn>
+        </div>
+      </div>
+    </Modal>
+  </div>;
+};
+
+
+const Tokenize=({session,keyCatalog,onToast})=>{
+  const [op,setOp]=useState("Tokenize");
+  const [modal,setModal]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [submitting,setSubmitting]=useState(false);
+  const [resultText,setResultText]=useState("// Output will appear here...");
+  const keyChoices=useMemo(()=>keyChoicesFromCatalog(keyCatalog),[keyCatalog]);
+  const defaultKeyId=String(keyChoices[0]?.id||"");
+  const vaultCapableKeys=useMemo(()=>keyChoices.filter((k)=>isVaultCapableKeyChoice(k)),[keyChoices]);
+  const defaultVaultKeyId=String(vaultCapableKeys[0]?.id||"");
+
+  const [vaults,setVaults]=useState<any[]>([]);
+  const [tokenMode,setTokenMode]=useState<"vault"|"vaultless">("vault");
+  const [tokenMethod,setTokenMethod]=useState("format_preserving");
+  const [tokenVaultId,setTokenVaultId]=useState("");
+  const [tokenVaultlessFormat,setTokenVaultlessFormat]=useState("deterministic");
+  const [tokenVaultlessType,setTokenVaultlessType]=useState("credit_card");
+  const [tokenVaultlessKeyId,setTokenVaultlessKeyId]=useState(defaultVaultKeyId);
+  const [tokenVaultlessRegex,setTokenVaultlessRegex]=useState("");
+  const [tokenInput,setTokenInput]=useState("4111 1111 1111 1111");
+  const [tokenBatch,setTokenBatch]=useState(false);
+  const [tokenTTL,setTokenTTL]=useState("0");
+  const [detokenizeInput,setDetokenizeInput]=useState("");
+
+  const [fpeKeyId,setFPEKeyId]=useState(defaultVaultKeyId||defaultKeyId);
+  const [fpeAlgorithm,setFPEAlgorithm]=useState("FF1");
+  const [fpeRadix,setFPERadix]=useState("10");
+  const [fpeTweak,setFPETweak]=useState("");
+  const [fpeInput,setFPEInput]=useState("");
+
+  const [maskPattern,setMaskPattern]=useState("partial_last4");
+  const [maskRole,setMaskRole]=useState("analyst");
+  const [maskInput,setMaskInput]=useState("John Smith - SSN: 123-45-6789");
+  const [maskConsistent,setMaskConsistent]=useState(true);
+
+  const [redactInput,setRedactInput]=useState("Please contact john@bank.com at +1-555-0123.");
+  const [redactAction,setRedactAction]=useState("replace_placeholder");
+  const [redactPlaceholder,setRedactPlaceholder]=useState("[REDACTED]");
+  const [redactDetectOnly,setRedactDetectOnly]=useState(false);
+
+  const [fieldKeyId,setFieldKeyId]=useState(defaultVaultKeyId||defaultKeyId);
+  const [fieldAlgorithm,setFieldAlgorithm]=useState("AES-GCM");
+  const [fieldDoc,setFieldDoc]=useState('{"name":"John","ssn":"123-45-6789","card":"4111111111111111"}');
+  const [fieldPaths,setFieldPaths]=useState("$.ssn,$.card");
+  const [fieldAAD,setFieldAAD]=useState("");
+  const [fieldDecrypt,setFieldDecrypt]=useState(false);
+
+  const [envMode,setEnvMode]=useState("encrypt");
+  const [envKeyId,setEnvKeyId]=useState(defaultVaultKeyId||defaultKeyId);
+  const [envAlgo,setEnvAlgo]=useState("AES-GCM");
+  const [envAAD,setEnvAAD]=useState("");
+  const [envPlaintext,setEnvPlaintext]=useState("");
+  const [envPackage,setEnvPackage]=useState('{"ciphertext":"","iv":"","wrapped_dek":"","wrapped_dek_iv":"","algorithm":"AES-GCM"}');
+
+  const [vaultName,setVaultName]=useState("");
+  const [vaultTokenType,setVaultTokenType]=useState("credit_card");
+  const [vaultFormat,setVaultFormat]=useState("format_preserving");
+  const [vaultKeyId,setVaultKeyId]=useState(defaultVaultKeyId);
+  const [vaultRegex,setVaultRegex]=useState("");
+
+  const setOutput=(v:any)=>setResultText(JSON.stringify(v,null,2));
+
+  const parseObject=(raw:string,label:string)=>{
+    const text=String(raw||"").trim();
+    if(!text){
+      throw new Error(`${label} is required.`);
+    }
+    let parsed:any;
+    try{
+      parsed=JSON.parse(text);
+    }catch{
+      throw new Error(`${label} must be valid JSON.`);
+    }
+    if(!parsed||typeof parsed!=="object"||Array.isArray(parsed)){
+      throw new Error(`${label} must be a JSON object.`);
+    }
+    return parsed;
+  };
+
+  const parseList=(raw:string)=>{
+    return String(raw||"").split(/[,\n]/).map((v)=>String(v||"").trim()).filter(Boolean);
+  };
+
+  useEffect(()=>{
+    if(!session?.token){
+      setVaults([]);
+      return;
+    }
+    let cancelled=false;
+    const loadVaults=async()=>{
+      setLoading(true);
+      try{
+        const items=await listTokenVaults(session,{limit:300,offset:0});
+        if(!cancelled){
+          setVaults(items||[]);
+        }
+      }catch(error){
+        if(!cancelled){
+          onToast?.(`Token vault load failed: ${errMsg(error)}`);
+        }
+      }finally{
+        if(!cancelled){
+          setLoading(false);
+        }
+      }
+    };
+    void loadVaults();
+    return()=>{cancelled=true;};
+  },[session?.token,session?.tenantId,onToast]);
+
+  useEffect(()=>{
+    const fallback=defaultVaultKeyId||defaultKeyId;
+    if(!fpeKeyId&&fallback)setFPEKeyId(fallback);
+    if(!fieldKeyId&&fallback)setFieldKeyId(fallback);
+    if(!envKeyId&&fallback)setEnvKeyId(fallback);
+    if(!vaultKeyId&&fallback)setVaultKeyId(fallback);
+    if(!tokenVaultlessKeyId&&fallback)setTokenVaultlessKeyId(fallback);
+  },[defaultKeyId,defaultVaultKeyId,fpeKeyId,fieldKeyId,envKeyId,vaultKeyId,tokenVaultlessKeyId]);
+
+  const methodVaults=useMemo(()=>{
+    return (vaults||[]).filter((v)=>{
+      const fmt=String(v?.format||"").toLowerCase().trim();
+      if(tokenMethod==="format_preserving"){
+        return fmt==="format_preserving"||fmt.includes("format");
+      }
+      return fmt===tokenMethod;
+    });
+  },[vaults,tokenMethod]);
+
+  useEffect(()=>{
+    if(!methodVaults.length){
+      setTokenVaultId("");
+      return;
+    }
+    if(!methodVaults.some((v)=>String(v.id)===String(tokenVaultId))){
+      setTokenVaultId(String(methodVaults[0]?.id||""));
+    }
+  },[methodVaults,tokenVaultId]);
+
+  const run=async(fn:()=>Promise<void>)=>{
+    if(submitting){
+      return;
+    }
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    setSubmitting(true);
+    try{
+      await fn();
+    }catch(error){
+      const message=errMsg(error);
+      setOutput({error:message,operation:op});
+      onToast?.(message);
+    }finally{
+      setSubmitting(false);
+    }
+  };
+
+  const submitCreateVault=async()=>{
+    await run(async()=>{
+      if(!String(vaultName||"").trim()){
+        throw new Error("Vault name is required.");
+      }
+      if(!String(vaultKeyId||"").trim()){
+        throw new Error("Encryption key is required.");
+      }
+      const created=await createTokenVault(session,{
+        name:String(vaultName||"").trim(),
+        token_type:vaultTokenType,
+        format:vaultFormat as any,
+        key_id:vaultKeyId,
+        custom_regex:String(vaultRegex||"").trim()||undefined
+      });
+      setVaults((prev)=>[...(Array.isArray(prev)?prev:[]),created]);
+      setTokenMethod(String(created?.format||vaultFormat));
+      setTokenVaultId(String(created?.id||""));
+      setVaultName("");
+      setVaultRegex("");
+      setModal(null);
+      setOutput({status:"vault_created",vault:created});
+      onToast?.("Token vault created.");
+    });
+  };
+
+  const submitCurrent=async()=>{
+    await run(async()=>{
+      if(op==="Tokenize"){
+        const values=tokenBatch?String(tokenInput||"").split("\n").map((v)=>String(v||"").trim()).filter(Boolean):[String(tokenInput||"").trim()];
+        if(!values.length||!values[0]){
+          throw new Error("Input value is required.");
+        }
+        if(tokenMode==="vault"){
+          if(!String(tokenVaultId||"").trim()){
+            throw new Error("Token vault is required.");
+          }
+        }else{
+          if(!String(tokenVaultlessKeyId||"").trim()){
+            throw new Error("A symmetric encryption key is required for vaultless tokenization.");
+          }
+          if(String(tokenVaultlessType||"").trim()==="custom"&&!String(tokenVaultlessRegex||"").trim()){
+            throw new Error("Custom regex is required when token type is custom.");
+          }
+        }
+        const items=await tokenizeValues(session,{
+          mode:tokenMode,
+          vault_id:tokenMode==="vault"?tokenVaultId:"",
+          key_id:tokenMode==="vaultless"?tokenVaultlessKeyId:"",
+          token_type:tokenMode==="vaultless"?tokenVaultlessType:undefined,
+          format:tokenMode==="vaultless"?tokenVaultlessFormat:undefined,
+          custom_regex:tokenMode==="vaultless"?tokenVaultlessRegex:undefined,
+          values,
+          ttl_hours:Math.max(0,Math.trunc(Number(tokenTTL||0)))
+        });
+        setOutput({operation:"tokenize",items});
+        return;
+      }
+      if(op==="Detokenize"){
+        const tokens=String(detokenizeInput||"").split("\n").map((v)=>String(v||"").trim()).filter(Boolean);
+        if(!tokens.length){
+          throw new Error("Token input is required.");
+        }
+        const items=await detokenizeValues(session,{tokens});
+        setOutput({operation:"detokenize",items});
+        return;
+      }
+      if(op==="FPE Encrypt"||op==="FPE Decrypt"){
+        if(!String(fpeKeyId||"").trim()){
+          throw new Error("Key is required.");
+        }
+        if(!String(fpeInput||"").trim()){
+          throw new Error(op==="FPE Encrypt"?"Plaintext is required.":"Ciphertext is required.");
+        }
+        const payload={key_id:fpeKeyId,algorithm:fpeAlgorithm,radix:Math.max(2,Math.min(36,Math.trunc(Number(fpeRadix||10)))),tweak:String(fpeTweak||"").trim()};
+        const result=op==="FPE Encrypt"
+          ? await fpeEncrypt(session,{...payload,plaintext:String(fpeInput||"").trim()})
+          : await fpeDecrypt(session,{...payload,ciphertext:String(fpeInput||"").trim()});
+        setOutput({operation:op,result});
+        return;
+      }
+      if(op==="Mask"){
+        if(!String(maskInput||"").trim()){
+          throw new Error("Input is required.");
+        }
+        const policy=await createMaskingPolicy(session,{
+          name:`ui-mask-${Date.now()}`,
+          target_type:"json",
+          field_path:"$.value",
+          mask_pattern:maskPattern,
+          roles_full:[],
+          roles_partial:[],
+          roles_redacted:[],
+          consistent:maskConsistent
+        });
+        const masked=await applyMask(session,{policy_id:String(policy.id||""),role:maskRole,data:{value:String(maskInput||"")}},{preview:true});
+        setOutput({operation:"mask",pattern:maskPattern,input:maskInput,output:masked?.value||"",policy_id:policy.id});
+        return;
+      }
+      if(op==="Redact"){
+        if(!String(redactInput||"").trim()){
+          throw new Error("Input document is required.");
+        }
+        const policy=await createRedactionPolicy(session,{
+          name:`ui-redact-${Date.now()}`,
+          action:redactAction as any,
+          placeholder:redactPlaceholder,
+          scope:"all",
+          applies_to:["*"],
+          patterns:[
+            {type:"regex",label:"EMAIL",pattern:"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"},
+            {type:"regex",label:"PHONE",pattern:"(?:\\+?\\d{1,3}[\\s.-]?)?(?:\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4})"},
+            {type:"regex",label:"SSN",pattern:"\\b\\d{3}-\\d{2}-\\d{4}\\b"},
+            {type:"regex",label:"PAN",pattern:"\\b(?:\\d[ -]*?){13,19}\\b"}
+          ]
+        });
+        const result=await redactContent(session,{policy_id:String(policy.id||""),content:redactInput,content_type:"text/plain"},{detectOnly:redactDetectOnly});
+        setOutput({operation:redactDetectOnly?"redact_detect":"redact_apply",policy_id:policy.id,result});
+        return;
+      }
+      if(op==="Field Encrypt"){
+        if(!String(fieldKeyId||"").trim()&&!fieldDecrypt){
+          throw new Error("KEK is required.");
+        }
+        const doc=parseObject(fieldDoc,"JSON document");
+        const fields=parseList(fieldPaths);
+        if(!fields.length){
+          throw new Error("Field list is required.");
+        }
+        const payload={document:doc,fields,key_id:String(fieldKeyId||""),algorithm:fieldAlgorithm,aad:fieldAAD};
+        const result=fieldDecrypt?await appDecryptFields(session,payload):await appEncryptFields(session,payload);
+        setOutput({operation:fieldDecrypt?"field_decrypt":"field_encrypt",result});
+        return;
+      }
+      if(op==="Envelope Encrypt"){
+        if(!String(envKeyId||"").trim()){
+          throw new Error("KEK is required.");
+        }
+        const result=envMode==="encrypt"
+          ? await appEnvelopeEncrypt(session,{key_id:envKeyId,algorithm:envAlgo,plaintext:envPlaintext,aad:envAAD})
+          : await appEnvelopeDecrypt(session,{key_id:envKeyId,algorithm:envAlgo,aad:envAAD,...parseObject(envPackage,"Envelope package")});
+        setOutput({operation:envMode==="encrypt"?"envelope_encrypt":"envelope_decrypt",result});
+      }
+    });
+  };
+
+  const tabs=["Tokenize","Detokenize","FPE Encrypt","FPE Decrypt","Mask","Redact","Field Encrypt","Envelope Encrypt"];
+  const panelTitle=
+    op==="Mask"?"Data Masking":
+    op==="Redact"?"PII Redaction":
+    op==="Field Encrypt"?"Field Encryption":
+    op==="Envelope Encrypt"?"Envelope Encryption":
+    op==="FPE Encrypt"||op==="FPE Decrypt"?"Format Preserving Encryption":
+    op==="Detokenize"?"Detokenization":"Tokenization";
+
+  return <div style={{display:"grid",gap:12}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+        {tabs.map((name)=>(
+          <button
+            key={name}
+            onClick={()=>setOp(name)}
+            style={{
+              background:op===name?C.accent:"transparent",
+              color:op===name?C.bg:C.text,
+              border:`1px solid ${op===name?C.accent:C.border}`,
+              borderRadius:8,
+              padding:"8px 14px",
+              fontSize:12,
+              fontWeight:600,
+              cursor:"pointer"
+            }}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:8}}>
+        <Btn small onClick={async()=>{if(!session?.token)return;setLoading(true);try{setVaults(await listTokenVaults(session,{limit:300,offset:0}));}catch(error){onToast?.(`Refresh failed: ${errMsg(error)}`);}finally{setLoading(false);}}} disabled={loading||submitting}><RefreshCcw size={12} strokeWidth={2}/> Refresh</Btn>
+        <Btn small primary onClick={()=>setModal("vault")}>+ Create Token Vault</Btn>
+      </div>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,alignItems:"start"}}>
+      <Card style={{padding:18}}>
+        <div style={{fontSize:30,fontWeight:700,color:C.text,marginBottom:8,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif",lineHeight:1}}>{panelTitle}</div>
+        <div style={{fontSize:11,color:C.muted,marginBottom:12}}>All operations below execute against backend `dataprotect` APIs.</div>
+        {op==="Tokenize"&&<>
+          <FG label="Tokenization Mode" required>
+            <Sel value={tokenMode} onChange={(e)=>setTokenMode((e.target.value==="vaultless"?"vaultless":"vault") as "vault"|"vaultless")}>
+              <option value="vault">Vault (reversible)</option>
+              <option value="vaultless">Vaultless (non-reversible)</option>
+            </Sel>
+          </FG>
+          {tokenMode==="vault"?<>
+            <FG label="Tokenization Method"><Sel value={tokenMethod} onChange={(e)=>setTokenMethod(e.target.value)}><option value="format_preserving">Format Preserving</option><option value="random">Random</option><option value="deterministic">Deterministic</option><option value="irreversible">Irreversible</option></Sel></FG>
+            <FG label="Token Vault" required><Sel value={tokenVaultId} onChange={(e)=>setTokenVaultId(e.target.value)}><option value="">{methodVaults.length?"Select vault":"No vault for selected method"}</option>{methodVaults.map((v)=><option key={v.id} value={v.id}>{v.name} ({v.token_type})</option>)}</Sel></FG>
+          </>:<>
+            <FG label="Vaultless Format" required>
+              <Sel value={tokenVaultlessFormat} onChange={(e)=>setTokenVaultlessFormat(e.target.value)}>
+                <option value="format_preserving">Format Preserving</option>
+                <option value="deterministic">Deterministic</option>
+                <option value="irreversible">Irreversible</option>
+              </Sel>
+            </FG>
+            <FG label="Encryption Key" required hint="Only active symmetric cipher keys are allowed.">
+              <Sel value={tokenVaultlessKeyId} onChange={(e)=>setTokenVaultlessKeyId(e.target.value)}>
+                {renderKeyOptions(vaultCapableKeys)}
+              </Sel>
+            </FG>
+            <FG label="Token Type" required>
+              <Sel value={tokenVaultlessType} onChange={(e)=>setTokenVaultlessType(e.target.value)}>
+                <option value="credit_card">credit_card (PAN with Luhn validation)</option>
+                <option value="ssn">ssn</option>
+                <option value="email">email</option>
+                <option value="phone">phone</option>
+                <option value="iban">iban</option>
+                <option value="custom">custom</option>
+              </Sel>
+            </FG>
+            {tokenVaultlessType==="custom"&&<FG label="Custom Regex" required><Inp value={tokenVaultlessRegex} onChange={(e)=>setTokenVaultlessRegex(e.target.value)} placeholder="^\\d{3}-\\d{2}-\\d{4}$" mono/></FG>}
+            <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Vaultless mode does not store original data, so detokenization is intentionally unavailable.</div>
+          </>}
+          <FG label="Input Value" required><Txt value={tokenInput} onChange={(e)=>setTokenInput(e.target.value)} rows={3}/></FG>
+          <Chk label="Batch mode (multiple values, one per line)" checked={tokenBatch} onChange={()=>setTokenBatch((v)=>!v)}/>
+          {tokenMode==="vault"
+            ?<FG label="TTL"><Sel value={tokenTTL} onChange={(e)=>setTokenTTL(e.target.value)}><option value="0">No expiry</option><option value="24">24 hours</option><option value="720">30 days</option><option value="2160">90 days</option></Sel></FG>
+            :<div style={{fontSize:10,color:C.dim,marginTop:6}}>TTL applies only to vault mode. Vaultless output is immediate and non-stored.</div>}
+        </>}
+        {op==="Detokenize"&&<><FG label="Tokens" required hint="One token per line"><Txt value={detokenizeInput} onChange={(e)=>setDetokenizeInput(e.target.value)} rows={8} placeholder="tok_..."/></FG></>}
+        {(op==="FPE Encrypt"||op==="FPE Decrypt")&&<><FG label="FPE Algorithm"><Sel value={fpeAlgorithm} onChange={(e)=>setFPEAlgorithm(e.target.value)}><option value="FF1">FF1</option><option value="FF3-1">FF3-1</option></Sel></FG>
+          <FG label="Key" required><Sel value={fpeKeyId} onChange={(e)=>setFPEKeyId(e.target.value)}>{renderKeyOptions(vaultCapableKeys)}</Sel></FG>
+          <Row2><FG label="Radix"><Inp value={fpeRadix} onChange={(e)=>setFPERadix(e.target.value)} mono/></FG><FG label="Tweak"><Inp value={fpeTweak} onChange={(e)=>setFPETweak(e.target.value)} mono/></FG></Row2>
+          <FG label={op==="FPE Encrypt"?"Plaintext":"Ciphertext"} required><Inp value={fpeInput} onChange={(e)=>setFPEInput(e.target.value)} mono/></FG></>}
+        {op==="Mask"&&<><FG label="Masking Pattern" required><Sel value={maskPattern} onChange={(e)=>setMaskPattern(e.target.value)}><option value="partial_last4">Partial - show last 4</option><option value="full">Full mask</option><option value="hash">Hash</option><option value="substitute">Substitute</option><option value="nullify">Nullify</option><option value="date_shift">Date shift</option><option value="shuffle">Shuffle</option></Sel></FG>
+          <FG label="Apply To Role"><Sel value={maskRole} onChange={(e)=>setMaskRole(e.target.value)}><option value="analyst">Analyst</option><option value="admin">Admin</option><option value="auditor">Auditor</option><option value="developer">Developer</option></Sel></FG>
+          <FG label="Input"><Txt value={maskInput} onChange={(e)=>setMaskInput(e.target.value)} rows={4}/></FG>
+          <Chk label="Consistent masking (same input -> same masked output)" checked={maskConsistent} onChange={()=>setMaskConsistent((v)=>!v)}/></>}
+        {op==="Redact"&&<><FG label="Redaction Action"><Sel value={redactAction} onChange={(e)=>setRedactAction(e.target.value)}><option value="replace_placeholder">Replace with [REDACTED]</option><option value="remove">Remove entirely</option><option value="hash">Hash value</option></Sel></FG>
+          <FG label="Placeholder"><Inp value={redactPlaceholder} onChange={(e)=>setRedactPlaceholder(e.target.value)}/></FG>
+          <FG label="Input Document" required><Txt value={redactInput} onChange={(e)=>setRedactInput(e.target.value)} rows={6}/></FG>
+          <Chk label="Detect only (no redaction apply)" checked={redactDetectOnly} onChange={()=>setRedactDetectOnly((v)=>!v)}/></>}
+        {op==="Field Encrypt"&&<><FG label="Encryption Algorithm"><Sel value={fieldAlgorithm} onChange={(e)=>setFieldAlgorithm(e.target.value)}><option value="AES-GCM">AES-GCM</option><option value="AES-SIV">AES-SIV</option><option value="CHACHA20-POLY1305">ChaCha20-Poly1305</option></Sel></FG>
+          <FG label="KEK (Key Encryption Key)" required><Sel value={fieldKeyId} onChange={(e)=>setFieldKeyId(e.target.value)}>{renderKeyOptions(vaultCapableKeys)}</Sel></FG>
+          <FG label="JSON Document" required><Txt value={fieldDoc} onChange={(e)=>setFieldDoc(e.target.value)} rows={6}/></FG>
+          <FG label="Fields to Encrypt" hint="JSONPath expressions"><Inp value={fieldPaths} onChange={(e)=>setFieldPaths(e.target.value)} mono/></FG>
+          <FG label="AAD"><Inp value={fieldAAD} onChange={(e)=>setFieldAAD(e.target.value)} /></FG>
+          <Chk label="Decrypt fields instead of encrypt" checked={fieldDecrypt} onChange={()=>setFieldDecrypt((v)=>!v)}/></>}
+        {op==="Envelope Encrypt"&&<><FG label="KEK" required><Sel value={envKeyId} onChange={(e)=>setEnvKeyId(e.target.value)}>{renderKeyOptions(vaultCapableKeys)}</Sel></FG>
+          <FG label="Mode"><Sel value={envMode} onChange={(e)=>setEnvMode(e.target.value)}><option value="encrypt">Encrypt</option><option value="decrypt">Decrypt</option></Sel></FG>
+          <FG label="DEK Algorithm"><Sel value={envAlgo} onChange={(e)=>setEnvAlgo(e.target.value)}><option value="AES-GCM">AES-GCM</option><option value="AES-SIV">AES-SIV</option><option value="CHACHA20-POLY1305">ChaCha20-Poly1305</option></Sel></FG>
+          {envMode==="encrypt"?<FG label="Plaintext" required><Txt value={envPlaintext} onChange={(e)=>setEnvPlaintext(e.target.value)} rows={5}/></FG>:<FG label="Envelope Package JSON" required><Txt value={envPackage} onChange={(e)=>setEnvPackage(e.target.value)} rows={5}/></FG>}
+          <FG label="AAD"><Inp value={envAAD} onChange={(e)=>setEnvAAD(e.target.value)} /></FG></>}
+        <Btn primary full style={{marginTop:12,padding:"10px 14px",fontSize:12}} onClick={()=>void submitCurrent()} disabled={submitting||loading}>{submitting?"Working...":op}</Btn>
+      </Card>
+      <Card style={{padding:18}}>
+        <div style={{fontSize:30,fontWeight:700,color:C.text,marginBottom:8,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif",lineHeight:1}}>Result</div>
+        <Txt value={resultText} rows={24} readOnly style={{minHeight:420}}/>
+      </Card>
+    </div>
+
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+      <Card style={{padding:16}}>
+        <div style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:6,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif"}}>Data Masking</div>
+        <div style={{fontSize:11,color:C.dim,marginBottom:8}}>Pattern: <span style={{color:C.accent}}>{maskPattern}</span> - Role: <span style={{color:C.accent}}>{maskRole}</span></div>
+        <div style={{fontSize:12,color:C.text,background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:10,marginBottom:10}}>
+          <div style={{color:C.dim,marginBottom:4}}>Input:</div>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,wordBreak:"break-word"}}>{maskInput||"-"}</div>
+        </div>
+        <Btn small onClick={()=>setOp("Mask")}>Open Mask Operation</Btn>
+      </Card>
+      <Card style={{padding:16}}>
+        <div style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:6,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif"}}>PII Redaction</div>
+        <div style={{fontSize:11,color:C.dim,marginBottom:8}}>Action: <span style={{color:C.accent}}>{redactAction}</span> {redactDetectOnly?"(detect-only)":"(apply)"}</div>
+        <div style={{fontSize:12,color:C.text,background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:10,marginBottom:10,maxHeight:90,overflow:"hidden"}}>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,wordBreak:"break-word"}}>{redactInput||"-"}</div>
+        </div>
+        <Btn small onClick={()=>setOp("Redact")}>Open Redact Operation</Btn>
+      </Card>
+    </div>
+
+    <Modal open={modal==="vault"} onClose={()=>setModal(null)} title="Create Token Vault" wide>
+      <Row2>
+        <FG label="Vault Name" required><Inp value={vaultName} onChange={(e)=>setVaultName(e.target.value)} placeholder="credit-card-vault"/></FG>
+        <FG label="Token Type" required><Sel value={vaultTokenType} onChange={(e)=>setVaultTokenType(e.target.value)}><option value="credit_card">credit_card (PAN with Luhn validation)</option><option value="ssn">ssn</option><option value="email">email</option><option value="phone">phone</option><option value="iban">iban</option><option value="custom">custom</option></Sel></FG>
+      </Row2>
+      <Row2>
+        <FG label="Token Format"><Sel value={vaultFormat} onChange={(e)=>setVaultFormat(e.target.value)}><option value="format_preserving">Format Preserving</option><option value="random">Random</option><option value="deterministic">Deterministic</option><option value="irreversible">Irreversible</option></Sel></FG>
+        <FG label="Encryption Key" required hint="Only active symmetric cipher keys are allowed"><Sel value={vaultKeyId} onChange={(e)=>setVaultKeyId(e.target.value)}>{renderKeyOptions(vaultCapableKeys)}</Sel></FG>
+      </Row2>
+      <FG label="Custom Regex" hint="Only for custom token type"><Inp value={vaultRegex} onChange={(e)=>setVaultRegex(e.target.value)} placeholder="^\\d{3}-\\d{2}-\\d{4}$" mono/></FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)} disabled={submitting}>Cancel</Btn><Btn primary onClick={()=>void submitCreateVault()} disabled={submitting}>{submitting?"Creating...":"Create Vault"}</Btn></div>
+    </Modal>
+  </div>;
+};
+
+const DataEncryption=({session,keyCatalog,onToast})=>{
+  const [mode,setMode]=useState("Field-Level (FLE)");
+  const [submitting,setSubmitting]=useState(false);
+  const [resultText,setResultText]=useState(`{
+  "name": "John",
+  "ssn": "ENC[AES-SIV:...]",
+  "card": "ENC[AES-GCM:...]"
+}`);
+  const keyChoices=useMemo(()=>keyChoicesFromCatalog(keyCatalog),[keyCatalog]);
+  const dataProtectKeyChoices=useMemo(()=>keyChoices.filter((k)=>isVaultCapableKeyChoice(k)),[keyChoices]);
+  const defaultKeyId=String(dataProtectKeyChoices[0]?.id||"");
+  const [keyId,setKeyId]=useState(defaultKeyId);
+  const [algorithm,setAlgorithm]=useState("AES-GCM");
+  const [aad,setAAD]=useState("");
+  const [encMode,setEncMode]=useState("encrypt");
+
+  const [docText,setDocText]=useState('{"name":"John","ssn":"123-45-6789","card":"4111111111111111"}');
+  const [fieldsText,setFieldsText]=useState("$.ssn,$.card");
+  const [docID,setDocID]=useState("");
+
+  const [plainText,setPlainText]=useState("");
+  const [envelopeText,setEnvelopeText]=useState('{"ciphertext":"","iv":"","wrapped_dek":"","wrapped_dek_iv":"","algorithm":"AES-GCM"}');
+  const [searchablePlaintext,setSearchablePlaintext]=useState("");
+  const [searchableCiphertext,setSearchableCiphertext]=useState("");
+
+  const [fpeAlgorithm,setFPEAlgorithm]=useState("FF1");
+  const [fpeRadix,setFPERadix]=useState("10");
+  const [fpeTweak,setFPETweak]=useState("");
+  const [fpeInput,setFPEInput]=useState("");
+  const [fpeMode,setFPEMode]=useState("encrypt");
+
+  const parseObject=(raw:string,label:string)=>{
+    const text=String(raw||"").trim();
+    if(!text){
+      throw new Error(`${label} is required.`);
+    }
+    let parsed:any;
+    try{
+      parsed=JSON.parse(text);
+    }catch{
+      throw new Error(`${label} must be valid JSON.`);
+    }
+    if(!parsed||typeof parsed!=="object"||Array.isArray(parsed)){
+      throw new Error(`${label} must be a JSON object.`);
+    }
+    return parsed;
+  };
+
+  const parseList=(raw:string)=>{
+    return String(raw||"").split(/[,\n]/).map((v)=>String(v||"").trim()).filter(Boolean);
+  };
+
+  useEffect(()=>{
+    if(!keyId&&defaultKeyId){
+      setKeyId(defaultKeyId);
+    }
+  },[keyId,defaultKeyId]);
+
+  const run=async(fn:()=>Promise<any>)=>{
+    if(submitting){
+      return;
+    }
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    setSubmitting(true);
+    try{
+      const result=await fn();
+      setResultText(JSON.stringify(result,null,2));
+    }catch(error){
+      const message=errMsg(error);
+      setResultText(JSON.stringify({error:message,mode},null,2));
+      onToast?.(message);
+    }finally{
+      setSubmitting(false);
+    }
+  };
+
+  const submit=async()=>{
+    if(mode==="Field-Level (FLE)"){
+      await run(async()=>{
+        const document=parseObject(docText,"Document");
+        const fields=parseList(fieldsText);
+        if(!fields.length){
+          throw new Error("Field list is required.");
+        }
+        if(encMode==="encrypt"){
+          return appEncryptFields(session,{
+            document_id:String(docID||"").trim()||undefined,
+            document,
+            fields,
+            key_id:keyId,
+            algorithm,
+            aad
+          });
+        }
+        return appDecryptFields(session,{
+          document_id:String(docID||"").trim()||undefined,
+          document,
+          fields,
+          key_id:keyId,
+          algorithm,
+          aad
+        });
+      });
+      return;
+    }
+    if(mode==="Envelope"){
+      await run(async()=>{
+        if(encMode==="encrypt"){
+          if(!String(plainText||"")){
+            throw new Error("Plaintext is required.");
+          }
+          return appEnvelopeEncrypt(session,{
+            key_id:keyId,
+            algorithm,
+            plaintext:plainText,
+            aad
+          });
+        }
+        const payload=parseObject(envelopeText,"Envelope payload");
+        return appEnvelopeDecrypt(session,{
+          key_id:keyId,
+          algorithm:String(payload.algorithm||algorithm),
+          ciphertext:String(payload.ciphertext||""),
+          iv:String(payload.iv||""),
+          wrapped_dek:String(payload.wrapped_dek||""),
+          wrapped_dek_iv:String(payload.wrapped_dek_iv||""),
+          aad
+        });
+      });
+      return;
+    }
+    if(mode==="Searchable (AES-SIV)"){
+      await run(async()=>{
+        if(encMode==="encrypt"){
+          if(!String(searchablePlaintext||"").trim()){
+            throw new Error("Plaintext is required.");
+          }
+          return appSearchableEncrypt(session,{key_id:keyId,plaintext:searchablePlaintext,aad});
+        }
+        if(!String(searchableCiphertext||"").trim()){
+          throw new Error("Ciphertext is required.");
+        }
+        return appSearchableDecrypt(session,{key_id:keyId,ciphertext:searchableCiphertext,aad});
+      });
+      return;
+    }
+    await run(async()=>{
+      if(fpeMode==="encrypt"){
+        if(!String(fpeInput||"").trim()){
+          throw new Error("Plaintext is required.");
+        }
+        return fpeEncrypt(session,{key_id:keyId,algorithm:fpeAlgorithm,radix:Math.max(2,Math.min(36,Math.trunc(Number(fpeRadix||10)))),tweak:fpeTweak,plaintext:fpeInput});
+      }
+      if(!String(fpeInput||"").trim()){
+        throw new Error("Ciphertext is required.");
+      }
+      return fpeDecrypt(session,{key_id:keyId,algorithm:fpeAlgorithm,radix:Math.max(2,Math.min(36,Math.trunc(Number(fpeRadix||10)))),tweak:fpeTweak,ciphertext:fpeInput});
+    });
+  };
+
+  const tabs=["Field-Level (FLE)","Envelope","Searchable (AES-SIV)","FPE (FF1/FF3-1)"];
+  return <div style={{display:"grid",gap:12}}>
+    <Card style={{padding:16}}>
+      <div style={{fontSize:28,fontWeight:700,color:C.text,marginBottom:10,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif",lineHeight:1}}>Data Encryption</div>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+        {tabs.map((name)=>(
+          <button
+            key={name}
+            onClick={()=>setMode(name)}
+            style={{
+              background:mode===name?C.accentDim:"transparent",
+              color:mode===name?C.accent:C.text,
+              border:`1px solid ${mode===name?C.accent:C.border}`,
+              borderRadius:8,
+              padding:"8px 12px",
+              fontSize:12,
+              fontWeight:600,
+              cursor:"pointer"
+            }}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <div>
+          <FG label="Key" required hint="Only active symmetric cipher keys are allowed for data encryption"><Sel value={keyId} onChange={(e)=>setKeyId(e.target.value)}>{renderKeyOptions(dataProtectKeyChoices)}</Sel></FG>
+          <Row2>
+            <FG label="Mode"><Sel value={encMode} onChange={(e)=>setEncMode(e.target.value)}><option value="encrypt">Encrypt</option><option value="decrypt">Decrypt</option></Sel></FG>
+            {(mode==="Field-Level (FLE)"||mode==="Envelope")
+              ?<FG label="Algorithm"><Sel value={algorithm} onChange={(e)=>setAlgorithm(e.target.value)}><option value="AES-GCM">AES-GCM</option><option value="AES-SIV">AES-SIV</option><option value="CHACHA20-POLY1305">ChaCha20-Poly1305</option></Sel></FG>
+              :<FG label="Algorithm"><Inp value={mode==="Searchable (AES-SIV)"?"AES-SIV (fixed for searchable deterministic encryption)":"Not applicable in FPE mode"} readOnly/></FG>}
+          </Row2>
+          {mode==="Field-Level (FLE)"&&<>
+            <FG label="Document ID"><Inp value={docID} onChange={(e)=>setDocID(e.target.value)} placeholder="Optional"/></FG>
+            <FG label="Fields"><Inp value={fieldsText} onChange={(e)=>setFieldsText(e.target.value)} mono/></FG>
+            <FG label="Document JSON"><Txt value={docText} onChange={(e)=>setDocText(e.target.value)} rows={8}/></FG>
+          </>}
+          {mode==="Envelope"&&<>
+            {encMode==="encrypt"?<FG label="Plaintext"><Txt value={plainText} onChange={(e)=>setPlainText(e.target.value)} rows={6}/></FG>:<FG label="Envelope payload JSON"><Txt value={envelopeText} onChange={(e)=>setEnvelopeText(e.target.value)} rows={6}/></FG>}
+          </>}
+          {mode==="Searchable (AES-SIV)"&&<>
+            {encMode==="encrypt"?<FG label="Plaintext"><Txt value={searchablePlaintext} onChange={(e)=>setSearchablePlaintext(e.target.value)} rows={6}/></FG>:<FG label="Ciphertext (base64)"><Txt value={searchableCiphertext} onChange={(e)=>setSearchableCiphertext(e.target.value)} rows={6}/></FG>}
+          </>}
+          {mode==="FPE (FF1/FF3-1)"&&<>
+            <Row2>
+              <FG label="FPE algorithm"><Sel value={fpeAlgorithm} onChange={(e)=>setFPEAlgorithm(e.target.value)}><option value="FF1">FF1</option><option value="FF3-1">FF3-1</option></Sel></FG>
+              <FG label="Direction"><Sel value={fpeMode} onChange={(e)=>setFPEMode(e.target.value)}><option value="encrypt">Encrypt</option><option value="decrypt">Decrypt</option></Sel></FG>
+            </Row2>
+            <Row2><FG label="Radix"><Inp value={fpeRadix} onChange={(e)=>setFPERadix(e.target.value)} mono/></FG><FG label="Tweak"><Inp value={fpeTweak} onChange={(e)=>setFPETweak(e.target.value)} mono/></FG></Row2>
+            <FG label={fpeMode==="encrypt"?"Plaintext":"Ciphertext"}><Inp value={fpeInput} onChange={(e)=>setFPEInput(e.target.value)} mono/></FG>
+          </>}
+          {mode!=="FPE (FF1/FF3-1)"&&<FG label="AAD" hint={mode==="Searchable (AES-SIV)"?"Same plaintext+AAD+key returns same ciphertext by design.":"Optional authenticated context"}><Inp value={aad} onChange={(e)=>setAAD(e.target.value)} placeholder="Optional"/></FG>}
+          <Btn primary onClick={()=>void submit()} disabled={submitting} style={{marginTop:6,padding:"8px 14px",fontSize:12}}>
+            {submitting?"Working...":"Execute"}
+          </Btn>
+        </div>
+        <div>
+          <div style={{fontSize:12,fontWeight:700,color:C.dim,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Output</div>
+          <Txt value={resultText} rows={22} readOnly style={{minHeight:430}}/>
+        </div>
+      </div>
+    </Card>
+  </div>;
+};
+
+// 
+// TAB: PAYMENT CRYPTO (interactive)
+// 
+const Payment=({session,keyCatalog,onToast})=>{
+  const [op,setOp]=useState("TR-31 Create");
+  const keyChoices=keyChoicesFromCatalog(keyCatalog);
+  const [running,setRunning]=useState(false);
+  const [resultText,setResultText]=useState("// Output will appear here...");
+
+  const [selectedKeyId,setSelectedKeyId]=useState("");
+  const [tr31Version,setTR31Version]=useState("D");
+  const [tr31Usage,setTR31Usage]=useState("D0");
+  const [tr31Algorithm,setTR31Algorithm]=useState("AES");
+  const [tr31SourceFormat,setTR31SourceFormat]=useState("variant");
+  const [tr31TargetFormat,setTR31TargetFormat]=useState("tr31-d");
+  const [tr31SourceBlock,setTR31SourceBlock]=useState("");
+  const [tr31MaterialB64,setTR31MaterialB64]=useState("");
+  const [tr31KBPKKeyID,setTR31KBPKKeyID]=useState("");
+  const [tr31KBPKKeyB64,setTR31KBPKKeyB64]=useState("");
+  const [tr31SourceKBPKKeyID,setTR31SourceKBPKKeyID]=useState("");
+  const [tr31SourceKBPKKeyB64,setTR31SourceKBPKKeyB64]=useState("");
+  const [tr31TargetKBPKKeyID,setTR31TargetKBPKKeyID]=useState("");
+  const [tr31TargetKBPKKeyB64,setTR31TargetKBPKKeyB64]=useState("");
+
+  const [pinSourceFormat,setPINSourceFormat]=useState("ISO-0");
+  const [pinTargetFormat,setPINTargetFormat]=useState("ISO-1");
+  const [pinSourceKeyID,setPINSourceKeyID]=useState("");
+  const [pinTargetKeyID,setPINTargetKeyID]=useState("");
+  const [pinSourceKeyB64,setPINSourceKeyB64]=useState("");
+  const [pinTargetKeyB64,setPINTargetKeyB64]=useState("");
+  const [pinBlockHex,setPINBlockHex]=useState("");
+  const [pinPAN,setPINPAN]=useState("");
+
+  const [pvvKeyID,setPVVKeyID]=useState("");
+  const [pvvKeyB64,setPVVKeyB64]=useState("");
+  const [pinValue,setPINValue]=useState("1234");
+  const [pvvPAN,setPVVPAN]=useState("4111111111111111");
+  const [pvki,setPVKI]=useState("1");
+  const [pvvValue,setPVVValue]=useState("");
+
+  const [cvvKeyID,setCVVKeyID]=useState("");
+  const [cvvKeyB64,setCVVKeyB64]=useState("");
+  const [cvvPAN,setCVVPAN]=useState("4111111111111111");
+  const [cvvExpiry,setCVVExpiry]=useState("2612");
+  const [cvvServiceCode,setCVVServiceCode]=useState("101");
+  const [cvvValue,setCVVValue]=useState("");
+
+  const [macType,setMACType]=useState<"retail"|"iso9797"|"cmac">("retail");
+  const [macAlgorithm,setMACAlgorithm]=useState(3);
+  const [macKeyID,setMACKeyID]=useState("");
+  const [macKeyB64,setMACKeyB64]=useState("");
+  const [macData,setMACData]=useState("PAYMENT-TEST-DATA");
+  const [macValue,setMACValue]=useState("");
+
+  const [isoKeyID,setISOKeyID]=useState("");
+  const [isoXML,setISOXML]=useState('<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008"><Msg>test</Msg></Document>');
+  const [isoSignature,setISOSignature]=useState("");
+  const [isoCiphertext,setISOCiphertext]=useState("");
+  const [isoIV,setISOIV]=useState("");
+
+  const [lauKeyID,setLAUKeyID]=useState("");
+  const [lauKeyB64,setLAUKeyB64]=useState("");
+  const [lauContext,setLAUContext]=useState("swift");
+  const [lauMessage,setLAUMessage]=useState("<AppHdr><MsgDefIdr>pacs.008</MsgDefIdr></AppHdr>");
+  const [lauValue,setLAUValue]=useState("");
+
+  useEffect(()=>{
+    if(!keyChoices.length){
+      return;
+    }
+    const fallback=String(keyChoices[0]?.id||"");
+    if(!selectedKeyId){
+      setSelectedKeyId(fallback);
+    }
+    if(!tr31KBPKKeyID){
+      setTR31KBPKKeyID(fallback);
+    }
+    if(!tr31SourceKBPKKeyID){
+      setTR31SourceKBPKKeyID(fallback);
+    }
+    if(!tr31TargetKBPKKeyID){
+      setTR31TargetKBPKKeyID(fallback);
+    }
+    if(!pinSourceKeyID){
+      setPINSourceKeyID(fallback);
+    }
+    if(!pinTargetKeyID){
+      setPINTargetKeyID(fallback);
+    }
+    if(!pvvKeyID){
+      setPVVKeyID(fallback);
+    }
+    if(!cvvKeyID){
+      setCVVKeyID(fallback);
+    }
+    if(!macKeyID){
+      setMACKeyID(fallback);
+    }
+    if(!isoKeyID){
+      setISOKeyID(fallback);
+    }
+    if(!lauKeyID){
+      setLAUKeyID(fallback);
+    }
+  },[keyChoices]);
+
+  const runPaymentOp=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required for payment operations.");
+      return;
+    }
+    setRunning(true);
+    try{
+      let out:any={};
+      if(op==="TR-31 Create"){
+        const created=await createTR31(session,{
+          key_id:selectedKeyId,
+          tr31_version:tr31Version,
+          algorithm:tr31Algorithm,
+          usage_code:tr31Usage,
+          mode_of_use:"B",
+          exportability:"E",
+          kbpk_key_id:String(tr31KBPKKeyID||"").trim()||undefined,
+          kbpk_key_b64:String(tr31KBPKKeyB64||"").trim()||undefined,
+          source_format:tr31SourceFormat,
+          material_b64:String(tr31MaterialB64||"").trim()||undefined
+        });
+        const validated=created?.key_block?await validateTR31(session,String(created.key_block),{
+          kbpk_key_id:String(tr31KBPKKeyID||"").trim()||undefined,
+          kbpk_key_b64:String(tr31KBPKKeyB64||"").trim()||undefined
+        }):null;
+        out={created,validated};
+      }else if(op==="TR-31 Translate"){
+        out=await translateTR31(session,{
+          source_key_id:selectedKeyId,
+          source_block:String(tr31SourceBlock||"").trim()||undefined,
+          source_format:tr31SourceFormat,
+          target_format:tr31TargetFormat,
+          source_kbpk_key_id:String(tr31SourceKBPKKeyID||"").trim()||undefined,
+          source_kbpk_key_b64:String(tr31SourceKBPKKeyB64||"").trim()||undefined,
+          target_kbpk_key_id:String(tr31TargetKBPKKeyID||"").trim()||undefined,
+          target_kbpk_key_b64:String(tr31TargetKBPKKeyB64||"").trim()||undefined,
+          tr31_version:tr31Version,
+          algorithm:tr31Algorithm,
+          usage_code:tr31Usage,
+          mode_of_use:"B",
+          exportability:"E"
+        });
+      }else if(op==="PIN Translate"){
+        const translated=await translatePIN(session,{
+          source_format:pinSourceFormat,
+          target_format:pinTargetFormat,
+          pin_block:String(pinBlockHex||"").trim().toUpperCase(),
+          pan:String(pinPAN||"").trim(),
+          source_zpk_key_id:String(pinSourceKeyID||"").trim()||undefined,
+          source_zpk_key_b64:String(pinSourceKeyB64||"").trim()||undefined,
+          target_zpk_key_id:String(pinTargetKeyID||"").trim()||undefined,
+          target_zpk_key_b64:String(pinTargetKeyB64||"").trim()||undefined
+        });
+        out={pin_block:translated};
+      }else if(op==="PIN Verify"){
+        const verified=await verifyPVV(session,{
+          pin:String(pinValue||"").trim(),
+          pan:String(pvvPAN||"").trim(),
+          pvki:String(pvki||"").trim(),
+          pvv:String(pvvValue||"").trim(),
+          pvk_key_id:String(pvvKeyID||"").trim()||undefined,
+          pvk_key_b64:String(pvvKeyB64||"").trim()||undefined
+        });
+        out={verified};
+      }else if(op==="PVV Generate"){
+        const pvv=await generatePVV(session,{
+          pin:String(pinValue||"").trim(),
+          pan:String(pvvPAN||"").trim(),
+          pvki:String(pvki||"").trim(),
+          pvk_key_id:String(pvvKeyID||"").trim()||undefined,
+          pvk_key_b64:String(pvvKeyB64||"").trim()||undefined
+        });
+        setPVVValue(pvv);
+        out={pvv};
+      }else if(op==="CVV Compute"){
+        const cvv=await computeCVV(session,{
+          pan:String(cvvPAN||"").trim(),
+          expiry_yymm:String(cvvExpiry||"").trim(),
+          service_code:String(cvvServiceCode||"").trim(),
+          cvk_key_id:String(cvvKeyID||"").trim()||undefined,
+          cvk_key_b64:String(cvvKeyB64||"").trim()||undefined
+        });
+        const verified=await verifyCVV(session,{
+          pan:String(cvvPAN||"").trim(),
+          expiry_yymm:String(cvvExpiry||"").trim(),
+          service_code:String(cvvServiceCode||"").trim(),
+          cvv,
+          cvk_key_id:String(cvvKeyID||"").trim()||undefined,
+          cvk_key_b64:String(cvvKeyB64||"").trim()||undefined
+        });
+        setCVVValue(cvv);
+        out={cvv,verified};
+      }else if(op==="MAC Generate"){
+        const dataB64=btoa(String(macData||""));
+        const mac=await computeMAC(session,{
+          type:macType,
+          key_id:String(macKeyID||"").trim()||undefined,
+          key_b64:String(macKeyB64||"").trim()||undefined,
+          data_b64:dataB64,
+          algorithm:Number(macAlgorithm||3)
+        });
+        const verified=await verifyMAC(session,{
+          type:macType,
+          key_id:String(macKeyID||"").trim()||undefined,
+          key_b64:String(macKeyB64||"").trim()||undefined,
+          data_b64:dataB64,
+          mac_b64:mac,
+          algorithm:Number(macAlgorithm||3)
+        });
+        setMACValue(mac);
+        out={mac_b64:mac,verified};
+      }else if(op==="ISO 20022 Sign"){
+        const signed=await signISO20022(session,{
+          key_id:String(isoKeyID||"").trim(),
+          xml:String(isoXML||"")
+        });
+        const sig=String(signed?.signature_b64||"").trim();
+        setISOSignature(sig);
+        const verified=sig?await verifyISO20022(session,{
+          key_id:String(isoKeyID||"").trim(),
+          xml:String(isoXML||""),
+          signature_b64:sig
+        }):false;
+        out={...signed,verified};
+      }else if(op==="ISO 20022 Encrypt"){
+        const encrypted=await encryptISO20022(session,{
+          key_id:String(isoKeyID||"").trim(),
+          xml:String(isoXML||""),
+          iv:String(isoIV||"").trim()||undefined
+        });
+        const cipher=String(encrypted?.ciphertext||"");
+        const iv=String(encrypted?.iv||"");
+        setISOCiphertext(cipher);
+        setISOIV(iv);
+        const decrypted=cipher?await decryptISO20022(session,{
+          key_id:String(isoKeyID||"").trim(),
+          ciphertext:cipher,
+          iv:iv
+        }):"";
+        out={...encrypted,decrypted_xml:decrypted};
+      }else if(op==="LAU Generate"){
+        const lau=await generateLAU(session,{
+          key_id:String(lauKeyID||"").trim()||undefined,
+          lau_key_b64:String(lauKeyB64||"").trim()||undefined,
+          message:String(lauMessage||""),
+          context:String(lauContext||"")
+        });
+        const verified=await verifyLAU(session,{
+          key_id:String(lauKeyID||"").trim()||undefined,
+          lau_key_b64:String(lauKeyB64||"").trim()||undefined,
+          message:String(lauMessage||""),
+          context:String(lauContext||""),
+          lau_b64:lau
+        });
+        setLAUValue(lau);
+        out={lau_b64:lau,verified};
+      }
+      setResultText(JSON.stringify(out,null,2));
+    }catch(error){
+      const msg=errMsg(error);
+      onToast?.(`Payment operation failed: ${msg}`);
+      setResultText(JSON.stringify({error:msg},null,2));
+    }finally{
+      setRunning(false);
+    }
+  };
+
+  return <div>
+    <Tabs tabs={["TR-31 Create","TR-31 Translate","PIN Translate","PIN Verify","PVV Generate","CVV Compute","MAC Generate","ISO 20022 Sign","ISO 20022 Encrypt","LAU Generate"]} active={op} onChange={setOp}/>
+    <Row2>
+      <Card>
+        {op==="TR-31 Create"&&<>
+          <Row2>
+            <FG label="Key to Wrap" required><Sel value={selectedKeyId} onChange={(e)=>setSelectedKeyId(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+            <FG label="KBPK / KEK" required><Sel value={tr31KBPKKeyID} onChange={(e)=>setTR31KBPKKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          </Row2>
+          <Row2>
+            <FG label="TR-31 Version"><Sel value={tr31Version} onChange={(e)=>setTR31Version(e.target.value)}><option value="D">D - AES CMAC</option><option value="B">B - TDES variant</option><option value="C">C - TDES derivation</option></Sel></FG>
+            <FG label="Source Format"><Sel value={tr31SourceFormat} onChange={(e)=>setTR31SourceFormat(e.target.value)}><option value="variant">Variant</option><option value="tr31-b">TR-31 B</option><option value="tr31-c">TR-31 C</option><option value="tr31-d">TR-31 D</option><option value="aes-kwp">AES-KWP</option></Sel></FG>
+          </Row2>
+          <Row2>
+            <FG label="Algorithm"><Sel value={tr31Algorithm} onChange={(e)=>setTR31Algorithm(e.target.value)}><option value="AES">AES</option><option value="TDES">TDES</option></Sel></FG>
+            <FG label="Key Usage"><Sel value={tr31Usage} onChange={(e)=>setTR31Usage(e.target.value)}><option value="P0">P0</option><option value="B0">B0</option><option value="D0">D0</option><option value="M0">M0</option><option value="M3">M3</option><option value="K0">K0</option><option value="V0">V0</option></Sel></FG>
+          </Row2>
+          <FG label="KBPK / KEK (base64 override)" hint="Optional override. If set, backend uses this instead of KBPK key ID.">
+            <Inp value={tr31KBPKKeyB64} onChange={(e)=>setTR31KBPKKeyB64(e.target.value)} mono/>
+          </FG>
+          <FG label="Override Material (base64)" hint="Optional. If empty, backend resolves key material from selected key ID.">
+            <Txt value={tr31MaterialB64} onChange={(e)=>setTR31MaterialB64(e.target.value)} rows={4}/>
+          </FG>
+        </>}
+
+        {op==="TR-31 Translate"&&<>
+          <FG label="Source Key ID"><Sel value={selectedKeyId} onChange={(e)=>setSelectedKeyId(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          <Row2>
+            <FG label="Source Format"><Sel value={tr31SourceFormat} onChange={(e)=>setTR31SourceFormat(e.target.value)}><option value="variant">Variant</option><option value="tr31-b">TR-31 B</option><option value="tr31-c">TR-31 C</option><option value="tr31-d">TR-31 D</option><option value="aes-kwp">AES-KWP</option></Sel></FG>
+            <FG label="Target Format"><Sel value={tr31TargetFormat} onChange={(e)=>setTR31TargetFormat(e.target.value)}><option value="variant">Variant</option><option value="tr31-b">TR-31 B</option><option value="tr31-c">TR-31 C</option><option value="tr31-d">TR-31 D</option><option value="aes-kwp">AES-KWP</option></Sel></FG>
+          </Row2>
+          <Row2>
+            <FG label="Source KBPK / KEK"><Sel value={tr31SourceKBPKKeyID} onChange={(e)=>setTR31SourceKBPKKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+            <FG label="Target KBPK / KEK"><Sel value={tr31TargetKBPKKeyID} onChange={(e)=>setTR31TargetKBPKKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          </Row2>
+          <Row2>
+            <FG label="Source KBPK (base64 override)"><Inp value={tr31SourceKBPKKeyB64} onChange={(e)=>setTR31SourceKBPKKeyB64(e.target.value)} mono/></FG>
+            <FG label="Target KBPK (base64 override)"><Inp value={tr31TargetKBPKKeyB64} onChange={(e)=>setTR31TargetKBPKKeyB64(e.target.value)} mono/></FG>
+          </Row2>
+          <FG label="Source Block (optional)" hint="If provided, backend translates this block; otherwise it uses source key ID."><Txt value={tr31SourceBlock} onChange={(e)=>setTR31SourceBlock(e.target.value)} rows={5}/></FG>
+        </>}
+
+        {op==="PIN Translate"&&<>
+          <Row2>
+            <FG label="Source PIN Block Format"><Sel value={pinSourceFormat} onChange={(e)=>setPINSourceFormat(e.target.value)}><option>ISO-0</option><option>ISO-1</option><option>ISO-3</option><option>ISO-4</option></Sel></FG>
+            <FG label="Target PIN Block Format"><Sel value={pinTargetFormat} onChange={(e)=>setPINTargetFormat(e.target.value)}><option>ISO-0</option><option>ISO-1</option><option>ISO-3</option><option>ISO-4</option></Sel></FG>
+          </Row2>
+          <FG label="Source ZPK"><Sel value={pinSourceKeyID} onChange={(e)=>setPINSourceKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          <FG label="Target ZPK"><Sel value={pinTargetKeyID} onChange={(e)=>setPINTargetKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          <FG label="Source ZPK (base64 override)" hint="Optional. Use this if key IDs are not registered in KeyCore."><Inp value={pinSourceKeyB64} onChange={(e)=>setPINSourceKeyB64(e.target.value)} mono/></FG>
+          <FG label="Target ZPK (base64 override)" hint="Optional. Use this if key IDs are not registered in KeyCore."><Inp value={pinTargetKeyB64} onChange={(e)=>setPINTargetKeyB64(e.target.value)} mono/></FG>
+          <FG label="PIN Block (hex)" required><Inp value={pinBlockHex} onChange={(e)=>setPINBlockHex(e.target.value)} placeholder="0412AC8967BFCD01" mono/></FG>
+          <FG label="PAN (required for ISO-0/ISO-3)" hint="Right-most 12 digits (excluding check digit) are used internally."><Inp value={pinPAN} onChange={(e)=>setPINPAN(e.target.value)} placeholder="4111111111111111" mono/></FG>
+        </>}
+
+        {op==="PIN Verify"&&<>
+          <FG label="PVK Key"><Sel value={pvvKeyID} onChange={(e)=>setPVVKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          <FG label="PVK Key (base64 override)" hint="Optional override if external key material is used."><Inp value={pvvKeyB64} onChange={(e)=>setPVVKeyB64(e.target.value)} mono/></FG>
+          <Row2>
+            <FG label="PIN"><Inp value={pinValue} onChange={(e)=>setPINValue(e.target.value)} mono/></FG>
+            <FG label="PVKI"><Inp value={pvki} onChange={(e)=>setPVKI(e.target.value)} mono/></FG>
+          </Row2>
+          <FG label="PAN"><Inp value={pvvPAN} onChange={(e)=>setPVVPAN(e.target.value)} mono/></FG>
+          <FG label="PVV"><Inp value={pvvValue} onChange={(e)=>setPVVValue(e.target.value)} mono/></FG>
+        </>}
+
+        {op==="PVV Generate"&&<>
+          <FG label="PVK Key"><Sel value={pvvKeyID} onChange={(e)=>setPVVKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          <FG label="PVK Key (base64 override)" hint="Optional override if external key material is used."><Inp value={pvvKeyB64} onChange={(e)=>setPVVKeyB64(e.target.value)} mono/></FG>
+          <Row2>
+            <FG label="PIN"><Inp value={pinValue} onChange={(e)=>setPINValue(e.target.value)} mono/></FG>
+            <FG label="PVKI"><Inp value={pvki} onChange={(e)=>setPVKI(e.target.value)} mono/></FG>
+          </Row2>
+          <FG label="PAN"><Inp value={pvvPAN} onChange={(e)=>setPVVPAN(e.target.value)} mono/></FG>
+        </>}
+
+        {op==="CVV Compute"&&<>
+          <FG label="CVK Key"><Sel value={cvvKeyID} onChange={(e)=>setCVVKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          <FG label="CVK Key (base64 override)" hint="Optional override if external key material is used."><Inp value={cvvKeyB64} onChange={(e)=>setCVVKeyB64(e.target.value)} mono/></FG>
+          <FG label="PAN" required><Inp value={cvvPAN} onChange={(e)=>setCVVPAN(e.target.value)} placeholder="4111111111111111" mono/></FG>
+          <Row2>
+            <FG label="Expiry (YYMM)" required><Inp value={cvvExpiry} onChange={(e)=>setCVVExpiry(e.target.value)} placeholder="2612" mono/></FG>
+            <FG label="Service Code" required><Inp value={cvvServiceCode} onChange={(e)=>setCVVServiceCode(e.target.value)} placeholder="101" mono/></FG>
+          </Row2>
+          <FG label="CVV (for verify)"><Inp value={cvvValue} onChange={(e)=>setCVVValue(e.target.value)} mono/></FG>
+        </>}
+
+        {op==="MAC Generate"&&<>
+          <Row2>
+            <FG label="MAC Type"><Sel value={macType} onChange={(e)=>setMACType(e.target.value as any)}><option value="retail">Retail MAC (ANSI X9.19)</option><option value="iso9797">ISO 9797</option><option value="cmac">AES CMAC</option></Sel></FG>
+            <FG label="ISO9797 Algorithm"><Sel value={String(macAlgorithm)} onChange={(e)=>setMACAlgorithm(Number(e.target.value||3))}><option value="1">1</option><option value="3">3</option></Sel></FG>
+          </Row2>
+          <FG label="MAC Key"><Sel value={macKeyID} onChange={(e)=>setMACKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          <FG label="MAC Key (base64 override)" hint="Optional override if external key material is used."><Inp value={macKeyB64} onChange={(e)=>setMACKeyB64(e.target.value)} mono/></FG>
+          <FG label="Data"><Txt value={macData} onChange={(e)=>setMACData(e.target.value)} rows={4}/></FG>
+          <FG label="MAC (for verify)"><Inp value={macValue} onChange={(e)=>setMACValue(e.target.value)} mono/></FG>
+        </>}
+
+        {op==="ISO 20022 Sign"&&<>
+          <FG label="Signing Key" required><Sel value={isoKeyID} onChange={(e)=>setISOKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          <FG label="XML Document" required><Txt value={isoXML} onChange={(e)=>setISOXML(e.target.value)} rows={6}/></FG>
+          <FG label="Signature (for verify)"><Txt value={isoSignature} onChange={(e)=>setISOSignature(e.target.value)} rows={3} mono/></FG>
+        </>}
+
+        {op==="ISO 20022 Encrypt"&&<>
+          <FG label="Encryption Key" required><Sel value={isoKeyID} onChange={(e)=>setISOKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          <FG label="XML Document" required><Txt value={isoXML} onChange={(e)=>setISOXML(e.target.value)} rows={6}/></FG>
+          <Row2>
+            <FG label="IV (base64 optional)"><Inp value={isoIV} onChange={(e)=>setISOIV(e.target.value)} mono/></FG>
+            <FG label="Ciphertext (base64)"><Inp value={isoCiphertext} onChange={(e)=>setISOCiphertext(e.target.value)} mono/></FG>
+          </Row2>
+        </>}
+
+        {op==="LAU Generate"&&<>
+          <FG label="LAU Key"><Sel value={lauKeyID} onChange={(e)=>setLAUKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          <FG label="LAU Key (base64 override)" hint="Optional override if external key material is used."><Inp value={lauKeyB64} onChange={(e)=>setLAUKeyB64(e.target.value)} mono/></FG>
+          <FG label="Context"><Inp value={lauContext} onChange={(e)=>setLAUContext(e.target.value)} mono/></FG>
+          <FG label="Message"><Txt value={lauMessage} onChange={(e)=>setLAUMessage(e.target.value)} rows={5}/></FG>
+          <FG label="LAU (for verify)"><Txt value={lauValue} onChange={(e)=>setLAUValue(e.target.value)} rows={3} mono/></FG>
+        </>}
+
+        <Btn primary full style={{marginTop:10}} onClick={()=>void runPaymentOp()} disabled={running}>{running?"Executing...":"Execute"}</Btn>
+      </Card>
+      <Card><FG label="Result"><Txt value={resultText} rows={18} readOnly/></FG></Card>
+    </Row2>
+  </div>;
+};
+
+// 
+// REMAINING TABS (interactive stubs with modals)
+// 
+const Home=({fipsMode,session,onToast})=>{
+  const [modal,setModal]=useState(null);
+  const [homeLoading,setHomeLoading]=useState(false);
+  const [homeSummary,setHomeSummary]=useState({
+    keys:0,
+    secrets:0,
+    certs:0,
+    alerts:0,
+    alertDays:30,
+    expiring:0,
+    expiringItems:[]
+  });
+  const globalFipsEnabled=isFipsModeEnabled(fipsMode);
+
+  useEffect(()=>{
+    if(!session?.token){
+      setHomeSummary({
+        keys:0,
+        secrets:0,
+        certs:0,
+        alerts:0,
+        alertDays:30,
+        expiring:0,
+        expiringItems:[]
+      });
+      return;
+    }
+    let cancelled=false;
+    const refreshHome=async()=>{
+      setHomeLoading(true);
+      try{
+        const [keys,secretItems,certItems,counts,policy]=await Promise.all([
+          listKeys(session),
+          listSecrets(session),
+          listCertificates(session,{limit:1000,offset:0}),
+          getUnreadAlertCounts(session),
+          getCertExpiryAlertPolicy(session)
+        ]);
+        if(cancelled){
+          return;
+        }
+        const alertDays=Math.max(1,Math.min(3650,Number(policy?.days_before||30)));
+        const includeExternal=Boolean(policy?.include_external);
+        const now=Date.now();
+        const threshold=now+(alertDays*24*60*60*1000);
+        const activeCerts=(Array.isArray(certItems)?certItems:[]).filter((item)=>{
+          const status=String(item?.status||"").toLowerCase();
+          if(status==="deleted"){
+            return false;
+          }
+          if(!includeExternal&&String(item?.ca_id||"").toLowerCase()==="external-ca"){
+            return false;
+          }
+          return true;
+        });
+        const expiringItems=activeCerts
+          .map((item)=>{
+            const expiresAt=new Date(String(item?.not_after||"")).getTime();
+            if(!Number.isFinite(expiresAt)){
+              return null;
+            }
+            return {
+              id:String(item?.id||""),
+              subject:String(item?.subject_cn||item?.id||"certificate"),
+              daysLeft:Math.ceil((expiresAt-now)/(24*60*60*1000)),
+              expiresAt
+            };
+          })
+          .filter(Boolean)
+          .filter((item)=>item.expiresAt<=threshold)
+          .sort((a,b)=>a.expiresAt-b.expiresAt);
+        const unreadTotal=Object.values(counts||{}).reduce((sum,val)=>sum+Math.max(0,Number(val||0)),0);
+        setHomeSummary({
+          keys:Array.isArray(keys)?keys.length:0,
+          secrets:Array.isArray(secretItems)?secretItems.length:0,
+          certs:Array.isArray(certItems)?certItems.length:0,
+          alerts:unreadTotal,
+          alertDays,
+          expiring:expiringItems.length,
+          expiringItems:expiringItems.slice(0,5)
+        });
+      }catch(error){
+        if(!cancelled){
+          onToast?.(`Dashboard summary load failed: ${errMsg(error)}`);
+        }
+      }finally{
+        if(!cancelled){
+          setHomeLoading(false);
+        }
+      }
+    };
+    void refreshHome();
+    const id=setInterval(()=>{void refreshHome();},30000);
+    return ()=>{
+      cancelled=true;
+      clearInterval(id);
+    };
+  },[session?.token,session?.tenantId]);
+
+  return <div>
+    <div style={{display:"flex",gap:12,marginBottom:14}}>
+      <Stat l="Keys" v={String(homeSummary.keys)} c="accent"/>
+      <Stat l="Secrets" v={String(homeSummary.secrets)} c="blue"/>
+      <Stat l="Certs" v={String(homeSummary.certs)} c="green"/>
+      <Stat l={`Expiring (${homeSummary.alertDays}d)`} v={String(homeSummary.expiring)} c="amber"/>
+      <Stat l="Alerts" v={String(homeSummary.alerts)} s={homeLoading?"refreshing...":"unread"} c="red"/>
+    </div>
+    <Row2>
+      <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>DISK ENCRYPTION</div>
+        <div style={{fontSize:10,color:C.dim}}>AES-256-XTS LUKS2 - 34.2/120 GB (28.5%) - Integrity: PASSED</div>
+        <div style={{fontSize:10,color:C.dim}}>Recovery: 3-of-5 Shamir shares</div>
+        <Btn small style={{marginTop:6}} onClick={()=>setModal("fde")}>Manage FDE</Btn>
+      </Card>
+      <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>FIPS MODE</div>
+        <B c={globalFipsEnabled?"green":"blue"}>{globalFipsEnabled?"FIPS STRICT":"STANDARD MODE"}</B>
+        <div style={{fontSize:10,color:C.dim,marginTop:4}}>
+          {globalFipsEnabled
+            ?"Runtime enforcement enabled. Non-FIPS algorithms are blocked."
+            :"Runtime enforcement disabled. All algorithms are allowed."}
+        </div>
+        <div style={{fontSize:9,color:C.muted,marginTop:6}}>Configure mode from Administration - System Administration.</div>
+      </Card>
+    </Row2>
+    {homeSummary.expiringItems.length>0?<><div style={{height:10}}/>
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:11,color:C.muted,fontWeight:700}}>CERTIFICATE EXPIRY WATCH</div>
+          <B c="amber">{`${homeSummary.expiring} expiring`}</B>
+        </div>
+        <div style={{display:"grid",gap:8}}>
+          {(Array.isArray(homeSummary.expiringItems)?homeSummary.expiringItems:[]).map((item)=>{
+            const tone=item.daysLeft<=0?"red":item.daysLeft<=15?"amber":"green";
+            const pct=Math.max(4,Math.min(100,((homeSummary.alertDays-Math.max(0,item.daysLeft))/Math.max(1,homeSummary.alertDays))*100));
+            return <div key={item.id} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{fontSize:10,color:C.text,maxWidth:360,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.subject}</div>
+                <B c={tone}>{item.daysLeft<=0?"expired":`${item.daysLeft}d`}</B>
+              </div>
+              <Bar pct={pct} color={tone==="red"?C.red:tone==="amber"?C.amber:C.green}/>
+            </div>;
+          })}
+        </div>
+      </Card>
+    </>:null}
+    <Modal open={modal==="fde"} onClose={()=>setModal(null)} title="Full Disk Encryption Management">
+      <FG label="Encryption"><div style={{fontSize:11,color:C.green}}>AES-256-XTS via LUKS2 - Active</div></FG>
+      <FG label="Actions"><Btn small>Run Integrity Check</Btn><Btn small style={{marginLeft:6}}>Rotate Volume Key</Btn><Btn small style={{marginLeft:6}}>Test Recovery Shares</Btn></FG>
+      <FG label="Recovery Shares (Shamir 3-of-5)">
+        <div style={{fontSize:10,color:C.dim}}>Share 1: Held by Admin A - Share 2: Held by Admin B - Share 3: Escrow - Share 4: Safe - Share 5: DR Site</div>
+      </FG>
+    </Modal>
+  </div>;
+};
+
+const CLOUD_PROVIDER_LABELS={aws:"AWS KMS",azure:"Azure Key Vault",gcp:"Google Cloud KMS",oci:"Oracle Cloud Vault",salesforce:"Salesforce BYOK"};
+const CLOUD_PROVIDER_ORDER=["aws","azure","gcp","oci","salesforce"];
+
+const BYOK=({session,keyCatalog,onToast})=>{
+  const [modal,setModal]=useState<null|"add"|"import">(null);
+  const [accounts,setAccounts]=useState<CloudAccount[]>([]);
+  const [bindings,setBindings]=useState<CloudKeyBinding[]>([]);
+  const [inventoryCounts,setInventoryCounts]=useState<Record<string,number>>({});
+  const [recentOps,setRecentOps]=useState<Array<{id:string;label:string;status:string;detail:string;ts:string}>>([]);
+  const [loading,setLoading]=useState(false);
+  const [refreshing,setRefreshing]=useState(false);
+  const [syncingAccount,setSyncingAccount]=useState("");
+  const [rotatingBinding,setRotatingBinding]=useState("");
+  const [submittingAdd,setSubmittingAdd]=useState(false);
+  const [submittingImport,setSubmittingImport]=useState(false);
+
+  const [addProvider,setAddProvider]=useState<CloudProvider>("aws");
+  const [addName,setAddName]=useState("");
+  const [addDefaultRegion,setAddDefaultRegion]=useState("");
+  const [addCredsJSON,setAddCredsJSON]=useState("{\n  \"access_key_id\": \"\",\n  \"secret_access_key\": \"\",\n  \"region\": \"us-east-1\"\n}");
+
+  const [importProvider,setImportProvider]=useState<CloudProvider>("aws");
+  const [importAccountID,setImportAccountID]=useState("");
+  const [importKeyID,setImportKeyID]=useState("");
+  const [importCloudRegion,setImportCloudRegion]=useState("");
+  const [importAlias,setImportAlias]=useState("");
+  const promptDialog=usePromptDialog();
+
+  const keyChoices=useMemo(()=>keyChoicesFromCatalog(keyCatalog),[keyCatalog]);
+
+  const addRecentOp=(label:string,status:string,detail:string)=>{
+    const item={
+      id:`op_${Date.now()}_${Math.random().toString(16).slice(2,8)}`,
+      label:String(label||""),
+      status:String(status||"info"),
+      detail:String(detail||""),
+      ts:new Date().toISOString()
+    };
+    setRecentOps((prev)=>[item,...prev].slice(0,24));
+  };
+
+  const refresh=async(silent=false)=>{
+    if(!session?.token){
+      setAccounts([]);
+      setBindings([]);
+      setInventoryCounts({});
+      return;
+    }
+    if(!silent){
+      setRefreshing(true);
+    }
+    try{
+      const [acctItems,bindingItems]=await Promise.all([
+        listCloudAccounts(session),
+        listCloudBindings(session,{limit:500,offset:0})
+      ]);
+      setAccounts(Array.isArray(acctItems)?acctItems:[]);
+      setBindings(Array.isArray(bindingItems)?bindingItems:[]);
+      const counts:Record<string,number>={};
+      await Promise.all((Array.isArray(acctItems)?acctItems:[]).map(async(acct)=>{
+        try{
+          const items=await discoverCloudInventory(session,{
+            provider:(acct.provider as CloudProvider),
+            accountId:acct.id
+          });
+          counts[acct.id]=Array.isArray(items)?items.length:0;
+        }catch{
+          counts[acct.id]=0;
+        }
+      }));
+      setInventoryCounts(counts);
+    }catch(error){
+      onToast?.(`BYOK refresh failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setRefreshing(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    if(!session?.token){
+      return;
+    }
+    setLoading(true);
+    void refresh(true).finally(()=>setLoading(false));
+  },[session?.token,session?.tenantId]);
+
+  useEffect(()=>{
+    if(!modal){
+      return;
+    }
+    if(modal==="import"){
+      const firstAccount=(Array.isArray(accounts)?accounts:[])[0];
+      if(firstAccount){
+        setImportProvider((firstAccount.provider as CloudProvider)||"aws");
+        setImportAccountID(firstAccount.id||"");
+        setImportCloudRegion(String(firstAccount.default_region||""));
+      }else{
+        setImportProvider("aws");
+        setImportAccountID("");
+      }
+      const firstKey=(Array.isArray(keyChoices)?keyChoices:[])[0];
+      setImportKeyID(firstKey?.id||"");
+    }
+  },[modal,accounts,keyChoices]);
+
+  const providerCards=useMemo(()=>{
+    return CLOUD_PROVIDER_ORDER.map((provider)=>{
+      const acctList=(Array.isArray(accounts)?accounts:[]).filter((acct)=>String(acct.provider||"").toLowerCase()===provider);
+      const bindingList=(Array.isArray(bindings)?bindings:[]).filter((binding)=>String(binding.provider||"").toLowerCase()===provider);
+      const regions=Array.from(new Set([
+        ...acctList.map((acct)=>String(acct.default_region||"").trim()).filter(Boolean),
+        ...bindingList.map((binding)=>String(binding.region||"").trim()).filter(Boolean)
+      ]));
+      const inventoryTotal=acctList.reduce((sum,acct)=>sum+Number(inventoryCounts[acct.id]||0),0);
+      const hasFailure=bindingList.some((binding)=>String(binding.sync_status||"").toLowerCase()==="failed");
+      const hasAnyBindings=bindingList.length>0;
+      const allSynced=hasAnyBindings&&bindingList.every((binding)=>String(binding.sync_status||"").toLowerCase()==="synced");
+      let stateLabel="Not Configured";
+      let stateColor:"blue"|"green"|"amber"|"red"="blue";
+      if(acctList.length>0&&bindingList.length===0){
+        stateLabel="Connected";
+        stateColor="blue";
+      }
+      if(allSynced){
+        stateLabel="Synced";
+        stateColor="green";
+      }else if(hasFailure){
+        stateLabel="Partial";
+        stateColor="amber";
+      }else if(hasAnyBindings){
+        stateLabel="Syncing";
+        stateColor="blue";
+      }
+      return {
+        provider,
+        accounts:acctList,
+        bindings:bindingList,
+        regions,
+        stateLabel,
+        stateColor,
+        inventoryTotal
+      };
+    });
+  },[accounts,bindings,inventoryCounts]);
+
+  const runSync=async(provider:string,accountId:string)=>{
+    if(!session?.token){
+      return;
+    }
+    setSyncingAccount(accountId||provider);
+    try{
+      const job:CloudSyncJob=await syncCloudKeys(session,{
+        provider:provider as CloudProvider,
+        accountId,
+        mode:"full"
+      });
+      addRecentOp(`${CLOUD_PROVIDER_LABELS[provider]||provider} sync`,job?.status==="completed"?"ok":"warn",String(job?.status||"completed"));
+      onToast?.(`${CLOUD_PROVIDER_LABELS[provider]||provider} sync ${String(job?.status||"completed")}.`);
+      await refresh(true);
+    }catch(error){
+      addRecentOp(`${CLOUD_PROVIDER_LABELS[provider]||provider} sync`,"error",errMsg(error));
+      onToast?.(`Cloud sync failed: ${errMsg(error)}`);
+    }finally{
+      setSyncingAccount("");
+    }
+  };
+
+  const submitAddConnector=async()=>{
+    if(!session?.token){
+      return;
+    }
+    const name=String(addName||"").trim();
+    if(!name){
+      onToast?.("Connector name is required.");
+      return;
+    }
+    const rawCreds=String(addCredsJSON||"{}").trim()||"{}";
+    try{
+      JSON.parse(rawCreds);
+    }catch{
+      onToast?.("Credentials JSON is invalid.");
+      return;
+    }
+    setSubmittingAdd(true);
+    try{
+      const account=await registerCloudAccount(session,{
+        provider:addProvider,
+        name,
+        defaultRegion:String(addDefaultRegion||"").trim(),
+        credentialsJson:rawCreds
+      });
+      addRecentOp(`${CLOUD_PROVIDER_LABELS[account.provider]||account.provider} connector`,"ok",`Connector ${account.name} added`);
+      onToast?.(`Cloud connector added: ${account.name}`);
+      setModal(null);
+      setAddName("");
+      await refresh(true);
+    }catch(error){
+      addRecentOp(`${CLOUD_PROVIDER_LABELS[addProvider]||addProvider} connector`,"error",errMsg(error));
+      onToast?.(`Add connector failed: ${errMsg(error)}`);
+    }finally{
+      setSubmittingAdd(false);
+    }
+  };
+
+  const submitImport=async()=>{
+    if(!session?.token){
+      return;
+    }
+    if(!String(importKeyID||"").trim()){
+      onToast?.("Select a Vecta key to import.");
+      return;
+    }
+    if(!String(importAccountID||"").trim()){
+      onToast?.("Select target cloud account.");
+      return;
+    }
+    setSubmittingImport(true);
+    try{
+      const binding=await importKeyToCloud(session,{
+        keyId:String(importKeyID||"").trim(),
+        provider:importProvider,
+        accountId:String(importAccountID||"").trim(),
+        cloudRegion:String(importCloudRegion||"").trim(),
+        metadata:{
+          alias:String(importAlias||"").trim()
+        }
+      });
+      addRecentOp(`${CLOUD_PROVIDER_LABELS[binding.provider]||binding.provider} import`,"ok",`${binding.key_id} -> ${binding.cloud_key_id}`);
+      onToast?.(`Imported key to ${CLOUD_PROVIDER_LABELS[binding.provider]||binding.provider}.`);
+      setModal(null);
+      setImportAlias("");
+      await refresh(true);
+    }catch(error){
+      addRecentOp(`${CLOUD_PROVIDER_LABELS[importProvider]||importProvider} import`,"error",errMsg(error));
+      onToast?.(`Cloud import failed: ${errMsg(error)}`);
+    }finally{
+      setSubmittingImport(false);
+    }
+  };
+
+  const rotateBindingAction=async(binding:CloudKeyBinding)=>{
+    if(!session?.token){
+      return;
+    }
+    const bid=String(binding?.id||"").trim();
+    if(!bid){
+      return;
+    }
+    setRotatingBinding(bid);
+    try{
+      const out=await rotateCloudBinding(session,bid,"manual-byok-rotate");
+      addRecentOp(`${CLOUD_PROVIDER_LABELS[binding.provider]||binding.provider} rotate`,"ok",`${binding.key_id} -> ${out.versionId||"new version"}`);
+      onToast?.(`Cloud key rotated for ${binding.key_id}.`);
+      await refresh(true);
+    }catch(error){
+      addRecentOp(`${CLOUD_PROVIDER_LABELS[binding.provider]||binding.provider} rotate`,"error",errMsg(error));
+      onToast?.(`Rotate cloud key failed: ${errMsg(error)}`);
+    }finally{
+      setRotatingBinding("");
+    }
+  };
+
+  const bindingsView=(Array.isArray(bindings)?bindings:[]).slice(0,12);
+  const importAccounts=(accounts||[]).filter((acct)=>String(acct.provider||"").toLowerCase()===String(importProvider||"").toLowerCase());
+  const latestOps=recentOps.length?recentOps:bindingsView.map((binding)=>({
+    id:`bind-${binding.id}`,
+    label:`${CLOUD_PROVIDER_LABELS[binding.provider]||binding.provider} binding`,
+    status:String(binding.sync_status||"").toLowerCase()==="failed"?"error":"ok",
+    detail:`${binding.key_id} -> ${binding.cloud_key_id}`,
+    ts:String(binding.updated_at||binding.created_at||"")
+  }));
+
+  return <div>
+    <Section
+      title="Bring Your Own Key - Cloud Connectors"
+      actions={<>
+        <Btn small onClick={()=>void refresh()} disabled={refreshing||loading}><RefreshCcw size={12} strokeWidth={2}/> Refresh</Btn>
+        <Btn small primary onClick={()=>setModal("add")}>+ Add Connector</Btn>
+      </>}
+    >
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(230px,1fr))",gap:10}}>
+        {providerCards.map((card)=>{
+          const activeAccount=card.accounts[0];
+          const accountId=activeAccount?.id||"";
+          return <Card key={card.provider}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div style={{fontSize:12,color:C.text,fontWeight:700}}>{CLOUD_PROVIDER_LABELS[card.provider]||card.provider}</div>
+              <B c={card.stateColor}>{card.stateLabel}</B>
+            </div>
+            <div style={{fontSize:11,color:C.text,marginBottom:4}}>{`${card.bindings.length} keys synced`}</div>
+            <div style={{fontSize:10,color:C.dim,marginBottom:8}}>
+              {card.regions.length?`Regions: ${card.regions.join(", ")}`:"No regions configured"}
+            </div>
+            <div style={{fontSize:10,color:C.muted,marginBottom:10}}>{`Cloud inventory: ${card.inventoryTotal} keys`}</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <Btn
+                small
+                onClick={()=>void runSync(card.provider,accountId)}
+                disabled={!accountId||syncingAccount===accountId||syncingAccount===card.provider}
+              >
+                {syncingAccount===accountId||syncingAccount===card.provider?"Syncing...":"Sync Now"}
+              </Btn>
+              <Btn
+                small
+                onClick={()=>{
+                  setImportProvider(card.provider as CloudProvider);
+                  setImportAccountID(accountId);
+                  setImportCloudRegion(String(activeAccount?.default_region||""));
+                  setModal("import");
+                }}
+                disabled={!accountId}
+              >
+                Import Keys
+              </Btn>
+            </div>
+          </Card>;
+        })}
+      </div>
+    </Section>
+
+    <Section title="Recent BYOK Operations">
+      <Card>
+        <div style={{display:"grid",gap:8}}>
+          {latestOps.slice(0,8).map((item)=>(
+            <div key={item.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
+              <div style={{maxWidth:"75%"}}>
+                <div style={{fontSize:11,color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.detail}</div>
+                <div style={{fontSize:10,color:C.muted}}>{item.label}</div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{fontSize:10,color:C.dim}}>{formatAgo(item.ts)}</div>
+                <B c={item.status==="error"?"red":item.status==="warn"?"amber":"green"}>{item.status==="error"?"Error":item.status==="warn"?"Partial":"OK"}</B>
+              </div>
+            </div>
+          ))}
+          {!latestOps.length&&<div style={{fontSize:10,color:C.dim}}>No BYOK operations yet.</div>}
+        </div>
+      </Card>
+    </Section>
+
+    <Section title="Managed Cloud Key Bindings">
+      <Card>
+        <div style={{display:"grid",gap:8}}>
+          {bindingsView.map((binding)=>{
+            const rowStatus=String(binding.sync_status||"").toLowerCase();
+            return <div key={binding.id} style={{display:"grid",gridTemplateColumns:"1.2fr 1fr 1fr auto",gap:8,alignItems:"center",borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
+              <div>
+                <div style={{fontSize:11,color:C.text,fontWeight:600}}>{binding.key_id}</div>
+                <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{binding.cloud_key_ref||binding.cloud_key_id}</div>
+              </div>
+              <div style={{fontSize:10,color:C.dim}}>{CLOUD_PROVIDER_LABELS[binding.provider]||binding.provider}</div>
+              <div style={{fontSize:10,color:C.dim}}>{binding.region||"-"}</div>
+              <div style={{display:"flex",alignItems:"center",gap:6,justifyContent:"flex-end"}}>
+                <B c={rowStatus==="failed"?"red":"green"}>{rowStatus==="failed"?"Failed":"Synced"}</B>
+                <Btn
+                  small
+                  onClick={()=>void rotateBindingAction(binding)}
+                  disabled={rotatingBinding===binding.id}
+                >
+                  {rotatingBinding===binding.id?"Rotating...":"Rotate"}
+                </Btn>
+              </div>
+            </div>;
+          })}
+          {!bindingsView.length&&<div style={{fontSize:10,color:C.dim}}>No cloud key bindings yet. Add connector and import keys.</div>}
+        </div>
+      </Card>
+    </Section>
+
+    <Modal open={modal==="add"} onClose={()=>setModal(null)} title="Add Cloud Connector" wide>
+      <FG label="Cloud Provider" required>
+        <Sel value={addProvider} onChange={(e)=>setAddProvider(normalizeCloudProvider(e.target.value))}>
+          <option value="aws">AWS KMS</option>
+          <option value="azure">Azure Key Vault</option>
+          <option value="gcp">Google Cloud KMS</option>
+          <option value="oci">Oracle Cloud Vault</option>
+          <option value="salesforce">Salesforce BYOK</option>
+        </Sel>
+      </FG>
+      <FG label="Connector Name" required>
+        <Inp value={addName} onChange={(e)=>setAddName(e.target.value)} placeholder="prod-main" mono/>
+      </FG>
+      <FG label="Default Region">
+        <Inp value={addDefaultRegion} onChange={(e)=>setAddDefaultRegion(e.target.value)} placeholder="us-east-1 / eastus / europe-west1" mono/>
+      </FG>
+      <FG label="Credentials JSON" required hint="Stored encrypted. Use provider SDK credential schema for this connector.">
+        <Txt rows={8} value={addCredsJSON} onChange={(e)=>setAddCredsJSON(e.target.value)} placeholder='{"access_key_id":"...","secret_access_key":"..."}'/>
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={submittingAdd}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitAddConnector()} disabled={submittingAdd}>{submittingAdd?"Adding...":"Add Connector"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="import"} onClose={()=>setModal(null)} title="Import Key to Cloud">
+      <FG label="Vecta Key to Import" required>
+        <Sel value={importKeyID} onChange={(e)=>setImportKeyID(e.target.value)}>
+          {renderKeyOptions(keyChoices)}
+        </Sel>
+      </FG>
+      <FG label="Cloud Provider" required>
+        <Sel value={importProvider} onChange={(e)=>setImportProvider(normalizeCloudProvider(e.target.value))}>
+          <option value="aws">AWS KMS</option>
+          <option value="azure">Azure Key Vault</option>
+          <option value="gcp">Google Cloud KMS</option>
+          <option value="oci">Oracle Cloud Vault</option>
+          <option value="salesforce">Salesforce BYOK</option>
+        </Sel>
+      </FG>
+      <FG label="Target Account" required>
+        <Sel value={importAccountID} onChange={(e)=>setImportAccountID(e.target.value)}>
+          {importAccounts.map((acct)=>
+            <option key={acct.id} value={acct.id}>{`${acct.name} (${acct.default_region||"default"})`}</option>
+          )}
+          {!importAccounts.length&&<option value="">No connector found for selected provider</option>}
+        </Sel>
+      </FG>
+      <FG label="Cloud Region Override">
+        <Inp value={importCloudRegion} onChange={(e)=>setImportCloudRegion(e.target.value)} placeholder="Leave empty to use account default" mono/>
+      </FG>
+      <FG label="Cloud Key Alias">
+        <Inp value={importAlias} onChange={(e)=>setImportAlias(e.target.value)} placeholder="alias/vecta-prod-db" mono/>
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={submittingImport}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitImport()} disabled={submittingImport}>{submittingImport?"Importing...":"Import to Cloud"}</Btn>
+      </div>
+    </Modal>
+    {promptDialog.ui}
+  </div>;
+};
+
+const HYOK_PROTOCOL_LABELS={
+  dke:"Microsoft DKE",
+  salesforce:"Salesforce Cache-Only",
+  google:"Google Cloud EKM",
+  generic:"Generic HYOK"
+};
+
+const HYOK_PROTOCOL_DETAILS={
+  dke:"Double Key Encryption: decrypt + public key delivery",
+  salesforce:"Shield Platform Encryption wrap/unwrap proxy",
+  google:"External Key Manager wrap/unwrap proxy",
+  generic:"Generic encrypt/decrypt/wrap/unwrap proxy"
+};
+
+const HYOK_OPS_BY_PROTOCOL={
+  dke:["decrypt","publickey"],
+  salesforce:["wrap","unwrap"],
+  google:["wrap","unwrap"],
+  generic:["encrypt","decrypt","wrap","unwrap"]
+};
+
+const HYOK=({session,keyCatalog,onToast})=>{
+  const [modal,setModal]=useState<null|"config">(null);
+  const [loading,setLoading]=useState(false);
+  const [refreshing,setRefreshing]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [executing,setExecuting]=useState(false);
+  const [endpoints,setEndpoints]=useState<any[]>([]);
+  const [requests,setRequests]=useState<any[]>([]);
+  const [health,setHealth]=useState<any>(null);
+  const [cfgProtocol,setCfgProtocol]=useState("generic");
+  const [cfgEnabled,setCfgEnabled]=useState(true);
+  const [cfgAuthMode,setCfgAuthMode]=useState("mtls_or_jwt");
+  const [cfgPolicyID,setCfgPolicyID]=useState("");
+  const [cfgGovernance,setCfgGovernance]=useState(false);
+  const [cfgMetadata,setCfgMetadata]=useState("{\n  \"description\": \"\"\n}");
+  const [testProtocol,setTestProtocol]=useState("generic");
+  const [testOperation,setTestOperation]=useState("encrypt");
+  const [testKeyID,setTestKeyID]=useState("");
+  const [testPlaintext,setTestPlaintext]=useState("");
+  const [testCiphertext,setTestCiphertext]=useState("");
+  const [testIV,setTestIV]=useState("");
+  const [testRefID,setTestRefID]=useState("");
+  const [testRequester,setTestRequester]=useState("");
+  const [testRequesterEmail,setTestRequesterEmail]=useState("");
+  const [testOutput,setTestOutput]=useState("// HYOK result will appear here...");
+  const keyChoices=useMemo(()=>keyChoicesFromCatalog(keyCatalog),[keyCatalog]);
+  const promptDialog=usePromptDialog();
+
+  const refresh=async(silent=false)=>{
+    if(!session?.token){
+      setEndpoints([]);
+      setRequests([]);
+      setHealth(null);
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }else{
+      setRefreshing(true);
+    }
+    try{
+      const [eps,reqs,h]=await Promise.all([
+        listHYOKEndpoints(session),
+        listHYOKRequests(session,{limit:60,offset:0}),
+        getHYOKHealth(session)
+      ]);
+      setEndpoints(Array.isArray(eps)?eps:[]);
+      setRequests(Array.isArray(reqs)?reqs:[]);
+      setHealth(h||null);
+    }catch(error){
+      onToast?.(`HYOK load failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }else{
+        setRefreshing(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    let stop=false;
+    const run=async(silent=false)=>{
+      if(stop){
+        return;
+      }
+      await refresh(silent);
+    };
+    void run(false);
+    const id=setInterval(()=>{void run(true);},15000);
+    return()=>{
+      stop=true;
+      clearInterval(id);
+    };
+  },[session?.token,session?.tenantId]);
+
+  useEffect(()=>{
+    if(testKeyID){
+      return;
+    }
+    const first=Array.isArray(keyChoices)?keyChoices[0]:null;
+    if(first?.id){
+      setTestKeyID(String(first.id));
+    }
+  },[keyChoices,testKeyID]);
+
+  useEffect(()=>{
+    const allowed=HYOK_OPS_BY_PROTOCOL[testProtocol]||[];
+    if(!allowed.includes(testOperation)){
+      setTestOperation(String(allowed[0]||"encrypt"));
+    }
+  },[testProtocol,testOperation]);
+
+  const openConfig=(protocol:string)=>{
+    const existing=(Array.isArray(endpoints)?endpoints:[]).find((item)=>String(item?.protocol||"")===protocol);
+    setCfgProtocol(protocol);
+    setCfgEnabled(existing?Boolean(existing.enabled):true);
+    setCfgAuthMode(String(existing?.auth_mode||"mtls_or_jwt"));
+    setCfgPolicyID(String(existing?.policy_id||""));
+    setCfgGovernance(Boolean(existing?.governance_required));
+    setCfgMetadata(String(existing?.metadata_json||"{\n  \"description\": \"\"\n}"));
+    setModal("config");
+  };
+
+  const submitConfig=async()=>{
+    if(!session?.token){
+      return;
+    }
+    const protocol=String(cfgProtocol||"").trim();
+    if(!protocol){
+      onToast?.("Select a protocol.");
+      return;
+    }
+    const authMode=String(cfgAuthMode||"").trim();
+    if(!authMode){
+      onToast?.("Select an auth mode.");
+      return;
+    }
+    const metadataJSON=String(cfgMetadata||"{}").trim()||"{}";
+    if(metadataJSON){
+      try{
+        JSON.parse(metadataJSON);
+      }catch{
+        onToast?.("Metadata JSON is invalid.");
+        return;
+      }
+    }
+    setSaving(true);
+    try{
+      await configureHYOKEndpoint(session,protocol,{
+        enabled:Boolean(cfgEnabled),
+        auth_mode:authMode,
+        policy_id:String(cfgPolicyID||"").trim(),
+        governance_required:Boolean(cfgGovernance),
+        metadata_json:metadataJSON
+      });
+      onToast?.(`HYOK endpoint updated: ${HYOK_PROTOCOL_LABELS[protocol]||protocol}.`);
+      setModal(null);
+      await refresh(true);
+    }catch(error){
+      onToast?.(`HYOK endpoint update failed: ${errMsg(error)}`);
+    }finally{
+      setSaving(false);
+    }
+  };
+
+  const runDelete=async(protocol:string)=>{
+    const confirmed=await promptDialog.confirm({
+      title:"Delete HYOK Endpoint Config",
+      message:`Delete endpoint config for ${HYOK_PROTOCOL_LABELS[protocol]||protocol}?\n\nThis resets it to default endpoint policy.`,
+      confirmLabel:"Delete",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    try{
+      await deleteHYOKEndpoint(session,protocol);
+      onToast?.(`HYOK endpoint removed: ${HYOK_PROTOCOL_LABELS[protocol]||protocol}.`);
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Delete endpoint failed: ${errMsg(error)}`);
+    }
+  };
+
+  const executeTest=async()=>{
+    if(!session?.token){
+      return;
+    }
+    const keyID=String(testKeyID||"").trim();
+    if(!keyID){
+      onToast?.("Select a key.");
+      return;
+    }
+    const protocol=String(testProtocol||"generic");
+    const operation=String(testOperation||"encrypt");
+    setExecuting(true);
+    try{
+      if(protocol==="dke"&&operation==="publickey"){
+        const out=await getHYOKDKEPublicKey(session,keyID);
+        setTestOutput(JSON.stringify(out,null,2));
+      }else{
+        const out=await hyokCrypto(session,protocol,operation,keyID,{
+          plaintext:testPlaintext,
+          ciphertext:testCiphertext,
+          iv:testIV,
+          reference_id:testRefID,
+          requester_id:testRequester,
+          requester_email:testRequesterEmail
+        });
+        setTestOutput(JSON.stringify(out,null,2));
+      }
+      onToast?.(`HYOK ${operation} completed.`);
+      await refresh(true);
+    }catch(error){
+      onToast?.(`HYOK ${operation} failed: ${errMsg(error)}`);
+    }finally{
+      setExecuting(false);
+    }
+  };
+
+  const endpointRows=Array.isArray(endpoints)?endpoints:[];
+  const requestRows=Array.isArray(requests)?requests:[];
+  const allowedOps=HYOK_OPS_BY_PROTOCOL[testProtocol]||[];
+  const enabledCount=endpointRows.filter((item)=>Boolean(item?.enabled)).length;
+
+  return <div>
+    <Section
+      title="HYOK Proxy Endpoints"
+      actions={<>
+        <Btn small onClick={()=>void refresh(false)} disabled={loading||refreshing}><RefreshCcw size={12} strokeWidth={2}/> Refresh</Btn>
+      </>}
+    >
+      <Row2>
+        <Card>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:12,color:C.text,fontWeight:700}}>Proxy Health</div>
+            <B c={String(health?.status||"").toLowerCase()==="ok"?"green":"amber"}>{String(health?.status||"unknown").toUpperCase()}</B>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 10px"}}>
+            {[["Tenant",String(health?.tenant_id||session?.tenantId||"-")],["Enabled Endpoints",`${Number(health?.enabled_endpoints||enabledCount)} / ${Number(health?.endpoint_count||endpointRows.length||4)}`],["Policy Fail Closed",Boolean(health?.policy_fail_closed)?"Yes":"No"],["Checked",formatAgo(String(health?.checked_at||""))]].map(([k,v])=>
+              <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:10,padding:"2px 0",gap:8}}>
+                <span style={{color:C.muted}}>{k}</span>
+                <span style={{color:C.text,fontFamily:"'JetBrains Mono',monospace",textAlign:"right"}}>{v}</span>
+              </div>
+            )}
+          </div>
+        </Card>
+        <Card>
+          <div style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:6}}>SUPPORTED PROTOCOLS</div>
+          <div style={{display:"grid",gap:6}}>
+            {["dke","salesforce","google","generic"].map((protocol)=>{
+              const item=endpointRows.find((e)=>String(e?.protocol||"")===protocol);
+              return <div key={protocol} style={{display:"flex",justifyContent:"space-between",alignItems:"center",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px"}}>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:11,color:C.text,fontWeight:700}}>{HYOK_PROTOCOL_LABELS[protocol]}</div>
+                  <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{HYOK_PROTOCOL_DETAILS[protocol]}</div>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                  <B c={Boolean(item?.enabled)?"green":"red"}>{Boolean(item?.enabled)?"Active":"Disabled"}</B>
+                  <Btn small onClick={()=>openConfig(protocol)}>Configure</Btn>
+                  <Btn small danger onClick={()=>void runDelete(protocol)}>Delete</Btn>
+                </div>
+              </div>;
+            })}
+          </div>
+        </Card>
+      </Row2>
+    </Section>
+
+    <Section title="HYOK Live Test Console">
+      <Row2>
+        <Card>
+          <FG label="Protocol" required>
+            <Sel value={testProtocol} onChange={(e)=>setTestProtocol(e.target.value)}>
+              <option value="dke">Microsoft DKE</option>
+              <option value="salesforce">Salesforce Cache-Only</option>
+              <option value="google">Google Cloud EKM</option>
+              <option value="generic">Generic HYOK</option>
+            </Sel>
+          </FG>
+          <FG label="Operation" required>
+            <Sel value={testOperation} onChange={(e)=>setTestOperation(e.target.value)}>
+              {allowedOps.map((op)=><option key={op} value={op}>{op}</option>)}
+            </Sel>
+          </FG>
+          <FG label="Vecta Key" required>
+            <Sel value={testKeyID} onChange={(e)=>setTestKeyID(e.target.value)}>
+              {renderKeyOptions(keyChoices)}
+            </Sel>
+          </FG>
+          {testOperation==="encrypt"||testOperation==="wrap"?<FG label="Plaintext (base64)" required>
+            <Txt rows={4} value={testPlaintext} onChange={(e)=>setTestPlaintext(e.target.value)} placeholder="SGVsbG8gd29ybGQ="/>
+          </FG>:null}
+          {testOperation==="decrypt"||testOperation==="unwrap"?<FG label="Ciphertext (base64)" required>
+            <Txt rows={4} value={testCiphertext} onChange={(e)=>setTestCiphertext(e.target.value)} placeholder="Paste ciphertext base64"/>
+          </FG>:null}
+          {testOperation!=="publickey"?<Row2>
+            <FG label="IV (base64)">
+              <Inp value={testIV} onChange={(e)=>setTestIV(e.target.value)} placeholder="Optional for algorithm/mode" mono/>
+            </FG>
+            <FG label="Reference ID">
+              <Inp value={testRefID} onChange={(e)=>setTestRefID(e.target.value)} placeholder="txn-..." mono/>
+            </FG>
+          </Row2>:null}
+          <Row2>
+            <FG label="Requester ID">
+              <Inp value={testRequester} onChange={(e)=>setTestRequester(e.target.value)} placeholder="svc-app-01" mono/>
+            </FG>
+            <FG label="Requester Email">
+              <Inp value={testRequesterEmail} onChange={(e)=>setTestRequesterEmail(e.target.value)} placeholder="security@bank.com" mono/>
+            </FG>
+          </Row2>
+          <Btn primary onClick={()=>void executeTest()} disabled={executing}>{executing?"Executing...":"Execute HYOK Request"}</Btn>
+        </Card>
+        <Card>
+          <div style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:6}}>OUTPUT</div>
+          <Txt rows={22} value={testOutput} readOnly/>
+        </Card>
+      </Row2>
+    </Section>
+
+    <Section title="HYOK Request Audit Trail">
+      <Card style={{padding:0,overflow:"hidden"}}>
+        <div style={{display:"grid",gridTemplateColumns:"120px 90px 80px 110px 1fr 90px",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+          <div>Time</div><div>Protocol</div><div>Operation</div><div>Status</div><div>Key / Requester</div><div>Auth</div>
+        </div>
+        <div style={{maxHeight:260,overflowY:"auto"}}>
+          {requestRows.map((item)=>(
+            <div key={item.id} style={{display:"grid",gridTemplateColumns:"120px 90px 80px 110px 1fr 90px",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:10,alignItems:"center"}}>
+              <div style={{color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{formatAgo(item.created_at)}</div>
+              <div style={{color:C.accent}}>{String(item.protocol||"-")}</div>
+              <div style={{color:C.text}}>{String(item.operation||"-")}</div>
+              <div><B c={String(item.status||"").toLowerCase()==="success"?"green":String(item.status||"").toLowerCase()==="pending_approval"?"amber":"red"}>{String(item.status||"unknown")}</B></div>
+              <div style={{minWidth:0}}>
+                <div style={{color:C.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{String(item.key_id||"-")}</div>
+                <div style={{fontSize:9,color:C.muted,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{String(item.requester_id||item.auth_subject||"-")}</div>
+              </div>
+              <div style={{color:C.dim}}>{String(item.auth_mode||"-")}</div>
+            </div>
+          ))}
+          {!requestRows.length&&<div style={{padding:"12px",fontSize:10,color:C.dim}}>{loading?"Loading HYOK requests...":"No HYOK requests yet."}</div>}
+        </div>
+      </Card>
+    </Section>
+
+    <Modal open={modal==="config"} onClose={()=>setModal(null)} title="Configure HYOK Endpoint" wide>
+      <FG label="Protocol" required>
+        <Sel value={cfgProtocol} onChange={(e)=>setCfgProtocol(e.target.value)}>
+          <option value="dke">Microsoft DKE</option>
+          <option value="salesforce">Salesforce Cache-Only</option>
+          <option value="google">Google Cloud EKM</option>
+          <option value="generic">Generic HYOK</option>
+        </Sel>
+      </FG>
+      <Row2>
+        <FG label="Enabled">
+          <Chk label="Enable protocol endpoint" checked={cfgEnabled} onChange={()=>setCfgEnabled((v)=>!v)}/>
+        </FG>
+        <FG label="Governance">
+          <Chk label="Require governance approval before crypto release" checked={cfgGovernance} onChange={()=>setCfgGovernance((v)=>!v)}/>
+        </FG>
+      </Row2>
+      <FG label="Auth Mode" required>
+        <Sel value={cfgAuthMode} onChange={(e)=>setCfgAuthMode(e.target.value)}>
+          <option value="mtls_or_jwt">mTLS or JWT</option>
+          <option value="mtls">mTLS only</option>
+          <option value="jwt">JWT only</option>
+        </Sel>
+      </FG>
+      <FG label="Policy ID">
+        <Inp value={cfgPolicyID} onChange={(e)=>setCfgPolicyID(e.target.value)} placeholder="Optional policy ID for hyok.<protocol>.<op>" mono/>
+      </FG>
+      <FG label="Metadata JSON" hint="Stored with endpoint configuration; keep valid JSON.">
+        <Txt rows={6} value={cfgMetadata} onChange={(e)=>setCfgMetadata(e.target.value)} placeholder='{"description":"Production DKE endpoint"}'/>
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={saving}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitConfig()} disabled={saving}>{saving?"Saving...":"Save Endpoint"}</Btn>
+      </div>
+    </Modal>
+    {promptDialog.ui}
+  </div>;
+};
+
+const EKM=({session,onToast})=>{
+  const [loading,setLoading]=useState(false);
+  const [agents,setAgents]=useState([]);
+  const [statusByID,setStatusByID]=useState({});
+  const [healthByID,setHealthByID]=useState({});
+  const [keyMetaByID,setKeyMetaByID]=useState({});
+  const [modal,setModal]=useState(null);
+  const [selectedAgent,setSelectedAgent]=useState(null);
+  const [logs,setLogs]=useState([]);
+  const [logsLoading,setLogsLoading]=useState(false);
+  const [deploying,setDeploying]=useState(false);
+  const [rotatingAgentID,setRotatingAgentID]=useState("");
+  const [deletingAgentID,setDeletingAgentID]=useState("");
+  const [deployPackage,setDeployPackage]=useState(null);
+  const [deployForm,setDeployForm]=useState({
+    name:"",
+    db_engine:"mssql",
+    host:"",
+    version:"",
+    target_os:"linux",
+    heartbeat_interval_sec:30,
+    rotation_cycle_days:90
+  });
+  const promptDialog=usePromptDialog();
+
+  const parseAgentMeta=(agent)=>{
+    try{
+      return JSON.parse(String(agent?.metadata_json||"{}"));
+    }catch{
+      return {};
+    }
+  };
+
+  const rotationDaysFor=(agent)=>{
+    const meta=parseAgentMeta(agent);
+    const n=Number(meta?.rotation_cycle_days||90);
+    if(Number.isFinite(n)&&n>0){
+      return Math.trunc(n);
+    }
+    return 90;
+  };
+
+  const safeFileName=(name)=>String(name||"file").replace(/[^a-zA-Z0-9._-]/g,"_");
+  const downloadText=(name,content)=>{
+    const blob=new Blob([String(content||"")],{type:"text/plain;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=safeFileName(name);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const refresh=async(silent=false)=>{
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const items=await listEKMAgents(session);
+      setAgents(items);
+      const statuses={};
+      const healthMap={};
+      await Promise.all(items.map(async(agent)=>{
+        try{
+          statuses[agent.id]=await getEKMAgentStatus(session,agent.id);
+        }catch{}
+        try{
+          healthMap[agent.id]=await getEKMAgentHealth(session,agent.id);
+        }catch{}
+      }));
+      setStatusByID(statuses);
+      setHealthByID(healthMap);
+
+      const keyIDs=[...new Set(items.map((agent)=>String(agent.assigned_key_id||"").trim()).filter(Boolean))];
+      const keyMeta={};
+      await Promise.all(keyIDs.map(async(keyID)=>{
+        try{
+          keyMeta[keyID]=await getEKMTDEPublicKey(session,keyID);
+        }catch{
+          keyMeta[keyID]={algorithm:"",key_version:""};
+        }
+      }));
+      setKeyMetaByID(keyMeta);
+    }catch(error){
+      onToast?.(`EKM load failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    let stop=false;
+    const run=async(silent=false)=>{
+      if(stop){
+        return;
+      }
+      await refresh(silent);
+    };
+    void run(false);
+    const id=setInterval(()=>{void run(true);},15000);
+    return()=>{
+      stop=true;
+      clearInterval(id);
+    };
+  },[session?.token,session?.tenantId]);
+
+  const openLogs=async(agent)=>{
+    setSelectedAgent(agent);
+    setModal("logs");
+    setLogs([]);
+    setLogsLoading(true);
+    try{
+      const items=await listEKMAgentLogs(session,agent.id,60);
+      setLogs(items);
+    }catch(error){
+      onToast?.(`Agent logs failed: ${errMsg(error)}`);
+    }finally{
+      setLogsLoading(false);
+    }
+  };
+
+  const runRotate=async(agent)=>{
+    if(!String(agent?.assigned_key_id||"").trim()){
+      onToast?.("No TDE key assigned to this agent.");
+      return;
+    }
+    setRotatingAgentID(agent.id);
+    try{
+      await rotateEKMAgentKey(session,agent.id,"manual-dashboard");
+      onToast?.(`TDE key rotation queued for ${agent.name}.`);
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Rotate failed: ${errMsg(error)}`);
+    }finally{
+      setRotatingAgentID("");
+    }
+  };
+
+  const runDelete=async(agent)=>{
+    const agentID=String(agent?.id||"").trim();
+    const agentName=String(agent?.name||agentID).trim();
+    if(!agentID){
+      onToast?.("Invalid agent id.");
+      return;
+    }
+    const confirmed=await promptDialog.confirm({
+      title:"Delete EKM Agent",
+      message:`Delete agent "${agentName}"?\n\nThis will remove the agent, linked databases, linked TDE keys, and access logs.`,
+      confirmLabel:"Delete Agent",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    setDeletingAgentID(agentID);
+    try{
+      const out=await deleteEKMAgent(session,agentID,"manual-dashboard-delete");
+      onToast?.(
+        `Agent deleted: DB ${Number(out?.deleted_databases||0)}, Keys ${Number(out?.deleted_keys||0)}, Logs ${Number(out?.deleted_logs||0)}.`
+      );
+      if(selectedAgent&&String(selectedAgent.id||"")===agentID){
+        setModal(null);
+        setSelectedAgent(null);
+      }
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Delete failed: ${errMsg(error)}`);
+    }finally{
+      setDeletingAgentID("");
+    }
+  };
+
+  const submitDeploy=async()=>{
+    const name=String(deployForm.name||"").trim();
+    const host=String(deployForm.host||"").trim();
+    const version=String(deployForm.version||"").trim();
+    if(!name||!host){
+      onToast?.("Agent name and host are required.");
+      return;
+    }
+    setDeploying(true);
+    try{
+      const metadataJSON=JSON.stringify({
+        target_os:deployForm.target_os,
+        rotation_cycle_days:Math.max(1,Math.trunc(Number(deployForm.rotation_cycle_days||90))),
+        pkcs11_profile:`${deployForm.db_engine}-tde-pkcs11`,
+        deployed_from:"dashboard"
+      });
+      const agent=await registerEKMAgent(session,{
+        name,
+        db_engine:deployForm.db_engine,
+        host,
+        version,
+        heartbeat_interval_sec:Math.max(5,Math.trunc(Number(deployForm.heartbeat_interval_sec||30))),
+        metadata_json:metadataJSON,
+        auto_provision_tde:true
+      });
+      const pkg=await getEKMDeployPackage(session,agent.id,deployForm.target_os);
+      setDeployPackage(pkg);
+      onToast?.(`Agent ${agent.name} registered. Download package files and deploy on ${deployForm.target_os}.`);
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Deploy failed: ${errMsg(error)}`);
+    }finally{
+      setDeploying(false);
+    }
+  };
+
+  const openDeploy=()=>{
+    setDeployPackage(null);
+    setDeployForm({
+      name:"",
+      db_engine:"mssql",
+      host:"",
+      version:"",
+      target_os:"linux",
+      heartbeat_interval_sec:30,
+      rotation_cycle_days:90
+    });
+    setModal("deploy");
+  };
+
+  const statusBadge=(agent)=>{
+    const health=String(healthByID[agent.id]?.health||"").toLowerCase();
+    const baseStatus=String(agent.status||"").toLowerCase();
+    const tdeState=String(agent.tde_state||"").toLowerCase();
+    if(health==="down"||baseStatus==="disconnected"){
+      return {label:"Down",color:"red"};
+    }
+    if(health==="degraded"||baseStatus==="degraded"){
+      return {label:"Degraded",color:"amber"};
+    }
+    if(tdeState==="enabled"){
+      return {label:"Active",color:"green"};
+    }
+    return {label:"Standby",color:"amber"};
+  };
+
+  const sortedAgents=[...agents].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+  const activeCount=sortedAgents.filter((agent)=>statusBadge(agent).label==="Active").length;
+  const standbyCount=sortedAgents.filter((agent)=>statusBadge(agent).label==="Standby").length;
+  const degradedCount=sortedAgents.filter((agent)=>statusBadge(agent).label==="Degraded").length;
+  const downCount=sortedAgents.filter((agent)=>statusBadge(agent).label==="Down").length;
+
+  return <div>
+    <Section
+      title="EXTENSIBLE KEY MANAGEMENT  -  TDE AGENTS"
+      actions={<div style={{display:"flex",gap:8,alignItems:"center"}}>
+        <Btn small onClick={()=>void refresh(false)} disabled={loading}>
+          <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+            <RefreshCcw size={12} strokeWidth={2}/>
+            {loading?"Refreshing...":"Refresh"}
+          </span>
+        </Btn>
+        <Btn small primary onClick={openDeploy}>+ Deploy New Agent</Btn>
+      </div>}
+    >
+      <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
+        <B c="green">{`${activeCount} Active`}</B>
+        <B c="amber">{`${standbyCount} Standby`}</B>
+        <B c="amber">{`${degradedCount} Degraded`}</B>
+        <B c="red">{`${downCount} Down`}</B>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:10}}>
+        {sortedAgents.map((agent)=>{
+          const badge=statusBadge(agent);
+          const keyID=String(agent.assigned_key_id||"").trim();
+          const keyMeta=keyMetaByID[keyID]||{};
+          const health=healthByID[agent.id]||{};
+          const metrics=health.metrics||{};
+          const hbAgeSec=Number(health.last_heartbeat_age_sec||statusByID[agent.id]?.last_heartbeat_age_sec||0);
+          const dbEngine=String(agent.db_engine||"mssql").toLowerCase()==="oracle"?"Oracle":"MSSQL";
+          const dbVersion=String(agent.version||"").trim()||"-";
+          const alg=String(keyMeta.algorithm||"").trim()||"Unassigned";
+          return <Card key={agent.id}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:18,color:C.white,fontWeight:700,marginBottom:4,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                  {agent.name}
+                </div>
+                <div style={{fontSize:12,color:C.dim}}>{`IP: ${agent.host||"-"}`}</div>
+              </div>
+              <B c={badge.color}>{badge.label}</B>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 10px",marginTop:8}}>
+              <div style={{fontSize:11,color:C.dim}}>{`Version: ${dbVersion}`}</div>
+              <div style={{fontSize:11,color:C.dim}}>{`Engine: ${dbEngine}`}</div>
+              <div style={{fontSize:11,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{`TDE Key: ${alg}`}</div>
+              <div style={{fontSize:11,color:C.dim}}>{`Rotation: ${rotationDaysFor(agent)}d cycle`}</div>
+            </div>
+            <div style={{fontSize:10,color:C.muted,marginTop:6}}>
+              {`OS Health  CPU ${Number(metrics.cpu_usage_pct||0).toFixed(0)}%  MEM ${Number(metrics.memory_usage_pct||0).toFixed(0)}%  DISK ${Number(metrics.disk_usage_pct||0).toFixed(0)}%  HB ${hbAgeSec}s`}
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:10}}>
+              <Btn small onClick={()=>void runRotate(agent)} disabled={!keyID||rotatingAgentID===agent.id}>
+                {rotatingAgentID===agent.id?"Rotating...":"Rotate TDE Key"}
+              </Btn>
+              <Btn small onClick={()=>void openLogs(agent)}>Agent Logs</Btn>
+              <Btn small danger onClick={()=>void runDelete(agent)} disabled={deletingAgentID===agent.id}>
+                {deletingAgentID===agent.id?"Deleting...":"Delete Agent"}
+              </Btn>
+            </div>
+          </Card>;
+        })}
+        {!sortedAgents.length&&<Card>
+          <div style={{fontSize:11,color:C.dim}}>No EKM agents registered yet. Deploy an agent to start MSSQL/Oracle TDE integration over PKCS#11.</div>
+        </Card>}
+      </div>
+    </Section>
+
+    <Modal open={modal==="deploy"} onClose={()=>setModal(null)} title="Deploy EKM Agent" wide>
+      <Row2>
+        <FG label="Agent Name" required>
+          <Inp value={deployForm.name} onChange={(e)=>setDeployForm({...deployForm,name:e.target.value})} placeholder="MSSQL-Prod-01"/>
+        </FG>
+        <FG label="Host / IP" required>
+          <Inp value={deployForm.host} onChange={(e)=>setDeployForm({...deployForm,host:e.target.value})} placeholder="10.0.5.10" mono/>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Database Engine" required>
+          <Sel value={deployForm.db_engine} onChange={(e)=>setDeployForm({...deployForm,db_engine:e.target.value})}>
+            <option value="mssql">Microsoft SQL Server (TDE)</option>
+            <option value="oracle">Oracle Database (TDE)</option>
+          </Sel>
+        </FG>
+        <FG label="Target OS" required>
+          <Sel value={deployForm.target_os} onChange={(e)=>setDeployForm({...deployForm,target_os:e.target.value})}>
+            <option value="linux">Linux Agent</option>
+            <option value="windows">Windows Agent</option>
+          </Sel>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Database Version">
+          <Inp value={deployForm.version} onChange={(e)=>setDeployForm({...deployForm,version:e.target.value})} placeholder="SQL Server 2022 / Oracle 19c"/>
+        </FG>
+        <FG label="Heartbeat Interval (sec)">
+          <Inp type="number" value={deployForm.heartbeat_interval_sec} onChange={(e)=>setDeployForm({...deployForm,heartbeat_interval_sec:Number(e.target.value||30)})}/>
+        </FG>
+      </Row2>
+      <FG label="Rotation Cycle (days)">
+        <Sel value={String(deployForm.rotation_cycle_days)} onChange={(e)=>setDeployForm({...deployForm,rotation_cycle_days:Number(e.target.value)})}>
+          <option value="90">90 days</option>
+          <option value="180">180 days</option>
+          <option value="365">365 days</option>
+        </Sel>
+      </FG>
+      <div style={{fontSize:10,color:C.muted,marginTop:8}}>
+        Deploy package includes PKCS#11 config templates for MSSQL/Oracle TDE agents on Linux/Windows with heartbeat, rotate, and register endpoints.
+      </div>
+      {deployPackage&&<Card style={{marginTop:10}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>{`Package ready: ${deployPackage.name} (${deployPackage.target_os})`}</div>
+          <B c="green">Ready</B>
+        </div>
+        <div style={{display:"grid",gap:6}}>
+          {(deployPackage.files||[]).map((file)=>(
+            <div key={file.path} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px"}}>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:11,color:C.text,fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{file.path}</div>
+                <div style={{fontSize:9,color:C.muted}}>{`mode ${file.mode}`}</div>
+              </div>
+              <Btn small onClick={()=>downloadText(file.path,file.content)}>Download</Btn>
+            </div>
+          ))}
+        </div>
+      </Card>}
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={deploying}>Close</Btn>
+        <Btn primary onClick={()=>void submitDeploy()} disabled={deploying}>{deploying?"Deploying...":"Deploy New Agent"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="logs"} onClose={()=>setModal(null)} title={`Agent Logs: ${String(selectedAgent?.name||"")}`} wide>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <div style={{fontSize:10,color:C.dim}}>
+          {`Live key operations for ${String(selectedAgent?.db_engine||"").toUpperCase()} TDE agent ${String(selectedAgent?.host||"-")}`}
+        </div>
+        <Btn small onClick={()=>selectedAgent&&void openLogs(selectedAgent)} disabled={logsLoading}>{logsLoading?"Refreshing...":"Refresh"}</Btn>
+      </div>
+      <Card style={{maxHeight:340,overflowY:"auto"}}>
+        <div style={{display:"grid",gap:6}}>
+          {logsLoading&&<div style={{fontSize:10,color:C.dim}}>Loading logs...</div>}
+          {!logsLoading&&logs.map((item)=>(
+            <div key={item.id} style={{display:"grid",gridTemplateColumns:"120px 80px 1fr auto",gap:8,alignItems:"center",borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
+              <div style={{fontSize:10,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{formatAgo(item.created_at)}</div>
+              <B c={String(item.status||"").toLowerCase()==="success"?"green":"red"}>{item.operation||"-"}</B>
+              <div style={{fontSize:10,color:C.text,fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.key_id||"-"}</div>
+              <div style={{fontSize:9,color:String(item.status||"").toLowerCase()==="success"?C.muted:C.red,maxWidth:260,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.error_message||item.status}</div>
+            </div>
+          ))}
+          {!logsLoading&&!logs.length&&<div style={{fontSize:10,color:C.dim}}>No key access logs for this agent yet.</div>}
+        </div>
+      </Card>
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
+        <Btn onClick={()=>setModal(null)}>Close</Btn>
+      </div>
+    </Modal>
+    {promptDialog.ui}
+  </div>;
+};
+
+const HSM=()=>{const [m,sM]=useState(null);return <div>
+  <Row2>
+    <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>CONNECTION</div>
+      {[["Mode","Hardware PKCS#11"],["Model","Primus X HSM"],["Firmware","v3.8.2"],["IP","10.0.3.50:2300"],["FIPS","Level 3"],["Partition","kms-prod"],["MEK","Loaded OK"],["Keys","47"]].map(([k,v])=>
+        <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:10}}><span style={{color:C.muted}}>{k}</span><span style={{color:C.text,fontFamily:"monospace"}}>{v}</span></div>)}
+    </Card>
+    <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>OPERATIONS (24h)</div>
+      {[["Encrypt/Decrypt","847K/day"],["Sign/Verify","234K/day"],["Key Gen","12/day"],["Wrap/Unwrap","1.2K/day"],["Avg Latency","0.8ms"],["Uptime","99.999%"]].map(([k,v])=>
+        <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:10}}><span style={{color:C.muted}}>{k}</span><span style={{color:C.accent}}>{v}</span></div>)}
+    </Card>
+  </Row2>
+  <Section title="HSM Actions" actions={<><Btn small onClick={()=>sM("gen")}>Generate Key in HSM</Btn><Btn small onClick={()=>sM("import-hsm")}>Import to HSM</Btn><Btn small>Backup HSM State</Btn></>}><div/></Section>
+  <Modal open={m==="gen"} onClose={()=>sM(null)} title="Generate Key in HSM">
+    <FG label="Algorithm" required><Sel><option>AES-256</option><option>RSA-2048</option><option>RSA-4096</option><option>ECDSA-P384</option><option>Ed25519</option></Sel></FG>
+    <FG label="Key Label" required><Inp placeholder="Enter customer key label" mono/></FG>
+    <FG label="HSM Partition"><Sel><option>kms-prod</option><option>kms-backup</option></Sel></FG>
+    <FG label="Key Attributes"><Chk label="Extractable (can be wrapped and exported)" checked={false}/><Chk label="Sensitive (never appears in plaintext)" checked={true}/><Chk label="Token object (persists on HSM)" checked={true}/></FG>
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Generate in HSM</Btn></div>
+  </Modal>
+</div>;};
+
+const QKD=({session,onToast})=>{
+  const [modal,setModal]=useState<null|"config"|"inject"|"keys">(null);
+  const [loading,setLoading]=useState(false);
+  const [refreshing,setRefreshing]=useState(false);
+  const [savingConfig,setSavingConfig]=useState(false);
+  const [runningTest,setRunningTest]=useState(false);
+  const [injecting,setInjecting]=useState(false);
+  const [slaveSAEID,setSlaveSAEID]=useState("");
+  const [overview,setOverview]=useState<any>(null);
+  const [qkdConfig,setQKDConfig]=useState<any>(null);
+  const [configDraft,setConfigDraft]=useState<any>({
+    qber_threshold:0.11,
+    pool_low_threshold:10,
+    pool_capacity:1250000,
+    auto_inject:false,
+    service_enabled:true,
+    etsi_api_enabled:true,
+    protocol:"ETSI GS QKD 014",
+    distance_km:47
+  });
+  const [keys,setKeys]=useState<any[]>([]);
+  const [logs,setLogs]=useState<any[]>([]);
+  const [selectedKeyID,setSelectedKeyID]=useState("");
+  const [injectPurpose,setInjectPurpose]=useState("encrypt");
+  const [injectConsume,setInjectConsume]=useState(true);
+  const [testCount,setTestCount]=useState("64");
+  const [testKeyBits,setTestKeyBits]=useState("256");
+  const [testQberMin,setTestQberMin]=useState("0.01");
+  const [testQberMax,setTestQberMax]=useState("0.08");
+
+  const activeSlave=String(overview?.slave_sae_id||slaveSAEID||"");
+  const loadData=async(silent=false)=>{
+    if(!session?.token){
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }else{
+      setRefreshing(true);
+    }
+    try{
+      const [cfg,ov]=await Promise.all([
+        getQKDConfig(session),
+        getQKDOverview(session,slaveSAEID||"")
+      ]);
+      const slave=String(ov?.slave_sae_id||slaveSAEID||"");
+      const [keyItems,logItems]=await Promise.all([
+        slave?listQKDKeys(session,{slave_sae_id:slave,status:["available","reserved","injected"],limit:300}):Promise.resolve([]),
+        listQKDLogs(session,120)
+      ]);
+      setQKDConfig(cfg);
+      setOverview(ov);
+      setKeys(Array.isArray(keyItems)?keyItems:[]);
+      setLogs(Array.isArray(logItems)?logItems:[]);
+      if(slave&&!slaveSAEID){
+        setSlaveSAEID(slave);
+      }
+      const firstInjectable=(Array.isArray(keyItems)?keyItems:[]).find((item)=>String(item?.status||"").toLowerCase()==="available"||String(item?.status||"").toLowerCase()==="reserved");
+      setSelectedKeyID(String(firstInjectable?.id||""));
+    }catch(error){
+      onToast?.(`QKD load failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }else{
+        setRefreshing(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    if(!session?.token){
+      return;
+    }
+    void loadData(false);
+    const id=setInterval(()=>{void loadData(true);},15000);
+    return()=>clearInterval(id);
+  },[session?.token,session?.tenantId,slaveSAEID]);
+
+  const openConfig=()=>{
+    setConfigDraft({
+      qber_threshold:Number(qkdConfig?.qber_threshold||0.11),
+      pool_low_threshold:Number(qkdConfig?.pool_low_threshold||10),
+      pool_capacity:Number(qkdConfig?.pool_capacity||1250000),
+      auto_inject:Boolean(qkdConfig?.auto_inject),
+      service_enabled:Boolean(qkdConfig?.service_enabled),
+      etsi_api_enabled:Boolean(qkdConfig?.etsi_api_enabled),
+      protocol:String(qkdConfig?.protocol||"ETSI GS QKD 014"),
+      distance_km:Number(qkdConfig?.distance_km||47)
+    });
+    setModal("config");
+  };
+
+  const saveConfig=async()=>{
+    if(!session?.token){
+      return;
+    }
+    setSavingConfig(true);
+    try{
+      const updated=await updateQKDConfig(session,{
+        qber_threshold:Math.max(0,Math.min(1,Number(configDraft.qber_threshold||0.11))),
+        pool_low_threshold:Math.max(1,Math.trunc(Number(configDraft.pool_low_threshold||10))),
+        pool_capacity:Math.max(1,Math.trunc(Number(configDraft.pool_capacity||1250000))),
+        auto_inject:Boolean(configDraft.auto_inject),
+        service_enabled:Boolean(configDraft.service_enabled),
+        etsi_api_enabled:Boolean(configDraft.etsi_api_enabled),
+        protocol:String(configDraft.protocol||"ETSI GS QKD 014").trim()||"ETSI GS QKD 014",
+        distance_km:Math.max(0,Number(configDraft.distance_km||47))
+      });
+      setQKDConfig(updated);
+      onToast?.("QKD runtime configuration updated.");
+      setModal(null);
+      await loadData(true);
+    }catch(error){
+      onToast?.(`QKD config update failed: ${errMsg(error)}`);
+    }finally{
+      setSavingConfig(false);
+    }
+  };
+
+  const runSelfTest=async()=>{
+    if(!session?.token){
+      return;
+    }
+    if(!activeSlave){
+      onToast?.("Set a slave SAE ID first.");
+      return;
+    }
+    setRunningTest(true);
+    try{
+      const result=await runQKDTestGenerate(session,{
+        slave_sae_id:activeSlave,
+        device_id:`selftest-${activeSlave}`,
+        device_name:`QKD SelfTest ${activeSlave}`,
+        role:"peer",
+        link_status:"up",
+        count:Math.max(1,Math.min(500,Math.trunc(Number(testCount||64)))),
+        key_size_bits:Math.max(128,Math.min(4096,Math.trunc(Number(testKeyBits||256)))),
+        qber_min:Math.max(0,Math.min(1,Number(testQberMin||0.01))),
+        qber_max:Math.max(0,Math.min(1,Number(testQberMax||0.08)))
+      });
+      onToast?.(`QKD test complete: accepted ${Number(result?.accepted_count||0)}, discarded ${Number(result?.discarded_count||0)}.`);
+      await loadData(true);
+    }catch(error){
+      onToast?.(`QKD test failed: ${errMsg(error)}`);
+    }finally{
+      setRunningTest(false);
+    }
+  };
+
+  const injectSelected=async()=>{
+    if(!session?.token){
+      return;
+    }
+    const keyID=String(selectedKeyID||"").trim();
+    if(!keyID){
+      onToast?.("Select a QKD key ID.");
+      return;
+    }
+    setInjecting(true);
+    try{
+      const out=await injectQKDKey(session,keyID,{
+        name:`qkd-${keyID}`,
+        purpose:injectPurpose,
+        consume:injectConsume
+      });
+      onToast?.(`Injected ${out.qkd_key_id} -> ${out.keycore_key_id}`);
+      setModal(null);
+      await loadData(true);
+    }catch(error){
+      onToast?.(`QKD inject failed: ${errMsg(error)}`);
+    }finally{
+      setInjecting(false);
+    }
+  };
+
+  const poolAvailable=Number(overview?.pool?.available_keys||0);
+  const poolPct=Math.max(0,Math.min(100,Number(overview?.pool?.pool_fill_pct||0)));
+  const usedToday=Number(overview?.pool?.used_today||0);
+  const createdToday=Number(overview?.status?.keys_received_today||0);
+  const qberAvg=Number(overview?.status?.qber_avg||0);
+  const keyRate=Number(overview?.status?.key_rate||0);
+  const active=Boolean(overview?.status?.active);
+  const serviceEnabled=Boolean(overview?.config?.service_enabled);
+  const etsiEnabled=Boolean(overview?.config?.etsi_api_enabled);
+
+  return <div>
+    <Section
+      title="QKD Interface"
+      actions={<div style={{display:"flex",gap:8,alignItems:"center"}}>
+        <Inp
+          w={180}
+          placeholder="slave_sae_id"
+          value={slaveSAEID}
+          onChange={(e)=>setSlaveSAEID(e.target.value)}
+          mono
+        />
+        <Btn small onClick={()=>void loadData(false)} disabled={loading||refreshing}>{loading||refreshing?"Refreshing...":"Refresh"}</Btn>
+        <Btn small onClick={openConfig}>Configure</Btn>
+        <Btn small primary onClick={()=>void runSelfTest()} disabled={runningTest||!serviceEnabled}>{runningTest?"Testing...":"Run QKD Test"}</Btn>
+      </div>}
+    >
+      <Row2>
+        <Card>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:13,color:C.text,fontWeight:700}}>QKD Link Status</div>
+            <B c={active&&serviceEnabled&&etsiEnabled?"green":"red"}>{active&&serviceEnabled&&etsiEnabled?"Active":"Inactive"}</B>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 14px"}}>
+            {[["Protocol",String(overview?.config?.protocol||qkdConfig?.protocol||"ETSI GS QKD 014")],["Status",active?"Key streaming":"Link down"],["Source",String(overview?.status?.source||"-")],["Destination",String(overview?.status?.destination||"-")],["Key Rate",`${keyRate.toFixed(3)} keys/sec`],["QBER",`${(qberAvg*100).toFixed(2)}% (OK < ${(Number(overview?.config?.qber_threshold||qkdConfig?.qber_threshold||0.11)*100).toFixed(2)}%)`],["Distance",`${Number(overview?.config?.distance_km||qkdConfig?.distance_km||47).toFixed(1)} km fiber`],["Keys Received",`${createdToday} (today)`]].map(([k,v])=>
+              <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:10,padding:"2px 0",gap:8}}>
+                <span style={{color:C.muted}}>{k}</span>
+                <span style={{color:C.text,fontFamily:"'JetBrains Mono',monospace",textAlign:"right"}}>{v}</span>
+              </div>
+            )}
+          </div>
+          <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
+            <B c={serviceEnabled?"green":"red"}>{serviceEnabled?"Service ON":"Service OFF"}</B>
+            <B c={etsiEnabled?"blue":"amber"}>{etsiEnabled?"ETSI API ON":"ETSI API OFF"}</B>
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{fontSize:13,color:C.text,fontWeight:700,marginBottom:8}}>QKD Key Pool</div>
+          <div style={{fontSize:46,lineHeight:1,color:C.green,fontWeight:700,letterSpacing:1,textAlign:"center"}}>
+            {poolAvailable.toLocaleString()}
+          </div>
+          <div style={{fontSize:11,color:C.dim,textAlign:"center",marginBottom:10}}>available quantum keys</div>
+          <Bar pct={poolPct} color={Number(overview?.pool?.low)?C.red:C.green}/>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.dim,marginTop:6}}>
+            <span>{`Used today: ${usedToday.toLocaleString()}`}</span>
+            <span>{`Pool: ${poolPct.toFixed(1)}% full`}</span>
+          </div>
+          <div style={{display:"flex",gap:8,marginTop:10}}>
+            <Btn small primary onClick={()=>setModal("inject")} disabled={!serviceEnabled||!keys.length}>Inject into Key Core</Btn>
+            <Btn small onClick={()=>setModal("keys")} disabled={!keys.length}>View Key IDs</Btn>
+          </div>
+        </Card>
+      </Row2>
+      <div style={{height:10}}/>
+      <Card>
+        <div style={{fontSize:11,color:C.muted,fontWeight:700,marginBottom:4}}>ETSI GS QKD 004 - Key Delivery API</div>
+        <div style={{fontSize:11,color:C.dim}}>
+          QKD-derived keys are delivered through ETSI REST endpoints and can be injected into KeyCore as AES-256 keys with source labels.
+        </div>
+      </Card>
+    </Section>
+
+    <Section title="QKD Logs" actions={<Btn small onClick={()=>void loadData(true)} disabled={refreshing}>{refreshing?"Refreshing...":"Refresh Logs"}</Btn>}>
+      <Card style={{padding:0,overflow:"hidden"}}>
+        <div style={{display:"grid",gridTemplateColumns:"160px 140px 100px 1fr",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+          <div>Time</div><div>Action</div><div>Level</div><div>Message</div>
+        </div>
+        <div style={{maxHeight:220,overflowY:"auto"}}>
+          {logs.map((item)=>(
+            <div key={item.id} style={{display:"grid",gridTemplateColumns:"160px 140px 100px 1fr",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:10,alignItems:"center"}}>
+              <div style={{color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{item.created_at?new Date(item.created_at).toLocaleString():"-"}</div>
+              <div style={{color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{String(item.action||"-")}</div>
+              <div><B c={String(item.level||"info").toLowerCase()==="error"?"red":String(item.level||"info").toLowerCase()==="warn"?"amber":"blue"}>{String(item.level||"info")}</B></div>
+              <div style={{color:C.text}}>{String(item.message||"-")}</div>
+            </div>
+          ))}
+          {!logs.length&&<div style={{padding:"12px",fontSize:10,color:C.dim}}>{loading?"Loading QKD logs...":"No QKD logs yet."}</div>}
+        </div>
+      </Card>
+    </Section>
+
+    <Modal open={modal==="config"} onClose={()=>setModal(null)} title="Configure QKD Interface" wide>
+      <Row2>
+        <FG label="Protocol"><Inp value={String(configDraft.protocol||"")} onChange={(e)=>setConfigDraft((prev:any)=>({...prev,protocol:e.target.value}))}/></FG>
+        <FG label="Distance (km)"><Inp type="number" min={0} value={String(configDraft.distance_km||47)} onChange={(e)=>setConfigDraft((prev:any)=>({...prev,distance_km:Number(e.target.value||47)}))}/></FG>
+      </Row2>
+      <Row2>
+        <FG label="QBER Threshold"><Inp type="number" step="0.0001" min={0} max={1} value={String(configDraft.qber_threshold||0.11)} onChange={(e)=>setConfigDraft((prev:any)=>({...prev,qber_threshold:Number(e.target.value||0.11)}))}/></FG>
+        <FG label="Pool Low Threshold"><Inp type="number" min={1} value={String(configDraft.pool_low_threshold||10)} onChange={(e)=>setConfigDraft((prev:any)=>({...prev,pool_low_threshold:Number(e.target.value||10)}))}/></FG>
+      </Row2>
+      <Row2>
+        <FG label="Pool Capacity"><Inp type="number" min={1} value={String(configDraft.pool_capacity||1250000)} onChange={(e)=>setConfigDraft((prev:any)=>({...prev,pool_capacity:Number(e.target.value||1250000)}))}/></FG>
+        <FG label="Auto Inject"><Chk label="Inject accepted keys to KeyCore automatically" checked={Boolean(configDraft.auto_inject)} onChange={()=>setConfigDraft((prev:any)=>({...prev,auto_inject:!Boolean(prev.auto_inject)}))}/></FG>
+      </Row2>
+      <FG label="Runtime Toggles">
+        <Chk label="Enable QKD service" checked={Boolean(configDraft.service_enabled)} onChange={()=>setConfigDraft((prev:any)=>({...prev,service_enabled:!Boolean(prev.service_enabled)}))}/>
+        <Chk label="Enable ETSI QKD API endpoints" checked={Boolean(configDraft.etsi_api_enabled)} onChange={()=>setConfigDraft((prev:any)=>({...prev,etsi_api_enabled:!Boolean(prev.etsi_api_enabled)}))}/>
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={savingConfig}>Cancel</Btn>
+        <Btn primary onClick={()=>void saveConfig()} disabled={savingConfig}>{savingConfig?"Saving...":"Save Configuration"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="inject"} onClose={()=>setModal(null)} title="Inject QKD Key into Key Core">
+      <FG label="QKD Key ID" required>
+        <Sel value={selectedKeyID} onChange={(e)=>setSelectedKeyID(e.target.value)}>
+          {keys.filter((item)=>String(item.status||"").toLowerCase()==="available"||String(item.status||"").toLowerCase()==="reserved").map((item)=><option key={item.id} value={item.id}>{`${item.id} (${item.status})`}</option>)}
+          {!keys.some((item)=>String(item.status||"").toLowerCase()==="available"||String(item.status||"").toLowerCase()==="reserved")&&<option value="">No injectable keys</option>}
+        </Sel>
+      </FG>
+      <Row2>
+        <FG label="Purpose">
+          <Sel value={injectPurpose} onChange={(e)=>setInjectPurpose(e.target.value)}>
+            <option value="encrypt">Encrypt</option>
+            <option value="decrypt">Decrypt</option>
+            <option value="wrap">Wrap</option>
+          </Sel>
+        </FG>
+        <FG label="Options">
+          <Chk label="Consume key after injection" checked={injectConsume} onChange={()=>setInjectConsume((v)=>!v)}/>
+        </FG>
+      </Row2>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={injecting}>Cancel</Btn>
+        <Btn primary onClick={()=>void injectSelected()} disabled={injecting||!selectedKeyID}>{injecting?"Injecting...":"Inject Key"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="keys"} onClose={()=>setModal(null)} title={`QKD Key IDs${activeSlave?` - ${activeSlave}`:""}`} wide>
+      <FG label="Self-Test Generator" hint="Generates cryptographically random test keys and ingests via ETSI enc_keys path.">
+        <Row3>
+          <Inp type="number" min={1} max={500} value={testCount} onChange={(e)=>setTestCount(e.target.value)} placeholder="Count"/>
+          <Inp type="number" min={128} max={4096} step={8} value={testKeyBits} onChange={(e)=>setTestKeyBits(e.target.value)} placeholder="Key bits"/>
+          <Btn primary onClick={()=>void runSelfTest()} disabled={runningTest||!serviceEnabled}>{runningTest?"Running...":"Run Test"}</Btn>
+        </Row3>
+        <Row2>
+          <Inp type="number" step="0.0001" min={0} max={1} value={testQberMin} onChange={(e)=>setTestQberMin(e.target.value)} placeholder="QBER min"/>
+          <Inp type="number" step="0.0001" min={0} max={1} value={testQberMax} onChange={(e)=>setTestQberMax(e.target.value)} placeholder="QBER max"/>
+        </Row2>
+      </FG>
+      <Card style={{padding:0,overflow:"hidden"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1.6fr .8fr .6fr .8fr",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+          <div>Key ID</div><div>Status</div><div>QBER</div><div>Created</div>
+        </div>
+        <div style={{maxHeight:280,overflowY:"auto"}}>
+          {keys.map((item)=>(
+            <div key={item.id} style={{display:"grid",gridTemplateColumns:"1.6fr .8fr .6fr .8fr",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:10}}>
+              <div style={{color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{item.id}</div>
+              <div><B c={String(item.status||"").toLowerCase()==="available"?"green":String(item.status||"").toLowerCase()==="discarded"?"red":"blue"}>{item.status}</B></div>
+              <div style={{color:C.dim}}>{`${(Number(item.qber||0)*100).toFixed(3)}%`}</div>
+              <div style={{color:C.dim}}>{item.created_at?new Date(item.created_at).toLocaleString():"-"}</div>
+            </div>
+          ))}
+          {!keys.length&&<div style={{padding:"12px",fontSize:10,color:C.dim}}>No QKD keys in pool.</div>}
+        </div>
+      </Card>
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
+        <Btn onClick={()=>setModal(null)}>Close</Btn>
+      </div>
+    </Modal>
+  </div>;
+};
+
+const MPC=({session,onToast})=>{
+  const [loading,setLoading]=useState(false);
+  const [busy,setBusy]=useState("");
+  const [modal,setModal]=useState<"dkg"|"sign"|"decrypt"|null>(null);
+  const [keys,setKeys]=useState<any[]>([]);
+  const [users,setUsers]=useState<any[]>([]);
+  const [lastResult,setLastResult]=useState<any>(null);
+
+  const [dkgName,setDKGName]=useState("custody-distributed");
+  const [dkgThreshold,setDKGThreshold]=useState(3);
+  const [dkgTotal,setDKGTotal]=useState(5);
+  const [dkgAlgorithm,setDKGAlgorithm]=useState("ECDSA_P256_GG20");
+  const [dkgTimeout,setDKGTimeout]=useState("30 minutes");
+  const [dkgPurpose,setDKGPurpose]=useState("Threshold signing");
+  const [dkgParticipants,setDKGParticipants]=useState<string[]>(["node-1","node-2","node-3"]);
+
+  const [signKeyID,setSignKeyID]=useState("");
+  const [signInput,setSignInput]=useState("deadbeef");
+  const [signParticipants,setSignParticipants]=useState<string[]>([]);
+
+  const [decryptKeyID,setDecryptKeyID]=useState("");
+  const [decryptCiphertext,setDecryptCiphertext]=useState("");
+  const [decryptParticipants,setDecryptParticipants]=useState<string[]>([]);
+
+  const algorithmOptions=[
+    {v:"ECDSA_P256_GG20",l:"ECDSA-P256 (GG20)"},
+    {v:"ECDSA_P384_GG20",l:"ECDSA-P384 (GG20)"},
+    {v:"ED25519_FROST",l:"EdDSA-Ed25519 (FROST)"},
+    {v:"SCHNORR_FROST",l:"Schnorr (FROST)"}
+  ];
+
+  const participantOptions=useMemo(()=>{
+    const base=[
+      {id:"node-1",label:"Admin A (alice@bank.com)",checked:true},
+      {id:"node-2",label:"Admin B (bob@bank.com)",checked:true},
+      {id:"node-3",label:"HSM Partition (automated)",checked:true},
+      {id:"node-4",label:"Escrow Agent",checked:false},
+      {id:"node-5",label:"DR Site",checked:false}
+    ];
+    const dynamic=(Array.isArray(users)?users:[])
+      .filter((u)=>String(u?.status||"").toLowerCase()==="active")
+      .map((u)=>({
+        id:String(u?.username||"").trim(),
+        label:`${String(u?.username||"").trim()} (${String(u?.email||"-")})`,
+        checked:false
+      }))
+      .filter((u)=>u.id);
+    const byID=new Map<string,any>();
+    [...base,...dynamic].forEach((item)=>{
+      if(!byID.has(item.id)){
+        byID.set(item.id,item);
+      }
+    });
+    return Array.from(byID.values());
+  },[users]);
+
+  const refresh=async(silent=false)=>{
+    if(!session?.token){
+      setKeys([]);
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const [keyItems,userItems]=await Promise.all([
+        listMPCKeys(session,{limit:200}),
+        listAuthUsers(session).catch(()=>[])
+      ]);
+      setKeys(Array.isArray(keyItems)?keyItems:[]);
+      setUsers(Array.isArray(userItems)?userItems:[]);
+      if(!signKeyID&&keyItems?.[0]?.id){
+        setSignKeyID(String(keyItems[0].id));
+      }
+      if(!decryptKeyID&&keyItems?.[0]?.id){
+        setDecryptKeyID(String(keyItems[0].id));
+      }
+    }catch(error){
+      onToast?.(`MPC load failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    if(!session?.token){
+      setKeys([]);
+      setUsers([]);
+      return;
+    }
+    void refresh();
+  },[session?.token,session?.tenantId]);
+
+  const selectedSignKey=useMemo(
+    ()=>keys.find((k)=>String(k?.id||"")===String(signKeyID||""))||null,
+    [keys,signKeyID]
+  );
+  const selectedDecryptKey=useMemo(
+    ()=>keys.find((k)=>String(k?.id||"")===String(decryptKeyID||""))||null,
+    [keys,decryptKeyID]
+  );
+
+  useEffect(()=>{
+    if(selectedSignKey){
+      const parts=Array.isArray(selectedSignKey.participants)?selectedSignKey.participants:[];
+      if(parts.length){
+        setSignParticipants((prev)=>prev.length?prev:parts.slice(0,Number(selectedSignKey.threshold||2)));
+      }
+    }
+  },[selectedSignKey?.id]);
+
+  useEffect(()=>{
+    if(selectedDecryptKey){
+      const parts=Array.isArray(selectedDecryptKey.participants)?selectedDecryptKey.participants:[];
+      if(parts.length){
+        setDecryptParticipants((prev)=>prev.length?prev:parts.slice(0,Number(selectedDecryptKey.threshold||2)));
+      }
+    }
+  },[selectedDecryptKey?.id]);
+
+  const toggle=(items:string[],id:string)=>items.includes(id)?items.filter((x)=>x!==id):[...items,id];
+  const nowIso=()=>new Date().toISOString();
+  const normalizeProtocol=(algorithm:string)=>{
+    const a=String(algorithm||"").toUpperCase();
+    if(a.includes("FROST")||a.includes("ED25519")||a.includes("SCHNORR")){
+      return "FROST";
+    }
+    if(a.includes("SHAMIR")){
+      return "Shamir";
+    }
+    return "Feldman VSS";
+  };
+  const fmtAgo=(value:string)=>{
+    const ts=new Date(String(value||""));
+    if(Number.isNaN(ts.getTime())){
+      return "Never used";
+    }
+    const sec=Math.max(1,Math.floor((Date.now()-ts.getTime())/1000));
+    if(sec<60){
+      return `${sec}s ago`;
+    }
+    if(sec<3600){
+      return `${Math.floor(sec/60)}m ago`;
+    }
+    if(sec<86400){
+      return `${Math.floor(sec/3600)}h ago`;
+    }
+    return `${Math.floor(sec/86400)}d ago`;
+  };
+  const availableCounts=(key:any)=>{
+    const active=Number(key?.metadata?.active_share_count||0);
+    const total=Math.max(1,Number(key?.participant_count||key?.participantCount||0));
+    return {active,total};
+  };
+
+  const autoContribute=async(type:"dkg"|"sign"|"decrypt",ceremonyID:string,parties:string[])=>{
+    for(const partyID of parties){
+      if(type==="dkg"){
+        await contributeMPCDKG(session,ceremonyID,{party_id:partyID,payload:{auto:true,submitted_at:nowIso()}});
+      }else if(type==="sign"){
+        await contributeMPCSign(session,ceremonyID,{party_id:partyID});
+      }else{
+        await contributeMPCDecrypt(session,ceremonyID,{party_id:partyID});
+      }
+    }
+  };
+
+  const submitDKG=async()=>{
+    const threshold=Math.max(2,Math.trunc(Number(dkgThreshold||0)));
+    const requestedTotal=Math.max(threshold,Math.trunc(Number(dkgTotal||0))||threshold);
+    const allIDs=participantOptions.map((p)=>p.id);
+    let chosen=dkgParticipants.filter((id)=>allIDs.includes(id));
+    if(!chosen.length){
+      chosen=allIDs.slice(0,requestedTotal);
+    }
+    if(chosen.length<requestedTotal){
+      const extras=allIDs.filter((id)=>!chosen.includes(id)).slice(0,requestedTotal-chosen.length);
+      chosen=[...chosen,...extras];
+    }
+    chosen=chosen.slice(0,requestedTotal);
+    if(chosen.length<threshold){
+      onToast?.("Select enough participants to satisfy threshold.");
+      return;
+    }
+    setBusy("dkg");
+    try{
+      const ceremony=await initiateMPCDKG(session,{
+        key_name:String(dkgName||"mpc-key").trim()||"mpc-key",
+        algorithm:dkgAlgorithm,
+        threshold,
+        participants:chosen,
+        created_by:String(session?.username||"system")
+      });
+      await autoContribute("dkg",String(ceremony.id||""),chosen.slice(0,threshold));
+      await refresh(true);
+      setModal(null);
+      onToast?.(`DKG completed: ${String(ceremony.key_id||"").slice(0,16)}...`);
+    }catch(error){
+      onToast?.(`DKG failed: ${errMsg(error)}`);
+    }finally{
+      setBusy("");
+    }
+  };
+
+  const submitSign=async()=>{
+    const key=selectedSignKey;
+    if(!key){
+      onToast?.("Select an MPC key for threshold signing.");
+      return;
+    }
+    const threshold=Math.max(2,Number(key?.threshold||2));
+    const parties=(signParticipants.length?signParticipants:Array.isArray(key.participants)?key.participants:[]).slice(0,Math.max(threshold,signParticipants.length||0));
+    if(parties.length<threshold){
+      onToast?.("Selected participants do not satisfy key threshold.");
+      return;
+    }
+    if(!String(signInput||"").trim()){
+      onToast?.("Message hash/input is required.");
+      return;
+    }
+    setBusy("sign");
+    try{
+      const ceremony=await initiateMPCSign(session,{
+        key_id:String(key.id),
+        message_hash:String(signInput||"").trim(),
+        participants:parties,
+        created_by:String(session?.username||"system")
+      });
+      await autoContribute("sign",String(ceremony.id||""),parties.slice(0,threshold));
+      const result=await getMPCSignResult(session,String(ceremony.id||""));
+      setLastResult({
+        type:"sign",
+        key:key.name,
+        at:new Date().toISOString(),
+        result
+      });
+      await refresh(true);
+      setModal(null);
+      onToast?.(`Threshold signature complete: ${String(result?.signature_b64||result?.signature||"").slice(0,20)}...`);
+    }catch(error){
+      onToast?.(`Threshold sign failed: ${errMsg(error)}`);
+    }finally{
+      setBusy("");
+    }
+  };
+
+  const submitDecrypt=async()=>{
+    const key=selectedDecryptKey;
+    if(!key){
+      onToast?.("Select an MPC key for threshold decryption.");
+      return;
+    }
+    const threshold=Math.max(2,Number(key?.threshold||2));
+    const parties=(decryptParticipants.length?decryptParticipants:Array.isArray(key.participants)?key.participants:[]).slice(0,Math.max(threshold,decryptParticipants.length||0));
+    if(parties.length<threshold){
+      onToast?.("Selected participants do not satisfy key threshold.");
+      return;
+    }
+    if(!String(decryptCiphertext||"").trim()){
+      onToast?.("Ciphertext is required.");
+      return;
+    }
+    setBusy("decrypt");
+    try{
+      const ceremony=await initiateMPCDecrypt(session,{
+        key_id:String(key.id),
+        ciphertext:String(decryptCiphertext||"").trim(),
+        participants:parties,
+        created_by:String(session?.username||"system")
+      });
+      await autoContribute("decrypt",String(ceremony.id||""),parties.slice(0,threshold));
+      const result=await getMPCDecryptResult(session,String(ceremony.id||""));
+      setLastResult({
+        type:"decrypt",
+        key:key.name,
+        at:new Date().toISOString(),
+        result
+      });
+      await refresh(true);
+      setModal(null);
+      onToast?.("Threshold decrypt completed.");
+    }catch(error){
+      onToast?.(`Threshold decrypt failed: ${errMsg(error)}`);
+    }finally{
+      setBusy("");
+    }
+  };
+
+  return <div>
+    <Section title="MPC Engine" actions={<Btn small onClick={()=>void refresh()} disabled={loading}>{loading?"Refreshing...":"Refresh"}</Btn>}>
+      <Row3>
+        <Card>
+          <div style={{display:"inline-flex",padding:"3px 7px",borderRadius:999,background:C.purpleDim,color:C.purple,fontSize:9,fontWeight:700,marginBottom:8}}>Feldman VSS</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <KeyRound size={18} color={C.accent}/>
+            <div style={{fontSize:20,color:C.text,fontWeight:700,lineHeight:1.1}}>Distributed Key Gen</div>
+          </div>
+          <div style={{fontSize:11,color:C.dim,marginTop:6}}>No single node holds the full key.</div>
+          <div style={{marginTop:12}}><Btn primary onClick={()=>setModal("dkg")}>Initiate</Btn></div>
+        </Card>
+        <Card>
+          <div style={{display:"inline-flex",padding:"3px 7px",borderRadius:999,background:C.purpleDim,color:C.purple,fontSize:9,fontWeight:700,marginBottom:8}}>GG20 / FROST</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <PenTool size={18} color={C.accent}/>
+            <div style={{fontSize:20,color:C.text,fontWeight:700,lineHeight:1.1}}>Threshold Signing</div>
+          </div>
+          <div style={{fontSize:11,color:C.dim,marginTop:6}}>T-of-N sign without reconstructing key externally.</div>
+          <div style={{marginTop:12}}><Btn primary onClick={()=>setModal("sign")} disabled={!keys.length}>Initiate</Btn></div>
+        </Card>
+        <Card>
+          <div style={{display:"inline-flex",padding:"3px 7px",borderRadius:999,background:C.purpleDim,color:C.purple,fontSize:9,fontWeight:700,marginBottom:8}}>Shamir SSS</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <Lock size={18} color={C.accent}/>
+            <div style={{fontSize:20,color:C.text,fontWeight:700,lineHeight:1.1}}>Threshold Decryption</div>
+          </div>
+          <div style={{fontSize:11,color:C.dim,marginTop:6}}>T-of-N decrypt cooperatively with active shares.</div>
+          <div style={{marginTop:12}}><Btn primary onClick={()=>setModal("decrypt")} disabled={!keys.length}>Initiate</Btn></div>
+        </Card>
+      </Row3>
+    </Section>
+
+    <Section title="Active MPC Keys">
+      <Card style={{padding:0,overflow:"hidden"}}>
+        <div style={{display:"grid",gridTemplateColumns:"2fr 1fr .8fr .8fr 1fr",padding:"10px 14px",borderBottom:`1px solid ${C.border}`,fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:.8}}>
+          <div>Key</div>
+          <div>Protocol</div>
+          <div>Threshold</div>
+          <div>Shares</div>
+          <div style={{textAlign:"right"}}>Last Action</div>
+        </div>
+        <div style={{maxHeight:280,overflowY:"auto"}}>
+          {keys.map((key:any)=>{
+            const counts=availableCounts(key);
+            return <div key={String(key.id)} style={{display:"grid",gridTemplateColumns:"2fr 1fr .8fr .8fr 1fr",padding:"11px 14px",borderBottom:`1px solid ${C.border}`,alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:12,color:C.text,fontWeight:700}}>{String(key.name||key.id)}</div>
+                <div style={{fontSize:10,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{String(key.algorithm||"-")}</div>
+              </div>
+              <div><B c="purple">{normalizeProtocol(String(key.algorithm||""))}</B></div>
+              <div style={{fontSize:11,color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{`${Number(key.threshold||0)}-of-${Number(key.participant_count||0)}`}</div>
+              <div style={{fontSize:11,color:counts.active>=Number(key.threshold||0)?C.green:C.amber}}>{`${counts.active}/${counts.total}`} {counts.active>=Number(key.threshold||0)?"✅":"⚠️"}</div>
+              <div style={{fontSize:10,color:C.dim,textAlign:"right"}}>{String(key.status||"pending").toLowerCase()==="active"?`Ready (${fmtAgo(String(key.updated_at||key.created_at||""))})`:String(key.status||"")}</div>
+            </div>;
+          })}
+          {!keys.length&&<div style={{padding:"12px 14px",fontSize:11,color:C.dim}}>{loading?"Loading MPC keys...":"No MPC keys created yet."}</div>}
+        </div>
+      </Card>
+      {lastResult&&<Card style={{marginTop:10}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Last MPC Result</div>
+          <B c={String(lastResult.type)==="sign"?"blue":"green"}>{String(lastResult.type||"").toUpperCase()}</B>
+        </div>
+        <div style={{fontSize:10,color:C.muted,marginBottom:6}}>{`${String(lastResult.key||"-")} • ${new Date(String(lastResult.at||Date.now())).toLocaleString()}`}</div>
+        <Txt rows={5} value={JSON.stringify(lastResult.result||{},null,2)} readOnly/>
+      </Card>}
+    </Section>
+
+    <Modal open={modal==="dkg"} onClose={()=>setModal(null)} title="Start DKG Ceremony" wide>
+      <Row2>
+        <FG label="Threshold (T)" required><Inp type="number" min={2} value={String(dkgThreshold)} onChange={(e)=>setDKGThreshold(Math.max(2,Number(e.target.value||2)))}/></FG>
+        <FG label="Total Parties (N)" required><Inp type="number" min={2} value={String(dkgTotal)} onChange={(e)=>setDKGTotal(Math.max(2,Number(e.target.value||2)))}/></FG>
+      </Row2>
+      <FG label="Key Name" required><Inp value={dkgName} onChange={(e)=>setDKGName(e.target.value)} placeholder="custody-distributed"/></FG>
+      <FG label="Key Algorithm"><Sel value={dkgAlgorithm} onChange={(e)=>setDKGAlgorithm(e.target.value)}>{algorithmOptions.map((item)=><option key={item.v} value={item.v}>{item.l}</option>)}</Sel></FG>
+      <FG label="Participants">
+        {(participantOptions||[]).map((p)=>(
+          <Chk key={p.id} label={p.label} checked={dkgParticipants.includes(p.id)} onChange={()=>setDKGParticipants((prev)=>toggle(prev,p.id))}/>
+        ))}
+      </FG>
+      <Row2>
+        <FG label="Timeout"><Sel value={dkgTimeout} onChange={(e)=>setDKGTimeout(e.target.value)}><option>30 minutes</option><option>1 hour</option><option>4 hours</option><option>24 hours</option></Sel></FG>
+        <FG label="Purpose"><Inp value={dkgPurpose} onChange={(e)=>setDKGPurpose(e.target.value)} placeholder="Threshold signing"/></FG>
+      </Row2>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={busy==="dkg"}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitDKG()} disabled={busy==="dkg"}>{busy==="dkg"?"Initiating...":"Initiate DKG"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="sign"} onClose={()=>setModal(null)} title="Start Threshold Signing" wide>
+      <FG label="MPC Key" required>
+        <Sel value={signKeyID} onChange={(e)=>setSignKeyID(e.target.value)}>
+          {(keys||[]).map((k)=><option key={k.id} value={k.id}>{`${k.name} (${k.algorithm})`}</option>)}
+          {!keys.length&&<option value="">No MPC keys available</option>}
+        </Sel>
+      </FG>
+      <FG label="Message Hash / Input" required hint="Hex, Base64, or UTF-8 input accepted.">
+        <Txt rows={4} value={signInput} onChange={(e)=>setSignInput(e.target.value)} placeholder="deadbeef"/>
+      </FG>
+      <FG label="Participants">
+        {(Array.isArray(selectedSignKey?.participants)?selectedSignKey.participants:[]).map((id:string)=>(
+          <Chk key={id} label={id} checked={signParticipants.includes(id)} onChange={()=>setSignParticipants((prev)=>toggle(prev,id))}/>
+        ))}
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={busy==="sign"}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitSign()} disabled={busy==="sign"||!selectedSignKey}>{busy==="sign"?"Signing...":"Initiate Sign"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="decrypt"} onClose={()=>setModal(null)} title="Start Threshold Decryption" wide>
+      <FG label="MPC Key" required>
+        <Sel value={decryptKeyID} onChange={(e)=>setDecryptKeyID(e.target.value)}>
+          {(keys||[]).map((k)=><option key={k.id} value={k.id}>{`${k.name} (${k.algorithm})`}</option>)}
+          {!keys.length&&<option value="">No MPC keys available</option>}
+        </Sel>
+      </FG>
+      <FG
+        label="Ciphertext"
+        required
+        hint='Accepted formats: JSON {"nonce","ciphertext","aad"}, nonce:ciphertext, or packed (12-byte nonce + ciphertext).'
+      >
+        <Txt rows={5} value={decryptCiphertext} onChange={(e)=>setDecryptCiphertext(e.target.value)} placeholder='{"nonce":"...","ciphertext":"...","aad":"..."}'/>
+      </FG>
+      <FG label="Participants">
+        {(Array.isArray(selectedDecryptKey?.participants)?selectedDecryptKey.participants:[]).map((id:string)=>(
+          <Chk key={id} label={id} checked={decryptParticipants.includes(id)} onChange={()=>setDecryptParticipants((prev)=>toggle(prev,id))}/>
+        ))}
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={busy==="decrypt"}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitDecrypt()} disabled={busy==="decrypt"||!selectedDecryptKey}>{busy==="decrypt"?"Decrypting...":"Initiate Decrypt"}</Btn>
+      </div>
+    </Modal>
+  </div>;
+};
+
+const KMIP=({session,onToast})=>{
+  const [loading,setLoading]=useState(false);
+  const [profiles,setProfiles]=useState([]);
+  const [clients,setClients]=useState([]);
+  const [caItems,setCAItems]=useState([]);
+  const [modal,setModal]=useState(null);
+  const [savingProfile,setSavingProfile]=useState(false);
+  const [savingClient,setSavingClient]=useState(false);
+  const [clientCertSource,setClientCertSource]=useState("paste");
+  const [issuedBundle,setIssuedBundle]=useState(null);
+  const [profileForm,setProfileForm]=useState({
+    name:"",
+    ca_id:"",
+    username_location:"cn",
+    subject_field_to_modify:"uid",
+    do_not_modify_subject_dn:false,
+    certificate_duration_days:365,
+    role:"kmip-client",
+    organization:"",
+    organizational_unit:"",
+    email:"",
+    uid:"",
+    surname:"",
+    city:"",
+    state:"",
+    country:""
+  });
+  const [clientForm,setClientForm]=useState({
+    name:"",
+    profile_id:"",
+    registration_token:"",
+    role:"kmip-client",
+    enrollment_mode:"internal",
+    common_name:"",
+    csr_pem:"",
+    certificate_pem:"",
+    private_key_pem:"",
+    ca_bundle_pem:"",
+    serial_number:"",
+    password:"",
+    password_match:"",
+    device_id:"",
+    network_id:"",
+    machine_id:"",
+    media_id:""
+  });
+
+  const resetProfileForm=()=>setProfileForm({
+    name:"",
+    ca_id:"",
+    username_location:"cn",
+    subject_field_to_modify:"uid",
+    do_not_modify_subject_dn:false,
+    certificate_duration_days:365,
+    role:"kmip-client",
+    organization:"",
+    organizational_unit:"",
+    email:"",
+    uid:"",
+    surname:"",
+    city:"",
+    state:"",
+    country:""
+  });
+  const resetClientForm=()=>setClientForm({
+    name:"",
+    profile_id:"",
+    registration_token:"",
+    role:"kmip-client",
+    enrollment_mode:"internal",
+    common_name:"",
+    csr_pem:"",
+    certificate_pem:"",
+    private_key_pem:"",
+    ca_bundle_pem:"",
+    serial_number:"",
+    password:"",
+    password_match:"",
+    device_id:"",
+    network_id:"",
+    machine_id:"",
+    media_id:""
+  });
+
+  const refresh=async(silent=false)=>{
+    if(!session?.token){
+      setProfiles([]);
+      setClients([]);
+      setCAItems([]);
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const [profileItems,clientItems,caList]=await Promise.all([
+        listKMIPProfiles(session),
+        listKMIPClients(session),
+        listCAs(session)
+      ]);
+      setProfiles(Array.isArray(profileItems)?profileItems:[]);
+      setClients(Array.isArray(clientItems)?clientItems:[]);
+      setCAItems(Array.isArray(caList)?caList:[]);
+    }catch(error){
+      onToast?.(`KMIP load failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    if(!session?.tenantId){
+      setProfiles([]);
+      setClients([]);
+      setCAItems([]);
+      return;
+    }
+    void refresh();
+  },[session?.tenantId]);
+
+  const selectedProfile=useMemo(()=>{
+    return (Array.isArray(profiles)?profiles:[]).find((p)=>String(p.id)===String(clientForm.profile_id))||null;
+  },[profiles,clientForm.profile_id]);
+
+  const stats=useMemo(()=>{
+    const list=Array.isArray(clients)?clients:[];
+    const active=list.filter((it)=>String(it.status||"").toLowerCase()==="active").length;
+    const external=list.filter((it)=>String(it.enrollment_mode||"").toLowerCase()==="external").length;
+    const expiringSoon=list.filter((it)=>{
+      const ts=new Date(String(it.cert_not_after||""));
+      if(Number.isNaN(ts.getTime())){
+        return false;
+      }
+      const days=(ts.getTime()-Date.now())/(24*60*60*1000);
+      return days>=0&&days<=30;
+    }).length;
+    return {
+      total:list.length,
+      active,
+      external,
+      expiringSoon
+    };
+  },[clients]);
+
+  const saveProfile=async()=>{
+    if(!session?.token){
+      return;
+    }
+    const name=String(profileForm.name||"").trim();
+    const caID=String(profileForm.ca_id||"").trim();
+    if(!name||!caID){
+      onToast?.("Profile name and CA are required.");
+      return;
+    }
+    setSavingProfile(true);
+    try{
+      const metadata=JSON.stringify({
+        organization:String(profileForm.organization||"").trim(),
+        organizational_unit:String(profileForm.organizational_unit||"").trim(),
+        email:String(profileForm.email||"").trim(),
+        uid:String(profileForm.uid||"").trim(),
+        surname:String(profileForm.surname||"").trim(),
+        city:String(profileForm.city||"").trim(),
+        state:String(profileForm.state||"").trim(),
+        country:String(profileForm.country||"").trim()
+      });
+      await createKMIPProfile(session,{
+        name,
+        ca_id:caID,
+        username_location:String(profileForm.username_location||"cn").trim(),
+        subject_field_to_modify:String(profileForm.subject_field_to_modify||"uid").trim(),
+        do_not_modify_subject_dn:Boolean(profileForm.do_not_modify_subject_dn),
+        certificate_duration_days:Math.max(1,Math.min(3650,Number(profileForm.certificate_duration_days||365))),
+        role:String(profileForm.role||"kmip-client").trim(),
+        metadata_json:metadata
+      });
+      onToast?.("KMIP client profile created.");
+      setModal(null);
+      resetProfileForm();
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Create profile failed: ${errMsg(error)}`);
+    }finally{
+      setSavingProfile(false);
+    }
+  };
+
+  const readPEMFile=async(file,targetField)=>{
+    if(!file){
+      return;
+    }
+    try{
+      const text=await file.text();
+      setClientForm((prev)=>({...prev,[targetField]:String(text||"")}));
+    }catch{
+      onToast?.("Unable to read selected file.");
+    }
+  };
+
+  const downloadText=(filename,content)=>{
+    const text=String(content||"");
+    if(!text){
+      return;
+    }
+    const blob=new Blob([text],{type:"text/plain;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=filename;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),500);
+  };
+
+  const saveClient=async()=>{
+    if(!session?.token){
+      return;
+    }
+    const name=String(clientForm.name||"").trim();
+    const mode=String(clientForm.enrollment_mode||"internal").trim().toLowerCase();
+    if(!name){
+      onToast?.("Client name is required.");
+      return;
+    }
+    if(mode==="internal"&&!String(clientForm.profile_id||"").trim()){
+      onToast?.("Select a client profile for internal enrollment.");
+      return;
+    }
+    if(mode==="external"&&!String(clientForm.certificate_pem||"").trim()){
+      onToast?.("External enrollment requires a certificate PEM.");
+      return;
+    }
+    if(String(clientForm.password||"")!==String(clientForm.password_match||"")){
+      onToast?.("Device credential password mismatch.");
+      return;
+    }
+    setSavingClient(true);
+    try{
+      const metadata=JSON.stringify({
+        serial_number:String(clientForm.serial_number||"").trim(),
+        password:String(clientForm.password||"").trim(),
+        device_id:String(clientForm.device_id||"").trim(),
+        network_id:String(clientForm.network_id||"").trim(),
+        machine_id:String(clientForm.machine_id||"").trim(),
+        media_id:String(clientForm.media_id||"").trim()
+      });
+      const out=await createKMIPClient(session,{
+        name,
+        profile_id:String(clientForm.profile_id||"").trim()||undefined,
+        registration_token:String(clientForm.registration_token||"").trim()||undefined,
+        role:String(clientForm.role||selectedProfile?.role||"kmip-client").trim(),
+        enrollment_mode:mode==="external"?"external":"internal",
+        common_name:String(clientForm.common_name||"").trim()||undefined,
+        csr_pem:String(clientForm.csr_pem||"").trim()||undefined,
+        certificate_pem:String(clientForm.certificate_pem||"").trim()||undefined,
+        private_key_pem:String(clientForm.private_key_pem||"").trim()||undefined,
+        ca_bundle_pem:String(clientForm.ca_bundle_pem||"").trim()||undefined,
+        metadata_json:metadata
+      });
+      if(String(out?.issued_cert_pem||"").trim()||String(out?.issued_key_pem||"").trim()){
+        setIssuedBundle({
+          name,
+          cert:String(out?.issued_cert_pem||""),
+          key:String(out?.issued_key_pem||"")
+        });
+      }
+      onToast?.("KMIP client added successfully.");
+      setModal(null);
+      resetClientForm();
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Add client failed: ${errMsg(error)}`);
+    }finally{
+      setSavingClient(false);
+    }
+  };
+
+  return <div>
+    <div style={{display:"flex",gap:12,marginBottom:14,flexWrap:"wrap"}}>
+      <Stat l="Client Profiles" v={String((profiles||[]).length)} c="blue"/>
+      <Stat l="Registered Clients" v={String(stats.total)} c="accent"/>
+      <Stat l="Active Clients" v={String(stats.active)} c="green"/>
+      <Stat l="Expiring <=30d" v={String(stats.expiringSoon)} c={stats.expiringSoon>0?"amber":"blue"}/>
+      <Stat l="Protocol" v="KMIP 2.1+" s="TTLV over TLS:5696" c="purple"/>
+    </div>
+
+    {issuedBundle?<Card style={{marginBottom:10,borderColor:C.green}}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
+        <div>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Issued Client Bundle: {issuedBundle.name}</div>
+          <div style={{fontSize:10,color:C.dim}}>Internal enrollment generated this client certificate and key. Download once and store securely.</div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <Btn small onClick={()=>downloadText(`${issuedBundle.name}.crt.pem`,issuedBundle.cert)}>Download Cert</Btn>
+          {issuedBundle.key?<Btn small onClick={()=>downloadText(`${issuedBundle.name}.key.pem`,issuedBundle.key)}>Download Key</Btn>:null}
+          <Btn small onClick={()=>setIssuedBundle(null)}>Dismiss</Btn>
+        </div>
+      </div>
+    </Card>:null}
+
+    <Row2>
+      <Section
+        title="Client Profiles"
+        actions={<div style={{display:"flex",gap:8}}>
+          <Btn small onClick={()=>void refresh()}>{loading?"Refreshing...":"Refresh"}</Btn>
+          <Btn small primary onClick={()=>setModal("profile")}>+ Add Profile</Btn>
+        </div>}
+      >
+        <Card style={{padding:0,overflow:"hidden"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr .9fr .7fr .7fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+            <div>Profile</div><div>CA</div><div>Duration</div><div>Role</div>
+          </div>
+          <div style={{maxHeight:260,overflowY:"auto"}}>
+            {(profiles||[]).map((p)=><div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr .9fr .7fr .7fr",padding:"8px 12px",fontSize:10,borderBottom:`1px solid ${C.border}`,gap:8}}>
+              <div>
+                <div style={{fontSize:11,color:C.text,fontWeight:600}}>{p.name}</div>
+                <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{p.id}</div>
+              </div>
+              <div style={{fontSize:9,color:C.dim}}>{(caItems.find((ca)=>String(ca.id)===String(p.ca_id))?.name)||p.ca_id||"-"}</div>
+              <div style={{fontSize:9,color:C.dim}}>{`${Number(p.certificate_duration_days||0)||365}d`}</div>
+              <div><B c="blue">{p.role||"kmip-client"}</B></div>
+            </div>)}
+            {!(profiles||[]).length?<div style={{padding:12,fontSize:10,color:C.muted}}>No KMIP client profiles yet.</div>:null}
+          </div>
+        </Card>
+      </Section>
+
+      <Section
+        title="KMIP Clients"
+        actions={<div style={{display:"flex",gap:8}}>
+          <Btn small onClick={()=>void refresh(true)}>Refresh</Btn>
+          <Btn small primary onClick={()=>setModal("client")}>+ Add Client</Btn>
+        </div>}
+      >
+        <Card style={{padding:0,overflow:"hidden"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr .6fr .7fr .8fr .8fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+            <div>Client</div><div>Status</div><div>Mode</div><div>Fingerprint</div><div>Expires</div>
+          </div>
+          <div style={{maxHeight:260,overflowY:"auto"}}>
+            {(clients||[]).map((c)=><div key={c.id} style={{display:"grid",gridTemplateColumns:"1fr .6fr .7fr .8fr .8fr",padding:"8px 12px",fontSize:10,borderBottom:`1px solid ${C.border}`,gap:8}}>
+              <div>
+                <div style={{fontSize:11,color:C.text,fontWeight:600}}>{c.name}</div>
+                <div style={{fontSize:9,color:C.muted}}>{c.role}</div>
+              </div>
+              <div><B c={String(c.status||"").toLowerCase()==="active"?"green":"red"}>{String(c.status||"-").toUpperCase()}</B></div>
+              <div style={{fontSize:9,color:C.dim}}>{String(c.enrollment_mode||"-")}</div>
+              <div style={{fontSize:9,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{String(c.cert_fingerprint_sha256||"-").slice(0,16)}...</div>
+              <div style={{fontSize:9,color:C.dim}}>{c.cert_not_after?new Date(String(c.cert_not_after)).toLocaleString():"-"}</div>
+            </div>)}
+            {!(clients||[]).length?<div style={{padding:12,fontSize:10,color:C.muted}}>No KMIP clients registered. Add client certificate to allow mTLS access.</div>:null}
+          </div>
+        </Card>
+      </Section>
+    </Row2>
+
+    <Card style={{marginTop:10}}>
+      <div style={{fontSize:10,color:C.dim}}>
+        KMIP access control is certificate-linked. Registered client certificates are validated and used during KMIP mTLS connect. External client certificates must chain to a CA configured in Certificates tab.
+      </div>
+    </Card>
+
+    <Modal open={modal==="profile"} onClose={()=>setModal(null)} title="Add KMIP Client Profile" wide>
+      <Row2>
+        <FG label="Profile Name" required><Inp value={profileForm.name} onChange={(e)=>setProfileForm((p)=>({...p,name:e.target.value}))} placeholder="prod-kmip-clients"/></FG>
+        <FG label="Issuing CA" required>
+          <Sel value={profileForm.ca_id} onChange={(e)=>setProfileForm((p)=>({...p,ca_id:e.target.value}))}>
+            <option value="">Select CA</option>
+            {(caItems||[]).map((ca)=><option key={ca.id} value={ca.id}>{ca.name} ({ca.algorithm})</option>)}
+          </Sel>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Username Location in Certificate">
+          <Sel value={profileForm.username_location} onChange={(e)=>setProfileForm((p)=>({...p,username_location:e.target.value}))}>
+            <option value="cn">CN</option>
+            <option value="email">Email</option>
+            <option value="uid">UID</option>
+          </Sel>
+        </FG>
+        <FG label="Subject DN Field to Modify">
+          <Sel value={profileForm.subject_field_to_modify} onChange={(e)=>setProfileForm((p)=>({...p,subject_field_to_modify:e.target.value}))}>
+            <option value="uid">UID</option>
+            <option value="cn">CN</option>
+            <option value="email">emailAddress</option>
+          </Sel>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Certificate Duration (days)">
+          <Inp type="number" value={String(profileForm.certificate_duration_days)} onChange={(e)=>setProfileForm((p)=>({...p,certificate_duration_days:Math.max(1,Number(e.target.value||365))}))}/>
+        </FG>
+        <FG label="Role">
+          <Sel value={profileForm.role} onChange={(e)=>setProfileForm((p)=>({...p,role:e.target.value}))}>
+            <option value="kmip-client">kmip-client</option>
+            <option value="kmip-admin">kmip-admin</option>
+            <option value="kmip-service">kmip-service</option>
+          </Sel>
+        </FG>
+      </Row2>
+      <FG label="Certificate Details (stored with profile metadata)">
+        <Row2>
+          <FG label="Organization"><Inp value={profileForm.organization} onChange={(e)=>setProfileForm((p)=>({...p,organization:e.target.value}))}/></FG>
+          <FG label="Organizational Unit"><Inp value={profileForm.organizational_unit} onChange={(e)=>setProfileForm((p)=>({...p,organizational_unit:e.target.value}))}/></FG>
+        </Row2>
+        <Row2>
+          <FG label="Email"><Inp value={profileForm.email} onChange={(e)=>setProfileForm((p)=>({...p,email:e.target.value}))}/></FG>
+          <FG label="UID"><Inp value={profileForm.uid} onChange={(e)=>setProfileForm((p)=>({...p,uid:e.target.value}))}/></FG>
+        </Row2>
+        <Row2>
+          <FG label="Surname"><Inp value={profileForm.surname} onChange={(e)=>setProfileForm((p)=>({...p,surname:e.target.value}))}/></FG>
+          <FG label="City"><Inp value={profileForm.city} onChange={(e)=>setProfileForm((p)=>({...p,city:e.target.value}))}/></FG>
+        </Row2>
+        <Row2>
+          <FG label="State"><Inp value={profileForm.state} onChange={(e)=>setProfileForm((p)=>({...p,state:e.target.value}))}/></FG>
+          <FG label="Country"><Inp value={profileForm.country} onChange={(e)=>setProfileForm((p)=>({...p,country:e.target.value}))}/></FG>
+        </Row2>
+      </FG>
+      <Chk label="Do not modify subject DN" checked={Boolean(profileForm.do_not_modify_subject_dn)} onChange={(e)=>setProfileForm((p)=>({...p,do_not_modify_subject_dn:e.target.checked}))}/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+        <Btn primary onClick={()=>void saveProfile()} disabled={savingProfile}>{savingProfile?"Saving...":"Save Profile"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="client"} onClose={()=>setModal(null)} title="Add KMIP Client" wide>
+      <Row2>
+        <FG label="Name" required><Inp value={clientForm.name} onChange={(e)=>setClientForm((p)=>({...p,name:e.target.value}))} placeholder="core-banking-hsm-client"/></FG>
+        <FG label="Registration Token"><Inp value={clientForm.registration_token} onChange={(e)=>setClientForm((p)=>({...p,registration_token:e.target.value}))} placeholder="optional auto-generated"/></FG>
+      </Row2>
+      <Row2>
+        <FG label="Enrollment Mode">
+          <Sel value={clientForm.enrollment_mode} onChange={(e)=>setClientForm((p)=>({...p,enrollment_mode:e.target.value}))}>
+            <option value="internal">Internal cert issuance (from CA tab)</option>
+            <option value="external">External certificate upload</option>
+          </Sel>
+        </FG>
+        <FG label="Role">
+          <Sel value={clientForm.role} onChange={(e)=>setClientForm((p)=>({...p,role:e.target.value}))}>
+            <option value="kmip-client">kmip-client</option>
+            <option value="kmip-admin">kmip-admin</option>
+            <option value="kmip-service">kmip-service</option>
+          </Sel>
+        </FG>
+      </Row2>
+
+      {String(clientForm.enrollment_mode)==="internal"?<>
+        <Row2>
+          <FG label="Client Profile" required>
+            <Sel value={clientForm.profile_id} onChange={(e)=>setClientForm((p)=>({...p,profile_id:e.target.value,role:(profiles.find((x)=>String(x.id)===String(e.target.value))?.role)||p.role}))}>
+              <option value="">Select profile</option>
+              {(profiles||[]).map((p)=><option key={p.id} value={p.id}>{p.name} ({p.role})</option>)}
+            </Sel>
+          </FG>
+          <FG label="Common Name (optional)"><Inp value={clientForm.common_name} onChange={(e)=>setClientForm((p)=>({...p,common_name:e.target.value}))} placeholder="defaults to tenant:role"/></FG>
+        </Row2>
+        <FG label="CSR PEM (optional)">
+          <Txt value={clientForm.csr_pem} onChange={(e)=>setClientForm((p)=>({...p,csr_pem:e.target.value}))} placeholder="Paste external CSR if you want CA-signed cert from existing key pair..."/>
+        </FG>
+      </>:<>
+        <FG label="Client Certificate Source">
+          <div style={{display:"flex",gap:10,alignItems:"center"}}>
+            <label style={{display:"flex",gap:6,alignItems:"center",fontSize:10,color:C.dim}}>
+              <input type="radio" checked={clientCertSource==="paste"} onChange={()=>setClientCertSource("paste")}/> Paste PEM
+            </label>
+            <label style={{display:"flex",gap:6,alignItems:"center",fontSize:10,color:C.dim}}>
+              <input type="radio" checked={clientCertSource==="upload"} onChange={()=>setClientCertSource("upload")}/> Upload cert/key files
+            </label>
+          </div>
+        </FG>
+        {clientCertSource==="upload"?<Card>
+          <div style={{display:"grid",gap:8}}>
+            <div style={{fontSize:10,color:C.dim}}>Upload filters only allow key/certificate material.</div>
+            <input type="file" accept=".pem,.crt,.cer,.der" onChange={(e)=>void readPEMFile(e.target.files?.[0],"certificate_pem")}/>
+            <input type="file" accept=".pem,.key" onChange={(e)=>void readPEMFile(e.target.files?.[0],"private_key_pem")}/>
+            <input type="file" accept=".pem,.crt,.cer,.p7b,.p7c" onChange={(e)=>void readPEMFile(e.target.files?.[0],"ca_bundle_pem")}/>
+          </div>
+        </Card>:null}
+        <FG label="Client Certificate PEM" required>
+          <Txt value={clientForm.certificate_pem} onChange={(e)=>setClientForm((p)=>({...p,certificate_pem:e.target.value}))} placeholder="-----BEGIN CERTIFICATE-----"/>
+        </FG>
+        <FG label="Client Private Key PEM (optional)">
+          <Txt value={clientForm.private_key_pem} onChange={(e)=>setClientForm((p)=>({...p,private_key_pem:e.target.value}))} placeholder="-----BEGIN PRIVATE KEY-----"/>
+        </FG>
+        <FG label="CA Bundle PEM (optional chain)">
+          <Txt value={clientForm.ca_bundle_pem} onChange={(e)=>setClientForm((p)=>({...p,ca_bundle_pem:e.target.value}))} placeholder="Intermediate CA certificates (if any)..."/>
+        </FG>
+      </>}
+
+      <FG label="Device Credentials (metadata)">
+        <Row2>
+          <FG label="Serial Number"><Inp value={clientForm.serial_number} onChange={(e)=>setClientForm((p)=>({...p,serial_number:e.target.value}))}/></FG>
+          <FG label="Device ID"><Inp value={clientForm.device_id} onChange={(e)=>setClientForm((p)=>({...p,device_id:e.target.value}))}/></FG>
+        </Row2>
+        <Row2>
+          <FG label="Password"><Inp type="password" value={clientForm.password} onChange={(e)=>setClientForm((p)=>({...p,password:e.target.value}))}/></FG>
+          <FG label="Password Match"><Inp type="password" value={clientForm.password_match} onChange={(e)=>setClientForm((p)=>({...p,password_match:e.target.value}))}/></FG>
+        </Row2>
+        <Row2>
+          <FG label="Network ID"><Inp value={clientForm.network_id} onChange={(e)=>setClientForm((p)=>({...p,network_id:e.target.value}))}/></FG>
+          <FG label="Machine ID"><Inp value={clientForm.machine_id} onChange={(e)=>setClientForm((p)=>({...p,machine_id:e.target.value}))}/></FG>
+        </Row2>
+        <FG label="Media ID"><Inp value={clientForm.media_id} onChange={(e)=>setClientForm((p)=>({...p,media_id:e.target.value}))}/></FG>
+      </FG>
+
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+        <Btn primary onClick={()=>void saveClient()} disabled={savingClient}>{savingClient?"Saving...":"Save Client"}</Btn>
+      </div>
+    </Modal>
+  </div>;
+};
+
+const Cluster=()=><div>
+  <Section title="Cluster Nodes">
+    {[["Node 1 (Leader)","10.0.1.100","Auth, KeyCore, Audit, Policy, Gov, BYOK, HYOK, Payment, DataProtect"],["Node 2 (Follower)","10.0.1.101","Auth, KeyCore, Audit, Policy"],["Node 3 (Follower)","10.0.1.102","Auth, KeyCore, Audit, Payment, EKM"]].map(([n,ip,svcs])=>
+      <Card key={n} style={{marginBottom:6}}><div style={{fontSize:12,color:C.text,fontWeight:600}}>{n}</div><div style={{fontSize:10,color:C.dim,fontFamily:"monospace"}}>{ip}</div><div style={{fontSize:9,color:C.muted,marginTop:4}}>{svcs}</div></Card>)}
+  </Section>
+</div>;
+
+const Approvals=({session,onToast})=>{
+  const [loading,setLoading]=useState(false);
+  const [requests,setRequests]=useState<any[]>([]);
+  const [policies,setPolicies]=useState<any[]>([]);
+  const [settings,setSettings]=useState<any>(null);
+  const [statusFilter,setStatusFilter]=useState("all");
+  const [approverEmail,setApproverEmail]=useState("");
+  const [voteBusy,setVoteBusy]=useState("");
+  const promptDialog=usePromptDialog();
+
+  const refresh=async(silent=false)=>{
+    if(!session?.token){
+      setRequests([]);
+      setPolicies([]);
+      setSettings(null);
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const [items,policyItems,govSettings]=await Promise.all([
+        listGovernanceRequests(session,{status:""}),
+        listGovernancePolicies(session,{status:"active"}),
+        getGovernanceSettings(session)
+      ]);
+      setRequests(Array.isArray(items)?items:[]);
+      setPolicies(Array.isArray(policyItems)?policyItems:[]);
+      setSettings(govSettings||null);
+    }catch(error){
+      onToast?.(`Approval queue load failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    if(!session?.token){
+      setRequests([]);
+      return;
+    }
+    void refresh(false);
+  },[session?.token,session?.tenantId]);
+
+  useEffect(()=>{
+    if(String(approverEmail||"").trim()){
+      return;
+    }
+    if(String(session?.username||"").trim()){
+      const value=String(session.username||"").trim();
+      setApproverEmail(value.includes("@")?value:`${value}@vecta.local`);
+    }
+  },[session?.username,approverEmail]);
+
+  const policyMap=useMemo(()=>{
+    const out:any={};
+    (Array.isArray(policies)?policies:[]).forEach((p)=>{out[String(p.id||"")]=p;});
+    return out;
+  },[policies]);
+
+  const sorted=useMemo(()=>{
+    const out=[...(Array.isArray(requests)?requests:[])];
+    out.sort((a,b)=>new Date(String(b.created_at||0)).getTime()-new Date(String(a.created_at||0)).getTime());
+    return out;
+  },[requests]);
+
+  const counters=useMemo(()=>{
+    const all=Array.isArray(requests)?requests:[];
+    return {
+      all:all.length,
+      pending:all.filter((it)=>String(it.status||"").toLowerCase()==="pending").length,
+      approved:all.filter((it)=>String(it.status||"").toLowerCase()==="approved").length,
+      denied:all.filter((it)=>String(it.status||"").toLowerCase()==="denied").length,
+      expired:all.filter((it)=>String(it.status||"").toLowerCase()==="expired").length
+    };
+  },[requests]);
+
+  const visible=useMemo(()=>{
+    if(statusFilter==="all"){
+      return sorted;
+    }
+    return sorted.filter((it)=>String(it.status||"").toLowerCase()===statusFilter);
+  },[sorted,statusFilter]);
+
+  const submitVote=async(item:any,vote:"approved"|"denied")=>{
+    if(!session?.token){
+      return;
+    }
+    const email=String(approverEmail||"").trim().toLowerCase();
+    if(!email){
+      onToast?.("Approver email is required.");
+      return;
+    }
+    let challengeCode="";
+    if(Boolean(settings?.challenge_response_enabled)){
+      const raw=await promptDialog.prompt({
+        title:"Challenge Response",
+        message:"Enter the approval challenge code received over email.",
+        placeholder:"6-digit code",
+        confirmLabel:vote==="approved"?"Approve":"Deny",
+        danger:vote==="denied",
+        validate:(value:string)=>String(value||"").trim()?"":"Challenge code is required."
+      });
+      if(raw===null){
+        return;
+      }
+      challengeCode=String(raw||"").trim();
+      if(!challengeCode){
+        onToast?.("Challenge code is required.");
+        return;
+      }
+    }
+    const key=`${String(item?.id||"")}:${vote}`;
+    setVoteBusy(key);
+    try{
+      await voteGovernanceRequest(session,String(item?.id||""),{
+        vote,
+        approver_email:email,
+        approver_id:email,
+        challenge_code:challengeCode
+      });
+      onToast?.(`Request ${vote==="approved"?"approved":"denied"}: ${String(item?.id||"")}`);
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Vote failed: ${errMsg(error)}`);
+    }finally{
+      setVoteBusy("");
+    }
+  };
+
+  const statusTabs=[
+    {id:"all",label:"All",count:counters.all,tone:"blue"},
+    {id:"pending",label:"Pending",count:counters.pending,tone:"amber"},
+    {id:"approved",label:"Approved",count:counters.approved,tone:"green"},
+    {id:"denied",label:"Denied",count:counters.denied,tone:"red"},
+    {id:"expired",label:"Expired",count:counters.expired,tone:"purple"}
+  ];
+
+  return <div>
+    <Section
+      title="Governance Approval Queue"
+      actions={<>
+        <Btn small onClick={()=>void refresh(false)}><RefreshCcw size={12}/>{loading?"Refreshing...":"Refresh"}</Btn>
+      </>}
+    >
+      <Card style={{marginBottom:10,padding:"10px 12px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1.1fr auto",gap:10,alignItems:"end"}}>
+          <FG label="Vote As (Approver Email)">
+            <Inp value={approverEmail} onChange={(e)=>setApproverEmail(e.target.value)} placeholder="approver@bank.com"/>
+          </FG>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+            <B c={settings?.notify_dashboard?"green":"red"}>{settings?.notify_dashboard?"Dashboard Queue On":"Dashboard Queue Off"}</B>
+            <B c={settings?.notify_email?"green":"red"}>{settings?.notify_email?"Email On":"Email Off"}</B>
+            <B c={settings?.challenge_response_enabled?"amber":"blue"}>{settings?.challenge_response_enabled?"Challenge Required":"Direct Vote"}</B>
+          </div>
+        </div>
+        <div style={{display:"flex",gap:6,marginTop:8,flexWrap:"wrap"}}>
+          {statusTabs.map((tab)=><Btn
+            key={tab.id}
+            small
+            onClick={()=>setStatusFilter(tab.id)}
+            style={{
+              background:statusFilter===tab.id?(C[`${tab.tone}Dim`]||C.accentDim):"transparent",
+              color:statusFilter===tab.id?(C[tab.tone]||C.accent):C.text,
+              borderColor:statusFilter===tab.id?(C[tab.tone]||C.accent):C.border,
+              height:26
+            }}
+          >{`${tab.label} (${tab.count})`}</Btn>)}
+        </div>
+      </Card>
+
+      <div style={{display:"grid",gap:8}}>
+        {visible.map((item:any)=>{
+          const status=String(item?.status||"").toLowerCase();
+          const policy=policyMap[String(item?.policy_id||"")]||{};
+          const totalApprovers=Math.max(1,Number(policy?.total_approvers||item?.required_approvals||1));
+          const required=Math.max(1,Number(item?.required_approvals||policy?.required_approvals||1));
+          const approvals=Number(item?.current_approvals||0);
+          const denials=Number(item?.current_denials||0);
+          const voteScheme=`${required}-of-${totalApprovers}`;
+          const voteProgress=`Votes: ${approvals}/${required}`;
+          const statusColor=status==="approved"?"green":status==="denied"?"red":status==="expired"?"amber":"amber";
+          const actionLabel=String(item?.action||"approval").replace(/^key\./,"").replaceAll("_"," ");
+          return <Card key={String(item?.id||"")} style={{padding:"12px 14px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:13,color:C.text,fontWeight:700,marginBottom:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{`${actionLabel}: ${String(item?.target_id||"-")}`}</div>
+                <div style={{fontSize:10,color:C.dim}}>{`By: ${String(item?.requester_email||item?.requester_id||"-")} • Scheme: ${voteScheme} • ${voteProgress}`}</div>
+                <div style={{fontSize:9,color:C.muted,marginTop:3}}>{`${approvals} approved • ${denials} denied`}</div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,minWidth:180}}>
+                <B c={statusColor}>{status==="pending"?"Pending":status==="approved"?"Approved":status==="denied"?"Denied":"Expired"}</B>
+                <div style={{fontSize:9,color:C.muted}}>{formatAgo(String(item?.created_at||""))}</div>
+                {status==="pending"?<div style={{display:"flex",gap:6}}>
+                  <Btn
+                    small
+                    primary
+                    onClick={()=>void submitVote(item,"approved")}
+                    disabled={voteBusy===`${String(item?.id||"")}:approved`||voteBusy===`${String(item?.id||"")}:denied`}
+                    style={{height:30,padding:"0 12px"}}
+                  >Approve</Btn>
+                  <Btn
+                    small
+                    danger
+                    onClick={()=>void submitVote(item,"denied")}
+                    disabled={voteBusy===`${String(item?.id||"")}:approved`||voteBusy===`${String(item?.id||"")}:denied`}
+                    style={{height:30,padding:"0 12px"}}
+                  >Deny</Btn>
+                </div>:null}
+              </div>
+            </div>
+          </Card>;
+        })}
+        {!visible.length&&!loading?<Card><div style={{fontSize:10,color:C.dim}}>No approval requests found for this filter.</div></Card>:null}
+      </div>
+    </Section>
+    {promptDialog.ui}
+  </div>;
+};
+
+const Alerts=({session,onToast,onUnreadSync})=>{
+  const [items,setItems]=useState<any[]>([]);
+  const [stats,setStats]=useState<any>({total:0,by_severity:{},by_status:{}});
+  const [mttr,setMTTR]=useState<Record<string,number>>({});
+  const [channels,setChannels]=useState<any[]>([]);
+  const [rules,setRules]=useState<any[]>([]);
+  const [loading,setLoading]=useState(false);
+  const [activeFilter,setActiveFilter]=useState("open");
+  const [pageSize,setPageSize]=useState(10);
+  const [pageIndex,setPageIndex]=useState(0);
+  const [ackBusy,setAckBusy]=useState("");
+  const [escBusy,setEscBusy]=useState("");
+  const [ruleModal,setRuleModal]=useState(false);
+  const [ruleSaving,setRuleSaving]=useState(false);
+  const [ruleName,setRuleName]=useState("");
+  const [rulePattern,setRulePattern]=useState("key.*");
+  const [ruleSeverity,setRuleSeverity]=useState("high");
+  const [ruleThreshold,setRuleThreshold]=useState(1);
+  const [ruleWindowSeconds,setRuleWindowSeconds]=useState(300);
+  const [ruleChannels,setRuleChannels]=useState<string[]>([]);
+
+  const refresh=async(silent=false)=>{
+    if(!session?.token){
+      setItems([]);
+      setStats({total:0,by_severity:{},by_status:{}});
+      setMTTR({});
+      setChannels([]);
+      setRules([]);
+      onUnreadSync?.(0);
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const [alertsOut,statsOut,mttrOut,channelsOut,rulesOut]=await Promise.all([
+        listReportingAlerts(session,{limit:500,offset:0}),
+        getReportingAlertStats(session),
+        getReportingMTTR(session),
+        listReportingChannels(session),
+        listReportingRules(session)
+      ]);
+      setItems(Array.isArray(alertsOut)?alertsOut:[]);
+      setStats(statsOut||{total:0,by_severity:{},by_status:{}});
+      setMTTR(mttrOut&&typeof mttrOut==="object"?mttrOut:{});
+      setChannels(Array.isArray(channelsOut)?channelsOut:[]);
+      setRules(Array.isArray(rulesOut)?rulesOut:[]);
+      const unread=Math.max(0,(Array.isArray(alertsOut)?alertsOut:[]).filter((item:any)=>String(item?.status||"").toLowerCase()==="new").length);
+      onUnreadSync?.(unread);
+      const defaults=(Array.isArray(channelsOut)?channelsOut:[]).filter((ch:any)=>Boolean(ch?.enabled)).map((ch:any)=>String(ch?.name||"").trim()).filter(Boolean);
+      if(!ruleChannels.length){
+        setRuleChannels(defaults.length?defaults:["screen","email"]);
+      }
+    }catch(error){
+      onToast?.(`Alerts load failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    if(!session?.tenantId){
+      setItems([]);
+      return;
+    }
+    void refresh(false);
+  },[session?.tenantId,session?.token]);
+
+  useEffect(()=>{
+    setPageIndex(0);
+  },[activeFilter,pageSize]);
+
+  const sortedItems=useMemo(()=>{
+    const out=[...(Array.isArray(items)?items:[])];
+    out.sort((a,b)=>new Date(String(b.created_at||b.updated_at||0)).getTime()-new Date(String(a.created_at||a.updated_at||0)).getTime());
+    return out;
+  },[items]);
+
+  const openItems=useMemo(()=>sortedItems.filter((it)=>String(it.status||"").toLowerCase()==="new"),[sortedItems]);
+  const criticalItems=useMemo(()=>openItems.filter((it)=>String(it.severity||"").toLowerCase()==="critical"),[openItems]);
+  const highItems=useMemo(()=>openItems.filter((it)=>String(it.severity||"").toLowerCase()==="high"),[openItems]);
+  const mediumItems=useMemo(()=>openItems.filter((it)=>{
+    const sev=String(it.severity||"").toLowerCase();
+    return sev==="warning"||sev==="medium";
+  }),[openItems]);
+  const resolvedItems=useMemo(()=>sortedItems.filter((it)=>{
+    const st=String(it.status||"").toLowerCase();
+    return st==="resolved"||st==="acknowledged";
+  }),[sortedItems]);
+  const suppressedItems=useMemo(()=>sortedItems.filter((it)=>String(it.status||"").toLowerCase()==="false_positive"),[sortedItems]);
+
+  const filteredItems=useMemo(()=>{
+    switch(activeFilter){
+      case "critical": return criticalItems;
+      case "high": return highItems;
+      case "medium": return mediumItems;
+      case "resolved": return resolvedItems;
+      case "suppressed": return suppressedItems;
+      case "open":
+      default:
+        return openItems;
+    }
+  },[activeFilter,criticalItems,highItems,mediumItems,openItems,resolvedItems,suppressedItems]);
+
+  const totalPages=useMemo(()=>Math.max(1,Math.ceil(filteredItems.length/Math.max(1,pageSize))),[filteredItems.length,pageSize]);
+  const currentPage=useMemo(()=>Math.min(Math.max(0,pageIndex),totalPages-1),[pageIndex,totalPages]);
+  const pagedItems=useMemo(()=>{
+    const start=currentPage*pageSize;
+    return filteredItems.slice(start,start+pageSize);
+  },[filteredItems,currentPage,pageSize]);
+
+  useEffect(()=>{
+    if(pageIndex>totalPages-1){
+      setPageIndex(Math.max(0,totalPages-1));
+    }
+  },[pageIndex,totalPages]);
+
+  const todayTotal=useMemo(()=>{
+    const now=new Date();
+    const y=now.getUTCFullYear();
+    const m=now.getUTCMonth();
+    const d=now.getUTCDate();
+    return sortedItems.filter((it)=>{
+      const ts=new Date(String(it.created_at||it.updated_at||0));
+      return ts.getUTCFullYear()===y&&ts.getUTCMonth()===m&&ts.getUTCDate()===d;
+    }).length;
+  },[sortedItems]);
+
+  const mttrAvg=useMemo(()=>{
+    const vals=Object.values(mttr||{}).map((v)=>Number(v||0)).filter((v)=>Number.isFinite(v)&&v>0);
+    if(!vals.length){
+      return 0;
+    }
+    return vals.reduce((sum,val)=>sum+val,0)/vals.length;
+  },[mttr]);
+
+  const enabledChannels=useMemo(()=>{
+    return (Array.isArray(channels)?channels:[]).filter((ch)=>Boolean(ch?.enabled));
+  },[channels]);
+
+  const alertCards=[
+    {
+      label:"Open Alerts",
+      value:String(openItems.length),
+      sub:`${criticalItems.length} critical, ${highItems.length} high`,
+      tone:"red",
+      icon:Bell
+    },
+    {
+      label:"Today Total",
+      value:String(todayTotal),
+      sub:stats?.total?`${Math.max(0,Math.round((resolvedItems.length/Math.max(1,stats.total))*100))}% triaged`:`${rules.length} active rules`,
+      tone:"accent",
+      icon:Bell
+    },
+    {
+      label:"Avg Response",
+      value:mttrAvg?`${(mttrAvg/60).toFixed(1)}h`:"-",
+      sub:mttrAvg?`MTTR ${Math.round(mttrAvg)}m`:"Awaiting resolved alerts",
+      tone:"green",
+      icon:Gauge
+    },
+    {
+      label:"Channels",
+      value:String(enabledChannels.length),
+      sub:enabledChannels.length?enabledChannels.map((ch:any)=>String(ch.name||"")).slice(0,5).join(", "):"none",
+      tone:"blue",
+      icon:RadioIcon
+    }
+  ];
+
+  const filterTabs=[
+    {id:"open",label:"All Open",count:openItems.length,tone:"accent"},
+    {id:"critical",label:"Critical",count:criticalItems.length,tone:"red"},
+    {id:"high",label:"High",count:highItems.length,tone:"amber"},
+    {id:"medium",label:"Medium",count:mediumItems.length,tone:"blue"},
+    {id:"resolved",label:"Resolved",count:resolvedItems.length,tone:"green"},
+    {id:"suppressed",label:"Suppressed",count:suppressedItems.length,tone:"purple"}
+  ];
+
+  const severityTone=(severity:string)=>{
+    const sev=String(severity||"").toLowerCase();
+    if(sev==="critical") return "red";
+    if(sev==="high") return "amber";
+    if(sev==="warning"||sev==="medium") return "blue";
+    return "green";
+  };
+
+  const ackAlert=async(item:any)=>{
+    if(!session?.token){
+      return;
+    }
+    const alertID=String(item?.id||"");
+    if(!alertID){
+      return;
+    }
+    setAckBusy(alertID);
+    try{
+      await acknowledgeAlert(session,alertID,session.username||"dashboard");
+      onToast?.("Alert acknowledged.");
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Acknowledge failed: ${errMsg(error)}`);
+    }finally{
+      setAckBusy("");
+    }
+  };
+
+  const escalateOne=async(item:any)=>{
+    if(!session?.token){
+      return;
+    }
+    const alertID=String(item?.id||"");
+    if(!alertID){
+      return;
+    }
+    setEscBusy(alertID);
+    try{
+      await escalateAlert(session,alertID,"critical");
+      onToast?.("Alert escalated to critical.");
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Escalation failed: ${errMsg(error)}`);
+    }finally{
+      setEscBusy("");
+    }
+  };
+
+  const submitRule=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    const name=String(ruleName||"").trim();
+    const pattern=String(rulePattern||"").trim();
+    if(!name||!pattern){
+      onToast?.("Rule name and event pattern are required.");
+      return;
+    }
+    setRuleSaving(true);
+    try{
+      await createReportingRule(session,{
+        name,
+        condition:"threshold",
+        severity:String(ruleSeverity||"high").toLowerCase(),
+        event_pattern:pattern,
+        threshold:Math.max(1,Math.trunc(Number(ruleThreshold||1))),
+        window_seconds:Math.max(10,Math.trunc(Number(ruleWindowSeconds||300))),
+        channels:(ruleChannels.length?ruleChannels:["screen"]).map((value)=>String(value||"").trim()).filter(Boolean),
+        enabled:true
+      });
+      onToast?.("Alert rule created.");
+      setRuleModal(false);
+      setRuleName("");
+      setRulePattern("key.*");
+      setRuleSeverity("high");
+      setRuleThreshold(1);
+      setRuleWindowSeconds(300);
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Create alert rule failed: ${errMsg(error)}`);
+    }finally{
+      setRuleSaving(false);
+    }
+  };
+
+  const toggleRuleChannel=(name:string)=>{
+    const key=String(name||"").trim().toLowerCase();
+    if(!key){
+      return;
+    }
+    setRuleChannels((prev)=>{
+      const set=new Set((Array.isArray(prev)?prev:[]).map((v)=>String(v||"").trim().toLowerCase()).filter(Boolean));
+      if(set.has(key)){
+        set.delete(key);
+      }else{
+        set.add(key);
+      }
+      return Array.from(set);
+    });
+  };
+
+  return <div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:10,marginBottom:12}}>
+      {alertCards.map((card)=><Card key={card.label} style={{padding:"12px 14px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>{card.label}</div>
+          <div style={{color:C.dim}}><card.icon size={14} strokeWidth={2}/></div>
+        </div>
+        <div style={{fontSize:24,fontWeight:700,letterSpacing:-.3,color:C[card.tone]||C.accent,marginTop:4}}>{card.value}</div>
+        <div style={{fontSize:10,color:C.dim,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.sub}</div>
+      </Card>)}
+    </div>
+
+    <Section
+      title="Alert Center"
+      actions={<div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+        <Btn small onClick={()=>void refresh(false)}><RefreshCcw size={12}/>{loading?"Refreshing...":"Refresh"}</Btn>
+        <Btn small primary onClick={()=>setRuleModal(true)}>+ Create Alert Rule</Btn>
+      </div>}
+    >
+      <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
+        {filterTabs.map((tab)=><Btn
+          key={tab.id}
+          small
+          onClick={()=>setActiveFilter(tab.id)}
+          style={{
+            background:activeFilter===tab.id?(C[`${tab.tone}Dim`]||C.accentDim):"transparent",
+            color:activeFilter===tab.id?(C[tab.tone]||C.accent):C.text,
+            borderColor:activeFilter===tab.id?(C[tab.tone]||C.accent):C.border,
+            height:28
+          }}
+        >{`${tab.label} (${tab.count})`}</Btn>)}
+      </div>
+
+      <div style={{display:"grid",gap:8}}>
+        {pagedItems.map((item:any)=>{
+          const sev=String(item?.severity||"info").toLowerCase();
+          const status=String(item?.status||"new").toLowerCase();
+          const tone=severityTone(sev);
+          const canAck=status==="new";
+          const canEscalate=status==="new"&&sev!=="critical";
+          return <Card key={String(item?.id||"")} style={{padding:"12px 14px",borderLeft:`3px solid ${C[tone]||C.accent}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+              <div style={{minWidth:0,flex:1}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
+                  <B c={tone}>{sev.toUpperCase()}</B>
+                  <div style={{fontSize:13,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(item?.title||item?.id||"Alert")}</div>
+                </div>
+                <div style={{fontSize:11,color:C.dim,marginBottom:5}}>{String(item?.description||"-")}</div>
+                <div style={{fontSize:9,color:C.muted}}>
+                  {`Source: ${String(item?.service||"-")}   Actor: ${String(item?.actor_id||"system")}   Target: ${String(item?.target_id||"-")}`}
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,minWidth:170}}>
+                <div style={{fontSize:10,color:C.muted}}>{formatAgo(String(item?.created_at||item?.updated_at||""))}</div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                  {canAck?<Btn small onClick={()=>void ackAlert(item)} disabled={ackBusy===String(item?.id||"")||escBusy===String(item?.id||"")} style={{height:30}}>{ackBusy===String(item?.id||"")?"Ack...":"Acknowledge"}</Btn>:null}
+                  {canEscalate?<Btn small danger onClick={()=>void escalateOne(item)} disabled={escBusy===String(item?.id||"")||ackBusy===String(item?.id||"")} style={{height:30}}>{escBusy===String(item?.id||"")?"Esc...":"Escalate"}</Btn>:null}
+                  {!canAck&&!canEscalate?<B c={status==="resolved"||status==="acknowledged"?"green":status==="false_positive"?"purple":"blue"}>{status}</B>:null}
+                </div>
+              </div>
+            </div>
+          </Card>;
+        })}
+        {!pagedItems.length&&!loading?<Card><div style={{fontSize:10,color:C.muted}}>No alerts found for current filter.</div></Card>:null}
+      </div>
+
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginTop:10,flexWrap:"wrap"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,fontSize:10,color:C.dim}}>
+          <span>Rows per page</span>
+          <Sel w={92} value={String(pageSize)} onChange={(e)=>setPageSize(Number(e.target.value||10))}>
+            <option value="10">10</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </Sel>
+          <span>{filteredItems.length?`${currentPage*pageSize+1}-${Math.min((currentPage+1)*pageSize,filteredItems.length)} of ${filteredItems.length}`:`0 of 0`}</span>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <Btn small onClick={()=>setPageIndex((prev)=>Math.max(0,prev-1))} disabled={currentPage<=0}>Prev</Btn>
+          <div style={{fontSize:10,color:C.text,minWidth:74,textAlign:"center"}}>{`Page ${currentPage+1} / ${totalPages}`}</div>
+          <Btn small onClick={()=>setPageIndex((prev)=>Math.min(totalPages-1,prev+1))} disabled={currentPage>=totalPages-1}>Next</Btn>
+        </div>
+      </div>
+    </Section>
+
+    <Modal open={ruleModal} onClose={()=>setRuleModal(false)} title="Create Alert Rule">
+      <FG label="Rule Name" required><Inp value={ruleName} onChange={(e)=>setRuleName(e.target.value)} placeholder="Key Export Spike"/></FG>
+      <FG label="Event Pattern" required><Inp value={rulePattern} onChange={(e)=>setRulePattern(e.target.value)} placeholder="key.exported" mono/></FG>
+      <Row3>
+        <FG label="Severity"><Sel value={ruleSeverity} onChange={(e)=>setRuleSeverity(e.target.value)}><option value="critical">critical</option><option value="high">high</option><option value="warning">warning</option><option value="info">info</option></Sel></FG>
+        <FG label="Threshold"><Inp type="number" min={1} value={String(ruleThreshold)} onChange={(e)=>setRuleThreshold(Math.max(1,Math.trunc(Number(e.target.value||1))))}/></FG>
+        <FG label="Window (seconds)"><Inp type="number" min={10} value={String(ruleWindowSeconds)} onChange={(e)=>setRuleWindowSeconds(Math.max(10,Math.trunc(Number(e.target.value||300))))}/></FG>
+      </Row3>
+      <FG label="Channels">
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:4}}>
+          {(Array.isArray(channels)?channels:[]).map((ch:any)=>{
+            const name=String(ch?.name||"").trim().toLowerCase();
+            if(!name){
+              return null;
+            }
+            return <Chk key={name} label={name} checked={ruleChannels.includes(name)} onChange={()=>toggleRuleChannel(name)}/>;
+          })}
+          {!Array.isArray(channels)||!channels.length?<div style={{fontSize:10,color:C.muted}}>No channels discovered.</div>:null}
+        </div>
+      </FG>
+      <div style={{fontSize:10,color:C.muted,marginTop:6}}>{`${rules.length} rules currently configured.`}</div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setRuleModal(false)} disabled={ruleSaving}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitRule()} disabled={ruleSaving}>{ruleSaving?"Creating...":"Create Rule"}</Btn>
+      </div>
+    </Modal>
+  </div>;
+};
+
+const AuditLog=()=><div>
+  <div style={{display:"flex",gap:6,marginBottom:10}}><Inp placeholder="Search audit events..." w={240}/>
+    <Sel w={120}><option>All Services</option><option>kms-keycore</option><option>kms-auth</option><option>kms-payment</option><option>kms-pkcs11</option></Sel>
+    <Sel w={100}><option>All Results</option><option>Success</option><option>Failure</option><option>Denied</option></Sel>
+    <Sel w={100}><option>Last 24h</option><option>Last 7d</option><option>Last 30d</option></Sel>
+    <Btn small>Export CSV</Btn><Btn small>Export CEF</Btn><Btn small primary>Verify Chain</Btn>
+  </div>
+  <div style={{fontSize:10,color:C.green}}>250+ event types - Hash chain: intact - Fail-closed: active - Every operation -&gt; audit + alert</div>
+</div>;
+
+const ComplianceReportingPanel=({session,onToast})=>{
+  const [loading,setLoading]=useState(false);
+  const [running,setRunning]=useState(false);
+  const [scheduling,setScheduling]=useState(false);
+  const [templates,setTemplates]=useState<any[]>([]);
+  const [jobs,setJobs]=useState<any[]>([]);
+  const [scheduled,setScheduled]=useState<any[]>([]);
+  const [alerts,setAlerts]=useState<any[]>([]);
+  const [stats,setStats]=useState<any>({daily_trend:{}});
+  const [templateId,setTemplateId]=useState("key_generation");
+  const [format,setFormat]=useState("pdf");
+  const [scheduleName,setScheduleName]=useState("weekly-compliance");
+  const [scheduleFrequency,setScheduleFrequency]=useState("weekly");
+  const [scheduleRecipients,setScheduleRecipients]=useState("");
+
+  const downloadTextFile=(filename:string,content:string,mime="application/json")=>{
+    const blob=new Blob([String(content||"")],{type:mime});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url;
+    link.download=String(filename||"report.txt");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadBase64File=(filename:string,b64:string,mime="application/pdf")=>{
+    try{
+      const bin=atob(String(b64||""));
+      const bytes=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i+=1){
+        bytes[i]=bin.charCodeAt(i);
+      }
+      const blob=new Blob([bytes],{type:mime});
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement("a");
+      link.href=url;
+      link.download=String(filename||"report.pdf");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }catch{
+      onToast?.("Report download failed: invalid base64 payload.");
+    }
+  };
+
+  const load=async(silent=false)=>{
+    if(!session?.token){
+      setTemplates([]);
+      setJobs([]);
+      setScheduled([]);
+      setAlerts([]);
+      setStats({daily_trend:{}});
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const [tpl,jb,sch,alertItems,alertStats]=await Promise.all([
+        listReportingReportTemplates(session),
+        listReportingReportJobs(session,40,0),
+        listReportingScheduledReports(session),
+        listReportingAlerts(session,{limit:1000,offset:0}),
+        getReportingAlertStats(session)
+      ]);
+      setTemplates(Array.isArray(tpl)?tpl:[]);
+      setJobs(Array.isArray(jb)?jb:[]);
+      setScheduled(Array.isArray(sch)?sch:[]);
+      setAlerts(Array.isArray(alertItems)?alertItems:[]);
+      setStats(alertStats||{daily_trend:{}});
+      if(!silent){
+        onToast?.("Reporting data refreshed.");
+      }
+    }catch(error){
+      onToast?.(`Reporting load failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    void load(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[session?.token,session?.tenantId]);
+
+  useEffect(()=>{
+    if(!templates.length){
+      return;
+    }
+    const preferred=String(templateId||"").trim().toLowerCase();
+    const current=templates.find((item:any)=>String(item?.id||"").toLowerCase()===preferred)||templates[0];
+    if(!current){
+      return;
+    }
+    if(String(current?.id||"").toLowerCase()!==preferred){
+      setTemplateId(String(current.id||""));
+    }
+    const fmts=Array.isArray(current?.formats)?current.formats.map((value:any)=>String(value||"").toLowerCase()):[];
+    if(fmts.length&&!fmts.includes(String(format||"").toLowerCase())){
+      setFormat(fmts[0]);
+    }
+  },[templates,templateId,format]);
+
+  const currentTemplate=useMemo(()=>{
+    const wanted=String(templateId||"").trim().toLowerCase();
+    return (Array.isArray(templates)?templates:[]).find((item:any)=>String(item?.id||"").toLowerCase()===wanted)||null;
+  },[templates,templateId]);
+
+  const templateFormats=Array.isArray(currentTemplate?.formats)&&currentTemplate.formats.length
+    ? currentTemplate.formats.map((value:any)=>String(value||"").toLowerCase())
+    : ["pdf","json","csv"];
+
+  const matchesAction=(scope:string,action:string)=>{
+    const a=String(action||"").toLowerCase().trim();
+    if(!a){
+      return false;
+    }
+    switch(scope){
+      case "key_generation":
+        return a==="key.created"||a.startsWith("key.create");
+      case "key_rotation":
+        return a==="key.rotated"||a.startsWith("key.rotate");
+      case "kms_operations":
+        return a.startsWith("key.")||a.startsWith("crypto.")||a.startsWith("payment.")||a.startsWith("policy.");
+      case "hyok_activity":
+        return a.startsWith("hyok.");
+      case "byok_activity":
+        return a.startsWith("cloud.")||a.includes("byok");
+      case "certificate_lifecycle":
+        return a.startsWith("cert.");
+      default:
+        return true;
+    }
+  };
+
+  const metricRows=useMemo(()=>{
+    const items=Array.isArray(alerts)?alerts:[];
+    const rows=[
+      {id:"key_generation",label:"Key Generation",color:C.green},
+      {id:"key_rotation",label:"Key Rotation",color:C.accent},
+      {id:"kms_operations",label:"KMS Ops",color:C.blue},
+      {id:"hyok_activity",label:"HYOK",color:C.purple},
+      {id:"byok_activity",label:"BYOK",color:C.amber},
+      {id:"certificate_lifecycle",label:"Certificates",color:C.pink}
+    ];
+    return rows.map((row)=>({
+      ...row,
+      count:items.filter((item:any)=>matchesAction(row.id,String(item?.audit_action||""))).length
+    }));
+  },[alerts]);
+
+  const maxMetric=Math.max(1,...metricRows.map((row)=>Math.max(0,Number(row.count||0))));
+  const trendEntries=useMemo(()=>{
+    const map=stats?.daily_trend&&typeof stats.daily_trend==="object"?stats.daily_trend:{};
+    return Object.entries(map).sort((a:any,b:any)=>String(a[0]).localeCompare(String(b[0]))).slice(-7);
+  },[stats]);
+  const maxTrend=Math.max(1,...trendEntries.map((entry:any)=>Math.max(0,Number(entry?.[1]||0))));
+
+  const downloadJob=async(job:any)=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    const id=String(job?.id||"").trim();
+    if(!id){
+      return;
+    }
+    try{
+      const out=await downloadReportingReport(session,id);
+      const stamp=new Date().toISOString().replace(/[:.]/g,"-");
+      const fmt=String(job?.format||"json").toLowerCase();
+      const template=String(job?.template_id||"report").replace(/[^a-z0-9._-]+/gi,"-");
+      if(fmt==="pdf"||String(out?.content_type||"").toLowerCase().includes("pdf")){
+        downloadBase64File(`vecta-report-${template}-${stamp}.pdf`,String(out?.content||""),"application/pdf");
+      }else if(fmt==="csv"){
+        downloadTextFile(`vecta-report-${template}-${stamp}.csv`,String(out?.content||""),"text/csv");
+      }else{
+        downloadTextFile(`vecta-report-${template}-${stamp}.json`,String(out?.content||""),"application/json");
+      }
+      onToast?.("Report downloaded.");
+    }catch(error){
+      onToast?.(`Report download failed: ${errMsg(error)}`);
+    }
+  };
+
+  const generateNow=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    const wantedTemplate=String(templateId||"").trim().toLowerCase();
+    if(!wantedTemplate){
+      onToast?.("Select a report template.");
+      return;
+    }
+    setRunning(true);
+    try{
+      const job=await generateReportingReport(session,{
+        template_id:wantedTemplate,
+        format:String(format||"pdf").toLowerCase(),
+        requested_by:session.username||"dashboard",
+        filters:{requested_from:"compliance-tab"}
+      });
+      let latest=job;
+      for(let i=0;i<45;i+=1){
+        if(String(latest?.status||"").toLowerCase()==="completed"){
+          break;
+        }
+        await new Promise((resolve)=>setTimeout(resolve,800));
+        latest=await getReportingReportJob(session,String(job?.id||""));
+      }
+      if(String(latest?.status||"").toLowerCase()==="completed"){
+        await downloadJob(latest);
+      }else if(String(latest?.status||"").toLowerCase()==="failed"){
+        throw new Error(String(latest?.error||"report generation failed"));
+      }else{
+        onToast?.("Report queued. It will appear in Recent Reports once completed.");
+      }
+      await load(true);
+    }catch(error){
+      onToast?.(`Generate report failed: ${errMsg(error)}`);
+    }finally{
+      setRunning(false);
+    }
+  };
+
+  const createSchedule=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    const name=String(scheduleName||"").trim()||"scheduled-report";
+    const recipients=String(scheduleRecipients||"")
+      .split(",")
+      .map((value)=>String(value||"").trim())
+      .filter(Boolean);
+    setScheduling(true);
+    try{
+      await createReportingScheduledReport(session,{
+        name,
+        template_id:String(templateId||"").trim().toLowerCase(),
+        format:String(format||"pdf").toLowerCase(),
+        schedule:String(scheduleFrequency||"weekly").toLowerCase() as any,
+        recipients,
+        filters:{requested_from:"compliance-tab"}
+      });
+      onToast?.("Scheduled compliance report created.");
+      await load(true);
+    }catch(error){
+      onToast?.(`Create schedule failed: ${errMsg(error)}`);
+    }finally{
+      setScheduling(false);
+    }
+  };
+
+  const sortedJobs=useMemo(()=>{
+    const out=[...(Array.isArray(jobs)?jobs:[])];
+    out.sort((a:any,b:any)=>new Date(String(b?.created_at||0)).getTime()-new Date(String(a?.created_at||0)).getTime());
+    return out;
+  },[jobs]);
+
+  return <Section
+    title="Compliance Reporting"
+    actions={<div style={{display:"flex",gap:8,alignItems:"center"}}>
+      <Btn small onClick={()=>void load(false)}><RefreshCcw size={12}/>{loading?"Refreshing...":"Refresh"}</Btn>
+    </div>}
+  >
+    <Row2>
+      <Card>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+          {metricRows.map((row)=>(
+            <Card key={row.id} style={{padding:10}}>
+              <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:.6}}>{row.label}</div>
+              <div style={{fontSize:20,fontWeight:800,color:row.color,marginTop:4}}>{Number(row.count||0)}</div>
+              <Bar pct={(Math.max(0,Number(row.count||0))/maxMetric)*100} color={row.color}/>
+            </Card>
+          ))}
+        </div>
+      </Card>
+      <Card>
+        <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>Alert Trend (last 7 days)</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))",gap:6,alignItems:"end",height:110}}>
+          {trendEntries.map((entry:any)=>{
+            const dateLabel=String(entry?.[0]||"");
+            const value=Math.max(0,Number(entry?.[1]||0));
+            const pct=(value/maxTrend)*100;
+            return <div key={dateLabel} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+              <div style={{width:"100%",height:Math.max(4,pct),background:C.accentDim,border:`1px solid ${C.border}`,borderRadius:6,position:"relative"}}>
+                <div style={{position:"absolute",left:0,right:0,bottom:0,height:Math.max(4,pct),background:C.accent,borderRadius:5}}/>
+              </div>
+              <div style={{fontSize:9,color:C.muted}}>{dateLabel.slice(5)}</div>
+            </div>;
+          })}
+        </div>
+      </Card>
+    </Row2>
+
+    <div style={{height:10}}/>
+    <Card>
+      <div style={{display:"grid",gridTemplateColumns:"1.15fr auto auto auto auto",gap:8,alignItems:"end"}}>
+        <FG label="Report Template" required>
+          <Sel value={templateId} onChange={(e)=>setTemplateId(e.target.value)}>
+            {(Array.isArray(templates)?templates:[]).map((tpl:any)=><option key={String(tpl?.id||"")} value={String(tpl?.id||"")}>{String(tpl?.name||tpl?.id||"template")}</option>)}
+          </Sel>
+        </FG>
+        <FG label="Format"><Sel w={120} value={format} onChange={(e)=>setFormat(e.target.value)}>
+          {(Array.isArray(templateFormats)?templateFormats:["pdf"]).map((fmt:string)=><option key={fmt} value={fmt}>{fmt.toUpperCase()}</option>)}
+        </Sel></FG>
+        <FG label="Schedule"><Sel w={120} value={scheduleFrequency} onChange={(e)=>setScheduleFrequency(e.target.value)}>
+          <option value="hourly">Hourly</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+        </Sel></FG>
+        <FG label="Schedule Name"><Inp w={190} value={scheduleName} onChange={(e)=>setScheduleName(e.target.value)} placeholder="weekly-compliance"/></FG>
+        <FG label="Recipients (comma-separated)"><Inp w={260} value={scheduleRecipients} onChange={(e)=>setScheduleRecipients(e.target.value)} placeholder="soc@bank.com, ciso@bank.com"/></FG>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginTop:8,flexWrap:"wrap"}}>
+        <div style={{fontSize:10,color:C.dim}}>{String(currentTemplate?.description||"Generate compliance evidence reports from real backend audit and posture data.")}</div>
+        <div style={{display:"flex",gap:8}}>
+          <Btn small onClick={()=>void createSchedule()} disabled={scheduling}>{scheduling?"Saving...":"Schedule Report"}</Btn>
+          <Btn small primary onClick={()=>void generateNow()} disabled={running}>{running?"Generating...":"Generate Now"}</Btn>
+        </div>
+      </div>
+    </Card>
+
+    <div style={{height:10}}/>
+    <Row2>
+      <Card>
+        <div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:8}}>Recent Reports</div>
+        <div style={{display:"grid",gap:6,maxHeight:240,overflowY:"auto"}}>
+          {sortedJobs.slice(0,20).map((job:any)=>{
+            const status=String(job?.status||"queued").toLowerCase();
+            const tone=status==="completed"?"green":status==="failed"?"red":status==="running"?"blue":"amber";
+            return <div key={String(job?.id||"")} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
+              <div>
+                <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(job?.template_id||"-")}</div>
+                <div style={{fontSize:9,color:C.muted}}>{`${String(job?.format||"").toUpperCase()} • ${new Date(String(job?.created_at||Date.now())).toLocaleString()}`}</div>
+              </div>
+              <B c={tone}>{status}</B>
+              <Btn small onClick={()=>void downloadJob(job)} disabled={status!=="completed"}>Download</Btn>
+            </div>;
+          })}
+          {!sortedJobs.length?<div style={{fontSize:10,color:C.muted}}>No reports generated yet.</div>:null}
+        </div>
+      </Card>
+      <Card>
+        <div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:8}}>Scheduled Reports</div>
+        <div style={{display:"grid",gap:6,maxHeight:240,overflowY:"auto"}}>
+          {(Array.isArray(scheduled)?scheduled:[]).map((item:any)=><div key={String(item?.id||"")} style={{padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+              <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(item?.name||item?.id||"-")}</div>
+              <B c={Boolean(item?.enabled)?"green":"red"}>{Boolean(item?.enabled)?"Enabled":"Disabled"}</B>
+            </div>
+            <div style={{fontSize:9,color:C.dim,marginTop:2}}>{`${String(item?.template_id||"-")} • ${String(item?.format||"").toUpperCase()} • ${String(item?.schedule||"").toUpperCase()}`}</div>
+            <div style={{fontSize:9,color:C.muted,marginTop:2}}>{`Next run: ${item?.next_run_at?new Date(String(item.next_run_at)).toLocaleString():"-"}`}</div>
+          </div>)}
+          {!Array.isArray(scheduled)||!scheduled.length?<div style={{fontSize:10,color:C.muted}}>No scheduled reports configured.</div>:null}
+        </div>
+      </Card>
+    </Row2>
+  </Section>;
+};
+
+const Compliance=({session,onToast})=>{
+  const [assessment,setAssessment]=useState<any>(null);
+  const [history,setHistory]=useState<any[]>([]);
+  const [schedule,setSchedule]=useState<any>({enabled:false,frequency:"daily"});
+  const [loading,setLoading]=useState(false);
+  const [running,setRunning]=useState(false);
+  const [savingSchedule,setSavingSchedule]=useState(false);
+  const [view,setView]=useState("assessment");
+
+  const loadAssessment=async(opts:any={})=>{
+    if(!session?.token){
+      setAssessment(null);
+      setHistory([]);
+      return;
+    }
+    if(!opts?.silent){
+      setLoading(true);
+    }
+    try{
+      const [assessOut,scheduleOut,historyOut]=await Promise.all([
+        getComplianceAssessment(session),
+        getComplianceAssessmentSchedule(session),
+        listComplianceAssessmentHistory(session,10)
+      ]);
+      setAssessment(assessOut||null);
+      setSchedule(scheduleOut||{enabled:false,frequency:"daily"});
+      setHistory(Array.isArray(historyOut)?historyOut:[]);
+    }catch(error){
+      onToast?.(`Compliance assessment load failed: ${errMsg(error)}`);
+    }finally{
+      if(!opts?.silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    void loadAssessment();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[session?.token,session?.tenantId]);
+
+  const runNow=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    setRunning(true);
+    try{
+      const out=await runComplianceAssessment(session);
+      setAssessment(out||null);
+      const hist=await listComplianceAssessmentHistory(session,10);
+      setHistory(Array.isArray(hist)?hist:[]);
+      onToast?.("Compliance assessment completed.");
+    }catch(error){
+      onToast?.(`Assessment run failed: ${errMsg(error)}`);
+    }finally{
+      setRunning(false);
+    }
+  };
+
+  const saveSchedule=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    setSavingSchedule(true);
+    try{
+      const out=await updateComplianceAssessmentSchedule(session,{
+        enabled:Boolean(schedule?.enabled),
+        frequency:String(schedule?.frequency||"daily") as any
+      });
+      setSchedule(out||schedule);
+      onToast?.("Assessment schedule updated.");
+    }catch(error){
+      onToast?.(`Schedule update failed: ${errMsg(error)}`);
+    }finally{
+      setSavingSchedule(false);
+    }
+  };
+
+  const frameworkScores=assessment?.framework_scores||{};
+  const frameworkRows=[
+    {id:"pci-dss-4.0",label:"PCI DSS 4.0",color:C.green},
+    {id:"fips-140-3",label:"FIPS 140-3",color:C.green},
+    {id:"nist-800-57",label:"NIST SP 800-57",color:C.blue},
+    {id:"eidas",label:"eIDAS",color:C.amber}
+  ].map((item)=>{
+    const score=Math.max(0,Math.min(100,Number(frameworkScores?.[item.id]||0)));
+    return {...item,score};
+  });
+
+  const pqc=assessment?.pqc||{};
+  const pqcReady=Math.max(0,Math.min(100,Number(pqc?.ready_percent||assessment?.posture?.pqc_readiness||0)));
+  const findings=Array.isArray(assessment?.findings)?assessment.findings:[];
+
+  const score=Math.max(0,Math.min(100,Number(assessment?.overall_score||assessment?.posture?.overall_score||0)));
+  const toneForFinding=(severity:string)=>{
+    const s=String(severity||"").toLowerCase();
+    if(s==="critical") return "red";
+    if(s==="high") return "amber";
+    if(s==="warning"||s==="medium") return "amber";
+    return "blue";
+  };
+
+  if(view==="reporting"){
+    return <div>
+      <div style={{display:"flex",gap:6,marginBottom:10}}>
+        <Btn
+          small
+          onClick={()=>setView("assessment")}
+          style={{background:"transparent",borderColor:C.border,color:C.text,height:28}}
+        >Assessment</Btn>
+        <Btn
+          small
+          onClick={()=>setView("reporting")}
+          style={{background:C.accentDim,borderColor:C.accent,color:C.accent,height:28}}
+        >Reporting</Btn>
+      </div>
+      <ComplianceReportingPanel session={session} onToast={onToast}/>
+    </div>;
+  }
+
+  return <div>
+    <div style={{display:"flex",gap:6,marginBottom:10}}>
+      <Btn
+        small
+        onClick={()=>setView("assessment")}
+        style={{background:C.accentDim,borderColor:C.accent,color:C.accent,height:28}}
+      >Assessment</Btn>
+      <Btn
+        small
+        onClick={()=>setView("reporting")}
+        style={{background:"transparent",borderColor:C.border,color:C.text,height:28}}
+      >Reporting</Btn>
+    </div>
+    <Section
+      title="Compliance Posture"
+      actions={
+        <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+          <Btn small onClick={()=>void loadAssessment()} disabled={loading}>Refresh</Btn>
+          <Btn small primary onClick={()=>void runNow()} disabled={running}>{running?"Running...":"Run Assessment"}</Btn>
+          <div style={{display:"flex",alignItems:"center",gap:6,padding:"2px 8px",border:`1px solid ${C.border}`,borderRadius:8}}>
+            <Chk label="Scheduled" checked={Boolean(schedule?.enabled)} onChange={()=>setSchedule((prev:any)=>({...prev,enabled:!prev?.enabled}))}/>
+            <Sel
+              w={96}
+              value={String(schedule?.frequency||"daily")}
+              onChange={(e)=>setSchedule((prev:any)=>({...prev,frequency:e.target.value}))}
+            >
+              <option value="hourly">Hourly</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </Sel>
+            <Btn small onClick={()=>void saveSchedule()} disabled={savingSchedule}>{savingSchedule?"Saving...":"Save"}</Btn>
+          </div>
+        </div>
+      }
+    >
+      <div style={{fontSize:10,color:C.muted,marginBottom:8}}>
+        Assessment is calculated from real key and certificate inventory, policy posture, and audit security signals.
+      </div>
+
+      <Row2>
+        <Card>
+          <div style={{display:"grid",gridTemplateColumns:"126px 1fr",gap:10}}>
+            <Card style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+              <div style={{fontSize:48,lineHeight:1,fontWeight:800,color:C.accent}}>{score}</div>
+              <div style={{fontSize:11,color:C.dim}}>/ 100</div>
+              <div style={{width:"100%",marginTop:8}}><Bar pct={score} color={score>=85?C.green:score>=65?C.blue:C.amber}/></div>
+            </Card>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+              {frameworkRows.map((row)=>(
+                <Card key={row.id}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:11,marginBottom:4}}>
+                    <span style={{color:C.text,fontWeight:700}}>{row.label}</span>
+                    <span style={{color:row.score>=85?C.green:row.score>=65?C.blue:C.amber,fontWeight:700}}>{row.score}%</span>
+                  </div>
+                  <Bar pct={row.score} color={row.color}/>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </Card>
+        <Card>
+          <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>Post-Quantum Readiness</div>
+          <div style={{fontSize:54,lineHeight:1,fontWeight:800,color:C.green,textAlign:"center",marginTop:4}}>{`${Math.round(pqcReady)}%`}</div>
+          <div style={{fontSize:11,color:C.dim,textAlign:"center",marginTop:6}}>PQC-ready keys</div>
+          <div style={{height:8}}/>
+          {[["ML-KEM migrated",Number(pqc?.ml_kem_migrated||0)],["ML-DSA migrated",Number(pqc?.ml_dsa_migrated||0)],["Pending",Number(pqc?.pending||0)]].map(([k,v])=>
+            <div key={String(k)} style={{display:"flex",justifyContent:"space-between",fontSize:11,padding:"4px 0",borderBottom:`1px solid ${C.border}`}}>
+              <span style={{color:C.muted}}>{k}</span>
+              <span style={{color:C.text,fontWeight:700}}>{Number(v).toLocaleString()}</span>
+            </div>)}
+        </Card>
+      </Row2>
+
+      <div style={{height:10}}/>
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Findings</div>
+          <B c={findings.length?"amber":"green"}>{findings.length?`${findings.length} open`:"No open findings"}</B>
+        </div>
+        <div style={{display:"grid",gap:8}}>
+          {findings.map((finding:any)=>(
+            <Card key={String(finding?.id||Math.random())} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+              <div>
+                <div style={{fontSize:12,color:C.text,fontWeight:700}}>{String(finding?.title||"")}</div>
+                <div style={{fontSize:10,color:C.dim,marginTop:3}}>{String(finding?.fix||"")}</div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{fontSize:10,color:C.muted}}>{`${Number(finding?.count||0)} item(s)`}</div>
+                <B c={toneForFinding(String(finding?.severity||""))}>{String(finding?.severity||"open").toUpperCase()}</B>
+              </div>
+            </Card>
+          ))}
+          {!findings.length&&!loading?<Card><div style={{fontSize:10,color:C.muted}}>No active findings from current key/certificate state.</div></Card>:null}
+        </div>
+      </Card>
+
+      <div style={{height:10}}/>
+      <Card>
+        <div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:8}}>Assessment History</div>
+        <div style={{display:"grid",gap:6}}>
+          {(Array.isArray(history)?history:[]).slice(0,5).map((item:any)=>(
+            <div key={String(item?.id||"")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:10,padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <B c="blue">{String(item?.trigger||"manual").toUpperCase()}</B>
+                <span style={{color:C.muted}}>{new Date(item?.created_at||Date.now()).toLocaleString()}</span>
+              </div>
+              <span style={{color:C.text,fontWeight:700}}>{`${Number(item?.overall_score||0)} / 100`}</span>
+            </div>
+          ))}
+          {!history.length&&!loading?<div style={{fontSize:10,color:C.muted}}>No assessment history yet.</div>:null}
+        </div>
+      </Card>
+    </Section>
+  </div>;
+};
+const SBOM=({session,onToast})=>{
+  const [loading,setLoading]=useState(false);
+  const [refreshing,setRefreshing]=useState(false);
+  const [exportingSBOM,setExportingSBOM]=useState("");
+  const [exportingCBOM,setExportingCBOM]=useState(false);
+  const [sbomLatest,setSBOMLatest]=useState<any>(null);
+  const [sbomVulns,setSBOMVulns]=useState<any[]>([]);
+  const [cbomLatest,setCBOMLatest]=useState<any>(null);
+  const [cbomSummary,setCBOMSummary]=useState<any>({});
+  const [cbomHistory,setCBOMHistory]=useState<any[]>([]);
+  const [activeSBOMFormat,setActiveSBOMFormat]=useState("cyclonedx");
+  const [diffOpen,setDiffOpen]=useState(false);
+  const [diffData,setDiffData]=useState<any>(null);
+
+  const downloadTextFile=(filename,content,mime="application/json")=>{
+    const blob=new Blob([String(content||"")],{type:mime});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url;
+    link.download=String(filename||"download.txt");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadBase64File=(filename,b64,mime="application/octet-stream")=>{
+    try{
+      const bin=atob(String(b64||""));
+      const bytes=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i+=1){
+        bytes[i]=bin.charCodeAt(i);
+      }
+      const blob=new Blob([bytes],{type:mime});
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement("a");
+      link.href=url;
+      link.download=String(filename||"download.bin");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }catch{
+      onToast?.("Export download failed: invalid base64 payload.");
+    }
+  };
+
+  const loadData=async(opts:any={})=>{
+    if(!session?.token){
+      setSBOMLatest(null);
+      setSBOMVulns([]);
+      setCBOMLatest(null);
+      setCBOMSummary({});
+      setCBOMHistory([]);
+      return;
+    }
+    const doRefresh=Boolean(opts?.refresh);
+    if(doRefresh){
+      setRefreshing(true);
+    }else if(!opts?.silent){
+      setLoading(true);
+    }
+    try{
+      if(doRefresh){
+        await Promise.all([
+          generateSBOM(session,"manual"),
+          generateCBOM(session,"manual")
+        ]);
+      }
+      const [sbomOut,vulnOut,cbomOut,summaryOut,historyOut]=await Promise.all([
+        getLatestSBOM(session),
+        listSBOMVulnerabilities(session),
+        getLatestCBOM(session),
+        getCBOMSummary(session),
+        listCBOMHistory(session,8)
+      ]);
+      setSBOMLatest(sbomOut||null);
+      setSBOMVulns(Array.isArray(vulnOut)?vulnOut:[]);
+      setCBOMLatest(cbomOut||null);
+      setCBOMSummary(summaryOut||{});
+      setCBOMHistory(Array.isArray(historyOut)?historyOut:[]);
+      if(doRefresh){
+        onToast?.("SBOM and CBOM refreshed from current components and cryptographic assets.");
+      }
+    }catch(error){
+      onToast?.(`SBOM/CBOM load failed: ${errMsg(error)}`);
+    }finally{
+      if(doRefresh){
+        setRefreshing(false);
+      }else if(!opts?.silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    void loadData({refresh:true});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[session?.token,session?.tenantId]);
+
+  const exportSBOMFile=async(format:string)=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    const snapshotID=String(sbomLatest?.id||"").trim();
+    if(!snapshotID){
+      onToast?.("SBOM snapshot is not ready. Refresh BOM first.");
+      return;
+    }
+    setActiveSBOMFormat(format);
+    setExportingSBOM(format);
+    try{
+      const encoding=format==="cyclonedx"?"json":"json";
+      const artifact=await exportSBOM(session,snapshotID,format as any,encoding);
+      const stamp=new Date().toISOString().replace(/[:.]/g,"-");
+      if(String(artifact?.encoding||"").toLowerCase()==="base64"){
+        const ext=format==="pdf"?"pdf":"bin";
+        downloadBase64File(`vecta-sbom-${format}-${stamp}.${ext}`,artifact?.content||"",String(artifact?.content_type||"application/octet-stream"));
+      }else{
+        const ext=format==="spdx"?"spdx.json":format==="cyclonedx"?"cyclonedx.json":"txt";
+        const mime=String(artifact?.content_type||"application/json");
+        downloadTextFile(`vecta-sbom-${format}-${stamp}.${ext}`,artifact?.content||"",mime);
+      }
+      onToast?.(`SBOM exported as ${format.toUpperCase()}.`);
+    }catch(error){
+      onToast?.(`SBOM export failed: ${errMsg(error)}`);
+    }finally{
+      setExportingSBOM("");
+    }
+  };
+
+  const exportCBOMFile=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    const snapshotID=String(cbomLatest?.id||"").trim();
+    if(!snapshotID){
+      onToast?.("CBOM snapshot is not ready. Refresh BOM first.");
+      return;
+    }
+    setExportingCBOM(true);
+    try{
+      const artifact=await exportCBOM(session,snapshotID,"cyclonedx");
+      const stamp=new Date().toISOString().replace(/[:.]/g,"-");
+      if(String(artifact?.encoding||"").toLowerCase()==="base64"){
+        downloadBase64File(`vecta-cbom-${stamp}.pdf`,artifact?.content||"",String(artifact?.content_type||"application/pdf"));
+      }else{
+        downloadTextFile(`vecta-cbom-${stamp}.json`,artifact?.content||"",String(artifact?.content_type||"application/json"));
+      }
+      onToast?.("CBOM exported.");
+    }catch(error){
+      onToast?.(`CBOM export failed: ${errMsg(error)}`);
+    }finally{
+      setExportingCBOM(false);
+    }
+  };
+
+  const openDiff=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    const history=Array.isArray(cbomHistory)?[...cbomHistory]:[];
+    history.sort((a:any,b:any)=>new Date(String(b?.created_at||0)).getTime()-new Date(String(a?.created_at||0)).getTime());
+    if(history.length<2){
+      onToast?.("Need at least two CBOM snapshots for diff. Click Refresh BOM again.");
+      return;
+    }
+    try{
+      const latest=history[0];
+      const prev=history[1];
+      const out=await diffCBOM(session,String(prev?.id||""),String(latest?.id||""));
+      setDiffData(out||null);
+      setDiffOpen(true);
+    }catch(error){
+      onToast?.(`CBOM diff failed: ${errMsg(error)}`);
+    }
+  };
+
+  const components=Array.isArray(sbomLatest?.document?.components)?sbomLatest.document.components:[];
+  const vulnerabilities=Array.isArray(sbomVulns)?sbomVulns:[];
+
+  const goComponents=components.filter((c:any)=>String(c?.type||"").toLowerCase()==="library"&&String(c?.ecosystem||"").toLowerCase()==="go");
+  const containerComponents=components.filter((c:any)=>String(c?.type||"").toLowerCase()==="container");
+  const systemComponents=components.filter((c:any)=>["runtime","infrastructure","os-pkg"].includes(String(c?.type||"").toLowerCase()));
+
+  const categorySeverity=(names:string[])=>{
+    const set=new Set(names.map((n)=>String(n||"").trim().toLowerCase()).filter(Boolean));
+    const items=vulnerabilities.filter((v:any)=>set.has(String(v?.component||"").trim().toLowerCase()));
+    if(!items.length){
+      return {label:"0 CVEs",tone:"green"};
+    }
+    const stats={critical:0,high:0,medium:0,low:0,other:0};
+    items.forEach((v:any)=>{
+      const sev=String(v?.severity||"").toLowerCase();
+      if(sev==="critical") stats.critical+=1;
+      else if(sev==="high") stats.high+=1;
+      else if(sev==="medium") stats.medium+=1;
+      else if(sev==="low") stats.low+=1;
+      else stats.other+=1;
+    });
+    if(stats.critical>0) return {label:`${stats.critical} critical`,tone:"red"};
+    if(stats.high>0) return {label:`${stats.high} high`,tone:"red"};
+    if(stats.medium>0) return {label:`${stats.medium} medium`,tone:"amber"};
+    if(stats.low>0) return {label:`${stats.low} low`,tone:"amber"};
+    return {label:`${items.length} CVEs`,tone:"blue"};
+  };
+
+  const sbomRows=[
+    {label:"Go modules",count:goComponents.length,names:goComponents.map((c:any)=>String(c?.name||""))},
+    {label:"Containers",count:containerComponents.length,names:containerComponents.map((c:any)=>String(c?.name||""))},
+    {label:"System pkgs",count:systemComponents.length,names:systemComponents.map((c:any)=>String(c?.name||""))}
+  ].map((row)=>({...row,sev:categorySeverity(row.names)}));
+
+  const rawDist=cbomSummary?.algorithm_distribution||cbomLatest?.document?.algorithm_distribution||{};
+  const grouped={AES:0,RSA:0,ECDSA:0,PQC:0,Other:0};
+  Object.entries(rawDist||{}).forEach(([alg,val])=>{
+    const count=Math.max(0,Number(val||0));
+    const upper=String(alg||"").toUpperCase();
+    if(upper.includes("AES")){
+      grouped.AES+=count;
+      return;
+    }
+    if(upper.includes("RSA")){
+      grouped.RSA+=count;
+      return;
+    }
+    if(upper.includes("ECDSA")||upper.includes("EDDSA")||upper.includes("ECDH")){
+      grouped.ECDSA+=count;
+      return;
+    }
+    if(upper.includes("ML-")||upper.includes("SLH")||upper.includes("XMSS")||upper.includes("KYBER")||upper.includes("DILITHIUM")||upper.includes("FALCON")){
+      grouped.PQC+=count;
+      return;
+    }
+    grouped.Other+=count;
+  });
+  const distItems=[
+    {label:"AES",value:grouped.AES,color:"#22d3ee"},
+    {label:"RSA",value:grouped.RSA,color:"#60a5fa"},
+    {label:"ECDSA",value:grouped.ECDSA,color:"#8b5cf6"},
+    {label:"PQC",value:grouped.PQC,color:"#34d399"},
+    {label:"Other",value:grouped.Other,color:"#facc15"}
+  ];
+  const distTotal=distItems.reduce((sum,item)=>sum+Math.max(0,Number(item.value||0)),0);
+  let acc=0;
+  const slices=distItems
+    .filter((item)=>Number(item.value||0)>0)
+    .map((item)=>{
+      const start=(acc/distTotal)*360;
+      acc+=Number(item.value||0);
+      const end=(acc/distTotal)*360;
+      return `${item.color} ${start}deg ${end}deg`;
+    });
+  const donutBackground=distTotal>0?`conic-gradient(${slices.join(", ")})`:`conic-gradient(${C.border} 0deg 360deg)`;
+  const totalAssets=Math.max(0,Number(cbomSummary?.total_assets??cbomLatest?.document?.total_asset_count??0));
+
+  const sbomGenerated=String(sbomLatest?.document?.generated_at||sbomLatest?.created_at||"");
+  const cbomGenerated=String(cbomLatest?.document?.generated_at||cbomLatest?.created_at||"");
+
+  return <div>
+    <Section
+      title="Software & Cryptographic BOM"
+      actions={<div style={{display:"flex",alignItems:"center",gap:8}}>
+        <Btn small onClick={()=>void loadData({refresh:true})} disabled={refreshing||loading}>
+          <RefreshCcw size={12}/>{refreshing?"Refreshing...":"Refresh BOM"}
+        </Btn>
+      </div>}
+    >
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+        <Card style={{padding:"12px 14px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.text,letterSpacing:-.2}}>Software BOM</div>
+            <div style={{display:"flex",gap:6}}>
+              {["cyclonedx","spdx","pdf"].map((fmt)=><Btn
+                key={fmt}
+                small
+                onClick={()=>void exportSBOMFile(fmt)}
+                disabled={Boolean(exportingSBOM)}
+                style={{
+                  height:30,
+                  background:activeSBOMFormat===fmt?C.accentDim:"transparent",
+                  borderColor:activeSBOMFormat===fmt?C.accent:C.border,
+                  color:activeSBOMFormat===fmt?C.accent:C.dim
+                }}
+              >
+                {exportingSBOM===fmt?"...":fmt==="cyclonedx"?"CycloneDX":fmt==="spdx"?"SPDX":"PDF"}
+              </Btn>)}
+            </div>
+          </div>
+          <div style={{display:"grid",gap:2}}>
+            {sbomRows.map((row)=><div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{fontSize:12,color:C.text,fontWeight:700,minWidth:120}}>{row.label}</div>
+                <div style={{fontSize:11,color:C.dim}}>{`${Number(row.count||0)} deps`}</div>
+              </div>
+              <B c={String(row.sev?.tone||"green")}>{String(row.sev?.label||"0 CVEs")}</B>
+            </div>)}
+          </div>
+          <div style={{marginTop:10,fontSize:10,color:C.muted}}>
+            {`Generated ${sbomGenerated?new Date(sbomGenerated).toLocaleString():"-"}`}
+          </div>
+        </Card>
+
+        <Card style={{padding:"12px 14px"}}>
+          <div style={{fontSize:12,fontWeight:700,color:C.text,letterSpacing:-.2,marginBottom:10}}>Cryptographic BOM</div>
+          <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:10,alignItems:"center"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <div style={{position:"relative",width:138,height:138,borderRadius:"50%",background:donutBackground,border:`1px solid ${C.border}`}}>
+                <div style={{position:"absolute",inset:20,borderRadius:"50%",background:C.card,border:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column"}}>
+                  <div style={{fontSize:24,color:C.text,fontWeight:800}}>{totalAssets.toLocaleString()}</div>
+                  <div style={{fontSize:9,color:C.muted}}>assets</div>
+                </div>
+              </div>
+            </div>
+            <div style={{display:"grid",gap:6}}>
+              {distItems.map((item)=>{
+                const pct=distTotal?Math.round((Number(item.value||0)/distTotal)*100):0;
+                return <div key={item.label} style={{display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:11}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{width:10,height:10,borderRadius:2,background:item.color,display:"inline-block"}}/>
+                    <span style={{color:C.text}}>{item.label}</span>
+                  </div>
+                  <span style={{color:C.dim}}>{`${pct}%`}</span>
+                </div>;
+              })}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:8,marginTop:12}}>
+            <Btn small onClick={()=>void exportCBOMFile()} disabled={exportingCBOM}>{exportingCBOM?"Exporting...":"Export CBOM"}</Btn>
+            <Btn small onClick={()=>void openDiff()}>View Diff</Btn>
+          </div>
+          <div style={{marginTop:10,fontSize:10,color:C.muted}}>
+            {`Generated ${cbomGenerated?new Date(cbomGenerated).toLocaleString():"-"} • Auto-scheduled daily and refreshed from live inventory.`}
+          </div>
+        </Card>
+      </div>
+      {!loading&&!refreshing&&!sbomLatest?<Card style={{marginTop:10}}><div style={{fontSize:10,color:C.muted}}>No SBOM snapshot available yet.</div></Card>:null}
+    </Section>
+
+    <Modal open={diffOpen} onClose={()=>setDiffOpen(false)} title="CBOM Diff (Latest vs Previous)">
+      <div style={{fontSize:10,color:C.dim,marginBottom:8}}>
+        Changes between the latest two CBOM snapshots for tenant {String(session?.tenantId||"-")}.
+      </div>
+      <Row3>
+        <Card><div style={{fontSize:10,color:C.muted}}>Added</div><div style={{fontSize:20,color:C.green,fontWeight:700}}>{Number(diffData?.metrics?.added||0)}</div></Card>
+        <Card><div style={{fontSize:10,color:C.muted}}>Removed</div><div style={{fontSize:20,color:C.red,fontWeight:700}}>{Number(diffData?.metrics?.removed||0)}</div></Card>
+        <Card><div style={{fontSize:10,color:C.muted}}>Changed</div><div style={{fontSize:20,color:C.amber,fontWeight:700}}>{Number(diffData?.metrics?.changed||0)}</div></Card>
+      </Row3>
+      <div style={{height:8}}/>
+      <Card style={{maxHeight:260,overflowY:"auto"}}>
+        <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Algorithm delta</div>
+        {Object.entries(diffData?.metrics?.algorithm_delta||{}).map(([alg,val])=><div key={alg} style={{display:"flex",justifyContent:"space-between",fontSize:10,padding:"3px 0",borderBottom:`1px solid ${C.border}`}}>
+          <span style={{color:C.dim}}>{alg}</span>
+          <span style={{color:Number(val)>=0?C.green:C.red,fontWeight:700}}>{`${Number(val)>=0?"+":""}${Number(val||0)}`}</span>
+        </div>)}
+        {!Object.keys(diffData?.metrics?.algorithm_delta||{}).length?<div style={{fontSize:10,color:C.muted}}>No algorithm distribution changes detected.</div>:null}
+      </Card>
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
+        <Btn onClick={()=>setDiffOpen(false)}>Close</Btn>
+      </div>
+    </Modal>
+  </div>;
+};
+
+const PKCS11=({session,onToast})=>{
+  const [loading,setLoading]=useState(false);
+  const [downloading,setDownloading]=useState("");
+  const [jwtLoading,setJWTLoading]=useState(false);
+  const [sdkJWT,setSDKJWT]=useState("");
+  const [sdkJWTExp,setSDKJWTExp]=useState("");
+  const [sdkJWTGeneratedAt,setSDKJWTGeneratedAt]=useState("");
+  const [showJWT,setShowJWT]=useState(false);
+  const [overview,setOverview]=useState<any>({
+    refreshed_at:"",
+    providers:[],
+    mechanisms:[],
+    clients:[]
+  });
+  const [pkcsTarget,setPKCSTarget]=useState("linux");
+  const [jcaTarget,setJCATarget]=useState("all");
+
+  const saveBase64File=(filename:string,b64:string,mime:string)=>{
+    const raw=atob(String(b64||""));
+    const bytes=new Uint8Array(raw.length);
+    for(let i=0;i<raw.length;i+=1){
+      bytes[i]=raw.charCodeAt(i);
+    }
+    const blob=new Blob([bytes],{type:mime||"application/octet-stream"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download=String(filename||"sdk.zip");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const loadOverview=async(silent=false)=>{
+    if(!session?.token){
+      setOverview({refreshed_at:"",providers:[],mechanisms:[],clients:[]});
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const out=await getEKMSDKOverview(session);
+      setOverview(out||{refreshed_at:"",providers:[],mechanisms:[],clients:[]});
+    }catch(error){
+      onToast?.(`SDK dashboard load failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  const downloadArtifact=async(provider:"pkcs11"|"jca",targetOS:"linux"|"windows"|"macos"|"all")=>{
+    if(!session?.token){
+      onToast?.("Login is required to download SDK.");
+      return;
+    }
+    const key=`${provider}:${targetOS}`;
+    setDownloading(key);
+    try{
+      const out=await downloadEKMSDK(session,provider,targetOS);
+      saveBase64File(String(out?.filename||`vecta-${provider}-${targetOS}.zip`),String(out?.content||""),String(out?.content_type||"application/zip"));
+      onToast?.(`${provider.toUpperCase()} SDK downloaded (${targetOS}).`);
+      await loadOverview(true);
+    }catch(error){
+      onToast?.(`SDK download failed: ${errMsg(error)}`);
+    }finally{
+      setDownloading("");
+    }
+  };
+
+  const createSDKJWT=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to create JWT.");
+      return;
+    }
+    if(String(session?.mode||"")!=="backend"){
+      onToast?.("JWT creation is available only in backend-auth mode.");
+      return;
+    }
+    setJWTLoading(true);
+    try{
+      const out:any=await serviceRequest(session,"auth","/auth/refresh",{
+        method:"POST"
+      });
+      const token=String(out?.access_token||"").trim();
+      if(!token){
+        throw new Error("Auth service did not return access_token.");
+      }
+      setSDKJWT(token);
+      setSDKJWTExp(String(out?.expires_at||"").trim());
+      setSDKJWTGeneratedAt(new Date().toISOString());
+      setShowJWT(false);
+      onToast?.("New JWT created for SDK usage.");
+    }catch(error){
+      onToast?.(`JWT creation failed: ${errMsg(error)}`);
+    }finally{
+      setJWTLoading(false);
+    }
+  };
+
+  const copySDKJWT=async()=>{
+    const token=String(sdkJWT||"").trim();
+    if(!token){
+      onToast?.("No JWT available yet.");
+      return;
+    }
+    try{
+      await navigator.clipboard.writeText(token);
+      onToast?.("JWT copied.");
+    }catch{
+      onToast?.("Copy failed. Please copy manually.");
+    }
+  };
+
+  useEffect(()=>{
+    void loadOverview();
+  },[session?.token,session?.tenantId]);
+
+  const providerByID=useMemo(()=>{
+    const out:any={};
+    for(const item of Array.isArray(overview?.providers)?overview.providers:[]){
+      out[String(item?.id||"").toLowerCase()]=item;
+    }
+    return out;
+  },[overview?.providers]);
+  const pkcs=providerByID.pkcs11||{};
+  const jca=providerByID.jca||{};
+  const mechanismRows=Array.isArray(overview?.mechanisms)?overview.mechanisms:[];
+  const maxOps=Math.max(...mechanismRows.map((row:any)=>Number(row?.ops_24h||0)),1);
+  const clientRows=Array.isArray(overview?.clients)?overview.clients:[];
+
+  const statusBadge=(status:string)=>{
+    const s=String(status||"").toLowerCase();
+    if(s==="active"){
+      return <B c="green">Active</B>;
+    }
+    if(s==="degraded"){
+      return <B c="amber">Degraded</B>;
+    }
+    return <B c="red">Down</B>;
+  };
+
+  const fmtOps=(n:any)=>{
+    const v=Number(n||0);
+    if(v>=1_000_000){
+      return `${(v/1_000_000).toFixed(v>=10_000_000?0:1)}M`;
+    }
+    if(v>=1_000){
+      return `${(v/1_000).toFixed(v>=10_000?0:1)}K`;
+    }
+    return String(v);
+  };
+
+  return <div>
+    <Section title="SDK Providers">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8,flexWrap:"wrap"}}>
+        <div style={{fontSize:10,color:C.muted}}>
+          {loading?"Loading SDK telemetry...":`Refreshed ${overview?.refreshed_at?new Date(overview.refreshed_at).toLocaleString():"-"}`}
+        </div>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+          <Btn small onClick={()=>void createSDKJWT()} disabled={jwtLoading||!session?.token||session?.mode!=="backend"}>
+            {jwtLoading?"Creating JWT...":"Create JWT"}
+          </Btn>
+          <Btn small onClick={()=>void loadOverview()} disabled={loading}>{loading?"Refreshing...":"Refresh"}</Btn>
+        </div>
+      </div>
+      {sdkJWT?<Card style={{marginBottom:10,padding:10}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+          <div style={{fontSize:11,color:C.text,fontWeight:700}}>SDK JWT (Bearer)</div>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+            <Btn small onClick={()=>setShowJWT((v)=>!v)}>{showJWT?"Hide":"Show"}</Btn>
+            <Btn small primary onClick={()=>void copySDKJWT()}>Copy JWT</Btn>
+          </div>
+        </div>
+        <div style={{fontSize:10,color:C.dim,marginBottom:6}}>
+          Use this token in SDK config (`VECTA_TOKEN`) instead of challenge-response.
+          {sdkJWTExp?` Expires: ${new Date(sdkJWTExp).toLocaleString()}.`:""}
+        </div>
+        <textarea
+          value={showJWT?sdkJWT:`${String(sdkJWT).slice(0,18)}...${String(sdkJWT).slice(-18)}`}
+          readOnly
+          style={{
+            width:"100%",
+            minHeight:72,
+            resize:"vertical",
+            border:`1px solid ${C.border}`,
+            background:C.surface,
+            color:C.text,
+            borderRadius:10,
+            padding:"8px 10px",
+            fontSize:11,
+            fontFamily:"'JetBrains Mono',monospace"
+          }}
+        />
+        <div style={{fontSize:10,color:C.muted,marginTop:6}}>
+          {`Generated ${sdkJWTGeneratedAt?new Date(sdkJWTGeneratedAt).toLocaleString():"-"}`}
+        </div>
+      </Card>:null}
+      <Row2>
+        <Card style={{minHeight:238,display:"flex",flexDirection:"column"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:13,color:C.text,fontWeight:700}}>{String(pkcs?.name||"PKCS#11 C Provider")}</div>
+            {statusBadge(String(pkcs?.status||"active"))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,flex:1}}>
+            {[["Library",pkcs?.artifact_name||"libvecta-pkcs11.so"],["Version",pkcs?.version||"v2.40 / v3.0"],["Size",pkcs?.size_label||"-"],["Transport",pkcs?.transport||"HTTPS + mTLS"],["Sessions",`${Number(pkcs?.sessions_active||0)} active`],["Ops/day",fmtOps(pkcs?.ops_24h)] ,["Top Mech",pkcs?.top_mechanism||"-"],["Clients",`${Number(pkcs?.clients_connected||0)} connected`]].map(([k,v])=>
+              <div key={String(k)} style={{display:"flex",flexDirection:"column",gap:2}}>
+                <span style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.7}}>{String(k)}</span>
+                <span style={{fontSize:12,color:C.text,fontWeight:600}}>{String(v)}</span>
+              </div>
+            )}
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+            {(Array.isArray(pkcs?.platforms)?pkcs.platforms:[]).map((p:string)=><B key={p} c="blue">{String(p)}</B>)}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:10}}>
+            <Sel w={120} value={pkcsTarget} onChange={(e)=>setPKCSTarget(String(e.target.value||"linux"))}>
+              <option value="linux">Linux</option>
+              <option value="macos">macOS</option>
+              <option value="windows">Windows</option>
+            </Sel>
+            <Btn small primary onClick={()=>void downloadArtifact("pkcs11",pkcsTarget as any)} disabled={downloading===`pkcs11:${pkcsTarget}`}>{downloading===`pkcs11:${pkcsTarget}`?"Downloading...":"Download SDK"}</Btn>
+          </div>
+        </Card>
+
+        <Card style={{minHeight:238,display:"flex",flexDirection:"column"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:13,color:C.text,fontWeight:700}}>{String(jca?.name||"Java JCA/JCE Provider")}</div>
+            {statusBadge(String(jca?.status||"active"))}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,flex:1}}>
+            {[["JAR",jca?.artifact_name||"vecta-jca-provider.jar"],["Version",jca?.version||"VECTA v1.0"],["Size",jca?.size_label||"-"],["Transport",jca?.transport||"HTTPS + mTLS"],["Sessions",`${Number(jca?.sessions_active||0)} active`],["Ops/day",fmtOps(jca?.ops_24h)],["Top Mech",jca?.top_mechanism||"-"],["Clients",`${Number(jca?.clients_connected||0)} apps`]].map(([k,v])=>
+              <div key={String(k)} style={{display:"flex",flexDirection:"column",gap:2}}>
+                <span style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.7}}>{String(k)}</span>
+                <span style={{fontSize:12,color:C.text,fontWeight:600}}>{String(v)}</span>
+              </div>
+            )}
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:8}}>
+            {(Array.isArray(jca?.capabilities)?jca.capabilities:[]).map((p:string)=><B key={p} c="blue">{String(p)}</B>)}
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:10}}>
+            <Sel w={120} value={jcaTarget} onChange={(e)=>setJCATarget(String(e.target.value||"all"))}>
+              <option value="all">All OS</option>
+              <option value="linux">Linux</option>
+              <option value="windows">Windows</option>
+              <option value="macos">macOS</option>
+            </Sel>
+            <Btn small primary onClick={()=>void downloadArtifact("jca",jcaTarget as any)} disabled={downloading===`jca:${jcaTarget}`}>{downloading===`jca:${jcaTarget}`?"Downloading...":"Download JAR"}</Btn>
+          </div>
+        </Card>
+      </Row2>
+    </Section>
+
+    <Section title="Mechanism Usage (24h)">
+      <Card>
+        {mechanismRows.map((row:any)=>{
+          const ops=Number(row?.ops_24h||0);
+          const pct=maxOps>0?Math.max(2,(ops/maxOps)*100):0;
+          return <div key={String(row?.mechanism||Math.random())} style={{display:"grid",gridTemplateColumns:"220px 1fr 92px 54px",gap:10,alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
+            <div style={{fontSize:11,color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{String(row?.mechanism||"-")}</div>
+            <div style={{height:10,background:C.border,borderRadius:999,overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${pct}%`,background:C.accent,borderRadius:999}}/>
+            </div>
+            <div style={{fontSize:11,color:C.text,textAlign:"right",fontWeight:700}}>{fmtOps(ops)}</div>
+            <div style={{fontSize:11,color:C.accent,textAlign:"right",fontWeight:700}}>{`${Math.round(Number(row?.percent||0))}%`}</div>
+          </div>;
+        })}
+        {!mechanismRows.length?<div style={{fontSize:10,color:C.muted}}>No mechanism usage recorded in the last 24 hours.</div>:null}
+      </Card>
+    </Section>
+
+    <Section title="Connected Clients">
+      <Card style={{overflow:"hidden"}}>
+        <div style={{display:"grid",gridTemplateColumns:"2fr 1.3fr 1.3fr 1fr 110px",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
+          {["Client","SDK","Mechanism","Ops/day","Status"].map((h)=><div key={h} style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>{h}</div>)}
+        </div>
+        <div style={{maxHeight:260,overflowY:"auto"}}>
+          {clientRows.map((client:any)=><div key={String(client?.id||client?.name||Math.random())} style={{display:"grid",gridTemplateColumns:"2fr 1.3fr 1.3fr 1fr 110px",gap:8,padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
+            <div style={{minWidth:0}}>
+              <div style={{fontSize:13,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(client?.name||client?.id||"-")}</div>
+              <div style={{fontSize:10,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(client?.id||"-")}</div>
+            </div>
+            <div style={{fontSize:11,color:C.dim,display:"flex",alignItems:"center"}}>{String(client?.sdk||"-")}</div>
+            <div style={{fontSize:11,color:C.accent,fontFamily:"'JetBrains Mono',monospace",display:"flex",alignItems:"center"}}>{String(client?.mechanism||"-")}</div>
+            <div style={{fontSize:12,color:C.text,fontWeight:700,display:"flex",alignItems:"center"}}>{`${fmtOps(client?.ops_24h)} ops/day`}</div>
+            <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center"}}>{statusBadge(String(client?.status||"down"))}</div>
+          </div>)}
+          {!clientRows.length?<div style={{padding:"12px 0",fontSize:10,color:C.muted}}>No SDK clients connected yet. Register EKM agents and run crypto operations to populate this panel.</div>:null}
+        </div>
+      </Card>
+    </Section>
+  </div>;
+};
+
+const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsModeChange})=>{
+  const [m,sM]=useState(null);
+  const [services,setServices]=useState([]);
+  const [summary,setSummary]=useState({total:0,running:0,degraded:0,down:0,unknown:0,all_ok:false});
+  const [loading,setLoading]=useState(false);
+  const [restarting,setRestarting]=useState({});
+  const [healthErr,setHealthErr]=useState("");
+  const [newTagName,setNewTagName]=useState("");
+  const [newTagColor,setNewTagColor]=useState("#14B8A6");
+  const [tagSaving,setTagSaving]=useState(false);
+  const [systemState,setSystemState]=useState(null);
+  const [fipsSaving,setFipsSaving]=useState(false);
+  const [fipsErr,setFipsErr]=useState("");
+  const [passwordPolicy,setPasswordPolicy]=useState(null);
+  const [policyLoading,setPolicyLoading]=useState(false);
+  const [policySaving,setPolicySaving]=useState(false);
+  const [govSettings,setGovSettings]=useState<any>(null);
+  const [govLoading,setGovLoading]=useState(false);
+  const [govSaving,setGovSaving]=useState(false);
+  const [smtpTestTo,setSMTPTestTo]=useState("");
+  const [smtpTesting,setSMTPTesting]=useState(false);
+  const promptDialog=usePromptDialog();
+
+  const statusTone=(status)=>{
+    const s=String(status||"").toLowerCase();
+    if(s==="running") return "green";
+    if(s==="degraded") return "amber";
+    if(s==="down") return "red";
+    return "blue";
+  };
+
+  const statusLabel=(status)=>{
+    const s=String(status||"").toLowerCase();
+    if(s==="running") return "Running";
+    if(s==="degraded") return "Degraded";
+    if(s==="down") return "Down";
+    return "Unknown";
+  };
+
+  const loadHealth=async(silent=false)=>{
+    if(!session?.token){
+      setServices([]);
+      setSummary({total:0,running:0,degraded:0,down:0,unknown:0,all_ok:false});
+      setHealthErr("Login is required to load service health.");
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const out=await serviceRequest(session,"auth","/auth/system-health");
+      const items=Array.isArray(out?.services)?out.services:[];
+      setServices(items);
+      const running=items.filter((svc)=>String(svc?.status||"").toLowerCase()==="running").length;
+      const degraded=items.filter((svc)=>String(svc?.status||"").toLowerCase()==="degraded").length;
+      const down=items.filter((svc)=>String(svc?.status||"").toLowerCase()==="down").length;
+      const unknown=Math.max(items.length-running-degraded-down,0);
+      const s=out?.summary||{};
+      setSummary({
+        total:Number(s.total??items.length),
+        running:Number(s.running??running),
+        degraded:Number(s.degraded??degraded),
+        down:Number(s.down??down),
+        unknown:Number(s.unknown??unknown),
+        all_ok:Boolean(s.all_ok??(items.length>0&&running===items.length))
+      });
+      setHealthErr("");
+    }catch(error){
+      const msg=errMsg(error);
+      const lower=String(msg||"").toLowerCase();
+      if(lower.includes("invalid token")||lower.includes("unauthorized")){
+        onToast?.("Session expired. Please login again.");
+        onLogout?.();
+        return;
+      }
+      setHealthErr(msg);
+      if(!silent){
+        onToast?.(`System health fetch failed: ${msg}`);
+      }
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  const restartService=async(svc)=>{
+    const serviceName=String(svc?.name||"").trim();
+    if(!serviceName){
+      return;
+    }
+    if(!svc?.restart_allowed){
+      onToast?.(`Restart is blocked for ${serviceName}.`);
+      return;
+    }
+    const confirmed=await promptDialog.confirm({
+      title:"Restart Service",
+      message:`Restart ${serviceName}?`,
+      confirmLabel:"Restart",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    setRestarting((prev)=>({...prev,[serviceName]:true}));
+    try{
+      await serviceRequest(session,"auth","/auth/system-health/restart",{
+        method:"POST",
+        body:JSON.stringify({service:serviceName})
+      });
+      onToast?.(`Restart requested: ${serviceName}`);
+      await loadHealth(true);
+      setTimeout(()=>{void loadHealth(true);},2500);
+    }catch(error){
+      const msg=errMsg(error);
+      const lower=String(msg||"").toLowerCase();
+      if(lower.includes("invalid token")||lower.includes("unauthorized")){
+        onToast?.("Session expired. Please login again.");
+        onLogout?.();
+        return;
+      }
+      onToast?.(`Restart failed for ${serviceName}: ${msg}`);
+    }finally{
+      setRestarting((prev)=>({...prev,[serviceName]:false}));
+    }
+  };
+
+  const loadTagCatalog=async()=>{
+    if(!session){
+      setTagCatalog([]);
+      return;
+    }
+    try{
+      const items=await listTags(session);
+      setTagCatalog(items);
+    }catch(error){
+      onToast?.(`Tag catalog load failed: ${errMsg(error)}`);
+    }
+  };
+
+  const loadSystemState=async(silent=false)=>{
+    if(!session?.token){
+      setSystemState(null);
+      setFipsErr("");
+      return;
+    }
+    try{
+      const out=await serviceRequest(
+        session,
+        "governance",
+        `/governance/system/state?tenant_id=${encodeURIComponent(session.tenantId)}`
+      );
+      const state=out?.state||{};
+      setSystemState(state);
+      setFipsErr("");
+      onFipsModeChange?.(normalizeFipsModeValue(String(state?.fips_mode||"disabled")));
+    }catch(error){
+      const msg=errMsg(error);
+      setFipsErr(msg);
+      if(!silent){
+        onToast?.(`FIPS mode load failed: ${msg}`);
+      }
+    }
+  };
+
+  const applyFipsMode=async(nextMode)=>{
+    if(!session?.token){
+      onToast?.("Login is required to update FIPS mode.");
+      return;
+    }
+    const desired=normalizeFipsModeValue(nextMode);
+    setFipsSaving(true);
+    try{
+      let state=systemState;
+      if(!state||typeof state!=="object"){
+        const current=await serviceRequest(
+          session,
+          "governance",
+          `/governance/system/state?tenant_id=${encodeURIComponent(session.tenantId)}`
+        );
+        state=current?.state||{};
+      }
+      const payload={
+        ...state,
+        tenant_id: session.tenantId,
+        fips_mode: desired,
+        updated_by: session?.username||"dashboard"
+      };
+      const out=await serviceRequest(session,"governance","/governance/system/state",{
+        method:"PUT",
+        body:JSON.stringify(payload)
+      });
+      const updated=out?.state||payload;
+      setSystemState(updated);
+      setFipsErr("");
+      onFipsModeChange?.(normalizeFipsModeValue(String(updated?.fips_mode||desired)));
+      onToast?.(`FIPS mode set to ${desired==="enabled"?"FIPS":"Standard"}.`);
+    }catch(error){
+      const msg=errMsg(error);
+      setFipsErr(msg);
+      onToast?.(`FIPS mode update failed: ${msg}`);
+    }finally{
+      setFipsSaving(false);
+    }
+  };
+
+  const addTag=async()=>{
+    const name=String(newTagName||"").trim();
+    const color=String(newTagColor||"").trim();
+    if(!name){
+      onToast?.("Enter tag name.");
+      return;
+    }
+    const colorTaken=(Array.isArray(tagCatalog)?tagCatalog:[]).find((item)=>{
+      const itemName=String(item?.name||"");
+      const itemColor=String(item?.color||"").toLowerCase();
+      return itemName.toLowerCase()!==name.toLowerCase()&&itemColor===color.toLowerCase();
+    });
+    if(colorTaken){
+      onToast?.(`Color already used by tag: ${String(colorTaken?.name||"")}`);
+      return;
+    }
+    setTagSaving(true);
+    try{
+      await upsertTag(session,name,color);
+      setNewTagName("");
+      await loadTagCatalog();
+      onToast?.(`Tag saved: ${name}`);
+    }catch(error){
+      onToast?.(`Save tag failed: ${errMsg(error)}`);
+    }finally{
+      setTagSaving(false);
+    }
+  };
+
+  const loadPasswordPolicy=async(silent=false)=>{
+    if(!session?.token){
+      setPasswordPolicy(null);
+      return;
+    }
+    if(!silent){
+      setPolicyLoading(true);
+    }
+    try{
+      const policy=await getAuthPasswordPolicy(session);
+      setPasswordPolicy(policy);
+    }catch(error){
+      if(!silent){
+        onToast?.(`Password policy load failed: ${errMsg(error)}`);
+      }
+    }finally{
+      if(!silent){
+        setPolicyLoading(false);
+      }
+    }
+  };
+
+  const loadGovernanceSettings=async(silent=false)=>{
+    if(!session?.token){
+      setGovSettings(null);
+      return;
+    }
+    if(!silent){
+      setGovLoading(true);
+    }
+    try{
+      const out=await getGovernanceSettings(session);
+      setGovSettings(out);
+      if(!String(smtpTestTo||"").trim()){
+        const defaultMail=String(session?.username||"").trim();
+        if(defaultMail){
+          setSMTPTestTo(defaultMail.includes("@")?defaultMail:`${defaultMail}@vecta.local`);
+        }
+      }
+    }catch(error){
+      if(!silent){
+        onToast?.(`Governance settings load failed: ${errMsg(error)}`);
+      }
+    }finally{
+      if(!silent){
+        setGovLoading(false);
+      }
+    }
+  };
+
+  const saveGovernanceSettings=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to update governance settings.");
+      return;
+    }
+    if(!govSettings){
+      onToast?.("Governance settings are not loaded.");
+      return;
+    }
+    setGovSaving(true);
+    try{
+      const payload={
+        approval_expiry_minutes:Math.max(1,Math.min(1440,Number(govSettings.approval_expiry_minutes||60))),
+        expiry_check_interval_seconds:Math.max(5,Math.min(3600,Number(govSettings.expiry_check_interval_seconds||60))),
+        smtp_host:String(govSettings.smtp_host||"").trim(),
+        smtp_port:String(govSettings.smtp_port||"").trim()||"587",
+        smtp_username:String(govSettings.smtp_username||"").trim(),
+        smtp_password:String(govSettings.smtp_password||""),
+        smtp_from:String(govSettings.smtp_from||"").trim(),
+        smtp_starttls:Boolean(govSettings.smtp_starttls),
+        notify_dashboard:Boolean(govSettings.notify_dashboard),
+        notify_email:Boolean(govSettings.notify_email),
+        challenge_response_enabled:Boolean(govSettings.challenge_response_enabled),
+        updated_by:session?.username||"dashboard"
+      };
+      const updated=await updateGovernanceSettings(session,payload);
+      setGovSettings(updated);
+      onToast?.("Governance settings updated.");
+      sM(null);
+    }catch(error){
+      onToast?.(`Governance settings update failed: ${errMsg(error)}`);
+    }finally{
+      setGovSaving(false);
+    }
+  };
+
+  const runSMTPTest=async()=>{
+    if(!session?.token){
+      return;
+    }
+    const to=String(smtpTestTo||"").trim();
+    if(!to){
+      onToast?.("Recipient email is required for SMTP test.");
+      return;
+    }
+    setSMTPTesting(true);
+    try{
+      await testGovernanceSMTP(session,to);
+      onToast?.("SMTP test email sent.");
+    }catch(error){
+      onToast?.(`SMTP test failed: ${errMsg(error)}`);
+    }finally{
+      setSMTPTesting(false);
+    }
+  };
+
+  const savePasswordPolicy=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to update password policy.");
+      return;
+    }
+    if(!passwordPolicy){
+      onToast?.("No password policy loaded.");
+      return;
+    }
+    setPolicySaving(true);
+    try{
+      const payload={
+        min_length:Math.max(8,Math.min(256,Number(passwordPolicy.min_length||12))),
+        max_length:Math.max(8,Math.min(256,Number(passwordPolicy.max_length||128))),
+        require_upper:Boolean(passwordPolicy.require_upper),
+        require_lower:Boolean(passwordPolicy.require_lower),
+        require_digit:Boolean(passwordPolicy.require_digit),
+        require_special:Boolean(passwordPolicy.require_special),
+        require_no_whitespace:Boolean(passwordPolicy.require_no_whitespace),
+        deny_username:Boolean(passwordPolicy.deny_username),
+        deny_email_local_part:Boolean(passwordPolicy.deny_email_local_part),
+        min_unique_chars:Math.max(0,Math.min(64,Number(passwordPolicy.min_unique_chars||0)))
+      };
+      const updated=await updateAuthPasswordPolicy(session,payload);
+      setPasswordPolicy(updated);
+      onToast?.("Password policy updated.");
+      sM(null);
+    }catch(error){
+      onToast?.(`Password policy update failed: ${errMsg(error)}`);
+    }finally{
+      setPolicySaving(false);
+    }
+  };
+
+  const removeTag=async(name)=>{
+    const confirmed=await promptDialog.confirm({
+      title:"Delete Tag",
+      message:`Delete tag ${name}?`,
+      confirmLabel:"Delete",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    try{
+      await deleteTag(session,name);
+      await loadTagCatalog();
+      onToast?.(`Tag removed: ${name}`);
+    }catch(error){
+      onToast?.(`Delete tag failed: ${errMsg(error)}`);
+    }
+  };
+
+  useEffect(()=>{
+    if(!session?.token){
+      setServices([]);
+      setSummary({total:0,running:0,degraded:0,down:0,unknown:0,all_ok:false});
+      setHealthErr("");
+      setTagCatalog([]);
+      setSystemState(null);
+      setFipsErr("");
+      setPasswordPolicy(null);
+      setGovSettings(null);
+      return;
+    }
+    void loadHealth(false);
+    void loadTagCatalog();
+    void loadSystemState(true);
+    void loadPasswordPolicy(true);
+    void loadGovernanceSettings(true);
+    const id=setInterval(()=>{void loadHealth(true);},15000);
+    return()=>clearInterval(id);
+  },[session?.token,session?.tenantId,onFipsModeChange]);
+
+  const summaryColor=summary.all_ok?"green":summary.down>0?"red":summary.degraded>0?"amber":"blue";
+  const summaryLabel=summary.all_ok?"All OK":summary.down>0?`${summary.down} Down`:summary.degraded>0?`${summary.degraded} Degraded`:"Unknown";
+  const runtimeFipsMode=normalizeFipsModeValue(String(systemState?.fips_mode||fipsMode||"disabled"));
+  const runtimeFipsEnabled=isFipsModeEnabled(runtimeFipsMode);
+
+  return <div>
+  <Section title="System Administration" actions={<>
+    <Btn small onClick={()=>void loadHealth(false)}>{loading?"Refreshing...":"Refresh Health"}</Btn>
+    <Btn small onClick={()=>sM("tls")}>Configure Web TLS</Btn>
+  </>}>
+    <Row2>
+      <Card style={{minHeight:218}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>System Health</div>
+          <B c={summaryColor}>{summaryLabel}</B>
+        </div>
+        <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
+          <B c="blue">{summary.total} Total</B>
+          <B c="green">{summary.running} Running</B>
+          <B c="amber">{summary.degraded} Degraded</B>
+          <B c="red">{summary.down} Down</B>
+          <B c="blue">{summary.unknown} Unknown</B>
+        </div>
+        <div style={{maxHeight:180,overflowY:"auto",paddingRight:4}}>
+          {!services.length&&!loading&&<div style={{fontSize:10,color:C.dim}}>No backend services discovered yet.</div>}
+          {services.map((svc)=>(
+            <div key={`${svc.name}-${svc.source}`} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
+              <div>
+                <div style={{fontSize:11,color:C.text,fontWeight:500}}>{svc.name}</div>
+                <div style={{fontSize:9,color:C.muted}}>{svc.source||"backend"}{svc.address?` ${svc.address}`:""}{svc.port?`:${svc.port}`:""}</div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <B c={statusTone(svc.status)}>{statusLabel(svc.status)}</B>
+                {svc.restart_allowed&&(
+                  <button
+                    onClick={()=>void restartService(svc)}
+                    disabled={Boolean(restarting[svc.name])}
+                    title={`Restart ${svc.name}`}
+                    style={{
+                      display:"inline-flex",
+                      alignItems:"center",
+                      justifyContent:"center",
+                      width:24,
+                      height:24,
+                      borderRadius:6,
+                      border:`1px solid ${C.border}`,
+                      background:C.card,
+                      color:C.accent,
+                      cursor:Boolean(restarting[svc.name])?"not-allowed":"pointer",
+                      opacity:Boolean(restarting[svc.name])?0.5:1
+                    }}
+                  >
+                    <RefreshCcw size={12} strokeWidth={2}/>
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+        {healthErr&&<div style={{marginTop:8,fontSize:10,color:C.red}}>{healthErr}</div>}
+        <div style={{marginTop:10,fontSize:9,color:C.muted}}>Live status from backend service discovery and health checks.</div>
+      </Card>
+      <Card style={{minHeight:218}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Runtime Crypto Mode</div>
+          <B c={runtimeFipsEnabled?"green":"blue"}>{runtimeFipsEnabled?"FIPS":"Standard"}</B>
+        </div>
+        <div style={{fontSize:10,color:C.muted,marginBottom:10}}>
+          Global switch for key creation/import/use behavior across KMS.
+        </div>
+        <div style={{display:"inline-flex",border:`1px solid ${C.border}`,borderRadius:8,overflow:"hidden",marginBottom:10}}>
+          <button
+            onClick={()=>void applyFipsMode("disabled")}
+            disabled={fipsSaving}
+            style={{
+              border:"none",
+              padding:"7px 12px",
+              background:runtimeFipsEnabled?"transparent":C.blueDim,
+              color:runtimeFipsEnabled?C.dim:C.blue,
+              fontSize:11,
+              fontWeight:700,
+              cursor:fipsSaving?"not-allowed":"pointer"
+            }}
+          >
+            Standard
+          </button>
+          <button
+            onClick={()=>void applyFipsMode("enabled")}
+            disabled={fipsSaving}
+            style={{
+              border:"none",
+              borderLeft:`1px solid ${C.border}`,
+              padding:"7px 12px",
+              background:runtimeFipsEnabled?C.greenDim:"transparent",
+              color:runtimeFipsEnabled?C.green:C.dim,
+              fontSize:11,
+              fontWeight:700,
+              cursor:fipsSaving?"not-allowed":"pointer"
+            }}
+          >
+            FIPS
+          </button>
+        </div>
+        <div style={{fontSize:10,color:C.dim,marginBottom:8}}>
+          {runtimeFipsEnabled
+            ?"Strict mode: non-FIPS algorithms are blocked for create/import/crypto operations."
+            :"Standard mode: all configured algorithms are allowed."}
+        </div>
+        {fipsErr&&<div style={{fontSize:10,color:C.red,marginBottom:8}}>{fipsErr}</div>}
+        <Btn small onClick={()=>void loadSystemState(false)} disabled={fipsSaving}>{fipsSaving?"Applying...":"Refresh Mode"}</Btn>
+      </Card>
+    </Row2>
+    <div style={{height:10}}/>
+    <Row3>
+      <Card onClick={()=>sM("network")}><div style={{fontSize:11,color:C.text,fontWeight:600}}>Network</div><div style={{fontSize:10,color:C.dim}}>IP, DNS, NTP, TLS</div></Card>
+      <Card onClick={()=>sM("backup")}><div style={{fontSize:11,color:C.text,fontWeight:600}}>Backup</div><div style={{fontSize:10,color:C.dim}}>Scheduled backups</div></Card>
+      <Card onClick={()=>sM("license")}><div style={{fontSize:11,color:C.text,fontWeight:600}}>License</div><div style={{fontSize:10,color:C.dim}}>Activation & limits</div></Card>
+      <Card onClick={()=>sM("tags")}><div style={{fontSize:11,color:C.text,fontWeight:600}}>Tags</div><div style={{fontSize:10,color:C.dim}}>Global tag catalog</div></Card>
+      <Card onClick={()=>sM("password-policy")}>
+        <div style={{fontSize:11,color:C.text,fontWeight:600}}>Password Policy</div>
+        <div style={{fontSize:10,color:C.dim}}>
+          {passwordPolicy
+            ? `Min ${passwordPolicy.min_length}, unique ${passwordPolicy.min_unique_chars}, ${passwordPolicy.require_special?"special required":"special optional"}`
+            : policyLoading
+              ?"Loading policy..."
+              :"Global user password controls"}
+        </div>
+      </Card>
+      <Card onClick={()=>sM("governance")}>
+        <div style={{fontSize:11,color:C.text,fontWeight:600}}>Governance Delivery</div>
+        <div style={{fontSize:10,color:C.dim}}>
+          {govSettings
+            ? `${govSettings.notify_dashboard?"dashboard":"-"} ${govSettings.notify_email?"+ email":""}${govSettings.challenge_response_enabled?" + challenge":""}`
+            : govLoading
+              ?"Loading settings..."
+              :"SMTP + approval delivery controls"}
+        </div>
+      </Card>
+    </Row3>
+  </Section>
+  <Modal open={m==="tls"} onClose={()=>sM(null)} title="Configure Web Interface TLS Certificate" wide>
+    <FG label="Certificate Source" required>
+      <Radio label="Use Vecta internal CA (auto-generated, auto-renewed)" selected={false}/>
+      <Radio label="Upload 3rd-party certificate (DigiCert, Let's Encrypt, etc.)" selected={true}/>
+      <Radio label="ACME auto-provisioning (Let's Encrypt compatible)" selected={false}/>
+    </FG>
+    <FG label="Certificate (PEM)" required><Txt placeholder="-----BEGIN CERTIFICATE-----\n..." rows={5}/></FG>
+    <FG label="Private Key (PEM)" required><Txt placeholder="-----BEGIN PRIVATE KEY-----\n..." rows={4}/></FG>
+    <FG label="CA Bundle"><Txt placeholder="Intermediate CA certificates..." rows={3}/></FG>
+    <FG label="TLS Version"><Sel><option>TLS 1.2 + TLS 1.3 (recommended)</option><option>TLS 1.3 only</option><option>TLS 1.2 only (legacy)</option></Sel></FG>
+    <FG label="Cipher Suites"><Sel><option>FIPS-approved only</option><option>Modern (AEAD only)</option><option>Compatible (includes CBC)</option></Sel></FG>
+    <Chk label="Enable OCSP stapling" checked={true}/>
+    <Chk label="Enable HSTS (HTTP Strict Transport Security)" checked={true}/>
+    <Chk label="Restart Envoy proxy after applying (required)" checked={true}/>
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Apply TLS Certificate</Btn></div>
+  </Modal>
+  <Modal open={m==="network"} onClose={()=>sM(null)} title="Network Configuration">
+    <Row2><FG label="Management IP"><Inp placeholder="10.0.1.100" mono/></FG><FG label="Cluster IP"><Inp placeholder="172.16.0.100" mono/></FG></Row2>
+    <Row2><FG label="DNS Servers"><Inp placeholder="10.0.0.2, 10.0.0.3" mono/></FG><FG label="NTP Servers"><Inp placeholder="ntp.bank.com" mono/></FG></Row2>
+    <Btn primary style={{marginTop:8}}>Apply Network Settings</Btn>
+  </Modal>
+  <Modal open={m==="backup"} onClose={()=>sM(null)} title="Backup Configuration">
+    <FG label="Backup Schedule"><Sel><option>Daily at 02:00</option><option>Every 6 hours</option><option>Weekly</option><option>Manual only</option></Sel></FG>
+    <FG label="Backup Target"><Sel><option>Local (/var/lib/vecta/backup)</option><option>S3-compatible storage</option><option>NFS mount</option></Sel></FG>
+    <FG label="Encryption"><Chk label="Encrypt backups with backup KEK" checked={true}/></FG>
+    <FG label="Retention"><Sel><option>30 days</option><option>90 days</option><option>365 days</option></Sel></FG>
+    <Btn primary style={{marginTop:8}}>Save Backup Config</Btn>
+  </Modal>
+  <Modal open={m==="tags"} onClose={()=>sM(null)} title="Tag Catalog" wide>
+    <FG label="Predefined + Customer Tags" hint="These tags are reused across KMS features.">
+      <div style={{maxHeight:220,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:8,padding:8,display:"grid",gap:6}}>
+        {(Array.isArray(tagCatalog)?tagCatalog:[]).map((tag)=>(
+          <div key={tag.name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"4px 0",borderBottom:`1px solid ${C.border}`}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{display:"inline-block",width:10,height:10,borderRadius:999,background:String(tag.color||C.blue)}}/>
+              <span style={{fontSize:11,color:C.text}}>{tag.name}</span>
+              {tag.is_system&&<B c="blue">System</B>}
+            </div>
+            {!tag.is_system&&<Btn small danger onClick={()=>void removeTag(tag.name)}>Delete</Btn>}
+          </div>
+        ))}
+        {!Array.isArray(tagCatalog)||!tagCatalog.length?<div style={{fontSize:10,color:C.muted}}>No tags found.</div>:null}
+      </div>
+    </FG>
+    <FG label="Add Customer Tag">
+      <Row3>
+        <Inp placeholder="tag-name" value={newTagName} onChange={(e)=>setNewTagName(e.target.value)}/>
+        <Inp type="color" value={newTagColor} onChange={(e)=>setNewTagColor(e.target.value)} style={{padding:4,height:34}}/>
+        <Btn primary onClick={addTag} disabled={tagSaving}>{tagSaving?"Saving...":"Save Tag"}</Btn>
+      </Row3>
+    </FG>
+  </Modal>
+  <Modal open={m==="password-policy"} onClose={()=>sM(null)} title="Password Policy">
+    <Row2>
+      <FG label="Minimum Length" required>
+        <Inp
+          type="number"
+          min={8}
+          max={256}
+          value={String(passwordPolicy?.min_length??12)}
+          onChange={(e)=>setPasswordPolicy((prev)=>({...prev,min_length:Number(e.target.value||12)}))}
+        />
+      </FG>
+      <FG label="Maximum Length" required>
+        <Inp
+          type="number"
+          min={8}
+          max={256}
+          value={String(passwordPolicy?.max_length??128)}
+          onChange={(e)=>setPasswordPolicy((prev)=>({...prev,max_length:Number(e.target.value||128)}))}
+        />
+      </FG>
+    </Row2>
+    <FG label="Minimum Unique Characters">
+      <Inp
+        type="number"
+        min={0}
+        max={64}
+        value={String(passwordPolicy?.min_unique_chars??6)}
+        onChange={(e)=>setPasswordPolicy((prev)=>({...prev,min_unique_chars:Number(e.target.value||0)}))}
+      />
+    </FG>
+    <FG label="Required Rules">
+      <Chk label="Require uppercase letters" checked={Boolean(passwordPolicy?.require_upper)} onChange={()=>setPasswordPolicy((prev)=>({...prev,require_upper:!Boolean(prev?.require_upper)}))}/>
+      <Chk label="Require lowercase letters" checked={Boolean(passwordPolicy?.require_lower)} onChange={()=>setPasswordPolicy((prev)=>({...prev,require_lower:!Boolean(prev?.require_lower)}))}/>
+      <Chk label="Require digits" checked={Boolean(passwordPolicy?.require_digit)} onChange={()=>setPasswordPolicy((prev)=>({...prev,require_digit:!Boolean(prev?.require_digit)}))}/>
+      <Chk label="Require special characters" checked={Boolean(passwordPolicy?.require_special)} onChange={()=>setPasswordPolicy((prev)=>({...prev,require_special:!Boolean(prev?.require_special)}))}/>
+      <Chk label="Disallow whitespace" checked={Boolean(passwordPolicy?.require_no_whitespace)} onChange={()=>setPasswordPolicy((prev)=>({...prev,require_no_whitespace:!Boolean(prev?.require_no_whitespace)}))}/>
+      <Chk label="Disallow username in password" checked={Boolean(passwordPolicy?.deny_username)} onChange={()=>setPasswordPolicy((prev)=>({...prev,deny_username:!Boolean(prev?.deny_username)}))}/>
+      <Chk label="Disallow email local-part in password" checked={Boolean(passwordPolicy?.deny_email_local_part)} onChange={()=>setPasswordPolicy((prev)=>({...prev,deny_email_local_part:!Boolean(prev?.deny_email_local_part)}))}/>
+    </FG>
+    <div style={{display:"flex",justifyContent:"space-between",gap:8,marginTop:12}}>
+      <Btn onClick={()=>void loadPasswordPolicy(false)} disabled={policySaving}>{policyLoading?"Loading...":"Reload Policy"}</Btn>
+      <div style={{display:"flex",gap:8}}>
+        <Btn onClick={()=>sM(null)} disabled={policySaving}>Cancel</Btn>
+        <Btn primary onClick={()=>void savePasswordPolicy()} disabled={policySaving}>{policySaving?"Saving...":"Save Policy"}</Btn>
+      </div>
+    </div>
+  </Modal>
+  <Modal open={m==="governance"} onClose={()=>sM(null)} title="Governance Delivery Settings" wide>
+    <Row2>
+      <FG label="Approval Expiry (minutes)">
+        <Inp
+          type="number"
+          min={1}
+          max={1440}
+          value={String(govSettings?.approval_expiry_minutes??60)}
+          onChange={(e)=>setGovSettings((prev)=>({...prev,approval_expiry_minutes:Number(e.target.value||60)}))}
+        />
+      </FG>
+      <FG label="Expiry Check Interval (seconds)">
+        <Inp
+          type="number"
+          min={5}
+          max={3600}
+          value={String(govSettings?.expiry_check_interval_seconds??60)}
+          onChange={(e)=>setGovSettings((prev)=>({...prev,expiry_check_interval_seconds:Number(e.target.value||60)}))}
+        />
+      </FG>
+    </Row2>
+    <FG label="SMTP Host">
+      <Inp value={String(govSettings?.smtp_host||"")} onChange={(e)=>setGovSettings((prev)=>({...prev,smtp_host:e.target.value}))} placeholder="smtp.bank.com"/>
+    </FG>
+    <Row2>
+      <FG label="SMTP Port"><Inp value={String(govSettings?.smtp_port||"587")} onChange={(e)=>setGovSettings((prev)=>({...prev,smtp_port:e.target.value}))}/></FG>
+      <FG label="SMTP Username"><Inp value={String(govSettings?.smtp_username||"")} onChange={(e)=>setGovSettings((prev)=>({...prev,smtp_username:e.target.value}))}/></FG>
+    </Row2>
+    <Row2>
+      <FG label="SMTP Password"><Inp type="password" value={String(govSettings?.smtp_password||"")} onChange={(e)=>setGovSettings((prev)=>({...prev,smtp_password:e.target.value}))}/></FG>
+      <FG label="SMTP From"><Inp value={String(govSettings?.smtp_from||"")} onChange={(e)=>setGovSettings((prev)=>({...prev,smtp_from:e.target.value}))} placeholder="noreply@bank.com"/></FG>
+    </Row2>
+    <FG label="Delivery Modes">
+      <Chk label="Dashboard approval queue" checked={Boolean(govSettings?.notify_dashboard)} onChange={()=>setGovSettings((prev)=>({...prev,notify_dashboard:!Boolean(prev?.notify_dashboard)}))}/>
+      <Chk label="Email approval links" checked={Boolean(govSettings?.notify_email)} onChange={()=>setGovSettings((prev)=>({...prev,notify_email:!Boolean(prev?.notify_email)}))}/>
+      <Chk label="Challenge-response required for dashboard vote" checked={Boolean(govSettings?.challenge_response_enabled)} onChange={()=>setGovSettings((prev)=>({...prev,challenge_response_enabled:!Boolean(prev?.challenge_response_enabled)}))}/>
+      <Chk label="Use STARTTLS" checked={Boolean(govSettings?.smtp_starttls)} onChange={()=>setGovSettings((prev)=>({...prev,smtp_starttls:!Boolean(prev?.smtp_starttls)}))}/>
+    </FG>
+    <FG label="SMTP Test Recipient">
+      <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8}}>
+        <Inp value={smtpTestTo} onChange={(e)=>setSMTPTestTo(e.target.value)} placeholder="approver@bank.com"/>
+        <Btn onClick={()=>void runSMTPTest()} disabled={smtpTesting}>{smtpTesting?"Testing...":"Send Test"}</Btn>
+      </div>
+    </FG>
+    <div style={{display:"flex",justifyContent:"space-between",gap:8,marginTop:12}}>
+      <Btn onClick={()=>void loadGovernanceSettings(false)} disabled={govSaving}>{govLoading?"Loading...":"Reload Settings"}</Btn>
+      <div style={{display:"flex",gap:8}}>
+        <Btn onClick={()=>sM(null)} disabled={govSaving}>Cancel</Btn>
+        <Btn primary onClick={()=>void saveGovernanceSettings()} disabled={govSaving}>{govSaving?"Saving...":"Save Settings"}</Btn>
+      </div>
+    </div>
+  </Modal>
+  {promptDialog.ui}
+</div>;};
+
+const UserManagement=({session,onToast,onLogout})=>{
+  const [users,setUsers]=useState([]);
+  const [loading,setLoading]=useState(false);
+  const [initializing,setInitializing]=useState(true);
+  const [saving,setSaving]=useState(false);
+  const [usersError,setUsersError]=useState("");
+  const [activeSession,setActiveSession]=useState(session);
+  const [modal,setModal]=useState(null);
+  const [createUsername,setCreateUsername]=useState("");
+  const [createEmail,setCreateEmail]=useState("");
+  const [createPassword,setCreatePassword]=useState("");
+  const [createRole,setCreateRole]=useState("readonly");
+  const [createStatus,setCreateStatus]=useState("active");
+  const [createMustChange,setCreateMustChange]=useState(true);
+  const [resetTarget,setResetTarget]=useState(null);
+  const [resetPassword,setResetPassword]=useState("");
+  const [resetMustChange,setResetMustChange]=useState(true);
+  const [quorumPolicy,setQuorumPolicy]=useState<any>(null);
+  const [quorumSaving,setQuorumSaving]=useState(false);
+  const [quorumRequired,setQuorumRequired]=useState(1);
+  const GOVERNANCE_DEFAULT_POLICY_NAME="crypto-governance-default";
+  const GOVERNANCE_CRYPTO_ACTIONS=[
+    "key.encrypt",
+    "key.decrypt",
+    "key.sign",
+    "key.verify",
+    "key.derive",
+    "key.kem_encapsulate",
+    "key.kem_decapsulate",
+    "key.wrap",
+    "key.unwrap",
+    "key.mac",
+    "key.destroy",
+    "key.export",
+    "mpc.dkg",
+    "mpc.sign",
+    "mpc.decrypt",
+    "cert.issue",
+    "cert.revoke",
+    "cert.renew"
+  ];
+
+  const roleOptions=useMemo(()=>{
+    const out=new Set(["tenant-admin","admin","backup","audit","readonly","cli-user"]);
+    (Array.isArray(users)?users:[]).forEach((user)=>{
+      const role=String(user?.role||"").trim();
+      if(role){
+        out.add(role);
+      }
+    });
+    return Array.from(out);
+  },[users]);
+  const protectedCLIUser="cli-user";
+  const userRows=Array.isArray(users)?users:[];
+
+  const isProtectedCLI=(user)=>String(user?.username||"").toLowerCase()===protectedCLIUser;
+
+  useEffect(()=>{
+    setActiveSession(session);
+  },[session?.tenantId,session?.token,session?.username]);
+
+  const withSessionRetry=async <T,>(request:(authSession:AuthSession)=>Promise<T>):Promise<T>=>{
+    const base=activeSession||session;
+    if(!base?.token){
+      throw new Error("Missing active session.");
+    }
+    try{
+      return await request(base);
+    }catch(error){
+      const lower=String(errMsg(error)||"").toLowerCase();
+      const isTokenError=lower.includes("invalid token")||lower.includes("unauthorized");
+      if(!isTokenError||base.mode!=="backend"){
+        throw error;
+      }
+      const refreshed=await refreshSession(base);
+      saveSession(refreshed);
+      setActiveSession(refreshed);
+      return request(refreshed);
+    }
+  };
+
+  const handleUserError=(prefix,error,silent=false)=>{
+    const msg=errMsg(error);
+    const lower=String(msg||"").toLowerCase();
+    if(lower.includes("invalid token")||lower.includes("unauthorized")){
+      setUsersError("Session token is invalid or expired. Click Refresh. If it persists, log out and log in again.");
+      if(!silent){
+        onToast?.(`${prefix}: ${msg}`);
+      }
+      return true;
+    }
+    setUsersError(msg?`${prefix}: ${msg}`:"");
+    if(!silent){
+      onToast?.(`${prefix}: ${msg}`);
+    }
+    return false;
+  };
+
+  const refreshUsers=async(silent=false)=>{
+    if(!session?.token){
+      setUsers([]);
+      setInitializing(false);
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const items=await withSessionRetry((authSession)=>listAuthUsers(authSession));
+      setUsers(Array.isArray(items)?items:[]);
+      setUsersError("");
+    }catch(error){
+      handleUserError("User list load failed",error,silent);
+    }finally{
+      setInitializing(false);
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  const refreshQuorumPolicy=async(silent=false)=>{
+    if(!session?.token){
+      setQuorumPolicy(null);
+      setQuorumRequired(1);
+      return;
+    }
+    try{
+      const items=await withSessionRetry((authSession)=>listGovernancePolicies(authSession,{status:"active"}));
+      const selected=(Array.isArray(items)?items:[]).find((policy:any)=>String(policy?.name||"").toLowerCase()===GOVERNANCE_DEFAULT_POLICY_NAME)||null;
+      setQuorumPolicy(selected);
+      if(selected){
+        setQuorumRequired(Math.max(1,Number(selected?.required_approvals||1)));
+      }
+    }catch(error){
+      if(!silent){
+        handleUserError("Governance policy load failed",error,false);
+      }
+    }
+  };
+
+  const saveQuorumMembers=async(nextEmailsRaw:string[])=>{
+    if(!session?.token){
+      onToast?.("Login is required to update quorum.");
+      return;
+    }
+    const nextEmails=Array.from(new Set((Array.isArray(nextEmailsRaw)?nextEmailsRaw:[])
+      .map((email)=>String(email||"").trim().toLowerCase())
+      .filter(Boolean)));
+    if(!nextEmails.length){
+      onToast?.("At least one quorum approver is required.");
+      return;
+    }
+    const total=nextEmails.length;
+    const required=Math.max(1,Math.min(total,Math.trunc(Number(quorumRequired||1))));
+    const payload={
+      name:GOVERNANCE_DEFAULT_POLICY_NAME,
+      description:"Default quorum policy for governance-bound crypto operations.",
+      scope:"crypto",
+      trigger_actions:GOVERNANCE_CRYPTO_ACTIONS,
+      required_approvals:required,
+      total_approvers:total,
+      approver_roles:["tenant-admin","admin","audit"],
+      approver_users:nextEmails,
+      timeout_hours:48,
+      retention_days:90,
+      notification_channels:["dashboard","email"],
+      status:"active"
+    };
+    setQuorumSaving(true);
+    try{
+      const out=quorumPolicy?.id
+        ? await withSessionRetry((authSession)=>updateGovernancePolicy(authSession,String(quorumPolicy.id),payload))
+        : await withSessionRetry((authSession)=>createGovernancePolicy(authSession,payload));
+      setQuorumPolicy(out);
+      setQuorumRequired(Math.max(1,Math.min(Number(out?.total_approvers||total),Number(out?.required_approvals||required))));
+      setUsersError("");
+      onToast?.(`Governance quorum updated (${required}-of-${total}).`);
+    }catch(error){
+      handleUserError("Governance quorum update failed",error,false);
+    }finally{
+      setQuorumSaving(false);
+    }
+  };
+
+  const quorumMembers=useMemo(()=>{
+    const raw=Array.isArray(quorumPolicy?.approver_users)?quorumPolicy.approver_users:[];
+    return new Set(raw.map((email:any)=>String(email||"").trim().toLowerCase()).filter(Boolean));
+  },[quorumPolicy]);
+
+  const toggleQuorumMember=async(user:any)=>{
+    const email=String(user?.email||"").trim().toLowerCase();
+    if(!email){
+      onToast?.("User email is required for quorum membership.");
+      return;
+    }
+    const next=Array.from(quorumMembers);
+    const idx=next.findIndex((item)=>item===email);
+    if(idx>=0){
+      next.splice(idx,1);
+    }else{
+      next.push(email);
+    }
+    await saveQuorumMembers(next);
+  };
+
+  const saveQuorumScheme=async()=>{
+    await saveQuorumMembers(Array.from(quorumMembers));
+  };
+
+  useEffect(()=>{
+    void refreshUsers(false);
+    void refreshQuorumPolicy(true);
+  },[session?.token,session?.tenantId]);
+
+  if(!session?.token){
+    return <Section title="Local User Management">
+      <Card>
+        <div style={{fontSize:10,color:C.red}}>No active session. Please login again.</div>
+      </Card>
+    </Section>;
+  }
+
+  const submitCreate=async()=>{
+    const username=String(createUsername||"").trim();
+    const email=String(createEmail||"").trim();
+    const password=String(createPassword||"");
+    if(!username||!email||!password){
+      onToast?.("Username, email, and password are required.");
+      return;
+    }
+    setSaving(true);
+    try{
+      await withSessionRetry((authSession)=>createAuthUser(authSession,{
+        username,
+        email,
+        password,
+        role:createRole,
+        status:createStatus,
+        must_change_password:createMustChange
+      }));
+      setCreateUsername("");
+      setCreateEmail("");
+      setCreatePassword("");
+      setCreateRole("readonly");
+      setCreateStatus("active");
+      setCreateMustChange(true);
+      setModal(null);
+      await refreshUsers(true);
+      setUsersError("");
+      onToast?.(`User created: ${username}`);
+    }catch(error){
+      handleUserError("Create user failed",error,false);
+    }finally{
+      setSaving(false);
+    }
+  };
+
+  const submitRoleChange=async(user,newRole)=>{
+    if(isProtectedCLI(user)&&newRole!==String(user?.role||"")){
+      onToast?.("Default CLI user role cannot be changed.");
+      return;
+    }
+    try{
+      await withSessionRetry((authSession)=>updateAuthUserRole(authSession,String(user?.id||""),String(newRole||"")));
+      setUsers((prev)=>prev.map((item)=>String(item.id)===String(user?.id)?{...item,role:newRole}:item));
+      setUsersError("");
+      onToast?.(`Role updated for ${String(user?.username||"user")}.`);
+    }catch(error){
+      handleUserError("Role update failed",error,false);
+    }
+  };
+
+  const submitStatusChange=async(user,newStatus)=>{
+    try{
+      await withSessionRetry((authSession)=>updateAuthUserStatus(authSession,String(user?.id||""),newStatus));
+      setUsers((prev)=>prev.map((item)=>String(item.id)===String(user?.id)?{...item,status:newStatus}:item));
+      setUsersError("");
+      onToast?.(`Status updated for ${String(user?.username||"user")}.`);
+    }catch(error){
+      handleUserError("Status update failed",error,false);
+    }
+  };
+
+  const openResetModal=(user)=>{
+    setResetTarget(user);
+    setResetPassword("");
+    setResetMustChange(true);
+    setModal("reset");
+  };
+
+  const submitReset=async()=>{
+    if(!resetTarget){
+      return;
+    }
+    if(!String(resetPassword||"").trim()){
+      onToast?.("New password is required.");
+      return;
+    }
+    setSaving(true);
+    try{
+      await withSessionRetry((authSession)=>resetAuthUserPassword(authSession,String(resetTarget.id||""),{
+        new_password:resetPassword,
+        must_change_password:resetMustChange
+      }));
+      setModal(null);
+      setResetTarget(null);
+      setResetPassword("");
+      await refreshUsers(true);
+      setUsersError("");
+      onToast?.(`Password reset for ${String(resetTarget.username||"user")}.`);
+    }catch(error){
+      handleUserError("Password reset failed",error,false);
+    }finally{
+      setSaving(false);
+    }
+  };
+
+  return <div>
+    <Section title="Local User Management" actions={<>
+      <B c="amber">{quorumPolicy?`${Number(quorumPolicy.required_approvals||1)}-of-${Number(quorumPolicy.total_approvers||Math.max(1,quorumMembers.size))} quorum`:"quorum not configured"}</B>
+      <Btn small onClick={()=>void refreshUsers(false)}>{loading?"Refreshing...":"Refresh"}</Btn>
+      <Btn small primary onClick={()=>setModal("create")}>+ Create User</Btn>
+    </>}>
+      {usersError?<Card style={{marginBottom:8,borderColor:C.red}}>
+        <div style={{fontSize:10,color:C.red}}>{usersError}</div>
+      </Card>:null}
+      <Card style={{marginBottom:8}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Governance Quorum Policy</div>
+          <B c="amber">{`${Math.max(1,Math.min(Number(quorumRequired||1),Math.max(1,quorumMembers.size)))}-of-${Math.max(1,quorumMembers.size)}`}</B>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:8,alignItems:"end"}}>
+          <FG label="Required Approvals">
+            <Inp
+              type="number"
+              min={1}
+              max={Math.max(1,quorumMembers.size)}
+              value={String(quorumRequired)}
+              onChange={(e)=>setQuorumRequired(Math.max(1,Math.trunc(Number(e.target.value||1))))}
+            />
+          </FG>
+          <FG label="Total Approvers (selected users)">
+            <Inp value={String(Math.max(1,quorumMembers.size))} disabled/>
+          </FG>
+          <Btn
+            small
+            primary
+            onClick={()=>void saveQuorumScheme()}
+            disabled={quorumSaving||!quorumMembers.size}
+            style={{height:34,padding:"0 12px"}}
+          >
+            {quorumSaving?"Saving...":"Save Quorum"}
+          </Btn>
+        </div>
+        <div style={{fontSize:10,color:C.muted,marginTop:6}}>
+          Select quorum members from the user table below. Required approvals are enforced by backend governance policy.
+        </div>
+      </Card>
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Users</div>
+          <B c="blue">{`${userRows.length} total`}</B>
+        </div>
+        <div style={{maxHeight:420,overflowY:"auto",paddingRight:4}}>
+          <div style={{display:"grid",gridTemplateColumns:"1.3fr 1.4fr 1fr .8fr .8fr .8fr 1fr",gap:8,padding:"4px 0",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+            <div>Username</div>
+            <div>Email</div>
+            <div>Role</div>
+            <div>Status</div>
+            <div>Password</div>
+            <div>Quorum</div>
+            <div>Actions</div>
+          </div>
+          {userRows.map((user)=>(
+            <div key={String(user.id)} style={{display:"grid",gridTemplateColumns:"1.3fr 1.4fr 1fr .8fr .8fr .8fr 1fr",gap:8,alignItems:"center",padding:"8px 0",borderTop:`1px solid ${C.border}`}}>
+              <div style={{fontSize:11,color:C.text}}>
+                {String(user.username||"")}
+                {isProtectedCLI(user)&&<span style={{marginLeft:6,fontSize:9,color:C.blue}}>(default CLI)</span>}
+              </div>
+              <div style={{fontSize:10,color:C.dim,wordBreak:"break-all"}}>{String(user.email||"-")}</div>
+              <Sel
+                value={String(user.role||"readonly")}
+                onChange={(e)=>void submitRoleChange(user,e.target.value)}
+                disabled={isProtectedCLI(user)}
+                style={{height:30}}
+              >
+                {roleOptions.map((role)=><option key={role} value={role}>{role==="tenant-admin"?"tenant-admin (admin)":role}</option>)}
+              </Sel>
+              <Sel
+                value={normalizeUserStatus(String(user.status||"active"))}
+                onChange={(e)=>void submitStatusChange(user,e.target.value)}
+                style={{height:30}}
+              >
+                <option value="active">active</option>
+                <option value="inactive">inactive</option>
+              </Sel>
+              {Boolean(user.must_change_password)?<B c="amber">Change</B>:<B c="green">OK</B>}
+              <div>
+                <Chk
+                  label=""
+                  checked={quorumMembers.has(String(user.email||"").trim().toLowerCase())}
+                  onChange={()=>void toggleQuorumMember(user)}
+                />
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <Btn small onClick={()=>openResetModal(user)}>Reset</Btn>
+              </div>
+            </div>
+          ))}
+          {initializing?<div style={{fontSize:10,color:C.muted,padding:"10px 0"}}>Loading users...</div>:null}
+          {!userRows.length&&!loading&&!initializing&&<div style={{fontSize:10,color:C.muted,padding:"10px 0"}}>No users found.</div>}
+        </div>
+      </Card>
+    </Section>
+
+    <Modal open={modal==="create"} onClose={()=>setModal(null)} title="Create Local User">
+      <Row2>
+        <FG label="Username" required><Inp value={createUsername} onChange={(e)=>setCreateUsername(e.target.value)} placeholder="operator-1"/></FG>
+        <FG label="Email" required><Inp type="email" value={createEmail} onChange={(e)=>setCreateEmail(e.target.value)} placeholder="operator@example.com"/></FG>
+      </Row2>
+      <FG label="Password" required><Inp type="password" value={createPassword} onChange={(e)=>setCreatePassword(e.target.value)} placeholder="Strong password"/></FG>
+      <Row2>
+        <FG label="Role" required>
+          <Sel value={createRole} onChange={(e)=>setCreateRole(e.target.value)}>
+            {roleOptions.map((role)=><option key={role} value={role}>{role}</option>)}
+          </Sel>
+        </FG>
+        <FG label="Status" required>
+          <Sel value={createStatus} onChange={(e)=>setCreateStatus(e.target.value)}>
+            <option value="active">active</option>
+            <option value="inactive">inactive</option>
+          </Sel>
+        </FG>
+      </Row2>
+      <Chk label="Require password change at first login" checked={createMustChange} onChange={()=>setCreateMustChange((v)=>!v)}/>
+      <div style={{fontSize:10,color:C.muted,marginTop:8}}>
+        Password complexity is enforced by global Administration password policy.
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={saving}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitCreate()} disabled={saving}>{saving?"Creating...":"Create User"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="reset"} onClose={()=>setModal(null)} title={`Reset Password: ${String(resetTarget?.username||"")}`}>
+      <FG label="New Password" required>
+        <Inp type="password" value={resetPassword} onChange={(e)=>setResetPassword(e.target.value)} placeholder="Enter new password"/>
+      </FG>
+      <Chk label="Require password change at next login" checked={resetMustChange} onChange={()=>setResetMustChange((v)=>!v)}/>
+      <div style={{fontSize:10,color:C.muted,marginTop:8}}>
+        Only admins can reset the default CLI user password.
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={saving}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitReset()} disabled={saving}>{saving?"Applying...":"Reset Password"}</Btn>
+      </div>
+    </Modal>
+  </div>;
+};
+
+const Documentation=()=>{
+  const [search,setSearch]=useState("");
+
+  const docs=useMemo(()=>{
+    const q=search.trim().toLowerCase();
+    if(!q){
+      return DOC_COMPONENTS;
+    }
+    return DOC_COMPONENTS.filter((item)=>{
+      return [item.name,item.group,item.purpose,item.customer].some((v)=>String(v||"").toLowerCase().includes(q));
+    });
+  },[search]);
+
+  const capabilities=useMemo(()=>{
+    const q=search.trim().toLowerCase();
+    if(!q){
+      return DOC_CAPABILITIES;
+    }
+    return DOC_CAPABILITIES.filter((item)=>{
+      return [item.name,item.domain,item.summary,item.customer].some((v)=>String(v||"").toLowerCase().includes(q));
+    });
+  },[search]);
+
+  return <div>
+    <Section title="Customer Documentation">
+      <Card>
+        <div style={{fontSize:10,color:C.dim}}>
+          This tab contains static product documentation only. Operational controls and live service status are available under Administration.
+        </div>
+      </Card>
+      <div style={{height:8}}/>
+      <Inp placeholder="Search components by name, purpose, or customer impact..." value={search} onChange={(e)=>setSearch(e.target.value)}/>
+      <div style={{height:8}}/>
+      <Row2>
+        <Card style={{height:480,overflowY:"auto"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:12,color:C.text,fontWeight:700}}>Components</div>
+            <B c="blue">{`${docs.length} items`}</B>
+          </div>
+          <div style={{display:"grid",gap:8,paddingRight:4}}>
+            {docs.map((item)=>(
+              <Card key={item.name}>
+                <div style={{fontSize:12,color:C.text,fontWeight:700}}>{item.name}</div>
+                <div style={{fontSize:9,color:C.muted,marginBottom:4}}>{item.group}</div>
+                <div style={{fontSize:10,color:C.dim,marginBottom:4}}>{item.purpose}</div>
+                <div style={{fontSize:10,color:C.text}}>{item.customer}</div>
+              </Card>
+            ))}
+            {!docs.length&&<Card><div style={{fontSize:10,color:C.dim}}>No matching components.</div></Card>}
+          </div>
+        </Card>
+        <Card style={{height:480,overflowY:"auto"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:12,color:C.text,fontWeight:700}}>Capabilities</div>
+            <B c="blue">{`${capabilities.length} items`}</B>
+          </div>
+          <div style={{display:"grid",gap:8,paddingRight:4}}>
+            {capabilities.map((item)=>(
+              <Card key={item.name}>
+                <div style={{fontSize:12,color:C.text,fontWeight:700}}>{item.name}</div>
+                <div style={{fontSize:9,color:C.muted,marginBottom:4}}>{item.domain}</div>
+                <div style={{fontSize:10,color:C.dim,marginBottom:4}}>{item.summary}</div>
+                <div style={{fontSize:10,color:C.text}}>{item.customer}</div>
+              </Card>
+            ))}
+            {!capabilities.length&&<Card><div style={{fontSize:10,color:C.dim}}>No matching capabilities.</div></Card>}
+          </div>
+        </Card>
+      </Row2>
+      <div style={{marginTop:8,fontSize:9,color:C.muted}}>
+        Customer note: Documentation content explains component purpose and business impact. It does not execute service discovery, health checks, or restart actions.
+      </div>
+    </Section>
+  </div>;
+};
+
+// 
+// MAIN APP WITH SIDEBAR
+// 
+const TABS={home:Home,keys:Keys,crypto:Crypto,vault:Vault,certs:Certs,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,byok:BYOK,hyok:HYOK,ekm:EKM,kmip:KMIP,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
+const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",vault:"Secret Vault",certs:"Certificates / Mini PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",byok:"BYOK",hyok:"HYOK",ekm:"EKM Agent Hub",kmip:"KMIP 2.1 Server",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
+
+export default function VectaDashboard(props){
+  const {session,enabledFeatures,alerts,audit,unreadAlerts,onLogout,markAlertsRead}=props;
+  const [tab,setTab]=useState("home");
+  const [collapsed,setCollapsed]=useState(false);
+  const [t,setT]=useState(new Date());
+  const [toast,setToast]=useState("");
+  const [keyCatalog,setKeyCatalog]=useState([]);
+  const [tagCatalog,setTagCatalog]=useState([]);
+  const [fipsMode,setFipsMode]=useState<"enabled"|"disabled">("disabled");
+  const [reportedUnread,setReportedUnread]=useState(Number(unreadAlerts||0));
+  const [cliStatus,setCLIStatus]=useState<any>(null);
+  const [cliModalOpen,setCLIModalOpen]=useState(false);
+  const [cliUsername,setCLIUsername]=useState("cli-user");
+  const [cliPassword,setCLIPassword]=useState("");
+  const [cliLaunching,setCLILaunching]=useState(false);
+  const [cliCommandHint,setCLICommandHint]=useState("");
+
+  useEffect(()=>{
+    const i=setInterval(()=>setT(new Date()),1000);
+    return()=>clearInterval(i);
+  },[]);
+
+  useEffect(()=>{
+    let stop=false;
+    (async()=>{
+      try{
+        const items=await listKeys(session);
+        if(!stop){
+          setKeyCatalog(items.map(toViewKey));
+        }
+      }catch{
+        // Keep customer-entered key names.
+      }
+      try{
+        const tags=await listTags(session);
+        if(!stop){
+          setTagCatalog(tags);
+        }
+      }catch{
+        // Tag catalog remains empty until admin refresh.
+      }
+      try{
+        const out=await serviceRequest(
+          session,
+          "governance",
+          `/governance/system/state?tenant_id=${encodeURIComponent(session?.tenantId||"")}`
+        );
+        if(!stop){
+          setFipsMode(normalizeFipsModeValue(String(out?.state?.fips_mode||"disabled")));
+        }
+      }catch{
+        if(!stop){
+          setFipsMode("disabled");
+        }
+      }
+    })();
+    return()=>{stop=true;};
+  },[session]);
+
+  useEffect(()=>{
+    if(!canSeeTab(tab,enabledFeatures||new Set())){
+      setTab("home");
+    }
+  },[tab,enabledFeatures]);
+
+  useEffect(()=>{
+    if(!toast){
+      return;
+    }
+    const id=setTimeout(()=>setToast(""),4000);
+    return()=>clearTimeout(id);
+  },[toast]);
+
+  useEffect(()=>{
+    if(!session?.token){
+      setReportedUnread(0);
+      return;
+    }
+    let cancelled=false;
+    const pullUnread=async()=>{
+      try{
+        const counts=await getUnreadAlertCounts(session);
+        if(cancelled){
+          return;
+        }
+        const total=Object.values(counts||{}).reduce((sum,val)=>sum+Math.max(0,Number(val||0)),0);
+        setReportedUnread(total);
+      }catch{
+        if(!cancelled){
+          setReportedUnread(Number(unreadAlerts||0));
+        }
+      }
+    };
+    void pullUnread();
+    const id=setInterval(()=>{void pullUnread();},10000);
+    return()=>{
+      cancelled=true;
+      clearInterval(id);
+    };
+  },[session?.token,session?.tenantId,unreadAlerts]);
+
+  useEffect(()=>{
+    if(!session?.token){
+      setCLIStatus(null);
+      setCLIModalOpen(false);
+      setCLIPassword("");
+      setCLICommandHint("");
+      return;
+    }
+    let cancelled=false;
+    const pullCLIStatus=async()=>{
+      try{
+        const out=await getAuthCLIStatus(session);
+        if(cancelled){
+          return;
+        }
+        setCLIStatus(out);
+        if(String(out?.cli_username||"").trim()){
+          setCLIUsername(String(out.cli_username).trim());
+        }
+      }catch{
+        if(!cancelled){
+          setCLIStatus({enabled:false,cli_username:"cli-user",host:"127.0.0.1",port:22});
+        }
+      }
+    };
+    void pullCLIStatus();
+    const id=setInterval(()=>{void pullCLIStatus();},10000);
+    return()=>{
+      cancelled=true;
+      clearInterval(id);
+    };
+  },[session?.token,session?.tenantId]);
+
+  const openCLIModal=()=>{
+    if(!cliStatus?.enabled){
+      onToast?.("CLI is disabled. Activate default CLI user in User Management.");
+      return;
+    }
+    setCLIUsername(String(cliStatus?.cli_username||"cli-user"));
+    setCLIPassword("");
+    setCLIModalOpen(true);
+  };
+
+  const launchCLI=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to open CLI.");
+      return;
+    }
+    if(!String(cliUsername||"").trim()||!String(cliPassword||"").trim()){
+      onToast?.("CLI username and password are required.");
+      return;
+    }
+    setCLILaunching(true);
+    try{
+      const out=await openAuthCLISession(session,{
+        username:String(cliUsername||"").trim(),
+        password:String(cliPassword||"")
+      });
+      setCLICommandHint(String(out?.ssh_command||""));
+      setCLIModalOpen(false);
+      setCLIPassword("");
+      const uri=String(out?.putty_uri||"").trim();
+      if(uri){
+        window.open(uri,"_blank");
+      }
+      onToast?.("CLI session prepared. Use PuTTY or SSH command shown.");
+    }catch(error){
+      onToast?.(`CLI launch failed: ${errMsg(error)}`);
+    }finally{
+      setCLILaunching(false);
+    }
+  };
+
+  const navGroups=useMemo(
+    ()=>NAV.map((g)=>({...g,items:g.items.filter((it)=>canSeeTab(it.id,enabledFeatures||new Set()))})).filter((g)=>g.items.length>0),
+    [enabledFeatures]
+  );
+  const globalFipsEnabled=isFipsModeEnabled(fipsMode);
+
+  const Tab=TABS[tab]||Home;
+  return(
+    <div style={{display:"flex",height:"100vh",background:C.bg,fontFamily:"'IBM Plex Sans',-apple-system,sans-serif",color:C.text,overflow:"hidden"}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+        *::-webkit-scrollbar{width:5px;height:5px} *::-webkit-scrollbar-track{background:transparent} *::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
+      <div style={{width:collapsed?56:210,background:C.sidebar,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",transition:"width .2s",flexShrink:0,overflow:"hidden"}}>
+        <div style={{padding:collapsed?"12px 8px":"12px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8,cursor:"pointer",minHeight:44}} onClick={()=>setCollapsed(!collapsed)}>
+          <div style={{width:28,height:28,borderRadius:7,background:`linear-gradient(135deg,${C.accent},${C.purple})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:C.bg,flexShrink:0}}>V</div>
+          {!collapsed&&<span style={{fontSize:13,fontWeight:700,letterSpacing:1.5,color:C.text}}>VECTA KMS</span>}
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:"6px 0"}}>
+          {navGroups.map(g=><div key={g.g}>
+            {!collapsed&&<div style={{padding:"8px 14px 3px",fontSize:8,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:1.5}}>{g.g}</div>}
+            {g.items.map(it=><div key={it.id} onClick={()=>setTab(it.id)} style={{display:"flex",alignItems:"center",gap:8,padding:collapsed?"8px":"6px 14px",cursor:"pointer",background:tab===it.id?C.accentDim:"transparent",borderLeft:tab===it.id?`2px solid ${C.accent}`:"2px solid transparent",transition:"all .15s"}} title={it.label}>
+              <span style={{display:"inline-flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",color:tab===it.id?C.text:C.dim,flexShrink:0,width:collapsed?"100%":"auto"}}>
+                <it.icon size={collapsed?16:14} strokeWidth={2}/>
+              </span>
+              {!collapsed&&<span style={{fontSize:11,color:tab===it.id?C.text:C.dim,fontWeight:tab===it.id?600:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it.label}</span>}
+            </div>)}
+          </div>)}
+        </div>
+      </div>
+      <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 20px",height:44,borderBottom:`1px solid ${C.border}`,flexShrink:0,background:C.surface}}>
+          <span style={{fontSize:14,fontWeight:700,color:C.text,letterSpacing:-.3}}>{TITLES[tab]}</span>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <B c={globalFipsEnabled?"green":"blue"} pulse={globalFipsEnabled}>{globalFipsEnabled?"FIPS STRICT":"STANDARD MODE"}</B>
+            <button
+              onClick={openCLIModal}
+              disabled={!Boolean(cliStatus?.enabled)}
+              title={Boolean(cliStatus?.enabled)?"Open secure CLI session":"CLI disabled (activate default CLI user)"}
+              style={{
+                display:"inline-flex",
+                alignItems:"center",
+                gap:5,
+                border:`1px solid ${Boolean(cliStatus?.enabled)?C.borderHi:C.border}`,
+                borderRadius:999,
+                background:Boolean(cliStatus?.enabled)?C.accentDim:"transparent",
+                color:Boolean(cliStatus?.enabled)?C.accent:C.muted,
+                padding:"4px 10px",
+                fontSize:10,
+                fontWeight:700,
+                letterSpacing:.4,
+                cursor:Boolean(cliStatus?.enabled)?"pointer":"not-allowed"
+              }}
+            >
+              <TerminalSquare size={12} strokeWidth={2}/>
+              CLI
+            </button>
+            <span style={{fontSize:11,color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{t.toLocaleTimeString()}</span>
+            <span onClick={()=>{
+              setTab("alerts");
+              markAlertsRead?.();
+            }} style={{display:"inline-flex",alignItems:"center",justifyContent:"center",cursor:"pointer",position:"relative",color:C.dim}}>
+              <Bell size={14} strokeWidth={2}/>
+              <span style={{position:"absolute",top:-4,right:-6,background:C.red,color:C.white,fontSize:8,borderRadius:6,padding:"1px 4px",fontWeight:700}}>{String(reportedUnread||0)}</span>
+            </span>
+            <div style={{width:26,height:26,borderRadius:6,background:C.accentDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:C.accent}}>{(session?.username||"NA").slice(0,2).toUpperCase()}</div>
+            <Btn small onClick={onLogout}>Logout</Btn>
+          </div>
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:16}}>
+          <TabErrorBoundary resetKey={tab}>
+            <Tab
+              session={session}
+              keyCatalog={keyCatalog}
+              setKeyCatalog={setKeyCatalog}
+              tagCatalog={tagCatalog}
+              setTagCatalog={setTagCatalog}
+              alerts={alerts}
+              audit={audit}
+            onToast={setToast}
+            onLogout={onLogout}
+            fipsMode={fipsMode}
+            onFipsModeChange={setFipsMode}
+            onUnreadSync={setReportedUnread}
+          />
+          </TabErrorBoundary>
+        </div>
+        <Modal open={cliModalOpen} onClose={()=>setCLIModalOpen(false)} title="Secure CLI Access">
+          <FG label="CLI User" required>
+            <Inp value={cliUsername} onChange={(e)=>setCLIUsername(e.target.value)} placeholder="cli-user"/>
+          </FG>
+          <FG label="CLI Password" required>
+            <Inp type="password" value={cliPassword} onChange={(e)=>setCLIPassword(e.target.value)} placeholder="Enter CLI user password"/>
+          </FG>
+          <div style={{fontSize:10,color:C.muted,marginTop:6}}>
+            Additional authentication is required. CLI access is encrypted over SSH and tied to the protected CLI user.
+          </div>
+          <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+            <Btn onClick={()=>setCLIModalOpen(false)} disabled={cliLaunching}>Cancel</Btn>
+            <Btn primary onClick={()=>void launchCLI()} disabled={cliLaunching}>{cliLaunching?"Opening...":"Open CLI"}</Btn>
+          </div>
+        </Modal>
+        {cliCommandHint&&<div style={{position:"fixed",left:16,bottom:16,background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,padding:"10px 12px",fontSize:11,color:C.text,zIndex:1200,maxWidth:460}}>
+          SSH command: <span style={{fontFamily:"'JetBrains Mono',monospace",color:C.accent}}>{cliCommandHint}</span>
+        </div>}
+        {toast&&<div style={{position:"fixed",right:16,bottom:16,background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,padding:"10px 12px",fontSize:11,color:C.text,zIndex:1200,maxWidth:380}}>{toast}</div>}
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

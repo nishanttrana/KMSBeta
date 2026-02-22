@@ -1,0 +1,10 @@
+[Unit]
+Description=Vecta KMS Health Check (enabled services)
+After=vecta-stack.service
+Requires=vecta-stack.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/vecta
+ExecStart=/opt/vecta/infra/scripts/healthcheck-enabled-services.sh /etc/vecta/deployment.yaml
+TimeoutStartSec=180

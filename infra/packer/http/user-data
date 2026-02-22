@@ -1,0 +1,20 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: vecta-kms
+    username: packer
+    password: "$6$rounds=4096$JOUxrc6L5h9Nn9H0$WVGO8vN1xjEa2zWq7sY9sXfDDBs8S/RQhm8WfgB1nS6Lwqjs6dbnsvf2kB9iEeYvJszG4NkA8mmWgBlJ2zWf80"
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  ssh:
+    install-server: true
+    allow-pw: true
+  packages:
+    - openssh-server
+    - curl
+    - ca-certificates
+  storage:
+    layout:
+      name: lvm

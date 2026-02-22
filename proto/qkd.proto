@@ -1,0 +1,180 @@
+syntax = "proto3";
+
+package vecta.qkd.v1;
+
+option go_package = "vecta-kms/proto/qkd;qkdpb";
+
+service QkdService {
+  rpc GetETSIStatus (ETSIStatusRequest) returns (ETSIStatusResponse);
+  rpc SubmitEncryptedKeys (SubmitEncryptedKeysRequest) returns (SubmitEncryptedKeysResponse);
+  rpc RetrieveDecryptKeys (RetrieveDecryptKeysRequest) returns (RetrieveDecryptKeysResponse);
+
+  rpc OpenConnect (OpenConnectRequest) returns (OpenConnectResponse);
+  rpc GetKey (GetKeyRequest) returns (GetKeyResponse);
+  rpc CloseConnect (CloseConnectRequest) returns (CloseConnectResponse);
+
+  rpc ListDevices (ListDevicesRequest) returns (ListDevicesResponse);
+  rpc GetDeviceStatus (GetDeviceStatusRequest) returns (GetDeviceStatusResponse);
+  rpc InjectKey (InjectKeyRequest) returns (InjectKeyResponse);
+
+  rpc GetConfig (GetConfigRequest) returns (GetConfigResponse);
+  rpc UpdateConfig (UpdateConfigRequest) returns (UpdateConfigResponse);
+}
+
+message QKDKeyMaterial {
+  string key_id = 1;
+  string key = 2;
+  double qber = 3;
+}
+
+message ETSIStatusRequest {
+  string tenant_id = 1;
+  string slave_sae_id = 2;
+}
+
+message ETSIStatusResponse {
+  string slave_sae_id = 1;
+  int32 available_key_count = 2;
+  int32 key_size_bits = 3;
+  string link_status = 4;
+  double key_rate = 5;
+  double qber_avg = 6;
+}
+
+message SubmitEncryptedKeysRequest {
+  string tenant_id = 1;
+  string slave_sae_id = 2;
+  string device_id = 3;
+  string device_name = 4;
+  string role = 5;
+  string link_status = 6;
+  repeated QKDKeyMaterial keys = 7;
+}
+
+message SubmitEncryptedKeysResponse {
+  string slave_sae_id = 1;
+  repeated string accepted_key_ids = 2;
+  repeated string discarded_key_ids = 3;
+  int32 accepted_count = 4;
+  int32 discarded_count = 5;
+}
+
+message RetrieveDecryptKeysRequest {
+  string tenant_id = 1;
+  string slave_sae_id = 2;
+  repeated string key_ids = 3;
+  int32 count = 4;
+}
+
+message RetrievedKey {
+  string key_id = 1;
+  string key = 2;
+  double qber = 3;
+  int32 key_size_bits = 4;
+}
+
+message RetrieveDecryptKeysResponse {
+  string slave_sae_id = 1;
+  repeated RetrievedKey keys = 2;
+}
+
+message OpenConnectRequest {
+  string tenant_id = 1;
+  string device_id = 2;
+  string slave_sae_id = 3;
+  string app_id = 4;
+}
+
+message OpenConnectResponse {
+  string session_id = 1;
+  string status = 2;
+}
+
+message GetKeyRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+  int32 count = 3;
+}
+
+message GetKeyResponse {
+  string session_id = 1;
+  repeated RetrievedKey keys = 2;
+}
+
+message CloseConnectRequest {
+  string tenant_id = 1;
+  string session_id = 2;
+}
+
+message CloseConnectResponse {
+  string session_id = 1;
+  string status = 2;
+}
+
+message Device {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string role = 4;
+  string slave_sae_id = 5;
+  string link_status = 6;
+  double key_rate = 7;
+  double qber_avg = 8;
+  string last_seen_at = 9;
+}
+
+message ListDevicesRequest {
+  string tenant_id = 1;
+}
+
+message ListDevicesResponse {
+  repeated Device items = 1;
+}
+
+message GetDeviceStatusRequest {
+  string tenant_id = 1;
+  string device_id = 2;
+}
+
+message GetDeviceStatusResponse {
+  Device device = 1;
+  int32 available_key_count = 2;
+}
+
+message InjectKeyRequest {
+  string tenant_id = 1;
+  string qkd_key_id = 2;
+  string name = 3;
+  string purpose = 4;
+  bool consume = 5;
+}
+
+message InjectKeyResponse {
+  string qkd_key_id = 1;
+  string keycore_key_id = 2;
+  string status = 3;
+}
+
+message QKDConfig {
+  string tenant_id = 1;
+  double qber_threshold = 2;
+  int32 pool_low_threshold = 3;
+  bool auto_inject = 4;
+  string updated_at = 5;
+}
+
+message GetConfigRequest {
+  string tenant_id = 1;
+}
+
+message GetConfigResponse {
+  QKDConfig config = 1;
+}
+
+message UpdateConfigRequest {
+  QKDConfig config = 1;
+}
+
+message UpdateConfigResponse {
+  QKDConfig config = 1;
+}

@@ -1,0 +1,153 @@
+syntax = "proto3";
+
+package vecta.policy.v1;
+
+option go_package = "vecta-kms/proto/policy;policypb";
+
+service PolicyService {
+  rpc CreatePolicy (CreatePolicyRequest) returns (CreatePolicyResponse);
+  rpc UpdatePolicy (UpdatePolicyRequest) returns (UpdatePolicyResponse);
+  rpc DeletePolicy (DeletePolicyRequest) returns (DeletePolicyResponse);
+  rpc GetPolicy (GetPolicyRequest) returns (GetPolicyResponse);
+  rpc ListPolicies (ListPoliciesRequest) returns (ListPoliciesResponse);
+  rpc ListPolicyVersions (ListPolicyVersionsRequest) returns (ListPolicyVersionsResponse);
+  rpc GetPolicyVersion (GetPolicyVersionRequest) returns (GetPolicyVersionResponse);
+  rpc EvaluatePolicy (EvaluatePolicyRequest) returns (EvaluatePolicyResponse);
+}
+
+message PolicyRule {
+  string name = 1;
+  string condition = 2;
+  string action = 3;
+  string message = 4;
+  repeated string notify = 5;
+}
+
+message Policy {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string status = 4;
+  string spec_type = 5;
+  string yaml = 6;
+  int32 current_version = 7;
+  string current_commit = 8;
+  string created_by = 9;
+  string updated_by = 10;
+  string created_at = 11;
+  string updated_at = 12;
+}
+
+message CreatePolicyRequest {
+  string tenant_id = 1;
+  string yaml = 2;
+  string actor = 3;
+  string commit_message = 4;
+}
+
+message CreatePolicyResponse {
+  Policy policy = 1;
+}
+
+message UpdatePolicyRequest {
+  string tenant_id = 1;
+  string policy_id = 2;
+  string yaml = 3;
+  string actor = 4;
+  string commit_message = 5;
+}
+
+message UpdatePolicyResponse {
+  Policy policy = 1;
+}
+
+message DeletePolicyRequest {
+  string tenant_id = 1;
+  string policy_id = 2;
+  string actor = 3;
+  string commit_message = 4;
+}
+
+message DeletePolicyResponse {
+  string status = 1;
+}
+
+message GetPolicyRequest {
+  string tenant_id = 1;
+  string policy_id = 2;
+}
+
+message GetPolicyResponse {
+  Policy policy = 1;
+}
+
+message ListPoliciesRequest {
+  string tenant_id = 1;
+  string status = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListPoliciesResponse {
+  repeated Policy items = 1;
+}
+
+message PolicyVersion {
+  string id = 1;
+  string tenant_id = 2;
+  string policy_id = 3;
+  int32 version = 4;
+  string commit_hash = 5;
+  string parent_commit_hash = 6;
+  string change_type = 7;
+  string change_message = 8;
+  string yaml = 9;
+  string created_by = 10;
+  string created_at = 11;
+}
+
+message ListPolicyVersionsRequest {
+  string tenant_id = 1;
+  string policy_id = 2;
+}
+
+message ListPolicyVersionsResponse {
+  repeated PolicyVersion items = 1;
+}
+
+message GetPolicyVersionRequest {
+  string tenant_id = 1;
+  string policy_id = 2;
+  int32 version = 3;
+}
+
+message GetPolicyVersionResponse {
+  PolicyVersion version = 1;
+}
+
+message EvaluatePolicyRequest {
+  string tenant_id = 1;
+  string operation = 2;
+  string key_id = 3;
+  string algorithm = 4;
+  string purpose = 5;
+  string iv_mode = 6;
+  int64 ops_total = 7;
+  int64 ops_limit = 8;
+  int32 days_since_rotation = 9;
+  string key_status = 10;
+}
+
+message RuleOutcome {
+  string policy_id = 1;
+  int32 policy_version = 2;
+  string rule_name = 3;
+  string action = 4;
+  string message = 5;
+}
+
+message EvaluatePolicyResponse {
+  string decision = 1; // ALLOW | DENY | WARN
+  string reason = 2;
+  repeated RuleOutcome outcomes = 3;
+}

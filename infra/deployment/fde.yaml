@@ -1,0 +1,17 @@
+algorithm: AES-256-XTS
+boot_unlock_listener_port: 9444
+boot_unlock_listener_protocol: https
+device: /dev/sda3
+enabled: true
+key_derivation: Argon2id
+luks_version: LUKS2
+operator_passphrase_sha256: e6ed18f000c7681fcfb72e813507d7617b6f129366090493a9d33c35d88b1b26
+operator_public_key: ""
+recovery_passphrase_sha256: e6ed18f000c7681fcfb72e813507d7617b6f129366090493a9d33c35d88b1b26
+recovery_share_encoding: hex
+recovery_share_generation: shamir
+recovery_share_verification: required
+recovery_shares: 5
+recovery_threshold: 3
+tang_server: ""
+unlock_method: rest_api

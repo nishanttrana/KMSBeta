@@ -1,0 +1,386 @@
+syntax = "proto3";
+
+package vecta.reporting.v1;
+
+option go_package = "vecta-kms/proto/reporting;reportingpb";
+
+service ReportingService {
+  rpc ListAlerts (ListAlertsRequest) returns (ListAlertsResponse);
+  rpc GetAlert (GetAlertRequest) returns (GetAlertResponse);
+  rpc GetUnreadCounts (GetUnreadCountsRequest) returns (GetUnreadCountsResponse);
+  rpc AcknowledgeAlert (AcknowledgeAlertRequest) returns (AlertActionResponse);
+  rpc ResolveAlert (ResolveAlertRequest) returns (AlertActionResponse);
+  rpc FalsePositiveAlert (FalsePositiveAlertRequest) returns (AlertActionResponse);
+  rpc EscalateAlert (EscalateAlertRequest) returns (AlertActionResponse);
+  rpc BulkAcknowledge (BulkAcknowledgeRequest) returns (BulkAlertActionResponse);
+  rpc BulkResolve (BulkResolveRequest) returns (BulkAlertActionResponse);
+
+  rpc ListIncidents (ListIncidentsRequest) returns (ListIncidentsResponse);
+  rpc GetIncident (GetIncidentRequest) returns (GetIncidentResponse);
+  rpc UpdateIncidentStatus (UpdateIncidentStatusRequest) returns (IncidentActionResponse);
+  rpc AssignIncident (AssignIncidentRequest) returns (IncidentActionResponse);
+
+  rpc ListRules (ListRulesRequest) returns (ListRulesResponse);
+  rpc CreateRule (CreateRuleRequest) returns (CreateRuleResponse);
+  rpc UpdateRule (UpdateRuleRequest) returns (RuleActionResponse);
+  rpc DeleteRule (DeleteRuleRequest) returns (RuleActionResponse);
+
+  rpc GetSeverityConfig (GetSeverityConfigRequest) returns (GetSeverityConfigResponse);
+  rpc UpdateSeverityConfig (UpdateSeverityConfigRequest) returns (UpdateSeverityConfigResponse);
+
+  rpc ListChannels (ListChannelsRequest) returns (ListChannelsResponse);
+  rpc UpdateChannels (UpdateChannelsRequest) returns (UpdateChannelsResponse);
+
+  rpc ListReportTemplates (ListReportTemplatesRequest) returns (ListReportTemplatesResponse);
+  rpc GenerateReport (GenerateReportRequest) returns (GenerateReportResponse);
+  rpc GetReportJob (GetReportJobRequest) returns (GetReportJobResponse);
+  rpc DownloadReport (DownloadReportRequest) returns (DownloadReportResponse);
+  rpc ListScheduledReports (ListScheduledReportsRequest) returns (ListScheduledReportsResponse);
+  rpc CreateScheduledReport (CreateScheduledReportRequest) returns (CreateScheduledReportResponse);
+
+  rpc GetAlertStats (GetAlertStatsRequest) returns (GetAlertStatsResponse);
+  rpc GetMTTRStats (GetMTTRStatsRequest) returns (GetMTTRStatsResponse);
+  rpc GetTopSources (GetTopSourcesRequest) returns (GetTopSourcesResponse);
+}
+
+message JsonObject {
+  map<string, string> fields = 1;
+}
+
+message Alert {
+  string id = 1;
+  string tenant_id = 2;
+  string audit_event_id = 3;
+  string audit_action = 4;
+  string severity = 5;
+  string category = 6;
+  string title = 7;
+  string description = 8;
+  string service = 9;
+  string actor_id = 10;
+  string actor_type = 11;
+  string target_type = 12;
+  string target_id = 13;
+  string source_ip = 14;
+  string status = 15;
+  string incident_id = 16;
+  string correlation_id = 17;
+  int32 dedup_count = 18;
+  repeated string channels_sent = 19;
+  map<string, string> channel_status = 20;
+  string created_at = 21;
+  string updated_at = 22;
+}
+
+message Incident {
+  string id = 1;
+  string tenant_id = 2;
+  string title = 3;
+  string severity = 4;
+  string status = 5;
+  int32 alert_count = 6;
+  string first_alert_at = 7;
+  string last_alert_at = 8;
+  string assigned_to = 9;
+  string notes = 10;
+  string created_at = 11;
+  string updated_at = 12;
+}
+
+message AlertRule {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string condition = 4;
+  string severity = 5;
+  string event_pattern = 6;
+  int32 threshold = 7;
+  int32 window_seconds = 8;
+  repeated string channels = 9;
+  bool enabled = 10;
+  string created_at = 11;
+  string updated_at = 12;
+}
+
+message NotificationChannel {
+  string tenant_id = 1;
+  string name = 2;
+  bool enabled = 3;
+  JsonObject config = 4;
+  string updated_at = 5;
+}
+
+message ReportTemplate {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated string formats = 4;
+}
+
+message ReportJob {
+  string id = 1;
+  string tenant_id = 2;
+  string template_id = 3;
+  string format = 4;
+  string status = 5;
+  JsonObject filters = 6;
+  string result_content = 7;
+  string result_content_type = 8;
+  string requested_by = 9;
+  string error = 10;
+  string created_at = 11;
+  string updated_at = 12;
+  string completed_at = 13;
+}
+
+message ScheduledReport {
+  string id = 1;
+  string tenant_id = 2;
+  string name = 3;
+  string template_id = 4;
+  string format = 5;
+  string schedule = 6;
+  JsonObject filters = 7;
+  repeated string recipients = 8;
+  bool enabled = 9;
+  string last_run_at = 10;
+  string next_run_at = 11;
+  string created_at = 12;
+  string updated_at = 13;
+}
+
+message ListAlertsRequest {
+  string tenant_id = 1;
+  string severity = 2;
+  string status = 3;
+  string action = 4;
+  string target_type = 5;
+  string target_id = 6;
+  string from = 7;
+  string to = 8;
+  int32 limit = 9;
+  int32 offset = 10;
+}
+message ListAlertsResponse {
+  repeated Alert items = 1;
+}
+
+message GetAlertRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+message GetAlertResponse {
+  Alert alert = 1;
+  JsonObject audit_event = 2;
+}
+
+message GetUnreadCountsRequest {
+  string tenant_id = 1;
+}
+message GetUnreadCountsResponse {
+  map<string, int32> counts = 1;
+}
+
+message AcknowledgeAlertRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string actor = 3;
+}
+message ResolveAlertRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string actor = 3;
+  string note = 4;
+}
+message FalsePositiveAlertRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string actor = 3;
+  string note = 4;
+}
+message EscalateAlertRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string severity = 3;
+}
+message AlertActionResponse {
+  string status = 1;
+}
+
+message BulkAcknowledgeRequest {
+  string tenant_id = 1;
+  repeated string ids = 2;
+  string actor = 3;
+}
+message BulkResolveRequest {
+  string tenant_id = 1;
+  repeated string ids = 2;
+  string actor = 3;
+  string note = 4;
+}
+message BulkAlertActionResponse {
+  string status = 1;
+  int32 updated = 2;
+}
+
+message ListIncidentsRequest {
+  string tenant_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+message ListIncidentsResponse {
+  repeated Incident items = 1;
+}
+
+message GetIncidentRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+message GetIncidentResponse {
+  Incident incident = 1;
+  repeated Alert alerts = 2;
+}
+
+message UpdateIncidentStatusRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string status = 3;
+  string notes = 4;
+}
+message AssignIncidentRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string assigned_to = 3;
+}
+message IncidentActionResponse {
+  string status = 1;
+}
+
+message ListRulesRequest {
+  string tenant_id = 1;
+}
+message ListRulesResponse {
+  repeated AlertRule items = 1;
+}
+
+message CreateRuleRequest {
+  string tenant_id = 1;
+  AlertRule rule = 2;
+}
+message CreateRuleResponse {
+  AlertRule rule = 1;
+}
+message UpdateRuleRequest {
+  string tenant_id = 1;
+  string id = 2;
+  AlertRule rule = 3;
+}
+message DeleteRuleRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+message RuleActionResponse {
+  string status = 1;
+}
+
+message GetSeverityConfigRequest {
+  string tenant_id = 1;
+}
+message GetSeverityConfigResponse {
+  map<string, string> items = 1;
+}
+message UpdateSeverityConfigRequest {
+  string tenant_id = 1;
+  map<string, string> updates = 2;
+}
+message UpdateSeverityConfigResponse {
+  string status = 1;
+}
+
+message ListChannelsRequest {
+  string tenant_id = 1;
+}
+message ListChannelsResponse {
+  repeated NotificationChannel items = 1;
+}
+message UpdateChannelsRequest {
+  string tenant_id = 1;
+  repeated NotificationChannel items = 2;
+}
+message UpdateChannelsResponse {
+  string status = 1;
+}
+
+message ListReportTemplatesRequest {}
+message ListReportTemplatesResponse {
+  repeated ReportTemplate items = 1;
+}
+
+message GenerateReportRequest {
+  string tenant_id = 1;
+  string template_id = 2;
+  string format = 3;
+  string requested_by = 4;
+  JsonObject filters = 5;
+}
+message GenerateReportResponse {
+  ReportJob job = 1;
+}
+
+message GetReportJobRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+message GetReportJobResponse {
+  ReportJob job = 1;
+}
+
+message DownloadReportRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+message DownloadReportResponse {
+  string content = 1;
+  string content_type = 2;
+}
+
+message ListScheduledReportsRequest {
+  string tenant_id = 1;
+}
+message ListScheduledReportsResponse {
+  repeated ScheduledReport items = 1;
+}
+
+message CreateScheduledReportRequest {
+  string tenant_id = 1;
+  string name = 2;
+  string template_id = 3;
+  string format = 4;
+  string schedule = 5;
+  repeated string recipients = 6;
+  JsonObject filters = 7;
+}
+message CreateScheduledReportResponse {
+  ScheduledReport item = 1;
+}
+
+message GetAlertStatsRequest {
+  string tenant_id = 1;
+}
+message GetAlertStatsResponse {
+  JsonObject stats = 1;
+}
+
+message GetMTTRStatsRequest {
+  string tenant_id = 1;
+}
+message GetMTTRStatsResponse {
+  map<string, double> mttr_minutes = 1;
+}
+
+message GetTopSourcesRequest {
+  string tenant_id = 1;
+}
+message GetTopSourcesResponse {
+  JsonObject sources = 1;
+}

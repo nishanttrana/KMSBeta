@@ -1,0 +1,138 @@
+syntax = "proto3";
+
+package vecta.discovery.v1;
+
+option go_package = "vecta-kms/proto/discovery;discoverypb";
+
+service DiscoveryService {
+  rpc StartScan (StartScanRequest) returns (StartScanResponse);
+  rpc ListScans (ListScansRequest) returns (ListScansResponse);
+  rpc GetScan (GetScanRequest) returns (GetScanResponse);
+
+  rpc ListAssets (ListAssetsRequest) returns (ListAssetsResponse);
+  rpc GetAsset (GetAssetRequest) returns (GetAssetResponse);
+  rpc ClassifyAsset (ClassifyAssetRequest) returns (ClassifyAssetResponse);
+
+  rpc GetSummary (GetSummaryRequest) returns (GetSummaryResponse);
+  rpc GetPosture (GetSummaryRequest) returns (GetSummaryResponse);
+}
+
+message JsonObject {
+  map<string, string> fields = 1;
+}
+
+message DiscoveryScan {
+  string id = 1;
+  string tenant_id = 2;
+  string scan_type = 3;
+  string status = 4;
+  string trigger = 5;
+  map<string, string> stats = 6;
+  string started_at = 7;
+  string completed_at = 8;
+  string created_at = 9;
+}
+
+message CryptoAsset {
+  string id = 1;
+  string tenant_id = 2;
+  string scan_id = 3;
+  string asset_type = 4;
+  string name = 5;
+  string location = 6;
+  string source = 7;
+  string algorithm = 8;
+  int32 strength_bits = 9;
+  string status = 10;
+  string classification = 11;
+  bool pqc_ready = 12;
+  double qsl_score = 13;
+  map<string, string> metadata = 14;
+  string first_seen = 15;
+  string last_seen = 16;
+  string created_at = 17;
+  string updated_at = 18;
+}
+
+message DiscoverySummary {
+  string tenant_id = 1;
+  int32 total_assets = 2;
+  map<string, int32> source_distribution = 3;
+  map<string, int32> algorithm_distribution = 4;
+  map<string, int32> classification_counts = 5;
+  int32 pqc_ready_count = 6;
+  double pqc_readiness_percent = 7;
+  double average_qsl = 8;
+  int32 posture_score = 9;
+}
+
+message StartScanRequest {
+  string tenant_id = 1;
+  repeated string scan_types = 2;
+  string trigger = 3;
+}
+
+message StartScanResponse {
+  DiscoveryScan scan = 1;
+}
+
+message ListScansRequest {
+  string tenant_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListScansResponse {
+  repeated DiscoveryScan items = 1;
+}
+
+message GetScanRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetScanResponse {
+  DiscoveryScan scan = 1;
+}
+
+message ListAssetsRequest {
+  string tenant_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+  string source = 4;
+  string asset_type = 5;
+  string classification = 6;
+}
+
+message ListAssetsResponse {
+  repeated CryptoAsset items = 1;
+}
+
+message GetAssetRequest {
+  string tenant_id = 1;
+  string id = 2;
+}
+
+message GetAssetResponse {
+  CryptoAsset asset = 1;
+}
+
+message ClassifyAssetRequest {
+  string tenant_id = 1;
+  string id = 2;
+  string classification = 3;
+  string status = 4;
+  string notes = 5;
+}
+
+message ClassifyAssetResponse {
+  CryptoAsset asset = 1;
+}
+
+message GetSummaryRequest {
+  string tenant_id = 1;
+}
+
+message GetSummaryResponse {
+  DiscoverySummary summary = 1;
+}

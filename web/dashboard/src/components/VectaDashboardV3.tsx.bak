@@ -1,0 +1,1125 @@
+// @ts-nocheck
+import { useState, useEffect, useMemo } from "react";
+import type { AuthSession } from "../lib/auth";
+import { createKey, decryptData, encryptData, listKeys, rotateKey, signData, verifyData } from "../lib/keycore";
+import { serviceRequest } from "../lib/serviceApi";
+import type { FeatureKey } from "../config/tabs";
+import type { LiveEvent } from "../store/live";
+
+// ═══════════════════════════════════════════════════════════════
+// VECTA KMS DASHBOARD v3 — FULLY INTERACTIVE BUILD REFERENCE
+// Every button opens real forms. Every form shows all options.
+// This dashboard IS the development spec.
+// ═══════════════════════════════════════════════════════════════
+
+const C={bg:"#060a11",sidebar:"#0a0f1a",surface:"#0f1521",card:"#131d2e",cardHover:"#182740",
+border:"#1a2944",borderHi:"#243656",accent:"#06d6e0",accentDim:"rgba(6,214,224,.08)",
+green:"#2dd4a0",greenDim:"rgba(45,212,160,.08)",red:"#ef4444",redDim:"rgba(239,68,68,.08)",
+amber:"#f59e0b",amberDim:"rgba(245,158,11,.08)",purple:"#a78bfa",purpleDim:"rgba(167,139,250,.08)",
+blue:"#3b82f6",blueDim:"rgba(59,130,246,.08)",pink:"#ec4899",text:"#e2e8f0",dim:"#94a3b8",
+muted:"#64748b",white:"#ffffff"};
+
+const FALLBACK_KEYS = [
+  {id:"key-001",name:"prod-db-master",algo:"AES-256-GCM",state:"Active",ver:"v3",kcv:"A1B2C3",ops:"847K",created:"2025-08-14",rotated:"2026-01-12",expires:"2026-04-12",tenant:"bank-alpha",purpose:"encrypt-decrypt",ivMode:"internal",opsLimit:"1M",approvalReq:false},
+  {id:"key-002",name:"tls-frontend",algo:"ECDSA-P384",state:"Active",ver:"v4",kcv:"D4E5F6",ops:"234K",created:"2025-06-01",rotated:"2026-02-01",expires:"2026-05-01",tenant:"bank-alpha",purpose:"sign-verify",ivMode:"-",opsLimit:"inf",approvalReq:false},
+  {id:"key-003",name:"pqc-signing",algo:"ML-DSA-65",state:"Active",ver:"v1",kcv:"G7H8I9",ops:"31K",created:"2026-01-15",rotated:"-",expires:"-",tenant:"bank-alpha",purpose:"sign-verify",ivMode:"-",opsLimit:"500K",approvalReq:true},
+  {id:"key-004",name:"token-vault-kek",algo:"AES-256-GCM",state:"Active",ver:"v2",kcv:"J0K1L2",ops:"1.2M",created:"2025-03-01",rotated:"2025-12-01",expires:"2026-03-01",tenant:"fincorp",purpose:"wrap-unwrap",ivMode:"internal",opsLimit:"5M",approvalReq:false},
+  {id:"key-005",name:"legacy-rsa",algo:"RSA-2048",state:"Deactivated",ver:"v1",kcv:"M3N4O5",ops:"89K",created:"2024-01-01",rotated:"-",expires:"2025-06-01",tenant:"bank-alpha",purpose:"encrypt-decrypt",ivMode:"-",opsLimit:"100K",approvalReq:false},
+];
+
+const TAB_FEATURES = {
+  vault: "secrets",
+  certs: "certs",
+  tokenize: "data_protection",
+  payment: "payment_crypto",
+  byok: "cloud_byok",
+  hyok: "hyok_proxy",
+  ekm: "ekm_database",
+  kmip: "kmip_server",
+  hsm: "hsm_hardware_or_software",
+  qkd: "qkd_interface",
+  mpc: "mpc_engine",
+  cluster: "clustering",
+  approvals: "governance",
+  alerts: "reporting_alerting",
+  compliance: "compliance_dashboard",
+  sbom: "sbom_cbom"
+};
+
+function errMsg(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
+function toViewKey(k: any) {
+  const ver = Number(k.current_version || 0);
+  return {
+    id: String(k.id || ""),
+    name: String(k.name || "unnamed-key"),
+    algo: String(k.algorithm || "unknown"),
+    state: String(k.status || "Unknown"),
+    ver: ver > 0 ? `v${ver}` : "v1",
+    kcv: String(k.kcv || ""),
+    ops: String(k.ops_total || 0),
+    created: String(k.created_at || "-"),
+    rotated: String(k.updated_at || "-"),
+    expires: String(k.expires_at || "-"),
+    tenant: String(k.tenant_id || ""),
+    purpose: String(k.purpose || "encrypt-decrypt"),
+    ivMode: String(k.iv_mode || "-"),
+    opsLimit: k.ops_limit ? String(k.ops_limit) : "inf",
+    approvalReq: Boolean(k.approval_required)
+  };
+}
+
+function canSeeTab(tab: string, enabledFeatures: Set<FeatureKey>): boolean {
+  const need = TAB_FEATURES[tab];
+  if (!need) {
+    return true;
+  }
+  if (need === "hsm_hardware_or_software") {
+    return enabledFeatures.has("hsm_hardware") || enabledFeatures.has("hsm_software");
+  }
+  return enabledFeatures.has(need as FeatureKey);
+}
+
+function toneForSeverity(sev: string): string {
+  const s = (sev || "").toLowerCase();
+  if (s === "critical" || s === "high") {
+    return "red";
+  }
+  if (s === "warning" || s === "medium") {
+    return "amber";
+  }
+  return "green";
+}
+
+// ═══════════════════════════════════
+// SHARED COMPONENTS
+// ═══════════════════════════════════
+const Modal=({open,onClose,title,wide,children})=>!open?null:(
+  <div style={{position:"fixed",inset:0,zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}} onClick={onClose}>
+    <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.7)",backdropFilter:"blur(4px)"}}/>
+    <div onClick={e=>e.stopPropagation()} style={{position:"relative",background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:14,padding:0,width:wide?720:520,maxHeight:"85vh",overflow:"auto",boxShadow:"0 24px 60px rgba(0,0,0,.5)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"16px 20px",borderBottom:`1px solid ${C.border}`,position:"sticky",top:0,background:C.surface,zIndex:1,borderRadius:"14px 14px 0 0"}}>
+        <span style={{fontSize:15,fontWeight:700,color:C.text,letterSpacing:-.3}}>{title}</span>
+        <button onClick={onClose} style={{background:"transparent",border:"none",color:C.muted,fontSize:18,cursor:"pointer",padding:4,lineHeight:1}}>✕</button>
+      </div>
+      <div style={{padding:"16px 20px 20px"}}>{children}</div>
+    </div></div>);
+
+const FG=({label,children,hint,required})=>(
+  <div style={{marginBottom:12}}>
+    <label style={{display:"block",fontSize:10,fontWeight:600,color:C.dim,marginBottom:4,textTransform:"uppercase",letterSpacing:.8}}>
+      {label}{required&&<span style={{color:C.red}}> *</span>}
+    </label>
+    {children}
+    {hint&&<div style={{fontSize:9,color:C.muted,marginTop:3}}>{hint}</div>}
+  </div>);
+
+const Inp=({placeholder,w,mono,...p})=><input placeholder={placeholder} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 10px",color:C.text,fontSize:11,width:w||"100%",outline:"none",fontFamily:mono?"'JetBrains Mono',monospace":"inherit",boxSizing:"border-box",...(p.style||{})}} {...p}/>;
+
+const Txt=({placeholder,rows,...p})=><textarea placeholder={placeholder} rows={rows||3} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 10px",color:C.text,fontSize:11,width:"100%",outline:"none",resize:"vertical",fontFamily:"'JetBrains Mono',monospace",boxSizing:"border-box"}} {...p}/>;
+
+const Sel=({children,w,...p})=><select style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 10px",color:C.text,fontSize:11,width:w||"100%",outline:"none",cursor:"pointer",boxSizing:"border-box"}} {...p}>{children}</select>;
+
+const Chk=({label,checked,onChange})=>(
+  <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:C.dim,cursor:"pointer",marginBottom:4}}>
+    <div style={{width:16,height:16,borderRadius:4,border:`1px solid ${checked?C.accent:C.border}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}} onClick={onChange}>
+      {checked&&<span style={{color:C.accent,fontSize:10}}>✓</span>}
+    </div>{label}</label>);
+
+const Radio=({label,selected,onSelect})=>(
+  <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:selected?C.text:C.dim,cursor:"pointer",marginBottom:4}} onClick={onSelect}>
+    <div style={{width:14,height:14,borderRadius:7,border:`2px solid ${selected?C.accent:C.border}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+      {selected&&<div style={{width:6,height:6,borderRadius:3,background:C.accent}}/>}
+    </div>{label}</label>);
+
+const Btn=({children,primary,danger,small,onClick,disabled,full,...p})=>(
+  <button onClick={onClick} disabled={disabled} style={{background:danger?C.red:primary?C.accent:"transparent",color:danger||primary?C.bg:C.accent,
+    border:`1px solid ${danger?C.red:primary?C.accent:C.border}`,borderRadius:7,padding:small?"5px 10px":"8px 16px",
+    fontSize:small?10:11,fontWeight:600,cursor:disabled?"not-allowed":"pointer",opacity:disabled?.5:1,
+    width:full?"100%":"auto",letterSpacing:.2,...(p.style||{})}} {...p}>{children}</button>);
+
+const B=({children,c="accent",pulse})=>(
+  <span style={{display:"inline-block",padding:"2px 7px",borderRadius:5,fontSize:9,fontWeight:600,
+    color:C[c],background:C[c+"Dim"]||"rgba(255,255,255,.05)",letterSpacing:.3,
+    animation:pulse?"pulse 2s infinite":"none"}}>{children}</span>);
+
+const Tabs=({tabs,active,onChange})=>(
+  <div style={{display:"flex",gap:2,marginBottom:14,flexWrap:"wrap"}}>
+    {tabs.map(t=><button key={t} onClick={()=>onChange(t)} style={{background:active===t?C.accentDim:"transparent",color:active===t?C.accent:C.muted,border:`1px solid ${active===t?C.accent:C.border}`,borderRadius:6,padding:"5px 10px",fontSize:10,fontWeight:active===t?600:400,cursor:"pointer",letterSpacing:.2}}>{t}</button>)}
+  </div>);
+
+const Stat=({l,v,s,c="accent",i})=>(
+  <div style={{flex:1,background:C.card,borderRadius:10,border:`1px solid ${C.border}`,padding:"12px 14px"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <span style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.8}}>{l}</span>
+      {i&&<span style={{fontSize:14}}>{i}</span>}
+    </div>
+    <div style={{fontSize:22,fontWeight:700,color:C[c],marginTop:4,letterSpacing:-.5}}>{v}</div>
+    {s&&<div style={{fontSize:9,color:C.dim,marginTop:2}}>{s}</div>}
+  </div>);
+
+const Bar=({pct,color=C.accent})=>(
+  <div style={{height:6,borderRadius:3,background:C.border,overflow:"hidden"}}>
+    <div style={{height:"100%",width:`${pct}%`,background:color,borderRadius:3,transition:"width .5s"}}/>
+  </div>);
+
+const Section=({title,children,actions})=>(
+  <div style={{marginBottom:16}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+      <span style={{fontSize:12,fontWeight:700,color:C.text,letterSpacing:-.2}}>{title}</span>
+      {actions&&<div style={{display:"flex",gap:4}}>{actions}</div>}
+    </div>{children}</div>);
+
+const Card=({children,onClick,...p})=>(
+  <div onClick={onClick} style={{background:C.card,borderRadius:10,border:`1px solid ${C.border}`,padding:14,
+    cursor:onClick?"pointer":"default",transition:"border-color .15s",
+    ...(p.style||{})}} onMouseEnter={e=>{if(onClick)e.currentTarget.style.borderColor=C.accent}}
+    onMouseLeave={e=>{if(onClick)e.currentTarget.style.borderColor=C.border}}>{children}</div>);
+
+const Row2=({children})=><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>{children}</div>;
+const Row3=({children})=><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>{children}</div>;
+
+const NAV=[
+  {g:"CORE",items:[{id:"home",icon:"⌘",label:"Dashboard"},{id:"keys",icon:"🔑",label:"Key Management"},{id:"crypto",icon:"⚡",label:"Crypto Console"}]},
+  {g:"SECRETS & CERTS",items:[{id:"vault",icon:"🔒",label:"Secret Vault"},{id:"certs",icon:"📜",label:"Certificates / PKI"}]},
+  {g:"DATA PROTECTION",items:[{id:"tokenize",icon:"🎭",label:"Tokenize / Mask"},{id:"payment",icon:"💳",label:"Payment Crypto"}]},
+  {g:"CLOUD & INTEGRATION",items:[{id:"byok",icon:"☁",label:"BYOK"},{id:"hyok",icon:"🔐",label:"HYOK"},{id:"ekm",icon:"🗄",label:"EKM Agent Hub"},{id:"kmip",icon:"🔗",label:"KMIP"}]},
+  {g:"INFRASTRUCTURE",items:[{id:"hsm",icon:"🛡",label:"HSM / Primus"},{id:"qkd",icon:"⚛",label:"QKD Interface"},{id:"mpc",icon:"🧩",label:"MPC Engine"},{id:"cluster",icon:"☁",label:"Cluster"}]},
+  {g:"GOVERNANCE",items:[{id:"approvals",icon:"✅",label:"Approvals"},{id:"alerts",icon:"🔔",label:"Alert Center"},{id:"audit",icon:"📝",label:"Audit Log"},{id:"compliance",icon:"📋",label:"Compliance"},{id:"sbom",icon:"📊",label:"SBOM / CBOM"}]},
+  {g:"ADMIN",items:[{id:"pkcs11",icon:"🔌",label:"PKCS#11 / JCA"},{id:"admin",icon:"⚙",label:"Administration"}]},
+];
+
+// ═══════════════════════════════════
+// TAB: KEY MANAGEMENT (fully interactive)
+// ═══════════════════════════════════
+const Keys=({session,keys,onRefresh,onToast})=>{
+  const [modal,setModal]=useState(null);
+  const [selectedKey,setSelectedKey]=useState(null);
+  const [algoType,setAlgoType]=useState("symmetric");
+  const [algo,setAlgo]=useState("AES-256-GCM");
+  const [purpose,setPurpose]=useState("encrypt-decrypt");
+  const [ivMode,setIvMode]=useState("internal");
+  const [approvalReq,setApprovalReq]=useState(false);
+  const [rotationEnabled,setRotationEnabled]=useState(true);
+  const [exportable,setExportable]=useState(false);
+
+  const keys=[
+    {id:"key-001",name:"prod-db-master",algo:"AES-256-GCM",state:"Active",ver:"v3",kcv:"A1B2C3",ops:"847K",created:"2025-08-14",rotated:"2026-01-12",expires:"2026-04-12",tenant:"bank-alpha",purpose:"encrypt-decrypt",ivMode:"internal",opsLimit:"1M",approvalReq:false},
+    {id:"key-002",name:"tls-frontend",algo:"ECDSA-P384",state:"Active",ver:"v4",kcv:"D4E5F6",ops:"234K",created:"2025-06-01",rotated:"2026-02-01",expires:"2026-05-01",tenant:"bank-alpha",purpose:"sign-verify",ivMode:"-",opsLimit:"∞",approvalReq:false},
+    {id:"key-003",name:"pqc-signing",algo:"ML-DSA-65",state:"Active",ver:"v1",kcv:"G7H8I9",ops:"31K",created:"2026-01-15",rotated:"-",expires:"-",tenant:"bank-alpha",purpose:"sign-verify",ivMode:"-",opsLimit:"500K",approvalReq:true},
+    {id:"key-004",name:"token-vault-kek",algo:"AES-256-GCM",state:"Active",ver:"v2",kcv:"J0K1L2",ops:"1.2M",created:"2025-03-01",rotated:"2025-12-01",expires:"2026-03-01",tenant:"fincorp",purpose:"wrap-unwrap",ivMode:"internal",opsLimit:"5M",approvalReq:false},
+    {id:"key-005",name:"legacy-rsa",algo:"RSA-2048",state:"Deactivated",ver:"v1",kcv:"M3N4O5",ops:"89K",created:"2024-01-01",rotated:"-",expires:"2025-06-01",tenant:"bank-alpha",purpose:"encrypt-decrypt",ivMode:"-",opsLimit:"100K",approvalReq:false},
+  ];
+
+  return <div>
+    <div style={{display:"flex",gap:12,marginBottom:14}}>
+      <Stat l="Total Keys" v="4,847" s="12 tenants" c="accent" i="🔑"/>
+      <Stat l="Active" v="4,201" s="87%" c="green" i="✅"/>
+      <Stat l="PQC Keys" v="847" s="17.5% migrated" c="purple" i="⚛"/>
+      <Stat l="Ops Today" v="2.1M" s="↑12% from yesterday" c="blue" i="⚡"/>
+    </div>
+
+    <Section title="Key Inventory" actions={<>
+      <Btn small onClick={()=>setModal("create")}>+ Create Key</Btn>
+      <Btn small onClick={()=>setModal("import")}>↓ Import Key</Btn>
+      <Btn small onClick={()=>setModal("generate-pqc")}>⚛ Generate PQC Key</Btn>
+    </>}>
+      <div style={{display:"flex",gap:6,marginBottom:10}}>
+        <Inp placeholder="Search keys by name, ID, algorithm, label..." w={300}/>
+        <Sel w={120}><option>All States</option><option>Active</option><option>Deactivated</option><option>Compromised</option><option>Destroyed</option></Sel>
+        <Sel w={120}><option>All Algorithms</option><option>AES-256</option><option>RSA</option><option>ECDSA</option><option>ML-DSA</option><option>ML-KEM</option></Sel>
+        <Sel w={120}><option>All Tenants</option><option>bank-alpha</option><option>fincorp</option></Sel>
+        <Sel w={120}><option>All Purposes</option><option>encrypt-decrypt</option><option>sign-verify</option><option>wrap-unwrap</option><option>key-agreement</option></Sel>
+      </div>
+      <div style={{background:C.card,borderRadius:10,border:`1px solid ${C.border}`,overflow:"hidden"}}>
+        <table style={{width:"100%",borderCollapse:"collapse"}}><thead><tr style={{borderBottom:`1px solid ${C.borderHi}`}}>
+          {["Name","Algorithm","State","Ver","KCV","Ops","Rotated","Purpose","Actions"].map(h=><th key={h} style={{padding:"8px 10px",fontSize:9,color:C.muted,textAlign:"left",textTransform:"uppercase",letterSpacing:.8}}>{h}</th>)}
+        </tr></thead><tbody>
+          {keys.map(k=><tr key={k.id} style={{borderBottom:`1px solid ${C.border}`,cursor:"pointer"}} onClick={()=>{setSelectedKey(k);setModal("detail")}}>
+            <td style={{padding:"8px 10px"}}><div style={{fontSize:11,color:C.text,fontWeight:600}}>{k.name}</div><div style={{fontSize:9,color:C.muted,fontFamily:"monospace"}}>{k.id}</div></td>
+            <td style={{padding:"8px 10px",fontSize:10,color:C.accent,fontFamily:"monospace"}}>{k.algo}</td>
+            <td style={{padding:"8px 10px"}}><B c={k.state==="Active"?"green":k.state==="Deactivated"?"amber":"red"}>{k.state}</B></td>
+            <td style={{padding:"8px 10px",fontSize:10,color:C.dim}}>{k.ver}</td>
+            <td style={{padding:"8px 10px",fontSize:10,color:C.accent,fontFamily:"monospace"}}>{k.kcv}</td>
+            <td style={{padding:"8px 10px",fontSize:10,color:C.dim}}>{k.ops}</td>
+            <td style={{padding:"8px 10px",fontSize:10,color:C.dim}}>{k.rotated}</td>
+            <td style={{padding:"8px 10px"}}><B c={k.purpose.includes("encrypt")?"accent":k.purpose.includes("sign")?"blue":"purple"}>{k.purpose}</B></td>
+            <td style={{padding:"8px 10px"}}><div style={{display:"flex",gap:3}} onClick={e=>e.stopPropagation()}>
+              <Btn small onClick={()=>{setSelectedKey(k);setModal("rotate")}}>↻</Btn>
+              <Btn small onClick={()=>{setSelectedKey(k);setModal("export")}}>↗</Btn>
+              <Btn small danger onClick={()=>{setSelectedKey(k);setModal("destroy")}}>✕</Btn>
+            </div></td>
+          </tr>)}
+        </tbody></table>
+      </div>
+    </Section>
+
+    {/* ── CREATE KEY MODAL ── */}
+    <Modal open={modal==="create"} onClose={()=>setModal(null)} title="Create New Key" wide>
+      <Row2>
+        <FG label="Key Name" required><Inp placeholder="e.g., prod-db-master"/></FG>
+        <FG label="Tenant" required><Sel><option>bank-alpha</option><option>fincorp</option><option>tenant-003</option></Sel></FG>
+      </Row2>
+      <FG label="Algorithm Family" required>
+        <div style={{display:"flex",gap:8,marginBottom:8}}>
+          {[["symmetric","Symmetric"],["asymmetric","Asymmetric"],["pqc","Post-Quantum"],["hmac","HMAC"]].map(([v,l])=>
+            <Radio key={v} label={l} selected={algoType===v} onSelect={()=>setAlgoType(v)}/>)}
+        </div>
+      </FG>
+      <Row2>
+        <FG label="Algorithm" required hint={algoType==="pqc"?"NIST FIPS 203/204/205 approved":""}>{algoType==="symmetric"?
+          <Sel value={algo} onChange={e=>setAlgo(e.target.value)}>
+            <optgroup label="AES (FIPS 197)"><option>AES-128-GCM</option><option>AES-192-GCM</option><option>AES-256-GCM</option><option>AES-256-CBC</option><option>AES-256-CTR</option><option>AES-256-CCM</option></optgroup>
+            <optgroup label="ChaCha20"><option>ChaCha20-Poly1305</option></optgroup>
+            <optgroup label="Camellia"><option>Camellia-256-GCM</option><option>Camellia-256-CBC</option></optgroup>
+            <optgroup label="3DES (legacy)"><option>3DES-CBC (not recommended)</option></optgroup>
+          </Sel>:algoType==="asymmetric"?
+          <Sel><optgroup label="RSA"><option>RSA-2048</option><option>RSA-3072</option><option>RSA-4096</option><option>RSA-8192</option></optgroup>
+            <optgroup label="ECDSA"><option>ECDSA-P256</option><option>ECDSA-P384</option><option>ECDSA-P521</option></optgroup>
+            <optgroup label="EdDSA"><option>Ed25519</option><option>Ed448</option></optgroup>
+            <optgroup label="ECDH"><option>X25519</option><option>X448</option><option>ECDH-P256</option><option>ECDH-P384</option></optgroup>
+            <optgroup label="Brainpool"><option>Brainpool-P256r1</option><option>Brainpool-P384r1</option></optgroup>
+            <optgroup label="DSA (legacy)"><option>DSA-3072</option></optgroup>
+          </Sel>:algoType==="pqc"?
+          <Sel><optgroup label="ML-KEM (FIPS 203 — Key Encapsulation)"><option>ML-KEM-512</option><option>ML-KEM-768</option><option>ML-KEM-1024</option></optgroup>
+            <optgroup label="ML-DSA (FIPS 204 — Signatures)"><option>ML-DSA-44</option><option>ML-DSA-65</option><option>ML-DSA-87</option></optgroup>
+            <optgroup label="SLH-DSA (FIPS 205 — Stateless Hash Signatures)"><option>SLH-DSA-128s</option><option>SLH-DSA-128f</option><option>SLH-DSA-192s</option><option>SLH-DSA-192f</option><option>SLH-DSA-256s</option><option>SLH-DSA-256f</option></optgroup>
+            <optgroup label="HSS/LMS (SP 800-208 — Stateful)"><option>HSS-LMS-SHA256-H10</option><option>HSS-LMS-SHA256-H15</option><option>HSS-LMS-SHA256-H20</option></optgroup>
+            <optgroup label="XMSS (RFC 8391 — Stateful)"><option>XMSS-SHA256-H10</option><option>XMSS-SHA256-H16</option><option>XMSS-SHA256-H20</option></optgroup>
+            <optgroup label="Hybrid (Classical + PQC)"><option>ECDSA-P384 + ML-DSA-65</option><option>RSA-3072 + ML-DSA-65</option><option>Ed25519 + ML-DSA-44</option><option>X25519 + ML-KEM-768</option></optgroup>
+          </Sel>:
+          <Sel><option>HMAC-SHA256</option><option>HMAC-SHA384</option><option>HMAC-SHA512</option><option>HMAC-SHA3-256</option><option>CMAC-AES-256</option></Sel>
+        }</FG>
+        <FG label="Purpose" required>
+          <Sel value={purpose} onChange={e=>setPurpose(e.target.value)}>
+            <option value="encrypt-decrypt">Encrypt / Decrypt</option>
+            <option value="sign-verify">Sign / Verify</option>
+            <option value="wrap-unwrap">Wrap / Unwrap (KEK)</option>
+            <option value="mac">MAC Generate / Verify</option>
+            <option value="key-agreement">Key Agreement (DH/ECDH/KEM)</option>
+            <option value="derive">Key Derivation (HKDF)</option>
+            <option value="all">All Operations</option>
+          </Sel>
+        </FG>
+      </Row2>
+      {algoType==="symmetric"&&<Row2>
+        <FG label="IV Mode" hint="How initialization vectors are managed for this key">
+          <Sel value={ivMode} onChange={e=>setIvMode(e.target.value)}>
+            <option value="internal">Internal — KMS generates IV (CSPRNG, 12 bytes for GCM)</option>
+            <option value="external">External — Caller provides IV (KMS validates length)</option>
+            <option value="deterministic">Deterministic — HMAC-SHA256(key, plaintext)[:12] (⚠ leaks equality)</option>
+          </Sel>
+        </FG>
+        <FG label="Key Derivation" hint="Optional: derive sub-keys from this master key">
+          <Sel><option value="none">None</option><option value="hkdf-sha256">HKDF-SHA256</option><option value="hkdf-sha384">HKDF-SHA384</option><option value="kdf-counter">NIST SP 800-108 Counter Mode</option></Sel>
+        </FG>
+      </Row2>}
+      <Row2>
+        <FG label="Auto-Rotation">
+          <Chk label="Enable automatic rotation" checked={rotationEnabled} onChange={()=>setRotationEnabled(!rotationEnabled)}/>
+          {rotationEnabled&&<Sel><option>Every 90 days</option><option>Every 30 days</option><option>Every 180 days</option><option>Every 365 days</option><option>Custom...</option></Sel>}
+        </FG>
+        <FG label="Operation Limits" hint="0 = unlimited">
+          <Row2><Inp placeholder="Max ops total (e.g., 1000000)"/><Sel w="100%"><option>Per lifetime</option><option>Per day</option><option>Per month</option></Sel></Row2>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Security Options">
+          <Chk label="Require governance approval for all operations" checked={approvalReq} onChange={()=>setApprovalReq(!approvalReq)}/>
+          <Chk label="Allow key export (wrapped)" checked={exportable} onChange={()=>setExportable(!exportable)}/>
+          <Chk label="HSM-backed (store in Primus HSM)" checked={false}/>
+          <Chk label="FIPS-only algorithms enforced" checked={true}/>
+        </FG>
+        <FG label="Activation">
+          <Sel><option>Activate immediately</option><option>Pre-active (activate later)</option><option>Activate on specific date...</option></Sel>
+        </FG>
+      </Row2>
+      <FG label="Labels / Tags" hint="Key-value pairs for search and policy matching">
+        <Row3><Inp placeholder="environment=production"/><Inp placeholder="team=platform"/><Inp placeholder="compliance=pci-dss"/></Row3>
+      </FG>
+      <FG label="Description"><Txt placeholder="Optional description for this key..." rows={2}/></FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8,paddingTop:12,borderTop:`1px solid ${C.border}`}}>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+        <Btn primary>Create Key</Btn>
+      </div>
+    </Modal>
+
+    {/* ── IMPORT KEY MODAL ── */}
+    <Modal open={modal==="import"} onClose={()=>setModal(null)} title="Import Key Material" wide>
+      <FG label="Import Method" required>
+        <div style={{display:"flex",gap:8}}>
+          {["Raw Key Material (Base64)","PKCS#8 / PEM","JWK (JSON Web Key)","TR-31 Key Block","PKCS#12 (.p12)","HSM Backup Blob"].map(m=>
+            <Radio key={m} label={m} selected={false}/>)}
+        </div>
+      </FG>
+      <Row2>
+        <FG label="Key Name" required><Inp placeholder="imported-key-name"/></FG>
+        <FG label="Tenant" required><Sel><option>bank-alpha</option><option>fincorp</option></Sel></FG>
+      </Row2>
+      <FG label="Key Material" required hint="Key material is envelope-encrypted immediately upon import. Plaintext never touches disk.">
+        <Txt placeholder="Paste base64-encoded key material, PEM block, or JWK JSON..." rows={5}/>
+      </FG>
+      <Row2>
+        <FG label="Algorithm" required hint="Must match the imported key material">
+          <Sel><option>Auto-detect from format</option><option>AES-256</option><option>RSA-2048</option><option>RSA-4096</option><option>ECDSA-P384</option><option>ML-DSA-65</option></Sel>
+        </FG>
+        <FG label="Wrapping Key (if wrapped)" hint="Select the KEK that wraps this imported key">
+          <Sel><option>Not wrapped (raw import)</option><option>token-vault-kek (AES-256)</option><option>import-kek-001 (RSA-4096 OAEP)</option><option>ml-kem-import (ML-KEM-768)</option></Sel>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Purpose"><Sel><option>encrypt-decrypt</option><option>sign-verify</option><option>wrap-unwrap</option><option>mac</option></Sel></FG>
+        <FG label="Origin"><Sel><option>External — customer imported</option><option>Cloud provider (BYOK re-import)</option><option>HSM backup restore</option><option>TR-31 key block</option></Sel></FG>
+      </Row2>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8,paddingTop:12,borderTop:`1px solid ${C.border}`}}>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary>Import Key</Btn>
+      </div>
+    </Modal>
+
+    {/* ── KEY DETAIL MODAL ── */}
+    <Modal open={modal==="detail"&&selectedKey} onClose={()=>setModal(null)} title={`Key: ${selectedKey?.name||""}`} wide>
+      {selectedKey&&<><Row3>
+        <FG label="Key ID"><div style={{fontFamily:"monospace",fontSize:11,color:C.accent}}>{selectedKey.id}</div></FG>
+        <FG label="Algorithm"><div style={{fontSize:11,color:C.text}}>{selectedKey.algo}</div></FG>
+        <FG label="KCV"><div style={{fontFamily:"monospace",fontSize:11,color:C.green}}>{selectedKey.kcv}</div></FG>
+      </Row3>
+      <Row3>
+        <FG label="State"><B c={selectedKey.state==="Active"?"green":"amber"}>{selectedKey.state}</B></FG>
+        <FG label="Version"><div style={{fontSize:11,color:C.text}}>{selectedKey.ver}</div></FG>
+        <FG label="Tenant"><div style={{fontSize:11,color:C.text}}>{selectedKey.tenant}</div></FG>
+      </Row3>
+      <Row3>
+        <FG label="Purpose"><B c="blue">{selectedKey.purpose}</B></FG>
+        <FG label="IV Mode"><div style={{fontSize:11,color:C.text}}>{selectedKey.ivMode}</div></FG>
+        <FG label="Ops Limit"><div style={{fontSize:11,color:C.text}}>{selectedKey.opsLimit}</div></FG>
+      </Row3>
+      <Row3>
+        <FG label="Created"><div style={{fontSize:11,color:C.dim}}>{selectedKey.created}</div></FG>
+        <FG label="Last Rotated"><div style={{fontSize:11,color:C.dim}}>{selectedKey.rotated}</div></FG>
+        <FG label="Expires"><div style={{fontSize:11,color:selectedKey.expires==="-"?C.dim:C.amber}}>{selectedKey.expires}</div></FG>
+      </Row3>
+      <FG label="Total Operations"><div style={{fontSize:18,fontWeight:700,color:C.accent}}>{selectedKey.ops}</div></FG>
+      <FG label="Key Versions">
+        <div style={{background:C.surface,borderRadius:7,padding:10,border:`1px solid ${C.border}`}}>
+          {["v3 — Active (current) — KCV: A1B2C3 — Created: 2026-01-12","v2 — Deactivated — KCV: X7Y8Z9 — Created: 2025-10-01","v1 — Destroyed — KCV: P4Q5R6 — Created: 2025-08-14"].map(v=>
+            <div key={v} style={{fontSize:10,color:C.dim,padding:"4px 0",borderBottom:`1px solid ${C.border}`,fontFamily:"monospace"}}>{v}</div>)}
+        </div>
+      </FG>
+      <div style={{display:"flex",gap:6,marginTop:12}}>
+        <Btn primary onClick={()=>setModal("rotate")}>↻ Rotate</Btn>
+        <Btn onClick={()=>setModal("export")}>↗ Export (Wrapped)</Btn>
+        <Btn onClick={()=>setModal(null)}>Deactivate</Btn>
+        <Btn danger onClick={()=>setModal("destroy")}>✕ Destroy</Btn>
+      </div></>}
+    </Modal>
+
+    {/* ── ROTATE KEY MODAL ── */}
+    <Modal open={modal==="rotate"} onClose={()=>setModal(null)} title={`Rotate Key: ${selectedKey?.name||""}`}>
+      <FG label="Rotation Type">
+        <Radio label="Standard Rotation — Generate new version, deactivate old" selected={true}/>
+        <Radio label="Re-key — Generate new key material, same ID (for compromised keys)" selected={false}/>
+        <Radio label="PQC Migration — Rotate to post-quantum algorithm" selected={false}/>
+      </FG>
+      <FG label="New Algorithm" hint="Usually same as current. Change for PQC migration.">
+        <Sel><option>{selectedKey?.algo} (same)</option><option>ML-DSA-65 (PQC migration)</option><option>ECDSA-P384 + ML-DSA-65 (hybrid)</option></Sel>
+      </FG>
+      <FG label="Old Version Action">
+        <Sel><option>Deactivate old version (recommended)</option><option>Keep old version active (dual-active period)</option><option>Destroy old version immediately</option></Sel>
+      </FG>
+      <Chk label="Notify BYOK cloud connectors to sync new version" checked={true}/>
+      <Chk label="Notify HYOK endpoints of rotation" checked={false}/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary>Rotate Key</Btn></div>
+    </Modal>
+
+    {/* ── EXPORT KEY MODAL ── */}
+    <Modal open={modal==="export"} onClose={()=>setModal(null)} title={`Export Key: ${selectedKey?.name||""}`}>
+      <div style={{background:C.amberDim,border:`1px solid ${C.amber}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.amber}}>⚠ Key material will be exported wrapped. This is a HIGH severity audit event.</div>
+      <FG label="Wrapping Key (KEK)" required hint="The exported key material will be encrypted with this KEK">
+        <Sel><option>token-vault-kek (AES-256-GCM)</option><option>import-kek-001 (RSA-4096 OAEP)</option><option>ml-kem-export (ML-KEM-768)</option></Sel>
+      </FG>
+      <FG label="Export Format">
+        <Sel><option>Raw wrapped (base64)</option><option>JWK (encrypted)</option><option>PKCS#8 (encrypted PEM)</option><option>TR-31 Key Block</option></Sel>
+      </FG>
+      <FG label="Justification" required><Txt placeholder="Reason for export (required for audit)..." rows={2}/></FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary>Export Key</Btn></div>
+    </Modal>
+
+    {/* ── DESTROY KEY MODAL ── */}
+    <Modal open={modal==="destroy"} onClose={()=>setModal(null)} title={`⚠ Destroy Key: ${selectedKey?.name||""}`}>
+      <div style={{background:C.redDim,border:`1px solid ${C.red}`,borderRadius:8,padding:12,marginBottom:12,fontSize:11,color:C.red}}>
+        <strong>CRITICAL: This action is irreversible.</strong><br/>All key material will be zeroized. Data encrypted with this key will become permanently unrecoverable.
+      </div>
+      <FG label="Destruction Method">
+        <Radio label="Soft Destroy — Zeroize material, keep metadata for audit (recommended)" selected={true}/>
+        <Radio label="Hard Destroy — Remove all traces including metadata" selected={false}/>
+      </FG>
+      <FG label="Pre-Destroy Checks">
+        <Chk label="I confirm no active workloads depend on this key" checked={false}/>
+        <Chk label="I have verified backup/re-encryption is complete" checked={false}/>
+        <Chk label="I understand this is irreversible" checked={false}/>
+      </FG>
+      <FG label="Type key name to confirm" required><Inp placeholder={selectedKey?.name}/></FG>
+      <FG label="Justification" required><Txt placeholder="Reason for destruction (required for audit)..." rows={2}/></FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn danger>Destroy Key Permanently</Btn></div>
+    </Modal>
+
+    {/* ── GENERATE PQC KEY MODAL ── */}
+    <Modal open={modal==="generate-pqc"} onClose={()=>setModal(null)} title="Generate Post-Quantum Key" wide>
+      <div style={{background:C.purpleDim,border:`1px solid ${C.purple}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.purple}}>⚛ Post-Quantum Cryptography — NIST FIPS 203/204/205 approved algorithms</div>
+      <Row2>
+        <FG label="PQC Algorithm" required>
+          <Sel><optgroup label="Key Encapsulation (FIPS 203)"><option>ML-KEM-512 (128-bit security)</option><option>ML-KEM-768 (192-bit security)</option><option>ML-KEM-1024 (256-bit security)</option></optgroup>
+            <optgroup label="Digital Signatures (FIPS 204)"><option>ML-DSA-44 (128-bit security)</option><option>ML-DSA-65 (192-bit security)</option><option>ML-DSA-87 (256-bit security)</option></optgroup>
+            <optgroup label="Hash-Based Signatures (FIPS 205)"><option>SLH-DSA-128s (small, slow)</option><option>SLH-DSA-128f (fast, large)</option><option>SLH-DSA-256f (256-bit, fast)</option></optgroup>
+            <optgroup label="Stateful (SP 800-208)"><option>HSS/LMS (⚠ OTS index tracking required)</option><option>XMSS (⚠ OTS index tracking required)</option></optgroup></Sel>
+        </FG>
+        <FG label="Hybrid Mode" hint="Combine PQC with classical for backward compatibility">
+          <Sel><option>Pure PQC only</option><option>Hybrid: ECDSA-P384 + ML-DSA-65</option><option>Hybrid: RSA-3072 + ML-DSA-65</option><option>Hybrid: X25519 + ML-KEM-768</option></Sel>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Key Name" required><Inp placeholder="pqc-signing-key-001"/></FG>
+        <FG label="Purpose"><Sel><option>sign-verify</option><option>key-encapsulation</option><option>key-agreement</option></Sel></FG>
+      </Row2>
+      <Chk label="Store in HSM (if HSM supports PQC)" checked={false}/>
+      <Chk label="Auto-generate classical fallback key (for migration period)" checked={true}/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary>Generate PQC Key</Btn></div>
+    </Modal>
+  </div>;
+};
+
+// ═══════════════════════════════════
+// TAB: CRYPTO CONSOLE (interactive encrypt/decrypt/sign/verify)
+// ═══════════════════════════════════
+const Crypto=()=>{
+  const [op,setOp]=useState("Encrypt");
+  const [modal,setModal]=useState(null);
+  return <div>
+    <Tabs tabs={["Encrypt","Decrypt","Sign","Verify","Wrap","Unwrap","MAC","Hash","KEM Encapsulate","KEM Decapsulate","Key Derive","Random"]} active={op} onChange={setOp}/>
+    <Row2>
+      <Card>
+        <FG label="Select Key" required><Sel><option>prod-db-master (AES-256-GCM)</option><option>tls-frontend (ECDSA-P384)</option><option>pqc-signing (ML-DSA-65)</option><option>token-vault-kek (AES-256-GCM)</option></Sel></FG>
+        {(op==="Encrypt"||op==="Decrypt")&&<>
+          <FG label="Algorithm" hint="Auto-detected from key"><Inp value="AES-256-GCM" readOnly mono/></FG>
+          <FG label="IV Mode"><Sel><option>Internal (KMS generates 12-byte IV)</option><option>External (provide your own IV)</option><option>Deterministic (HMAC-derived, ⚠ leaks equality)</option></Sel></FG>
+          <FG label="AAD (Additional Authenticated Data)" hint="Optional for GCM/CCM modes"><Inp placeholder="Optional AAD (base64 or UTF-8)" mono/></FG>
+        </>}
+        {(op==="Sign"||op==="Verify")&&<>
+          <FG label="Signature Algorithm"><Sel><option>ECDSA-SHA384 (from key)</option><option>RSA-PSS-SHA256</option><option>RSA-PKCS1-SHA256</option><option>Ed25519</option><option>ML-DSA-65 (PQC)</option></Sel></FG>
+          <FG label="Signature Format"><Sel><option>Raw (DER/ASN.1)</option><option>P1363 (IEEE)</option><option>Base64</option></Sel></FG>
+        </>}
+        {op==="Wrap"&&<FG label="Wrapping Algorithm"><Sel><option>AES-KW (RFC 3394)</option><option>AES-KWP (RFC 5649)</option><option>RSA-OAEP-SHA256</option><option>ML-KEM-768 (PQC key encapsulation)</option></Sel></FG>}
+        {op==="Hash"&&<FG label="Hash Algorithm"><Sel><option>SHA-256</option><option>SHA-384</option><option>SHA-512</option><option>SHA3-256</option><option>SHA3-384</option><option>SHA3-512</option><option>BLAKE2b-256</option></Sel></FG>}
+        {op==="MAC"&&<FG label="MAC Algorithm"><Sel><option>HMAC-SHA256</option><option>HMAC-SHA384</option><option>HMAC-SHA512</option><option>CMAC-AES-256</option><option>GMAC-AES-256</option></Sel></FG>}
+        {op==="Key Derive"&&<><FG label="KDF"><Sel><option>HKDF-SHA256</option><option>HKDF-SHA384</option><option>NIST SP 800-108 Counter</option><option>ECDH + HKDF</option><option>X25519 + HKDF</option></Sel></FG>
+          <FG label="Derived Key Length (bits)"><Sel><option>128</option><option>192</option><option>256</option><option>384</option><option>512</option></Sel></FG>
+          <FG label="Info / Context"><Inp placeholder="Application-specific context (base64)" mono/></FG>
+          <FG label="Salt"><Inp placeholder="Optional salt (base64, recommended)" mono/></FG></>}
+        {op==="Random"&&<><FG label="Length (bytes)"><Inp placeholder="32" type="number"/></FG>
+          <FG label="Source"><Sel><option>KMS CSPRNG (crypto/rand)</option><option>HSM TRNG (hardware RNG)</option><option>QKD-seeded CSPRNG</option></Sel></FG></>}
+        <FG label={op==="Verify"?"Plaintext / Message":op==="Decrypt"?"Ciphertext (Base64)":"Plaintext / Input"} required>
+          <Txt placeholder={op==="Decrypt"?"Paste base64-encoded ciphertext...":"Enter plaintext or paste base64-encoded data..."} rows={4}/>
+        </FG>
+        {op==="Verify"&&<FG label="Signature to Verify" required><Txt placeholder="Paste base64-encoded signature..." rows={2}/></FG>}
+        <FG label="Encoding"><Sel><option>Base64</option><option>UTF-8</option><option>Hex</option></Sel></FG>
+        <FG label="Reference ID" hint="Your correlation ID (returned in response + audit trail)"><Inp placeholder="txn-456" mono/></FG>
+        <Btn primary full>{op}</Btn>
+      </Card>
+      <Card>
+        <FG label="Result">
+          <Txt value={op==="Encrypt"?'{\n  "ciphertext": "c2FtcGxlX2VuY3J5cHRlZF9kYXRh...",\n  "iv": "dW5pcXVlX2l2X2hlcmU=",\n  "version": 3,\n  "kcv": "A1B2C3",\n  "reference_id": "txn-456"\n}':op==="Sign"?'{\n  "signature": "MEUCIQD3k8Hs...",\n  "key_version": 4,\n  "algorithm": "ECDSA-SHA384"\n}':'// Result will appear here...'} rows={12} readOnly/>
+        </FG>
+        <FG label="Audit Event"><div style={{fontSize:10,color:C.green,fontFamily:"monospace"}}>✅ audit.key.{op.toLowerCase()} → NATS published • Alert: LOW</div></FG>
+        <FG label="Performance"><div style={{fontSize:10,color:C.dim}}>Duration: 0.8ms • FIPS: ✅ • IV Mode: internal</div></FG>
+      </Card>
+    </Row2>
+  </div>;
+};
+
+// ═══════════════════════════════════
+// TAB: SECRET VAULT (interactive)
+// ═══════════════════════════════════
+const Vault=()=>{
+  const [modal,setModal]=useState(null);
+  return <div>
+    <div style={{display:"flex",gap:12,marginBottom:14}}>
+      <Stat l="Secrets" v="1,284" c="accent" i="🔒"/><Stat l="Types" v="17" s="SSH, PGP, API, TLS..." c="blue" i="📋"/>
+      <Stat l="Expiring (7d)" v="12" s="Action needed" c="amber" i="⏰"/><Stat l="Leases Active" v="47" c="green" i="📄"/>
+    </div>
+    <Section title="Secrets" actions={<><Btn small onClick={()=>setModal("create")}>+ Store Secret</Btn><Btn small onClick={()=>setModal("generate")}>🔑 Generate Key Pair</Btn></>}>
+      <div style={{fontSize:10,color:C.muted}}>Secrets list with search, type filter, TTL status...</div>
+    </Section>
+
+    <Modal open={modal==="create"} onClose={()=>setModal(null)} title="Store New Secret" wide>
+      <Row2>
+        <FG label="Secret Name" required><Inp placeholder="prod-api-key-stripe"/></FG>
+        <FG label="Secret Type" required>
+          <Sel>
+            <optgroup label="Credentials"><option>api_key</option><option>password</option><option>database_dsn</option><option>oauth_token</option><option>bearer_token</option></optgroup>
+            <optgroup label="SSH"><option>ssh_key_ed25519</option><option>ssh_key_rsa</option><option>ssh_key_ecdsa</option></optgroup>
+            <optgroup label="PGP / GPG"><option>pgp_key</option><option>gpg_key</option></optgroup>
+            <optgroup label="TLS / X.509"><option>tls_cert_pem</option><option>tls_key_pem</option><option>pkcs12 (.p12)</option><option>ca_bundle</option></optgroup>
+            <optgroup label="Crypto"><option>jwk (JSON Web Key)</option><option>jwks (JWK Set)</option><option>age_key</option><option>wireguard_key</option></optgroup>
+            <optgroup label="Enterprise"><option>kerberos_keytab</option><option>saml_cert</option><option>license_key</option><option>env_file</option></optgroup>
+            <optgroup label="Other"><option>ppk (PuTTY key)</option><option>generic_binary</option><option>generic_text</option></optgroup>
+          </Sel>
+        </FG>
+      </Row2>
+      <FG label="Secret Value" required hint="Envelope-encrypted at rest. Never stored in plaintext.">
+        <Txt placeholder="Paste secret value (API key, PEM block, JSON, binary base64...)" rows={5}/>
+      </FG>
+      <Row2>
+        <FG label="TTL (Time to Live)" hint="After expiry, GET returns 410 Gone">
+          <Sel><option>No expiry</option><option>1 hour</option><option>24 hours</option><option>7 days</option><option>30 days</option><option>90 days</option><option>365 days</option><option>Custom...</option></Sel>
+        </FG>
+        <FG label="Delivery Format" hint="Format conversion when secret is retrieved">
+          <Sel><option>As stored (raw)</option><option>PEM</option><option>OpenSSH</option><option>PPK (PuTTY)</option><option>PKCS#12</option><option>JWK</option><option>Base64</option></Sel>
+        </FG>
+      </Row2>
+      <FG label="Labels"><Row3><Inp placeholder="environment=production"/><Inp placeholder="service=payment"/><Inp placeholder="owner=alice"/></Row3></FG>
+      <Chk label="Enable auto-rotation (linked to external rotation webhook)" checked={false}/>
+      <Chk label="Lease-based access (must renew TTL to maintain access)" checked={false}/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary>Store Secret</Btn></div>
+    </Modal>
+
+    <Modal open={modal==="generate"} onClose={()=>setModal(null)} title="Generate Key Pair">
+      <FG label="Key Type" required>
+        <Sel><option>Ed25519 (SSH — recommended)</option><option>RSA-4096 (SSH)</option><option>ECDSA-P384 (SSH)</option><option>PGP / GPG (RSA-4096)</option><option>age (X25519)</option><option>WireGuard (Curve25519)</option></Sel>
+      </FG>
+      <FG label="Key Name" required><Inp placeholder="deploy-key-prod"/></FG>
+      <FG label="Comment / Email" hint="For SSH: appears in public key. For PGP: user ID."><Inp placeholder="deploy@company.com"/></FG>
+      <FG label="Passphrase Protection"><Sel><option>No passphrase (key encrypted by KMS envelope)</option><option>Additional passphrase (double encrypted)</option></Sel></FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary>Generate Key Pair</Btn></div>
+    </Modal>
+  </div>;
+};
+
+// ═══════════════════════════════════
+// TAB: CERTIFICATES / PKI (interactive with PQC)
+// ═══════════════════════════════════
+const Certs=()=>{
+  const [modal,setModal]=useState(null);
+  return <div>
+    <div style={{display:"flex",gap:12,marginBottom:14}}>
+      <Stat l="Active Certs" v="2,847" c="green" i="📜"/><Stat l="CAs" v="4" s="1 root, 3 intermediate" c="accent" i="🏛"/>
+      <Stat l="PQC Certs" v="128" s="4.5% of total" c="purple" i="⚛"/><Stat l="Expiring (30d)" v="23" c="amber" i="⏰"/>
+    </div>
+    <Section title="Certificate Authority" actions={<Btn small onClick={()=>setModal("create-ca")}>+ Create CA</Btn>}>
+      <div style={{fontSize:10,color:C.muted,marginBottom:8}}>CA hierarchy tree...</div>
+    </Section>
+    <Section title="Certificates" actions={<>
+      <Btn small onClick={()=>setModal("issue")}>+ Issue Certificate</Btn>
+      <Btn small onClick={()=>setModal("issue-pqc")}>⚛ Issue PQC Certificate</Btn>
+      <Btn small onClick={()=>setModal("upload-3p")}>↑ Upload 3rd-Party Cert</Btn>
+    </>}>
+      <div style={{fontSize:10,color:C.muted}}>Certificate inventory table...</div>
+    </Section>
+
+    {/* ── CREATE CA MODAL ── */}
+    <Modal open={modal==="create-ca"} onClose={()=>setModal(null)} title="Create Certificate Authority" wide>
+      <Row2>
+        <FG label="CA Type" required>
+          <Sel><option>Root CA (self-signed)</option><option>Intermediate CA (signed by parent)</option><option>Cross-Certified CA</option></Sel>
+        </FG>
+        <FG label="Parent CA" hint="Required for intermediate CAs">
+          <Sel><option>— None (Root CA) —</option><option>Vecta Root CA (RSA-4096)</option><option>Vecta PQC Root CA (ML-DSA-87)</option></Sel>
+        </FG>
+      </Row2>
+      <FG label="CA Signing Algorithm" required>
+        <Sel>
+          <optgroup label="Classical"><option>RSA-4096-SHA384</option><option>RSA-3072-SHA256</option><option>ECDSA-P384-SHA384</option><option>ECDSA-P256-SHA256</option></optgroup>
+          <optgroup label="Post-Quantum (Pure PQC)"><option>ML-DSA-87 (FIPS 204 — highest security)</option><option>ML-DSA-65 (FIPS 204 — recommended)</option><option>SLH-DSA-256f (FIPS 205 — hash-based, large sigs)</option><option>SLH-DSA-128f (FIPS 205 — smaller)</option><option>HSS/LMS-SHA256 (SP 800-208 — stateful ⚠)</option><option>XMSS-SHA256 (RFC 8391 — stateful ⚠)</option></optgroup>
+          <optgroup label="Hybrid (Classical + PQC)"><option>ECDSA-P384 + ML-DSA-65 (composite)</option><option>RSA-3072 + ML-DSA-65 (composite)</option><option>Ed25519 + ML-DSA-44 (composite)</option></optgroup>
+        </Sel>
+      </FG>
+      <Row2>
+        <FG label="Subject DN" required><Inp placeholder="CN=Vecta Root CA, O=Bank Corp, C=CH"/></FG>
+        <FG label="Validity"><Sel><option>10 years (Root CA)</option><option>5 years (Intermediate)</option><option>3 years</option><option>1 year</option><option>Custom...</option></Sel></FG>
+      </Row2>
+      <FG label="Key Storage">
+        <Radio label="HSM-backed (Primus HSM — FIPS 140-3 Level 3)" selected={true}/>
+        <Radio label="Software vault (envelope-encrypted)" selected={false}/>
+      </FG>
+      <FG label="Path Length Constraint" hint="Max depth of CA chain below this CA"><Inp placeholder="1" type="number"/></FG>
+      <FG label="Key Usage"><Chk label="Key Cert Sign" checked={true}/><Chk label="CRL Sign" checked={true}/><Chk label="Digital Signature" checked={false}/></FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary>Create CA</Btn></div>
+    </Modal>
+
+    {/* ── ISSUE CERTIFICATE MODAL ── */}
+    <Modal open={modal==="issue"||modal==="issue-pqc"} onClose={()=>setModal(null)} title={modal==="issue-pqc"?"Issue PQC Certificate":"Issue Certificate"} wide>
+      <Row2>
+        <FG label="Issuing CA" required><Sel><option>Vecta Intermediate CA (ECDSA-P384)</option><option>Vecta PQC CA (ML-DSA-65)</option><option>Vecta Hybrid CA (ECDSA + ML-DSA)</option></Sel></FG>
+        <FG label="Certificate Profile"><Sel>
+          {modal==="issue-pqc"?<>
+            <option>pqc-tls-server (ML-DSA-65 + ECDHE)</option><option>pqc-code-signing (SLH-DSA-256f)</option>
+            <option>hybrid-tls (ECDSA-P384 + ML-DSA-65)</option><option>quantum-safe-smime (ML-DSA + ML-KEM)</option>
+          </>:<>
+            <option>TLS Server</option><option>TLS Client (mTLS)</option><option>Code Signing</option>
+            <option>Email / S-MIME</option><option>Device Identity</option><option>Custom...</option>
+          </>}
+        </Sel></FG>
+      </Row2>
+      <FG label="Key Source">
+        <Radio label="Server-generated key (KMS creates key pair)" selected={true}/>
+        <Radio label="CSR (upload Certificate Signing Request)" selected={false}/>
+      </FG>
+      {modal==="issue-pqc"&&<FG label="PQC Algorithm" required>
+        <Sel><option>ML-DSA-65 (recommended for TLS)</option><option>ML-DSA-87 (highest security)</option><option>SLH-DSA-128f (hash-based, no state)</option>
+          <option>ECDSA-P384 + ML-DSA-65 (hybrid composite)</option></Sel>
+      </FG>}
+      <Row2>
+        <FG label="Common Name (CN)" required><Inp placeholder="api.bank.com"/></FG>
+        <FG label="Subject Alternative Names (SANs)"><Inp placeholder="api.bank.com, *.api.bank.com, 10.0.1.100" mono/></FG>
+      </Row2>
+      <Row2>
+        <FG label="Organization"><Inp placeholder="Bank Corp"/></FG>
+        <FG label="Validity"><Sel><option>365 days</option><option>90 days</option><option>30 days</option><option>730 days</option><option>Custom...</option></Sel></FG>
+      </Row2>
+      <FG label="Key Usage"><Chk label="Digital Signature" checked={true}/><Chk label="Key Encipherment" checked={true}/><Chk label="Key Agreement" checked={false}/></FG>
+      <FG label="Extended Key Usage"><Chk label="TLS Server Auth" checked={true}/><Chk label="TLS Client Auth" checked={false}/><Chk label="Code Signing" checked={false}/><Chk label="Email Protection" checked={false}/></FG>
+      <Chk label="Auto-renew via ACME (RFC 8555)" checked={false}/>
+      <Chk label="Include in CRL distribution" checked={true}/>
+      <Chk label="Enable OCSP stapling" checked={true}/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary>Issue Certificate</Btn></div>
+    </Modal>
+
+    {/* ── UPLOAD 3RD-PARTY CERT MODAL ── */}
+    <Modal open={modal==="upload-3p"} onClose={()=>setModal(null)} title="Upload 3rd-Party Web Certificate" wide>
+      <div style={{background:C.blueDim,border:`1px solid ${C.blue}`,borderRadius:8,padding:10,marginBottom:12,fontSize:10,color:C.blue}}>
+        Upload certificates issued by external CAs (DigiCert, Let's Encrypt, etc.) for the KMS web interface or other services.
+      </div>
+      <FG label="Certificate Purpose" required>
+        <Sel><option>KMS Web Interface (HTTPS on port 443)</option><option>API Gateway (Envoy TLS termination)</option><option>KMIP Server (port 5696 TLS)</option><option>Syslog TLS (audit export)</option><option>Custom service endpoint</option></Sel>
+      </FG>
+      <FG label="Certificate (PEM)" required hint="Paste the certificate chain (leaf + intermediates + root)">
+        <Txt placeholder="-----BEGIN CERTIFICATE-----\nMIID...paste PEM here...\n-----END CERTIFICATE-----" rows={6}/>
+      </FG>
+      <FG label="Private Key (PEM)" required hint="Will be envelope-encrypted and stored in Key Core">
+        <Txt placeholder="-----BEGIN PRIVATE KEY-----\nMIIE...paste key here...\n-----END PRIVATE KEY-----" rows={4}/>
+      </FG>
+      <FG label="CA Bundle (PEM)" hint="Intermediate CA certificates (if not included above)">
+        <Txt placeholder="-----BEGIN CERTIFICATE-----\n...intermediate CA...\n-----END CERTIFICATE-----" rows={3}/>
+      </FG>
+      <Chk label="Set as active web interface certificate (replace current)" checked={true}/>
+      <Chk label="Enable OCSP stapling for this certificate" checked={true}/>
+      <Chk label="Auto-renew via ACME when expiring" checked={false}/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary>Upload & Apply Certificate</Btn></div>
+    </Modal>
+  </div>;
+};
+
+// ═══════════════════════════════════
+// TAB: TOKENIZE / MASK (interactive)
+// ═══════════════════════════════════
+const Tokenize=()=>{
+  const [op,setOp]=useState("Tokenize");
+  const [modal,setModal]=useState(null);
+  return <div>
+    <Tabs tabs={["Tokenize","Detokenize","FPE Encrypt","FPE Decrypt","Mask","Redact","Field Encrypt","Envelope Encrypt"]} active={op} onChange={setOp}/>
+    <Section title="" actions={<Btn small onClick={()=>setModal("vault")}>+ Create Token Vault</Btn>}>
+    <Row2>
+      <Card>
+        {op==="Tokenize"&&<><FG label="Token Vault" required><Sel><option>credit-card-vault (format-preserving, Luhn-valid)</option><option>ssn-vault (format-preserving)</option><option>email-vault (random tokens)</option><option>iban-vault (format-preserving)</option><option>custom-vault</option></Sel></FG>
+          <FG label="Tokenization Method"><Sel><option>Format Preserving (output matches input format)</option><option>Random (UUID-based token)</option><option>Deterministic (same input → same token)</option><option>Irreversible (one-way hash, no detokenize)</option></Sel></FG>
+          <FG label="Input Value" required><Txt placeholder="4111-1111-1111-1111" rows={2}/></FG>
+          <Chk label="Batch mode (multiple values, one per line)" checked={false}/>
+          <FG label="TTL"><Sel><option>No expiry</option><option>24 hours</option><option>30 days</option><option>90 days</option></Sel></FG></>}
+        {op==="Mask"&&<><FG label="Masking Pattern" required><Sel><option>Partial — show last 4 (***-**-6789)</option><option>Full mask (****************)</option><option>Hash (SHA-256 of original)</option><option>Substitute (random same-format)</option><option>Nullify (set to null)</option><option>Date shift (±random days)</option><option>Shuffle (reorder characters)</option></Sel></FG>
+          <FG label="Apply To Role"><Sel><option>Analyst → partial</option><option>Admin → full access</option><option>Auditor → hash only</option><option>Developer → nullify</option></Sel></FG>
+          <FG label="Input"><Txt placeholder="John Smith, SSN: 123-45-6789, DOB: 1985-03-14" rows={3}/></FG>
+          <Chk label="Consistent masking (same input → same masked output)" checked={true}/></>}
+        {op==="Redact"&&<><FG label="Redaction Mode"><Sel><option>Auto-detect PII (regex patterns)</option><option>Custom regex patterns</option><option>NER-based entity detection (AI)</option></Sel></FG>
+          <FG label="PII Patterns to Detect"><Chk label="Email addresses" checked={true}/><Chk label="Phone numbers" checked={true}/><Chk label="SSN / National ID" checked={true}/><Chk label="Credit card numbers" checked={true}/><Chk label="IBAN" checked={true}/><Chk label="IP addresses" checked={false}/><Chk label="Custom regex..." checked={false}/></FG>
+          <FG label="Input Document" required><Txt placeholder="Please contact John at john.doe@email.com or 555-123-4567..." rows={4}/></FG>
+          <FG label="Redaction Action"><Sel><option>Replace with [REDACTED]</option><option>Replace with placeholder (e.g., [EMAIL], [PHONE])</option><option>Replace with *** of same length</option><option>Remove entirely</option></Sel></FG></>}
+        {op==="Field Encrypt"&&<><FG label="Encryption Algorithm"><Sel><option>AES-GCM-256 (authenticated encryption)</option><option>AES-SIV (deterministic, searchable)</option><option>ChaCha20-Poly1305</option></Sel></FG>
+          <FG label="KEK (Key Encryption Key)" required><Sel><option>prod-db-master (AES-256-GCM)</option><option>token-vault-kek (AES-256-GCM)</option></Sel></FG>
+          <FG label="JSON Document" required><Txt placeholder='{"name": "John", "ssn": "123-45-6789", "email": "john@email.com"}' rows={4}/></FG>
+          <FG label="Fields to Encrypt" hint="JSONPath expressions"><Inp placeholder="$.ssn, $.email, $.credit_card" mono/></FG>
+          <Chk label="Searchable encryption (AES-SIV for equality queries)" checked={false}/></>}
+        {(op==="FPE Encrypt"||op==="FPE Decrypt")&&<><FG label="FPE Algorithm"><Sel><option>FF1 (NIST SP 800-38G Rev 1)</option><option>FF3-1 (NIST SP 800-38G Rev 1, shorter inputs)</option></Sel></FG>
+          <FG label="Character Set"><Sel><option>Numeric (0-9)</option><option>Alphanumeric lowercase</option><option>Alphanumeric mixed case</option><option>Custom alphabet...</option></Sel></FG>
+          <FG label="Tweak" hint="FPE tweak value (context binding)"><Inp placeholder="Optional tweak (hex)" mono/></FG>
+          <FG label="Input" required><Inp placeholder="4111111111111111" mono/></FG></>}
+        {op==="Envelope Encrypt"&&<><FG label="KEK" required><Sel><option>prod-db-master (AES-256-GCM)</option><option>ml-kem-768-001 (PQC)</option></Sel></FG>
+          <FG label="DEK Algorithm"><Sel><option>AES-256-GCM (generated per request)</option><option>ChaCha20-Poly1305</option></Sel></FG>
+          <FG label="Plaintext" required><Txt placeholder="Data to encrypt..." rows={4}/></FG>
+          <div style={{fontSize:10,color:C.dim,marginTop:8}}>Flow: Generate DEK → Encrypt data with DEK → Wrap DEK with KEK → Return &#123;wrapped_dek, ciphertext, iv&#125;</div></>}
+        <Btn primary full style={{marginTop:10}}>{op}</Btn>
+      </Card>
+      <Card><FG label="Result"><Txt value="// Output will appear here..." rows={16} readOnly/></FG></Card>
+    </Row2></Section>
+
+    <Modal open={modal==="vault"} onClose={()=>setModal(null)} title="Create Token Vault" wide>
+      <Row2>
+        <FG label="Vault Name" required><Inp placeholder="credit-card-vault"/></FG>
+        <FG label="Token Type" required><Sel><option>credit_card (PAN with Luhn validation)</option><option>ssn (US Social Security Number)</option><option>email</option><option>phone</option><option>iban</option><option>custom (provide regex)</option></Sel></FG>
+      </Row2>
+      <Row2>
+        <FG label="Token Format"><Sel><option>Format Preserving (same length/charset as input)</option><option>Random UUID</option><option>Prefixed (tok_...)</option></Sel></FG>
+        <FG label="Encryption Key" required hint="KEK used to envelope-encrypt original values"><Sel><option>token-vault-kek (AES-256-GCM)</option><option>Create new key...</option></Sel></FG>
+      </Row2>
+      <FG label="Custom Regex" hint="Only for 'custom' token type"><Inp placeholder="^\d{3}-\d{2}-\d{4}$" mono/></FG>
+      <Chk label="Allow detokenization (reversible)" checked={true}/>
+      <Chk label="Deduplication (same input always returns same token)" checked={true}/>
+      <Chk label="Token expiry (auto-delete after TTL)" checked={false}/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary>Create Vault</Btn></div>
+    </Modal>
+  </div>;
+};
+
+// ═══════════════════════════════════
+// TAB: PAYMENT CRYPTO (interactive)
+// ═══════════════════════════════════
+const Payment=()=>{
+  const [op,setOp]=useState("TR-31 Create");
+  return <div>
+    <Tabs tabs={["TR-31 Create","TR-31 Translate","PIN Translate","PIN Verify","PVV Generate","CVV Compute","MAC Generate","ISO 20022 Sign","ISO 20022 Encrypt","LAU Generate"]} active={op} onChange={setOp}/>
+    <Row2>
+      <Card>
+        {op==="TR-31 Create"&&<><FG label="Key to Wrap" required><Sel><option>zpk-001 (ZPK — Zone PIN Key)</option><option>bdk-001 (BDK — Base Derivation Key)</option><option>pvk-001 (PVK — PIN Verification Key)</option></Sel></FG>
+          <FG label="KBPK (Key Block Protection Key)" required><Sel><option>kbpk-master (AES-256)</option><option>kbpk-partner-001 (3DES)</option></Sel></FG>
+          <FG label="TR-31 Version"><Sel><option>D — AES CMAC (recommended)</option><option>B — 3DES variant</option><option>C — 3DES with key derivation</option></Sel></FG>
+          <FG label="Key Usage"><Sel><option>P0 — PIN Encryption</option><option>B0 — BDK</option><option>D0 — Data Encryption (Symmetric)</option><option>M0 — ISO 9797-1 MAC (Algorithm 1)</option><option>M3 — ISO 9797-1 MAC (Algorithm 3)</option><option>K0 — Key Encryption / Wrapping</option><option>V0 — PIN Verification (PVV)</option></Sel></FG>
+          <FG label="Export Mode"><Sel><option>E — Exportable per TR-31 rules</option><option>N — Not exportable</option><option>S — Sensitive (exportable under KEK)</option></Sel></FG></>}
+        {op==="PIN Translate"&&<><FG label="Source PIN Block Format"><Sel><option>ISO 0 (Visa format)</option><option>ISO 1</option><option>ISO 3</option><option>ISO 4 (AES-encrypted, recommended)</option></Sel></FG>
+          <FG label="Target PIN Block Format"><Sel><option>ISO 4 (AES)</option><option>ISO 0 (3DES)</option></Sel></FG>
+          <FG label="Source ZPK"><Sel><option>zpk-incoming (AES-256)</option></Sel></FG>
+          <FG label="Target ZPK"><Sel><option>zpk-outgoing (AES-256)</option></Sel></FG>
+          <FG label="PIN Block (hex)" required><Inp placeholder="0412AC8967BFCD01" mono/></FG>
+          <FG label="PAN (for format 0/4)"><Inp placeholder="4111111111111111" mono/></FG></>}
+        {op==="CVV Compute"&&<><FG label="CVK (Card Verification Key)" required><Sel><option>cvk-visa-001 (3DES)</option><option>cvk-mc-001 (3DES)</option></Sel></FG>
+          <FG label="PAN" required><Inp placeholder="4111111111111111" mono/></FG>
+          <FG label="Expiry (YYMM)" required><Inp placeholder="2612" mono/></FG>
+          <FG label="Service Code" required><Inp placeholder="101" mono/></FG>
+          <FG label="CVV Type"><Sel><option>CVV1 (magnetic stripe)</option><option>CVV2 (card-not-present)</option><option>iCVV (chip)</option><option>dCVV (dynamic)</option></Sel></FG></>}
+        {op==="ISO 20022 Sign"&&<><FG label="Signing Key" required><Sel><option>iso20022-sign-001 (RSA-2048-SHA256)</option><option>iso20022-sign-pqc (ML-DSA-65)</option></Sel></FG>
+          <FG label="XML Document" required><Txt placeholder='<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008">...</Document>' rows={5}/></FG>
+          <FG label="Signature Type"><Sel><option>XMLDSig (enveloped)</option><option>XMLDSig (detached)</option><option>LAU (Local Authentication)</option></Sel></FG>
+          <FG label="Canonicalization"><Sel><option>Exclusive XML C14N</option><option>Inclusive XML C14N</option></Sel></FG></>}
+        {op==="ISO 20022 Encrypt"&&<><FG label="Encryption Key" required><Sel><option>iso20022-enc-001 (AES-256-GCM)</option></Sel></FG>
+          <FG label="XML Document" required><Txt placeholder="<Document>...sensitive payment fields...</Document>" rows={4}/></FG>
+          <FG label="Fields to Encrypt" hint="XPath expressions for selective field encryption"><Inp placeholder="//CdtrAcct/Id/IBAN, //DbtrAcct/Id/IBAN" mono/></FG>
+          <FG label="Encryption Scope"><Sel><option>Full document encryption</option><option>Selective field encryption (XPath)</option></Sel></FG></>}
+        <Btn primary full style={{marginTop:10}}>Execute</Btn>
+      </Card>
+      <Card><FG label="Result"><Txt value="// Output will appear here..." rows={16} readOnly/></FG></Card>
+    </Row2>
+  </div>;
+};
+
+// ═══════════════════════════════════
+// REMAINING TABS (interactive stubs with modals)
+// ═══════════════════════════════════
+const Home=()=>{
+  const [modal,setModal]=useState(null);
+  return <div>
+    <div style={{display:"flex",gap:12,marginBottom:14}}>
+      <Stat l="Keys" v="4,847" c="accent" i="🔑"/><Stat l="Secrets" v="1,284" c="blue" i="🔒"/><Stat l="Certs" v="2,847" c="green" i="📜"/>
+      <Stat l="Ops Today" v="2.1M" c="purple" i="⚡"/><Stat l="Alerts" v="19 open" s="2 critical" c="red" i="🔔"/>
+    </div>
+    <Row2>
+      <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>🔒 DISK ENCRYPTION</div>
+        <div style={{fontSize:10,color:C.dim}}>AES-256-XTS LUKS2 • 34.2/120 GB (28.5%) • Integrity: ✅ Passed</div>
+        <div style={{fontSize:10,color:C.dim}}>Recovery: 3-of-5 Shamir shares</div>
+        <Btn small style={{marginTop:6}} onClick={()=>setModal("fde")}>Manage FDE</Btn>
+      </Card>
+      <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>🛡 FIPS MODE</div>
+        <B c="green">FIPS STRICT</B>
+        <div style={{fontSize:10,color:C.dim,marginTop:4}}>Go: BoringCrypto ✅ • TLS: 1.2+ FIPS • RNG: CTR_DRBG • Violations (24h): 0</div>
+        <Btn small style={{marginTop:6}} onClick={()=>setModal("fips")}>Configure FIPS</Btn>
+      </Card>
+    </Row2>
+    <Modal open={modal==="fde"} onClose={()=>setModal(null)} title="Full Disk Encryption Management">
+      <FG label="Encryption"><div style={{fontSize:11,color:C.green}}>AES-256-XTS via LUKS2 — Active ✅</div></FG>
+      <FG label="Actions"><Btn small>Run Integrity Check</Btn><Btn small style={{marginLeft:6}}>Rotate Volume Key</Btn><Btn small style={{marginLeft:6}}>Test Recovery Shares</Btn></FG>
+      <FG label="Recovery Shares (Shamir 3-of-5)">
+        <div style={{fontSize:10,color:C.dim}}>Share 1: Held by Admin A ✅ • Share 2: Held by Admin B ✅ • Share 3: Escrow ✅ • Share 4: Safe ✅ • Share 5: DR Site ✅</div>
+      </FG>
+    </Modal>
+    <Modal open={modal==="fips"} onClose={()=>setModal(null)} title="FIPS Compliance Mode">
+      <FG label="Mode"><Sel><option>Strict FIPS (non-approved algos blocked)</option><option>Standard (all algos, FIPS violations logged)</option></Sel></FG>
+      <FG label="Crypto Library"><div style={{fontSize:11,color:C.green}}>Go BoringCrypto — FIPS 140-3 validated ✅</div></FG>
+      <FG label="TLS"><Sel><option>TLS 1.2+ with FIPS cipher suites only</option><option>TLS 1.3 only</option></Sel></FG>
+      <FG label="RNG"><Sel><option>CTR_DRBG (FIPS-approved)</option><option>HMAC_DRBG</option><option>HSM TRNG</option></Sel></FG>
+      <Btn primary style={{marginTop:8}}>Apply FIPS Settings</Btn>
+    </Modal>
+  </div>;
+};
+
+const BYOK=()=>{const [m,sM]=useState(null);return <div>
+  <Section title="Cloud Connectors" actions={<Btn small onClick={()=>sM("add")}>+ Add Cloud Connector</Btn>}>
+    {[["AWS KMS","28 keys","ap-south-1, eu-west-1"],["Azure Key Vault","15 keys","westeurope, eastus"],["Google Cloud KMS","8 keys","europe-west1"],["Oracle Cloud Vault","3 keys","eu-frankfurt-1"]].map(([n,k,r])=>
+      <Card key={n} style={{marginBottom:6}} onClick={()=>sM("import")}><div style={{display:"flex",justifyContent:"space-between"}}><div><div style={{fontSize:12,color:C.text,fontWeight:600}}>{n}</div><div style={{fontSize:10,color:C.dim}}>{k} • {r}</div></div><B c="green">Synced</B></div></Card>)}
+  </Section>
+  <Modal open={m==="add"} onClose={()=>sM(null)} title="Add Cloud Connector" wide>
+    <FG label="Cloud Provider" required><Sel><option>AWS KMS</option><option>Azure Key Vault</option><option>Google Cloud KMS</option><option>Oracle Cloud Vault</option></Sel></FG>
+    <FG label="Authentication"><Sel><option>IAM Role (recommended)</option><option>Access Key + Secret</option><option>Service Account JSON</option><option>Managed Identity</option></Sel></FG>
+    <FG label="Region(s)"><Inp placeholder="eu-west-1, us-east-1" mono/></FG>
+    <FG label="Auto-sync Interval"><Sel><option>Every 5 minutes</option><option>Every 15 minutes</option><option>Hourly</option><option>Manual only</option></Sel></FG>
+    <Chk label="Auto-rotate cloud keys when Vecta key rotates" checked={true}/>
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Add Connector</Btn></div>
+  </Modal>
+  <Modal open={m==="import"} onClose={()=>sM(null)} title="Import Key to Cloud">
+    <FG label="Vecta Key to Import" required><Sel><option>prod-db-master (AES-256-GCM)</option><option>tls-frontend (ECDSA-P384)</option></Sel></FG>
+    <FG label="Target Cloud"><Sel><option>AWS KMS — eu-west-1</option><option>Azure Key Vault — westeurope</option></Sel></FG>
+    <FG label="Cloud Key Alias"><Inp placeholder="alias/vecta-prod-db" mono/></FG>
+    <Chk label="Enable automatic sync on rotation" checked={true}/>
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Import to Cloud</Btn></div>
+  </Modal>
+</div>;};
+
+const HYOK=()=>{const [m,sM]=useState(null);return <div>
+  <Section title="HYOK Proxy Endpoints" actions={<Btn small onClick={()=>sM("add")}>+ Configure Endpoint</Btn>}>
+    {[["Microsoft DKE","M365 Double Key Encryption","RSA-2048","12,847 decrypt/day"],["Salesforce Cache-Only","Shield Platform Encryption","AES-256","3,201 wrap/day"],["Google Cloud EKM","External Key Manager","RSA-3072","847 ops/day"]].map(([n,d,a,v])=>
+      <Card key={n} style={{marginBottom:6}}><div style={{display:"flex",justifyContent:"space-between"}}><div><div style={{fontSize:12,color:C.text,fontWeight:600}}>{n}</div><div style={{fontSize:10,color:C.dim}}>{d} • {a}</div></div><div style={{textAlign:"right"}}><B c="green">Active</B><div style={{fontSize:9,color:C.dim,marginTop:2}}>{v}</div></div></div></Card>)}
+  </Section>
+  <Modal open={m==="add"} onClose={()=>sM(null)} title="Configure HYOK Endpoint" wide>
+    <FG label="Protocol" required><Sel><option>Microsoft DKE (Double Key Encryption)</option><option>Salesforce Cache-Only Key Service</option><option>Google Cloud External Key Manager</option><option>Generic HYOK (custom REST API)</option></Sel></FG>
+    <FG label="Vecta Key" required><Sel><option>dke-key-001 (RSA-2048)</option><option>sf-cache-key (AES-256)</option><option>Create new key...</option></Sel></FG>
+    <FG label="Endpoint URL" hint="The well-known URL the cloud service will call"><Inp placeholder="https://kms.bank.com/.well-known/dke/keys/dke-key-001" mono/></FG>
+    <Chk label="Require policy check before serving HYOK request" checked={true}/>
+    <Chk label="Require governance approval for configuration changes" checked={true}/>
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Configure Endpoint</Btn></div>
+  </Modal>
+</div>;};
+
+const EKM=()=>{const [m,sM]=useState(null);return <div>
+  <Section title="TDE Agents" actions={<Btn small onClick={()=>sM("deploy")}>+ Deploy Agent</Btn>}>
+    {[["MSSQL-Prod-01","10.0.5.10","SQL Server 2022","Active"],["MSSQL-Prod-02","10.0.5.11","SQL Server 2022","Active"],["MSSQL-DR-01","10.0.6.10","SQL Server 2019","Standby"]].map(([n,ip,v,s])=>
+      <Card key={n} style={{marginBottom:6}} onClick={()=>sM("provision")}><div style={{display:"flex",justifyContent:"space-between"}}><div><div style={{fontSize:12,color:C.text,fontWeight:600}}>{n}</div><div style={{fontSize:10,color:C.dim,fontFamily:"monospace"}}>{ip} • {v}</div></div><B c={s==="Active"?"green":"amber"}>{s}</B></div></Card>)}
+  </Section>
+  <Modal open={m==="deploy"} onClose={()=>sM(null)} title="Deploy EKM Agent">
+    <FG label="Database Type" required><Sel><option>Microsoft SQL Server (TDE)</option><option>Oracle Database (TDE)</option></Sel></FG>
+    <FG label="Host IP" required><Inp placeholder="10.0.5.12" mono/></FG>
+    <FG label="Agent Authentication"><Sel><option>mTLS client certificate</option><option>API key</option></Sel></FG>
+    <FG label="TDE Key Algorithm"><Sel><option>AES-256</option><option>AES-128</option></Sel></FG>
+    <FG label="Rotation Cycle"><Sel><option>90 days</option><option>180 days</option><option>365 days</option></Sel></FG>
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Deploy Agent</Btn></div>
+  </Modal>
+  <Modal open={m==="provision"} onClose={()=>sM(null)} title="Provision TDE Key">
+    <FG label="Key Name"><Inp placeholder="tde-mssql-prod-03"/></FG>
+    <FG label="Algorithm"><Sel><option>AES-256</option></Sel></FG>
+    <FG label="Target Agent"><Sel><option>MSSQL-Prod-01</option><option>MSSQL-Prod-02</option></Sel></FG>
+    <Btn primary style={{marginTop:8}}>Provision Key</Btn>
+  </Modal>
+</div>;};
+
+const HSM=()=>{const [m,sM]=useState(null);return <div>
+  <Row2>
+    <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>CONNECTION</div>
+      {[["Mode","Hardware PKCS#11"],["Model","Primus X HSM"],["Firmware","v3.8.2"],["IP","10.0.3.50:2300"],["FIPS","Level 3"],["Partition","kms-prod"],["MEK","Loaded ✅"],["Keys","47"]].map(([k,v])=>
+        <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:10}}><span style={{color:C.muted}}>{k}</span><span style={{color:C.text,fontFamily:"monospace"}}>{v}</span></div>)}
+    </Card>
+    <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>OPERATIONS (24h)</div>
+      {[["Encrypt/Decrypt","847K/day"],["Sign/Verify","234K/day"],["Key Gen","12/day"],["Wrap/Unwrap","1.2K/day"],["Avg Latency","0.8ms"],["Uptime","99.999%"]].map(([k,v])=>
+        <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:10}}><span style={{color:C.muted}}>{k}</span><span style={{color:C.accent}}>{v}</span></div>)}
+    </Card>
+  </Row2>
+  <Section title="HSM Actions" actions={<><Btn small onClick={()=>sM("gen")}>Generate Key in HSM</Btn><Btn small onClick={()=>sM("import-hsm")}>Import to HSM</Btn><Btn small>Backup HSM State</Btn></>}><div/></Section>
+  <Modal open={m==="gen"} onClose={()=>sM(null)} title="Generate Key in HSM">
+    <FG label="Algorithm" required><Sel><option>AES-256</option><option>RSA-2048</option><option>RSA-4096</option><option>ECDSA-P384</option><option>Ed25519</option></Sel></FG>
+    <FG label="Key Label" required><Inp placeholder="hsm-key-label" mono/></FG>
+    <FG label="HSM Partition"><Sel><option>kms-prod</option><option>kms-backup</option></Sel></FG>
+    <FG label="Key Attributes"><Chk label="Extractable (can be wrapped and exported)" checked={false}/><Chk label="Sensitive (never appears in plaintext)" checked={true}/><Chk label="Token object (persists on HSM)" checked={true}/></FG>
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Generate in HSM</Btn></div>
+  </Modal>
+</div>;};
+
+const QKD=()=>{const [m,sM]=useState(null);return <div>
+  <Row2>
+    <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>LINK STATUS</div>
+      {[["Protocol","ETSI GS QKD 014"],["Status","Key streaming ✅"],["Source","QKD Node A (DC1)"],["Destination","QKD Node B (DC2)"],["Key Rate","1,200 keys/sec"],["QBER","2.1% (OK < 11%)"],["Distance","47 km fiber"]].map(([k,v])=>
+        <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:10}}><span style={{color:C.muted}}>{k}</span><span style={{color:C.text,fontFamily:"monospace"}}>{v}</span></div>)}
+    </Card>
+    <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>KEY POOL</div>
+      <div style={{fontSize:22,fontWeight:700,color:C.accent}}>847,293</div>
+      <div style={{fontSize:10,color:C.dim}}>available quantum keys (68% full)</div>
+      <Bar pct={68} color={C.green}/>
+      <Btn small primary style={{marginTop:8}} onClick={()=>sM("inject")}>Inject into Key Core</Btn>
+    </Card>
+  </Row2>
+  <Modal open={m==="inject"} onClose={()=>sM(null)} title="Inject QKD Keys into Key Core">
+    <FG label="Number of Keys"><Inp placeholder="100" type="number"/></FG>
+    <FG label="Key Purpose"><Sel><option>AES-256-GCM encryption keys</option><option>HMAC-SHA256 authentication keys</option><option>KEK (Key Encryption Keys)</option></Sel></FG>
+    <FG label="Target Tenant"><Sel><option>bank-alpha</option><option>fincorp</option><option>All tenants (pool)</option></Sel></FG>
+    <FG label="Min QBER Threshold"><Inp placeholder="5" type="number" mono/><span style={{fontSize:9,color:C.muted}}>% (reject keys above this)</span></FG>
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Inject Keys</Btn></div>
+  </Modal>
+</div>;};
+
+const MPC=()=>{const [m,sM]=useState(null);return <div>
+  <Section title="MPC Ceremonies" actions={<Btn small onClick={()=>sM("dkg")}>+ Start DKG Ceremony</Btn>}>
+    <div style={{fontSize:10,color:C.dim}}>Active ceremonies and share inventory...</div>
+  </Section>
+  <Modal open={m==="dkg"} onClose={()=>sM(null)} title="Start Distributed Key Generation (DKG)" wide>
+    <FG label="Threshold Scheme" required hint="T-of-N: T parties must collaborate to use the key">
+      <Row2><FG label="Threshold (T)"><Inp placeholder="3" type="number"/></FG><FG label="Total Parties (N)"><Inp placeholder="5" type="number"/></FG></Row2>
+    </FG>
+    <FG label="Key Algorithm"><Sel><option>ECDSA-P256 (GG20 protocol)</option><option>ECDSA-P384 (GG20 protocol)</option><option>EdDSA-Ed25519 (FROST protocol)</option><option>Schnorr (FROST protocol)</option></Sel></FG>
+    <FG label="Participants" hint="Select N users who will hold key shares">
+      <Chk label="Admin A (alice@bank.com)" checked={true}/><Chk label="Admin B (bob@bank.com)" checked={true}/>
+      <Chk label="HSM Partition (automated)" checked={true}/><Chk label="Escrow Agent (escrow@bank.com)" checked={false}/>
+      <Chk label="DR Site (dr-admin@bank.com)" checked={false}/>
+    </FG>
+    <FG label="Ceremony Timeout"><Sel><option>30 minutes</option><option>1 hour</option><option>24 hours</option></Sel></FG>
+    <FG label="Purpose"><Sel><option>Threshold signing (T-of-N sign)</option><option>Threshold decryption</option><option>Recovery key (backup)</option></Sel></FG>
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Initiate DKG</Btn></div>
+  </Modal>
+</div>;};
+
+const KMIP=()=><div>
+  <div style={{display:"flex",gap:12,marginBottom:14}}>
+    <Stat l="Active Clients" v="14" c="accent" i="🔗"/><Stat l="Ops Today" v="234K" c="blue" i="⚡"/><Stat l="Protocol" v="2.1" s="TTLV over TLS:5696" c="green" i="📡"/>
+  </div>
+  <Section title="Connected KMIP Clients"><div style={{fontSize:10,color:C.dim}}>Client table with CN, operations, ops/day...</div></Section>
+</div>;
+
+const Cluster=()=><div>
+  <Section title="Cluster Nodes">
+    {[["Node 1 (Leader)","10.0.1.100","Auth, KeyCore, Audit, Policy, Gov, BYOK, HYOK, Payment, DataProtect"],["Node 2 (Follower)","10.0.1.101","Auth, KeyCore, Audit, Policy"],["Node 3 (Follower)","10.0.1.102","Auth, KeyCore, Audit, Payment, EKM"]].map(([n,ip,svcs])=>
+      <Card key={n} style={{marginBottom:6}}><div style={{fontSize:12,color:C.text,fontWeight:600}}>{n}</div><div style={{fontSize:10,color:C.dim,fontFamily:"monospace"}}>{ip}</div><div style={{fontSize:9,color:C.muted,marginTop:4}}>{svcs}</div></Card>)}
+  </Section>
+</div>;
+
+const Approvals=()=><div><Section title="Pending Approvals"><div style={{fontSize:10,color:C.dim}}>Governance approval queue with approve/deny actions...</div></Section></div>;
+
+const Alerts=()=>{const [m,sM]=useState(null);return <div>
+  <div style={{display:"flex",gap:12,marginBottom:14}}>
+    <Stat l="Open" v="19" s="2 critical" c="red" i="🔴"/><Stat l="Today" v="13,213" s="97.2% auto-resolved" c="accent" i="🔔"/>
+    <Stat l="Avg Response" v="4.2m" c="green" i="⏱"/><Stat l="Channels" v="5" s="Email, SIEM, PD, Slack, WH" c="blue" i="📡"/>
+  </div>
+  <Section title="Alert Rules" actions={<Btn small onClick={()=>sM("rule")}>+ Create Alert Rule</Btn>}>
+    <div style={{fontSize:10,color:C.dim}}>Alert feed with severity badges...</div>
+  </Section>
+  <Modal open={m==="rule"} onClose={()=>sM(null)} title="Create Custom Alert Rule" wide>
+    <FG label="Rule Name" required><Inp placeholder="bulk-decrypt-alert"/></FG>
+    <FG label="Condition" required hint="Expression evaluated against every audit event">
+      <Txt placeholder='event.action == "key.decrypt" AND event.details.batch_size > 1000' rows={2} mono/>
+    </FG>
+    <FG label="Severity"><Sel><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></Sel></FG>
+    <FG label="Alert Title Template"><Inp placeholder="Bulk decryption: {event.details.batch_size} items"/></FG>
+    <FG label="Notification Channels"><Chk label="Email" checked={true}/><Chk label="SIEM" checked={true}/><Chk label="PagerDuty" checked={false}/><Chk label="Slack" checked={false}/><Chk label="Webhook" checked={false}/></FG>
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Create Rule</Btn></div>
+  </Modal>
+</div>;};
+
+const AuditLog=()=><div>
+  <div style={{display:"flex",gap:6,marginBottom:10}}><Inp placeholder="Search audit events..." w={240}/>
+    <Sel w={120}><option>All Services</option><option>kms-keycore</option><option>kms-auth</option><option>kms-payment</option><option>kms-pkcs11</option></Sel>
+    <Sel w={100}><option>All Results</option><option>Success</option><option>Failure</option><option>Denied</option></Sel>
+    <Sel w={100}><option>Last 24h</option><option>Last 7d</option><option>Last 30d</option></Sel>
+    <Btn small>Export CSV</Btn><Btn small>Export CEF</Btn><Btn small primary>Verify Chain ✓</Btn>
+  </div>
+  <div style={{fontSize:10,color:C.green}}>■ 250+ event types • Hash chain: ✅ Intact • Fail-closed: Active • Every operation → audit + alert</div>
+</div>;
+
+const Compliance=()=><div><Section title="Compliance Posture"><div style={{fontSize:10,color:C.dim}}>Framework scores and gap analysis...</div></Section></div>;
+const SBOM=()=><div><Section title="Software BOM"><div style={{fontSize:10,color:C.dim}}>SBOM/CBOM generation and CVE tracking...</div></Section></div>;
+
+const PKCS11=()=><div>
+  <Row2>
+    <Card><div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:8}}>PKCS#11 C Provider</div>
+      {[["Library","libvecta-pkcs11.so"],["Version","v2.40 / v3.0"],["Sessions","47"],["Ops/day","1.2M"]].map(([k,v])=>
+        <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"2px 0",fontSize:10}}><span style={{color:C.muted}}>{k}</span><span style={{color:C.text}}>{v}</span></div>)}
+      <Btn small primary style={{marginTop:8}}>Download SDK</Btn>
+    </Card>
+    <Card><div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:8}}>Java JCA/JCE Provider</div>
+      {[["JAR","vecta-jca-provider.jar"],["Java","11, 17, 21 LTS"],["Provider","VECTA v1.0"],["Ops/day","847K"]].map(([k,v])=>
+        <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"2px 0",fontSize:10}}><span style={{color:C.muted}}>{k}</span><span style={{color:C.text}}>{v}</span></div>)}
+      <Btn small primary style={{marginTop:8}}>Download JAR</Btn>
+    </Card>
+  </Row2>
+</div>;
+
+const Admin=()=>{const [m,sM]=useState(null);return <div>
+  <Section title="System Administration" actions={<Btn small onClick={()=>sM("tls")}>🔒 Configure Web TLS</Btn>}>
+    <Row3>
+      <Card onClick={()=>sM("network")}><div style={{fontSize:11,color:C.text,fontWeight:600}}>🌐 Network</div><div style={{fontSize:10,color:C.dim}}>IP, DNS, NTP, TLS</div></Card>
+      <Card onClick={()=>sM("backup")}><div style={{fontSize:11,color:C.text,fontWeight:600}}>💾 Backup</div><div style={{fontSize:10,color:C.dim}}>Scheduled backups</div></Card>
+      <Card onClick={()=>sM("license")}><div style={{fontSize:11,color:C.text,fontWeight:600}}>📄 License</div><div style={{fontSize:10,color:C.dim}}>Activation & limits</div></Card>
+    </Row3>
+  </Section>
+  <Modal open={m==="tls"} onClose={()=>sM(null)} title="Configure Web Interface TLS Certificate" wide>
+    <FG label="Certificate Source" required>
+      <Radio label="Use Vecta internal CA (auto-generated, auto-renewed)" selected={false}/>
+      <Radio label="Upload 3rd-party certificate (DigiCert, Let's Encrypt, etc.)" selected={true}/>
+      <Radio label="ACME auto-provisioning (Let's Encrypt compatible)" selected={false}/>
+    </FG>
+    <FG label="Certificate (PEM)" required><Txt placeholder="-----BEGIN CERTIFICATE-----\n..." rows={5}/></FG>
+    <FG label="Private Key (PEM)" required><Txt placeholder="-----BEGIN PRIVATE KEY-----\n..." rows={4}/></FG>
+    <FG label="CA Bundle"><Txt placeholder="Intermediate CA certificates..." rows={3}/></FG>
+    <FG label="TLS Version"><Sel><option>TLS 1.2 + TLS 1.3 (recommended)</option><option>TLS 1.3 only</option><option>TLS 1.2 only (legacy)</option></Sel></FG>
+    <FG label="Cipher Suites"><Sel><option>FIPS-approved only</option><option>Modern (AEAD only)</option><option>Compatible (includes CBC)</option></Sel></FG>
+    <Chk label="Enable OCSP stapling" checked={true}/>
+    <Chk label="Enable HSTS (HTTP Strict Transport Security)" checked={true}/>
+    <Chk label="Restart Envoy proxy after applying (required)" checked={true}/>
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Apply TLS Certificate</Btn></div>
+  </Modal>
+  <Modal open={m==="network"} onClose={()=>sM(null)} title="Network Configuration">
+    <Row2><FG label="Management IP"><Inp placeholder="10.0.1.100" mono/></FG><FG label="Cluster IP"><Inp placeholder="172.16.0.100" mono/></FG></Row2>
+    <Row2><FG label="DNS Servers"><Inp placeholder="10.0.0.2, 10.0.0.3" mono/></FG><FG label="NTP Servers"><Inp placeholder="ntp.bank.com" mono/></FG></Row2>
+    <Btn primary style={{marginTop:8}}>Apply Network Settings</Btn>
+  </Modal>
+  <Modal open={m==="backup"} onClose={()=>sM(null)} title="Backup Configuration">
+    <FG label="Backup Schedule"><Sel><option>Daily at 02:00</option><option>Every 6 hours</option><option>Weekly</option><option>Manual only</option></Sel></FG>
+    <FG label="Backup Target"><Sel><option>Local (/var/lib/vecta/backup)</option><option>S3-compatible storage</option><option>NFS mount</option></Sel></FG>
+    <FG label="Encryption"><Chk label="Encrypt backups with backup KEK" checked={true}/></FG>
+    <FG label="Retention"><Sel><option>30 days</option><option>90 days</option><option>365 days</option></Sel></FG>
+    <Btn primary style={{marginTop:8}}>Save Backup Config</Btn>
+  </Modal>
+</div>;};
+
+// ═══════════════════════════════════
+// MAIN APP WITH SIDEBAR
+// ═══════════════════════════════════
+const TABS={home:Home,keys:Keys,crypto:Crypto,vault:Vault,certs:Certs,tokenize:Tokenize,payment:Payment,byok:BYOK,hyok:HYOK,ekm:EKM,kmip:KMIP,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin};
+const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",vault:"Secret Vault",certs:"Certificates / Mini PKI",tokenize:"Tokenization • Masking • Redaction",payment:"Payment Crypto",byok:"BYOK",hyok:"HYOK",ekm:"EKM Agent Hub",kmip:"KMIP 2.1 Server",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration"};
+
+export default function VectaDashboard(){
+  const [tab,setTab]=useState("home");
+  const [collapsed,setCollapsed]=useState(false);
+  const [t,setT]=useState(new Date());
+  useEffect(()=>{const i=setInterval(()=>setT(new Date()),1000);return()=>clearInterval(i);},[]);
+  const Tab=TABS[tab]||Home;
+  return(
+    <div style={{display:"flex",height:"100vh",background:C.bg,fontFamily:"'IBM Plex Sans',-apple-system,sans-serif",color:C.text,overflow:"hidden"}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+        *::-webkit-scrollbar{width:5px;height:5px} *::-webkit-scrollbar-track{background:transparent} *::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
+      {/* SIDEBAR */}
+      <div style={{width:collapsed?56:210,background:C.sidebar,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",transition:"width .2s",flexShrink:0,overflow:"hidden"}}>
+        <div style={{padding:collapsed?"12px 8px":"12px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8,cursor:"pointer",minHeight:44}} onClick={()=>setCollapsed(!collapsed)}>
+          <div style={{width:28,height:28,borderRadius:7,background:`linear-gradient(135deg,${C.accent},${C.purple})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:C.bg,flexShrink:0}}>V</div>
+          {!collapsed&&<span style={{fontSize:13,fontWeight:700,letterSpacing:1.5,color:C.text}}>VECTA KMS</span>}
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:"6px 0"}}>
+          {NAV.map(g=><div key={g.g}>
+            {!collapsed&&<div style={{padding:"8px 14px 3px",fontSize:8,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:1.5}}>{g.g}</div>}
+            {g.items.map(it=><div key={it.id} onClick={()=>setTab(it.id)} style={{display:"flex",alignItems:"center",gap:8,padding:collapsed?"8px":"6px 14px",cursor:"pointer",background:tab===it.id?C.accentDim:"transparent",borderLeft:tab===it.id?`2px solid ${C.accent}`:"2px solid transparent",transition:"all .15s"}} title={it.label}>
+              <span style={{fontSize:collapsed?16:13,flexShrink:0,width:collapsed?"100%":"auto",textAlign:collapsed?"center":"left"}}>{it.icon}</span>
+              {!collapsed&&<span style={{fontSize:11,color:tab===it.id?C.text:C.dim,fontWeight:tab===it.id?600:400,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{it.label}</span>}
+            </div>)}
+          </div>)}
+        </div>
+      </div>
+      {/* MAIN */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 20px",height:44,borderBottom:`1px solid ${C.border}`,flexShrink:0,background:C.surface}}>
+          <span style={{fontSize:14,fontWeight:700,color:C.text,letterSpacing:-.3}}>{TITLES[tab]}</span>
+          <div style={{display:"flex",alignItems:"center",gap:12}}>
+            <B c="green" pulse>FIPS STRICT</B>
+            <span style={{fontSize:11,color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{t.toLocaleTimeString()}</span>
+            <span style={{fontSize:13,cursor:"pointer",position:"relative"}}>🔔<span style={{position:"absolute",top:-4,right:-6,background:C.red,color:C.white,fontSize:8,borderRadius:6,padding:"1px 4px",fontWeight:700}}>3</span></span>
+            <div style={{width:26,height:26,borderRadius:6,background:C.accentDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:C.accent}}>NP</div>
+          </div>
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:16}}><Tab/></div>
+      </div>
+    </div>);
+}

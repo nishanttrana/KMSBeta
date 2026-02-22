@@ -1,0 +1,746 @@
+name: vecta-kms
+
+x-kms-common-env: &kms-common-env
+  POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/vecta?sslmode=disable
+  SQLITE_FALLBACK: "false"
+  NATS_URL: nats://nats:4222
+  CONSUL_HTTP_ADDR: consul:8500
+  CONSUL_SERVICE_ADDRESS: $$HOSTNAME
+  CONSUL_HEALTH_CHECK_TYPE: tcp
+
+x-kms-service: &kms-service
+  restart: unless-stopped
+  networks:
+    - kms_net
+  depends_on:
+    postgres:
+      condition: service_healthy
+    nats:
+      condition: service_healthy
+    consul:
+      condition: service_healthy
+
+services:
+  postgres:
+    restart: unless-stopped
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: vecta
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d vecta"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - kms_net
+
+  nats:
+    restart: unless-stopped
+    image: nats:2.10-alpine
+    command: ["-js"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 4222"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - kms_net
+
+  valkey:
+    restart: unless-stopped
+    image: valkey/valkey:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - kms_net
+
+  consul:
+    restart: unless-stopped
+    image: hashicorp/consul:1.20
+    command: ["agent", "-server", "-bootstrap-expect=1", "-client=0.0.0.0", "-ui", "-config-file=/consul/config/consul.hcl"]
+    ports:
+      - "8500:8500"
+      - "8502:8502"
+      - "8600:8600/udp"
+    volumes:
+      - ./infra/consul:/consul/config
+      - consul-data:/consul/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8500/v1/status/leader | grep -q ':'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - kms_net
+
+  etcd:
+    restart: unless-stopped
+    image: quay.io/coreos/etcd:v3.5.18
+    environment:
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://0.0.0.0:2379
+    command: ["etcd"]
+    ports:
+      - "2379:2379"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 2379"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    profiles: ["clustering"]
+    networks:
+      - kms_net
+
+  envoy:
+    restart: unless-stopped
+    image: envoyproxy/envoy:v1.31-latest
+    command: ["-c", "/etc/envoy/envoy.yaml", "--service-cluster", "vecta-edge"]
+    volumes:
+      - ./infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ./infra/certs/out/envoy:/etc/envoy/certs:ro
+    ports:
+      - "80:80"
+      - "443:443"
+      - "5696:5696"
+      - "9901:9901"
+    depends_on:
+      auth:
+        condition: service_started
+      keycore:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/envoy", "--version"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    networks:
+      - kms_net
+
+  dashboard:
+    restart: unless-stopped
+    build:
+      context: ./web/dashboard
+      dockerfile: Dockerfile
+    image: vecta/dashboard:latest
+    environment:
+      DASHBOARD_IN_DOCKER: "true"
+    ports:
+      - "5173:5173"
+    depends_on:
+      auth:
+        condition: service_healthy
+      keycore:
+        condition: service_healthy
+      audit:
+        condition: service_healthy
+      policy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - kms_net
+
+  firstboot:
+    restart: unless-stopped
+    profiles: ["firstboot"]
+    build:
+      context: .
+      dockerfile: services/firstboot/Dockerfile
+    image: vecta/firstboot:latest
+    environment:
+      FIRSTBOOT_PORT: "${FIRSTBOOT_PORT:-9443}"
+      FIRSTBOOT_DEPLOYMENT_PATH: "${FIRSTBOOT_DEPLOYMENT_PATH:-/config/deployment.yaml}"
+      FIRSTBOOT_NETWORK_PATH: "${FIRSTBOOT_NETWORK_PATH:-/config/network.yaml}"
+      FIRSTBOOT_FIPS_PATH: "${FIRSTBOOT_FIPS_PATH:-/config/fips.yaml}"
+      FIRSTBOOT_FDE_PATH: "${FIRSTBOOT_FDE_PATH:-/config/fde.yaml}"
+      FIRSTBOOT_AUTH_PATH: "${FIRSTBOOT_AUTH_PATH:-/config/auth-bootstrap.yaml}"
+    ports:
+      - "9443:9443"
+    volumes:
+      - ${FIRSTBOOT_CONFIG_DIR:-./infra/deployment}:/config
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:9443/healthz | grep -q ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - kms_net
+
+  auth:
+    <<: *kms-service
+    build:
+      context: .
+      dockerfile: services/auth/Dockerfile
+    image: vecta/auth:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8001"
+      GRPC_PORT: "18001"
+      JWT_PRIVATE_KEY_PATH: /var/lib/vecta/auth/jwt_private.pem
+      SYSTEM_SERVICE_RESTART_ENABLED: ${SYSTEM_SERVICE_RESTART_ENABLED:-true}
+      AUTH_BOOTSTRAP_TENANT_ID: ${AUTH_BOOTSTRAP_TENANT_ID:-bank-alpha}
+      AUTH_BOOTSTRAP_TENANT_NAME: ${AUTH_BOOTSTRAP_TENANT_NAME:-Bank Alpha}
+      AUTH_BOOTSTRAP_ADMIN_USERNAME: ${AUTH_BOOTSTRAP_ADMIN_USERNAME:-admin}
+      AUTH_BOOTSTRAP_ADMIN_PASSWORD: ${AUTH_BOOTSTRAP_ADMIN_PASSWORD:-VectaAdmin@2026}
+      AUTH_BOOTSTRAP_ADMIN_EMAIL: ${AUTH_BOOTSTRAP_ADMIN_EMAIL:-admin@vecta.local}
+      AUTH_BOOTSTRAP_ADMIN_ROLE: ${AUTH_BOOTSTRAP_ADMIN_ROLE:-tenant-admin}
+      AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE: ${AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE:-true}
+    volumes:
+      - auth-data:/var/lib/vecta/auth
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8001:8001"
+      - "18001:18001"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18001"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  keycore:
+    <<: *kms-service
+    build:
+      context: .
+      dockerfile: services/keycore/Dockerfile
+    image: vecta/keycore:latest
+    environment:
+      <<: *kms-common-env
+      REDIS_URL: valkey:6379
+      HSM_MODE: ${HSM_MODE:-software}
+      HSM_ENDPOINT: ${HSM_ENDPOINT:-hsm-connector:18430}
+      GOVERNANCE_URL: http://governance:8050
+      HTTP_PORT: "8010"
+      GRPC_PORT: "18010"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+      consul:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    ports:
+      - "8010:8010"
+      - "18010:18010"
+    volumes:
+      - keycore-data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18010"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  audit:
+    <<: *kms-service
+    build:
+      context: .
+      dockerfile: services/audit/Dockerfile
+    image: vecta/audit:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8070"
+      GRPC_PORT: "18070"
+    ports:
+      - "8070:8070"
+      - "18070:18070"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18070"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  policy:
+    <<: *kms-service
+    build:
+      context: .
+      dockerfile: services/policy/Dockerfile
+    image: vecta/policy:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8040"
+      GRPC_PORT: "18040"
+    ports:
+      - "8040:8040"
+      - "18040:18040"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18040"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  secrets:
+    <<: *kms-service
+    profiles: ["secrets"]
+    build:
+      context: .
+      dockerfile: services/secrets/Dockerfile
+    image: vecta/secrets:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8020"
+      GRPC_PORT: "18020"
+    ports:
+      - "8020:8020"
+      - "18020:18020"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18020"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  certs:
+    <<: *kms-service
+    profiles: ["certs"]
+    build:
+      context: .
+      dockerfile: services/certs/Dockerfile
+    image: vecta/certs:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      HTTP_PORT: "8030"
+      GRPC_PORT: "18030"
+    ports:
+      - "8030:8030"
+      - "18030:18030"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18030"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  governance:
+    <<: *kms-service
+    profiles: ["governance"]
+    build:
+      context: .
+      dockerfile: services/governance/Dockerfile
+    image: vecta/governance:latest
+    environment:
+      <<: *kms-common-env
+      APP_BASE_URL: https://localhost
+      HTTP_PORT: "8050"
+      GRPC_PORT: "18050"
+    ports:
+      - "8050:8050"
+      - "18050:18050"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18050"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  cloud:
+    <<: *kms-service
+    profiles: ["cloud_byok"]
+    build:
+      context: .
+      dockerfile: services/cloud/Dockerfile
+    image: vecta/cloud:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      HTTP_PORT: "8080"
+      GRPC_PORT: "18080"
+    ports:
+      - "8080:8080"
+      - "18080:18080"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18080"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  hyok:
+    <<: *kms-service
+    profiles: ["hyok_proxy"]
+    build:
+      context: .
+      dockerfile: services/hyok/Dockerfile
+    image: vecta/hyok:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      POLICY_URL: http://policy:8040
+      GOVERNANCE_URL: http://governance:8050
+      HTTP_PORT: "8120"
+      GRPC_PORT: "18120"
+    ports:
+      - "8120:8120"
+      - "18120:18120"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18120"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  kmip:
+    <<: *kms-service
+    profiles: ["kmip_server"]
+    build:
+      context: .
+      dockerfile: services/kmip/Dockerfile
+    image: vecta/kmip:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      CERTS_URL: http://certs:8030
+      HTTP_PORT: "8160"
+      KMIP_PORT: "5696"
+      GRPC_PORT: "15696"
+      KMIP_REQUIRE_REGISTERED_CLIENT: ${KMIP_REQUIRE_REGISTERED_CLIENT:-true}
+      KMIP_TLS_CERT_FILE: /etc/vecta-certs/kmip/tls.crt
+      KMIP_TLS_KEY_FILE: /etc/vecta-certs/kmip/tls.key
+      KMIP_TLS_CLIENT_CA_FILE: /etc/vecta-certs/ca/ca.crt
+    volumes:
+      - ./infra/certs/out/kmip:/etc/vecta-certs/kmip:ro
+      - ./infra/certs/out/ca:/etc/vecta-certs/ca:ro
+    ports:
+      - "8160:8160"
+      - "15696:15696"
+    expose:
+      - "5696"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 15696"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  qkd:
+    <<: *kms-service
+    profiles: ["qkd_interface"]
+    build:
+      context: .
+      dockerfile: services/qkd/Dockerfile
+    image: vecta/qkd:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      HTTP_PORT: "8150"
+      GRPC_PORT: "18150"
+    ports:
+      - "8150:8150"
+      - "18150:18150"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18150"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  ekm:
+    <<: *kms-service
+    profiles: ["ekm_database"]
+    build:
+      context: .
+      dockerfile: services/ekm/Dockerfile
+    image: vecta/ekm:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      HTTP_PORT: "8130"
+      GRPC_PORT: "18130"
+    ports:
+      - "8130:8130"
+      - "18130:18130"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18130"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  payment:
+    <<: *kms-service
+    profiles: ["payment_crypto"]
+    build:
+      context: .
+      dockerfile: services/payment/Dockerfile
+    image: vecta/payment:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      HTTP_PORT: "8170"
+      GRPC_PORT: "18170"
+    ports:
+      - "8170:8170"
+      - "18170:18170"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18170"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  compliance:
+    <<: *kms-service
+    profiles: ["compliance_dashboard"]
+    build:
+      context: .
+      dockerfile: services/compliance/Dockerfile
+    image: vecta/compliance:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      AUDIT_URL: http://audit:8070
+      POLICY_URL: http://policy:8040
+      CERTS_URL: http://certs:8030
+      HTTP_PORT: "8110"
+      GRPC_PORT: "18110"
+    ports:
+      - "8110:8110"
+      - "18110:18110"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18110"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  sbom:
+    <<: *kms-service
+    profiles: ["sbom_cbom"]
+    build:
+      context: .
+      dockerfile: services/sbom/Dockerfile
+    image: vecta/sbom:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      CERTS_URL: http://certs:8030
+      DISCOVERY_URL: http://discovery:8100
+      SBOM_SCHEDULE: "daily"
+      CBOM_SCHEDULE: "daily"
+      CBOM_SCHEDULE_TENANTS: "${CBOM_SCHEDULE_TENANTS:-bank-alpha}"
+      HTTP_PORT: "8180"
+      GRPC_PORT: "18180"
+    ports:
+      - "8180:8180"
+      - "18180:18180"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18180"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  reporting:
+    <<: *kms-service
+    profiles: ["reporting_alerting"]
+    build:
+      context: .
+      dockerfile: services/reporting/Dockerfile
+    image: vecta/reporting:latest
+    environment:
+      <<: *kms-common-env
+      AUDIT_URL: http://audit:8070
+      COMPLIANCE_URL: http://compliance:8110
+      HTTP_PORT: "8140"
+      GRPC_PORT: "18140"
+    ports:
+      - "8140:8140"
+      - "18140:18140"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18140"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  ai:
+    <<: *kms-service
+    profiles: ["ai_llm"]
+    build:
+      context: .
+      dockerfile: services/ai/Dockerfile
+    image: vecta/ai:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      POLICY_URL: http://policy:8040
+      AUDIT_URL: http://audit:8070
+      COMPLIANCE_URL: http://compliance:8110
+      REPORTING_URL: http://reporting:8140
+      SECRETS_URL: http://secrets:8020
+      HTTP_PORT: "8090"
+      GRPC_PORT: "18090"
+    ports:
+      - "8090:8090"
+      - "18090:18090"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18090"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  pqc:
+    <<: *kms-service
+    profiles: ["pqc_migration"]
+    build:
+      context: .
+      dockerfile: services/pqc/Dockerfile
+    image: vecta/pqc:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      DISCOVERY_URL: http://discovery:8100
+      HTTP_PORT: "8060"
+      GRPC_PORT: "18060"
+    ports:
+      - "8060:8060"
+      - "18060:18060"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18060"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  discovery:
+    <<: *kms-service
+    profiles: ["crypto_discovery"]
+    build:
+      context: .
+      dockerfile: services/discovery/Dockerfile
+    image: vecta/discovery:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      CERTS_URL: http://certs:8030
+      HTTP_PORT: "8100"
+      GRPC_PORT: "18100"
+    ports:
+      - "8100:8100"
+      - "18100:18100"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18100"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  mpc:
+    <<: *kms-service
+    profiles: ["mpc_engine"]
+    build:
+      context: .
+      dockerfile: services/mpc/Dockerfile
+    image: vecta/mpc:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      CLUSTER_URL: http://cluster-manager:8210
+      HTTP_PORT: "8190"
+      GRPC_PORT: "18190"
+    ports:
+      - "8190:8190"
+      - "18190:18190"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18190"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  dataprotect:
+    <<: *kms-service
+    profiles: ["data_protection"]
+    build:
+      context: .
+      dockerfile: services/dataprotect/Dockerfile
+    image: vecta/dataprotect:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      HTTP_PORT: "8200"
+      GRPC_PORT: "18200"
+    ports:
+      - "8200:8200"
+      - "18200:18200"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18200"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  cluster-manager:
+    <<: *kms-service
+    profiles: ["clustering"]
+    image: vecta/cluster:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8210"
+      GRPC_PORT: "18210"
+    ports:
+      - "8210:8210"
+      - "18210:18210"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18210"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  hsm-connector:
+    <<: *kms-service
+    profiles: ["hsm_hardware"]
+    image: vecta/hsm-connector:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8430"
+      GRPC_PORT: "18430"
+    ports:
+      - "8430:8430"
+      - "18430:18430"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18430"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  software-vault:
+    <<: *kms-service
+    profiles: ["hsm_software"]
+    build:
+      context: .
+      dockerfile: services/software-vault/Dockerfile
+    image: vecta/software-vault:latest
+    environment:
+      <<: *kms-common-env
+      HSM_PROVIDER: ${HSM_PROVIDER:-software}
+      SOFTWARE_VAULT_PASSPHRASE: ${SOFTWARE_VAULT_PASSPHRASE:-vecta-dev-passphrase}
+      SOFTWARE_VAULT_MLOCK_REQUIRED: ${SOFTWARE_VAULT_MLOCK_REQUIRED:-false}
+      THALES_ENDPOINT: ${THALES_ENDPOINT:-}
+      THALES_PARTITION: ${THALES_PARTITION:-}
+      THALES_SLOT_LABEL: ${THALES_SLOT_LABEL:-}
+      VECTA_ENDPOINT: ${VECTA_ENDPOINT:-}
+      VECTA_PROJECT_ID: ${VECTA_PROJECT_ID:-}
+      VECTA_KEY_DOMAIN: ${VECTA_KEY_DOMAIN:-}
+      HTTP_PORT: "8440"
+      GRPC_PORT: "18440"
+    ports:
+      - "8440:8440"
+      - "18440:18440"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18440"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+networks:
+  kms_net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  consul-data:
+  auth-data:
+  keycore-data:
