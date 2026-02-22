@@ -89,6 +89,18 @@ func main() {
 		envBool("CERTS_KEYCORE_FAIL_CLOSED", true),
 	)
 	go func() {
+		migrateCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		n, err := svc.RewrapLegacyCASigners(migrateCtx)
+		if err != nil {
+			logger.Printf("legacy signer rewrap warning: %v", err)
+			return
+		}
+		if n > 0 {
+			logger.Printf("legacy signer rewrap completed: %d ca signer keys migrated to %s/%s", n, rootCfg.StorageMode, rootCfg.RootKeyMode)
+		}
+	}()
+	go func() {
 		ticker := time.NewTicker(2 * time.Minute)
 		defer ticker.Stop()
 		_ = svc.RunExpiryAlertSweep(context.Background())

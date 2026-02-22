@@ -2149,6 +2149,68 @@ func (s *Service) SecurityStatus() CertRootKeyStatus {
 	return status
 }
 
+func (s *Service) RewrapLegacyCASigners(ctx context.Context) (int, error) {
+	if s.securityProvider == nil || s.certStorageMode != "db_encrypted" {
+		return 0, nil
+	}
+	status := s.securityProvider.Status()
+	if !status.Ready {
+		return 0, nil
+	}
+
+	tenants, err := s.store.ListTenants(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	rewrapped := 0
+	for _, tenantID := range tenants {
+		tenantID = strings.TrimSpace(tenantID)
+		if tenantID == "" {
+			continue
+		}
+		cas, listErr := s.store.ListCAs(ctx, tenantID)
+		if listErr != nil {
+			return rewrapped, listErr
+		}
+		for _, ca := range cas {
+			if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(ca.SignerKeyVersion)), "legacy") {
+				continue
+			}
+			if len(ca.SignerCiphertext) == 0 {
+				continue
+			}
+			raw, decErr := s.decryptSigner(ca)
+			if decErr != nil {
+				return rewrapped, fmt.Errorf("decrypt legacy signer for ca %s failed: %w", ca.ID, decErr)
+			}
+			enc, encErr := s.encryptSigner(raw)
+			pkgcrypto.Zeroize(raw)
+			if encErr != nil {
+				return rewrapped, fmt.Errorf("encrypt signer for ca %s failed: %w", ca.ID, encErr)
+			}
+			if strings.HasPrefix(strings.ToLower(strings.TrimSpace(enc.KeyVersion)), "legacy") {
+				return rewrapped, fmt.Errorf("refusing legacy rewrap output for ca %s", ca.ID)
+			}
+			if updErr := s.store.UpdateCASignerEncryption(ctx, tenantID, ca.ID, enc); updErr != nil {
+				return rewrapped, fmt.Errorf("persist rewrapped signer for ca %s failed: %w", ca.ID, updErr)
+			}
+			rewrapped++
+			_ = s.publishAudit(ctx, "audit.cert.ca_signer_rewrapped", tenantID, map[string]interface{}{
+				"ca_id":              ca.ID,
+				"from_version":       defaultString(ca.SignerKeyVersion, "legacy-v1"),
+				"to_version":         enc.KeyVersion,
+				"fingerprint_sha256": enc.Fingerprint,
+				"storage_mode":       s.certStorageMode,
+				"root_key_mode":      s.rootKeyMode,
+				"security_ready":     status.Ready,
+				"security_state":     status.State,
+			})
+		}
+	}
+	return rewrapped, nil
+}
+
 func (s *Service) signWithKeyCoreIfConfigured(ctx context.Context, tenantID string, keyBackend string, keyRef string, payload []byte) ([]byte, error) {
 	backend := normalizeKeyBackend(keyBackend)
 	if backend != "keycore" && backend != "hsm" {

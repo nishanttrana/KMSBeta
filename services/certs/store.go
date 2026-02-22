@@ -19,6 +19,7 @@ type Store interface {
 	CreateCA(ctx context.Context, ca CA) error
 	GetCA(ctx context.Context, tenantID string, caID string) (CA, error)
 	ListCAs(ctx context.Context, tenantID string) ([]CA, error)
+	UpdateCASignerEncryption(ctx context.Context, tenantID string, caID string, enc EncryptedSigner) error
 	ReserveOTSIndex(ctx context.Context, tenantID string, caID string) (int64, error)
 
 	CreateProfile(ctx context.Context, profile CertificateProfile) error
@@ -144,6 +145,28 @@ ORDER BY created_at ASC
 		out = append(out, ca)
 	}
 	return out, rows.Err()
+}
+
+func (s *SQLStore) UpdateCASignerEncryption(ctx context.Context, tenantID string, caID string, enc EncryptedSigner) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE cert_cas
+SET signer_wrapped_dek = $1,
+    signer_wrapped_dek_iv = $2,
+    signer_ciphertext = $3,
+    signer_data_iv = $4,
+    signer_kek_version = $5,
+    signer_fingerprint_sha256 = $6,
+    updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $7 AND id = $8
+`, enc.WrappedDEK, enc.WrappedDEKIV, enc.Ciphertext, enc.DataIV, defaultString(enc.KeyVersion, "legacy-v1"), enc.Fingerprint, tenantID, caID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errStoreNotFound
+	}
+	return nil
 }
 
 func (s *SQLStore) CreateProfile(ctx context.Context, profile CertificateProfile) error {
