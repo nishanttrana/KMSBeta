@@ -35,6 +35,8 @@ type CA struct {
 	SignerWrappedDEKIV []byte `json:"-"`
 	SignerCiphertext   []byte `json:"-"`
 	SignerDataIV       []byte `json:"-"`
+	SignerKeyVersion   string `json:"-"`
+	SignerFingerprint  string `json:"-"`
 }
 
 type Certificate struct {
@@ -77,6 +79,8 @@ type EncryptedSigner struct {
 	WrappedDEKIV []byte
 	Ciphertext   []byte
 	DataIV       []byte
+	KeyVersion   string
+	Fingerprint  string
 }
 
 type IssueCertificateRequest struct {

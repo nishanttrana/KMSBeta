@@ -54,23 +54,49 @@ type Service struct {
 	events            EventPublisher
 	keycore           KeyCoreSigner
 	mek               []byte
+	securityProvider  certRootKeyProvider
+	certStorageMode   string
+	rootKeyMode       string
+	securityInitError string
 	fipsStrict        bool
 	keycoreFailClosed bool
 }
 
 func NewService(store Store, events EventPublisher, keycore KeyCoreSigner, mek []byte, fipsStrict bool, keycoreFailClosed bool) *Service {
+	cfg := ServiceSecurityConfig{
+		CertStorageMode: "legacy",
+		RootKeyMode:     "legacy",
+		LegacyMEK:       mek,
+	}
+	return NewServiceWithSecurity(store, events, keycore, cfg, fipsStrict, keycoreFailClosed)
+}
+
+type ServiceSecurityConfig struct {
+	CertStorageMode string
+	RootKeyMode     string
+	RootProvider    certRootKeyProvider
+	SecurityErr     string
+	LegacyMEK       []byte
+}
+
+func NewServiceWithSecurity(store Store, events EventPublisher, keycore KeyCoreSigner, sec ServiceSecurityConfig, fipsStrict bool, keycoreFailClosed bool) *Service {
 	if keycore == nil {
 		keycore = NoopKeyCoreSigner{}
 	}
-	if len(mek) < 32 {
+	legacyMEK := sec.LegacyMEK
+	if len(legacyMEK) < 32 {
 		sum := sha256.Sum256([]byte("vecta-certs-dev-mek"))
-		mek = sum[:]
+		legacyMEK = sum[:]
 	}
 	return &Service{
 		store:             store,
 		events:            events,
 		keycore:           keycore,
-		mek:               append([]byte{}, mek[:32]...),
+		mek:               append([]byte{}, legacyMEK[:32]...),
+		securityProvider:  sec.RootProvider,
+		certStorageMode:   normalizeStorageMode(sec.CertStorageMode),
+		rootKeyMode:       normalizeRootKeyMode(sec.RootKeyMode),
+		securityInitError: strings.TrimSpace(sec.SecurityErr),
 		fipsStrict:        fipsStrict,
 		keycoreFailClosed: keycoreFailClosed,
 	}
@@ -194,6 +220,8 @@ func (s *Service) CreateCA(ctx context.Context, req CreateCARequest) (CA, error)
 		SignerWrappedDEKIV: encSigner.WrappedDEKIV,
 		SignerCiphertext:   encSigner.Ciphertext,
 		SignerDataIV:       encSigner.DataIV,
+		SignerKeyVersion:   encSigner.KeyVersion,
+		SignerFingerprint:  encSigner.Fingerprint,
 	}
 	if err := s.store.CreateCA(ctx, ca); err != nil {
 		return CA{}, err
@@ -2012,19 +2040,59 @@ func (s *Service) loadCASigner(ca CA) (crypto.Signer, error) {
 }
 
 func (s *Service) encryptSigner(raw []byte) (EncryptedSigner, error) {
-	env, err := pkgcrypto.EncryptEnvelope(s.mek, raw)
+	fingerprint := signerFingerprint(raw)
+	if s.securityProvider == nil || s.certStorageMode != "db_encrypted" {
+		env, err := pkgcrypto.EncryptEnvelope(s.mek, raw)
+		if err != nil {
+			return EncryptedSigner{}, err
+		}
+		return EncryptedSigner{
+			WrappedDEK:   env.WrappedDEK,
+			WrappedDEKIV: env.WrappedDEKIV,
+			Ciphertext:   env.Ciphertext,
+			DataIV:       env.DataIV,
+			KeyVersion:   "legacy-v1",
+			Fingerprint:  fingerprint,
+		}, nil
+	}
+
+	dek := make([]byte, 32)
+	if _, err := rand.Read(dek); err != nil {
+		return EncryptedSigner{}, err
+	}
+	defer pkgcrypto.Zeroize(dek)
+	ciphertext, dataIV, err := aesGCMEncryptRaw(dek, raw)
 	if err != nil {
 		return EncryptedSigner{}, err
 	}
+	wrapped, wrappedIV, keyVersion, err := s.securityProvider.WrapDEK(context.Background(), dek)
+	if err != nil {
+		return EncryptedSigner{}, err
+	}
+	if strings.TrimSpace(keyVersion) == "" {
+		keyVersion = "crwk-v1"
+	}
 	return EncryptedSigner{
-		WrappedDEK:   env.WrappedDEK,
-		WrappedDEKIV: env.WrappedDEKIV,
-		Ciphertext:   env.Ciphertext,
-		DataIV:       env.DataIV,
+		WrappedDEK:   wrapped,
+		WrappedDEKIV: wrappedIV,
+		Ciphertext:   ciphertext,
+		DataIV:       dataIV,
+		KeyVersion:   keyVersion,
+		Fingerprint:  fingerprint,
 	}, nil
 }
 
 func (s *Service) decryptSigner(ca CA) ([]byte, error) {
+	if s.securityProvider != nil && s.certStorageMode == "db_encrypted" && !strings.HasPrefix(strings.ToLower(strings.TrimSpace(ca.SignerKeyVersion)), "legacy") {
+		dek, err := s.securityProvider.UnwrapDEK(context.Background(), ca.SignerWrappedDEK, ca.SignerWrappedDEKIV, ca.SignerKeyVersion)
+		if err == nil {
+			defer pkgcrypto.Zeroize(dek)
+			return aesGCMDecryptRaw(dek, ca.SignerCiphertext, ca.SignerDataIV)
+		}
+		if len(s.mek) == 0 {
+			return nil, err
+		}
+	}
 	return pkgcrypto.DecryptEnvelope(s.mek, &pkgcrypto.EnvelopeCiphertext{
 		WrappedDEK:   ca.SignerWrappedDEK,
 		WrappedDEKIV: ca.SignerWrappedDEKIV,
@@ -2057,6 +2125,28 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 		return err
 	}
 	return s.events.Publish(ctx, subject, raw)
+}
+
+func (s *Service) SecurityStatus() CertRootKeyStatus {
+	status := CertRootKeyStatus{
+		StorageMode: s.certStorageMode,
+		RootKeyMode: s.rootKeyMode,
+		Ready:       false,
+		State:       "legacy",
+	}
+	if s.securityProvider != nil {
+		status = s.securityProvider.Status()
+		if strings.TrimSpace(status.StorageMode) == "" {
+			status.StorageMode = s.certStorageMode
+		}
+		if strings.TrimSpace(status.RootKeyMode) == "" {
+			status.RootKeyMode = s.rootKeyMode
+		}
+	}
+	if strings.TrimSpace(s.securityInitError) != "" && strings.TrimSpace(status.LastError) == "" {
+		status.LastError = s.securityInitError
+	}
+	return status
 }
 
 func (s *Service) signWithKeyCoreIfConfigured(ctx context.Context, tenantID string, keyBackend string, keyRef string, payload []byte) ([]byte, error) {

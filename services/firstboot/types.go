@@ -12,14 +12,24 @@ type WizardMetadata struct {
 }
 
 type WizardSpec struct {
-	HSMMode  string          `json:"hsm_mode"`
-	FDE      FDEConfig       `json:"fde"`
-	FIPS     FIPSModeConfig  `json:"fips"`
-	Network  NetworkConfig   `json:"network"`
-	Features FeatureConfig   `json:"features"`
-	License  LicenseConfig   `json:"license"`
-	Admin    AdminBootstrap  `json:"admin"`
-	Timing   WizardApplyPlan `json:"timing"`
+	HSMMode      string             `json:"hsm_mode"`
+	CertSecurity CertSecurityConfig `json:"cert_security"`
+	FDE          FDEConfig          `json:"fde"`
+	FIPS         FIPSModeConfig     `json:"fips"`
+	Network      NetworkConfig      `json:"network"`
+	Features     FeatureConfig      `json:"features"`
+	License      LicenseConfig      `json:"license"`
+	Admin        AdminBootstrap     `json:"admin"`
+	Timing       WizardApplyPlan    `json:"timing"`
+}
+
+type CertSecurityConfig struct {
+	CertStorageMode     string `json:"cert_storage_mode"`
+	RootKeyMode         string `json:"root_key_mode"`
+	BootstrapPassphrase string `json:"bootstrap_passphrase,omitempty"`
+	UseTPMSeal          bool   `json:"use_tpm_seal"`
+	SealedKeyPath       string `json:"sealed_key_path,omitempty"`
+	PassphraseFilePath  string `json:"passphrase_file_path,omitempty"`
 }
 
 type FDEConfig struct {
@@ -150,6 +160,7 @@ type GeneratedConfigs struct {
 	FIPSYAML       []byte            `json:"-"`
 	FDEYAML        []byte            `json:"-"`
 	AuthYAML       []byte            `json:"-"`
+	CertBootstrap  []byte            `json:"-"`
 	RecoveryShares []RecoveryShare   `json:"recovery_shares,omitempty"`
 	GeneratedAt    time.Time         `json:"generated_at"`
 	Warnings       []string          `json:"warnings,omitempty"`

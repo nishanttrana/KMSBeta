@@ -101,6 +101,18 @@ export type CertExpiryAlertPolicy = {
   updated_at?: string;
 };
 
+export type CertSecurityStatus = {
+  storage_mode: string;
+  root_key_mode: string;
+  ready: boolean;
+  state: string;
+  key_version?: string;
+  sealed_path?: string;
+  use_tpm_seal?: boolean;
+  mlock_status?: string;
+  last_error?: string;
+};
+
 export type ProtocolSchema = {
   protocol: "acme" | "est" | "scep" | "cmpv2";
   title: string;
@@ -118,6 +130,7 @@ type InventoryResponse = { items: InventoryCertificateItem[] };
 type ProtocolsResponse = { items: ProtocolConfig[] };
 type ProtocolSchemasResponse = { items: ProtocolSchema[] };
 type AlertPolicyResponse = { policy: CertExpiryAlertPolicy };
+type CertSecurityStatusResponse = { status: CertSecurityStatus };
 type CAResponse = { ca: CertCA };
 type CertResponse = { certificate: CertificateItem; private_key_pem?: string };
 type ConfigResponse = { config: ProtocolConfig };
@@ -405,6 +418,20 @@ export async function listProfiles(session: AuthSession): Promise<CertificatePro
 export async function listInventory(session: AuthSession): Promise<InventoryCertificateItem[]> {
   const out = await serviceRequest<InventoryResponse>(session, "certs", `/certs/inventory?${tenantQuery(session)}`);
   return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getCertSecurityStatus(session: AuthSession): Promise<CertSecurityStatus> {
+  const out = await serviceRequest<CertSecurityStatusResponse>(
+    session,
+    "certs",
+    `/certs/security/status?${tenantQuery(session)}`
+  );
+  return out?.status || {
+    storage_mode: "unknown",
+    root_key_mode: "unknown",
+    ready: false,
+    state: "unknown"
+  };
 }
 
 export async function getCertExpiryAlertPolicy(session: AuthSession): Promise<CertExpiryAlertPolicy> {

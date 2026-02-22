@@ -29,6 +29,12 @@ spec:
         sbom_cbom: true
         secrets: true
     hsm_mode: software
+    cert_security:
+        cert_storage_mode: db_encrypted
+        root_key_mode: software
+        sealed_key_path: /var/lib/vecta/certs/crwk.sealed
+        passphrase_file_path: /etc/vecta/certs-bootstrap.secret
+        use_tpm_seal: false
     license:
         activated_at: "2026-02-19T16:06:36Z"
         features_allowed:

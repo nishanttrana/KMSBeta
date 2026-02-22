@@ -89,17 +89,17 @@ func (s *SQLStore) CreateCA(ctx context.Context, ca CA) error {
 INSERT INTO cert_cas (
 	id, tenant_id, name, parent_ca_id, ca_level, algorithm, ca_type, key_backend, key_ref,
 	cert_pem, subject, status, ots_current, ots_max, ots_alert_threshold,
-	signer_wrapped_dek, signer_wrapped_dek_iv, signer_ciphertext, signer_data_iv,
+	signer_wrapped_dek, signer_wrapped_dek_iv, signer_ciphertext, signer_data_iv, signer_kek_version, signer_fingerprint_sha256,
 	created_at, updated_at
 ) VALUES (
 	$1,$2,$3,$4,$5,$6,$7,$8,$9,
 	$10,$11,$12,$13,$14,$15,
-	$16,$17,$18,$19,
+	$16,$17,$18,$19,$20,$21,
 	CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
 )
 `, ca.ID, ca.TenantID, ca.Name, nullableString(ca.ParentCAID), ca.CALevel, ca.Algorithm, ca.CAType, ca.KeyBackend, ca.KeyRef,
 		ca.CertPEM, ca.Subject, ca.Status, ca.OTSCurrent, ca.OTSMax, ca.OTSAlertThreshold,
-		ca.SignerWrappedDEK, ca.SignerWrappedDEKIV, ca.SignerCiphertext, ca.SignerDataIV)
+		ca.SignerWrappedDEK, ca.SignerWrappedDEKIV, ca.SignerCiphertext, ca.SignerDataIV, defaultString(ca.SignerKeyVersion, "legacy-v1"), ca.SignerFingerprint)
 	return err
 }
 
@@ -108,6 +108,7 @@ func (s *SQLStore) GetCA(ctx context.Context, tenantID string, caID string) (CA,
 SELECT id, tenant_id, name, COALESCE(parent_ca_id,''), ca_level, algorithm, ca_type, key_backend, key_ref,
 	   cert_pem, subject, status, ots_current, ots_max, ots_alert_threshold,
 	   signer_wrapped_dek, signer_wrapped_dek_iv, signer_ciphertext, signer_data_iv,
+	   COALESCE(signer_kek_version,'legacy-v1'), COALESCE(signer_fingerprint_sha256,''),
 	   created_at, updated_at
 FROM cert_cas
 WHERE tenant_id = $1 AND id = $2
@@ -124,6 +125,7 @@ func (s *SQLStore) ListCAs(ctx context.Context, tenantID string) ([]CA, error) {
 SELECT id, tenant_id, name, COALESCE(parent_ca_id,''), ca_level, algorithm, ca_type, key_backend, key_ref,
 	   cert_pem, subject, status, ots_current, ots_max, ots_alert_threshold,
 	   signer_wrapped_dek, signer_wrapped_dek_iv, signer_ciphertext, signer_data_iv,
+	   COALESCE(signer_kek_version,'legacy-v1'), COALESCE(signer_fingerprint_sha256,''),
 	   created_at, updated_at
 FROM cert_cas
 WHERE tenant_id = $1
@@ -543,8 +545,8 @@ FROM cert_expiry_alert_policies
 WHERE tenant_id = $1
 `, tenantID)
 	var (
-		item        CertExpiryAlertPolicy
-		includeRaw  interface{}
+		item         CertExpiryAlertPolicy
+		includeRaw   interface{}
 		updatedAtRaw interface{}
 	)
 	if err := row.Scan(
@@ -594,7 +596,7 @@ WHERE tenant_id = $1
 	out := make([]CertExpiryAlertState, 0)
 	for rows.Next() {
 		var (
-			item          CertExpiryAlertState
+			item         CertExpiryAlertState
 			updatedAtRaw interface{}
 		)
 		if err := rows.Scan(&item.TenantID, &item.CertID, &item.LastDaysLeft, &updatedAtRaw); err != nil {
@@ -705,6 +707,7 @@ func scanCA(scanner interface {
 		&ca.ID, &ca.TenantID, &ca.Name, &ca.ParentCAID, &ca.CALevel, &ca.Algorithm, &ca.CAType, &ca.KeyBackend, &ca.KeyRef,
 		&ca.CertPEM, &ca.Subject, &ca.Status, &ca.OTSCurrent, &ca.OTSMax, &ca.OTSAlertThreshold,
 		&ca.SignerWrappedDEK, &ca.SignerWrappedDEKIV, &ca.SignerCiphertext, &ca.SignerDataIV,
+		&ca.SignerKeyVersion, &ca.SignerFingerprint,
 		&createdRaw, &updatedRaw,
 	)
 	if err != nil {

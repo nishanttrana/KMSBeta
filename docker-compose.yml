@@ -316,8 +316,20 @@ services:
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
+      CERTS_STORAGE_MODE: ${CERTS_STORAGE_MODE:-db_encrypted}
+      CERTS_ROOT_KEY_MODE: ${CERTS_ROOT_KEY_MODE:-software}
+      CERTS_CRWK_SEALED_PATH: ${CERTS_CRWK_SEALED_PATH:-/var/lib/vecta/certs/crwk.sealed}
+      CERTS_CRWK_BOOTSTRAP_PASSPHRASE: ${CERTS_CRWK_BOOTSTRAP_PASSPHRASE:-}
+      CERTS_CRWK_PASSPHRASE_FILE: ${CERTS_CRWK_PASSPHRASE_FILE:-}
+      CERTS_CRWK_ARGON_MEMORY_KB: ${CERTS_CRWK_ARGON_MEMORY_KB:-131072}
+      CERTS_CRWK_ARGON_ITERATIONS: ${CERTS_CRWK_ARGON_ITERATIONS:-4}
+      CERTS_CRWK_ARGON_PARALLEL: ${CERTS_CRWK_ARGON_PARALLEL:-2}
+      CERTS_CRWK_MLOCK_REQUIRED: ${CERTS_CRWK_MLOCK_REQUIRED:-false}
+      CERTS_CRWK_USE_TPM_SEAL: ${CERTS_CRWK_USE_TPM_SEAL:-false}
       HTTP_PORT: "8030"
       GRPC_PORT: "18030"
+    volumes:
+      - certs-key-data:/var/lib/vecta/certs
     ports:
       - "8030:8030"
       - "18030:18030"
@@ -744,3 +756,4 @@ volumes:
   consul-data:
   auth-data:
   keycore-data:
+  certs-key-data:

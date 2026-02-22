@@ -51,6 +51,25 @@ fi
 
 wait_docker 90
 
+extract_cert_security_field() {
+  local key="$1"
+  awk -v wanted="${key}" '
+    BEGIN { in_cert=0 }
+    /^[[:space:]]*cert_security:[[:space:]]*$/ { in_cert=1; next }
+    in_cert == 1 {
+      if ($0 !~ /^[[:space:]]{4,}/) { in_cert=0; next }
+      if ($0 ~ "^[[:space:]]{4,}" wanted ":[[:space:]]*") {
+        line=$0
+        gsub("#.*$", "", line)
+        sub("^[^:]*:[[:space:]]*", "", line)
+        gsub(/[[:space:]]+$/, "", line)
+        print line
+        exit
+      }
+    }
+  ' "${DEPLOYMENT_FILE}" 2>/dev/null || true
+}
+
 if [[ ! -f "${ENVOY_CERT}" || ! -f "${ENVOY_KEY}" ]]; then
   if command -v openssl >/dev/null 2>&1; then
     bash "${CERT_SCRIPT}" "${CERTS_OUT_DIR}"
@@ -89,6 +108,30 @@ if [[ -z "${HSM_ENDPOINT:-}" ]]; then
       export HSM_ENDPOINT="hsm-connector:18430"
       ;;
   esac
+fi
+
+CERTS_STORAGE_MODE_CFG="$(extract_cert_security_field cert_storage_mode)"
+CERTS_ROOT_KEY_MODE_CFG="$(extract_cert_security_field root_key_mode)"
+CERTS_CRWK_SEALED_PATH_CFG="$(extract_cert_security_field sealed_key_path)"
+CERTS_CRWK_PASSPHRASE_FILE_CFG="$(extract_cert_security_field passphrase_file_path)"
+CERTS_CRWK_USE_TPM_SEAL_CFG="$(extract_cert_security_field use_tpm_seal)"
+
+if [[ -n "${CERTS_STORAGE_MODE_CFG}" ]]; then
+  export CERTS_STORAGE_MODE="${CERTS_STORAGE_MODE_CFG}"
+fi
+if [[ -n "${CERTS_ROOT_KEY_MODE_CFG}" ]]; then
+  export CERTS_ROOT_KEY_MODE="${CERTS_ROOT_KEY_MODE_CFG}"
+fi
+if [[ -n "${CERTS_CRWK_SEALED_PATH_CFG}" ]]; then
+  export CERTS_CRWK_SEALED_PATH="${CERTS_CRWK_SEALED_PATH_CFG}"
+fi
+if [[ -n "${CERTS_CRWK_PASSPHRASE_FILE_CFG}" ]]; then
+  export CERTS_CRWK_PASSPHRASE_FILE="${CERTS_CRWK_PASSPHRASE_FILE_CFG}"
+elif [[ -f "/etc/vecta/certs-bootstrap.secret" ]]; then
+  export CERTS_CRWK_PASSPHRASE_FILE="/etc/vecta/certs-bootstrap.secret"
+fi
+if [[ -n "${CERTS_CRWK_USE_TPM_SEAL_CFG}" ]]; then
+  export CERTS_CRWK_USE_TPM_SEAL="${CERTS_CRWK_USE_TPM_SEAL_CFG}"
 fi
 
 echo "starting KMS with COMPOSE_PROFILES=${COMPOSE_PROFILES}"

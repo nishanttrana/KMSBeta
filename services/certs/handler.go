@@ -55,6 +55,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /certs/ocsp", h.handleOCSP)
 	mux.HandleFunc("POST /certs/ocsp", h.handleOCSP)
 	mux.HandleFunc("GET /certs/inventory", h.handleInventory)
+	mux.HandleFunc("GET /certs/security/status", h.handleSecurityStatus)
 	mux.HandleFunc("GET /certs/alert-policy", h.handleGetAlertPolicy)
 	mux.HandleFunc("PUT /certs/alert-policy", h.handleUpsertAlertPolicy)
 	mux.HandleFunc("GET /certs/protocols", h.handleListProtocolConfigs)
@@ -476,6 +477,14 @@ func (h *Handler) handleInventory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleSecurityStatus(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":     h.svc.SecurityStatus(),
+		"request_id": reqID,
+	})
 }
 
 func (h *Handler) handleGetAlertPolicy(w http.ResponseWriter, r *http.Request) {

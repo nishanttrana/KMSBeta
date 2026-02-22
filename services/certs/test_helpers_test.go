@@ -40,7 +40,8 @@ func createCertsSchemaForTest(conn *pkgdb.DB) error {
 			key_ref TEXT NOT NULL DEFAULT '', cert_pem TEXT NOT NULL, subject TEXT NOT NULL DEFAULT '',
 			status TEXT NOT NULL DEFAULT 'active', ots_current INTEGER NOT NULL DEFAULT 0, ots_max INTEGER NOT NULL DEFAULT 0,
 			ots_alert_threshold INTEGER NOT NULL DEFAULT 0, signer_wrapped_dek BLOB NOT NULL, signer_wrapped_dek_iv BLOB NOT NULL,
-			signer_ciphertext BLOB NOT NULL, signer_data_iv BLOB NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			signer_ciphertext BLOB NOT NULL, signer_data_iv BLOB NOT NULL, signer_kek_version TEXT NOT NULL DEFAULT 'legacy-v1',
+			signer_fingerprint_sha256 TEXT NOT NULL DEFAULT '', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id), UNIQUE (tenant_id, name)
 		);`,
 		`CREATE TABLE cert_profiles (

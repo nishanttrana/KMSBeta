@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -17,11 +18,13 @@ import (
 )
 
 const (
-	defaultDeploymentPath = "/etc/vecta/deployment.yaml"
-	defaultNetworkPath    = "/etc/vecta/network.yaml"
-	defaultFIPSPath       = "/etc/vecta/fips.yaml"
-	defaultFDEPath        = "/etc/vecta/fde.yaml"
-	defaultAuthPath       = "/etc/vecta/auth-bootstrap.yaml"
+	defaultDeploymentPath    = "/etc/vecta/deployment.yaml"
+	defaultNetworkPath       = "/etc/vecta/network.yaml"
+	defaultFIPSPath          = "/etc/vecta/fips.yaml"
+	defaultFDEPath           = "/etc/vecta/fde.yaml"
+	defaultAuthPath          = "/etc/vecta/auth-bootstrap.yaml"
+	defaultCertBootstrapPath = "/etc/vecta/certs-bootstrap.secret"
+	defaultCertSealedKeyPath = "/var/lib/vecta/certs/crwk.sealed"
 )
 
 var (
@@ -30,11 +33,12 @@ var (
 
 func outputPaths() map[string]string {
 	return map[string]string{
-		"deployment": envOr("FIRSTBOOT_DEPLOYMENT_PATH", defaultDeploymentPath),
-		"network":    envOr("FIRSTBOOT_NETWORK_PATH", defaultNetworkPath),
-		"fips":       envOr("FIRSTBOOT_FIPS_PATH", defaultFIPSPath),
-		"fde":        envOr("FIRSTBOOT_FDE_PATH", defaultFDEPath),
-		"auth":       envOr("FIRSTBOOT_AUTH_PATH", defaultAuthPath),
+		"deployment":     envOr("FIRSTBOOT_DEPLOYMENT_PATH", defaultDeploymentPath),
+		"network":        envOr("FIRSTBOOT_NETWORK_PATH", defaultNetworkPath),
+		"fips":           envOr("FIRSTBOOT_FIPS_PATH", defaultFIPSPath),
+		"fde":            envOr("FIRSTBOOT_FDE_PATH", defaultFDEPath),
+		"auth":           envOr("FIRSTBOOT_AUTH_PATH", defaultAuthPath),
+		"cert_bootstrap": envOr("FIRSTBOOT_CERT_BOOTSTRAP_PATH", defaultCertBootstrapPath),
 	}
 }
 
@@ -46,6 +50,23 @@ func generateConfigs(req WizardRequest) (GeneratedConfigs, error) {
 	paths := outputPaths()
 	warnings := make([]string, 0)
 
+	certSecurity := req.Spec.CertSecurity
+	certStorageMode := strings.ToLower(strings.TrimSpace(certSecurity.CertStorageMode))
+	if certStorageMode == "" {
+		certStorageMode = "db_encrypted"
+	}
+	rootKeyMode := strings.ToLower(strings.TrimSpace(certSecurity.RootKeyMode))
+	if rootKeyMode == "" {
+		rootKeyMode = "software"
+	}
+	bootstrapPassphrase := strings.TrimSpace(certSecurity.BootstrapPassphrase)
+	if rootKeyMode == "software" && bootstrapPassphrase == "" {
+		bootstrapPassphrase = randomBootstrapSecret(32)
+		warnings = append(warnings, "certificate bootstrap passphrase was auto-generated and written to cert bootstrap secret file")
+	}
+	sealedPath := firstNonEmpty(certSecurity.SealedKeyPath, defaultCertSealedKeyPath)
+	passphraseFilePath := firstNonEmpty(certSecurity.PassphraseFilePath, paths["cert_bootstrap"])
+
 	deployment := map[string]any{
 		"apiVersion": "kms.securosys.com/v1",
 		"kind":       "DeploymentConfig",
@@ -55,6 +76,13 @@ func generateConfigs(req WizardRequest) (GeneratedConfigs, error) {
 		},
 		"spec": map[string]any{
 			"hsm_mode": req.Spec.HSMMode,
+			"cert_security": map[string]any{
+				"cert_storage_mode":    certStorageMode,
+				"root_key_mode":        rootKeyMode,
+				"sealed_key_path":      sealedPath,
+				"passphrase_file_path": passphraseFilePath,
+				"use_tpm_seal":         certSecurity.UseTPMSeal,
+			},
 			"core": map[string]bool{
 				"auth":    true,
 				"keycore": true,
@@ -167,12 +195,18 @@ func generateConfigs(req WizardRequest) (GeneratedConfigs, error) {
 		return GeneratedConfigs{}, err
 	}
 
+	var certBootstrap []byte
+	if rootKeyMode == "software" {
+		certBootstrap = []byte(bootstrapPassphrase + "\n")
+	}
+
 	return GeneratedConfigs{
 		DeploymentYAML: deploymentYAML,
 		NetworkYAML:    networkYAML,
 		FIPSYAML:       fipsYAML,
 		FDEYAML:        fdeYAML,
 		AuthYAML:       authYAML,
+		CertBootstrap:  certBootstrap,
 		RecoveryShares: shares,
 		GeneratedAt:    now,
 		Warnings:       warnings,
@@ -188,6 +222,25 @@ func validateRequest(req WizardRequest) error {
 	case "hardware", "software", "auto":
 	default:
 		return errors.New("spec.hsm_mode must be hardware, software, or auto")
+	}
+	storageMode := strings.ToLower(strings.TrimSpace(req.Spec.CertSecurity.CertStorageMode))
+	if storageMode == "" {
+		storageMode = "db_encrypted"
+	}
+	if storageMode != "db_encrypted" {
+		return errors.New("spec.cert_security.cert_storage_mode must be db_encrypted")
+	}
+	rootMode := strings.ToLower(strings.TrimSpace(req.Spec.CertSecurity.RootKeyMode))
+	if rootMode == "" {
+		rootMode = "software"
+	}
+	switch rootMode {
+	case "software", "hsm":
+	default:
+		return errors.New("spec.cert_security.root_key_mode must be software or hsm")
+	}
+	if strings.TrimSpace(req.Spec.CertSecurity.BootstrapPassphrase) != "" && len(strings.TrimSpace(req.Spec.CertSecurity.BootstrapPassphrase)) < 12 {
+		return errors.New("spec.cert_security.bootstrap_passphrase must be at least 12 characters")
 	}
 	switch req.Spec.FIPS.Mode {
 	case "strict", "standard":
@@ -382,6 +435,18 @@ func writeConfigFiles(g GeneratedConfigs) error {
 			return fmt.Errorf("write %s: %w", path, err)
 		}
 	}
+	if len(g.CertBootstrap) > 0 {
+		secretPath := strings.TrimSpace(g.Paths["cert_bootstrap"])
+		if secretPath == "" {
+			secretPath = defaultCertBootstrapPath
+		}
+		if err := os.MkdirAll(filepath.Dir(secretPath), 0o750); err != nil {
+			return fmt.Errorf("mkdir %s: %w", secretPath, err)
+		}
+		if err := os.WriteFile(secretPath, g.CertBootstrap, 0o600); err != nil {
+			return fmt.Errorf("write %s: %w", secretPath, err)
+		}
+	}
 	return nil
 }
 
@@ -400,4 +465,20 @@ func envOr(k string, d string) string {
 		return d
 	}
 	return v
+}
+
+func randomBootstrapSecret(length int) string {
+	if length < 16 {
+		length = 16
+	}
+	const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*()-_=+"
+	buf := make([]byte, length)
+	raw := make([]byte, length)
+	if _, err := rand.Read(raw); err != nil {
+		return fmt.Sprintf("vecta-bootstrap-%d", time.Now().UTC().UnixNano())
+	}
+	for i := 0; i < length; i++ {
+		buf[i] = alphabet[int(raw[i])%len(alphabet)]
+	}
+	return string(buf)
 }

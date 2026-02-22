@@ -79,6 +79,7 @@ import {
   downloadCertificateAsset,
   estServerKeygen,
   getCertExpiryAlertPolicy,
+  getCertSecurityStatus,
   getCRL,
   getOCSP,
   issueCertificate,
@@ -11828,6 +11829,8 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
   const [systemState,setSystemState]=useState(null);
   const [fipsSaving,setFipsSaving]=useState(false);
   const [fipsErr,setFipsErr]=useState("");
+  const [certSecurity,setCertSecurity]=useState<any>(null);
+  const [certSecurityLoading,setCertSecurityLoading]=useState(false);
   const [passwordPolicy,setPasswordPolicy]=useState(null);
   const [policyLoading,setPolicyLoading]=useState(false);
   const [policySaving,setPolicySaving]=useState(false);
@@ -11976,6 +11979,28 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       setFipsErr(msg);
       if(!silent){
         onToast?.(`FIPS mode load failed: ${msg}`);
+      }
+    }
+  };
+
+  const loadCertSecurity=async(silent=false)=>{
+    if(!session?.token){
+      setCertSecurity(null);
+      return;
+    }
+    if(!silent){
+      setCertSecurityLoading(true);
+    }
+    try{
+      const out=await getCertSecurityStatus(session);
+      setCertSecurity(out||null);
+    }catch(error){
+      if(!silent){
+        onToast?.(`Certificate key security load failed: ${errMsg(error)}`);
+      }
+    }finally{
+      if(!silent){
+        setCertSecurityLoading(false);
       }
     }
   };
@@ -12216,6 +12241,7 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       setHealthErr("");
       setTagCatalog([]);
       setSystemState(null);
+      setCertSecurity(null);
       setFipsErr("");
       setPasswordPolicy(null);
       setGovSettings(null);
@@ -12224,6 +12250,7 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     void loadHealth(false);
     void loadTagCatalog();
     void loadSystemState(true);
+    void loadCertSecurity(true);
     void loadPasswordPolicy(true);
     void loadGovernanceSettings(true);
     const id=setInterval(()=>{void loadHealth(true);},15000);
@@ -12344,6 +12371,16 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     </Row2>
     <div style={{height:10}}/>
     <Row3>
+      <Card onClick={()=>sM("cert-security")}>
+        <div style={{fontSize:11,color:C.text,fontWeight:600}}>Certificate Key Security</div>
+        <div style={{fontSize:10,color:C.dim}}>
+          {certSecurity
+            ? `${String(certSecurity.storage_mode||"db_encrypted")} / ${String(certSecurity.root_key_mode||"software")} ${certSecurity.ready?"• ready":"• degraded"}`
+            : certSecurityLoading
+              ?"Loading cert key mode..."
+              :"CRWK envelope status"}
+        </div>
+      </Card>
       <Card onClick={()=>sM("network")}><div style={{fontSize:11,color:C.text,fontWeight:600}}>Network</div><div style={{fontSize:10,color:C.dim}}>IP, DNS, NTP, TLS</div></Card>
       <Card onClick={()=>sM("backup")}><div style={{fontSize:11,color:C.text,fontWeight:600}}>Backup</div><div style={{fontSize:10,color:C.dim}}>Scheduled backups</div></Card>
       <Card onClick={()=>sM("license")}><div style={{fontSize:11,color:C.text,fontWeight:600}}>License</div><div style={{fontSize:10,color:C.dim}}>Activation & limits</div></Card>
@@ -12370,6 +12407,37 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       </Card>
     </Row3>
   </Section>
+  <Modal open={m==="cert-security"} onClose={()=>sM(null)} title="Certificate Key Security">
+    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+      <Card>
+        <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Storage Mode</div>
+        <div style={{fontSize:12,color:C.text,fontWeight:700,marginTop:4}}>{String(certSecurity?.storage_mode||"db_encrypted")}</div>
+      </Card>
+      <Card>
+        <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Root Key Mode</div>
+        <div style={{fontSize:12,color:C.text,fontWeight:700,marginTop:4}}>{String(certSecurity?.root_key_mode||"software")}</div>
+      </Card>
+      <Card>
+        <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Status</div>
+        <div style={{marginTop:4}}><B c={certSecurity?.ready?"green":"amber"}>{certSecurity?.ready?"Ready":"Degraded"}</B></div>
+      </Card>
+      <Card>
+        <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Key Version</div>
+        <div style={{fontSize:11,color:C.text,fontWeight:600,marginTop:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(certSecurity?.key_version||"-")}</div>
+      </Card>
+    </div>
+    <FG label="Sealed Root Key Path">
+      <Inp value={String(certSecurity?.sealed_path||"-")} readOnly mono/>
+    </FG>
+    <div style={{fontSize:10,color:C.dim,marginTop:6}}>
+      mlock: {String(certSecurity?.mlock_status||"n/a")} • TPM seal: {certSecurity?.use_tpm_seal?"enabled":"disabled"}
+    </div>
+    {String(certSecurity?.last_error||"").trim()&&<div style={{marginTop:8,fontSize:10,color:C.red}}>{String(certSecurity?.last_error||"")}</div>}
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+      <Btn onClick={()=>sM(null)}>Close</Btn>
+      <Btn primary onClick={()=>void loadCertSecurity(false)}>{certSecurityLoading?"Refreshing...":"Refresh"}</Btn>
+    </div>
+  </Modal>
   <Modal open={m==="tls"} onClose={()=>sM(null)} title="Configure Web Interface TLS Certificate" wide>
     <FG label="Certificate Source" required>
       <Radio label="Use Vecta internal CA (auto-generated, auto-renewed)" selected={false}/>

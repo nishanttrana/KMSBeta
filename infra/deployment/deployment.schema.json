@@ -57,6 +57,40 @@
             "auto"
           ]
         },
+        "cert_security": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cert_storage_mode",
+            "root_key_mode"
+          ],
+          "properties": {
+            "cert_storage_mode": {
+              "type": "string",
+              "enum": [
+                "db_encrypted"
+              ]
+            },
+            "root_key_mode": {
+              "type": "string",
+              "enum": [
+                "software",
+                "hsm"
+              ]
+            },
+            "sealed_key_path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "passphrase_file_path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "use_tpm_seal": {
+              "type": "boolean"
+            }
+          }
+        },
         "core": {
           "type": "object",
           "additionalProperties": false,

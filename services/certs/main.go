@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -63,11 +64,27 @@ func main() {
 
 	keycoreURL := envOr("KEYCORE_URL", "http://127.0.0.1:8010")
 	keycoreClient := NewHTTPKeyCoreSigner(keycoreURL, 3*time.Second)
-	svc := NewService(
+
+	rootCfg := loadCertRootKeyConfig()
+	rootProvider, rootErr := newCertRootKeyProvider(rootCfg)
+	if rootErr != nil {
+		logger.Printf("cert root key provider init warning: %v", rootErr)
+	}
+	if rootProvider != nil {
+		defer rootProvider.Close() //nolint:errcheck
+	}
+	legacyMEK := loadLegacyMEK()
+	svc := NewServiceWithSecurity(
 		NewSQLStore(dbConn),
 		publisher,
 		keycoreClient,
-		loadMEK(),
+		ServiceSecurityConfig{
+			CertStorageMode: rootCfg.StorageMode,
+			RootKeyMode:     rootCfg.RootKeyMode,
+			RootProvider:    rootProvider,
+			SecurityErr:     errString(rootErr),
+			LegacyMEK:       legacyMEK,
+		},
 		envBool("FIPS_STRICT", false),
 		envBool("CERTS_KEYCORE_FAIL_CLOSED", true),
 	)
@@ -190,7 +207,7 @@ func devMTLSConfig() (*tls.Config, error) {
 	}, nil
 }
 
-func loadMEK() []byte {
+func loadLegacyMEK() []byte {
 	raw := strings.TrimSpace(os.Getenv("CERTS_MEK_B64"))
 	if raw != "" {
 		if out, err := base64.StdEncoding.DecodeString(raw); err == nil && len(out) >= 32 {
@@ -199,6 +216,21 @@ func loadMEK() []byte {
 	}
 	sum := sha256.Sum256([]byte("vecta-certs-dev-mek"))
 	return sum[:]
+}
+
+func loadCertRootKeyConfig() CertRootKeyConfig {
+	return CertRootKeyConfig{
+		StorageMode:             envOr("CERTS_STORAGE_MODE", "db_encrypted"),
+		RootKeyMode:             envOr("CERTS_ROOT_KEY_MODE", "software"),
+		SealedPath:              envOr("CERTS_CRWK_SEALED_PATH", defaultCRWKSealedPath),
+		BootstrapPassphrase:     strings.TrimSpace(os.Getenv("CERTS_CRWK_BOOTSTRAP_PASSPHRASE")),
+		BootstrapPassphraseFile: envOr("CERTS_CRWK_PASSPHRASE_FILE", ""),
+		ArgonMemoryKB:           uint32(envInt("CERTS_CRWK_ARGON_MEMORY_KB", defaultCRWKMemKB)),
+		ArgonIterations:         uint32(envInt("CERTS_CRWK_ARGON_ITERATIONS", defaultCRWKIterations)),
+		ArgonParallel:           uint8(envInt("CERTS_CRWK_ARGON_PARALLEL", int(defaultCRWKParallel))),
+		MlockRequired:           envBool("CERTS_CRWK_MLOCK_REQUIRED", false),
+		UseTPMSeal:              envBool("CERTS_CRWK_USE_TPM_SEAL", false),
+	}
 }
 
 func envOr(k string, d string) string {
@@ -215,6 +247,25 @@ func envBool(k string, d bool) bool {
 		return d
 	}
 	return v == "1" || v == "true" || v == "yes"
+}
+
+func envInt(k string, d int) int {
+	v := strings.TrimSpace(os.Getenv(k))
+	if v == "" {
+		return d
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return d
+	}
+	return n
+}
+
+func errString(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }
 
 func mustAtoi(s string) int {
