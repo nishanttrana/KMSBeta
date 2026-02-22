@@ -300,6 +300,228 @@ const TAB_FEATURES = {
   sbom: "sbom_cbom"
 };
 
+const REST_API_METHODS_WITH_BODY = new Set(["POST", "PUT", "PATCH"]);
+
+const REST_API_CATALOG = [
+  {
+    id: "keys-list",
+    group: "Key Management",
+    title: "List Keys",
+    service: "keycore",
+    method: "GET",
+    pathTemplate: "/keys?tenant_id={{tenant_id}}&limit=100&offset=0",
+    bodyTemplate: "",
+    description: "Returns key inventory metadata for a tenant. This does not return plaintext key material.",
+    requestExample: "GET /svc/keycore/keys?tenant_id=bank-alpha&limit=100&offset=0",
+    responseExample: {
+      items: [{ id: "key_01", name: "prod-db-master", algorithm: "AES-256-GCM", status: "active", version: 2 }]
+    },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id or invalid query parameters" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Caller does not have list-keys permission" }
+    ]
+  },
+  {
+    id: "keys-create",
+    group: "Key Management",
+    title: "Create Key",
+    service: "keycore",
+    method: "POST",
+    pathTemplate: "/keys",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "customer-key-name",\n  "algorithm": "AES-256-GCM",\n  "purpose": "encrypt-decrypt",\n  "status": "active",\n  "export_allowed": false\n}',
+    description: "Creates a new cryptographic key object with policy attributes.",
+    requestExample: "POST /svc/keycore/keys",
+    responseExample: { key: { id: "key_123", name: "customer-key-name", algorithm: "AES-256-GCM", status: "active" } },
+    errorCodes: [
+      { code: 400, meaning: "Invalid algorithm/payload" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 409, meaning: "Key name already exists for tenant" }
+    ]
+  },
+  {
+    id: "key-encrypt",
+    group: "Crypto",
+    title: "Encrypt",
+    service: "keycore",
+    method: "POST",
+    pathTemplate: "/keys/{{key_id}}/encrypt",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "plaintext": "hello-vecta",\n  "encoding": "utf-8",\n  "aad": "context",\n  "aad_encoding": "utf-8",\n  "iv_mode": "internal",\n  "reference_id": "txn-001"\n}',
+    description: "Encrypts plaintext with selected key. For AEAD ciphers, AAD integrity is enforced.",
+    requestExample: "POST /svc/keycore/keys/{key_id}/encrypt",
+    responseExample: {
+      ciphertext: "BASE64...",
+      iv: "BASE64...",
+      key_id: "key_123",
+      version: 2,
+      reference_id: "txn-001"
+    },
+    errorCodes: [
+      { code: 400, meaning: "Payload invalid (encoding/AAD/IV mismatch)" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Key state/policy blocks encryption (disabled/deactivated/limit)" }
+    ]
+  },
+  {
+    id: "key-decrypt",
+    group: "Crypto",
+    title: "Decrypt",
+    service: "keycore",
+    method: "POST",
+    pathTemplate: "/keys/{{key_id}}/decrypt",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "ciphertext": "BASE64...",\n  "binary_encoding": "base64",\n  "aad": "context",\n  "aad_encoding": "utf-8",\n  "iv": "BASE64...",\n  "output_encoding": "utf-8"\n}',
+    description: "Decrypts ciphertext and verifies AEAD tag when applicable.",
+    requestExample: "POST /svc/keycore/keys/{key_id}/decrypt",
+    responseExample: { plaintext: "hello-vecta", output_encoding: "utf-8", key_id: "key_123", version: 2 },
+    errorCodes: [
+      { code: 400, meaning: "Ciphertext or IV format invalid" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Authentication/tag verification failed or wrong key/version" }
+    ]
+  },
+  {
+    id: "key-sign",
+    group: "Crypto",
+    title: "Sign",
+    service: "keycore",
+    method: "POST",
+    pathTemplate: "/keys/{{key_id}}/sign",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "message": "payload-to-sign",\n  "encoding": "utf-8",\n  "algorithm": "ecdsa-sha384"\n}',
+    description: "Generates digital signature or MAC depending on key type/purpose.",
+    requestExample: "POST /svc/keycore/keys/{key_id}/sign",
+    responseExample: { signature: "BASE64...", algorithm: "ecdsa-sha384", key_id: "key_123", version: 2 },
+    errorCodes: [
+      { code: 400, meaning: "Algorithm/message invalid for selected key" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Key policy/state blocks signing" }
+    ]
+  },
+  {
+    id: "key-verify",
+    group: "Crypto",
+    title: "Verify",
+    service: "keycore",
+    method: "POST",
+    pathTemplate: "/keys/{{key_id}}/verify",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "message": "payload-to-sign",\n  "signature": "BASE64...",\n  "encoding": "utf-8",\n  "algorithm": "ecdsa-sha384"\n}',
+    description: "Verifies signature validity for the supplied payload and key.",
+    requestExample: "POST /svc/keycore/keys/{key_id}/verify",
+    responseExample: { valid: true, algorithm: "ecdsa-sha384", key_id: "key_123" },
+    errorCodes: [
+      { code: 400, meaning: "Signature/message format invalid" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Verification failed" }
+    ]
+  },
+  {
+    id: "crypto-hash",
+    group: "Crypto",
+    title: "Hash",
+    service: "keycore",
+    method: "POST",
+    pathTemplate: "/crypto/hash",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "algorithm": "sha-512",\n  "input": "data-to-hash",\n  "encoding": "utf-8",\n  "binary_output_encoding": "base64"\n}',
+    description: "Runs backend hash function and returns digest.",
+    requestExample: "POST /svc/keycore/crypto/hash",
+    responseExample: { algorithm: "sha-512", digest: "BASE64...", digest_encoding: "base64" },
+    errorCodes: [
+      { code: 400, meaning: "Unsupported hash algorithm or malformed input" },
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "crypto-random",
+    group: "Crypto",
+    title: "Random Bytes",
+    service: "keycore",
+    method: "POST",
+    pathTemplate: "/crypto/random",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "length": 32,\n  "source": "kms-csprng",\n  "binary_output_encoding": "base64"\n}',
+    description: "Generates cryptographically secure random bytes from backend entropy source.",
+    requestExample: "POST /svc/keycore/crypto/random",
+    responseExample: { length: 32, random: "BASE64...", encoding: "base64", source: "kms-csprng" },
+    errorCodes: [
+      { code: 400, meaning: "Length invalid or source unsupported" },
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "secrets-list",
+    group: "Management",
+    title: "List Secrets",
+    service: "secrets",
+    method: "GET",
+    pathTemplate: "/secrets?tenant_id={{tenant_id}}&limit=100&offset=0",
+    bodyTemplate: "",
+    description: "Returns secret metadata inventory. Secret values are not returned here.",
+    requestExample: "GET /svc/secrets/secrets?tenant_id=bank-alpha&limit=100&offset=0",
+    responseExample: { items: [{ id: "sec_01", name: "db-password", secret_type: "password", status: "active" }] },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id or invalid query" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Caller lacks secret-list privilege" }
+    ]
+  },
+  {
+    id: "certs-list",
+    group: "Management",
+    title: "List Certificates",
+    service: "certs",
+    method: "GET",
+    pathTemplate: "/certs?tenant_id={{tenant_id}}&limit=100&offset=0",
+    bodyTemplate: "",
+    description: "Returns certificate inventory for tenant CA/certificate lifecycle tracking.",
+    requestExample: "GET /svc/certs/certs?tenant_id=bank-alpha&limit=100&offset=0",
+    responseExample: { items: [{ id: "crt_01", subject_cn: "api.bank.com", status: "active", algorithm: "ECDSA-P384" }] },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id or invalid query" },
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "cert-issue",
+    group: "Management",
+    title: "Issue Certificate",
+    service: "certs",
+    method: "POST",
+    pathTemplate: "/certs",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "ca_id": "ca_runtime",\n  "subject_cn": "service.tenant.local",\n  "sans": ["service.tenant.local"],\n  "cert_type": "tls-server",\n  "algorithm": "ECDSA-P384",\n  "server_keygen": true,\n  "validity_days": 365,\n  "protocol": "REST"\n}',
+    description: "Issues a certificate from selected CA/profile. Supports server-side keygen.",
+    requestExample: "POST /svc/certs/certs",
+    responseExample: { certificate: { id: "crt_99", status: "active", subject_cn: "service.tenant.local" } },
+    errorCodes: [
+      { code: 400, meaning: "CA/profile/subject invalid" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Issuance policy violation" }
+    ]
+  },
+  {
+    id: "gov-requests",
+    group: "Management",
+    title: "List Governance Requests",
+    service: "governance",
+    method: "GET",
+    pathTemplate: "/governance/requests?tenant_id={{tenant_id}}&status=pending",
+    bodyTemplate: "",
+    description: "Returns active/pending governance approvals and quorum state.",
+    requestExample: "GET /svc/governance/governance/requests?tenant_id=bank-alpha&status=pending",
+    responseExample: { items: [{ id: "req_01", action: "key.export", status: "pending", required_approvals: 2, current_approvals: 1 }] },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id or invalid filter" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Caller lacks governance read privilege" }
+    ]
+  }
+];
+
 function errMsg(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -1219,7 +1441,7 @@ const Row2=({children})=><div style={{display:"grid",gridTemplateColumns:"1fr 1f
 const Row3=({children})=><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>{children}</div>;
 
 const NAV=[
-  {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"crypto",icon:Zap,label:"Crypto Console"}]},
+  {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"crypto",icon:Zap,label:"Crypto Console"},{id:"restapi",icon:TerminalSquare,label:"REST API Workbench"}]},
   {g:"SECRETS & CERTS",items:[{id:"vault",icon:Lock,label:"Secret Vault"},{id:"certs",icon:FileText,label:"Certificates / PKI"}]},
   {g:"DATA PROTECTION",items:[{id:"tokenize",icon:VenetianMask,label:"Tokenize / Mask / Redact"},{id:"dataenc",icon:Database,label:"Data Encryption"},{id:"payment",icon:CreditCard,label:"Payment Crypto"},{id:"pkcs11",icon:Plug,label:"PKCS#11 / JCA"}]},
   {g:"CLOUD & INTEGRATION",items:[{id:"byok",icon:Cloud,label:"BYOK"},{id:"hyok",icon:ShieldCheck,label:"HYOK"},{id:"ekm",icon:Database,label:"EKM Agent Hub"},{id:"kmip",icon:Link,label:"KMIP"}]},
@@ -4071,6 +4293,342 @@ const Crypto=({session,keyCatalog,onToast,fipsMode})=>{
         </div>
       </div>
     </div>
+  </div>;
+};
+
+// 
+// TAB: REST API WORKBENCH (authenticated playground)
+// 
+const RestAPI=({session,keyCatalog,onToast})=>{
+  const [selectedEndpointID,setSelectedEndpointID]=useState(String(REST_API_CATALOG[0]?.id||""));
+  const [authMode,setAuthMode]=useState("session-jwt");
+  const [customJWT,setCustomJWT]=useState("");
+  const [serviceName,setServiceName]=useState(String(REST_API_CATALOG[0]?.service||"keycore"));
+  const [method,setMethod]=useState(String(REST_API_CATALOG[0]?.method||"GET"));
+  const [pathValue,setPathValue]=useState(String(REST_API_CATALOG[0]?.pathTemplate||"/"));
+  const [bodyValue,setBodyValue]=useState(String(REST_API_CATALOG[0]?.bodyTemplate||""));
+  const [keyID,setKeyID]=useState("");
+  const [certID,setCertID]=useState("");
+  const [secretID,setSecretID]=useState("");
+  const [certOptions,setCertOptions]=useState([]);
+  const [secretOptions,setSecretOptions]=useState([]);
+  const [running,setRunning]=useState(false);
+  const [statusText,setStatusText]=useState("No request executed yet.");
+  const [responseText,setResponseText]=useState("// Response will appear here...");
+  const [requestPreview,setRequestPreview]=useState("// cURL preview will appear here...");
+
+  const endpoint=useMemo(
+    ()=>REST_API_CATALOG.find((item)=>String(item.id)===String(selectedEndpointID))||REST_API_CATALOG[0],
+    [selectedEndpointID]
+  );
+
+  const groupedEndpoints=useMemo(()=>{
+    const groups:any={};
+    REST_API_CATALOG.forEach((item)=>{
+      const g=String(item.group||"Other");
+      if(!groups[g]){
+        groups[g]=[];
+      }
+      groups[g].push(item);
+    });
+    return Object.entries(groups);
+  },[]);
+
+  const keyChoices=useMemo(()=>keyChoicesFromCatalog(keyCatalog),[keyCatalog]);
+
+  useEffect(()=>{
+    setServiceName(String(endpoint?.service||"keycore"));
+    setMethod(String(endpoint?.method||"GET"));
+    setPathValue(String(endpoint?.pathTemplate||"/"));
+    setBodyValue(String(endpoint?.bodyTemplate||""));
+  },[endpoint?.id]);
+
+  useEffect(()=>{
+    if(!keyID&&Array.isArray(keyChoices)&&keyChoices.length){
+      setKeyID(String(keyChoices[0]?.id||""));
+    }
+  },[keyChoices,keyID]);
+
+  useEffect(()=>{
+    if(!session?.token){
+      setCertOptions([]);
+      setSecretOptions([]);
+      return;
+    }
+    let cancelled=false;
+    (async()=>{
+      try{
+        const [certs,secrets]=await Promise.all([
+          listCertificates(session,{limit:200,offset:0}),
+          listSecrets(session,{limit:200,offset:0})
+        ]);
+        if(cancelled){
+          return;
+        }
+        setCertOptions(Array.isArray(certs)?certs:[]);
+        setSecretOptions(Array.isArray(secrets)?secrets:[]);
+        if(!certID&&Array.isArray(certs)&&certs.length){
+          setCertID(String(certs[0]?.id||""));
+        }
+        if(!secretID&&Array.isArray(secrets)&&secrets.length){
+          setSecretID(String(secrets[0]?.id||""));
+        }
+      }catch{
+        if(!cancelled){
+          setCertOptions([]);
+          setSecretOptions([]);
+        }
+      }
+    })();
+    return ()=>{cancelled=true;};
+  },[session?.token,session?.tenantId]);
+
+  const resolvePathTemplate=(raw:string)=>{
+    return String(raw||"")
+      .replaceAll("{{tenant_id}}",encodeURIComponent(String(session?.tenantId||"")))
+      .replaceAll("{{key_id}}",encodeURIComponent(String(keyID||"")))
+      .replaceAll("{{cert_id}}",encodeURIComponent(String(certID||"")))
+      .replaceAll("{{secret_id}}",encodeURIComponent(String(secretID||"")));
+  };
+
+  const resolveBodyTemplate=(raw:string)=>{
+    return String(raw||"")
+      .replaceAll("{{tenant_id}}",String(session?.tenantId||""))
+      .replaceAll("{{key_id}}",String(keyID||""))
+      .replaceAll("{{cert_id}}",String(certID||""))
+      .replaceAll("{{secret_id}}",String(secretID||""));
+  };
+
+  const pretty=(value:any)=>{
+    if(value===null||value===undefined){
+      return "";
+    }
+    if(typeof value==="string"){
+      try{
+        return JSON.stringify(JSON.parse(value),null,2);
+      }catch{
+        return value;
+      }
+    }
+    try{
+      return JSON.stringify(value,null,2);
+    }catch{
+      return String(value);
+    }
+  };
+
+  const buildPreview=()=>{
+    const resolvedPath=resolvePathTemplate(pathValue);
+    const resolvedBody=resolveBodyTemplate(bodyValue);
+    const trimmedMethod=String(method||"GET").toUpperCase();
+    const url=`{{base_url}}/svc/${String(serviceName||"").trim()}${resolvedPath}`;
+    const tokenPlaceholder=authMode==="session-jwt"?"<session-jwt>":"<custom-jwt>";
+    const lines=[
+      `curl -X ${trimmedMethod} "${url}"`,
+      `  -H "Authorization: Bearer ${tokenPlaceholder}"`,
+      `  -H "X-Tenant-ID: ${String(session?.tenantId||"")}"`,
+      `  -H "Content-Type: application/json"`
+    ];
+    if(REST_API_METHODS_WITH_BODY.has(trimmedMethod)&&String(resolvedBody||"").trim()){
+      lines.push(`  -d '${resolvedBody.replaceAll("'","\\'")}'`);
+    }
+    setRequestPreview(lines.join(" \\\n"));
+  };
+
+  useEffect(()=>{
+    buildPreview();
+  },[authMode,serviceName,method,pathValue,bodyValue,keyID,certID,secretID,session?.tenantId]);
+
+  const executeRequest=async()=>{
+    if(!session?.token&&authMode==="session-jwt"){
+      onToast?.("Login is required to execute API calls.");
+      return;
+    }
+    const token=authMode==="session-jwt"?String(session?.token||"").trim():String(customJWT||"").trim();
+    if(!token){
+      onToast?.("JWT is required before calling this endpoint.");
+      return;
+    }
+    const unresolved=String(pathValue||"");
+    if(unresolved.includes("{{key_id}}")&&!String(keyID||"").trim()){
+      onToast?.("Select key_id before executing this endpoint.");
+      return;
+    }
+    if(unresolved.includes("{{cert_id}}")&&!String(certID||"").trim()){
+      onToast?.("Select cert_id before executing this endpoint.");
+      return;
+    }
+    if(unresolved.includes("{{secret_id}}")&&!String(secretID||"").trim()){
+      onToast?.("Select secret_id before executing this endpoint.");
+      return;
+    }
+
+    const resolvedPath=resolvePathTemplate(pathValue);
+    const resolvedBody=resolveBodyTemplate(bodyValue);
+    const trimmedMethod=String(method||"GET").toUpperCase();
+    let parsedBody:any=undefined;
+    if(REST_API_METHODS_WITH_BODY.has(trimmedMethod)&&String(resolvedBody||"").trim()){
+      try{
+        parsedBody=JSON.parse(resolvedBody);
+      }catch{
+        onToast?.("Request body must be valid JSON.");
+        return;
+      }
+    }
+
+    setRunning(true);
+    setStatusText("Executing...");
+    const start=performance.now();
+    try{
+      const response=await fetch(`/svc/${String(serviceName||"").trim()}${resolvedPath}`,{
+        method:trimmedMethod,
+        headers:{
+          "Content-Type":"application/json",
+          "Authorization":`Bearer ${token}`,
+          "X-Tenant-ID":String(session?.tenantId||"")
+        },
+        body:parsedBody===undefined?undefined:JSON.stringify(parsedBody)
+      });
+      const elapsed=Math.round(performance.now()-start);
+      const contentType=String(response.headers.get("content-type")||"");
+      let payload:any="";
+      if(contentType.includes("application/json")){
+        payload=await response.json();
+      }else{
+        payload=await response.text();
+      }
+      setResponseText(pretty(payload)||"");
+      setStatusText(`${response.status} ${response.statusText} - ${elapsed} ms`);
+      if(!response.ok){
+        onToast?.(`API call failed (${response.status}): ${response.statusText}`);
+      }
+    }catch(error){
+      const msg=errMsg(error);
+      setStatusText(`Request error - ${msg}`);
+      setResponseText(msg);
+      onToast?.(`API call failed: ${msg}`);
+    }finally{
+      setRunning(false);
+    }
+  };
+
+  return <div>
+    <Section title="REST API Workbench" actions={<>
+      <B c="blue">JWT Required</B>
+      <Btn small onClick={executeRequest} disabled={running}>{running?"Executing...":"Execute Call"}</Btn>
+    </>}>
+      <Card style={{marginBottom:10}}>
+        <div style={{fontSize:10,color:C.dim,lineHeight:1.5}}>
+          Live API playground for management and cryptographic endpoints. Calls are executed against real backend services over
+          <span style={{color:C.text}}> /svc/&lt;service&gt;...</span> and require authentication.
+        </div>
+        <div style={{fontSize:10,color:C.muted,marginTop:6}}>
+          Recommended product name: <span style={{color:C.accent,fontWeight:700}}>API Workbench</span>.
+        </div>
+      </Card>
+      <Row2>
+        <Card style={{minHeight:620}}>
+          <FG label="Endpoint Catalog">
+            <Sel value={selectedEndpointID} onChange={(e)=>setSelectedEndpointID(e.target.value)}>
+              {groupedEndpoints.map(([group,items]:any)=><optgroup key={String(group)} label={String(group)}>
+                {items.map((item:any)=><option key={item.id} value={item.id}>{item.title}</option>)}
+              </optgroup>)}
+            </Sel>
+          </FG>
+          <FG label="What this endpoint does">
+            <div style={{fontSize:10,color:C.dim,lineHeight:1.5}}>{String(endpoint?.description||"")}</div>
+          </FG>
+          <Row2>
+            <FG label="Service"><Inp value={String(endpoint?.service||"")} readOnly/></FG>
+            <FG label="Method"><Inp value={String(endpoint?.method||"")} readOnly/></FG>
+          </Row2>
+          <FG label="Path">
+            <Inp value={String(endpoint?.pathTemplate||"")} readOnly mono/>
+          </FG>
+          <FG label="Authentication">
+            <div style={{fontSize:10,color:C.dim}}>
+              Bearer JWT is mandatory. Endpoint execution is blocked until JWT is present.
+            </div>
+          </FG>
+          <FG label="Request Example">
+            <Txt rows={4} readOnly mono value={String(endpoint?.requestExample||"")}/>
+          </FG>
+          <FG label="Expected Success Response">
+            <Txt rows={6} readOnly mono value={pretty(endpoint?.responseExample||{})}/>
+          </FG>
+          <FG label="Expected Error Codes">
+            <div style={{display:"grid",gap:6}}>
+              {(Array.isArray(endpoint?.errorCodes)?endpoint.errorCodes:[]).map((item:any)=>(
+                <div key={`${item.code}-${item.meaning}`} style={{display:"flex",gap:8,fontSize:10}}>
+                  <B c={Number(item.code)>=500?"red":Number(item.code)>=400?"amber":"blue"}>{String(item.code)}</B>
+                  <span style={{color:C.dim}}>{String(item.meaning||"")}</span>
+                </div>
+              ))}
+            </div>
+          </FG>
+        </Card>
+        <Card style={{minHeight:620}}>
+          <FG label="Authentication Mode" required>
+            <Sel value={authMode} onChange={(e)=>setAuthMode(e.target.value)}>
+              <option value="session-jwt">Use current session JWT</option>
+              <option value="custom-jwt">Use custom Bearer JWT</option>
+            </Sel>
+          </FG>
+          {authMode==="custom-jwt"&&<FG label="Custom Bearer JWT" required>
+            <Txt rows={4} mono value={customJWT} onChange={(e)=>setCustomJWT(e.target.value)} placeholder="Paste JWT token"/>
+          </FG>}
+          <Row3>
+            <FG label="Service"><Inp value={serviceName} onChange={(e)=>setServiceName(e.target.value)} mono/></FG>
+            <FG label="Method">
+              <Sel value={method} onChange={(e)=>setMethod(e.target.value.toUpperCase())}>
+                <option>GET</option>
+                <option>POST</option>
+                <option>PUT</option>
+                <option>PATCH</option>
+                <option>DELETE</option>
+              </Sel>
+            </FG>
+            <FG label="Tenant Header"><Inp value={String(session?.tenantId||"")} readOnly mono/></FG>
+          </Row3>
+          <FG label="Path (supports {{tenant_id}}, {{key_id}}, {{cert_id}}, {{secret_id}})">
+            <Inp value={pathValue} onChange={(e)=>setPathValue(e.target.value)} mono/>
+          </FG>
+          <Row3>
+            <FG label="key_id">
+              <Sel value={keyID} onChange={(e)=>setKeyID(e.target.value)}>
+                <option value="">- select key -</option>
+                {(Array.isArray(keyChoices)?keyChoices:[]).map((k:any)=><option key={k.id} value={k.id}>{k.name} ({k.id})</option>)}
+              </Sel>
+            </FG>
+            <FG label="cert_id">
+              <Sel value={certID} onChange={(e)=>setCertID(e.target.value)}>
+                <option value="">- select cert -</option>
+                {(Array.isArray(certOptions)?certOptions:[]).map((c:any)=><option key={c.id} value={c.id}>{c.subject_cn||c.id} ({c.id})</option>)}
+              </Sel>
+            </FG>
+            <FG label="secret_id">
+              <Sel value={secretID} onChange={(e)=>setSecretID(e.target.value)}>
+                <option value="">- select secret -</option>
+                {(Array.isArray(secretOptions)?secretOptions:[]).map((s:any)=><option key={s.id} value={s.id}>{s.name||s.id} ({s.id})</option>)}
+              </Sel>
+            </FG>
+          </Row3>
+          <FG label="JSON Body">
+            <Txt rows={10} mono value={bodyValue} onChange={(e)=>setBodyValue(e.target.value)} placeholder='{"tenant_id":"{{tenant_id}}"}'/>
+          </FG>
+          <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:8}}>
+            <Btn onClick={buildPreview}>Refresh cURL</Btn>
+            <Btn primary onClick={executeRequest} disabled={running}>{running?"Executing...":"Execute Call"}</Btn>
+          </div>
+          <FG label={`Response (${statusText})`}>
+            <Txt rows={10} mono value={responseText} readOnly/>
+          </FG>
+          <FG label="How to call (cURL)">
+            <Txt rows={6} mono value={requestPreview} readOnly/>
+          </FG>
+        </Card>
+      </Row2>
+    </Section>
   </div>;
 };
 
@@ -13143,8 +13701,8 @@ const Documentation=()=>{
 // 
 // MAIN APP WITH SIDEBAR
 // 
-const TABS={home:Home,keys:Keys,crypto:Crypto,vault:Vault,certs:Certs,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,byok:BYOK,hyok:HYOK,ekm:EKM,kmip:KMIP,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
-const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",vault:"Secret Vault",certs:"Certificates / Mini PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",byok:"BYOK",hyok:"HYOK",ekm:"EKM Agent Hub",kmip:"KMIP 2.1 Server",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
+const TABS={home:Home,keys:Keys,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,byok:BYOK,hyok:HYOK,ekm:EKM,kmip:KMIP,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
+const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",restapi:"REST API Workbench",vault:"Secret Vault",certs:"Certificates / Mini PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",byok:"BYOK",hyok:"HYOK",ekm:"EKM Agent Hub",kmip:"KMIP 2.1 Server",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
 
 export default function VectaDashboard(props){
   const {session,enabledFeatures,alerts,audit,unreadAlerts,onLogout,markAlertsRead}=props;
