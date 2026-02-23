@@ -4582,6 +4582,7 @@ const RestAPI=({session,keyCatalog,onToast})=>{
   const [selectedEndpointID,setSelectedEndpointID]=useState(String(REST_API_CATALOG[0]?.id||""));
   const [authMode,setAuthMode]=useState("session-jwt");
   const [customJWT,setCustomJWT]=useState("");
+  const [tenantParam,setTenantParam]=useState(String(session?.tenantId||""));
   const [serviceName,setServiceName]=useState(String(REST_API_CATALOG[0]?.service||"keycore"));
   const [method,setMethod]=useState(String(REST_API_CATALOG[0]?.method||"GET"));
   const [pathValue,setPathValue]=useState(String(REST_API_CATALOG[0]?.pathTemplate||"/"));
@@ -4629,6 +4630,10 @@ const RestAPI=({session,keyCatalog,onToast})=>{
   },[keyChoices,keyID]);
 
   useEffect(()=>{
+    setTenantParam(String(session?.tenantId||""));
+  },[session?.tenantId]);
+
+  useEffect(()=>{
     if(!session?.token){
       setCertOptions([]);
       setSecretOptions([]);
@@ -4664,7 +4669,7 @@ const RestAPI=({session,keyCatalog,onToast})=>{
 
   const resolvePathTemplate=(raw:string)=>{
     return String(raw||"")
-      .replaceAll("{{tenant_id}}",encodeURIComponent(String(session?.tenantId||"")))
+      .replaceAll("{{tenant_id}}",encodeURIComponent(String(tenantParam||"")))
       .replaceAll("{{key_id}}",encodeURIComponent(String(keyID||"")))
       .replaceAll("{{cert_id}}",encodeURIComponent(String(certID||"")))
       .replaceAll("{{secret_id}}",encodeURIComponent(String(secretID||"")));
@@ -4672,7 +4677,7 @@ const RestAPI=({session,keyCatalog,onToast})=>{
 
   const resolveBodyTemplate=(raw:string)=>{
     return String(raw||"")
-      .replaceAll("{{tenant_id}}",String(session?.tenantId||""))
+      .replaceAll("{{tenant_id}}",String(tenantParam||""))
       .replaceAll("{{key_id}}",String(keyID||""))
       .replaceAll("{{cert_id}}",String(certID||""))
       .replaceAll("{{secret_id}}",String(secretID||""));
@@ -4705,7 +4710,7 @@ const RestAPI=({session,keyCatalog,onToast})=>{
     const lines=[
       `curl -X ${trimmedMethod} "${url}"`,
       `  -H "Authorization: Bearer ${tokenPlaceholder}"`,
-      `  -H "X-Tenant-ID: ${String(session?.tenantId||"")}"`,
+      `  -H "X-Tenant-ID: ${String(tenantParam||"")}"`,
       `  -H "Content-Type: application/json"`
     ];
     if(REST_API_METHODS_WITH_BODY.has(trimmedMethod)&&String(resolvedBody||"").trim()){
@@ -4716,7 +4721,7 @@ const RestAPI=({session,keyCatalog,onToast})=>{
 
   useEffect(()=>{
     buildPreview();
-  },[authMode,serviceName,method,pathValue,bodyValue,keyID,certID,secretID,session?.tenantId]);
+  },[authMode,serviceName,method,pathValue,bodyValue,keyID,certID,secretID,tenantParam]);
 
   const executeRequest=async()=>{
     if(!session?.token&&authMode==="session-jwt"){
@@ -4726,6 +4731,11 @@ const RestAPI=({session,keyCatalog,onToast})=>{
     const token=authMode==="session-jwt"?String(session?.token||"").trim():String(customJWT||"").trim();
     if(!token){
       onToast?.("JWT is required before calling this endpoint.");
+      return;
+    }
+    const tenantID=String(tenantParam||"").trim();
+    if(!tenantID){
+      onToast?.("Tenant parameter is required.");
       return;
     }
     const unresolved=String(pathValue||"");
@@ -4764,7 +4774,7 @@ const RestAPI=({session,keyCatalog,onToast})=>{
         headers:{
           "Content-Type":"application/json",
           "Authorization":`Bearer ${token}`,
-          "X-Tenant-ID":String(session?.tenantId||"")
+          "X-Tenant-ID":tenantID
         },
         body:parsedBody===undefined?undefined:JSON.stringify(parsedBody)
       });
@@ -4800,6 +4810,9 @@ const RestAPI=({session,keyCatalog,onToast})=>{
         <div style={{fontSize:10,color:C.dim,lineHeight:1.5}}>
           Live API playground for management and cryptographic endpoints. Calls are executed against real backend services over
           <span style={{color:C.text}}> /svc/&lt;service&gt;...</span> and require authentication.
+        </div>
+        <div style={{fontSize:10,color:C.dim,marginTop:6}}>
+          Tenant parameter is explicit and drives both <span style={{color:C.text}}>X-Tenant-ID</span> and template replacement for <span style={{color:C.text}}>{"{{tenant_id}}"}</span>.
         </div>
         <div style={{fontSize:10,color:C.muted,marginTop:6}}>
           Recommended product name: <span style={{color:C.accent,fontWeight:700}}>API Workbench</span>.
@@ -4867,7 +4880,7 @@ const RestAPI=({session,keyCatalog,onToast})=>{
                 <option>DELETE</option>
               </Sel>
             </FG>
-            <FG label="Tenant Header"><Inp value={String(session?.tenantId||"")} readOnly mono/></FG>
+            <FG label="Tenant Parameter (X-Tenant-ID)" required><Inp value={tenantParam} onChange={(e)=>setTenantParam(e.target.value)} mono placeholder="tenant-id"/></FG>
           </Row3>
           <FG label="Path (supports {{tenant_id}}, {{key_id}}, {{cert_id}}, {{secret_id}})">
             <Inp value={pathValue} onChange={(e)=>setPathValue(e.target.value)} mono/>
@@ -12412,6 +12425,7 @@ const PKCS11=({session,onToast})=>{
   const [loading,setLoading]=useState(false);
   const [downloading,setDownloading]=useState("");
   const [jwtLoading,setJWTLoading]=useState(false);
+  const [sdkTenant,setSDKTenant]=useState(String(session?.tenantId||""));
   const [sdkJWT,setSDKJWT]=useState("");
   const [sdkJWTExp,setSDKJWTExp]=useState("");
   const [sdkJWTGeneratedAt,setSDKJWTGeneratedAt]=useState("");
@@ -12447,11 +12461,16 @@ const PKCS11=({session,onToast})=>{
       setOverview({refreshed_at:"",providers:[],mechanisms:[],clients:[]});
       return;
     }
+    const tenantID=String(sdkTenant||session?.tenantId||"").trim();
+    if(!tenantID){
+      onToast?.("Tenant parameter is required for SDK telemetry.");
+      return;
+    }
     if(!silent){
       setLoading(true);
     }
     try{
-      const out=await getEKMSDKOverview(session);
+      const out=await getEKMSDKOverview(session,tenantID);
       setOverview(out||{refreshed_at:"",providers:[],mechanisms:[],clients:[]});
     }catch(error){
       onToast?.(`SDK dashboard load failed: ${errMsg(error)}`);
@@ -12467,10 +12486,15 @@ const PKCS11=({session,onToast})=>{
       onToast?.("Login is required to download SDK.");
       return;
     }
+    const tenantID=String(sdkTenant||session?.tenantId||"").trim();
+    if(!tenantID){
+      onToast?.("Tenant parameter is required for SDK download.");
+      return;
+    }
     const key=`${provider}:${targetOS}`;
     setDownloading(key);
     try{
-      const out=await downloadEKMSDK(session,provider,targetOS);
+      const out=await downloadEKMSDK(session,provider,targetOS,tenantID);
       saveBase64File(String(out?.filename||`vecta-${provider}-${targetOS}.zip`),String(out?.content||""),String(out?.content_type||"application/zip"));
       onToast?.(`${provider.toUpperCase()} SDK downloaded (${targetOS}).`);
       await loadOverview(true);
@@ -12526,8 +12550,12 @@ const PKCS11=({session,onToast})=>{
   };
 
   useEffect(()=>{
+    setSDKTenant(String(session?.tenantId||""));
+  },[session?.tenantId]);
+
+  useEffect(()=>{
     void loadOverview();
-  },[session?.token,session?.tenantId]);
+  },[session?.token,sdkTenant]);
 
   const providerByID=useMemo(()=>{
     const out:any={};
@@ -12570,7 +12598,9 @@ const PKCS11=({session,onToast})=>{
         <div style={{fontSize:10,color:C.muted}}>
           {loading?"Loading SDK telemetry...":`Refreshed ${overview?.refreshed_at?new Date(overview.refreshed_at).toLocaleString():"-"}`}
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",minWidth:360}}>
+          <span style={{fontSize:10,color:C.muted}}>Tenant</span>
+          <Inp w={220} mono value={sdkTenant} onChange={(e)=>setSDKTenant(e.target.value)} placeholder="tenant-id"/>
           <Btn small onClick={()=>void createSDKJWT()} disabled={jwtLoading||!session?.token||session?.mode!=="backend"}>
             {jwtLoading?"Creating JWT...":"Create JWT"}
           </Btn>

@@ -172,8 +172,9 @@ type PublicKeyResponse = {
   };
 };
 
-function tenantQuery(session: AuthSession): string {
-  return `tenant_id=${encodeURIComponent(session.tenantId)}`;
+function tenantQuery(session: AuthSession, tenantOverride?: string): string {
+  const tenant = String(tenantOverride || session.tenantId || "").trim();
+  return `tenant_id=${encodeURIComponent(tenant)}`;
 }
 
 export async function listEKMAgents(session: AuthSession): Promise<EKMAgent[]> {
@@ -290,11 +291,11 @@ export async function getEKMTDEPublicKey(
   };
 }
 
-export async function getEKMSDKOverview(session: AuthSession): Promise<EKMSDKOverview> {
+export async function getEKMSDKOverview(session: AuthSession, tenantOverride?: string): Promise<EKMSDKOverview> {
   const out = await serviceRequest<SDKOverviewResponse>(
     session,
     "ekm",
-    `/ekm/sdk/overview?${tenantQuery(session)}`
+    `/ekm/sdk/overview?${tenantQuery(session, tenantOverride)}`
   );
   return out.overview || { refreshed_at: "", providers: [], mechanisms: [], clients: [] };
 }
@@ -302,12 +303,13 @@ export async function getEKMSDKOverview(session: AuthSession): Promise<EKMSDKOve
 export async function downloadEKMSDK(
   session: AuthSession,
   provider: "pkcs11" | "jca",
-  targetOS: "linux" | "windows" | "macos" | "all" = "all"
+  targetOS: "linux" | "windows" | "macos" | "all" = "all",
+  tenantOverride?: string
 ): Promise<EKMSDKArtifact> {
   const out = await serviceRequest<SDKDownloadResponse>(
     session,
     "ekm",
-    `/ekm/sdk/download?${tenantQuery(session)}&provider=${encodeURIComponent(provider)}&os=${encodeURIComponent(targetOS)}`
+    `/ekm/sdk/download?${tenantQuery(session, tenantOverride)}&provider=${encodeURIComponent(provider)}&os=${encodeURIComponent(targetOS)}`
   );
   return out.artifact;
 }
