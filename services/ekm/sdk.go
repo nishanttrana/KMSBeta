@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"archive/zip"
@@ -292,9 +292,9 @@ Build:
   make -C examples/c
 
 Examples:
-  ./examples/c/vecta_kms_client register-client bank-alpha app1 ops@acme.com service app-service
-  ./examples/c/vecta_kms_client wrap bank-alpha key_123 BASE64PLAINTEXT
-  ./examples/c/vecta_kms_client public bank-alpha key_123
+  ./examples/c/vecta_kms_client register-client root app1 ops@acme.com service app-service
+  ./examples/c/vecta_kms_client wrap root key_123 BASE64PLAINTEXT
+  ./examples/c/vecta_kms_client public root key_123
 
 Target OS profile: %s
 `, osLabel, osLabel)
@@ -614,8 +614,8 @@ Build:
   mvn -q -DskipTests package
 
 Run:
-  java -jar target/vecta-jca-provider.jar register-client bank-alpha app1 ops@acme.com
-  java -jar target/vecta-jca-provider.jar wrap bank-alpha key_123 BASE64PLAINTEXT
+  java -jar target/vecta-jca-provider.jar register-client root app1 ops@acme.com
+  java -jar target/vecta-jca-provider.jar wrap root key_123 BASE64PLAINTEXT
 
 Environment:
 - VECTA_BASE_URL

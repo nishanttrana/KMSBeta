@@ -1,4 +1,4 @@
-# KMIP Service
+﻿# KMIP Service
 
 This service runs a real KMIP-over-TLS endpoint backed by `keycore` for key lifecycle and cryptographic operations.
 
@@ -31,7 +31,7 @@ Generate internal service certs and CA:
 Generate a KMIP client cert:
 
 ```bash
-./infra/certs/generate-kmip-client.sh infra/certs/out/kmip-client bank-alpha:kmip-client
+./infra/certs/generate-kmip-client.sh infra/certs/out/kmip-client root:kmip-client
 ```
 
 ## Compose Deployment

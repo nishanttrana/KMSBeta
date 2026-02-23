@@ -1,11 +1,11 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 set -euo pipefail
 
 umask 077
 
 CERTS_ROOT="${VECTA_CERTS_OUT:-infra/certs/out}"
 OUT_DIR="${1:-${CERTS_ROOT}/kmip-client}"
-CLIENT_CN="${2:-bank-alpha:kmip-client}"
+CLIENT_CN="${2:-root:kmip-client}"
 ORG="${ORG:-Vecta KMS}"
 ORG_DN="${ORG// /\\ }"
 DAYS="${DAYS:-825}"

@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"crypto/rand"
@@ -167,7 +167,7 @@ func generateConfigs(req WizardRequest) (GeneratedConfigs, error) {
 	}
 
 	authBootstrap := map[string]any{
-		"tenant_id":             "bank-alpha",
+		"tenant_id":             "root",
 		"admin_username":        req.Spec.Admin.Username,
 		"admin_password":        req.Spec.Admin.Password,
 		"admin_email":           req.Spec.Admin.Email,

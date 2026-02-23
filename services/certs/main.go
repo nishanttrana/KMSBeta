@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"context"
@@ -276,7 +276,7 @@ func loadRuntimeMaterializerConfig() RuntimeCertMaterializerConfig {
 	return RuntimeCertMaterializerConfig{
 		Enabled:        envBool("CERTS_RUNTIME_MATERIALIZER_ENABLED", true),
 		MaterializeDir: envOr("CERTS_RUNTIME_MATERIALIZER_DIR", "/run/vecta/certs"),
-		TenantID:       envOr("CERTS_RUNTIME_TENANT_ID", "bank-alpha"),
+		TenantID:       envOr("CERTS_RUNTIME_TENANT_ID", "root"),
 		RootCAName:     envOr("CERTS_RUNTIME_ROOT_CA_NAME", "vecta-runtime-root"),
 		ValidityDays:   int64(envInt("CERTS_RUNTIME_VALIDITY_DAYS", 90)),
 		Interval:       envDuration("CERTS_RUNTIME_MATERIALIZER_INTERVAL", 5*time.Minute),

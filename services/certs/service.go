@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"bytes"
@@ -2297,7 +2297,7 @@ func (s *Service) MaterializeRuntimeCerts(ctx context.Context, cfg RuntimeCertMa
 	}
 	tenantID := strings.TrimSpace(cfg.TenantID)
 	if tenantID == "" {
-		tenantID = "bank-alpha"
+		tenantID = "root"
 	}
 	rootName := strings.TrimSpace(cfg.RootCAName)
 	if rootName == "" {

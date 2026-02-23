@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"context"
@@ -67,7 +67,7 @@ func TestHTTPFIPSModeProvider(t *testing.T) {
 	defer srv.Close()
 
 	provider := NewHTTPFIPSModeProvider(srv.URL, time.Second, 2*time.Second)
-	enabled, err := provider.IsEnabled(context.Background(), "bank-alpha")
+	enabled, err := provider.IsEnabled(context.Background(), "root")
 	if err != nil {
 		t.Fatalf("provider read failed: %v", err)
 	}

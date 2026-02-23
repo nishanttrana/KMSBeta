@@ -1,5 +1,5 @@
-{
-  "tenant_id": "bank-alpha",
+﻿{
+  "tenant_id": "root",
   "agent_id": "agent-win-01",
   "agent_name": "MSSQL-Prod-01",
   "role": "ekm-agent",

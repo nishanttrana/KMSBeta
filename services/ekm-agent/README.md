@@ -1,4 +1,4 @@
-# Vecta EKM Agent (Windows-first)
+﻿# Vecta EKM Agent (Windows-first)
 
 This agent registers to `services/ekm`, sends heartbeat + OS health metrics, and reports TDE state for:
 
@@ -23,7 +23,7 @@ Output zip is generated under `dist/ekm-agent-windows/`.
 
 ```powershell
 .\install-ekm-agent.ps1 `
-  -TenantId bank-alpha `
+  -TenantId root `
   -AgentId mssql-prod-01 `
   -AgentName MSSQL-Prod-01 `
   -DbEngine mssql `
@@ -38,7 +38,7 @@ For Oracle:
 
 ```powershell
 .\install-ekm-agent.ps1 `
-  -TenantId bank-alpha `
+  -TenantId root `
   -AgentId oracle-prod-01 `
   -AgentName ORACLE-Prod-01 `
   -DbEngine oracle `
