@@ -63,8 +63,16 @@ import {
   randomBytes,
   rotateKey,
   getKeyAccessPolicy,
+  getKeyAccessSettings,
+  listKeyInterfacePolicies,
+  listKeyInterfacePorts,
   setKeyAccessGroupMembers,
   setKeyAccessPolicy,
+  updateKeyAccessSettings,
+  upsertKeyInterfacePolicy,
+  upsertKeyInterfacePort,
+  deleteKeyInterfacePolicy,
+  deleteKeyInterfacePort,
   setKeyExportPolicy,
   setKeyUsageLimit,
   createKeyAccessGroup,
@@ -1884,6 +1892,10 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
   const [policyNewSubjectType,setPolicyNewSubjectType]=useState("user");
   const [policyNewSubjectId,setPolicyNewSubjectId]=useState("");
   const [policyNewOperations,setPolicyNewOperations]=useState<string[]>(["encrypt"]);
+  const [policyNewNotBefore,setPolicyNewNotBefore]=useState("");
+  const [policyNewExpiresAt,setPolicyNewExpiresAt]=useState("");
+  const [policyNewJustification,setPolicyNewJustification]=useState("");
+  const [policyNewTicketId,setPolicyNewTicketId]=useState("");
   const [policyCreateGroupName,setPolicyCreateGroupName]=useState("");
   const [policyCreateGroupDescription,setPolicyCreateGroupDescription]=useState("");
   const [policyCreateGroupMembers,setPolicyCreateGroupMembers]=useState<string[]>([]);
@@ -2834,7 +2846,11 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
         subject_id:String(grant?.subject_id||"").trim(),
         operations:Array.isArray(grant?.operations)&&grant.operations.length
           ?Array.from(new Set(grant.operations.map((op)=>String(op||"").trim().toLowerCase()).filter(Boolean)))
-          :["encrypt"]
+          :["encrypt"],
+        not_before:String(grant?.not_before||"").trim(),
+        expires_at:String(grant?.expires_at||"").trim(),
+        justification:String(grant?.justification||"").trim(),
+        ticket_id:String(grant?.ticket_id||"").trim()
       })).filter((grant)=>grant.subject_id):[]);
     }catch(error){
       setPolicyUsers([]);
@@ -2872,6 +2888,10 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
     setPolicyNewSubjectType("user");
     setPolicyNewSubjectId("");
     setPolicyNewOperations(["encrypt"]);
+    setPolicyNewNotBefore("");
+    setPolicyNewExpiresAt("");
+    setPolicyNewJustification("");
+    setPolicyNewTicketId("");
     setPolicyCreateGroupName("");
     setPolicyCreateGroupDescription("");
     setPolicyCreateGroupMembers([]);
@@ -2898,6 +2918,8 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
     const subjectType=policyNewSubjectType==="group"?"group":"user";
     const subjectId=String(policyNewSubjectId||"").trim();
     const operations=Array.from(new Set((Array.isArray(policyNewOperations)?policyNewOperations:["encrypt"]).map((op)=>String(op||"").trim().toLowerCase()).filter(Boolean)));
+    const notBeforeISO=policyNewNotBefore?toISODateTime(policyNewNotBefore):"";
+    const expiresISO=policyNewExpiresAt?toISODateTime(policyNewExpiresAt):"";
     if(!subjectId){
       onToast?.("Select a user or group to assign.");
       return;
@@ -2906,17 +2928,48 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
       onToast?.("Select at least one allowed operation.");
       return;
     }
+    if(policyNewNotBefore&&!notBeforeISO){
+      onToast?.("Invalid grant start date/time.");
+      return;
+    }
+    if(policyNewExpiresAt&&!expiresISO){
+      onToast?.("Invalid grant expiry date/time.");
+      return;
+    }
+    if(notBeforeISO&&expiresISO&&new Date(notBeforeISO).getTime()>new Date(expiresISO).getTime()){
+      onToast?.("Grant expiry must be after grant start.");
+      return;
+    }
     setPolicyGrants((prev)=>{
       const items=Array.isArray(prev)?[...prev]:[];
       const idx=items.findIndex((grant)=>String(grant?.subject_type)===(subjectType)&&String(grant?.subject_id||"").trim()===subjectId);
       if(idx>=0){
-        items[idx]={...items[idx],operations};
+        items[idx]={
+          ...items[idx],
+          operations,
+          not_before:notBeforeISO,
+          expires_at:expiresISO,
+          justification:String(policyNewJustification||"").trim(),
+          ticket_id:String(policyNewTicketId||"").trim()
+        };
         return items;
       }
-      return [...items,{subject_type:subjectType,subject_id:subjectId,operations}];
+      return [...items,{
+        subject_type:subjectType,
+        subject_id:subjectId,
+        operations,
+        not_before:notBeforeISO,
+        expires_at:expiresISO,
+        justification:String(policyNewJustification||"").trim(),
+        ticket_id:String(policyNewTicketId||"").trim()
+      }];
     });
     setPolicyNewSubjectId("");
     setPolicyNewOperations(["encrypt"]);
+    setPolicyNewNotBefore("");
+    setPolicyNewExpiresAt("");
+    setPolicyNewJustification("");
+    setPolicyNewTicketId("");
   };
 
   const removePolicyGrant=(subjectType:string,subjectId:string)=>{
@@ -2999,7 +3052,11 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
       await setKeyAccessPolicy(session,selectedKey.id,(Array.isArray(policyGrants)?policyGrants:[]).map((grant)=>({
         subject_type:String(grant?.subject_type||"user")==="group"?"group":"user",
         subject_id:String(grant?.subject_id||"").trim(),
-        operations:Array.from(new Set((Array.isArray(grant?.operations)?grant.operations:[]).map((op)=>String(op||"").trim().toLowerCase()).filter(Boolean)))
+        operations:Array.from(new Set((Array.isArray(grant?.operations)?grant.operations:[]).map((op)=>String(op||"").trim().toLowerCase()).filter(Boolean))),
+        not_before:String(grant?.not_before||"").trim()||undefined,
+        expires_at:String(grant?.expires_at||"").trim()||undefined,
+        justification:String(grant?.justification||"").trim()||undefined,
+        ticket_id:String(grant?.ticket_id||"").trim()||undefined
       })).filter((grant)=>grant.subject_id&&grant.operations.length),session.username||"");
       if(canEditActivation){
         await updateKeyActivation(session,selectedKey.id,{
@@ -3925,6 +3982,22 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
               onChange={()=>togglePolicyNewOperation(item.id)}
             />)}
           </div>
+          <div style={{marginTop:8,display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+            <FG label="Grant active from (optional)">
+              <Inp type="datetime-local" value={policyNewNotBefore} onChange={(e)=>setPolicyNewNotBefore(e.target.value)}/>
+            </FG>
+            <FG label="Grant expires at (optional)">
+              <Inp type="datetime-local" value={policyNewExpiresAt} onChange={(e)=>setPolicyNewExpiresAt(e.target.value)}/>
+            </FG>
+          </div>
+          <Row2>
+            <FG label="Justification (optional)">
+              <Inp value={policyNewJustification} onChange={(e)=>setPolicyNewJustification(e.target.value)} placeholder="Reason for grant"/>
+            </FG>
+            <FG label="Ticket ID (optional)">
+              <Inp value={policyNewTicketId} onChange={(e)=>setPolicyNewTicketId(e.target.value)} placeholder="INC-1234 / CHG-1234"/>
+            </FG>
+          </Row2>
           <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
             <Btn onClick={addPolicyGrant}>Add Assignment</Btn>
           </div>
@@ -3936,10 +4009,17 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
                 ?((Array.isArray(policyGroups)?policyGroups:[]).find((group)=>String(group?.id||"")===subjectID)?.name||subjectID)
                 :((Array.isArray(policyUsers)?policyUsers:[]).find((user)=>String(user?.id||"")===subjectID)?.username||subjectID);
               const operations=(Array.isArray(grant?.operations)?grant.operations:[]).map((op)=>KEY_ACCESS_OPERATION_OPTIONS.find((item)=>item.id===String(op||"").toLowerCase())?.label||String(op||"").toUpperCase()).join(", ");
+              const windowParts=[
+                String(grant?.not_before||"").trim()?`from ${new Date(String(grant?.not_before)).toLocaleString()}`:"",
+                String(grant?.expires_at||"").trim()?`until ${new Date(String(grant?.expires_at)).toLocaleString()}`:""
+              ].filter(Boolean).join(" ");
+              const reason=String(grant?.justification||"").trim();
+              const ticket=String(grant?.ticket_id||"").trim();
+              const extra=[windowParts,reason?`reason: ${reason}`:"",ticket?`ticket: ${ticket}`:""].filter(Boolean).join(" • ");
               return <div key={`${subjectType}:${subjectID}`} style={{display:"grid",gridTemplateColumns:"1fr auto",alignItems:"center",gap:8,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
                 <div>
                   <div style={{fontSize:10,color:C.text,fontWeight:700}}>{`${subjectType==="group"?"Group":"User"}: ${subjectLabel}`}</div>
-                  <div style={{fontSize:9,color:C.muted}}>{operations||"No operations"}</div>
+                  <div style={{fontSize:9,color:C.muted}}>{operations||"No operations"}{extra?` • ${extra}`:""}</div>
                 </div>
                 <Btn danger small onClick={()=>removePolicyGrant(subjectType,subjectID)}>Remove</Btn>
               </div>;
@@ -13054,6 +13134,26 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
   const [govSaving,setGovSaving]=useState(false);
   const [smtpTestTo,setSMTPTestTo]=useState("");
   const [smtpTesting,setSMTPTesting]=useState(false);
+  const [accessSettings,setAccessSettings]=useState<any>(null);
+  const [accessSettingsLoading,setAccessSettingsLoading]=useState(false);
+  const [accessSettingsSaving,setAccessSettingsSaving]=useState(false);
+  const [interfacePolicies,setInterfacePolicies]=useState<any[]>([]);
+  const [interfacePorts,setInterfacePorts]=useState<any[]>([]);
+  const [interfaceConfigLoading,setInterfaceConfigLoading]=useState(false);
+  const [newInterfacePolicy,setNewInterfacePolicy]=useState<any>({
+    interface_name:"rest",
+    subject_type:"user",
+    subject_id:"",
+    operations:["encrypt"],
+    enabled:true
+  });
+  const [newInterfacePort,setNewInterfacePort]=useState<any>({
+    interface_name:"rest",
+    bind_address:"0.0.0.0",
+    port:443,
+    enabled:true,
+    description:""
+  });
   const promptDialog=usePromptDialog();
 
   const statusTone=(status)=>{
@@ -13418,6 +13518,156 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     }
   };
 
+  const loadAccessHardening=async(silent=false)=>{
+    if(!session?.token){
+      setAccessSettings(null);
+      setInterfacePolicies([]);
+      setInterfacePorts([]);
+      return;
+    }
+    if(!silent){
+      setAccessSettingsLoading(true);
+      setInterfaceConfigLoading(true);
+    }
+    try{
+      const [settings,policies,ports]=await Promise.all([
+        getKeyAccessSettings(session),
+        listKeyInterfacePolicies(session),
+        listKeyInterfacePorts(session)
+      ]);
+      setAccessSettings(settings||null);
+      setInterfacePolicies(Array.isArray(policies)?policies:[]);
+      setInterfacePorts(Array.isArray(ports)?ports:[]);
+    }catch(error){
+      if(!silent){
+        onToast?.(`Key access hardening load failed: ${errMsg(error)}`);
+      }
+    }finally{
+      if(!silent){
+        setAccessSettingsLoading(false);
+        setInterfaceConfigLoading(false);
+      }
+    }
+  };
+
+  const saveAccessHardening=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to update key access hardening.");
+      return;
+    }
+    if(!accessSettings){
+      onToast?.("Access hardening settings are not loaded.");
+      return;
+    }
+    setAccessSettingsSaving(true);
+    try{
+      const payload={
+        deny_by_default:Boolean(accessSettings?.deny_by_default),
+        require_approval_for_policy_change:Boolean(accessSettings?.require_approval_for_policy_change),
+        grant_default_ttl_minutes:Math.max(0,Math.min(43200,Number(accessSettings?.grant_default_ttl_minutes||0))),
+        grant_max_ttl_minutes:Math.max(0,Math.min(129600,Number(accessSettings?.grant_max_ttl_minutes||0))),
+        enforce_signed_requests:Boolean(accessSettings?.enforce_signed_requests),
+        replay_window_seconds:Math.max(30,Math.min(3600,Number(accessSettings?.replay_window_seconds||300))),
+        nonce_ttl_seconds:Math.max(30,Math.min(7200,Number(accessSettings?.nonce_ttl_seconds||900))),
+        require_interface_policies:Boolean(accessSettings?.require_interface_policies)
+      };
+      const updated=await updateKeyAccessSettings(session,payload);
+      setAccessSettings(updated||payload);
+      onToast?.("Key access hardening updated.");
+    }catch(error){
+      onToast?.(`Key access hardening update failed: ${errMsg(error)}`);
+    }finally{
+      setAccessSettingsSaving(false);
+    }
+  };
+
+  const addInterfacePolicy=async()=>{
+    const subjectID=String(newInterfacePolicy?.subject_id||"").trim();
+    if(!subjectID){
+      onToast?.("Subject ID is required.");
+      return;
+    }
+    const operations=Array.isArray(newInterfacePolicy?.operations)?newInterfacePolicy.operations:[];
+    if(!operations.length){
+      onToast?.("Select at least one operation.");
+      return;
+    }
+    try{
+      await upsertKeyInterfacePolicy(session,{
+        interface_name:String(newInterfacePolicy?.interface_name||"rest"),
+        subject_type:String(newInterfacePolicy?.subject_type||"user")==="group"?"group":"user",
+        subject_id:subjectID,
+        operations,
+        enabled:Boolean(newInterfacePolicy?.enabled)
+      });
+      await loadAccessHardening(true);
+      setNewInterfacePolicy((prev)=>({...prev,subject_id:"",operations:["encrypt"],enabled:true}));
+      onToast?.("Interface subject policy saved.");
+    }catch(error){
+      onToast?.(`Save interface policy failed: ${errMsg(error)}`);
+    }
+  };
+
+  const removeInterfacePolicy=async(id)=>{
+    const confirmed=await promptDialog.confirm({
+      title:"Delete Interface Policy",
+      message:"Delete this subject mapping?",
+      confirmLabel:"Delete",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    try{
+      await deleteKeyInterfacePolicy(session,String(id||""));
+      await loadAccessHardening(true);
+      onToast?.("Interface subject policy deleted.");
+    }catch(error){
+      onToast?.(`Delete interface policy failed: ${errMsg(error)}`);
+    }
+  };
+
+  const addInterfacePort=async()=>{
+    const interfaceName=String(newInterfacePort?.interface_name||"").trim();
+    const port=Number(newInterfacePort?.port||0);
+    if(!interfaceName||port<1||port>65535){
+      onToast?.("Valid interface and port are required.");
+      return;
+    }
+    try{
+      await upsertKeyInterfacePort(session,{
+        interface_name:interfaceName,
+        bind_address:String(newInterfacePort?.bind_address||"0.0.0.0").trim()||"0.0.0.0",
+        port:Math.trunc(port),
+        enabled:Boolean(newInterfacePort?.enabled),
+        description:String(newInterfacePort?.description||"").trim()
+      });
+      await loadAccessHardening(true);
+      onToast?.("Interface port updated.");
+    }catch(error){
+      onToast?.(`Save interface port failed: ${errMsg(error)}`);
+    }
+  };
+
+  const removeInterfacePort=async(interfaceName)=>{
+    const confirmed=await promptDialog.confirm({
+      title:"Delete Interface Port",
+      message:`Delete ${String(interfaceName||"")}?`,
+      confirmLabel:"Delete",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    try{
+      await deleteKeyInterfacePort(session,String(interfaceName||""));
+      await loadAccessHardening(true);
+      onToast?.("Interface port deleted.");
+    }catch(error){
+      onToast?.(`Delete interface port failed: ${errMsg(error)}`);
+    }
+  };
+
   const savePasswordPolicy=async()=>{
     if(!session?.token){
       onToast?.("Login is required to update password policy.");
@@ -13510,6 +13760,9 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       setPasswordPolicy(null);
       setSecurityPolicy(null);
       setGovSettings(null);
+      setAccessSettings(null);
+      setInterfacePolicies([]);
+      setInterfacePorts([]);
       return;
     }
     void loadHealth(false);
@@ -13519,6 +13772,7 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     void loadPasswordPolicy(true);
     void loadSecurityPolicy(true);
     void loadGovernanceSettings(true);
+    void loadAccessHardening(true);
     const id=setInterval(()=>{void loadHealth(true);},15000);
     return()=>clearInterval(id);
   },[session?.token,session?.tenantId,onFipsModeChange]);
@@ -13681,6 +13935,16 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
               :"SMTP + approval delivery controls"}
         </div>
       </Card>
+      <Card onClick={()=>sM("key-access-hardening")}>
+        <div style={{fontSize:11,color:C.text,fontWeight:600}}>Key Access Hardening</div>
+        <div style={{fontSize:10,color:C.dim}}>
+          {accessSettings
+            ? `${accessSettings.deny_by_default?"deny-default":"creator-default"} • replay ${accessSettings.replay_window_seconds||300}s • ${accessSettings.require_interface_policies?"interface enforced":"interface optional"}`
+            : accessSettingsLoading
+              ?"Loading hardening..."
+              :"Deny-by-default, JIT grants, replay and interface controls"}
+        </div>
+      </Card>
     </Row3>
   </Section>
   <Modal open={m==="cert-security"} onClose={()=>sM(null)} title="Certificate Key Security">
@@ -13713,6 +13977,143 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       <Btn onClick={()=>sM(null)}>Close</Btn>
       <Btn primary onClick={()=>void loadCertSecurity(false)}>{certSecurityLoading?"Refreshing...":"Refresh"}</Btn>
     </div>
+  </Modal>
+  <Modal open={m==="key-access-hardening"} onClose={()=>sM(null)} title="Key Access Hardening" wide>
+    <FG label="Global Policy Controls" hint="Applies to key access policy evaluation across REST, EKM, PKCS#11, JCA, KMIP and future interfaces.">
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+        <Chk label="Deny-by-default for new keys" checked={Boolean(accessSettings?.deny_by_default)} onChange={()=>setAccessSettings((prev)=>({...prev,deny_by_default:!Boolean(prev?.deny_by_default)}))}/>
+        <Chk label="Approval required for access policy changes" checked={Boolean(accessSettings?.require_approval_for_policy_change)} onChange={()=>setAccessSettings((prev)=>({...prev,require_approval_for_policy_change:!Boolean(prev?.require_approval_for_policy_change)}))}/>
+        <Chk label="Enforce signed requests (nonce + timestamp + signature)" checked={Boolean(accessSettings?.enforce_signed_requests)} onChange={()=>setAccessSettings((prev)=>({...prev,enforce_signed_requests:!Boolean(prev?.enforce_signed_requests)}))}/>
+        <Chk label="Require interface subject policies" checked={Boolean(accessSettings?.require_interface_policies)} onChange={()=>setAccessSettings((prev)=>({...prev,require_interface_policies:!Boolean(prev?.require_interface_policies)}))}/>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10,marginTop:8}}>
+        <FG label="Grant default TTL (minutes)">
+          <Inp
+            type="number"
+            min={0}
+            value={String(accessSettings?.grant_default_ttl_minutes??0)}
+            onChange={(e)=>setAccessSettings((prev)=>({...prev,grant_default_ttl_minutes:Number(e.target.value||0)}))}
+          />
+        </FG>
+        <FG label="Grant max TTL (minutes)">
+          <Inp
+            type="number"
+            min={0}
+            value={String(accessSettings?.grant_max_ttl_minutes??0)}
+            onChange={(e)=>setAccessSettings((prev)=>({...prev,grant_max_ttl_minutes:Number(e.target.value||0)}))}
+          />
+        </FG>
+        <FG label="Replay window (seconds)">
+          <Inp
+            type="number"
+            min={30}
+            value={String(accessSettings?.replay_window_seconds??300)}
+            onChange={(e)=>setAccessSettings((prev)=>({...prev,replay_window_seconds:Number(e.target.value||300)}))}
+          />
+        </FG>
+        <FG label="Nonce TTL (seconds)">
+          <Inp
+            type="number"
+            min={30}
+            value={String(accessSettings?.nonce_ttl_seconds??900)}
+            onChange={(e)=>setAccessSettings((prev)=>({...prev,nonce_ttl_seconds:Number(e.target.value||900)}))}
+          />
+        </FG>
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}>
+        <Btn onClick={()=>void loadAccessHardening(false)} disabled={accessSettingsLoading||interfaceConfigLoading}>{accessSettingsLoading?"Refreshing...":"Refresh"}</Btn>
+        <Btn primary onClick={saveAccessHardening} disabled={accessSettingsSaving}>{accessSettingsSaving?"Saving...":"Save Hardening Policy"}</Btn>
+      </div>
+    </FG>
+
+    <FG label="Interface Port Mapping" hint="Single network interface, different service ports configurable per interface.">
+      <div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr)) auto",gap:8,alignItems:"end"}}>
+        <FG label="Interface">
+          <Sel value={String(newInterfacePort?.interface_name||"rest")} onChange={(e)=>setNewInterfacePort((prev)=>({...prev,interface_name:e.target.value}))}>
+            {["rest","ekm","pkcs11","jca","kmip","hyok","byok"].map((opt)=><option key={opt} value={opt}>{opt.toUpperCase()}</option>)}
+          </Sel>
+        </FG>
+        <FG label="Bind Address">
+          <Inp value={String(newInterfacePort?.bind_address||"0.0.0.0")} onChange={(e)=>setNewInterfacePort((prev)=>({...prev,bind_address:e.target.value}))}/>
+        </FG>
+        <FG label="Port">
+          <Inp type="number" min={1} max={65535} value={String(newInterfacePort?.port??443)} onChange={(e)=>setNewInterfacePort((prev)=>({...prev,port:Number(e.target.value||0)}))}/>
+        </FG>
+        <FG label="Description">
+          <Inp value={String(newInterfacePort?.description||"")} onChange={(e)=>setNewInterfacePort((prev)=>({...prev,description:e.target.value}))}/>
+        </FG>
+        <FG label="Enabled">
+          <Chk label="Allow traffic" checked={Boolean(newInterfacePort?.enabled)} onChange={()=>setNewInterfacePort((prev)=>({...prev,enabled:!Boolean(prev?.enabled)}))}/>
+        </FG>
+        <Btn onClick={addInterfacePort}>Save</Btn>
+      </div>
+      <div style={{display:"grid",gap:6,marginTop:8,maxHeight:160,overflowY:"auto"}}>
+        {(Array.isArray(interfacePorts)?interfacePorts:[]).map((item)=>(
+          <div key={String(item?.interface_name||Math.random())} style={{display:"grid",gridTemplateColumns:"1fr auto",alignItems:"center",gap:8,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
+            <div>
+              <div style={{fontSize:10,color:C.text,fontWeight:700}}>{String(item?.interface_name||"-").toUpperCase()}</div>
+              <div style={{fontSize:9,color:C.muted}}>{`${String(item?.bind_address||"0.0.0.0")}:${Number(item?.port||0)} • ${item?.enabled?"enabled":"disabled"}${String(item?.description||"").trim()?` • ${String(item?.description||"").trim()}`:""}`}</div>
+            </div>
+            <Btn danger small onClick={()=>void removeInterfacePort(String(item?.interface_name||""))}>Delete</Btn>
+          </div>
+        ))}
+        {!Array.isArray(interfacePorts)||!interfacePorts.length?<div style={{fontSize:10,color:C.dim}}>No interface ports configured yet.</div>:null}
+      </div>
+    </FG>
+
+    <FG label="Per-interface Subject Policies" hint="Maps service accounts/users/groups to allowed crypto operations per interface.">
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8}}>
+        <FG label="Interface">
+          <Sel value={String(newInterfacePolicy?.interface_name||"rest")} onChange={(e)=>setNewInterfacePolicy((prev)=>({...prev,interface_name:e.target.value}))}>
+            {["rest","ekm","pkcs11","jca","kmip","hyok","byok"].map((opt)=><option key={opt} value={opt}>{opt.toUpperCase()}</option>)}
+          </Sel>
+        </FG>
+        <FG label="Subject Type">
+          <Sel value={String(newInterfacePolicy?.subject_type||"user")} onChange={(e)=>setNewInterfacePolicy((prev)=>({...prev,subject_type:e.target.value==="group"?"group":"user"}))}>
+            <option value="user">User</option>
+            <option value="group">Group</option>
+          </Sel>
+        </FG>
+        <FG label="Subject ID">
+          <Inp value={String(newInterfacePolicy?.subject_id||"")} onChange={(e)=>setNewInterfacePolicy((prev)=>({...prev,subject_id:e.target.value}))} placeholder="user-id / username / group-id"/>
+        </FG>
+        <FG label="Enabled">
+          <Chk label="Policy active" checked={Boolean(newInterfacePolicy?.enabled)} onChange={()=>setNewInterfacePolicy((prev)=>({...prev,enabled:!Boolean(prev?.enabled)}))}/>
+        </FG>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:6,marginTop:6}}>
+        {KEY_ACCESS_OPERATION_OPTIONS.map((item)=>{
+          const selected=(Array.isArray(newInterfacePolicy?.operations)?newInterfacePolicy.operations:[]).includes(item.id);
+          return <Chk
+            key={`if-op-${item.id}`}
+            label={item.label}
+            checked={selected}
+            onChange={()=>setNewInterfacePolicy((prev)=>{
+              const ops=Array.isArray(prev?.operations)?[...prev.operations]:[];
+              if(ops.includes(item.id)){
+                return {...prev,operations:ops.filter((op)=>op!==item.id)};
+              }
+              return {...prev,operations:[...ops,item.id]};
+            })}
+          />;
+        })}
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
+        <Btn onClick={addInterfacePolicy}>Save Subject Policy</Btn>
+      </div>
+      <div style={{display:"grid",gap:6,marginTop:8,maxHeight:220,overflowY:"auto"}}>
+        {(Array.isArray(interfacePolicies)?interfacePolicies:[]).map((item)=>(
+          <div key={String(item?.id||Math.random())} style={{display:"grid",gridTemplateColumns:"1fr auto",alignItems:"center",gap:8,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
+            <div>
+              <div style={{fontSize:10,color:C.text,fontWeight:700}}>{`${String(item?.interface_name||"rest").toUpperCase()} • ${String(item?.subject_type||"user").toUpperCase()} ${String(item?.subject_id||"-")}`}</div>
+              <div style={{fontSize:9,color:C.muted}}>{`${(Array.isArray(item?.operations)?item.operations:[]).join(", ")||"-"} • ${item?.enabled?"enabled":"disabled"}`}</div>
+            </div>
+            <Btn danger small onClick={()=>void removeInterfacePolicy(String(item?.id||""))}>Delete</Btn>
+          </div>
+        ))}
+        {!Array.isArray(interfacePolicies)||!interfacePolicies.length?<div style={{fontSize:10,color:C.dim}}>No interface subject policies configured.</div>:null}
+      </div>
+    </FG>
   </Modal>
   <Modal open={m==="tls"} onClose={()=>sM(null)} title="Configure Web Interface TLS Certificate" wide>
     <FG label="Certificate Source" required>

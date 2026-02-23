@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -13,6 +16,12 @@ import (
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+)
+
+type requestSecurityCtxKey string
+
+const (
+	rawBearerTokenCtxKey requestSecurityCtxKey = "raw_bearer_token"
 )
 
 type AuditPublisher interface {
@@ -37,16 +46,27 @@ func (h *Handler) SetTokenParser(parser func(string) (*pkgauth.Claims, error)) {
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	rawToken := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
 	if h.parseToken != nil {
-		raw := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
-		if raw != "" {
-			claims, err := h.parseToken(raw)
+		if rawToken != "" {
+			claims, err := h.parseToken(rawToken)
 			if err != nil {
 				writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid token", requestID(r), "")
 				return
 			}
 			ctx = pkgauth.ContextWithClaims(ctx, claims)
 		}
+	}
+	if rawToken != "" {
+		ctx = context.WithValue(ctx, rawBearerTokenCtxKey, rawToken)
+	}
+	if err := h.enforceSignedRequestPolicy(r.WithContext(ctx)); err != nil {
+		code := http.StatusUnauthorized
+		if strings.Contains(strings.ToLower(err.Error()), "replay") {
+			code = http.StatusConflict
+		}
+		writeErr(w, code, "request_security_violation", err.Error(), requestID(r), "")
+		return
 	}
 	ctx = contextWithAccessActor(ctx, accessActorFromHTTPRequest(r.WithContext(ctx)))
 	h.mux.ServeHTTP(w, r.WithContext(ctx))
@@ -89,6 +109,14 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /access/groups", h.handleCreateAccessGroup)
 	mux.HandleFunc("DELETE /access/groups/{id}", h.handleDeleteAccessGroup)
 	mux.HandleFunc("PUT /access/groups/{id}/members", h.handleSetAccessGroupMembers)
+	mux.HandleFunc("GET /access/settings", h.handleGetAccessSettings)
+	mux.HandleFunc("PUT /access/settings", h.handleSetAccessSettings)
+	mux.HandleFunc("GET /access/interface-policies", h.handleListInterfacePolicies)
+	mux.HandleFunc("POST /access/interface-policies", h.handleUpsertInterfacePolicy)
+	mux.HandleFunc("DELETE /access/interface-policies/{id}", h.handleDeleteInterfacePolicy)
+	mux.HandleFunc("GET /access/interface-ports", h.handleListInterfacePorts)
+	mux.HandleFunc("POST /access/interface-ports", h.handleUpsertInterfacePort)
+	mux.HandleFunc("DELETE /access/interface-ports/{name}", h.handleDeleteInterfacePort)
 	mux.HandleFunc("GET /tags", h.handleListTags)
 	mux.HandleFunc("POST /tags", h.handleUpsertTag)
 	mux.HandleFunc("DELETE /tags/{name}", h.handleDeleteTag)
@@ -891,6 +919,223 @@ func (h *Handler) handleSetAccessGroupMembers(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
 }
 
+func (h *Handler) handleGetAccessSettings(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	settings, err := h.svc.GetKeyAccessSettings(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "access_settings_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"settings":   settings,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleSetAccessSettings(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	current, err := h.svc.GetKeyAccessSettings(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "access_settings_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	var req struct {
+		DenyByDefault                  *bool `json:"deny_by_default"`
+		RequireApprovalForPolicyChange *bool `json:"require_approval_for_policy_change"`
+		GrantDefaultTTLMinutes         *int  `json:"grant_default_ttl_minutes"`
+		GrantMaxTTLMinutes             *int  `json:"grant_max_ttl_minutes"`
+		EnforceSignedRequests          *bool `json:"enforce_signed_requests"`
+		ReplayWindowSeconds            *int  `json:"replay_window_seconds"`
+		NonceTTLSeconds                *int  `json:"nonce_ttl_seconds"`
+		RequireInterfacePolicies       *bool `json:"require_interface_policies"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	if req.DenyByDefault != nil {
+		current.DenyByDefault = *req.DenyByDefault
+	}
+	if req.RequireApprovalForPolicyChange != nil {
+		current.RequireApprovalForPolicyChange = *req.RequireApprovalForPolicyChange
+	}
+	if req.GrantDefaultTTLMinutes != nil {
+		current.GrantDefaultTTLMinutes = *req.GrantDefaultTTLMinutes
+	}
+	if req.GrantMaxTTLMinutes != nil {
+		current.GrantMaxTTLMinutes = *req.GrantMaxTTLMinutes
+	}
+	if req.EnforceSignedRequests != nil {
+		current.EnforceSignedRequests = *req.EnforceSignedRequests
+	}
+	if req.ReplayWindowSeconds != nil {
+		current.ReplayWindowSeconds = *req.ReplayWindowSeconds
+	}
+	if req.NonceTTLSeconds != nil {
+		current.NonceTTLSeconds = *req.NonceTTLSeconds
+	}
+	if req.RequireInterfacePolicies != nil {
+		current.RequireInterfacePolicies = *req.RequireInterfacePolicies
+	}
+	actor := accessActorFromContext(r.Context())
+	current.UpdatedBy = strings.TrimSpace(actor.UserID)
+	if current.UpdatedBy == "" {
+		current.UpdatedBy = strings.TrimSpace(actor.Username)
+	}
+	if current.UpdatedBy == "" {
+		current.UpdatedBy = "api"
+	}
+	out, err := h.svc.UpdateKeyAccessSettings(r.Context(), current)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "access_settings_update_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"settings":   out,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleListInterfacePolicies(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	interfaceName := strings.TrimSpace(r.URL.Query().Get("interface"))
+	items, err := h.svc.ListKeyInterfaceSubjectPolicies(r.Context(), tenantID, interfaceName)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "list_interface_policies_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"items":      items,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleUpsertInterfacePolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req KeyInterfaceSubjectPolicy
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	req.TenantID = tenantID
+	actor := accessActorFromContext(r.Context())
+	req.CreatedBy = strings.TrimSpace(actor.UserID)
+	if req.CreatedBy == "" {
+		req.CreatedBy = strings.TrimSpace(actor.Username)
+	}
+	if req.CreatedBy == "" {
+		req.CreatedBy = "api"
+	}
+	out, err := h.svc.UpsertKeyInterfaceSubjectPolicy(r.Context(), req)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "upsert_interface_policy_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"policy":     out,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleDeleteInterfacePolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	if err := h.svc.DeleteKeyInterfaceSubjectPolicy(r.Context(), tenantID, r.PathValue("id")); err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errStoreNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "delete_interface_policy_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleListInterfacePorts(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.svc.ListKeyInterfacePorts(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "list_interface_ports_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"items":      items,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleUpsertInterfacePort(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req KeyInterfacePort
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	req.TenantID = tenantID
+	actor := accessActorFromContext(r.Context())
+	req.UpdatedBy = strings.TrimSpace(actor.UserID)
+	if req.UpdatedBy == "" {
+		req.UpdatedBy = strings.TrimSpace(actor.Username)
+	}
+	if req.UpdatedBy == "" {
+		req.UpdatedBy = "api"
+	}
+	out, err := h.svc.UpsertKeyInterfacePort(r.Context(), req)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "upsert_interface_port_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"item":       out,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleDeleteInterfacePort(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	interfaceName := strings.TrimSpace(r.PathValue("name"))
+	if err := h.svc.DeleteKeyInterfacePort(r.Context(), tenantID, interfaceName); err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errStoreNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "delete_interface_port_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
 func (h *Handler) handleSetIVMode(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	tenantID := mustTenant(r, reqID, w)
@@ -1362,6 +1607,122 @@ func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
 	return tenantID
 }
 
+func isSensitiveKeycoreRoute(method string, path string) bool {
+	m := strings.ToUpper(strings.TrimSpace(method))
+	if m != http.MethodPost && m != http.MethodPut && m != http.MethodDelete {
+		return false
+	}
+	p := strings.TrimSpace(path)
+	if strings.HasPrefix(p, "/keys") || strings.HasPrefix(p, "/access") || strings.HasPrefix(p, "/crypto") || strings.HasPrefix(p, "/tags") {
+		return true
+	}
+	return false
+}
+
+func extractTenantFromRequest(r *http.Request) string {
+	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
+	if tenantID == "" {
+		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	}
+	return tenantID
+}
+
+func parseRequestTimestamp(raw string) (time.Time, error) {
+	v := strings.TrimSpace(raw)
+	if v == "" {
+		return time.Time{}, errors.New("missing request timestamp")
+	}
+	if unix, err := strconv.ParseInt(v, 10, 64); err == nil {
+		return time.Unix(unix, 0).UTC(), nil
+	}
+	ts, err := time.Parse(time.RFC3339, v)
+	if err != nil {
+		return time.Time{}, errors.New("invalid request timestamp")
+	}
+	return ts.UTC(), nil
+}
+
+func decodeRequestSignature(raw string) ([]byte, error) {
+	v := strings.TrimSpace(raw)
+	if v == "" {
+		return nil, errors.New("missing request signature")
+	}
+	if b, err := hex.DecodeString(v); err == nil {
+		return b, nil
+	}
+	if b, err := base64.StdEncoding.DecodeString(v); err == nil {
+		return b, nil
+	}
+	return nil, errors.New("invalid request signature")
+}
+
+func signaturePayload(r *http.Request, tenantID string, nonce string, ts time.Time) []byte {
+	return []byte(strings.Join([]string{
+		strings.ToUpper(strings.TrimSpace(r.Method)),
+		strings.TrimSpace(r.URL.Path),
+		strings.TrimSpace(r.URL.RawQuery),
+		strings.TrimSpace(tenantID),
+		strings.TrimSpace(nonce),
+		strconv.FormatInt(ts.Unix(), 10),
+	}, "\n"))
+}
+
+func (h *Handler) enforceSignedRequestPolicy(r *http.Request) error {
+	if !isSensitiveKeycoreRoute(r.Method, r.URL.Path) {
+		return nil
+	}
+	tenantID := extractTenantFromRequest(r)
+	if tenantID == "" {
+		return nil
+	}
+	settings, err := h.svc.GetKeyAccessSettings(r.Context(), tenantID)
+	if err != nil {
+		return err
+	}
+	if !settings.EnforceSignedRequests {
+		return nil
+	}
+	rawToken, _ := r.Context().Value(rawBearerTokenCtxKey).(string)
+	rawToken = strings.TrimSpace(rawToken)
+	if rawToken == "" {
+		return errors.New("signed requests require bearer authentication")
+	}
+	nonce := strings.TrimSpace(r.Header.Get("X-KMS-Req-Nonce"))
+	if nonce == "" {
+		return errors.New("missing X-KMS-Req-Nonce header")
+	}
+	ts, err := parseRequestTimestamp(r.Header.Get("X-KMS-Req-Timestamp"))
+	if err != nil {
+		return err
+	}
+	window := time.Duration(settings.ReplayWindowSeconds) * time.Second
+	if window <= 0 {
+		window = 300 * time.Second
+	}
+	now := time.Now().UTC()
+	if now.Sub(ts) > window || ts.Sub(now) > window {
+		return fmt.Errorf("request timestamp outside replay window (%ds)", settings.ReplayWindowSeconds)
+	}
+	provided, err := decodeRequestSignature(r.Header.Get("X-KMS-Req-Signature"))
+	if err != nil {
+		return err
+	}
+	mac := hmac.New(sha256.New, []byte(rawToken))
+	_, _ = mac.Write(signaturePayload(r, tenantID, nonce, ts))
+	expected := mac.Sum(nil)
+	if !hmac.Equal(expected, provided) {
+		return errors.New("request signature mismatch")
+	}
+	nonceTTL := settings.NonceTTLSeconds
+	if nonceTTL <= 0 {
+		nonceTTL = int(window.Seconds()) * 2
+	}
+	if err := h.svc.store.ReserveRequestNonce(r.Context(), tenantID, nonce, time.Now().UTC().Add(time.Duration(nonceTTL)*time.Second)); err != nil {
+		return err
+	}
+	return nil
+}
+
 func accessActorFromHTTPRequest(r *http.Request) AccessActor {
 	ctx := r.Context()
 	actor := AccessActor{}
@@ -1373,6 +1734,8 @@ func accessActorFromHTTPRequest(r *http.Request) AccessActor {
 		}
 		actor.Role = strings.TrimSpace(claims.Role)
 		actor.Permissions = append([]string{}, claims.Permissions...)
+		actor.ClientID = strings.TrimSpace(claims.ClientID)
+		actor.SubjectID = strings.TrimSpace(claims.Subject)
 		actor.Authenticated = actor.UserID != "" || actor.Username != ""
 	}
 	if actor.UserID == "" {
@@ -1388,6 +1751,13 @@ func accessActorFromHTTPRequest(r *http.Request) AccessActor {
 		actor.Permissions = splitCSVHeader(r.Header.Get("X-Actor-Permissions"))
 	}
 	actor.Groups = splitCSVHeader(r.Header.Get("X-Actor-Groups"))
+	actor.InterfaceName = normalizeInterfaceName(r.Header.Get("X-KMS-Interface"))
+	if actor.InterfaceName == "" {
+		actor.InterfaceName = "rest"
+	}
+	if actor.SubjectID == "" {
+		actor.SubjectID = strings.TrimSpace(r.Header.Get("X-KMS-Subject"))
+	}
 	if actor.UserID != "" || actor.Username != "" {
 		actor.Authenticated = true
 	}

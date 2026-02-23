@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -55,6 +56,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /auth/register", h.handleRegister)
 	mux.HandleFunc("GET /auth/register/{id}/status", h.handleRegistrationStatus)
 	mux.HandleFunc("POST /auth/login", h.handleLogin)
+	mux.HandleFunc("POST /auth/client-token", h.handleClientToken)
 	mux.HandleFunc("GET /auth/system-health", h.withAuth(h.handleSystemHealth, "auth.self.read"))
 	mux.HandleFunc("POST /auth/system-health/restart", h.withAuth(h.handleRestartSystemService, "auth.service.restart"))
 	mux.HandleFunc("POST /auth/refresh", h.withAuth(h.handleRefresh, "auth.token.refresh"))
@@ -121,6 +123,8 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		TenantID      string `json:"tenant_id"`
 		ClientName    string `json:"client_name"`
 		ClientType    string `json:"client_type"`
+		InterfaceName string `json:"interface_name"`
+		SubjectID     string `json:"subject_id"`
 		Description   string `json:"description"`
 		ContactEmail  string `json:"contact_email"`
 		RequestedRole string `json:"requested_role"`
@@ -134,6 +138,8 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		TenantID:      strings.TrimSpace(req.TenantID),
 		ClientName:    strings.TrimSpace(req.ClientName),
 		ClientType:    strings.TrimSpace(req.ClientType),
+		InterfaceName: strings.ToLower(strings.TrimSpace(req.InterfaceName)),
+		SubjectID:     strings.TrimSpace(req.SubjectID),
 		Description:   req.Description,
 		ContactEmail:  req.ContactEmail,
 		RequestedRole: req.RequestedRole,
@@ -146,6 +152,16 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 	if reg.ClientType == "" {
 		reg.ClientType = "service"
+	}
+	if reg.InterfaceName == "" {
+		reg.InterfaceName = "rest"
+	}
+	if reg.SubjectID == "" {
+		reg.SubjectID = reg.ClientName
+	}
+	if reg.InterfaceName == "" || reg.SubjectID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "interface_name and subject_id are required", reqID, reg.TenantID)
+		return
 	}
 	if reg.RequestedRole == "" {
 		reg.RequestedRole = "app-service"
@@ -171,7 +187,14 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, reg.TenantID)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"registration_id": reg.ID, "status": "pending", "message": "Awaiting admin approval", "request_id": reqID})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"registration_id": reg.ID,
+		"status":          "pending",
+		"message":         "Awaiting admin approval",
+		"interface_name":  reg.InterfaceName,
+		"subject_id":      reg.SubjectID,
+		"request_id":      reqID,
+	})
 }
 
 func (h *Handler) handleRegistrationStatus(w http.ResponseWriter, r *http.Request) {
@@ -246,6 +269,168 @@ func (h *Handler) handleActivateRegistration(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"registration_id": r.PathValue("id"), "status": "approved", "api_key": rawKey, "api_key_prefix": prefix, "request_id": reqID})
+}
+
+func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req struct {
+		TenantID      string   `json:"tenant_id"`
+		ClientID      string   `json:"client_id"`
+		SubjectID     string   `json:"subject_id"`
+		InterfaceName string   `json:"interface_name"`
+		Permissions   []string `json:"permissions"`
+		TTLSeconds    int      `json:"ttl_seconds"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
+		return
+	}
+
+	tenantID := strings.TrimSpace(req.TenantID)
+	if tenantID == "" {
+		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	}
+	clientID := strings.TrimSpace(req.ClientID)
+	if tenantID == "" || clientID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id and client_id are required", reqID, tenantID)
+		return
+	}
+
+	rawKey := strings.TrimSpace(r.Header.Get("X-API-Key"))
+	if rawKey == "" {
+		authz := strings.TrimSpace(r.Header.Get("Authorization"))
+		if strings.HasPrefix(strings.ToLower(authz), "apikey ") {
+			rawKey = strings.TrimSpace(authz[len("ApiKey "):])
+		}
+	}
+	if rawKey == "" {
+		writeErr(w, http.StatusUnauthorized, "unauthorized", "missing api key", reqID, tenantID)
+		return
+	}
+
+	sum := sha256.Sum256([]byte(rawKey))
+	apiKey, err := h.store.GetAPIKeyByHash(r.Context(), tenantID, sum[:])
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid api key", reqID, tenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to validate api key", reqID, tenantID)
+		return
+	}
+	if apiKey.ExpiresAt != nil && time.Now().UTC().After(apiKey.ExpiresAt.UTC()) {
+		writeErr(w, http.StatusUnauthorized, "unauthorized", "api key is expired", reqID, tenantID)
+		return
+	}
+	if strings.TrimSpace(apiKey.ClientID) == "" || !strings.EqualFold(strings.TrimSpace(apiKey.ClientID), clientID) {
+		writeErr(w, http.StatusForbidden, "forbidden", "api key is not bound to requested client_id", reqID, tenantID)
+		return
+	}
+
+	reg, err := h.store.GetClientRegistration(r.Context(), tenantID, clientID)
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "client registration not found", reqID, tenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read client registration", reqID, tenantID)
+		return
+	}
+	if !strings.EqualFold(strings.TrimSpace(reg.Status), "approved") {
+		writeErr(w, http.StatusForbidden, "forbidden", "client registration is not approved", reqID, tenantID)
+		return
+	}
+
+	boundSubject := strings.TrimSpace(reg.SubjectID)
+	if boundSubject == "" {
+		boundSubject = strings.TrimSpace(reg.ClientName)
+	}
+	requestedSubject := strings.TrimSpace(req.SubjectID)
+	if requestedSubject != "" && !strings.EqualFold(boundSubject, requestedSubject) {
+		writeErr(w, http.StatusForbidden, "forbidden", "subject_id is immutable for this registration", reqID, tenantID)
+		return
+	}
+	interfaceName := strings.ToLower(strings.TrimSpace(reg.InterfaceName))
+	if interfaceName == "" {
+		interfaceName = "rest"
+	}
+	requestedInterface := strings.ToLower(strings.TrimSpace(req.InterfaceName))
+	if requestedInterface != "" && requestedInterface != interfaceName {
+		writeErr(w, http.StatusForbidden, "forbidden", "interface_name is immutable for this registration", reqID, tenantID)
+		return
+	}
+
+	allowedSet := map[string]struct{}{}
+	for _, p := range apiKey.Permissions {
+		perm := strings.TrimSpace(p)
+		if perm == "" {
+			continue
+		}
+		allowedSet[perm] = struct{}{}
+	}
+	effectivePerms := make([]string, 0, len(allowedSet))
+	if len(req.Permissions) > 0 {
+		for _, p := range req.Permissions {
+			perm := strings.TrimSpace(p)
+			if perm == "" {
+				continue
+			}
+			if _, ok := allowedSet[perm]; ok {
+				effectivePerms = append(effectivePerms, perm)
+			}
+		}
+	} else {
+		for perm := range allowedSet {
+			effectivePerms = append(effectivePerms, perm)
+		}
+	}
+	if len(effectivePerms) == 0 {
+		writeErr(w, http.StatusForbidden, "forbidden", "no permitted scopes for requested token", reqID, tenantID)
+		return
+	}
+
+	ttlSeconds := req.TTLSeconds
+	if ttlSeconds <= 0 {
+		ttlSeconds = 300
+	}
+	if ttlSeconds < 60 {
+		ttlSeconds = 60
+	}
+	if ttlSeconds > 3600 {
+		ttlSeconds = 3600
+	}
+
+	token, exp, err := h.logic.IssueClientJWT(
+		tenantID,
+		clientID,
+		boundSubject,
+		interfaceName,
+		effectivePerms,
+		time.Duration(ttlSeconds)*time.Second,
+	)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "jwt_issue_failed", "failed to issue client token", reqID, tenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.client_token_issued", reqID, tenantID, map[string]any{
+		"client_id":      clientID,
+		"subject_id":     boundSubject,
+		"interface_name": interfaceName,
+		"ttl_seconds":    ttlSeconds,
+	}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"access_token":   token,
+		"token_type":     "Bearer",
+		"expires_at":     exp.UTC().Format(time.RFC3339),
+		"tenant_id":      tenantID,
+		"client_id":      clientID,
+		"subject_id":     boundSubject,
+		"interface_name": interfaceName,
+		"request_id":     reqID,
+	})
 }
 
 func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {

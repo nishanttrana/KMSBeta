@@ -68,6 +68,42 @@ func (a *AuthLogic) IssueJWT(tenantID string, role string, permissions []string,
 	return signed, expiresAt, err
 }
 
+func (a *AuthLogic) IssueClientJWT(
+	tenantID string,
+	clientID string,
+	subjectID string,
+	interfaceName string,
+	permissions []string,
+	ttl time.Duration,
+) (string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = 5 * time.Minute
+	}
+	if ttl > time.Hour {
+		ttl = time.Hour
+	}
+	now := time.Now().UTC()
+	expiresAt := now.Add(ttl)
+	claims := &pkgauth.Claims{
+		TenantID:    strings.TrimSpace(tenantID),
+		Role:        "client-service",
+		Permissions: permissions,
+		UserID:      strings.TrimSpace(subjectID),
+		ClientID:    strings.TrimSpace(clientID),
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   strings.TrimSpace(subjectID),
+			Issuer:    a.issuer,
+			Audience:  jwt.ClaimStrings{a.audience},
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now.Add(-5 * time.Second)),
+			ID:        fmt.Sprintf("%s:%s:%d", strings.TrimSpace(clientID), strings.TrimSpace(interfaceName), now.UnixNano()),
+		},
+	}
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(a.privateKey)
+	return signed, expiresAt, err
+}
+
 func HashPassword(password string) ([]byte, error) {
 	pw := []byte(password)
 	defer pkgcrypto.Zeroize(pw)

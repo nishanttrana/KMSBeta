@@ -58,6 +58,10 @@ export type KeyAccessGrant = {
   subject_type: "user" | "group";
   subject_id: string;
   operations: string[];
+  not_before?: string;
+  expires_at?: string;
+  justification?: string;
+  ticket_id?: string;
 };
 
 export type KeyAccessPolicy = {
@@ -74,6 +78,44 @@ export type KeyAccessGroup = {
   created_by?: string;
   member_count?: number;
   created_at?: string;
+  updated_at?: string;
+};
+
+export type KeyAccessSettings = {
+  tenant_id: string;
+  deny_by_default: boolean;
+  require_approval_for_policy_change: boolean;
+  grant_default_ttl_minutes: number;
+  grant_max_ttl_minutes: number;
+  enforce_signed_requests: boolean;
+  replay_window_seconds: number;
+  nonce_ttl_seconds: number;
+  require_interface_policies: boolean;
+  updated_by?: string;
+  updated_at?: string;
+};
+
+export type KeyInterfaceSubjectPolicy = {
+  id: string;
+  tenant_id: string;
+  interface_name: string;
+  subject_type: "user" | "group";
+  subject_id: string;
+  operations: string[];
+  enabled: boolean;
+  created_by?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type KeyInterfacePort = {
+  tenant_id: string;
+  interface_name: string;
+  bind_address: string;
+  port: number;
+  enabled: boolean;
+  description?: string;
+  updated_by?: string;
   updated_at?: string;
 };
 
@@ -95,6 +137,26 @@ type APIListAccessGroupsResponse = {
 
 type APICreateAccessGroupResponse = {
   group: KeyAccessGroup;
+};
+
+type APIGetAccessSettingsResponse = {
+  settings: KeyAccessSettings;
+};
+
+type APIListInterfacePoliciesResponse = {
+  items: KeyInterfaceSubjectPolicy[];
+};
+
+type APIUpsertInterfacePolicyResponse = {
+  policy: KeyInterfaceSubjectPolicy;
+};
+
+type APIListInterfacePortsResponse = {
+  items: KeyInterfacePort[];
+};
+
+type APIUpsertInterfacePortResponse = {
+  item: KeyInterfacePort;
 };
 
 type APICreateKeyResponse = {
@@ -969,6 +1031,95 @@ export async function setKeyAccessPolicy(
         updated_by: String(updatedBy || "").trim()
       })
     }
+  );
+}
+
+export async function getKeyAccessSettings(session: AuthSession): Promise<KeyAccessSettings> {
+  const payload = await apiRequest<APIGetAccessSettingsResponse>(
+    session,
+    `/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  return payload.settings;
+}
+
+export async function updateKeyAccessSettings(
+  session: AuthSession,
+  input: Partial<KeyAccessSettings>
+): Promise<KeyAccessSettings> {
+  const payload = await apiRequest<APIGetAccessSettingsResponse>(
+    session,
+    `/access/settings?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(input || {})
+    }
+  );
+  return payload.settings;
+}
+
+export async function listKeyInterfacePolicies(
+  session: AuthSession,
+  interfaceName = ""
+): Promise<KeyInterfaceSubjectPolicy[]> {
+  const q = interfaceName ? `&interface=${encodeURIComponent(interfaceName)}` : "";
+  const payload = await apiRequest<APIListInterfacePoliciesResponse>(
+    session,
+    `/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}${q}`
+  );
+  return Array.isArray(payload.items) ? payload.items : [];
+}
+
+export async function upsertKeyInterfacePolicy(
+  session: AuthSession,
+  input: Partial<KeyInterfaceSubjectPolicy>
+): Promise<KeyInterfaceSubjectPolicy> {
+  const payload = await apiRequest<APIUpsertInterfacePolicyResponse>(
+    session,
+    `/access/interface-policies?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    {
+      method: "POST",
+      body: JSON.stringify(input || {})
+    }
+  );
+  return payload.policy;
+}
+
+export async function deleteKeyInterfacePolicy(session: AuthSession, id: string): Promise<void> {
+  await apiRequest<Record<string, unknown>>(
+    session,
+    `/access/interface-policies/${encodeURIComponent(id)}?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    { method: "DELETE" }
+  );
+}
+
+export async function listKeyInterfacePorts(session: AuthSession): Promise<KeyInterfacePort[]> {
+  const payload = await apiRequest<APIListInterfacePortsResponse>(
+    session,
+    `/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  return Array.isArray(payload.items) ? payload.items : [];
+}
+
+export async function upsertKeyInterfacePort(
+  session: AuthSession,
+  input: Partial<KeyInterfacePort>
+): Promise<KeyInterfacePort> {
+  const payload = await apiRequest<APIUpsertInterfacePortResponse>(
+    session,
+    `/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    {
+      method: "POST",
+      body: JSON.stringify(input || {})
+    }
+  );
+  return payload.item;
+}
+
+export async function deleteKeyInterfacePort(session: AuthSession, interfaceName: string): Promise<void> {
+  await apiRequest<Record<string, unknown>>(
+    session,
+    `/access/interface-ports/${encodeURIComponent(interfaceName)}?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    { method: "DELETE" }
   );
 }
 

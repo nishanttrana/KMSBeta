@@ -39,6 +39,7 @@ type Store interface {
 	ActivateClientRegistration(ctx context.Context, tenantID string, registrationID string, apiKey APIKey, approver string, approvalID string) error
 	RevokeClientRegistration(ctx context.Context, tenantID string, registrationID string) error
 	RotateClientAPIKey(ctx context.Context, tenantID string, registrationID string, keyHash []byte, keyPrefix string) error
+	GetAPIKeyByHash(ctx context.Context, tenantID string, keyHash []byte) (APIKey, error)
 
 	CreateAPIKey(ctx context.Context, k APIKey) error
 	DeleteAPIKey(ctx context.Context, tenantID string, keyID string) error
@@ -91,6 +92,8 @@ type ClientRegistration struct {
 	TenantID      string    `json:"tenant_id"`
 	ClientName    string    `json:"client_name"`
 	ClientType    string    `json:"client_type"`
+	InterfaceName string    `json:"interface_name"`
+	SubjectID     string    `json:"subject_id"`
 	Description   string    `json:"description"`
 	ContactEmail  string    `json:"contact_email"`
 	RequestedRole string    `json:"requested_role"`
@@ -393,10 +396,10 @@ func (s *SQLStore) CreateClientRegistration(ctx context.Context, reg ClientRegis
 	}
 	_, err = s.db.SQL().ExecContext(ctx, `
 INSERT INTO auth_client_registrations (
-    id, tenant_id, client_name, client_type, description, contact_email, requested_role,
+    id, tenant_id, client_name, client_type, interface_name, subject_id, description, contact_email, requested_role,
     status, approval_id, ip_whitelist, rate_limit, created_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP)
-`, reg.ID, reg.TenantID, reg.ClientName, reg.ClientType, reg.Description, reg.ContactEmail, reg.RequestedRole, reg.Status, reg.ApprovalID, wl, reg.RateLimit)
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,CURRENT_TIMESTAMP)
+`, reg.ID, reg.TenantID, reg.ClientName, reg.ClientType, reg.InterfaceName, reg.SubjectID, reg.Description, reg.ContactEmail, reg.RequestedRole, reg.Status, reg.ApprovalID, wl, reg.RateLimit)
 	return err
 }
 
@@ -405,12 +408,12 @@ func (s *SQLStore) GetClientRegistration(ctx context.Context, tenantID string, r
 	var raw []byte
 	var approvedAt sql.NullTime
 	err := s.db.SQL().QueryRowContext(ctx, `
-SELECT id, tenant_id, client_name, client_type, description, contact_email, requested_role,
+SELECT id, tenant_id, client_name, client_type, interface_name, subject_id, description, contact_email, requested_role,
        status, approval_id, ip_whitelist, rate_limit, api_key_prefix, approved_at, created_at
 FROM auth_client_registrations
 WHERE tenant_id=$1 AND id=$2
 `, tenantID, registrationID).Scan(
-		&reg.ID, &reg.TenantID, &reg.ClientName, &reg.ClientType, &reg.Description, &reg.ContactEmail, &reg.RequestedRole,
+		&reg.ID, &reg.TenantID, &reg.ClientName, &reg.ClientType, &reg.InterfaceName, &reg.SubjectID, &reg.Description, &reg.ContactEmail, &reg.RequestedRole,
 		&reg.Status, &reg.ApprovalID, &raw, &reg.RateLimit, &reg.APIKeyPrefix, &approvedAt, &reg.CreatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -432,7 +435,7 @@ WHERE tenant_id=$1 AND id=$2
 
 func (s *SQLStore) ListClientRegistrations(ctx context.Context, tenantID string) ([]ClientRegistration, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, client_name, client_type, description, contact_email, requested_role,
+SELECT id, tenant_id, client_name, client_type, interface_name, subject_id, description, contact_email, requested_role,
        status, approval_id, ip_whitelist, rate_limit, api_key_prefix, created_at
 FROM auth_client_registrations
 WHERE tenant_id=$1
@@ -447,7 +450,7 @@ ORDER BY created_at DESC
 		var reg ClientRegistration
 		var raw []byte
 		if err := rows.Scan(
-			&reg.ID, &reg.TenantID, &reg.ClientName, &reg.ClientType, &reg.Description, &reg.ContactEmail, &reg.RequestedRole,
+			&reg.ID, &reg.TenantID, &reg.ClientName, &reg.ClientType, &reg.InterfaceName, &reg.SubjectID, &reg.Description, &reg.ContactEmail, &reg.RequestedRole,
 			&reg.Status, &reg.ApprovalID, &raw, &reg.RateLimit, &reg.APIKeyPrefix, &reg.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -549,6 +552,51 @@ WHERE tenant_id=$3 AND id=$4
 		return errNotFound
 	}
 	return nil
+}
+
+func (s *SQLStore) GetAPIKeyByHash(ctx context.Context, tenantID string, keyHash []byte) (APIKey, error) {
+	var out APIKey
+	var userID sql.NullString
+	var clientID sql.NullString
+	var permsRaw []byte
+	var expiresAt sql.NullTime
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT id, tenant_id, user_id, client_id, key_hash, name, permissions, expires_at, created_at
+FROM auth_api_keys
+WHERE tenant_id=$1 AND key_hash=$2
+`, tenantID, keyHash).Scan(
+		&out.ID,
+		&out.TenantID,
+		&userID,
+		&clientID,
+		&out.KeyHash,
+		&out.Name,
+		&permsRaw,
+		&expiresAt,
+		&out.CreatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return APIKey{}, errNotFound
+	}
+	if err != nil {
+		return APIKey{}, err
+	}
+	if userID.Valid {
+		out.UserID = userID.String
+	}
+	if clientID.Valid {
+		out.ClientID = clientID.String
+	}
+	if len(permsRaw) > 0 {
+		if err := json.Unmarshal(permsRaw, &out.Permissions); err != nil {
+			return APIKey{}, err
+		}
+	}
+	if expiresAt.Valid {
+		t := expiresAt.Time
+		out.ExpiresAt = &t
+	}
+	return out, nil
 }
 
 func (s *SQLStore) CreateAPIKey(ctx context.Context, k APIKey) error {

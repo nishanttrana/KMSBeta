@@ -47,6 +47,15 @@ type Store interface {
 	ListAccessGroupIDsForUser(ctx context.Context, tenantID string, userID string) ([]string, error)
 	ListKeyAccessGrants(ctx context.Context, tenantID string, keyID string) ([]KeyAccessGrant, error)
 	ReplaceKeyAccessGrants(ctx context.Context, tenantID string, keyID string, grants []KeyAccessGrant, createdBy string) error
+	GetKeyAccessSettings(ctx context.Context, tenantID string) (KeyAccessSettings, error)
+	UpsertKeyAccessSettings(ctx context.Context, settings KeyAccessSettings) (KeyAccessSettings, error)
+	ListKeyInterfaceSubjectPolicies(ctx context.Context, tenantID string, interfaceName string) ([]KeyInterfaceSubjectPolicy, error)
+	UpsertKeyInterfaceSubjectPolicy(ctx context.Context, policy KeyInterfaceSubjectPolicy) (KeyInterfaceSubjectPolicy, error)
+	DeleteKeyInterfaceSubjectPolicy(ctx context.Context, tenantID string, id string) error
+	ListKeyInterfacePorts(ctx context.Context, tenantID string) ([]KeyInterfacePort, error)
+	UpsertKeyInterfacePort(ctx context.Context, port KeyInterfacePort) (KeyInterfacePort, error)
+	DeleteKeyInterfacePort(ctx context.Context, tenantID string, interfaceName string) error
+	ReserveRequestNonce(ctx context.Context, tenantID string, nonce string, expiresAt time.Time) error
 
 	ListVersions(ctx context.Context, tenantID string, keyID string) ([]KeyVersion, error)
 	GetVersion(ctx context.Context, tenantID string, keyID string, version int) (KeyVersion, error)

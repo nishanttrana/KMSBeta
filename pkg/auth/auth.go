@@ -22,6 +22,7 @@ type Claims struct {
 	Role               string   `json:"role"`
 	Permissions        []string `json:"permissions"`
 	UserID             string   `json:"user_id"`
+	ClientID           string   `json:"client_id,omitempty"`
 	MustChangePassword bool     `json:"must_change_password,omitempty"`
 	jwt.RegisteredClaims
 }

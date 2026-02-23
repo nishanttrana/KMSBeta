@@ -24,9 +24,13 @@ const (
 )
 
 type KeyAccessGrant struct {
-	SubjectType AccessSubjectType `json:"subject_type"`
-	SubjectID   string            `json:"subject_id"`
-	Operations  []string          `json:"operations"`
+	SubjectType   AccessSubjectType `json:"subject_type"`
+	SubjectID     string            `json:"subject_id"`
+	Operations    []string          `json:"operations"`
+	NotBefore     *time.Time        `json:"not_before,omitempty"`
+	ExpiresAt     *time.Time        `json:"expires_at,omitempty"`
+	Justification string            `json:"justification,omitempty"`
+	TicketID      string            `json:"ticket_id,omitempty"`
 }
 
 type KeyAccessPolicy struct {
@@ -47,11 +51,14 @@ type AccessGroup struct {
 }
 
 type AccessActor struct {
-	UserID       string
-	Username     string
-	Role         string
-	Permissions  []string
-	Groups       []string
+	UserID        string
+	Username      string
+	Role          string
+	Permissions   []string
+	Groups        []string
+	ClientID      string
+	InterfaceName string
+	SubjectID     string
 	Authenticated bool
 }
 
@@ -202,13 +209,32 @@ func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation strin
 		return err
 	}
 	actor := accessActorFromContext(ctx)
+	settings, err := s.store.GetKeyAccessSettings(ctx, key.TenantID)
+	if err != nil {
+		return err
+	}
 	grants, err := s.store.ListKeyAccessGrants(ctx, key.TenantID, key.ID)
 	if err != nil {
 		return err
 	}
 
-	// Legacy safe default: without grants, only creator/admin can use the key when caller identity is available.
+	now := time.Now().UTC()
+	activeGrants := make([]KeyAccessGrant, 0, len(grants))
+	for _, grant := range grants {
+		if grantActiveAt(grant, now) {
+			activeGrants = append(activeGrants, grant)
+		}
+	}
+
+	// Backward-compatible default remains creator/admin unless deny-by-default is explicitly enabled.
+	grants = activeGrants
 	if len(grants) == 0 {
+		if settings.DenyByDefault {
+			if actor.Authenticated && actorIsAdmin(actor) {
+				return nil
+			}
+			return errors.New("access denied: no active grants and deny-by-default is enabled")
+		}
 		if !actor.Authenticated {
 			return nil
 		}
@@ -250,6 +276,12 @@ func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation strin
 			}
 		}
 	}
+	if settings.RequireInterfacePolicies {
+		if err := s.enforceInterfaceSubjectPolicy(ctx, key.TenantID, actor, normOperation, groupIDs); err != nil {
+			return err
+		}
+		return nil
+	}
 	return errors.New("access denied: operation not permitted for caller on this key")
 }
 
@@ -277,6 +309,11 @@ func (s *Service) ReplaceKeyAccessPolicy(ctx context.Context, tenantID string, k
 		return errors.New("cannot update access policy for deleted keys")
 	}
 
+	settings, err := s.store.GetKeyAccessSettings(ctx, tenantID)
+	if err != nil {
+		return err
+	}
+
 	normalized := make([]KeyAccessGrant, 0, len(grants))
 	seen := map[string]struct{}{}
 	for _, item := range grants {
@@ -296,12 +333,52 @@ func (s *Service) ReplaceKeyAccessPolicy(ctx context.Context, tenantID string, k
 		if _, exists := seen[key]; exists {
 			return fmt.Errorf("duplicate grant for %s:%s", subjectType, subjectID)
 		}
+		if item.NotBefore != nil && item.ExpiresAt != nil && item.NotBefore.After(item.ExpiresAt.UTC()) {
+			return fmt.Errorf("grant %s:%s has not_before later than expires_at", subjectType, subjectID)
+		}
+		notBefore := item.NotBefore
+		if notBefore != nil {
+			v := notBefore.UTC()
+			notBefore = &v
+		}
+		expiresAt := item.ExpiresAt
+		if expiresAt != nil {
+			v := expiresAt.UTC()
+			expiresAt = &v
+		}
+		if expiresAt == nil && settings.GrantDefaultTTLMinutes > 0 {
+			v := time.Now().UTC().Add(time.Duration(settings.GrantDefaultTTLMinutes) * time.Minute)
+			expiresAt = &v
+		}
+		if settings.GrantMaxTTLMinutes > 0 {
+			if notBefore != nil && expiresAt != nil {
+				maxTTL := time.Duration(settings.GrantMaxTTLMinutes) * time.Minute
+				if expiresAt.Sub(*notBefore) > maxTTL {
+					return fmt.Errorf("grant %s:%s exceeds max ttl of %d minutes", subjectType, subjectID, settings.GrantMaxTTLMinutes)
+				}
+			} else if expiresAt != nil {
+				maxTTL := time.Duration(settings.GrantMaxTTLMinutes) * time.Minute
+				if expiresAt.Sub(time.Now().UTC()) > maxTTL {
+					return fmt.Errorf("grant %s:%s exceeds max ttl of %d minutes", subjectType, subjectID, settings.GrantMaxTTLMinutes)
+				}
+			}
+		}
 		seen[key] = struct{}{}
 		normalized = append(normalized, KeyAccessGrant{
-			SubjectType: subjectType,
-			SubjectID:   subjectID,
-			Operations:  operations,
+			SubjectType:   subjectType,
+			SubjectID:     subjectID,
+			Operations:    operations,
+			NotBefore:     notBefore,
+			ExpiresAt:     expiresAt,
+			Justification: strings.TrimSpace(item.Justification),
+			TicketID:      strings.TrimSpace(item.TicketID),
 		})
+	}
+
+	if settings.RequireApprovalForPolicyChange {
+		if err := s.ensureAccessPolicyApproval(ctx, tenantID, keyID, updatedBy, normalized); err != nil {
+			return err
+		}
 	}
 
 	if err := s.store.ReplaceKeyAccessGrants(ctx, tenantID, keyID, normalized, updatedBy); err != nil {
