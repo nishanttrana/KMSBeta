@@ -14005,6 +14005,14 @@ export default function VectaDashboard(props){
   const [cliPassword,setCLIPassword]=useState("");
   const [cliLaunching,setCLILaunching]=useState(false);
   const [cliCommandHint,setCLICommandHint]=useState("");
+  const restOnlyMode=useMemo(()=>{
+    try{
+      const qp=new URLSearchParams(window.location.search);
+      return qp.get("restapi")==="1";
+    }catch{
+      return false;
+    }
+  },[]);
 
   useEffect(()=>{
     const i=setInterval(()=>setT(new Date()),1000);
@@ -14170,6 +14178,35 @@ export default function VectaDashboard(props){
   const globalFipsEnabled=isFipsModeEnabled(fipsMode);
 
   const Tab=TABS[tab]||Home;
+  if(restOnlyMode){
+    return(
+      <div style={{minHeight:"100vh",background:C.bg,fontFamily:"'IBM Plex Sans',-apple-system,sans-serif",color:C.text,display:"flex",flexDirection:"column"}}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+          *::-webkit-scrollbar{width:5px;height:5px} *::-webkit-scrollbar-track{background:transparent} *::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 20px",height:48,borderBottom:`1px solid ${C.border}`,background:C.surface}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:24,height:24,borderRadius:6,background:`linear-gradient(135deg,${C.accent},${C.purple})`,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:C.bg}}>V</div>
+            <span style={{fontSize:13,fontWeight:700,letterSpacing:.3}}>VECTA KMS - REST API Workbench</span>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <B c={globalFipsEnabled?"green":"blue"} pulse={globalFipsEnabled}>{globalFipsEnabled?"FIPS STRICT":"STANDARD MODE"}</B>
+            <Btn small onClick={()=>window.location.href=window.location.pathname}>Open Full UI</Btn>
+            <Btn small onClick={onLogout}>Logout</Btn>
+          </div>
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:16}}>
+          <TabErrorBoundary resetKey="restapi">
+            <RestAPI
+              session={session}
+              keyCatalog={keyCatalog}
+              onToast={setToast}
+            />
+          </TabErrorBoundary>
+        </div>
+        {toast&&<div style={{position:"fixed",right:16,bottom:16,background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,padding:"10px 12px",fontSize:11,color:C.text,zIndex:1200,maxWidth:380}}>{toast}</div>}
+      </div>
+    );
+  }
   return(
     <div style={{display:"flex",height:"100vh",background:C.bg,fontFamily:"'IBM Plex Sans',-apple-system,sans-serif",color:C.text,overflow:"hidden"}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
