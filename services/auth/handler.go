@@ -144,6 +144,25 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id and client_name are required", reqID, reg.TenantID)
 		return
 	}
+	if reg.ClientType == "" {
+		reg.ClientType = "service"
+	}
+	if reg.RequestedRole == "" {
+		reg.RequestedRole = "app-service"
+	}
+	tenant, err := h.store.GetTenant(r.Context(), reg.TenantID)
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusBadRequest, "bad_request", "unknown tenant_id", reqID, reg.TenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to validate tenant", reqID, reg.TenantID)
+		return
+	}
+	if strings.TrimSpace(strings.ToLower(tenant.Status)) != "active" {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant is not active", reqID, reg.TenantID)
+		return
+	}
 	if err := h.store.CreateClientRegistration(r.Context(), reg); err != nil {
 		writeErr(w, http.StatusInternalServerError, "store_error", "failed to create registration", reqID, reg.TenantID)
 		return

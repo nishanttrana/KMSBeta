@@ -86,6 +86,29 @@ func TestHandlerRegisterActivateFlow(t *testing.T) {
 	}
 }
 
+func TestHandlerRegisterRejectsUnknownTenant(t *testing.T) {
+	h, _, _, _ := newTestHandler(t)
+	body := []byte(`{
+		"tenant_id":"missing-tenant",
+		"client_name":"svc-a",
+		"client_type":"service",
+		"contact_email":"ops@example.com",
+		"requested_role":"app-service"
+	}`)
+	req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewReader(body))
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("expected bad request, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	var out map[string]any
+	_ = json.Unmarshal(rr.Body.Bytes(), &out)
+	errObj, _ := out["error"].(map[string]any)
+	if code, _ := errObj["code"].(string); code != "bad_request" {
+		t.Fatalf("expected bad_request code, got %v body=%s", code, rr.Body.String())
+	}
+}
+
 func TestHandlerLoginWithTOTP(t *testing.T) {
 	h, _, store, _ := newTestHandler(t)
 	secret, err := GenerateTOTPSecret()
@@ -252,11 +275,11 @@ func TestHandlerUserCreateHonorsPasswordPolicy(t *testing.T) {
 	}
 
 	policyReq := map[string]any{
-		"min_length":        16,
-		"require_special":   true,
-		"require_digit":     true,
-		"min_unique_chars":  8,
-		"deny_username":     true,
+		"min_length":            16,
+		"require_special":       true,
+		"require_digit":         true,
+		"min_unique_chars":      8,
+		"deny_username":         true,
 		"deny_email_local_part": true,
 	}
 	policyRaw, _ := json.Marshal(policyReq)
