@@ -317,6 +317,18 @@ func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger)
 		return
 	}
 
+	if _, err := store.GetSecurityPolicy(ctx, tenantID); errors.Is(err, errNotFound) {
+		policy := NormalizeSecurityPolicy(DefaultSecurityPolicy(tenantID), tenantID)
+		policy.UpdatedBy = "bootstrap"
+		if _, err := store.UpsertSecurityPolicy(ctx, policy); err != nil {
+			logger.Printf("bootstrap: create security policy failed: %v", err)
+			return
+		}
+	} else if err != nil {
+		logger.Printf("bootstrap: read security policy failed: %v", err)
+		return
+	}
+
 	if _, err := store.GetUserByUsername(ctx, tenantID, adminUsername); errors.Is(err, errNotFound) {
 		hash, err := HashPassword(adminPassword)
 		if err != nil {

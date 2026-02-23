@@ -48,6 +48,8 @@ type Store interface {
 
 	GetPasswordPolicy(ctx context.Context, tenantID string) (PasswordPolicy, error)
 	UpsertPasswordPolicy(ctx context.Context, policy PasswordPolicy) (PasswordPolicy, error)
+	GetSecurityPolicy(ctx context.Context, tenantID string) (SecurityPolicy, error)
+	UpsertSecurityPolicy(ctx context.Context, policy SecurityPolicy) (SecurityPolicy, error)
 }
 
 type SQLStore struct {
@@ -126,19 +128,28 @@ type Session struct {
 }
 
 type PasswordPolicy struct {
-	TenantID         string    `json:"tenant_id"`
-	MinLength        int       `json:"min_length"`
-	MaxLength        int       `json:"max_length"`
-	RequireUpper     bool      `json:"require_upper"`
-	RequireLower     bool      `json:"require_lower"`
-	RequireDigit     bool      `json:"require_digit"`
-	RequireSpecial   bool      `json:"require_special"`
-	RequireNoSpace   bool      `json:"require_no_whitespace"`
-	DenyUsername     bool      `json:"deny_username"`
-	DenyEmailLocal   bool      `json:"deny_email_local_part"`
-	MinUniqueChars   int       `json:"min_unique_chars"`
-	UpdatedBy        string    `json:"updated_by"`
-	UpdatedAt        time.Time `json:"updated_at"`
+	TenantID       string    `json:"tenant_id"`
+	MinLength      int       `json:"min_length"`
+	MaxLength      int       `json:"max_length"`
+	RequireUpper   bool      `json:"require_upper"`
+	RequireLower   bool      `json:"require_lower"`
+	RequireDigit   bool      `json:"require_digit"`
+	RequireSpecial bool      `json:"require_special"`
+	RequireNoSpace bool      `json:"require_no_whitespace"`
+	DenyUsername   bool      `json:"deny_username"`
+	DenyEmailLocal bool      `json:"deny_email_local_part"`
+	MinUniqueChars int       `json:"min_unique_chars"`
+	UpdatedBy      string    `json:"updated_by"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type SecurityPolicy struct {
+	TenantID           string    `json:"tenant_id"`
+	MaxFailedAttempts  int       `json:"max_failed_attempts"`
+	LockoutMinutes     int       `json:"lockout_minutes"`
+	IdleTimeoutMinutes int       `json:"idle_timeout_minutes"`
+	UpdatedBy          string    `json:"updated_by"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 func (s *SQLStore) CreateTenant(ctx context.Context, t Tenant) error {
@@ -644,6 +655,44 @@ ON CONFLICT (tenant_id) DO UPDATE SET
 		return PasswordPolicy{}, err
 	}
 	return s.GetPasswordPolicy(ctx, policy.TenantID)
+}
+
+func (s *SQLStore) GetSecurityPolicy(ctx context.Context, tenantID string) (SecurityPolicy, error) {
+	var out SecurityPolicy
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, max_failed_attempts, lockout_minutes, idle_timeout_minutes, updated_by, updated_at
+FROM auth_security_policies
+WHERE tenant_id=$1
+	`, tenantID).Scan(
+		&out.TenantID,
+		&out.MaxFailedAttempts,
+		&out.LockoutMinutes,
+		&out.IdleTimeoutMinutes,
+		&out.UpdatedBy,
+		&out.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return SecurityPolicy{}, errNotFound
+	}
+	return out, err
+}
+
+func (s *SQLStore) UpsertSecurityPolicy(ctx context.Context, policy SecurityPolicy) (SecurityPolicy, error) {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO auth_security_policies (
+    tenant_id, max_failed_attempts, lockout_minutes, idle_timeout_minutes, updated_by, updated_at
+) VALUES ($1,$2,$3,$4,$5,CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id) DO UPDATE SET
+    max_failed_attempts = EXCLUDED.max_failed_attempts,
+    lockout_minutes = EXCLUDED.lockout_minutes,
+    idle_timeout_minutes = EXCLUDED.idle_timeout_minutes,
+    updated_by = EXCLUDED.updated_by,
+    updated_at = CURRENT_TIMESTAMP
+`, policy.TenantID, policy.MaxFailedAttempts, policy.LockoutMinutes, policy.IdleTimeoutMinutes, policy.UpdatedBy)
+	if err != nil {
+		return SecurityPolicy{}, err
+	}
+	return s.GetSecurityPolicy(ctx, policy.TenantID)
 }
 
 func nullableString(v string) interface{} {

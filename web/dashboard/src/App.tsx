@@ -174,6 +174,40 @@ export default function App() {
     };
   }, [session?.mode, session?.token, session?.expiresAt]);
 
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+    const idleMinutes = Number(session.idleTimeoutMinutes || 0);
+    if (!Number.isFinite(idleMinutes) || idleMinutes <= 0) {
+      return;
+    }
+    const timeoutMs = Math.max(60_000, Math.trunc(idleMinutes * 60_000));
+    let timer: number | undefined;
+    const resetTimer = () => {
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+      timer = window.setTimeout(() => {
+        clearSession();
+        setSession(null);
+      }, timeoutMs);
+    };
+    const events: Array<keyof WindowEventMap> = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"];
+    events.forEach((eventName) => {
+      window.addEventListener(eventName, resetTimer, { passive: true });
+    });
+    resetTimer();
+    return () => {
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+      events.forEach((eventName) => {
+        window.removeEventListener(eventName, resetTimer);
+      });
+    };
+  }, [session?.token, session?.idleTimeoutMinutes]);
+
   if (!uiAuthQuery.data) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-cyber-bg text-cyber-text">

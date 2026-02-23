@@ -79,6 +79,8 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /auth/users/{id}/reset-password", h.withAuth(h.handleResetUserPassword, "auth.user.write"))
 	mux.HandleFunc("GET /auth/password-policy", h.withAuth(h.handleGetPasswordPolicy, "auth.user.read"))
 	mux.HandleFunc("PUT /auth/password-policy", h.withAuth(h.handleUpdatePasswordPolicy, "auth.user.write"))
+	mux.HandleFunc("GET /auth/security-policy", h.withAuth(h.handleGetSecurityPolicy, "auth.user.read"))
+	mux.HandleFunc("PUT /auth/security-policy", h.withAuth(h.handleUpdateSecurityPolicy, "auth.user.write"))
 	mux.HandleFunc("GET /auth/cli/status", h.withAuth(h.handleCLIStatus, "auth.user.read"))
 	mux.HandleFunc("POST /auth/cli/session", h.withAuth(h.handleCLISession, "auth.user.read"))
 	mux.HandleFunc("POST /auth/api-keys", h.withAuth(h.handleCreateAPIKey, "auth.api_key.write"))
@@ -239,24 +241,45 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
 		return
 	}
-	rlKey := req.TenantID + "|" + clientIP(r)
-	if _, locked := h.logic.limiter.IsLocked(rlKey, time.Now().UTC()); locked {
-		writeErr(w, http.StatusTooManyRequests, "rate_limited", "too many failed attempts", reqID, req.TenantID)
+	securityPolicy, err := h.resolveSecurityPolicy(r.Context(), req.TenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to resolve security policy", reqID, req.TenantID)
+		return
+	}
+	lockoutWindow := time.Duration(securityPolicy.LockoutMinutes) * time.Minute
+	loginUser := strings.ToLower(strings.TrimSpace(req.Username))
+	rlKey := req.TenantID + "|" + loginUser + "|" + clientIP(r)
+	if lockUntil, locked := h.logic.limiter.IsLocked(rlKey, time.Now().UTC()); locked {
+		retryAfter := int(time.Until(lockUntil).Seconds())
+		if retryAfter < 1 {
+			retryAfter = 1
+		}
+		w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
+		writeJSON(w, http.StatusTooManyRequests, map[string]any{
+			"error": map[string]any{
+				"code":             "rate_limited",
+				"message":          "too many failed attempts",
+				"request_id":       reqID,
+				"tenant_id":        req.TenantID,
+				"retry_after_sec":  retryAfter,
+				"locked_until_utc": lockUntil.UTC().Format(time.RFC3339),
+			},
+		})
 		return
 	}
 	u, err := h.store.GetUserByUsername(r.Context(), req.TenantID, req.Username)
 	if err != nil || !VerifyPassword(u.Password, req.Password) {
-		_, _ = h.logic.limiter.Fail(rlKey, time.Now().UTC())
+		_, _ = h.logic.limiter.FailWithPolicy(rlKey, time.Now().UTC(), securityPolicy.MaxFailedAttempts, lockoutWindow)
 		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid credentials", reqID, req.TenantID)
 		return
 	}
 	if normalizeUserStatus(u.Status) != "active" {
-		_, _ = h.logic.limiter.Fail(rlKey, time.Now().UTC())
+		_, _ = h.logic.limiter.FailWithPolicy(rlKey, time.Now().UTC(), securityPolicy.MaxFailedAttempts, lockoutWindow)
 		writeErr(w, http.StatusUnauthorized, "unauthorized", "user is disabled", reqID, req.TenantID)
 		return
 	}
 	if len(u.TOTPSecret) > 0 && !ValidateTOTP(string(u.TOTPSecret), req.TOTPCode, time.Now().UTC()) {
-		_, _ = h.logic.limiter.Fail(rlKey, time.Now().UTC())
+		_, _ = h.logic.limiter.FailWithPolicy(rlKey, time.Now().UTC(), securityPolicy.MaxFailedAttempts, lockoutWindow)
 		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid mfa code", reqID, req.TenantID)
 		return
 	}
@@ -293,7 +316,12 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		"token_type":           "Bearer",
 		"expires_at":           exp.UTC().Format(time.RFC3339),
 		"must_change_password": u.MustChangePassword,
-		"request_id":           reqID,
+		"security_policy": map[string]any{
+			"max_failed_attempts":  securityPolicy.MaxFailedAttempts,
+			"lockout_minutes":      securityPolicy.LockoutMinutes,
+			"idle_timeout_minutes": securityPolicy.IdleTimeoutMinutes,
+		},
+		"request_id": reqID,
 	})
 }
 
@@ -957,6 +985,62 @@ func (h *Handler) handleUpdatePasswordPolicy(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, map[string]any{"policy": updated, "request_id": reqID})
 }
 
+func (h *Handler) handleGetSecurityPolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	policy, err := h.resolveSecurityPolicy(r.Context(), claims.TenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read security policy", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"policy": policy, "request_id": reqID})
+}
+
+func (h *Handler) handleUpdateSecurityPolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	existing, err := h.resolveSecurityPolicy(r.Context(), claims.TenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to read current security policy", reqID, claims.TenantID)
+		return
+	}
+	var req struct {
+		MaxFailedAttempts  *int `json:"max_failed_attempts"`
+		LockoutMinutes     *int `json:"lockout_minutes"`
+		IdleTimeoutMinutes *int `json:"idle_timeout_minutes"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	policy := existing
+	if req.MaxFailedAttempts != nil {
+		policy.MaxFailedAttempts = *req.MaxFailedAttempts
+	}
+	if req.LockoutMinutes != nil {
+		policy.LockoutMinutes = *req.LockoutMinutes
+	}
+	if req.IdleTimeoutMinutes != nil {
+		policy.IdleTimeoutMinutes = *req.IdleTimeoutMinutes
+	}
+	policy = NormalizeSecurityPolicy(policy, claims.TenantID)
+	policy.UpdatedBy = claims.UserID
+	updated, err := h.store.UpsertSecurityPolicy(r.Context(), policy)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to update security policy", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.security_policy_updated", reqID, claims.TenantID, map[string]any{
+		"max_failed_attempts":  updated.MaxFailedAttempts,
+		"lockout_minutes":      updated.LockoutMinutes,
+		"idle_timeout_minutes": updated.IdleTimeoutMinutes,
+	}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"policy": updated, "request_id": reqID})
+}
+
 func (h *Handler) handleCLIStatus(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
@@ -1280,6 +1364,15 @@ func (h *Handler) ensureTenantDefaults(ctx context.Context, tenantID string) err
 	} else if err != nil {
 		return err
 	}
+	if _, err := h.store.GetSecurityPolicy(ctx, tenantID); errors.Is(err, errNotFound) {
+		policy := NormalizeSecurityPolicy(DefaultSecurityPolicy(tenantID), tenantID)
+		policy.UpdatedBy = "tenant-bootstrap"
+		if _, err := h.store.UpsertSecurityPolicy(ctx, policy); err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1431,6 +1524,17 @@ func (h *Handler) resolvePasswordPolicy(ctx context.Context, tenantID string) (P
 		return PasswordPolicy{}, err
 	}
 	return NormalizePasswordPolicy(policy, tenantID), nil
+}
+
+func (h *Handler) resolveSecurityPolicy(ctx context.Context, tenantID string) (SecurityPolicy, error) {
+	policy, err := h.store.GetSecurityPolicy(ctx, tenantID)
+	if errors.Is(err, errNotFound) {
+		return NormalizeSecurityPolicy(DefaultSecurityPolicy(tenantID), tenantID), nil
+	}
+	if err != nil {
+		return SecurityPolicy{}, err
+	}
+	return NormalizeSecurityPolicy(policy, tenantID), nil
 }
 
 func (h *Handler) enforcePasswordPolicy(ctx context.Context, tenantID string, password string, username string, email string) error {

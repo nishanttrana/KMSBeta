@@ -227,13 +227,23 @@ func (l *FailedLoginLimiter) IsLocked(key string, now time.Time) (time.Time, boo
 }
 
 func (l *FailedLoginLimiter) Fail(key string, now time.Time) (time.Time, bool) {
+	return l.FailWithPolicy(key, now, l.maxFails, l.lockWindow)
+}
+
+func (l *FailedLoginLimiter) FailWithPolicy(key string, now time.Time, maxFails int, lockWindow time.Duration) (time.Time, bool) {
+	if maxFails <= 0 {
+		maxFails = l.maxFails
+	}
+	if lockWindow <= 0 {
+		lockWindow = l.lockWindow
+	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	rec := l.state[key]
 	rec.Count++
-	if rec.Count >= l.maxFails {
+	if rec.Count >= maxFails {
 		rec.Count = 0
-		rec.LockedUntil = now.Add(l.lockWindow)
+		rec.LockedUntil = now.Add(lockWindow)
 		l.state[key] = rec
 		return rec.LockedUntil, true
 	}
@@ -291,6 +301,46 @@ func NormalizePasswordPolicy(policy PasswordPolicy, tenantID string) PasswordPol
 	}
 	if out.MinUniqueChars > out.MinLength {
 		out.MinUniqueChars = out.MinLength
+	}
+	return out
+}
+
+func DefaultSecurityPolicy(tenantID string) SecurityPolicy {
+	return SecurityPolicy{
+		TenantID:           tenantID,
+		MaxFailedAttempts:  5,
+		LockoutMinutes:     15,
+		IdleTimeoutMinutes: 15,
+		UpdatedBy:          "system",
+	}
+}
+
+func NormalizeSecurityPolicy(policy SecurityPolicy, tenantID string) SecurityPolicy {
+	out := policy
+	def := DefaultSecurityPolicy(tenantID)
+	if strings.TrimSpace(out.TenantID) == "" {
+		out.TenantID = def.TenantID
+	}
+	if out.MaxFailedAttempts < 3 {
+		out.MaxFailedAttempts = 3
+	}
+	if out.MaxFailedAttempts > 50 {
+		out.MaxFailedAttempts = 50
+	}
+	if out.LockoutMinutes < 1 {
+		out.LockoutMinutes = 1
+	}
+	if out.LockoutMinutes > 1440 {
+		out.LockoutMinutes = 1440
+	}
+	if out.IdleTimeoutMinutes < 1 {
+		out.IdleTimeoutMinutes = 1
+	}
+	if out.IdleTimeoutMinutes > 1440 {
+		out.IdleTimeoutMinutes = 1440
+	}
+	if strings.TrimSpace(out.UpdatedBy) == "" {
+		out.UpdatedBy = def.UpdatedBy
 	}
 	return out
 }

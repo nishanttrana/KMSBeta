@@ -247,11 +247,13 @@ import {
   createAuthUser,
   getAuthCLIStatus,
   getAuthPasswordPolicy,
+  getAuthSecurityPolicy,
   listAuthTenants,
   listAuthUsers,
   openAuthCLISession,
   resetAuthUserPassword,
   updateAuthPasswordPolicy,
+  updateAuthSecurityPolicy,
   updateAuthUserRole,
   updateAuthUserStatus
 } from "../lib/authAdmin";
@@ -12754,6 +12756,9 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
   const [passwordPolicy,setPasswordPolicy]=useState(null);
   const [policyLoading,setPolicyLoading]=useState(false);
   const [policySaving,setPolicySaving]=useState(false);
+  const [securityPolicy,setSecurityPolicy]=useState<any>(null);
+  const [securityLoading,setSecurityLoading]=useState(false);
+  const [securitySaving,setSecuritySaving]=useState(false);
   const [govSettings,setGovSettings]=useState<any>(null);
   const [govLoading,setGovLoading]=useState(false);
   const [govSaving,setGovSaving]=useState(false);
@@ -13017,6 +13022,28 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     }
   };
 
+  const loadSecurityPolicy=async(silent=false)=>{
+    if(!session?.token){
+      setSecurityPolicy(null);
+      return;
+    }
+    if(!silent){
+      setSecurityLoading(true);
+    }
+    try{
+      const policy=await getAuthSecurityPolicy(session);
+      setSecurityPolicy(policy);
+    }catch(error){
+      if(!silent){
+        onToast?.(`Login security policy load failed: ${errMsg(error)}`);
+      }
+    }finally{
+      if(!silent){
+        setSecurityLoading(false);
+      }
+    }
+  };
+
   const loadGovernanceSettings=async(silent=false)=>{
     if(!session?.token){
       setGovSettings(null);
@@ -13135,6 +13162,33 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     }
   };
 
+  const saveSecurityPolicy=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to update login security policy.");
+      return;
+    }
+    if(!securityPolicy){
+      onToast?.("No login security policy loaded.");
+      return;
+    }
+    setSecuritySaving(true);
+    try{
+      const payload={
+        max_failed_attempts:Math.max(3,Math.min(50,Number(securityPolicy.max_failed_attempts||5))),
+        lockout_minutes:Math.max(1,Math.min(1440,Number(securityPolicy.lockout_minutes||15))),
+        idle_timeout_minutes:Math.max(1,Math.min(1440,Number(securityPolicy.idle_timeout_minutes||15)))
+      };
+      const updated=await updateAuthSecurityPolicy(session,payload);
+      setSecurityPolicy(updated);
+      onToast?.("Login security policy updated. Inactivity timeout applies on next login session.");
+      sM(null);
+    }catch(error){
+      onToast?.(`Login security policy update failed: ${errMsg(error)}`);
+    }finally{
+      setSecuritySaving(false);
+    }
+  };
+
   const removeTag=async(name)=>{
     const confirmed=await promptDialog.confirm({
       title:"Delete Tag",
@@ -13164,6 +13218,7 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       setCertSecurity(null);
       setFipsErr("");
       setPasswordPolicy(null);
+      setSecurityPolicy(null);
       setGovSettings(null);
       return;
     }
@@ -13172,6 +13227,7 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     void loadSystemState(true);
     void loadCertSecurity(true);
     void loadPasswordPolicy(true);
+    void loadSecurityPolicy(true);
     void loadGovernanceSettings(true);
     const id=setInterval(()=>{void loadHealth(true);},15000);
     return()=>clearInterval(id);
@@ -13315,6 +13371,16 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
               :"Global user password controls"}
         </div>
       </Card>
+      <Card onClick={()=>sM("login-security")}>
+        <div style={{fontSize:11,color:C.text,fontWeight:600}}>Login Security</div>
+        <div style={{fontSize:10,color:C.dim}}>
+          {securityPolicy
+            ? `${securityPolicy.max_failed_attempts} fails / ${securityPolicy.lockout_minutes}m lock / idle ${securityPolicy.idle_timeout_minutes}m`
+            : securityLoading
+              ?"Loading policy..."
+              :"Brute-force + inactivity logout policy"}
+        </div>
+      </Card>
       <Card onClick={()=>sM("governance")}>
         <div style={{fontSize:11,color:C.text,fontWeight:600}}>Governance Delivery</div>
         <div style={{fontSize:10,color:C.dim}}>
@@ -13454,6 +13520,47 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       <div style={{display:"flex",gap:8}}>
         <Btn onClick={()=>sM(null)} disabled={policySaving}>Cancel</Btn>
         <Btn primary onClick={()=>void savePasswordPolicy()} disabled={policySaving}>{policySaving?"Saving...":"Save Policy"}</Btn>
+      </div>
+    </div>
+  </Modal>
+  <Modal open={m==="login-security"} onClose={()=>sM(null)} title="Login Security Policy">
+    <Row3>
+      <FG label="Max Failed Login Attempts" required>
+        <Inp
+          type="number"
+          min={3}
+          max={50}
+          value={String(securityPolicy?.max_failed_attempts??5)}
+          onChange={(e)=>setSecurityPolicy((prev)=>({...prev,max_failed_attempts:Number(e.target.value||5)}))}
+        />
+      </FG>
+      <FG label="Lockout Duration (minutes)" required>
+        <Inp
+          type="number"
+          min={1}
+          max={1440}
+          value={String(securityPolicy?.lockout_minutes??15)}
+          onChange={(e)=>setSecurityPolicy((prev)=>({...prev,lockout_minutes:Number(e.target.value||15)}))}
+        />
+      </FG>
+      <FG label="Idle Auto Logout (minutes)" required>
+        <Inp
+          type="number"
+          min={1}
+          max={1440}
+          value={String(securityPolicy?.idle_timeout_minutes??15)}
+          onChange={(e)=>setSecurityPolicy((prev)=>({...prev,idle_timeout_minutes:Number(e.target.value||15)}))}
+        />
+      </FG>
+    </Row3>
+    <div style={{fontSize:10,color:C.dim,marginTop:8}}>
+      Idle timeout logs out inactive dashboard sessions. New value applies to newly authenticated sessions.
+    </div>
+    <div style={{display:"flex",justifyContent:"space-between",gap:8,marginTop:12}}>
+      <Btn onClick={()=>void loadSecurityPolicy(false)} disabled={securitySaving}>{securityLoading?"Loading...":"Reload Policy"}</Btn>
+      <div style={{display:"flex",gap:8}}>
+        <Btn onClick={()=>sM(null)} disabled={securitySaving}>Cancel</Btn>
+        <Btn primary onClick={()=>void saveSecurityPolicy()} disabled={securitySaving}>{securitySaving?"Saving...":"Save Policy"}</Btn>
       </div>
     </div>
   </Modal>

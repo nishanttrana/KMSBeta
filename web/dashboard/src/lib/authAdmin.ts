@@ -35,6 +35,15 @@ export type PasswordPolicy = {
   updated_at?: string;
 };
 
+export type SecurityPolicy = {
+  tenant_id: string;
+  max_failed_attempts: number;
+  lockout_minutes: number;
+  idle_timeout_minutes: number;
+  updated_by?: string;
+  updated_at?: string;
+};
+
 export type CLIStatus = {
   enabled: boolean;
   cli_username: string;
@@ -61,6 +70,7 @@ type UsersResponse = { items: AuthUser[] };
 type UserCreateResponse = { user_id: string };
 type StatusResponse = { status: string };
 type PolicyResponse = { policy: PasswordPolicy };
+type SecurityPolicyResponse = { policy: SecurityPolicy };
 type TenantsResponse = { items: AuthTenant[] };
 type TenantCreateResponse = { status: string; tenant_id: string };
 
@@ -203,6 +213,22 @@ export async function updateAuthPasswordPolicy(
   input: Partial<PasswordPolicy>
 ): Promise<PasswordPolicy> {
   const out = await serviceRequest<PolicyResponse>(session, "auth", "/auth/password-policy", {
+    method: "PUT",
+    body: JSON.stringify(input || {})
+  });
+  return out.policy;
+}
+
+export async function getAuthSecurityPolicy(session: AuthSession): Promise<SecurityPolicy> {
+  const out = await serviceRequest<SecurityPolicyResponse>(session, "auth", "/auth/security-policy");
+  return out.policy;
+}
+
+export async function updateAuthSecurityPolicy(
+  session: AuthSession,
+  input: Partial<SecurityPolicy>
+): Promise<SecurityPolicy> {
+  const out = await serviceRequest<SecurityPolicyResponse>(session, "auth", "/auth/security-policy", {
     method: "PUT",
     body: JSON.stringify(input || {})
   });

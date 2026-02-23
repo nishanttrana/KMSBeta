@@ -13,6 +13,7 @@ export type AuthSession = {
   token: string;
   mode: "backend" | "local";
   mustChangePassword: boolean;
+  idleTimeoutMinutes?: number;
   expiresAt?: string;
 };
 
@@ -63,6 +64,10 @@ export function getSession(): AuthSession | null {
     return {
       ...parsed,
       mustChangePassword: Boolean(parsed.mustChangePassword),
+      idleTimeoutMinutes:
+        Number.isFinite(Number(parsed.idleTimeoutMinutes)) && Number(parsed.idleTimeoutMinutes) > 0
+          ? Math.trunc(Number(parsed.idleTimeoutMinutes))
+          : undefined,
       expiresAt: String(parsed.expiresAt || "").trim() || undefined
     };
   } catch {
@@ -119,15 +124,18 @@ export async function login(
         const data = (await response.json()) as {
           access_token?: string;
           must_change_password?: boolean;
+          security_policy?: { idle_timeout_minutes?: number };
           expires_at?: string;
         };
         if (data.access_token) {
+          const idleTimeoutMinutes = Number(data.security_policy?.idle_timeout_minutes || 0);
           return {
             tenantId,
             username,
             token: data.access_token,
             mode: "backend",
             mustChangePassword: Boolean(data.must_change_password),
+            idleTimeoutMinutes: Number.isFinite(idleTimeoutMinutes) && idleTimeoutMinutes > 0 ? Math.trunc(idleTimeoutMinutes) : undefined,
             expiresAt: String(data.expires_at || "").trim() || undefined
           };
         }
@@ -159,7 +167,8 @@ export async function login(
     username,
     token: `local-${Date.now()}`,
     mode: "local",
-    mustChangePassword: mustForcePasswordChange(config)
+    mustChangePassword: mustForcePasswordChange(config),
+    idleTimeoutMinutes: undefined
   };
 }
 
