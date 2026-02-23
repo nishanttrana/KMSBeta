@@ -205,6 +205,7 @@ import {
   rotateEKMAgentKey
 } from "../lib/ekm";
 import {
+  acknowledgeAlertsBulk,
   acknowledgeAlert,
   createReportingScheduledReport,
   createReportingRule,
@@ -11055,6 +11056,7 @@ const Alerts=({session,onToast,onUnreadSync})=>{
   const [pageSize,setPageSize]=useState(10);
   const [pageIndex,setPageIndex]=useState(0);
   const [ackBusy,setAckBusy]=useState("");
+  const [ackAllBusy,setAckAllBusy]=useState(false);
   const [escBusy,setEscBusy]=useState("");
   const [ruleModal,setRuleModal]=useState(false);
   const [ruleSaving,setRuleSaving]=useState(false);
@@ -11254,6 +11256,32 @@ const Alerts=({session,onToast,onUnreadSync})=>{
     }
   };
 
+  const ackAllAlerts=async()=>{
+    if(!session?.token){
+      return;
+    }
+    const ids=(Array.isArray(openItems)?openItems:[])
+      .map((item:any)=>String(item?.id||"").trim())
+      .filter(Boolean);
+    if(!ids.length){
+      onToast?.("No open alerts to acknowledge.");
+      return;
+    }
+    setAckAllBusy(true);
+    try{
+      const updated=await acknowledgeAlertsBulk(session,{
+        ids,
+        actor:session.username||"dashboard"
+      });
+      onToast?.(`Acknowledged ${updated} alert${updated===1?"":"s"}.`);
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Acknowledge all failed: ${errMsg(error)}`);
+    }finally{
+      setAckAllBusy(false);
+    }
+  };
+
   const escalateOne=async(item:any)=>{
     if(!session?.token){
       return;
@@ -11344,6 +11372,13 @@ const Alerts=({session,onToast,onUnreadSync})=>{
       title="Alert Center"
       actions={<div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
         <Btn small onClick={()=>void refresh(false)}><RefreshCcw size={12}/>{loading?"Refreshing...":"Refresh"}</Btn>
+        <Btn
+          small
+          onClick={()=>void ackAllAlerts()}
+          disabled={ackAllBusy||!openItems.length||loading}
+        >
+          {ackAllBusy?"Ack All...":"Acknowledge All"}
+        </Btn>
         <Btn small primary onClick={()=>setRuleModal(true)}>+ Create Alert Rule</Btn>
       </div>}
     >
@@ -14353,7 +14388,7 @@ const TABS={home:Home,keys:Keys,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:
 const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",restapi:"REST API Workbench",vault:"Secret Vault",certs:"Certificates / Mini PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",byok:"BYOK",hyok:"HYOK",ekm:"EKM Agent Hub",kmip:"KMIP 2.1 Server",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
 
 export default function VectaDashboard(props){
-  const {session,enabledFeatures,alerts,audit,unreadAlerts,onLogout,markAlertsRead}=props;
+  const {session:sessionBase,enabledFeatures,alerts,audit,unreadAlerts,onLogout,markAlertsRead}=props;
   const initialTab=useMemo(()=>{
     try{
       const qp=new URLSearchParams(window.location.search);
@@ -14376,6 +14411,12 @@ export default function VectaDashboard(props){
   const [cliPassword,setCLIPassword]=useState("");
   const [cliLaunching,setCLILaunching]=useState(false);
   const [cliCommandHint,setCLICommandHint]=useState("");
+  const [tenantOptions,setTenantOptions]=useState<Array<{id:string;name:string;status?:string}>>([]);
+  const [tenantScope,setTenantScope]=useState(String(sessionBase?.tenantId||""));
+  const session=useMemo(()=>({
+    ...sessionBase,
+    tenantId:String(tenantScope||sessionBase?.tenantId||"").trim()||String(sessionBase?.tenantId||"")
+  }),[sessionBase,tenantScope]);
   const restOnlyMode=useMemo(()=>{
     try{
       const qp=new URLSearchParams(window.location.search);
@@ -14384,6 +14425,50 @@ export default function VectaDashboard(props){
       return false;
     }
   },[]);
+
+  useEffect(()=>{
+    setTenantScope(String(sessionBase?.tenantId||""));
+  },[sessionBase?.tenantId,sessionBase?.token]);
+
+  useEffect(()=>{
+    if(!sessionBase?.token){
+      setTenantOptions([]);
+      return;
+    }
+    let cancelled=false;
+    (async()=>{
+      try{
+        const items=await listAuthTenants(sessionBase);
+        if(cancelled){
+          return;
+        }
+        const rows=(Array.isArray(items)?items:[])
+          .map((item:any)=>({
+            id:String(item?.id||"").trim(),
+            name:String(item?.name||item?.id||"").trim(),
+            status:String(item?.status||"active").trim()
+          }))
+          .filter((item)=>Boolean(item.id));
+        if(rows.length){
+          setTenantOptions(rows);
+          if(!rows.some((item)=>item.id===String(tenantScope||sessionBase?.tenantId||""))){
+            setTenantScope(rows[0].id);
+          }
+          return;
+        }
+      }catch{
+        // Fallback to token tenant when tenant catalog is not permitted.
+      }
+      if(!cancelled){
+        const fallbackID=String(sessionBase?.tenantId||"").trim();
+        setTenantOptions(fallbackID?[{id:fallbackID,name:fallbackID,status:"active"}]:[]);
+        if(fallbackID){
+          setTenantScope(fallbackID);
+        }
+      }
+    })();
+    return()=>{cancelled=true;};
+  },[sessionBase?.token,sessionBase?.tenantId,tenantScope]);
 
   useEffect(()=>{
     const i=setInterval(()=>setT(new Date()),1000);
@@ -14561,6 +14646,19 @@ export default function VectaDashboard(props){
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <B c={globalFipsEnabled?"green":"blue"} pulse={globalFipsEnabled}>{globalFipsEnabled?"FIPS STRICT":"STANDARD MODE"}</B>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.8}}>Tenant</span>
+              <Sel
+                w={180}
+                value={String(session?.tenantId||"")}
+                onChange={(e)=>setTenantScope(String(e.target.value||""))}
+                style={{height:28,borderRadius:8,padding:"4px 24px 4px 8px",fontSize:10}}
+              >
+                {(Array.isArray(tenantOptions)&&tenantOptions.length?tenantOptions:[{id:String(session?.tenantId||""),name:String(session?.tenantId||""),status:"active"}])
+                  .filter((item:any)=>Boolean(String(item?.id||"").trim()))
+                  .map((item:any)=><option key={String(item.id)} value={String(item.id)}>{`${String(item.name||item.id)} (${String(item.id)})`}</option>)}
+              </Sel>
+            </div>
             <Btn small onClick={()=>window.location.href=window.location.pathname}>Open Full UI</Btn>
             <Btn small onClick={onLogout}>Logout</Btn>
           </div>
@@ -14617,6 +14715,19 @@ export default function VectaDashboard(props){
           <span style={{fontSize:14,fontWeight:700,color:C.text,letterSpacing:-.3}}>{TITLES[tab]}</span>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
             <B c={globalFipsEnabled?"green":"blue"} pulse={globalFipsEnabled}>{globalFipsEnabled?"FIPS STRICT":"STANDARD MODE"}</B>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <span style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.8}}>Tenant</span>
+              <Sel
+                w={170}
+                value={String(session?.tenantId||"")}
+                onChange={(e)=>setTenantScope(String(e.target.value||""))}
+                style={{height:28,borderRadius:8,padding:"4px 24px 4px 8px",fontSize:10}}
+              >
+                {(Array.isArray(tenantOptions)&&tenantOptions.length?tenantOptions:[{id:String(session?.tenantId||""),name:String(session?.tenantId||""),status:"active"}])
+                  .filter((item:any)=>Boolean(String(item?.id||"").trim()))
+                  .map((item:any)=><option key={String(item.id)} value={String(item.id)}>{`${String(item.name||item.id)} (${String(item.id)})`}</option>)}
+              </Sel>
+            </div>
             <button
               onClick={openCLIModal}
               disabled={!Boolean(cliStatus?.enabled)}

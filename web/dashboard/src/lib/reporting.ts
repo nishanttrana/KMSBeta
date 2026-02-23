@@ -213,6 +213,41 @@ export async function acknowledgeAlert(session: AuthSession, alertID: string, ac
   });
 }
 
+export async function acknowledgeAlertsBulk(
+  session: AuthSession,
+  input?: {
+    ids?: string[];
+    severity?: string;
+    status?: string;
+    action?: string;
+    actor?: string;
+    note?: string;
+  }
+): Promise<number> {
+  const q = new URLSearchParams();
+  q.set("tenant_id", session.tenantId);
+  if (String(input?.severity || "").trim()) {
+    q.set("severity", String(input?.severity || "").trim().toLowerCase());
+  }
+  if (String(input?.status || "").trim()) {
+    q.set("status", String(input?.status || "").trim().toLowerCase());
+  }
+  if (String(input?.action || "").trim()) {
+    q.set("action", String(input?.action || "").trim().toLowerCase());
+  }
+  const out = await serviceRequest<{ updated?: number }>(session, "reporting", `/alerts/bulk/acknowledge?${q.toString()}`, {
+    method: "POST",
+    body: JSON.stringify({
+      ids: Array.isArray(input?.ids)
+        ? input?.ids.map((value) => String(value || "").trim()).filter(Boolean)
+        : [],
+      actor: String(input?.actor || session.username || "dashboard").trim() || "dashboard",
+      note: String(input?.note || "").trim()
+    })
+  });
+  return Math.max(0, Number(out?.updated || 0));
+}
+
 export async function escalateAlert(session: AuthSession, alertID: string, severity?: string): Promise<void> {
   await serviceRequest(session, "reporting", `/alerts/${encodeURIComponent(String(alertID || "").trim())}/escalate?${tenantQuery(session)}`, {
     method: "PUT",
