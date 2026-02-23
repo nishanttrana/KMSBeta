@@ -4915,6 +4915,7 @@ const Vault=({session,onToast})=>{
   const [modal,setModal]=useState(null);
   const [busy,setBusy]=useState(false);
   const [loading,setLoading]=useState(false);
+  const [refreshing,setRefreshing]=useState(false);
   const [refreshTick,setRefreshTick]=useState(0);
   const [secrets,setSecrets]=useState([]);
   const [search,setSearch]=useState("");
@@ -4983,13 +4984,13 @@ const Vault=({session,onToast})=>{
 
   const normalizeType=(value:string)=>String(value||"").trim().toLowerCase().replace(/\s+/g,"_");
 
-  const loadSecrets=async()=>{
+  const loadSecrets=async(force=false)=>{
     if(!session){
       return;
     }
     setLoading(true);
     try{
-      const items=await listSecrets(session,{limit:500,offset:0});
+      const items=await listSecrets(session,{limit:500,offset:0,noCache:Boolean(force)});
       setSecrets(Array.isArray(items)?items:[]);
     }catch(error){
       onToast?.(`Secrets load failed: ${errMsg(error)}`);
@@ -4999,8 +5000,21 @@ const Vault=({session,onToast})=>{
   };
 
   useEffect(()=>{
-    void loadSecrets();
+    void loadSecrets(false);
   },[session,refreshTick]);
+
+  const handleRefresh=async()=>{
+    if(!session){
+      return;
+    }
+    setRefreshing(true);
+    try{
+      await loadSecrets(true);
+      onToast?.("Secrets refreshed.");
+    }finally{
+      setRefreshing(false);
+    }
+  };
 
   const matchesCategory=(secret:any)=>{
     if(category==="all") return true;
@@ -5204,7 +5218,7 @@ const Vault=({session,onToast})=>{
 
   return <div>
     <Section title="Secret Vault" actions={<>
-      <Btn small onClick={()=>setRefreshTick((n)=>n+1)} disabled={loading||busy}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>Refresh</span></Btn>
+      <Btn small onClick={()=>void handleRefresh()} disabled={refreshing||busy}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>{refreshing?"Refreshing...":"Refresh"}</span></Btn>
     </>}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:14,flexWrap:"wrap"}}>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -5228,12 +5242,12 @@ const Vault=({session,onToast})=>{
           const badge=secretBadge(s);
           return <div key={s.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:16,minHeight:122}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10}}>
-              <div style={{fontSize:27,fontWeight:700,color:C.text,lineHeight:1.2}}>{s.name}</div>
+              <div style={{fontSize:16,fontWeight:800,color:C.text,lineHeight:1.2}}>{s.name}</div>
               <span style={{background:badge.bg,color:badge.fg,borderRadius:999,padding:"4px 10px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{badge.t}</span>
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8,fontSize:20,color:C.muted}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,fontSize:13,color:C.muted}}>
               <span>TTL: {ttlCompact(s)}</span>
-              <span style={{fontSize:20,color:"#89a5cf"}}>{`v${Number(s.current_version||1)}`}</span>
+              <span style={{fontSize:13,color:"#89a5cf"}}>{`v${Number(s.current_version||1)}`}</span>
             </div>
             <div style={{display:"flex",gap:8,marginTop:12}}>
               <Btn small onClick={()=>void openRetrieve(s)} disabled={busy}>Retrieve</Btn>

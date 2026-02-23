@@ -64,7 +64,7 @@ export type UpdateSecretInput = {
 
 export async function listSecrets(
   session: AuthSession,
-  options?: { secretType?: string; limit?: number; offset?: number }
+  options?: { secretType?: string; limit?: number; offset?: number; noCache?: boolean }
 ): Promise<SecretItem[]> {
   const limit = Math.max(1, Math.min(500, Math.trunc(Number(options?.limit || 200))));
   const offset = Math.max(0, Math.trunc(Number(options?.offset || 0)));
@@ -75,6 +75,9 @@ export async function listSecrets(
   q.set("offset", String(offset));
   if (secretType) {
     q.set("secret_type", secretType);
+  }
+  if (options?.noCache) {
+    q.set("_ts", String(Date.now()));
   }
   const res = await serviceRequest<ListSecretsResponse>(session, "secrets", `/secrets?${q.toString()}`);
   return Array.isArray(res?.items) ? res.items : [];
