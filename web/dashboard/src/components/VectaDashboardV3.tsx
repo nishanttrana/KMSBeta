@@ -14450,9 +14450,24 @@ export default function VectaDashboard(props){
           }))
           .filter((item)=>Boolean(item.id));
         if(rows.length){
-          setTenantOptions(rows);
-          if(!rows.some((item)=>item.id===String(tenantScope||sessionBase?.tenantId||""))){
-            setTenantScope(rows[0].id);
+          const baseTenant=String(sessionBase?.tenantId||"").trim();
+          const normalized=rows.some((item)=>item.id===baseTenant)
+            ? rows
+            : (baseTenant?[{id:baseTenant,name:baseTenant,status:"active"},...rows]:rows);
+          setTenantOptions(normalized);
+          const currentScope=String(tenantScope||"").trim();
+          if(!currentScope){
+            if(baseTenant){
+              setTenantScope(baseTenant);
+            }else if(normalized[0]?.id){
+              setTenantScope(normalized[0].id);
+            }
+          }else if(!normalized.some((item)=>item.id===currentScope)){
+            if(baseTenant){
+              setTenantScope(baseTenant);
+            }else if(normalized[0]?.id){
+              setTenantScope(normalized[0].id);
+            }
           }
           return;
         }
