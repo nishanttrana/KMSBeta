@@ -12,6 +12,7 @@ type LoginScreenProps = {
 
 export function LoginScreen(props: LoginScreenProps) {
   const { config, onAuthenticated } = props;
+  const ROOT_TENANT_ID = "root";
   const [username, setUsername] = useState(config.admin_username);
   const [password, setPassword] = useState(config.admin_password);
   const [useRootTenant, setUseRootTenant] = useState(true);
@@ -28,7 +29,7 @@ export function LoginScreen(props: LoginScreenProps) {
   }, [newPassword, confirmPassword]);
 
   const handleLogin = async () => {
-    const tenantId = useRootTenant ? config.tenant_id : tenantInput.trim();
+    const tenantId = useRootTenant ? ROOT_TENANT_ID : tenantInput.trim();
     if (!tenantId) {
       setAuthError("Tenant name is required when root tenant is not selected.");
       return;
@@ -106,7 +107,7 @@ export function LoginScreen(props: LoginScreenProps) {
                       onChange={(event) => setUseRootTenant(event.target.checked)}
                       className="h-3.5 w-3.5 rounded border-cyber-border bg-cyber-panel accent-cyber-accent"
                     />
-                    Use root tenant ({config.tenant_id})
+                    Use root tenant ({ROOT_TENANT_ID})
                   </label>
                   {!useRootTenant ? (
                     <TextInput value={tenantInput} onChange={setTenantInput} placeholder="Enter tenant ID" />
