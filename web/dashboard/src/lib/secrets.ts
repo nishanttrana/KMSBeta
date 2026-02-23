@@ -37,6 +37,12 @@ type GenerateSSHResponse = {
   public_key: string;
 };
 
+type GenerateKeyPairResponse = {
+  secret: SecretItem;
+  public_key: string;
+  key_type: string;
+};
+
 export type CreateSecretInput = {
   name: string;
   secret_type: string;
@@ -153,6 +159,30 @@ export async function generateSSHKeySecret(
     body: JSON.stringify({
       tenant_id: session.tenantId,
       name: input.name,
+      description: input.description || "",
+      labels: input.labels || {},
+      lease_ttl_seconds: Math.trunc(Number(input.lease_ttl_seconds || 0)),
+      created_by: session.username || "dashboard"
+    })
+  });
+}
+
+export async function generateKeyPairSecret(
+  session: AuthSession,
+  input: {
+    name: string;
+    key_type: string;
+    description?: string;
+    labels?: Record<string, string>;
+    lease_ttl_seconds?: number;
+  }
+): Promise<GenerateKeyPairResponse> {
+  return serviceRequest<GenerateKeyPairResponse>(session, "secrets", "/secrets/generate/keypair", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      name: input.name,
+      key_type: input.key_type,
       description: input.description || "",
       labels: input.labels || {},
       lease_ttl_seconds: Math.trunc(Number(input.lease_ttl_seconds || 0)),

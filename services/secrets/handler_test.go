@@ -85,6 +85,26 @@ func TestHandlerGenerateSSHKeyEndpoint(t *testing.T) {
 	}
 }
 
+func TestHandlerGenerateKeyPairEndpoint(t *testing.T) {
+	h, _, _ := newSecretsHandler(t)
+	body := map[string]interface{}{
+		"tenant_id":  "t4",
+		"name":       "wg-auto",
+		"key_type":   "wireguard-curve25519",
+		"created_by": "tester",
+	}
+	raw, _ := json.Marshal(body)
+	req := httptest.NewRequest(http.MethodPost, "/secrets/generate/keypair", bytes.NewReader(raw))
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusCreated {
+		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), `"key_type":"wireguard-curve25519"`) {
+		t.Fatalf("expected key_type in response body=%s", rr.Body.String())
+	}
+}
+
 func TestVaultCompatibleKV2WriteRead(t *testing.T) {
 	h, _, _ := newSecretsHandler(t)
 

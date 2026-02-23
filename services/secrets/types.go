@@ -86,6 +86,16 @@ type GenerateSSHKeyRequest struct {
 	CreatedBy       string            `json:"created_by"`
 }
 
+type GenerateKeyPairRequest struct {
+	TenantID        string            `json:"tenant_id"`
+	Name            string            `json:"name"`
+	KeyType         string            `json:"key_type"`
+	Description     string            `json:"description"`
+	Labels          map[string]string `json:"labels"`
+	LeaseTTLSeconds int64             `json:"lease_ttl_seconds"`
+	CreatedBy       string            `json:"created_by"`
+}
+
 type SecretValueResponse struct {
 	Value       string `json:"value"`
 	Format      string `json:"format"`

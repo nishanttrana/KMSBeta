@@ -260,6 +260,45 @@ func TestGenerateSSHKey(t *testing.T) {
 	}
 }
 
+func TestGenerateKeyPairTypes(t *testing.T) {
+	svc, _ := newSecretsService(t)
+	ctx := context.Background()
+	cases := []struct {
+		keyType    string
+		tenant     string
+		name       string
+		secretType string
+		pubPrefix  string
+	}{
+		{keyType: "ed25519", tenant: "t6", name: "ssh-ed", secretType: "ssh_private_key", pubPrefix: "ssh-ed25519"},
+		{keyType: "rsa-4096", tenant: "t7", name: "ssh-rsa", secretType: "ssh_private_key", pubPrefix: "ssh-rsa"},
+		{keyType: "ecdsa-p384", tenant: "t8", name: "ssh-ecdsa", secretType: "ssh_private_key", pubPrefix: "ecdsa-sha2-nistp384"},
+		{keyType: "pgp-rsa-4096", tenant: "t9", name: "pgp", secretType: "pgp_private_key", pubPrefix: "-----BEGIN PGP PUBLIC KEY BLOCK-----"},
+		{keyType: "wireguard-curve25519", tenant: "t10", name: "wg", secretType: "wireguard_private_key", pubPrefix: ""},
+		{keyType: "age-x25519", tenant: "t11", name: "age", secretType: "age_key", pubPrefix: "age1"},
+	}
+	for _, tc := range cases {
+		secret, pub, gotType, err := svc.GenerateKeyPair(ctx, GenerateKeyPairRequest{
+			TenantID:  tc.tenant,
+			Name:      tc.name,
+			KeyType:   tc.keyType,
+			CreatedBy: "tester",
+		})
+		if err != nil {
+			t.Fatalf("generate %s: %v", tc.keyType, err)
+		}
+		if secret.SecretType != tc.secretType {
+			t.Fatalf("generate %s: secret type=%s want=%s", tc.keyType, secret.SecretType, tc.secretType)
+		}
+		if gotType != tc.keyType {
+			t.Fatalf("generate %s: key type=%s", tc.keyType, gotType)
+		}
+		if tc.pubPrefix != "" && !strings.HasPrefix(pub, tc.pubPrefix) {
+			t.Fatalf("generate %s: pub=%q", tc.keyType, pub)
+		}
+	}
+}
+
 func TestSupportedTypesAtLeast17(t *testing.T) {
 	if len(supportedSecretTypes) < 17 {
 		t.Fatalf("expected at least 17 secret types, got %d", len(supportedSecretTypes))

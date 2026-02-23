@@ -1,9 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"crypto"
+	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
@@ -15,6 +20,11 @@ import (
 	"strings"
 	"time"
 
+	"filippo.io/age"
+	"golang.org/x/crypto/curve25519"
+	"golang.org/x/crypto/openpgp"
+	"golang.org/x/crypto/openpgp/armor"
+	"golang.org/x/crypto/openpgp/packet"
 	"golang.org/x/crypto/pkcs12"
 	"golang.org/x/crypto/ssh"
 
@@ -282,6 +292,200 @@ func (s *Service) GenerateSSHKey(ctx context.Context, req GenerateSSHKeyRequest)
 		"type":      "ssh_private_key",
 	})
 	return secret, pubSSH, nil
+}
+
+func (s *Service) GenerateKeyPair(ctx context.Context, req GenerateKeyPairRequest) (Secret, string, string, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	req.Name = strings.TrimSpace(req.Name)
+	req.KeyType = strings.TrimSpace(strings.ToLower(req.KeyType))
+	if req.CreatedBy == "" {
+		req.CreatedBy = "system"
+	}
+	if req.TenantID == "" || req.Name == "" || req.KeyType == "" {
+		return Secret{}, "", "", errors.New("tenant_id, name, key_type are required")
+	}
+	if req.LeaseTTLSeconds < 0 {
+		return Secret{}, "", "", errors.New("lease_ttl_seconds cannot be negative")
+	}
+
+	var (
+		secretType string
+		privateVal string
+		publicVal  string
+		algorithm  string
+		err        error
+	)
+
+	switch req.KeyType {
+	case "ed25519":
+		privateVal, publicVal, err = generateSSHKeyPair("ed25519")
+		secretType = "ssh_private_key"
+		algorithm = "ed25519"
+	case "rsa-4096":
+		privateVal, publicVal, err = generateSSHKeyPair("rsa-4096")
+		secretType = "ssh_private_key"
+		algorithm = "rsa-4096"
+	case "ecdsa-p384":
+		privateVal, publicVal, err = generateSSHKeyPair("ecdsa-p384")
+		secretType = "ssh_private_key"
+		algorithm = "ecdsa-p384"
+	case "pgp-rsa-4096":
+		privateVal, publicVal, err = generateOpenPGPKeyPair(req.Name)
+		secretType = "pgp_private_key"
+		algorithm = "pgp-rsa-4096"
+	case "wireguard-curve25519":
+		privateVal, publicVal, err = generateWireGuardKeyPair()
+		secretType = "wireguard_private_key"
+		algorithm = "curve25519"
+	case "age-x25519":
+		privateVal, publicVal, err = generateAgeX25519KeyPair()
+		secretType = "age_key"
+		algorithm = "x25519"
+	default:
+		return Secret{}, "", "", errors.New("unsupported key_type")
+	}
+	if err != nil {
+		return Secret{}, "", "", err
+	}
+
+	createReq := CreateSecretRequest{
+		TenantID:        req.TenantID,
+		Name:            req.Name,
+		SecretType:      secretType,
+		Value:           privateVal,
+		Description:     req.Description,
+		Labels:          req.Labels,
+		LeaseTTLSeconds: req.LeaseTTLSeconds,
+		CreatedBy:       req.CreatedBy,
+		Metadata: map[string]interface{}{
+			"generated":  true,
+			"algorithm":  algorithm,
+			"key_type":   req.KeyType,
+			"public_key": publicVal,
+		},
+	}
+	secret, err := s.CreateSecret(ctx, createReq)
+	if err != nil {
+		return Secret{}, "", "", err
+	}
+	_ = s.publishAudit(ctx, "audit.secrets.generated", req.TenantID, map[string]interface{}{
+		"secret_id": secret.ID,
+		"type":      secretType,
+		"key_type":  req.KeyType,
+	})
+	return secret, publicVal, req.KeyType, nil
+}
+
+func generateSSHKeyPair(keyType string) (string, string, error) {
+	var (
+		privAny interface{}
+		pubAny  interface{}
+		err     error
+	)
+	switch keyType {
+	case "ed25519":
+		var pub ed25519.PublicKey
+		var priv ed25519.PrivateKey
+		pub, priv, err = ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return "", "", err
+		}
+		privAny = priv
+		pubAny = pub
+	case "rsa-4096":
+		var priv *rsa.PrivateKey
+		priv, err = rsa.GenerateKey(rand.Reader, 4096)
+		if err != nil {
+			return "", "", err
+		}
+		privAny = priv
+		pubAny = &priv.PublicKey
+	case "ecdsa-p384":
+		var priv *ecdsa.PrivateKey
+		priv, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		if err != nil {
+			return "", "", err
+		}
+		privAny = priv
+		pubAny = &priv.PublicKey
+	default:
+		return "", "", errors.New("unsupported ssh key type")
+	}
+	privDER, err := x509.MarshalPKCS8PrivateKey(privAny)
+	if err != nil {
+		return "", "", err
+	}
+	privPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privDER})
+	pubKey, err := ssh.NewPublicKey(pubAny)
+	if err != nil {
+		return "", "", err
+	}
+	pubSSH := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(pubKey)))
+	return string(privPEM), pubSSH, nil
+}
+
+func generateOpenPGPKeyPair(name string) (string, string, error) {
+	cfg := &packet.Config{
+		RSABits:     4096,
+		DefaultHash: crypto.SHA256,
+		Time:        func() time.Time { return time.Now().UTC() },
+	}
+	emailSafe := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(name), " ", "-"))
+	if emailSafe == "" {
+		emailSafe = "vecta"
+	}
+	entity, err := openpgp.NewEntity(name, "vecta-kms", fmt.Sprintf("%s@local", emailSafe), cfg)
+	if err != nil {
+		return "", "", err
+	}
+
+	var pubBuf bytes.Buffer
+	pubArmor, err := armor.Encode(&pubBuf, openpgp.PublicKeyType, nil)
+	if err != nil {
+		return "", "", err
+	}
+	if err := entity.Serialize(pubArmor); err != nil {
+		return "", "", err
+	}
+	if err := pubArmor.Close(); err != nil {
+		return "", "", err
+	}
+
+	var privBuf bytes.Buffer
+	privArmor, err := armor.Encode(&privBuf, openpgp.PrivateKeyType, nil)
+	if err != nil {
+		return "", "", err
+	}
+	if err := entity.SerializePrivate(privArmor, nil); err != nil {
+		return "", "", err
+	}
+	if err := privArmor.Close(); err != nil {
+		return "", "", err
+	}
+	return privBuf.String(), pubBuf.String(), nil
+}
+
+func generateWireGuardKeyPair() (string, string, error) {
+	private := make([]byte, 32)
+	if _, err := rand.Read(private); err != nil {
+		return "", "", err
+	}
+	private[0] &= 248
+	private[31] = (private[31] & 127) | 64
+
+	public, err := curve25519.X25519(private, curve25519.Basepoint)
+	if err != nil {
+		return "", "", err
+	}
+	return base64.StdEncoding.EncodeToString(private), base64.StdEncoding.EncodeToString(public), nil
+}
+
+func generateAgeX25519KeyPair() (string, string, error) {
+	id, err := age.GenerateX25519Identity()
+	if err != nil {
+		return "", "", err
+	}
+	return id.String(), id.Recipient().String(), nil
 }
 
 func (s *Service) encryptValue(plain []byte) (EncryptedSecretValue, error) {

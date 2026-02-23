@@ -33,6 +33,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("PUT /secrets/{id}", h.handleUpdateSecret)
 	mux.HandleFunc("DELETE /secrets/{id}", h.handleDeleteSecret)
 	mux.HandleFunc("POST /secrets/generate/ssh_key", h.handleGenerateSSHKey)
+	mux.HandleFunc("POST /secrets/generate/keypair", h.handleGenerateKeyPair)
 
 	// HashiCorp Vault / OpenBao compatibility (KV v1 + KV v2 subset)
 	mux.HandleFunc("GET /v1/sys/health", h.handleVaultSysHealth)
@@ -181,6 +182,27 @@ func (h *Handler) handleGenerateSSHKey(w http.ResponseWriter, r *http.Request) {
 		"secret":     secret,
 		"public_key": pub,
 		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleGenerateKeyPair(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req GenerateKeyPairRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	secret, pub, keyType, err := h.svc.GenerateKeyPair(r.Context(), req)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "generate_failed", err.Error(), reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"secret":      secret,
+		"public_key":  pub,
+		"key_type":    keyType,
+		"request_id":  reqID,
+		"contentType": "text/plain",
 	})
 }
 
