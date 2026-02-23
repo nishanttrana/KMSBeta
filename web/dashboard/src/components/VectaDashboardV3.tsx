@@ -519,6 +519,283 @@ const REST_API_CATALOG = [
       { code: 401, meaning: "JWT missing/invalid/expired" },
       { code: 403, meaning: "Caller lacks governance read privilege" }
     ]
+  },
+  {
+    id: "byok-accounts-list",
+    group: "BYOK",
+    title: "List Cloud Accounts",
+    service: "cloud",
+    method: "GET",
+    pathTemplate: "/cloud/accounts",
+    bodyTemplate: "",
+    description: "Returns registered cloud BYOK connectors (AWS, Azure, GCP, OCI, Salesforce) for current tenant.",
+    requestExample: "GET /svc/cloud/cloud/accounts",
+    responseExample: { items: [{ id: "acct_aws_01", provider: "aws", name: "aws-prod", default_region: "us-east-1", status: "active" }] },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Caller lacks BYOK connector read privilege" }
+    ]
+  },
+  {
+    id: "byok-import-key",
+    group: "BYOK",
+    title: "Import/Sync Key To CSP",
+    service: "cloud",
+    method: "POST",
+    pathTemplate: "/cloud/import",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "key_id": "{{key_id}}",\n  "provider": "aws",\n  "account_id": "acct_aws_01",\n  "vecta_region": "primary",\n  "cloud_region": "us-east-1",\n  "metadata_json": "{\\"source\\":\\"rest-workbench\\"}"\n}',
+    description: "Imports or binds a KMS key to cloud KMS/HSM target using configured account credentials.",
+    requestExample: "POST /svc/cloud/cloud/import",
+    responseExample: { binding: { id: "bind_01", key_id: "key_123", provider: "aws", cloud_key_ref: "arn:aws:kms:..." } },
+    errorCodes: [
+      { code: 400, meaning: "Provider/account/key payload invalid" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Cloud import refused by CSP or policy" }
+    ]
+  },
+  {
+    id: "hyok-endpoints-list",
+    group: "HYOK",
+    title: "List HYOK Endpoints",
+    service: "hyok",
+    method: "GET",
+    pathTemplate: "/hyok/v1/endpoints?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Lists HYOK endpoint protocols and policy bindings (DKE/Salesforce/Google/Generic).",
+    requestExample: "GET /svc/hyok/hyok/v1/endpoints?tenant_id=bank-alpha",
+    responseExample: { items: [{ protocol: "dke", enabled: true, auth_mode: "mtls_or_jwt", governance_required: true }] },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Caller lacks HYOK read privilege" }
+    ]
+  },
+  {
+    id: "hyok-dke-publickey",
+    group: "HYOK",
+    title: "Get DKE Public Key",
+    service: "hyok",
+    method: "GET",
+    pathTemplate: "/hyok/dke/v1/keys/{{key_id}}/publickey?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Returns DKE-compatible public key material for Microsoft-style HYOK/DKE integration.",
+    requestExample: "GET /svc/hyok/hyok/dke/v1/keys/{key_id}/publickey?tenant_id=bank-alpha",
+    responseExample: { key: { key_id: "key_123", algorithm: "RSA-OAEP-2048", format: "pem", public_key: "-----BEGIN PUBLIC KEY-----..." } },
+    errorCodes: [
+      { code: 400, meaning: "key_id missing or invalid for DKE" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Key algorithm/profile incompatible with DKE export" }
+    ]
+  },
+  {
+    id: "kmip-profiles-list",
+    group: "KMIP",
+    title: "List KMIP Client Profiles",
+    service: "kmip",
+    method: "GET",
+    pathTemplate: "/kmip/profiles?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Lists KMIP onboarding profiles used to issue/internalize KMIP client credentials.",
+    requestExample: "GET /svc/kmip/kmip/profiles?tenant_id=bank-alpha",
+    responseExample: { items: [{ id: "prof_01", name: "default-kmip", role: "kmip-client", certificate_duration_days: 365 }] },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id" },
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "kmip-client-create",
+    group: "KMIP",
+    title: "Create KMIP Client",
+    service: "kmip",
+    method: "POST",
+    pathTemplate: "/kmip/clients",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "app-kmip-client-01",\n  "profile_id": "prof_01",\n  "role": "kmip-client",\n  "enrollment_mode": "internal",\n  "common_name": "app-kmip-client-01"\n}',
+    description: "Registers a KMIP client and issues internal credentials when enrollment_mode is internal.",
+    requestExample: "POST /svc/kmip/kmip/clients",
+    responseExample: { client: { id: "kmip_client_01", name: "app-kmip-client-01", status: "active", enrollment_mode: "internal" } },
+    errorCodes: [
+      { code: 400, meaning: "Profile/enrollment payload invalid" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Certificate issuance or external cert validation failed" }
+    ]
+  },
+  {
+    id: "ekm-agents-list",
+    group: "EKM",
+    title: "List EKM Agents",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/agents?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Lists deployed EKM/TDE agents and their registration metadata.",
+    requestExample: "GET /svc/ekm/ekm/agents?tenant_id=bank-alpha",
+    responseExample: { items: [{ id: "agent_01", name: "mssql-prod-01", db_engine: "mssql", status: "active", host: "10.0.0.5" }] },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id" },
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "ekm-agent-register",
+    group: "EKM",
+    title: "Register EKM Agent",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/agents/register",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "mssql-prod-03",\n  "role": "ekm-agent",\n  "db_engine": "mssql",\n  "host": "10.0.0.15",\n  "version": "SQL Server 2022",\n  "heartbeat_interval_sec": 30,\n  "auto_provision_tde": true\n}',
+    description: "Registers an EKM agent endpoint and provisions initial TDE key mapping policy.",
+    requestExample: "POST /svc/ekm/ekm/agents/register",
+    responseExample: { agent: { id: "agent_03", name: "mssql-prod-03", status: "active", assigned_key_id: "key_tde_01" } },
+    errorCodes: [
+      { code: 400, meaning: "Agent payload invalid (host/engine/version)" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Key provisioning/policy assignment failed" }
+    ]
+  },
+  {
+    id: "qkd-overview",
+    group: "QKD",
+    title: "QKD Overview",
+    service: "qkd",
+    method: "GET",
+    pathTemplate: "/qkd/v1/overview?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Returns ETSI QKD interface status, pool metrics, and link telemetry for tenant.",
+    requestExample: "GET /svc/qkd/qkd/v1/overview?tenant_id=bank-alpha",
+    responseExample: { overview: { status: { active: true, link_status: "up", key_rate: 1200 }, pool: { available_keys: 847293, pool_fill_pct: 68 } } },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 503, meaning: "QKD interface disabled/unavailable" }
+    ]
+  },
+  {
+    id: "qkd-test-generate",
+    group: "QKD",
+    title: "Generate Test QKD Keys",
+    service: "qkd",
+    method: "POST",
+    pathTemplate: "/qkd/v1/test/generate",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "slave_sae_id": "sae-node-b",\n  "device_id": "qkd-node-b",\n  "count": 8,\n  "key_size_bits": 256,\n  "qber_min": 1.2,\n  "qber_max": 2.8\n}',
+    description: "Generates QKD test keys through the QKD service flow for validation and pool testing.",
+    requestExample: "POST /svc/qkd/qkd/v1/test/generate",
+    responseExample: { result: { accepted_count: 8, discarded_count: 0, accepted_key_ids: ["qkd_01", "qkd_02"] } },
+    errorCodes: [
+      { code: 400, meaning: "Invalid QKD test generation parameters" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "QBER/pool policy rejected generated keys" }
+    ]
+  },
+  {
+    id: "mpc-dkg-initiate",
+    group: "MPC",
+    title: "Initiate MPC DKG Ceremony",
+    service: "mpc",
+    method: "POST",
+    pathTemplate: "/mpc/dkg/initiate",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "key_name": "custody-btc-hot",\n  "algorithm": "ECDSA-P256-GG20",\n  "threshold": 3,\n  "participants": ["alice@bank.com", "bob@bank.com", "hsm-partition"]\n}',
+    description: "Starts distributed key generation with threshold policy. Produces no single full private key holder.",
+    requestExample: "POST /svc/mpc/mpc/dkg/initiate",
+    responseExample: { ceremony: { id: "cer_01", type: "dkg", status: "pending", required_contributors: 3 } },
+    errorCodes: [
+      { code: 400, meaning: "Threshold/participant/algorithm combination invalid" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Governance/quorum policy blocked ceremony" }
+    ]
+  },
+  {
+    id: "mpc-sign-initiate",
+    group: "MPC",
+    title: "Initiate MPC Signing",
+    service: "mpc",
+    method: "POST",
+    pathTemplate: "/mpc/sign/initiate",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "key_id": "{{key_id}}",\n  "message_hash": "BASE64_OR_HEX_HASH",\n  "participants": ["alice@bank.com", "bob@bank.com"]\n}',
+    description: "Starts threshold signing ceremony for existing MPC key.",
+    requestExample: "POST /svc/mpc/mpc/sign/initiate",
+    responseExample: { ceremony: { id: "cer_sign_01", type: "sign", status: "pending" } },
+    errorCodes: [
+      { code: 400, meaning: "Message hash/key payload invalid" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "MPC key not ready or insufficient eligible participants" }
+    ]
+  },
+  {
+    id: "approval-vote",
+    group: "Approvals",
+    title: "Vote Approval Request",
+    service: "governance",
+    method: "POST",
+    pathTemplate: "/governance/approve/REQ_ID_HERE",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "request_id": "REQ_ID_HERE",\n  "vote": "approved",\n  "approver_email": "approver@bank.com",\n  "comment": "Approved after review",\n  "vote_method": "dashboard",\n  "challenge_code": ""\n}',
+    description: "Submits governance vote for pending request; supports challenge-response when enabled.",
+    requestExample: "POST /svc/governance/governance/approve/{request_id}",
+    responseExample: { request: { id: "req_01", status: "approved", current_approvals: 2, required_approvals: 2 } },
+    errorCodes: [
+      { code: 400, meaning: "Vote payload invalid or request_id missing" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Request expired/challenge invalid/already resolved" }
+    ]
+  },
+  {
+    id: "reporting-alerts-list",
+    group: "Reporting",
+    title: "List Alerts",
+    service: "reporting",
+    method: "GET",
+    pathTemplate: "/alerts?tenant_id={{tenant_id}}&status=open&limit=100&offset=0",
+    bodyTemplate: "",
+    description: "Lists alert center events with severity/status filters and pagination.",
+    requestExample: "GET /svc/reporting/alerts?tenant_id=bank-alpha&status=open&limit=100&offset=0",
+    responseExample: { items: [{ id: "alert_01", severity: "critical", title: "FDE Integrity Check Failed", status: "open" }] },
+    errorCodes: [
+      { code: 400, meaning: "Invalid query filters" },
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "reporting-ack-alert",
+    group: "Reporting",
+    title: "Acknowledge Alert",
+    service: "reporting",
+    method: "PUT",
+    pathTemplate: "/alerts/ALERT_ID_HERE/acknowledge?tenant_id={{tenant_id}}",
+    bodyTemplate:
+      '{\n  "actor": "admin@bank.com"\n}',
+    description: "Acknowledges an active alert and updates alert center counters/channels state.",
+    requestExample: "PUT /svc/reporting/alerts/{alert_id}/acknowledge?tenant_id=bank-alpha",
+    responseExample: { status: "ok" },
+    errorCodes: [
+      { code: 400, meaning: "alert_id missing or invalid" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Alert already resolved or immutable" }
+    ]
+  },
+  {
+    id: "reporting-generate-report",
+    group: "Reporting",
+    title: "Generate Report Job",
+    service: "reporting",
+    method: "POST",
+    pathTemplate: "/reports/generate",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "template_id": "key-rotation-summary",\n  "format": "pdf",\n  "requested_by": "admin@bank.com",\n  "filters": {\n    "date_from": "2026-01-01",\n    "date_to": "2026-12-31"\n  }\n}',
+    description: "Creates an asynchronous reporting job (PDF/JSON/CSV depending on template/format support).",
+    requestExample: "POST /svc/reporting/reports/generate",
+    responseExample: { job: { id: "rep_job_01", template_id: "key-rotation-summary", status: "queued", format: "pdf" } },
+    errorCodes: [
+      { code: 400, meaning: "Template/format/filter payload invalid" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Template disabled or policy restricts generation" }
+    ]
   }
 ];
 
@@ -13706,7 +13983,15 @@ const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",res
 
 export default function VectaDashboard(props){
   const {session,enabledFeatures,alerts,audit,unreadAlerts,onLogout,markAlertsRead}=props;
-  const [tab,setTab]=useState("home");
+  const initialTab=useMemo(()=>{
+    try{
+      const qp=new URLSearchParams(window.location.search);
+      return qp.get("restapi")==="1"?"restapi":"home";
+    }catch{
+      return "home";
+    }
+  },[]);
+  const [tab,setTab]=useState(initialTab);
   const [collapsed,setCollapsed]=useState(false);
   const [t,setT]=useState(new Date());
   const [toast,setToast]=useState("");
@@ -13898,7 +14183,19 @@ export default function VectaDashboard(props){
         <div style={{flex:1,overflowY:"auto",padding:"6px 0"}}>
           {navGroups.map(g=><div key={g.g}>
             {!collapsed&&<div style={{padding:"8px 14px 3px",fontSize:8,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:1.5}}>{g.g}</div>}
-            {g.items.map(it=><div key={it.id} onClick={()=>setTab(it.id)} style={{display:"flex",alignItems:"center",gap:8,padding:collapsed?"8px":"6px 14px",cursor:"pointer",background:tab===it.id?C.accentDim:"transparent",borderLeft:tab===it.id?`2px solid ${C.accent}`:"2px solid transparent",transition:"all .15s"}} title={it.label}>
+            {g.items.map(it=><div key={it.id} onClick={()=>{
+              if(it.id==="restapi"){
+                const qp=new URLSearchParams(window.location.search);
+                if(qp.get("restapi")==="1"){
+                  setTab("restapi");
+                  return;
+                }
+                const url=`${window.location.origin}${window.location.pathname}?restapi=1`;
+                window.open(url,"_blank","noopener,noreferrer");
+                return;
+              }
+              setTab(it.id);
+            }} style={{display:"flex",alignItems:"center",gap:8,padding:collapsed?"8px":"6px 14px",cursor:"pointer",background:tab===it.id?C.accentDim:"transparent",borderLeft:tab===it.id?`2px solid ${C.accent}`:"2px solid transparent",transition:"all .15s"}} title={it.label}>
               <span style={{display:"inline-flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",color:tab===it.id?C.text:C.dim,flexShrink:0,width:collapsed?"100%":"auto"}}>
                 <it.icon size={collapsed?16:14} strokeWidth={2}/>
               </span>
