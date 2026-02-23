@@ -99,6 +99,7 @@ import {
 } from "../lib/certs";
 import {
   createSecret,
+  deleteSecret as deleteVaultSecret,
   generateKeyPairSecret,
   getSecretValue,
   listSecrets
@@ -4937,6 +4938,7 @@ const Vault=({session,onToast})=>{
   const [valueFormat,setValueFormat]=useState("raw");
   const [retrievedValue,setRetrievedValue]=useState("");
   const [retrievedType,setRetrievedType]=useState("");
+  const promptDialog=usePromptDialog();
 
   const categories=[
     {id:"all",label:"All"},
@@ -5216,6 +5218,31 @@ const Vault=({session,onToast})=>{
     }
   };
 
+  const removeSecret=async(secret:any)=>{
+    if(!session){
+      return;
+    }
+    const confirmed=await promptDialog.confirm({
+      title:"Delete Secret",
+      message:`Delete secret ${String(secret?.name||"")}?`,
+      confirmLabel:"Delete",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    setBusy(true);
+    try{
+      await deleteVaultSecret(session,String(secret?.id||""));
+      onToast?.("Secret deleted.");
+      await loadSecrets(true);
+    }catch(error){
+      onToast?.(`Delete failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
   return <div>
     <Section title="Secret Vault" actions={<>
       <Btn small onClick={()=>void handleRefresh()} disabled={refreshing||busy}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>{refreshing?"Refreshing...":"Refresh"}</span></Btn>
@@ -5231,7 +5258,7 @@ const Vault=({session,onToast})=>{
         </div>
         <div style={{display:"flex",gap:10}}>
           <Btn primary onClick={()=>setModal("create")} style={{height:40,padding:"0 20px",borderRadius:11,fontWeight:700}}>+ Store Secret</Btn>
-          <Btn onClick={()=>setModal("generate")} style={{height:40,padding:"0 20px",borderRadius:11,fontWeight:600}}><span style={{display:"inline-flex",alignItems:"center",gap:6}}>🔑 Generate</span></Btn>
+          <Btn onClick={()=>setModal("generate")} style={{height:40,padding:"0 20px",borderRadius:11,fontWeight:600}}>Generate</Btn>
         </div>
       </div>
       <div style={{marginBottom:10}}>
@@ -5242,16 +5269,17 @@ const Vault=({session,onToast})=>{
           const badge=secretBadge(s);
           return <div key={s.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:16,minHeight:122}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10}}>
-              <div style={{fontSize:16,fontWeight:800,color:C.text,lineHeight:1.2}}>{s.name}</div>
+              <div style={{fontSize:13,fontWeight:800,color:C.text,lineHeight:1.25}}>{s.name}</div>
               <span style={{background:badge.bg,color:badge.fg,borderRadius:999,padding:"4px 10px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{badge.t}</span>
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,fontSize:13,color:C.muted}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,fontSize:11,color:C.muted}}>
               <span>TTL: {ttlCompact(s)}</span>
-              <span style={{fontSize:13,color:"#89a5cf"}}>{`v${Number(s.current_version||1)}`}</span>
+              <span style={{fontSize:11,color:"#89a5cf"}}>{`v${Number(s.current_version||1)}`}</span>
             </div>
             <div style={{display:"flex",gap:8,marginTop:12}}>
               <Btn small onClick={()=>void openRetrieve(s)} disabled={busy}>Retrieve</Btn>
               <Btn small onClick={()=>void downloadSecret(s)} disabled={busy}>Download</Btn>
+              <Btn small danger onClick={()=>void removeSecret(s)} disabled={busy}>Delete</Btn>
             </div>
           </div>;
         })}
@@ -5330,6 +5358,7 @@ const Vault=({session,onToast})=>{
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)} disabled={busy}>Close</Btn><Btn primary onClick={()=>void fetchFormat()} disabled={busy}>{busy?"Fetching...":"Fetch Format"}</Btn></div>
     </Modal>
 
+    {promptDialog.ui}
   </div>;
 };
 
