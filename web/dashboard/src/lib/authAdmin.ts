@@ -12,6 +12,13 @@ export type AuthUser = {
   created_at?: string;
 };
 
+export type AuthTenant = {
+  id: string;
+  name: string;
+  status: string;
+  created_at?: string;
+};
+
 export type PasswordPolicy = {
   tenant_id: string;
   min_length: number;
@@ -54,15 +61,56 @@ type UsersResponse = { items: AuthUser[] };
 type UserCreateResponse = { user_id: string };
 type StatusResponse = { status: string };
 type PolicyResponse = { policy: PasswordPolicy };
+type TenantsResponse = { items: AuthTenant[] };
+type TenantCreateResponse = { status: string; tenant_id: string };
 
-export async function listAuthUsers(session: AuthSession): Promise<AuthUser[]> {
-  const out = await serviceRequest<UsersResponse>(session, "auth", "/auth/users");
+export async function listAuthUsers(session: AuthSession, tenantID?: string): Promise<AuthUser[]> {
+  const targetTenant = String(tenantID || "").trim();
+  const path = targetTenant ? `/auth/users?tenant_id=${encodeURIComponent(targetTenant)}` : "/auth/users";
+  const out = await serviceRequest<UsersResponse>(session, "auth", path);
   return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function listAuthTenants(session: AuthSession): Promise<AuthTenant[]> {
+  const out = await serviceRequest<TenantsResponse>(session, "auth", "/tenants");
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function createAuthTenant(
+  session: AuthSession,
+  input: {
+    id: string;
+    name: string;
+    status?: string;
+    admin_username?: string;
+    admin_email?: string;
+    admin_password?: string;
+    admin_role?: string;
+    admin_status?: string;
+    admin_must_change_password?: boolean;
+  }
+): Promise<string> {
+  const out = await serviceRequest<TenantCreateResponse>(session, "auth", "/tenants", {
+    method: "POST",
+    body: JSON.stringify({
+      id: String(input.id || "").trim(),
+      name: String(input.name || "").trim(),
+      status: String(input.status || "active").trim(),
+      admin_username: String(input.admin_username || "").trim(),
+      admin_email: String(input.admin_email || "").trim(),
+      admin_password: String(input.admin_password || ""),
+      admin_role: String(input.admin_role || "tenant-admin").trim(),
+      admin_status: String(input.admin_status || "active").trim(),
+      admin_must_change_password: Boolean(input.admin_must_change_password ?? true)
+    })
+  });
+  return String(out?.tenant_id || "");
 }
 
 export async function createAuthUser(
   session: AuthSession,
   input: {
+    tenant_id?: string;
     username: string;
     email: string;
     password: string;
@@ -77,6 +125,7 @@ export async function createAuthUser(
       username: String(input.username || "").trim(),
       email: String(input.email || "").trim(),
       password: String(input.password || ""),
+      tenant_id: String(input.tenant_id || "").trim(),
       role: String(input.role || "").trim(),
       status: String(input.status || "active").trim(),
       must_change_password: Boolean(input.must_change_password)
@@ -88,12 +137,15 @@ export async function createAuthUser(
 export async function updateAuthUserRole(
   session: AuthSession,
   userID: string,
-  role: string
+  role: string,
+  tenantID?: string
 ): Promise<void> {
+  const targetTenant = String(tenantID || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
   await serviceRequest<StatusResponse>(
     session,
     "auth",
-    `/auth/users/${encodeURIComponent(String(userID || "").trim())}/role`,
+    `/auth/users/${encodeURIComponent(String(userID || "").trim())}/role${qs}`,
     {
       method: "PUT",
       body: JSON.stringify({ role: String(role || "").trim() })
@@ -104,12 +156,15 @@ export async function updateAuthUserRole(
 export async function updateAuthUserStatus(
   session: AuthSession,
   userID: string,
-  status: string
+  status: string,
+  tenantID?: string
 ): Promise<void> {
+  const targetTenant = String(tenantID || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
   await serviceRequest<StatusResponse>(
     session,
     "auth",
-    `/auth/users/${encodeURIComponent(String(userID || "").trim())}/status`,
+    `/auth/users/${encodeURIComponent(String(userID || "").trim())}/status${qs}`,
     {
       method: "PUT",
       body: JSON.stringify({ status: String(status || "").trim() })
@@ -120,12 +175,14 @@ export async function updateAuthUserStatus(
 export async function resetAuthUserPassword(
   session: AuthSession,
   userID: string,
-  input: { new_password: string; must_change_password?: boolean }
+  input: { new_password: string; must_change_password?: boolean; tenant_id?: string }
 ): Promise<void> {
+  const targetTenant = String(input.tenant_id || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
   await serviceRequest<StatusResponse>(
     session,
     "auth",
-    `/auth/users/${encodeURIComponent(String(userID || "").trim())}/reset-password`,
+    `/auth/users/${encodeURIComponent(String(userID || "").trim())}/reset-password${qs}`,
     {
       method: "POST",
       body: JSON.stringify({

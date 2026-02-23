@@ -14,6 +14,8 @@ export function LoginScreen(props: LoginScreenProps) {
   const { config, onAuthenticated } = props;
   const [username, setUsername] = useState(config.admin_username);
   const [password, setPassword] = useState(config.admin_password);
+  const [useRootTenant, setUseRootTenant] = useState(true);
+  const [tenantInput, setTenantInput] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
@@ -26,10 +28,15 @@ export function LoginScreen(props: LoginScreenProps) {
   }, [newPassword, confirmPassword]);
 
   const handleLogin = async () => {
+    const tenantId = useRootTenant ? config.tenant_id : tenantInput.trim();
+    if (!tenantId) {
+      setAuthError("Tenant name is required when root tenant is not selected.");
+      return;
+    }
     setLoading(true);
     setAuthError(null);
     try {
-      const next = await login(username.trim(), password, config);
+      const next = await login(username.trim(), password, config, tenantId);
       if (next.mustChangePassword) {
         setSession(next);
       } else {
@@ -91,7 +98,20 @@ export function LoginScreen(props: LoginScreenProps) {
             <div className="space-y-4">
               <label className="block space-y-1">
                 <span className="text-xs uppercase tracking-wide text-cyber-muted">Tenant</span>
-                <div className="rounded-md border border-cyber-border bg-cyber-elevated px-3 py-2 text-sm text-cyber-text">{config.tenant_id}</div>
+                <div className="space-y-2 rounded-md border border-cyber-border bg-cyber-elevated p-3">
+                  <label className="flex items-center gap-2 text-xs text-cyber-text">
+                    <input
+                      type="checkbox"
+                      checked={useRootTenant}
+                      onChange={(event) => setUseRootTenant(event.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-cyber-border bg-cyber-panel accent-cyber-accent"
+                    />
+                    Use root tenant ({config.tenant_id})
+                  </label>
+                  {!useRootTenant ? (
+                    <TextInput value={tenantInput} onChange={setTenantInput} placeholder="Enter tenant ID" />
+                  ) : null}
+                </div>
               </label>
               <label className="block space-y-1">
                 <span className="flex items-center gap-2 text-xs uppercase tracking-wide text-cyber-muted">

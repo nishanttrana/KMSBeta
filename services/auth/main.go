@@ -251,7 +251,7 @@ func envOrBool(k string, d bool) bool {
 }
 
 func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger) {
-	tenantID := envOr("AUTH_BOOTSTRAP_TENANT_ID", "bank-alpha")
+	tenantID := envOr("AUTH_BOOTSTRAP_TENANT_ID", "root")
 	tenantName := envOr("AUTH_BOOTSTRAP_TENANT_NAME", "Bank Alpha")
 	adminUsername := envOr("AUTH_BOOTSTRAP_ADMIN_USERNAME", "admin")
 	adminPassword := envOr("AUTH_BOOTSTRAP_ADMIN_PASSWORD", "VectaAdmin@2026")

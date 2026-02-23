@@ -243,9 +243,11 @@ import {
 } from "../lib/sbom";
 import { serviceRequest } from "../lib/serviceApi";
 import {
+  createAuthTenant,
   createAuthUser,
   getAuthCLIStatus,
   getAuthPasswordPolicy,
+  listAuthTenants,
   listAuthUsers,
   openAuthCLISession,
   resetAuthUserPassword,
@@ -13482,9 +13484,13 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
 
 const UserManagement=({session,onToast,onLogout})=>{
   const [users,setUsers]=useState([]);
+  const [tenants,setTenants]=useState([]);
+  const [tenantScope,setTenantScope]=useState(String(session?.tenantId||""));
   const [loading,setLoading]=useState(false);
+  const [tenantLoading,setTenantLoading]=useState(false);
   const [initializing,setInitializing]=useState(true);
   const [saving,setSaving]=useState(false);
+  const [tenantSaving,setTenantSaving]=useState(false);
   const [usersError,setUsersError]=useState("");
   const [activeSession,setActiveSession]=useState(session);
   const [modal,setModal]=useState(null);
@@ -13497,6 +13503,14 @@ const UserManagement=({session,onToast,onLogout})=>{
   const [resetTarget,setResetTarget]=useState(null);
   const [resetPassword,setResetPassword]=useState("");
   const [resetMustChange,setResetMustChange]=useState(true);
+  const [createTenantID,setCreateTenantID]=useState("");
+  const [createTenantName,setCreateTenantName]=useState("");
+  const [createTenantStatus,setCreateTenantStatus]=useState("active");
+  const [createTenantAdminUsername,setCreateTenantAdminUsername]=useState("admin");
+  const [createTenantAdminEmail,setCreateTenantAdminEmail]=useState("");
+  const [createTenantAdminPassword,setCreateTenantAdminPassword]=useState("");
+  const [createTenantAdminRole,setCreateTenantAdminRole]=useState("tenant-admin");
+  const [createTenantAdminMustChange,setCreateTenantAdminMustChange]=useState(true);
   const [quorumPolicy,setQuorumPolicy]=useState<any>(null);
   const [quorumSaving,setQuorumSaving]=useState(false);
   const [quorumRequired,setQuorumRequired]=useState(1);
@@ -13539,6 +13553,10 @@ const UserManagement=({session,onToast,onLogout})=>{
 
   useEffect(()=>{
     setActiveSession(session);
+    setTenantScope((prev)=>{
+      const next=String(session?.tenantId||"");
+      return String(prev||"").trim()?prev:next;
+    });
   },[session?.tenantId,session?.token,session?.username]);
 
   const withSessionRetry=async <T,>(request:(authSession:AuthSession)=>Promise<T>):Promise<T>=>{
@@ -13578,6 +13596,37 @@ const UserManagement=({session,onToast,onLogout})=>{
     return false;
   };
 
+  const refreshTenants=async(silent=false)=>{
+    if(!session?.token){
+      setTenants([]);
+      return;
+    }
+    if(!silent){
+      setTenantLoading(true);
+    }
+    try{
+      const items=await withSessionRetry((authSession)=>listAuthTenants(authSession));
+      const rows=Array.isArray(items)?items:[];
+      setTenants(rows);
+      const effectiveScope=String(tenantScope||session?.tenantId||"");
+      if(rows.length&&!rows.some((item)=>String(item?.id||"")===effectiveScope)){
+        setTenantScope(String(rows[0]?.id||session?.tenantId||""));
+      }
+    }catch(error){
+      const msg=String(errMsg(error)||"").toLowerCase();
+      if(msg.includes("forbidden")||msg.includes("insufficient permissions")){
+        setTenants([{id:String(session?.tenantId||""),name:"Current Tenant",status:"active"}]);
+        setTenantScope(String(session?.tenantId||""));
+      }else if(!silent){
+        handleUserError("Tenant list load failed",error,false);
+      }
+    }finally{
+      if(!silent){
+        setTenantLoading(false);
+      }
+    }
+  };
+
   const refreshUsers=async(silent=false)=>{
     if(!session?.token){
       setUsers([]);
@@ -13588,7 +13637,8 @@ const UserManagement=({session,onToast,onLogout})=>{
       setLoading(true);
     }
     try{
-      const items=await withSessionRetry((authSession)=>listAuthUsers(authSession));
+      const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+      const items=await withSessionRetry((authSession)=>listAuthUsers(authSession,targetTenant));
       setUsers(Array.isArray(items)?items:[]);
       setUsersError("");
     }catch(error){
@@ -13691,17 +13741,71 @@ const UserManagement=({session,onToast,onLogout})=>{
   };
 
   useEffect(()=>{
+    void refreshTenants(true);
+  },[session?.token,session?.tenantId]);
+
+  useEffect(()=>{
     void refreshUsers(false);
+  },[session?.token,session?.tenantId,tenantScope]);
+
+  useEffect(()=>{
     void refreshQuorumPolicy(true);
   },[session?.token,session?.tenantId]);
 
   if(!session?.token){
-    return <Section title="Local User Management">
+    return <Section title="Tenant & User Management">
       <Card>
         <div style={{fontSize:10,color:C.red}}>No active session. Please login again.</div>
       </Card>
     </Section>;
   }
+
+  const submitCreateTenant=async()=>{
+    const tenantID=String(createTenantID||"").trim();
+    const tenantName=String(createTenantName||"").trim();
+    const adminUsername=String(createTenantAdminUsername||"").trim();
+    const adminEmail=String(createTenantAdminEmail||"").trim();
+    const adminPassword=String(createTenantAdminPassword||"");
+    if(!tenantID||!tenantName){
+      onToast?.("Tenant ID and tenant name are required.");
+      return;
+    }
+    if(!adminUsername||!adminEmail||!adminPassword){
+      onToast?.("Tenant admin username, email, and password are required.");
+      return;
+    }
+    setTenantSaving(true);
+    try{
+      const createdTenantID=await withSessionRetry((authSession)=>createAuthTenant(authSession,{
+        id:tenantID,
+        name:tenantName,
+        status:createTenantStatus,
+        admin_username:adminUsername,
+        admin_email:adminEmail,
+        admin_password:adminPassword,
+        admin_role:createTenantAdminRole,
+        admin_status:"active",
+        admin_must_change_password:createTenantAdminMustChange
+      }));
+      setModal(null);
+      setCreateTenantID("");
+      setCreateTenantName("");
+      setCreateTenantStatus("active");
+      setCreateTenantAdminUsername("admin");
+      setCreateTenantAdminEmail("");
+      setCreateTenantAdminPassword("");
+      setCreateTenantAdminRole("tenant-admin");
+      setCreateTenantAdminMustChange(true);
+      await refreshTenants(true);
+      const targetTenant=String(createdTenantID||tenantID);
+      setTenantScope(targetTenant);
+      onToast?.(`Tenant created: ${targetTenant}`);
+    }catch(error){
+      handleUserError("Create tenant failed",error,false);
+    }finally{
+      setTenantSaving(false);
+    }
+  };
 
   const submitCreate=async()=>{
     const username=String(createUsername||"").trim();
@@ -13714,6 +13818,7 @@ const UserManagement=({session,onToast,onLogout})=>{
     setSaving(true);
     try{
       await withSessionRetry((authSession)=>createAuthUser(authSession,{
+        tenant_id:String(tenantScope||session?.tenantId||""),
         username,
         email,
         password,
@@ -13744,7 +13849,12 @@ const UserManagement=({session,onToast,onLogout})=>{
       return;
     }
     try{
-      await withSessionRetry((authSession)=>updateAuthUserRole(authSession,String(user?.id||""),String(newRole||"")));
+      await withSessionRetry((authSession)=>updateAuthUserRole(
+        authSession,
+        String(user?.id||""),
+        String(newRole||""),
+        String(tenantScope||session?.tenantId||"")
+      ));
       setUsers((prev)=>prev.map((item)=>String(item.id)===String(user?.id)?{...item,role:newRole}:item));
       setUsersError("");
       onToast?.(`Role updated for ${String(user?.username||"user")}.`);
@@ -13755,7 +13865,12 @@ const UserManagement=({session,onToast,onLogout})=>{
 
   const submitStatusChange=async(user,newStatus)=>{
     try{
-      await withSessionRetry((authSession)=>updateAuthUserStatus(authSession,String(user?.id||""),newStatus));
+      await withSessionRetry((authSession)=>updateAuthUserStatus(
+        authSession,
+        String(user?.id||""),
+        newStatus,
+        String(tenantScope||session?.tenantId||"")
+      ));
       setUsers((prev)=>prev.map((item)=>String(item.id)===String(user?.id)?{...item,status:newStatus}:item));
       setUsersError("");
       onToast?.(`Status updated for ${String(user?.username||"user")}.`);
@@ -13783,7 +13898,8 @@ const UserManagement=({session,onToast,onLogout})=>{
     try{
       await withSessionRetry((authSession)=>resetAuthUserPassword(authSession,String(resetTarget.id||""),{
         new_password:resetPassword,
-        must_change_password:resetMustChange
+        must_change_password:resetMustChange,
+        tenant_id:String(tenantScope||session?.tenantId||"")
       }));
       setModal(null);
       setResetTarget(null);
@@ -13799,11 +13915,36 @@ const UserManagement=({session,onToast,onLogout})=>{
   };
 
   return <div>
-    <Section title="Local User Management" actions={<>
+    <Section title="Tenant & User Management" actions={<>
       <B c="amber">{quorumPolicy?`${Number(quorumPolicy.required_approvals||1)}-of-${Number(quorumPolicy.total_approvers||Math.max(1,quorumMembers.size))} quorum`:"quorum not configured"}</B>
+      <Btn small onClick={()=>void refreshTenants(false)}>{tenantLoading?"Refreshing Tenants...":"Refresh Tenants"}</Btn>
+      <Btn small onClick={()=>setModal("create-tenant")}>+ Create Tenant</Btn>
       <Btn small onClick={()=>void refreshUsers(false)}>{loading?"Refreshing...":"Refresh"}</Btn>
       <Btn small primary onClick={()=>setModal("create")}>+ Create User</Btn>
     </>}>
+      <Card style={{marginBottom:8}}>
+        <div style={{display:"grid",gridTemplateColumns:"1.2fr .8fr .8fr",gap:8,alignItems:"end"}}>
+          <FG label="Tenant Scope">
+            <Sel value={String(tenantScope||session?.tenantId||"")} onChange={(e)=>setTenantScope(e.target.value)}>
+              {(Array.isArray(tenants)&&tenants.length?tenants:[{id:String(session?.tenantId||""),name:"Current Tenant",status:"active"}])
+                .map((tenant:any)=>(
+                  <option key={String(tenant?.id||"")} value={String(tenant?.id||"")}>
+                    {`${String(tenant?.id||"")} (${String(tenant?.name||"")})`}
+                  </option>
+                ))}
+            </Sel>
+          </FG>
+          <FG label="Status">
+            <Inp value={String((tenants.find((tenant:any)=>String(tenant?.id||"")===String(tenantScope||session?.tenantId||""))?.status)||"active")} disabled/>
+          </FG>
+          <FG label="Tenants Visible">
+            <Inp value={String((Array.isArray(tenants)&&tenants.length)?tenants.length:1)} disabled/>
+          </FG>
+        </div>
+        <div style={{fontSize:10,color:C.muted,marginTop:6}}>
+          Root admin can switch tenant scope to manage tenant users. Tenant admins remain scoped to their own tenant.
+        </div>
+      </Card>
       {usersError?<Card style={{marginBottom:8,borderColor:C.red}}>
         <div style={{fontSize:10,color:C.red}}>{usersError}</div>
       </Card>:null}
@@ -13897,6 +14038,9 @@ const UserManagement=({session,onToast,onLogout})=>{
     </Section>
 
     <Modal open={modal==="create"} onClose={()=>setModal(null)} title="Create Local User">
+      <FG label="Tenant" required>
+        <Inp value={String(tenantScope||session?.tenantId||"")} disabled/>
+      </FG>
       <Row2>
         <FG label="Username" required><Inp value={createUsername} onChange={(e)=>setCreateUsername(e.target.value)} placeholder="operator-1"/></FG>
         <FG label="Email" required><Inp type="email" value={createEmail} onChange={(e)=>setCreateEmail(e.target.value)} placeholder="operator@example.com"/></FG>
@@ -13922,6 +14066,54 @@ const UserManagement=({session,onToast,onLogout})=>{
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
         <Btn onClick={()=>setModal(null)} disabled={saving}>Cancel</Btn>
         <Btn primary onClick={()=>void submitCreate()} disabled={saving}>{saving?"Creating...":"Create User"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="create-tenant"} onClose={()=>setModal(null)} title="Create Tenant + Tenant Admin" wide>
+      <Row2>
+        <FG label="Tenant ID" required>
+          <Inp value={createTenantID} onChange={(e)=>setCreateTenantID(e.target.value)} placeholder="tenant-acme"/>
+        </FG>
+        <FG label="Tenant Name" required>
+          <Inp value={createTenantName} onChange={(e)=>setCreateTenantName(e.target.value)} placeholder="Acme Corporation"/>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Tenant Status">
+          <Sel value={createTenantStatus} onChange={(e)=>setCreateTenantStatus(e.target.value)}>
+            <option value="active">active</option>
+            <option value="inactive">inactive</option>
+          </Sel>
+        </FG>
+        <FG label="Tenant Admin Role">
+          <Sel value={createTenantAdminRole} onChange={(e)=>setCreateTenantAdminRole(e.target.value)}>
+            <option value="tenant-admin">tenant-admin</option>
+            <option value="admin">admin</option>
+          </Sel>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Tenant Admin Username" required>
+          <Inp value={createTenantAdminUsername} onChange={(e)=>setCreateTenantAdminUsername(e.target.value)} placeholder="admin"/>
+        </FG>
+        <FG label="Tenant Admin Email" required>
+          <Inp type="email" value={createTenantAdminEmail} onChange={(e)=>setCreateTenantAdminEmail(e.target.value)} placeholder="admin@tenant.local"/>
+        </FG>
+      </Row2>
+      <FG label="Tenant Admin Password" required>
+        <Inp type="password" value={createTenantAdminPassword} onChange={(e)=>setCreateTenantAdminPassword(e.target.value)} placeholder="Strong tenant admin password"/>
+      </FG>
+      <Chk
+        label="Require password change at first tenant login"
+        checked={createTenantAdminMustChange}
+        onChange={()=>setCreateTenantAdminMustChange((v)=>!v)}
+      />
+      <div style={{fontSize:10,color:C.muted,marginTop:8}}>
+        This flow creates the tenant, seeds default tenant roles/password policy, and creates the tenant-admin user.
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={tenantSaving}>Cancel</Btn>
+        <Btn primary onClick={()=>void submitCreateTenant()} disabled={tenantSaving}>{tenantSaving?"Creating...":"Create Tenant"}</Btn>
       </div>
     </Modal>
 

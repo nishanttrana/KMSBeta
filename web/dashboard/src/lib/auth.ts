@@ -17,7 +17,7 @@ export type AuthSession = {
 };
 
 const defaultUIAuth: UIAuthConfig = {
-  tenant_id: "bank-alpha",
+  tenant_id: "root",
   admin_username: "admin",
   admin_password: "VectaAdmin@2026",
   force_password_change: true,
@@ -100,9 +100,10 @@ function effectiveLocalPassword(config: UIAuthConfig): string {
 export async function login(
   username: string,
   password: string,
-  config: UIAuthConfig
+  config: UIAuthConfig,
+  tenantOverride?: string
 ): Promise<AuthSession> {
-  const tenantId = config.tenant_id;
+  const tenantId = String(tenantOverride || config.tenant_id || "").trim() || config.tenant_id;
   if (config.prefer_backend_auth) {
     try {
       const response = await fetch("/auth/login", {

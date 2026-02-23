@@ -1,5 +1,5 @@
 {
-  "tenant_id": "bank-alpha",
+  "tenant_id": "root",
   "admin_username": "admin",
   "admin_password": "VectaAdmin@2026",
   "force_password_change": true,
