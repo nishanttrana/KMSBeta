@@ -604,8 +604,8 @@ collect_inputs() {
   INSTALL_DIR="${INSTALL_DIR%/}"
 
   prompt_default APPLIANCE_ID "Appliance ID" "kms-prod-01"
-  prompt_default TENANT_ID "Default tenant ID" "bank-alpha"
-  prompt_default TENANT_NAME "Default tenant name" "Bank Alpha"
+  prompt_default TENANT_ID "Default tenant ID" "root"
+  prompt_default TENANT_NAME "Default tenant name" "Root"
 
   detected_iface="$(detect_default_route_interface)"
   [[ -z "${detected_iface}" ]] && detected_iface="eth0"
