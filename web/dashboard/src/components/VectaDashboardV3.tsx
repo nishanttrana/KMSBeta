@@ -56,13 +56,19 @@ import {
   importKey,
   kemDecapsulate,
   kemEncapsulate,
+  listKeyAccessGroups,
   listKeys,
   listKeyVersions,
   listTags,
   randomBytes,
   rotateKey,
+  getKeyAccessPolicy,
+  setKeyAccessGroupMembers,
+  setKeyAccessPolicy,
   setKeyExportPolicy,
   setKeyUsageLimit,
+  createKeyAccessGroup,
+  deleteKeyAccessGroup,
   signData,
   updateKeyActivation,
   upsertTag,
@@ -317,7 +323,7 @@ const REST_API_CATALOG = [
     pathTemplate: "/keys?tenant_id={{tenant_id}}&limit=100&offset=0",
     bodyTemplate: "",
     description: "Returns key inventory metadata for a tenant. This does not return plaintext key material.",
-    requestExample: "GET /svc/keycore/keys?tenant_id=bank-alpha&limit=100&offset=0",
+    requestExample: "GET /svc/keycore/keys?tenant_id=root&limit=100&offset=0",
     responseExample: {
       items: [{ id: "key_01", name: "prod-db-master", algorithm: "AES-256-GCM", status: "active", version: 2 }]
     },
@@ -466,7 +472,7 @@ const REST_API_CATALOG = [
     pathTemplate: "/secrets?tenant_id={{tenant_id}}&limit=100&offset=0",
     bodyTemplate: "",
     description: "Returns secret metadata inventory. Secret values are not returned here.",
-    requestExample: "GET /svc/secrets/secrets?tenant_id=bank-alpha&limit=100&offset=0",
+    requestExample: "GET /svc/secrets/secrets?tenant_id=root&limit=100&offset=0",
     responseExample: { items: [{ id: "sec_01", name: "db-password", secret_type: "password", status: "active" }] },
     errorCodes: [
       { code: 400, meaning: "Missing tenant_id or invalid query" },
@@ -483,7 +489,7 @@ const REST_API_CATALOG = [
     pathTemplate: "/certs?tenant_id={{tenant_id}}&limit=100&offset=0",
     bodyTemplate: "",
     description: "Returns certificate inventory for tenant CA/certificate lifecycle tracking.",
-    requestExample: "GET /svc/certs/certs?tenant_id=bank-alpha&limit=100&offset=0",
+    requestExample: "GET /svc/certs/certs?tenant_id=root&limit=100&offset=0",
     responseExample: { items: [{ id: "crt_01", subject_cn: "api.bank.com", status: "active", algorithm: "ECDSA-P384" }] },
     errorCodes: [
       { code: 400, meaning: "Missing tenant_id or invalid query" },
@@ -517,7 +523,7 @@ const REST_API_CATALOG = [
     pathTemplate: "/governance/requests?tenant_id={{tenant_id}}&status=pending",
     bodyTemplate: "",
     description: "Returns active/pending governance approvals and quorum state.",
-    requestExample: "GET /svc/governance/governance/requests?tenant_id=bank-alpha&status=pending",
+    requestExample: "GET /svc/governance/governance/requests?tenant_id=root&status=pending",
     responseExample: { items: [{ id: "req_01", action: "key.export", status: "pending", required_approvals: 2, current_approvals: 1 }] },
     errorCodes: [
       { code: 400, meaning: "Missing tenant_id or invalid filter" },
@@ -568,7 +574,7 @@ const REST_API_CATALOG = [
     pathTemplate: "/hyok/v1/endpoints?tenant_id={{tenant_id}}",
     bodyTemplate: "",
     description: "Lists HYOK endpoint protocols and policy bindings (DKE/Salesforce/Google/Generic).",
-    requestExample: "GET /svc/hyok/hyok/v1/endpoints?tenant_id=bank-alpha",
+    requestExample: "GET /svc/hyok/hyok/v1/endpoints?tenant_id=root",
     responseExample: { items: [{ protocol: "dke", enabled: true, auth_mode: "mtls_or_jwt", governance_required: true }] },
     errorCodes: [
       { code: 400, meaning: "Missing tenant_id" },
@@ -585,7 +591,7 @@ const REST_API_CATALOG = [
     pathTemplate: "/hyok/dke/v1/keys/{{key_id}}/publickey?tenant_id={{tenant_id}}",
     bodyTemplate: "",
     description: "Returns DKE-compatible public key material for Microsoft-style HYOK/DKE integration.",
-    requestExample: "GET /svc/hyok/hyok/dke/v1/keys/{key_id}/publickey?tenant_id=bank-alpha",
+    requestExample: "GET /svc/hyok/hyok/dke/v1/keys/{key_id}/publickey?tenant_id=root",
     responseExample: { key: { key_id: "key_123", algorithm: "RSA-OAEP-2048", format: "pem", public_key: "-----BEGIN PUBLIC KEY-----..." } },
     errorCodes: [
       { code: 400, meaning: "key_id missing or invalid for DKE" },
@@ -602,7 +608,7 @@ const REST_API_CATALOG = [
     pathTemplate: "/kmip/profiles?tenant_id={{tenant_id}}",
     bodyTemplate: "",
     description: "Lists KMIP onboarding profiles used to issue/internalize KMIP client credentials.",
-    requestExample: "GET /svc/kmip/kmip/profiles?tenant_id=bank-alpha",
+    requestExample: "GET /svc/kmip/kmip/profiles?tenant_id=root",
     responseExample: { items: [{ id: "prof_01", name: "default-kmip", role: "kmip-client", certificate_duration_days: 365 }] },
     errorCodes: [
       { code: 400, meaning: "Missing tenant_id" },
@@ -636,7 +642,7 @@ const REST_API_CATALOG = [
     pathTemplate: "/ekm/agents?tenant_id={{tenant_id}}",
     bodyTemplate: "",
     description: "Lists deployed EKM/TDE agents and their registration metadata.",
-    requestExample: "GET /svc/ekm/ekm/agents?tenant_id=bank-alpha",
+    requestExample: "GET /svc/ekm/ekm/agents?tenant_id=root",
     responseExample: { items: [{ id: "agent_01", name: "mssql-prod-01", db_engine: "mssql", status: "active", host: "10.0.0.5" }] },
     errorCodes: [
       { code: 400, meaning: "Missing tenant_id" },
@@ -670,7 +676,7 @@ const REST_API_CATALOG = [
     pathTemplate: "/qkd/v1/overview?tenant_id={{tenant_id}}",
     bodyTemplate: "",
     description: "Returns ETSI QKD interface status, pool metrics, and link telemetry for tenant.",
-    requestExample: "GET /svc/qkd/qkd/v1/overview?tenant_id=bank-alpha",
+    requestExample: "GET /svc/qkd/qkd/v1/overview?tenant_id=root",
     responseExample: { overview: { status: { active: true, link_status: "up", key_rate: 1200 }, pool: { available_keys: 847293, pool_fill_pct: 68 } } },
     errorCodes: [
       { code: 400, meaning: "Missing tenant_id" },
@@ -759,7 +765,7 @@ const REST_API_CATALOG = [
     pathTemplate: "/alerts?tenant_id={{tenant_id}}&status=open&limit=100&offset=0",
     bodyTemplate: "",
     description: "Lists alert center events with severity/status filters and pagination.",
-    requestExample: "GET /svc/reporting/alerts?tenant_id=bank-alpha&status=open&limit=100&offset=0",
+    requestExample: "GET /svc/reporting/alerts?tenant_id=root&status=open&limit=100&offset=0",
     responseExample: { items: [{ id: "alert_01", severity: "critical", title: "FDE Integrity Check Failed", status: "open" }] },
     errorCodes: [
       { code: 400, meaning: "Invalid query filters" },
@@ -776,7 +782,7 @@ const REST_API_CATALOG = [
     bodyTemplate:
       '{\n  "actor": "admin@bank.com"\n}',
     description: "Acknowledges an active alert and updates alert center counters/channels state.",
-    requestExample: "PUT /svc/reporting/alerts/{alert_id}/acknowledge?tenant_id=bank-alpha",
+    requestExample: "PUT /svc/reporting/alerts/{alert_id}/acknowledge?tenant_id=root",
     responseExample: { status: "ok" },
     errorCodes: [
       { code: 400, meaning: "alert_id missing or invalid" },
@@ -1812,6 +1818,20 @@ const DEFAULT_KEY_COLUMN_VISIBILITY={
   actions:true
 };
 
+const KEY_ACCESS_OPERATION_OPTIONS=[
+  {id:"encrypt",label:"Encrypt"},
+  {id:"decrypt",label:"Decrypt"},
+  {id:"wrap",label:"Wrap"},
+  {id:"unwrap",label:"Unwrap"},
+  {id:"sign",label:"Sign"},
+  {id:"verify",label:"Verify"},
+  {id:"mac",label:"MAC"},
+  {id:"derive",label:"Derive"},
+  {id:"kem-encapsulate",label:"KEM Encap"},
+  {id:"kem-decapsulate",label:"KEM Decap"},
+  {id:"export",label:"Export"}
+];
+
 // 
 // TAB: KEY MANAGEMENT (fully interactive)
 // 
@@ -1857,6 +1877,16 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
   const [policyActivationMode,setPolicyActivationMode]=useState("immediate");
   const [policyActivationDateTime,setPolicyActivationDateTime]=useState("");
   const [policyExportAllowed,setPolicyExportAllowed]=useState(false);
+  const [policyLoading,setPolicyLoading]=useState(false);
+  const [policyUsers,setPolicyUsers]=useState([]);
+  const [policyGroups,setPolicyGroups]=useState([]);
+  const [policyGrants,setPolicyGrants]=useState([]);
+  const [policyNewSubjectType,setPolicyNewSubjectType]=useState("user");
+  const [policyNewSubjectId,setPolicyNewSubjectId]=useState("");
+  const [policyNewOperations,setPolicyNewOperations]=useState<string[]>(["encrypt"]);
+  const [policyCreateGroupName,setPolicyCreateGroupName]=useState("");
+  const [policyCreateGroupDescription,setPolicyCreateGroupDescription]=useState("");
+  const [policyCreateGroupMembers,setPolicyCreateGroupMembers]=useState<string[]>([]);
   const [formName,setFormName]=useState("");
   const [formAlgorithm,setFormAlgorithm]=useState("AES-256-GCM");
   const [formPurpose,setFormPurpose]=useState("encrypt-decrypt");
@@ -2786,7 +2816,37 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
     }
   };
 
-  const openPolicyEditor=(targetKey)=>{
+  const loadKeyPolicyBindings=async(targetKey)=>{
+    if(!session||!targetKey?.id){
+      return;
+    }
+    setPolicyLoading(true);
+    try{
+      const [users,groups,policy]=await Promise.all([
+        listAuthUsers(session,session.tenantId),
+        listKeyAccessGroups(session),
+        getKeyAccessPolicy(session,targetKey.id)
+      ]);
+      setPolicyUsers(Array.isArray(users)?users:[]);
+      setPolicyGroups(Array.isArray(groups)?groups:[]);
+      setPolicyGrants(Array.isArray(policy?.grants)?policy.grants.map((grant)=>({
+        subject_type:String(grant?.subject_type||"user")==="group"?"group":"user",
+        subject_id:String(grant?.subject_id||"").trim(),
+        operations:Array.isArray(grant?.operations)&&grant.operations.length
+          ?Array.from(new Set(grant.operations.map((op)=>String(op||"").trim().toLowerCase()).filter(Boolean)))
+          :["encrypt"]
+      })).filter((grant)=>grant.subject_id):[]);
+    }catch(error){
+      setPolicyUsers([]);
+      setPolicyGroups([]);
+      setPolicyGrants([]);
+      onToast?.(`Load key policy bindings failed: ${errMsg(error)}`);
+    }finally{
+      setPolicyLoading(false);
+    }
+  };
+
+  const openPolicyEditor=async(targetKey)=>{
     if(!targetKey){
       return;
     }
@@ -2809,7 +2869,111 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
     }
     setSelectedKey(targetKey);
     setOpenActionMenuId("");
+    setPolicyNewSubjectType("user");
+    setPolicyNewSubjectId("");
+    setPolicyNewOperations(["encrypt"]);
+    setPolicyCreateGroupName("");
+    setPolicyCreateGroupDescription("");
+    setPolicyCreateGroupMembers([]);
     setModal("edit-policy");
+    await loadKeyPolicyBindings(targetKey);
+  };
+
+  const togglePolicyNewOperation=(operation:string)=>{
+    const normalized=String(operation||"").trim().toLowerCase();
+    if(!normalized){
+      return;
+    }
+    setPolicyNewOperations((prev)=>{
+      const current=Array.isArray(prev)?prev:[];
+      if(current.includes(normalized)){
+        const next=current.filter((op)=>op!==normalized);
+        return next.length?next:["encrypt"];
+      }
+      return [...current,normalized];
+    });
+  };
+
+  const addPolicyGrant=()=>{
+    const subjectType=policyNewSubjectType==="group"?"group":"user";
+    const subjectId=String(policyNewSubjectId||"").trim();
+    const operations=Array.from(new Set((Array.isArray(policyNewOperations)?policyNewOperations:["encrypt"]).map((op)=>String(op||"").trim().toLowerCase()).filter(Boolean)));
+    if(!subjectId){
+      onToast?.("Select a user or group to assign.");
+      return;
+    }
+    if(!operations.length){
+      onToast?.("Select at least one allowed operation.");
+      return;
+    }
+    setPolicyGrants((prev)=>{
+      const items=Array.isArray(prev)?[...prev]:[];
+      const idx=items.findIndex((grant)=>String(grant?.subject_type)===(subjectType)&&String(grant?.subject_id||"").trim()===subjectId);
+      if(idx>=0){
+        items[idx]={...items[idx],operations};
+        return items;
+      }
+      return [...items,{subject_type:subjectType,subject_id:subjectId,operations}];
+    });
+    setPolicyNewSubjectId("");
+    setPolicyNewOperations(["encrypt"]);
+  };
+
+  const removePolicyGrant=(subjectType:string,subjectId:string)=>{
+    const typeNorm=String(subjectType||"user").trim();
+    const idNorm=String(subjectId||"").trim();
+    setPolicyGrants((prev)=>(Array.isArray(prev)?prev:[]).filter((grant)=>!(
+      String(grant?.subject_type||"").trim()===typeNorm&&String(grant?.subject_id||"").trim()===idNorm
+    )));
+  };
+
+  const createPolicyGroup=async()=>{
+    if(!session){
+      return;
+    }
+    const name=String(policyCreateGroupName||"").trim();
+    if(!name){
+      onToast?.("Enter group name.");
+      return;
+    }
+    try{
+      const group=await createKeyAccessGroup(session,{
+        name,
+        description:String(policyCreateGroupDescription||"").trim(),
+        created_by:session.username||""
+      });
+      if(Array.isArray(policyCreateGroupMembers)&&policyCreateGroupMembers.length){
+        await setKeyAccessGroupMembers(session,group.id,policyCreateGroupMembers);
+      }
+      const groups=await listKeyAccessGroups(session);
+      setPolicyGroups(Array.isArray(groups)?groups:[]);
+      setPolicyCreateGroupName("");
+      setPolicyCreateGroupDescription("");
+      setPolicyCreateGroupMembers([]);
+      onToast?.(`Group created: ${group.name}`);
+    }catch(error){
+      onToast?.(`Create group failed: ${errMsg(error)}`);
+    }
+  };
+
+  const deletePolicyGroup=async(groupId:string)=>{
+    if(!session||!groupId){
+      return;
+    }
+    const confirmed=window.confirm("Delete this key access group?");
+    if(!confirmed){
+      return;
+    }
+    try{
+      await deleteKeyAccessGroup(session,groupId);
+      setPolicyGroups((prev)=>(Array.isArray(prev)?prev:[]).filter((group)=>String(group?.id||"")!==String(groupId)));
+      setPolicyGrants((prev)=>(Array.isArray(prev)?prev:[]).filter((grant)=>!(
+        String(grant?.subject_type||"")==="group"&&String(grant?.subject_id||"")===String(groupId)
+      )));
+      onToast?.("Group deleted.");
+    }catch(error){
+      onToast?.(`Delete group failed: ${errMsg(error)}`);
+    }
   };
 
   const saveKeyPolicy=async()=>{
@@ -2832,6 +2996,11 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
     try{
       await setKeyUsageLimit(session,selectedKey.id,parsedLimit,policyOpsWindow==="daily"?"daily":policyOpsWindow==="monthly"?"monthly":"total");
       await setKeyExportPolicy(session,selectedKey.id,policyExportAllowed);
+      await setKeyAccessPolicy(session,selectedKey.id,(Array.isArray(policyGrants)?policyGrants:[]).map((grant)=>({
+        subject_type:String(grant?.subject_type||"user")==="group"?"group":"user",
+        subject_id:String(grant?.subject_id||"").trim(),
+        operations:Array.from(new Set((Array.isArray(grant?.operations)?grant.operations:[]).map((op)=>String(op||"").trim().toLowerCase()).filter(Boolean)))
+      })).filter((grant)=>grant.subject_id&&grant.operations.length),session.username||"");
       if(canEditActivation){
         await updateKeyActivation(session,selectedKey.id,{
           mode:policyActivationMode==="pre-active"?"pre-active":policyActivationMode==="scheduled"?"scheduled":"immediate",
@@ -3732,6 +3901,92 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
       </FG>
       <FG label="Export Policy">
         <Chk label="Allow key export (wrapped)" checked={policyExportAllowed} onChange={()=>setPolicyExportAllowed(!policyExportAllowed)}/>
+      </FG>
+      <FG label="Key Access Assignments" hint="Only assigned users/groups can perform selected operations on this key.">
+        {policyLoading&&<div style={{fontSize:10,color:C.dim}}>Loading key access policy...</div>}
+        {!policyLoading&&<>
+          <Row2>
+            <Sel value={policyNewSubjectType} onChange={(e)=>{setPolicyNewSubjectType(e.target.value==="group"?"group":"user");setPolicyNewSubjectId("");}}>
+              <option value="user">User</option>
+              <option value="group">Group</option>
+            </Sel>
+            <Sel value={policyNewSubjectId} onChange={(e)=>setPolicyNewSubjectId(e.target.value)}>
+              <option value="">{policyNewSubjectType==="group"?"Select group":"Select user"}</option>
+              {policyNewSubjectType==="group"
+                ?(Array.isArray(policyGroups)?policyGroups:[]).map((group)=><option key={group.id} value={group.id}>{`${group.name}${Number(group.member_count||0)>0?` (${group.member_count})`:""}`}</option>)
+                :(Array.isArray(policyUsers)?policyUsers:[]).map((user)=><option key={user.id} value={user.id}>{`${user.username} (${user.role})`}</option>)}
+            </Sel>
+          </Row2>
+          <div style={{marginTop:8,display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:6}}>
+            {KEY_ACCESS_OPERATION_OPTIONS.map((item)=><Chk
+              key={item.id}
+              label={item.label}
+              checked={(Array.isArray(policyNewOperations)?policyNewOperations:[]).includes(item.id)}
+              onChange={()=>togglePolicyNewOperation(item.id)}
+            />)}
+          </div>
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
+            <Btn onClick={addPolicyGrant}>Add Assignment</Btn>
+          </div>
+          <div style={{display:"grid",gap:6,marginTop:10}}>
+            {(Array.isArray(policyGrants)?policyGrants:[]).map((grant)=>{
+              const subjectType=String(grant?.subject_type||"user")==="group"?"group":"user";
+              const subjectID=String(grant?.subject_id||"").trim();
+              const subjectLabel=subjectType==="group"
+                ?((Array.isArray(policyGroups)?policyGroups:[]).find((group)=>String(group?.id||"")===subjectID)?.name||subjectID)
+                :((Array.isArray(policyUsers)?policyUsers:[]).find((user)=>String(user?.id||"")===subjectID)?.username||subjectID);
+              const operations=(Array.isArray(grant?.operations)?grant.operations:[]).map((op)=>KEY_ACCESS_OPERATION_OPTIONS.find((item)=>item.id===String(op||"").toLowerCase())?.label||String(op||"").toUpperCase()).join(", ");
+              return <div key={`${subjectType}:${subjectID}`} style={{display:"grid",gridTemplateColumns:"1fr auto",alignItems:"center",gap:8,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
+                <div>
+                  <div style={{fontSize:10,color:C.text,fontWeight:700}}>{`${subjectType==="group"?"Group":"User"}: ${subjectLabel}`}</div>
+                  <div style={{fontSize:9,color:C.muted}}>{operations||"No operations"}</div>
+                </div>
+                <Btn danger small onClick={()=>removePolicyGrant(subjectType,subjectID)}>Remove</Btn>
+              </div>;
+            })}
+            {!Array.isArray(policyGrants)||!policyGrants.length?<div style={{fontSize:10,color:C.dim}}>No assignments yet. Unassigned keys are usable by creator/admin only.</div>:null}
+          </div>
+        </>}
+      </FG>
+      <FG label="Access Groups" hint="Create key access groups and attach users.">
+        <Row2>
+          <Inp placeholder="Group name" value={policyCreateGroupName} onChange={(e)=>setPolicyCreateGroupName(e.target.value)}/>
+          <Inp placeholder="Description (optional)" value={policyCreateGroupDescription} onChange={(e)=>setPolicyCreateGroupDescription(e.target.value)}/>
+        </Row2>
+        <div style={{marginTop:8,padding:8,border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
+          <div style={{fontSize:10,color:C.dim,marginBottom:6}}>Initial Group Members</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:6,maxHeight:130,overflow:"auto"}}>
+            {(Array.isArray(policyUsers)?policyUsers:[]).map((user)=>{
+              const userID=String(user?.id||"");
+              const checked=(Array.isArray(policyCreateGroupMembers)?policyCreateGroupMembers:[]).includes(userID);
+              return <Chk
+                key={userID}
+                label={`${user.username} (${user.role})`}
+                checked={checked}
+                onChange={()=>setPolicyCreateGroupMembers((prev)=>{
+                  const items=Array.isArray(prev)?[...prev]:[];
+                  if(items.includes(userID)){
+                    return items.filter((id)=>id!==userID);
+                  }
+                  return [...items,userID];
+                })}
+              />;
+            })}
+          </div>
+        </div>
+        <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
+          <Btn onClick={createPolicyGroup}>Create Group</Btn>
+        </div>
+        <div style={{display:"grid",gap:6,marginTop:8}}>
+          {(Array.isArray(policyGroups)?policyGroups:[]).map((group)=><div key={group.id} style={{display:"grid",gridTemplateColumns:"1fr auto",alignItems:"center",gap:8,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
+            <div>
+              <div style={{fontSize:10,color:C.text,fontWeight:700}}>{group.name}</div>
+              <div style={{fontSize:9,color:C.muted}}>{`${group.description||"No description"} • members ${Number(group.member_count||0)}`}</div>
+            </div>
+            <Btn danger small onClick={()=>deletePolicyGroup(group.id)}>Delete</Btn>
+          </div>)}
+          {!Array.isArray(policyGroups)||!policyGroups.length?<div style={{fontSize:10,color:C.dim}}>No access groups created.</div>:null}
+        </div>
       </FG>
       {normalizeKeyState(String(selectedKey?.state||""))==="pre-active"&&<FG label="Activation Policy">
         <Sel value={policyActivationMode} onChange={(e)=>setPolicyActivationMode(e.target.value)}>

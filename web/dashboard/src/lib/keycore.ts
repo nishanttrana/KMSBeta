@@ -54,12 +54,47 @@ type APITagItem = {
   created_by?: string;
 };
 
+export type KeyAccessGrant = {
+  subject_type: "user" | "group";
+  subject_id: string;
+  operations: string[];
+};
+
+export type KeyAccessPolicy = {
+  tenant_id: string;
+  key_id: string;
+  grants: KeyAccessGrant[];
+};
+
+export type KeyAccessGroup = {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description?: string;
+  created_by?: string;
+  member_count?: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
 type APITagsResponse = {
   items: APITagItem[];
 };
 
 type APIUpsertTagResponse = {
   tag: APITagItem;
+};
+
+type APIGetKeyAccessPolicyResponse = {
+  policy: KeyAccessPolicy;
+};
+
+type APIListAccessGroupsResponse = {
+  items: KeyAccessGroup[];
+};
+
+type APICreateAccessGroupResponse = {
+  group: KeyAccessGroup;
 };
 
 type APICreateKeyResponse = {
@@ -902,6 +937,88 @@ export async function setKeyExportPolicy(
       method: "PUT",
       body: JSON.stringify({
         export_allowed: Boolean(exportAllowed)
+      })
+    }
+  );
+}
+
+export async function getKeyAccessPolicy(
+  session: AuthSession,
+  keyId: string
+): Promise<KeyAccessPolicy> {
+  const payload = await apiRequest<APIGetKeyAccessPolicyResponse>(
+    session,
+    `/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  return payload.policy || { tenant_id: session.tenantId, key_id: keyId, grants: [] };
+}
+
+export async function setKeyAccessPolicy(
+  session: AuthSession,
+  keyId: string,
+  grants: KeyAccessGrant[],
+  updatedBy?: string
+): Promise<void> {
+  await apiRequest<Record<string, unknown>>(
+    session,
+    `/keys/${encodeURIComponent(keyId)}/access-policy?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        grants: Array.isArray(grants) ? grants : [],
+        updated_by: String(updatedBy || "").trim()
+      })
+    }
+  );
+}
+
+export async function listKeyAccessGroups(session: AuthSession): Promise<KeyAccessGroup[]> {
+  const payload = await apiRequest<APIListAccessGroupsResponse>(
+    session,
+    `/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  return Array.isArray(payload.items) ? payload.items : [];
+}
+
+export async function createKeyAccessGroup(
+  session: AuthSession,
+  input: { name: string; description?: string; created_by?: string }
+): Promise<KeyAccessGroup> {
+  const payload = await apiRequest<APICreateAccessGroupResponse>(
+    session,
+    `/access/groups?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        name: String(input?.name || "").trim(),
+        description: String(input?.description || "").trim(),
+        created_by: String(input?.created_by || "").trim()
+      })
+    }
+  );
+  return payload.group;
+}
+
+export async function deleteKeyAccessGroup(session: AuthSession, groupId: string): Promise<void> {
+  await apiRequest<Record<string, unknown>>(
+    session,
+    `/access/groups/${encodeURIComponent(groupId)}?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    { method: "DELETE" }
+  );
+}
+
+export async function setKeyAccessGroupMembers(
+  session: AuthSession,
+  groupId: string,
+  userIds: string[]
+): Promise<void> {
+  await apiRequest<Record<string, unknown>>(
+    session,
+    `/access/groups/${encodeURIComponent(groupId)}/members?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        user_ids: Array.isArray(userIds) ? userIds : []
       })
     }
   );

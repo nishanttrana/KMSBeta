@@ -40,6 +40,13 @@ type Store interface {
 	ListTagCatalog(ctx context.Context, tenantID string) ([]TagDefinition, error)
 	UpsertTag(ctx context.Context, tag TagDefinition) (TagDefinition, error)
 	DeleteTag(ctx context.Context, tenantID string, name string) error
+	ListAccessGroups(ctx context.Context, tenantID string) ([]AccessGroup, error)
+	CreateAccessGroup(ctx context.Context, group AccessGroup) (AccessGroup, error)
+	DeleteAccessGroup(ctx context.Context, tenantID string, groupID string) error
+	ReplaceAccessGroupMembers(ctx context.Context, tenantID string, groupID string, userIDs []string) error
+	ListAccessGroupIDsForUser(ctx context.Context, tenantID string, userID string) ([]string, error)
+	ListKeyAccessGrants(ctx context.Context, tenantID string, keyID string) ([]KeyAccessGrant, error)
+	ReplaceKeyAccessGrants(ctx context.Context, tenantID string, keyID string, grants []KeyAccessGrant, createdBy string) error
 
 	ListVersions(ctx context.Context, tenantID string, keyID string) ([]KeyVersion, error)
 	GetVersion(ctx context.Context, tenantID string, keyID string, version int) (KeyVersion, error)

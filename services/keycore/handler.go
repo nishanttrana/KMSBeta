@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	pkgauth "vecta-kms/pkg/auth"
 )
 
 type AuditPublisher interface {
@@ -18,8 +20,9 @@ type AuditPublisher interface {
 }
 
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc        *Service
+	mux        *http.ServeMux
+	parseToken func(string) (*pkgauth.Claims, error)
 }
 
 func NewHandler(svc *Service) *Handler {
@@ -28,8 +31,25 @@ func NewHandler(svc *Service) *Handler {
 	return h
 }
 
+func (h *Handler) SetTokenParser(parser func(string) (*pkgauth.Claims, error)) {
+	h.parseToken = parser
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.mux.ServeHTTP(w, r)
+	ctx := r.Context()
+	if h.parseToken != nil {
+		raw := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
+		if raw != "" {
+			claims, err := h.parseToken(raw)
+			if err != nil {
+				writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid token", requestID(r), "")
+				return
+			}
+			ctx = pkgauth.ContextWithClaims(ctx, claims)
+		}
+	}
+	ctx = contextWithAccessActor(ctx, accessActorFromHTTPRequest(r.WithContext(ctx)))
+	h.mux.ServeHTTP(w, r.WithContext(ctx))
 }
 
 func (h *Handler) routes() *http.ServeMux {
@@ -60,9 +80,15 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /keys/{id}/usage/reset", h.handleResetUsage)
 	mux.HandleFunc("PUT /keys/{id}/approval", h.handleSetApproval)
 	mux.HandleFunc("GET /keys/{id}/approval", h.handleGetApproval)
+	mux.HandleFunc("GET /keys/{id}/access-policy", h.handleGetKeyAccessPolicy)
+	mux.HandleFunc("PUT /keys/{id}/access-policy", h.handleSetKeyAccessPolicy)
 	mux.HandleFunc("PUT /keys/{id}/iv-mode", h.handleSetIVMode)
 	mux.HandleFunc("GET /keys/{id}/iv-log", h.handleGetIVLog)
 	mux.HandleFunc("GET /keys/{id}/iv-log/{ref}", h.handleGetIVByRef)
+	mux.HandleFunc("GET /access/groups", h.handleListAccessGroups)
+	mux.HandleFunc("POST /access/groups", h.handleCreateAccessGroup)
+	mux.HandleFunc("DELETE /access/groups/{id}", h.handleDeleteAccessGroup)
+	mux.HandleFunc("PUT /access/groups/{id}/members", h.handleSetAccessGroupMembers)
 	mux.HandleFunc("GET /tags", h.handleListTags)
 	mux.HandleFunc("POST /tags", h.handleUpsertTag)
 	mux.HandleFunc("DELETE /tags/{name}", h.handleDeleteTag)
@@ -697,6 +723,174 @@ func (h *Handler) handleGetApproval(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"approval": cfg, "request_id": reqID})
 }
 
+func (h *Handler) handleGetKeyAccessPolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	policy, err := h.svc.GetKeyAccessPolicy(r.Context(), tenantID, r.PathValue("id"))
+	if err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errStoreNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "key_access_policy_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"policy":     policy,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleSetKeyAccessPolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req struct {
+		Grants    []KeyAccessGrant `json:"grants"`
+		UpdatedBy string           `json:"updated_by"`
+	}
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	defer r.Body.Close() //nolint:errcheck
+	if len(strings.TrimSpace(string(body))) == 0 {
+		writeErr(w, http.StatusBadRequest, "bad_request", "grants payload is required", reqID, tenantID)
+		return
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		// Also allow direct array payload.
+		if arrErr := json.Unmarshal(body, &req.Grants); arrErr != nil {
+			writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+			return
+		}
+	}
+
+	updatedBy := strings.TrimSpace(req.UpdatedBy)
+	if updatedBy == "" {
+		actor := accessActorFromContext(r.Context())
+		updatedBy = strings.TrimSpace(actor.UserID)
+		if updatedBy == "" {
+			updatedBy = strings.TrimSpace(actor.Username)
+		}
+		if updatedBy == "" {
+			updatedBy = "api"
+		}
+	}
+
+	if err := h.svc.ReplaceKeyAccessPolicy(r.Context(), tenantID, r.PathValue("id"), req.Grants, updatedBy); err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errStoreNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "key_access_policy_update_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleListAccessGroups(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.svc.ListAccessGroups(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "list_access_groups_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleCreateAccessGroup(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		CreatedBy   string `json:"created_by"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+
+	createdBy := strings.TrimSpace(req.CreatedBy)
+	if createdBy == "" {
+		actor := accessActorFromContext(r.Context())
+		createdBy = strings.TrimSpace(actor.UserID)
+		if createdBy == "" {
+			createdBy = strings.TrimSpace(actor.Username)
+		}
+		if createdBy == "" {
+			createdBy = "api"
+		}
+	}
+
+	group, err := h.svc.CreateAccessGroup(r.Context(), tenantID, req.Name, req.Description, createdBy)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "create_access_group_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"group": group, "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteAccessGroup(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	if err := h.svc.DeleteAccessGroup(r.Context(), tenantID, r.PathValue("id")); err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errStoreNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "delete_access_group_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleSetAccessGroupMembers(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req struct {
+		UserIDs []string `json:"user_ids"`
+		Members []string `json:"members"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	userIDs := req.UserIDs
+	if len(userIDs) == 0 && len(req.Members) > 0 {
+		userIDs = req.Members
+	}
+	if err := h.svc.SetAccessGroupMembers(r.Context(), tenantID, r.PathValue("id"), userIDs); err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errStoreNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "set_access_group_members_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
 func (h *Handler) handleSetIVMode(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	tenantID := mustTenant(r, reqID, w)
@@ -840,12 +1034,15 @@ func (h *Handler) handleGetIVByRef(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *Handler) handleEncrypt(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handleEncryptWithOperation(w http.ResponseWriter, r *http.Request, operation string) {
 	reqID := requestID(r)
 	var req EncryptRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
 		return
+	}
+	if strings.TrimSpace(operation) != "" {
+		req.Operation = strings.TrimSpace(operation)
 	}
 	resp, err := h.svc.Encrypt(r.Context(), r.PathValue("id"), req)
 	if err != nil {
@@ -871,12 +1068,19 @@ func (h *Handler) handleEncrypt(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"ciphertext": resp.CipherB64, "iv": resp.IVB64, "version": resp.Version, "key_id": resp.KeyID, "kcv": resp.KCV, "request_id": reqID})
 }
 
-func (h *Handler) handleDecrypt(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handleEncrypt(w http.ResponseWriter, r *http.Request) {
+	h.handleEncryptWithOperation(w, r, "encrypt")
+}
+
+func (h *Handler) handleDecryptWithOperation(w http.ResponseWriter, r *http.Request, operation string) {
 	reqID := requestID(r)
 	var req DecryptRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
 		return
+	}
+	if strings.TrimSpace(operation) != "" {
+		req.Operation = strings.TrimSpace(operation)
 	}
 	resp, err := h.svc.Decrypt(r.Context(), r.PathValue("id"), req)
 	if err != nil {
@@ -896,12 +1100,19 @@ func (h *Handler) handleDecrypt(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"plaintext": resp.PlainB64, "version": resp.Version, "key_id": resp.KeyID, "request_id": reqID})
 }
 
-func (h *Handler) handleSign(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) handleDecrypt(w http.ResponseWriter, r *http.Request) {
+	h.handleDecryptWithOperation(w, r, "decrypt")
+}
+
+func (h *Handler) handleSignWithOperation(w http.ResponseWriter, r *http.Request, operation string) {
 	reqID := requestID(r)
 	var req SignRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
 		return
+	}
+	if strings.TrimSpace(operation) != "" {
+		req.Operation = strings.TrimSpace(operation)
 	}
 	resp, err := h.svc.Sign(r.Context(), r.PathValue("id"), req)
 	if err != nil {
@@ -919,6 +1130,10 @@ func (h *Handler) handleSign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"signature": resp.SignatureB64, "version": resp.Version, "key_id": resp.KeyID, "request_id": reqID})
+}
+
+func (h *Handler) handleSign(w http.ResponseWriter, r *http.Request) {
+	h.handleSignWithOperation(w, r, "sign")
 }
 
 func (h *Handler) handleVerify(w http.ResponseWriter, r *http.Request) {
@@ -946,9 +1161,17 @@ func (h *Handler) handleVerify(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"verified": resp.Verified, "version": resp.Version, "key_id": resp.KeyID, "request_id": reqID})
 }
 
-func (h *Handler) handleWrap(w http.ResponseWriter, r *http.Request)   { h.handleEncrypt(w, r) }
-func (h *Handler) handleUnwrap(w http.ResponseWriter, r *http.Request) { h.handleDecrypt(w, r) }
-func (h *Handler) handleMAC(w http.ResponseWriter, r *http.Request)    { h.handleSign(w, r) }
+func (h *Handler) handleWrap(w http.ResponseWriter, r *http.Request) {
+	h.handleEncryptWithOperation(w, r, "wrap")
+}
+
+func (h *Handler) handleUnwrap(w http.ResponseWriter, r *http.Request) {
+	h.handleDecryptWithOperation(w, r, "unwrap")
+}
+
+func (h *Handler) handleMAC(w http.ResponseWriter, r *http.Request) {
+	h.handleSignWithOperation(w, r, "mac")
+}
 
 func (h *Handler) handleDerive(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
@@ -1137,6 +1360,57 @@ func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
 		return ""
 	}
 	return tenantID
+}
+
+func accessActorFromHTTPRequest(r *http.Request) AccessActor {
+	ctx := r.Context()
+	actor := AccessActor{}
+	if claims, ok := pkgauth.ClaimsFromContext(ctx); ok && claims != nil {
+		actor.UserID = strings.TrimSpace(claims.UserID)
+		actor.Username = strings.TrimSpace(claims.Subject)
+		if actor.Username == "" {
+			actor.Username = actor.UserID
+		}
+		actor.Role = strings.TrimSpace(claims.Role)
+		actor.Permissions = append([]string{}, claims.Permissions...)
+		actor.Authenticated = actor.UserID != "" || actor.Username != ""
+	}
+	if actor.UserID == "" {
+		actor.UserID = strings.TrimSpace(r.Header.Get("X-Actor-User-ID"))
+	}
+	if actor.Username == "" {
+		actor.Username = strings.TrimSpace(r.Header.Get("X-Actor-Username"))
+	}
+	if actor.Role == "" {
+		actor.Role = strings.TrimSpace(r.Header.Get("X-Actor-Role"))
+	}
+	if len(actor.Permissions) == 0 {
+		actor.Permissions = splitCSVHeader(r.Header.Get("X-Actor-Permissions"))
+	}
+	actor.Groups = splitCSVHeader(r.Header.Get("X-Actor-Groups"))
+	if actor.UserID != "" || actor.Username != "" {
+		actor.Authenticated = true
+	}
+	return actor
+}
+
+func splitCSVHeader(raw string) []string {
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	seen := map[string]struct{}{}
+	for _, item := range parts {
+		value := strings.TrimSpace(item)
+		if value == "" {
+			continue
+		}
+		key := strings.ToLower(value)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, value)
+	}
+	return out
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload map[string]any) {

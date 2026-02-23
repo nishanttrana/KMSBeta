@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
+	"encoding/pem"
 	"errors"
 	"log"
 	"math/big"
@@ -24,6 +25,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 
+	pkgauth "vecta-kms/pkg/auth"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
@@ -95,6 +97,12 @@ func main() {
 		logger.Printf("governance fips mode integration enabled")
 	}
 	handler := NewHandler(svc)
+	if tokenParser, err := loadJWTParser(); err != nil {
+		logger.Printf("jwt parser disabled: %v", err)
+	} else if tokenParser != nil {
+		handler.SetTokenParser(tokenParser)
+		logger.Printf("jwt parser enabled for key access control")
+	}
 
 	httpPort := envOr("HTTP_PORT", "8010")
 	httpSrv := &http.Server{
@@ -273,4 +281,42 @@ func envBool(k string, d bool) bool {
 		return d
 	}
 	return v == "true" || v == "1" || v == "yes"
+}
+
+func loadJWTParser() (func(string) (*pkgauth.Claims, error), error) {
+	pubPEM := strings.TrimSpace(os.Getenv("KEYCORE_JWT_PUBLIC_KEY_PEM"))
+	if pubPEM == "" {
+		if b64 := strings.TrimSpace(os.Getenv("KEYCORE_JWT_PUBLIC_KEY_B64")); b64 != "" {
+			raw, err := base64.StdEncoding.DecodeString(b64)
+			if err != nil {
+				return nil, err
+			}
+			pubPEM = string(raw)
+		}
+	}
+	pubPEM = strings.ReplaceAll(pubPEM, `\n`, "\n")
+	if pubPEM == "" {
+		return nil, nil
+	}
+	block, _ := pem.Decode([]byte(pubPEM))
+	if block == nil {
+		return nil, errors.New("invalid public key PEM")
+	}
+	var pub *rsa.PublicKey
+	if parsed, err := x509.ParsePKIXPublicKey(block.Bytes); err == nil {
+		if p, ok := parsed.(*rsa.PublicKey); ok {
+			pub = p
+		}
+	}
+	if pub == nil {
+		if p, err := x509.ParsePKCS1PublicKey(block.Bytes); err == nil {
+			pub = p
+		}
+	}
+	if pub == nil {
+		return nil, errors.New("unable to parse RSA public key")
+	}
+	return func(token string) (*pkgauth.Claims, error) {
+		return pkgauth.ParseRS256(token, pub)
+	}, nil
 }

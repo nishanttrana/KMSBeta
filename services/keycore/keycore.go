@@ -164,6 +164,7 @@ type EncryptRequest struct {
 	IVMode       string `json:"iv_mode"`
 	AADB64       string `json:"aad"`
 	ReferenceID  string `json:"reference_id"`
+	Operation    string `json:"-"`
 }
 
 type DecryptRequest struct {
@@ -172,12 +173,14 @@ type DecryptRequest struct {
 	IVB64         string `json:"iv"`
 	AADB64        string `json:"aad"`
 	ReferenceID   string `json:"reference_id"`
+	Operation     string `json:"-"`
 }
 
 type SignRequest struct {
 	TenantID  string `json:"tenant_id"`
 	DataB64   string `json:"data"`
 	Algorithm string `json:"algorithm"`
+	Operation string `json:"-"`
 }
 
 type VerifyRequest struct {
@@ -185,6 +188,7 @@ type VerifyRequest struct {
 	DataB64      string `json:"data"`
 	SignatureB64 string `json:"signature"`
 	Algorithm    string `json:"algorithm"`
+	Operation    string `json:"-"`
 }
 
 type CryptoResponse struct {
@@ -230,6 +234,7 @@ type DeriveRequest struct {
 	InfoB64     string `json:"info"`
 	SaltB64     string `json:"salt"`
 	ReferenceID string `json:"reference_id"`
+	Operation   string `json:"-"`
 }
 
 type DeriveResponse struct {
@@ -245,6 +250,7 @@ type KEMEncapsulateRequest struct {
 	Algorithm   string `json:"algorithm"`
 	AADB64      string `json:"aad"`
 	ReferenceID string `json:"reference_id"`
+	Operation   string `json:"-"`
 }
 
 type KEMDecapsulateRequest struct {
@@ -254,6 +260,7 @@ type KEMDecapsulateRequest struct {
 	IVB64           string `json:"iv"`
 	AADB64          string `json:"aad"`
 	ReferenceID     string `json:"reference_id"`
+	Operation       string `json:"-"`
 }
 
 type KEMResponse struct {
@@ -1517,6 +1524,9 @@ func (s *Service) ExportPublicComponentPlaintext(ctx context.Context, tenantID s
 	if isDeletedLike(key.Status) {
 		return PlaintextExportResult{}, errors.New("cannot export a deleted key")
 	}
+	if err := s.enforceKeyAccess(ctx, key, "export"); err != nil {
+		return PlaintextExportResult{}, err
+	}
 	if !isPublicComponentKey(key) {
 		return PlaintextExportResult{}, errors.New("plaintext export is allowed only for public key components")
 	}
@@ -1647,6 +1657,9 @@ func (s *Service) RotateKey(ctx context.Context, tenantID string, keyID string, 
 	}
 	if isDeletedLike(key.Status) {
 		return KeyVersion{}, errors.New("cannot rotate a deleted key")
+	}
+	if err := s.enforceKeyAccess(ctx, key, "all"); err != nil {
+		return KeyVersion{}, err
 	}
 	if err := s.checkPolicy(ctx, PolicyEvaluateRequest{
 		TenantID:          tenantID,
@@ -1993,6 +2006,9 @@ func (s *Service) ExportCurrentVersion(ctx context.Context, tenantID string, key
 	if isDeletedLike(key.Status) {
 		return Key{}, KeyVersion{}, errors.New("cannot export a deleted key")
 	}
+	if err := s.enforceKeyAccess(ctx, key, "export"); err != nil {
+		return Key{}, KeyVersion{}, err
+	}
 	if !key.ExportAllowed {
 		return Key{}, KeyVersion{}, errors.New("export is disabled by key policy")
 	}
@@ -2167,7 +2183,14 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 	if err != nil {
 		return CryptoResponse{}, err
 	}
-	if err := ensureKeySupportsOperation(key, "encrypt"); err != nil {
+	operation := strings.TrimSpace(req.Operation)
+	if operation == "" {
+		operation = "encrypt"
+	}
+	if err := ensureKeySupportsOperation(key, operation); err != nil {
+		return CryptoResponse{}, err
+	}
+	if err := s.enforceKeyAccess(ctx, key, operation); err != nil {
 		return CryptoResponse{}, err
 	}
 	if err := s.enforceFIPSKeyAlgorithm(ctx, req.TenantID, key.Algorithm, "key.encrypt"); err != nil {
@@ -2191,7 +2214,7 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 	}); err != nil {
 		return CryptoResponse{}, err
 	}
-	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, "encrypt", map[string]string{
+	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, operation, map[string]string{
 		"plaintext":    strings.TrimSpace(req.PlaintextB64),
 		"iv":           strings.TrimSpace(req.IVB64),
 		"iv_mode":      strings.TrimSpace(effectiveIVMode),
@@ -2213,7 +2236,7 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 		}
 	}
 
-	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, "encrypt", func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -2249,7 +2272,14 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 	if err != nil {
 		return CryptoResponse{}, err
 	}
-	if err := ensureKeySupportsOperation(key, "decrypt"); err != nil {
+	operation := strings.TrimSpace(req.Operation)
+	if operation == "" {
+		operation = "decrypt"
+	}
+	if err := ensureKeySupportsOperation(key, operation); err != nil {
+		return CryptoResponse{}, err
+	}
+	if err := s.enforceKeyAccess(ctx, key, operation); err != nil {
 		return CryptoResponse{}, err
 	}
 	if err := s.enforceFIPSKeyAlgorithm(ctx, req.TenantID, key.Algorithm, "key.decrypt"); err != nil {
@@ -2269,7 +2299,7 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 	}); err != nil {
 		return CryptoResponse{}, err
 	}
-	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, "decrypt", map[string]string{
+	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, operation, map[string]string{
 		"ciphertext":   strings.TrimSpace(req.CiphertextB64),
 		"iv":           strings.TrimSpace(req.IVB64),
 		"aad":          strings.TrimSpace(req.AADB64),
@@ -2292,7 +2322,7 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 			return CryptoResponse{}, errors.New("aad must be base64")
 		}
 	}
-	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, "decrypt", func(_ Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(_ Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -2326,7 +2356,14 @@ func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (Cryp
 	if err != nil {
 		return CryptoResponse{}, err
 	}
-	if err := ensureKeySupportsOperation(key, "sign"); err != nil {
+	operation := strings.TrimSpace(req.Operation)
+	if operation == "" {
+		operation = "sign"
+	}
+	if err := ensureKeySupportsOperation(key, operation); err != nil {
+		return CryptoResponse{}, err
+	}
+	if err := s.enforceKeyAccess(ctx, key, operation); err != nil {
 		return CryptoResponse{}, err
 	}
 	if err := s.enforceFIPSKeyAlgorithm(ctx, req.TenantID, key.Algorithm, "key.sign"); err != nil {
@@ -2346,9 +2383,9 @@ func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (Cryp
 	}); err != nil {
 		return CryptoResponse{}, err
 	}
-	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, "sign", map[string]string{
-		"data":         strings.TrimSpace(req.DataB64),
-		"algorithm":    strings.TrimSpace(req.Algorithm),
+	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, operation, map[string]string{
+		"data":      strings.TrimSpace(req.DataB64),
+		"algorithm": strings.TrimSpace(req.Algorithm),
 	}); err != nil {
 		return CryptoResponse{}, err
 	}
@@ -2357,7 +2394,7 @@ func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (Cryp
 		return CryptoResponse{}, errors.New("data must be base64")
 	}
 	defer crypto.Zeroize(data)
-	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, "sign", func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -2391,7 +2428,14 @@ func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (
 	if err != nil {
 		return CryptoResponse{}, err
 	}
-	if err := ensureKeySupportsOperation(key, "verify"); err != nil {
+	operation := strings.TrimSpace(req.Operation)
+	if operation == "" {
+		operation = "verify"
+	}
+	if err := ensureKeySupportsOperation(key, operation); err != nil {
+		return CryptoResponse{}, err
+	}
+	if err := s.enforceKeyAccess(ctx, key, operation); err != nil {
 		return CryptoResponse{}, err
 	}
 	if err := s.enforceFIPSKeyAlgorithm(ctx, req.TenantID, key.Algorithm, "key.verify"); err != nil {
@@ -2411,10 +2455,10 @@ func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (
 	}); err != nil {
 		return CryptoResponse{}, err
 	}
-	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, "verify", map[string]string{
-		"data":         strings.TrimSpace(req.DataB64),
-		"signature":    strings.TrimSpace(req.SignatureB64),
-		"algorithm":    strings.TrimSpace(req.Algorithm),
+	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, operation, map[string]string{
+		"data":      strings.TrimSpace(req.DataB64),
+		"signature": strings.TrimSpace(req.SignatureB64),
+		"algorithm": strings.TrimSpace(req.Algorithm),
 	}); err != nil {
 		return CryptoResponse{}, err
 	}
@@ -2431,7 +2475,7 @@ func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (
 		version  int
 		verified bool
 	)
-	_, err = s.store.RunCryptoTx(ctx, req.TenantID, keyID, "sign", func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+	_, err = s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -2761,7 +2805,14 @@ func (s *Service) Derive(ctx context.Context, keyID string, req DeriveRequest) (
 	if err != nil {
 		return DeriveResponse{}, err
 	}
-	if err := ensureKeySupportsOperation(key, "derive"); err != nil {
+	operation := strings.TrimSpace(req.Operation)
+	if operation == "" {
+		operation = "derive"
+	}
+	if err := ensureKeySupportsOperation(key, operation); err != nil {
+		return DeriveResponse{}, err
+	}
+	if err := s.enforceKeyAccess(ctx, key, operation); err != nil {
 		return DeriveResponse{}, err
 	}
 	if err := s.enforceFIPSKeyAlgorithm(ctx, req.TenantID, key.Algorithm, "key.derive"); err != nil {
@@ -2805,7 +2856,7 @@ func (s *Service) Derive(ctx context.Context, keyID string, req DeriveRequest) (
 	}); err != nil {
 		return DeriveResponse{}, err
 	}
-	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, "derive", map[string]string{
+	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, operation, map[string]string{
 		"algorithm":    strings.TrimSpace(canonicalAlg),
 		"length_bits":  fmt.Sprintf("%d", req.LengthBits),
 		"info":         strings.TrimSpace(req.InfoB64),
@@ -2814,7 +2865,7 @@ func (s *Service) Derive(ctx context.Context, keyID string, req DeriveRequest) (
 	}); err != nil {
 		return DeriveResponse{}, err
 	}
-	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, "sign", func(_ Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(_ Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -2855,7 +2906,14 @@ func (s *Service) KEMEncapsulate(ctx context.Context, keyID string, req KEMEncap
 	if err != nil {
 		return KEMResponse{}, err
 	}
-	if err := ensureKeySupportsOperation(key, "kem-encapsulate"); err != nil {
+	operation := strings.TrimSpace(req.Operation)
+	if operation == "" {
+		operation = "kem-encapsulate"
+	}
+	if err := ensureKeySupportsOperation(key, operation); err != nil {
+		return KEMResponse{}, err
+	}
+	if err := s.enforceKeyAccess(ctx, key, operation); err != nil {
 		return KEMResponse{}, err
 	}
 	if err := s.enforceFIPSKeyAlgorithm(ctx, req.TenantID, key.Algorithm, "key.kem_encapsulate"); err != nil {
@@ -2883,14 +2941,14 @@ func (s *Service) KEMEncapsulate(ctx context.Context, keyID string, req KEMEncap
 	}); err != nil {
 		return KEMResponse{}, err
 	}
-	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, "kem_encapsulate", map[string]string{
+	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, "kem-encapsulate", map[string]string{
 		"algorithm":    strings.TrimSpace(keyAlg),
 		"aad":          strings.TrimSpace(req.AADB64),
 		"reference_id": strings.TrimSpace(req.ReferenceID),
 	}); err != nil {
 		return KEMResponse{}, err
 	}
-	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, "encrypt", func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -2931,7 +2989,14 @@ func (s *Service) KEMDecapsulate(ctx context.Context, keyID string, req KEMDecap
 	if err != nil {
 		return KEMResponse{}, err
 	}
-	if err := ensureKeySupportsOperation(key, "kem-decapsulate"); err != nil {
+	operation := strings.TrimSpace(req.Operation)
+	if operation == "" {
+		operation = "kem-decapsulate"
+	}
+	if err := ensureKeySupportsOperation(key, operation); err != nil {
+		return KEMResponse{}, err
+	}
+	if err := s.enforceKeyAccess(ctx, key, operation); err != nil {
 		return KEMResponse{}, err
 	}
 	if err := s.enforceFIPSKeyAlgorithm(ctx, req.TenantID, key.Algorithm, "key.kem_decapsulate"); err != nil {
@@ -2963,14 +3028,14 @@ func (s *Service) KEMDecapsulate(ctx context.Context, keyID string, req KEMDecap
 	}); err != nil {
 		return KEMResponse{}, err
 	}
-	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, "kem_decapsulate", map[string]string{
-		"algorithm":       strings.TrimSpace(keyAlg),
-		"encapsulated":    strings.TrimSpace(req.EncapsulatedB64),
-		"reference_id":    strings.TrimSpace(req.ReferenceID),
+	if err := s.ensureApprovalAllowed(ctx, key, req.TenantID, "kem-decapsulate", map[string]string{
+		"algorithm":    strings.TrimSpace(keyAlg),
+		"encapsulated": strings.TrimSpace(req.EncapsulatedB64),
+		"reference_id": strings.TrimSpace(req.ReferenceID),
 	}); err != nil {
 		return KEMResponse{}, err
 	}
-	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, "decrypt", func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
