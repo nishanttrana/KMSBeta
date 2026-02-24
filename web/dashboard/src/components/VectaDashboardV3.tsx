@@ -8172,24 +8172,18 @@ const DataEncryptionPolicy=({session,onToast})=>{
   const [loading,setLoading]=useState(false);
   const [saving,setSaving]=useState(false);
   const [dataPolicy,setDataPolicy]=useState<any>(null);
-  const [payPolicy,setPayPolicy]=useState<any>(null);
   const dataAlgoOptions=["AES-GCM","AES-SIV","CHACHA20-POLY1305"];
-  const tr31VersionOptions=["B","C","D"];
 
   const loadPolicy=async(silent=false)=>{
     if(!session?.token){
       setDataPolicy(null);
-      setPayPolicy(null);
       return;
     }
     if(!silent){
       setLoading(true);
     }
     try{
-      const [dp,pp]=await Promise.all([
-        getDataProtectionPolicy(session),
-        getPaymentPolicy(session)
-      ]);
+      const dp=await getDataProtectionPolicy(session);
       setDataPolicy({
         tenant_id:String(dp?.tenant_id||session?.tenantId||""),
         allowed_data_algorithms:Array.isArray(dp?.allowed_data_algorithms)&&dp.allowed_data_algorithms.length?dp.allowed_data_algorithms:dataAlgoOptions,
@@ -8202,14 +8196,6 @@ const DataEncryptionPolicy=({session,onToast})=>{
         allow_redaction_detect_only:Boolean(dp?.allow_redaction_detect_only),
         allow_custom_regex_tokens:Boolean(dp?.allow_custom_regex_tokens),
         max_token_batch:Math.max(1,Number(dp?.max_token_batch||10000))
-      });
-      setPayPolicy({
-        tenant_id:String(pp?.tenant_id||session?.tenantId||""),
-        allowed_tr31_versions:Array.isArray(pp?.allowed_tr31_versions)&&pp.allowed_tr31_versions.length?pp.allowed_tr31_versions:tr31VersionOptions,
-        require_kbpk_for_tr31:Boolean(pp?.require_kbpk_for_tr31),
-        allow_inline_key_material:Boolean(pp?.allow_inline_key_material),
-        max_iso20022_payload_bytes:Math.max(1024,Number(pp?.max_iso20022_payload_bytes||262144)),
-        require_iso20022_lau_context:Boolean(pp?.require_iso20022_lau_context)
       });
     }catch(error){
       if(!silent){
@@ -8231,39 +8217,27 @@ const DataEncryptionPolicy=({session,onToast})=>{
       onToast?.("Login is required to update data encryption policy.");
       return;
     }
-    if(!dataPolicy||!payPolicy){
+    if(!dataPolicy){
       onToast?.("Policy settings are not loaded.");
       return;
     }
     setSaving(true);
     try{
-      const [updatedDP,updatedPP]=await Promise.all([
-        updateDataProtectionPolicy(session,{
-          tenant_id:session.tenantId,
-          allowed_data_algorithms:Array.isArray(dataPolicy?.allowed_data_algorithms)?dataPolicy.allowed_data_algorithms:dataAlgoOptions,
-          require_aad_for_aead:Boolean(dataPolicy?.require_aad_for_aead),
-          max_fields_per_operation:Math.max(1,Math.min(2048,Number(dataPolicy?.max_fields_per_operation||64))),
-          max_document_bytes:Math.max(1024,Math.min(16777216,Number(dataPolicy?.max_document_bytes||262144))),
-          allow_vaultless_tokenization:Boolean(dataPolicy?.allow_vaultless_tokenization),
-          require_token_ttl:Boolean(dataPolicy?.require_token_ttl),
-          max_token_ttl_hours:Math.max(0,Math.min(87600,Number(dataPolicy?.max_token_ttl_hours||0))),
-          allow_redaction_detect_only:Boolean(dataPolicy?.allow_redaction_detect_only),
-          allow_custom_regex_tokens:Boolean(dataPolicy?.allow_custom_regex_tokens),
-          max_token_batch:Math.max(1,Math.min(100000,Number(dataPolicy?.max_token_batch||10000))),
-          updated_by:session?.username||"dashboard"
-        }),
-        updatePaymentPolicy(session,{
-          tenant_id:session.tenantId,
-          allowed_tr31_versions:Array.isArray(payPolicy?.allowed_tr31_versions)?payPolicy.allowed_tr31_versions:tr31VersionOptions,
-          require_kbpk_for_tr31:Boolean(payPolicy?.require_kbpk_for_tr31),
-          allow_inline_key_material:Boolean(payPolicy?.allow_inline_key_material),
-          max_iso20022_payload_bytes:Math.max(1024,Math.min(4194304,Number(payPolicy?.max_iso20022_payload_bytes||262144))),
-          require_iso20022_lau_context:Boolean(payPolicy?.require_iso20022_lau_context),
-          updated_by:session?.username||"dashboard"
-        })
-      ]);
-      setDataPolicy((prev)=>({...prev,...updatedDP}));
-      setPayPolicy((prev)=>({...prev,...updatedPP}));
+      const updated=await updateDataProtectionPolicy(session,{
+        tenant_id:session.tenantId,
+        allowed_data_algorithms:Array.isArray(dataPolicy?.allowed_data_algorithms)?dataPolicy.allowed_data_algorithms:dataAlgoOptions,
+        require_aad_for_aead:Boolean(dataPolicy?.require_aad_for_aead),
+        max_fields_per_operation:Math.max(1,Math.min(2048,Number(dataPolicy?.max_fields_per_operation||64))),
+        max_document_bytes:Math.max(1024,Math.min(16777216,Number(dataPolicy?.max_document_bytes||262144))),
+        allow_vaultless_tokenization:Boolean(dataPolicy?.allow_vaultless_tokenization),
+        require_token_ttl:Boolean(dataPolicy?.require_token_ttl),
+        max_token_ttl_hours:Math.max(0,Math.min(87600,Number(dataPolicy?.max_token_ttl_hours||0))),
+        allow_redaction_detect_only:Boolean(dataPolicy?.allow_redaction_detect_only),
+        allow_custom_regex_tokens:Boolean(dataPolicy?.allow_custom_regex_tokens),
+        max_token_batch:Math.max(1,Math.min(100000,Number(dataPolicy?.max_token_batch||10000))),
+        updated_by:session?.username||"dashboard"
+      });
+      setDataPolicy((prev)=>({...prev,...updated}));
       onToast?.("Data encryption policy updated.");
     }catch(error){
       onToast?.(`Data encryption policy update failed: ${errMsg(error)}`);
@@ -8280,7 +8254,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
       <Card>
         <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Policy Scope</div>
         <div style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
-          Data-protection policies below govern Data Encryption, Tokenize/Mask/Redact and Payment Crypto behavior. Key Access Hardening is separate in Administration and both are enforced together.
+          This tab controls only data-encryption behavior for Field-Level, Envelope and Searchable application encryption flows.
         </div>
       </Card>
     </Section>
@@ -8313,6 +8287,99 @@ const DataEncryptionPolicy=({session,onToast})=>{
         </div>
       </Card>
     </Section>
+  </div>;
+};
+
+const TokenizeMaskRedactPolicy=({session,onToast})=>{
+  const [loading,setLoading]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [dataPolicy,setDataPolicy]=useState<any>(null);
+  const dataAlgoOptions=["AES-GCM","AES-SIV","CHACHA20-POLY1305"];
+
+  const loadPolicy=async(silent=false)=>{
+    if(!session?.token){
+      setDataPolicy(null);
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const dp=await getDataProtectionPolicy(session);
+      setDataPolicy({
+        tenant_id:String(dp?.tenant_id||session?.tenantId||""),
+        allowed_data_algorithms:Array.isArray(dp?.allowed_data_algorithms)&&dp.allowed_data_algorithms.length?dp.allowed_data_algorithms:dataAlgoOptions,
+        require_aad_for_aead:Boolean(dp?.require_aad_for_aead),
+        max_fields_per_operation:Math.max(1,Number(dp?.max_fields_per_operation||64)),
+        max_document_bytes:Math.max(1024,Number(dp?.max_document_bytes||262144)),
+        allow_vaultless_tokenization:Boolean(dp?.allow_vaultless_tokenization),
+        require_token_ttl:Boolean(dp?.require_token_ttl),
+        max_token_ttl_hours:Math.max(0,Number(dp?.max_token_ttl_hours||0)),
+        allow_redaction_detect_only:Boolean(dp?.allow_redaction_detect_only),
+        allow_custom_regex_tokens:Boolean(dp?.allow_custom_regex_tokens),
+        max_token_batch:Math.max(1,Number(dp?.max_token_batch||10000))
+      });
+    }catch(error){
+      if(!silent){
+        onToast?.(`Tokenize/mask/redact policy load failed: ${errMsg(error)}`);
+      }
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    void loadPolicy();
+  },[session?.token,session?.tenantId]);
+
+  const savePolicy=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to update tokenize/mask/redact policy.");
+      return;
+    }
+    if(!dataPolicy){
+      onToast?.("Policy settings are not loaded.");
+      return;
+    }
+    setSaving(true);
+    try{
+      const updated=await updateDataProtectionPolicy(session,{
+        tenant_id:session.tenantId,
+        allowed_data_algorithms:Array.isArray(dataPolicy?.allowed_data_algorithms)?dataPolicy.allowed_data_algorithms:dataAlgoOptions,
+        require_aad_for_aead:Boolean(dataPolicy?.require_aad_for_aead),
+        max_fields_per_operation:Math.max(1,Math.min(2048,Number(dataPolicy?.max_fields_per_operation||64))),
+        max_document_bytes:Math.max(1024,Math.min(16777216,Number(dataPolicy?.max_document_bytes||262144))),
+        allow_vaultless_tokenization:Boolean(dataPolicy?.allow_vaultless_tokenization),
+        require_token_ttl:Boolean(dataPolicy?.require_token_ttl),
+        max_token_ttl_hours:Math.max(0,Math.min(87600,Number(dataPolicy?.max_token_ttl_hours||0))),
+        allow_redaction_detect_only:Boolean(dataPolicy?.allow_redaction_detect_only),
+        allow_custom_regex_tokens:Boolean(dataPolicy?.allow_custom_regex_tokens),
+        max_token_batch:Math.max(1,Math.min(100000,Number(dataPolicy?.max_token_batch||10000))),
+        updated_by:session?.username||"dashboard"
+      });
+      setDataPolicy((prev)=>({...prev,...updated}));
+      onToast?.("Tokenize/mask/redact policy updated.");
+    }catch(error){
+      onToast?.(`Tokenize/mask/redact policy update failed: ${errMsg(error)}`);
+    }finally{
+      setSaving(false);
+    }
+  };
+
+  return <div style={{display:"grid",gap:12}}>
+    <Section title="Tokenize / Mask / Redact Policy" actions={<>
+      <Btn small onClick={()=>void loadPolicy(false)} disabled={loading}>{loading?"Refreshing...":"Refresh"}</Btn>
+      <Btn small primary onClick={savePolicy} disabled={saving||loading}>{saving?"Saving...":"Save Policy"}</Btn>
+    </>}>
+      <Card>
+        <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Policy Scope</div>
+        <div style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
+          This tab controls tokenization behavior, masking/redaction modes, regex policy, and token lifetime constraints.
+        </div>
+      </Card>
+    </Section>
 
     <Section title="Tokenize / Mask / Redact Controls">
       <Card style={{display:"grid",gap:8}}>
@@ -8329,6 +8396,89 @@ const DataEncryptionPolicy=({session,onToast})=>{
           <FG label="Max token batch size">
             <Inp type="number" min={1} max={100000} value={String(dataPolicy?.max_token_batch??10000)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_token_batch:Number(e.target.value||10000)}))}/>
           </FG>
+        </div>
+      </Card>
+    </Section>
+  </div>;
+};
+
+const PaymentCryptoPolicy=({session,onToast})=>{
+  const [loading,setLoading]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [payPolicy,setPayPolicy]=useState<any>(null);
+  const tr31VersionOptions=["B","C","D"];
+
+  const loadPolicy=async(silent=false)=>{
+    if(!session?.token){
+      setPayPolicy(null);
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const pp=await getPaymentPolicy(session);
+      setPayPolicy({
+        tenant_id:String(pp?.tenant_id||session?.tenantId||""),
+        allowed_tr31_versions:Array.isArray(pp?.allowed_tr31_versions)&&pp.allowed_tr31_versions.length?pp.allowed_tr31_versions:tr31VersionOptions,
+        require_kbpk_for_tr31:Boolean(pp?.require_kbpk_for_tr31),
+        allow_inline_key_material:Boolean(pp?.allow_inline_key_material),
+        max_iso20022_payload_bytes:Math.max(1024,Number(pp?.max_iso20022_payload_bytes||262144)),
+        require_iso20022_lau_context:Boolean(pp?.require_iso20022_lau_context)
+      });
+    }catch(error){
+      if(!silent){
+        onToast?.(`Payment policy load failed: ${errMsg(error)}`);
+      }
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    void loadPolicy();
+  },[session?.token,session?.tenantId]);
+
+  const savePolicy=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to update payment policy.");
+      return;
+    }
+    if(!payPolicy){
+      onToast?.("Policy settings are not loaded.");
+      return;
+    }
+    setSaving(true);
+    try{
+      const updated=await updatePaymentPolicy(session,{
+        tenant_id:session.tenantId,
+        allowed_tr31_versions:Array.isArray(payPolicy?.allowed_tr31_versions)?payPolicy.allowed_tr31_versions:tr31VersionOptions,
+        require_kbpk_for_tr31:Boolean(payPolicy?.require_kbpk_for_tr31),
+        allow_inline_key_material:Boolean(payPolicy?.allow_inline_key_material),
+        max_iso20022_payload_bytes:Math.max(1024,Math.min(4194304,Number(payPolicy?.max_iso20022_payload_bytes||262144))),
+        require_iso20022_lau_context:Boolean(payPolicy?.require_iso20022_lau_context),
+        updated_by:session?.username||"dashboard"
+      });
+      setPayPolicy((prev)=>({...prev,...updated}));
+      onToast?.("Payment policy updated.");
+    }catch(error){
+      onToast?.(`Payment policy update failed: ${errMsg(error)}`);
+    }finally{
+      setSaving(false);
+    }
+  };
+
+  return <div style={{display:"grid",gap:12}}>
+    <Section title="Payment Policy" actions={<>
+      <Btn small onClick={()=>void loadPolicy(false)} disabled={loading}>{loading?"Refreshing...":"Refresh"}</Btn>
+      <Btn small primary onClick={savePolicy} disabled={saving||loading}>{saving?"Saving...":"Save Policy"}</Btn>
+    </>}>
+      <Card>
+        <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Policy Scope</div>
+        <div style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
+          This tab controls Payment Crypto policies such as TR-31 handling, inline key material policy, and ISO20022 constraints.
         </div>
       </Card>
     </Section>
@@ -8377,7 +8527,9 @@ const DataProtection=({session,keyCatalog,onToast,subView,onSubViewChange})=>{
       <Btn small primary={currentSubtab==="dataenc"} onClick={()=>selectSubtab("dataenc")}>Data Encryption</Btn>
       <Btn small primary={currentSubtab==="dataenc-policy"} onClick={()=>selectSubtab("dataenc-policy")}>Data Encryption Policy</Btn>
       <Btn small primary={currentSubtab==="tokenize"} onClick={()=>selectSubtab("tokenize")}>Tokenize / Mask / Redact</Btn>
+      <Btn small primary={currentSubtab==="token-policy"} onClick={()=>selectSubtab("token-policy")}>Token / Mask / Redact Policy</Btn>
       <Btn small primary={currentSubtab==="payment"} onClick={()=>selectSubtab("payment")}>Payment Crypto</Btn>
+      <Btn small primary={currentSubtab==="payment-policy"} onClick={()=>selectSubtab("payment-policy")}>Payment Policy</Btn>
       <Btn small primary={currentSubtab==="pkcs11"} onClick={()=>selectSubtab("pkcs11")}>PKCS#11 / JCA</Btn>
     </div>}
     {currentSubtab==="tokenize"
@@ -8386,6 +8538,10 @@ const DataProtection=({session,keyCatalog,onToast,subView,onSubViewChange})=>{
         ? <Payment session={session} keyCatalog={keyCatalog} onToast={onToast}/>
         : currentSubtab==="pkcs11"
           ? <PKCS11 session={session} onToast={onToast}/>
+          : currentSubtab==="token-policy"
+            ? <TokenizeMaskRedactPolicy session={session} onToast={onToast}/>
+            : currentSubtab==="payment-policy"
+              ? <PaymentCryptoPolicy session={session} onToast={onToast}/>
           : currentSubtab==="dataenc-policy"
             ? <DataEncryptionPolicy session={session} onToast={onToast}/>
             : <DataEncryption session={session} keyCatalog={keyCatalog} onToast={onToast}/>}
@@ -16348,9 +16504,11 @@ const SUB_PANES={
   ],
   dataprotection:[
     {id:"dataenc",label:"Data Encryption",hint:"Field-level, envelope, searchable and FPE crypto",icon:Database,feature:"data_protection"},
-    {id:"dataenc-policy",label:"Data Encryption Policy",hint:"Policy controls for REST/PKCS#11/JCA/EKM interfaces",icon:ShieldCheck,feature:"data_protection"},
+    {id:"dataenc-policy",label:"Data Encryption Policy",hint:"Policy controls only for data encryption interfaces",icon:ShieldCheck,feature:"data_protection"},
     {id:"tokenize",label:"Tokenize / Mask / Redact",hint:"Vault and vaultless tokenization with masking/redaction",icon:VenetianMask,feature:"data_protection"},
+    {id:"token-policy",label:"Token / Mask / Redact Policy",hint:"Policy controls only for tokenization, masking and redaction",icon:VenetianMask,feature:"data_protection"},
     {id:"payment",label:"Payment Crypto",hint:"TR-31, PIN, CVV, MAC and ISO20022 operations",icon:CreditCard,feature:"payment_crypto"},
+    {id:"payment-policy",label:"Payment Policy",hint:"Policy controls only for payment cryptography operations",icon:CreditCard,feature:"payment_crypto"},
     {id:"pkcs11",label:"PKCS#11 / JCA",hint:"SDK providers, mechanism usage and client telemetry",icon:Plug}
   ],
   cloudctl:[
