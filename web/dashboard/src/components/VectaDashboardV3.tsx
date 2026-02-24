@@ -132,6 +132,7 @@ import {
   applyMask,
   createMaskingPolicy,
   createRedactionPolicy,
+  getDataProtectionPolicy,
   createTokenVault,
   detokenizeValues,
   fpeDecrypt,
@@ -140,6 +141,7 @@ import {
   listRedactionPolicies,
   listTokenVaults,
   redactContent,
+  updateDataProtectionPolicy,
   tokenizeValues
 } from "../lib/dataprotect";
 import {
@@ -150,9 +152,11 @@ import {
   encryptISO20022,
   generateLAU,
   generatePVV,
+  getPaymentPolicy,
   signISO20022,
   translatePIN,
   translateTR31,
+  updatePaymentPolicy,
   validateTR31,
   verifyCVV,
   verifyISO20022,
@@ -314,6 +318,7 @@ muted:"#64748b",white:"#ffffff"};
 const TAB_FEATURES = {
   vault: "secrets",
   certs: "certs",
+  dataprotection: ["data_protection", "payment_crypto"],
   tokenize: "data_protection",
   dataenc: "data_protection",
   payment: "payment_crypto",
@@ -1826,7 +1831,7 @@ const NAV=[
   {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"certs",icon:FileText,label:"Certificates / PKI"}]},
   {g:"WORKBENCH",items:[{id:"workbench",icon:LayoutGrid,label:"Workbench"}]},
   {g:"SECRETS & CERTS",items:[{id:"vault",icon:Lock,label:"Secret Vault"}]},
-  {g:"DATA PROTECTION",items:[{id:"tokenize",icon:VenetianMask,label:"Tokenize / Mask / Redact"},{id:"dataenc",icon:Database,label:"Data Encryption"},{id:"payment",icon:CreditCard,label:"Payment Crypto"},{id:"pkcs11",icon:Plug,label:"PKCS#11 / JCA"}]},
+  {g:"DATA PROTECTION",items:[{id:"dataprotection",icon:Database,label:"Data Protection"}]},
   {g:"CLOUD KEY CONTROL",items:[{id:"cloudctl",icon:Cloud,label:"Cloud Key Control"},{id:"ekm",icon:Database,label:"Enterprise Key Management"}]},
   {g:"INFRASTRUCTURE",items:[{id:"hsm",icon:Cpu,label:"HSM / Primus"},{id:"qkd",icon:GitBranch,label:"QKD Interface"},{id:"mpc",icon:Cpu,label:"MPC Engine"},{id:"cluster",icon:GitBranch,label:"Cluster"}]},
   {g:"GOVERNANCE",items:[{id:"approvals",icon:CheckCircle2,label:"Approvals"},{id:"alerts",icon:Bell,label:"Alert Center"},{id:"audit",icon:ScrollText,label:"Audit Log"},{id:"compliance",icon:ClipboardCheck,label:"Compliance"},{id:"sbom",icon:BarChart3,label:"SBOM / CBOM"}]},
@@ -1928,6 +1933,8 @@ const KEY_ACCESS_OPERATION_OPTIONS=[
   {id:"kem-decapsulate",label:"KEM Decap"},
   {id:"export",label:"Export"}
 ];
+
+const DATA_ENCRYPTION_INTERFACE_OPTIONS=["rest","pkcs11","jca","ekm","kmip","hyok","byok"];
 
 // 
 // TAB: KEY MANAGEMENT (fully interactive)
@@ -8158,6 +8165,230 @@ const DataEncryption=({session,keyCatalog,onToast})=>{
         </div>
       </div>
     </Card>
+  </div>;
+};
+
+const DataEncryptionPolicy=({session,onToast})=>{
+  const [loading,setLoading]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [dataPolicy,setDataPolicy]=useState<any>(null);
+  const [payPolicy,setPayPolicy]=useState<any>(null);
+  const dataAlgoOptions=["AES-GCM","AES-SIV","CHACHA20-POLY1305"];
+  const tr31VersionOptions=["B","C","D"];
+
+  const loadPolicy=async(silent=false)=>{
+    if(!session?.token){
+      setDataPolicy(null);
+      setPayPolicy(null);
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const [dp,pp]=await Promise.all([
+        getDataProtectionPolicy(session),
+        getPaymentPolicy(session)
+      ]);
+      setDataPolicy({
+        tenant_id:String(dp?.tenant_id||session?.tenantId||""),
+        allowed_data_algorithms:Array.isArray(dp?.allowed_data_algorithms)&&dp.allowed_data_algorithms.length?dp.allowed_data_algorithms:dataAlgoOptions,
+        require_aad_for_aead:Boolean(dp?.require_aad_for_aead),
+        max_fields_per_operation:Math.max(1,Number(dp?.max_fields_per_operation||64)),
+        max_document_bytes:Math.max(1024,Number(dp?.max_document_bytes||262144)),
+        allow_vaultless_tokenization:Boolean(dp?.allow_vaultless_tokenization),
+        require_token_ttl:Boolean(dp?.require_token_ttl),
+        max_token_ttl_hours:Math.max(0,Number(dp?.max_token_ttl_hours||0)),
+        allow_redaction_detect_only:Boolean(dp?.allow_redaction_detect_only),
+        allow_custom_regex_tokens:Boolean(dp?.allow_custom_regex_tokens),
+        max_token_batch:Math.max(1,Number(dp?.max_token_batch||10000))
+      });
+      setPayPolicy({
+        tenant_id:String(pp?.tenant_id||session?.tenantId||""),
+        allowed_tr31_versions:Array.isArray(pp?.allowed_tr31_versions)&&pp.allowed_tr31_versions.length?pp.allowed_tr31_versions:tr31VersionOptions,
+        require_kbpk_for_tr31:Boolean(pp?.require_kbpk_for_tr31),
+        allow_inline_key_material:Boolean(pp?.allow_inline_key_material),
+        max_iso20022_payload_bytes:Math.max(1024,Number(pp?.max_iso20022_payload_bytes||262144)),
+        require_iso20022_lau_context:Boolean(pp?.require_iso20022_lau_context)
+      });
+    }catch(error){
+      if(!silent){
+        onToast?.(`Data encryption policy load failed: ${errMsg(error)}`);
+      }
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    void loadPolicy();
+  },[session?.token,session?.tenantId]);
+
+  const savePolicy=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to update data encryption policy.");
+      return;
+    }
+    if(!dataPolicy||!payPolicy){
+      onToast?.("Policy settings are not loaded.");
+      return;
+    }
+    setSaving(true);
+    try{
+      const [updatedDP,updatedPP]=await Promise.all([
+        updateDataProtectionPolicy(session,{
+          tenant_id:session.tenantId,
+          allowed_data_algorithms:Array.isArray(dataPolicy?.allowed_data_algorithms)?dataPolicy.allowed_data_algorithms:dataAlgoOptions,
+          require_aad_for_aead:Boolean(dataPolicy?.require_aad_for_aead),
+          max_fields_per_operation:Math.max(1,Math.min(2048,Number(dataPolicy?.max_fields_per_operation||64))),
+          max_document_bytes:Math.max(1024,Math.min(16777216,Number(dataPolicy?.max_document_bytes||262144))),
+          allow_vaultless_tokenization:Boolean(dataPolicy?.allow_vaultless_tokenization),
+          require_token_ttl:Boolean(dataPolicy?.require_token_ttl),
+          max_token_ttl_hours:Math.max(0,Math.min(87600,Number(dataPolicy?.max_token_ttl_hours||0))),
+          allow_redaction_detect_only:Boolean(dataPolicy?.allow_redaction_detect_only),
+          allow_custom_regex_tokens:Boolean(dataPolicy?.allow_custom_regex_tokens),
+          max_token_batch:Math.max(1,Math.min(100000,Number(dataPolicy?.max_token_batch||10000))),
+          updated_by:session?.username||"dashboard"
+        }),
+        updatePaymentPolicy(session,{
+          tenant_id:session.tenantId,
+          allowed_tr31_versions:Array.isArray(payPolicy?.allowed_tr31_versions)?payPolicy.allowed_tr31_versions:tr31VersionOptions,
+          require_kbpk_for_tr31:Boolean(payPolicy?.require_kbpk_for_tr31),
+          allow_inline_key_material:Boolean(payPolicy?.allow_inline_key_material),
+          max_iso20022_payload_bytes:Math.max(1024,Math.min(4194304,Number(payPolicy?.max_iso20022_payload_bytes||262144))),
+          require_iso20022_lau_context:Boolean(payPolicy?.require_iso20022_lau_context),
+          updated_by:session?.username||"dashboard"
+        })
+      ]);
+      setDataPolicy((prev)=>({...prev,...updatedDP}));
+      setPayPolicy((prev)=>({...prev,...updatedPP}));
+      onToast?.("Data encryption policy updated.");
+    }catch(error){
+      onToast?.(`Data encryption policy update failed: ${errMsg(error)}`);
+    }finally{
+      setSaving(false);
+    }
+  };
+
+  return <div style={{display:"grid",gap:12}}>
+    <Section title="Data Encryption Policy" actions={<>
+      <Btn small onClick={()=>void loadPolicy(false)} disabled={loading}>{loading?"Refreshing...":"Refresh"}</Btn>
+      <Btn small primary onClick={savePolicy} disabled={saving||loading}>{saving?"Saving...":"Save Policy"}</Btn>
+    </>}>
+      <Card>
+        <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Policy Scope</div>
+        <div style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
+          Data-protection policies below govern Data Encryption, Tokenize/Mask/Redact and Payment Crypto behavior. Key Access Hardening is separate in Administration and both are enforced together.
+        </div>
+      </Card>
+    </Section>
+
+    <Section title="Data Encryption Controls">
+      <Card style={{display:"grid",gap:8}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <Chk label="Require AAD for AEAD operations" checked={Boolean(dataPolicy?.require_aad_for_aead)} onChange={()=>setDataPolicy((prev)=>({...prev,require_aad_for_aead:!Boolean(prev?.require_aad_for_aead)}))}/>
+          <div style={{fontSize:10,color:C.dim,alignSelf:"center"}}>Allowed algorithms are enforced server-side for FLE/Envelope/Searchable APIs.</div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+          {dataAlgoOptions.map((algo)=>{
+            const selected=(Array.isArray(dataPolicy?.allowed_data_algorithms)?dataPolicy.allowed_data_algorithms:[]).includes(algo);
+            return <Chk key={`dp-algo-${algo}`} label={algo} checked={selected} onChange={()=>setDataPolicy((prev)=>{
+              const current=Array.isArray(prev?.allowed_data_algorithms)?[...prev.allowed_data_algorithms]:[];
+              if(current.includes(algo)){
+                return {...prev,allowed_data_algorithms:current.filter((item)=>item!==algo)};
+              }
+              return {...prev,allowed_data_algorithms:[...current,algo]};
+            })}/>;
+          })}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
+          <FG label="Max fields per operation">
+            <Inp type="number" min={1} max={2048} value={String(dataPolicy?.max_fields_per_operation??64)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_fields_per_operation:Number(e.target.value||64)}))}/>
+          </FG>
+          <FG label="Max document size (bytes)">
+            <Inp type="number" min={1024} max={16777216} value={String(dataPolicy?.max_document_bytes??262144)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_document_bytes:Number(e.target.value||262144)}))}/>
+          </FG>
+        </div>
+      </Card>
+    </Section>
+
+    <Section title="Tokenize / Mask / Redact Controls">
+      <Card style={{display:"grid",gap:8}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <Chk label="Allow vaultless tokenization" checked={Boolean(dataPolicy?.allow_vaultless_tokenization)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_vaultless_tokenization:!Boolean(prev?.allow_vaultless_tokenization)}))}/>
+          <Chk label="Require token TTL" checked={Boolean(dataPolicy?.require_token_ttl)} onChange={()=>setDataPolicy((prev)=>({...prev,require_token_ttl:!Boolean(prev?.require_token_ttl)}))}/>
+          <Chk label="Allow redaction detect-only mode" checked={Boolean(dataPolicy?.allow_redaction_detect_only)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_redaction_detect_only:!Boolean(prev?.allow_redaction_detect_only)}))}/>
+          <Chk label="Allow custom regex tokens" checked={Boolean(dataPolicy?.allow_custom_regex_tokens)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_custom_regex_tokens:!Boolean(prev?.allow_custom_regex_tokens)}))}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
+          <FG label="Max token TTL (hours, 0=unlimited)">
+            <Inp type="number" min={0} max={87600} value={String(dataPolicy?.max_token_ttl_hours??0)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_token_ttl_hours:Number(e.target.value||0)}))}/>
+          </FG>
+          <FG label="Max token batch size">
+            <Inp type="number" min={1} max={100000} value={String(dataPolicy?.max_token_batch??10000)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_token_batch:Number(e.target.value||10000)}))}/>
+          </FG>
+        </div>
+      </Card>
+    </Section>
+
+    <Section title="Payment Crypto Controls">
+      <Card style={{display:"grid",gap:8}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <Chk label="Require KBPK/KEK for TR-31 operations" checked={Boolean(payPolicy?.require_kbpk_for_tr31)} onChange={()=>setPayPolicy((prev)=>({...prev,require_kbpk_for_tr31:!Boolean(prev?.require_kbpk_for_tr31)}))}/>
+          <Chk label="Allow inline key material in payment API" checked={Boolean(payPolicy?.allow_inline_key_material)} onChange={()=>setPayPolicy((prev)=>({...prev,allow_inline_key_material:!Boolean(prev?.allow_inline_key_material)}))}/>
+          <Chk label="Require ISO20022 LAU context" checked={Boolean(payPolicy?.require_iso20022_lau_context)} onChange={()=>setPayPolicy((prev)=>({...prev,require_iso20022_lau_context:!Boolean(prev?.require_iso20022_lau_context)}))}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+          {tr31VersionOptions.map((ver)=>{
+            const selected=(Array.isArray(payPolicy?.allowed_tr31_versions)?payPolicy.allowed_tr31_versions:[]).includes(ver);
+            return <Chk key={`pay-pol-ver-${ver}`} label={`TR-31 ${ver}`} checked={selected} onChange={()=>setPayPolicy((prev)=>{
+              const current=Array.isArray(prev?.allowed_tr31_versions)?[...prev.allowed_tr31_versions]:[];
+              if(current.includes(ver)){
+                return {...prev,allowed_tr31_versions:current.filter((item)=>item!==ver)};
+              }
+              return {...prev,allowed_tr31_versions:[...current,ver]};
+            })}/>;
+          })}
+        </div>
+        <FG label="Max ISO20022 payload bytes">
+          <Inp type="number" min={1024} max={4194304} value={String(payPolicy?.max_iso20022_payload_bytes??262144)} onChange={(e)=>setPayPolicy((prev)=>({...prev,max_iso20022_payload_bytes:Number(e.target.value||262144)}))}/>
+        </FG>
+      </Card>
+    </Section>
+  </div>;
+};
+
+const DataProtection=({session,keyCatalog,onToast,subView,onSubViewChange})=>{
+  const [dataSubtab,setDataSubtab]=useState("dataenc");
+  const currentSubtab=String(subView||dataSubtab||"dataenc");
+  const selectSubtab=(next:string)=>{
+    if(onSubViewChange){
+      onSubViewChange(next);
+      return;
+    }
+    setDataSubtab(next);
+  };
+  const showInlineSubTabs=!onSubViewChange;
+
+  return <div>
+    {showInlineSubTabs&&<div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+      <Btn small primary={currentSubtab==="dataenc"} onClick={()=>selectSubtab("dataenc")}>Data Encryption</Btn>
+      <Btn small primary={currentSubtab==="dataenc-policy"} onClick={()=>selectSubtab("dataenc-policy")}>Data Encryption Policy</Btn>
+      <Btn small primary={currentSubtab==="tokenize"} onClick={()=>selectSubtab("tokenize")}>Tokenize / Mask / Redact</Btn>
+      <Btn small primary={currentSubtab==="payment"} onClick={()=>selectSubtab("payment")}>Payment Crypto</Btn>
+      <Btn small primary={currentSubtab==="pkcs11"} onClick={()=>selectSubtab("pkcs11")}>PKCS#11 / JCA</Btn>
+    </div>}
+    {currentSubtab==="tokenize"
+      ? <Tokenize session={session} keyCatalog={keyCatalog} onToast={onToast}/>
+      : currentSubtab==="payment"
+        ? <Payment session={session} keyCatalog={keyCatalog} onToast={onToast}/>
+        : currentSubtab==="pkcs11"
+          ? <PKCS11 session={session} onToast={onToast}/>
+          : currentSubtab==="dataenc-policy"
+            ? <DataEncryptionPolicy session={session} onToast={onToast}/>
+            : <DataEncryption session={session} keyCatalog={keyCatalog} onToast={onToast}/>}
   </div>;
 };
 
@@ -16108,12 +16339,19 @@ const Documentation=()=>{
 // 
 // MAIN APP WITH SIDEBAR
 // 
-const TABS={home:Home,keys:Keys,workbench:Workbench,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,cloudctl:CloudKeyControl,byok:BYOK,hyok:HYOK,ekm:EKM,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
-const TITLES={home:"Dashboard",keys:"Key Management",workbench:"Workbench",crypto:"Crypto Console",restapi:"REST API",vault:"Secret Vault",certs:"Certificates / PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",cloudctl:"Cloud Key Control",byok:"BYOK",hyok:"HYOK",ekm:"Enterprise Key Management",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
+const TABS={home:Home,keys:Keys,workbench:Workbench,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,dataprotection:DataProtection,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,cloudctl:CloudKeyControl,byok:BYOK,hyok:HYOK,ekm:EKM,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
+const TITLES={home:"Dashboard",keys:"Key Management",workbench:"Workbench",crypto:"Crypto Console",restapi:"REST API",vault:"Secret Vault",certs:"Certificates / PKI",dataprotection:"Data Protection",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",cloudctl:"Cloud Key Control",byok:"BYOK",hyok:"HYOK",ekm:"Enterprise Key Management",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
 const SUB_PANES={
   workbench:[
     {id:"crypto",label:"Crypto Console",hint:"Interactive cryptographic operations and algorithm console",icon:Zap},
     {id:"restapi",label:"REST API",hint:"Authenticated API explorer and endpoint documentation",icon:TerminalSquare}
+  ],
+  dataprotection:[
+    {id:"dataenc",label:"Data Encryption",hint:"Field-level, envelope, searchable and FPE crypto",icon:Database,feature:"data_protection"},
+    {id:"dataenc-policy",label:"Data Encryption Policy",hint:"Policy controls for REST/PKCS#11/JCA/EKM interfaces",icon:ShieldCheck,feature:"data_protection"},
+    {id:"tokenize",label:"Tokenize / Mask / Redact",hint:"Vault and vaultless tokenization with masking/redaction",icon:VenetianMask,feature:"data_protection"},
+    {id:"payment",label:"Payment Crypto",hint:"TR-31, PIN, CVV, MAC and ISO20022 operations",icon:CreditCard,feature:"payment_crypto"},
+    {id:"pkcs11",label:"PKCS#11 / JCA",hint:"SDK providers, mechanism usage and client telemetry",icon:Plug}
   ],
   cloudctl:[
     {id:"byok",label:"BYOK",hint:"Cloud provider key import and sync",icon:Cloud,feature:"cloud_byok"},
@@ -16142,7 +16380,7 @@ export default function VectaDashboard(props){
   const [toast,setToast]=useState("");
   const [keyCatalog,setKeyCatalog]=useState([]);
   const [tagCatalog,setTagCatalog]=useState([]);
-  const [subPaneSelection,setSubPaneSelection]=useState({workbench:"crypto",cloudctl:"byok",ekm:"db"});
+  const [subPaneSelection,setSubPaneSelection]=useState({workbench:"crypto",dataprotection:"dataenc",cloudctl:"byok",ekm:"db"});
   const [fipsMode,setFipsMode]=useState<"enabled"|"disabled">("disabled");
   const [reportedUnread,setReportedUnread]=useState(Number(unreadAlerts||0));
   const [cliStatus,setCLIStatus]=useState<any>(null);

@@ -31,6 +31,8 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /payment/keys/{id}", h.handleGetPaymentKey)
 	mux.HandleFunc("PUT /payment/keys/{id}", h.handleUpdatePaymentKey)
 	mux.HandleFunc("POST /payment/keys/{id}/rotate", h.handleRotatePaymentKey)
+	mux.HandleFunc("GET /payment/policy", h.handleGetPaymentPolicy)
+	mux.HandleFunc("PUT /payment/policy", h.handleSetPaymentPolicy)
 
 	mux.HandleFunc("POST /payment/tr31/create", h.handleTR31Create)
 	mux.HandleFunc("POST /payment/tr31/parse", h.handleTR31Parse)
@@ -139,6 +141,46 @@ func (h *Handler) handleRotatePaymentKey(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
+}
+
+func (h *Handler) handleGetPaymentPolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := tenantFromRequest(r)
+	if tenantID == "" {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required"), reqID, "")
+		return
+	}
+	item, err := h.svc.GetPaymentPolicy(r.Context(), tenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
+}
+
+func (h *Handler) handleSetPaymentPolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := tenantFromRequest(r)
+	if tenantID == "" {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required"), reqID, "")
+		return
+	}
+	var req PaymentPolicy
+	if err := decodeJSON(r, &req); err != nil {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantID)
+		return
+	}
+	req.TenantID = firstNonEmpty(req.TenantID, tenantID)
+	if req.TenantID != tenantID {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant mismatch between request and session context"), reqID, tenantID)
+		return
+	}
+	item, err := h.svc.UpdatePaymentPolicy(r.Context(), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
 }
 
 func (h *Handler) handleTR31Create(w http.ResponseWriter, r *http.Request) {

@@ -28,6 +28,17 @@ type PaymentKey struct {
 	UpdatedAt        time.Time `json:"updated_at"`
 }
 
+type PaymentPolicy struct {
+	TenantID                    string    `json:"tenant_id"`
+	AllowedTR31Versions         []string  `json:"allowed_tr31_versions"`
+	RequireKBPKForTR31          bool      `json:"require_kbpk_for_tr31"`
+	AllowInlineKeyMaterial      bool      `json:"allow_inline_key_material"`
+	MaxISO20022PayloadBytes     int       `json:"max_iso20022_payload_bytes"`
+	RequireISO20022LAUContext   bool      `json:"require_iso20022_lau_context"`
+	UpdatedBy                   string    `json:"updated_by,omitempty"`
+	UpdatedAt                   time.Time `json:"updated_at"`
+}
+
 type TR31Translation struct {
 	ID           string    `json:"id"`
 	TenantID     string    `json:"tenant_id"`

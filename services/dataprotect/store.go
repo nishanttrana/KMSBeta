@@ -315,6 +315,127 @@ ORDER BY created_at ASC
 	return out, rows.Err()
 }
 
+func (s *SQLStore) GetDataProtectionPolicy(ctx context.Context, tenantID string) (DataProtectionPolicy, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id,
+       allowed_data_algorithms_json,
+       require_aad_for_aead,
+       max_fields_per_operation,
+       max_document_bytes,
+       allow_vaultless_tokenization,
+       require_token_ttl,
+       max_token_ttl_hours,
+       allow_redaction_detect_only,
+       allow_custom_regex_tokens,
+       max_token_batch,
+       COALESCE(updated_by,''),
+       updated_at
+FROM data_protection_policy
+WHERE tenant_id = $1
+`, strings.TrimSpace(tenantID))
+	var (
+		out            DataProtectionPolicy
+		algorithmsJSON string
+		updatedRaw     interface{}
+	)
+	if err := row.Scan(
+		&out.TenantID,
+		&algorithmsJSON,
+		&out.RequireAADForAEAD,
+		&out.MaxFieldsPerOperation,
+		&out.MaxDocumentBytes,
+		&out.AllowVaultlessTokenization,
+		&out.RequireTokenTTL,
+		&out.MaxTokenTTLHours,
+		&out.AllowRedactionDetectOnly,
+		&out.AllowCustomRegexTokens,
+		&out.MaxTokenBatch,
+		&out.UpdatedBy,
+		&updatedRaw,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return DataProtectionPolicy{}, errNotFound
+		}
+		return DataProtectionPolicy{}, err
+	}
+	out.AllowedDataAlgorithms = parseJSONArrayString(algorithmsJSON)
+	out.UpdatedAt = parseTimeValue(updatedRaw)
+	return out, nil
+}
+
+func (s *SQLStore) UpsertDataProtectionPolicy(ctx context.Context, item DataProtectionPolicy) (DataProtectionPolicy, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+INSERT INTO data_protection_policy (
+    tenant_id,
+    allowed_data_algorithms_json,
+    require_aad_for_aead,
+    max_fields_per_operation,
+    max_document_bytes,
+    allow_vaultless_tokenization,
+    require_token_ttl,
+    max_token_ttl_hours,
+    allow_redaction_detect_only,
+    allow_custom_regex_tokens,
+    max_token_batch,
+    updated_by,
+    updated_at
+) VALUES (
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP
+)
+ON CONFLICT (tenant_id) DO UPDATE SET
+    allowed_data_algorithms_json = EXCLUDED.allowed_data_algorithms_json,
+    require_aad_for_aead = EXCLUDED.require_aad_for_aead,
+    max_fields_per_operation = EXCLUDED.max_fields_per_operation,
+    max_document_bytes = EXCLUDED.max_document_bytes,
+    allow_vaultless_tokenization = EXCLUDED.allow_vaultless_tokenization,
+    require_token_ttl = EXCLUDED.require_token_ttl,
+    max_token_ttl_hours = EXCLUDED.max_token_ttl_hours,
+    allow_redaction_detect_only = EXCLUDED.allow_redaction_detect_only,
+    allow_custom_regex_tokens = EXCLUDED.allow_custom_regex_tokens,
+    max_token_batch = EXCLUDED.max_token_batch,
+    updated_by = EXCLUDED.updated_by,
+    updated_at = CURRENT_TIMESTAMP
+RETURNING tenant_id,
+          allowed_data_algorithms_json,
+          require_aad_for_aead,
+          max_fields_per_operation,
+          max_document_bytes,
+          allow_vaultless_tokenization,
+          require_token_ttl,
+          max_token_ttl_hours,
+          allow_redaction_detect_only,
+          allow_custom_regex_tokens,
+          max_token_batch,
+          COALESCE(updated_by,''),
+          updated_at
+`, item.TenantID, mustJSON(item.AllowedDataAlgorithms, "[]"), item.RequireAADForAEAD, item.MaxFieldsPerOperation, item.MaxDocumentBytes, item.AllowVaultlessTokenization, item.RequireTokenTTL, item.MaxTokenTTLHours, item.AllowRedactionDetectOnly, item.AllowCustomRegexTokens, item.MaxTokenBatch, item.UpdatedBy)
+	var (
+		out            DataProtectionPolicy
+		algorithmsJSON string
+		updatedRaw     interface{}
+	)
+	if err := row.Scan(
+		&out.TenantID,
+		&algorithmsJSON,
+		&out.RequireAADForAEAD,
+		&out.MaxFieldsPerOperation,
+		&out.MaxDocumentBytes,
+		&out.AllowVaultlessTokenization,
+		&out.RequireTokenTTL,
+		&out.MaxTokenTTLHours,
+		&out.AllowRedactionDetectOnly,
+		&out.AllowCustomRegexTokens,
+		&out.MaxTokenBatch,
+		&out.UpdatedBy,
+		&updatedRaw,
+	); err != nil {
+		return DataProtectionPolicy{}, err
+	}
+	out.AllowedDataAlgorithms = parseJSONArrayString(algorithmsJSON)
+	out.UpdatedAt = parseTimeValue(updatedRaw)
+	return out, nil
+}
+
 func scanTokenVault(scanner interface {
 	Scan(dest ...interface{}) error
 }) (TokenVault, error) {

@@ -795,6 +795,42 @@ func formatKCVHex(v []byte) string {
 	return strings.ToUpper(hex.EncodeToString(v))
 }
 
+func parseJSONArrayString(raw string) []string {
+	items := parseStringListJSON(raw)
+	return uniqueStrings(items)
+}
+
+func uniqueStrings(values []string) []string {
+	seen := make(map[string]struct{}, len(values))
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		item := strings.TrimSpace(value)
+		if item == "" {
+			continue
+		}
+		key := strings.ToUpper(item)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, item)
+	}
+	return out
+}
+
+func containsString(values []string, needle string) bool {
+	needle = strings.TrimSpace(needle)
+	if needle == "" {
+		return false
+	}
+	for _, value := range values {
+		if strings.EqualFold(strings.TrimSpace(value), needle) {
+			return true
+		}
+	}
+	return false
+}
+
 func mustJSON(v interface{}) string {
 	raw, _ := json.Marshal(v)
 	if len(raw) == 0 {

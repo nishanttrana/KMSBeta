@@ -57,6 +57,9 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /app/searchable-encrypt", h.handleAppSearchableEncrypt)
 	mux.HandleFunc("POST /app/searchable-decrypt", h.handleAppSearchableDecrypt)
 
+	mux.HandleFunc("GET /policy", h.handleGetDataProtectionPolicy)
+	mux.HandleFunc("PUT /policy", h.handleSetDataProtectionPolicy)
+
 	return mux
 }
 
@@ -418,6 +421,44 @@ func (h *Handler) handleAppSearchableDecrypt(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
+}
+
+func (h *Handler) handleGetDataProtectionPolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	item, err := h.svc.GetDataProtectionPolicy(r.Context(), tenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
+}
+
+func (h *Handler) handleSetDataProtectionPolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req DataProtectionPolicy
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	req.TenantID = firstTenant(req.TenantID, tenantID)
+	if req.TenantID != tenantID {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant mismatch between request and session context", reqID, tenantID)
+		return
+	}
+	item, err := h.svc.UpdateDataProtectionPolicy(r.Context(), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {

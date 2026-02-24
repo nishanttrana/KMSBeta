@@ -37,6 +37,25 @@ type Store interface {
 
 	CreateFLEMetadata(ctx context.Context, item FLEMetadata) error
 	ListFLEMetadataByDocument(ctx context.Context, tenantID string, documentID string) ([]FLEMetadata, error)
+
+	GetDataProtectionPolicy(ctx context.Context, tenantID string) (DataProtectionPolicy, error)
+	UpsertDataProtectionPolicy(ctx context.Context, item DataProtectionPolicy) (DataProtectionPolicy, error)
+}
+
+type DataProtectionPolicy struct {
+	TenantID                   string    `json:"tenant_id"`
+	AllowedDataAlgorithms      []string  `json:"allowed_data_algorithms"`
+	RequireAADForAEAD          bool      `json:"require_aad_for_aead"`
+	MaxFieldsPerOperation      int       `json:"max_fields_per_operation"`
+	MaxDocumentBytes           int       `json:"max_document_bytes"`
+	AllowVaultlessTokenization bool      `json:"allow_vaultless_tokenization"`
+	RequireTokenTTL            bool      `json:"require_token_ttl"`
+	MaxTokenTTLHours           int       `json:"max_token_ttl_hours"`
+	AllowRedactionDetectOnly   bool      `json:"allow_redaction_detect_only"`
+	AllowCustomRegexTokens     bool      `json:"allow_custom_regex_tokens"`
+	MaxTokenBatch              int       `json:"max_token_batch"`
+	UpdatedBy                  string    `json:"updated_by,omitempty"`
+	UpdatedAt                  time.Time `json:"updated_at"`
 }
 
 type TokenVault struct {

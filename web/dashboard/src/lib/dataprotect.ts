@@ -57,6 +57,23 @@ type RedactResponse = { result: Record<string, unknown> };
 type RedactionPoliciesResponse = { items: RedactionPolicy[] };
 type RedactionPolicyResponse = { item: RedactionPolicy };
 type AppResponse = { result: Record<string, unknown> };
+type DataProtectionPolicyResponse = { policy: DataProtectionPolicy };
+
+export type DataProtectionPolicy = {
+  tenant_id: string;
+  allowed_data_algorithms: string[];
+  require_aad_for_aead: boolean;
+  max_fields_per_operation: number;
+  max_document_bytes: number;
+  allow_vaultless_tokenization: boolean;
+  require_token_ttl: boolean;
+  max_token_ttl_hours: number;
+  allow_redaction_detect_only: boolean;
+  allow_custom_regex_tokens: boolean;
+  max_token_batch: number;
+  updated_by?: string;
+  updated_at?: string;
+};
 
 export type CreateTokenVaultInput = {
   name: string;
@@ -356,4 +373,27 @@ export async function appSearchableDecrypt(session: AuthSession, input: Searchab
     })
   });
   return out?.result || {};
+}
+
+export async function getDataProtectionPolicy(session: AuthSession): Promise<DataProtectionPolicy> {
+  const out = await serviceRequest<DataProtectionPolicyResponse>(
+    session,
+    "dataprotect",
+    `/policy?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  return (out?.policy || {}) as DataProtectionPolicy;
+}
+
+export async function updateDataProtectionPolicy(
+  session: AuthSession,
+  input: Partial<DataProtectionPolicy>
+): Promise<DataProtectionPolicy> {
+  const out = await serviceRequest<DataProtectionPolicyResponse>(session, "dataprotect", `/policy?tenant_id=${encodeURIComponent(session.tenantId)}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      ...input
+    })
+  });
+  return (out?.policy || {}) as DataProtectionPolicy;
 }

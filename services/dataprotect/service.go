@@ -22,6 +22,8 @@ type Service struct {
 	now     func() time.Time
 }
 
+var supportedDataProtectAlgorithms = []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305"}
+
 func NewService(store Store, keycore KeyCoreClient, events EventPublisher) *Service {
 	return &Service{
 		store:   store,
@@ -29,6 +31,113 @@ func NewService(store Store, keycore KeyCoreClient, events EventPublisher) *Serv
 		events:  events,
 		now:     func() time.Time { return time.Now().UTC() },
 	}
+}
+
+func defaultDataProtectionPolicy(tenantID string) DataProtectionPolicy {
+	return DataProtectionPolicy{
+		TenantID:                   strings.TrimSpace(tenantID),
+		AllowedDataAlgorithms:      append([]string{}, supportedDataProtectAlgorithms...),
+		RequireAADForAEAD:          false,
+		MaxFieldsPerOperation:      64,
+		MaxDocumentBytes:           262144,
+		AllowVaultlessTokenization: true,
+		RequireTokenTTL:            false,
+		MaxTokenTTLHours:           0,
+		AllowRedactionDetectOnly:   true,
+		AllowCustomRegexTokens:     true,
+		MaxTokenBatch:              10000,
+	}
+}
+
+func normalizeDataProtectionPolicy(in DataProtectionPolicy) DataProtectionPolicy {
+	in.TenantID = strings.TrimSpace(in.TenantID)
+	allowed := uniqueStrings(in.AllowedDataAlgorithms)
+	outAllowed := make([]string, 0, len(allowed))
+	for _, item := range allowed {
+		algo := strings.ToUpper(strings.TrimSpace(item))
+		if containsString(supportedDataProtectAlgorithms, algo) {
+			outAllowed = append(outAllowed, algo)
+		}
+	}
+	if len(outAllowed) == 0 {
+		outAllowed = append([]string{}, supportedDataProtectAlgorithms...)
+	}
+	sort.Strings(outAllowed)
+	in.AllowedDataAlgorithms = outAllowed
+	if in.MaxFieldsPerOperation <= 0 {
+		in.MaxFieldsPerOperation = 64
+	}
+	if in.MaxFieldsPerOperation > 2048 {
+		in.MaxFieldsPerOperation = 2048
+	}
+	if in.MaxDocumentBytes <= 0 {
+		in.MaxDocumentBytes = 262144
+	}
+	if in.MaxDocumentBytes > 16777216 {
+		in.MaxDocumentBytes = 16777216
+	}
+	if in.MaxTokenTTLHours < 0 {
+		in.MaxTokenTTLHours = 0
+	}
+	if in.MaxTokenTTLHours > 87600 {
+		in.MaxTokenTTLHours = 87600
+	}
+	if in.MaxTokenBatch <= 0 {
+		in.MaxTokenBatch = 10000
+	}
+	if in.MaxTokenBatch > 100000 {
+		in.MaxTokenBatch = 100000
+	}
+	in.UpdatedBy = strings.TrimSpace(in.UpdatedBy)
+	return in
+}
+
+func (s *Service) GetDataProtectionPolicy(ctx context.Context, tenantID string) (DataProtectionPolicy, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return DataProtectionPolicy{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	item, err := s.store.GetDataProtectionPolicy(ctx, tenantID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return defaultDataProtectionPolicy(tenantID), nil
+		}
+		return DataProtectionPolicy{}, err
+	}
+	return normalizeDataProtectionPolicy(item), nil
+}
+
+func (s *Service) UpdateDataProtectionPolicy(ctx context.Context, in DataProtectionPolicy) (DataProtectionPolicy, error) {
+	in = normalizeDataProtectionPolicy(in)
+	if in.TenantID == "" {
+		return DataProtectionPolicy{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	item, err := s.store.UpsertDataProtectionPolicy(ctx, in)
+	if err != nil {
+		return DataProtectionPolicy{}, err
+	}
+	item = normalizeDataProtectionPolicy(item)
+	_ = s.publishAudit(ctx, "audit.dataprotect.policy_updated", item.TenantID, map[string]interface{}{
+		"allowed_data_algorithms":       item.AllowedDataAlgorithms,
+		"require_aad_for_aead":          item.RequireAADForAEAD,
+		"max_fields_per_operation":      item.MaxFieldsPerOperation,
+		"max_document_bytes":            item.MaxDocumentBytes,
+		"allow_vaultless_tokenization":  item.AllowVaultlessTokenization,
+		"require_token_ttl":             item.RequireTokenTTL,
+		"max_token_ttl_hours":           item.MaxTokenTTLHours,
+		"allow_redaction_detect_only":   item.AllowRedactionDetectOnly,
+		"allow_custom_regex_tokens":     item.AllowCustomRegexTokens,
+		"max_token_batch":               item.MaxTokenBatch,
+	})
+	return item, nil
+}
+
+func (s *Service) mustDataProtectionPolicy(ctx context.Context, tenantID string) (DataProtectionPolicy, error) {
+	item, err := s.GetDataProtectionPolicy(ctx, tenantID)
+	if err != nil {
+		return DataProtectionPolicy{}, err
+	}
+	return item, nil
 }
 
 func (s *Service) CreateTokenVault(ctx context.Context, tenantID string, in TokenVault) (TokenVault, error) {
@@ -145,12 +254,19 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 	if len(req.Values) == 0 {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "values cannot be empty")
 	}
-	if len(req.Values) > 10000 {
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "batch size limit is 10,000 values")
+	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	if len(req.Values) > policy.MaxTokenBatch {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "batch size exceeds configured policy limit")
 	}
 
 	vault := TokenVault{}
 	if req.Mode == "vaultless" {
+		if !policy.AllowVaultlessTokenization {
+			return nil, newServiceError(http.StatusForbidden, "policy_denied", "vaultless tokenization is disabled by policy")
+		}
 		if req.KeyID == "" {
 			return nil, newServiceError(http.StatusBadRequest, "bad_request", "key_id is required for vaultless tokenization")
 		}
@@ -159,6 +275,9 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 		}
 		if !isSupportedTokenType(req.TokenType) {
 			return nil, newServiceError(http.StatusBadRequest, "bad_request", "unsupported token_type")
+		}
+		if req.TokenType == "custom" && !policy.AllowCustomRegexTokens {
+			return nil, newServiceError(http.StatusForbidden, "policy_denied", "custom regex tokenization is disabled by policy")
 		}
 		if req.TokenType == "custom" && req.CustomRegex != "" {
 			if _, err := regexp.Compile(req.CustomRegex); err != nil {
@@ -190,6 +309,15 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			return nil, err
 		}
 		vault.Mode = "vault"
+		if vault.TokenType == "custom" && !policy.AllowCustomRegexTokens {
+			return nil, newServiceError(http.StatusForbidden, "policy_denied", "custom regex tokenization is disabled by policy")
+		}
+		if policy.RequireTokenTTL && req.TTLHours <= 0 {
+			return nil, newServiceError(http.StatusBadRequest, "bad_request", "token ttl is required by policy")
+		}
+	}
+	if policy.MaxTokenTTLHours > 0 && req.TTLHours > policy.MaxTokenTTLHours {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "token ttl exceeds configured policy limit")
 	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, vault.KeyID, "encrypt"); err != nil {
 		return nil, err
@@ -633,6 +761,13 @@ func (s *Service) Redact(ctx context.Context, req RedactRequest) (map[string]int
 	if req.TenantID == "" || strings.TrimSpace(req.Content) == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and content are required")
 	}
+	policyCfg, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	if req.DetectOnly && !policyCfg.AllowRedactionDetectOnly {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "redaction detect-only mode is disabled by policy")
+	}
 	policy := RedactionPolicy{
 		Action:      "replace_placeholder",
 		Placeholder: "[REDACTED]",
@@ -682,6 +817,22 @@ func (s *Service) EncryptFields(ctx context.Context, req AppFieldRequest) (map[s
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "fields are required")
 	}
 	algorithm := normalizeFieldAlgorithm(req.Algorithm, req.Searchable)
+	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	if len(req.Fields) > policy.MaxFieldsPerOperation {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "field count exceeds configured policy limit")
+	}
+	if !containsString(policy.AllowedDataAlgorithms, strings.ToUpper(algorithm)) {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "algorithm is disabled by data protection policy")
+	}
+	if policy.RequireAADForAEAD && strings.TrimSpace(req.AAD) == "" {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data protection policy")
+	}
+	if docRaw, jErr := json.Marshal(req.Document); jErr == nil && len(docRaw) > policy.MaxDocumentBytes {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "document size exceeds configured policy limit")
+	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt"); err != nil {
 		return nil, err
 	}
@@ -745,6 +896,13 @@ func (s *Service) DecryptFields(ctx context.Context, req AppFieldRequest) (map[s
 	if len(req.Fields) == 0 {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "fields are required")
 	}
+	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	if len(req.Fields) > policy.MaxFieldsPerOperation {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "field count exceeds configured policy limit")
+	}
 	doc := cloneMap(req.Document)
 	metaByField := map[string]FLEMetadata{}
 	if req.DocumentID != "" {
@@ -775,6 +933,12 @@ func (s *Service) DecryptFields(ctx context.Context, req AppFieldRequest) (map[s
 		alg := strings.ToUpper(strings.TrimSpace(firstString(block["alg"])))
 		if alg == "" {
 			alg = "AES-GCM"
+		}
+		if !containsString(policy.AllowedDataAlgorithms, alg) {
+			return nil, newServiceError(http.StatusForbidden, "policy_denied", "algorithm is disabled by data protection policy")
+		}
+		if policy.RequireAADForAEAD && strings.TrimSpace(req.AAD) == "" {
+			return nil, newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data protection policy")
 		}
 		keyID := req.KeyID
 		if keyID == "" {
@@ -830,6 +994,10 @@ func (s *Service) EnvelopeEncrypt(ctx context.Context, req EnvelopeRequest) (map
 	if req.TenantID == "" || req.KeyID == "" || req.Plaintext == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and plaintext are required")
 	}
+	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return nil, err
+	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "wrap"); err != nil {
 		return nil, err
 	}
@@ -842,6 +1010,12 @@ func (s *Service) EnvelopeEncrypt(ctx context.Context, req EnvelopeRequest) (map
 	defer pkgcrypto.Zeroize(dek)
 
 	alg := normalizeFieldAlgorithm(req.Algorithm, false)
+	if !containsString(policy.AllowedDataAlgorithms, strings.ToUpper(alg)) {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "algorithm is disabled by data protection policy")
+	}
+	if policy.RequireAADForAEAD && strings.TrimSpace(req.AAD) == "" {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data protection policy")
+	}
 	iv, ciphertext, err := encryptWithAlgorithm(dek, alg, []byte(req.Plaintext), []byte(req.AAD), false)
 	if err != nil {
 		return nil, err
@@ -868,6 +1042,10 @@ func (s *Service) EnvelopeDecrypt(ctx context.Context, req EnvelopeRequest) (map
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	if req.TenantID == "" || req.KeyID == "" || req.Ciphertext == "" || req.WrappedDEK == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id, ciphertext and wrapped_dek are required")
+	}
+	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return nil, err
 	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "unwrap"); err != nil {
 		return nil, err
@@ -899,6 +1077,12 @@ func (s *Service) EnvelopeDecrypt(ctx context.Context, req EnvelopeRequest) (map
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "iv must be base64")
 	}
 	alg := normalizeFieldAlgorithm(req.Algorithm, false)
+	if !containsString(policy.AllowedDataAlgorithms, strings.ToUpper(alg)) {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "algorithm is disabled by data protection policy")
+	}
+	if policy.RequireAADForAEAD && strings.TrimSpace(req.AAD) == "" {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data protection policy")
+	}
 	pt, err := decryptWithAlgorithm(dek, alg, iv, ct, []byte(req.AAD), false)
 	if err != nil {
 		return nil, err
@@ -918,6 +1102,16 @@ func (s *Service) SearchableEncrypt(ctx context.Context, req SearchableRequest) 
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	if req.TenantID == "" || req.KeyID == "" || req.Plaintext == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and plaintext are required")
+	}
+	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	if !containsString(policy.AllowedDataAlgorithms, "AES-SIV") {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "AES-SIV is disabled by data protection policy")
+	}
+	if policy.RequireAADForAEAD && strings.TrimSpace(req.AAD) == "" {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data protection policy")
 	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt"); err != nil {
 		return nil, err
@@ -942,6 +1136,16 @@ func (s *Service) SearchableDecrypt(ctx context.Context, req SearchableRequest) 
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	if req.TenantID == "" || req.KeyID == "" || req.Ciphertext == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and ciphertext are required")
+	}
+	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	if !containsString(policy.AllowedDataAlgorithms, "AES-SIV") {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "AES-SIV is disabled by data protection policy")
+	}
+	if policy.RequireAADForAEAD && strings.TrimSpace(req.AAD) == "" {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data protection policy")
 	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "decrypt"); err != nil {
 		return nil, err

@@ -20,6 +20,9 @@ type Store interface {
 
 	CreateTR31Translation(ctx context.Context, tr TR31Translation) error
 	CreatePINOperationLog(ctx context.Context, item PINOperationLog) error
+
+	GetPaymentPolicy(ctx context.Context, tenantID string) (PaymentPolicy, error)
+	UpsertPaymentPolicy(ctx context.Context, item PaymentPolicy) (PaymentPolicy, error)
 }
 
 type SQLStore struct {
@@ -144,6 +147,97 @@ INSERT INTO pin_operations_log (
 )
 `, item.TenantID, item.ID, item.Operation, item.SourceFormat, item.TargetFormat, item.ZPKKeyID, item.Result)
 	return err
+}
+
+func (s *SQLStore) GetPaymentPolicy(ctx context.Context, tenantID string) (PaymentPolicy, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id,
+       allowed_tr31_versions_json,
+       require_kbpk_for_tr31,
+       allow_inline_key_material,
+       max_iso20022_payload_bytes,
+       require_iso20022_lau_context,
+       COALESCE(updated_by,''),
+       updated_at
+FROM payment_policy
+WHERE tenant_id = $1
+`, strings.TrimSpace(tenantID))
+	var (
+		out          PaymentPolicy
+		versionsJSON string
+		updatedRaw   interface{}
+	)
+	if err := row.Scan(
+		&out.TenantID,
+		&versionsJSON,
+		&out.RequireKBPKForTR31,
+		&out.AllowInlineKeyMaterial,
+		&out.MaxISO20022PayloadBytes,
+		&out.RequireISO20022LAUContext,
+		&out.UpdatedBy,
+		&updatedRaw,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return PaymentPolicy{}, errNotFound
+		}
+		return PaymentPolicy{}, err
+	}
+	out.AllowedTR31Versions = parseJSONArrayString(versionsJSON)
+	out.UpdatedAt = parseTimeValue(updatedRaw)
+	return out, nil
+}
+
+func (s *SQLStore) UpsertPaymentPolicy(ctx context.Context, item PaymentPolicy) (PaymentPolicy, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+INSERT INTO payment_policy (
+    tenant_id,
+    allowed_tr31_versions_json,
+    require_kbpk_for_tr31,
+    allow_inline_key_material,
+    max_iso20022_payload_bytes,
+    require_iso20022_lau_context,
+    updated_by,
+    updated_at
+) VALUES (
+    $1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP
+)
+ON CONFLICT (tenant_id) DO UPDATE SET
+    allowed_tr31_versions_json = EXCLUDED.allowed_tr31_versions_json,
+    require_kbpk_for_tr31 = EXCLUDED.require_kbpk_for_tr31,
+    allow_inline_key_material = EXCLUDED.allow_inline_key_material,
+    max_iso20022_payload_bytes = EXCLUDED.max_iso20022_payload_bytes,
+    require_iso20022_lau_context = EXCLUDED.require_iso20022_lau_context,
+    updated_by = EXCLUDED.updated_by,
+    updated_at = CURRENT_TIMESTAMP
+RETURNING tenant_id,
+          allowed_tr31_versions_json,
+          require_kbpk_for_tr31,
+          allow_inline_key_material,
+          max_iso20022_payload_bytes,
+          require_iso20022_lau_context,
+          COALESCE(updated_by,''),
+          updated_at
+`, item.TenantID, validJSONOr(mustJSON(item.AllowedTR31Versions), "[]"), item.RequireKBPKForTR31, item.AllowInlineKeyMaterial, item.MaxISO20022PayloadBytes, item.RequireISO20022LAUContext, item.UpdatedBy)
+	var (
+		out          PaymentPolicy
+		versionsJSON string
+		updatedRaw   interface{}
+	)
+	if err := row.Scan(
+		&out.TenantID,
+		&versionsJSON,
+		&out.RequireKBPKForTR31,
+		&out.AllowInlineKeyMaterial,
+		&out.MaxISO20022PayloadBytes,
+		&out.RequireISO20022LAUContext,
+		&out.UpdatedBy,
+		&updatedRaw,
+	); err != nil {
+		return PaymentPolicy{}, err
+	}
+	out.AllowedTR31Versions = parseJSONArrayString(versionsJSON)
+	out.UpdatedAt = parseTimeValue(updatedRaw)
+	return out, nil
 }
 
 func scanPaymentKey(scanner interface {

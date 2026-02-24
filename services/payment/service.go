@@ -48,6 +48,8 @@ type Service struct {
 	meter   *metering.Meter
 }
 
+var supportedPaymentTR31Versions = []string{"B", "C", "D"}
+
 func NewService(store Store, keycore KeyCoreClient, events EventPublisher, meter *metering.Meter) *Service {
 	if meter == nil {
 		meter = metering.NewMeter(0, 0)
@@ -58,6 +60,97 @@ func NewService(store Store, keycore KeyCoreClient, events EventPublisher, meter
 		events:  events,
 		meter:   meter,
 	}
+}
+
+func defaultPaymentPolicy(tenantID string) PaymentPolicy {
+	return PaymentPolicy{
+		TenantID:                  strings.TrimSpace(tenantID),
+		AllowedTR31Versions:       append([]string{}, supportedPaymentTR31Versions...),
+		RequireKBPKForTR31:        false,
+		AllowInlineKeyMaterial:    true,
+		MaxISO20022PayloadBytes:   262144,
+		RequireISO20022LAUContext: false,
+	}
+}
+
+func normalizePaymentPolicy(in PaymentPolicy) PaymentPolicy {
+	in.TenantID = strings.TrimSpace(in.TenantID)
+	allowed := uniqueStrings(in.AllowedTR31Versions)
+	outAllowed := make([]string, 0, len(allowed))
+	for _, item := range allowed {
+		v := normalizeTR31Version(item)
+		if containsString(supportedPaymentTR31Versions, v) {
+			outAllowed = append(outAllowed, v)
+		}
+	}
+	if len(outAllowed) == 0 {
+		outAllowed = append([]string{}, supportedPaymentTR31Versions...)
+	}
+	in.AllowedTR31Versions = outAllowed
+	if in.MaxISO20022PayloadBytes <= 0 {
+		in.MaxISO20022PayloadBytes = 262144
+	}
+	if in.MaxISO20022PayloadBytes > 4194304 {
+		in.MaxISO20022PayloadBytes = 4194304
+	}
+	in.UpdatedBy = strings.TrimSpace(in.UpdatedBy)
+	return in
+}
+
+func (s *Service) GetPaymentPolicy(ctx context.Context, tenantID string) (PaymentPolicy, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return PaymentPolicy{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	item, err := s.store.GetPaymentPolicy(ctx, tenantID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return defaultPaymentPolicy(tenantID), nil
+		}
+		return PaymentPolicy{}, err
+	}
+	return normalizePaymentPolicy(item), nil
+}
+
+func (s *Service) UpdatePaymentPolicy(ctx context.Context, in PaymentPolicy) (PaymentPolicy, error) {
+	in = normalizePaymentPolicy(in)
+	if in.TenantID == "" {
+		return PaymentPolicy{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	item, err := s.store.UpsertPaymentPolicy(ctx, in)
+	if err != nil {
+		return PaymentPolicy{}, err
+	}
+	item = normalizePaymentPolicy(item)
+	_ = s.publishAudit(ctx, "audit.payment.policy_updated", item.TenantID, map[string]interface{}{
+		"allowed_tr31_versions":       item.AllowedTR31Versions,
+		"require_kbpk_for_tr31":       item.RequireKBPKForTR31,
+		"allow_inline_key_material":   item.AllowInlineKeyMaterial,
+		"max_iso20022_payload_bytes":  item.MaxISO20022PayloadBytes,
+		"require_iso20022_lau_context": item.RequireISO20022LAUContext,
+	})
+	return item, nil
+}
+
+func (s *Service) mustPaymentPolicy(ctx context.Context, tenantID string) (PaymentPolicy, error) {
+	item, err := s.GetPaymentPolicy(ctx, tenantID)
+	if err != nil {
+		return PaymentPolicy{}, err
+	}
+	return item, nil
+}
+
+func paymentTR31VersionAllowed(policy PaymentPolicy, version string) bool {
+	ver := normalizeTR31Version(version)
+	if ver == "" {
+		return false
+	}
+	for _, allowed := range policy.AllowedTR31Versions {
+		if normalizeTR31Version(allowed) == ver {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Service) RegisterPaymentKey(ctx context.Context, req RegisterPaymentKeyRequest) (PaymentKey, error) {
@@ -246,6 +339,26 @@ func (s *Service) CreateTR31(ctx context.Context, req CreateTR31Request) (Create
 	if req.TenantID == "" || req.KeyID == "" {
 		return CreateTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and key_id are required")
 	}
+	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	if err != nil {
+		return CreateTR31Response{}, err
+	}
+	if !policy.AllowInlineKeyMaterial && strings.TrimSpace(req.MaterialB64) != "" {
+		return CreateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "inline key material is blocked by payment policy")
+	}
+	if policy.RequireKBPKForTR31 && firstString(req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64) == "" {
+		return CreateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "kbpk/kek is required by payment policy for TR-31")
+	}
+	version := normalizeTR31Version(req.TR31Version)
+	if strings.TrimSpace(req.TR31Version) == "" {
+		version = "D"
+	}
+	if version == "" {
+		return CreateTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", "unsupported tr31_version")
+	}
+	if !paymentTR31VersionAllowed(policy, version) {
+		return CreateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "tr31_version is blocked by payment policy")
+	}
 	raw, err := s.resolveKeyMaterial(ctx, req.TenantID, req.KeyID, req.MaterialB64)
 	if err != nil {
 		return CreateTR31Response{}, err
@@ -258,13 +371,6 @@ func (s *Service) CreateTR31(ctx context.Context, req CreateTR31Request) (Create
 	defer pkgcrypto.Zeroize(kbpk)
 	if err := s.consumeMeter(); err != nil {
 		return CreateTR31Response{}, err
-	}
-	version := normalizeTR31Version(req.TR31Version)
-	if strings.TrimSpace(req.TR31Version) == "" {
-		version = "D"
-	}
-	if version == "" {
-		return CreateTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", "unsupported tr31_version")
 	}
 	usage := normalizeTR31UsageCode(req.UsageCode)
 	if usage == "" {
@@ -323,6 +429,13 @@ func (s *Service) ParseTR31(ctx context.Context, req ParseTR31Request) (ParseTR3
 	if req.TenantID == "" || req.KeyBlock == "" {
 		return ParseTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and key_block are required")
 	}
+	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	if err != nil {
+		return ParseTR31Response{}, err
+	}
+	if policy.RequireKBPKForTR31 && firstString(req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64) == "" {
+		return ParseTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "kbpk/kek is required by payment policy for TR-31")
+	}
 	kbpk, kbpkRef, err := s.resolveKBPKMaterial(ctx, req.TenantID, req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "kbpk_key_b64", "kbpk_key_id")
 	if err != nil {
 		return ParseTR31Response{Valid: false}, err
@@ -337,6 +450,9 @@ func (s *Service) ParseTR31(ctx context.Context, req ParseTR31Request) (ParseTR3
 		return ParseTR31Response{}, err
 	}
 	version := normalizeTR31Version(header.VersionID)
+	if !paymentTR31VersionAllowed(policy, version) {
+		return ParseTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "tr31_version is blocked by payment policy")
+	}
 	algorithm := tr31AlgorithmNameFromCode(header.Algorithm)
 	usage := normalizeTR31UsageCode(header.KeyUsage)
 	if usage == "" {
@@ -386,6 +502,10 @@ func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (
 	if req.TenantID == "" {
 		return TranslateTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
+	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	if err != nil {
+		return TranslateTR31Response{}, err
+	}
 	sourceFmt := normalizeTR31Format(req.SourceFormat)
 	targetFmt := normalizeTR31Format(req.TargetFormat)
 	if sourceFmt == "" || targetFmt == "" {
@@ -400,6 +520,16 @@ func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (
 	sourceKBPKKeyB64 := firstString(req.SourceKBPKKeyB64, req.KEKKeyB64)
 	targetKBPKKeyID := firstString(req.TargetKBPKKeyID, req.KEKKeyID)
 	targetKBPKKeyB64 := firstString(req.TargetKBPKKeyB64, req.KEKKeyB64)
+	if policy.RequireKBPKForTR31 {
+		sourceNeedsKBPK := sourceFmt == TR31FormatB || sourceFmt == TR31FormatC || sourceFmt == TR31FormatD
+		targetNeedsKBPK := targetFmt == TR31FormatB || targetFmt == TR31FormatC || targetFmt == TR31FormatD
+		if sourceNeedsKBPK && firstString(sourceKBPKKeyID, sourceKBPKKeyB64) == "" {
+			return TranslateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "source kbpk/kek is required by payment policy for TR-31 translation")
+		}
+		if targetNeedsKBPK && firstString(targetKBPKKeyID, targetKBPKKeyB64) == "" {
+			return TranslateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "target kbpk/kek is required by payment policy for TR-31 translation")
+		}
+	}
 
 	keyMaterial, sourceKCV, err := s.resolveSourceMaterial(ctx, req.TenantID, sourceKeyID, sourceFmt, req.SourceBlock, sourceKBPKKeyID, sourceKBPKKeyB64)
 	if err != nil {
@@ -434,6 +564,11 @@ func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (
 		versionForTarget = "C"
 	case TR31FormatD:
 		versionForTarget = "D"
+	}
+	if targetFmt == TR31FormatB || targetFmt == TR31FormatC || targetFmt == TR31FormatD {
+		if !paymentTR31VersionAllowed(policy, versionForTarget) {
+			return TranslateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "target tr31_version is blocked by payment policy")
+		}
 	}
 
 	algorithm := strings.ToUpper(defaultString(req.Algorithm, "AES"))
@@ -524,6 +659,13 @@ func (s *Service) ValidateTR31(ctx context.Context, req ValidateTR31Request) (Va
 	if strings.TrimSpace(req.TenantID) == "" || req.KeyBlock == "" {
 		return ValidateTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and key_block are required")
 	}
+	policy, err := s.mustPaymentPolicy(ctx, strings.TrimSpace(req.TenantID))
+	if err != nil {
+		return ValidateTR31Response{}, err
+	}
+	if policy.RequireKBPKForTR31 && firstString(req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64) == "" {
+		return ValidateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "kbpk/kek is required by payment policy for TR-31")
+	}
 	kbpk, _, err := s.resolveKBPKMaterial(ctx, strings.TrimSpace(req.TenantID), req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "kbpk_key_b64", "kbpk_key_id")
 	if err != nil {
 		return ValidateTR31Response{}, err
@@ -538,6 +680,9 @@ func (s *Service) ValidateTR31(ctx context.Context, req ValidateTR31Request) (Va
 	}
 	defer pkgcrypto.Zeroize(key)
 	version := normalizeTR31Version(header.VersionID)
+	if !paymentTR31VersionAllowed(policy, version) {
+		return ValidateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "tr31_version is blocked by payment policy")
+	}
 	algorithm := tr31AlgorithmNameFromCode(header.Algorithm)
 	usage := normalizeTR31UsageCode(header.KeyUsage)
 	if usage == "" {
@@ -898,6 +1043,13 @@ func (s *Service) ISO20022Sign(ctx context.Context, req ISO20022SignRequest) (ma
 	if req.TenantID == "" || req.KeyID == "" || xml == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and xml are required")
 	}
+	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	if policy.MaxISO20022PayloadBytes > 0 && len([]byte(xml)) > policy.MaxISO20022PayloadBytes {
+		return nil, newServiceError(http.StatusRequestEntityTooLarge, "payload_too_large", "xml exceeds payment policy max_iso20022_payload_bytes")
+	}
 	if s.keycore == nil {
 		return nil, newServiceError(http.StatusFailedDependency, "keycore_unavailable", "keycore client is not configured")
 	}
@@ -931,6 +1083,13 @@ func (s *Service) ISO20022Verify(ctx context.Context, req ISO20022VerifyRequest)
 	if req.TenantID == "" || req.KeyID == "" || xml == "" || sig == "" {
 		return false, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id, xml and signature_b64 are required")
 	}
+	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	if err != nil {
+		return false, err
+	}
+	if policy.MaxISO20022PayloadBytes > 0 && len([]byte(xml)) > policy.MaxISO20022PayloadBytes {
+		return false, newServiceError(http.StatusRequestEntityTooLarge, "payload_too_large", "xml exceeds payment policy max_iso20022_payload_bytes")
+	}
 	if s.keycore == nil {
 		return false, newServiceError(http.StatusFailedDependency, "keycore_unavailable", "keycore client is not configured")
 	}
@@ -948,6 +1107,13 @@ func (s *Service) ISO20022Encrypt(ctx context.Context, req ISO20022EncryptReques
 	xml := normalizeISOXML(req.XML)
 	if req.TenantID == "" || req.KeyID == "" || xml == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and xml are required")
+	}
+	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	if policy.MaxISO20022PayloadBytes > 0 && len([]byte(xml)) > policy.MaxISO20022PayloadBytes {
+		return nil, newServiceError(http.StatusRequestEntityTooLarge, "payload_too_large", "xml exceeds payment policy max_iso20022_payload_bytes")
 	}
 	if s.keycore == nil {
 		return nil, newServiceError(http.StatusFailedDependency, "keycore_unavailable", "keycore client is not configured")
@@ -1003,6 +1169,16 @@ func (s *Service) GenerateLAU(ctx context.Context, req LAUGenerateRequest) (stri
 	if req.TenantID == "" || strings.TrimSpace(req.Message) == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and message are required")
 	}
+	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	if err != nil {
+		return "", err
+	}
+	if policy.RequireISO20022LAUContext && strings.TrimSpace(req.Context) == "" {
+		return "", newServiceError(http.StatusForbidden, "policy_violation", "context is required by payment policy for LAU")
+	}
+	if policy.MaxISO20022PayloadBytes > 0 && len([]byte(req.Message)) > policy.MaxISO20022PayloadBytes {
+		return "", newServiceError(http.StatusRequestEntityTooLarge, "payload_too_large", "message exceeds payment policy max_iso20022_payload_bytes")
+	}
 	key, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, req.KeyID, req.LAUKeyB64, "lau_key_b64", "key_id")
 	if err != nil {
 		return "", err
@@ -1016,6 +1192,13 @@ func (s *Service) GenerateLAU(ctx context.Context, req LAUGenerateRequest) (stri
 }
 
 func (s *Service) VerifyLAU(ctx context.Context, req LAUVerifyRequest) (bool, error) {
+	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	if err != nil {
+		return false, err
+	}
+	if policy.RequireISO20022LAUContext && strings.TrimSpace(req.Context) == "" {
+		return false, newServiceError(http.StatusForbidden, "policy_violation", "context is required by payment policy for LAU")
+	}
 	got, err := s.GenerateLAU(ctx, LAUGenerateRequest{
 		TenantID:  req.TenantID,
 		KeyID:     req.KeyID,

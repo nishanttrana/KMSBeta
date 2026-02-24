@@ -15,6 +15,18 @@ type PaymentKey = {
 };
 
 type PaymentKeyListResponse = { items: PaymentKey[] };
+type PaymentPolicyResponse = { policy: PaymentPolicy };
+
+export type PaymentPolicy = {
+  tenant_id: string;
+  allowed_tr31_versions: string[];
+  require_kbpk_for_tr31: boolean;
+  allow_inline_key_material: boolean;
+  max_iso20022_payload_bytes: number;
+  require_iso20022_lau_context: boolean;
+  updated_by?: string;
+  updated_at?: string;
+};
 
 function tenantQuery(session: AuthSession): string {
   return `tenant_id=${encodeURIComponent(session.tenantId)}`;
@@ -27,6 +39,25 @@ export async function listPaymentKeys(session: AuthSession): Promise<PaymentKey[
     `/payment/keys?${tenantQuery(session)}`
   );
   return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getPaymentPolicy(session: AuthSession): Promise<PaymentPolicy> {
+  const out = await serviceRequest<PaymentPolicyResponse>(session, "payment", `/payment/policy?${tenantQuery(session)}`);
+  return (out?.policy || {}) as PaymentPolicy;
+}
+
+export async function updatePaymentPolicy(
+  session: AuthSession,
+  input: Partial<PaymentPolicy>
+): Promise<PaymentPolicy> {
+  const out = await serviceRequest<PaymentPolicyResponse>(session, "payment", `/payment/policy?${tenantQuery(session)}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      ...input
+    })
+  });
+  return (out?.policy || {}) as PaymentPolicy;
 }
 
 export async function createTR31(
