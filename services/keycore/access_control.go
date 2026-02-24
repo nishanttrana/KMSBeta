@@ -247,9 +247,6 @@ func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation strin
 	if !actor.Authenticated {
 		return errors.New("access denied: authenticated caller required for key with access policy")
 	}
-	if actorIsAdmin(actor) {
-		return nil
-	}
 
 	groupIDs := normalizeActorGroups(actor.Groups)
 	if strings.TrimSpace(actor.UserID) != "" {
