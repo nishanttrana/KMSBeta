@@ -36,7 +36,9 @@ import {
   RefreshCcw,
   ExternalLink,
   Users,
-  TerminalSquare
+  TerminalSquare,
+  ChevronsLeft,
+  ChevronsRight
 } from "lucide-react";
 import { refreshSession, saveSession, type AuthSession } from "../lib/auth";
 import {
@@ -15728,9 +15730,30 @@ export default function VectaDashboard(props){
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
         *::-webkit-scrollbar{width:5px;height:5px} *::-webkit-scrollbar-track{background:transparent} *::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
       <div style={{width:collapsed?56:210,background:C.sidebar,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",transition:"width .2s",flexShrink:0,overflow:"hidden"}}>
-        <div style={{padding:collapsed?"12px 8px":"12px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8,cursor:"pointer",minHeight:44}} onClick={()=>setCollapsed(!collapsed)}>
+        <div style={{padding:collapsed?"8px 8px":"8px 10px 8px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8,minHeight:44,justifyContent:collapsed?"center":"space-between"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
           <div style={{width:28,height:28,borderRadius:7,background:`linear-gradient(135deg,${C.accent},${C.purple})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:C.bg,flexShrink:0}}>V</div>
           {!collapsed&&<span style={{fontSize:13,fontWeight:700,letterSpacing:1.5,color:C.text}}>VECTA KMS</span>}
+          </div>
+          <button
+            onClick={()=>setCollapsed((v)=>!v)}
+            title={collapsed?"Expand sidebar":"Collapse sidebar"}
+            style={{
+              width:24,
+              height:24,
+              borderRadius:6,
+              border:`1px solid ${C.border}`,
+              background:"transparent",
+              color:C.dim,
+              display:"inline-flex",
+              alignItems:"center",
+              justifyContent:"center",
+              cursor:"pointer",
+              flexShrink:0
+            }}
+          >
+            {collapsed?<ChevronsRight size={13} strokeWidth={2}/>:<ChevronsLeft size={13} strokeWidth={2}/>}
+          </button>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"6px 0"}}>
           {navGroups.map(g=><div key={g.g}>
