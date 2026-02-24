@@ -8,3 +8,5 @@ infra/certs/out/**
 .env.local
 .env.*.local
 
+# Node dependency caches
+web/dashboard/node_modules/
