@@ -13548,25 +13548,24 @@ const SBOM=({session,onToast})=>{
                 {sbomTrend.length?`${Number(latestTrend?.total||0)} total (${trendDelta>=0?"+":""}${trendDelta} vs prev)`:"No history"}
               </div>
             </div>
-            <div style={{height:128,border:`1px solid ${C.border}`,borderRadius:8,background:C.surface,padding:8}}>
+            <div style={{height:128,border:`1px solid ${C.border}`,borderRadius:8,background:C.surface,padding:8,overflow:"hidden"}}>
               {sbomTrend.length?<div style={{height:"100%",display:"grid",gridTemplateColumns:"36px 1fr",gap:6}}>
-                <div style={{display:"flex",flexDirection:"column",justifyContent:"space-between",fontSize:9,color:C.muted}}>
+                <div style={{display:"flex",flexDirection:"column",justifyContent:"space-between",fontSize:9,color:C.muted,overflow:"hidden"}}>
                   {trendTicks.map((tick:number)=><span key={tick}>{tick}</span>)}
                 </div>
-                <div style={{display:"grid",gridTemplateRows:"1fr auto",height:"100%"}}>
-                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{width:"100%",height:"100%"}}>
-                    {trendTicks.map((tick:number)=><line key={`grid-${tick}`} x1="0" x2="100" y1={trendTickY(tick)} y2={trendTickY(tick)} stroke={C.border} strokeWidth="0.6"/>)}
-                    <polyline
-                      fill="none"
-                      stroke={C.accent}
-                      strokeWidth="2.2"
-                      points={trendPoints}
-                    />
-                    {trendChartPoints.map((point:any,index:number)=><g key={`${point.at}-${index}`}>
-                      <circle cx={point.x} cy={point.y} r="2" fill={C.accent}/>
-                      {(index===trendChartPoints.length-1||index===0||index%2===0)?<text x={point.x} y={Math.max(6,point.y-4)} textAnchor="middle" fontSize="4.2" fill={C.text}>{point.total}</text>:null}
-                    </g>)}
-                  </svg>
+                <div style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
+                  <div style={{flex:1,minHeight:0,overflow:"hidden"}}>
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{width:"100%",height:"100%",display:"block",overflow:"hidden"}}>
+                      {trendTicks.map((tick:number)=><line key={`grid-${tick}`} x1="0" x2="100" y1={trendTickY(tick)} y2={trendTickY(tick)} stroke={C.border} strokeWidth="0.6"/>)}
+                      <polyline
+                        fill="none"
+                        stroke={C.accent}
+                        strokeWidth="2.2"
+                        points={trendPoints}
+                      />
+                      {trendChartPoints.map((point:any,index:number)=><circle key={`${point.at}-${index}`} cx={point.x} cy={point.y} r="2" fill={C.accent}/>)}
+                    </svg>
+                  </div>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:C.muted,paddingTop:4}}>
                     <span>{trendChartPoints[0]?.label||"-"}</span>
                     <span>{trendChartPoints[trendChartPoints.length-1]?.label||"-"}</span>
