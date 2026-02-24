@@ -1039,7 +1039,10 @@ function toneForSeverity(sev: string): string {
 }
 
 function keyChoicesFromCatalog(keyCatalog: any[]): any[] {
-  return Array.isArray(keyCatalog) ? keyCatalog : [];
+  if (!Array.isArray(keyCatalog)) {
+    return [];
+  }
+  return keyCatalog.filter((k) => normalizeKeyState(String(k?.state || "")) !== "deleted");
 }
 
 function isFipsAlgorithm(algorithm: string): boolean {
@@ -2398,7 +2401,13 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
       const updated=mapped.find((k)=>k.id===preferredKeyId);
       if(updated){
         setSelectedKey(updated);
+      }else if(mapped.length){
+        setSelectedKey(mapped[0]);
+      }else{
+        setSelectedKey(null);
       }
+    }else if(!mapped.length){
+      setSelectedKey(null);
     }
     return mapped;
   };

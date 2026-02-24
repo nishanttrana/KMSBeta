@@ -1750,11 +1750,17 @@ func (s *Service) ListKeys(ctx context.Context, tenantID string, limit int, offs
 	if err != nil {
 		return nil, err
 	}
+	out := make([]Key, 0, len(keys))
 	for _, k := range keys {
+		if normalizeLifecycleStatus(k.Status) == "deleted" {
+			_ = s.cache.Delete(ctx, tenantID, k.ID)
+			continue
+		}
+		out = append(out, k)
 		s.exists.AddString(existsToken(tenantID, k.ID))
 		_ = s.cache.Set(ctx, k)
 	}
-	return keys, nil
+	return out, nil
 }
 
 func (s *Service) GetKey(ctx context.Context, tenantID string, keyID string) (Key, error) {
@@ -1764,12 +1770,20 @@ func (s *Service) GetKey(ctx context.Context, tenantID string, keyID string) (Ke
 	token := existsToken(tenantID, keyID)
 	if s.exists.TestString(token) {
 		if k, ok, err := s.cache.Get(ctx, tenantID, keyID); err == nil && ok {
+			if normalizeLifecycleStatus(k.Status) == "deleted" {
+				_ = s.cache.Delete(ctx, tenantID, keyID)
+				return Key{}, errStoreNotFound
+			}
 			return k, nil
 		}
 	}
 	k, err := s.store.GetKey(ctx, tenantID, keyID)
 	if err != nil {
 		return Key{}, err
+	}
+	if normalizeLifecycleStatus(k.Status) == "deleted" {
+		_ = s.cache.Delete(ctx, tenantID, keyID)
+		return Key{}, errStoreNotFound
 	}
 	s.exists.AddString(token)
 	_ = s.cache.Set(ctx, k)
