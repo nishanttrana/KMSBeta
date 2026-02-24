@@ -314,9 +314,10 @@ const TAB_FEATURES = {
   tokenize: "data_protection",
   dataenc: "data_protection",
   payment: "payment_crypto",
+  cloudctl: ["cloud_byok", "hyok_proxy"],
   byok: "cloud_byok",
   hyok: "hyok_proxy",
-  ekm: "ekm_database",
+  ekm: ["ekm_database", "kmip_server"],
   kmip: "kmip_server",
   hsm: "hsm_hardware_or_software",
   qkd: "qkd_interface",
@@ -1006,15 +1007,21 @@ function toViewKey(k: any) {
   };
 }
 
-function canSeeTab(tab: string, enabledFeatures: Set<FeatureKey>): boolean {
-  const need = TAB_FEATURES[tab];
+function canSeeFeature(need: any, enabledFeatures: Set<FeatureKey>): boolean {
   if (!need) {
     return true;
+  }
+  if (Array.isArray(need)) {
+    return need.some((item) => canSeeFeature(item, enabledFeatures));
   }
   if (need === "hsm_hardware_or_software") {
     return enabledFeatures.has("hsm_hardware") || enabledFeatures.has("hsm_software");
   }
   return enabledFeatures.has(need as FeatureKey);
+}
+
+function canSeeTab(tab: string, enabledFeatures: Set<FeatureKey>): boolean {
+  return canSeeFeature(TAB_FEATURES[tab], enabledFeatures);
 }
 
 function toneForSeverity(sev: string): string {
@@ -1813,7 +1820,7 @@ const NAV=[
   {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"crypto",icon:Zap,label:"Crypto Console"},{id:"restapi",icon:TerminalSquare,label:"REST API Workbench"}]},
   {g:"SECRETS & CERTS",items:[{id:"vault",icon:Lock,label:"Secret Vault"},{id:"certs",icon:FileText,label:"Certificates / PKI"}]},
   {g:"DATA PROTECTION",items:[{id:"tokenize",icon:VenetianMask,label:"Tokenize / Mask / Redact"},{id:"dataenc",icon:Database,label:"Data Encryption"},{id:"payment",icon:CreditCard,label:"Payment Crypto"},{id:"pkcs11",icon:Plug,label:"PKCS#11 / JCA"}]},
-  {g:"CLOUD & INTEGRATION",items:[{id:"byok",icon:Cloud,label:"BYOK"},{id:"hyok",icon:ShieldCheck,label:"HYOK"},{id:"ekm",icon:Database,label:"EKM"}]},
+  {g:"CLOUD KEY CONTROL",items:[{id:"cloudctl",icon:Cloud,label:"Cloud Key Control"},{id:"ekm",icon:Database,label:"EKM"}]},
   {g:"INFRASTRUCTURE",items:[{id:"hsm",icon:Cpu,label:"HSM / Primus"},{id:"qkd",icon:GitBranch,label:"QKD Interface"},{id:"mpc",icon:Cpu,label:"MPC Engine"},{id:"cluster",icon:GitBranch,label:"Cluster"}]},
   {g:"GOVERNANCE",items:[{id:"approvals",icon:CheckCircle2,label:"Approvals"},{id:"alerts",icon:Bell,label:"Alert Center"},{id:"audit",icon:ScrollText,label:"Audit Log"},{id:"compliance",icon:ClipboardCheck,label:"Compliance"},{id:"sbom",icon:BarChart3,label:"SBOM / CBOM"}]},
   {g:"ADMIN",items:[{id:"admin",icon:Settings,label:"Administration"},{id:"users",icon:Users,label:"User Management"},{id:"docs",icon:ScrollText,label:"Documentation"}]},
@@ -9511,6 +9518,29 @@ const HYOK=({session,keyCatalog,onToast})=>{
   </div>;
 };
 
+const CloudKeyControl=({session,keyCatalog,onToast,subView,onSubViewChange})=>{
+  const [cloudSubtab,setCloudSubtab]=useState("byok");
+  const currentSubtab=String(subView||cloudSubtab||"byok");
+  const selectSubtab=(next:string)=>{
+    if(onSubViewChange){
+      onSubViewChange(next);
+      return;
+    }
+    setCloudSubtab(next);
+  };
+  const showInlineSubTabs=!onSubViewChange;
+
+  return <div>
+    {showInlineSubTabs&&<div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+      <Btn small primary={currentSubtab==="byok"} onClick={()=>selectSubtab("byok")}>BYOK</Btn>
+      <Btn small primary={currentSubtab==="hyok"} onClick={()=>selectSubtab("hyok")}>HYOK</Btn>
+    </div>}
+    {currentSubtab==="hyok"
+      ? <HYOK session={session} keyCatalog={keyCatalog} onToast={onToast}/>
+      : <BYOK session={session} keyCatalog={keyCatalog} onToast={onToast}/>}
+  </div>;
+};
+
 const EKM=({session,onToast,subView,onSubViewChange})=>{
   const [loading,setLoading]=useState(false);
   const [agents,setAgents]=useState([]);
@@ -15426,13 +15456,17 @@ const Documentation=()=>{
 // 
 // MAIN APP WITH SIDEBAR
 // 
-const TABS={home:Home,keys:Keys,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,byok:BYOK,hyok:HYOK,ekm:EKM,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
-const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",restapi:"REST API Workbench",vault:"Secret Vault",certs:"Certificates / Mini PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",byok:"BYOK",hyok:"HYOK",ekm:"EKM",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
+const TABS={home:Home,keys:Keys,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,cloudctl:CloudKeyControl,byok:BYOK,hyok:HYOK,ekm:EKM,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
+const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",restapi:"REST API Workbench",vault:"Secret Vault",certs:"Certificates / Mini PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",cloudctl:"Cloud Key Control",byok:"BYOK",hyok:"HYOK",ekm:"EKM",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
 const SUB_PANES={
+  cloudctl:[
+    {id:"byok",label:"BYOK",hint:"Cloud provider key import and sync",icon:Cloud,feature:"cloud_byok"},
+    {id:"hyok",label:"HYOK",hint:"Hold-your-own-key policy and cryptographic controls",icon:ShieldCheck,feature:"hyok_proxy"}
+  ],
   ekm:[
-    {id:"db",label:"EKM for DBs",hint:"MSSQL / Oracle TDE agents"},
-    {id:"bitlocker",label:"BitLocker",hint:"Windows endpoint key lifecycle"},
-    {id:"kmip",label:"KMIP",hint:"Profiles, clients, mTLS onboarding"}
+    {id:"db",label:"EKM for DBs",hint:"MSSQL / Oracle TDE agents",icon:Database,feature:"ekm_database"},
+    {id:"bitlocker",label:"BitLocker",hint:"Windows endpoint key lifecycle",icon:Lock,feature:"ekm_database"},
+    {id:"kmip",label:"KMIP",hint:"Profiles, clients, mTLS onboarding",icon:Link,feature:"kmip_server"}
   ]
 };
 
@@ -15452,7 +15486,7 @@ export default function VectaDashboard(props){
   const [toast,setToast]=useState("");
   const [keyCatalog,setKeyCatalog]=useState([]);
   const [tagCatalog,setTagCatalog]=useState([]);
-  const [subPaneSelection,setSubPaneSelection]=useState({ekm:"db"});
+  const [subPaneSelection,setSubPaneSelection]=useState({cloudctl:"byok",ekm:"db"});
   const [fipsMode,setFipsMode]=useState<"enabled"|"disabled">("disabled");
   const [reportedUnread,setReportedUnread]=useState(Number(unreadAlerts||0));
   const [cliStatus,setCLIStatus]=useState<any>(null);
@@ -15696,15 +15730,19 @@ export default function VectaDashboard(props){
     ()=>NAV.map((g)=>({...g,items:g.items.filter((it)=>canSeeTab(it.id,enabledFeatures||new Set()))})).filter((g)=>g.items.length>0),
     [enabledFeatures]
   );
-  const activeSubPaneItems=Array.isArray((SUB_PANES as any)[tab])?(SUB_PANES as any)[tab]:[];
+  const allActiveSubPaneItems=Array.isArray((SUB_PANES as any)[tab])?(SUB_PANES as any)[tab]:[];
+  const activeSubPaneItems=allActiveSubPaneItems.filter((item:any)=>canSeeFeature(item?.feature,enabledFeatures||new Set()));
+  const selectedSubPaneRaw=String((subPaneSelection as any)[tab]||"");
   const activeSubPaneSelection=String(
-    (subPaneSelection as any)[tab]||
-    (activeSubPaneItems[0]?.id||"")
+    activeSubPaneItems.some((item:any)=>String(item.id)===selectedSubPaneRaw)
+      ? selectedSubPaneRaw
+      : (activeSubPaneItems[0]?.id||"")
   );
   const globalFipsEnabled=isFipsModeEnabled(fipsMode);
   const selectTab=(nextTab:string)=>{
     setTab(nextTab);
-    const paneItems=Array.isArray((SUB_PANES as any)[nextTab])?(SUB_PANES as any)[nextTab]:[];
+    const paneItems=(Array.isArray((SUB_PANES as any)[nextTab])?(SUB_PANES as any)[nextTab]:[])
+      .filter((item:any)=>canSeeFeature(item?.feature,enabledFeatures||new Set()));
     if(paneItems.length){
       setSubPaneSelection((prev:any)=>({
         ...prev,
@@ -15869,6 +15907,7 @@ export default function VectaDashboard(props){
             <div style={{display:"grid",gap:6}}>
               {activeSubPaneItems.map((item:any)=>{
                 const isActive=String(activeSubPaneSelection)===String(item.id);
+                const ItemIcon=typeof item.icon==="function"?item.icon:null;
                 return(
                   <div
                     key={String(item.id)}
@@ -15881,7 +15920,10 @@ export default function VectaDashboard(props){
                       cursor:"pointer"
                     }}
                   >
-                    <div style={{fontSize:11,color:isActive?C.text:C.dim,fontWeight:isActive?700:600,lineHeight:1.2}}>{String(item.label||item.id)}</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      {ItemIcon&&<span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",color:isActive?C.accent:C.dim}}><ItemIcon size={13} strokeWidth={2}/></span>}
+                      <div style={{fontSize:11,color:isActive?C.text:C.dim,fontWeight:isActive?700:600,lineHeight:1.2}}>{String(item.label||item.id)}</div>
+                    </div>
                     {item.hint&&<div style={{fontSize:9,color:C.muted,marginTop:4,lineHeight:1.3}}>{String(item.hint)}</div>}
                   </div>
                 );
