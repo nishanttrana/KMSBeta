@@ -1819,8 +1819,9 @@ const Row2=({children})=><div style={{display:"grid",gridTemplateColumns:"1fr 1f
 const Row3=({children})=><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>{children}</div>;
 
 const NAV=[
-  {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"crypto",icon:Zap,label:"Crypto Console"},{id:"restapi",icon:TerminalSquare,label:"REST API Workbench"}]},
-  {g:"SECRETS & CERTS",items:[{id:"vault",icon:Lock,label:"Secret Vault"},{id:"certs",icon:FileText,label:"Certificates / PKI"}]},
+  {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"certs",icon:FileText,label:"Certificates / PKI"}]},
+  {g:"WORKBENCH",items:[{id:"crypto",icon:Zap,label:"Crypto Console"},{id:"restapi",icon:TerminalSquare,label:"REST API Workbench"}]},
+  {g:"SECRETS & CERTS",items:[{id:"vault",icon:Lock,label:"Secret Vault"}]},
   {g:"DATA PROTECTION",items:[{id:"tokenize",icon:VenetianMask,label:"Tokenize / Mask / Redact"},{id:"dataenc",icon:Database,label:"Data Encryption"},{id:"payment",icon:CreditCard,label:"Payment Crypto"},{id:"pkcs11",icon:Plug,label:"PKCS#11 / JCA"}]},
   {g:"CLOUD KEY CONTROL",items:[{id:"cloudctl",icon:Cloud,label:"Cloud Key Control"},{id:"ekm",icon:Database,label:"Enterprise Key Management"}]},
   {g:"INFRASTRUCTURE",items:[{id:"hsm",icon:Cpu,label:"HSM / Primus"},{id:"qkd",icon:GitBranch,label:"QKD Interface"},{id:"mpc",icon:Cpu,label:"MPC Engine"},{id:"cluster",icon:GitBranch,label:"Cluster"}]},
