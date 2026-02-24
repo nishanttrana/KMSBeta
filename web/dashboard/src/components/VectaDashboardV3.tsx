@@ -13584,7 +13584,15 @@ const SBOM=({session,onToast})=>{
         </Card>
 
         <Card style={{padding:"12px 14px"}}>
-          <div style={{fontSize:12,fontWeight:700,color:C.text,letterSpacing:-.2,marginBottom:10}}>Cryptographic BOM</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div style={{fontSize:12,fontWeight:700,color:C.text,letterSpacing:-.2}}>Cryptographic BOM</div>
+            <div style={{display:"flex",gap:8}}>
+              <Btn small onClick={()=>void exportCBOMFile()} disabled={exportingCBOM} style={{height:30,fontSize:11}}>
+                {exportingCBOM?"Exporting...":"Export CBOM"}
+              </Btn>
+              <Btn small onClick={()=>void openDiff()} style={{height:30,fontSize:11}}>View Diff</Btn>
+            </div>
+          </div>
           <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:10,alignItems:"center"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}>
               <div style={{position:"relative",width:138,height:138,borderRadius:"50%",background:donutBackground,border:`1px solid ${C.border}`}}>
@@ -13606,10 +13614,6 @@ const SBOM=({session,onToast})=>{
                 </div>;
               })}
             </div>
-          </div>
-          <div style={{display:"flex",gap:8,marginTop:12}}>
-            <Btn small onClick={()=>void exportCBOMFile()} disabled={exportingCBOM}>{exportingCBOM?"Exporting...":"Export CBOM"}</Btn>
-            <Btn small onClick={()=>void openDiff()}>View Diff</Btn>
           </div>
           <div style={{marginTop:10,fontSize:10,color:C.muted}}>
             {`Generated ${cbomGenerated?new Date(cbomGenerated).toLocaleString():"-"} • Auto-scheduled daily and refreshed from live inventory.`}
