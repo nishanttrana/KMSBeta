@@ -13071,6 +13071,11 @@ const SBOM=({session,onToast})=>{
   const [depListTitle,setDepListTitle]=useState("");
   const [depListItems,setDepListItems]=useState<any[]>([]);
   const [depListFilter,setDepListFilter]=useState("");
+  const [selectedCBOMCategory,setSelectedCBOMCategory]=useState("");
+  const [cbomAssetListOpen,setCBOMAssetListOpen]=useState(false);
+  const [cbomAssetListTitle,setCBOMAssetListTitle]=useState("");
+  const [cbomAssetListItems,setCBOMAssetListItems]=useState<any[]>([]);
+  const [cbomAssetListFilter,setCBOMAssetListFilter]=useState("");
   const [diffOpen,setDiffOpen]=useState(false);
   const [diffData,setDiffData]=useState<any>(null);
 
@@ -13442,6 +13447,92 @@ const SBOM=({session,onToast})=>{
     });
   const donutBackground=distTotal>0?`conic-gradient(${slices.join(", ")})`:`conic-gradient(${C.border} 0deg 360deg)`;
   const totalAssets=Math.max(0,Number(cbomSummary?.total_assets??cbomLatest?.document?.total_asset_count??0));
+  const cbomAssets=Array.isArray(cbomLatest?.document?.assets)?cbomLatest.document.assets:[];
+
+  const isHSMBackedAsset=(asset:any)=>{
+    const metadata=(asset&&typeof asset.metadata==="object"&&asset.metadata)?asset.metadata:{};
+    const sourceBlob=[
+      asset?.source,
+      asset?.status,
+      asset?.asset_type,
+      asset?.name,
+      asset?.algorithm,
+      metadata?.storage,
+      metadata?.provider,
+      metadata?.backend,
+      metadata?.key_store,
+      metadata?.kek_mode,
+      metadata?.origin,
+      metadata?.hsm,
+      metadata?.hsm_backed,
+      metadata?.location
+    ].map((v)=>String(v??"")).join(" ").toLowerCase();
+    if(metadata?.hsm_backed===true){
+      return true;
+    }
+    if(String(metadata?.storage||"").toLowerCase()==="hsm"){
+      return true;
+    }
+    return /\bhsm\b|pkcs11|cloudhsm|luna|thales|utimaco|hsm-backed/.test(sourceBlob);
+  };
+
+  const isWeakLegacyAsset=(asset:any)=>{
+    const alg=String(asset?.algorithm||"").toUpperCase();
+    const status=String(asset?.status||"").toLowerCase();
+    const bits=Number(asset?.strength_bits||0);
+    if(bits>0&&bits<128){
+      return true;
+    }
+    if(/\bDES\b|\b3DES\b|RC2|RC4|MD5|SHA1|RSA-1024|DSA-1024/.test(alg)){
+      return true;
+    }
+    if(status.includes("weak")||status.includes("legacy")||status.includes("deprecated")){
+      return true;
+    }
+    return Boolean(asset?.deprecated);
+  };
+
+  const cbomCategoryRows=useMemo(()=>{
+    const list=Array.isArray(cbomAssets)?cbomAssets:[];
+    const hsmBacked=list.filter((asset:any)=>isHSMBackedAsset(asset));
+    const softwareBacked=list.filter((asset:any)=>!isHSMBackedAsset(asset));
+    return [
+      {label:"PQC-ready",items:list.filter((asset:any)=>Boolean(asset?.pqc_ready)),tone:"green"},
+      {label:"Deprecated",items:list.filter((asset:any)=>Boolean(asset?.deprecated)),tone:"amber"},
+      {label:"Weak / Legacy",items:list.filter((asset:any)=>isWeakLegacyAsset(asset)),tone:"red"},
+      {label:"HSM-backed",items:hsmBacked,tone:"blue"},
+      {label:"Software-backed",items:softwareBacked,tone:"blue"}
+    ].map((row:any)=>({
+      ...row,
+      count:Array.isArray(row.items)?row.items.length:0
+    }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[cbomAssets]);
+
+  const openCBOMAssetList=(row:any)=>{
+    setSelectedCBOMCategory(String(row?.label||""));
+    setCBOMAssetListTitle(`${String(row?.label||"")} Assets`);
+    setCBOMAssetListFilter("");
+    setCBOMAssetListItems(Array.isArray(row?.items)?[...row.items]:[]);
+    setCBOMAssetListOpen(true);
+  };
+
+  const filteredCBOMAssetList=cbomAssetListItems.filter((asset:any)=>{
+    const q=String(cbomAssetListFilter||"").trim().toLowerCase();
+    if(!q){
+      return true;
+    }
+    const text=[
+      asset?.id,
+      asset?.name,
+      asset?.asset_type,
+      asset?.source,
+      asset?.algorithm,
+      asset?.status,
+      asset?.strength_bits
+    ].map((v)=>String(v??"").toLowerCase()).join(" ");
+    return text.includes(q);
+  });
 
   const sbomGenerated=String(sbomLatest?.document?.generated_at||sbomLatest?.created_at||"");
   const cbomGenerated=String(cbomLatest?.document?.generated_at||cbomLatest?.created_at||"");
@@ -13613,6 +13704,38 @@ const SBOM=({session,onToast})=>{
                   <span style={{color:C.dim}}>{`${pct}%`}</span>
                 </div>;
               })}
+              <div style={{marginTop:6,paddingTop:8,borderTop:`1px solid ${C.border}`,display:"grid",gap:2}}>
+                {cbomCategoryRows.map((row:any)=><div key={String(row.label)} style={{display:"flex",alignItems:"center",justifyContent:"space-between",fontSize:10,padding:"3px 0"}}>
+                  <button
+                    type="button"
+                    onClick={()=>openCBOMAssetList(row)}
+                    style={{
+                      border:"none",
+                      background:"transparent",
+                      color:(cbomAssetListOpen&&selectedCBOMCategory===row.label)?C.text:C.dim,
+                      fontWeight:(cbomAssetListOpen&&selectedCBOMCategory===row.label)?700:500,
+                      cursor:"pointer",
+                      padding:0
+                    }}
+                  >
+                    {String(row.label)}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={()=>openCBOMAssetList(row)}
+                    style={{
+                      border:"none",
+                      background:"transparent",
+                      color:(cbomAssetListOpen&&selectedCBOMCategory===row.label)?C.text:C.dim,
+                      fontWeight:700,
+                      cursor:"pointer",
+                      padding:0
+                    }}
+                  >
+                    {Number(row.count||0).toLocaleString()}
+                  </button>
+                </div>)}
+              </div>
             </div>
           </div>
           <div style={{marginTop:10,fontSize:10,color:C.muted}}>
@@ -13681,6 +13804,41 @@ const SBOM=({session,onToast})=>{
       <div style={{display:"flex",justifyContent:"space-between",marginTop:10}}>
         <span style={{fontSize:10,color:C.muted}}>{`${filteredDepList.length} of ${depListItems.length} shown`}</span>
         <Btn onClick={()=>{setDepListOpen(false);setSelectedDepCategory("");}}>Close</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={cbomAssetListOpen} onClose={()=>{setCBOMAssetListOpen(false);setSelectedCBOMCategory("");}} title={cbomAssetListTitle||"CBOM Assets"}>
+      <div style={{fontSize:10,color:C.dim,marginBottom:8}}>
+        Filtered cryptographic assets from the current CBOM snapshot.
+      </div>
+      <Inp
+        value={cbomAssetListFilter}
+        onChange={(e:any)=>setCBOMAssetListFilter(e.target.value)}
+        placeholder="Search name, id, algorithm, source, status..."
+      />
+      <div style={{height:8}}/>
+      <Card style={{maxHeight:360,overflowY:"auto"}}>
+        <div style={{display:"grid",gap:6}}>
+          {filteredCBOMAssetList.map((asset:any,idx:number)=>{
+            const tone=Boolean(asset?.deprecated)||isWeakLegacyAsset(asset)?"red":Boolean(asset?.pqc_ready)?"green":"blue";
+            return <div key={`${String(asset?.id||"asset")}-${idx}`} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.border}`}}>
+              <div style={{display:"grid",gap:2}}>
+                <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(asset?.name||asset?.id||"-")}</div>
+                <div style={{fontSize:10,color:C.dim}}>
+                  {`${String(asset?.algorithm||"-")} • ${String(asset?.asset_type||"-")} • ${String(asset?.source||"-")} • ${Number(asset?.strength_bits||0)||"-"} bits`}
+                </div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <B c={tone}>{String(asset?.status||"unknown")}</B>
+              </div>
+            </div>;
+          })}
+          {!filteredCBOMAssetList.length?<div style={{fontSize:10,color:C.muted}}>No assets found for current filter.</div>:null}
+        </div>
+      </Card>
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:10}}>
+        <span style={{fontSize:10,color:C.muted}}>{`${filteredCBOMAssetList.length} of ${cbomAssetListItems.length} shown`}</span>
+        <Btn onClick={()=>{setCBOMAssetListOpen(false);setSelectedCBOMCategory("");}}>Close</Btn>
       </div>
     </Modal>
   </div>;
