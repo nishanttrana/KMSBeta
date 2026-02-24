@@ -206,6 +206,11 @@ import {
   listMPCKeys
 } from "../lib/mpc";
 import {
+  getBitLockerDeployPackage,
+  getBitLockerClient,
+  listBitLockerClients,
+  listBitLockerJobs,
+  listBitLockerRecoveryKeys,
   downloadEKMSDK,
   deleteEKMAgent,
   getEKMAgentHealth,
@@ -215,6 +220,8 @@ import {
   getEKMTDEPublicKey,
   listEKMAgentLogs,
   listEKMAgents,
+  queueBitLockerOperation,
+  registerBitLockerClient,
   registerEKMAgent,
   rotateEKMAgentKey
 } from "../lib/ekm";
@@ -1804,7 +1811,7 @@ const NAV=[
   {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"crypto",icon:Zap,label:"Crypto Console"},{id:"restapi",icon:TerminalSquare,label:"REST API Workbench"}]},
   {g:"SECRETS & CERTS",items:[{id:"vault",icon:Lock,label:"Secret Vault"},{id:"certs",icon:FileText,label:"Certificates / PKI"}]},
   {g:"DATA PROTECTION",items:[{id:"tokenize",icon:VenetianMask,label:"Tokenize / Mask / Redact"},{id:"dataenc",icon:Database,label:"Data Encryption"},{id:"payment",icon:CreditCard,label:"Payment Crypto"},{id:"pkcs11",icon:Plug,label:"PKCS#11 / JCA"}]},
-  {g:"CLOUD & INTEGRATION",items:[{id:"byok",icon:Cloud,label:"BYOK"},{id:"hyok",icon:ShieldCheck,label:"HYOK"},{id:"ekm",icon:Database,label:"EKM Agent Hub"},{id:"kmip",icon:Link,label:"KMIP"}]},
+  {g:"CLOUD & INTEGRATION",items:[{id:"byok",icon:Cloud,label:"BYOK"},{id:"hyok",icon:ShieldCheck,label:"HYOK"},{id:"ekm",icon:Database,label:"EKM"}]},
   {g:"INFRASTRUCTURE",items:[{id:"hsm",icon:Cpu,label:"HSM / Primus"},{id:"qkd",icon:GitBranch,label:"QKD Interface"},{id:"mpc",icon:Cpu,label:"MPC Engine"},{id:"cluster",icon:GitBranch,label:"Cluster"}]},
   {g:"GOVERNANCE",items:[{id:"approvals",icon:CheckCircle2,label:"Approvals"},{id:"alerts",icon:Bell,label:"Alert Center"},{id:"audit",icon:ScrollText,label:"Audit Log"},{id:"compliance",icon:ClipboardCheck,label:"Compliance"},{id:"sbom",icon:BarChart3,label:"SBOM / CBOM"}]},
   {g:"ADMIN",items:[{id:"admin",icon:Settings,label:"Administration"},{id:"users",icon:Users,label:"User Management"},{id:"docs",icon:ScrollText,label:"Documentation"}]},
@@ -9525,6 +9532,21 @@ const EKM=({session,onToast})=>{
     heartbeat_interval_sec:30,
     rotation_cycle_days:90
   });
+  const [bitLockerClients,setBitLockerClients]=useState([]);
+  const [bitLockerDeployPackage,setBitLockerDeployPackage]=useState(null);
+  const [bitLockerDeploying,setBitLockerDeploying]=useState(false);
+  const [bitLockerOpClientID,setBitLockerOpClientID]=useState("");
+  const [bitLockerJobs,setBitLockerJobs]=useState([]);
+  const [bitLockerRecovery,setBitLockerRecovery]=useState([]);
+  const [bitLockerLoadingDetail,setBitLockerLoadingDetail]=useState(false);
+  const [bitLockerForm,setBitLockerForm]=useState({
+    name:"",
+    host:"",
+    os_version:"Windows 11 / Server 2022",
+    mount_point:"C:",
+    heartbeat_interval_sec:30
+  });
+  const [ekmSubtab,setEkmSubtab]=useState("db");
   const promptDialog=usePromptDialog();
 
   const parseAgentMeta=(agent)=>{
@@ -9576,6 +9598,12 @@ const EKM=({session,onToast})=>{
       }));
       setStatusByID(statuses);
       setHealthByID(healthMap);
+      try{
+        const blItems=await listBitLockerClients(session,1000);
+        setBitLockerClients(Array.isArray(blItems)?blItems:[]);
+      }catch{
+        setBitLockerClients([]);
+      }
 
       const keyIDs=[...new Set(items.map((agent)=>String(agent.assigned_key_id||"").trim()).filter(Boolean))];
       const keyMeta={};
@@ -9728,6 +9756,95 @@ const EKM=({session,onToast})=>{
     setModal("deploy");
   };
 
+  const openBitLockerDeploy=()=>{
+    setBitLockerDeployPackage(null);
+    setBitLockerForm({
+      name:"",
+      host:"",
+      os_version:"Windows 11 / Server 2022",
+      mount_point:"C:",
+      heartbeat_interval_sec:30
+    });
+    setModal("bitlocker-deploy");
+  };
+
+  const submitBitLockerDeploy=async()=>{
+    const name=String(bitLockerForm.name||"").trim();
+    const host=String(bitLockerForm.host||"").trim();
+    if(!name||!host){
+      onToast?.("BitLocker client name and host are required.");
+      return;
+    }
+    setBitLockerDeploying(true);
+    try{
+      const client=await registerBitLockerClient(session,{
+        name,
+        host,
+        os_version:String(bitLockerForm.os_version||"windows").trim(),
+        mount_point:String(bitLockerForm.mount_point||"C:").trim()||"C:",
+        heartbeat_interval_sec:Math.max(5,Math.trunc(Number(bitLockerForm.heartbeat_interval_sec||30))),
+        metadata_json:JSON.stringify({managed_by:"vecta-ekm",feature:"bitlocker"})
+      });
+      const pkg=await getBitLockerDeployPackage(session,client.id,"windows");
+      setBitLockerDeployPackage(pkg);
+      onToast?.(`BitLocker client ${client.name} registered. Download package and deploy on Windows host.`);
+      await refresh(true);
+    }catch(error){
+      onToast?.(`BitLocker deploy failed: ${errMsg(error)}`);
+    }finally{
+      setBitLockerDeploying(false);
+    }
+  };
+
+  const runBitLockerOperation=async(client,operation)=>{
+    const clientID=String(client?.id||"").trim();
+    if(!clientID){
+      return;
+    }
+    setBitLockerOpClientID(`${clientID}:${operation}`);
+    try{
+      await queueBitLockerOperation(session,clientID,operation,{
+        mount_point:String(client?.mount_point||"C:").trim()||"C:"
+      });
+      onToast?.(`BitLocker operation queued: ${operation} (${client.name}).`);
+      await refresh(true);
+    }catch(error){
+      onToast?.(`BitLocker operation failed: ${errMsg(error)}`);
+    }finally{
+      setBitLockerOpClientID("");
+    }
+  };
+
+  const openBitLockerActivity=async(client)=>{
+    const clientID=String(client?.id||"").trim();
+    if(!clientID){
+      return;
+    }
+    let selected=client;
+    try{
+      selected=await getBitLockerClient(session,clientID);
+    }catch{
+      // fall back to cached row
+    }
+    setSelectedAgent(selected);
+    setModal("bitlocker-activity");
+    setBitLockerJobs([]);
+    setBitLockerRecovery([]);
+    setBitLockerLoadingDetail(true);
+    try{
+      const [jobs,recovery]=await Promise.all([
+        listBitLockerJobs(session,clientID,80),
+        listBitLockerRecoveryKeys(session,clientID,80)
+      ]);
+      setBitLockerJobs(Array.isArray(jobs)?jobs:[]);
+      setBitLockerRecovery(Array.isArray(recovery)?recovery:[]);
+    }catch(error){
+      onToast?.(`BitLocker activity load failed: ${errMsg(error)}`);
+    }finally{
+      setBitLockerLoadingDetail(false);
+    }
+  };
+
   const statusBadge=(agent)=>{
     const health=String(healthByID[agent.id]?.health||"").toLowerCase();
     const baseStatus=String(agent.status||"").toLowerCase();
@@ -9749,10 +9866,42 @@ const EKM=({session,onToast})=>{
   const standbyCount=sortedAgents.filter((agent)=>statusBadge(agent).label==="Standby").length;
   const degradedCount=sortedAgents.filter((agent)=>statusBadge(agent).label==="Degraded").length;
   const downCount=sortedAgents.filter((agent)=>statusBadge(agent).label==="Down").length;
+  const bitLockerBadge=(client)=>{
+    const status=String(client?.status||"").toLowerCase();
+    const health=String(client?.health||"").toLowerCase();
+    const protection=String(client?.protection_status||"").toLowerCase();
+    if(health==="down"||status==="disconnected"){
+      return {label:"Down",color:"red"};
+    }
+    if(health==="degraded"||status==="degraded"){
+      return {label:"Degraded",color:"amber"};
+    }
+    if(protection==="on"){
+      return {label:"Protected",color:"green"};
+    }
+    if(protection==="suspended"){
+      return {label:"Suspended",color:"amber"};
+    }
+    if(protection==="off"){
+      return {label:"Off",color:"red"};
+    }
+    return {label:"Unknown",color:"blue"};
+  };
+  const sortedBitLockerClients=[...bitLockerClients].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+  const bitLockerProtectedCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Protected").length;
+  const bitLockerSuspendedCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Suspended").length;
+  const bitLockerDegradedCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Degraded").length;
+  const bitLockerDownCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Down").length;
 
   return <div>
-    <Section
-      title="EXTENSIBLE KEY MANAGEMENT  -  TDE AGENTS"
+    <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+      <Btn small primary={ekmSubtab==="db"} onClick={()=>setEkmSubtab("db")}>EKM for DBs</Btn>
+      <Btn small primary={ekmSubtab==="bitlocker"} onClick={()=>setEkmSubtab("bitlocker")}>BitLocker Management</Btn>
+      <Btn small primary={ekmSubtab==="kmip"} onClick={()=>setEkmSubtab("kmip")}>KMIP</Btn>
+    </div>
+
+    {ekmSubtab==="db"&&<Section
+      title="EKM  -  TDE AGENTS"
       actions={<div style={{display:"flex",gap:8,alignItems:"center"}}>
         <Btn small onClick={()=>void refresh(false)} disabled={loading}>
           <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
@@ -9814,7 +9963,162 @@ const EKM=({session,onToast})=>{
           <div style={{fontSize:11,color:C.dim}}>No EKM agents registered yet. Deploy an agent to start MSSQL/Oracle TDE integration over PKCS#11.</div>
         </Card>}
       </div>
-    </Section>
+    </Section>}
+
+    {ekmSubtab==="bitlocker"&&<Section
+      title="ENTERPRISE KEY MANAGEMENT  -  BITLOCKER"
+      actions={<div style={{display:"flex",gap:8,alignItems:"center"}}>
+        <Btn small onClick={()=>void refresh(false)} disabled={loading}>
+          <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+            <RefreshCcw size={12} strokeWidth={2}/>
+            {loading?"Refreshing...":"Refresh"}
+          </span>
+        </Btn>
+        <Btn small primary onClick={openBitLockerDeploy}>+ Register BitLocker Agent</Btn>
+      </div>}
+    >
+      <div style={{display:"flex",gap:6,marginBottom:8,flexWrap:"wrap"}}>
+        <B c="green">{`${bitLockerProtectedCount} Protected`}</B>
+        <B c="amber">{`${bitLockerSuspendedCount} Suspended`}</B>
+        <B c="amber">{`${bitLockerDegradedCount} Degraded`}</B>
+        <B c="red">{`${bitLockerDownCount} Down`}</B>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:10}}>
+        {sortedBitLockerClients.map((client)=>{
+          const badge=bitLockerBadge(client);
+          const encryptionPct=Math.max(0,Math.min(100,Number(client.encryption_percentage||0)));
+          const hbAge=formatAgo(client.last_heartbeat_at);
+          const opBusy=(op)=>bitLockerOpClientID===`${String(client.id||"").trim()}:${op}`;
+          return <Card key={client.id}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:18,color:C.white,fontWeight:700,marginBottom:4,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                  {client.name}
+                </div>
+                <div style={{fontSize:12,color:C.dim}}>{`Host: ${client.host||"-"}`}</div>
+              </div>
+              <B c={badge.color}>{badge.label}</B>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 10px",marginTop:8}}>
+              <div style={{fontSize:11,color:C.dim}}>{`OS: ${client.os_version||"windows"}`}</div>
+              <div style={{fontSize:11,color:C.dim}}>{`Mount: ${client.mount_point||"C:"}`}</div>
+              <div style={{fontSize:11,color:C.dim}}>{`TPM: ${client.tpm_present?"present":"unknown"}`}</div>
+              <div style={{fontSize:11,color:C.dim}}>{`Heartbeat: ${hbAge}`}</div>
+            </div>
+            <div style={{fontSize:10,color:C.muted,marginTop:6}}>{`Encryption ${encryptionPct.toFixed(1)}%  ·  Protection ${String(client.protection_status||"unknown")}`}</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8,marginTop:10}}>
+              <Btn small onClick={()=>void runBitLockerOperation(client,"enable")} disabled={opBusy("enable")}>{opBusy("enable")?"...":"Enable"}</Btn>
+              <Btn small onClick={()=>void runBitLockerOperation(client,"pause")} disabled={opBusy("pause")}>{opBusy("pause")?"...":"Pause"}</Btn>
+              <Btn small onClick={()=>void runBitLockerOperation(client,"resume")} disabled={opBusy("resume")}>{opBusy("resume")?"...":"Resume"}</Btn>
+              <Btn small onClick={()=>void runBitLockerOperation(client,"rotate")} disabled={opBusy("rotate")}>{opBusy("rotate")?"...":"Rotate Key"}</Btn>
+              <Btn small onClick={()=>void runBitLockerOperation(client,"fetch_recovery")} disabled={opBusy("fetch_recovery")}>{opBusy("fetch_recovery")?"...":"Fetch Recovery"}</Btn>
+              <Btn small onClick={()=>void openBitLockerActivity(client)}>Activity</Btn>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,marginTop:8}}>
+              <Btn small danger onClick={()=>void runBitLockerOperation(client,"disable")} disabled={opBusy("disable")}>{opBusy("disable")?"...":"Disable"}</Btn>
+              <Btn small danger onClick={()=>void runBitLockerOperation(client,"remove")} disabled={opBusy("remove")}>{opBusy("remove")?"...":"Remove"}</Btn>
+            </div>
+          </Card>;
+        })}
+        {!sortedBitLockerClients.length&&<Card>
+          <div style={{fontSize:11,color:C.dim}}>No BitLocker clients registered. Use Register BitLocker Agent to onboard Windows endpoints with mTLS/JWT agent auth.</div>
+        </Card>}
+      </div>
+    </Section>}
+
+    {ekmSubtab==="kmip"&&<KMIP session={session} onToast={onToast}/>}
+
+    <Modal open={modal==="bitlocker-deploy"} onClose={()=>setModal(null)} title="Register BitLocker Agent" wide>
+      <Row2>
+        <FG label="Agent Name" required>
+          <Inp value={bitLockerForm.name} onChange={(e)=>setBitLockerForm({...bitLockerForm,name:e.target.value})} placeholder="WIN-LAPTOP-001"/>
+        </FG>
+        <FG label="Host / IP" required>
+          <Inp value={bitLockerForm.host} onChange={(e)=>setBitLockerForm({...bitLockerForm,host:e.target.value})} placeholder="10.0.20.15" mono/>
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="OS Version">
+          <Inp value={bitLockerForm.os_version} onChange={(e)=>setBitLockerForm({...bitLockerForm,os_version:e.target.value})} placeholder="Windows 11 / Server 2022"/>
+        </FG>
+        <FG label="Mount Point">
+          <Inp value={bitLockerForm.mount_point} onChange={(e)=>setBitLockerForm({...bitLockerForm,mount_point:e.target.value})} placeholder="C:" mono/>
+        </FG>
+      </Row2>
+      <FG label="Heartbeat Interval (sec)">
+        <Inp type="number" value={String(bitLockerForm.heartbeat_interval_sec)} onChange={(e)=>setBitLockerForm({...bitLockerForm,heartbeat_interval_sec:Number(e.target.value||30)})}/>
+      </FG>
+      <div style={{fontSize:10,color:C.muted,marginTop:8}}>
+        Registration issues tenant-scoped BitLocker client identity. Download package and run on Windows host to start mTLS/JWT heartbeat and job execution.
+      </div>
+      {bitLockerDeployPackage&&<Card style={{marginTop:10}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>{`Package ready: ${bitLockerDeployPackage.name} (${bitLockerDeployPackage.target_os})`}</div>
+          <B c="green">Ready</B>
+        </div>
+        <div style={{display:"grid",gap:6}}>
+          {(bitLockerDeployPackage.files||[]).map((file)=>(
+            <div key={file.path} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px"}}>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:11,color:C.text,fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{file.path}</div>
+                <div style={{fontSize:9,color:C.muted}}>{`mode ${file.mode}`}</div>
+              </div>
+              <Btn small onClick={()=>downloadText(file.path,file.content)}>Download</Btn>
+            </div>
+          ))}
+        </div>
+      </Card>}
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={bitLockerDeploying}>Close</Btn>
+        <Btn primary onClick={()=>void submitBitLockerDeploy()} disabled={bitLockerDeploying}>{bitLockerDeploying?"Registering...":"Register BitLocker Agent"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="bitlocker-activity"} onClose={()=>setModal(null)} title={`BitLocker Activity: ${String(selectedAgent?.name||"")}`} wide>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <div style={{fontSize:10,color:C.dim}}>
+          {`Client ${String(selectedAgent?.id||"-")}  ·  ${String(selectedAgent?.host||"-")}`}
+        </div>
+        <Btn small onClick={()=>selectedAgent&&void openBitLockerActivity(selectedAgent)} disabled={bitLockerLoadingDetail}>{bitLockerLoadingDetail?"Refreshing...":"Refresh"}</Btn>
+      </div>
+      <Row2>
+        <Card style={{maxHeight:330,overflowY:"auto"}}>
+          <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Queued / Completed Jobs</div>
+          <div style={{display:"grid",gap:6}}>
+            {bitLockerLoadingDetail&&<div style={{fontSize:10,color:C.dim}}>Loading jobs...</div>}
+            {!bitLockerLoadingDetail&&bitLockerJobs.map((item)=>(
+              <div key={item.id} style={{display:"grid",gridTemplateColumns:"110px 90px 1fr auto",gap:8,alignItems:"center",borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
+                <div style={{fontSize:10,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{formatAgo(item.requested_at)}</div>
+                <B c={String(item.status||"").toLowerCase()==="succeeded"?"green":String(item.status||"").toLowerCase()==="failed"?"red":"amber"}>{String(item.operation||"-")}</B>
+                <div style={{fontSize:10,color:C.text,fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{String(item.id||"-")}</div>
+                <div style={{fontSize:9,color:C.dim}}>{String(item.status||"-")}</div>
+              </div>
+            ))}
+            {!bitLockerLoadingDetail&&!bitLockerJobs.length&&<div style={{fontSize:10,color:C.dim}}>No BitLocker operations yet.</div>}
+          </div>
+        </Card>
+        <Card style={{maxHeight:330,overflowY:"auto"}}>
+          <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Recovery Key Records</div>
+          <div style={{display:"grid",gap:6}}>
+            {bitLockerLoadingDetail&&<div style={{fontSize:10,color:C.dim}}>Loading recovery records...</div>}
+            {!bitLockerLoadingDetail&&bitLockerRecovery.map((item)=>(
+              <div key={item.id} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}>
+                  <div style={{fontSize:10,color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{String(item.key_masked||"-")}</div>
+                  <B c="blue">{String(item.volume_mount_point||"C:")}</B>
+                </div>
+                <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace",marginTop:4}}>{String(item.key_fingerprint||"-")}</div>
+                <div style={{fontSize:9,color:C.dim,marginTop:4}}>{new Date(String(item.created_at||Date.now())).toLocaleString()}</div>
+              </div>
+            ))}
+            {!bitLockerLoadingDetail&&!bitLockerRecovery.length&&<div style={{fontSize:10,color:C.dim}}>No recovery records saved yet.</div>}
+          </div>
+        </Card>
+      </Row2>
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
+        <Btn onClick={()=>setModal(null)}>Close</Btn>
+      </div>
+    </Modal>
 
     <Modal open={modal==="deploy"} onClose={()=>setModal(null)} title="Deploy EKM Agent" wide>
       <Row2>
@@ -15111,8 +15415,8 @@ const Documentation=()=>{
 // 
 // MAIN APP WITH SIDEBAR
 // 
-const TABS={home:Home,keys:Keys,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,byok:BYOK,hyok:HYOK,ekm:EKM,kmip:KMIP,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
-const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",restapi:"REST API Workbench",vault:"Secret Vault",certs:"Certificates / Mini PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",byok:"BYOK",hyok:"HYOK",ekm:"EKM Agent Hub",kmip:"KMIP 2.1 Server",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
+const TABS={home:Home,keys:Keys,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,byok:BYOK,hyok:HYOK,ekm:EKM,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
+const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",restapi:"REST API Workbench",vault:"Secret Vault",certs:"Certificates / Mini PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",byok:"BYOK",hyok:"HYOK",ekm:"EKM",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
 
 export default function VectaDashboard(props){
   const {session:sessionBase,enabledFeatures,alerts,audit,unreadAlerts,onLogout,markAlertsRead}=props;

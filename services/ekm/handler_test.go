@@ -258,3 +258,42 @@ func TestHandlerEKMTenantRequired(t *testing.T) {
 		t.Fatalf("expected structured error body=%s", rr.Body.String())
 	}
 }
+
+func TestHandlerBitLockerRegisterAndDeployWithDashboardJWT(t *testing.T) {
+	h, _, _, _ := newEKMHandler(t)
+
+	registerReq := httptest.NewRequest(http.MethodPost, "/ekm/bitlocker/clients/register", bytes.NewReader([]byte(`{
+		"tenant_id":"tenant-h1",
+		"name":"bitlocker-host-01",
+		"host":"10.0.0.25",
+		"os_version":"Windows 11",
+		"mount_point":"C:"
+	}`)))
+	registerReq.Header.Set("Authorization", "Bearer dashboard-session-token")
+	registerReq.Header.Set("X-Tenant-ID", "tenant-h1")
+	registerRR := httptest.NewRecorder()
+	h.ServeHTTP(registerRR, registerReq)
+	if registerRR.Code != http.StatusCreated {
+		t.Fatalf("register bitlocker client status=%d body=%s", registerRR.Code, registerRR.Body.String())
+	}
+	var registerResp struct {
+		Client BitLockerClient `json:"client"`
+	}
+	_ = json.Unmarshal(registerRR.Body.Bytes(), &registerResp)
+	if registerResp.Client.ID == "" {
+		t.Fatalf("missing bitlocker client id: %s", registerRR.Body.String())
+	}
+
+	deployReq := httptest.NewRequest(
+		http.MethodGet,
+		"/ekm/bitlocker/clients/"+registerResp.Client.ID+"/deploy?tenant_id=tenant-h1&os=windows",
+		nil,
+	)
+	deployReq.Header.Set("Authorization", "Bearer dashboard-session-token")
+	deployReq.Header.Set("X-Tenant-ID", "tenant-h1")
+	deployRR := httptest.NewRecorder()
+	h.ServeHTTP(deployRR, deployReq)
+	if deployRR.Code != http.StatusOK {
+		t.Fatalf("bitlocker deploy package status=%d body=%s", deployRR.Code, deployRR.Body.String())
+	}
+}

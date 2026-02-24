@@ -1,13 +1,19 @@
 package main
 
 import (
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type Handler struct {
@@ -38,6 +44,17 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /ekm/agents/{id}/heartbeat", h.handleAgentHeartbeat)
 	mux.HandleFunc("GET /ekm/sdk/overview", h.handleSDKOverview)
 	mux.HandleFunc("GET /ekm/sdk/download", h.handleSDKDownload)
+
+	mux.HandleFunc("POST /ekm/bitlocker/clients/register", h.handleRegisterBitLockerClient)
+	mux.HandleFunc("GET /ekm/bitlocker/clients", h.handleListBitLockerClients)
+	mux.HandleFunc("GET /ekm/bitlocker/clients/{id}", h.handleGetBitLockerClient)
+	mux.HandleFunc("POST /ekm/bitlocker/clients/{id}/heartbeat", h.handleBitLockerHeartbeat)
+	mux.HandleFunc("POST /ekm/bitlocker/clients/{id}/operations", h.handleQueueBitLockerOperation)
+	mux.HandleFunc("GET /ekm/bitlocker/clients/{id}/jobs", h.handleListBitLockerJobs)
+	mux.HandleFunc("POST /ekm/bitlocker/clients/{id}/jobs/next", h.handlePollBitLockerJob)
+	mux.HandleFunc("POST /ekm/bitlocker/clients/{id}/jobs/{job_id}/result", h.handleBitLockerJobResult)
+	mux.HandleFunc("GET /ekm/bitlocker/recovery", h.handleListBitLockerRecovery)
+	mux.HandleFunc("GET /ekm/bitlocker/clients/{id}/deploy", h.handleBitLockerDeployPackage)
 
 	mux.HandleFunc("POST /ekm/tde/keys", h.handleCreateTDEKey)
 	mux.HandleFunc("POST /ekm/tde/keys/{id}/wrap", h.handleWrapDEK)
@@ -255,6 +272,200 @@ func (h *Handler) handleSDKDownload(w http.ResponseWriter, r *http.Request) {
 		"artifact":   out,
 		"request_id": reqID,
 	})
+}
+
+func (h *Handler) handleRegisterBitLockerClient(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req RegisterBitLockerClientRequest
+	if err := decodeJSON(r, &req); err != nil {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
+		return
+	}
+	tenantID, cn, sub, _, authErr := bitLockerTenantFromRequest(r, req.TenantID, false)
+	if authErr != nil {
+		h.writeServiceError(w, authErr, reqID, req.TenantID)
+		return
+	}
+	req.TenantID = tenantID
+	out, err := h.svc.RegisterBitLockerClient(r.Context(), req, cn, sub)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{"client": out, "request_id": reqID})
+}
+
+func (h *Handler) handleListBitLockerClients(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID, _, err := tenantFromRequest(r, "")
+	if err != nil {
+		h.writeServiceError(w, err, reqID, "")
+		return
+	}
+	limit := 1000
+	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		if n, convErr := strconv.Atoi(raw); convErr == nil {
+			limit = n
+		}
+	}
+	items, svcErr := h.svc.ListBitLockerClients(r.Context(), tenantID, limit)
+	if svcErr != nil {
+		h.writeServiceError(w, svcErr, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleGetBitLockerClient(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID, _, err := tenantFromRequest(r, "")
+	if err != nil {
+		h.writeServiceError(w, err, reqID, "")
+		return
+	}
+	item, svcErr := h.svc.GetBitLockerClient(r.Context(), tenantID, r.PathValue("id"))
+	if svcErr != nil {
+		h.writeServiceError(w, svcErr, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"client": item, "request_id": reqID})
+}
+
+func (h *Handler) handleBitLockerHeartbeat(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req BitLockerHeartbeatRequest
+	if err := decodeJSON(r, &req); err != nil {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
+		return
+	}
+	tenantID, cn, sub, _, authErr := bitLockerTenantFromRequest(r, req.TenantID, true)
+	if authErr != nil {
+		h.writeServiceError(w, authErr, reqID, req.TenantID)
+		return
+	}
+	req.TenantID = tenantID
+	out, err := h.svc.BitLockerHeartbeat(r.Context(), r.PathValue("id"), req, cn, sub)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"client": out, "request_id": reqID})
+}
+
+func (h *Handler) handleQueueBitLockerOperation(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req BitLockerOperationRequest
+	if err := decodeJSON(r, &req); err != nil {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
+		return
+	}
+	tenantID, _, err := tenantFromRequest(r, req.TenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	req.TenantID = tenantID
+	out, svcErr := h.svc.QueueBitLockerOperation(r.Context(), r.PathValue("id"), req)
+	if svcErr != nil {
+		h.writeServiceError(w, svcErr, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{"job": out, "request_id": reqID})
+}
+
+func (h *Handler) handleListBitLockerJobs(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID, _, err := tenantFromRequest(r, "")
+	if err != nil {
+		h.writeServiceError(w, err, reqID, "")
+		return
+	}
+	limit := 100
+	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		if n, convErr := strconv.Atoi(raw); convErr == nil {
+			limit = n
+		}
+	}
+	items, svcErr := h.svc.ListBitLockerJobs(r.Context(), tenantID, r.PathValue("id"), limit)
+	if svcErr != nil {
+		h.writeServiceError(w, svcErr, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handlePollBitLockerJob(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID, _, _, _, authErr := bitLockerTenantFromRequest(r, "", true)
+	if authErr != nil {
+		h.writeServiceError(w, authErr, reqID, "")
+		return
+	}
+	out, err := h.svc.PollBitLockerJob(r.Context(), tenantID, r.PathValue("id"))
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"job": out, "request_id": reqID})
+}
+
+func (h *Handler) handleBitLockerJobResult(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req BitLockerJobResultRequest
+	if err := decodeJSON(r, &req); err != nil {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
+		return
+	}
+	tenantID, _, _, _, authErr := bitLockerTenantFromRequest(r, req.TenantID, true)
+	if authErr != nil {
+		h.writeServiceError(w, authErr, reqID, req.TenantID)
+		return
+	}
+	req.TenantID = tenantID
+	out, err := h.svc.SubmitBitLockerJobResult(r.Context(), r.PathValue("id"), r.PathValue("job_id"), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"job": out, "request_id": reqID})
+}
+
+func (h *Handler) handleListBitLockerRecovery(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID, _, err := tenantFromRequest(r, "")
+	if err != nil {
+		h.writeServiceError(w, err, reqID, "")
+		return
+	}
+	limit := 200
+	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		if n, convErr := strconv.Atoi(raw); convErr == nil {
+			limit = n
+		}
+	}
+	clientID := strings.TrimSpace(r.URL.Query().Get("client_id"))
+	items, svcErr := h.svc.ListBitLockerRecoveryKeys(r.Context(), tenantID, clientID, limit)
+	if svcErr != nil {
+		h.writeServiceError(w, svcErr, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleBitLockerDeployPackage(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID, _, err := tenantFromRequest(r, "")
+	if err != nil {
+		h.writeServiceError(w, err, reqID, "")
+		return
+	}
+	targetOS := strings.TrimSpace(r.URL.Query().Get("os"))
+	out, svcErr := h.svc.BuildBitLockerDeployPackage(r.Context(), tenantID, r.PathValue("id"), targetOS)
+	if svcErr != nil {
+		h.writeServiceError(w, svcErr, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"package": out, "request_id": reqID})
 }
 
 func (h *Handler) handleCreateTDEKey(w http.ResponseWriter, r *http.Request) {
@@ -505,6 +716,137 @@ func principalFromCert(cert *x509.Certificate) (string, string, string, error) {
 func isEKMRole(role string) bool {
 	r := strings.ToLower(strings.TrimSpace(role))
 	return r == "ekm-agent" || r == "ekm-client" || r == "ekm-admin" || r == "ekm-service"
+}
+
+func isBitLockerRole(role string) bool {
+	r := strings.ToLower(strings.TrimSpace(role))
+	return r == "bitlocker-agent" || r == "bitlocker-client" || r == "bitlocker-service" || r == "ekm-admin"
+}
+
+func bitLockerTenantFromRequest(r *http.Request, bodyTenant string, requireAgentAuth bool) (string, string, string, bool, error) {
+	tenantID := strings.TrimSpace(bodyTenant)
+	if tenantID == "" {
+		tenantID = strings.TrimSpace(r.URL.Query().Get("tenant_id"))
+	}
+	if tenantID == "" {
+		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	}
+
+	certTenant, certRole, certCN, certErr := certPrincipal(r)
+	if certErr != nil {
+		return "", "", "", false, newServiceError(http.StatusUnauthorized, "invalid_client_cert", certErr.Error())
+	}
+	if certTenant != "" {
+		if tenantID == "" {
+			tenantID = certTenant
+		}
+		if tenantID != certTenant {
+			return "", "", "", false, newServiceError(http.StatusForbidden, "tenant_mismatch", "tenant in request does not match mTLS certificate")
+		}
+		if !isBitLockerRole(certRole) {
+			return "", "", "", false, newServiceError(http.StatusForbidden, "role_not_allowed", "mTLS role is not allowed for bitlocker")
+		}
+		return tenantID, certCN, "", true, nil
+	}
+
+	rawToken := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
+	if rawToken != "" {
+		claims, err := parseBitLockerJWT(rawToken)
+		if err == nil {
+			if !isBitLockerRole(claims.Role) {
+				return "", "", "", false, newServiceError(http.StatusForbidden, "role_not_allowed", "jwt role is not allowed for bitlocker")
+			}
+			if tenantID == "" {
+				tenantID = claims.TenantID
+			}
+			if tenantID == "" {
+				return "", "", "", false, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+			}
+			if claims.TenantID != "" && tenantID != claims.TenantID {
+				return "", "", "", false, newServiceError(http.StatusForbidden, "tenant_mismatch", "tenant in request does not match jwt token")
+			}
+			return tenantID, "", claims.Subject, true, nil
+		}
+		// Dashboard/admin calls include Auth service JWTs, which are not BitLocker-agent JWTs.
+		// For non-agent endpoints, keep tenant resolution from request and do not fail on JWT parse.
+		if requireAgentAuth {
+			return "", "", "", false, newServiceError(http.StatusUnauthorized, "invalid_token", err.Error())
+		}
+	}
+
+	if requireAgentAuth {
+		return "", "", "", false, newServiceError(http.StatusUnauthorized, "unauthorized", "bitlocker agent auth requires mTLS or JWT")
+	}
+	if tenantID == "" {
+		return "", "", "", false, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	return tenantID, "", "", false, nil
+}
+
+type bitLockerJWTClaims struct {
+	TenantID string `json:"tenant_id"`
+	Role     string `json:"role"`
+	jwt.RegisteredClaims
+}
+
+var (
+	bitLockerJWTOnce sync.Once
+	bitLockerJWTErr  error
+	bitLockerJWTPub  *rsa.PublicKey
+)
+
+func parseBitLockerJWT(rawToken string) (*bitLockerJWTClaims, error) {
+	rawToken = strings.TrimSpace(rawToken)
+	if rawToken == "" {
+		return nil, errors.New("missing bearer token")
+	}
+	bitLockerJWTOnce.Do(func() {
+		path := strings.TrimSpace(os.Getenv("JWT_PUBLIC_KEY_PATH"))
+		if path == "" {
+			path = "certs/jwt_public.pem"
+		}
+		pemRaw, err := os.ReadFile(path)
+		if err != nil {
+			bitLockerJWTErr = err
+			return
+		}
+		block, _ := pem.Decode(pemRaw)
+		if block == nil {
+			bitLockerJWTErr = errors.New("failed to decode jwt public key PEM")
+			return
+		}
+		pubAny, err := x509.ParsePKIXPublicKey(block.Bytes)
+		if err != nil {
+			bitLockerJWTErr = err
+			return
+		}
+		pub, ok := pubAny.(*rsa.PublicKey)
+		if !ok {
+			bitLockerJWTErr = errors.New("jwt public key is not RSA")
+			return
+		}
+		bitLockerJWTPub = pub
+	})
+	if bitLockerJWTErr != nil {
+		return nil, bitLockerJWTErr
+	}
+	if bitLockerJWTPub == nil {
+		return nil, errors.New("jwt public key is not configured")
+	}
+	token, err := jwt.ParseWithClaims(rawToken, &bitLockerJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if token.Method.Alg() != jwt.SigningMethodRS256.Alg() {
+			return nil, errors.New("invalid signing method")
+		}
+		return bitLockerJWTPub, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	claims, ok := token.Claims.(*bitLockerJWTClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid claims")
+	}
+	return claims, nil
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {
