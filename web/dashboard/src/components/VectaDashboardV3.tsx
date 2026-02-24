@@ -15730,8 +15730,8 @@ export default function VectaDashboard(props){
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
         *::-webkit-scrollbar{width:5px;height:5px} *::-webkit-scrollbar-track{background:transparent} *::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
       <div style={{width:collapsed?56:210,background:C.sidebar,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",transition:"width .2s",flexShrink:0,overflow:"hidden"}}>
-        <div style={{padding:collapsed?"8px 8px":"8px 10px 8px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:8,minHeight:44,justifyContent:collapsed?"center":"space-between"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+        <div style={{padding:collapsed?"8px 6px":"8px 10px 8px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:collapsed?6:8,minHeight:collapsed?66:44,justifyContent:collapsed?"center":"space-between",flexDirection:collapsed?"column":"row"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0,justifyContent:"center",width:collapsed?"100%":"auto"}}>
           <div style={{width:28,height:28,borderRadius:7,background:`linear-gradient(135deg,${C.accent},${C.purple})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,color:C.bg,flexShrink:0}}>V</div>
           {!collapsed&&<span style={{fontSize:13,fontWeight:700,letterSpacing:1.5,color:C.text}}>VECTA KMS</span>}
           </div>
@@ -15739,8 +15739,8 @@ export default function VectaDashboard(props){
             onClick={()=>setCollapsed((v)=>!v)}
             title={collapsed?"Expand sidebar":"Collapse sidebar"}
             style={{
-              width:24,
-              height:24,
+              width:collapsed?20:24,
+              height:collapsed?20:24,
               borderRadius:6,
               border:`1px solid ${C.border}`,
               background:"transparent",
