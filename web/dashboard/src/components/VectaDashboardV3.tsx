@@ -5388,7 +5388,8 @@ const Vault=({session,onToast})=>{
     "api_key","password","database_credentials","token","oauth_client_secret",
     "ssh_private_key","ssh_public_key","pgp_private_key","pgp_public_key","ppk",
     "x509_certificate","pkcs12","jwk","kerberos_keytab","wireguard_private_key",
-    "wireguard_public_key","age_key","tls_private_key","tls_certificate","binary_blob"
+    "wireguard_public_key","age_key","tls_private_key","tls_certificate","binary_blob",
+    "bitlocker_keys"
   ];
 
   const ttlToSeconds=(mode:string,custom:string)=>{
@@ -5480,7 +5481,8 @@ const Vault=({session,onToast})=>{
       jwk:{t:"jwk",bg:"#2f3d14",fg:"#b3ff62"},
       kerberos_keytab:{t:"kerberos keytab",bg:"#113c4d",fg:"#5fdfff"},
       oauth_client_secret:{t:"oauth secret",bg:"#412916",fg:"#ffb575"},
-      wireguard_private_key:{t:"wireguard key",bg:"#123862",fg:"#5bc3ff"}
+      wireguard_private_key:{t:"wireguard key",bg:"#123862",fg:"#5bc3ff"},
+      bitlocker_keys:{t:"bitlocker keys",bg:"#3f2a19",fg:"#ffc78a"}
     };
     return map[type]||{t:type||"secret",bg:"#223047",fg:"#93b1df"};
   };
@@ -5711,11 +5713,12 @@ const Vault=({session,onToast})=>{
     <Modal open={modal==="create"} onClose={()=>setModal(null)} title="Store New Secret" wide>
       <Row2>
         <FG label="Name" required><Inp placeholder="prod-api-key-stripe" value={createName} onChange={(e)=>setCreateName(e.target.value)}/></FG>
-        <FG label="Type" required><Inp placeholder="api_key" value={createType} onChange={(e)=>setCreateType(e.target.value)} list="vault-secret-types"/></FG>
+        <FG label="Type" required>
+          <Sel value={createType} onChange={(e)=>setCreateType(e.target.value)}>
+            {supportedTypes.map((type)=><option key={type} value={type}>{type}</option>)}
+          </Sel>
+        </FG>
       </Row2>
-      <datalist id="vault-secret-types">
-        {supportedTypes.map((type)=><option key={type} value={type}>{type}</option>)}
-      </datalist>
       <FG label="Secret Value" required hint="Envelope-encrypted at rest. Never stored plaintext.">
         <Txt placeholder="Paste API key, PEM block, JSON..." rows={6} value={createValue} onChange={(e)=>setCreateValue(e.target.value)}/>
       </FG>

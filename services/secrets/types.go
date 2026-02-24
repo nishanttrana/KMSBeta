@@ -21,6 +21,7 @@ var supportedSecretTypes = map[string]struct{}{
 	"oauth_client_secret":   {},
 	"wireguard_private_key": {},
 	"wireguard_public_key":  {},
+	"bitlocker_keys":        {},
 	"age_key":               {},
 	"password":              {},
 	"token":                 {},
