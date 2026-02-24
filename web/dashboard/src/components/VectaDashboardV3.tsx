@@ -966,10 +966,13 @@ function toViewKey(k: any) {
   const ver = Number(k.current_version || 0);
   const labels = (k && typeof k.labels === "object" && k.labels) ? k.labels : {};
   const componentRole = String(labels.component_role || labels.component || "").toLowerCase();
+  const algoDisplay = keyInventoryAlgorithmDisplay(String(k.algorithm || "unknown"));
   return {
     id: String(k.id || ""),
     name: String(k.name || "unnamed-key"),
     algo: String(k.algorithm || "unknown"),
+    algoFamily: algoDisplay.family,
+    algoSizeCurve: algoDisplay.sizeCurve,
     keyType: String(k.key_type || ""),
     state: normalizeKeyState(String(k.status || "unknown")),
     ver: ver > 0 ? `v${ver}` : "v1",
@@ -1306,7 +1309,7 @@ function algorithmFamilyLabel(algorithm: string): string {
     v.includes("HSS-LMS") ||
     v.includes("XMSS")
   ) {
-    return "PQC";
+    return "ML";
   }
   if (v.includes("HMAC")) {
     return "HMAC";
@@ -1327,6 +1330,67 @@ function algorithmFamilyLabel(algorithm: string): string {
     return "Camellia";
   }
   return "Other";
+}
+
+function keyInventoryAlgorithmDisplay(algorithm: string): { family: string; sizeCurve: string } {
+  const raw = String(algorithm || "").trim();
+  const upper = raw.toUpperCase();
+  const family = algorithmFamilyLabel(raw);
+  let sizeCurve = "-";
+
+  if (family === "AES") {
+    const match = upper.match(/AES[-_ ]?(\d{3})/);
+    if (match?.[1]) {
+      sizeCurve = match[1];
+    }
+  } else if (family === "RSA") {
+    const match = upper.match(/RSA[-_ ]?(?:OAEP[-_ ]?)?(\d{3,4})/) || upper.match(/RSA[-_ ]?(\d{3,4})/);
+    if (match?.[1]) {
+      sizeCurve = match[1];
+    }
+  } else if (family === "ECC") {
+    const fixed = ["ED25519", "ED448", "X25519", "X448"].find((name) => upper.includes(name));
+    if (fixed) {
+      sizeCurve = fixed;
+    } else {
+      const namedCurve =
+        upper.match(/(P-?256|P-?384|P-?521)/)?.[1] ||
+        upper.match(/(BRAINPOOL-?P?256R1|BRAINPOOL-?P?384R1)/)?.[1] ||
+        upper.match(/(SECP256R1|SECP384R1|SECP521R1)/)?.[1];
+      if (namedCurve) {
+        sizeCurve = namedCurve
+          .replace(/^P(?=\d)/, "P-")
+          .replace(/^BRAINPOOLP/i, "BRAINPOOL-P");
+      } else {
+        const ecdsa = upper.match(/ECD(?:SA|H)?[-_ ]?P[-_ ]?(\d{3})/)?.[1];
+        if (ecdsa) {
+          sizeCurve = `P-${ecdsa}`;
+        }
+      }
+    }
+  } else if (family === "ML") {
+    const match =
+      upper.match(/(ML-KEM-\d+)/)?.[1] ||
+      upper.match(/(ML-DSA-\d+)/)?.[1] ||
+      upper.match(/(SLH-DSA-[0-9A-Z]+)/)?.[1] ||
+      upper.match(/(HSS\/LMS)/)?.[1] ||
+      upper.match(/(XMSS)/)?.[1];
+    if (match) {
+      sizeCurve = match;
+    }
+  } else if (family === "HMAC") {
+    const match = upper.match(/(SHA3?-?\d{3})/)?.[1];
+    if (match) {
+      sizeCurve = match.replace(/^SHA(?=\d)/, "SHA-");
+    }
+  } else if (family === "DSA") {
+    const match = upper.match(/DSA[-_ ]?(\d{3,4})/)?.[1];
+    if (match) {
+      sizeCurve = match;
+    }
+  }
+
+  return { family, sizeCurve };
 }
 
 function composeCreateAlgorithm(
@@ -1803,6 +1867,7 @@ const DOC_CAPABILITIES=[
 const KEY_TABLE_COLUMNS=[
   {id:"name",label:"Name"},
   {id:"algorithm",label:"Algorithm"},
+  {id:"sizeCurve",label:"Size / Curve"},
   {id:"status",label:"Status"},
   {id:"destroyAt",label:"Destroy At"},
   {id:"fips",label:"FIPS"},
@@ -1816,6 +1881,7 @@ const KEY_TABLE_COLUMNS=[
 const DEFAULT_KEY_COLUMN_VISIBILITY={
   name:true,
   algorithm:true,
+  sizeCurve:true,
   status:true,
   destroyAt:true,
   fips:true,
@@ -1987,7 +2053,7 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
   };
 
   const algorithms=useMemo(()=>{
-    const set=new Set<string>(["AES","RSA","ECC","PQC","HMAC","MAC"]);
+    const set=new Set<string>(["AES","RSA","ECC","ML","HMAC","MAC"]);
     keys.forEach((k)=>{
       if(k?.algo){
         set.add(algorithmFamilyLabel(String(k.algo)));
@@ -3302,7 +3368,8 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
                 </div>
                 <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{k.id}</div>
               </td>}
-              {columnVisibility.algorithm&&<td style={{padding:"8px 10px",fontSize:10,color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{k.algo}</td>}
+              {columnVisibility.algorithm&&<td style={{padding:"8px 10px",fontSize:10,color:C.accent,fontWeight:700}}>{k.algoFamily||"-"}</td>}
+              {columnVisibility.sizeCurve&&<td style={{padding:"8px 10px",fontSize:10,color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{k.algoSizeCurve||"-"}</td>}
               {columnVisibility.status&&<td style={{padding:"8px 10px"}}><B c={tone}>{stateLabel}</B></td>}
               {columnVisibility.destroyAt&&<td style={{padding:"8px 10px",fontSize:10,color:isDeletePending?C.amber:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>
                 {formatDestroyAt(k.destroyAt)}
@@ -3863,9 +3930,10 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
         const selectedStateBusy=statusUpdatingId===selectedKey.id;
         return <><Row3>
         <FG label="Key ID"><div style={{fontFamily:"monospace",fontSize:11,color:C.accent}}>{selectedKey.id}</div></FG>
-        <FG label="Algorithm"><div style={{fontSize:11,color:C.text}}>{selectedKey.algo}</div></FG>
+        <FG label="Algorithm"><div style={{fontSize:11,color:C.text}}>{selectedKey.algoFamily||"-"}</div></FG>
         <FG label="KCV"><div style={{fontFamily:"monospace",fontSize:11,color:C.green}}>{selectedKey.kcv}</div></FG>
       </Row3>
+      <FG label="Size / Curve"><div style={{fontSize:11,color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{selectedKey.algoSizeCurve||"-"}</div></FG>
       <Row3>
         <FG label="State"><B c={keyStateTone(selectedNormState)}>{keyStateLabel(selectedNormState)}</B></FG>
         <FG label="Version"><div style={{fontSize:11,color:C.text}}>{selectedKey.ver}</div></FG>
