@@ -265,6 +265,7 @@ import {
   getLatestCBOM,
   getLatestSBOM,
   listCBOMHistory,
+  listSBOMHistory,
   listSBOMVulnerabilities
 } from "../lib/sbom";
 import { serviceRequest } from "../lib/serviceApi";
@@ -13058,11 +13059,17 @@ const SBOM=({session,onToast})=>{
   const [exportingSBOM,setExportingSBOM]=useState("");
   const [exportingCBOM,setExportingCBOM]=useState(false);
   const [sbomLatest,setSBOMLatest]=useState<any>(null);
+  const [sbomHistory,setSBOMHistory]=useState<any[]>([]);
   const [sbomVulns,setSBOMVulns]=useState<any[]>([]);
   const [cbomLatest,setCBOMLatest]=useState<any>(null);
   const [cbomSummary,setCBOMSummary]=useState<any>({});
   const [cbomHistory,setCBOMHistory]=useState<any[]>([]);
   const [activeSBOMFormat,setActiveSBOMFormat]=useState("cyclonedx");
+  const [exportMenuOpen,setExportMenuOpen]=useState(false);
+  const [depListOpen,setDepListOpen]=useState(false);
+  const [depListTitle,setDepListTitle]=useState("");
+  const [depListItems,setDepListItems]=useState<any[]>([]);
+  const [depListFilter,setDepListFilter]=useState("");
   const [diffOpen,setDiffOpen]=useState(false);
   const [diffData,setDiffData]=useState<any>(null);
 
@@ -13102,6 +13109,7 @@ const SBOM=({session,onToast})=>{
   const loadData=async(opts:any={})=>{
     if(!session?.token){
       setSBOMLatest(null);
+      setSBOMHistory([]);
       setSBOMVulns([]);
       setCBOMLatest(null);
       setCBOMSummary({});
@@ -13121,14 +13129,16 @@ const SBOM=({session,onToast})=>{
           generateCBOM(session,"manual")
         ]);
       }
-      const [sbomOut,vulnOut,cbomOut,summaryOut,historyOut]=await Promise.all([
+      const [sbomOut,sbomHistoryOut,vulnOut,cbomOut,summaryOut,historyOut]=await Promise.all([
         getLatestSBOM(session),
+        listSBOMHistory(session,12),
         listSBOMVulnerabilities(session),
         getLatestCBOM(session),
         getCBOMSummary(session),
         listCBOMHistory(session,8)
       ]);
       setSBOMLatest(sbomOut||null);
+      setSBOMHistory(Array.isArray(sbomHistoryOut)?sbomHistoryOut:[]);
       setSBOMVulns(Array.isArray(vulnOut)?vulnOut:[]);
       setCBOMLatest(cbomOut||null);
       setCBOMSummary(summaryOut||{});
@@ -13236,6 +13246,35 @@ const SBOM=({session,onToast})=>{
   const components=Array.isArray(sbomLatest?.document?.components)?sbomLatest.document.components:[];
   const vulnerabilities=Array.isArray(sbomVulns)?sbomVulns:[];
 
+  const severityRank=(sev:string)=>{
+    const normalized=String(sev||"").toLowerCase();
+    if(normalized==="critical") return 5;
+    if(normalized==="high") return 4;
+    if(normalized==="medium") return 3;
+    if(normalized==="low") return 2;
+    return 1;
+  };
+
+  const componentVulnStats=useMemo(()=>{
+    const out:any={};
+    vulnerabilities.forEach((item:any)=>{
+      const key=String(item?.component||"").trim().toLowerCase();
+      if(!key){
+        return;
+      }
+      if(!out[key]){
+        out[key]={count:0,top:"none",rank:0};
+      }
+      out[key].count+=1;
+      const rank=severityRank(String(item?.severity||""));
+      if(rank>Number(out[key].rank||0)){
+        out[key].rank=rank;
+        out[key].top=String(item?.severity||"none").toLowerCase();
+      }
+    });
+    return out;
+  },[vulnerabilities]);
+
   const goComponents=components.filter((c:any)=>String(c?.type||"").toLowerCase()==="library"&&String(c?.ecosystem||"").toLowerCase()==="go");
   const containerComponents=components.filter((c:any)=>String(c?.type||"").toLowerCase()==="container");
   const systemComponents=components.filter((c:any)=>["runtime","infrastructure","os-pkg"].includes(String(c?.type||"").toLowerCase()));
@@ -13263,10 +13302,63 @@ const SBOM=({session,onToast})=>{
   };
 
   const sbomRows=[
-    {label:"Go modules",count:goComponents.length,names:goComponents.map((c:any)=>String(c?.name||""))},
-    {label:"Containers",count:containerComponents.length,names:containerComponents.map((c:any)=>String(c?.name||""))},
-    {label:"System pkgs",count:systemComponents.length,names:systemComponents.map((c:any)=>String(c?.name||""))}
+    {label:"Go modules",count:goComponents.length,names:goComponents.map((c:any)=>String(c?.name||"")),components:goComponents},
+    {label:"Containers",count:containerComponents.length,names:containerComponents.map((c:any)=>String(c?.name||"")),components:containerComponents},
+    {label:"System pkgs",count:systemComponents.length,names:systemComponents.map((c:any)=>String(c?.name||"")),components:systemComponents}
   ].map((row)=>({...row,sev:categorySeverity(row.names)}));
+
+  const openDependencyList=(row:any)=>{
+    setDepListTitle(String(row?.label||"Dependencies"));
+    setDepListFilter("");
+    setDepListItems(Array.isArray(row?.components)?[...row.components]:[]);
+    setDepListOpen(true);
+  };
+
+  const sbomTrend=useMemo(()=>{
+    const items=Array.isArray(sbomHistory)?[...sbomHistory]:[];
+    items.sort((a:any,b:any)=>{
+      const ta=new Date(String(a?.created_at||a?.document?.generated_at||0)).getTime();
+      const tb=new Date(String(b?.created_at||b?.document?.generated_at||0)).getTime();
+      return ta-tb;
+    });
+    return items.slice(-10).map((item:any)=>{
+      const docs=Array.isArray(item?.document?.components)?item.document.components:[];
+      const go=docs.filter((c:any)=>String(c?.type||"").toLowerCase()==="library"&&String(c?.ecosystem||"").toLowerCase()==="go").length;
+      const containers=docs.filter((c:any)=>String(c?.type||"").toLowerCase()==="container").length;
+      const sys=docs.filter((c:any)=>["runtime","infrastructure","os-pkg"].includes(String(c?.type||"").toLowerCase())).length;
+      return {
+        id:String(item?.id||""),
+        at:String(item?.created_at||item?.document?.generated_at||""),
+        total:docs.length,
+        go,
+        containers,
+        system:sys
+      };
+    });
+  },[sbomHistory]);
+
+  const trendMax=Math.max(1,...sbomTrend.map((point:any)=>Math.max(0,Number(point?.total||0))));
+  const trendPoints=sbomTrend.length===1
+    ? `50,${100-((Number(sbomTrend[0]?.total||0)/trendMax)*100)}`
+    : sbomTrend.map((point:any,index:number)=>{
+      const x=(index/(sbomTrend.length-1))*100;
+      const y=100-((Number(point?.total||0)/trendMax)*100);
+      return `${x},${Math.max(2,Math.min(98,y))}`;
+    }).join(" ");
+  const latestTrend=sbomTrend.length?sbomTrend[sbomTrend.length-1]:null;
+  const prevTrend=sbomTrend.length>1?sbomTrend[sbomTrend.length-2]:null;
+  const trendDelta=(latestTrend&&prevTrend)?(Number(latestTrend.total||0)-Number(prevTrend.total||0)):0;
+  const filteredDepList=depListItems.filter((item:any)=>{
+    const q=String(depListFilter||"").trim().toLowerCase();
+    if(!q){
+      return true;
+    }
+    const name=String(item?.name||"").toLowerCase();
+    const version=String(item?.version||"").toLowerCase();
+    const typ=String(item?.type||"").toLowerCase();
+    const eco=String(item?.ecosystem||"").toLowerCase();
+    return name.includes(q)||version.includes(q)||typ.includes(q)||eco.includes(q);
+  });
 
   const rawDist=cbomSummary?.algorithm_distribution||cbomLatest?.document?.algorithm_distribution||{};
   const grouped={AES:0,RSA:0,ECDSA:0,PQC:0,Other:0};
@@ -13327,31 +13419,82 @@ const SBOM=({session,onToast})=>{
         <Card style={{padding:"12px 14px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
             <div style={{fontSize:12,fontWeight:700,color:C.text,letterSpacing:-.2}}>Software BOM</div>
-            <div style={{display:"flex",gap:6}}>
-              {["cyclonedx","spdx","pdf"].map((fmt)=><Btn
-                key={fmt}
+            <div style={{display:"flex",gap:6,position:"relative"}}>
+              <Btn
                 small
-                onClick={()=>void exportSBOMFile(fmt)}
+                onClick={()=>void exportSBOMFile("cyclonedx")}
                 disabled={Boolean(exportingSBOM)}
                 style={{
                   height:30,
-                  background:activeSBOMFormat===fmt?C.accentDim:"transparent",
-                  borderColor:activeSBOMFormat===fmt?C.accent:C.border,
-                  color:activeSBOMFormat===fmt?C.accent:C.dim
+                  background:activeSBOMFormat==="cyclonedx"?C.accentDim:"transparent",
+                  borderColor:activeSBOMFormat==="cyclonedx"?C.accent:C.border,
+                  color:activeSBOMFormat==="cyclonedx"?C.accent:C.dim
                 }}
               >
-                {exportingSBOM===fmt?"...":fmt==="cyclonedx"?"CycloneDX":fmt==="spdx"?"SPDX":"PDF"}
-              </Btn>)}
+                {exportingSBOM==="cyclonedx"?"...":"CycloneDX"}
+              </Btn>
+              <div style={{position:"relative"}}>
+                <Btn
+                  small
+                  onClick={()=>setExportMenuOpen((prev)=>!prev)}
+                  disabled={Boolean(exportingSBOM)}
+                  style={{height:30}}
+                >
+                  Export
+                </Btn>
+                {exportMenuOpen?<div style={{position:"absolute",right:0,top:34,minWidth:120,background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:6,zIndex:20}}>
+                  <Btn
+                    small
+                    onClick={()=>{setExportMenuOpen(false);void exportSBOMFile("spdx");}}
+                    disabled={Boolean(exportingSBOM)}
+                    style={{width:"100%",justifyContent:"flex-start",height:28,borderColor:"transparent"}}
+                  >
+                    {exportingSBOM==="spdx"?"Exporting...":"SPDX"}
+                  </Btn>
+                  <Btn
+                    small
+                    onClick={()=>{setExportMenuOpen(false);void exportSBOMFile("pdf");}}
+                    disabled={Boolean(exportingSBOM)}
+                    style={{width:"100%",justifyContent:"flex-start",height:28,borderColor:"transparent"}}
+                  >
+                    {exportingSBOM==="pdf"?"Exporting...":"PDF"}
+                  </Btn>
+                </div>:null}
+              </div>
             </div>
           </div>
           <div style={{display:"grid",gap:2}}>
             {sbomRows.map((row)=><div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <div style={{fontSize:12,color:C.text,fontWeight:700,minWidth:120}}>{row.label}</div>
-                <div style={{fontSize:11,color:C.dim}}>{`${Number(row.count||0)} deps`}</div>
+                <button
+                  type="button"
+                  onClick={()=>openDependencyList(row)}
+                  style={{fontSize:11,color:C.accent,background:"transparent",border:"none",padding:0,cursor:"pointer",textDecoration:"underline"}}
+                >
+                  {`${Number(row.count||0)} deps`}
+                </button>
               </div>
               <B c={String(row.sev?.tone||"green")}>{String(row.sev?.label||"0 CVEs")}</B>
             </div>)}
+          </div>
+          <div style={{marginTop:12,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <div style={{fontSize:10,color:C.dim,fontWeight:700,letterSpacing:.3}}>Dependency Trend (history)</div>
+              <div style={{fontSize:10,color:C.muted}}>
+                {sbomTrend.length?`${Number(latestTrend?.total||0)} total (${trendDelta>=0?"+":""}${trendDelta} vs prev)`:"No history"}
+              </div>
+            </div>
+            <div style={{height:86,border:`1px solid ${C.border}`,borderRadius:8,background:C.surface,padding:6}}>
+              {sbomTrend.length?<svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{width:"100%",height:"100%"}}>
+                <polyline
+                  fill="none"
+                  stroke={C.accent}
+                  strokeWidth="2.2"
+                  points={trendPoints}
+                />
+              </svg>:<div style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:C.muted}}>No historical SBOM snapshots yet.</div>}
+            </div>
           </div>
           <div style={{marginTop:10,fontSize:10,color:C.muted}}>
             {`Generated ${sbomGenerated?new Date(sbomGenerated).toLocaleString():"-"}`}
@@ -13414,6 +13557,44 @@ const SBOM=({session,onToast})=>{
       </Card>
       <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
         <Btn onClick={()=>setDiffOpen(false)}>Close</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={depListOpen} onClose={()=>setDepListOpen(false)} title={`${depListTitle} Dependencies`}>
+      <div style={{fontSize:10,color:C.dim,marginBottom:8}}>
+        Clicked dependency count now opens the exact package list for this category.
+      </div>
+      <Inp
+        value={depListFilter}
+        onChange={(e:any)=>setDepListFilter(e.target.value)}
+        placeholder="Search name, version, type, ecosystem..."
+      />
+      <div style={{height:8}}/>
+      <Card style={{maxHeight:360,overflowY:"auto"}}>
+        <div style={{display:"grid",gap:6}}>
+          {filteredDepList.map((item:any,idx:number)=>{
+            const key=String(item?.name||"").trim().toLowerCase();
+            const vuln=componentVulnStats[key];
+            const top=String(vuln?.top||"none");
+            const tone=top==="critical"||top==="high"?"red":top==="medium"||top==="low"?"amber":"green";
+            return <div key={`${String(item?.name||"dep")}-${String(item?.version||"")}-${idx}`} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${C.border}`}}>
+              <div style={{display:"grid",gap:2}}>
+                <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(item?.name||"-")}</div>
+                <div style={{fontSize:10,color:C.dim}}>
+                  {`${String(item?.version||"-")} • ${String(item?.type||"-")}${String(item?.ecosystem||"")?` • ${String(item?.ecosystem||"")}`:""}`}
+                </div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <B c={tone}>{vuln?`${Number(vuln.count||0)} CVEs`:"0 CVEs"}</B>
+              </div>
+            </div>;
+          })}
+          {!filteredDepList.length?<div style={{fontSize:10,color:C.muted}}>No dependencies found for current filter.</div>:null}
+        </div>
+      </Card>
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:10}}>
+        <span style={{fontSize:10,color:C.muted}}>{`${filteredDepList.length} of ${depListItems.length} shown`}</span>
+        <Btn onClick={()=>setDepListOpen(false)}>Close</Btn>
       </div>
     </Modal>
   </div>;
