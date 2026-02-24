@@ -31,6 +31,8 @@ export type PaymentPolicy = {
   max_tcp_payload_bytes: number;
   allowed_tcp_operations: string[];
   allowed_pin_block_formats: string[];
+  disable_iso0_pin_block: boolean;
+  decimalization_table: string;
   block_wildcard_pan: boolean;
   updated_by?: string;
   updated_at?: string;

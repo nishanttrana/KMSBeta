@@ -232,6 +232,8 @@ func createPaymentSchemaForTest(conn *pkgdb.DB) error {
 			max_tcp_payload_bytes INTEGER NOT NULL DEFAULT 262144,
 			allowed_tcp_operations_json TEXT NOT NULL DEFAULT '[]',
 			allowed_pin_block_formats_json TEXT NOT NULL DEFAULT '["ISO-0","ISO-1","ISO-3"]',
+			disable_iso0_pin_block BOOLEAN NOT NULL DEFAULT FALSE,
+			decimalization_table TEXT NOT NULL DEFAULT '0123456789012345',
 			block_wildcard_pan BOOLEAN NOT NULL DEFAULT TRUE,
 			updated_by TEXT NOT NULL DEFAULT '',
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -430,7 +430,7 @@ func decodePINFromClearBlock(format string, clear []byte, pan string) (string, e
 	return pin, nil
 }
 
-func computePVVWithTDES(key []byte, pin string, pan string, pvki string) (string, error) {
+func computePVVWithTDES(key []byte, pin string, pan string, pvki string, decimalizationTable string) (string, error) {
 	pin, err := sanitizeDigits(pin)
 	if err != nil {
 		return "", errors.New("pin is required and must be numeric")
@@ -477,18 +477,23 @@ func computePVVWithTDES(key []byte, pin string, pan string, pvki string) (string
 		return "", err
 	}
 	hexOut := strings.ToUpper(hex.EncodeToString(out))
+	if len(decimalizationTable) != 16 {
+		decimalizationTable = "0123456789012345"
+	}
+	table := []byte(decimalizationTable)
 	dec := make([]byte, 0, 4)
 	for i := 0; i < len(hexOut) && len(dec) < 4; i++ {
 		c := hexOut[i]
-		if c >= '0' && c <= '9' {
-			dec = append(dec, c)
+		var nibble int
+		switch {
+		case c >= '0' && c <= '9':
+			nibble = int(c - '0')
+		case c >= 'A' && c <= 'F':
+			nibble = int(c-'A') + 10
+		default:
+			continue
 		}
-	}
-	for i := 0; i < len(hexOut) && len(dec) < 4; i++ {
-		c := hexOut[i]
-		if c >= 'A' && c <= 'F' {
-			dec = append(dec, byte('0'+(c-'A')))
-		}
+		dec = append(dec, table[nibble])
 	}
 	for len(dec) < 4 {
 		dec = append(dec, '0')
@@ -566,8 +571,8 @@ func computeCVVWithTDES(cvk []byte, pan string, expiryYYMM string, serviceCode s
 	return string(out), nil
 }
 
-func generatePVV(key []byte, pin string, pan string, pvki string) (string, error) {
-	return computePVVWithTDES(key, pin, pan, pvki)
+func generatePVV(key []byte, pin string, pan string, pvki string, decimalizationTable string) (string, error) {
+	return computePVVWithTDES(key, pin, pan, pvki, decimalizationTable)
 }
 
 func generatePINOffset(pin string, referencePIN string) (string, error) {

@@ -38,13 +38,15 @@ type PaymentPolicy struct {
 	AllowInlineKeyMaterial    bool      `json:"allow_inline_key_material"`
 	MaxISO20022PayloadBytes   int       `json:"max_iso20022_payload_bytes"`
 	RequireISO20022LAUContext bool      `json:"require_iso20022_lau_context"`
-	StrictPCIDSS40            bool      `json:"strict_pci_dss_4_0"`
+	StrictPCIDSS40            bool      `json:"strict_pci_dss_4_0"` // legacy compatibility flag (no auto-bundle enforcement)
 	RequireKeyIDForOperations bool      `json:"require_key_id_for_operations"`
 	AllowTCPInterface         bool      `json:"allow_tcp_interface"`
 	RequireJWTOnTCP           bool      `json:"require_jwt_on_tcp"`
 	MaxTCPPayloadBytes        int       `json:"max_tcp_payload_bytes"`
 	AllowedTCPOperations      []string  `json:"allowed_tcp_operations"`
 	AllowedPINBlockFormats    []string  `json:"allowed_pin_block_formats"`
+	DisableISO0PINBlock       bool      `json:"disable_iso0_pin_block"`
+	DecimalizationTable       string    `json:"decimalization_table"`
 	BlockWildcardPAN          bool      `json:"block_wildcard_pan"`
 	UpdatedBy                 string    `json:"updated_by,omitempty"`
 	UpdatedAt                 time.Time `json:"updated_at"`

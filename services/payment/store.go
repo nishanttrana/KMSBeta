@@ -164,6 +164,8 @@ SELECT tenant_id,
        max_tcp_payload_bytes,
        allowed_tcp_operations_json,
        allowed_pin_block_formats_json,
+       disable_iso0_pin_block,
+       decimalization_table,
        block_wildcard_pan,
        COALESCE(updated_by,''),
        updated_at
@@ -191,6 +193,8 @@ WHERE tenant_id = $1
 		&out.MaxTCPPayloadBytes,
 		&tcpOpsJSON,
 		&pinFormatsJSON,
+		&out.DisableISO0PINBlock,
+		&out.DecimalizationTable,
 		&out.BlockWildcardPAN,
 		&out.UpdatedBy,
 		&updatedRaw,
@@ -223,11 +227,13 @@ INSERT INTO payment_policy (
     max_tcp_payload_bytes,
     allowed_tcp_operations_json,
     allowed_pin_block_formats_json,
+    disable_iso0_pin_block,
+    decimalization_table,
     block_wildcard_pan,
     updated_by,
     updated_at
 ) VALUES (
-    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,CURRENT_TIMESTAMP
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,CURRENT_TIMESTAMP
 )
 ON CONFLICT (tenant_id) DO UPDATE SET
     allowed_tr31_versions_json = EXCLUDED.allowed_tr31_versions_json,
@@ -242,6 +248,8 @@ ON CONFLICT (tenant_id) DO UPDATE SET
     max_tcp_payload_bytes = EXCLUDED.max_tcp_payload_bytes,
     allowed_tcp_operations_json = EXCLUDED.allowed_tcp_operations_json,
     allowed_pin_block_formats_json = EXCLUDED.allowed_pin_block_formats_json,
+    disable_iso0_pin_block = EXCLUDED.disable_iso0_pin_block,
+    decimalization_table = EXCLUDED.decimalization_table,
     block_wildcard_pan = EXCLUDED.block_wildcard_pan,
     updated_by = EXCLUDED.updated_by,
     updated_at = CURRENT_TIMESTAMP
@@ -258,10 +266,12 @@ RETURNING tenant_id,
           max_tcp_payload_bytes,
           allowed_tcp_operations_json,
           allowed_pin_block_formats_json,
+          disable_iso0_pin_block,
+          decimalization_table,
           block_wildcard_pan,
           COALESCE(updated_by,''),
           updated_at
-`, item.TenantID, validJSONOr(mustJSON(item.AllowedTR31Versions), "[]"), item.RequireKBPKForTR31, item.AllowInlineKeyMaterial, item.MaxISO20022PayloadBytes, item.RequireISO20022LAUContext, item.StrictPCIDSS40, item.RequireKeyIDForOperations, item.AllowTCPInterface, item.RequireJWTOnTCP, item.MaxTCPPayloadBytes, validJSONOr(mustJSON(item.AllowedTCPOperations), "[]"), validJSONOr(mustJSON(item.AllowedPINBlockFormats), "[]"), item.BlockWildcardPAN, item.UpdatedBy)
+`, item.TenantID, validJSONOr(mustJSON(item.AllowedTR31Versions), "[]"), item.RequireKBPKForTR31, item.AllowInlineKeyMaterial, item.MaxISO20022PayloadBytes, item.RequireISO20022LAUContext, item.StrictPCIDSS40, item.RequireKeyIDForOperations, item.AllowTCPInterface, item.RequireJWTOnTCP, item.MaxTCPPayloadBytes, validJSONOr(mustJSON(item.AllowedTCPOperations), "[]"), validJSONOr(mustJSON(item.AllowedPINBlockFormats), "[]"), item.DisableISO0PINBlock, item.DecimalizationTable, item.BlockWildcardPAN, item.UpdatedBy)
 	var (
 		out            PaymentPolicy
 		versionsJSON   string
@@ -283,6 +293,8 @@ RETURNING tenant_id,
 		&out.MaxTCPPayloadBytes,
 		&tcpOpsJSON,
 		&pinFormatsJSON,
+		&out.DisableISO0PINBlock,
+		&out.DecimalizationTable,
 		&out.BlockWildcardPAN,
 		&out.UpdatedBy,
 		&updatedRaw,

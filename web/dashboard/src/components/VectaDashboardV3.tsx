@@ -1724,9 +1724,9 @@ const Txt=({placeholder,rows,style,...p})=><textarea placeholder={placeholder} r
 
 const Sel=({children,w,style,...p})=><select style={{backgroundColor:C.card,border:`1px solid ${C.border}`,borderRadius:7,padding:"8px 30px 8px 10px",color:C.text,fontSize:11,width:w||"100%",outline:"none",cursor:"pointer",boxSizing:"border-box",appearance:"none",WebkitAppearance:"none",MozAppearance:"none",backgroundImage:"linear-gradient(45deg, transparent 50%, #7f93b3 50%), linear-gradient(135deg, #7f93b3 50%, transparent 50%)",backgroundPosition:"calc(100% - 14px) calc(50% - 2px), calc(100% - 9px) calc(50% - 2px)",backgroundSize:"5px 5px, 5px 5px",backgroundRepeat:"no-repeat",...(style||{})}} {...p}>{children}</select>;
 
-const Chk=({label,checked,onChange})=>(
-  <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:C.dim,cursor:"pointer",marginBottom:4}}>
-    <div style={{width:16,height:16,borderRadius:4,border:`1px solid ${checked?C.accent:C.border}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}} onClick={onChange}>
+const Chk=({label,checked,onChange,disabled})=>(
+  <label style={{display:"flex",alignItems:"center",gap:6,fontSize:11,color:disabled?C.muted:C.dim,cursor:disabled?"not-allowed":"pointer",marginBottom:4,opacity:disabled?0.75:1}}>
+    <div style={{width:16,height:16,borderRadius:4,border:`1px solid ${checked?C.accent:C.border}`,background:checked?C.accentDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}} onClick={disabled?undefined:onChange}>
       {checked&&<Check size={10} strokeWidth={3} color={C.accent}/>}
     </div>{label}</label>);
 
@@ -8439,6 +8439,8 @@ const PaymentCryptoPolicy=({session,onToast})=>{
         max_tcp_payload_bytes:Math.max(4096,Number(pp?.max_tcp_payload_bytes||262144)),
         allowed_tcp_operations:Array.isArray(pp?.allowed_tcp_operations)&&pp.allowed_tcp_operations.length?pp.allowed_tcp_operations:tcpOperationOptions,
         allowed_pin_block_formats:Array.isArray(pp?.allowed_pin_block_formats)&&pp.allowed_pin_block_formats.length?pp.allowed_pin_block_formats:pinFormatOptions,
+        disable_iso0_pin_block:Boolean(pp?.disable_iso0_pin_block),
+        decimalization_table:String(pp?.decimalization_table||"0123456789012345"),
         block_wildcard_pan:Boolean(pp?.block_wildcard_pan??true)
       });
     }catch(error){
@@ -8481,6 +8483,8 @@ const PaymentCryptoPolicy=({session,onToast})=>{
         max_tcp_payload_bytes:Math.max(4096,Math.min(1048576,Number(payPolicy?.max_tcp_payload_bytes||262144))),
         allowed_tcp_operations:Array.isArray(payPolicy?.allowed_tcp_operations)?payPolicy.allowed_tcp_operations:tcpOperationOptions,
         allowed_pin_block_formats:Array.isArray(payPolicy?.allowed_pin_block_formats)?payPolicy.allowed_pin_block_formats:pinFormatOptions,
+        disable_iso0_pin_block:Boolean(payPolicy?.disable_iso0_pin_block),
+        decimalization_table:String(payPolicy?.decimalization_table||"0123456789012345").trim(),
         block_wildcard_pan:Boolean(payPolicy?.block_wildcard_pan),
         updated_by:session?.username||"dashboard"
       });
@@ -8501,7 +8505,7 @@ const PaymentCryptoPolicy=({session,onToast})=>{
       <Card>
         <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Policy Scope</div>
         <div style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
-          This tab enforces PCI-focused payment policy across both REST and Payment TCP interfaces (TR-31, PIN, MAC, ISO20022).
+          This tab enforces configurable payment cryptography policy across REST and Payment TCP interfaces (TR-31, PIN, MAC, ISO20022).
         </div>
       </Card>
     </Section>
@@ -8509,7 +8513,12 @@ const PaymentCryptoPolicy=({session,onToast})=>{
     <Section title="Payment Crypto Controls">
       <Card style={{display:"grid",gap:8}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          <Chk label="Strict PCI DSS 4.0 mode (enforced hardening bundle)" checked={Boolean(payPolicy?.strict_pci_dss_4_0)} onChange={()=>setPayPolicy((prev)=>({...prev,strict_pci_dss_4_0:!Boolean(prev?.strict_pci_dss_4_0)}))}/>
+          <Chk label="Disable ISO-0 PIN block format" checked={Boolean(payPolicy?.disable_iso0_pin_block)} onChange={()=>setPayPolicy((prev)=>{
+            const disable=!Boolean(prev?.disable_iso0_pin_block);
+            const current=Array.isArray(prev?.allowed_pin_block_formats)?[...prev.allowed_pin_block_formats]:pinFormatOptions;
+            const nextFormats=disable?current.filter((fmt)=>fmt!=="ISO-0"):current;
+            return {...prev,disable_iso0_pin_block:disable,allowed_pin_block_formats:nextFormats};
+          })}/>
           <Chk label="Require KBPK/KEK for TR-31 operations" checked={Boolean(payPolicy?.require_kbpk_for_tr31)} onChange={()=>setPayPolicy((prev)=>({...prev,require_kbpk_for_tr31:!Boolean(prev?.require_kbpk_for_tr31)}))}/>
           <Chk label="Allow inline key material in payment API" checked={Boolean(payPolicy?.allow_inline_key_material)} onChange={()=>setPayPolicy((prev)=>({...prev,allow_inline_key_material:!Boolean(prev?.allow_inline_key_material)}))}/>
           <Chk label="Require ISO20022 LAU context" checked={Boolean(payPolicy?.require_iso20022_lau_context)} onChange={()=>setPayPolicy((prev)=>({...prev,require_iso20022_lau_context:!Boolean(prev?.require_iso20022_lau_context)}))}/>
@@ -8537,13 +8546,22 @@ const PaymentCryptoPolicy=({session,onToast})=>{
           <FG label="Max Payment TCP payload bytes">
             <Inp type="number" min={4096} max={1048576} value={String(payPolicy?.max_tcp_payload_bytes??262144)} onChange={(e)=>setPayPolicy((prev)=>({...prev,max_tcp_payload_bytes:Number(e.target.value||262144)}))}/>
           </FG>
+          <FG label="Decimalization Table (16 digits)">
+            <Inp
+              value={String(payPolicy?.decimalization_table||"0123456789012345")}
+              onChange={(e)=>setPayPolicy((prev)=>({...prev,decimalization_table:String(e.target.value||"").replace(/\s+/g,"")}))}
+              placeholder="0123456789012345"
+              mono
+            />
+          </FG>
         </div>
         <div>
           <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed PIN block formats</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
             {pinFormatOptions.map((fmt)=>{
               const selected=(Array.isArray(payPolicy?.allowed_pin_block_formats)?payPolicy.allowed_pin_block_formats:[]).includes(fmt);
-              return <Chk key={`pay-pol-pin-${fmt}`} label={fmt} checked={selected} onChange={()=>setPayPolicy((prev)=>{
+              const locked=Boolean(payPolicy?.disable_iso0_pin_block)&&fmt==="ISO-0";
+              return <Chk key={`pay-pol-pin-${fmt}`} label={locked?`${fmt} (disabled by policy)`:fmt} checked={locked?false:selected} disabled={locked} onChange={()=>setPayPolicy((prev)=>{
                 const current=Array.isArray(prev?.allowed_pin_block_formats)?[...prev.allowed_pin_block_formats]:[];
                 if(current.includes(fmt)){
                   return {...prev,allowed_pin_block_formats:current.filter((item)=>item!==fmt)};

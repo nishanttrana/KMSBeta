@@ -51,6 +51,8 @@ type Service struct {
 var supportedPaymentTR31Versions = []string{"B", "C", "D"}
 var supportedPINBlockFormats = []string{"ISO-0", "ISO-1", "ISO-3"}
 
+const defaultPaymentDecimalizationTable = "0123456789012345"
+
 func NewService(store Store, keycore KeyCoreClient, events EventPublisher, meter *metering.Meter) *Service {
 	if meter == nil {
 		meter = metering.NewMeter(0, 0)
@@ -78,8 +80,31 @@ func defaultPaymentPolicy(tenantID string) PaymentPolicy {
 		MaxTCPPayloadBytes:        262144,
 		AllowedTCPOperations:      append([]string{}, supportedPaymentCryptoOperations...),
 		AllowedPINBlockFormats:    append([]string{}, supportedPINBlockFormats...),
+		DisableISO0PINBlock:       false,
+		DecimalizationTable:       defaultPaymentDecimalizationTable,
 		BlockWildcardPAN:          true,
 	}
+}
+
+func isValidDecimalizationTable(raw string) bool {
+	value := strings.TrimSpace(raw)
+	if len(value) != 16 {
+		return false
+	}
+	for _, c := range value {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func normalizeDecimalizationTable(raw string) string {
+	value := strings.TrimSpace(raw)
+	if !isValidDecimalizationTable(value) {
+		return defaultPaymentDecimalizationTable
+	}
+	return value
 }
 
 func normalizePaymentPolicy(in PaymentPolicy) PaymentPolicy {
@@ -113,7 +138,21 @@ func normalizePaymentPolicy(in PaymentPolicy) PaymentPolicy {
 	if len(outPIN) == 0 {
 		outPIN = append([]string{}, supportedPINBlockFormats...)
 	}
+	if in.DisableISO0PINBlock {
+		filtered := make([]string, 0, len(outPIN))
+		for _, v := range outPIN {
+			if strings.EqualFold(v, "ISO-0") {
+				continue
+			}
+			filtered = append(filtered, v)
+		}
+		if len(filtered) == 0 {
+			filtered = []string{"ISO-1", "ISO-3"}
+		}
+		outPIN = filtered
+	}
 	in.AllowedPINBlockFormats = outPIN
+	in.DecimalizationTable = normalizeDecimalizationTable(in.DecimalizationTable)
 	tcpOps := uniqueStrings(in.AllowedTCPOperations)
 	outOps := make([]string, 0, len(tcpOps))
 	for _, item := range tcpOps {
@@ -135,14 +174,6 @@ func normalizePaymentPolicy(in PaymentPolicy) PaymentPolicy {
 	if in.MaxTCPPayloadBytes > 1048576 {
 		in.MaxTCPPayloadBytes = 1048576
 	}
-	if in.StrictPCIDSS40 {
-		in.RequireKBPKForTR31 = true
-		in.AllowInlineKeyMaterial = false
-		in.RequireISO20022LAUContext = true
-		in.RequireKeyIDForOperations = true
-		in.RequireJWTOnTCP = true
-		in.BlockWildcardPAN = true
-	}
 	in.UpdatedBy = strings.TrimSpace(in.UpdatedBy)
 	return in
 }
@@ -163,6 +194,9 @@ func (s *Service) GetPaymentPolicy(ctx context.Context, tenantID string) (Paymen
 }
 
 func (s *Service) UpdatePaymentPolicy(ctx context.Context, in PaymentPolicy) (PaymentPolicy, error) {
+	if raw := strings.TrimSpace(in.DecimalizationTable); raw != "" && !isValidDecimalizationTable(raw) {
+		return PaymentPolicy{}, newServiceError(http.StatusBadRequest, "bad_request", "decimalization_table must be exactly 16 digits (0-9)")
+	}
 	in = normalizePaymentPolicy(in)
 	if in.TenantID == "" {
 		return PaymentPolicy{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
@@ -185,6 +219,8 @@ func (s *Service) UpdatePaymentPolicy(ctx context.Context, in PaymentPolicy) (Pa
 		"max_tcp_payload_bytes":         item.MaxTCPPayloadBytes,
 		"allowed_tcp_operations":        item.AllowedTCPOperations,
 		"allowed_pin_block_formats":     item.AllowedPINBlockFormats,
+		"disable_iso0_pin_block":        item.DisableISO0PINBlock,
+		"decimalization_table":          item.DecimalizationTable,
 		"block_wildcard_pan":            item.BlockWildcardPAN,
 	})
 	return item, nil
@@ -894,7 +930,7 @@ func (s *Service) GeneratePVV(ctx context.Context, req PVVGenerateRequest) (stri
 	if err := s.consumeMeter(); err != nil {
 		return "", err
 	}
-	pvv, err := generatePVV(key, req.PIN, req.PAN, req.PVKI)
+	pvv, err := generatePVV(key, req.PIN, req.PAN, req.PVKI, policy.DecimalizationTable)
 	if err != nil {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", err.Error())
 	}
