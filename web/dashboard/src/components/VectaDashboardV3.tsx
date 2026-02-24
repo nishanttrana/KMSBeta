@@ -576,7 +576,7 @@ const REST_API_CATALOG = [
     method: "POST",
     pathTemplate: "/cloud/import",
     bodyTemplate:
-      '{\n  "tenant_id": "{{tenant_id}}",\n  "key_id": "{{key_id}}",\n  "provider": "aws",\n  "account_id": "acct_aws_01",\n  "vecta_region": "primary",\n  "cloud_region": "us-east-1",\n  "metadata_json": "{\\"source\\":\\"rest-workbench\\"}"\n}',
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "key_id": "{{key_id}}",\n  "provider": "aws",\n  "account_id": "acct_aws_01",\n  "vecta_region": "primary",\n  "cloud_region": "us-east-1",\n  "metadata_json": "{\\"source\\":\\"rest-api\\"}"\n}',
     description: "Imports or binds a KMS key to cloud KMS/HSM target using configured account credentials.",
     requestExample: "POST /svc/cloud/cloud/import",
     responseExample: { binding: { id: "bind_01", key_id: "key_123", provider: "aws", cloud_key_ref: "arn:aws:kms:..." } },
@@ -1821,7 +1821,7 @@ const Row3=({children})=><div style={{display:"grid",gridTemplateColumns:"1fr 1f
 
 const NAV=[
   {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"certs",icon:FileText,label:"Certificates / PKI"}]},
-  {g:"WORKBENCH",items:[{id:"crypto",icon:Zap,label:"Crypto Console"},{id:"restapi",icon:TerminalSquare,label:"REST API Workbench"}]},
+  {g:"WORKBENCH",items:[{id:"workbench",icon:LayoutGrid,label:"Workbench"}]},
   {g:"SECRETS & CERTS",items:[{id:"vault",icon:Lock,label:"Secret Vault"}]},
   {g:"DATA PROTECTION",items:[{id:"tokenize",icon:VenetianMask,label:"Tokenize / Mask / Redact"},{id:"dataenc",icon:Database,label:"Data Encryption"},{id:"payment",icon:CreditCard,label:"Payment Crypto"},{id:"pkcs11",icon:Plug,label:"PKCS#11 / JCA"}]},
   {g:"CLOUD KEY CONTROL",items:[{id:"cloudctl",icon:Cloud,label:"Cloud Key Control"},{id:"ekm",icon:Database,label:"Enterprise Key Management"}]},
@@ -5002,7 +5002,7 @@ const Crypto=({session,keyCatalog,onToast,fipsMode})=>{
 };
 
 // 
-// TAB: REST API WORKBENCH (authenticated playground)
+// TAB: REST API (authenticated playground)
 // 
 const RestAPI=({session,keyCatalog,onToast})=>{
   const [selectedEndpointID,setSelectedEndpointID]=useState(String(REST_API_CATALOG[0]?.id||""));
@@ -5228,7 +5228,7 @@ const RestAPI=({session,keyCatalog,onToast})=>{
   };
 
   return <div>
-    <Section title="REST API Workbench" actions={<>
+    <Section title="REST API" actions={<>
       <B c="blue">JWT Required</B>
       <Btn small onClick={executeRequest} disabled={running}>{running?"Executing...":"Execute Call"}</Btn>
     </>}>
@@ -5241,7 +5241,7 @@ const RestAPI=({session,keyCatalog,onToast})=>{
           Tenant parameter is explicit and drives both <span style={{color:C.text}}>X-Tenant-ID</span> and template replacement for <span style={{color:C.text}}>{"{{tenant_id}}"}</span>.
         </div>
         <div style={{fontSize:10,color:C.muted,marginTop:6}}>
-          Recommended product name: <span style={{color:C.accent,fontWeight:700}}>API Workbench</span>.
+          Product label: <span style={{color:C.accent,fontWeight:700}}>REST API</span>.
         </div>
       </Card>
       <Row2>
@@ -5348,6 +5348,14 @@ const RestAPI=({session,keyCatalog,onToast})=>{
       </Row2>
     </Section>
   </div>;
+};
+
+const Workbench=({session,keyCatalog,onToast,subView,fipsMode})=>{
+  const active=String(subView||"crypto");
+  if(active==="restapi"){
+    return <RestAPI session={session} keyCatalog={keyCatalog} onToast={onToast}/>;
+  }
+  return <Crypto session={session} keyCatalog={keyCatalog} onToast={onToast} fipsMode={fipsMode}/>;
 };
 
 // 
@@ -16091,9 +16099,13 @@ const Documentation=()=>{
 // 
 // MAIN APP WITH SIDEBAR
 // 
-const TABS={home:Home,keys:Keys,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,cloudctl:CloudKeyControl,byok:BYOK,hyok:HYOK,ekm:EKM,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
-const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",restapi:"REST API Workbench",vault:"Secret Vault",certs:"Certificates / PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",cloudctl:"Cloud Key Control",byok:"BYOK",hyok:"HYOK",ekm:"Enterprise Key Management",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
+const TABS={home:Home,keys:Keys,workbench:Workbench,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,cloudctl:CloudKeyControl,byok:BYOK,hyok:HYOK,ekm:EKM,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
+const TITLES={home:"Dashboard",keys:"Key Management",workbench:"Workbench",crypto:"Crypto Console",restapi:"REST API",vault:"Secret Vault",certs:"Certificates / PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",cloudctl:"Cloud Key Control",byok:"BYOK",hyok:"HYOK",ekm:"Enterprise Key Management",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
 const SUB_PANES={
+  workbench:[
+    {id:"crypto",label:"Crypto Console",hint:"Interactive cryptographic operations and algorithm console",icon:Zap},
+    {id:"restapi",label:"REST API",hint:"Authenticated API explorer and endpoint documentation",icon:TerminalSquare}
+  ],
   cloudctl:[
     {id:"byok",label:"BYOK",hint:"Cloud provider key import and sync",icon:Cloud,feature:"cloud_byok"},
     {id:"hyok",label:"HYOK",hint:"Hold-your-own-key policy and cryptographic controls",icon:ShieldCheck,feature:"hyok_proxy"}
@@ -16121,7 +16133,7 @@ export default function VectaDashboard(props){
   const [toast,setToast]=useState("");
   const [keyCatalog,setKeyCatalog]=useState([]);
   const [tagCatalog,setTagCatalog]=useState([]);
-  const [subPaneSelection,setSubPaneSelection]=useState({cloudctl:"byok",ekm:"db"});
+  const [subPaneSelection,setSubPaneSelection]=useState({workbench:"crypto",cloudctl:"byok",ekm:"db"});
   const [fipsMode,setFipsMode]=useState<"enabled"|"disabled">("disabled");
   const [reportedUnread,setReportedUnread]=useState(Number(unreadAlerts||0));
   const [cliStatus,setCLIStatus]=useState<any>(null);
@@ -16395,7 +16407,7 @@ export default function VectaDashboard(props){
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 20px",height:48,borderBottom:`1px solid ${C.border}`,background:C.surface}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <div style={{width:24,height:24,borderRadius:6,background:`linear-gradient(135deg,${C.accent},${C.purple})`,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:C.bg}}>V</div>
-            <span style={{fontSize:13,fontWeight:700,letterSpacing:.3}}>VECTA KMS - REST API Workbench</span>
+            <span style={{fontSize:13,fontWeight:700,letterSpacing:.3}}>VECTA KMS - REST API</span>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
             <B c={globalFipsEnabled?"green":"blue"} pulse={globalFipsEnabled}>{globalFipsEnabled?"FIPS STRICT":"STANDARD MODE"}</B>
@@ -16546,7 +16558,14 @@ export default function VectaDashboard(props){
                 return(
                   <div
                     key={String(item.id)}
-                    onClick={()=>setSubPaneSelection((prev:any)=>({...prev,[tab]:String(item.id)}))}
+                    onClick={()=>{
+                      if(tab==="workbench"&&String(item.id)==="restapi"){
+                        const url=`${window.location.origin}${window.location.pathname}?restapi=1`;
+                        window.open(url,"_blank","noopener,noreferrer");
+                        return;
+                      }
+                      setSubPaneSelection((prev:any)=>({...prev,[tab]:String(item.id)}));
+                    }}
                     style={{
                       border:`1px solid ${isActive?C.accent:C.border}`,
                       background:isActive?C.accentDim:"transparent",
