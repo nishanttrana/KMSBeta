@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"errors"
 	"log"
 	"math/big"
@@ -64,6 +66,7 @@ func main() {
 		NewSQLStore(dbConn),
 		NewHTTPKeyCoreClient(keycoreURL, 3*time.Second),
 		publisher,
+		loadMEK(),
 	)
 	handler := NewHandler(svc)
 
@@ -186,4 +189,16 @@ func mustAtoi(s string) int {
 		n = n*10 + int(s[i]-'0')
 	}
 	return n
+}
+
+func loadMEK() []byte {
+	b64 := strings.TrimSpace(os.Getenv("EKM_MEK_B64"))
+	if b64 != "" {
+		if raw, err := base64.StdEncoding.DecodeString(b64); err == nil && len(raw) >= 32 {
+			return raw[:32]
+		}
+	}
+	// Security: deterministic fallback is for local/dev only; production should provide EKM_MEK_B64.
+	sum := sha256.Sum256([]byte("vecta-ekm-dev-mek"))
+	return sum[:]
 }

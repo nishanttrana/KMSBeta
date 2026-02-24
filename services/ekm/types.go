@@ -248,6 +248,115 @@ type PublicKeyResponse struct {
 	KeyVersion string `json:"key_version"`
 }
 
+type BitLockerClient struct {
+	ID                   string    `json:"id"`
+	TenantID             string    `json:"tenant_id"`
+	Name                 string    `json:"name"`
+	Host                 string    `json:"host"`
+	OSVersion            string    `json:"os_version"`
+	Status               string    `json:"status"`
+	Health               string    `json:"health"`
+	ProtectionStatus     string    `json:"protection_status"`
+	EncryptionPercentage float64   `json:"encryption_percentage"`
+	MountPoint           string    `json:"mount_point"`
+	HeartbeatIntervalSec int       `json:"heartbeat_interval_sec"`
+	LastHeartbeatAt      time.Time `json:"last_heartbeat_at"`
+	TPMPresent           bool      `json:"tpm_present"`
+	TPMReady             bool      `json:"tpm_ready"`
+	JWTSubject           string    `json:"jwt_subject"`
+	TLSClientCN          string    `json:"tls_client_cn"`
+	MetadataJSON         string    `json:"metadata_json"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
+}
+
+type RegisterBitLockerClientRequest struct {
+	TenantID             string `json:"tenant_id"`
+	ClientID             string `json:"client_id"`
+	Name                 string `json:"name"`
+	Host                 string `json:"host"`
+	OSVersion            string `json:"os_version"`
+	MountPoint           string `json:"mount_point"`
+	HeartbeatIntervalSec int    `json:"heartbeat_interval_sec"`
+	MetadataJSON         string `json:"metadata_json"`
+}
+
+type BitLockerHeartbeatRequest struct {
+	TenantID             string  `json:"tenant_id"`
+	Status               string  `json:"status"`
+	Health               string  `json:"health"`
+	ProtectionStatus     string  `json:"protection_status"`
+	EncryptionPercentage float64 `json:"encryption_percentage"`
+	MountPoint           string  `json:"mount_point"`
+	TPMPresent           bool    `json:"tpm_present"`
+	TPMReady             bool    `json:"tpm_ready"`
+	MetadataJSON         string  `json:"metadata_json"`
+}
+
+type BitLockerOperationRequest struct {
+	TenantID string                 `json:"tenant_id"`
+	Operation string                `json:"operation"`
+	RequestedBy string              `json:"requested_by"`
+	RequestID string                `json:"request_id"`
+	Params map[string]interface{}   `json:"params"`
+}
+
+type BitLockerJob struct {
+	ID             string    `json:"id"`
+	TenantID       string    `json:"tenant_id"`
+	ClientID       string    `json:"client_id"`
+	Operation      string    `json:"operation"`
+	ParamsJSON     string    `json:"params_json"`
+	Status         string    `json:"status"`
+	RequestedBy    string    `json:"requested_by"`
+	RequestID      string    `json:"request_id"`
+	RequestedAt    time.Time `json:"requested_at"`
+	DispatchedAt   time.Time `json:"dispatched_at"`
+	CompletedAt    time.Time `json:"completed_at"`
+	ResultJSON     string    `json:"result_json"`
+	ErrorMessage   string    `json:"error_message"`
+	RecoveryKeyRef string    `json:"recovery_key_ref"`
+}
+
+type BitLockerJobResultRequest struct {
+	TenantID         string                 `json:"tenant_id"`
+	Status           string                 `json:"status"`
+	ProtectionStatus string                 `json:"protection_status"`
+	Result           map[string]interface{} `json:"result"`
+	ErrorMessage     string                 `json:"error_message"`
+	RecoveryKey      string                 `json:"recovery_key"`
+	ProtectorID      string                 `json:"protector_id"`
+	VolumeMountPoint string                 `json:"volume_mount_point"`
+}
+
+type BitLockerRecoveryKeyRecord struct {
+	ID               string    `json:"id"`
+	TenantID         string    `json:"tenant_id"`
+	ClientID         string    `json:"client_id"`
+	JobID            string    `json:"job_id"`
+	VolumeMountPoint string    `json:"volume_mount_point"`
+	ProtectorID      string    `json:"protector_id"`
+	KeyFingerprint   string    `json:"key_fingerprint"`
+	KeyMasked        string    `json:"key_masked"`
+	WrappedDEK       string    `json:"wrapped_dek"`
+	WrappedDEKIV     string    `json:"wrapped_dek_iv"`
+	Ciphertext       string    `json:"ciphertext"`
+	DataIV           string    `json:"data_iv"`
+	Source           string    `json:"source"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+type BitLockerRecoveryKeyView struct {
+	ID               string    `json:"id"`
+	ClientID         string    `json:"client_id"`
+	VolumeMountPoint string    `json:"volume_mount_point"`
+	ProtectorID      string    `json:"protector_id"`
+	KeyFingerprint   string    `json:"key_fingerprint"`
+	KeyMasked        string    `json:"key_masked"`
+	Source           string    `json:"source"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
 type SDKProviderSummary struct {
 	ID               string   `json:"id"`
 	Name             string   `json:"name"`

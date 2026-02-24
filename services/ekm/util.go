@@ -274,6 +274,101 @@ func normalizeTargetOS(v string) string {
 	}
 }
 
+func normalizeBitLockerStatus(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "", "connected", "online":
+		return "connected"
+	case "degraded":
+		return "degraded"
+	case "disconnected", "offline":
+		return "disconnected"
+	default:
+		return "connected"
+	}
+}
+
+func normalizeBitLockerHealth(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "", "healthy":
+		return "healthy"
+	case "degraded":
+		return "degraded"
+	case "down":
+		return "down"
+	default:
+		return "healthy"
+	}
+}
+
+func normalizeBitLockerProtection(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "on", "enabled", "protected":
+		return "on"
+	case "off", "disabled", "unprotected":
+		return "off"
+	case "suspended", "pause", "paused":
+		return "suspended"
+	default:
+		return "unknown"
+	}
+}
+
+func normalizeBitLockerOperation(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "enable":
+		return "enable"
+	case "disable":
+		return "disable"
+	case "pause", "suspend":
+		return "pause"
+	case "resume":
+		return "resume"
+	case "remove":
+		return "remove"
+	case "rotate":
+		return "rotate"
+	case "fetch_recovery", "fetch-key", "fetch":
+		return "fetch_recovery"
+	default:
+		return ""
+	}
+}
+
+func normalizeBitLockerJobStatus(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "", "pending":
+		return "pending"
+	case "dispatched":
+		return "dispatched"
+	case "succeeded", "success":
+		return "succeeded"
+	case "failed", "error":
+		return "failed"
+	default:
+		return "pending"
+	}
+}
+
+func maskBitLockerKey(raw string) string {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return ""
+	}
+	if len(s) <= 8 {
+		return "****" + s[len(s)-2:]
+	}
+	return s[:4] + strings.Repeat("*", len(s)-8) + s[len(s)-4:]
+}
+
+func fingerprintBitLockerKey(raw string) string {
+	s := strings.TrimSpace(raw)
+	if s == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(sum[:16])
+}
+
 func parseJSONMap(v string) map[string]interface{} {
 	out := map[string]interface{}{}
 	if strings.TrimSpace(v) == "" {

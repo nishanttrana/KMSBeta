@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -21,13 +22,21 @@ type Service struct {
 	store   Store
 	keycore KeyCoreClient
 	events  EventPublisher
+	mek     []byte
 }
 
-func NewService(store Store, keycore KeyCoreClient, events EventPublisher) *Service {
+func NewService(store Store, keycore KeyCoreClient, events EventPublisher, mek []byte) *Service {
+	if len(mek) < 32 {
+		sum := sha256.Sum256([]byte("vecta-ekm-dev-mek"))
+		mek = sum[:]
+	}
+	outMEK := make([]byte, 32)
+	copy(outMEK, mek[:32])
 	return &Service{
 		store:   store,
 		keycore: keycore,
 		events:  events,
+		mek:     outMEK,
 	}
 }
 

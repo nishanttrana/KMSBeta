@@ -35,6 +35,21 @@ type Store interface {
 	RecordKeyAccess(ctx context.Context, item KeyAccessLog) error
 	ListKeyAccessByAgent(ctx context.Context, tenantID string, agentID string, limit int) ([]KeyAccessLog, error)
 	ListKeyAccessByTenant(ctx context.Context, tenantID string, since time.Time, limit int) ([]KeyAccessLog, error)
+
+	UpsertBitLockerClient(ctx context.Context, client BitLockerClient) error
+	GetBitLockerClient(ctx context.Context, tenantID string, clientID string) (BitLockerClient, error)
+	ListBitLockerClients(ctx context.Context, tenantID string, limit int) ([]BitLockerClient, error)
+	UpdateBitLockerHeartbeat(ctx context.Context, tenantID string, clientID string, status string, health string, protectionStatus string, encryptionPct float64, mountPoint string, tpmPresent bool, tpmReady bool, metadataJSON string, at time.Time) error
+	MarkBitLockerClientDisconnected(ctx context.Context, tenantID string, clientID string, at time.Time) error
+
+	CreateBitLockerJob(ctx context.Context, job BitLockerJob) error
+	GetBitLockerJob(ctx context.Context, tenantID string, clientID string, jobID string) (BitLockerJob, error)
+	ListBitLockerJobs(ctx context.Context, tenantID string, clientID string, limit int) ([]BitLockerJob, error)
+	DispatchNextBitLockerJob(ctx context.Context, tenantID string, clientID string, at time.Time) (BitLockerJob, error)
+	CompleteBitLockerJob(ctx context.Context, tenantID string, clientID string, jobID string, status string, resultJSON string, errMessage string, recoveryRef string, completedAt time.Time) error
+
+	SaveBitLockerRecoveryKey(ctx context.Context, rec BitLockerRecoveryKeyRecord) error
+	ListBitLockerRecoveryKeys(ctx context.Context, tenantID string, clientID string, limit int) ([]BitLockerRecoveryKeyRecord, error)
 }
 
 type SQLStore struct {

@@ -83,6 +83,66 @@ export type EKMDeployPackage = {
   files: EKMDeployPackageFile[];
 };
 
+export type EKMBitLockerClient = {
+  id: string;
+  tenant_id: string;
+  name: string;
+  host: string;
+  os_version: string;
+  status: string;
+  health: string;
+  protection_status: string;
+  encryption_percentage: number;
+  mount_point: string;
+  heartbeat_interval_sec: number;
+  last_heartbeat_at?: string;
+  tpm_present: boolean;
+  tpm_ready: boolean;
+  jwt_subject?: string;
+  tls_client_cn?: string;
+  metadata_json?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type EKMBitLockerJob = {
+  id: string;
+  tenant_id: string;
+  client_id: string;
+  operation: string;
+  params_json?: string;
+  status: string;
+  requested_by: string;
+  request_id: string;
+  requested_at?: string;
+  dispatched_at?: string;
+  completed_at?: string;
+  result_json?: string;
+  error_message?: string;
+  recovery_key_ref?: string;
+};
+
+export type EKMBitLockerRecovery = {
+  id: string;
+  client_id: string;
+  volume_mount_point: string;
+  protector_id: string;
+  key_fingerprint: string;
+  key_masked: string;
+  source: string;
+  created_at?: string;
+};
+
+export type RegisterBitLockerClientInput = {
+  client_id?: string;
+  name: string;
+  host: string;
+  os_version?: string;
+  mount_point?: string;
+  heartbeat_interval_sec?: number;
+  metadata_json?: string;
+};
+
 export type EKMSDKProvider = {
   id: string;
   name: string;
@@ -162,6 +222,12 @@ type DeleteAgentResponse = { deleted: EKMDeleteAgentResult };
 type DeployResponse = { package: EKMDeployPackage };
 type SDKOverviewResponse = { overview: EKMSDKOverview };
 type SDKDownloadResponse = { artifact: EKMSDKArtifact };
+type BitLockerClientsResponse = { items: EKMBitLockerClient[] };
+type BitLockerClientResponse = { client: EKMBitLockerClient };
+type BitLockerJobResponse = { job: EKMBitLockerJob };
+type BitLockerJobsResponse = { items: EKMBitLockerJob[] };
+type BitLockerRecoveryResponse = { items: EKMBitLockerRecovery[] };
+type BitLockerDeployResponse = { package: EKMDeployPackage };
 type PublicKeyResponse = {
   public_key: {
     key_id: string;
@@ -272,6 +338,125 @@ export async function getEKMDeployPackage(
     session,
     "ekm",
     `/ekm/agents/${encodeURIComponent(agentID)}/deploy?${tenantQuery(session)}&os=${encodeURIComponent(targetOS)}`
+  );
+  return out.package;
+}
+
+export async function listBitLockerClients(
+  session: AuthSession,
+  limit = 1000,
+  tenantOverride?: string
+): Promise<EKMBitLockerClient[]> {
+  const out = await serviceRequest<BitLockerClientsResponse>(
+    session,
+    "ekm",
+    `/ekm/bitlocker/clients?${tenantQuery(session, tenantOverride)}&limit=${Math.max(1, Math.min(100000, Math.trunc(limit)))}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getBitLockerClient(
+  session: AuthSession,
+  clientID: string,
+  tenantOverride?: string
+): Promise<EKMBitLockerClient> {
+  const out = await serviceRequest<BitLockerClientResponse>(
+    session,
+    "ekm",
+    `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}?${tenantQuery(session, tenantOverride)}`
+  );
+  return out.client;
+}
+
+export async function registerBitLockerClient(
+  session: AuthSession,
+  input: RegisterBitLockerClientInput,
+  tenantOverride?: string
+): Promise<EKMBitLockerClient> {
+  const out = await serviceRequest<BitLockerClientResponse>(
+    session,
+    "ekm",
+    "/ekm/bitlocker/clients/register",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        tenant_id: String(tenantOverride || session.tenantId || "").trim(),
+        client_id: String(input.client_id || "").trim(),
+        name: String(input.name || "").trim(),
+        host: String(input.host || "").trim(),
+        os_version: String(input.os_version || "windows").trim(),
+        mount_point: String(input.mount_point || "C:").trim(),
+        heartbeat_interval_sec: Math.max(5, Math.min(300, Math.trunc(Number(input.heartbeat_interval_sec || 30)))),
+        metadata_json: String(input.metadata_json || "{}")
+      })
+    }
+  );
+  return out.client;
+}
+
+export async function queueBitLockerOperation(
+  session: AuthSession,
+  clientID: string,
+  operation: "enable" | "disable" | "pause" | "resume" | "remove" | "rotate" | "fetch_recovery",
+  params: Record<string, unknown> = {},
+  tenantOverride?: string
+): Promise<EKMBitLockerJob> {
+  const out = await serviceRequest<BitLockerJobResponse>(
+    session,
+    "ekm",
+    `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/operations`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        tenant_id: String(tenantOverride || session.tenantId || "").trim(),
+        operation,
+        requested_by: String(session.username || "dashboard").trim() || "dashboard",
+        request_id: "",
+        params
+      })
+    }
+  );
+  return out.job;
+}
+
+export async function listBitLockerJobs(
+  session: AuthSession,
+  clientID: string,
+  limit = 100,
+  tenantOverride?: string
+): Promise<EKMBitLockerJob[]> {
+  const out = await serviceRequest<BitLockerJobsResponse>(
+    session,
+    "ekm",
+    `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/jobs?${tenantQuery(session, tenantOverride)}&limit=${Math.max(1, Math.min(5000, Math.trunc(limit)))}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function listBitLockerRecoveryKeys(
+  session: AuthSession,
+  clientID: string,
+  limit = 200,
+  tenantOverride?: string
+): Promise<EKMBitLockerRecovery[]> {
+  const out = await serviceRequest<BitLockerRecoveryResponse>(
+    session,
+    "ekm",
+    `/ekm/bitlocker/recovery?${tenantQuery(session, tenantOverride)}&client_id=${encodeURIComponent(clientID)}&limit=${Math.max(1, Math.min(20000, Math.trunc(limit)))}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getBitLockerDeployPackage(
+  session: AuthSession,
+  clientID: string,
+  targetOS: "windows" = "windows",
+  tenantOverride?: string
+): Promise<EKMDeployPackage> {
+  const out = await serviceRequest<BitLockerDeployResponse>(
+    session,
+    "ekm",
+    `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/deploy?${tenantQuery(session, tenantOverride)}&os=${encodeURIComponent(targetOS)}`
   );
   return out.package;
 }
