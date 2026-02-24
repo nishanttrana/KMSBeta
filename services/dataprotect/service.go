@@ -191,6 +191,9 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 		}
 		vault.Mode = "vault"
 	}
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, vault.KeyID, "encrypt"); err != nil {
+		return nil, err
+	}
 
 	key, err := s.resolveWorkingKey(ctx, req.TenantID, vault.KeyID, "tokenize")
 	if err != nil {
@@ -347,6 +350,9 @@ func (s *Service) Detokenize(ctx context.Context, req DetokenizeRequest) ([]map[
 		}
 		key, ok := keyCache[vault.KeyID]
 		if !ok {
+			if err := s.enforceKeycoreMetering(ctx, req.TenantID, vault.KeyID, "decrypt"); err != nil {
+				return nil, err
+			}
 			key, err = s.resolveWorkingKey(ctx, req.TenantID, vault.KeyID, "tokenize")
 			if err != nil {
 				return nil, err
@@ -385,6 +391,9 @@ func (s *Service) FPEEncrypt(ctx context.Context, req FPERequest) (map[string]in
 	if req.Radix == 0 {
 		req.Radix = 10
 	}
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt"); err != nil {
+		return nil, err
+	}
 	key, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "fpe")
 	if err != nil {
 		return nil, err
@@ -420,6 +429,9 @@ func (s *Service) FPEDecrypt(ctx context.Context, req FPERequest) (map[string]in
 	}
 	if req.Radix == 0 {
 		req.Radix = 10
+	}
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "decrypt"); err != nil {
+		return nil, err
 	}
 	key, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "fpe")
 	if err != nil {
@@ -551,6 +563,9 @@ func (s *Service) ApplyMask(ctx context.Context, req MaskRequest) (map[string]in
 	seed := []byte{}
 	if policy.Consistent {
 		if policy.KeyID != "" {
+			if err := s.enforceKeycoreMetering(ctx, req.TenantID, policy.KeyID, "encrypt"); err != nil {
+				return nil, err
+			}
 			mk, err := s.resolveWorkingKey(ctx, req.TenantID, policy.KeyID, "masking")
 			if err == nil {
 				seed = hmacSHA256(mk, req.Role, policy.FieldPath, firstString(raw))
@@ -667,6 +682,9 @@ func (s *Service) EncryptFields(ctx context.Context, req AppFieldRequest) (map[s
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "fields are required")
 	}
 	algorithm := normalizeFieldAlgorithm(req.Algorithm, req.Searchable)
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt"); err != nil {
+		return nil, err
+	}
 	key, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "field-encrypt")
 	if err != nil {
 		return nil, err
@@ -737,6 +755,7 @@ func (s *Service) DecryptFields(ctx context.Context, req AppFieldRequest) (map[s
 		}
 	}
 	keyCache := map[string][]byte{}
+	metered := map[string]struct{}{}
 	defer func() {
 		for _, k := range keyCache {
 			pkgcrypto.Zeroize(k)
@@ -766,6 +785,12 @@ func (s *Service) DecryptFields(ctx context.Context, req AppFieldRequest) (map[s
 		}
 		key, ok := keyCache[keyID]
 		if !ok {
+			if _, seen := metered[keyID]; !seen {
+				if err := s.enforceKeycoreMetering(ctx, req.TenantID, keyID, "decrypt"); err != nil {
+					return nil, err
+				}
+				metered[keyID] = struct{}{}
+			}
 			var err error
 			key, err = s.resolveWorkingKey(ctx, req.TenantID, keyID, "field-encrypt")
 			if err != nil {
@@ -805,6 +830,9 @@ func (s *Service) EnvelopeEncrypt(ctx context.Context, req EnvelopeRequest) (map
 	if req.TenantID == "" || req.KeyID == "" || req.Plaintext == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and plaintext are required")
 	}
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "wrap"); err != nil {
+		return nil, err
+	}
 	kek, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "envelope-kek")
 	if err != nil {
 		return nil, err
@@ -840,6 +868,9 @@ func (s *Service) EnvelopeDecrypt(ctx context.Context, req EnvelopeRequest) (map
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	if req.TenantID == "" || req.KeyID == "" || req.Ciphertext == "" || req.WrappedDEK == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id, ciphertext and wrapped_dek are required")
+	}
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "unwrap"); err != nil {
+		return nil, err
 	}
 	kek, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "envelope-kek")
 	if err != nil {
@@ -888,6 +919,9 @@ func (s *Service) SearchableEncrypt(ctx context.Context, req SearchableRequest) 
 	if req.TenantID == "" || req.KeyID == "" || req.Plaintext == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and plaintext are required")
 	}
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt"); err != nil {
+		return nil, err
+	}
 	key, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "searchable")
 	if err != nil {
 		return nil, err
@@ -908,6 +942,9 @@ func (s *Service) SearchableDecrypt(ctx context.Context, req SearchableRequest) 
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	if req.TenantID == "" || req.KeyID == "" || req.Ciphertext == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and ciphertext are required")
+	}
+	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "decrypt"); err != nil {
+		return nil, err
 	}
 	key, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "searchable")
 	if err != nil {
@@ -944,6 +981,50 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 		return err
 	}
 	return s.events.Publish(ctx, subject, raw)
+}
+
+func (s *Service) enforceKeycoreMetering(ctx context.Context, tenantID string, keyID string, operation string) error {
+	tenantID = strings.TrimSpace(tenantID)
+	keyID = strings.TrimSpace(keyID)
+	if tenantID == "" || keyID == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and key_id are required")
+	}
+	if s.keycore == nil {
+		return newServiceError(http.StatusServiceUnavailable, "keycore_unavailable", "keycore usage metering is required")
+	}
+	if err := s.keycore.MeterUsage(ctx, tenantID, keyID, operation); err != nil {
+		var herr keycoreHTTPError
+		if errors.As(err, &herr) {
+			msg := strings.TrimSpace(herr.Message)
+			if msg == "" {
+				msg = "keycore usage metering failed"
+			}
+			switch herr.Status {
+			case http.StatusTooManyRequests:
+				return newServiceError(http.StatusTooManyRequests, "ops_limit_reached", msg)
+			case http.StatusNotFound:
+				return newServiceError(http.StatusNotFound, "not_found", msg)
+			case http.StatusForbidden:
+				return newServiceError(http.StatusForbidden, "access_denied", msg)
+			case http.StatusConflict:
+				return newServiceError(http.StatusConflict, "invalid_key_status", msg)
+			case http.StatusBadRequest:
+				code := strings.TrimSpace(herr.Code)
+				if code == "" {
+					code = "bad_request"
+				}
+				return newServiceError(http.StatusBadRequest, code, msg)
+			default:
+				return newServiceError(http.StatusBadGateway, "keycore_meter_failed", msg)
+			}
+		}
+		msg := strings.TrimSpace(err.Error())
+		if msg == "" {
+			msg = "keycore usage metering failed"
+		}
+		return newServiceError(http.StatusBadGateway, "keycore_meter_failed", msg)
+	}
+	return nil
 }
 
 func (s *Service) resolveWorkingKey(ctx context.Context, tenantID string, keyID string, purpose string) ([]byte, error) {

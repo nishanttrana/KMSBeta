@@ -96,6 +96,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /keys/{id}/kcv", h.handleGetKCV)
 
 	mux.HandleFunc("GET /keys/{id}/usage", h.handleGetUsage)
+	mux.HandleFunc("POST /keys/{id}/usage/meter", h.handleMeterUsage)
 	mux.HandleFunc("PUT /keys/{id}/usage/limit", h.handleSetUsageLimit)
 	mux.HandleFunc("POST /keys/{id}/usage/reset", h.handleResetUsage)
 	mux.HandleFunc("PUT /keys/{id}/approval", h.handleSetApproval)
@@ -672,6 +673,57 @@ func (h *Handler) handleSetUsageLimit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleMeterUsage(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req struct {
+		Operation string `json:"operation"`
+	}
+	if r.ContentLength != 0 {
+		if err := decodeJSON(r, &req); err != nil {
+			writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+			return
+		}
+	}
+	usage, err := h.svc.MeterUsage(r.Context(), tenantID, r.PathValue("id"), req.Operation)
+	if err != nil {
+		switch {
+		case errors.Is(err, errStoreNotFound):
+			writeErr(w, http.StatusNotFound, "not_found", err.Error(), reqID, tenantID)
+		case errors.Is(err, errOpsLimit):
+			writeErr(w, http.StatusTooManyRequests, "ops_limit_reached", "Operation limit reached for this key", reqID, tenantID)
+		default:
+			var denied policyDeniedError
+			if errors.As(err, &denied) {
+				writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, tenantID)
+				return
+			}
+			msg := strings.ToLower(strings.TrimSpace(err.Error()))
+			if strings.Contains(msg, "access denied") {
+				writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, tenantID)
+				return
+			}
+			if strings.Contains(msg, "key status is") {
+				writeErr(w, http.StatusConflict, "invalid_key_status", err.Error(), reqID, tenantID)
+				return
+			}
+			writeErr(w, http.StatusBadRequest, "usage_meter_failed", err.Error(), reqID, tenantID)
+		}
+		return
+	}
+	remaining := int64(0)
+	if usage.OpsLimit > 0 {
+		remaining = usage.OpsLimit - usage.OpsTotal
+		if remaining < 0 {
+			remaining = 0
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"usage": usage, "remaining": remaining, "request_id": reqID})
 }
 
 func (h *Handler) handleSetExportPolicy(w http.ResponseWriter, r *http.Request) {

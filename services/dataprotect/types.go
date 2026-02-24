@@ -11,6 +11,7 @@ type EventPublisher interface {
 
 type KeyCoreClient interface {
 	GetKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error)
+	MeterUsage(ctx context.Context, tenantID string, keyID string, operation string) error
 }
 
 type Store interface {

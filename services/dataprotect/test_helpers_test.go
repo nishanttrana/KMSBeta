@@ -43,6 +43,10 @@ func (f *fakeDataProtectKeyCore) GetKey(_ context.Context, _ string, keyID strin
 	return map[string]interface{}{"id": keyID, "kcv": "ABCD12"}, nil
 }
 
+func (f *fakeDataProtectKeyCore) MeterUsage(_ context.Context, _ string, _ string, _ string) error {
+	return nil
+}
+
 func newDataProtectService(t *testing.T) (*Service, *SQLStore, *nopDataProtectPublisher) {
 	t.Helper()
 	conn, err := pkgdb.Open(context.Background(), pkgdb.Config{

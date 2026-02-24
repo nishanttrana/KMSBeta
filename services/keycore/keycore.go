@@ -2118,6 +2118,114 @@ func (s *Service) GetUsage(ctx context.Context, tenantID string, keyID string) (
 	return s.store.GetUsage(ctx, tenantID, keyID)
 }
 
+func normalizeMeterOperation(op string) string {
+	switch strings.ToLower(strings.TrimSpace(op)) {
+	case "", "encrypt":
+		return "encrypt"
+	case "decrypt":
+		return "decrypt"
+	case "sign":
+		return "sign"
+	case "verify":
+		return "verify"
+	case "wrap":
+		return "wrap"
+	case "unwrap":
+		return "unwrap"
+	case "mac":
+		return "mac"
+	case "derive":
+		return "derive"
+	case "kem-encapsulate", "kem_encapsulate":
+		return "kem-encapsulate"
+	case "kem-decapsulate", "kem_decapsulate":
+		return "kem-decapsulate"
+	default:
+		return strings.ToLower(strings.TrimSpace(op))
+	}
+}
+
+func policyOperationForMeter(op string) string {
+	switch op {
+	case "encrypt":
+		return "key.encrypt"
+	case "decrypt":
+		return "key.decrypt"
+	case "sign":
+		return "key.sign"
+	case "verify":
+		return "key.verify"
+	case "wrap":
+		return "key.wrap"
+	case "unwrap":
+		return "key.unwrap"
+	case "mac":
+		return "key.mac"
+	case "derive":
+		return "key.derive"
+	case "kem-encapsulate":
+		return "key.kem_encapsulate"
+	case "kem-decapsulate":
+		return "key.kem_decapsulate"
+	default:
+		return "key." + strings.ReplaceAll(op, "-", "_")
+	}
+}
+
+func (s *Service) MeterUsage(ctx context.Context, tenantID string, keyID string, operation string) (Usage, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	keyID = strings.TrimSpace(keyID)
+	if tenantID == "" || keyID == "" {
+		return Usage{}, errors.New("tenant_id and key_id are required")
+	}
+	op := normalizeMeterOperation(operation)
+	if op == "" {
+		return Usage{}, errors.New("operation is required")
+	}
+	key, err := s.GetKey(ctx, tenantID, keyID)
+	if err != nil {
+		return Usage{}, err
+	}
+	if isDeletedLike(key.Status) {
+		return Usage{}, errStoreNotFound
+	}
+	if err := ensureKeySupportsOperation(key, op); err != nil {
+		return Usage{}, err
+	}
+	if err := s.enforceKeyAccess(ctx, key, op); err != nil {
+		return Usage{}, err
+	}
+	if err := s.checkPolicy(ctx, PolicyEvaluateRequest{
+		TenantID:          tenantID,
+		Operation:         policyOperationForMeter(op),
+		KeyID:             keyID,
+		Algorithm:         key.Algorithm,
+		Purpose:           key.Purpose,
+		IVMode:            key.IVMode,
+		OpsTotal:          key.OpsTotal,
+		OpsLimit:          key.OpsLimit,
+		KeyStatus:         key.Status,
+		DaysSinceRotation: daysSince(key.UpdatedAt),
+	}); err != nil {
+		return Usage{}, err
+	}
+	if _, err := s.store.RunCryptoTx(ctx, tenantID, keyID, op, func(_ Key, _ KeyVersion) (CryptoTxResult, error) {
+		return CryptoTxResult{}, nil
+	}); err != nil {
+		return Usage{}, err
+	}
+	_ = s.cache.Delete(ctx, tenantID, keyID)
+	usage, err := s.store.GetUsage(ctx, tenantID, keyID)
+	if err != nil {
+		return Usage{}, err
+	}
+	_ = s.publishAudit(ctx, "audit.key.usage_metered", tenantID, map[string]any{
+		"key_id":    keyID,
+		"operation": op,
+	})
+	return usage, nil
+}
+
 func (s *Service) GetApproval(ctx context.Context, tenantID string, keyID string) (ApprovalConfig, error) {
 	return s.store.GetApproval(ctx, tenantID, keyID)
 }
