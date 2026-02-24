@@ -516,9 +516,13 @@ services:
       KEYCORE_URL: http://keycore:8010
       HTTP_PORT: "8170"
       GRPC_PORT: "18170"
+      PAYMENT_TCP_ENABLED: "${PAYMENT_TCP_ENABLED:-true}"
+      PAYMENT_TCP_BIND: "0.0.0.0"
+      PAYMENT_TCP_PORT: "${PAYMENT_TCP_PORT:-9170}"
     ports:
       - "8170:8170"
       - "18170:18170"
+      - "${PAYMENT_TCP_PORT:-9170}:${PAYMENT_TCP_PORT:-9170}"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18170"]
       interval: 15s

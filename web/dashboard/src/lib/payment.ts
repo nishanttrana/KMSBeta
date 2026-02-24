@@ -24,6 +24,14 @@ export type PaymentPolicy = {
   allow_inline_key_material: boolean;
   max_iso20022_payload_bytes: number;
   require_iso20022_lau_context: boolean;
+  strict_pci_dss_4_0: boolean;
+  require_key_id_for_operations: boolean;
+  allow_tcp_interface: boolean;
+  require_jwt_on_tcp: boolean;
+  max_tcp_payload_bytes: number;
+  allowed_tcp_operations: string[];
+  allowed_pin_block_formats: string[];
+  block_wildcard_pan: boolean;
   updated_by?: string;
   updated_at?: string;
 };

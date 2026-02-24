@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"encoding/json"
+	"time"
+)
 
 const (
 	TR31FormatVariant = "variant"
@@ -29,14 +32,28 @@ type PaymentKey struct {
 }
 
 type PaymentPolicy struct {
-	TenantID                    string    `json:"tenant_id"`
-	AllowedTR31Versions         []string  `json:"allowed_tr31_versions"`
-	RequireKBPKForTR31          bool      `json:"require_kbpk_for_tr31"`
-	AllowInlineKeyMaterial      bool      `json:"allow_inline_key_material"`
-	MaxISO20022PayloadBytes     int       `json:"max_iso20022_payload_bytes"`
-	RequireISO20022LAUContext   bool      `json:"require_iso20022_lau_context"`
-	UpdatedBy                   string    `json:"updated_by,omitempty"`
-	UpdatedAt                   time.Time `json:"updated_at"`
+	TenantID                  string    `json:"tenant_id"`
+	AllowedTR31Versions       []string  `json:"allowed_tr31_versions"`
+	RequireKBPKForTR31        bool      `json:"require_kbpk_for_tr31"`
+	AllowInlineKeyMaterial    bool      `json:"allow_inline_key_material"`
+	MaxISO20022PayloadBytes   int       `json:"max_iso20022_payload_bytes"`
+	RequireISO20022LAUContext bool      `json:"require_iso20022_lau_context"`
+	StrictPCIDSS40            bool      `json:"strict_pci_dss_4_0"`
+	RequireKeyIDForOperations bool      `json:"require_key_id_for_operations"`
+	AllowTCPInterface         bool      `json:"allow_tcp_interface"`
+	RequireJWTOnTCP           bool      `json:"require_jwt_on_tcp"`
+	MaxTCPPayloadBytes        int       `json:"max_tcp_payload_bytes"`
+	AllowedTCPOperations      []string  `json:"allowed_tcp_operations"`
+	AllowedPINBlockFormats    []string  `json:"allowed_pin_block_formats"`
+	BlockWildcardPAN          bool      `json:"block_wildcard_pan"`
+	UpdatedBy                 string    `json:"updated_by,omitempty"`
+	UpdatedAt                 time.Time `json:"updated_at"`
+}
+
+type PaymentCryptoDispatchRequest struct {
+	TenantID  string          `json:"tenant_id"`
+	Operation string          `json:"operation"`
+	Payload   json.RawMessage `json:"payload"`
 }
 
 type TR31Translation struct {
@@ -147,23 +164,23 @@ type ParseTR31Response struct {
 }
 
 type TranslateTR31Request struct {
-	TenantID      string `json:"tenant_id"`
-	SourceKeyID   string `json:"source_key_id"`
-	SourceBlock   string `json:"source_block"`
-	SourceFormat  string `json:"source_format"`
-	TargetFormat  string `json:"target_format"`
+	TenantID         string `json:"tenant_id"`
+	SourceKeyID      string `json:"source_key_id"`
+	SourceBlock      string `json:"source_block"`
+	SourceFormat     string `json:"source_format"`
+	TargetFormat     string `json:"target_format"`
 	SourceKBPKKeyID  string `json:"source_kbpk_key_id"`
 	SourceKBPKKeyB64 string `json:"source_kbpk_key_b64"`
 	TargetKBPKKeyID  string `json:"target_kbpk_key_id"`
 	TargetKBPKKeyB64 string `json:"target_kbpk_key_b64"`
-	KEKKeyID      string `json:"kek_key_id"`
-	KEKKeyB64     string `json:"kek_key_b64"`
-	TR31Version   string `json:"tr31_version"`
-	Algorithm     string `json:"algorithm"`
-	UsageCode     string `json:"usage_code"`
-	ModeOfUse     string `json:"mode_of_use"`
-	KeyVersionNum string `json:"key_version_num"`
-	Exportability string `json:"exportability"`
+	KEKKeyID         string `json:"kek_key_id"`
+	KEKKeyB64        string `json:"kek_key_b64"`
+	TR31Version      string `json:"tr31_version"`
+	Algorithm        string `json:"algorithm"`
+	UsageCode        string `json:"usage_code"`
+	ModeOfUse        string `json:"mode_of_use"`
+	KeyVersionNum    string `json:"key_version_num"`
+	Exportability    string `json:"exportability"`
 }
 
 type TranslateTR31Response struct {
@@ -175,8 +192,8 @@ type TranslateTR31Response struct {
 }
 
 type ValidateTR31Request struct {
-	TenantID string `json:"tenant_id"`
-	KeyBlock string `json:"key_block"`
+	TenantID   string `json:"tenant_id"`
+	KeyBlock   string `json:"key_block"`
 	KBPKKeyID  string `json:"kbpk_key_id"`
 	KBPKKeyB64 string `json:"kbpk_key_b64"`
 	KEKKeyID   string `json:"kek_key_id"`

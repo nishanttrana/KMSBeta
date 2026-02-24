@@ -8407,6 +8407,13 @@ const PaymentCryptoPolicy=({session,onToast})=>{
   const [saving,setSaving]=useState(false);
   const [payPolicy,setPayPolicy]=useState<any>(null);
   const tr31VersionOptions=["B","C","D"];
+  const tcpOperationOptions=[
+    "tr31.create","tr31.parse","tr31.translate","tr31.validate","tr31.key-usages",
+    "pin.translate","pin.pvv.generate","pin.pvv.verify","pin.offset.generate","pin.offset.verify","pin.cvv.compute","pin.cvv.verify",
+    "mac.retail","mac.iso9797","mac.cmac","mac.verify",
+    "iso20022.sign","iso20022.verify","iso20022.encrypt","iso20022.decrypt","iso20022.lau.generate","iso20022.lau.verify"
+  ];
+  const pinFormatOptions=["ISO-0","ISO-1","ISO-3"];
 
   const loadPolicy=async(silent=false)=>{
     if(!session?.token){
@@ -8424,7 +8431,15 @@ const PaymentCryptoPolicy=({session,onToast})=>{
         require_kbpk_for_tr31:Boolean(pp?.require_kbpk_for_tr31),
         allow_inline_key_material:Boolean(pp?.allow_inline_key_material),
         max_iso20022_payload_bytes:Math.max(1024,Number(pp?.max_iso20022_payload_bytes||262144)),
-        require_iso20022_lau_context:Boolean(pp?.require_iso20022_lau_context)
+        require_iso20022_lau_context:Boolean(pp?.require_iso20022_lau_context),
+        strict_pci_dss_4_0:Boolean(pp?.strict_pci_dss_4_0),
+        require_key_id_for_operations:Boolean(pp?.require_key_id_for_operations),
+        allow_tcp_interface:Boolean(pp?.allow_tcp_interface??true),
+        require_jwt_on_tcp:Boolean(pp?.require_jwt_on_tcp??true),
+        max_tcp_payload_bytes:Math.max(4096,Number(pp?.max_tcp_payload_bytes||262144)),
+        allowed_tcp_operations:Array.isArray(pp?.allowed_tcp_operations)&&pp.allowed_tcp_operations.length?pp.allowed_tcp_operations:tcpOperationOptions,
+        allowed_pin_block_formats:Array.isArray(pp?.allowed_pin_block_formats)&&pp.allowed_pin_block_formats.length?pp.allowed_pin_block_formats:pinFormatOptions,
+        block_wildcard_pan:Boolean(pp?.block_wildcard_pan??true)
       });
     }catch(error){
       if(!silent){
@@ -8459,6 +8474,14 @@ const PaymentCryptoPolicy=({session,onToast})=>{
         allow_inline_key_material:Boolean(payPolicy?.allow_inline_key_material),
         max_iso20022_payload_bytes:Math.max(1024,Math.min(4194304,Number(payPolicy?.max_iso20022_payload_bytes||262144))),
         require_iso20022_lau_context:Boolean(payPolicy?.require_iso20022_lau_context),
+        strict_pci_dss_4_0:Boolean(payPolicy?.strict_pci_dss_4_0),
+        require_key_id_for_operations:Boolean(payPolicy?.require_key_id_for_operations),
+        allow_tcp_interface:Boolean(payPolicy?.allow_tcp_interface),
+        require_jwt_on_tcp:Boolean(payPolicy?.require_jwt_on_tcp),
+        max_tcp_payload_bytes:Math.max(4096,Math.min(1048576,Number(payPolicy?.max_tcp_payload_bytes||262144))),
+        allowed_tcp_operations:Array.isArray(payPolicy?.allowed_tcp_operations)?payPolicy.allowed_tcp_operations:tcpOperationOptions,
+        allowed_pin_block_formats:Array.isArray(payPolicy?.allowed_pin_block_formats)?payPolicy.allowed_pin_block_formats:pinFormatOptions,
+        block_wildcard_pan:Boolean(payPolicy?.block_wildcard_pan),
         updated_by:session?.username||"dashboard"
       });
       setPayPolicy((prev)=>({...prev,...updated}));
@@ -8478,7 +8501,7 @@ const PaymentCryptoPolicy=({session,onToast})=>{
       <Card>
         <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Policy Scope</div>
         <div style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
-          This tab controls Payment Crypto policies such as TR-31 handling, inline key material policy, and ISO20022 constraints.
+          This tab enforces PCI-focused payment policy across both REST and Payment TCP interfaces (TR-31, PIN, MAC, ISO20022).
         </div>
       </Card>
     </Section>
@@ -8486,9 +8509,14 @@ const PaymentCryptoPolicy=({session,onToast})=>{
     <Section title="Payment Crypto Controls">
       <Card style={{display:"grid",gap:8}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <Chk label="Strict PCI DSS 4.0 mode (enforced hardening bundle)" checked={Boolean(payPolicy?.strict_pci_dss_4_0)} onChange={()=>setPayPolicy((prev)=>({...prev,strict_pci_dss_4_0:!Boolean(prev?.strict_pci_dss_4_0)}))}/>
           <Chk label="Require KBPK/KEK for TR-31 operations" checked={Boolean(payPolicy?.require_kbpk_for_tr31)} onChange={()=>setPayPolicy((prev)=>({...prev,require_kbpk_for_tr31:!Boolean(prev?.require_kbpk_for_tr31)}))}/>
           <Chk label="Allow inline key material in payment API" checked={Boolean(payPolicy?.allow_inline_key_material)} onChange={()=>setPayPolicy((prev)=>({...prev,allow_inline_key_material:!Boolean(prev?.allow_inline_key_material)}))}/>
           <Chk label="Require ISO20022 LAU context" checked={Boolean(payPolicy?.require_iso20022_lau_context)} onChange={()=>setPayPolicy((prev)=>({...prev,require_iso20022_lau_context:!Boolean(prev?.require_iso20022_lau_context)}))}/>
+          <Chk label="Require key_id for payment crypto operations" checked={Boolean(payPolicy?.require_key_id_for_operations)} onChange={()=>setPayPolicy((prev)=>({...prev,require_key_id_for_operations:!Boolean(prev?.require_key_id_for_operations)}))}/>
+          <Chk label="Allow Payment TCP interface" checked={Boolean(payPolicy?.allow_tcp_interface)} onChange={()=>setPayPolicy((prev)=>({...prev,allow_tcp_interface:!Boolean(prev?.allow_tcp_interface)}))}/>
+          <Chk label="Require JWT on Payment TCP interface" checked={Boolean(payPolicy?.require_jwt_on_tcp)} onChange={()=>setPayPolicy((prev)=>({...prev,require_jwt_on_tcp:!Boolean(prev?.require_jwt_on_tcp)}))}/>
+          <Chk label="Block wildcard/non-digit PAN values" checked={Boolean(payPolicy?.block_wildcard_pan)} onChange={()=>setPayPolicy((prev)=>({...prev,block_wildcard_pan:!Boolean(prev?.block_wildcard_pan)}))}/>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
           {tr31VersionOptions.map((ver)=>{
@@ -8502,9 +8530,44 @@ const PaymentCryptoPolicy=({session,onToast})=>{
             })}/>;
           })}
         </div>
-        <FG label="Max ISO20022 payload bytes">
-          <Inp type="number" min={1024} max={4194304} value={String(payPolicy?.max_iso20022_payload_bytes??262144)} onChange={(e)=>setPayPolicy((prev)=>({...prev,max_iso20022_payload_bytes:Number(e.target.value||262144)}))}/>
-        </FG>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
+          <FG label="Max ISO20022 payload bytes">
+            <Inp type="number" min={1024} max={4194304} value={String(payPolicy?.max_iso20022_payload_bytes??262144)} onChange={(e)=>setPayPolicy((prev)=>({...prev,max_iso20022_payload_bytes:Number(e.target.value||262144)}))}/>
+          </FG>
+          <FG label="Max Payment TCP payload bytes">
+            <Inp type="number" min={4096} max={1048576} value={String(payPolicy?.max_tcp_payload_bytes??262144)} onChange={(e)=>setPayPolicy((prev)=>({...prev,max_tcp_payload_bytes:Number(e.target.value||262144)}))}/>
+          </FG>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed PIN block formats</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+            {pinFormatOptions.map((fmt)=>{
+              const selected=(Array.isArray(payPolicy?.allowed_pin_block_formats)?payPolicy.allowed_pin_block_formats:[]).includes(fmt);
+              return <Chk key={`pay-pol-pin-${fmt}`} label={fmt} checked={selected} onChange={()=>setPayPolicy((prev)=>{
+                const current=Array.isArray(prev?.allowed_pin_block_formats)?[...prev.allowed_pin_block_formats]:[];
+                if(current.includes(fmt)){
+                  return {...prev,allowed_pin_block_formats:current.filter((item)=>item!==fmt)};
+                }
+                return {...prev,allowed_pin_block_formats:[...current,fmt]};
+              })}/>;
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed operations over Payment TCP</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+            {tcpOperationOptions.map((op)=>{
+              const selected=(Array.isArray(payPolicy?.allowed_tcp_operations)?payPolicy.allowed_tcp_operations:[]).includes(op);
+              return <Chk key={`pay-pol-op-${op}`} label={op} checked={selected} onChange={()=>setPayPolicy((prev)=>{
+                const current=Array.isArray(prev?.allowed_tcp_operations)?[...prev.allowed_tcp_operations]:[];
+                if(current.includes(op)){
+                  return {...prev,allowed_tcp_operations:current.filter((item)=>item!==op)};
+                }
+                return {...prev,allowed_tcp_operations:[...current,op]};
+              })}/>;
+            })}
+          </div>
+        </div>
       </Card>
     </Section>
   </div>;
@@ -15485,7 +15548,7 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,minmax(0,1fr)) auto",gap:8,alignItems:"end"}}>
         <FG label="Interface">
           <Sel value={String(newInterfacePort?.interface_name||"rest")} onChange={(e)=>setNewInterfacePort((prev)=>({...prev,interface_name:e.target.value}))}>
-            {["rest","ekm","pkcs11","jca","kmip","hyok","byok"].map((opt)=><option key={opt} value={opt}>{opt.toUpperCase()}</option>)}
+            {["rest","ekm","payment-tcp","pkcs11","jca","kmip","hyok","byok"].map((opt)=><option key={opt} value={opt}>{opt.toUpperCase()}</option>)}
           </Sel>
         </FG>
         <FG label="Bind Address">
@@ -15520,7 +15583,7 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8}}>
         <FG label="Interface">
           <Sel value={String(newInterfacePolicy?.interface_name||"rest")} onChange={(e)=>setNewInterfacePolicy((prev)=>({...prev,interface_name:e.target.value}))}>
-            {["rest","ekm","pkcs11","jca","kmip","hyok","byok"].map((opt)=><option key={opt} value={opt}>{opt.toUpperCase()}</option>)}
+            {["rest","ekm","payment-tcp","pkcs11","jca","kmip","hyok","byok"].map((opt)=><option key={opt} value={opt}>{opt.toUpperCase()}</option>)}
           </Sel>
         </FG>
         <FG label="Subject Type">

@@ -20,7 +20,7 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.mux.ServeHTTP(w, r)
+	h.mux.ServeHTTP(w, r.WithContext(withPaymentChannel(r.Context(), paymentChannelREST)))
 }
 
 func (h *Handler) routes() *http.ServeMux {
@@ -33,6 +33,8 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /payment/keys/{id}/rotate", h.handleRotatePaymentKey)
 	mux.HandleFunc("GET /payment/policy", h.handleGetPaymentPolicy)
 	mux.HandleFunc("PUT /payment/policy", h.handleSetPaymentPolicy)
+	mux.HandleFunc("GET /payment/crypto/operations", h.handleListPaymentCryptoOperations)
+	mux.HandleFunc("POST /payment/crypto", h.handlePaymentCryptoDispatch)
 
 	mux.HandleFunc("POST /payment/tr31/create", h.handleTR31Create)
 	mux.HandleFunc("POST /payment/tr31/parse", h.handleTR31Parse)
@@ -181,6 +183,45 @@ func (h *Handler) handleSetPaymentPolicy(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
+}
+
+func (h *Handler) handleListPaymentCryptoOperations(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := tenantFromRequest(r)
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"tenant_id":  tenantID,
+		"operations": h.svc.SupportedPaymentCryptoOperations(),
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handlePaymentCryptoDispatch(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := tenantFromRequest(r)
+	if tenantID == "" {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required"), reqID, "")
+		return
+	}
+	var req PaymentCryptoDispatchRequest
+	if err := decodeJSON(r, &req); err != nil {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantID)
+		return
+	}
+	req.TenantID = firstNonEmpty(req.TenantID, tenantID)
+	if !strings.EqualFold(req.TenantID, tenantID) {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", "tenant mismatch between request and session context"), reqID, tenantID)
+		return
+	}
+	result, err := h.svc.DispatchPaymentCrypto(r.Context(), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"operation":  strings.ToLower(strings.TrimSpace(req.Operation)),
+		"result":     result,
+		"request_id": reqID,
+	})
 }
 
 func (h *Handler) handleTR31Create(w http.ResponseWriter, r *http.Request) {

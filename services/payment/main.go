@@ -68,6 +68,7 @@ func main() {
 		metering.NewMeter(0, 0),
 	)
 	handler := NewHandler(svc)
+	maybeStartPaymentTCPServer(ctx, svc, logger)
 
 	httpPort := envOr("HTTP_PORT", "8170")
 	httpSrv := &http.Server{

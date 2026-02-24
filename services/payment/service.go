@@ -49,6 +49,7 @@ type Service struct {
 }
 
 var supportedPaymentTR31Versions = []string{"B", "C", "D"}
+var supportedPINBlockFormats = []string{"ISO-0", "ISO-1", "ISO-3"}
 
 func NewService(store Store, keycore KeyCoreClient, events EventPublisher, meter *metering.Meter) *Service {
 	if meter == nil {
@@ -70,6 +71,14 @@ func defaultPaymentPolicy(tenantID string) PaymentPolicy {
 		AllowInlineKeyMaterial:    true,
 		MaxISO20022PayloadBytes:   262144,
 		RequireISO20022LAUContext: false,
+		StrictPCIDSS40:            false,
+		RequireKeyIDForOperations: false,
+		AllowTCPInterface:         true,
+		RequireJWTOnTCP:           true,
+		MaxTCPPayloadBytes:        262144,
+		AllowedTCPOperations:      append([]string{}, supportedPaymentCryptoOperations...),
+		AllowedPINBlockFormats:    append([]string{}, supportedPINBlockFormats...),
+		BlockWildcardPAN:          true,
 	}
 }
 
@@ -92,6 +101,47 @@ func normalizePaymentPolicy(in PaymentPolicy) PaymentPolicy {
 	}
 	if in.MaxISO20022PayloadBytes > 4194304 {
 		in.MaxISO20022PayloadBytes = 4194304
+	}
+	pinFormats := uniqueStrings(in.AllowedPINBlockFormats)
+	outPIN := make([]string, 0, len(pinFormats))
+	for _, item := range pinFormats {
+		v := normalizePINFormat(item)
+		if containsString(supportedPINBlockFormats, v) {
+			outPIN = append(outPIN, v)
+		}
+	}
+	if len(outPIN) == 0 {
+		outPIN = append([]string{}, supportedPINBlockFormats...)
+	}
+	in.AllowedPINBlockFormats = outPIN
+	tcpOps := uniqueStrings(in.AllowedTCPOperations)
+	outOps := make([]string, 0, len(tcpOps))
+	for _, item := range tcpOps {
+		v := strings.ToLower(strings.TrimSpace(item))
+		if containsString(supportedPaymentCryptoOperations, v) {
+			outOps = append(outOps, v)
+		}
+	}
+	if len(outOps) == 0 {
+		outOps = append([]string{}, supportedPaymentCryptoOperations...)
+	}
+	in.AllowedTCPOperations = outOps
+	if in.MaxTCPPayloadBytes <= 0 {
+		in.MaxTCPPayloadBytes = 262144
+	}
+	if in.MaxTCPPayloadBytes < 4096 {
+		in.MaxTCPPayloadBytes = 4096
+	}
+	if in.MaxTCPPayloadBytes > 1048576 {
+		in.MaxTCPPayloadBytes = 1048576
+	}
+	if in.StrictPCIDSS40 {
+		in.RequireKBPKForTR31 = true
+		in.AllowInlineKeyMaterial = false
+		in.RequireISO20022LAUContext = true
+		in.RequireKeyIDForOperations = true
+		in.RequireJWTOnTCP = true
+		in.BlockWildcardPAN = true
 	}
 	in.UpdatedBy = strings.TrimSpace(in.UpdatedBy)
 	return in
@@ -123,11 +173,19 @@ func (s *Service) UpdatePaymentPolicy(ctx context.Context, in PaymentPolicy) (Pa
 	}
 	item = normalizePaymentPolicy(item)
 	_ = s.publishAudit(ctx, "audit.payment.policy_updated", item.TenantID, map[string]interface{}{
-		"allowed_tr31_versions":       item.AllowedTR31Versions,
-		"require_kbpk_for_tr31":       item.RequireKBPKForTR31,
-		"allow_inline_key_material":   item.AllowInlineKeyMaterial,
-		"max_iso20022_payload_bytes":  item.MaxISO20022PayloadBytes,
-		"require_iso20022_lau_context": item.RequireISO20022LAUContext,
+		"allowed_tr31_versions":         item.AllowedTR31Versions,
+		"require_kbpk_for_tr31":         item.RequireKBPKForTR31,
+		"allow_inline_key_material":     item.AllowInlineKeyMaterial,
+		"max_iso20022_payload_bytes":    item.MaxISO20022PayloadBytes,
+		"require_iso20022_lau_context":  item.RequireISO20022LAUContext,
+		"strict_pci_dss_4_0":            item.StrictPCIDSS40,
+		"require_key_id_for_operations": item.RequireKeyIDForOperations,
+		"allow_tcp_interface":           item.AllowTCPInterface,
+		"require_jwt_on_tcp":            item.RequireJWTOnTCP,
+		"max_tcp_payload_bytes":         item.MaxTCPPayloadBytes,
+		"allowed_tcp_operations":        item.AllowedTCPOperations,
+		"allowed_pin_block_formats":     item.AllowedPINBlockFormats,
+		"block_wildcard_pan":            item.BlockWildcardPAN,
 	})
 	return item, nil
 }
@@ -339,10 +397,11 @@ func (s *Service) CreateTR31(ctx context.Context, req CreateTR31Request) (Create
 	if req.TenantID == "" || req.KeyID == "" {
 		return CreateTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and key_id are required")
 	}
-	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "tr31.create")
 	if err != nil {
 		return CreateTR31Response{}, err
 	}
+	ctx = withPaymentPolicy(ctx, policy)
 	if !policy.AllowInlineKeyMaterial && strings.TrimSpace(req.MaterialB64) != "" {
 		return CreateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "inline key material is blocked by payment policy")
 	}
@@ -429,10 +488,11 @@ func (s *Service) ParseTR31(ctx context.Context, req ParseTR31Request) (ParseTR3
 	if req.TenantID == "" || req.KeyBlock == "" {
 		return ParseTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and key_block are required")
 	}
-	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "tr31.parse")
 	if err != nil {
 		return ParseTR31Response{}, err
 	}
+	ctx = withPaymentPolicy(ctx, policy)
 	if policy.RequireKBPKForTR31 && firstString(req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64) == "" {
 		return ParseTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "kbpk/kek is required by payment policy for TR-31")
 	}
@@ -502,10 +562,11 @@ func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (
 	if req.TenantID == "" {
 		return TranslateTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
-	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "tr31.translate")
 	if err != nil {
 		return TranslateTR31Response{}, err
 	}
+	ctx = withPaymentPolicy(ctx, policy)
 	sourceFmt := normalizeTR31Format(req.SourceFormat)
 	targetFmt := normalizeTR31Format(req.TargetFormat)
 	if sourceFmt == "" || targetFmt == "" {
@@ -659,14 +720,16 @@ func (s *Service) ValidateTR31(ctx context.Context, req ValidateTR31Request) (Va
 	if strings.TrimSpace(req.TenantID) == "" || req.KeyBlock == "" {
 		return ValidateTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and key_block are required")
 	}
-	policy, err := s.mustPaymentPolicy(ctx, strings.TrimSpace(req.TenantID))
+	tenantID := strings.TrimSpace(req.TenantID)
+	policy, err := s.enforceOperationPolicy(ctx, tenantID, "tr31.validate")
 	if err != nil {
 		return ValidateTR31Response{}, err
 	}
+	ctx = withPaymentPolicy(ctx, policy)
 	if policy.RequireKBPKForTR31 && firstString(req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64) == "" {
 		return ValidateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "kbpk/kek is required by payment policy for TR-31")
 	}
-	kbpk, _, err := s.resolveKBPKMaterial(ctx, strings.TrimSpace(req.TenantID), req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "kbpk_key_b64", "kbpk_key_id")
+	kbpk, _, err := s.resolveKBPKMaterial(ctx, tenantID, req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "kbpk_key_b64", "kbpk_key_id")
 	if err != nil {
 		return ValidateTR31Response{}, err
 	}
@@ -713,11 +776,22 @@ func (s *Service) TranslatePIN(ctx context.Context, req TranslatePINRequest) (st
 	if req.TenantID == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "pin.translate")
+	if err != nil {
+		return "", err
+	}
+	ctx = withPaymentPolicy(ctx, policy)
 	source := normalizePINFormat(req.SourceFormat)
 	target := normalizePINFormat(req.TargetFormat)
 	block := strings.ToUpper(strings.TrimSpace(req.PINBlock))
 	if source == "" || target == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "source_format and target_format are required")
+	}
+	if !isPINFormatAllowed(policy, source) || !isPINFormatAllowed(policy, target) {
+		return "", newServiceError(http.StatusForbidden, "policy_violation", "pin block format is blocked by payment policy")
+	}
+	if err := validatePANPolicy(policy, req.PAN); err != nil {
+		return "", err
 	}
 	if len(block) != 16 || !isHex(block) {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "pin_block must be 16 hex chars")
@@ -804,6 +878,14 @@ func (s *Service) GeneratePVV(ctx context.Context, req PVVGenerateRequest) (stri
 	if req.TenantID == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "pin.pvv.generate")
+	if err != nil {
+		return "", err
+	}
+	ctx = withPaymentPolicy(ctx, policy)
+	if err := validatePANPolicy(policy, req.PAN); err != nil {
+		return "", err
+	}
 	key, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, req.PVKKeyID, req.PVKKeyB64, "pvk_key_b64", "pvk_key_id")
 	if err != nil {
 		return "", err
@@ -833,6 +915,11 @@ func (s *Service) GeneratePVV(ctx context.Context, req PVVGenerateRequest) (stri
 }
 
 func (s *Service) VerifyPVV(ctx context.Context, req PVVVerifyRequest) (bool, error) {
+	policy, err := s.enforceOperationPolicy(ctx, strings.TrimSpace(req.TenantID), "pin.pvv.verify")
+	if err != nil {
+		return false, err
+	}
+	ctx = withPaymentPolicy(ctx, policy)
 	pvv, err := s.GeneratePVV(ctx, PVVGenerateRequest{
 		TenantID:  req.TenantID,
 		PVKKeyID:  req.PVKKeyID,
@@ -867,6 +954,11 @@ func (s *Service) GenerateOffset(ctx context.Context, req OffsetGenerateRequest)
 	if req.TenantID == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "pin.offset.generate")
+	if err != nil {
+		return "", err
+	}
+	ctx = withPaymentPolicy(ctx, policy)
 	offset, err := generatePINOffset(req.PIN, req.ReferencePIN)
 	if err != nil {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", err.Error())
@@ -891,6 +983,11 @@ func (s *Service) VerifyOffset(ctx context.Context, req OffsetVerifyRequest) (bo
 	if req.TenantID == "" {
 		return false, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "pin.offset.verify")
+	if err != nil {
+		return false, err
+	}
+	ctx = withPaymentPolicy(ctx, policy)
 	ok := verifyPINOffset(req.PIN, req.ReferencePIN, req.Offset)
 	_ = s.store.CreatePINOperationLog(ctx, PINOperationLog{
 		ID:           newID("pinlog"),
@@ -912,6 +1009,14 @@ func (s *Service) ComputeCVV(ctx context.Context, req CVVComputeRequest) (string
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	if req.TenantID == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "pin.cvv.compute")
+	if err != nil {
+		return "", err
+	}
+	ctx = withPaymentPolicy(ctx, policy)
+	if err := validatePANPolicy(policy, req.PAN); err != nil {
+		return "", err
 	}
 	cvk, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, req.CVKKeyID, req.CVKKeyB64, "cvk_key_b64", "cvk_key_id")
 	if err != nil {
@@ -941,6 +1046,11 @@ func (s *Service) ComputeCVV(ctx context.Context, req CVVComputeRequest) (string
 }
 
 func (s *Service) VerifyCVV(ctx context.Context, req CVVVerifyRequest) (bool, error) {
+	policy, err := s.enforceOperationPolicy(ctx, strings.TrimSpace(req.TenantID), "pin.cvv.verify")
+	if err != nil {
+		return false, err
+	}
+	ctx = withPaymentPolicy(ctx, policy)
 	cvv, err := s.ComputeCVV(ctx, CVVComputeRequest{
 		TenantID:    req.TenantID,
 		CVKKeyID:    req.CVKKeyID,
@@ -960,6 +1070,18 @@ func (s *Service) VerifyCVV(ctx context.Context, req CVVVerifyRequest) (bool, er
 }
 
 func (s *Service) ComputeMAC(ctx context.Context, req MACRequest) (string, error) {
+	op := "mac.retail"
+	switch normalizeMACType(req.Type) {
+	case "iso9797":
+		op = "mac.iso9797"
+	case "cmac":
+		op = "mac.cmac"
+	}
+	policy, err := s.enforceOperationPolicy(ctx, strings.TrimSpace(req.TenantID), op)
+	if err != nil {
+		return "", err
+	}
+	ctx = withPaymentPolicy(ctx, policy)
 	key, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.KeyID, req.KeyB64, "key_b64", "key_id")
 	if err != nil {
 		return "", err
@@ -1012,6 +1134,11 @@ func (s *Service) ComputeMAC(ctx context.Context, req MACRequest) (string, error
 }
 
 func (s *Service) VerifyMAC(ctx context.Context, req VerifyMACRequest) (bool, error) {
+	policy, err := s.enforceOperationPolicy(ctx, strings.TrimSpace(req.TenantID), "mac.verify")
+	if err != nil {
+		return false, err
+	}
+	ctx = withPaymentPolicy(ctx, policy)
 	expectedB64, err := s.ComputeMAC(ctx, MACRequest{
 		TenantID:  req.TenantID,
 		KeyID:     req.KeyID,
@@ -1043,10 +1170,11 @@ func (s *Service) ISO20022Sign(ctx context.Context, req ISO20022SignRequest) (ma
 	if req.TenantID == "" || req.KeyID == "" || xml == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and xml are required")
 	}
-	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "iso20022.sign")
 	if err != nil {
 		return nil, err
 	}
+	ctx = withPaymentPolicy(ctx, policy)
 	if policy.MaxISO20022PayloadBytes > 0 && len([]byte(xml)) > policy.MaxISO20022PayloadBytes {
 		return nil, newServiceError(http.StatusRequestEntityTooLarge, "payload_too_large", "xml exceeds payment policy max_iso20022_payload_bytes")
 	}
@@ -1083,10 +1211,11 @@ func (s *Service) ISO20022Verify(ctx context.Context, req ISO20022VerifyRequest)
 	if req.TenantID == "" || req.KeyID == "" || xml == "" || sig == "" {
 		return false, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id, xml and signature_b64 are required")
 	}
-	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "iso20022.verify")
 	if err != nil {
 		return false, err
 	}
+	ctx = withPaymentPolicy(ctx, policy)
 	if policy.MaxISO20022PayloadBytes > 0 && len([]byte(xml)) > policy.MaxISO20022PayloadBytes {
 		return false, newServiceError(http.StatusRequestEntityTooLarge, "payload_too_large", "xml exceeds payment policy max_iso20022_payload_bytes")
 	}
@@ -1108,10 +1237,11 @@ func (s *Service) ISO20022Encrypt(ctx context.Context, req ISO20022EncryptReques
 	if req.TenantID == "" || req.KeyID == "" || xml == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and xml are required")
 	}
-	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "iso20022.encrypt")
 	if err != nil {
 		return nil, err
 	}
+	ctx = withPaymentPolicy(ctx, policy)
 	if policy.MaxISO20022PayloadBytes > 0 && len([]byte(xml)) > policy.MaxISO20022PayloadBytes {
 		return nil, newServiceError(http.StatusRequestEntityTooLarge, "payload_too_large", "xml exceeds payment policy max_iso20022_payload_bytes")
 	}
@@ -1145,6 +1275,11 @@ func (s *Service) ISO20022Decrypt(ctx context.Context, req ISO20022DecryptReques
 	if req.TenantID == "" || req.KeyID == "" || strings.TrimSpace(req.CiphertextB64) == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, key_id and ciphertext are required")
 	}
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "iso20022.decrypt")
+	if err != nil {
+		return "", err
+	}
+	ctx = withPaymentPolicy(ctx, policy)
 	if s.keycore == nil {
 		return "", newServiceError(http.StatusFailedDependency, "keycore_unavailable", "keycore client is not configured")
 	}
@@ -1169,10 +1304,11 @@ func (s *Service) GenerateLAU(ctx context.Context, req LAUGenerateRequest) (stri
 	if req.TenantID == "" || strings.TrimSpace(req.Message) == "" {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and message are required")
 	}
-	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "iso20022.lau.generate")
 	if err != nil {
 		return "", err
 	}
+	ctx = withPaymentPolicy(ctx, policy)
 	if policy.RequireISO20022LAUContext && strings.TrimSpace(req.Context) == "" {
 		return "", newServiceError(http.StatusForbidden, "policy_violation", "context is required by payment policy for LAU")
 	}
@@ -1192,10 +1328,11 @@ func (s *Service) GenerateLAU(ctx context.Context, req LAUGenerateRequest) (stri
 }
 
 func (s *Service) VerifyLAU(ctx context.Context, req LAUVerifyRequest) (bool, error) {
-	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	policy, err := s.enforceOperationPolicy(ctx, strings.TrimSpace(req.TenantID), "iso20022.lau.verify")
 	if err != nil {
 		return false, err
 	}
+	ctx = withPaymentPolicy(ctx, policy)
 	if policy.RequireISO20022LAUContext && strings.TrimSpace(req.Context) == "" {
 		return false, newServiceError(http.StatusForbidden, "policy_violation", "context is required by payment policy for LAU")
 	}
@@ -1249,6 +1386,13 @@ func (s *Service) resolveOperationKeyMaterial(ctx context.Context, tenantID stri
 	tenantID = strings.TrimSpace(tenantID)
 	keyID = strings.TrimSpace(keyID)
 	materialB64 = strings.TrimSpace(materialB64)
+	policy, err := s.policyFromContextOrStore(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	if err := enforceInlineKeyMaterialPolicy(policy, keyID, materialB64, materialField, keyField); err != nil {
+		return nil, err
+	}
 	if materialB64 != "" {
 		return decodeB64(materialB64, materialField)
 	}

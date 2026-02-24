@@ -55,6 +55,7 @@ func defaultInterfacePorts(tenantID string) []KeyInterfacePort {
 	return []KeyInterfacePort{
 		{TenantID: tenantID, InterfaceName: "rest", BindAddress: "0.0.0.0", Port: 443, Enabled: true, Description: "REST API"},
 		{TenantID: tenantID, InterfaceName: "ekm", BindAddress: "0.0.0.0", Port: 5696, Enabled: true, Description: "EKM / TDE"},
+		{TenantID: tenantID, InterfaceName: "payment-tcp", BindAddress: "0.0.0.0", Port: 9170, Enabled: true, Description: "Payment Crypto TCP"},
 		{TenantID: tenantID, InterfaceName: "pkcs11", BindAddress: "0.0.0.0", Port: 8101, Enabled: true, Description: "PKCS#11 gRPC bridge"},
 		{TenantID: tenantID, InterfaceName: "jca", BindAddress: "0.0.0.0", Port: 8102, Enabled: true, Description: "JCA/JCE bridge"},
 		{TenantID: tenantID, InterfaceName: "kmip", BindAddress: "0.0.0.0", Port: 5698, Enabled: true, Description: "KMIP"},
@@ -122,6 +123,8 @@ func normalizeInterfaceName(raw string) string {
 		return "rest"
 	case "ekm", "tde":
 		return "ekm"
+	case "payment", "paymenttcp", "payment-tcp", "paytcp":
+		return "payment-tcp"
 	case "pkcs11", "pkcs-11":
 		return "pkcs11"
 	case "jca", "jce":

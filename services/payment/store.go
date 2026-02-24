@@ -157,15 +157,25 @@ SELECT tenant_id,
        allow_inline_key_material,
        max_iso20022_payload_bytes,
        require_iso20022_lau_context,
+       strict_pci_dss_4_0,
+       require_key_id_for_operations,
+       allow_tcp_interface,
+       require_jwt_on_tcp,
+       max_tcp_payload_bytes,
+       allowed_tcp_operations_json,
+       allowed_pin_block_formats_json,
+       block_wildcard_pan,
        COALESCE(updated_by,''),
        updated_at
 FROM payment_policy
 WHERE tenant_id = $1
 `, strings.TrimSpace(tenantID))
 	var (
-		out          PaymentPolicy
-		versionsJSON string
-		updatedRaw   interface{}
+		out            PaymentPolicy
+		versionsJSON   string
+		tcpOpsJSON     string
+		pinFormatsJSON string
+		updatedRaw     interface{}
 	)
 	if err := row.Scan(
 		&out.TenantID,
@@ -174,6 +184,14 @@ WHERE tenant_id = $1
 		&out.AllowInlineKeyMaterial,
 		&out.MaxISO20022PayloadBytes,
 		&out.RequireISO20022LAUContext,
+		&out.StrictPCIDSS40,
+		&out.RequireKeyIDForOperations,
+		&out.AllowTCPInterface,
+		&out.RequireJWTOnTCP,
+		&out.MaxTCPPayloadBytes,
+		&tcpOpsJSON,
+		&pinFormatsJSON,
+		&out.BlockWildcardPAN,
 		&out.UpdatedBy,
 		&updatedRaw,
 	); err != nil {
@@ -183,6 +201,8 @@ WHERE tenant_id = $1
 		return PaymentPolicy{}, err
 	}
 	out.AllowedTR31Versions = parseJSONArrayString(versionsJSON)
+	out.AllowedTCPOperations = parseJSONArrayString(tcpOpsJSON)
+	out.AllowedPINBlockFormats = parseJSONArrayString(pinFormatsJSON)
 	out.UpdatedAt = parseTimeValue(updatedRaw)
 	return out, nil
 }
@@ -196,10 +216,18 @@ INSERT INTO payment_policy (
     allow_inline_key_material,
     max_iso20022_payload_bytes,
     require_iso20022_lau_context,
+    strict_pci_dss_4_0,
+    require_key_id_for_operations,
+    allow_tcp_interface,
+    require_jwt_on_tcp,
+    max_tcp_payload_bytes,
+    allowed_tcp_operations_json,
+    allowed_pin_block_formats_json,
+    block_wildcard_pan,
     updated_by,
     updated_at
 ) VALUES (
-    $1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,CURRENT_TIMESTAMP
 )
 ON CONFLICT (tenant_id) DO UPDATE SET
     allowed_tr31_versions_json = EXCLUDED.allowed_tr31_versions_json,
@@ -207,6 +235,14 @@ ON CONFLICT (tenant_id) DO UPDATE SET
     allow_inline_key_material = EXCLUDED.allow_inline_key_material,
     max_iso20022_payload_bytes = EXCLUDED.max_iso20022_payload_bytes,
     require_iso20022_lau_context = EXCLUDED.require_iso20022_lau_context,
+    strict_pci_dss_4_0 = EXCLUDED.strict_pci_dss_4_0,
+    require_key_id_for_operations = EXCLUDED.require_key_id_for_operations,
+    allow_tcp_interface = EXCLUDED.allow_tcp_interface,
+    require_jwt_on_tcp = EXCLUDED.require_jwt_on_tcp,
+    max_tcp_payload_bytes = EXCLUDED.max_tcp_payload_bytes,
+    allowed_tcp_operations_json = EXCLUDED.allowed_tcp_operations_json,
+    allowed_pin_block_formats_json = EXCLUDED.allowed_pin_block_formats_json,
+    block_wildcard_pan = EXCLUDED.block_wildcard_pan,
     updated_by = EXCLUDED.updated_by,
     updated_at = CURRENT_TIMESTAMP
 RETURNING tenant_id,
@@ -215,13 +251,23 @@ RETURNING tenant_id,
           allow_inline_key_material,
           max_iso20022_payload_bytes,
           require_iso20022_lau_context,
+          strict_pci_dss_4_0,
+          require_key_id_for_operations,
+          allow_tcp_interface,
+          require_jwt_on_tcp,
+          max_tcp_payload_bytes,
+          allowed_tcp_operations_json,
+          allowed_pin_block_formats_json,
+          block_wildcard_pan,
           COALESCE(updated_by,''),
           updated_at
-`, item.TenantID, validJSONOr(mustJSON(item.AllowedTR31Versions), "[]"), item.RequireKBPKForTR31, item.AllowInlineKeyMaterial, item.MaxISO20022PayloadBytes, item.RequireISO20022LAUContext, item.UpdatedBy)
+`, item.TenantID, validJSONOr(mustJSON(item.AllowedTR31Versions), "[]"), item.RequireKBPKForTR31, item.AllowInlineKeyMaterial, item.MaxISO20022PayloadBytes, item.RequireISO20022LAUContext, item.StrictPCIDSS40, item.RequireKeyIDForOperations, item.AllowTCPInterface, item.RequireJWTOnTCP, item.MaxTCPPayloadBytes, validJSONOr(mustJSON(item.AllowedTCPOperations), "[]"), validJSONOr(mustJSON(item.AllowedPINBlockFormats), "[]"), item.BlockWildcardPAN, item.UpdatedBy)
 	var (
-		out          PaymentPolicy
-		versionsJSON string
-		updatedRaw   interface{}
+		out            PaymentPolicy
+		versionsJSON   string
+		tcpOpsJSON     string
+		pinFormatsJSON string
+		updatedRaw     interface{}
 	)
 	if err := row.Scan(
 		&out.TenantID,
@@ -230,12 +276,22 @@ RETURNING tenant_id,
 		&out.AllowInlineKeyMaterial,
 		&out.MaxISO20022PayloadBytes,
 		&out.RequireISO20022LAUContext,
+		&out.StrictPCIDSS40,
+		&out.RequireKeyIDForOperations,
+		&out.AllowTCPInterface,
+		&out.RequireJWTOnTCP,
+		&out.MaxTCPPayloadBytes,
+		&tcpOpsJSON,
+		&pinFormatsJSON,
+		&out.BlockWildcardPAN,
 		&out.UpdatedBy,
 		&updatedRaw,
 	); err != nil {
 		return PaymentPolicy{}, err
 	}
 	out.AllowedTR31Versions = parseJSONArrayString(versionsJSON)
+	out.AllowedTCPOperations = parseJSONArrayString(tcpOpsJSON)
+	out.AllowedPINBlockFormats = parseJSONArrayString(pinFormatsJSON)
 	out.UpdatedAt = parseTimeValue(updatedRaw)
 	return out, nil
 }
