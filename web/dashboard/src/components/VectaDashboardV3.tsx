@@ -13066,6 +13066,7 @@ const SBOM=({session,onToast})=>{
   const [cbomHistory,setCBOMHistory]=useState<any[]>([]);
   const [activeSBOMFormat,setActiveSBOMFormat]=useState("cyclonedx");
   const [exportMenuOpen,setExportMenuOpen]=useState(false);
+  const [selectedDepCategory,setSelectedDepCategory]=useState("");
   const [depListOpen,setDepListOpen]=useState(false);
   const [depListTitle,setDepListTitle]=useState("");
   const [depListItems,setDepListItems]=useState<any[]>([]);
@@ -13194,6 +13195,36 @@ const SBOM=({session,onToast})=>{
     }
   };
 
+  const exportSBOMCSV=()=>{
+    const list=Array.isArray(sbomLatest?.document?.components)?sbomLatest.document.components:[];
+    if(!list.length){
+      onToast?.("SBOM snapshot is not ready. Refresh BOM first.");
+      return;
+    }
+    try{
+      setExportingSBOM("csv");
+      const esc=(v:any)=>`"${String(v??"").replace(/"/g,'""')}"`;
+      const rows=[
+        ["name","version","type","ecosystem","supplier"],
+        ...list.map((item:any)=>[
+          String(item?.name||""),
+          String(item?.version||""),
+          String(item?.type||""),
+          String(item?.ecosystem||""),
+          String(item?.supplier||"")
+        ])
+      ];
+      const csv=rows.map((row:any[])=>row.map((v:any)=>esc(v)).join(",")).join("\n");
+      const stamp=new Date().toISOString().replace(/[:.]/g,"-");
+      downloadTextFile(`vecta-sbom-csv-${stamp}.csv`,csv,"text/csv;charset=utf-8");
+      onToast?.("SBOM exported as CSV.");
+    }catch(error){
+      onToast?.(`SBOM CSV export failed: ${errMsg(error)}`);
+    }finally{
+      setExportingSBOM("");
+    }
+  };
+
   const exportCBOMFile=async()=>{
     if(!session?.token){
       onToast?.("Login is required.");
@@ -13308,6 +13339,7 @@ const SBOM=({session,onToast})=>{
   ].map((row)=>({...row,sev:categorySeverity(row.names)}));
 
   const openDependencyList=(row:any)=>{
+    setSelectedDepCategory(String(row?.label||""));
     setDepListTitle(String(row?.label||"Dependencies"));
     setDepListFilter("");
     setDepListItems(Array.isArray(row?.components)?[...row.components]:[]);
@@ -13338,13 +13370,21 @@ const SBOM=({session,onToast})=>{
   },[sbomHistory]);
 
   const trendMax=Math.max(1,...sbomTrend.map((point:any)=>Math.max(0,Number(point?.total||0))));
-  const trendPoints=sbomTrend.length===1
-    ? `50,${100-((Number(sbomTrend[0]?.total||0)/trendMax)*100)}`
-    : sbomTrend.map((point:any,index:number)=>{
-      const x=(index/(sbomTrend.length-1))*100;
-      const y=100-((Number(point?.total||0)/trendMax)*100);
-      return `${x},${Math.max(2,Math.min(98,y))}`;
-    }).join(" ");
+  const trendChartPoints=sbomTrend.map((point:any,index:number)=>{
+    const x=sbomTrend.length===1?50:(index/(sbomTrend.length-1))*100;
+    const y=100-((Number(point?.total||0)/trendMax)*100);
+    return {
+      x,
+      y:Math.max(4,Math.min(96,y)),
+      total:Number(point?.total||0),
+      at:String(point?.at||""),
+      label:new Date(String(point?.at||Date.now())).toLocaleDateString(undefined,{month:"short",day:"numeric"})
+    };
+  });
+  const trendPoints=trendChartPoints.map((p:any)=>`${p.x},${p.y}`).join(" ");
+  const trendTicksRaw=[trendMax,Math.round(trendMax*0.75),Math.round(trendMax*0.5),Math.round(trendMax*0.25),0];
+  const trendTicks=Array.from(new Set(trendTicksRaw.filter((v)=>Number.isFinite(v)&&v>=0))).sort((a,b)=>b-a);
+  const trendTickY=(v:number)=>Math.max(4,Math.min(96,100-((Math.max(0,Number(v||0))/trendMax)*100)));
   const latestTrend=sbomTrend.length?sbomTrend[sbomTrend.length-1]:null;
   const prevTrend=sbomTrend.length>1?sbomTrend[sbomTrend.length-2]:null;
   const trendDelta=(latestTrend&&prevTrend)?(Number(latestTrend.total||0)-Number(prevTrend.total||0)):0;
@@ -13426,6 +13466,7 @@ const SBOM=({session,onToast})=>{
                 disabled={Boolean(exportingSBOM)}
                 style={{
                   height:30,
+                  fontSize:11,
                   background:activeSBOMFormat==="cyclonedx"?C.accentDim:"transparent",
                   borderColor:activeSBOMFormat==="cyclonedx"?C.accent:C.border,
                   color:activeSBOMFormat==="cyclonedx"?C.accent:C.dim
@@ -13433,31 +13474,45 @@ const SBOM=({session,onToast})=>{
               >
                 {exportingSBOM==="cyclonedx"?"...":"CycloneDX"}
               </Btn>
+              <Btn
+                small
+                onClick={()=>void exportSBOMFile("spdx")}
+                disabled={Boolean(exportingSBOM)}
+                style={{
+                  height:30,
+                  fontSize:11,
+                  background:activeSBOMFormat==="spdx"?C.accentDim:"transparent",
+                  borderColor:activeSBOMFormat==="spdx"?C.accent:C.border,
+                  color:activeSBOMFormat==="spdx"?C.accent:C.dim
+                }}
+              >
+                {exportingSBOM==="spdx"?"...":"SPDX"}
+              </Btn>
               <div style={{position:"relative"}}>
                 <Btn
                   small
                   onClick={()=>setExportMenuOpen((prev)=>!prev)}
                   disabled={Boolean(exportingSBOM)}
-                  style={{height:30}}
+                  style={{height:30,fontSize:11}}
                 >
                   Export
                 </Btn>
                 {exportMenuOpen?<div style={{position:"absolute",right:0,top:34,minWidth:120,background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:6,zIndex:20}}>
                   <Btn
                     small
-                    onClick={()=>{setExportMenuOpen(false);void exportSBOMFile("spdx");}}
+                    onClick={()=>{setExportMenuOpen(false);void exportSBOMFile("pdf");}}
                     disabled={Boolean(exportingSBOM)}
-                    style={{width:"100%",justifyContent:"flex-start",height:28,borderColor:"transparent"}}
+                    style={{width:"100%",justifyContent:"flex-start",height:28,borderColor:"transparent",fontSize:11}}
                   >
-                    {exportingSBOM==="spdx"?"Exporting...":"SPDX"}
+                    {exportingSBOM==="pdf"?"Exporting...":"PDF"}
                   </Btn>
                   <Btn
                     small
-                    onClick={()=>{setExportMenuOpen(false);void exportSBOMFile("pdf");}}
+                    onClick={()=>{setExportMenuOpen(false);exportSBOMCSV();}}
                     disabled={Boolean(exportingSBOM)}
-                    style={{width:"100%",justifyContent:"flex-start",height:28,borderColor:"transparent"}}
+                    style={{width:"100%",justifyContent:"flex-start",height:28,borderColor:"transparent",fontSize:11}}
                   >
-                    {exportingSBOM==="pdf"?"Exporting...":"PDF"}
+                    {exportingSBOM==="csv"?"Exporting...":"CSV"}
                   </Btn>
                 </div>:null}
               </div>
@@ -13470,7 +13525,15 @@ const SBOM=({session,onToast})=>{
                 <button
                   type="button"
                   onClick={()=>openDependencyList(row)}
-                  style={{fontSize:11,color:C.accent,background:"transparent",border:"none",padding:0,cursor:"pointer",textDecoration:"underline"}}
+                  style={{
+                    fontSize:11,
+                    color:(depListOpen&&selectedDepCategory===row.label)?C.text:C.dim,
+                    background:"transparent",
+                    border:"none",
+                    padding:0,
+                    cursor:"pointer",
+                    fontWeight:(depListOpen&&selectedDepCategory===row.label)?700:500
+                  }}
                 >
                   {`${Number(row.count||0)} deps`}
                 </button>
@@ -13485,15 +13548,35 @@ const SBOM=({session,onToast})=>{
                 {sbomTrend.length?`${Number(latestTrend?.total||0)} total (${trendDelta>=0?"+":""}${trendDelta} vs prev)`:"No history"}
               </div>
             </div>
-            <div style={{height:86,border:`1px solid ${C.border}`,borderRadius:8,background:C.surface,padding:6}}>
-              {sbomTrend.length?<svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{width:"100%",height:"100%"}}>
-                <polyline
-                  fill="none"
-                  stroke={C.accent}
-                  strokeWidth="2.2"
-                  points={trendPoints}
-                />
-              </svg>:<div style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:C.muted}}>No historical SBOM snapshots yet.</div>}
+            <div style={{height:128,border:`1px solid ${C.border}`,borderRadius:8,background:C.surface,padding:8}}>
+              {sbomTrend.length?<div style={{height:"100%",display:"grid",gridTemplateColumns:"36px 1fr",gap:6}}>
+                <div style={{display:"flex",flexDirection:"column",justifyContent:"space-between",fontSize:9,color:C.muted}}>
+                  {trendTicks.map((tick:number)=><span key={tick}>{tick}</span>)}
+                </div>
+                <div style={{display:"grid",gridTemplateRows:"1fr auto",height:"100%"}}>
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{width:"100%",height:"100%"}}>
+                    {trendTicks.map((tick:number)=><line key={`grid-${tick}`} x1="0" x2="100" y1={trendTickY(tick)} y2={trendTickY(tick)} stroke={C.border} strokeWidth="0.6"/>)}
+                    <polyline
+                      fill="none"
+                      stroke={C.accent}
+                      strokeWidth="2.2"
+                      points={trendPoints}
+                    />
+                    {trendChartPoints.map((point:any,index:number)=><g key={`${point.at}-${index}`}>
+                      <circle cx={point.x} cy={point.y} r="2" fill={C.accent}/>
+                      {(index===trendChartPoints.length-1||index===0||index%2===0)?<text x={point.x} y={Math.max(6,point.y-4)} textAnchor="middle" fontSize="4.2" fill={C.text}>{point.total}</text>:null}
+                    </g>)}
+                  </svg>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:C.muted,paddingTop:4}}>
+                    <span>{trendChartPoints[0]?.label||"-"}</span>
+                    <span>{trendChartPoints[trendChartPoints.length-1]?.label||"-"}</span>
+                  </div>
+                </div>
+              </div>:<div style={{height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:C.muted}}>No historical SBOM snapshots yet.</div>}
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:C.muted,marginTop:4}}>
+              <span>Total dependency count per snapshot</span>
+              <span>{`${sbomTrend.length} snapshots`}</span>
             </div>
           </div>
           <div style={{marginTop:10,fontSize:10,color:C.muted}}>
@@ -13560,7 +13643,7 @@ const SBOM=({session,onToast})=>{
       </div>
     </Modal>
 
-    <Modal open={depListOpen} onClose={()=>setDepListOpen(false)} title={`${depListTitle} Dependencies`}>
+    <Modal open={depListOpen} onClose={()=>{setDepListOpen(false);setSelectedDepCategory("");}} title={`${depListTitle} Dependencies`}>
       <div style={{fontSize:10,color:C.dim,marginBottom:8}}>
         Clicked dependency count now opens the exact package list for this category.
       </div>
@@ -13594,7 +13677,7 @@ const SBOM=({session,onToast})=>{
       </Card>
       <div style={{display:"flex",justifyContent:"space-between",marginTop:10}}>
         <span style={{fontSize:10,color:C.muted}}>{`${filteredDepList.length} of ${depListItems.length} shown`}</span>
-        <Btn onClick={()=>setDepListOpen(false)}>Close</Btn>
+        <Btn onClick={()=>{setDepListOpen(false);setSelectedDepCategory("");}}>Close</Btn>
       </div>
     </Modal>
   </div>;
