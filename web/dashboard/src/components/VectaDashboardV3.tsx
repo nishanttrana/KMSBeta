@@ -16554,7 +16554,7 @@ export default function VectaDashboard(props){
             <div style={{display:"grid",gap:6}}>
               {activeSubPaneItems.map((item:any)=>{
                 const isActive=String(activeSubPaneSelection)===String(item.id);
-                const ItemIcon=typeof item.icon==="function"?item.icon:null;
+                const ItemIcon=item.icon||null;
                 return(
                   <div
                     key={String(item.id)}
