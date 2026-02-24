@@ -38,7 +38,9 @@ import {
   Users,
   TerminalSquare,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import { refreshSession, saveSession, type AuthSession } from "../lib/auth";
 import {
@@ -1820,7 +1822,7 @@ const NAV=[
   {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"crypto",icon:Zap,label:"Crypto Console"},{id:"restapi",icon:TerminalSquare,label:"REST API Workbench"}]},
   {g:"SECRETS & CERTS",items:[{id:"vault",icon:Lock,label:"Secret Vault"},{id:"certs",icon:FileText,label:"Certificates / PKI"}]},
   {g:"DATA PROTECTION",items:[{id:"tokenize",icon:VenetianMask,label:"Tokenize / Mask / Redact"},{id:"dataenc",icon:Database,label:"Data Encryption"},{id:"payment",icon:CreditCard,label:"Payment Crypto"},{id:"pkcs11",icon:Plug,label:"PKCS#11 / JCA"}]},
-  {g:"CLOUD KEY CONTROL",items:[{id:"cloudctl",icon:Cloud,label:"Cloud Key Control"},{id:"ekm",icon:Database,label:"EKM"}]},
+  {g:"CLOUD KEY CONTROL",items:[{id:"cloudctl",icon:Cloud,label:"Cloud Key Control"},{id:"ekm",icon:Database,label:"Enterprise Key Management"}]},
   {g:"INFRASTRUCTURE",items:[{id:"hsm",icon:Cpu,label:"HSM / Primus"},{id:"qkd",icon:GitBranch,label:"QKD Interface"},{id:"mpc",icon:Cpu,label:"MPC Engine"},{id:"cluster",icon:GitBranch,label:"Cluster"}]},
   {g:"GOVERNANCE",items:[{id:"approvals",icon:CheckCircle2,label:"Approvals"},{id:"alerts",icon:Bell,label:"Alert Center"},{id:"audit",icon:ScrollText,label:"Audit Log"},{id:"compliance",icon:ClipboardCheck,label:"Compliance"},{id:"sbom",icon:BarChart3,label:"SBOM / CBOM"}]},
   {g:"ADMIN",items:[{id:"admin",icon:Settings,label:"Administration"},{id:"users",icon:Users,label:"User Management"},{id:"docs",icon:ScrollText,label:"Documentation"}]},
@@ -8713,6 +8715,9 @@ const BYOK=({session,keyCatalog,onToast})=>{
   const [rotatingBinding,setRotatingBinding]=useState("");
   const [submittingAdd,setSubmittingAdd]=useState(false);
   const [submittingImport,setSubmittingImport]=useState(false);
+  const [connectorView,setConnectorView]=useState<"cards"|"list">("cards");
+  const [connectorSearch,setConnectorSearch]=useState("");
+  const [connectorMenu,setConnectorMenu]=useState("");
 
   const [addProvider,setAddProvider]=useState<CloudProvider>("aws");
   const [addName,setAddName]=useState("");
@@ -8844,6 +8849,20 @@ const BYOK=({session,keyCatalog,onToast})=>{
       };
     });
   },[accounts,bindings,inventoryCounts]);
+  const normalizedConnectorSearch=String(connectorSearch||"").trim().toLowerCase();
+  const filteredProviderCards=useMemo(()=>{
+    if(!normalizedConnectorSearch){
+      return providerCards;
+    }
+    return providerCards.filter((card)=>{
+      const providerLabel=String(CLOUD_PROVIDER_LABELS[card.provider]||card.provider).toLowerCase();
+      const regions=String((card.regions||[]).join(" ")).toLowerCase();
+      const accountNames=String((card.accounts||[]).map((acct:any)=>String(acct?.name||"")).join(" ")).toLowerCase();
+      return providerLabel.includes(normalizedConnectorSearch)
+        || regions.includes(normalizedConnectorSearch)
+        || accountNames.includes(normalizedConnectorSearch);
+    });
+  },[providerCards,normalizedConnectorSearch]);
 
   const runSync=async(provider:string,accountId:string)=>{
     if(!session?.token){
@@ -8975,49 +8994,113 @@ const BYOK=({session,keyCatalog,onToast})=>{
   return <div>
     <Section
       title="Bring Your Own Key - Cloud Connectors"
-      actions={<>
+      actions={<div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+        <Inp
+          style={{width:220}}
+          value={connectorSearch}
+          onChange={(e)=>setConnectorSearch(e.target.value)}
+          placeholder="Search cloud/provider/region..."
+        />
+        <Btn small primary={connectorView==="cards"} onClick={()=>setConnectorView("cards")} title="Card view">
+          <LayoutGrid size={12} strokeWidth={2}/>
+        </Btn>
+        <Btn small primary={connectorView==="list"} onClick={()=>setConnectorView("list")} title="List view">
+          <List size={12} strokeWidth={2}/>
+        </Btn>
         <Btn small onClick={()=>void refresh()} disabled={refreshing||loading}><RefreshCcw size={12} strokeWidth={2}/> Refresh</Btn>
         <Btn small primary onClick={()=>setModal("add")}>+ Add Connector</Btn>
-      </>}
+      </div>}
     >
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(230px,1fr))",gap:10}}>
-        {providerCards.map((card)=>{
-          const activeAccount=card.accounts[0];
-          const accountId=activeAccount?.id||"";
-          return <Card key={card.provider}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-              <div style={{fontSize:12,color:C.text,fontWeight:700}}>{CLOUD_PROVIDER_LABELS[card.provider]||card.provider}</div>
-              <B c={card.stateColor}>{card.stateLabel}</B>
-            </div>
-            <div style={{fontSize:11,color:C.text,marginBottom:4}}>{`${card.bindings.length} keys synced`}</div>
-            <div style={{fontSize:10,color:C.dim,marginBottom:8}}>
-              {card.regions.length?`Regions: ${card.regions.join(", ")}`:"No regions configured"}
-            </div>
-            <div style={{fontSize:10,color:C.muted,marginBottom:10}}>{`Cloud inventory: ${card.inventoryTotal} keys`}</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              <Btn
-                small
-                onClick={()=>void runSync(card.provider,accountId)}
-                disabled={!accountId||syncingAccount===accountId||syncingAccount===card.provider}
-              >
-                {syncingAccount===accountId||syncingAccount===card.provider?"Syncing...":"Sync Now"}
-              </Btn>
-              <Btn
-                small
-                onClick={()=>{
-                  setImportProvider(card.provider as CloudProvider);
-                  setImportAccountID(accountId);
-                  setImportCloudRegion(String(activeAccount?.default_region||""));
-                  setModal("import");
-                }}
-                disabled={!accountId}
-              >
-                Import Keys
-              </Btn>
-            </div>
-          </Card>;
-        })}
-      </div>
+      {connectorView==="cards"
+        ? <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(230px,1fr))",gap:10}}>
+          {filteredProviderCards.map((card)=>{
+            const activeAccount=card.accounts[0];
+            const accountId=activeAccount?.id||"";
+            return <Card key={card.provider}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <div style={{fontSize:12,color:C.text,fontWeight:700}}>{CLOUD_PROVIDER_LABELS[card.provider]||card.provider}</div>
+                <B c={card.stateColor}>{card.stateLabel}</B>
+              </div>
+              <div style={{fontSize:11,color:C.text,marginBottom:4}}>{`${card.bindings.length} keys synced`}</div>
+              <div style={{fontSize:10,color:C.dim,marginBottom:8}}>
+                {card.regions.length?`Regions: ${card.regions.join(", ")}`:"No regions configured"}
+              </div>
+              <div style={{fontSize:10,color:C.muted,marginBottom:10}}>{`Cloud inventory: ${card.inventoryTotal} keys`}</div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                <Btn
+                  small
+                  onClick={()=>void runSync(card.provider,accountId)}
+                  disabled={!accountId||syncingAccount===accountId||syncingAccount===card.provider}
+                >
+                  {syncingAccount===accountId||syncingAccount===card.provider?"Syncing...":"Sync Now"}
+                </Btn>
+                <Btn
+                  small
+                  onClick={()=>{
+                    setImportProvider(card.provider as CloudProvider);
+                    setImportAccountID(accountId);
+                    setImportCloudRegion(String(activeAccount?.default_region||""));
+                    setModal("import");
+                  }}
+                  disabled={!accountId}
+                >
+                  Import Keys
+                </Btn>
+              </div>
+            </Card>;
+          })}
+        </div>
+        : <Card style={{padding:0,overflow:"hidden"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1.1fr .8fr .8fr .9fr .8fr auto",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+            <div>Provider</div><div>Status</div><div>Keys Synced</div><div>Regions</div><div>Inventory</div><div>Options</div>
+          </div>
+          <div style={{maxHeight:300,overflowY:"auto"}}>
+            {filteredProviderCards.map((card)=>{
+              const activeAccount=card.accounts[0];
+              const accountId=activeAccount?.id||"";
+              const menuOpen=connectorMenu===String(card.provider);
+              return <div key={card.provider} style={{display:"grid",gridTemplateColumns:"1.1fr .8fr .8fr .9fr .8fr auto",alignItems:"center",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:10}}>
+                <div style={{color:C.text,fontWeight:600}}>{CLOUD_PROVIDER_LABELS[card.provider]||card.provider}</div>
+                <div><B c={card.stateColor}>{card.stateLabel}</B></div>
+                <div style={{color:C.dim}}>{String(card.bindings.length)}</div>
+                <div style={{color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{card.regions.length?card.regions.join(", "):"-"}</div>
+                <div style={{color:C.dim}}>{String(card.inventoryTotal)}</div>
+                <div style={{position:"relative",justifySelf:"end"}}>
+                  <button
+                    onClick={()=>setConnectorMenu(menuOpen?"":String(card.provider))}
+                    style={{border:`1px solid ${C.border}`,background:"transparent",color:C.accent,borderRadius:8,padding:"4px 6px",cursor:"pointer"}}
+                  >
+                    <MoreVertical size={13} strokeWidth={2}/>
+                  </button>
+                  {menuOpen&&<div style={{position:"absolute",right:0,top:30,zIndex:20,minWidth:132,background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,padding:6,display:"grid",gap:4}}>
+                    <button
+                      onClick={()=>{setConnectorMenu("");void runSync(card.provider,accountId);}}
+                      disabled={!accountId||syncingAccount===accountId||syncingAccount===card.provider}
+                      style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px",borderRadius:6}}
+                    >
+                      {syncingAccount===accountId||syncingAccount===card.provider?"Syncing...":"Sync Now"}
+                    </button>
+                    <button
+                      onClick={()=>{
+                        setConnectorMenu("");
+                        setImportProvider(card.provider as CloudProvider);
+                        setImportAccountID(accountId);
+                        setImportCloudRegion(String(activeAccount?.default_region||""));
+                        setModal("import");
+                      }}
+                      disabled={!accountId}
+                      style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px",borderRadius:6}}
+                    >
+                      Import Keys
+                    </button>
+                  </div>}
+                </div>
+              </div>;
+            })}
+            {!filteredProviderCards.length&&<div style={{padding:12,fontSize:10,color:C.dim}}>No cloud connectors match search.</div>}
+          </div>
+        </Card>}
+      {!filteredProviderCards.length&&connectorView==="cards"&&<Card><div style={{fontSize:10,color:C.dim}}>No cloud connectors match search.</div></Card>}
     </Section>
 
     <Section title="Recent BYOK Operations">
@@ -9579,6 +9662,12 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
     heartbeat_interval_sec:30
   });
   const [ekmSubtab,setEkmSubtab]=useState("db");
+  const [dbView,setDbView]=useState<"cards"|"list">("cards");
+  const [bitLockerView,setBitLockerView]=useState<"cards"|"list">("cards");
+  const [dbSearch,setDbSearch]=useState("");
+  const [bitLockerSearch,setBitLockerSearch]=useState("");
+  const [dbMenu,setDbMenu]=useState("");
+  const [bitLockerMenu,setBitLockerMenu]=useState("");
   const promptDialog=usePromptDialog();
 
   const parseAgentMeta=(agent)=>{
@@ -9894,6 +9983,19 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
   };
 
   const sortedAgents=[...agents].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+  const normalizedDBSearch=String(dbSearch||"").trim().toLowerCase();
+  const filteredAgents=sortedAgents.filter((agent)=>{
+    if(!normalizedDBSearch){
+      return true;
+    }
+    return [
+      String(agent?.name||""),
+      String(agent?.host||""),
+      String(agent?.db_engine||""),
+      String(agent?.version||""),
+      String(agent?.assigned_key_id||"")
+    ].join(" ").toLowerCase().includes(normalizedDBSearch);
+  });
   const activeCount=sortedAgents.filter((agent)=>statusBadge(agent).label==="Active").length;
   const standbyCount=sortedAgents.filter((agent)=>statusBadge(agent).label==="Standby").length;
   const degradedCount=sortedAgents.filter((agent)=>statusBadge(agent).label==="Degraded").length;
@@ -9920,6 +10022,19 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
     return {label:"Unknown",color:"blue"};
   };
   const sortedBitLockerClients=[...bitLockerClients].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+  const normalizedBitLockerSearch=String(bitLockerSearch||"").trim().toLowerCase();
+  const filteredBitLockerClients=sortedBitLockerClients.filter((client)=>{
+    if(!normalizedBitLockerSearch){
+      return true;
+    }
+    return [
+      String(client?.name||""),
+      String(client?.host||""),
+      String(client?.os_version||""),
+      String(client?.mount_point||""),
+      String(client?.protection_status||"")
+    ].join(" ").toLowerCase().includes(normalizedBitLockerSearch);
+  });
   const bitLockerProtectedCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Protected").length;
   const bitLockerSuspendedCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Suspended").length;
   const bitLockerDegradedCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Degraded").length;
@@ -9942,8 +10057,16 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
     </div>}
 
     {currentSubtab==="db"&&<Section
-      title="EKM  -  TDE AGENTS"
-      actions={<div style={{display:"flex",gap:8,alignItems:"center"}}>
+      title="ENTERPRISE KEY MANAGEMENT  -  TDE AGENTS"
+      actions={<div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+        <Inp
+          style={{width:220}}
+          value={dbSearch}
+          onChange={(e)=>setDbSearch(e.target.value)}
+          placeholder="Search hostname / agent..."
+        />
+        <Btn small primary={dbView==="cards"} onClick={()=>setDbView("cards")} title="Card view"><LayoutGrid size={12} strokeWidth={2}/></Btn>
+        <Btn small primary={dbView==="list"} onClick={()=>setDbView("list")} title="List view"><List size={12} strokeWidth={2}/></Btn>
         <Btn small onClick={()=>void refresh(false)} disabled={loading}>
           <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
             <RefreshCcw size={12} strokeWidth={2}/>
@@ -9959,56 +10082,102 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
         <B c="amber">{`${degradedCount} Degraded`}</B>
         <B c="red">{`${downCount} Down`}</B>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:10}}>
-        {sortedAgents.map((agent)=>{
-          const badge=statusBadge(agent);
-          const keyID=String(agent.assigned_key_id||"").trim();
-          const keyMeta=keyMetaByID[keyID]||{};
-          const health=healthByID[agent.id]||{};
-          const metrics=health.metrics||{};
-          const hbAgeSec=Number(health.last_heartbeat_age_sec||statusByID[agent.id]?.last_heartbeat_age_sec||0);
-          const dbEngine=String(agent.db_engine||"mssql").toLowerCase()==="oracle"?"Oracle":"MSSQL";
-          const dbVersion=String(agent.version||"").trim()||"-";
-          const alg=String(keyMeta.algorithm||"").trim()||"Unassigned";
-          return <Card key={agent.id}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-              <div style={{minWidth:0}}>
-                <div style={{fontSize:18,color:C.white,fontWeight:700,marginBottom:4,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
-                  {agent.name}
+      {dbView==="cards"
+        ? <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:10}}>
+          {filteredAgents.map((agent)=>{
+            const badge=statusBadge(agent);
+            const keyID=String(agent.assigned_key_id||"").trim();
+            const keyMeta=keyMetaByID[keyID]||{};
+            const health=healthByID[agent.id]||{};
+            const metrics=health.metrics||{};
+            const hbAgeSec=Number(health.last_heartbeat_age_sec||statusByID[agent.id]?.last_heartbeat_age_sec||0);
+            const dbEngine=String(agent.db_engine||"mssql").toLowerCase()==="oracle"?"Oracle":"MSSQL";
+            const dbVersion=String(agent.version||"").trim()||"-";
+            const alg=String(keyMeta.algorithm||"").trim()||"Unassigned";
+            return <Card key={agent.id}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:18,color:C.white,fontWeight:700,marginBottom:4,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                    {agent.name}
+                  </div>
+                  <div style={{fontSize:12,color:C.dim}}>{`IP: ${agent.host||"-"}`}</div>
                 </div>
-                <div style={{fontSize:12,color:C.dim}}>{`IP: ${agent.host||"-"}`}</div>
+                <B c={badge.color}>{badge.label}</B>
               </div>
-              <B c={badge.color}>{badge.label}</B>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 10px",marginTop:8}}>
-              <div style={{fontSize:11,color:C.dim}}>{`Version: ${dbVersion}`}</div>
-              <div style={{fontSize:11,color:C.dim}}>{`Engine: ${dbEngine}`}</div>
-              <div style={{fontSize:11,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{`TDE Key: ${alg}`}</div>
-              <div style={{fontSize:11,color:C.dim}}>{`Rotation: ${rotationDaysFor(agent)}d cycle`}</div>
-            </div>
-            <div style={{fontSize:10,color:C.muted,marginTop:6}}>
-              {`OS Health  CPU ${Number(metrics.cpu_usage_pct||0).toFixed(0)}%  MEM ${Number(metrics.memory_usage_pct||0).toFixed(0)}%  DISK ${Number(metrics.disk_usage_pct||0).toFixed(0)}%  HB ${hbAgeSec}s`}
-            </div>
-            <div style={{display:"flex",gap:8,marginTop:10}}>
-              <Btn small onClick={()=>void runRotate(agent)} disabled={!keyID||rotatingAgentID===agent.id}>
-                {rotatingAgentID===agent.id?"Rotating...":"Rotate TDE Key"}
-              </Btn>
-              <Btn small onClick={()=>void openLogs(agent)}>Agent Logs</Btn>
-              <Btn small danger onClick={()=>void runDelete(agent)} disabled={deletingAgentID===agent.id}>
-                {deletingAgentID===agent.id?"Deleting...":"Delete Agent"}
-              </Btn>
-            </div>
-          </Card>;
-        })}
-        {!sortedAgents.length&&<Card>
-          <div style={{fontSize:11,color:C.dim}}>No EKM agents registered yet. Deploy an agent to start MSSQL/Oracle TDE integration over PKCS#11.</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 10px",marginTop:8}}>
+                <div style={{fontSize:11,color:C.dim}}>{`Version: ${dbVersion}`}</div>
+                <div style={{fontSize:11,color:C.dim}}>{`Engine: ${dbEngine}`}</div>
+                <div style={{fontSize:11,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{`TDE Key: ${alg}`}</div>
+                <div style={{fontSize:11,color:C.dim}}>{`Rotation: ${rotationDaysFor(agent)}d cycle`}</div>
+              </div>
+              <div style={{fontSize:10,color:C.muted,marginTop:6}}>
+                {`OS Health  CPU ${Number(metrics.cpu_usage_pct||0).toFixed(0)}%  MEM ${Number(metrics.memory_usage_pct||0).toFixed(0)}%  DISK ${Number(metrics.disk_usage_pct||0).toFixed(0)}%  HB ${hbAgeSec}s`}
+              </div>
+              <div style={{display:"flex",gap:8,marginTop:10}}>
+                <Btn small onClick={()=>void runRotate(agent)} disabled={!keyID||rotatingAgentID===agent.id}>
+                  {rotatingAgentID===agent.id?"Rotating...":"Rotate TDE Key"}
+                </Btn>
+                <Btn small onClick={()=>void openLogs(agent)}>Agent Logs</Btn>
+                <Btn small danger onClick={()=>void runDelete(agent)} disabled={deletingAgentID===agent.id}>
+                  {deletingAgentID===agent.id?"Deleting...":"Delete Agent"}
+                </Btn>
+              </div>
+            </Card>;
+          })}
+        </div>
+        : <Card style={{padding:0,overflow:"hidden"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1.1fr 1fr .7fr .8fr .8fr .8fr auto",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+            <div>Agent</div><div>Host / Engine</div><div>Version</div><div>TDE Key</div><div>Rotation</div><div>Status</div><div>Options</div>
+          </div>
+          <div style={{maxHeight:320,overflowY:"auto"}}>
+            {filteredAgents.map((agent)=>{
+              const badge=statusBadge(agent);
+              const keyID=String(agent.assigned_key_id||"").trim();
+              const keyMeta=keyMetaByID[keyID]||{};
+              const dbEngine=String(agent.db_engine||"mssql").toLowerCase()==="oracle"?"Oracle":"MSSQL";
+              const dbVersion=String(agent.version||"").trim()||"-";
+              const alg=String(keyMeta.algorithm||"").trim()||"Unassigned";
+              const menuKey=String(agent.id||"");
+              const menuOpen=dbMenu===menuKey;
+              return <div key={agent.id} style={{display:"grid",gridTemplateColumns:"1.1fr 1fr .7fr .8fr .8fr .8fr auto",alignItems:"center",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:10}}>
+                <div style={{color:C.text,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{agent.name}</div>
+                <div style={{color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{`${agent.host||"-"} · ${dbEngine}`}</div>
+                <div style={{color:C.dim}}>{dbVersion}</div>
+                <div style={{color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{alg}</div>
+                <div style={{color:C.dim}}>{`${rotationDaysFor(agent)}d`}</div>
+                <div><B c={badge.color}>{badge.label}</B></div>
+                <div style={{position:"relative",justifySelf:"end"}}>
+                  <button onClick={()=>setDbMenu(menuOpen?"":menuKey)} style={{border:`1px solid ${C.border}`,background:"transparent",color:C.accent,borderRadius:8,padding:"4px 6px",cursor:"pointer"}}>
+                    <MoreVertical size={13} strokeWidth={2}/>
+                  </button>
+                  {menuOpen&&<div style={{position:"absolute",right:0,top:30,zIndex:20,minWidth:140,background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,padding:6,display:"grid",gap:4}}>
+                    <button onClick={()=>{setDbMenu("");void runRotate(agent);}} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>Rotate TDE Key</button>
+                    <button onClick={()=>{setDbMenu("");void openLogs(agent);}} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>Agent Logs</button>
+                    <button onClick={()=>{setDbMenu("");void runDelete(agent);}} style={{textAlign:"left",background:"transparent",border:"none",color:C.red,cursor:"pointer",padding:"6px 8px"}}>Delete Agent</button>
+                  </div>}
+                </div>
+              </div>;
+            })}
+          </div>
         </Card>}
-      </div>
+      {!filteredAgents.length&&<Card>
+        <div style={{fontSize:11,color:C.dim}}>
+          {normalizedDBSearch?"No EKM agents match search.":"No EKM agents registered yet. Deploy an agent to start MSSQL/Oracle TDE integration over PKCS#11."}
+        </div>
+      </Card>}
     </Section>}
 
     {currentSubtab==="bitlocker"&&<Section
       title="ENTERPRISE KEY MANAGEMENT  -  BITLOCKER"
-      actions={<div style={{display:"flex",gap:8,alignItems:"center"}}>
+      actions={<div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+        <Inp
+          style={{width:220}}
+          value={bitLockerSearch}
+          onChange={(e)=>setBitLockerSearch(e.target.value)}
+          placeholder="Search BitLocker client / host..."
+        />
+        <Btn small primary={bitLockerView==="cards"} onClick={()=>setBitLockerView("cards")} title="Card view"><LayoutGrid size={12} strokeWidth={2}/></Btn>
+        <Btn small primary={bitLockerView==="list"} onClick={()=>setBitLockerView("list")} title="List view"><List size={12} strokeWidth={2}/></Btn>
         <Btn small onClick={()=>void refresh(false)} disabled={loading}>
           <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
             <RefreshCcw size={12} strokeWidth={2}/>
@@ -10024,47 +10193,87 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
         <B c="amber">{`${bitLockerDegradedCount} Degraded`}</B>
         <B c="red">{`${bitLockerDownCount} Down`}</B>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:10}}>
-        {sortedBitLockerClients.map((client)=>{
-          const badge=bitLockerBadge(client);
-          const encryptionPct=Math.max(0,Math.min(100,Number(client.encryption_percentage||0)));
-          const hbAge=formatAgo(client.last_heartbeat_at);
-          const opBusy=(op)=>bitLockerOpClientID===`${String(client.id||"").trim()}:${op}`;
-          return <Card key={client.id}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-              <div style={{minWidth:0}}>
-                <div style={{fontSize:18,color:C.white,fontWeight:700,marginBottom:4,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
-                  {client.name}
+      {bitLockerView==="cards"
+        ? <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:10}}>
+          {filteredBitLockerClients.map((client)=>{
+            const badge=bitLockerBadge(client);
+            const encryptionPct=Math.max(0,Math.min(100,Number(client.encryption_percentage||0)));
+            const hbAge=formatAgo(client.last_heartbeat_at);
+            const opBusy=(op)=>bitLockerOpClientID===`${String(client.id||"").trim()}:${op}`;
+            return <Card key={client.id}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:18,color:C.white,fontWeight:700,marginBottom:4,lineHeight:1.1,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                    {client.name}
+                  </div>
+                  <div style={{fontSize:12,color:C.dim}}>{`Host: ${client.host||"-"}`}</div>
                 </div>
-                <div style={{fontSize:12,color:C.dim}}>{`Host: ${client.host||"-"}`}</div>
+                <B c={badge.color}>{badge.label}</B>
               </div>
-              <B c={badge.color}>{badge.label}</B>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 10px",marginTop:8}}>
-              <div style={{fontSize:11,color:C.dim}}>{`OS: ${client.os_version||"windows"}`}</div>
-              <div style={{fontSize:11,color:C.dim}}>{`Mount: ${client.mount_point||"C:"}`}</div>
-              <div style={{fontSize:11,color:C.dim}}>{`TPM: ${client.tpm_present?"present":"unknown"}`}</div>
-              <div style={{fontSize:11,color:C.dim}}>{`Heartbeat: ${hbAge}`}</div>
-            </div>
-            <div style={{fontSize:10,color:C.muted,marginTop:6}}>{`Encryption ${encryptionPct.toFixed(1)}%  ·  Protection ${String(client.protection_status||"unknown")}`}</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8,marginTop:10}}>
-              <Btn small onClick={()=>void runBitLockerOperation(client,"enable")} disabled={opBusy("enable")}>{opBusy("enable")?"...":"Enable"}</Btn>
-              <Btn small onClick={()=>void runBitLockerOperation(client,"pause")} disabled={opBusy("pause")}>{opBusy("pause")?"...":"Pause"}</Btn>
-              <Btn small onClick={()=>void runBitLockerOperation(client,"resume")} disabled={opBusy("resume")}>{opBusy("resume")?"...":"Resume"}</Btn>
-              <Btn small onClick={()=>void runBitLockerOperation(client,"rotate")} disabled={opBusy("rotate")}>{opBusy("rotate")?"...":"Rotate Key"}</Btn>
-              <Btn small onClick={()=>void runBitLockerOperation(client,"fetch_recovery")} disabled={opBusy("fetch_recovery")}>{opBusy("fetch_recovery")?"...":"Fetch Recovery"}</Btn>
-              <Btn small onClick={()=>void openBitLockerActivity(client)}>Activity</Btn>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,marginTop:8}}>
-              <Btn small danger onClick={()=>void runBitLockerOperation(client,"disable")} disabled={opBusy("disable")}>{opBusy("disable")?"...":"Disable"}</Btn>
-              <Btn small danger onClick={()=>void runBitLockerOperation(client,"remove")} disabled={opBusy("remove")}>{opBusy("remove")?"...":"Remove"}</Btn>
-            </div>
-          </Card>;
-        })}
-        {!sortedBitLockerClients.length&&<Card>
-          <div style={{fontSize:11,color:C.dim}}>No BitLocker clients registered. Use Register BitLocker Agent to onboard Windows endpoints with mTLS/JWT agent auth.</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 10px",marginTop:8}}>
+                <div style={{fontSize:11,color:C.dim}}>{`OS: ${client.os_version||"windows"}`}</div>
+                <div style={{fontSize:11,color:C.dim}}>{`Mount: ${client.mount_point||"C:"}`}</div>
+                <div style={{fontSize:11,color:C.dim}}>{`TPM: ${client.tpm_present?"present":"unknown"}`}</div>
+                <div style={{fontSize:11,color:C.dim}}>{`Heartbeat: ${hbAge}`}</div>
+              </div>
+              <div style={{fontSize:10,color:C.muted,marginTop:6}}>{`Encryption ${encryptionPct.toFixed(1)}%  ·  Protection ${String(client.protection_status||"unknown")}`}</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8,marginTop:10}}>
+                <Btn small onClick={()=>void runBitLockerOperation(client,"enable")} disabled={opBusy("enable")}>{opBusy("enable")?"...":"Enable"}</Btn>
+                <Btn small onClick={()=>void runBitLockerOperation(client,"pause")} disabled={opBusy("pause")}>{opBusy("pause")?"...":"Pause"}</Btn>
+                <Btn small onClick={()=>void runBitLockerOperation(client,"resume")} disabled={opBusy("resume")}>{opBusy("resume")?"...":"Resume"}</Btn>
+                <Btn small onClick={()=>void runBitLockerOperation(client,"rotate")} disabled={opBusy("rotate")}>{opBusy("rotate")?"...":"Rotate Key"}</Btn>
+                <Btn small onClick={()=>void runBitLockerOperation(client,"fetch_recovery")} disabled={opBusy("fetch_recovery")}>{opBusy("fetch_recovery")?"...":"Fetch Recovery"}</Btn>
+                <Btn small onClick={()=>void openBitLockerActivity(client)}>Activity</Btn>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,marginTop:8}}>
+                <Btn small danger onClick={()=>void runBitLockerOperation(client,"disable")} disabled={opBusy("disable")}>{opBusy("disable")?"...":"Disable"}</Btn>
+                <Btn small danger onClick={()=>void runBitLockerOperation(client,"remove")} disabled={opBusy("remove")}>{opBusy("remove")?"...":"Remove"}</Btn>
+              </div>
+            </Card>;
+          })}
+        </div>
+        : <Card style={{padding:0,overflow:"hidden"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr .9fr .8fr .8fr .8fr auto",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+            <div>Client</div><div>Host / OS</div><div>Mount</div><div>Protection</div><div>Encrypt %</div><div>Status</div><div>Options</div>
+          </div>
+          <div style={{maxHeight:320,overflowY:"auto"}}>
+            {filteredBitLockerClients.map((client)=>{
+              const badge=bitLockerBadge(client);
+              const encryptionPct=Math.max(0,Math.min(100,Number(client.encryption_percentage||0)));
+              const menuKey=String(client.id||"");
+              const menuOpen=bitLockerMenu===menuKey;
+              const opBusy=(op)=>bitLockerOpClientID===`${String(client.id||"").trim()}:${op}`;
+              return <div key={client.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr .9fr .8fr .8fr .8fr auto",alignItems:"center",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:10}}>
+                <div style={{color:C.text,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{client.name}</div>
+                <div style={{color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{`${client.host||"-"} · ${client.os_version||"windows"}`}</div>
+                <div style={{color:C.dim}}>{client.mount_point||"C:"}</div>
+                <div style={{color:C.dim}}>{String(client.protection_status||"unknown")}</div>
+                <div style={{color:C.dim}}>{`${encryptionPct.toFixed(1)}%`}</div>
+                <div><B c={badge.color}>{badge.label}</B></div>
+                <div style={{position:"relative",justifySelf:"end"}}>
+                  <button onClick={()=>setBitLockerMenu(menuOpen?"":menuKey)} style={{border:`1px solid ${C.border}`,background:"transparent",color:C.accent,borderRadius:8,padding:"4px 6px",cursor:"pointer"}}>
+                    <MoreVertical size={13} strokeWidth={2}/>
+                  </button>
+                  {menuOpen&&<div style={{position:"absolute",right:0,top:30,zIndex:20,minWidth:170,background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,padding:6,display:"grid",gap:4}}>
+                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"enable");}} disabled={opBusy("enable")} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>{opBusy("enable")?"Enabling...":"Enable"}</button>
+                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"pause");}} disabled={opBusy("pause")} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>{opBusy("pause")?"Pausing...":"Pause"}</button>
+                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"resume");}} disabled={opBusy("resume")} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>{opBusy("resume")?"Resuming...":"Resume"}</button>
+                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"rotate");}} disabled={opBusy("rotate")} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>{opBusy("rotate")?"Rotating...":"Rotate Key"}</button>
+                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"fetch_recovery");}} disabled={opBusy("fetch_recovery")} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>{opBusy("fetch_recovery")?"Fetching...":"Fetch Recovery"}</button>
+                    <button onClick={()=>{setBitLockerMenu("");void openBitLockerActivity(client);}} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>Activity</button>
+                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"disable");}} disabled={opBusy("disable")} style={{textAlign:"left",background:"transparent",border:"none",color:C.red,cursor:"pointer",padding:"6px 8px"}}>{opBusy("disable")?"Disabling...":"Disable"}</button>
+                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"remove");}} disabled={opBusy("remove")} style={{textAlign:"left",background:"transparent",border:"none",color:C.red,cursor:"pointer",padding:"6px 8px"}}>{opBusy("remove")?"Removing...":"Remove"}</button>
+                  </div>}
+                </div>
+              </div>;
+            })}
+          </div>
         </Card>}
-      </div>
+      {!filteredBitLockerClients.length&&<Card>
+        <div style={{fontSize:11,color:C.dim}}>
+          {normalizedBitLockerSearch?"No BitLocker clients match search.":"No BitLocker clients registered. Use Register BitLocker Agent to onboard Windows endpoints with mTLS/JWT agent auth."}
+        </div>
+      </Card>}
     </Section>}
 
     {currentSubtab==="kmip"&&<KMIP session={session} onToast={onToast}/>}
@@ -15457,7 +15666,7 @@ const Documentation=()=>{
 // MAIN APP WITH SIDEBAR
 // 
 const TABS={home:Home,keys:Keys,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,cloudctl:CloudKeyControl,byok:BYOK,hyok:HYOK,ekm:EKM,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
-const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",restapi:"REST API Workbench",vault:"Secret Vault",certs:"Certificates / Mini PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",cloudctl:"Cloud Key Control",byok:"BYOK",hyok:"HYOK",ekm:"EKM",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
+const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",restapi:"REST API Workbench",vault:"Secret Vault",certs:"Certificates / Mini PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",cloudctl:"Cloud Key Control",byok:"BYOK",hyok:"HYOK",ekm:"Enterprise Key Management",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
 const SUB_PANES={
   cloudctl:[
     {id:"byok",label:"BYOK",hint:"Cloud provider key import and sync",icon:Cloud,feature:"cloud_byok"},
@@ -15921,7 +16130,17 @@ export default function VectaDashboard(props){
                     }}
                   >
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      {ItemIcon&&<span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",color:isActive?C.accent:C.dim}}><ItemIcon size={13} strokeWidth={2}/></span>}
+                      {ItemIcon&&<span style={{
+                        width:20,
+                        height:20,
+                        borderRadius:999,
+                        border:`1px solid ${isActive?C.accent:C.border}`,
+                        background:isActive?C.accentDim:"transparent",
+                        display:"inline-flex",
+                        alignItems:"center",
+                        justifyContent:"center",
+                        color:isActive?C.accent:C.dim
+                      }}><ItemIcon size={12} strokeWidth={2}/></span>}
                       <div style={{fontSize:11,color:isActive?C.text:C.dim,fontWeight:isActive?700:600,lineHeight:1.2}}>{String(item.label||item.id)}</div>
                     </div>
                     {item.hint&&<div style={{fontSize:9,color:C.muted,marginTop:4,lineHeight:1.3}}>{String(item.hint)}</div>}
