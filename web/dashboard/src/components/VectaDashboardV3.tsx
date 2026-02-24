@@ -9511,7 +9511,7 @@ const HYOK=({session,keyCatalog,onToast})=>{
   </div>;
 };
 
-const EKM=({session,onToast})=>{
+const EKM=({session,onToast,subView,onSubViewChange})=>{
   const [loading,setLoading]=useState(false);
   const [agents,setAgents]=useState([]);
   const [statusByID,setStatusByID]=useState({});
@@ -9894,15 +9894,24 @@ const EKM=({session,onToast})=>{
   const bitLockerSuspendedCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Suspended").length;
   const bitLockerDegradedCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Degraded").length;
   const bitLockerDownCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Down").length;
+  const currentSubtab=String(subView||ekmSubtab||"db");
+  const selectSubtab=(next:string)=>{
+    if(onSubViewChange){
+      onSubViewChange(next);
+      return;
+    }
+    setEkmSubtab(next);
+  };
+  const showInlineSubTabs=!onSubViewChange;
 
   return <div>
-    <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
-      <Btn small primary={ekmSubtab==="db"} onClick={()=>setEkmSubtab("db")}>EKM for DBs</Btn>
-      <Btn small primary={ekmSubtab==="bitlocker"} onClick={()=>setEkmSubtab("bitlocker")}>BitLocker Management</Btn>
-      <Btn small primary={ekmSubtab==="kmip"} onClick={()=>setEkmSubtab("kmip")}>KMIP</Btn>
-    </div>
+    {showInlineSubTabs&&<div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+      <Btn small primary={currentSubtab==="db"} onClick={()=>selectSubtab("db")}>EKM for DBs</Btn>
+      <Btn small primary={currentSubtab==="bitlocker"} onClick={()=>selectSubtab("bitlocker")}>BitLocker Management</Btn>
+      <Btn small primary={currentSubtab==="kmip"} onClick={()=>selectSubtab("kmip")}>KMIP</Btn>
+    </div>}
 
-    {ekmSubtab==="db"&&<Section
+    {currentSubtab==="db"&&<Section
       title="EKM  -  TDE AGENTS"
       actions={<div style={{display:"flex",gap:8,alignItems:"center"}}>
         <Btn small onClick={()=>void refresh(false)} disabled={loading}>
@@ -9967,7 +9976,7 @@ const EKM=({session,onToast})=>{
       </div>
     </Section>}
 
-    {ekmSubtab==="bitlocker"&&<Section
+    {currentSubtab==="bitlocker"&&<Section
       title="ENTERPRISE KEY MANAGEMENT  -  BITLOCKER"
       actions={<div style={{display:"flex",gap:8,alignItems:"center"}}>
         <Btn small onClick={()=>void refresh(false)} disabled={loading}>
@@ -10028,7 +10037,7 @@ const EKM=({session,onToast})=>{
       </div>
     </Section>}
 
-    {ekmSubtab==="kmip"&&<KMIP session={session} onToast={onToast}/>}
+    {currentSubtab==="kmip"&&<KMIP session={session} onToast={onToast}/>}
 
     <Modal open={modal==="bitlocker-deploy"} onClose={()=>setModal(null)} title="Register BitLocker Agent" wide>
       <Row2>
@@ -15419,6 +15428,13 @@ const Documentation=()=>{
 // 
 const TABS={home:Home,keys:Keys,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,byok:BYOK,hyok:HYOK,ekm:EKM,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
 const TITLES={home:"Dashboard",keys:"Key Management",crypto:"Crypto Console",restapi:"REST API Workbench",vault:"Secret Vault",certs:"Certificates / Mini PKI",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",byok:"BYOK",hyok:"HYOK",ekm:"EKM",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
+const SUB_PANES={
+  ekm:[
+    {id:"db",label:"EKM for DBs",hint:"MSSQL / Oracle TDE agents"},
+    {id:"bitlocker",label:"BitLocker",hint:"Windows endpoint key lifecycle"},
+    {id:"kmip",label:"KMIP",hint:"Profiles, clients, mTLS onboarding"}
+  ]
+};
 
 export default function VectaDashboard(props){
   const {session:sessionBase,enabledFeatures,alerts,audit,unreadAlerts,onLogout,markAlertsRead}=props;
@@ -15436,6 +15452,7 @@ export default function VectaDashboard(props){
   const [toast,setToast]=useState("");
   const [keyCatalog,setKeyCatalog]=useState([]);
   const [tagCatalog,setTagCatalog]=useState([]);
+  const [subPaneSelection,setSubPaneSelection]=useState({ekm:"db"});
   const [fipsMode,setFipsMode]=useState<"enabled"|"disabled">("disabled");
   const [reportedUnread,setReportedUnread]=useState(Number(unreadAlerts||0));
   const [cliStatus,setCLIStatus]=useState<any>(null);
@@ -15679,7 +15696,22 @@ export default function VectaDashboard(props){
     ()=>NAV.map((g)=>({...g,items:g.items.filter((it)=>canSeeTab(it.id,enabledFeatures||new Set()))})).filter((g)=>g.items.length>0),
     [enabledFeatures]
   );
+  const activeSubPaneItems=Array.isArray((SUB_PANES as any)[tab])?(SUB_PANES as any)[tab]:[];
+  const activeSubPaneSelection=String(
+    (subPaneSelection as any)[tab]||
+    (activeSubPaneItems[0]?.id||"")
+  );
   const globalFipsEnabled=isFipsModeEnabled(fipsMode);
+  const selectTab=(nextTab:string)=>{
+    setTab(nextTab);
+    const paneItems=Array.isArray((SUB_PANES as any)[nextTab])?(SUB_PANES as any)[nextTab]:[];
+    if(paneItems.length){
+      setSubPaneSelection((prev:any)=>({
+        ...prev,
+        [nextTab]:String(prev?.[nextTab]||paneItems[0].id)
+      }));
+    }
+  };
 
   const Tab=TABS[tab]||Home;
   if(restOnlyMode){
@@ -15762,14 +15794,14 @@ export default function VectaDashboard(props){
               if(it.id==="restapi"){
                 const qp=new URLSearchParams(window.location.search);
                 if(qp.get("restapi")==="1"){
-                  setTab("restapi");
+                  selectTab("restapi");
                   return;
                 }
                 const url=`${window.location.origin}${window.location.pathname}?restapi=1`;
                 window.open(url,"_blank","noopener,noreferrer");
                 return;
               }
-              setTab(it.id);
+              selectTab(it.id);
             }} style={{display:"flex",alignItems:"center",gap:8,padding:collapsed?"8px":"6px 14px",cursor:"pointer",background:tab===it.id?C.accentDim:"transparent",borderLeft:tab===it.id?`2px solid ${C.accent}`:"2px solid transparent",transition:"all .15s"}} title={it.label}>
               <span style={{display:"inline-flex",alignItems:"center",justifyContent:collapsed?"center":"flex-start",color:tab===it.id?C.text:C.dim,flexShrink:0,width:collapsed?"100%":"auto"}}>
                 <it.icon size={collapsed?16:14} strokeWidth={2}/>
@@ -15831,23 +15863,51 @@ export default function VectaDashboard(props){
             <Btn small onClick={onLogout}>Logout</Btn>
           </div>
         </div>
-        <div style={{flex:1,overflowY:"auto",padding:16}}>
-          <TabErrorBoundary resetKey={tab}>
-            <Tab
-              session={session}
-              keyCatalog={keyCatalog}
-              setKeyCatalog={setKeyCatalog}
-              tagCatalog={tagCatalog}
-              setTagCatalog={setTagCatalog}
-              alerts={alerts}
-              audit={audit}
-            onToast={setToast}
-            onLogout={onLogout}
-            fipsMode={fipsMode}
-            onFipsModeChange={setFipsMode}
-            onUnreadSync={setReportedUnread}
-          />
-          </TabErrorBoundary>
+        <div style={{flex:1,display:"flex",overflow:"hidden"}}>
+          {activeSubPaneItems.length>0&&<div style={{width:220,flexShrink:0,background:C.surface,borderRight:`1px solid ${C.border}`,padding:"12px 10px",overflowY:"auto"}}>
+            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:10}}>{`${TITLES[tab]} Modules`}</div>
+            <div style={{display:"grid",gap:6}}>
+              {activeSubPaneItems.map((item:any)=>{
+                const isActive=String(activeSubPaneSelection)===String(item.id);
+                return(
+                  <div
+                    key={String(item.id)}
+                    onClick={()=>setSubPaneSelection((prev:any)=>({...prev,[tab]:String(item.id)}))}
+                    style={{
+                      border:`1px solid ${isActive?C.accent:C.border}`,
+                      background:isActive?C.accentDim:"transparent",
+                      borderRadius:8,
+                      padding:"10px 10px",
+                      cursor:"pointer"
+                    }}
+                  >
+                    <div style={{fontSize:11,color:isActive?C.text:C.dim,fontWeight:isActive?700:600,lineHeight:1.2}}>{String(item.label||item.id)}</div>
+                    {item.hint&&<div style={{fontSize:9,color:C.muted,marginTop:4,lineHeight:1.3}}>{String(item.hint)}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>}
+          <div style={{flex:1,overflowY:"auto",padding:16}}>
+            <TabErrorBoundary resetKey={`${tab}:${activeSubPaneSelection}`}>
+              <Tab
+                session={session}
+                keyCatalog={keyCatalog}
+                setKeyCatalog={setKeyCatalog}
+                tagCatalog={tagCatalog}
+                setTagCatalog={setTagCatalog}
+                alerts={alerts}
+                audit={audit}
+                onToast={setToast}
+                onLogout={onLogout}
+                fipsMode={fipsMode}
+                onFipsModeChange={setFipsMode}
+                onUnreadSync={setReportedUnread}
+                subView={activeSubPaneSelection}
+                onSubViewChange={(next:string)=>setSubPaneSelection((prev:any)=>({...prev,[tab]:String(next||"")}))}
+              />
+            </TabErrorBoundary>
+          </div>
         </div>
         <Modal open={cliModalOpen} onClose={()=>setCLIModalOpen(false)} title="Secure CLI Access">
           <FG label="CLI User" required>
