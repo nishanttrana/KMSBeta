@@ -14,6 +14,11 @@ type KeyCoreClient interface {
 	MeterUsage(ctx context.Context, tenantID string, keyID string, operation string) error
 }
 
+type CertsClient interface {
+	ListCAs(ctx context.Context, tenantID string) ([]map[string]interface{}, error)
+	SignCSR(ctx context.Context, req FieldEncryptionSignCSRRequest) (FieldEncryptionIssuedCertificate, error)
+}
+
 type Store interface {
 	CreateTokenVault(ctx context.Context, item TokenVault) error
 	ListTokenVaults(ctx context.Context, tenantID string, limit int, offset int) ([]TokenVault, error)
@@ -182,20 +187,20 @@ type FieldEncryptionLease struct {
 }
 
 type FieldEncryptionUsageReceipt struct {
-	TenantID    string    `json:"tenant_id"`
-	ReceiptID   string    `json:"receipt_id"`
-	LeaseID     string    `json:"lease_id"`
-	WrapperID   string    `json:"wrapper_id"`
-	KeyID       string    `json:"key_id"`
-	Operation   string    `json:"operation"`
-	OpCount     int       `json:"op_count"`
-	Nonce       string    `json:"nonce"`
-	Timestamp   time.Time `json:"timestamp"`
-	SignatureB64 string   `json:"signature_b64"`
-	PayloadHash string    `json:"payload_hash"`
-	Accepted    bool      `json:"accepted"`
-	RejectReason string   `json:"reject_reason,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
+	TenantID     string    `json:"tenant_id"`
+	ReceiptID    string    `json:"receipt_id"`
+	LeaseID      string    `json:"lease_id"`
+	WrapperID    string    `json:"wrapper_id"`
+	KeyID        string    `json:"key_id"`
+	Operation    string    `json:"operation"`
+	OpCount      int       `json:"op_count"`
+	Nonce        string    `json:"nonce"`
+	Timestamp    time.Time `json:"timestamp"`
+	SignatureB64 string    `json:"signature_b64"`
+	PayloadHash  string    `json:"payload_hash"`
+	Accepted     bool      `json:"accepted"`
+	RejectReason string    `json:"reject_reason,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type TokenVault struct {
@@ -370,15 +375,49 @@ type FieldEncryptionRegisterInitRequest struct {
 }
 
 type FieldEncryptionRegisterCompleteRequest struct {
-	TenantID            string            `json:"tenant_id"`
-	ChallengeID         string            `json:"challenge_id"`
-	WrapperID           string            `json:"wrapper_id"`
-	SignatureB64        string            `json:"signature_b64"`
-	CSRPEM              string            `json:"csr_pem"`
-	CertFingerprint     string            `json:"cert_fingerprint"`
-	GovernanceApproved  bool              `json:"governance_approved"`
-	ApprovedBy          string            `json:"approved_by"`
-	Metadata            map[string]string `json:"metadata"`
+	TenantID           string            `json:"tenant_id"`
+	ChallengeID        string            `json:"challenge_id"`
+	WrapperID          string            `json:"wrapper_id"`
+	SignatureB64       string            `json:"signature_b64"`
+	CSRPEM             string            `json:"csr_pem"`
+	CertFingerprint    string            `json:"cert_fingerprint"`
+	GovernanceApproved bool              `json:"governance_approved"`
+	ApprovedBy         string            `json:"approved_by"`
+	Metadata           map[string]string `json:"metadata"`
+}
+
+type FieldEncryptionAuthProfile struct {
+	Mode      string   `json:"mode"`
+	TokenType string   `json:"token_type"`
+	Token     string   `json:"token"`
+	ExpiresAt string   `json:"expires_at"`
+	Scopes    []string `json:"scopes"`
+	Issuer    string   `json:"issuer"`
+	Audience  string   `json:"audience"`
+}
+
+type FieldEncryptionIssuedCertificate struct {
+	CertID          string `json:"cert_id,omitempty"`
+	CertPEM         string `json:"cert_pem,omitempty"`
+	CertFingerprint string `json:"cert_fingerprint,omitempty"`
+	CAID            string `json:"ca_id,omitempty"`
+	NotAfter        string `json:"not_after,omitempty"`
+}
+
+type FieldEncryptionWrapperRegistrationResult struct {
+	Wrapper     FieldEncryptionWrapper           `json:"wrapper"`
+	AuthProfile FieldEncryptionAuthProfile       `json:"auth_profile"`
+	Certificate FieldEncryptionIssuedCertificate `json:"certificate,omitempty"`
+	Warnings    []string                         `json:"warnings,omitempty"`
+}
+
+type FieldEncryptionSignCSRRequest struct {
+	TenantID  string `json:"tenant_id"`
+	CAID      string `json:"ca_id"`
+	CSRPEM    string `json:"csr_pem"`
+	CertType  string `json:"cert_type"`
+	Algorithm string `json:"algorithm"`
+	Protocol  string `json:"protocol"`
 }
 
 type FieldEncryptionLeaseRequest struct {
@@ -394,14 +433,24 @@ type FieldEncryptionLeaseRequest struct {
 }
 
 type FieldEncryptionReceiptRequest struct {
-	TenantID      string `json:"tenant_id"`
-	LeaseID       string `json:"lease_id"`
-	WrapperID     string `json:"wrapper_id"`
-	KeyID         string `json:"key_id"`
-	Operation     string `json:"operation"`
-	OpCount       int    `json:"op_count"`
-	Nonce         string `json:"nonce"`
-	Timestamp     string `json:"timestamp"`
-	SignatureB64  string `json:"signature_b64"`
-	ClientStatus  string `json:"client_status"`
+	TenantID     string `json:"tenant_id"`
+	LeaseID      string `json:"lease_id"`
+	WrapperID    string `json:"wrapper_id"`
+	KeyID        string `json:"key_id"`
+	Operation    string `json:"operation"`
+	OpCount      int    `json:"op_count"`
+	Nonce        string `json:"nonce"`
+	Timestamp    string `json:"timestamp"`
+	SignatureB64 string `json:"signature_b64"`
+	ClientStatus string `json:"client_status"`
+}
+
+type FieldEncryptionSDKArtifact struct {
+	TargetOS    string `json:"target_os"`
+	Filename    string `json:"filename"`
+	ContentType string `json:"content_type"`
+	Encoding    string `json:"encoding"`
+	Content     string `json:"content"`
+	SizeBytes   int    `json:"size_bytes"`
+	SHA256      string `json:"sha256"`
 }

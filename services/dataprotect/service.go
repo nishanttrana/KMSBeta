@@ -5,15 +5,21 @@ import (
 	"crypto/ecdh"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
+	"fmt"
 	"net/http"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
@@ -21,8 +27,36 @@ import (
 type Service struct {
 	store   Store
 	keycore KeyCoreClient
+	certs   CertsClient
 	events  EventPublisher
+	jwtKey  []byte
+	jwtIss  string
+	jwtAud  string
+	jwtTTL  time.Duration
 	now     func() time.Time
+}
+
+type ServiceOption func(*Service)
+
+func WithCertsClient(client CertsClient) ServiceOption {
+	return func(s *Service) {
+		s.certs = client
+	}
+}
+
+func WithWrapperJWT(secret string, issuer string, audience string, ttl time.Duration) ServiceOption {
+	return func(s *Service) {
+		s.jwtKey = []byte(strings.TrimSpace(secret))
+		if strings.TrimSpace(issuer) != "" {
+			s.jwtIss = strings.TrimSpace(issuer)
+		}
+		if strings.TrimSpace(audience) != "" {
+			s.jwtAud = strings.TrimSpace(audience)
+		}
+		if ttl > 0 {
+			s.jwtTTL = ttl
+		}
+	}
 }
 
 var supportedDataProtectAlgorithms = []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305"}
@@ -68,13 +102,22 @@ func defaultMaskingRolePolicy() map[string]string {
 	}
 }
 
-func NewService(store Store, keycore KeyCoreClient, events EventPublisher) *Service {
-	return &Service{
+func NewService(store Store, keycore KeyCoreClient, events EventPublisher, opts ...ServiceOption) *Service {
+	out := &Service{
 		store:   store,
 		keycore: keycore,
 		events:  events,
+		jwtIss:  "vecta-dataprotect",
+		jwtAud:  "vecta-field-wrapper",
+		jwtTTL:  60 * time.Minute,
 		now:     func() time.Time { return time.Now().UTC() },
 	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(out)
+		}
+	}
+	return out
 }
 
 func defaultDataProtectionPolicy(tenantID string) DataProtectionPolicy {
@@ -496,57 +539,69 @@ func (s *Service) InitFieldEncryptionWrapperRegistration(ctx context.Context, re
 	}, nil
 }
 
-func (s *Service) CompleteFieldEncryptionWrapperRegistration(ctx context.Context, req FieldEncryptionRegisterCompleteRequest) (FieldEncryptionWrapper, error) {
+func (s *Service) CompleteFieldEncryptionWrapperRegistration(ctx context.Context, req FieldEncryptionRegisterCompleteRequest) (FieldEncryptionWrapperRegistrationResult, error) {
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.ChallengeID = strings.TrimSpace(req.ChallengeID)
 	req.WrapperID = strings.TrimSpace(req.WrapperID)
 	req.SignatureB64 = strings.TrimSpace(req.SignatureB64)
 	req.ApprovedBy = strings.TrimSpace(req.ApprovedBy)
 	if req.TenantID == "" || req.ChallengeID == "" || req.WrapperID == "" || req.SignatureB64 == "" {
-		return FieldEncryptionWrapper{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, challenge_id, wrapper_id and signature_b64 are required")
+		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, challenge_id, wrapper_id and signature_b64 are required")
 	}
 	if !req.GovernanceApproved {
-		return FieldEncryptionWrapper{}, newServiceError(http.StatusForbidden, "governance_required", "wrapper registration requires governance approval")
+		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusForbidden, "governance_required", "wrapper registration requires governance approval")
 	}
 	challenge, err := s.store.GetFieldEncryptionWrapperChallenge(ctx, req.TenantID, req.ChallengeID)
 	if err != nil {
 		if errors.Is(err, errNotFound) {
-			return FieldEncryptionWrapper{}, newServiceError(http.StatusNotFound, "not_found", "registration challenge was not found")
+			return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusNotFound, "not_found", "registration challenge was not found")
 		}
-		return FieldEncryptionWrapper{}, err
+		return FieldEncryptionWrapperRegistrationResult{}, err
 	}
 	if challenge.Used {
-		return FieldEncryptionWrapper{}, newServiceError(http.StatusConflict, "invalid_state", "registration challenge is already used")
+		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusConflict, "invalid_state", "registration challenge is already used")
 	}
 	if s.now().After(challenge.ExpiresAt) {
-		return FieldEncryptionWrapper{}, newServiceError(http.StatusConflict, "expired", "registration challenge has expired")
+		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusConflict, "expired", "registration challenge has expired")
 	}
 	if challenge.WrapperID != req.WrapperID {
-		return FieldEncryptionWrapper{}, newServiceError(http.StatusBadRequest, "bad_request", "wrapper_id does not match challenge")
+		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusBadRequest, "bad_request", "wrapper_id does not match challenge")
 	}
 	pubRaw, err := b64d(challenge.SigningPublicKeyB64)
 	if err != nil || len(pubRaw) != ed25519.PublicKeySize {
-		return FieldEncryptionWrapper{}, newServiceError(http.StatusBadRequest, "bad_request", "challenge signing key is invalid")
+		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusBadRequest, "bad_request", "challenge signing key is invalid")
 	}
 	signature, err := b64d(req.SignatureB64)
 	if err != nil || len(signature) != ed25519.SignatureSize {
-		return FieldEncryptionWrapper{}, newServiceError(http.StatusBadRequest, "bad_request", "signature_b64 must be valid ed25519 signature")
+		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusBadRequest, "bad_request", "signature_b64 must be valid ed25519 signature")
 	}
 	challengeBytes, err := b64d(challenge.ChallengeB64)
 	if err != nil || len(challengeBytes) == 0 {
-		return FieldEncryptionWrapper{}, newServiceError(http.StatusBadRequest, "bad_request", "challenge payload is invalid")
+		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusBadRequest, "bad_request", "challenge payload is invalid")
 	}
 	if !ed25519.Verify(ed25519.PublicKey(pubRaw), challengeBytes, signature) {
-		return FieldEncryptionWrapper{}, newServiceError(http.StatusForbidden, "access_denied", "challenge signature verification failed")
+		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusForbidden, "access_denied", "challenge signature verification failed")
 	}
 	approvedBy := defaultString(req.ApprovedBy, "governance")
 	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
 	if err != nil {
-		return FieldEncryptionWrapper{}, err
+		return FieldEncryptionWrapperRegistrationResult{}, err
 	}
-	certFingerprint := strings.TrimSpace(req.CertFingerprint)
+	certFingerprint := strings.ToLower(strings.TrimSpace(req.CertFingerprint))
+	issuedCert := FieldEncryptionIssuedCertificate{}
+	warnings := make([]string, 0)
+	if strings.TrimSpace(req.CSRPEM) != "" {
+		certOut, certErr := s.issueWrapperCSR(ctx, req.TenantID, challenge.WrapperID, challenge.AppID, req.CSRPEM)
+		if certErr != nil {
+			return FieldEncryptionWrapperRegistrationResult{}, certErr
+		}
+		issuedCert = certOut
+		if certFingerprint == "" {
+			certFingerprint = strings.ToLower(strings.TrimSpace(issuedCert.CertFingerprint))
+		}
+	}
 	if policy.RequireMTLS && certFingerprint == "" {
-		return FieldEncryptionWrapper{}, newServiceError(http.StatusForbidden, "policy_denied", "mTLS is required by policy; cert_fingerprint is mandatory")
+		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusForbidden, "policy_denied", "mTLS is required by policy; cert_fingerprint is mandatory")
 	}
 	item := FieldEncryptionWrapper{
 		TenantID:            req.TenantID,
@@ -567,21 +622,28 @@ func (s *Service) CompleteFieldEncryptionWrapperRegistration(ctx context.Context
 			strings.TrimSpace(existing.AppID) != strings.TrimSpace(item.AppID) ||
 			strings.TrimSpace(existing.SigningPublicKeyB64) != strings.TrimSpace(item.SigningPublicKeyB64) ||
 			strings.TrimSpace(existing.EncryptionPublicKey) != strings.TrimSpace(item.EncryptionPublicKey) {
-			return FieldEncryptionWrapper{}, newServiceError(http.StatusConflict, "immutable_binding_violation", "wrapper binding (tenant/app/keys) is immutable")
+			return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusConflict, "immutable_binding_violation", "wrapper binding (tenant/app/keys) is immutable")
 		}
 		if strings.TrimSpace(existing.CertFingerprint) != "" &&
 			!strings.EqualFold(strings.TrimSpace(existing.CertFingerprint), strings.TrimSpace(item.CertFingerprint)) {
-			return FieldEncryptionWrapper{}, newServiceError(http.StatusConflict, "immutable_binding_violation", "wrapper certificate fingerprint is immutable")
+			return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusConflict, "immutable_binding_violation", "wrapper certificate fingerprint is immutable")
 		}
 	} else if !errors.Is(getErr, errNotFound) {
-		return FieldEncryptionWrapper{}, getErr
+		return FieldEncryptionWrapperRegistrationResult{}, getErr
 	}
 	wrapper, err := s.store.UpsertFieldEncryptionWrapper(ctx, item)
 	if err != nil {
-		return FieldEncryptionWrapper{}, err
+		return FieldEncryptionWrapperRegistrationResult{}, err
 	}
 	if err := s.store.MarkFieldEncryptionWrapperChallengeUsed(ctx, req.TenantID, req.ChallengeID); err != nil {
-		return FieldEncryptionWrapper{}, err
+		return FieldEncryptionWrapperRegistrationResult{}, err
+	}
+	authProfile, err := s.issueWrapperAuthProfile(wrapper)
+	if err != nil {
+		return FieldEncryptionWrapperRegistrationResult{}, err
+	}
+	if len(s.jwtKey) == 0 {
+		warnings = append(warnings, "wrapper jwt secret is not configured; set DATAPROTECT_WRAPPER_JWT_SECRET for stable tokens")
 	}
 	_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.register_complete", req.TenantID, map[string]interface{}{
 		"wrapper_id":       wrapper.WrapperID,
@@ -590,7 +652,12 @@ func (s *Service) CompleteFieldEncryptionWrapperRegistration(ctx context.Context
 		"governance":       true,
 		"cert_fingerprint": wrapper.CertFingerprint,
 	})
-	return wrapper, nil
+	return FieldEncryptionWrapperRegistrationResult{
+		Wrapper:     wrapper,
+		AuthProfile: authProfile,
+		Certificate: issuedCert,
+		Warnings:    warnings,
+	}, nil
 }
 
 func (s *Service) IssueFieldEncryptionLease(ctx context.Context, req FieldEncryptionLeaseRequest) (FieldEncryptionLease, error) {
@@ -1019,6 +1086,154 @@ func (s *Service) verifyWrapperSignedNonce(wrapper FieldEncryptionWrapper, mode 
 		return newServiceError(http.StatusForbidden, "access_denied", "wrapper signature verification failed")
 	}
 	return nil
+}
+
+func (s *Service) issueWrapperCSR(ctx context.Context, tenantID string, wrapperID string, appID string, csrPEM string) (FieldEncryptionIssuedCertificate, error) {
+	if s.certs == nil {
+		return FieldEncryptionIssuedCertificate{}, newServiceError(http.StatusServiceUnavailable, "certs_unavailable", "certificate service is not configured")
+	}
+	tenantID = strings.TrimSpace(tenantID)
+	csrPEM = strings.TrimSpace(csrPEM)
+	if tenantID == "" || csrPEM == "" {
+		return FieldEncryptionIssuedCertificate{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and csr_pem are required")
+	}
+	cas, err := s.certs.ListCAs(ctx, tenantID)
+	if err != nil {
+		return FieldEncryptionIssuedCertificate{}, err
+	}
+	caID := pickWrapperSigningCA(cas)
+	if caID == "" {
+		return FieldEncryptionIssuedCertificate{}, newServiceError(http.StatusConflict, "ca_not_found", "no active certificate authority is available for wrapper csr signing")
+	}
+	out, err := s.certs.SignCSR(ctx, FieldEncryptionSignCSRRequest{
+		TenantID:  tenantID,
+		CAID:      caID,
+		CSRPEM:    csrPEM,
+		CertType:  "tls-client",
+		Algorithm: "ECDSA-P384",
+		Protocol:  "field-encryption-wrapper",
+	})
+	if err != nil {
+		return FieldEncryptionIssuedCertificate{}, err
+	}
+	out.CAID = defaultString(strings.TrimSpace(out.CAID), caID)
+	if strings.TrimSpace(out.CertFingerprint) == "" && strings.TrimSpace(out.CertPEM) != "" {
+		fp, fpErr := certFingerprintFromPEM(out.CertPEM)
+		if fpErr != nil {
+			return FieldEncryptionIssuedCertificate{}, fpErr
+		}
+		out.CertFingerprint = strings.ToLower(strings.TrimSpace(fp))
+	}
+	_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.wrapper_csr_signed", tenantID, map[string]interface{}{
+		"wrapper_id":            wrapperID,
+		"app_id":                appID,
+		"ca_id":                 out.CAID,
+		"cert_id":               out.CertID,
+		"cert_fingerprint":      out.CertFingerprint,
+		"protocol":              "field-encryption-wrapper",
+		"certificate_not_after": out.NotAfter,
+	})
+	return out, nil
+}
+
+func pickWrapperSigningCA(cas []map[string]interface{}) string {
+	type caCandidate struct {
+		ID     string
+		Name   string
+		Level  string
+		Active bool
+	}
+	candidates := make([]caCandidate, 0, len(cas))
+	for _, item := range cas {
+		id := strings.TrimSpace(firstString(item["id"]))
+		if id == "" {
+			continue
+		}
+		status := strings.ToLower(strings.TrimSpace(firstString(item["status"])))
+		candidates = append(candidates, caCandidate{
+			ID:     id,
+			Name:   strings.ToLower(strings.TrimSpace(firstString(item["name"]))),
+			Level:  strings.ToLower(strings.TrimSpace(firstString(item["ca_level"]))),
+			Active: status == "" || status == "active",
+		})
+	}
+	for _, item := range candidates {
+		if item.Active && strings.Contains(item.Name, "vecta-runtime-root") {
+			return item.ID
+		}
+	}
+	for _, item := range candidates {
+		if item.Active && item.Level == "root" {
+			return item.ID
+		}
+	}
+	for _, item := range candidates {
+		if item.Active {
+			return item.ID
+		}
+	}
+	if len(candidates) > 0 {
+		return candidates[0].ID
+	}
+	return ""
+}
+
+func certFingerprintFromPEM(certPEM string) (string, error) {
+	block, _ := pem.Decode([]byte(certPEM))
+	if block == nil || len(block.Bytes) == 0 {
+		return "", newServiceError(http.StatusBadRequest, "bad_request", "certificate pem decode failed")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return "", newServiceError(http.StatusBadRequest, "bad_request", "certificate parse failed")
+	}
+	sum := sha256.Sum256(cert.Raw)
+	return hex.EncodeToString(sum[:]), nil
+}
+
+func (s *Service) issueWrapperAuthProfile(wrapper FieldEncryptionWrapper) (FieldEncryptionAuthProfile, error) {
+	now := s.now().UTC()
+	ttl := s.jwtTTL
+	if ttl <= 0 {
+		ttl = 60 * time.Minute
+	}
+	expiresAt := now.Add(ttl)
+	scopes := []string{
+		"field-encryption:lease",
+		"field-encryption:receipt",
+		"field-encryption:local-crypto",
+	}
+	claims := jwt.MapClaims{
+		"iss":        s.jwtIss,
+		"aud":        s.jwtAud,
+		"sub":        strings.TrimSpace(wrapper.WrapperID),
+		"tenant_id":  strings.TrimSpace(wrapper.TenantID),
+		"app_id":     strings.TrimSpace(wrapper.AppID),
+		"wrapper_id": strings.TrimSpace(wrapper.WrapperID),
+		"scope":      scopes,
+		"iat":        now.Unix(),
+		"nbf":        now.Unix(),
+		"exp":        expiresAt.Unix(),
+	}
+	secret := append([]byte{}, s.jwtKey...)
+	if len(secret) == 0 {
+		sum := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|field-wrapper", wrapper.TenantID, wrapper.WrapperID, wrapper.AppID)))
+		secret = append(secret, sum[:]...)
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString(secret)
+	if err != nil {
+		return FieldEncryptionAuthProfile{}, err
+	}
+	return FieldEncryptionAuthProfile{
+		Mode:      "jwt",
+		TokenType: "Bearer",
+		Token:     signed,
+		ExpiresAt: expiresAt.Format(time.RFC3339),
+		Scopes:    scopes,
+		Issuer:    s.jwtIss,
+		Audience:  s.jwtAud,
+	}, nil
 }
 
 func mergeStringMaps(base map[string]string, override map[string]string) map[string]string {

@@ -133,6 +133,7 @@ import {
   completeFieldEncryptionWrapperRegistration,
   createMaskingPolicy,
   createRedactionPolicy,
+  downloadFieldEncryptionWrapperSDK,
   getDataProtectionPolicy,
   initFieldEncryptionWrapperRegistration,
   issueFieldEncryptionLease,
@@ -8190,6 +8191,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
   const [resultText,setResultText]=useState("// Field Encryption runtime output will appear here...");
   const promptDialog=usePromptDialog();
   const keyChoices=useMemo(()=>keyChoicesFromCatalog(keyCatalog),[keyCatalog]);
+  const [sdkTargetOS,setSDKTargetOS]=useState("linux");
 
   const [initWrapperID,setInitWrapperID]=useState("");
   const [initAppID,setInitAppID]=useState("");
@@ -8357,7 +8359,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
     }
     setBusy(true);
     try{
-      const wrapper=await completeFieldEncryptionWrapperRegistration(session,{
+      const out=await completeFieldEncryptionWrapperRegistration(session,{
         challenge_id:String(completeChallengeID||"").trim(),
         wrapper_id:String(completeWrapperID||"").trim(),
         signature_b64:String(completeSignature||"").trim(),
@@ -8366,12 +8368,47 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
         governance_approved:Boolean(completeApproved),
         approved_by:String(completeApprovedBy||"").trim()||session?.username||"dashboard"
       });
-      setResultText(JSON.stringify({wrapper},null,2));
-      setLeaseWrapperID(String(wrapper?.wrapper_id||leaseWrapperID||""));
+      setResultText(JSON.stringify(out,null,2));
+      setLeaseWrapperID(String(out?.wrapper?.wrapper_id||leaseWrapperID||""));
+      if(Array.isArray(out?.warnings)&&out.warnings.length){
+        onToast?.(`Registration warning: ${String(out.warnings[0]||"")}`);
+      }
       onToast?.("Wrapper registration completed.");
       await refresh(true);
     }catch(error){
       onToast?.(`Registration complete failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const downloadSDK=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    setBusy(true);
+    try{
+      const artifact=await downloadFieldEncryptionWrapperSDK(session,sdkTargetOS);
+      const clean=String(artifact?.content||"").replace(/\s+/g,"");
+      const raw=atob(clean);
+      const bytes=new Uint8Array(raw.length);
+      for(let i=0;i<raw.length;i+=1){
+        bytes[i]=raw.charCodeAt(i);
+      }
+      const blob=new Blob([bytes],{type:String(artifact?.content_type||"application/zip")});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.href=url;
+      a.download=String(artifact?.filename||`vecta-field-encryption-wrapper-sdk-${sdkTargetOS}.zip`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setResultText(JSON.stringify({sdk_artifact:artifact},null,2));
+      onToast?.(`Wrapper SDK downloaded (${String(artifact?.target_os||sdkTargetOS)}).`);
+    }catch(error){
+      onToast?.(`Wrapper SDK download failed: ${errMsg(error)}`);
     }finally{
       setBusy(false);
     }
@@ -8486,6 +8523,12 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
 
   return <div style={{display:"grid",gap:12}}>
     <Section title="Field Encryption Runtime" actions={<>
+      <Sel value={sdkTargetOS} onChange={(e)=>setSDKTargetOS(e.target.value)} style={{minWidth:120}}>
+        <option value="linux">SDK: Linux</option>
+        <option value="windows">SDK: Windows</option>
+        <option value="macos">SDK: macOS</option>
+      </Sel>
+      <Btn small onClick={()=>void downloadSDK()} disabled={busy}>Download SDK</Btn>
       <Btn small onClick={()=>void refresh(false)} disabled={loading||busy}>{loading?"Refreshing...":"Refresh"}</Btn>
     </>}>
       <Card>

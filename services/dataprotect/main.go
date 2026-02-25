@@ -63,6 +63,13 @@ func main() {
 		NewSQLStore(dbConn),
 		NewHTTPKeyCoreClient(envOr("KEYCORE_URL", "http://127.0.0.1:8010"), 5*time.Second),
 		publisher,
+		WithCertsClient(NewHTTPCertsClient(envOr("CERTS_URL", "http://127.0.0.1:8030"), 5*time.Second)),
+		WithWrapperJWT(
+			firstNonEmptyEnv("DATAPROTECT_WRAPPER_JWT_SECRET", "JWT_SECRET"),
+			envOr("DATAPROTECT_WRAPPER_JWT_ISSUER", "vecta-dataprotect"),
+			envOr("DATAPROTECT_WRAPPER_JWT_AUDIENCE", "vecta-field-wrapper"),
+			time.Duration(mustAtoi(envOr("DATAPROTECT_WRAPPER_JWT_TTL_SEC", "3600")))*time.Second,
+		),
 	)
 	handler := NewHandler(svc)
 
@@ -184,4 +191,14 @@ func mustAtoi(s string) int {
 		n = n*10 + int(s[i]-'0')
 	}
 	return n
+}
+
+func firstNonEmptyEnv(keys ...string) string {
+	for _, key := range keys {
+		v := strings.TrimSpace(os.Getenv(key))
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }

@@ -63,6 +63,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /field-encryption/wrappers", h.handleListFieldEncryptionWrappers)
 	mux.HandleFunc("POST /field-encryption/register/init", h.handleInitFieldEncryptionWrapperRegistration)
 	mux.HandleFunc("POST /field-encryption/register/complete", h.handleCompleteFieldEncryptionWrapperRegistration)
+	mux.HandleFunc("GET /field-encryption/sdk/download", h.handleDownloadFieldEncryptionWrapperSDK)
 	mux.HandleFunc("POST /field-encryption/leases", h.handleIssueFieldEncryptionLease)
 	mux.HandleFunc("GET /field-encryption/leases", h.handleListFieldEncryptionLeases)
 	mux.HandleFunc("POST /field-encryption/receipts", h.handleSubmitFieldEncryptionReceipt)
@@ -512,7 +513,31 @@ func (h *Handler) handleCompleteFieldEncryptionWrapperRegistration(w http.Respon
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"wrapper": item, "request_id": reqID})
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"wrapper":      item.Wrapper,
+		"auth_profile": item.AuthProfile,
+		"certificate":  item.Certificate,
+		"warnings":     item.Warnings,
+		"request_id":   reqID,
+	})
+}
+
+func (h *Handler) handleDownloadFieldEncryptionWrapperSDK(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	targetOS := strings.TrimSpace(r.URL.Query().Get("target_os"))
+	artifact, err := h.svc.BuildFieldEncryptionWrapperSDKArtifact(r.Context(), tenantID, targetOS)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"artifact":   artifact,
+		"request_id": reqID,
+	})
 }
 
 func (h *Handler) handleIssueFieldEncryptionLease(w http.ResponseWriter, r *http.Request) {

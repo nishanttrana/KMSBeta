@@ -58,12 +58,18 @@ type RedactionPoliciesResponse = { items: RedactionPolicy[] };
 type RedactionPolicyResponse = { item: RedactionPolicy };
 type AppResponse = { result: Record<string, unknown> };
 type DataProtectionPolicyResponse = { policy: DataProtectionPolicy };
-type FieldEncryptionWrapperResponse = { wrapper: FieldEncryptionWrapper };
+type FieldEncryptionWrapperResponse = {
+  wrapper: FieldEncryptionWrapper;
+  auth_profile?: FieldEncryptionAuthProfile;
+  certificate?: FieldEncryptionIssuedCertificate;
+  warnings?: string[];
+};
 type FieldEncryptionWrappersResponse = { items: FieldEncryptionWrapper[] };
 type FieldEncryptionLeaseResponse = { lease: FieldEncryptionLease };
 type FieldEncryptionLeasesResponse = { items: FieldEncryptionLease[] };
 type FieldEncryptionReceiptResponse = { receipt: FieldEncryptionUsageReceipt };
 type FieldEncryptionRegisterInitResponse = { item: Record<string, unknown> };
+type FieldEncryptionSDKDownloadResponse = { artifact: FieldEncryptionSDKArtifact };
 
 export type DataProtectionPolicy = {
   tenant_id: string;
@@ -152,6 +158,31 @@ export type FieldEncryptionWrapper = {
   updated_at?: string;
 };
 
+export type FieldEncryptionAuthProfile = {
+  mode: string;
+  token_type: string;
+  token: string;
+  expires_at: string;
+  scopes: string[];
+  issuer: string;
+  audience: string;
+};
+
+export type FieldEncryptionIssuedCertificate = {
+  cert_id?: string;
+  cert_pem?: string;
+  cert_fingerprint?: string;
+  ca_id?: string;
+  not_after?: string;
+};
+
+export type FieldEncryptionRegistrationResult = {
+  wrapper: FieldEncryptionWrapper;
+  auth_profile?: FieldEncryptionAuthProfile;
+  certificate?: FieldEncryptionIssuedCertificate;
+  warnings?: string[];
+};
+
 export type FieldEncryptionLease = {
   tenant_id: string;
   lease_id: string;
@@ -185,6 +216,16 @@ export type FieldEncryptionUsageReceipt = {
   accepted: boolean;
   reject_reason?: string;
   created_at?: string;
+};
+
+export type FieldEncryptionSDKArtifact = {
+  target_os: "linux" | "windows" | "macos" | string;
+  filename: string;
+  content_type: string;
+  encoding: "base64" | string;
+  content: string;
+  size_bytes: number;
+  sha256: string;
 };
 
 export type FieldEncryptionRegisterInitInput = {
@@ -599,7 +640,7 @@ export async function initFieldEncryptionWrapperRegistration(
 export async function completeFieldEncryptionWrapperRegistration(
   session: AuthSession,
   input: FieldEncryptionRegisterCompleteInput
-): Promise<FieldEncryptionWrapper> {
+): Promise<FieldEncryptionRegistrationResult> {
   const out = await serviceRequest<FieldEncryptionWrapperResponse>(session, "dataprotect", "/field-encryption/register/complete", {
     method: "POST",
     body: JSON.stringify({
@@ -607,7 +648,12 @@ export async function completeFieldEncryptionWrapperRegistration(
       ...input
     })
   });
-  return out.wrapper;
+  return {
+    wrapper: out.wrapper,
+    auth_profile: out?.auth_profile,
+    certificate: out?.certificate,
+    warnings: Array.isArray(out?.warnings) ? out.warnings : []
+  };
 }
 
 export async function issueFieldEncryptionLease(
@@ -664,4 +710,21 @@ export async function revokeFieldEncryptionLease(
       reason: reason || ""
     })
   });
+}
+
+export async function downloadFieldEncryptionWrapperSDK(
+  session: AuthSession,
+  targetOS?: "linux" | "windows" | "macos" | string
+): Promise<FieldEncryptionSDKArtifact> {
+  const q = new URLSearchParams();
+  q.set("tenant_id", session.tenantId);
+  if (targetOS && String(targetOS).trim()) {
+    q.set("target_os", String(targetOS).trim());
+  }
+  const out = await serviceRequest<FieldEncryptionSDKDownloadResponse>(
+    session,
+    "dataprotect",
+    `/field-encryption/sdk/download?${q.toString()}`
+  );
+  return out.artifact;
 }
