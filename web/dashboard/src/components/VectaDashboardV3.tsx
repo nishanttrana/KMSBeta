@@ -130,17 +130,24 @@ import {
   appSearchableDecrypt,
   appSearchableEncrypt,
   applyMask,
+  completeFieldEncryptionWrapperRegistration,
   createMaskingPolicy,
   createRedactionPolicy,
   getDataProtectionPolicy,
+  initFieldEncryptionWrapperRegistration,
+  issueFieldEncryptionLease,
   createTokenVault,
   detokenizeValues,
   fpeDecrypt,
   fpeEncrypt,
+  listFieldEncryptionLeases,
+  listFieldEncryptionWrappers,
   listMaskingPolicies,
   listRedactionPolicies,
   listTokenVaults,
   redactContent,
+  revokeFieldEncryptionLease,
+  submitFieldEncryptionUsageReceipt,
   updateDataProtectionPolicy,
   tokenizeValues
 } from "../lib/dataprotect";
@@ -8175,6 +8182,453 @@ const DataEncryption=({session,keyCatalog,onToast})=>{
   </div>;
 };
 
+const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
+  const [loading,setLoading]=useState(false);
+  const [busy,setBusy]=useState(false);
+  const [wrappers,setWrappers]=useState<any[]>([]);
+  const [leases,setLeases]=useState<any[]>([]);
+  const [resultText,setResultText]=useState("// Field Encryption runtime output will appear here...");
+  const promptDialog=usePromptDialog();
+  const keyChoices=useMemo(()=>keyChoicesFromCatalog(keyCatalog),[keyCatalog]);
+
+  const [initWrapperID,setInitWrapperID]=useState("");
+  const [initAppID,setInitAppID]=useState("");
+  const [initDisplayName,setInitDisplayName]=useState("");
+  const [initSigningPub,setInitSigningPub]=useState("");
+  const [initEncryptionPub,setInitEncryptionPub]=useState("");
+  const [initTransport,setInitTransport]=useState("mtls+jwt");
+  const [initMetadataJSON,setInitMetadataJSON]=useState("{}");
+
+  const [completeChallengeID,setCompleteChallengeID]=useState("");
+  const [completeWrapperID,setCompleteWrapperID]=useState("");
+  const [completeSignature,setCompleteSignature]=useState("");
+  const [completeCSR,setCompleteCSR]=useState("");
+  const [completeFingerprint,setCompleteFingerprint]=useState("");
+  const [completeApproved,setCompleteApproved]=useState(true);
+  const [completeApprovedBy,setCompleteApprovedBy]=useState("");
+
+  const [leaseWrapperID,setLeaseWrapperID]=useState("");
+  const [leaseKeyID,setLeaseKeyID]=useState("");
+  const [leaseOperation,setLeaseOperation]=useState("encrypt");
+  const [leaseNonce,setLeaseNonce]=useState("");
+  const [leaseTimestamp,setLeaseTimestamp]=useState("");
+  const [leaseSignature,setLeaseSignature]=useState("");
+  const [leaseTTL,setLeaseTTL]=useState("300");
+  const [leaseMaxOps,setLeaseMaxOps]=useState("1000");
+
+  const [receiptLeaseID,setReceiptLeaseID]=useState("");
+  const [receiptWrapperID,setReceiptWrapperID]=useState("");
+  const [receiptKeyID,setReceiptKeyID]=useState("");
+  const [receiptOperation,setReceiptOperation]=useState("encrypt");
+  const [receiptCount,setReceiptCount]=useState("1");
+  const [receiptNonce,setReceiptNonce]=useState("");
+  const [receiptTimestamp,setReceiptTimestamp]=useState("");
+  const [receiptSignature,setReceiptSignature]=useState("");
+  const [receiptClientStatus,setReceiptClientStatus]=useState("ok");
+
+  const parseMapJSON=(raw:string,label:string)=>{
+    const text=String(raw||"").trim();
+    if(!text){
+      return {};
+    }
+    let parsed:any={};
+    try{
+      parsed=JSON.parse(text);
+    }catch{
+      throw new Error(`${label} must be valid JSON object.`);
+    }
+    if(!parsed||typeof parsed!=="object"||Array.isArray(parsed)){
+      throw new Error(`${label} must be valid JSON object.`);
+    }
+    return parsed;
+  };
+
+  const makeNonce=()=>{
+    try{
+      const bytes=new Uint8Array(24);
+      if(typeof window!=="undefined"&&window.crypto&&window.crypto.getRandomValues){
+        window.crypto.getRandomValues(bytes);
+      }else{
+        for(let i=0;i<bytes.length;i+=1){
+          bytes[i]=Math.floor(Math.random()*256);
+        }
+      }
+      return btoa(String.fromCharCode(...Array.from(bytes))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+    }catch{
+      return `nonce-${Date.now()}`;
+    }
+  };
+
+  const refresh=async(silent=false)=>{
+    if(!session?.token){
+      setWrappers([]);
+      setLeases([]);
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const [wrapperItems,leaseItems]=await Promise.all([
+        listFieldEncryptionWrappers(session,{limit:500,offset:0}),
+        listFieldEncryptionLeases(session,{limit:500,offset:0})
+      ]);
+      setWrappers(Array.isArray(wrapperItems)?wrapperItems:[]);
+      setLeases(Array.isArray(leaseItems)?leaseItems:[]);
+      if(!leaseWrapperID&&Array.isArray(wrapperItems)&&wrapperItems.length){
+        setLeaseWrapperID(String(wrapperItems[0]?.wrapper_id||""));
+      }
+      if(!leaseKeyID&&keyChoices.length){
+        setLeaseKeyID(String(keyChoices[0]?.id||""));
+      }
+      if(!receiptLeaseID&&Array.isArray(leaseItems)&&leaseItems.length){
+        setReceiptLeaseID(String(leaseItems[0]?.lease_id||""));
+        setReceiptWrapperID(String(leaseItems[0]?.wrapper_id||""));
+        setReceiptKeyID(String(leaseItems[0]?.key_id||""));
+      }
+    }catch(error){
+      if(!silent){
+        onToast?.(`Field Encryption refresh failed: ${errMsg(error)}`);
+      }
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    if(!session?.token){
+      return;
+    }
+    void refresh(true);
+  },[session?.token,session?.tenantId]);
+
+  useEffect(()=>{
+    if(!leaseKeyID&&keyChoices.length){
+      setLeaseKeyID(String(keyChoices[0]?.id||""));
+    }
+  },[keyChoices,leaseKeyID]);
+
+  const submitInit=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    if(!String(initWrapperID||"").trim()||!String(initAppID||"").trim()){
+      onToast?.("wrapper_id and app_id are required.");
+      return;
+    }
+    if(!String(initSigningPub||"").trim()||!String(initEncryptionPub||"").trim()){
+      onToast?.("Signing and encryption public keys are required.");
+      return;
+    }
+    setBusy(true);
+    try{
+      const out=await initFieldEncryptionWrapperRegistration(session,{
+        wrapper_id:String(initWrapperID||"").trim(),
+        app_id:String(initAppID||"").trim(),
+        display_name:String(initDisplayName||"").trim()||String(initWrapperID||"").trim(),
+        signing_public_key_b64:String(initSigningPub||"").trim(),
+        encryption_public_key_b64:String(initEncryptionPub||"").trim(),
+        transport:String(initTransport||"mtls+jwt").trim()||"mtls+jwt",
+        metadata:parseMapJSON(initMetadataJSON,"Init metadata")
+      });
+      setCompleteChallengeID(String((out as any)?.challenge_id||""));
+      setCompleteWrapperID(String((out as any)?.wrapper_id||String(initWrapperID||"").trim()));
+      setResultText(JSON.stringify(out,null,2));
+      onToast?.("Wrapper registration challenge issued.");
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Registration init failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const submitComplete=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    if(!String(completeChallengeID||"").trim()||!String(completeWrapperID||"").trim()||!String(completeSignature||"").trim()){
+      onToast?.("challenge_id, wrapper_id and signature are required.");
+      return;
+    }
+    setBusy(true);
+    try{
+      const wrapper=await completeFieldEncryptionWrapperRegistration(session,{
+        challenge_id:String(completeChallengeID||"").trim(),
+        wrapper_id:String(completeWrapperID||"").trim(),
+        signature_b64:String(completeSignature||"").trim(),
+        csr_pem:String(completeCSR||"").trim()||undefined,
+        cert_fingerprint:String(completeFingerprint||"").trim()||undefined,
+        governance_approved:Boolean(completeApproved),
+        approved_by:String(completeApprovedBy||"").trim()||session?.username||"dashboard"
+      });
+      setResultText(JSON.stringify({wrapper},null,2));
+      setLeaseWrapperID(String(wrapper?.wrapper_id||leaseWrapperID||""));
+      onToast?.("Wrapper registration completed.");
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Registration complete failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const submitLease=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    if(!String(leaseWrapperID||"").trim()||!String(leaseKeyID||"").trim()){
+      onToast?.("wrapper_id and key_id are required.");
+      return;
+    }
+    if(!String(leaseSignature||"").trim()){
+      onToast?.("Signed challenge/nonce is required.");
+      return;
+    }
+    setBusy(true);
+    try{
+      const nonce=String(leaseNonce||"").trim()||makeNonce();
+      const ts=String(leaseTimestamp||"").trim()||new Date().toISOString();
+      const lease=await issueFieldEncryptionLease(session,{
+        wrapper_id:String(leaseWrapperID||"").trim(),
+        key_id:String(leaseKeyID||"").trim(),
+        operation:String(leaseOperation||"encrypt").trim(),
+        nonce,
+        timestamp:ts,
+        signature_b64:String(leaseSignature||"").trim(),
+        requested_ttl_sec:Math.max(1,Math.min(86400,Number(leaseTTL||300))),
+        requested_max_ops:Math.max(1,Math.min(1000000,Number(leaseMaxOps||1000)))
+      });
+      setReceiptLeaseID(String(lease?.lease_id||""));
+      setReceiptWrapperID(String(lease?.wrapper_id||""));
+      setReceiptKeyID(String(lease?.key_id||""));
+      setLeaseNonce(nonce);
+      setLeaseTimestamp(ts);
+      setResultText(JSON.stringify({lease},null,2));
+      onToast?.("Field-encryption lease issued.");
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Lease issue failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const submitReceipt=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    if(!String(receiptLeaseID||"").trim()||!String(receiptWrapperID||"").trim()||!String(receiptKeyID||"").trim()){
+      onToast?.("lease_id, wrapper_id and key_id are required.");
+      return;
+    }
+    if(!String(receiptSignature||"").trim()){
+      onToast?.("Receipt signature is required.");
+      return;
+    }
+    setBusy(true);
+    try{
+      const nonce=String(receiptNonce||"").trim()||makeNonce();
+      const ts=String(receiptTimestamp||"").trim()||new Date().toISOString();
+      const receipt=await submitFieldEncryptionUsageReceipt(session,{
+        lease_id:String(receiptLeaseID||"").trim(),
+        wrapper_id:String(receiptWrapperID||"").trim(),
+        key_id:String(receiptKeyID||"").trim(),
+        operation:String(receiptOperation||"encrypt").trim(),
+        op_count:Math.max(1,Math.min(100000,Number(receiptCount||1))),
+        nonce,
+        timestamp:ts,
+        signature_b64:String(receiptSignature||"").trim(),
+        client_status:String(receiptClientStatus||"ok").trim()
+      });
+      setReceiptNonce(nonce);
+      setReceiptTimestamp(ts);
+      setResultText(JSON.stringify({receipt},null,2));
+      onToast?.("Usage receipt submitted.");
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Receipt submission failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  const revokeLease=async(lease:any)=>{
+    if(!session?.token){
+      return;
+    }
+    const confirmed=await promptDialog.confirm({
+      title:"Revoke Field Encryption Lease",
+      message:`Revoke lease ${String(lease?.lease_id||"")} for wrapper ${String(lease?.wrapper_id||"")}?`,
+      confirmLabel:"Revoke",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    setBusy(true);
+    try{
+      await revokeFieldEncryptionLease(session,String(lease?.lease_id||""),"revoked by admin");
+      onToast?.("Lease revoked.");
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Lease revoke failed: ${errMsg(error)}`);
+    }finally{
+      setBusy(false);
+    }
+  };
+
+  return <div style={{display:"grid",gap:12}}>
+    <Section title="Field Encryption Runtime" actions={<>
+      <Btn small onClick={()=>void refresh(false)} disabled={loading||busy}>{loading?"Refreshing...":"Refresh"}</Btn>
+    </>}>
+      <Card>
+        <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Execution Model</div>
+        <div style={{fontSize:10,color:C.dim,lineHeight:1.5}}>
+          Wrapper registration is mandatory when <code>require_registered_wrapper</code> is enabled. Lease issuance enforces nonce/timestamp/signature checks and policy gates (cache/local crypto).
+        </div>
+      </Card>
+    </Section>
+
+    <Row3>
+      <Stat l="Wrappers" v={String(wrappers.length)} s="Registered wrapper identities" c="accent"/>
+      <Stat l="Leases" v={String(leases.length)} s="Issued local-crypto leases" c="blue"/>
+      <Stat l="Active Leases" v={String((leases||[]).filter((item)=>!Boolean(item?.revoked)).length)} s="Not revoked" c="green"/>
+    </Row3>
+
+    <Section title="Wrapper Registration">
+      <Card style={{display:"grid",gap:10}}>
+        <div style={{fontSize:11,color:C.text,fontWeight:700}}>1) Registration Init (challenge issuance)</div>
+        <Row3>
+          <FG label="Wrapper ID" required><Inp value={initWrapperID} onChange={(e)=>setInitWrapperID(e.target.value)} placeholder="wrapper-prod-01"/></FG>
+          <FG label="App ID" required><Inp value={initAppID} onChange={(e)=>setInitAppID(e.target.value)} placeholder="payments-api"/></FG>
+          <FG label="Display Name"><Inp value={initDisplayName} onChange={(e)=>setInitDisplayName(e.target.value)} placeholder="Payments API Wrapper"/></FG>
+          <FG label="Transport"><Sel value={initTransport} onChange={(e)=>setInitTransport(e.target.value)}><option value="mtls+jwt">mtls+jwt</option><option value="mtls">mtls</option><option value="jwt">jwt</option></Sel></FG>
+        </Row3>
+        <Row2>
+          <FG label="Signing Public Key (base64)" required><Txt rows={3} value={initSigningPub} onChange={(e)=>setInitSigningPub(e.target.value)} mono/></FG>
+          <FG label="Encryption Public Key (base64)" required><Txt rows={3} value={initEncryptionPub} onChange={(e)=>setInitEncryptionPub(e.target.value)} mono/></FG>
+        </Row2>
+        <FG label="Metadata (JSON object)"><Txt rows={2} value={initMetadataJSON} onChange={(e)=>setInitMetadataJSON(e.target.value)} mono/></FG>
+        <div style={{display:"flex",justifyContent:"flex-end"}}><Btn small primary onClick={()=>void submitInit()} disabled={busy}>{busy?"Working...":"Init Registration"}</Btn></div>
+
+        <div style={{height:1,background:C.line}}/>
+
+        <div style={{fontSize:11,color:C.text,fontWeight:700}}>2) Registration Complete (challenge response)</div>
+        <Row3>
+          <FG label="Challenge ID" required><Inp value={completeChallengeID} onChange={(e)=>setCompleteChallengeID(e.target.value)} mono/></FG>
+          <FG label="Wrapper ID" required><Inp value={completeWrapperID} onChange={(e)=>setCompleteWrapperID(e.target.value)}/></FG>
+          <FG label="Approved By"><Inp value={completeApprovedBy} onChange={(e)=>setCompleteApprovedBy(e.target.value)} placeholder={session?.username||"admin"}/></FG>
+        </Row3>
+        <Row2>
+          <FG label="Signature (base64)" required><Txt rows={3} value={completeSignature} onChange={(e)=>setCompleteSignature(e.target.value)} mono/></FG>
+          <FG label="CSR PEM (optional)"><Txt rows={3} value={completeCSR} onChange={(e)=>setCompleteCSR(e.target.value)} mono/></FG>
+        </Row2>
+        <Row2>
+          <FG label="Cert Fingerprint (optional)"><Inp value={completeFingerprint} onChange={(e)=>setCompleteFingerprint(e.target.value)} mono/></FG>
+          <Chk label="Governance approved" checked={completeApproved} onChange={()=>setCompleteApproved((v)=>!v)}/>
+        </Row2>
+        <div style={{display:"flex",justifyContent:"flex-end"}}><Btn small primary onClick={()=>void submitComplete()} disabled={busy}>{busy?"Working...":"Complete Registration"}</Btn></div>
+      </Card>
+    </Section>
+
+    <Section title="Lease and Receipt">
+      <Card style={{display:"grid",gap:10}}>
+        <div style={{fontSize:11,color:C.text,fontWeight:700}}>3) Key Lease for Local Crypto</div>
+        <Row3>
+          <FG label="Wrapper ID" required><Sel value={leaseWrapperID} onChange={(e)=>setLeaseWrapperID(e.target.value)}><option value="">Select wrapper</option>{(wrappers||[]).map((item)=><option key={String(item?.wrapper_id||"")} value={String(item?.wrapper_id||"")}>{`${String(item?.display_name||item?.wrapper_id||"")} (${String(item?.wrapper_id||"")})`}</option>)}</Sel></FG>
+          <FG label="Key ID" required><Sel value={leaseKeyID} onChange={(e)=>setLeaseKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          <FG label="Operation"><Sel value={leaseOperation} onChange={(e)=>setLeaseOperation(e.target.value)}><option value="encrypt">encrypt</option><option value="decrypt">decrypt</option><option value="tokenize">tokenize</option><option value="detokenize">detokenize</option><option value="mask">mask</option><option value="redact">redact</option></Sel></FG>
+          <FG label="Requested TTL (sec)"><Inp type="number" min={1} max={86400} value={leaseTTL} onChange={(e)=>setLeaseTTL(e.target.value)}/></FG>
+          <FG label="Requested Max Ops"><Inp type="number" min={1} max={1000000} value={leaseMaxOps} onChange={(e)=>setLeaseMaxOps(e.target.value)}/></FG>
+        </Row3>
+        <Row3>
+          <FG label="Nonce"><Inp value={leaseNonce} onChange={(e)=>setLeaseNonce(e.target.value)} placeholder="Auto-generated if empty" mono/></FG>
+          <FG label="Timestamp (RFC3339)"><Inp value={leaseTimestamp} onChange={(e)=>setLeaseTimestamp(e.target.value)} placeholder="Auto-generated if empty" mono/></FG>
+          <FG label="Signature (base64)" required><Inp value={leaseSignature} onChange={(e)=>setLeaseSignature(e.target.value)} mono/></FG>
+        </Row3>
+        <div style={{display:"flex",justifyContent:"flex-end"}}><Btn small primary onClick={()=>void submitLease()} disabled={busy}>{busy?"Working...":"Issue Lease"}</Btn></div>
+
+        <div style={{height:1,background:C.line}}/>
+
+        <div style={{fontSize:11,color:C.text,fontWeight:700}}>4) Local Usage Receipt</div>
+        <Row3>
+          <FG label="Lease ID" required><Inp value={receiptLeaseID} onChange={(e)=>setReceiptLeaseID(e.target.value)} mono/></FG>
+          <FG label="Wrapper ID" required><Inp value={receiptWrapperID} onChange={(e)=>setReceiptWrapperID(e.target.value)} mono/></FG>
+          <FG label="Key ID" required><Inp value={receiptKeyID} onChange={(e)=>setReceiptKeyID(e.target.value)} mono/></FG>
+          <FG label="Operation"><Sel value={receiptOperation} onChange={(e)=>setReceiptOperation(e.target.value)}><option value="encrypt">encrypt</option><option value="decrypt">decrypt</option><option value="tokenize">tokenize</option><option value="detokenize">detokenize</option><option value="mask">mask</option><option value="redact">redact</option></Sel></FG>
+          <FG label="Operation Count"><Inp type="number" min={1} max={100000} value={receiptCount} onChange={(e)=>setReceiptCount(e.target.value)}/></FG>
+          <FG label="Client Status"><Inp value={receiptClientStatus} onChange={(e)=>setReceiptClientStatus(e.target.value)} placeholder="ok"/></FG>
+          <FG label="Nonce"><Inp value={receiptNonce} onChange={(e)=>setReceiptNonce(e.target.value)} placeholder="Auto-generated if empty" mono/></FG>
+          <FG label="Timestamp (RFC3339)"><Inp value={receiptTimestamp} onChange={(e)=>setReceiptTimestamp(e.target.value)} placeholder="Auto-generated if empty" mono/></FG>
+          <FG label="Signature (base64)" required><Inp value={receiptSignature} onChange={(e)=>setReceiptSignature(e.target.value)} mono/></FG>
+        </Row3>
+        <div style={{display:"flex",justifyContent:"flex-end"}}><Btn small primary onClick={()=>void submitReceipt()} disabled={busy}>{busy?"Working...":"Submit Receipt"}</Btn></div>
+      </Card>
+    </Section>
+
+    <Row2>
+      <Section title="Registered Wrappers">
+        <Card style={{maxHeight:260,overflowY:"auto"}}>
+          {(wrappers||[]).length?(
+            <div style={{display:"grid",gap:8}}>
+              {wrappers.map((item:any)=>{
+                const status=String(item?.status||"pending").toLowerCase();
+                const badgeColor=status==="active"?"green":status==="pending"?"yellow":"muted";
+                return <Card key={String(item?.wrapper_id||"")} style={{padding:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                    <div>
+                      <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(item?.display_name||item?.wrapper_id||"")}</div>
+                      <div style={{fontSize:9,color:C.muted}}>{String(item?.wrapper_id||"")} · {String(item?.app_id||"")}</div>
+                    </div>
+                    <B c={badgeColor as any}>{status||"pending"}</B>
+                  </div>
+                </Card>;
+              })}
+            </div>
+          ):<div style={{fontSize:10,color:C.dim}}>No wrappers registered for this tenant.</div>}
+        </Card>
+      </Section>
+      <Section title="Issued Leases">
+        <Card style={{maxHeight:260,overflowY:"auto"}}>
+          {(leases||[]).length?(
+            <div style={{display:"grid",gap:8}}>
+              {leases.map((item:any)=>{
+                const revoked=Boolean(item?.revoked);
+                return <Card key={String(item?.lease_id||"")} style={{padding:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                    <div>
+                      <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(item?.lease_id||"")}</div>
+                      <div style={{fontSize:9,color:C.muted}}>{`${String(item?.wrapper_id||"")} · ${String(item?.operation||"")} · used ${Number(item?.used_ops||0)}/${Number(item?.max_ops||0)}`}</div>
+                    </div>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <B c={revoked?"red":"green"}>{revoked?"revoked":"active"}</B>
+                      {!revoked?<Btn small danger onClick={()=>void revokeLease(item)} disabled={busy}>Revoke</Btn>:null}
+                    </div>
+                  </div>
+                </Card>;
+              })}
+            </div>
+          ):<div style={{fontSize:10,color:C.dim}}>No leases issued for this tenant.</div>}
+        </Card>
+      </Section>
+    </Row2>
+
+    <Section title="Runtime Output">
+      <Card>
+        <Txt rows={12} value={resultText} readOnly/>
+      </Card>
+    </Section>
+    {promptDialog.ui}
+  </div>;
+};
+
 const DataEncryptionPolicy=({session,onToast})=>{
   const [loading,setLoading]=useState(false);
   const [saving,setSaving]=useState(false);
@@ -8185,7 +8639,18 @@ const DataEncryptionPolicy=({session,onToast})=>{
     {id:"envelope",label:"Envelope"},
     {id:"searchable",label:"Searchable"}
   ];
+  const localKeyClassOptions=["symmetric","hmac","asymmetric","pqc"];
+  const forceRemoteOpsOptions=["encrypt","decrypt","tokenize","detokenize","mask","redact","sign","verify","wrap","unwrap"];
+  const localAlgoOptions=["AES-GCM","AES-SIV","CHACHA20-POLY1305"];
   const parseCsvList=(value:string)=>String(value||"").split(",").map((item)=>item.trim()).filter(Boolean);
+  const toggleStringList=(list:string[]|undefined,value:string)=>{
+    const normalized=String(value||"").trim();
+    const current=Array.isArray(list)?list.map((item)=>String(item||"").trim()).filter(Boolean):[];
+    if(!normalized){
+      return current;
+    }
+    return current.includes(normalized)?current.filter((item)=>item!==normalized):[...current,normalized];
+  };
   const fmtBytes=(value:number)=>{
     const n=Math.max(0,Number(value||0));
     if(n>=1024*1024){
@@ -8277,7 +8742,22 @@ const DataEncryptionPolicy=({session,onToast})=>{
         required_token_context_keys:Array.isArray(dp?.required_token_context_keys)?dp.required_token_context_keys:[],
         masking_role_policy:dp?.masking_role_policy&&typeof dp.masking_role_policy==="object"?dp.masking_role_policy:{admin:"none",auditor:"hash",analyst:"partial_last4",support:"partial_last4"},
         token_metadata_retention_days:Math.max(1,Number(dp?.token_metadata_retention_days||365)),
-        redaction_event_retention_days:Math.max(1,Number(dp?.redaction_event_retention_days||365))
+        redaction_event_retention_days:Math.max(1,Number(dp?.redaction_event_retention_days||365)),
+        require_registered_wrapper:Boolean(dp?.require_registered_wrapper ?? true),
+        local_crypto_allowed:Boolean(dp?.local_crypto_allowed),
+        cache_enabled:Boolean(dp?.cache_enabled),
+        cache_ttl_sec:Math.max(1,Number(dp?.cache_ttl_sec||300)),
+        lease_max_ops:Math.max(1,Number(dp?.lease_max_ops||1000)),
+        max_cached_keys:Math.max(1,Number(dp?.max_cached_keys||16)),
+        allowed_local_algorithms:Array.isArray(dp?.allowed_local_algorithms)&&dp.allowed_local_algorithms.length?dp.allowed_local_algorithms:["AES-GCM","AES-SIV","CHACHA20-POLY1305"],
+        allowed_key_classes_for_local_export:Array.isArray(dp?.allowed_key_classes_for_local_export)&&dp.allowed_key_classes_for_local_export.length?dp.allowed_key_classes_for_local_export:["symmetric"],
+        force_remote_ops:Array.isArray(dp?.force_remote_ops)?dp.force_remote_ops:[],
+        require_mtls:Boolean(dp?.require_mtls),
+        require_signed_nonce:Boolean(dp?.require_signed_nonce ?? true),
+        anti_replay_window_sec:Math.max(1,Number(dp?.anti_replay_window_sec||300)),
+        attested_wrapper_only:Boolean(dp?.attested_wrapper_only),
+        revoke_on_policy_change:Boolean(dp?.revoke_on_policy_change ?? true),
+        rekey_on_policy_change:Boolean(dp?.rekey_on_policy_change)
       });
     }catch(error){
       if(!silent){
@@ -8356,6 +8836,21 @@ const DataEncryptionPolicy=({session,onToast})=>{
         masking_role_policy:dataPolicy?.masking_role_policy&&typeof dataPolicy.masking_role_policy==="object"?dataPolicy.masking_role_policy:{},
         token_metadata_retention_days:Math.max(1,Math.min(36500,Number(dataPolicy?.token_metadata_retention_days||365))),
         redaction_event_retention_days:Math.max(1,Math.min(36500,Number(dataPolicy?.redaction_event_retention_days||365))),
+        require_registered_wrapper:Boolean(dataPolicy?.require_registered_wrapper),
+        local_crypto_allowed:Boolean(dataPolicy?.local_crypto_allowed),
+        cache_enabled:Boolean(dataPolicy?.cache_enabled),
+        cache_ttl_sec:Math.max(1,Math.min(86400,Number(dataPolicy?.cache_ttl_sec||300))),
+        lease_max_ops:Math.max(1,Math.min(1000000,Number(dataPolicy?.lease_max_ops||1000))),
+        max_cached_keys:Math.max(1,Math.min(10000,Number(dataPolicy?.max_cached_keys||16))),
+        allowed_local_algorithms:Array.isArray(dataPolicy?.allowed_local_algorithms)?dataPolicy.allowed_local_algorithms:[],
+        allowed_key_classes_for_local_export:Array.isArray(dataPolicy?.allowed_key_classes_for_local_export)?dataPolicy.allowed_key_classes_for_local_export:[],
+        force_remote_ops:Array.isArray(dataPolicy?.force_remote_ops)?dataPolicy.force_remote_ops:[],
+        require_mtls:Boolean(dataPolicy?.require_mtls),
+        require_signed_nonce:Boolean(dataPolicy?.require_signed_nonce),
+        anti_replay_window_sec:Math.max(1,Math.min(86400,Number(dataPolicy?.anti_replay_window_sec||300))),
+        attested_wrapper_only:Boolean(dataPolicy?.attested_wrapper_only),
+        revoke_on_policy_change:Boolean(dataPolicy?.revoke_on_policy_change),
+        rekey_on_policy_change:Boolean(dataPolicy?.rekey_on_policy_change),
         updated_by:session?.username||"dashboard"
       });
       setDataPolicy((prev)=>({...prev,...updated}));
@@ -8504,6 +8999,62 @@ const DataEncryptionPolicy=({session,onToast})=>{
           <FG label="Max app crypto batch size">
             <Inp type="number" min={1} max={4096} value={String(dataPolicy?.max_app_crypto_batch_size??256)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_app_crypto_batch_size:Number(e.target.value||256)}))}/>
           </FG>
+        </div>
+
+        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+
+        <div style={{fontSize:11,color:C.text,fontWeight:700}}>8. Field Encryption Runtime Policy</div>
+        <div style={{fontSize:10,color:C.dim}}>Enforces wrapper registration, local crypto leasing, cache controls, anti-replay checks, and mTLS requirements.</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+          <Chk label="Require registered wrapper (mandatory registration flow)" checked={Boolean(dataPolicy?.require_registered_wrapper)} onChange={()=>setDataPolicy((prev)=>({...prev,require_registered_wrapper:!Boolean(prev?.require_registered_wrapper)}))}/>
+          <Chk label="Allow local crypto path (wrapper local execution)" checked={Boolean(dataPolicy?.local_crypto_allowed)} onChange={()=>setDataPolicy((prev)=>({...prev,local_crypto_allowed:!Boolean(prev?.local_crypto_allowed)}))}/>
+          <Chk label="Enable key cache/lease mode" checked={Boolean(dataPolicy?.cache_enabled)} onChange={()=>setDataPolicy((prev)=>({...prev,cache_enabled:!Boolean(prev?.cache_enabled)}))}/>
+          <Chk label="Require mTLS for wrapper runtime APIs" checked={Boolean(dataPolicy?.require_mtls)} onChange={()=>setDataPolicy((prev)=>({...prev,require_mtls:!Boolean(prev?.require_mtls)}))}/>
+          <Chk label="Require signed nonce + timestamp (anti-replay)" checked={Boolean(dataPolicy?.require_signed_nonce)} onChange={()=>setDataPolicy((prev)=>({...prev,require_signed_nonce:!Boolean(prev?.require_signed_nonce)}))}/>
+          <Chk label="Attested wrappers only (strict mode)" checked={Boolean(dataPolicy?.attested_wrapper_only)} onChange={()=>setDataPolicy((prev)=>({...prev,attested_wrapper_only:!Boolean(prev?.attested_wrapper_only)}))}/>
+          <Chk label="Revoke active leases when policy changes" checked={Boolean(dataPolicy?.revoke_on_policy_change)} onChange={()=>setDataPolicy((prev)=>({...prev,revoke_on_policy_change:!Boolean(prev?.revoke_on_policy_change)}))}/>
+          <Chk label="Require key re-lease/rekey on policy change" checked={Boolean(dataPolicy?.rekey_on_policy_change)} onChange={()=>setDataPolicy((prev)=>({...prev,rekey_on_policy_change:!Boolean(prev?.rekey_on_policy_change)}))}/>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:10}}>
+          <FG label="Cache TTL (seconds)">
+            <Inp type="number" min={1} max={86400} value={String(dataPolicy?.cache_ttl_sec??300)} onChange={(e)=>setDataPolicy((prev)=>({...prev,cache_ttl_sec:Number(e.target.value||300)}))}/>
+          </FG>
+          <FG label="Lease max operations">
+            <Inp type="number" min={1} max={1000000} value={String(dataPolicy?.lease_max_ops??1000)} onChange={(e)=>setDataPolicy((prev)=>({...prev,lease_max_ops:Number(e.target.value||1000)}))}/>
+          </FG>
+          <FG label="Max cached keys per wrapper">
+            <Inp type="number" min={1} max={10000} value={String(dataPolicy?.max_cached_keys??16)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_cached_keys:Number(e.target.value||16)}))}/>
+          </FG>
+          <FG label="Anti-replay window (seconds)">
+            <Inp type="number" min={1} max={86400} value={String(dataPolicy?.anti_replay_window_sec??300)} onChange={(e)=>setDataPolicy((prev)=>({...prev,anti_replay_window_sec:Number(e.target.value||300)}))}/>
+          </FG>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed local algorithms</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+            {localAlgoOptions.map((algo)=>{
+              const selected=(Array.isArray(dataPolicy?.allowed_local_algorithms)?dataPolicy.allowed_local_algorithms:[]).includes(algo);
+              return <Chk key={`dpol-local-algo-${algo}`} label={algo} checked={selected} onChange={()=>setDataPolicy((prev)=>({...prev,allowed_local_algorithms:toggleStringList(prev?.allowed_local_algorithms,algo)}))}/>;
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed key classes for local export/lease</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8}}>
+            {localKeyClassOptions.map((item)=>{
+              const selected=(Array.isArray(dataPolicy?.allowed_key_classes_for_local_export)?dataPolicy.allowed_key_classes_for_local_export:[]).includes(item);
+              return <Chk key={`dpol-local-class-${item}`} label={item} checked={selected} onChange={()=>setDataPolicy((prev)=>({...prev,allowed_key_classes_for_local_export:toggleStringList(prev?.allowed_key_classes_for_local_export,item)}))}/>;
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Force remote execution for selected operations</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+            {forceRemoteOpsOptions.map((item)=>{
+              const selected=(Array.isArray(dataPolicy?.force_remote_ops)?dataPolicy.force_remote_ops:[]).includes(item);
+              return <Chk key={`dpol-force-remote-${item}`} label={item} checked={selected} onChange={()=>setDataPolicy((prev)=>({...prev,force_remote_ops:toggleStringList(prev?.force_remote_ops,item)}))}/>;
+            })}
+          </div>
         </div>
       </Card>
     </Section>
@@ -9296,6 +9847,7 @@ const DataProtection=({session,keyCatalog,onToast,subView,onSubViewChange})=>{
   return <div>
     {showInlineSubTabs&&<div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
       <Btn small primary={currentSubtab==="dataenc"} onClick={()=>selectSubtab("dataenc")}>Data Encryption</Btn>
+      <Btn small primary={currentSubtab==="fieldenc"} onClick={()=>selectSubtab("fieldenc")}>Field Encryption</Btn>
       <Btn small primary={currentSubtab==="dataenc-policy"} onClick={()=>selectSubtab("dataenc-policy")}>Data Encryption Policy</Btn>
       <Btn small primary={currentSubtab==="tokenize"} onClick={()=>selectSubtab("tokenize")}>Tokenize / Mask / Redact</Btn>
       <Btn small primary={currentSubtab==="token-policy"} onClick={()=>selectSubtab("token-policy")}>Token / Mask / Redact Policy</Btn>
@@ -9309,6 +9861,8 @@ const DataProtection=({session,keyCatalog,onToast,subView,onSubViewChange})=>{
         ? <Payment session={session} keyCatalog={keyCatalog} onToast={onToast}/>
         : currentSubtab==="pkcs11"
           ? <PKCS11 session={session} onToast={onToast}/>
+          : currentSubtab==="fieldenc"
+            ? <FieldEncryptionRuntime session={session} keyCatalog={keyCatalog} onToast={onToast}/>
           : currentSubtab==="token-policy"
             ? <TokenizeMaskRedactPolicy session={session} onToast={onToast}/>
             : currentSubtab==="payment-policy"
@@ -17501,6 +18055,7 @@ const SUB_PANES={
   ],
   dataprotection:[
     {id:"dataenc",label:"Data Encryption",hint:"Field-level, envelope, searchable and FPE crypto",icon:Database,feature:"data_protection"},
+    {id:"fieldenc",label:"Field Encryption",hint:"Wrapper registration, challenge-response and local crypto lease control",icon:KeyRound,feature:"data_protection"},
     {id:"dataenc-policy",label:"Data Encryption Policy",hint:"Policy controls only for data encryption interfaces",icon:ShieldCheck,feature:"data_protection"},
     {id:"tokenize",label:"Tokenize / Mask / Redact",hint:"Vault and vaultless tokenization with masking/redaction",icon:VenetianMask,feature:"data_protection"},
     {id:"token-policy",label:"Token / Mask / Redact Policy",hint:"Policy controls only for tokenization, masking and redaction",icon:VenetianMask,feature:"data_protection"},

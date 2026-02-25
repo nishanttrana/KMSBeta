@@ -58,6 +58,12 @@ type RedactionPoliciesResponse = { items: RedactionPolicy[] };
 type RedactionPolicyResponse = { item: RedactionPolicy };
 type AppResponse = { result: Record<string, unknown> };
 type DataProtectionPolicyResponse = { policy: DataProtectionPolicy };
+type FieldEncryptionWrapperResponse = { wrapper: FieldEncryptionWrapper };
+type FieldEncryptionWrappersResponse = { items: FieldEncryptionWrapper[] };
+type FieldEncryptionLeaseResponse = { lease: FieldEncryptionLease };
+type FieldEncryptionLeasesResponse = { items: FieldEncryptionLease[] };
+type FieldEncryptionReceiptResponse = { receipt: FieldEncryptionUsageReceipt };
+type FieldEncryptionRegisterInitResponse = { item: Record<string, unknown> };
 
 export type DataProtectionPolicy = {
   tenant_id: string;
@@ -110,8 +116,119 @@ export type DataProtectionPolicy = {
   masking_role_policy: Record<string, string>;
   token_metadata_retention_days: number;
   redaction_event_retention_days: number;
+  require_registered_wrapper: boolean;
+  local_crypto_allowed: boolean;
+  cache_enabled: boolean;
+  cache_ttl_sec: number;
+  lease_max_ops: number;
+  max_cached_keys: number;
+  allowed_local_algorithms: string[];
+  allowed_key_classes_for_local_export: string[];
+  force_remote_ops: string[];
+  require_mtls: boolean;
+  require_signed_nonce: boolean;
+  anti_replay_window_sec: number;
+  attested_wrapper_only: boolean;
+  revoke_on_policy_change: boolean;
+  rekey_on_policy_change: boolean;
   updated_by?: string;
   updated_at?: string;
+};
+
+export type FieldEncryptionWrapper = {
+  tenant_id: string;
+  wrapper_id: string;
+  app_id: string;
+  display_name: string;
+  signing_public_key_b64: string;
+  encryption_public_key_b64: string;
+  transport: string;
+  status: string;
+  cert_fingerprint?: string;
+  metadata?: Record<string, string>;
+  approved_by?: string;
+  approved_at?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type FieldEncryptionLease = {
+  tenant_id: string;
+  lease_id: string;
+  wrapper_id: string;
+  key_id: string;
+  operation: string;
+  lease_package: Record<string, unknown>;
+  policy_hash: string;
+  revocation_counter: number;
+  max_ops: number;
+  used_ops: number;
+  expires_at: string;
+  revoked: boolean;
+  revoke_reason?: string;
+  issued_at?: string;
+  updated_at?: string;
+};
+
+export type FieldEncryptionUsageReceipt = {
+  tenant_id: string;
+  receipt_id: string;
+  lease_id: string;
+  wrapper_id: string;
+  key_id: string;
+  operation: string;
+  op_count: number;
+  nonce: string;
+  timestamp: string;
+  signature_b64: string;
+  payload_hash: string;
+  accepted: boolean;
+  reject_reason?: string;
+  created_at?: string;
+};
+
+export type FieldEncryptionRegisterInitInput = {
+  wrapper_id: string;
+  app_id: string;
+  display_name?: string;
+  signing_public_key_b64: string;
+  encryption_public_key_b64: string;
+  transport?: string;
+  metadata?: Record<string, string>;
+};
+
+export type FieldEncryptionRegisterCompleteInput = {
+  challenge_id: string;
+  wrapper_id: string;
+  signature_b64: string;
+  csr_pem?: string;
+  cert_fingerprint?: string;
+  governance_approved: boolean;
+  approved_by?: string;
+  metadata?: Record<string, string>;
+};
+
+export type FieldEncryptionLeaseInput = {
+  wrapper_id: string;
+  key_id: string;
+  operation: string;
+  nonce: string;
+  timestamp: string;
+  signature_b64: string;
+  requested_ttl_sec?: number;
+  requested_max_ops?: number;
+};
+
+export type FieldEncryptionReceiptInput = {
+  lease_id: string;
+  wrapper_id: string;
+  key_id: string;
+  operation: string;
+  op_count: number;
+  nonce: string;
+  timestamp: string;
+  signature_b64: string;
+  client_status?: string;
 };
 
 export type CreateTokenVaultInput = {
@@ -451,4 +568,100 @@ export async function updateDataProtectionPolicy(
     })
   });
   return (out?.policy || {}) as DataProtectionPolicy;
+}
+
+export async function listFieldEncryptionWrappers(
+  session: AuthSession,
+  options?: { limit?: number; offset?: number }
+): Promise<FieldEncryptionWrapper[]> {
+  const q = new URLSearchParams();
+  q.set("tenant_id", session.tenantId);
+  q.set("limit", String(Math.max(1, Math.min(500, Math.trunc(Number(options?.limit || 200))))));
+  q.set("offset", String(Math.max(0, Math.trunc(Number(options?.offset || 0)))));
+  const out = await serviceRequest<FieldEncryptionWrappersResponse>(session, "dataprotect", `/field-encryption/wrappers?${q.toString()}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function initFieldEncryptionWrapperRegistration(
+  session: AuthSession,
+  input: FieldEncryptionRegisterInitInput
+): Promise<Record<string, unknown>> {
+  const out = await serviceRequest<FieldEncryptionRegisterInitResponse>(session, "dataprotect", "/field-encryption/register/init", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      ...input
+    })
+  });
+  return (out?.item || {}) as Record<string, unknown>;
+}
+
+export async function completeFieldEncryptionWrapperRegistration(
+  session: AuthSession,
+  input: FieldEncryptionRegisterCompleteInput
+): Promise<FieldEncryptionWrapper> {
+  const out = await serviceRequest<FieldEncryptionWrapperResponse>(session, "dataprotect", "/field-encryption/register/complete", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      ...input
+    })
+  });
+  return out.wrapper;
+}
+
+export async function issueFieldEncryptionLease(
+  session: AuthSession,
+  input: FieldEncryptionLeaseInput
+): Promise<FieldEncryptionLease> {
+  const out = await serviceRequest<FieldEncryptionLeaseResponse>(session, "dataprotect", "/field-encryption/leases", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      ...input
+    })
+  });
+  return out.lease;
+}
+
+export async function listFieldEncryptionLeases(
+  session: AuthSession,
+  options?: { wrapper_id?: string; limit?: number; offset?: number }
+): Promise<FieldEncryptionLease[]> {
+  const q = new URLSearchParams();
+  q.set("tenant_id", session.tenantId);
+  if (options?.wrapper_id) {
+    q.set("wrapper_id", String(options.wrapper_id));
+  }
+  q.set("limit", String(Math.max(1, Math.min(500, Math.trunc(Number(options?.limit || 200))))));
+  q.set("offset", String(Math.max(0, Math.trunc(Number(options?.offset || 0)))));
+  const out = await serviceRequest<FieldEncryptionLeasesResponse>(session, "dataprotect", `/field-encryption/leases?${q.toString()}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function submitFieldEncryptionUsageReceipt(
+  session: AuthSession,
+  input: FieldEncryptionReceiptInput
+): Promise<FieldEncryptionUsageReceipt> {
+  const out = await serviceRequest<FieldEncryptionReceiptResponse>(session, "dataprotect", "/field-encryption/receipts", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      ...input
+    })
+  });
+  return out.receipt;
+}
+
+export async function revokeFieldEncryptionLease(
+  session: AuthSession,
+  leaseId: string,
+  reason?: string
+): Promise<void> {
+  await serviceRequest(session, "dataprotect", `/field-encryption/leases/${encodeURIComponent(leaseId)}/revoke?tenant_id=${encodeURIComponent(session.tenantId)}`, {
+    method: "POST",
+    body: JSON.stringify({
+      reason: reason || ""
+    })
+  });
 }

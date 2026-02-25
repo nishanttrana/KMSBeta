@@ -502,6 +502,52 @@ WHERE tenant_id = $1
 	out.RequiredTokenContextKeys = parseJSONArrayString(contextJSON)
 	out.MaskingRolePolicy = parseStringMap(maskingJSON)
 	out.UpdatedAt = parseTimeValue(updatedRaw)
+	var (
+		allowedLocalAlgorithmsJSON string
+		allowedKeyClassesJSON      string
+		forceRemoteOpsJSON         string
+	)
+	rowRuntime := s.db.SQL().QueryRowContext(ctx, `
+SELECT require_registered_wrapper,
+       local_crypto_allowed,
+       cache_enabled,
+       cache_ttl_sec,
+       lease_max_ops,
+       max_cached_keys,
+       allowed_local_algorithms_json,
+       allowed_key_classes_for_local_export_json,
+       force_remote_ops_json,
+       require_mtls,
+       require_signed_nonce,
+       anti_replay_window_sec,
+       attested_wrapper_only,
+       revoke_on_policy_change,
+       rekey_on_policy_change
+FROM data_protection_policy
+WHERE tenant_id = $1
+`, strings.TrimSpace(tenantID))
+	if err := rowRuntime.Scan(
+		&out.RequireRegisteredWrapper,
+		&out.LocalCryptoAllowed,
+		&out.CacheEnabled,
+		&out.CacheTTLSeconds,
+		&out.LeaseMaxOps,
+		&out.MaxCachedKeys,
+		&allowedLocalAlgorithmsJSON,
+		&allowedKeyClassesJSON,
+		&forceRemoteOpsJSON,
+		&out.RequireMTLS,
+		&out.RequireSignedNonce,
+		&out.AntiReplayWindowSeconds,
+		&out.AttestedWrapperOnly,
+		&out.RevokeOnPolicyChange,
+		&out.RekeyOnPolicyChange,
+	); err != nil {
+		return DataProtectionPolicy{}, err
+	}
+	out.AllowedLocalAlgorithms = parseJSONArrayString(allowedLocalAlgorithmsJSON)
+	out.AllowedKeyClassesForLocal = parseJSONArrayString(allowedKeyClassesJSON)
+	out.ForceRemoteOps = parseJSONArrayString(forceRemoteOpsJSON)
 	return out, nil
 }
 
@@ -811,7 +857,364 @@ RETURNING tenant_id,
 	out.RequiredTokenContextKeys = parseJSONArrayString(contextJSON)
 	out.MaskingRolePolicy = parseStringMap(maskingJSON)
 	out.UpdatedAt = parseTimeValue(updatedRaw)
+	if _, err := s.db.SQL().ExecContext(ctx, `
+UPDATE data_protection_policy
+SET require_registered_wrapper = $2,
+    local_crypto_allowed = $3,
+    cache_enabled = $4,
+    cache_ttl_sec = $5,
+    lease_max_ops = $6,
+    max_cached_keys = $7,
+    allowed_local_algorithms_json = $8,
+    allowed_key_classes_for_local_export_json = $9,
+    force_remote_ops_json = $10,
+    require_mtls = $11,
+    require_signed_nonce = $12,
+    anti_replay_window_sec = $13,
+    attested_wrapper_only = $14,
+    revoke_on_policy_change = $15,
+    rekey_on_policy_change = $16
+WHERE tenant_id = $1
+`, out.TenantID,
+		item.RequireRegisteredWrapper,
+		item.LocalCryptoAllowed,
+		item.CacheEnabled,
+		item.CacheTTLSeconds,
+		item.LeaseMaxOps,
+		item.MaxCachedKeys,
+		mustJSON(item.AllowedLocalAlgorithms, "[]"),
+		mustJSON(item.AllowedKeyClassesForLocal, "[]"),
+		mustJSON(item.ForceRemoteOps, "[]"),
+		item.RequireMTLS,
+		item.RequireSignedNonce,
+		item.AntiReplayWindowSeconds,
+		item.AttestedWrapperOnly,
+		item.RevokeOnPolicyChange,
+		item.RekeyOnPolicyChange,
+	); err != nil {
+		return DataProtectionPolicy{}, err
+	}
+	out.RequireRegisteredWrapper = item.RequireRegisteredWrapper
+	out.LocalCryptoAllowed = item.LocalCryptoAllowed
+	out.CacheEnabled = item.CacheEnabled
+	out.CacheTTLSeconds = item.CacheTTLSeconds
+	out.LeaseMaxOps = item.LeaseMaxOps
+	out.MaxCachedKeys = item.MaxCachedKeys
+	out.AllowedLocalAlgorithms = append([]string{}, item.AllowedLocalAlgorithms...)
+	out.AllowedKeyClassesForLocal = append([]string{}, item.AllowedKeyClassesForLocal...)
+	out.ForceRemoteOps = append([]string{}, item.ForceRemoteOps...)
+	out.RequireMTLS = item.RequireMTLS
+	out.RequireSignedNonce = item.RequireSignedNonce
+	out.AntiReplayWindowSeconds = item.AntiReplayWindowSeconds
+	out.AttestedWrapperOnly = item.AttestedWrapperOnly
+	out.RevokeOnPolicyChange = item.RevokeOnPolicyChange
+	out.RekeyOnPolicyChange = item.RekeyOnPolicyChange
 	return out, nil
+}
+
+func (s *SQLStore) CreateFieldEncryptionWrapperChallenge(ctx context.Context, item FieldEncryptionWrapperChallenge) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO field_encryption_wrapper_challenges (
+	tenant_id, challenge_id, wrapper_id, app_id, challenge_b64, nonce,
+	signing_public_key_b64, encryption_public_key_b64, metadata_json, expires_at, used, created_at
+) VALUES (
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP
+)
+`, item.TenantID, item.ChallengeID, item.WrapperID, item.AppID, item.ChallengeB64, item.Nonce, item.SigningPublicKeyB64, item.EncryptionPublicKey, mustJSON(item.Metadata, "{}"), nullableTime(item.ExpiresAt), item.Used)
+	return err
+}
+
+func (s *SQLStore) GetFieldEncryptionWrapperChallenge(ctx context.Context, tenantID string, challengeID string) (FieldEncryptionWrapperChallenge, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, challenge_id, wrapper_id, app_id, challenge_b64, nonce, signing_public_key_b64, encryption_public_key_b64, metadata_json, expires_at, used, created_at
+FROM field_encryption_wrapper_challenges
+WHERE tenant_id = $1 AND challenge_id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(challengeID))
+	item, err := scanFieldEncryptionWrapperChallenge(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return FieldEncryptionWrapperChallenge{}, errNotFound
+	}
+	return item, err
+}
+
+func (s *SQLStore) MarkFieldEncryptionWrapperChallengeUsed(ctx context.Context, tenantID string, challengeID string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE field_encryption_wrapper_challenges
+SET used = TRUE
+WHERE tenant_id = $1 AND challenge_id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(challengeID))
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) UpsertFieldEncryptionWrapper(ctx context.Context, item FieldEncryptionWrapper) (FieldEncryptionWrapper, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+INSERT INTO field_encryption_wrappers (
+	tenant_id, wrapper_id, app_id, display_name, signing_public_key_b64, encryption_public_key_b64,
+	transport, status, cert_fingerprint, metadata_json, approved_by, approved_at, created_at, updated_at
+) VALUES (
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+)
+ON CONFLICT (tenant_id, wrapper_id) DO UPDATE SET
+	app_id = EXCLUDED.app_id,
+	display_name = EXCLUDED.display_name,
+	signing_public_key_b64 = EXCLUDED.signing_public_key_b64,
+	encryption_public_key_b64 = EXCLUDED.encryption_public_key_b64,
+	transport = EXCLUDED.transport,
+	status = EXCLUDED.status,
+	cert_fingerprint = EXCLUDED.cert_fingerprint,
+	metadata_json = EXCLUDED.metadata_json,
+	approved_by = EXCLUDED.approved_by,
+	approved_at = EXCLUDED.approved_at,
+	updated_at = CURRENT_TIMESTAMP
+RETURNING tenant_id, wrapper_id, app_id, display_name, signing_public_key_b64, encryption_public_key_b64, transport, status, cert_fingerprint, metadata_json, approved_by, approved_at, created_at, updated_at
+`, item.TenantID, item.WrapperID, item.AppID, item.DisplayName, item.SigningPublicKeyB64, item.EncryptionPublicKey, item.Transport, item.Status, item.CertFingerprint, mustJSON(item.Metadata, "{}"), item.ApprovedBy, nullableTime(item.ApprovedAt))
+	out, err := scanFieldEncryptionWrapper(row)
+	if err != nil {
+		return FieldEncryptionWrapper{}, err
+	}
+	return out, nil
+}
+
+func (s *SQLStore) GetFieldEncryptionWrapper(ctx context.Context, tenantID string, wrapperID string) (FieldEncryptionWrapper, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, wrapper_id, app_id, display_name, signing_public_key_b64, encryption_public_key_b64, transport, status, cert_fingerprint, metadata_json, approved_by, approved_at, created_at, updated_at
+FROM field_encryption_wrappers
+WHERE tenant_id = $1 AND wrapper_id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(wrapperID))
+	item, err := scanFieldEncryptionWrapper(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return FieldEncryptionWrapper{}, errNotFound
+	}
+	return item, err
+}
+
+func (s *SQLStore) ListFieldEncryptionWrappers(ctx context.Context, tenantID string, limit int, offset int) ([]FieldEncryptionWrapper, error) {
+	if limit <= 0 || limit > 1000 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, wrapper_id, app_id, display_name, signing_public_key_b64, encryption_public_key_b64, transport, status, cert_fingerprint, metadata_json, approved_by, approved_at, created_at, updated_at
+FROM field_encryption_wrappers
+WHERE tenant_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`, strings.TrimSpace(tenantID), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]FieldEncryptionWrapper, 0)
+	for rows.Next() {
+		item, err := scanFieldEncryptionWrapper(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) CreateFieldEncryptionLease(ctx context.Context, item FieldEncryptionLease) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO field_encryption_leases (
+	tenant_id, lease_id, wrapper_id, key_id, operation, lease_package_json, policy_hash, revocation_counter,
+	max_ops, used_ops, expires_at, revoked, revoke_reason, issued_at, updated_at
+) VALUES (
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15
+)
+`, item.TenantID, item.LeaseID, item.WrapperID, item.KeyID, item.Operation, mustJSON(item.LeasePackage, "{}"), item.PolicyHash, item.RevocationCounter, item.MaxOps, item.UsedOps, nullableTime(item.ExpiresAt), item.Revoked, item.RevokeReason, nullableTime(item.IssuedAt), nullableTime(item.UpdatedAt))
+	return err
+}
+
+func (s *SQLStore) GetFieldEncryptionLease(ctx context.Context, tenantID string, leaseID string) (FieldEncryptionLease, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, lease_id, wrapper_id, key_id, operation, lease_package_json, policy_hash, revocation_counter, max_ops, used_ops, expires_at, revoked, revoke_reason, issued_at, updated_at
+FROM field_encryption_leases
+WHERE tenant_id = $1 AND lease_id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(leaseID))
+	item, err := scanFieldEncryptionLease(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return FieldEncryptionLease{}, errNotFound
+	}
+	return item, err
+}
+
+func (s *SQLStore) ListFieldEncryptionLeases(ctx context.Context, tenantID string, wrapperID string, limit int, offset int) ([]FieldEncryptionLease, error) {
+	if limit <= 0 || limit > 1000 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	base := `
+SELECT tenant_id, lease_id, wrapper_id, key_id, operation, lease_package_json, policy_hash, revocation_counter, max_ops, used_ops, expires_at, revoked, revoke_reason, issued_at, updated_at
+FROM field_encryption_leases
+WHERE tenant_id = $1`
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	if strings.TrimSpace(wrapperID) != "" {
+		rows, err = s.db.SQL().QueryContext(ctx, base+` AND wrapper_id = $2 ORDER BY issued_at DESC LIMIT $3 OFFSET $4`, strings.TrimSpace(tenantID), strings.TrimSpace(wrapperID), limit, offset)
+	} else {
+		rows, err = s.db.SQL().QueryContext(ctx, base+` ORDER BY issued_at DESC LIMIT $2 OFFSET $3`, strings.TrimSpace(tenantID), limit, offset)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]FieldEncryptionLease, 0)
+	for rows.Next() {
+		item, err := scanFieldEncryptionLease(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) ConsumeFieldEncryptionLeaseOps(ctx context.Context, tenantID string, leaseID string, ops int) (FieldEncryptionLease, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+UPDATE field_encryption_leases
+SET used_ops = used_ops + $3,
+    updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $1
+  AND lease_id = $2
+  AND revoked = FALSE
+  AND expires_at > CURRENT_TIMESTAMP
+  AND (max_ops <= 0 OR used_ops + $3 <= max_ops)
+RETURNING tenant_id, lease_id, wrapper_id, key_id, operation, lease_package_json, policy_hash, revocation_counter, max_ops, used_ops, expires_at, revoked, revoke_reason, issued_at, updated_at
+`, strings.TrimSpace(tenantID), strings.TrimSpace(leaseID), ops)
+	item, err := scanFieldEncryptionLease(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return FieldEncryptionLease{}, errNotFound
+	}
+	return item, err
+}
+
+func (s *SQLStore) RevokeFieldEncryptionLease(ctx context.Context, tenantID string, leaseID string, reason string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE field_encryption_leases
+SET revoked = TRUE,
+    revoke_reason = $3,
+    updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $1 AND lease_id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(leaseID), strings.TrimSpace(reason))
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) CreateFieldEncryptionUsageReceipt(ctx context.Context, item FieldEncryptionUsageReceipt) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO field_encryption_usage_receipts (
+	tenant_id, receipt_id, lease_id, wrapper_id, key_id, operation, op_count, nonce, ts, signature_b64, payload_hash, accepted, reject_reason, created_at
+) VALUES (
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14
+)
+`, item.TenantID, item.ReceiptID, item.LeaseID, item.WrapperID, item.KeyID, item.Operation, item.OpCount, item.Nonce, nullableTime(item.Timestamp), item.SignatureB64, item.PayloadHash, item.Accepted, item.RejectReason, nullableTime(item.CreatedAt))
+	return err
+}
+
+func (s *SQLStore) GetFieldEncryptionUsageReceiptByNonce(ctx context.Context, tenantID string, wrapperID string, nonce string) (FieldEncryptionUsageReceipt, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, receipt_id, lease_id, wrapper_id, key_id, operation, op_count, nonce, ts, signature_b64, payload_hash, accepted, reject_reason, created_at
+FROM field_encryption_usage_receipts
+WHERE tenant_id = $1 AND wrapper_id = $2 AND nonce = $3
+`, strings.TrimSpace(tenantID), strings.TrimSpace(wrapperID), strings.TrimSpace(nonce))
+	item, err := scanFieldEncryptionUsageReceipt(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return FieldEncryptionUsageReceipt{}, errNotFound
+	}
+	return item, err
+}
+
+func scanFieldEncryptionWrapperChallenge(scanner interface {
+	Scan(dest ...interface{}) error
+}) (FieldEncryptionWrapperChallenge, error) {
+	var (
+		item       FieldEncryptionWrapperChallenge
+		metadataJS string
+		expiresRaw interface{}
+		createdRaw interface{}
+	)
+	if err := scanner.Scan(&item.TenantID, &item.ChallengeID, &item.WrapperID, &item.AppID, &item.ChallengeB64, &item.Nonce, &item.SigningPublicKeyB64, &item.EncryptionPublicKey, &metadataJS, &expiresRaw, &item.Used, &createdRaw); err != nil {
+		return FieldEncryptionWrapperChallenge{}, err
+	}
+	item.Metadata = parseStringMap(metadataJS)
+	item.ExpiresAt = parseTimeValue(expiresRaw)
+	item.CreatedAt = parseTimeValue(createdRaw)
+	return item, nil
+}
+
+func scanFieldEncryptionWrapper(scanner interface {
+	Scan(dest ...interface{}) error
+}) (FieldEncryptionWrapper, error) {
+	var (
+		item       FieldEncryptionWrapper
+		metadataJS string
+		approvedAt interface{}
+		createdRaw interface{}
+		updatedRaw interface{}
+	)
+	if err := scanner.Scan(&item.TenantID, &item.WrapperID, &item.AppID, &item.DisplayName, &item.SigningPublicKeyB64, &item.EncryptionPublicKey, &item.Transport, &item.Status, &item.CertFingerprint, &metadataJS, &item.ApprovedBy, &approvedAt, &createdRaw, &updatedRaw); err != nil {
+		return FieldEncryptionWrapper{}, err
+	}
+	item.Metadata = parseStringMap(metadataJS)
+	item.ApprovedAt = parseTimeValue(approvedAt)
+	item.CreatedAt = parseTimeValue(createdRaw)
+	item.UpdatedAt = parseTimeValue(updatedRaw)
+	return item, nil
+}
+
+func scanFieldEncryptionLease(scanner interface {
+	Scan(dest ...interface{}) error
+}) (FieldEncryptionLease, error) {
+	var (
+		item          FieldEncryptionLease
+		leasePackage  string
+		expiresRaw    interface{}
+		issuedRaw     interface{}
+		updatedRaw    interface{}
+	)
+	if err := scanner.Scan(&item.TenantID, &item.LeaseID, &item.WrapperID, &item.KeyID, &item.Operation, &leasePackage, &item.PolicyHash, &item.RevocationCounter, &item.MaxOps, &item.UsedOps, &expiresRaw, &item.Revoked, &item.RevokeReason, &issuedRaw, &updatedRaw); err != nil {
+		return FieldEncryptionLease{}, err
+	}
+	item.LeasePackage = parseJSONObject(leasePackage)
+	item.ExpiresAt = parseTimeValue(expiresRaw)
+	item.IssuedAt = parseTimeValue(issuedRaw)
+	item.UpdatedAt = parseTimeValue(updatedRaw)
+	return item, nil
+}
+
+func scanFieldEncryptionUsageReceipt(scanner interface {
+	Scan(dest ...interface{}) error
+}) (FieldEncryptionUsageReceipt, error) {
+	var (
+		item       FieldEncryptionUsageReceipt
+		tsRaw      interface{}
+		createdRaw interface{}
+	)
+	if err := scanner.Scan(&item.TenantID, &item.ReceiptID, &item.LeaseID, &item.WrapperID, &item.KeyID, &item.Operation, &item.OpCount, &item.Nonce, &tsRaw, &item.SignatureB64, &item.PayloadHash, &item.Accepted, &item.RejectReason, &createdRaw); err != nil {
+		return FieldEncryptionUsageReceipt{}, err
+	}
+	item.Timestamp = parseTimeValue(tsRaw)
+	item.CreatedAt = parseTimeValue(createdRaw)
+	return item, nil
 }
 
 func scanTokenVault(scanner interface {

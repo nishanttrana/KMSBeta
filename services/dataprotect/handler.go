@@ -60,6 +60,14 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /policy", h.handleGetDataProtectionPolicy)
 	mux.HandleFunc("PUT /policy", h.handleSetDataProtectionPolicy)
 
+	mux.HandleFunc("GET /field-encryption/wrappers", h.handleListFieldEncryptionWrappers)
+	mux.HandleFunc("POST /field-encryption/register/init", h.handleInitFieldEncryptionWrapperRegistration)
+	mux.HandleFunc("POST /field-encryption/register/complete", h.handleCompleteFieldEncryptionWrapperRegistration)
+	mux.HandleFunc("POST /field-encryption/leases", h.handleIssueFieldEncryptionLease)
+	mux.HandleFunc("GET /field-encryption/leases", h.handleListFieldEncryptionLeases)
+	mux.HandleFunc("POST /field-encryption/receipts", h.handleSubmitFieldEncryptionReceipt)
+	mux.HandleFunc("POST /field-encryption/leases/{id}/revoke", h.handleRevokeFieldEncryptionLease)
+
 	return mux
 }
 
@@ -459,6 +467,128 @@ func (h *Handler) handleSetDataProtectionPolicy(w http.ResponseWriter, r *http.R
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
+}
+
+func (h *Handler) handleListFieldEncryptionWrappers(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.svc.ListFieldEncryptionWrappers(r.Context(), tenantID, atoi(r.URL.Query().Get("limit")), atoi(r.URL.Query().Get("offset")))
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleInitFieldEncryptionWrapperRegistration(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req FieldEncryptionRegisterInitRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
+	out, err := h.svc.InitFieldEncryptionWrapperRegistration(r.Context(), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{"item": out, "request_id": reqID})
+}
+
+func (h *Handler) handleCompleteFieldEncryptionWrapperRegistration(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req FieldEncryptionRegisterCompleteRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
+	item, err := h.svc.CompleteFieldEncryptionWrapperRegistration(r.Context(), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"wrapper": item, "request_id": reqID})
+}
+
+func (h *Handler) handleIssueFieldEncryptionLease(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req FieldEncryptionLeaseRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
+	item, err := h.svc.IssueFieldEncryptionLease(r.Context(), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{"lease": item, "request_id": reqID})
+}
+
+func (h *Handler) handleListFieldEncryptionLeases(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.svc.ListFieldEncryptionLeases(
+		r.Context(),
+		tenantID,
+		strings.TrimSpace(r.URL.Query().Get("wrapper_id")),
+		atoi(r.URL.Query().Get("limit")),
+		atoi(r.URL.Query().Get("offset")),
+	)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleSubmitFieldEncryptionReceipt(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req FieldEncryptionReceiptRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
+	item, err := h.svc.SubmitFieldEncryptionUsageReceipt(r.Context(), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"receipt": item, "request_id": reqID})
+}
+
+func (h *Handler) handleRevokeFieldEncryptionLease(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	leaseID := strings.TrimSpace(r.PathValue("id"))
+	if leaseID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "lease id is required", reqID, tenantID)
+		return
+	}
+	body := map[string]interface{}{}
+	if err := decodeJSON(r, &body); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	reason := strings.TrimSpace(firstString(body["reason"]))
+	if err := h.svc.RevokeFieldEncryptionLease(r.Context(), tenantID, leaseID, reason); err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "request_id": reqID})
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {

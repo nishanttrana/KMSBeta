@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/ecdh"
+	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -126,6 +129,21 @@ func defaultDataProtectionPolicy(tenantID string) DataProtectionPolicy {
 		MaskingRolePolicy:              defaultMaskingRolePolicy(),
 		TokenMetadataRetentionDays:     365,
 		RedactionEventRetentionDays:    365,
+		RequireRegisteredWrapper:       true,
+		LocalCryptoAllowed:             false,
+		CacheEnabled:                   false,
+		CacheTTLSeconds:                300,
+		LeaseMaxOps:                    1000,
+		MaxCachedKeys:                  16,
+		AllowedLocalAlgorithms:         []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305"},
+		AllowedKeyClassesForLocal:      []string{"symmetric"},
+		ForceRemoteOps:                 []string{},
+		RequireMTLS:                    false,
+		RequireSignedNonce:             true,
+		AntiReplayWindowSeconds:        300,
+		AttestedWrapperOnly:            false,
+		RevokeOnPolicyChange:           true,
+		RekeyOnPolicyChange:            false,
 	}
 }
 
@@ -235,6 +253,39 @@ func normalizeDataProtectionPolicy(in DataProtectionPolicy) DataProtectionPolicy
 	if in.RedactionEventRetentionDays > 36500 {
 		in.RedactionEventRetentionDays = 36500
 	}
+	if in.CacheTTLSeconds <= 0 {
+		in.CacheTTLSeconds = 300
+	}
+	if in.CacheTTLSeconds > 86400 {
+		in.CacheTTLSeconds = 86400
+	}
+	if in.LeaseMaxOps <= 0 {
+		in.LeaseMaxOps = 1000
+	}
+	if in.LeaseMaxOps > 1000000 {
+		in.LeaseMaxOps = 1000000
+	}
+	if in.MaxCachedKeys <= 0 {
+		in.MaxCachedKeys = 16
+	}
+	if in.MaxCachedKeys > 10000 {
+		in.MaxCachedKeys = 10000
+	}
+	if in.AntiReplayWindowSeconds <= 0 {
+		in.AntiReplayWindowSeconds = 300
+	}
+	if in.AntiReplayWindowSeconds > 86400 {
+		in.AntiReplayWindowSeconds = 86400
+	}
+	in.AllowedLocalAlgorithms = uniqueUpper(uniqueStrings(in.AllowedLocalAlgorithms))
+	if len(in.AllowedLocalAlgorithms) == 0 {
+		in.AllowedLocalAlgorithms = []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305"}
+	}
+	in.AllowedKeyClassesForLocal = normalizeLowerKeys(uniqueStrings(in.AllowedKeyClassesForLocal))
+	if len(in.AllowedKeyClassesForLocal) == 0 {
+		in.AllowedKeyClassesForLocal = []string{"symmetric"}
+	}
+	in.ForceRemoteOps = normalizeLowerKeys(uniqueStrings(in.ForceRemoteOps))
 	in.DetokenizeAllowedPurposes = uniqueStrings(in.DetokenizeAllowedPurposes)
 	in.DetokenizeAllowedWorkflows = uniqueStrings(in.DetokenizeAllowedWorkflows)
 	in.RequiredTokenContextKeys = uniqueStrings(in.RequiredTokenContextKeys)
@@ -336,6 +387,21 @@ func (s *Service) UpdateDataProtectionPolicy(ctx context.Context, in DataProtect
 		"masking_role_policy":                item.MaskingRolePolicy,
 		"token_metadata_retention_days":      item.TokenMetadataRetentionDays,
 		"redaction_event_retention_days":     item.RedactionEventRetentionDays,
+		"require_registered_wrapper":         item.RequireRegisteredWrapper,
+		"local_crypto_allowed":               item.LocalCryptoAllowed,
+		"cache_enabled":                      item.CacheEnabled,
+		"cache_ttl_sec":                      item.CacheTTLSeconds,
+		"lease_max_ops":                      item.LeaseMaxOps,
+		"max_cached_keys":                    item.MaxCachedKeys,
+		"allowed_local_algorithms":           item.AllowedLocalAlgorithms,
+		"allowed_key_classes_for_local":      item.AllowedKeyClassesForLocal,
+		"force_remote_ops":                   item.ForceRemoteOps,
+		"require_mtls":                       item.RequireMTLS,
+		"require_signed_nonce":               item.RequireSignedNonce,
+		"anti_replay_window_sec":             item.AntiReplayWindowSeconds,
+		"attested_wrapper_only":              item.AttestedWrapperOnly,
+		"revoke_on_policy_change":            item.RevokeOnPolicyChange,
+		"rekey_on_policy_change":             item.RekeyOnPolicyChange,
 	})
 	return item, nil
 }
@@ -346,6 +412,632 @@ func (s *Service) mustDataProtectionPolicy(ctx context.Context, tenantID string)
 		return DataProtectionPolicy{}, err
 	}
 	return item, nil
+}
+
+func (s *Service) ListFieldEncryptionWrappers(ctx context.Context, tenantID string, limit int, offset int) ([]FieldEncryptionWrapper, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	items, err := s.store.ListFieldEncryptionWrappers(ctx, tenantID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (s *Service) ListFieldEncryptionLeases(ctx context.Context, tenantID string, wrapperID string, limit int, offset int) ([]FieldEncryptionLease, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	items, err := s.store.ListFieldEncryptionLeases(ctx, tenantID, strings.TrimSpace(wrapperID), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+func (s *Service) InitFieldEncryptionWrapperRegistration(ctx context.Context, req FieldEncryptionRegisterInitRequest) (map[string]interface{}, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	req.WrapperID = strings.TrimSpace(req.WrapperID)
+	req.AppID = strings.TrimSpace(req.AppID)
+	req.DisplayName = strings.TrimSpace(req.DisplayName)
+	req.SigningPublicKeyB64 = strings.TrimSpace(req.SigningPublicKeyB64)
+	req.EncryptionPublicKey = strings.TrimSpace(req.EncryptionPublicKey)
+	req.Transport = strings.TrimSpace(req.Transport)
+	if req.Transport == "" {
+		req.Transport = "mtls+jwt"
+	}
+	if req.TenantID == "" || req.WrapperID == "" || req.AppID == "" || req.SigningPublicKeyB64 == "" || req.EncryptionPublicKey == "" {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, wrapper_id, app_id, signing_public_key_b64 and encryption_public_key_b64 are required")
+	}
+	signPub, err := b64d(req.SigningPublicKeyB64)
+	if err != nil || len(signPub) != ed25519.PublicKeySize {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "signing_public_key_b64 must be base64 encoded ed25519 public key")
+	}
+	encPubRaw, err := b64d(req.EncryptionPublicKey)
+	if err != nil {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "encryption_public_key_b64 must be base64")
+	}
+	if _, err := ecdh.X25519().NewPublicKey(encPubRaw); err != nil {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "encryption_public_key_b64 must be valid X25519 public key")
+	}
+	challenge := randBytes(32)
+	defer zeroizeAll(challenge)
+	item := FieldEncryptionWrapperChallenge{
+		TenantID:            req.TenantID,
+		ChallengeID:         newID("wrpchal"),
+		WrapperID:           req.WrapperID,
+		AppID:               req.AppID,
+		ChallengeB64:        b64(challenge),
+		Nonce:               newID("nonce"),
+		SigningPublicKeyB64: req.SigningPublicKeyB64,
+		EncryptionPublicKey: req.EncryptionPublicKey,
+		Metadata:            req.Metadata,
+		ExpiresAt:           s.now().Add(10 * time.Minute),
+		Used:                false,
+	}
+	if err := s.store.CreateFieldEncryptionWrapperChallenge(ctx, item); err != nil {
+		return nil, err
+	}
+	_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.register_init", req.TenantID, map[string]interface{}{
+		"wrapper_id": item.WrapperID,
+		"app_id":     item.AppID,
+		"challenge":  item.ChallengeID,
+		"transport":  req.Transport,
+		"expires_at": item.ExpiresAt.Format(time.RFC3339),
+	})
+	return map[string]interface{}{
+		"challenge_id":  item.ChallengeID,
+		"challenge_b64": item.ChallengeB64,
+		"nonce":         item.Nonce,
+		"expires_at":    item.ExpiresAt.Format(time.RFC3339),
+	}, nil
+}
+
+func (s *Service) CompleteFieldEncryptionWrapperRegistration(ctx context.Context, req FieldEncryptionRegisterCompleteRequest) (FieldEncryptionWrapper, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	req.ChallengeID = strings.TrimSpace(req.ChallengeID)
+	req.WrapperID = strings.TrimSpace(req.WrapperID)
+	req.SignatureB64 = strings.TrimSpace(req.SignatureB64)
+	req.ApprovedBy = strings.TrimSpace(req.ApprovedBy)
+	if req.TenantID == "" || req.ChallengeID == "" || req.WrapperID == "" || req.SignatureB64 == "" {
+		return FieldEncryptionWrapper{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, challenge_id, wrapper_id and signature_b64 are required")
+	}
+	if !req.GovernanceApproved {
+		return FieldEncryptionWrapper{}, newServiceError(http.StatusForbidden, "governance_required", "wrapper registration requires governance approval")
+	}
+	challenge, err := s.store.GetFieldEncryptionWrapperChallenge(ctx, req.TenantID, req.ChallengeID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return FieldEncryptionWrapper{}, newServiceError(http.StatusNotFound, "not_found", "registration challenge was not found")
+		}
+		return FieldEncryptionWrapper{}, err
+	}
+	if challenge.Used {
+		return FieldEncryptionWrapper{}, newServiceError(http.StatusConflict, "invalid_state", "registration challenge is already used")
+	}
+	if s.now().After(challenge.ExpiresAt) {
+		return FieldEncryptionWrapper{}, newServiceError(http.StatusConflict, "expired", "registration challenge has expired")
+	}
+	if challenge.WrapperID != req.WrapperID {
+		return FieldEncryptionWrapper{}, newServiceError(http.StatusBadRequest, "bad_request", "wrapper_id does not match challenge")
+	}
+	pubRaw, err := b64d(challenge.SigningPublicKeyB64)
+	if err != nil || len(pubRaw) != ed25519.PublicKeySize {
+		return FieldEncryptionWrapper{}, newServiceError(http.StatusBadRequest, "bad_request", "challenge signing key is invalid")
+	}
+	signature, err := b64d(req.SignatureB64)
+	if err != nil || len(signature) != ed25519.SignatureSize {
+		return FieldEncryptionWrapper{}, newServiceError(http.StatusBadRequest, "bad_request", "signature_b64 must be valid ed25519 signature")
+	}
+	challengeBytes, err := b64d(challenge.ChallengeB64)
+	if err != nil || len(challengeBytes) == 0 {
+		return FieldEncryptionWrapper{}, newServiceError(http.StatusBadRequest, "bad_request", "challenge payload is invalid")
+	}
+	if !ed25519.Verify(ed25519.PublicKey(pubRaw), challengeBytes, signature) {
+		return FieldEncryptionWrapper{}, newServiceError(http.StatusForbidden, "access_denied", "challenge signature verification failed")
+	}
+	approvedBy := defaultString(req.ApprovedBy, "governance")
+	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return FieldEncryptionWrapper{}, err
+	}
+	certFingerprint := strings.TrimSpace(req.CertFingerprint)
+	if policy.RequireMTLS && certFingerprint == "" {
+		return FieldEncryptionWrapper{}, newServiceError(http.StatusForbidden, "policy_denied", "mTLS is required by policy; cert_fingerprint is mandatory")
+	}
+	item := FieldEncryptionWrapper{
+		TenantID:            req.TenantID,
+		WrapperID:           challenge.WrapperID,
+		AppID:               challenge.AppID,
+		DisplayName:         defaultString(challenge.WrapperID, challenge.WrapperID),
+		SigningPublicKeyB64: challenge.SigningPublicKeyB64,
+		EncryptionPublicKey: challenge.EncryptionPublicKey,
+		Transport:           "mtls+jwt",
+		Status:              "active",
+		CertFingerprint:     certFingerprint,
+		Metadata:            mergeStringMaps(challenge.Metadata, req.Metadata),
+		ApprovedBy:          approvedBy,
+		ApprovedAt:          s.now(),
+	}
+	if existing, getErr := s.store.GetFieldEncryptionWrapper(ctx, req.TenantID, req.WrapperID); getErr == nil {
+		if strings.TrimSpace(existing.TenantID) != strings.TrimSpace(item.TenantID) ||
+			strings.TrimSpace(existing.AppID) != strings.TrimSpace(item.AppID) ||
+			strings.TrimSpace(existing.SigningPublicKeyB64) != strings.TrimSpace(item.SigningPublicKeyB64) ||
+			strings.TrimSpace(existing.EncryptionPublicKey) != strings.TrimSpace(item.EncryptionPublicKey) {
+			return FieldEncryptionWrapper{}, newServiceError(http.StatusConflict, "immutable_binding_violation", "wrapper binding (tenant/app/keys) is immutable")
+		}
+		if strings.TrimSpace(existing.CertFingerprint) != "" &&
+			!strings.EqualFold(strings.TrimSpace(existing.CertFingerprint), strings.TrimSpace(item.CertFingerprint)) {
+			return FieldEncryptionWrapper{}, newServiceError(http.StatusConflict, "immutable_binding_violation", "wrapper certificate fingerprint is immutable")
+		}
+	} else if !errors.Is(getErr, errNotFound) {
+		return FieldEncryptionWrapper{}, getErr
+	}
+	wrapper, err := s.store.UpsertFieldEncryptionWrapper(ctx, item)
+	if err != nil {
+		return FieldEncryptionWrapper{}, err
+	}
+	if err := s.store.MarkFieldEncryptionWrapperChallengeUsed(ctx, req.TenantID, req.ChallengeID); err != nil {
+		return FieldEncryptionWrapper{}, err
+	}
+	_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.register_complete", req.TenantID, map[string]interface{}{
+		"wrapper_id":       wrapper.WrapperID,
+		"app_id":           wrapper.AppID,
+		"challenge_id":     req.ChallengeID,
+		"governance":       true,
+		"cert_fingerprint": wrapper.CertFingerprint,
+	})
+	return wrapper, nil
+}
+
+func (s *Service) IssueFieldEncryptionLease(ctx context.Context, req FieldEncryptionLeaseRequest) (FieldEncryptionLease, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	req.WrapperID = strings.TrimSpace(req.WrapperID)
+	req.KeyID = strings.TrimSpace(req.KeyID)
+	req.Operation = strings.ToLower(strings.TrimSpace(req.Operation))
+	req.Nonce = strings.TrimSpace(req.Nonce)
+	req.Timestamp = strings.TrimSpace(req.Timestamp)
+	req.SignatureB64 = strings.TrimSpace(req.SignatureB64)
+	if req.TenantID == "" || req.WrapperID == "" || req.KeyID == "" {
+		return FieldEncryptionLease{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, wrapper_id and key_id are required")
+	}
+	if req.Operation == "" {
+		req.Operation = "encrypt"
+	}
+	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return FieldEncryptionLease{}, err
+	}
+	if !policy.LocalCryptoAllowed {
+		return FieldEncryptionLease{}, newServiceError(http.StatusForbidden, "policy_denied", "local crypto is disabled by policy")
+	}
+	if !policy.CacheEnabled {
+		return FieldEncryptionLease{}, newServiceError(http.StatusForbidden, "policy_denied", "cache_enabled=false requires remote KMS crypto path")
+	}
+	if containsString(policy.ForceRemoteOps, req.Operation) {
+		return FieldEncryptionLease{}, newServiceError(http.StatusForbidden, "policy_denied", "operation is forced to remote path by policy")
+	}
+	wrapper, err := s.store.GetFieldEncryptionWrapper(ctx, req.TenantID, req.WrapperID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return FieldEncryptionLease{}, newServiceError(http.StatusNotFound, "not_found", "wrapper registration is not found")
+		}
+		return FieldEncryptionLease{}, err
+	}
+	if policy.RequireRegisteredWrapper && strings.ToLower(strings.TrimSpace(wrapper.Status)) != "active" {
+		return FieldEncryptionLease{}, newServiceError(http.StatusForbidden, "policy_denied", "wrapper is not active")
+	}
+	if err := s.enforceWrapperTransportPolicy(policy, wrapper); err != nil {
+		return FieldEncryptionLease{}, err
+	}
+	if policy.MaxCachedKeys > 0 {
+		activeLeases, err := s.store.ListFieldEncryptionLeases(ctx, req.TenantID, req.WrapperID, policy.MaxCachedKeys+1, 0)
+		if err != nil {
+			return FieldEncryptionLease{}, err
+		}
+		activeCount := 0
+		now := s.now()
+		for _, item := range activeLeases {
+			if item.Revoked {
+				continue
+			}
+			if now.After(item.ExpiresAt) {
+				continue
+			}
+			activeCount++
+		}
+		if activeCount >= policy.MaxCachedKeys {
+			return FieldEncryptionLease{}, newServiceError(http.StatusForbidden, "policy_denied", "max_cached_keys limit reached for wrapper")
+		}
+	}
+	if policy.RequireSignedNonce {
+		if err := s.verifyWrapperSignedNonce(wrapper, "lease", req.KeyID, req.Operation, req.Nonce, req.Timestamp, req.SignatureB64, policy.AntiReplayWindowSeconds); err != nil {
+			return FieldEncryptionLease{}, err
+		}
+	}
+	keyMeta := map[string]interface{}{}
+	if s.keycore != nil {
+		keyMeta, err = s.keycore.GetKey(ctx, req.TenantID, req.KeyID)
+		if err != nil {
+			return FieldEncryptionLease{}, err
+		}
+	}
+	if err := s.enforceLocalWrapperKeyPolicies(policy, keyMeta, req.Operation); err != nil {
+		return FieldEncryptionLease{}, err
+	}
+	workingKey, err := s.resolveWorkingKeyForDataPolicy(ctx, req.TenantID, req.KeyID, "field-local-lease", policy)
+	if err != nil {
+		return FieldEncryptionLease{}, err
+	}
+	defer zeroizeAll(workingKey)
+	leasePayload, err := s.wrapLeaseKeyForWrapper(req.TenantID, req.WrapperID, req.KeyID, req.Operation, wrapper.EncryptionPublicKey, workingKey)
+	if err != nil {
+		return FieldEncryptionLease{}, err
+	}
+	maxOps := policy.LeaseMaxOps
+	if req.RequestedMaxOps > 0 && req.RequestedMaxOps < maxOps {
+		maxOps = req.RequestedMaxOps
+	}
+	if maxOps <= 0 {
+		maxOps = 1
+	}
+	ttlSeconds := policy.CacheTTLSeconds
+	if req.RequestedTTLSecond > 0 && req.RequestedTTLSecond < ttlSeconds {
+		ttlSeconds = req.RequestedTTLSecond
+	}
+	if ttlSeconds <= 0 {
+		ttlSeconds = 300
+	}
+	now := s.now()
+	expiresAt := now.Add(time.Duration(ttlSeconds) * time.Second)
+	policyHash := hashHex(mustJSON(policy, "{}"))
+	leasePayload["policy_hash"] = policyHash
+	leasePayload["exp"] = expiresAt.Format(time.RFC3339)
+	leasePayload["max_ops"] = maxOps
+	leasePayload["revocation_counter"] = 0
+	signingKey := keyFromHash([]byte(req.TenantID+"|"+req.WrapperID), "field-lease-signature")
+	leasePayload["kms_sig"] = b64(hmacSHA256(signingKey, mustJSON(leasePayload, "{}")))
+	zeroizeAll(signingKey)
+	lease := FieldEncryptionLease{
+		TenantID:          req.TenantID,
+		LeaseID:           newID("lease"),
+		WrapperID:         req.WrapperID,
+		KeyID:             req.KeyID,
+		Operation:         req.Operation,
+		LeasePackage:      leasePayload,
+		PolicyHash:        policyHash,
+		RevocationCounter: 0,
+		MaxOps:            maxOps,
+		UsedOps:           0,
+		ExpiresAt:         expiresAt,
+		Revoked:           false,
+		IssuedAt:          now,
+		UpdatedAt:         now,
+	}
+	if err := s.store.CreateFieldEncryptionLease(ctx, lease); err != nil {
+		return FieldEncryptionLease{}, err
+	}
+	_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.lease_issued", req.TenantID, map[string]interface{}{
+		"lease_id":    lease.LeaseID,
+		"wrapper_id":  lease.WrapperID,
+		"key_id":      lease.KeyID,
+		"operation":   lease.Operation,
+		"expires_at":  lease.ExpiresAt.Format(time.RFC3339),
+		"max_ops":     lease.MaxOps,
+		"policy_hash": lease.PolicyHash,
+	})
+	return lease, nil
+}
+
+func (s *Service) SubmitFieldEncryptionUsageReceipt(ctx context.Context, req FieldEncryptionReceiptRequest) (FieldEncryptionUsageReceipt, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	req.LeaseID = strings.TrimSpace(req.LeaseID)
+	req.WrapperID = strings.TrimSpace(req.WrapperID)
+	req.KeyID = strings.TrimSpace(req.KeyID)
+	req.Operation = strings.ToLower(strings.TrimSpace(req.Operation))
+	req.Nonce = strings.TrimSpace(req.Nonce)
+	req.Timestamp = strings.TrimSpace(req.Timestamp)
+	req.SignatureB64 = strings.TrimSpace(req.SignatureB64)
+	req.ClientStatus = strings.TrimSpace(req.ClientStatus)
+	if req.TenantID == "" || req.LeaseID == "" || req.WrapperID == "" || req.KeyID == "" || req.Operation == "" || req.Nonce == "" || req.SignatureB64 == "" {
+		return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, lease_id, wrapper_id, key_id, operation, nonce and signature_b64 are required")
+	}
+	if req.OpCount <= 0 {
+		req.OpCount = 1
+	}
+	if req.OpCount > 1000 {
+		return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusBadRequest, "bad_request", "op_count exceeds max allowed value")
+	}
+	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return FieldEncryptionUsageReceipt{}, err
+	}
+	wrapper, err := s.store.GetFieldEncryptionWrapper(ctx, req.TenantID, req.WrapperID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusNotFound, "not_found", "wrapper registration is not found")
+		}
+		return FieldEncryptionUsageReceipt{}, err
+	}
+	if policy.RequireRegisteredWrapper && strings.ToLower(strings.TrimSpace(wrapper.Status)) != "active" {
+		return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusForbidden, "policy_denied", "wrapper is not active")
+	}
+	if err := s.enforceWrapperTransportPolicy(policy, wrapper); err != nil {
+		return FieldEncryptionUsageReceipt{}, err
+	}
+	if _, err := s.store.GetFieldEncryptionUsageReceiptByNonce(ctx, req.TenantID, req.WrapperID, req.Nonce); err == nil {
+		return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusConflict, "replay_detected", "receipt nonce has already been used")
+	} else if !errors.Is(err, errNotFound) {
+		return FieldEncryptionUsageReceipt{}, err
+	}
+	if policy.RequireSignedNonce {
+		if err := s.verifyWrapperSignedNonce(wrapper, "receipt", req.LeaseID+"|"+req.KeyID, req.Operation+"|"+strconvI(req.OpCount), req.Nonce, req.Timestamp, req.SignatureB64, policy.AntiReplayWindowSeconds); err != nil {
+			_ = s.store.RevokeFieldEncryptionLease(ctx, req.TenantID, req.LeaseID, "receipt_signature_verification_failed")
+			_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.lease_revoked", req.TenantID, map[string]interface{}{
+				"lease_id": req.LeaseID,
+				"reason":   "receipt_signature_verification_failed",
+			})
+			return FieldEncryptionUsageReceipt{}, err
+		}
+	}
+	lease, err := s.store.GetFieldEncryptionLease(ctx, req.TenantID, req.LeaseID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusNotFound, "not_found", "lease not found")
+		}
+		return FieldEncryptionUsageReceipt{}, err
+	}
+	if lease.Revoked {
+		return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusForbidden, "access_denied", "lease is revoked")
+	}
+	if s.now().After(lease.ExpiresAt) {
+		return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusForbidden, "lease_expired", "lease has expired")
+	}
+	if lease.WrapperID != req.WrapperID || lease.KeyID != req.KeyID {
+		return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusBadRequest, "bad_request", "receipt does not match lease binding")
+	}
+	if lease.Operation != req.Operation {
+		return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusBadRequest, "bad_request", "receipt operation does not match lease operation")
+	}
+	currentPolicyHash := hashHex(mustJSON(policy, "{}"))
+	if strings.TrimSpace(lease.PolicyHash) != "" && lease.PolicyHash != currentPolicyHash {
+		if policy.RevokeOnPolicyChange {
+			_ = s.store.RevokeFieldEncryptionLease(ctx, req.TenantID, req.LeaseID, "policy_changed")
+			_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.lease_revoked", req.TenantID, map[string]interface{}{
+				"lease_id": req.LeaseID,
+				"reason":   "policy_changed",
+			})
+			return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusForbidden, "policy_changed", "lease revoked due to policy change")
+		}
+		if policy.RekeyOnPolicyChange {
+			return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusForbidden, "rekey_required", "policy changed, re-lease key required")
+		}
+	}
+	updatedLease, err := s.store.ConsumeFieldEncryptionLeaseOps(ctx, req.TenantID, req.LeaseID, req.OpCount)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusTooManyRequests, "ops_limit_reached", "lease operation limit reached")
+		}
+		return FieldEncryptionUsageReceipt{}, err
+	}
+	for i := 0; i < req.OpCount; i++ {
+		if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, req.Operation); err != nil {
+			return FieldEncryptionUsageReceipt{}, err
+		}
+	}
+	ts := parseTimeString(req.Timestamp)
+	payloadHash := hashHex(req.TenantID, req.LeaseID, req.WrapperID, req.KeyID, req.Operation, strconvI(req.OpCount), req.Nonce, req.Timestamp, req.ClientStatus)
+	receipt := FieldEncryptionUsageReceipt{
+		TenantID:     req.TenantID,
+		ReceiptID:    newID("rcpt"),
+		LeaseID:      req.LeaseID,
+		WrapperID:    req.WrapperID,
+		KeyID:        req.KeyID,
+		Operation:    req.Operation,
+		OpCount:      req.OpCount,
+		Nonce:        req.Nonce,
+		Timestamp:    ts,
+		SignatureB64: req.SignatureB64,
+		PayloadHash:  payloadHash,
+		Accepted:     true,
+		CreatedAt:    s.now(),
+	}
+	if err := s.store.CreateFieldEncryptionUsageReceipt(ctx, receipt); err != nil {
+		return FieldEncryptionUsageReceipt{}, err
+	}
+	_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.receipt_accepted", req.TenantID, map[string]interface{}{
+		"receipt_id":    receipt.ReceiptID,
+		"lease_id":      receipt.LeaseID,
+		"wrapper_id":    receipt.WrapperID,
+		"key_id":        receipt.KeyID,
+		"operation":     receipt.Operation,
+		"op_count":      receipt.OpCount,
+		"lease_used":    updatedLease.UsedOps,
+		"lease_max_ops": updatedLease.MaxOps,
+	})
+	return receipt, nil
+}
+
+func (s *Service) RevokeFieldEncryptionLease(ctx context.Context, tenantID string, leaseID string, reason string) error {
+	tenantID = strings.TrimSpace(tenantID)
+	leaseID = strings.TrimSpace(leaseID)
+	reason = strings.TrimSpace(reason)
+	if tenantID == "" || leaseID == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and lease_id are required")
+	}
+	if reason == "" {
+		reason = "operator_request"
+	}
+	if err := s.store.RevokeFieldEncryptionLease(ctx, tenantID, leaseID, reason); err != nil {
+		if errors.Is(err, errNotFound) {
+			return newServiceError(http.StatusNotFound, "not_found", "lease was not found")
+		}
+		return err
+	}
+	_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.lease_revoked", tenantID, map[string]interface{}{
+		"lease_id": leaseID,
+		"reason":   reason,
+	})
+	return nil
+}
+
+func (s *Service) enforceLocalWrapperKeyPolicies(policy DataProtectionPolicy, keyMeta map[string]interface{}, operation string) error {
+	keyType := strings.ToLower(strings.TrimSpace(firstString(keyMeta["key_type"])))
+	if keyType == "" {
+		keyType = inferDataProtectionKeyTypeFromAlgorithm(firstString(keyMeta["algorithm"]))
+	}
+	if len(policy.AllowedKeyClassesForLocal) > 0 && keyType != "" && !containsString(policy.AllowedKeyClassesForLocal, keyType) {
+		return newServiceError(http.StatusForbidden, "policy_denied", "key class is blocked for local crypto export")
+	}
+	localAlg := s.classifyLocalAlgorithm(firstString(keyMeta["algorithm"]))
+	if len(policy.AllowedLocalAlgorithms) > 0 && localAlg != "" && !containsString(policy.AllowedLocalAlgorithms, localAlg) {
+		return newServiceError(http.StatusForbidden, "policy_denied", "key algorithm is blocked for local crypto")
+	}
+	if containsString(policy.ForceRemoteOps, operation) {
+		return newServiceError(http.StatusForbidden, "policy_denied", "operation is forced to remote path by policy")
+	}
+	return nil
+}
+
+func (s *Service) classifyLocalAlgorithm(keyAlgorithm string) string {
+	a := strings.ToUpper(strings.TrimSpace(keyAlgorithm))
+	switch {
+	case strings.Contains(a, "CHACHA20"):
+		return "CHACHA20-POLY1305"
+	case strings.Contains(a, "SIV"):
+		return "AES-SIV"
+	case strings.Contains(a, "AES"):
+		return "AES-GCM"
+	default:
+		return "AES-GCM"
+	}
+}
+
+func (s *Service) enforceWrapperTransportPolicy(policy DataProtectionPolicy, wrapper FieldEncryptionWrapper) error {
+	transport := strings.ToLower(strings.TrimSpace(wrapper.Transport))
+	fingerprint := strings.TrimSpace(wrapper.CertFingerprint)
+	if policy.RequireMTLS {
+		if !strings.Contains(transport, "mtls") {
+			return newServiceError(http.StatusForbidden, "policy_denied", "wrapper transport must include mTLS")
+		}
+		if fingerprint == "" {
+			return newServiceError(http.StatusForbidden, "policy_denied", "wrapper cert fingerprint is required when mTLS is enforced")
+		}
+	}
+	if policy.AttestedWrapperOnly {
+		attested := false
+		if strings.EqualFold(strings.TrimSpace(wrapper.Metadata["attested"]), "true") ||
+			strings.EqualFold(strings.TrimSpace(wrapper.Metadata["attestation"]), "verified") ||
+			strings.EqualFold(strings.TrimSpace(wrapper.Metadata["attestation_status"]), "verified") {
+			attested = true
+		}
+		if !attested && fingerprint == "" {
+			return newServiceError(http.StatusForbidden, "policy_denied", "attested wrapper is required by policy")
+		}
+	}
+	return nil
+}
+
+func (s *Service) wrapLeaseKeyForWrapper(tenantID string, wrapperID string, keyID string, operation string, wrapperPubKeyB64 string, rawKey []byte) (map[string]interface{}, error) {
+	pubRaw, err := b64d(wrapperPubKeyB64)
+	if err != nil {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "wrapper encryption key must be valid base64")
+	}
+	curve := ecdh.X25519()
+	wrapperPub, err := curve.NewPublicKey(pubRaw)
+	if err != nil {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "wrapper encryption key must be valid X25519 key")
+	}
+	ephemeralKey, err := curve.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	shared, err := ephemeralKey.ECDH(wrapperPub)
+	if err != nil {
+		return nil, err
+	}
+	defer zeroizeAll(shared)
+	kek := keyFromHash(shared, "field-wrapper-lease")
+	defer zeroizeAll(kek)
+	aad := []byte(tenantID + "|" + wrapperID + "|" + keyID + "|" + strings.ToLower(strings.TrimSpace(operation)))
+	iv, ciphertext, err := encryptWithAlgorithm(kek, "AES-GCM", rawKey, aad, false)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"alg":               "X25519+AES-256-GCM",
+		"ephemeral_pub_b64": b64(ephemeralKey.PublicKey().Bytes()),
+		"ciphertext_b64":    b64(ciphertext),
+		"iv_b64":            b64(iv),
+		"key_id":            keyID,
+		"operation":         strings.ToLower(strings.TrimSpace(operation)),
+	}, nil
+}
+
+func (s *Service) verifyWrapperSignedNonce(wrapper FieldEncryptionWrapper, mode string, left string, right string, nonce string, ts string, signatureB64 string, replayWindowSec int) error {
+	nonce = strings.TrimSpace(nonce)
+	ts = strings.TrimSpace(ts)
+	signatureB64 = strings.TrimSpace(signatureB64)
+	if nonce == "" || ts == "" || signatureB64 == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "nonce, timestamp and signature are required")
+	}
+	if replayWindowSec <= 0 {
+		replayWindowSec = 300
+	}
+	parsedTs := parseTimeString(ts)
+	if parsedTs.IsZero() {
+		return newServiceError(http.StatusBadRequest, "bad_request", "timestamp must be RFC3339")
+	}
+	delta := s.now().Sub(parsedTs)
+	if delta < 0 {
+		delta = -delta
+	}
+	if delta > time.Duration(replayWindowSec)*time.Second {
+		return newServiceError(http.StatusForbidden, "access_denied", "signed nonce is outside anti-replay window")
+	}
+	pubRaw, err := b64d(wrapper.SigningPublicKeyB64)
+	if err != nil || len(pubRaw) != ed25519.PublicKeySize {
+		return newServiceError(http.StatusBadRequest, "bad_request", "wrapper signing key is invalid")
+	}
+	signature, err := b64d(signatureB64)
+	if err != nil || len(signature) != ed25519.SignatureSize {
+		return newServiceError(http.StatusBadRequest, "bad_request", "signature must be a valid ed25519 signature")
+	}
+	payload := strings.Join([]string{
+		mode,
+		strings.TrimSpace(wrapper.TenantID),
+		strings.TrimSpace(wrapper.WrapperID),
+		strings.TrimSpace(left),
+		strings.TrimSpace(right),
+		nonce,
+		ts,
+	}, "|")
+	if !ed25519.Verify(ed25519.PublicKey(pubRaw), []byte(payload), signature) {
+		return newServiceError(http.StatusForbidden, "access_denied", "wrapper signature verification failed")
+	}
+	return nil
+}
+
+func mergeStringMaps(base map[string]string, override map[string]string) map[string]string {
+	out := map[string]string{}
+	for k, v := range base {
+		key := strings.TrimSpace(k)
+		if key == "" {
+			continue
+		}
+		out[key] = strings.TrimSpace(v)
+	}
+	for k, v := range override {
+		key := strings.TrimSpace(k)
+		if key == "" {
+			continue
+		}
+		out[key] = strings.TrimSpace(v)
+	}
+	return out
 }
 
 func normalizeLowerKeys(in []string) []string {

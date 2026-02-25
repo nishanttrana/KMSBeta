@@ -42,6 +42,23 @@ type Store interface {
 
 	GetDataProtectionPolicy(ctx context.Context, tenantID string) (DataProtectionPolicy, error)
 	UpsertDataProtectionPolicy(ctx context.Context, item DataProtectionPolicy) (DataProtectionPolicy, error)
+
+	CreateFieldEncryptionWrapperChallenge(ctx context.Context, item FieldEncryptionWrapperChallenge) error
+	GetFieldEncryptionWrapperChallenge(ctx context.Context, tenantID string, challengeID string) (FieldEncryptionWrapperChallenge, error)
+	MarkFieldEncryptionWrapperChallengeUsed(ctx context.Context, tenantID string, challengeID string) error
+
+	UpsertFieldEncryptionWrapper(ctx context.Context, item FieldEncryptionWrapper) (FieldEncryptionWrapper, error)
+	GetFieldEncryptionWrapper(ctx context.Context, tenantID string, wrapperID string) (FieldEncryptionWrapper, error)
+	ListFieldEncryptionWrappers(ctx context.Context, tenantID string, limit int, offset int) ([]FieldEncryptionWrapper, error)
+
+	CreateFieldEncryptionLease(ctx context.Context, item FieldEncryptionLease) error
+	GetFieldEncryptionLease(ctx context.Context, tenantID string, leaseID string) (FieldEncryptionLease, error)
+	ListFieldEncryptionLeases(ctx context.Context, tenantID string, wrapperID string, limit int, offset int) ([]FieldEncryptionLease, error)
+	ConsumeFieldEncryptionLeaseOps(ctx context.Context, tenantID string, leaseID string, ops int) (FieldEncryptionLease, error)
+	RevokeFieldEncryptionLease(ctx context.Context, tenantID string, leaseID string, reason string) error
+
+	CreateFieldEncryptionUsageReceipt(ctx context.Context, item FieldEncryptionUsageReceipt) error
+	GetFieldEncryptionUsageReceiptByNonce(ctx context.Context, tenantID string, wrapperID string, nonce string) (FieldEncryptionUsageReceipt, error)
 }
 
 type DataProtectionPolicy struct {
@@ -95,8 +112,90 @@ type DataProtectionPolicy struct {
 	MaskingRolePolicy              map[string]string   `json:"masking_role_policy"`
 	TokenMetadataRetentionDays     int                 `json:"token_metadata_retention_days"`
 	RedactionEventRetentionDays    int                 `json:"redaction_event_retention_days"`
+	RequireRegisteredWrapper       bool                `json:"require_registered_wrapper"`
+	LocalCryptoAllowed             bool                `json:"local_crypto_allowed"`
+	CacheEnabled                   bool                `json:"cache_enabled"`
+	CacheTTLSeconds                int                 `json:"cache_ttl_sec"`
+	LeaseMaxOps                    int                 `json:"lease_max_ops"`
+	MaxCachedKeys                  int                 `json:"max_cached_keys"`
+	AllowedLocalAlgorithms         []string            `json:"allowed_local_algorithms"`
+	AllowedKeyClassesForLocal      []string            `json:"allowed_key_classes_for_local_export"`
+	ForceRemoteOps                 []string            `json:"force_remote_ops"`
+	RequireMTLS                    bool                `json:"require_mtls"`
+	RequireSignedNonce             bool                `json:"require_signed_nonce"`
+	AntiReplayWindowSeconds        int                 `json:"anti_replay_window_sec"`
+	AttestedWrapperOnly            bool                `json:"attested_wrapper_only"`
+	RevokeOnPolicyChange           bool                `json:"revoke_on_policy_change"`
+	RekeyOnPolicyChange            bool                `json:"rekey_on_policy_change"`
 	UpdatedBy                      string              `json:"updated_by,omitempty"`
 	UpdatedAt                      time.Time           `json:"updated_at"`
+}
+
+type FieldEncryptionWrapper struct {
+	TenantID            string            `json:"tenant_id"`
+	WrapperID           string            `json:"wrapper_id"`
+	AppID               string            `json:"app_id"`
+	DisplayName         string            `json:"display_name"`
+	SigningPublicKeyB64 string            `json:"signing_public_key_b64"`
+	EncryptionPublicKey string            `json:"encryption_public_key_b64"`
+	Transport           string            `json:"transport"`
+	Status              string            `json:"status"`
+	CertFingerprint     string            `json:"cert_fingerprint,omitempty"`
+	Metadata            map[string]string `json:"metadata,omitempty"`
+	ApprovedBy          string            `json:"approved_by,omitempty"`
+	ApprovedAt          time.Time         `json:"approved_at,omitempty"`
+	CreatedAt           time.Time         `json:"created_at"`
+	UpdatedAt           time.Time         `json:"updated_at"`
+}
+
+type FieldEncryptionWrapperChallenge struct {
+	TenantID            string            `json:"tenant_id"`
+	ChallengeID         string            `json:"challenge_id"`
+	WrapperID           string            `json:"wrapper_id"`
+	AppID               string            `json:"app_id"`
+	ChallengeB64        string            `json:"challenge_b64"`
+	Nonce               string            `json:"nonce"`
+	SigningPublicKeyB64 string            `json:"signing_public_key_b64"`
+	EncryptionPublicKey string            `json:"encryption_public_key_b64"`
+	Metadata            map[string]string `json:"metadata,omitempty"`
+	ExpiresAt           time.Time         `json:"expires_at"`
+	Used                bool              `json:"used"`
+	CreatedAt           time.Time         `json:"created_at"`
+}
+
+type FieldEncryptionLease struct {
+	TenantID          string                 `json:"tenant_id"`
+	LeaseID           string                 `json:"lease_id"`
+	WrapperID         string                 `json:"wrapper_id"`
+	KeyID             string                 `json:"key_id"`
+	Operation         string                 `json:"operation"`
+	LeasePackage      map[string]interface{} `json:"lease_package"`
+	PolicyHash        string                 `json:"policy_hash"`
+	RevocationCounter int                    `json:"revocation_counter"`
+	MaxOps            int                    `json:"max_ops"`
+	UsedOps           int                    `json:"used_ops"`
+	ExpiresAt         time.Time              `json:"expires_at"`
+	Revoked           bool                   `json:"revoked"`
+	RevokeReason      string                 `json:"revoke_reason,omitempty"`
+	IssuedAt          time.Time              `json:"issued_at"`
+	UpdatedAt         time.Time              `json:"updated_at"`
+}
+
+type FieldEncryptionUsageReceipt struct {
+	TenantID    string    `json:"tenant_id"`
+	ReceiptID   string    `json:"receipt_id"`
+	LeaseID     string    `json:"lease_id"`
+	WrapperID   string    `json:"wrapper_id"`
+	KeyID       string    `json:"key_id"`
+	Operation   string    `json:"operation"`
+	OpCount     int       `json:"op_count"`
+	Nonce       string    `json:"nonce"`
+	Timestamp   time.Time `json:"timestamp"`
+	SignatureB64 string   `json:"signature_b64"`
+	PayloadHash string    `json:"payload_hash"`
+	Accepted    bool      `json:"accepted"`
+	RejectReason string   `json:"reject_reason,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type TokenVault struct {
@@ -257,4 +356,52 @@ type SearchableRequest struct {
 	Ciphertext string `json:"ciphertext"`
 	AAD        string `json:"aad"`
 	QueryType  string `json:"query_type"`
+}
+
+type FieldEncryptionRegisterInitRequest struct {
+	TenantID            string            `json:"tenant_id"`
+	WrapperID           string            `json:"wrapper_id"`
+	AppID               string            `json:"app_id"`
+	DisplayName         string            `json:"display_name"`
+	SigningPublicKeyB64 string            `json:"signing_public_key_b64"`
+	EncryptionPublicKey string            `json:"encryption_public_key_b64"`
+	Transport           string            `json:"transport"`
+	Metadata            map[string]string `json:"metadata"`
+}
+
+type FieldEncryptionRegisterCompleteRequest struct {
+	TenantID            string            `json:"tenant_id"`
+	ChallengeID         string            `json:"challenge_id"`
+	WrapperID           string            `json:"wrapper_id"`
+	SignatureB64        string            `json:"signature_b64"`
+	CSRPEM              string            `json:"csr_pem"`
+	CertFingerprint     string            `json:"cert_fingerprint"`
+	GovernanceApproved  bool              `json:"governance_approved"`
+	ApprovedBy          string            `json:"approved_by"`
+	Metadata            map[string]string `json:"metadata"`
+}
+
+type FieldEncryptionLeaseRequest struct {
+	TenantID           string `json:"tenant_id"`
+	WrapperID          string `json:"wrapper_id"`
+	KeyID              string `json:"key_id"`
+	Operation          string `json:"operation"`
+	Nonce              string `json:"nonce"`
+	Timestamp          string `json:"timestamp"`
+	SignatureB64       string `json:"signature_b64"`
+	RequestedTTLSecond int    `json:"requested_ttl_sec"`
+	RequestedMaxOps    int    `json:"requested_max_ops"`
+}
+
+type FieldEncryptionReceiptRequest struct {
+	TenantID      string `json:"tenant_id"`
+	LeaseID       string `json:"lease_id"`
+	WrapperID     string `json:"wrapper_id"`
+	KeyID         string `json:"key_id"`
+	Operation     string `json:"operation"`
+	OpCount       int    `json:"op_count"`
+	Nonce         string `json:"nonce"`
+	Timestamp     string `json:"timestamp"`
+	SignatureB64  string `json:"signature_b64"`
+	ClientStatus  string `json:"client_status"`
 }
