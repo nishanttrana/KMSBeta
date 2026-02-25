@@ -353,9 +353,28 @@ func (s *SQLStore) GetDataProtectionPolicy(ctx context.Context, tenantID string)
 	row := s.db.SQL().QueryRowContext(ctx, `
 SELECT tenant_id,
        allowed_data_algorithms_json,
+       algorithm_profile_policy_json,
        require_aad_for_aead,
+       required_aad_claims_json,
+       enforce_aad_tenant_binding,
+       allowed_aad_environments_json,
        max_fields_per_operation,
        max_document_bytes,
+       max_app_crypto_request_bytes,
+       max_app_crypto_batch_size,
+       require_symmetric_keys,
+       require_fips_keys,
+       min_key_size_bits,
+       allowed_encrypt_field_paths_json,
+       allowed_decrypt_field_paths_json,
+       denied_decrypt_field_paths_json,
+       block_wildcard_field_paths,
+       allow_deterministic_encryption,
+       allow_searchable_encryption,
+       allow_range_search,
+       envelope_kek_allowlist_json,
+       max_wrapped_dek_age_minutes,
+       require_rewrap_on_dek_age_exceeded,
        allow_vaultless_tokenization,
        tokenization_mode_policy_json,
        token_format_policy_json,
@@ -388,24 +407,50 @@ FROM data_protection_policy
 WHERE tenant_id = $1
 `, strings.TrimSpace(tenantID))
 	var (
-		out            DataProtectionPolicy
-		algorithmsJSON string
-		modeJSON       string
-		formatJSON     string
-		purposeJSON    string
-		workflowJSON   string
-		detectorsJSON  string
-		actionsJSON    string
-		contextJSON    string
-		maskingJSON    string
-		updatedRaw     interface{}
+		out                  DataProtectionPolicy
+		algorithmsJSON       string
+		algorithmProfileJSON string
+		requiredAADJSON      string
+		allowedAADEEnvJSON   string
+		encryptPathsJSON     string
+		decryptPathsJSON     string
+		deniedDecryptJSON    string
+		envelopeKEKJSON      string
+		modeJSON             string
+		formatJSON           string
+		purposeJSON          string
+		workflowJSON         string
+		detectorsJSON        string
+		actionsJSON          string
+		contextJSON          string
+		maskingJSON          string
+		updatedRaw           interface{}
 	)
 	if err := row.Scan(
 		&out.TenantID,
 		&algorithmsJSON,
+		&algorithmProfileJSON,
 		&out.RequireAADForAEAD,
+		&requiredAADJSON,
+		&out.EnforceAADTenantBinding,
+		&allowedAADEEnvJSON,
 		&out.MaxFieldsPerOperation,
 		&out.MaxDocumentBytes,
+		&out.MaxAppCryptoRequestBytes,
+		&out.MaxAppCryptoBatchSize,
+		&out.RequireSymmetricKeys,
+		&out.RequireFIPSKeys,
+		&out.MinKeySizeBits,
+		&encryptPathsJSON,
+		&decryptPathsJSON,
+		&deniedDecryptJSON,
+		&out.BlockWildcardFieldPaths,
+		&out.AllowDeterministicEncryption,
+		&out.AllowSearchableEncryption,
+		&out.AllowRangeSearch,
+		&envelopeKEKJSON,
+		&out.MaxWrappedDEKAgeMinutes,
+		&out.RequireRewrapOnDEKAgeExceeded,
 		&out.AllowVaultlessTokenization,
 		&modeJSON,
 		&formatJSON,
@@ -441,6 +486,13 @@ WHERE tenant_id = $1
 		return DataProtectionPolicy{}, err
 	}
 	out.AllowedDataAlgorithms = parseJSONArrayString(algorithmsJSON)
+	out.AlgorithmProfilePolicy = parseStringSliceMap(algorithmProfileJSON)
+	out.RequiredAADClaims = parseJSONArrayString(requiredAADJSON)
+	out.AllowedAADEvironments = parseJSONArrayString(allowedAADEEnvJSON)
+	out.AllowedEncryptFieldPaths = parseJSONArrayString(encryptPathsJSON)
+	out.AllowedDecryptFieldPaths = parseJSONArrayString(decryptPathsJSON)
+	out.DeniedDecryptFieldPaths = parseJSONArrayString(deniedDecryptJSON)
+	out.EnvelopeKEKAllowlist = parseJSONArrayString(envelopeKEKJSON)
 	out.TokenizationModePolicy = parseStringSliceMap(modeJSON)
 	out.TokenFormatPolicy = parseStringSliceMap(formatJSON)
 	out.DetokenizeAllowedPurposes = parseJSONArrayString(purposeJSON)
@@ -458,9 +510,28 @@ func (s *SQLStore) UpsertDataProtectionPolicy(ctx context.Context, item DataProt
 INSERT INTO data_protection_policy (
     tenant_id,
     allowed_data_algorithms_json,
+    algorithm_profile_policy_json,
     require_aad_for_aead,
+    required_aad_claims_json,
+    enforce_aad_tenant_binding,
+    allowed_aad_environments_json,
     max_fields_per_operation,
     max_document_bytes,
+    max_app_crypto_request_bytes,
+    max_app_crypto_batch_size,
+    require_symmetric_keys,
+    require_fips_keys,
+    min_key_size_bits,
+    allowed_encrypt_field_paths_json,
+    allowed_decrypt_field_paths_json,
+    denied_decrypt_field_paths_json,
+    block_wildcard_field_paths,
+    allow_deterministic_encryption,
+    allow_searchable_encryption,
+    allow_range_search,
+    envelope_kek_allowlist_json,
+    max_wrapped_dek_age_minutes,
+    require_rewrap_on_dek_age_exceeded,
     allow_vaultless_tokenization,
     tokenization_mode_policy_json,
     token_format_policy_json,
@@ -490,13 +561,32 @@ INSERT INTO data_protection_policy (
     updated_by,
     updated_at
 ) VALUES (
-    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,CURRENT_TIMESTAMP
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,CURRENT_TIMESTAMP
 )
 ON CONFLICT (tenant_id) DO UPDATE SET
     allowed_data_algorithms_json = EXCLUDED.allowed_data_algorithms_json,
+    algorithm_profile_policy_json = EXCLUDED.algorithm_profile_policy_json,
     require_aad_for_aead = EXCLUDED.require_aad_for_aead,
+    required_aad_claims_json = EXCLUDED.required_aad_claims_json,
+    enforce_aad_tenant_binding = EXCLUDED.enforce_aad_tenant_binding,
+    allowed_aad_environments_json = EXCLUDED.allowed_aad_environments_json,
     max_fields_per_operation = EXCLUDED.max_fields_per_operation,
     max_document_bytes = EXCLUDED.max_document_bytes,
+    max_app_crypto_request_bytes = EXCLUDED.max_app_crypto_request_bytes,
+    max_app_crypto_batch_size = EXCLUDED.max_app_crypto_batch_size,
+    require_symmetric_keys = EXCLUDED.require_symmetric_keys,
+    require_fips_keys = EXCLUDED.require_fips_keys,
+    min_key_size_bits = EXCLUDED.min_key_size_bits,
+    allowed_encrypt_field_paths_json = EXCLUDED.allowed_encrypt_field_paths_json,
+    allowed_decrypt_field_paths_json = EXCLUDED.allowed_decrypt_field_paths_json,
+    denied_decrypt_field_paths_json = EXCLUDED.denied_decrypt_field_paths_json,
+    block_wildcard_field_paths = EXCLUDED.block_wildcard_field_paths,
+    allow_deterministic_encryption = EXCLUDED.allow_deterministic_encryption,
+    allow_searchable_encryption = EXCLUDED.allow_searchable_encryption,
+    allow_range_search = EXCLUDED.allow_range_search,
+    envelope_kek_allowlist_json = EXCLUDED.envelope_kek_allowlist_json,
+    max_wrapped_dek_age_minutes = EXCLUDED.max_wrapped_dek_age_minutes,
+    require_rewrap_on_dek_age_exceeded = EXCLUDED.require_rewrap_on_dek_age_exceeded,
     allow_vaultless_tokenization = EXCLUDED.allow_vaultless_tokenization,
     tokenization_mode_policy_json = EXCLUDED.tokenization_mode_policy_json,
     token_format_policy_json = EXCLUDED.token_format_policy_json,
@@ -527,9 +617,28 @@ ON CONFLICT (tenant_id) DO UPDATE SET
     updated_at = CURRENT_TIMESTAMP
 RETURNING tenant_id,
           allowed_data_algorithms_json,
+          algorithm_profile_policy_json,
           require_aad_for_aead,
+          required_aad_claims_json,
+          enforce_aad_tenant_binding,
+          allowed_aad_environments_json,
           max_fields_per_operation,
           max_document_bytes,
+          max_app_crypto_request_bytes,
+          max_app_crypto_batch_size,
+          require_symmetric_keys,
+          require_fips_keys,
+          min_key_size_bits,
+          allowed_encrypt_field_paths_json,
+          allowed_decrypt_field_paths_json,
+          denied_decrypt_field_paths_json,
+          block_wildcard_field_paths,
+          allow_deterministic_encryption,
+          allow_searchable_encryption,
+          allow_range_search,
+          envelope_kek_allowlist_json,
+          max_wrapped_dek_age_minutes,
+          require_rewrap_on_dek_age_exceeded,
           allow_vaultless_tokenization,
           tokenization_mode_policy_json,
           token_format_policy_json,
@@ -558,26 +667,102 @@ RETURNING tenant_id,
           redaction_event_retention_days,
           COALESCE(updated_by,''),
           updated_at
-`, item.TenantID, mustJSON(item.AllowedDataAlgorithms, "[]"), item.RequireAADForAEAD, item.MaxFieldsPerOperation, item.MaxDocumentBytes, item.AllowVaultlessTokenization, mustJSON(item.TokenizationModePolicy, "{}"), mustJSON(item.TokenFormatPolicy, "{}"), item.RequireTokenTTL, item.MaxTokenTTLHours, item.AllowTokenRenewal, item.MaxTokenRenewals, item.AllowOneTimeTokens, mustJSON(item.DetokenizeAllowedPurposes, "[]"), mustJSON(item.DetokenizeAllowedWorkflows, "[]"), item.RequireDetokenizeJustification, item.AllowBulkTokenize, item.AllowBulkDetokenize, item.AllowRedactionDetectOnly, mustJSON(item.AllowedRedactionDetectors, "[]"), mustJSON(item.AllowedRedactionActions, "[]"), item.AllowCustomRegexTokens, item.MaxCustomRegexLength, item.MaxCustomRegexGroups, item.MaxTokenBatch, item.MaxDetokenizeBatch, item.RequireTokenContextTags, mustJSON(item.RequiredTokenContextKeys, "[]"), mustJSON(item.MaskingRolePolicy, "{}"), item.TokenMetadataRetentionDays, item.RedactionEventRetentionDays, item.UpdatedBy)
+`, item.TenantID,
+		mustJSON(item.AllowedDataAlgorithms, "[]"),
+		mustJSON(item.AlgorithmProfilePolicy, "{}"),
+		item.RequireAADForAEAD,
+		mustJSON(item.RequiredAADClaims, "[]"),
+		item.EnforceAADTenantBinding,
+		mustJSON(item.AllowedAADEvironments, "[]"),
+		item.MaxFieldsPerOperation,
+		item.MaxDocumentBytes,
+		item.MaxAppCryptoRequestBytes,
+		item.MaxAppCryptoBatchSize,
+		item.RequireSymmetricKeys,
+		item.RequireFIPSKeys,
+		item.MinKeySizeBits,
+		mustJSON(item.AllowedEncryptFieldPaths, "[]"),
+		mustJSON(item.AllowedDecryptFieldPaths, "[]"),
+		mustJSON(item.DeniedDecryptFieldPaths, "[]"),
+		item.BlockWildcardFieldPaths,
+		item.AllowDeterministicEncryption,
+		item.AllowSearchableEncryption,
+		item.AllowRangeSearch,
+		mustJSON(item.EnvelopeKEKAllowlist, "[]"),
+		item.MaxWrappedDEKAgeMinutes,
+		item.RequireRewrapOnDEKAgeExceeded,
+		item.AllowVaultlessTokenization,
+		mustJSON(item.TokenizationModePolicy, "{}"),
+		mustJSON(item.TokenFormatPolicy, "{}"),
+		item.RequireTokenTTL,
+		item.MaxTokenTTLHours,
+		item.AllowTokenRenewal,
+		item.MaxTokenRenewals,
+		item.AllowOneTimeTokens,
+		mustJSON(item.DetokenizeAllowedPurposes, "[]"),
+		mustJSON(item.DetokenizeAllowedWorkflows, "[]"),
+		item.RequireDetokenizeJustification,
+		item.AllowBulkTokenize,
+		item.AllowBulkDetokenize,
+		item.AllowRedactionDetectOnly,
+		mustJSON(item.AllowedRedactionDetectors, "[]"),
+		mustJSON(item.AllowedRedactionActions, "[]"),
+		item.AllowCustomRegexTokens,
+		item.MaxCustomRegexLength,
+		item.MaxCustomRegexGroups,
+		item.MaxTokenBatch,
+		item.MaxDetokenizeBatch,
+		item.RequireTokenContextTags,
+		mustJSON(item.RequiredTokenContextKeys, "[]"),
+		mustJSON(item.MaskingRolePolicy, "{}"),
+		item.TokenMetadataRetentionDays,
+		item.RedactionEventRetentionDays,
+		item.UpdatedBy)
 	var (
-		out            DataProtectionPolicy
-		algorithmsJSON string
-		modeJSON       string
-		formatJSON     string
-		purposeJSON    string
-		workflowJSON   string
-		detectorsJSON  string
-		actionsJSON    string
-		contextJSON    string
-		maskingJSON    string
-		updatedRaw     interface{}
+		out                  DataProtectionPolicy
+		algorithmsJSON       string
+		algorithmProfileJSON string
+		requiredAADJSON      string
+		allowedAADEEnvJSON   string
+		encryptPathsJSON     string
+		decryptPathsJSON     string
+		deniedDecryptJSON    string
+		envelopeKEKJSON      string
+		modeJSON             string
+		formatJSON           string
+		purposeJSON          string
+		workflowJSON         string
+		detectorsJSON        string
+		actionsJSON          string
+		contextJSON          string
+		maskingJSON          string
+		updatedRaw           interface{}
 	)
 	if err := row.Scan(
 		&out.TenantID,
 		&algorithmsJSON,
+		&algorithmProfileJSON,
 		&out.RequireAADForAEAD,
+		&requiredAADJSON,
+		&out.EnforceAADTenantBinding,
+		&allowedAADEEnvJSON,
 		&out.MaxFieldsPerOperation,
 		&out.MaxDocumentBytes,
+		&out.MaxAppCryptoRequestBytes,
+		&out.MaxAppCryptoBatchSize,
+		&out.RequireSymmetricKeys,
+		&out.RequireFIPSKeys,
+		&out.MinKeySizeBits,
+		&encryptPathsJSON,
+		&decryptPathsJSON,
+		&deniedDecryptJSON,
+		&out.BlockWildcardFieldPaths,
+		&out.AllowDeterministicEncryption,
+		&out.AllowSearchableEncryption,
+		&out.AllowRangeSearch,
+		&envelopeKEKJSON,
+		&out.MaxWrappedDEKAgeMinutes,
+		&out.RequireRewrapOnDEKAgeExceeded,
 		&out.AllowVaultlessTokenization,
 		&modeJSON,
 		&formatJSON,
@@ -610,6 +795,13 @@ RETURNING tenant_id,
 		return DataProtectionPolicy{}, err
 	}
 	out.AllowedDataAlgorithms = parseJSONArrayString(algorithmsJSON)
+	out.AlgorithmProfilePolicy = parseStringSliceMap(algorithmProfileJSON)
+	out.RequiredAADClaims = parseJSONArrayString(requiredAADJSON)
+	out.AllowedAADEvironments = parseJSONArrayString(allowedAADEEnvJSON)
+	out.AllowedEncryptFieldPaths = parseJSONArrayString(encryptPathsJSON)
+	out.AllowedDecryptFieldPaths = parseJSONArrayString(decryptPathsJSON)
+	out.DeniedDecryptFieldPaths = parseJSONArrayString(deniedDecryptJSON)
+	out.EnvelopeKEKAllowlist = parseJSONArrayString(envelopeKEKJSON)
 	out.TokenizationModePolicy = parseStringSliceMap(modeJSON)
 	out.TokenFormatPolicy = parseStringSliceMap(formatJSON)
 	out.DetokenizeAllowedPurposes = parseJSONArrayString(purposeJSON)

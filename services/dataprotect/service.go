@@ -24,6 +24,14 @@ type Service struct {
 
 var supportedDataProtectAlgorithms = []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305"}
 
+func defaultDataAlgorithmProfilePolicy() map[string][]string {
+	return map[string][]string{
+		"field_level": []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305"},
+		"envelope":    []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305"},
+		"searchable":  []string{"AES-SIV"},
+	}
+}
+
 func defaultTokenizationModePolicy() map[string][]string {
 	return map[string][]string{
 		"credit_card": []string{"vault", "vaultless"},
@@ -70,9 +78,28 @@ func defaultDataProtectionPolicy(tenantID string) DataProtectionPolicy {
 	return DataProtectionPolicy{
 		TenantID:                       strings.TrimSpace(tenantID),
 		AllowedDataAlgorithms:          append([]string{}, supportedDataProtectAlgorithms...),
+		AlgorithmProfilePolicy:         defaultDataAlgorithmProfilePolicy(),
 		RequireAADForAEAD:              false,
+		RequiredAADClaims:              []string{},
+		EnforceAADTenantBinding:        false,
+		AllowedAADEvironments:          []string{},
 		MaxFieldsPerOperation:          64,
 		MaxDocumentBytes:               262144,
+		MaxAppCryptoRequestBytes:       1048576,
+		MaxAppCryptoBatchSize:          256,
+		RequireSymmetricKeys:           true,
+		RequireFIPSKeys:                false,
+		MinKeySizeBits:                 0,
+		AllowedEncryptFieldPaths:       []string{},
+		AllowedDecryptFieldPaths:       []string{},
+		DeniedDecryptFieldPaths:        []string{},
+		BlockWildcardFieldPaths:        true,
+		AllowDeterministicEncryption:   true,
+		AllowSearchableEncryption:      true,
+		AllowRangeSearch:               false,
+		EnvelopeKEKAllowlist:           []string{},
+		MaxWrappedDEKAgeMinutes:        0,
+		RequireRewrapOnDEKAgeExceeded:  true,
 		AllowVaultlessTokenization:     true,
 		TokenizationModePolicy:         defaultTokenizationModePolicy(),
 		TokenFormatPolicy:              defaultTokenFormatPolicy(),
@@ -117,6 +144,37 @@ func normalizeDataProtectionPolicy(in DataProtectionPolicy) DataProtectionPolicy
 	}
 	sort.Strings(outAllowed)
 	in.AllowedDataAlgorithms = outAllowed
+	in.AlgorithmProfilePolicy = normalizeDataAlgorithmProfilesPolicy(in.AlgorithmProfilePolicy)
+	in.RequiredAADClaims = normalizeLowerKeys(uniqueStrings(in.RequiredAADClaims))
+	in.AllowedAADEvironments = normalizeLowerKeys(uniqueStrings(in.AllowedAADEvironments))
+	if in.MaxAppCryptoRequestBytes <= 0 {
+		in.MaxAppCryptoRequestBytes = 1048576
+	}
+	if in.MaxAppCryptoRequestBytes > 67108864 {
+		in.MaxAppCryptoRequestBytes = 67108864
+	}
+	if in.MaxAppCryptoBatchSize <= 0 {
+		in.MaxAppCryptoBatchSize = 256
+	}
+	if in.MaxAppCryptoBatchSize > 4096 {
+		in.MaxAppCryptoBatchSize = 4096
+	}
+	if in.MinKeySizeBits < 0 {
+		in.MinKeySizeBits = 0
+	}
+	if in.MinKeySizeBits > 16384 {
+		in.MinKeySizeBits = 16384
+	}
+	in.AllowedEncryptFieldPaths = normalizeFieldPathList(in.AllowedEncryptFieldPaths)
+	in.AllowedDecryptFieldPaths = normalizeFieldPathList(in.AllowedDecryptFieldPaths)
+	in.DeniedDecryptFieldPaths = normalizeFieldPathList(in.DeniedDecryptFieldPaths)
+	in.EnvelopeKEKAllowlist = uniqueStrings(in.EnvelopeKEKAllowlist)
+	if in.MaxWrappedDEKAgeMinutes < 0 {
+		in.MaxWrappedDEKAgeMinutes = 0
+	}
+	if in.MaxWrappedDEKAgeMinutes > 525600 {
+		in.MaxWrappedDEKAgeMinutes = 525600
+	}
 	if in.MaxFieldsPerOperation <= 0 {
 		in.MaxFieldsPerOperation = 64
 	}
@@ -229,36 +287,55 @@ func (s *Service) UpdateDataProtectionPolicy(ctx context.Context, in DataProtect
 	}
 	item = normalizeDataProtectionPolicy(item)
 	_ = s.publishAudit(ctx, "audit.dataprotect.policy_updated", item.TenantID, map[string]interface{}{
-		"allowed_data_algorithms":          item.AllowedDataAlgorithms,
-		"require_aad_for_aead":             item.RequireAADForAEAD,
-		"max_fields_per_operation":         item.MaxFieldsPerOperation,
-		"max_document_bytes":               item.MaxDocumentBytes,
-		"allow_vaultless_tokenization":     item.AllowVaultlessTokenization,
-		"tokenization_mode_policy":         item.TokenizationModePolicy,
-		"token_format_policy":              item.TokenFormatPolicy,
-		"require_token_ttl":                item.RequireTokenTTL,
-		"max_token_ttl_hours":              item.MaxTokenTTLHours,
-		"allow_token_renewal":              item.AllowTokenRenewal,
-		"max_token_renewals":               item.MaxTokenRenewals,
-		"allow_one_time_tokens":            item.AllowOneTimeTokens,
-		"detokenize_allowed_purposes":      item.DetokenizeAllowedPurposes,
-		"detokenize_allowed_workflows":     item.DetokenizeAllowedWorkflows,
-		"require_detokenize_justification": item.RequireDetokenizeJustification,
-		"allow_bulk_tokenize":              item.AllowBulkTokenize,
-		"allow_bulk_detokenize":            item.AllowBulkDetokenize,
-		"allow_redaction_detect_only":      item.AllowRedactionDetectOnly,
-		"allowed_redaction_detectors":      item.AllowedRedactionDetectors,
-		"allowed_redaction_actions":        item.AllowedRedactionActions,
-		"allow_custom_regex_tokens":        item.AllowCustomRegexTokens,
-		"max_custom_regex_length":          item.MaxCustomRegexLength,
-		"max_custom_regex_groups":          item.MaxCustomRegexGroups,
-		"max_token_batch":                  item.MaxTokenBatch,
-		"max_detokenize_batch":             item.MaxDetokenizeBatch,
-		"require_token_context_tags":       item.RequireTokenContextTags,
-		"required_token_context_keys":      item.RequiredTokenContextKeys,
-		"masking_role_policy":              item.MaskingRolePolicy,
-		"token_metadata_retention_days":    item.TokenMetadataRetentionDays,
-		"redaction_event_retention_days":   item.RedactionEventRetentionDays,
+		"allowed_data_algorithms":            item.AllowedDataAlgorithms,
+		"algorithm_profile_policy":           item.AlgorithmProfilePolicy,
+		"require_aad_for_aead":               item.RequireAADForAEAD,
+		"required_aad_claims":                item.RequiredAADClaims,
+		"enforce_aad_tenant_binding":         item.EnforceAADTenantBinding,
+		"allowed_aad_environments":           item.AllowedAADEvironments,
+		"max_fields_per_operation":           item.MaxFieldsPerOperation,
+		"max_document_bytes":                 item.MaxDocumentBytes,
+		"max_app_crypto_request_bytes":       item.MaxAppCryptoRequestBytes,
+		"max_app_crypto_batch_size":          item.MaxAppCryptoBatchSize,
+		"require_symmetric_keys":             item.RequireSymmetricKeys,
+		"require_fips_keys":                  item.RequireFIPSKeys,
+		"min_key_size_bits":                  item.MinKeySizeBits,
+		"allowed_encrypt_field_paths":        item.AllowedEncryptFieldPaths,
+		"allowed_decrypt_field_paths":        item.AllowedDecryptFieldPaths,
+		"denied_decrypt_field_paths":         item.DeniedDecryptFieldPaths,
+		"block_wildcard_field_paths":         item.BlockWildcardFieldPaths,
+		"allow_deterministic_encryption":     item.AllowDeterministicEncryption,
+		"allow_searchable_encryption":        item.AllowSearchableEncryption,
+		"allow_range_search":                 item.AllowRangeSearch,
+		"envelope_kek_allowlist":             item.EnvelopeKEKAllowlist,
+		"max_wrapped_dek_age_minutes":        item.MaxWrappedDEKAgeMinutes,
+		"require_rewrap_on_dek_age_exceeded": item.RequireRewrapOnDEKAgeExceeded,
+		"allow_vaultless_tokenization":       item.AllowVaultlessTokenization,
+		"tokenization_mode_policy":           item.TokenizationModePolicy,
+		"token_format_policy":                item.TokenFormatPolicy,
+		"require_token_ttl":                  item.RequireTokenTTL,
+		"max_token_ttl_hours":                item.MaxTokenTTLHours,
+		"allow_token_renewal":                item.AllowTokenRenewal,
+		"max_token_renewals":                 item.MaxTokenRenewals,
+		"allow_one_time_tokens":              item.AllowOneTimeTokens,
+		"detokenize_allowed_purposes":        item.DetokenizeAllowedPurposes,
+		"detokenize_allowed_workflows":       item.DetokenizeAllowedWorkflows,
+		"require_detokenize_justification":   item.RequireDetokenizeJustification,
+		"allow_bulk_tokenize":                item.AllowBulkTokenize,
+		"allow_bulk_detokenize":              item.AllowBulkDetokenize,
+		"allow_redaction_detect_only":        item.AllowRedactionDetectOnly,
+		"allowed_redaction_detectors":        item.AllowedRedactionDetectors,
+		"allowed_redaction_actions":          item.AllowedRedactionActions,
+		"allow_custom_regex_tokens":          item.AllowCustomRegexTokens,
+		"max_custom_regex_length":            item.MaxCustomRegexLength,
+		"max_custom_regex_groups":            item.MaxCustomRegexGroups,
+		"max_token_batch":                    item.MaxTokenBatch,
+		"max_detokenize_batch":               item.MaxDetokenizeBatch,
+		"require_token_context_tags":         item.RequireTokenContextTags,
+		"required_token_context_keys":        item.RequiredTokenContextKeys,
+		"masking_role_policy":                item.MaskingRolePolicy,
+		"token_metadata_retention_days":      item.TokenMetadataRetentionDays,
+		"redaction_event_retention_days":     item.RedactionEventRetentionDays,
 	})
 	return item, nil
 }
@@ -269,6 +346,349 @@ func (s *Service) mustDataProtectionPolicy(ctx context.Context, tenantID string)
 		return DataProtectionPolicy{}, err
 	}
 	return item, nil
+}
+
+func normalizeLowerKeys(in []string) []string {
+	out := make([]string, 0, len(in))
+	seen := map[string]struct{}{}
+	for _, item := range in {
+		s := strings.ToLower(strings.TrimSpace(item))
+		if s == "" {
+			continue
+		}
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
+}
+
+func normalizeFieldPath(path string) string {
+	p := strings.TrimSpace(path)
+	if p == "" {
+		return ""
+	}
+	if strings.HasPrefix(p, "$.") || p == "$" {
+		return p
+	}
+	if strings.HasPrefix(p, "$") {
+		return "$." + strings.TrimPrefix(p, "$")
+	}
+	return "$." + p
+}
+
+func normalizeFieldPathList(in []string) []string {
+	out := make([]string, 0, len(in))
+	seen := map[string]struct{}{}
+	for _, item := range in {
+		p := normalizeFieldPath(item)
+		if p == "" {
+			continue
+		}
+		if _, ok := seen[p]; ok {
+			continue
+		}
+		seen[p] = struct{}{}
+		out = append(out, p)
+	}
+	return out
+}
+
+func normalizeDataAlgorithmProfilesPolicy(in map[string][]string) map[string][]string {
+	defaults := defaultDataAlgorithmProfilePolicy()
+	out := map[string][]string{}
+	for _, useCase := range []string{"field_level", "envelope", "searchable"} {
+		candidate := defaults[useCase]
+		if supplied, ok := in[useCase]; ok {
+			candidate = supplied
+		} else {
+			for alias, values := range in {
+				switch useCase {
+				case "field_level":
+					if strings.EqualFold(alias, "field-level") || strings.EqualFold(alias, "fle") {
+						candidate = values
+					}
+				case "searchable":
+					if strings.EqualFold(alias, "search") {
+						candidate = values
+					}
+				}
+			}
+		}
+		valid := make([]string, 0, len(candidate))
+		for _, item := range candidate {
+			alg := strings.ToUpper(strings.TrimSpace(item))
+			if containsString(supportedDataProtectAlgorithms, alg) && !containsString(valid, alg) {
+				valid = append(valid, alg)
+			}
+		}
+		if len(valid) == 0 {
+			valid = append(valid, defaults[useCase]...)
+		}
+		out[useCase] = valid
+	}
+	return out
+}
+
+func useCaseAlgorithms(policy DataProtectionPolicy, useCase string) []string {
+	p := normalizeDataProtectionPolicy(policy)
+	k := strings.ToLower(strings.TrimSpace(useCase))
+	switch k {
+	case "field-level", "fle":
+		k = "field_level"
+	case "search":
+		k = "searchable"
+	}
+	values := p.AlgorithmProfilePolicy[k]
+	if len(values) == 0 {
+		return append([]string{}, defaultDataAlgorithmProfilePolicy()[k]...)
+	}
+	return append([]string{}, values...)
+}
+
+func matchesPathPolicy(pattern string, path string) bool {
+	p := normalizeFieldPath(pattern)
+	t := normalizeFieldPath(path)
+	if p == "" || t == "" {
+		return false
+	}
+	if p == "*" || p == "$.*" {
+		return true
+	}
+	if strings.Contains(p, "*") {
+		prefix := strings.SplitN(p, "*", 2)[0]
+		return strings.HasPrefix(t, prefix)
+	}
+	return strings.EqualFold(p, t)
+}
+
+func hasPathWildcard(path string) bool {
+	p := strings.TrimSpace(path)
+	return strings.Contains(p, "*") || strings.Contains(p, "[") || strings.Contains(p, "]")
+}
+
+func parseAADClaims(aad string) map[string]string {
+	out := map[string]string{}
+	raw := strings.TrimSpace(aad)
+	if raw == "" {
+		return out
+	}
+	if strings.HasPrefix(raw, "{") && strings.HasSuffix(raw, "}") {
+		js := map[string]interface{}{}
+		if err := json.Unmarshal([]byte(raw), &js); err == nil {
+			for k, v := range js {
+				key := strings.ToLower(strings.TrimSpace(k))
+				if key == "" {
+					continue
+				}
+				out[key] = strings.TrimSpace(firstString(v))
+			}
+			return out
+		}
+	}
+	separators := strings.NewReplacer("\n", ",", ";", ",", "&", ",")
+	parts := strings.Split(separators.Replace(raw), ",")
+	for _, part := range parts {
+		token := strings.TrimSpace(part)
+		if token == "" {
+			continue
+		}
+		kv := strings.SplitN(token, "=", 2)
+		if len(kv) != 2 {
+			kv = strings.SplitN(token, ":", 2)
+		}
+		if len(kv) != 2 {
+			continue
+		}
+		key := strings.ToLower(strings.TrimSpace(kv[0]))
+		val := strings.TrimSpace(kv[1])
+		if key == "" || val == "" {
+			continue
+		}
+		out[key] = val
+	}
+	return out
+}
+
+func extractKeyBitsFromAlgorithm(algorithm string) int {
+	re := regexp.MustCompile(`\d{2,5}`)
+	matches := re.FindAllString(strings.ToUpper(strings.TrimSpace(algorithm)), -1)
+	for _, m := range matches {
+		v := extractInt(m)
+		if v >= 64 && v <= 16384 {
+			return v
+		}
+	}
+	return 0
+}
+
+func isFIPSApprovedDataAlgorithm(algorithm string) bool {
+	a := strings.ToUpper(strings.TrimSpace(algorithm))
+	return strings.HasPrefix(a, "AES")
+}
+
+func isTruthy(v interface{}) bool {
+	switch x := v.(type) {
+	case bool:
+		return x
+	case string:
+		s := strings.ToLower(strings.TrimSpace(x))
+		return s == "1" || s == "true" || s == "yes" || s == "on"
+	default:
+		return false
+	}
+}
+
+func (s *Service) enforceAppCryptoPayloadPolicy(policy DataProtectionPolicy, request interface{}, batchCount int) error {
+	if policy.MaxAppCryptoBatchSize > 0 && batchCount > policy.MaxAppCryptoBatchSize {
+		return newServiceError(http.StatusBadRequest, "bad_request", "batch size exceeds configured app crypto policy limit")
+	}
+	if policy.MaxAppCryptoRequestBytes > 0 {
+		if raw, err := json.Marshal(request); err == nil && len(raw) > policy.MaxAppCryptoRequestBytes {
+			return newServiceError(http.StatusBadRequest, "bad_request", "request size exceeds configured app crypto policy limit")
+		}
+	}
+	return nil
+}
+
+func (s *Service) enforceAADContractPolicy(policy DataProtectionPolicy, tenantID string, aad string) error {
+	if !policy.RequireAADForAEAD && len(policy.RequiredAADClaims) == 0 && !policy.EnforceAADTenantBinding && len(policy.AllowedAADEvironments) == 0 {
+		return nil
+	}
+	if strings.TrimSpace(aad) == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data encryption policy")
+	}
+	claims := parseAADClaims(aad)
+	for _, reqClaim := range policy.RequiredAADClaims {
+		if strings.TrimSpace(claims[strings.ToLower(strings.TrimSpace(reqClaim))]) == "" {
+			return newServiceError(http.StatusForbidden, "policy_denied", "aad claim "+reqClaim+" is required by policy")
+		}
+	}
+	if policy.EnforceAADTenantBinding {
+		aadTenant := strings.TrimSpace(firstString(claims["tenant_id"], claims["tenant"]))
+		if aadTenant == "" || !strings.EqualFold(aadTenant, strings.TrimSpace(tenantID)) {
+			return newServiceError(http.StatusForbidden, "policy_denied", "aad tenant binding check failed")
+		}
+	}
+	if len(policy.AllowedAADEvironments) > 0 {
+		env := strings.ToLower(strings.TrimSpace(firstString(claims["env"], claims["environment"])))
+		if env == "" || !containsString(policy.AllowedAADEvironments, env) {
+			return newServiceError(http.StatusForbidden, "policy_denied", "aad environment is blocked by policy")
+		}
+	}
+	return nil
+}
+
+func (s *Service) enforceFieldScopePolicy(policy DataProtectionPolicy, path string, decrypt bool) error {
+	p := normalizeFieldPath(path)
+	if p == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "field path is required")
+	}
+	if policy.BlockWildcardFieldPaths && hasPathWildcard(p) {
+		return newServiceError(http.StatusForbidden, "policy_denied", "wildcard field paths are blocked by policy")
+	}
+	if decrypt {
+		for _, denied := range policy.DeniedDecryptFieldPaths {
+			if matchesPathPolicy(denied, p) {
+				return newServiceError(http.StatusForbidden, "policy_denied", "field path is blocked for decrypt by policy")
+			}
+		}
+		if len(policy.AllowedDecryptFieldPaths) > 0 {
+			allowed := false
+			for _, allowedPath := range policy.AllowedDecryptFieldPaths {
+				if matchesPathPolicy(allowedPath, p) {
+					allowed = true
+					break
+				}
+			}
+			if !allowed {
+				return newServiceError(http.StatusForbidden, "policy_denied", "field path is not allowed for decrypt by policy")
+			}
+		}
+		return nil
+	}
+	if len(policy.AllowedEncryptFieldPaths) > 0 {
+		allowed := false
+		for _, allowedPath := range policy.AllowedEncryptFieldPaths {
+			if matchesPathPolicy(allowedPath, p) {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			return newServiceError(http.StatusForbidden, "policy_denied", "field path is not allowed for encrypt by policy")
+		}
+	}
+	return nil
+}
+
+func (s *Service) enforceUseCaseAlgorithmPolicy(policy DataProtectionPolicy, useCase string, algorithm string) error {
+	alg := strings.ToUpper(strings.TrimSpace(algorithm))
+	if !containsString(policy.AllowedDataAlgorithms, alg) {
+		return newServiceError(http.StatusForbidden, "policy_denied", "algorithm is disabled by data protection policy")
+	}
+	if !containsString(useCaseAlgorithms(policy, useCase), alg) {
+		return newServiceError(http.StatusForbidden, "policy_denied", "algorithm is blocked by data encryption profile policy")
+	}
+	if policy.RequireFIPSKeys && !isFIPSApprovedDataAlgorithm(alg) {
+		return newServiceError(http.StatusForbidden, "policy_denied", "algorithm is not FIPS-approved under current policy")
+	}
+	return nil
+}
+
+func (s *Service) enforceSearchablePolicy(policy DataProtectionPolicy, queryType string) error {
+	if !policy.AllowSearchableEncryption {
+		return newServiceError(http.StatusForbidden, "policy_denied", "searchable encryption is disabled by policy")
+	}
+	if !policy.AllowDeterministicEncryption {
+		return newServiceError(http.StatusForbidden, "policy_denied", "deterministic encryption is disabled by policy")
+	}
+	q := strings.ToLower(strings.TrimSpace(defaultString(queryType, "equality")))
+	switch q {
+	case "", "equality":
+		return nil
+	case "range":
+		if !policy.AllowRangeSearch {
+			return newServiceError(http.StatusForbidden, "policy_denied", "range search is blocked by policy")
+		}
+		return nil
+	default:
+		return newServiceError(http.StatusBadRequest, "bad_request", "query_type must be equality or range")
+	}
+}
+
+func (s *Service) enforceEnvelopePolicyEncrypt(policy DataProtectionPolicy, keyID string) error {
+	if len(policy.EnvelopeKEKAllowlist) > 0 && !containsString(policy.EnvelopeKEKAllowlist, strings.TrimSpace(keyID)) {
+		return newServiceError(http.StatusForbidden, "policy_denied", "selected KEK is blocked by envelope policy")
+	}
+	return nil
+}
+
+func (s *Service) enforceEnvelopePolicyDecrypt(policy DataProtectionPolicy, keyID string, dekCreatedAt string) error {
+	if len(policy.EnvelopeKEKAllowlist) > 0 && !containsString(policy.EnvelopeKEKAllowlist, strings.TrimSpace(keyID)) {
+		return newServiceError(http.StatusForbidden, "policy_denied", "selected KEK is blocked by envelope policy")
+	}
+	if policy.MaxWrappedDEKAgeMinutes <= 0 {
+		return nil
+	}
+	ts := strings.TrimSpace(dekCreatedAt)
+	if ts == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "dek_created_at is required by envelope policy")
+	}
+	createdAt, err := time.Parse(time.RFC3339, ts)
+	if err != nil {
+		return newServiceError(http.StatusBadRequest, "bad_request", "dek_created_at must be RFC3339")
+	}
+	ageLimit := time.Duration(policy.MaxWrappedDEKAgeMinutes) * time.Minute
+	if s.now().Sub(createdAt.UTC()) <= ageLimit {
+		return nil
+	}
+	if policy.RequireRewrapOnDEKAgeExceeded {
+		return newServiceError(http.StatusConflict, "rewrap_required", "wrapped DEK age exceeded policy threshold; re-wrap is required")
+	}
+	return newServiceError(http.StatusForbidden, "policy_denied", "wrapped DEK age exceeded policy threshold")
 }
 
 func (s *Service) CreateTokenVault(ctx context.Context, tenantID string, in TokenVault) (TokenVault, error) {
@@ -1114,14 +1534,23 @@ func (s *Service) EncryptFields(ctx context.Context, req AppFieldRequest) (map[s
 	if err != nil {
 		return nil, err
 	}
+	if err := s.enforceAppCryptoPayloadPolicy(policy, req, len(req.Fields)); err != nil {
+		return nil, err
+	}
 	if len(req.Fields) > policy.MaxFieldsPerOperation {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "field count exceeds configured policy limit")
 	}
-	if !containsString(policy.AllowedDataAlgorithms, strings.ToUpper(algorithm)) {
-		return nil, newServiceError(http.StatusForbidden, "policy_denied", "algorithm is disabled by data protection policy")
+	if err := s.enforceUseCaseAlgorithmPolicy(policy, "field_level", algorithm); err != nil {
+		return nil, err
 	}
-	if policy.RequireAADForAEAD && strings.TrimSpace(req.AAD) == "" {
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data protection policy")
+	if req.Searchable && !policy.AllowSearchableEncryption {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "searchable encryption is disabled by policy")
+	}
+	if strings.EqualFold(algorithm, "AES-SIV") && !policy.AllowDeterministicEncryption {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "deterministic encryption is disabled by policy")
+	}
+	if err := s.enforceAADContractPolicy(policy, req.TenantID, req.AAD); err != nil {
+		return nil, err
 	}
 	if docRaw, jErr := json.Marshal(req.Document); jErr == nil && len(docRaw) > policy.MaxDocumentBytes {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "document size exceeds configured policy limit")
@@ -1129,7 +1558,7 @@ func (s *Service) EncryptFields(ctx context.Context, req AppFieldRequest) (map[s
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt"); err != nil {
 		return nil, err
 	}
-	key, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "field-encrypt")
+	key, err := s.resolveWorkingKeyForDataPolicy(ctx, req.TenantID, req.KeyID, "field-encrypt", policy)
 	if err != nil {
 		return nil, err
 	}
@@ -1138,6 +1567,9 @@ func (s *Service) EncryptFields(ctx context.Context, req AppFieldRequest) (map[s
 	doc := cloneMap(req.Document)
 	done := make([]string, 0, len(req.Fields))
 	for _, field := range uniqueStrings(req.Fields) {
+		if err := s.enforceFieldScopePolicy(policy, field, false); err != nil {
+			return nil, err
+		}
 		val, ok := getPathValue(doc, field)
 		if !ok {
 			continue
@@ -1193,8 +1625,14 @@ func (s *Service) DecryptFields(ctx context.Context, req AppFieldRequest) (map[s
 	if err != nil {
 		return nil, err
 	}
+	if err := s.enforceAppCryptoPayloadPolicy(policy, req, len(req.Fields)); err != nil {
+		return nil, err
+	}
 	if len(req.Fields) > policy.MaxFieldsPerOperation {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "field count exceeds configured policy limit")
+	}
+	if err := s.enforceAADContractPolicy(policy, req.TenantID, req.AAD); err != nil {
+		return nil, err
 	}
 	doc := cloneMap(req.Document)
 	metaByField := map[string]FLEMetadata{}
@@ -1215,6 +1653,9 @@ func (s *Service) DecryptFields(ctx context.Context, req AppFieldRequest) (map[s
 
 	done := make([]string, 0, len(req.Fields))
 	for _, field := range uniqueStrings(req.Fields) {
+		if err := s.enforceFieldScopePolicy(policy, field, true); err != nil {
+			return nil, err
+		}
 		v, ok := getPathValue(doc, field)
 		if !ok {
 			continue
@@ -1227,11 +1668,11 @@ func (s *Service) DecryptFields(ctx context.Context, req AppFieldRequest) (map[s
 		if alg == "" {
 			alg = "AES-GCM"
 		}
-		if !containsString(policy.AllowedDataAlgorithms, alg) {
-			return nil, newServiceError(http.StatusForbidden, "policy_denied", "algorithm is disabled by data protection policy")
+		if err := s.enforceUseCaseAlgorithmPolicy(policy, "field_level", alg); err != nil {
+			return nil, err
 		}
-		if policy.RequireAADForAEAD && strings.TrimSpace(req.AAD) == "" {
-			return nil, newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data protection policy")
+		if strings.EqualFold(alg, "AES-SIV") && !policy.AllowDeterministicEncryption {
+			return nil, newServiceError(http.StatusForbidden, "policy_denied", "deterministic encryption is disabled by policy")
 		}
 		keyID := req.KeyID
 		if keyID == "" {
@@ -1249,7 +1690,7 @@ func (s *Service) DecryptFields(ctx context.Context, req AppFieldRequest) (map[s
 				metered[keyID] = struct{}{}
 			}
 			var err error
-			key, err = s.resolveWorkingKey(ctx, req.TenantID, keyID, "field-encrypt")
+			key, err = s.resolveWorkingKeyForDataPolicy(ctx, req.TenantID, keyID, "field-encrypt", policy)
 			if err != nil {
 				return nil, err
 			}
@@ -1291,10 +1732,26 @@ func (s *Service) EnvelopeEncrypt(ctx context.Context, req EnvelopeRequest) (map
 	if err != nil {
 		return nil, err
 	}
+	if err := s.enforceAppCryptoPayloadPolicy(policy, req, 1); err != nil {
+		return nil, err
+	}
+	if err := s.enforceEnvelopePolicyEncrypt(policy, req.KeyID); err != nil {
+		return nil, err
+	}
+	alg := normalizeFieldAlgorithm(req.Algorithm, false)
+	if err := s.enforceUseCaseAlgorithmPolicy(policy, "envelope", alg); err != nil {
+		return nil, err
+	}
+	if strings.EqualFold(alg, "AES-SIV") && !policy.AllowDeterministicEncryption {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "deterministic encryption is disabled by policy")
+	}
+	if err := s.enforceAADContractPolicy(policy, req.TenantID, req.AAD); err != nil {
+		return nil, err
+	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "wrap"); err != nil {
 		return nil, err
 	}
-	kek, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "envelope-kek")
+	kek, err := s.resolveWorkingKeyForDataPolicy(ctx, req.TenantID, req.KeyID, "envelope-kek", policy)
 	if err != nil {
 		return nil, err
 	}
@@ -1302,13 +1759,6 @@ func (s *Service) EnvelopeEncrypt(ctx context.Context, req EnvelopeRequest) (map
 	dek := randBytes(32)
 	defer pkgcrypto.Zeroize(dek)
 
-	alg := normalizeFieldAlgorithm(req.Algorithm, false)
-	if !containsString(policy.AllowedDataAlgorithms, strings.ToUpper(alg)) {
-		return nil, newServiceError(http.StatusForbidden, "policy_denied", "algorithm is disabled by data protection policy")
-	}
-	if policy.RequireAADForAEAD && strings.TrimSpace(req.AAD) == "" {
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data protection policy")
-	}
 	iv, ciphertext, err := encryptWithAlgorithm(dek, alg, []byte(req.Plaintext), []byte(req.AAD), false)
 	if err != nil {
 		return nil, err
@@ -1326,6 +1776,7 @@ func (s *Service) EnvelopeEncrypt(ctx context.Context, req EnvelopeRequest) (map
 		"iv":             b64(iv),
 		"wrapped_dek":    b64(wrappedDEK),
 		"wrapped_dek_iv": b64(dekIV),
+		"dek_created_at": s.now().Format(time.RFC3339),
 		"algorithm":      alg,
 	}, nil
 }
@@ -1340,10 +1791,26 @@ func (s *Service) EnvelopeDecrypt(ctx context.Context, req EnvelopeRequest) (map
 	if err != nil {
 		return nil, err
 	}
+	if err := s.enforceAppCryptoPayloadPolicy(policy, req, 1); err != nil {
+		return nil, err
+	}
+	alg := normalizeFieldAlgorithm(req.Algorithm, false)
+	if err := s.enforceUseCaseAlgorithmPolicy(policy, "envelope", alg); err != nil {
+		return nil, err
+	}
+	if strings.EqualFold(alg, "AES-SIV") && !policy.AllowDeterministicEncryption {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "deterministic encryption is disabled by policy")
+	}
+	if err := s.enforceAADContractPolicy(policy, req.TenantID, req.AAD); err != nil {
+		return nil, err
+	}
+	if err := s.enforceEnvelopePolicyDecrypt(policy, req.KeyID, req.DEKCreatedAt); err != nil {
+		return nil, err
+	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "unwrap"); err != nil {
 		return nil, err
 	}
-	kek, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "envelope-kek")
+	kek, err := s.resolveWorkingKeyForDataPolicy(ctx, req.TenantID, req.KeyID, "envelope-kek", policy)
 	if err != nil {
 		return nil, err
 	}
@@ -1369,13 +1836,6 @@ func (s *Service) EnvelopeDecrypt(ctx context.Context, req EnvelopeRequest) (map
 	if err != nil {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "iv must be base64")
 	}
-	alg := normalizeFieldAlgorithm(req.Algorithm, false)
-	if !containsString(policy.AllowedDataAlgorithms, strings.ToUpper(alg)) {
-		return nil, newServiceError(http.StatusForbidden, "policy_denied", "algorithm is disabled by data protection policy")
-	}
-	if policy.RequireAADForAEAD && strings.TrimSpace(req.AAD) == "" {
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data protection policy")
-	}
 	pt, err := decryptWithAlgorithm(dek, alg, iv, ct, []byte(req.AAD), false)
 	if err != nil {
 		return nil, err
@@ -1400,16 +1860,22 @@ func (s *Service) SearchableEncrypt(ctx context.Context, req SearchableRequest) 
 	if err != nil {
 		return nil, err
 	}
-	if !containsString(policy.AllowedDataAlgorithms, "AES-SIV") {
-		return nil, newServiceError(http.StatusForbidden, "policy_denied", "AES-SIV is disabled by data protection policy")
+	if err := s.enforceAppCryptoPayloadPolicy(policy, req, 1); err != nil {
+		return nil, err
 	}
-	if policy.RequireAADForAEAD && strings.TrimSpace(req.AAD) == "" {
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data protection policy")
+	if err := s.enforceSearchablePolicy(policy, req.QueryType); err != nil {
+		return nil, err
+	}
+	if err := s.enforceUseCaseAlgorithmPolicy(policy, "searchable", "AES-SIV"); err != nil {
+		return nil, err
+	}
+	if err := s.enforceAADContractPolicy(policy, req.TenantID, req.AAD); err != nil {
+		return nil, err
 	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "encrypt"); err != nil {
 		return nil, err
 	}
-	key, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "searchable")
+	key, err := s.resolveWorkingKeyForDataPolicy(ctx, req.TenantID, req.KeyID, "searchable", policy)
 	if err != nil {
 		return nil, err
 	}
@@ -1434,16 +1900,22 @@ func (s *Service) SearchableDecrypt(ctx context.Context, req SearchableRequest) 
 	if err != nil {
 		return nil, err
 	}
-	if !containsString(policy.AllowedDataAlgorithms, "AES-SIV") {
-		return nil, newServiceError(http.StatusForbidden, "policy_denied", "AES-SIV is disabled by data protection policy")
+	if err := s.enforceAppCryptoPayloadPolicy(policy, req, 1); err != nil {
+		return nil, err
 	}
-	if policy.RequireAADForAEAD && strings.TrimSpace(req.AAD) == "" {
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "aad is required by data protection policy")
+	if err := s.enforceSearchablePolicy(policy, req.QueryType); err != nil {
+		return nil, err
+	}
+	if err := s.enforceUseCaseAlgorithmPolicy(policy, "searchable", "AES-SIV"); err != nil {
+		return nil, err
+	}
+	if err := s.enforceAADContractPolicy(policy, req.TenantID, req.AAD); err != nil {
+		return nil, err
 	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, req.KeyID, "decrypt"); err != nil {
 		return nil, err
 	}
-	key, err := s.resolveWorkingKey(ctx, req.TenantID, req.KeyID, "searchable")
+	key, err := s.resolveWorkingKeyForDataPolicy(ctx, req.TenantID, req.KeyID, "searchable", policy)
 	if err != nil {
 		return nil, err
 	}
@@ -1525,6 +1997,14 @@ func (s *Service) enforceKeycoreMetering(ctx context.Context, tenantID string, k
 }
 
 func (s *Service) resolveWorkingKey(ctx context.Context, tenantID string, keyID string, purpose string) ([]byte, error) {
+	return s.resolveWorkingKeyInternal(ctx, tenantID, keyID, purpose, nil)
+}
+
+func (s *Service) resolveWorkingKeyForDataPolicy(ctx context.Context, tenantID string, keyID string, purpose string, policy DataProtectionPolicy) ([]byte, error) {
+	return s.resolveWorkingKeyInternal(ctx, tenantID, keyID, purpose, &policy)
+}
+
+func (s *Service) resolveWorkingKeyInternal(ctx context.Context, tenantID string, keyID string, purpose string, policy *DataProtectionPolicy) ([]byte, error) {
 	keyID = strings.TrimSpace(keyID)
 	if keyID == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "key_id is required")
@@ -1537,6 +2017,11 @@ func (s *Service) resolveWorkingKey(ctx context.Context, tenantID string, keyID 
 		}
 		if err := validateDataProtectionKeyMetadata(item, purpose); err != nil {
 			return nil, err
+		}
+		if policy != nil {
+			if err := enforceDataEncryptionKeyClassPolicy(*policy, item); err != nil {
+				return nil, err
+			}
 		}
 		if m := firstString(item["material_b64"]); m != "" {
 			if raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(m)); err == nil && len(raw) > 0 {
@@ -1557,6 +2042,42 @@ func (s *Service) resolveWorkingKey(ctx context.Context, tenantID string, keyID 
 	out := keyFromHash(material, "dataprotect-"+purpose)
 	pkgcrypto.Zeroize(material)
 	return out, nil
+}
+
+func enforceDataEncryptionKeyClassPolicy(policy DataProtectionPolicy, item map[string]interface{}) error {
+	keyType := strings.ToLower(strings.TrimSpace(firstString(item["key_type"])))
+	if policy.RequireSymmetricKeys && keyType != "" && keyType != "symmetric" {
+		return newServiceError(http.StatusForbidden, "policy_denied", "selected key type is blocked by key-class binding policy")
+	}
+	alg := strings.ToUpper(strings.TrimSpace(firstString(item["algorithm"])))
+	if policy.RequireFIPSKeys {
+		if flag, ok := item["fips_compliant"]; ok {
+			if !isTruthy(flag) {
+				return newServiceError(http.StatusForbidden, "policy_denied", "selected key is not FIPS-compliant")
+			}
+		} else if !isFIPSApprovedDataAlgorithm(alg) {
+			return newServiceError(http.StatusForbidden, "policy_denied", "selected key algorithm is not FIPS-approved")
+		}
+	}
+	if policy.MinKeySizeBits > 0 {
+		bits := extractInt(item["key_strength"])
+		if bits == 0 {
+			bits = extractInt(item["size"])
+		}
+		if bits == 0 {
+			bits = extractInt(item["key_size"])
+		}
+		if bits == 0 {
+			bits = extractInt(item["bits"])
+		}
+		if bits == 0 {
+			bits = extractKeyBitsFromAlgorithm(alg)
+		}
+		if bits == 0 || bits < policy.MinKeySizeBits {
+			return newServiceError(http.StatusForbidden, "policy_denied", "selected key size/curve does not satisfy minimum key size policy")
+		}
+	}
+	return nil
 }
 
 func buildTokenForVault(vault TokenVault, key []byte, value string) (string, string, map[string]interface{}, error) {

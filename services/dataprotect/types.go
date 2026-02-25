@@ -47,9 +47,28 @@ type Store interface {
 type DataProtectionPolicy struct {
 	TenantID                       string              `json:"tenant_id"`
 	AllowedDataAlgorithms          []string            `json:"allowed_data_algorithms"`
+	AlgorithmProfilePolicy         map[string][]string `json:"algorithm_profile_policy"`
 	RequireAADForAEAD              bool                `json:"require_aad_for_aead"`
+	RequiredAADClaims              []string            `json:"required_aad_claims"`
+	EnforceAADTenantBinding        bool                `json:"enforce_aad_tenant_binding"`
+	AllowedAADEvironments          []string            `json:"allowed_aad_environments"`
 	MaxFieldsPerOperation          int                 `json:"max_fields_per_operation"`
 	MaxDocumentBytes               int                 `json:"max_document_bytes"`
+	MaxAppCryptoRequestBytes       int                 `json:"max_app_crypto_request_bytes"`
+	MaxAppCryptoBatchSize          int                 `json:"max_app_crypto_batch_size"`
+	RequireSymmetricKeys           bool                `json:"require_symmetric_keys"`
+	RequireFIPSKeys                bool                `json:"require_fips_keys"`
+	MinKeySizeBits                 int                 `json:"min_key_size_bits"`
+	AllowedEncryptFieldPaths       []string            `json:"allowed_encrypt_field_paths"`
+	AllowedDecryptFieldPaths       []string            `json:"allowed_decrypt_field_paths"`
+	DeniedDecryptFieldPaths        []string            `json:"denied_decrypt_field_paths"`
+	BlockWildcardFieldPaths        bool                `json:"block_wildcard_field_paths"`
+	AllowDeterministicEncryption   bool                `json:"allow_deterministic_encryption"`
+	AllowSearchableEncryption      bool                `json:"allow_searchable_encryption"`
+	AllowRangeSearch               bool                `json:"allow_range_search"`
+	EnvelopeKEKAllowlist           []string            `json:"envelope_kek_allowlist"`
+	MaxWrappedDEKAgeMinutes        int                 `json:"max_wrapped_dek_age_minutes"`
+	RequireRewrapOnDEKAgeExceeded  bool                `json:"require_rewrap_on_dek_age_exceeded"`
 	AllowVaultlessTokenization     bool                `json:"allow_vaultless_tokenization"`
 	TokenizationModePolicy         map[string][]string `json:"tokenization_mode_policy"`
 	TokenFormatPolicy              map[string][]string `json:"token_format_policy"`
@@ -227,6 +246,7 @@ type EnvelopeRequest struct {
 	IV           string `json:"iv"`
 	WrappedDEK   string `json:"wrapped_dek"`
 	WrappedDEKIV string `json:"wrapped_dek_iv"`
+	DEKCreatedAt string `json:"dek_created_at"`
 	AAD          string `json:"aad"`
 }
 
@@ -236,4 +256,5 @@ type SearchableRequest struct {
 	Plaintext  string `json:"plaintext"`
 	Ciphertext string `json:"ciphertext"`
 	AAD        string `json:"aad"`
+	QueryType  string `json:"query_type"`
 }

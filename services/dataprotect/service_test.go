@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestServiceTokenizationFlow(t *testing.T) {
@@ -362,5 +363,176 @@ func TestServiceDetokenizePolicyEnforcement(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("detokenize with allowed purpose/justification: %v", err)
+	}
+}
+
+func TestServiceDataEncryptionPolicyStrictEnforcement(t *testing.T) {
+	svc, _, _ := newDataProtectService(t)
+	ctx := context.Background()
+	tenantID := "tenant-svc-policy-data-encryption"
+
+	_, err := svc.UpdateDataProtectionPolicy(ctx, DataProtectionPolicy{
+		TenantID:              tenantID,
+		AllowedDataAlgorithms: []string{"AES-GCM", "CHACHA20-POLY1305", "AES-SIV"},
+		AlgorithmProfilePolicy: map[string][]string{
+			"field_level": []string{"AES-GCM"},
+			"envelope":    []string{"AES-GCM"},
+			"searchable":  []string{"AES-SIV"},
+		},
+		RequireAADForAEAD:             true,
+		RequiredAADClaims:             []string{"tenant_id", "app_id"},
+		EnforceAADTenantBinding:       true,
+		AllowedAADEvironments:         []string{"prod"},
+		MaxFieldsPerOperation:         1,
+		MaxDocumentBytes:              262144,
+		MaxAppCryptoRequestBytes:      4096,
+		MaxAppCryptoBatchSize:         1,
+		RequireSymmetricKeys:          true,
+		RequireFIPSKeys:               true,
+		MinKeySizeBits:                256,
+		AllowedEncryptFieldPaths:      []string{"$.ssn"},
+		AllowedDecryptFieldPaths:      []string{"$.ssn"},
+		DeniedDecryptFieldPaths:       []string{"$.pan"},
+		BlockWildcardFieldPaths:       true,
+		AllowDeterministicEncryption:  false,
+		AllowSearchableEncryption:     true,
+		AllowRangeSearch:              false,
+		EnvelopeKEKAllowlist:          []string{"key-1"},
+		MaxWrappedDEKAgeMinutes:       1,
+		RequireRewrapOnDEKAgeExceeded: true,
+	})
+	if err != nil {
+		t.Fatalf("update policy: %v", err)
+	}
+
+	_, err = svc.EncryptFields(ctx, AppFieldRequest{
+		TenantID:  tenantID,
+		KeyID:     "key-1",
+		Algorithm: "CHACHA20-POLY1305",
+		Document: map[string]interface{}{
+			"ssn": "123-45-6789",
+		},
+		Fields: []string{"$.ssn"},
+		AAD:    "tenant_id=" + tenantID + ",app_id=svc-a,env=prod",
+	})
+	if err == nil {
+		t.Fatalf("expected algorithm profile rejection for field_level use case")
+	}
+
+	_, err = svc.EncryptFields(ctx, AppFieldRequest{
+		TenantID:  tenantID,
+		KeyID:     "key-1",
+		Algorithm: "AES-GCM",
+		Document: map[string]interface{}{
+			"ssn": "123-45-6789",
+		},
+		Fields: []string{"$.ssn"},
+		AAD:    "tenant_id=" + tenantID + ",env=prod",
+	})
+	if err == nil {
+		t.Fatalf("expected aad claim policy rejection (missing app_id)")
+	}
+
+	_, err = svc.EncryptFields(ctx, AppFieldRequest{
+		TenantID:  tenantID,
+		KeyID:     "key-1",
+		Algorithm: "AES-GCM",
+		Document: map[string]interface{}{
+			"card": "4111111111111111",
+		},
+		Fields: []string{"$.card"},
+		AAD:    "tenant_id=" + tenantID + ",app_id=svc-a,env=prod",
+	})
+	if err == nil {
+		t.Fatalf("expected field scope rejection for encrypt path")
+	}
+
+	_, err = svc.EncryptFields(ctx, AppFieldRequest{
+		TenantID:  tenantID,
+		KeyID:     "key-1",
+		Algorithm: "AES-GCM",
+		Document: map[string]interface{}{
+			"ssn": "123-45-6789",
+			"pan": "4111111111111111",
+		},
+		Fields: []string{"$.ssn", "$.pan"},
+		AAD:    "tenant_id=" + tenantID + ",app_id=svc-a,env=prod",
+	})
+	if err == nil {
+		t.Fatalf("expected max fields per operation rejection")
+	}
+
+	encOut, err := svc.EncryptFields(ctx, AppFieldRequest{
+		TenantID:  tenantID,
+		KeyID:     "key-1",
+		Algorithm: "AES-GCM",
+		Document: map[string]interface{}{
+			"ssn": "123-45-6789",
+		},
+		Fields: []string{"$.ssn"},
+		AAD:    "tenant_id=" + tenantID + ",app_id=svc-a,env=prod",
+	})
+	if err != nil {
+		t.Fatalf("encrypt with valid policy: %v", err)
+	}
+
+	encDoc, _ := encOut["document"].(map[string]interface{})
+	_, err = svc.DecryptFields(ctx, AppFieldRequest{
+		TenantID:  tenantID,
+		KeyID:     "key-1",
+		Document:  encDoc,
+		Fields:    []string{"$.pan"},
+		AAD:       "tenant_id=" + tenantID + ",app_id=svc-a,env=prod",
+		Algorithm: "AES-GCM",
+	})
+	if err == nil {
+		t.Fatalf("expected decrypt path policy rejection")
+	}
+
+	_, err = svc.EnvelopeEncrypt(ctx, EnvelopeRequest{
+		TenantID:  tenantID,
+		KeyID:     "key-2",
+		Algorithm: "AES-GCM",
+		Plaintext: "hello",
+		AAD:       "tenant_id=" + tenantID + ",app_id=svc-a,env=prod",
+	})
+	if err == nil {
+		t.Fatalf("expected envelope KEK allowlist rejection")
+	}
+
+	envEnc, err := svc.EnvelopeEncrypt(ctx, EnvelopeRequest{
+		TenantID:  tenantID,
+		KeyID:     "key-1",
+		Algorithm: "AES-GCM",
+		Plaintext: "hello",
+		AAD:       "tenant_id=" + tenantID + ",app_id=svc-a,env=prod",
+	})
+	if err != nil {
+		t.Fatalf("envelope encrypt with allowed KEK: %v", err)
+	}
+
+	_, err = svc.EnvelopeDecrypt(ctx, EnvelopeRequest{
+		TenantID:     tenantID,
+		KeyID:        "key-1",
+		Algorithm:    "AES-GCM",
+		Ciphertext:   firstString(envEnc["ciphertext"]),
+		IV:           firstString(envEnc["iv"]),
+		WrappedDEK:   firstString(envEnc["wrapped_dek"]),
+		WrappedDEKIV: firstString(envEnc["wrapped_dek_iv"]),
+		DEKCreatedAt: time.Now().UTC().Add(-2 * time.Minute).Format(time.RFC3339),
+		AAD:          "tenant_id=" + tenantID + ",app_id=svc-a,env=prod",
+	})
+	if err == nil {
+		t.Fatalf("expected envelope rewrap-required rejection for old wrapped DEK")
+	}
+
+	_, err = svc.SearchableEncrypt(ctx, SearchableRequest{
+		TenantID:  tenantID,
+		KeyID:     "key-1",
+		Plaintext: "alice@example.com",
+		AAD:       "tenant_id=" + tenantID + ",app_id=svc-a,env=prod",
+	})
+	if err == nil {
+		t.Fatalf("expected searchable policy rejection when deterministic encryption is disabled")
 	}
 }

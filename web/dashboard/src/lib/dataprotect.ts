@@ -62,9 +62,28 @@ type DataProtectionPolicyResponse = { policy: DataProtectionPolicy };
 export type DataProtectionPolicy = {
   tenant_id: string;
   allowed_data_algorithms: string[];
+  algorithm_profile_policy: Record<string, string[]>;
   require_aad_for_aead: boolean;
+  required_aad_claims: string[];
+  enforce_aad_tenant_binding: boolean;
+  allowed_aad_environments: string[];
   max_fields_per_operation: number;
   max_document_bytes: number;
+  max_app_crypto_request_bytes: number;
+  max_app_crypto_batch_size: number;
+  require_symmetric_keys: boolean;
+  require_fips_keys: boolean;
+  min_key_size_bits: number;
+  allowed_encrypt_field_paths: string[];
+  allowed_decrypt_field_paths: string[];
+  denied_decrypt_field_paths: string[];
+  block_wildcard_field_paths: boolean;
+  allow_deterministic_encryption: boolean;
+  allow_searchable_encryption: boolean;
+  allow_range_search: boolean;
+  envelope_kek_allowlist: string[];
+  max_wrapped_dek_age_minutes: number;
+  require_rewrap_on_dek_age_exceeded: boolean;
   allow_vaultless_tokenization: boolean;
   tokenization_mode_policy: Record<string, string[]>;
   token_format_policy: Record<string, string[]>;
@@ -188,6 +207,7 @@ export type EnvelopeInput = {
   iv?: string;
   wrapped_dek?: string;
   wrapped_dek_iv?: string;
+  dek_created_at?: string;
   aad?: string;
 };
 
@@ -196,6 +216,7 @@ export type SearchableInput = {
   plaintext?: string;
   ciphertext?: string;
   aad?: string;
+  query_type?: "equality" | "range" | string;
 };
 
 export async function listTokenVaults(
