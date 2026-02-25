@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,11 +25,11 @@ func NewSQLStore(db *pkgdb.DB) *SQLStore {
 func (s *SQLStore) CreateTokenVault(ctx context.Context, item TokenVault) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO token_vaults (
-	tenant_id, id, name, mode, token_type, format, key_id, custom_regex, created_at
+	tenant_id, id, name, mode, storage_type, external_provider, external_config_json, external_schema_version, token_type, format, custom_token_format, key_id, custom_regex, created_at
 ) VALUES (
-	$1,$2,$3,$4,$5,$6,$7,$8,CURRENT_TIMESTAMP
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,CURRENT_TIMESTAMP
 )
-`, item.TenantID, item.ID, item.Name, item.Mode, item.TokenType, item.Format, item.KeyID, item.CustomRegex)
+`, item.TenantID, item.ID, item.Name, item.Mode, item.StorageType, item.ExternalProvider, mustJSON(item.ExternalConfig, "{}"), item.ExternalSchemaVersion, item.TokenType, item.Format, item.CustomTokenFormat, item.KeyID, item.CustomRegex)
 	return err
 }
 
@@ -40,7 +41,7 @@ func (s *SQLStore) ListTokenVaults(ctx context.Context, tenantID string, limit i
 		offset = 0
 	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, id, name, mode, token_type, format, key_id, custom_regex, created_at
+SELECT tenant_id, id, name, mode, storage_type, external_provider, external_config_json, external_schema_version, token_type, format, custom_token_format, key_id, custom_regex, created_at
 FROM token_vaults
 WHERE tenant_id = $1
 ORDER BY created_at DESC
@@ -63,7 +64,7 @@ LIMIT $2 OFFSET $3
 
 func (s *SQLStore) GetTokenVault(ctx context.Context, tenantID string, id string) (TokenVault, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, id, name, mode, token_type, format, key_id, custom_regex, created_at
+SELECT tenant_id, id, name, mode, storage_type, external_provider, external_config_json, external_schema_version, token_type, format, custom_token_format, key_id, custom_regex, created_at
 FROM token_vaults
 WHERE tenant_id = $1 AND id = $2
 `, strings.TrimSpace(tenantID), strings.TrimSpace(id))
@@ -378,6 +379,9 @@ SELECT tenant_id,
        allow_vaultless_tokenization,
        tokenization_mode_policy_json,
        token_format_policy_json,
+       custom_token_formats_json,
+       reuse_existing_token_for_same_input,
+       enforce_unique_token_per_vault,
        require_token_ttl,
        max_token_ttl_hours,
        allow_token_renewal,
@@ -418,6 +422,7 @@ WHERE tenant_id = $1
 		envelopeKEKJSON      string
 		modeJSON             string
 		formatJSON           string
+		customFormatsJSON    string
 		purposeJSON          string
 		workflowJSON         string
 		detectorsJSON        string
@@ -454,6 +459,9 @@ WHERE tenant_id = $1
 		&out.AllowVaultlessTokenization,
 		&modeJSON,
 		&formatJSON,
+		&customFormatsJSON,
+		&out.ReuseExistingTokenForSameInput,
+		&out.EnforceUniqueTokenPerVault,
 		&out.RequireTokenTTL,
 		&out.MaxTokenTTLHours,
 		&out.AllowTokenRenewal,
@@ -495,6 +503,7 @@ WHERE tenant_id = $1
 	out.EnvelopeKEKAllowlist = parseJSONArrayString(envelopeKEKJSON)
 	out.TokenizationModePolicy = parseStringSliceMap(modeJSON)
 	out.TokenFormatPolicy = parseStringSliceMap(formatJSON)
+	out.CustomTokenFormats = parseStringMap(customFormatsJSON)
 	out.DetokenizeAllowedPurposes = parseJSONArrayString(purposeJSON)
 	out.DetokenizeAllowedWorkflows = parseJSONArrayString(workflowJSON)
 	out.AllowedRedactionDetectors = parseJSONArrayString(detectorsJSON)
@@ -506,6 +515,8 @@ WHERE tenant_id = $1
 		allowedLocalAlgorithmsJSON string
 		allowedKeyClassesJSON      string
 		forceRemoteOpsJSON         string
+		attestationAKAllowlistJSON string
+		attestationAllowedPCRsJSON string
 	)
 	rowRuntime := s.db.SQL().QueryRowContext(ctx, `
 SELECT require_registered_wrapper,
@@ -522,7 +533,14 @@ SELECT require_registered_wrapper,
        anti_replay_window_sec,
        attested_wrapper_only,
        revoke_on_policy_change,
-       rekey_on_policy_change
+       rekey_on_policy_change,
+       receipt_reconciliation_enabled,
+       receipt_heartbeat_sec,
+       receipt_missing_grace_sec,
+       require_tpm_attestation,
+       require_non_exportable_wrapper_keys,
+       attestation_ak_allowlist_json,
+       attestation_allowed_pcrs_json
 FROM data_protection_policy
 WHERE tenant_id = $1
 `, strings.TrimSpace(tenantID))
@@ -542,12 +560,21 @@ WHERE tenant_id = $1
 		&out.AttestedWrapperOnly,
 		&out.RevokeOnPolicyChange,
 		&out.RekeyOnPolicyChange,
+		&out.ReceiptReconciliationEnabled,
+		&out.ReceiptHeartbeatSec,
+		&out.ReceiptMissingGraceSec,
+		&out.RequireTPMAttestation,
+		&out.RequireNonExportableWrapperKey,
+		&attestationAKAllowlistJSON,
+		&attestationAllowedPCRsJSON,
 	); err != nil {
 		return DataProtectionPolicy{}, err
 	}
 	out.AllowedLocalAlgorithms = parseJSONArrayString(allowedLocalAlgorithmsJSON)
 	out.AllowedKeyClassesForLocal = parseJSONArrayString(allowedKeyClassesJSON)
 	out.ForceRemoteOps = parseJSONArrayString(forceRemoteOpsJSON)
+	out.AttestationAKAllowlist = parseJSONArrayString(attestationAKAllowlistJSON)
+	out.AttestationAllowedPCRs = parseStringSliceMap(attestationAllowedPCRsJSON)
 	return out, nil
 }
 
@@ -581,6 +608,9 @@ INSERT INTO data_protection_policy (
     allow_vaultless_tokenization,
     tokenization_mode_policy_json,
     token_format_policy_json,
+    custom_token_formats_json,
+    reuse_existing_token_for_same_input,
+    enforce_unique_token_per_vault,
     require_token_ttl,
     max_token_ttl_hours,
     allow_token_renewal,
@@ -607,7 +637,7 @@ INSERT INTO data_protection_policy (
     updated_by,
     updated_at
 ) VALUES (
-    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,CURRENT_TIMESTAMP
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,$52,$53,$54,CURRENT_TIMESTAMP
 )
 ON CONFLICT (tenant_id) DO UPDATE SET
     allowed_data_algorithms_json = EXCLUDED.allowed_data_algorithms_json,
@@ -636,6 +666,9 @@ ON CONFLICT (tenant_id) DO UPDATE SET
     allow_vaultless_tokenization = EXCLUDED.allow_vaultless_tokenization,
     tokenization_mode_policy_json = EXCLUDED.tokenization_mode_policy_json,
     token_format_policy_json = EXCLUDED.token_format_policy_json,
+    custom_token_formats_json = EXCLUDED.custom_token_formats_json,
+    reuse_existing_token_for_same_input = EXCLUDED.reuse_existing_token_for_same_input,
+    enforce_unique_token_per_vault = EXCLUDED.enforce_unique_token_per_vault,
     require_token_ttl = EXCLUDED.require_token_ttl,
     max_token_ttl_hours = EXCLUDED.max_token_ttl_hours,
     allow_token_renewal = EXCLUDED.allow_token_renewal,
@@ -688,6 +721,9 @@ RETURNING tenant_id,
           allow_vaultless_tokenization,
           tokenization_mode_policy_json,
           token_format_policy_json,
+          custom_token_formats_json,
+          reuse_existing_token_for_same_input,
+          enforce_unique_token_per_vault,
           require_token_ttl,
           max_token_ttl_hours,
           allow_token_renewal,
@@ -740,6 +776,9 @@ RETURNING tenant_id,
 		item.AllowVaultlessTokenization,
 		mustJSON(item.TokenizationModePolicy, "{}"),
 		mustJSON(item.TokenFormatPolicy, "{}"),
+		mustJSON(item.CustomTokenFormats, "{}"),
+		item.ReuseExistingTokenForSameInput,
+		item.EnforceUniqueTokenPerVault,
 		item.RequireTokenTTL,
 		item.MaxTokenTTLHours,
 		item.AllowTokenRenewal,
@@ -776,6 +815,7 @@ RETURNING tenant_id,
 		envelopeKEKJSON      string
 		modeJSON             string
 		formatJSON           string
+		customFormatsJSON    string
 		purposeJSON          string
 		workflowJSON         string
 		detectorsJSON        string
@@ -812,6 +852,9 @@ RETURNING tenant_id,
 		&out.AllowVaultlessTokenization,
 		&modeJSON,
 		&formatJSON,
+		&customFormatsJSON,
+		&out.ReuseExistingTokenForSameInput,
+		&out.EnforceUniqueTokenPerVault,
 		&out.RequireTokenTTL,
 		&out.MaxTokenTTLHours,
 		&out.AllowTokenRenewal,
@@ -850,6 +893,7 @@ RETURNING tenant_id,
 	out.EnvelopeKEKAllowlist = parseJSONArrayString(envelopeKEKJSON)
 	out.TokenizationModePolicy = parseStringSliceMap(modeJSON)
 	out.TokenFormatPolicy = parseStringSliceMap(formatJSON)
+	out.CustomTokenFormats = parseStringMap(customFormatsJSON)
 	out.DetokenizeAllowedPurposes = parseJSONArrayString(purposeJSON)
 	out.DetokenizeAllowedWorkflows = parseJSONArrayString(workflowJSON)
 	out.AllowedRedactionDetectors = parseJSONArrayString(detectorsJSON)
@@ -873,7 +917,14 @@ SET require_registered_wrapper = $2,
     anti_replay_window_sec = $13,
     attested_wrapper_only = $14,
     revoke_on_policy_change = $15,
-    rekey_on_policy_change = $16
+    rekey_on_policy_change = $16,
+    receipt_reconciliation_enabled = $17,
+    receipt_heartbeat_sec = $18,
+    receipt_missing_grace_sec = $19,
+    require_tpm_attestation = $20,
+    require_non_exportable_wrapper_keys = $21,
+    attestation_ak_allowlist_json = $22,
+    attestation_allowed_pcrs_json = $23
 WHERE tenant_id = $1
 `, out.TenantID,
 		item.RequireRegisteredWrapper,
@@ -891,6 +942,13 @@ WHERE tenant_id = $1
 		item.AttestedWrapperOnly,
 		item.RevokeOnPolicyChange,
 		item.RekeyOnPolicyChange,
+		item.ReceiptReconciliationEnabled,
+		item.ReceiptHeartbeatSec,
+		item.ReceiptMissingGraceSec,
+		item.RequireTPMAttestation,
+		item.RequireNonExportableWrapperKey,
+		mustJSON(item.AttestationAKAllowlist, "[]"),
+		mustJSON(item.AttestationAllowedPCRs, "{}"),
 	); err != nil {
 		return DataProtectionPolicy{}, err
 	}
@@ -909,6 +967,16 @@ WHERE tenant_id = $1
 	out.AttestedWrapperOnly = item.AttestedWrapperOnly
 	out.RevokeOnPolicyChange = item.RevokeOnPolicyChange
 	out.RekeyOnPolicyChange = item.RekeyOnPolicyChange
+	out.ReceiptReconciliationEnabled = item.ReceiptReconciliationEnabled
+	out.ReceiptHeartbeatSec = item.ReceiptHeartbeatSec
+	out.ReceiptMissingGraceSec = item.ReceiptMissingGraceSec
+	out.RequireTPMAttestation = item.RequireTPMAttestation
+	out.RequireNonExportableWrapperKey = item.RequireNonExportableWrapperKey
+	out.AttestationAKAllowlist = append([]string{}, item.AttestationAKAllowlist...)
+	out.AttestationAllowedPCRs = map[string][]string{}
+	for k, v := range item.AttestationAllowedPCRs {
+		out.AttestationAllowedPCRs[k] = append([]string{}, v...)
+	}
 	return out, nil
 }
 
@@ -1143,6 +1211,204 @@ WHERE tenant_id = $1 AND wrapper_id = $2 AND nonce = $3
 	return item, err
 }
 
+func (s *SQLStore) ListFieldEncryptionLeaseReceiptStates(ctx context.Context, limit int) ([]FieldEncryptionLeaseReceiptState, error) {
+	if limit <= 0 || limit > 5000 {
+		limit = 500
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT l.tenant_id,
+       l.lease_id,
+       l.wrapper_id,
+       l.policy_hash,
+       l.issued_at,
+       l.expires_at,
+       COALESCE(MAX(r.created_at), NULL) AS last_receipt_at,
+       COUNT(r.receipt_id) AS receipt_count
+FROM field_encryption_leases l
+LEFT JOIN field_encryption_usage_receipts r
+  ON r.tenant_id = l.tenant_id
+ AND r.lease_id = l.lease_id
+WHERE l.revoked = FALSE
+  AND l.expires_at > CURRENT_TIMESTAMP
+GROUP BY l.tenant_id, l.lease_id, l.wrapper_id, l.policy_hash, l.issued_at, l.expires_at
+ORDER BY l.issued_at ASC
+LIMIT $1
+`, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]FieldEncryptionLeaseReceiptState, 0)
+	for rows.Next() {
+		var (
+			item           FieldEncryptionLeaseReceiptState
+			issuedRaw      interface{}
+			expiresRaw     interface{}
+			lastReceiptRaw interface{}
+		)
+		if err := rows.Scan(
+			&item.TenantID,
+			&item.LeaseID,
+			&item.WrapperID,
+			&item.PolicyHash,
+			&issuedRaw,
+			&expiresRaw,
+			&lastReceiptRaw,
+			&item.ReceiptCount,
+		); err != nil {
+			return nil, err
+		}
+		item.IssuedAt = parseTimeValue(issuedRaw)
+		item.ExpiresAt = parseTimeValue(expiresRaw)
+		item.LastReceiptAt = parseTimeValue(lastReceiptRaw)
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) UpsertFieldProtectionProfile(ctx context.Context, item FieldProtectionProfile) (FieldProtectionProfile, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+INSERT INTO field_protection_profiles (
+	tenant_id, profile_id, name, app_id, wrapper_id, status, priority, cache_ttl_sec, policy_hash, rules_json, metadata_json, updated_by, created_at, updated_at
+) VALUES (
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+)
+ON CONFLICT (tenant_id, profile_id) DO UPDATE SET
+	name = EXCLUDED.name,
+	app_id = EXCLUDED.app_id,
+	wrapper_id = EXCLUDED.wrapper_id,
+	status = EXCLUDED.status,
+	priority = EXCLUDED.priority,
+	cache_ttl_sec = EXCLUDED.cache_ttl_sec,
+	policy_hash = EXCLUDED.policy_hash,
+	rules_json = EXCLUDED.rules_json,
+	metadata_json = EXCLUDED.metadata_json,
+	updated_by = EXCLUDED.updated_by,
+	updated_at = CURRENT_TIMESTAMP
+RETURNING tenant_id, profile_id, name, app_id, wrapper_id, status, priority, cache_ttl_sec, policy_hash, rules_json, metadata_json, updated_by, created_at, updated_at
+`, strings.TrimSpace(item.TenantID), strings.TrimSpace(item.ProfileID), strings.TrimSpace(item.Name), strings.TrimSpace(item.AppID), strings.TrimSpace(item.WrapperID), strings.TrimSpace(item.Status), item.Priority, item.CacheTTLSeconds, strings.TrimSpace(item.PolicyHash), mustJSON(item.Rules, "[]"), mustJSON(item.Metadata, "{}"), strings.TrimSpace(item.UpdatedBy))
+	out, err := scanFieldProtectionProfile(row)
+	if err != nil {
+		return FieldProtectionProfile{}, err
+	}
+	return out, nil
+}
+
+func (s *SQLStore) GetFieldProtectionProfile(ctx context.Context, tenantID string, profileID string) (FieldProtectionProfile, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, profile_id, name, app_id, wrapper_id, status, priority, cache_ttl_sec, policy_hash, rules_json, metadata_json, updated_by, created_at, updated_at
+FROM field_protection_profiles
+WHERE tenant_id = $1 AND profile_id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(profileID))
+	item, err := scanFieldProtectionProfile(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return FieldProtectionProfile{}, errNotFound
+	}
+	return item, err
+}
+
+func (s *SQLStore) ListFieldProtectionProfiles(ctx context.Context, tenantID string, appID string, wrapperID string, status string, limit int, offset int) ([]FieldProtectionProfile, error) {
+	if limit <= 0 || limit > 1000 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	tenantID = strings.TrimSpace(tenantID)
+	appID = strings.TrimSpace(appID)
+	wrapperID = strings.TrimSpace(wrapperID)
+	status = strings.TrimSpace(status)
+	query := `
+SELECT tenant_id, profile_id, name, app_id, wrapper_id, status, priority, cache_ttl_sec, policy_hash, rules_json, metadata_json, updated_by, created_at, updated_at
+FROM field_protection_profiles
+WHERE tenant_id = $1`
+	args := []interface{}{tenantID}
+	next := 2
+	if appID != "" {
+		query += " AND app_id = $" + strconv.Itoa(next)
+		args = append(args, appID)
+		next++
+	}
+	if wrapperID != "" {
+		query += " AND wrapper_id = $" + strconv.Itoa(next)
+		args = append(args, wrapperID)
+		next++
+	}
+	if status != "" {
+		query += " AND LOWER(status) = LOWER($" + strconv.Itoa(next) + ")"
+		args = append(args, status)
+		next++
+	}
+	query += " ORDER BY priority ASC, updated_at DESC LIMIT $" + strconv.Itoa(next) + " OFFSET $" + strconv.Itoa(next+1)
+	args = append(args, limit, offset)
+	rows, err := s.db.SQL().QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]FieldProtectionProfile, 0)
+	for rows.Next() {
+		item, err := scanFieldProtectionProfile(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) ResolveFieldProtectionProfiles(ctx context.Context, tenantID string, appID string, wrapperID string, limit int) ([]FieldProtectionProfile, error) {
+	if limit <= 0 || limit > 5000 {
+		limit = 1000
+	}
+	tenantID = strings.TrimSpace(tenantID)
+	appID = strings.TrimSpace(appID)
+	wrapperID = strings.TrimSpace(wrapperID)
+	if appID == "" {
+		appID = "*"
+	}
+	if wrapperID == "" {
+		wrapperID = "*"
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, profile_id, name, app_id, wrapper_id, status, priority, cache_ttl_sec, policy_hash, rules_json, metadata_json, updated_by, created_at, updated_at
+FROM field_protection_profiles
+WHERE tenant_id = $1
+  AND LOWER(status) = 'active'
+  AND (app_id = $2 OR app_id = '*' OR app_id = '')
+  AND (wrapper_id = $3 OR wrapper_id = '*' OR wrapper_id = '')
+ORDER BY priority ASC, updated_at DESC
+LIMIT $4
+`, tenantID, appID, wrapperID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]FieldProtectionProfile, 0)
+	for rows.Next() {
+		item, err := scanFieldProtectionProfile(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) DeleteFieldProtectionProfile(ctx context.Context, tenantID string, profileID string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM field_protection_profiles
+WHERE tenant_id = $1 AND profile_id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(profileID))
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
 func scanFieldEncryptionWrapperChallenge(scanner interface {
 	Scan(dest ...interface{}) error
 }) (FieldEncryptionWrapperChallenge, error) {
@@ -1185,11 +1451,11 @@ func scanFieldEncryptionLease(scanner interface {
 	Scan(dest ...interface{}) error
 }) (FieldEncryptionLease, error) {
 	var (
-		item          FieldEncryptionLease
-		leasePackage  string
-		expiresRaw    interface{}
-		issuedRaw     interface{}
-		updatedRaw    interface{}
+		item         FieldEncryptionLease
+		leasePackage string
+		expiresRaw   interface{}
+		issuedRaw    interface{}
+		updatedRaw   interface{}
 	)
 	if err := scanner.Scan(&item.TenantID, &item.LeaseID, &item.WrapperID, &item.KeyID, &item.Operation, &leasePackage, &item.PolicyHash, &item.RevocationCounter, &item.MaxOps, &item.UsedOps, &expiresRaw, &item.Revoked, &item.RevokeReason, &issuedRaw, &updatedRaw); err != nil {
 		return FieldEncryptionLease{}, err
@@ -1217,17 +1483,84 @@ func scanFieldEncryptionUsageReceipt(scanner interface {
 	return item, nil
 }
 
+func scanFieldProtectionProfile(scanner interface {
+	Scan(dest ...interface{}) error
+}) (FieldProtectionProfile, error) {
+	var (
+		item       FieldProtectionProfile
+		rulesJSON  string
+		metadataJS string
+		createdRaw interface{}
+		updatedRaw interface{}
+	)
+	if err := scanner.Scan(
+		&item.TenantID,
+		&item.ProfileID,
+		&item.Name,
+		&item.AppID,
+		&item.WrapperID,
+		&item.Status,
+		&item.Priority,
+		&item.CacheTTLSeconds,
+		&item.PolicyHash,
+		&rulesJSON,
+		&metadataJS,
+		&item.UpdatedBy,
+		&createdRaw,
+		&updatedRaw,
+	); err != nil {
+		return FieldProtectionProfile{}, err
+	}
+	item.Rules = parseFieldProtectionRules(rulesJSON)
+	item.Metadata = parseStringMap(metadataJS)
+	item.CreatedAt = parseTimeValue(createdRaw)
+	item.UpdatedAt = parseTimeValue(updatedRaw)
+	return item, nil
+}
+
+func parseFieldProtectionRules(v string) []FieldProtectionRule {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return []FieldProtectionRule{}
+	}
+	out := make([]FieldProtectionRule, 0)
+	_ = json.Unmarshal([]byte(v), &out)
+	if out == nil {
+		return []FieldProtectionRule{}
+	}
+	return out
+}
+
 func scanTokenVault(scanner interface {
 	Scan(dest ...interface{}) error
 }) (TokenVault, error) {
 	var (
-		item       TokenVault
-		createdRaw interface{}
+		item               TokenVault
+		externalConfigJSON string
+		createdRaw         interface{}
 	)
-	if err := scanner.Scan(&item.TenantID, &item.ID, &item.Name, &item.Mode, &item.TokenType, &item.Format, &item.KeyID, &item.CustomRegex, &createdRaw); err != nil {
+	if err := scanner.Scan(
+		&item.TenantID,
+		&item.ID,
+		&item.Name,
+		&item.Mode,
+		&item.StorageType,
+		&item.ExternalProvider,
+		&externalConfigJSON,
+		&item.ExternalSchemaVersion,
+		&item.TokenType,
+		&item.Format,
+		&item.CustomTokenFormat,
+		&item.KeyID,
+		&item.CustomRegex,
+		&createdRaw,
+	); err != nil {
 		return TokenVault{}, err
 	}
 	item.Mode = normalizeTokenMode(item.Mode)
+	item.StorageType = normalizeTokenStorageType(item.StorageType)
+	item.ExternalProvider = normalizeExternalVaultProvider(item.ExternalProvider)
+	item.ExternalConfig = parseStringMap(externalConfigJSON)
 	item.CreatedAt = parseTimeValue(createdRaw)
 	return item, nil
 }

@@ -64,6 +64,13 @@ type Store interface {
 
 	CreateFieldEncryptionUsageReceipt(ctx context.Context, item FieldEncryptionUsageReceipt) error
 	GetFieldEncryptionUsageReceiptByNonce(ctx context.Context, tenantID string, wrapperID string, nonce string) (FieldEncryptionUsageReceipt, error)
+	ListFieldEncryptionLeaseReceiptStates(ctx context.Context, limit int) ([]FieldEncryptionLeaseReceiptState, error)
+
+	UpsertFieldProtectionProfile(ctx context.Context, item FieldProtectionProfile) (FieldProtectionProfile, error)
+	GetFieldProtectionProfile(ctx context.Context, tenantID string, profileID string) (FieldProtectionProfile, error)
+	ListFieldProtectionProfiles(ctx context.Context, tenantID string, appID string, wrapperID string, status string, limit int, offset int) ([]FieldProtectionProfile, error)
+	ResolveFieldProtectionProfiles(ctx context.Context, tenantID string, appID string, wrapperID string, limit int) ([]FieldProtectionProfile, error)
+	DeleteFieldProtectionProfile(ctx context.Context, tenantID string, profileID string) error
 }
 
 type DataProtectionPolicy struct {
@@ -94,6 +101,9 @@ type DataProtectionPolicy struct {
 	AllowVaultlessTokenization     bool                `json:"allow_vaultless_tokenization"`
 	TokenizationModePolicy         map[string][]string `json:"tokenization_mode_policy"`
 	TokenFormatPolicy              map[string][]string `json:"token_format_policy"`
+	CustomTokenFormats             map[string]string   `json:"custom_token_formats"`
+	ReuseExistingTokenForSameInput bool               `json:"reuse_existing_token_for_same_input"`
+	EnforceUniqueTokenPerVault     bool               `json:"enforce_unique_token_per_vault"`
 	RequireTokenTTL                bool                `json:"require_token_ttl"`
 	MaxTokenTTLHours               int                 `json:"max_token_ttl_hours"`
 	AllowTokenRenewal              bool                `json:"allow_token_renewal"`
@@ -132,6 +142,13 @@ type DataProtectionPolicy struct {
 	AttestedWrapperOnly            bool                `json:"attested_wrapper_only"`
 	RevokeOnPolicyChange           bool                `json:"revoke_on_policy_change"`
 	RekeyOnPolicyChange            bool                `json:"rekey_on_policy_change"`
+	ReceiptReconciliationEnabled   bool                `json:"receipt_reconciliation_enabled"`
+	ReceiptHeartbeatSec            int                 `json:"receipt_heartbeat_sec"`
+	ReceiptMissingGraceSec         int                 `json:"receipt_missing_grace_sec"`
+	RequireTPMAttestation          bool                `json:"require_tpm_attestation"`
+	RequireNonExportableWrapperKey bool                `json:"require_non_exportable_wrapper_keys"`
+	AttestationAKAllowlist         []string            `json:"attestation_ak_allowlist"`
+	AttestationAllowedPCRs         map[string][]string `json:"attestation_allowed_pcrs"`
 	UpdatedBy                      string              `json:"updated_by,omitempty"`
 	UpdatedAt                      time.Time           `json:"updated_at"`
 }
@@ -203,16 +220,99 @@ type FieldEncryptionUsageReceipt struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+type FieldEncryptionLeaseReceiptState struct {
+	TenantID      string    `json:"tenant_id"`
+	LeaseID       string    `json:"lease_id"`
+	WrapperID     string    `json:"wrapper_id"`
+	PolicyHash    string    `json:"policy_hash"`
+	IssuedAt      time.Time `json:"issued_at"`
+	ExpiresAt     time.Time `json:"expires_at"`
+	LastReceiptAt time.Time `json:"last_receipt_at,omitempty"`
+	ReceiptCount  int       `json:"receipt_count"`
+}
+
+type FieldProtectionRule struct {
+	RuleID             string            `json:"rule_id"`
+	DataClass          string            `json:"data_class,omitempty"`
+	TableName          string            `json:"table,omitempty"`
+	ColumnName         string            `json:"column,omitempty"`
+	JSONPath           string            `json:"json_path,omitempty"`
+	WriteAction        string            `json:"write_action"`
+	ReadAction         string            `json:"read_action"`
+	Algorithm          string            `json:"algorithm,omitempty"`
+	KeyID              string            `json:"key_id,omitempty"`
+	TokenVaultID       string            `json:"token_vault_id,omitempty"`
+	MaskPattern        string            `json:"mask_pattern,omitempty"`
+	RedactionPolicyID  string            `json:"redaction_policy_id,omitempty"`
+	AllowedDecryptRoles []string         `json:"allowed_decrypt_roles,omitempty"`
+	MaskedRoles        []string          `json:"masked_roles,omitempty"`
+	TokenOnlyRoles     []string          `json:"token_only_roles,omitempty"`
+	AllowedPurposes    []string          `json:"allowed_purposes,omitempty"`
+	AllowedWorkflows   []string          `json:"allowed_workflows,omitempty"`
+	Metadata           map[string]string `json:"metadata,omitempty"`
+}
+
+type FieldProtectionProfile struct {
+	TenantID         string               `json:"tenant_id"`
+	ProfileID        string               `json:"profile_id"`
+	Name             string               `json:"name"`
+	AppID            string               `json:"app_id"`
+	WrapperID        string               `json:"wrapper_id"`
+	Status           string               `json:"status"`
+	Priority         int                  `json:"priority"`
+	CacheTTLSeconds  int                  `json:"cache_ttl_sec"`
+	PolicyHash       string               `json:"policy_hash"`
+	Rules            []FieldProtectionRule `json:"rules"`
+	Metadata         map[string]string    `json:"metadata,omitempty"`
+	UpdatedBy        string               `json:"updated_by,omitempty"`
+	CreatedAt        time.Time            `json:"created_at"`
+	UpdatedAt        time.Time            `json:"updated_at"`
+}
+
+type FieldProtectionResolvedRule struct {
+	ProfileID   string `json:"profile_id"`
+	ProfileName string `json:"profile_name"`
+	Priority    int    `json:"priority"`
+	FieldProtectionRule
+}
+
+type FieldProtectionResolveRequest struct {
+	TenantID     string `json:"tenant_id"`
+	AppID        string `json:"app_id"`
+	WrapperID    string `json:"wrapper_id"`
+	Role         string `json:"role,omitempty"`
+	Purpose      string `json:"purpose,omitempty"`
+	Workflow     string `json:"workflow,omitempty"`
+	AuthToken    string `json:"-"`
+	ClientCertFP string `json:"-"`
+}
+
+type FieldProtectionPolicyBundle struct {
+	TenantID         string                      `json:"tenant_id"`
+	AppID            string                      `json:"app_id"`
+	WrapperID        string                      `json:"wrapper_id"`
+	ETag             string                      `json:"etag"`
+	CacheTTLSeconds  int                         `json:"cache_ttl_sec"`
+	GeneratedAt      time.Time                   `json:"generated_at"`
+	Profiles         []FieldProtectionProfile    `json:"profiles"`
+	Rules            []FieldProtectionResolvedRule `json:"rules"`
+}
+
 type TokenVault struct {
-	ID          string    `json:"id"`
-	TenantID    string    `json:"tenant_id"`
-	Name        string    `json:"name"`
-	Mode        string    `json:"mode"`
-	TokenType   string    `json:"token_type"`
-	Format      string    `json:"format"`
-	KeyID       string    `json:"key_id"`
-	CustomRegex string    `json:"custom_regex,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID                  string            `json:"id"`
+	TenantID            string            `json:"tenant_id"`
+	Name                string            `json:"name"`
+	Mode                string            `json:"mode"`
+	StorageType         string            `json:"storage_type"`
+	ExternalProvider    string            `json:"external_provider,omitempty"`
+	ExternalConfig      map[string]string `json:"external_config,omitempty"`
+	ExternalSchemaVersion string          `json:"external_schema_version,omitempty"`
+	TokenType           string            `json:"token_type"`
+	Format              string            `json:"format"`
+	CustomTokenFormat   string            `json:"custom_token_format,omitempty"`
+	KeyID               string            `json:"key_id"`
+	CustomRegex         string            `json:"custom_regex,omitempty"`
+	CreatedAt           time.Time         `json:"created_at"`
 }
 
 type TokenRecord struct {
@@ -284,6 +384,7 @@ type TokenizeRequest struct {
 	KeyID        string            `json:"key_id"`
 	TokenType    string            `json:"token_type"`
 	Format       string            `json:"format"`
+	CustomTokenFormat string       `json:"custom_token_format"`
 	CustomRegex  string            `json:"custom_regex"`
 	Values       []string          `json:"values"`
 	TTLHours     int               `json:"ttl_hours"`
@@ -384,6 +485,9 @@ type FieldEncryptionRegisterCompleteRequest struct {
 	GovernanceApproved bool              `json:"governance_approved"`
 	ApprovedBy         string            `json:"approved_by"`
 	Metadata           map[string]string `json:"metadata"`
+	AttestationEvidenceB64 string `json:"attestation_evidence_b64"`
+	AttestationSignatureB64 string `json:"attestation_signature_b64"`
+	AttestationPublicKeyPEM string `json:"attestation_public_key_pem"`
 }
 
 type FieldEncryptionAuthProfile struct {
@@ -430,6 +534,8 @@ type FieldEncryptionLeaseRequest struct {
 	SignatureB64       string `json:"signature_b64"`
 	RequestedTTLSecond int    `json:"requested_ttl_sec"`
 	RequestedMaxOps    int    `json:"requested_max_ops"`
+	AuthToken          string `json:"-"`
+	ClientCertFP       string `json:"-"`
 }
 
 type FieldEncryptionReceiptRequest struct {
@@ -443,6 +549,8 @@ type FieldEncryptionReceiptRequest struct {
 	Timestamp    string `json:"timestamp"`
 	SignatureB64 string `json:"signature_b64"`
 	ClientStatus string `json:"client_status"`
+	AuthToken    string `json:"-"`
+	ClientCertFP string `json:"-"`
 }
 
 type FieldEncryptionSDKArtifact struct {

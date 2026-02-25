@@ -133,6 +133,7 @@ import {
   completeFieldEncryptionWrapperRegistration,
   createMaskingPolicy,
   createRedactionPolicy,
+  downloadTokenVaultExternalSchema,
   downloadFieldEncryptionWrapperSDK,
   getDataProtectionPolicy,
   initFieldEncryptionWrapperRegistration,
@@ -5386,6 +5387,12 @@ const Workbench=({session,keyCatalog,onToast,subView,fipsMode})=>{
   if(active==="restapi"){
     return <RestAPI session={session} keyCatalog={keyCatalog} onToast={onToast}/>;
   }
+  if(active==="dataenc"){
+    return <DataEncryption session={session} keyCatalog={keyCatalog} onToast={onToast}/>;
+  }
+  if(active==="payment"){
+    return <Payment session={session} keyCatalog={keyCatalog} onToast={onToast}/>;
+  }
   return <Crypto session={session} keyCatalog={keyCatalog} onToast={onToast} fipsMode={fipsMode}/>;
 };
 
@@ -7519,6 +7526,7 @@ const Tokenize=({session,keyCatalog,onToast})=>{
   const [tokenVaultlessType,setTokenVaultlessType]=useState("credit_card");
   const [tokenVaultlessKeyId,setTokenVaultlessKeyId]=useState(defaultVaultKeyId);
   const [tokenVaultlessRegex,setTokenVaultlessRegex]=useState("");
+  const [tokenVaultlessCustomFormat,setTokenVaultlessCustomFormat]=useState("");
   const [tokenInput,setTokenInput]=useState("4111 1111 1111 1111");
   const [tokenBatch,setTokenBatch]=useState(false);
   const [tokenTTL,setTokenTTL]=useState("0");
@@ -7557,6 +7565,7 @@ const Tokenize=({session,keyCatalog,onToast})=>{
   const [vaultName,setVaultName]=useState("");
   const [vaultTokenType,setVaultTokenType]=useState("credit_card");
   const [vaultFormat,setVaultFormat]=useState("format_preserving");
+  const [vaultCustomFormat,setVaultCustomFormat]=useState("");
   const [vaultKeyId,setVaultKeyId]=useState(defaultVaultKeyId);
   const [vaultRegex,setVaultRegex]=useState("");
 
@@ -7667,10 +7676,17 @@ const Tokenize=({session,keyCatalog,onToast})=>{
       if(!String(vaultKeyId||"").trim()){
         throw new Error("Encryption key is required.");
       }
+      if(String(vaultFormat||"").trim()==="custom"&&!String(vaultCustomFormat||"").trim()){
+        throw new Error("Custom format name is required when vault format is custom.");
+      }
+      if(String(vaultTokenType||"").trim()==="custom"&&!String(vaultRegex||"").trim()){
+        throw new Error("Custom regex is required when token type is custom.");
+      }
       const created=await createTokenVault(session,{
         name:String(vaultName||"").trim(),
         token_type:vaultTokenType,
         format:vaultFormat as any,
+        custom_token_format:String(vaultCustomFormat||"").trim()||undefined,
         key_id:vaultKeyId,
         custom_regex:String(vaultRegex||"").trim()||undefined
       });
@@ -7679,6 +7695,7 @@ const Tokenize=({session,keyCatalog,onToast})=>{
       setTokenVaultId(String(created?.id||""));
       setVaultName("");
       setVaultRegex("");
+      setVaultCustomFormat("");
       setModal(null);
       setOutput({status:"vault_created",vault:created});
       onToast?.("Token vault created.");
@@ -7703,6 +7720,9 @@ const Tokenize=({session,keyCatalog,onToast})=>{
           if(String(tokenVaultlessType||"").trim()==="custom"&&!String(tokenVaultlessRegex||"").trim()){
             throw new Error("Custom regex is required when token type is custom.");
           }
+          if(String(tokenVaultlessFormat||"").trim()==="custom"&&!String(tokenVaultlessCustomFormat||"").trim()){
+            throw new Error("Custom token format name is required when vaultless format is custom.");
+          }
         }
         const items=await tokenizeValues(session,{
           mode:tokenMode,
@@ -7710,6 +7730,7 @@ const Tokenize=({session,keyCatalog,onToast})=>{
           key_id:tokenMode==="vaultless"?tokenVaultlessKeyId:"",
           token_type:tokenMode==="vaultless"?tokenVaultlessType:undefined,
           format:tokenMode==="vaultless"?tokenVaultlessFormat:undefined,
+          custom_token_format:tokenMode==="vaultless"?String(tokenVaultlessCustomFormat||"").trim()||undefined:undefined,
           custom_regex:tokenMode==="vaultless"?tokenVaultlessRegex:undefined,
           values,
           ttl_hours:Math.max(0,Math.trunc(Number(tokenTTL||0)))
@@ -7853,7 +7874,7 @@ const Tokenize=({session,keyCatalog,onToast})=>{
             </Sel>
           </FG>
           {tokenMode==="vault"?<>
-            <FG label="Tokenization Method"><Sel value={tokenMethod} onChange={(e)=>setTokenMethod(e.target.value)}><option value="format_preserving">Format Preserving</option><option value="random">Random</option><option value="deterministic">Deterministic</option><option value="irreversible">Irreversible</option></Sel></FG>
+            <FG label="Tokenization Method"><Sel value={tokenMethod} onChange={(e)=>setTokenMethod(e.target.value)}><option value="format_preserving">Format Preserving</option><option value="random">Random</option><option value="deterministic">Deterministic</option><option value="irreversible">Irreversible</option><option value="custom">Custom</option></Sel></FG>
             <FG label="Token Vault" required><Sel value={tokenVaultId} onChange={(e)=>setTokenVaultId(e.target.value)}><option value="">{methodVaults.length?"Select vault":"No vault for selected method"}</option>{methodVaults.map((v)=><option key={v.id} value={v.id}>{v.name} ({v.token_type})</option>)}</Sel></FG>
           </>:<>
             <FG label="Vaultless Format" required>
@@ -7861,8 +7882,10 @@ const Tokenize=({session,keyCatalog,onToast})=>{
                 <option value="format_preserving">Format Preserving</option>
                 <option value="deterministic">Deterministic</option>
                 <option value="irreversible">Irreversible</option>
+                <option value="custom">Custom</option>
               </Sel>
             </FG>
+            {tokenVaultlessFormat==="custom"&&<FG label="Custom Format Name" required><Inp value={tokenVaultlessCustomFormat} onChange={(e)=>setTokenVaultlessCustomFormat(e.target.value)} placeholder="pan_enterprise"/></FG>}
             <FG label="Encryption Key" required hint="Only active symmetric cipher keys are allowed.">
               <Sel value={tokenVaultlessKeyId} onChange={(e)=>setTokenVaultlessKeyId(e.target.value)}>
                 {renderKeyOptions(vaultCapableKeys)}
@@ -7945,9 +7968,10 @@ const Tokenize=({session,keyCatalog,onToast})=>{
         <FG label="Token Type" required><Sel value={vaultTokenType} onChange={(e)=>setVaultTokenType(e.target.value)}><option value="credit_card">credit_card (PAN with Luhn validation)</option><option value="ssn">ssn</option><option value="email">email</option><option value="phone">phone</option><option value="iban">iban</option><option value="custom">custom</option></Sel></FG>
       </Row2>
       <Row2>
-        <FG label="Token Format"><Sel value={vaultFormat} onChange={(e)=>setVaultFormat(e.target.value)}><option value="format_preserving">Format Preserving</option><option value="random">Random</option><option value="deterministic">Deterministic</option><option value="irreversible">Irreversible</option></Sel></FG>
+        <FG label="Token Format"><Sel value={vaultFormat} onChange={(e)=>setVaultFormat(e.target.value)}><option value="format_preserving">Format Preserving</option><option value="random">Random</option><option value="deterministic">Deterministic</option><option value="irreversible">Irreversible</option><option value="custom">Custom</option></Sel></FG>
         <FG label="Encryption Key" required hint="Only active symmetric cipher keys are allowed"><Sel value={vaultKeyId} onChange={(e)=>setVaultKeyId(e.target.value)}>{renderKeyOptions(vaultCapableKeys)}</Sel></FG>
       </Row2>
+      {vaultFormat==="custom"&&<FG label="Custom Format Name" required><Inp value={vaultCustomFormat} onChange={(e)=>setVaultCustomFormat(e.target.value)} placeholder="pan_enterprise"/></FG>}
       <FG label="Custom Regex" hint="Only for custom token type"><Inp value={vaultRegex} onChange={(e)=>setVaultRegex(e.target.value)} placeholder="^\\d{3}-\\d{2}-\\d{4}$" mono/></FG>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)} disabled={submitting}>Cancel</Btn><Btn primary onClick={()=>void submitCreateVault()} disabled={submitting}>{submitting?"Creating...":"Create Vault"}</Btn></div>
     </Modal>
@@ -8208,6 +8232,11 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
   const [completeFingerprint,setCompleteFingerprint]=useState("");
   const [completeApproved,setCompleteApproved]=useState(true);
   const [completeApprovedBy,setCompleteApprovedBy]=useState("");
+  const [completeAttestationEvidenceB64,setCompleteAttestationEvidenceB64]=useState("");
+  const [completeAttestationSignatureB64,setCompleteAttestationSignatureB64]=useState("");
+  const [completeAttestationPublicKeyPEM,setCompleteAttestationPublicKeyPEM]=useState("");
+  const [wrapperRuntimeToken,setWrapperRuntimeToken]=useState("");
+  const [wrapperClientCertFP,setWrapperClientCertFP]=useState("");
 
   const [leaseWrapperID,setLeaseWrapperID]=useState("");
   const [leaseKeyID,setLeaseKeyID]=useState("");
@@ -8279,6 +8308,13 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
       setLeases(Array.isArray(leaseItems)?leaseItems:[]);
       if(!leaseWrapperID&&Array.isArray(wrapperItems)&&wrapperItems.length){
         setLeaseWrapperID(String(wrapperItems[0]?.wrapper_id||""));
+      }
+      const selectedWrapperID=String(leaseWrapperID||wrapperItems?.[0]?.wrapper_id||"");
+      const selectedWrapper=Array.isArray(wrapperItems)
+        ? wrapperItems.find((item:any)=>String(item?.wrapper_id||"")===selectedWrapperID)
+        : null;
+      if(!String(wrapperClientCertFP||"").trim()&&String(selectedWrapper?.cert_fingerprint||"").trim()){
+        setWrapperClientCertFP(String(selectedWrapper?.cert_fingerprint||"").trim());
       }
       if(!leaseKeyID&&keyChoices.length){
         setLeaseKeyID(String(keyChoices[0]?.id||""));
@@ -8366,10 +8402,15 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
         csr_pem:String(completeCSR||"").trim()||undefined,
         cert_fingerprint:String(completeFingerprint||"").trim()||undefined,
         governance_approved:Boolean(completeApproved),
-        approved_by:String(completeApprovedBy||"").trim()||session?.username||"dashboard"
+        approved_by:String(completeApprovedBy||"").trim()||session?.username||"dashboard",
+        attestation_evidence_b64:String(completeAttestationEvidenceB64||"").trim()||undefined,
+        attestation_signature_b64:String(completeAttestationSignatureB64||"").trim()||undefined,
+        attestation_public_key_pem:String(completeAttestationPublicKeyPEM||"").trim()||undefined
       });
       setResultText(JSON.stringify(out,null,2));
       setLeaseWrapperID(String(out?.wrapper?.wrapper_id||leaseWrapperID||""));
+      setWrapperRuntimeToken(String(out?.auth_profile?.token||wrapperRuntimeToken||""));
+      setWrapperClientCertFP(String(out?.wrapper?.cert_fingerprint||completeFingerprint||wrapperClientCertFP||""));
       if(Array.isArray(out?.warnings)&&out.warnings.length){
         onToast?.(`Registration warning: ${String(out.warnings[0]||"")}`);
       }
@@ -8439,7 +8480,9 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
         timestamp:ts,
         signature_b64:String(leaseSignature||"").trim(),
         requested_ttl_sec:Math.max(1,Math.min(86400,Number(leaseTTL||300))),
-        requested_max_ops:Math.max(1,Math.min(1000000,Number(leaseMaxOps||1000)))
+        requested_max_ops:Math.max(1,Math.min(1000000,Number(leaseMaxOps||1000))),
+        wrapper_token:String(wrapperRuntimeToken||"").trim(),
+        client_cert_fingerprint:String(wrapperClientCertFP||"").trim()
       });
       setReceiptLeaseID(String(lease?.lease_id||""));
       setReceiptWrapperID(String(lease?.wrapper_id||""));
@@ -8482,7 +8525,9 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
         nonce,
         timestamp:ts,
         signature_b64:String(receiptSignature||"").trim(),
-        client_status:String(receiptClientStatus||"ok").trim()
+        client_status:String(receiptClientStatus||"ok").trim(),
+        wrapper_token:String(wrapperRuntimeToken||"").trim(),
+        client_cert_fingerprint:String(wrapperClientCertFP||"").trim()
       });
       setReceiptNonce(nonce);
       setReceiptTimestamp(ts);
@@ -8574,6 +8619,11 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
           <FG label="CSR PEM (optional)"><Txt rows={3} value={completeCSR} onChange={(e)=>setCompleteCSR(e.target.value)} mono/></FG>
         </Row2>
         <Row2>
+          <FG label="TPM Attestation Evidence (base64 JSON, optional)"><Txt rows={3} value={completeAttestationEvidenceB64} onChange={(e)=>setCompleteAttestationEvidenceB64(e.target.value)} mono/></FG>
+          <FG label="TPM Attestation Signature (base64, optional)"><Txt rows={3} value={completeAttestationSignatureB64} onChange={(e)=>setCompleteAttestationSignatureB64(e.target.value)} mono/></FG>
+        </Row2>
+        <FG label="TPM Attestation Public Key PEM (optional)"><Txt rows={3} value={completeAttestationPublicKeyPEM} onChange={(e)=>setCompleteAttestationPublicKeyPEM(e.target.value)} mono/></FG>
+        <Row2>
           <FG label="Cert Fingerprint (optional)"><Inp value={completeFingerprint} onChange={(e)=>setCompleteFingerprint(e.target.value)} mono/></FG>
           <Chk label="Governance approved" checked={completeApproved} onChange={()=>setCompleteApproved((v)=>!v)}/>
         </Row2>
@@ -8591,6 +8641,10 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
           <FG label="Requested TTL (sec)"><Inp type="number" min={1} max={86400} value={leaseTTL} onChange={(e)=>setLeaseTTL(e.target.value)}/></FG>
           <FG label="Requested Max Ops"><Inp type="number" min={1} max={1000000} value={leaseMaxOps} onChange={(e)=>setLeaseMaxOps(e.target.value)}/></FG>
         </Row3>
+        <Row2>
+          <FG label="Wrapper Runtime JWT"><Inp value={wrapperRuntimeToken} onChange={(e)=>setWrapperRuntimeToken(e.target.value)} placeholder="From registration auth_profile.token" mono/></FG>
+          <FG label="Client Cert Fingerprint"><Inp value={wrapperClientCertFP} onChange={(e)=>setWrapperClientCertFP(e.target.value)} placeholder="sha256 fingerprint" mono/></FG>
+        </Row2>
         <Row3>
           <FG label="Nonce"><Inp value={leaseNonce} onChange={(e)=>setLeaseNonce(e.target.value)} placeholder="Auto-generated if empty" mono/></FG>
           <FG label="Timestamp (RFC3339)"><Inp value={leaseTimestamp} onChange={(e)=>setLeaseTimestamp(e.target.value)} placeholder="Auto-generated if empty" mono/></FG>
@@ -8676,6 +8730,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
   const [loading,setLoading]=useState(false);
   const [saving,setSaving]=useState(false);
   const [dataPolicy,setDataPolicy]=useState<any>(null);
+  const [attestationAllowedPCRsJSON,setAttestationAllowedPCRsJSON]=useState("{}");
   const dataAlgoOptions=["AES-GCM","AES-SIV","CHACHA20-POLY1305"];
   const useCaseProfiles=[
     {id:"field_level",label:"Field-Level (FLE)"},
@@ -8708,6 +8763,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
   const loadPolicy=async(silent=false)=>{
     if(!session?.token){
       setDataPolicy(null);
+      setAttestationAllowedPCRsJSON("{}");
       return;
     }
     if(!silent){
@@ -8715,6 +8771,8 @@ const DataEncryptionPolicy=({session,onToast})=>{
     }
     try{
       const dp=await getDataProtectionPolicy(session);
+      const attestationAllowedPCRs=(dp?.attestation_allowed_pcrs&&typeof dp.attestation_allowed_pcrs==="object"&&!Array.isArray(dp.attestation_allowed_pcrs))?dp.attestation_allowed_pcrs:{};
+      setAttestationAllowedPCRsJSON(JSON.stringify(attestationAllowedPCRs,null,2));
       setDataPolicy({
         tenant_id:String(dp?.tenant_id||session?.tenantId||""),
         allowed_data_algorithms:Array.isArray(dp?.allowed_data_algorithms)&&dp.allowed_data_algorithms.length?dp.allowed_data_algorithms:dataAlgoOptions,
@@ -8751,18 +8809,19 @@ const DataEncryptionPolicy=({session,onToast})=>{
           iban:["vault","vaultless"],
           email:["vault","vaultless"],
           phone:["vault","vaultless"],
-          custom:["vault","vaultless"],
-          bitlocker:["vault"]
+          custom:["vault","vaultless"]
         },
         token_format_policy:dp?.token_format_policy&&typeof dp.token_format_policy==="object"?dp.token_format_policy:{
-          credit_card:["format_preserving","deterministic","irreversible","random"],
-          ssn:["format_preserving","deterministic","irreversible","random"],
-          iban:["format_preserving","deterministic","irreversible","random"],
-          email:["format_preserving","deterministic","irreversible","random"],
-          phone:["format_preserving","deterministic","irreversible","random"],
-          custom:["format_preserving","deterministic","irreversible","random"],
-          bitlocker:["deterministic","irreversible","random"]
+          credit_card:["format_preserving","deterministic","irreversible","random","custom"],
+          ssn:["format_preserving","deterministic","irreversible","random","custom"],
+          iban:["format_preserving","deterministic","irreversible","random","custom"],
+          email:["format_preserving","deterministic","irreversible","random","custom"],
+          phone:["format_preserving","deterministic","irreversible","random","custom"],
+          custom:["format_preserving","deterministic","irreversible","random","custom"]
         },
+        custom_token_formats:dp?.custom_token_formats&&typeof dp.custom_token_formats==="object"?dp.custom_token_formats:{},
+        reuse_existing_token_for_same_input:Boolean(dp?.reuse_existing_token_for_same_input??true),
+        enforce_unique_token_per_vault:Boolean(dp?.enforce_unique_token_per_vault??true),
         require_token_ttl:Boolean(dp?.require_token_ttl),
         max_token_ttl_hours:Math.max(0,Number(dp?.max_token_ttl_hours||0)),
         allow_token_renewal:Boolean(dp?.allow_token_renewal??true),
@@ -8800,7 +8859,14 @@ const DataEncryptionPolicy=({session,onToast})=>{
         anti_replay_window_sec:Math.max(1,Number(dp?.anti_replay_window_sec||300)),
         attested_wrapper_only:Boolean(dp?.attested_wrapper_only),
         revoke_on_policy_change:Boolean(dp?.revoke_on_policy_change ?? true),
-        rekey_on_policy_change:Boolean(dp?.rekey_on_policy_change)
+        rekey_on_policy_change:Boolean(dp?.rekey_on_policy_change),
+        receipt_reconciliation_enabled:Boolean(dp?.receipt_reconciliation_enabled),
+        receipt_heartbeat_sec:Math.max(1,Number(dp?.receipt_heartbeat_sec||120)),
+        receipt_missing_grace_sec:Math.max(1,Number(dp?.receipt_missing_grace_sec||60)),
+        require_tpm_attestation:Boolean(dp?.require_tpm_attestation),
+        require_non_exportable_wrapper_keys:Boolean(dp?.require_non_exportable_wrapper_keys),
+        attestation_ak_allowlist:Array.isArray(dp?.attestation_ak_allowlist)?dp.attestation_ak_allowlist:[],
+        attestation_allowed_pcrs:attestationAllowedPCRs
       });
     }catch(error){
       if(!silent){
@@ -8824,6 +8890,17 @@ const DataEncryptionPolicy=({session,onToast})=>{
     }
     if(!dataPolicy){
       onToast?.("Policy settings are not loaded.");
+      return;
+    }
+    let attestationAllowedPCRs:any={};
+    try{
+      const parsed=JSON.parse(String(attestationAllowedPCRsJSON||"{}"));
+      if(!parsed||typeof parsed!=="object"||Array.isArray(parsed)){
+        throw new Error("Attestation PCR policy must be a JSON object.");
+      }
+      attestationAllowedPCRs=parsed;
+    }catch(error){
+      onToast?.(`Attestation PCR policy JSON is invalid: ${errMsg(error)}`);
       return;
     }
     setSaving(true);
@@ -8856,6 +8933,9 @@ const DataEncryptionPolicy=({session,onToast})=>{
         allow_vaultless_tokenization:Boolean(dataPolicy?.allow_vaultless_tokenization),
         tokenization_mode_policy:dataPolicy?.tokenization_mode_policy&&typeof dataPolicy.tokenization_mode_policy==="object"?dataPolicy.tokenization_mode_policy:{},
         token_format_policy:dataPolicy?.token_format_policy&&typeof dataPolicy.token_format_policy==="object"?dataPolicy.token_format_policy:{},
+        custom_token_formats:dataPolicy?.custom_token_formats&&typeof dataPolicy.custom_token_formats==="object"?dataPolicy.custom_token_formats:{},
+        reuse_existing_token_for_same_input:Boolean(dataPolicy?.reuse_existing_token_for_same_input??true),
+        enforce_unique_token_per_vault:Boolean(dataPolicy?.enforce_unique_token_per_vault??true),
         require_token_ttl:Boolean(dataPolicy?.require_token_ttl),
         max_token_ttl_hours:Math.max(0,Math.min(87600,Number(dataPolicy?.max_token_ttl_hours||0))),
         allow_token_renewal:Boolean(dataPolicy?.allow_token_renewal),
@@ -8894,9 +8974,17 @@ const DataEncryptionPolicy=({session,onToast})=>{
         attested_wrapper_only:Boolean(dataPolicy?.attested_wrapper_only),
         revoke_on_policy_change:Boolean(dataPolicy?.revoke_on_policy_change),
         rekey_on_policy_change:Boolean(dataPolicy?.rekey_on_policy_change),
+        receipt_reconciliation_enabled:Boolean(dataPolicy?.receipt_reconciliation_enabled),
+        receipt_heartbeat_sec:Math.max(1,Math.min(86400,Number(dataPolicy?.receipt_heartbeat_sec||120))),
+        receipt_missing_grace_sec:Math.max(1,Math.min(86400,Number(dataPolicy?.receipt_missing_grace_sec||60))),
+        require_tpm_attestation:Boolean(dataPolicy?.require_tpm_attestation),
+        require_non_exportable_wrapper_keys:Boolean(dataPolicy?.require_non_exportable_wrapper_keys),
+        attestation_ak_allowlist:Array.isArray(dataPolicy?.attestation_ak_allowlist)?dataPolicy.attestation_ak_allowlist:[],
+        attestation_allowed_pcrs:attestationAllowedPCRs,
         updated_by:session?.username||"dashboard"
       });
       setDataPolicy((prev)=>({...prev,...updated}));
+      setAttestationAllowedPCRsJSON(JSON.stringify((updated?.attestation_allowed_pcrs&&typeof updated.attestation_allowed_pcrs==="object")?updated.attestation_allowed_pcrs:{},null,2));
       onToast?.("Data encryption policy updated.");
     }catch(error){
       onToast?.(`Data encryption policy update failed: ${errMsg(error)}`);
@@ -9055,6 +9143,9 @@ const DataEncryptionPolicy=({session,onToast})=>{
           <Chk label="Require mTLS for wrapper runtime APIs" checked={Boolean(dataPolicy?.require_mtls)} onChange={()=>setDataPolicy((prev)=>({...prev,require_mtls:!Boolean(prev?.require_mtls)}))}/>
           <Chk label="Require signed nonce + timestamp (anti-replay)" checked={Boolean(dataPolicy?.require_signed_nonce)} onChange={()=>setDataPolicy((prev)=>({...prev,require_signed_nonce:!Boolean(prev?.require_signed_nonce)}))}/>
           <Chk label="Attested wrappers only (strict mode)" checked={Boolean(dataPolicy?.attested_wrapper_only)} onChange={()=>setDataPolicy((prev)=>({...prev,attested_wrapper_only:!Boolean(prev?.attested_wrapper_only)}))}/>
+          <Chk label="Require TPM attestation verification" checked={Boolean(dataPolicy?.require_tpm_attestation)} onChange={()=>setDataPolicy((prev)=>({...prev,require_tpm_attestation:!Boolean(prev?.require_tpm_attestation)}))}/>
+          <Chk label="Require non-exportable wrapper key assertion" checked={Boolean(dataPolicy?.require_non_exportable_wrapper_keys)} onChange={()=>setDataPolicy((prev)=>({...prev,require_non_exportable_wrapper_keys:!Boolean(prev?.require_non_exportable_wrapper_keys)}))}/>
+          <Chk label="Enable missing-receipt reconciliation" checked={Boolean(dataPolicy?.receipt_reconciliation_enabled)} onChange={()=>setDataPolicy((prev)=>({...prev,receipt_reconciliation_enabled:!Boolean(prev?.receipt_reconciliation_enabled)}))}/>
           <Chk label="Revoke active leases when policy changes" checked={Boolean(dataPolicy?.revoke_on_policy_change)} onChange={()=>setDataPolicy((prev)=>({...prev,revoke_on_policy_change:!Boolean(prev?.revoke_on_policy_change)}))}/>
           <Chk label="Require key re-lease/rekey on policy change" checked={Boolean(dataPolicy?.rekey_on_policy_change)} onChange={()=>setDataPolicy((prev)=>({...prev,rekey_on_policy_change:!Boolean(prev?.rekey_on_policy_change)}))}/>
         </div>
@@ -9071,7 +9162,19 @@ const DataEncryptionPolicy=({session,onToast})=>{
           <FG label="Anti-replay window (seconds)">
             <Inp type="number" min={1} max={86400} value={String(dataPolicy?.anti_replay_window_sec??300)} onChange={(e)=>setDataPolicy((prev)=>({...prev,anti_replay_window_sec:Number(e.target.value||300)}))}/>
           </FG>
+          <FG label="Receipt heartbeat (seconds)">
+            <Inp type="number" min={1} max={86400} value={String(dataPolicy?.receipt_heartbeat_sec??120)} onChange={(e)=>setDataPolicy((prev)=>({...prev,receipt_heartbeat_sec:Number(e.target.value||120)}))}/>
+          </FG>
+          <FG label="Missing receipt grace (seconds)">
+            <Inp type="number" min={1} max={86400} value={String(dataPolicy?.receipt_missing_grace_sec??60)} onChange={(e)=>setDataPolicy((prev)=>({...prev,receipt_missing_grace_sec:Number(e.target.value||60)}))}/>
+          </FG>
         </div>
+        <FG label="Attestation AK allowlist (SHA-256 fingerprints, comma separated)">
+          <Inp value={Array.isArray(dataPolicy?.attestation_ak_allowlist)?dataPolicy.attestation_ak_allowlist.join(", "):""} onChange={(e)=>setDataPolicy((prev)=>({...prev,attestation_ak_allowlist:parseCsvList(e.target.value)}))} placeholder="ak_fp_1, ak_fp_2"/>
+        </FG>
+        <FG label="Allowed PCR policy JSON (map pcr index -> allowed values array)">
+          <Txt rows={4} value={attestationAllowedPCRsJSON} onChange={(e)=>setAttestationAllowedPCRsJSON(e.target.value)} mono/>
+        </FG>
         <div>
           <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed local algorithms</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
@@ -9107,18 +9210,201 @@ const DataEncryptionPolicy=({session,onToast})=>{
 const TokenizeMaskRedactPolicy=({session,onToast})=>{
   const [loading,setLoading]=useState(false);
   const [saving,setSaving]=useState(false);
+  const [creatingVault,setCreatingVault]=useState(false);
+  const [refreshingVaults,setRefreshingVaults]=useState(false);
+  const [vaultRows,setVaultRows]=useState<any[]>([]);
   const [dataPolicy,setDataPolicy]=useState<any>(null);
+  const [customTokenFormatsText,setCustomTokenFormatsText]=useState("{}");
+  const [newVaultName,setNewVaultName]=useState("");
+  const [newVaultTokenType,setNewVaultTokenType]=useState("credit_card");
+  const [newVaultFormat,setNewVaultFormat]=useState("format_preserving");
+  const [newVaultCustomFormat,setNewVaultCustomFormat]=useState("");
+  const [newVaultKeyId,setNewVaultKeyId]=useState("");
+  const [newVaultRegex,setNewVaultRegex]=useState("");
+  const [newVaultStorageType,setNewVaultStorageType]=useState("internal");
+  const [newVaultProvider,setNewVaultProvider]=useState("postgres");
+  const [newVaultHost,setNewVaultHost]=useState("");
+  const [newVaultPort,setNewVaultPort]=useState("");
+  const [newVaultDatabase,setNewVaultDatabase]=useState("");
+  const [newVaultSchema,setNewVaultSchema]=useState("public");
+  const [newVaultTable,setNewVaultTable]=useState("token_vault_records");
+  const [newVaultUser,setNewVaultUser]=useState("");
+  const [newVaultPasswordRef,setNewVaultPasswordRef]=useState("");
+  const [newVaultTLSMode,setNewVaultTLSMode]=useState("require");
   const dataAlgoOptions=["AES-GCM","AES-SIV","CHACHA20-POLY1305"];
-  const tokenTypes=["credit_card","ssn","iban","email","phone","custom","bitlocker"];
-  const tokenFormats=["random","format_preserving","deterministic","irreversible"];
+  const tokenTypes=["credit_card","ssn","iban","email","phone","custom"];
+  const tokenFormats=["random","format_preserving","deterministic","irreversible","custom"];
   const redactionDetectors=["EMAIL","PHONE","SSN","PAN","IBAN","NAME","CUSTOM"];
   const redactionActions=["replace_placeholder","remove","hash"];
   const maskingRoles=["admin","auditor","analyst","support"];
   const maskingPatterns=["none","full","partial_last4","partial_first2","hash","substitute","nullify"];
 
+  const parseCustomTokenFormats=(raw:string)=>{
+    let parsed:any;
+    try{
+      parsed=JSON.parse(String(raw||"{}"));
+    }catch{
+      throw new Error("Custom token formats must be valid JSON.");
+    }
+    if(!parsed||Array.isArray(parsed)||typeof parsed!=="object"){
+      throw new Error("Custom token formats must be a JSON object.");
+    }
+    const out:Record<string,string>={};
+    Object.entries(parsed).forEach(([key,val])=>{
+      const name=String(key||"").trim().toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_-]/g,"");
+      if(!name){
+        return;
+      }
+      const tpl=String(val||"").trim();
+      if(!tpl){
+        return;
+      }
+      out[name]=tpl.slice(0,512);
+    });
+    return out;
+  };
+
+  const refreshVaultRows=async(silent=false)=>{
+    if(!session?.token){
+      setVaultRows([]);
+      return;
+    }
+    if(!silent){
+      setRefreshingVaults(true);
+    }
+    try{
+      const rows=await listTokenVaults(session,{limit:300,offset:0});
+      setVaultRows(Array.isArray(rows)?rows:[]);
+    }catch(error){
+      if(!silent){
+        onToast?.(`Token vault refresh failed: ${errMsg(error)}`);
+      }
+    }finally{
+      if(!silent){
+        setRefreshingVaults(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    void refreshVaultRows(true);
+  },[session?.token,session?.tenantId]);
+
+  const downloadVaultSetup=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    try{
+      const item=await downloadTokenVaultExternalSchema(session,newVaultProvider as any);
+      const content=String(item?.content||"");
+      if(!content){
+        throw new Error("External setup script is empty.");
+      }
+      const blob=new Blob([content],{type:String(item?.content_type||"text/plain")});
+      const url=URL.createObjectURL(blob);
+      const anchor=document.createElement("a");
+      anchor.href=url;
+      anchor.download=String(item?.filename||`token_vault_${newVaultProvider}.sql`);
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      onToast?.("External vault setup script downloaded.");
+    }catch(error){
+      onToast?.(`Setup script download failed: ${errMsg(error)}`);
+    }
+  };
+
+  const createVaultFromPolicy=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    if(!String(newVaultName||"").trim()){
+      onToast?.("Vault name is required.");
+      return;
+    }
+    if(!String(newVaultKeyId||"").trim()){
+      onToast?.("Key ID is required.");
+      return;
+    }
+    if(String(newVaultFormat||"").trim()==="custom"&&!String(newVaultCustomFormat||"").trim()){
+      onToast?.("Custom token format name is required when format is custom.");
+      return;
+    }
+    if(String(newVaultTokenType||"").trim()==="custom"&&!String(newVaultRegex||"").trim()){
+      onToast?.("Custom regex is required for custom token type.");
+      return;
+    }
+    if(String(newVaultStorageType||"")==="external"){
+      if(newVaultProvider==="mongodb"){
+        if(!String(newVaultHost||"").trim()||!String(newVaultDatabase||"").trim()){
+          onToast?.("MongoDB vault requires URI and database.");
+          return;
+        }
+      }else if(!String(newVaultHost||"").trim()||!String(newVaultDatabase||"").trim()){
+        onToast?.("External vault requires host and database.");
+        return;
+      }
+    }
+    setCreatingVault(true);
+    try{
+      const externalConfig=String(newVaultStorageType||"")==="external"
+        ? (newVaultProvider==="mongodb"
+            ? {
+                uri:(()=>{
+                  const raw=String(newVaultHost||"").trim();
+                  if(/^mongodb(\+srv)?:\/\//i.test(raw)){
+                    return raw;
+                  }
+                  return `mongodb://${raw}`;
+                })(),
+                database:String(newVaultDatabase||"").trim()||"vecta_token_vault",
+                auth_database:String(newVaultSchema||"").trim()||"admin",
+                table:String(newVaultTable||"").trim()||"token_vault_records",
+                password_ref:String(newVaultPasswordRef||"").trim()
+              }
+            : {
+                host:String(newVaultHost||"").trim(),
+                port:String(newVaultPort||"").trim(),
+                database:String(newVaultDatabase||"").trim(),
+                schema:String(newVaultSchema||"").trim(),
+                table:String(newVaultTable||"").trim(),
+                username:String(newVaultUser||"").trim(),
+                password_ref:String(newVaultPasswordRef||"").trim(),
+                tls_mode:String(newVaultTLSMode||"").trim()
+              })
+        : undefined;
+      const created=await createTokenVault(session,{
+        name:String(newVaultName||"").trim(),
+        token_type:String(newVaultTokenType||"").trim(),
+        format:newVaultFormat as any,
+        custom_token_format:String(newVaultCustomFormat||"").trim()||undefined,
+        key_id:String(newVaultKeyId||"").trim(),
+        custom_regex:String(newVaultRegex||"").trim()||undefined,
+        storage_type:(newVaultStorageType==="external"?"external":"internal") as any,
+        external_provider:newVaultStorageType==="external"?String(newVaultProvider||"").trim():undefined,
+        external_config:externalConfig,
+        external_schema_version:newVaultStorageType==="external"?"v1":undefined
+      });
+      onToast?.(`Token vault created: ${String(created?.id||"")}`);
+      await refreshVaultRows(true);
+      setNewVaultName("");
+      setNewVaultRegex("");
+      setNewVaultCustomFormat("");
+    }catch(error){
+      onToast?.(`Token vault creation failed: ${errMsg(error)}`);
+    }finally{
+      setCreatingVault(false);
+    }
+  };
+
   const loadPolicy=async(silent=false)=>{
     if(!session?.token){
       setDataPolicy(null);
+      setCustomTokenFormatsText("{}");
+      setVaultRows([]);
       return;
     }
     if(!silent){
@@ -9139,18 +9425,19 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
           iban:["vault","vaultless"],
           email:["vault","vaultless"],
           phone:["vault","vaultless"],
-          custom:["vault","vaultless"],
-          bitlocker:["vault"]
+          custom:["vault","vaultless"]
         },
         token_format_policy:dp?.token_format_policy&&typeof dp.token_format_policy==="object"?dp.token_format_policy:{
-          credit_card:["format_preserving","deterministic","irreversible","random"],
-          ssn:["format_preserving","deterministic","irreversible","random"],
-          iban:["format_preserving","deterministic","irreversible","random"],
-          email:["format_preserving","deterministic","irreversible","random"],
-          phone:["format_preserving","deterministic","irreversible","random"],
-          custom:["format_preserving","deterministic","irreversible","random"],
-          bitlocker:["deterministic","irreversible","random"]
+          credit_card:["format_preserving","deterministic","irreversible","random","custom"],
+          ssn:["format_preserving","deterministic","irreversible","random","custom"],
+          iban:["format_preserving","deterministic","irreversible","random","custom"],
+          email:["format_preserving","deterministic","irreversible","random","custom"],
+          phone:["format_preserving","deterministic","irreversible","random","custom"],
+          custom:["format_preserving","deterministic","irreversible","random","custom"]
         },
+        custom_token_formats:dp?.custom_token_formats&&typeof dp.custom_token_formats==="object"?dp.custom_token_formats:{},
+        reuse_existing_token_for_same_input:Boolean(dp?.reuse_existing_token_for_same_input??true),
+        enforce_unique_token_per_vault:Boolean(dp?.enforce_unique_token_per_vault??true),
         require_token_ttl:Boolean(dp?.require_token_ttl),
         max_token_ttl_hours:Math.max(0,Number(dp?.max_token_ttl_hours||0)),
         allow_token_renewal:Boolean(dp?.allow_token_renewal??true),
@@ -9175,6 +9462,8 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
         token_metadata_retention_days:Math.max(1,Number(dp?.token_metadata_retention_days||365)),
         redaction_event_retention_days:Math.max(1,Number(dp?.redaction_event_retention_days||365))
       });
+      const customFormats=dp?.custom_token_formats&&typeof dp.custom_token_formats==="object"?dp.custom_token_formats:{};
+      setCustomTokenFormatsText(JSON.stringify(customFormats,null,2));
     }catch(error){
       if(!silent){
         onToast?.(`Tokenize/mask/redact policy load failed: ${errMsg(error)}`);
@@ -9201,6 +9490,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
     }
     setSaving(true);
     try{
+      const parsedCustomTokenFormats=parseCustomTokenFormats(customTokenFormatsText);
       const updated=await updateDataProtectionPolicy(session,{
         tenant_id:session.tenantId,
         allowed_data_algorithms:Array.isArray(dataPolicy?.allowed_data_algorithms)?dataPolicy.allowed_data_algorithms:dataAlgoOptions,
@@ -9210,6 +9500,9 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
         allow_vaultless_tokenization:Boolean(dataPolicy?.allow_vaultless_tokenization),
         tokenization_mode_policy:dataPolicy?.tokenization_mode_policy&&typeof dataPolicy.tokenization_mode_policy==="object"?dataPolicy.tokenization_mode_policy:{},
         token_format_policy:dataPolicy?.token_format_policy&&typeof dataPolicy.token_format_policy==="object"?dataPolicy.token_format_policy:{},
+        custom_token_formats:parsedCustomTokenFormats,
+        reuse_existing_token_for_same_input:Boolean(dataPolicy?.reuse_existing_token_for_same_input??true),
+        enforce_unique_token_per_vault:Boolean(dataPolicy?.enforce_unique_token_per_vault??true),
         require_token_ttl:Boolean(dataPolicy?.require_token_ttl),
         max_token_ttl_hours:Math.max(0,Math.min(87600,Number(dataPolicy?.max_token_ttl_hours||0))),
         allow_token_renewal:Boolean(dataPolicy?.allow_token_renewal),
@@ -9236,6 +9529,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
         updated_by:session?.username||"dashboard"
       });
       setDataPolicy((prev)=>({...prev,...updated}));
+      setCustomTokenFormatsText(JSON.stringify(updated?.custom_token_formats||parsedCustomTokenFormats,null,2));
       onToast?.("Tokenize/mask/redact policy updated.");
     }catch(error){
       onToast?.(`Tokenize/mask/redact policy update failed: ${errMsg(error)}`);
@@ -9261,6 +9555,8 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
       <Card style={{display:"grid",gap:12}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           <Chk label="Allow vaultless tokenization globally" checked={Boolean(dataPolicy?.allow_vaultless_tokenization)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_vaultless_tokenization:!Boolean(prev?.allow_vaultless_tokenization)}))}/>
+          <Chk label="Reuse existing token for same plaintext input" checked={Boolean(dataPolicy?.reuse_existing_token_for_same_input??true)} onChange={()=>setDataPolicy((prev)=>({...prev,reuse_existing_token_for_same_input:!Boolean(prev?.reuse_existing_token_for_same_input??true)}))}/>
+          <Chk label="Enforce unique token values per vault" checked={Boolean(dataPolicy?.enforce_unique_token_per_vault??true)} onChange={()=>setDataPolicy((prev)=>({...prev,enforce_unique_token_per_vault:!Boolean(prev?.enforce_unique_token_per_vault??true)}))}/>
           <Chk label="Require token TTL" checked={Boolean(dataPolicy?.require_token_ttl)} onChange={()=>setDataPolicy((prev)=>({...prev,require_token_ttl:!Boolean(prev?.require_token_ttl)}))}/>
           <Chk label="Allow token lease renewal" checked={Boolean(dataPolicy?.allow_token_renewal)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_token_renewal:!Boolean(prev?.allow_token_renewal)}))}/>
           <Chk label="Allow one-time tokens" checked={Boolean(dataPolicy?.allow_one_time_tokens)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_one_time_tokens:!Boolean(prev?.allow_one_time_tokens)}))}/>
@@ -9378,6 +9674,12 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
         </div>
 
         <div style={{display:"grid",gap:6}}>
+          <div style={{fontSize:11,color:C.text,fontWeight:700}}>Custom Token Format Definitions</div>
+          <div style={{fontSize:10,color:C.dim}}>Define named token templates (JSON map). Supported placeholders: <code>{"{{HASH8}}"}</code>, <code>{"{{HASH12}}"}</code>, <code>{"{{HASH16}}"}</code>, <code>{"{{LAST4}}"}</code>, <code>{"{{LEN}}"}</code>, <code>{"{{RAND8}}"}</code>, <code>{"{{RAND12}}"}</code>, <code>{"{{VALUE}}"}</code>.</div>
+          <Txt rows={6} value={customTokenFormatsText} onChange={(e)=>setCustomTokenFormatsText(e.target.value)} placeholder={`{\n  "pan_enterprise": "PAN-{{HASH12}}-{{LAST4}}"\n}`} mono/>
+        </div>
+
+        <div style={{display:"grid",gap:6}}>
           <div style={{fontSize:11,color:C.text,fontWeight:700}}>Masking Role Policy</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
             {maskingRoles.map((role)=>(
@@ -9427,6 +9729,68 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
                 />
               ))}
             </div>
+          </div>
+        </div>
+
+        <div style={{display:"grid",gap:8,border:`1px solid ${C.border}`,borderRadius:10,padding:10}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <div style={{fontSize:11,color:C.text,fontWeight:700}}>Create Token Vault (from Policy)</div>
+            <div style={{display:"flex",gap:8}}>
+              <Btn small onClick={()=>void refreshVaultRows(false)} disabled={refreshingVaults||creatingVault}>{refreshingVaults?"Refreshing...":"Refresh Vaults"}</Btn>
+              {newVaultStorageType==="external"&&<Btn small onClick={()=>void downloadVaultSetup()} disabled={creatingVault}>Download Setup Query</Btn>}
+              <Btn small primary onClick={()=>void createVaultFromPolicy()} disabled={creatingVault||refreshingVaults}>{creatingVault?"Creating...":"Create Vault"}</Btn>
+            </div>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+            <FG label="Vault Name" required><Inp value={newVaultName} onChange={(e)=>setNewVaultName(e.target.value)} placeholder="customer-data-vault"/></FG>
+            <FG label="Token Type" required>
+              <Sel value={newVaultTokenType} onChange={(e)=>setNewVaultTokenType(e.target.value)}>
+                {tokenTypes.map((tokenType)=><option key={`policy-vault-token-type-${tokenType}`} value={tokenType}>{tokenType}</option>)}
+              </Sel>
+            </FG>
+            <FG label="Token Format" required>
+              <Sel value={newVaultFormat} onChange={(e)=>setNewVaultFormat(e.target.value)}>
+                {tokenFormats.map((format)=><option key={`policy-vault-format-${format}`} value={format}>{format}</option>)}
+              </Sel>
+            </FG>
+            {newVaultFormat==="custom"&&<FG label="Custom Format Name" required><Inp value={newVaultCustomFormat} onChange={(e)=>setNewVaultCustomFormat(e.target.value)} placeholder="pan_enterprise"/></FG>}
+            {newVaultTokenType==="custom"&&<FG label="Custom Regex" required><Inp value={newVaultRegex} onChange={(e)=>setNewVaultRegex(e.target.value)} placeholder="^\\d{3}-\\d{2}-\\d{4}$" mono/></FG>}
+            <FG label="Key ID" required><Inp value={newVaultKeyId} onChange={(e)=>setNewVaultKeyId(e.target.value)} placeholder="key-1" mono/></FG>
+            <FG label="Storage Type">
+              <Sel value={newVaultStorageType} onChange={(e)=>setNewVaultStorageType(e.target.value==="external"?"external":"internal")}>
+                <option value="internal">Internal KMS vault DB</option>
+                <option value="external">External DB vault</option>
+              </Sel>
+            </FG>
+            {newVaultStorageType==="external"&&<FG label="External Provider" required>
+              <Sel value={newVaultProvider} onChange={(e)=>setNewVaultProvider(e.target.value)}>
+                <option value="postgres">PostgreSQL</option>
+                <option value="mysql">MySQL</option>
+                <option value="mssql">MSSQL</option>
+                <option value="oracle">Oracle</option>
+                <option value="mongodb">MongoDB</option>
+              </Sel>
+            </FG>}
+            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="Host" required><Inp value={newVaultHost} onChange={(e)=>setNewVaultHost(e.target.value)} placeholder="db.example.com"/></FG>}
+            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="Port"><Inp value={newVaultPort} onChange={(e)=>setNewVaultPort(e.target.value)} placeholder="5432"/></FG>}
+            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="Database" required><Inp value={newVaultDatabase} onChange={(e)=>setNewVaultDatabase(e.target.value)} placeholder="vecta_token_vault"/></FG>}
+            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="Schema"><Inp value={newVaultSchema} onChange={(e)=>setNewVaultSchema(e.target.value)} placeholder="public"/></FG>}
+            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="Table"><Inp value={newVaultTable} onChange={(e)=>setNewVaultTable(e.target.value)} placeholder="token_vault_records"/></FG>}
+            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="Username"><Inp value={newVaultUser} onChange={(e)=>setNewVaultUser(e.target.value)} placeholder="vault_user"/></FG>}
+            {newVaultStorageType==="external"&&newVaultProvider==="mongodb"&&<FG label="MongoDB URI" required><Inp value={newVaultHost} onChange={(e)=>setNewVaultHost(e.target.value)} placeholder="mongodb://mongo.example.com:27017"/></FG>}
+            {newVaultStorageType==="external"&&newVaultProvider==="mongodb"&&<FG label="Database" required><Inp value={newVaultDatabase} onChange={(e)=>setNewVaultDatabase(e.target.value)} placeholder="vecta_token_vault"/></FG>}
+            {newVaultStorageType==="external"&&newVaultProvider==="mongodb"&&<FG label="Auth Database"><Inp value={newVaultSchema} onChange={(e)=>setNewVaultSchema(e.target.value)} placeholder="admin"/></FG>}
+            {newVaultStorageType==="external"&&newVaultProvider==="mongodb"&&<FG label="Collection"><Inp value={newVaultTable} onChange={(e)=>setNewVaultTable(e.target.value)} placeholder="token_vault_records"/></FG>}
+            {newVaultStorageType==="external"&&<FG label="Password Secret Ref" hint="Store DB password in KMS secret vault and reference it here."><Inp value={newVaultPasswordRef} onChange={(e)=>setNewVaultPasswordRef(e.target.value)} placeholder="secret://db/token-vault-password"/></FG>}
+            {newVaultStorageType==="external"&&newVaultProvider!=="mongodb"&&<FG label="TLS Mode"><Inp value={newVaultTLSMode} onChange={(e)=>setNewVaultTLSMode(e.target.value)} placeholder="require"/></FG>}
+          </div>
+          <div style={{fontSize:10,color:C.dim}}>Vault tokens store token, token hash, ciphertext, original hash, metadata and lifecycle counters for deterministic lookup and detokenize controls.</div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700}}>Existing token vaults: {Array.isArray(vaultRows)?vaultRows.length:0}</div>
+          <div style={{maxHeight:180,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:8,padding:8,display:"grid",gap:6}}>
+            {(Array.isArray(vaultRows)?vaultRows:[]).map((row:any)=><div key={`policy-vault-row-${String(row?.id||"")}`} style={{fontSize:10,color:C.text}}>
+              {`${String(row?.name||"")} (${String(row?.id||"")}) - ${String(row?.token_type||"")}/${String(row?.format||"")} - ${String(row?.storage_type||"internal")}${String(row?.external_provider||"").trim()?`:${String(row?.external_provider||"")}`:""}`}
+            </div>)}
+            {!Array.isArray(vaultRows)||!vaultRows.length?<div style={{fontSize:10,color:C.dim}}>No token vaults found for this tenant.</div>:null}
           </div>
         </div>
       </Card>
@@ -9876,8 +10240,8 @@ const PaymentCryptoPolicy=({session,onToast})=>{
 };
 
 const DataProtection=({session,keyCatalog,onToast,subView,onSubViewChange})=>{
-  const [dataSubtab,setDataSubtab]=useState("dataenc");
-  const currentSubtab=String(subView||dataSubtab||"dataenc");
+  const [dataSubtab,setDataSubtab]=useState("fieldenc");
+  const currentSubtab=String(subView||dataSubtab||"fieldenc");
   const selectSubtab=(next:string)=>{
     if(onSubViewChange){
       onSubViewChange(next);
@@ -9889,12 +10253,10 @@ const DataProtection=({session,keyCatalog,onToast,subView,onSubViewChange})=>{
 
   return <div>
     {showInlineSubTabs&&<div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
-      <Btn small primary={currentSubtab==="dataenc"} onClick={()=>selectSubtab("dataenc")}>Data Encryption</Btn>
       <Btn small primary={currentSubtab==="fieldenc"} onClick={()=>selectSubtab("fieldenc")}>Field Encryption</Btn>
       <Btn small primary={currentSubtab==="dataenc-policy"} onClick={()=>selectSubtab("dataenc-policy")}>Data Encryption Policy</Btn>
       <Btn small primary={currentSubtab==="tokenize"} onClick={()=>selectSubtab("tokenize")}>Tokenize / Mask / Redact</Btn>
       <Btn small primary={currentSubtab==="token-policy"} onClick={()=>selectSubtab("token-policy")}>Token / Mask / Redact Policy</Btn>
-      <Btn small primary={currentSubtab==="payment"} onClick={()=>selectSubtab("payment")}>Payment Crypto</Btn>
       <Btn small primary={currentSubtab==="payment-policy"} onClick={()=>selectSubtab("payment-policy")}>Payment Policy</Btn>
       <Btn small primary={currentSubtab==="pkcs11"} onClick={()=>selectSubtab("pkcs11")}>PKCS#11 / JCA</Btn>
     </div>}
@@ -18094,15 +18456,15 @@ const TITLES={home:"Dashboard",keys:"Key Management",workbench:"Workbench",crypt
 const SUB_PANES={
   workbench:[
     {id:"crypto",label:"Crypto Console",hint:"Interactive cryptographic operations and algorithm console",icon:Zap},
-    {id:"restapi",label:"REST API",hint:"Authenticated API explorer and endpoint documentation",icon:TerminalSquare}
+    {id:"restapi",label:"REST API",hint:"Authenticated API explorer and endpoint documentation",icon:TerminalSquare},
+    {id:"dataenc",label:"Data Encryption",hint:"Field-level, envelope, searchable and FPE crypto",icon:Database,feature:"data_protection"},
+    {id:"payment",label:"Payment Crypto",hint:"TR-31, PIN, CVV, MAC and ISO20022 operations",icon:CreditCard,feature:"payment_crypto"}
   ],
   dataprotection:[
-    {id:"dataenc",label:"Data Encryption",hint:"Field-level, envelope, searchable and FPE crypto",icon:Database,feature:"data_protection"},
     {id:"fieldenc",label:"Field Encryption",hint:"Wrapper registration, challenge-response and local crypto lease control",icon:KeyRound,feature:"data_protection"},
     {id:"dataenc-policy",label:"Data Encryption Policy",hint:"Policy controls only for data encryption interfaces",icon:ShieldCheck,feature:"data_protection"},
     {id:"tokenize",label:"Tokenize / Mask / Redact",hint:"Vault and vaultless tokenization with masking/redaction",icon:VenetianMask,feature:"data_protection"},
     {id:"token-policy",label:"Token / Mask / Redact Policy",hint:"Policy controls only for tokenization, masking and redaction",icon:VenetianMask,feature:"data_protection"},
-    {id:"payment",label:"Payment Crypto",hint:"TR-31, PIN, CVV, MAC and ISO20022 operations",icon:CreditCard,feature:"payment_crypto"},
     {id:"payment-policy",label:"Payment Policy",hint:"Policy controls only for payment cryptography operations",icon:CreditCard,feature:"payment_crypto"},
     {id:"pkcs11",label:"PKCS#11 / JCA",hint:"SDK providers, mechanism usage and client telemetry",icon:Plug}
   ],
@@ -18133,7 +18495,7 @@ export default function VectaDashboard(props){
   const [toast,setToast]=useState("");
   const [keyCatalog,setKeyCatalog]=useState([]);
   const [tagCatalog,setTagCatalog]=useState([]);
-  const [subPaneSelection,setSubPaneSelection]=useState({workbench:"crypto",dataprotection:"dataenc",cloudctl:"byok",ekm:"db"});
+  const [subPaneSelection,setSubPaneSelection]=useState({workbench:"crypto",dataprotection:"fieldenc",cloudctl:"byok",ekm:"db"});
   const [fipsMode,setFipsMode]=useState<"enabled"|"disabled">("disabled");
   const [reportedUnread,setReportedUnread]=useState(Number(unreadAlerts||0));
   const [cliStatus,setCLIStatus]=useState<any>(null);

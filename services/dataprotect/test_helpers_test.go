@@ -65,9 +65,10 @@ func newDataProtectService(t *testing.T) (*Service, *SQLStore, *nopDataProtectPu
 	store := NewSQLStore(conn)
 	pub := &nopDataProtectPublisher{}
 	svc := NewService(store, &fakeDataProtectKeyCore{items: map[string]map[string]interface{}{
-		"key-1":   {"id": "key-1", "kcv": "AAAA01", "algorithm": "AES-256", "key_type": "symmetric", "purpose": "encrypt-decrypt", "status": "active"},
-		"key-2":   {"id": "key-2", "kcv": "BBBB02", "algorithm": "AES-256", "key_type": "symmetric", "purpose": "encrypt-decrypt", "status": "active"},
-		"key-rsa": {"id": "key-rsa", "kcv": "CCCC03", "algorithm": "RSA-2048", "key_type": "asymmetric", "purpose": "sign-verify", "status": "active"},
+		"key-1":         {"id": "key-1", "kcv": "AAAA01", "algorithm": "AES-256", "key_type": "symmetric", "purpose": "encrypt-decrypt", "status": "active", "export_allowed": true},
+		"key-2":         {"id": "key-2", "kcv": "BBBB02", "algorithm": "AES-256", "key_type": "symmetric", "purpose": "encrypt-decrypt", "status": "active", "export_allowed": true},
+		"key-no-export": {"id": "key-no-export", "kcv": "DDDD04", "algorithm": "AES-256", "key_type": "symmetric", "purpose": "encrypt-decrypt", "status": "active", "export_allowed": false},
+		"key-rsa":       {"id": "key-rsa", "kcv": "CCCC03", "algorithm": "RSA-2048", "key_type": "asymmetric", "purpose": "sign-verify", "status": "active", "export_allowed": false},
 	}}, pub)
 	return svc, store, pub
 }
@@ -85,8 +86,13 @@ func createDataProtectSchemaForTest(conn *pkgdb.DB) error {
 			id TEXT NOT NULL,
 			name TEXT NOT NULL,
 			mode TEXT NOT NULL DEFAULT 'vault',
+			storage_type TEXT NOT NULL DEFAULT 'internal',
+			external_provider TEXT NOT NULL DEFAULT '',
+			external_config_json TEXT NOT NULL DEFAULT '{}',
+			external_schema_version TEXT NOT NULL DEFAULT '',
 			token_type TEXT NOT NULL,
 			format TEXT NOT NULL,
+			custom_token_format TEXT NOT NULL DEFAULT '',
 			key_id TEXT NOT NULL,
 			custom_regex TEXT NOT NULL DEFAULT '',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -176,6 +182,9 @@ func createDataProtectSchemaForTest(conn *pkgdb.DB) error {
 			allow_vaultless_tokenization BOOLEAN NOT NULL DEFAULT TRUE,
 			tokenization_mode_policy_json TEXT NOT NULL DEFAULT '{}',
 			token_format_policy_json TEXT NOT NULL DEFAULT '{}',
+			custom_token_formats_json TEXT NOT NULL DEFAULT '{}',
+			reuse_existing_token_for_same_input BOOLEAN NOT NULL DEFAULT TRUE,
+			enforce_unique_token_per_vault BOOLEAN NOT NULL DEFAULT TRUE,
 			require_token_ttl BOOLEAN NOT NULL DEFAULT FALSE,
 			max_token_ttl_hours INTEGER NOT NULL DEFAULT 0,
 			allow_token_renewal BOOLEAN NOT NULL DEFAULT TRUE,
@@ -214,6 +223,13 @@ func createDataProtectSchemaForTest(conn *pkgdb.DB) error {
 			attested_wrapper_only BOOLEAN NOT NULL DEFAULT FALSE,
 			revoke_on_policy_change BOOLEAN NOT NULL DEFAULT TRUE,
 			rekey_on_policy_change BOOLEAN NOT NULL DEFAULT FALSE,
+			receipt_reconciliation_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+			receipt_heartbeat_sec INTEGER NOT NULL DEFAULT 120,
+			receipt_missing_grace_sec INTEGER NOT NULL DEFAULT 60,
+			require_tpm_attestation BOOLEAN NOT NULL DEFAULT FALSE,
+			require_non_exportable_wrapper_keys BOOLEAN NOT NULL DEFAULT FALSE,
+			attestation_ak_allowlist_json TEXT NOT NULL DEFAULT '[]',
+			attestation_allowed_pcrs_json TEXT NOT NULL DEFAULT '{}',
 			updated_by TEXT NOT NULL DEFAULT '',
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);`,
@@ -284,7 +300,24 @@ func createDataProtectSchemaForTest(conn *pkgdb.DB) error {
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, receipt_id)
 		);`,
-		}
+		`CREATE TABLE field_protection_profiles (
+			tenant_id TEXT NOT NULL,
+			profile_id TEXT NOT NULL,
+			name TEXT NOT NULL,
+			app_id TEXT NOT NULL DEFAULT '*',
+			wrapper_id TEXT NOT NULL DEFAULT '*',
+			status TEXT NOT NULL DEFAULT 'active',
+			priority INTEGER NOT NULL DEFAULT 100,
+			cache_ttl_sec INTEGER NOT NULL DEFAULT 300,
+			policy_hash TEXT NOT NULL DEFAULT '',
+			rules_json TEXT NOT NULL DEFAULT '[]',
+			metadata_json TEXT NOT NULL DEFAULT '{}',
+			updated_by TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, profile_id)
+		);`,
+	}
 	for _, stmt := range stmts {
 		if _, err := conn.SQL().Exec(stmt); err != nil {
 			return err

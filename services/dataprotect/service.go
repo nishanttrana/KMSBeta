@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto"
 	"crypto/ecdh"
+	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
@@ -60,6 +63,9 @@ func WithWrapperJWT(secret string, issuer string, audience string, ttl time.Dura
 }
 
 var supportedDataProtectAlgorithms = []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305"}
+var supportedFieldProtectionWriteActions = []string{"encrypt", "tokenize", "redact", "passthrough"}
+var supportedFieldProtectionReadActions = []string{"decrypt", "mask", "token_only", "redact", "passthrough"}
+var supportedFieldProtectionEncryptAlgorithms = []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305", "FPE-FF1", "FPE-FF3"}
 
 func defaultDataAlgorithmProfilePolicy() map[string][]string {
 	return map[string][]string{
@@ -77,19 +83,17 @@ func defaultTokenizationModePolicy() map[string][]string {
 		"email":       []string{"vault", "vaultless"},
 		"phone":       []string{"vault", "vaultless"},
 		"custom":      []string{"vault", "vaultless"},
-		"bitlocker":   []string{"vault"},
 	}
 }
 
 func defaultTokenFormatPolicy() map[string][]string {
 	return map[string][]string{
-		"credit_card": []string{"format_preserving", "deterministic", "irreversible", "random"},
-		"ssn":         []string{"format_preserving", "deterministic", "irreversible", "random"},
-		"iban":        []string{"format_preserving", "deterministic", "irreversible", "random"},
-		"email":       []string{"format_preserving", "deterministic", "irreversible", "random"},
-		"phone":       []string{"format_preserving", "deterministic", "irreversible", "random"},
-		"custom":      []string{"format_preserving", "deterministic", "irreversible", "random"},
-		"bitlocker":   []string{"deterministic", "irreversible", "random"},
+		"credit_card": []string{"format_preserving", "deterministic", "irreversible", "random", "custom"},
+		"ssn":         []string{"format_preserving", "deterministic", "irreversible", "random", "custom"},
+		"iban":        []string{"format_preserving", "deterministic", "irreversible", "random", "custom"},
+		"email":       []string{"format_preserving", "deterministic", "irreversible", "random", "custom"},
+		"phone":       []string{"format_preserving", "deterministic", "irreversible", "random", "custom"},
+		"custom":      []string{"format_preserving", "deterministic", "irreversible", "random", "custom"},
 	}
 }
 
@@ -149,6 +153,9 @@ func defaultDataProtectionPolicy(tenantID string) DataProtectionPolicy {
 		AllowVaultlessTokenization:     true,
 		TokenizationModePolicy:         defaultTokenizationModePolicy(),
 		TokenFormatPolicy:              defaultTokenFormatPolicy(),
+		CustomTokenFormats:             map[string]string{},
+		ReuseExistingTokenForSameInput: true,
+		EnforceUniqueTokenPerVault:     true,
 		RequireTokenTTL:                false,
 		MaxTokenTTLHours:               0,
 		AllowTokenRenewal:              true,
@@ -187,6 +194,13 @@ func defaultDataProtectionPolicy(tenantID string) DataProtectionPolicy {
 		AttestedWrapperOnly:            false,
 		RevokeOnPolicyChange:           true,
 		RekeyOnPolicyChange:            false,
+		ReceiptReconciliationEnabled:   false,
+		ReceiptHeartbeatSec:            120,
+		ReceiptMissingGraceSec:         60,
+		RequireTPMAttestation:          false,
+		RequireNonExportableWrapperKey: false,
+		AttestationAKAllowlist:         []string{},
+		AttestationAllowedPCRs:         map[string][]string{},
 	}
 }
 
@@ -320,6 +334,20 @@ func normalizeDataProtectionPolicy(in DataProtectionPolicy) DataProtectionPolicy
 	if in.AntiReplayWindowSeconds > 86400 {
 		in.AntiReplayWindowSeconds = 86400
 	}
+	if in.ReceiptHeartbeatSec <= 0 {
+		in.ReceiptHeartbeatSec = 120
+	}
+	if in.ReceiptHeartbeatSec > 86400 {
+		in.ReceiptHeartbeatSec = 86400
+	}
+	if in.ReceiptMissingGraceSec <= 0 {
+		in.ReceiptMissingGraceSec = 60
+	}
+	if in.ReceiptMissingGraceSec > 86400 {
+		in.ReceiptMissingGraceSec = 86400
+	}
+	in.AttestationAKAllowlist = normalizeFingerprintList(in.AttestationAKAllowlist)
+	in.AttestationAllowedPCRs = normalizeAttestationPCRPolicy(in.AttestationAllowedPCRs)
 	in.AllowedLocalAlgorithms = uniqueUpper(uniqueStrings(in.AllowedLocalAlgorithms))
 	if len(in.AllowedLocalAlgorithms) == 0 {
 		in.AllowedLocalAlgorithms = []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305"}
@@ -350,6 +378,10 @@ func normalizeDataProtectionPolicy(in DataProtectionPolicy) DataProtectionPolicy
 	in.AllowedRedactionActions = outActions
 	in.TokenizationModePolicy = normalizeTokenModesPolicy(in.TokenizationModePolicy)
 	in.TokenFormatPolicy = normalizeTokenFormatsPolicy(in.TokenFormatPolicy)
+	in.CustomTokenFormats = normalizeCustomTokenFormats(in.CustomTokenFormats)
+	if in.CustomTokenFormats == nil {
+		in.CustomTokenFormats = map[string]string{}
+	}
 	in.MaskingRolePolicy = normalizeMaskingRolePolicy(in.MaskingRolePolicy)
 	in.UpdatedBy = strings.TrimSpace(in.UpdatedBy)
 	return in
@@ -407,6 +439,9 @@ func (s *Service) UpdateDataProtectionPolicy(ctx context.Context, in DataProtect
 		"allow_vaultless_tokenization":       item.AllowVaultlessTokenization,
 		"tokenization_mode_policy":           item.TokenizationModePolicy,
 		"token_format_policy":                item.TokenFormatPolicy,
+		"custom_token_formats":               item.CustomTokenFormats,
+		"reuse_existing_token_for_same_input": item.ReuseExistingTokenForSameInput,
+		"enforce_unique_token_per_vault":     item.EnforceUniqueTokenPerVault,
 		"require_token_ttl":                  item.RequireTokenTTL,
 		"max_token_ttl_hours":                item.MaxTokenTTLHours,
 		"allow_token_renewal":                item.AllowTokenRenewal,
@@ -445,6 +480,13 @@ func (s *Service) UpdateDataProtectionPolicy(ctx context.Context, in DataProtect
 		"attested_wrapper_only":              item.AttestedWrapperOnly,
 		"revoke_on_policy_change":            item.RevokeOnPolicyChange,
 		"rekey_on_policy_change":             item.RekeyOnPolicyChange,
+		"receipt_reconciliation_enabled":     item.ReceiptReconciliationEnabled,
+		"receipt_heartbeat_sec":              item.ReceiptHeartbeatSec,
+		"receipt_missing_grace_sec":          item.ReceiptMissingGraceSec,
+		"require_tpm_attestation":            item.RequireTPMAttestation,
+		"require_non_exportable_wrapper_key": item.RequireNonExportableWrapperKey,
+		"attestation_ak_allowlist":           item.AttestationAKAllowlist,
+		"attestation_allowed_pcrs":           item.AttestationAllowedPCRs,
 	})
 	return item, nil
 }
@@ -455,6 +497,436 @@ func (s *Service) mustDataProtectionPolicy(ctx context.Context, tenantID string)
 		return DataProtectionPolicy{}, err
 	}
 	return item, nil
+}
+
+func normalizeFieldProtectionProfile(in FieldProtectionProfile) FieldProtectionProfile {
+	in.TenantID = strings.TrimSpace(in.TenantID)
+	in.ProfileID = strings.TrimSpace(in.ProfileID)
+	in.Name = strings.TrimSpace(in.Name)
+	in.AppID = strings.TrimSpace(in.AppID)
+	in.WrapperID = strings.TrimSpace(in.WrapperID)
+	in.Status = strings.ToLower(strings.TrimSpace(in.Status))
+	in.UpdatedBy = strings.TrimSpace(in.UpdatedBy)
+	if in.ProfileID == "" {
+		in.ProfileID = newID("fpp")
+	}
+	if in.Name == "" {
+		in.Name = in.ProfileID
+	}
+	if in.AppID == "" {
+		in.AppID = "*"
+	}
+	if in.WrapperID == "" {
+		in.WrapperID = "*"
+	}
+	switch in.Status {
+	case "active", "disabled", "draft":
+	default:
+		in.Status = "active"
+	}
+	if in.Priority <= 0 {
+		in.Priority = 100
+	}
+	if in.Priority > 100000 {
+		in.Priority = 100000
+	}
+	if in.CacheTTLSeconds <= 0 {
+		in.CacheTTLSeconds = 300
+	}
+	if in.CacheTTLSeconds > 86400 {
+		in.CacheTTLSeconds = 86400
+	}
+	outRules := make([]FieldProtectionRule, 0, len(in.Rules))
+	for _, rule := range in.Rules {
+		outRules = append(outRules, normalizeFieldProtectionRule(rule))
+	}
+	in.Rules = outRules
+	outMetadata := map[string]string{}
+	for k, v := range in.Metadata {
+		key := strings.TrimSpace(k)
+		val := strings.TrimSpace(v)
+		if key == "" || val == "" {
+			continue
+		}
+		outMetadata[key] = val
+	}
+	in.Metadata = outMetadata
+	in.PolicyHash = computeFieldProtectionProfileHash(in)
+	return in
+}
+
+func normalizeFieldProtectionRule(in FieldProtectionRule) FieldProtectionRule {
+	in.RuleID = strings.TrimSpace(in.RuleID)
+	if in.RuleID == "" {
+		in.RuleID = newID("fprule")
+	}
+	in.DataClass = strings.ToLower(strings.TrimSpace(in.DataClass))
+	in.TableName = strings.TrimSpace(in.TableName)
+	in.ColumnName = strings.TrimSpace(in.ColumnName)
+	in.JSONPath = normalizeFieldPath(in.JSONPath)
+	in.WriteAction = strings.ToLower(strings.TrimSpace(in.WriteAction))
+	in.ReadAction = strings.ToLower(strings.TrimSpace(in.ReadAction))
+	in.Algorithm = strings.ToUpper(strings.TrimSpace(in.Algorithm))
+	in.KeyID = strings.TrimSpace(in.KeyID)
+	in.TokenVaultID = strings.TrimSpace(in.TokenVaultID)
+	in.MaskPattern = strings.TrimSpace(in.MaskPattern)
+	in.RedactionPolicyID = strings.TrimSpace(in.RedactionPolicyID)
+	in.AllowedDecryptRoles = normalizeLowerKeys(uniqueStrings(in.AllowedDecryptRoles))
+	in.MaskedRoles = normalizeLowerKeys(uniqueStrings(in.MaskedRoles))
+	in.TokenOnlyRoles = normalizeLowerKeys(uniqueStrings(in.TokenOnlyRoles))
+	in.AllowedPurposes = normalizeLowerKeys(uniqueStrings(in.AllowedPurposes))
+	in.AllowedWorkflows = normalizeLowerKeys(uniqueStrings(in.AllowedWorkflows))
+	if in.MaskPattern != "" {
+		in.MaskPattern = normalizeMaskPattern(in.MaskPattern)
+	}
+	if in.WriteAction == "" {
+		in.WriteAction = "passthrough"
+	}
+	if in.ReadAction == "" {
+		in.ReadAction = "passthrough"
+	}
+	outMetadata := map[string]string{}
+	for k, v := range in.Metadata {
+		key := strings.TrimSpace(k)
+		val := strings.TrimSpace(v)
+		if key == "" || val == "" {
+			continue
+		}
+		outMetadata[key] = val
+	}
+	in.Metadata = outMetadata
+	return in
+}
+
+func computeFieldProtectionProfileHash(item FieldProtectionProfile) string {
+	payload := map[string]interface{}{
+		"tenant_id":     strings.TrimSpace(item.TenantID),
+		"profile_id":    strings.TrimSpace(item.ProfileID),
+		"name":          strings.TrimSpace(item.Name),
+		"app_id":        strings.TrimSpace(item.AppID),
+		"wrapper_id":    strings.TrimSpace(item.WrapperID),
+		"status":        strings.TrimSpace(item.Status),
+		"priority":      item.Priority,
+		"cache_ttl_sec": item.CacheTTLSeconds,
+		"rules":         item.Rules,
+		"metadata":      item.Metadata,
+	}
+	raw, _ := json.Marshal(payload)
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
+}
+
+func (s *Service) validateFieldProtectionProfile(ctx context.Context, in FieldProtectionProfile) (FieldProtectionProfile, error) {
+	item := normalizeFieldProtectionProfile(in)
+	if item.TenantID == "" {
+		return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	if strings.TrimSpace(item.Name) == "" {
+		return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "name is required")
+	}
+	if len(item.Rules) == 0 {
+		return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "at least one field protection rule is required")
+	}
+
+	for i := range item.Rules {
+		rule := normalizeFieldProtectionRule(item.Rules[i])
+		if rule.RuleID == "" {
+			rule.RuleID = fmt.Sprintf("%s-%d", item.ProfileID, i+1)
+		}
+		hasSelector := strings.TrimSpace(rule.DataClass) != "" ||
+			strings.TrimSpace(rule.JSONPath) != "" ||
+			(strings.TrimSpace(rule.TableName) != "" && strings.TrimSpace(rule.ColumnName) != "")
+		if !hasSelector {
+			return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" requires at least one selector: data_class, json_path, or table+column")
+		}
+		if strings.TrimSpace(rule.TableName) != "" && strings.TrimSpace(rule.ColumnName) == "" {
+			return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" requires column when table is set")
+		}
+		if !containsString(supportedFieldProtectionWriteActions, rule.WriteAction) {
+			return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" has unsupported write_action")
+		}
+		if !containsString(supportedFieldProtectionReadActions, rule.ReadAction) {
+			return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" has unsupported read_action")
+		}
+		switch rule.WriteAction {
+		case "encrypt":
+			if strings.TrimSpace(rule.KeyID) == "" {
+				return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" requires key_id for encrypt action")
+			}
+			if strings.TrimSpace(rule.Algorithm) == "" {
+				rule.Algorithm = "AES-GCM"
+			}
+			if !containsString(supportedFieldProtectionEncryptAlgorithms, rule.Algorithm) {
+				return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" has unsupported encrypt algorithm")
+			}
+			if s.keycore != nil {
+				if _, err := s.keycore.GetKey(ctx, item.TenantID, rule.KeyID); err != nil {
+					return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" key_id could not be resolved in keycore")
+				}
+			}
+		case "tokenize":
+			if strings.TrimSpace(rule.TokenVaultID) == "" {
+				return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" requires token_vault_id for tokenize action")
+			}
+			if _, err := s.store.GetTokenVault(ctx, item.TenantID, rule.TokenVaultID); err != nil {
+				if errors.Is(err, errNotFound) {
+					return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" token_vault_id was not found")
+				}
+				return FieldProtectionProfile{}, err
+			}
+		case "redact":
+			if strings.TrimSpace(rule.RedactionPolicyID) == "" {
+				return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" requires redaction_policy_id for redact action")
+			}
+		}
+		if strings.TrimSpace(rule.RedactionPolicyID) != "" {
+			if _, err := s.store.GetRedactionPolicy(ctx, item.TenantID, rule.RedactionPolicyID); err != nil {
+				if errors.Is(err, errNotFound) {
+					return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" redaction_policy_id was not found")
+				}
+				return FieldProtectionProfile{}, err
+			}
+		}
+		switch rule.ReadAction {
+		case "mask":
+			if strings.TrimSpace(rule.MaskPattern) == "" {
+				rule.MaskPattern = "partial_last4"
+			}
+			rule.MaskPattern = normalizeMaskPattern(rule.MaskPattern)
+		case "token_only":
+			if rule.WriteAction != "tokenize" {
+				return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" token_only read_action requires tokenize write_action")
+			}
+		case "redact":
+			if strings.TrimSpace(rule.RedactionPolicyID) == "" {
+				return FieldProtectionProfile{}, newServiceError(http.StatusBadRequest, "bad_request", "rule "+rule.RuleID+" redact read_action requires redaction_policy_id")
+			}
+		}
+		item.Rules[i] = rule
+	}
+	item.PolicyHash = computeFieldProtectionProfileHash(item)
+	return item, nil
+}
+
+func (s *Service) UpsertFieldProtectionProfile(ctx context.Context, in FieldProtectionProfile) (FieldProtectionProfile, error) {
+	item, err := s.validateFieldProtectionProfile(ctx, in)
+	if err != nil {
+		return FieldProtectionProfile{}, err
+	}
+	out, err := s.store.UpsertFieldProtectionProfile(ctx, item)
+	if err != nil {
+		return FieldProtectionProfile{}, err
+	}
+	out = normalizeFieldProtectionProfile(out)
+	_ = s.publishAudit(ctx, "audit.dataprotect.field_protection.profile_upserted", out.TenantID, map[string]interface{}{
+		"profile_id":    out.ProfileID,
+		"name":          out.Name,
+		"app_id":        out.AppID,
+		"wrapper_id":    out.WrapperID,
+		"status":        out.Status,
+		"priority":      out.Priority,
+		"cache_ttl_sec": out.CacheTTLSeconds,
+		"policy_hash":   out.PolicyHash,
+		"rules_count":   len(out.Rules),
+	})
+	return out, nil
+}
+
+func (s *Service) ListFieldProtectionProfiles(ctx context.Context, tenantID string, appID string, wrapperID string, status string, limit int, offset int) ([]FieldProtectionProfile, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	appID = strings.TrimSpace(appID)
+	wrapperID = strings.TrimSpace(wrapperID)
+	status = strings.ToLower(strings.TrimSpace(status))
+	if status != "" && !containsString([]string{"active", "disabled", "draft"}, status) {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "status filter is invalid")
+	}
+	items, err := s.store.ListFieldProtectionProfiles(ctx, tenantID, appID, wrapperID, status, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]FieldProtectionProfile, 0, len(items))
+	for _, item := range items {
+		out = append(out, normalizeFieldProtectionProfile(item))
+	}
+	return out, nil
+}
+
+func (s *Service) DeleteFieldProtectionProfile(ctx context.Context, tenantID string, profileID string) error {
+	tenantID = strings.TrimSpace(tenantID)
+	profileID = strings.TrimSpace(profileID)
+	if tenantID == "" || profileID == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and profile_id are required")
+	}
+	if err := s.store.DeleteFieldProtectionProfile(ctx, tenantID, profileID); err != nil {
+		if errors.Is(err, errNotFound) {
+			return newServiceError(http.StatusNotFound, "not_found", "field protection profile was not found")
+		}
+		return err
+	}
+	_ = s.publishAudit(ctx, "audit.dataprotect.field_protection.profile_deleted", tenantID, map[string]interface{}{
+		"profile_id": profileID,
+	})
+	return nil
+}
+
+func resolveRuleReadActionForRole(rule FieldProtectionRule, role string) string {
+	role = strings.ToLower(strings.TrimSpace(role))
+	readAction := strings.ToLower(strings.TrimSpace(rule.ReadAction))
+	if role == "" {
+		return readAction
+	}
+	if containsString(rule.TokenOnlyRoles, role) {
+		return "token_only"
+	}
+	if containsString(rule.MaskedRoles, role) {
+		return "mask"
+	}
+	if len(rule.AllowedDecryptRoles) > 0 && !containsString(rule.AllowedDecryptRoles, role) && readAction == "decrypt" {
+		if len(rule.MaskedRoles) > 0 {
+			return "mask"
+		}
+		if len(rule.TokenOnlyRoles) > 0 {
+			return "token_only"
+		}
+		return "redact"
+	}
+	return readAction
+}
+
+func fieldRuleAllowedForContext(rule FieldProtectionRule, req FieldProtectionResolveRequest) bool {
+	if strings.TrimSpace(req.Purpose) != "" && len(rule.AllowedPurposes) > 0 && !containsString(rule.AllowedPurposes, strings.ToLower(strings.TrimSpace(req.Purpose))) {
+		return false
+	}
+	if strings.TrimSpace(req.Workflow) != "" && len(rule.AllowedWorkflows) > 0 && !containsString(rule.AllowedWorkflows, strings.ToLower(strings.TrimSpace(req.Workflow))) {
+		return false
+	}
+	return true
+}
+
+func resolveFieldProtectionBundleTTL(policy DataProtectionPolicy, profiles []FieldProtectionProfile) int {
+	ttl := policy.CacheTTLSeconds
+	if ttl <= 0 {
+		ttl = 300
+	}
+	for _, profile := range profiles {
+		if profile.CacheTTLSeconds > 0 && profile.CacheTTLSeconds < ttl {
+			ttl = profile.CacheTTLSeconds
+		}
+	}
+	if ttl <= 0 {
+		ttl = 300
+	}
+	return ttl
+}
+
+func computeFieldProtectionBundleETag(req FieldProtectionResolveRequest, profiles []FieldProtectionProfile, rules []FieldProtectionResolvedRule) string {
+	payload := map[string]interface{}{
+		"tenant_id":  strings.TrimSpace(req.TenantID),
+		"app_id":     strings.TrimSpace(req.AppID),
+		"wrapper_id": strings.TrimSpace(req.WrapperID),
+		"role":       strings.ToLower(strings.TrimSpace(req.Role)),
+		"purpose":    strings.ToLower(strings.TrimSpace(req.Purpose)),
+		"workflow":   strings.ToLower(strings.TrimSpace(req.Workflow)),
+		"profiles":   profiles,
+		"rules":      rules,
+	}
+	raw, _ := json.Marshal(payload)
+	sum := sha256.Sum256(raw)
+	return hex.EncodeToString(sum[:])
+}
+
+func (s *Service) ResolveFieldProtectionPolicyBundle(ctx context.Context, req FieldProtectionResolveRequest) (FieldProtectionPolicyBundle, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	req.AppID = strings.TrimSpace(req.AppID)
+	req.WrapperID = strings.TrimSpace(req.WrapperID)
+	req.Role = strings.ToLower(strings.TrimSpace(req.Role))
+	req.Purpose = strings.ToLower(strings.TrimSpace(req.Purpose))
+	req.Workflow = strings.ToLower(strings.TrimSpace(req.Workflow))
+	if req.TenantID == "" {
+		return FieldProtectionPolicyBundle{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	if req.AppID == "" {
+		return FieldProtectionPolicyBundle{}, newServiceError(http.StatusBadRequest, "bad_request", "app_id is required")
+	}
+	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return FieldProtectionPolicyBundle{}, err
+	}
+
+	if req.WrapperID != "" && req.WrapperID != "*" {
+		wrapper, err := s.store.GetFieldEncryptionWrapper(ctx, req.TenantID, req.WrapperID)
+		if err != nil {
+			if errors.Is(err, errNotFound) {
+				return FieldProtectionPolicyBundle{}, newServiceError(http.StatusNotFound, "not_found", "wrapper registration is not found")
+			}
+			return FieldProtectionPolicyBundle{}, err
+		}
+		if !strings.EqualFold(strings.TrimSpace(wrapper.AppID), req.AppID) {
+			return FieldProtectionPolicyBundle{}, newServiceError(http.StatusForbidden, "access_denied", "wrapper app binding mismatch")
+		}
+		if err := s.verifyWrapperAuthProfileToken(req.AuthToken, wrapper, "field-protection:resolve"); err != nil {
+			return FieldProtectionPolicyBundle{}, err
+		}
+		if policy.RequireRegisteredWrapper && !strings.EqualFold(strings.TrimSpace(wrapper.Status), "active") {
+			return FieldProtectionPolicyBundle{}, newServiceError(http.StatusForbidden, "policy_denied", "wrapper is not active")
+		}
+		if err := s.enforceWrapperTransportPolicy(policy, wrapper); err != nil {
+			return FieldProtectionPolicyBundle{}, err
+		}
+		if err := s.enforceWrapperClientCertificate(policy, wrapper, req.ClientCertFP); err != nil {
+			return FieldProtectionPolicyBundle{}, err
+		}
+	}
+
+	profiles, err := s.store.ResolveFieldProtectionProfiles(ctx, req.TenantID, req.AppID, req.WrapperID, 2000)
+	if err != nil {
+		return FieldProtectionPolicyBundle{}, err
+	}
+	for i := range profiles {
+		profiles[i] = normalizeFieldProtectionProfile(profiles[i])
+	}
+	resolvedRules := make([]FieldProtectionResolvedRule, 0)
+	for _, profile := range profiles {
+		for _, rule := range profile.Rules {
+			if !fieldRuleAllowedForContext(rule, req) {
+				continue
+			}
+			r := rule
+			r.ReadAction = resolveRuleReadActionForRole(r, req.Role)
+			resolvedRules = append(resolvedRules, FieldProtectionResolvedRule{
+				ProfileID:           profile.ProfileID,
+				ProfileName:         profile.Name,
+				Priority:            profile.Priority,
+				FieldProtectionRule: r,
+			})
+		}
+	}
+
+	out := FieldProtectionPolicyBundle{
+		TenantID:        req.TenantID,
+		AppID:           req.AppID,
+		WrapperID:       req.WrapperID,
+		CacheTTLSeconds: resolveFieldProtectionBundleTTL(policy, profiles),
+		GeneratedAt:     s.now(),
+		Profiles:        profiles,
+		Rules:           resolvedRules,
+	}
+	out.ETag = computeFieldProtectionBundleETag(req, profiles, resolvedRules)
+	_ = s.publishAudit(ctx, "audit.dataprotect.field_protection.policy_resolved", req.TenantID, map[string]interface{}{
+		"app_id":       req.AppID,
+		"wrapper_id":   req.WrapperID,
+		"etag":         out.ETag,
+		"cache_ttl":    out.CacheTTLSeconds,
+		"profiles":     len(profiles),
+		"rules":        len(resolvedRules),
+		"purpose":      req.Purpose,
+		"workflow":     req.Workflow,
+		"request_role": req.Role,
+	})
+	return out, nil
 }
 
 func (s *Service) ListFieldEncryptionWrappers(ctx context.Context, tenantID string, limit int, offset int) ([]FieldEncryptionWrapper, error) {
@@ -587,9 +1059,16 @@ func (s *Service) CompleteFieldEncryptionWrapperRegistration(ctx context.Context
 	if err != nil {
 		return FieldEncryptionWrapperRegistrationResult{}, err
 	}
+	attestationResult, err := s.verifyWrapperAttestationEvidence(policy, challenge, req)
+	if err != nil {
+		return FieldEncryptionWrapperRegistrationResult{}, err
+	}
 	certFingerprint := strings.ToLower(strings.TrimSpace(req.CertFingerprint))
 	issuedCert := FieldEncryptionIssuedCertificate{}
 	warnings := make([]string, 0)
+	if policy.RequireNonExportableWrapperKey {
+		warnings = append(warnings, "non-exportable wrapper key guarantee is enforced as signed attestation claim; generation method remains a client-side responsibility")
+	}
 	if strings.TrimSpace(req.CSRPEM) != "" {
 		certOut, certErr := s.issueWrapperCSR(ctx, req.TenantID, challenge.WrapperID, challenge.AppID, req.CSRPEM)
 		if certErr != nil {
@@ -603,6 +1082,8 @@ func (s *Service) CompleteFieldEncryptionWrapperRegistration(ctx context.Context
 	if policy.RequireMTLS && certFingerprint == "" {
 		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusForbidden, "policy_denied", "mTLS is required by policy; cert_fingerprint is mandatory")
 	}
+	metadata := mergeStringMaps(challenge.Metadata, req.Metadata)
+	metadata = applyAttestationMetadata(metadata, attestationResult)
 	item := FieldEncryptionWrapper{
 		TenantID:            req.TenantID,
 		WrapperID:           challenge.WrapperID,
@@ -613,7 +1094,7 @@ func (s *Service) CompleteFieldEncryptionWrapperRegistration(ctx context.Context
 		Transport:           "mtls+jwt",
 		Status:              "active",
 		CertFingerprint:     certFingerprint,
-		Metadata:            mergeStringMaps(challenge.Metadata, req.Metadata),
+		Metadata:            metadata,
 		ApprovedBy:          approvedBy,
 		ApprovedAt:          s.now(),
 	}
@@ -651,6 +1132,9 @@ func (s *Service) CompleteFieldEncryptionWrapperRegistration(ctx context.Context
 		"challenge_id":     req.ChallengeID,
 		"governance":       true,
 		"cert_fingerprint": wrapper.CertFingerprint,
+		"attestation":      attestationResult.Verified,
+		"ak_fingerprint":   attestationResult.AKFingerprint,
+		"non_exportable":   attestationResult.NonExportableKey,
 	})
 	return FieldEncryptionWrapperRegistrationResult{
 		Wrapper:     wrapper,
@@ -694,10 +1178,16 @@ func (s *Service) IssueFieldEncryptionLease(ctx context.Context, req FieldEncryp
 		}
 		return FieldEncryptionLease{}, err
 	}
+	if err := s.verifyWrapperAuthProfileToken(req.AuthToken, wrapper, "field-encryption:lease"); err != nil {
+		return FieldEncryptionLease{}, err
+	}
 	if policy.RequireRegisteredWrapper && strings.ToLower(strings.TrimSpace(wrapper.Status)) != "active" {
 		return FieldEncryptionLease{}, newServiceError(http.StatusForbidden, "policy_denied", "wrapper is not active")
 	}
 	if err := s.enforceWrapperTransportPolicy(policy, wrapper); err != nil {
+		return FieldEncryptionLease{}, err
+	}
+	if err := s.enforceWrapperClientCertificate(policy, wrapper, req.ClientCertFP); err != nil {
 		return FieldEncryptionLease{}, err
 	}
 	if policy.MaxCachedKeys > 0 {
@@ -829,10 +1319,16 @@ func (s *Service) SubmitFieldEncryptionUsageReceipt(ctx context.Context, req Fie
 		}
 		return FieldEncryptionUsageReceipt{}, err
 	}
+	if err := s.verifyWrapperAuthProfileToken(req.AuthToken, wrapper, "field-encryption:receipt"); err != nil {
+		return FieldEncryptionUsageReceipt{}, err
+	}
 	if policy.RequireRegisteredWrapper && strings.ToLower(strings.TrimSpace(wrapper.Status)) != "active" {
 		return FieldEncryptionUsageReceipt{}, newServiceError(http.StatusForbidden, "policy_denied", "wrapper is not active")
 	}
 	if err := s.enforceWrapperTransportPolicy(policy, wrapper); err != nil {
+		return FieldEncryptionUsageReceipt{}, err
+	}
+	if err := s.enforceWrapperClientCertificate(policy, wrapper, req.ClientCertFP); err != nil {
 		return FieldEncryptionUsageReceipt{}, err
 	}
 	if _, err := s.store.GetFieldEncryptionUsageReceiptByNonce(ctx, req.TenantID, req.WrapperID, req.Nonce); err == nil {
@@ -951,7 +1447,138 @@ func (s *Service) RevokeFieldEncryptionLease(ctx context.Context, tenantID strin
 	return nil
 }
 
+func (s *Service) RenewFieldEncryptionLease(ctx context.Context, tenantID string, leaseID string, req FieldEncryptionLeaseRequest) (FieldEncryptionLease, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	leaseID = strings.TrimSpace(leaseID)
+	if tenantID == "" || leaseID == "" {
+		return FieldEncryptionLease{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and lease_id are required")
+	}
+	existing, err := s.store.GetFieldEncryptionLease(ctx, tenantID, leaseID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return FieldEncryptionLease{}, newServiceError(http.StatusNotFound, "not_found", "lease was not found")
+		}
+		return FieldEncryptionLease{}, err
+	}
+	if existing.Revoked {
+		return FieldEncryptionLease{}, newServiceError(http.StatusForbidden, "access_denied", "lease is revoked")
+	}
+
+	req.TenantID = tenantID
+	req.WrapperID = firstTenant(req.WrapperID, existing.WrapperID)
+	req.KeyID = firstTenant(req.KeyID, existing.KeyID)
+	if strings.TrimSpace(req.Operation) == "" {
+		req.Operation = existing.Operation
+	}
+	if strings.TrimSpace(req.WrapperID) != strings.TrimSpace(existing.WrapperID) ||
+		strings.TrimSpace(req.KeyID) != strings.TrimSpace(existing.KeyID) ||
+		strings.ToLower(strings.TrimSpace(req.Operation)) != strings.ToLower(strings.TrimSpace(existing.Operation)) {
+		return FieldEncryptionLease{}, newServiceError(http.StatusBadRequest, "bad_request", "lease renewal binding mismatch")
+	}
+
+	renewed, err := s.IssueFieldEncryptionLease(ctx, req)
+	if err != nil {
+		return FieldEncryptionLease{}, err
+	}
+	_ = s.store.RevokeFieldEncryptionLease(ctx, tenantID, leaseID, "renewed:"+renewed.LeaseID)
+	_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.lease_renewed", tenantID, map[string]interface{}{
+		"old_lease_id": leaseID,
+		"new_lease_id": renewed.LeaseID,
+		"wrapper_id":   renewed.WrapperID,
+		"key_id":       renewed.KeyID,
+		"operation":    renewed.Operation,
+		"expires_at":   renewed.ExpiresAt.Format(time.RFC3339),
+	})
+	return renewed, nil
+}
+
+func (s *Service) ReconcileMissingFieldEncryptionReceipts(ctx context.Context, limit int) (int, int, error) {
+	if limit <= 0 || limit > 5000 {
+		limit = 500
+	}
+	states, err := s.store.ListFieldEncryptionLeaseReceiptStates(ctx, limit)
+	if err != nil {
+		return 0, 0, err
+	}
+	if len(states) == 0 {
+		return 0, 0, nil
+	}
+	now := s.now()
+	policies := map[string]DataProtectionPolicy{}
+	scanned := 0
+	revoked := 0
+	for _, state := range states {
+		scanned++
+		tenantID := strings.TrimSpace(state.TenantID)
+		leaseID := strings.TrimSpace(state.LeaseID)
+		if tenantID == "" || leaseID == "" {
+			continue
+		}
+		policy, ok := policies[tenantID]
+		if !ok {
+			p, policyErr := s.mustDataProtectionPolicy(ctx, tenantID)
+			if policyErr != nil {
+				return scanned, revoked, policyErr
+			}
+			policy = p
+			policies[tenantID] = p
+		}
+		if !policy.ReceiptReconciliationEnabled {
+			continue
+		}
+		heartbeatSec := policy.ReceiptHeartbeatSec
+		if heartbeatSec <= 0 {
+			heartbeatSec = 120
+		}
+		graceSec := policy.ReceiptMissingGraceSec
+		if graceSec < 0 {
+			graceSec = 0
+		}
+		lastSignalAt := state.LastReceiptAt
+		if lastSignalAt.IsZero() {
+			lastSignalAt = state.IssuedAt
+		}
+		if lastSignalAt.IsZero() {
+			lastSignalAt = now
+		}
+		deadline := lastSignalAt.Add(time.Duration(heartbeatSec+graceSec) * time.Second)
+		if !now.After(deadline) {
+			continue
+		}
+		if revokeErr := s.store.RevokeFieldEncryptionLease(ctx, tenantID, leaseID, "receipt_missing_reconciliation"); revokeErr != nil {
+			if errors.Is(revokeErr, errNotFound) {
+				continue
+			}
+			return scanned, revoked, revokeErr
+		}
+		revoked++
+		_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.receipt_missing_detected", tenantID, map[string]interface{}{
+			"lease_id":            leaseID,
+			"wrapper_id":          state.WrapperID,
+			"policy_hash":         state.PolicyHash,
+			"issued_at":           state.IssuedAt.Format(time.RFC3339),
+			"last_receipt_at":     state.LastReceiptAt.Format(time.RFC3339),
+			"receipt_count":       state.ReceiptCount,
+			"heartbeat_sec":       heartbeatSec,
+			"missing_grace_sec":   graceSec,
+			"reconciliation_time": now.Format(time.RFC3339),
+		})
+		_ = s.publishAudit(ctx, "audit.dataprotect.field_encryption.lease_revoked", tenantID, map[string]interface{}{
+			"lease_id": leaseID,
+			"reason":   "receipt_missing_reconciliation",
+		})
+	}
+	return scanned, revoked, nil
+}
+
 func (s *Service) enforceLocalWrapperKeyPolicies(policy DataProtectionPolicy, keyMeta map[string]interface{}, operation string) error {
+	exportAllowed, exportPolicyKnown := keyMetadataExportAllowed(keyMeta)
+	if !exportPolicyKnown {
+		return newServiceError(http.StatusForbidden, "policy_denied", "key export policy metadata is required for local crypto lease")
+	}
+	if !exportAllowed {
+		return newServiceError(http.StatusForbidden, "policy_denied", "key is not exportable for local crypto lease")
+	}
 	keyType := strings.ToLower(strings.TrimSpace(firstString(keyMeta["key_type"])))
 	if keyType == "" {
 		keyType = inferDataProtectionKeyTypeFromAlgorithm(firstString(keyMeta["algorithm"]))
@@ -969,6 +1596,54 @@ func (s *Service) enforceLocalWrapperKeyPolicies(policy DataProtectionPolicy, ke
 	return nil
 }
 
+func keyMetadataExportAllowed(keyMeta map[string]interface{}) (bool, bool) {
+	if len(keyMeta) == 0 {
+		return false, false
+	}
+	if raw, ok := keyMeta["export_allowed"]; ok {
+		return parseMetadataBool(raw), true
+	}
+	if raw, ok := keyMeta["exportable"]; ok {
+		return parseMetadataBool(raw), true
+	}
+	if raw, ok := keyMeta["allow_export"]; ok {
+		return parseMetadataBool(raw), true
+	}
+	if raw, ok := keyMeta["is_exportable"]; ok {
+		return parseMetadataBool(raw), true
+	}
+	if nested, ok := keyMeta["export_policy"].(map[string]interface{}); ok && nested != nil {
+		if raw, ok := nested["export_allowed"]; ok {
+			return parseMetadataBool(raw), true
+		}
+		if raw, ok := nested["exportable"]; ok {
+			return parseMetadataBool(raw), true
+		}
+	}
+	return false, false
+}
+
+func parseMetadataBool(raw interface{}) bool {
+	switch v := raw.(type) {
+	case bool:
+		return v
+	case string:
+		return isTruthy(v)
+	case int:
+		return v != 0
+	case int32:
+		return v != 0
+	case int64:
+		return v != 0
+	case float32:
+		return v != 0
+	case float64:
+		return v != 0
+	default:
+		return isTruthy(v)
+	}
+}
+
 func (s *Service) classifyLocalAlgorithm(keyAlgorithm string) string {
 	a := strings.ToUpper(strings.TrimSpace(keyAlgorithm))
 	switch {
@@ -983,6 +1658,133 @@ func (s *Service) classifyLocalAlgorithm(keyAlgorithm string) string {
 	}
 }
 
+func (s *Service) verifyWrapperAuthProfileToken(rawToken string, wrapper FieldEncryptionWrapper, requiredScope string) error {
+	rawToken = strings.TrimSpace(rawToken)
+	if rawToken == "" {
+		return newServiceError(http.StatusUnauthorized, "auth_required", "wrapper token is required")
+	}
+	claims := jwt.MapClaims{}
+	token, err := jwt.ParseWithClaims(rawToken, claims, func(token *jwt.Token) (interface{}, error) {
+		if token.Method == nil || token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+			return nil, errors.New("unsupported signing method")
+		}
+		if len(s.jwtKey) > 0 {
+			return s.jwtKey, nil
+		}
+		sum := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|field-wrapper", wrapper.TenantID, wrapper.WrapperID, wrapper.AppID)))
+		fallbackKey := make([]byte, len(sum))
+		copy(fallbackKey, sum[:])
+		return fallbackKey, nil
+	})
+	if err != nil || token == nil || !token.Valid {
+		return newServiceError(http.StatusUnauthorized, "invalid_token", "wrapper token is invalid")
+	}
+
+	tenantID := strings.TrimSpace(firstString(claims["tenant_id"]))
+	wrapperID := strings.TrimSpace(firstString(claims["wrapper_id"], claims["sub"]))
+	appID := strings.TrimSpace(firstString(claims["app_id"]))
+	if !strings.EqualFold(tenantID, strings.TrimSpace(wrapper.TenantID)) ||
+		!strings.EqualFold(wrapperID, strings.TrimSpace(wrapper.WrapperID)) ||
+		!strings.EqualFold(appID, strings.TrimSpace(wrapper.AppID)) {
+		return newServiceError(http.StatusForbidden, "access_denied", "wrapper token binding mismatch")
+	}
+
+	if strings.TrimSpace(s.jwtIss) != "" {
+		iss := strings.TrimSpace(firstString(claims["iss"]))
+		if !strings.EqualFold(iss, strings.TrimSpace(s.jwtIss)) {
+			return newServiceError(http.StatusForbidden, "access_denied", "wrapper token issuer mismatch")
+		}
+	}
+	if strings.TrimSpace(s.jwtAud) != "" {
+		if !claimContainsAudience(claims["aud"], s.jwtAud) {
+			return newServiceError(http.StatusForbidden, "access_denied", "wrapper token audience mismatch")
+		}
+	}
+	if strings.TrimSpace(requiredScope) != "" && !claimContainsScope(claims["scope"], requiredScope) {
+		return newServiceError(http.StatusForbidden, "access_denied", "wrapper token scope is insufficient")
+	}
+	return nil
+}
+
+func claimContainsAudience(raw interface{}, expected string) bool {
+	expected = strings.TrimSpace(expected)
+	if expected == "" {
+		return true
+	}
+	switch v := raw.(type) {
+	case string:
+		return strings.EqualFold(strings.TrimSpace(v), expected)
+	case []string:
+		for _, item := range v {
+			if strings.EqualFold(strings.TrimSpace(item), expected) {
+				return true
+			}
+		}
+	case []interface{}:
+		for _, item := range v {
+			if strings.EqualFold(strings.TrimSpace(firstString(item)), expected) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func claimContainsScope(raw interface{}, required string) bool {
+	required = strings.TrimSpace(required)
+	if required == "" {
+		return true
+	}
+	scopes := make([]string, 0)
+	switch v := raw.(type) {
+	case string:
+		for _, item := range strings.FieldsFunc(v, func(r rune) bool { return r == ' ' || r == ',' }) {
+			item = strings.TrimSpace(item)
+			if item != "" {
+				scopes = append(scopes, item)
+			}
+		}
+	case []string:
+		for _, item := range v {
+			item = strings.TrimSpace(item)
+			if item != "" {
+				scopes = append(scopes, item)
+			}
+		}
+	case []interface{}:
+		for _, item := range v {
+			val := strings.TrimSpace(firstString(item))
+			if val != "" {
+				scopes = append(scopes, val)
+			}
+		}
+	}
+	for _, scope := range scopes {
+		if strings.EqualFold(strings.TrimSpace(scope), required) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Service) enforceWrapperClientCertificate(policy DataProtectionPolicy, wrapper FieldEncryptionWrapper, presentedFP string) error {
+	if !policy.RequireMTLS {
+		return nil
+	}
+	expected := strings.ToLower(strings.TrimSpace(wrapper.CertFingerprint))
+	presented := strings.ToLower(strings.TrimSpace(presentedFP))
+	if expected == "" {
+		return newServiceError(http.StatusForbidden, "policy_denied", "wrapper cert fingerprint is not registered")
+	}
+	if presented == "" {
+		return newServiceError(http.StatusForbidden, "policy_denied", "wrapper client certificate fingerprint is required")
+	}
+	if !strings.EqualFold(expected, presented) {
+		return newServiceError(http.StatusForbidden, "access_denied", "wrapper client certificate fingerprint mismatch")
+	}
+	return nil
+}
+
 func (s *Service) enforceWrapperTransportPolicy(policy DataProtectionPolicy, wrapper FieldEncryptionWrapper) error {
 	transport := strings.ToLower(strings.TrimSpace(wrapper.Transport))
 	fingerprint := strings.TrimSpace(wrapper.CertFingerprint)
@@ -994,18 +1796,297 @@ func (s *Service) enforceWrapperTransportPolicy(policy DataProtectionPolicy, wra
 			return newServiceError(http.StatusForbidden, "policy_denied", "wrapper cert fingerprint is required when mTLS is enforced")
 		}
 	}
-	if policy.AttestedWrapperOnly {
-		attested := false
-		if strings.EqualFold(strings.TrimSpace(wrapper.Metadata["attested"]), "true") ||
-			strings.EqualFold(strings.TrimSpace(wrapper.Metadata["attestation"]), "verified") ||
-			strings.EqualFold(strings.TrimSpace(wrapper.Metadata["attestation_status"]), "verified") {
-			attested = true
+	if policy.AttestedWrapperOnly || policy.RequireTPMAttestation {
+		if !wrapperAttestationVerified(wrapper.Metadata) {
+			return newServiceError(http.StatusForbidden, "policy_denied", "tpm attestation verification is required by policy")
 		}
-		if !attested && fingerprint == "" {
-			return newServiceError(http.StatusForbidden, "policy_denied", "attested wrapper is required by policy")
+	}
+	if policy.RequireNonExportableWrapperKey {
+		if !wrapperMetadataTruthy(wrapper.Metadata, "non_exportable_key_asserted") {
+			return newServiceError(http.StatusForbidden, "policy_denied", "wrapper non-exportable key assertion is required by policy")
 		}
 	}
 	return nil
+}
+
+type wrapperTPMAttestationEvidence struct {
+	TenantID         string
+	WrapperID        string
+	AppID            string
+	ChallengeID      string
+	Nonce            string
+	Timestamp        string
+	AKFingerprint    string
+	AKPublicKeyPEM   string
+	NonExportableKey bool
+	PCRs             map[string]string
+}
+
+type wrapperAttestationVerification struct {
+	Verified         bool
+	AKFingerprint    string
+	NonExportableKey bool
+	VerifiedAt       time.Time
+	PCRDigest        string
+	EvidenceHash     string
+}
+
+func (s *Service) verifyWrapperAttestationEvidence(policy DataProtectionPolicy, challenge FieldEncryptionWrapperChallenge, req FieldEncryptionRegisterCompleteRequest) (wrapperAttestationVerification, error) {
+	evidenceB64 := strings.TrimSpace(req.AttestationEvidenceB64)
+	signatureB64 := strings.TrimSpace(req.AttestationSignatureB64)
+	pubKeyPEM := strings.TrimSpace(req.AttestationPublicKeyPEM)
+	requireAttestation := policy.AttestedWrapperOnly || policy.RequireTPMAttestation || policy.RequireNonExportableWrapperKey
+	if evidenceB64 == "" && signatureB64 == "" && pubKeyPEM == "" {
+		if requireAttestation {
+			return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "policy_denied", "tpm attestation evidence is required by policy")
+		}
+		return wrapperAttestationVerification{}, nil
+	}
+	if evidenceB64 == "" || signatureB64 == "" {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusBadRequest, "bad_request", "attestation_evidence_b64 and attestation_signature_b64 are required when attestation is provided")
+	}
+
+	evidenceRaw, err := b64d(evidenceB64)
+	if err != nil || len(evidenceRaw) == 0 {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusBadRequest, "bad_request", "attestation_evidence_b64 must be valid base64-encoded json")
+	}
+	evidence, err := parseWrapperTPMAttestationEvidence(evidenceRaw)
+	if err != nil {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusBadRequest, "bad_request", "attestation evidence payload is invalid: "+err.Error())
+	}
+	if pubKeyPEM == "" {
+		pubKeyPEM = evidence.AKPublicKeyPEM
+	}
+	if strings.TrimSpace(pubKeyPEM) == "" {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusBadRequest, "bad_request", "attestation_public_key_pem is required when attestation evidence is provided")
+	}
+	pub, err := parseAttestationPublicKeyPEM(pubKeyPEM)
+	if err != nil {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusBadRequest, "bad_request", "attestation public key is invalid")
+	}
+	signature, err := b64d(signatureB64)
+	if err != nil || len(signature) == 0 {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusBadRequest, "bad_request", "attestation_signature_b64 must be valid base64")
+	}
+	if err := verifyAttestationSignature(pub, evidenceRaw, signature); err != nil {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "access_denied", "tpm attestation signature verification failed")
+	}
+
+	if !strings.EqualFold(strings.TrimSpace(evidence.TenantID), strings.TrimSpace(challenge.TenantID)) {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "access_denied", "attestation tenant binding mismatch")
+	}
+	if !strings.EqualFold(strings.TrimSpace(evidence.WrapperID), strings.TrimSpace(challenge.WrapperID)) {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "access_denied", "attestation wrapper binding mismatch")
+	}
+	if !strings.EqualFold(strings.TrimSpace(evidence.AppID), strings.TrimSpace(challenge.AppID)) {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "access_denied", "attestation app binding mismatch")
+	}
+	if !strings.EqualFold(strings.TrimSpace(evidence.ChallengeID), strings.TrimSpace(challenge.ChallengeID)) {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "access_denied", "attestation challenge_id mismatch")
+	}
+	if !strings.EqualFold(strings.TrimSpace(evidence.Nonce), strings.TrimSpace(challenge.Nonce)) {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "access_denied", "attestation nonce mismatch")
+	}
+	ts := parseTimeString(evidence.Timestamp)
+	if ts.IsZero() {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusBadRequest, "bad_request", "attestation timestamp must be RFC3339")
+	}
+	windowSec := policy.AntiReplayWindowSeconds
+	if windowSec <= 0 {
+		windowSec = 300
+	}
+	delta := s.now().Sub(ts)
+	if delta < 0 {
+		delta = -delta
+	}
+	if delta > time.Duration(windowSec)*time.Second {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "access_denied", "attestation evidence is outside anti-replay window")
+	}
+
+	computedAKFP, err := fingerprintFromPublicKey(pub)
+	if err != nil {
+		return wrapperAttestationVerification{}, err
+	}
+	declaredAKFP := normalizeFingerprint(evidence.AKFingerprint)
+	if declaredAKFP != "" && !strings.EqualFold(declaredAKFP, computedAKFP) {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "access_denied", "attestation AK fingerprint mismatch")
+	}
+	akFingerprint := computedAKFP
+	if declaredAKFP != "" {
+		akFingerprint = declaredAKFP
+	}
+	if len(policy.AttestationAKAllowlist) > 0 && !containsString(policy.AttestationAKAllowlist, akFingerprint) {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "policy_denied", "attestation AK is not in allowlist")
+	}
+
+	normalizedPCRs := normalizeAttestationPCRValues(evidence.PCRs)
+	if len(policy.AttestationAllowedPCRs) > 0 {
+		for pcr, allowed := range policy.AttestationAllowedPCRs {
+			got := normalizePCRValue(normalizedPCRs[pcr])
+			if got == "" {
+				return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "policy_denied", "required pcr value is missing in attestation evidence: "+pcr)
+			}
+			if !containsString(allowed, got) {
+				return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "policy_denied", "attestation pcr value is not allowed by policy: "+pcr)
+			}
+		}
+	}
+	if policy.RequireNonExportableWrapperKey && !evidence.NonExportableKey {
+		return wrapperAttestationVerification{}, newServiceError(http.StatusForbidden, "policy_denied", "attestation does not assert non-exportable wrapper keys")
+	}
+
+	pcrDigest := hashHex(mustJSON(normalizedPCRs, "{}"))
+	evidenceHash := hashHex(string(evidenceRaw))
+	return wrapperAttestationVerification{
+		Verified:         true,
+		AKFingerprint:    akFingerprint,
+		NonExportableKey: evidence.NonExportableKey,
+		VerifiedAt:       s.now(),
+		PCRDigest:        pcrDigest,
+		EvidenceHash:     evidenceHash,
+	}, nil
+}
+
+func parseWrapperTPMAttestationEvidence(raw []byte) (wrapperTPMAttestationEvidence, error) {
+	payload := map[string]interface{}{}
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return wrapperTPMAttestationEvidence{}, err
+	}
+	out := wrapperTPMAttestationEvidence{
+		TenantID:         strings.TrimSpace(firstString(payload["tenant_id"], payload["tenant"])),
+		WrapperID:        strings.TrimSpace(firstString(payload["wrapper_id"])),
+		AppID:            strings.TrimSpace(firstString(payload["app_id"])),
+		ChallengeID:      strings.TrimSpace(firstString(payload["challenge_id"])),
+		Nonce:            strings.TrimSpace(firstString(payload["nonce"])),
+		Timestamp:        strings.TrimSpace(firstString(payload["timestamp"], payload["ts"])),
+		AKFingerprint:    strings.TrimSpace(firstString(payload["ak_fingerprint"])),
+		AKPublicKeyPEM:   strings.TrimSpace(firstString(payload["ak_public_key_pem"], payload["attestation_public_key_pem"])),
+		NonExportableKey: isTruthy(payload["non_exportable_key"]) || isTruthy(payload["wrapper_key_non_exportable"]) || isTruthy(payload["key_non_exportable"]),
+		PCRs:             normalizeAttestationPCRValues(parseAttestationPCRValues(payload["pcrs"])),
+	}
+	if out.TenantID == "" || out.WrapperID == "" || out.AppID == "" || out.ChallengeID == "" || out.Nonce == "" || out.Timestamp == "" {
+		return wrapperTPMAttestationEvidence{}, errors.New("required attestation fields are missing")
+	}
+	return out, nil
+}
+
+func parseAttestationPCRValues(raw interface{}) map[string]string {
+	out := map[string]string{}
+	switch v := raw.(type) {
+	case map[string]interface{}:
+		for k, val := range v {
+			key := normalizePCRIndex(k)
+			value := normalizePCRValue(firstString(val))
+			if key != "" && value != "" {
+				out[key] = value
+			}
+		}
+	case map[string]string:
+		for k, val := range v {
+			key := normalizePCRIndex(k)
+			value := normalizePCRValue(val)
+			if key != "" && value != "" {
+				out[key] = value
+			}
+		}
+	}
+	return out
+}
+
+func normalizeAttestationPCRValues(in map[string]string) map[string]string {
+	out := map[string]string{}
+	for key, value := range in {
+		k := normalizePCRIndex(key)
+		v := normalizePCRValue(value)
+		if k == "" || v == "" {
+			continue
+		}
+		out[k] = v
+	}
+	return out
+}
+
+func parseAttestationPublicKeyPEM(raw string) (interface{}, error) {
+	block, _ := pem.Decode([]byte(strings.TrimSpace(raw)))
+	if block == nil {
+		return nil, errors.New("invalid pem")
+	}
+	switch {
+	case strings.Contains(strings.ToUpper(strings.TrimSpace(block.Type)), "CERTIFICATE"):
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+		return cert.PublicKey, nil
+	case strings.Contains(strings.ToUpper(strings.TrimSpace(block.Type)), "RSA PUBLIC KEY"):
+		return x509.ParsePKCS1PublicKey(block.Bytes)
+	default:
+		return x509.ParsePKIXPublicKey(block.Bytes)
+	}
+}
+
+func verifyAttestationSignature(pub interface{}, message []byte, signature []byte) error {
+	switch k := pub.(type) {
+	case ed25519.PublicKey:
+		if !ed25519.Verify(k, message, signature) {
+			return errors.New("ed25519 signature verify failed")
+		}
+		return nil
+	case *rsa.PublicKey:
+		sum := sha256.Sum256(message)
+		return rsa.VerifyPKCS1v15(k, crypto.SHA256, sum[:], signature)
+	case *ecdsa.PublicKey:
+		sum := sha256.Sum256(message)
+		if !ecdsa.VerifyASN1(k, sum[:], signature) {
+			return errors.New("ecdsa signature verify failed")
+		}
+		return nil
+	default:
+		return errors.New("unsupported attestation public key type")
+	}
+}
+
+func fingerprintFromPublicKey(pub interface{}) (string, error) {
+	der, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		return "", err
+	}
+	sum := sha256.Sum256(der)
+	return strings.ToLower(hex.EncodeToString(sum[:])), nil
+}
+
+func applyAttestationMetadata(metadata map[string]string, attestation wrapperAttestationVerification) map[string]string {
+	out := mergeStringMaps(metadata, map[string]string{})
+	if !attestation.Verified {
+		return out
+	}
+	out["attestation_verified"] = "true"
+	out["attestation_status"] = "verified"
+	out["attestation"] = "verified"
+	out["ak_fingerprint"] = strings.ToLower(strings.TrimSpace(attestation.AKFingerprint))
+	if attestation.NonExportableKey {
+		out["non_exportable_key_asserted"] = "true"
+	} else {
+		out["non_exportable_key_asserted"] = "false"
+	}
+	out["attestation_verified_at"] = attestation.VerifiedAt.UTC().Format(time.RFC3339)
+	out["attestation_pcr_digest"] = attestation.PCRDigest
+	out["attestation_evidence_hash"] = attestation.EvidenceHash
+	return out
+}
+
+func wrapperAttestationVerified(metadata map[string]string) bool {
+	return wrapperMetadataTruthy(metadata, "attestation_verified") ||
+		strings.EqualFold(strings.TrimSpace(metadata["attestation_status"]), "verified") ||
+		strings.EqualFold(strings.TrimSpace(metadata["attestation"]), "verified")
+}
+
+func wrapperMetadataTruthy(metadata map[string]string, key string) bool {
+	if metadata == nil {
+		return false
+	}
+	val := strings.ToLower(strings.TrimSpace(metadata[strings.TrimSpace(key)]))
+	return val == "1" || val == "true" || val == "yes" || val == "on"
 }
 
 func (s *Service) wrapLeaseKeyForWrapper(tenantID string, wrapperID string, keyID string, operation string, wrapperPubKeyB64 string, rawKey []byte) (map[string]interface{}, error) {
@@ -1202,6 +2283,7 @@ func (s *Service) issueWrapperAuthProfile(wrapper FieldEncryptionWrapper) (Field
 		"field-encryption:lease",
 		"field-encryption:receipt",
 		"field-encryption:local-crypto",
+		"field-protection:resolve",
 	}
 	claims := jwt.MapClaims{
 		"iss":        s.jwtIss,
@@ -1268,6 +2350,68 @@ func normalizeLowerKeys(in []string) []string {
 		}
 		seen[s] = struct{}{}
 		out = append(out, s)
+	}
+	return out
+}
+
+func normalizeFingerprint(v string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	if v == "" {
+		return ""
+	}
+	replacer := strings.NewReplacer(":", "", "-", "", " ", "", "\t", "")
+	return replacer.Replace(v)
+}
+
+func normalizeFingerprintList(in []string) []string {
+	out := make([]string, 0, len(in))
+	seen := map[string]struct{}{}
+	for _, item := range in {
+		fp := normalizeFingerprint(item)
+		if fp == "" {
+			continue
+		}
+		if _, ok := seen[fp]; ok {
+			continue
+		}
+		seen[fp] = struct{}{}
+		out = append(out, fp)
+	}
+	return out
+}
+
+func normalizePCRIndex(v string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	v = strings.TrimPrefix(v, "pcr")
+	v = strings.TrimSpace(v)
+	return v
+}
+
+func normalizePCRValue(v string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	v = strings.TrimPrefix(v, "0x")
+	return v
+}
+
+func normalizeAttestationPCRPolicy(in map[string][]string) map[string][]string {
+	out := map[string][]string{}
+	for key, raw := range in {
+		k := normalizePCRIndex(key)
+		if k == "" {
+			continue
+		}
+		values := make([]string, 0, len(raw))
+		for _, item := range raw {
+			val := normalizePCRValue(item)
+			if val != "" {
+				values = append(values, val)
+			}
+		}
+		values = uniqueStrings(values)
+		if len(values) == 0 {
+			continue
+		}
+		out[k] = values
 	}
 	return out
 }
@@ -1605,15 +2749,42 @@ func (s *Service) CreateTokenVault(ctx context.Context, tenantID string, in Toke
 	}
 	in.Name = strings.TrimSpace(in.Name)
 	in.Mode = "vault"
+	in.StorageType = normalizeTokenStorageType(in.StorageType)
+	in.ExternalProvider = normalizeExternalVaultProvider(in.ExternalProvider)
+	in.ExternalConfig = normalizeExternalVaultConfig(in.ExternalConfig)
+	in.ExternalSchemaVersion = strings.TrimSpace(in.ExternalSchemaVersion)
 	in.TokenType = strings.ToLower(strings.TrimSpace(in.TokenType))
 	in.Format = normalizeTokenFormat(in.Format)
+	in.CustomTokenFormat = normalizeTokenFormatName(in.CustomTokenFormat)
 	in.KeyID = strings.TrimSpace(in.KeyID)
 	in.CustomRegex = strings.TrimSpace(in.CustomRegex)
 	if in.Name == "" || in.TokenType == "" || in.KeyID == "" {
 		return TokenVault{}, newServiceError(http.StatusBadRequest, "bad_request", "name, token_type and key_id are required")
 	}
+	if in.StorageType == "external" {
+		if in.ExternalProvider == "" {
+			return TokenVault{}, newServiceError(http.StatusBadRequest, "bad_request", "external_provider is required for external token vaults")
+		}
+		if err := validateExternalVaultConfig(in.ExternalProvider, in.ExternalConfig); err != nil {
+			return TokenVault{}, err
+		}
+		if in.ExternalSchemaVersion == "" {
+			in.ExternalSchemaVersion = "v1"
+		}
+	} else {
+		in.StorageType = "internal"
+		in.ExternalProvider = ""
+		in.ExternalConfig = map[string]string{}
+		in.ExternalSchemaVersion = ""
+	}
 	if !isSupportedTokenType(in.TokenType) {
 		return TokenVault{}, newServiceError(http.StatusBadRequest, "bad_request", "unsupported token_type")
+	}
+	if in.Format == "custom" && in.CustomTokenFormat == "" {
+		return TokenVault{}, newServiceError(http.StatusBadRequest, "bad_request", "custom_token_format is required when format is custom")
+	}
+	if in.Format != "custom" {
+		in.CustomTokenFormat = ""
 	}
 	if in.TokenType == "custom" && in.CustomRegex == "" {
 		return TokenVault{}, newServiceError(http.StatusBadRequest, "bad_request", "custom_regex is required for custom token type")
@@ -1627,6 +2798,15 @@ func (s *Service) CreateTokenVault(ctx context.Context, tenantID string, in Toke
 	}
 	if !policyAllowsTokenFormat(policy, in.TokenType, in.Format) {
 		return TokenVault{}, newServiceError(http.StatusForbidden, "policy_denied", "token format is blocked for selected token type")
+	}
+	if in.Format == "custom" {
+		template, ok := resolveCustomTokenFormatTemplate(policy, in.CustomTokenFormat)
+		if !ok {
+			return TokenVault{}, newServiceError(http.StatusForbidden, "policy_denied", "custom token format is not allowed by policy")
+		}
+		if err := validateCustomTokenFormatTemplate(template); err != nil {
+			return TokenVault{}, err
+		}
 	}
 	if in.TokenType == "custom" {
 		if !policy.AllowCustomRegexTokens {
@@ -1651,9 +2831,12 @@ func (s *Service) CreateTokenVault(ctx context.Context, tenantID string, in Toke
 		return TokenVault{}, err
 	}
 	_ = s.publishAudit(ctx, "audit.dataprotect.token_vault_created", tenantID, map[string]interface{}{
-		"vault_id":     in.ID,
-		"token_type":   in.TokenType,
-		"token_format": in.Format,
+		"vault_id":          in.ID,
+		"storage_type":      in.StorageType,
+		"external_provider": in.ExternalProvider,
+		"token_type":        in.TokenType,
+		"token_format":      in.Format,
+		"custom_format":     in.CustomTokenFormat,
 	})
 	return s.store.GetTokenVault(ctx, tenantID, in.ID)
 }
@@ -1706,6 +2889,119 @@ func (s *Service) DeleteTokenVault(ctx context.Context, tenantID string, vaultID
 	return nil
 }
 
+func (s *Service) GetExternalTokenVaultSetup(provider string) (map[string]interface{}, error) {
+	provider = normalizeExternalVaultProvider(provider)
+	if provider == "" {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "provider must be one of postgres, mysql, mssql, oracle, mongodb")
+	}
+	filename := ""
+	contentType := "text/plain; charset=utf-8"
+	content := ""
+	switch provider {
+	case "postgres":
+		filename = "token_vault_schema_postgres.sql"
+		content = `CREATE TABLE IF NOT EXISTS token_vault_records (
+    tenant_id TEXT NOT NULL,
+    vault_id TEXT NOT NULL,
+    token TEXT NOT NULL,
+    token_hash TEXT NOT NULL,
+    original_hash TEXT NOT NULL,
+    ciphertext BYTEA NOT NULL,
+    metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    use_count INTEGER NOT NULL DEFAULT 0,
+    use_limit INTEGER NOT NULL DEFAULT 0,
+    renew_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMPTZ NULL,
+    PRIMARY KEY (tenant_id, vault_id, token)
+);
+CREATE INDEX IF NOT EXISTS idx_token_vault_records_lookup ON token_vault_records (tenant_id, vault_id, original_hash);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_token_vault_records_unique_input ON token_vault_records (tenant_id, vault_id, original_hash);`
+	case "mysql":
+		filename = "token_vault_schema_mysql.sql"
+		content = `CREATE TABLE IF NOT EXISTS token_vault_records (
+    tenant_id VARCHAR(128) NOT NULL,
+    vault_id VARCHAR(128) NOT NULL,
+    token VARCHAR(256) NOT NULL,
+    token_hash VARCHAR(128) NOT NULL,
+    original_hash VARCHAR(128) NOT NULL,
+    ciphertext LONGBLOB NOT NULL,
+    metadata_json JSON NOT NULL,
+    use_count INT NOT NULL DEFAULT 0,
+    use_limit INT NOT NULL DEFAULT 0,
+    renew_count INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NULL,
+    PRIMARY KEY (tenant_id, vault_id, token),
+    KEY idx_token_vault_records_lookup (tenant_id, vault_id, original_hash),
+    UNIQUE KEY idx_token_vault_records_unique_input (tenant_id, vault_id, original_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`
+	case "mssql":
+		filename = "token_vault_schema_mssql.sql"
+		content = `IF OBJECT_ID('dbo.token_vault_records', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.token_vault_records (
+        tenant_id NVARCHAR(128) NOT NULL,
+        vault_id NVARCHAR(128) NOT NULL,
+        token NVARCHAR(256) NOT NULL,
+        token_hash NVARCHAR(128) NOT NULL,
+        original_hash NVARCHAR(128) NOT NULL,
+        ciphertext VARBINARY(MAX) NOT NULL,
+        metadata_json NVARCHAR(MAX) NOT NULL,
+        use_count INT NOT NULL DEFAULT 0,
+        use_limit INT NOT NULL DEFAULT 0,
+        renew_count INT NOT NULL DEFAULT 0,
+        created_at DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+        expires_at DATETIME2 NULL,
+        CONSTRAINT PK_token_vault_records PRIMARY KEY (tenant_id, vault_id, token)
+    );
+    CREATE INDEX IX_token_vault_records_lookup ON dbo.token_vault_records (tenant_id, vault_id, original_hash);
+    CREATE UNIQUE INDEX IX_token_vault_records_unique_input ON dbo.token_vault_records (tenant_id, vault_id, original_hash);
+END;`
+	case "oracle":
+		filename = "token_vault_schema_oracle.sql"
+		content = `BEGIN
+    EXECUTE IMMEDIATE '
+        CREATE TABLE token_vault_records (
+            tenant_id VARCHAR2(128) NOT NULL,
+            vault_id VARCHAR2(128) NOT NULL,
+            token VARCHAR2(256) NOT NULL,
+            token_hash VARCHAR2(128) NOT NULL,
+            original_hash VARCHAR2(128) NOT NULL,
+            ciphertext BLOB NOT NULL,
+            metadata_json CLOB NOT NULL,
+            use_count NUMBER(10) DEFAULT 0 NOT NULL,
+            use_limit NUMBER(10) DEFAULT 0 NOT NULL,
+            renew_count NUMBER(10) DEFAULT 0 NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            expires_at TIMESTAMP NULL,
+            CONSTRAINT pk_token_vault_records PRIMARY KEY (tenant_id, vault_id, token)
+        )';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -955 THEN RAISE; END IF;
+END;
+/
+CREATE INDEX idx_token_vault_records_lookup ON token_vault_records (tenant_id, vault_id, original_hash);
+CREATE UNIQUE INDEX idx_token_vault_records_unique_input ON token_vault_records (tenant_id, vault_id, original_hash);`
+	case "mongodb":
+		filename = "token_vault_schema_mongodb.js"
+		contentType = "application/javascript; charset=utf-8"
+		content = `db = db.getSiblingDB("vecta_token_vault");
+db.createCollection("token_vault_records");
+db.token_vault_records.createIndex({tenant_id:1, vault_id:1, token:1}, {unique:true, name:"uq_token"});
+db.token_vault_records.createIndex({tenant_id:1, vault_id:1, original_hash:1}, {unique:true, name:"uq_original_hash"});
+db.token_vault_records.createIndex({tenant_id:1, vault_id:1, created_at:-1}, {name:"idx_created_at"});`
+	}
+	return map[string]interface{}{
+		"provider":     provider,
+		"filename":     filename,
+		"content_type": contentType,
+		"content":      content,
+		"schema_ver":   "v1",
+	}, nil
+}
+
 func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[string]interface{}, error) {
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.Mode = normalizeTokenMode(req.Mode)
@@ -1713,6 +3009,7 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	req.TokenType = strings.ToLower(strings.TrimSpace(req.TokenType))
 	req.Format = strings.ToLower(strings.TrimSpace(req.Format))
+	req.CustomTokenFormat = normalizeTokenFormatName(req.CustomTokenFormat)
 	req.CustomRegex = strings.TrimSpace(req.CustomRegex)
 	if req.TenantID == "" || req.VaultID == "" {
 		if req.Mode != "vaultless" {
@@ -1745,6 +3042,7 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 	}
 
 	vault := TokenVault{}
+	customFormatTemplate := ""
 	if req.Mode == "vaultless" {
 		if !policy.AllowVaultlessTokenization {
 			return nil, newServiceError(http.StatusForbidden, "policy_denied", "vaultless tokenization is disabled by policy")
@@ -1774,6 +3072,21 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 		if req.Format == "random" {
 			return nil, newServiceError(http.StatusBadRequest, "bad_request", "vaultless mode does not support random format because detokenization is not possible")
 		}
+		if req.Format == "custom" {
+			if req.CustomTokenFormat == "" {
+				return nil, newServiceError(http.StatusBadRequest, "bad_request", "custom_token_format is required when format is custom")
+			}
+			template, ok := resolveCustomTokenFormatTemplate(policy, req.CustomTokenFormat)
+			if !ok {
+				return nil, newServiceError(http.StatusForbidden, "policy_denied", "custom token format is not allowed by policy")
+			}
+			if err := validateCustomTokenFormatTemplate(template); err != nil {
+				return nil, err
+			}
+			customFormatTemplate = template
+		} else {
+			req.CustomTokenFormat = ""
+		}
 		if !policyAllowsTokenMode(policy, req.TokenType, "vaultless") {
 			return nil, newServiceError(http.StatusForbidden, "policy_denied", "vaultless mode is blocked for selected token type")
 		}
@@ -1787,6 +3100,7 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			Name:        "vaultless",
 			TokenType:   req.TokenType,
 			Format:      req.Format,
+			CustomTokenFormat: req.CustomTokenFormat,
 			KeyID:       req.KeyID,
 			CustomRegex: req.CustomRegex,
 		}
@@ -1802,6 +3116,16 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 		}
 		if !policyAllowsTokenFormat(policy, vault.TokenType, vault.Format) {
 			return nil, newServiceError(http.StatusForbidden, "policy_denied", "token format is blocked for selected token type")
+		}
+		if vault.Format == "custom" {
+			template, ok := resolveCustomTokenFormatTemplate(policy, vault.CustomTokenFormat)
+			if !ok {
+				return nil, newServiceError(http.StatusForbidden, "policy_denied", "custom token format is not allowed by policy")
+			}
+			if err := validateCustomTokenFormatTemplate(template); err != nil {
+				return nil, err
+			}
+			customFormatTemplate = template
 		}
 		if vault.TokenType == "custom" && !policy.AllowCustomRegexTokens {
 			return nil, newServiceError(http.StatusForbidden, "policy_denied", "custom regex tokenization is disabled by policy")
@@ -1846,7 +3170,7 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			})
 			continue
 		}
-		token, originalHash, metadata, err := buildTokenForVault(vault, key, value)
+		token, originalHash, metadata, err := buildTokenForVault(vault, key, value, customFormatTemplate)
 		if err != nil {
 			results = append(results, map[string]interface{}{
 				"input": value,
@@ -1869,8 +3193,11 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			results = append(results, out)
 			continue
 		}
-		if !req.OneTimeToken && (vault.Format == "deterministic" || vault.Format == "irreversible") {
+		if !req.OneTimeToken && policy.ReuseExistingTokenForSameInput {
 			if existing, err := s.store.GetTokenByHash(ctx, req.TenantID, req.VaultID, originalHash); err == nil {
+				if !existing.ExpiresAt.IsZero() && s.now().After(existing.ExpiresAt) {
+					// expired mapping must not be reused.
+				} else {
 				results = append(results, map[string]interface{}{
 					"input":    value,
 					"token":    existing.Token,
@@ -1878,6 +3205,7 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 					"reused":   true,
 				})
 				continue
+				}
 			} else if !errors.Is(err, errNotFound) {
 				return nil, err
 			}
@@ -1908,6 +3236,16 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 		} else {
 			rec.OriginalEnc = []byte("IRREVERSIBLE")
 		}
+		if policy.EnforceUniqueTokenPerVault {
+			if existingByToken, err := s.store.GetTokenByValue(ctx, req.TenantID, rec.Token); err == nil {
+				if strings.EqualFold(strings.TrimSpace(existingByToken.VaultID), strings.TrimSpace(req.VaultID)) &&
+					!strings.EqualFold(strings.TrimSpace(existingByToken.OriginalHash), strings.TrimSpace(rec.OriginalHash)) {
+					return nil, newServiceError(http.StatusConflict, "token_collision", "token collision detected for vault; adjust format or policy")
+				}
+			} else if !errors.Is(err, errNotFound) {
+				return nil, err
+			}
+		}
 		if err := s.store.CreateToken(ctx, rec); err != nil {
 			return nil, err
 		}
@@ -1928,12 +3266,13 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 	}
 	if req.Mode == "vaultless" {
 		_ = s.publishAudit(ctx, "audit.dataprotect.tokenized", req.TenantID, map[string]interface{}{
-			"mode":       "vaultless",
-			"count":      len(results),
-			"token_type": vault.TokenType,
-			"format":     vault.Format,
-			"key_id":     vault.KeyID,
-			"one_time":   req.OneTimeToken,
+			"mode":                "vaultless",
+			"count":               len(results),
+			"token_type":          vault.TokenType,
+			"format":              vault.Format,
+			"custom_token_format": vault.CustomTokenFormat,
+			"key_id":              vault.KeyID,
+			"one_time":            req.OneTimeToken,
 		})
 		return results, nil
 	}
@@ -2987,15 +4326,17 @@ func enforceDataEncryptionKeyClassPolicy(policy DataProtectionPolicy, item map[s
 	return nil
 }
 
-func buildTokenForVault(vault TokenVault, key []byte, value string) (string, string, map[string]interface{}, error) {
+func buildTokenForVault(vault TokenVault, key []byte, value string, customTemplate string) (string, string, map[string]interface{}, error) {
 	hashB := hmacSHA256(key, "token-hash", value)
 	defer zeroizeAll(hashB)
 	hash := hex.EncodeToString(hashB)
 	meta := map[string]interface{}{
-		"input_length": len(value),
-		"mode":         normalizeTokenMode(vault.Mode),
-		"token_type":   vault.TokenType,
-		"format":       vault.Format,
+		"input_length":  len(value),
+		"mode":          normalizeTokenMode(vault.Mode),
+		"storage_type":  normalizeTokenStorageType(vault.StorageType),
+		"token_type":    vault.TokenType,
+		"format":        vault.Format,
+		"custom_format": vault.CustomTokenFormat,
 	}
 	switch vault.Format {
 	case "deterministic":
@@ -3006,6 +4347,12 @@ func buildTokenForVault(vault TokenVault, key []byte, value string) (string, str
 		return "toki_" + hash[:24], hash, meta, nil
 	case "format_preserving":
 		return formatPreservingToken(vault, key, value), hash, meta, nil
+	case "custom":
+		token, err := renderCustomTokenFormat(customTemplate, value, key)
+		if err != nil {
+			return "", "", nil, err
+		}
+		return token, hash, meta, nil
 	default:
 		return "tokr_" + hex.EncodeToString(randBytes(12)), hash, meta, nil
 	}
@@ -3022,6 +4369,67 @@ func formatPreservingToken(vault TokenVault, key []byte, value string) string {
 	default:
 		return formatCharsetLike(value, key, "generic")
 	}
+}
+
+func renderCustomTokenFormat(template string, value string, key []byte) (string, error) {
+	if err := validateCustomTokenFormatTemplate(template); err != nil {
+		return "", err
+	}
+	hashRaw := hmacSHA256(key, "token-custom", value)
+	defer zeroizeAll(hashRaw)
+	hashHexValue := hex.EncodeToString(hashRaw)
+	last4 := value
+	if len(last4) > 4 {
+		last4 = last4[len(last4)-4:]
+	}
+	alphaValue := sanitizeTokenValue(value)
+	randA := hex.EncodeToString(randBytes(6))
+	randB := hex.EncodeToString(randBytes(8))
+	token := strings.TrimSpace(template)
+	replacer := strings.NewReplacer(
+		"{{HASH8}}", strings.ToUpper(hashHexValue[:8]),
+		"{{HASH12}}", strings.ToUpper(hashHexValue[:12]),
+		"{{HASH16}}", strings.ToUpper(hashHexValue[:16]),
+		"{{LAST4}}", sanitizeTokenValue(last4),
+		"{{LEN}}", strconvI(len(value)),
+		"{{RAND8}}", strings.ToUpper(randA[:8]),
+		"{{RAND12}}", strings.ToUpper(randB[:12]),
+		"{{VALUE}}", alphaValue,
+	)
+	token = replacer.Replace(token)
+	if regexp.MustCompile(`\{\{[A-Za-z0-9_]+\}\}`).MatchString(token) {
+		return "", newServiceError(http.StatusBadRequest, "bad_request", "custom token format produced unresolved placeholder")
+	}
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return "", newServiceError(http.StatusBadRequest, "bad_request", "custom token format produced empty token")
+	}
+	return token, nil
+}
+
+func sanitizeTokenValue(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return "NA"
+	}
+	buf := make([]rune, 0, len(v))
+	for _, r := range v {
+		switch {
+		case r >= 'a' && r <= 'z':
+			buf = append(buf, r)
+		case r >= 'A' && r <= 'Z':
+			buf = append(buf, r)
+		case r >= '0' && r <= '9':
+			buf = append(buf, r)
+		}
+		if len(buf) >= 16 {
+			break
+		}
+	}
+	if len(buf) == 0 {
+		return "NA"
+	}
+	return string(buf)
 }
 
 func formatPANLike(value string, key []byte) string {
@@ -3281,7 +4689,7 @@ func encodeFieldValue(v interface{}) []byte {
 
 func isSupportedTokenType(v string) bool {
 	switch strings.ToLower(strings.TrimSpace(v)) {
-	case "credit_card", "ssn", "email", "phone", "iban", "bitlocker", "custom":
+	case "credit_card", "ssn", "email", "phone", "iban", "custom":
 		return true
 	default:
 		return false
@@ -3447,6 +4855,138 @@ func normalizeTokenFormatsPolicy(in map[string][]string) map[string][]string {
 		out[key] = valid
 	}
 	return out
+}
+
+func normalizeCustomTokenFormats(in map[string]string) map[string]string {
+	if len(in) == 0 {
+		return map[string]string{}
+	}
+	out := map[string]string{}
+	for name, template := range in {
+		key := normalizeTokenFormatName(name)
+		if key == "" {
+			continue
+		}
+		value := strings.TrimSpace(template)
+		if value == "" {
+			continue
+		}
+		if len(value) > 512 {
+			value = value[:512]
+		}
+		out[key] = value
+	}
+	return out
+}
+
+func normalizeTokenFormatName(v string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	if v == "" {
+		return ""
+	}
+	buf := make([]rune, 0, len(v))
+	for _, r := range v {
+		switch {
+		case r >= 'a' && r <= 'z':
+			buf = append(buf, r)
+		case r >= '0' && r <= '9':
+			buf = append(buf, r)
+		case r == '-' || r == '_':
+			buf = append(buf, r)
+		case r == ' ':
+			buf = append(buf, '_')
+		}
+	}
+	return strings.Trim(strings.ReplaceAll(string(buf), "__", "_"), "_")
+}
+
+func normalizeExternalVaultConfig(in map[string]string) map[string]string {
+	out := map[string]string{}
+	if len(in) == 0 {
+		return out
+	}
+	for rawKey, rawValue := range in {
+		key := strings.ToLower(strings.TrimSpace(rawKey))
+		value := strings.TrimSpace(rawValue)
+		if key == "" || value == "" {
+			continue
+		}
+		switch key {
+		case "host", "port", "database", "schema", "table", "username", "password_ref", "tls_mode", "uri", "auth_database":
+			if len(value) > 512 {
+				value = value[:512]
+			}
+			out[key] = value
+		}
+	}
+	return out
+}
+
+func validateExternalVaultConfig(provider string, cfg map[string]string) error {
+	provider = normalizeExternalVaultProvider(provider)
+	if provider == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "unsupported external_provider")
+	}
+	if len(cfg) == 0 {
+		return newServiceError(http.StatusBadRequest, "bad_request", "external_config is required for external token vaults")
+	}
+	for k := range cfg {
+		key := strings.ToLower(strings.TrimSpace(k))
+		if strings.Contains(key, "password") && key != "password_ref" {
+			return newServiceError(http.StatusBadRequest, "bad_request", "external_config must use password_ref instead of inline password")
+		}
+	}
+	switch provider {
+	case "postgres", "mysql", "mssql", "oracle":
+		if strings.TrimSpace(cfg["host"]) == "" || strings.TrimSpace(cfg["database"]) == "" {
+			return newServiceError(http.StatusBadRequest, "bad_request", "external_config host and database are required for SQL vault providers")
+		}
+	case "mongodb":
+		if strings.TrimSpace(cfg["uri"]) == "" {
+			return newServiceError(http.StatusBadRequest, "bad_request", "external_config uri is required for mongodb vault provider")
+		}
+	}
+	return nil
+}
+
+func resolveCustomTokenFormatTemplate(policy DataProtectionPolicy, formatName string) (string, bool) {
+	key := normalizeTokenFormatName(formatName)
+	if key == "" {
+		return "", false
+	}
+	template := strings.TrimSpace(policy.CustomTokenFormats[key])
+	if template == "" {
+		return "", false
+	}
+	return template, true
+}
+
+func validateCustomTokenFormatTemplate(template string) error {
+	template = strings.TrimSpace(template)
+	if template == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "custom token format template cannot be empty")
+	}
+	if len(template) > 512 {
+		return newServiceError(http.StatusBadRequest, "bad_request", "custom token format template exceeds 512 characters")
+	}
+	allowed := map[string]struct{}{
+		"{{HASH8}}":  {},
+		"{{HASH12}}": {},
+		"{{HASH16}}": {},
+		"{{LAST4}}":  {},
+		"{{LEN}}":    {},
+		"{{RAND8}}":  {},
+		"{{RAND12}}": {},
+		"{{VALUE}}":  {},
+	}
+	matches := regexp.MustCompile(`\{\{[A-Za-z0-9_]+\}\}`).FindAllString(template, -1)
+	for _, match := range matches {
+		upper := strings.ToUpper(match)
+		if _, ok := allowed[upper]; !ok {
+			return newServiceError(http.StatusBadRequest, "bad_request", "custom token format contains unsupported placeholder "+match)
+		}
+	}
+	return nil
 }
 
 func normalizeMaskingRolePolicy(in map[string]string) map[string]string {

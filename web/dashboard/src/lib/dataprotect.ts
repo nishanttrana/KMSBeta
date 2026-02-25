@@ -6,8 +6,13 @@ export type TokenVault = {
   tenant_id: string;
   name: string;
   mode?: "vault" | "vaultless" | string;
+  storage_type?: "internal" | "external" | string;
+  external_provider?: "postgres" | "mysql" | "mssql" | "oracle" | "mongodb" | string;
+  external_config?: Record<string, string>;
+  external_schema_version?: string;
   token_type: string;
-  format: "random" | "format_preserving" | "deterministic" | "irreversible" | string;
+  format: "random" | "format_preserving" | "deterministic" | "irreversible" | "custom" | string;
+  custom_token_format?: string;
   key_id: string;
   custom_regex?: string;
   created_at?: string;
@@ -58,6 +63,7 @@ type RedactionPoliciesResponse = { items: RedactionPolicy[] };
 type RedactionPolicyResponse = { item: RedactionPolicy };
 type AppResponse = { result: Record<string, unknown> };
 type DataProtectionPolicyResponse = { policy: DataProtectionPolicy };
+type TokenVaultExternalSchemaResponse = { item: TokenVaultExternalSchema };
 type FieldEncryptionWrapperResponse = {
   wrapper: FieldEncryptionWrapper;
   auth_profile?: FieldEncryptionAuthProfile;
@@ -99,6 +105,9 @@ export type DataProtectionPolicy = {
   allow_vaultless_tokenization: boolean;
   tokenization_mode_policy: Record<string, string[]>;
   token_format_policy: Record<string, string[]>;
+  custom_token_formats: Record<string, string>;
+  reuse_existing_token_for_same_input: boolean;
+  enforce_unique_token_per_vault: boolean;
   require_token_ttl: boolean;
   max_token_ttl_hours: number;
   allow_token_renewal: boolean;
@@ -137,6 +146,13 @@ export type DataProtectionPolicy = {
   attested_wrapper_only: boolean;
   revoke_on_policy_change: boolean;
   rekey_on_policy_change: boolean;
+  receipt_reconciliation_enabled: boolean;
+  receipt_heartbeat_sec: number;
+  receipt_missing_grace_sec: number;
+  require_tpm_attestation: boolean;
+  require_non_exportable_wrapper_keys: boolean;
+  attestation_ak_allowlist: string[];
+  attestation_allowed_pcrs: Record<string, string[]>;
   updated_by?: string;
   updated_at?: string;
 };
@@ -247,6 +263,9 @@ export type FieldEncryptionRegisterCompleteInput = {
   governance_approved: boolean;
   approved_by?: string;
   metadata?: Record<string, string>;
+  attestation_evidence_b64?: string;
+  attestation_signature_b64?: string;
+  attestation_public_key_pem?: string;
 };
 
 export type FieldEncryptionLeaseInput = {
@@ -258,6 +277,8 @@ export type FieldEncryptionLeaseInput = {
   signature_b64: string;
   requested_ttl_sec?: number;
   requested_max_ops?: number;
+  wrapper_token?: string;
+  client_cert_fingerprint?: string;
 };
 
 export type FieldEncryptionReceiptInput = {
@@ -270,13 +291,20 @@ export type FieldEncryptionReceiptInput = {
   timestamp: string;
   signature_b64: string;
   client_status?: string;
+  wrapper_token?: string;
+  client_cert_fingerprint?: string;
 };
 
 export type CreateTokenVaultInput = {
   name: string;
   token_type: string;
-  format: "random" | "format_preserving" | "deterministic" | "irreversible";
+  format: "random" | "format_preserving" | "deterministic" | "irreversible" | "custom";
+  custom_token_format?: string;
   key_id: string;
+  storage_type?: "internal" | "external";
+  external_provider?: "postgres" | "mysql" | "mssql" | "oracle" | "mongodb" | string;
+  external_config?: Record<string, string>;
+  external_schema_version?: string;
   custom_regex?: string;
 };
 
@@ -285,12 +313,21 @@ export type TokenizeInput = {
   vault_id: string;
   key_id?: string;
   token_type?: string;
-  format?: "random" | "format_preserving" | "deterministic" | "irreversible" | string;
+  format?: "random" | "format_preserving" | "deterministic" | "irreversible" | "custom" | string;
+  custom_token_format?: string;
   custom_regex?: string;
   values: string[];
   ttl_hours?: number;
   one_time_token?: boolean;
   metadata_tags?: Record<string, string>;
+};
+
+export type TokenVaultExternalSchema = {
+  provider: "postgres" | "mysql" | "mssql" | "oracle" | "mongodb" | string;
+  filename: string;
+  content_type: string;
+  content: string;
+  schema_ver?: string;
 };
 
 export type DetokenizeInput = {
@@ -400,6 +437,18 @@ export async function createTokenVault(session: AuthSession, input: CreateTokenV
   return out.vault;
 }
 
+export async function downloadTokenVaultExternalSchema(
+  session: AuthSession,
+  provider: "postgres" | "mysql" | "mssql" | "oracle" | "mongodb" | string
+): Promise<TokenVaultExternalSchema> {
+  const out = await serviceRequest<TokenVaultExternalSchemaResponse>(
+    session,
+    "dataprotect",
+    `/token-vaults/external-schema?tenant_id=${encodeURIComponent(session.tenantId)}&provider=${encodeURIComponent(String(provider || "").trim())}`
+  );
+  return out?.item || { provider: String(provider || ""), filename: "", content_type: "text/plain", content: "" };
+}
+
 export async function tokenizeValues(session: AuthSession, input: TokenizeInput): Promise<Array<Record<string, unknown>>> {
   const out = await serviceRequest<TokenizeResponse>(session, "dataprotect", "/tokenize", {
     method: "POST",
@@ -410,6 +459,7 @@ export async function tokenizeValues(session: AuthSession, input: TokenizeInput)
       key_id: input.key_id || "",
       token_type: input.token_type || "",
       format: input.format || "",
+      custom_token_format: input.custom_token_format || "",
       custom_regex: input.custom_regex || "",
       values: Array.isArray(input.values) ? input.values : [],
       ttl_hours: Math.max(0, Math.trunc(Number(input.ttl_hours || 0))),
@@ -660,11 +710,28 @@ export async function issueFieldEncryptionLease(
   session: AuthSession,
   input: FieldEncryptionLeaseInput
 ): Promise<FieldEncryptionLease> {
+  const wrapperToken = String(input.wrapper_token || "").trim();
+  const certFP = String(input.client_cert_fingerprint || "").trim();
+  const headers: Record<string, string> = {};
+  if (wrapperToken) {
+    headers["X-Wrapper-Token"] = wrapperToken;
+  }
+  if (certFP) {
+    headers["X-Wrapper-Cert-Fingerprint"] = certFP;
+  }
   const out = await serviceRequest<FieldEncryptionLeaseResponse>(session, "dataprotect", "/field-encryption/leases", {
     method: "POST",
+    headers,
     body: JSON.stringify({
       tenant_id: session.tenantId,
-      ...input
+      wrapper_id: input.wrapper_id,
+      key_id: input.key_id,
+      operation: input.operation,
+      nonce: input.nonce,
+      timestamp: input.timestamp,
+      signature_b64: input.signature_b64,
+      requested_ttl_sec: input.requested_ttl_sec,
+      requested_max_ops: input.requested_max_ops
     })
   });
   return out.lease;
@@ -689,11 +756,29 @@ export async function submitFieldEncryptionUsageReceipt(
   session: AuthSession,
   input: FieldEncryptionReceiptInput
 ): Promise<FieldEncryptionUsageReceipt> {
+  const wrapperToken = String(input.wrapper_token || "").trim();
+  const certFP = String(input.client_cert_fingerprint || "").trim();
+  const headers: Record<string, string> = {};
+  if (wrapperToken) {
+    headers["X-Wrapper-Token"] = wrapperToken;
+  }
+  if (certFP) {
+    headers["X-Wrapper-Cert-Fingerprint"] = certFP;
+  }
   const out = await serviceRequest<FieldEncryptionReceiptResponse>(session, "dataprotect", "/field-encryption/receipts", {
     method: "POST",
+    headers,
     body: JSON.stringify({
       tenant_id: session.tenantId,
-      ...input
+      lease_id: input.lease_id,
+      wrapper_id: input.wrapper_id,
+      key_id: input.key_id,
+      operation: input.operation,
+      op_count: input.op_count,
+      nonce: input.nonce,
+      timestamp: input.timestamp,
+      signature_b64: input.signature_b64,
+      client_status: input.client_status
     })
   });
   return out.receipt;
@@ -710,6 +795,43 @@ export async function revokeFieldEncryptionLease(
       reason: reason || ""
     })
   });
+}
+
+export async function renewFieldEncryptionLease(
+  session: AuthSession,
+  leaseId: string,
+  input: FieldEncryptionLeaseInput
+): Promise<FieldEncryptionLease> {
+  const wrapperToken = String(input.wrapper_token || "").trim();
+  const certFP = String(input.client_cert_fingerprint || "").trim();
+  const headers: Record<string, string> = {};
+  if (wrapperToken) {
+    headers["X-Wrapper-Token"] = wrapperToken;
+  }
+  if (certFP) {
+    headers["X-Wrapper-Cert-Fingerprint"] = certFP;
+  }
+  const out = await serviceRequest<FieldEncryptionLeaseResponse>(
+    session,
+    "dataprotect",
+    `/field-encryption/leases/${encodeURIComponent(leaseId)}/renew?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        tenant_id: session.tenantId,
+        wrapper_id: input.wrapper_id,
+        key_id: input.key_id,
+        operation: input.operation,
+        nonce: input.nonce,
+        timestamp: input.timestamp,
+        signature_b64: input.signature_b64,
+        requested_ttl_sec: input.requested_ttl_sec,
+        requested_max_ops: input.requested_max_ops
+      })
+    }
+  );
+  return out.lease;
 }
 
 export async function downloadFieldEncryptionWrapperSDK(

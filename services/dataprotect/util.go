@@ -316,7 +316,7 @@ func zeroizeAll(items ...[]byte) {
 func normalizeTokenFormat(v string) string {
 	v = strings.ToLower(strings.TrimSpace(v))
 	switch v {
-	case "random", "format_preserving", "deterministic", "irreversible":
+	case "random", "format_preserving", "deterministic", "irreversible", "custom":
 		return v
 	default:
 		return "random"
@@ -330,6 +330,26 @@ func normalizeTokenMode(v string) string {
 		return "vaultless"
 	default:
 		return "vault"
+	}
+}
+
+func normalizeTokenStorageType(v string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	switch v {
+	case "external":
+		return "external"
+	default:
+		return "internal"
+	}
+}
+
+func normalizeExternalVaultProvider(v string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	switch v {
+	case "postgres", "mysql", "mssql", "oracle", "mongodb":
+		return v
+	default:
+		return ""
 	}
 }
 
