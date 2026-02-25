@@ -265,3 +265,102 @@ func TestServiceRejectsAsymmetricTokenVaultKey(t *testing.T) {
 		t.Fatalf("expected asymmetric key validation error")
 	}
 }
+
+func TestServiceTokenizationPolicyEnforcement(t *testing.T) {
+	svc, _, _ := newDataProtectService(t)
+	ctx := context.Background()
+	tenantID := "tenant-svc-policy-token"
+
+	_, err := svc.UpdateDataProtectionPolicy(ctx, DataProtectionPolicy{
+		TenantID: tenantID,
+		TokenizationModePolicy: map[string][]string{
+			"credit_card": []string{"vault"},
+		},
+		MaxCustomRegexLength: 8,
+	})
+	if err != nil {
+		t.Fatalf("update policy: %v", err)
+	}
+
+	_, err = svc.Tokenize(ctx, TokenizeRequest{
+		TenantID:  tenantID,
+		Mode:      "vaultless",
+		KeyID:     "key-1",
+		TokenType: "credit_card",
+		Format:    "deterministic",
+		Values:    []string{"4111111111111111"},
+	})
+	if err == nil {
+		t.Fatalf("expected vaultless policy denial for credit_card")
+	}
+
+	_, err = svc.Tokenize(ctx, TokenizeRequest{
+		TenantID:    tenantID,
+		Mode:        "vaultless",
+		KeyID:       "key-1",
+		TokenType:   "custom",
+		Format:      "deterministic",
+		CustomRegex: "(very-long-regex)",
+		Values:      []string{"abc"},
+	})
+	if err == nil {
+		t.Fatalf("expected custom regex policy rejection")
+	}
+}
+
+func TestServiceDetokenizePolicyEnforcement(t *testing.T) {
+	svc, _, _ := newDataProtectService(t)
+	ctx := context.Background()
+	tenantID := "tenant-svc-policy-detok"
+
+	vault, err := svc.CreateTokenVault(ctx, tenantID, TokenVault{
+		Name:      "card-vault",
+		TokenType: "credit_card",
+		Format:    "deterministic",
+		KeyID:     "key-1",
+	})
+	if err != nil {
+		t.Fatalf("create vault: %v", err)
+	}
+	tok, err := svc.Tokenize(ctx, TokenizeRequest{
+		TenantID: tenantID,
+		VaultID:  vault.ID,
+		Values:   []string{"4111111111111111"},
+	})
+	if err != nil {
+		t.Fatalf("tokenize: %v", err)
+	}
+	token := firstString(tok[0]["token"])
+	if token == "" {
+		t.Fatalf("missing token")
+	}
+
+	_, err = svc.UpdateDataProtectionPolicy(ctx, DataProtectionPolicy{
+		TenantID:                       tenantID,
+		AllowBulkDetokenize:            false,
+		DetokenizeAllowedPurposes:      []string{"support"},
+		RequireDetokenizeJustification: true,
+	})
+	if err != nil {
+		t.Fatalf("update policy: %v", err)
+	}
+
+	_, err = svc.Detokenize(ctx, DetokenizeRequest{
+		TenantID: tenantID,
+		Tokens:   []string{token},
+		Purpose:  "support",
+	})
+	if err == nil {
+		t.Fatalf("expected missing justification rejection")
+	}
+
+	_, err = svc.Detokenize(ctx, DetokenizeRequest{
+		TenantID:      tenantID,
+		Tokens:        []string{token},
+		Purpose:       "support",
+		Justification: "ticket-1234",
+	})
+	if err != nil {
+		t.Fatalf("detokenize with allowed purpose/justification: %v", err)
+	}
+}

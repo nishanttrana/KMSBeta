@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strings"
+	"time"
 
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -115,17 +116,17 @@ WHERE tenant_id = $1 AND vault_id = $2
 func (s *SQLStore) CreateToken(ctx context.Context, item TokenRecord) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO tokens (
-	tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, created_at, expires_at
+	tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at
 ) VALUES (
-	$1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP,$8
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP,$12
 )
-`, item.TenantID, item.ID, item.VaultID, item.Token, item.OriginalEnc, item.OriginalHash, mustJSON(item.FormatMetadata, "{}"), nullableTime(item.ExpiresAt))
+`, item.TenantID, item.ID, item.VaultID, item.Token, item.OriginalEnc, item.OriginalHash, mustJSON(item.FormatMetadata, "{}"), item.UseCount, item.UseLimit, item.RenewCount, mustJSON(item.MetadataTags, "{}"), nullableTime(item.ExpiresAt))
 	return err
 }
 
 func (s *SQLStore) GetTokenByValue(ctx context.Context, tenantID string, token string) (TokenRecord, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, created_at, expires_at
+SELECT tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at
 FROM tokens
 WHERE tenant_id = $1 AND token = $2
 ORDER BY created_at DESC
@@ -140,12 +141,45 @@ LIMIT 1
 
 func (s *SQLStore) GetTokenByHash(ctx context.Context, tenantID string, vaultID string, hash string) (TokenRecord, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, created_at, expires_at
+SELECT tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at
 FROM tokens
 WHERE tenant_id = $1 AND vault_id = $2 AND original_hash = $3
 ORDER BY created_at DESC
 LIMIT 1
 `, strings.TrimSpace(tenantID), strings.TrimSpace(vaultID), strings.TrimSpace(hash))
+	item, err := scanTokenRecord(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return TokenRecord{}, errNotFound
+	}
+	return item, err
+}
+
+func (s *SQLStore) ConsumeTokenUse(ctx context.Context, tenantID string, id string) (TokenRecord, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+UPDATE tokens
+SET use_count = use_count + 1
+WHERE tenant_id = $1
+  AND id = $2
+  AND (use_limit = 0 OR use_count < use_limit)
+RETURNING tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at
+`, strings.TrimSpace(tenantID), strings.TrimSpace(id))
+	item, err := scanTokenRecord(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return TokenRecord{}, errNotFound
+	}
+	return item, err
+}
+
+func (s *SQLStore) RenewTokenLease(ctx context.Context, tenantID string, id string, expiresAt time.Time, maxRenewals int) (TokenRecord, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+UPDATE tokens
+SET expires_at = $3,
+    renew_count = renew_count + 1
+WHERE tenant_id = $1
+  AND id = $2
+  AND ($4 <= 0 OR renew_count < $4)
+RETURNING tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at
+`, strings.TrimSpace(tenantID), strings.TrimSpace(id), nullableTime(expiresAt), maxRenewals)
 	item, err := scanTokenRecord(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return TokenRecord{}, errNotFound
@@ -323,11 +357,31 @@ SELECT tenant_id,
        max_fields_per_operation,
        max_document_bytes,
        allow_vaultless_tokenization,
+       tokenization_mode_policy_json,
+       token_format_policy_json,
        require_token_ttl,
        max_token_ttl_hours,
+       allow_token_renewal,
+       max_token_renewals,
+       allow_one_time_tokens,
+       detokenize_allowed_purposes_json,
+       detokenize_allowed_workflows_json,
+       require_detokenize_justification,
+       allow_bulk_tokenize,
+       allow_bulk_detokenize,
        allow_redaction_detect_only,
+       allowed_redaction_detectors_json,
+       allowed_redaction_actions_json,
        allow_custom_regex_tokens,
+       max_custom_regex_length,
+       max_custom_regex_groups,
        max_token_batch,
+       max_detokenize_batch,
+       require_token_context_tags,
+       required_token_context_keys_json,
+       masking_role_policy_json,
+       token_metadata_retention_days,
+       redaction_event_retention_days,
        COALESCE(updated_by,''),
        updated_at
 FROM data_protection_policy
@@ -336,6 +390,14 @@ WHERE tenant_id = $1
 	var (
 		out            DataProtectionPolicy
 		algorithmsJSON string
+		modeJSON       string
+		formatJSON     string
+		purposeJSON    string
+		workflowJSON   string
+		detectorsJSON  string
+		actionsJSON    string
+		contextJSON    string
+		maskingJSON    string
 		updatedRaw     interface{}
 	)
 	if err := row.Scan(
@@ -345,11 +407,31 @@ WHERE tenant_id = $1
 		&out.MaxFieldsPerOperation,
 		&out.MaxDocumentBytes,
 		&out.AllowVaultlessTokenization,
+		&modeJSON,
+		&formatJSON,
 		&out.RequireTokenTTL,
 		&out.MaxTokenTTLHours,
+		&out.AllowTokenRenewal,
+		&out.MaxTokenRenewals,
+		&out.AllowOneTimeTokens,
+		&purposeJSON,
+		&workflowJSON,
+		&out.RequireDetokenizeJustification,
+		&out.AllowBulkTokenize,
+		&out.AllowBulkDetokenize,
 		&out.AllowRedactionDetectOnly,
+		&detectorsJSON,
+		&actionsJSON,
 		&out.AllowCustomRegexTokens,
+		&out.MaxCustomRegexLength,
+		&out.MaxCustomRegexGroups,
 		&out.MaxTokenBatch,
+		&out.MaxDetokenizeBatch,
+		&out.RequireTokenContextTags,
+		&contextJSON,
+		&maskingJSON,
+		&out.TokenMetadataRetentionDays,
+		&out.RedactionEventRetentionDays,
 		&out.UpdatedBy,
 		&updatedRaw,
 	); err != nil {
@@ -359,6 +441,14 @@ WHERE tenant_id = $1
 		return DataProtectionPolicy{}, err
 	}
 	out.AllowedDataAlgorithms = parseJSONArrayString(algorithmsJSON)
+	out.TokenizationModePolicy = parseStringSliceMap(modeJSON)
+	out.TokenFormatPolicy = parseStringSliceMap(formatJSON)
+	out.DetokenizeAllowedPurposes = parseJSONArrayString(purposeJSON)
+	out.DetokenizeAllowedWorkflows = parseJSONArrayString(workflowJSON)
+	out.AllowedRedactionDetectors = parseJSONArrayString(detectorsJSON)
+	out.AllowedRedactionActions = parseJSONArrayString(actionsJSON)
+	out.RequiredTokenContextKeys = parseJSONArrayString(contextJSON)
+	out.MaskingRolePolicy = parseStringMap(maskingJSON)
 	out.UpdatedAt = parseTimeValue(updatedRaw)
 	return out, nil
 }
@@ -372,15 +462,35 @@ INSERT INTO data_protection_policy (
     max_fields_per_operation,
     max_document_bytes,
     allow_vaultless_tokenization,
+    tokenization_mode_policy_json,
+    token_format_policy_json,
     require_token_ttl,
     max_token_ttl_hours,
+    allow_token_renewal,
+    max_token_renewals,
+    allow_one_time_tokens,
+    detokenize_allowed_purposes_json,
+    detokenize_allowed_workflows_json,
+    require_detokenize_justification,
+    allow_bulk_tokenize,
+    allow_bulk_detokenize,
     allow_redaction_detect_only,
+    allowed_redaction_detectors_json,
+    allowed_redaction_actions_json,
     allow_custom_regex_tokens,
+    max_custom_regex_length,
+    max_custom_regex_groups,
     max_token_batch,
+    max_detokenize_batch,
+    require_token_context_tags,
+    required_token_context_keys_json,
+    masking_role_policy_json,
+    token_metadata_retention_days,
+    redaction_event_retention_days,
     updated_by,
     updated_at
 ) VALUES (
-    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,CURRENT_TIMESTAMP
 )
 ON CONFLICT (tenant_id) DO UPDATE SET
     allowed_data_algorithms_json = EXCLUDED.allowed_data_algorithms_json,
@@ -388,11 +498,31 @@ ON CONFLICT (tenant_id) DO UPDATE SET
     max_fields_per_operation = EXCLUDED.max_fields_per_operation,
     max_document_bytes = EXCLUDED.max_document_bytes,
     allow_vaultless_tokenization = EXCLUDED.allow_vaultless_tokenization,
+    tokenization_mode_policy_json = EXCLUDED.tokenization_mode_policy_json,
+    token_format_policy_json = EXCLUDED.token_format_policy_json,
     require_token_ttl = EXCLUDED.require_token_ttl,
     max_token_ttl_hours = EXCLUDED.max_token_ttl_hours,
+    allow_token_renewal = EXCLUDED.allow_token_renewal,
+    max_token_renewals = EXCLUDED.max_token_renewals,
+    allow_one_time_tokens = EXCLUDED.allow_one_time_tokens,
+    detokenize_allowed_purposes_json = EXCLUDED.detokenize_allowed_purposes_json,
+    detokenize_allowed_workflows_json = EXCLUDED.detokenize_allowed_workflows_json,
+    require_detokenize_justification = EXCLUDED.require_detokenize_justification,
+    allow_bulk_tokenize = EXCLUDED.allow_bulk_tokenize,
+    allow_bulk_detokenize = EXCLUDED.allow_bulk_detokenize,
     allow_redaction_detect_only = EXCLUDED.allow_redaction_detect_only,
+    allowed_redaction_detectors_json = EXCLUDED.allowed_redaction_detectors_json,
+    allowed_redaction_actions_json = EXCLUDED.allowed_redaction_actions_json,
     allow_custom_regex_tokens = EXCLUDED.allow_custom_regex_tokens,
+    max_custom_regex_length = EXCLUDED.max_custom_regex_length,
+    max_custom_regex_groups = EXCLUDED.max_custom_regex_groups,
     max_token_batch = EXCLUDED.max_token_batch,
+    max_detokenize_batch = EXCLUDED.max_detokenize_batch,
+    require_token_context_tags = EXCLUDED.require_token_context_tags,
+    required_token_context_keys_json = EXCLUDED.required_token_context_keys_json,
+    masking_role_policy_json = EXCLUDED.masking_role_policy_json,
+    token_metadata_retention_days = EXCLUDED.token_metadata_retention_days,
+    redaction_event_retention_days = EXCLUDED.redaction_event_retention_days,
     updated_by = EXCLUDED.updated_by,
     updated_at = CURRENT_TIMESTAMP
 RETURNING tenant_id,
@@ -401,17 +531,45 @@ RETURNING tenant_id,
           max_fields_per_operation,
           max_document_bytes,
           allow_vaultless_tokenization,
+          tokenization_mode_policy_json,
+          token_format_policy_json,
           require_token_ttl,
           max_token_ttl_hours,
+          allow_token_renewal,
+          max_token_renewals,
+          allow_one_time_tokens,
+          detokenize_allowed_purposes_json,
+          detokenize_allowed_workflows_json,
+          require_detokenize_justification,
+          allow_bulk_tokenize,
+          allow_bulk_detokenize,
           allow_redaction_detect_only,
+          allowed_redaction_detectors_json,
+          allowed_redaction_actions_json,
           allow_custom_regex_tokens,
+          max_custom_regex_length,
+          max_custom_regex_groups,
           max_token_batch,
+          max_detokenize_batch,
+          require_token_context_tags,
+          required_token_context_keys_json,
+          masking_role_policy_json,
+          token_metadata_retention_days,
+          redaction_event_retention_days,
           COALESCE(updated_by,''),
           updated_at
-`, item.TenantID, mustJSON(item.AllowedDataAlgorithms, "[]"), item.RequireAADForAEAD, item.MaxFieldsPerOperation, item.MaxDocumentBytes, item.AllowVaultlessTokenization, item.RequireTokenTTL, item.MaxTokenTTLHours, item.AllowRedactionDetectOnly, item.AllowCustomRegexTokens, item.MaxTokenBatch, item.UpdatedBy)
+`, item.TenantID, mustJSON(item.AllowedDataAlgorithms, "[]"), item.RequireAADForAEAD, item.MaxFieldsPerOperation, item.MaxDocumentBytes, item.AllowVaultlessTokenization, mustJSON(item.TokenizationModePolicy, "{}"), mustJSON(item.TokenFormatPolicy, "{}"), item.RequireTokenTTL, item.MaxTokenTTLHours, item.AllowTokenRenewal, item.MaxTokenRenewals, item.AllowOneTimeTokens, mustJSON(item.DetokenizeAllowedPurposes, "[]"), mustJSON(item.DetokenizeAllowedWorkflows, "[]"), item.RequireDetokenizeJustification, item.AllowBulkTokenize, item.AllowBulkDetokenize, item.AllowRedactionDetectOnly, mustJSON(item.AllowedRedactionDetectors, "[]"), mustJSON(item.AllowedRedactionActions, "[]"), item.AllowCustomRegexTokens, item.MaxCustomRegexLength, item.MaxCustomRegexGroups, item.MaxTokenBatch, item.MaxDetokenizeBatch, item.RequireTokenContextTags, mustJSON(item.RequiredTokenContextKeys, "[]"), mustJSON(item.MaskingRolePolicy, "{}"), item.TokenMetadataRetentionDays, item.RedactionEventRetentionDays, item.UpdatedBy)
 	var (
 		out            DataProtectionPolicy
 		algorithmsJSON string
+		modeJSON       string
+		formatJSON     string
+		purposeJSON    string
+		workflowJSON   string
+		detectorsJSON  string
+		actionsJSON    string
+		contextJSON    string
+		maskingJSON    string
 		updatedRaw     interface{}
 	)
 	if err := row.Scan(
@@ -421,17 +579,45 @@ RETURNING tenant_id,
 		&out.MaxFieldsPerOperation,
 		&out.MaxDocumentBytes,
 		&out.AllowVaultlessTokenization,
+		&modeJSON,
+		&formatJSON,
 		&out.RequireTokenTTL,
 		&out.MaxTokenTTLHours,
+		&out.AllowTokenRenewal,
+		&out.MaxTokenRenewals,
+		&out.AllowOneTimeTokens,
+		&purposeJSON,
+		&workflowJSON,
+		&out.RequireDetokenizeJustification,
+		&out.AllowBulkTokenize,
+		&out.AllowBulkDetokenize,
 		&out.AllowRedactionDetectOnly,
+		&detectorsJSON,
+		&actionsJSON,
 		&out.AllowCustomRegexTokens,
+		&out.MaxCustomRegexLength,
+		&out.MaxCustomRegexGroups,
 		&out.MaxTokenBatch,
+		&out.MaxDetokenizeBatch,
+		&out.RequireTokenContextTags,
+		&contextJSON,
+		&maskingJSON,
+		&out.TokenMetadataRetentionDays,
+		&out.RedactionEventRetentionDays,
 		&out.UpdatedBy,
 		&updatedRaw,
 	); err != nil {
 		return DataProtectionPolicy{}, err
 	}
 	out.AllowedDataAlgorithms = parseJSONArrayString(algorithmsJSON)
+	out.TokenizationModePolicy = parseStringSliceMap(modeJSON)
+	out.TokenFormatPolicy = parseStringSliceMap(formatJSON)
+	out.DetokenizeAllowedPurposes = parseJSONArrayString(purposeJSON)
+	out.DetokenizeAllowedWorkflows = parseJSONArrayString(workflowJSON)
+	out.AllowedRedactionDetectors = parseJSONArrayString(detectorsJSON)
+	out.AllowedRedactionActions = parseJSONArrayString(actionsJSON)
+	out.RequiredTokenContextKeys = parseJSONArrayString(contextJSON)
+	out.MaskingRolePolicy = parseStringMap(maskingJSON)
 	out.UpdatedAt = parseTimeValue(updatedRaw)
 	return out, nil
 }
@@ -457,13 +643,15 @@ func scanTokenRecord(scanner interface {
 	var (
 		item         TokenRecord
 		metaJS       string
+		metadataTags string
 		createdRaw   interface{}
 		expiresAtRaw interface{}
 	)
-	if err := scanner.Scan(&item.TenantID, &item.ID, &item.VaultID, &item.Token, &item.OriginalEnc, &item.OriginalHash, &metaJS, &createdRaw, &expiresAtRaw); err != nil {
+	if err := scanner.Scan(&item.TenantID, &item.ID, &item.VaultID, &item.Token, &item.OriginalEnc, &item.OriginalHash, &metaJS, &item.UseCount, &item.UseLimit, &item.RenewCount, &metadataTags, &createdRaw, &expiresAtRaw); err != nil {
 		return TokenRecord{}, err
 	}
 	item.FormatMetadata = parseJSONObject(metaJS)
+	item.MetadataTags = parseStringMap(metadataTags)
 	item.CreatedAt = parseTimeValue(createdRaw)
 	item.ExpiresAt = parseTimeValue(expiresAtRaw)
 	return item, nil

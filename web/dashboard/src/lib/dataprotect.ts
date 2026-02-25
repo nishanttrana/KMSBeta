@@ -66,11 +66,31 @@ export type DataProtectionPolicy = {
   max_fields_per_operation: number;
   max_document_bytes: number;
   allow_vaultless_tokenization: boolean;
+  tokenization_mode_policy: Record<string, string[]>;
+  token_format_policy: Record<string, string[]>;
   require_token_ttl: boolean;
   max_token_ttl_hours: number;
+  allow_token_renewal: boolean;
+  max_token_renewals: number;
+  allow_one_time_tokens: boolean;
+  detokenize_allowed_purposes: string[];
+  detokenize_allowed_workflows: string[];
+  require_detokenize_justification: boolean;
+  allow_bulk_tokenize: boolean;
+  allow_bulk_detokenize: boolean;
   allow_redaction_detect_only: boolean;
+  allowed_redaction_detectors: string[];
+  allowed_redaction_actions: string[];
   allow_custom_regex_tokens: boolean;
+  max_custom_regex_length: number;
+  max_custom_regex_groups: number;
   max_token_batch: number;
+  max_detokenize_batch: number;
+  require_token_context_tags: boolean;
+  required_token_context_keys: string[];
+  masking_role_policy: Record<string, string>;
+  token_metadata_retention_days: number;
+  redaction_event_retention_days: number;
   updated_by?: string;
   updated_at?: string;
 };
@@ -92,10 +112,17 @@ export type TokenizeInput = {
   custom_regex?: string;
   values: string[];
   ttl_hours?: number;
+  one_time_token?: boolean;
+  metadata_tags?: Record<string, string>;
 };
 
 export type DetokenizeInput = {
   tokens: string[];
+  purpose?: string;
+  workflow?: string;
+  justification?: string;
+  metadata_tags?: Record<string, string>;
+  renew_ttl_hours?: number;
 };
 
 export type FPEInput = {
@@ -206,7 +233,9 @@ export async function tokenizeValues(session: AuthSession, input: TokenizeInput)
       format: input.format || "",
       custom_regex: input.custom_regex || "",
       values: Array.isArray(input.values) ? input.values : [],
-      ttl_hours: Math.max(0, Math.trunc(Number(input.ttl_hours || 0)))
+      ttl_hours: Math.max(0, Math.trunc(Number(input.ttl_hours || 0))),
+      one_time_token: Boolean(input.one_time_token),
+      metadata_tags: input.metadata_tags || {}
     })
   });
   return Array.isArray(out?.items) ? out.items : [];
@@ -217,7 +246,12 @@ export async function detokenizeValues(session: AuthSession, input: DetokenizeIn
     method: "POST",
     body: JSON.stringify({
       tenant_id: session.tenantId,
-      tokens: Array.isArray(input.tokens) ? input.tokens : []
+      tokens: Array.isArray(input.tokens) ? input.tokens : [],
+      purpose: input.purpose || "",
+      workflow: input.workflow || "",
+      justification: input.justification || "",
+      metadata_tags: input.metadata_tags || {},
+      renew_ttl_hours: Math.max(0, Math.trunc(Number(input.renew_ttl_hours || 0)))
     })
   });
   return Array.isArray(out?.items) ? out.items : [];

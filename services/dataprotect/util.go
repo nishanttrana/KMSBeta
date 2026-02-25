@@ -134,6 +134,58 @@ func parseJSONObject(v string) map[string]interface{} {
 	return out
 }
 
+func parseStringMap(v string) map[string]string {
+	raw := parseJSONObject(v)
+	out := map[string]string{}
+	for key, val := range raw {
+		k := strings.TrimSpace(key)
+		if k == "" {
+			continue
+		}
+		s := strings.TrimSpace(firstString(val))
+		if s == "" {
+			continue
+		}
+		out[k] = s
+	}
+	return out
+}
+
+func parseStringSliceMap(v string) map[string][]string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return map[string][]string{}
+	}
+	raw := map[string]interface{}{}
+	_ = json.Unmarshal([]byte(v), &raw)
+	out := map[string][]string{}
+	for key, val := range raw {
+		k := strings.TrimSpace(key)
+		if k == "" {
+			continue
+		}
+		values := []string{}
+		switch arr := val.(type) {
+		case []interface{}:
+			for _, item := range arr {
+				s := strings.TrimSpace(firstString(item))
+				if s != "" {
+					values = append(values, s)
+				}
+			}
+		case []string:
+			for _, item := range arr {
+				s := strings.TrimSpace(item)
+				if s != "" {
+					values = append(values, s)
+				}
+			}
+		}
+		out[k] = uniqueStrings(values)
+	}
+	return out
+}
+
 func firstString(values ...interface{}) string {
 	for _, v := range values {
 		switch x := v.(type) {

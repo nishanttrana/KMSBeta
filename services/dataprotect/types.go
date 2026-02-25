@@ -24,6 +24,8 @@ type Store interface {
 	CreateToken(ctx context.Context, item TokenRecord) error
 	GetTokenByValue(ctx context.Context, tenantID string, token string) (TokenRecord, error)
 	GetTokenByHash(ctx context.Context, tenantID string, vaultID string, hash string) (TokenRecord, error)
+	ConsumeTokenUse(ctx context.Context, tenantID string, id string) (TokenRecord, error)
+	RenewTokenLease(ctx context.Context, tenantID string, id string, expiresAt time.Time, maxRenewals int) (TokenRecord, error)
 
 	CreateMaskingPolicy(ctx context.Context, item MaskingPolicy) error
 	UpdateMaskingPolicy(ctx context.Context, item MaskingPolicy) error
@@ -43,19 +45,39 @@ type Store interface {
 }
 
 type DataProtectionPolicy struct {
-	TenantID                   string    `json:"tenant_id"`
-	AllowedDataAlgorithms      []string  `json:"allowed_data_algorithms"`
-	RequireAADForAEAD          bool      `json:"require_aad_for_aead"`
-	MaxFieldsPerOperation      int       `json:"max_fields_per_operation"`
-	MaxDocumentBytes           int       `json:"max_document_bytes"`
-	AllowVaultlessTokenization bool      `json:"allow_vaultless_tokenization"`
-	RequireTokenTTL            bool      `json:"require_token_ttl"`
-	MaxTokenTTLHours           int       `json:"max_token_ttl_hours"`
-	AllowRedactionDetectOnly   bool      `json:"allow_redaction_detect_only"`
-	AllowCustomRegexTokens     bool      `json:"allow_custom_regex_tokens"`
-	MaxTokenBatch              int       `json:"max_token_batch"`
-	UpdatedBy                  string    `json:"updated_by,omitempty"`
-	UpdatedAt                  time.Time `json:"updated_at"`
+	TenantID                       string              `json:"tenant_id"`
+	AllowedDataAlgorithms          []string            `json:"allowed_data_algorithms"`
+	RequireAADForAEAD              bool                `json:"require_aad_for_aead"`
+	MaxFieldsPerOperation          int                 `json:"max_fields_per_operation"`
+	MaxDocumentBytes               int                 `json:"max_document_bytes"`
+	AllowVaultlessTokenization     bool                `json:"allow_vaultless_tokenization"`
+	TokenizationModePolicy         map[string][]string `json:"tokenization_mode_policy"`
+	TokenFormatPolicy              map[string][]string `json:"token_format_policy"`
+	RequireTokenTTL                bool                `json:"require_token_ttl"`
+	MaxTokenTTLHours               int                 `json:"max_token_ttl_hours"`
+	AllowTokenRenewal              bool                `json:"allow_token_renewal"`
+	MaxTokenRenewals               int                 `json:"max_token_renewals"`
+	AllowOneTimeTokens             bool                `json:"allow_one_time_tokens"`
+	DetokenizeAllowedPurposes      []string            `json:"detokenize_allowed_purposes"`
+	DetokenizeAllowedWorkflows     []string            `json:"detokenize_allowed_workflows"`
+	RequireDetokenizeJustification bool                `json:"require_detokenize_justification"`
+	AllowBulkTokenize              bool                `json:"allow_bulk_tokenize"`
+	AllowBulkDetokenize            bool                `json:"allow_bulk_detokenize"`
+	AllowRedactionDetectOnly       bool                `json:"allow_redaction_detect_only"`
+	AllowedRedactionDetectors      []string            `json:"allowed_redaction_detectors"`
+	AllowedRedactionActions        []string            `json:"allowed_redaction_actions"`
+	AllowCustomRegexTokens         bool                `json:"allow_custom_regex_tokens"`
+	MaxCustomRegexLength           int                 `json:"max_custom_regex_length"`
+	MaxCustomRegexGroups           int                 `json:"max_custom_regex_groups"`
+	MaxTokenBatch                  int                 `json:"max_token_batch"`
+	MaxDetokenizeBatch             int                 `json:"max_detokenize_batch"`
+	RequireTokenContextTags        bool                `json:"require_token_context_tags"`
+	RequiredTokenContextKeys       []string            `json:"required_token_context_keys"`
+	MaskingRolePolicy              map[string]string   `json:"masking_role_policy"`
+	TokenMetadataRetentionDays     int                 `json:"token_metadata_retention_days"`
+	RedactionEventRetentionDays    int                 `json:"redaction_event_retention_days"`
+	UpdatedBy                      string              `json:"updated_by,omitempty"`
+	UpdatedAt                      time.Time           `json:"updated_at"`
 }
 
 type TokenVault struct {
@@ -78,6 +100,10 @@ type TokenRecord struct {
 	OriginalEnc    []byte                 `json:"-"`
 	OriginalHash   string                 `json:"original_hash,omitempty"`
 	FormatMetadata map[string]interface{} `json:"format_metadata,omitempty"`
+	UseCount       int                    `json:"use_count"`
+	UseLimit       int                    `json:"use_limit"`
+	RenewCount     int                    `json:"renew_count"`
+	MetadataTags   map[string]string      `json:"metadata_tags,omitempty"`
 	CreatedAt      time.Time              `json:"created_at"`
 	ExpiresAt      time.Time              `json:"expires_at,omitempty"`
 }
@@ -129,20 +155,27 @@ type FLEMetadata struct {
 }
 
 type TokenizeRequest struct {
-	TenantID    string   `json:"tenant_id"`
-	Mode        string   `json:"mode"`
-	VaultID     string   `json:"vault_id"`
-	KeyID       string   `json:"key_id"`
-	TokenType   string   `json:"token_type"`
-	Format      string   `json:"format"`
-	CustomRegex string   `json:"custom_regex"`
-	Values      []string `json:"values"`
-	TTLHours    int      `json:"ttl_hours"`
+	TenantID     string            `json:"tenant_id"`
+	Mode         string            `json:"mode"`
+	VaultID      string            `json:"vault_id"`
+	KeyID        string            `json:"key_id"`
+	TokenType    string            `json:"token_type"`
+	Format       string            `json:"format"`
+	CustomRegex  string            `json:"custom_regex"`
+	Values       []string          `json:"values"`
+	TTLHours     int               `json:"ttl_hours"`
+	OneTimeToken bool              `json:"one_time_token"`
+	MetadataTags map[string]string `json:"metadata_tags"`
 }
 
 type DetokenizeRequest struct {
-	TenantID string   `json:"tenant_id"`
-	Tokens   []string `json:"tokens"`
+	TenantID      string            `json:"tenant_id"`
+	Tokens        []string          `json:"tokens"`
+	Purpose       string            `json:"purpose"`
+	Workflow      string            `json:"workflow"`
+	Justification string            `json:"justification"`
+	MetadataTags  map[string]string `json:"metadata_tags"`
+	RenewTTLHours int               `json:"renew_ttl_hours"`
 }
 
 type FPERequest struct {

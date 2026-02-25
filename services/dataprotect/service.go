@@ -24,6 +24,39 @@ type Service struct {
 
 var supportedDataProtectAlgorithms = []string{"AES-GCM", "AES-SIV", "CHACHA20-POLY1305"}
 
+func defaultTokenizationModePolicy() map[string][]string {
+	return map[string][]string{
+		"credit_card": []string{"vault", "vaultless"},
+		"ssn":         []string{"vault", "vaultless"},
+		"iban":        []string{"vault", "vaultless"},
+		"email":       []string{"vault", "vaultless"},
+		"phone":       []string{"vault", "vaultless"},
+		"custom":      []string{"vault", "vaultless"},
+		"bitlocker":   []string{"vault"},
+	}
+}
+
+func defaultTokenFormatPolicy() map[string][]string {
+	return map[string][]string{
+		"credit_card": []string{"format_preserving", "deterministic", "irreversible", "random"},
+		"ssn":         []string{"format_preserving", "deterministic", "irreversible", "random"},
+		"iban":        []string{"format_preserving", "deterministic", "irreversible", "random"},
+		"email":       []string{"format_preserving", "deterministic", "irreversible", "random"},
+		"phone":       []string{"format_preserving", "deterministic", "irreversible", "random"},
+		"custom":      []string{"format_preserving", "deterministic", "irreversible", "random"},
+		"bitlocker":   []string{"deterministic", "irreversible", "random"},
+	}
+}
+
+func defaultMaskingRolePolicy() map[string]string {
+	return map[string]string{
+		"admin":   "none",
+		"auditor": "hash",
+		"analyst": "partial_last4",
+		"support": "partial_last4",
+	}
+}
+
 func NewService(store Store, keycore KeyCoreClient, events EventPublisher) *Service {
 	return &Service{
 		store:   store,
@@ -35,17 +68,37 @@ func NewService(store Store, keycore KeyCoreClient, events EventPublisher) *Serv
 
 func defaultDataProtectionPolicy(tenantID string) DataProtectionPolicy {
 	return DataProtectionPolicy{
-		TenantID:                   strings.TrimSpace(tenantID),
-		AllowedDataAlgorithms:      append([]string{}, supportedDataProtectAlgorithms...),
-		RequireAADForAEAD:          false,
-		MaxFieldsPerOperation:      64,
-		MaxDocumentBytes:           262144,
-		AllowVaultlessTokenization: true,
-		RequireTokenTTL:            false,
-		MaxTokenTTLHours:           0,
-		AllowRedactionDetectOnly:   true,
-		AllowCustomRegexTokens:     true,
-		MaxTokenBatch:              10000,
+		TenantID:                       strings.TrimSpace(tenantID),
+		AllowedDataAlgorithms:          append([]string{}, supportedDataProtectAlgorithms...),
+		RequireAADForAEAD:              false,
+		MaxFieldsPerOperation:          64,
+		MaxDocumentBytes:               262144,
+		AllowVaultlessTokenization:     true,
+		TokenizationModePolicy:         defaultTokenizationModePolicy(),
+		TokenFormatPolicy:              defaultTokenFormatPolicy(),
+		RequireTokenTTL:                false,
+		MaxTokenTTLHours:               0,
+		AllowTokenRenewal:              true,
+		MaxTokenRenewals:               3,
+		AllowOneTimeTokens:             true,
+		DetokenizeAllowedPurposes:      []string{},
+		DetokenizeAllowedWorkflows:     []string{},
+		RequireDetokenizeJustification: false,
+		AllowBulkTokenize:              true,
+		AllowBulkDetokenize:            true,
+		AllowRedactionDetectOnly:       true,
+		AllowedRedactionDetectors:      []string{"EMAIL", "PHONE", "SSN", "PAN", "IBAN", "NAME", "CUSTOM"},
+		AllowedRedactionActions:        []string{"replace_placeholder", "remove", "hash"},
+		AllowCustomRegexTokens:         true,
+		MaxCustomRegexLength:           512,
+		MaxCustomRegexGroups:           16,
+		MaxTokenBatch:                  10000,
+		MaxDetokenizeBatch:             10000,
+		RequireTokenContextTags:        false,
+		RequiredTokenContextKeys:       []string{},
+		MaskingRolePolicy:              defaultMaskingRolePolicy(),
+		TokenMetadataRetentionDays:     365,
+		RedactionEventRetentionDays:    365,
 	}
 }
 
@@ -82,12 +135,70 @@ func normalizeDataProtectionPolicy(in DataProtectionPolicy) DataProtectionPolicy
 	if in.MaxTokenTTLHours > 87600 {
 		in.MaxTokenTTLHours = 87600
 	}
+	if in.MaxTokenRenewals < 0 {
+		in.MaxTokenRenewals = 0
+	}
+	if in.MaxTokenRenewals > 100 {
+		in.MaxTokenRenewals = 100
+	}
+	if in.MaxCustomRegexLength <= 0 {
+		in.MaxCustomRegexLength = 512
+	}
+	if in.MaxCustomRegexLength > 4096 {
+		in.MaxCustomRegexLength = 4096
+	}
+	if in.MaxCustomRegexGroups <= 0 {
+		in.MaxCustomRegexGroups = 16
+	}
+	if in.MaxCustomRegexGroups > 128 {
+		in.MaxCustomRegexGroups = 128
+	}
 	if in.MaxTokenBatch <= 0 {
 		in.MaxTokenBatch = 10000
 	}
 	if in.MaxTokenBatch > 100000 {
 		in.MaxTokenBatch = 100000
 	}
+	if in.MaxDetokenizeBatch <= 0 {
+		in.MaxDetokenizeBatch = 10000
+	}
+	if in.MaxDetokenizeBatch > 100000 {
+		in.MaxDetokenizeBatch = 100000
+	}
+	if in.TokenMetadataRetentionDays <= 0 {
+		in.TokenMetadataRetentionDays = 365
+	}
+	if in.TokenMetadataRetentionDays > 36500 {
+		in.TokenMetadataRetentionDays = 36500
+	}
+	if in.RedactionEventRetentionDays <= 0 {
+		in.RedactionEventRetentionDays = 365
+	}
+	if in.RedactionEventRetentionDays > 36500 {
+		in.RedactionEventRetentionDays = 36500
+	}
+	in.DetokenizeAllowedPurposes = uniqueStrings(in.DetokenizeAllowedPurposes)
+	in.DetokenizeAllowedWorkflows = uniqueStrings(in.DetokenizeAllowedWorkflows)
+	in.RequiredTokenContextKeys = uniqueStrings(in.RequiredTokenContextKeys)
+	in.AllowedRedactionDetectors = uniqueUpper(uniqueStrings(in.AllowedRedactionDetectors))
+	if len(in.AllowedRedactionDetectors) == 0 {
+		in.AllowedRedactionDetectors = []string{"EMAIL", "PHONE", "SSN", "PAN", "IBAN", "NAME", "CUSTOM"}
+	}
+	actions := uniqueStrings(in.AllowedRedactionActions)
+	outActions := make([]string, 0, len(actions))
+	for _, action := range actions {
+		normalized := normalizeRedactAction(action)
+		if !containsString(outActions, normalized) {
+			outActions = append(outActions, normalized)
+		}
+	}
+	if len(outActions) == 0 {
+		outActions = []string{"replace_placeholder", "remove", "hash"}
+	}
+	in.AllowedRedactionActions = outActions
+	in.TokenizationModePolicy = normalizeTokenModesPolicy(in.TokenizationModePolicy)
+	in.TokenFormatPolicy = normalizeTokenFormatsPolicy(in.TokenFormatPolicy)
+	in.MaskingRolePolicy = normalizeMaskingRolePolicy(in.MaskingRolePolicy)
 	in.UpdatedBy = strings.TrimSpace(in.UpdatedBy)
 	return in
 }
@@ -118,16 +229,36 @@ func (s *Service) UpdateDataProtectionPolicy(ctx context.Context, in DataProtect
 	}
 	item = normalizeDataProtectionPolicy(item)
 	_ = s.publishAudit(ctx, "audit.dataprotect.policy_updated", item.TenantID, map[string]interface{}{
-		"allowed_data_algorithms":       item.AllowedDataAlgorithms,
-		"require_aad_for_aead":          item.RequireAADForAEAD,
-		"max_fields_per_operation":      item.MaxFieldsPerOperation,
-		"max_document_bytes":            item.MaxDocumentBytes,
-		"allow_vaultless_tokenization":  item.AllowVaultlessTokenization,
-		"require_token_ttl":             item.RequireTokenTTL,
-		"max_token_ttl_hours":           item.MaxTokenTTLHours,
-		"allow_redaction_detect_only":   item.AllowRedactionDetectOnly,
-		"allow_custom_regex_tokens":     item.AllowCustomRegexTokens,
-		"max_token_batch":               item.MaxTokenBatch,
+		"allowed_data_algorithms":          item.AllowedDataAlgorithms,
+		"require_aad_for_aead":             item.RequireAADForAEAD,
+		"max_fields_per_operation":         item.MaxFieldsPerOperation,
+		"max_document_bytes":               item.MaxDocumentBytes,
+		"allow_vaultless_tokenization":     item.AllowVaultlessTokenization,
+		"tokenization_mode_policy":         item.TokenizationModePolicy,
+		"token_format_policy":              item.TokenFormatPolicy,
+		"require_token_ttl":                item.RequireTokenTTL,
+		"max_token_ttl_hours":              item.MaxTokenTTLHours,
+		"allow_token_renewal":              item.AllowTokenRenewal,
+		"max_token_renewals":               item.MaxTokenRenewals,
+		"allow_one_time_tokens":            item.AllowOneTimeTokens,
+		"detokenize_allowed_purposes":      item.DetokenizeAllowedPurposes,
+		"detokenize_allowed_workflows":     item.DetokenizeAllowedWorkflows,
+		"require_detokenize_justification": item.RequireDetokenizeJustification,
+		"allow_bulk_tokenize":              item.AllowBulkTokenize,
+		"allow_bulk_detokenize":            item.AllowBulkDetokenize,
+		"allow_redaction_detect_only":      item.AllowRedactionDetectOnly,
+		"allowed_redaction_detectors":      item.AllowedRedactionDetectors,
+		"allowed_redaction_actions":        item.AllowedRedactionActions,
+		"allow_custom_regex_tokens":        item.AllowCustomRegexTokens,
+		"max_custom_regex_length":          item.MaxCustomRegexLength,
+		"max_custom_regex_groups":          item.MaxCustomRegexGroups,
+		"max_token_batch":                  item.MaxTokenBatch,
+		"max_detokenize_batch":             item.MaxDetokenizeBatch,
+		"require_token_context_tags":       item.RequireTokenContextTags,
+		"required_token_context_keys":      item.RequiredTokenContextKeys,
+		"masking_role_policy":              item.MaskingRolePolicy,
+		"token_metadata_retention_days":    item.TokenMetadataRetentionDays,
+		"redaction_event_retention_days":   item.RedactionEventRetentionDays,
 	})
 	return item, nil
 }
@@ -160,9 +291,22 @@ func (s *Service) CreateTokenVault(ctx context.Context, tenantID string, in Toke
 	if in.TokenType == "custom" && in.CustomRegex == "" {
 		return TokenVault{}, newServiceError(http.StatusBadRequest, "bad_request", "custom_regex is required for custom token type")
 	}
+	policy, err := s.mustDataProtectionPolicy(ctx, tenantID)
+	if err != nil {
+		return TokenVault{}, err
+	}
+	if !policyAllowsTokenMode(policy, in.TokenType, "vault") {
+		return TokenVault{}, newServiceError(http.StatusForbidden, "policy_denied", "vault mode is blocked for selected token type")
+	}
+	if !policyAllowsTokenFormat(policy, in.TokenType, in.Format) {
+		return TokenVault{}, newServiceError(http.StatusForbidden, "policy_denied", "token format is blocked for selected token type")
+	}
 	if in.TokenType == "custom" {
-		if _, err := regexp.Compile(in.CustomRegex); err != nil {
-			return TokenVault{}, newServiceError(http.StatusBadRequest, "bad_request", "invalid custom_regex")
+		if !policy.AllowCustomRegexTokens {
+			return TokenVault{}, newServiceError(http.StatusForbidden, "policy_denied", "custom regex tokenization is disabled by policy")
+		}
+		if err := validateCustomRegexPolicy(in.CustomRegex, policy); err != nil {
+			return TokenVault{}, err
 		}
 	}
 	if s.keycore != nil {
@@ -258,8 +402,19 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 	if err != nil {
 		return nil, err
 	}
+	if !policy.AllowBulkTokenize && len(req.Values) > 1 {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "bulk tokenization is disabled by policy")
+	}
 	if len(req.Values) > policy.MaxTokenBatch {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "batch size exceeds configured policy limit")
+	}
+	if policy.RequireTokenContextTags {
+		if err := validateRequiredContextTags(req.MetadataTags, policy.RequiredTokenContextKeys); err != nil {
+			return nil, err
+		}
+	}
+	if req.OneTimeToken && !policy.AllowOneTimeTokens {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "one-time tokenization is disabled by policy")
 	}
 
 	vault := TokenVault{}
@@ -280,8 +435,8 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			return nil, newServiceError(http.StatusForbidden, "policy_denied", "custom regex tokenization is disabled by policy")
 		}
 		if req.TokenType == "custom" && req.CustomRegex != "" {
-			if _, err := regexp.Compile(req.CustomRegex); err != nil {
-				return nil, newServiceError(http.StatusBadRequest, "bad_request", "invalid custom_regex")
+			if err := validateCustomRegexPolicy(req.CustomRegex, policy); err != nil {
+				return nil, err
 			}
 		}
 		if req.Format == "" {
@@ -291,6 +446,12 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 		}
 		if req.Format == "random" {
 			return nil, newServiceError(http.StatusBadRequest, "bad_request", "vaultless mode does not support random format because detokenization is not possible")
+		}
+		if !policyAllowsTokenMode(policy, req.TokenType, "vaultless") {
+			return nil, newServiceError(http.StatusForbidden, "policy_denied", "vaultless mode is blocked for selected token type")
+		}
+		if !policyAllowsTokenFormat(policy, req.TokenType, req.Format) {
+			return nil, newServiceError(http.StatusForbidden, "policy_denied", "token format is blocked for selected token type")
 		}
 		vault = TokenVault{
 			ID:          "vaultless",
@@ -309,14 +470,32 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			return nil, err
 		}
 		vault.Mode = "vault"
+		if !policyAllowsTokenMode(policy, vault.TokenType, "vault") {
+			return nil, newServiceError(http.StatusForbidden, "policy_denied", "vault mode is blocked for selected token type")
+		}
+		if !policyAllowsTokenFormat(policy, vault.TokenType, vault.Format) {
+			return nil, newServiceError(http.StatusForbidden, "policy_denied", "token format is blocked for selected token type")
+		}
 		if vault.TokenType == "custom" && !policy.AllowCustomRegexTokens {
 			return nil, newServiceError(http.StatusForbidden, "policy_denied", "custom regex tokenization is disabled by policy")
+		}
+		if vault.TokenType == "custom" && strings.TrimSpace(vault.CustomRegex) != "" {
+			if err := validateCustomRegexPolicy(vault.CustomRegex, policy); err != nil {
+				return nil, err
+			}
 		}
 		if policy.RequireTokenTTL && req.TTLHours <= 0 {
 			return nil, newServiceError(http.StatusBadRequest, "bad_request", "token ttl is required by policy")
 		}
 	}
-	if policy.MaxTokenTTLHours > 0 && req.TTLHours > policy.MaxTokenTTLHours {
+	maxTTL := policy.MaxTokenTTLHours
+	if policy.TokenMetadataRetentionDays > 0 {
+		retentionTTL := policy.TokenMetadataRetentionDays * 24
+		if maxTTL == 0 || retentionTTL < maxTTL {
+			maxTTL = retentionTTL
+		}
+	}
+	if maxTTL > 0 && req.TTLHours > maxTTL {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "token ttl exceeds configured policy limit")
 	}
 	if err := s.enforceKeycoreMetering(ctx, req.TenantID, vault.KeyID, "encrypt"); err != nil {
@@ -363,7 +542,7 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			results = append(results, out)
 			continue
 		}
-		if vault.Format == "deterministic" || vault.Format == "irreversible" {
+		if !req.OneTimeToken && (vault.Format == "deterministic" || vault.Format == "irreversible") {
 			if existing, err := s.store.GetTokenByHash(ctx, req.TenantID, req.VaultID, originalHash); err == nil {
 				results = append(results, map[string]interface{}{
 					"input":    value,
@@ -383,9 +562,15 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			Token:          token,
 			OriginalHash:   originalHash,
 			FormatMetadata: metadata,
+			MetadataTags:   req.MetadataTags,
+		}
+		if req.OneTimeToken {
+			rec.UseLimit = 1
 		}
 		if req.TTLHours > 0 {
 			rec.ExpiresAt = s.now().Add(time.Duration(req.TTLHours) * time.Hour)
+		} else if policy.TokenMetadataRetentionDays > 0 {
+			rec.ExpiresAt = s.now().Add(time.Duration(policy.TokenMetadataRetentionDays) * 24 * time.Hour)
 		}
 		if vault.Format != "irreversible" {
 			enc, err := encryptTokenValue(key, value)
@@ -409,6 +594,9 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 		if !rec.ExpiresAt.IsZero() {
 			out["expires_at"] = rec.ExpiresAt
 		}
+		if rec.UseLimit > 0 {
+			out["use_limit"] = rec.UseLimit
+		}
 		results = append(results, out)
 	}
 	if req.Mode == "vaultless" {
@@ -418,6 +606,7 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			"token_type": vault.TokenType,
 			"format":     vault.Format,
 			"key_id":     vault.KeyID,
+			"one_time":   req.OneTimeToken,
 		})
 		return results, nil
 	}
@@ -425,6 +614,7 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 		_ = s.publishAudit(ctx, "audit.dataprotect.tokenized", req.TenantID, map[string]interface{}{
 			"vault_id": req.VaultID,
 			"count":    created,
+			"one_time": req.OneTimeToken,
 		})
 	}
 	return results, nil
@@ -432,14 +622,41 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 
 func (s *Service) Detokenize(ctx context.Context, req DetokenizeRequest) ([]map[string]interface{}, error) {
 	req.TenantID = strings.TrimSpace(req.TenantID)
+	req.Purpose = strings.TrimSpace(req.Purpose)
+	req.Workflow = strings.TrimSpace(req.Workflow)
+	req.Justification = strings.TrimSpace(req.Justification)
 	if req.TenantID == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
 	if len(req.Tokens) == 0 {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tokens cannot be empty")
 	}
-	if len(req.Tokens) > 10000 {
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "batch size limit is 10,000 tokens")
+	policy, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return nil, err
+	}
+	if !policy.AllowBulkDetokenize && len(req.Tokens) > 1 {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "bulk detokenization is disabled by policy")
+	}
+	if len(req.Tokens) > policy.MaxDetokenizeBatch {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "detokenize batch size exceeds configured policy limit")
+	}
+	if policy.RequireTokenContextTags {
+		if err := validateRequiredContextTags(req.MetadataTags, policy.RequiredTokenContextKeys); err != nil {
+			return nil, err
+		}
+	}
+	if len(policy.DetokenizeAllowedPurposes) > 0 && !containsString(policy.DetokenizeAllowedPurposes, req.Purpose) {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "detokenize purpose is blocked by policy")
+	}
+	if len(policy.DetokenizeAllowedWorkflows) > 0 && !containsString(policy.DetokenizeAllowedWorkflows, req.Workflow) {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "detokenize workflow is blocked by policy")
+	}
+	if policy.RequireDetokenizeJustification && req.Justification == "" {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "detokenize justification is required by policy")
+	}
+	if req.RenewTTLHours > 0 && !policy.AllowTokenRenewal {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "token lease renewal is disabled by policy")
 	}
 	results := make([]map[string]interface{}, 0, len(req.Tokens))
 	keyCache := map[string][]byte{}
@@ -476,6 +693,17 @@ func (s *Service) Detokenize(ctx context.Context, req DetokenizeRequest) ([]map[
 			results = append(results, map[string]interface{}{"token": token, "error": "token is irreversible and cannot be detokenized"})
 			continue
 		}
+		if record.UseLimit > 0 {
+			updated, err := s.store.ConsumeTokenUse(ctx, req.TenantID, record.ID)
+			if err != nil {
+				if errors.Is(err, errNotFound) {
+					results = append(results, map[string]interface{}{"token": token, "error": "token usage limit reached"})
+					continue
+				}
+				return nil, err
+			}
+			record = updated
+		}
 		key, ok := keyCache[vault.KeyID]
 		if !ok {
 			if err := s.enforceKeycoreMetering(ctx, req.TenantID, vault.KeyID, "decrypt"); err != nil {
@@ -492,17 +720,46 @@ func (s *Service) Detokenize(ctx context.Context, req DetokenizeRequest) ([]map[
 			results = append(results, map[string]interface{}{"token": token, "error": "decryption failed"})
 			continue
 		}
+		if req.RenewTTLHours > 0 {
+			maxTTL := policy.MaxTokenTTLHours
+			if policy.TokenMetadataRetentionDays > 0 {
+				retentionTTL := policy.TokenMetadataRetentionDays * 24
+				if maxTTL == 0 || retentionTTL < maxTTL {
+					maxTTL = retentionTTL
+				}
+			}
+			if maxTTL > 0 && req.RenewTTLHours > maxTTL {
+				results = append(results, map[string]interface{}{"token": token, "error": "renew ttl exceeds configured policy limit"})
+				continue
+			}
+			renewed, err := s.store.RenewTokenLease(ctx, req.TenantID, record.ID, s.now().Add(time.Duration(req.RenewTTLHours)*time.Hour), policy.MaxTokenRenewals)
+			if err != nil {
+				if errors.Is(err, errNotFound) {
+					results = append(results, map[string]interface{}{"token": token, "error": "token renewal limit reached"})
+					continue
+				}
+				return nil, err
+			}
+			record = renewed
+		}
 		okCount++
 		results = append(results, map[string]interface{}{
-			"token":      token,
-			"value":      value,
-			"vault_id":   record.VaultID,
-			"created_at": record.CreatedAt,
+			"token":       token,
+			"value":       value,
+			"vault_id":    record.VaultID,
+			"created_at":  record.CreatedAt,
+			"expires_at":  record.ExpiresAt,
+			"use_count":   record.UseCount,
+			"use_limit":   record.UseLimit,
+			"renew_count": record.RenewCount,
 		})
 	}
 	if okCount > 0 {
 		_ = s.publishAudit(ctx, "audit.dataprotect.detokenized", req.TenantID, map[string]interface{}{
-			"count": okCount,
+			"count":           okCount,
+			"purpose":         req.Purpose,
+			"workflow":        req.Workflow,
+			"renew_ttl_hours": req.RenewTTLHours,
 		})
 	}
 	return results, nil
@@ -669,6 +926,10 @@ func (s *Service) ApplyMask(ctx context.Context, req MaskRequest) (map[string]in
 	if req.TenantID == "" || req.PolicyID == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and policy_id are required")
 	}
+	policyCfg, err := s.mustDataProtectionPolicy(ctx, req.TenantID)
+	if err != nil {
+		return nil, err
+	}
 	policy, err := s.store.GetMaskingPolicy(ctx, req.TenantID, req.PolicyID)
 	if err != nil {
 		return nil, err
@@ -682,6 +943,13 @@ func (s *Service) ApplyMask(ctx context.Context, req MaskRequest) (map[string]in
 		return out, nil
 	}
 	pattern := policy.MaskPattern
+	if rolePattern, ok := policyCfg.MaskingRolePolicy[strings.ToLower(req.Role)]; ok {
+		rolePattern = strings.ToLower(strings.TrimSpace(rolePattern))
+		if rolePattern == "none" {
+			return out, nil
+		}
+		pattern = normalizeMaskPattern(rolePattern)
+	}
 	if containsString(policy.RolesRedacted, req.Role) {
 		pattern = "full"
 	}
@@ -723,6 +991,10 @@ func (s *Service) CreateRedactionPolicy(ctx context.Context, tenantID string, in
 	if tenantID == "" {
 		return RedactionPolicy{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
+	policyCfg, err := s.mustDataProtectionPolicy(ctx, tenantID)
+	if err != nil {
+		return RedactionPolicy{}, err
+	}
 	in.Name = strings.TrimSpace(in.Name)
 	in.Scope = strings.TrimSpace(in.Scope)
 	in.Action = normalizeRedactAction(in.Action)
@@ -733,6 +1005,14 @@ func (s *Service) CreateRedactionPolicy(ctx context.Context, tenantID string, in
 	}
 	if len(in.Patterns) == 0 {
 		in.Patterns = defaultRedactionPatterns()
+	}
+	if !containsString(policyCfg.AllowedRedactionActions, in.Action) {
+		return RedactionPolicy{}, newServiceError(http.StatusForbidden, "policy_denied", "redaction action is blocked by policy")
+	}
+	for _, pattern := range in.Patterns {
+		if !isAllowedRedactionDetector(pattern, policyCfg.AllowedRedactionDetectors) {
+			return RedactionPolicy{}, newServiceError(http.StatusForbidden, "policy_denied", "redaction detector is blocked by policy")
+		}
 	}
 	in.ID = newID("redact")
 	in.TenantID = tenantID
@@ -782,6 +1062,19 @@ func (s *Service) Redact(ctx context.Context, req RedactRequest) (map[string]int
 		}
 		policy = item
 	}
+	if !containsString(policyCfg.AllowedRedactionActions, policy.Action) {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "redaction action is blocked by policy")
+	}
+	filteredPatterns := make([]RedactionPattern, 0, len(policy.Patterns))
+	for _, pattern := range policy.Patterns {
+		if isAllowedRedactionDetector(pattern, policyCfg.AllowedRedactionDetectors) {
+			filteredPatterns = append(filteredPatterns, pattern)
+		}
+	}
+	if len(filteredPatterns) == 0 {
+		return nil, newServiceError(http.StatusForbidden, "policy_denied", "all redaction detectors are blocked by policy")
+	}
+	policy.Patterns = filteredPatterns
 	if !matchesRedactionScope(policy, req.EndpointName) {
 		return map[string]interface{}{
 			"content": req.Content,
@@ -1560,7 +1853,7 @@ func encodeFieldValue(v interface{}) []byte {
 
 func isSupportedTokenType(v string) bool {
 	switch strings.ToLower(strings.TrimSpace(v)) {
-	case "credit_card", "ssn", "email", "phone", "iban", "custom":
+	case "credit_card", "ssn", "email", "phone", "iban", "bitlocker", "custom":
 		return true
 	default:
 		return false
@@ -1655,4 +1948,175 @@ func purposeAllowsDataProtection(purpose string) bool {
 		strings.Contains(p, "token") ||
 		strings.Contains(p, "data") ||
 		strings.Contains(p, "protect")
+}
+
+func uniqueUpper(in []string) []string {
+	out := make([]string, 0, len(in))
+	seen := map[string]struct{}{}
+	for _, item := range in {
+		s := strings.ToUpper(strings.TrimSpace(item))
+		if s == "" {
+			continue
+		}
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
+}
+
+func normalizeTokenModesPolicy(in map[string][]string) map[string][]string {
+	defaults := defaultTokenizationModePolicy()
+	if len(in) == 0 {
+		return defaults
+	}
+	out := map[string][]string{}
+	for tokenType, modes := range defaults {
+		key := strings.ToLower(strings.TrimSpace(tokenType))
+		candidate := modes
+		if supplied, ok := in[key]; ok {
+			candidate = supplied
+		}
+		valid := make([]string, 0, len(candidate))
+		for _, mode := range candidate {
+			n := normalizeTokenMode(mode)
+			if !containsString(valid, n) {
+				valid = append(valid, n)
+			}
+		}
+		if len(valid) == 0 {
+			valid = append(valid, modes...)
+		}
+		out[key] = valid
+	}
+	return out
+}
+
+func normalizeTokenFormatsPolicy(in map[string][]string) map[string][]string {
+	defaults := defaultTokenFormatPolicy()
+	if len(in) == 0 {
+		return defaults
+	}
+	out := map[string][]string{}
+	for tokenType, formats := range defaults {
+		key := strings.ToLower(strings.TrimSpace(tokenType))
+		candidate := formats
+		if supplied, ok := in[key]; ok {
+			candidate = supplied
+		}
+		valid := make([]string, 0, len(candidate))
+		for _, format := range candidate {
+			n := normalizeTokenFormat(format)
+			if !containsString(valid, n) {
+				valid = append(valid, n)
+			}
+		}
+		if len(valid) == 0 {
+			valid = append(valid, formats...)
+		}
+		out[key] = valid
+	}
+	return out
+}
+
+func normalizeMaskingRolePolicy(in map[string]string) map[string]string {
+	base := defaultMaskingRolePolicy()
+	if len(in) == 0 {
+		return base
+	}
+	out := map[string]string{}
+	for role, mode := range base {
+		out[role] = mode
+	}
+	for role, mode := range in {
+		key := strings.ToLower(strings.TrimSpace(role))
+		if key == "" {
+			continue
+		}
+		value := strings.ToLower(strings.TrimSpace(mode))
+		if value == "none" {
+			out[key] = value
+			continue
+		}
+		out[key] = normalizeMaskPattern(value)
+	}
+	return out
+}
+
+func policyAllowsTokenMode(policy DataProtectionPolicy, tokenType string, mode string) bool {
+	tokenType = strings.ToLower(strings.TrimSpace(tokenType))
+	mode = normalizeTokenMode(mode)
+	allowed, ok := policy.TokenizationModePolicy[tokenType]
+	if !ok || len(allowed) == 0 {
+		return mode == "vault"
+	}
+	return containsString(allowed, mode)
+}
+
+func policyAllowsTokenFormat(policy DataProtectionPolicy, tokenType string, format string) bool {
+	tokenType = strings.ToLower(strings.TrimSpace(tokenType))
+	format = normalizeTokenFormat(format)
+	allowed, ok := policy.TokenFormatPolicy[tokenType]
+	if !ok || len(allowed) == 0 {
+		return true
+	}
+	return containsString(allowed, format)
+}
+
+func validateCustomRegexPolicy(pattern string, policy DataProtectionPolicy) error {
+	pattern = strings.TrimSpace(pattern)
+	if pattern == "" {
+		return nil
+	}
+	if len(pattern) > policy.MaxCustomRegexLength {
+		return newServiceError(http.StatusBadRequest, "bad_request", "custom_regex exceeds policy length limit")
+	}
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return newServiceError(http.StatusBadRequest, "bad_request", "invalid custom_regex")
+	}
+	if re.NumSubexp() > policy.MaxCustomRegexGroups {
+		return newServiceError(http.StatusBadRequest, "bad_request", "custom_regex exceeds policy capture-group limit")
+	}
+	return nil
+}
+
+func validateRequiredContextTags(tags map[string]string, required []string) error {
+	if len(required) == 0 {
+		return nil
+	}
+	for _, key := range required {
+		name := strings.TrimSpace(key)
+		if name == "" {
+			continue
+		}
+		value := strings.TrimSpace(tags[name])
+		if value == "" {
+			return newServiceError(http.StatusBadRequest, "bad_request", "required metadata tag "+name+" is missing")
+		}
+	}
+	return nil
+}
+
+func isAllowedRedactionDetector(pattern RedactionPattern, allowed []string) bool {
+	label := strings.ToUpper(strings.TrimSpace(pattern.Label))
+	pType := strings.ToUpper(strings.TrimSpace(pattern.Type))
+	switch {
+	case strings.Contains(label, "EMAIL"):
+		return containsString(allowed, "EMAIL")
+	case strings.Contains(label, "PHONE"):
+		return containsString(allowed, "PHONE")
+	case strings.Contains(label, "SSN"):
+		return containsString(allowed, "SSN")
+	case strings.Contains(label, "PAN"), strings.Contains(label, "CARD"):
+		return containsString(allowed, "PAN")
+	case strings.Contains(label, "IBAN"):
+		return containsString(allowed, "IBAN")
+	case strings.Contains(label, "PERSON"), strings.Contains(label, "NAME"):
+		return containsString(allowed, "NAME")
+	default:
+		return pType == "REGEX" && containsString(allowed, "CUSTOM")
+	}
 }

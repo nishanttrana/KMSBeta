@@ -8198,11 +8198,47 @@ const DataEncryptionPolicy=({session,onToast})=>{
         max_fields_per_operation:Math.max(1,Number(dp?.max_fields_per_operation||64)),
         max_document_bytes:Math.max(1024,Number(dp?.max_document_bytes||262144)),
         allow_vaultless_tokenization:Boolean(dp?.allow_vaultless_tokenization),
+        tokenization_mode_policy:dp?.tokenization_mode_policy&&typeof dp.tokenization_mode_policy==="object"?dp.tokenization_mode_policy:{
+          credit_card:["vault","vaultless"],
+          ssn:["vault","vaultless"],
+          iban:["vault","vaultless"],
+          email:["vault","vaultless"],
+          phone:["vault","vaultless"],
+          custom:["vault","vaultless"],
+          bitlocker:["vault"]
+        },
+        token_format_policy:dp?.token_format_policy&&typeof dp.token_format_policy==="object"?dp.token_format_policy:{
+          credit_card:["format_preserving","deterministic","irreversible","random"],
+          ssn:["format_preserving","deterministic","irreversible","random"],
+          iban:["format_preserving","deterministic","irreversible","random"],
+          email:["format_preserving","deterministic","irreversible","random"],
+          phone:["format_preserving","deterministic","irreversible","random"],
+          custom:["format_preserving","deterministic","irreversible","random"],
+          bitlocker:["deterministic","irreversible","random"]
+        },
         require_token_ttl:Boolean(dp?.require_token_ttl),
         max_token_ttl_hours:Math.max(0,Number(dp?.max_token_ttl_hours||0)),
+        allow_token_renewal:Boolean(dp?.allow_token_renewal??true),
+        max_token_renewals:Math.max(0,Number(dp?.max_token_renewals??3)),
+        allow_one_time_tokens:Boolean(dp?.allow_one_time_tokens??true),
+        detokenize_allowed_purposes:Array.isArray(dp?.detokenize_allowed_purposes)?dp.detokenize_allowed_purposes:[],
+        detokenize_allowed_workflows:Array.isArray(dp?.detokenize_allowed_workflows)?dp.detokenize_allowed_workflows:[],
+        require_detokenize_justification:Boolean(dp?.require_detokenize_justification),
+        allow_bulk_tokenize:Boolean(dp?.allow_bulk_tokenize??true),
+        allow_bulk_detokenize:Boolean(dp?.allow_bulk_detokenize??true),
         allow_redaction_detect_only:Boolean(dp?.allow_redaction_detect_only),
+        allowed_redaction_detectors:Array.isArray(dp?.allowed_redaction_detectors)&&dp.allowed_redaction_detectors.length?dp.allowed_redaction_detectors:["EMAIL","PHONE","SSN","PAN","IBAN","NAME","CUSTOM"],
+        allowed_redaction_actions:Array.isArray(dp?.allowed_redaction_actions)&&dp.allowed_redaction_actions.length?dp.allowed_redaction_actions:["replace_placeholder","remove","hash"],
         allow_custom_regex_tokens:Boolean(dp?.allow_custom_regex_tokens),
-        max_token_batch:Math.max(1,Number(dp?.max_token_batch||10000))
+        max_custom_regex_length:Math.max(1,Number(dp?.max_custom_regex_length||512)),
+        max_custom_regex_groups:Math.max(0,Number(dp?.max_custom_regex_groups||16)),
+        max_token_batch:Math.max(1,Number(dp?.max_token_batch||10000)),
+        max_detokenize_batch:Math.max(1,Number(dp?.max_detokenize_batch||10000)),
+        require_token_context_tags:Boolean(dp?.require_token_context_tags),
+        required_token_context_keys:Array.isArray(dp?.required_token_context_keys)?dp.required_token_context_keys:[],
+        masking_role_policy:dp?.masking_role_policy&&typeof dp.masking_role_policy==="object"?dp.masking_role_policy:{admin:"none",auditor:"hash",analyst:"partial_last4",support:"partial_last4"},
+        token_metadata_retention_days:Math.max(1,Number(dp?.token_metadata_retention_days||365)),
+        redaction_event_retention_days:Math.max(1,Number(dp?.redaction_event_retention_days||365))
       });
     }catch(error){
       if(!silent){
@@ -8237,11 +8273,31 @@ const DataEncryptionPolicy=({session,onToast})=>{
         max_fields_per_operation:Math.max(1,Math.min(2048,Number(dataPolicy?.max_fields_per_operation||64))),
         max_document_bytes:Math.max(1024,Math.min(16777216,Number(dataPolicy?.max_document_bytes||262144))),
         allow_vaultless_tokenization:Boolean(dataPolicy?.allow_vaultless_tokenization),
+        tokenization_mode_policy:dataPolicy?.tokenization_mode_policy&&typeof dataPolicy.tokenization_mode_policy==="object"?dataPolicy.tokenization_mode_policy:{},
+        token_format_policy:dataPolicy?.token_format_policy&&typeof dataPolicy.token_format_policy==="object"?dataPolicy.token_format_policy:{},
         require_token_ttl:Boolean(dataPolicy?.require_token_ttl),
         max_token_ttl_hours:Math.max(0,Math.min(87600,Number(dataPolicy?.max_token_ttl_hours||0))),
+        allow_token_renewal:Boolean(dataPolicy?.allow_token_renewal),
+        max_token_renewals:Math.max(0,Math.min(100,Number(dataPolicy?.max_token_renewals||3))),
+        allow_one_time_tokens:Boolean(dataPolicy?.allow_one_time_tokens),
+        detokenize_allowed_purposes:Array.isArray(dataPolicy?.detokenize_allowed_purposes)?dataPolicy.detokenize_allowed_purposes:[],
+        detokenize_allowed_workflows:Array.isArray(dataPolicy?.detokenize_allowed_workflows)?dataPolicy.detokenize_allowed_workflows:[],
+        require_detokenize_justification:Boolean(dataPolicy?.require_detokenize_justification),
+        allow_bulk_tokenize:Boolean(dataPolicy?.allow_bulk_tokenize),
+        allow_bulk_detokenize:Boolean(dataPolicy?.allow_bulk_detokenize),
         allow_redaction_detect_only:Boolean(dataPolicy?.allow_redaction_detect_only),
+        allowed_redaction_detectors:Array.isArray(dataPolicy?.allowed_redaction_detectors)?dataPolicy.allowed_redaction_detectors:[],
+        allowed_redaction_actions:Array.isArray(dataPolicy?.allowed_redaction_actions)?dataPolicy.allowed_redaction_actions:[],
         allow_custom_regex_tokens:Boolean(dataPolicy?.allow_custom_regex_tokens),
+        max_custom_regex_length:Math.max(1,Math.min(4096,Number(dataPolicy?.max_custom_regex_length||512))),
+        max_custom_regex_groups:Math.max(1,Math.min(128,Number(dataPolicy?.max_custom_regex_groups||16))),
         max_token_batch:Math.max(1,Math.min(100000,Number(dataPolicy?.max_token_batch||10000))),
+        max_detokenize_batch:Math.max(1,Math.min(100000,Number(dataPolicy?.max_detokenize_batch||10000))),
+        require_token_context_tags:Boolean(dataPolicy?.require_token_context_tags),
+        required_token_context_keys:Array.isArray(dataPolicy?.required_token_context_keys)?dataPolicy.required_token_context_keys:[],
+        masking_role_policy:dataPolicy?.masking_role_policy&&typeof dataPolicy.masking_role_policy==="object"?dataPolicy.masking_role_policy:{},
+        token_metadata_retention_days:Math.max(1,Math.min(36500,Number(dataPolicy?.token_metadata_retention_days||365))),
+        redaction_event_retention_days:Math.max(1,Math.min(36500,Number(dataPolicy?.redaction_event_retention_days||365))),
         updated_by:session?.username||"dashboard"
       });
       setDataPolicy((prev)=>({...prev,...updated}));
@@ -8302,6 +8358,12 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
   const [saving,setSaving]=useState(false);
   const [dataPolicy,setDataPolicy]=useState<any>(null);
   const dataAlgoOptions=["AES-GCM","AES-SIV","CHACHA20-POLY1305"];
+  const tokenTypes=["credit_card","ssn","iban","email","phone","custom","bitlocker"];
+  const tokenFormats=["random","format_preserving","deterministic","irreversible"];
+  const redactionDetectors=["EMAIL","PHONE","SSN","PAN","IBAN","NAME","CUSTOM"];
+  const redactionActions=["replace_placeholder","remove","hash"];
+  const maskingRoles=["admin","auditor","analyst","support"];
+  const maskingPatterns=["none","full","partial_last4","partial_first2","hash","substitute","nullify"];
 
   const loadPolicy=async(silent=false)=>{
     if(!session?.token){
@@ -8320,11 +8382,47 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
         max_fields_per_operation:Math.max(1,Number(dp?.max_fields_per_operation||64)),
         max_document_bytes:Math.max(1024,Number(dp?.max_document_bytes||262144)),
         allow_vaultless_tokenization:Boolean(dp?.allow_vaultless_tokenization),
+        tokenization_mode_policy:dp?.tokenization_mode_policy&&typeof dp.tokenization_mode_policy==="object"?dp.tokenization_mode_policy:{
+          credit_card:["vault","vaultless"],
+          ssn:["vault","vaultless"],
+          iban:["vault","vaultless"],
+          email:["vault","vaultless"],
+          phone:["vault","vaultless"],
+          custom:["vault","vaultless"],
+          bitlocker:["vault"]
+        },
+        token_format_policy:dp?.token_format_policy&&typeof dp.token_format_policy==="object"?dp.token_format_policy:{
+          credit_card:["format_preserving","deterministic","irreversible","random"],
+          ssn:["format_preserving","deterministic","irreversible","random"],
+          iban:["format_preserving","deterministic","irreversible","random"],
+          email:["format_preserving","deterministic","irreversible","random"],
+          phone:["format_preserving","deterministic","irreversible","random"],
+          custom:["format_preserving","deterministic","irreversible","random"],
+          bitlocker:["deterministic","irreversible","random"]
+        },
         require_token_ttl:Boolean(dp?.require_token_ttl),
         max_token_ttl_hours:Math.max(0,Number(dp?.max_token_ttl_hours||0)),
+        allow_token_renewal:Boolean(dp?.allow_token_renewal??true),
+        max_token_renewals:Math.max(0,Number(dp?.max_token_renewals??3)),
+        allow_one_time_tokens:Boolean(dp?.allow_one_time_tokens??true),
+        detokenize_allowed_purposes:Array.isArray(dp?.detokenize_allowed_purposes)?dp.detokenize_allowed_purposes:[],
+        detokenize_allowed_workflows:Array.isArray(dp?.detokenize_allowed_workflows)?dp.detokenize_allowed_workflows:[],
+        require_detokenize_justification:Boolean(dp?.require_detokenize_justification),
+        allow_bulk_tokenize:Boolean(dp?.allow_bulk_tokenize??true),
+        allow_bulk_detokenize:Boolean(dp?.allow_bulk_detokenize??true),
         allow_redaction_detect_only:Boolean(dp?.allow_redaction_detect_only),
+        allowed_redaction_detectors:Array.isArray(dp?.allowed_redaction_detectors)&&dp.allowed_redaction_detectors.length?dp.allowed_redaction_detectors:["EMAIL","PHONE","SSN","PAN","IBAN","NAME","CUSTOM"],
+        allowed_redaction_actions:Array.isArray(dp?.allowed_redaction_actions)&&dp.allowed_redaction_actions.length?dp.allowed_redaction_actions:["replace_placeholder","remove","hash"],
         allow_custom_regex_tokens:Boolean(dp?.allow_custom_regex_tokens),
-        max_token_batch:Math.max(1,Number(dp?.max_token_batch||10000))
+        max_custom_regex_length:Math.max(1,Number(dp?.max_custom_regex_length||512)),
+        max_custom_regex_groups:Math.max(1,Number(dp?.max_custom_regex_groups||16)),
+        max_token_batch:Math.max(1,Number(dp?.max_token_batch||10000)),
+        max_detokenize_batch:Math.max(1,Number(dp?.max_detokenize_batch||10000)),
+        require_token_context_tags:Boolean(dp?.require_token_context_tags),
+        required_token_context_keys:Array.isArray(dp?.required_token_context_keys)?dp.required_token_context_keys:[],
+        masking_role_policy:dp?.masking_role_policy&&typeof dp.masking_role_policy==="object"?dp.masking_role_policy:{admin:"none",auditor:"hash",analyst:"partial_last4",support:"partial_last4"},
+        token_metadata_retention_days:Math.max(1,Number(dp?.token_metadata_retention_days||365)),
+        redaction_event_retention_days:Math.max(1,Number(dp?.redaction_event_retention_days||365))
       });
     }catch(error){
       if(!silent){
@@ -8359,11 +8457,31 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
         max_fields_per_operation:Math.max(1,Math.min(2048,Number(dataPolicy?.max_fields_per_operation||64))),
         max_document_bytes:Math.max(1024,Math.min(16777216,Number(dataPolicy?.max_document_bytes||262144))),
         allow_vaultless_tokenization:Boolean(dataPolicy?.allow_vaultless_tokenization),
+        tokenization_mode_policy:dataPolicy?.tokenization_mode_policy&&typeof dataPolicy.tokenization_mode_policy==="object"?dataPolicy.tokenization_mode_policy:{},
+        token_format_policy:dataPolicy?.token_format_policy&&typeof dataPolicy.token_format_policy==="object"?dataPolicy.token_format_policy:{},
         require_token_ttl:Boolean(dataPolicy?.require_token_ttl),
         max_token_ttl_hours:Math.max(0,Math.min(87600,Number(dataPolicy?.max_token_ttl_hours||0))),
+        allow_token_renewal:Boolean(dataPolicy?.allow_token_renewal),
+        max_token_renewals:Math.max(0,Math.min(100,Number(dataPolicy?.max_token_renewals||3))),
+        allow_one_time_tokens:Boolean(dataPolicy?.allow_one_time_tokens),
+        detokenize_allowed_purposes:Array.isArray(dataPolicy?.detokenize_allowed_purposes)?dataPolicy.detokenize_allowed_purposes:[],
+        detokenize_allowed_workflows:Array.isArray(dataPolicy?.detokenize_allowed_workflows)?dataPolicy.detokenize_allowed_workflows:[],
+        require_detokenize_justification:Boolean(dataPolicy?.require_detokenize_justification),
+        allow_bulk_tokenize:Boolean(dataPolicy?.allow_bulk_tokenize),
+        allow_bulk_detokenize:Boolean(dataPolicy?.allow_bulk_detokenize),
         allow_redaction_detect_only:Boolean(dataPolicy?.allow_redaction_detect_only),
+        allowed_redaction_detectors:Array.isArray(dataPolicy?.allowed_redaction_detectors)?dataPolicy.allowed_redaction_detectors:[],
+        allowed_redaction_actions:Array.isArray(dataPolicy?.allowed_redaction_actions)?dataPolicy.allowed_redaction_actions:[],
         allow_custom_regex_tokens:Boolean(dataPolicy?.allow_custom_regex_tokens),
+        max_custom_regex_length:Math.max(1,Math.min(4096,Number(dataPolicy?.max_custom_regex_length||512))),
+        max_custom_regex_groups:Math.max(1,Math.min(128,Number(dataPolicy?.max_custom_regex_groups||16))),
         max_token_batch:Math.max(1,Math.min(100000,Number(dataPolicy?.max_token_batch||10000))),
+        max_detokenize_batch:Math.max(1,Math.min(100000,Number(dataPolicy?.max_detokenize_batch||10000))),
+        require_token_context_tags:Boolean(dataPolicy?.require_token_context_tags),
+        required_token_context_keys:Array.isArray(dataPolicy?.required_token_context_keys)?dataPolicy.required_token_context_keys:[],
+        masking_role_policy:dataPolicy?.masking_role_policy&&typeof dataPolicy.masking_role_policy==="object"?dataPolicy.masking_role_policy:{},
+        token_metadata_retention_days:Math.max(1,Math.min(36500,Number(dataPolicy?.token_metadata_retention_days||365))),
+        redaction_event_retention_days:Math.max(1,Math.min(36500,Number(dataPolicy?.redaction_event_retention_days||365))),
         updated_by:session?.username||"dashboard"
       });
       setDataPolicy((prev)=>({...prev,...updated}));
@@ -8389,20 +8507,176 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
     </Section>
 
     <Section title="Tokenize / Mask / Redact Controls">
-      <Card style={{display:"grid",gap:8}}>
+      <Card style={{display:"grid",gap:12}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          <Chk label="Allow vaultless tokenization" checked={Boolean(dataPolicy?.allow_vaultless_tokenization)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_vaultless_tokenization:!Boolean(prev?.allow_vaultless_tokenization)}))}/>
+          <Chk label="Allow vaultless tokenization globally" checked={Boolean(dataPolicy?.allow_vaultless_tokenization)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_vaultless_tokenization:!Boolean(prev?.allow_vaultless_tokenization)}))}/>
           <Chk label="Require token TTL" checked={Boolean(dataPolicy?.require_token_ttl)} onChange={()=>setDataPolicy((prev)=>({...prev,require_token_ttl:!Boolean(prev?.require_token_ttl)}))}/>
-          <Chk label="Allow redaction detect-only mode" checked={Boolean(dataPolicy?.allow_redaction_detect_only)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_redaction_detect_only:!Boolean(prev?.allow_redaction_detect_only)}))}/>
+          <Chk label="Allow token lease renewal" checked={Boolean(dataPolicy?.allow_token_renewal)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_token_renewal:!Boolean(prev?.allow_token_renewal)}))}/>
+          <Chk label="Allow one-time tokens" checked={Boolean(dataPolicy?.allow_one_time_tokens)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_one_time_tokens:!Boolean(prev?.allow_one_time_tokens)}))}/>
           <Chk label="Allow custom regex tokens" checked={Boolean(dataPolicy?.allow_custom_regex_tokens)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_custom_regex_tokens:!Boolean(prev?.allow_custom_regex_tokens)}))}/>
+          <Chk label="Allow redaction detect-only mode" checked={Boolean(dataPolicy?.allow_redaction_detect_only)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_redaction_detect_only:!Boolean(prev?.allow_redaction_detect_only)}))}/>
+          <Chk label="Allow bulk tokenize" checked={Boolean(dataPolicy?.allow_bulk_tokenize)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_bulk_tokenize:!Boolean(prev?.allow_bulk_tokenize)}))}/>
+          <Chk label="Allow bulk detokenize" checked={Boolean(dataPolicy?.allow_bulk_detokenize)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_bulk_detokenize:!Boolean(prev?.allow_bulk_detokenize)}))}/>
+          <Chk label="Require context tags for token operations" checked={Boolean(dataPolicy?.require_token_context_tags)} onChange={()=>setDataPolicy((prev)=>({...prev,require_token_context_tags:!Boolean(prev?.require_token_context_tags)}))}/>
+          <Chk label="Require detokenize justification" checked={Boolean(dataPolicy?.require_detokenize_justification)} onChange={()=>setDataPolicy((prev)=>({...prev,require_detokenize_justification:!Boolean(prev?.require_detokenize_justification)}))}/>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
+
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:10}}>
           <FG label="Max token TTL (hours, 0=unlimited)">
             <Inp type="number" min={0} max={87600} value={String(dataPolicy?.max_token_ttl_hours??0)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_token_ttl_hours:Number(e.target.value||0)}))}/>
           </FG>
-          <FG label="Max token batch size">
+          <FG label="Max token renewals">
+            <Inp type="number" min={0} max={100} value={String(dataPolicy?.max_token_renewals??3)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_token_renewals:Number(e.target.value||3)}))}/>
+          </FG>
+          <FG label="Max tokenize batch size">
             <Inp type="number" min={1} max={100000} value={String(dataPolicy?.max_token_batch??10000)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_token_batch:Number(e.target.value||10000)}))}/>
           </FG>
+          <FG label="Max detokenize batch size">
+            <Inp type="number" min={1} max={100000} value={String(dataPolicy?.max_detokenize_batch??10000)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_detokenize_batch:Number(e.target.value||10000)}))}/>
+          </FG>
+          <FG label="Max custom regex length">
+            <Inp type="number" min={1} max={4096} value={String(dataPolicy?.max_custom_regex_length??512)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_custom_regex_length:Number(e.target.value||512)}))}/>
+          </FG>
+          <FG label="Max custom regex capture groups">
+            <Inp type="number" min={1} max={128} value={String(dataPolicy?.max_custom_regex_groups??16)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_custom_regex_groups:Number(e.target.value||16)}))}/>
+          </FG>
+          <FG label="Token metadata retention (days)">
+            <Inp type="number" min={1} max={36500} value={String(dataPolicy?.token_metadata_retention_days??365)} onChange={(e)=>setDataPolicy((prev)=>({...prev,token_metadata_retention_days:Number(e.target.value||365)}))}/>
+          </FG>
+          <FG label="Redaction event retention (days)">
+            <Inp type="number" min={1} max={36500} value={String(dataPolicy?.redaction_event_retention_days??365)} onChange={(e)=>setDataPolicy((prev)=>({...prev,redaction_event_retention_days:Number(e.target.value||365)}))}/>
+          </FG>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <FG label="Detokenize allowed purposes (comma separated)">
+            <Inp
+              value={Array.isArray(dataPolicy?.detokenize_allowed_purposes)?dataPolicy.detokenize_allowed_purposes.join(", "):""}
+              onChange={(e)=>setDataPolicy((prev)=>({...prev,detokenize_allowed_purposes:String(e.target.value||"").split(",").map((v)=>v.trim()).filter(Boolean)}))}
+              placeholder="support-case, forensic, payment-dispute"
+            />
+          </FG>
+          <FG label="Detokenize allowed workflows (comma separated)">
+            <Inp
+              value={Array.isArray(dataPolicy?.detokenize_allowed_workflows)?dataPolicy.detokenize_allowed_workflows.join(", "):""}
+              onChange={(e)=>setDataPolicy((prev)=>({...prev,detokenize_allowed_workflows:String(e.target.value||"").split(",").map((v)=>v.trim()).filter(Boolean)}))}
+              placeholder="incident-response, customer-support"
+            />
+          </FG>
+          <FG label="Required context tag keys (comma separated)">
+            <Inp
+              value={Array.isArray(dataPolicy?.required_token_context_keys)?dataPolicy.required_token_context_keys.join(", "):""}
+              onChange={(e)=>setDataPolicy((prev)=>({...prev,required_token_context_keys:String(e.target.value||"").split(",").map((v)=>v.trim()).filter(Boolean)}))}
+              placeholder="dataset, region, consent"
+            />
+          </FG>
+        </div>
+
+        <div style={{display:"grid",gap:6}}>
+          <div style={{fontSize:11,color:C.text,fontWeight:700}}>Tokenization Mode Policy (by data type)</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+            {tokenTypes.map((tokenType)=>(
+              <div key={`mode-policy-${tokenType}`} style={{display:"grid",gridTemplateColumns:"1fr auto auto",alignItems:"center",gap:8,border:`1px solid ${C.line}`,borderRadius:10,padding:"8px 10px"}}>
+                <div style={{fontSize:12,color:C.text}}>{tokenType}</div>
+                <Chk
+                  label="Vault"
+                  checked={Array.isArray(dataPolicy?.tokenization_mode_policy?.[tokenType])&&dataPolicy.tokenization_mode_policy[tokenType].includes("vault")}
+                  onChange={()=>setDataPolicy((prev)=>{
+                    const current=Array.isArray(prev?.tokenization_mode_policy?.[tokenType])?[...prev.tokenization_mode_policy[tokenType]]:[];
+                    const next=current.includes("vault")?current.filter((m)=>m!=="vault"):[...current,"vault"];
+                    return {...prev,tokenization_mode_policy:{...(prev?.tokenization_mode_policy||{}),[tokenType]:next}};
+                  })}
+                />
+                <Chk
+                  label="Vaultless"
+                  checked={Array.isArray(dataPolicy?.tokenization_mode_policy?.[tokenType])&&dataPolicy.tokenization_mode_policy[tokenType].includes("vaultless")}
+                  onChange={()=>setDataPolicy((prev)=>{
+                    const current=Array.isArray(prev?.tokenization_mode_policy?.[tokenType])?[...prev.tokenization_mode_policy[tokenType]]:[];
+                    const next=current.includes("vaultless")?current.filter((m)=>m!=="vaultless"):[...current,"vaultless"];
+                    return {...prev,tokenization_mode_policy:{...(prev?.tokenization_mode_policy||{}),[tokenType]:next}};
+                  })}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{display:"grid",gap:6}}>
+          <div style={{fontSize:11,color:C.text,fontWeight:700}}>Token Format Policy (by data type)</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+            {tokenTypes.map((tokenType)=>(
+              <div key={`fmt-policy-${tokenType}`} style={{border:`1px solid ${C.line}`,borderRadius:10,padding:"8px 10px"}}>
+                <div style={{fontSize:12,color:C.text,marginBottom:6}}>{tokenType}</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:6}}>
+                  {tokenFormats.map((format)=>(
+                    <Chk
+                      key={`fmt-policy-${tokenType}-${format}`}
+                      label={format}
+                      checked={Array.isArray(dataPolicy?.token_format_policy?.[tokenType])&&dataPolicy.token_format_policy[tokenType].includes(format)}
+                      onChange={()=>setDataPolicy((prev)=>{
+                        const current=Array.isArray(prev?.token_format_policy?.[tokenType])?[...prev.token_format_policy[tokenType]]:[];
+                        const next=current.includes(format)?current.filter((f)=>f!==format):[...current,format];
+                        return {...prev,token_format_policy:{...(prev?.token_format_policy||{}),[tokenType]:next}};
+                      })}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{display:"grid",gap:6}}>
+          <div style={{fontSize:11,color:C.text,fontWeight:700}}>Masking Role Policy</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+            {maskingRoles.map((role)=>(
+              <FG key={`mask-role-${role}`} label={role}>
+                <Sel
+                  value={String(dataPolicy?.masking_role_policy?.[role]||"partial_last4")}
+                  onChange={(e)=>setDataPolicy((prev)=>({...prev,masking_role_policy:{...(prev?.masking_role_policy||{}),[role]:String(e.target.value||"partial_last4")}}))}
+                >
+                  {maskingPatterns.map((pattern)=><option key={`mask-pattern-${role}-${pattern}`} value={pattern}>{pattern}</option>)}
+                </Sel>
+              </FG>
+            ))}
+          </div>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div>
+            <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Allowed Redaction Detectors</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:6}}>
+              {redactionDetectors.map((detector)=>(
+                <Chk
+                  key={`detector-${detector}`}
+                  label={detector}
+                  checked={Array.isArray(dataPolicy?.allowed_redaction_detectors)&&dataPolicy.allowed_redaction_detectors.includes(detector)}
+                  onChange={()=>setDataPolicy((prev)=>{
+                    const current=Array.isArray(prev?.allowed_redaction_detectors)?[...prev.allowed_redaction_detectors]:[];
+                    const next=current.includes(detector)?current.filter((d)=>d!==detector):[...current,detector];
+                    return {...prev,allowed_redaction_detectors:next};
+                  })}
+                />
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Allowed Redaction Actions</div>
+            <div style={{display:"grid",gap:6}}>
+              {redactionActions.map((action)=>(
+                <Chk
+                  key={`redact-action-${action}`}
+                  label={action}
+                  checked={Array.isArray(dataPolicy?.allowed_redaction_actions)&&dataPolicy.allowed_redaction_actions.includes(action)}
+                  onChange={()=>setDataPolicy((prev)=>{
+                    const current=Array.isArray(prev?.allowed_redaction_actions)?[...prev.allowed_redaction_actions]:[];
+                    const next=current.includes(action)?current.filter((a)=>a!==action):[...current,action];
+                    return {...prev,allowed_redaction_actions:next};
+                  })}
+                />
+              ))}
+            </div>
+          </div>
         </div>
       </Card>
     </Section>
