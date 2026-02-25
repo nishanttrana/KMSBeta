@@ -8180,6 +8180,22 @@ const DataEncryptionPolicy=({session,onToast})=>{
   const [saving,setSaving]=useState(false);
   const [dataPolicy,setDataPolicy]=useState<any>(null);
   const dataAlgoOptions=["AES-GCM","AES-SIV","CHACHA20-POLY1305"];
+  const useCaseProfiles=[
+    {id:"field_level",label:"Field-Level (FLE)"},
+    {id:"envelope",label:"Envelope"},
+    {id:"searchable",label:"Searchable"}
+  ];
+  const parseCsvList=(value:string)=>String(value||"").split(",").map((item)=>item.trim()).filter(Boolean);
+  const fmtBytes=(value:number)=>{
+    const n=Math.max(0,Number(value||0));
+    if(n>=1024*1024){
+      return `${(n/(1024*1024)).toFixed(1)} MB`;
+    }
+    if(n>=1024){
+      return `${(n/1024).toFixed(1)} KB`;
+    }
+    return `${n} B`;
+  };
 
   const loadPolicy=async(silent=false)=>{
     if(!session?.token){
@@ -8194,9 +8210,32 @@ const DataEncryptionPolicy=({session,onToast})=>{
       setDataPolicy({
         tenant_id:String(dp?.tenant_id||session?.tenantId||""),
         allowed_data_algorithms:Array.isArray(dp?.allowed_data_algorithms)&&dp.allowed_data_algorithms.length?dp.allowed_data_algorithms:dataAlgoOptions,
+        algorithm_profile_policy:dp?.algorithm_profile_policy&&typeof dp.algorithm_profile_policy==="object"?dp.algorithm_profile_policy:{
+          field_level:["AES-GCM","AES-SIV","CHACHA20-POLY1305"],
+          envelope:["AES-GCM","AES-SIV","CHACHA20-POLY1305"],
+          searchable:["AES-SIV"]
+        },
         require_aad_for_aead:Boolean(dp?.require_aad_for_aead),
+        required_aad_claims:Array.isArray(dp?.required_aad_claims)?dp.required_aad_claims:[],
+        enforce_aad_tenant_binding:Boolean(dp?.enforce_aad_tenant_binding),
+        allowed_aad_environments:Array.isArray(dp?.allowed_aad_environments)?dp.allowed_aad_environments:[],
         max_fields_per_operation:Math.max(1,Number(dp?.max_fields_per_operation||64)),
         max_document_bytes:Math.max(1024,Number(dp?.max_document_bytes||262144)),
+        max_app_crypto_request_bytes:Math.max(1024,Number(dp?.max_app_crypto_request_bytes||1048576)),
+        max_app_crypto_batch_size:Math.max(1,Number(dp?.max_app_crypto_batch_size||256)),
+        require_symmetric_keys:Boolean(dp?.require_symmetric_keys??true),
+        require_fips_keys:Boolean(dp?.require_fips_keys),
+        min_key_size_bits:Math.max(0,Number(dp?.min_key_size_bits||0)),
+        allowed_encrypt_field_paths:Array.isArray(dp?.allowed_encrypt_field_paths)?dp.allowed_encrypt_field_paths:[],
+        allowed_decrypt_field_paths:Array.isArray(dp?.allowed_decrypt_field_paths)?dp.allowed_decrypt_field_paths:[],
+        denied_decrypt_field_paths:Array.isArray(dp?.denied_decrypt_field_paths)?dp.denied_decrypt_field_paths:[],
+        block_wildcard_field_paths:Boolean(dp?.block_wildcard_field_paths??true),
+        allow_deterministic_encryption:Boolean(dp?.allow_deterministic_encryption??true),
+        allow_searchable_encryption:Boolean(dp?.allow_searchable_encryption??true),
+        allow_range_search:Boolean(dp?.allow_range_search),
+        envelope_kek_allowlist:Array.isArray(dp?.envelope_kek_allowlist)?dp.envelope_kek_allowlist:[],
+        max_wrapped_dek_age_minutes:Math.max(0,Number(dp?.max_wrapped_dek_age_minutes||0)),
+        require_rewrap_on_dek_age_exceeded:Boolean(dp?.require_rewrap_on_dek_age_exceeded??true),
         allow_vaultless_tokenization:Boolean(dp?.allow_vaultless_tokenization),
         tokenization_mode_policy:dp?.tokenization_mode_policy&&typeof dp.tokenization_mode_policy==="object"?dp.tokenization_mode_policy:{
           credit_card:["vault","vaultless"],
@@ -8269,9 +8308,28 @@ const DataEncryptionPolicy=({session,onToast})=>{
       const updated=await updateDataProtectionPolicy(session,{
         tenant_id:session.tenantId,
         allowed_data_algorithms:Array.isArray(dataPolicy?.allowed_data_algorithms)?dataPolicy.allowed_data_algorithms:dataAlgoOptions,
+        algorithm_profile_policy:dataPolicy?.algorithm_profile_policy&&typeof dataPolicy.algorithm_profile_policy==="object"?dataPolicy.algorithm_profile_policy:{},
         require_aad_for_aead:Boolean(dataPolicy?.require_aad_for_aead),
+        required_aad_claims:Array.isArray(dataPolicy?.required_aad_claims)?dataPolicy.required_aad_claims:[],
+        enforce_aad_tenant_binding:Boolean(dataPolicy?.enforce_aad_tenant_binding),
+        allowed_aad_environments:Array.isArray(dataPolicy?.allowed_aad_environments)?dataPolicy.allowed_aad_environments:[],
         max_fields_per_operation:Math.max(1,Math.min(2048,Number(dataPolicy?.max_fields_per_operation||64))),
         max_document_bytes:Math.max(1024,Math.min(16777216,Number(dataPolicy?.max_document_bytes||262144))),
+        max_app_crypto_request_bytes:Math.max(1024,Math.min(67108864,Number(dataPolicy?.max_app_crypto_request_bytes||1048576))),
+        max_app_crypto_batch_size:Math.max(1,Math.min(4096,Number(dataPolicy?.max_app_crypto_batch_size||256))),
+        require_symmetric_keys:Boolean(dataPolicy?.require_symmetric_keys??true),
+        require_fips_keys:Boolean(dataPolicy?.require_fips_keys),
+        min_key_size_bits:Math.max(0,Math.min(16384,Number(dataPolicy?.min_key_size_bits||0))),
+        allowed_encrypt_field_paths:Array.isArray(dataPolicy?.allowed_encrypt_field_paths)?dataPolicy.allowed_encrypt_field_paths:[],
+        allowed_decrypt_field_paths:Array.isArray(dataPolicy?.allowed_decrypt_field_paths)?dataPolicy.allowed_decrypt_field_paths:[],
+        denied_decrypt_field_paths:Array.isArray(dataPolicy?.denied_decrypt_field_paths)?dataPolicy.denied_decrypt_field_paths:[],
+        block_wildcard_field_paths:Boolean(dataPolicy?.block_wildcard_field_paths),
+        allow_deterministic_encryption:Boolean(dataPolicy?.allow_deterministic_encryption),
+        allow_searchable_encryption:Boolean(dataPolicy?.allow_searchable_encryption),
+        allow_range_search:Boolean(dataPolicy?.allow_range_search),
+        envelope_kek_allowlist:Array.isArray(dataPolicy?.envelope_kek_allowlist)?dataPolicy.envelope_kek_allowlist:[],
+        max_wrapped_dek_age_minutes:Math.max(0,Math.min(525600,Number(dataPolicy?.max_wrapped_dek_age_minutes||0))),
+        require_rewrap_on_dek_age_exceeded:Boolean(dataPolicy?.require_rewrap_on_dek_age_exceeded),
         allow_vaultless_tokenization:Boolean(dataPolicy?.allow_vaultless_tokenization),
         tokenization_mode_policy:dataPolicy?.tokenization_mode_policy&&typeof dataPolicy.tokenization_mode_policy==="object"?dataPolicy.tokenization_mode_policy:{},
         token_format_policy:dataPolicy?.token_format_policy&&typeof dataPolicy.token_format_policy==="object"?dataPolicy.token_format_policy:{},
@@ -8324,28 +8382,127 @@ const DataEncryptionPolicy=({session,onToast})=>{
 
     <Section title="Data Encryption Controls">
       <Card style={{display:"grid",gap:8}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          <Chk label="Require AAD for AEAD operations" checked={Boolean(dataPolicy?.require_aad_for_aead)} onChange={()=>setDataPolicy((prev)=>({...prev,require_aad_for_aead:!Boolean(prev?.require_aad_for_aead)}))}/>
-          <div style={{fontSize:10,color:C.dim,alignSelf:"center"}}>Allowed algorithms are enforced server-side for FLE/Envelope/Searchable APIs.</div>
-        </div>
+        <div style={{fontSize:11,color:C.text,fontWeight:700}}>1. Algorithm Profile Policy</div>
+        <div style={{fontSize:10,color:C.dim}}>Controls which algorithms are globally allowed and which are valid per use-case (FLE, Envelope, Searchable).</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
           {dataAlgoOptions.map((algo)=>{
             const selected=(Array.isArray(dataPolicy?.allowed_data_algorithms)?dataPolicy.allowed_data_algorithms:[]).includes(algo);
-            return <Chk key={`dp-algo-${algo}`} label={algo} checked={selected} onChange={()=>setDataPolicy((prev)=>{
+            return <Chk key={`dp-allowed-algo-${algo}`} label={`Allow ${algo}`} checked={selected} onChange={()=>setDataPolicy((prev)=>{
               const current=Array.isArray(prev?.allowed_data_algorithms)?[...prev.allowed_data_algorithms]:[];
-              if(current.includes(algo)){
-                return {...prev,allowed_data_algorithms:current.filter((item)=>item!==algo)};
-              }
-              return {...prev,allowed_data_algorithms:[...current,algo]};
+              const next=current.includes(algo)?current.filter((item)=>item!==algo):[...current,algo];
+              return {...prev,allowed_data_algorithms:next};
             })}/>;
           })}
         </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+          {useCaseProfiles.map((profile)=>(
+            <div key={`alg-profile-${profile.id}`} style={{border:`1px solid ${C.line}`,borderRadius:10,padding:"8px 10px"}}>
+              <div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:6}}>{profile.label}</div>
+              <div style={{display:"grid",gap:6}}>
+                {dataAlgoOptions.map((algo)=>{
+                  const current=Array.isArray(dataPolicy?.algorithm_profile_policy?.[profile.id])?dataPolicy.algorithm_profile_policy[profile.id]:[];
+                  const selected=current.includes(algo);
+                  return <Chk
+                    key={`alg-profile-${profile.id}-${algo}`}
+                    label={algo}
+                    checked={selected}
+                    onChange={()=>setDataPolicy((prev)=>{
+                      const profileCurrent=Array.isArray(prev?.algorithm_profile_policy?.[profile.id])?[...prev.algorithm_profile_policy[profile.id]]:[];
+                      const profileNext=profileCurrent.includes(algo)?profileCurrent.filter((item)=>item!==algo):[...profileCurrent,algo];
+                      return {...prev,algorithm_profile_policy:{...(prev?.algorithm_profile_policy||{}),[profile.id]:profileNext}};
+                    })}
+                  />;
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+
+        <div style={{fontSize:11,color:C.text,fontWeight:700}}>2. Key-Class Binding Policy</div>
+        <div style={{fontSize:10,color:C.dim}}>Defines eligible key classes for data encryption operations.</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+          <Chk label="Require symmetric keys only" checked={Boolean(dataPolicy?.require_symmetric_keys)} onChange={()=>setDataPolicy((prev)=>({...prev,require_symmetric_keys:!Boolean(prev?.require_symmetric_keys)}))}/>
+          <Chk label="Require FIPS compliant keys" checked={Boolean(dataPolicy?.require_fips_keys)} onChange={()=>setDataPolicy((prev)=>({...prev,require_fips_keys:!Boolean(prev?.require_fips_keys)}))}/>
+          <FG label="Minimum key size (bits, 0=disabled)">
+            <Inp type="number" min={0} max={16384} value={String(dataPolicy?.min_key_size_bits??0)} onChange={(e)=>setDataPolicy((prev)=>({...prev,min_key_size_bits:Number(e.target.value||0)}))}/>
+          </FG>
+        </div>
+
+        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+
+        <div style={{fontSize:11,color:C.text,fontWeight:700}}>3. AAD Contract Policy</div>
+        <div style={{fontSize:10,color:C.dim}}>Requires and validates structured AAD claims for AEAD and searchable operations.</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+          <Chk label="Require AAD for AEAD operations" checked={Boolean(dataPolicy?.require_aad_for_aead)} onChange={()=>setDataPolicy((prev)=>({...prev,require_aad_for_aead:!Boolean(prev?.require_aad_for_aead)}))}/>
+          <Chk label="Enforce tenant_id claim binding" checked={Boolean(dataPolicy?.enforce_aad_tenant_binding)} onChange={()=>setDataPolicy((prev)=>({...prev,enforce_aad_tenant_binding:!Boolean(prev?.enforce_aad_tenant_binding)}))}/>
+          <FG label="Required AAD claims (comma separated)">
+            <Inp value={Array.isArray(dataPolicy?.required_aad_claims)?dataPolicy.required_aad_claims.join(", "):""} onChange={(e)=>setDataPolicy((prev)=>({...prev,required_aad_claims:parseCsvList(e.target.value)}))} placeholder="tenant_id, app_id, purpose"/>
+          </FG>
+          <FG label="Allowed AAD environments (comma separated)">
+            <Inp value={Array.isArray(dataPolicy?.allowed_aad_environments)?dataPolicy.allowed_aad_environments.join(", "):""} onChange={(e)=>setDataPolicy((prev)=>({...prev,allowed_aad_environments:parseCsvList(e.target.value)}))} placeholder="prod, stage"/>
+          </FG>
+        </div>
+
+        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+
+        <div style={{fontSize:11,color:C.text,fontWeight:700}}>4. Field Scope Policy</div>
+        <div style={{fontSize:10,color:C.dim}}>Restricts which JSONPaths can be encrypted/decrypted and blocks wildcard access when required.</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+          <Chk label="Block wildcard field paths" checked={Boolean(dataPolicy?.block_wildcard_field_paths)} onChange={()=>setDataPolicy((prev)=>({...prev,block_wildcard_field_paths:!Boolean(prev?.block_wildcard_field_paths)}))}/>
+          <div/>
+          <FG label="Allowed encrypt field paths (comma separated)">
+            <Inp value={Array.isArray(dataPolicy?.allowed_encrypt_field_paths)?dataPolicy.allowed_encrypt_field_paths.join(", "):""} onChange={(e)=>setDataPolicy((prev)=>({...prev,allowed_encrypt_field_paths:parseCsvList(e.target.value)}))} placeholder="$.ssn, $.card.number"/>
+          </FG>
+          <FG label="Allowed decrypt field paths (comma separated)">
+            <Inp value={Array.isArray(dataPolicy?.allowed_decrypt_field_paths)?dataPolicy.allowed_decrypt_field_paths.join(", "):""} onChange={(e)=>setDataPolicy((prev)=>({...prev,allowed_decrypt_field_paths:parseCsvList(e.target.value)}))} placeholder="$.ssn"/>
+          </FG>
+          <FG label="Denied decrypt field paths (comma separated)">
+            <Inp value={Array.isArray(dataPolicy?.denied_decrypt_field_paths)?dataPolicy.denied_decrypt_field_paths.join(", "):""} onChange={(e)=>setDataPolicy((prev)=>({...prev,denied_decrypt_field_paths:parseCsvList(e.target.value)}))} placeholder="$.pan.full"/>
+          </FG>
+        </div>
+
+        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+
+        <div style={{fontSize:11,color:C.text,fontWeight:700}}>5. Deterministic/Searchable Policy</div>
+        <div style={{fontSize:10,color:C.dim}}>Controls deterministic and searchable encryption behavior, including range search.</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+          <Chk label="Allow deterministic encryption" checked={Boolean(dataPolicy?.allow_deterministic_encryption)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_deterministic_encryption:!Boolean(prev?.allow_deterministic_encryption)}))}/>
+          <Chk label="Allow searchable encryption" checked={Boolean(dataPolicy?.allow_searchable_encryption)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_searchable_encryption:!Boolean(prev?.allow_searchable_encryption)}))}/>
+          <Chk label="Allow range search" checked={Boolean(dataPolicy?.allow_range_search)} onChange={()=>setDataPolicy((prev)=>({...prev,allow_range_search:!Boolean(prev?.allow_range_search)}))}/>
+        </div>
+
+        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+
+        <div style={{fontSize:11,color:C.text,fontWeight:700}}>6. Envelope Policy</div>
+        <div style={{fontSize:10,color:C.dim}}>Constrains KEK allowlist and wrapped DEK age enforcement during envelope operations.</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+          <FG label="Envelope KEK allowlist (key IDs, comma separated)">
+            <Inp value={Array.isArray(dataPolicy?.envelope_kek_allowlist)?dataPolicy.envelope_kek_allowlist.join(", "):""} onChange={(e)=>setDataPolicy((prev)=>({...prev,envelope_kek_allowlist:parseCsvList(e.target.value)}))} placeholder="key_abc123, key_xyz789"/>
+          </FG>
+          <FG label="Max wrapped DEK age (minutes, 0=disabled)">
+            <Inp type="number" min={0} max={525600} value={String(dataPolicy?.max_wrapped_dek_age_minutes??0)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_wrapped_dek_age_minutes:Number(e.target.value||0)}))}/>
+          </FG>
+          <Chk label="Require re-wrap when DEK age exceeds limit" checked={Boolean(dataPolicy?.require_rewrap_on_dek_age_exceeded)} onChange={()=>setDataPolicy((prev)=>({...prev,require_rewrap_on_dek_age_exceeded:!Boolean(prev?.require_rewrap_on_dek_age_exceeded)}))}/>
+        </div>
+
+        <div style={{height:1,background:C.line,margin:"4px 0"}}/>
+
+        <div style={{fontSize:11,color:C.text,fontWeight:700}}>7. Payload Policy</div>
+        <div style={{fontSize:10,color:C.dim}}>Applies request/field/batch size limits across Data Encryption REST operations.</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
           <FG label="Max fields per operation">
             <Inp type="number" min={1} max={2048} value={String(dataPolicy?.max_fields_per_operation??64)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_fields_per_operation:Number(e.target.value||64)}))}/>
           </FG>
           <FG label="Max document size (bytes)">
             <Inp type="number" min={1024} max={16777216} value={String(dataPolicy?.max_document_bytes??262144)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_document_bytes:Number(e.target.value||262144)}))}/>
+          </FG>
+          <FG label={`Max app crypto request size (${fmtBytes(Number(dataPolicy?.max_app_crypto_request_bytes||1048576))})`}>
+            <Inp type="number" min={1024} max={67108864} value={String(dataPolicy?.max_app_crypto_request_bytes??1048576)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_app_crypto_request_bytes:Number(e.target.value||1048576)}))}/>
+          </FG>
+          <FG label="Max app crypto batch size">
+            <Inp type="number" min={1} max={4096} value={String(dataPolicy?.max_app_crypto_batch_size??256)} onChange={(e)=>setDataPolicy((prev)=>({...prev,max_app_crypto_batch_size:Number(e.target.value||256)}))}/>
           </FG>
         </div>
       </Card>
@@ -8687,18 +8844,112 @@ const PaymentCryptoPolicy=({session,onToast})=>{
   const [loading,setLoading]=useState(false);
   const [saving,setSaving]=useState(false);
   const [payPolicy,setPayPolicy]=useState<any>(null);
+  const [tr31ExportabilityMatrixText,setTR31ExportabilityMatrixText]=useState("{}");
+  const [paymentKeyPurposeMatrixText,setPaymentKeyPurposeMatrixText]=useState("{}");
+  const [rotationDaysByClassText,setRotationDaysByClassText]=useState("{}");
+  const [pinTranslationPairsText,setPINTranslationPairsText]=useState("");
+  const [cvvServiceCodesText,setCVVServiceCodesText]=useState("");
+  const [issuerProfilesText,setIssuerProfilesText]=useState("");
   const tr31VersionOptions=["B","C","D"];
+  const paymentKeyClassOptions=["ZMK","TMK","TPK","BMK","BDK","IPEK","ZPK","ZAK","ZEK","TAK","CVK","PVK","KBPK"];
+  const tr31ExportabilityOptions=["E","N","S"];
+  const isoCanonicalizationOptions=["exc-c14n","c14n11"];
+  const isoSignatureSuiteOptions=["rsa-pss-sha256","rsa-pkcs1-sha256","ecdsa-sha256","ecdsa-sha384"];
+  const macDomainOptions=["retail","iso9797","cmac"];
+  const macPaddingOptions=["ansi-x9.19-m1","iso9797-m2","cmac"];
   const tcpOperationOptions=[
     "tr31.create","tr31.parse","tr31.translate","tr31.validate","tr31.key-usages",
     "pin.translate","pin.pvv.generate","pin.pvv.verify","pin.offset.generate","pin.offset.verify","pin.cvv.compute","pin.cvv.verify",
     "mac.retail","mac.iso9797","mac.cmac","mac.verify",
     "iso20022.sign","iso20022.verify","iso20022.encrypt","iso20022.decrypt","iso20022.lau.generate","iso20022.lau.verify"
   ];
+  const sensitiveOperationOptions=[...tcpOperationOptions,"key.rotate"];
   const pinFormatOptions=["ISO-0","ISO-1","ISO-3"];
+
+  const toggleStringList=(list:string[]|undefined,value:string)=>{
+    const current=Array.isArray(list)?[...list]:[];
+    return current.includes(value)?current.filter((item)=>item!==value):[...current,value];
+  };
+
+  const parseCSVList=(raw:string)=>{
+    return Array.from(new Set(
+      String(raw||"")
+        .split(/[\n,]/g)
+        .map((v)=>String(v||"").trim())
+        .filter(Boolean)
+    ));
+  };
+
+  const toPrettyJSON=(input:any)=>{
+    const value=input&&typeof input==="object"&&!Array.isArray(input)?input:{};
+    try{
+      return JSON.stringify(value,null,2);
+    }catch{
+      return "{}";
+    }
+  };
+
+  const parseStringArrayMap=(raw:string,label:string):Record<string,string[]>=>{
+    let parsed:any;
+    try{
+      parsed=JSON.parse(String(raw||"{}"));
+    }catch{
+      throw new Error(`${label} must be valid JSON object.`);
+    }
+    if(!parsed||Array.isArray(parsed)||typeof parsed!=="object"){
+      throw new Error(`${label} must be a JSON object.`);
+    }
+    const out:Record<string,string[]>={};
+    Object.entries(parsed).forEach(([key,val])=>{
+      const mapKey=String(key||"").trim();
+      if(!mapKey){
+        return;
+      }
+      if(!Array.isArray(val)){
+        throw new Error(`${label}.${mapKey} must be an array of strings.`);
+      }
+      const normalized=Array.from(new Set(val.map((item)=>String(item||"").trim()).filter(Boolean)));
+      if(normalized.length){
+        out[mapKey]=normalized;
+      }
+    });
+    return out;
+  };
+
+  const parseStringIntMap=(raw:string,label:string):Record<string,number>=>{
+    let parsed:any;
+    try{
+      parsed=JSON.parse(String(raw||"{}"));
+    }catch{
+      throw new Error(`${label} must be valid JSON object.`);
+    }
+    if(!parsed||Array.isArray(parsed)||typeof parsed!=="object"){
+      throw new Error(`${label} must be a JSON object.`);
+    }
+    const out:Record<string,number>={};
+    Object.entries(parsed).forEach(([key,val])=>{
+      const mapKey=String(key||"").trim();
+      if(!mapKey){
+        return;
+      }
+      const parsedNum=Math.floor(Number(val));
+      if(!Number.isFinite(parsedNum)||parsedNum<=0){
+        throw new Error(`${label}.${mapKey} must be a positive integer.`);
+      }
+      out[mapKey]=parsedNum;
+    });
+    return out;
+  };
 
   const loadPolicy=async(silent=false)=>{
     if(!session?.token){
       setPayPolicy(null);
+      setTR31ExportabilityMatrixText("{}");
+      setPaymentKeyPurposeMatrixText("{}");
+      setRotationDaysByClassText("{}");
+      setPINTranslationPairsText("");
+      setCVVServiceCodesText("");
+      setIssuerProfilesText("");
       return;
     }
     if(!silent){
@@ -8710,9 +8961,13 @@ const PaymentCryptoPolicy=({session,onToast})=>{
         tenant_id:String(pp?.tenant_id||session?.tenantId||""),
         allowed_tr31_versions:Array.isArray(pp?.allowed_tr31_versions)&&pp.allowed_tr31_versions.length?pp.allowed_tr31_versions:tr31VersionOptions,
         require_kbpk_for_tr31:Boolean(pp?.require_kbpk_for_tr31),
+        allowed_kbpk_classes:Array.isArray(pp?.allowed_kbpk_classes)?pp.allowed_kbpk_classes:[],
+        allowed_tr31_exportability:Array.isArray(pp?.allowed_tr31_exportability)&&pp.allowed_tr31_exportability.length?pp.allowed_tr31_exportability:tr31ExportabilityOptions,
         allow_inline_key_material:Boolean(pp?.allow_inline_key_material),
         max_iso20022_payload_bytes:Math.max(1024,Number(pp?.max_iso20022_payload_bytes||262144)),
         require_iso20022_lau_context:Boolean(pp?.require_iso20022_lau_context),
+        allowed_iso20022_canonicalization:Array.isArray(pp?.allowed_iso20022_canonicalization)?pp.allowed_iso20022_canonicalization:[],
+        allowed_iso20022_signature_suites:Array.isArray(pp?.allowed_iso20022_signature_suites)?pp.allowed_iso20022_signature_suites:[],
         strict_pci_dss_4_0:Boolean(pp?.strict_pci_dss_4_0),
         require_key_id_for_operations:Boolean(pp?.require_key_id_for_operations),
         allow_tcp_interface:Boolean(pp?.allow_tcp_interface??true),
@@ -8720,10 +8975,28 @@ const PaymentCryptoPolicy=({session,onToast})=>{
         max_tcp_payload_bytes:Math.max(4096,Number(pp?.max_tcp_payload_bytes||262144)),
         allowed_tcp_operations:Array.isArray(pp?.allowed_tcp_operations)&&pp.allowed_tcp_operations.length?pp.allowed_tcp_operations:tcpOperationOptions,
         allowed_pin_block_formats:Array.isArray(pp?.allowed_pin_block_formats)&&pp.allowed_pin_block_formats.length?pp.allowed_pin_block_formats:pinFormatOptions,
+        allowed_pin_translation_pairs:Array.isArray(pp?.allowed_pin_translation_pairs)?pp.allowed_pin_translation_pairs:[],
         disable_iso0_pin_block:Boolean(pp?.disable_iso0_pin_block),
+        allowed_cvv_service_codes:Array.isArray(pp?.allowed_cvv_service_codes)?pp.allowed_cvv_service_codes:[],
+        pvki_min:Number.isFinite(Number(pp?.pvki_min))?Math.max(0,Math.min(9,Number(pp?.pvki_min))):0,
+        pvki_max:Number.isFinite(Number(pp?.pvki_max))?Math.max(0,Math.min(9,Number(pp?.pvki_max))):9,
+        allowed_issuer_profiles:Array.isArray(pp?.allowed_issuer_profiles)?pp.allowed_issuer_profiles:[],
+        allowed_mac_domains:Array.isArray(pp?.allowed_mac_domains)?pp.allowed_mac_domains:[],
+        allowed_mac_padding_profiles:Array.isArray(pp?.allowed_mac_padding_profiles)?pp.allowed_mac_padding_profiles:[],
+        dual_control_required_operations:Array.isArray(pp?.dual_control_required_operations)?pp.dual_control_required_operations:[],
+        hsm_required_operations:Array.isArray(pp?.hsm_required_operations)?pp.hsm_required_operations:[],
+        runtime_environment:String(pp?.runtime_environment||"prod").toLowerCase()==="test"?"test":"prod",
+        disallow_test_keys_in_prod:Boolean(pp?.disallow_test_keys_in_prod),
+        disallow_prod_keys_in_test:Boolean(pp?.disallow_prod_keys_in_test),
         decimalization_table:String(pp?.decimalization_table||"0123456789012345"),
         block_wildcard_pan:Boolean(pp?.block_wildcard_pan??true)
       });
+      setTR31ExportabilityMatrixText(toPrettyJSON(pp?.tr31_exportability_matrix));
+      setPaymentKeyPurposeMatrixText(toPrettyJSON(pp?.payment_key_purpose_matrix));
+      setRotationDaysByClassText(toPrettyJSON(pp?.rotation_interval_days_by_class));
+      setPINTranslationPairsText(Array.isArray(pp?.allowed_pin_translation_pairs)?pp.allowed_pin_translation_pairs.join(", "):"");
+      setCVVServiceCodesText(Array.isArray(pp?.allowed_cvv_service_codes)?pp.allowed_cvv_service_codes.join(", "):"");
+      setIssuerProfilesText(Array.isArray(pp?.allowed_issuer_profiles)?pp.allowed_issuer_profiles.join(", "):"");
     }catch(error){
       if(!silent){
         onToast?.(`Payment policy load failed: ${errMsg(error)}`);
@@ -8748,15 +9021,38 @@ const PaymentCryptoPolicy=({session,onToast})=>{
       onToast?.("Policy settings are not loaded.");
       return;
     }
+    let parsedTR31Matrix:Record<string,string[]>={};
+    let parsedPurposeMatrix:Record<string,string[]>={};
+    let parsedRotationByClass:Record<string,number>={};
+    try{
+      parsedTR31Matrix=parseStringArrayMap(tr31ExportabilityMatrixText,"TR-31 exportability matrix");
+      parsedPurposeMatrix=parseStringArrayMap(paymentKeyPurposeMatrixText,"Payment key purpose matrix");
+      parsedRotationByClass=parseStringIntMap(rotationDaysByClassText,"Rotation interval by class");
+    }catch(parseError){
+      onToast?.(errMsg(parseError));
+      return;
+    }
+    const pvkiMin=Math.max(0,Math.min(9,Math.floor(Number(payPolicy?.pvki_min||0))));
+    const pvkiMax=Math.max(0,Math.min(9,Math.floor(Number(payPolicy?.pvki_max||9))));
+    if(pvkiMin>pvkiMax){
+      onToast?.("PVKI min cannot be greater than PVKI max.");
+      return;
+    }
     setSaving(true);
     try{
       const updated=await updatePaymentPolicy(session,{
         tenant_id:session.tenantId,
         allowed_tr31_versions:Array.isArray(payPolicy?.allowed_tr31_versions)?payPolicy.allowed_tr31_versions:tr31VersionOptions,
         require_kbpk_for_tr31:Boolean(payPolicy?.require_kbpk_for_tr31),
+        allowed_kbpk_classes:Array.isArray(payPolicy?.allowed_kbpk_classes)?payPolicy.allowed_kbpk_classes:[],
+        allowed_tr31_exportability:Array.isArray(payPolicy?.allowed_tr31_exportability)?payPolicy.allowed_tr31_exportability:tr31ExportabilityOptions,
+        tr31_exportability_matrix:parsedTR31Matrix,
+        payment_key_purpose_matrix:parsedPurposeMatrix,
         allow_inline_key_material:Boolean(payPolicy?.allow_inline_key_material),
         max_iso20022_payload_bytes:Math.max(1024,Math.min(4194304,Number(payPolicy?.max_iso20022_payload_bytes||262144))),
         require_iso20022_lau_context:Boolean(payPolicy?.require_iso20022_lau_context),
+        allowed_iso20022_canonicalization:Array.isArray(payPolicy?.allowed_iso20022_canonicalization)?payPolicy.allowed_iso20022_canonicalization:[],
+        allowed_iso20022_signature_suites:Array.isArray(payPolicy?.allowed_iso20022_signature_suites)?payPolicy.allowed_iso20022_signature_suites:[],
         strict_pci_dss_4_0:Boolean(payPolicy?.strict_pci_dss_4_0),
         require_key_id_for_operations:Boolean(payPolicy?.require_key_id_for_operations),
         allow_tcp_interface:Boolean(payPolicy?.allow_tcp_interface),
@@ -8764,12 +9060,31 @@ const PaymentCryptoPolicy=({session,onToast})=>{
         max_tcp_payload_bytes:Math.max(4096,Math.min(1048576,Number(payPolicy?.max_tcp_payload_bytes||262144))),
         allowed_tcp_operations:Array.isArray(payPolicy?.allowed_tcp_operations)?payPolicy.allowed_tcp_operations:tcpOperationOptions,
         allowed_pin_block_formats:Array.isArray(payPolicy?.allowed_pin_block_formats)?payPolicy.allowed_pin_block_formats:pinFormatOptions,
+        allowed_pin_translation_pairs:parseCSVList(pinTranslationPairsText),
         disable_iso0_pin_block:Boolean(payPolicy?.disable_iso0_pin_block),
+        allowed_cvv_service_codes:parseCSVList(cvvServiceCodesText),
+        pvki_min:pvkiMin,
+        pvki_max:pvkiMax,
+        allowed_issuer_profiles:parseCSVList(issuerProfilesText),
+        allowed_mac_domains:Array.isArray(payPolicy?.allowed_mac_domains)?payPolicy.allowed_mac_domains:[],
+        allowed_mac_padding_profiles:Array.isArray(payPolicy?.allowed_mac_padding_profiles)?payPolicy.allowed_mac_padding_profiles:[],
+        dual_control_required_operations:Array.isArray(payPolicy?.dual_control_required_operations)?payPolicy.dual_control_required_operations:[],
+        hsm_required_operations:Array.isArray(payPolicy?.hsm_required_operations)?payPolicy.hsm_required_operations:[],
+        rotation_interval_days_by_class:parsedRotationByClass,
+        runtime_environment:String(payPolicy?.runtime_environment||"prod").toLowerCase()==="test"?"test":"prod",
+        disallow_test_keys_in_prod:Boolean(payPolicy?.disallow_test_keys_in_prod),
+        disallow_prod_keys_in_test:Boolean(payPolicy?.disallow_prod_keys_in_test),
         decimalization_table:String(payPolicy?.decimalization_table||"0123456789012345").trim(),
         block_wildcard_pan:Boolean(payPolicy?.block_wildcard_pan),
         updated_by:session?.username||"dashboard"
       });
       setPayPolicy((prev)=>({...prev,...updated}));
+      setTR31ExportabilityMatrixText(toPrettyJSON(updated?.tr31_exportability_matrix));
+      setPaymentKeyPurposeMatrixText(toPrettyJSON(updated?.payment_key_purpose_matrix));
+      setRotationDaysByClassText(toPrettyJSON(updated?.rotation_interval_days_by_class));
+      setPINTranslationPairsText(Array.isArray(updated?.allowed_pin_translation_pairs)?updated.allowed_pin_translation_pairs.join(", "):"");
+      setCVVServiceCodesText(Array.isArray(updated?.allowed_cvv_service_codes)?updated.allowed_cvv_service_codes.join(", "):"");
+      setIssuerProfilesText(Array.isArray(updated?.allowed_issuer_profiles)?updated.allowed_issuer_profiles.join(", "):"");
       onToast?.("Payment policy updated.");
     }catch(error){
       onToast?.(`Payment policy update failed: ${errMsg(error)}`);
@@ -8807,20 +9122,24 @@ const PaymentCryptoPolicy=({session,onToast})=>{
           <Chk label="Allow Payment TCP interface" checked={Boolean(payPolicy?.allow_tcp_interface)} onChange={()=>setPayPolicy((prev)=>({...prev,allow_tcp_interface:!Boolean(prev?.allow_tcp_interface)}))}/>
           <Chk label="Require JWT on Payment TCP interface" checked={Boolean(payPolicy?.require_jwt_on_tcp)} onChange={()=>setPayPolicy((prev)=>({...prev,require_jwt_on_tcp:!Boolean(prev?.require_jwt_on_tcp)}))}/>
           <Chk label="Block wildcard/non-digit PAN values" checked={Boolean(payPolicy?.block_wildcard_pan)} onChange={()=>setPayPolicy((prev)=>({...prev,block_wildcard_pan:!Boolean(prev?.block_wildcard_pan)}))}/>
+          <Chk label="Block test payment keys in prod runtime" checked={Boolean(payPolicy?.disallow_test_keys_in_prod)} onChange={()=>setPayPolicy((prev)=>({...prev,disallow_test_keys_in_prod:!Boolean(prev?.disallow_test_keys_in_prod)}))}/>
+          <Chk label="Block prod payment keys in test runtime" checked={Boolean(payPolicy?.disallow_prod_keys_in_test)} onChange={()=>setPayPolicy((prev)=>({...prev,disallow_prod_keys_in_test:!Boolean(prev?.disallow_prod_keys_in_test)}))}/>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
           {tr31VersionOptions.map((ver)=>{
             const selected=(Array.isArray(payPolicy?.allowed_tr31_versions)?payPolicy.allowed_tr31_versions:[]).includes(ver);
             return <Chk key={`pay-pol-ver-${ver}`} label={`TR-31 ${ver}`} checked={selected} onChange={()=>setPayPolicy((prev)=>{
-              const current=Array.isArray(prev?.allowed_tr31_versions)?[...prev.allowed_tr31_versions]:[];
-              if(current.includes(ver)){
-                return {...prev,allowed_tr31_versions:current.filter((item)=>item!==ver)};
-              }
-              return {...prev,allowed_tr31_versions:[...current,ver]};
+              return {...prev,allowed_tr31_versions:toggleStringList(prev?.allowed_tr31_versions,ver)};
             })}/>;
           })}
         </div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
+          <FG label="Runtime Environment">
+            <Sel value={String(payPolicy?.runtime_environment||"prod")} onChange={(e)=>setPayPolicy((prev)=>({...prev,runtime_environment:e.target.value==="test"?"test":"prod"}))}>
+              <option value="prod">Production</option>
+              <option value="test">Test / Sandbox</option>
+            </Sel>
+          </FG>
           <FG label="Max ISO20022 payload bytes">
             <Inp type="number" min={1024} max={4194304} value={String(payPolicy?.max_iso20022_payload_bytes??262144)} onChange={(e)=>setPayPolicy((prev)=>({...prev,max_iso20022_payload_bytes:Number(e.target.value||262144)}))}/>
           </FG>
@@ -8835,6 +9154,12 @@ const PaymentCryptoPolicy=({session,onToast})=>{
               mono
             />
           </FG>
+          <FG label="PVKI Min">
+            <Inp type="number" min={0} max={9} value={String(payPolicy?.pvki_min??0)} onChange={(e)=>setPayPolicy((prev)=>({...prev,pvki_min:Number(e.target.value||0)}))}/>
+          </FG>
+          <FG label="PVKI Max">
+            <Inp type="number" min={0} max={9} value={String(payPolicy?.pvki_max??9)} onChange={(e)=>setPayPolicy((prev)=>({...prev,pvki_max:Number(e.target.value||9)}))}/>
+          </FG>
         </div>
         <div>
           <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed PIN block formats</div>
@@ -8843,12 +9168,62 @@ const PaymentCryptoPolicy=({session,onToast})=>{
               const selected=(Array.isArray(payPolicy?.allowed_pin_block_formats)?payPolicy.allowed_pin_block_formats:[]).includes(fmt);
               const locked=Boolean(payPolicy?.disable_iso0_pin_block)&&fmt==="ISO-0";
               return <Chk key={`pay-pol-pin-${fmt}`} label={locked?`${fmt} (disabled by policy)`:fmt} checked={locked?false:selected} disabled={locked} onChange={()=>setPayPolicy((prev)=>{
-                const current=Array.isArray(prev?.allowed_pin_block_formats)?[...prev.allowed_pin_block_formats]:[];
-                if(current.includes(fmt)){
-                  return {...prev,allowed_pin_block_formats:current.filter((item)=>item!==fmt)};
-                }
-                return {...prev,allowed_pin_block_formats:[...current,fmt]};
+                return {...prev,allowed_pin_block_formats:toggleStringList(prev?.allowed_pin_block_formats,fmt)};
               })}/>;
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed KBPK Classes</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8}}>
+            {paymentKeyClassOptions.map((klass)=>{
+              const selected=(Array.isArray(payPolicy?.allowed_kbpk_classes)?payPolicy.allowed_kbpk_classes:[]).includes(klass);
+              return <Chk key={`pay-pol-kbpk-${klass}`} label={klass} checked={selected} onChange={()=>setPayPolicy((prev)=>({...prev,allowed_kbpk_classes:toggleStringList(prev?.allowed_kbpk_classes,klass)}))}/>;
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed TR-31 Exportability Flags</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+            {tr31ExportabilityOptions.map((flag)=>{
+              const selected=(Array.isArray(payPolicy?.allowed_tr31_exportability)?payPolicy.allowed_tr31_exportability:[]).includes(flag);
+              return <Chk key={`pay-pol-exp-${flag}`} label={flag} checked={selected} onChange={()=>setPayPolicy((prev)=>({...prev,allowed_tr31_exportability:toggleStringList(prev?.allowed_tr31_exportability,flag)}))}/>;
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed ISO20022 Canonicalization</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+            {isoCanonicalizationOptions.map((item)=>{
+              const selected=(Array.isArray(payPolicy?.allowed_iso20022_canonicalization)?payPolicy.allowed_iso20022_canonicalization:[]).includes(item);
+              return <Chk key={`pay-pol-canon-${item}`} label={item} checked={selected} onChange={()=>setPayPolicy((prev)=>({...prev,allowed_iso20022_canonicalization:toggleStringList(prev?.allowed_iso20022_canonicalization,item)}))}/>;
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed ISO20022 Signature Suites</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8}}>
+            {isoSignatureSuiteOptions.map((item)=>{
+              const selected=(Array.isArray(payPolicy?.allowed_iso20022_signature_suites)?payPolicy.allowed_iso20022_signature_suites:[]).includes(item);
+              return <Chk key={`pay-pol-suite-${item}`} label={item} checked={selected} onChange={()=>setPayPolicy((prev)=>({...prev,allowed_iso20022_signature_suites:toggleStringList(prev?.allowed_iso20022_signature_suites,item)}))}/>;
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed MAC Domains</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+            {macDomainOptions.map((item)=>{
+              const selected=(Array.isArray(payPolicy?.allowed_mac_domains)?payPolicy.allowed_mac_domains:[]).includes(item);
+              return <Chk key={`pay-pol-mac-dom-${item}`} label={item} checked={selected} onChange={()=>setPayPolicy((prev)=>({...prev,allowed_mac_domains:toggleStringList(prev?.allowed_mac_domains,item)}))}/>;
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Allowed MAC Padding Profiles</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+            {macPaddingOptions.map((item)=>{
+              const selected=(Array.isArray(payPolicy?.allowed_mac_padding_profiles)?payPolicy.allowed_mac_padding_profiles:[]).includes(item);
+              return <Chk key={`pay-pol-mac-pad-${item}`} label={item} checked={selected} onChange={()=>setPayPolicy((prev)=>({...prev,allowed_mac_padding_profiles:toggleStringList(prev?.allowed_mac_padding_profiles,item)}))}/>;
             })}
           </div>
         </div>
@@ -8857,15 +9232,49 @@ const PaymentCryptoPolicy=({session,onToast})=>{
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
             {tcpOperationOptions.map((op)=>{
               const selected=(Array.isArray(payPolicy?.allowed_tcp_operations)?payPolicy.allowed_tcp_operations:[]).includes(op);
-              return <Chk key={`pay-pol-op-${op}`} label={op} checked={selected} onChange={()=>setPayPolicy((prev)=>{
-                const current=Array.isArray(prev?.allowed_tcp_operations)?[...prev.allowed_tcp_operations]:[];
-                if(current.includes(op)){
-                  return {...prev,allowed_tcp_operations:current.filter((item)=>item!==op)};
-                }
-                return {...prev,allowed_tcp_operations:[...current,op]};
-              })}/>;
+              return <Chk key={`pay-pol-op-${op}`} label={op} checked={selected} onChange={()=>setPayPolicy((prev)=>({...prev,allowed_tcp_operations:toggleStringList(prev?.allowed_tcp_operations,op)}))}/>;
             })}
           </div>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>Dual-control Required Operations</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+            {sensitiveOperationOptions.map((op)=>{
+              const selected=(Array.isArray(payPolicy?.dual_control_required_operations)?payPolicy.dual_control_required_operations:[]).includes(op);
+              return <Chk key={`pay-pol-dual-${op}`} label={op} checked={selected} onChange={()=>setPayPolicy((prev)=>({...prev,dual_control_required_operations:toggleStringList(prev?.dual_control_required_operations,op)}))}/>;
+            })}
+          </div>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:8}}>HSM-required Operations</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8}}>
+            {sensitiveOperationOptions.map((op)=>{
+              const selected=(Array.isArray(payPolicy?.hsm_required_operations)?payPolicy.hsm_required_operations:[]).includes(op);
+              return <Chk key={`pay-pol-hsm-${op}`} label={op} checked={selected} onChange={()=>setPayPolicy((prev)=>({...prev,hsm_required_operations:toggleStringList(prev?.hsm_required_operations,op)}))}/>;
+            })}
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:10}}>
+          <FG label="Allowed PIN Translation Pairs (CSV or newline; e.g. ISO-0>ISO-1)">
+            <Txt rows={3} value={pinTranslationPairsText} onChange={(e)=>setPINTranslationPairsText(e.target.value)} placeholder="ISO-0>ISO-1, ISO-1>ISO-3"/>
+          </FG>
+          <FG label="Allowed CVV Service Codes (CSV or newline)">
+            <Txt rows={3} value={cvvServiceCodesText} onChange={(e)=>setCVVServiceCodesText(e.target.value)} placeholder="101, 201"/>
+          </FG>
+          <FG label="Allowed Issuer Profiles (CSV or newline)">
+            <Txt rows={3} value={issuerProfilesText} onChange={(e)=>setIssuerProfilesText(e.target.value)} placeholder="issuer-alpha, issuer-beta"/>
+          </FG>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:10}}>
+          <FG label="TR-31 Exportability Matrix (JSON)">
+            <Txt rows={8} value={tr31ExportabilityMatrixText} onChange={(e)=>setTR31ExportabilityMatrixText(e.target.value)} placeholder='{"D0":["E","N"],"K0":["N"]}'/>
+          </FG>
+          <FG label="Payment Key Purpose Matrix (JSON)">
+            <Txt rows={8} value={paymentKeyPurposeMatrixText} onChange={(e)=>setPaymentKeyPurposeMatrixText(e.target.value)} placeholder='{"ZPK":["pin.translate"],"*":["iso20022.sign"]}'/>
+          </FG>
+          <FG label="Rotation Interval Days by Key Class (JSON)">
+            <Txt rows={8} value={rotationDaysByClassText} onChange={(e)=>setRotationDaysByClassText(e.target.value)} placeholder='{"ZPK":90,"PVK":60}'/>
+          </FG>
         </div>
       </Card>
     </Section>
