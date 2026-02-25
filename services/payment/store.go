@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"time"
 
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -23,6 +24,22 @@ type Store interface {
 
 	GetPaymentPolicy(ctx context.Context, tenantID string) (PaymentPolicy, error)
 	UpsertPaymentPolicy(ctx context.Context, item PaymentPolicy) (PaymentPolicy, error)
+
+	CreateInjectionTerminal(ctx context.Context, item PaymentInjectionTerminal) error
+	GetInjectionTerminal(ctx context.Context, tenantID string, id string) (PaymentInjectionTerminal, error)
+	GetInjectionTerminalByTerminalID(ctx context.Context, tenantID string, terminalID string) (PaymentInjectionTerminal, error)
+	ListInjectionTerminals(ctx context.Context, tenantID string) ([]PaymentInjectionTerminal, error)
+	UpdateInjectionTerminalChallenge(ctx context.Context, tenantID string, id string, nonce string, expiresAt time.Time) error
+	MarkInjectionTerminalVerified(ctx context.Context, tenantID string, id string, verifiedAt time.Time, authTokenHash string, authTokenIssuedAt time.Time) error
+	UpdateInjectionTerminalLastSeen(ctx context.Context, tenantID string, id string, lastSeenAt time.Time) error
+
+	CreateInjectionJob(ctx context.Context, item PaymentInjectionJob) error
+	GetInjectionJob(ctx context.Context, tenantID string, id string) (PaymentInjectionJob, error)
+	ListInjectionJobs(ctx context.Context, tenantID string) ([]PaymentInjectionJob, error)
+	ListInjectionJobsByTerminal(ctx context.Context, tenantID string, terminalID string) ([]PaymentInjectionJob, error)
+	GetNextQueuedInjectionJob(ctx context.Context, tenantID string, terminalID string) (PaymentInjectionJob, error)
+	MarkInjectionJobDelivered(ctx context.Context, tenantID string, id string, deliveredAt time.Time) error
+	MarkInjectionJobAck(ctx context.Context, tenantID string, id string, status string, detail string, ackedAt time.Time) error
 }
 
 type SQLStore struct {

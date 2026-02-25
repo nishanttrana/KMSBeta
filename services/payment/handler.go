@@ -62,6 +62,15 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /payment/iso20022/lau/generate", h.handleLAUGenerate)
 	mux.HandleFunc("POST /payment/iso20022/lau/verify", h.handleLAUVerify)
 
+	mux.HandleFunc("POST /payment/injection/terminals", h.handleRegisterInjectionTerminal)
+	mux.HandleFunc("GET /payment/injection/terminals", h.handleListInjectionTerminals)
+	mux.HandleFunc("POST /payment/injection/terminals/{id}/challenge", h.handleIssueInjectionChallenge)
+	mux.HandleFunc("POST /payment/injection/terminals/{id}/verify", h.handleVerifyInjectionChallenge)
+	mux.HandleFunc("POST /payment/injection/jobs", h.handleCreateInjectionJob)
+	mux.HandleFunc("GET /payment/injection/jobs", h.handleListInjectionJobs)
+	mux.HandleFunc("GET /payment/injection/terminals/{id}/jobs/next", h.handlePullNextInjectionJob)
+	mux.HandleFunc("POST /payment/injection/jobs/{id}/ack", h.handleAckInjectionJob)
+
 	return mux
 }
 

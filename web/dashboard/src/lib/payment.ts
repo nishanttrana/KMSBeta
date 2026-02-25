@@ -38,6 +38,39 @@ export type PaymentPolicy = {
   updated_at?: string;
 };
 
+export type PaymentInjectionTerminal = {
+  id: string;
+  tenant_id: string;
+  terminal_id: string;
+  name: string;
+  status: string;
+  transport: string;
+  key_algorithm: string;
+  public_key_fingerprint: string;
+  metadata_json?: string;
+  verified_at?: string;
+  last_seen_at?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type PaymentInjectionJob = {
+  id: string;
+  tenant_id: string;
+  terminal_id: string;
+  payment_key_id: string;
+  key_id: string;
+  tr31_version: string;
+  tr31_usage_code: string;
+  tr31_kcv: string;
+  status: string;
+  ack_detail?: string;
+  created_at?: string;
+  updated_at?: string;
+  delivered_at?: string;
+  acked_at?: string;
+};
+
 function tenantQuery(session: AuthSession): string {
   return `tenant_id=${encodeURIComponent(session.tenantId)}`;
 }
@@ -409,4 +442,119 @@ export async function verifyLAU(
     })
   });
   return Boolean(out?.verified);
+}
+
+export async function listInjectionTerminals(session: AuthSession): Promise<PaymentInjectionTerminal[]> {
+  const out = await serviceRequest<{ items: PaymentInjectionTerminal[] }>(
+    session,
+    "payment",
+    `/payment/injection/terminals?${tenantQuery(session)}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function registerInjectionTerminal(
+  session: AuthSession,
+  input: {
+    terminal_id: string;
+    name: string;
+    public_key_pem: string;
+    transport?: string;
+    key_algorithm?: string;
+    metadata_json?: string;
+  }
+): Promise<PaymentInjectionTerminal> {
+  const out = await serviceRequest<{ item: PaymentInjectionTerminal }>(
+    session,
+    "payment",
+    `/payment/injection/terminals?${tenantQuery(session)}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        tenant_id: session.tenantId,
+        ...input
+      })
+    }
+  );
+  return (out?.item || {}) as PaymentInjectionTerminal;
+}
+
+export async function issueInjectionChallenge(
+  session: AuthSession,
+  terminalRowID: string
+): Promise<{ nonce: string; expires_at: string }> {
+  const out = await serviceRequest<{ challenge: { nonce: string; expires_at: string } }>(
+    session,
+    "payment",
+    `/payment/injection/terminals/${encodeURIComponent(String(terminalRowID || ""))}/challenge?${tenantQuery(session)}`,
+    {
+      method: "POST",
+      body: JSON.stringify({})
+    }
+  );
+  return out?.challenge || { nonce: "", expires_at: "" };
+}
+
+export async function verifyInjectionChallenge(
+  session: AuthSession,
+  terminalRowID: string,
+  signatureB64: string
+): Promise<{ terminal: PaymentInjectionTerminal; auth_token: string; token_type: string }> {
+  const out = await serviceRequest<{ result: { terminal: PaymentInjectionTerminal; auth_token: string; token_type: string } }>(
+    session,
+    "payment",
+    `/payment/injection/terminals/${encodeURIComponent(String(terminalRowID || ""))}/verify?${tenantQuery(session)}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        tenant_id: session.tenantId,
+        signature_b64: signatureB64
+      })
+    }
+  );
+  return out?.result || { terminal: {} as PaymentInjectionTerminal, auth_token: "", token_type: "" };
+}
+
+export async function listInjectionJobs(
+  session: AuthSession,
+  terminalRowID?: string
+): Promise<PaymentInjectionJob[]> {
+  const qp = new URLSearchParams();
+  qp.set("tenant_id", session.tenantId);
+  if (String(terminalRowID || "").trim()) {
+    qp.set("terminal_id", String(terminalRowID).trim());
+  }
+  const out = await serviceRequest<{ items: PaymentInjectionJob[] }>(
+    session,
+    "payment",
+    `/payment/injection/jobs?${qp.toString()}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function createInjectionJob(
+  session: AuthSession,
+  input: {
+    terminal_id: string;
+    payment_key_id: string;
+    tr31_version?: string;
+    kbpk_key_id?: string;
+    kbpk_key_b64?: string;
+    kek_key_id?: string;
+    kek_key_b64?: string;
+  }
+): Promise<PaymentInjectionJob> {
+  const out = await serviceRequest<{ item: PaymentInjectionJob }>(
+    session,
+    "payment",
+    `/payment/injection/jobs?${tenantQuery(session)}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        tenant_id: session.tenantId,
+        ...input
+      })
+    }
+  );
+  return (out?.item || {}) as PaymentInjectionJob;
 }

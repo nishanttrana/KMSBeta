@@ -145,19 +145,26 @@ import {
   tokenizeValues
 } from "../lib/dataprotect";
 import {
+  listPaymentKeys,
   computeCVV,
   computeMAC,
+  createInjectionJob,
   createTR31,
   decryptISO20022,
   encryptISO20022,
   generateLAU,
   generatePVV,
   getPaymentPolicy,
+  issueInjectionChallenge,
+  listInjectionJobs,
+  listInjectionTerminals,
+  registerInjectionTerminal,
   signISO20022,
   translatePIN,
   translateTR31,
   updatePaymentPolicy,
   validateTR31,
+  verifyInjectionChallenge,
   verifyCVV,
   verifyISO20022,
   verifyLAU,
@@ -8637,6 +8644,25 @@ const Payment=({session,keyCatalog,onToast})=>{
   const keyChoices=keyChoicesFromCatalog(keyCatalog);
   const [running,setRunning]=useState(false);
   const [resultText,setResultText]=useState("// Output will appear here...");
+  const [paymentKeyItems,setPaymentKeyItems]=useState<any[]>([]);
+  const [injectionTerminals,setInjectionTerminals]=useState<any[]>([]);
+  const [injectionJobs,setInjectionJobs]=useState<any[]>([]);
+  const [injectionLoading,setInjectionLoading]=useState(false);
+
+  const [injTerminalName,setInjTerminalName]=useState("");
+  const [injTerminalExternalID,setInjTerminalExternalID]=useState("");
+  const [injTerminalPubPEM,setInjTerminalPubPEM]=useState("");
+  const [injTerminalTransport,setInjTerminalTransport]=useState("jwt");
+  const [injTerminalMeta,setInjTerminalMeta]=useState("{}");
+  const [injSelectedTerminalRowID,setInjSelectedTerminalRowID]=useState("");
+  const [injChallengeNonce,setInjChallengeNonce]=useState("");
+  const [injChallengeExpiry,setInjChallengeExpiry]=useState("");
+  const [injSignatureB64,setInjSignatureB64]=useState("");
+  const [injVerifiedToken,setInjVerifiedToken]=useState("");
+  const [injSelectedPaymentKeyID,setInjSelectedPaymentKeyID]=useState("");
+  const [injTR31Version,setInjTR31Version]=useState("D");
+  const [injKBPKKeyID,setInjKBPKKeyID]=useState("");
+  const [injKBPKB64,setInjKBPKB64]=useState("");
 
   const [selectedKeyId,setSelectedKeyId]=useState("");
   const [tr31Version,setTR31Version]=useState("D");
@@ -8734,6 +8760,150 @@ const Payment=({session,keyCatalog,onToast})=>{
       setLAUKeyID(fallback);
     }
   },[keyChoices]);
+
+  const refreshInjectionData=async(silent=false)=>{
+    if(!session?.token){
+      return;
+    }
+    if(!silent){
+      setInjectionLoading(true);
+    }
+    try{
+      const [payKeys,terminals,jobs]=await Promise.all([
+        listPaymentKeys(session),
+        listInjectionTerminals(session),
+        listInjectionJobs(session)
+      ]);
+      const keyItems=Array.isArray(payKeys)?payKeys:[];
+      const terminalItems=Array.isArray(terminals)?terminals:[];
+      const jobItems=Array.isArray(jobs)?jobs:[];
+      setPaymentKeyItems(keyItems);
+      setInjectionTerminals(terminalItems);
+      setInjectionJobs(jobItems);
+      if(!injSelectedTerminalRowID&&terminalItems.length){
+        setInjSelectedTerminalRowID(String(terminalItems[0]?.id||""));
+      }
+      if(!injSelectedPaymentKeyID&&keyItems.length){
+        setInjSelectedPaymentKeyID(String(keyItems[0]?.id||""));
+      }
+      if(!injKBPKKeyID&&keyChoices.length){
+        setInjKBPKKeyID(String(keyChoices[0]?.id||""));
+      }
+    }catch(error){
+      onToast?.(`Payment injection refresh failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setInjectionLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    if(!session?.token){
+      return;
+    }
+    void refreshInjectionData(true);
+  },[session?.token,session?.tenantId]);
+
+  const registerTerminal=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    setInjectionLoading(true);
+    try{
+      const created=await registerInjectionTerminal(session,{
+        terminal_id:String(injTerminalExternalID||"").trim(),
+        name:String(injTerminalName||"").trim(),
+        public_key_pem:String(injTerminalPubPEM||"").trim(),
+        transport:String(injTerminalTransport||"jwt"),
+        metadata_json:String(injTerminalMeta||"{}").trim()||"{}"
+      });
+      onToast?.("PoS terminal registered.");
+      setResultText(JSON.stringify({terminal:created},null,2));
+      setInjTerminalName("");
+      setInjTerminalExternalID("");
+      setInjTerminalPubPEM("");
+      await refreshInjectionData(true);
+      if(created?.id){
+        setInjSelectedTerminalRowID(String(created.id));
+      }
+    }catch(error){
+      onToast?.(`Terminal register failed: ${errMsg(error)}`);
+    }finally{
+      setInjectionLoading(false);
+    }
+  };
+
+  const issueChallenge=async()=>{
+    if(!session?.token||!injSelectedTerminalRowID){
+      onToast?.("Select a terminal first.");
+      return;
+    }
+    setInjectionLoading(true);
+    try{
+      const challenge=await issueInjectionChallenge(session,injSelectedTerminalRowID);
+      setInjChallengeNonce(String(challenge?.nonce||""));
+      setInjChallengeExpiry(String(challenge?.expires_at||""));
+      setResultText(JSON.stringify({challenge},null,2));
+      onToast?.("Challenge issued.");
+    }catch(error){
+      onToast?.(`Challenge issue failed: ${errMsg(error)}`);
+    }finally{
+      setInjectionLoading(false);
+    }
+  };
+
+  const verifyChallenge=async()=>{
+    if(!session?.token||!injSelectedTerminalRowID){
+      onToast?.("Select a terminal first.");
+      return;
+    }
+    if(!String(injSignatureB64||"").trim()){
+      onToast?.("Enter signature from terminal.");
+      return;
+    }
+    setInjectionLoading(true);
+    try{
+      const out=await verifyInjectionChallenge(session,injSelectedTerminalRowID,String(injSignatureB64||"").trim());
+      setInjVerifiedToken(String(out?.auth_token||""));
+      setResultText(JSON.stringify(out,null,2));
+      onToast?.("Terminal verified and token issued.");
+      await refreshInjectionData(true);
+    }catch(error){
+      onToast?.(`Challenge verify failed: ${errMsg(error)}`);
+    }finally{
+      setInjectionLoading(false);
+    }
+  };
+
+  const createInjection=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    if(!injSelectedTerminalRowID||!injSelectedPaymentKeyID){
+      onToast?.("Select terminal and payment key.");
+      return;
+    }
+    setInjectionLoading(true);
+    try{
+      const job=await createInjectionJob(session,{
+        terminal_id:String(injSelectedTerminalRowID||"").trim(),
+        payment_key_id:String(injSelectedPaymentKeyID||"").trim(),
+        tr31_version:String(injTR31Version||"D").trim(),
+        kbpk_key_id:String(injKBPKKeyID||"").trim()||undefined,
+        kbpk_key_b64:String(injKBPKB64||"").trim()||undefined
+      });
+      setResultText(JSON.stringify({injection_job:job},null,2));
+      onToast?.("Injection job queued.");
+      await refreshInjectionData(true);
+    }catch(error){
+      onToast?.(`Injection job failed: ${errMsg(error)}`);
+    }finally{
+      setInjectionLoading(false);
+    }
+  };
 
   const runPaymentOp=async()=>{
     if(!session?.token){
@@ -8903,7 +9073,7 @@ const Payment=({session,keyCatalog,onToast})=>{
   };
 
   return <div>
-    <Tabs tabs={["TR-31 Create","TR-31 Translate","PIN Translate","PIN Verify","PVV Generate","CVV Compute","MAC Generate","ISO 20022 Sign","ISO 20022 Encrypt","LAU Generate"]} active={op} onChange={setOp}/>
+    <Tabs tabs={["TR-31 Create","TR-31 Translate","PIN Translate","PIN Verify","PVV Generate","CVV Compute","MAC Generate","ISO 20022 Sign","ISO 20022 Encrypt","LAU Generate","Payment Key Injection"]} active={op} onChange={setOp}/>
     <Row2>
       <Card>
         {op==="TR-31 Create"&&<>
@@ -9023,7 +9193,70 @@ const Payment=({session,keyCatalog,onToast})=>{
           <FG label="LAU (for verify)"><Txt value={lauValue} onChange={(e)=>setLAUValue(e.target.value)} rows={3} mono/></FG>
         </>}
 
-        <Btn primary full style={{marginTop:10}} onClick={()=>void runPaymentOp()} disabled={running}>{running?"Executing...":"Execute"}</Btn>
+        {op==="Payment Key Injection"&&<>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:11,color:C.muted,fontWeight:700}}>PoS Terminal Onboarding and Remote Injection</div>
+            <Btn small onClick={()=>void refreshInjectionData()} disabled={injectionLoading}>{injectionLoading?"Refreshing...":"Refresh"}</Btn>
+          </div>
+          <Row2>
+            <FG label="Terminal Name" required><Inp value={injTerminalName} onChange={(e)=>setInjTerminalName(e.target.value)} placeholder="Store-01 POS"/></FG>
+            <FG label="Terminal ID" required><Inp value={injTerminalExternalID} onChange={(e)=>setInjTerminalExternalID(e.target.value)} placeholder="pos-store-01"/></FG>
+          </Row2>
+          <Row2>
+            <FG label="Transport"><Sel value={injTerminalTransport} onChange={(e)=>setInjTerminalTransport(e.target.value)}><option value="jwt">JWT</option><option value="mtls">mTLS</option></Sel></FG>
+            <FG label="Metadata (JSON)"><Inp value={injTerminalMeta} onChange={(e)=>setInjTerminalMeta(e.target.value)} mono/></FG>
+          </Row2>
+          <FG label="Terminal RSA Public Key (PEM)" required>
+            <Txt value={injTerminalPubPEM} onChange={(e)=>setInjTerminalPubPEM(e.target.value)} rows={5} placeholder={"-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"}/>
+          </FG>
+          <div style={{display:"flex",gap:8,marginBottom:10}}>
+            <Btn small primary onClick={()=>void registerTerminal()} disabled={injectionLoading}>Register Terminal</Btn>
+          </div>
+
+          <Row2>
+            <FG label="Registered Terminal"><Sel value={injSelectedTerminalRowID} onChange={(e)=>setInjSelectedTerminalRowID(e.target.value)}>{(Array.isArray(injectionTerminals)?injectionTerminals:[]).map((t)=>{return <option key={String(t?.id||"")} value={String(t?.id||"")}>{`${String(t?.name||"terminal")} [${String(t?.status||"pending")}]`}</option>;})}</Sel></FG>
+            <FG label="Challenge Expires"><Inp value={injChallengeExpiry} readOnly mono/></FG>
+          </Row2>
+          <FG label="Challenge Nonce"><Inp value={injChallengeNonce} readOnly mono/></FG>
+          <Row2>
+            <FG label="Signature (base64)"><Inp value={injSignatureB64} onChange={(e)=>setInjSignatureB64(e.target.value)} mono/></FG>
+            <FG label="Terminal Token (issued once)"><Inp value={injVerifiedToken} readOnly mono/></FG>
+          </Row2>
+          <div style={{display:"flex",gap:8,marginBottom:10}}>
+            <Btn small onClick={()=>void issueChallenge()} disabled={injectionLoading||!injSelectedTerminalRowID}>Issue Challenge</Btn>
+            <Btn small onClick={()=>void verifyChallenge()} disabled={injectionLoading||!injSelectedTerminalRowID}>Verify Challenge</Btn>
+          </div>
+
+          <div style={{height:1,background:C.border,margin:"10px 0"}}/>
+          <Row2>
+            <FG label="Payment Key"><Sel value={injSelectedPaymentKeyID} onChange={(e)=>setInjSelectedPaymentKeyID(e.target.value)}>{(Array.isArray(paymentKeyItems)?paymentKeyItems:[]).map((k)=>{return <option key={String(k?.id||"")} value={String(k?.id||"")}>{`${String(k?.id||"")} - ${String(k?.key_id||"")} (${String(k?.usage_code||"")})`}</option>;})}</Sel></FG>
+            <FG label="TR-31 Version"><Sel value={injTR31Version} onChange={(e)=>setInjTR31Version(e.target.value)}><option value="D">D - AES CMAC</option><option value="B">B - TDES variant</option><option value="C">C - TDES derivation</option></Sel></FG>
+          </Row2>
+          <FG label="KBPK / KEK Key"><Sel value={injKBPKKeyID} onChange={(e)=>setInjKBPKKeyID(e.target.value)}>{renderKeyOptions(keyChoices)}</Sel></FG>
+          <FG label="KBPK / KEK (base64 override)"><Inp value={injKBPKB64} onChange={(e)=>setInjKBPKB64(e.target.value)} mono/></FG>
+
+          <FG label="Recent Injection Jobs">
+            <div style={{maxHeight:180,overflow:"auto",border:`1px solid ${C.border}`,borderRadius:8,padding:8}}>
+              {(Array.isArray(injectionJobs)?injectionJobs:[]).slice(0,12).map((j)=>{return <div key={String(j?.id||"")} style={{display:"flex",justifyContent:"space-between",gap:8,padding:"5px 0",borderBottom:`1px solid ${C.border}`}}>
+                <div style={{fontSize:10,color:C.text,maxWidth:350,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{`${String(j?.id||"")} | ${String(j?.payment_key_id||"")} | ${String(j?.terminal_id||"")}`}</div>
+                <B c={String(j?.status||"").toLowerCase()==="applied"?"green":String(j?.status||"").toLowerCase()==="failed"?"red":"blue"}>{String(j?.status||"queued")}</B>
+              </div>;})}
+              {!Array.isArray(injectionJobs)||!injectionJobs.length?<div style={{fontSize:10,color:C.dim}}>No injection jobs yet.</div>:null}
+            </div>
+          </FG>
+        </>}
+
+        <Btn
+          primary
+          full
+          style={{marginTop:10}}
+          onClick={()=>{if(op==="Payment Key Injection"){void createInjection();return;}void runPaymentOp();}}
+          disabled={op==="Payment Key Injection"?injectionLoading:running}
+        >
+          {op==="Payment Key Injection"
+            ? (injectionLoading?"Submitting...":"Create Injection Job")
+            : (running?"Executing...":"Execute")}
+        </Btn>
       </Card>
       <Card><FG label="Result"><Txt value={resultText} rows={18} readOnly/></FG></Card>
     </Row2>

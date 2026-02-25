@@ -344,3 +344,85 @@ type LAUVerifyRequest struct {
 	Context   string `json:"context"`
 	LAUB64    string `json:"lau_b64"`
 }
+
+type PaymentInjectionTerminal struct {
+	ID                         string    `json:"id"`
+	TenantID                   string    `json:"tenant_id"`
+	TerminalID                 string    `json:"terminal_id"`
+	Name                       string    `json:"name"`
+	Status                     string    `json:"status"`
+	Transport                  string    `json:"transport"`
+	KeyAlgorithm               string    `json:"key_algorithm"`
+	PublicKeyPEM               string    `json:"public_key_pem,omitempty"`
+	PublicKeyFingerprint       string    `json:"public_key_fingerprint"`
+	RegistrationNonce          string    `json:"registration_nonce,omitempty"`
+	RegistrationNonceExpiresAt time.Time `json:"registration_nonce_expires_at,omitempty"`
+	VerifiedAt                 time.Time `json:"verified_at,omitempty"`
+	AuthTokenHash              string    `json:"-"`
+	AuthTokenIssuedAt          time.Time `json:"auth_token_issued_at,omitempty"`
+	LastSeenAt                 time.Time `json:"last_seen_at,omitempty"`
+	MetadataJSON               string    `json:"metadata_json"`
+	CreatedAt                  time.Time `json:"created_at"`
+	UpdatedAt                  time.Time `json:"updated_at"`
+}
+
+type PaymentInjectionJob struct {
+	ID                   string    `json:"id"`
+	TenantID             string    `json:"tenant_id"`
+	TerminalID           string    `json:"terminal_id"`
+	PaymentKeyID         string    `json:"payment_key_id"`
+	KeyID                string    `json:"key_id"`
+	TR31Version          string    `json:"tr31_version"`
+	TR31UsageCode        string    `json:"tr31_usage_code"`
+	TR31KeyBlock         string    `json:"tr31_key_block"`
+	TR31KCV              string    `json:"tr31_kcv"`
+	PayloadCiphertextB64 string    `json:"payload_ciphertext_b64"`
+	PayloadIVB64         string    `json:"payload_iv_b64"`
+	WrappedDEKB64        string    `json:"wrapped_dek_b64"`
+	DEKWrapAlg           string    `json:"dek_wrap_alg"`
+	Status               string    `json:"status"`
+	DeliveredAt          time.Time `json:"delivered_at,omitempty"`
+	AckedAt              time.Time `json:"acked_at,omitempty"`
+	AckDetail            string    `json:"ack_detail,omitempty"`
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
+}
+
+type RegisterInjectionTerminalRequest struct {
+	TenantID     string `json:"tenant_id"`
+	TerminalID   string `json:"terminal_id"`
+	Name         string `json:"name"`
+	Transport    string `json:"transport"`
+	PublicKeyPEM string `json:"public_key_pem"`
+	KeyAlgorithm string `json:"key_algorithm"`
+	MetadataJSON string `json:"metadata_json"`
+}
+
+type VerifyInjectionChallengeRequest struct {
+	TenantID     string `json:"tenant_id"`
+	SignatureB64 string `json:"signature_b64"`
+}
+
+type VerifyInjectionChallengeResponse struct {
+	Terminal  PaymentInjectionTerminal `json:"terminal"`
+	AuthToken string                   `json:"auth_token"`
+	TokenType string                   `json:"token_type"`
+}
+
+type CreateInjectionJobRequest struct {
+	TenantID     string `json:"tenant_id"`
+	TerminalID   string `json:"terminal_id"`
+	PaymentKeyID string `json:"payment_key_id"`
+	TR31Version  string `json:"tr31_version"`
+	KBPKKeyID    string `json:"kbpk_key_id"`
+	KBPKKeyB64   string `json:"kbpk_key_b64"`
+	KEKKeyID     string `json:"kek_key_id"`
+	KEKKeyB64    string `json:"kek_key_b64"`
+}
+
+type AckInjectionJobRequest struct {
+	TenantID   string `json:"tenant_id"`
+	TerminalID string `json:"terminal_id"`
+	Status     string `json:"status"`
+	Detail     string `json:"detail"`
+}
