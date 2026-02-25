@@ -10,12 +10,14 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	tr31lib "github.com/moov-io/tr31/pkg/tr31"
 
+	pkgauth "vecta-kms/pkg/auth"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/metering"
 	pkgpayment "vecta-kms/pkg/payment"
@@ -39,6 +41,10 @@ var supportedPaymentTypes = map[string]struct{}{
 	"ZPK":  {},
 	"ZAK":  {},
 	"ZEK":  {},
+	"TAK":  {},
+	"CVK":  {},
+	"PVK":  {},
+	"KBPK": {},
 }
 
 type Service struct {
@@ -50,6 +56,12 @@ type Service struct {
 
 var supportedPaymentTR31Versions = []string{"B", "C", "D"}
 var supportedPINBlockFormats = []string{"ISO-0", "ISO-1", "ISO-3"}
+var supportedTR31ExportabilityFlags = []string{"E", "N", "S"}
+var supportedPaymentKeyClasses = []string{"ZMK", "TMK", "TPK", "BMK", "BDK", "IPEK", "ZPK", "ZAK", "ZEK", "TAK", "CVK", "PVK", "KBPK"}
+var supportedISO20022Canonicalization = []string{"exc-c14n", "c14n11"}
+var supportedISO20022SignatureSuites = []string{"rsa-pss-sha256", "rsa-pkcs1-sha256", "ecdsa-sha256", "ecdsa-sha384"}
+var supportedMACDomains = []string{"retail", "iso9797", "cmac"}
+var supportedMACPaddingProfiles = []string{"ansi-x9.19-m1", "iso9797-m2", "cmac"}
 
 const defaultPaymentDecimalizationTable = "0123456789012345"
 
@@ -67,22 +79,41 @@ func NewService(store Store, keycore KeyCoreClient, events EventPublisher, meter
 
 func defaultPaymentPolicy(tenantID string) PaymentPolicy {
 	return PaymentPolicy{
-		TenantID:                  strings.TrimSpace(tenantID),
-		AllowedTR31Versions:       append([]string{}, supportedPaymentTR31Versions...),
-		RequireKBPKForTR31:        false,
-		AllowInlineKeyMaterial:    true,
-		MaxISO20022PayloadBytes:   262144,
-		RequireISO20022LAUContext: false,
-		StrictPCIDSS40:            false,
-		RequireKeyIDForOperations: false,
-		AllowTCPInterface:         true,
-		RequireJWTOnTCP:           true,
-		MaxTCPPayloadBytes:        262144,
-		AllowedTCPOperations:      append([]string{}, supportedPaymentCryptoOperations...),
-		AllowedPINBlockFormats:    append([]string{}, supportedPINBlockFormats...),
-		DisableISO0PINBlock:       false,
-		DecimalizationTable:       defaultPaymentDecimalizationTable,
-		BlockWildcardPAN:          true,
+		TenantID:                        strings.TrimSpace(tenantID),
+		AllowedTR31Versions:             append([]string{}, supportedPaymentTR31Versions...),
+		RequireKBPKForTR31:              false,
+		AllowedKBPKClasses:              []string{},
+		AllowedTR31Exportability:        append([]string{}, supportedTR31ExportabilityFlags...),
+		TR31ExportabilityMatrix:         map[string][]string{},
+		PaymentKeyPurposeMatrix:         map[string][]string{},
+		AllowInlineKeyMaterial:          true,
+		MaxISO20022PayloadBytes:         262144,
+		RequireISO20022LAUContext:       false,
+		AllowedISO20022Canonicalization: []string{},
+		AllowedISO20022SignatureSuites:  []string{},
+		StrictPCIDSS40:                  false,
+		RequireKeyIDForOperations:       false,
+		AllowTCPInterface:               true,
+		RequireJWTOnTCP:                 true,
+		MaxTCPPayloadBytes:              262144,
+		AllowedTCPOperations:            append([]string{}, supportedPaymentCryptoOperations...),
+		AllowedPINBlockFormats:          append([]string{}, supportedPINBlockFormats...),
+		AllowedPINTranslationPairs:      []string{},
+		DisableISO0PINBlock:             false,
+		AllowedCVVServiceCodes:          []string{},
+		PVKIMin:                         0,
+		PVKIMax:                         9,
+		AllowedIssuerProfiles:           []string{},
+		AllowedMACDomains:               []string{},
+		AllowedMACPaddingProfiles:       []string{},
+		DualControlRequiredOperations:   []string{},
+		HSMRequiredOperations:           []string{},
+		RotationIntervalDaysByClass:     map[string]int{},
+		RuntimeEnvironment:              "prod",
+		DisallowTestKeysInProd:          false,
+		DisallowProdKeysInTest:          false,
+		DecimalizationTable:             defaultPaymentDecimalizationTable,
+		BlockWildcardPAN:                true,
 	}
 }
 
@@ -109,38 +140,24 @@ func normalizeDecimalizationTable(raw string) string {
 
 func normalizePaymentPolicy(in PaymentPolicy) PaymentPolicy {
 	in.TenantID = strings.TrimSpace(in.TenantID)
-	allowed := uniqueStrings(in.AllowedTR31Versions)
-	outAllowed := make([]string, 0, len(allowed))
-	for _, item := range allowed {
-		v := normalizeTR31Version(item)
-		if containsString(supportedPaymentTR31Versions, v) {
-			outAllowed = append(outAllowed, v)
-		}
-	}
-	if len(outAllowed) == 0 {
-		outAllowed = append([]string{}, supportedPaymentTR31Versions...)
-	}
-	in.AllowedTR31Versions = outAllowed
+	in.AllowedTR31Versions = normalizeAllowedTR31Versions(in.AllowedTR31Versions)
+	in.AllowedKBPKClasses = normalizePaymentKeyClassList(in.AllowedKBPKClasses)
+	in.AllowedTR31Exportability = normalizeExportabilityList(in.AllowedTR31Exportability)
+	in.TR31ExportabilityMatrix = normalizeTR31ExportabilityMatrix(in.TR31ExportabilityMatrix)
+	in.PaymentKeyPurposeMatrix = normalizePaymentKeyPurposeMatrix(in.PaymentKeyPurposeMatrix)
 	if in.MaxISO20022PayloadBytes <= 0 {
 		in.MaxISO20022PayloadBytes = 262144
 	}
 	if in.MaxISO20022PayloadBytes > 4194304 {
 		in.MaxISO20022PayloadBytes = 4194304
 	}
-	pinFormats := uniqueStrings(in.AllowedPINBlockFormats)
-	outPIN := make([]string, 0, len(pinFormats))
-	for _, item := range pinFormats {
-		v := normalizePINFormat(item)
-		if containsString(supportedPINBlockFormats, v) {
-			outPIN = append(outPIN, v)
-		}
-	}
-	if len(outPIN) == 0 {
-		outPIN = append([]string{}, supportedPINBlockFormats...)
-	}
+	in.AllowedISO20022Canonicalization = normalizeISOCanonicalizationList(in.AllowedISO20022Canonicalization)
+	in.AllowedISO20022SignatureSuites = normalizeISOSignatureSuiteList(in.AllowedISO20022SignatureSuites)
+
+	pinFormats := normalizePINFormats(in.AllowedPINBlockFormats)
 	if in.DisableISO0PINBlock {
-		filtered := make([]string, 0, len(outPIN))
-		for _, v := range outPIN {
+		filtered := make([]string, 0, len(pinFormats))
+		for _, v := range pinFormats {
 			if strings.EqualFold(v, "ISO-0") {
 				continue
 			}
@@ -149,22 +166,31 @@ func normalizePaymentPolicy(in PaymentPolicy) PaymentPolicy {
 		if len(filtered) == 0 {
 			filtered = []string{"ISO-1", "ISO-3"}
 		}
-		outPIN = filtered
+		pinFormats = filtered
 	}
-	in.AllowedPINBlockFormats = outPIN
+	in.AllowedPINBlockFormats = pinFormats
+	in.AllowedPINTranslationPairs = normalizePINTranslationPairs(in.AllowedPINTranslationPairs)
+	in.AllowedCVVServiceCodes = normalizeServiceCodeList(in.AllowedCVVServiceCodes)
+	if in.PVKIMin < 0 {
+		in.PVKIMin = 0
+	}
+	if in.PVKIMax > 9 || in.PVKIMax == 0 {
+		in.PVKIMax = 9
+	}
+	if in.PVKIMin > in.PVKIMax {
+		in.PVKIMin = 0
+		in.PVKIMax = 9
+	}
+	in.AllowedIssuerProfiles = normalizeIssuerProfiles(in.AllowedIssuerProfiles)
+	in.AllowedMACDomains = normalizeDomainList(in.AllowedMACDomains, supportedMACDomains)
+	in.AllowedMACPaddingProfiles = normalizeDomainList(in.AllowedMACPaddingProfiles, supportedMACPaddingProfiles)
+
 	in.DecimalizationTable = normalizeDecimalizationTable(in.DecimalizationTable)
-	tcpOps := uniqueStrings(in.AllowedTCPOperations)
-	outOps := make([]string, 0, len(tcpOps))
-	for _, item := range tcpOps {
-		v := strings.ToLower(strings.TrimSpace(item))
-		if containsString(supportedPaymentCryptoOperations, v) {
-			outOps = append(outOps, v)
-		}
-	}
-	if len(outOps) == 0 {
-		outOps = append([]string{}, supportedPaymentCryptoOperations...)
-	}
-	in.AllowedTCPOperations = outOps
+	in.AllowedTCPOperations = normalizeOperationList(in.AllowedTCPOperations, supportedPaymentCryptoOperations)
+	in.DualControlRequiredOperations = normalizeOperationList(in.DualControlRequiredOperations, append(append([]string{}, supportedPaymentCryptoOperations...), "key.rotate"))
+	in.HSMRequiredOperations = normalizeOperationList(in.HSMRequiredOperations, append(append([]string{}, supportedPaymentCryptoOperations...), "key.rotate"))
+	in.RotationIntervalDaysByClass = normalizeRotationDaysByClass(in.RotationIntervalDaysByClass)
+
 	if in.MaxTCPPayloadBytes <= 0 {
 		in.MaxTCPPayloadBytes = 262144
 	}
@@ -174,6 +200,7 @@ func normalizePaymentPolicy(in PaymentPolicy) PaymentPolicy {
 	if in.MaxTCPPayloadBytes > 1048576 {
 		in.MaxTCPPayloadBytes = 1048576
 	}
+	in.RuntimeEnvironment = normalizeRuntimeEnvironment(in.RuntimeEnvironment)
 	in.UpdatedBy = strings.TrimSpace(in.UpdatedBy)
 	return in
 }
@@ -207,21 +234,40 @@ func (s *Service) UpdatePaymentPolicy(ctx context.Context, in PaymentPolicy) (Pa
 	}
 	item = normalizePaymentPolicy(item)
 	_ = s.publishAudit(ctx, "audit.payment.policy_updated", item.TenantID, map[string]interface{}{
-		"allowed_tr31_versions":         item.AllowedTR31Versions,
-		"require_kbpk_for_tr31":         item.RequireKBPKForTR31,
-		"allow_inline_key_material":     item.AllowInlineKeyMaterial,
-		"max_iso20022_payload_bytes":    item.MaxISO20022PayloadBytes,
-		"require_iso20022_lau_context":  item.RequireISO20022LAUContext,
-		"strict_pci_dss_4_0":            item.StrictPCIDSS40,
-		"require_key_id_for_operations": item.RequireKeyIDForOperations,
-		"allow_tcp_interface":           item.AllowTCPInterface,
-		"require_jwt_on_tcp":            item.RequireJWTOnTCP,
-		"max_tcp_payload_bytes":         item.MaxTCPPayloadBytes,
-		"allowed_tcp_operations":        item.AllowedTCPOperations,
-		"allowed_pin_block_formats":     item.AllowedPINBlockFormats,
-		"disable_iso0_pin_block":        item.DisableISO0PINBlock,
-		"decimalization_table":          item.DecimalizationTable,
-		"block_wildcard_pan":            item.BlockWildcardPAN,
+		"allowed_tr31_versions":             item.AllowedTR31Versions,
+		"require_kbpk_for_tr31":             item.RequireKBPKForTR31,
+		"allowed_kbpk_classes":              item.AllowedKBPKClasses,
+		"allowed_tr31_exportability":        item.AllowedTR31Exportability,
+		"tr31_exportability_matrix":         item.TR31ExportabilityMatrix,
+		"payment_key_purpose_matrix":        item.PaymentKeyPurposeMatrix,
+		"allow_inline_key_material":         item.AllowInlineKeyMaterial,
+		"max_iso20022_payload_bytes":        item.MaxISO20022PayloadBytes,
+		"require_iso20022_lau_context":      item.RequireISO20022LAUContext,
+		"allowed_iso20022_canonicalization": item.AllowedISO20022Canonicalization,
+		"allowed_iso20022_signature_suites": item.AllowedISO20022SignatureSuites,
+		"strict_pci_dss_4_0":                item.StrictPCIDSS40,
+		"require_key_id_for_operations":     item.RequireKeyIDForOperations,
+		"allow_tcp_interface":               item.AllowTCPInterface,
+		"require_jwt_on_tcp":                item.RequireJWTOnTCP,
+		"max_tcp_payload_bytes":             item.MaxTCPPayloadBytes,
+		"allowed_tcp_operations":            item.AllowedTCPOperations,
+		"allowed_pin_block_formats":         item.AllowedPINBlockFormats,
+		"allowed_pin_translation_pairs":     item.AllowedPINTranslationPairs,
+		"disable_iso0_pin_block":            item.DisableISO0PINBlock,
+		"allowed_cvv_service_codes":         item.AllowedCVVServiceCodes,
+		"pvki_min":                          item.PVKIMin,
+		"pvki_max":                          item.PVKIMax,
+		"allowed_issuer_profiles":           item.AllowedIssuerProfiles,
+		"allowed_mac_domains":               item.AllowedMACDomains,
+		"allowed_mac_padding_profiles":      item.AllowedMACPaddingProfiles,
+		"dual_control_required_operations":  item.DualControlRequiredOperations,
+		"hsm_required_operations":           item.HSMRequiredOperations,
+		"rotation_interval_days_by_class":   item.RotationIntervalDaysByClass,
+		"runtime_environment":               item.RuntimeEnvironment,
+		"disallow_test_keys_in_prod":        item.DisallowTestKeysInProd,
+		"disallow_prod_keys_in_test":        item.DisallowProdKeysInTest,
+		"decimalization_table":              item.DecimalizationTable,
+		"block_wildcard_pan":                item.BlockWildcardPAN,
 	})
 	return item, nil
 }
@@ -247,15 +293,519 @@ func paymentTR31VersionAllowed(policy PaymentPolicy, version string) bool {
 	return false
 }
 
+func normalizeAllowedTR31Versions(values []string) []string {
+	allowed := uniqueStrings(values)
+	out := make([]string, 0, len(allowed))
+	for _, item := range allowed {
+		v := normalizeTR31Version(item)
+		if containsString(supportedPaymentTR31Versions, v) {
+			out = append(out, v)
+		}
+	}
+	if len(out) == 0 {
+		out = append([]string{}, supportedPaymentTR31Versions...)
+	}
+	return out
+}
+
+func normalizePaymentKeyClassList(values []string) []string {
+	in := uniqueStrings(values)
+	out := make([]string, 0, len(in))
+	for _, item := range in {
+		v := strings.ToUpper(strings.TrimSpace(item))
+		if containsString(supportedPaymentKeyClasses, v) {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func normalizeExportabilityList(values []string) []string {
+	in := uniqueStrings(values)
+	out := make([]string, 0, len(in))
+	for _, item := range in {
+		v := normalizeExportability(item)
+		if v != "" && containsString(supportedTR31ExportabilityFlags, v) {
+			out = append(out, v)
+		}
+	}
+	if len(out) == 0 {
+		out = append([]string{}, supportedTR31ExportabilityFlags...)
+	}
+	return out
+}
+
+func normalizeTR31ExportabilityMatrix(values map[string][]string) map[string][]string {
+	if len(values) == 0 {
+		return map[string][]string{}
+	}
+	out := make(map[string][]string, len(values))
+	for usage, flags := range values {
+		normalizedUsage := normalizeTR31UsageCode(usage)
+		if normalizedUsage == "" {
+			continue
+		}
+		normalizedFlags := normalizeExportabilityList(flags)
+		if len(normalizedFlags) == 0 {
+			continue
+		}
+		out[normalizedUsage] = normalizedFlags
+	}
+	return out
+}
+
+func normalizePaymentKeyPurposeMatrix(values map[string][]string) map[string][]string {
+	if len(values) == 0 {
+		return map[string][]string{}
+	}
+	out := make(map[string][]string, len(values))
+	for class, ops := range values {
+		normalizedClass := strings.ToUpper(strings.TrimSpace(class))
+		if normalizedClass == "" {
+			continue
+		}
+		if normalizedClass != "*" && !containsString(supportedPaymentKeyClasses, normalizedClass) {
+			continue
+		}
+		normalizedOps := normalizeOperationList(ops, append(append([]string{}, supportedPaymentCryptoOperations...), "key.rotate"))
+		if len(normalizedOps) == 0 {
+			continue
+		}
+		out[normalizedClass] = normalizedOps
+	}
+	return out
+}
+
+func normalizePINFormats(values []string) []string {
+	in := uniqueStrings(values)
+	out := make([]string, 0, len(in))
+	for _, item := range in {
+		v := normalizePINFormat(item)
+		if containsString(supportedPINBlockFormats, v) {
+			out = append(out, v)
+		}
+	}
+	if len(out) == 0 {
+		out = append([]string{}, supportedPINBlockFormats...)
+	}
+	return out
+}
+
+func normalizePINTranslationPairs(values []string) []string {
+	in := uniqueStrings(values)
+	if len(in) == 0 {
+		return []string{}
+	}
+	out := make([]string, 0, len(in))
+	for _, item := range in {
+		pair := strings.TrimSpace(item)
+		parts := strings.Split(pair, ">")
+		if len(parts) != 2 {
+			continue
+		}
+		src := normalizePINFormat(parts[0])
+		dst := normalizePINFormat(parts[1])
+		if src == "" || dst == "" {
+			continue
+		}
+		out = append(out, src+">"+dst)
+	}
+	return uniqueStrings(out)
+}
+
+func normalizeServiceCodeList(values []string) []string {
+	in := uniqueStrings(values)
+	out := make([]string, 0, len(in))
+	for _, item := range in {
+		v := strings.TrimSpace(item)
+		if len(v) != 3 {
+			continue
+		}
+		valid := true
+		for _, c := range v {
+			if c < '0' || c > '9' {
+				valid = false
+				break
+			}
+		}
+		if valid {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func normalizeIssuerProfiles(values []string) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range uniqueStrings(values) {
+		v := strings.TrimSpace(value)
+		if v == "" {
+			continue
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
+func normalizeDomainList(values []string, allowList []string) []string {
+	in := uniqueStrings(values)
+	out := make([]string, 0, len(in))
+	for _, item := range in {
+		v := strings.ToLower(strings.TrimSpace(item))
+		if containsString(allowList, v) {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func normalizeISOCanonicalizationList(values []string) []string {
+	return normalizeDomainList(values, supportedISO20022Canonicalization)
+}
+
+func normalizeISOSignatureSuiteList(values []string) []string {
+	return normalizeDomainList(values, supportedISO20022SignatureSuites)
+}
+
+func normalizeOperationList(values []string, allowed []string) []string {
+	in := uniqueStrings(values)
+	out := make([]string, 0, len(in))
+	for _, item := range in {
+		v := strings.ToLower(strings.TrimSpace(item))
+		if containsString(allowed, v) {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func normalizeRotationDaysByClass(values map[string]int) map[string]int {
+	if len(values) == 0 {
+		return map[string]int{}
+	}
+	out := make(map[string]int, len(values))
+	for class, days := range values {
+		normalizedClass := strings.ToUpper(strings.TrimSpace(class))
+		if normalizedClass == "" || !containsString(supportedPaymentKeyClasses, normalizedClass) {
+			continue
+		}
+		if days <= 0 {
+			continue
+		}
+		if days > 3650 {
+			days = 3650
+		}
+		out[normalizedClass] = days
+	}
+	return out
+}
+
+func normalizeRuntimeEnvironment(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "prod", "production", "":
+		return "prod"
+	case "test", "uat", "qa", "sandbox":
+		return "test"
+	default:
+		return ""
+	}
+}
+
+func paymentHSMActive() bool {
+	mode := strings.ToLower(strings.TrimSpace(firstString(
+		os.Getenv("PAYMENT_HSM_MODE"),
+		os.Getenv("HSM_MODE"),
+		os.Getenv("KMS_HSM_MODE"),
+	)))
+	switch mode {
+	case "hsm", "hardware", "enabled", "true", "strict":
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *Service) enforceOperationHardPolicies(ctx context.Context, policy PaymentPolicy, operation string) error {
+	if containsString(policy.HSMRequiredOperations, operation) && !paymentHSMActive() {
+		return newServiceError(http.StatusForbidden, "policy_violation", "operation requires HSM mode by payment policy")
+	}
+	if containsString(policy.DualControlRequiredOperations, operation) {
+		claims, ok := paymentJWTClaimsFromContext(ctx)
+		if !ok || claims == nil {
+			claims, ok = pkgauth.ClaimsFromContext(ctx)
+		}
+		if !ok || claims == nil {
+			return newServiceError(http.StatusForbidden, "policy_violation", "dual-control approval is required by payment policy")
+		}
+		required := []string{
+			"*",
+			"payment.approve",
+			"payment.dual_control.approve",
+			"payment." + operation + ".approve",
+		}
+		if !hasAnyPermission(claims.Permissions, required) {
+			return newServiceError(http.StatusForbidden, "policy_violation", "dual-control approval permission is missing for this operation")
+		}
+	}
+	return nil
+}
+
+func keyPurposeMatrixEnabled(policy PaymentPolicy) bool {
+	return len(policy.PaymentKeyPurposeMatrix) > 0
+}
+
+func (s *Service) paymentKeyByKeyID(ctx context.Context, tenantID string, keyID string) (PaymentKey, error) {
+	return s.store.GetPaymentKeyByKeyID(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(keyID))
+}
+
+func (s *Service) enforcePaymentKeyUsage(ctx context.Context, policy PaymentPolicy, tenantID string, keyID string, operation string, requireIfConfigured bool) (PaymentKey, error) {
+	keyID = strings.TrimSpace(keyID)
+	inventoryEnforced := keyPurposeMatrixEnabled(policy) || len(policy.RotationIntervalDaysByClass) > 0 || policy.DisallowProdKeysInTest || policy.DisallowTestKeysInProd
+	if keyID == "" {
+		if requireIfConfigured {
+			if inventoryEnforced {
+				return PaymentKey{}, newServiceError(http.StatusForbidden, "policy_violation", "key_id is required by payment policy for this operation")
+			}
+		}
+		return PaymentKey{}, nil
+	}
+	pkey, err := s.paymentKeyByKeyID(ctx, tenantID, keyID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			if !inventoryEnforced {
+				return PaymentKey{}, nil
+			}
+			return PaymentKey{}, newServiceError(http.StatusForbidden, "policy_violation", "key_id is not registered in payment key inventory")
+		}
+		return PaymentKey{}, err
+	}
+	keyClass := strings.ToUpper(strings.TrimSpace(pkey.PaymentType))
+	if keyPurposeMatrixEnabled(policy) {
+		ops := policy.PaymentKeyPurposeMatrix[keyClass]
+		if len(ops) == 0 {
+			ops = policy.PaymentKeyPurposeMatrix["*"]
+		}
+		if len(ops) > 0 && !containsString(ops, operation) {
+			return PaymentKey{}, newServiceError(http.StatusForbidden, "policy_violation", "operation is blocked for this payment key class")
+		}
+	}
+	if days := policy.RotationIntervalDaysByClass[keyClass]; days > 0 {
+		ref := pkey.UpdatedAt
+		if ref.IsZero() {
+			ref = pkey.CreatedAt
+		}
+		if !ref.IsZero() {
+			if time.Since(ref.UTC()) > (time.Duration(days) * 24 * time.Hour) {
+				return PaymentKey{}, newServiceError(http.StatusForbidden, "policy_violation", "payment key rotation interval exceeded; rotate key before operation")
+			}
+		}
+	}
+	keyEnv := normalizeRuntimeEnvironment(pkey.KeyEnvironment)
+	if keyEnv == "" {
+		keyEnv = "prod"
+	}
+	runtimeEnv := normalizeRuntimeEnvironment(policy.RuntimeEnvironment)
+	if runtimeEnv == "" {
+		runtimeEnv = "prod"
+	}
+	if runtimeEnv == "prod" && policy.DisallowTestKeysInProd && keyEnv == "test" {
+		return PaymentKey{}, newServiceError(http.StatusForbidden, "policy_violation", "test payment keys are blocked in prod runtime")
+	}
+	if runtimeEnv == "test" && policy.DisallowProdKeysInTest && keyEnv == "prod" {
+		return PaymentKey{}, newServiceError(http.StatusForbidden, "policy_violation", "prod payment keys are blocked in test runtime")
+	}
+	return pkey, nil
+}
+
+func isTR31ExportabilityAllowed(policy PaymentPolicy, usage string, exportability string) bool {
+	flag := normalizeExportability(exportability)
+	if flag == "" {
+		return false
+	}
+	if len(policy.AllowedTR31Exportability) > 0 && !containsString(policy.AllowedTR31Exportability, flag) {
+		return false
+	}
+	usageCode := normalizeTR31UsageCode(usage)
+	if usageCode == "" {
+		return true
+	}
+	matrix := policy.TR31ExportabilityMatrix
+	if len(matrix) == 0 {
+		return true
+	}
+	allowed := matrix[usageCode]
+	if len(allowed) == 0 {
+		return true
+	}
+	return containsString(allowed, flag)
+}
+
+func (s *Service) enforceKBPKClassPolicy(ctx context.Context, policy PaymentPolicy, tenantID string, kbpkKeyID string, inlineProvided bool) error {
+	if len(policy.AllowedKBPKClasses) == 0 {
+		return nil
+	}
+	keyID := strings.TrimSpace(kbpkKeyID)
+	if keyID == "" {
+		if inlineProvided {
+			return newServiceError(http.StatusForbidden, "policy_violation", "kbpk_key_id is required for kbpk class validation")
+		}
+		return nil
+	}
+	pkey, err := s.paymentKeyByKeyID(ctx, tenantID, keyID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return newServiceError(http.StatusForbidden, "policy_violation", "kbpk key is not registered in payment key inventory")
+		}
+		return err
+	}
+	if !containsString(policy.AllowedKBPKClasses, pkey.PaymentType) {
+		return newServiceError(http.StatusForbidden, "policy_violation", "kbpk key class is blocked by payment policy")
+	}
+	return nil
+}
+
+func isPINTranslationPairAllowed(policy PaymentPolicy, source string, target string) bool {
+	if len(policy.AllowedPINTranslationPairs) == 0 {
+		return true
+	}
+	pair := normalizePINFormat(source) + ">" + normalizePINFormat(target)
+	return containsString(policy.AllowedPINTranslationPairs, pair)
+}
+
+func isServiceCodeAllowed(policy PaymentPolicy, serviceCode string) bool {
+	if len(policy.AllowedCVVServiceCodes) == 0 {
+		return true
+	}
+	return containsString(policy.AllowedCVVServiceCodes, strings.TrimSpace(serviceCode))
+}
+
+func validatePVKIByPolicy(policy PaymentPolicy, pvki string) error {
+	pvki = strings.TrimSpace(pvki)
+	if pvki == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "pvki is required")
+	}
+	v, err := strconv.Atoi(pvki)
+	if err != nil {
+		return newServiceError(http.StatusBadRequest, "bad_request", "pvki must be numeric")
+	}
+	if v < policy.PVKIMin || v > policy.PVKIMax {
+		return newServiceError(http.StatusForbidden, "policy_violation", "pvki is blocked by payment policy")
+	}
+	return nil
+}
+
+func (s *Service) enforceIssuerProfilePolicy(ctx context.Context, policy PaymentPolicy, tenantID string, keyID string) error {
+	if len(policy.AllowedIssuerProfiles) == 0 {
+		return nil
+	}
+	keyID = strings.TrimSpace(keyID)
+	if keyID == "" {
+		return newServiceError(http.StatusForbidden, "policy_violation", "key_id is required by issuer profile policy")
+	}
+	pkey, err := s.paymentKeyByKeyID(ctx, tenantID, keyID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return newServiceError(http.StatusForbidden, "policy_violation", "key_id is not registered in payment key inventory")
+		}
+		return err
+	}
+	if !containsString(policy.AllowedIssuerProfiles, strings.TrimSpace(pkey.ISO20022PartyID)) {
+		return newServiceError(http.StatusForbidden, "policy_violation", "issuer profile is blocked by payment policy")
+	}
+	return nil
+}
+
+func normalizeMACDomain(v string, fallback string) string {
+	raw := strings.ToLower(strings.TrimSpace(v))
+	if raw == "" {
+		raw = strings.ToLower(strings.TrimSpace(fallback))
+	}
+	if containsString(supportedMACDomains, raw) {
+		return raw
+	}
+	return ""
+}
+
+func macPaddingProfile(macType string, algorithm int) string {
+	switch normalizeMACType(macType) {
+	case "retail":
+		return "ansi-x9.19-m1"
+	case "iso9797":
+		return "iso9797-m2"
+	case "cmac":
+		return "cmac"
+	default:
+		return ""
+	}
+}
+
+func enforceMACPolicy(policy PaymentPolicy, req MACRequest) error {
+	domain := normalizeMACDomain(req.Domain, req.Type)
+	if domain == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "invalid mac domain")
+	}
+	if len(policy.AllowedMACDomains) > 0 && !containsString(policy.AllowedMACDomains, domain) {
+		return newServiceError(http.StatusForbidden, "policy_violation", "mac domain is blocked by payment policy")
+	}
+	padding := macPaddingProfile(req.Type, req.Algorithm)
+	if padding == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "unsupported mac padding profile")
+	}
+	if strings.TrimSpace(req.PaddingProfile) != "" && !strings.EqualFold(strings.TrimSpace(req.PaddingProfile), padding) {
+		return newServiceError(http.StatusBadRequest, "bad_request", "padding_profile does not match selected mac algorithm/type")
+	}
+	if len(policy.AllowedMACPaddingProfiles) > 0 && !containsString(policy.AllowedMACPaddingProfiles, padding) {
+		return newServiceError(http.StatusForbidden, "policy_violation", "mac padding profile is blocked by payment policy")
+	}
+	return nil
+}
+
+func enforceISO20022SignaturePolicy(policy PaymentPolicy, canonicalization string, signatureSuite string) error {
+	canon := strings.ToLower(strings.TrimSpace(canonicalization))
+	suite := strings.ToLower(strings.TrimSpace(signatureSuite))
+	if len(policy.AllowedISO20022Canonicalization) > 0 {
+		if canon == "" {
+			return newServiceError(http.StatusForbidden, "policy_violation", "canonicalization is required by payment policy")
+		}
+		if !containsString(policy.AllowedISO20022Canonicalization, canon) {
+			return newServiceError(http.StatusForbidden, "policy_violation", "canonicalization is blocked by payment policy")
+		}
+	} else if canon != "" && !containsString(supportedISO20022Canonicalization, canon) {
+		return newServiceError(http.StatusBadRequest, "bad_request", "unsupported canonicalization")
+	}
+	if len(policy.AllowedISO20022SignatureSuites) > 0 {
+		if suite == "" {
+			return newServiceError(http.StatusForbidden, "policy_violation", "signature_suite is required by payment policy")
+		}
+		if !containsString(policy.AllowedISO20022SignatureSuites, suite) {
+			return newServiceError(http.StatusForbidden, "policy_violation", "signature suite is blocked by payment policy")
+		}
+	} else if suite != "" && !containsString(supportedISO20022SignatureSuites, suite) {
+		return newServiceError(http.StatusBadRequest, "bad_request", "unsupported signature_suite")
+	}
+	return nil
+}
+
 func (s *Service) RegisterPaymentKey(ctx context.Context, req RegisterPaymentKeyRequest) (PaymentKey, error) {
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.KeyID = strings.TrimSpace(req.KeyID)
 	if req.TenantID == "" || req.KeyID == "" {
 		return PaymentKey{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and key_id are required")
 	}
+	policy, err := s.mustPaymentPolicy(ctx, req.TenantID)
+	if err != nil {
+		return PaymentKey{}, err
+	}
 	paymentType := strings.ToUpper(strings.TrimSpace(req.PaymentType))
 	if _, ok := supportedPaymentTypes[paymentType]; !ok {
 		return PaymentKey{}, newServiceError(http.StatusBadRequest, "bad_request", "unsupported payment_type")
+	}
+	keyEnv := normalizeRuntimeEnvironment(req.KeyEnvironment)
+	if keyEnv == "" {
+		keyEnv = normalizeRuntimeEnvironment(policy.RuntimeEnvironment)
+	}
+	if keyEnv == "" {
+		keyEnv = "prod"
 	}
 	usage := normalizeTR31UsageCode(req.UsageCode)
 	if usage == "" {
@@ -281,6 +831,7 @@ func (s *Service) RegisterPaymentKey(ctx context.Context, req RegisterPaymentKey
 		TenantID:         req.TenantID,
 		KeyID:            req.KeyID,
 		PaymentType:      paymentType,
+		KeyEnvironment:   keyEnv,
 		UsageCode:        usage,
 		ModeOfUse:        mode,
 		KeyVersionNum:    defaultTR31KeyVersion(req.KeyVersionNum),
@@ -342,6 +893,13 @@ func (s *Service) UpdatePaymentKey(ctx context.Context, id string, req UpdatePay
 	} else {
 		req.PaymentType = current.PaymentType
 	}
+	keyEnv := normalizeRuntimeEnvironment(req.KeyEnvironment)
+	if keyEnv == "" {
+		keyEnv = normalizeRuntimeEnvironment(current.KeyEnvironment)
+	}
+	if keyEnv == "" {
+		keyEnv = "prod"
+	}
 	if strings.TrimSpace(req.UsageCode) == "" {
 		req.UsageCode = current.UsageCode
 	}
@@ -373,6 +931,7 @@ func (s *Service) UpdatePaymentKey(ctx context.Context, id string, req UpdatePay
 		TenantID:         req.TenantID,
 		KeyID:            current.KeyID,
 		PaymentType:      req.PaymentType,
+		KeyEnvironment:   keyEnv,
 		UsageCode:        req.UsageCode,
 		ModeOfUse:        req.ModeOfUse,
 		KeyVersionNum:    defaultTR31KeyVersion(firstString(req.KeyVersionNum, current.KeyVersionNum)),
@@ -398,8 +957,19 @@ func (s *Service) RotatePaymentKey(ctx context.Context, id string, req RotatePay
 	if id == "" || req.TenantID == "" {
 		return RotatePaymentKeyResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and id are required")
 	}
+	policy, err := s.enforceOperationPolicy(ctx, req.TenantID, "key.rotate")
+	if err != nil {
+		return RotatePaymentKeyResponse{}, err
+	}
+	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "key.rotate"); err != nil {
+		return RotatePaymentKeyResponse{}, err
+	}
 	key, err := s.store.GetPaymentKey(ctx, req.TenantID, id)
 	if err != nil {
+		return RotatePaymentKeyResponse{}, err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, key.KeyID, "key.rotate", true); err != nil {
 		return RotatePaymentKeyResponse{}, err
 	}
 	if s.keycore == nil {
@@ -438,6 +1008,12 @@ func (s *Service) CreateTR31(ctx context.Context, req CreateTR31Request) (Create
 		return CreateTR31Response{}, err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "tr31.create"); err != nil {
+		return CreateTR31Response{}, err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, req.KeyID, "tr31.create", true); err != nil {
+		return CreateTR31Response{}, err
+	}
 	if !policy.AllowInlineKeyMaterial && strings.TrimSpace(req.MaterialB64) != "" {
 		return CreateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "inline key material is blocked by payment policy")
 	}
@@ -481,7 +1057,17 @@ func (s *Service) CreateTR31(ctx context.Context, req CreateTR31Request) (Create
 	if exportability == "" {
 		exportability = "E"
 	}
+	if !isTR31ExportabilityAllowed(policy, usage, exportability) {
+		return CreateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "exportability is blocked by TR-31 policy")
+	}
 	versionNum := defaultTR31KeyVersion(req.KeyVersionNum)
+	kbpkID := strings.TrimSpace(firstString(req.KBPKKeyID, req.KEKKeyID))
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, kbpkID, "tr31.create", true); err != nil {
+		return CreateTR31Response{}, err
+	}
+	if err := s.enforceKBPKClassPolicy(ctx, policy, req.TenantID, kbpkID, strings.TrimSpace(firstString(req.KBPKKeyB64, req.KEKKeyB64)) != ""); err != nil {
+		return CreateTR31Response{}, err
+	}
 	header, err := tr31lib.NewHeader(version, usage, algorithmCode, modeOfUse, versionNum, exportability)
 	if err != nil {
 		return CreateTR31Response{}, newServiceError(http.StatusBadRequest, "bad_request", err.Error())
@@ -529,8 +1115,18 @@ func (s *Service) ParseTR31(ctx context.Context, req ParseTR31Request) (ParseTR3
 		return ParseTR31Response{}, err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "tr31.parse"); err != nil {
+		return ParseTR31Response{}, err
+	}
 	if policy.RequireKBPKForTR31 && firstString(req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64) == "" {
 		return ParseTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "kbpk/kek is required by payment policy for TR-31")
+	}
+	kbpkID := strings.TrimSpace(firstString(req.KBPKKeyID, req.KEKKeyID))
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, kbpkID, "tr31.parse", true); err != nil {
+		return ParseTR31Response{}, err
+	}
+	if err := s.enforceKBPKClassPolicy(ctx, policy, req.TenantID, kbpkID, strings.TrimSpace(firstString(req.KBPKKeyB64, req.KEKKeyB64)) != ""); err != nil {
+		return ParseTR31Response{}, err
 	}
 	kbpk, kbpkRef, err := s.resolveKBPKMaterial(ctx, req.TenantID, req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "kbpk_key_b64", "kbpk_key_id")
 	if err != nil {
@@ -553,6 +1149,9 @@ func (s *Service) ParseTR31(ctx context.Context, req ParseTR31Request) (ParseTR3
 	usage := normalizeTR31UsageCode(header.KeyUsage)
 	if usage == "" {
 		usage = strings.ToUpper(strings.TrimSpace(header.KeyUsage))
+	}
+	if !isTR31ExportabilityAllowed(policy, usage, strings.TrimSpace(header.Exportability)) {
+		return ParseTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "tr31 exportability is blocked by payment policy")
 	}
 	kcv, err := computePaymentKCV(key, algorithm)
 	if err != nil {
@@ -603,6 +1202,9 @@ func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (
 		return TranslateTR31Response{}, err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "tr31.translate"); err != nil {
+		return TranslateTR31Response{}, err
+	}
 	sourceFmt := normalizeTR31Format(req.SourceFormat)
 	targetFmt := normalizeTR31Format(req.TargetFormat)
 	if sourceFmt == "" || targetFmt == "" {
@@ -613,6 +1215,11 @@ func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (
 	}
 
 	sourceKeyID := strings.TrimSpace(req.SourceKeyID)
+	if sourceKeyID != "" {
+		if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, sourceKeyID, "tr31.translate", true); err != nil {
+			return TranslateTR31Response{}, err
+		}
+	}
 	sourceKBPKKeyID := firstString(req.SourceKBPKKeyID, req.KEKKeyID)
 	sourceKBPKKeyB64 := firstString(req.SourceKBPKKeyB64, req.KEKKeyB64)
 	targetKBPKKeyID := firstString(req.TargetKBPKKeyID, req.KEKKeyID)
@@ -626,6 +1233,18 @@ func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (
 		if targetNeedsKBPK && firstString(targetKBPKKeyID, targetKBPKKeyB64) == "" {
 			return TranslateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "target kbpk/kek is required by payment policy for TR-31 translation")
 		}
+	}
+	if err := s.enforceKBPKClassPolicy(ctx, policy, req.TenantID, sourceKBPKKeyID, strings.TrimSpace(sourceKBPKKeyB64) != ""); err != nil {
+		return TranslateTR31Response{}, err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, sourceKBPKKeyID, "tr31.translate", false); err != nil {
+		return TranslateTR31Response{}, err
+	}
+	if err := s.enforceKBPKClassPolicy(ctx, policy, req.TenantID, targetKBPKKeyID, strings.TrimSpace(targetKBPKKeyB64) != ""); err != nil {
+		return TranslateTR31Response{}, err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, targetKBPKKeyID, "tr31.translate", false); err != nil {
+		return TranslateTR31Response{}, err
 	}
 
 	keyMaterial, sourceKCV, err := s.resolveSourceMaterial(ctx, req.TenantID, sourceKeyID, sourceFmt, req.SourceBlock, sourceKBPKKeyID, sourceKBPKKeyB64)
@@ -680,6 +1299,9 @@ func (s *Service) TranslateTR31(ctx context.Context, req TranslateTR31Request) (
 	exportability := normalizeExportability(req.Exportability)
 	if exportability == "" {
 		exportability = "E"
+	}
+	if !isTR31ExportabilityAllowed(policy, usage, exportability) {
+		return TranslateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "exportability is blocked by TR-31 policy")
 	}
 	versionNum := defaultTR31KeyVersion(req.KeyVersionNum)
 
@@ -762,8 +1384,18 @@ func (s *Service) ValidateTR31(ctx context.Context, req ValidateTR31Request) (Va
 		return ValidateTR31Response{}, err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "tr31.validate"); err != nil {
+		return ValidateTR31Response{}, err
+	}
 	if policy.RequireKBPKForTR31 && firstString(req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64) == "" {
 		return ValidateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "kbpk/kek is required by payment policy for TR-31")
+	}
+	kbpkID := strings.TrimSpace(firstString(req.KBPKKeyID, req.KEKKeyID))
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, tenantID, kbpkID, "tr31.validate", true); err != nil {
+		return ValidateTR31Response{}, err
+	}
+	if err := s.enforceKBPKClassPolicy(ctx, policy, tenantID, kbpkID, strings.TrimSpace(firstString(req.KBPKKeyB64, req.KEKKeyB64)) != ""); err != nil {
+		return ValidateTR31Response{}, err
 	}
 	kbpk, _, err := s.resolveKBPKMaterial(ctx, tenantID, req.KBPKKeyID, req.KBPKKeyB64, req.KEKKeyID, req.KEKKeyB64, "kbpk_key_b64", "kbpk_key_id")
 	if err != nil {
@@ -786,6 +1418,9 @@ func (s *Service) ValidateTR31(ctx context.Context, req ValidateTR31Request) (Va
 	usage := normalizeTR31UsageCode(header.KeyUsage)
 	if usage == "" {
 		usage = strings.ToUpper(strings.TrimSpace(header.KeyUsage))
+	}
+	if !isTR31ExportabilityAllowed(policy, usage, strings.TrimSpace(header.Exportability)) {
+		return ValidateTR31Response{}, newServiceError(http.StatusForbidden, "policy_violation", "tr31 exportability is blocked by payment policy")
 	}
 	kcv, err := computePaymentKCV(key, algorithm)
 	if err != nil {
@@ -817,6 +1452,9 @@ func (s *Service) TranslatePIN(ctx context.Context, req TranslatePINRequest) (st
 		return "", err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "pin.translate"); err != nil {
+		return "", err
+	}
 	source := normalizePINFormat(req.SourceFormat)
 	target := normalizePINFormat(req.TargetFormat)
 	block := strings.ToUpper(strings.TrimSpace(req.PINBlock))
@@ -825,6 +1463,9 @@ func (s *Service) TranslatePIN(ctx context.Context, req TranslatePINRequest) (st
 	}
 	if !isPINFormatAllowed(policy, source) || !isPINFormatAllowed(policy, target) {
 		return "", newServiceError(http.StatusForbidden, "policy_violation", "pin block format is blocked by payment policy")
+	}
+	if !isPINTranslationPairAllowed(policy, source, target) {
+		return "", newServiceError(http.StatusForbidden, "policy_violation", "pin translation pair is blocked by payment policy")
 	}
 	if err := validatePANPolicy(policy, req.PAN); err != nil {
 		return "", err
@@ -844,6 +1485,16 @@ func (s *Service) TranslatePIN(ctx context.Context, req TranslatePINRequest) (st
 	targetZPKB64 := firstString(req.TargetZPKKeyB64, req.ZPKKeyB64, sourceZPKB64)
 	if (sourceZPK == "" && sourceZPKB64 == "") || (targetZPK == "" && targetZPKB64 == "") {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "provide source/target ZPK via key_id or key_b64")
+	}
+	if sourceZPK != "" {
+		if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, sourceZPK, "pin.translate", true); err != nil {
+			return "", err
+		}
+	}
+	if targetZPK != "" {
+		if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, targetZPK, "pin.translate", true); err != nil {
+			return "", err
+		}
 	}
 	sourceKeyRaw, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, sourceZPK, sourceZPKB64, "source_zpk_key_b64", "source_zpk_key_id")
 	if err != nil {
@@ -919,7 +1570,19 @@ func (s *Service) GeneratePVV(ctx context.Context, req PVVGenerateRequest) (stri
 		return "", err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "pin.pvv.generate"); err != nil {
+		return "", err
+	}
 	if err := validatePANPolicy(policy, req.PAN); err != nil {
+		return "", err
+	}
+	if err := validatePVKIByPolicy(policy, req.PVKI); err != nil {
+		return "", err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, req.PVKKeyID, "pin.pvv.generate", true); err != nil {
+		return "", err
+	}
+	if err := s.enforceIssuerProfilePolicy(ctx, policy, req.TenantID, req.PVKKeyID); err != nil {
 		return "", err
 	}
 	key, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, req.PVKKeyID, req.PVKKeyB64, "pvk_key_b64", "pvk_key_id")
@@ -956,17 +1619,32 @@ func (s *Service) VerifyPVV(ctx context.Context, req PVVVerifyRequest) (bool, er
 		return false, err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
-	pvv, err := s.GeneratePVV(ctx, PVVGenerateRequest{
-		TenantID:  req.TenantID,
-		PVKKeyID:  req.PVKKeyID,
-		PVKKeyB64: req.PVKKeyB64,
-		PIN:       req.PIN,
-		PAN:       req.PAN,
-		PVKI:      req.PVKI,
-		ZPKKeyID:  req.ZPKKeyID,
-	})
+	if err := s.enforceOperationHardPolicies(ctx, policy, "pin.pvv.verify"); err != nil {
+		return false, err
+	}
+	if err := validatePANPolicy(policy, req.PAN); err != nil {
+		return false, err
+	}
+	if err := validatePVKIByPolicy(policy, req.PVKI); err != nil {
+		return false, err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, strings.TrimSpace(req.TenantID), req.PVKKeyID, "pin.pvv.verify", true); err != nil {
+		return false, err
+	}
+	if err := s.enforceIssuerProfilePolicy(ctx, policy, strings.TrimSpace(req.TenantID), req.PVKKeyID); err != nil {
+		return false, err
+	}
+	key, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.PVKKeyID, req.PVKKeyB64, "pvk_key_b64", "pvk_key_id")
 	if err != nil {
 		return false, err
+	}
+	defer pkgcrypto.Zeroize(key)
+	if err := s.consumeMeter(); err != nil {
+		return false, err
+	}
+	pvv, err := generatePVV(key, req.PIN, req.PAN, req.PVKI, policy.DecimalizationTable)
+	if err != nil {
+		return false, newServiceError(http.StatusBadRequest, "bad_request", err.Error())
 	}
 	ok := subtle.ConstantTimeCompare([]byte(pvv), []byte(strings.TrimSpace(req.PVV))) == 1
 	_ = s.store.CreatePINOperationLog(ctx, PINOperationLog{
@@ -995,6 +1673,15 @@ func (s *Service) GenerateOffset(ctx context.Context, req OffsetGenerateRequest)
 		return "", err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "pin.offset.generate"); err != nil {
+		return "", err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, req.ZPKKeyID, "pin.offset.generate", false); err != nil {
+		return "", err
+	}
+	if err := s.consumeMeter(); err != nil {
+		return "", err
+	}
 	offset, err := generatePINOffset(req.PIN, req.ReferencePIN)
 	if err != nil {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", err.Error())
@@ -1024,6 +1711,15 @@ func (s *Service) VerifyOffset(ctx context.Context, req OffsetVerifyRequest) (bo
 		return false, err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "pin.offset.verify"); err != nil {
+		return false, err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, req.ZPKKeyID, "pin.offset.verify", false); err != nil {
+		return false, err
+	}
+	if err := s.consumeMeter(); err != nil {
+		return false, err
+	}
 	ok := verifyPINOffset(req.PIN, req.ReferencePIN, req.Offset)
 	_ = s.store.CreatePINOperationLog(ctx, PINOperationLog{
 		ID:           newID("pinlog"),
@@ -1051,7 +1747,19 @@ func (s *Service) ComputeCVV(ctx context.Context, req CVVComputeRequest) (string
 		return "", err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "pin.cvv.compute"); err != nil {
+		return "", err
+	}
 	if err := validatePANPolicy(policy, req.PAN); err != nil {
+		return "", err
+	}
+	if !isServiceCodeAllowed(policy, req.ServiceCode) {
+		return "", newServiceError(http.StatusForbidden, "policy_violation", "service_code is blocked by payment policy")
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, req.CVKKeyID, "pin.cvv.compute", true); err != nil {
+		return "", err
+	}
+	if err := s.enforceIssuerProfilePolicy(ctx, policy, req.TenantID, req.CVKKeyID); err != nil {
 		return "", err
 	}
 	cvk, err := s.resolveOperationKeyMaterial(ctx, req.TenantID, req.CVKKeyID, req.CVKKeyB64, "cvk_key_b64", "cvk_key_id")
@@ -1087,16 +1795,32 @@ func (s *Service) VerifyCVV(ctx context.Context, req CVVVerifyRequest) (bool, er
 		return false, err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
-	cvv, err := s.ComputeCVV(ctx, CVVComputeRequest{
-		TenantID:    req.TenantID,
-		CVKKeyID:    req.CVKKeyID,
-		CVKKeyB64:   req.CVKKeyB64,
-		PAN:         req.PAN,
-		ExpiryYYMM:  req.ExpiryYYMM,
-		ServiceCode: req.ServiceCode,
-	})
+	if err := s.enforceOperationHardPolicies(ctx, policy, "pin.cvv.verify"); err != nil {
+		return false, err
+	}
+	if err := validatePANPolicy(policy, req.PAN); err != nil {
+		return false, err
+	}
+	if !isServiceCodeAllowed(policy, req.ServiceCode) {
+		return false, newServiceError(http.StatusForbidden, "policy_violation", "service_code is blocked by payment policy")
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, strings.TrimSpace(req.TenantID), req.CVKKeyID, "pin.cvv.verify", true); err != nil {
+		return false, err
+	}
+	if err := s.enforceIssuerProfilePolicy(ctx, policy, strings.TrimSpace(req.TenantID), req.CVKKeyID); err != nil {
+		return false, err
+	}
+	cvk, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.CVKKeyID, req.CVKKeyB64, "cvk_key_b64", "cvk_key_id")
 	if err != nil {
 		return false, err
+	}
+	defer pkgcrypto.Zeroize(cvk)
+	if err := s.consumeMeter(); err != nil {
+		return false, err
+	}
+	cvv, err := computeCVVWithTDES(cvk, strings.TrimSpace(req.PAN), strings.TrimSpace(req.ExpiryYYMM), strings.TrimSpace(req.ServiceCode))
+	if err != nil {
+		return false, newServiceError(http.StatusBadRequest, "bad_request", err.Error())
 	}
 	ok := subtle.ConstantTimeCompare([]byte(cvv), []byte(strings.TrimSpace(req.CVV))) == 1
 	_ = s.publishAudit(ctx, "audit.payment.cvv_verified", strings.TrimSpace(req.TenantID), map[string]interface{}{
@@ -1118,6 +1842,15 @@ func (s *Service) ComputeMAC(ctx context.Context, req MACRequest) (string, error
 		return "", err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, op); err != nil {
+		return "", err
+	}
+	if err := enforceMACPolicy(policy, req); err != nil {
+		return "", err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, strings.TrimSpace(req.TenantID), req.KeyID, op, true); err != nil {
+		return "", err
+	}
 	key, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.KeyID, req.KeyB64, "key_b64", "key_id")
 	if err != nil {
 		return "", err
@@ -1128,45 +1861,14 @@ func (s *Service) ComputeMAC(ctx context.Context, req MACRequest) (string, error
 		return "", err
 	}
 	defer pkgcrypto.Zeroize(data)
-	switch normalizeMACType(req.Type) {
-	case "retail":
-		if len(key) < 16 {
-			return "", newServiceError(http.StatusBadRequest, "bad_request", "retail MAC key must be at least 16 bytes")
-		}
-		mac, err := pkgpayment.RetailMACANSI919(key[:16], data)
-		if err != nil {
-			return "", newServiceError(http.StatusBadRequest, "bad_request", err.Error())
-		}
-		return base64.StdEncoding.EncodeToString(mac), nil
-	case "iso9797":
-		switch req.Algorithm {
-		case 0, 1:
-			mac, err := iso9797Alg1MAC(key, data)
-			if err != nil {
-				return "", newServiceError(http.StatusBadRequest, "bad_request", err.Error())
-			}
-			return base64.StdEncoding.EncodeToString(mac), nil
-		case 3:
-			if len(key) < 16 {
-				return "", newServiceError(http.StatusBadRequest, "bad_request", "iso9797 alg3 key must be at least 16 bytes")
-			}
-			mac, err := pkgpayment.RetailMACANSI919(key[:16], data)
-			if err != nil {
-				return "", newServiceError(http.StatusBadRequest, "bad_request", err.Error())
-			}
-			return base64.StdEncoding.EncodeToString(mac), nil
-		default:
-			return "", newServiceError(http.StatusBadRequest, "bad_request", "unsupported iso9797 algorithm (use 1 or 3)")
-		}
-	case "cmac":
-		mac, err := aesCMAC(key, data)
-		if err != nil {
-			return "", newServiceError(http.StatusBadRequest, "bad_request", err.Error())
-		}
-		return base64.StdEncoding.EncodeToString(mac), nil
-	default:
-		return "", newServiceError(http.StatusBadRequest, "bad_request", "unsupported mac type")
+	if err := s.consumeMeter(); err != nil {
+		return "", err
 	}
+	mac, err := computeMACRaw(req.Type, req.Algorithm, key, data)
+	if err != nil {
+		return "", newServiceError(http.StatusBadRequest, "bad_request", err.Error())
+	}
+	return base64.StdEncoding.EncodeToString(mac), nil
 }
 
 func (s *Service) VerifyMAC(ctx context.Context, req VerifyMACRequest) (bool, error) {
@@ -1175,20 +1877,41 @@ func (s *Service) VerifyMAC(ctx context.Context, req VerifyMACRequest) (bool, er
 		return false, err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
-	expectedB64, err := s.ComputeMAC(ctx, MACRequest{
-		TenantID:  req.TenantID,
-		KeyID:     req.KeyID,
-		KeyB64:    req.KeyB64,
-		DataB64:   req.DataB64,
-		Algorithm: req.Algorithm,
-		Type:      req.Type,
-	})
+	if err := s.enforceOperationHardPolicies(ctx, policy, "mac.verify"); err != nil {
+		return false, err
+	}
+	macReq := MACRequest{
+		TenantID:       req.TenantID,
+		KeyID:          req.KeyID,
+		KeyB64:         req.KeyB64,
+		DataB64:        req.DataB64,
+		Algorithm:      req.Algorithm,
+		Type:           req.Type,
+		Domain:         req.Domain,
+		PaddingProfile: req.PaddingProfile,
+	}
+	if err := enforceMACPolicy(policy, macReq); err != nil {
+		return false, err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, strings.TrimSpace(req.TenantID), req.KeyID, "mac.verify", true); err != nil {
+		return false, err
+	}
+	key, err := s.resolveOperationKeyMaterial(ctx, strings.TrimSpace(req.TenantID), req.KeyID, req.KeyB64, "key_b64", "key_id")
 	if err != nil {
 		return false, err
 	}
-	expected, err := base64.StdEncoding.DecodeString(expectedB64)
+	defer pkgcrypto.Zeroize(key)
+	data, err := decodeB64(req.DataB64, "data_b64")
 	if err != nil {
 		return false, err
+	}
+	defer pkgcrypto.Zeroize(data)
+	if err := s.consumeMeter(); err != nil {
+		return false, err
+	}
+	expected, err := computeMACRaw(req.Type, req.Algorithm, key, data)
+	if err != nil {
+		return false, newServiceError(http.StatusBadRequest, "bad_request", err.Error())
 	}
 	got, err := decodeB64(req.MACB64, "mac_b64")
 	if err != nil {
@@ -1197,6 +1920,32 @@ func (s *Service) VerifyMAC(ctx context.Context, req VerifyMACRequest) (bool, er
 	defer pkgcrypto.Zeroize(got)
 	ok := subtle.ConstantTimeCompare(expected, got) == 1
 	return ok, nil
+}
+
+func computeMACRaw(macType string, algorithm int, key []byte, data []byte) ([]byte, error) {
+	switch normalizeMACType(macType) {
+	case "retail":
+		if len(key) < 16 {
+			return nil, errors.New("retail MAC key must be at least 16 bytes")
+		}
+		return pkgpayment.RetailMACANSI919(key[:16], data)
+	case "iso9797":
+		switch algorithm {
+		case 0, 1:
+			return iso9797Alg1MAC(key, data)
+		case 3:
+			if len(key) < 16 {
+				return nil, errors.New("iso9797 alg3 key must be at least 16 bytes")
+			}
+			return pkgpayment.RetailMACANSI919(key[:16], data)
+		default:
+			return nil, errors.New("unsupported iso9797 algorithm (use 1 or 3)")
+		}
+	case "cmac":
+		return aesCMAC(key, data)
+	default:
+		return nil, errors.New("unsupported mac type")
+	}
 }
 
 func (s *Service) ISO20022Sign(ctx context.Context, req ISO20022SignRequest) (map[string]string, error) {
@@ -1211,6 +1960,15 @@ func (s *Service) ISO20022Sign(ctx context.Context, req ISO20022SignRequest) (ma
 		return nil, err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "iso20022.sign"); err != nil {
+		return nil, err
+	}
+	if err := enforceISO20022SignaturePolicy(policy, req.Canonicalization, req.SignatureSuite); err != nil {
+		return nil, err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, req.KeyID, "iso20022.sign", true); err != nil {
+		return nil, err
+	}
 	if policy.MaxISO20022PayloadBytes > 0 && len([]byte(xml)) > policy.MaxISO20022PayloadBytes {
 		return nil, newServiceError(http.StatusRequestEntityTooLarge, "payload_too_large", "xml exceeds payment policy max_iso20022_payload_bytes")
 	}
@@ -1252,11 +2010,23 @@ func (s *Service) ISO20022Verify(ctx context.Context, req ISO20022VerifyRequest)
 		return false, err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "iso20022.verify"); err != nil {
+		return false, err
+	}
+	if err := enforceISO20022SignaturePolicy(policy, req.Canonicalization, req.SignatureSuite); err != nil {
+		return false, err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, req.KeyID, "iso20022.verify", true); err != nil {
+		return false, err
+	}
 	if policy.MaxISO20022PayloadBytes > 0 && len([]byte(xml)) > policy.MaxISO20022PayloadBytes {
 		return false, newServiceError(http.StatusRequestEntityTooLarge, "payload_too_large", "xml exceeds payment policy max_iso20022_payload_bytes")
 	}
 	if s.keycore == nil {
 		return false, newServiceError(http.StatusFailedDependency, "keycore_unavailable", "keycore client is not configured")
+	}
+	if err := s.consumeMeter(); err != nil {
+		return false, err
 	}
 	dataB64 := base64.StdEncoding.EncodeToString([]byte(xml))
 	out, err := s.keycore.Verify(ctx, req.TenantID, req.KeyID, dataB64, sig)
@@ -1278,6 +2048,12 @@ func (s *Service) ISO20022Encrypt(ctx context.Context, req ISO20022EncryptReques
 		return nil, err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "iso20022.encrypt"); err != nil {
+		return nil, err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, req.KeyID, "iso20022.encrypt", true); err != nil {
+		return nil, err
+	}
 	if policy.MaxISO20022PayloadBytes > 0 && len([]byte(xml)) > policy.MaxISO20022PayloadBytes {
 		return nil, newServiceError(http.StatusRequestEntityTooLarge, "payload_too_large", "xml exceeds payment policy max_iso20022_payload_bytes")
 	}
@@ -1316,8 +2092,17 @@ func (s *Service) ISO20022Decrypt(ctx context.Context, req ISO20022DecryptReques
 		return "", err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "iso20022.decrypt"); err != nil {
+		return "", err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, req.KeyID, "iso20022.decrypt", true); err != nil {
+		return "", err
+	}
 	if s.keycore == nil {
 		return "", newServiceError(http.StatusFailedDependency, "keycore_unavailable", "keycore client is not configured")
+	}
+	if err := s.consumeMeter(); err != nil {
+		return "", err
 	}
 	out, err := s.keycore.Decrypt(ctx, req.TenantID, req.KeyID, strings.TrimSpace(req.CiphertextB64), strings.TrimSpace(req.IVB64))
 	if err != nil {
@@ -1345,6 +2130,12 @@ func (s *Service) GenerateLAU(ctx context.Context, req LAUGenerateRequest) (stri
 		return "", err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "iso20022.lau.generate"); err != nil {
+		return "", err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, req.TenantID, req.KeyID, "iso20022.lau.generate", true); err != nil {
+		return "", err
+	}
 	if policy.RequireISO20022LAUContext && strings.TrimSpace(req.Context) == "" {
 		return "", newServiceError(http.StatusForbidden, "policy_violation", "context is required by payment policy for LAU")
 	}
@@ -1356,6 +2147,9 @@ func (s *Service) GenerateLAU(ctx context.Context, req LAUGenerateRequest) (stri
 		return "", err
 	}
 	defer pkgcrypto.Zeroize(key)
+	if err := s.consumeMeter(); err != nil {
+		return "", err
+	}
 	mac := hmac.New(sha256.New, key)
 	_, _ = mac.Write([]byte(strings.TrimSpace(req.Context)))
 	_, _ = mac.Write([]byte{0x1F})
@@ -1369,6 +2163,12 @@ func (s *Service) VerifyLAU(ctx context.Context, req LAUVerifyRequest) (bool, er
 		return false, err
 	}
 	ctx = withPaymentPolicy(ctx, policy)
+	if err := s.enforceOperationHardPolicies(ctx, policy, "iso20022.lau.verify"); err != nil {
+		return false, err
+	}
+	if _, err := s.enforcePaymentKeyUsage(ctx, policy, strings.TrimSpace(req.TenantID), req.KeyID, "iso20022.lau.verify", true); err != nil {
+		return false, err
+	}
 	if policy.RequireISO20022LAUContext && strings.TrimSpace(req.Context) == "" {
 		return false, newServiceError(http.StatusForbidden, "policy_violation", "context is required by payment policy for LAU")
 	}
@@ -1721,6 +2521,30 @@ func parseStringListJSON(raw string) []string {
 	}
 	var out []string
 	_ = json.Unmarshal([]byte(raw), &out)
+	return out
+}
+
+func parseStringMapStringSliceJSON(raw string) map[string][]string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return map[string][]string{}
+	}
+	out := map[string][]string{}
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		return map[string][]string{}
+	}
+	return out
+}
+
+func parseStringMapIntJSON(raw string) map[string]int {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return map[string]int{}
+	}
+	out := map[string]int{}
+	if err := json.Unmarshal([]byte(raw), &out); err != nil {
+		return map[string]int{}
+	}
 	return out
 }
 

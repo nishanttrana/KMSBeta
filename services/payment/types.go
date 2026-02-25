@@ -18,6 +18,7 @@ type PaymentKey struct {
 	TenantID         string    `json:"tenant_id"`
 	KeyID            string    `json:"key_id"`
 	PaymentType      string    `json:"payment_type"`
+	KeyEnvironment   string    `json:"key_environment"`
 	UsageCode        string    `json:"usage_code"`
 	ModeOfUse        string    `json:"mode_of_use"`
 	KeyVersionNum    string    `json:"key_version_num"`
@@ -32,24 +33,43 @@ type PaymentKey struct {
 }
 
 type PaymentPolicy struct {
-	TenantID                  string    `json:"tenant_id"`
-	AllowedTR31Versions       []string  `json:"allowed_tr31_versions"`
-	RequireKBPKForTR31        bool      `json:"require_kbpk_for_tr31"`
-	AllowInlineKeyMaterial    bool      `json:"allow_inline_key_material"`
-	MaxISO20022PayloadBytes   int       `json:"max_iso20022_payload_bytes"`
-	RequireISO20022LAUContext bool      `json:"require_iso20022_lau_context"`
-	StrictPCIDSS40            bool      `json:"strict_pci_dss_4_0"` // legacy compatibility flag (no auto-bundle enforcement)
-	RequireKeyIDForOperations bool      `json:"require_key_id_for_operations"`
-	AllowTCPInterface         bool      `json:"allow_tcp_interface"`
-	RequireJWTOnTCP           bool      `json:"require_jwt_on_tcp"`
-	MaxTCPPayloadBytes        int       `json:"max_tcp_payload_bytes"`
-	AllowedTCPOperations      []string  `json:"allowed_tcp_operations"`
-	AllowedPINBlockFormats    []string  `json:"allowed_pin_block_formats"`
-	DisableISO0PINBlock       bool      `json:"disable_iso0_pin_block"`
-	DecimalizationTable       string    `json:"decimalization_table"`
-	BlockWildcardPAN          bool      `json:"block_wildcard_pan"`
-	UpdatedBy                 string    `json:"updated_by,omitempty"`
-	UpdatedAt                 time.Time `json:"updated_at"`
+	TenantID                        string              `json:"tenant_id"`
+	AllowedTR31Versions             []string            `json:"allowed_tr31_versions"`
+	RequireKBPKForTR31              bool                `json:"require_kbpk_for_tr31"`
+	AllowedKBPKClasses              []string            `json:"allowed_kbpk_classes"`
+	AllowedTR31Exportability        []string            `json:"allowed_tr31_exportability"`
+	TR31ExportabilityMatrix         map[string][]string `json:"tr31_exportability_matrix"`
+	PaymentKeyPurposeMatrix         map[string][]string `json:"payment_key_purpose_matrix"`
+	AllowInlineKeyMaterial          bool                `json:"allow_inline_key_material"`
+	MaxISO20022PayloadBytes         int                 `json:"max_iso20022_payload_bytes"`
+	RequireISO20022LAUContext       bool                `json:"require_iso20022_lau_context"`
+	AllowedISO20022Canonicalization []string            `json:"allowed_iso20022_canonicalization"`
+	AllowedISO20022SignatureSuites  []string            `json:"allowed_iso20022_signature_suites"`
+	StrictPCIDSS40                  bool                `json:"strict_pci_dss_4_0"` // legacy compatibility flag (no auto-bundle enforcement)
+	RequireKeyIDForOperations       bool                `json:"require_key_id_for_operations"`
+	AllowTCPInterface               bool                `json:"allow_tcp_interface"`
+	RequireJWTOnTCP                 bool                `json:"require_jwt_on_tcp"`
+	MaxTCPPayloadBytes              int                 `json:"max_tcp_payload_bytes"`
+	AllowedTCPOperations            []string            `json:"allowed_tcp_operations"`
+	AllowedPINBlockFormats          []string            `json:"allowed_pin_block_formats"`
+	AllowedPINTranslationPairs      []string            `json:"allowed_pin_translation_pairs"`
+	DisableISO0PINBlock             bool                `json:"disable_iso0_pin_block"`
+	AllowedCVVServiceCodes          []string            `json:"allowed_cvv_service_codes"`
+	PVKIMin                         int                 `json:"pvki_min"`
+	PVKIMax                         int                 `json:"pvki_max"`
+	AllowedIssuerProfiles           []string            `json:"allowed_issuer_profiles"`
+	AllowedMACDomains               []string            `json:"allowed_mac_domains"`
+	AllowedMACPaddingProfiles       []string            `json:"allowed_mac_padding_profiles"`
+	DualControlRequiredOperations   []string            `json:"dual_control_required_operations"`
+	HSMRequiredOperations           []string            `json:"hsm_required_operations"`
+	RotationIntervalDaysByClass     map[string]int      `json:"rotation_interval_days_by_class"`
+	RuntimeEnvironment              string              `json:"runtime_environment"`
+	DisallowTestKeysInProd          bool                `json:"disallow_test_keys_in_prod"`
+	DisallowProdKeysInTest          bool                `json:"disallow_prod_keys_in_test"`
+	DecimalizationTable             string              `json:"decimalization_table"`
+	BlockWildcardPAN                bool                `json:"block_wildcard_pan"`
+	UpdatedBy                       string              `json:"updated_by,omitempty"`
+	UpdatedAt                       time.Time           `json:"updated_at"`
 }
 
 type PaymentCryptoDispatchRequest struct {
@@ -85,6 +105,7 @@ type RegisterPaymentKeyRequest struct {
 	TenantID         string   `json:"tenant_id"`
 	KeyID            string   `json:"key_id"`
 	PaymentType      string   `json:"payment_type"`
+	KeyEnvironment   string   `json:"key_environment"`
 	UsageCode        string   `json:"usage_code"`
 	ModeOfUse        string   `json:"mode_of_use"`
 	KeyVersionNum    string   `json:"key_version_num"`
@@ -97,6 +118,7 @@ type RegisterPaymentKeyRequest struct {
 type UpdatePaymentKeyRequest struct {
 	TenantID         string   `json:"tenant_id"`
 	PaymentType      string   `json:"payment_type"`
+	KeyEnvironment   string   `json:"key_environment"`
 	UsageCode        string   `json:"usage_code"`
 	ModeOfUse        string   `json:"mode_of_use"`
 	KeyVersionNum    string   `json:"key_version_num"`
@@ -282,35 +304,43 @@ type CVVVerifyRequest struct {
 }
 
 type MACRequest struct {
-	TenantID  string `json:"tenant_id"`
-	KeyID     string `json:"key_id"`
-	KeyB64    string `json:"key_b64"`
-	DataB64   string `json:"data_b64"`
-	Algorithm int    `json:"algorithm"`
-	Type      string `json:"type"`
+	TenantID       string `json:"tenant_id"`
+	KeyID          string `json:"key_id"`
+	KeyB64         string `json:"key_b64"`
+	DataB64        string `json:"data_b64"`
+	Algorithm      int    `json:"algorithm"`
+	Type           string `json:"type"`
+	Domain         string `json:"domain"`
+	PaddingProfile string `json:"padding_profile"`
 }
 
 type VerifyMACRequest struct {
-	TenantID  string `json:"tenant_id"`
-	KeyID     string `json:"key_id"`
-	KeyB64    string `json:"key_b64"`
-	DataB64   string `json:"data_b64"`
-	MACB64    string `json:"mac_b64"`
-	Algorithm int    `json:"algorithm"`
-	Type      string `json:"type"`
+	TenantID       string `json:"tenant_id"`
+	KeyID          string `json:"key_id"`
+	KeyB64         string `json:"key_b64"`
+	DataB64        string `json:"data_b64"`
+	MACB64         string `json:"mac_b64"`
+	Algorithm      int    `json:"algorithm"`
+	Type           string `json:"type"`
+	Domain         string `json:"domain"`
+	PaddingProfile string `json:"padding_profile"`
 }
 
 type ISO20022SignRequest struct {
-	TenantID string `json:"tenant_id"`
-	KeyID    string `json:"key_id"`
-	XML      string `json:"xml"`
+	TenantID         string `json:"tenant_id"`
+	KeyID            string `json:"key_id"`
+	XML              string `json:"xml"`
+	Canonicalization string `json:"canonicalization"`
+	SignatureSuite   string `json:"signature_suite"`
 }
 
 type ISO20022VerifyRequest struct {
-	TenantID     string `json:"tenant_id"`
-	KeyID        string `json:"key_id"`
-	XML          string `json:"xml"`
-	SignatureB64 string `json:"signature_b64"`
+	TenantID         string `json:"tenant_id"`
+	KeyID            string `json:"key_id"`
+	XML              string `json:"xml"`
+	SignatureB64     string `json:"signature_b64"`
+	Canonicalization string `json:"canonicalization"`
+	SignatureSuite   string `json:"signature_suite"`
 }
 
 type ISO20022EncryptRequest struct {
