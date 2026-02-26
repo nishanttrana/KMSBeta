@@ -97,6 +97,7 @@ func (s *Service) CreateApprovalRequest(ctx context.Context, in CreateApprovalRe
 	if len(approvers) == 0 {
 		return ApprovalRequest{}, errors.New("no approvers configured for policy")
 	}
+	requiredApprovals := effectiveRequiredApprovals(policy, len(approvers))
 
 	req := ApprovalRequest{
 		ID:                newID("apr"),
@@ -110,7 +111,7 @@ func (s *Service) CreateApprovalRequest(ctx context.Context, in CreateApprovalRe
 		RequesterEmail:    in.RequesterEmail,
 		RequesterIP:       in.RequesterIP,
 		Status:            "pending",
-		RequiredApprovals: policy.RequiredApprovals,
+		RequiredApprovals: requiredApprovals,
 		CurrentApprovals:  0,
 		CurrentDenials:    0,
 		ExpiresAt:         time.Now().UTC().Add(time.Duration(expiryMinutes) * time.Minute),
@@ -334,6 +335,7 @@ func (s *Service) CountPendingByApprover(ctx context.Context, tenantID string, a
 func (s *Service) CreateKeyApproval(ctx context.Context, in CreateKeyApprovalInput) (ApprovalRequest, error) {
 	return s.CreateApprovalRequest(ctx, CreateApprovalRequestInput{
 		TenantID:        in.TenantID,
+		PolicyID:        in.PolicyID,
 		Action:          "key." + strings.ToLower(strings.TrimSpace(in.Operation)),
 		TargetType:      "key",
 		TargetID:        in.KeyID,
@@ -635,6 +637,16 @@ func normalizePolicy(p ApprovalPolicy) ApprovalPolicy {
 	if p.TotalApprovers < p.RequiredApprovals {
 		p.TotalApprovers = p.RequiredApprovals
 	}
+	if p.TotalApprovers < 1 {
+		p.TotalApprovers = 1
+	}
+	p.QuorumMode = normalizeQuorumMode(p.QuorumMode)
+	switch p.QuorumMode {
+	case "and":
+		p.RequiredApprovals = p.TotalApprovers
+	case "or":
+		p.RequiredApprovals = 1
+	}
 	if len(p.NotificationChannels) == 0 {
 		p.NotificationChannels = []string{"email"}
 	}
@@ -659,6 +671,10 @@ func validatePolicy(p ApprovalPolicy) error {
 	}
 	if len(p.TriggerActions) == 0 {
 		return errors.New("trigger_actions are required")
+	}
+	mode := normalizeQuorumMode(p.QuorumMode)
+	if mode != "and" && mode != "or" && mode != "threshold" {
+		return errors.New("quorum_mode must be and/or/threshold")
 	}
 	if p.RequiredApprovals <= 0 || p.TotalApprovers <= 0 || p.RequiredApprovals > p.TotalApprovers {
 		return errors.New("invalid required_approvals/total_approvers")
@@ -750,6 +766,25 @@ func resolveApprovers(policy ApprovalPolicy, targetDetails map[string]interface{
 		}
 	}
 	return out
+}
+
+func effectiveRequiredApprovals(policy ApprovalPolicy, approverCount int) int {
+	total := maxInt(1, approverCount)
+	switch normalizeQuorumMode(policy.QuorumMode) {
+	case "and":
+		return total
+	case "or":
+		return 1
+	default:
+		required := policy.RequiredApprovals
+		if required < 1 {
+			required = 1
+		}
+		if required > total {
+			required = total
+		}
+		return required
+	}
 }
 
 func containsIgnoreCase(values []string, needle string) bool {
@@ -847,4 +882,11 @@ func intFromAny(v interface{}) int {
 	default:
 		return 0
 	}
+}
+
+func maxInt(a int, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

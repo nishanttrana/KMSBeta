@@ -38,7 +38,7 @@ func newHandlerForTest(t *testing.T) (*Handler, *Service) {
 	return NewHandler(svc), svc
 }
 
-func TestEncryptApprovalRequiredReturns202(t *testing.T) {
+func TestEncryptApprovalRequiredFailsClosedWithoutGovernanceClient(t *testing.T) {
 	h, svc := newHandlerForTest(t)
 	key, err := svc.CreateKey(context.Background(), CreateKeyRequest{
 		TenantID: "t1", Name: "k1", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "encrypt",
@@ -55,8 +55,11 @@ func TestEncryptApprovalRequiredReturns202(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/encrypt", bytes.NewReader(raw))
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
-	if rr.Code != http.StatusAccepted {
+	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	if !strings.Contains(strings.ToLower(rr.Body.String()), "governance approval is required but governance client is not configured") {
+		t.Fatalf("expected governance fail-closed error, got body=%s", rr.Body.String())
 	}
 }
 

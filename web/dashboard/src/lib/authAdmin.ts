@@ -19,6 +19,33 @@ export type AuthTenant = {
   created_at?: string;
 };
 
+export type GroupRoleBinding = {
+  tenant_id: string;
+  group_id: string;
+  role_name: string;
+  updated_at?: string;
+};
+
+export type TenantActivityBlocker = {
+  code: string;
+  label: string;
+  count: number;
+  details?: string[];
+  remediation?: string;
+};
+
+export type TenantDeleteReadiness = {
+  tenant_id: string;
+  tenant_status: string;
+  checked_at?: string;
+  active_ui_session_count?: number;
+  active_service_link_count?: number;
+  requires_governance_approval?: boolean;
+  can_disable?: boolean;
+  can_delete?: boolean;
+  blockers?: TenantActivityBlocker[];
+};
+
 export type PasswordPolicy = {
   tenant_id: string;
   min_length: number;
@@ -73,6 +100,21 @@ type PolicyResponse = { policy: PasswordPolicy };
 type SecurityPolicyResponse = { policy: SecurityPolicy };
 type TenantsResponse = { items: AuthTenant[] };
 type TenantCreateResponse = { status: string; tenant_id: string };
+type GroupRoleBindingsResponse = { items: GroupRoleBinding[] };
+type GroupRoleBindingResponse = { binding: GroupRoleBinding };
+type TenantReadinessResponse = { readiness: TenantDeleteReadiness };
+type TenantDeleteResponse = {
+  status: string;
+  tenant_id: string;
+  tables_purged?: number;
+  rows_purged?: number;
+  deleted_by_table?: Record<string, number>;
+};
+type TenantDisableResponse = {
+  status: string;
+  tenant_id: string;
+  readiness?: TenantDeleteReadiness;
+};
 
 export async function listAuthUsers(session: AuthSession, tenantID?: string): Promise<AuthUser[]> {
   const targetTenant = String(tenantID || "").trim();
@@ -115,6 +157,65 @@ export async function createAuthTenant(
     })
   });
   return String(out?.tenant_id || "");
+}
+
+export async function deleteAuthTenant(
+  session: AuthSession,
+  tenantID: string,
+  governanceApprovalID: string
+): Promise<TenantDeleteResponse> {
+  const target = String(tenantID || "").trim();
+  const approval = String(governanceApprovalID || "").trim();
+  const query = new URLSearchParams({
+    confirm_tenant_id: target,
+    force: "true",
+    governance_approval_id: approval
+  }).toString();
+  return serviceRequest<TenantDeleteResponse>(session, "auth", `/tenants/${encodeURIComponent(target)}?${query}`, {
+    method: "DELETE",
+    body: JSON.stringify({
+      confirm_tenant_id: target,
+      force: true,
+      governance_approval_id: approval
+    })
+  });
+}
+
+export async function getAuthTenantDeleteReadiness(
+  session: AuthSession,
+  tenantID: string
+): Promise<TenantDeleteReadiness> {
+  const target = String(tenantID || "").trim();
+  const out = await serviceRequest<TenantReadinessResponse>(
+    session,
+    "auth",
+    `/tenants/${encodeURIComponent(target)}/delete-readiness`
+  );
+  return out?.readiness;
+}
+
+export async function disableAuthTenant(
+  session: AuthSession,
+  tenantID: string,
+  governanceApprovalID: string
+): Promise<TenantDeleteReadiness> {
+  const target = String(tenantID || "").trim();
+  const out = await serviceRequest<TenantDisableResponse>(
+    session,
+    "auth",
+    `/tenants/${encodeURIComponent(target)}/disable`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        governance_approval_id: String(governanceApprovalID || "").trim()
+      })
+    }
+  );
+  return out?.readiness || {
+    tenant_id: target,
+    tenant_status: "disabled",
+    can_delete: true
+  };
 }
 
 export async function createAuthUser(
@@ -250,4 +351,49 @@ export async function openAuthCLISession(
       password: String(input.password || "")
     })
   });
+}
+
+export async function listAuthGroupRoleBindings(
+  session: AuthSession,
+  tenantID?: string
+): Promise<GroupRoleBinding[]> {
+  const targetTenant = String(tenantID || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
+  const out = await serviceRequest<GroupRoleBindingsResponse>(session, "auth", `/auth/groups/roles${qs}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function upsertAuthGroupRoleBinding(
+  session: AuthSession,
+  groupID: string,
+  roleName: string,
+  tenantID?: string
+): Promise<GroupRoleBinding> {
+  const targetTenant = String(tenantID || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
+  const out = await serviceRequest<GroupRoleBindingResponse>(
+    session,
+    "auth",
+    `/auth/groups/${encodeURIComponent(String(groupID || "").trim())}/role${qs}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ role_name: String(roleName || "").trim() })
+    }
+  );
+  return out?.binding;
+}
+
+export async function deleteAuthGroupRoleBinding(
+  session: AuthSession,
+  groupID: string,
+  tenantID?: string
+): Promise<void> {
+  const targetTenant = String(tenantID || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
+  await serviceRequest<StatusResponse>(
+    session,
+    "auth",
+    `/auth/groups/${encodeURIComponent(String(groupID || "").trim())}/role${qs}`,
+    { method: "DELETE" }
+  );
 }

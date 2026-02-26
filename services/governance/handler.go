@@ -38,6 +38,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("DELETE /governance/policies/{id}", h.handleDeletePolicy)
 
 	mux.HandleFunc("GET /governance/requests", h.handleListRequests)
+	mux.HandleFunc("POST /governance/requests", h.handleCreateRequest)
 	mux.HandleFunc("GET /governance/requests/{id}", h.handleGetRequest)
 	mux.HandleFunc("POST /governance/requests/{id}/cancel", h.handleCancelRequest)
 	mux.HandleFunc("GET /governance/requests/pending", h.handlePendingRequests)
@@ -256,6 +257,21 @@ func (h *Handler) handleGetRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"request": out.Request, "votes": out.Votes, "request_id": reqID})
+}
+
+func (h *Handler) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var in CreateApprovalRequestInput
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	out, err := h.svc.CreateApprovalRequest(r.Context(), in)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "approval_request_failed", err.Error(), reqID, in.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{"request": out, "request_id": reqID})
 }
 
 func (h *Handler) handleCancelRequest(w http.ResponseWriter, r *http.Request) {

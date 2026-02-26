@@ -7,6 +7,7 @@ import (
 	"crypto/rsa"
 	"encoding/base32"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -366,5 +367,184 @@ func TestHandlerCLIResetRequiresAdmin(t *testing.T) {
 	h.ServeHTTP(allowedRR, allowedReq)
 	if allowedRR.Code != http.StatusOK {
 		t.Fatalf("expected success for admin reset, got %d body=%s", allowedRR.Code, allowedRR.Body.String())
+	}
+}
+
+func TestHandlerDeleteTenantPurgesTenantData(t *testing.T) {
+	h, logic, store, pub := newTestHandler(t)
+	if err := store.CreateTenant(context.Background(), Tenant{ID: "t-delete", Name: "Delete Tenant", Status: "active"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CreateTenantRole(context.Background(), TenantRole{
+		TenantID: "t-delete", RoleName: "tenant-admin", Permissions: []string{"*"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	pwd, _ := HashPassword("TempStrong@2026")
+	if err := store.CreateUser(context.Background(), User{
+		ID: "u-del", TenantID: "t-delete", Username: "to-delete", Email: "to-delete@example.com",
+		Password: pwd, Role: "tenant-admin", Status: "active",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.SQL().ExecContext(context.Background(), `
+INSERT INTO approval_requests (id, tenant_id, action, target_type, target_id, status)
+VALUES ('apr-disable','t-delete','tenant.disable','tenant','t-delete','approved')
+`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.SQL().ExecContext(context.Background(), `
+INSERT INTO approval_requests (id, tenant_id, action, target_type, target_id, status)
+VALUES ('apr-delete','t-delete','tenant.delete','tenant','t-delete','approved')
+`); err != nil {
+		t.Fatal(err)
+	}
+
+	superToken, _, err := logic.IssueJWT("t1", "super-admin", []string{"*"}, "root-admin", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disableBody := []byte(`{"governance_approval_id":"apr-disable"}`)
+	disableReq := httptest.NewRequest(http.MethodPost, "/tenants/t-delete/disable", bytes.NewReader(disableBody))
+	disableReq.Header.Set("Authorization", "Bearer "+superToken)
+	disableRR := httptest.NewRecorder()
+	h.ServeHTTP(disableRR, disableReq)
+	if disableRR.Code != http.StatusOK {
+		t.Fatalf("disable tenant status=%d body=%s", disableRR.Code, disableRR.Body.String())
+	}
+
+	reqBody := []byte(`{"confirm_tenant_id":"t-delete","force":true,"governance_approval_id":"apr-delete"}`)
+	req := httptest.NewRequest(http.MethodDelete, "/tenants/t-delete", bytes.NewReader(reqBody))
+	req.Header.Set("Authorization", "Bearer "+superToken)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("delete tenant status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	if len(pub.subjects) == 0 || pub.subjects[len(pub.subjects)-1] != "audit.auth.tenant_deleted" {
+		t.Fatalf("expected tenant_deleted audit event, subjects=%v", pub.subjects)
+	}
+	_, err = store.GetTenant(context.Background(), "t-delete")
+	if !errors.Is(err, errNotFound) {
+		t.Fatalf("expected tenant deleted, err=%v", err)
+	}
+}
+
+func TestHandlerDisableTenantBlockedByActiveSessions(t *testing.T) {
+	h, logic, store, _ := newTestHandler(t)
+	if err := store.CreateTenant(context.Background(), Tenant{ID: "t-disable", Name: "Disable Tenant", Status: "active"}); err != nil {
+		t.Fatal(err)
+	}
+	hash, _ := HashPassword("Disable@2026")
+	if err := store.CreateUser(context.Background(), User{
+		ID:       "u-disable",
+		TenantID: "t-disable",
+		Username: "disable-user",
+		Email:    "disable-user@example.com",
+		Password: hash,
+		Role:     "tenant-admin",
+		Status:   "active",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CreateSession(context.Background(), Session{
+		ID:        "sess-disable",
+		TenantID:  "t-disable",
+		UserID:    "u-disable",
+		TokenHash: []byte("token-hash"),
+		ExpiresAt: time.Now().Add(30 * time.Minute),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.SQL().ExecContext(context.Background(), `
+INSERT INTO approval_requests (id, tenant_id, action, target_type, target_id, status)
+VALUES ('apr-disable-block','t-disable','tenant.disable','tenant','t-disable','approved')
+`); err != nil {
+		t.Fatal(err)
+	}
+
+	superToken, _, err := logic.IssueJWT("t1", "super-admin", []string{"*"}, "root-admin", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := []byte(`{"governance_approval_id":"apr-disable-block"}`)
+	req := httptest.NewRequest(http.MethodPost, "/tenants/t-disable/disable", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+superToken)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("expected conflict for active sessions, got %d body=%s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestHandlerLoginIncludesGroupRolePermissions(t *testing.T) {
+	h, logic, store, _ := newTestHandler(t)
+
+	if err := store.CreateTenantRole(context.Background(), TenantRole{
+		TenantID: "t1", RoleName: "readonly", Permissions: []string{"auth.user.read"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CreateTenantRole(context.Background(), TenantRole{
+		TenantID: "t1", RoleName: "audit", Permissions: []string{"audit.read"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	hash, _ := HashPassword("ReadOnly@2026")
+	if err := store.CreateUser(context.Background(), User{
+		ID:       "u-readonly",
+		TenantID: "t1",
+		Username: "reader",
+		Email:    "reader@example.com",
+		Password: hash,
+		Role:     "readonly",
+		Status:   "active",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.SQL().ExecContext(context.Background(), `
+INSERT INTO key_access_group_members (tenant_id, group_id, user_id)
+VALUES ('t1','grp-audit','u-readonly')
+`); err != nil {
+		t.Fatal(err)
+	}
+
+	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assignBody := []byte(`{"role_name":"audit"}`)
+	assignReq := httptest.NewRequest(http.MethodPut, "/auth/groups/grp-audit/role", bytes.NewReader(assignBody))
+	assignReq.Header.Set("Authorization", "Bearer "+adminToken)
+	assignRR := httptest.NewRecorder()
+	h.ServeHTTP(assignRR, assignReq)
+	if assignRR.Code != http.StatusOK {
+		t.Fatalf("assign group role status=%d body=%s", assignRR.Code, assignRR.Body.String())
+	}
+
+	loginBody := []byte(`{"tenant_id":"t1","username":"reader","password":"ReadOnly@2026"}`)
+	loginReq := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewReader(loginBody))
+	loginReq.RemoteAddr = "127.0.0.1:12345"
+	loginRR := httptest.NewRecorder()
+	h.ServeHTTP(loginRR, loginReq)
+	if loginRR.Code != http.StatusOK {
+		t.Fatalf("login status=%d body=%s", loginRR.Code, loginRR.Body.String())
+	}
+
+	var out map[string]any
+	_ = json.Unmarshal(loginRR.Body.Bytes(), &out)
+	token, _ := out["access_token"].(string)
+	if token == "" {
+		t.Fatalf("missing token in login response: %v", out)
+	}
+	claims, err := logic.ParseJWT(token)
+	if err != nil {
+		t.Fatalf("parse jwt: %v", err)
+	}
+	if !hasPermission(claims.Permissions, "auth.user.read") {
+		t.Fatalf("expected primary role permission in claims, got %+v", claims.Permissions)
+	}
+	if !hasPermission(claims.Permissions, "audit.read") {
+		t.Fatalf("expected inherited group role permission in claims, got %+v", claims.Permissions)
 	}
 }

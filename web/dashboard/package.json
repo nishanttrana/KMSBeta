@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "build": "npm run generate:rest-catalog && tsc -b && vite build",
+    "preview": "vite preview",
+    "generate:rest-catalog": "node scripts/generate-rest-catalog.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.66.0",

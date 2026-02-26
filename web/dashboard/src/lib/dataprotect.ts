@@ -437,6 +437,21 @@ export async function createTokenVault(session: AuthSession, input: CreateTokenV
   return out.vault;
 }
 
+export async function deleteTokenVault(
+  session: AuthSession,
+  vaultId: string,
+  options?: { governanceApproved?: boolean }
+): Promise<void> {
+  const q = new URLSearchParams();
+  q.set("tenant_id", session.tenantId);
+  if (options?.governanceApproved ?? true) {
+    q.set("governance_approved", "true");
+  }
+  await serviceRequest(session, "dataprotect", `/token-vaults/${encodeURIComponent(String(vaultId || "").trim())}?${q.toString()}`, {
+    method: "DELETE"
+  });
+}
+
 export async function downloadTokenVaultExternalSchema(
   session: AuthSession,
   provider: "postgres" | "mysql" | "mssql" | "oracle" | "mongodb" | string

@@ -2276,7 +2276,7 @@ func (s *Service) ensureApprovalAllowed(ctx context.Context, key Key, tenantID s
 	}
 	payloadHash := approvalPayloadHash(operation, payload)
 	if s.approval == nil {
-		return approvalRequiredError{RequestID: newID("approval")}
+		return errors.New("governance approval is required but governance client is not configured")
 	}
 	approved, requestID, err := s.approval.ensureApproval(ctx, governanceApprovalInput{
 		TenantID:       tenantID,
@@ -2295,7 +2295,7 @@ func (s *Service) ensureApprovalAllowed(ctx context.Context, key Key, tenantID s
 		return nil
 	}
 	if strings.TrimSpace(requestID) == "" {
-		requestID = newID("approval")
+		return errors.New("governance approval request was not created")
 	}
 	return approvalRequiredError{RequestID: requestID}
 }

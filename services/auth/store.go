@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	pkgdb "vecta-kms/pkg/db"
@@ -18,6 +20,14 @@ type Store interface {
 	ListTenants(ctx context.Context) ([]Tenant, error)
 	GetTenant(ctx context.Context, tenantID string) (Tenant, error)
 	UpdateTenant(ctx context.Context, t Tenant) error
+	DeleteTenant(ctx context.Context, tenantID string) (TenantDeleteSummary, error)
+	GetTenantDeleteReadiness(ctx context.Context, tenantID string) (TenantDeleteReadiness, error)
+	DisableTenant(ctx context.Context, tenantID string) (TenantDeleteReadiness, error)
+	IsGovernanceRequestApproved(ctx context.Context, tenantID string, requestID string, action string, targetType string, targetID string) (bool, error)
+	ListGroupRoleBindings(ctx context.Context, tenantID string) ([]GroupRoleBinding, error)
+	UpsertGroupRoleBinding(ctx context.Context, binding GroupRoleBinding) (GroupRoleBinding, error)
+	DeleteGroupRoleBinding(ctx context.Context, tenantID string, groupID string) error
+	ListGroupRolesForUser(ctx context.Context, tenantID string, userID string) ([]string, error)
 
 	CreateTenantRole(ctx context.Context, role TenantRole) error
 	UpdateTenantRole(ctx context.Context, role TenantRole) error
@@ -155,6 +165,20 @@ type SecurityPolicy struct {
 	UpdatedAt          time.Time `json:"updated_at"`
 }
 
+type TenantDeleteSummary struct {
+	TenantID       string           `json:"tenant_id"`
+	TablesPurged   int              `json:"tables_purged"`
+	RowsPurged     int64            `json:"rows_purged"`
+	DeletedByTable map[string]int64 `json:"deleted_by_table,omitempty"`
+}
+
+type GroupRoleBinding struct {
+	TenantID  string    `json:"tenant_id"`
+	GroupID   string    `json:"group_id"`
+	RoleName  string    `json:"role_name"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 func (s *SQLStore) CreateTenant(ctx context.Context, t Tenant) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO auth_tenants (id, name, status, created_at, updated_at)
@@ -203,6 +227,85 @@ UPDATE auth_tenants SET name=$1, status=$2, updated_at=CURRENT_TIMESTAMP WHERE i
 		return errNotFound
 	}
 	return nil
+}
+
+func (s *SQLStore) DeleteTenant(ctx context.Context, tenantID string) (TenantDeleteSummary, error) {
+	summary := TenantDeleteSummary{
+		TenantID:       tenantID,
+		DeletedByTable: map[string]int64{},
+	}
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return summary, errors.New("tenant id is required")
+	}
+
+	tx, err := s.db.SQL().BeginTx(ctx, nil)
+	if err != nil {
+		return summary, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	var exists string
+	if err := tx.QueryRowContext(ctx, `SELECT id FROM auth_tenants WHERE id=$1`, tenantID).Scan(&exists); errors.Is(err, sql.ErrNoRows) {
+		return summary, errNotFound
+	} else if err != nil {
+		return summary, err
+	}
+
+	tables, err := discoverTenantTables(ctx, tx)
+	if err != nil {
+		return summary, err
+	}
+	pending := append([]string(nil), tables...)
+	for attempts := 0; attempts < len(tables); attempts++ {
+		if len(pending) == 0 {
+			break
+		}
+		progress := false
+		next := make([]string, 0, len(pending))
+		for _, table := range pending {
+			stmt := buildTenantDeleteStatement(table)
+			res, execErr := tx.ExecContext(ctx, stmt, tenantID)
+			if execErr != nil {
+				if isForeignKeyDeleteError(execErr) {
+					next = append(next, table)
+					continue
+				}
+				return summary, execErr
+			}
+			n, _ := res.RowsAffected()
+			summary.RowsPurged += n
+			if n > 0 {
+				summary.DeletedByTable[table] += n
+			}
+			summary.TablesPurged++
+			progress = true
+		}
+		if len(next) == 0 {
+			pending = next
+			break
+		}
+		if !progress {
+			return summary, fmt.Errorf("tenant purge blocked by relational constraints for tables: %s", strings.Join(next, ", "))
+		}
+		pending = next
+	}
+
+	res, err := tx.ExecContext(ctx, `DELETE FROM auth_tenants WHERE id=$1`, tenantID)
+	if err != nil {
+		return summary, err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return summary, errNotFound
+	}
+	summary.RowsPurged += n
+	summary.DeletedByTable["auth_tenants"] += n
+
+	if err := tx.Commit(); err != nil {
+		return summary, err
+	}
+	return summary, nil
 }
 
 func (s *SQLStore) CreateTenantRole(ctx context.Context, role TenantRole) error {
@@ -267,6 +370,108 @@ WHERE tenant_id=$1 AND role_name=$2
 		return nil, err
 	}
 	return perms, nil
+}
+
+func (s *SQLStore) ListGroupRoleBindings(ctx context.Context, tenantID string) ([]GroupRoleBinding, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, group_id, role_name, updated_at
+FROM auth_group_role_bindings
+WHERE tenant_id=$1
+ORDER BY group_id
+`, tenantID)
+	if err != nil {
+		if isGroupRoleSchemaMissing(err) {
+			return []GroupRoleBinding{}, nil
+		}
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]GroupRoleBinding, 0)
+	for rows.Next() {
+		var item GroupRoleBinding
+		if scanErr := rows.Scan(&item.TenantID, &item.GroupID, &item.RoleName, &item.UpdatedAt); scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) UpsertGroupRoleBinding(ctx context.Context, binding GroupRoleBinding) (GroupRoleBinding, error) {
+	if strings.TrimSpace(binding.TenantID) == "" || strings.TrimSpace(binding.GroupID) == "" || strings.TrimSpace(binding.RoleName) == "" {
+		return GroupRoleBinding{}, errors.New("tenant_id, group_id and role_name are required")
+	}
+	if _, err := s.GetRolePermissions(ctx, binding.TenantID, binding.RoleName); err != nil {
+		if errors.Is(err, errNotFound) {
+			return GroupRoleBinding{}, fmt.Errorf("role %s is not configured", strings.TrimSpace(binding.RoleName))
+		}
+		return GroupRoleBinding{}, err
+	}
+	var out GroupRoleBinding
+	err := s.db.SQL().QueryRowContext(ctx, `
+INSERT INTO auth_group_role_bindings (tenant_id, group_id, role_name, created_at, updated_at)
+VALUES ($1,$2,$3,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id, group_id) DO UPDATE SET
+    role_name=EXCLUDED.role_name,
+    updated_at=CURRENT_TIMESTAMP
+RETURNING tenant_id, group_id, role_name, updated_at
+`, strings.TrimSpace(binding.TenantID), strings.TrimSpace(binding.GroupID), strings.TrimSpace(binding.RoleName)).
+		Scan(&out.TenantID, &out.GroupID, &out.RoleName, &out.UpdatedAt)
+	if err != nil {
+		if isGroupRoleSchemaMissing(err) {
+			return GroupRoleBinding{}, errors.New("group role schema is not initialized")
+		}
+		return GroupRoleBinding{}, err
+	}
+	return out, nil
+}
+
+func (s *SQLStore) DeleteGroupRoleBinding(ctx context.Context, tenantID string, groupID string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM auth_group_role_bindings
+WHERE tenant_id=$1 AND group_id=$2
+`, tenantID, groupID)
+	if err != nil {
+		if isGroupRoleSchemaMissing(err) {
+			return errNotFound
+		}
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) ListGroupRolesForUser(ctx context.Context, tenantID string, userID string) ([]string, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT DISTINCT gr.role_name
+FROM auth_group_role_bindings gr
+JOIN key_access_group_members gm
+  ON gm.tenant_id = gr.tenant_id AND gm.group_id = gr.group_id
+WHERE gr.tenant_id=$1 AND gm.user_id=$2
+ORDER BY gr.role_name
+`, tenantID, userID)
+	if err != nil {
+		if isGroupRoleSchemaMissing(err) || isGroupMembershipSchemaMissing(err) {
+			return []string{}, nil
+		}
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]string, 0, 4)
+	for rows.Next() {
+		var role string
+		if scanErr := rows.Scan(&role); scanErr != nil {
+			return nil, scanErr
+		}
+		role = strings.TrimSpace(role)
+		if role != "" {
+			out = append(out, role)
+		}
+	}
+	return out, rows.Err()
 }
 
 func (s *SQLStore) CreateUser(ctx context.Context, u User) error {
@@ -741,6 +946,131 @@ ON CONFLICT (tenant_id) DO UPDATE SET
 		return SecurityPolicy{}, err
 	}
 	return s.GetSecurityPolicy(ctx, policy.TenantID)
+}
+
+func discoverTenantTables(ctx context.Context, tx *sql.Tx) ([]string, error) {
+	rows, err := tx.QueryContext(ctx, `
+SELECT table_schema, table_name
+FROM information_schema.columns
+WHERE column_name='tenant_id'
+  AND table_schema NOT IN ('pg_catalog','information_schema')
+`)
+	if err == nil {
+		defer rows.Close() //nolint:errcheck
+		out := make([]string, 0, 64)
+		seen := map[string]struct{}{}
+		for rows.Next() {
+			var schema string
+			var table string
+			if scanErr := rows.Scan(&schema, &table); scanErr != nil {
+				return nil, scanErr
+			}
+			name := fmt.Sprintf("%s.%s", schema, table)
+			if _, ok := seen[name]; ok {
+				continue
+			}
+			seen[name] = struct{}{}
+			out = append(out, name)
+		}
+		if rowsErr := rows.Err(); rowsErr != nil {
+			return nil, rowsErr
+		}
+		sort.Strings(out)
+		return out, nil
+	}
+
+	// SQLite fallback.
+	sqliteRows, sqliteErr := tx.QueryContext(ctx, `
+SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'
+`)
+	if sqliteErr != nil {
+		return nil, err
+	}
+	defer sqliteRows.Close() //nolint:errcheck
+	out := make([]string, 0, 64)
+	for sqliteRows.Next() {
+		var table string
+		if scanErr := sqliteRows.Scan(&table); scanErr != nil {
+			return nil, scanErr
+		}
+		if strings.TrimSpace(table) == "" {
+			continue
+		}
+		hasTenant, hasErr := sqliteTableHasTenantID(ctx, tx, table)
+		if hasErr != nil {
+			return nil, hasErr
+		}
+		if hasTenant {
+			out = append(out, table)
+		}
+	}
+	if rowsErr := sqliteRows.Err(); rowsErr != nil {
+		return nil, rowsErr
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+func sqliteTableHasTenantID(ctx context.Context, tx *sql.Tx, table string) (bool, error) {
+	query := fmt.Sprintf(`PRAGMA table_info("%s")`, sqlQuoteIdentifier(table))
+	rows, err := tx.QueryContext(ctx, query)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close() //nolint:errcheck
+	for rows.Next() {
+		var cid int
+		var name string
+		var dataType string
+		var notNull int
+		var defaultVal sql.NullString
+		var pk int
+		if scanErr := rows.Scan(&cid, &name, &dataType, &notNull, &defaultVal, &pk); scanErr != nil {
+			return false, scanErr
+		}
+		if strings.EqualFold(strings.TrimSpace(name), "tenant_id") {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
+}
+
+func buildTenantDeleteStatement(table string) string {
+	parts := strings.SplitN(strings.TrimSpace(table), ".", 2)
+	if len(parts) == 2 {
+		return fmt.Sprintf(`DELETE FROM "%s"."%s" WHERE tenant_id=$1`, sqlQuoteIdentifier(parts[0]), sqlQuoteIdentifier(parts[1]))
+	}
+	return fmt.Sprintf(`DELETE FROM "%s" WHERE tenant_id=$1`, sqlQuoteIdentifier(parts[0]))
+}
+
+func sqlQuoteIdentifier(value string) string {
+	return strings.ReplaceAll(strings.TrimSpace(value), `"`, `""`)
+}
+
+func isForeignKeyDeleteError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "foreign key") || strings.Contains(msg, "constraint failed")
+}
+
+func isGroupRoleSchemaMissing(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "auth_group_role_bindings") &&
+		(strings.Contains(msg, "no such table") || strings.Contains(msg, "does not exist"))
+}
+
+func isGroupMembershipSchemaMissing(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "key_access_group_members") &&
+		(strings.Contains(msg, "no such table") || strings.Contains(msg, "does not exist"))
 }
 
 func nullableString(v string) interface{} {

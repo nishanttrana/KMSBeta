@@ -268,6 +268,9 @@ func (s *Service) ensureAccessPolicyApproval(ctx context.Context, tenantID strin
 		return err
 	}
 	if !approved {
+		if strings.TrimSpace(requestID) == "" {
+			return errors.New("governance approval request was not created")
+		}
 		return approvalRequiredError{RequestID: requestID}
 	}
 	return nil

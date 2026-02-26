@@ -55,13 +55,13 @@ func (s *SQLStore) CreatePolicy(ctx context.Context, p ApprovalPolicy) error {
 	channels, _ := json.Marshal(p.NotificationChannels)
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO approval_policies (
-    id, tenant_id, name, description, scope, trigger_actions, required_approvals, total_approvers,
+    id, tenant_id, name, description, scope, trigger_actions, quorum_mode, required_approvals, total_approvers,
     approver_roles, approver_users, timeout_hours, escalation_hours, escalation_to, retention_days,
     notification_channels, status, created_at
 ) VALUES (
-    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,CURRENT_TIMESTAMP
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,CURRENT_TIMESTAMP
 )
-`, p.ID, p.TenantID, p.Name, nullable(p.Description), p.Scope, triggerActions, p.RequiredApprovals, p.TotalApprovers,
+`, p.ID, p.TenantID, p.Name, nullable(p.Description), p.Scope, triggerActions, p.QuorumMode, p.RequiredApprovals, p.TotalApprovers,
 		approverRoles, nullableJSON(approverUsers), p.TimeoutHours, nullableInt(p.EscalationHours), nullableJSON(escalationTo),
 		p.RetentionDays, channels, p.Status)
 	return err
@@ -75,11 +75,11 @@ func (s *SQLStore) UpdatePolicy(ctx context.Context, p ApprovalPolicy) error {
 	channels, _ := json.Marshal(p.NotificationChannels)
 	res, err := s.db.SQL().ExecContext(ctx, `
 UPDATE approval_policies
-SET name=$1, description=$2, scope=$3, trigger_actions=$4, required_approvals=$5, total_approvers=$6,
-    approver_roles=$7, approver_users=$8, timeout_hours=$9, escalation_hours=$10, escalation_to=$11,
-    retention_days=$12, notification_channels=$13, status=$14
-WHERE tenant_id=$15 AND id=$16
-`, p.Name, nullable(p.Description), p.Scope, triggerActions, p.RequiredApprovals, p.TotalApprovers,
+SET name=$1, description=$2, scope=$3, trigger_actions=$4, quorum_mode=$5, required_approvals=$6, total_approvers=$7,
+    approver_roles=$8, approver_users=$9, timeout_hours=$10, escalation_hours=$11, escalation_to=$12,
+    retention_days=$13, notification_channels=$14, status=$15
+WHERE tenant_id=$16 AND id=$17
+`, p.Name, nullable(p.Description), p.Scope, triggerActions, p.QuorumMode, p.RequiredApprovals, p.TotalApprovers,
 		approverRoles, nullableJSON(approverUsers), p.TimeoutHours, nullableInt(p.EscalationHours), nullableJSON(escalationTo),
 		p.RetentionDays, channels, p.Status, p.TenantID, p.ID)
 	if err != nil {
@@ -105,6 +105,7 @@ func (s *SQLStore) DeletePolicy(ctx context.Context, tenantID string, policyID s
 func (s *SQLStore) GetPolicy(ctx context.Context, tenantID string, policyID string) (ApprovalPolicy, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
 SELECT id, tenant_id, name, COALESCE(description,''), scope, trigger_actions, required_approvals, total_approvers,
+       COALESCE(quorum_mode,'threshold'),
        approver_roles, COALESCE(approver_users,'[]'), timeout_hours, COALESCE(escalation_hours,0), COALESCE(escalation_to,'[]'),
        retention_days, notification_channels, status, created_at
 FROM approval_policies
@@ -120,6 +121,7 @@ WHERE tenant_id=$1 AND id=$2
 func (s *SQLStore) ListPolicies(ctx context.Context, tenantID string, scope string, status string) ([]ApprovalPolicy, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT id, tenant_id, name, COALESCE(description,''), scope, trigger_actions, required_approvals, total_approvers,
+       COALESCE(quorum_mode,'threshold'),
        approver_roles, COALESCE(approver_users,'[]'), timeout_hours, COALESCE(escalation_hours,0), COALESCE(escalation_to,'[]'),
        retention_days, notification_channels, status, created_at
 FROM approval_policies
@@ -151,10 +153,10 @@ func (s *SQLStore) FindPolicyForAction(ctx context.Context, tenantID string, pol
 	if err != nil {
 		return ApprovalPolicy{}, err
 	}
-	act := strings.ToLower(strings.TrimSpace(action))
+	act := normalizeAction(action)
 	for _, p := range policies {
 		for _, t := range p.TriggerActions {
-			if strings.EqualFold(strings.TrimSpace(t), act) {
+			if actionMatches(t, act) {
 				return p, nil
 			}
 		}
@@ -390,16 +392,53 @@ UPDATE approval_tokens SET used=true WHERE request_id=$1 AND token_hash=$2
 		} else {
 			nextDenials++
 		}
+		totalApprovers := 0
+		if err := tx.QueryRowContext(ctx, `
+SELECT COUNT(DISTINCT approver_email)
+FROM approval_tokens
+WHERE request_id=$1 AND action='approve'
+`, req.ID).Scan(&totalApprovers); err != nil {
+			return err
+		}
+		if totalApprovers < 1 {
+			totalApprovers = policy.TotalApprovers
+		}
+		if totalApprovers < 1 {
+			totalApprovers = 1
+		}
+		requiredApprovals := cur.RequiredApprovals
+		if requiredApprovals < 1 {
+			requiredApprovals = 1
+		}
+		if requiredApprovals > totalApprovers {
+			requiredApprovals = totalApprovers
+		}
+
 		nextStatus := "pending"
-		if nextApprovals >= cur.RequiredApprovals {
-			nextStatus = "approved"
-		} else {
-			denyThreshold := policy.TotalApprovers - cur.RequiredApprovals + 1
-			if denyThreshold < 1 {
-				denyThreshold = 1
-			}
-			if nextDenials >= denyThreshold {
+		switch normalizeQuorumMode(policy.QuorumMode) {
+		case "and":
+			if nextDenials > 0 {
 				nextStatus = "denied"
+			} else if nextApprovals >= totalApprovers {
+				nextStatus = "approved"
+			}
+		case "or":
+			if nextApprovals >= 1 {
+				nextStatus = "approved"
+			} else if nextDenials >= totalApprovers {
+				nextStatus = "denied"
+			}
+		default:
+			if nextApprovals >= requiredApprovals {
+				nextStatus = "approved"
+			} else {
+				denyThreshold := totalApprovers - requiredApprovals + 1
+				if denyThreshold < 1 {
+					denyThreshold = 1
+				}
+				if nextDenials >= denyThreshold {
+					nextStatus = "denied"
+				}
 			}
 		}
 
@@ -659,7 +698,7 @@ func scanPolicy(scanner interface {
 	var channelsRaw []byte
 	var createdRaw interface{}
 	err := scanner.Scan(
-		&p.ID, &p.TenantID, &p.Name, &p.Description, &p.Scope, &triggerRaw, &p.RequiredApprovals, &p.TotalApprovers,
+		&p.ID, &p.TenantID, &p.Name, &p.Description, &p.Scope, &triggerRaw, &p.RequiredApprovals, &p.TotalApprovers, &p.QuorumMode,
 		&rolesRaw, &usersRaw, &p.TimeoutHours, &p.EscalationHours, &escalationRaw, &p.RetentionDays, &channelsRaw, &p.Status, &createdRaw,
 	)
 	if err != nil {
@@ -729,6 +768,40 @@ func scanToken(scanner interface {
 	t.ExpiresAt = parseTimeValue(expiresRaw)
 	t.CreatedAt = parseTimeValue(createdRaw)
 	return t, nil
+}
+
+func normalizeAction(raw string) string {
+	return strings.ReplaceAll(strings.ToLower(strings.TrimSpace(raw)), "_", "-")
+}
+
+func actionMatches(pattern string, action string) bool {
+	p := normalizeAction(pattern)
+	a := normalizeAction(action)
+	if p == "" || a == "" {
+		return false
+	}
+	if p == "*" {
+		return true
+	}
+	if strings.HasSuffix(p, ".*") {
+		prefix := strings.TrimSuffix(p, "*")
+		return strings.HasPrefix(a, prefix)
+	}
+	return p == a
+}
+
+func normalizeQuorumMode(raw string) string {
+	mode := strings.ToLower(strings.TrimSpace(raw))
+	switch mode {
+	case "and", "all":
+		return "and"
+	case "or", "any":
+		return "or"
+	case "", "threshold", "m-of-n", "mofn":
+		return "threshold"
+	default:
+		return "threshold"
+	}
 }
 
 func nullable(v string) interface{} {

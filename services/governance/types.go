@@ -9,6 +9,7 @@ type ApprovalPolicy struct {
 	Description          string    `json:"description"`
 	Scope                string    `json:"scope"`
 	TriggerActions       []string  `json:"trigger_actions"`
+	QuorumMode           string    `json:"quorum_mode"`
 	RequiredApprovals    int       `json:"required_approvals"`
 	TotalApprovers       int       `json:"total_approvers"`
 	ApproverRoles        []string  `json:"approver_roles"`
@@ -106,6 +107,7 @@ type ApprovalRequestDetails struct {
 
 type CreateKeyApprovalInput struct {
 	TenantID        string                 `json:"tenant_id"`
+	PolicyID        string                 `json:"policy_id"`
 	KeyID           string                 `json:"key_id"`
 	Operation       string                 `json:"operation"`
 	PayloadHash     string                 `json:"payload_hash"`

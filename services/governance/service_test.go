@@ -60,6 +60,7 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 			description TEXT,
 			scope TEXT NOT NULL,
 			trigger_actions TEXT NOT NULL,
+			quorum_mode TEXT NOT NULL DEFAULT 'threshold',
 			required_approvals INTEGER NOT NULL,
 			total_approvers INTEGER NOT NULL,
 			approver_roles TEXT NOT NULL,
@@ -118,7 +119,7 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 			expires_at TEXT NOT NULL,
 			created_at TEXT DEFAULT CURRENT_TIMESTAMP
 		);`,
-			`CREATE TABLE governance_settings (
+		`CREATE TABLE governance_settings (
 				tenant_id TEXT PRIMARY KEY,
 				approval_expiry_minutes INTEGER NOT NULL DEFAULT 60,
 				expiry_check_interval_seconds INTEGER NOT NULL DEFAULT 60,
@@ -305,6 +306,137 @@ func TestMultiQuorumApproval(t *testing.T) {
 	}
 	if callback.count != 1 {
 		t.Fatalf("expected callback executed once, got %d", callback.count)
+	}
+}
+
+func TestQuorumModeORApprovesOnFirstVote(t *testing.T) {
+	store := newGovernanceStore(t)
+	mailer := &mockEmailSender{}
+	svc := NewService(store, nil, mailer, &mockCallbackExecutor{}, "http://localhost:8050")
+	_, err := svc.CreatePolicy(context.Background(), ApprovalPolicy{
+		TenantID:          "tor",
+		Name:              "or-policy",
+		Scope:             "key_operation",
+		TriggerActions:    []string{"key.encrypt"},
+		QuorumMode:        "or",
+		RequiredApprovals: 2,
+		TotalApprovers:    2,
+		ApproverRoles:     []string{"admin"},
+		ApproverUsers:     []string{"or1@example.com", "or2@example.com"},
+		Status:            "active",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, err := svc.CreateApprovalRequest(context.Background(), CreateApprovalRequestInput{
+		TenantID:       "tor",
+		Action:         "key.encrypt",
+		TargetType:     "key",
+		TargetID:       "key-or",
+		RequesterID:    "u-or",
+		RequesterEmail: "u-or@example.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if req.RequiredApprovals != 1 {
+		t.Fatalf("expected OR mode to require 1 approval, got %d", req.RequiredApprovals)
+	}
+	token := extractToken(t, mailer.msgs[0].Body, "approve")
+	out, err := svc.Vote(context.Background(), VoteInput{
+		TenantID:  "tor",
+		RequestID: req.ID,
+		Token:     token,
+		Vote:      "approved",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Status != "approved" {
+		t.Fatalf("expected approved after first vote in OR mode, got %s", out.Status)
+	}
+}
+
+func TestQuorumModeANDDeniesOnAnyDenial(t *testing.T) {
+	store := newGovernanceStore(t)
+	mailer := &mockEmailSender{}
+	svc := NewService(store, nil, mailer, &mockCallbackExecutor{}, "http://localhost:8050")
+	_, err := svc.CreatePolicy(context.Background(), ApprovalPolicy{
+		TenantID:          "tand",
+		Name:              "and-policy",
+		Scope:             "key_operation",
+		TriggerActions:    []string{"key.encrypt"},
+		QuorumMode:        "and",
+		RequiredApprovals: 1,
+		TotalApprovers:    2,
+		ApproverRoles:     []string{"admin"},
+		ApproverUsers:     []string{"and1@example.com", "and2@example.com"},
+		Status:            "active",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, err := svc.CreateApprovalRequest(context.Background(), CreateApprovalRequestInput{
+		TenantID:       "tand",
+		Action:         "key.encrypt",
+		TargetType:     "key",
+		TargetID:       "key-and",
+		RequesterID:    "u-and",
+		RequesterEmail: "u-and@example.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if req.RequiredApprovals != 2 {
+		t.Fatalf("expected AND mode to require all approvals, got %d", req.RequiredApprovals)
+	}
+	token := extractToken(t, mailer.msgs[0].Body, "deny")
+	out, err := svc.Vote(context.Background(), VoteInput{
+		TenantID:  "tand",
+		RequestID: req.ID,
+		Token:     token,
+		Vote:      "denied",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Status != "denied" {
+		t.Fatalf("expected denied after first denial in AND mode, got %s", out.Status)
+	}
+}
+
+func TestActionMatchSupportsHyphenUnderscore(t *testing.T) {
+	store := newGovernanceStore(t)
+	mailer := &mockEmailSender{}
+	svc := NewService(store, nil, mailer, &mockCallbackExecutor{}, "http://localhost:8050")
+	_, err := svc.CreatePolicy(context.Background(), ApprovalPolicy{
+		TenantID:          "tact",
+		Name:              "action-alias-policy",
+		Scope:             "key_operation",
+		TriggerActions:    []string{"key.kem_encapsulate"},
+		QuorumMode:        "or",
+		RequiredApprovals: 1,
+		TotalApprovers:    1,
+		ApproverRoles:     []string{"admin"},
+		ApproverUsers:     []string{"ops@example.com"},
+		Status:            "active",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, err := svc.CreateApprovalRequest(context.Background(), CreateApprovalRequestInput{
+		TenantID:       "tact",
+		Action:         "key.kem-encapsulate",
+		TargetType:     "key",
+		TargetID:       "key-kem",
+		RequesterID:    "u-kem",
+		RequesterEmail: "u-kem@example.com",
+	})
+	if err != nil {
+		t.Fatalf("expected action alias to match, got err=%v", err)
+	}
+	if strings.TrimSpace(req.ID) == "" {
+		t.Fatal("expected approval request id")
 	}
 }
 

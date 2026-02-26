@@ -25,6 +25,7 @@ export type GovernancePolicy = {
   description?: string;
   scope: string;
   trigger_actions: string[];
+  quorum_mode?: "and" | "or" | string;
   required_approvals: number;
   total_approvers: number;
   approver_roles?: string[];
@@ -182,6 +183,42 @@ export async function listGovernanceRequests(
   return Array.isArray(out.items) ? out.items : [];
 }
 
+export async function createGovernanceRequest(
+  session: AuthSession,
+  input: {
+    policy_id?: string;
+    action: string;
+    target_type: string;
+    target_id: string;
+    target_details?: Record<string, unknown>;
+    requester_id?: string;
+    requester_email?: string;
+    requester_ip?: string;
+    callback_service?: string;
+    callback_action?: string;
+    callback_payload?: Record<string, unknown>;
+  }
+): Promise<GovernanceRequest> {
+  const out = await serviceRequest<{ request: GovernanceRequest }>(session, "governance", "/governance/requests", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      policy_id: String(input.policy_id || "").trim(),
+      action: String(input.action || "").trim(),
+      target_type: String(input.target_type || "").trim(),
+      target_id: String(input.target_id || "").trim(),
+      target_details: input.target_details || {},
+      requester_id: String(input.requester_id || session.username || "").trim(),
+      requester_email: String(input.requester_email || "").trim(),
+      requester_ip: String(input.requester_ip || "").trim(),
+      callback_service: String(input.callback_service || "").trim(),
+      callback_action: String(input.callback_action || "").trim(),
+      callback_payload: input.callback_payload || {}
+    })
+  });
+  return out.request;
+}
+
 export async function getGovernanceRequest(
   session: AuthSession,
   requestID: string
@@ -228,4 +265,3 @@ export async function voteGovernanceRequest(
   );
   return out.request;
 }
-

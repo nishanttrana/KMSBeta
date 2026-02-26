@@ -865,6 +865,15 @@ func (h *Handler) handleSetKeyAccessPolicy(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.svc.ReplaceKeyAccessPolicy(r.Context(), tenantID, r.PathValue("id"), req.Grants, updatedBy); err != nil {
+		var approval approvalRequiredError
+		if errors.As(err, &approval) {
+			writeJSON(w, http.StatusAccepted, map[string]any{
+				"status":              "pending_approval",
+				"approval_request_id": approval.RequestID,
+				"request_id":          reqID,
+			})
+			return
+		}
 		code := http.StatusBadRequest
 		if errors.Is(err, errStoreNotFound) {
 			code = http.StatusNotFound

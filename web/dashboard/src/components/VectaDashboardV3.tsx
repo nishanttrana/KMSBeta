@@ -133,6 +133,7 @@ import {
   completeFieldEncryptionWrapperRegistration,
   createMaskingPolicy,
   createRedactionPolicy,
+  deleteTokenVault,
   downloadTokenVaultExternalSchema,
   downloadFieldEncryptionWrapperSDK,
   getDataProtectionPolicy,
@@ -292,19 +293,26 @@ import { serviceRequest } from "../lib/serviceApi";
 import {
   createAuthTenant,
   createAuthUser,
+  deleteAuthGroupRoleBinding,
+  disableAuthTenant,
+  deleteAuthTenant,
   getAuthCLIStatus,
+  getAuthTenantDeleteReadiness,
   getAuthPasswordPolicy,
   getAuthSecurityPolicy,
+  listAuthGroupRoleBindings,
   listAuthTenants,
   listAuthUsers,
   openAuthCLISession,
   resetAuthUserPassword,
+  upsertAuthGroupRoleBinding,
   updateAuthPasswordPolicy,
   updateAuthSecurityPolicy,
   updateAuthUserRole,
   updateAuthUserStatus
 } from "../lib/authAdmin";
 import {
+  createGovernanceRequest,
   createGovernancePolicy,
   getGovernanceRequest,
   getGovernanceSettings,
@@ -317,6 +325,7 @@ import {
 } from "../lib/governance";
 import type { FeatureKey } from "../config/tabs";
 import type { LiveEvent } from "../store/live";
+import { DISCOVERED_REST_API_CATALOG } from "../generated/restApiCatalog.generated";
 
 // 
 // VECTA KMS DASHBOARD v3 - FULLY INTERACTIVE BUILD REFERENCE
@@ -2008,9 +2017,6 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
   const [policyNewExpiresAt,setPolicyNewExpiresAt]=useState("");
   const [policyNewJustification,setPolicyNewJustification]=useState("");
   const [policyNewTicketId,setPolicyNewTicketId]=useState("");
-  const [policyCreateGroupName,setPolicyCreateGroupName]=useState("");
-  const [policyCreateGroupDescription,setPolicyCreateGroupDescription]=useState("");
-  const [policyCreateGroupMembers,setPolicyCreateGroupMembers]=useState<string[]>([]);
   const [formName,setFormName]=useState("");
   const [formAlgorithm,setFormAlgorithm]=useState("AES-256-GCM");
   const [formPurpose,setFormPurpose]=useState("encrypt-decrypt");
@@ -3098,55 +3104,6 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
     )));
   };
 
-  const createPolicyGroup=async()=>{
-    if(!session){
-      return;
-    }
-    const name=String(policyCreateGroupName||"").trim();
-    if(!name){
-      onToast?.("Enter group name.");
-      return;
-    }
-    try{
-      const group=await createKeyAccessGroup(session,{
-        name,
-        description:String(policyCreateGroupDescription||"").trim(),
-        created_by:session.username||""
-      });
-      if(Array.isArray(policyCreateGroupMembers)&&policyCreateGroupMembers.length){
-        await setKeyAccessGroupMembers(session,group.id,policyCreateGroupMembers);
-      }
-      const groups=await listKeyAccessGroups(session);
-      setPolicyGroups(Array.isArray(groups)?groups:[]);
-      setPolicyCreateGroupName("");
-      setPolicyCreateGroupDescription("");
-      setPolicyCreateGroupMembers([]);
-      onToast?.(`Group created: ${group.name}`);
-    }catch(error){
-      onToast?.(`Create group failed: ${errMsg(error)}`);
-    }
-  };
-
-  const deletePolicyGroup=async(groupId:string)=>{
-    if(!session||!groupId){
-      return;
-    }
-    const confirmed=window.confirm("Delete this key access group?");
-    if(!confirmed){
-      return;
-    }
-    try{
-      await deleteKeyAccessGroup(session,groupId);
-      setPolicyGroups((prev)=>(Array.isArray(prev)?prev:[]).filter((group)=>String(group?.id||"")!==String(groupId)));
-      setPolicyGrants((prev)=>(Array.isArray(prev)?prev:[]).filter((grant)=>!(
-        String(grant?.subject_type||"")==="group"&&String(grant?.subject_id||"")===String(groupId)
-      )));
-      onToast?.("Group deleted.");
-    }catch(error){
-      onToast?.(`Delete group failed: ${errMsg(error)}`);
-    }
-  };
-
   const saveKeyPolicy=async()=>{
     if(!session||!selectedKey?.id){
       return;
@@ -4148,46 +4105,6 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
           </div>
         </>}
       </FG>
-      <FG label="Access Groups" hint="Create key access groups and attach users.">
-        <Row2>
-          <Inp placeholder="Group name" value={policyCreateGroupName} onChange={(e)=>setPolicyCreateGroupName(e.target.value)}/>
-          <Inp placeholder="Description (optional)" value={policyCreateGroupDescription} onChange={(e)=>setPolicyCreateGroupDescription(e.target.value)}/>
-        </Row2>
-        <div style={{marginTop:8,padding:8,border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
-          <div style={{fontSize:10,color:C.dim,marginBottom:6}}>Initial Group Members</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:6,maxHeight:130,overflow:"auto"}}>
-            {(Array.isArray(policyUsers)?policyUsers:[]).map((user)=>{
-              const userID=String(user?.id||"");
-              const checked=(Array.isArray(policyCreateGroupMembers)?policyCreateGroupMembers:[]).includes(userID);
-              return <Chk
-                key={userID}
-                label={`${user.username} (${user.role})`}
-                checked={checked}
-                onChange={()=>setPolicyCreateGroupMembers((prev)=>{
-                  const items=Array.isArray(prev)?[...prev]:[];
-                  if(items.includes(userID)){
-                    return items.filter((id)=>id!==userID);
-                  }
-                  return [...items,userID];
-                })}
-              />;
-            })}
-          </div>
-        </div>
-        <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
-          <Btn onClick={createPolicyGroup}>Create Group</Btn>
-        </div>
-        <div style={{display:"grid",gap:6,marginTop:8}}>
-          {(Array.isArray(policyGroups)?policyGroups:[]).map((group)=><div key={group.id} style={{display:"grid",gridTemplateColumns:"1fr auto",alignItems:"center",gap:8,padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
-            <div>
-              <div style={{fontSize:10,color:C.text,fontWeight:700}}>{group.name}</div>
-              <div style={{fontSize:9,color:C.muted}}>{`${group.description||"No description"} • members ${Number(group.member_count||0)}`}</div>
-            </div>
-            <Btn danger small onClick={()=>deletePolicyGroup(group.id)}>Delete</Btn>
-          </div>)}
-          {!Array.isArray(policyGroups)||!policyGroups.length?<div style={{fontSize:10,color:C.dim}}>No access groups created.</div>:null}
-        </div>
-      </FG>
       {normalizeKeyState(String(selectedKey?.state||""))==="pre-active"&&<FG label="Activation Policy">
         <Sel value={policyActivationMode} onChange={(e)=>setPolicyActivationMode(e.target.value)}>
           <option value="immediate">Activate immediately</option>
@@ -5033,18 +4950,52 @@ const Crypto=({session,keyCatalog,onToast,fipsMode})=>{
   </div>;
 };
 
+const normalizeRestPathTemplate=(raw:string)=>{
+  const value=String(raw||"");
+  return value.replace(/\{([a-zA-Z0-9_]+)\}/g,(match,param)=>{
+    const key=String(param||"").trim();
+    if(!key){
+      return match;
+    }
+    return `{{${key}}}`;
+  });
+};
+
+const REST_API_CATALOG_FULL=(()=>{
+  const rows:any[]=[];
+  const seen=new Set<string>();
+  const add=(item:any)=>{
+    const service=String(item?.service||"").trim();
+    const method=String(item?.method||"GET").trim().toUpperCase();
+    const pathTemplate=normalizeRestPathTemplate(String(item?.pathTemplate||"/"));
+    if(!service){
+      return;
+    }
+    const key=`${service}|${method}|${pathTemplate}`;
+    if(seen.has(key)){
+      return;
+    }
+    seen.add(key);
+    rows.push({...item,method,pathTemplate});
+  };
+  (Array.isArray(REST_API_CATALOG)?REST_API_CATALOG:[]).forEach(add);
+  (Array.isArray(DISCOVERED_REST_API_CATALOG)?DISCOVERED_REST_API_CATALOG:[]).forEach(add);
+  return rows;
+})();
+
 // 
 // TAB: REST API (authenticated playground)
 // 
 const RestAPI=({session,keyCatalog,onToast})=>{
-  const [selectedEndpointID,setSelectedEndpointID]=useState(String(REST_API_CATALOG[0]?.id||""));
+  const [selectedEndpointID,setSelectedEndpointID]=useState(String(REST_API_CATALOG_FULL[0]?.id||""));
   const [authMode,setAuthMode]=useState("session-jwt");
   const [customJWT,setCustomJWT]=useState("");
   const [tenantParam,setTenantParam]=useState(String(session?.tenantId||""));
-  const [serviceName,setServiceName]=useState(String(REST_API_CATALOG[0]?.service||"keycore"));
-  const [method,setMethod]=useState(String(REST_API_CATALOG[0]?.method||"GET"));
-  const [pathValue,setPathValue]=useState(String(REST_API_CATALOG[0]?.pathTemplate||"/"));
-  const [bodyValue,setBodyValue]=useState(String(REST_API_CATALOG[0]?.bodyTemplate||""));
+  const [serviceName,setServiceName]=useState(String(REST_API_CATALOG_FULL[0]?.service||"keycore"));
+  const [method,setMethod]=useState(String(REST_API_CATALOG_FULL[0]?.method||"GET"));
+  const [pathValue,setPathValue]=useState(String(REST_API_CATALOG_FULL[0]?.pathTemplate||"/"));
+  const [bodyValue,setBodyValue]=useState(String(REST_API_CATALOG_FULL[0]?.bodyTemplate||""));
+  const [endpointSearch,setEndpointSearch]=useState("");
   const [keyID,setKeyID]=useState("");
   const [certID,setCertID]=useState("");
   const [secretID,setSecretID]=useState("");
@@ -5055,14 +5006,38 @@ const RestAPI=({session,keyCatalog,onToast})=>{
   const [responseText,setResponseText]=useState("// Response will appear here...");
   const [requestPreview,setRequestPreview]=useState("// cURL preview will appear here...");
 
+  const filteredEndpoints=useMemo(()=>{
+    const query=String(endpointSearch||"").trim().toLowerCase();
+    if(!query){
+      return REST_API_CATALOG_FULL;
+    }
+    return REST_API_CATALOG_FULL.filter((item:any)=>{
+      const haystack=[
+        String(item?.group||""),
+        String(item?.title||""),
+        String(item?.service||""),
+        String(item?.method||""),
+        String(item?.pathTemplate||""),
+        String(item?.description||"")
+      ].join(" ").toLowerCase();
+      return haystack.includes(query);
+    });
+  },[endpointSearch]);
+
+  useEffect(()=>{
+    if(!filteredEndpoints.some((item:any)=>String(item?.id||"")===String(selectedEndpointID||""))){
+      setSelectedEndpointID(String(filteredEndpoints[0]?.id||REST_API_CATALOG_FULL[0]?.id||""));
+    }
+  },[filteredEndpoints,selectedEndpointID]);
+
   const endpoint=useMemo(
-    ()=>REST_API_CATALOG.find((item)=>String(item.id)===String(selectedEndpointID))||REST_API_CATALOG[0],
-    [selectedEndpointID]
+    ()=>filteredEndpoints.find((item:any)=>String(item?.id||"")===String(selectedEndpointID||""))||filteredEndpoints[0]||REST_API_CATALOG_FULL[0],
+    [selectedEndpointID,filteredEndpoints]
   );
 
   const groupedEndpoints=useMemo(()=>{
     const groups:any={};
-    REST_API_CATALOG.forEach((item)=>{
+    filteredEndpoints.forEach((item:any)=>{
       const g=String(item.group||"Other");
       if(!groups[g]){
         groups[g]=[];
@@ -5070,14 +5045,14 @@ const RestAPI=({session,keyCatalog,onToast})=>{
       groups[g].push(item);
     });
     return Object.entries(groups);
-  },[]);
+  },[filteredEndpoints]);
 
   const keyChoices=useMemo(()=>keyChoicesFromCatalog(keyCatalog),[keyCatalog]);
 
   useEffect(()=>{
     setServiceName(String(endpoint?.service||"keycore"));
     setMethod(String(endpoint?.method||"GET"));
-    setPathValue(String(endpoint?.pathTemplate||"/"));
+    setPathValue(normalizeRestPathTemplate(String(endpoint?.pathTemplate||"/")));
     setBodyValue(String(endpoint?.bodyTemplate||""));
   },[endpoint?.id]);
 
@@ -5125,20 +5100,43 @@ const RestAPI=({session,keyCatalog,onToast})=>{
     return ()=>{cancelled=true;};
   },[session?.token,session?.tenantId]);
 
+  const resolveTemplateValue=(name:string,encode:boolean)=>{
+    const key=String(name||"").trim();
+    let value="";
+    if(key==="tenant_id"){
+      value=String(tenantParam||"");
+    }else if(key==="key_id"){
+      value=String(keyID||"");
+    }else if(key==="cert_id"){
+      value=String(certID||"");
+    }else if(key==="secret_id"){
+      value=String(secretID||"");
+    }else if(key==="id"){
+      value=String(keyID||certID||secretID||"sample");
+    }else if(key.endsWith("_id")){
+      value="sample";
+    }else if(key==="name"){
+      value="default";
+    }else if(key==="protocol"){
+      value="generic";
+    }else if(key==="slave"){
+      value="node-b";
+    }else if(key==="version"||key==="ver"){
+      value="1";
+    }else{
+      value="sample";
+    }
+    return encode?encodeURIComponent(value):value;
+  };
+
   const resolvePathTemplate=(raw:string)=>{
-    return String(raw||"")
-      .replaceAll("{{tenant_id}}",encodeURIComponent(String(tenantParam||"")))
-      .replaceAll("{{key_id}}",encodeURIComponent(String(keyID||"")))
-      .replaceAll("{{cert_id}}",encodeURIComponent(String(certID||"")))
-      .replaceAll("{{secret_id}}",encodeURIComponent(String(secretID||"")));
+    return normalizeRestPathTemplate(String(raw||""))
+      .replace(/\{\{([a-zA-Z0-9_]+)\}\}/g,(_,param)=>resolveTemplateValue(String(param||""),true));
   };
 
   const resolveBodyTemplate=(raw:string)=>{
     return String(raw||"")
-      .replaceAll("{{tenant_id}}",String(tenantParam||""))
-      .replaceAll("{{key_id}}",String(keyID||""))
-      .replaceAll("{{cert_id}}",String(certID||""))
-      .replaceAll("{{secret_id}}",String(secretID||""));
+      .replace(/\{\{([a-zA-Z0-9_]+)\}\}/g,(_,param)=>resolveTemplateValue(String(param||""),false));
   };
 
   const pretty=(value:any)=>{
@@ -5272,12 +5270,21 @@ const RestAPI=({session,keyCatalog,onToast})=>{
         <div style={{fontSize:10,color:C.dim,marginTop:6}}>
           Tenant parameter is explicit and drives both <span style={{color:C.text}}>X-Tenant-ID</span> and template replacement for <span style={{color:C.text}}>{"{{tenant_id}}"}</span>.
         </div>
+        <div style={{fontSize:10,color:C.dim,marginTop:6}}>
+          {`Catalog endpoints available: ${REST_API_CATALOG_FULL.length}`}
+        </div>
         <div style={{fontSize:10,color:C.muted,marginTop:6}}>
           Product label: <span style={{color:C.accent,fontWeight:700}}>REST API</span>.
         </div>
       </Card>
       <Row2>
         <Card style={{minHeight:620}}>
+          <FG label="Search Endpoints">
+            <Inp value={endpointSearch} onChange={(e)=>setEndpointSearch(e.target.value)} placeholder="Search service, method, path or capability..." mono/>
+            <div style={{fontSize:10,color:C.muted,marginTop:6}}>
+              {`${filteredEndpoints.length} matched`}
+            </div>
+          </FG>
           <FG label="Endpoint Catalog">
             <Sel value={selectedEndpointID} onChange={(e)=>setSelectedEndpointID(e.target.value)}>
               {groupedEndpoints.map(([group,items]:any)=><optgroup key={String(group)} label={String(group)}>
@@ -5340,7 +5347,7 @@ const RestAPI=({session,keyCatalog,onToast})=>{
             </FG>
             <FG label="Tenant Parameter (X-Tenant-ID)" required><Inp value={tenantParam} onChange={(e)=>setTenantParam(e.target.value)} mono placeholder="tenant-id"/></FG>
           </Row3>
-          <FG label="Path (supports {{tenant_id}}, {{key_id}}, {{cert_id}}, {{secret_id}})">
+          <FG label="Path (supports {{tenant_id}} and dynamic {{param}} placeholders)">
             <Inp value={pathValue} onChange={(e)=>setPathValue(e.target.value)} mono/>
           </FG>
           <Row3>
@@ -5386,6 +5393,9 @@ const Workbench=({session,keyCatalog,onToast,subView,fipsMode})=>{
   const active=String(subView||"crypto");
   if(active==="restapi"){
     return <RestAPI session={session} keyCatalog={keyCatalog} onToast={onToast}/>;
+  }
+  if(active==="tokenize"){
+    return <Tokenize session={session} keyCatalog={keyCatalog} onToast={onToast}/>;
   }
   if(active==="dataenc"){
     return <DataEncryption session={session} keyCatalog={keyCatalog} onToast={onToast}/>;
@@ -7509,7 +7519,6 @@ const Certs=({session,onToast})=>{
 
 const Tokenize=({session,keyCatalog,onToast})=>{
   const [op,setOp]=useState("Tokenize");
-  const [modal,setModal]=useState(null);
   const [loading,setLoading]=useState(false);
   const [submitting,setSubmitting]=useState(false);
   const [resultText,setResultText]=useState("// Output will appear here...");
@@ -7520,7 +7529,6 @@ const Tokenize=({session,keyCatalog,onToast})=>{
 
   const [vaults,setVaults]=useState<any[]>([]);
   const [tokenMode,setTokenMode]=useState<"vault"|"vaultless">("vault");
-  const [tokenMethod,setTokenMethod]=useState("format_preserving");
   const [tokenVaultId,setTokenVaultId]=useState("");
   const [tokenVaultlessFormat,setTokenVaultlessFormat]=useState("deterministic");
   const [tokenVaultlessType,setTokenVaultlessType]=useState("credit_card");
@@ -7561,13 +7569,6 @@ const Tokenize=({session,keyCatalog,onToast})=>{
   const [envAAD,setEnvAAD]=useState("");
   const [envPlaintext,setEnvPlaintext]=useState("");
   const [envPackage,setEnvPackage]=useState('{"ciphertext":"","iv":"","wrapped_dek":"","wrapped_dek_iv":"","algorithm":"AES-GCM"}');
-
-  const [vaultName,setVaultName]=useState("");
-  const [vaultTokenType,setVaultTokenType]=useState("credit_card");
-  const [vaultFormat,setVaultFormat]=useState("format_preserving");
-  const [vaultCustomFormat,setVaultCustomFormat]=useState("");
-  const [vaultKeyId,setVaultKeyId]=useState(defaultVaultKeyId);
-  const [vaultRegex,setVaultRegex]=useState("");
 
   const setOutput=(v:any)=>setResultText(JSON.stringify(v,null,2));
 
@@ -7624,29 +7625,26 @@ const Tokenize=({session,keyCatalog,onToast})=>{
     if(!fpeKeyId&&fallback)setFPEKeyId(fallback);
     if(!fieldKeyId&&fallback)setFieldKeyId(fallback);
     if(!envKeyId&&fallback)setEnvKeyId(fallback);
-    if(!vaultKeyId&&fallback)setVaultKeyId(fallback);
     if(!tokenVaultlessKeyId&&fallback)setTokenVaultlessKeyId(fallback);
-  },[defaultKeyId,defaultVaultKeyId,fpeKeyId,fieldKeyId,envKeyId,vaultKeyId,tokenVaultlessKeyId]);
+  },[defaultKeyId,defaultVaultKeyId,fpeKeyId,fieldKeyId,envKeyId,tokenVaultlessKeyId]);
 
-  const methodVaults=useMemo(()=>{
-    return (vaults||[]).filter((v)=>{
-      const fmt=String(v?.format||"").toLowerCase().trim();
-      if(tokenMethod==="format_preserving"){
-        return fmt==="format_preserving"||fmt.includes("format");
-      }
-      return fmt===tokenMethod;
-    });
-  },[vaults,tokenMethod]);
+  const vaultSelectOptions=useMemo(()=>{
+    return Array.isArray(vaults)?vaults:[];
+  },[vaults]);
+
+  const selectedTokenVault=useMemo(()=>{
+    return vaultSelectOptions.find((v:any)=>String(v?.id||"")===String(tokenVaultId||""))||null;
+  },[vaultSelectOptions,tokenVaultId]);
 
   useEffect(()=>{
-    if(!methodVaults.length){
+    if(!vaultSelectOptions.length){
       setTokenVaultId("");
       return;
     }
-    if(!methodVaults.some((v)=>String(v.id)===String(tokenVaultId))){
-      setTokenVaultId(String(methodVaults[0]?.id||""));
+    if(!vaultSelectOptions.some((v:any)=>String(v?.id||"")===String(tokenVaultId))){
+      setTokenVaultId(String(vaultSelectOptions[0]?.id||""));
     }
-  },[methodVaults,tokenVaultId]);
+  },[vaultSelectOptions,tokenVaultId]);
 
   const run=async(fn:()=>Promise<void>)=>{
     if(submitting){
@@ -7666,40 +7664,6 @@ const Tokenize=({session,keyCatalog,onToast})=>{
     }finally{
       setSubmitting(false);
     }
-  };
-
-  const submitCreateVault=async()=>{
-    await run(async()=>{
-      if(!String(vaultName||"").trim()){
-        throw new Error("Vault name is required.");
-      }
-      if(!String(vaultKeyId||"").trim()){
-        throw new Error("Encryption key is required.");
-      }
-      if(String(vaultFormat||"").trim()==="custom"&&!String(vaultCustomFormat||"").trim()){
-        throw new Error("Custom format name is required when vault format is custom.");
-      }
-      if(String(vaultTokenType||"").trim()==="custom"&&!String(vaultRegex||"").trim()){
-        throw new Error("Custom regex is required when token type is custom.");
-      }
-      const created=await createTokenVault(session,{
-        name:String(vaultName||"").trim(),
-        token_type:vaultTokenType,
-        format:vaultFormat as any,
-        custom_token_format:String(vaultCustomFormat||"").trim()||undefined,
-        key_id:vaultKeyId,
-        custom_regex:String(vaultRegex||"").trim()||undefined
-      });
-      setVaults((prev)=>[...(Array.isArray(prev)?prev:[]),created]);
-      setTokenMethod(String(created?.format||vaultFormat));
-      setTokenVaultId(String(created?.id||""));
-      setVaultName("");
-      setVaultRegex("");
-      setVaultCustomFormat("");
-      setModal(null);
-      setOutput({status:"vault_created",vault:created});
-      onToast?.("Token vault created.");
-    });
   };
 
   const submitCurrent=async()=>{
@@ -7859,7 +7823,6 @@ const Tokenize=({session,keyCatalog,onToast})=>{
       </div>
       <div style={{display:"flex",gap:8}}>
         <Btn small onClick={async()=>{if(!session?.token)return;setLoading(true);try{setVaults(await listTokenVaults(session,{limit:300,offset:0}));}catch(error){onToast?.(`Refresh failed: ${errMsg(error)}`);}finally{setLoading(false);}}} disabled={loading||submitting}><RefreshCcw size={12} strokeWidth={2}/> Refresh</Btn>
-        <Btn small primary onClick={()=>setModal("vault")}>+ Create Token Vault</Btn>
       </div>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,alignItems:"start"}}>
@@ -7874,8 +7837,24 @@ const Tokenize=({session,keyCatalog,onToast})=>{
             </Sel>
           </FG>
           {tokenMode==="vault"?<>
-            <FG label="Tokenization Method"><Sel value={tokenMethod} onChange={(e)=>setTokenMethod(e.target.value)}><option value="format_preserving">Format Preserving</option><option value="random">Random</option><option value="deterministic">Deterministic</option><option value="irreversible">Irreversible</option><option value="custom">Custom</option></Sel></FG>
-            <FG label="Token Vault" required><Sel value={tokenVaultId} onChange={(e)=>setTokenVaultId(e.target.value)}><option value="">{methodVaults.length?"Select vault":"No vault for selected method"}</option>{methodVaults.map((v)=><option key={v.id} value={v.id}>{v.name} ({v.token_type})</option>)}</Sel></FG>
+            <FG label="Token Vault" required>
+              <Sel value={tokenVaultId} onChange={(e)=>setTokenVaultId(e.target.value)}>
+                <option value="">{vaultSelectOptions.length?"Select vault":"No token vault found. Create vault from Token / Mask / Redact Policy."}</option>
+                {vaultSelectOptions.map((v:any)=>{
+                  const storage=String(v?.storage_type||"internal").toLowerCase()==="external"
+                    ? `external:${String(v?.external_provider||"db")}`
+                    : "internal";
+                  return <option key={String(v?.id||"")} value={String(v?.id||"")}>
+                    {`${String(v?.name||"")} (${String(v?.token_type||"")}/${String(v?.format||"")}) [${storage}]`}
+                  </option>;
+                })}
+              </Sel>
+            </FG>
+            <div style={{fontSize:10,color:C.dim,marginBottom:8}}>
+              {selectedTokenVault
+                ? `Selected vault storage: ${String(selectedTokenVault?.storage_type||"internal")}${String(selectedTokenVault?.external_provider||"").trim()?` (${String(selectedTokenVault?.external_provider||"")})`:""}.`
+                : "Vault list includes internal and external vault connections created from policy."}
+            </div>
           </>:<>
             <FG label="Vaultless Format" required>
               <Sel value={tokenVaultlessFormat} onChange={(e)=>setTokenVaultlessFormat(e.target.value)}>
@@ -7961,20 +7940,6 @@ const Tokenize=({session,keyCatalog,onToast})=>{
         <Btn small onClick={()=>setOp("Redact")}>Open Redact Operation</Btn>
       </Card>
     </div>
-
-    <Modal open={modal==="vault"} onClose={()=>setModal(null)} title="Create Token Vault" wide>
-      <Row2>
-        <FG label="Vault Name" required><Inp value={vaultName} onChange={(e)=>setVaultName(e.target.value)} placeholder="credit-card-vault"/></FG>
-        <FG label="Token Type" required><Sel value={vaultTokenType} onChange={(e)=>setVaultTokenType(e.target.value)}><option value="credit_card">credit_card (PAN with Luhn validation)</option><option value="ssn">ssn</option><option value="email">email</option><option value="phone">phone</option><option value="iban">iban</option><option value="custom">custom</option></Sel></FG>
-      </Row2>
-      <Row2>
-        <FG label="Token Format"><Sel value={vaultFormat} onChange={(e)=>setVaultFormat(e.target.value)}><option value="format_preserving">Format Preserving</option><option value="random">Random</option><option value="deterministic">Deterministic</option><option value="irreversible">Irreversible</option><option value="custom">Custom</option></Sel></FG>
-        <FG label="Encryption Key" required hint="Only active symmetric cipher keys are allowed"><Sel value={vaultKeyId} onChange={(e)=>setVaultKeyId(e.target.value)}>{renderKeyOptions(vaultCapableKeys)}</Sel></FG>
-      </Row2>
-      {vaultFormat==="custom"&&<FG label="Custom Format Name" required><Inp value={vaultCustomFormat} onChange={(e)=>setVaultCustomFormat(e.target.value)} placeholder="pan_enterprise"/></FG>}
-      <FG label="Custom Regex" hint="Only for custom token type"><Inp value={vaultRegex} onChange={(e)=>setVaultRegex(e.target.value)} placeholder="^\\d{3}-\\d{2}-\\d{4}$" mono/></FG>
-      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)} disabled={submitting}>Cancel</Btn><Btn primary onClick={()=>void submitCreateVault()} disabled={submitting}>{submitting?"Creating...":"Create Vault"}</Btn></div>
-    </Modal>
   </div>;
 };
 
@@ -9212,6 +9177,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
   const [saving,setSaving]=useState(false);
   const [creatingVault,setCreatingVault]=useState(false);
   const [refreshingVaults,setRefreshingVaults]=useState(false);
+  const [deletingVaultId,setDeletingVaultId]=useState("");
   const [vaultRows,setVaultRows]=useState<any[]>([]);
   const [dataPolicy,setDataPolicy]=useState<any>(null);
   const [customTokenFormatsText,setCustomTokenFormatsText]=useState("{}");
@@ -9397,6 +9363,36 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
       onToast?.(`Token vault creation failed: ${errMsg(error)}`);
     }finally{
       setCreatingVault(false);
+    }
+  };
+
+  const deleteVaultFromPolicy=async(row:any)=>{
+    const vaultID=String(row?.id||"").trim();
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    if(!vaultID){
+      onToast?.("Vault ID is required.");
+      return;
+    }
+    const storageType=String(row?.storage_type||"internal").toLowerCase();
+    const targetLabel=storageType==="external"?"external vault connection":"internal token vault";
+    if(typeof window!=="undefined"){
+      const ok=window.confirm(`Delete ${targetLabel} ${String(row?.name||vaultID)}? This will remove local metadata and token mappings for this vault.`);
+      if(!ok){
+        return;
+      }
+    }
+    setDeletingVaultId(vaultID);
+    try{
+      await deleteTokenVault(session,vaultID,{governanceApproved:true});
+      onToast?.(storageType==="external"?"External vault connection deleted.":"Token vault deleted.");
+      await refreshVaultRows(true);
+    }catch(error){
+      onToast?.(`Delete vault failed: ${errMsg(error)}`);
+    }finally{
+      setDeletingVaultId("");
     }
   };
 
@@ -9787,9 +9783,25 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
           <div style={{fontSize:10,color:C.dim}}>Vault tokens store token, token hash, ciphertext, original hash, metadata and lifecycle counters for deterministic lookup and detokenize controls.</div>
           <div style={{fontSize:10,color:C.text,fontWeight:700}}>Existing token vaults: {Array.isArray(vaultRows)?vaultRows.length:0}</div>
           <div style={{maxHeight:180,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:8,padding:8,display:"grid",gap:6}}>
-            {(Array.isArray(vaultRows)?vaultRows:[]).map((row:any)=><div key={`policy-vault-row-${String(row?.id||"")}`} style={{fontSize:10,color:C.text}}>
-              {`${String(row?.name||"")} (${String(row?.id||"")}) - ${String(row?.token_type||"")}/${String(row?.format||"")} - ${String(row?.storage_type||"internal")}${String(row?.external_provider||"").trim()?`:${String(row?.external_provider||"")}`:""}`}
-            </div>)}
+            {(Array.isArray(vaultRows)?vaultRows:[]).map((row:any)=>{
+              const id=String(row?.id||"");
+              const storageType=String(row?.storage_type||"internal").toLowerCase();
+              const isExternal=storageType==="external";
+              return <div key={`policy-vault-row-${id}`} style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",border:`1px solid ${C.line}`,borderRadius:8,padding:"6px 8px"}}>
+                <div style={{fontSize:10,color:C.text}}>
+                  {`${String(row?.name||"")} (${id}) - ${String(row?.token_type||"")}/${String(row?.format||"")} - ${storageType}${String(row?.external_provider||"").trim()?`:${String(row?.external_provider||"")}`:""}`}
+                </div>
+                <Btn
+                  small
+                  onClick={()=>void deleteVaultFromPolicy(row)}
+                  disabled={Boolean(deletingVaultId)||creatingVault||refreshingVaults}
+                >
+                  {deletingVaultId===id
+                    ? "Deleting..."
+                    : (isExternal?"Delete Connection":"Delete Vault")}
+                </Btn>
+              </div>;
+            })}
             {!Array.isArray(vaultRows)||!vaultRows.length?<div style={{fontSize:10,color:C.dim}}>No token vaults found for this tenant.</div>:null}
           </div>
         </div>
@@ -10255,26 +10267,19 @@ const DataProtection=({session,keyCatalog,onToast,subView,onSubViewChange})=>{
     {showInlineSubTabs&&<div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
       <Btn small primary={currentSubtab==="fieldenc"} onClick={()=>selectSubtab("fieldenc")}>Field Encryption</Btn>
       <Btn small primary={currentSubtab==="dataenc-policy"} onClick={()=>selectSubtab("dataenc-policy")}>Data Encryption Policy</Btn>
-      <Btn small primary={currentSubtab==="tokenize"} onClick={()=>selectSubtab("tokenize")}>Tokenize / Mask / Redact</Btn>
       <Btn small primary={currentSubtab==="token-policy"} onClick={()=>selectSubtab("token-policy")}>Token / Mask / Redact Policy</Btn>
       <Btn small primary={currentSubtab==="payment-policy"} onClick={()=>selectSubtab("payment-policy")}>Payment Policy</Btn>
       <Btn small primary={currentSubtab==="pkcs11"} onClick={()=>selectSubtab("pkcs11")}>PKCS#11 / JCA</Btn>
     </div>}
-    {currentSubtab==="tokenize"
-      ? <Tokenize session={session} keyCatalog={keyCatalog} onToast={onToast}/>
-      : currentSubtab==="payment"
-        ? <Payment session={session} keyCatalog={keyCatalog} onToast={onToast}/>
-        : currentSubtab==="pkcs11"
-          ? <PKCS11 session={session} onToast={onToast}/>
-          : currentSubtab==="fieldenc"
-            ? <FieldEncryptionRuntime session={session} keyCatalog={keyCatalog} onToast={onToast}/>
-          : currentSubtab==="token-policy"
-            ? <TokenizeMaskRedactPolicy session={session} onToast={onToast}/>
-            : currentSubtab==="payment-policy"
-              ? <PaymentCryptoPolicy session={session} onToast={onToast}/>
-          : currentSubtab==="dataenc-policy"
-            ? <DataEncryptionPolicy session={session} onToast={onToast}/>
-            : <DataEncryption session={session} keyCatalog={keyCatalog} onToast={onToast}/>}
+    {currentSubtab==="pkcs11"
+      ? <PKCS11 session={session} onToast={onToast}/>
+      : currentSubtab==="token-policy"
+        ? <TokenizeMaskRedactPolicy session={session} onToast={onToast}/>
+        : currentSubtab==="payment-policy"
+          ? <PaymentCryptoPolicy session={session} onToast={onToast}/>
+        : currentSubtab==="dataenc-policy"
+          ? <DataEncryptionPolicy session={session} onToast={onToast}/>
+          : <FieldEncryptionRuntime session={session} keyCatalog={keyCatalog} onToast={onToast}/>}
   </div>;
 };
 
@@ -17722,14 +17727,22 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
 </div>;};
 
 const UserManagement=({session,onToast,onLogout})=>{
+  const promptDialog=usePromptDialog();
   const [users,setUsers]=useState([]);
   const [tenants,setTenants]=useState([]);
   const [tenantScope,setTenantScope]=useState(String(session?.tenantId||""));
   const [loading,setLoading]=useState(false);
   const [tenantLoading,setTenantLoading]=useState(false);
+  const [tenantReadiness,setTenantReadiness]=useState<any>(null);
+  const [tenantReadinessLoading,setTenantReadinessLoading]=useState(false);
   const [initializing,setInitializing]=useState(true);
   const [saving,setSaving]=useState(false);
   const [tenantSaving,setTenantSaving]=useState(false);
+  const [tenantDisabling,setTenantDisabling]=useState(false);
+  const [tenantApprovalCreating,setTenantApprovalCreating]=useState(false);
+  const [tenantDeleting,setTenantDeleting]=useState(false);
+  const [tenantDisableApprovalID,setTenantDisableApprovalID]=useState("");
+  const [tenantDeleteApprovalID,setTenantDeleteApprovalID]=useState("");
   const [usersError,setUsersError]=useState("");
   const [activeSession,setActiveSession]=useState(session);
   const [modal,setModal]=useState(null);
@@ -17739,6 +17752,16 @@ const UserManagement=({session,onToast,onLogout})=>{
   const [createRole,setCreateRole]=useState("readonly");
   const [createStatus,setCreateStatus]=useState("active");
   const [createMustChange,setCreateMustChange]=useState(true);
+  const [groups,setGroups]=useState<any[]>([]);
+  const [groupsLoading,setGroupsLoading]=useState(false);
+  const [groupsSaving,setGroupsSaving]=useState(false);
+  const [groupRoleBindings,setGroupRoleBindings]=useState<Record<string,string>>({});
+  const [newGroupName,setNewGroupName]=useState("");
+  const [newGroupDescription,setNewGroupDescription]=useState("");
+  const [newGroupRole,setNewGroupRole]=useState("readonly");
+  const [newGroupMembers,setNewGroupMembers]=useState<string[]>([]);
+  const [groupDeletingID,setGroupDeletingID]=useState("");
+  const [groupRoleUpdatingID,setGroupRoleUpdatingID]=useState("");
   const [resetTarget,setResetTarget]=useState(null);
   const [resetPassword,setResetPassword]=useState("");
   const [resetMustChange,setResetMustChange]=useState(true);
@@ -17753,6 +17776,7 @@ const UserManagement=({session,onToast,onLogout})=>{
   const [quorumPolicy,setQuorumPolicy]=useState<any>(null);
   const [quorumSaving,setQuorumSaving]=useState(false);
   const [quorumRequired,setQuorumRequired]=useState(1);
+  const [quorumMode,setQuorumMode]=useState<"and"|"or">("or");
   const GOVERNANCE_DEFAULT_POLICY_NAME="crypto-governance-default";
   const GOVERNANCE_CRYPTO_ACTIONS=[
     "key.encrypt",
@@ -17765,6 +17789,7 @@ const UserManagement=({session,onToast,onLogout})=>{
     "key.wrap",
     "key.unwrap",
     "key.mac",
+    "key.update_access_policy",
     "key.destroy",
     "key.export",
     "mpc.dkg",
@@ -17772,7 +17797,9 @@ const UserManagement=({session,onToast,onLogout})=>{
     "mpc.decrypt",
     "cert.issue",
     "cert.revoke",
-    "cert.renew"
+    "cert.renew",
+    "tenant.disable",
+    "tenant.delete"
   ];
 
   const roleOptions=useMemo(()=>{
@@ -17787,8 +17814,29 @@ const UserManagement=({session,onToast,onLogout})=>{
   },[users]);
   const protectedCLIUser="cli-user";
   const userRows=Array.isArray(users)?users:[];
+  const groupRows=Array.isArray(groups)?groups:[];
+  const selectedTenantID=String(tenantScope||session?.tenantId||"").trim();
+  const selectedTenant=(Array.isArray(tenants)?tenants:[]).find((item:any)=>String(item?.id||"")===selectedTenantID)||null;
+  const selectedTenantLower=selectedTenantID.toLowerCase();
+  const currentTenantLower=String(session?.tenantId||"").trim().toLowerCase();
+  const canManageTenantLifecycle=Boolean(selectedTenantID)&&
+    selectedTenantLower!==currentTenantLower&&
+    selectedTenantLower!=="root"&&
+    selectedTenantLower!=="system";
+  const readinessBlockers=Array.isArray(tenantReadiness?.blockers)?tenantReadiness.blockers:[];
+  const readinessTenantStatus=String(tenantReadiness?.tenant_status||selectedTenant?.status||"active").toLowerCase();
+  const canDisableTenantNow=Boolean(canManageTenantLifecycle)&&Boolean(tenantReadiness?.can_disable)&&!readinessBlockers.length;
+  const canDeleteTenantNow=Boolean(canManageTenantLifecycle)&&Boolean(tenantReadiness?.can_delete)&&!readinessBlockers.length&&readinessTenantStatus==="disabled";
+  const effectiveTenantID=selectedTenantID||String(session?.tenantId||"").trim();
 
   const isProtectedCLI=(user)=>String(user?.username||"").toLowerCase()===protectedCLIUser;
+
+  const withTenantScope=(authSession:AuthSession):AuthSession=>{
+    return {
+      ...authSession,
+      tenantId:String(effectiveTenantID||authSession?.tenantId||"").trim()||String(authSession?.tenantId||"")
+    };
+  };
 
   useEffect(()=>{
     setActiveSession(session);
@@ -17890,18 +17938,89 @@ const UserManagement=({session,onToast,onLogout})=>{
     }
   };
 
+  const refreshTenantReadiness=async(silent=false)=>{
+    const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+    if(!session?.token||!targetTenant){
+      setTenantReadiness(null);
+      return;
+    }
+    if(!silent){
+      setTenantReadinessLoading(true);
+    }
+    try{
+      const readiness=await withSessionRetry((authSession)=>getAuthTenantDeleteReadiness(authSession,targetTenant));
+      setTenantReadiness(readiness||null);
+      setUsersError("");
+    }catch(error){
+      if(!silent){
+        handleUserError("Tenant readiness check failed",error,false);
+      }
+      setTenantReadiness(null);
+    }finally{
+      if(!silent){
+        setTenantReadinessLoading(false);
+      }
+    }
+  };
+
+  const refreshGroups=async(silent=false)=>{
+    if(!session?.token){
+      setGroups([]);
+      setGroupRoleBindings({});
+      return;
+    }
+    if(!silent){
+      setGroupsLoading(true);
+    }
+    try{
+      const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+      const [groupItems,bindings]=await Promise.all([
+        withSessionRetry((authSession)=>listKeyAccessGroups(withTenantScope(authSession))).catch(()=>[]),
+        withSessionRetry((authSession)=>listAuthGroupRoleBindings(authSession,targetTenant)).catch(()=>[])
+      ]);
+      const nextGroups=Array.isArray(groupItems)?groupItems:[];
+      const nextBindingMap:Record<string,string>={};
+      (Array.isArray(bindings)?bindings:[]).forEach((item:any)=>{
+        const groupID=String(item?.group_id||"").trim();
+        const roleName=String(item?.role_name||"").trim();
+        if(groupID&&roleName){
+          nextBindingMap[groupID]=roleName;
+        }
+      });
+      setGroups(nextGroups);
+      setGroupRoleBindings(nextBindingMap);
+    }catch(error){
+      if(!silent){
+        handleUserError("Access groups load failed",error,false);
+      }
+    }finally{
+      if(!silent){
+        setGroupsLoading(false);
+      }
+    }
+  };
+
   const refreshQuorumPolicy=async(silent=false)=>{
     if(!session?.token){
       setQuorumPolicy(null);
       setQuorumRequired(1);
+      setQuorumMode("or");
       return;
     }
     try{
-      const items=await withSessionRetry((authSession)=>listGovernancePolicies(authSession,{status:"active"}));
+      const items=await withSessionRetry((authSession)=>listGovernancePolicies(withTenantScope(authSession),{status:"active"}));
       const selected=(Array.isArray(items)?items:[]).find((policy:any)=>String(policy?.name||"").toLowerCase()===GOVERNANCE_DEFAULT_POLICY_NAME)||null;
       setQuorumPolicy(selected);
       if(selected){
-        setQuorumRequired(Math.max(1,Number(selected?.required_approvals||1)));
+        const total=Math.max(1,Number(selected?.total_approvers||1));
+        const required=Math.max(1,Math.min(total,Number(selected?.required_approvals||1)));
+        const modeRaw=String(selected?.quorum_mode||"").trim().toLowerCase();
+        const mode=(modeRaw==="and"||modeRaw==="or")?modeRaw:(required>=total?"and":"or");
+        setQuorumMode(mode as "and"|"or");
+        setQuorumRequired(mode==="and"?total:1);
+      }else{
+        setQuorumMode("or");
+        setQuorumRequired(1);
       }
     }catch(error){
       if(!silent){
@@ -17923,12 +18042,14 @@ const UserManagement=({session,onToast,onLogout})=>{
       return;
     }
     const total=nextEmails.length;
-    const required=Math.max(1,Math.min(total,Math.trunc(Number(quorumRequired||1))));
+    const mode=(quorumMode==="and"?"and":"or") as "and"|"or";
+    const required=mode==="and"?total:1;
     const payload={
       name:GOVERNANCE_DEFAULT_POLICY_NAME,
       description:"Default quorum policy for governance-bound crypto operations.",
       scope:"crypto",
       trigger_actions:GOVERNANCE_CRYPTO_ACTIONS,
+      quorum_mode:mode,
       required_approvals:required,
       total_approvers:total,
       approver_roles:["tenant-admin","admin","audit"],
@@ -17941,12 +18062,16 @@ const UserManagement=({session,onToast,onLogout})=>{
     setQuorumSaving(true);
     try{
       const out=quorumPolicy?.id
-        ? await withSessionRetry((authSession)=>updateGovernancePolicy(authSession,String(quorumPolicy.id),payload))
-        : await withSessionRetry((authSession)=>createGovernancePolicy(authSession,payload));
+        ? await withSessionRetry((authSession)=>updateGovernancePolicy(withTenantScope(authSession),String(quorumPolicy.id),payload))
+        : await withSessionRetry((authSession)=>createGovernancePolicy(withTenantScope(authSession),payload));
       setQuorumPolicy(out);
-      setQuorumRequired(Math.max(1,Math.min(Number(out?.total_approvers||total),Number(out?.required_approvals||required))));
+      const outTotal=Math.max(1,Number(out?.total_approvers||total));
+      const outModeRaw=String(out?.quorum_mode||mode).trim().toLowerCase();
+      const outMode=(outModeRaw==="and"||outModeRaw==="or")?outModeRaw:mode;
+      setQuorumMode(outMode as "and"|"or");
+      setQuorumRequired(outMode==="and"?outTotal:1);
       setUsersError("");
-      onToast?.(`Governance quorum updated (${required}-of-${total}).`);
+      onToast?.(`Governance quorum updated (${outMode.toUpperCase()}: ${outMode==="and"?`${outTotal}-of-${outTotal}`:`1-of-${outTotal}`}).`);
     }catch(error){
       handleUserError("Governance quorum update failed",error,false);
     }finally{
@@ -17979,6 +18104,63 @@ const UserManagement=({session,onToast,onLogout})=>{
     await saveQuorumMembers(Array.from(quorumMembers));
   };
 
+  const ensureTenantLifecycleGovernancePolicy=async()=>{
+    const requiredActions=Array.from(new Set(GOVERNANCE_CRYPTO_ACTIONS.map((item)=>String(item||"").trim()).filter(Boolean)));
+    const approverUsers=Array.from(quorumMembers);
+    if(!approverUsers.length){
+      throw new Error("Configure at least one quorum approver before requesting tenant disable/delete approvals.");
+    }
+    const mode=(quorumMode==="and"?"and":"or") as "and"|"or";
+    const required=mode==="and"?approverUsers.length:1;
+    const basePolicy=quorumPolicy;
+    if(!basePolicy?.id){
+      const created=await withSessionRetry((authSession)=>createGovernancePolicy(withTenantScope(authSession),{
+        name:GOVERNANCE_DEFAULT_POLICY_NAME,
+        description:"Default quorum policy for governance-bound crypto operations.",
+        scope:"crypto",
+        trigger_actions:requiredActions,
+        quorum_mode:mode,
+        required_approvals:required,
+        total_approvers:approverUsers.length,
+        approver_roles:["tenant-admin","admin","audit"],
+        approver_users:approverUsers,
+        timeout_hours:48,
+        retention_days:90,
+        notification_channels:["dashboard","email"],
+        status:"active"
+      }));
+      setQuorumPolicy(created);
+      const createdTotal=Math.max(1,Number(created?.total_approvers||approverUsers.length));
+      const createdModeRaw=String(created?.quorum_mode||mode).trim().toLowerCase();
+      const createdMode=(createdModeRaw==="and"||createdModeRaw==="or")?createdModeRaw:mode;
+      setQuorumMode(createdMode as "and"|"or");
+      setQuorumRequired(createdMode==="and"?createdTotal:1);
+      return created;
+    }
+    const existingActions=Array.isArray(basePolicy?.trigger_actions)?basePolicy.trigger_actions.map((item:any)=>String(item||"").trim()).filter(Boolean):[];
+    const missing=requiredActions.filter((action)=>!existingActions.includes(action));
+    if(!missing.length){
+      return basePolicy;
+    }
+    const updated=await withSessionRetry((authSession)=>updateGovernancePolicy(withTenantScope(authSession),String(basePolicy.id),{
+      ...basePolicy,
+      trigger_actions:Array.from(new Set([...existingActions,...requiredActions])),
+      quorum_mode:mode,
+      required_approvals:required,
+      total_approvers:approverUsers.length,
+      approver_roles:["tenant-admin","admin","audit"],
+      approver_users:approverUsers,
+      status:"active"
+    }));
+    setQuorumPolicy(updated);
+    const updatedTotal=Math.max(1,Number(updated?.total_approvers||approverUsers.length));
+    const updatedModeRaw=String(updated?.quorum_mode||mode).trim().toLowerCase();
+    const updatedMode=(updatedModeRaw==="and"||updatedModeRaw==="or")?updatedModeRaw:mode;
+    setQuorumMode(updatedMode as "and"|"or");
+    setQuorumRequired(updatedMode==="and"?updatedTotal:1);
+    return updated;
+  };
+
   useEffect(()=>{
     void refreshTenants(true);
   },[session?.token,session?.tenantId]);
@@ -17988,8 +18170,22 @@ const UserManagement=({session,onToast,onLogout})=>{
   },[session?.token,session?.tenantId,tenantScope]);
 
   useEffect(()=>{
+    void refreshGroups(true);
+  },[session?.token,session?.tenantId,tenantScope]);
+
+  useEffect(()=>{
+    void refreshTenantReadiness(true);
+  },[session?.token,session?.tenantId,tenantScope]);
+
+  useEffect(()=>{
     void refreshQuorumPolicy(true);
   },[session?.token,session?.tenantId]);
+
+  useEffect(()=>{
+    setNewGroupMembers([]);
+    setTenantDisableApprovalID("");
+    setTenantDeleteApprovalID("");
+  },[tenantScope]);
 
   if(!session?.token){
     return <Section title="Tenant & User Management">
@@ -18046,6 +18242,156 @@ const UserManagement=({session,onToast,onLogout})=>{
     }
   };
 
+  const requestTenantApproval=async(operation:"disable"|"delete")=>{
+    const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+    if(!targetTenant){
+      onToast?.("Select tenant.");
+      return;
+    }
+    const selectedName=String(selectedTenant?.name||targetTenant);
+    if(!canManageTenantLifecycle){
+      onToast?.("Protected or current session tenant cannot be disabled/deleted from this session.");
+      return;
+    }
+    setTenantApprovalCreating(true);
+    try{
+      await ensureTenantLifecycleGovernancePolicy();
+      const action=operation==="disable"?"tenant.disable":"tenant.delete";
+      const request=await withSessionRetry((authSession)=>createGovernanceRequest(withTenantScope(authSession),{
+        action,
+        target_type:"tenant",
+        target_id:targetTenant,
+        target_details:{
+          tenant_name:selectedName,
+          requested_operation:operation,
+          requested_from:"user-management-tenant-lifecycle",
+          active_ui_sessions:Number(tenantReadiness?.active_ui_session_count||0),
+          active_service_links:Number(tenantReadiness?.active_service_link_count||0),
+          blocker_codes:readinessBlockers.map((item:any)=>String(item?.code||""))
+        },
+        requester_id:String(authSession?.username||session?.username||"").trim()
+      }));
+      if(operation==="disable"){
+        setTenantDisableApprovalID(String(request?.id||""));
+      }else{
+        setTenantDeleteApprovalID(String(request?.id||""));
+      }
+      onToast?.(`Governance request created (${action}): ${String(request?.id||"")}`);
+      await refreshTenantReadiness(true);
+    }catch(error){
+      handleUserError("Governance approval request failed",error,false);
+    }finally{
+      setTenantApprovalCreating(false);
+    }
+  };
+
+  const submitDisableTenant=async()=>{
+    const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+    if(!targetTenant){
+      onToast?.("Select tenant to disable.");
+      return;
+    }
+    const selectedName=String(selectedTenant?.name||targetTenant);
+    if(!canManageTenantLifecycle){
+      onToast?.("Protected or current session tenant cannot be disabled from this session.");
+      return;
+    }
+    if(!canDisableTenantNow){
+      onToast?.("Tenant disable is blocked. Resolve active sessions/connections first.");
+      return;
+    }
+    const approvalID=String(tenantDisableApprovalID||"").trim();
+    if(!approvalID){
+      onToast?.("Create governance approval request for tenant.disable first.");
+      return;
+    }
+    const confirmed=await promptDialog.confirm({
+      title:"Disable Tenant",
+      message:`Disable tenant "${targetTenant}" (${selectedName})?\n\nThis blocks tenant operations and is required before permanent deletion.`,
+      confirmLabel:"Disable Tenant",
+      cancelLabel:"Cancel",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    setTenantDisabling(true);
+    try{
+      const readiness=await withSessionRetry((authSession)=>disableAuthTenant(authSession,targetTenant,approvalID));
+      setTenantReadiness(readiness||null);
+      await refreshTenants(true);
+      await refreshUsers(true);
+      setUsersError("");
+      onToast?.(`Tenant disabled: ${targetTenant}`);
+    }catch(error){
+      await refreshTenantReadiness(true);
+      handleUserError("Disable tenant failed",error,false);
+    }finally{
+      setTenantDisabling(false);
+    }
+  };
+
+  const submitDeleteTenant=async()=>{
+    const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+    if(!targetTenant){
+      onToast?.("Select tenant to delete.");
+      return;
+    }
+    const selectedName=String(selectedTenant?.name||targetTenant);
+    if(!canManageTenantLifecycle){
+      onToast?.("Protected or current session tenant cannot be deleted from this session.");
+      return;
+    }
+    if(!canDeleteTenantNow){
+      onToast?.("Tenant delete is blocked. Disable tenant and clear all active sessions/connections first.");
+      return;
+    }
+    const approvalID=String(tenantDeleteApprovalID||"").trim();
+    if(!approvalID){
+      onToast?.("Create governance approval request for tenant.delete first.");
+      return;
+    }
+    const warning=await promptDialog.confirm({
+      title:"Delete Tenant Permanently",
+      message:`Delete Tenant is destructive: it permanently purges tenant-scoped keys/data/logs/policies/artifacts\n\nThis action cannot be undone.`,
+      confirmLabel:"Continue",
+      cancelLabel:"Cancel",
+      danger:true
+    });
+    if(!warning){
+      return;
+    }
+    const confirmation=await promptDialog.prompt({
+      title:"Confirm Tenant Deletion",
+      message:`Type the tenant ID "${targetTenant}" to confirm permanent deletion.`,
+      confirmLabel:"Delete Tenant",
+      cancelLabel:"Cancel",
+      danger:true,
+      placeholder:targetTenant
+    });
+    if(String(confirmation||"").trim()!==targetTenant){
+      onToast?.("Tenant delete cancelled. Confirmation text did not match.");
+      return;
+    }
+    setTenantDeleting(true);
+    try{
+      const out=await withSessionRetry((authSession)=>deleteAuthTenant(authSession,targetTenant,approvalID));
+      await refreshTenants(true);
+      setTenantScope(String(session?.tenantId||""));
+      await refreshUsers(true);
+      setTenantReadiness(null);
+      setTenantDisableApprovalID("");
+      setTenantDeleteApprovalID("");
+      setUsersError("");
+      onToast?.(`Tenant deleted: ${targetTenant} (${Number(out?.rows_purged||0)} rows purged across ${Number(out?.tables_purged||0)} tables).`);
+    }catch(error){
+      await refreshTenantReadiness(true);
+      handleUserError("Delete tenant failed",error,false);
+    }finally{
+      setTenantDeleting(false);
+    }
+  };
+
   const submitCreate=async()=>{
     const username=String(createUsername||"").trim();
     const email=String(createEmail||"").trim();
@@ -18079,6 +18425,116 @@ const UserManagement=({session,onToast,onLogout})=>{
       handleUserError("Create user failed",error,false);
     }finally{
       setSaving(false);
+    }
+  };
+
+  const submitCreateGroup=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to create access groups.");
+      return;
+    }
+    const name=String(newGroupName||"").trim();
+    const description=String(newGroupDescription||"").trim();
+    const roleName=String(newGroupRole||"").trim();
+    const tenantID=String(tenantScope||session?.tenantId||"").trim();
+    if(!name){
+      onToast?.("Group name is required.");
+      return;
+    }
+    if(!roleName){
+      onToast?.("Select a role for this group.");
+      return;
+    }
+    setGroupsSaving(true);
+    try{
+      const group=await withSessionRetry((authSession)=>createKeyAccessGroup(withTenantScope(authSession),{
+        name,
+        description,
+        created_by:String(authSession?.username||session?.username||"")
+      }));
+      const members=(Array.isArray(newGroupMembers)?newGroupMembers:[])
+        .map((id)=>String(id||"").trim())
+        .filter(Boolean);
+      if(members.length){
+        await withSessionRetry((authSession)=>setKeyAccessGroupMembers(withTenantScope(authSession),String(group?.id||""),members));
+      }
+      await withSessionRetry((authSession)=>upsertAuthGroupRoleBinding(authSession,String(group?.id||""),roleName,tenantID));
+      setNewGroupName("");
+      setNewGroupDescription("");
+      setNewGroupMembers([]);
+      setNewGroupRole("readonly");
+      await refreshGroups(true);
+      setUsersError("");
+      onToast?.(`Access group created: ${String(group?.name||name)} (${roleName})`);
+    }catch(error){
+      handleUserError("Access group create failed",error,false);
+    }finally{
+      setGroupsSaving(false);
+    }
+  };
+
+  const submitGroupRoleChange=async(group:any,newRole:string)=>{
+    const groupID=String(group?.id||"").trim();
+    const roleName=String(newRole||"").trim();
+    if(!groupID){
+      return;
+    }
+    const tenantID=String(tenantScope||session?.tenantId||"").trim();
+    setGroupRoleUpdatingID(groupID);
+    try{
+      if(roleName){
+        await withSessionRetry((authSession)=>upsertAuthGroupRoleBinding(authSession,groupID,roleName,tenantID));
+        setGroupRoleBindings((prev)=>({...prev,[groupID]:roleName}));
+        onToast?.(`Group role updated: ${String(group?.name||groupID)} -> ${roleName}`);
+      }else{
+        await withSessionRetry((authSession)=>deleteAuthGroupRoleBinding(authSession,groupID,tenantID));
+        setGroupRoleBindings((prev)=>{
+          const next={...(prev||{})};
+          delete next[groupID];
+          return next;
+        });
+        onToast?.(`Group role removed: ${String(group?.name||groupID)}`);
+      }
+      setUsersError("");
+    }catch(error){
+      handleUserError("Group role update failed",error,false);
+    }finally{
+      setGroupRoleUpdatingID("");
+    }
+  };
+
+  const submitDeleteGroup=async(group:any)=>{
+    const groupID=String(group?.id||"").trim();
+    if(!groupID){
+      return;
+    }
+    const confirmed=await promptDialog.confirm({
+      title:"Delete Access Group",
+      message:`Delete access group "${String(group?.name||groupID)}"?`,
+      confirmLabel:"Delete",
+      cancelLabel:"Cancel",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    const tenantID=String(tenantScope||session?.tenantId||"").trim();
+    setGroupDeletingID(groupID);
+    try{
+      await withSessionRetry((authSession)=>deleteAuthGroupRoleBinding(authSession,groupID,tenantID).catch(()=>undefined));
+      await withSessionRetry((authSession)=>deleteKeyAccessGroup(withTenantScope(authSession),groupID));
+      setGroups((prev)=>(Array.isArray(prev)?prev:[]).filter((item:any)=>String(item?.id||"")!==groupID));
+      setGroupRoleBindings((prev)=>{
+        const next={...(prev||{})};
+        delete next[groupID];
+        return next;
+      });
+      setUsersError("");
+      onToast?.(`Access group deleted: ${String(group?.name||groupID)}`);
+    }catch(error){
+      handleUserError("Delete access group failed",error,false);
+    }finally{
+      setGroupDeletingID("");
     }
   };
 
@@ -18155,9 +18611,10 @@ const UserManagement=({session,onToast,onLogout})=>{
 
   return <div>
     <Section title="Tenant & User Management" actions={<>
-      <B c="amber">{quorumPolicy?`${Number(quorumPolicy.required_approvals||1)}-of-${Number(quorumPolicy.total_approvers||Math.max(1,quorumMembers.size))} quorum`:"quorum not configured"}</B>
+      <B c="amber">{quorumPolicy?`${String(quorumMode||"or").toUpperCase()} quorum (${String(quorumMode||"or")==="and"?`${Number(quorumPolicy.total_approvers||Math.max(1,quorumMembers.size))}-of-${Number(quorumPolicy.total_approvers||Math.max(1,quorumMembers.size))}`:`1-of-${Number(quorumPolicy.total_approvers||Math.max(1,quorumMembers.size))}`})`:"quorum not configured"}</B>
       <Btn small onClick={()=>void refreshTenants(false)}>{tenantLoading?"Refreshing Tenants...":"Refresh Tenants"}</Btn>
       <Btn small onClick={()=>setModal("create-tenant")}>+ Create Tenant</Btn>
+      <Btn small onClick={()=>void refreshTenantReadiness(false)}>{tenantReadinessLoading?"Checking Tenant...":"Check Tenant State"}</Btn>
       <Btn small onClick={()=>void refreshUsers(false)}>{loading?"Refreshing...":"Refresh"}</Btn>
       <Btn small primary onClick={()=>setModal("create")}>+ Create User</Btn>
     </>}>
@@ -18174,7 +18631,7 @@ const UserManagement=({session,onToast,onLogout})=>{
             </Sel>
           </FG>
           <FG label="Status">
-            <Inp value={String((tenants.find((tenant:any)=>String(tenant?.id||"")===String(tenantScope||session?.tenantId||""))?.status)||"active")} disabled/>
+            <Inp value={String(readinessTenantStatus||"active")} disabled/>
           </FG>
           <FG label="Tenants Visible">
             <Inp value={String((Array.isArray(tenants)&&tenants.length)?tenants.length:1)} disabled/>
@@ -18183,6 +18640,86 @@ const UserManagement=({session,onToast,onLogout})=>{
         <div style={{fontSize:10,color:C.muted,marginTop:6}}>
           Root admin can switch tenant scope to manage tenant users. Tenant admins remain scoped to their own tenant.
         </div>
+        <div style={{fontSize:10,color:C.red,marginTop:4}}>
+          Tenant delete workflow: governance approval, then disable tenant (no active connections/sessions), then delete.
+        </div>
+      </Card>
+      <Card style={{marginBottom:8}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Tenant Decommission Workflow</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <B c={readinessTenantStatus==="disabled"?"amber":"green"}>{`status: ${readinessTenantStatus}`}</B>
+            <B c={readinessBlockers.length?"red":"blue"}>{`${readinessBlockers.length} blockers`}</B>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8,marginBottom:8}}>
+          <Card>
+            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>UI Sessions</div>
+            <div style={{fontSize:14,color:C.text,fontWeight:700}}>{Number(tenantReadiness?.active_ui_session_count||0)}</div>
+          </Card>
+          <Card>
+            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Service Links</div>
+            <div style={{fontSize:14,color:C.text,fontWeight:700}}>{Number(tenantReadiness?.active_service_link_count||0)}</div>
+          </Card>
+          <Card>
+            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Can Disable</div>
+            <div style={{fontSize:14,color:Boolean(tenantReadiness?.can_disable)?C.green:C.red,fontWeight:700}}>{Boolean(tenantReadiness?.can_disable)?"YES":"NO"}</div>
+          </Card>
+          <Card>
+            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Can Delete</div>
+            <div style={{fontSize:14,color:Boolean(tenantReadiness?.can_delete)?C.green:C.red,fontWeight:700}}>{Boolean(tenantReadiness?.can_delete)?"YES":"NO"}</div>
+          </Card>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <FG label="Disable Approval Request ID">
+            <Inp value={tenantDisableApprovalID} onChange={(e)=>setTenantDisableApprovalID(e.target.value)} placeholder="apr_xxx (tenant.disable)"/>
+          </FG>
+          <FG label="Delete Approval Request ID">
+            <Inp value={tenantDeleteApprovalID} onChange={(e)=>setTenantDeleteApprovalID(e.target.value)} placeholder="apr_xxx (tenant.delete)"/>
+          </FG>
+        </div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:2}}>
+          <Btn small onClick={()=>void requestTenantApproval("disable")} disabled={!canManageTenantLifecycle||tenantApprovalCreating}>
+            {tenantApprovalCreating?"Requesting...":"Request Disable Approval"}
+          </Btn>
+          <Btn small onClick={()=>void submitDisableTenant()} disabled={!canDisableTenantNow||tenantDisabling||tenantSaving}>
+            {tenantDisabling?"Disabling...":"Disable Tenant"}
+          </Btn>
+          <Btn small onClick={()=>void requestTenantApproval("delete")} disabled={!canManageTenantLifecycle||tenantApprovalCreating}>
+            {tenantApprovalCreating?"Requesting...":"Request Delete Approval"}
+          </Btn>
+          <Btn
+            small
+            danger
+            onClick={()=>void submitDeleteTenant()}
+            disabled={!canDeleteTenantNow||tenantDeleting||tenantSaving}
+          >
+            {tenantDeleting?"Deleting...":"Delete Tenant"}
+          </Btn>
+        </div>
+        {readinessBlockers.length?<div style={{marginTop:10,padding:8,border:`1px solid ${C.red}`,borderRadius:8,background:C.redDim}}>
+          <div style={{fontSize:10,color:C.red,fontWeight:700,marginBottom:6}}>
+            Disable/Delete blocked until all active sessions and service connections are closed.
+          </div>
+          <div style={{display:"grid",gap:6,maxHeight:220,overflowY:"auto",paddingRight:2}}>
+            {readinessBlockers.map((item:any,index:number)=>{
+              const details=(Array.isArray(item?.details)?item.details:[]).slice(0,5);
+              return <div key={`tenant-blocker-${String(item?.code||item?.label||index)}`} style={{padding:"8px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
+                <div style={{fontSize:10,color:C.text,fontWeight:700}}>
+                  {`${String(item?.label||item?.code||"Blocker")} (${Number(item?.count||0)})`}
+                </div>
+                {details.length?<div style={{fontSize:9,color:C.muted,marginTop:2,wordBreak:"break-all"}}>
+                  {`Examples: ${details.join(", ")}`}
+                </div>:null}
+                {String(item?.remediation||"").trim()?<div style={{fontSize:9,color:C.dim,marginTop:2}}>
+                  {`Fix: ${String(item?.remediation||"")}`}
+                </div>:null}
+              </div>;
+            })}
+          </div>
+        </div>:<div style={{marginTop:10,fontSize:10,color:C.green}}>
+          No active blockers detected for selected tenant.
+        </div>}
       </Card>
       {usersError?<Card style={{marginBottom:8,borderColor:C.red}}>
         <div style={{fontSize:10,color:C.red}}>{usersError}</div>
@@ -18190,16 +18727,22 @@ const UserManagement=({session,onToast,onLogout})=>{
       <Card style={{marginBottom:8}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div style={{fontSize:12,color:C.text,fontWeight:700}}>Governance Quorum Policy</div>
-          <B c="amber">{`${Math.max(1,Math.min(Number(quorumRequired||1),Math.max(1,quorumMembers.size)))}-of-${Math.max(1,quorumMembers.size)}`}</B>
+          <B c="amber">{`${String(quorumMode||"or").toUpperCase()} • ${String(quorumMode||"or")==="and"?`${Math.max(1,quorumMembers.size)}-of-${Math.max(1,quorumMembers.size)}`:`1-of-${Math.max(1,quorumMembers.size)}`}`}</B>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:8,alignItems:"end"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:8,alignItems:"end"}}>
+          <FG label="Quorum Logic">
+            <Sel value={quorumMode} onChange={(e)=>setQuorumMode(String(e.target.value||"or").toLowerCase()==="and"?"and":"or")}>
+              <option value="or">OR (Any 1 approver)</option>
+              <option value="and">AND (All approvers)</option>
+            </Sel>
+          </FG>
           <FG label="Required Approvals">
             <Inp
               type="number"
               min={1}
               max={Math.max(1,quorumMembers.size)}
-              value={String(quorumRequired)}
-              onChange={(e)=>setQuorumRequired(Math.max(1,Math.trunc(Number(e.target.value||1))))}
+              value={String(quorumMode==="and"?Math.max(1,quorumMembers.size):1)}
+              disabled
             />
           </FG>
           <FG label="Total Approvers (selected users)">
@@ -18216,7 +18759,98 @@ const UserManagement=({session,onToast,onLogout})=>{
           </Btn>
         </div>
         <div style={{fontSize:10,color:C.muted,marginTop:6}}>
-          Select quorum members from the user table below. Required approvals are enforced by backend governance policy.
+          Select quorum members from the user table below. AND requires all approvers; OR requires any one approver.
+        </div>
+      </Card>
+      <Card style={{marginBottom:8}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Access Groups</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <B c="blue">{`${groupRows.length} groups`}</B>
+            <Btn small onClick={()=>void refreshGroups(false)}>{groupsLoading?"Refreshing...":"Refresh Groups"}</Btn>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1.1fr 1.2fr 1fr auto",gap:8,alignItems:"end"}}>
+          <FG label="Group Name" required>
+            <Inp value={newGroupName} onChange={(e)=>setNewGroupName(e.target.value)} placeholder="db-ops"/>
+          </FG>
+          <FG label="Description">
+            <Inp value={newGroupDescription} onChange={(e)=>setNewGroupDescription(e.target.value)} placeholder="DB operators with encrypt/decrypt access"/>
+          </FG>
+          <FG label="Group Role" required>
+            <Sel value={newGroupRole} onChange={(e)=>setNewGroupRole(e.target.value)}>
+              {roleOptions.map((role)=><option key={`grp-role-${role}`} value={role}>{role}</option>)}
+            </Sel>
+          </FG>
+          <Btn
+            small
+            primary
+            onClick={()=>void submitCreateGroup()}
+            disabled={groupsSaving}
+            style={{height:34,padding:"0 12px"}}
+          >
+            {groupsSaving?"Creating...":"Create Group"}
+          </Btn>
+        </div>
+        <div style={{marginTop:8,padding:8,border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
+          <div style={{fontSize:10,color:C.dim,marginBottom:6}}>Initial Members</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:6,maxHeight:120,overflowY:"auto"}}>
+            {userRows.map((user:any)=>{
+              const userID=String(user?.id||"");
+              const checked=(Array.isArray(newGroupMembers)?newGroupMembers:[]).includes(userID);
+              return <Chk
+                key={`grp-member-${userID}`}
+                label={`${String(user?.username||"")} (${String(user?.role||"readonly")})`}
+                checked={checked}
+                onChange={()=>setNewGroupMembers((prev)=>{
+                  const items=Array.isArray(prev)?[...prev]:[];
+                  if(items.includes(userID)){
+                    return items.filter((id)=>id!==userID);
+                  }
+                  return [...items,userID];
+                })}
+              />;
+            })}
+            {!userRows.length&&<div style={{fontSize:10,color:C.muted}}>No users available for membership assignment.</div>}
+          </div>
+        </div>
+        <div style={{marginTop:10,maxHeight:240,overflowY:"auto",paddingRight:4}}>
+          <div style={{display:"grid",gridTemplateColumns:"1.1fr 1fr .7fr auto",gap:8,padding:"4px 0",fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+            <div>Group</div>
+            <div>Assigned Role</div>
+            <div>Members</div>
+            <div>Actions</div>
+          </div>
+          {groupRows.map((group:any)=>{
+            const groupID=String(group?.id||"");
+            const selectedRole=String(groupRoleBindings?.[groupID]||"");
+            return <div key={groupID} style={{display:"grid",gridTemplateColumns:"1.1fr 1fr .7fr auto",gap:8,alignItems:"center",padding:"8px 0",borderTop:`1px solid ${C.border}`}}>
+              <div>
+                <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(group?.name||groupID)}</div>
+                <div style={{fontSize:9,color:C.muted}}>{String(group?.description||"No description")}</div>
+              </div>
+              <Sel
+                value={selectedRole}
+                onChange={(e)=>void submitGroupRoleChange(group,e.target.value)}
+                disabled={groupRoleUpdatingID===groupID}
+                style={{height:30}}
+              >
+                <option value="">unassigned</option>
+                {roleOptions.map((role)=><option key={`grp-row-role-${groupID}-${role}`} value={role}>{role}</option>)}
+              </Sel>
+              <div style={{fontSize:10,color:C.dim}}>{Number(group?.member_count||0)}</div>
+              <Btn
+                small
+                danger
+                onClick={()=>void submitDeleteGroup(group)}
+                disabled={groupDeletingID===groupID}
+              >
+                {groupDeletingID===groupID?"Deleting...":"Delete"}
+              </Btn>
+            </div>;
+          })}
+          {groupsLoading&&<div style={{fontSize:10,color:C.muted,padding:"10px 0"}}>Loading groups...</div>}
+          {!groupRows.length&&!groupsLoading&&<div style={{fontSize:10,color:C.muted,padding:"10px 0"}}>No access groups found.</div>}
         </div>
       </Card>
       <Card>
@@ -18369,6 +19003,7 @@ const UserManagement=({session,onToast,onLogout})=>{
         <Btn primary onClick={()=>void submitReset()} disabled={saving}>{saving?"Applying...":"Reset Password"}</Btn>
       </div>
     </Modal>
+    {promptDialog.ui}
   </div>;
 };
 
@@ -18457,13 +19092,13 @@ const SUB_PANES={
   workbench:[
     {id:"crypto",label:"Crypto Console",hint:"Interactive cryptographic operations and algorithm console",icon:Zap},
     {id:"restapi",label:"REST API",hint:"Authenticated API explorer and endpoint documentation",icon:TerminalSquare},
+    {id:"tokenize",label:"Tokenize / Mask / Redact",hint:"Vault and vaultless tokenization with masking/redaction",icon:VenetianMask,feature:"data_protection"},
     {id:"dataenc",label:"Data Encryption",hint:"Field-level, envelope, searchable and FPE crypto",icon:Database,feature:"data_protection"},
     {id:"payment",label:"Payment Crypto",hint:"TR-31, PIN, CVV, MAC and ISO20022 operations",icon:CreditCard,feature:"payment_crypto"}
   ],
   dataprotection:[
     {id:"fieldenc",label:"Field Encryption",hint:"Wrapper registration, challenge-response and local crypto lease control",icon:KeyRound,feature:"data_protection"},
     {id:"dataenc-policy",label:"Data Encryption Policy",hint:"Policy controls only for data encryption interfaces",icon:ShieldCheck,feature:"data_protection"},
-    {id:"tokenize",label:"Tokenize / Mask / Redact",hint:"Vault and vaultless tokenization with masking/redaction",icon:VenetianMask,feature:"data_protection"},
     {id:"token-policy",label:"Token / Mask / Redact Policy",hint:"Policy controls only for tokenization, masking and redaction",icon:VenetianMask,feature:"data_protection"},
     {id:"payment-policy",label:"Payment Policy",hint:"Policy controls only for payment cryptography operations",icon:CreditCard,feature:"payment_crypto"},
     {id:"pkcs11",label:"PKCS#11 / JCA",hint:"SDK providers, mechanism usage and client telemetry",icon:Plug}

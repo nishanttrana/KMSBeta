@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -69,7 +71,10 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /tenants", h.withAuth(h.handleCreateTenant, "auth.tenant.write", "super-admin"))
 	mux.HandleFunc("GET /tenants", h.withAuth(h.handleListTenants, "auth.tenant.read", "super-admin"))
 	mux.HandleFunc("GET /tenants/{id}", h.withAuth(h.handleGetTenant, "auth.tenant.read", "super-admin"))
+	mux.HandleFunc("GET /tenants/{id}/delete-readiness", h.withAuth(h.handleGetTenantDeleteReadiness, "auth.tenant.read", "super-admin"))
+	mux.HandleFunc("POST /tenants/{id}/disable", h.withAuth(h.handleDisableTenant, "auth.tenant.write", "super-admin"))
 	mux.HandleFunc("PUT /tenants/{id}", h.withAuth(h.handleUpdateTenant, "auth.tenant.write", "super-admin"))
+	mux.HandleFunc("DELETE /tenants/{id}", h.withAuth(h.handleDeleteTenant, "auth.tenant.write", "super-admin"))
 	mux.HandleFunc("POST /tenants/{id}/roles", h.withAuth(h.handleCreateTenantRole, "auth.role.write", "super-admin"))
 	mux.HandleFunc("PUT /tenants/{id}/roles/{name}", h.withAuth(h.handleUpdateTenantRole, "auth.role.write", "super-admin"))
 	mux.HandleFunc("DELETE /tenants/{id}/roles/{name}", h.withAuth(h.handleDeleteTenantRole, "auth.role.write", "super-admin"))
@@ -79,6 +84,9 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("PUT /auth/users/{id}/role", h.withAuth(h.handleUpdateUserRole, "auth.user.write"))
 	mux.HandleFunc("PUT /auth/users/{id}/status", h.withAuth(h.handleUpdateUserStatus, "auth.user.write"))
 	mux.HandleFunc("POST /auth/users/{id}/reset-password", h.withAuth(h.handleResetUserPassword, "auth.user.write"))
+	mux.HandleFunc("GET /auth/groups/roles", h.withAuth(h.handleListGroupRoleBindings, "auth.role.read"))
+	mux.HandleFunc("PUT /auth/groups/{id}/role", h.withAuth(h.handleUpsertGroupRoleBinding, "auth.role.write"))
+	mux.HandleFunc("DELETE /auth/groups/{id}/role", h.withAuth(h.handleDeleteGroupRoleBinding, "auth.role.write"))
 	mux.HandleFunc("GET /auth/password-policy", h.withAuth(h.handleGetPasswordPolicy, "auth.user.read"))
 	mux.HandleFunc("PUT /auth/password-policy", h.withAuth(h.handleUpdatePasswordPolicy, "auth.user.write"))
 	mux.HandleFunc("GET /auth/security-policy", h.withAuth(h.handleGetSecurityPolicy, "auth.user.read"))
@@ -487,12 +495,11 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid mfa code", reqID, req.TenantID)
 		return
 	}
-	perms, err := h.store.GetRolePermissions(r.Context(), req.TenantID, u.Role)
+	tokenPerms, err := h.resolveEffectivePermissions(r.Context(), req.TenantID, u.ID, u.Role)
 	if err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", "role not configured", reqID, req.TenantID)
+		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, req.TenantID)
 		return
 	}
-	tokenPerms := perms
 	if u.MustChangePassword {
 		tokenPerms = []string{"auth.password.change"}
 	}
@@ -532,7 +539,25 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
-	token, exp, err := h.logic.IssueJWT(claims.TenantID, claims.Role, claims.Permissions, claims.UserID, claims.MustChangePassword)
+	user, err := h.store.GetUserByID(r.Context(), claims.TenantID, claims.UserID)
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "user not found", reqID, claims.TenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to resolve user", reqID, claims.TenantID)
+		return
+	}
+	perms, err := h.resolveEffectivePermissions(r.Context(), claims.TenantID, user.ID, user.Role)
+	if err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	tokenPerms := perms
+	if user.MustChangePassword {
+		tokenPerms = []string{"auth.password.change"}
+	}
+	token, exp, err := h.logic.IssueJWT(claims.TenantID, user.Role, tokenPerms, claims.UserID, user.MustChangePassword)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "jwt_issue_failed", "failed to refresh token", reqID, claims.TenantID)
 		return
@@ -586,9 +611,9 @@ func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, code, "store_error", "failed to update password", reqID, claims.TenantID)
 		return
 	}
-	perms, err := h.store.GetRolePermissions(r.Context(), claims.TenantID, user.Role)
+	perms, err := h.resolveEffectivePermissions(r.Context(), claims.TenantID, user.ID, user.Role)
 	if err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", "role not configured", reqID, claims.TenantID)
+		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
 		return
 	}
 	token, exp, err := h.logic.IssueJWT(claims.TenantID, user.Role, perms, claims.UserID, false)
@@ -694,6 +719,261 @@ func (h *Handler) handleGetTenant(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"tenant": t, "request_id": reqID})
 }
 
+func (h *Handler) handleGetTenantDeleteReadiness(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	tenantID := strings.TrimSpace(r.PathValue("id"))
+	if tenantID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant id is required", reqID, "")
+		return
+	}
+	readiness, err := h.store.GetTenantDeleteReadiness(r.Context(), tenantID)
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "tenant not found", reqID, tenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to check tenant readiness", reqID, tenantID)
+		return
+	}
+	if publishErr := h.publishAudit(r.Context(), "audit.auth.tenant_delete_readiness_checked", reqID, tenantID, map[string]any{
+		"tenant_id":                   tenantID,
+		"actor_user_id":               claims.UserID,
+		"actor_tenant_id":             claims.TenantID,
+		"active_ui_session_count":     readiness.ActiveUISessionCount,
+		"active_service_link_count":   readiness.ActiveServiceLinkCount,
+		"blocker_count":               len(readiness.Blockers),
+		"requires_governance_approve": readiness.RequiresGovernanceApprove,
+	}); publishErr != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"readiness": readiness, "request_id": reqID})
+}
+
+func (h *Handler) handleDisableTenant(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	tenantID := strings.TrimSpace(r.PathValue("id"))
+	if tenantID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant id is required", reqID, "")
+		return
+	}
+	if strings.EqualFold(tenantID, "root") || strings.EqualFold(tenantID, "system") {
+		writeErr(w, http.StatusForbidden, "forbidden", "protected tenant cannot be disabled", reqID, tenantID)
+		return
+	}
+	if strings.EqualFold(tenantID, strings.TrimSpace(claims.TenantID)) {
+		writeErr(w, http.StatusForbidden, "forbidden", "current session tenant cannot be disabled from this session", reqID, tenantID)
+		return
+	}
+	var req struct {
+		GovernanceApprovalID string `json:"governance_approval_id"`
+	}
+	if r.Body != nil && r.Body != http.NoBody {
+		if err := decodeJSON(r, &req); err != nil && !errors.Is(err, io.EOF) {
+			writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+			return
+		}
+	}
+	if strings.TrimSpace(req.GovernanceApprovalID) == "" {
+		req.GovernanceApprovalID = strings.TrimSpace(r.URL.Query().Get("governance_approval_id"))
+	}
+	if err := h.requireApprovedGovernanceRequest(
+		r.Context(),
+		tenantID,
+		req.GovernanceApprovalID,
+		"tenant.disable",
+		"tenant",
+		tenantID,
+	); err != nil {
+		_ = h.publishAudit(r.Context(), "audit.auth.tenant_disable_rejected", reqID, tenantID, map[string]any{
+			"tenant_id":              tenantID,
+			"actor_user_id":          claims.UserID,
+			"actor_tenant_id":        claims.TenantID,
+			"governance_approval_id": strings.TrimSpace(req.GovernanceApprovalID),
+			"reason":                 err.Error(),
+		})
+		writeErr(w, http.StatusForbidden, "governance_required", err.Error(), reqID, tenantID)
+		return
+	}
+	readiness, err := h.store.DisableTenant(r.Context(), tenantID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			writeErr(w, http.StatusNotFound, "not_found", "tenant not found", reqID, tenantID)
+			return
+		}
+		if len(readiness.Blockers) > 0 {
+			_ = h.publishAudit(r.Context(), "audit.auth.tenant_disable_blocked", reqID, tenantID, map[string]any{
+				"tenant_id":                 tenantID,
+				"actor_user_id":             claims.UserID,
+				"actor_tenant_id":           claims.TenantID,
+				"governance_approval_id":    strings.TrimSpace(req.GovernanceApprovalID),
+				"active_ui_session_count":   readiness.ActiveUISessionCount,
+				"active_service_link_count": readiness.ActiveServiceLinkCount,
+				"blockers":                  readiness.Blockers,
+			})
+			writeJSON(w, http.StatusConflict, map[string]any{
+				"error": map[string]any{
+					"code":       "tenant_disable_blocked",
+					"message":    "tenant still has active sessions or service connections; close all connections before disable",
+					"request_id": reqID,
+					"tenant_id":  tenantID,
+				},
+				"readiness": readiness,
+			})
+			return
+		}
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to disable tenant", reqID, tenantID)
+		return
+	}
+	if publishErr := h.publishAudit(r.Context(), "audit.auth.tenant_disabled", reqID, tenantID, map[string]any{
+		"tenant_id":                 tenantID,
+		"actor_user_id":             claims.UserID,
+		"actor_tenant_id":           claims.TenantID,
+		"governance_approval_id":    strings.TrimSpace(req.GovernanceApprovalID),
+		"active_ui_session_count":   readiness.ActiveUISessionCount,
+		"active_service_link_count": readiness.ActiveServiceLinkCount,
+	}); publishErr != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":     "ok",
+		"tenant_id":  tenantID,
+		"readiness":  readiness,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleDeleteTenant(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	tenantID := strings.TrimSpace(r.PathValue("id"))
+	if tenantID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant id is required", reqID, "")
+		return
+	}
+	if strings.EqualFold(tenantID, "root") || strings.EqualFold(tenantID, "system") {
+		writeErr(w, http.StatusForbidden, "forbidden", "protected tenant cannot be deleted", reqID, tenantID)
+		return
+	}
+	if strings.EqualFold(tenantID, strings.TrimSpace(claims.TenantID)) {
+		writeErr(w, http.StatusForbidden, "forbidden", "current session tenant cannot be deleted", reqID, tenantID)
+		return
+	}
+
+	var req struct {
+		ConfirmTenantID      string `json:"confirm_tenant_id"`
+		Force                bool   `json:"force"`
+		GovernanceApprovalID string `json:"governance_approval_id"`
+	}
+	if r.Body != nil && r.Body != http.NoBody {
+		if err := decodeJSON(r, &req); err != nil && !errors.Is(err, io.EOF) {
+			writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+			return
+		}
+	}
+	if strings.TrimSpace(req.ConfirmTenantID) == "" {
+		req.ConfirmTenantID = strings.TrimSpace(r.URL.Query().Get("confirm_tenant_id"))
+	}
+	if !req.Force {
+		force := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("force")))
+		req.Force = force == "true" || force == "1" || force == "yes"
+	}
+	if !req.Force || !strings.EqualFold(strings.TrimSpace(req.ConfirmTenantID), tenantID) {
+		writeErr(
+			w,
+			http.StatusBadRequest,
+			"bad_request",
+			"destructive delete requires force=true and confirm_tenant_id matching tenant path",
+			reqID,
+			tenantID,
+		)
+		return
+	}
+	if strings.TrimSpace(req.GovernanceApprovalID) == "" {
+		req.GovernanceApprovalID = strings.TrimSpace(r.URL.Query().Get("governance_approval_id"))
+	}
+	if err := h.requireApprovedGovernanceRequest(
+		r.Context(),
+		tenantID,
+		req.GovernanceApprovalID,
+		"tenant.delete",
+		"tenant",
+		tenantID,
+	); err != nil {
+		_ = h.publishAudit(r.Context(), "audit.auth.tenant_delete_rejected", reqID, tenantID, map[string]any{
+			"tenant_id":              tenantID,
+			"actor_user_id":          claims.UserID,
+			"actor_tenant_id":        claims.TenantID,
+			"governance_approval_id": strings.TrimSpace(req.GovernanceApprovalID),
+			"reason":                 err.Error(),
+		})
+		writeErr(w, http.StatusForbidden, "governance_required", err.Error(), reqID, tenantID)
+		return
+	}
+
+	readiness, readinessErr := h.store.GetTenantDeleteReadiness(r.Context(), tenantID)
+	if readinessErr != nil && !errors.Is(readinessErr, errNotFound) {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to check tenant readiness", reqID, tenantID)
+		return
+	}
+	if readinessErr == nil && (readiness.TenantStatus != "disabled" || len(readiness.Blockers) > 0) {
+		_ = h.publishAudit(r.Context(), "audit.auth.tenant_delete_blocked", reqID, tenantID, map[string]any{
+			"tenant_id":                 tenantID,
+			"actor_user_id":             claims.UserID,
+			"actor_tenant_id":           claims.TenantID,
+			"governance_approval_id":    strings.TrimSpace(req.GovernanceApprovalID),
+			"tenant_status":             readiness.TenantStatus,
+			"active_ui_session_count":   readiness.ActiveUISessionCount,
+			"active_service_link_count": readiness.ActiveServiceLinkCount,
+			"blockers":                  readiness.Blockers,
+		})
+		writeJSON(w, http.StatusConflict, map[string]any{
+			"error": map[string]any{
+				"code":       "tenant_delete_blocked",
+				"message":    "tenant must be disabled and have no active sessions/service connections before deletion",
+				"request_id": reqID,
+				"tenant_id":  tenantID,
+			},
+			"readiness": readiness,
+		})
+		return
+	}
+
+	summary, err := h.store.DeleteTenant(r.Context(), tenantID)
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "tenant not found", reqID, tenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to delete tenant", reqID, tenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.tenant_deleted", reqID, tenantID, map[string]any{
+		"tenant_id":              tenantID,
+		"actor_user_id":          claims.UserID,
+		"actor_tenant_id":        claims.TenantID,
+		"tables_purged":          summary.TablesPurged,
+		"rows_purged":            summary.RowsPurged,
+		"deleted_by_table":       summary.DeletedByTable,
+		"governance_approval_id": strings.TrimSpace(req.GovernanceApprovalID),
+		"destructive_action":     true,
+	}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":           "ok",
+		"tenant_id":        tenantID,
+		"tables_purged":    summary.TablesPurged,
+		"rows_purged":      summary.RowsPurged,
+		"deleted_by_table": summary.DeletedByTable,
+		"request_id":       reqID,
+	})
+}
+
 func (h *Handler) tenantWrite(w http.ResponseWriter, r *http.Request, mode string) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
@@ -714,6 +994,17 @@ func (h *Handler) tenantWrite(w http.ResponseWriter, r *http.Request, mode strin
 	}
 	if req.Status == "" {
 		req.Status = "active"
+	}
+	if mode == "update" && strings.EqualFold(strings.TrimSpace(req.Status), "disabled") {
+		writeErr(
+			w,
+			http.StatusBadRequest,
+			"bad_request",
+			"tenant status cannot be set to disabled using update endpoint; use /tenants/{id}/disable with governance approval and readiness checks",
+			reqID,
+			strings.TrimSpace(r.PathValue("id")),
+		)
+		return
 	}
 	tenantID := req.ID
 	if mode == "update" {
@@ -1085,6 +1376,100 @@ func (h *Handler) handleResetUserPassword(w http.ResponseWriter, r *http.Request
 		"actor_user_id":        claims.UserID,
 		"actor_tenant":         claims.TenantID,
 		"updated_tenant":       targetTenant,
+	}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, targetTenant)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
+}
+
+func (h *Handler) handleListGroupRoleBindings(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	targetTenant, err := h.resolveTenantScope(r, claims, "auth.tenant.read", r.URL.Query().Get("tenant_id"))
+	if err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	items, err := h.store.ListGroupRoleBindings(r.Context(), targetTenant)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to list group role bindings", reqID, targetTenant)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleUpsertGroupRoleBinding(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	targetTenant, err := h.resolveTenantScope(r, claims, "auth.tenant.write", r.URL.Query().Get("tenant_id"))
+	if err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	groupID := strings.TrimSpace(r.PathValue("id"))
+	if groupID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "group id is required", reqID, targetTenant)
+		return
+	}
+	var req struct {
+		RoleName string `json:"role_name"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, targetTenant)
+		return
+	}
+	roleName := strings.TrimSpace(req.RoleName)
+	if roleName == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "role_name is required", reqID, targetTenant)
+		return
+	}
+	binding, err := h.store.UpsertGroupRoleBinding(r.Context(), GroupRoleBinding{
+		TenantID: targetTenant,
+		GroupID:  groupID,
+		RoleName: roleName,
+	})
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "group_role_update_failed", err.Error(), reqID, targetTenant)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.group_role_updated", reqID, targetTenant, map[string]any{
+		"group_id":        groupID,
+		"role_name":       roleName,
+		"actor_user_id":   claims.UserID,
+		"actor_tenant_id": claims.TenantID,
+	}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, targetTenant)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"binding": binding, "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteGroupRoleBinding(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	targetTenant, err := h.resolveTenantScope(r, claims, "auth.tenant.write", r.URL.Query().Get("tenant_id"))
+	if err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	groupID := strings.TrimSpace(r.PathValue("id"))
+	if groupID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "group id is required", reqID, targetTenant)
+		return
+	}
+	if err := h.store.DeleteGroupRoleBinding(r.Context(), targetTenant, groupID); err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "group_role_delete_failed", err.Error(), reqID, targetTenant)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.group_role_deleted", reqID, targetTenant, map[string]any{
+		"group_id":        groupID,
+		"actor_user_id":   claims.UserID,
+		"actor_tenant_id": claims.TenantID,
 	}); err != nil {
 		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, targetTenant)
 		return
@@ -1522,6 +1907,88 @@ func (h *Handler) resolveTenantScope(r *http.Request, claims *pkgauth.Claims, cr
 		return "", errors.New("cross-tenant operation requires tenant management permission")
 	}
 	return targetTenant, nil
+}
+
+func (h *Handler) resolveEffectivePermissions(ctx context.Context, tenantID string, userID string, primaryRole string) ([]string, error) {
+	roleName := strings.TrimSpace(primaryRole)
+	if roleName == "" {
+		return nil, errors.New("user role is required")
+	}
+	primaryPerms, err := h.store.GetRolePermissions(ctx, tenantID, roleName)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return nil, fmt.Errorf("role %s is not configured", roleName)
+		}
+		return nil, err
+	}
+	permSet := map[string]struct{}{}
+	for _, perm := range primaryPerms {
+		p := strings.TrimSpace(perm)
+		if p != "" {
+			permSet[p] = struct{}{}
+		}
+	}
+	groupRoles, err := h.store.ListGroupRolesForUser(ctx, tenantID, strings.TrimSpace(userID))
+	if err != nil {
+		return nil, err
+	}
+	for _, role := range groupRoles {
+		role = strings.TrimSpace(role)
+		if role == "" {
+			continue
+		}
+		rolePerms, roleErr := h.store.GetRolePermissions(ctx, tenantID, role)
+		if roleErr != nil {
+			if errors.Is(roleErr, errNotFound) {
+				continue
+			}
+			return nil, roleErr
+		}
+		for _, perm := range rolePerms {
+			p := strings.TrimSpace(perm)
+			if p != "" {
+				permSet[p] = struct{}{}
+			}
+		}
+	}
+	out := make([]string, 0, len(permSet))
+	for perm := range permSet {
+		out = append(out, perm)
+	}
+	sort.Strings(out)
+	return out, nil
+}
+
+func (h *Handler) requireApprovedGovernanceRequest(
+	ctx context.Context,
+	tenantID string,
+	approvalID string,
+	action string,
+	targetType string,
+	targetID string,
+) error {
+	approvalID = strings.TrimSpace(approvalID)
+	if approvalID == "" {
+		return errors.New("governance_approval_id is required")
+	}
+	approved, err := h.store.IsGovernanceRequestApproved(
+		ctx,
+		strings.TrimSpace(tenantID),
+		approvalID,
+		strings.ToLower(strings.TrimSpace(action)),
+		strings.ToLower(strings.TrimSpace(targetType)),
+		strings.TrimSpace(targetID),
+	)
+	if errors.Is(err, errNotFound) {
+		return errors.New("governance approval request not found for tenant/action/target")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to validate governance approval: %w", err)
+	}
+	if !approved {
+		return errors.New("governance approval request is not approved")
+	}
+	return nil
 }
 
 func (h *Handler) canCrossTenant(claims *pkgauth.Claims, perm string) bool {

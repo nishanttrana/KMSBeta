@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS approval_policies (
     description           TEXT,
     scope                 TEXT NOT NULL,
     trigger_actions       JSONB NOT NULL,
+    quorum_mode           TEXT NOT NULL DEFAULT 'threshold',
     required_approvals    INTEGER NOT NULL,
     total_approvers       INTEGER NOT NULL,
     approver_roles        JSONB NOT NULL,

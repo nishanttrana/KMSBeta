@@ -217,7 +217,7 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 		approvalID, err := s.governance.CreateKeyApproval(ctx, GovernanceApprovalRequest{
 			TenantID:        tenantID,
 			KeyID:           keyID,
-			Operation:       composePolicyOperation(protocol, operation),
+			Operation:       operation,
 			PayloadHash:     hashJSONPayload(req),
 			RequesterID:     logEntry.RequesterID,
 			RequesterEmail:  logEntry.RequesterEmail,
