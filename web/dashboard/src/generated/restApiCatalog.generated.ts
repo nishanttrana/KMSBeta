@@ -5463,6 +5463,118 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "governance-get-governance-backups",
+    "group": "Governance (governance)",
+    "title": "GET /governance/backups",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/backups?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "GET /svc/governance/governance/backups?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-get-governance-backups-id",
+    "group": "Governance (governance)",
+    "title": "GET /governance/backups/{id}",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/backups/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "GET /svc/governance/governance/backups/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-get-governance-backups-id-artifact",
+    "group": "Governance (governance)",
+    "title": "GET /governance/backups/{id}/artifact",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/backups/{id}/artifact?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "GET /svc/governance/governance/backups/{id}/artifact?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-get-governance-backups-id-key",
+    "group": "Governance (governance)",
+    "title": "GET /governance/backups/{id}/key",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/backups/{id}/key?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "GET /svc/governance/governance/backups/{id}/key?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "governance-get-governance-key-approval-id-status",
     "group": "Governance (governance)",
     "title": "GET /governance/key-approval/{id}/status",
@@ -5724,6 +5836,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Governance service.",
     "requestExample": "POST /svc/governance/governance/approve/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-post-governance-backups",
+    "group": "Governance (governance)",
+    "title": "POST /governance/backups",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/backups?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "POST /svc/governance/governance/backups?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

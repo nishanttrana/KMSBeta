@@ -78,6 +78,31 @@ export type GovernanceVote = {
   ip_address?: string;
 };
 
+export type GovernanceBackupJob = {
+  id: string;
+  tenant_id: string;
+  scope: "system" | "tenant" | string;
+  target_tenant_id?: string;
+  status: string;
+  backup_format: string;
+  encryption_algorithm: string;
+  ciphertext_sha256: string;
+  artifact_size_bytes: number;
+  row_count_total: number;
+  table_count: number;
+  hsm_bound: boolean;
+  hsm_provider_name?: string;
+  hsm_slot_id?: string;
+  hsm_partition_label?: string;
+  hsm_token_label?: string;
+  hsm_binding_fingerprint?: string;
+  key_package?: Record<string, unknown>;
+  created_by?: string;
+  created_at?: string;
+  completed_at?: string;
+  failure_reason?: string;
+};
+
 export async function getGovernanceSettings(session: AuthSession): Promise<GovernanceSettings> {
   const out = await serviceRequest<{ settings: GovernanceSettings }>(
     session,
@@ -124,6 +149,65 @@ export async function testGovernanceWebhook(
       webhook_url: webhook_url || ""
     })
   });
+}
+
+export async function createGovernanceBackup(
+  session: AuthSession,
+  input: {
+    scope: "system" | "tenant";
+    target_tenant_id?: string;
+    bind_to_hsm?: boolean;
+    created_by?: string;
+  }
+): Promise<GovernanceBackupJob> {
+  const out = await serviceRequest<{ job: GovernanceBackupJob }>(session, "governance", "/governance/backups", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      scope: input.scope,
+      target_tenant_id: String(input.target_tenant_id || "").trim(),
+      bind_to_hsm: typeof input.bind_to_hsm === "boolean" ? input.bind_to_hsm : true,
+      created_by: String(input.created_by || "").trim()
+    })
+  });
+  return out.job;
+}
+
+export async function listGovernanceBackups(
+  session: AuthSession,
+  options?: { scope?: string; status?: string; limit?: number }
+): Promise<GovernanceBackupJob[]> {
+  const qp = new URLSearchParams();
+  qp.set("tenant_id", session.tenantId);
+  if (String(options?.scope || "").trim()) qp.set("scope", String(options?.scope || "").trim());
+  if (String(options?.status || "").trim()) qp.set("status", String(options?.status || "").trim());
+  if (Number(options?.limit || 0) > 0) qp.set("limit", String(Math.trunc(Number(options?.limit || 0))));
+  const out = await serviceRequest<{ items?: GovernanceBackupJob[] }>(session, "governance", `/governance/backups?${qp.toString()}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function downloadGovernanceBackupArtifact(
+  session: AuthSession,
+  backupID: string
+): Promise<{ file_name: string; content_type: string; content_base64: string }> {
+  const out = await serviceRequest<{ artifact: { file_name: string; content_type: string; content_base64: string } }>(
+    session,
+    "governance",
+    `/governance/backups/${encodeURIComponent(String(backupID || "").trim())}/artifact?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  return out.artifact;
+}
+
+export async function downloadGovernanceBackupKey(
+  session: AuthSession,
+  backupID: string
+): Promise<{ file_name: string; content_type: string; content_base64: string; key_package?: Record<string, unknown> }> {
+  const out = await serviceRequest<{ artifact: { file_name: string; content_type: string; content_base64: string; key_package?: Record<string, unknown> } }>(
+    session,
+    "governance",
+    `/governance/backups/${encodeURIComponent(String(backupID || "").trim())}/key?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  return out.artifact;
 }
 
 export async function listGovernancePolicies(

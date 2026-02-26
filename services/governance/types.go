@@ -180,3 +180,39 @@ type SystemIntegrityStatus struct {
 	Checks    map[string]string `json:"checks"`
 	Timestamp time.Time         `json:"timestamp"`
 }
+
+type CreateBackupInput struct {
+	TenantID       string `json:"tenant_id"`
+	Scope          string `json:"scope"`
+	TargetTenantID string `json:"target_tenant_id"`
+	BindToHSM      *bool  `json:"bind_to_hsm,omitempty"`
+	CreatedBy      string `json:"created_by"`
+}
+
+type BackupJob struct {
+	ID                    string                 `json:"id"`
+	TenantID              string                 `json:"tenant_id"`
+	Scope                 string                 `json:"scope"`
+	TargetTenantID        string                 `json:"target_tenant_id"`
+	Status                string                 `json:"status"`
+	BackupFormat          string                 `json:"backup_format"`
+	EncryptionAlgorithm   string                 `json:"encryption_algorithm"`
+	CiphertextSHA256      string                 `json:"ciphertext_sha256"`
+	ArtifactSizeBytes     int64                  `json:"artifact_size_bytes"`
+	RowCountTotal         int64                  `json:"row_count_total"`
+	TableCount            int                    `json:"table_count"`
+	HSMBound              bool                   `json:"hsm_bound"`
+	HSMProviderName       string                 `json:"hsm_provider_name,omitempty"`
+	HSMSlotID             string                 `json:"hsm_slot_id,omitempty"`
+	HSMPartitionLabel     string                 `json:"hsm_partition_label,omitempty"`
+	HSMTokenLabel         string                 `json:"hsm_token_label,omitempty"`
+	HSMBindingFingerprint string                 `json:"hsm_binding_fingerprint,omitempty"`
+	KeyPackage            map[string]interface{} `json:"key_package,omitempty"`
+	CreatedBy             string                 `json:"created_by"`
+	CreatedAt             time.Time              `json:"created_at"`
+	CompletedAt           time.Time              `json:"completed_at"`
+	FailureReason         string                 `json:"failure_reason,omitempty"`
+	ArtifactCiphertext    []byte                 `json:"-"`
+	ArtifactNonce         []byte                 `json:"-"`
+	KeyPackageRaw         []byte                 `json:"-"`
+}

@@ -1,0 +1,683 @@
+package main
+
+import (
+	"bytes"
+	"compress/gzip"
+	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+)
+
+const (
+	backupScopeSystem = "system"
+	backupScopeTenant = "tenant"
+
+	backupFormatJSONGzAESGCM = "json.gz+aes256gcm"
+)
+
+type backupHSMBinding struct {
+	Enabled         bool
+	ProviderName    string
+	LibraryPath     string
+	SlotID          string
+	PartitionLabel  string
+	TokenLabel      string
+	Fingerprint     string
+	FingerprintHash string
+}
+
+type backupSnapshotPayload struct {
+	Version         string                     `json:"version"`
+	CapturedAt      string                     `json:"captured_at"`
+	Scope           string                     `json:"scope"`
+	RequestTenantID string                     `json:"request_tenant_id"`
+	TargetTenantID  string                     `json:"target_tenant_id,omitempty"`
+	TableRowCounts  map[string]int64           `json:"table_row_counts"`
+	Tables          map[string]json.RawMessage `json:"tables"`
+}
+
+func normalizeBackupScope(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case backupScopeSystem:
+		return backupScopeSystem
+	case backupScopeTenant:
+		return backupScopeTenant
+	default:
+		return ""
+	}
+}
+
+func (s *Service) CreateBackup(ctx context.Context, in CreateBackupInput) (BackupJob, error) {
+	store, ok := s.store.(*SQLStore)
+	if !ok || store == nil || store.db == nil || store.db.SQL() == nil {
+		return BackupJob{}, errors.New("backup store is unavailable")
+	}
+	in.TenantID = strings.TrimSpace(in.TenantID)
+	if in.TenantID == "" {
+		return BackupJob{}, errors.New("tenant_id is required")
+	}
+	scope := normalizeBackupScope(in.Scope)
+	if scope == "" {
+		return BackupJob{}, errors.New("scope must be system or tenant")
+	}
+	targetTenantID := strings.TrimSpace(in.TargetTenantID)
+	if scope == backupScopeTenant && targetTenantID == "" {
+		targetTenantID = in.TenantID
+	}
+	if scope == backupScopeSystem {
+		targetTenantID = ""
+	}
+	createdBy := strings.TrimSpace(in.CreatedBy)
+	if createdBy == "" {
+		createdBy = "system"
+	}
+	bindToHSM := true
+	if in.BindToHSM != nil {
+		bindToHSM = *in.BindToHSM
+	}
+
+	payload, rowCountTotal, tableCount, err := s.captureBackupPayload(ctx, store, in.TenantID, scope, targetTenantID)
+	if err != nil {
+		return BackupJob{}, err
+	}
+	if len(payload) == 0 {
+		return BackupJob{}, errors.New("backup payload is empty")
+	}
+	backupKey, err := randomBytes(32)
+	if err != nil {
+		return BackupJob{}, err
+	}
+	aad, err := json.Marshal(map[string]interface{}{
+		"service":          "governance",
+		"scope":            scope,
+		"tenant_id":        in.TenantID,
+		"target_tenant_id": targetTenantID,
+		"format":           backupFormatJSONGzAESGCM,
+		"captured_at":      time.Now().UTC().Format(time.RFC3339Nano),
+	})
+	if err != nil {
+		return BackupJob{}, err
+	}
+	ciphertext, nonce, err := encryptAESGCM(payload, backupKey, aad)
+	if err != nil {
+		return BackupJob{}, err
+	}
+	hsmTenantID := in.TenantID
+	if scope == backupScopeTenant {
+		hsmTenantID = targetTenantID
+	}
+	binding := store.loadHSMBinding(ctx, hsmTenantID)
+	hsmBound := bindToHSM && binding.Enabled
+	keyPackage, keyPackageRaw, err := buildBackupKeyPackage(backupKey, hsmBound, binding, in.TenantID, targetTenantID)
+	if err != nil {
+		return BackupJob{}, err
+	}
+	job := BackupJob{
+		ID:                    newID("bkp"),
+		TenantID:              in.TenantID,
+		Scope:                 scope,
+		TargetTenantID:        targetTenantID,
+		Status:                "completed",
+		BackupFormat:          backupFormatJSONGzAESGCM,
+		EncryptionAlgorithm:   "AES-256-GCM",
+		CiphertextSHA256:      sha256Hex(string(ciphertext)),
+		ArtifactCiphertext:    ciphertext,
+		ArtifactNonce:         nonce,
+		ArtifactSizeBytes:     int64(len(ciphertext)),
+		RowCountTotal:         rowCountTotal,
+		TableCount:            tableCount,
+		HSMBound:              hsmBound,
+		HSMProviderName:       binding.ProviderName,
+		HSMSlotID:             binding.SlotID,
+		HSMPartitionLabel:     binding.PartitionLabel,
+		HSMTokenLabel:         binding.TokenLabel,
+		HSMBindingFingerprint: binding.FingerprintHash,
+		KeyPackage:            keyPackage,
+		KeyPackageRaw:         keyPackageRaw,
+		CreatedBy:             createdBy,
+		CompletedAt:           time.Now().UTC(),
+	}
+	if err := store.insertBackupJob(ctx, job); err != nil {
+		return BackupJob{}, err
+	}
+	_ = s.publishAudit(ctx, "audit.governance.backup_created", in.TenantID, map[string]interface{}{
+		"backup_id":           job.ID,
+		"scope":               job.Scope,
+		"target_tenant_id":    job.TargetTenantID,
+		"artifact_size_bytes": job.ArtifactSizeBytes,
+		"hsm_bound":           job.HSMBound,
+		"row_count_total":     job.RowCountTotal,
+		"table_count":         job.TableCount,
+	})
+	sanitizeBackupJobSummary(&job)
+	return job, nil
+}
+
+func (s *Service) ListBackups(ctx context.Context, tenantID string, scope string, status string, limit int) ([]BackupJob, error) {
+	store, ok := s.store.(*SQLStore)
+	if !ok || store == nil || store.db == nil || store.db.SQL() == nil {
+		return nil, errors.New("backup store is unavailable")
+	}
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, errors.New("tenant_id is required")
+	}
+	scope = strings.ToLower(strings.TrimSpace(scope))
+	status = strings.ToLower(strings.TrimSpace(status))
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	items, err := store.listBackupJobs(ctx, tenantID, scope, status, limit)
+	if err != nil {
+		return nil, err
+	}
+	for i := range items {
+		sanitizeBackupJobSummary(&items[i])
+	}
+	return items, nil
+}
+
+func (s *Service) GetBackup(ctx context.Context, tenantID string, backupID string) (BackupJob, error) {
+	store, ok := s.store.(*SQLStore)
+	if !ok || store == nil || store.db == nil || store.db.SQL() == nil {
+		return BackupJob{}, errors.New("backup store is unavailable")
+	}
+	tenantID = strings.TrimSpace(tenantID)
+	backupID = strings.TrimSpace(backupID)
+	if tenantID == "" || backupID == "" {
+		return BackupJob{}, errors.New("tenant_id and backup_id are required")
+	}
+	item, err := store.getBackupJob(ctx, tenantID, backupID, false)
+	if err != nil {
+		return BackupJob{}, err
+	}
+	sanitizeBackupJobSummary(&item)
+	return item, nil
+}
+
+func (s *Service) GetBackupArtifactDownload(ctx context.Context, tenantID string, backupID string) (map[string]interface{}, error) {
+	store, ok := s.store.(*SQLStore)
+	if !ok || store == nil || store.db == nil || store.db.SQL() == nil {
+		return nil, errors.New("backup store is unavailable")
+	}
+	item, err := store.getBackupJob(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(backupID), true)
+	if err != nil {
+		return nil, err
+	}
+	if len(item.ArtifactCiphertext) == 0 {
+		return nil, errors.New("backup artifact is empty")
+	}
+	return map[string]interface{}{
+		"file_name":            fmt.Sprintf("vecta-backup-%s.vbk", item.ID),
+		"content_type":         "application/octet-stream",
+		"content_base64":       base64.StdEncoding.EncodeToString(item.ArtifactCiphertext),
+		"nonce_base64":         base64.StdEncoding.EncodeToString(item.ArtifactNonce),
+		"ciphertext_sha256":    item.CiphertextSHA256,
+		"backup_format":        item.BackupFormat,
+		"encryption_algorithm": item.EncryptionAlgorithm,
+		"hsm_bound":            item.HSMBound,
+	}, nil
+}
+
+func (s *Service) GetBackupKeyDownload(ctx context.Context, tenantID string, backupID string) (map[string]interface{}, error) {
+	store, ok := s.store.(*SQLStore)
+	if !ok || store == nil || store.db == nil || store.db.SQL() == nil {
+		return nil, errors.New("backup store is unavailable")
+	}
+	item, err := store.getBackupJob(ctx, strings.TrimSpace(tenantID), strings.TrimSpace(backupID), true)
+	if err != nil {
+		return nil, err
+	}
+	if len(item.KeyPackageRaw) == 0 {
+		return nil, errors.New("backup key package is empty")
+	}
+	var keyPackage map[string]interface{}
+	if err := json.Unmarshal(item.KeyPackageRaw, &keyPackage); err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"file_name":    fmt.Sprintf("vecta-backup-%s.key.json", item.ID),
+		"content_type": "application/json",
+		"key_package":  keyPackage,
+	}, nil
+}
+
+func (s *Service) captureBackupPayload(ctx context.Context, store *SQLStore, requestTenantID string, scope string, targetTenantID string) ([]byte, int64, int, error) {
+	tables, err := store.listBackupTables(ctx)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	sort.Strings(tables)
+	payload := backupSnapshotPayload{
+		Version:         "v1",
+		CapturedAt:      time.Now().UTC().Format(time.RFC3339Nano),
+		Scope:           scope,
+		RequestTenantID: requestTenantID,
+		TargetTenantID:  targetTenantID,
+		TableRowCounts:  map[string]int64{},
+		Tables:          map[string]json.RawMessage{},
+	}
+	var rowCountTotal int64
+	for _, table := range tables {
+		if table == "" {
+			continue
+		}
+		if strings.EqualFold(table, "governance_backup_jobs") {
+			continue
+		}
+		hasTenantID, err := store.tableHasTenantIDColumn(ctx, table)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+		if scope == backupScopeTenant && !hasTenantID {
+			continue
+		}
+		rowsJSON, rowCount, err := store.dumpTableRows(ctx, table, scope, targetTenantID, hasTenantID)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+		if rowCount == 0 {
+			continue
+		}
+		payload.Tables[table] = rowsJSON
+		payload.TableRowCounts[table] = rowCount
+		rowCountTotal += rowCount
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	var compressed bytes.Buffer
+	gz := gzip.NewWriter(&compressed)
+	if _, err := gz.Write(raw); err != nil {
+		_ = gz.Close()
+		return nil, 0, 0, err
+	}
+	if err := gz.Close(); err != nil {
+		return nil, 0, 0, err
+	}
+	return compressed.Bytes(), rowCountTotal, len(payload.Tables), nil
+}
+
+func buildBackupKeyPackage(backupKey []byte, hsmBound bool, binding backupHSMBinding, requestTenantID string, targetTenantID string) (map[string]interface{}, []byte, error) {
+	if hsmBound {
+		secret := strings.TrimSpace(os.Getenv("BACKUP_HSM_WRAP_SECRET"))
+		if secret == "" {
+			secret = "vecta-backup-wrap-secret-change-me"
+		}
+		derived := sha256.Sum256([]byte(secret + "|" + binding.Fingerprint + "|" + requestTenantID + "|" + targetTenantID))
+		aad := []byte("vecta-kms:backup:hsm-binding:" + binding.FingerprintHash)
+		wrapped, wrapNonce, err := encryptAESGCM(backupKey, derived[:], aad)
+		if err != nil {
+			return nil, nil, err
+		}
+		pkg := map[string]interface{}{
+			"version":          1,
+			"mode":             "hsm_bound",
+			"algorithm":        "AES-256-GCM",
+			"wrapped_key_b64":  base64.StdEncoding.EncodeToString(wrapped),
+			"wrap_nonce_b64":   base64.StdEncoding.EncodeToString(wrapNonce),
+			"wrap_aad_b64":     base64.StdEncoding.EncodeToString(aad),
+			"hsm_binding_hash": binding.FingerprintHash,
+			"hsm_binding": map[string]interface{}{
+				"provider_name":    binding.ProviderName,
+				"slot_id":          binding.SlotID,
+				"partition_label":  binding.PartitionLabel,
+				"token_label":      binding.TokenLabel,
+				"library_path_sha": sha256Hex(binding.LibraryPath),
+			},
+			"note": "Backup key is wrapped using local HSM binding metadata. Keep this package with backup artifact for restore.",
+		}
+		raw, err := json.Marshal(pkg)
+		if err != nil {
+			return nil, nil, err
+		}
+		return pkg, raw, nil
+	}
+	pkg := map[string]interface{}{
+		"version":           1,
+		"mode":              "software",
+		"algorithm":         "AES-256",
+		"backup_key_b64":    base64.StdEncoding.EncodeToString(backupKey),
+		"backup_key_sha256": sha256Hex(string(backupKey)),
+		"note":              "Store this key package separately from the encrypted backup artifact.",
+	}
+	raw, err := json.Marshal(pkg)
+	if err != nil {
+		return nil, nil, err
+	}
+	return pkg, raw, nil
+}
+
+func sanitizeBackupJobSummary(job *BackupJob) {
+	if job == nil {
+		return
+	}
+	if len(job.KeyPackageRaw) > 0 && len(job.KeyPackage) == 0 {
+		var parsed map[string]interface{}
+		if err := json.Unmarshal(job.KeyPackageRaw, &parsed); err == nil {
+			job.KeyPackage = parsed
+		}
+	}
+	if len(job.KeyPackage) > 0 {
+		mode := strings.TrimSpace(fmt.Sprintf("%v", job.KeyPackage["mode"]))
+		summary := map[string]interface{}{}
+		if mode != "" {
+			summary["mode"] = mode
+		}
+		if hsmBinding, ok := job.KeyPackage["hsm_binding"].(map[string]interface{}); ok {
+			summary["hsm_binding"] = hsmBinding
+		}
+		job.KeyPackage = summary
+	}
+	job.ArtifactCiphertext = nil
+	job.ArtifactNonce = nil
+	job.KeyPackageRaw = nil
+}
+
+func (s *SQLStore) insertBackupJob(ctx context.Context, job BackupJob) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO governance_backup_jobs (
+    id, tenant_id, scope, target_tenant_id, status, backup_format, encryption_algorithm,
+    ciphertext_sha256, artifact_ciphertext, artifact_nonce, artifact_size_bytes, row_count_total, table_count,
+    hsm_bound, hsm_provider_name, hsm_slot_id, hsm_partition_label, hsm_token_label, hsm_binding_fingerprint,
+    key_package_json, created_by, created_at, completed_at, failure_reason
+) VALUES (
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20::jsonb,$21,CURRENT_TIMESTAMP,$22,$23
+)
+`, job.ID, job.TenantID, job.Scope, strings.TrimSpace(job.TargetTenantID), job.Status, job.BackupFormat, job.EncryptionAlgorithm,
+		job.CiphertextSHA256, job.ArtifactCiphertext, job.ArtifactNonce, job.ArtifactSizeBytes, job.RowCountTotal, job.TableCount,
+		job.HSMBound, nullable(job.HSMProviderName), nullable(job.HSMSlotID), nullable(job.HSMPartitionLabel), nullable(job.HSMTokenLabel), nullable(job.HSMBindingFingerprint),
+		string(job.KeyPackageRaw), nullable(job.CreatedBy), nullableTime(job.CompletedAt), nullable(job.FailureReason))
+	return err
+}
+
+func (s *SQLStore) getBackupJob(ctx context.Context, tenantID string, backupID string, includeBlob bool) (BackupJob, error) {
+	query := `
+SELECT id, tenant_id, scope, COALESCE(target_tenant_id,''), status, backup_format, encryption_algorithm,
+       ciphertext_sha256, artifact_size_bytes, row_count_total, table_count, hsm_bound,
+       COALESCE(hsm_provider_name,''), COALESCE(hsm_slot_id,''), COALESCE(hsm_partition_label,''), COALESCE(hsm_token_label,''), COALESCE(hsm_binding_fingerprint,''),
+       key_package_json::text, COALESCE(created_by,''), created_at, completed_at, COALESCE(failure_reason,'')
+FROM governance_backup_jobs
+WHERE tenant_id=$1 AND id=$2
+`
+	if includeBlob {
+		query = `
+SELECT id, tenant_id, scope, COALESCE(target_tenant_id,''), status, backup_format, encryption_algorithm,
+       ciphertext_sha256, artifact_size_bytes, row_count_total, table_count, hsm_bound,
+       COALESCE(hsm_provider_name,''), COALESCE(hsm_slot_id,''), COALESCE(hsm_partition_label,''), COALESCE(hsm_token_label,''), COALESCE(hsm_binding_fingerprint,''),
+       key_package_json::text, COALESCE(created_by,''), created_at, completed_at, COALESCE(failure_reason,''),
+       artifact_ciphertext, artifact_nonce
+FROM governance_backup_jobs
+WHERE tenant_id=$1 AND id=$2
+`
+	}
+	row := s.db.SQL().QueryRowContext(ctx, query, tenantID, backupID)
+	var out BackupJob
+	var keyJSON string
+	var createdRaw interface{}
+	var completedRaw interface{}
+	if includeBlob {
+		err := row.Scan(
+			&out.ID, &out.TenantID, &out.Scope, &out.TargetTenantID, &out.Status, &out.BackupFormat, &out.EncryptionAlgorithm,
+			&out.CiphertextSHA256, &out.ArtifactSizeBytes, &out.RowCountTotal, &out.TableCount, &out.HSMBound,
+			&out.HSMProviderName, &out.HSMSlotID, &out.HSMPartitionLabel, &out.HSMTokenLabel, &out.HSMBindingFingerprint,
+			&keyJSON, &out.CreatedBy, &createdRaw, &completedRaw, &out.FailureReason,
+			&out.ArtifactCiphertext, &out.ArtifactNonce,
+		)
+		if errors.Is(err, sql.ErrNoRows) {
+			return BackupJob{}, errNotFound
+		}
+		if err != nil {
+			return BackupJob{}, err
+		}
+	} else {
+		err := row.Scan(
+			&out.ID, &out.TenantID, &out.Scope, &out.TargetTenantID, &out.Status, &out.BackupFormat, &out.EncryptionAlgorithm,
+			&out.CiphertextSHA256, &out.ArtifactSizeBytes, &out.RowCountTotal, &out.TableCount, &out.HSMBound,
+			&out.HSMProviderName, &out.HSMSlotID, &out.HSMPartitionLabel, &out.HSMTokenLabel, &out.HSMBindingFingerprint,
+			&keyJSON, &out.CreatedBy, &createdRaw, &completedRaw, &out.FailureReason,
+		)
+		if errors.Is(err, sql.ErrNoRows) {
+			return BackupJob{}, errNotFound
+		}
+		if err != nil {
+			return BackupJob{}, err
+		}
+	}
+	out.CreatedAt = parseTimeValue(createdRaw)
+	out.CompletedAt = parseTimeValue(completedRaw)
+	out.KeyPackageRaw = []byte(strings.TrimSpace(keyJSON))
+	if len(out.KeyPackageRaw) > 0 {
+		var parsed map[string]interface{}
+		if err := json.Unmarshal(out.KeyPackageRaw, &parsed); err == nil {
+			out.KeyPackage = parsed
+		}
+	}
+	return out, nil
+}
+
+func (s *SQLStore) listBackupJobs(ctx context.Context, tenantID string, scope string, status string, limit int) ([]BackupJob, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, tenant_id, scope, COALESCE(target_tenant_id,''), status, backup_format, encryption_algorithm,
+       ciphertext_sha256, artifact_size_bytes, row_count_total, table_count, hsm_bound,
+       COALESCE(hsm_provider_name,''), COALESCE(hsm_slot_id,''), COALESCE(hsm_partition_label,''), COALESCE(hsm_token_label,''), COALESCE(hsm_binding_fingerprint,''),
+       key_package_json::text, COALESCE(created_by,''), created_at, completed_at, COALESCE(failure_reason,'')
+FROM governance_backup_jobs
+WHERE tenant_id=$1
+  AND ($2='' OR scope=$2)
+  AND ($3='' OR status=$3)
+ORDER BY created_at DESC
+LIMIT $4
+`, tenantID, scope, status, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]BackupJob, 0)
+	for rows.Next() {
+		var item BackupJob
+		var keyJSON string
+		var createdRaw interface{}
+		var completedRaw interface{}
+		if err := rows.Scan(
+			&item.ID, &item.TenantID, &item.Scope, &item.TargetTenantID, &item.Status, &item.BackupFormat, &item.EncryptionAlgorithm,
+			&item.CiphertextSHA256, &item.ArtifactSizeBytes, &item.RowCountTotal, &item.TableCount, &item.HSMBound,
+			&item.HSMProviderName, &item.HSMSlotID, &item.HSMPartitionLabel, &item.HSMTokenLabel, &item.HSMBindingFingerprint,
+			&keyJSON, &item.CreatedBy, &createdRaw, &completedRaw, &item.FailureReason,
+		); err != nil {
+			return nil, err
+		}
+		item.CreatedAt = parseTimeValue(createdRaw)
+		item.CompletedAt = parseTimeValue(completedRaw)
+		item.KeyPackageRaw = []byte(strings.TrimSpace(keyJSON))
+		if len(item.KeyPackageRaw) > 0 {
+			var parsed map[string]interface{}
+			if err := json.Unmarshal(item.KeyPackageRaw, &parsed); err == nil {
+				item.KeyPackage = parsed
+			}
+		}
+		out = append(out, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (s *SQLStore) listBackupTables(ctx context.Context) ([]string, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema='public' AND table_type='BASE TABLE'
+ORDER BY table_name
+`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]string, 0)
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return nil, err
+		}
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		out = append(out, name)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (s *SQLStore) tableHasTenantIDColumn(ctx context.Context, tableName string) (bool, error) {
+	var count int
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT COUNT(*)::int
+FROM information_schema.columns
+WHERE table_schema='public'
+  AND table_name=$1
+  AND column_name='tenant_id'
+`, tableName).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (s *SQLStore) dumpTableRows(ctx context.Context, tableName string, scope string, targetTenantID string, hasTenantID bool) (json.RawMessage, int64, error) {
+	quotedTable := quoteIdentifier(tableName)
+	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM %s`, quotedTable)
+	rowsQuery := fmt.Sprintf(`SELECT COALESCE(json_agg(row_to_json(t)),'[]'::json)::text FROM (SELECT * FROM %s) AS t`, quotedTable)
+	var countArgs []interface{}
+	var rowsArgs []interface{}
+	if scope == backupScopeTenant && hasTenantID {
+		countQuery = fmt.Sprintf(`SELECT COUNT(*) FROM %s WHERE tenant_id=$1`, quotedTable)
+		rowsQuery = fmt.Sprintf(`SELECT COALESCE(json_agg(row_to_json(t)),'[]'::json)::text FROM (SELECT * FROM %s WHERE tenant_id=$1) AS t`, quotedTable)
+		countArgs = append(countArgs, targetTenantID)
+		rowsArgs = append(rowsArgs, targetTenantID)
+	}
+	var rowCount int64
+	if err := s.db.SQL().QueryRowContext(ctx, countQuery, countArgs...).Scan(&rowCount); err != nil {
+		return nil, 0, err
+	}
+	if rowCount <= 0 {
+		return json.RawMessage("[]"), 0, nil
+	}
+	var raw string
+	if err := s.db.SQL().QueryRowContext(ctx, rowsQuery, rowsArgs...).Scan(&raw); err != nil {
+		return nil, 0, err
+	}
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" || trimmed == "null" {
+		trimmed = "[]"
+	}
+	return json.RawMessage(trimmed), rowCount, nil
+}
+
+func (s *SQLStore) loadHSMBinding(ctx context.Context, tenantID string) backupHSMBinding {
+	if strings.TrimSpace(tenantID) == "" {
+		return backupHSMBinding{}
+	}
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT COALESCE(provider_name,''), COALESCE(library_path,''), COALESCE(slot_id,''), COALESCE(partition_label,''), COALESCE(token_label,''), enabled
+FROM auth_hsm_provider_configs
+WHERE tenant_id=$1
+`, tenantID)
+	var provider string
+	var libraryPath string
+	var slotID string
+	var partitionLabel string
+	var tokenLabel string
+	var enabled bool
+	if err := row.Scan(&provider, &libraryPath, &slotID, &partitionLabel, &tokenLabel, &enabled); err != nil {
+		return backupHSMBinding{}
+	}
+	if !enabled {
+		return backupHSMBinding{}
+	}
+	fingerprint := strings.Join([]string{
+		strings.TrimSpace(strings.ToLower(provider)),
+		strings.TrimSpace(strings.ToLower(slotID)),
+		strings.TrimSpace(strings.ToLower(partitionLabel)),
+		strings.TrimSpace(strings.ToLower(tokenLabel)),
+		sha256Hex(strings.TrimSpace(strings.ToLower(libraryPath))),
+	}, "|")
+	return backupHSMBinding{
+		Enabled:         true,
+		ProviderName:    strings.TrimSpace(provider),
+		LibraryPath:     strings.TrimSpace(libraryPath),
+		SlotID:          strings.TrimSpace(slotID),
+		PartitionLabel:  strings.TrimSpace(partitionLabel),
+		TokenLabel:      strings.TrimSpace(tokenLabel),
+		Fingerprint:     fingerprint,
+		FingerprintHash: sha256Hex(fingerprint),
+	}
+}
+
+func quoteIdentifier(name string) string {
+	return `"` + strings.ReplaceAll(strings.TrimSpace(name), `"`, `""`) + `"`
+}
+
+func randomBytes(size int) ([]byte, error) {
+	if size <= 0 {
+		return nil, errors.New("size must be > 0")
+	}
+	out := make([]byte, size)
+	if _, err := io.ReadFull(rand.Reader, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func encryptAESGCM(plaintext []byte, key []byte, aad []byte) ([]byte, []byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, nil, err
+	}
+	nonce, err := randomBytes(gcm.NonceSize())
+	if err != nil {
+		return nil, nil, err
+	}
+	ciphertext := gcm.Seal(nil, nonce, plaintext, aad)
+	return ciphertext, nonce, nil
+}
+
+func parseBackupLimit(raw string, fallback int) int {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(trimmed)
+	if err != nil {
+		return fallback
+	}
+	if n <= 0 {
+		return fallback
+	}
+	if n > 200 {
+		return 200
+	}
+	return n
+}

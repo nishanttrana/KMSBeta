@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,6 +31,11 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("PUT /governance/settings", h.handleUpdateSettings)
 	mux.HandleFunc("POST /governance/settings/smtp/test", h.handleTestSMTP)
 	mux.HandleFunc("POST /governance/settings/webhook/test", h.handleTestWebhook)
+	mux.HandleFunc("GET /governance/backups", h.handleListBackups)
+	mux.HandleFunc("POST /governance/backups", h.handleCreateBackup)
+	mux.HandleFunc("GET /governance/backups/{id}", h.handleGetBackup)
+	mux.HandleFunc("GET /governance/backups/{id}/artifact", h.handleDownloadBackupArtifact)
+	mux.HandleFunc("GET /governance/backups/{id}/key", h.handleDownloadBackupKey)
 	mux.HandleFunc("GET /governance/system/state", h.handleGetSystemState)
 	mux.HandleFunc("PUT /governance/system/state", h.handleUpdateSystemState)
 	mux.HandleFunc("GET /governance/system/integrity", h.handleSystemIntegrity)
@@ -153,6 +160,120 @@ func (h *Handler) handleGetSystemState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"state": state, "request_id": reqID})
+}
+
+func (h *Handler) handleCreateBackup(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var in CreateBackupInput
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	if strings.TrimSpace(in.TenantID) == "" {
+		in.TenantID = strings.TrimSpace(r.URL.Query().Get("tenant_id"))
+	}
+	if strings.TrimSpace(in.TenantID) == "" {
+		in.TenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	}
+	job, err := h.svc.CreateBackup(r.Context(), in)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "backup_create_failed", err.Error(), reqID, in.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"job":        job,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleListBackups(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	scope := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("scope")))
+	status := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("status")))
+	limit := parseBackupLimit(r.URL.Query().Get("limit"), 50)
+	items, err := h.svc.ListBackups(r.Context(), tenantID, scope, status, limit)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "backup_list_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"items":      items,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleGetBackup(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	item, err := h.svc.GetBackup(r.Context(), tenantID, r.PathValue("id"))
+	if err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "backup_read_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"job":        item,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleDownloadBackupArtifact(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	content, err := h.svc.GetBackupArtifactDownload(r.Context(), tenantID, r.PathValue("id"))
+	if err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "backup_artifact_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"artifact":   content,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleDownloadBackupKey(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	content, err := h.svc.GetBackupKeyDownload(r.Context(), tenantID, r.PathValue("id"))
+	if err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "backup_key_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	fileName := strings.TrimSpace(fmt.Sprintf("%v", content["file_name"]))
+	if fileName == "" {
+		fileName = fmt.Sprintf("vecta-backup-%s.key.json", strings.TrimSpace(r.PathValue("id")))
+	}
+	raw, _ := json.Marshal(content["key_package"])
+	content["content_base64"] = base64.StdEncoding.EncodeToString(raw)
+	content["file_name"] = fileName
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"artifact":   content,
+		"request_id": reqID,
+	})
 }
 
 func (h *Handler) handleUpdateSystemState(w http.ResponseWriter, r *http.Request) {

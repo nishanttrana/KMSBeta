@@ -327,10 +327,14 @@ import {
   updateAuthUserStatus
 } from "../lib/authAdmin";
 import {
+  createGovernanceBackup,
   createGovernanceRequest,
   createGovernancePolicy,
+  downloadGovernanceBackupArtifact,
+  downloadGovernanceBackupKey,
   getGovernanceRequest,
   getGovernanceSettings,
+  listGovernanceBackups,
   listGovernancePolicies,
   listGovernanceRequests,
   testGovernanceSMTP,
@@ -17431,6 +17435,17 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
   const [smtpTestTo,setSMTPTestTo]=useState("");
   const [smtpTesting,setSMTPTesting]=useState(false);
   const [webhookTesting,setWebhookTesting]=useState<any>({slack:false,teams:false});
+  const [backupJobs,setBackupJobs]=useState<any[]>([]);
+  const [backupJobsLoading,setBackupJobsLoading]=useState(false);
+  const [backupCreating,setBackupCreating]=useState(false);
+  const [backupDownloading,setBackupDownloading]=useState("");
+  const [backupScope,setBackupScope]=useState<"system"|"tenant">("system");
+  const [backupTargetTenant,setBackupTargetTenant]=useState(String(session?.tenantId||""));
+  const [backupBindToHSM,setBackupBindToHSM]=useState(true);
+  const [backupSchedule,setBackupSchedule]=useState("daily@02:00");
+  const [backupTarget,setBackupTarget]=useState("local");
+  const [backupRetentionDays,setBackupRetentionDays]=useState(30);
+  const [backupEncrypted,setBackupEncrypted]=useState(true);
   const [accessSettings,setAccessSettings]=useState<any>(null);
   const [accessSettingsLoading,setAccessSettingsLoading]=useState(false);
   const [accessSettingsSaving,setAccessSettingsSaving]=useState(false);
@@ -17584,6 +17599,10 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       );
       const state=out?.state||{};
       setSystemState(state);
+      setBackupSchedule(String(state?.backup_schedule||"daily@02:00"));
+      setBackupTarget(String(state?.backup_target||"local"));
+      setBackupRetentionDays(Math.max(1,Math.min(3650,Number(state?.backup_retention_days||30))));
+      setBackupEncrypted(Boolean(state?.backup_encrypted ?? true));
       setFipsErr("");
       onFipsModeChange?.(normalizeFipsModeValue(String(state?.fips_mode||"disabled")));
     }catch(error){
@@ -17881,6 +17900,145 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     }
   };
 
+  const downloadBase64File=(filename:string,b64:string,mime="application/octet-stream")=>{
+    const clean=String(b64||"").trim();
+    if(!clean){
+      onToast?.("Download failed: empty payload.");
+      return;
+    }
+    try{
+      const raw=window.atob(clean);
+      const bytes=new Uint8Array(raw.length);
+      for(let i=0;i<raw.length;i++){
+        bytes[i]=raw.charCodeAt(i);
+      }
+      const blob=new Blob([bytes],{type:mime});
+      const url=URL.createObjectURL(blob);
+      const link=document.createElement("a");
+      link.href=url;
+      link.download=String(filename||"download.bin");
+      link.click();
+      URL.revokeObjectURL(url);
+    }catch{
+      onToast?.("Download failed: invalid file payload.");
+    }
+  };
+
+  const loadBackupJobs=async(silent=false)=>{
+    if(!session?.token){
+      setBackupJobs([]);
+      return;
+    }
+    if(!silent){
+      setBackupJobsLoading(true);
+    }
+    try{
+      const items=await listGovernanceBackups(session,{limit:25});
+      setBackupJobs(Array.isArray(items)?items:[]);
+    }catch(error){
+      if(!silent){
+        onToast?.(`Backup jobs load failed: ${errMsg(error)}`);
+      }
+    }finally{
+      if(!silent){
+        setBackupJobsLoading(false);
+      }
+    }
+  };
+
+  const saveBackupConfiguration=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to update backup configuration.");
+      return;
+    }
+    const current=(systemState&&typeof systemState==="object")?systemState:{};
+    try{
+      const payload={
+        ...current,
+        tenant_id:session.tenantId,
+        backup_schedule:String(backupSchedule||"daily@02:00").trim()||"daily@02:00",
+        backup_target:String(backupTarget||"local").trim()||"local",
+        backup_retention_days:Math.max(1,Math.min(3650,Math.trunc(Number(backupRetentionDays||30)))),
+        backup_encrypted:Boolean(backupEncrypted),
+        updated_by:session?.username||"dashboard"
+      };
+      const out=await serviceRequest(session,"governance","/governance/system/state",{
+        method:"PUT",
+        body:JSON.stringify(payload)
+      });
+      const updated=out?.state||payload;
+      setSystemState(updated);
+      setBackupSchedule(String(updated?.backup_schedule||payload.backup_schedule));
+      setBackupTarget(String(updated?.backup_target||payload.backup_target));
+      setBackupRetentionDays(Math.max(1,Math.min(3650,Number(updated?.backup_retention_days||payload.backup_retention_days))));
+      setBackupEncrypted(Boolean(updated?.backup_encrypted ?? payload.backup_encrypted));
+      onToast?.("Backup configuration updated.");
+    }catch(error){
+      onToast?.(`Backup configuration update failed: ${errMsg(error)}`);
+    }
+  };
+
+  const createBackupNow=async()=>{
+    if(!session?.token){
+      return;
+    }
+    const scope=backupScope==="tenant"?"tenant":"system";
+    const targetTenant=String(backupTargetTenant||"").trim();
+    if(scope==="tenant"&&!targetTenant){
+      onToast?.("Target tenant is required for tenant backup.");
+      return;
+    }
+    setBackupCreating(true);
+    try{
+      const job=await createGovernanceBackup(session,{
+        scope,
+        target_tenant_id:scope==="tenant"?targetTenant:"",
+        bind_to_hsm:Boolean(backupBindToHSM),
+        created_by:session?.username||"dashboard"
+      });
+      onToast?.(`Backup created: ${String(job?.id||"")}${job?.hsm_bound?" (HSM bound)":" (software key package)"}`);
+      await loadBackupJobs(true);
+    }catch(error){
+      onToast?.(`Backup creation failed: ${errMsg(error)}`);
+    }finally{
+      setBackupCreating(false);
+    }
+  };
+
+  const downloadBackupArtifactFile=async(jobID:string)=>{
+    const id=String(jobID||"").trim();
+    if(!id){
+      return;
+    }
+    setBackupDownloading(`artifact:${id}`);
+    try{
+      const out=await downloadGovernanceBackupArtifact(session,id);
+      downloadBase64File(String(out?.file_name||`vecta-backup-${id}.vbk`),String(out?.content_base64||""),String(out?.content_type||"application/octet-stream"));
+      onToast?.("Encrypted backup downloaded.");
+    }catch(error){
+      onToast?.(`Backup download failed: ${errMsg(error)}`);
+    }finally{
+      setBackupDownloading("");
+    }
+  };
+
+  const downloadBackupKeyPackageFile=async(jobID:string)=>{
+    const id=String(jobID||"").trim();
+    if(!id){
+      return;
+    }
+    setBackupDownloading(`key:${id}`);
+    try{
+      const out=await downloadGovernanceBackupKey(session,id);
+      downloadBase64File(String(out?.file_name||`vecta-backup-${id}.key.json`),String(out?.content_base64||""),String(out?.content_type||"application/json"));
+      onToast?.("Backup key package downloaded.");
+    }catch(error){
+      onToast?.(`Backup key download failed: ${errMsg(error)}`);
+    }finally{
+      setBackupDownloading("");
+    }
+  };
+
   const loadAccessHardening=async(silent=false)=>{
     if(!session?.token){
       setAccessSettings(null);
@@ -18139,6 +18297,14 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     const id=setInterval(()=>{void loadHealth(true);},15000);
     return()=>clearInterval(id);
   },[session?.token,session?.tenantId,onFipsModeChange]);
+
+  useEffect(()=>{
+    if(m==="backup"){
+      setBackupTargetTenant(String(session?.tenantId||""));
+      void loadBackupJobs(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[m]);
 
   const summaryColor=summary.all_ok?"green":summary.down>0?"red":summary.degraded>0?"amber":"blue";
   const summaryLabel=summary.all_ok?"All OK":summary.down>0?`${summary.down} Down`:summary.degraded>0?`${summary.degraded} Degraded`:"Unknown";
@@ -18522,11 +18688,94 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     <Btn primary style={{marginTop:8}}>Apply Network Settings</Btn>
   </Modal>
   <Modal open={m==="backup"} onClose={()=>sM(null)} title="Backup Configuration">
-    <FG label="Backup Schedule"><Sel><option>Daily at 02:00</option><option>Every 6 hours</option><option>Weekly</option><option>Manual only</option></Sel></FG>
-    <FG label="Backup Target"><Sel><option>Local (/var/lib/vecta/backup)</option><option>S3-compatible storage</option><option>NFS mount</option></Sel></FG>
-    <FG label="Encryption"><Chk label="Encrypt backups with backup KEK" checked={true}/></FG>
-    <FG label="Retention"><Sel><option>30 days</option><option>90 days</option><option>365 days</option></Sel></FG>
-    <Btn primary style={{marginTop:8}}>Save Backup Config</Btn>
+    <FG label="Backup Schedule">
+      <Sel value={backupSchedule} onChange={(e)=>setBackupSchedule(e.target.value)}>
+        <option value="daily@02:00">Daily at 02:00</option>
+        <option value="every_6h">Every 6 hours</option>
+        <option value="weekly@sun_02:00">Weekly (Sunday 02:00)</option>
+        <option value="manual">Manual only</option>
+      </Sel>
+    </FG>
+    <FG label="Backup Target">
+      <Sel value={backupTarget} onChange={(e)=>setBackupTarget(e.target.value)}>
+        <option value="local">Local (/var/lib/vecta/backup)</option>
+        <option value="s3">S3-compatible storage</option>
+        <option value="nfs">NFS mount</option>
+      </Sel>
+    </FG>
+    <Row2>
+      <FG label="Retention (days)">
+        <Inp type="number" min={1} max={3650} value={String(backupRetentionDays)} onChange={(e)=>setBackupRetentionDays(Number(e.target.value||30))}/>
+      </FG>
+      <FG label="Encryption">
+        <Chk label="Encrypt backup artifacts" checked={Boolean(backupEncrypted)} onChange={()=>setBackupEncrypted((v)=>!v)}/>
+      </FG>
+    </Row2>
+    <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
+      <Btn primary onClick={()=>void saveBackupConfiguration()}>Save Backup Config</Btn>
+    </div>
+
+    <div style={{marginTop:12,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
+      <FG label="Run Encrypted Backup Now" hint="Backup artifact is encrypted and key package is downloaded separately.">
+        <Row2>
+          <FG label="Scope">
+            <Sel value={backupScope} onChange={(e)=>setBackupScope(e.target.value==="tenant"?"tenant":"system")}>
+              <option value="system">Complete system backup</option>
+              <option value="tenant">Per-tenant backup</option>
+            </Sel>
+          </FG>
+          <FG label="Tenant ID">
+            <Inp
+              value={backupTargetTenant}
+              onChange={(e)=>setBackupTargetTenant(e.target.value)}
+              placeholder="tenant-id"
+              disabled={backupScope!=="tenant"}
+            />
+          </FG>
+        </Row2>
+        <Chk label="Bind backup key package to HSM configuration when available" checked={Boolean(backupBindToHSM)} onChange={()=>setBackupBindToHSM((v)=>!v)}/>
+        <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
+          <Btn primary onClick={()=>void createBackupNow()} disabled={backupCreating}>{backupCreating?"Creating...":"Create Backup"}</Btn>
+        </div>
+      </FG>
+    </div>
+
+    <FG label="Recent Backup Jobs">
+      <div style={{display:"grid",gap:8,maxHeight:240,overflowY:"auto"}}>
+        {backupJobsLoading?<div style={{fontSize:10,color:C.dim}}>Loading backup jobs...</div>:null}
+        {!backupJobsLoading&&!backupJobs.length?<div style={{fontSize:10,color:C.dim}}>No backups created yet.</div>:null}
+        {backupJobs.map((job:any)=>{
+          const id=String(job?.id||"");
+          const hsmBound=Boolean(job?.hsm_bound);
+          const scope=String(job?.scope||"system");
+          const targetTenant=String(job?.target_tenant_id||"");
+          const createdAt=formatAgo(String(job?.created_at||""));
+          const status=String(job?.status||"completed").toLowerCase();
+          return <Card key={id} style={{padding:"8px 10px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:11,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{id}</div>
+                <div style={{fontSize:9,color:C.dim}}>{`${scope==="tenant"?"Tenant":"System"} backup${scope==="tenant"&&targetTenant?` • ${targetTenant}`:""} • ${createdAt}`}</div>
+                <div style={{fontSize:9,color:C.muted}}>{`${Number(job?.table_count||0)} tables • ${Number(job?.row_count_total||0)} rows • ${Number(job?.artifact_size_bytes||0)} bytes`}</div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
+                <div style={{display:"flex",gap:6}}>
+                  <B c={status==="completed"?"green":status==="failed"?"red":"amber"}>{status.toUpperCase()}</B>
+                  <B c={hsmBound?"blue":"amber"}>{hsmBound?"HSM bound":"Software key"}</B>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <Btn small onClick={()=>void downloadBackupArtifactFile(id)} disabled={backupDownloading!==""}>{backupDownloading===`artifact:${id}`?"Downloading...":"Download Backup"}</Btn>
+                  <Btn small onClick={()=>void downloadBackupKeyPackageFile(id)} disabled={backupDownloading!==""}>{backupDownloading===`key:${id}`?"Downloading...":"Download Key"}</Btn>
+                </div>
+              </div>
+            </div>
+          </Card>;
+        })}
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
+        <Btn onClick={()=>void loadBackupJobs(false)} disabled={backupJobsLoading}>{backupJobsLoading?"Loading...":"Refresh Backup Jobs"}</Btn>
+      </div>
+    </FG>
   </Modal>
   <Modal open={m==="tags"} onClose={()=>sM(null)} title="Tag Catalog" wide>
     <FG label="Predefined + Customer Tags" hint="These tags are reused across KMS features.">
