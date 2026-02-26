@@ -64,20 +64,6 @@ func (s *SQLStore) GetTenantDeleteReadiness(ctx context.Context, tenantID string
 			IsUISession: true,
 		},
 		{
-			Code:        "rest_clients",
-			Label:       "Approved REST Clients",
-			CountQuery:  `SELECT COUNT(1) FROM auth_client_registrations WHERE tenant_id=$1 AND LOWER(COALESCE(status,''))='approved'`,
-			DetailQuery: `SELECT id FROM auth_client_registrations WHERE tenant_id=$1 AND LOWER(COALESCE(status,''))='approved' ORDER BY created_at DESC LIMIT 10`,
-			Remediation: "Revoke or deactivate REST clients before tenant disable.",
-		},
-		{
-			Code:        "rest_api_keys",
-			Label:       "Active API Keys",
-			CountQuery:  `SELECT COUNT(1) FROM auth_api_keys WHERE tenant_id=$1 AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)`,
-			DetailQuery: `SELECT id FROM auth_api_keys WHERE tenant_id=$1 AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP) ORDER BY created_at DESC LIMIT 10`,
-			Remediation: "Delete or expire API keys assigned to this tenant.",
-		},
-		{
 			Code:        "ekm_agents",
 			Label:       "Connected EKM Agents",
 			CountQuery:  `SELECT COUNT(1) FROM ekm_agents WHERE tenant_id=$1 AND LOWER(COALESCE(status,'')) IN ('connected','active')`,
