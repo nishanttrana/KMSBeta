@@ -133,6 +133,49 @@ export type EKMBitLockerRecovery = {
   created_at?: string;
 };
 
+export type EKMBitLockerDeletePreview = {
+  client_id: string;
+  client_name: string;
+  host: string;
+  latest_recovery_key: string;
+  latest_recovery_key_masked: string;
+  latest_recovery_at?: string;
+  recovery_keys_available: number;
+};
+
+export type EKMDeleteBitLockerClientResult = {
+  client_id: string;
+  deleted_clients: number;
+  deleted_jobs: number;
+  deleted_recovery_keys: number;
+};
+
+export type EKMBitLockerNetworkCandidate = {
+  ip: string;
+  host: string;
+  os_guess: string;
+  confidence: string;
+  smb_reachable: boolean;
+  winrm_reachable: boolean;
+  ports_open: number[];
+};
+
+export type EKMBitLockerNetworkScanResult = {
+  ip_range: string;
+  scanned_hosts: number;
+  windows_hosts: number;
+  candidates: EKMBitLockerNetworkCandidate[];
+  duration_ms: number;
+};
+
+export type EKMBitLockerNetworkScanInput = {
+  ip_range: string;
+  port_timeout_ms?: number;
+  max_hosts?: number;
+  concurrency?: number;
+  require_winrm?: boolean;
+};
+
 export type RegisterBitLockerClientInput = {
   client_id?: string;
   name: string;
@@ -228,6 +271,9 @@ type BitLockerJobResponse = { job: EKMBitLockerJob };
 type BitLockerJobsResponse = { items: EKMBitLockerJob[] };
 type BitLockerRecoveryResponse = { items: EKMBitLockerRecovery[] };
 type BitLockerDeployResponse = { package: EKMDeployPackage };
+type BitLockerDeletePreviewResponse = { preview: EKMBitLockerDeletePreview };
+type BitLockerDeleteResponse = { deleted: EKMDeleteBitLockerClientResult };
+type BitLockerNetworkScanResponse = { scan: EKMBitLockerNetworkScanResult };
 type PublicKeyResponse = {
   public_key: {
     key_id: string;
@@ -368,6 +414,19 @@ export async function getBitLockerClient(
   return out.client;
 }
 
+export async function getBitLockerDeletePreview(
+  session: AuthSession,
+  clientID: string,
+  tenantOverride?: string
+): Promise<EKMBitLockerDeletePreview> {
+  const out = await serviceRequest<BitLockerDeletePreviewResponse>(
+    session,
+    "ekm",
+    `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}/delete-preview?${tenantQuery(session, tenantOverride)}`
+  );
+  return out.preview;
+}
+
 export async function registerBitLockerClient(
   session: AuthSession,
   input: RegisterBitLockerClientInput,
@@ -392,6 +451,52 @@ export async function registerBitLockerClient(
     }
   );
   return out.client;
+}
+
+export async function deleteBitLockerClient(
+  session: AuthSession,
+  clientID: string,
+  options: { reason?: string; confirm_backup?: boolean } = {},
+  tenantOverride?: string
+): Promise<EKMDeleteBitLockerClientResult> {
+  const out = await serviceRequest<BitLockerDeleteResponse>(
+    session,
+    "ekm",
+    `/ekm/bitlocker/clients/${encodeURIComponent(clientID)}`,
+    {
+      method: "DELETE",
+      body: JSON.stringify({
+        tenant_id: String(tenantOverride || session.tenantId || "").trim(),
+        reason: String(options.reason || "manual-dashboard-delete").trim(),
+        confirm_backup: options.confirm_backup === true
+      })
+    }
+  );
+  return out.deleted;
+}
+
+export async function scanBitLockerWindows(
+  session: AuthSession,
+  input: EKMBitLockerNetworkScanInput,
+  tenantOverride?: string
+): Promise<EKMBitLockerNetworkScanResult> {
+  const out = await serviceRequest<BitLockerNetworkScanResponse>(
+    session,
+    "ekm",
+    "/ekm/bitlocker/network/scan",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        tenant_id: String(tenantOverride || session.tenantId || "").trim(),
+        ip_range: String(input.ip_range || "").trim(),
+        port_timeout_ms: Math.max(50, Math.min(5000, Math.trunc(Number(input.port_timeout_ms || 350)))),
+        max_hosts: Math.max(1, Math.min(4096, Math.trunc(Number(input.max_hosts || 256)))),
+        concurrency: Math.max(1, Math.min(128, Math.trunc(Number(input.concurrency || 32)))),
+        require_winrm: input.require_winrm !== false
+      })
+    }
+  );
+  return out.scan || { ip_range: "", scanned_hosts: 0, windows_hosts: 0, candidates: [], duration_ms: 0 };
 }
 
 export async function queueBitLockerOperation(

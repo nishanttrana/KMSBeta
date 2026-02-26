@@ -294,11 +294,11 @@ type BitLockerHeartbeatRequest struct {
 }
 
 type BitLockerOperationRequest struct {
-	TenantID string                 `json:"tenant_id"`
-	Operation string                `json:"operation"`
-	RequestedBy string              `json:"requested_by"`
-	RequestID string                `json:"request_id"`
-	Params map[string]interface{}   `json:"params"`
+	TenantID    string                 `json:"tenant_id"`
+	Operation   string                 `json:"operation"`
+	RequestedBy string                 `json:"requested_by"`
+	RequestID   string                 `json:"request_id"`
+	Params      map[string]interface{} `json:"params"`
 }
 
 type BitLockerJob struct {
@@ -355,6 +355,56 @@ type BitLockerRecoveryKeyView struct {
 	KeyMasked        string    `json:"key_masked"`
 	Source           string    `json:"source"`
 	CreatedAt        time.Time `json:"created_at"`
+}
+
+type DeleteBitLockerClientRequest struct {
+	TenantID      string `json:"tenant_id"`
+	Reason        string `json:"reason"`
+	ConfirmBackup bool   `json:"confirm_backup"`
+}
+
+type DeleteBitLockerClientResponse struct {
+	ClientID                string `json:"client_id"`
+	DeletedClients          int    `json:"deleted_clients"`
+	DeletedJobs             int    `json:"deleted_jobs"`
+	DeletedRecoveryKeyCount int    `json:"deleted_recovery_keys"`
+}
+
+type BitLockerDeletePreview struct {
+	ClientID              string    `json:"client_id"`
+	ClientName            string    `json:"client_name"`
+	Host                  string    `json:"host"`
+	LatestRecoveryKey     string    `json:"latest_recovery_key"`
+	LatestRecoveryMasked  string    `json:"latest_recovery_key_masked"`
+	LatestRecoveryAt      time.Time `json:"latest_recovery_at"`
+	RecoveryKeysAvailable int       `json:"recovery_keys_available"`
+}
+
+type BitLockerNetworkScanRequest struct {
+	TenantID      string `json:"tenant_id"`
+	IPRange       string `json:"ip_range"`
+	PortTimeoutMS int    `json:"port_timeout_ms"`
+	MaxHosts      int    `json:"max_hosts"`
+	Concurrency   int    `json:"concurrency"`
+	RequireWinRM  bool   `json:"require_winrm"`
+}
+
+type BitLockerNetworkCandidate struct {
+	IP             string `json:"ip"`
+	Host           string `json:"host"`
+	OSGuess        string `json:"os_guess"`
+	Confidence     string `json:"confidence"`
+	SMBReachable   bool   `json:"smb_reachable"`
+	WinRMReachable bool   `json:"winrm_reachable"`
+	PortsOpen      []int  `json:"ports_open"`
+}
+
+type BitLockerNetworkScanResult struct {
+	IPRange      string                      `json:"ip_range"`
+	ScannedHosts int                         `json:"scanned_hosts"`
+	WindowsHosts int                         `json:"windows_hosts"`
+	Candidates   []BitLockerNetworkCandidate `json:"candidates"`
+	DurationMS   int64                       `json:"duration_ms"`
 }
 
 type SDKProviderSummary struct {

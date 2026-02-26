@@ -48,12 +48,15 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /ekm/bitlocker/clients/register", h.handleRegisterBitLockerClient)
 	mux.HandleFunc("GET /ekm/bitlocker/clients", h.handleListBitLockerClients)
 	mux.HandleFunc("GET /ekm/bitlocker/clients/{id}", h.handleGetBitLockerClient)
+	mux.HandleFunc("GET /ekm/bitlocker/clients/{id}/delete-preview", h.handleBitLockerDeletePreview)
+	mux.HandleFunc("DELETE /ekm/bitlocker/clients/{id}", h.handleDeleteBitLockerClient)
 	mux.HandleFunc("POST /ekm/bitlocker/clients/{id}/heartbeat", h.handleBitLockerHeartbeat)
 	mux.HandleFunc("POST /ekm/bitlocker/clients/{id}/operations", h.handleQueueBitLockerOperation)
 	mux.HandleFunc("GET /ekm/bitlocker/clients/{id}/jobs", h.handleListBitLockerJobs)
 	mux.HandleFunc("POST /ekm/bitlocker/clients/{id}/jobs/next", h.handlePollBitLockerJob)
 	mux.HandleFunc("POST /ekm/bitlocker/clients/{id}/jobs/{job_id}/result", h.handleBitLockerJobResult)
 	mux.HandleFunc("GET /ekm/bitlocker/recovery", h.handleListBitLockerRecovery)
+	mux.HandleFunc("POST /ekm/bitlocker/network/scan", h.handleBitLockerNetworkScan)
 	mux.HandleFunc("GET /ekm/bitlocker/clients/{id}/deploy", h.handleBitLockerDeployPackage)
 
 	mux.HandleFunc("POST /ekm/tde/keys", h.handleCreateTDEKey)
@@ -331,6 +334,42 @@ func (h *Handler) handleGetBitLockerClient(w http.ResponseWriter, r *http.Reques
 	writeJSON(w, http.StatusOK, map[string]interface{}{"client": item, "request_id": reqID})
 }
 
+func (h *Handler) handleBitLockerDeletePreview(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID, _, err := tenantFromRequest(r, "")
+	if err != nil {
+		h.writeServiceError(w, err, reqID, "")
+		return
+	}
+	out, svcErr := h.svc.GetBitLockerDeletePreview(r.Context(), tenantID, r.PathValue("id"))
+	if svcErr != nil {
+		h.writeServiceError(w, svcErr, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"preview": out, "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteBitLockerClient(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req DeleteBitLockerClientRequest
+	if err := decodeJSON(r, &req); err != nil {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
+		return
+	}
+	tenantID, _, err := tenantFromRequest(r, req.TenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	req.TenantID = tenantID
+	out, svcErr := h.svc.DeleteBitLockerClient(r.Context(), r.PathValue("id"), req)
+	if svcErr != nil {
+		h.writeServiceError(w, svcErr, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"deleted": out, "request_id": reqID})
+}
+
 func (h *Handler) handleBitLockerHeartbeat(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	var req BitLockerHeartbeatRequest
@@ -450,6 +489,27 @@ func (h *Handler) handleListBitLockerRecovery(w http.ResponseWriter, r *http.Req
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleBitLockerNetworkScan(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req BitLockerNetworkScanRequest
+	if err := decodeJSON(r, &req); err != nil {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
+		return
+	}
+	tenantID, _, err := tenantFromRequest(r, req.TenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	req.TenantID = tenantID
+	out, svcErr := h.svc.ScanBitLockerWindowsEndpoints(r.Context(), req)
+	if svcErr != nil {
+		h.writeServiceError(w, svcErr, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"scan": out, "request_id": reqID})
 }
 
 func (h *Handler) handleBitLockerDeployPackage(w http.ResponseWriter, r *http.Request) {

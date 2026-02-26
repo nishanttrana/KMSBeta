@@ -4623,6 +4623,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "ekm-delete-ekm-bitlocker-clients-id",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "DELETE /ekm/bitlocker/clients/{id}",
+    "service": "ekm",
+    "method": "DELETE",
+    "pathTemplate": "/ekm/bitlocker/clients/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "DELETE /svc/ekm/ekm/bitlocker/clients/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "ekm-get-ekm-agents",
     "group": "Enterprise Key Management (ekm)",
     "title": "GET /ekm/agents",
@@ -4800,6 +4828,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from EKM service.",
     "requestExample": "GET /svc/ekm/ekm/bitlocker/clients/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-get-ekm-bitlocker-clients-id-delete-preview",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/bitlocker/clients/{id}/delete-preview",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/bitlocker/clients/{id}/delete-preview?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/bitlocker/clients/{id}/delete-preview?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -5267,6 +5323,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "ekm-post-ekm-bitlocker-network-scan",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/bitlocker/network/scan",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/bitlocker/network/scan?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/bitlocker/network/scan?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "ekm-post-ekm-databases",
     "group": "Enterprise Key Management (ekm)",
     "title": "POST /ekm/databases",
@@ -5388,6 +5472,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from EKM service.",
     "requestExample": "POST /svc/ekm/ekm/tde/keys/{id}/wrap?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-delete-governance-backups-id",
+    "group": "Governance (governance)",
+    "title": "DELETE /governance/backups/{id}",
+    "service": "governance",
+    "method": "DELETE",
+    "pathTemplate": "/governance/backups/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "DELETE /svc/governance/governance/backups/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

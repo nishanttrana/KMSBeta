@@ -332,6 +332,80 @@ WHERE tenant_id = $1
 	return out, rows.Err()
 }
 
+func (s *SQLStore) GetLatestBitLockerRecoveryKey(ctx context.Context, tenantID string, clientID string) (BitLockerRecoveryKeyRecord, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, id, client_id, job_id, volume_mount_point, protector_id, key_fingerprint, key_masked,
+	   wrapped_dek, wrapped_dek_iv, ciphertext, data_iv, source, created_at
+FROM ekm_bitlocker_recovery_keys
+WHERE tenant_id = $1 AND client_id = $2
+ORDER BY created_at DESC
+LIMIT 1
+`, tenantID, clientID)
+	out, err := scanBitLockerRecovery(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return BitLockerRecoveryKeyRecord{}, errNotFound
+	}
+	return out, err
+}
+
+func (s *SQLStore) CountBitLockerRecoveryKeys(ctx context.Context, tenantID string, clientID string) (int, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT COUNT(1)
+FROM ekm_bitlocker_recovery_keys
+WHERE tenant_id = $1 AND client_id = $2
+`, tenantID, clientID)
+	var n int
+	if err := row.Scan(&n); err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
+func (s *SQLStore) PurgeBitLockerClient(ctx context.Context, tenantID string, clientID string) (int, int, int, error) {
+	deletedClients := 0
+	deletedJobs := 0
+	deletedRecovery := 0
+	err := s.db.WithTenantTx(ctx, tenantID, func(tx *sql.Tx) error {
+		resRecovery, err := tx.ExecContext(ctx, `
+DELETE FROM ekm_bitlocker_recovery_keys
+WHERE tenant_id = $1 AND client_id = $2
+`, tenantID, clientID)
+		if err != nil {
+			return err
+		}
+		nRecovery, _ := resRecovery.RowsAffected()
+		deletedRecovery = int(nRecovery)
+
+		resJobs, err := tx.ExecContext(ctx, `
+DELETE FROM ekm_bitlocker_jobs
+WHERE tenant_id = $1 AND client_id = $2
+`, tenantID, clientID)
+		if err != nil {
+			return err
+		}
+		nJobs, _ := resJobs.RowsAffected()
+		deletedJobs = int(nJobs)
+
+		resClient, err := tx.ExecContext(ctx, `
+DELETE FROM ekm_bitlocker_clients
+WHERE tenant_id = $1 AND id = $2
+`, tenantID, clientID)
+		if err != nil {
+			return err
+		}
+		nClient, _ := resClient.RowsAffected()
+		deletedClients = int(nClient)
+		if deletedClients == 0 {
+			return errNotFound
+		}
+		return nil
+	})
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	return deletedClients, deletedJobs, deletedRecovery, nil
+}
+
 func scanBitLockerClient(scanner interface {
 	Scan(dest ...interface{}) error
 }) (BitLockerClient, error) {

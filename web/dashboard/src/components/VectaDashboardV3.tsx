@@ -231,8 +231,10 @@ import {
   listMPCKeys
 } from "../lib/mpc";
 import {
+  deleteBitLockerClient,
   getBitLockerDeployPackage,
   getBitLockerClient,
+  getBitLockerDeletePreview,
   listBitLockerClients,
   listBitLockerJobs,
   listBitLockerRecoveryKeys,
@@ -248,6 +250,7 @@ import {
   queueBitLockerOperation,
   registerBitLockerClient,
   registerEKMAgent,
+  scanBitLockerWindows,
   rotateEKMAgentKey
 } from "../lib/ekm";
 import {
@@ -330,6 +333,7 @@ import {
   createGovernanceBackup,
   createGovernanceRequest,
   createGovernancePolicy,
+  deleteGovernanceBackup,
   downloadGovernanceBackupArtifact,
   downloadGovernanceBackupKey,
   getGovernanceRequest,
@@ -12036,9 +12040,15 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
   const [bitLockerDeployPackage,setBitLockerDeployPackage]=useState(null);
   const [bitLockerDeploying,setBitLockerDeploying]=useState(false);
   const [bitLockerOpClientID,setBitLockerOpClientID]=useState("");
+  const [bitLockerDeletingClientID,setBitLockerDeletingClientID]=useState("");
   const [bitLockerJobs,setBitLockerJobs]=useState([]);
   const [bitLockerRecovery,setBitLockerRecovery]=useState([]);
   const [bitLockerLoadingDetail,setBitLockerLoadingDetail]=useState(false);
+  const [bitLockerDeleteTarget,setBitLockerDeleteTarget]=useState(null);
+  const [bitLockerDeletePreview,setBitLockerDeletePreview]=useState(null);
+  const [bitLockerDeleteLoading,setBitLockerDeleteLoading]=useState(false);
+  const [bitLockerDeleteSubmitting,setBitLockerDeleteSubmitting]=useState(false);
+  const [bitLockerDeleteConfirmBackup,setBitLockerDeleteConfirmBackup]=useState(false);
   const [bitLockerForm,setBitLockerForm]=useState({
     name:"",
     host:"",
@@ -12046,6 +12056,18 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
     mount_point:"C:",
     heartbeat_interval_sec:30
   });
+  const [bitLockerScanForm,setBitLockerScanForm]=useState({
+    ip_range:"",
+    max_hosts:256,
+    concurrency:32,
+    port_timeout_ms:350,
+    require_winrm:true
+  });
+  const [bitLockerScanRunning,setBitLockerScanRunning]=useState(false);
+  const [bitLockerScanResult,setBitLockerScanResult]=useState<any>(null);
+  const [bitLockerScanCandidates,setBitLockerScanCandidates]=useState<any[]>([]);
+  const [bitLockerScanSelected,setBitLockerScanSelected]=useState<Record<string,boolean>>({});
+  const [bitLockerOnboarding,setBitLockerOnboarding]=useState(false);
   const [ekmSubtab,setEkmSubtab]=useState("db");
   const [dbView,setDbView]=useState<"cards"|"list">("cards");
   const [bitLockerView,setBitLockerView]=useState<"cards"|"list">("cards");
@@ -12321,6 +12343,161 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
     }
   };
 
+  const openBitLockerDelete=async(client)=>{
+    const clientID=String(client?.id||"").trim();
+    if(!clientID){
+      onToast?.("Invalid BitLocker client.");
+      return;
+    }
+    setBitLockerDeleteTarget(client);
+    setBitLockerDeletePreview(null);
+    setBitLockerDeleteConfirmBackup(false);
+    setBitLockerDeleteLoading(true);
+    setModal("bitlocker-delete");
+    try{
+      const preview=await getBitLockerDeletePreview(session,clientID);
+      setBitLockerDeletePreview(preview||null);
+    }catch(error){
+      onToast?.(`Delete preview failed: ${errMsg(error)}`);
+    }finally{
+      setBitLockerDeleteLoading(false);
+    }
+  };
+
+  const submitBitLockerDelete=async()=>{
+    const target=bitLockerDeleteTarget;
+    const clientID=String(target?.id||"").trim();
+    if(!clientID){
+      onToast?.("Invalid BitLocker client.");
+      return;
+    }
+    if(!bitLockerDeleteConfirmBackup){
+      onToast?.("Please confirm backup of recovery key before deleting.");
+      return;
+    }
+    setBitLockerDeleteSubmitting(true);
+    setBitLockerDeletingClientID(clientID);
+    try{
+      const out=await deleteBitLockerClient(session,clientID,{
+        reason:"manual-dashboard-delete",
+        confirm_backup:true
+      });
+      onToast?.(`BitLocker client deleted: jobs ${Number(out?.deleted_jobs||0)}, recovery ${Number(out?.deleted_recovery_keys||0)}.`);
+      if(selectedAgent&&String(selectedAgent?.id||"")===clientID){
+        setSelectedAgent(null);
+      }
+      setModal(null);
+      setBitLockerDeleteTarget(null);
+      setBitLockerDeletePreview(null);
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Delete client failed: ${errMsg(error)}`);
+    }finally{
+      setBitLockerDeleteSubmitting(false);
+      setBitLockerDeletingClientID("");
+    }
+  };
+
+  const openBitLockerScan=()=>{
+    setBitLockerScanResult(null);
+    setBitLockerScanCandidates([]);
+    setBitLockerScanSelected({});
+    setModal("bitlocker-scan");
+  };
+
+  const runBitLockerScan=async()=>{
+    const range=String(bitLockerScanForm.ip_range||"").trim();
+    if(!range){
+      onToast?.("IP range is required.");
+      return;
+    }
+    setBitLockerScanRunning(true);
+    try{
+      const scan=await scanBitLockerWindows(session,{
+        ip_range:range,
+        max_hosts:Number(bitLockerScanForm.max_hosts||256),
+        concurrency:Number(bitLockerScanForm.concurrency||32),
+        port_timeout_ms:Number(bitLockerScanForm.port_timeout_ms||350),
+        require_winrm:Boolean(bitLockerScanForm.require_winrm)
+      });
+      const rows=Array.isArray(scan?.candidates)?scan.candidates:[];
+      setBitLockerScanResult(scan||null);
+      setBitLockerScanCandidates(rows);
+      setBitLockerScanSelected({});
+      onToast?.(`Scan complete: ${Number(scan?.windows_hosts||0)} Windows hosts found.`);
+    }catch(error){
+      onToast?.(`Network scan failed: ${errMsg(error)}`);
+    }finally{
+      setBitLockerScanRunning(false);
+    }
+  };
+
+  const toggleBitLockerCandidate=(ip:string)=>{
+    const key=String(ip||"").trim();
+    if(!key){
+      return;
+    }
+    setBitLockerScanSelected((prev)=>({
+      ...prev,
+      [key]:!Boolean(prev?.[key])
+    }));
+  };
+
+  const onboardScannedBitLocker=async()=>{
+    const selectedIPs=Object.entries(bitLockerScanSelected||{}).filter(([,v])=>Boolean(v)).map(([k])=>String(k||"").trim()).filter(Boolean);
+    if(!selectedIPs.length){
+      onToast?.("Select at least one Windows host to onboard.");
+      return;
+    }
+    const byIP=new Map((bitLockerScanCandidates||[]).map((row:any)=>[String(row?.ip||"").trim(),row]));
+    const existingHosts=new Set((bitLockerClients||[]).map((row:any)=>String(row?.host||"").trim().toLowerCase()).filter(Boolean));
+    setBitLockerOnboarding(true);
+    let created=0;
+    let skipped=0;
+    let failed=0;
+    for(const ip of selectedIPs){
+      const row:any=byIP.get(ip);
+      if(!row){
+        skipped++;
+        continue;
+      }
+      const host=String(row?.host||ip).trim();
+      if(existingHosts.has(String(host).toLowerCase())||existingHosts.has(String(ip).toLowerCase())){
+        skipped++;
+        continue;
+      }
+      const baseName=String(host||ip).split(".")[0].replace(/[^a-zA-Z0-9_-]/g,"-");
+      const suggestedName=(baseName||`WIN-${ip.replace(/\./g,"-")}`).slice(0,48);
+      const suggestedClientID=`scan-${ip.replace(/[^0-9]/g,"-")}`;
+      try{
+        await registerBitLockerClient(session,{
+          client_id:suggestedClientID,
+          name:suggestedName,
+          host:ip,
+          os_version:String(row?.os_guess||"Windows (discovered)"),
+          mount_point:"C:",
+          heartbeat_interval_sec:30,
+          metadata_json:JSON.stringify({
+            managed_by:"vecta-ekm",
+            source:"network-scan",
+            scan_confidence:String(row?.confidence||""),
+            scan_ports_open:Array.isArray(row?.ports_open)?row.ports_open:[]
+          })
+        });
+        existingHosts.add(String(ip).toLowerCase());
+        existingHosts.add(String(host).toLowerCase());
+        created++;
+      }catch{
+        failed++;
+      }
+    }
+    setBitLockerOnboarding(false);
+    onToast?.(`Onboard complete: added ${created}, skipped ${skipped}, failed ${failed}.`);
+    if(created>0){
+      await refresh(true);
+    }
+  };
+
   const openBitLockerActivity=async(client)=>{
     const clientID=String(client?.id||"").trim();
     if(!clientID){
@@ -12569,6 +12746,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
             {loading?"Refreshing...":"Refresh"}
           </span>
         </Btn>
+        <Btn small onClick={openBitLockerScan}>Network Scan</Btn>
         <Btn small primary onClick={openBitLockerDeploy}>+ Register BitLocker Agent</Btn>
       </div>}
     >
@@ -12585,6 +12763,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
             const encryptionPct=Math.max(0,Math.min(100,Number(client.encryption_percentage||0)));
             const hbAge=formatAgo(client.last_heartbeat_at);
             const opBusy=(op)=>bitLockerOpClientID===`${String(client.id||"").trim()}:${op}`;
+            const deleteBusy=bitLockerDeletingClientID===String(client.id||"").trim();
             return <Card key={client.id}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                 <div style={{minWidth:0}}>
@@ -12610,9 +12789,10 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
                 <Btn small onClick={()=>void runBitLockerOperation(client,"fetch_recovery")} disabled={opBusy("fetch_recovery")}>{opBusy("fetch_recovery")?"...":"Fetch Recovery"}</Btn>
                 <Btn small onClick={()=>void openBitLockerActivity(client)}>Activity</Btn>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,marginTop:8}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8,marginTop:8}}>
                 <Btn small danger onClick={()=>void runBitLockerOperation(client,"disable")} disabled={opBusy("disable")}>{opBusy("disable")?"...":"Disable"}</Btn>
                 <Btn small danger onClick={()=>void runBitLockerOperation(client,"remove")} disabled={opBusy("remove")}>{opBusy("remove")?"...":"Remove"}</Btn>
+                <Btn small danger onClick={()=>void openBitLockerDelete(client)} disabled={deleteBusy}>{deleteBusy?"Deleting...":"Delete Client"}</Btn>
               </div>
             </Card>;
           })}
@@ -12628,6 +12808,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
               const menuKey=String(client.id||"");
               const menuOpen=bitLockerMenu===menuKey;
               const opBusy=(op)=>bitLockerOpClientID===`${String(client.id||"").trim()}:${op}`;
+              const deleteBusy=bitLockerDeletingClientID===String(client.id||"").trim();
               return <div key={client.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr .9fr .8fr .8fr .8fr auto",alignItems:"center",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:10}}>
                 <div style={{color:C.text,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{client.name}</div>
                 <div style={{color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{`${client.host||"-"} · ${client.os_version||"windows"}`}</div>
@@ -12648,6 +12829,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
                     <button onClick={()=>{setBitLockerMenu("");void openBitLockerActivity(client);}} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>Activity</button>
                     <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"disable");}} disabled={opBusy("disable")} style={{textAlign:"left",background:"transparent",border:"none",color:C.red,cursor:"pointer",padding:"6px 8px"}}>{opBusy("disable")?"Disabling...":"Disable"}</button>
                     <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"remove");}} disabled={opBusy("remove")} style={{textAlign:"left",background:"transparent",border:"none",color:C.red,cursor:"pointer",padding:"6px 8px"}}>{opBusy("remove")?"Removing...":"Remove"}</button>
+                    <button onClick={()=>{setBitLockerMenu("");void openBitLockerDelete(client);}} disabled={deleteBusy} style={{textAlign:"left",background:"transparent",border:"none",color:C.red,cursor:"pointer",padding:"6px 8px"}}>{deleteBusy?"Deleting...":"Delete Client"}</button>
                   </div>}
                 </div>
               </div>;
@@ -12714,7 +12896,12 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
         <div style={{fontSize:10,color:C.dim}}>
           {`Client ${String(selectedAgent?.id||"-")}  ·  ${String(selectedAgent?.host||"-")}`}
         </div>
-        <Btn small onClick={()=>selectedAgent&&void openBitLockerActivity(selectedAgent)} disabled={bitLockerLoadingDetail}>{bitLockerLoadingDetail?"Refreshing...":"Refresh"}</Btn>
+        <div style={{display:"flex",gap:8}}>
+          <Btn small onClick={()=>selectedAgent&&void openBitLockerActivity(selectedAgent)} disabled={bitLockerLoadingDetail}>{bitLockerLoadingDetail?"Refreshing...":"Refresh"}</Btn>
+          <Btn small danger onClick={()=>selectedAgent&&void openBitLockerDelete(selectedAgent)} disabled={!selectedAgent||bitLockerDeletingClientID===String(selectedAgent?.id||"").trim()}>
+            {bitLockerDeletingClientID===String(selectedAgent?.id||"").trim()?"Deleting...":"Delete Client"}
+          </Btn>
+        </div>
       </div>
       <Row2>
         <Card style={{maxHeight:330,overflowY:"auto"}}>
@@ -12753,6 +12940,121 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
       <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
         <Btn onClick={()=>setModal(null)}>Close</Btn>
       </div>
+    </Modal>
+
+    <Modal open={modal==="bitlocker-delete"} onClose={()=>!bitLockerDeleteSubmitting&&setModal(null)} title={`Delete BitLocker Client: ${String(bitLockerDeleteTarget?.name||"")}`} wide>
+      <div style={{fontSize:11,color:C.red,lineHeight:1.5,marginBottom:10}}>
+        WARNING: This permanently deletes the BitLocker client from KMS UI and backend DB (client record, queued jobs, and stored recovery records).
+      </div>
+      <div style={{fontSize:10,color:C.dim,marginBottom:10}}>
+        Ensure recovery key is backed up before proceeding.
+      </div>
+      {bitLockerDeleteLoading&&<div style={{fontSize:10,color:C.dim,marginBottom:10}}>Loading delete preview...</div>}
+      {!bitLockerDeleteLoading&&bitLockerDeletePreview&&<Card style={{marginBottom:10}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 10px"}}>
+          <div style={{fontSize:10,color:C.dim}}>{`Client ID: ${String(bitLockerDeletePreview.client_id||"-")}`}</div>
+          <div style={{fontSize:10,color:C.dim}}>{`Host: ${String(bitLockerDeletePreview.host||"-")}`}</div>
+          <div style={{fontSize:10,color:C.dim}}>{`Recovery records: ${Number(bitLockerDeletePreview.recovery_keys_available||0)}`}</div>
+          <div style={{fontSize:10,color:C.dim}}>{`Latest key at: ${bitLockerDeletePreview.latest_recovery_at?new Date(String(bitLockerDeletePreview.latest_recovery_at)).toLocaleString():"-"}`}</div>
+        </div>
+      </Card>}
+      <Chk
+        label="I confirm the BitLocker recovery key is backed up and I want to view the stored key string before delete."
+        checked={bitLockerDeleteConfirmBackup}
+        onChange={()=>setBitLockerDeleteConfirmBackup(!bitLockerDeleteConfirmBackup)}
+        disabled={bitLockerDeleteSubmitting}
+      />
+      {bitLockerDeleteConfirmBackup&&<FG label="BitLocker Key String Stored In DB">
+        <Txt
+          rows={3}
+          readOnly
+          value={String(bitLockerDeletePreview?.latest_recovery_key||bitLockerDeletePreview?.latest_recovery_key_masked||"No recovery key record found for this client.")}
+        />
+      </FG>}
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={bitLockerDeleteSubmitting}>Cancel</Btn>
+        <Btn danger onClick={()=>void submitBitLockerDelete()} disabled={bitLockerDeleteSubmitting||bitLockerDeleteLoading||!bitLockerDeleteConfirmBackup}>
+          {bitLockerDeleteSubmitting?"Deleting...":"Delete Client"}
+        </Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="bitlocker-scan"} onClose={()=>!bitLockerScanRunning&&!bitLockerOnboarding&&setModal(null)} title="Network Scan (Windows BitLocker Endpoints)" wide>
+      <Row2>
+        <FG label="IP Range (CIDR or start-end)" required>
+          <Inp
+            value={bitLockerScanForm.ip_range}
+            onChange={(e)=>setBitLockerScanForm({...bitLockerScanForm,ip_range:e.target.value})}
+            placeholder="10.0.0.0/24 or 10.0.0.10-10.0.0.120"
+            mono
+          />
+        </FG>
+        <FG label="Max Hosts">
+          <Inp
+            type="number"
+            value={String(bitLockerScanForm.max_hosts)}
+            onChange={(e)=>setBitLockerScanForm({...bitLockerScanForm,max_hosts:Number(e.target.value||256)})}
+          />
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="Concurrency">
+          <Inp
+            type="number"
+            value={String(bitLockerScanForm.concurrency)}
+            onChange={(e)=>setBitLockerScanForm({...bitLockerScanForm,concurrency:Number(e.target.value||32)})}
+          />
+        </FG>
+        <FG label="Port Timeout (ms)">
+          <Inp
+            type="number"
+            value={String(bitLockerScanForm.port_timeout_ms)}
+            onChange={(e)=>setBitLockerScanForm({...bitLockerScanForm,port_timeout_ms:Number(e.target.value||350)})}
+          />
+        </FG>
+      </Row2>
+      <Chk
+        label="Windows-only strict mode (require SMB + WinRM)"
+        checked={Boolean(bitLockerScanForm.require_winrm)}
+        onChange={()=>setBitLockerScanForm({...bitLockerScanForm,require_winrm:!bitLockerScanForm.require_winrm})}
+        disabled={bitLockerScanRunning}
+      />
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:10}}>
+        <Btn onClick={()=>setModal(null)} disabled={bitLockerScanRunning||bitLockerOnboarding}>Close</Btn>
+        <Btn primary onClick={()=>void runBitLockerScan()} disabled={bitLockerScanRunning}>{bitLockerScanRunning?"Scanning...":"Run Scan"}</Btn>
+      </div>
+      {bitLockerScanResult&&<Card style={{marginTop:12}}>
+        <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:8}}>
+          <B c="blue">{`Scanned ${Number(bitLockerScanResult?.scanned_hosts||0)}`}</B>
+          <B c="green">{`Windows ${Number(bitLockerScanResult?.windows_hosts||0)}`}</B>
+          <B c="amber">{`Duration ${Number(bitLockerScanResult?.duration_ms||0)} ms`}</B>
+        </div>
+        <div style={{maxHeight:260,overflowY:"auto",border:`1px solid ${C.border}`,borderRadius:8}}>
+          <div style={{display:"grid",gridTemplateColumns:"36px 1fr 1fr .8fr .8fr 1fr",padding:"8px 10px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+            <div></div><div>IP</div><div>Host</div><div>OS</div><div>Confidence</div><div>Ports</div>
+          </div>
+          {(bitLockerScanCandidates||[]).map((row:any)=>{
+            const ip=String(row?.ip||"").trim();
+            const selected=Boolean(bitLockerScanSelected?.[ip]);
+            return <div key={ip} style={{display:"grid",gridTemplateColumns:"36px 1fr 1fr .8fr .8fr 1fr",padding:"8px 10px",borderBottom:`1px solid ${C.border}`,fontSize:10,alignItems:"center"}}>
+              <div>
+                <Chk label="" checked={selected} onChange={()=>toggleBitLockerCandidate(ip)} disabled={!ip||bitLockerOnboarding}/>
+              </div>
+              <div style={{color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{ip||"-"}</div>
+              <div style={{color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{String(row?.host||"-")}</div>
+              <div style={{color:C.dim}}>{String(row?.os_guess||"Windows")}</div>
+              <div><B c={String(row?.confidence||"").toLowerCase()==="high"?"green":"amber"}>{String(row?.confidence||"medium")}</B></div>
+              <div style={{color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{Array.isArray(row?.ports_open)?row.ports_open.join(", "):"-"}</div>
+            </div>;
+          })}
+          {!bitLockerScanCandidates.length&&<div style={{padding:"10px 12px",fontSize:10,color:C.dim}}>No Windows endpoints found for this range.</div>}
+        </div>
+        <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
+          <Btn primary onClick={()=>void onboardScannedBitLocker()} disabled={bitLockerOnboarding||!Object.values(bitLockerScanSelected||{}).some(Boolean)}>
+            {bitLockerOnboarding?"Onboarding...":"Onboard Selected"}
+          </Btn>
+        </div>
+      </Card>}
     </Modal>
 
     <Modal open={modal==="deploy"} onClose={()=>setModal(null)} title="Deploy EKM Agent" wide>
@@ -17440,6 +17742,7 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
   const [backupJobsLoading,setBackupJobsLoading]=useState(false);
   const [backupCreating,setBackupCreating]=useState(false);
   const [backupDownloading,setBackupDownloading]=useState("");
+  const [backupDeleting,setBackupDeleting]=useState("");
   const [backupScope,setBackupScope]=useState<"system"|"tenant">("system");
   const [backupTargetTenant,setBackupTargetTenant]=useState(String(session?.tenantId||""));
   const [backupBindToHSM,setBackupBindToHSM]=useState(true);
@@ -18104,6 +18407,27 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       onToast?.(`Backup key download failed: ${errMsg(error)}`);
     }finally{
       setBackupDownloading("");
+    }
+  };
+
+  const deleteBackupJob=async(jobID:string)=>{
+    const id=String(jobID||"").trim();
+    if(!id){
+      return;
+    }
+    const ok=window.confirm(`Delete backup ${id}? This removes stored artifact and key package metadata from KMS.`);
+    if(!ok){
+      return;
+    }
+    setBackupDeleting(id);
+    try{
+      await deleteGovernanceBackup(session,id,session?.username||"dashboard");
+      onToast?.("Backup deleted.");
+      await loadBackupJobs(true);
+    }catch(error){
+      onToast?.(`Backup delete failed: ${errMsg(error)}`);
+    }finally{
+      setBackupDeleting("");
     }
   };
 
@@ -18908,8 +19232,9 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
                   <B c={hsmBound?"blue":"amber"}>{hsmBound?"HSM bound":"Software key"}</B>
                 </div>
                 <div style={{display:"flex",gap:6}}>
-                  <Btn small onClick={()=>void downloadBackupArtifactFile(id)} disabled={backupDownloading!==""}>{backupDownloading===`artifact:${id}`?"Downloading...":"Download Backup"}</Btn>
-                  <Btn small onClick={()=>void downloadBackupKeyPackageFile(id)} disabled={backupDownloading!==""}>{backupDownloading===`key:${id}`?"Downloading...":"Download Key"}</Btn>
+                  <Btn small onClick={()=>void downloadBackupArtifactFile(id)} disabled={backupDownloading!==""||backupDeleting!==""}>{backupDownloading===`artifact:${id}`?"Downloading...":"Download Backup"}</Btn>
+                  <Btn small onClick={()=>void downloadBackupKeyPackageFile(id)} disabled={backupDownloading!==""||backupDeleting!==""}>{backupDownloading===`key:${id}`?"Downloading...":"Download Key"}</Btn>
+                  <Btn small danger onClick={()=>void deleteBackupJob(id)} disabled={backupDownloading!==""||backupDeleting!==""}>{backupDeleting===id?"Deleting...":"Delete"}</Btn>
                 </div>
               </div>
             </div>

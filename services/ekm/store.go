@@ -50,6 +50,9 @@ type Store interface {
 
 	SaveBitLockerRecoveryKey(ctx context.Context, rec BitLockerRecoveryKeyRecord) error
 	ListBitLockerRecoveryKeys(ctx context.Context, tenantID string, clientID string, limit int) ([]BitLockerRecoveryKeyRecord, error)
+	GetLatestBitLockerRecoveryKey(ctx context.Context, tenantID string, clientID string) (BitLockerRecoveryKeyRecord, error)
+	CountBitLockerRecoveryKeys(ctx context.Context, tenantID string, clientID string) (int, error)
+	PurgeBitLockerClient(ctx context.Context, tenantID string, clientID string) (int, int, int, error)
 }
 
 type SQLStore struct {
