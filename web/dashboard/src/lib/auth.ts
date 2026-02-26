@@ -13,6 +13,8 @@ export type AuthSession = {
   token: string;
   mode: "backend" | "local";
   mustChangePassword: boolean;
+  role?: string;
+  permissions?: string[];
   idleTimeoutMinutes?: number;
   expiresAt?: string;
 };
@@ -64,6 +66,8 @@ export function getSession(): AuthSession | null {
     return {
       ...parsed,
       mustChangePassword: Boolean(parsed.mustChangePassword),
+      role: String(parsed.role || "").trim() || undefined,
+      permissions: normalizePermissionList(parsed.permissions),
       idleTimeoutMinutes:
         Number.isFinite(Number(parsed.idleTimeoutMinutes)) && Number(parsed.idleTimeoutMinutes) > 0
           ? Math.trunc(Number(parsed.idleTimeoutMinutes))
@@ -128,6 +132,7 @@ export async function login(
           expires_at?: string;
         };
         if (data.access_token) {
+          const authz = deriveSessionAuthFromToken(data.access_token);
           const idleTimeoutMinutes = Number(data.security_policy?.idle_timeout_minutes || 0);
           return {
             tenantId,
@@ -135,6 +140,8 @@ export async function login(
             token: data.access_token,
             mode: "backend",
             mustChangePassword: Boolean(data.must_change_password),
+            role: authz.role,
+            permissions: authz.permissions,
             idleTimeoutMinutes: Number.isFinite(idleTimeoutMinutes) && idleTimeoutMinutes > 0 ? Math.trunc(idleTimeoutMinutes) : undefined,
             expiresAt: String(data.expires_at || "").trim() || undefined
           };
@@ -168,6 +175,8 @@ export async function login(
     token: `local-${Date.now()}`,
     mode: "local",
     mustChangePassword: mustForcePasswordChange(config),
+    role: "admin",
+    permissions: ["*"],
     idleTimeoutMinutes: undefined
   };
 }
@@ -213,10 +222,14 @@ export async function changePassword(
     if (!response.ok) {
       throw new Error(readErrorMessage(payload, "Password update failed"));
     }
+    const nextToken = String(payload.access_token || session.token);
+    const authz = deriveSessionAuthFromToken(nextToken, session);
     return {
       ...session,
-      token: payload.access_token ?? session.token,
+      token: nextToken,
       mustChangePassword: Boolean(payload.must_change_password),
+      role: authz.role,
+      permissions: authz.permissions,
       expiresAt: String(payload.expires_at || "").trim() || session.expiresAt
     };
   }
@@ -250,9 +263,67 @@ export async function refreshSession(session: AuthSession): Promise<AuthSession>
   if (!response.ok) {
     throw new Error(readErrorMessage(payload, "Session refresh failed"));
   }
+  const nextToken = String(payload.access_token || session.token);
+  const authz = deriveSessionAuthFromToken(nextToken, session);
   return {
     ...session,
-    token: String(payload.access_token || session.token),
+    token: nextToken,
+    role: authz.role,
+    permissions: authz.permissions,
     expiresAt: String(payload.expires_at || "").trim() || session.expiresAt
+  };
+}
+
+type TokenClaims = {
+  role?: unknown;
+  permissions?: unknown;
+};
+
+function normalizePermissionList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const dedup = new Set<string>();
+  value.forEach((item) => {
+    const token = String(item || "").trim();
+    if (!token) {
+      return;
+    }
+    dedup.add(token);
+  });
+  return Array.from(dedup);
+}
+
+function decodeTokenClaims(token: string): TokenClaims | null {
+  const raw = String(token || "").trim();
+  if (!raw) {
+    return null;
+  }
+  const parts = raw.split(".");
+  if (parts.length < 2) {
+    return null;
+  }
+  try {
+    const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = payload.padEnd(Math.ceil(payload.length / 4) * 4, "=");
+    const json = atob(padded);
+    const parsed = JSON.parse(json) as TokenClaims;
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function deriveSessionAuthFromToken(
+  token: string,
+  fallback?: Pick<AuthSession, "role" | "permissions">
+): Pick<AuthSession, "role" | "permissions"> {
+  const claims = decodeTokenClaims(token);
+  const role = String(claims?.role || fallback?.role || "").trim() || undefined;
+  const nextPermissions = normalizePermissionList(claims?.permissions);
+  const permissions = nextPermissions.length ? nextPermissions : normalizePermissionList(fallback?.permissions);
+  return {
+    role,
+    permissions
   };
 }

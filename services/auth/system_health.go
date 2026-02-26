@@ -214,6 +214,8 @@ func knownBackendTargets() []serviceTarget {
 		{name: "kms-sbom", address: "sbom:18180"},
 		{name: "kms-mpc", address: "mpc:18190"},
 		{name: "kms-dataprotect", address: "dataprotect:18200"},
+		{name: "kms-cluster-manager", address: "cluster-manager:18210"},
+		{name: "kms-hsm-connector", address: "hsm-connector:18430"},
 		{name: "kms-kmip", address: "kmip:15696"},
 		{name: "kms-software-vault", address: "software-vault:18440"},
 	}
@@ -703,10 +705,14 @@ func composeServiceToHealthName(serviceName string) (string, bool) {
 		return "kms-dataprotect", true
 	case "mpc":
 		return "kms-mpc", true
+	case "cluster-manager":
+		return "kms-cluster-manager", true
 	case "discovery":
 		return "kms-discovery", true
 	case "ai":
 		return "kms-ai", true
+	case "hsm-connector":
+		return "kms-hsm-connector", true
 	case "kmip":
 		return "kms-kmip", true
 	case "software-vault":

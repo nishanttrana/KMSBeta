@@ -13,8 +13,8 @@ type SidebarProps = {
 const groupOrder: GroupId[] = [
   "core",
   "secrets_certs",
-  "data_protection",
   "cloud_integration",
+  "data_protection",
   "infrastructure",
   "governance_compliance",
   "admin"

@@ -301,7 +301,14 @@ import {
   deleteAuthGroupRoleBinding,
   disableAuthTenant,
   deleteAuthTenant,
+  importAuthIdentityUsers,
+  getAuthCLIHSMConfig,
   getAuthCLIStatus,
+  listAuthCLIHSMPartitions,
+  listAuthIdentityProviderGroupMembers,
+  listAuthIdentityProviderGroups,
+  listAuthIdentityProviderUsers,
+  listAuthIdentityProviders,
   getAuthTenantDeleteReadiness,
   getAuthPasswordPolicy,
   getAuthSecurityPolicy,
@@ -310,6 +317,9 @@ import {
   listAuthUsers,
   openAuthCLISession,
   resetAuthUserPassword,
+  testAuthIdentityProviderConfig,
+  upsertAuthCLIHSMConfig,
+  upsertAuthIdentityProviderConfig,
   upsertAuthGroupRoleBinding,
   updateAuthPasswordPolicy,
   updateAuthSecurityPolicy,
@@ -1858,14 +1868,11 @@ const Row2=({children})=><div style={{display:"grid",gridTemplateColumns:"1fr 1f
 const Row3=({children})=><div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>{children}</div>;
 
 const NAV=[
-  {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"certs",icon:FileText,label:"Certificates / PKI"}]},
+  {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"certs",icon:FileText,label:"Certificates / PKI"},{id:"cloudctl",icon:Cloud,label:"Cloud Key Control"},{id:"ekm",icon:Database,label:"Enterprise Key Management"},{id:"vault",icon:Lock,label:"Secret Vault"},{id:"dataprotection",icon:ShieldCheck,label:"Data Protection"}]},
   {g:"WORKBENCH",items:[{id:"workbench",icon:LayoutGrid,label:"Workbench"}]},
-  {g:"SECRETS & CERTS",items:[{id:"vault",icon:Lock,label:"Secret Vault"}]},
-  {g:"DATA PROTECTION",items:[{id:"dataprotection",icon:ShieldCheck,label:"Data Protection"}]},
-  {g:"CLOUD KEY CONTROL",items:[{id:"cloudctl",icon:Cloud,label:"Cloud Key Control"},{id:"ekm",icon:Database,label:"Enterprise Key Management"}]},
   {g:"INFRASTRUCTURE",items:[{id:"hsm",icon:Cpu,label:"HSM / Primus"},{id:"qkd",icon:GitBranch,label:"QKD Interface"},{id:"mpc",icon:Cpu,label:"MPC Engine"},{id:"cluster",icon:GitBranch,label:"Cluster"}]},
   {g:"GOVERNANCE",items:[{id:"approvals",icon:CheckCircle2,label:"Approvals"},{id:"alerts",icon:Bell,label:"Alert Center"},{id:"audit",icon:ScrollText,label:"Audit Log"},{id:"compliance",icon:ClipboardCheck,label:"Compliance"},{id:"sbom",icon:BarChart3,label:"SBOM / CBOM"}]},
-  {g:"ADMIN",items:[{id:"admin",icon:Settings,label:"Administration"},{id:"users",icon:Users,label:"User Management"},{id:"docs",icon:ScrollText,label:"Documentation"}]},
+  {g:"ADMIN",items:[{id:"admin",icon:Settings,label:"Administration"}]},
 ];
 
 const DOC_COMPONENTS=[
@@ -12835,26 +12842,412 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
   </div>;
 };
 
-const HSM=()=>{const [m,sM]=useState(null);return <div>
-  <Row2>
-    <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>CONNECTION</div>
-      {[["Mode","Hardware PKCS#11"],["Model","Primus X HSM"],["Firmware","v3.8.2"],["IP","10.0.3.50:2300"],["FIPS","Level 3"],["Partition","kms-prod"],["MEK","Loaded OK"],["Keys","47"]].map(([k,v])=>
-        <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:10}}><span style={{color:C.muted}}>{k}</span><span style={{color:C.text,fontFamily:"monospace"}}>{v}</span></div>)}
-    </Card>
-    <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>OPERATIONS (24h)</div>
-      {[["Encrypt/Decrypt","847K/day"],["Sign/Verify","234K/day"],["Key Gen","12/day"],["Wrap/Unwrap","1.2K/day"],["Avg Latency","0.8ms"],["Uptime","99.999%"]].map(([k,v])=>
-        <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:10}}><span style={{color:C.muted}}>{k}</span><span style={{color:C.accent}}>{v}</span></div>)}
-    </Card>
-  </Row2>
-  <Section title="HSM Actions" actions={<><Btn small onClick={()=>sM("gen")}>Generate Key in HSM</Btn><Btn small onClick={()=>sM("import-hsm")}>Import to HSM</Btn><Btn small>Backup HSM State</Btn></>}><div/></Section>
-  <Modal open={m==="gen"} onClose={()=>sM(null)} title="Generate Key in HSM">
-    <FG label="Algorithm" required><Sel><option>AES-256</option><option>RSA-2048</option><option>RSA-4096</option><option>ECDSA-P384</option><option>Ed25519</option></Sel></FG>
-    <FG label="Key Label" required><Inp placeholder="Enter customer key label" mono/></FG>
-    <FG label="HSM Partition"><Sel><option>kms-prod</option><option>kms-backup</option></Sel></FG>
-    <FG label="Key Attributes"><Chk label="Extractable (can be wrapped and exported)" checked={false}/><Chk label="Sensitive (never appears in plaintext)" checked={true}/><Chk label="Token object (persists on HSM)" checked={true}/></FG>
-    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Generate in HSM</Btn></div>
-  </Modal>
-</div>;};
+const HSM=({session,onToast})=>{
+  const [modal,setModal]=useState<null|"gen">(null);
+  const [statusLoading,setStatusLoading]=useState(false);
+  const [configLoading,setConfigLoading]=useState(false);
+  const [configSaving,setConfigSaving]=useState(false);
+  const [discovering,setDiscovering]=useState(false);
+  const [cliStatus,setCLIStatus]=useState<any>(null);
+  const [cliHints,setCLIHints]=useState<any>(null);
+  const [providerName,setProviderName]=useState("customer-hsm");
+  const [providerFileName,setProviderFileName]=useState("");
+  const [pinEnvVar,setPinEnvVar]=useState("HSM_PIN");
+  const [providerReadOnly,setProviderReadOnly]=useState(false);
+  const [providerEnabled,setProviderEnabled]=useState(false);
+  const [configUpdatedAt,setConfigUpdatedAt]=useState("");
+  const [configUpdatedBy,setConfigUpdatedBy]=useState("");
+  const [slots,setSlots]=useState<any[]>([]);
+  const [rawOutput,setRawOutput]=useState("");
+  const [lastDiscoveredAt,setLastDiscoveredAt]=useState("");
+  const [selectedSlotID,setSelectedSlotID]=useState("");
+  const [selectedPartition,setSelectedPartition]=useState("");
+  const [keyAlgo,setKeyAlgo]=useState("AES-256");
+  const [keyLabel,setKeyLabel]=useState("");
+
+  const providerDir=String(cliHints?.provider_library_dir||"").trim();
+  const templateLibraryPath=String(cliHints?.pkcs11_config_template?.library_path||"").trim();
+  const workspaceRoot=String(cliHints?.workspace_root||"").trim();
+  const integrationService=String(cliHints?.integration_service||"").trim()||"hsm-integration";
+  const resolvedLibraryPath=useMemo(()=>{
+    const file=String(providerFileName||"").trim();
+    if(providerDir&&file){
+      return `${providerDir}/${file}`;
+    }
+    if(file&&templateLibraryPath.includes("<pkcs11-library-file>")){
+      return templateLibraryPath.replace("<pkcs11-library-file>",file);
+    }
+    return templateLibraryPath;
+  },[providerDir,providerFileName,templateLibraryPath]);
+
+  const partitionOptions=useMemo(()=>{
+    const seen=new Set<string>();
+    const out:string[]=[];
+    for(const item of Array.isArray(slots)?slots:[]){
+      const label=String(item?.partition||item?.token_label||"").trim();
+      if(!label||seen.has(label)){
+        continue;
+      }
+      seen.add(label);
+      out.push(label);
+    }
+    const selected=String(selectedPartition||"").trim();
+    if(selected&&!seen.has(selected)){
+      out.unshift(selected);
+    }
+    return out;
+  },[selectedPartition,slots]);
+
+  const slotOptions=useMemo(()=>{
+    const out=Array.isArray(slots)?[...slots]:[];
+    const selected=String(selectedSlotID||"").trim();
+    if(selected&&!out.some((slot:any)=>String(slot?.slot_id||"").trim()===selected)){
+      out.unshift({slot_id:selected,slot_name:"saved-slot",token_present:true});
+    }
+    return out;
+  },[selectedSlotID,slots]);
+
+  const inferLibraryFilename=(libraryPath:string)=>{
+    const normalized=String(libraryPath||"").trim().replace(/\\/g,"/");
+    if(!normalized||normalized.includes("<pkcs11-library-file>")){
+      return "";
+    }
+    const parts=normalized.split("/").filter(Boolean);
+    return parts.length?String(parts[parts.length-1]||"").trim():"";
+  };
+
+  const refreshCLIHints=async(silent=false)=>{
+    if(!session?.token){
+      return;
+    }
+    setStatusLoading(true);
+    try{
+      const out=await getAuthCLIStatus(session);
+      setCLIStatus(out||null);
+      setCLIHints(out?.hsm_pkcs11_onboarding||null);
+      if(!silent){
+        onToast?.("HSM integration status refreshed.");
+      }
+    }catch(error){
+      onToast?.(`HSM status load failed: ${errMsg(error)}`);
+    }finally{
+      setStatusLoading(false);
+    }
+  };
+
+  const loadProviderConfig=async(silent=false)=>{
+    if(!session?.token){
+      return;
+    }
+    setConfigLoading(true);
+    try{
+      const cfg=await getAuthCLIHSMConfig(session);
+      const nextProviderName=String(cfg?.provider_name||"customer-hsm").trim()||"customer-hsm";
+      const nextPINEnvVar=String(cfg?.pin_env_var||"HSM_PIN").trim()||"HSM_PIN";
+      const nextLibraryPath=String(cfg?.library_path||"").trim();
+      const nextSlotID=String(cfg?.slot_id||"").trim();
+      const nextPartition=String(cfg?.partition_label||cfg?.token_label||"").trim();
+      const nextDiscoveredAt=String(cfg?.metadata?.last_discovery_at||"").trim();
+
+      setProviderName(nextProviderName);
+      setPinEnvVar(nextPINEnvVar);
+      setProviderReadOnly(Boolean(cfg?.read_only));
+      setProviderEnabled(Boolean(cfg?.enabled));
+      setConfigUpdatedAt(String(cfg?.updated_at||"").trim());
+      setConfigUpdatedBy(String(cfg?.updated_by||"").trim());
+      if(nextSlotID){
+        setSelectedSlotID(nextSlotID);
+      }
+      if(nextPartition){
+        setSelectedPartition(nextPartition);
+      }
+      if(nextDiscoveredAt){
+        setLastDiscoveredAt(nextDiscoveredAt);
+      }
+      const inferredFile=inferLibraryFilename(nextLibraryPath);
+      if(inferredFile){
+        setProviderFileName(inferredFile);
+      }
+      if(!silent){
+        onToast?.("Persisted HSM provider config loaded.");
+      }
+    }catch(error){
+      onToast?.(`HSM provider config load failed: ${errMsg(error)}`);
+    }finally{
+      setConfigLoading(false);
+    }
+  };
+
+  const persistProviderConfig=async(overrides:any={},options:any={})=>{
+    if(!session?.token){
+      onToast?.("Login is required to save HSM provider config.");
+      return null;
+    }
+    const effectiveLibraryPath=String((overrides?.library_path??resolvedLibraryPath)||"").trim();
+    const effectivePartition=String((overrides?.partition_label??overrides?.token_label??selectedPartition)||"").trim();
+    const metadataInput={
+      ui_source:"dashboard-hsm",
+      ...(overrides?.metadata&&typeof overrides.metadata==="object"?overrides.metadata:{})
+    };
+    setConfigSaving(true);
+    try{
+        const updated=await upsertAuthCLIHSMConfig(session,{
+        provider_name:String((overrides?.provider_name??providerName)||"customer-hsm").trim()||"customer-hsm",
+        integration_service:String((overrides?.integration_service??integrationService)||"hsm-integration").trim()||"hsm-integration",
+        library_path:effectiveLibraryPath,
+        slot_id:String((overrides?.slot_id??selectedSlotID)||"").trim(),
+        partition_label:effectivePartition,
+        token_label:String((overrides?.token_label??effectivePartition)||"").trim(),
+        pin_env_var:String((overrides?.pin_env_var??pinEnvVar)||"HSM_PIN").trim()||"HSM_PIN",
+        read_only:Boolean(overrides?.read_only??providerReadOnly),
+        enabled:Boolean(overrides?.enabled??providerEnabled),
+        metadata:metadataInput
+      });
+      setProviderName(String(updated?.provider_name||"customer-hsm").trim()||"customer-hsm");
+      setPinEnvVar(String(updated?.pin_env_var||"HSM_PIN").trim()||"HSM_PIN");
+      setProviderReadOnly(Boolean(updated?.read_only));
+      setProviderEnabled(Boolean(updated?.enabled));
+      setSelectedSlotID(String(updated?.slot_id||"").trim());
+      setSelectedPartition(String(updated?.partition_label||updated?.token_label||"").trim());
+      setConfigUpdatedAt(String(updated?.updated_at||"").trim());
+      setConfigUpdatedBy(String(updated?.updated_by||"").trim());
+      const inferredFile=inferLibraryFilename(String(updated?.library_path||"").trim());
+      if(inferredFile){
+        setProviderFileName(inferredFile);
+      }
+      if(!Boolean(options?.silent_success)){
+        onToast?.(String(options?.success_message||"HSM provider config saved."));
+      }
+      return updated;
+    }catch(error){
+      onToast?.(`${String(options?.error_prefix||"HSM provider save failed")}: ${errMsg(error)}`);
+      return null;
+    }finally{
+      setConfigSaving(false);
+    }
+  };
+
+  useEffect(()=>{
+    if(!session?.token){
+      setCLIStatus(null);
+      setCLIHints(null);
+      setProviderName("customer-hsm");
+      setProviderFileName("");
+      setPinEnvVar("HSM_PIN");
+      setProviderReadOnly(false);
+      setProviderEnabled(false);
+      setConfigUpdatedAt("");
+      setConfigUpdatedBy("");
+      setSlots([]);
+      setRawOutput("");
+      setLastDiscoveredAt("");
+      setSelectedSlotID("");
+      setSelectedPartition("");
+      return;
+    }
+    void Promise.all([refreshCLIHints(true),loadProviderConfig(true)]);
+  },[session?.token,session?.tenantId]);
+
+  const autoFetchPartitions=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to discover HSM partitions.");
+      return;
+    }
+    const libPath=String(resolvedLibraryPath||"").trim();
+    if(!libPath||libPath.includes("<pkcs11-library-file>")){
+      onToast?.("Enter the uploaded PKCS#11 library filename first.");
+      return;
+    }
+    setDiscovering(true);
+    try{
+      const out=await listAuthCLIHSMPartitions(session,libPath);
+      const rows=Array.isArray(out?.items)?out.items:[];
+      setSlots(rows);
+      setRawOutput(String(out?.raw_output||""));
+      const discoveredAt=new Date().toISOString();
+      setLastDiscoveredAt(discoveredAt);
+      const firstSlot=String(rows[0]?.slot_id||"").trim();
+      const firstWithPartition=rows.find((row:any)=>String(row?.partition||row?.token_label||"").trim());
+      const firstPartition=String(firstWithPartition?.partition||firstWithPartition?.token_label||"").trim();
+      if(firstSlot){
+        setSelectedSlotID(firstSlot);
+      }
+      if(firstPartition){
+        setSelectedPartition(firstPartition);
+      }
+      const persisted=await persistProviderConfig({
+        integration_service:String(out?.service_name||integrationService||"hsm-integration").trim()||"hsm-integration",
+        library_path:libPath,
+        slot_id:firstSlot,
+        partition_label:firstPartition,
+        token_label:firstPartition,
+        metadata:{
+          auto_bound:true,
+          discovered_service:String(out?.service_name||integrationService||"hsm-integration").trim()||"hsm-integration",
+          last_discovery_at:discoveredAt,
+          discovered_slot_count:rows.length
+        }
+      },{silent_success:true,error_prefix:"Auto-bind failed"});
+      if(persisted){
+        onToast?.(`Discovered ${rows.length} slot(s) from ${String(out?.service_name||integrationService)} and auto-bound HSM config.`);
+      }else{
+        onToast?.(`Discovered ${rows.length} slot(s) from ${String(out?.service_name||integrationService)}.`);
+      }
+    }catch(error){
+      onToast?.(`Partition discovery failed: ${errMsg(error)}`);
+    }finally{
+      setDiscovering(false);
+    }
+  };
+
+  useEffect(()=>{
+    if(!selectedSlotID){
+      return;
+    }
+    const slot=(Array.isArray(slots)?slots:[]).find((item:any)=>String(item?.slot_id||"")===String(selectedSlotID));
+    const partition=String(slot?.partition||slot?.token_label||"").trim();
+    if(partition&&!String(selectedPartition||"").trim()){
+      setSelectedPartition(partition);
+    }
+  },[selectedPartition,selectedSlotID,slots]);
+
+  const connectionRows=[
+    ["Mode",Boolean(cliStatus?.enabled)?"Hardware PKCS#11 (CLI-integrated)":"CLI integration disabled"],
+    ["Service",integrationService],
+    ["Endpoint",`${String(cliStatus?.host||"127.0.0.1")}:${Number(cliStatus?.port||2222)}`],
+    ["Workspace",workspaceRoot||"-"],
+    ["Provider",providerName||"-"],
+    ["Provider Dir",providerDir||"-"],
+    ["Library Path",resolvedLibraryPath||"-"],
+    ["Slots",String(Array.isArray(slots)?slots.length:0)],
+    ["Partitions",String(partitionOptions.length)],
+    ["Config Enabled",providerEnabled?"yes":"no"],
+    ["Config Updated",configUpdatedAt?new Date(configUpdatedAt).toLocaleString():"not saved"]
+  ];
+
+  return <div>
+    <Row2>
+      <Card>
+        <div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>CONNECTION</div>
+        {connectionRows.map(([k,v])=>
+          <div key={String(k)} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:10,gap:8}}>
+            <span style={{color:C.muted}}>{String(k)}</span>
+            <span style={{color:C.text,fontFamily:"'JetBrains Mono',monospace",textAlign:"right"}}>{String(v)}</span>
+          </div>
+        )}
+      </Card>
+      <Card>
+        <div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>DISCOVERY STATUS</div>
+        {[["Partition source","PKCS#11 list via dedicated hsm-integration service"],["Last fetch",lastDiscoveredAt?new Date(lastDiscoveredAt).toLocaleString():"not fetched"],["Slot selected",selectedSlotID||"-"],["Partition selected",selectedPartition||"-"],["Config updated by",configUpdatedBy||"-"],["Auto-bind","Enabled (discovery writes slot/partition to persisted config)"]].map(([k,v])=>
+          <div key={String(k)} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:10,gap:8}}>
+            <span style={{color:C.muted}}>{String(k)}</span>
+            <span style={{color:C.accent,textAlign:"right"}}>{String(v)}</span>
+          </div>
+        )}
+        <div style={{display:"flex",gap:8,marginTop:10}}>
+          <Btn small onClick={()=>void refreshCLIHints()} disabled={statusLoading}>{statusLoading?"Refreshing...":"Refresh Hints"}</Btn>
+          <Btn small onClick={()=>void loadProviderConfig()} disabled={configLoading||configSaving}>{configLoading?"Loading...":"Load Config"}</Btn>
+          <Btn small primary onClick={()=>void autoFetchPartitions()} disabled={discovering}>{discovering?"Discovering...":"Auto-fetch Partitions"}</Btn>
+        </div>
+      </Card>
+    </Row2>
+
+    <Section title="HSM Configuration" actions={<div style={{display:"flex",gap:8}}>
+      <Btn small onClick={()=>void refreshCLIHints()} disabled={statusLoading}>{statusLoading?"Refreshing...":"Refresh"}</Btn>
+      <Btn small onClick={()=>void loadProviderConfig()} disabled={configLoading||configSaving}>{configLoading?"Loading...":"Load Saved"}</Btn>
+      <Btn small primary onClick={()=>void autoFetchPartitions()} disabled={discovering}>{discovering?"Discovering...":"Auto-fetch Partitions"}</Btn>
+      <Btn small primary onClick={()=>void persistProviderConfig({},{success_message:"HSM provider config saved."})} disabled={configSaving||configLoading}>{configSaving?"Saving...":"Save Provider Config"}</Btn>
+      <Btn small onClick={()=>setModal("gen")} disabled={!selectedPartition}>Generate Key in HSM</Btn>
+    </div>}>
+      <Card>
+        <Row2>
+          <FG label="Provider Name" required>
+            <Inp value={providerName} onChange={(e)=>setProviderName(e.target.value)} mono placeholder="customer-hsm"/>
+          </FG>
+          <FG label="Integration Service">
+            <Inp value={integrationService||"hsm-integration"} readOnly mono/>
+          </FG>
+        </Row2>
+        <Row2>
+          <FG label="Provider Library Directory">
+            <Inp value={providerDir||""} readOnly mono/>
+          </FG>
+          <FG label="Provider Library Filename" required hint="Example: libCryptoki2_64.so">
+            <Inp value={providerFileName} onChange={(e)=>setProviderFileName(e.target.value)} mono placeholder="libVendorPKCS11.so"/>
+          </FG>
+        </Row2>
+        <FG label="Resolved PKCS#11 Library Path" required>
+          <Inp value={resolvedLibraryPath||""} readOnly mono/>
+        </FG>
+        <Row2>
+          <FG label="Detected Slot" required>
+            <Sel value={selectedSlotID} onChange={(e)=>setSelectedSlotID(e.target.value)}>
+              {slotOptions.map((slot:any)=><option key={`hsm-slot-${String(slot?.slot_id||"")}`} value={String(slot?.slot_id||"")}>
+                {`${String(slot?.slot_id||"")} - ${String(slot?.slot_name||"slot")}${String(slot?.token_present)?" (token present)":""}`}
+              </option>)}
+              {!slotOptions.length?<option value="">No slots discovered yet</option>:null}
+            </Sel>
+          </FG>
+          <FG label="Detected Partition" required>
+            <Sel value={selectedPartition} onChange={(e)=>setSelectedPartition(e.target.value)}>
+              {partitionOptions.map((partition)=>(
+                <option key={`hsm-part-${partition}`} value={partition}>{partition}</option>
+              ))}
+              {!partitionOptions.length?<option value="">No partitions detected yet</option>:null}
+            </Sel>
+          </FG>
+        </Row2>
+        <Row2>
+          <FG label="PIN Environment Variable">
+            <Inp value={pinEnvVar} onChange={(e)=>setPinEnvVar(e.target.value)} mono placeholder="HSM_PIN"/>
+          </FG>
+          <FG label="Provider Flags">
+            <Chk label="Enabled for key operations" checked={providerEnabled} onChange={()=>setProviderEnabled((v)=>!v)}/>
+            <Chk label="Read-only session mode" checked={providerReadOnly} onChange={()=>setProviderReadOnly((v)=>!v)}/>
+          </FG>
+        </Row2>
+        <FG label="Raw PKCS#11 Discovery Output" hint="Captured from list-partitions utility inside hsm-integration service.">
+          <Txt rows={7} value={rawOutput} readOnly placeholder="// Slot discovery output appears here after auto-fetch"/>
+        </FG>
+      </Card>
+    </Section>
+
+    <Modal open={modal==="gen"} onClose={()=>setModal(null)} title="Generate Key in HSM">
+      <FG label="Algorithm" required>
+        <Sel value={keyAlgo} onChange={(e)=>setKeyAlgo(e.target.value)}>
+          <option value="AES-256">AES-256</option>
+          <option value="RSA-2048">RSA-2048</option>
+          <option value="RSA-4096">RSA-4096</option>
+          <option value="ECDSA-P384">ECDSA-P384</option>
+          <option value="Ed25519">Ed25519</option>
+        </Sel>
+      </FG>
+      <FG label="Key Label" required>
+        <Inp placeholder="Enter customer key label" mono value={keyLabel} onChange={(e)=>setKeyLabel(e.target.value)}/>
+      </FG>
+      <FG label="HSM Partition" required>
+        <Sel value={selectedPartition} onChange={(e)=>setSelectedPartition(e.target.value)}>
+          {partitionOptions.map((partition)=>(
+            <option key={`hsm-gen-part-${partition}`} value={partition}>{partition}</option>
+          ))}
+          {!partitionOptions.length?<option value="">No partitions detected yet</option>:null}
+        </Sel>
+      </FG>
+      <FG label="Key Attributes">
+        <Chk label="Extractable (can be wrapped and exported)" checked={false}/>
+        <Chk label="Sensitive (never appears in plaintext)" checked={true}/>
+        <Chk label="Token object (persists on HSM)" checked={true}/>
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+        <Btn primary onClick={()=>{
+          onToast?.(`HSM key generate request prepared for partition "${selectedPartition}" (${keyAlgo}).`);
+          setModal(null);
+        }} disabled={!String(selectedPartition||"").trim()||!String(keyLabel||"").trim()}>Generate in HSM</Btn>
+      </div>
+    </Modal>
+  </div>;
+};
 
 const QKD=({session,onToast})=>{
   const [modal,setModal]=useState<null|"config"|"inject"|"keys">(null);
@@ -18211,8 +18604,12 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
   {promptDialog.ui}
 </div>;};
 
-const UserManagement=({session,onToast,onLogout})=>{
+const UserManagement=({session,onToast,onLogout,mode="full"})=>{
   const promptDialog=usePromptDialog();
+  const tenantAdminOnly=String(mode||"").trim().toLowerCase()==="tenant";
+  const userConfigOnly=String(mode||"").trim().toLowerCase()==="user";
+  const showTenantControls=!userConfigOnly;
+  const showUserControls=!tenantAdminOnly;
   const [users,setUsers]=useState([]);
   const [tenants,setTenants]=useState([]);
   const [tenantScope,setTenantScope]=useState(String(session?.tenantId||""));
@@ -18247,6 +18644,26 @@ const UserManagement=({session,onToast,onLogout})=>{
   const [newGroupMembers,setNewGroupMembers]=useState<string[]>([]);
   const [groupDeletingID,setGroupDeletingID]=useState("");
   const [groupRoleUpdatingID,setGroupRoleUpdatingID]=useState("");
+  const [identityProvider,setIdentityProvider]=useState<"ad"|"entra">("ad");
+  const [identityConfigs,setIdentityConfigs]=useState<Record<string,any>>({});
+  const [identityDraft,setIdentityDraft]=useState<any>(null);
+  const [identityConfigLoading,setIdentityConfigLoading]=useState(false);
+  const [identityConfigSaving,setIdentityConfigSaving]=useState(false);
+  const [identityTesting,setIdentityTesting]=useState(false);
+  const [identitySearchQuery,setIdentitySearchQuery]=useState("");
+  const [identityLookupLoading,setIdentityLookupLoading]=useState(false);
+  const [identityDirectoryUsers,setIdentityDirectoryUsers]=useState<any[]>([]);
+  const [identityDirectoryGroups,setIdentityDirectoryGroups]=useState<any[]>([]);
+  const [identitySelectedUsers,setIdentitySelectedUsers]=useState<string[]>([]);
+  const [identitySelectedGroupID,setIdentitySelectedGroupID]=useState("");
+  const [identityGroupMembers,setIdentityGroupMembers]=useState<any[]>([]);
+  const [identityGroupMembersLoading,setIdentityGroupMembersLoading]=useState(false);
+  const [identityImportRole,setIdentityImportRole]=useState("readonly");
+  const [identityImportStatus,setIdentityImportStatus]=useState("active");
+  const [identityImportMustChange,setIdentityImportMustChange]=useState(true);
+  const [identityGroupImportRole,setIdentityGroupImportRole]=useState("readonly");
+  const [identityImporting,setIdentityImporting]=useState(false);
+  const [identityLastTest,setIdentityLastTest]=useState("");
   const [resetTarget,setResetTarget]=useState(null);
   const [resetPassword,setResetPassword]=useState("");
   const [resetMustChange,setResetMustChange]=useState(true);
@@ -18288,6 +18705,11 @@ const UserManagement=({session,onToast,onLogout})=>{
   },[users]);
   const protectedCLIUser="cli-user";
   const userRows=Array.isArray(users)?users:[];
+  const approverUserRows=(Array.isArray(users)?users:[])
+    .filter((user:any)=>{
+      const email=String(user?.email||"").trim();
+      return Boolean(email);
+    });
   const groupRows=Array.isArray(groups)?groups:[];
   const kmsAdminGroup=useMemo(
     ()=>groupRows.find((item:any)=>String(item?.name||"").trim().toLowerCase()===KMS_ADMIN_GROUP_NAME)||null,
@@ -18307,6 +18729,20 @@ const UserManagement=({session,onToast,onLogout})=>{
   const canDisableTenantNow=Boolean(canManageTenantLifecycle)&&Boolean(tenantReadiness?.can_disable)&&!readinessBlockers.length;
   const canDeleteTenantNow=Boolean(canManageTenantLifecycle)&&Boolean(tenantReadiness?.can_delete)&&!readinessBlockers.length&&readinessTenantStatus==="disabled";
   const effectiveTenantID=selectedTenantID||String(session?.tenantId||"").trim();
+  const buildIdentityDraft=(provider:string,cfg:any)=>{
+    const nextProvider=(String(provider||"").toLowerCase()==="entra"?"entra":"ad");
+    const nextConfig=(cfg&&typeof cfg==="object"&&cfg.config&&typeof cfg.config==="object")?cfg.config:{};
+    const nextSecretPresence=(cfg&&typeof cfg==="object"&&cfg.secret_presence&&typeof cfg.secret_presence==="object")?cfg.secret_presence:{};
+    return {
+      provider:nextProvider,
+      enabled:Boolean(cfg?.enabled),
+      config:{...nextConfig},
+      secrets:{},
+      secret_presence:{...nextSecretPresence}
+    };
+  };
+  const currentIdentityStored=identityConfigs?.[identityProvider]||null;
+  const activeIdentityDraft=identityDraft||buildIdentityDraft(identityProvider,currentIdentityStored);
 
   const isProtectedCLI=(user)=>String(user?.username||"").toLowerCase()===protectedCLIUser;
 
@@ -18476,6 +18912,271 @@ const UserManagement=({session,onToast,onLogout})=>{
       if(!silent){
         setGroupsLoading(false);
       }
+    }
+  };
+
+  const refreshIdentityProviders=async(silent=false)=>{
+    if(!session?.token){
+      setIdentityConfigs({});
+      setIdentityDraft(buildIdentityDraft(identityProvider,null));
+      setIdentityDirectoryUsers([]);
+      setIdentityDirectoryGroups([]);
+      setIdentityGroupMembers([]);
+      setIdentitySelectedUsers([]);
+      return;
+    }
+    if(!silent){
+      setIdentityConfigLoading(true);
+    }
+    try{
+      const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+      const items=await withSessionRetry((authSession)=>listAuthIdentityProviders(authSession,targetTenant));
+      const nextMap:Record<string,any>={};
+      (Array.isArray(items)?items:[]).forEach((item:any)=>{
+        const provider=String(item?.provider||"").trim().toLowerCase();
+        if(provider==="ad"||provider==="entra"){
+          nextMap[provider]=item;
+        }
+      });
+      setIdentityConfigs(nextMap);
+      setIdentityDraft(buildIdentityDraft(identityProvider,nextMap?.[identityProvider]||null));
+      setUsersError("");
+    }catch(error){
+      if(!silent){
+        handleUserError("Directory provider load failed",error,false);
+      }
+    }finally{
+      if(!silent){
+        setIdentityConfigLoading(false);
+      }
+    }
+  };
+
+  const saveIdentityProviderConfig=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to update directory provider settings.");
+      return;
+    }
+    setIdentityConfigSaving(true);
+    try{
+      const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+      const provider=(String(identityProvider||"").trim().toLowerCase()==="entra"?"entra":"ad") as "ad"|"entra";
+      const configPayload={...(activeIdentityDraft?.config||{})};
+      const secretPayload:Record<string,unknown>={};
+      if(provider==="ad"){
+        const bindPassword=String(activeIdentityDraft?.secrets?.bind_password||"").trim();
+        if(bindPassword){
+          secretPayload.bind_password=bindPassword;
+        }
+      }else{
+        const clientSecret=String(activeIdentityDraft?.secrets?.client_secret||"").trim();
+        if(clientSecret){
+          secretPayload.client_secret=clientSecret;
+        }
+      }
+      const updated=await withSessionRetry((authSession)=>upsertAuthIdentityProviderConfig(authSession,provider,{
+        tenant_id:targetTenant,
+        enabled:Boolean(activeIdentityDraft?.enabled),
+        config:configPayload,
+        secrets:secretPayload
+      }));
+      const providerKey=String(updated?.provider||provider).trim().toLowerCase();
+      setIdentityConfigs((prev)=>({
+        ...(prev||{}),
+        [providerKey]:updated
+      }));
+      setIdentityDraft(buildIdentityDraft(providerKey,updated));
+      setUsersError("");
+      onToast?.(`Directory provider saved: ${providerKey.toUpperCase()}`);
+    }catch(error){
+      handleUserError("Directory provider save failed",error,false);
+    }finally{
+      setIdentityConfigSaving(false);
+    }
+  };
+
+  const testIdentityProviderConnection=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to test directory provider.");
+      return;
+    }
+    setIdentityTesting(true);
+    try{
+      const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+      const provider=(String(identityProvider||"").trim().toLowerCase()==="entra"?"entra":"ad") as "ad"|"entra";
+      const configPayload={...(activeIdentityDraft?.config||{})};
+      const secretPayload:Record<string,unknown>={};
+      if(provider==="ad"){
+        const bindPassword=String(activeIdentityDraft?.secrets?.bind_password||"").trim();
+        if(bindPassword){
+          secretPayload.bind_password=bindPassword;
+        }
+      }else{
+        const clientSecret=String(activeIdentityDraft?.secrets?.client_secret||"").trim();
+        if(clientSecret){
+          secretPayload.client_secret=clientSecret;
+        }
+      }
+      const out=await withSessionRetry((authSession)=>testAuthIdentityProviderConfig(authSession,provider,{
+        tenant_id:targetTenant,
+        enabled:Boolean(activeIdentityDraft?.enabled),
+        config:configPayload,
+        secrets:secretPayload
+      }));
+      setIdentityLastTest(JSON.stringify(out?.result||{},null,2));
+      setUsersError("");
+      onToast?.(`Directory connection test succeeded for ${provider.toUpperCase()}.`);
+    }catch(error){
+      handleUserError("Directory connection test failed",error,false);
+    }finally{
+      setIdentityTesting(false);
+    }
+  };
+
+  const lookupDirectoryEntities=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to query directory users/groups.");
+      return;
+    }
+    setIdentityLookupLoading(true);
+    try{
+      const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+      const provider=(String(identityProvider||"").trim().toLowerCase()==="entra"?"entra":"ad") as "ad"|"entra";
+      const query=String(identitySearchQuery||"").trim();
+      const [usersOut,groupsOut]=await Promise.all([
+        withSessionRetry((authSession)=>listAuthIdentityProviderUsers(authSession,provider,{tenant_id:targetTenant,query,limit:100})),
+        withSessionRetry((authSession)=>listAuthIdentityProviderGroups(authSession,provider,{tenant_id:targetTenant,query,limit:100}))
+      ]);
+      setIdentityDirectoryUsers(Array.isArray(usersOut)?usersOut:[]);
+      setIdentityDirectoryGroups(Array.isArray(groupsOut)?groupsOut:[]);
+      setIdentitySelectedUsers([]);
+      setIdentitySelectedGroupID("");
+      setIdentityGroupMembers([]);
+      setUsersError("");
+    }catch(error){
+      handleUserError("Directory lookup failed",error,false);
+    }finally{
+      setIdentityLookupLoading(false);
+    }
+  };
+
+  const loadDirectoryGroupMembers=async(groupID:string)=>{
+    const provider=(String(identityProvider||"").trim().toLowerCase()==="entra"?"entra":"ad") as "ad"|"entra";
+    const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+    const selectedGroupID=String(groupID||"").trim();
+    if(!selectedGroupID){
+      setIdentityGroupMembers([]);
+      return;
+    }
+    setIdentityGroupMembersLoading(true);
+    try{
+      const members=await withSessionRetry((authSession)=>listAuthIdentityProviderGroupMembers(authSession,provider,selectedGroupID,{tenant_id:targetTenant,limit:1000}));
+      setIdentityGroupMembers(Array.isArray(members)?members:[]);
+      setUsersError("");
+    }catch(error){
+      handleUserError("Directory group members load failed",error,false);
+    }finally{
+      setIdentityGroupMembersLoading(false);
+    }
+  };
+
+  const importSelectedDirectoryUsers=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to import directory users.");
+      return;
+    }
+    const selectedIDs=new Set((Array.isArray(identitySelectedUsers)?identitySelectedUsers:[]).map((id)=>String(id||"").trim()).filter(Boolean));
+    const selectedUsers=(Array.isArray(identityDirectoryUsers)?identityDirectoryUsers:[]).filter((item:any)=>{
+      const externalID=String(item?.external_id||"").trim();
+      if(externalID&&selectedIDs.has(externalID)){
+        return true;
+      }
+      return !externalID&&selectedIDs.has(String(item?.username||"").trim().toLowerCase());
+    });
+    if(!selectedUsers.length){
+      onToast?.("Select at least one directory user to import.");
+      return;
+    }
+    setIdentityImporting(true);
+    try{
+      const provider=(String(identityProvider||"").trim().toLowerCase()==="entra"?"entra":"ad") as "ad"|"entra";
+      const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+      const out=await withSessionRetry((authSession)=>importAuthIdentityUsers(authSession,{
+        tenant_id:targetTenant,
+        provider,
+        role:String(identityImportRole||"readonly"),
+        status:String(identityImportStatus||"active"),
+        must_change_password:Boolean(identityImportMustChange),
+        users:selectedUsers
+      }));
+      await refreshUsers(true);
+      setUsersError("");
+      const createdCount=Array.isArray(out?.created)?out.created.length:0;
+      const existingCount=Array.isArray(out?.existing)?out.existing.length:0;
+      const failedCount=Array.isArray(out?.failed)?out.failed.length:0;
+      onToast?.(`Directory users import completed: created ${createdCount}, existing ${existingCount}, failed ${failedCount}.`);
+    }catch(error){
+      handleUserError("Directory user import failed",error,false);
+    }finally{
+      setIdentityImporting(false);
+    }
+  };
+
+  const importDirectoryGroup=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to import directory groups.");
+      return;
+    }
+    const selectedGroup=(Array.isArray(identityDirectoryGroups)?identityDirectoryGroups:[])
+      .find((item:any)=>String(item?.external_id||"").trim()===String(identitySelectedGroupID||"").trim())||null;
+    if(!selectedGroup){
+      onToast?.("Select a directory group to import.");
+      return;
+    }
+    setIdentityImporting(true);
+    try{
+      const provider=(String(identityProvider||"").trim().toLowerCase()==="entra"?"entra":"ad") as "ad"|"entra";
+      const targetTenant=String(tenantScope||session?.tenantId||"").trim();
+      const out=await withSessionRetry((authSession)=>importAuthIdentityUsers(authSession,{
+        tenant_id:targetTenant,
+        provider,
+        group_id:String(selectedGroup?.external_id||"").trim(),
+        role:String(identityImportRole||"readonly"),
+        status:String(identityImportStatus||"active"),
+        must_change_password:Boolean(identityImportMustChange),
+        limit:1000
+      }));
+      const importedRows=[...(Array.isArray(out?.created)?out.created:[]),...(Array.isArray(out?.existing)?out.existing:[])];
+      const importedUserIDs=Array.from(new Set(importedRows
+        .map((item:any)=>String(item?.user_id||"").trim())
+        .filter(Boolean)));
+      const groupNameRaw=String(selectedGroup?.name||"directory-group").trim();
+      const groupDescription=`Imported from ${provider.toUpperCase()} group ${String(selectedGroup?.name||selectedGroup?.external_id||"")}`;
+      let targetGroup=groupRows.find((row:any)=>String(row?.name||"").trim().toLowerCase()===groupNameRaw.toLowerCase())||null;
+      if(!targetGroup){
+        targetGroup=await withSessionRetry((authSession)=>createKeyAccessGroup(withTenantScope(authSession),{
+          name:groupNameRaw,
+          description:groupDescription,
+          created_by:String(authSession?.username||session?.username||"")
+        }));
+      }
+      const groupID=String(targetGroup?.id||"").trim();
+      if(groupID&&importedUserIDs.length){
+        await withSessionRetry((authSession)=>setKeyAccessGroupMembers(withTenantScope(authSession),groupID,importedUserIDs));
+      }
+      if(groupID){
+        await withSessionRetry((authSession)=>upsertAuthGroupRoleBinding(authSession,groupID,String(identityGroupImportRole||identityImportRole||"readonly"),targetTenant));
+      }
+      await Promise.all([refreshUsers(true),refreshGroups(true)]);
+      setUsersError("");
+      const createdCount=Array.isArray(out?.created)?out.created.length:0;
+      const existingCount=Array.isArray(out?.existing)?out.existing.length:0;
+      const failedCount=Array.isArray(out?.failed)?out.failed.length:0;
+      onToast?.(`Directory group imported: ${groupNameRaw} (created ${createdCount}, existing ${existingCount}, failed ${failedCount}).`);
+    }catch(error){
+      handleUserError("Directory group import failed",error,false);
+    }finally{
+      setIdentityImporting(false);
     }
   };
 
@@ -18717,6 +19418,14 @@ const UserManagement=({session,onToast,onLogout})=>{
   },[session?.token,session?.tenantId,tenantScope]);
 
   useEffect(()=>{
+    void refreshIdentityProviders(true);
+  },[session?.token,session?.tenantId,tenantScope]);
+
+  useEffect(()=>{
+    setIdentityDraft(buildIdentityDraft(identityProvider,identityConfigs?.[identityProvider]||null));
+  },[identityProvider,identityConfigs]);
+
+  useEffect(()=>{
     void refreshTenantReadiness(true);
   },[session?.token,session?.tenantId,tenantScope]);
 
@@ -18728,10 +19437,17 @@ const UserManagement=({session,onToast,onLogout})=>{
     setNewGroupMembers([]);
     setTenantDisableApprovalID("");
     setTenantDeleteApprovalID("");
+    setIdentityDirectoryUsers([]);
+    setIdentityDirectoryGroups([]);
+    setIdentityGroupMembers([]);
+    setIdentitySelectedUsers([]);
+    setIdentitySelectedGroupID("");
+    setIdentitySearchQuery("");
+    setIdentityLastTest("");
   },[tenantScope]);
 
   if(!session?.token){
-    return <Section title="Tenant & User Management">
+    return <Section title={tenantAdminOnly?"Tenant Administration":"User Management"}>
       <Card>
         <div style={{fontSize:10,color:C.red}}>No active session. Please login again.</div>
       </Card>
@@ -19156,18 +19872,54 @@ const UserManagement=({session,onToast,onLogout})=>{
     }
   };
 
+  const updateIdentityConfigField=(key:string,value:any)=>{
+    setIdentityDraft((prev:any)=>{
+      const base=(prev&&typeof prev==="object")?prev:buildIdentityDraft(identityProvider,currentIdentityStored);
+      return {
+        ...base,
+        config:{
+          ...(base?.config||{}),
+          [key]:value
+        }
+      };
+    });
+  };
+
+  const updateIdentitySecretField=(key:string,value:any)=>{
+    setIdentityDraft((prev:any)=>{
+      const base=(prev&&typeof prev==="object")?prev:buildIdentityDraft(identityProvider,currentIdentityStored);
+      return {
+        ...base,
+        secrets:{
+          ...(base?.secrets||{}),
+          [key]:value
+        }
+      };
+    });
+  };
+
+  const updateIdentityEnabled=(enabled:boolean)=>{
+    setIdentityDraft((prev:any)=>{
+      const base=(prev&&typeof prev==="object")?prev:buildIdentityDraft(identityProvider,currentIdentityStored);
+      return {
+        ...base,
+        enabled:Boolean(enabled)
+      };
+    });
+  };
+
   return <div>
-    <Section title="Tenant & User Management" actions={<>
+    <Section title={tenantAdminOnly?"Tenant Administration":"User Management"} actions={<>
       <B c={quorumEnabled?"amber":"muted"}>
         {quorumEnabled
           ?`${String(quorumMode||"or").toUpperCase()} KMS admin quorum (${String(quorumMode||"or")==="and"?`${Number(quorumPolicy?.total_approvers||Math.max(1,quorumMembers.size))}-of-${Number(quorumPolicy?.total_approvers||Math.max(1,quorumMembers.size))}`:`1-of-${Number(quorumPolicy?.total_approvers||Math.max(1,quorumMembers.size))}`})`
           :"KMS admin quorum disabled"}
       </B>
       <Btn small onClick={()=>void refreshTenants(false)}>{tenantLoading?"Refreshing Tenants...":"Refresh Tenants"}</Btn>
-      <Btn small onClick={()=>setModal("create-tenant")}>+ Create Tenant</Btn>
-      <Btn small onClick={()=>void refreshTenantReadiness(false)}>{tenantReadinessLoading?"Checking Tenant...":"Check Tenant State"}</Btn>
-      <Btn small onClick={()=>void refreshUsers(false)}>{loading?"Refreshing...":"Refresh"}</Btn>
-      <Btn small primary onClick={()=>setModal("create")}>+ Create User</Btn>
+      {showTenantControls&&<Btn small onClick={()=>setModal("create-tenant")}>+ Create Tenant</Btn>}
+      {showTenantControls&&<Btn small onClick={()=>void refreshTenantReadiness(false)}>{tenantReadinessLoading?"Checking Tenant...":"Check Tenant State"}</Btn>}
+      {showUserControls&&<Btn small onClick={()=>void refreshUsers(false)}>{loading?"Refreshing...":"Refresh"}</Btn>}
+      {showUserControls&&<Btn small primary onClick={()=>setModal("create")}>+ Create User</Btn>}
     </>}>
       <Card style={{marginBottom:8}}>
         <div style={{display:"grid",gridTemplateColumns:"1.2fr .8fr .8fr",gap:8,alignItems:"end"}}>
@@ -19189,13 +19941,15 @@ const UserManagement=({session,onToast,onLogout})=>{
           </FG>
         </div>
         <div style={{fontSize:10,color:C.muted,marginTop:6}}>
-          Root admin can switch tenant scope to manage tenant users. Tenant admins remain scoped to their own tenant.
+          {showTenantControls
+            ?"Root admin can switch tenant scope to administer tenant lifecycle and governance. Tenant admins remain scoped to their own tenant."
+            :"Select tenant scope for user and group administration."}
         </div>
-        <div style={{fontSize:10,color:C.red,marginTop:4}}>
+        {showTenantControls&&<div style={{fontSize:10,color:C.red,marginTop:4}}>
           Tenant delete workflow: {governanceRequiredForTenantLifecycle?"governance approval, then ":""}disable tenant (no active connections/sessions), then delete.
-        </div>
+        </div>}
       </Card>
-      <Card style={{marginBottom:8}}>
+      {showTenantControls&&<Card style={{marginBottom:8}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div style={{fontSize:12,color:C.text,fontWeight:700}}>Tenant Decommission Workflow</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -19271,11 +20025,11 @@ const UserManagement=({session,onToast,onLogout})=>{
         </div>:<div style={{marginTop:10,fontSize:10,color:C.green}}>
           No active blockers detected for selected tenant.
         </div>}
-      </Card>
+      </Card>}
       {usersError?<Card style={{marginBottom:8,borderColor:C.red}}>
         <div style={{fontSize:10,color:C.red}}>{usersError}</div>
       </Card>:null}
-      <Card style={{marginBottom:8}}>
+      {showTenantControls&&<Card style={{marginBottom:8}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div style={{fontSize:12,color:C.text,fontWeight:700}}>KMS Admin Platform Governance</div>
           <B c={quorumEnabled?"amber":"muted"}>
@@ -19319,8 +20073,332 @@ const UserManagement=({session,onToast,onLogout})=>{
         <div style={{fontSize:10,color:C.muted,marginTop:6}}>
           Quorum controls only KMS platform administration (governance, logs, interfaces, tenants, policy management). Feature operations are excluded.
         </div>
-      </Card>
-      <Card style={{marginBottom:8}}>
+        {tenantAdminOnly&&<div style={{marginTop:10,padding:8,border:`1px solid ${C.border}`,borderRadius:8,background:C.surface}}>
+          <div style={{fontSize:10,color:C.dim,marginBottom:6}}>Approver Users (existing accounts only)</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:6,maxHeight:180,overflowY:"auto"}}>
+            {approverUserRows.map((user:any)=>{
+              const email=String(user?.email||"").trim().toLowerCase();
+              return <Chk
+                key={`tenant-approver-${String(user?.id||email)}`}
+                label={`${String(user?.username||"")} (${email})`}
+                checked={quorumMembers.has(email)}
+                onChange={()=>void toggleQuorumMember(user)}
+              />;
+            })}
+            {!approverUserRows.length&&<div style={{fontSize:10,color:C.muted}}>No users available in selected tenant scope.</div>}
+          </div>
+        </div>}
+      </Card>}
+      {showUserControls&&<Card style={{marginBottom:8}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Directory Federation (Microsoft AD / Entra ID)</div>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <B c={Boolean(activeIdentityDraft?.enabled)?"green":"amber"}>{Boolean(activeIdentityDraft?.enabled)?"enabled":"disabled"}</B>
+            <Btn small onClick={()=>void refreshIdentityProviders(false)}>{identityConfigLoading?"Refreshing...":"Refresh Directory"}</Btn>
+          </div>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto auto",gap:8,alignItems:"end"}}>
+          <FG label="Provider">
+            <Sel value={identityProvider} onChange={(e)=>setIdentityProvider(String(e.target.value||"ad").toLowerCase()==="entra"?"entra":"ad")}>
+              <option value="ad">Microsoft AD (LDAP)</option>
+              <option value="entra">Microsoft Entra ID (Graph)</option>
+            </Sel>
+          </FG>
+          <FG label="Provider Status">
+            <Chk
+              label="Enable directory integration"
+              checked={Boolean(activeIdentityDraft?.enabled)}
+              onChange={()=>updateIdentityEnabled(!Boolean(activeIdentityDraft?.enabled))}
+            />
+          </FG>
+          <Btn
+            small
+            onClick={()=>void testIdentityProviderConnection()}
+            disabled={identityTesting||identityConfigSaving}
+            style={{height:34,padding:"0 12px"}}
+          >
+            {identityTesting?"Testing...":"Test Connection"}
+          </Btn>
+          <Btn
+            small
+            primary
+            onClick={()=>void saveIdentityProviderConfig()}
+            disabled={identityConfigSaving||identityTesting}
+            style={{height:34,padding:"0 12px"}}
+          >
+            {identityConfigSaving?"Saving...":"Save Provider"}
+          </Btn>
+        </div>
+        {identityProvider==="ad"?<div style={{display:"grid",gridTemplateColumns:"1.2fr 1fr",gap:8,marginTop:8}}>
+          <FG label="LDAP URL" required>
+            <Inp
+              value={String(activeIdentityDraft?.config?.ldap_url||"")}
+              onChange={(e)=>updateIdentityConfigField("ldap_url",e.target.value)}
+              placeholder="ldaps://dc01.example.local:636"
+            />
+          </FG>
+          <FG label="Base DN" required>
+            <Inp
+              value={String(activeIdentityDraft?.config?.base_dn||"")}
+              onChange={(e)=>updateIdentityConfigField("base_dn",e.target.value)}
+              placeholder="dc=example,dc=local"
+            />
+          </FG>
+          <FG label="Bind DN">
+            <Inp
+              value={String(activeIdentityDraft?.config?.bind_dn||"")}
+              onChange={(e)=>updateIdentityConfigField("bind_dn",e.target.value)}
+              placeholder="cn=svc-kms,ou=service,dc=example,dc=local"
+            />
+          </FG>
+          <FG label={`Bind Password ${Boolean(activeIdentityDraft?.secret_presence?.bind_password_set)?"(set)":"(empty)"}`}>
+            <Inp
+              type="password"
+              value={String(activeIdentityDraft?.secrets?.bind_password||"")}
+              onChange={(e)=>updateIdentitySecretField("bind_password",e.target.value)}
+              placeholder="Set/rotate bind password"
+            />
+          </FG>
+          <FG label="User Login Attribute">
+            <Inp
+              value={String(activeIdentityDraft?.config?.user_login_attr||"sAMAccountName")}
+              onChange={(e)=>updateIdentityConfigField("user_login_attr",e.target.value)}
+              placeholder="sAMAccountName"
+            />
+          </FG>
+          <FG label="User Email Attribute">
+            <Inp
+              value={String(activeIdentityDraft?.config?.user_email_attr||"mail")}
+              onChange={(e)=>updateIdentityConfigField("user_email_attr",e.target.value)}
+              placeholder="mail"
+            />
+          </FG>
+          <FG label="User Display Attribute">
+            <Inp
+              value={String(activeIdentityDraft?.config?.user_display_attr||"displayName")}
+              onChange={(e)=>updateIdentityConfigField("user_display_attr",e.target.value)}
+              placeholder="displayName"
+            />
+          </FG>
+          <FG label="Group Name Attribute">
+            <Inp
+              value={String(activeIdentityDraft?.config?.group_name_attr||"cn")}
+              onChange={(e)=>updateIdentityConfigField("group_name_attr",e.target.value)}
+              placeholder="cn"
+            />
+          </FG>
+          <FG label="User LDAP Filter">
+            <Inp
+              value={String(activeIdentityDraft?.config?.user_object_filter||"(objectClass=user)")}
+              onChange={(e)=>updateIdentityConfigField("user_object_filter",e.target.value)}
+              placeholder="(objectClass=user)"
+            />
+          </FG>
+          <FG label="Group LDAP Filter">
+            <Inp
+              value={String(activeIdentityDraft?.config?.group_object_filter||"(objectClass=group)")}
+              onChange={(e)=>updateIdentityConfigField("group_object_filter",e.target.value)}
+              placeholder="(objectClass=group)"
+            />
+          </FG>
+          <FG label="Timeout (seconds)">
+            <Inp
+              type="number"
+              min={3}
+              max={60}
+              value={String(activeIdentityDraft?.config?.timeout_sec||10)}
+              onChange={(e)=>updateIdentityConfigField("timeout_sec",Math.max(3,Math.min(60,Number(e.target.value||10))))}
+            />
+          </FG>
+          <FG label="Transport">
+            <div style={{display:"flex",gap:10,alignItems:"center"}}>
+              <Chk
+                label="Use StartTLS (ldap://)"
+                checked={Boolean(activeIdentityDraft?.config?.use_start_tls)}
+                onChange={()=>updateIdentityConfigField("use_start_tls",!Boolean(activeIdentityDraft?.config?.use_start_tls))}
+              />
+              <Chk
+                label="Skip TLS verify (lab only)"
+                checked={Boolean(activeIdentityDraft?.config?.insecure_skip_verify)}
+                onChange={()=>updateIdentityConfigField("insecure_skip_verify",!Boolean(activeIdentityDraft?.config?.insecure_skip_verify))}
+              />
+            </div>
+          </FG>
+        </div>:<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:8}}>
+          <FG label="Entra Tenant ID" required>
+            <Inp
+              value={String(activeIdentityDraft?.config?.tenant_id||"")}
+              onChange={(e)=>updateIdentityConfigField("tenant_id",e.target.value)}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+            />
+          </FG>
+          <FG label="Client ID" required>
+            <Inp
+              value={String(activeIdentityDraft?.config?.client_id||"")}
+              onChange={(e)=>updateIdentityConfigField("client_id",e.target.value)}
+              placeholder="App registration client_id"
+            />
+          </FG>
+          <FG label={`Client Secret ${Boolean(activeIdentityDraft?.secret_presence?.client_secret_set)?"(set)":"(empty)"}`}>
+            <Inp
+              type="password"
+              value={String(activeIdentityDraft?.secrets?.client_secret||"")}
+              onChange={(e)=>updateIdentitySecretField("client_secret",e.target.value)}
+              placeholder="Set/rotate client secret"
+            />
+          </FG>
+          <FG label="Authority Host">
+            <Inp
+              value={String(activeIdentityDraft?.config?.authority_host||"https://login.microsoftonline.com")}
+              onChange={(e)=>updateIdentityConfigField("authority_host",e.target.value)}
+              placeholder="https://login.microsoftonline.com"
+            />
+          </FG>
+          <FG label="Graph Base URL">
+            <Inp
+              value={String(activeIdentityDraft?.config?.graph_base||"https://graph.microsoft.com/v1.0")}
+              onChange={(e)=>updateIdentityConfigField("graph_base",e.target.value)}
+              placeholder="https://graph.microsoft.com/v1.0"
+            />
+          </FG>
+          <FG label="Timeout (seconds)">
+            <Inp
+              type="number"
+              min={3}
+              max={60}
+              value={String(activeIdentityDraft?.config?.timeout_sec||10)}
+              onChange={(e)=>updateIdentityConfigField("timeout_sec",Math.max(3,Math.min(60,Number(e.target.value||10))))}
+            />
+          </FG>
+        </div>}
+        <Card style={{marginTop:10,padding:8,borderColor:C.border}}>
+          <div style={{display:"grid",gridTemplateColumns:"1.2fr auto auto auto",gap:8,alignItems:"end",marginBottom:8}}>
+            <FG label="Directory Search Query">
+              <Inp
+                value={identitySearchQuery}
+                onChange={(e)=>setIdentitySearchQuery(e.target.value)}
+                placeholder="Search by username/email/display name/group"
+              />
+            </FG>
+            <Btn small onClick={()=>void lookupDirectoryEntities()} disabled={identityLookupLoading||identityImporting}>
+              {identityLookupLoading?"Searching...":"Search Directory"}
+            </Btn>
+            <Btn small onClick={()=>void importSelectedDirectoryUsers()} disabled={identityImporting||!identitySelectedUsers.length}>
+              {identityImporting?"Importing...":"Import Selected Users"}
+            </Btn>
+            <Btn small primary onClick={()=>void importDirectoryGroup()} disabled={identityImporting||!identitySelectedGroupID}>
+              {identityImporting?"Importing...":"Import Selected Group"}
+            </Btn>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:8}}>
+            <FG label="Imported User Role">
+              <Sel value={identityImportRole} onChange={(e)=>setIdentityImportRole(String(e.target.value||"readonly"))}>
+                {roleOptions.map((role)=><option key={`identity-role-${role}`} value={role}>{role}</option>)}
+              </Sel>
+            </FG>
+            <FG label="Imported User Status">
+              <Sel value={identityImportStatus} onChange={(e)=>setIdentityImportStatus(String(e.target.value||"active"))}>
+                <option value="active">active</option>
+                <option value="inactive">inactive</option>
+              </Sel>
+            </FG>
+            <FG label="Imported Group Role">
+              <Sel value={identityGroupImportRole} onChange={(e)=>setIdentityGroupImportRole(String(e.target.value||"readonly"))}>
+                {roleOptions.map((role)=><option key={`identity-group-role-${role}`} value={role}>{role}</option>)}
+              </Sel>
+            </FG>
+            <FG label="Security">
+              <Chk
+                label="Force password change for imported users"
+                checked={Boolean(identityImportMustChange)}
+                onChange={()=>setIdentityImportMustChange((v)=>!v)}
+              />
+            </FG>
+          </div>
+          <Row2>
+            <Card style={{maxHeight:250,overflowY:"auto"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                <div style={{fontSize:11,color:C.text,fontWeight:700}}>Directory Users</div>
+                <B c="blue">{`${Array.isArray(identityDirectoryUsers)?identityDirectoryUsers.length:0} found`}</B>
+              </div>
+              <div style={{display:"grid",gap:6}}>
+                {(Array.isArray(identityDirectoryUsers)?identityDirectoryUsers:[]).map((item:any,index:number)=>{
+                  const externalID=String(item?.external_id||"").trim()||String(item?.username||`user-${index}`).trim().toLowerCase();
+                  const selected=(Array.isArray(identitySelectedUsers)?identitySelectedUsers:[]).includes(externalID);
+                  return <Chk
+                    key={`identity-user-${externalID}-${index}`}
+                    label={`${String(item?.username||"")} (${String(item?.email||"-")})`}
+                    checked={selected}
+                    onChange={()=>setIdentitySelectedUsers((prev)=>{
+                      const rows=Array.isArray(prev)?[...prev]:[];
+                      if(rows.includes(externalID)){
+                        return rows.filter((id)=>id!==externalID);
+                      }
+                      return [...rows,externalID];
+                    })}
+                  />;
+                })}
+                {!identityLookupLoading&&!(Array.isArray(identityDirectoryUsers)&&identityDirectoryUsers.length)&&<div style={{fontSize:10,color:C.muted}}>No directory users loaded.</div>}
+              </div>
+            </Card>
+            <Card style={{maxHeight:250,overflowY:"auto"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                <div style={{fontSize:11,color:C.text,fontWeight:700}}>Directory Groups</div>
+                <B c="blue">{`${Array.isArray(identityDirectoryGroups)?identityDirectoryGroups.length:0} found`}</B>
+              </div>
+              <div style={{display:"grid",gap:6,marginBottom:8}}>
+                {(Array.isArray(identityDirectoryGroups)?identityDirectoryGroups:[]).map((group:any,index:number)=>{
+                  const groupID=String(group?.external_id||"").trim();
+                  const selected=groupID&&groupID===String(identitySelectedGroupID||"").trim();
+                  return <div
+                    key={`identity-group-${groupID||index}`}
+                    style={{
+                      display:"flex",
+                      alignItems:"center",
+                      justifyContent:"space-between",
+                      gap:8,
+                      padding:"6px 8px",
+                      border:`1px solid ${selected?C.accent:C.border}`,
+                      borderRadius:8,
+                      background:selected?C.accentDim:C.surface
+                    }}
+                  >
+                    <div style={{fontSize:10,color:C.text}}>
+                      <div style={{fontWeight:700}}>{String(group?.name||groupID||"-")}</div>
+                      <div style={{color:C.muted}}>{`${Number(group?.member_count||0)} members`}</div>
+                    </div>
+                    <Btn
+                      small
+                      onClick={()=>{
+                        setIdentitySelectedGroupID(groupID);
+                        void loadDirectoryGroupMembers(groupID);
+                      }}
+                    >
+                      {selected?"Selected":"Select"}
+                    </Btn>
+                  </div>;
+                })}
+                {!identityLookupLoading&&!(Array.isArray(identityDirectoryGroups)&&identityDirectoryGroups.length)&&<div style={{fontSize:10,color:C.muted}}>No directory groups loaded.</div>}
+              </div>
+              <div style={{fontSize:10,color:C.dim,fontWeight:700,marginBottom:4}}>Selected Group Members</div>
+              <div style={{display:"grid",gap:4,maxHeight:86,overflowY:"auto"}}>
+                {identityGroupMembersLoading&&<div style={{fontSize:10,color:C.muted}}>Loading members...</div>}
+                {!identityGroupMembersLoading&&(Array.isArray(identityGroupMembers)?identityGroupMembers:[]).slice(0,25).map((member:any,index:number)=>(
+                  <div key={`identity-member-${String(member?.external_id||index)}`} style={{fontSize:10,color:C.text}}>
+                    {`${String(member?.username||"-")} (${String(member?.email||"-")})`}
+                  </div>
+                ))}
+                {!identityGroupMembersLoading&&!(Array.isArray(identityGroupMembers)&&identityGroupMembers.length)&&<div style={{fontSize:10,color:C.muted}}>No members loaded.</div>}
+              </div>
+            </Card>
+          </Row2>
+        </Card>
+        {String(identityLastTest||"").trim()?<Card style={{marginTop:8,borderColor:C.border,padding:8}}>
+          <div style={{fontSize:10,color:C.dim,marginBottom:6}}>Last Connection Test Result</div>
+          <pre style={{margin:0,whiteSpace:"pre-wrap",fontSize:10,color:C.text,maxHeight:120,overflowY:"auto"}}>{identityLastTest}</pre>
+        </Card>:null}
+      </Card>}
+      {showUserControls&&<Card style={{marginBottom:8}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div style={{fontSize:12,color:C.text,fontWeight:700}}>Access Groups</div>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -19410,8 +20488,8 @@ const UserManagement=({session,onToast,onLogout})=>{
           {groupsLoading&&<div style={{fontSize:10,color:C.muted,padding:"10px 0"}}>Loading groups...</div>}
           {!groupRows.length&&!groupsLoading&&<div style={{fontSize:10,color:C.muted,padding:"10px 0"}}>No access groups found.</div>}
         </div>
-      </Card>
-      <Card>
+      </Card>}
+      {showUserControls&&<Card>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div style={{fontSize:12,color:C.text,fontWeight:700}}>Users</div>
           <B c="blue">{`${userRows.length} total`}</B>
@@ -19465,10 +20543,10 @@ const UserManagement=({session,onToast,onLogout})=>{
           {initializing?<div style={{fontSize:10,color:C.muted,padding:"10px 0"}}>Loading users...</div>:null}
           {!userRows.length&&!loading&&!initializing&&<div style={{fontSize:10,color:C.muted,padding:"10px 0"}}>No users found.</div>}
         </div>
-      </Card>
+      </Card>}
     </Section>
 
-    <Modal open={modal==="create"} onClose={()=>setModal(null)} title="Create Local User">
+    {showUserControls&&<Modal open={modal==="create"} onClose={()=>setModal(null)} title="Create Local User">
       <FG label="Tenant" required>
         <Inp value={String(tenantScope||session?.tenantId||"")} disabled/>
       </FG>
@@ -19498,9 +20576,9 @@ const UserManagement=({session,onToast,onLogout})=>{
         <Btn onClick={()=>setModal(null)} disabled={saving}>Cancel</Btn>
         <Btn primary onClick={()=>void submitCreate()} disabled={saving}>{saving?"Creating...":"Create User"}</Btn>
       </div>
-    </Modal>
+    </Modal>}
 
-    <Modal open={modal==="create-tenant"} onClose={()=>setModal(null)} title="Create Tenant + Tenant Admin" wide>
+    {showTenantControls&&<Modal open={modal==="create-tenant"} onClose={()=>setModal(null)} title="Create Tenant + Tenant Admin" wide>
       <Row2>
         <FG label="Tenant ID" required>
           <Inp value={createTenantID} onChange={(e)=>setCreateTenantID(e.target.value)} placeholder="tenant-acme"/>
@@ -19546,9 +20624,9 @@ const UserManagement=({session,onToast,onLogout})=>{
         <Btn onClick={()=>setModal(null)} disabled={tenantSaving}>Cancel</Btn>
         <Btn primary onClick={()=>void submitCreateTenant()} disabled={tenantSaving}>{tenantSaving?"Creating...":"Create Tenant"}</Btn>
       </div>
-    </Modal>
+    </Modal>}
 
-    <Modal open={modal==="reset"} onClose={()=>setModal(null)} title={`Reset Password: ${String(resetTarget?.username||"")}`}>
+    {showUserControls&&<Modal open={modal==="reset"} onClose={()=>setModal(null)} title={`Reset Password: ${String(resetTarget?.username||"")}`}>
       <FG label="New Password" required>
         <Inp type="password" value={resetPassword} onChange={(e)=>setResetPassword(e.target.value)} placeholder="Enter new password"/>
       </FG>
@@ -19560,9 +20638,17 @@ const UserManagement=({session,onToast,onLogout})=>{
         <Btn onClick={()=>setModal(null)} disabled={saving}>Cancel</Btn>
         <Btn primary onClick={()=>void submitReset()} disabled={saving}>{saving?"Applying...":"Reset Password"}</Btn>
       </div>
-    </Modal>
+    </Modal>}
     {promptDialog.ui}
   </div>;
+};
+
+const TenantAdministration=(props)=>{
+  return <UserManagement {...props} mode="tenant"/>;
+};
+
+const UserAdministration=(props)=>{
+  return <UserManagement {...props} mode="user"/>;
 };
 
 const Documentation=()=>{
@@ -19641,11 +20727,25 @@ const Documentation=()=>{
   </div>;
 };
 
+const Administration=(props)=>{
+  const view=String(props?.subView||"system").trim().toLowerCase();
+  if(view==="tenant"){
+    return <TenantAdministration {...props}/>;
+  }
+  if(view==="users"){
+    return <UserAdministration {...props}/>;
+  }
+  if(view==="docs"){
+    return <Documentation/>;
+  }
+  return <Admin {...props}/>;
+};
+
 // 
 // MAIN APP WITH SIDEBAR
 // 
-const TABS={home:Home,keys:Keys,workbench:Workbench,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,dataprotection:DataProtection,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,cloudctl:CloudKeyControl,byok:BYOK,hyok:HYOK,ekm:EKM,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Admin,users:UserManagement,docs:Documentation};
-const TITLES={home:"Dashboard",keys:"Key Management",workbench:"Workbench",crypto:"Crypto Console",restapi:"REST API",vault:"Secret Vault",certs:"Certificates / PKI",dataprotection:"Data Protection",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",cloudctl:"Cloud Key Control",byok:"BYOK",hyok:"HYOK",ekm:"Enterprise Key Management",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration",users:"User Management",docs:"Documentation"};
+const TABS={home:Home,keys:Keys,workbench:Workbench,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,dataprotection:DataProtection,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,cloudctl:CloudKeyControl,byok:BYOK,hyok:HYOK,ekm:EKM,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Administration};
+const TITLES={home:"Dashboard",keys:"Key Management",workbench:"Workbench",crypto:"Crypto Console",restapi:"REST API",vault:"Secret Vault",certs:"Certificates / PKI",dataprotection:"Data Protection",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",cloudctl:"Cloud Key Control",byok:"BYOK",hyok:"HYOK",ekm:"Enterprise Key Management",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration"};
 const SUB_PANES={
   workbench:[
     {id:"crypto",label:"Crypto Console",hint:"Interactive cryptographic operations and algorithm console",icon:Zap},
@@ -19669,6 +20769,12 @@ const SUB_PANES={
     {id:"db",label:"EKM for DBs",hint:"MSSQL / Oracle TDE agents",icon:Database,feature:"ekm_database"},
     {id:"bitlocker",label:"BitLocker",hint:"Windows endpoint key lifecycle",icon:Lock,feature:"ekm_database"},
     {id:"kmip",label:"KMIP",hint:"Profiles, clients, mTLS onboarding",icon:Link,feature:"kmip_server"}
+  ],
+  admin:[
+    {id:"system",label:"System Administration",hint:"Platform health, runtime hardening, FIPS and governance settings",icon:Settings},
+    {id:"tenant",label:"Tenant Administration",hint:"Tenant lifecycle, disable/delete workflow, and quorum-governed administration",icon:Building2},
+    {id:"users",label:"User Management",hint:"User and group administration with role assignments",icon:Users},
+    {id:"docs",label:"Documentation",hint:"Static component and capability documentation",icon:ScrollText}
   ]
 };
 
@@ -19688,7 +20794,7 @@ export default function VectaDashboard(props){
   const [toast,setToast]=useState("");
   const [keyCatalog,setKeyCatalog]=useState([]);
   const [tagCatalog,setTagCatalog]=useState([]);
-  const [subPaneSelection,setSubPaneSelection]=useState({workbench:"crypto",dataprotection:"fieldenc",cloudctl:"byok",ekm:"db"});
+  const [subPaneSelection,setSubPaneSelection]=useState({workbench:"crypto",dataprotection:"fieldenc",cloudctl:"byok",ekm:"db",admin:"system"});
   const [fipsMode,setFipsMode]=useState<"enabled"|"disabled">("disabled");
   const [reportedUnread,setReportedUnread]=useState(Number(unreadAlerts||0));
   const [cliStatus,setCLIStatus]=useState<any>(null);
@@ -19696,7 +20802,9 @@ export default function VectaDashboard(props){
   const [cliUsername,setCLIUsername]=useState("cli-user");
   const [cliPassword,setCLIPassword]=useState("");
   const [cliLaunching,setCLILaunching]=useState(false);
+  const [cliRunbookOpen,setCLIRunbookOpen]=useState(false);
   const [cliCommandHint,setCLICommandHint]=useState("");
+  const [cliHSMHints,setCLIHSMHints]=useState<any>(null);
   const [tenantOptions,setTenantOptions]=useState<Array<{id:string;name:string;status?:string}>>([]);
   const [tenantScope,setTenantScope]=useState(String(sessionBase?.tenantId||""));
   const session=useMemo(()=>({
@@ -19861,6 +20969,7 @@ export default function VectaDashboard(props){
       setCLIModalOpen(false);
       setCLIPassword("");
       setCLICommandHint("");
+      setCLIHSMHints(null);
       return;
     }
     let cancelled=false;
@@ -19871,12 +20980,14 @@ export default function VectaDashboard(props){
           return;
         }
         setCLIStatus(out);
+        setCLIHSMHints(out?.hsm_pkcs11_onboarding||null);
         if(String(out?.cli_username||"").trim()){
           setCLIUsername(String(out.cli_username).trim());
         }
       }catch{
         if(!cancelled){
-          setCLIStatus({enabled:false,cli_username:"cli-user",host:"127.0.0.1",port:22});
+          setCLIStatus({enabled:false,cli_username:"cli-user",host:"127.0.0.1",port:2222});
+          setCLIHSMHints(null);
         }
       }
     };
@@ -19914,17 +21025,31 @@ export default function VectaDashboard(props){
         password:String(cliPassword||"")
       });
       setCLICommandHint(String(out?.ssh_command||""));
-      setCLIModalOpen(false);
-      setCLIPassword("");
-      const uri=String(out?.putty_uri||"").trim();
-      if(uri){
-        window.open(uri,"_blank");
+      if(out?.hsm_pkcs11_onboarding){
+      setCLIHSMHints(out.hsm_pkcs11_onboarding);
       }
-      onToast?.("CLI session prepared. Use PuTTY or SSH command shown.");
+      setCLIModalOpen(false);
+      setCLIRunbookOpen(true);
+      setCLIPassword("");
+      onToast?.("CLI session prepared. Follow the HSM onboarding runbook on screen.");
     }catch(error){
       onToast?.(`CLI launch failed: ${errMsg(error)}`);
     }finally{
       setCLILaunching(false);
+    }
+  };
+
+  const copyCLICommand=async(label:string,cmd:any)=>{
+    const value=String(cmd||"").trim();
+    if(!value){
+      onToast?.(`${label} command is empty.`);
+      return;
+    }
+    try{
+      await navigator.clipboard.writeText(value);
+      onToast?.(`${label} command copied.`);
+    }catch{
+      onToast?.(`Failed to copy ${label} command.`);
     }
   };
 
@@ -20180,13 +21305,78 @@ export default function VectaDashboard(props){
           <div style={{fontSize:10,color:C.muted,marginTop:6}}>
             Additional authentication is required. CLI access is encrypted over SSH and tied to the protected CLI user.
           </div>
+          <div style={{fontSize:10,color:C.muted,marginTop:4}}>
+            For HSM onboarding, upload vendor PKCS#11 library via SCP/SFTP to the tenant workspace shown after session launch.
+          </div>
           <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
             <Btn onClick={()=>setCLIModalOpen(false)} disabled={cliLaunching}>Cancel</Btn>
             <Btn primary onClick={()=>void launchCLI()} disabled={cliLaunching}>{cliLaunching?"Opening...":"Open CLI"}</Btn>
           </div>
         </Modal>
+        <Modal open={cliRunbookOpen} onClose={()=>setCLIRunbookOpen(false)} title="HSM CLI Onboarding Runbook" wide width={980}>
+          <div style={{fontSize:11,color:C.muted,marginBottom:10}}>
+            Use this guided flow to upload PKCS#11 libraries, run vendor utilities, list partitions, and continue HSM configuration from the dashboard.
+          </div>
+          <div style={{display:"grid",gap:8}}>
+            {[{
+              title:"1. Connect to dedicated HSM integration service",
+              command:cliCommandHint,
+              fallback:String(cliHSMHints?.integration_service||"").trim()?`Service: ${String(cliHSMHints?.integration_service)}`:""
+            },{
+              title:"2. Prepare workspace",
+              command:String(cliHSMHints?.prepare_workspace_command||"").trim(),
+              fallback:String(cliHSMHints?.workspace_root||"").trim()?`Workspace root: ${String(cliHSMHints.workspace_root)}`:""
+            },{
+              title:"3. Upload vendor package",
+              command:String(cliHSMHints?.scp_upload_command||"").trim()||String(cliHSMHints?.sftp_command||""),
+              fallback:String(cliHSMHints?.workspace_incoming_dir||"").trim()?`Upload directory: ${String(cliHSMHints.workspace_incoming_dir)}`:""
+            },{
+              title:"4. Install and verify provider library",
+              command:String(cliHSMHints?.install_library_command||"").trim(),
+              fallback:String(cliHSMHints?.verify_provider_command||"").trim()||String(cliHSMHints?.verify_checksum_command||"")
+            },{
+              title:"5. List partitions / slots",
+              command:String(cliHSMHints?.list_partitions_command||"").trim(),
+              fallback:String(cliHSMHints?.run_vendor_utility_command||"").trim()
+            }].map((item:any,idx:number)=>(
+              <Card key={`cli-runbook-step-${idx}`} style={{padding:10,borderColor:C.borderHi}}>
+                <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>{item.title}</div>
+                {String(item.command||"").trim()?<div style={{display:"flex",gap:8,alignItems:"center",marginBottom:4}}>
+                  <Inp mono readOnly value={String(item.command)} style={{fontSize:10}}/>
+                  <Btn small primary onClick={()=>void copyCLICommand(`Step ${idx+1}`,item.command)}>Copy</Btn>
+                </div>:null}
+                {String(item.fallback||"").trim()?<div style={{fontSize:10,color:C.muted,fontFamily:"'JetBrains Mono',monospace",wordBreak:"break-all"}}>{String(item.fallback)}</div>:null}
+              </Card>
+            ))}
+          </div>
+          <Card style={{marginTop:8,padding:10}}>
+            <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Next in UI</div>
+            <div style={{fontSize:10,color:C.muted,marginBottom:6}}>
+              {String(cliHSMHints?.next_ui_step||"After partition discovery, continue configuration under HSM / Primus in dashboard.")}
+            </div>
+            {String(cliHSMHints?.pkcs11_config_file||"").trim()?<div style={{fontSize:10,color:C.muted,marginBottom:4}}>
+              PKCS#11 config file: <span style={{fontFamily:"'JetBrains Mono',monospace",color:C.text}}>{String(cliHSMHints.pkcs11_config_file)}</span>
+            </div>:null}
+            {String(cliHSMHints?.provider_library_dir||"").trim()?<div style={{fontSize:10,color:C.muted,marginBottom:4}}>
+              Provider library dir: <span style={{fontFamily:"'JetBrains Mono',monospace",color:C.text}}>{String(cliHSMHints.provider_library_dir)}</span>
+            </div>:null}
+            {(Array.isArray(cliHSMHints?.security_notes)?cliHSMHints.security_notes:[]).slice(0,3).map((note:any,idx:number)=>(
+              <div key={`hsm-security-note-${idx}`} style={{fontSize:10,color:C.muted,marginTop:3}}>{String(note||"")}</div>
+            ))}
+          </Card>
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
+            <Btn onClick={()=>setCLIRunbookOpen(false)}>Close</Btn>
+          </div>
+        </Modal>
         {cliCommandHint&&<div style={{position:"fixed",left:16,bottom:16,background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,padding:"10px 12px",fontSize:11,color:C.text,zIndex:1200,maxWidth:460}}>
-          SSH command: <span style={{fontFamily:"'JetBrains Mono',monospace",color:C.accent}}>{cliCommandHint}</span>
+          <div style={{fontSize:10,color:C.muted,textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>CLI Session Ready</div>
+          <div style={{fontSize:10,color:C.muted,marginBottom:8}}>
+            HSM onboarding runbook includes upload, install, utility, and partition listing commands.
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <Btn small primary onClick={()=>setCLIRunbookOpen(true)}>Open Runbook</Btn>
+            <Btn small onClick={()=>void copyCLICommand("SSH",cliCommandHint)}>Copy SSH</Btn>
+          </div>
         </div>}
         {toast&&<div style={{position:"fixed",right:16,bottom:16,background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,padding:"10px 12px",fontSize:11,color:C.text,zIndex:1200,maxWidth:380}}>{toast}</div>}
       </div>

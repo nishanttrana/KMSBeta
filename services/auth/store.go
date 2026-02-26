@@ -62,6 +62,11 @@ type Store interface {
 	UpsertPasswordPolicy(ctx context.Context, policy PasswordPolicy) (PasswordPolicy, error)
 	GetSecurityPolicy(ctx context.Context, tenantID string) (SecurityPolicy, error)
 	UpsertSecurityPolicy(ctx context.Context, policy SecurityPolicy) (SecurityPolicy, error)
+	GetHSMProviderConfig(ctx context.Context, tenantID string) (HSMProviderConfig, error)
+	UpsertHSMProviderConfig(ctx context.Context, cfg HSMProviderConfig) (HSMProviderConfig, error)
+	ListIdentityProviderConfigs(ctx context.Context, tenantID string) ([]IdentityProviderConfig, error)
+	GetIdentityProviderConfig(ctx context.Context, tenantID string, provider string) (IdentityProviderConfig, error)
+	UpsertIdentityProviderConfig(ctx context.Context, cfg IdentityProviderConfig) (IdentityProviderConfig, error)
 }
 
 type SQLStore struct {
@@ -166,6 +171,34 @@ type SecurityPolicy struct {
 	UpdatedAt          time.Time `json:"updated_at"`
 }
 
+type HSMProviderConfig struct {
+	TenantID           string         `json:"tenant_id"`
+	ProviderName       string         `json:"provider_name"`
+	IntegrationService string         `json:"integration_service"`
+	LibraryPath        string         `json:"library_path"`
+	SlotID             string         `json:"slot_id"`
+	PartitionLabel     string         `json:"partition_label"`
+	TokenLabel         string         `json:"token_label"`
+	PINEnvVar          string         `json:"pin_env_var"`
+	ReadOnly           bool           `json:"read_only"`
+	Enabled            bool           `json:"enabled"`
+	Metadata           map[string]any `json:"metadata,omitempty"`
+	UpdatedBy          string         `json:"updated_by"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
+}
+
+type IdentityProviderConfig struct {
+	TenantID  string         `json:"tenant_id"`
+	Provider  string         `json:"provider"`
+	Enabled   bool           `json:"enabled"`
+	Config    map[string]any `json:"config,omitempty"`
+	Secrets   map[string]any `json:"secrets,omitempty"`
+	UpdatedBy string         `json:"updated_by"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+}
+
 type TenantDeleteSummary struct {
 	TenantID       string           `json:"tenant_id"`
 	TablesPurged   int              `json:"tables_purged"`
@@ -257,6 +290,16 @@ func (s *SQLStore) DeleteTenant(ctx context.Context, tenantID string) (TenantDel
 	if err != nil {
 		return summary, err
 	}
+	auditTriggerDisabled := []string{}
+	for _, table := range tables {
+		if !isAuditEventsTable(table) {
+			continue
+		}
+		if disableErr := disableTableUserTriggers(ctx, tx, table); disableErr != nil {
+			return summary, disableErr
+		}
+		auditTriggerDisabled = append(auditTriggerDisabled, table)
+	}
 	pending := append([]string(nil), tables...)
 	for attempts := 0; attempts < len(tables); attempts++ {
 		if len(pending) == 0 {
@@ -290,6 +333,11 @@ func (s *SQLStore) DeleteTenant(ctx context.Context, tenantID string) (TenantDel
 			return summary, fmt.Errorf("tenant purge blocked by relational constraints for tables: %s", strings.Join(next, ", "))
 		}
 		pending = next
+	}
+	for _, table := range auditTriggerDisabled {
+		if enableErr := enableTableUserTriggers(ctx, tx, table); enableErr != nil {
+			return summary, enableErr
+		}
 	}
 
 	res, err := tx.ExecContext(ctx, `DELETE FROM auth_tenants WHERE id=$1`, tenantID)
@@ -949,6 +997,179 @@ ON CONFLICT (tenant_id) DO UPDATE SET
 	return s.GetSecurityPolicy(ctx, policy.TenantID)
 }
 
+func (s *SQLStore) GetHSMProviderConfig(ctx context.Context, tenantID string) (HSMProviderConfig, error) {
+	var out HSMProviderConfig
+	var metadataRaw []byte
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, provider_name, integration_service, library_path, slot_id, partition_label,
+       token_label, pin_env_var, read_only, enabled, metadata_json, updated_by, created_at, updated_at
+FROM auth_hsm_provider_configs
+WHERE tenant_id=$1
+`, tenantID).Scan(
+		&out.TenantID,
+		&out.ProviderName,
+		&out.IntegrationService,
+		&out.LibraryPath,
+		&out.SlotID,
+		&out.PartitionLabel,
+		&out.TokenLabel,
+		&out.PINEnvVar,
+		&out.ReadOnly,
+		&out.Enabled,
+		&metadataRaw,
+		&out.UpdatedBy,
+		&out.CreatedAt,
+		&out.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return HSMProviderConfig{}, errNotFound
+	}
+	if err != nil {
+		return HSMProviderConfig{}, err
+	}
+	out.Metadata = map[string]any{}
+	if len(metadataRaw) > 0 {
+		_ = json.Unmarshal(metadataRaw, &out.Metadata)
+	}
+	return out, nil
+}
+
+func (s *SQLStore) UpsertHSMProviderConfig(ctx context.Context, cfg HSMProviderConfig) (HSMProviderConfig, error) {
+	metadataRaw, err := json.Marshal(cfg.Metadata)
+	if err != nil {
+		return HSMProviderConfig{}, err
+	}
+	_, err = s.db.SQL().ExecContext(ctx, `
+INSERT INTO auth_hsm_provider_configs (
+    tenant_id, provider_name, integration_service, library_path, slot_id, partition_label,
+    token_label, pin_env_var, read_only, enabled, metadata_json, updated_by, created_at, updated_at
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id) DO UPDATE SET
+    provider_name = EXCLUDED.provider_name,
+    integration_service = EXCLUDED.integration_service,
+    library_path = EXCLUDED.library_path,
+    slot_id = EXCLUDED.slot_id,
+    partition_label = EXCLUDED.partition_label,
+    token_label = EXCLUDED.token_label,
+    pin_env_var = EXCLUDED.pin_env_var,
+    read_only = EXCLUDED.read_only,
+    enabled = EXCLUDED.enabled,
+    metadata_json = EXCLUDED.metadata_json,
+    updated_by = EXCLUDED.updated_by,
+    updated_at = CURRENT_TIMESTAMP
+`, cfg.TenantID, cfg.ProviderName, cfg.IntegrationService, cfg.LibraryPath, cfg.SlotID, cfg.PartitionLabel, cfg.TokenLabel, cfg.PINEnvVar, cfg.ReadOnly, cfg.Enabled, metadataRaw, cfg.UpdatedBy)
+	if err != nil {
+		return HSMProviderConfig{}, err
+	}
+	return s.GetHSMProviderConfig(ctx, cfg.TenantID)
+}
+
+func (s *SQLStore) ListIdentityProviderConfigs(ctx context.Context, tenantID string) ([]IdentityProviderConfig, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, provider, enabled, config_json, secret_json, updated_by, created_at, updated_at
+FROM auth_identity_provider_configs
+WHERE tenant_id=$1
+ORDER BY provider
+`, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+
+	out := make([]IdentityProviderConfig, 0, 4)
+	for rows.Next() {
+		var cfg IdentityProviderConfig
+		var configRaw []byte
+		var secretRaw []byte
+		if err := rows.Scan(
+			&cfg.TenantID,
+			&cfg.Provider,
+			&cfg.Enabled,
+			&configRaw,
+			&secretRaw,
+			&cfg.UpdatedBy,
+			&cfg.CreatedAt,
+			&cfg.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		cfg.Config = map[string]any{}
+		cfg.Secrets = map[string]any{}
+		if len(configRaw) > 0 {
+			_ = json.Unmarshal(configRaw, &cfg.Config)
+		}
+		if len(secretRaw) > 0 {
+			_ = json.Unmarshal(secretRaw, &cfg.Secrets)
+		}
+		out = append(out, cfg)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (s *SQLStore) GetIdentityProviderConfig(ctx context.Context, tenantID string, provider string) (IdentityProviderConfig, error) {
+	var out IdentityProviderConfig
+	var configRaw []byte
+	var secretRaw []byte
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, provider, enabled, config_json, secret_json, updated_by, created_at, updated_at
+FROM auth_identity_provider_configs
+WHERE tenant_id=$1 AND provider=$2
+`, tenantID, provider).Scan(
+		&out.TenantID,
+		&out.Provider,
+		&out.Enabled,
+		&configRaw,
+		&secretRaw,
+		&out.UpdatedBy,
+		&out.CreatedAt,
+		&out.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return IdentityProviderConfig{}, errNotFound
+	}
+	if err != nil {
+		return IdentityProviderConfig{}, err
+	}
+	out.Config = map[string]any{}
+	out.Secrets = map[string]any{}
+	if len(configRaw) > 0 {
+		_ = json.Unmarshal(configRaw, &out.Config)
+	}
+	if len(secretRaw) > 0 {
+		_ = json.Unmarshal(secretRaw, &out.Secrets)
+	}
+	return out, nil
+}
+
+func (s *SQLStore) UpsertIdentityProviderConfig(ctx context.Context, cfg IdentityProviderConfig) (IdentityProviderConfig, error) {
+	configRaw, err := json.Marshal(cfg.Config)
+	if err != nil {
+		return IdentityProviderConfig{}, err
+	}
+	secretRaw, err := json.Marshal(cfg.Secrets)
+	if err != nil {
+		return IdentityProviderConfig{}, err
+	}
+	_, err = s.db.SQL().ExecContext(ctx, `
+INSERT INTO auth_identity_provider_configs (
+    tenant_id, provider, enabled, config_json, secret_json, updated_by, created_at, updated_at
+) VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id, provider) DO UPDATE SET
+    enabled = EXCLUDED.enabled,
+    config_json = EXCLUDED.config_json,
+    secret_json = EXCLUDED.secret_json,
+    updated_by = EXCLUDED.updated_by,
+    updated_at = CURRENT_TIMESTAMP
+`, cfg.TenantID, cfg.Provider, cfg.Enabled, configRaw, secretRaw, cfg.UpdatedBy)
+	if err != nil {
+		return IdentityProviderConfig{}, err
+	}
+	return s.GetIdentityProviderConfig(ctx, cfg.TenantID, cfg.Provider)
+}
+
 func discoverTenantTables(ctx context.Context, tx *sql.Tx) ([]string, error) {
 	rows, err := tx.QueryContext(ctx, `
 SELECT table_schema, table_name
@@ -1054,6 +1275,57 @@ func isForeignKeyDeleteError(err error) bool {
 	}
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "foreign key") || strings.Contains(msg, "constraint failed")
+}
+
+func isAuditEventsTable(table string) bool {
+	name := strings.ToLower(strings.TrimSpace(table))
+	if name == "" {
+		return false
+	}
+	return strings.HasSuffix(name, ".audit_events") ||
+		strings.Contains(name, ".audit_events_") ||
+		name == "audit_events" ||
+		strings.HasPrefix(name, "audit_events_")
+}
+
+func disableTableUserTriggers(ctx context.Context, tx *sql.Tx, table string) error {
+	stmt := buildDisableTableUserTriggersStatement(table)
+	if strings.TrimSpace(stmt) == "" {
+		return nil
+	}
+	_, err := tx.ExecContext(ctx, stmt)
+	if err != nil && strings.Contains(strings.ToLower(err.Error()), "does not exist") {
+		return nil
+	}
+	return err
+}
+
+func enableTableUserTriggers(ctx context.Context, tx *sql.Tx, table string) error {
+	stmt := buildEnableTableUserTriggersStatement(table)
+	if strings.TrimSpace(stmt) == "" {
+		return nil
+	}
+	_, err := tx.ExecContext(ctx, stmt)
+	if err != nil && strings.Contains(strings.ToLower(err.Error()), "does not exist") {
+		return nil
+	}
+	return err
+}
+
+func buildDisableTableUserTriggersStatement(table string) string {
+	parts := strings.SplitN(strings.TrimSpace(table), ".", 2)
+	if len(parts) == 2 {
+		return fmt.Sprintf(`ALTER TABLE "%s"."%s" DISABLE TRIGGER USER`, sqlQuoteIdentifier(parts[0]), sqlQuoteIdentifier(parts[1]))
+	}
+	return fmt.Sprintf(`ALTER TABLE "%s" DISABLE TRIGGER USER`, sqlQuoteIdentifier(parts[0]))
+}
+
+func buildEnableTableUserTriggersStatement(table string) string {
+	parts := strings.SplitN(strings.TrimSpace(table), ".", 2)
+	if len(parts) == 2 {
+		return fmt.Sprintf(`ALTER TABLE "%s"."%s" ENABLE TRIGGER USER`, sqlQuoteIdentifier(parts[0]), sqlQuoteIdentifier(parts[1]))
+	}
+	return fmt.Sprintf(`ALTER TABLE "%s" ENABLE TRIGGER USER`, sqlQuoteIdentifier(parts[0]))
 }
 
 func isGroupRoleSchemaMissing(err error) bool {

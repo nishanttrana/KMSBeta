@@ -217,6 +217,14 @@ services:
       AUTH_BOOTSTRAP_ADMIN_EMAIL: ${AUTH_BOOTSTRAP_ADMIN_EMAIL:-admin@vecta.local}
       AUTH_BOOTSTRAP_ADMIN_ROLE: ${AUTH_BOOTSTRAP_ADMIN_ROLE:-tenant-admin}
       AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE: ${AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE:-true}
+      AUTH_BOOTSTRAP_CLI_ENABLED: ${AUTH_BOOTSTRAP_CLI_ENABLED:-true}
+      AUTH_BOOTSTRAP_CLI_USERNAME: ${AUTH_BOOTSTRAP_CLI_USERNAME:-cli-user}
+      AUTH_BOOTSTRAP_CLI_PASSWORD: ${AUTH_BOOTSTRAP_CLI_PASSWORD:-VectaCLI@2026}
+      AUTH_BOOTSTRAP_CLI_EMAIL: ${AUTH_BOOTSTRAP_CLI_EMAIL:-cli@vecta.local}
+      AUTH_CLI_HOST: ${AUTH_CLI_HOST:-127.0.0.1}
+      AUTH_CLI_PORT: ${AUTH_CLI_PORT:-2222}
+      AUTH_CLI_HSM_WORKSPACE_ROOT: ${AUTH_CLI_HSM_WORKSPACE_ROOT:-/var/lib/vecta/hsm/providers}
+      AUTH_CLI_HSM_SERVICE_NAME: ${AUTH_CLI_HSM_SERVICE_NAME:-hsm-integration}
     volumes:
       - auth-data:/var/lib/vecta/auth
       - /var/run/docker.sock:/var/run/docker.sock
@@ -228,6 +236,28 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
+
+  hsm-integration:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: services/hsm-integration/Dockerfile
+    image: vecta/hsm-integration:latest
+    environment:
+      HSM_INTEGRATION_USER: ${AUTH_BOOTSTRAP_CLI_USERNAME:-cli-user}
+      HSM_INTEGRATION_PASSWORD: ${AUTH_BOOTSTRAP_CLI_PASSWORD:-VectaCLI@2026}
+      HSM_INTEGRATION_WORKSPACE_ROOT: ${AUTH_CLI_HSM_WORKSPACE_ROOT:-/var/lib/vecta/hsm/providers}
+    ports:
+      - "2222:22"
+    volumes:
+      - hsm-integration-data:/var/lib/vecta/hsm
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 22"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - kms_net
 
   keycore:
     <<: *kms-service
@@ -785,6 +815,7 @@ volumes:
   postgres-data:
   consul-data:
   auth-data:
+  hsm-integration-data:
   keycore-data:
   certs-key-data:
   runtime-certs:

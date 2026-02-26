@@ -6555,6 +6555,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "auth-get-auth-cli-hsm-config",
+    "group": "Identity & Access (auth)",
+    "title": "GET /auth/cli/hsm/config",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/cli/hsm/config?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "GET /svc/auth/auth/cli/hsm/config?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "auth-get-auth-cli-hsm-partitions",
+    "group": "Identity & Access (auth)",
+    "title": "GET /auth/cli/hsm/partitions",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/cli/hsm/partitions?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "GET /svc/auth/auth/cli/hsm/partitions?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "auth-get-auth-cli-status",
     "group": "Identity & Access (auth)",
     "title": "GET /auth/cli/status",
@@ -6648,6 +6704,146 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Auth service.",
     "requestExample": "GET /svc/auth/auth/groups/roles?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "auth-get-auth-identity-providers",
+    "group": "Identity & Access (auth)",
+    "title": "GET /auth/identity/providers",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/identity/providers?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "GET /svc/auth/auth/identity/providers?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "auth-get-auth-identity-providers-provider",
+    "group": "Identity & Access (auth)",
+    "title": "GET /auth/identity/providers/{provider}",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/identity/providers/{provider}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "GET /svc/auth/auth/identity/providers/{provider}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "auth-get-auth-identity-providers-provider-groups",
+    "group": "Identity & Access (auth)",
+    "title": "GET /auth/identity/providers/{provider}/groups",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/identity/providers/{provider}/groups?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "GET /svc/auth/auth/identity/providers/{provider}/groups?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "auth-get-auth-identity-providers-provider-groups-id-members",
+    "group": "Identity & Access (auth)",
+    "title": "GET /auth/identity/providers/{provider}/groups/{id}/members",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/identity/providers/{provider}/groups/{id}/members?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "GET /svc/auth/auth/identity/providers/{provider}/groups/{id}/members?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "auth-get-auth-identity-providers-provider-users",
+    "group": "Identity & Access (auth)",
+    "title": "GET /auth/identity/providers/{provider}/users",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/identity/providers/{provider}/users?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "GET /svc/auth/auth/identity/providers/{provider}/users?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -7087,6 +7283,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "auth-post-auth-identity-import-users",
+    "group": "Identity & Access (auth)",
+    "title": "POST /auth/identity/import/users",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/auth/identity/import/users?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "POST /svc/auth/auth/identity/import/users?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "auth-post-auth-identity-providers-provider-test",
+    "group": "Identity & Access (auth)",
+    "title": "POST /auth/identity/providers/{provider}/test",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/auth/identity/providers/{provider}/test?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "POST /svc/auth/auth/identity/providers/{provider}/test?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "auth-post-auth-login",
     "group": "Identity & Access (auth)",
     "title": "POST /auth/login",
@@ -7395,6 +7647,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "auth-put-auth-cli-hsm-config",
+    "group": "Identity & Access (auth)",
+    "title": "PUT /auth/cli/hsm/config",
+    "service": "auth",
+    "method": "PUT",
+    "pathTemplate": "/auth/cli/hsm/config?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "PUT /svc/auth/auth/cli/hsm/config?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "auth-put-auth-clients-id",
     "group": "Identity & Access (auth)",
     "title": "PUT /auth/clients/{id}",
@@ -7432,6 +7712,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Auth service.",
     "requestExample": "PUT /svc/auth/auth/groups/{id}/role?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "auth-put-auth-identity-providers-provider",
+    "group": "Identity & Access (auth)",
+    "title": "PUT /auth/identity/providers/{provider}",
+    "service": "auth",
+    "method": "PUT",
+    "pathTemplate": "/auth/identity/providers/{provider}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "PUT /svc/auth/auth/identity/providers/{provider}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

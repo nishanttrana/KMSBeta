@@ -10,6 +10,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -634,5 +635,113 @@ VALUES ('t1','grp-audit','u-readonly')
 	}
 	if !hasPermission(claims.Permissions, "audit.read") {
 		t.Fatalf("expected inherited group role permission in claims, got %+v", claims.Permissions)
+	}
+}
+
+func TestHandlerIdentityProviderConfigRoundTrip(t *testing.T) {
+	h, logic, _, _ := newTestHandler(t)
+	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	putBody := map[string]any{
+		"enabled": true,
+		"config": map[string]any{
+			"ldap_url": "ldaps://dc01.example.local:636",
+			"base_dn":  "dc=example,dc=local",
+			"bind_dn":  "cn=svc-kms,ou=svc,dc=example,dc=local",
+		},
+		"secrets": map[string]any{
+			"bind_password": "SuperSecret!123",
+		},
+	}
+	raw, _ := json.Marshal(putBody)
+	putReq := httptest.NewRequest(http.MethodPut, "/auth/identity/providers/ad", bytes.NewReader(raw))
+	putReq.Header.Set("Authorization", "Bearer "+adminToken)
+	putRR := httptest.NewRecorder()
+	h.ServeHTTP(putRR, putReq)
+	if putRR.Code != http.StatusOK {
+		t.Fatalf("upsert identity provider status=%d body=%s", putRR.Code, putRR.Body.String())
+	}
+
+	getReq := httptest.NewRequest(http.MethodGet, "/auth/identity/providers/ad", nil)
+	getReq.Header.Set("Authorization", "Bearer "+adminToken)
+	getRR := httptest.NewRecorder()
+	h.ServeHTTP(getRR, getReq)
+	if getRR.Code != http.StatusOK {
+		t.Fatalf("get identity provider status=%d body=%s", getRR.Code, getRR.Body.String())
+	}
+	var out map[string]any
+	_ = json.Unmarshal(getRR.Body.Bytes(), &out)
+	cfg, _ := out["config"].(map[string]any)
+	if cfg == nil {
+		t.Fatalf("missing config payload: %v", out)
+	}
+	if enabled, _ := cfg["enabled"].(bool); !enabled {
+		t.Fatalf("expected enabled=true: %v", cfg)
+	}
+	secretPresence, _ := cfg["secret_presence"].(map[string]any)
+	if present, _ := secretPresence["bind_password_set"].(bool); !present {
+		t.Fatalf("expected bind_password_set=true: %v", secretPresence)
+	}
+}
+
+func TestHandlerImportIdentityUsersFromPayload(t *testing.T) {
+	h, logic, store, _ := newTestHandler(t)
+	adminToken, _, err := logic.IssueJWT("t1", "tenant-admin", []string{"*"}, "admin-1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	role := TenantRole{
+		TenantID:    "t1",
+		RoleName:    "readonly",
+		Permissions: []string{"auth.self.read", "auth.user.read"},
+	}
+	if err := store.CreateTenantRole(context.Background(), role); err != nil && !errors.Is(err, errNotFound) {
+		t.Fatal(err)
+	}
+
+	importBody := map[string]any{
+		"provider": "ad",
+		"role":     "readonly",
+		"status":   "active",
+		"users": []map[string]any{
+			{
+				"external_id":  "CN=Alice,OU=Users,DC=example,DC=local",
+				"username":     "alice.ad",
+				"email":        "alice.ad@example.local",
+				"display_name": "Alice AD",
+			},
+		},
+	}
+	raw, _ := json.Marshal(importBody)
+	req := httptest.NewRequest(http.MethodPost, "/auth/identity/import/users", bytes.NewReader(raw))
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("import identity users status=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var out map[string]any
+	_ = json.Unmarshal(rr.Body.Bytes(), &out)
+	created, _ := out["created"].([]any)
+	if len(created) != 1 {
+		t.Fatalf("expected one created user, got %v body=%s", created, rr.Body.String())
+	}
+	users, err := store.ListUsers(context.Background(), "t1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, user := range users {
+		if strings.EqualFold(strings.TrimSpace(user.Username), "alice.ad") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected imported user alice.ad in tenant users: %+v", users)
 	}
 }

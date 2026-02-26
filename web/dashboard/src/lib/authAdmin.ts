@@ -46,6 +46,31 @@ export type TenantDeleteReadiness = {
   blockers?: TenantActivityBlocker[];
 };
 
+export type SystemServiceHealth = {
+  name: string;
+  status: string;
+  source?: string;
+  instances?: number;
+  output?: string;
+};
+
+export type SystemHealthSummary = {
+  total?: number;
+  running?: number;
+  degraded?: number;
+  down?: number;
+  unknown?: number;
+  all_ok?: boolean;
+};
+
+export type AuthSystemHealthSnapshot = {
+  summary?: SystemHealthSummary;
+  services?: SystemServiceHealth[];
+  collected_at?: string;
+  warning?: string;
+  request_id?: string;
+};
+
 export type PasswordPolicy = {
   tenant_id: string;
   min_length: number;
@@ -71,6 +96,28 @@ export type SecurityPolicy = {
   updated_at?: string;
 };
 
+export type CLIHSMOnboarding = {
+  workspace_root?: string;
+  workspace_incoming_dir?: string;
+  provider_library_dir?: string;
+  pkcs11_config_file?: string;
+  checksums_file?: string;
+  integration_service?: string;
+  supports_package_install?: boolean;
+  scp_upload_command?: string;
+  sftp_command?: string;
+  prepare_workspace_command?: string;
+  install_library_command?: string;
+  verify_checksum_command?: string;
+  verify_provider_command?: string;
+  list_partitions_command?: string;
+  run_vendor_utility_command?: string;
+  docker_copy_command?: string;
+  next_ui_step?: string;
+  security_notes?: string[];
+  pkcs11_config_template?: Record<string, unknown>;
+};
+
 export type CLIStatus = {
   enabled: boolean;
   cli_username: string;
@@ -79,6 +126,7 @@ export type CLIStatus = {
   transport: string;
   requires_additional_auth: boolean;
   default_cli_user_protected: boolean;
+  hsm_pkcs11_onboarding?: CLIHSMOnboarding;
 };
 
 export type CLISessionOpenResult = {
@@ -91,6 +139,74 @@ export type CLISessionOpenResult = {
   port: number;
   username: string;
   additional_auth: boolean;
+  hsm_pkcs11_onboarding?: CLIHSMOnboarding;
+};
+
+export type CLIHSMPartitionSlot = {
+  slot_id: string;
+  slot_name: string;
+  token_label?: string;
+  token_model?: string;
+  token_manufacturer?: string;
+  serial_number?: string;
+  token_present?: boolean;
+  partition?: string;
+};
+
+export type CLIHSMPartitionList = {
+  items: CLIHSMPartitionSlot[];
+  raw_output?: string;
+  library_path?: string;
+  service_name?: string;
+};
+
+export type HSMProviderConfig = {
+  tenant_id: string;
+  provider_name: string;
+  integration_service: string;
+  library_path: string;
+  slot_id: string;
+  partition_label: string;
+  token_label: string;
+  pin_env_var: string;
+  read_only: boolean;
+  enabled: boolean;
+  metadata?: Record<string, unknown>;
+  updated_by?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type IdentityProviderName = "ad" | "entra";
+
+export type IdentityProviderConfigView = {
+  tenant_id: string;
+  provider: IdentityProviderName;
+  enabled: boolean;
+  config?: Record<string, unknown>;
+  secret_presence?: Record<string, unknown>;
+  updated_by?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ExternalDirectoryUser = {
+  external_id: string;
+  username: string;
+  email: string;
+  display_name?: string;
+  source?: string;
+  dn?: string;
+};
+
+export type ExternalDirectoryGroup = {
+  external_id: string;
+  name: string;
+  description?: string;
+  source?: string;
+  dn?: string;
+  member_count?: number;
+  provider_name?: string;
 };
 
 type UsersResponse = { items: AuthUser[] };
@@ -98,6 +214,44 @@ type UserCreateResponse = { user_id: string };
 type StatusResponse = { status: string };
 type PolicyResponse = { policy: PasswordPolicy };
 type SecurityPolicyResponse = { policy: SecurityPolicy };
+type HSMProviderConfigResponse = {
+  config: HSMProviderConfig;
+  persisted?: boolean;
+};
+type CLIHSMPartitionListResponse = {
+  items?: CLIHSMPartitionSlot[];
+  raw_output?: string;
+  library_path?: string;
+  service_name?: string;
+};
+type IdentityProvidersResponse = { items: IdentityProviderConfigView[] };
+type IdentityProviderResponse = { config: IdentityProviderConfigView };
+type IdentityProviderTestResponse = {
+  status?: string;
+  provider?: IdentityProviderName;
+  result?: Record<string, unknown>;
+};
+type ExternalDirectoryUsersResponse = {
+  items?: ExternalDirectoryUser[];
+  provider?: IdentityProviderName;
+  tenant_id?: string;
+  request_id?: string;
+};
+type ExternalDirectoryGroupsResponse = {
+  items?: ExternalDirectoryGroup[];
+  provider?: IdentityProviderName;
+  tenant_id?: string;
+  request_id?: string;
+};
+type IdentityImportResponse = {
+  status?: string;
+  provider?: IdentityProviderName;
+  tenant_id?: string;
+  group_id?: string;
+  created?: Array<Record<string, unknown>>;
+  existing?: Array<Record<string, unknown>>;
+  failed?: Array<Record<string, unknown>>;
+};
 type TenantsResponse = { items: AuthTenant[] };
 type TenantCreateResponse = { status: string; tenant_id: string };
 type GroupRoleBindingsResponse = { items: GroupRoleBinding[] };
@@ -126,6 +280,14 @@ export async function listAuthUsers(session: AuthSession, tenantID?: string): Pr
 export async function listAuthTenants(session: AuthSession): Promise<AuthTenant[]> {
   const out = await serviceRequest<TenantsResponse>(session, "auth", "/tenants");
   return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getAuthSystemHealth(session: AuthSession): Promise<AuthSystemHealthSnapshot> {
+  const out = await serviceRequest<AuthSystemHealthSnapshot>(session, "auth", "/auth/system-health");
+  return {
+    ...out,
+    services: Array.isArray(out?.services) ? out.services : []
+  };
 }
 
 export async function createAuthTenant(
@@ -349,6 +511,245 @@ export async function openAuthCLISession(
     body: JSON.stringify({
       username: String(input.username || "").trim(),
       password: String(input.password || "")
+    })
+  });
+}
+
+export async function listAuthCLIHSMPartitions(
+  session: AuthSession,
+  libraryPath: string,
+  slotID?: string
+): Promise<CLIHSMPartitionList> {
+  const qp = new URLSearchParams();
+  qp.set("library_path", String(libraryPath || "").trim());
+  if (String(slotID || "").trim()) {
+    qp.set("slot_id", String(slotID || "").trim());
+  }
+  const out = await serviceRequest<CLIHSMPartitionListResponse>(
+    session,
+    "auth",
+    `/auth/cli/hsm/partitions?${qp.toString()}`
+  );
+  return {
+    items: Array.isArray(out?.items) ? out.items : [],
+    raw_output: String(out?.raw_output || ""),
+    library_path: String(out?.library_path || ""),
+    service_name: String(out?.service_name || "")
+  };
+}
+
+export async function getAuthCLIHSMConfig(session: AuthSession): Promise<HSMProviderConfig> {
+  const out = await serviceRequest<HSMProviderConfigResponse>(session, "auth", "/auth/cli/hsm/config");
+  return out?.config;
+}
+
+export async function upsertAuthCLIHSMConfig(
+  session: AuthSession,
+  input: Partial<HSMProviderConfig>
+): Promise<HSMProviderConfig> {
+  const out = await serviceRequest<HSMProviderConfigResponse>(session, "auth", "/auth/cli/hsm/config", {
+    method: "PUT",
+    body: JSON.stringify(input || {})
+  });
+  return out?.config;
+}
+
+export async function listAuthIdentityProviders(
+  session: AuthSession,
+  tenantID?: string
+): Promise<IdentityProviderConfigView[]> {
+  const targetTenant = String(tenantID || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
+  const out = await serviceRequest<IdentityProvidersResponse>(session, "auth", `/auth/identity/providers${qs}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getAuthIdentityProviderConfig(
+  session: AuthSession,
+  provider: IdentityProviderName,
+  tenantID?: string
+): Promise<IdentityProviderConfigView> {
+  const targetTenant = String(tenantID || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
+  const out = await serviceRequest<IdentityProviderResponse>(
+    session,
+    "auth",
+    `/auth/identity/providers/${encodeURIComponent(String(provider || "").trim())}${qs}`
+  );
+  return out?.config;
+}
+
+export async function upsertAuthIdentityProviderConfig(
+  session: AuthSession,
+  provider: IdentityProviderName,
+  input: {
+    tenant_id?: string;
+    enabled?: boolean;
+    config?: Record<string, unknown>;
+    secrets?: Record<string, unknown>;
+    clear_secrets?: string[];
+  }
+): Promise<IdentityProviderConfigView> {
+  const targetTenant = String(input?.tenant_id || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
+  const out = await serviceRequest<IdentityProviderResponse>(
+    session,
+    "auth",
+    `/auth/identity/providers/${encodeURIComponent(String(provider || "").trim())}${qs}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        tenant_id: targetTenant,
+        enabled: typeof input?.enabled === "boolean" ? Boolean(input.enabled) : undefined,
+        config: input?.config || {},
+        secrets: input?.secrets || {},
+        clear_secrets: Array.isArray(input?.clear_secrets) ? input.clear_secrets : []
+      })
+    }
+  );
+  return out?.config;
+}
+
+export async function testAuthIdentityProviderConfig(
+  session: AuthSession,
+  provider: IdentityProviderName,
+  input?: {
+    tenant_id?: string;
+    enabled?: boolean;
+    config?: Record<string, unknown>;
+    secrets?: Record<string, unknown>;
+    clear_secrets?: string[];
+  }
+): Promise<IdentityProviderTestResponse> {
+  const targetTenant = String(input?.tenant_id || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
+  return serviceRequest<IdentityProviderTestResponse>(
+    session,
+    "auth",
+    `/auth/identity/providers/${encodeURIComponent(String(provider || "").trim())}/test${qs}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        tenant_id: targetTenant,
+        enabled: typeof input?.enabled === "boolean" ? Boolean(input.enabled) : undefined,
+        config: input?.config || {},
+        secrets: input?.secrets || {},
+        clear_secrets: Array.isArray(input?.clear_secrets) ? input.clear_secrets : []
+      })
+    }
+  );
+}
+
+export async function listAuthIdentityProviderUsers(
+  session: AuthSession,
+  provider: IdentityProviderName,
+  input?: {
+    tenant_id?: string;
+    query?: string;
+    limit?: number;
+  }
+): Promise<ExternalDirectoryUser[]> {
+  const qs = new URLSearchParams();
+  const tenantID = String(input?.tenant_id || "").trim();
+  const query = String(input?.query || "").trim();
+  const limit = Number(input?.limit || 50);
+  if (tenantID) {
+    qs.set("tenant_id", tenantID);
+  }
+  if (query) {
+    qs.set("query", query);
+  }
+  if (Number.isFinite(limit) && limit > 0) {
+    qs.set("limit", String(limit));
+  }
+  const out = await serviceRequest<ExternalDirectoryUsersResponse>(
+    session,
+    "auth",
+    `/auth/identity/providers/${encodeURIComponent(String(provider || "").trim())}/users${qs.toString() ? `?${qs.toString()}` : ""}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function listAuthIdentityProviderGroups(
+  session: AuthSession,
+  provider: IdentityProviderName,
+  input?: {
+    tenant_id?: string;
+    query?: string;
+    limit?: number;
+  }
+): Promise<ExternalDirectoryGroup[]> {
+  const qs = new URLSearchParams();
+  const tenantID = String(input?.tenant_id || "").trim();
+  const query = String(input?.query || "").trim();
+  const limit = Number(input?.limit || 50);
+  if (tenantID) {
+    qs.set("tenant_id", tenantID);
+  }
+  if (query) {
+    qs.set("query", query);
+  }
+  if (Number.isFinite(limit) && limit > 0) {
+    qs.set("limit", String(limit));
+  }
+  const out = await serviceRequest<ExternalDirectoryGroupsResponse>(
+    session,
+    "auth",
+    `/auth/identity/providers/${encodeURIComponent(String(provider || "").trim())}/groups${qs.toString() ? `?${qs.toString()}` : ""}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function listAuthIdentityProviderGroupMembers(
+  session: AuthSession,
+  provider: IdentityProviderName,
+  groupID: string,
+  input?: {
+    tenant_id?: string;
+    limit?: number;
+  }
+): Promise<ExternalDirectoryUser[]> {
+  const qs = new URLSearchParams();
+  const tenantID = String(input?.tenant_id || "").trim();
+  const limit = Number(input?.limit || 500);
+  if (tenantID) {
+    qs.set("tenant_id", tenantID);
+  }
+  if (Number.isFinite(limit) && limit > 0) {
+    qs.set("limit", String(limit));
+  }
+  const out = await serviceRequest<ExternalDirectoryUsersResponse>(
+    session,
+    "auth",
+    `/auth/identity/providers/${encodeURIComponent(String(provider || "").trim())}/groups/${encodeURIComponent(String(groupID || "").trim())}/members${qs.toString() ? `?${qs.toString()}` : ""}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function importAuthIdentityUsers(
+  session: AuthSession,
+  input: {
+    tenant_id?: string;
+    provider: IdentityProviderName;
+    group_id?: string;
+    role?: string;
+    status?: string;
+    must_change_password?: boolean;
+    users?: ExternalDirectoryUser[];
+    limit?: number;
+  }
+): Promise<IdentityImportResponse> {
+  return serviceRequest<IdentityImportResponse>(session, "auth", "/auth/identity/import/users", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: String(input?.tenant_id || "").trim(),
+      provider: String(input?.provider || "").trim(),
+      group_id: String(input?.group_id || "").trim(),
+      role: String(input?.role || "").trim(),
+      status: String(input?.status || "").trim(),
+      must_change_password: Boolean(input?.must_change_password ?? true),
+      users: Array.isArray(input?.users) ? input.users : [],
+      limit: Number(input?.limit || 0)
     })
   });
 }

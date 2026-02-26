@@ -37,6 +37,8 @@ func createSQLiteSchema(conn *pkgdb.DB) error {
 		`CREATE TABLE auth_sessions (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, user_id TEXT NOT NULL, token_hash BLOB NOT NULL, ip_address TEXT, user_agent TEXT, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE auth_password_policies (tenant_id TEXT PRIMARY KEY, min_length INTEGER NOT NULL DEFAULT 12, max_length INTEGER NOT NULL DEFAULT 128, require_upper INTEGER NOT NULL DEFAULT 1, require_lower INTEGER NOT NULL DEFAULT 1, require_digit INTEGER NOT NULL DEFAULT 1, require_special INTEGER NOT NULL DEFAULT 1, require_no_whitespace INTEGER NOT NULL DEFAULT 1, deny_username INTEGER NOT NULL DEFAULT 1, deny_email_local_part INTEGER NOT NULL DEFAULT 1, min_unique_chars INTEGER NOT NULL DEFAULT 6, updated_by TEXT NOT NULL DEFAULT 'system', updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE auth_security_policies (tenant_id TEXT PRIMARY KEY, max_failed_attempts INTEGER NOT NULL DEFAULT 5, lockout_minutes INTEGER NOT NULL DEFAULT 15, idle_timeout_minutes INTEGER NOT NULL DEFAULT 15, updated_by TEXT NOT NULL DEFAULT 'system', updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
+		`CREATE TABLE auth_hsm_provider_configs (tenant_id TEXT PRIMARY KEY, provider_name TEXT NOT NULL DEFAULT 'customer-hsm', integration_service TEXT NOT NULL DEFAULT 'hsm-integration', library_path TEXT NOT NULL DEFAULT '', slot_id TEXT NOT NULL DEFAULT '', partition_label TEXT NOT NULL DEFAULT '', token_label TEXT NOT NULL DEFAULT '', pin_env_var TEXT NOT NULL DEFAULT 'HSM_PIN', read_only INTEGER NOT NULL DEFAULT 0, enabled INTEGER NOT NULL DEFAULT 0, metadata_json TEXT NOT NULL DEFAULT '{}', updated_by TEXT NOT NULL DEFAULT 'system', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
+		`CREATE TABLE auth_identity_provider_configs (tenant_id TEXT NOT NULL, provider TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 0, config_json TEXT NOT NULL DEFAULT '{}', secret_json TEXT NOT NULL DEFAULT '{}', updated_by TEXT NOT NULL DEFAULT 'system', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, provider));`,
 		`CREATE TABLE auth_group_role_bindings (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, role_name TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, group_id));`,
 		`CREATE TABLE key_access_group_members (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, user_id TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, group_id, user_id));`,
 		`CREATE TABLE approval_policies (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, scope TEXT NOT NULL, trigger_actions TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active');`,
@@ -417,6 +419,101 @@ VALUES ('pol-1','t-platform','kms-platform-governance-default','platform','["ten
 	}
 	if required {
 		t.Fatal("did not expect key.encrypt to require platform quorum")
+	}
+}
+
+func TestSQLStoreHSMProviderConfigRoundTrip(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	if err := s.CreateTenant(ctx, Tenant{ID: "t-hsm", Name: "HSM Tenant", Status: "active"}); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := s.GetHSMProviderConfig(ctx, "t-hsm")
+	if !errors.Is(err, errNotFound) {
+		t.Fatalf("expected errNotFound before upsert, got %v", err)
+	}
+
+	cfg := HSMProviderConfig{
+		TenantID:           "t-hsm",
+		ProviderName:       "customer-hsm",
+		IntegrationService: "hsm-integration",
+		LibraryPath:        "/var/lib/vecta/hsm/providers/t-hsm/provider/libVendor.so",
+		SlotID:             "0",
+		PartitionLabel:     "kms-prod",
+		TokenLabel:         "kms-prod",
+		PINEnvVar:          "HSM_PIN",
+		ReadOnly:           false,
+		Enabled:            true,
+		Metadata: map[string]any{
+			"source": "unit-test",
+		},
+		UpdatedBy: "tester",
+	}
+	updated, err := s.UpsertHSMProviderConfig(ctx, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.SlotID != "0" || updated.PartitionLabel != "kms-prod" || !updated.Enabled {
+		t.Fatalf("unexpected config after upsert: %+v", updated)
+	}
+	if updated.Metadata["source"] != "unit-test" {
+		t.Fatalf("metadata mismatch: %+v", updated.Metadata)
+	}
+
+	got, err := s.GetHSMProviderConfig(ctx, "t-hsm")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.LibraryPath != cfg.LibraryPath {
+		t.Fatalf("library_path mismatch got=%s want=%s", got.LibraryPath, cfg.LibraryPath)
+	}
+}
+
+func TestSQLStoreIdentityProviderConfigRoundTrip(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	if err := s.CreateTenant(ctx, Tenant{ID: "t-idp", Name: "Identity Tenant", Status: "active"}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := s.GetIdentityProviderConfig(ctx, "t-idp", "ad")
+	if !errors.Is(err, errNotFound) {
+		t.Fatalf("expected errNotFound before upsert, got %v", err)
+	}
+
+	input := IdentityProviderConfig{
+		TenantID: "t-idp",
+		Provider: "ad",
+		Enabled:  true,
+		Config: map[string]any{
+			"ldap_url": "ldaps://dc01.example.local:636",
+			"base_dn":  "DC=example,DC=local",
+		},
+		Secrets: map[string]any{
+			"bind_password": "super-secret",
+		},
+		UpdatedBy: "tester",
+	}
+	updated, err := s.UpsertIdentityProviderConfig(ctx, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !updated.Enabled || updated.Provider != "ad" {
+		t.Fatalf("unexpected config after upsert: %+v", updated)
+	}
+	if got, _ := updated.Config["ldap_url"].(string); got != "ldaps://dc01.example.local:636" {
+		t.Fatalf("unexpected ldap_url: %+v", updated.Config)
+	}
+	if got, _ := updated.Secrets["bind_password"].(string); got != "super-secret" {
+		t.Fatalf("unexpected secret map: %+v", updated.Secrets)
+	}
+
+	listed, err := s.ListIdentityProviderConfigs(ctx, "t-idp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 1 {
+		t.Fatalf("expected one provider config, got %d", len(listed))
 	}
 }
 

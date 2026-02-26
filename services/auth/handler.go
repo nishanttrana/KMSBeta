@@ -10,6 +10,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -81,6 +82,14 @@ func (h *Handler) routes() *http.ServeMux {
 
 	mux.HandleFunc("GET /auth/users", h.withAuth(h.handleListUsers, "auth.user.read"))
 	mux.HandleFunc("POST /auth/users", h.withAuth(h.handleCreateUser, "auth.user.write"))
+	mux.HandleFunc("GET /auth/identity/providers", h.withAuth(h.handleListIdentityProviderConfigs, "auth.user.read"))
+	mux.HandleFunc("GET /auth/identity/providers/{provider}", h.withAuth(h.handleGetIdentityProviderConfig, "auth.user.read"))
+	mux.HandleFunc("PUT /auth/identity/providers/{provider}", h.withAuth(h.handleUpsertIdentityProviderConfig, "auth.user.write"))
+	mux.HandleFunc("POST /auth/identity/providers/{provider}/test", h.withAuth(h.handleTestIdentityProviderConnection, "auth.user.write"))
+	mux.HandleFunc("GET /auth/identity/providers/{provider}/users", h.withAuth(h.handleListIdentityProviderUsers, "auth.user.read"))
+	mux.HandleFunc("GET /auth/identity/providers/{provider}/groups", h.withAuth(h.handleListIdentityProviderGroups, "auth.user.read"))
+	mux.HandleFunc("GET /auth/identity/providers/{provider}/groups/{id}/members", h.withAuth(h.handleListIdentityProviderGroupMembers, "auth.user.read"))
+	mux.HandleFunc("POST /auth/identity/import/users", h.withAuth(h.handleImportIdentityUsers, "auth.user.write"))
 	mux.HandleFunc("PUT /auth/users/{id}/role", h.withAuth(h.handleUpdateUserRole, "auth.user.write"))
 	mux.HandleFunc("PUT /auth/users/{id}/status", h.withAuth(h.handleUpdateUserStatus, "auth.user.write"))
 	mux.HandleFunc("POST /auth/users/{id}/reset-password", h.withAuth(h.handleResetUserPassword, "auth.user.write"))
@@ -93,6 +102,9 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("PUT /auth/security-policy", h.withAuth(h.handleUpdateSecurityPolicy, "auth.user.write"))
 	mux.HandleFunc("GET /auth/cli/status", h.withAuth(h.handleCLIStatus, "auth.user.read"))
 	mux.HandleFunc("POST /auth/cli/session", h.withAuth(h.handleCLISession, "auth.user.read"))
+	mux.HandleFunc("GET /auth/cli/hsm/config", h.withAuth(h.handleGetCLIHSMConfig, "auth.user.read"))
+	mux.HandleFunc("PUT /auth/cli/hsm/config", h.withAuth(h.handleUpdateCLIHSMConfig, "auth.user.write"))
+	mux.HandleFunc("GET /auth/cli/hsm/partitions", h.withAuth(h.handleCLIHSMPartitions, "auth.user.read"))
 	mux.HandleFunc("POST /auth/api-keys", h.withAuth(h.handleCreateAPIKey, "auth.api_key.write"))
 	mux.HandleFunc("DELETE /auth/api-keys/{id}", h.withAuth(h.handleDeleteAPIKey, "auth.api_key.write"))
 
@@ -967,7 +979,7 @@ func (h *Handler) handleDeleteTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "store_error", "failed to delete tenant", reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "store_error", fmt.Sprintf("failed to delete tenant: %v", err), reqID, tenantID)
 		return
 	}
 	if err := h.publishAudit(r.Context(), "audit.auth.tenant_deleted", reqID, tenantID, map[string]any{
@@ -1650,6 +1662,144 @@ func (h *Handler) handleUpdateSecurityPolicy(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, map[string]any{"policy": updated, "request_id": reqID})
 }
 
+func (h *Handler) handleGetCLIHSMConfig(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	if !isAdminRole(claims.Role) {
+		writeErr(w, http.StatusForbidden, "forbidden", "admin role required for HSM provider config", reqID, claims.TenantID)
+		return
+	}
+	hints := buildCLIHSMOnboardingHints(
+		claims.TenantID,
+		strings.TrimSpace(envOr("AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user")),
+		strings.TrimSpace(envOr("AUTH_CLI_HOST", "127.0.0.1")),
+		parseCLIPort(),
+	)
+	cfg, err := h.store.GetHSMProviderConfig(r.Context(), claims.TenantID)
+	persisted := true
+	if errors.Is(err, errNotFound) {
+		cfg = defaultHSMProviderConfig(claims.TenantID, hints)
+		persisted = false
+	} else if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to load HSM provider config", reqID, claims.TenantID)
+		return
+	}
+	cfg = normalizeHSMProviderConfig(cfg, claims.TenantID, hints)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"config":     cfg,
+		"persisted":  persisted,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleUpdateCLIHSMConfig(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	if !isAdminRole(claims.Role) {
+		writeErr(w, http.StatusForbidden, "forbidden", "admin role required for HSM provider config update", reqID, claims.TenantID)
+		return
+	}
+	hints := buildCLIHSMOnboardingHints(
+		claims.TenantID,
+		strings.TrimSpace(envOr("AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user")),
+		strings.TrimSpace(envOr("AUTH_CLI_HOST", "127.0.0.1")),
+		parseCLIPort(),
+	)
+	current, err := h.store.GetHSMProviderConfig(r.Context(), claims.TenantID)
+	if errors.Is(err, errNotFound) {
+		current = defaultHSMProviderConfig(claims.TenantID, hints)
+	} else if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to load current HSM provider config", reqID, claims.TenantID)
+		return
+	}
+	current = normalizeHSMProviderConfig(current, claims.TenantID, hints)
+
+	var req struct {
+		ProviderName       *string        `json:"provider_name"`
+		IntegrationService *string        `json:"integration_service"`
+		LibraryPath        *string        `json:"library_path"`
+		SlotID             *string        `json:"slot_id"`
+		PartitionLabel     *string        `json:"partition_label"`
+		TokenLabel         *string        `json:"token_label"`
+		PINEnvVar          *string        `json:"pin_env_var"`
+		ReadOnly           *bool          `json:"read_only"`
+		Enabled            *bool          `json:"enabled"`
+		Metadata           map[string]any `json:"metadata"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+
+	cfg := current
+	if req.ProviderName != nil {
+		cfg.ProviderName = strings.TrimSpace(*req.ProviderName)
+	}
+	if req.IntegrationService != nil {
+		cfg.IntegrationService = strings.TrimSpace(*req.IntegrationService)
+	}
+	if req.LibraryPath != nil {
+		cfg.LibraryPath = strings.TrimSpace(*req.LibraryPath)
+	}
+	if req.SlotID != nil {
+		cfg.SlotID = strings.TrimSpace(*req.SlotID)
+	}
+	if req.PartitionLabel != nil {
+		cfg.PartitionLabel = strings.TrimSpace(*req.PartitionLabel)
+	}
+	if req.TokenLabel != nil {
+		cfg.TokenLabel = strings.TrimSpace(*req.TokenLabel)
+	}
+	if req.PINEnvVar != nil {
+		cfg.PINEnvVar = strings.TrimSpace(*req.PINEnvVar)
+	}
+	if req.ReadOnly != nil {
+		cfg.ReadOnly = *req.ReadOnly
+	}
+	if req.Enabled != nil {
+		cfg.Enabled = *req.Enabled
+	}
+	if req.Metadata != nil {
+		cfg.Metadata = req.Metadata
+	}
+
+	cfg = normalizeHSMProviderConfig(cfg, claims.TenantID, hints)
+	if cfg.LibraryPath != "" && !strings.Contains(cfg.LibraryPath, "<pkcs11-library-file>") {
+		allowedPrefix := fmt.Sprintf("%s/%s/provider/", strings.TrimRight(strings.TrimSpace(envOr("AUTH_CLI_HSM_WORKSPACE_ROOT", "/var/lib/vecta/hsm/providers")), "/"), sanitizePathSegment(claims.TenantID))
+		if !strings.HasPrefix(cfg.LibraryPath, allowedPrefix) {
+			writeErr(w, http.StatusBadRequest, "bad_request", fmt.Sprintf("library_path must be within %s", allowedPrefix), reqID, claims.TenantID)
+			return
+		}
+		if strings.Contains(cfg.LibraryPath, "..") {
+			writeErr(w, http.StatusBadRequest, "bad_request", "library_path contains invalid path traversal sequence", reqID, claims.TenantID)
+			return
+		}
+	}
+	cfg.UpdatedBy = claims.UserID
+
+	updated, err := h.store.UpsertHSMProviderConfig(r.Context(), cfg)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to persist HSM provider config", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.cli_hsm_config_updated", reqID, claims.TenantID, map[string]any{
+		"provider_name":       updated.ProviderName,
+		"integration_service": updated.IntegrationService,
+		"library_path":        updated.LibraryPath,
+		"slot_id":             updated.SlotID,
+		"partition_label":     updated.PartitionLabel,
+		"enabled":             updated.Enabled,
+	}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"config":     updated,
+		"persisted":  true,
+		"request_id": reqID,
+	})
+}
+
 func (h *Handler) handleCLIStatus(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
@@ -1661,6 +1811,7 @@ func (h *Handler) handleCLIStatus(w http.ResponseWriter, r *http.Request) {
 	if user, err := h.store.GetUserByUsername(r.Context(), claims.TenantID, cliUsername); err == nil {
 		enabled = normalizeUserStatus(user.Status) == "active" && strings.EqualFold(strings.TrimSpace(user.Role), "cli-user")
 	}
+	hsmOnboarding := buildCLIHSMOnboardingHints(claims.TenantID, cliUsername, cliHost, cliPort)
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"enabled":                       enabled,
@@ -1672,6 +1823,7 @@ func (h *Handler) handleCLIStatus(w http.ResponseWriter, r *http.Request) {
 		"default_cli_user_protected":    true,
 		"request_id":                    reqID,
 		"fips_boundary_aware_transport": true,
+		"hsm_pkcs11_onboarding":         hsmOnboarding,
 	})
 }
 
@@ -1726,6 +1878,7 @@ func (h *Handler) handleCLISession(w http.ResponseWriter, r *http.Request) {
 	puttyURI := fmt.Sprintf("putty://%s@%s:%d", cliUsername, host, port)
 	sessionID := NewID("clisess")
 	expiresAt := time.Now().UTC().Add(5 * time.Minute)
+	hsmOnboarding := buildCLIHSMOnboardingHints(claims.TenantID, cliUsername, host, port)
 
 	if err := h.publishAudit(r.Context(), "audit.auth.cli_session_opened", reqID, claims.TenantID, map[string]any{
 		"initiator_user_id": claims.UserID,
@@ -1738,16 +1891,83 @@ func (h *Handler) handleCLISession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status":          "ok",
-		"cli_session_id":  sessionID,
-		"expires_at":      expiresAt.Format(time.RFC3339),
-		"putty_uri":       puttyURI,
-		"ssh_command":     sshCommand,
-		"host":            host,
-		"port":            port,
-		"username":        cliUsername,
-		"request_id":      reqID,
-		"additional_auth": true,
+		"status":                "ok",
+		"cli_session_id":        sessionID,
+		"expires_at":            expiresAt.Format(time.RFC3339),
+		"putty_uri":             puttyURI,
+		"ssh_command":           sshCommand,
+		"host":                  host,
+		"port":                  port,
+		"username":              cliUsername,
+		"request_id":            reqID,
+		"additional_auth":       true,
+		"hsm_pkcs11_onboarding": hsmOnboarding,
+	})
+}
+
+func (h *Handler) handleCLIHSMPartitions(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	if !isAdminRole(claims.Role) {
+		writeErr(w, http.StatusForbidden, "forbidden", "admin role required for HSM partition discovery", reqID, claims.TenantID)
+		return
+	}
+
+	libraryPath := strings.TrimSpace(r.URL.Query().Get("library_path"))
+	if libraryPath == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "library_path query parameter is required", reqID, claims.TenantID)
+		return
+	}
+	if strings.Contains(libraryPath, "<pkcs11-library-file>") {
+		writeErr(w, http.StatusBadRequest, "bad_request", "library_path must reference a concrete uploaded file", reqID, claims.TenantID)
+		return
+	}
+	if strings.Contains(libraryPath, "..") {
+		writeErr(w, http.StatusBadRequest, "bad_request", "library_path contains invalid path traversal sequence", reqID, claims.TenantID)
+		return
+	}
+
+	workspaceRoot := strings.TrimSpace(envOr("AUTH_CLI_HSM_WORKSPACE_ROOT", "/var/lib/vecta/hsm/providers"))
+	if workspaceRoot == "" {
+		workspaceRoot = "/var/lib/vecta/hsm/providers"
+	}
+	workspaceRoot = strings.TrimRight(workspaceRoot, "/")
+	tenantSlug := sanitizePathSegment(claims.TenantID)
+	allowedPrefix := fmt.Sprintf("%s/%s/provider/", workspaceRoot, tenantSlug)
+	if !strings.HasPrefix(libraryPath, allowedPrefix) {
+		writeErr(w, http.StatusBadRequest, "bad_request", fmt.Sprintf("library_path must be within %s", allowedPrefix), reqID, claims.TenantID)
+		return
+	}
+
+	serviceName := strings.TrimSpace(envOr("AUTH_CLI_HSM_SERVICE_NAME", "hsm-integration"))
+	slotID := strings.TrimSpace(r.URL.Query().Get("slot_id"))
+	cmd := []string{"/opt/vecta/hsm/scripts/list-partitions.sh", libraryPath}
+	if slotID != "" {
+		cmd = append(cmd, slotID)
+	}
+
+	rawOutput, err := h.execComposeServiceCommand(r.Context(), serviceName, cmd)
+	if err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "hsm_partition_discovery_failed", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	items := parsePKCS11Slots(rawOutput)
+
+	if err := h.publishAudit(r.Context(), "audit.auth.cli_hsm_partitions_listed", reqID, claims.TenantID, map[string]any{
+		"service_name": serviceName,
+		"library_path": libraryPath,
+		"slot_count":   len(items),
+	}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"items":        items,
+		"raw_output":   rawOutput,
+		"library_path": libraryPath,
+		"service_name": serviceName,
+		"request_id":   reqID,
 	})
 }
 
@@ -2204,6 +2424,348 @@ func parseCLIPort() int {
 		return 22
 	}
 	return port
+}
+
+var nonPathSafePattern = regexp.MustCompile(`[^a-z0-9._-]+`)
+var pkcs11SlotHeaderPattern = regexp.MustCompile(`(?i)^slot\s+([0-9a-fx]+)(?:\s*\([^)]*\))?\s*:\s*(.*)$`)
+var pkcs11TokenLabelPattern = regexp.MustCompile(`(?i)^token label\s*:\s*(.*)$`)
+var pkcs11TokenModelPattern = regexp.MustCompile(`(?i)^token model\s*:\s*(.*)$`)
+var pkcs11TokenManufacturerPattern = regexp.MustCompile(`(?i)^token manufacturer\s*:\s*(.*)$`)
+var pkcs11TokenSerialPattern = regexp.MustCompile(`(?i)^serial num\s*:\s*(.*)$`)
+
+type dockerExecCreateResponse struct {
+	ID string `json:"Id"`
+}
+
+type dockerExecInspectResponse struct {
+	Running  bool `json:"Running"`
+	ExitCode int  `json:"ExitCode"`
+}
+
+type cliPKCS11Slot struct {
+	SlotID            string `json:"slot_id"`
+	SlotName          string `json:"slot_name"`
+	TokenLabel        string `json:"token_label,omitempty"`
+	TokenModel        string `json:"token_model,omitempty"`
+	TokenManufacturer string `json:"token_manufacturer,omitempty"`
+	SerialNumber      string `json:"serial_number,omitempty"`
+	TokenPresent      bool   `json:"token_present"`
+	Partition         string `json:"partition,omitempty"`
+}
+
+func buildCLIHSMOnboardingHints(tenantID string, cliUsername string, host string, port int) map[string]any {
+	tenantSlug := sanitizePathSegment(tenantID)
+	workspaceRoot := strings.TrimSpace(envOr("AUTH_CLI_HSM_WORKSPACE_ROOT", "/var/lib/vecta/hsm/providers"))
+	if workspaceRoot == "" {
+		workspaceRoot = "/var/lib/vecta/hsm/providers"
+	}
+	workspaceRoot = strings.TrimRight(workspaceRoot, "/")
+	keycoreContainer := strings.TrimSpace(envOr("AUTH_CLI_HSM_KEYCORE_CONTAINER", "vecta-kms-keycore-1"))
+	integrationService := strings.TrimSpace(envOr("AUTH_CLI_HSM_SERVICE_NAME", "hsm-integration"))
+	incomingDir := fmt.Sprintf("%s/%s/incoming", workspaceRoot, tenantSlug)
+	providerDir := fmt.Sprintf("%s/%s/provider", workspaceRoot, tenantSlug)
+	configPath := fmt.Sprintf("%s/%s/pkcs11-provider.json", workspaceRoot, tenantSlug)
+	checksumPath := fmt.Sprintf("%s/%s/sha256sum.txt", workspaceRoot, tenantSlug)
+	pkcs11LibraryPath := fmt.Sprintf("%s/<pkcs11-library-file>", providerDir)
+	sshBase := fmt.Sprintf("%s@%s", strings.TrimSpace(cliUsername), strings.TrimSpace(host))
+	portFlag := ""
+	if port > 0 {
+		portFlag = fmt.Sprintf(" -P %d", port)
+	}
+	prepareCmd := fmt.Sprintf("mkdir -p %s %s && chmod 700 %s %s", incomingDir, providerDir, incomingDir, providerDir)
+	installCmd := fmt.Sprintf("sudo /opt/vecta/hsm/scripts/install-provider.sh %s %s/<pkcs11-library-file>", tenantSlug, incomingDir)
+	verifyCmd := fmt.Sprintf("sudo /opt/vecta/hsm/scripts/verify-provider.sh %s", pkcs11LibraryPath)
+	listPartitionsCmd := fmt.Sprintf("sudo /opt/vecta/hsm/scripts/list-partitions.sh %s", pkcs11LibraryPath)
+	return map[string]any{
+		"workspace_root":             workspaceRoot,
+		"workspace_incoming_dir":     incomingDir,
+		"provider_library_dir":       providerDir,
+		"pkcs11_config_file":         configPath,
+		"checksums_file":             checksumPath,
+		"integration_service":        integrationService,
+		"supports_package_install":   true,
+		"scp_upload_command":         fmt.Sprintf("scp%s <pkcs11-library-file> %s:%s/", portFlag, sshBase, incomingDir),
+		"sftp_command":               fmt.Sprintf("sftp%s %s", portFlag, sshBase),
+		"prepare_workspace_command":  prepareCmd,
+		"install_library_command":    installCmd,
+		"verify_checksum_command":    fmt.Sprintf("sha256sum %s | tee -a %s", pkcs11LibraryPath, checksumPath),
+		"verify_provider_command":    verifyCmd,
+		"list_partitions_command":    listPartitionsCmd,
+		"run_vendor_utility_command": listPartitionsCmd + " <slot-id>",
+		"docker_copy_command":        fmt.Sprintf("docker cp <pkcs11-library-file> %s:%s/", keycoreContainer, providerDir),
+		"next_ui_step":               "After partitions are listed, open HSM / Primus in dashboard and configure provider path, slot id, and token label.",
+		"security_notes": []string{
+			"Do not store HSM PIN in files; supply PIN via environment or secret manager only.",
+			"Restrict uploaded file permissions to root/app group and disable world read/execute.",
+			"Use vendor signed library packages and validate SHA-256 before activation.",
+			"Use the dedicated hsm-integration container for SSH/SCP and keep production keycore locked down.",
+		},
+		"pkcs11_config_template": map[string]any{
+			"provider_name": "customer-hsm",
+			"library_path":  pkcs11LibraryPath,
+			"slot_id":       0,
+			"token_label":   "kms-prod",
+			"pin_env_var":   "HSM_PIN",
+			"read_only":     false,
+		},
+	}
+}
+
+func sanitizePathSegment(raw string) string {
+	s := strings.ToLower(strings.TrimSpace(raw))
+	if s == "" {
+		return "tenant"
+	}
+	s = nonPathSafePattern.ReplaceAllString(s, "-")
+	s = strings.Trim(s, "-")
+	if s == "" {
+		return "tenant"
+	}
+	return s
+}
+
+func defaultHSMProviderConfig(tenantID string, hints map[string]any) HSMProviderConfig {
+	libraryPath := strings.TrimSpace(anyString(hints["pkcs11_config_template.library_path"]))
+	if libraryPath == "" {
+		if tpl, ok := hints["pkcs11_config_template"].(map[string]any); ok {
+			libraryPath = strings.TrimSpace(anyString(tpl["library_path"]))
+		}
+	}
+	return HSMProviderConfig{
+		TenantID:           strings.TrimSpace(tenantID),
+		ProviderName:       "customer-hsm",
+		IntegrationService: strings.TrimSpace(anyString(hints["integration_service"])),
+		LibraryPath:        libraryPath,
+		SlotID:             "",
+		PartitionLabel:     "",
+		TokenLabel:         "",
+		PINEnvVar:          "HSM_PIN",
+		ReadOnly:           false,
+		Enabled:            false,
+		Metadata:           map[string]any{},
+		UpdatedBy:          "system",
+	}
+}
+
+func normalizeHSMProviderConfig(cfg HSMProviderConfig, tenantID string, hints map[string]any) HSMProviderConfig {
+	out := cfg
+	out.TenantID = strings.TrimSpace(tenantID)
+	if strings.TrimSpace(out.ProviderName) == "" {
+		out.ProviderName = "customer-hsm"
+	}
+	if strings.TrimSpace(out.IntegrationService) == "" {
+		out.IntegrationService = strings.TrimSpace(anyString(hints["integration_service"]))
+		if out.IntegrationService == "" {
+			out.IntegrationService = "hsm-integration"
+		}
+	}
+	if strings.TrimSpace(out.PINEnvVar) == "" {
+		out.PINEnvVar = "HSM_PIN"
+	}
+	if out.Metadata == nil {
+		out.Metadata = map[string]any{}
+	}
+	out.LibraryPath = strings.TrimSpace(out.LibraryPath)
+	out.SlotID = strings.TrimSpace(out.SlotID)
+	out.PartitionLabel = strings.TrimSpace(out.PartitionLabel)
+	out.TokenLabel = strings.TrimSpace(out.TokenLabel)
+	if out.TokenLabel == "" && out.PartitionLabel != "" {
+		out.TokenLabel = out.PartitionLabel
+	}
+	if out.PartitionLabel == "" && out.TokenLabel != "" {
+		out.PartitionLabel = out.TokenLabel
+	}
+	return out
+}
+
+func anyString(v any) string {
+	if v == nil {
+		return ""
+	}
+	return fmt.Sprintf("%v", v)
+}
+
+func (h *Handler) execComposeServiceCommand(ctx context.Context, composeService string, cmd []string) (string, error) {
+	if h.healthChecker == nil {
+		return "", errors.New("system health checker not configured")
+	}
+	if h.healthChecker.restartHTTP == nil {
+		return "", errors.New("docker socket client not configured")
+	}
+	containerID, err := h.healthChecker.findComposeContainer(ctx, strings.TrimSpace(composeService))
+	if err != nil {
+		return "", err
+	}
+	output, exitCode, err := h.execDockerContainerCommand(ctx, containerID, cmd)
+	if err != nil {
+		return strings.TrimSpace(output), err
+	}
+	if exitCode != 0 {
+		return strings.TrimSpace(output), fmt.Errorf("command failed with exit code %d: %s", exitCode, strings.TrimSpace(output))
+	}
+	return strings.TrimSpace(output), nil
+}
+
+func (h *Handler) execDockerContainerCommand(ctx context.Context, containerID string, cmd []string) (string, int, error) {
+	payload := map[string]any{
+		"AttachStdout": true,
+		"AttachStderr": true,
+		"Tty":          true,
+		"Cmd":          cmd,
+		"User":         "root",
+	}
+	rawPayload, err := json.Marshal(payload)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to encode docker exec create payload: %w", err)
+	}
+	createPath := fmt.Sprintf("http://docker/containers/%s/exec", containerID)
+	createReq, err := http.NewRequestWithContext(ctx, http.MethodPost, createPath, strings.NewReader(string(rawPayload)))
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to build docker exec create request: %w", err)
+	}
+	createReq.Header.Set("Content-Type", "application/json")
+	createResp, err := h.healthChecker.restartHTTP.Do(createReq)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to create docker exec session: %w", err)
+	}
+	defer createResp.Body.Close() //nolint:errcheck
+	if createResp.StatusCode != http.StatusCreated {
+		return "", 0, fmt.Errorf("docker exec create failed (%d): %s", createResp.StatusCode, bodySnippet(createResp.Body))
+	}
+	var createOut dockerExecCreateResponse
+	if err := json.NewDecoder(createResp.Body).Decode(&createOut); err != nil {
+		return "", 0, fmt.Errorf("failed to decode docker exec create response: %w", err)
+	}
+	if strings.TrimSpace(createOut.ID) == "" {
+		return "", 0, errors.New("docker exec id is empty")
+	}
+
+	startPayload := `{"Detach":false,"Tty":true}`
+	startPath := fmt.Sprintf("http://docker/exec/%s/start", createOut.ID)
+	startReq, err := http.NewRequestWithContext(ctx, http.MethodPost, startPath, strings.NewReader(startPayload))
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to build docker exec start request: %w", err)
+	}
+	startReq.Header.Set("Content-Type", "application/json")
+	startResp, err := h.healthChecker.restartHTTP.Do(startReq)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to start docker exec session: %w", err)
+	}
+	defer startResp.Body.Close() //nolint:errcheck
+	if startResp.StatusCode != http.StatusOK {
+		return "", 0, fmt.Errorf("docker exec start failed (%d): %s", startResp.StatusCode, bodySnippet(startResp.Body))
+	}
+	rawOutput, readErr := io.ReadAll(startResp.Body)
+	if readErr != nil {
+		return "", 0, fmt.Errorf("failed to read docker exec output: %w", readErr)
+	}
+	output := strings.TrimSpace(string(rawOutput))
+
+	inspectOut, err := h.inspectDockerExec(ctx, createOut.ID)
+	if err != nil {
+		return output, 0, err
+	}
+	return output, inspectOut.ExitCode, nil
+}
+
+func (h *Handler) inspectDockerExec(ctx context.Context, execID string) (dockerExecInspectResponse, error) {
+	var out dockerExecInspectResponse
+	for i := 0; i < 20; i++ {
+		inspectPath := fmt.Sprintf("http://docker/exec/%s/json", execID)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, inspectPath, nil)
+		if err != nil {
+			return out, fmt.Errorf("failed to build docker exec inspect request: %w", err)
+		}
+		resp, err := h.healthChecker.restartHTTP.Do(req)
+		if err != nil {
+			return out, fmt.Errorf("docker exec inspect failed: %w", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			msg := bodySnippet(resp.Body)
+			_ = resp.Body.Close()
+			return out, fmt.Errorf("docker exec inspect failed (%d): %s", resp.StatusCode, msg)
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+			_ = resp.Body.Close()
+			return out, fmt.Errorf("failed to decode docker exec inspect response: %w", err)
+		}
+		_ = resp.Body.Close()
+		if !out.Running {
+			return out, nil
+		}
+		select {
+		case <-ctx.Done():
+			return out, ctx.Err()
+		case <-time.After(125 * time.Millisecond):
+		}
+	}
+	return out, errors.New("docker exec did not complete in time")
+}
+
+func parsePKCS11Slots(raw string) []cliPKCS11Slot {
+	lines := strings.Split(raw, "\n")
+	out := make([]cliPKCS11Slot, 0, 8)
+	var current *cliPKCS11Slot
+	flush := func() {
+		if current == nil {
+			return
+		}
+		if strings.TrimSpace(current.SlotName) == "" {
+			current.SlotName = "slot " + strings.TrimSpace(current.SlotID)
+		}
+		label := normalizePKCS11Field(current.TokenLabel)
+		current.TokenLabel = label
+		current.Partition = label
+		current.TokenPresent = label != ""
+		out = append(out, *current)
+		current = nil
+	}
+
+	for _, rawLine := range lines {
+		line := strings.TrimSpace(rawLine)
+		if line == "" {
+			continue
+		}
+		if m := pkcs11SlotHeaderPattern.FindStringSubmatch(line); m != nil {
+			flush()
+			current = &cliPKCS11Slot{
+				SlotID:   strings.TrimSpace(m[1]),
+				SlotName: strings.TrimSpace(m[2]),
+			}
+			continue
+		}
+		if current == nil {
+			continue
+		}
+		if m := pkcs11TokenLabelPattern.FindStringSubmatch(line); m != nil {
+			current.TokenLabel = normalizePKCS11Field(m[1])
+			continue
+		}
+		if m := pkcs11TokenModelPattern.FindStringSubmatch(line); m != nil {
+			current.TokenModel = normalizePKCS11Field(m[1])
+			continue
+		}
+		if m := pkcs11TokenManufacturerPattern.FindStringSubmatch(line); m != nil {
+			current.TokenManufacturer = normalizePKCS11Field(m[1])
+			continue
+		}
+		if m := pkcs11TokenSerialPattern.FindStringSubmatch(line); m != nil {
+			current.SerialNumber = normalizePKCS11Field(m[1])
+			continue
+		}
+	}
+	flush()
+	return out
+}
+
+func normalizePKCS11Field(raw string) string {
+	v := strings.TrimSpace(raw)
+	v = strings.Trim(v, "\"")
+	lv := strings.ToLower(v)
+	if lv == "" || lv == "<empty>" || lv == "n/a" || lv == "(null)" || lv == "none" {
+		return ""
+	}
+	return v
 }
 
 func (h *Handler) resolvePasswordPolicy(ctx context.Context, tenantID string) (PasswordPolicy, error) {
