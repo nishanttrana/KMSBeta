@@ -337,6 +337,7 @@ import {
   listGovernanceBackups,
   listGovernancePolicies,
   listGovernanceRequests,
+  restoreGovernanceBackup,
   testGovernanceSMTP,
   testGovernanceWebhook,
   updateGovernancePolicy,
@@ -17446,6 +17447,11 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
   const [backupTarget,setBackupTarget]=useState("local");
   const [backupRetentionDays,setBackupRetentionDays]=useState(30);
   const [backupEncrypted,setBackupEncrypted]=useState(true);
+  const [restoreArtifactFileName,setRestoreArtifactFileName]=useState("");
+  const [restoreArtifactFileBase64,setRestoreArtifactFileBase64]=useState("");
+  const [restoreKeyFileName,setRestoreKeyFileName]=useState("");
+  const [restoreKeyFileBase64,setRestoreKeyFileBase64]=useState("");
+  const [backupRestoring,setBackupRestoring]=useState(false);
   const [accessSettings,setAccessSettings]=useState<any>(null);
   const [accessSettingsLoading,setAccessSettingsLoading]=useState(false);
   const [accessSettingsSaving,setAccessSettingsSaving]=useState(false);
@@ -17924,6 +17930,68 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     }
   };
 
+  const readFileAsBase64=(file:File):Promise<string>=>{
+    return new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=()=>{
+        try{
+          const raw=String(reader.result||"");
+          const idx=raw.indexOf(",");
+          resolve(idx>=0?raw.slice(idx+1):raw);
+        }catch(error){
+          reject(error);
+        }
+      };
+      reader.onerror=()=>reject(new Error("Unable to read file."));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const isValidBackupArtifactName=(name:string)=>String(name||"").trim().toLowerCase().endsWith(".vbk");
+  const isValidBackupKeyName=(name:string)=>String(name||"").trim().toLowerCase().endsWith(".key.json");
+
+  const onRestoreArtifactSelected=async(file:File|null)=>{
+    if(!file){
+      setRestoreArtifactFileName("");
+      setRestoreArtifactFileBase64("");
+      return;
+    }
+    if(!isValidBackupArtifactName(file.name)){
+      onToast?.("Restore artifact must use .vbk extension.");
+      setRestoreArtifactFileName("");
+      setRestoreArtifactFileBase64("");
+      return;
+    }
+    try{
+      const b64=await readFileAsBase64(file);
+      setRestoreArtifactFileName(String(file.name||""));
+      setRestoreArtifactFileBase64(String(b64||""));
+    }catch{
+      onToast?.("Unable to read backup artifact file.");
+    }
+  };
+
+  const onRestoreKeySelected=async(file:File|null)=>{
+    if(!file){
+      setRestoreKeyFileName("");
+      setRestoreKeyFileBase64("");
+      return;
+    }
+    if(!isValidBackupKeyName(file.name)){
+      onToast?.("Backup key file must use .key.json extension.");
+      setRestoreKeyFileName("");
+      setRestoreKeyFileBase64("");
+      return;
+    }
+    try{
+      const b64=await readFileAsBase64(file);
+      setRestoreKeyFileName(String(file.name||""));
+      setRestoreKeyFileBase64(String(b64||""));
+    }catch{
+      onToast?.("Unable to read backup key file.");
+    }
+  };
+
   const loadBackupJobs=async(silent=false)=>{
     if(!session?.token){
       setBackupJobs([]);
@@ -18036,6 +18104,52 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       onToast?.(`Backup key download failed: ${errMsg(error)}`);
     }finally{
       setBackupDownloading("");
+    }
+  };
+
+  const restoreBackupFromUpload=async()=>{
+    if(!session?.token){
+      return;
+    }
+    const artifactName=String(restoreArtifactFileName||"").trim();
+    const keyName=String(restoreKeyFileName||"").trim();
+    const artifactContent=String(restoreArtifactFileBase64||"").trim();
+    const keyContent=String(restoreKeyFileBase64||"").trim();
+    if(!artifactName||!artifactContent){
+      onToast?.("Select a .vbk backup artifact to restore.");
+      return;
+    }
+    if(!keyName||!keyContent){
+      onToast?.("Select a .key.json backup key package to restore.");
+      return;
+    }
+    if(!isValidBackupArtifactName(artifactName)||!isValidBackupKeyName(keyName)){
+      onToast?.("Invalid backup file extension. Required: .vbk and .key.json.");
+      return;
+    }
+    const proceed=window.confirm("Restore will overwrite KMS data from backup scope and cannot be undone. Continue?");
+    if(!proceed){
+      return;
+    }
+    setBackupRestoring(true);
+    try{
+      const out=await restoreGovernanceBackup(session,{
+        artifact_file_name:artifactName,
+        artifact_content_base64:artifactContent,
+        key_file_name:keyName,
+        key_content_base64:keyContent,
+        created_by:session?.username||"dashboard"
+      });
+      onToast?.(`Restore completed: ${Number(out?.tables_processed||0)} tables, ${Number(out?.rows_restored||0)} rows restored.`);
+      setRestoreArtifactFileName("");
+      setRestoreArtifactFileBase64("");
+      setRestoreKeyFileName("");
+      setRestoreKeyFileBase64("");
+      await loadBackupJobs(true);
+    }catch(error){
+      onToast?.(`Backup restore failed: ${errMsg(error)}`);
+    }finally{
+      setBackupRestoring(false);
     }
   };
 
@@ -18301,6 +18415,10 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
   useEffect(()=>{
     if(m==="backup"){
       setBackupTargetTenant(String(session?.tenantId||""));
+      setRestoreArtifactFileName("");
+      setRestoreArtifactFileBase64("");
+      setRestoreKeyFileName("");
+      setRestoreKeyFileBase64("");
       void loadBackupJobs(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -18736,6 +18854,32 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
         <Chk label="Bind backup key package to HSM configuration when available" checked={Boolean(backupBindToHSM)} onChange={()=>setBackupBindToHSM((v)=>!v)}/>
         <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
           <Btn primary onClick={()=>void createBackupNow()} disabled={backupCreating}>{backupCreating?"Creating...":"Create Backup"}</Btn>
+        </div>
+      </FG>
+    </div>
+
+    <div style={{marginTop:12,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
+      <FG label="Restore From Backup Upload" hint="Upload approved .vbk artifact and matching .key.json package. Logs/audits/alerts are excluded from restore.">
+        <Row2>
+          <FG label="Backup Artifact (.vbk)">
+            <Inp
+              type="file"
+              accept=".vbk"
+              onChange={(e)=>void onRestoreArtifactSelected((e.target as HTMLInputElement).files?.[0]||null)}
+            />
+            {restoreArtifactFileName?<div style={{fontSize:9,color:C.muted,marginTop:4}}>{restoreArtifactFileName}</div>:null}
+          </FG>
+          <FG label="Backup Key (.key.json)">
+            <Inp
+              type="file"
+              accept=".key.json,application/json"
+              onChange={(e)=>void onRestoreKeySelected((e.target as HTMLInputElement).files?.[0]||null)}
+            />
+            {restoreKeyFileName?<div style={{fontSize:9,color:C.muted,marginTop:4}}>{restoreKeyFileName}</div>:null}
+          </FG>
+        </Row2>
+        <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
+          <Btn danger onClick={()=>void restoreBackupFromUpload()} disabled={backupRestoring}>{backupRestoring?"Restoring...":"Restore Backup"}</Btn>
         </div>
       </FG>
     </div>

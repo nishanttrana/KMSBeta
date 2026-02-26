@@ -103,6 +103,16 @@ export type GovernanceBackupJob = {
   failure_reason?: string;
 };
 
+export type GovernanceRestoreBackupResult = {
+  scope: "system" | "tenant" | string;
+  target_tenant_id?: string;
+  rows_restored: number;
+  tables_processed: number;
+  tables_skipped?: string[];
+  excluded_tables?: string[];
+  backup_captured_at?: string;
+};
+
 export async function getGovernanceSettings(session: AuthSession): Promise<GovernanceSettings> {
   const out = await serviceRequest<{ settings: GovernanceSettings }>(
     session,
@@ -208,6 +218,30 @@ export async function downloadGovernanceBackupKey(
     `/governance/backups/${encodeURIComponent(String(backupID || "").trim())}/key?tenant_id=${encodeURIComponent(session.tenantId)}`
   );
   return out.artifact;
+}
+
+export async function restoreGovernanceBackup(
+  session: AuthSession,
+  input: {
+    artifact_file_name: string;
+    artifact_content_base64: string;
+    key_file_name: string;
+    key_content_base64: string;
+    created_by?: string;
+  }
+): Promise<GovernanceRestoreBackupResult> {
+  const out = await serviceRequest<{ result: GovernanceRestoreBackupResult }>(session, "governance", "/governance/backups/restore", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      artifact_file_name: String(input.artifact_file_name || "").trim(),
+      artifact_content_base64: String(input.artifact_content_base64 || "").trim(),
+      key_file_name: String(input.key_file_name || "").trim(),
+      key_content_base64: String(input.key_content_base64 || "").trim(),
+      created_by: String(input.created_by || "").trim()
+    })
+  });
+  return out.result;
 }
 
 export async function listGovernancePolicies(

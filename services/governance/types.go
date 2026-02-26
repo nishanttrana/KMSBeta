@@ -216,3 +216,22 @@ type BackupJob struct {
 	ArtifactNonce         []byte                 `json:"-"`
 	KeyPackageRaw         []byte                 `json:"-"`
 }
+
+type RestoreBackupInput struct {
+	TenantID            string `json:"tenant_id"`
+	ArtifactFileName    string `json:"artifact_file_name"`
+	ArtifactContentBase string `json:"artifact_content_base64"`
+	KeyFileName         string `json:"key_file_name"`
+	KeyContentBase      string `json:"key_content_base64"`
+	CreatedBy           string `json:"created_by"`
+}
+
+type RestoreBackupResult struct {
+	Scope            string   `json:"scope"`
+	TargetTenantID   string   `json:"target_tenant_id,omitempty"`
+	RowsRestored     int64    `json:"rows_restored"`
+	TablesProcessed  int      `json:"tables_processed"`
+	TablesSkipped    []string `json:"tables_skipped,omitempty"`
+	ExcludedTables   []string `json:"excluded_tables,omitempty"`
+	BackupCapturedAt string   `json:"backup_captured_at,omitempty"`
+}

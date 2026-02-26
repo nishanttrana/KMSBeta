@@ -33,6 +33,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /governance/settings/webhook/test", h.handleTestWebhook)
 	mux.HandleFunc("GET /governance/backups", h.handleListBackups)
 	mux.HandleFunc("POST /governance/backups", h.handleCreateBackup)
+	mux.HandleFunc("POST /governance/backups/restore", h.handleRestoreBackup)
 	mux.HandleFunc("GET /governance/backups/{id}", h.handleGetBackup)
 	mux.HandleFunc("GET /governance/backups/{id}/artifact", h.handleDownloadBackupArtifact)
 	mux.HandleFunc("GET /governance/backups/{id}/key", h.handleDownloadBackupKey)
@@ -186,6 +187,30 @@ func (h *Handler) handleCreateBackup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) handleRestoreBackup(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var in RestoreBackupInput
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	if strings.TrimSpace(in.TenantID) == "" {
+		in.TenantID = strings.TrimSpace(r.URL.Query().Get("tenant_id"))
+	}
+	if strings.TrimSpace(in.TenantID) == "" {
+		in.TenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	}
+	out, err := h.svc.RestoreBackup(r.Context(), in)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "backup_restore_failed", err.Error(), reqID, in.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"result":     out,
+		"request_id": reqID,
+	})
+}
+
 func (h *Handler) handleListBackups(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	tenantID := mustTenant(r, w, reqID)
@@ -265,7 +290,7 @@ func (h *Handler) handleDownloadBackupKey(w http.ResponseWriter, r *http.Request
 	}
 	fileName := strings.TrimSpace(fmt.Sprintf("%v", content["file_name"]))
 	if fileName == "" {
-		fileName = fmt.Sprintf("vecta-backup-%s.key.json", strings.TrimSpace(r.PathValue("id")))
+		fileName = fmt.Sprintf("vecta-backup-%s%s", strings.TrimSpace(r.PathValue("id")), backupKeyExtension)
 	}
 	raw, _ := json.Marshal(content["key_package"])
 	content["content_base64"] = base64.StdEncoding.EncodeToString(raw)

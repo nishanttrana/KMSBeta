@@ -5883,6 +5883,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "governance-post-governance-backups-restore",
+    "group": "Governance (governance)",
+    "title": "POST /governance/backups/restore",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/backups/restore?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "POST /svc/governance/governance/backups/restore?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "governance-post-governance-key-approval",
     "group": "Governance (governance)",
     "title": "POST /governance/key-approval",

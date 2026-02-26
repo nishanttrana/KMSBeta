@@ -26,6 +26,9 @@ const (
 	backupScopeTenant = "tenant"
 
 	backupFormatJSONGzAESGCM = "json.gz+aes256gcm"
+	backupArtifactVersion    = "v1"
+	backupArtifactExtension  = ".vbk"
+	backupKeyExtension       = ".key.json"
 )
 
 type backupHSMBinding struct {
@@ -47,6 +50,19 @@ type backupSnapshotPayload struct {
 	TargetTenantID  string                     `json:"target_tenant_id,omitempty"`
 	TableRowCounts  map[string]int64           `json:"table_row_counts"`
 	Tables          map[string]json.RawMessage `json:"tables"`
+}
+
+type backupArtifactEnvelope struct {
+	Version          string `json:"version"`
+	Encryption       string `json:"encryption"`
+	BackupFormat     string `json:"backup_format"`
+	Scope            string `json:"scope"`
+	RequestTenantID  string `json:"request_tenant_id"`
+	TargetTenantID   string `json:"target_tenant_id,omitempty"`
+	CapturedAt       string `json:"captured_at,omitempty"`
+	CiphertextB64    string `json:"ciphertext_base64"`
+	NonceB64         string `json:"nonce_base64"`
+	CiphertextSHA256 string `json:"ciphertext_sha256,omitempty"`
 }
 
 func normalizeBackupScope(raw string) string {
@@ -106,7 +122,6 @@ func (s *Service) CreateBackup(ctx context.Context, in CreateBackupInput) (Backu
 		"tenant_id":        in.TenantID,
 		"target_tenant_id": targetTenantID,
 		"format":           backupFormatJSONGzAESGCM,
-		"captured_at":      time.Now().UTC().Format(time.RFC3339Nano),
 	})
 	if err != nil {
 		return BackupJob{}, err
@@ -220,10 +235,26 @@ func (s *Service) GetBackupArtifactDownload(ctx context.Context, tenantID string
 	if len(item.ArtifactCiphertext) == 0 {
 		return nil, errors.New("backup artifact is empty")
 	}
+	envelope := backupArtifactEnvelope{
+		Version:          backupArtifactVersion,
+		Encryption:       item.EncryptionAlgorithm,
+		BackupFormat:     item.BackupFormat,
+		Scope:            item.Scope,
+		RequestTenantID:  item.TenantID,
+		TargetTenantID:   item.TargetTenantID,
+		CapturedAt:       item.CompletedAt.UTC().Format(time.RFC3339Nano),
+		CiphertextB64:    base64.StdEncoding.EncodeToString(item.ArtifactCiphertext),
+		NonceB64:         base64.StdEncoding.EncodeToString(item.ArtifactNonce),
+		CiphertextSHA256: item.CiphertextSHA256,
+	}
+	envelopeRaw, err := json.Marshal(envelope)
+	if err != nil {
+		return nil, err
+	}
 	return map[string]interface{}{
-		"file_name":            fmt.Sprintf("vecta-backup-%s.vbk", item.ID),
+		"file_name":            fmt.Sprintf("vecta-backup-%s%s", item.ID, backupArtifactExtension),
 		"content_type":         "application/octet-stream",
-		"content_base64":       base64.StdEncoding.EncodeToString(item.ArtifactCiphertext),
+		"content_base64":       base64.StdEncoding.EncodeToString(envelopeRaw),
 		"nonce_base64":         base64.StdEncoding.EncodeToString(item.ArtifactNonce),
 		"ciphertext_sha256":    item.CiphertextSHA256,
 		"backup_format":        item.BackupFormat,
@@ -248,11 +279,270 @@ func (s *Service) GetBackupKeyDownload(ctx context.Context, tenantID string, bac
 	if err := json.Unmarshal(item.KeyPackageRaw, &keyPackage); err != nil {
 		return nil, err
 	}
+	if keyPackage == nil {
+		keyPackage = map[string]interface{}{}
+	}
+	if len(item.ArtifactNonce) > 0 {
+		keyPackage["backup_artifact_nonce_b64"] = base64.StdEncoding.EncodeToString(item.ArtifactNonce)
+	}
+	if strings.TrimSpace(item.BackupFormat) != "" {
+		keyPackage["backup_format"] = item.BackupFormat
+	}
+	keyPackage["backup_scope"] = item.Scope
+	if strings.TrimSpace(item.TargetTenantID) != "" {
+		keyPackage["target_tenant_id"] = item.TargetTenantID
+	}
 	return map[string]interface{}{
-		"file_name":    fmt.Sprintf("vecta-backup-%s.key.json", item.ID),
+		"file_name":    fmt.Sprintf("vecta-backup-%s%s", item.ID, backupKeyExtension),
 		"content_type": "application/json",
 		"key_package":  keyPackage,
 	}, nil
+}
+
+func (s *Service) RestoreBackup(ctx context.Context, in RestoreBackupInput) (RestoreBackupResult, error) {
+	store, ok := s.store.(*SQLStore)
+	if !ok || store == nil || store.db == nil || store.db.SQL() == nil {
+		return RestoreBackupResult{}, errors.New("backup store is unavailable")
+	}
+	in.TenantID = strings.TrimSpace(in.TenantID)
+	in.ArtifactFileName = strings.TrimSpace(in.ArtifactFileName)
+	in.KeyFileName = strings.TrimSpace(in.KeyFileName)
+	if in.TenantID == "" {
+		return RestoreBackupResult{}, errors.New("tenant_id is required")
+	}
+	if !hasApprovedBackupArtifactName(in.ArtifactFileName) {
+		return RestoreBackupResult{}, fmt.Errorf("artifact file must use %s extension", backupArtifactExtension)
+	}
+	if !hasApprovedBackupKeyName(in.KeyFileName) {
+		return RestoreBackupResult{}, fmt.Errorf("key file must use %s extension", backupKeyExtension)
+	}
+	artifactRaw, err := decodeBase64Payload(in.ArtifactContentBase)
+	if err != nil {
+		return RestoreBackupResult{}, fmt.Errorf("invalid backup artifact: %w", err)
+	}
+	keyRaw, err := decodeBase64Payload(in.KeyContentBase)
+	if err != nil {
+		return RestoreBackupResult{}, fmt.Errorf("invalid backup key package: %w", err)
+	}
+	var keyPackage map[string]interface{}
+	if err := json.Unmarshal(keyRaw, &keyPackage); err != nil {
+		return RestoreBackupResult{}, errors.New("backup key package is not valid JSON")
+	}
+	var envelope backupArtifactEnvelope
+	var ciphertext []byte
+	var nonce []byte
+	if err := json.Unmarshal(artifactRaw, &envelope); err == nil {
+		if strings.TrimSpace(envelope.CiphertextB64) == "" || strings.TrimSpace(envelope.NonceB64) == "" {
+			return RestoreBackupResult{}, errors.New("backup artifact is missing required encryption fields")
+		}
+		ciphertext, err = base64.StdEncoding.DecodeString(strings.TrimSpace(envelope.CiphertextB64))
+		if err != nil {
+			return RestoreBackupResult{}, fmt.Errorf("invalid backup ciphertext: %w", err)
+		}
+		nonce, err = base64.StdEncoding.DecodeString(strings.TrimSpace(envelope.NonceB64))
+		if err != nil {
+			return RestoreBackupResult{}, fmt.Errorf("invalid backup nonce: %w", err)
+		}
+	} else {
+		// Compatibility mode: previous .vbk files stored raw ciphertext only.
+		ciphertext = artifactRaw
+		nonceRaw := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["backup_artifact_nonce_b64"]))
+		if nonceRaw == "" {
+			return RestoreBackupResult{}, errors.New("backup artifact format is invalid (missing nonce for legacy artifact)")
+		}
+		nonce, err = base64.StdEncoding.DecodeString(nonceRaw)
+		if err != nil {
+			return RestoreBackupResult{}, fmt.Errorf("invalid backup nonce in key package: %w", err)
+		}
+		envelope = backupArtifactEnvelope{
+			Version:         backupArtifactVersion,
+			BackupFormat:    strings.TrimSpace(fmt.Sprintf("%v", keyPackage["backup_format"])),
+			Scope:           strings.TrimSpace(fmt.Sprintf("%v", keyPackage["backup_scope"])),
+			RequestTenantID: strings.TrimSpace(fmt.Sprintf("%v", keyPackage["request_tenant_id"])),
+			TargetTenantID:  strings.TrimSpace(fmt.Sprintf("%v", keyPackage["target_tenant_id"])),
+		}
+	}
+	backupKey, err := s.resolveRestoreBackupKey(ctx, store, in.TenantID, keyPackage)
+	if err != nil {
+		return RestoreBackupResult{}, err
+	}
+	scope := normalizeBackupScope(envelope.Scope)
+	if scope == "" {
+		scope = backupScopeSystem
+	}
+	requestTenantID := strings.TrimSpace(envelope.RequestTenantID)
+	if requestTenantID == "" {
+		requestTenantID = in.TenantID
+	}
+	targetTenantID := strings.TrimSpace(envelope.TargetTenantID)
+	if scope == backupScopeTenant && targetTenantID == "" {
+		targetTenantID = requestTenantID
+	}
+	if scope == backupScopeSystem {
+		targetTenantID = ""
+	}
+	backupFormat := strings.TrimSpace(envelope.BackupFormat)
+	if backupFormat == "" {
+		backupFormat = backupFormatJSONGzAESGCM
+	}
+	if backupFormat != backupFormatJSONGzAESGCM {
+		return RestoreBackupResult{}, fmt.Errorf("unsupported backup format: %s", backupFormat)
+	}
+	aad, err := json.Marshal(map[string]interface{}{
+		"service":          "governance",
+		"scope":            scope,
+		"tenant_id":        requestTenantID,
+		"target_tenant_id": targetTenantID,
+		"format":           backupFormat,
+	})
+	if err != nil {
+		return RestoreBackupResult{}, err
+	}
+	plaintext, err := decryptAESGCM(ciphertext, backupKey, nonce, aad)
+	if err != nil {
+		legacyAAD := map[string]interface{}{
+			"service":          "governance",
+			"scope":            scope,
+			"tenant_id":        requestTenantID,
+			"target_tenant_id": targetTenantID,
+			"format":           backupFormat,
+			"captured_at":      strings.TrimSpace(envelope.CapturedAt),
+		}
+		legacyAADRaw, _ := json.Marshal(legacyAAD)
+		plaintext, err = decryptAESGCM(ciphertext, backupKey, nonce, legacyAADRaw)
+		if err != nil {
+			plaintext, err = decryptAESGCM(ciphertext, backupKey, nonce, nil)
+			if err != nil {
+				return RestoreBackupResult{}, errors.New("backup decryption failed: invalid key package or artifact")
+			}
+		}
+	}
+	gzReader, err := gzip.NewReader(bytes.NewReader(plaintext))
+	if err != nil {
+		return RestoreBackupResult{}, fmt.Errorf("backup payload is not gzip content: %w", err)
+	}
+	defer gzReader.Close() //nolint:errcheck
+	uncompressed, err := io.ReadAll(gzReader)
+	if err != nil {
+		return RestoreBackupResult{}, err
+	}
+	var snapshot backupSnapshotPayload
+	if err := json.Unmarshal(uncompressed, &snapshot); err != nil {
+		return RestoreBackupResult{}, errors.New("backup payload JSON is invalid")
+	}
+	snapshotScope := normalizeBackupScope(snapshot.Scope)
+	if snapshotScope == "" {
+		snapshotScope = scope
+	}
+	snapshotTargetTenantID := strings.TrimSpace(snapshot.TargetTenantID)
+	if snapshotScope == backupScopeTenant && snapshotTargetTenantID == "" {
+		snapshotTargetTenantID = targetTenantID
+	}
+	if snapshotScope == backupScopeSystem {
+		snapshotTargetTenantID = ""
+	}
+	rowsRestored, tablesProcessed, tablesSkipped, excludedTables, err := store.restoreSnapshot(ctx, snapshotScope, snapshotTargetTenantID, snapshot.Tables)
+	if err != nil {
+		return RestoreBackupResult{}, err
+	}
+	createdBy := strings.TrimSpace(in.CreatedBy)
+	if createdBy == "" {
+		createdBy = "system"
+	}
+	_ = s.publishAudit(ctx, "audit.governance.backup_restored", in.TenantID, map[string]interface{}{
+		"scope":            snapshotScope,
+		"target_tenant_id": snapshotTargetTenantID,
+		"rows_restored":    rowsRestored,
+		"tables_processed": tablesProcessed,
+		"tables_skipped":   tablesSkipped,
+		"excluded_tables":  excludedTables,
+		"restored_by":      createdBy,
+	})
+	return RestoreBackupResult{
+		Scope:            snapshotScope,
+		TargetTenantID:   snapshotTargetTenantID,
+		RowsRestored:     rowsRestored,
+		TablesProcessed:  tablesProcessed,
+		TablesSkipped:    tablesSkipped,
+		ExcludedTables:   excludedTables,
+		BackupCapturedAt: strings.TrimSpace(snapshot.CapturedAt),
+	}, nil
+}
+
+func (s *Service) resolveRestoreBackupKey(ctx context.Context, store *SQLStore, tenantID string, keyPackage map[string]interface{}) ([]byte, error) {
+	mode := strings.TrimSpace(strings.ToLower(fmt.Sprintf("%v", keyPackage["mode"])))
+	switch mode {
+	case "software":
+		raw := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["backup_key_b64"]))
+		if raw == "" {
+			return nil, errors.New("backup key package is missing backup_key_b64")
+		}
+		key, err := base64.StdEncoding.DecodeString(raw)
+		if err != nil {
+			return nil, err
+		}
+		if len(key) != 32 {
+			return nil, errors.New("backup key size is invalid")
+		}
+		return key, nil
+	case "hsm_bound":
+		wrappedRaw := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["wrapped_key_b64"]))
+		nonceRaw := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["wrap_nonce_b64"]))
+		aadRaw := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["wrap_aad_b64"]))
+		if wrappedRaw == "" || nonceRaw == "" {
+			return nil, errors.New("backup key package is missing wrapped key fields")
+		}
+		wrapped, err := base64.StdEncoding.DecodeString(wrappedRaw)
+		if err != nil {
+			return nil, err
+		}
+		wrapNonce, err := base64.StdEncoding.DecodeString(nonceRaw)
+		if err != nil {
+			return nil, err
+		}
+		var wrapAAD []byte
+		if aadRaw != "" {
+			wrapAAD, err = base64.StdEncoding.DecodeString(aadRaw)
+			if err != nil {
+				return nil, err
+			}
+		}
+		binding := store.loadHSMBinding(ctx, tenantID)
+		if !binding.Enabled {
+			return nil, errors.New("restore requires enabled HSM configuration for hsm_bound backup")
+		}
+		secret := strings.TrimSpace(os.Getenv("BACKUP_HSM_WRAP_SECRET"))
+		if secret == "" {
+			secret = "vecta-backup-wrap-secret-change-me"
+		}
+		requestTenantID := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["request_tenant_id"]))
+		targetTenantID := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["target_tenant_id"]))
+		candidates := []string{
+			secret + "|" + binding.Fingerprint + "|" + requestTenantID + "|" + targetTenantID,
+			secret + "|" + binding.Fingerprint + "|" + tenantID + "|" + targetTenantID,
+			secret + "|" + binding.Fingerprint,
+		}
+		seen := map[string]struct{}{}
+		for _, candidate := range candidates {
+			keyID := sha256Hex(candidate)
+			if _, exists := seen[keyID]; exists {
+				continue
+			}
+			seen[keyID] = struct{}{}
+			derived := sha256.Sum256([]byte(candidate))
+			backupKey, err := decryptAESGCM(wrapped, derived[:], wrapNonce, wrapAAD)
+			if err != nil {
+				continue
+			}
+			if len(backupKey) != 32 {
+				continue
+			}
+			return backupKey, nil
+		}
+		return nil, errors.New("unable to unwrap hsm_bound backup key with current HSM binding")
+	default:
+		return nil, errors.New("unsupported backup key package mode")
+	}
 }
 
 func (s *Service) captureBackupPayload(ctx context.Context, store *SQLStore, requestTenantID string, scope string, targetTenantID string) ([]byte, int64, int, error) {
@@ -275,7 +565,7 @@ func (s *Service) captureBackupPayload(ctx context.Context, store *SQLStore, req
 		if table == "" {
 			continue
 		}
-		if strings.EqualFold(table, "governance_backup_jobs") {
+		if isExcludedFromBackupTable(table) {
 			continue
 		}
 		hasTenantID, err := store.tableHasTenantIDColumn(ctx, table)
@@ -325,13 +615,16 @@ func buildBackupKeyPackage(backupKey []byte, hsmBound bool, binding backupHSMBin
 			return nil, nil, err
 		}
 		pkg := map[string]interface{}{
-			"version":          1,
-			"mode":             "hsm_bound",
-			"algorithm":        "AES-256-GCM",
-			"wrapped_key_b64":  base64.StdEncoding.EncodeToString(wrapped),
-			"wrap_nonce_b64":   base64.StdEncoding.EncodeToString(wrapNonce),
-			"wrap_aad_b64":     base64.StdEncoding.EncodeToString(aad),
-			"hsm_binding_hash": binding.FingerprintHash,
+			"version":           1,
+			"mode":              "hsm_bound",
+			"algorithm":         "AES-256-GCM",
+			"key_derivation":    "v1",
+			"request_tenant_id": requestTenantID,
+			"target_tenant_id":  targetTenantID,
+			"wrapped_key_b64":   base64.StdEncoding.EncodeToString(wrapped),
+			"wrap_nonce_b64":    base64.StdEncoding.EncodeToString(wrapNonce),
+			"wrap_aad_b64":      base64.StdEncoding.EncodeToString(aad),
+			"hsm_binding_hash":  binding.FingerprintHash,
 			"hsm_binding": map[string]interface{}{
 				"provider_name":    binding.ProviderName,
 				"slot_id":          binding.SlotID,
@@ -351,6 +644,8 @@ func buildBackupKeyPackage(backupKey []byte, hsmBound bool, binding backupHSMBin
 		"version":           1,
 		"mode":              "software",
 		"algorithm":         "AES-256",
+		"request_tenant_id": requestTenantID,
+		"target_tenant_id":  targetTenantID,
 		"backup_key_b64":    base64.StdEncoding.EncodeToString(backupKey),
 		"backup_key_sha256": sha256Hex(string(backupKey)),
 		"note":              "Store this key package separately from the encrypted backup artifact.",
@@ -518,6 +813,124 @@ LIMIT $4
 	return out, nil
 }
 
+func (s *SQLStore) restoreSnapshot(ctx context.Context, scope string, targetTenantID string, tables map[string]json.RawMessage) (int64, int, []string, []string, error) {
+	if len(tables) == 0 {
+		return 0, 0, nil, nil, errors.New("backup payload has no tables")
+	}
+	tableNames := make([]string, 0, len(tables))
+	for name := range tables {
+		trimmed := strings.TrimSpace(name)
+		if trimmed == "" {
+			continue
+		}
+		tableNames = append(tableNames, trimmed)
+	}
+	sort.Strings(tableNames)
+	restorableTables := make([]string, 0, len(tableNames))
+	skipped := make([]string, 0)
+	excluded := make([]string, 0)
+	for _, tableName := range tableNames {
+		if isExcludedFromBackupTable(tableName) {
+			excluded = append(excluded, tableName)
+			continue
+		}
+		exists, err := s.tableExists(ctx, tableName)
+		if err != nil {
+			return 0, 0, skipped, excluded, err
+		}
+		if !exists {
+			skipped = append(skipped, tableName)
+			continue
+		}
+		if scope == backupScopeTenant {
+			hasTenantID, err := s.tableHasTenantIDColumn(ctx, tableName)
+			if err != nil {
+				return 0, 0, skipped, excluded, err
+			}
+			if !hasTenantID {
+				skipped = append(skipped, tableName)
+				continue
+			}
+		}
+		restorableTables = append(restorableTables, tableName)
+	}
+	if len(restorableTables) == 0 {
+		return 0, 0, skipped, excluded, errors.New("no valid tables found in backup for restore")
+	}
+	tx, err := s.db.SQL().BeginTx(ctx, nil)
+	if err != nil {
+		return 0, 0, skipped, excluded, err
+	}
+	rollback := true
+	defer func() {
+		if rollback {
+			_ = tx.Rollback()
+		}
+	}()
+	if _, err := tx.ExecContext(ctx, `SET LOCAL session_replication_role = 'replica'`); err != nil {
+		return 0, 0, skipped, excluded, err
+	}
+	if scope == backupScopeSystem {
+		quoted := make([]string, 0, len(restorableTables))
+		for _, tableName := range restorableTables {
+			quoted = append(quoted, quoteIdentifier(tableName))
+		}
+		if len(quoted) > 0 {
+			query := fmt.Sprintf(`TRUNCATE TABLE %s RESTART IDENTITY CASCADE`, strings.Join(quoted, ","))
+			if _, err := tx.ExecContext(ctx, query); err != nil {
+				return 0, 0, skipped, excluded, err
+			}
+		}
+	}
+	var rowsRestored int64
+	tablesProcessed := 0
+	for _, tableName := range restorableTables {
+		rawRows := strings.TrimSpace(string(tables[tableName]))
+		if rawRows == "" || rawRows == "null" {
+			rawRows = "[]"
+		}
+		quotedTable := quoteIdentifier(tableName)
+		if scope == backupScopeTenant {
+			deleteQuery := fmt.Sprintf(`DELETE FROM %s WHERE tenant_id=$1`, quotedTable)
+			if _, err := tx.ExecContext(ctx, deleteQuery, targetTenantID); err != nil {
+				return 0, 0, skipped, excluded, err
+			}
+		}
+		if rawRows != "[]" {
+			insertQuery := fmt.Sprintf(`INSERT INTO %s SELECT * FROM json_populate_recordset(NULL::%s, $1::json)`, quotedTable, quotedTable)
+			result, err := tx.ExecContext(ctx, insertQuery, rawRows)
+			if err != nil {
+				return 0, 0, skipped, excluded, err
+			}
+			if result != nil {
+				if count, err := result.RowsAffected(); err == nil && count > 0 {
+					rowsRestored += count
+				}
+			}
+		}
+		tablesProcessed++
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, 0, skipped, excluded, err
+	}
+	rollback = false
+	return rowsRestored, tablesProcessed, skipped, excluded, nil
+}
+
+func (s *SQLStore) tableExists(ctx context.Context, tableName string) (bool, error) {
+	var exists bool
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relname = $1
+)
+`, strings.TrimSpace(tableName)).Scan(&exists)
+	return exists, err
+}
+
 func (s *SQLStore) listBackupTables(ctx context.Context) ([]string, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT table_name
@@ -632,6 +1045,26 @@ WHERE tenant_id=$1
 	}
 }
 
+func isExcludedFromBackupTable(tableName string) bool {
+	name := strings.TrimSpace(strings.ToLower(tableName))
+	if name == "" {
+		return true
+	}
+	if name == "governance_backup_jobs" {
+		return true
+	}
+	if strings.Contains(name, "audit") {
+		return true
+	}
+	if strings.Contains(name, "alert") {
+		return true
+	}
+	if strings.Contains(name, "_log") || strings.HasSuffix(name, "log") || strings.Contains(name, "logs") {
+		return true
+	}
+	return false
+}
+
 func quoteIdentifier(name string) string {
 	return `"` + strings.ReplaceAll(strings.TrimSpace(name), `"`, `""`) + `"`
 }
@@ -662,6 +1095,39 @@ func encryptAESGCM(plaintext []byte, key []byte, aad []byte) ([]byte, []byte, er
 	}
 	ciphertext := gcm.Seal(nil, nonce, plaintext, aad)
 	return ciphertext, nonce, nil
+}
+
+func decryptAESGCM(ciphertext []byte, key []byte, nonce []byte, aad []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	if len(nonce) != gcm.NonceSize() {
+		return nil, errors.New("invalid nonce size")
+	}
+	return gcm.Open(nil, nonce, ciphertext, aad)
+}
+
+func decodeBase64Payload(raw string) ([]byte, error) {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return nil, errors.New("payload is empty")
+	}
+	return base64.StdEncoding.DecodeString(trimmed)
+}
+
+func hasApprovedBackupArtifactName(fileName string) bool {
+	trimmed := strings.TrimSpace(strings.ToLower(fileName))
+	return strings.HasSuffix(trimmed, backupArtifactExtension)
+}
+
+func hasApprovedBackupKeyName(fileName string) bool {
+	trimmed := strings.TrimSpace(strings.ToLower(fileName))
+	return strings.HasSuffix(trimmed, backupKeyExtension)
 }
 
 func parseBackupLimit(raw string, fallback int) int {
