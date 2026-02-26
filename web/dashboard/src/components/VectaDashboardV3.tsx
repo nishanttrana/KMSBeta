@@ -255,6 +255,7 @@ import {
   acknowledgeAlert,
   createReportingScheduledReport,
   createReportingRule,
+  deleteReportingReportJob,
   downloadReportingReport,
   escalateAlert,
   getReportingAlertStats,
@@ -272,8 +273,12 @@ import {
 import {
   getComplianceAssessment,
   getComplianceAssessmentSchedule,
+  listComplianceFrameworkCatalog,
   listComplianceAssessmentHistory,
+  listComplianceTemplates,
   runComplianceAssessment,
+  upsertComplianceTemplate,
+  deleteComplianceTemplate,
   updateComplianceAssessmentSchedule
 } from "../lib/compliance";
 import {
@@ -1856,7 +1861,7 @@ const NAV=[
   {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"certs",icon:FileText,label:"Certificates / PKI"}]},
   {g:"WORKBENCH",items:[{id:"workbench",icon:LayoutGrid,label:"Workbench"}]},
   {g:"SECRETS & CERTS",items:[{id:"vault",icon:Lock,label:"Secret Vault"}]},
-  {g:"DATA PROTECTION",items:[{id:"dataprotection",icon:Database,label:"Data Protection"}]},
+  {g:"DATA PROTECTION",items:[{id:"dataprotection",icon:ShieldCheck,label:"Data Protection"}]},
   {g:"CLOUD KEY CONTROL",items:[{id:"cloudctl",icon:Cloud,label:"Cloud Key Control"},{id:"ekm",icon:Database,label:"Enterprise Key Management"}]},
   {g:"INFRASTRUCTURE",items:[{id:"hsm",icon:Cpu,label:"HSM / Primus"},{id:"qkd",icon:GitBranch,label:"QKD Interface"},{id:"mpc",icon:Cpu,label:"MPC Engine"},{id:"cluster",icon:GitBranch,label:"Cluster"}]},
   {g:"GOVERNANCE",items:[{id:"approvals",icon:CheckCircle2,label:"Approvals"},{id:"alerts",icon:Bell,label:"Alert Center"},{id:"audit",icon:ScrollText,label:"Audit Log"},{id:"compliance",icon:ClipboardCheck,label:"Compliance"},{id:"sbom",icon:BarChart3,label:"SBOM / CBOM"}]},
@@ -14200,17 +14205,45 @@ const Approvals=({session,onToast})=>{
     if(String(approverEmail||"").trim()){
       return;
     }
-    if(String(session?.username||"").trim()){
-      const value=String(session.username||"").trim();
-      setApproverEmail(value.includes("@")?value:`${value}@vecta.local`);
+    const username=String(session?.username||"").trim().toLowerCase();
+    if(!username){
+      return;
     }
-  },[session?.username,approverEmail]);
+    const policyApprovers=(Array.isArray(policies)?policies:[])
+      .flatMap((policy:any)=>Array.isArray(policy?.approver_users)?policy.approver_users:[])
+      .map((email:any)=>String(email||"").trim().toLowerCase())
+      .filter(Boolean);
+    const matchByLocalPart=policyApprovers.find((email)=>String(email.split("@")[0]||"")===username);
+    if(matchByLocalPart){
+      setApproverEmail(matchByLocalPart);
+      return;
+    }
+    setApproverEmail(username.includes("@")?username:`${username}@vecta.local`);
+  },[session?.username,approverEmail,policies]);
 
   const policyMap=useMemo(()=>{
     const out:any={};
     (Array.isArray(policies)?policies:[]).forEach((p)=>{out[String(p.id||"")]=p;});
     return out;
   },[policies]);
+
+  const extractAllowedApproverEmails=(item:any)=>{
+    const seen=new Set<string>();
+    const out:string[]=[];
+    const add=(value:any)=>{
+      const normalized=String(value||"").trim().toLowerCase();
+      if(!normalized||seen.has(normalized)){
+        return;
+      }
+      seen.add(normalized);
+      out.push(normalized);
+    };
+    const policy=policyMap[String(item?.policy_id||"")]||{};
+    (Array.isArray(policy?.approver_users)?policy.approver_users:[]).forEach((value:any)=>add(value));
+    const details=item?.target_details||{};
+    (Array.isArray(details?.approver_emails)?details.approver_emails:[]).forEach((value:any)=>add(value));
+    return out;
+  };
 
   const sorted=useMemo(()=>{
     const out=[...(Array.isArray(requests)?requests:[])];
@@ -14240,10 +14273,25 @@ const Approvals=({session,onToast})=>{
     if(!session?.token){
       return;
     }
-    const email=String(approverEmail||"").trim().toLowerCase();
+    let email=String(approverEmail||"").trim().toLowerCase();
     if(!email){
       onToast?.("Approver email is required.");
       return;
+    }
+    const allowedApprovers=extractAllowedApproverEmails(item);
+    if(allowedApprovers.length&&!allowedApprovers.includes(email)){
+      const username=String(session?.username||"").trim().toLowerCase();
+      const matchByLocalPart=allowedApprovers.find((candidate)=>String(candidate.split("@")[0]||"")===username);
+      if(matchByLocalPart){
+        email=matchByLocalPart;
+        setApproverEmail(matchByLocalPart);
+      }else if(allowedApprovers.length===1){
+        email=allowedApprovers[0];
+        setApproverEmail(email);
+      }else{
+        onToast?.(`Approver email is not allowed for this request. Use one of: ${allowedApprovers.join(", ")}`);
+        return;
+      }
     }
     let challengeCode="";
     if(Boolean(settings?.challenge_response_enabled)){
@@ -14335,12 +14383,17 @@ const Approvals=({session,onToast})=>{
           const voteProgress=`Votes: ${approvals}/${required}`;
           const statusColor=status==="approved"?"green":status==="denied"?"red":status==="expired"?"amber":"amber";
           const actionLabel=String(item?.action||"approval").replace(/^key\./,"").replaceAll("_"," ");
+          const allowedApprovers=extractAllowedApproverEmails(item);
+          const approverPreview=allowedApprovers.slice(0,3);
           return <Card key={String(item?.id||"")} style={{padding:"12px 14px"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
               <div style={{minWidth:0}}>
                 <div style={{fontSize:13,color:C.text,fontWeight:700,marginBottom:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{`${actionLabel}: ${String(item?.target_id||"-")}`}</div>
                 <div style={{fontSize:10,color:C.dim}}>{`By: ${String(item?.requester_email||item?.requester_id||"-")} • Scheme: ${voteScheme} • ${voteProgress}`}</div>
                 <div style={{fontSize:9,color:C.muted,marginTop:3}}>{`${approvals} approved • ${denials} denied`}</div>
+                {approverPreview.length?<div style={{fontSize:9,color:C.dim,marginTop:3}}>
+                  {`Allowed approvers: ${approverPreview.join(", ")}${allowedApprovers.length>approverPreview.length?" ...":""}`}
+                </div>:null}
               </div>
               <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,minWidth:180}}>
                 <B c={statusColor}>{status==="pending"?"Pending":status==="approved"?"Approved":status==="denied"?"Denied":"Expired"}</B>
@@ -14814,9 +14867,11 @@ const AuditLog=()=><div>
 </div>;
 
 const ComplianceReportingPanel=({session,onToast})=>{
+  const promptDialog=usePromptDialog();
   const [loading,setLoading]=useState(false);
   const [running,setRunning]=useState(false);
   const [scheduling,setScheduling]=useState(false);
+  const [deletingJobID,setDeletingJobID]=useState("");
   const [templates,setTemplates]=useState<any[]>([]);
   const [jobs,setJobs]=useState<any[]>([]);
   const [scheduled,setScheduled]=useState<any[]>([]);
@@ -15003,6 +15058,40 @@ const ComplianceReportingPanel=({session,onToast})=>{
     }
   };
 
+  const deleteJob=async(job:any)=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    const id=String(job?.id||"").trim();
+    if(!id){
+      return;
+    }
+    const templateID=String(job?.template_id||"report");
+    const fmt=String(job?.format||"").toUpperCase();
+    const ok=await promptDialog.confirm({
+      title:"Delete Report",
+      message:`Delete ${templateID} (${fmt}) from Recent Reports?`,
+      confirmLabel:"Delete",
+      cancelLabel:"Cancel",
+      danger:true
+    });
+    if(!ok){
+      return;
+    }
+    setDeletingJobID(id);
+    try{
+      await deleteReportingReportJob(session,id,session.username||"dashboard");
+      setJobs((prev:any[])=>Array.isArray(prev)?prev.filter((item:any)=>String(item?.id||"")!==id):[]);
+      onToast?.("Report deleted.");
+      await load(true);
+    }catch(error){
+      onToast?.(`Delete report failed: ${errMsg(error)}`);
+    }finally{
+      setDeletingJobID("");
+    }
+  };
+
   const generateNow=async()=>{
     if(!session?.token){
       onToast?.("Login is required.");
@@ -15151,13 +15240,16 @@ const ComplianceReportingPanel=({session,onToast})=>{
           {sortedJobs.slice(0,20).map((job:any)=>{
             const status=String(job?.status||"queued").toLowerCase();
             const tone=status==="completed"?"green":status==="failed"?"red":status==="running"?"blue":"amber";
-            return <div key={String(job?.id||"")} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
+            const jobID=String(job?.id||"");
+            const deleting=deletingJobID===jobID;
+            return <div key={jobID} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:8,alignItems:"center",padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
               <div>
                 <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(job?.template_id||"-")}</div>
                 <div style={{fontSize:9,color:C.muted}}>{`${String(job?.format||"").toUpperCase()} • ${new Date(String(job?.created_at||Date.now())).toLocaleString()}`}</div>
               </div>
               <B c={tone}>{status}</B>
-              <Btn small onClick={()=>void downloadJob(job)} disabled={status!=="completed"}>Download</Btn>
+              <Btn small onClick={()=>void downloadJob(job)} disabled={status!=="completed"||deleting}>Download</Btn>
+              <Btn small danger onClick={()=>void deleteJob(job)} disabled={deleting}>{deleting?"Deleting...":"Delete"}</Btn>
             </div>;
           })}
           {!sortedJobs.length?<div style={{fontSize:10,color:C.muted}}>No reports generated yet.</div>:null}
@@ -15178,36 +15270,157 @@ const ComplianceReportingPanel=({session,onToast})=>{
         </div>
       </Card>
     </Row2>
+    {promptDialog.ui}
   </Section>;
 };
 
 const Compliance=({session,onToast})=>{
+  const promptDialog=usePromptDialog();
   const [assessment,setAssessment]=useState<any>(null);
   const [history,setHistory]=useState<any[]>([]);
   const [schedule,setSchedule]=useState<any>({enabled:false,frequency:"daily"});
+  const [templates,setTemplates]=useState<any[]>([]);
+  const [frameworkCatalog,setFrameworkCatalog]=useState<any[]>([]);
+  const [selectedTemplateID,setSelectedTemplateID]=useState("default");
+  const [templateDraft,setTemplateDraft]=useState<any>(null);
   const [loading,setLoading]=useState(false);
   const [running,setRunning]=useState(false);
   const [savingSchedule,setSavingSchedule]=useState(false);
+  const [savingTemplate,setSavingTemplate]=useState(false);
+  const [deletingTemplate,setDeletingTemplate]=useState(false);
   const [view,setView]=useState("assessment");
+
+  const frameworkSeed=useMemo(()=>{
+    const list=Array.isArray(frameworkCatalog)?frameworkCatalog:[];
+    return list
+      .map((fw:any)=>({
+        framework_id:String(fw?.id||"").trim(),
+        label:String(`${String(fw?.name||fw?.id||"").trim()} ${String(fw?.version||"").trim()}`).trim(),
+        enabled:true,
+        weight:1,
+        controls:(Array.isArray(fw?.controls)?fw.controls:[]).map((ctrl:any)=>({
+          id:String(ctrl?.id||"").trim(),
+          title:String(ctrl?.title||"").trim(),
+          category:String(ctrl?.category||"").trim(),
+          requirement:String(ctrl?.requirement||"").trim(),
+          enabled:true,
+          weight:1,
+          threshold:80
+        })).filter((ctrl:any)=>Boolean(ctrl.id))
+      }))
+      .filter((fw:any)=>Boolean(fw.framework_id));
+  },[frameworkCatalog]);
+
+  const buildTemplateDraft=(input:any={})=>{
+    const numOr=(value:any,fallback:number)=>{
+      const n=Number(value);
+      return Number.isFinite(n)?n:fallback;
+    };
+    const sourceFrameworks=Array.isArray(input?.frameworks)?input.frameworks:[];
+    const sourceByID:any={};
+    sourceFrameworks.forEach((fw:any)=>{
+      const id=String(fw?.framework_id||"").trim();
+      if(id){
+        sourceByID[id]=fw;
+      }
+    });
+    const mergedFrameworks=frameworkSeed.map((base:any)=>{
+      const incoming=sourceByID[base.framework_id]||{};
+      const controlByID:any={};
+      (Array.isArray(incoming?.controls)?incoming.controls:[]).forEach((ctrl:any)=>{
+        const id=String(ctrl?.id||"").trim();
+        if(id){
+          controlByID[id]=ctrl;
+        }
+      });
+      const mergedControls=(Array.isArray(base?.controls)?base.controls:[]).map((ctrl:any)=>{
+        const incomingCtrl=controlByID[ctrl.id]||{};
+        return {
+          ...ctrl,
+          ...incomingCtrl,
+          id:ctrl.id,
+          title:String(incomingCtrl?.title||ctrl.title||""),
+          category:String(incomingCtrl?.category||ctrl.category||""),
+          requirement:String(incomingCtrl?.requirement||ctrl.requirement||""),
+          enabled:incomingCtrl?.enabled===undefined?Boolean(ctrl.enabled):Boolean(incomingCtrl.enabled),
+          weight:Math.max(0.1,numOr(incomingCtrl?.weight,ctrl.weight||1)),
+          threshold:Math.max(1,Math.min(100,Math.round(numOr(incomingCtrl?.threshold,ctrl.threshold||80))))
+        };
+      });
+      return {
+        ...base,
+        ...incoming,
+        framework_id:base.framework_id,
+        label:String(incoming?.label||base.label||base.framework_id),
+        enabled:incoming?.enabled===undefined?Boolean(base.enabled):Boolean(incoming.enabled),
+        weight:Math.max(0.1,numOr(incoming?.weight,base.weight||1)),
+        controls:mergedControls
+      };
+    });
+    return {
+      id:String(input?.id||""),
+      tenant_id:String(input?.tenant_id||session?.tenantId||""),
+      name:String(input?.name||"Custom Compliance Template"),
+      description:String(input?.description||""),
+      enabled:input?.enabled===undefined?true:Boolean(input.enabled),
+      frameworks:mergedFrameworks
+    };
+  };
+
+  const loadTemplates=async()=>{
+    if(!session?.token){
+      setTemplates([]);
+      setFrameworkCatalog([]);
+      return {templates:[],frameworks:[]};
+    }
+    try{
+      const [tplOut,catalogOut]=await Promise.all([
+        listComplianceTemplates(session),
+        listComplianceFrameworkCatalog(session)
+      ]);
+      const nextTemplates=Array.isArray(tplOut)?tplOut:[];
+      const nextCatalog=Array.isArray(catalogOut)?catalogOut:[];
+      setTemplates(nextTemplates);
+      setFrameworkCatalog(nextCatalog);
+      return {templates:nextTemplates,frameworks:nextCatalog};
+    }catch(error){
+      onToast?.(`Compliance templates load failed: ${errMsg(error)}`);
+      return {templates:[],frameworks:[]};
+    }
+  };
 
   const loadAssessment=async(opts:any={})=>{
     if(!session?.token){
       setAssessment(null);
       setHistory([]);
+      setSchedule({enabled:false,frequency:"daily"});
       return;
     }
     if(!opts?.silent){
       setLoading(true);
     }
     try{
+      const payload=await loadTemplates();
+      const candidateTemplateID=String((opts?.templateId ?? selectedTemplateID) || "default");
+      const hasTemplate=candidateTemplateID==="default"||payload.templates.some((item:any)=>String(item?.id||"")===candidateTemplateID);
+      const effectiveTemplateID=hasTemplate?candidateTemplateID:"default";
+      if(effectiveTemplateID!==selectedTemplateID){
+        setSelectedTemplateID(effectiveTemplateID);
+      }
       const [assessOut,scheduleOut,historyOut]=await Promise.all([
-        getComplianceAssessment(session),
+        getComplianceAssessment(session,effectiveTemplateID),
         getComplianceAssessmentSchedule(session),
-        listComplianceAssessmentHistory(session,10)
+        listComplianceAssessmentHistory(session,20,effectiveTemplateID)
       ]);
       setAssessment(assessOut||null);
       setSchedule(scheduleOut||{enabled:false,frequency:"daily"});
       setHistory(Array.isArray(historyOut)?historyOut:[]);
+      if(effectiveTemplateID==="default"){
+        setTemplateDraft(null);
+      }else{
+        const selected=payload.templates.find((item:any)=>String(item?.id||"")===effectiveTemplateID);
+        setTemplateDraft(selected?buildTemplateDraft(selected):null);
+      }
     }catch(error){
       onToast?.(`Compliance assessment load failed: ${errMsg(error)}`);
     }finally{
@@ -15218,7 +15431,7 @@ const Compliance=({session,onToast})=>{
   };
 
   useEffect(()=>{
-    void loadAssessment();
+    void loadAssessment({templateId:"default"});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[session?.token,session?.tenantId]);
 
@@ -15229,9 +15442,9 @@ const Compliance=({session,onToast})=>{
     }
     setRunning(true);
     try{
-      const out=await runComplianceAssessment(session);
+      const out=await runComplianceAssessment(session,{templateId:selectedTemplateID,recompute:true});
       setAssessment(out||null);
-      const hist=await listComplianceAssessmentHistory(session,10);
+      const hist=await listComplianceAssessmentHistory(session,20,selectedTemplateID);
       setHistory(Array.isArray(hist)?hist:[]);
       onToast?.("Compliance assessment completed.");
     }catch(error){
@@ -15261,15 +15474,171 @@ const Compliance=({session,onToast})=>{
     }
   };
 
+  const createTemplate=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    const nameInput=await promptDialog.prompt({
+      title:"Create Compliance Template",
+      message:"Provide a name for the custom compliance template.",
+      placeholder:"Template name",
+      confirmLabel:"Create",
+      cancelLabel:"Cancel",
+      validate:(value:string)=>String(value||"").trim()?"":"Template name is required."
+    });
+    const name=String(nameInput||"").trim();
+    if(!name){
+      return;
+    }
+    setSavingTemplate(true);
+    try{
+      const out=await upsertComplianceTemplate(session,{
+        name,
+        description:"",
+        enabled:true,
+        frameworks:Array.isArray(templateDraft?.frameworks)&&templateDraft.frameworks.length?templateDraft.frameworks:frameworkSeed
+      } as any);
+      const nextID=String(out?.id||"").trim();
+      if(nextID){
+        setSelectedTemplateID(nextID);
+      }
+      await loadAssessment({silent:true,templateId:nextID||"default"});
+      onToast?.("Compliance template created.");
+    }catch(error){
+      onToast?.(`Template create failed: ${errMsg(error)}`);
+    }finally{
+      setSavingTemplate(false);
+    }
+  };
+
+  const saveTemplate=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    if(selectedTemplateID==="default"){
+      onToast?.("Built-in template is read-only. Create a custom template first.");
+      return;
+    }
+    if(!templateDraft){
+      onToast?.("No template selected.");
+      return;
+    }
+    setSavingTemplate(true);
+    try{
+      const out=await upsertComplianceTemplate(session,{
+        id:selectedTemplateID,
+        name:String(templateDraft?.name||"").trim(),
+        description:String(templateDraft?.description||"").trim(),
+        enabled:Boolean(templateDraft?.enabled),
+        frameworks:Array.isArray(templateDraft?.frameworks)?templateDraft.frameworks:[]
+      } as any);
+      setTemplateDraft(buildTemplateDraft(out||templateDraft));
+      await loadAssessment({silent:true,templateId:selectedTemplateID});
+      onToast?.("Compliance template saved.");
+    }catch(error){
+      onToast?.(`Template save failed: ${errMsg(error)}`);
+    }finally{
+      setSavingTemplate(false);
+    }
+  };
+
+  const removeTemplate=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    if(selectedTemplateID==="default"){
+      onToast?.("Built-in template cannot be deleted.");
+      return;
+    }
+    const ok=await promptDialog.confirm({
+      title:"Delete Template",
+      message:"Delete selected compliance template?",
+      confirmLabel:"Delete",
+      cancelLabel:"Cancel",
+      danger:true
+    });
+    if(!ok){
+      return;
+    }
+    setDeletingTemplate(true);
+    try{
+      await deleteComplianceTemplate(session,selectedTemplateID);
+      setSelectedTemplateID("default");
+      setTemplateDraft(null);
+      await loadAssessment({silent:true,templateId:"default"});
+      onToast?.("Compliance template deleted.");
+    }catch(error){
+      onToast?.(`Template delete failed: ${errMsg(error)}`);
+    }finally{
+      setDeletingTemplate(false);
+    }
+  };
+
+  const patchFramework=(frameworkID:string,patch:any)=>{
+    setTemplateDraft((prev:any)=>{
+      if(!prev){
+        return prev;
+      }
+      const frameworks=(Array.isArray(prev?.frameworks)?prev.frameworks:[]).map((fw:any)=>{
+        if(String(fw?.framework_id||"")!==frameworkID){
+          return fw;
+        }
+        return {...fw,...patch};
+      });
+      return {...prev,frameworks};
+    });
+  };
+
+  const patchControl=(frameworkID:string,controlID:string,patch:any)=>{
+    setTemplateDraft((prev:any)=>{
+      if(!prev){
+        return prev;
+      }
+      const frameworks=(Array.isArray(prev?.frameworks)?prev.frameworks:[]).map((fw:any)=>{
+        if(String(fw?.framework_id||"")!==frameworkID){
+          return fw;
+        }
+        const controls=(Array.isArray(fw?.controls)?fw.controls:[]).map((ctrl:any)=>{
+          if(String(ctrl?.id||"")!==controlID){
+            return ctrl;
+          }
+          return {...ctrl,...patch};
+        });
+        return {...fw,controls};
+      });
+      return {...prev,frameworks};
+    });
+  };
+
+  const templateOptions=[{id:"default",name:"Built-in Baseline"},...(Array.isArray(templates)?templates:[]).map((item:any)=>({
+    id:String(item?.id||""),
+    name:String(item?.name||item?.id||"Custom Template")
+  }))];
   const frameworkScores=assessment?.framework_scores||{};
-  const frameworkRows=[
-    {id:"pci-dss-4.0",label:"PCI DSS 4.0",color:C.green},
-    {id:"fips-140-3",label:"FIPS 140-3",color:C.green},
-    {id:"nist-800-57",label:"NIST SP 800-57",color:C.blue},
-    {id:"eidas",label:"eIDAS",color:C.amber}
-  ].map((item)=>{
-    const score=Math.max(0,Math.min(100,Number(frameworkScores?.[item.id]||0)));
-    return {...item,score};
+  const labelByID:any={};
+  (Array.isArray(frameworkCatalog)?frameworkCatalog:[]).forEach((fw:any)=>{
+    const id=String(fw?.id||"").trim();
+    if(id){
+      labelByID[id]=String(`${String(fw?.name||id).trim()} ${String(fw?.version||"").trim()}`).trim();
+    }
+  });
+  (Array.isArray(templateDraft?.frameworks)?templateDraft.frameworks:[]).forEach((fw:any)=>{
+    const id=String(fw?.framework_id||"").trim();
+    if(id&&String(fw?.label||"").trim()){
+      labelByID[id]=String(fw.label);
+    }
+  });
+  const frameworkIDs=Array.from(new Set([
+    ...Object.keys(frameworkScores||{}),
+    ...(Array.isArray(templateDraft?.frameworks)?templateDraft.frameworks.map((fw:any)=>String(fw?.framework_id||"")).filter(Boolean):[])
+  ]));
+  const palette=[C.green,C.blue,C.amber,C.accent];
+  const frameworkRows=frameworkIDs.map((id,idx)=>{
+    const score=Math.max(0,Math.min(100,Number(frameworkScores?.[id]||0)));
+    return {id,label:labelByID[id]||id,score,color:palette[idx%palette.length]};
   });
 
   const pqc=assessment?.pqc||{};
@@ -15284,6 +15653,21 @@ const Compliance=({session,onToast})=>{
     if(s==="warning"||s==="medium") return "amber";
     return "blue";
   };
+  const trendData=useMemo(()=>{
+    const items=Array.isArray(history)?[...history]:[];
+    items.sort((a:any,b:any)=>new Date(String(a?.created_at||0)).getTime()-new Date(String(b?.created_at||0)).getTime());
+    return items.slice(-12).map((item:any)=>({
+      id:String(item?.id||""),
+      score:Math.max(0,Math.min(100,Number(item?.overall_score||0))),
+      at:String(item?.created_at||"")
+    }));
+  },[history]);
+  const trendPoints=trendData.map((item:any,index:number)=>{
+    const x=trendData.length===1?50:(index/(trendData.length-1))*100;
+    const y=100-Math.max(0,Math.min(100,Number(item?.score||0)));
+    return {...item,x,y:Math.max(4,Math.min(96,y)),label:new Date(String(item?.at||Date.now())).toLocaleDateString(undefined,{month:"short",day:"numeric"})};
+  });
+  const trendPolyline=trendPoints.map((point:any)=>`${point.x},${point.y}`).join(" ");
 
   if(view==="reporting"){
     return <div>
@@ -15300,6 +15684,7 @@ const Compliance=({session,onToast})=>{
         >Reporting</Btn>
       </div>
       <ComplianceReportingPanel session={session} onToast={onToast}/>
+      {promptDialog.ui}
     </div>;
   }
 
@@ -15320,7 +15705,15 @@ const Compliance=({session,onToast})=>{
       title="Compliance Posture"
       actions={
         <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-          <Btn small onClick={()=>void loadAssessment()} disabled={loading}>Refresh</Btn>
+          <FG label="Template">
+            <Sel w={220} value={selectedTemplateID} onChange={(e)=>void loadAssessment({templateId:e.target.value})}>
+              {templateOptions.map((item:any)=><option key={String(item?.id||"default")} value={String(item?.id||"default")}>{String(item?.name||item?.id||"Template")}</option>)}
+            </Sel>
+          </FG>
+          <Btn small onClick={()=>void createTemplate()} disabled={savingTemplate}>+ Template</Btn>
+          <Btn small onClick={()=>void saveTemplate()} disabled={savingTemplate||selectedTemplateID==="default"}>{savingTemplate?"Saving...":"Save Template"}</Btn>
+          <Btn small onClick={()=>void removeTemplate()} disabled={deletingTemplate||selectedTemplateID==="default"}>{deletingTemplate?"Deleting...":"Delete Template"}</Btn>
+          <Btn small onClick={()=>void loadAssessment({templateId:selectedTemplateID})} disabled={loading}>Refresh</Btn>
           <Btn small primary onClick={()=>void runNow()} disabled={running}>{running?"Running...":"Run Assessment"}</Btn>
           <div style={{display:"flex",alignItems:"center",gap:6,padding:"2px 8px",border:`1px solid ${C.border}`,borderRadius:8}}>
             <Chk label="Scheduled" checked={Boolean(schedule?.enabled)} onChange={()=>setSchedule((prev:any)=>({...prev,enabled:!prev?.enabled}))}/>
@@ -15339,8 +15732,77 @@ const Compliance=({session,onToast})=>{
       }
     >
       <div style={{fontSize:10,color:C.muted,marginBottom:8}}>
-        Assessment is calculated from real key and certificate inventory, policy posture, and audit security signals.
+        Assessment is calculated from real key/certificate posture and scored against the selected template ({selectedTemplateID==="default"?"Built-in Baseline":"Custom Template"}).
       </div>
+
+      {selectedTemplateID!=="default"&&templateDraft?<Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,marginBottom:8}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Template Configuration</div>
+          <B c={Boolean(templateDraft?.enabled)?"green":"red"}>{Boolean(templateDraft?.enabled)?"Enabled":"Disabled"}</B>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr auto",gap:8,alignItems:"end"}}>
+          <FG label="Template Name">
+            <Inp value={String(templateDraft?.name||"")} onChange={(e)=>setTemplateDraft((prev:any)=>({...prev,name:e.target.value}))}/>
+          </FG>
+          <FG label="Description">
+            <Inp value={String(templateDraft?.description||"")} onChange={(e)=>setTemplateDraft((prev:any)=>({...prev,description:e.target.value}))}/>
+          </FG>
+          <Chk label="Enabled" checked={Boolean(templateDraft?.enabled)} onChange={()=>setTemplateDraft((prev:any)=>({...prev,enabled:!prev?.enabled}))}/>
+        </div>
+        <div style={{height:8}}/>
+        <div style={{display:"grid",gap:8,maxHeight:280,overflowY:"auto",paddingRight:4}}>
+          {(Array.isArray(templateDraft?.frameworks)?templateDraft.frameworks:[]).map((fw:any)=>(
+            <Card key={String(fw?.framework_id||Math.random())}>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 110px",gap:8,alignItems:"center",marginBottom:6}}>
+                <Chk
+                  label={String(fw?.label||fw?.framework_id||"Framework")}
+                  checked={Boolean(fw?.enabled)}
+                  onChange={()=>patchFramework(String(fw?.framework_id||""),{enabled:!fw?.enabled})}
+                />
+                <FG label="Weight">
+                  <Inp
+                    type="number"
+                    value={String(fw?.weight??1)}
+                    onChange={(e)=>patchFramework(String(fw?.framework_id||""),{weight:Math.max(0.1,Number(e.target.value)||1)})}
+                  />
+                </FG>
+              </div>
+              <div style={{display:"grid",gap:6}}>
+                {(Array.isArray(fw?.controls)?fw.controls:[]).map((ctrl:any)=>(
+                  <div key={String(ctrl?.id||Math.random())} style={{display:"grid",gridTemplateColumns:"1fr 90px 90px",gap:8,alignItems:"center",padding:"6px 0",borderTop:`1px solid ${C.border}`}}>
+                    <div>
+                      <Chk
+                        label={String(ctrl?.title||ctrl?.id||"Control")}
+                        checked={Boolean(ctrl?.enabled)}
+                        onChange={()=>patchControl(String(fw?.framework_id||""),String(ctrl?.id||""),{enabled:!ctrl?.enabled})}
+                      />
+                      <div style={{fontSize:9,color:C.dim,marginTop:2}}>{String(ctrl?.requirement||ctrl?.category||"")}</div>
+                    </div>
+                    <FG label="Weight">
+                      <Inp
+                        type="number"
+                        value={String(ctrl?.weight??1)}
+                        onChange={(e)=>patchControl(String(fw?.framework_id||""),String(ctrl?.id||""),{weight:Math.max(0.1,Number(e.target.value)||1)})}
+                      />
+                    </FG>
+                    <FG label="Threshold">
+                      <Inp
+                        type="number"
+                        value={String(ctrl?.threshold??80)}
+                        onChange={(e)=>patchControl(String(fw?.framework_id||""),String(ctrl?.id||""),{threshold:Math.max(1,Math.min(100,Number(e.target.value)||80))})}
+                      />
+                    </FG>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </Card>:null}
+
+      {selectedTemplateID==="default"?<Card><div style={{fontSize:10,color:C.muted}}>Built-in Baseline is read-only. Create a custom template to configure framework/control weights, thresholds, and enabled controls.</div></Card>:null}
+
+      <div style={{height:10}}/>
 
       <Row2>
         <Card>
@@ -15379,12 +15841,33 @@ const Compliance=({session,onToast})=>{
       <div style={{height:10}}/>
       <Card>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Score Trendline (Previous Scans)</div>
+          <B c="blue">{trendPoints.length?`${trendPoints[trendPoints.length-1]?.score||0} latest`:"No history"}</B>
+        </div>
+        {trendPoints.length?<div>
+          <div style={{height:140,border:`1px solid ${C.border}`,borderRadius:10,padding:8,background:C.card}}>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{width:"100%",height:"100%",display:"block"}}>
+              {[100,75,50,25,0].map((tick:number)=><line key={tick} x1="0" x2="100" y1={100-tick} y2={100-tick} stroke={C.border} strokeWidth="0.6"/>)}
+              <polyline fill="none" stroke={C.accent} strokeWidth="2" points={trendPolyline}/>
+              {trendPoints.map((point:any,index:number)=><circle key={`${point.id}-${index}`} cx={point.x} cy={point.y} r="2" fill={C.accent}/>)}
+            </svg>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:C.dim,marginTop:6}}>
+            <span>{trendPoints[0]?.label||"-"}</span>
+            <span>{trendPoints[trendPoints.length-1]?.label||"-"}</span>
+          </div>
+        </div>:<div style={{fontSize:10,color:C.muted}}>Run more assessments to populate trendline.</div>}
+      </Card>
+
+      <div style={{height:10}}/>
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div style={{fontSize:12,color:C.text,fontWeight:700}}>Findings</div>
           <B c={findings.length?"amber":"green"}>{findings.length?`${findings.length} open`:"No open findings"}</B>
         </div>
         <div style={{display:"grid",gap:8}}>
-          {findings.map((finding:any)=>(
-            <Card key={String(finding?.id||Math.random())} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+          {findings.map((finding:any,index:number)=>(
+            <Card key={String(finding?.id||finding?.title||index)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
               <div>
                 <div style={{fontSize:12,color:C.text,fontWeight:700}}>{String(finding?.title||"")}</div>
                 <div style={{fontSize:10,color:C.dim,marginTop:3}}>{String(finding?.fix||"")}</div>
@@ -15403,11 +15886,12 @@ const Compliance=({session,onToast})=>{
       <Card>
         <div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:8}}>Assessment History</div>
         <div style={{display:"grid",gap:6}}>
-          {(Array.isArray(history)?history:[]).slice(0,5).map((item:any)=>(
+          {(Array.isArray(history)?history:[]).slice(0,10).map((item:any)=>(
             <div key={String(item?.id||"")} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:10,padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <B c="blue">{String(item?.trigger||"manual").toUpperCase()}</B>
                 <span style={{color:C.muted}}>{new Date(item?.created_at||Date.now()).toLocaleString()}</span>
+                <span style={{color:C.dim}}>{String(item?.template_name||"Built-in Baseline")}</span>
               </div>
               <span style={{color:C.text,fontWeight:700}}>{`${Number(item?.overall_score||0)} / 100`}</span>
             </div>
@@ -15416,6 +15900,7 @@ const Compliance=({session,onToast})=>{
         </div>
       </Card>
     </Section>
+    {promptDialog.ui}
   </div>;
 };
 const SBOM=({session,onToast})=>{
@@ -17775,32 +18260,21 @@ const UserManagement=({session,onToast,onLogout})=>{
   const [createTenantAdminMustChange,setCreateTenantAdminMustChange]=useState(true);
   const [quorumPolicy,setQuorumPolicy]=useState<any>(null);
   const [quorumSaving,setQuorumSaving]=useState(false);
+  const [quorumEnabled,setQuorumEnabled]=useState(false);
   const [quorumRequired,setQuorumRequired]=useState(1);
   const [quorumMode,setQuorumMode]=useState<"and"|"or">("or");
-  const GOVERNANCE_DEFAULT_POLICY_NAME="crypto-governance-default";
-  const GOVERNANCE_CRYPTO_ACTIONS=[
-    "key.encrypt",
-    "key.decrypt",
-    "key.sign",
-    "key.verify",
-    "key.derive",
-    "key.kem_encapsulate",
-    "key.kem_decapsulate",
-    "key.wrap",
-    "key.unwrap",
-    "key.mac",
-    "key.update_access_policy",
-    "key.destroy",
-    "key.export",
-    "mpc.dkg",
-    "mpc.sign",
-    "mpc.decrypt",
-    "cert.issue",
-    "cert.revoke",
-    "cert.renew",
-    "tenant.disable",
-    "tenant.delete"
+  const GOVERNANCE_DEFAULT_POLICY_NAME="kms-platform-governance-default";
+  const GOVERNANCE_PLATFORM_ACTIONS=[
+    "tenant.*",
+    "auth.user.*",
+    "auth.group.*",
+    "governance.policy.*",
+    "governance.settings.*",
+    "platform.interfaces.*",
+    "platform.logs.*"
   ];
+  const KMS_ADMIN_GROUP_NAME="kms-admin";
+  const KMS_ADMIN_GROUP_DESCRIPTION="KMS platform admin approvers for quorum-governed operations.";
 
   const roleOptions=useMemo(()=>{
     const out=new Set(["tenant-admin","admin","backup","audit","readonly","cli-user"]);
@@ -17815,6 +18289,10 @@ const UserManagement=({session,onToast,onLogout})=>{
   const protectedCLIUser="cli-user";
   const userRows=Array.isArray(users)?users:[];
   const groupRows=Array.isArray(groups)?groups:[];
+  const kmsAdminGroup=useMemo(
+    ()=>groupRows.find((item:any)=>String(item?.name||"").trim().toLowerCase()===KMS_ADMIN_GROUP_NAME)||null,
+    [groupRows]
+  );
   const selectedTenantID=String(tenantScope||session?.tenantId||"").trim();
   const selectedTenant=(Array.isArray(tenants)?tenants:[]).find((item:any)=>String(item?.id||"")===selectedTenantID)||null;
   const selectedTenantLower=selectedTenantID.toLowerCase();
@@ -17825,6 +18303,7 @@ const UserManagement=({session,onToast,onLogout})=>{
     selectedTenantLower!=="system";
   const readinessBlockers=Array.isArray(tenantReadiness?.blockers)?tenantReadiness.blockers:[];
   const readinessTenantStatus=String(tenantReadiness?.tenant_status||selectedTenant?.status||"active").toLowerCase();
+  const governanceRequiredForTenantLifecycle=Boolean(tenantReadiness?.requires_governance_approval)||quorumEnabled;
   const canDisableTenantNow=Boolean(canManageTenantLifecycle)&&Boolean(tenantReadiness?.can_disable)&&!readinessBlockers.length;
   const canDeleteTenantNow=Boolean(canManageTenantLifecycle)&&Boolean(tenantReadiness?.can_delete)&&!readinessBlockers.length&&readinessTenantStatus==="disabled";
   const effectiveTenantID=selectedTenantID||String(session?.tenantId||"").trim();
@@ -18003,15 +18482,18 @@ const UserManagement=({session,onToast,onLogout})=>{
   const refreshQuorumPolicy=async(silent=false)=>{
     if(!session?.token){
       setQuorumPolicy(null);
+      setQuorumEnabled(false);
       setQuorumRequired(1);
       setQuorumMode("or");
       return;
     }
     try{
-      const items=await withSessionRetry((authSession)=>listGovernancePolicies(withTenantScope(authSession),{status:"active"}));
+      const items=await withSessionRetry((authSession)=>listGovernancePolicies(withTenantScope(authSession),{scope:"platform",status:""}));
       const selected=(Array.isArray(items)?items:[]).find((policy:any)=>String(policy?.name||"").toLowerCase()===GOVERNANCE_DEFAULT_POLICY_NAME)||null;
       setQuorumPolicy(selected);
       if(selected){
+        const enabled=String(selected?.status||"active").trim().toLowerCase()==="active";
+        setQuorumEnabled(enabled);
         const total=Math.max(1,Number(selected?.total_approvers||1));
         const required=Math.max(1,Math.min(total,Number(selected?.required_approvals||1)));
         const modeRaw=String(selected?.quorum_mode||"").trim().toLowerCase();
@@ -18019,6 +18501,7 @@ const UserManagement=({session,onToast,onLogout})=>{
         setQuorumMode(mode as "and"|"or");
         setQuorumRequired(mode==="and"?total:1);
       }else{
+        setQuorumEnabled(false);
         setQuorumMode("or");
         setQuorumRequired(1);
       }
@@ -18029,26 +18512,68 @@ const UserManagement=({session,onToast,onLogout})=>{
     }
   };
 
-  const saveQuorumMembers=async(nextEmailsRaw:string[])=>{
+  const ensureKMSAdminGroup=async()=>{
+    const existingID=String(kmsAdminGroup?.id||"").trim();
+    if(existingID){
+      return existingID;
+    }
+    const created=await withSessionRetry((authSession)=>createKeyAccessGroup(withTenantScope(authSession),{
+      name:KMS_ADMIN_GROUP_NAME,
+      description:KMS_ADMIN_GROUP_DESCRIPTION,
+      created_by:String(authSession?.username||session?.username||"")
+    }));
+    const createdID=String(created?.id||"").trim();
+    await refreshGroups(true);
+    return createdID;
+  };
+
+  const saveQuorumMembers=async(nextEmailsRaw:string[],enabledOverride?:boolean)=>{
     if(!session?.token){
       onToast?.("Login is required to update quorum.");
       return;
     }
+    const enabled=Boolean(enabledOverride??quorumEnabled);
     const nextEmails=Array.from(new Set((Array.isArray(nextEmailsRaw)?nextEmailsRaw:[])
       .map((email)=>String(email||"").trim().toLowerCase())
       .filter(Boolean)));
-    if(!nextEmails.length){
-      onToast?.("At least one quorum approver is required.");
+    if(enabled&&!nextEmails.length){
+      onToast?.("Add at least one KMS admin approver before enabling quorum.");
       return;
     }
-    const total=nextEmails.length;
+    const userByEmail=new Map(
+      userRows
+        .map((user:any)=>({
+          email:String(user?.email||"").trim().toLowerCase(),
+          id:String(user?.id||"").trim()
+        }))
+        .filter((item)=>item.email&&item.id)
+        .map((item)=>[item.email,item.id])
+    );
+    const missingEmails=nextEmails.filter((email)=>!userByEmail.has(email));
+    if(missingEmails.length){
+      onToast?.(`Missing users for quorum members: ${missingEmails.join(", ")}`);
+      return;
+    }
+    const groupMemberIDs=nextEmails.map((email)=>String(userByEmail.get(email)||"")).filter(Boolean);
+    const total=Math.max(1,nextEmails.length);
     const mode=(quorumMode==="and"?"and":"or") as "and"|"or";
-    const required=mode==="and"?total:1;
+    const required=mode==="and"?Math.max(1,total):1;
+    if(groupMemberIDs.length||kmsAdminGroup?.id){
+      try{
+        const groupID=groupMemberIDs.length?await ensureKMSAdminGroup():String(kmsAdminGroup?.id||"").trim();
+        if(groupID){
+          await withSessionRetry((authSession)=>setKeyAccessGroupMembers(withTenantScope(authSession),groupID,groupMemberIDs));
+        }
+      }catch(error){
+        handleUserError("KMS admin group sync failed",error,false);
+        return;
+      }
+    }
     const payload={
       name:GOVERNANCE_DEFAULT_POLICY_NAME,
-      description:"Default quorum policy for governance-bound crypto operations.",
-      scope:"crypto",
-      trigger_actions:GOVERNANCE_CRYPTO_ACTIONS,
+      description:"KMS platform governance quorum for tenant, governance, interface, log, and policy administration.",
+      scope:"platform",
+      trigger_actions:GOVERNANCE_PLATFORM_ACTIONS,
       quorum_mode:mode,
       required_approvals:required,
       total_approvers:total,
@@ -18057,7 +18582,7 @@ const UserManagement=({session,onToast,onLogout})=>{
       timeout_hours:48,
       retention_days:90,
       notification_channels:["dashboard","email"],
-      status:"active"
+      status:enabled?"active":"inactive"
     };
     setQuorumSaving(true);
     try{
@@ -18065,13 +18590,19 @@ const UserManagement=({session,onToast,onLogout})=>{
         ? await withSessionRetry((authSession)=>updateGovernancePolicy(withTenantScope(authSession),String(quorumPolicy.id),payload))
         : await withSessionRetry((authSession)=>createGovernancePolicy(withTenantScope(authSession),payload));
       setQuorumPolicy(out);
+      const outEnabled=String(out?.status||payload.status).trim().toLowerCase()==="active";
+      setQuorumEnabled(outEnabled);
       const outTotal=Math.max(1,Number(out?.total_approvers||total));
       const outModeRaw=String(out?.quorum_mode||mode).trim().toLowerCase();
       const outMode=(outModeRaw==="and"||outModeRaw==="or")?outModeRaw:mode;
       setQuorumMode(outMode as "and"|"or");
       setQuorumRequired(outMode==="and"?outTotal:1);
       setUsersError("");
-      onToast?.(`Governance quorum updated (${outMode.toUpperCase()}: ${outMode==="and"?`${outTotal}-of-${outTotal}`:`1-of-${outTotal}`}).`);
+      if(outEnabled){
+        onToast?.(`KMS admin quorum enabled (${outMode.toUpperCase()}: ${outMode==="and"?`${outTotal}-of-${outTotal}`:`1-of-${outTotal}`}).`);
+      }else{
+        onToast?.("KMS admin quorum disabled.");
+      }
     }catch(error){
       handleUserError("Governance quorum update failed",error,false);
     }finally{
@@ -18087,7 +18618,7 @@ const UserManagement=({session,onToast,onLogout})=>{
   const toggleQuorumMember=async(user:any)=>{
     const email=String(user?.email||"").trim().toLowerCase();
     if(!email){
-      onToast?.("User email is required for quorum membership.");
+      onToast?.("User email is required for KMS admin quorum membership.");
       return;
     }
     const next=Array.from(quorumMembers);
@@ -18101,14 +18632,14 @@ const UserManagement=({session,onToast,onLogout})=>{
   };
 
   const saveQuorumScheme=async()=>{
-    await saveQuorumMembers(Array.from(quorumMembers));
+    await saveQuorumMembers(Array.from(quorumMembers),quorumEnabled);
   };
 
   const ensureTenantLifecycleGovernancePolicy=async()=>{
-    const requiredActions=Array.from(new Set(GOVERNANCE_CRYPTO_ACTIONS.map((item)=>String(item||"").trim()).filter(Boolean)));
+    const requiredActions=Array.from(new Set(GOVERNANCE_PLATFORM_ACTIONS.map((item)=>String(item||"").trim()).filter(Boolean)));
     const approverUsers=Array.from(quorumMembers);
     if(!approverUsers.length){
-      throw new Error("Configure at least one quorum approver before requesting tenant disable/delete approvals.");
+      throw new Error("Configure at least one KMS admin approver before requesting tenant disable/delete approvals.");
     }
     const mode=(quorumMode==="and"?"and":"or") as "and"|"or";
     const required=mode==="and"?approverUsers.length:1;
@@ -18116,8 +18647,8 @@ const UserManagement=({session,onToast,onLogout})=>{
     if(!basePolicy?.id){
       const created=await withSessionRetry((authSession)=>createGovernancePolicy(withTenantScope(authSession),{
         name:GOVERNANCE_DEFAULT_POLICY_NAME,
-        description:"Default quorum policy for governance-bound crypto operations.",
-        scope:"crypto",
+        description:"KMS platform governance quorum for tenant, governance, interface, log, and policy administration.",
+        scope:"platform",
         trigger_actions:requiredActions,
         quorum_mode:mode,
         required_approvals:required,
@@ -18135,11 +18666,22 @@ const UserManagement=({session,onToast,onLogout})=>{
       const createdMode=(createdModeRaw==="and"||createdModeRaw==="or")?createdModeRaw:mode;
       setQuorumMode(createdMode as "and"|"or");
       setQuorumRequired(createdMode==="and"?createdTotal:1);
+      setQuorumEnabled(true);
       return created;
     }
     const existingActions=Array.isArray(basePolicy?.trigger_actions)?basePolicy.trigger_actions.map((item:any)=>String(item||"").trim()).filter(Boolean):[];
     const missing=requiredActions.filter((action)=>!existingActions.includes(action));
-    if(!missing.length){
+    const existingApprovers=Array.isArray(basePolicy?.approver_users)?basePolicy.approver_users.map((item:any)=>String(item||"").trim().toLowerCase()).filter(Boolean):[];
+    const approverMismatch=existingApprovers.length!==approverUsers.length||approverUsers.some((email)=>!existingApprovers.includes(email));
+    const existingMode=String(basePolicy?.quorum_mode||"").trim().toLowerCase();
+    const existingStatus=String(basePolicy?.status||"").trim().toLowerCase();
+    const requiresPolicyUpdate=missing.length>0||
+      approverMismatch||
+      (existingMode!==mode)||
+      (existingStatus!=="active")||
+      Number(basePolicy?.total_approvers||0)!==approverUsers.length||
+      Number(basePolicy?.required_approvals||0)!==required;
+    if(!requiresPolicyUpdate){
       return basePolicy;
     }
     const updated=await withSessionRetry((authSession)=>updateGovernancePolicy(withTenantScope(authSession),String(basePolicy.id),{
@@ -18158,6 +18700,7 @@ const UserManagement=({session,onToast,onLogout})=>{
     const updatedMode=(updatedModeRaw==="and"||updatedModeRaw==="or")?updatedModeRaw:mode;
     setQuorumMode(updatedMode as "and"|"or");
     setQuorumRequired(updatedMode==="and"?updatedTotal:1);
+    setQuorumEnabled(true);
     return updated;
   };
 
@@ -18179,7 +18722,7 @@ const UserManagement=({session,onToast,onLogout})=>{
 
   useEffect(()=>{
     void refreshQuorumPolicy(true);
-  },[session?.token,session?.tenantId]);
+  },[session?.token,session?.tenantId,tenantScope]);
 
   useEffect(()=>{
     setNewGroupMembers([]);
@@ -18243,6 +18786,10 @@ const UserManagement=({session,onToast,onLogout})=>{
   };
 
   const requestTenantApproval=async(operation:"disable"|"delete")=>{
+    if(!governanceRequiredForTenantLifecycle){
+      onToast?.("KMS admin quorum is disabled. Approval requests are not required for tenant lifecycle actions.");
+      return;
+    }
     const targetTenant=String(tenantScope||session?.tenantId||"").trim();
     if(!targetTenant){
       onToast?.("Select tenant.");
@@ -18301,7 +18848,7 @@ const UserManagement=({session,onToast,onLogout})=>{
       return;
     }
     const approvalID=String(tenantDisableApprovalID||"").trim();
-    if(!approvalID){
+    if(governanceRequiredForTenantLifecycle&&!approvalID){
       onToast?.("Create governance approval request for tenant.disable first.");
       return;
     }
@@ -18317,7 +18864,7 @@ const UserManagement=({session,onToast,onLogout})=>{
     }
     setTenantDisabling(true);
     try{
-      const readiness=await withSessionRetry((authSession)=>disableAuthTenant(authSession,targetTenant,approvalID));
+      const readiness=await withSessionRetry((authSession)=>disableAuthTenant(authSession,targetTenant,governanceRequiredForTenantLifecycle?approvalID:""));
       setTenantReadiness(readiness||null);
       await refreshTenants(true);
       await refreshUsers(true);
@@ -18347,7 +18894,7 @@ const UserManagement=({session,onToast,onLogout})=>{
       return;
     }
     const approvalID=String(tenantDeleteApprovalID||"").trim();
-    if(!approvalID){
+    if(governanceRequiredForTenantLifecycle&&!approvalID){
       onToast?.("Create governance approval request for tenant.delete first.");
       return;
     }
@@ -18375,7 +18922,7 @@ const UserManagement=({session,onToast,onLogout})=>{
     }
     setTenantDeleting(true);
     try{
-      const out=await withSessionRetry((authSession)=>deleteAuthTenant(authSession,targetTenant,approvalID));
+      const out=await withSessionRetry((authSession)=>deleteAuthTenant(authSession,targetTenant,governanceRequiredForTenantLifecycle?approvalID:""));
       await refreshTenants(true);
       setTenantScope(String(session?.tenantId||""));
       await refreshUsers(true);
@@ -18611,7 +19158,11 @@ const UserManagement=({session,onToast,onLogout})=>{
 
   return <div>
     <Section title="Tenant & User Management" actions={<>
-      <B c="amber">{quorumPolicy?`${String(quorumMode||"or").toUpperCase()} quorum (${String(quorumMode||"or")==="and"?`${Number(quorumPolicy.total_approvers||Math.max(1,quorumMembers.size))}-of-${Number(quorumPolicy.total_approvers||Math.max(1,quorumMembers.size))}`:`1-of-${Number(quorumPolicy.total_approvers||Math.max(1,quorumMembers.size))}`})`:"quorum not configured"}</B>
+      <B c={quorumEnabled?"amber":"muted"}>
+        {quorumEnabled
+          ?`${String(quorumMode||"or").toUpperCase()} KMS admin quorum (${String(quorumMode||"or")==="and"?`${Number(quorumPolicy?.total_approvers||Math.max(1,quorumMembers.size))}-of-${Number(quorumPolicy?.total_approvers||Math.max(1,quorumMembers.size))}`:`1-of-${Number(quorumPolicy?.total_approvers||Math.max(1,quorumMembers.size))}`})`
+          :"KMS admin quorum disabled"}
+      </B>
       <Btn small onClick={()=>void refreshTenants(false)}>{tenantLoading?"Refreshing Tenants...":"Refresh Tenants"}</Btn>
       <Btn small onClick={()=>setModal("create-tenant")}>+ Create Tenant</Btn>
       <Btn small onClick={()=>void refreshTenantReadiness(false)}>{tenantReadinessLoading?"Checking Tenant...":"Check Tenant State"}</Btn>
@@ -18641,7 +19192,7 @@ const UserManagement=({session,onToast,onLogout})=>{
           Root admin can switch tenant scope to manage tenant users. Tenant admins remain scoped to their own tenant.
         </div>
         <div style={{fontSize:10,color:C.red,marginTop:4}}>
-          Tenant delete workflow: governance approval, then disable tenant (no active connections/sessions), then delete.
+          Tenant delete workflow: {governanceRequiredForTenantLifecycle?"governance approval, then ":""}disable tenant (no active connections/sessions), then delete.
         </div>
       </Card>
       <Card style={{marginBottom:8}}>
@@ -18671,21 +19222,21 @@ const UserManagement=({session,onToast,onLogout})=>{
           </Card>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-          <FG label="Disable Approval Request ID">
-            <Inp value={tenantDisableApprovalID} onChange={(e)=>setTenantDisableApprovalID(e.target.value)} placeholder="apr_xxx (tenant.disable)"/>
+          <FG label={`Disable Approval Request ID${governanceRequiredForTenantLifecycle?"":" (optional)"}`}>
+            <Inp value={tenantDisableApprovalID} onChange={(e)=>setTenantDisableApprovalID(e.target.value)} placeholder={governanceRequiredForTenantLifecycle?"apr_xxx (tenant.disable)":"optional when quorum disabled"}/>
           </FG>
-          <FG label="Delete Approval Request ID">
-            <Inp value={tenantDeleteApprovalID} onChange={(e)=>setTenantDeleteApprovalID(e.target.value)} placeholder="apr_xxx (tenant.delete)"/>
+          <FG label={`Delete Approval Request ID${governanceRequiredForTenantLifecycle?"":" (optional)"}`}>
+            <Inp value={tenantDeleteApprovalID} onChange={(e)=>setTenantDeleteApprovalID(e.target.value)} placeholder={governanceRequiredForTenantLifecycle?"apr_xxx (tenant.delete)":"optional when quorum disabled"}/>
           </FG>
         </div>
         <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:2}}>
-          <Btn small onClick={()=>void requestTenantApproval("disable")} disabled={!canManageTenantLifecycle||tenantApprovalCreating}>
+          <Btn small onClick={()=>void requestTenantApproval("disable")} disabled={!canManageTenantLifecycle||tenantApprovalCreating||!governanceRequiredForTenantLifecycle}>
             {tenantApprovalCreating?"Requesting...":"Request Disable Approval"}
           </Btn>
           <Btn small onClick={()=>void submitDisableTenant()} disabled={!canDisableTenantNow||tenantDisabling||tenantSaving}>
             {tenantDisabling?"Disabling...":"Disable Tenant"}
           </Btn>
-          <Btn small onClick={()=>void requestTenantApproval("delete")} disabled={!canManageTenantLifecycle||tenantApprovalCreating}>
+          <Btn small onClick={()=>void requestTenantApproval("delete")} disabled={!canManageTenantLifecycle||tenantApprovalCreating||!governanceRequiredForTenantLifecycle}>
             {tenantApprovalCreating?"Requesting...":"Request Delete Approval"}
           </Btn>
           <Btn
@@ -18726,10 +19277,17 @@ const UserManagement=({session,onToast,onLogout})=>{
       </Card>:null}
       <Card style={{marginBottom:8}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Governance Quorum Policy</div>
-          <B c="amber">{`${String(quorumMode||"or").toUpperCase()} • ${String(quorumMode||"or")==="and"?`${Math.max(1,quorumMembers.size)}-of-${Math.max(1,quorumMembers.size)}`:`1-of-${Math.max(1,quorumMembers.size)}`}`}</B>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>KMS Admin Platform Governance</div>
+          <B c={quorumEnabled?"amber":"muted"}>
+            {quorumEnabled
+              ?`${String(quorumMode||"or").toUpperCase()} • ${String(quorumMode||"or")==="and"?`${Math.max(1,quorumMembers.size)}-of-${Math.max(1,quorumMembers.size)}`:`1-of-${Math.max(1,quorumMembers.size)}`}`
+              :"DISABLED"}
+          </B>
         </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:8,alignItems:"end"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1.2fr 1fr 1fr 1fr auto",gap:8,alignItems:"end"}}>
+          <FG label="KMS Admin Quorum">
+            <Chk label="Require approvals for platform admin actions" checked={quorumEnabled} onChange={()=>setQuorumEnabled((value)=>!value)}/>
+          </FG>
           <FG label="Quorum Logic">
             <Sel value={quorumMode} onChange={(e)=>setQuorumMode(String(e.target.value||"or").toLowerCase()==="and"?"and":"or")}>
               <option value="or">OR (Any 1 approver)</option>
@@ -18741,7 +19299,7 @@ const UserManagement=({session,onToast,onLogout})=>{
               type="number"
               min={1}
               max={Math.max(1,quorumMembers.size)}
-              value={String(quorumMode==="and"?Math.max(1,quorumMembers.size):1)}
+              value={String(quorumEnabled?(quorumMode==="and"?Math.max(1,quorumMembers.size):1):0)}
               disabled
             />
           </FG>
@@ -18752,14 +19310,14 @@ const UserManagement=({session,onToast,onLogout})=>{
             small
             primary
             onClick={()=>void saveQuorumScheme()}
-            disabled={quorumSaving||!quorumMembers.size}
+            disabled={quorumSaving||(quorumEnabled&&!quorumMembers.size)}
             style={{height:34,padding:"0 12px"}}
           >
             {quorumSaving?"Saving...":"Save Quorum"}
           </Btn>
         </div>
         <div style={{fontSize:10,color:C.muted,marginTop:6}}>
-          Select quorum members from the user table below. AND requires all approvers; OR requires any one approver.
+          Quorum controls only KMS platform administration (governance, logs, interfaces, tenants, policy management). Feature operations are excluded.
         </div>
       </Card>
       <Card style={{marginBottom:8}}>
@@ -18865,7 +19423,7 @@ const UserManagement=({session,onToast,onLogout})=>{
             <div>Role</div>
             <div>Status</div>
             <div>Password</div>
-            <div>Quorum</div>
+            <div>KMS Admin</div>
             <div>Actions</div>
           </div>
           {userRows.map((user)=>(
@@ -19098,7 +19656,7 @@ const SUB_PANES={
   ],
   dataprotection:[
     {id:"fieldenc",label:"Field Encryption",hint:"Wrapper registration, challenge-response and local crypto lease control",icon:KeyRound,feature:"data_protection"},
-    {id:"dataenc-policy",label:"Data Encryption Policy",hint:"Policy controls only for data encryption interfaces",icon:ShieldCheck,feature:"data_protection"},
+    {id:"dataenc-policy",label:"Data Encryption Policy",hint:"Policy controls only for data encryption interfaces",icon:List,feature:"data_protection"},
     {id:"token-policy",label:"Token / Mask / Redact Policy",hint:"Policy controls only for tokenization, masking and redaction",icon:VenetianMask,feature:"data_protection"},
     {id:"payment-policy",label:"Payment Policy",hint:"Policy controls only for payment cryptography operations",icon:CreditCard,feature:"payment_crypto"},
     {id:"pkcs11",label:"PKCS#11 / JCA",hint:"SDK providers, mechanism usage and client telemetry",icon:Plug}

@@ -107,6 +107,8 @@ func TestStoreAssessmentRunsAndSchedule(t *testing.T) {
 		ID:              "a1",
 		TenantID:        "tenant-3",
 		Trigger:         "manual",
+		TemplateID:      "default",
+		TemplateName:    "Built-in Baseline",
 		OverallScore:    81,
 		FrameworkScores: map[string]int{frameworkFIPS: 90},
 		Findings:        []AssessmentFinding{{ID: "f1", Severity: "warning", Title: "sample", Fix: "fix", Count: 1}},
@@ -121,12 +123,15 @@ func TestStoreAssessmentRunsAndSchedule(t *testing.T) {
 	if err := store.CreateAssessmentRun(ctx, run); err != nil {
 		t.Fatal(err)
 	}
-	runs, err := store.ListAssessmentRuns(ctx, "tenant-3", 10)
+	runs, err := store.ListAssessmentRuns(ctx, "tenant-3", "default", 10)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(runs) != 1 || runs[0].ID != "a1" {
 		t.Fatalf("unexpected assessment runs: %+v", runs)
+	}
+	if runs[0].TemplateID != "default" {
+		t.Fatalf("unexpected template id: %+v", runs[0])
 	}
 
 	sched, err := store.GetAssessmentSchedule(ctx, "tenant-3")
@@ -149,5 +154,49 @@ func TestStoreAssessmentRunsAndSchedule(t *testing.T) {
 	}
 	if len(due) != 1 || due[0].TenantID != "tenant-3" {
 		t.Fatalf("unexpected due schedules: %+v", due)
+	}
+}
+
+func TestStoreComplianceTemplates(t *testing.T) {
+	_, store, _, _, _, _, _ := newComplianceService(t)
+	ctx := context.Background()
+
+	tpl := ComplianceTemplate{
+		ID:          "tpl-1",
+		TenantID:    "tenant-5",
+		Name:        "Custom PCI Focus",
+		Description: "Higher PCI emphasis",
+		Enabled:     true,
+		Frameworks: []ComplianceTemplateFramework{
+			{
+				FrameworkID: frameworkPCIDSS,
+				Label:       "PCI DSS 4.0",
+				Enabled:     true,
+				Weight:      2,
+				Controls: []ComplianceTemplateControl{
+					{ID: "pci-3.6.4", Title: "Rotation", Category: "key_hygiene", Requirement: "rotate", Enabled: true, Weight: 2, Threshold: 85},
+				},
+			},
+		},
+	}
+	if err := store.UpsertComplianceTemplate(ctx, tpl); err != nil {
+		t.Fatal(err)
+	}
+	got, err := store.GetComplianceTemplate(ctx, "tenant-5", "tpl-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Name != tpl.Name || len(got.Frameworks) != 1 {
+		t.Fatalf("unexpected template: %+v", got)
+	}
+	items, err := store.ListComplianceTemplates(ctx, "tenant-5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].ID != "tpl-1" {
+		t.Fatalf("unexpected list output: %+v", items)
+	}
+	if err := store.DeleteComplianceTemplate(ctx, "tenant-5", "tpl-1"); err != nil {
+		t.Fatal(err)
 	}
 }

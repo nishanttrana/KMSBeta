@@ -30,7 +30,12 @@ type Store interface {
 	ListCBOMSnapshots(ctx context.Context, tenantID string, from time.Time, to time.Time, limit int) ([]CBOMSnapshot, error)
 
 	CreateAssessmentRun(ctx context.Context, item AssessmentResult) error
-	ListAssessmentRuns(ctx context.Context, tenantID string, limit int) ([]AssessmentResult, error)
+	ListAssessmentRuns(ctx context.Context, tenantID string, templateID string, limit int) ([]AssessmentResult, error)
+
+	UpsertComplianceTemplate(ctx context.Context, item ComplianceTemplate) error
+	GetComplianceTemplate(ctx context.Context, tenantID string, templateID string) (ComplianceTemplate, error)
+	ListComplianceTemplates(ctx context.Context, tenantID string) ([]ComplianceTemplate, error)
+	DeleteComplianceTemplate(ctx context.Context, tenantID string, templateID string) error
 
 	GetAssessmentSchedule(ctx context.Context, tenantID string) (AssessmentSchedule, error)
 	UpsertAssessmentSchedule(ctx context.Context, item AssessmentSchedule) error
@@ -284,26 +289,31 @@ func (s *SQLStore) CreateAssessmentRun(ctx context.Context, item AssessmentResul
 	}
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO compliance_assessment_runs (
-	tenant_id, id, trigger, overall_score, framework_scores, findings_json, pqc_json, cert_metrics_json, posture_json, created_at
+	tenant_id, id, trigger, template_id, template_name, overall_score, framework_scores, findings_json, pqc_json, cert_metrics_json, posture_json, created_at
 ) VALUES (
-	$1,$2,$3,$4,$5,$6,$7,$8,$9,CURRENT_TIMESTAMP
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP
 )
-`, item.TenantID, item.ID, item.Trigger, item.OverallScore, mustJSON(item.FrameworkScores, "{}"),
+`, item.TenantID, item.ID, item.Trigger, item.TemplateID, item.TemplateName, item.OverallScore, mustJSON(item.FrameworkScores, "{}"),
 		mustJSON(item.Findings, "[]"), mustJSON(item.PQC, "{}"), mustJSON(item.CertMetrics, "{}"), mustJSON(item.Posture, "{}"))
 	return err
 }
 
-func (s *SQLStore) ListAssessmentRuns(ctx context.Context, tenantID string, limit int) ([]AssessmentResult, error) {
+func (s *SQLStore) ListAssessmentRuns(ctx context.Context, tenantID string, templateID string, limit int) ([]AssessmentResult, error) {
 	if limit <= 0 || limit > 365 {
 		limit = 30
 	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, id, trigger, overall_score, framework_scores, findings_json, pqc_json, cert_metrics_json, posture_json, created_at
+SELECT tenant_id, id, trigger, template_id, template_name, overall_score, framework_scores, findings_json, pqc_json, cert_metrics_json, posture_json, created_at
 FROM compliance_assessment_runs
 WHERE tenant_id = $1
+  AND (
+	$2 = ''
+	OR ($2 = 'default' AND (template_id = '' OR template_id = 'default'))
+	OR template_id = $2
+  )
 ORDER BY created_at DESC
-LIMIT $2
-`, tenantID, limit)
+LIMIT $3
+`, tenantID, strings.TrimSpace(templateID), limit)
 	if err != nil {
 		return nil, err
 	}
@@ -317,6 +327,73 @@ LIMIT $2
 		out = append(out, item)
 	}
 	return out, rows.Err()
+}
+
+func (s *SQLStore) UpsertComplianceTemplate(ctx context.Context, item ComplianceTemplate) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO compliance_templates (
+	tenant_id, id, name, description, enabled, frameworks_json, created_at, updated_at
+) VALUES (
+	$1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+)
+ON CONFLICT (tenant_id, id) DO UPDATE SET
+	name = excluded.name,
+	description = excluded.description,
+	enabled = excluded.enabled,
+	frameworks_json = excluded.frameworks_json,
+	updated_at = CURRENT_TIMESTAMP
+`, item.TenantID, item.ID, item.Name, item.Description, item.Enabled, mustJSON(item.Frameworks, "[]"))
+	return err
+}
+
+func (s *SQLStore) GetComplianceTemplate(ctx context.Context, tenantID string, templateID string) (ComplianceTemplate, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, id, name, description, enabled, frameworks_json, created_at, updated_at
+FROM compliance_templates
+WHERE tenant_id = $1 AND id = $2
+`, tenantID, templateID)
+	item, err := scanComplianceTemplate(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ComplianceTemplate{}, errNotFound
+	}
+	return item, err
+}
+
+func (s *SQLStore) ListComplianceTemplates(ctx context.Context, tenantID string) ([]ComplianceTemplate, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, id, name, description, enabled, frameworks_json, created_at, updated_at
+FROM compliance_templates
+WHERE tenant_id = $1
+ORDER BY updated_at DESC, name ASC
+`, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]ComplianceTemplate, 0)
+	for rows.Next() {
+		item, err := scanComplianceTemplate(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) DeleteComplianceTemplate(ctx context.Context, tenantID string, templateID string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM compliance_templates
+WHERE tenant_id = $1 AND id = $2
+`, tenantID, templateID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errNotFound
+	}
+	return nil
 }
 
 func (s *SQLStore) GetAssessmentSchedule(ctx context.Context, tenantID string) (AssessmentSchedule, error) {
@@ -476,6 +553,8 @@ func scanAssessmentResult(scanner interface {
 }) (AssessmentResult, error) {
 	var (
 		item              AssessmentResult
+		templateID        string
+		templateName      string
 		frameworkScoresJS string
 		findingsJS        string
 		pqcJS             string
@@ -484,17 +563,40 @@ func scanAssessmentResult(scanner interface {
 		createdRaw        interface{}
 	)
 	err := scanner.Scan(
-		&item.TenantID, &item.ID, &item.Trigger, &item.OverallScore, &frameworkScoresJS, &findingsJS, &pqcJS, &certMetricsJS, &postureJS, &createdRaw,
+		&item.TenantID, &item.ID, &item.Trigger, &templateID, &templateName, &item.OverallScore, &frameworkScoresJS, &findingsJS, &pqcJS, &certMetricsJS, &postureJS, &createdRaw,
 	)
 	if err != nil {
 		return AssessmentResult{}, err
 	}
+	item.TemplateID = strings.TrimSpace(templateID)
+	item.TemplateName = strings.TrimSpace(templateName)
 	_ = jsonUnmarshalMapInt(frameworkScoresJS, &item.FrameworkScores)
 	_ = jsonUnmarshalSliceFindings(findingsJS, &item.Findings)
 	_ = jsonUnmarshalPQC(pqcJS, &item.PQC)
 	_ = jsonUnmarshalMapFloat(certMetricsJS, &item.CertMetrics)
 	_ = jsonUnmarshalPosture(postureJS, &item.Posture)
 	item.CreatedAt = parseTimeValue(createdRaw)
+	return item, nil
+}
+
+func scanComplianceTemplate(scanner interface {
+	Scan(dest ...interface{}) error
+}) (ComplianceTemplate, error) {
+	var (
+		item         ComplianceTemplate
+		frameworksJS string
+		createdRaw   interface{}
+		updatedRaw   interface{}
+	)
+	err := scanner.Scan(
+		&item.TenantID, &item.ID, &item.Name, &item.Description, &item.Enabled, &frameworksJS, &createdRaw, &updatedRaw,
+	)
+	if err != nil {
+		return ComplianceTemplate{}, err
+	}
+	_ = jsonUnmarshalSliceTemplateFrameworks(frameworksJS, &item.Frameworks)
+	item.CreatedAt = parseTimeValue(createdRaw)
+	item.UpdatedAt = parseTimeValue(updatedRaw)
 	return item, nil
 }
 
@@ -580,6 +682,16 @@ func jsonUnmarshalPQC(raw string, out *AssessmentPQC) error {
 func jsonUnmarshalPosture(raw string, out *PostureSnapshot) error {
 	if out == nil {
 		return nil
+	}
+	return json.Unmarshal([]byte(raw), out)
+}
+
+func jsonUnmarshalSliceTemplateFrameworks(raw string, out *[]ComplianceTemplateFramework) error {
+	if out == nil {
+		return nil
+	}
+	if *out == nil {
+		*out = []ComplianceTemplateFramework{}
 	}
 	return json.Unmarshal([]byte(raw), out)
 }

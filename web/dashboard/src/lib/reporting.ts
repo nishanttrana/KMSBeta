@@ -326,6 +326,14 @@ export async function downloadReportingReport(
   };
 }
 
+export async function deleteReportingReportJob(session: AuthSession, jobID: string, actor?: string): Promise<void> {
+  const id = encodeURIComponent(String(jobID || "").trim());
+  const actorID = encodeURIComponent(String(actor || session.username || "dashboard").trim() || "dashboard");
+  await serviceRequest(session, "reporting", `/reports/jobs/${id}?${tenantQuery(session)}&actor=${actorID}`, {
+    method: "DELETE"
+  });
+}
+
 export async function listReportingScheduledReports(session: AuthSession): Promise<ScheduledReport[]> {
   const out = await serviceRequest<ScheduledResponse>(session, "reporting", `/reports/scheduled?${tenantQuery(session)}`);
   return Array.isArray(out?.items) ? out.items : [];

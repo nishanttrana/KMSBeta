@@ -54,6 +54,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /reports/jobs", h.handleListReportJobs)
 	mux.HandleFunc("GET /reports/jobs/{id}", h.handleReportJob)
 	mux.HandleFunc("GET /reports/jobs/{id}/download", h.handleReportDownload)
+	mux.HandleFunc("DELETE /reports/jobs/{id}", h.handleDeleteReportJob)
 	mux.HandleFunc("GET /reports/scheduled", h.handleListScheduledReports)
 	mux.HandleFunc("POST /reports/scheduled", h.handleCreateScheduledReport)
 
@@ -563,6 +564,20 @@ func (h *Handler) handleReportDownload(w http.ResponseWriter, r *http.Request) {
 		"report_job_id": job.ID,
 		"request_id":    reqID,
 	})
+}
+
+func (h *Handler) handleDeleteReportJob(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	actor := firstNonEmpty(strings.TrimSpace(r.URL.Query().Get("actor")), strings.TrimSpace(r.Header.Get("X-Actor-ID")), "dashboard")
+	if err := h.svc.DeleteReportJob(r.Context(), tenantID, r.PathValue("id"), actor); err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"deleted": true, "request_id": reqID})
 }
 
 func (h *Handler) handleListScheduledReports(w http.ResponseWriter, r *http.Request) {

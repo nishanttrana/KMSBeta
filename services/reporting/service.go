@@ -743,6 +743,34 @@ func (s *Service) ListReportJobs(ctx context.Context, tenantID string, limit int
 	return s.store.ListReportJobs(ctx, tenantID, limit, offset)
 }
 
+func (s *Service) DeleteReportJob(ctx context.Context, tenantID string, id string, actor string) error {
+	tenantID = strings.TrimSpace(tenantID)
+	id = strings.TrimSpace(id)
+	if tenantID == "" {
+		return newServiceError(400, "bad_request", "tenant_id is required")
+	}
+	if id == "" {
+		return newServiceError(400, "bad_request", "report job id is required")
+	}
+	job, err := s.store.GetReportJob(ctx, tenantID, id)
+	if err != nil {
+		return err
+	}
+	if err := s.store.DeleteReportJob(ctx, tenantID, id); err != nil {
+		return err
+	}
+	_ = s.publishAudit(ctx, "audit.reporting.report_deleted", tenantID, map[string]interface{}{
+		"job_id":       job.ID,
+		"template_id":  job.TemplateID,
+		"format":       job.Format,
+		"requested_by": job.RequestedBy,
+		"actor":        defaultString(actor, "system"),
+		"severity":     "info",
+		"audit_level":  "info",
+	})
+	return nil
+}
+
 func (s *Service) ScheduleReport(ctx context.Context, tenantID string, name string, templateID string, format string, schedule string, recipients []string, filters map[string]interface{}) (ScheduledReport, error) {
 	item := ScheduledReport{
 		ID:         newID("sched"),

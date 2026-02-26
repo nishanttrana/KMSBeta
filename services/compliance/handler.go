@@ -33,6 +33,10 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /compliance/assessment/history", h.handleAssessmentHistory)
 	mux.HandleFunc("GET /compliance/assessment/schedule", h.handleAssessmentSchedule)
 	mux.HandleFunc("PUT /compliance/assessment/schedule", h.handleUpsertAssessmentSchedule)
+	mux.HandleFunc("GET /compliance/templates", h.handleListComplianceTemplates)
+	mux.HandleFunc("POST /compliance/templates", h.handleUpsertComplianceTemplate)
+	mux.HandleFunc("GET /compliance/templates/{id}", h.handleGetComplianceTemplate)
+	mux.HandleFunc("DELETE /compliance/templates/{id}", h.handleDeleteComplianceTemplate)
 
 	mux.HandleFunc("GET /compliance/frameworks", h.handleFrameworks)
 	mux.HandleFunc("GET /compliance/frameworks/{id}/controls", h.handleFrameworkControls)
@@ -108,7 +112,8 @@ func (h *Handler) handleAssessment(w http.ResponseWriter, r *http.Request) {
 	if tenantID == "" {
 		return
 	}
-	item, err := h.svc.GetLatestAssessment(r.Context(), tenantID)
+	templateID := strings.TrimSpace(r.URL.Query().Get("template_id"))
+	item, err := h.svc.GetLatestAssessment(r.Context(), tenantID, templateID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
@@ -122,7 +127,23 @@ func (h *Handler) handleRunAssessment(w http.ResponseWriter, r *http.Request) {
 	if tenantID == "" {
 		return
 	}
-	item, err := h.svc.RunAssessment(r.Context(), tenantID, "manual", true)
+	var body struct {
+		TemplateID string `json:"template_id"`
+		Recompute  *bool  `json:"recompute"`
+	}
+	templateID := strings.TrimSpace(r.URL.Query().Get("template_id"))
+	recompute := true
+	if r.ContentLength > 0 {
+		if err := decodeJSON(r, &body); err != nil {
+			writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+			return
+		}
+		templateID = firstNonEmpty(templateID, body.TemplateID)
+		if body.Recompute != nil {
+			recompute = *body.Recompute
+		}
+	}
+	item, err := h.svc.RunAssessment(r.Context(), tenantID, "manual", recompute, templateID)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
@@ -137,12 +158,74 @@ func (h *Handler) handleAssessmentHistory(w http.ResponseWriter, r *http.Request
 		return
 	}
 	limit := atoi(r.URL.Query().Get("limit"))
-	items, err := h.svc.ListAssessmentRuns(r.Context(), tenantID, limit)
+	templateID := strings.TrimSpace(r.URL.Query().Get("template_id"))
+	items, err := h.svc.ListAssessmentRuns(r.Context(), tenantID, templateID, limit)
 	if err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleListComplianceTemplates(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.svc.ListComplianceTemplates(r.Context(), tenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleGetComplianceTemplate(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	item, err := h.svc.GetComplianceTemplate(r.Context(), tenantID, r.PathValue("id"))
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"template": item, "request_id": reqID})
+}
+
+func (h *Handler) handleUpsertComplianceTemplate(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var body ComplianceTemplate
+	if err := decodeJSON(r, &body); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	body.TenantID = firstNonEmpty(body.TenantID, strings.TrimSpace(r.Header.Get("X-Tenant-ID")), strings.TrimSpace(r.URL.Query().Get("tenant_id")))
+	if body.TenantID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
+		return
+	}
+	item, err := h.svc.UpsertComplianceTemplate(r.Context(), body)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, body.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"template": item, "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteComplianceTemplate(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	if err := h.svc.DeleteComplianceTemplate(r.Context(), tenantID, r.PathValue("id")); err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"ok": true, "request_id": reqID})
 }
 
 func (h *Handler) handleAssessmentSchedule(w http.ResponseWriter, r *http.Request) {

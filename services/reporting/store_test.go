@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -153,6 +154,12 @@ func TestStoreRulesChannelsAndReports(t *testing.T) {
 	}
 	if gotJob.Status != "completed" {
 		t.Fatalf("expected completed report job got %s", gotJob.Status)
+	}
+	if err := store.DeleteReportJob(context.Background(), tenantID, job.ID); err != nil {
+		t.Fatalf("delete report job: %v", err)
+	}
+	if _, err := store.GetReportJob(context.Background(), tenantID, job.ID); !errors.Is(err, errNotFound) {
+		t.Fatalf("expected deleted report job to be not found, err=%v", err)
 	}
 
 	sched := ScheduledReport{

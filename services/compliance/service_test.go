@@ -105,7 +105,7 @@ func TestServiceAssessmentRunAndSchedule(t *testing.T) {
 		{"id": "c1", "algorithm": "RSA-1024-SHA1", "status": "active", "not_after": time.Now().UTC().Add(7 * 24 * time.Hour).Format(time.RFC3339)},
 	}
 
-	run, err := svc.RunAssessment(ctx, "tenant-c", "manual", true)
+	run, err := svc.RunAssessment(ctx, "tenant-c", "manual", true, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,5 +123,62 @@ func TestServiceAssessmentRunAndSchedule(t *testing.T) {
 	}
 	if !sched.Enabled || sched.NextRunAt.IsZero() {
 		t.Fatalf("unexpected schedule: %+v", sched)
+	}
+}
+
+func TestServiceTemplateAssessmentScoring(t *testing.T) {
+	svc, _, keycore, policy, audit, certs, _ := newComplianceService(t)
+	ctx := context.Background()
+
+	keycore.keys["tenant-t"] = []map[string]interface{}{
+		{"id": "k1", "algorithm": "AES-256", "status": "active", "current_version": 2, "ops_total": 20},
+		{"id": "k2", "algorithm": "3DES", "status": "active", "current_version": 1, "ops_total": 0},
+	}
+	policy.policies["tenant-t"] = []map[string]interface{}{
+		{"id": "pol-1", "status": "active"},
+	}
+	audit.events["tenant-t"] = []map[string]interface{}{
+		{"action": "auth.login_failed", "timestamp": time.Now().UTC().Format(time.RFC3339)},
+	}
+	certs.certs["tenant-t"] = []map[string]interface{}{
+		{"id": "c1", "algorithm": "RSA-1024-SHA1", "status": "active", "not_after": time.Now().UTC().Add(12 * 24 * time.Hour).Format(time.RFC3339)},
+	}
+
+	tpl, err := svc.UpsertComplianceTemplate(ctx, ComplianceTemplate{
+		TenantID: "tenant-t",
+		Name:     "Crypto Weight",
+		Frameworks: []ComplianceTemplateFramework{
+			{
+				FrameworkID: frameworkFIPS,
+				Enabled:     true,
+				Weight:      3,
+				Controls: []ComplianceTemplateControl{
+					{ID: "fips-alg-1", Enabled: true, Weight: 3, Threshold: 90},
+					{ID: "fips-key-1", Enabled: true, Weight: 1, Threshold: 80},
+					{ID: "fips-access-1", Enabled: false, Weight: 1, Threshold: 80},
+					{ID: "fips-policy-1", Enabled: false, Weight: 1, Threshold: 80},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	run, err := svc.RunAssessment(ctx, "tenant-t", "manual", true, tpl.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.TemplateID != tpl.ID || run.TemplateName != tpl.Name {
+		t.Fatalf("unexpected template binding: %+v", run)
+	}
+	if _, ok := run.FrameworkScores[frameworkFIPS]; !ok {
+		t.Fatalf("expected template framework score: %+v", run.FrameworkScores)
+	}
+	history, err := svc.ListAssessmentRuns(ctx, "tenant-t", tpl.ID, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(history) == 0 {
+		t.Fatal("expected template-filtered history")
 	}
 }

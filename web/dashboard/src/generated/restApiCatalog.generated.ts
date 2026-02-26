@@ -2327,6 +2327,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "compliance-delete-compliance-templates-id",
+    "group": "Compliance (compliance)",
+    "title": "DELETE /compliance/templates/{id}",
+    "service": "compliance",
+    "method": "DELETE",
+    "pathTemplate": "/compliance/templates/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "DELETE /svc/compliance/compliance/templates/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "compliance-get-compliance-assessment",
     "group": "Compliance (compliance)",
     "title": "GET /compliance/assessment",
@@ -2971,6 +2999,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "compliance-get-compliance-templates",
+    "group": "Compliance (compliance)",
+    "title": "GET /compliance/templates",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/templates?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "GET /svc/compliance/compliance/templates?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "compliance-get-compliance-templates-id",
+    "group": "Compliance (compliance)",
+    "title": "GET /compliance/templates/{id}",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/templates/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "GET /svc/compliance/compliance/templates/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "compliance-post-compliance-assessment-run",
     "group": "Compliance (compliance)",
     "title": "POST /compliance/assessment/run",
@@ -2980,6 +3064,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Compliance service.",
     "requestExample": "POST /svc/compliance/compliance/assessment/run?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "compliance-post-compliance-templates",
+    "group": "Compliance (compliance)",
+    "title": "POST /compliance/templates",
+    "service": "compliance",
+    "method": "POST",
+    "pathTemplate": "/compliance/templates?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "POST /svc/compliance/compliance/templates?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -11828,6 +11940,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Reporting service.",
     "requestExample": "DELETE /svc/reporting/alerts/rules/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "reporting-delete-reports-jobs-id",
+    "group": "Reporting (reporting)",
+    "title": "DELETE /reports/jobs/{id}",
+    "service": "reporting",
+    "method": "DELETE",
+    "pathTemplate": "/reports/jobs/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Reporting service.",
+    "requestExample": "DELETE /svc/reporting/reports/jobs/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

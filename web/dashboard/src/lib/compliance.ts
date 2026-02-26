@@ -13,6 +13,8 @@ export type AssessmentResult = {
   id: string;
   tenant_id: string;
   trigger: string;
+  template_id: string;
+  template_name: string;
   overall_score: number;
   framework_scores: Record<string, number>;
   findings: AssessmentFinding[];
@@ -37,27 +39,100 @@ export type AssessmentSchedule = {
   updated_at?: string;
 };
 
+export type ComplianceFrameworkControl = {
+  id: string;
+  title: string;
+  category: string;
+  requirement: string;
+  weight: number;
+  status?: string;
+  score?: number;
+  evidence?: string;
+};
+
+export type ComplianceFramework = {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  controls?: ComplianceFrameworkControl[];
+};
+
+export type ComplianceTemplateControl = {
+  id: string;
+  title: string;
+  category: string;
+  requirement: string;
+  enabled: boolean;
+  weight: number;
+  threshold: number;
+};
+
+export type ComplianceTemplateFramework = {
+  framework_id: string;
+  label: string;
+  enabled: boolean;
+  weight: number;
+  controls: ComplianceTemplateControl[];
+};
+
+export type ComplianceTemplate = {
+  id: string;
+  tenant_id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  frameworks: ComplianceTemplateFramework[];
+  created_at?: string;
+  updated_at?: string;
+};
+
 function tenantQuery(session: AuthSession): string {
   return `tenant_id=${encodeURIComponent(session.tenantId)}`;
 }
 
-export async function getComplianceAssessment(session: AuthSession): Promise<AssessmentResult> {
-  const out = await serviceRequest<{ assessment?: AssessmentResult }>(session, "compliance", `/compliance/assessment?${tenantQuery(session)}`);
+function queryWithTemplate(session: AuthSession, templateId?: string): string {
+  const params = new URLSearchParams();
+  params.set("tenant_id", session.tenantId);
+  if (String(templateId || "").trim()) {
+    params.set("template_id", String(templateId).trim());
+  }
+  return params.toString();
+}
+
+export async function getComplianceAssessment(session: AuthSession, templateId = ""): Promise<AssessmentResult> {
+  const out = await serviceRequest<{ assessment?: AssessmentResult }>(
+    session,
+    "compliance",
+    `/compliance/assessment?${queryWithTemplate(session, templateId)}`
+  );
   return out?.assessment || ({} as AssessmentResult);
 }
 
-export async function runComplianceAssessment(session: AuthSession): Promise<AssessmentResult> {
-  const out = await serviceRequest<{ assessment?: AssessmentResult }>(session, "compliance", `/compliance/assessment/run?${tenantQuery(session)}`, {
-    method: "POST"
-  });
+export async function runComplianceAssessment(
+  session: AuthSession,
+  opts: { templateId?: string; recompute?: boolean } = {}
+): Promise<AssessmentResult> {
+  const out = await serviceRequest<{ assessment?: AssessmentResult }>(
+    session,
+    "compliance",
+    `/compliance/assessment/run?${queryWithTemplate(session, opts.templateId)}`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        template_id: String(opts.templateId || "").trim(),
+        recompute: opts.recompute === undefined ? true : Boolean(opts.recompute)
+      })
+    }
+  );
   return out?.assessment || ({} as AssessmentResult);
 }
 
-export async function listComplianceAssessmentHistory(session: AuthSession, limit = 20): Promise<AssessmentResult[]> {
+export async function listComplianceAssessmentHistory(session: AuthSession, limit = 20, templateId = ""): Promise<AssessmentResult[]> {
   const out = await serviceRequest<{ items?: AssessmentResult[] }>(
     session,
     "compliance",
-    `/compliance/assessment/history?${tenantQuery(session)}&limit=${Math.max(1, Math.trunc(limit || 20))}`
+    `/compliance/assessment/history?${queryWithTemplate(session, templateId)}&limit=${Math.max(1, Math.trunc(limit || 20))}`
   );
   return Array.isArray(out?.items) ? out.items : [];
 }
@@ -71,6 +146,50 @@ export async function getComplianceAssessmentSchedule(session: AuthSession): Pro
       frequency: "daily"
     }
   );
+}
+
+export async function listComplianceFrameworkCatalog(session: AuthSession): Promise<ComplianceFramework[]> {
+  const out = await serviceRequest<{ items?: ComplianceFramework[] }>(session, "compliance", "/compliance/frameworks");
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function listComplianceTemplates(session: AuthSession): Promise<ComplianceTemplate[]> {
+  const out = await serviceRequest<{ items?: ComplianceTemplate[] }>(session, "compliance", `/compliance/templates?${tenantQuery(session)}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getComplianceTemplate(session: AuthSession, templateID: string): Promise<ComplianceTemplate> {
+  const out = await serviceRequest<{ template?: ComplianceTemplate }>(
+    session,
+    "compliance",
+    `/compliance/templates/${encodeURIComponent(String(templateID || "").trim())}?${tenantQuery(session)}`
+  );
+  return out?.template || ({} as ComplianceTemplate);
+}
+
+export async function upsertComplianceTemplate(
+  session: AuthSession,
+  payload: Partial<ComplianceTemplate> & Pick<ComplianceTemplate, "name">
+): Promise<ComplianceTemplate> {
+  const out = await serviceRequest<{ template?: ComplianceTemplate }>(session, "compliance", `/compliance/templates?${tenantQuery(session)}`, {
+    method: "POST",
+    body: JSON.stringify({
+      ...payload,
+      tenant_id: session.tenantId,
+      id: String(payload?.id || "").trim(),
+      name: String(payload?.name || "").trim(),
+      description: String(payload?.description || "").trim(),
+      enabled: payload?.enabled !== undefined ? Boolean(payload.enabled) : true,
+      frameworks: Array.isArray(payload?.frameworks) ? payload.frameworks : []
+    })
+  });
+  return out?.template || ({} as ComplianceTemplate);
+}
+
+export async function deleteComplianceTemplate(session: AuthSession, templateID: string): Promise<void> {
+  await serviceRequest(session, "compliance", `/compliance/templates/${encodeURIComponent(String(templateID || "").trim())}?${tenantQuery(session)}`, {
+    method: "DELETE"
+  });
 }
 
 export async function updateComplianceAssessmentSchedule(

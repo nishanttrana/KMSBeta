@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -32,7 +33,7 @@ func TestServiceSyncAlertsAndEscalation(t *testing.T) {
 }
 
 func TestServiceReportsAndSchedules(t *testing.T) {
-	svc, _, audit, compliance, _ := newReportingService(t)
+	svc, _, audit, compliance, pub := newReportingService(t)
 	tenantID := "tenant-r"
 	audit.events[tenantID] = []map[string]interface{}{
 		{"id": "e1", "action": "key.created", "service": "keycore", "target_id": "k1", "timestamp": time.Now().UTC().Format(time.RFC3339)},
@@ -60,6 +61,12 @@ func TestServiceReportsAndSchedules(t *testing.T) {
 	}
 	if got.ResultContent == "" {
 		t.Fatalf("expected report content")
+	}
+	if err := svc.DeleteReportJob(context.Background(), tenantID, got.ID, "tester"); err != nil {
+		t.Fatalf("delete report job: %v", err)
+	}
+	if _, err := svc.GetReportJob(context.Background(), tenantID, got.ID); !errors.Is(err, errNotFound) {
+		t.Fatalf("expected deleted report job to be not found, err=%v", err)
 	}
 
 	pdfJob, err := svc.GenerateReport(context.Background(), tenantID, "key_generation", "pdf", "tester", nil)
@@ -97,5 +104,8 @@ func TestServiceReportsAndSchedules(t *testing.T) {
 	}
 	if err := svc.RunDueSchedules(context.Background()); err != nil {
 		t.Fatalf("run due schedules: %v", err)
+	}
+	if pub.Count("audit.reporting.report_deleted") == 0 {
+		t.Fatalf("expected report deletion audit publication")
 	}
 }

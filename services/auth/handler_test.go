@@ -477,6 +477,94 @@ VALUES ('apr-disable-block','t-disable','tenant.disable','tenant','t-disable','a
 	}
 }
 
+func TestHandlerTenantLifecycleWithoutPlatformQuorumAllowsNoApprovalID(t *testing.T) {
+	h, logic, store, _ := newTestHandler(t)
+	if err := store.CreateTenant(context.Background(), Tenant{ID: "t-noquorum", Name: "No Quorum", Status: "active"}); err != nil {
+		t.Fatal(err)
+	}
+	superToken, _, err := logic.IssueJWT("t1", "super-admin", []string{"*"}, "root-admin", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	disableReq := httptest.NewRequest(http.MethodPost, "/tenants/t-noquorum/disable", bytes.NewReader([]byte(`{}`)))
+	disableReq.Header.Set("Authorization", "Bearer "+superToken)
+	disableRR := httptest.NewRecorder()
+	h.ServeHTTP(disableRR, disableReq)
+	if disableRR.Code != http.StatusOK {
+		t.Fatalf("disable tenant status=%d body=%s", disableRR.Code, disableRR.Body.String())
+	}
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/tenants/t-noquorum", bytes.NewReader([]byte(`{"confirm_tenant_id":"t-noquorum","force":true}`)))
+	deleteReq.Header.Set("Authorization", "Bearer "+superToken)
+	deleteRR := httptest.NewRecorder()
+	h.ServeHTTP(deleteRR, deleteReq)
+	if deleteRR.Code != http.StatusOK {
+		t.Fatalf("delete tenant status=%d body=%s", deleteRR.Code, deleteRR.Body.String())
+	}
+}
+
+func TestHandlerTenantLifecycleWithPlatformQuorumRequiresApproval(t *testing.T) {
+	h, logic, store, _ := newTestHandler(t)
+	if err := store.CreateTenant(context.Background(), Tenant{ID: "t-quorum", Name: "Quorum Tenant", Status: "active"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.SQL().ExecContext(context.Background(), `
+INSERT INTO approval_policies (id, tenant_id, name, scope, trigger_actions, status)
+VALUES ('pol-quorum','t-quorum','kms-platform-governance-default','platform','["tenant.disable","tenant.delete"]','active')
+`); err != nil {
+		t.Fatal(err)
+	}
+	superToken, _, err := logic.IssueJWT("t1", "super-admin", []string{"*"}, "root-admin", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	disableNoApprovalReq := httptest.NewRequest(http.MethodPost, "/tenants/t-quorum/disable", bytes.NewReader([]byte(`{}`)))
+	disableNoApprovalReq.Header.Set("Authorization", "Bearer "+superToken)
+	disableNoApprovalRR := httptest.NewRecorder()
+	h.ServeHTTP(disableNoApprovalRR, disableNoApprovalReq)
+	if disableNoApprovalRR.Code != http.StatusForbidden {
+		t.Fatalf("expected forbidden without approval id, got %d body=%s", disableNoApprovalRR.Code, disableNoApprovalRR.Body.String())
+	}
+
+	if _, err := store.db.SQL().ExecContext(context.Background(), `
+INSERT INTO approval_requests (id, tenant_id, action, target_type, target_id, status)
+VALUES ('apr-q-disable','t-quorum','tenant.disable','tenant','t-quorum','approved')
+`); err != nil {
+		t.Fatal(err)
+	}
+	disableReq := httptest.NewRequest(http.MethodPost, "/tenants/t-quorum/disable", bytes.NewReader([]byte(`{"governance_approval_id":"apr-q-disable"}`)))
+	disableReq.Header.Set("Authorization", "Bearer "+superToken)
+	disableRR := httptest.NewRecorder()
+	h.ServeHTTP(disableRR, disableReq)
+	if disableRR.Code != http.StatusOK {
+		t.Fatalf("disable tenant status=%d body=%s", disableRR.Code, disableRR.Body.String())
+	}
+
+	deleteNoApprovalReq := httptest.NewRequest(http.MethodDelete, "/tenants/t-quorum", bytes.NewReader([]byte(`{"confirm_tenant_id":"t-quorum","force":true}`)))
+	deleteNoApprovalReq.Header.Set("Authorization", "Bearer "+superToken)
+	deleteNoApprovalRR := httptest.NewRecorder()
+	h.ServeHTTP(deleteNoApprovalRR, deleteNoApprovalReq)
+	if deleteNoApprovalRR.Code != http.StatusForbidden {
+		t.Fatalf("expected forbidden without delete approval id, got %d body=%s", deleteNoApprovalRR.Code, deleteNoApprovalRR.Body.String())
+	}
+
+	if _, err := store.db.SQL().ExecContext(context.Background(), `
+INSERT INTO approval_requests (id, tenant_id, action, target_type, target_id, status)
+VALUES ('apr-q-delete','t-quorum','tenant.delete','tenant','t-quorum','approved')
+`); err != nil {
+		t.Fatal(err)
+	}
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/tenants/t-quorum", bytes.NewReader([]byte(`{"confirm_tenant_id":"t-quorum","force":true,"governance_approval_id":"apr-q-delete"}`)))
+	deleteReq.Header.Set("Authorization", "Bearer "+superToken)
+	deleteRR := httptest.NewRecorder()
+	h.ServeHTTP(deleteRR, deleteReq)
+	if deleteRR.Code != http.StatusOK {
+		t.Fatalf("delete tenant status=%d body=%s", deleteRR.Code, deleteRR.Body.String())
+	}
+}
+
 func TestHandlerLoginIncludesGroupRolePermissions(t *testing.T) {
 	h, logic, store, _ := newTestHandler(t)
 

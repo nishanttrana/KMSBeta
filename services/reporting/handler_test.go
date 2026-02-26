@@ -174,6 +174,20 @@ func TestHandlerRulesChannelsAndReports(t *testing.T) {
 		t.Fatalf("download report status=%d body=%s", downloadRR.Code, downloadRR.Body.String())
 	}
 
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/reports/jobs/"+jobID+"?tenant_id="+tenantID+"&actor=tester", nil)
+	deleteRR := httptest.NewRecorder()
+	h.ServeHTTP(deleteRR, deleteReq)
+	if deleteRR.Code != http.StatusOK {
+		t.Fatalf("delete report status=%d body=%s", deleteRR.Code, deleteRR.Body.String())
+	}
+
+	jobAfterDeleteReq := httptest.NewRequest(http.MethodGet, "/reports/jobs/"+jobID+"?tenant_id="+tenantID, nil)
+	jobAfterDeleteRR := httptest.NewRecorder()
+	h.ServeHTTP(jobAfterDeleteRR, jobAfterDeleteReq)
+	if jobAfterDeleteRR.Code != http.StatusNotFound {
+		t.Fatalf("expected report job not found after delete status=%d body=%s", jobAfterDeleteRR.Code, jobAfterDeleteRR.Body.String())
+	}
+
 	schedReq := httptest.NewRequest(http.MethodPost, "/reports/scheduled", strings.NewReader(`{
 		"tenant_id":"`+tenantID+`",
 		"name":"daily",

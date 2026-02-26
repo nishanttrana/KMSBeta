@@ -39,6 +39,7 @@ func createSQLiteSchema(conn *pkgdb.DB) error {
 		`CREATE TABLE auth_security_policies (tenant_id TEXT PRIMARY KEY, max_failed_attempts INTEGER NOT NULL DEFAULT 5, lockout_minutes INTEGER NOT NULL DEFAULT 15, idle_timeout_minutes INTEGER NOT NULL DEFAULT 15, updated_by TEXT NOT NULL DEFAULT 'system', updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE auth_group_role_bindings (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, role_name TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, group_id));`,
 		`CREATE TABLE key_access_group_members (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, user_id TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, group_id, user_id));`,
+		`CREATE TABLE approval_policies (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, scope TEXT NOT NULL, trigger_actions TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active');`,
 		`CREATE TABLE approval_requests (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, action TEXT NOT NULL, target_type TEXT NOT NULL, target_id TEXT NOT NULL, status TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, expires_at TIMESTAMP, resolved_at TIMESTAMP);`,
 	}
 	for _, q := range sql {
@@ -381,5 +382,68 @@ VALUES ('apr-1','t-gov','tenant.delete','tenant','t-gov','approved')
 	}
 	if !approved {
 		t.Fatal("expected governance approval to be approved")
+	}
+}
+
+func TestSQLStoreIsPlatformQuorumRequired(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	if err := s.CreateTenant(ctx, Tenant{ID: "t-platform", Name: "Platform", Status: "active"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO approval_policies (id, tenant_id, name, scope, trigger_actions, status)
+VALUES ('pol-1','t-platform','kms-platform-governance-default','platform','["tenant.disable","tenant.delete","governance.policy.*"]','active')
+`); err != nil {
+		t.Fatal(err)
+	}
+	required, err := s.IsPlatformQuorumRequired(ctx, "t-platform", "tenant.disable")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !required {
+		t.Fatal("expected tenant.disable to require platform quorum")
+	}
+	required, err = s.IsPlatformQuorumRequired(ctx, "t-platform", "governance.policy.update")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !required {
+		t.Fatal("expected wildcard governance policy action to require platform quorum")
+	}
+	required, err = s.IsPlatformQuorumRequired(ctx, "t-platform", "key.encrypt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if required {
+		t.Fatal("did not expect key.encrypt to require platform quorum")
+	}
+}
+
+func TestSQLStoreTenantReadinessGovernanceFlagFollowsPlatformPolicy(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	if err := s.CreateTenant(ctx, Tenant{ID: "t-ready", Name: "Readiness Tenant", Status: "active"}); err != nil {
+		t.Fatal(err)
+	}
+	readiness, err := s.GetTenantDeleteReadiness(ctx, "t-ready")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if readiness.RequiresGovernanceApprove {
+		t.Fatalf("expected governance requirement false without active platform policy, got %+v", readiness)
+	}
+	if _, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO approval_policies (id, tenant_id, name, scope, trigger_actions, status)
+VALUES ('pol-ready','t-ready','kms-platform-governance-default','platform','["tenant.delete"]','active')
+`); err != nil {
+		t.Fatal(err)
+	}
+	readiness, err = s.GetTenantDeleteReadiness(ctx, "t-ready")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !readiness.RequiresGovernanceApprove {
+		t.Fatalf("expected governance requirement true with active platform policy, got %+v", readiness)
 	}
 }

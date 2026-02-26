@@ -779,23 +779,31 @@ func (h *Handler) handleDisableTenant(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(req.GovernanceApprovalID) == "" {
 		req.GovernanceApprovalID = strings.TrimSpace(r.URL.Query().Get("governance_approval_id"))
 	}
-	if err := h.requireApprovedGovernanceRequest(
-		r.Context(),
-		tenantID,
-		req.GovernanceApprovalID,
-		"tenant.disable",
-		"tenant",
-		tenantID,
-	); err != nil {
-		_ = h.publishAudit(r.Context(), "audit.auth.tenant_disable_rejected", reqID, tenantID, map[string]any{
-			"tenant_id":              tenantID,
-			"actor_user_id":          claims.UserID,
-			"actor_tenant_id":        claims.TenantID,
-			"governance_approval_id": strings.TrimSpace(req.GovernanceApprovalID),
-			"reason":                 err.Error(),
-		})
-		writeErr(w, http.StatusForbidden, "governance_required", err.Error(), reqID, tenantID)
+	governanceRequired, err := h.store.IsPlatformQuorumRequired(r.Context(), tenantID, "tenant.disable")
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to evaluate governance policy", reqID, tenantID)
 		return
+	}
+	if governanceRequired {
+		if err := h.requireApprovedGovernanceRequest(
+			r.Context(),
+			tenantID,
+			req.GovernanceApprovalID,
+			"tenant.disable",
+			"tenant",
+			tenantID,
+		); err != nil {
+			_ = h.publishAudit(r.Context(), "audit.auth.tenant_disable_rejected", reqID, tenantID, map[string]any{
+				"tenant_id":              tenantID,
+				"actor_user_id":          claims.UserID,
+				"actor_tenant_id":        claims.TenantID,
+				"governance_required":    true,
+				"governance_approval_id": strings.TrimSpace(req.GovernanceApprovalID),
+				"reason":                 err.Error(),
+			})
+			writeErr(w, http.StatusForbidden, "governance_required", err.Error(), reqID, tenantID)
+			return
+		}
 	}
 	readiness, err := h.store.DisableTenant(r.Context(), tenantID)
 	if err != nil {
@@ -808,6 +816,7 @@ func (h *Handler) handleDisableTenant(w http.ResponseWriter, r *http.Request) {
 				"tenant_id":                 tenantID,
 				"actor_user_id":             claims.UserID,
 				"actor_tenant_id":           claims.TenantID,
+				"governance_required":       governanceRequired,
 				"governance_approval_id":    strings.TrimSpace(req.GovernanceApprovalID),
 				"active_ui_session_count":   readiness.ActiveUISessionCount,
 				"active_service_link_count": readiness.ActiveServiceLinkCount,
@@ -831,6 +840,7 @@ func (h *Handler) handleDisableTenant(w http.ResponseWriter, r *http.Request) {
 		"tenant_id":                 tenantID,
 		"actor_user_id":             claims.UserID,
 		"actor_tenant_id":           claims.TenantID,
+		"governance_required":       governanceRequired,
 		"governance_approval_id":    strings.TrimSpace(req.GovernanceApprovalID),
 		"active_ui_session_count":   readiness.ActiveUISessionCount,
 		"active_service_link_count": readiness.ActiveServiceLinkCount,
@@ -895,23 +905,31 @@ func (h *Handler) handleDeleteTenant(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(req.GovernanceApprovalID) == "" {
 		req.GovernanceApprovalID = strings.TrimSpace(r.URL.Query().Get("governance_approval_id"))
 	}
-	if err := h.requireApprovedGovernanceRequest(
-		r.Context(),
-		tenantID,
-		req.GovernanceApprovalID,
-		"tenant.delete",
-		"tenant",
-		tenantID,
-	); err != nil {
-		_ = h.publishAudit(r.Context(), "audit.auth.tenant_delete_rejected", reqID, tenantID, map[string]any{
-			"tenant_id":              tenantID,
-			"actor_user_id":          claims.UserID,
-			"actor_tenant_id":        claims.TenantID,
-			"governance_approval_id": strings.TrimSpace(req.GovernanceApprovalID),
-			"reason":                 err.Error(),
-		})
-		writeErr(w, http.StatusForbidden, "governance_required", err.Error(), reqID, tenantID)
+	governanceRequired, err := h.store.IsPlatformQuorumRequired(r.Context(), tenantID, "tenant.delete")
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to evaluate governance policy", reqID, tenantID)
 		return
+	}
+	if governanceRequired {
+		if err := h.requireApprovedGovernanceRequest(
+			r.Context(),
+			tenantID,
+			req.GovernanceApprovalID,
+			"tenant.delete",
+			"tenant",
+			tenantID,
+		); err != nil {
+			_ = h.publishAudit(r.Context(), "audit.auth.tenant_delete_rejected", reqID, tenantID, map[string]any{
+				"tenant_id":              tenantID,
+				"actor_user_id":          claims.UserID,
+				"actor_tenant_id":        claims.TenantID,
+				"governance_required":    true,
+				"governance_approval_id": strings.TrimSpace(req.GovernanceApprovalID),
+				"reason":                 err.Error(),
+			})
+			writeErr(w, http.StatusForbidden, "governance_required", err.Error(), reqID, tenantID)
+			return
+		}
 	}
 
 	readiness, readinessErr := h.store.GetTenantDeleteReadiness(r.Context(), tenantID)
@@ -924,6 +942,7 @@ func (h *Handler) handleDeleteTenant(w http.ResponseWriter, r *http.Request) {
 			"tenant_id":                 tenantID,
 			"actor_user_id":             claims.UserID,
 			"actor_tenant_id":           claims.TenantID,
+			"governance_required":       governanceRequired,
 			"governance_approval_id":    strings.TrimSpace(req.GovernanceApprovalID),
 			"tenant_status":             readiness.TenantStatus,
 			"active_ui_session_count":   readiness.ActiveUISessionCount,
@@ -958,6 +977,7 @@ func (h *Handler) handleDeleteTenant(w http.ResponseWriter, r *http.Request) {
 		"tables_purged":          summary.TablesPurged,
 		"rows_purged":            summary.RowsPurged,
 		"deleted_by_table":       summary.DeletedByTable,
+		"governance_required":    governanceRequired,
 		"governance_approval_id": strings.TrimSpace(req.GovernanceApprovalID),
 		"destructive_action":     true,
 	}); err != nil {

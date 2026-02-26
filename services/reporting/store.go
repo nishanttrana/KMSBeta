@@ -48,6 +48,7 @@ type Store interface {
 	UpdateReportJob(ctx context.Context, item ReportJob) error
 	GetReportJob(ctx context.Context, tenantID string, id string) (ReportJob, error)
 	ListReportJobs(ctx context.Context, tenantID string, limit int, offset int) ([]ReportJob, error)
+	DeleteReportJob(ctx context.Context, tenantID string, id string) error
 
 	CreateScheduledReport(ctx context.Context, item ScheduledReport) error
 	ListScheduledReports(ctx context.Context, tenantID string) ([]ScheduledReport, error)
@@ -641,6 +642,21 @@ LIMIT $2 OFFSET $3
 		out = append(out, item)
 	}
 	return out, rows.Err()
+}
+
+func (s *SQLStore) DeleteReportJob(ctx context.Context, tenantID string, id string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM reporting_report_jobs
+WHERE tenant_id = $1 AND id = $2
+`, tenantID, id)
+	if err != nil {
+		return err
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return errNotFound
+	}
+	return nil
 }
 
 func (s *SQLStore) CreateScheduledReport(ctx context.Context, item ScheduledReport) error {

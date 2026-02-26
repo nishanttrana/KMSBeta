@@ -215,6 +215,8 @@ func createComplianceSchemaForTest(conn *pkgdb.DB) error {
 			tenant_id TEXT NOT NULL,
 			id TEXT NOT NULL,
 			trigger TEXT NOT NULL DEFAULT 'manual',
+			template_id TEXT NOT NULL DEFAULT '',
+			template_name TEXT NOT NULL DEFAULT '',
 			overall_score INTEGER NOT NULL,
 			framework_scores TEXT NOT NULL DEFAULT '{}',
 			findings_json TEXT NOT NULL DEFAULT '[]',
@@ -231,6 +233,17 @@ func createComplianceSchemaForTest(conn *pkgdb.DB) error {
 			last_run_at TIMESTAMP,
 			next_run_at TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		);`,
+		`CREATE TABLE compliance_templates (
+			tenant_id TEXT NOT NULL,
+			id TEXT NOT NULL,
+			name TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			enabled INTEGER NOT NULL DEFAULT 1,
+			frameworks_json TEXT NOT NULL DEFAULT '[]',
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, id)
 		);`,
 	}
 	for _, stmt := range stmts {

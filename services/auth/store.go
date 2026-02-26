@@ -23,6 +23,7 @@ type Store interface {
 	DeleteTenant(ctx context.Context, tenantID string) (TenantDeleteSummary, error)
 	GetTenantDeleteReadiness(ctx context.Context, tenantID string) (TenantDeleteReadiness, error)
 	DisableTenant(ctx context.Context, tenantID string) (TenantDeleteReadiness, error)
+	IsPlatformQuorumRequired(ctx context.Context, tenantID string, action string) (bool, error)
 	IsGovernanceRequestApproved(ctx context.Context, tenantID string, requestID string, action string, targetType string, targetID string) (bool, error)
 	ListGroupRoleBindings(ctx context.Context, tenantID string) ([]GroupRoleBinding, error)
 	UpsertGroupRoleBinding(ctx context.Context, binding GroupRoleBinding) (GroupRoleBinding, error)

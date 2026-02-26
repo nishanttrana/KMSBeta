@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -51,9 +52,18 @@ func (s *SQLStore) GetTenantDeleteReadiness(ctx context.Context, tenantID string
 		TenantID:                  tenantID,
 		TenantStatus:              normalizeTenantStatus(tenant.Status),
 		CheckedAt:                 time.Now().UTC(),
-		RequiresGovernanceApprove: true,
+		RequiresGovernanceApprove: false,
 		Blockers:                  []TenantActivityBlocker{},
 	}
+	disableGovernanceRequired, err := s.IsPlatformQuorumRequired(ctx, tenantID, "tenant.disable")
+	if err != nil {
+		return TenantDeleteReadiness{}, err
+	}
+	deleteGovernanceRequired, err := s.IsPlatformQuorumRequired(ctx, tenantID, "tenant.delete")
+	if err != nil {
+		return TenantDeleteReadiness{}, err
+	}
+	readiness.RequiresGovernanceApprove = disableGovernanceRequired || deleteGovernanceRequired
 	checks := []tenantReadinessCheck{
 		{
 			Code:        "ui_sessions",
@@ -196,6 +206,49 @@ WHERE id=$1
 	return s.GetTenantDeleteReadiness(ctx, tenantID)
 }
 
+func (s *SQLStore) IsPlatformQuorumRequired(ctx context.Context, tenantID string, action string) (bool, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	action = normalizeGovernanceAction(action)
+	if tenantID == "" {
+		return false, errors.New("tenant id is required")
+	}
+	if action == "" {
+		return false, errors.New("action is required")
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT trigger_actions
+FROM approval_policies
+WHERE tenant_id=$1
+  AND LOWER(COALESCE(status,''))='active'
+  AND LOWER(COALESCE(scope,''))='platform'
+`, tenantID)
+	if err != nil {
+		if isMissingTableOrColumn(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	defer rows.Close() //nolint:errcheck
+	for rows.Next() {
+		var raw any
+		if scanErr := rows.Scan(&raw); scanErr != nil {
+			return false, scanErr
+		}
+		for _, pattern := range decodeGovernanceActions(raw) {
+			if governanceActionMatches(pattern, action) {
+				return true, nil
+			}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		if isMissingTableOrColumn(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return false, nil
+}
+
 func (s *SQLStore) IsGovernanceRequestApproved(
 	ctx context.Context,
 	tenantID string,
@@ -309,4 +362,59 @@ func toString(v any) string {
 	default:
 		return fmt.Sprint(value)
 	}
+}
+
+func decodeGovernanceActions(raw any) []string {
+	text := strings.TrimSpace(toString(raw))
+	if text == "" {
+		return []string{}
+	}
+	var parsed []string
+	if err := json.Unmarshal([]byte(text), &parsed); err == nil {
+		return normalizeGovernanceActionList(parsed)
+	}
+	trimmed := strings.TrimSpace(strings.Trim(strings.TrimSpace(text), "[]"))
+	if trimmed == "" {
+		return []string{}
+	}
+	parts := strings.Split(trimmed, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		cleaned := strings.Trim(strings.TrimSpace(part), "\"'")
+		if cleaned != "" {
+			out = append(out, cleaned)
+		}
+	}
+	return normalizeGovernanceActionList(out)
+}
+
+func normalizeGovernanceActionList(actions []string) []string {
+	out := make([]string, 0, len(actions))
+	for _, action := range actions {
+		normalized := normalizeGovernanceAction(action)
+		if normalized != "" {
+			out = append(out, normalized)
+		}
+	}
+	return out
+}
+
+func normalizeGovernanceAction(raw string) string {
+	return strings.ReplaceAll(strings.ToLower(strings.TrimSpace(raw)), "_", "-")
+}
+
+func governanceActionMatches(pattern string, action string) bool {
+	p := normalizeGovernanceAction(pattern)
+	a := normalizeGovernanceAction(action)
+	if p == "" || a == "" {
+		return false
+	}
+	if p == "*" {
+		return true
+	}
+	if strings.HasSuffix(p, ".*") {
+		prefix := strings.TrimSuffix(p, "*")
+		return strings.HasPrefix(a, prefix)
+	}
+	return p == a
 }

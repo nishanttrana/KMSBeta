@@ -172,16 +172,18 @@ type AssessmentPQC struct {
 }
 
 type AssessmentResult struct {
-	ID              string             `json:"id"`
-	TenantID        string             `json:"tenant_id"`
-	Trigger         string             `json:"trigger"`
-	OverallScore    int                `json:"overall_score"`
-	FrameworkScores map[string]int     `json:"framework_scores"`
+	ID              string              `json:"id"`
+	TenantID        string              `json:"tenant_id"`
+	Trigger         string              `json:"trigger"`
+	TemplateID      string              `json:"template_id"`
+	TemplateName    string              `json:"template_name"`
+	OverallScore    int                 `json:"overall_score"`
+	FrameworkScores map[string]int      `json:"framework_scores"`
 	Findings        []AssessmentFinding `json:"findings"`
-	PQC             AssessmentPQC      `json:"pqc"`
-	CertMetrics     map[string]float64 `json:"cert_metrics"`
-	Posture         PostureSnapshot    `json:"posture"`
-	CreatedAt       time.Time          `json:"created_at"`
+	PQC             AssessmentPQC       `json:"pqc"`
+	CertMetrics     map[string]float64  `json:"cert_metrics"`
+	Posture         PostureSnapshot     `json:"posture"`
+	CreatedAt       time.Time           `json:"created_at"`
 }
 
 type AssessmentSchedule struct {
@@ -191,4 +193,33 @@ type AssessmentSchedule struct {
 	LastRunAt time.Time `json:"last_run_at"`
 	NextRunAt time.Time `json:"next_run_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type ComplianceTemplate struct {
+	ID          string                        `json:"id"`
+	TenantID    string                        `json:"tenant_id"`
+	Name        string                        `json:"name"`
+	Description string                        `json:"description"`
+	Enabled     bool                          `json:"enabled"`
+	Frameworks  []ComplianceTemplateFramework `json:"frameworks"`
+	CreatedAt   time.Time                     `json:"created_at"`
+	UpdatedAt   time.Time                     `json:"updated_at"`
+}
+
+type ComplianceTemplateFramework struct {
+	FrameworkID string                      `json:"framework_id"`
+	Label       string                      `json:"label"`
+	Enabled     bool                        `json:"enabled"`
+	Weight      float64                     `json:"weight"`
+	Controls    []ComplianceTemplateControl `json:"controls"`
+}
+
+type ComplianceTemplateControl struct {
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Category    string  `json:"category"`
+	Requirement string  `json:"requirement"`
+	Enabled     bool    `json:"enabled"`
+	Weight      float64 `json:"weight"`
+	Threshold   int     `json:"threshold"`
 }

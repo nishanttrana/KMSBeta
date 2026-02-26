@@ -154,3 +154,33 @@ func TestHandlerAssessmentRunAndSchedule(t *testing.T) {
 		t.Fatalf("get schedule status=%d body=%s", getScheduleRR.Code, getScheduleRR.Body.String())
 	}
 }
+
+func TestHandlerComplianceTemplateEndpoints(t *testing.T) {
+	h, _, keycore, _, _, _, _ := newComplianceHandler(t)
+	keycore.keys["t6"] = []map[string]interface{}{
+		{"id": "k1", "algorithm": "AES-256", "status": "active", "current_version": 2, "ops_total": 11},
+	}
+
+	createReq := httptest.NewRequest(http.MethodPost, "/compliance/templates",
+		strings.NewReader(`{"tenant_id":"t6","name":"My Template","enabled":true}`))
+	createReq.Header.Set("Content-Type", "application/json")
+	createRR := httptest.NewRecorder()
+	h.ServeHTTP(createRR, createReq)
+	if createRR.Code != http.StatusOK || !strings.Contains(createRR.Body.String(), "\"template\"") {
+		t.Fatalf("create template status=%d body=%s", createRR.Code, createRR.Body.String())
+	}
+
+	listReq := httptest.NewRequest(http.MethodGet, "/compliance/templates?tenant_id=t6", nil)
+	listRR := httptest.NewRecorder()
+	h.ServeHTTP(listRR, listReq)
+	if listRR.Code != http.StatusOK || !strings.Contains(listRR.Body.String(), "My Template") {
+		t.Fatalf("list templates status=%d body=%s", listRR.Code, listRR.Body.String())
+	}
+
+	runReq := httptest.NewRequest(http.MethodPost, "/compliance/assessment/run?tenant_id=t6", nil)
+	runRR := httptest.NewRecorder()
+	h.ServeHTTP(runRR, runReq)
+	if runRR.Code != http.StatusOK || !strings.Contains(runRR.Body.String(), "\"assessment\"") {
+		t.Fatalf("run assessment status=%d body=%s", runRR.Code, runRR.Body.String())
+	}
+}

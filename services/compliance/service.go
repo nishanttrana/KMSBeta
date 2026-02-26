@@ -198,27 +198,29 @@ func (s *Service) StartScheduler(ctx context.Context) {
 	}()
 }
 
-func (s *Service) GetLatestAssessment(ctx context.Context, tenantID string) (AssessmentResult, error) {
+func (s *Service) GetLatestAssessment(ctx context.Context, tenantID string, templateID string) (AssessmentResult, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	if tenantID == "" {
 		return AssessmentResult{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
-	items, err := s.store.ListAssessmentRuns(ctx, tenantID, 1)
+	templateID = normalizeTemplateID(templateID)
+	items, err := s.store.ListAssessmentRuns(ctx, tenantID, templateID, 1)
 	if err == nil && len(items) > 0 {
 		return items[0], nil
 	}
-	return s.RunAssessment(ctx, tenantID, "auto", false)
+	return s.RunAssessment(ctx, tenantID, "auto", false, templateID)
 }
 
-func (s *Service) ListAssessmentRuns(ctx context.Context, tenantID string, limit int) ([]AssessmentResult, error) {
+func (s *Service) ListAssessmentRuns(ctx context.Context, tenantID string, templateID string, limit int) ([]AssessmentResult, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	if tenantID == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
-	return s.store.ListAssessmentRuns(ctx, tenantID, limit)
+	templateID = normalizeTemplateID(templateID)
+	return s.store.ListAssessmentRuns(ctx, tenantID, templateID, limit)
 }
 
-func (s *Service) RunAssessment(ctx context.Context, tenantID string, trigger string, recompute bool) (AssessmentResult, error) {
+func (s *Service) RunAssessment(ctx context.Context, tenantID string, trigger string, recompute bool, templateID string) (AssessmentResult, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	if tenantID == "" {
 		return AssessmentResult{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
@@ -232,6 +234,18 @@ func (s *Service) RunAssessment(ctx context.Context, tenantID string, trigger st
 	if err != nil {
 		return AssessmentResult{}, err
 	}
+	templateID = normalizeTemplateID(templateID)
+	templateName := "Built-in Baseline"
+	frameworkScores := posture.FrameworkScores
+	overallScore := posture.OverallScore
+	template, err := s.resolveComplianceTemplate(ctx, tenantID, templateID)
+	if err != nil {
+		return AssessmentResult{}, err
+	}
+	if template != nil {
+		templateName = template.Name
+		frameworkScores, overallScore = scoreFromComplianceTemplate(*template, posture)
+	}
 	keys, _ := s.fetchKeys(ctx, tenantID)
 	certs, _ := s.fetchCerts(ctx, tenantID)
 
@@ -243,8 +257,10 @@ func (s *Service) RunAssessment(ctx context.Context, tenantID string, trigger st
 		ID:              newID("assess"),
 		TenantID:        tenantID,
 		Trigger:         trigger,
-		OverallScore:    posture.OverallScore,
-		FrameworkScores: posture.FrameworkScores,
+		TemplateID:      templateID,
+		TemplateName:    templateName,
+		OverallScore:    overallScore,
+		FrameworkScores: frameworkScores,
 		Findings:        findings,
 		PQC:             pqc,
 		CertMetrics:     certMetrics,
@@ -253,13 +269,15 @@ func (s *Service) RunAssessment(ctx context.Context, tenantID string, trigger st
 	if err := s.store.CreateAssessmentRun(ctx, out); err != nil {
 		return AssessmentResult{}, err
 	}
-	items, err := s.store.ListAssessmentRuns(ctx, tenantID, 1)
+	items, err := s.store.ListAssessmentRuns(ctx, tenantID, templateID, 1)
 	if err == nil && len(items) > 0 {
 		out = items[0]
 	}
 	_ = s.publishAudit(ctx, "audit.compliance.assessment_run", tenantID, map[string]interface{}{
 		"assessment_id": out.ID,
 		"trigger":       trigger,
+		"template_id":   out.TemplateID,
+		"template_name": out.TemplateName,
 		"overall_score": out.OverallScore,
 		"finding_count": len(out.Findings),
 	})
@@ -323,10 +341,92 @@ func (s *Service) RunDueSchedules(ctx context.Context) error {
 		return err
 	}
 	for _, item := range items {
-		_, _ = s.RunAssessment(ctx, item.TenantID, "scheduled", true)
+		_, _ = s.RunAssessment(ctx, item.TenantID, "scheduled", true, "")
 		next := nextAssessmentRunTime(now, item.Frequency)
 		_ = s.store.UpdateAssessmentScheduleRun(ctx, item.TenantID, now, next)
 	}
+	return nil
+}
+
+func (s *Service) ListComplianceTemplates(ctx context.Context, tenantID string) ([]ComplianceTemplate, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	return s.store.ListComplianceTemplates(ctx, tenantID)
+}
+
+func (s *Service) GetComplianceTemplate(ctx context.Context, tenantID string, templateID string) (ComplianceTemplate, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	templateID = normalizeTemplateID(templateID)
+	if tenantID == "" || templateID == "" {
+		return ComplianceTemplate{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and template_id are required")
+	}
+	if templateID == "default" {
+		return defaultComplianceTemplate(tenantID), nil
+	}
+	item, err := s.store.GetComplianceTemplate(ctx, tenantID, templateID)
+	if err != nil {
+		return ComplianceTemplate{}, err
+	}
+	return normalizeComplianceTemplate(item, tenantID), nil
+}
+
+func (s *Service) UpsertComplianceTemplate(ctx context.Context, req ComplianceTemplate) (ComplianceTemplate, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	if req.TenantID == "" {
+		return ComplianceTemplate{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	newTemplate := strings.TrimSpace(req.ID) == ""
+	req.ID = strings.ToLower(strings.TrimSpace(req.ID))
+	if req.ID == "" {
+		req.ID = newID("ctpl")
+	}
+	if req.ID == "baseline" || req.ID == "built-in" {
+		req.ID = "default"
+	}
+	if req.ID == "default" {
+		return ComplianceTemplate{}, newServiceError(http.StatusBadRequest, "bad_request", "default template is read-only")
+	}
+	if newTemplate && !req.Enabled {
+		req.Enabled = true
+	}
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		return ComplianceTemplate{}, newServiceError(http.StatusBadRequest, "bad_request", "name is required")
+	}
+	req = normalizeComplianceTemplate(req, req.TenantID)
+	if err := s.store.UpsertComplianceTemplate(ctx, req); err != nil {
+		return ComplianceTemplate{}, err
+	}
+	item, err := s.store.GetComplianceTemplate(ctx, req.TenantID, req.ID)
+	if err != nil {
+		return ComplianceTemplate{}, err
+	}
+	item = normalizeComplianceTemplate(item, req.TenantID)
+	_ = s.publishAudit(ctx, "audit.compliance.template_upserted", req.TenantID, map[string]interface{}{
+		"template_id":   item.ID,
+		"template_name": item.Name,
+		"enabled":       item.Enabled,
+	})
+	return item, nil
+}
+
+func (s *Service) DeleteComplianceTemplate(ctx context.Context, tenantID string, templateID string) error {
+	tenantID = strings.TrimSpace(tenantID)
+	templateID = normalizeTemplateID(templateID)
+	if tenantID == "" || templateID == "" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and template_id are required")
+	}
+	if templateID == "default" {
+		return newServiceError(http.StatusBadRequest, "bad_request", "default template cannot be deleted")
+	}
+	if err := s.store.DeleteComplianceTemplate(ctx, tenantID, templateID); err != nil {
+		return err
+	}
+	_ = s.publishAudit(ctx, "audit.compliance.template_deleted", tenantID, map[string]interface{}{
+		"template_id": templateID,
+	})
 	return nil
 }
 
@@ -724,6 +824,200 @@ func (s *Service) assessFrameworks(tenantID string, keyHygiene int, policy int, 
 		})
 	}
 	return out
+}
+
+func (s *Service) resolveComplianceTemplate(ctx context.Context, tenantID string, templateID string) (*ComplianceTemplate, error) {
+	templateID = normalizeTemplateID(templateID)
+	if templateID == "" || templateID == "default" {
+		return nil, nil
+	}
+	item, err := s.store.GetComplianceTemplate(ctx, tenantID, templateID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return nil, newServiceError(http.StatusNotFound, "not_found", "compliance template not found")
+		}
+		return nil, err
+	}
+	item = normalizeComplianceTemplate(item, tenantID)
+	if !item.Enabled {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "selected compliance template is disabled")
+	}
+	return &item, nil
+}
+
+func normalizeTemplateID(v string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	if v == "" || v == "default" || v == "baseline" || v == "built-in" {
+		return "default"
+	}
+	return v
+}
+
+func defaultComplianceTemplate(tenantID string) ComplianceTemplate {
+	return ComplianceTemplate{
+		ID:          "default",
+		TenantID:    tenantID,
+		Name:        "Built-in Baseline",
+		Description: "Default compliance scoring derived from posture categories and built-in frameworks.",
+		Enabled:     true,
+		Frameworks:  defaultTemplateFrameworks(),
+	}
+}
+
+func defaultTemplateFrameworks() []ComplianceTemplateFramework {
+	catalog := frameworkCatalog()
+	out := make([]ComplianceTemplateFramework, 0, len(catalog))
+	for _, fw := range catalog {
+		controls := make([]ComplianceTemplateControl, 0, len(fw.Controls))
+		for _, c := range fw.Controls {
+			controls = append(controls, ComplianceTemplateControl{
+				ID:          c.ID,
+				Title:       c.Title,
+				Category:    c.Category,
+				Requirement: c.Requirement,
+				Enabled:     true,
+				Weight:      defaultWeight(c.Weight, 1),
+				Threshold:   80,
+			})
+		}
+		out = append(out, ComplianceTemplateFramework{
+			FrameworkID: fw.ID,
+			Label:       strings.TrimSpace(fw.Name + " " + fw.Version),
+			Enabled:     true,
+			Weight:      1,
+			Controls:    controls,
+		})
+	}
+	return out
+}
+
+func normalizeComplianceTemplate(in ComplianceTemplate, tenantID string) ComplianceTemplate {
+	baseMap := map[string]ComplianceTemplateFramework{}
+	for _, fw := range defaultTemplateFrameworks() {
+		baseMap[fw.FrameworkID] = fw
+	}
+	in.TenantID = tenantID
+	in.Description = strings.TrimSpace(in.Description)
+	seen := map[string]struct{}{}
+	outFrameworks := make([]ComplianceTemplateFramework, 0, len(baseMap))
+	for _, fw := range in.Frameworks {
+		fwID := normalizeFrameworkID(fw.FrameworkID)
+		if fwID == "" {
+			continue
+		}
+		if _, ok := seen[fwID]; ok {
+			continue
+		}
+		seen[fwID] = struct{}{}
+		base, ok := baseMap[fwID]
+		if !ok {
+			continue
+		}
+		fw.FrameworkID = fwID
+		fw.Label = firstNonEmpty(fw.Label, base.Label)
+		fw.Weight = defaultWeight(fw.Weight, 1)
+		controlMap := map[string]ComplianceTemplateControl{}
+		for _, c := range base.Controls {
+			controlMap[c.ID] = c
+		}
+		normalizedControls := make([]ComplianceTemplateControl, 0, len(base.Controls))
+		usedControls := map[string]struct{}{}
+		for _, c := range fw.Controls {
+			id := strings.TrimSpace(c.ID)
+			baseCtrl, ok := controlMap[id]
+			if !ok || id == "" {
+				continue
+			}
+			if _, exists := usedControls[id]; exists {
+				continue
+			}
+			usedControls[id] = struct{}{}
+			c.ID = id
+			c.Title = firstNonEmpty(c.Title, baseCtrl.Title)
+			c.Category = firstNonEmpty(c.Category, baseCtrl.Category)
+			c.Requirement = firstNonEmpty(c.Requirement, baseCtrl.Requirement)
+			c.Weight = defaultWeight(c.Weight, 1)
+			if c.Threshold <= 0 || c.Threshold > 100 {
+				c.Threshold = 80
+			}
+			normalizedControls = append(normalizedControls, c)
+		}
+		for _, c := range base.Controls {
+			if _, exists := usedControls[c.ID]; exists {
+				continue
+			}
+			normalizedControls = append(normalizedControls, c)
+		}
+		fw.Controls = normalizedControls
+		outFrameworks = append(outFrameworks, fw)
+	}
+	for fwID, fw := range baseMap {
+		if _, ok := seen[fwID]; ok {
+			continue
+		}
+		outFrameworks = append(outFrameworks, fw)
+	}
+	sort.Slice(outFrameworks, func(i, j int) bool {
+		return outFrameworks[i].FrameworkID < outFrameworks[j].FrameworkID
+	})
+	in.Frameworks = outFrameworks
+	if in.Name == "" {
+		in.Name = "Custom Compliance Template"
+	}
+	return in
+}
+
+func scoreFromComplianceTemplate(tpl ComplianceTemplate, posture PostureSnapshot) (map[string]int, int) {
+	frameworkScores := map[string]int{}
+	totalWeight := 0.0
+	weightedTotal := 0.0
+	for _, fw := range tpl.Frameworks {
+		if !fw.Enabled {
+			continue
+		}
+		fwWeight := defaultWeight(fw.Weight, 1)
+		ctrlWeightSum := 0.0
+		ctrlWeightedTotal := 0.0
+		for _, ctrl := range fw.Controls {
+			if !ctrl.Enabled {
+				continue
+			}
+			score := controlScore(
+				ctrl.Category,
+				posture.KeyHygiene,
+				posture.PolicyCompliance,
+				posture.AccessSecurity,
+				posture.CryptoPosture,
+				posture.PQCReadiness,
+				posture.Metrics["qsl_avg"],
+			)
+			ctrlWeight := defaultWeight(ctrl.Weight, 1)
+			ctrlWeightSum += ctrlWeight
+			ctrlWeightedTotal += float64(score) * ctrlWeight
+		}
+		fwScore := posture.FrameworkScores[fw.FrameworkID]
+		if ctrlWeightSum > 0 {
+			fwScore = clampScore(int(ctrlWeightedTotal / ctrlWeightSum))
+		}
+		frameworkScores[fw.FrameworkID] = fwScore
+		weightedTotal += float64(fwScore) * fwWeight
+		totalWeight += fwWeight
+	}
+	if len(frameworkScores) == 0 {
+		return posture.FrameworkScores, posture.OverallScore
+	}
+	overall := posture.OverallScore
+	if totalWeight > 0 {
+		overall = clampScore(int(weightedTotal / totalWeight))
+	}
+	return frameworkScores, overall
+}
+
+func defaultWeight(v float64, fallback float64) float64 {
+	if v <= 0 {
+		return fallback
+	}
+	return v
 }
 
 func (s *Service) fetchKeys(ctx context.Context, tenantID string) ([]map[string]interface{}, error) {
