@@ -244,6 +244,26 @@ export async function restoreGovernanceBackup(
   return out.result;
 }
 
+export async function deleteGovernanceBackup(
+  session: AuthSession,
+  backupID: string,
+  actor?: string
+): Promise<void> {
+  const qp = new URLSearchParams();
+  qp.set("tenant_id", session.tenantId);
+  if (String(actor || "").trim()) {
+    qp.set("actor", String(actor || "").trim());
+  }
+  await serviceRequest<Record<string, unknown>>(
+    session,
+    "governance",
+    `/governance/backups/${encodeURIComponent(String(backupID || "").trim())}?${qp.toString()}`,
+    {
+      method: "DELETE"
+    }
+  );
+}
+
 export async function listGovernancePolicies(
   session: AuthSession,
   options?: { scope?: string; status?: string }

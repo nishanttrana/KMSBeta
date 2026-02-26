@@ -34,6 +34,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /governance/backups", h.handleListBackups)
 	mux.HandleFunc("POST /governance/backups", h.handleCreateBackup)
 	mux.HandleFunc("POST /governance/backups/restore", h.handleRestoreBackup)
+	mux.HandleFunc("DELETE /governance/backups/{id}", h.handleDeleteBackup)
 	mux.HandleFunc("GET /governance/backups/{id}", h.handleGetBackup)
 	mux.HandleFunc("GET /governance/backups/{id}/artifact", h.handleDownloadBackupArtifact)
 	mux.HandleFunc("GET /governance/backups/{id}/key", h.handleDownloadBackupKey)
@@ -248,6 +249,31 @@ func (h *Handler) handleGetBackup(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"job":        item,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleDeleteBackup(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	actor := strings.TrimSpace(r.URL.Query().Get("actor"))
+	if actor == "" {
+		actor = strings.TrimSpace(r.Header.Get("X-User-ID"))
+	}
+	err := h.svc.DeleteBackup(r.Context(), tenantID, r.PathValue("id"), actor)
+	if err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "backup_delete_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":     "deleted",
 		"request_id": reqID,
 	})
 }

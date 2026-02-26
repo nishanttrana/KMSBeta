@@ -223,6 +223,39 @@ func (s *Service) GetBackup(ctx context.Context, tenantID string, backupID strin
 	return item, nil
 }
 
+func (s *Service) DeleteBackup(ctx context.Context, tenantID string, backupID string, deletedBy string) error {
+	store, ok := s.store.(*SQLStore)
+	if !ok || store == nil || store.db == nil || store.db.SQL() == nil {
+		return errors.New("backup store is unavailable")
+	}
+	tenantID = strings.TrimSpace(tenantID)
+	backupID = strings.TrimSpace(backupID)
+	if tenantID == "" || backupID == "" {
+		return errors.New("tenant_id and backup_id are required")
+	}
+	item, err := store.getBackupJob(ctx, tenantID, backupID, false)
+	if err != nil {
+		return err
+	}
+	if err := store.deleteBackupJob(ctx, tenantID, backupID); err != nil {
+		return err
+	}
+	deletedBy = strings.TrimSpace(deletedBy)
+	if deletedBy == "" {
+		deletedBy = "system"
+	}
+	_ = s.publishAudit(ctx, "audit.governance.backup_deleted", tenantID, map[string]interface{}{
+		"backup_id":         backupID,
+		"deleted_by":        deletedBy,
+		"scope":             item.Scope,
+		"target_tenant_id":  item.TargetTenantID,
+		"artifact_size":     item.ArtifactSizeBytes,
+		"row_count_total":   item.RowCountTotal,
+		"table_count_total": item.TableCount,
+	})
+	return nil
+}
+
 func (s *Service) GetBackupArtifactDownload(ctx context.Context, tenantID string, backupID string) (map[string]interface{}, error) {
 	store, ok := s.store.(*SQLStore)
 	if !ok || store == nil || store.db == nil || store.db.SQL() == nil {
@@ -763,6 +796,27 @@ WHERE tenant_id=$1 AND id=$2
 		}
 	}
 	return out, nil
+}
+
+func (s *SQLStore) deleteBackupJob(ctx context.Context, tenantID string, backupID string) error {
+	result, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM governance_backup_jobs
+WHERE tenant_id=$1 AND id=$2
+`, tenantID, backupID)
+	if err != nil {
+		return err
+	}
+	if result == nil {
+		return errNotFound
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected <= 0 {
+		return errNotFound
+	}
+	return nil
 }
 
 func (s *SQLStore) listBackupJobs(ctx context.Context, tenantID string, scope string, status string, limit int) ([]BackupJob, error) {
