@@ -123,6 +123,7 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 				tenant_id TEXT PRIMARY KEY,
 				approval_expiry_minutes INTEGER NOT NULL DEFAULT 60,
 				expiry_check_interval_seconds INTEGER NOT NULL DEFAULT 60,
+				approval_delivery_mode TEXT NOT NULL DEFAULT 'notify',
 				smtp_host TEXT,
 				smtp_port TEXT,
 				smtp_username TEXT,
@@ -131,6 +132,11 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 				smtp_starttls INTEGER NOT NULL DEFAULT 1,
 				notify_dashboard INTEGER NOT NULL DEFAULT 1,
 				notify_email INTEGER NOT NULL DEFAULT 1,
+				notify_slack INTEGER NOT NULL DEFAULT 0,
+				notify_teams INTEGER NOT NULL DEFAULT 0,
+				slack_webhook_url TEXT,
+				teams_webhook_url TEXT,
+				delivery_webhook_timeout_seconds INTEGER NOT NULL DEFAULT 5,
 				challenge_response_enabled INTEGER NOT NULL DEFAULT 0,
 				updated_by TEXT,
 				updated_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -521,6 +527,54 @@ func TestSystemStatePersistenceAndIntegrity(t *testing.T) {
 	}
 	if integrity.Status != "healthy" {
 		t.Fatalf("expected healthy integrity, got %s with checks=%v", integrity.Status, integrity.Checks)
+	}
+}
+
+func TestApprovalRequestSendsSlackWebhookNotification(t *testing.T) {
+	store := newGovernanceStore(t)
+	mailer := &mockEmailSender{}
+	svc := NewService(store, nil, mailer, &mockCallbackExecutor{}, "http://localhost:8050")
+	webhookHits := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("expected POST webhook call, got %s", r.Method)
+		}
+		webhookHits++
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	}))
+	defer server.Close()
+
+	_, err := svc.UpdateSettings(context.Background(), GovernanceSettings{
+		TenantID:                  "tw1",
+		ApprovalDeliveryMode:      "notify",
+		NotifyEmail:               false,
+		NotifySlack:               true,
+		SlackWebhookURL:           server.URL,
+		DeliveryWebhookTimeoutSec: 2,
+		UpdatedBy:                 "admin",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	createTestPolicy(t, svc, "tw1", 1, 1, []string{"ops@example.com"})
+	_, err = svc.CreateApprovalRequest(context.Background(), CreateApprovalRequestInput{
+		TenantID:       "tw1",
+		Action:         "key.destroy",
+		TargetType:     "key",
+		TargetID:       "key-webhook",
+		RequesterID:    "u-webhook",
+		RequesterEmail: "u-webhook@example.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if webhookHits != 1 {
+		t.Fatalf("expected exactly 1 slack webhook notification, got %d", webhookHits)
+	}
+	if len(mailer.msgs) != 0 {
+		t.Fatalf("expected email delivery disabled, got %d emails", len(mailer.msgs))
 	}
 }
 

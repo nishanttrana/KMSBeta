@@ -205,6 +205,7 @@ func (s *Service) CreateApprovalRequest(ctx context.Context, in CreateApprovalRe
 			})
 		}
 	}
+	s.sendConfiguredWebhooks(ctx, settings, req, approvers)
 	return s.store.GetApprovalRequest(ctx, req.TenantID, req.ID)
 }
 
@@ -367,16 +368,11 @@ func (s *Service) GetSettings(ctx context.Context, tenantID string) (GovernanceS
 	if err != nil {
 		return GovernanceSettings{}, err
 	}
-	settings.ApprovalExpiryMinutes = clamp(settings.ApprovalExpiryMinutes, 1, 1440)
-	settings.ExpiryCheckIntervalSeconds = clamp(settings.ExpiryCheckIntervalSeconds, 5, 3600)
-	if strings.TrimSpace(settings.SMTPPort) == "" {
-		settings.SMTPPort = "587"
+	normalized, err := normalizeGovernanceSettings(settings, false)
+	if err != nil {
+		return GovernanceSettings{}, err
 	}
-	if !settings.NotifyDashboard && !settings.NotifyEmail {
-		settings.NotifyDashboard = true
-		settings.NotifyEmail = true
-	}
-	return settings, nil
+	return normalized, nil
 }
 
 func (s *Service) UpdateSettings(ctx context.Context, settings GovernanceSettings) (GovernanceSettings, error) {
@@ -384,30 +380,22 @@ func (s *Service) UpdateSettings(ctx context.Context, settings GovernanceSetting
 	if settings.TenantID == "" {
 		return GovernanceSettings{}, errors.New("tenant_id is required")
 	}
-	settings.ApprovalExpiryMinutes = clamp(settings.ApprovalExpiryMinutes, 1, 1440)
-	settings.ExpiryCheckIntervalSeconds = clamp(settings.ExpiryCheckIntervalSeconds, 5, 3600)
-	if strings.TrimSpace(settings.SMTPPort) == "" {
-		settings.SMTPPort = "587"
-	}
-	if !settings.SMTPStartTLS {
-		settings.SMTPStartTLS = false
-	} else {
-		settings.SMTPStartTLS = true
-	}
-	if settings.UpdatedBy == "" {
-		settings.UpdatedBy = "system"
-	}
-	if !settings.NotifyDashboard && !settings.NotifyEmail {
-		settings.NotifyDashboard = true
-		settings.NotifyEmail = true
-	}
-	if settings.ChallengeResponseEnabled && !settings.NotifyEmail {
-		settings.NotifyEmail = true
-	}
-	if err := s.store.UpsertSettings(ctx, settings); err != nil {
+	existing, err := s.store.GetSettings(ctx, settings.TenantID)
+	if err != nil {
 		return GovernanceSettings{}, err
 	}
-	return s.GetSettings(ctx, settings.TenantID)
+	// Keep existing SMTP secret unless explicitly provided.
+	if strings.TrimSpace(settings.SMTPPassword) == "" {
+		settings.SMTPPassword = existing.SMTPPassword
+	}
+	normalized, err := normalizeGovernanceSettings(settings, true)
+	if err != nil {
+		return GovernanceSettings{}, err
+	}
+	if err := s.store.UpsertSettings(ctx, normalized); err != nil {
+		return GovernanceSettings{}, err
+	}
+	return s.GetSettings(ctx, normalized.TenantID)
 }
 
 func (s *Service) TestSMTP(ctx context.Context, tenantID string, to string) error {

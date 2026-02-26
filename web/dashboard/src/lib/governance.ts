@@ -5,6 +5,7 @@ export type GovernanceSettings = {
   tenant_id: string;
   approval_expiry_minutes: number;
   expiry_check_interval_seconds: number;
+  approval_delivery_mode: "notify" | "kms_only" | string;
   smtp_host: string;
   smtp_port: string;
   smtp_username: string;
@@ -13,6 +14,11 @@ export type GovernanceSettings = {
   smtp_starttls: boolean;
   notify_dashboard: boolean;
   notify_email: boolean;
+  notify_slack: boolean;
+  notify_teams: boolean;
+  slack_webhook_url: string;
+  teams_webhook_url: string;
+  delivery_webhook_timeout_seconds: number;
   challenge_response_enabled: boolean;
   updated_by?: string;
   updated_at?: string;
@@ -101,6 +107,21 @@ export async function testGovernanceSMTP(session: AuthSession, to: string): Prom
     body: JSON.stringify({
       tenant_id: session.tenantId,
       to
+    })
+  });
+}
+
+export async function testGovernanceWebhook(
+  session: AuthSession,
+  channel: "slack" | "teams",
+  webhook_url?: string
+): Promise<void> {
+  await serviceRequest<Record<string, unknown>>(session, "governance", "/governance/settings/webhook/test", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      channel,
+      webhook_url: webhook_url || ""
     })
   });
 }

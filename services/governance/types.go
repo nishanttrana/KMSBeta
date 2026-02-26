@@ -130,6 +130,7 @@ type GovernanceSettings struct {
 	TenantID                   string    `json:"tenant_id"`
 	ApprovalExpiryMinutes      int       `json:"approval_expiry_minutes"`
 	ExpiryCheckIntervalSeconds int       `json:"expiry_check_interval_seconds"`
+	ApprovalDeliveryMode       string    `json:"approval_delivery_mode"`
 	SMTPHost                   string    `json:"smtp_host"`
 	SMTPPort                   string    `json:"smtp_port"`
 	SMTPUsername               string    `json:"smtp_username"`
@@ -138,6 +139,11 @@ type GovernanceSettings struct {
 	SMTPStartTLS               bool      `json:"smtp_starttls"`
 	NotifyDashboard            bool      `json:"notify_dashboard"`
 	NotifyEmail                bool      `json:"notify_email"`
+	NotifySlack                bool      `json:"notify_slack"`
+	NotifyTeams                bool      `json:"notify_teams"`
+	SlackWebhookURL            string    `json:"slack_webhook_url"`
+	TeamsWebhookURL            string    `json:"teams_webhook_url"`
+	DeliveryWebhookTimeoutSec  int       `json:"delivery_webhook_timeout_seconds"`
 	ChallengeResponseEnabled   bool      `json:"challenge_response_enabled"`
 	UpdatedBy                  string    `json:"updated_by"`
 	UpdatedAt                  time.Time `json:"updated_at"`

@@ -334,6 +334,7 @@ import {
   listGovernancePolicies,
   listGovernanceRequests,
   testGovernanceSMTP,
+  testGovernanceWebhook,
   updateGovernancePolicy,
   updateGovernanceSettings,
   voteGovernanceRequest
@@ -17426,8 +17427,10 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
   const [govSettings,setGovSettings]=useState<any>(null);
   const [govLoading,setGovLoading]=useState(false);
   const [govSaving,setGovSaving]=useState(false);
+  const [smtpSaving,setSMTPSaving]=useState(false);
   const [smtpTestTo,setSMTPTestTo]=useState("");
   const [smtpTesting,setSMTPTesting]=useState(false);
+  const [webhookTesting,setWebhookTesting]=useState<any>({slack:false,teams:false});
   const [accessSettings,setAccessSettings]=useState<any>(null);
   const [accessSettingsLoading,setAccessSettingsLoading]=useState(false);
   const [accessSettingsSaving,setAccessSettingsSaving]=useState(false);
@@ -17738,7 +17741,15 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     }
     try{
       const out=await getGovernanceSettings(session);
-      setGovSettings(out);
+      setGovSettings({
+        ...out,
+        approval_delivery_mode:String(out?.approval_delivery_mode||"notify").toLowerCase()==="kms_only"?"kms_only":"notify",
+        notify_slack:Boolean(out?.notify_slack),
+        notify_teams:Boolean(out?.notify_teams),
+        slack_webhook_url:String(out?.slack_webhook_url||""),
+        teams_webhook_url:String(out?.teams_webhook_url||""),
+        delivery_webhook_timeout_seconds:Math.max(1,Math.min(60,Number(out?.delivery_webhook_timeout_seconds||5)))
+      });
       if(!String(smtpTestTo||"").trim()){
         const defaultMail=String(session?.username||"").trim();
         if(defaultMail){
@@ -17756,6 +17767,27 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     }
   };
 
+  const buildGovernancePayload=(state:any)=>({
+    approval_expiry_minutes:Math.max(1,Math.min(1440,Number(state?.approval_expiry_minutes||60))),
+    expiry_check_interval_seconds:Math.max(5,Math.min(3600,Number(state?.expiry_check_interval_seconds||60))),
+    approval_delivery_mode:String(state?.approval_delivery_mode||"notify").toLowerCase()==="kms_only"?"kms_only":"notify",
+    smtp_host:String(state?.smtp_host||"").trim(),
+    smtp_port:String(state?.smtp_port||"").trim()||"587",
+    smtp_username:String(state?.smtp_username||"").trim(),
+    smtp_password:String(state?.smtp_password||""),
+    smtp_from:String(state?.smtp_from||"").trim(),
+    smtp_starttls:Boolean(state?.smtp_starttls),
+    notify_dashboard:true,
+    notify_email:Boolean(state?.notify_email),
+    notify_slack:Boolean(state?.notify_slack),
+    notify_teams:Boolean(state?.notify_teams),
+    slack_webhook_url:String(state?.slack_webhook_url||"").trim(),
+    teams_webhook_url:String(state?.teams_webhook_url||"").trim(),
+    delivery_webhook_timeout_seconds:Math.max(1,Math.min(60,Number(state?.delivery_webhook_timeout_seconds||5))),
+    challenge_response_enabled:Boolean(state?.challenge_response_enabled),
+    updated_by:session?.username||"dashboard"
+  });
+
   const saveGovernanceSettings=async()=>{
     if(!session?.token){
       onToast?.("Login is required to update governance settings.");
@@ -17767,20 +17799,7 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     }
     setGovSaving(true);
     try{
-      const payload={
-        approval_expiry_minutes:Math.max(1,Math.min(1440,Number(govSettings.approval_expiry_minutes||60))),
-        expiry_check_interval_seconds:Math.max(5,Math.min(3600,Number(govSettings.expiry_check_interval_seconds||60))),
-        smtp_host:String(govSettings.smtp_host||"").trim(),
-        smtp_port:String(govSettings.smtp_port||"").trim()||"587",
-        smtp_username:String(govSettings.smtp_username||"").trim(),
-        smtp_password:String(govSettings.smtp_password||""),
-        smtp_from:String(govSettings.smtp_from||"").trim(),
-        smtp_starttls:Boolean(govSettings.smtp_starttls),
-        notify_dashboard:Boolean(govSettings.notify_dashboard),
-        notify_email:Boolean(govSettings.notify_email),
-        challenge_response_enabled:Boolean(govSettings.challenge_response_enabled),
-        updated_by:session?.username||"dashboard"
-      };
+      const payload=buildGovernancePayload(govSettings);
       const updated=await updateGovernanceSettings(session,payload);
       setGovSettings(updated);
       onToast?.("Governance settings updated.");
@@ -17789,6 +17808,29 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       onToast?.(`Governance settings update failed: ${errMsg(error)}`);
     }finally{
       setGovSaving(false);
+    }
+  };
+
+  const saveSMTPSettings=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to update SMTP settings.");
+      return;
+    }
+    if(!govSettings){
+      onToast?.("Governance settings are not loaded.");
+      return;
+    }
+    setSMTPSaving(true);
+    try{
+      const payload=buildGovernancePayload(govSettings);
+      const updated=await updateGovernanceSettings(session,payload);
+      setGovSettings(updated);
+      onToast?.("SMTP settings updated.");
+      sM(null);
+    }catch(error){
+      onToast?.(`SMTP settings update failed: ${errMsg(error)}`);
+    }finally{
+      setSMTPSaving(false);
     }
   };
 
@@ -17809,6 +17851,33 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       onToast?.(`SMTP test failed: ${errMsg(error)}`);
     }finally{
       setSMTPTesting(false);
+    }
+  };
+
+  const runWebhookTest=async(channel:"slack"|"teams")=>{
+    if(!session?.token){
+      return;
+    }
+    const mode=String(govSettings?.approval_delivery_mode||"notify").toLowerCase();
+    if(mode==="kms_only"){
+      onToast?.("Switch delivery mode to KMS + notifications to test webhook channels.");
+      return;
+    }
+    const targetURL=channel==="slack"
+      ?String(govSettings?.slack_webhook_url||"").trim()
+      :String(govSettings?.teams_webhook_url||"").trim();
+    if(!targetURL){
+      onToast?.(`${channel==="slack"?"Slack":"Teams"} webhook URL is required.`);
+      return;
+    }
+    setWebhookTesting((prev:any)=>({...prev,[channel]:true}));
+    try{
+      await testGovernanceWebhook(session,channel,targetURL);
+      onToast?.(`${channel==="slack"?"Slack":"Teams"} webhook test sent.`);
+    }catch(error){
+      onToast?.(`${channel==="slack"?"Slack":"Teams"} webhook test failed: ${errMsg(error)}`);
+    }finally{
+      setWebhookTesting((prev:any)=>({...prev,[channel]:false}));
     }
   };
 
@@ -18075,6 +18144,18 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
   const summaryLabel=summary.all_ok?"All OK":summary.down>0?`${summary.down} Down`:summary.degraded>0?`${summary.degraded} Degraded`:"Unknown";
   const runtimeFipsMode=normalizeFipsModeValue(String(systemState?.fips_mode||fipsMode||"disabled"));
   const runtimeFipsEnabled=isFipsModeEnabled(runtimeFipsMode);
+  const governanceDeliveryMode=String(govSettings?.approval_delivery_mode||"notify").toLowerCase()==="kms_only"?"kms_only":"notify";
+  const governanceChannels=[
+    Boolean(govSettings?.notify_email)?"email":"",
+    Boolean(govSettings?.notify_slack)?"slack":"",
+    Boolean(govSettings?.notify_teams)?"teams":""
+  ].filter(Boolean).join(" + ");
+  const governanceSummary=governanceDeliveryMode==="kms_only"
+    ?"KMS-only approval queue"
+    :`Notifications: ${governanceChannels||"none"}${govSettings?.challenge_response_enabled?" + challenge":""}`;
+  const smtpSummary=String(govSettings?.smtp_host||"").trim()
+    ?`${String(govSettings?.smtp_host||"").trim()}:${String(govSettings?.smtp_port||"587").trim()||"587"}`
+    :"SMTP not configured";
 
   return <div>
   <Section title="System Administration" actions={<>
@@ -18223,10 +18304,20 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
         <div style={{fontSize:11,color:C.text,fontWeight:600}}>Governance Delivery</div>
         <div style={{fontSize:10,color:C.dim}}>
           {govSettings
-            ? `${govSettings.notify_dashboard?"dashboard":"-"} ${govSettings.notify_email?"+ email":""}${govSettings.challenge_response_enabled?" + challenge":""}`
+            ? governanceSummary
             : govLoading
               ?"Loading settings..."
-              :"SMTP + approval delivery controls"}
+              :"Approval mode and notification channels"}
+        </div>
+      </Card>
+      <Card onClick={()=>sM("smtp-delivery")}>
+        <div style={{fontSize:11,color:C.text,fontWeight:600}}>SMTP Delivery</div>
+        <div style={{fontSize:10,color:C.dim}}>
+          {govSettings
+            ? smtpSummary
+            : govLoading
+              ?"Loading settings..."
+              :"SMTP host and sender profile"}
         </div>
       </Card>
       <Card onClick={()=>sM("key-access-hardening")}>
@@ -18570,6 +18661,95 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
         />
       </FG>
     </Row2>
+    <FG label="Approval Delivery Mode" hint="KMS-only keeps approvals inside KMS. Notify mode keeps KMS approval while sending context notifications to selected channels.">
+      <Radio
+        label="KMS only (approve only in KMS Approvals tab)"
+        selected={governanceDeliveryMode==="kms_only"}
+        onSelect={()=>setGovSettings((prev)=>({...prev,approval_delivery_mode:"kms_only"}))}
+      />
+      <Radio
+        label="KMS + notification channels"
+        selected={governanceDeliveryMode==="notify"}
+        onSelect={()=>setGovSettings((prev)=>({...prev,approval_delivery_mode:"notify"}))}
+      />
+    </FG>
+    <FG label="Delivery Channels" hint="Dashboard queue remains enabled in both modes.">
+      <Chk label="Dashboard approval queue (always enabled)" checked={true} disabled={true}/>
+      <Chk
+        label="Email approval notifications"
+        checked={Boolean(govSettings?.notify_email)}
+        disabled={governanceDeliveryMode==="kms_only"}
+        onChange={()=>setGovSettings((prev)=>({...prev,notify_email:!Boolean(prev?.notify_email)}))}
+      />
+      <Chk
+        label="Slack webhook notifications"
+        checked={Boolean(govSettings?.notify_slack)}
+        disabled={governanceDeliveryMode==="kms_only"}
+        onChange={()=>setGovSettings((prev)=>({...prev,notify_slack:!Boolean(prev?.notify_slack)}))}
+      />
+      <Chk
+        label="Teams webhook notifications"
+        checked={Boolean(govSettings?.notify_teams)}
+        disabled={governanceDeliveryMode==="kms_only"}
+        onChange={()=>setGovSettings((prev)=>({...prev,notify_teams:!Boolean(prev?.notify_teams)}))}
+      />
+      <Chk
+        label="Challenge-response required for dashboard vote"
+        checked={Boolean(govSettings?.challenge_response_enabled)}
+        disabled={governanceDeliveryMode==="kms_only"||!Boolean(govSettings?.notify_email)}
+        onChange={()=>setGovSettings((prev)=>({...prev,challenge_response_enabled:!Boolean(prev?.challenge_response_enabled)}))}
+      />
+    </FG>
+    <FG label="Webhook Timeout (seconds)">
+      <Inp
+        type="number"
+        min={1}
+        max={60}
+        value={String(govSettings?.delivery_webhook_timeout_seconds??5)}
+        onChange={(e)=>setGovSettings((prev)=>({...prev,delivery_webhook_timeout_seconds:Number(e.target.value||5)}))}
+      />
+    </FG>
+    {governanceDeliveryMode==="notify"&&<>
+      <FG label="Slack Webhook URL">
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8}}>
+          <Inp
+            value={String(govSettings?.slack_webhook_url||"")}
+            onChange={(e)=>setGovSettings((prev)=>({...prev,slack_webhook_url:e.target.value}))}
+            placeholder="https://hooks.slack.com/services/..."
+          />
+          <Btn
+            onClick={()=>void runWebhookTest("slack")}
+            disabled={Boolean(webhookTesting?.slack)||!String(govSettings?.slack_webhook_url||"").trim()}
+          >
+            {Boolean(webhookTesting?.slack)?"Testing...":"Send Test"}
+          </Btn>
+        </div>
+      </FG>
+      <FG label="Teams Webhook URL">
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8}}>
+          <Inp
+            value={String(govSettings?.teams_webhook_url||"")}
+            onChange={(e)=>setGovSettings((prev)=>({...prev,teams_webhook_url:e.target.value}))}
+            placeholder="https://outlook.office.com/webhook/..."
+          />
+          <Btn
+            onClick={()=>void runWebhookTest("teams")}
+            disabled={Boolean(webhookTesting?.teams)||!String(govSettings?.teams_webhook_url||"").trim()}
+          >
+            {Boolean(webhookTesting?.teams)?"Testing...":"Send Test"}
+          </Btn>
+        </div>
+      </FG>
+    </>}
+    <div style={{display:"flex",justifyContent:"space-between",gap:8,marginTop:12}}>
+      <Btn onClick={()=>void loadGovernanceSettings(false)} disabled={govSaving}>{govLoading?"Loading...":"Reload Settings"}</Btn>
+      <div style={{display:"flex",gap:8}}>
+        <Btn onClick={()=>sM(null)} disabled={govSaving}>Cancel</Btn>
+        <Btn primary onClick={()=>void saveGovernanceSettings()} disabled={govSaving}>{govSaving?"Saving...":"Save Settings"}</Btn>
+      </div>
+    </div>
+  </Modal>
+  <Modal open={m==="smtp-delivery"} onClose={()=>sM(null)} title="SMTP Delivery Settings" wide>
     <FG label="SMTP Host">
       <Inp value={String(govSettings?.smtp_host||"")} onChange={(e)=>setGovSettings((prev)=>({...prev,smtp_host:e.target.value}))} placeholder="smtp.bank.com"/>
     </FG>
@@ -18581,10 +18761,7 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       <FG label="SMTP Password"><Inp type="password" value={String(govSettings?.smtp_password||"")} onChange={(e)=>setGovSettings((prev)=>({...prev,smtp_password:e.target.value}))}/></FG>
       <FG label="SMTP From"><Inp value={String(govSettings?.smtp_from||"")} onChange={(e)=>setGovSettings((prev)=>({...prev,smtp_from:e.target.value}))} placeholder="noreply@bank.com"/></FG>
     </Row2>
-    <FG label="Delivery Modes">
-      <Chk label="Dashboard approval queue" checked={Boolean(govSettings?.notify_dashboard)} onChange={()=>setGovSettings((prev)=>({...prev,notify_dashboard:!Boolean(prev?.notify_dashboard)}))}/>
-      <Chk label="Email approval links" checked={Boolean(govSettings?.notify_email)} onChange={()=>setGovSettings((prev)=>({...prev,notify_email:!Boolean(prev?.notify_email)}))}/>
-      <Chk label="Challenge-response required for dashboard vote" checked={Boolean(govSettings?.challenge_response_enabled)} onChange={()=>setGovSettings((prev)=>({...prev,challenge_response_enabled:!Boolean(prev?.challenge_response_enabled)}))}/>
+    <FG label="Transport">
       <Chk label="Use STARTTLS" checked={Boolean(govSettings?.smtp_starttls)} onChange={()=>setGovSettings((prev)=>({...prev,smtp_starttls:!Boolean(prev?.smtp_starttls)}))}/>
     </FG>
     <FG label="SMTP Test Recipient">
@@ -18594,10 +18771,10 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       </div>
     </FG>
     <div style={{display:"flex",justifyContent:"space-between",gap:8,marginTop:12}}>
-      <Btn onClick={()=>void loadGovernanceSettings(false)} disabled={govSaving}>{govLoading?"Loading...":"Reload Settings"}</Btn>
+      <Btn onClick={()=>void loadGovernanceSettings(false)} disabled={smtpSaving}>{govLoading?"Loading...":"Reload Settings"}</Btn>
       <div style={{display:"flex",gap:8}}>
-        <Btn onClick={()=>sM(null)} disabled={govSaving}>Cancel</Btn>
-        <Btn primary onClick={()=>void saveGovernanceSettings()} disabled={govSaving}>{govSaving?"Saving...":"Save Settings"}</Btn>
+        <Btn onClick={()=>sM(null)} disabled={smtpSaving}>Cancel</Btn>
+        <Btn primary onClick={()=>void saveSMTPSettings()} disabled={smtpSaving}>{smtpSaving?"Saving...":"Save SMTP Settings"}</Btn>
       </div>
     </div>
   </Modal>

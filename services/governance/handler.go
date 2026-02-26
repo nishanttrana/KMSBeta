@@ -28,6 +28,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /governance/settings", h.handleGetSettings)
 	mux.HandleFunc("PUT /governance/settings", h.handleUpdateSettings)
 	mux.HandleFunc("POST /governance/settings/smtp/test", h.handleTestSMTP)
+	mux.HandleFunc("POST /governance/settings/webhook/test", h.handleTestWebhook)
 	mux.HandleFunc("GET /governance/system/state", h.handleGetSystemState)
 	mux.HandleFunc("PUT /governance/system/state", h.handleUpdateSystemState)
 	mux.HandleFunc("GET /governance/system/integrity", h.handleSystemIntegrity)
@@ -110,6 +111,34 @@ func (h *Handler) handleTestSMTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "smtp_ok", "request_id": reqID})
+}
+
+func (h *Handler) handleTestWebhook(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var body struct {
+		TenantID   string `json:"tenant_id"`
+		Channel    string `json:"channel"`
+		WebhookURL string `json:"webhook_url"`
+	}
+	if err := decodeJSON(r, &body); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	if body.TenantID == "" {
+		body.TenantID = strings.TrimSpace(r.URL.Query().Get("tenant_id"))
+	}
+	if body.TenantID == "" {
+		body.TenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	}
+	if err := h.svc.TestWebhook(r.Context(), body.TenantID, body.Channel, body.WebhookURL); err != nil {
+		writeErr(w, http.StatusBadRequest, "webhook_test_failed", err.Error(), reqID, body.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":     "webhook_ok",
+		"channel":    strings.ToLower(strings.TrimSpace(body.Channel)),
+		"request_id": reqID,
+	})
 }
 
 func (h *Handler) handleGetSystemState(w http.ResponseWriter, r *http.Request) {

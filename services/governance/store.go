@@ -515,27 +515,50 @@ WHERE tenant_id=$1 AND id=$2 AND status='pending'
 
 func (s *SQLStore) GetSettings(ctx context.Context, tenantID string) (GovernanceSettings, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, approval_expiry_minutes, expiry_check_interval_seconds, COALESCE(smtp_host,''), COALESCE(smtp_port,''),
-       COALESCE(smtp_username,''), COALESCE(smtp_password,''), COALESCE(smtp_from,''), COALESCE(smtp_starttls,true),
-       COALESCE(notify_dashboard,true), COALESCE(notify_email,true), COALESCE(challenge_response_enabled,false),
+SELECT tenant_id, approval_expiry_minutes, expiry_check_interval_seconds, COALESCE(approval_delivery_mode,'notify'),
+       COALESCE(smtp_host,''), COALESCE(smtp_port,''), COALESCE(smtp_username,''), COALESCE(smtp_password,''),
+       COALESCE(smtp_from,''), COALESCE(smtp_starttls,true), COALESCE(notify_dashboard,true), COALESCE(notify_email,true),
+       COALESCE(notify_slack,false), COALESCE(notify_teams,false), COALESCE(slack_webhook_url,''), COALESCE(teams_webhook_url,''),
+       COALESCE(delivery_webhook_timeout_seconds,5), COALESCE(challenge_response_enabled,false),
        COALESCE(updated_by,''), updated_at
 FROM governance_settings
 WHERE tenant_id=$1
 `, tenantID)
 	var out GovernanceSettings
 	var updatedRaw interface{}
-	err := row.Scan(&out.TenantID, &out.ApprovalExpiryMinutes, &out.ExpiryCheckIntervalSeconds, &out.SMTPHost, &out.SMTPPort,
-		&out.SMTPUsername, &out.SMTPPassword, &out.SMTPFrom, &out.SMTPStartTLS, &out.NotifyDashboard, &out.NotifyEmail,
-		&out.ChallengeResponseEnabled, &out.UpdatedBy, &updatedRaw)
+	err := row.Scan(
+		&out.TenantID,
+		&out.ApprovalExpiryMinutes,
+		&out.ExpiryCheckIntervalSeconds,
+		&out.ApprovalDeliveryMode,
+		&out.SMTPHost,
+		&out.SMTPPort,
+		&out.SMTPUsername,
+		&out.SMTPPassword,
+		&out.SMTPFrom,
+		&out.SMTPStartTLS,
+		&out.NotifyDashboard,
+		&out.NotifyEmail,
+		&out.NotifySlack,
+		&out.NotifyTeams,
+		&out.SlackWebhookURL,
+		&out.TeamsWebhookURL,
+		&out.DeliveryWebhookTimeoutSec,
+		&out.ChallengeResponseEnabled,
+		&out.UpdatedBy,
+		&updatedRaw,
+	)
 	if errors.Is(err, sql.ErrNoRows) {
 		// default fallback row when not configured
 		return GovernanceSettings{
 			TenantID:                   tenantID,
 			ApprovalExpiryMinutes:      60,
 			ExpiryCheckIntervalSeconds: 60,
+			ApprovalDeliveryMode:       "notify",
 			SMTPStartTLS:               true,
 			NotifyDashboard:            true,
 			NotifyEmail:                true,
+			DeliveryWebhookTimeoutSec:  5,
 			ChallengeResponseEnabled:   false,
 			UpdatedBy:                  "system",
 		}, nil
@@ -563,13 +586,15 @@ func (s *SQLStore) UpsertSettings(ctx context.Context, settings GovernanceSettin
 	_, err := s.db.SQL().ExecContext(ctx, `
 	INSERT INTO governance_settings (
 	    tenant_id, approval_expiry_minutes, expiry_check_interval_seconds,
-	    smtp_host, smtp_port, smtp_username, smtp_password, smtp_from, smtp_starttls,
-	    notify_dashboard, notify_email, challenge_response_enabled,
+	    approval_delivery_mode, smtp_host, smtp_port, smtp_username, smtp_password, smtp_from, smtp_starttls,
+	    notify_dashboard, notify_email, notify_slack, notify_teams, slack_webhook_url, teams_webhook_url,
+	    delivery_webhook_timeout_seconds, challenge_response_enabled,
 	    updated_by, updated_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,CURRENT_TIMESTAMP)
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,CURRENT_TIMESTAMP)
 ON CONFLICT (tenant_id) DO UPDATE
 SET approval_expiry_minutes=EXCLUDED.approval_expiry_minutes,
     expiry_check_interval_seconds=EXCLUDED.expiry_check_interval_seconds,
+    approval_delivery_mode=EXCLUDED.approval_delivery_mode,
     smtp_host=EXCLUDED.smtp_host,
     smtp_port=EXCLUDED.smtp_port,
     smtp_username=EXCLUDED.smtp_username,
@@ -578,13 +603,20 @@ SET approval_expiry_minutes=EXCLUDED.approval_expiry_minutes,
     smtp_starttls=EXCLUDED.smtp_starttls,
     notify_dashboard=EXCLUDED.notify_dashboard,
     notify_email=EXCLUDED.notify_email,
+    notify_slack=EXCLUDED.notify_slack,
+    notify_teams=EXCLUDED.notify_teams,
+    slack_webhook_url=EXCLUDED.slack_webhook_url,
+    teams_webhook_url=EXCLUDED.teams_webhook_url,
+    delivery_webhook_timeout_seconds=EXCLUDED.delivery_webhook_timeout_seconds,
     challenge_response_enabled=EXCLUDED.challenge_response_enabled,
     updated_by=EXCLUDED.updated_by,
     updated_at=CURRENT_TIMESTAMP
 `, settings.TenantID, settings.ApprovalExpiryMinutes, settings.ExpiryCheckIntervalSeconds,
-		nullable(settings.SMTPHost), nullable(settings.SMTPPort), nullable(settings.SMTPUsername),
+		settings.ApprovalDeliveryMode, nullable(settings.SMTPHost), nullable(settings.SMTPPort), nullable(settings.SMTPUsername),
 		nullable(settings.SMTPPassword), nullable(settings.SMTPFrom), settings.SMTPStartTLS,
-		settings.NotifyDashboard, settings.NotifyEmail, settings.ChallengeResponseEnabled, nullable(settings.UpdatedBy))
+		settings.NotifyDashboard, settings.NotifyEmail, settings.NotifySlack, settings.NotifyTeams,
+		nullable(settings.SlackWebhookURL), nullable(settings.TeamsWebhookURL), settings.DeliveryWebhookTimeoutSec,
+		settings.ChallengeResponseEnabled, nullable(settings.UpdatedBy))
 	return err
 }
 

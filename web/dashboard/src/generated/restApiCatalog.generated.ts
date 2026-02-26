@@ -5883,6 +5883,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "governance-post-governance-settings-webhook-test",
+    "group": "Governance (governance)",
+    "title": "POST /governance/settings/webhook/test",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/settings/webhook/test?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "POST /svc/governance/governance/settings/webhook/test?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "governance-put-governance-policies-id",
     "group": "Governance (governance)",
     "title": "PUT /governance/policies/{id}",
