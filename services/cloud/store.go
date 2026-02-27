@@ -16,6 +16,8 @@ type Store interface {
 	CreateAccount(ctx context.Context, account CloudAccount) error
 	GetAccount(ctx context.Context, tenantID string, accountID string) (CloudAccount, error)
 	ListAccounts(ctx context.Context, tenantID string, provider string) ([]CloudAccount, error)
+	DeleteAccountCascade(ctx context.Context, tenantID string, accountID string) (DeleteCloudAccountResult, error)
+	UpdateAccountStatus(ctx context.Context, tenantID string, accountID string, status string) error
 
 	SetRegionMapping(ctx context.Context, mapping RegionMapping) error
 	ListRegionMappings(ctx context.Context, tenantID string, provider string) ([]RegionMapping, error)
@@ -98,6 +100,111 @@ WHERE tenant_id = $1
 		out = append(out, item)
 	}
 	return out, rows.Err()
+}
+
+func (s *SQLStore) DeleteAccountCascade(ctx context.Context, tenantID string, accountID string) (DeleteCloudAccountResult, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	accountID = strings.TrimSpace(accountID)
+	if tenantID == "" || accountID == "" {
+		return DeleteCloudAccountResult{}, errors.New("tenant_id and account_id are required")
+	}
+
+	tx, err := s.db.SQL().BeginTx(ctx, nil)
+	if err != nil {
+		return DeleteCloudAccountResult{}, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	var provider string
+	if err := tx.QueryRowContext(ctx, `
+SELECT provider
+FROM cloud_accounts
+WHERE tenant_id = $1 AND id = $2
+`, tenantID, accountID).Scan(&provider); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return DeleteCloudAccountResult{}, errNotFound
+		}
+		return DeleteCloudAccountResult{}, err
+	}
+
+	bindRes, err := tx.ExecContext(ctx, `
+DELETE FROM cloud_key_bindings
+WHERE tenant_id = $1 AND account_id = $2
+`, tenantID, accountID)
+	if err != nil {
+		return DeleteCloudAccountResult{}, err
+	}
+	deletedBindings, _ := bindRes.RowsAffected()
+
+	jobRes, err := tx.ExecContext(ctx, `
+DELETE FROM cloud_sync_jobs
+WHERE tenant_id = $1 AND account_id = $2
+`, tenantID, accountID)
+	if err != nil {
+		return DeleteCloudAccountResult{}, err
+	}
+	deletedJobs, _ := jobRes.RowsAffected()
+
+	acctRes, err := tx.ExecContext(ctx, `
+DELETE FROM cloud_accounts
+WHERE tenant_id = $1 AND id = $2
+`, tenantID, accountID)
+	if err != nil {
+		return DeleteCloudAccountResult{}, err
+	}
+	deletedAccounts, _ := acctRes.RowsAffected()
+	if deletedAccounts == 0 {
+		return DeleteCloudAccountResult{}, errNotFound
+	}
+
+	var remainingForProvider int64
+	if err := tx.QueryRowContext(ctx, `
+SELECT COUNT(*)
+FROM cloud_accounts
+WHERE tenant_id = $1 AND provider = $2
+`, tenantID, provider).Scan(&remainingForProvider); err != nil {
+		return DeleteCloudAccountResult{}, err
+	}
+
+	var deletedMappings int64
+	if remainingForProvider == 0 {
+		mapRes, err := tx.ExecContext(ctx, `
+DELETE FROM cloud_region_mappings
+WHERE tenant_id = $1 AND provider = $2
+`, tenantID, provider)
+		if err != nil {
+			return DeleteCloudAccountResult{}, err
+		}
+		deletedMappings, _ = mapRes.RowsAffected()
+	}
+
+	if err := tx.Commit(); err != nil {
+		return DeleteCloudAccountResult{}, err
+	}
+	return DeleteCloudAccountResult{
+		TenantID:              tenantID,
+		AccountID:             accountID,
+		Provider:              provider,
+		DeletedBindings:       deletedBindings,
+		DeletedSyncJobs:       deletedJobs,
+		DeletedRegionMappings: deletedMappings,
+	}, nil
+}
+
+func (s *SQLStore) UpdateAccountStatus(ctx context.Context, tenantID string, accountID string, status string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE cloud_accounts
+SET status = $1, updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $2 AND id = $3
+`, strings.TrimSpace(status), tenantID, accountID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errNotFound
+	}
+	return nil
 }
 
 func (s *SQLStore) SetRegionMapping(ctx context.Context, mapping RegionMapping) error {

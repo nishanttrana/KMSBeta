@@ -5,35 +5,48 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"net/http"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/consul/api"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/load"
+	"github.com/shirou/gopsutil/v4/mem"
 	pkgclustersync "vecta-kms/pkg/clustersync"
 )
 
 const defaultProfileName = "base-platform"
+const minActiveCPUPercent = 0.1
+const defaultDegradedHeartbeatSec = 45
+const defaultDownHeartbeatSec = 90
 
 var requiredCoreComponents = []string{"auth", "keycore", "policy", "governance"}
 
 type Service struct {
-	store                Store
-	events               EventPublisher
-	now                  func() time.Time
-	bootstrapNodeID      string
-	bootstrapNodeName    string
-	bootstrapNodeRole    string
-	bootstrapNodeAddress string
-	bootstrapProfileID   string
-	syncRequireMTLS      bool
-	syncSharedSecret     []byte
-	syncReplayWindowSec  int64
-	localHSMPartition    string
-	localMEKInHSM        bool
-	localMEKLogicalID    string
-	hsmReplicationShared bool
+	store                  Store
+	events                 EventPublisher
+	now                    func() time.Time
+	bootstrapNodeID        string
+	bootstrapNodeName      string
+	bootstrapNodeRole      string
+	bootstrapNodeAddress   string
+	bootstrapProfileID     string
+	consulAddress          string
+	heartbeatDegradedAfter time.Duration
+	heartbeatDownAfter     time.Duration
+	syncRequireMTLS        bool
+	syncSharedSecret       []byte
+	syncReplayWindowSec    int64
+	localHSMPartition      string
+	localMEKInHSM          bool
+	localMEKLogicalID      string
+	hsmReplicationShared   bool
 }
 
 func NewService(store Store, events EventPublisher) *Service {
@@ -41,18 +54,29 @@ func NewService(store Store, events EventPublisher) *Service {
 	if replayWindowSec < 30 {
 		replayWindowSec = 30
 	}
+	degradedAfterSec := parseEnvInt64("CLUSTER_HEARTBEAT_DEGRADED_AFTER_SEC", defaultDegradedHeartbeatSec)
+	downAfterSec := parseEnvInt64("CLUSTER_HEARTBEAT_DOWN_AFTER_SEC", defaultDownHeartbeatSec)
+	if degradedAfterSec < 10 {
+		degradedAfterSec = defaultDegradedHeartbeatSec
+	}
+	if downAfterSec <= degradedAfterSec {
+		downAfterSec = degradedAfterSec + 30
+	}
 	return &Service{
-		store:                store,
-		events:               events,
-		now:                  func() time.Time { return time.Now().UTC() },
-		bootstrapNodeID:      defaultIfEmpty(os.Getenv("CLUSTER_NODE_ID"), "vecta-kms-01"),
-		bootstrapNodeName:    defaultIfEmpty(os.Getenv("CLUSTER_NODE_NAME"), "vecta-kms-01"),
-		bootstrapNodeRole:    normalizeRole(defaultIfEmpty(os.Getenv("CLUSTER_NODE_ROLE"), "leader")),
-		bootstrapNodeAddress: defaultIfEmpty(os.Getenv("CLUSTER_NODE_ENDPOINT"), "10.0.1.100"),
-		bootstrapProfileID:   defaultIfEmpty(os.Getenv("CLUSTER_BOOTSTRAP_PROFILE_ID"), "cluster-profile-base"),
-		syncRequireMTLS:      parseEnvBool("CLUSTER_SYNC_REQUIRE_MTLS", false),
-		syncSharedSecret:     []byte(strings.TrimSpace(os.Getenv("CLUSTER_SYNC_SHARED_SECRET"))),
-		syncReplayWindowSec:  replayWindowSec,
+		store:                  store,
+		events:                 events,
+		now:                    func() time.Time { return time.Now().UTC() },
+		bootstrapNodeID:        defaultIfEmpty(os.Getenv("CLUSTER_NODE_ID"), "vecta-kms-01"),
+		bootstrapNodeName:      defaultIfEmpty(os.Getenv("CLUSTER_NODE_NAME"), "vecta-kms-01"),
+		bootstrapNodeRole:      normalizeRole(defaultIfEmpty(os.Getenv("CLUSTER_NODE_ROLE"), "leader")),
+		bootstrapNodeAddress:   defaultIfEmpty(os.Getenv("CLUSTER_NODE_ENDPOINT"), "10.0.1.100"),
+		bootstrapProfileID:     defaultIfEmpty(os.Getenv("CLUSTER_BOOTSTRAP_PROFILE_ID"), "cluster-profile-base"),
+		consulAddress:          defaultIfEmpty(os.Getenv("CONSUL_HTTP_ADDR"), "consul:8500"),
+		heartbeatDegradedAfter: time.Duration(degradedAfterSec) * time.Second,
+		heartbeatDownAfter:     time.Duration(downAfterSec) * time.Second,
+		syncRequireMTLS:        parseEnvBool("CLUSTER_SYNC_REQUIRE_MTLS", false),
+		syncSharedSecret:       []byte(strings.TrimSpace(os.Getenv("CLUSTER_SYNC_SHARED_SECRET"))),
+		syncReplayWindowSec:    replayWindowSec,
 		localHSMPartition: defaultIfEmpty(
 			os.Getenv("CLUSTER_HSM_PARTITION_LABEL"),
 			defaultIfEmpty(os.Getenv("HSM_PARTITION_LABEL"), strings.TrimSpace(os.Getenv("THALES_PARTITION"))),
@@ -80,9 +104,15 @@ func (s *Service) GetOverview(ctx context.Context, tenantID string) (ClusterOver
 		return ClusterOverview{}, err
 	}
 	for i := range nodes {
-		nodes[i].Status = normalizeNodeStatus(nodes[i].Status)
+		nodes[i].Status = s.effectiveNodeStatus(nodes[i])
 		nodes[i].Role = normalizeRole(nodes[i].Role)
-		nodes[i].EnabledComponents = normalizeComponents(nodes[i].EnabledComponents)
+		nodes[i].EnabledComponents = normalizeDisplayComponents(nodes[i].EnabledComponents)
+		if strings.TrimSpace(nodes[i].ID) == strings.TrimSpace(s.bootstrapNodeID) {
+			if s.enrichLocalNodeRuntime(ctx, &nodes[i]) {
+				_ = s.store.UpsertNode(ctx, nodes[i])
+			}
+			nodes[i].Status = s.effectiveNodeStatus(nodes[i])
+		}
 	}
 	out := ClusterOverview{Nodes: nodes, Profiles: profiles}
 	out.SelectiveComponentSync.Enabled = true
@@ -122,8 +152,8 @@ func (s *Service) ListMembers(ctx context.Context, tenantID string) ([]ClusterNo
 			continue
 		}
 		node.Role = normalizeRole(node.Role)
-		node.Status = normalizeNodeStatus(node.Status)
-		node.EnabledComponents = normalizeComponents(node.EnabledComponents)
+		node.Status = s.effectiveNodeStatus(node)
+		node.EnabledComponents = normalizeDisplayComponents(node.EnabledComponents)
 		out = append(out, node)
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -388,8 +418,14 @@ func (s *Service) UpdateHeartbeat(ctx context.Context, nodeID string, in Heartbe
 		}
 	}
 	node.Status = normalizeNodeStatus(defaultIfEmpty(in.Status, node.Status))
-	node.CPUPercent = in.CPUPercent
-	node.RAMGB = in.RAMGB
+	prevCPU := round1(clampFloat(node.CPUPercent, 0, 100))
+	incomingCPU := round1(clampFloat(in.CPUPercent, 0, 100))
+	// Preserve last known non-zero CPU for active nodes when heartbeat rounds down to 0.
+	if incomingCPU <= 0 && (node.Status == "online" || node.Status == "degraded") && prevCPU > 0 {
+		incomingCPU = prevCPU
+	}
+	node.CPUPercent = incomingCPU
+	node.RAMGB = round1(clampFloat(in.RAMGB, 0, 65536))
 	if parsed := parseTimeString(in.LastSyncAt); !parsed.IsZero() {
 		node.LastSyncAt = parsed
 	}
@@ -411,11 +447,243 @@ func (s *Service) UpdateHeartbeat(ctx context.Context, nodeID string, in Heartbe
 	if strings.TrimSpace(in.NodeRole) != "" {
 		node.Role = normalizeRole(in.NodeRole)
 	}
+	node.CPUPercent = enforceActiveCPUFloor(node.CPUPercent, node.Status, node.JoinState, node.EnabledComponents)
 	node.LastHeartbeatAt = s.now()
 	if err := s.store.UpsertNode(ctx, node); err != nil {
 		return ClusterNode{}, err
 	}
 	return s.store.GetNode(ctx, in.TenantID, node.ID)
+}
+
+func (s *Service) UpsertNode(ctx context.Context, in UpsertNodeInput) (ClusterNode, error) {
+	in.TenantID = strings.TrimSpace(in.TenantID)
+	if in.TenantID == "" {
+		return ClusterNode{}, newServiceError(400, "bad_request", "tenant_id is required")
+	}
+	if err := s.ensureBootstrap(ctx, in.TenantID); err != nil {
+		return ClusterNode{}, err
+	}
+	nodeID := strings.TrimSpace(in.NodeID)
+	if nodeID == "" {
+		return ClusterNode{}, newServiceError(400, "bad_request", "node_id is required")
+	}
+	profileID := strings.TrimSpace(in.ProfileID)
+	if profileID == "" {
+		profiles, err := s.store.ListProfiles(ctx, in.TenantID)
+		if err != nil {
+			return ClusterNode{}, err
+		}
+		for _, profile := range profiles {
+			if profile.IsDefault {
+				profileID = profile.ID
+				break
+			}
+		}
+		if profileID == "" && len(profiles) > 0 {
+			profileID = profiles[0].ID
+		}
+	}
+	if profileID == "" {
+		return ClusterNode{}, newServiceError(409, "missing_profile", "cluster profile is required")
+	}
+	profile, err := s.store.GetProfile(ctx, in.TenantID, profileID)
+	if err != nil {
+		return ClusterNode{}, err
+	}
+	normalizedComponents := disallowAuditComponent(normalizeComponents(in.Components))
+	if len(normalizedComponents) == 0 {
+		normalizedComponents = profile.Components
+	}
+	for _, component := range normalizedComponents {
+		if !componentAllowedForProfile(component, profile.Components) {
+			return ClusterNode{}, newServiceError(409, "component_not_allowed", "node components must be part of the selected profile")
+		}
+	}
+	node, err := s.store.GetNode(ctx, in.TenantID, nodeID)
+	nodeExists := err == nil
+	if err != nil && !errorsIsNotFound(err) {
+		return ClusterNode{}, err
+	}
+	if !nodeExists {
+		node = ClusterNode{
+			ID:       nodeID,
+			TenantID: in.TenantID,
+		}
+	}
+	node.Name = defaultIfEmpty(in.NodeName, defaultIfEmpty(node.Name, nodeID))
+	node.Role = normalizeRole(defaultIfEmpty(in.Role, defaultIfEmpty(node.Role, "follower")))
+	node.Endpoint = defaultIfEmpty(in.Endpoint, defaultIfEmpty(node.Endpoint, "unknown"))
+	node.Status = normalizeNodeStatus(defaultIfEmpty(in.Status, defaultIfEmpty(node.Status, "unknown")))
+	node.CPUPercent = round1(clampFloat(in.CPUPercent, 0, 100))
+	node.RAMGB = round1(clampFloat(in.RAMGB, 0, 65536))
+	node.EnabledComponents = normalizeDisplayComponents(normalizedComponents)
+	node.ProfileID = profile.ID
+	node.JoinState = defaultIfEmpty(in.JoinState, defaultIfEmpty(node.JoinState, "active"))
+	node.CertFingerprint = defaultIfEmpty(in.CertFingerprint, node.CertFingerprint)
+	node.CPUPercent = enforceActiveCPUFloor(node.CPUPercent, node.Status, node.JoinState, node.EnabledComponents)
+	node.LastHeartbeatAt = s.now()
+	if err := s.store.UpsertNode(ctx, node); err != nil {
+		return ClusterNode{}, err
+	}
+	if node.Role == "leader" {
+		if err := s.demoteOtherLeaders(ctx, in.TenantID, node.ID); err != nil {
+			return ClusterNode{}, err
+		}
+	}
+	out, err := s.store.GetNode(ctx, in.TenantID, node.ID)
+	if err != nil {
+		return ClusterNode{}, err
+	}
+	if !nodeExists || in.SeedSync {
+		_, _ = s.seedNodeSyncEvents(ctx, out, profile, defaultIfEmpty(strings.TrimSpace(in.RequestedBy), s.bootstrapNodeID))
+	}
+	s.appendClusterLog(ctx, ClusterLogEntry{
+		TenantID:  in.TenantID,
+		NodeID:    out.ID,
+		Level:     "info",
+		EventType: "node_upserted",
+		Message:   "cluster node registration updated",
+		Details: map[string]interface{}{
+			"profile_id": out.ProfileID,
+			"role":       out.Role,
+			"components": out.EnabledComponents,
+			"seed_sync":  !nodeExists || in.SeedSync,
+		},
+	})
+	_ = s.publishAudit(ctx, "audit.cluster.node_upserted", in.TenantID, map[string]interface{}{
+		"node_id":    out.ID,
+		"profile_id": out.ProfileID,
+		"role":       out.Role,
+		"components": out.EnabledComponents,
+	})
+	return out, nil
+}
+
+func (s *Service) UpdateNodeRole(ctx context.Context, nodeID string, in UpdateNodeRoleInput) (ClusterNode, error) {
+	in.TenantID = strings.TrimSpace(in.TenantID)
+	if in.TenantID == "" {
+		return ClusterNode{}, newServiceError(400, "bad_request", "tenant_id is required")
+	}
+	nodeID = strings.TrimSpace(nodeID)
+	if nodeID == "" {
+		return ClusterNode{}, newServiceError(400, "bad_request", "node_id is required")
+	}
+	targetRole := normalizeRole(in.Role)
+	node, err := s.store.GetNode(ctx, in.TenantID, nodeID)
+	if err != nil {
+		return ClusterNode{}, err
+	}
+	if node.Role == targetRole {
+		return node, nil
+	}
+	node.Role = targetRole
+	node.UpdatedAt = s.now()
+	if err := s.store.UpsertNode(ctx, node); err != nil {
+		return ClusterNode{}, err
+	}
+	if targetRole == "leader" {
+		if err := s.demoteOtherLeaders(ctx, in.TenantID, nodeID); err != nil {
+			return ClusterNode{}, err
+		}
+	}
+	out, err := s.store.GetNode(ctx, in.TenantID, nodeID)
+	if err != nil {
+		return ClusterNode{}, err
+	}
+	s.appendClusterLog(ctx, ClusterLogEntry{
+		TenantID:  in.TenantID,
+		NodeID:    out.ID,
+		Level:     "info",
+		EventType: "node_role_updated",
+		Message:   "cluster node role updated",
+		Details: map[string]interface{}{
+			"role":       out.Role,
+			"updated_by": defaultIfEmpty(strings.TrimSpace(in.RequestedBy), "system"),
+		},
+	})
+	_ = s.publishAudit(ctx, "audit.cluster.node_role_updated", in.TenantID, map[string]interface{}{
+		"node_id":    out.ID,
+		"role":       out.Role,
+		"updated_by": defaultIfEmpty(strings.TrimSpace(in.RequestedBy), "system"),
+	})
+	return out, nil
+}
+
+func (s *Service) RemoveNode(ctx context.Context, nodeID string, in RemoveNodeInput) (RemoveNodeResult, error) {
+	in.TenantID = strings.TrimSpace(in.TenantID)
+	if in.TenantID == "" {
+		return RemoveNodeResult{}, newServiceError(400, "bad_request", "tenant_id is required")
+	}
+	nodeID = strings.TrimSpace(nodeID)
+	if nodeID == "" {
+		return RemoveNodeResult{}, newServiceError(400, "bad_request", "node_id is required")
+	}
+	if err := s.ensureBootstrap(ctx, in.TenantID); err != nil {
+		return RemoveNodeResult{}, err
+	}
+	node, err := s.store.GetNode(ctx, in.TenantID, nodeID)
+	if err != nil {
+		return RemoveNodeResult{}, err
+	}
+	if strings.EqualFold(strings.TrimSpace(node.ID), strings.TrimSpace(s.bootstrapNodeID)) {
+		return RemoveNodeResult{}, newServiceError(409, "node_locked", "local bootstrap node cannot be removed from itself")
+	}
+	profile, err := s.store.GetProfile(ctx, in.TenantID, node.ProfileID)
+	if err != nil {
+		return RemoveNodeResult{}, err
+	}
+	reason := strings.TrimSpace(in.Reason)
+	if reason == "" {
+		reason = "removed_from_cluster"
+	}
+	purgeSyncedData := true
+	purgeEventIDs, seedErr := s.emitNodeDecommissionEvents(ctx, node, profile, reason, purgeSyncedData)
+	if seedErr != nil {
+		return RemoveNodeResult{}, seedErr
+	}
+	promotedLeaderNode := ""
+	if normalizeRole(node.Role) == "leader" {
+		candidateID, promoteErr := s.promoteReplacementLeader(ctx, in.TenantID, node.ID)
+		if promoteErr != nil {
+			return RemoveNodeResult{}, promoteErr
+		}
+		promotedLeaderNode = candidateID
+	}
+	if err := s.store.DeleteNode(ctx, in.TenantID, node.ID); err != nil {
+		return RemoveNodeResult{}, err
+	}
+	result := RemoveNodeResult{
+		NodeID:             node.ID,
+		TenantID:           in.TenantID,
+		Standalone:         true,
+		PurgeSyncedData:    purgeSyncedData,
+		PurgeEventIDs:      purgeEventIDs,
+		PreviousRole:       normalizeRole(node.Role),
+		PromotedLeaderNode: promotedLeaderNode,
+	}
+	s.appendClusterLog(ctx, ClusterLogEntry{
+		TenantID:  in.TenantID,
+		NodeID:    node.ID,
+		Level:     "warn",
+		EventType: "node_removed",
+		Message:   "cluster node removed and decommissioned",
+		Details: map[string]interface{}{
+			"purge_synced_data":  purgeSyncedData,
+			"purge_event_ids":    purgeEventIDs,
+			"promoted_leader_id": promotedLeaderNode,
+			"requested_by":       defaultIfEmpty(strings.TrimSpace(in.RequestedBy), "system"),
+			"reason":             reason,
+		},
+	})
+	_ = s.publishAudit(ctx, "audit.cluster.node_removed", in.TenantID, map[string]interface{}{
+		"node_id":            node.ID,
+		"purge_synced_data":  purgeSyncedData,
+		"purge_event_ids":    purgeEventIDs,
+		"promoted_leader_id": promotedLeaderNode,
+		"requested_by":       defaultIfEmpty(strings.TrimSpace(in.RequestedBy), "system"),
+		"reason":             reason,
+	})
+	return result, nil
 }
 
 func (s *Service) PublishSyncEvent(ctx context.Context, in PublishSyncEventInput) (ClusterSyncEvent, error) {
@@ -751,6 +1019,7 @@ func (s *Service) ensureBootstrap(ctx context.Context, tenantID string) error {
 	} else if !errorsIsNotFound(err) {
 		return err
 	}
+	discoveredComponents, _ := s.discoverLocalComponents()
 	bootstrapNode := ClusterNode{
 		ID:                nodeID,
 		TenantID:          tenantID,
@@ -760,7 +1029,7 @@ func (s *Service) ensureBootstrap(ctx context.Context, tenantID string) error {
 		Status:            "online",
 		CPUPercent:        0,
 		RAMGB:             0,
-		EnabledComponents: append([]string{}, requiredCoreComponents...),
+		EnabledComponents: normalizeDisplayComponents(discoveredComponents),
 		ProfileID:         defaultProfileID,
 		JoinState:         "active",
 		LastHeartbeatAt:   s.now(),
@@ -794,6 +1063,508 @@ func sanitizeSyncPayload(in map[string]interface{}) (map[string]interface{}, []s
 	}
 	sort.Strings(removed)
 	return out, removed
+}
+
+func (s *Service) enrichLocalNodeRuntime(ctx context.Context, node *ClusterNode) bool {
+	if node == nil {
+		return false
+	}
+	changed := false
+
+	runtimeComponents, componentsOK := s.discoverLocalComponents()
+	if componentsOK {
+		normalized := normalizeDisplayComponents(runtimeComponents)
+		if !equalStringSlices(node.EnabledComponents, normalized) {
+			node.EnabledComponents = normalized
+			changed = true
+		}
+	}
+
+	cpuPercent, ramGB, metricsOK := sampleLocalRuntimeMetrics(ctx)
+	if metricsOK {
+		cpuPercent = enforceActiveCPUFloor(cpuPercent, node.Status, node.JoinState, node.EnabledComponents)
+		if math.Abs(node.CPUPercent-cpuPercent) >= 0.1 {
+			node.CPUPercent = cpuPercent
+			changed = true
+		}
+		if math.Abs(node.RAMGB-ramGB) >= 0.1 {
+			node.RAMGB = ramGB
+			changed = true
+		}
+	}
+
+	if normalizeNodeStatus(node.Status) != "online" {
+		node.Status = "online"
+		changed = true
+	}
+	if strings.TrimSpace(node.JoinState) == "" {
+		node.JoinState = "active"
+		changed = true
+	}
+	if node.LastHeartbeatAt.IsZero() || s.now().Sub(node.LastHeartbeatAt) >= 30*time.Second {
+		node.LastHeartbeatAt = s.now()
+		changed = true
+	}
+	return changed
+}
+
+func (s *Service) discoverLocalComponents() ([]string, bool) {
+	consulAddr := strings.TrimSpace(s.consulAddress)
+	if consulAddr == "" {
+		return []string{}, false
+	}
+	cfg := api.DefaultConfig()
+	cfg.Address = consulAddr
+	cfg.HttpClient = &http.Client{Timeout: 800 * time.Millisecond}
+	client, err := api.NewClient(cfg)
+	if err != nil {
+		return []string{}, false
+	}
+
+	// Prefer catalog-by-node discovery so each node exposes only services running on itself.
+	components := make([]string, 0, 16)
+	foundNodeRecord := false
+	for _, nodeName := range localConsulNodeCandidates(s.bootstrapNodeName, s.bootstrapNodeID) {
+		nodeComponents, found := discoverComponentsForConsulNode(client, nodeName)
+		if !found {
+			continue
+		}
+		foundNodeRecord = true
+		components = append(components, nodeComponents...)
+	}
+
+	if foundNodeRecord {
+		return normalizeDisplayComponents(components), true
+	}
+
+	// Fallback to local Consul agent services when catalog node lookup is unavailable.
+	if services, err := client.Agent().Services(); err == nil && len(services) > 0 {
+		for _, svc := range services {
+			if svc == nil {
+				continue
+			}
+			if mapped := componentFromServiceName(svc.Service); mapped != "" {
+				components = append(components, mapped)
+			}
+		}
+		normalized := normalizeDisplayComponents(components)
+		if len(normalized) > 0 {
+			return normalized, true
+		}
+	}
+
+	// Last fallback: passing checks filtered to local node identifiers.
+	checks, _, err := client.Health().State("passing", nil)
+	if err != nil {
+		return []string{}, false
+	}
+	identifiers := localNodeIdentifiers(s.bootstrapNodeName, s.bootstrapNodeID, s.bootstrapNodeAddress)
+	for _, check := range checks {
+		if !checkMatchesLocalNode(check, identifiers) {
+			continue
+		}
+		name := strings.TrimSpace(check.ServiceName)
+		if name == "" {
+			continue
+		}
+		if mapped := componentFromServiceName(name); mapped != "" {
+			components = append(components, mapped)
+			continue
+		}
+		if strings.HasPrefix(strings.ToLower(name), "kms-") {
+			components = append(components, strings.TrimPrefix(strings.ToLower(name), "kms-"))
+		}
+	}
+	return normalizeDisplayComponents(components), true
+}
+
+func discoverComponentsForConsulNode(client *api.Client, nodeName string) ([]string, bool) {
+	nodeName = strings.TrimSpace(nodeName)
+	if client == nil || nodeName == "" {
+		return nil, false
+	}
+	nodeInfo, _, err := client.Catalog().Node(nodeName, nil)
+	if err != nil {
+		return nil, false
+	}
+	if nodeInfo == nil {
+		return nil, false
+	}
+	services := nodeInfo.Services
+	if len(services) == 0 {
+		return []string{}, true
+	}
+
+	passingByID := map[string]struct{}{}
+	passingByName := map[string]struct{}{}
+	checks, _, err := client.Health().Node(nodeName, nil)
+	if err != nil {
+		return nil, false
+	}
+	for _, check := range checks {
+		if check == nil || !strings.EqualFold(strings.TrimSpace(check.Status), api.HealthPassing) {
+			continue
+		}
+		if sid := strings.TrimSpace(check.ServiceID); sid != "" {
+			passingByID[sid] = struct{}{}
+		}
+		if sname := strings.ToLower(strings.TrimSpace(check.ServiceName)); sname != "" {
+			passingByName[sname] = struct{}{}
+		}
+	}
+
+	components := make([]string, 0, len(services))
+	for _, svc := range services {
+		if svc == nil {
+			continue
+		}
+		serviceName := strings.TrimSpace(svc.Service)
+		if serviceName == "" {
+			continue
+		}
+		if len(passingByID) > 0 || len(passingByName) > 0 {
+			_, okByID := passingByID[strings.TrimSpace(svc.ID)]
+			_, okByName := passingByName[strings.ToLower(serviceName)]
+			if !okByID && !okByName {
+				continue
+			}
+		}
+		if mapped := componentFromServiceName(serviceName); mapped != "" {
+			components = append(components, mapped)
+		}
+	}
+	return normalizeDisplayComponents(components), true
+}
+
+func localConsulNodeCandidates(bootstrapNodeName string, bootstrapNodeID string) []string {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, 4)
+	add := func(v string) {
+		name := strings.TrimSpace(v)
+		if name == "" {
+			return
+		}
+		key := strings.ToLower(name)
+		if _, ok := seen[key]; ok {
+			return
+		}
+		seen[key] = struct{}{}
+		out = append(out, name)
+	}
+	add(bootstrapNodeName)
+	add(bootstrapNodeID)
+	if host, err := os.Hostname(); err == nil {
+		add(host)
+	}
+	return out
+}
+
+func localNodeIdentifiers(bootstrapNodeName string, bootstrapNodeID string, bootstrapNodeAddr string) []string {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, 8)
+	add := func(v string) {
+		v = strings.TrimSpace(strings.ToLower(v))
+		if v == "" {
+			return
+		}
+		if _, ok := seen[v]; ok {
+			return
+		}
+		seen[v] = struct{}{}
+		out = append(out, v)
+	}
+	add(bootstrapNodeName)
+	add(bootstrapNodeID)
+	addr := strings.TrimSpace(bootstrapNodeAddr)
+	if addr != "" {
+		add(strings.Split(addr, ":")[0])
+	}
+	if host, err := os.Hostname(); err == nil {
+		add(host)
+	}
+	return out
+}
+
+func checkMatchesLocalNode(check *api.HealthCheck, identifiers []string) bool {
+	if check == nil {
+		return false
+	}
+	if len(identifiers) == 0 {
+		return true
+	}
+	candidates := []string{
+		strings.ToLower(strings.TrimSpace(check.Node)),
+		strings.ToLower(strings.TrimSpace(check.ServiceID)),
+		strings.ToLower(strings.TrimSpace(check.CheckID)),
+		strings.ToLower(strings.TrimSpace(check.Name)),
+	}
+	for _, candidate := range candidates {
+		if candidate == "" {
+			continue
+		}
+		for _, id := range identifiers {
+			if id != "" && strings.Contains(candidate, id) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func sampleLocalRuntimeMetrics(ctx context.Context) (float64, float64, bool) {
+	metricsCtx, cancel := context.WithTimeout(ctx, 900*time.Millisecond)
+	defer cancel()
+
+	var cpuPercent float64
+	var ramGB float64
+	available := false
+
+	if values, err := cpu.PercentWithContext(metricsCtx, 100*time.Millisecond, false); err == nil && len(values) > 0 {
+		cpuPercent = clampFloat(values[0], 0, 100)
+		available = true
+	}
+	if cpuPercent <= 0 {
+		if avg, err := load.AvgWithContext(metricsCtx); err == nil {
+			cores := float64(runtime.NumCPU())
+			if cores <= 0 {
+				cores = 1
+			}
+			cpuPercent = clampFloat((avg.Load1/cores)*100, 0, 100)
+			available = true
+		}
+	}
+	if cpuPercent > 0 && cpuPercent < 1 {
+		cpuPercent = 1
+	}
+	if vm, err := mem.VirtualMemoryWithContext(metricsCtx); err == nil {
+		ramGB = float64(vm.Used) / (1024.0 * 1024.0 * 1024.0)
+		available = true
+	}
+
+	return round1(cpuPercent), round1(ramGB), available
+}
+
+func parseLocalComponentHints() []string {
+	rawInputs := []string{
+		os.Getenv("CLUSTER_LOCAL_COMPONENTS"),
+		os.Getenv("VECTA_ENABLED_COMPONENTS"),
+		os.Getenv("COMPOSE_PROFILES"),
+	}
+	items := make([]string, 0, 16)
+	for _, raw := range rawInputs {
+		for _, token := range splitComponentTokens(raw) {
+			if mapped := componentFromHint(token); mapped != "" {
+				items = append(items, mapped)
+			}
+		}
+	}
+	return normalizeDisplayComponents(items)
+}
+
+func splitComponentTokens(raw string) []string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	replacer := strings.NewReplacer(";", ",", "|", ",", " ", ",", "\n", ",", "\t", ",")
+	normalized := replacer.Replace(raw)
+	parts := strings.Split(normalized, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		v := strings.TrimSpace(part)
+		if v == "" {
+			continue
+		}
+		out = append(out, v)
+	}
+	return out
+}
+
+func componentFromHint(raw string) string {
+	v := strings.ToLower(strings.TrimSpace(raw))
+	switch v {
+	case "auth", "keycore", "policy", "governance", "audit", "payment", "dataprotect", "byok", "hyok", "ekm", "kmip", "certs", "secrets", "qkd", "mpc", "cluster", "compliance", "reporting", "sbom", "pqc", "discovery", "ai":
+		return v
+	case "cloud", "cloud_control", "cloud-key-control":
+		return "byok"
+	case "payments":
+		return "payment"
+	case "data_protection", "data-protection", "field_encryption", "field-encryption":
+		return "dataprotect"
+	case "certificates", "pki":
+		return "certs"
+	case "vault":
+		return "secrets"
+	case "clustering":
+		return "cluster"
+	}
+	if mapped := componentFromServiceName(v); mapped != "" {
+		return mapped
+	}
+	if strings.HasPrefix(v, "kms-") {
+		return strings.TrimPrefix(v, "kms-")
+	}
+	return strings.ReplaceAll(v, "_", "-")
+}
+
+func componentFromServiceName(serviceName string) string {
+	switch strings.ToLower(strings.TrimSpace(serviceName)) {
+	case "kms-auth":
+		return "auth"
+	case "kms-keycore":
+		return "keycore"
+	case "kms-policy":
+		return "policy"
+	case "kms-governance":
+		return "governance"
+	case "kms-audit":
+		return "audit"
+	case "kms-payment":
+		return "payment"
+	case "kms-dataprotect":
+		return "dataprotect"
+	case "kms-cloud":
+		return "byok"
+	case "kms-hyok", "kms-hyok-proxy":
+		return "hyok"
+	case "kms-ekm":
+		return "ekm"
+	case "kms-kmip":
+		return "kmip"
+	case "kms-certs":
+		return "certs"
+	case "kms-secrets":
+		return "secrets"
+	case "kms-qkd":
+		return "qkd"
+	case "kms-mpc":
+		return "mpc"
+	case "kms-cluster-manager":
+		return "cluster"
+	case "kms-compliance":
+		return "compliance"
+	case "kms-reporting":
+		return "reporting"
+	case "kms-sbom":
+		return "sbom"
+	case "kms-pqc":
+		return "pqc"
+	case "kms-discovery":
+		return "discovery"
+	case "kms-ai":
+		return "ai"
+	case "kms-software-vault":
+		return "software-vault"
+	default:
+		return ""
+	}
+}
+
+func normalizeDisplayComponents(in []string) []string {
+	if len(in) == 0 {
+		return []string{}
+	}
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(in))
+	for _, item := range in {
+		raw := strings.ToLower(strings.TrimSpace(item))
+		if raw == "" {
+			continue
+		}
+		if known := normalizeComponentName(raw); known != "" {
+			raw = known
+		} else {
+			raw = strings.ReplaceAll(raw, "_", "-")
+		}
+		if _, ok := seen[raw]; ok {
+			continue
+		}
+		seen[raw] = struct{}{}
+		out = append(out, raw)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func equalStringSlices(a []string, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func clampFloat(v float64, min float64, max float64) float64 {
+	if v < min {
+		return min
+	}
+	if v > max {
+		return max
+	}
+	return v
+}
+
+func round1(v float64) float64 {
+	return math.Round(v*10) / 10
+}
+
+func (s *Service) effectiveNodeStatus(node ClusterNode) string {
+	status := normalizeNodeStatus(node.Status)
+	if strings.EqualFold(strings.TrimSpace(node.JoinState), "revoked") {
+		return "down"
+	}
+	if node.LastHeartbeatAt.IsZero() {
+		return status
+	}
+	now := time.Now().UTC()
+	if s != nil && s.now != nil {
+		now = s.now()
+	}
+	age := now.Sub(node.LastHeartbeatAt)
+	if age < 0 {
+		age = 0
+	}
+	downAfter := defaultDownHeartbeatSec * time.Second
+	degradedAfter := defaultDegradedHeartbeatSec * time.Second
+	if s != nil {
+		if s.heartbeatDownAfter > 0 {
+			downAfter = s.heartbeatDownAfter
+		}
+		if s.heartbeatDegradedAfter > 0 {
+			degradedAfter = s.heartbeatDegradedAfter
+		}
+	}
+	if age >= downAfter {
+		return "down"
+	}
+	if age >= degradedAfter {
+		if status == "online" || status == "unknown" {
+			return "degraded"
+		}
+	}
+	return status
+}
+
+func enforceActiveCPUFloor(cpu float64, status string, joinState string, components []string) float64 {
+	cpu = round1(clampFloat(cpu, 0, 100))
+	if cpu >= minActiveCPUPercent {
+		return cpu
+	}
+	status = normalizeNodeStatus(status)
+	if status == "down" {
+		return 0
+	}
+	if strings.EqualFold(strings.TrimSpace(joinState), "revoked") {
+		return 0
+	}
+	if len(normalizeDisplayComponents(components)) == 0 {
+		return cpu
+	}
+	return minActiveCPUPercent
 }
 
 func isSensitiveSyncField(key string) bool {
@@ -927,6 +1698,148 @@ func ensureProfileComponents(in []string) []string {
 	merged = append(merged, in...)
 	merged = append(merged, requiredCoreComponents...)
 	return disallowAuditComponent(normalizeComponents(merged))
+}
+
+func (s *Service) demoteOtherLeaders(ctx context.Context, tenantID string, selectedNodeID string) error {
+	nodes, err := s.store.ListNodes(ctx, tenantID)
+	if err != nil {
+		return err
+	}
+	for _, node := range nodes {
+		if strings.TrimSpace(node.ID) == "" {
+			continue
+		}
+		if strings.TrimSpace(node.ID) == strings.TrimSpace(selectedNodeID) {
+			continue
+		}
+		if normalizeRole(node.Role) != "leader" {
+			continue
+		}
+		node.Role = "follower"
+		if err := s.store.UpsertNode(ctx, node); err != nil {
+			return err
+		}
+		s.appendClusterLog(ctx, ClusterLogEntry{
+			TenantID:  tenantID,
+			NodeID:    node.ID,
+			Level:     "info",
+			EventType: "leader_demoted",
+			Message:   "existing leader demoted because another node was promoted",
+			Details: map[string]interface{}{
+				"promoted_node_id": selectedNodeID,
+			},
+		})
+	}
+	return nil
+}
+
+func (s *Service) seedNodeSyncEvents(ctx context.Context, node ClusterNode, profile ClusterProfile, sourceNodeID string) ([]int64, error) {
+	sourceNodeID = strings.TrimSpace(sourceNodeID)
+	if sourceNodeID == "" {
+		sourceNodeID = s.bootstrapNodeID
+	}
+	components := normalizeComponents(node.EnabledComponents)
+	if len(components) == 0 {
+		components = normalizeComponents(profile.Components)
+	}
+	events := make([]int64, 0, len(components))
+	for _, component := range components {
+		if component == "audit" {
+			continue
+		}
+		if !componentAllowedForProfile(component, profile.Components) {
+			continue
+		}
+		created, err := s.PublishSyncEvent(ctx, PublishSyncEventInput{
+			TenantID:     node.TenantID,
+			ProfileID:    profile.ID,
+			Component:    component,
+			EntityType:   "cluster_node",
+			EntityID:     node.ID,
+			Operation:    "seed_sync",
+			SourceNodeID: sourceNodeID,
+			Payload: map[string]interface{}{
+				"target_node_id": node.ID,
+				"reason":         "node_added",
+				"profile_id":     profile.ID,
+			},
+		})
+		if err != nil {
+			return events, err
+		}
+		events = append(events, created.ID)
+	}
+	return events, nil
+}
+
+func (s *Service) emitNodeDecommissionEvents(ctx context.Context, node ClusterNode, profile ClusterProfile, reason string, purgeSyncedData bool) ([]int64, error) {
+	components := normalizeComponents(node.EnabledComponents)
+	if len(components) == 0 {
+		components = normalizeComponents(profile.Components)
+	}
+	eventIDs := make([]int64, 0, len(components))
+	for _, component := range components {
+		if component == "audit" {
+			continue
+		}
+		if !componentAllowedForProfile(component, profile.Components) {
+			continue
+		}
+		created, err := s.PublishSyncEvent(ctx, PublishSyncEventInput{
+			TenantID:     node.TenantID,
+			ProfileID:    profile.ID,
+			Component:    component,
+			EntityType:   "cluster_node",
+			EntityID:     node.ID,
+			Operation:    "decommission",
+			SourceNodeID: s.bootstrapNodeID,
+			Payload: map[string]interface{}{
+				"target_node_id":      node.ID,
+				"decommissioned":      true,
+				"set_standalone":      true,
+				"purge_synced_state":  purgeSyncedData,
+				"remove_from_cluster": true,
+				"reason":              reason,
+			},
+		})
+		if err != nil {
+			return eventIDs, err
+		}
+		eventIDs = append(eventIDs, created.ID)
+	}
+	return eventIDs, nil
+}
+
+func (s *Service) promoteReplacementLeader(ctx context.Context, tenantID string, removingNodeID string) (string, error) {
+	nodes, err := s.store.ListNodes(ctx, tenantID)
+	if err != nil {
+		return "", err
+	}
+	candidates := make([]ClusterNode, 0, len(nodes))
+	for _, node := range nodes {
+		if strings.TrimSpace(node.ID) == "" || strings.TrimSpace(node.ID) == strings.TrimSpace(removingNodeID) {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(node.JoinState), "revoked") {
+			continue
+		}
+		candidates = append(candidates, node)
+	}
+	if len(candidates) == 0 {
+		return "", nil
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		return strings.ToLower(strings.TrimSpace(candidates[i].Name)) < strings.ToLower(strings.TrimSpace(candidates[j].Name))
+	})
+	candidate := candidates[0]
+	candidate.Role = "leader"
+	if err := s.store.UpsertNode(ctx, candidate); err != nil {
+		return "", err
+	}
+	if err := s.demoteOtherLeaders(ctx, tenantID, candidate.ID); err != nil {
+		return "", err
+	}
+	return candidate.ID, nil
 }
 
 func (s *Service) resolvePushTargets(ctx context.Context, tenantID string, profileID string, sourceNodeID string, component string) []string {

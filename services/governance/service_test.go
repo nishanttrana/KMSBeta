@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -144,6 +146,11 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 		`CREATE TABLE governance_system_state (
 			tenant_id TEXT PRIMARY KEY,
 			fips_mode TEXT NOT NULL DEFAULT 'disabled',
+			fips_mode_policy TEXT NOT NULL DEFAULT 'strict',
+			fips_crypto_library TEXT NOT NULL DEFAULT 'go-boringcrypto',
+			fips_library_validated INTEGER NOT NULL DEFAULT 1,
+			fips_tls_profile TEXT NOT NULL DEFAULT 'tls12_fips_suites',
+			fips_rng_mode TEXT NOT NULL DEFAULT 'ctr_drbg',
 			hsm_mode TEXT NOT NULL DEFAULT 'software',
 			cluster_mode TEXT NOT NULL DEFAULT 'standalone',
 			license_key TEXT,
@@ -527,6 +534,139 @@ func TestSystemStatePersistenceAndIntegrity(t *testing.T) {
 	}
 	if integrity.Status != "healthy" {
 		t.Fatalf("expected healthy integrity, got %s with checks=%v", integrity.Status, integrity.Checks)
+	}
+}
+
+func TestUpdateSystemStateHybridToggleTriggersInternalRollout(t *testing.T) {
+	store := newGovernanceStore(t)
+	hits := map[string]int{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/certs/ca":
+			hits["list_ca"]++
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"items": []map[string]interface{}{
+					{"id": "ca_hybrid_1", "name": "vecta-hybrid-runtime-root", "status": "active", "cert_pem": "PEM"},
+				},
+			})
+		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/certs/internal/mtls/"):
+			hits["issue_internal"]++
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"certificate": map[string]interface{}{"id": "crt_x"},
+			})
+		case r.Method == http.MethodGet && r.URL.Path == "/certs/protocols":
+			hits["list_protocols"]++
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"items": []map[string]interface{}{
+					{"protocol": "runtime-mtls", "enabled": true, "config_json": `{"mode":"default"}`},
+				},
+			})
+		case r.Method == http.MethodPut && r.URL.Path == "/certs/protocols/runtime-mtls":
+			hits["put_protocol"]++
+			var body map[string]interface{}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode protocol body: %v", err)
+			}
+			cfg := strings.TrimSpace(fmt.Sprintf("%v", body["config_json"]))
+			if !strings.Contains(cfg, `"hybrid_pqc":true`) && !strings.Contains(cfg, `"hybrid_pqc": true`) {
+				t.Fatalf("expected hybrid_pqc enabled in config_json, got %s", cfg)
+			}
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"config": map[string]interface{}{"protocol": "runtime-mtls"},
+			})
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	svc := NewService(
+		store,
+		nil,
+		&mockEmailSender{},
+		&mockCallbackExecutor{},
+		"http://localhost:8050",
+		WithCertsURL(server.URL),
+		WithHTTPClient(server.Client()),
+	)
+
+	// Baseline non-hybrid mode should not trigger rollout.
+	if _, err := svc.UpdateSystemState(context.Background(), GovernanceSystemState{
+		TenantID:  "thybrid",
+		TLSMode:   "tls13_only",
+		UpdatedBy: "admin",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := hits["issue_internal"]; got != 0 {
+		t.Fatalf("expected no internal mTLS issuance on non-hybrid baseline, got %d", got)
+	}
+
+	// Transition to hybrid KMS mode must trigger internal rollout.
+	if _, err := svc.UpdateSystemState(context.Background(), GovernanceSystemState{
+		TenantID:  "thybrid",
+		TLSMode:   "tls13_hybrid_kms",
+		UpdatedBy: "admin",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := hits["issue_internal"]; got != len(internalHybridMTLSServices) {
+		t.Fatalf("expected %d internal cert issues, got %d", len(internalHybridMTLSServices), got)
+	}
+	if got := hits["put_protocol"]; got != 1 {
+		t.Fatalf("expected runtime-mtls protocol update once, got %d", got)
+	}
+}
+
+func TestShouldApplyInternalHybridTLS(t *testing.T) {
+	if !shouldApplyInternalHybridTLS(
+		GovernanceSystemState{TLSMode: "tls13_only"},
+		GovernanceSystemState{TLSMode: "tls13_hybrid_kms"},
+	) {
+		t.Fatal("expected hybrid rollout on tls13_only -> tls13_hybrid_kms transition")
+	}
+	if shouldApplyInternalHybridTLS(
+		GovernanceSystemState{TLSMode: "tls13_hybrid_kms"},
+		GovernanceSystemState{TLSMode: "tls13_hybrid_kms"},
+	) {
+		t.Fatal("did not expect hybrid rollout for same-mode update")
+	}
+}
+
+func TestUpdateSystemStateRejectsHSMTRNGWithoutHSM(t *testing.T) {
+	store := newGovernanceStore(t)
+	svc := NewService(store, nil, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050")
+
+	_, err := svc.UpdateSystemState(context.Background(), GovernanceSystemState{
+		TenantID:       "tfips-rng",
+		FIPSRNGMode:    "hsm_trng",
+		HSMMode:        "software",
+		FIPSMode:       "enabled",
+		UpdatedBy:      "admin",
+		FIPSModePolicy: "strict",
+	})
+	if err == nil {
+		t.Fatal("expected hsm_trng validation error when hsm is not connected")
+	}
+	if !strings.Contains(strings.ToLower(err.Error()), "configure/connect hsm first") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestEnrichFIPSRuntimeStateHSMTRNGWithoutHSMReportsError(t *testing.T) {
+	out := enrichFIPSRuntimeState(GovernanceSystemState{
+		TenantID:    "tfips-rng-2",
+		FIPSRNGMode: "hsm_trng",
+		HSMMode:     "software",
+	})
+	if out.FIPSEntropyHealth != "error" {
+		t.Fatalf("expected error health, got %s", out.FIPSEntropyHealth)
+	}
+	if out.FIPSEntropySource != "hsm-not-connected" {
+		t.Fatalf("expected hsm-not-connected source, got %s", out.FIPSEntropySource)
+	}
+	if out.FIPSEntropyBitsByte != 0 {
+		t.Fatalf("expected entropy bits to be 0, got %f", out.FIPSEntropyBitsByte)
 	}
 }
 

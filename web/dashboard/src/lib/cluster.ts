@@ -62,10 +62,22 @@ export type ClusterJoinBundle = {
   profile_components?: string[];
 };
 
+export type RemoveClusterNodeResult = {
+  node_id: string;
+  tenant_id: string;
+  standalone: boolean;
+  purge_synced_data: boolean;
+  purge_event_ids: number[];
+  previous_role: string;
+  promoted_leader_node?: string;
+};
+
 type OverviewResponse = { overview: ClusterOverview };
 type ProfilesResponse = { items: ClusterProfile[] };
 type ProfileResponse = { profile: ClusterProfile };
 type JoinResponse = { join: ClusterJoinBundle };
+type NodeResponse = { node: ClusterNode };
+type NodeRemoveResponse = { result: RemoveClusterNodeResult };
 
 function tenantQuery(session: AuthSession): string {
   return `tenant_id=${encodeURIComponent(session.tenantId)}`;
@@ -135,4 +147,81 @@ export async function createClusterJoinRequest(
     })
   });
   return out.join;
+}
+
+export async function upsertClusterNode(
+  session: AuthSession,
+  input: {
+    node_id: string;
+    node_name?: string;
+    endpoint?: string;
+    role?: "leader" | "follower" | string;
+    profile_id: string;
+    components?: string[];
+    status?: string;
+    join_state?: string;
+    cpu_percent?: number;
+    ram_gb?: number;
+    cert_fingerprint?: string;
+    seed_sync?: boolean;
+  }
+): Promise<ClusterNode> {
+  const out = await serviceRequest<NodeResponse>(session, "cluster", "/cluster/nodes", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      node_id: input.node_id,
+      node_name: input.node_name || input.node_id,
+      endpoint: input.endpoint || "",
+      role: input.role || "follower",
+      profile_id: input.profile_id,
+      components: Array.isArray(input.components) ? input.components : [],
+      status: input.status || "unknown",
+      join_state: input.join_state || "active",
+      cpu_percent: Number(input.cpu_percent || 0),
+      ram_gb: Number(input.ram_gb || 0),
+      cert_fingerprint: input.cert_fingerprint || "",
+      requested_by: session.username || "admin",
+      seed_sync: Boolean(input.seed_sync)
+    })
+  });
+  return out.node;
+}
+
+export async function updateClusterNodeRole(
+  session: AuthSession,
+  nodeID: string,
+  role: "leader" | "follower" | string
+): Promise<ClusterNode> {
+  const out = await serviceRequest<NodeResponse>(session, "cluster", `/cluster/nodes/${encodeURIComponent(nodeID)}/role`, {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      role,
+      requested_by: session.username || "admin"
+    })
+  });
+  return out.node;
+}
+
+export async function removeClusterNode(
+  session: AuthSession,
+  nodeID: string,
+  options?: { reason?: string; purge_synced_data?: boolean }
+): Promise<RemoveClusterNodeResult> {
+  const out = await serviceRequest<NodeRemoveResponse>(
+    session,
+    "cluster",
+    `/cluster/nodes/${encodeURIComponent(nodeID)}?${tenantQuery(session)}`,
+    {
+      method: "DELETE",
+      body: JSON.stringify({
+        tenant_id: session.tenantId,
+        reason: options?.reason || "removed_from_cluster",
+        purge_synced_data: options?.purge_synced_data !== false,
+        requested_by: session.username || "admin"
+      })
+    }
+  );
+  return out.result;
 }

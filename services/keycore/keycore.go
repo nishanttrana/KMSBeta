@@ -1730,11 +1730,13 @@ func (s *Service) reconcileLifecycle(ctx context.Context, tenantID string) error
 	if err != nil {
 		return err
 	}
-	for _, keyID := range dueDestroyed {
-		_ = s.cache.Delete(ctx, tenantID, keyID)
+	for _, deleted := range dueDestroyed {
+		_ = s.cache.Delete(ctx, tenantID, deleted.KeyID)
 		_ = s.publishAudit(ctx, "audit.key.destroyed", tenantID, map[string]any{
-			"key_id": keyID,
-			"mode":   "scheduled",
+			"key_id":        deleted.KeyID,
+			"mode":          "scheduled",
+			"deleted_key":   buildDeletedKeyAudit(deleted),
+			"deleted_items": buildDeletedItemsAudit(deleted),
 		})
 	}
 	dueActivated, err := s.store.ActivateDueKeys(ctx, tenantID, now)
@@ -1751,7 +1753,7 @@ func (s *Service) reconcileLifecycle(ctx context.Context, tenantID string) error
 	return nil
 }
 
-func (s *Service) ListKeys(ctx context.Context, tenantID string, limit int, offset int) ([]Key, error) {
+func (s *Service) ListKeys(ctx context.Context, tenantID string, limit int, offset int, includeDeleted bool) ([]Key, error) {
 	if err := s.reconcileLifecycle(ctx, tenantID); err != nil {
 		return nil, err
 	}
@@ -1763,6 +1765,9 @@ func (s *Service) ListKeys(ctx context.Context, tenantID string, limit int, offs
 	for _, k := range keys {
 		if normalizeLifecycleStatus(k.Status) == "deleted" {
 			_ = s.cache.Delete(ctx, tenantID, k.ID)
+			if includeDeleted {
+				out = append(out, k)
+			}
 			continue
 		}
 		out = append(out, k)
@@ -1949,6 +1954,23 @@ func (s *Service) ScheduleKeyDestroy(ctx context.Context, tenantID string, keyID
 		"destroy_after_days": days,
 		"destroy_at":         destroyAt.UTC().Format(time.RFC3339),
 		"justification":      strings.TrimSpace(justification),
+		"key": map[string]any{
+			"name":               key.Name,
+			"algorithm":          key.Algorithm,
+			"key_type":           key.KeyType,
+			"purpose":            key.Purpose,
+			"owner":              key.Owner,
+			"cloud":              key.Cloud,
+			"region":             key.Region,
+			"status_before":      key.Status,
+			"current_version":    key.CurrentVersion,
+			"export_allowed":     key.ExportAllowed,
+			"approval_required":  key.ApprovalRequired,
+			"approval_policy_id": key.ApprovalPolicyID,
+			"tags":               append([]string(nil), key.Tags...),
+			"compliance":         append([]string(nil), key.Compliance...),
+			"labels":             cloneKeyLabels(key.Labels),
+		},
 	})
 	return destroyAt, nil
 }
@@ -1978,16 +2000,51 @@ func (s *Service) DestroyKeyImmediately(ctx context.Context, tenantID string, ke
 	}); err != nil {
 		return err
 	}
-	if err := s.store.MarkKeyDestroyed(ctx, tenantID, keyID, time.Now().UTC()); err != nil {
+	deleted, err := s.store.MarkKeyDestroyed(ctx, tenantID, keyID, time.Now().UTC())
+	if err != nil {
 		return err
 	}
 	_ = s.cache.Delete(ctx, tenantID, keyID)
 	_ = s.publishAudit(ctx, "audit.key.destroyed", tenantID, map[string]any{
-		"key_id":        keyID,
+		"key_id":        deleted.KeyID,
 		"mode":          "immediate",
 		"justification": strings.TrimSpace(justification),
+		"deleted_key":   buildDeletedKeyAudit(deleted),
+		"deleted_items": buildDeletedItemsAudit(deleted),
 	})
 	return nil
+}
+
+func buildDeletedKeyAudit(deleted KeyDeletionRecord) map[string]any {
+	payload := map[string]any{
+		"name":               deleted.KeyName,
+		"algorithm":          deleted.Algorithm,
+		"key_type":           deleted.KeyType,
+		"purpose":            deleted.Purpose,
+		"owner":              deleted.Owner,
+		"cloud":              deleted.Cloud,
+		"region":             deleted.Region,
+		"status_before":      deleted.StatusBefore,
+		"current_version":    deleted.CurrentVersion,
+		"export_allowed":     deleted.ExportAllowed,
+		"approval_required":  deleted.ApprovalRequired,
+		"approval_policy_id": deleted.ApprovalPolicyID,
+		"tags":               append([]string(nil), deleted.Tags...),
+		"compliance":         append([]string(nil), deleted.Compliance...),
+		"labels":             cloneKeyLabels(deleted.Labels),
+	}
+	if deleted.ScheduledDestroyAt != nil {
+		payload["scheduled_destroy_at"] = deleted.ScheduledDestroyAt.UTC().Format(time.RFC3339)
+	}
+	return payload
+}
+
+func buildDeletedItemsAudit(deleted KeyDeletionRecord) map[string]any {
+	return map[string]any{
+		"versions":      deleted.DeletedVersionCount,
+		"iv_logs":       deleted.DeletedIVLogCount,
+		"access_grants": deleted.DeletedAccessGrants,
+	}
 }
 
 func (s *Service) SetUsageLimit(ctx context.Context, tenantID string, keyID string, limit int64, window string) error {

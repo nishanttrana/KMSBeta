@@ -622,7 +622,10 @@ SET approval_expiry_minutes=EXCLUDED.approval_expiry_minutes,
 
 func (s *SQLStore) GetSystemState(ctx context.Context, tenantID string) (GovernanceSystemState, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, COALESCE(fips_mode,'disabled'), COALESCE(hsm_mode,'software'), COALESCE(cluster_mode,'standalone'),
+SELECT tenant_id, COALESCE(fips_mode,'disabled'), COALESCE(fips_mode_policy,'strict'),
+       COALESCE(fips_crypto_library,'go-boringcrypto'), COALESCE(fips_library_validated,true),
+       COALESCE(fips_tls_profile,'tls12_fips_suites'), COALESCE(fips_rng_mode,'ctr_drbg'),
+       COALESCE(hsm_mode,'software'), COALESCE(cluster_mode,'standalone'),
        COALESCE(license_key,''), COALESCE(license_status,'inactive'),
        COALESCE(mgmt_ip,''), COALESCE(cluster_ip,''), COALESCE(dns_servers,''), COALESCE(ntp_servers,''),
        COALESCE(tls_mode,'internal_ca'), COALESCE(tls_cert_pem,''), COALESCE(tls_key_pem,''), COALESCE(tls_ca_bundle_pem,''),
@@ -634,7 +637,9 @@ WHERE tenant_id=$1
 	var out GovernanceSystemState
 	var updatedRaw interface{}
 	err := row.Scan(
-		&out.TenantID, &out.FIPSMode, &out.HSMMode, &out.ClusterMode,
+		&out.TenantID, &out.FIPSMode, &out.FIPSModePolicy,
+		&out.FIPSCryptoLibrary, &out.FIPSLibraryValidated, &out.FIPSTLSProfile, &out.FIPSRNGMode,
+		&out.HSMMode, &out.ClusterMode,
 		&out.LicenseKey, &out.LicenseStatus,
 		&out.MgmtIP, &out.ClusterIP, &out.DNSServers, &out.NTPServers,
 		&out.TLSMode, &out.TLSCertPEM, &out.TLSKeyPEM, &out.TLSCABundlePEM,
@@ -643,17 +648,24 @@ WHERE tenant_id=$1
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return GovernanceSystemState{
-			TenantID:            tenantID,
-			FIPSMode:            "disabled",
-			HSMMode:             "software",
-			ClusterMode:         "standalone",
-			LicenseStatus:       "inactive",
-			TLSMode:             "internal_ca",
-			BackupSchedule:      "daily@02:00",
-			BackupTarget:        "local",
-			BackupRetentionDays: 30,
-			BackupEncrypted:     true,
-			UpdatedBy:           "system",
+			TenantID:             tenantID,
+			FIPSMode:             "disabled",
+			FIPSModePolicy:       "strict",
+			FIPSCryptoLibrary:    "go-boringcrypto",
+			FIPSLibraryValidated: true,
+			FIPSTLSProfile:       "tls12_fips_suites",
+			FIPSRNGMode:          "ctr_drbg",
+			FIPSEntropySource:    "os-csprng",
+			FIPSEntropyHealth:    "unknown",
+			HSMMode:              "software",
+			ClusterMode:          "standalone",
+			LicenseStatus:        "inactive",
+			TLSMode:              "internal_ca",
+			BackupSchedule:       "daily@02:00",
+			BackupTarget:         "local",
+			BackupRetentionDays:  30,
+			BackupEncrypted:      true,
+			UpdatedBy:            "system",
 		}, nil
 	}
 	if err != nil {
@@ -669,14 +681,20 @@ func (s *SQLStore) UpsertSystemState(ctx context.Context, state GovernanceSystem
 	}
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO governance_system_state (
-    tenant_id, fips_mode, hsm_mode, cluster_mode, license_key, license_status,
+    tenant_id, fips_mode, fips_mode_policy, fips_crypto_library, fips_library_validated, fips_tls_profile, fips_rng_mode,
+    hsm_mode, cluster_mode, license_key, license_status,
     mgmt_ip, cluster_ip, dns_servers, ntp_servers,
     tls_mode, tls_cert_pem, tls_key_pem, tls_ca_bundle_pem,
     backup_schedule, backup_target, backup_retention_days, backup_encrypted,
     proxy_endpoint, snmp_target, updated_by, updated_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,CURRENT_TIMESTAMP)
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,CURRENT_TIMESTAMP)
 ON CONFLICT (tenant_id) DO UPDATE
 SET fips_mode=EXCLUDED.fips_mode,
+    fips_mode_policy=EXCLUDED.fips_mode_policy,
+    fips_crypto_library=EXCLUDED.fips_crypto_library,
+    fips_library_validated=EXCLUDED.fips_library_validated,
+    fips_tls_profile=EXCLUDED.fips_tls_profile,
+    fips_rng_mode=EXCLUDED.fips_rng_mode,
     hsm_mode=EXCLUDED.hsm_mode,
     cluster_mode=EXCLUDED.cluster_mode,
     license_key=EXCLUDED.license_key,
@@ -697,7 +715,9 @@ SET fips_mode=EXCLUDED.fips_mode,
     snmp_target=EXCLUDED.snmp_target,
     updated_by=EXCLUDED.updated_by,
     updated_at=CURRENT_TIMESTAMP
-`, state.TenantID, nullable(state.FIPSMode), nullable(state.HSMMode), nullable(state.ClusterMode),
+`, state.TenantID, nullable(state.FIPSMode), nullable(state.FIPSModePolicy),
+		nullable(state.FIPSCryptoLibrary), state.FIPSLibraryValidated, nullable(state.FIPSTLSProfile), nullable(state.FIPSRNGMode),
+		nullable(state.HSMMode), nullable(state.ClusterMode),
 		nullable(state.LicenseKey), nullable(state.LicenseStatus),
 		nullable(state.MgmtIP), nullable(state.ClusterIP), nullable(state.DNSServers), nullable(state.NTPServers),
 		nullable(state.TLSMode), nullable(state.TLSCertPEM), nullable(state.TLSKeyPEM), nullable(state.TLSCABundlePEM),

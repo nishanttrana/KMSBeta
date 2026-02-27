@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -172,5 +173,81 @@ func TestServiceMicrosoftDKEAdapterMetadataHostEnforcement(t *testing.T) {
 	}
 	if svcErr.HTTPStatus != http.StatusUnauthorized {
 		t.Fatalf("unexpected status=%d msg=%s", svcErr.HTTPStatus, svcErr.Message)
+	}
+}
+
+func TestServiceHealthReflectsConfiguredAndConnectedStatus(t *testing.T) {
+	svc, _, keycore, _, _, _ := newHYOKService(t)
+	ctx := context.Background()
+
+	initial, err := svc.Health(ctx, "tenant-h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.TrimSpace(toString(initial["status"])); got != "not_configured" {
+		t.Fatalf("expected status not_configured, got %q", got)
+	}
+	initialStatus := protocolHealthStatus(t, initial, ProtocolGeneric)
+	if initialStatus != "not_configured" {
+		t.Fatalf("expected generic protocol to be not_configured, got %q", initialStatus)
+	}
+
+	keycore.Seed("tenant-h", "key-h", "AES-256")
+	if _, err := svc.ConfigureEndpoint(ctx, EndpointConfig{
+		TenantID: "tenant-h",
+		Protocol: ProtocolGeneric,
+		Enabled:  true,
+		AuthMode: AuthModeMTLSOrJWT,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.ProcessCrypto(ctx, "tenant-h", ProtocolGeneric, "wrap", "key-h", "/hyok/generic/v1/keys/key-h/wrap", AuthIdentity{Mode: "mtls", Subject: "tenant-h:cloud"}, ProxyCryptoRequest{
+		PlaintextB64: "aGVsbG8=",
+		IVB64:        "aXYxMjM0NTY3ODkw",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	after, err := svc.Health(ctx, "tenant-h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	afterStatus := protocolHealthStatus(t, after, ProtocolGeneric)
+	if afterStatus != "connected" {
+		t.Fatalf("expected generic protocol to be connected, got %q", afterStatus)
+	}
+}
+
+func protocolHealthStatus(t *testing.T, health map[string]interface{}, protocol string) string {
+	t.Helper()
+	var protoRaw map[string]interface{}
+	switch statuses := health["protocol_statuses"].(type) {
+	case map[string]interface{}:
+		item, ok := statuses[protocol].(map[string]interface{})
+		if !ok {
+			t.Fatalf("missing protocol status for %s: %#v", protocol, statuses)
+		}
+		protoRaw = item
+	case map[string]map[string]interface{}:
+		item, ok := statuses[protocol]
+		if !ok {
+			t.Fatalf("missing protocol status for %s: %#v", protocol, statuses)
+		}
+		protoRaw = item
+	default:
+		t.Fatalf("missing protocol_statuses in health payload: %#v", health)
+	}
+	return strings.TrimSpace(toString(protoRaw["status"]))
+}
+
+func toString(v interface{}) string {
+	switch x := v.(type) {
+	case string:
+		return x
+	case []byte:
+		return string(x)
+	default:
+		return ""
 	}
 }

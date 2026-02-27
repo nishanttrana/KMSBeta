@@ -40,7 +40,10 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /cluster/join/request", h.handleJoinRequest)
 	mux.HandleFunc("POST /cluster/join/complete", h.handleJoinComplete)
 
+	mux.HandleFunc("POST /cluster/nodes", h.handleUpsertNode)
 	mux.HandleFunc("POST /cluster/nodes/{id}/heartbeat", h.handleNodeHeartbeat)
+	mux.HandleFunc("POST /cluster/nodes/{id}/role", h.handleNodeRoleUpdate)
+	mux.HandleFunc("DELETE /cluster/nodes/{id}", h.handleRemoveNode)
 
 	mux.HandleFunc("POST /cluster/sync/events", h.handlePublishSyncEvent)
 	mux.HandleFunc("GET /cluster/sync/events", h.handleListSyncEvents)
@@ -197,6 +200,73 @@ func (h *Handler) handleNodeHeartbeat(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"node": node, "request_id": reqID})
 }
 
+func (h *Handler) handleUpsertNode(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var in UpsertNodeInput
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	in.TenantID = firstTenant(in.TenantID, tenantFromRequest(r))
+	if strings.TrimSpace(in.RequestedBy) == "" {
+		in.RequestedBy = firstActor(r)
+	}
+	node, err := h.svc.UpsertNode(r.Context(), in)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, in.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"node": node, "request_id": reqID})
+}
+
+func (h *Handler) handleNodeRoleUpdate(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	nodeID := strings.TrimSpace(r.PathValue("id"))
+	if nodeID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "node id is required", reqID, "")
+		return
+	}
+	var in UpdateNodeRoleInput
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	in.TenantID = firstTenant(in.TenantID, tenantFromRequest(r))
+	if strings.TrimSpace(in.RequestedBy) == "" {
+		in.RequestedBy = firstActor(r)
+	}
+	node, err := h.svc.UpdateNodeRole(r.Context(), nodeID, in)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, in.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"node": node, "request_id": reqID})
+}
+
+func (h *Handler) handleRemoveNode(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	nodeID := strings.TrimSpace(r.PathValue("id"))
+	if nodeID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "node id is required", reqID, "")
+		return
+	}
+	var in RemoveNodeInput
+	if err := decodeJSONOptional(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	in.TenantID = firstTenant(in.TenantID, tenantFromRequest(r))
+	if strings.TrimSpace(in.RequestedBy) == "" {
+		in.RequestedBy = firstActor(r)
+	}
+	result, err := h.svc.RemoveNode(r.Context(), nodeID, in)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, in.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"result": result, "request_id": reqID})
+}
+
 func (h *Handler) handlePublishSyncEvent(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	rawBody, err := readRequestBody(r)
@@ -336,6 +406,18 @@ func decodeJSON(r *http.Request, out interface{}) error {
 	raw, err := readRequestBody(r)
 	if err != nil {
 		return err
+	}
+	return decodeJSONBytes(raw, out)
+}
+
+func decodeJSONOptional(r *http.Request, out interface{}) error {
+	defer r.Body.Close() //nolint:errcheck
+	raw, err := io.ReadAll(io.LimitReader(r.Body, 2<<20))
+	if err != nil {
+		return err
+	}
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return nil
 	}
 	return decodeJSONBytes(raw, out)
 }

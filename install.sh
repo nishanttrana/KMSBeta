@@ -19,7 +19,7 @@ SUDO=""
 DOCKER_BIN=(docker)
 HOST_OS="linux"
 STEP_INDEX=0
-STEP_TOTAL=18
+STEP_TOTAL=19
 INSTALL_WARNINGS=()
 
 FEATURE_KEYS=(
@@ -675,8 +675,9 @@ collect_inputs() {
     esac
     prompt_default CLUSTER_REPLICATION_PROFILE "Selective replication profile ID" "cluster-profile-base"
     if [[ "${CLUSTER_DEPLOYMENT_MODE}" == "join-existing" ]]; then
-      prompt_default CLUSTER_JOIN_ENDPOINT "Existing cluster manager endpoint (https://host:8210)" "https://10.0.1.100:8210"
-      prompt_default CLUSTER_JOIN_TOKEN "Cluster join token (issued by leader)" ""
+      prompt_default CLUSTER_JOIN_ENDPOINT "Existing cluster manager endpoint (http://host:8210)" "http://10.0.1.100:8210"
+      prompt_default CLUSTER_JOIN_TOKEN "Cluster join credential (bundle JSON/file or token_id:join_secret)" ""
+      [[ -n "$(trim "${CLUSTER_JOIN_TOKEN}")" ]] || die "Cluster join credential is required for join-existing mode."
     fi
   else
     CLUSTER_INTERFACE="eth1"
@@ -1325,6 +1326,159 @@ start_stack() {
   fi
 }
 
+extract_join_credential_payload() {
+  local raw
+  raw="$(trim "${CLUSTER_JOIN_TOKEN:-}")"
+  if [[ -z "${raw}" ]]; then
+    printf "%s" ""
+    return
+  fi
+  if [[ -f "${raw}" ]]; then
+    cat "${raw}"
+    return
+  fi
+  printf "%s" "${raw}"
+}
+
+parse_join_bundle_json() {
+  local raw="$1"
+  local parsed=""
+  if command -v jq >/dev/null 2>&1; then
+    parsed="$(printf "%s" "${raw}" | jq -r '[.id // .token_id // "", .issued_secret // .join_secret // "", .endpoint // "", .profile_id // ""] | @tsv' 2>/dev/null || true)"
+    if [[ -n "${parsed}" ]]; then
+      printf "%s" "${parsed}"
+      return 0
+    fi
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    parsed="$(
+      python3 - "$raw" <<'PY' 2>/dev/null || true
+import json, sys
+raw = sys.argv[1]
+obj = json.loads(raw)
+token_id = str(obj.get("id") or obj.get("token_id") or "").strip()
+secret = str(obj.get("issued_secret") or obj.get("join_secret") or "").strip()
+endpoint = str(obj.get("endpoint") or "").strip()
+profile = str(obj.get("profile_id") or "").strip()
+print("\t".join([token_id, secret, endpoint, profile]))
+PY
+    )"
+    if [[ -n "${parsed}" ]]; then
+      printf "%s" "${parsed}"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
+resolve_join_credentials() {
+  local raw="$1"
+  CLUSTER_JOIN_TOKEN_ID=""
+  CLUSTER_JOIN_SECRET=""
+
+  raw="$(trim "${raw}")"
+  if [[ -z "${raw}" ]]; then
+    return 1
+  fi
+
+  if [[ "${raw}" == *:* && "${raw}" != \{* ]]; then
+    CLUSTER_JOIN_TOKEN_ID="$(trim "${raw%%:*}")"
+    CLUSTER_JOIN_SECRET="$(trim "${raw#*:}")"
+    [[ -n "${CLUSTER_JOIN_TOKEN_ID}" && -n "${CLUSTER_JOIN_SECRET}" ]] && return 0
+  fi
+
+  if [[ "${raw}" == \{* ]]; then
+    local parsed=""
+    if parsed="$(parse_join_bundle_json "${raw}")"; then
+      CLUSTER_JOIN_TOKEN_ID="$(trim "$(printf "%s" "${parsed}" | awk -F'\t' '{print $1}')")"
+      CLUSTER_JOIN_SECRET="$(trim "$(printf "%s" "${parsed}" | awk -F'\t' '{print $2}')")"
+      local parsed_endpoint parsed_profile
+      parsed_endpoint="$(trim "$(printf "%s" "${parsed}" | awk -F'\t' '{print $3}')")"
+      parsed_profile="$(trim "$(printf "%s" "${parsed}" | awk -F'\t' '{print $4}')")"
+      if [[ -n "${parsed_endpoint}" && -z "$(trim "${CLUSTER_JOIN_ENDPOINT}")" ]]; then
+        CLUSTER_JOIN_ENDPOINT="${parsed_endpoint}"
+      fi
+      if [[ -n "${parsed_profile}" && -z "$(trim "${CLUSTER_REPLICATION_PROFILE}")" ]]; then
+        CLUSTER_REPLICATION_PROFILE="${parsed_profile}"
+      fi
+      [[ -n "${CLUSTER_JOIN_TOKEN_ID}" && -n "${CLUSTER_JOIN_SECRET}" ]] && return 0
+    fi
+  fi
+
+  return 1
+}
+
+build_join_complete_url() {
+  local endpoint="$1"
+  endpoint="$(trim "${endpoint}")"
+  endpoint="${endpoint%/}"
+  if [[ "${endpoint}" != */cluster ]]; then
+    endpoint="${endpoint}/cluster"
+  fi
+  printf "%s/join/complete" "${endpoint}"
+}
+
+attempt_cluster_join() {
+  if [[ "${CLUSTER_ENABLED}" != "true" || "${CLUSTER_DEPLOYMENT_MODE}" != "join-existing" ]]; then
+    return
+  fi
+
+  info "Finalizing cluster join through installer flow..."
+
+  local raw_credential
+  raw_credential="$(extract_join_credential_payload)"
+  if ! resolve_join_credentials "${raw_credential}"; then
+    add_warning "Cluster join credential format invalid. Expected bundle JSON/file or token_id:join_secret."
+    return
+  fi
+
+  local join_url
+  join_url="$(build_join_complete_url "${CLUSTER_JOIN_ENDPOINT}")"
+  if [[ -z "${join_url}" ]]; then
+    add_warning "Cluster join endpoint is empty; cannot complete join."
+    return
+  fi
+
+  local payload_file response_file http_code curl_insecure
+  payload_file="$(mktemp)"
+  response_file="$(mktemp)"
+  curl_insecure=()
+  if [[ "${join_url}" == https:* && "${CLUSTER_SYNC_TLS_INSECURE_SKIP_VERIFY:-false}" == "true" ]]; then
+    curl_insecure=(-k)
+  fi
+
+  cat > "${payload_file}" <<EOF
+{
+  "tenant_id": "${TENANT_ID}",
+  "token_id": "${CLUSTER_JOIN_TOKEN_ID}",
+  "join_secret": "${CLUSTER_JOIN_SECRET}",
+  "node_id": "${APPLIANCE_ID}",
+  "node_name": "${APPLIANCE_ID}",
+  "endpoint": "${CLUSTER_NODE_ENDPOINT}",
+  "components": []
+}
+EOF
+
+  http_code="$(
+    curl "${curl_insecure[@]}" -sS -o "${response_file}" -w "%{http_code}" \
+      -X POST "${join_url}" \
+      -H "Content-Type: application/json" \
+      --data-binary "@${payload_file}" || true
+  )"
+
+  if [[ "${http_code}" =~ ^2[0-9][0-9]$ ]]; then
+    info "Cluster join completed successfully for follower ${APPLIANCE_ID}."
+  else
+    local body
+    body="$(tr '\n' ' ' < "${response_file}" | tr -s ' ' | cut -c1-500)"
+    add_warning "Cluster join complete call failed (HTTP ${http_code:-000}). Response: ${body}"
+  fi
+
+  rm -f "${payload_file}" "${response_file}" || true
+}
+
 wait_for_stack_ready() {
   local timeout_seconds=600
   local poll_seconds=5
@@ -1370,6 +1524,14 @@ print_summary() {
   echo "Build parallel    : ${BUILD_PARALLEL_LIMIT}"
   echo "Cert security     : ${CERT_STORAGE_MODE}/${ROOT_KEY_MODE}"
   echo "CRWK sealed path  : ${CERTS_SEALED_KEY_PATH}"
+  if [[ "${CLUSTER_ENABLED}" == "true" ]]; then
+    echo "Cluster mode      : ${CLUSTER_DEPLOYMENT_MODE}"
+    echo "Cluster role      : ${CLUSTER_NODE_ROLE}"
+    echo "Cluster profile   : ${CLUSTER_REPLICATION_PROFILE}"
+    if [[ "${CLUSTER_DEPLOYMENT_MODE}" == "join-existing" ]]; then
+      echo "Cluster join URL  : ${CLUSTER_JOIN_ENDPOINT}"
+    fi
+  fi
   echo
   echo "Access URLs:"
   echo "  Dashboard : http://${BIND_IP}:${DASHBOARD_PORT}"
@@ -1467,6 +1629,8 @@ main() {
   start_stack
   step "Wait for stack readiness"
   wait_for_stack_ready
+  step "Finalize installer-managed cluster enrollment"
+  attempt_cluster_join
 
   print_summary
 }

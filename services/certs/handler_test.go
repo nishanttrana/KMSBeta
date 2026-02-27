@@ -268,11 +268,49 @@ func TestHandlerDeleteCertificate(t *testing.T) {
 	getReq := httptest.NewRequest(http.MethodGet, "/certs/"+issued.ID+"?tenant_id=t-del", nil)
 	getRR := httptest.NewRecorder()
 	h.ServeHTTP(getRR, getReq)
-	if getRR.Code != http.StatusOK {
-		t.Fatalf("expected certificate metadata after delete status=%d body=%s", getRR.Code, getRR.Body.String())
+	if getRR.Code != http.StatusNotFound {
+		t.Fatalf("expected certificate not found after hard delete status=%d body=%s", getRR.Code, getRR.Body.String())
 	}
-	if !strings.Contains(strings.ToLower(getRR.Body.String()), "\"status\":\"deleted\"") {
-		t.Fatalf("expected deleted status after delete body=%s", getRR.Body.String())
+	listDeletedReq := httptest.NewRequest(http.MethodGet, "/certs?tenant_id=t-del&status=deleted", nil)
+	listDeletedRR := httptest.NewRecorder()
+	h.ServeHTTP(listDeletedRR, listDeletedReq)
+	if listDeletedRR.Code != http.StatusOK {
+		t.Fatalf("expected deleted refs list status=%d body=%s", listDeletedRR.Code, listDeletedRR.Body.String())
+	}
+	body := strings.ToLower(listDeletedRR.Body.String())
+	if !strings.Contains(body, issued.ID) || !strings.Contains(body, "\"status\":\"deleted\"") {
+		t.Fatalf("expected deleted reference in list body=%s", listDeletedRR.Body.String())
+	}
+}
+
+func TestHandlerDeleteCA(t *testing.T) {
+	h, svc := newCertsHandler(t)
+	ctx := context.Background()
+	ca, err := svc.CreateCA(ctx, CreateCARequest{
+		TenantID:   "t-del-ca",
+		Name:       "leaf-delete",
+		CALevel:    "root",
+		Algorithm:  "ECDSA-P384",
+		KeyBackend: "software",
+		Subject:    "CN=Leaf Delete",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	delReq := httptest.NewRequest(http.MethodDelete, "/certs/ca/"+ca.ID+"?tenant_id=t-del-ca", nil)
+	delRR := httptest.NewRecorder()
+	h.ServeHTTP(delRR, delReq)
+	if delRR.Code != http.StatusOK {
+		t.Fatalf("delete ca status=%d body=%s", delRR.Code, delRR.Body.String())
+	}
+	listReq := httptest.NewRequest(http.MethodGet, "/certs/ca?tenant_id=t-del-ca", nil)
+	listRR := httptest.NewRecorder()
+	h.ServeHTTP(listRR, listReq)
+	if listRR.Code != http.StatusOK {
+		t.Fatalf("list ca status=%d body=%s", listRR.Code, listRR.Body.String())
+	}
+	if strings.Contains(listRR.Body.String(), ca.ID) {
+		t.Fatalf("expected CA removed from list body=%s", listRR.Body.String())
 	}
 }
 

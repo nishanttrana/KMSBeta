@@ -27,9 +27,9 @@ type Store interface {
 	SetKeyActivation(ctx context.Context, tenantID string, keyID string, status string, activationAt *time.Time) error
 	ActivateDueKeys(ctx context.Context, tenantID string, now time.Time) ([]string, error)
 	ScheduleDestroy(ctx context.Context, tenantID string, keyID string, destroyAt time.Time) error
-	MarkKeyDestroyed(ctx context.Context, tenantID string, keyID string, destroyedAt time.Time) error
+	MarkKeyDestroyed(ctx context.Context, tenantID string, keyID string, destroyedAt time.Time) (KeyDeletionRecord, error)
 	HardDeleteKey(ctx context.Context, tenantID string, keyID string) error
-	PurgeDueDestroyed(ctx context.Context, tenantID string, now time.Time) ([]string, error)
+	PurgeDueDestroyed(ctx context.Context, tenantID string, now time.Time) ([]KeyDeletionRecord, error)
 	SetUsageLimit(ctx context.Context, tenantID string, keyID string, limit int64, window string) error
 	SetExportAllowed(ctx context.Context, tenantID string, keyID string, allowed bool) error
 	ResetUsage(ctx context.Context, tenantID string, keyID string) error
@@ -111,6 +111,29 @@ type Key struct {
 	CreatedBy        string     `json:"created_by"`
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
+}
+
+type KeyDeletionRecord struct {
+	KeyID               string     `json:"key_id"`
+	KeyName             string     `json:"key_name"`
+	Algorithm           string     `json:"algorithm"`
+	KeyType             string     `json:"key_type"`
+	Purpose             string     `json:"purpose"`
+	Owner               string     `json:"owner"`
+	Cloud               string     `json:"cloud"`
+	Region              string     `json:"region"`
+	StatusBefore        string     `json:"status_before"`
+	CurrentVersion      int        `json:"current_version"`
+	ExportAllowed       bool       `json:"export_allowed"`
+	ApprovalRequired    bool       `json:"approval_required"`
+	ApprovalPolicyID    string     `json:"approval_policy_id"`
+	Tags                []string   `json:"tags"`
+	Compliance          []string   `json:"compliance"`
+	Labels              KeyLabels  `json:"labels"`
+	ScheduledDestroyAt  *time.Time `json:"scheduled_destroy_at,omitempty"`
+	DeletedVersionCount int64      `json:"deleted_version_count"`
+	DeletedIVLogCount   int64      `json:"deleted_iv_log_count"`
+	DeletedAccessGrants int64      `json:"deleted_access_grants"`
 }
 
 type KeyLabels map[string]string
@@ -360,10 +383,17 @@ WHERE tenant_id=$2 AND id=$3
 	return nil
 }
 
-func (s *SQLStore) MarkKeyDestroyed(ctx context.Context, tenantID string, keyID string, destroyedAt time.Time) error {
-	return s.withTenantTx(ctx, tenantID, func(tx *sql.Tx) error {
-		return s.markDestroyedTx(ctx, tx, tenantID, keyID, destroyedAt)
+func (s *SQLStore) MarkKeyDestroyed(ctx context.Context, tenantID string, keyID string, destroyedAt time.Time) (KeyDeletionRecord, error) {
+	var record KeyDeletionRecord
+	err := s.withTenantTx(ctx, tenantID, func(tx *sql.Tx) error {
+		var txErr error
+		record, txErr = s.markDestroyedTx(ctx, tx, tenantID, keyID, destroyedAt)
+		return txErr
 	})
+	if err != nil {
+		return KeyDeletionRecord{}, err
+	}
+	return record, nil
 }
 
 func (s *SQLStore) HardDeleteKey(ctx context.Context, tenantID string, keyID string) error {
@@ -372,8 +402,8 @@ func (s *SQLStore) HardDeleteKey(ctx context.Context, tenantID string, keyID str
 	})
 }
 
-func (s *SQLStore) PurgeDueDestroyed(ctx context.Context, tenantID string, now time.Time) ([]string, error) {
-	var converted []string
+func (s *SQLStore) PurgeDueDestroyed(ctx context.Context, tenantID string, now time.Time) ([]KeyDeletionRecord, error) {
+	var converted []KeyDeletionRecord
 	err := s.withTenantTx(ctx, tenantID, func(tx *sql.Tx) error {
 		rows, err := tx.QueryContext(ctx, `
 SELECT id
@@ -401,11 +431,12 @@ WHERE tenant_id=$1
 		}
 
 		for _, keyID := range ids {
-			if err := s.markDestroyedTx(ctx, tx, tenantID, keyID, now.UTC()); err != nil {
+			record, err := s.markDestroyedTx(ctx, tx, tenantID, keyID, now.UTC())
+			if err != nil {
 				return err
 			}
+			converted = append(converted, record)
 		}
-		converted = ids
 		return nil
 	})
 	if err != nil {
@@ -859,6 +890,11 @@ WHERE tenant_id=$1 AND id=$2
 
 func (s *SQLStore) deleteKeyTx(ctx context.Context, tx *sql.Tx, tenantID string, keyID string) error {
 	if _, err := tx.ExecContext(ctx, `
+DELETE FROM key_access_grants WHERE tenant_id=$1 AND key_id=$2
+`, tenantID, keyID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `
 DELETE FROM key_iv_log WHERE tenant_id=$1 AND key_id=$2
 `, tenantID, keyID); err != nil {
 		return err
@@ -880,16 +916,25 @@ DELETE FROM keys WHERE tenant_id=$1 AND id=$2
 	return nil
 }
 
-func (s *SQLStore) markDestroyedTx(ctx context.Context, tx *sql.Tx, tenantID string, keyID string, destroyedAt time.Time) error {
+func (s *SQLStore) markDestroyedTx(ctx context.Context, tx *sql.Tx, tenantID string, keyID string, destroyedAt time.Time) (KeyDeletionRecord, error) {
+	record, err := s.collectKeyDeletionRecordTx(ctx, tx, tenantID, keyID)
+	if err != nil {
+		return KeyDeletionRecord{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+DELETE FROM key_access_grants WHERE tenant_id=$1 AND key_id=$2
+`, tenantID, keyID); err != nil {
+		return KeyDeletionRecord{}, err
+	}
 	if _, err := tx.ExecContext(ctx, `
 DELETE FROM key_iv_log WHERE tenant_id=$1 AND key_id=$2
 `, tenantID, keyID); err != nil {
-		return err
+		return KeyDeletionRecord{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
 DELETE FROM key_versions WHERE tenant_id=$1 AND key_id=$2
 `, tenantID, keyID); err != nil {
-		return err
+		return KeyDeletionRecord{}, err
 	}
 	res, err := tx.ExecContext(ctx, `
 UPDATE keys
@@ -897,18 +942,110 @@ SET status='deleted',
     current_version=0,
     kcv=NULL,
     kcv_algorithm='',
+    purpose='deleted',
+    iv_mode='internal',
+    owner='deleted',
+    cloud='',
+    region='',
+    compliance='[]',
+    labels='{}',
+    tags='[]',
+    export_allowed=FALSE,
     activation_date=NULL,
+    expiry_date=NULL,
+    ops_total=0,
+    ops_encrypt=0,
+    ops_decrypt=0,
+    ops_sign=0,
+    ops_limit=0,
+    ops_limit_window='',
+    ops_last_reset=NULL,
+    approval_required=FALSE,
+    approval_policy_id=NULL,
     destroy_date=$1,
     updated_at=CURRENT_TIMESTAMP
 WHERE tenant_id=$2 AND id=$3
 `, destroyedAt.UTC(), tenantID, keyID)
 	if err != nil {
-		return err
+		return KeyDeletionRecord{}, err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
-		return errStoreNotFound
+		return KeyDeletionRecord{}, errStoreNotFound
 	}
-	return nil
+	return record, nil
+}
+
+func (s *SQLStore) collectKeyDeletionRecordTx(ctx context.Context, tx *sql.Tx, tenantID string, keyID string) (KeyDeletionRecord, error) {
+	row := tx.QueryRowContext(ctx, `
+SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, current_version, kcv, kcv_algorithm, iv_mode,
+       owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
+       ops_limit, COALESCE(ops_limit_window, ''), ops_last_reset, approval_required,
+       COALESCE(approval_policy_id,''), created_by, created_at, updated_at
+FROM keys WHERE tenant_id=$1 AND id=$2
+`, tenantID, keyID)
+	key, err := scanKey(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return KeyDeletionRecord{}, errStoreNotFound
+	}
+	if err != nil {
+		return KeyDeletionRecord{}, err
+	}
+
+	deletedVersions, err := s.countByKeyTx(ctx, tx, `SELECT COUNT(1) FROM key_versions WHERE tenant_id=$1 AND key_id=$2`, tenantID, keyID)
+	if err != nil {
+		return KeyDeletionRecord{}, err
+	}
+	deletedIVLogs, err := s.countByKeyTx(ctx, tx, `SELECT COUNT(1) FROM key_iv_log WHERE tenant_id=$1 AND key_id=$2`, tenantID, keyID)
+	if err != nil {
+		return KeyDeletionRecord{}, err
+	}
+	deletedGrants, err := s.countByKeyTx(ctx, tx, `SELECT COUNT(1) FROM key_access_grants WHERE tenant_id=$1 AND key_id=$2`, tenantID, keyID)
+	if err != nil {
+		return KeyDeletionRecord{}, err
+	}
+
+	record := KeyDeletionRecord{
+		KeyID:               key.ID,
+		KeyName:             key.Name,
+		Algorithm:           key.Algorithm,
+		KeyType:             key.KeyType,
+		Purpose:             key.Purpose,
+		Owner:               key.Owner,
+		Cloud:               key.Cloud,
+		Region:              key.Region,
+		StatusBefore:        key.Status,
+		CurrentVersion:      key.CurrentVersion,
+		ExportAllowed:       key.ExportAllowed,
+		ApprovalRequired:    key.ApprovalRequired,
+		ApprovalPolicyID:    key.ApprovalPolicyID,
+		Tags:                append([]string(nil), key.Tags...),
+		Compliance:          append([]string(nil), key.Compliance...),
+		Labels:              cloneKeyLabels(key.Labels),
+		ScheduledDestroyAt:  key.DestroyDate,
+		DeletedVersionCount: deletedVersions,
+		DeletedIVLogCount:   deletedIVLogs,
+		DeletedAccessGrants: deletedGrants,
+	}
+	return record, nil
+}
+
+func (s *SQLStore) countByKeyTx(ctx context.Context, tx *sql.Tx, query string, tenantID string, keyID string) (int64, error) {
+	var count int64
+	if err := tx.QueryRowContext(ctx, query, tenantID, keyID).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func cloneKeyLabels(in KeyLabels) KeyLabels {
+	if len(in) == 0 {
+		return KeyLabels{}
+	}
+	out := make(KeyLabels, len(in))
+	for k, v := range in {
+		out[k] = v
+	}
+	return out
 }
 
 func (s *SQLStore) withTenantTx(ctx context.Context, tenantID string, fn func(tx *sql.Tx) error) error {

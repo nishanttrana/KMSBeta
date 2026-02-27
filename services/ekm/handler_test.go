@@ -284,6 +284,21 @@ func TestHandlerBitLockerRegisterAndDeployWithDashboardJWT(t *testing.T) {
 		t.Fatalf("missing bitlocker client id: %s", registerRR.Body.String())
 	}
 
+	dupReq := httptest.NewRequest(http.MethodPost, "/ekm/bitlocker/clients/register", bytes.NewReader([]byte(`{
+		"tenant_id":"tenant-h1",
+		"name":"bitlocker-host-01",
+		"host":"10.0.0.25",
+		"os_version":"Windows 11",
+		"mount_point":"C:"
+	}`)))
+	dupReq.Header.Set("Authorization", "Bearer dashboard-session-token")
+	dupReq.Header.Set("X-Tenant-ID", "tenant-h1")
+	dupRR := httptest.NewRecorder()
+	h.ServeHTTP(dupRR, dupReq)
+	if dupRR.Code != http.StatusConflict {
+		t.Fatalf("duplicate bitlocker registration status=%d body=%s", dupRR.Code, dupRR.Body.String())
+	}
+
 	deployReq := httptest.NewRequest(
 		http.MethodGet,
 		"/ekm/bitlocker/clients/"+registerResp.Client.ID+"/deploy?tenant_id=tenant-h1&os=windows",

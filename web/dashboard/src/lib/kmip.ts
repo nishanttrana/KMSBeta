@@ -70,10 +70,22 @@ export type CreateKMIPClientResult = {
   issued_key_pem?: string;
 };
 
+export type KMIPCapabilities = {
+  library: string;
+  library_version: string;
+  protocol: string;
+  port: string;
+  highest_supported_version: string;
+  supported_versions: string[];
+  operations: string[];
+  object_types: string[];
+};
+
 type ProfilesResponse = { items: KMIPClientProfile[] };
 type ClientsResponse = { items: KMIPClient[] };
 type ProfileResponse = { profile: KMIPClientProfile };
 type CreateClientResponse = { client: KMIPClient; issued_cert_pem?: string; issued_key_pem?: string };
+type CapabilitiesResponse = { capabilities: KMIPCapabilities };
 
 function tenantQuery(session: AuthSession): string {
   return `tenant_id=${encodeURIComponent(session.tenantId)}`;
@@ -82,6 +94,20 @@ function tenantQuery(session: AuthSession): string {
 export async function listKMIPProfiles(session: AuthSession): Promise<KMIPClientProfile[]> {
   const out = await serviceRequest<ProfilesResponse>(session, "kmip", `/kmip/profiles?${tenantQuery(session)}`);
   return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getKMIPCapabilities(session: AuthSession): Promise<KMIPCapabilities> {
+  const out = await serviceRequest<CapabilitiesResponse>(session, "kmip", `/kmip/capabilities?${tenantQuery(session)}`);
+  return out?.capabilities || {
+    library: "github.com/ovh/kmip-go",
+    library_version: "v0.7.2",
+    protocol: "TTLV over TLS",
+    port: "5696",
+    highest_supported_version: "",
+    supported_versions: [],
+    operations: [],
+    object_types: []
+  };
 }
 
 export async function createKMIPProfile(session: AuthSession, input: CreateKMIPProfileInput): Promise<KMIPClientProfile> {
@@ -93,6 +119,13 @@ export async function createKMIPProfile(session: AuthSession, input: CreateKMIPP
     })
   });
   return out.profile;
+}
+
+export async function deleteKMIPProfile(session: AuthSession, profileID: string): Promise<void> {
+  const id = encodeURIComponent(String(profileID || "").trim());
+  await serviceRequest(session, "kmip", `/kmip/profiles/${id}?${tenantQuery(session)}`, {
+    method: "DELETE"
+  });
 }
 
 export async function listKMIPClients(session: AuthSession): Promise<KMIPClient[]> {
@@ -113,4 +146,11 @@ export async function createKMIPClient(session: AuthSession, input: CreateKMIPCl
     issued_cert_pem: out.issued_cert_pem || "",
     issued_key_pem: out.issued_key_pem || ""
   };
+}
+
+export async function deleteKMIPClient(session: AuthSession, clientID: string): Promise<void> {
+  const id = encodeURIComponent(String(clientID || "").trim());
+  await serviceRequest(session, "kmip", `/kmip/clients/${id}?${tenantQuery(session)}`, {
+    method: "DELETE"
+  });
 }

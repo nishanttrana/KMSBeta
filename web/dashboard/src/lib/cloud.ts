@@ -53,6 +53,15 @@ export type CloudSyncJob = {
   created_at?: string;
 };
 
+export type DeleteCloudAccountResult = {
+  tenant_id: string;
+  account_id: string;
+  provider: string;
+  deleted_bindings: number;
+  deleted_sync_jobs: number;
+  deleted_region_mappings: number;
+};
+
 export type CloudInventoryItem = {
   cloud_key_id: string;
   cloud_key_ref: string;
@@ -74,6 +83,7 @@ type SyncResponse = { job: CloudSyncJob };
 type InventoryResponse = { items?: CloudInventoryItem[] };
 type ListBindingsResponse = { items?: CloudKeyBinding[] };
 type GetBindingResponse = { binding: CloudKeyBinding };
+type DeleteAccountResponse = { result: DeleteCloudAccountResult };
 
 export type RegisterCloudAccountInput = {
   provider: CloudProvider;
@@ -133,6 +143,19 @@ export async function registerCloudAccount(
     })
   });
   return payload.account;
+}
+
+export async function deleteCloudAccount(
+  session: AuthSession,
+  accountId: string
+): Promise<DeleteCloudAccountResult> {
+  const payload = await serviceRequest<DeleteAccountResponse>(
+    session,
+    "cloud",
+    `/cloud/accounts/${encodeURIComponent(String(accountId || "").trim())}`,
+    { method: "DELETE" }
+  );
+  return payload.result;
 }
 
 export async function listCloudRegionMappings(session: AuthSession, provider = ""): Promise<CloudRegionMapping[]> {

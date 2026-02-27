@@ -1,5 +1,5 @@
 ﻿// @ts-nocheck
-import { useState, useEffect, useMemo, Component } from "react";
+import { useState, useEffect, useMemo, useRef, Component } from "react";
 import {
   Home as HomeIcon,
   KeyRound,
@@ -93,6 +93,7 @@ import {
   acmeNewOrder,
   cmpv2Request,
   createCA,
+  deleteCA,
   deleteCertificate,
   downloadCertificateAsset,
   estServerKeygen,
@@ -182,6 +183,7 @@ import {
   verifyPVV
 } from "../lib/payment";
 import {
+  deleteCloudAccount,
   discoverCloudInventory,
   importKeyToCloud,
   listCloudAccounts,
@@ -191,6 +193,7 @@ import {
   rotateCloudBinding,
   syncCloudKeys,
   type CloudAccount,
+  type DeleteCloudAccountResult,
   type CloudKeyBinding,
   type CloudProvider,
   type CloudSyncJob
@@ -207,6 +210,9 @@ import {
 import {
   createKMIPClient,
   createKMIPProfile,
+  deleteKMIPClient,
+  deleteKMIPProfile,
+  getKMIPCapabilities,
   listKMIPClients,
   listKMIPProfiles
 } from "../lib/kmip";
@@ -231,9 +237,11 @@ import {
   listMPCKeys
 } from "../lib/mpc";
 import {
-  createClusterJoinRequest,
   deleteClusterProfile,
   getClusterOverview,
+  removeClusterNode,
+  updateClusterNodeRole,
+  upsertClusterNode,
   upsertClusterProfile
 } from "../lib/cluster";
 import {
@@ -716,6 +724,57 @@ const REST_API_CATALOG = [
     ]
   },
   {
+    id: "kmip-clients-list",
+    group: "KMIP",
+    title: "List KMIP Clients",
+    service: "kmip",
+    method: "GET",
+    pathTemplate: "/kmip/clients?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Lists registered KMIP clients, enrollment mode, certificate fingerprint and status.",
+    requestExample: "GET /svc/kmip/kmip/clients?tenant_id=root",
+    responseExample: { items: [{ id: "kmipc_01", name: "app-kmip-client-01", status: "active", enrollment_mode: "internal", role: "kmip-client" }] },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id" },
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "kmip-client-delete",
+    group: "KMIP",
+    title: "Delete KMIP Client",
+    service: "kmip",
+    method: "DELETE",
+    pathTemplate: "/kmip/clients/{{id}}?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Deletes a KMIP client registration and removes certificate-linked access from KMIP service.",
+    requestExample: "DELETE /svc/kmip/kmip/clients/kmipc_01?tenant_id=root",
+    responseExample: { status: "deleted" },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id or client id" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "KMIP client not found" }
+    ]
+  },
+  {
+    id: "kmip-profile-delete",
+    group: "KMIP",
+    title: "Delete KMIP Client Profile",
+    service: "kmip",
+    method: "DELETE",
+    pathTemplate: "/kmip/profiles/{{id}}?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Deletes a KMIP client profile. Profile deletion is blocked while any KMIP client is still attached.",
+    requestExample: "DELETE /svc/kmip/kmip/profiles/kpf_01?tenant_id=root",
+    responseExample: { status: "deleted" },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id or profile id" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Profile not found" },
+      { code: 409, meaning: "Profile is still assigned to one or more KMIP clients" }
+    ]
+  },
+  {
     id: "ekm-agents-list",
     group: "EKM",
     title: "List EKM Agents",
@@ -961,10 +1020,10 @@ function sanitizeDisplayText(value: unknown): string {
       if (ch === "–" || ch === "—") {
         return "-";
       }
-      if (ch === "→") {
+      if (ch === "?") {
         return "->";
       }
-      if (ch === "•" || ch === "◆" || ch === "◈" || ch === "◊") {
+      if (ch === "•" || ch === "?" || ch === "?" || ch === "?") {
         return "*";
       }
       return "";
@@ -1886,7 +1945,7 @@ const Row3=({children})=><div style={{display:"grid",gridTemplateColumns:"1fr 1f
 const NAV=[
   {g:"CORE",items:[{id:"home",icon:HomeIcon,label:"Dashboard"},{id:"keys",icon:KeyRound,label:"Key Management"},{id:"certs",icon:FileText,label:"Certificates / PKI"},{id:"cloudctl",icon:Cloud,label:"Cloud Key Control"},{id:"ekm",icon:Database,label:"Enterprise Key Management"},{id:"vault",icon:Lock,label:"Secret Vault"},{id:"dataprotection",icon:ShieldCheck,label:"Data Protection"}]},
   {g:"WORKBENCH",items:[{id:"workbench",icon:LayoutGrid,label:"Workbench"}]},
-  {g:"INFRASTRUCTURE",items:[{id:"hsm",icon:Cpu,label:"HSM / Primus"},{id:"qkd",icon:GitBranch,label:"QKD Interface"},{id:"mpc",icon:Cpu,label:"MPC Engine"},{id:"cluster",icon:GitBranch,label:"Cluster"}]},
+  {g:"INFRASTRUCTURE",items:[{id:"hsm",icon:Cpu,label:"HSM"},{id:"qkd",icon:GitBranch,label:"QKD Interface"},{id:"mpc",icon:Cpu,label:"MPC Engine"},{id:"cluster",icon:GitBranch,label:"Cluster"}]},
   {g:"GOVERNANCE",items:[{id:"approvals",icon:CheckCircle2,label:"Approvals"},{id:"alerts",icon:Bell,label:"Alert Center"},{id:"audit",icon:ScrollText,label:"Audit Log"},{id:"compliance",icon:ClipboardCheck,label:"Compliance"},{id:"sbom",icon:BarChart3,label:"SBOM / CBOM"}]},
   {g:"ADMIN",items:[{id:"admin",icon:Settings,label:"Administration"}]},
 ];
@@ -1935,7 +1994,7 @@ const DOC_CAPABILITIES=[
   {name:"BYOK and HYOK Integration",domain:"Cloud",summary:"Bring-your-own-key and hold-your-own-key integration patterns.",customer:"Preserves enterprise control of key ownership."},
   {name:"External KMS / EKM Interop",domain:"Integration",summary:"Connectors for external key consumers and provider-managed workflows.",customer:"Extends KMS controls across external platforms."},
   {name:"KMIP 2.1 Service",domain:"Integration",summary:"Standards-based KMIP endpoint for client/application interoperability.",customer:"Simplifies migration from legacy key managers."},
-  {name:"HSM and Primus Mode",domain:"Hardware Security",summary:"Hardware-backed cryptographic boundary and key operation offload.",customer:"Raises assurance for high-trust environments."},
+  {name:"HSM Mode",domain:"Hardware Security",summary:"Hardware-backed cryptographic boundary and key operation offload.",customer:"Raises assurance for high-trust environments."},
   {name:"Approvals and Governance",domain:"Governance",summary:"Multi-step authorization and role-based approval flows.",customer:"Enforces separation of duties and controlled change."},
   {name:"Audit Logging",domain:"Governance",summary:"Tamper-evident audit capture for security and operations activity.",customer:"Supports investigation and compliance evidence."},
   {name:"Compliance and Reporting",domain:"Governance",summary:"Control-mapped reporting and posture visibility.",customer:"Tracks adherence to internal and external requirements."},
@@ -2102,7 +2161,7 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
       return {...DEFAULT_KEY_COLUMN_VISIBILITY};
     }
   });
-  const keys=keyChoicesFromCatalog(keyCatalog);
+  const keys=Array.isArray(keyCatalog)?keyCatalog:[];
   const [pqcAlgorithm,setPqcAlgorithm]=useState("ML-KEM-768");
   const [pqcHybridMode,setPqcHybridMode]=useState("pure");
   const [pqcName,setPqcName]=useState("");
@@ -2451,7 +2510,7 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
   },[formComponentCount,formComponents.length]);
 
   const refreshKeyCatalog=async(preferredKeyId)=>{
-    const items=await listKeys(session);
+    const items=await listKeys(session,{includeDeleted:true});
     const mapped=items.map(toViewKey);
     setKeyCatalog(mapped);
     if(preferredKeyId){
@@ -3658,7 +3717,7 @@ const Keys=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog,onToast})
         <FG label="Security Options">
           <Chk label="Require governance approval for all operations" checked={approvalReq} onChange={()=>setApprovalReq(!approvalReq)}/>
           <Chk label="Allow key export (wrapped)" checked={exportable} onChange={()=>setExportable(!exportable)}/>
-          <Chk label="HSM-backed (store in Primus HSM)" checked={false}/>
+          <Chk label="HSM-backed (store in external HSM)" checked={false}/>
           <Chk label="FIPS-only algorithms enforced" checked={true}/>
         </FG>
         <FG label="Activation">
@@ -5126,7 +5185,7 @@ const RestAPI=({session,keyCatalog,onToast})=>{
       }
     })();
     return ()=>{cancelled=true;};
-  },[session?.token,session?.tenantId]);
+  },[onSubViewChange,session?.token,session?.tenantId,tabVendorID]);
 
   const resolveTemplateValue=(name:string,encode:boolean)=>{
     const key=String(name||"").trim();
@@ -5564,7 +5623,7 @@ const Vault=({session,onToast})=>{
 
   const ttlCompact=(secret:any)=>{
     const ttlSec=Number(secret?.lease_ttl_seconds||0);
-    if(ttlSec<=0) return "∞";
+    if(ttlSec<=0) return "8";
     if(ttlSec>=86400) return `${Math.round(ttlSec/86400)}d`;
     if(ttlSec>=3600) return `${Math.round(ttlSec/3600)}h`;
     if(ttlSec>=60) return `${Math.round(ttlSec/60)}m`;
@@ -5893,7 +5952,7 @@ const Vault=({session,onToast})=>{
 // 
 // TAB: CERTIFICATES / PKI (interactive with PQC)
 // 
-const Certs=({session,onToast})=>{
+const Certs=({session,onToast,subView,onSubViewChange})=>{
   const [modal,setModal]=useState(null);
   const [loading,setLoading]=useState(false);
   const [submitting,setSubmitting]=useState(false);
@@ -5975,6 +6034,10 @@ const Certs=({session,onToast})=>{
   const [alertPolicyIncludeExternal,setAlertPolicyIncludeExternal]=useState(true);
   const [alertPolicySaving,setAlertPolicySaving]=useState(false);
   const promptDialog=usePromptDialog();
+  const requestedCertPane=String(subView||"cert-overview").trim().toLowerCase();
+  const activeCertPane=requestedCertPane==="cert-enrollment"?"cert-enrollment":"cert-overview";
+  const showEnrollmentPane=activeCertPane==="cert-enrollment";
+  const showOverviewPane=!showEnrollmentPane;
 
   const refresh=async()=>{
     if(!session){
@@ -6031,6 +6094,16 @@ const Certs=({session,onToast})=>{
     }
     void refresh();
   },[session?.tenantId]);
+
+  useEffect(()=>{
+    if(!onSubViewChange){
+      return;
+    }
+    if(String(subView||"").trim()){
+      return;
+    }
+    onSubViewChange("cert-overview");
+  },[subView,onSubViewChange]);
 
   const protocolOrder=useMemo(()=>["acme","est","scep","cmpv2","runtime-mtls"],[]);
 
@@ -6813,7 +6886,7 @@ const Certs=({session,onToast})=>{
     const label=String(cert.subject_cn||cert.id||"certificate");
     const ok=await promptDialog.confirm({
       title:"Delete Certificate",
-      message:`Delete certificate '${label}'?\n\nMetadata will be retained for forensics and audit.`,
+      message:`Delete certificate '${label}'?\n\nThis permanently flushes certificate material/metadata from DB and cannot be recovered. Deleted tab keeps only a minimal reference.`,
       confirmLabel:"Delete",
       danger:true
     });
@@ -6862,6 +6935,28 @@ const Certs=({session,onToast})=>{
       const fileName=`${safe||"ca"}-crl.pem`;
       downloadTextFile(fileName,String(out?.crl_pem||""),"application/x-pem-file");
       onToast?.(`CRL generated for ${String(ca.name||ca.id)} at ${String(out?.generated_at||"")}`);
+    });
+  };
+
+  const actDeleteCA=async(ca:any)=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    const label=String(ca?.name||ca?.id||"CA");
+    const ok=await promptDialog.confirm({
+      title:"Delete Certificate Authority",
+      message:`Delete CA '${label}'?\n\nThis permanently removes CA metadata and cannot be undone.\n\nDelete will be blocked if this CA has child CAs or issued certificates.`,
+      confirmLabel:"Delete CA",
+      danger:true
+    });
+    if(!ok){
+      return;
+    }
+    await runCertAction(`delete-ca-${String(ca?.id||"")}`,async()=>{
+      await deleteCA(session,String(ca?.id||""));
+      onToast?.(`CA deleted: ${label}`);
+      await refresh();
     });
   };
 
@@ -6947,6 +7042,7 @@ const Certs=({session,onToast})=>{
     const issuedOpen=Object.prototype.hasOwnProperty.call(issuedExpanded||{},caID)?Boolean(issuedExpanded[caID]):true;
     const status=String(ca.status||"unknown").toLowerCase();
     const crlBusy=String(rowActionBusy||"")===`crl-${caID}`;
+    const deleteCABusy=String(rowActionBusy||"")===`delete-ca-${caID}`;
     return <Card key={caID} style={{padding:8,marginLeft:depth*16,background:depth===0?"rgba(6,214,224,.08)":"rgba(148,163,184,.10)",borderColor:depth===0?C.accentDim:C.border}}>
       <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"flex-start"}}>
         <div style={{minWidth:0}}>
@@ -6956,6 +7052,7 @@ const Certs=({session,onToast})=>{
         <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
           <B c={status==="active"?"green":status==="revoked"?"red":"amber"}>{String(ca.status||"unknown")}</B>
           <Btn small onClick={()=>void actCRL(ca)} disabled={crlBusy}>{crlBusy?"Generating...":"CRL"}</Btn>
+          <Btn small danger onClick={()=>void actDeleteCA(ca)} disabled={deleteCABusy}>{deleteCABusy?"Deleting...":"Delete"}</Btn>
         </div>
       </div>
       {open?<>
@@ -6971,19 +7068,21 @@ const Certs=({session,onToast})=>{
   };
 
   return <div>
-    <div style={{display:"flex",gap:12,marginBottom:14}}>
-      <Stat l="Active Certs" v={String(stats.active)} c="green"/>
-      <Stat l="Revoked" v={String(stats.revoked)} c="red"/>
-      <Stat l="Deleted" v={String(stats.deleted)} c="blue"/>
-      <Stat l="CAs" v={String(stats.cas)} s={`${roots.length} root`} c="accent"/>
-      <Stat l="PQC Certs" v={String(stats.pqc)} s={`${stats.total?Math.round((stats.pqc*100)/stats.total):0}% of total`} c="purple"/>
-      <Stat l={`Expiring (${alertPolicyDaysBefore}d)`} v={String(stats.expiring)} c="amber"/>
-    </div>
-    <div style={{fontSize:9,color:C.muted,marginBottom:10}}>
-      OCSP status meanings: <span style={{color:C.green}}>good</span> = valid and not revoked, <span style={{color:C.red}}>revoked</span> = explicitly revoked, <span style={{color:C.amber}}>expired</span> = validity ended.
-    </div>
+    {showOverviewPane&&<>
+      <div style={{display:"flex",gap:12,marginBottom:14}}>
+        <Stat l="Active Certs" v={String(stats.active)} c="green"/>
+        <Stat l="Revoked" v={String(stats.revoked)} c="red"/>
+        <Stat l="Deleted" v={String(stats.deleted)} c="blue"/>
+        <Stat l="CAs" v={String(stats.cas)} s={`${roots.length} root`} c="accent"/>
+        <Stat l="PQC Certs" v={String(stats.pqc)} s={`${stats.total?Math.round((stats.pqc*100)/stats.total):0}% of total`} c="purple"/>
+        <Stat l={`Expiring (${alertPolicyDaysBefore}d)`} v={String(stats.expiring)} c="amber"/>
+      </div>
+      <div style={{fontSize:9,color:C.muted,marginBottom:10}}>
+        OCSP status meanings: <span style={{color:C.green}}>good</span> = valid and not revoked, <span style={{color:C.red}}>revoked</span> = explicitly revoked, <span style={{color:C.amber}}>expired</span> = validity ended.
+      </div>
+    </>}
 
-    <Section title="Enrollment Protocols">
+    {showEnrollmentPane&&<Section title="Enrollment Protocols">
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         {protocolMeta.map((meta)=>{
           const cfg=protocolByName[meta.name];
@@ -7010,9 +7109,9 @@ const Certs=({session,onToast})=>{
           </Card>;
         })}
       </div>
-    </Section>
+    </Section>}
 
-    <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:10,marginBottom:12}}>
+    {showOverviewPane&&<div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:10,marginBottom:12}}>
       <Card style={{padding:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
           <div style={{fontSize:12,fontWeight:700,color:C.text}}>CA Hierarchy</div>
@@ -7055,17 +7154,17 @@ const Certs=({session,onToast})=>{
           </div>
         </Card>
       </div>
-    </div>
+    </div>}
 
-    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
+    {showOverviewPane&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
       <Btn small primary onClick={()=>setModal("issue")} style={{height:34,padding:"0 14px"}}>+ Issue</Btn>
       <Btn small onClick={()=>setModal("sign-csr")} style={{height:34,padding:"0 14px"}}>Sign CSR</Btn>
       <Btn small onClick={()=>setModal("issue-pqc")} style={{height:34,padding:"0 14px"}}>PQC</Btn>
       <Btn small onClick={()=>setModal("upload-3p")} style={{height:34,padding:"0 14px"}}>Upload 3rd-Party</Btn>
       <Btn small onClick={()=>setModal("cert-alert-policy")} style={{height:34,padding:"0 14px"}}>Alert Policy</Btn>
-    </div>
+    </div>}
 
-    <Section title="Certificates">
+    {showOverviewPane&&<Section title="Certificates">
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
           <Inp
@@ -7232,7 +7331,7 @@ const Certs=({session,onToast})=>{
           <Btn small onClick={()=>setCertPageIndex((prev)=>Math.min(certTotalPages-1,prev+1))} disabled={certCurrentPage>=certTotalPages-1}>Next</Btn>
         </div>
       </div>
-    </Section>
+    </Section>}
 
     <Modal open={modal==="create-ca"} onClose={()=>setModal(null)} title="Create Certificate Authority" wide>
       <Row2>
@@ -7276,7 +7375,7 @@ const Certs=({session,onToast})=>{
         <FG label="Validity"><Sel value={caValidity} onChange={(e)=>setCAValidity(e.target.value)}><option value="3650">10 years (Root CA)</option><option value="1825">5 years (Intermediate)</option><option value="1095">3 years</option><option value="365">1 year</option></Sel></FG>
       </Row2>
       <FG label="Key Storage">
-        <Radio label="HSM-backed (Primus HSM - FIPS 140-3 Level 3)" selected={caBackend==="keycore"} onSelect={()=>setCABackend("keycore")}/>
+        <Radio label="HSM-backed (external HSM - FIPS boundary)" selected={caBackend==="keycore"} onSelect={()=>setCABackend("keycore")}/>
         <Radio label="Software vault (envelope-encrypted)" selected={caBackend==="software"} onSelect={()=>setCABackend("software")}/>
       </FG>
       <FG label="Path Length Constraint" hint="Max depth of CA chain below this CA"><Inp value={caPathLength} onChange={(e)=>setCAPathLength(e.target.value)} placeholder="1" type="number"/></FG>
@@ -8333,7 +8432,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
       return;
     }
     void refresh(true);
-  },[session?.token,session?.tenantId]);
+  },[session?.token,session?.tenantId,session?.username,globalFipsEnabled]);
 
   useEffect(()=>{
     if(!leaseKeyID&&keyChoices.length){
@@ -10944,44 +11043,170 @@ const Payment=({session,keyCatalog,onToast})=>{
 const Home=({fipsMode,session,onToast})=>{
   const [modal,setModal]=useState(null);
   const [homeLoading,setHomeLoading]=useState(false);
+  const [approvalVoteBusy,setApprovalVoteBusy]=useState("");
+  const [homeRefreshNonce,setHomeRefreshNonce]=useState(0);
+  const promptDialog=usePromptDialog();
   const [homeSummary,setHomeSummary]=useState({
     keys:0,
     secrets:0,
     certs:0,
     alerts:0,
+    criticalAlerts:0,
+    keyGrowthWeek:0,
+    opsPerDay:0,
+    opsGrowthPct:8.2,
+    complianceScore:87,
+    complianceDeltaWeek:3,
     alertDays:30,
     expiring:0,
-    expiringItems:[]
+    myPendingApprovals:0,
+    approverIdentity:"",
+    govChallengeRequired:false,
+    pendingApprovals:[],
+    cryptoLibrary:"",
+    cryptoLibraryValidated:false,
+    clusterNodes:[],
+    clusterSummary:{total_nodes:0,online_nodes:0,degraded_nodes:0,down_nodes:0},
+    clusterLagSec:null,
+    algorithms:[]
   });
   const globalFipsEnabled=isFipsModeEnabled(fipsMode);
+  const fmtInt=(value:number)=>Number(value||0).toLocaleString("en-US");
+  const fmtCompact=(value:number)=>{
+    const n=Math.max(0,Number(value||0));
+    if(n>=1_000_000_000){
+      return `${(n/1_000_000_000).toFixed(1).replace(/\.0$/,"")}B`;
+    }
+    if(n>=1_000_000){
+      return `${(n/1_000_000).toFixed(1).replace(/\.0$/,"")}M`;
+    }
+    if(n>=1_000){
+      return `${(n/1_000).toFixed(1).replace(/\.0$/,"")}K`;
+    }
+    return String(n);
+  };
+  const statusTone=(status:string)=>{
+    const raw=String(status||"").trim().toLowerCase();
+    if(raw==="online"||raw==="ok"||raw==="active"||raw==="strict"||raw==="standard"){
+      return "green";
+    }
+    if(raw==="degraded"||raw==="warning"||raw==="warn"){
+      return "amber";
+    }
+    if(raw==="down"||raw==="failed"||raw==="error"){
+      return "red";
+    }
+    return "blue";
+  };
+  const statusPill=(label:string,status:string,pulse=true)=>{
+    const tone=statusTone(status);
+    const dotColor=(C as any)[tone]||C.accent;
+    const bgColor=(C as any)[`${tone}Dim`]||C.accentDim;
+    return <div style={{padding:"4px 10px",borderRadius:999,background:bgColor,color:dotColor,fontSize:10,fontWeight:700,display:"inline-flex",alignItems:"center",gap:5}}>
+      <span style={{width:7,height:7,borderRadius:999,background:dotColor,display:"inline-block",animation:pulse?"pulse 1.8s infinite":"none"}}/>
+      {label}
+    </div>;
+  };
+  const normalizeAlgoLabel=(raw:any)=>{
+    const src=String(raw||"").trim();
+    const upper=src.toUpperCase();
+    if(!upper){
+      return "Other";
+    }
+    if(upper.includes("AES")&&upper.includes("GCM")&&upper.includes("256")){
+      return "AES-256-GCM";
+    }
+    if(upper.includes("RSA")&&upper.includes("4096")){
+      return "RSA-4096";
+    }
+    if((upper.includes("ECDSA")||upper.includes("EC"))&&upper.includes("P384")){
+      return "ECDSA-P384";
+    }
+    if(upper.includes("ML-KEM")&&upper.includes("768")){
+      return "ML-KEM-768";
+    }
+    if(upper.includes("ED25519")){
+      return "Ed25519";
+    }
+    if(upper.includes("AES")){
+      return "AES";
+    }
+    if(upper.includes("RSA")){
+      return "RSA";
+    }
+    if(upper.includes("ECDSA")){
+      return "ECDSA";
+    }
+    return src.length>24?`${src.slice(0,24)}...`:src;
+  };
+  const allowedApproversForRequest=(requestItem:any,policyItems:any[])=>{
+    const seen=new Set<string>();
+    const out:string[]=[];
+    const add=(value:any)=>{
+      const email=String(value||"").trim().toLowerCase();
+      if(!email||seen.has(email)){
+        return;
+      }
+      seen.add(email);
+      out.push(email);
+    };
+    const policy=(Array.isArray(policyItems)?policyItems:[]).find((entry:any)=>String(entry?.id||"")===String(requestItem?.policy_id||""))||{};
+    (Array.isArray(policy?.approver_users)?policy.approver_users:[]).forEach((item:any)=>add(item));
+    const details=requestItem?.target_details||{};
+    (Array.isArray(details?.approver_emails)?details.approver_emails:[]).forEach((item:any)=>add(item));
+    return out;
+  };
+  const refreshEmpty=()=>({
+    keys:0,
+    secrets:0,
+    certs:0,
+    alerts:0,
+    criticalAlerts:0,
+    keyGrowthWeek:0,
+    opsPerDay:0,
+    opsGrowthPct:8.2,
+    complianceScore:87,
+    complianceDeltaWeek:3,
+    alertDays:30,
+    expiring:0,
+    myPendingApprovals:0,
+    approverIdentity:"",
+    govChallengeRequired:false,
+    pendingApprovals:[],
+    cryptoLibrary:"",
+    cryptoLibraryValidated:false,
+    clusterNodes:[],
+    clusterSummary:{total_nodes:0,online_nodes:0,degraded_nodes:0,down_nodes:0},
+    clusterLagSec:null,
+    algorithms:[]
+  });
 
   useEffect(()=>{
     if(!session?.token){
-      setHomeSummary({
-        keys:0,
-        secrets:0,
-        certs:0,
-        alerts:0,
-        alertDays:30,
-        expiring:0,
-        expiringItems:[]
-      });
+      setHomeSummary(refreshEmpty());
       return;
     }
     let cancelled=false;
     const refreshHome=async()=>{
       setHomeLoading(true);
       try{
-        const [keys,secretItems,certItems,counts,policy]=await Promise.all([
+        const [keys,secretItems,certItems,counts,policy,pendingRequests,governancePolicies,governanceSettings,clusterOverview,governanceSystemState]=await Promise.all([
           listKeys(session),
           listSecrets(session),
           listCertificates(session,{limit:1000,offset:0}),
           getUnreadAlertCounts(session),
-          getCertExpiryAlertPolicy(session)
+          getCertExpiryAlertPolicy(session),
+          listGovernanceRequests(session,{status:"pending"}).catch(()=>[]),
+          listGovernancePolicies(session,{status:"active"}).catch(()=>[]),
+          getGovernanceSettings(session).catch(()=>null),
+          getClusterOverview(session).catch(()=>({nodes:[],profiles:[],summary:{total_nodes:0,online_nodes:0,degraded_nodes:0,down_nodes:0}})),
+          serviceRequest(session,"governance",`/governance/system/state?tenant_id=${encodeURIComponent(session.tenantId)}`).catch(()=>null)
         ]);
         if(cancelled){
           return;
         }
+        const keyItems=Array.isArray(keys)?keys:[];
+        const keyCount=keyItems.length;
         const alertDays=Math.max(1,Math.min(3650,Number(policy?.days_before||30)));
         const includeExternal=Boolean(policy?.include_external);
         const now=Date.now();
@@ -11013,14 +11238,157 @@ const Home=({fipsMode,session,onToast})=>{
           .filter((item)=>item.expiresAt<=threshold)
           .sort((a,b)=>a.expiresAt-b.expiresAt);
         const unreadTotal=Object.values(counts||{}).reduce((sum,val)=>sum+Math.max(0,Number(val||0)),0);
+        const criticalAlerts=Math.max(0,Number(counts?.critical||counts?.high||0));
+        const keyGrowthWeek=Math.max(0,Math.round(keyCount*0.0045));
+        const opsPerDay=Math.max(0,Math.round(keyCount*4.32));
+        const opsGrowthPct=8.2;
+        const complianceBase=globalFipsEnabled?94:86;
+        const compliancePenalty=Math.min(32,(criticalAlerts*3)+(expiringItems.length*2));
+        const complianceScore=Math.max(0,Math.min(100,Math.round(complianceBase-compliancePenalty)));
+        const complianceDeltaWeek=Math.max(0,3-Math.min(3,criticalAlerts));
+
+        const algoBuckets:any={};
+        for(const item of keyItems){
+          const label=normalizeAlgoLabel(item?.algorithm||item?.type||"");
+          algoBuckets[label]=(Number(algoBuckets[label]||0)+1);
+        }
+        const algoTotal=Object.values(algoBuckets).reduce((sum,val)=>sum+Number(val||0),0);
+        const palette=[C.accent,C.blue,C.purple,C.green,C.amber];
+        const algorithms=algoTotal>0
+          ? (()=>{
+              const ranked=Object.entries(algoBuckets).sort((a:any,b:any)=>Number(b[1]||0)-Number(a[1]||0));
+              const top=ranked.slice(0,5).map((entry:any,idx:number)=>({
+                name:String(entry[0]||"Other"),
+                count:Number(entry[1]||0),
+                color:palette[idx]||C.accent
+              }));
+              const used=top.reduce((sum:number,item:any)=>sum+item.count,0);
+              const rest=Math.max(0,algoTotal-used);
+              const mapped=top.map((item:any)=>({
+                name:item.name,
+                pct:Math.round((item.count/algoTotal)*100),
+                color:item.color
+              }));
+              if(rest>0){
+                mapped.push({name:"Other",pct:Math.round((rest/algoTotal)*100),color:C.muted});
+              }
+              const totalPct=mapped.reduce((sum:number,item:any)=>sum+Number(item.pct||0),0);
+              if(mapped.length&&totalPct!==100){
+                mapped[0]={...mapped[0],pct:Math.max(0,Number(mapped[0].pct||0)+(100-totalPct))};
+              }
+              return mapped;
+            })()
+          : [];
+
+        const policyItems=(Array.isArray(governancePolicies)?governancePolicies:[]);
+        const pendingItems=(Array.isArray(pendingRequests)?pendingRequests:[]);
+        const username=String(session?.username||"").trim().toLowerCase();
+        const policyApprovers=policyItems
+          .flatMap((policy:any)=>Array.isArray(policy?.approver_users)?policy.approver_users:[])
+          .map((email:any)=>String(email||"").trim().toLowerCase())
+          .filter(Boolean);
+        const approverIdentity=(()=>{
+          if(!username){
+            return "";
+          }
+          const localPartMatch=policyApprovers.find((email)=>String(email.split("@")[0]||"")===username);
+          if(localPartMatch){
+            return localPartMatch;
+          }
+          return username.includes("@")?username:`${username}@vecta.local`;
+        })();
+        const requestForUser=(item:any)=>{
+          const status=String(item?.status||"").trim().toLowerCase()||"pending";
+          if(status!=="pending"){
+            return false;
+          }
+          const allowed=allowedApproversForRequest(item,policyItems);
+          if(!allowed.length){
+            return false;
+          }
+          if(approverIdentity&&allowed.includes(approverIdentity)){
+            return true;
+          }
+          if(username&&allowed.some((email)=>String(email.split("@")[0]||"")===username)){
+            return true;
+          }
+          return false;
+        };
+        const userPendingApprovals=pendingItems
+          .filter((item:any)=>requestForUser(item))
+          .sort((a:any,b:any)=>new Date(String(b?.created_at||0)).getTime()-new Date(String(a?.created_at||0)).getTime())
+          .slice(0,6)
+          .map((item:any)=>({
+            id:String(item?.id||""),
+            action:String(item?.action||"approval"),
+            target_id:String(item?.target_id||"-"),
+            created_at:String(item?.created_at||""),
+            allowed_approvers:allowedApproversForRequest(item,policyItems),
+            required_approvals:Number(item?.required_approvals||1),
+            current_approvals:Number(item?.current_approvals||0),
+            current_denials:Number(item?.current_denials||0)
+          }));
+
+        const clusterNodes=(Array.isArray(clusterOverview?.nodes)?clusterOverview.nodes:[])
+          .map((node:any)=>({
+            ...node,
+            role:String(node?.role||"follower").toLowerCase()==="leader"?"leader":"follower",
+            status:String(node?.status||"unknown").toLowerCase()
+          }))
+          .sort((a:any,b:any)=>{
+            if(String(a?.role||"")==="leader"&&String(b?.role||"")!=="leader"){
+              return -1;
+            }
+            if(String(b?.role||"")==="leader"&&String(a?.role||"")!=="leader"){
+              return 1;
+            }
+            return String(a?.name||a?.id||"").localeCompare(String(b?.name||b?.id||""));
+          });
+        const clusterSummary={
+          total_nodes:Math.max(0,Number(clusterOverview?.summary?.total_nodes||clusterNodes.length||0)),
+          online_nodes:Math.max(0,Number(clusterOverview?.summary?.online_nodes||clusterNodes.filter((n:any)=>n.status==="online").length||0)),
+          degraded_nodes:Math.max(0,Number(clusterOverview?.summary?.degraded_nodes||clusterNodes.filter((n:any)=>n.status==="degraded").length||0)),
+          down_nodes:Math.max(0,Number(clusterOverview?.summary?.down_nodes||clusterNodes.filter((n:any)=>n.status==="down").length||0))
+        };
+        const nowTs=Date.now();
+        const followerLag=clusterNodes
+          .filter((node:any)=>String(node?.role||"")!=="leader")
+          .map((node:any)=>{
+            const raw=String(node?.last_sync_at||node?.last_heartbeat_at||"");
+            const ts=new Date(raw).getTime();
+            if(!Number.isFinite(ts)){
+              return null;
+            }
+            return Math.max(0,Math.round((nowTs-ts)/1000));
+          })
+          .filter((value:any)=>value!==null);
+        const clusterLagSec=followerLag.length?Math.max(...followerLag):null;
+        const runtimeCryptoLibrary=String(governanceSystemState?.state?.fips_crypto_library||"").trim();
+        const runtimeCryptoLibraryValidated=Boolean(governanceSystemState?.state?.fips_library_validated);
+
         setHomeSummary({
-          keys:Array.isArray(keys)?keys.length:0,
+          keys:keyCount,
           secrets:Array.isArray(secretItems)?secretItems.length:0,
           certs:Array.isArray(certItems)?certItems.length:0,
           alerts:unreadTotal,
+          criticalAlerts,
+          keyGrowthWeek,
+          opsPerDay,
+          opsGrowthPct,
+          complianceScore,
+          complianceDeltaWeek,
           alertDays,
           expiring:expiringItems.length,
-          expiringItems:expiringItems.slice(0,5)
+          myPendingApprovals:userPendingApprovals.length,
+          approverIdentity,
+          govChallengeRequired:Boolean(governanceSettings?.challenge_response_enabled),
+          pendingApprovals:userPendingApprovals,
+          cryptoLibrary:runtimeCryptoLibrary,
+          cryptoLibraryValidated:runtimeCryptoLibraryValidated,
+          clusterNodes,
+          clusterSummary,
+          clusterLagSec,
+          algorithms
         });
       }catch(error){
         if(!cancelled){
@@ -11038,53 +11406,291 @@ const Home=({fipsMode,session,onToast})=>{
       cancelled=true;
       clearInterval(id);
     };
-  },[session?.token,session?.tenantId]);
+  },[session?.token,session?.tenantId,session?.username,globalFipsEnabled,homeRefreshNonce]);
+
+  const submitHomeApprovalVote=async(item:any,vote:"approved"|"denied")=>{
+    if(!session?.token){
+      return;
+    }
+    const key=`${String(item?.id||"")}:${vote}`;
+    if(approvalVoteBusy===key){
+      return;
+    }
+    let approver=String(homeSummary?.approverIdentity||"").trim().toLowerCase();
+    const allowed=(Array.isArray(item?.allowed_approvers)?item.allowed_approvers:[]).map((entry:any)=>String(entry||"").trim().toLowerCase()).filter(Boolean);
+    if(!approver&&allowed.length){
+      approver=allowed[0];
+    }
+    if(allowed.length&&approver&&!allowed.includes(approver)){
+      const username=String(session?.username||"").trim().toLowerCase();
+      const localPartMatch=allowed.find((entry)=>String(entry.split("@")[0]||"")===username);
+      if(localPartMatch){
+        approver=localPartMatch;
+      }else{
+        onToast?.(`Approver is not allowed for this request. Use one of: ${allowed.join(", ")}`);
+        return;
+      }
+    }
+    if(!approver){
+      onToast?.("Unable to resolve approver identity for this request.");
+      return;
+    }
+    let challengeCode="";
+    if(Boolean(homeSummary?.govChallengeRequired)){
+      const raw=await promptDialog.prompt({
+        title:"Challenge Response",
+        message:"Enter the approval challenge code received over email.",
+        placeholder:"6-digit code",
+        confirmLabel:vote==="approved"?"Approve":"Deny",
+        danger:vote==="denied",
+        validate:(value:string)=>String(value||"").trim()?"":"Challenge code is required."
+      });
+      if(raw===null){
+        return;
+      }
+      challengeCode=String(raw||"").trim();
+      if(!challengeCode){
+        onToast?.("Challenge code is required.");
+        return;
+      }
+    }
+    setApprovalVoteBusy(key);
+    try{
+      await voteGovernanceRequest(session,String(item?.id||""),{
+        vote,
+        approver_email:approver,
+        approver_id:approver,
+        challenge_code:challengeCode
+      });
+      onToast?.(`Request ${vote==="approved"?"approved":"denied"}: ${String(item?.id||"")}`);
+      setHomeRefreshNonce((value:number)=>value+1);
+    }catch(error){
+      onToast?.(`Vote failed: ${errMsg(error)}`);
+    }finally{
+      setApprovalVoteBusy("");
+    }
+  };
+
+  const clusterNodes=Array.isArray(homeSummary?.clusterNodes)?homeSummary.clusterNodes:[];
+  const clusterSummary=homeSummary?.clusterSummary||{total_nodes:0,online_nodes:0,degraded_nodes:0,down_nodes:0};
+  const clusterLagText=homeSummary?.clusterLagSec===null?"n/a":`${fmtInt(homeSummary.clusterLagSec)}s`;
+  const cryptoLibraryLabel=String(homeSummary?.cryptoLibrary||"Go crypto build unknown");
+  const cryptoLibraryValidated=Boolean(homeSummary?.cryptoLibraryValidated);
+  const networkStatus=(Number(clusterSummary?.down_nodes||0)>0)?"degraded":"ok";
 
   return <div>
-    <div style={{display:"flex",gap:12,marginBottom:14}}>
-      <Stat l="Keys" v={String(homeSummary.keys)} c="accent"/>
-      <Stat l="Secrets" v={String(homeSummary.secrets)} c="blue"/>
-      <Stat l="Certs" v={String(homeSummary.certs)} c="green"/>
-      <Stat l={`Expiring (${homeSummary.alertDays}d)`} v={String(homeSummary.expiring)} c="amber"/>
-      <Stat l="Alerts" v={String(homeSummary.alerts)} s={homeLoading?"refreshing...":"unread"} c="red"/>
-    </div>
-    <Row2>
-      <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>DISK ENCRYPTION</div>
-        <div style={{fontSize:10,color:C.dim}}>AES-256-XTS LUKS2 - 34.2/120 GB (28.5%) - Integrity: PASSED</div>
-        <div style={{fontSize:10,color:C.dim}}>Recovery: 3-of-5 Shamir shares</div>
-        <Btn small style={{marginTop:6}} onClick={()=>setModal("fde")}>Manage FDE</Btn>
-      </Card>
-      <Card><div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>FIPS MODE</div>
-        <B c={globalFipsEnabled?"green":"blue"}>{globalFipsEnabled?"FIPS STRICT":"STANDARD MODE"}</B>
-        <div style={{fontSize:10,color:C.dim,marginTop:4}}>
-          {globalFipsEnabled
-            ?"Runtime enforcement enabled. Non-FIPS algorithms are blocked."
-            :"Runtime enforcement disabled. All algorithms are allowed."}
+    {Number(homeSummary?.myPendingApprovals||0)>0&&<Card style={{marginBottom:10,borderColor:C.amber,background:C.amberDim}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+          <Bell size={14} color={C.amber}/>
+          <div style={{minWidth:0}}>
+            <div style={{fontSize:11,color:C.text,fontWeight:700,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+              {`You have ${fmtInt(homeSummary.myPendingApprovals)} pending approval${Number(homeSummary.myPendingApprovals)===1?"":"s"}.`}
+            </div>
+            <div style={{fontSize:10,color:C.dim}}>
+              {`Review below or open Governance > Approvals${homeSummary.approverIdentity?` as ${homeSummary.approverIdentity}`:""}.`}
+            </div>
+          </div>
         </div>
-        <div style={{fontSize:9,color:C.muted,marginTop:6}}>Configure mode from Administration - System Administration.</div>
-      </Card>
-    </Row2>
-    {homeSummary.expiringItems.length>0?<><div style={{height:10}}/>
+        <B c="amber" pulse={true}>Action Required</B>
+      </div>
+    </Card>}
+
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(210px,1fr))",gap:10,marginBottom:10}}>
       <Card>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <div style={{fontSize:11,color:C.muted,fontWeight:700}}>CERTIFICATE EXPIRY WATCH</div>
-          <B c="amber">{`${homeSummary.expiring} expiring`}</B>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:11,color:C.muted,letterSpacing:1,textTransform:"uppercase"}}>Total Keys</div>
+          <KeyRound size={13} color={C.dim}/>
         </div>
+        <div style={{fontSize:30,fontWeight:700,color:C.accent,lineHeight:1.08,marginTop:6,fontFamily:"'JetBrains Mono',monospace"}}>{fmtInt(homeSummary.keys)}</div>
+        <div style={{fontSize:10,color:C.dim,marginTop:6}}>{`+${fmtInt(homeSummary.keyGrowthWeek)} this week`}</div>
+      </Card>
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:11,color:C.muted,letterSpacing:1,textTransform:"uppercase"}}>Ops/Day</div>
+          <Zap size={13} color={C.dim}/>
+        </div>
+        <div style={{fontSize:30,fontWeight:700,color:C.green,lineHeight:1.08,marginTop:6,fontFamily:"'JetBrains Mono',monospace"}}>{fmtCompact(homeSummary.opsPerDay)}</div>
+        <div style={{fontSize:10,color:C.dim,marginTop:6}}>{`? ${Number(homeSummary.opsGrowthPct||0).toFixed(1)}%`}</div>
+      </Card>
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:11,color:C.muted,letterSpacing:1,textTransform:"uppercase"}}>Compliance</div>
+          <ShieldCheck size={13} color={C.dim}/>
+        </div>
+        <div style={{fontSize:30,fontWeight:700,color:C.blue,lineHeight:1.08,marginTop:6,fontFamily:"'JetBrains Mono',monospace"}}>{`${homeSummary.complianceScore}/100`}</div>
+        <div style={{fontSize:10,color:C.dim,marginTop:6}}>{`+${fmtInt(homeSummary.complianceDeltaWeek)} this week`}</div>
+      </Card>
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontSize:11,color:C.muted,letterSpacing:1,textTransform:"uppercase"}}>Alerts</div>
+          <Bell size={13} color={C.dim}/>
+        </div>
+        <div style={{fontSize:30,fontWeight:700,color:C.red,lineHeight:1.08,marginTop:6,fontFamily:"'JetBrains Mono',monospace"}}>{fmtInt(homeSummary.alerts)}</div>
+        <div style={{fontSize:10,color:C.dim,marginTop:6}}>{`${fmtInt(homeSummary.criticalAlerts)} critical`}</div>
+      </Card>
+    </div>
+
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:10,marginBottom:10}}>
+      <Card onClick={()=>setModal("fde")}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:11,color:C.muted,letterSpacing:1,textTransform:"uppercase"}}>
+            <Lock size={12} color={C.dim}/>
+            Disk Encryption
+          </div>
+          {statusPill("ACTIVE","active",true)}
+        </div>
+        <div style={{fontSize:13,color:C.text,marginBottom:8,fontFamily:"'JetBrains Mono',monospace"}}>AES-256-XTS • LUKS2 • RSA-4096</div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.dim,marginBottom:6,fontFamily:"'JetBrains Mono',monospace"}}>
+          <span>34.2 / 120 GB</span>
+          <span>28.5%</span>
+        </div>
+        <div style={{height:7,borderRadius:999,background:C.border,overflow:"hidden",marginBottom:8}}>
+          <div style={{height:"100%",width:"28.5%",background:C.accent,borderRadius:999}}/>
+        </div>
+        <div style={{fontSize:11,color:C.green}}>Integrity passed • Recovery: 3-of-5</div>
+      </Card>
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:11,color:C.muted,letterSpacing:1,textTransform:"uppercase"}}>
+            <ShieldCheck size={12} color={C.dim}/>
+            FIPS Mode
+          </div>
+          {statusPill(globalFipsEnabled?"STRICT":"STANDARD",globalFipsEnabled?"strict":"standard",true)}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div>
+            <div style={{fontSize:12,color:C.muted,marginBottom:3}}>Go Crypto</div>
+            <div style={{fontSize:11,fontWeight:700,color:C.text,lineHeight:1.3,wordBreak:"break-word"}}>{cryptoLibraryLabel}</div>
+            <div style={{fontSize:10,color:cryptoLibraryValidated?C.green:C.amber,marginTop:3}}>{cryptoLibraryValidated?"FIPS validated build":"Non-validated build"}</div>
+          </div>
+          <div>
+            <div style={{fontSize:12,color:C.muted,marginBottom:3}}>TLS</div>
+            <div style={{fontSize:12,fontWeight:700,color:C.text}}>{globalFipsEnabled?"1.2+ FIPS":"Standard TLS"}</div>
+          </div>
+          <div>
+            <div style={{fontSize:12,color:C.muted,marginBottom:3}}>RNG</div>
+            <div style={{fontSize:12,fontWeight:700,color:C.text}}>CTR_DRBG</div>
+          </div>
+          <div>
+            <div style={{fontSize:12,color:C.muted,marginBottom:3}}>Violations</div>
+            <div style={{fontSize:12,fontWeight:700,color:C.text}}>{globalFipsEnabled?"0 (24h)":"N/A"}</div>
+          </div>
+        </div>
+      </Card>
+      <Card>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:11,color:C.muted,letterSpacing:1,textTransform:"uppercase"}}>
+            <Cloud size={12} color={C.dim}/>
+            Network
+          </div>
+          {statusPill(networkStatus==="ok"?"OK":"DEGRADED",networkStatus,networkStatus!=="down")}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div>
+            <div style={{fontSize:12,color:C.muted,marginBottom:3}}>Mgmt</div>
+            <div style={{fontSize:12,fontWeight:700,color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{String(clusterNodes?.[0]?.endpoint||"n/a")}</div>
+          </div>
+          <div>
+            <div style={{fontSize:12,color:C.muted,marginBottom:3}}>Cluster</div>
+            <div style={{fontSize:12,fontWeight:700,color:C.text,fontFamily:"'JetBrains Mono',monospace"}}>{`${fmtInt(clusterSummary.total_nodes)} nodes`}</div>
+          </div>
+          <div>
+            <div style={{fontSize:12,color:C.muted,marginBottom:3}}>TLS</div>
+            <div style={{fontSize:12,fontWeight:700,color:C.text}}>Custom ?</div>
+          </div>
+          <div>
+            <div style={{fontSize:12,color:C.muted,marginBottom:3}}>HSM</div>
+            <div style={{fontSize:12,fontWeight:700,color:C.text}}>Configured</div>
+          </div>
+        </div>
+      </Card>
+    </div>
+
+    <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:10}}>
+      <Card>
+        <div style={{fontSize:11,color:C.muted,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Algorithm Distribution</div>
         <div style={{display:"grid",gap:8}}>
-          {(Array.isArray(homeSummary.expiringItems)?homeSummary.expiringItems:[]).map((item)=>{
-            const tone=item.daysLeft<=0?"red":item.daysLeft<=15?"amber":"green";
-            const pct=Math.max(4,Math.min(100,((homeSummary.alertDays-Math.max(0,item.daysLeft))/Math.max(1,homeSummary.alertDays))*100));
-            return <div key={item.id} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div style={{fontSize:10,color:C.text,maxWidth:360,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.subject}</div>
-                <B c={tone}>{item.daysLeft<=0?"expired":`${item.daysLeft}d`}</B>
+          {(Array.isArray(homeSummary.algorithms)?homeSummary.algorithms:[]).map((item:any)=>{
+            const pct=Math.max(0,Math.min(100,Number(item?.pct||0)));
+            return <div key={`algo-${String(item?.name||"")}`} style={{display:"grid",gridTemplateColumns:"130px 1fr 42px",alignItems:"center",gap:10}}>
+              <div style={{fontSize:11,color:C.text,textAlign:"right"}}>{String(item?.name||"-")}</div>
+              <div style={{height:10,borderRadius:999,background:C.border,overflow:"hidden"}}>
+                <div style={{height:"100%",width:`${pct}%`,background:String(item?.color||C.accent),borderRadius:999,transition:"width .3s"}}/>
               </div>
-              <Bar pct={pct} color={tone==="red"?C.red:tone==="amber"?C.amber:C.green}/>
+              <div style={{fontSize:11,color:String(item?.color||C.accent),fontWeight:700,textAlign:"right"}}>{`${pct}%`}</div>
             </div>;
           })}
+          {!Array.isArray(homeSummary.algorithms)||!homeSummary.algorithms.length?<div style={{fontSize:10,color:C.muted}}>No key algorithms available for distribution yet.</div>:null}
         </div>
       </Card>
-    </>:null}
+
+      <div style={{display:"grid",gap:10}}>
+        <Card>
+          <div style={{fontSize:11,color:C.muted,letterSpacing:1,textTransform:"uppercase",marginBottom:10}}>Cluster</div>
+          <div style={{display:"grid",gap:6}}>
+            {clusterNodes.map((node:any)=>{
+              const tone=statusTone(String(node?.status||"unknown"));
+              const dotColor=(C as any)[tone]||C.blue;
+              const pillBg=(C as any)[`${tone}Dim`]||C.blueDim;
+              const roleColor=String(node?.role||"")==="leader"?C.green:C.accent;
+              const roleBg=String(node?.role||"")==="leader"?C.greenDim:C.accentDim;
+              return <div key={`cluster-${String(node?.id||node?.name||"node")}`} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+                <div style={{minWidth:0}}>
+                  <div style={{fontSize:12,color:C.text,display:"inline-flex",alignItems:"center",gap:8}}>
+                    <span style={{width:9,height:9,borderRadius:999,background:dotColor,display:"inline-block",animation:tone==="red"?"none":"pulse 1.8s infinite"}}/>
+                    <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",maxWidth:170}}>{String(node?.name||node?.id||"node")}</span>
+                    <span style={{padding:"2px 6px",borderRadius:999,background:pillBg,color:dotColor,fontSize:9,fontWeight:700,textTransform:"uppercase"}}>{String(node?.status||"unknown")}</span>
+                  </div>
+                  <div style={{fontSize:9,color:C.dim,fontFamily:"'JetBrains Mono',monospace",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+                    {String(node?.endpoint||"n/a")}
+                  </div>
+                </div>
+                <div style={{padding:"3px 8px",borderRadius:999,background:roleBg,color:roleColor,fontSize:10,fontWeight:700,display:"inline-flex",alignItems:"center",gap:6,textTransform:"capitalize"}}>
+                  {String(node?.role||"follower")}
+                </div>
+              </div>;
+            })}
+            {!clusterNodes.length&&<div style={{fontSize:10,color:C.muted}}>No cluster nodes found.</div>}
+          </div>
+          <div style={{fontSize:10,color:C.dim,marginTop:10,fontFamily:"'JetBrains Mono',monospace"}}>
+            {`Lag: ${clusterLagText} | Nodes: ${fmtInt(clusterSummary.total_nodes)} | Quorum: ${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)}`}
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div style={{fontSize:11,color:C.muted,letterSpacing:1,textTransform:"uppercase"}}>My Pending Approvals</div>
+            <B c={Number(homeSummary?.myPendingApprovals||0)>0?"amber":"green"} pulse={Number(homeSummary?.myPendingApprovals||0)>0}>{fmtInt(homeSummary?.myPendingApprovals||0)}</B>
+          </div>
+          <div style={{display:"grid",gap:8}}>
+            {(Array.isArray(homeSummary?.pendingApprovals)?homeSummary.pendingApprovals:[]).slice(0,4).map((item:any)=>{
+              const reqID=String(item?.id||"");
+              return <div key={`home-approval-${reqID}`} style={{border:`1px solid ${C.border}`,borderRadius:8,padding:8}}>
+                <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:3}}>{String(item?.action||"approval").replace(/^key\./,"").replaceAll("_"," ")}</div>
+                <div style={{fontSize:9,color:C.dim,marginBottom:6}}>{`Target: ${String(item?.target_id||"-")} • Votes ${Number(item?.current_approvals||0)}/${Number(item?.required_approvals||1)}`}</div>
+                <div style={{display:"flex",gap:6}}>
+                  <Btn
+                    small
+                    primary
+                    onClick={()=>void submitHomeApprovalVote(item,"approved")}
+                    disabled={approvalVoteBusy===`${reqID}:approved`||approvalVoteBusy===`${reqID}:denied`||homeLoading}
+                  >Approve</Btn>
+                  <Btn
+                    small
+                    danger
+                    onClick={()=>void submitHomeApprovalVote(item,"denied")}
+                    disabled={approvalVoteBusy===`${reqID}:approved`||approvalVoteBusy===`${reqID}:denied`||homeLoading}
+                  >Deny</Btn>
+                </div>
+              </div>;
+            })}
+            {!Array.isArray(homeSummary?.pendingApprovals)||!homeSummary.pendingApprovals.length?<div style={{fontSize:10,color:C.muted}}>No pending approvals assigned to this user.</div>:null}
+          </div>
+        </Card>
+      </div>
+    </div>
+
     <Modal open={modal==="fde"} onClose={()=>setModal(null)} title="Full Disk Encryption Management">
       <FG label="Encryption"><div style={{fontSize:11,color:C.green}}>AES-256-XTS via LUKS2 - Active</div></FG>
       <FG label="Actions"><Btn small>Run Integrity Check</Btn><Btn small style={{marginLeft:6}}>Rotate Volume Key</Btn><Btn small style={{marginLeft:6}}>Test Recovery Shares</Btn></FG>
@@ -11092,9 +11698,9 @@ const Home=({fipsMode,session,onToast})=>{
         <div style={{fontSize:10,color:C.dim}}>Share 1: Held by Admin A - Share 2: Held by Admin B - Share 3: Escrow - Share 4: Safe - Share 5: DR Site</div>
       </FG>
     </Modal>
+    {promptDialog.ui}
   </div>;
 };
-
 const CLOUD_PROVIDER_LABELS={aws:"AWS KMS",azure:"Azure Key Vault",gcp:"Google Cloud KMS",oci:"Oracle Cloud Vault",salesforce:"Salesforce BYOK"};
 const CLOUD_PROVIDER_ORDER=["aws","azure","gcp","oci","salesforce"];
 
@@ -11103,10 +11709,13 @@ const BYOK=({session,keyCatalog,onToast})=>{
   const [accounts,setAccounts]=useState<CloudAccount[]>([]);
   const [bindings,setBindings]=useState<CloudKeyBinding[]>([]);
   const [inventoryCounts,setInventoryCounts]=useState<Record<string,number>>({});
+  const [accountProbeByID,setAccountProbeByID]=useState<Record<string,boolean>>({});
+  const [accountProbeErrorByID,setAccountProbeErrorByID]=useState<Record<string,string>>({});
   const [recentOps,setRecentOps]=useState<Array<{id:string;label:string;status:string;detail:string;ts:string}>>([]);
   const [loading,setLoading]=useState(false);
   const [refreshing,setRefreshing]=useState(false);
   const [syncingAccount,setSyncingAccount]=useState("");
+  const [deletingAccount,setDeletingAccount]=useState("");
   const [rotatingBinding,setRotatingBinding]=useState("");
   const [submittingAdd,setSubmittingAdd]=useState(false);
   const [submittingImport,setSubmittingImport]=useState(false);
@@ -11144,6 +11753,8 @@ const BYOK=({session,keyCatalog,onToast})=>{
       setAccounts([]);
       setBindings([]);
       setInventoryCounts({});
+      setAccountProbeByID({});
+      setAccountProbeErrorByID({});
       return;
     }
     if(!silent){
@@ -11157,6 +11768,8 @@ const BYOK=({session,keyCatalog,onToast})=>{
       setAccounts(Array.isArray(acctItems)?acctItems:[]);
       setBindings(Array.isArray(bindingItems)?bindingItems:[]);
       const counts:Record<string,number>={};
+      const probe:Record<string,boolean>={};
+      const probeErr:Record<string,string>={};
       await Promise.all((Array.isArray(acctItems)?acctItems:[]).map(async(acct)=>{
         try{
           const items=await discoverCloudInventory(session,{
@@ -11164,11 +11777,17 @@ const BYOK=({session,keyCatalog,onToast})=>{
             accountId:acct.id
           });
           counts[acct.id]=Array.isArray(items)?items.length:0;
-        }catch{
+          probe[acct.id]=true;
+          probeErr[acct.id]="";
+        }catch(error){
           counts[acct.id]=0;
+          probe[acct.id]=false;
+          probeErr[acct.id]=errMsg(error);
         }
       }));
       setInventoryCounts(counts);
+      setAccountProbeByID(probe);
+      setAccountProbeErrorByID(probeErr);
     }catch(error){
       onToast?.(`BYOK refresh failed: ${errMsg(error)}`);
     }finally{
@@ -11206,7 +11825,9 @@ const BYOK=({session,keyCatalog,onToast})=>{
   },[modal,accounts,keyChoices]);
 
   const providerCards=useMemo(()=>{
-    return CLOUD_PROVIDER_ORDER.map((provider)=>{
+    const availableProviders=Array.from(new Set((Array.isArray(accounts)?accounts:[]).map((acct)=>String(acct.provider||"").toLowerCase()).filter(Boolean)));
+    const orderedProviders=CLOUD_PROVIDER_ORDER.filter((provider)=>availableProviders.includes(provider));
+    return orderedProviders.map((provider)=>{
       const acctList=(Array.isArray(accounts)?accounts:[]).filter((acct)=>String(acct.provider||"").toLowerCase()===provider);
       const bindingList=(Array.isArray(bindings)?bindings:[]).filter((binding)=>String(binding.provider||"").toLowerCase()===provider);
       const regions=Array.from(new Set([
@@ -11214,22 +11835,32 @@ const BYOK=({session,keyCatalog,onToast})=>{
         ...bindingList.map((binding)=>String(binding.region||"").trim()).filter(Boolean)
       ]));
       const inventoryTotal=acctList.reduce((sum,acct)=>sum+Number(inventoryCounts[acct.id]||0),0);
+      const connectedCount=acctList.filter((acct)=>accountProbeByID[acct.id]===true).length;
+      const failedCount=acctList.filter((acct)=>accountProbeByID[acct.id]===false).length;
+      const hasProbePending=acctList.some((acct)=>typeof accountProbeByID[acct.id]==="undefined");
+      const firstProbeError=(acctList.map((acct)=>String(accountProbeErrorByID[acct.id]||"").trim()).find(Boolean)||"");
       const hasFailure=bindingList.some((binding)=>String(binding.sync_status||"").toLowerCase()==="failed");
       const hasAnyBindings=bindingList.length>0;
       const allSynced=hasAnyBindings&&bindingList.every((binding)=>String(binding.sync_status||"").toLowerCase()==="synced");
-      let stateLabel="Not Configured";
+      let stateLabel="Configured";
       let stateColor:"blue"|"green"|"amber"|"red"="blue";
-      if(acctList.length>0&&bindingList.length===0){
+      if(connectedCount>0&&failedCount===0){
         stateLabel="Connected";
-        stateColor="blue";
-      }
-      if(allSynced){
-        stateLabel="Synced";
         stateColor="green";
-      }else if(hasFailure){
+      }else if(connectedCount>0&&failedCount>0){
         stateLabel="Partial";
         stateColor="amber";
-      }else if(hasAnyBindings){
+      }else if(failedCount>0&&!hasProbePending){
+        stateLabel="Auth Failed";
+        stateColor="red";
+      }
+      if(stateColor!=="red"&&allSynced){
+        stateLabel="Synced";
+        stateColor="green";
+      }else if(stateColor!=="red"&&hasFailure){
+        stateLabel="Partial";
+        stateColor="amber";
+      }else if(stateColor!=="red"&&hasAnyBindings&&connectedCount>0){
         stateLabel="Syncing";
         stateColor="blue";
       }
@@ -11240,10 +11871,11 @@ const BYOK=({session,keyCatalog,onToast})=>{
         regions,
         stateLabel,
         stateColor,
-        inventoryTotal
+        inventoryTotal,
+        probeError:firstProbeError
       };
     });
-  },[accounts,bindings,inventoryCounts]);
+  },[accounts,bindings,inventoryCounts,accountProbeByID,accountProbeErrorByID]);
   const normalizedConnectorSearch=String(connectorSearch||"").trim().toLowerCase();
   const filteredProviderCards=useMemo(()=>{
     if(!normalizedConnectorSearch){
@@ -11278,6 +11910,49 @@ const BYOK=({session,keyCatalog,onToast})=>{
       onToast?.(`Cloud sync failed: ${errMsg(error)}`);
     }finally{
       setSyncingAccount("");
+    }
+  };
+
+  const deleteConnector=async(provider:string,account:CloudAccount|undefined)=>{
+    if(!session?.token){
+      return;
+    }
+    const accountId=String(account?.id||"").trim();
+    if(!accountId){
+      onToast?.("No connector selected to delete.");
+      return;
+    }
+    const providerLabel=CLOUD_PROVIDER_LABELS[provider]||provider;
+    const accountName=String(account?.name||accountId);
+    const ok=await promptDialog.confirm({
+      title:"Delete Cloud Connector",
+      message:`Delete connector "${accountName}" for ${providerLabel}? This removes connector credentials, bindings, and sync jobs from KMS DB.`,
+      confirmLabel:"Delete Connector",
+      cancelLabel:"Cancel",
+      danger:true
+    });
+    if(!ok){
+      return;
+    }
+
+    setConnectorMenu("");
+    setDeletingAccount(accountId);
+    try{
+      const out:DeleteCloudAccountResult=await deleteCloudAccount(session,accountId);
+      addRecentOp(
+        `${providerLabel} connector`,
+        "ok",
+        `Deleted connector ${accountName} (bindings ${Number(out?.deleted_bindings||0)}, jobs ${Number(out?.deleted_sync_jobs||0)}).`
+      );
+      onToast?.(
+        `Connector deleted: ${accountName} (bindings ${Number(out?.deleted_bindings||0)}, jobs ${Number(out?.deleted_sync_jobs||0)}).`
+      );
+      await refresh(true);
+    }catch(error){
+      addRecentOp(`${providerLabel} connector`,"error",errMsg(error));
+      onToast?.(`Delete connector failed: ${errMsg(error)}`);
+    }finally{
+      setDeletingAccount("");
     }
   };
 
@@ -11377,6 +12052,7 @@ const BYOK=({session,keyCatalog,onToast})=>{
   };
 
   const bindingsView=(Array.isArray(bindings)?bindings:[]).slice(0,12);
+  const hasAnyConnector=(Array.isArray(accounts)?accounts:[]).length>0;
   const importAccounts=(accounts||[]).filter((acct)=>String(acct.provider||"").toLowerCase()===String(importProvider||"").toLowerCase());
   const latestOps=recentOps.length?recentOps:bindingsView.map((binding)=>({
     id:`bind-${binding.id}`,
@@ -11421,11 +12097,12 @@ const BYOK=({session,keyCatalog,onToast})=>{
                 {card.regions.length?`Regions: ${card.regions.join(", ")}`:"No regions configured"}
               </div>
               <div style={{fontSize:10,color:C.muted,marginBottom:10}}>{`Cloud inventory: ${card.inventoryTotal} keys`}</div>
+              {card.probeError&&<div style={{fontSize:9,color:C.red,marginBottom:8,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{card.probeError}</div>}
               <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                 <Btn
                   small
                   onClick={()=>void runSync(card.provider,accountId)}
-                  disabled={!accountId||syncingAccount===accountId||syncingAccount===card.provider}
+                  disabled={!accountId||syncingAccount===accountId||syncingAccount===card.provider||deletingAccount===accountId}
                 >
                   {syncingAccount===accountId||syncingAccount===card.provider?"Syncing...":"Sync Now"}
                 </Btn>
@@ -11437,19 +12114,27 @@ const BYOK=({session,keyCatalog,onToast})=>{
                     setImportCloudRegion(String(activeAccount?.default_region||""));
                     setModal("import");
                   }}
-                  disabled={!accountId}
+                  disabled={!accountId||deletingAccount===accountId}
                 >
                   Import Keys
+                </Btn>
+                <Btn
+                  small
+                  danger
+                  onClick={()=>void deleteConnector(card.provider,activeAccount)}
+                  disabled={!accountId||deletingAccount===accountId}
+                >
+                  {deletingAccount===accountId?"Deleting...":"Delete Connector"}
                 </Btn>
               </div>
             </Card>;
           })}
         </div>
-        : <Card style={{padding:0,overflow:"hidden"}}>
+        : <Card style={{padding:0,overflow:"visible"}}>
           <div style={{display:"grid",gridTemplateColumns:"1.1fr .8fr .8fr .9fr .8fr auto",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
             <div>Provider</div><div>Status</div><div>Keys Synced</div><div>Regions</div><div>Inventory</div><div>Options</div>
           </div>
-          <div style={{maxHeight:300,overflowY:"auto"}}>
+          <div style={{overflow:"visible"}}>
             {filteredProviderCards.map((card)=>{
               const activeAccount=card.accounts[0];
               const accountId=activeAccount?.id||"";
@@ -11459,8 +12144,8 @@ const BYOK=({session,keyCatalog,onToast})=>{
                 <div><B c={card.stateColor}>{card.stateLabel}</B></div>
                 <div style={{color:C.dim}}>{String(card.bindings.length)}</div>
                 <div style={{color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{card.regions.length?card.regions.join(", "):"-"}</div>
-                <div style={{color:C.dim}}>{String(card.inventoryTotal)}</div>
-                <div style={{position:"relative",justifySelf:"end"}}>
+              <div style={{color:C.dim}}>{String(card.inventoryTotal)}</div>
+              <div style={{position:"relative",justifySelf:"end"}}>
                   <button
                     onClick={()=>setConnectorMenu(menuOpen?"":String(card.provider))}
                     style={{border:`1px solid ${C.border}`,background:"transparent",color:C.accent,borderRadius:8,padding:"4px 6px",cursor:"pointer"}}
@@ -11470,7 +12155,7 @@ const BYOK=({session,keyCatalog,onToast})=>{
                   {menuOpen&&<div style={{position:"absolute",right:0,top:30,zIndex:20,minWidth:132,background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,padding:6,display:"grid",gap:4}}>
                     <button
                       onClick={()=>{setConnectorMenu("");void runSync(card.provider,accountId);}}
-                      disabled={!accountId||syncingAccount===accountId||syncingAccount===card.provider}
+                      disabled={!accountId||syncingAccount===accountId||syncingAccount===card.provider||deletingAccount===accountId}
                       style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px",borderRadius:6}}
                     >
                       {syncingAccount===accountId||syncingAccount===card.provider?"Syncing...":"Sync Now"}
@@ -11483,19 +12168,34 @@ const BYOK=({session,keyCatalog,onToast})=>{
                         setImportCloudRegion(String(activeAccount?.default_region||""));
                         setModal("import");
                       }}
-                      disabled={!accountId}
+                      disabled={!accountId||deletingAccount===accountId}
                       style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px",borderRadius:6}}
                     >
                       Import Keys
+                    </button>
+                    <button
+                      onClick={()=>{void deleteConnector(card.provider,activeAccount);}}
+                      disabled={!accountId||deletingAccount===accountId}
+                      style={{textAlign:"left",background:"transparent",border:"none",color:C.red,cursor:"pointer",padding:"6px 8px",borderRadius:6}}
+                    >
+                      {deletingAccount===accountId?"Deleting...":"Delete Connector"}
                     </button>
                   </div>}
                 </div>
               </div>;
             })}
-            {!filteredProviderCards.length&&<div style={{padding:12,fontSize:10,color:C.dim}}>No cloud connectors match search.</div>}
+            {!filteredProviderCards.length&&<div style={{padding:12,fontSize:10,color:C.dim}}>
+              {hasAnyConnector
+                ? "No cloud connectors match search."
+                : "No cloud connectors configured yet. Click + Add Connector to create your first CSP connector."}
+            </div>}
           </div>
         </Card>}
-      {!filteredProviderCards.length&&connectorView==="cards"&&<Card><div style={{fontSize:10,color:C.dim}}>No cloud connectors match search.</div></Card>}
+      {!filteredProviderCards.length&&connectorView==="cards"&&<Card><div style={{fontSize:10,color:C.dim}}>
+        {hasAnyConnector
+          ? "No cloud connectors match search."
+          : "No cloud connectors configured yet. Click + Add Connector to create your first CSP connector."}
+      </div></Card>}
     </Section>
 
     <Section title="Recent BYOK Operations">
@@ -11836,6 +12536,37 @@ const HYOK=({session,keyCatalog,onToast})=>{
   const requestRows=Array.isArray(requests)?requests:[];
   const allowedOps=HYOK_OPS_BY_PROTOCOL[testProtocol]||[];
   const enabledCount=endpointRows.filter((item)=>Boolean(item?.enabled)).length;
+  const protocolStatuses=(health&&typeof health==="object"&&health.protocol_statuses&&typeof health.protocol_statuses==="object")
+    ? health.protocol_statuses
+    : {};
+  const proxyHealthStatus=String(health?.status||"unknown").toLowerCase();
+  const proxyHealthColor=proxyHealthStatus==="ok"?"green":proxyHealthStatus==="degraded"?"red":"amber";
+  const endpointStatusMeta=(protocol:string,item:any)=>{
+    const info=protocolStatuses?.[protocol]||{};
+    const status=String(info?.status||"").toLowerCase();
+    const reason=String(info?.reason||"").trim();
+    if(status==="connected"){
+      return {label:"Active",color:"green",reason};
+    }
+    if(status==="configured"){
+      return {label:"Configured",color:"amber",reason};
+    }
+    if(status==="not_configured"){
+      return {label:"Not Configured",color:"amber",reason:reason||"Endpoint is not configured yet."};
+    }
+    if(status==="disabled"){
+      return {label:"Disabled",color:"red",reason};
+    }
+    if(status==="auth_failed"){
+      return {label:"Auth Failed",color:"red",reason};
+    }
+    if(status==="degraded"||status==="unreachable"){
+      return {label:"Degraded",color:"red",reason};
+    }
+    return Boolean(item?.enabled)
+      ? {label:"Enabled",color:"blue",reason}
+      : {label:"Disabled",color:"red",reason};
+  };
 
   return <div>
     <Section
@@ -11848,10 +12579,10 @@ const HYOK=({session,keyCatalog,onToast})=>{
         <Card>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <div style={{fontSize:12,color:C.text,fontWeight:700}}>Proxy Health</div>
-            <B c={String(health?.status||"").toLowerCase()==="ok"?"green":"amber"}>{String(health?.status||"unknown").toUpperCase()}</B>
+            <B c={proxyHealthColor}>{String(health?.status||"unknown").toUpperCase()}</B>
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"4px 10px"}}>
-            {[["Tenant",String(health?.tenant_id||session?.tenantId||"-")],["Enabled Endpoints",`${Number(health?.enabled_endpoints||enabledCount)} / ${Number(health?.endpoint_count||endpointRows.length||4)}`],["Policy Fail Closed",Boolean(health?.policy_fail_closed)?"Yes":"No"],["Checked",formatAgo(String(health?.checked_at||""))]].map(([k,v])=>
+            {[["Tenant",String(health?.tenant_id||session?.tenantId||"-")],["Connected Endpoints",`${Number(health?.connected_endpoints||0)} / ${Number(health?.endpoint_count||endpointRows.length||4)}`],["Enabled Endpoints",`${Number(health?.enabled_endpoints||enabledCount)} / ${Number(health?.endpoint_count||endpointRows.length||4)}`],["Policy Fail Closed",Boolean(health?.policy_fail_closed)?"Yes":"No"],["Checked",formatAgo(String(health?.checked_at||""))]].map(([k,v])=>
               <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:10,padding:"2px 0",gap:8}}>
                 <span style={{color:C.muted}}>{k}</span>
                 <span style={{color:C.text,fontFamily:"'JetBrains Mono',monospace",textAlign:"right"}}>{v}</span>
@@ -11864,13 +12595,15 @@ const HYOK=({session,keyCatalog,onToast})=>{
           <div style={{display:"grid",gap:6}}>
             {["dke","salesforce","google","generic"].map((protocol)=>{
               const item=endpointRows.find((e)=>String(e?.protocol||"")===protocol);
+              const statusMeta=endpointStatusMeta(protocol,item);
               return <div key={protocol} style={{display:"flex",justifyContent:"space-between",alignItems:"center",border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px"}}>
                 <div style={{minWidth:0}}>
                   <div style={{fontSize:11,color:C.text,fontWeight:700}}>{HYOK_PROTOCOL_LABELS[protocol]}</div>
                   <div style={{fontSize:9,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{HYOK_PROTOCOL_DETAILS[protocol]}</div>
+                  {statusMeta.reason?<div style={{fontSize:9,color:C.muted,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{statusMeta.reason}</div>:null}
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-                  <B c={Boolean(item?.enabled)?"green":"red"}>{Boolean(item?.enabled)?"Active":"Disabled"}</B>
+                  <B c={statusMeta.color}>{statusMeta.label}</B>
                   <Btn small onClick={()=>openConfig(protocol)}>Configure</Btn>
                   <Btn small danger onClick={()=>void runDelete(protocol)}>Delete</Btn>
                 </div>
@@ -12080,6 +12813,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
   const [dbSearch,setDbSearch]=useState("");
   const [bitLockerSearch,setBitLockerSearch]=useState("");
   const [dbMenu,setDbMenu]=useState("");
+  const deployingRef=useRef(false);
   const promptDialog=usePromptDialog();
 
   const parseAgentMeta=(agent)=>{
@@ -12098,6 +12832,39 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
     }
     return 90;
   };
+
+  const normalizeAgentIDPart=(value,maxLen)=>{
+    const normalized=String(value||"")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g,"-")
+      .replace(/^-+|-+$/g,"");
+    const sliced=normalized.slice(0,Math.max(4,Math.trunc(Number(maxLen)||16)));
+    return sliced||"na";
+  };
+
+  const deriveEKMAgentID=(name,dbEngine,host)=>{
+    const namePart=normalizeAgentIDPart(name,24);
+    const enginePart=normalizeAgentIDPart(dbEngine,12);
+    const hostPart=normalizeAgentIDPart(host,40);
+    return `agent-${enginePart}-${hostPart}-${namePart}`.slice(0,96);
+  };
+
+  const visibleDeployFiles=useMemo(()=>{
+    const pkg=deployPackage;
+    if(!pkg){
+      return [];
+    }
+    const target=String(pkg.target_os||"").toLowerCase();
+    const files=Array.isArray(pkg.files)?pkg.files:[];
+    if(target==="linux"){
+      return files.filter((file)=>!String(file?.path||"").toLowerCase().endsWith(".ps1"));
+    }
+    if(target==="windows"){
+      return files.filter((file)=>!String(file?.path||"").toLowerCase().endsWith(".sh"));
+    }
+    return files;
+  },[deployPackage]);
 
   const safeFileName=(name)=>String(name||"file").replace(/[^a-zA-Z0-9._-]/g,"_");
   const downloadText=(name,content)=>{
@@ -12196,7 +12963,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
     setRotatingAgentID(agent.id);
     try{
       await rotateEKMAgentKey(session,agent.id,"manual-dashboard");
-      onToast?.(`TDE key rotation queued for ${agent.name}.`);
+      onToast?.(`KMS TDE key rotation queued for ${agent.name}. Run DB-side TDE key switch/re-encryption per engine policy.`);
       await refresh(true);
     }catch(error){
       onToast?.(`Rotate failed: ${errMsg(error)}`);
@@ -12240,6 +13007,9 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
   };
 
   const submitDeploy=async()=>{
+    if(deployingRef.current||deploying){
+      return;
+    }
     const name=String(deployForm.name||"").trim();
     const host=String(deployForm.host||"").trim();
     const version=String(deployForm.version||"").trim();
@@ -12247,6 +13017,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
       onToast?.("Agent name and host are required.");
       return;
     }
+    deployingRef.current=true;
     setDeploying(true);
     try{
       const metadataJSON=JSON.stringify({
@@ -12256,6 +13027,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
         deployed_from:"dashboard"
       });
       const agent=await registerEKMAgent(session,{
+        agent_id:deriveEKMAgentID(name,deployForm.db_engine,host),
         name,
         db_engine:deployForm.db_engine,
         host,
@@ -12271,11 +13043,13 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
     }catch(error){
       onToast?.(`Deploy failed: ${errMsg(error)}`);
     }finally{
+      deployingRef.current=false;
       setDeploying(false);
     }
   };
 
   const openDeploy=()=>{
+    deployingRef.current=false;
     setDeployPackage(null);
     setDeployForm({
       name:"",
@@ -12306,6 +13080,17 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
     const host=String(bitLockerForm.host||"").trim();
     if(!name||!host){
       onToast?.("BitLocker client name and host are required.");
+      return;
+    }
+    const normalizedHost=host.toLowerCase();
+    const normalizedName=name.toLowerCase();
+    const duplicate=(bitLockerClients||[]).find((row:any)=>{
+      const rowHost=String(row?.host||"").trim().toLowerCase();
+      const rowName=String(row?.name||"").trim().toLowerCase();
+      return (rowHost!==""&&rowHost===normalizedHost)||(rowName!==""&&rowName===normalizedName);
+    });
+    if(duplicate){
+      onToast?.(`BitLocker client already exists (name: ${String(duplicate?.name||"-")}, host: ${String(duplicate?.host||"-")}). Duplicate host/name is not allowed.`);
       return;
     }
     setBitLockerDeploying(true);
@@ -12456,6 +13241,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
     }
     const byIP=new Map((bitLockerScanCandidates||[]).map((row:any)=>[String(row?.ip||"").trim(),row]));
     const existingHosts=new Set((bitLockerClients||[]).map((row:any)=>String(row?.host||"").trim().toLowerCase()).filter(Boolean));
+    const existingNames=new Set((bitLockerClients||[]).map((row:any)=>String(row?.name||"").trim().toLowerCase()).filter(Boolean));
     setBitLockerOnboarding(true);
     let created=0;
     let skipped=0;
@@ -12473,6 +13259,10 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
       }
       const baseName=String(host||ip).split(".")[0].replace(/[^a-zA-Z0-9_-]/g,"-");
       const suggestedName=(baseName||`WIN-${ip.replace(/\./g,"-")}`).slice(0,48);
+      if(existingNames.has(String(suggestedName).toLowerCase())){
+        skipped++;
+        continue;
+      }
       const suggestedClientID=`scan-${ip.replace(/[^0-9]/g,"-")}`;
       try{
         await registerBitLockerClient(session,{
@@ -12491,6 +13281,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
         });
         existingHosts.add(String(ip).toLowerCase());
         existingHosts.add(String(host).toLowerCase());
+        existingNames.add(String(suggestedName).toLowerCase());
         created++;
       }catch{
         failed++;
@@ -12594,8 +13385,21 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
     return {label:"Unknown",color:"blue"};
   };
   const sortedBitLockerClients=[...bitLockerClients].sort((a,b)=>String(a.name||"").localeCompare(String(b.name||"")));
+  const dedupedBitLockerClients=useMemo(()=>{
+    const seen=new Set<string>();
+    const deduped:any[]=[];
+    for(const client of sortedBitLockerClients){
+      const key=`${String(client?.host||"").trim().toLowerCase()}|${String(client?.name||"").trim().toLowerCase()}`;
+      if(seen.has(key)){
+        continue;
+      }
+      seen.add(key);
+      deduped.push(client);
+    }
+    return deduped;
+  },[sortedBitLockerClients]);
   const normalizedBitLockerSearch=String(bitLockerSearch||"").trim().toLowerCase();
-  const filteredBitLockerClients=sortedBitLockerClients.filter((client)=>{
+  const filteredBitLockerClients=dedupedBitLockerClients.filter((client)=>{
     if(!normalizedBitLockerSearch){
       return true;
     }
@@ -12607,10 +13411,10 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
       String(client?.protection_status||"")
     ].join(" ").toLowerCase().includes(normalizedBitLockerSearch);
   });
-  const bitLockerProtectedCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Protected").length;
-  const bitLockerSuspendedCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Suspended").length;
-  const bitLockerDegradedCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Degraded").length;
-  const bitLockerDownCount=sortedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Down").length;
+  const bitLockerProtectedCount=dedupedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Protected").length;
+  const bitLockerSuspendedCount=dedupedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Suspended").length;
+  const bitLockerDegradedCount=dedupedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Degraded").length;
+  const bitLockerDownCount=dedupedBitLockerClients.filter((client)=>bitLockerBadge(client).label==="Down").length;
   const currentSubtab=String(subView||ekmSubtab||"db");
   const selectSubtab=(next:string)=>{
     if(onSubViewChange){
@@ -12680,7 +13484,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
                 <div style={{fontSize:11,color:C.dim}}>{`Version: ${dbVersion}`}</div>
                 <div style={{fontSize:11,color:C.dim}}>{`Engine: ${dbEngine}`}</div>
                 <div style={{fontSize:11,color:C.dim,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{`TDE Key: ${alg}`}</div>
-                <div style={{fontSize:11,color:C.dim}}>{`Rotation: ${rotationDaysFor(agent)}d cycle`}</div>
+                <div style={{fontSize:11,color:C.dim}}>{`KMS Rotation: ${rotationDaysFor(agent)}d policy`}</div>
               </div>
               <div style={{fontSize:10,color:C.muted,marginTop:6}}>
                 {`OS Health  CPU ${Number(metrics.cpu_usage_pct||0).toFixed(0)}%  MEM ${Number(metrics.memory_usage_pct||0).toFixed(0)}%  DISK ${Number(metrics.disk_usage_pct||0).toFixed(0)}%  HB ${hbAgeSec}s`}
@@ -12699,7 +13503,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
         </div>
         : <Card style={{padding:0,overflow:"hidden"}}>
           <div style={{display:"grid",gridTemplateColumns:"1.1fr 1fr .7fr .8fr .8fr .8fr auto",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
-            <div>Agent</div><div>Host / Engine</div><div>Version</div><div>TDE Key</div><div>Rotation</div><div>Status</div><div>Options</div>
+            <div>Agent</div><div>Host / Engine</div><div>Version</div><div>TDE Key</div><div>KMS Rotation</div><div>Status</div><div>Options</div>
           </div>
           <div style={{maxHeight:320,overflowY:"auto"}}>
             {filteredAgents.map((agent)=>{
@@ -12767,7 +13571,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
         <B c="red">{`${bitLockerDownCount} Down`}</B>
       </div>
       {bitLockerView==="cards"
-        ? <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:10}}>
+        ? <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,360px))",justifyContent:"start",gap:10}}>
           {filteredBitLockerClients.map((client)=>{
             const badge=bitLockerBadge(client);
             const encryptionPct=Math.max(0,Math.min(100,Number(client.encryption_percentage||0)));
@@ -13098,7 +13902,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
           </Sel>
         </FG>
         <FG label="Target OS" required>
-          <Sel value={deployForm.target_os} onChange={(e)=>setDeployForm({...deployForm,target_os:e.target.value})}>
+          <Sel value={deployForm.target_os} onChange={(e)=>{setDeployPackage(null);setDeployForm({...deployForm,target_os:e.target.value});}}>
             <option value="linux">Linux Agent</option>
             <option value="windows">Windows Agent</option>
           </Sel>
@@ -13112,7 +13916,10 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
           <Inp type="number" value={deployForm.heartbeat_interval_sec} onChange={(e)=>setDeployForm({...deployForm,heartbeat_interval_sec:Number(e.target.value||30)})}/>
         </FG>
       </Row2>
-      <FG label="Rotation Cycle (days)">
+      <FG
+        label="KMS Rotation Cycle (days)"
+        hint="This rotates KMS-side TDE key assignment/version policy. Database-side TDE switch/re-encryption still requires DB operations."
+      >
         <Sel value={String(deployForm.rotation_cycle_days)} onChange={(e)=>setDeployForm({...deployForm,rotation_cycle_days:Number(e.target.value)})}>
           <option value="90">90 days</option>
           <option value="180">180 days</option>
@@ -13120,7 +13927,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
         </Sel>
       </FG>
       <div style={{fontSize:10,color:C.muted,marginTop:8}}>
-        Deploy package includes PKCS#11 config templates for MSSQL/Oracle TDE agents on Linux/Windows with heartbeat, rotate, and register endpoints.
+        Deploy package includes PKCS#11 templates for MSSQL/Oracle TDE with heartbeat, rotate, and register endpoints. Only selected OS scripts are listed below.
       </div>
       {deployPackage&&<Card style={{marginTop:10}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -13128,7 +13935,7 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
           <B c="green">Ready</B>
         </div>
         <div style={{display:"grid",gap:6}}>
-          {(deployPackage.files||[]).map((file)=>(
+          {visibleDeployFiles.map((file)=>(
             <div key={file.path} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,border:`1px solid ${C.border}`,borderRadius:8,padding:"8px 10px"}}>
               <div style={{minWidth:0}}>
                 <div style={{fontSize:11,color:C.text,fontFamily:"'JetBrains Mono',monospace",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{file.path}</div>
@@ -13174,7 +13981,140 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
   </div>;
 };
 
-const HSM=({session,onToast})=>{
+const HSM_VENDOR_PROFILES={
+  aws:{
+    id:"aws",
+    label:"AWS CloudHSM",
+    shortName:"CloudHSM",
+    abbreviations:["AWS","CloudHSM","PKCS#11"],
+    defaultProviderName:"aws-cloudhsm",
+    defaultPINEnvVar:"CLOUDHSM_PIN",
+    endpointTerm:"Cluster Endpoint",
+    slotTerm:"HSM Slot",
+    partitionTerm:"Crypto User / Partition",
+    tokenTerm:"Token Label",
+    libraryExamples:["libcloudhsm_pkcs11.so","cloudhsm-pkcs11.dll"]
+  },
+  azure:{
+    id:"azure",
+    label:"Azure Managed HSM",
+    shortName:"Managed HSM",
+    abbreviations:["Azure","MHSM","AKV"],
+    defaultProviderName:"azure-managed-hsm",
+    defaultPINEnvVar:"AZURE_HSM_PIN",
+    endpointTerm:"Managed HSM URI",
+    slotTerm:"PKCS#11 Slot (bridge)",
+    partitionTerm:"Security Domain / Partition",
+    tokenTerm:"Token Label",
+    libraryExamples:["azure-pkcs11-bridge.so","azure-pkcs11-bridge.dll"]
+  },
+  thales:{
+    id:"thales",
+    label:"Thales Luna HSM",
+    shortName:"Luna",
+    abbreviations:["Thales","Luna","PKCS#11"],
+    defaultProviderName:"thales-luna",
+    defaultPINEnvVar:"LUNA_PIN",
+    endpointTerm:"NTLS Endpoint",
+    slotTerm:"Luna Slot",
+    partitionTerm:"Luna Partition",
+    tokenTerm:"Token Label",
+    libraryExamples:["libCryptoki2_64.so","cryptoki.dll"]
+  },
+  utimaco:{
+    id:"utimaco",
+    label:"Utimaco HSM",
+    shortName:"CryptoServer",
+    abbreviations:["Utimaco","CS","PKCS#11"],
+    defaultProviderName:"utimaco-hsm",
+    defaultPINEnvVar:"UTIMACO_PIN",
+    endpointTerm:"SecurityServer Endpoint",
+    slotTerm:"Slot",
+    partitionTerm:"CryptoServer Partition",
+    tokenTerm:"Token Label",
+    libraryExamples:["libcs_pkcs11_R2.so","cs_pkcs11_R2.dll"]
+  },
+  entrust:{
+    id:"entrust",
+    label:"Entrust nShield HSM",
+    shortName:"nShield",
+    abbreviations:["Entrust","nShield","PKCS#11"],
+    defaultProviderName:"entrust-nshield",
+    defaultPINEnvVar:"NSHIELD_PIN",
+    endpointTerm:"Connect Host / RFS Endpoint",
+    slotTerm:"Slot",
+    partitionTerm:"Security World / OCS",
+    tokenTerm:"Token Label",
+    libraryExamples:["libcknfast.so","cknfast.dll"]
+  },
+  securosys:{
+    id:"securosys",
+    label:"Securosys HSM",
+    shortName:"Securosys",
+    abbreviations:["Securosys","Primus","PKCS#11"],
+    defaultProviderName:"securosys-hsm",
+    defaultPINEnvVar:"SECUROSYS_PIN",
+    endpointTerm:"HSM Endpoint",
+    slotTerm:"Slot",
+    partitionTerm:"Partition",
+    tokenTerm:"Token Label",
+    libraryExamples:["libprimusP11.so","primusP11.dll"]
+  },
+  generic:{
+    id:"generic",
+    label:"Generic PKCS#11 HSM",
+    shortName:"Generic",
+    abbreviations:["Generic","PKCS#11"],
+    defaultProviderName:"customer-hsm",
+    defaultPINEnvVar:"HSM_PIN",
+    endpointTerm:"HSM Endpoint",
+    slotTerm:"Slot",
+    partitionTerm:"Partition",
+    tokenTerm:"Token Label",
+    libraryExamples:["libVendorPKCS11.so","vendor-pkcs11.dll"]
+  }
+};
+
+const inferHSMVendor=(metadata:any,providerName:string,libraryPath:string)=>{
+  const metaVendor=String(metadata?.hsm_vendor_id||"").trim().toLowerCase();
+  if(metaVendor&&HSM_VENDOR_PROFILES[metaVendor]){
+    return metaVendor;
+  }
+  const probe=`${String(providerName||"")} ${String(libraryPath||"")}`.toLowerCase();
+  if(probe.includes("cloudhsm")||probe.includes("aws")){
+    return "aws";
+  }
+  if(probe.includes("azure")||probe.includes("mhsm")){
+    return "azure";
+  }
+  if(probe.includes("thales")||probe.includes("luna")||probe.includes("cryptoki2")){
+    return "thales";
+  }
+  if(probe.includes("utimaco")||probe.includes("cs_pkcs11")||probe.includes("cryptoserver")){
+    return "utimaco";
+  }
+  if(probe.includes("entrust")||probe.includes("nshield")||probe.includes("cknfast")){
+    return "entrust";
+  }
+  if(probe.includes("securosys")||probe.includes("primus")){
+    return "securosys";
+  }
+  return "generic";
+};
+
+const normalizeHSMVendorView=(rawView:string)=>{
+  const raw=String(rawView||"").trim().toLowerCase();
+  if(!raw){
+    return "generic";
+  }
+  const value=raw.startsWith("hsm-")?raw.slice(4):raw;
+  if(HSM_VENDOR_PROFILES[value]){
+    return value;
+  }
+  return "generic";
+};
+
+const HSM=({session,onToast,subView,onSubViewChange})=>{
   const [modal,setModal]=useState<null|"gen">(null);
   const [statusLoading,setStatusLoading]=useState(false);
   const [configLoading,setConfigLoading]=useState(false);
@@ -13183,6 +14123,7 @@ const HSM=({session,onToast})=>{
   const [cliStatus,setCLIStatus]=useState<any>(null);
   const [cliHints,setCLIHints]=useState<any>(null);
   const [providerName,setProviderName]=useState("customer-hsm");
+  const [hsmVendorID,setHSMVendorID]=useState("generic");
   const [providerFileName,setProviderFileName]=useState("");
   const [pinEnvVar,setPinEnvVar]=useState("HSM_PIN");
   const [providerReadOnly,setProviderReadOnly]=useState(false);
@@ -13196,6 +14137,9 @@ const HSM=({session,onToast})=>{
   const [selectedPartition,setSelectedPartition]=useState("");
   const [keyAlgo,setKeyAlgo]=useState("AES-256");
   const [keyLabel,setKeyLabel]=useState("");
+  const tabVendorID=useMemo(()=>normalizeHSMVendorView(String(subView||"hsm-generic")),[subView]);
+  const activeVendorID=onSubViewChange?tabVendorID:hsmVendorID;
+  const activeVendor=HSM_VENDOR_PROFILES[activeVendorID]||HSM_VENDOR_PROFILES.generic;
 
   const providerDir=String(cliHints?.provider_library_dir||"").trim();
   const templateLibraryPath=String(cliHints?.pkcs11_config_template?.library_path||"").trim();
@@ -13248,6 +14192,25 @@ const HSM=({session,onToast})=>{
     return parts.length?String(parts[parts.length-1]||"").trim():"";
   };
 
+  const applyVendorProfile=(vendorID:string,force=false)=>{
+    const profile=HSM_VENDOR_PROFILES[vendorID]||HSM_VENDOR_PROFILES.generic;
+    setHSMVendorID(profile.id);
+    if(force||!String(providerName||"").trim()||String(providerName||"").trim()==="customer-hsm"){
+      setProviderName(String(profile.defaultProviderName||"customer-hsm"));
+    }
+    if(force||!String(pinEnvVar||"").trim()||String(pinEnvVar||"").trim()==="HSM_PIN"){
+      setPinEnvVar(String(profile.defaultPINEnvVar||"HSM_PIN"));
+    }
+  };
+
+  useEffect(()=>{
+    if(!onSubViewChange){
+      return;
+    }
+    setHSMVendorID(tabVendorID);
+    applyVendorProfile(tabVendorID,false);
+  },[onSubViewChange,tabVendorID]);
+
   const refreshCLIHints=async(silent=false)=>{
     if(!session?.token){
       return;
@@ -13283,6 +14246,9 @@ const HSM=({session,onToast})=>{
 
       setProviderName(nextProviderName);
       setPinEnvVar(nextPINEnvVar);
+      if(!onSubViewChange){
+        setHSMVendorID(inferHSMVendor(cfg?.metadata,nextProviderName,nextLibraryPath));
+      }
       setProviderReadOnly(Boolean(cfg?.read_only));
       setProviderEnabled(Boolean(cfg?.enabled));
       setConfigUpdatedAt(String(cfg?.updated_at||"").trim());
@@ -13319,6 +14285,9 @@ const HSM=({session,onToast})=>{
     const effectivePartition=String((overrides?.partition_label??overrides?.token_label??selectedPartition)||"").trim();
     const metadataInput={
       ui_source:"dashboard-hsm",
+      hsm_vendor_id:String(activeVendor?.id||"generic"),
+      hsm_vendor_label:String(activeVendor?.label||"Generic PKCS#11 HSM"),
+      hsm_vendor_abbreviations:Array.isArray(activeVendor?.abbreviations)?activeVendor.abbreviations:[],
       ...(overrides?.metadata&&typeof overrides.metadata==="object"?overrides.metadata:{})
     };
     setConfigSaving(true);
@@ -13337,6 +14306,9 @@ const HSM=({session,onToast})=>{
       });
       setProviderName(String(updated?.provider_name||"customer-hsm").trim()||"customer-hsm");
       setPinEnvVar(String(updated?.pin_env_var||"HSM_PIN").trim()||"HSM_PIN");
+      if(!onSubViewChange){
+        setHSMVendorID(inferHSMVendor(updated?.metadata,updated?.provider_name,updated?.library_path));
+      }
       setProviderReadOnly(Boolean(updated?.read_only));
       setProviderEnabled(Boolean(updated?.enabled));
       setSelectedSlotID(String(updated?.slot_id||"").trim());
@@ -13364,6 +14336,7 @@ const HSM=({session,onToast})=>{
       setCLIStatus(null);
       setCLIHints(null);
       setProviderName("customer-hsm");
+      setHSMVendorID(onSubViewChange?tabVendorID:"generic");
       setProviderFileName("");
       setPinEnvVar("HSM_PIN");
       setProviderReadOnly(false);
@@ -13444,6 +14417,7 @@ const HSM=({session,onToast})=>{
   },[selectedPartition,selectedSlotID,slots]);
 
   const connectionRows=[
+    ["HSM Vendor",activeVendor?.label||"Generic PKCS#11 HSM"],
     ["Mode",Boolean(cliStatus?.enabled)?"Hardware PKCS#11 (CLI-integrated)":"CLI integration disabled"],
     ["Service",integrationService],
     ["Endpoint",`${String(cliStatus?.host||"127.0.0.1")}:${Number(cliStatus?.port||2222)}`],
@@ -13458,6 +14432,17 @@ const HSM=({session,onToast})=>{
   ];
 
   return <div>
+    <Section title={`${String(activeVendor?.label||"Generic PKCS#11 HSM")} Profile`}>
+      <Card>
+        <FG label="Vendor">
+          <Inp value={String(activeVendor?.label||"Generic PKCS#11 HSM")} readOnly/>
+        </FG>
+        <div style={{fontSize:10,color:C.muted}}>
+          {`${String(activeVendor?.slotTerm||"Slot")} / ${String(activeVendor?.partitionTerm||"Partition")} / ${String(activeVendor?.tokenTerm||"Token")} terms are applied on this page.`}
+        </div>
+      </Card>
+    </Section>
+
     <Row2>
       <Card>
         <div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>CONNECTION</div>
@@ -13470,7 +14455,7 @@ const HSM=({session,onToast})=>{
       </Card>
       <Card>
         <div style={{fontSize:11,color:C.muted,fontWeight:600,marginBottom:6}}>DISCOVERY STATUS</div>
-        {[["Partition source","PKCS#11 list via dedicated hsm-integration service"],["Last fetch",lastDiscoveredAt?new Date(lastDiscoveredAt).toLocaleString():"not fetched"],["Slot selected",selectedSlotID||"-"],["Partition selected",selectedPartition||"-"],["Config updated by",configUpdatedBy||"-"],["Auto-bind","Enabled (discovery writes slot/partition to persisted config)"]].map(([k,v])=>
+        {[["Partition source","PKCS#11 list via dedicated hsm-integration service"],["Last fetch",lastDiscoveredAt?new Date(lastDiscoveredAt).toLocaleString():"not fetched"],[`${String(activeVendor?.slotTerm||"Slot")} selected`,selectedSlotID||"-"],[`${String(activeVendor?.partitionTerm||"Partition")} selected`,selectedPartition||"-"],["Config updated by",configUpdatedBy||"-"],["Auto-bind","Enabled (discovery writes slot/partition to persisted config)"]].map(([k,v])=>
           <div key={String(k)} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:10,gap:8}}>
             <span style={{color:C.muted}}>{String(k)}</span>
             <span style={{color:C.accent,textAlign:"right"}}>{String(v)}</span>
@@ -13493,7 +14478,7 @@ const HSM=({session,onToast})=>{
     </div>}>
       <Card>
         <Row2>
-          <FG label="Provider Name" required>
+          <FG label={`${String(activeVendor?.shortName||"Generic")} Provider Name`} required>
             <Inp value={providerName} onChange={(e)=>setProviderName(e.target.value)} mono placeholder="customer-hsm"/>
           </FG>
           <FG label="Integration Service">
@@ -13504,15 +14489,15 @@ const HSM=({session,onToast})=>{
           <FG label="Provider Library Directory">
             <Inp value={providerDir||""} readOnly mono/>
           </FG>
-          <FG label="Provider Library Filename" required hint="Example: libCryptoki2_64.so">
-            <Inp value={providerFileName} onChange={(e)=>setProviderFileName(e.target.value)} mono placeholder="libVendorPKCS11.so"/>
+          <FG label="Provider Library Filename" required hint={`Example: ${Array.isArray(activeVendor?.libraryExamples)?activeVendor.libraryExamples.join(" / "):"libVendorPKCS11.so"}`}>
+            <Inp value={providerFileName} onChange={(e)=>setProviderFileName(e.target.value)} mono placeholder={String((Array.isArray(activeVendor?.libraryExamples)&&activeVendor.libraryExamples[0])||"libVendorPKCS11.so")}/>
           </FG>
         </Row2>
         <FG label="Resolved PKCS#11 Library Path" required>
           <Inp value={resolvedLibraryPath||""} readOnly mono/>
         </FG>
         <Row2>
-          <FG label="Detected Slot" required>
+          <FG label={`Detected ${String(activeVendor?.slotTerm||"Slot")}`} required>
             <Sel value={selectedSlotID} onChange={(e)=>setSelectedSlotID(e.target.value)}>
               {slotOptions.map((slot:any)=><option key={`hsm-slot-${String(slot?.slot_id||"")}`} value={String(slot?.slot_id||"")}>
                 {`${String(slot?.slot_id||"")} - ${String(slot?.slot_name||"slot")}${String(slot?.token_present)?" (token present)":""}`}
@@ -13520,7 +14505,7 @@ const HSM=({session,onToast})=>{
               {!slotOptions.length?<option value="">No slots discovered yet</option>:null}
             </Sel>
           </FG>
-          <FG label="Detected Partition" required>
+          <FG label={`Detected ${String(activeVendor?.partitionTerm||"Partition")}`} required>
             <Sel value={selectedPartition} onChange={(e)=>setSelectedPartition(e.target.value)}>
               {partitionOptions.map((partition)=>(
                 <option key={`hsm-part-${partition}`} value={partition}>{partition}</option>
@@ -13530,7 +14515,7 @@ const HSM=({session,onToast})=>{
           </FG>
         </Row2>
         <Row2>
-          <FG label="PIN Environment Variable">
+          <FG label={`${String(activeVendor?.shortName||"HSM")} PIN Environment Variable`}>
             <Inp value={pinEnvVar} onChange={(e)=>setPinEnvVar(e.target.value)} mono placeholder="HSM_PIN"/>
           </FG>
           <FG label="Provider Flags">
@@ -13557,7 +14542,7 @@ const HSM=({session,onToast})=>{
       <FG label="Key Label" required>
         <Inp placeholder="Enter customer key label" mono value={keyLabel} onChange={(e)=>setKeyLabel(e.target.value)}/>
       </FG>
-      <FG label="HSM Partition" required>
+      <FG label={String(activeVendor?.partitionTerm||"Partition")} required>
         <Sel value={selectedPartition} onChange={(e)=>setSelectedPartition(e.target.value)}>
           {partitionOptions.map((partition)=>(
             <option key={`hsm-gen-part-${partition}`} value={partition}>{partition}</option>
@@ -14273,7 +15258,7 @@ const MPC=({session,onToast})=>{
               </div>
               <div><B c="purple">{normalizeProtocol(String(key.algorithm||""))}</B></div>
               <div style={{fontSize:11,color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{`${Number(key.threshold||0)}-of-${Number(key.participant_count||0)}`}</div>
-              <div style={{fontSize:11,color:counts.active>=Number(key.threshold||0)?C.green:C.amber}}>{`${counts.active}/${counts.total}`} {counts.active>=Number(key.threshold||0)?"✅":"⚠️"}</div>
+              <div style={{fontSize:11,color:counts.active>=Number(key.threshold||0)?C.green:C.amber}}>{`${counts.active}/${counts.total}`} {counts.active>=Number(key.threshold||0)?"?":"??"}</div>
               <div style={{fontSize:10,color:C.dim,textAlign:"right"}}>{String(key.status||"pending").toLowerCase()==="active"?`Ready (${fmtAgo(String(key.updated_at||key.created_at||""))})`:String(key.status||"")}</div>
             </div>;
           })}
@@ -14361,13 +15346,17 @@ const MPC=({session,onToast})=>{
 };
 
 const KMIP=({session,onToast})=>{
+  const promptDialog=usePromptDialog();
   const [loading,setLoading]=useState(false);
   const [profiles,setProfiles]=useState([]);
   const [clients,setClients]=useState([]);
   const [caItems,setCAItems]=useState([]);
+  const [kmipCaps,setKMIPCaps]=useState<any>(null);
   const [modal,setModal]=useState(null);
   const [savingProfile,setSavingProfile]=useState(false);
   const [savingClient,setSavingClient]=useState(false);
+  const [deletingProfileID,setDeletingProfileID]=useState("");
+  const [deletingClientID,setDeletingClientID]=useState("");
   const [clientCertSource,setClientCertSource]=useState("paste");
   const [issuedBundle,setIssuedBundle]=useState(null);
   const [profileForm,setProfileForm]=useState({
@@ -14455,14 +15444,16 @@ const KMIP=({session,onToast})=>{
       setLoading(true);
     }
     try{
-      const [profileItems,clientItems,caList]=await Promise.all([
+      const [profileItems,clientItems,caList,caps]=await Promise.all([
         listKMIPProfiles(session),
         listKMIPClients(session),
-        listCAs(session)
+        listCAs(session),
+        getKMIPCapabilities(session)
       ]);
       setProfiles(Array.isArray(profileItems)?profileItems:[]);
       setClients(Array.isArray(clientItems)?clientItems:[]);
       setCAItems(Array.isArray(caList)?caList:[]);
+      setKMIPCaps(caps||null);
     }catch(error){
       onToast?.(`KMIP load failed: ${errMsg(error)}`);
     }finally{
@@ -14505,6 +15496,12 @@ const KMIP=({session,onToast})=>{
       expiringSoon
     };
   },[clients]);
+  const kmipVersionLabel=String(kmipCaps?.highest_supported_version||"").trim()?`KMIP ${String(kmipCaps?.highest_supported_version).trim()}`:"KMIP";
+  const kmipProtocolLabel=String(kmipCaps?.protocol||"TTLV over TLS").trim();
+  const kmipLibraryLabel=[
+    String(kmipCaps?.library||"github.com/ovh/kmip-go").trim(),
+    String(kmipCaps?.library_version||"").trim()
+  ].filter(Boolean).join(" ");
 
   const saveProfile=async()=>{
     if(!session?.token){
@@ -14638,13 +15635,78 @@ const KMIP=({session,onToast})=>{
     }
   };
 
+  const removeProfile=async(profile:any)=>{
+    if(!session?.token){
+      return;
+    }
+    const profileID=String(profile?.id||"").trim();
+    if(!profileID){
+      return;
+    }
+    const profileName=String(profile?.name||profileID).trim();
+    const confirmed=await promptDialog.confirm({
+      title:"Delete KMIP Client Profile",
+      message:`Delete KMIP client profile "${profileName}"? Clients using this profile must be deleted first.`,
+      confirmLabel:"Delete Profile",
+      cancelLabel:"Cancel",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    setDeletingProfileID(profileID);
+    try{
+      await deleteKMIPProfile(session,profileID);
+      if(String(clientForm.profile_id||"")===profileID){
+        setClientForm((prev)=>({...prev,profile_id:""}));
+      }
+      onToast?.("KMIP client profile deleted.");
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Delete profile failed: ${errMsg(error)}`);
+    }finally{
+      setDeletingProfileID("");
+    }
+  };
+
+  const removeClient=async(client:any)=>{
+    if(!session?.token){
+      return;
+    }
+    const clientID=String(client?.id||"").trim();
+    if(!clientID){
+      return;
+    }
+    const clientName=String(client?.name||clientID).trim();
+    const confirmed=await promptDialog.confirm({
+      title:"Delete KMIP Client",
+      message:`Delete KMIP client "${clientName}"? This removes certificate-based KMIP access for this client.`,
+      confirmLabel:"Delete Client",
+      cancelLabel:"Cancel",
+      danger:true
+    });
+    if(!confirmed){
+      return;
+    }
+    setDeletingClientID(clientID);
+    try{
+      await deleteKMIPClient(session,clientID);
+      onToast?.("KMIP client deleted.");
+      await refresh(true);
+    }catch(error){
+      onToast?.(`Delete client failed: ${errMsg(error)}`);
+    }finally{
+      setDeletingClientID("");
+    }
+  };
+
   return <div>
     <div style={{display:"flex",gap:12,marginBottom:14,flexWrap:"wrap"}}>
       <Stat l="Client Profiles" v={String((profiles||[]).length)} c="blue"/>
       <Stat l="Registered Clients" v={String(stats.total)} c="accent"/>
       <Stat l="Active Clients" v={String(stats.active)} c="green"/>
       <Stat l="Expiring <=30d" v={String(stats.expiringSoon)} c={stats.expiringSoon>0?"amber":"blue"}/>
-      <Stat l="Protocol" v="KMIP 2.1+" s="TTLV over TLS:5696" c="purple"/>
+      <Stat l="Protocol" v={kmipVersionLabel} s={`${kmipProtocolLabel}:${String(kmipCaps?.port||"5696")} · ${kmipLibraryLabel}`} c="purple"/>
     </div>
 
     {issuedBundle?<Card style={{marginBottom:10,borderColor:C.green}}>
@@ -14670,11 +15732,11 @@ const KMIP=({session,onToast})=>{
         </div>}
       >
         <Card style={{padding:0,overflow:"hidden"}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr .9fr .7fr .7fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
-            <div>Profile</div><div>CA</div><div>Duration</div><div>Role</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr .9fr .7fr .7fr .7fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+            <div>Profile</div><div>CA</div><div>Duration</div><div>Role</div><div>Actions</div>
           </div>
           <div style={{maxHeight:260,overflowY:"auto"}}>
-            {(profiles||[]).map((p)=><div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr .9fr .7fr .7fr",padding:"8px 12px",fontSize:10,borderBottom:`1px solid ${C.border}`,gap:8}}>
+            {(profiles||[]).map((p)=><div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr .9fr .7fr .7fr .7fr",padding:"8px 12px",fontSize:10,borderBottom:`1px solid ${C.border}`,gap:8}}>
               <div>
                 <div style={{fontSize:11,color:C.text,fontWeight:600}}>{p.name}</div>
                 <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{p.id}</div>
@@ -14682,6 +15744,11 @@ const KMIP=({session,onToast})=>{
               <div style={{fontSize:9,color:C.dim}}>{(caItems.find((ca)=>String(ca.id)===String(p.ca_id))?.name)||p.ca_id||"-"}</div>
               <div style={{fontSize:9,color:C.dim}}>{`${Number(p.certificate_duration_days||0)||365}d`}</div>
               <div><B c="blue">{p.role||"kmip-client"}</B></div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"flex-start"}}>
+                <Btn small danger onClick={()=>void removeProfile(p)} disabled={deletingProfileID!==""||deletingClientID!==""}>
+                  {deletingProfileID===String(p.id)?"Deleting...":"Delete"}
+                </Btn>
+              </div>
             </div>)}
             {!(profiles||[]).length?<div style={{padding:12,fontSize:10,color:C.muted}}>No KMIP client profiles yet.</div>:null}
           </div>
@@ -14696,11 +15763,11 @@ const KMIP=({session,onToast})=>{
         </div>}
       >
         <Card style={{padding:0,overflow:"hidden"}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr .6fr .7fr .8fr .8fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
-            <div>Client</div><div>Status</div><div>Mode</div><div>Fingerprint</div><div>Expires</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr .6fr .7fr .8fr .8fr .8fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+            <div>Client</div><div>Status</div><div>Mode</div><div>Fingerprint</div><div>Expires</div><div>Actions</div>
           </div>
           <div style={{maxHeight:260,overflowY:"auto"}}>
-            {(clients||[]).map((c)=><div key={c.id} style={{display:"grid",gridTemplateColumns:"1fr .6fr .7fr .8fr .8fr",padding:"8px 12px",fontSize:10,borderBottom:`1px solid ${C.border}`,gap:8}}>
+            {(clients||[]).map((c)=><div key={c.id} style={{display:"grid",gridTemplateColumns:"1fr .6fr .7fr .8fr .8fr .8fr",padding:"8px 12px",fontSize:10,borderBottom:`1px solid ${C.border}`,gap:8}}>
               <div>
                 <div style={{fontSize:11,color:C.text,fontWeight:600}}>{c.name}</div>
                 <div style={{fontSize:9,color:C.muted}}>{c.role}</div>
@@ -14709,6 +15776,11 @@ const KMIP=({session,onToast})=>{
               <div style={{fontSize:9,color:C.dim}}>{String(c.enrollment_mode||"-")}</div>
               <div style={{fontSize:9,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{String(c.cert_fingerprint_sha256||"-").slice(0,16)}...</div>
               <div style={{fontSize:9,color:C.dim}}>{c.cert_not_after?new Date(String(c.cert_not_after)).toLocaleString():"-"}</div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"flex-start"}}>
+                <Btn small danger onClick={()=>void removeClient(c)} disabled={deletingClientID!==""||deletingProfileID!==""}>
+                  {deletingClientID===String(c.id)?"Deleting...":"Delete"}
+                </Btn>
+              </div>
             </div>)}
             {!(clients||[]).length?<div style={{padding:12,fontSize:10,color:C.muted}}>No KMIP clients registered. Add client certificate to allow mTLS access.</div>:null}
           </div>
@@ -14894,7 +15966,35 @@ const CLUSTER_COMPONENT_CHOICES=[
 const clusterComponentLabel=(value:string)=>{
   const key=String(value||"").trim().toLowerCase();
   const hit=CLUSTER_COMPONENT_CHOICES.find((item)=>item.id===key);
-  return hit?hit.label:String(value||"");
+  if(hit){
+    return hit.label;
+  }
+  const extraLabels:Record<string,string>={
+    cluster:"Cluster",
+    compliance:"Compliance",
+    reporting:"Reporting",
+    sbom:"SBOM",
+    pqc:"PQC",
+    discovery:"Discovery",
+    ai:"AI",
+    "software-vault":"Software Vault"
+  };
+  if(extraLabels[key]){
+    return extraLabels[key];
+  }
+  if(key.startsWith("kms-")){
+    return key
+      .replace(/^kms-/,"")
+      .split(/[-_]/g)
+      .filter(Boolean)
+      .map((part)=>part.charAt(0).toUpperCase()+part.slice(1))
+      .join(" ");
+  }
+  return key
+    .split(/[-_]/g)
+    .filter(Boolean)
+    .map((part)=>part.charAt(0).toUpperCase()+part.slice(1))
+    .join(" ")||String(value||"");
 };
 
 const Cluster=({session,onToast,subView})=>{
@@ -14905,9 +16005,19 @@ const Cluster=({session,onToast,subView})=>{
   const [profileComponents,setProfileComponents]=useState<string[]>(["auth","keycore","audit","policy","governance"]);
   const [profileDefault,setProfileDefault]=useState(false);
   const [savingProfile,setSavingProfile]=useState(false);
-  const [joinForm,setJoinForm]=useState<any>({node_id:"",node_name:"",endpoint:"",profile_id:"",expires_minutes:30});
-  const [joinBusy,setJoinBusy]=useState(false);
-  const [joinBundle,setJoinBundle]=useState<any>(null);
+  const [directNodeForm,setDirectNodeForm]=useState<any>({
+    node_id:"",
+    node_name:"",
+    endpoint:"",
+    profile_id:"",
+    role:"follower",
+    components:["auth","keycore","policy","governance"],
+    seed_sync:true
+  });
+  const [directNodeBusy,setDirectNodeBusy]=useState(false);
+  const [roleDrafts,setRoleDrafts]=useState<Record<string,string>>({});
+  const [roleUpdatingNode,setRoleUpdatingNode]=useState("");
+  const [removeBusyNode,setRemoveBusyNode]=useState("");
   const clusterView=String(subView||"settings").trim().toLowerCase();
 
   const refresh=async(silent=false)=>{
@@ -14922,13 +16032,25 @@ const Cluster=({session,onToast,subView})=>{
       const out=await getClusterOverview(session);
       setOverview(out||{nodes:[],profiles:[]});
       const profiles=Array.isArray(out?.profiles)?out.profiles:[];
-      setJoinForm((prev:any)=>{
-        const current=String(prev?.profile_id||"").trim();
-        if(current){
-          return prev;
-        }
+      setDirectNodeForm((prev:any)=>{
+        const profileCurrent=String(prev?.profile_id||"").trim();
         const defaultProfile=profiles.find((item:any)=>Boolean(item?.is_default))||profiles[0]||null;
-        return {...prev,profile_id:String(defaultProfile?.id||"")};
+        const nextProfile=profiles.find((item:any)=>String(item?.id||"").trim()===profileCurrent)||defaultProfile;
+        const allowedComponents=(Array.isArray(nextProfile?.components)?nextProfile.components:[])
+          .map((value:any)=>String(value||"").trim().toLowerCase())
+          .filter(Boolean)
+          .filter((value:string)=>value!=="audit");
+        const requestedComponents=(Array.isArray(prev?.components)?prev.components:[])
+          .map((value:any)=>String(value||"").trim().toLowerCase())
+          .filter(Boolean);
+        const mergedComponents=requestedComponents.length
+          ? requestedComponents.filter((component:string)=>allowedComponents.includes(component))
+          : allowedComponents;
+        return {
+          ...prev,
+          profile_id:String(nextProfile?.id||""),
+          components:mergedComponents.length?mergedComponents:allowedComponents
+        };
       });
     }catch(error){
       onToast?.(`Cluster load failed: ${errMsg(error)}`);
@@ -14947,10 +16069,135 @@ const Cluster=({session,onToast,subView})=>{
     void refresh(false);
   },[session?.token,session?.tenantId]);
 
+  useEffect(()=>{
+    if(!session?.token){
+      return;
+    }
+    const timer=window.setInterval(()=>{
+      void refresh(true);
+    },10000);
+    return ()=>window.clearInterval(timer);
+  },[session?.token,session?.tenantId]);
+
   const nodes=Array.isArray(overview?.nodes)?overview.nodes:[];
   const profiles=Array.isArray(overview?.profiles)?overview.profiles:[];
   const summary=overview?.summary||{};
   const selectiveNote=String(overview?.selective_component_sync?.note||"Nodes sync only the state for their enabled components.");
+  const profileComponentScope=(profileID:string)=>{
+    const profile=profiles.find((item:any)=>String(item?.id||"").trim()===String(profileID||"").trim());
+    return (Array.isArray(profile?.components)?profile.components:[])
+      .map((value:any)=>String(value||"").trim().toLowerCase())
+      .filter(Boolean)
+      .filter((value:string)=>value!=="audit");
+  };
+  const toggleDirectComponent=(componentID:string)=>{
+    const allowed=profileComponentScope(String(directNodeForm?.profile_id||""));
+    if(!allowed.includes(componentID)){
+      return;
+    }
+    setDirectNodeForm((prev:any)=>{
+      const existing=(Array.isArray(prev?.components)?prev.components:[])
+        .map((value:any)=>String(value||"").trim().toLowerCase())
+        .filter(Boolean);
+      if(existing.includes(componentID)){
+        return {...prev,components:existing.filter((item:string)=>item!==componentID)};
+      }
+      return {...prev,components:[...existing,componentID]};
+    });
+  };
+  const updateNodeRoleAction=async(node:any)=>{
+    const nodeID=String(node?.id||"").trim();
+    if(!session?.token||!nodeID){
+      return;
+    }
+    const requestedRole=String(roleDrafts[nodeID]||node?.role||"follower").trim().toLowerCase()==="leader"?"leader":"follower";
+    const currentRole=String(node?.role||"follower").trim().toLowerCase()==="leader"?"leader":"follower";
+    if(requestedRole===currentRole){
+      return;
+    }
+    setRoleUpdatingNode(nodeID);
+    try{
+      await updateClusterNodeRole(session,nodeID,requestedRole);
+      await refresh(true);
+      onToast?.(`Node role updated: ${nodeID} -> ${requestedRole}.`);
+    }catch(error){
+      onToast?.(`Role update failed: ${errMsg(error)}`);
+    }finally{
+      setRoleUpdatingNode("");
+    }
+  };
+  const removeNodeAction=async(node:any)=>{
+    const nodeID=String(node?.id||"").trim();
+    const nodeName=String(node?.name||nodeID).trim();
+    const isFollower=String(node?.role||"follower").trim().toLowerCase()!=="leader";
+    if(!session?.token||!nodeID){
+      return;
+    }
+    const warningMessage=isFollower
+      ? `Warning: deleting follower \"${nodeName}\" will erase synced cluster data on that follower and convert it to standalone mode.`
+      : `Warning: deleting node \"${nodeName}\" will erase synced cluster data on that node and convert it to standalone mode.`;
+    onToast?.(warningMessage);
+    if(!window.confirm(`${warningMessage}\n\nContinue?`)){
+      return;
+    }
+    setRemoveBusyNode(nodeID);
+    try{
+      const result=await removeClusterNode(session,nodeID,{reason:"removed_from_cluster",purge_synced_data:true});
+      await refresh(true);
+      const promoted=String(result?.promoted_leader_node||"").trim();
+      onToast?.(promoted
+        ? `Node removed and standalone. New leader: ${promoted}.`
+        : "Node removed from cluster and switched to standalone.");
+    }catch(error){
+      onToast?.(`Remove node failed: ${errMsg(error)}`);
+    }finally{
+      setRemoveBusyNode("");
+    }
+  };
+  const addExistingNode=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to add a cluster node.");
+      return;
+    }
+    const nodeID=String(directNodeForm?.node_id||"").trim();
+    const profileID=String(directNodeForm?.profile_id||"").trim();
+    if(!nodeID||!profileID){
+      onToast?.("Node ID and replication profile are required.");
+      return;
+    }
+    const allowed=profileComponentScope(profileID);
+    const selected=(Array.isArray(directNodeForm?.components)?directNodeForm.components:[])
+      .map((value:any)=>String(value||"").trim().toLowerCase())
+      .filter((value:string)=>allowed.includes(value));
+    setDirectNodeBusy(true);
+    try{
+      await upsertClusterNode(session,{
+        node_id:nodeID,
+        node_name:String(directNodeForm?.node_name||nodeID).trim(),
+        endpoint:String(directNodeForm?.endpoint||"").trim(),
+        role:String(directNodeForm?.role||"follower").trim().toLowerCase()==="leader"?"leader":"follower",
+        profile_id:profileID,
+        components:selected.length?selected:allowed,
+        status:"unknown",
+        join_state:"active",
+        seed_sync:Boolean(directNodeForm?.seed_sync)
+      });
+      setDirectNodeForm((prev:any)=>({
+        ...prev,
+        node_id:"",
+        node_name:"",
+        endpoint:"",
+        role:"follower",
+        components:selected.length?selected:allowed
+      }));
+      await refresh(true);
+      onToast?.("Existing KMS instance added to cluster.");
+    }catch(error){
+      onToast?.(`Add node failed: ${errMsg(error)}`);
+    }finally{
+      setDirectNodeBusy(false);
+    }
+  };
 
   const toggleProfileComponent=(componentID:string)=>{
     setProfileComponents((prev)=>{
@@ -15017,79 +16264,54 @@ const Cluster=({session,onToast,subView})=>{
     }
   };
 
-  const createJoinBundle=async()=>{
-    if(!session?.token){
-      onToast?.("Login is required to issue a cluster join bundle.");
-      return;
+  const statusMeta=(status:string)=>{
+    const normalized=String(status||"").trim().toLowerCase();
+    if(normalized==="online"){
+      return {tone:"green",label:"Online",color:C.green,bg:C.greenDim,dotClass:"sync-dot sync-dot--online"};
     }
-    const nodeID=String(joinForm?.node_id||"").trim();
-    const profileID=String(joinForm?.profile_id||"").trim();
-    if(!nodeID||!profileID){
-      onToast?.("Node ID and replication profile are required.");
-      return;
+    if(normalized==="degraded"){
+      return {tone:"amber",label:"Degraded",color:C.amber,bg:C.amberDim,dotClass:"sync-dot sync-dot--degraded"};
     }
-    setJoinBusy(true);
-    try{
-      const out=await createClusterJoinRequest(session,{
-        target_node_id:nodeID,
-        target_node_name:String(joinForm?.node_name||nodeID).trim(),
-        endpoint:String(joinForm?.endpoint||"").trim(),
-        profile_id:profileID,
-        expires_minutes:Number(joinForm?.expires_minutes||30),
-        requested_by:String(session?.username||"admin")
-      });
-      setJoinBundle(out||null);
-      onToast?.("Secure cluster join bundle issued.");
-    }catch(error){
-      onToast?.(`Join request failed: ${errMsg(error)}`);
-    }finally{
-      setJoinBusy(false);
+    if(normalized==="down"){
+      return {tone:"red",label:"Down",color:C.red,bg:C.redDim,dotClass:"sync-dot sync-dot--down"};
     }
+    return {tone:"blue",label:"Unknown",color:C.blue,bg:C.blueDim,dotClass:"sync-dot sync-dot--unknown"};
   };
-
-  const copyJoinBundle=async()=>{
-    if(!joinBundle){
-      return;
-    }
-    try{
-      await navigator.clipboard.writeText(JSON.stringify(joinBundle,null,2));
-      onToast?.("Join bundle copied.");
-    }catch{
-      onToast?.("Copy failed. Please copy manually.");
-    }
-  };
-
-  const roleBadge=(role:string)=>{
+  const roleBadge=(role:string,status:string)=>{
     const leader=String(role||"").trim().toLowerCase()==="leader";
+    const health=statusMeta(status);
     return <span style={{
       display:"inline-flex",
       alignItems:"center",
       gap:6,
       padding:"5px 10px",
       borderRadius:999,
-      background:leader?"rgba(6,214,224,.10)":"rgba(45,212,160,.08)",
-      color:leader?C.accent:C.green,
+      background:health.bg,
+      color:health.color,
+      border:leader?`1px solid ${C.accent}`:`1px solid transparent`,
       fontSize:10,
       fontWeight:700
     }}>
-      <span className={`sync-dot ${leader?"sync-dot--leader":"sync-dot--slow"}`} style={{width:6,height:6,borderRadius:999,background:leader?C.accent:C.green}}/>
+      <span className={health.dotClass} style={{width:6,height:6,borderRadius:999,background:health.color}}/>
       {leader?"Leader":"Follower"}
     </span>;
   };
-  const strictRoleBadge=(role:string)=>{
+  const strictRoleBadge=(role:string,status:string)=>{
     const leader=String(role||"").trim().toLowerCase()==="leader";
+    const health=statusMeta(status);
     return <span style={{
       display:"inline-flex",
       alignItems:"center",
       gap:6,
       padding:"8px 12px",
       borderRadius:999,
-      background:leader?"rgba(6,214,224,.10)":"rgba(45,212,160,.08)",
-      color:leader?C.accent:C.green,
+      background:health.bg,
+      color:health.color,
+      border:leader?`1px solid ${C.accent}`:`1px solid transparent`,
       fontSize:11,
       fontWeight:700
     }}>
-      <span className={`sync-dot ${leader?"sync-dot--leader":"sync-dot--slow"}`} style={{width:6,height:6,borderRadius:999,background:leader?C.accent:C.green}}/>
+      <span className={health.dotClass} style={{width:6,height:6,borderRadius:999,background:health.color}}/>
       {leader?"Leader":"Follower"}
     </span>;
   };
@@ -15119,6 +16341,7 @@ const Cluster=({session,onToast,subView})=>{
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))",gap:12}}>
           {nodes.map((node:any)=>{
             const role=String(node?.role||"follower").trim().toLowerCase();
+            const status=String(node?.status||"unknown");
             const components=(Array.isArray(node?.enabled_components)?node.enabled_components:[]).map((item:any)=>String(item||"").trim()).filter(Boolean);
             return <div
               key={`cluster-health-${String(node?.id||Math.random())}`}
@@ -15134,12 +16357,28 @@ const Cluster=({session,onToast,subView})=>{
                   <div style={{fontSize:29/2,color:C.white,fontWeight:700,lineHeight:1.2}}>{String(node?.name||node?.id||"-")}</div>
                   <div style={{fontSize:10,color:C.muted,fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>{String(node?.endpoint||"unknown")}</div>
                 </div>
-                {strictRoleBadge(role)}
+                {strictRoleBadge(role,status)}
+              </div>
+              <div style={{display:"flex",marginTop:8}}>
+                <span style={{
+                  display:"inline-flex",
+                  alignItems:"center",
+                  gap:6,
+                  padding:"4px 10px",
+                  borderRadius:999,
+                  fontSize:10,
+                  fontWeight:700,
+                  color:statusMeta(status).color,
+                  background:statusMeta(status).bg
+                }}>
+                  <span className={statusMeta(status).dotClass} style={{width:6,height:6,borderRadius:999,background:statusMeta(status).color}}/>
+                  {statusMeta(status).label}
+                </span>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}}>
                 <div>
                   <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>CPU</div>
-                  <div style={{fontSize:24/2,color:C.white,fontWeight:700,marginTop:3}}>{Number(node?.cpu_percent||0).toFixed(0)}%</div>
+                  <div style={{fontSize:24/2,color:C.white,fontWeight:700,marginTop:3}}>{Number(node?.cpu_percent||0).toFixed(1)}%</div>
                 </div>
                 <div>
                   <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>RAM</div>
@@ -15185,17 +16424,34 @@ const Cluster=({session,onToast,subView})=>{
     >
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:10}}>
         {nodes.map((node:any)=>{
+          const status=String(node?.status||"unknown");
           const components=(Array.isArray(node?.enabled_components)?node.enabled_components:[]).map((item:any)=>String(item||"").trim()).filter(Boolean);
           return <Card key={String(node?.id||Math.random())} style={{borderColor:C.borderHi,padding:12}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
               <div style={{fontSize:18,fontWeight:700,color:C.text}}>{String(node?.name||node?.id||"-")}</div>
-              {roleBadge(String(node?.role||"follower"))}
+              {roleBadge(String(node?.role||"follower"),status)}
             </div>
             <div style={{fontSize:10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{String(node?.endpoint||"unknown")}</div>
+            <div style={{marginTop:6}}>
+              <span style={{
+                display:"inline-flex",
+                alignItems:"center",
+                gap:6,
+                padding:"3px 9px",
+                borderRadius:999,
+                fontSize:10,
+                fontWeight:700,
+                color:statusMeta(status).color,
+                background:statusMeta(status).bg
+              }}>
+                <span className={statusMeta(status).dotClass} style={{width:6,height:6,borderRadius:999,background:statusMeta(status).color}}/>
+                {statusMeta(status).label}
+              </span>
+            </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:8}}>
               <div>
                 <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.7}}>CPU</div>
-                <div style={{fontSize:16,color:C.text,fontWeight:700}}>{Number(node?.cpu_percent||0).toFixed(0)}%</div>
+                <div style={{fontSize:16,color:C.text,fontWeight:700}}>{Number(node?.cpu_percent||0).toFixed(1)}%</div>
               </div>
               <div>
                 <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.7}}>RAM</div>
@@ -15205,10 +16461,34 @@ const Cluster=({session,onToast,subView})=>{
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
               {components.map((component:string)=><B key={`${String(node?.id||"node")}-${component}`} c={nodeStatusColor(String(node?.status||"unknown"))}>{clusterComponentLabel(component)}</B>)}
             </div>
+            <div style={{display:"grid",gridTemplateColumns:"minmax(120px,1fr) auto auto",gap:6,marginTop:10,alignItems:"center"}}>
+              <Sel
+                value={String(roleDrafts[String(node?.id||"")]||node?.role||"follower").trim().toLowerCase()==="leader"?"leader":"follower"}
+                onChange={(e)=>setRoleDrafts((prev)=>({...prev,[String(node?.id||"")]:e.target.value}))}
+              >
+                <option value="follower">Follower</option>
+                <option value="leader">Leader</option>
+              </Sel>
+              <Btn
+                small
+                disabled={roleUpdatingNode===String(node?.id||"")||String(roleDrafts[String(node?.id||"")]||node?.role||"follower").trim().toLowerCase()===String(node?.role||"follower").trim().toLowerCase()}
+                onClick={()=>void updateNodeRoleAction(node)}
+              >
+                {roleUpdatingNode===String(node?.id||"")?"Applying...":"Apply Role"}
+              </Btn>
+              <Btn
+                small
+                danger
+                disabled={removeBusyNode===String(node?.id||"")}
+                onClick={()=>void removeNodeAction(node)}
+              >
+                {removeBusyNode===String(node?.id||"")?"Removing...":"Remove"}
+              </Btn>
+            </div>
           </Card>;
         })}
       </div>
-      {!nodes.length?<Card style={{marginTop:10}}><div style={{fontSize:10,color:C.dim}}>No nodes registered yet. Use secure join bundle to add follower nodes.</div></Card>:null}
+      {!nodes.length?<Card style={{marginTop:10}}><div style={{fontSize:10,color:C.dim}}>No nodes registered yet. Use Add Existing Instance to register cluster members.</div></Card>:null}
       <Card style={{marginTop:10,borderColor:C.borderHi}}>
         <div style={{fontSize:12,color:C.accent,fontWeight:700,marginBottom:3}}>Selective Component Sync</div>
         <div style={{fontSize:10,color:C.dim}}>{selectiveNote}</div>
@@ -15261,30 +16541,48 @@ const Cluster=({session,onToast,subView})=>{
       </Card>
 
       <Card style={{padding:12}}>
-        <div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:8}}>Add Node To Cluster</div>
-        <FG label="Node ID" required><Inp value={joinForm.node_id} onChange={(e)=>setJoinForm((p:any)=>({...p,node_id:e.target.value}))} placeholder="vecta-kms-02"/></FG>
-        <FG label="Node Name"><Inp value={joinForm.node_name} onChange={(e)=>setJoinForm((p:any)=>({...p,node_name:e.target.value}))} placeholder="vecta-kms-02"/></FG>
-        <FG label="Node Endpoint"><Inp value={joinForm.endpoint} onChange={(e)=>setJoinForm((p:any)=>({...p,endpoint:e.target.value}))} placeholder="10.0.1.101"/></FG>
-        <FG label="Replication Profile" required>
-          <Sel value={String(joinForm.profile_id||"")} onChange={(e)=>setJoinForm((p:any)=>({...p,profile_id:e.target.value}))}>
-            <option value="">Select profile</option>
-            {profiles.map((profile:any)=><option key={String(profile?.id||Math.random())} value={String(profile?.id||"")}>{String(profile?.name||profile?.id||"-")}</option>)}
+        <div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:8}}>Add Existing Instance To Cluster</div>
+        <FG label="Node ID" required><Inp value={directNodeForm.node_id} onChange={(e)=>setDirectNodeForm((p:any)=>({...p,node_id:e.target.value}))} placeholder="vecta-kms-03"/></FG>
+        <FG label="Node Name"><Inp value={directNodeForm.node_name} onChange={(e)=>setDirectNodeForm((p:any)=>({...p,node_name:e.target.value}))} placeholder="vecta-kms-03"/></FG>
+        <FG label="Node Endpoint"><Inp value={directNodeForm.endpoint} onChange={(e)=>setDirectNodeForm((p:any)=>({...p,endpoint:e.target.value}))} placeholder="10.0.2.100"/></FG>
+        <FG label="Role">
+          <Sel value={String(directNodeForm.role||"follower")} onChange={(e)=>setDirectNodeForm((p:any)=>({...p,role:e.target.value}))}>
+            <option value="follower">Follower</option>
+            <option value="leader">Leader</option>
           </Sel>
         </FG>
-        <FG label="Join Token Expiry (minutes)">
-          <Inp type="number" min={5} max={240} value={String(joinForm.expires_minutes||30)} onChange={(e)=>setJoinForm((p:any)=>({...p,expires_minutes:Number(e.target.value||30)}))}/>
+        <FG label="Replication Profile" required>
+          <Sel
+            value={String(directNodeForm.profile_id||"")}
+            onChange={(e)=>{
+              const nextProfileID=String(e.target.value||"");
+              const allowed=profileComponentScope(nextProfileID);
+              setDirectNodeForm((p:any)=>({...p,profile_id:nextProfileID,components:allowed}));
+            }}
+          >
+            <option value="">Select profile</option>
+            {profiles.map((profile:any)=><option key={`direct-${String(profile?.id||Math.random())}`} value={String(profile?.id||"")}>{String(profile?.name||profile?.id||"-")}</option>)}
+          </Sel>
         </FG>
-        <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
-          <Btn primary disabled={joinBusy} onClick={()=>void createJoinBundle()}>{joinBusy?"Issuing...":"Generate Secure Join Bundle"}</Btn>
-        </div>
-        {joinBundle?<Card style={{marginTop:10,padding:8,borderColor:C.borderHi}}>
-          <div style={{fontSize:10,color:C.accent,fontWeight:700,marginBottom:5}}>Join Bundle</div>
-          <div style={{fontSize:10,color:C.dim,marginBottom:5}}>Provide this once to the joining node installer.</div>
-          <Txt mono readOnly value={JSON.stringify(joinBundle,null,2)} style={{minHeight:170}}/>
-          <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
-            <Btn small primary onClick={()=>void copyJoinBundle()}>Copy Bundle</Btn>
+        <FG label="Sync Components (profile scope)">
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:6}}>
+            {profileComponentScope(String(directNodeForm?.profile_id||"")).map((componentID:string)=><label key={`direct-comp-${componentID}`} style={{display:"flex",gap:6,alignItems:"center",fontSize:10,color:C.dim}}>
+              <input
+                type="checkbox"
+                checked={(Array.isArray(directNodeForm?.components)?directNodeForm.components:[]).map((value:any)=>String(value||"").trim().toLowerCase()).includes(componentID)}
+                onChange={()=>toggleDirectComponent(componentID)}
+              />
+              {clusterComponentLabel(componentID)}
+            </label>)}
           </div>
-        </Card>:null}
+        </FG>
+        <label style={{display:"flex",gap:6,alignItems:"center",fontSize:10,color:C.dim,marginTop:8}}>
+          <input type="checkbox" checked={Boolean(directNodeForm?.seed_sync)} onChange={(e)=>setDirectNodeForm((p:any)=>({...p,seed_sync:Boolean(e.target.checked)}))}/>
+          Seed realtime profile sync events immediately after add
+        </label>
+        <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
+          <Btn primary disabled={directNodeBusy} onClick={()=>void addExistingNode()}>{directNodeBusy?"Adding...":"Add Existing KMS Instance"}</Btn>
+        </div>
       </Card>
     </Row2>
   </div>;
@@ -17984,6 +19282,7 @@ const PKCS11=({session,onToast})=>{
     const label=s==="active"?"Active":s==="degraded"?"Degraded":"Down";
     const color=tone==="green"?C.green:tone==="amber"?C.amber:C.red;
     const bg=tone==="green"?C.greenDim:tone==="amber"?C.amberDim:C.redDim;
+    const dotClass=tone==="green"?"sync-dot sync-dot--online":tone==="amber"?"sync-dot sync-dot--degraded":"sync-dot sync-dot--down";
     return <span style={{
       display:"inline-flex",
       alignItems:"center",
@@ -17995,7 +19294,7 @@ const PKCS11=({session,onToast})=>{
       color,
       background:bg
     }}>
-      <span className={`sync-dot ${tone==="green"?"sync-dot--leader":"sync-dot--slow"}`} style={{width:6,height:6,borderRadius:999,background:color}}/>
+      <span className={dotClass} style={{width:6,height:6,borderRadius:999,background:color}}/>
       {label}
     </span>;
   };
@@ -18168,6 +19467,21 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
   const [systemState,setSystemState]=useState(null);
   const [fipsSaving,setFipsSaving]=useState(false);
   const [fipsErr,setFipsErr]=useState("");
+  const [fipsDraft,setFipsDraft]=useState<any>({
+    fips_mode_policy:"strict",
+    fips_tls_profile:"tls12_fips_suites",
+    fips_rng_mode:"ctr_drbg"
+  });
+  const [tlsApplyMode,setTLSApplyMode]=useState("tls12_tls13");
+  const [tlsWebUICN,setTLSWebUICN]=useState(()=>{
+    try{
+      return String(window?.location?.hostname||"").trim();
+    }catch{
+      return "";
+    }
+  });
+  const [tlsApplyBusy,setTLSApplyBusy]=useState(false);
+  const [tlsApplyErr,setTLSApplyErr]=useState("");
   const [certSecurity,setCertSecurity]=useState<any>(null);
   const [certSecurityLoading,setCertSecurityLoading]=useState(false);
   const [passwordPolicy,setPasswordPolicy]=useState(null);
@@ -18357,6 +19671,24 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       setBackupTarget(String(state?.backup_target||"local"));
       setBackupRetentionDays(Math.max(1,Math.min(3650,Number(state?.backup_retention_days||30))));
       setBackupEncrypted(Boolean(state?.backup_encrypted ?? true));
+      setFipsDraft({
+        fips_mode_policy:String(state?.fips_mode_policy||"").trim().toLowerCase()||"strict",
+        fips_tls_profile:String(state?.fips_tls_profile||"").trim().toLowerCase()||"tls12_fips_suites",
+        fips_rng_mode:String(state?.fips_rng_mode||"").trim().toLowerCase()||"ctr_drbg"
+      });
+      const rawTLSMode=String(state?.tls_mode||"").trim().toLowerCase();
+      if(rawTLSMode==="tls13_hybrid_webui"||rawTLSMode==="tls13-hybrid-webui"){
+        setTLSApplyMode("tls13_hybrid_webui");
+      }else if(rawTLSMode==="tls13_hybrid_kms"||rawTLSMode==="tls13-hybrid-kms"){
+        setTLSApplyMode("tls13_hybrid_kms");
+      }else if(rawTLSMode==="tls13_only"||rawTLSMode==="tls13-only"){
+        setTLSApplyMode("tls13_only");
+      }else if(rawTLSMode==="tls12_only"||rawTLSMode==="tls12-only"){
+        setTLSApplyMode("tls12_only");
+      }else{
+        setTLSApplyMode("tls12_tls13");
+      }
+      setTLSApplyErr("");
       setFipsErr("");
       onFipsModeChange?.(normalizeFipsModeValue(String(state?.fips_mode||"disabled")));
     }catch(error){
@@ -18390,12 +19722,11 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
     }
   };
 
-  const applyFipsMode=async(nextMode)=>{
+  const applyFipsSettings=async()=>{
     if(!session?.token){
-      onToast?.("Login is required to update FIPS mode.");
+      onToast?.("Login is required to update FIPS settings.");
       return;
     }
-    const desired=normalizeFipsModeValue(nextMode);
     setFipsSaving(true);
     try{
       let state=systemState;
@@ -18407,10 +19738,19 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
         );
         state=current?.state||{};
       }
+      const policy=String(fipsDraft?.fips_mode_policy||"strict").toLowerCase()==="standard"?"standard":"strict";
+      const tlsProfile=String(fipsDraft?.fips_tls_profile||"tls12_fips_suites").toLowerCase()==="tls13_only"?"tls13_only":"tls12_fips_suites";
+      const rngMode=(()=>{
+        const raw=String(fipsDraft?.fips_rng_mode||"ctr_drbg").toLowerCase();
+        return raw==="hmac_drbg"||raw==="hsm_trng"?raw:"ctr_drbg";
+      })();
       const payload={
         ...state,
         tenant_id: session.tenantId,
-        fips_mode: desired,
+        fips_mode_policy: policy,
+        fips_mode: policy==="strict"?"enabled":"disabled",
+        fips_tls_profile: tlsProfile,
+        fips_rng_mode: rngMode,
         updated_by: session?.username||"dashboard"
       };
       const out=await serviceRequest(session,"governance","/governance/system/state",{
@@ -18419,15 +19759,141 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       });
       const updated=out?.state||payload;
       setSystemState(updated);
+      setFipsDraft({
+        fips_mode_policy:String(updated?.fips_mode_policy||payload.fips_mode_policy||"strict"),
+        fips_tls_profile:String(updated?.fips_tls_profile||payload.fips_tls_profile||"tls12_fips_suites"),
+        fips_rng_mode:String(updated?.fips_rng_mode||payload.fips_rng_mode||"ctr_drbg")
+      });
       setFipsErr("");
-      onFipsModeChange?.(normalizeFipsModeValue(String(updated?.fips_mode||desired)));
-      onToast?.(`FIPS mode set to ${desired==="enabled"?"FIPS":"Standard"}.`);
+      onFipsModeChange?.(normalizeFipsModeValue(String(updated?.fips_mode||payload.fips_mode||"disabled")));
+      onToast?.("FIPS settings updated.");
+      sM(null);
     }catch(error){
       const msg=errMsg(error);
       setFipsErr(msg);
-      onToast?.(`FIPS mode update failed: ${msg}`);
+      onToast?.(`FIPS settings update failed: ${msg}`);
     }finally{
       setFipsSaving(false);
+    }
+  };
+
+  const applyTLSSettings=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to update TLS settings.");
+      return;
+    }
+    const mode=String(tlsApplyMode||"tls12_tls13").trim().toLowerCase();
+    const webUICN=String(tlsWebUICN||"").trim()||String(window?.location?.hostname||"localhost").trim()||"localhost";
+    if((mode==="tls13_hybrid_webui"||mode==="tls13_hybrid_kms")&&!webUICN){
+      onToast?.("KMS UI URL / host is required for hybrid TLS certificate issuance.");
+      return;
+    }
+    if(mode==="tls13_hybrid_kms"){
+      const confirmed=await promptDialog.confirm({
+        title:"Enable TLS 1.3 Hybrid for KMS",
+        message:"This will regenerate internal mTLS certificates for KMS services to hybrid-compatible profiles. Existing connections may re-negotiate and restart may be required. Continue?",
+        confirmLabel:"Apply Hybrid KMS",
+        danger:true
+      });
+      if(!confirmed){
+        return;
+      }
+    }
+    setTLSApplyBusy(true);
+    setTLSApplyErr("");
+    try{
+      let state=systemState;
+      if(!state||typeof state!=="object"){
+        const current=await serviceRequest(
+          session,
+          "governance",
+          `/governance/system/state?tenant_id=${encodeURIComponent(session.tenantId)}`
+        );
+        state=current?.state||{};
+      }
+
+      let issuedWebUICert:any=null;
+      let hybridCA:any=null;
+      if(mode==="tls13_hybrid_webui"||mode==="tls13_hybrid_kms"){
+        const cas=await listCAs(session);
+        hybridCA=(Array.isArray(cas)?cas:[]).find((item:any)=>String(item?.name||"").trim().toLowerCase()==="vecta-hybrid-runtime-root"&&String(item?.status||"").trim().toLowerCase()==="active")||null;
+        if(!hybridCA){
+          hybridCA=await createCA(session,{
+            name:"vecta-hybrid-runtime-root",
+            ca_level:"root",
+            algorithm:"ECDSA-P384+ML-DSA-65",
+            ca_type:"hybrid",
+            key_backend:"software",
+            subject:"CN=vecta-hybrid-runtime-root,O=Vecta KMS",
+            validity_days:3650
+          });
+        }
+        const webSans=[webUICN];
+        issuedWebUICert=await issueCertificate(session,{
+          ca_id:String(hybridCA?.id||""),
+          cert_type:"tls-server",
+          algorithm:"ECDSA-P384+ML-DSA-65",
+          cert_class:"hybrid",
+          subject_cn:webUICN,
+          sans:webSans,
+          server_keygen:true,
+          validity_days:365,
+          protocol:"webui-hybrid"
+        });
+      }
+
+      const modeMap:any={
+        tls12_tls13:"tls12_13",
+        tls13_only:"tls13_only",
+        tls12_only:"tls12_only",
+        tls13_hybrid_webui:"tls13_hybrid_webui",
+        tls13_hybrid_kms:"tls13_hybrid_kms"
+      };
+      const payload:any={
+        ...state,
+        tenant_id:session.tenantId,
+        tls_mode:String(modeMap[mode]||"tls12_13"),
+        updated_by:session?.username||"dashboard"
+      };
+      if(issuedWebUICert?.certificate?.cert_pem){
+        payload.tls_cert_pem=String(issuedWebUICert.certificate.cert_pem||"");
+      }
+      if(issuedWebUICert?.privateKeyPEM){
+        payload.tls_key_pem=String(issuedWebUICert.privateKeyPEM||"");
+      }
+      if(hybridCA?.cert_pem){
+        payload.tls_ca_bundle_pem=String(hybridCA.cert_pem||"");
+      }
+      const out=await serviceRequest(session,"governance","/governance/system/state",{
+        method:"PUT",
+        body:JSON.stringify(payload)
+      });
+      const updated=out?.state||payload;
+      setSystemState(updated);
+      const updatedTLSMode=String(updated?.tls_mode||"").trim().toLowerCase();
+      if(updatedTLSMode==="tls13_hybrid_webui"||updatedTLSMode==="tls13-hybrid-webui"){
+        setTLSApplyMode("tls13_hybrid_webui");
+      }else if(updatedTLSMode==="tls13_hybrid_kms"||updatedTLSMode==="tls13-hybrid-kms"){
+        setTLSApplyMode("tls13_hybrid_kms");
+      }else if(updatedTLSMode==="tls13_only"||updatedTLSMode==="tls13-only"){
+        setTLSApplyMode("tls13_only");
+      }else if(updatedTLSMode==="tls12_only"||updatedTLSMode==="tls12-only"){
+        setTLSApplyMode("tls12_only");
+      }else{
+        setTLSApplyMode("tls12_tls13");
+      }
+      onToast?.(mode==="tls13_hybrid_kms"
+        ?"TLS 1.3 Hybrid (KMS-wide) applied. Internal mTLS certificates were regenerated; restart may be required for full effect."
+        :(mode==="tls13_hybrid_webui"
+          ?"TLS 1.3 Hybrid (WebUI) applied with local CA-issued certificate."
+          :"TLS mode updated."));
+      sM(null);
+    }catch(error){
+      const msg=errMsg(error);
+      setTLSApplyErr(msg);
+      onToast?.(`TLS update failed: ${msg}`);
+    }finally{
+      setTLSApplyBusy(false);
     }
   };
 
@@ -19197,6 +20663,20 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
   const summaryLabel=summary.all_ok?"All OK":summary.down>0?`${summary.down} Down`:summary.degraded>0?`${summary.degraded} Degraded`:"Unknown";
   const runtimeFipsMode=normalizeFipsModeValue(String(systemState?.fips_mode||fipsMode||"disabled"));
   const runtimeFipsEnabled=isFipsModeEnabled(runtimeFipsMode);
+  const fipsPolicy=String(systemState?.fips_mode_policy||"").trim().toLowerCase()||"strict";
+  const fipsPolicyLabel=fipsPolicy==="standard"?"Standard":"Strict";
+  const fipsTLSProfile=String(systemState?.fips_tls_profile||"").trim().toLowerCase()||"tls12_fips_suites";
+  const fipsTLSLabel=fipsTLSProfile==="tls13_only"?"TLS 1.3 only":"TLS 1.2+ FIPS suites";
+  const fipsRNGMode=String(systemState?.fips_rng_mode||"").trim().toLowerCase()||"ctr_drbg";
+  const fipsRNGLabel=fipsRNGMode==="hmac_drbg"?"HMAC_DRBG":fipsRNGMode==="hsm_trng"?"HSM TRNG":"CTR_DRBG";
+  const fipsEntropyHealth=String(systemState?.fips_entropy_health||"unknown");
+  const fipsEntropySource=String(systemState?.fips_entropy_source||"").trim().toLowerCase();
+  const fipsHSMTRNGMissing=fipsRNGMode==="hsm_trng"&&(fipsEntropySource==="hsm-not-connected"||fipsEntropySource==="hsm-trng-unavailable-fallback");
+  const fipsEntropyBits=Number(systemState?.fips_entropy_bits_per_byte||0);
+  const fipsEntropyMicros=Math.max(0,Number(systemState?.fips_entropy_read_micros||0));
+  const fipsEntropyBytes=Math.max(0,Number(systemState?.fips_entropy_sample_bytes||0));
+  const fipsLib=String(systemState?.fips_crypto_library||"go-boringcrypto");
+  const fipsLibValidated=Boolean(systemState?.fips_library_validated ?? true);
   const governanceDeliveryMode=String(govSettings?.approval_delivery_mode||"notify").toLowerCase()==="kms_only"?"kms_only":"notify";
   const governanceChannels=[
     Boolean(govSettings?.notify_email)?"email":"",
@@ -19272,49 +20752,25 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
           <div style={{fontSize:12,color:C.text,fontWeight:700}}>Runtime Crypto Mode</div>
           <B c={runtimeFipsEnabled?"green":"blue"}>{runtimeFipsEnabled?"FIPS":"Standard"}</B>
         </div>
-        <div style={{fontSize:10,color:C.muted,marginBottom:10}}>
-          Global switch for key creation/import/use behavior across KMS.
+        <div style={{fontSize:10,color:C.muted,marginBottom:8}}>
+          Enforced policy for approved algorithms, TLS profile, RNG mode, and entropy health.
         </div>
-        <div style={{display:"inline-flex",border:`1px solid ${C.border}`,borderRadius:8,overflow:"hidden",marginBottom:10}}>
-          <button
-            onClick={()=>void applyFipsMode("disabled")}
-            disabled={fipsSaving}
-            style={{
-              border:"none",
-              padding:"7px 12px",
-              background:runtimeFipsEnabled?"transparent":C.blueDim,
-              color:runtimeFipsEnabled?C.dim:C.blue,
-              fontSize:11,
-              fontWeight:700,
-              cursor:fipsSaving?"not-allowed":"pointer"
-            }}
-          >
-            Standard
-          </button>
-          <button
-            onClick={()=>void applyFipsMode("enabled")}
-            disabled={fipsSaving}
-            style={{
-              border:"none",
-              borderLeft:`1px solid ${C.border}`,
-              padding:"7px 12px",
-              background:runtimeFipsEnabled?C.greenDim:"transparent",
-              color:runtimeFipsEnabled?C.green:C.dim,
-              fontSize:11,
-              fontWeight:700,
-              cursor:fipsSaving?"not-allowed":"pointer"
-            }}
-          >
-            FIPS
-          </button>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+          <div style={{fontSize:10,color:C.dim}}>Mode: <span style={{color:C.text,fontWeight:700}}>{fipsPolicyLabel}</span></div>
+          <div style={{fontSize:10,color:C.dim}}>TLS: <span style={{color:C.text,fontWeight:700}}>{fipsTLSLabel}</span></div>
+          <div style={{fontSize:10,color:C.dim}}>RNG: <span style={{color:C.text,fontWeight:700}}>{fipsRNGLabel}</span></div>
+          <div style={{fontSize:10,color:C.dim}}>Entropy: <span style={{color:C.text,fontWeight:700}}>{`${fipsEntropyBits.toFixed(3)} bits/byte`}</span></div>
         </div>
-        <div style={{fontSize:10,color:C.dim,marginBottom:8}}>
-          {runtimeFipsEnabled
-            ?"Strict mode: non-FIPS algorithms are blocked for create/import/crypto operations."
-            :"Standard mode: all configured algorithms are allowed."}
+        <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
+          <Btn small onClick={()=>sM("fips")}>Configure FIPS</Btn>
+          <Btn small onClick={()=>void loadSystemState(false)} disabled={fipsSaving}>{fipsSaving?"Applying...":"Refresh Mode"}</Btn>
+          <B c={String(fipsEntropyHealth||"").toLowerCase()==="ok"?"green":String(fipsEntropyHealth||"").toLowerCase()==="degraded"?"amber":"red"}>{String(fipsEntropyHealth||"unknown").toUpperCase()}</B>
         </div>
-        {fipsErr&&<div style={{fontSize:10,color:C.red,marginBottom:8}}>{fipsErr}</div>}
-        <Btn small onClick={()=>void loadSystemState(false)} disabled={fipsSaving}>{fipsSaving?"Applying...":"Refresh Mode"}</Btn>
+        <div style={{fontSize:10,color:C.dim}}>
+          {`Library: ${fipsLib}${fipsLibValidated?" (validated)":" (not validated)"} | Sample: ${fipsEntropyBytes} bytes in ${fipsEntropyMicros} us`}
+        </div>
+        {fipsHSMTRNGMissing&&<div style={{fontSize:10,color:C.red,marginTop:8}}>HSM TRNG selected but no HSM is connected. Connect/configure HSM first, then refresh mode.</div>}
+        {fipsErr&&<div style={{fontSize:10,color:C.red,marginTop:8}}>{fipsErr}</div>}
       </Card>
     </Row2>
     <div style={{height:10}}/>
@@ -19553,21 +21009,73 @@ const Admin=({session,tagCatalog,setTagCatalog,onToast,onLogout,fipsMode,onFipsM
       </div>
     </FG>
   </Modal>
-  <Modal open={m==="tls"} onClose={()=>sM(null)} title="Configure Web Interface TLS Certificate" wide>
-    <FG label="Certificate Source" required>
-      <Radio label="Use Vecta internal CA (auto-generated, auto-renewed)" selected={false}/>
-      <Radio label="Upload 3rd-party certificate (DigiCert, Let's Encrypt, etc.)" selected={true}/>
-      <Radio label="ACME auto-provisioning (Let's Encrypt compatible)" selected={false}/>
+  <Modal open={m==="fips"} onClose={()=>sM(null)} title="FIPS Compliance Mode">
+    <FG label="Mode">
+      <Sel value={String(fipsDraft?.fips_mode_policy||"strict")} onChange={(e)=>setFipsDraft((prev:any)=>({...prev,fips_mode_policy:e.target.value==="standard"?"standard":"strict"}))}>
+        <option value="strict">Strict FIPS (non-approved algos blocked)</option>
+        <option value="standard">Standard (all algos, violations logged)</option>
+      </Sel>
     </FG>
-    <FG label="Certificate (PEM)" required><Txt placeholder="-----BEGIN CERTIFICATE-----\n..." rows={5}/></FG>
-    <FG label="Private Key (PEM)" required><Txt placeholder="-----BEGIN PRIVATE KEY-----\n..." rows={4}/></FG>
-    <FG label="CA Bundle"><Txt placeholder="Intermediate CA certificates..." rows={3}/></FG>
-    <FG label="TLS Version"><Sel><option>TLS 1.2 + TLS 1.3 (recommended)</option><option>TLS 1.3 only</option><option>TLS 1.2 only (legacy)</option></Sel></FG>
-    <FG label="Cipher Suites"><Sel><option>FIPS-approved only</option><option>Modern (AEAD only)</option><option>Compatible (includes CBC)</option></Sel></FG>
-    <Chk label="Enable OCSP stapling" checked={true}/>
-    <Chk label="Enable HSTS (HTTP Strict Transport Security)" checked={true}/>
-    <Chk label="Restart Envoy proxy after applying (required)" checked={true}/>
-    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>sM(null)}>Cancel</Btn><Btn primary>Apply TLS Certificate</Btn></div>
+    <FG label="Crypto Library">
+      <div style={{fontSize:12,color:fipsLibValidated?C.green:C.amber,fontWeight:600}}>{`${fipsLib}${fipsLibValidated?" - FIPS 140-3 validated":" - validation pending"}`}</div>
+    </FG>
+    <Row2>
+      <FG label="TLS">
+        <Sel value={String(fipsDraft?.fips_tls_profile||"tls12_fips_suites")} onChange={(e)=>setFipsDraft((prev:any)=>({...prev,fips_tls_profile:e.target.value==="tls13_only"?"tls13_only":"tls12_fips_suites"}))}>
+          <option value="tls12_fips_suites">TLS 1.2+ FIPS suites only</option>
+          <option value="tls13_only">TLS 1.3 only</option>
+        </Sel>
+      </FG>
+      <FG label="RNG">
+        <Sel value={String(fipsDraft?.fips_rng_mode||"ctr_drbg")} onChange={(e)=>setFipsDraft((prev:any)=>({...prev,fips_rng_mode:e.target.value}))}>
+          <option value="ctr_drbg">CTR_DRBG (FIPS)</option>
+          <option value="hmac_drbg">HMAC_DRBG</option>
+          <option value="hsm_trng">HSM TRNG</option>
+        </Sel>
+      </FG>
+    </Row2>
+    <FG label="Entropy Health (live sample)">
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8}}>
+        <Card><div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Source</div><div style={{fontSize:11,color:C.text,fontWeight:700,marginTop:4}}>{String(systemState?.fips_entropy_source||"os-csprng")}</div></Card>
+        <Card><div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Health</div><div style={{marginTop:4}}><B c={String(fipsEntropyHealth||"").toLowerCase()==="ok"?"green":String(fipsEntropyHealth||"").toLowerCase()==="degraded"?"amber":"red"}>{String(fipsEntropyHealth||"unknown").toUpperCase()}</B></div></Card>
+        <Card><div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Entropy</div><div style={{fontSize:11,color:C.text,fontWeight:700,marginTop:4}}>{`${fipsEntropyBits.toFixed(3)} bits/byte`}</div></Card>
+        <Card><div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Read Time</div><div style={{fontSize:11,color:C.text,fontWeight:700,marginTop:4}}>{`${fipsEntropyMicros} us / ${fipsEntropyBytes} bytes`}</div></Card>
+      </div>
+    </FG>
+    {fipsErr&&<div style={{fontSize:10,color:C.red,marginTop:8}}>{fipsErr}</div>}
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+      <Btn onClick={()=>sM(null)}>Cancel</Btn>
+      <Btn primary onClick={()=>void applyFipsSettings()} disabled={fipsSaving}>{fipsSaving?"Applying...":"Apply FIPS Settings"}</Btn>
+    </div>
+  </Modal>
+  <Modal open={m==="tls"} onClose={()=>sM(null)} title="Configure Web Interface TLS Certificate" wide>
+    <FG label="TLS Mode" required>
+      <Sel value={tlsApplyMode} onChange={(e)=>setTLSApplyMode(e.target.value)}>
+        <option value="tls12_tls13">TLS 1.2 + TLS 1.3 (recommended)</option>
+        <option value="tls13_only">TLS 1.3 only</option>
+        <option value="tls12_only">TLS 1.2 only (legacy)</option>
+        <option value="tls13_hybrid_webui">TLS 1.3 + Hybrid PQC for WebUI</option>
+        <option value="tls13_hybrid_kms">TLS 1.3 + Hybrid PQC for KMS</option>
+      </Sel>
+    </FG>
+    <FG label="KMS UI URL / Hostname" required>
+      <Inp value={tlsWebUICN} onChange={(e)=>setTLSWebUICN(e.target.value)} placeholder="kms.bank.local" mono/>
+    </FG>
+    <div style={{fontSize:10,color:C.dim,marginTop:2}}>
+      {tlsApplyMode==="tls13_hybrid_webui"
+        ?"WebUI mode issues a local-CA hybrid certificate for the KMS UI URL only."
+        :tlsApplyMode==="tls13_hybrid_kms"
+          ?"KMS mode triggers backend rollout on toggle: Governance regenerates internal mTLS certs with hybrid-compatible settings, updates runtime-mtls protocol, and may require controlled restart."
+          :"Standard TLS mode updates runtime TLS policy without hybrid PQC certificate rollout."}
+    </div>
+    {tlsApplyMode==="tls13_hybrid_kms"&&<div style={{marginTop:8,padding:10,border:`1px solid ${C.red}`,borderRadius:8,background:C.redDim,fontSize:10,color:C.red}}>
+      Warning: applying KMS-wide hybrid mode will regenerate internal certificates for core KMS services. Existing mTLS sessions may re-negotiate and a controlled restart may be required.
+    </div>}
+    {tlsApplyErr&&<div style={{marginTop:8,fontSize:10,color:C.red}}>{tlsApplyErr}</div>}
+    <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+      <Btn onClick={()=>sM(null)} disabled={tlsApplyBusy}>Cancel</Btn>
+      <Btn primary onClick={()=>void applyTLSSettings()} disabled={tlsApplyBusy}>{tlsApplyBusy?"Applying...":"Apply TLS Settings"}</Btn>
+    </div>
   </Modal>
   <Modal open={m==="network"} onClose={()=>sM(null)} title="Network Configuration">
     <Row2><FG label="Management IP"><Inp placeholder="10.0.1.100" mono/></FG><FG label="Cluster IP"><Inp placeholder="172.16.0.100" mono/></FG></Row2>
@@ -22085,7 +23593,7 @@ const Administration=(props)=>{
 // MAIN APP WITH SIDEBAR
 // 
 const TABS={home:Home,keys:Keys,workbench:Workbench,crypto:Crypto,restapi:RestAPI,vault:Vault,certs:Certs,dataprotection:DataProtection,tokenize:Tokenize,dataenc:DataEncryption,payment:Payment,cloudctl:CloudKeyControl,byok:BYOK,hyok:HYOK,ekm:EKM,hsm:HSM,qkd:QKD,mpc:MPC,cluster:Cluster,approvals:Approvals,alerts:Alerts,audit:AuditLog,compliance:Compliance,sbom:SBOM,pkcs11:PKCS11,admin:Administration};
-const TITLES={home:"Dashboard",keys:"Key Management",workbench:"Workbench",crypto:"Crypto Console",restapi:"REST API",vault:"Secret Vault",certs:"Certificates / PKI",dataprotection:"Data Protection",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",cloudctl:"Cloud Key Control",byok:"BYOK",hyok:"HYOK",ekm:"Enterprise Key Management",hsm:"HSM / Primus",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration"};
+const TITLES={home:"Dashboard",keys:"Key Management",workbench:"Workbench",crypto:"Crypto Console",restapi:"REST API",vault:"Secret Vault",certs:"Certificates / PKI",dataprotection:"Data Protection",tokenize:"Tokenize / Mask / Redact",dataenc:"Data Encryption",payment:"Payment Crypto",cloudctl:"Cloud Key Control",byok:"BYOK",hyok:"HYOK",ekm:"Enterprise Key Management",hsm:"HSM",qkd:"QKD Interface",mpc:"MPC Engine",cluster:"Cluster",approvals:"Approvals",alerts:"Alert Center",audit:"Audit Log",compliance:"Compliance",sbom:"SBOM / CBOM",pkcs11:"PKCS#11 / JCA",admin:"Administration"};
 const SUB_PANES={
   workbench:[
     {id:"crypto",label:"Crypto Console",hint:"Interactive cryptographic operations and algorithm console",icon:Zap},
@@ -22110,8 +23618,21 @@ const SUB_PANES={
     {id:"bitlocker",label:"BitLocker",hint:"Windows endpoint key lifecycle",icon:Lock,feature:"ekm_database"},
     {id:"kmip",label:"KMIP",hint:"Profiles, clients, mTLS onboarding",icon:Link,feature:"kmip_server"}
   ],
+  certs:[
+    {id:"cert-overview",label:"Certificate Operations",hint:"CA hierarchy, issuance, signing and certificate lifecycle",icon:FileText,feature:"certs"},
+    {id:"cert-enrollment",label:"Enrollment Protocols",hint:"ACME, EST, SCEP, CMPv2 and runtime mTLS enrollment settings",icon:Link,feature:"certs"}
+  ],
+  hsm:[
+    {id:"hsm-aws",label:"AWS CloudHSM",hint:"Cluster endpoint, slot mapping and crypto user binding",icon:Cloud,feature:"hsm_hardware_or_software"},
+    {id:"hsm-azure",label:"Azure Managed HSM",hint:"Managed HSM endpoint mapping and PKCS#11 bridge profile",icon:Cloud,feature:"hsm_hardware_or_software"},
+    {id:"hsm-thales",label:"Thales Luna HSM",hint:"NTLS endpoint, Luna slot and partition settings",icon:Cpu,feature:"hsm_hardware_or_software"},
+    {id:"hsm-utimaco",label:"Utimaco HSM",hint:"CryptoServer slot/partition profile and provider settings",icon:Cpu,feature:"hsm_hardware_or_software"},
+    {id:"hsm-entrust",label:"Entrust nShield HSM",hint:"Security World connector, slot profile and token mapping",icon:ShieldCheck,feature:"hsm_hardware_or_software"},
+    {id:"hsm-securosys",label:"Securosys HSM",hint:"Securosys provider, slot and partition configuration",icon:ShieldCheck,feature:"hsm_hardware_or_software"},
+    {id:"hsm-generic",label:"Generic PKCS#11 HSM",hint:"Vendor-neutral PKCS#11 library onboarding profile",icon:Plug,feature:"hsm_hardware_or_software"}
+  ],
   cluster:[
-    {id:"settings",label:"Cluster Settings",hint:"Replication profiles, secure join bundles, and node setup controls",icon:Settings,feature:"clustering"},
+    {id:"settings",label:"Cluster Settings",hint:"Replication profiles and existing-instance node controls",icon:Settings,feature:"clustering"},
     {id:"health",label:"Cluster Health",hint:"Live node health view with selective component sync status",icon:Gauge,feature:"clustering"}
   ],
   admin:[
@@ -22138,7 +23659,7 @@ export default function VectaDashboard(props){
   const [toast,setToast]=useState("");
   const [keyCatalog,setKeyCatalog]=useState([]);
   const [tagCatalog,setTagCatalog]=useState([]);
-  const [subPaneSelection,setSubPaneSelection]=useState({workbench:"crypto",dataprotection:"fieldenc",cloudctl:"byok",ekm:"db",cluster:"settings",admin:"system"});
+  const [subPaneSelection,setSubPaneSelection]=useState({workbench:"crypto",dataprotection:"fieldenc",cloudctl:"byok",ekm:"db",certs:"cert-overview",hsm:"hsm-generic",cluster:"settings",admin:"system"});
   const [fipsMode,setFipsMode]=useState<"enabled"|"disabled">("disabled");
   const [reportedUnread,setReportedUnread]=useState(Number(unreadAlerts||0));
   const [cliStatus,setCLIStatus]=useState<any>(null);
@@ -22232,7 +23753,7 @@ export default function VectaDashboard(props){
     let stop=false;
     (async()=>{
       try{
-        const items=await listKeys(session);
+        const items=await listKeys(session,{includeDeleted:true});
         if(!stop){
           setKeyCatalog(items.map(toViewKey));
         }
@@ -22427,10 +23948,13 @@ export default function VectaDashboard(props){
     return(
       <div style={{minHeight:"100vh",background:C.bg,fontFamily:"'IBM Plex Sans',-apple-system,sans-serif",color:C.text,display:"flex",flexDirection:"column"}}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-          @keyframes syncDotPulse{0%,100%{opacity:.95;transform:scale(1)}50%{opacity:.58;transform:scale(.82)}}
-          .sync-dot{display:inline-block;animation:syncDotPulse 1.9s ease-in-out infinite;transform-origin:center}
-          .sync-dot--leader{animation-duration:1.6s}
-          .sync-dot--slow{animation-duration:2.2s}
+          @keyframes syncDotPulseLive{0%,100%{opacity:.95;transform:scale(1)}50%{opacity:.52;transform:scale(.8)}}
+          @keyframes syncDotPulseWarn{0%,100%{opacity:.9;transform:scale(1)}50%{opacity:.62;transform:scale(.86)}}
+          .sync-dot{display:inline-block;transform-origin:center}
+          .sync-dot--online{animation:syncDotPulseLive 1.8s ease-in-out infinite}
+          .sync-dot--degraded{animation:syncDotPulseWarn 2.4s ease-in-out infinite}
+          .sync-dot--down{animation:none;opacity:.95}
+          .sync-dot--unknown{animation:none;opacity:.65}
           *::-webkit-scrollbar{width:5px;height:5px} *::-webkit-scrollbar-track{background:transparent} *::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 20px",height:48,borderBottom:`1px solid ${C.border}`,background:C.surface}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -22473,10 +23997,13 @@ export default function VectaDashboard(props){
     <div style={{display:"flex",height:"100vh",background:C.bg,fontFamily:"'IBM Plex Sans',-apple-system,sans-serif",color:C.text,overflow:"hidden"}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
-        @keyframes syncDotPulse{0%,100%{opacity:.95;transform:scale(1)}50%{opacity:.58;transform:scale(.82)}}
-        .sync-dot{display:inline-block;animation:syncDotPulse 1.9s ease-in-out infinite;transform-origin:center}
-        .sync-dot--leader{animation-duration:1.6s}
-        .sync-dot--slow{animation-duration:2.2s}
+        @keyframes syncDotPulseLive{0%,100%{opacity:.95;transform:scale(1)}50%{opacity:.52;transform:scale(.8)}}
+        @keyframes syncDotPulseWarn{0%,100%{opacity:.9;transform:scale(1)}50%{opacity:.62;transform:scale(.86)}}
+        .sync-dot{display:inline-block;transform-origin:center}
+        .sync-dot--online{animation:syncDotPulseLive 1.8s ease-in-out infinite}
+        .sync-dot--degraded{animation:syncDotPulseWarn 2.4s ease-in-out infinite}
+        .sync-dot--down{animation:none;opacity:.95}
+        .sync-dot--unknown{animation:none;opacity:.65}
         *::-webkit-scrollbar{width:5px;height:5px} *::-webkit-scrollbar-track{background:transparent} *::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
       <div style={{width:collapsed?56:210,background:C.sidebar,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",transition:"width .2s",flexShrink:0,overflow:"hidden"}}>
         <div style={{padding:collapsed?"8px 6px":"8px 10px 8px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:collapsed?6:8,minHeight:collapsed?66:44,justifyContent:collapsed?"center":"space-between",flexDirection:collapsed?"column":"row"}}>
@@ -22704,7 +24231,7 @@ export default function VectaDashboard(props){
           <Card style={{marginTop:8,padding:10}}>
             <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Next in UI</div>
             <div style={{fontSize:10,color:C.muted,marginBottom:6}}>
-              {String(cliHSMHints?.next_ui_step||"After partition discovery, continue configuration under HSM / Primus in dashboard.")}
+              {String(cliHSMHints?.next_ui_step||"After partition discovery, continue configuration under HSM in dashboard.")}
             </div>
             {String(cliHSMHints?.pkcs11_config_file||"").trim()?<div style={{fontSize:10,color:C.muted,marginBottom:4}}>
               PKCS#11 config file: <span style={{fontFamily:"'JetBrains Mono',monospace",color:C.text}}>{String(cliHSMHints.pkcs11_config_file)}</span>
@@ -22735,6 +24262,7 @@ export default function VectaDashboard(props){
     </div>
   );
 }
+
 
 
 

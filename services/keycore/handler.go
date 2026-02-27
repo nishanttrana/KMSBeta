@@ -260,7 +260,9 @@ func (h *Handler) handleListKeys(w http.ResponseWriter, r *http.Request) {
 	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-	keys, err := h.svc.ListKeys(r.Context(), tenantID, limit, offset)
+	rawIncludeDeleted := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("include_deleted")))
+	includeDeleted := rawIncludeDeleted == "1" || rawIncludeDeleted == "true" || rawIncludeDeleted == "yes" || rawIncludeDeleted == "on"
+	keys, err := h.svc.ListKeys(r.Context(), tenantID, limit, offset, includeDeleted)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "list_failed", err.Error(), reqID, tenantID)
 		return

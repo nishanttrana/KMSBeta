@@ -127,12 +127,18 @@ func TestStoreReserveOTSAndCertificateLifecycle(t *testing.T) {
 	if err := store.DeleteCertificate(ctx, "t2", "c1"); err != nil {
 		t.Fatalf("delete cert: %v", err)
 	}
-	afterDelete, err := store.GetCertificate(ctx, "t2", "c1")
-	if err != nil {
-		t.Fatalf("get cert after delete: %v", err)
+	if _, err := store.GetCertificate(ctx, "t2", "c1"); err == nil {
+		t.Fatalf("expected not found after hard delete")
 	}
-	if strings.ToLower(afterDelete.Status) != CertStatusDeleted {
-		t.Fatalf("expected deleted status, got %+v", afterDelete)
+	deletedRefs, err := store.ListCertificates(ctx, "t2", CertStatusDeleted, "", 50, 0)
+	if err != nil {
+		t.Fatalf("list deleted refs: %v", err)
+	}
+	if len(deletedRefs) != 1 || deletedRefs[0].ID != "c1" {
+		t.Fatalf("expected one deleted reference, got %+v", deletedRefs)
+	}
+	if deletedRefs[0].CertPEM != "" || !strings.EqualFold(deletedRefs[0].Status, CertStatusDeleted) {
+		t.Fatalf("expected reference-only deleted row, got %+v", deletedRefs[0])
 	}
 }
 

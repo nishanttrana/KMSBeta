@@ -26,11 +26,14 @@ type Store interface {
 	CreateClientProfile(ctx context.Context, profile KMIPClientProfile) error
 	ListClientProfiles(ctx context.Context, tenantID string) ([]KMIPClientProfile, error)
 	GetClientProfile(ctx context.Context, tenantID string, profileID string) (KMIPClientProfile, error)
+	DeleteClientProfile(ctx context.Context, tenantID string, profileID string) error
+	CountClientsByProfile(ctx context.Context, tenantID string, profileID string) (int, error)
 
 	CreateClient(ctx context.Context, client KMIPClient) error
 	ListClients(ctx context.Context, tenantID string) ([]KMIPClient, error)
 	GetClientByID(ctx context.Context, tenantID string, clientID string) (KMIPClient, error)
 	GetClientByFingerprint(ctx context.Context, fingerprint string) (KMIPClient, error)
+	DeleteClient(ctx context.Context, tenantID string, clientID string) error
 }
 
 type SQLStore struct {
@@ -231,6 +234,34 @@ WHERE tenant_id = $1 AND id = $2
 	return out, err
 }
 
+func (s *SQLStore) DeleteClientProfile(ctx context.Context, tenantID string, profileID string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM kmip_client_profiles
+WHERE tenant_id = $1 AND id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(profileID))
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) CountClientsByProfile(ctx context.Context, tenantID string, profileID string) (int, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT COUNT(*)
+FROM kmip_clients
+WHERE tenant_id = $1 AND profile_id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(profileID))
+	var count int
+	if err := row.Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (s *SQLStore) CreateClient(ctx context.Context, client KMIPClient) error {
 	now := time.Now().UTC()
 	_, err := s.db.SQL().ExecContext(ctx, `
@@ -304,6 +335,21 @@ LIMIT 1
 		return KMIPClient{}, errNotFound
 	}
 	return out, err
+}
+
+func (s *SQLStore) DeleteClient(ctx context.Context, tenantID string, clientID string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM kmip_clients
+WHERE tenant_id = $1 AND id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(clientID))
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errNotFound
+	}
+	return nil
 }
 
 func scanObject(scanner interface {

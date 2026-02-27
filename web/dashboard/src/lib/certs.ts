@@ -211,12 +211,20 @@ export type AcmeOrderInput = {
 };
 
 export type ESTServerKeygenInput = {
-  ca_id: string;
-  profile_id?: string;
-  subject_cn: string;
-  sans?: string[];
-  auth_method?: string;
-  auth_token?: string;
+	ca_id: string;
+	profile_id?: string;
+	subject_cn: string;
+	sans?: string[];
+	auth_method?: string;
+	auth_token?: string;
+};
+
+export type IssueInternalMTLSInput = {
+	ca_id?: string;
+	algorithm?: string;
+	cert_class?: string;
+	protocol?: string;
+	validity_days?: number;
 };
 
 export type SCEPEnrollInput = {
@@ -257,6 +265,17 @@ export async function createCA(session: AuthSession, input: CreateCAInput): Prom
     })
   });
   return out.ca;
+}
+
+export async function deleteCA(session: AuthSession, caId: string): Promise<void> {
+  await serviceRequest<StatusResponse>(
+    session,
+    "certs",
+    `/certs/ca/${encodeURIComponent(String(caId || "").trim())}?${tenantQuery(session)}`,
+    {
+      method: "DELETE"
+    }
+  );
 }
 
 export async function listCertificates(
@@ -620,4 +639,37 @@ export async function cmpv2Request(session: AuthSession, input: CMPv2Input): Pro
     })
   });
   return out.certificate;
+}
+
+export async function issueInternalMTLS(
+	session: AuthSession,
+	serviceName: string,
+	input?: IssueInternalMTLSInput
+): Promise<{ certificate: CertificateItem; privateKeyPEM?: string }> {
+	const service = String(serviceName || "").trim().toLowerCase();
+	if (!service) {
+		throw new Error("service name is required");
+	}
+	const out = await serviceRequest<CertResponse>(
+		session,
+		"certs",
+		`/certs/internal/mtls/${encodeURIComponent(service)}?${tenantQuery(session)}`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				tenant_id: session.tenantId,
+				ca_id: String(input?.ca_id || "").trim(),
+				algorithm: String(input?.algorithm || "").trim(),
+				cert_class: String(input?.cert_class || "").trim(),
+				protocol: String(input?.protocol || "").trim(),
+				validity_days: Number.isFinite(Number(input?.validity_days))
+					? Math.max(1, Math.min(3650, Math.trunc(Number(input?.validity_days || 365))))
+					: 365
+			})
+		}
+	);
+	return {
+		certificate: out.certificate,
+		privateKeyPEM: out.private_key_pem || ""
+	};
 }

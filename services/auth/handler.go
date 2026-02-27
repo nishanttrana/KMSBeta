@@ -2493,7 +2493,7 @@ func buildCLIHSMOnboardingHints(tenantID string, cliUsername string, host string
 		"list_partitions_command":    listPartitionsCmd,
 		"run_vendor_utility_command": listPartitionsCmd + " <slot-id>",
 		"docker_copy_command":        fmt.Sprintf("docker cp <pkcs11-library-file> %s:%s/", keycoreContainer, providerDir),
-		"next_ui_step":               "After partitions are listed, open HSM / Primus in dashboard and configure provider path, slot id, and token label.",
+		"next_ui_step":               "After partitions are listed, open HSM in dashboard and configure provider path, slot id, and token label.",
 		"security_notes": []string{
 			"Do not store HSM PIN in files; supply PIN via environment or secret manager only.",
 			"Restrict uploaded file permissions to root/app group and disable world read/execute.",

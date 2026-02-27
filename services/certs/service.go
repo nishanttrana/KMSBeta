@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"bytes"
@@ -267,6 +267,47 @@ func (s *Service) ListCAs(ctx context.Context, tenantID string) ([]CA, error) {
 	rootName := s.runtimeRootCAName(ctx, tenantID)
 	_, _ = s.ensureRuntimeRootCA(ctx, tenantID, rootName)
 	return s.store.ListCAs(ctx, tenantID)
+}
+
+func (s *Service) DeleteCA(ctx context.Context, tenantID string, caID string) error {
+	tenantID = strings.TrimSpace(tenantID)
+	caID = strings.TrimSpace(caID)
+	if tenantID == "" || caID == "" {
+		return errors.New("tenant_id and ca_id are required")
+	}
+	ca, err := s.store.GetCA(ctx, tenantID, caID)
+	if err != nil {
+		return err
+	}
+	if strings.EqualFold(strings.TrimSpace(ca.Name), strings.TrimSpace(s.runtimeRootCAName(ctx, tenantID))) {
+		return errors.New("cannot delete runtime root CA")
+	}
+	childCount, err := s.store.CountChildCAs(ctx, tenantID, caID)
+	if err != nil {
+		return err
+	}
+	if childCount > 0 {
+		return fmt.Errorf("cannot delete CA with child CAs: %d", childCount)
+	}
+	certCount, err := s.store.CountCertificatesByCA(ctx, tenantID, caID)
+	if err != nil {
+		return err
+	}
+	if certCount > 0 {
+		return fmt.Errorf("cannot delete CA with issued certificates: %d", certCount)
+	}
+	if err := s.store.DeleteCA(ctx, tenantID, caID); err != nil {
+		return err
+	}
+	_ = s.publishAudit(ctx, "audit.cert.ca_deleted", tenantID, map[string]interface{}{
+		"ca_id":       caID,
+		"name":        ca.Name,
+		"algorithm":   ca.Algorithm,
+		"ca_level":    ca.CALevel,
+		"ca_type":     ca.CAType,
+		"key_backend": ca.KeyBackend,
+	})
+	return nil
 }
 
 func (s *Service) CreateProfile(ctx context.Context, req CreateProfileRequest) (CertificateProfile, error) {
@@ -803,14 +844,19 @@ func (s *Service) DeleteCertificate(ctx context.Context, tenantID string, certID
 		strings.Contains(strings.ToLower(strings.TrimSpace(current.Protocol)), "internal-mtls") {
 		return errors.New("cannot delete internal-mtls certificate; use renew or rotate")
 	}
-	if strings.EqualFold(strings.TrimSpace(current.Status), CertStatusDeleted) {
-		return nil
-	}
 	if err := s.store.DeleteCertificate(ctx, tenantID, certID); err != nil {
 		return err
 	}
 	_ = s.publishAudit(ctx, "audit.cert.deleted", tenantID, map[string]interface{}{
-		"cert_id": certID,
+		"cert_id":        certID,
+		"ca_id":          current.CAID,
+		"subject_cn":     current.SubjectCN,
+		"serial_number":  current.SerialNumber,
+		"algorithm":      current.Algorithm,
+		"cert_class":     current.CertClass,
+		"protocol":       current.Protocol,
+		"status_before":  current.Status,
+		"revoked_before": !current.RevokedAt.IsZero(),
 	})
 	return nil
 }
@@ -1765,26 +1811,41 @@ func (s *Service) IssueInternalMTLS(ctx context.Context, serviceName string, req
 		}
 		req.CAID = ca.ID
 	}
+	req.Algorithm = normalizeAlgorithm(req.Algorithm)
+	if req.Algorithm == "" {
+		req.Algorithm = "ECDSA-P384"
+	}
+	req.CertClass = normalizeCertClass(req.CertClass, req.Algorithm)
+	if req.CertClass == "" {
+		req.CertClass = "internal-mtls"
+	}
+	req.Protocol = strings.TrimSpace(req.Protocol)
+	if req.Protocol == "" {
+		req.Protocol = "internal-mtls"
+	}
 	cn := "kms-" + serviceName
 	sans := []string{cn, cn + ".svc", cn + ".svc.cluster.local"}
 	out, keyPEM, err := s.IssueCertificate(ctx, IssueCertificateRequest{
 		TenantID:     req.TenantID,
 		CAID:         req.CAID,
 		CertType:     "tls-client",
-		CertClass:    "internal-mtls",
-		Algorithm:    "ECDSA-P384",
+		CertClass:    req.CertClass,
+		Algorithm:    req.Algorithm,
 		SubjectCN:    cn,
 		SANs:         sans,
 		ServerKeygen: true,
 		ValidityDays: req.ValidityDays,
-		Protocol:     "internal-mtls",
+		Protocol:     req.Protocol,
 	})
 	if err != nil {
 		return Certificate{}, "", err
 	}
 	_ = s.publishAudit(ctx, "audit.cert.internal_mtls_issued", req.TenantID, map[string]interface{}{
-		"service": serviceName,
-		"cert_id": out.ID,
+		"service":   serviceName,
+		"cert_id":   out.ID,
+		"algorithm": req.Algorithm,
+		"class":     req.CertClass,
+		"protocol":  req.Protocol,
 	})
 	return out, keyPEM, nil
 }

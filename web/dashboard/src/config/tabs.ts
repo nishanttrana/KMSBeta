@@ -228,7 +228,7 @@ export const tabConfig: TabConfig[] = [
   },
   {
     id: "hsm_primus",
-    label: "HSM/Primus",
+    label: "HSM",
     shortLabel: "HSM",
     group: "infrastructure",
     description: "Hardware and software vault provider plane",

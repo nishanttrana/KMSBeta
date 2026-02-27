@@ -330,5 +330,8 @@ type CMPv2RequestMessage struct {
 type InternalMTLSRequest struct {
 	TenantID     string `json:"tenant_id"`
 	CAID         string `json:"ca_id"`
+	Algorithm    string `json:"algorithm"`
+	CertClass    string `json:"cert_class"`
+	Protocol     string `json:"protocol"`
 	ValidityDays int64  `json:"validity_days"`
 }

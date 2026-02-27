@@ -57,6 +57,12 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			created_by TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, name)
 		);`,
+		`CREATE TABLE key_access_grants (
+			tenant_id TEXT NOT NULL, key_id TEXT NOT NULL, subject_type TEXT NOT NULL, subject_id TEXT NOT NULL,
+			operations BLOB, created_by TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			not_before TIMESTAMP, expires_at TIMESTAMP, justification TEXT, ticket_id TEXT,
+			PRIMARY KEY (tenant_id, key_id, subject_type, subject_id)
+		);`,
 	}
 	for _, s := range stmts {
 		if _, err := conn.SQL().Exec(s); err != nil {
@@ -141,6 +147,18 @@ func TestStoreScheduleDestroyAndPurge(t *testing.T) {
 	if err := s.CreateKeyWithVersion(ctx, k, v); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO key_access_grants (tenant_id, key_id, subject_type, subject_id, operations, created_by)
+VALUES ('t1','k3','user','u1','["encrypt"]','tester')
+`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO key_iv_log (id, tenant_id, key_id, key_version, iv, operation, reference_id)
+VALUES ('iv1','t1','k3',1,?, 'encrypt', 'ref-1')
+`, []byte("123456789012")); err != nil {
+		t.Fatal(err)
+	}
 	if err := s.ScheduleDestroy(ctx, "t1", "k3", time.Now().UTC().Add(-time.Hour)); err != nil {
 		t.Fatal(err)
 	}
@@ -148,8 +166,11 @@ func TestStoreScheduleDestroyAndPurge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(deleted) != 1 || deleted[0] != "k3" {
+	if len(deleted) != 1 || deleted[0].KeyID != "k3" {
 		t.Fatalf("unexpected deleted keys: %+v", deleted)
+	}
+	if deleted[0].DeletedVersionCount != 1 || deleted[0].DeletedIVLogCount != 1 || deleted[0].DeletedAccessGrants != 1 {
+		t.Fatalf("unexpected deleted artifact counts: %+v", deleted[0])
 	}
 	got, err := s.GetKey(ctx, "t1", "k3")
 	if err != nil {
@@ -161,12 +182,28 @@ func TestStoreScheduleDestroyAndPurge(t *testing.T) {
 	if got.CurrentVersion != 0 {
 		t.Fatalf("expected current_version=0, got %d", got.CurrentVersion)
 	}
+	if got.Purpose != "deleted" || got.Owner != "deleted" {
+		t.Fatalf("expected scrubbed tombstone purpose/owner, got purpose=%q owner=%q", got.Purpose, got.Owner)
+	}
+	if got.ExportAllowed || got.ApprovalRequired || got.ApprovalPolicyID != "" {
+		t.Fatalf("expected export/approval metadata reset, got export=%v approval_required=%v policy=%q", got.ExportAllowed, got.ApprovalRequired, got.ApprovalPolicyID)
+	}
+	if len(got.Tags) != 0 || len(got.Compliance) != 0 || len(got.Labels) != 0 {
+		t.Fatalf("expected tags/compliance/labels scrubbed, got tags=%v compliance=%v labels=%v", got.Tags, got.Compliance, got.Labels)
+	}
 	versions, err := s.ListVersions(ctx, "t1", "k3")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(versions) != 0 {
 		t.Fatalf("expected versions to be removed, found %d", len(versions))
+	}
+	var grants int
+	if err := s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(1) FROM key_access_grants WHERE tenant_id='t1' AND key_id='k3'`).Scan(&grants); err != nil {
+		t.Fatal(err)
+	}
+	if grants != 0 {
+		t.Fatalf("expected key access grants to be removed, found %d", grants)
 	}
 }
 
@@ -185,6 +222,12 @@ func TestStoreHardDeleteKey(t *testing.T) {
 	if err := s.CreateKeyWithVersion(ctx, k, v); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO key_access_grants (tenant_id, key_id, subject_type, subject_id, operations, created_by)
+VALUES ('t1','k4','user','u2','["encrypt"]','tester')
+`); err != nil {
+		t.Fatal(err)
+	}
 	if err := s.HardDeleteKey(ctx, "t1", "k4"); err != nil {
 		t.Fatal(err)
 	}
@@ -197,6 +240,13 @@ func TestStoreHardDeleteKey(t *testing.T) {
 	}
 	if len(versions) != 0 {
 		t.Fatalf("expected versions to be removed, found %d", len(versions))
+	}
+	var grants int
+	if err := s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(1) FROM key_access_grants WHERE tenant_id='t1' AND key_id='k4'`).Scan(&grants); err != nil {
+		t.Fatal(err)
+	}
+	if grants != 0 {
+		t.Fatalf("expected key access grants to be removed, found %d", grants)
 	}
 }
 

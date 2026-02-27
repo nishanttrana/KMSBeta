@@ -120,3 +120,12 @@ type DiscoverInventoryRequest struct {
 	AccountID   string `json:"account_id"`
 	CloudRegion string `json:"cloud_region"`
 }
+
+type DeleteCloudAccountResult struct {
+	TenantID              string `json:"tenant_id"`
+	AccountID             string `json:"account_id"`
+	Provider              string `json:"provider"`
+	DeletedBindings       int64  `json:"deleted_bindings"`
+	DeletedSyncJobs       int64  `json:"deleted_sync_jobs"`
+	DeletedRegionMappings int64  `json:"deleted_region_mappings"`
+}

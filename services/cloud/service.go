@@ -64,7 +64,7 @@ func (s *Service) RegisterAccount(ctx context.Context, req RegisterCloudAccountR
 		Provider:                req.Provider,
 		Name:                    req.Name,
 		DefaultRegion:           req.DefaultRegion,
-		Status:                  "active",
+		Status:                  "configured",
 		CredentialsWrappedDEK:   env.WrappedDEK,
 		CredentialsWrappedDEKIV: env.WrappedDEKIV,
 		CredentialsCiphertext:   env.Ciphertext,
@@ -97,6 +97,27 @@ func (s *Service) ListAccounts(ctx context.Context, tenantID string, provider st
 		return nil, errors.New("tenant_id is required")
 	}
 	return s.store.ListAccounts(ctx, tenantID, provider)
+}
+
+func (s *Service) DeleteAccount(ctx context.Context, tenantID string, accountID string) (DeleteCloudAccountResult, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	accountID = strings.TrimSpace(accountID)
+	if tenantID == "" || accountID == "" {
+		return DeleteCloudAccountResult{}, errors.New("tenant_id and account_id are required")
+	}
+	out, err := s.store.DeleteAccountCascade(ctx, tenantID, accountID)
+	if err != nil {
+		return DeleteCloudAccountResult{}, err
+	}
+	_ = s.publishAudit(ctx, "audit.cloud.connector_deleted", tenantID, map[string]interface{}{
+		"account_id":              out.AccountID,
+		"provider":                out.Provider,
+		"deleted_bindings":        out.DeletedBindings,
+		"deleted_sync_jobs":       out.DeletedSyncJobs,
+		"deleted_region_mappings": out.DeletedRegionMappings,
+		"action":                  "delete_connector",
+	})
+	return out, nil
 }
 
 func (s *Service) SetRegionMapping(ctx context.Context, req SetRegionMappingRequest) (RegionMapping, error) {
@@ -491,8 +512,10 @@ func (s *Service) DiscoverInventory(ctx context.Context, req DiscoverInventoryRe
 		Credentials: creds,
 	})
 	if err != nil {
+		_ = s.store.UpdateAccountStatus(ctx, req.TenantID, account.ID, "auth_failed")
 		return nil, err
 	}
+	_ = s.store.UpdateAccountStatus(ctx, req.TenantID, account.ID, "connected")
 	bindings, _ := s.store.ListBindings(ctx, req.TenantID, provider.Name(), account.ID, "", 10_000, 0)
 	managed := map[string]struct{}{}
 	for _, b := range bindings {
@@ -558,7 +581,7 @@ func (s *Service) resolveAccountProvider(ctx context.Context, tenantID string, p
 	var account CloudAccount
 	found := false
 	for _, a := range accounts {
-		if strings.EqualFold(a.Status, "active") {
+		if strings.EqualFold(a.Status, "connected") || strings.EqualFold(a.Status, "configured") || strings.EqualFold(a.Status, "active") {
 			account = a
 			found = true
 			break

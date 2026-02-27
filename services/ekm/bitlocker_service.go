@@ -41,6 +41,34 @@ func (s *Service) RegisterBitLockerClient(ctx context.Context, req RegisterBitLo
 	if req.MountPoint == "" {
 		req.MountPoint = "C:"
 	}
+	normalizedHost := strings.ToLower(strings.TrimSpace(req.Host))
+	normalizedName := strings.ToLower(strings.TrimSpace(req.Name))
+	existing, err := s.store.ListBitLockerClients(ctx, req.TenantID, 100000)
+	if err != nil {
+		return BitLockerClient{}, err
+	}
+	for _, item := range existing {
+		itemID := strings.TrimSpace(item.ID)
+		if req.ClientID != "" && strings.EqualFold(itemID, req.ClientID) {
+			continue
+		}
+		itemHost := strings.ToLower(strings.TrimSpace(item.Host))
+		itemName := strings.ToLower(strings.TrimSpace(item.Name))
+		if normalizedHost != "" && itemHost == normalizedHost {
+			return BitLockerClient{}, newServiceError(
+				http.StatusConflict,
+				"bitlocker_client_exists",
+				"bitlocker client with the same host/IP is already registered",
+			)
+		}
+		if normalizedName != "" && itemName == normalizedName {
+			return BitLockerClient{}, newServiceError(
+				http.StatusConflict,
+				"bitlocker_client_exists",
+				"bitlocker client with the same name is already registered",
+			)
+		}
+	}
 	client := BitLockerClient{
 		ID:                   req.ClientID,
 		TenantID:             req.TenantID,

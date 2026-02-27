@@ -83,6 +83,13 @@ func TestHandlerCloudFlow(t *testing.T) {
 	if inventoryRR.Code != http.StatusOK {
 		t.Fatalf("inventory status=%d body=%s", inventoryRR.Code, inventoryRR.Body.String())
 	}
+
+	deleteHTTP := httptest.NewRequest(http.MethodDelete, "/cloud/accounts/"+accountResp.Account.ID+"?tenant_id=tenant-1", nil)
+	deleteRR := httptest.NewRecorder()
+	h.ServeHTTP(deleteRR, deleteHTTP)
+	if deleteRR.Code != http.StatusOK {
+		t.Fatalf("delete account status=%d body=%s", deleteRR.Code, deleteRR.Body.String())
+	}
 }
 
 func TestHandlerTenantRequired(t *testing.T) {

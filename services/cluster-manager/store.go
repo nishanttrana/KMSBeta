@@ -179,6 +179,46 @@ ON CONFLICT (tenant_id, id) DO UPDATE SET
 	return err
 }
 
+func (s *SQLStore) DeleteNode(ctx context.Context, tenantID string, nodeID string) error {
+	tenantID = strings.TrimSpace(tenantID)
+	nodeID = strings.TrimSpace(nodeID)
+	tx, err := s.db.SQL().BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	if _, err := tx.ExecContext(ctx, `
+DELETE FROM cluster_sync_checkpoints
+WHERE tenant_id = $1 AND node_id = $2
+`, tenantID, nodeID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `
+DELETE FROM cluster_join_tokens
+WHERE tenant_id = $1 AND target_node_id = $2
+`, tenantID, nodeID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `
+DELETE FROM cluster_sync_nonces
+WHERE tenant_id = $1 AND source_node_id = $2
+`, tenantID, nodeID); err != nil {
+		return err
+	}
+	res, err := tx.ExecContext(ctx, `
+DELETE FROM cluster_nodes
+WHERE tenant_id = $1 AND id = $2
+`, tenantID, nodeID)
+	if err != nil {
+		return err
+	}
+	if rows, _ := res.RowsAffected(); rows == 0 {
+		return errNotFound
+	}
+	return tx.Commit()
+}
+
 func (s *SQLStore) CreateJoinToken(ctx context.Context, token ClusterJoinToken) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO cluster_join_tokens (

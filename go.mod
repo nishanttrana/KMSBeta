@@ -1,20 +1,25 @@
 module vecta-kms
 
-go 1.24.0
+go 1.26.0
 
 require (
 	cloud.google.com/go/kms v1.26.0
+	filippo.io/age v1.2.1
 	github.com/aws/aws-sdk-go-v2 v1.41.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.9
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.9
 	github.com/aws/aws-sdk-go-v2/service/kms v1.50.0
 	github.com/bits-and-blooms/bloom/v3 v3.7.0
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0
+	github.com/go-ldap/ldap/v3 v3.4.8
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/hashicorp/consul/api v1.31.2
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/kardianos/service v1.2.4
 	github.com/microsoft/go-mssqldb v1.9.6
+	github.com/moov-io/tr31 v0.0.0-20251023044939-625bfc8dedd5
 	github.com/nats-io/nats.go v1.39.1
+	github.com/oracle/oci-go-sdk/v65 v65.108.2
 	github.com/ovh/kmip-go v0.7.2
 	github.com/redis/go-redis/v9 v9.7.0
 	github.com/shirou/gopsutil/v4 v4.26.1
@@ -38,7 +43,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
 	cloud.google.com/go/iam v1.5.3 // indirect
 	cloud.google.com/go/longrunning v0.8.0 // indirect
-	filippo.io/age v1.2.1 // indirect
 	github.com/Azure/go-ntlmssp v0.0.0-20221128193559-754e69321358 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.17 // indirect
@@ -55,14 +59,12 @@ require (
 	github.com/bits-and-blooms/bitset v1.10.0 // indirect
 	github.com/ccoveille/go-safecast v1.7.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.5 // indirect
-	github.com/go-ldap/ldap/v3 v3.4.8 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -90,11 +92,9 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/moov-io/tr31 v0.0.0-20251023044939-625bfc8dedd5 // indirect
 	github.com/nats-io/nkeys v0.4.9 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
-	github.com/oracle/oci-go-sdk/v65 v65.108.2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect

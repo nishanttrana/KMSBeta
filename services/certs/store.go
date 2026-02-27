@@ -19,6 +19,9 @@ type Store interface {
 	CreateCA(ctx context.Context, ca CA) error
 	GetCA(ctx context.Context, tenantID string, caID string) (CA, error)
 	ListCAs(ctx context.Context, tenantID string) ([]CA, error)
+	DeleteCA(ctx context.Context, tenantID string, caID string) error
+	CountChildCAs(ctx context.Context, tenantID string, caID string) (int64, error)
+	CountCertificatesByCA(ctx context.Context, tenantID string, caID string) (int64, error)
 	UpdateCASignerEncryption(ctx context.Context, tenantID string, caID string, enc EncryptedSigner) error
 	ReserveOTSIndex(ctx context.Context, tenantID string, caID string) (int64, error)
 
@@ -145,6 +148,45 @@ ORDER BY created_at ASC
 		out = append(out, ca)
 	}
 	return out, rows.Err()
+}
+
+func (s *SQLStore) DeleteCA(ctx context.Context, tenantID string, caID string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM cert_cas
+WHERE tenant_id = $1 AND id = $2
+`, tenantID, caID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errStoreNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) CountChildCAs(ctx context.Context, tenantID string, caID string) (int64, error) {
+	var count int64
+	if err := s.db.SQL().QueryRowContext(ctx, `
+SELECT COUNT(1)
+FROM cert_cas
+WHERE tenant_id = $1 AND parent_ca_id = $2
+`, tenantID, caID).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (s *SQLStore) CountCertificatesByCA(ctx context.Context, tenantID string, caID string) (int64, error) {
+	var count int64
+	if err := s.db.SQL().QueryRowContext(ctx, `
+SELECT COUNT(1)
+FROM cert_certificates
+WHERE tenant_id = $1 AND ca_id = $2
+`, tenantID, caID).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func (s *SQLStore) UpdateCASignerEncryption(ctx context.Context, tenantID string, caID string, enc EncryptedSigner) error {
@@ -309,6 +351,98 @@ func (s *SQLStore) ListCertificates(ctx context.Context, tenantID string, status
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
+	status = strings.TrimSpace(status)
+	certClass = strings.TrimSpace(certClass)
+	if strings.EqualFold(status, CertStatusDeleted) {
+		rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT cert_id AS id,
+       tenant_id,
+       ca_id,
+       serial_number,
+       subject_cn,
+       '[]' AS sans_json,
+       '' AS cert_type,
+       'deleted-ref' AS algorithm,
+       '' AS profile_id,
+       'deleted-ref' AS protocol,
+       'deleted-ref' AS cert_class,
+       '' AS cert_pem,
+       'deleted' AS status,
+       deleted_at AS not_before,
+       deleted_at AS not_after,
+       NULL AS revoked_at,
+       '' AS revocation_reason,
+       deleted_at AS created_at,
+       deleted_at AS updated_at,
+       '' AS key_ref
+FROM cert_deleted_refs
+WHERE tenant_id = $1
+ORDER BY deleted_at DESC
+LIMIT $2 OFFSET $3
+`, tenantID, limit, offset)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close() //nolint:errcheck
+		out := make([]Certificate, 0)
+		for rows.Next() {
+			c, scanErr := scanCertificate(rows)
+			if scanErr != nil {
+				return nil, scanErr
+			}
+			out = append(out, c)
+		}
+		return out, rows.Err()
+	}
+
+	if status == "" && certClass == "" {
+		rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, tenant_id, ca_id, serial_number, subject_cn, sans_json, cert_type, algorithm,
+       COALESCE(profile_id,''), protocol, cert_class, cert_pem, status, not_before, not_after,
+       revoked_at, COALESCE(revocation_reason,''), created_at, updated_at, COALESCE(key_ref,'')
+FROM cert_certificates
+WHERE tenant_id = $1
+UNION ALL
+SELECT cert_id AS id,
+       tenant_id,
+       ca_id,
+       serial_number,
+       subject_cn,
+       '[]' AS sans_json,
+       '' AS cert_type,
+       'deleted-ref' AS algorithm,
+       '' AS profile_id,
+       'deleted-ref' AS protocol,
+       'deleted-ref' AS cert_class,
+       '' AS cert_pem,
+       'deleted' AS status,
+       deleted_at AS not_before,
+       deleted_at AS not_after,
+       NULL AS revoked_at,
+       '' AS revocation_reason,
+       deleted_at AS created_at,
+       deleted_at AS updated_at,
+       '' AS key_ref
+FROM cert_deleted_refs
+WHERE tenant_id = $1
+ORDER BY created_at DESC
+LIMIT $2 OFFSET $3
+`, tenantID, limit, offset)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close() //nolint:errcheck
+		out := make([]Certificate, 0)
+		for rows.Next() {
+			c, scanErr := scanCertificate(rows)
+			if scanErr != nil {
+				return nil, scanErr
+			}
+			out = append(out, c)
+		}
+		return out, rows.Err()
+	}
+
 	qb := strings.Builder{}
 	qb.WriteString(`
 SELECT id, tenant_id, ca_id, serial_number, subject_cn, sans_json, cert_type, algorithm,
@@ -319,12 +453,12 @@ WHERE tenant_id = $1
 `)
 	args := []interface{}{tenantID}
 	idx := 2
-	if strings.TrimSpace(status) != "" {
+	if status != "" {
 		qb.WriteString(" AND status = $" + itoa(idx))
 		args = append(args, status)
 		idx++
 	}
-	if strings.TrimSpace(certClass) != "" {
+	if certClass != "" {
 		qb.WriteString(" AND cert_class = $" + itoa(idx))
 		args = append(args, certClass)
 		idx++
@@ -397,11 +531,66 @@ VALUES ($1,$2,$3,$4,$5,$6)
 }
 
 func (s *SQLStore) DeleteCertificate(ctx context.Context, tenantID string, certID string) error {
-	res, err := s.db.SQL().ExecContext(ctx, `
-UPDATE cert_certificates
-SET status = $1, updated_at = CURRENT_TIMESTAMP
-WHERE tenant_id = $2 AND id = $3
-`, CertStatusDeleted, tenantID, certID)
+	tx, err := s.db.SQL().BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	row := tx.QueryRowContext(ctx, `
+SELECT ca_id, serial_number, subject_cn
+FROM cert_certificates
+WHERE tenant_id = $1 AND id = $2
+`, tenantID, certID)
+	var (
+		caID      string
+		serial    string
+		subjectCN string
+	)
+	if err := row.Scan(&caID, &serial, &subjectCN); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errStoreNotFound
+		}
+		return err
+	}
+
+	now := time.Now().UTC()
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO cert_deleted_refs (tenant_id, cert_id, ca_id, serial_number, subject_cn, deleted_at)
+VALUES ($1,$2,$3,$4,$5,$6)
+ON CONFLICT (tenant_id, cert_id) DO UPDATE
+SET ca_id = EXCLUDED.ca_id,
+    serial_number = EXCLUDED.serial_number,
+    subject_cn = EXCLUDED.subject_cn,
+    deleted_at = EXCLUDED.deleted_at
+`, tenantID, certID, caID, serial, subjectCN, now); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+DELETE FROM cert_revocations
+WHERE tenant_id = $1 AND cert_id = $2
+`, tenantID, certID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `
+DELETE FROM cert_expiry_alert_state
+WHERE tenant_id = $1 AND cert_id = $2
+`, tenantID, certID); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `
+UPDATE cert_acme_orders
+SET cert_id = NULL, updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $1 AND cert_id = $2
+`, tenantID, certID); err != nil {
+		return err
+	}
+
+	res, err := tx.ExecContext(ctx, `
+DELETE FROM cert_certificates
+WHERE tenant_id = $1 AND id = $2
+`, tenantID, certID)
 	if err != nil {
 		return err
 	}
@@ -409,7 +598,7 @@ WHERE tenant_id = $2 AND id = $3
 	if n == 0 {
 		return errStoreNotFound
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (s *SQLStore) UpdateCertificateStatus(ctx context.Context, tenantID string, certID string, status string) error {

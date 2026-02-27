@@ -871,6 +871,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "certs-delete-certs-ca-id",
+    "group": "Certificates / PKI (certs)",
+    "title": "DELETE /certs/ca/{id}",
+    "service": "certs",
+    "method": "DELETE",
+    "pathTemplate": "/certs/ca/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "DELETE /svc/certs/certs/ca/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "certs-get-acme-cert-id",
     "group": "Certificates / PKI (certs)",
     "title": "GET /acme/cert/{id}",
@@ -2028,6 +2056,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "PUT /svc/certs/certs/protocols/{protocol}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cloud-delete-cloud-accounts-id",
+    "group": "Cloud Key Control (cloud)",
+    "title": "DELETE /cloud/accounts/{id}",
+    "service": "cloud",
+    "method": "DELETE",
+    "pathTemplate": "/cloud/accounts/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Cloud service.",
+    "requestExample": "DELETE /svc/cloud/cloud/accounts/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -9840,6 +9896,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "PUT /svc/keycore/keys/{id}/usage/limit?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "kmip-delete-kmip-clients-id",
+    "group": "KMIP (kmip)",
+    "title": "DELETE /kmip/clients/{id}",
+    "service": "kmip",
+    "method": "DELETE",
+    "pathTemplate": "/kmip/clients/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KMIP service.",
+    "requestExample": "DELETE /svc/kmip/kmip/clients/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "kmip-delete-kmip-profiles-id",
+    "group": "KMIP (kmip)",
+    "title": "DELETE /kmip/profiles/{id}",
+    "service": "kmip",
+    "method": "DELETE",
+    "pathTemplate": "/kmip/profiles/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KMIP service.",
+    "requestExample": "DELETE /svc/kmip/kmip/profiles/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "kmip-get-kmip-capabilities",
+    "group": "KMIP (kmip)",
+    "title": "GET /kmip/capabilities",
+    "service": "kmip",
+    "method": "GET",
+    "pathTemplate": "/kmip/capabilities?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KMIP service.",
+    "requestExample": "GET /svc/kmip/kmip/capabilities?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

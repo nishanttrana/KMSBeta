@@ -27,6 +27,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /cloud/accounts", h.handleRegisterAccount)
 	mux.HandleFunc("GET /cloud/accounts", h.handleListAccounts)
+	mux.HandleFunc("DELETE /cloud/accounts/{id}", h.handleDeleteAccount)
 	mux.HandleFunc("POST /cloud/region-mappings", h.handleSetRegionMapping)
 	mux.HandleFunc("GET /cloud/region-mappings", h.handleListRegionMappings)
 	mux.HandleFunc("POST /cloud/import", h.handleImportKey)
@@ -65,6 +66,29 @@ func (h *Handler) handleListAccounts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	accountID := strings.TrimSpace(r.PathValue("id"))
+	if accountID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "account id is required", reqID, tenantID)
+		return
+	}
+	out, err := h.svc.DeleteAccount(r.Context(), tenantID, accountID)
+	if err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "delete_account_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
 }
 
 func (h *Handler) handleSetRegionMapping(w http.ResponseWriter, r *http.Request) {

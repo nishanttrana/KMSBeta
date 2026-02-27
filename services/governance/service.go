@@ -1,12 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"math"
+	"net/http"
+	"net/url"
+	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -22,19 +30,95 @@ type Service struct {
 	email    EmailSender
 	callback CallbackExecutor
 	baseURL  string
+	certsURL string
+	http     *http.Client
 }
 
-func NewService(store Store, events EventPublisher, email EmailSender, callback CallbackExecutor, baseURL string) *Service {
+var runtimeCryptoLibraryLabel, runtimeCryptoLibraryValidated = detectRuntimeCryptoLibrary()
+
+func detectRuntimeCryptoLibrary() (string, bool) {
+	goVersion := strings.TrimSpace(runtime.Version())
+	goExperiment := ""
+	cgoEnabled := ""
+	xcryptoVersion := ""
+	if buildInfo, ok := debug.ReadBuildInfo(); ok && buildInfo != nil {
+		if strings.TrimSpace(buildInfo.GoVersion) != "" {
+			goVersion = strings.TrimSpace(buildInfo.GoVersion)
+		}
+		for _, setting := range buildInfo.Settings {
+			key := strings.TrimSpace(setting.Key)
+			switch key {
+			case "GOEXPERIMENT":
+				goExperiment = strings.TrimSpace(setting.Value)
+			case "CGO_ENABLED":
+				cgoEnabled = strings.TrimSpace(setting.Value)
+			}
+		}
+		for _, dep := range buildInfo.Deps {
+			if strings.EqualFold(strings.TrimSpace(dep.Path), "golang.org/x/crypto") {
+				xcryptoVersion = strings.TrimSpace(dep.Version)
+				break
+			}
+		}
+	}
+	if goVersion == "" {
+		goVersion = "unknown"
+	}
+	if goExperiment == "" {
+		goExperiment = "none"
+	}
+	if cgoEnabled == "" {
+		cgoEnabled = "unknown"
+	}
+	lowerExperiment := strings.ToLower(goExperiment)
+	if strings.Contains(lowerExperiment, "boringcrypto") {
+		if xcryptoVersion != "" {
+			return fmt.Sprintf("Go BoringCrypto (%s, GOEXPERIMENT=%s, x/crypto=%s)", goVersion, goExperiment, xcryptoVersion), true
+		}
+		return fmt.Sprintf("Go BoringCrypto (%s, GOEXPERIMENT=%s)", goVersion, goExperiment), true
+	}
+	if xcryptoVersion != "" {
+		return fmt.Sprintf("Go std crypto (%s, GOEXPERIMENT=%s, CGO=%s, x/crypto=%s)", goVersion, goExperiment, cgoEnabled, xcryptoVersion), false
+	}
+	return fmt.Sprintf("Go std crypto (%s, GOEXPERIMENT=%s, CGO=%s)", goVersion, goExperiment, cgoEnabled), false
+}
+
+type ServiceOption func(*Service)
+
+func WithCertsURL(raw string) ServiceOption {
+	return func(s *Service) {
+		s.certsURL = strings.TrimRight(strings.TrimSpace(raw), "/")
+	}
+}
+
+func WithHTTPClient(client *http.Client) ServiceOption {
+	return func(s *Service) {
+		if client != nil {
+			s.http = client
+		}
+	}
+}
+
+func NewService(store Store, events EventPublisher, email EmailSender, callback CallbackExecutor, baseURL string, opts ...ServiceOption) *Service {
 	if callback == nil {
 		callback = NoopCallbackExecutor{}
 	}
-	return &Service{
+	svc := &Service{
 		store:    store,
 		events:   events,
 		email:    email,
 		callback: callback,
 		baseURL:  strings.TrimSpace(baseURL),
+		http: &http.Client{
+			Timeout: 15 * time.Second,
+		},
 	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(svc)
+		}
+	}
+	return svc
 }
 
 func (s *Service) CreatePolicy(ctx context.Context, p ApprovalPolicy) (ApprovalPolicy, error) {
@@ -429,7 +513,7 @@ func (s *Service) GetSystemState(ctx context.Context, tenantID string) (Governan
 	if err != nil {
 		return GovernanceSystemState{}, err
 	}
-	return normalizeSystemState(out), nil
+	return enrichFIPSRuntimeState(normalizeSystemState(out)), nil
 }
 
 func (s *Service) UpdateSystemState(ctx context.Context, state GovernanceSystemState) (GovernanceSystemState, error) {
@@ -443,16 +527,233 @@ func (s *Service) UpdateSystemState(ctx context.Context, state GovernanceSystemS
 	if state.LicenseKey != "" {
 		state.LicenseStatus = "active"
 	}
+	if state.FIPSRNGMode == "hsm_trng" && !isHSMReadyForTRNG(state.HSMMode) {
+		return GovernanceSystemState{}, errors.New("hsm_trng requires a connected HSM; configure/connect HSM first")
+	}
+	prev, prevErr := s.store.GetSystemState(ctx, state.TenantID)
+	if prevErr != nil && !errors.Is(prevErr, errNotFound) {
+		return GovernanceSystemState{}, prevErr
+	}
+	shouldApplyHybrid := shouldApplyInternalHybridTLS(prev, state)
+	if shouldApplyHybrid {
+		if err := s.applyInternalHybridTLSOnToggle(ctx, state.TenantID, state.UpdatedBy); err != nil {
+			return GovernanceSystemState{}, err
+		}
+	}
 	if err := s.store.UpsertSystemState(ctx, state); err != nil {
 		return GovernanceSystemState{}, err
 	}
 	_ = s.publishAudit(ctx, "audit.governance.system_state_updated", state.TenantID, map[string]interface{}{
-		"fips_mode":      state.FIPSMode,
-		"hsm_mode":       state.HSMMode,
-		"cluster_mode":   state.ClusterMode,
-		"license_status": state.LicenseStatus,
+		"fips_mode":         state.FIPSMode,
+		"fips_mode_policy":  state.FIPSModePolicy,
+		"fips_tls_profile":  state.FIPSTLSProfile,
+		"fips_rng_mode":     state.FIPSRNGMode,
+		"hsm_mode":          state.HSMMode,
+		"cluster_mode":      state.ClusterMode,
+		"license_status":    state.LicenseStatus,
+		"crypto_library":    state.FIPSCryptoLibrary,
+		"library_validated": state.FIPSLibraryValidated,
+		"tls_mode":          state.TLSMode,
+		"hybrid_rollout":    shouldApplyHybrid,
 	})
 	return s.GetSystemState(ctx, state.TenantID)
+}
+
+var internalHybridMTLSServices = []string{
+	"auth", "keycore", "policy", "governance", "audit", "certs", "secrets", "cloud", "ekm", "hyok", "kmip", "payment", "pqc", "dataprotect", "cluster-manager", "compliance", "reporting", "sbom",
+}
+
+type certsCAItem struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Status  string `json:"status"`
+	CertPEM string `json:"cert_pem"`
+}
+
+func shouldApplyInternalHybridTLS(prev GovernanceSystemState, next GovernanceSystemState) bool {
+	prevMode := normalizeTLSModeForHybridTransition(prev.TLSMode)
+	nextMode := normalizeTLSModeForHybridTransition(next.TLSMode)
+	return nextMode == "tls13_hybrid_kms" && prevMode != "tls13_hybrid_kms"
+}
+
+func normalizeTLSModeForHybridTransition(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "tls13_hybrid_kms", "tls13-hybrid-kms":
+		return "tls13_hybrid_kms"
+	default:
+		return strings.ToLower(strings.TrimSpace(v))
+	}
+}
+
+func (s *Service) applyInternalHybridTLSOnToggle(ctx context.Context, tenantID string, updatedBy string) error {
+	if strings.TrimSpace(tenantID) == "" {
+		return errors.New("tenant_id is required")
+	}
+	if strings.TrimSpace(s.certsURL) == "" {
+		return errors.New("certs_url is not configured for hybrid TLS rollout")
+	}
+	ca, err := s.ensureHybridRuntimeCA(ctx, tenantID)
+	if err != nil {
+		return err
+	}
+	for _, serviceName := range internalHybridMTLSServices {
+		reqBody := map[string]interface{}{
+			"tenant_id":     tenantID,
+			"ca_id":         ca.ID,
+			"algorithm":     "ECDSA-P384+ML-DSA-65",
+			"cert_class":    "hybrid",
+			"protocol":      "internal-mtls-hybrid",
+			"validity_days": 365,
+		}
+		if err := s.certsJSONRequest(ctx, http.MethodPost, "/certs/internal/mtls/"+url.PathEscape(serviceName), tenantID, reqBody, nil); err != nil {
+			return fmt.Errorf("hybrid internal mTLS issue failed for %s: %w", serviceName, err)
+		}
+	}
+	if err := s.enableRuntimeHybridMTLSProtocol(ctx, tenantID, updatedBy); err != nil {
+		return err
+	}
+	_ = s.publishAudit(ctx, "audit.governance.internal_hybrid_tls_applied", tenantID, map[string]interface{}{
+		"services": len(internalHybridMTLSServices),
+		"ca_id":    ca.ID,
+		"ca_name":  ca.Name,
+	})
+	return nil
+}
+
+func (s *Service) ensureHybridRuntimeCA(ctx context.Context, tenantID string) (certsCAItem, error) {
+	var listResp struct {
+		Items []certsCAItem `json:"items"`
+	}
+	if err := s.certsJSONRequest(ctx, http.MethodGet, "/certs/ca", tenantID, nil, &listResp); err != nil {
+		return certsCAItem{}, fmt.Errorf("list cert CAs failed: %w", err)
+	}
+	for _, item := range listResp.Items {
+		if strings.EqualFold(strings.TrimSpace(item.Name), "vecta-hybrid-runtime-root") &&
+			strings.EqualFold(strings.TrimSpace(item.Status), "active") {
+			return item, nil
+		}
+	}
+	createBody := map[string]interface{}{
+		"tenant_id":     tenantID,
+		"name":          "vecta-hybrid-runtime-root",
+		"ca_level":      "root",
+		"algorithm":     "ECDSA-P384+ML-DSA-65",
+		"ca_type":       "hybrid",
+		"key_backend":   "software",
+		"subject":       "CN=vecta-hybrid-runtime-root,O=Vecta KMS",
+		"validity_days": 3650,
+	}
+	var createResp struct {
+		CA certsCAItem `json:"ca"`
+	}
+	if err := s.certsJSONRequest(ctx, http.MethodPost, "/certs/ca", tenantID, createBody, &createResp); err != nil {
+		// If another request created it concurrently, fetch again.
+		if err2 := s.certsJSONRequest(ctx, http.MethodGet, "/certs/ca", tenantID, nil, &listResp); err2 == nil {
+			for _, item := range listResp.Items {
+				if strings.EqualFold(strings.TrimSpace(item.Name), "vecta-hybrid-runtime-root") &&
+					strings.EqualFold(strings.TrimSpace(item.Status), "active") {
+					return item, nil
+				}
+			}
+		}
+		return certsCAItem{}, fmt.Errorf("create hybrid runtime root CA failed: %w", err)
+	}
+	if strings.TrimSpace(createResp.CA.ID) == "" {
+		return certsCAItem{}, errors.New("hybrid runtime root CA was not returned by certs service")
+	}
+	return createResp.CA, nil
+}
+
+func (s *Service) enableRuntimeHybridMTLSProtocol(ctx context.Context, tenantID string, updatedBy string) error {
+	var listResp struct {
+		Items []struct {
+			Protocol   string `json:"protocol"`
+			Enabled    bool   `json:"enabled"`
+			ConfigJSON string `json:"config_json"`
+		} `json:"items"`
+	}
+	if err := s.certsJSONRequest(ctx, http.MethodGet, "/certs/protocols", tenantID, nil, &listResp); err != nil {
+		return fmt.Errorf("list cert protocols failed: %w", err)
+	}
+	cfg := map[string]interface{}{}
+	for _, item := range listResp.Items {
+		if strings.EqualFold(strings.TrimSpace(item.Protocol), "runtime-mtls") && strings.TrimSpace(item.ConfigJSON) != "" {
+			_ = json.Unmarshal([]byte(item.ConfigJSON), &cfg)
+			break
+		}
+	}
+	mode := strings.ToLower(strings.TrimSpace(fmt.Sprintf("%v", cfg["mode"])))
+	if mode != "custom" {
+		mode = "default"
+	}
+	cfg["mode"] = mode
+	cfg["tls_min_version"] = "1.3"
+	cfg["hybrid_pqc"] = true
+	cfg["cert_algorithm"] = "ECDSA-P384+ML-DSA-65"
+	rawCfg, _ := json.Marshal(cfg)
+	body := map[string]interface{}{
+		"enabled":     true,
+		"config_json": string(rawCfg),
+		"updated_by":  firstNonEmpty(updatedBy, "governance"),
+	}
+	if err := s.certsJSONRequest(ctx, http.MethodPut, "/certs/protocols/runtime-mtls", tenantID, body, nil); err != nil {
+		return fmt.Errorf("update runtime-mtls protocol failed: %w", err)
+	}
+	return nil
+}
+
+func (s *Service) certsJSONRequest(ctx context.Context, method string, path string, tenantID string, body interface{}, out interface{}) error {
+	base := strings.TrimRight(strings.TrimSpace(s.certsURL), "/")
+	if base == "" {
+		return errors.New("certs_url is empty")
+	}
+	target := base + path
+	if strings.TrimSpace(tenantID) != "" {
+		sep := "?"
+		if strings.Contains(target, "?") {
+			sep = "&"
+		}
+		target = target + sep + "tenant_id=" + url.QueryEscape(strings.TrimSpace(tenantID))
+	}
+	var payload io.Reader
+	if body != nil {
+		raw, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		payload = bytes.NewReader(raw)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, target, payload)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/json")
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+	resp, err := s.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		var errResp map[string]interface{}
+		_ = json.Unmarshal(respBody, &errResp)
+		if msg := strings.TrimSpace(fmt.Sprintf("%v", errResp["error"])); msg != "" && msg != "<nil>" {
+			return fmt.Errorf("%s (%d)", msg, resp.StatusCode)
+		}
+		if msg := strings.TrimSpace(string(respBody)); msg != "" {
+			return fmt.Errorf("%s (%d)", msg, resp.StatusCode)
+		}
+		return fmt.Errorf("request failed (%d)", resp.StatusCode)
+	}
+	if out != nil && len(respBody) > 0 {
+		if err := json.Unmarshal(respBody, out); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Service) SystemIntegrity(ctx context.Context, tenantID string) (SystemIntegrityStatus, error) {
@@ -526,9 +827,43 @@ func (s *Service) ExpireWorkerTick(ctx context.Context) error {
 
 func normalizeSystemState(in GovernanceSystemState) GovernanceSystemState {
 	in.TenantID = strings.TrimSpace(in.TenantID)
-	in.FIPSMode = strings.ToLower(strings.TrimSpace(in.FIPSMode))
-	if in.FIPSMode == "" {
+	rawFIPSMode := strings.ToLower(strings.TrimSpace(in.FIPSMode))
+	if rawFIPSMode == "enabled" || rawFIPSMode == "strict" || rawFIPSMode == "fips" || rawFIPSMode == "on" || rawFIPSMode == "true" {
+		in.FIPSMode = "enabled"
+	} else {
 		in.FIPSMode = "disabled"
+	}
+	in.FIPSModePolicy = strings.ToLower(strings.TrimSpace(in.FIPSModePolicy))
+	switch in.FIPSModePolicy {
+	case "strict", "standard":
+	default:
+		if in.FIPSMode == "enabled" {
+			in.FIPSModePolicy = "strict"
+		} else {
+			in.FIPSModePolicy = "standard"
+		}
+	}
+	if in.FIPSModePolicy == "strict" {
+		in.FIPSMode = "enabled"
+	} else {
+		in.FIPSMode = "disabled"
+	}
+	in.FIPSCryptoLibrary = strings.TrimSpace(in.FIPSCryptoLibrary)
+	if in.FIPSCryptoLibrary == "" {
+		in.FIPSCryptoLibrary = runtimeCryptoLibraryLabel
+		in.FIPSLibraryValidated = runtimeCryptoLibraryValidated
+	}
+	in.FIPSTLSProfile = strings.ToLower(strings.TrimSpace(in.FIPSTLSProfile))
+	switch in.FIPSTLSProfile {
+	case "tls12_fips_suites", "tls13_only":
+	default:
+		in.FIPSTLSProfile = "tls12_fips_suites"
+	}
+	in.FIPSRNGMode = strings.ToLower(strings.TrimSpace(in.FIPSRNGMode))
+	switch in.FIPSRNGMode {
+	case "ctr_drbg", "hmac_drbg", "hsm_trng":
+	default:
+		in.FIPSRNGMode = "ctr_drbg"
 	}
 	in.HSMMode = strings.ToLower(strings.TrimSpace(in.HSMMode))
 	if in.HSMMode == "" {
@@ -564,7 +899,99 @@ func normalizeSystemState(in GovernanceSystemState) GovernanceSystemState {
 	in.ProxyEndpoint = strings.TrimSpace(in.ProxyEndpoint)
 	in.SNMPTarget = strings.TrimSpace(in.SNMPTarget)
 	in.UpdatedBy = strings.TrimSpace(in.UpdatedBy)
+	in.FIPSEntropySource = strings.TrimSpace(in.FIPSEntropySource)
+	if in.FIPSEntropySource == "" {
+		in.FIPSEntropySource = "os-csprng"
+	}
+	in.FIPSEntropyHealth = strings.ToLower(strings.TrimSpace(in.FIPSEntropyHealth))
+	switch in.FIPSEntropyHealth {
+	case "ok", "degraded", "error", "unknown":
+	default:
+		in.FIPSEntropyHealth = "unknown"
+	}
+	if in.FIPSEntropyBitsByte < 0 {
+		in.FIPSEntropyBitsByte = 0
+	}
+	if in.FIPSEntropyBitsByte > 8 {
+		in.FIPSEntropyBitsByte = 8
+	}
+	if in.FIPSEntropyBytes < 0 {
+		in.FIPSEntropyBytes = 0
+	}
+	if in.FIPSEntropyReadUs < 0 {
+		in.FIPSEntropyReadUs = 0
+	}
 	return in
+}
+
+func enrichFIPSRuntimeState(in GovernanceSystemState) GovernanceSystemState {
+	in.FIPSCryptoLibrary = runtimeCryptoLibraryLabel
+	in.FIPSLibraryValidated = runtimeCryptoLibraryValidated
+	if in.FIPSRNGMode == "hsm_trng" && !isHSMReadyForTRNG(in.HSMMode) {
+		in.FIPSEntropyAt = time.Now().UTC()
+		in.FIPSEntropySource = "hsm-not-connected"
+		in.FIPSEntropyHealth = "error"
+		in.FIPSEntropyBitsByte = 0
+		in.FIPSEntropyBytes = 0
+		in.FIPSEntropyReadUs = 0
+		return in
+	}
+	const sampleBytes = 4096
+	buf := make([]byte, sampleBytes)
+	start := time.Now()
+	n, err := rand.Read(buf)
+	elapsed := time.Since(start)
+	in.FIPSEntropyAt = time.Now().UTC()
+	in.FIPSEntropyBytes = n
+	in.FIPSEntropyReadUs = elapsed.Microseconds()
+	if in.FIPSEntropyReadUs < 0 {
+		in.FIPSEntropyReadUs = 0
+	}
+	in.FIPSEntropySource = "os-csprng"
+	if in.FIPSRNGMode == "hsm_trng" {
+		if in.HSMMode == "hsm" || in.HSMMode == "hardware" {
+			in.FIPSEntropySource = "hsm-trng"
+		} else {
+			in.FIPSEntropySource = "hsm-trng-unavailable-fallback"
+		}
+	}
+	if err != nil || n <= 0 {
+		in.FIPSEntropyHealth = "error"
+		in.FIPSEntropyBitsByte = 0
+		return in
+	}
+	counts := [256]int{}
+	for _, b := range buf[:n] {
+		counts[int(b)]++
+	}
+	total := float64(n)
+	entropy := 0.0
+	for _, c := range counts {
+		if c == 0 {
+			continue
+		}
+		p := float64(c) / total
+		entropy += -p * math.Log2(p)
+	}
+	in.FIPSEntropyBitsByte = math.Round(entropy*1000) / 1000
+	if in.FIPSEntropyBitsByte >= 7.0 && in.FIPSEntropyReadUs <= 250000 {
+		in.FIPSEntropyHealth = "ok"
+	} else {
+		in.FIPSEntropyHealth = "degraded"
+	}
+	if in.FIPSRNGMode == "hsm_trng" && in.FIPSEntropySource == "hsm-trng-unavailable-fallback" {
+		in.FIPSEntropyHealth = "error"
+	}
+	return in
+}
+
+func isHSMReadyForTRNG(mode string) bool {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "hsm", "hardware", "connected", "active":
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *Service) ExpiryCheckInterval(ctx context.Context, tenantID string) time.Duration {

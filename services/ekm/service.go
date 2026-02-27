@@ -1106,13 +1106,17 @@ Write-Host "Schedule heartbeat.ps1 in Windows Task Scheduler every 30 seconds."
 	files := []DeployPackageFile{
 		{Path: "agent.env", Content: envFile, Mode: "0600"},
 		{Path: "pkcs11.conf", Content: pkcs11Cfg, Mode: "0600"},
-		{Path: "heartbeat.sh", Content: linuxHeartbeat, Mode: "0750"},
-		{Path: "heartbeat.ps1", Content: windowsHeartbeat, Mode: "0644"},
 	}
 	if targetOS == "linux" {
-		files = append(files, DeployPackageFile{Path: "install.sh", Content: linuxInstall, Mode: "0750"})
+		files = append(files,
+			DeployPackageFile{Path: "heartbeat.sh", Content: linuxHeartbeat, Mode: "0750"},
+			DeployPackageFile{Path: "install.sh", Content: linuxInstall, Mode: "0750"},
+		)
 	} else {
-		files = append(files, DeployPackageFile{Path: "install.ps1", Content: windowsInstall, Mode: "0644"})
+		files = append(files,
+			DeployPackageFile{Path: "heartbeat.ps1", Content: windowsHeartbeat, Mode: "0644"},
+			DeployPackageFile{Path: "install.ps1", Content: windowsInstall, Mode: "0644"},
+		)
 	}
 
 	pkg := DeployPackage{

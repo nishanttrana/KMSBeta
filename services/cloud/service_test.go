@@ -94,6 +94,24 @@ func TestServiceImportRotateSyncAndInventory(t *testing.T) {
 	if len(items) == 0 {
 		t.Fatalf("expected inventory items")
 	}
+
+	delOut, err := svc.DeleteAccount(ctx, "tenant-1", account.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if delOut.AccountID != account.ID || delOut.DeletedBindings < 1 {
+		t.Fatalf("unexpected delete connector result: %+v", delOut)
+	}
+	if pub.Count("audit.cloud.connector_deleted") == 0 {
+		t.Fatalf("expected connector_deleted event")
+	}
+	left, err := svc.ListAccounts(ctx, "tenant-1", ProviderAWS)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(left) != 0 {
+		t.Fatalf("expected connector removed, remaining=%d", len(left))
+	}
 }
 
 func TestServiceValidation(t *testing.T) {

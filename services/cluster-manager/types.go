@@ -19,6 +19,7 @@ type Store interface {
 	ListNodes(ctx context.Context, tenantID string) ([]ClusterNode, error)
 	GetNode(ctx context.Context, tenantID string, nodeID string) (ClusterNode, error)
 	UpsertNode(ctx context.Context, item ClusterNode) error
+	DeleteNode(ctx context.Context, tenantID string, nodeID string) error
 
 	CreateJoinToken(ctx context.Context, token ClusterJoinToken) error
 	GetJoinToken(ctx context.Context, tenantID string, tokenID string) (ClusterJoinToken, error)
@@ -193,4 +194,44 @@ type SyncAckInput struct {
 	NodeID      string `json:"node_id"`
 	ProfileID   string `json:"profile_id"`
 	LastEventID int64  `json:"last_event_id"`
+}
+
+type UpsertNodeInput struct {
+	TenantID        string   `json:"tenant_id"`
+	NodeID          string   `json:"node_id"`
+	NodeName        string   `json:"node_name"`
+	Endpoint        string   `json:"endpoint"`
+	Role            string   `json:"role"`
+	ProfileID       string   `json:"profile_id"`
+	Components      []string `json:"components"`
+	Status          string   `json:"status"`
+	JoinState       string   `json:"join_state"`
+	CertFingerprint string   `json:"cert_fingerprint"`
+	CPUPercent      float64  `json:"cpu_percent"`
+	RAMGB           float64  `json:"ram_gb"`
+	RequestedBy     string   `json:"requested_by"`
+	SeedSync        bool     `json:"seed_sync"`
+}
+
+type UpdateNodeRoleInput struct {
+	TenantID    string `json:"tenant_id"`
+	Role        string `json:"role"`
+	RequestedBy string `json:"requested_by"`
+}
+
+type RemoveNodeInput struct {
+	TenantID        string `json:"tenant_id"`
+	RequestedBy     string `json:"requested_by"`
+	Reason          string `json:"reason"`
+	PurgeSyncedData bool   `json:"purge_synced_data"`
+}
+
+type RemoveNodeResult struct {
+	NodeID             string  `json:"node_id"`
+	TenantID           string  `json:"tenant_id"`
+	Standalone         bool    `json:"standalone"`
+	PurgeSyncedData    bool    `json:"purge_synced_data"`
+	PurgeEventIDs      []int64 `json:"purge_event_ids"`
+	PreviousRole       string  `json:"previous_role"`
+	PromotedLeaderNode string  `json:"promoted_leader_node,omitempty"`
 }

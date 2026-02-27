@@ -137,4 +137,30 @@ func TestStoreClientProfilesAndClients(t *testing.T) {
 	if found.ID != client.ID {
 		t.Fatalf("unexpected fingerprint lookup: %+v", found)
 	}
+	count, err := store.CountClientsByProfile(ctx, "tenant-c", "kpf_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("expected profile usage count 1, got %d", count)
+	}
+	if err := store.DeleteClient(ctx, "tenant-c", client.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetClientByID(ctx, "tenant-c", client.ID); err == nil {
+		t.Fatalf("expected client not found after delete")
+	}
+	count, err = store.CountClientsByProfile(ctx, "tenant-c", "kpf_1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("expected profile usage count 0 after delete, got %d", count)
+	}
+	if err := store.DeleteClientProfile(ctx, "tenant-c", "kpf_1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.GetClientProfile(ctx, "tenant-c", "kpf_1"); err == nil {
+		t.Fatalf("expected profile not found after delete")
+	}
 }

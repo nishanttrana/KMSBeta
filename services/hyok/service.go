@@ -124,26 +124,125 @@ func (s *Service) Health(ctx context.Context, tenantID string) (map[string]inter
 	if tenantID == "" {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
+	configuredEndpoints, err := s.store.ListEndpoints(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	configuredByProtocol := map[string]EndpointConfig{}
+	for _, item := range configuredEndpoints {
+		configuredByProtocol[normalizeProtocol(item.Protocol)] = item
+	}
 	endpoints, err := s.ListEndpoints(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
 	enabled := 0
+	connected := 0
+	degraded := 0
+	notConfigured := 0
+	protocolStatuses := map[string]map[string]interface{}{}
 	for _, item := range endpoints {
 		if item.Enabled {
 			enabled++
 		}
+		protocol := normalizeProtocol(item.Protocol)
+		if protocol == "" {
+			continue
+		}
+
+		cfg, configured := configuredByProtocol[protocol]
+		status := "not_configured"
+		reason := "endpoint config not saved yet"
+		if configured {
+			if !cfg.Enabled {
+				status = "disabled"
+				reason = "endpoint is disabled"
+			} else {
+				status, reason = s.endpointRuntimeStatus(ctx, tenantID, protocol)
+			}
+		}
+
+		switch status {
+		case "connected":
+			connected++
+		case "degraded", "auth_failed", "unreachable":
+			degraded++
+		case "not_configured":
+			notConfigured++
+		}
+		protocolStatuses[protocol] = map[string]interface{}{
+			"status":     status,
+			"reason":     reason,
+			"configured": configured,
+			"enabled":    item.Enabled,
+		}
 	}
+
+	overallStatus := "ok"
+	switch {
+	case degraded > 0:
+		overallStatus = "degraded"
+	case notConfigured == len(endpoints):
+		overallStatus = "not_configured"
+	case connected == 0 && enabled > 0:
+		overallStatus = "configured"
+	}
+
 	out := map[string]interface{}{
-		"status":             "ok",
-		"tenant_id":          tenantID,
-		"endpoint_count":     len(endpoints),
-		"enabled_endpoints":  enabled,
-		"policy_fail_closed": s.policyFailClosed,
-		"checked_at":         time.Now().UTC().Format(time.RFC3339Nano),
+		"status":                   overallStatus,
+		"tenant_id":                tenantID,
+		"endpoint_count":           len(endpoints),
+		"enabled_endpoints":        enabled,
+		"configured_endpoints":     len(configuredByProtocol),
+		"connected_endpoints":      connected,
+		"degraded_endpoints":       degraded,
+		"not_configured_endpoints": notConfigured,
+		"policy_fail_closed":       s.policyFailClosed,
+		"protocol_statuses":        protocolStatuses,
+		"checked_at":               time.Now().UTC().Format(time.RFC3339Nano),
 	}
 	_ = s.publishAudit(ctx, "audit.hyok.health_check", tenantID, out)
 	return out, nil
+}
+
+func (s *Service) endpointRuntimeStatus(ctx context.Context, tenantID string, protocol string) (string, string) {
+	logs, err := s.store.ListRequestLogs(ctx, tenantID, protocol, 25, 0)
+	if err != nil {
+		return "degraded", "unable to inspect request history"
+	}
+	if len(logs) == 0 {
+		return "configured", "awaiting first successful request"
+	}
+
+	latest := logs[0]
+	for _, item := range logs {
+		state := strings.ToLower(strings.TrimSpace(item.Status))
+		if state != "success" && state != "ok" {
+			continue
+		}
+		when := item.CompletedAt
+		if when.IsZero() {
+			when = item.CreatedAt
+		}
+		if when.IsZero() {
+			return "connected", "request flow verified"
+		}
+		return "connected", "last success " + when.UTC().Format(time.RFC3339)
+	}
+
+	latestState := strings.ToLower(strings.TrimSpace(latest.Status))
+	if latestState == "pending_approval" {
+		return "configured", "pending governance approval"
+	}
+	reason := strings.TrimSpace(latest.ErrorMessage)
+	if reason == "" {
+		reason = "latest request status: " + firstNonEmpty(latestState, "unknown")
+	}
+	reasonLower := strings.ToLower(reason)
+	if strings.Contains(reasonLower, "unauthorized") || strings.Contains(reasonLower, "auth") || strings.Contains(reasonLower, "token") || strings.Contains(reasonLower, "forbidden") {
+		return "auth_failed", reason
+	}
+	return "degraded", reason
 }
 
 func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol string, operation string, keyID string, endpointPath string, identity AuthIdentity, req ProxyCryptoRequest) (ProxyCryptoResponse, error) {

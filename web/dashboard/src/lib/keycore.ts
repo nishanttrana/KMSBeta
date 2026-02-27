@@ -524,13 +524,15 @@ export async function listKeys(
   options?: {
     limit?: number;
     offset?: number;
+    includeDeleted?: boolean;
   }
 ): Promise<KeyItem[]> {
   const limit = Math.max(1, Math.min(5000, Math.trunc(Number(options?.limit || 2000))));
   const offset = Math.max(0, Math.trunc(Number(options?.offset || 0)));
+  const includeDeleted = Boolean(options?.includeDeleted);
   const payload = await apiRequest<APIKeysResponse>(
     session,
-    `/keys?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}&offset=${offset}`
+    `/keys?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}&offset=${offset}&include_deleted=${includeDeleted ? "true" : "false"}`
   );
   return payload.items || [];
 }

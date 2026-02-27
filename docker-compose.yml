@@ -97,7 +97,7 @@ services:
     ports:
       - "2379:2379"
     healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 2379"]
+      test: ["CMD", "etcdctl", "endpoint", "health", "--endpoints=http://127.0.0.1:2379"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -252,7 +252,7 @@ services:
     volumes:
       - hsm-integration-data:/var/lib/vecta/hsm
     healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 22"]
+      test: ["CMD-SHELL", "netstat -ltn | grep -q ':22[[:space:]]'"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -437,6 +437,7 @@ services:
     environment:
       <<: *kms-common-env
       APP_BASE_URL: https://localhost
+      CERTS_URL: http://certs:8030
       HTTP_PORT: "8050"
       GRPC_PORT: "18050"
     ports:

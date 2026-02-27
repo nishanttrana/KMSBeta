@@ -42,7 +42,20 @@ export type HYOKHealth = {
   tenant_id: string;
   endpoint_count: number;
   enabled_endpoints: number;
+  configured_endpoints?: number;
+  connected_endpoints?: number;
+  degraded_endpoints?: number;
+  not_configured_endpoints?: number;
   policy_fail_closed: boolean;
+  protocol_statuses?: Record<
+    string,
+    {
+      status: string;
+      reason?: string;
+      configured?: boolean;
+      enabled?: boolean;
+    }
+  >;
   checked_at: string;
 };
 

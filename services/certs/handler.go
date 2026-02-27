@@ -36,6 +36,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /certs/ca", h.handleCreateCA)
 	mux.HandleFunc("GET /certs/ca", h.handleListCAs)
+	mux.HandleFunc("DELETE /certs/ca/{id}", h.handleDeleteCA)
 	mux.HandleFunc("POST /certs", h.handleIssueCert)
 	mux.HandleFunc("POST /certs/sign-csr", h.handleSignCSR)
 	mux.HandleFunc("GET /certs", h.handleListCerts)
@@ -111,6 +112,23 @@ func (h *Handler) handleListCAs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteCA(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	if err := h.svc.DeleteCA(r.Context(), tenantID, r.PathValue("id")); err != nil {
+		status := http.StatusBadRequest
+		if errors.Is(err, errStoreNotFound) {
+			status = http.StatusNotFound
+		}
+		writeErr(w, status, "delete_ca_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "deleted", "request_id": reqID})
 }
 
 func (h *Handler) handleIssueCert(w http.ResponseWriter, r *http.Request) {

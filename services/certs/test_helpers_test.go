@@ -62,6 +62,11 @@ func createCertsSchemaForTest(conn *pkgdb.DB) error {
 			reason TEXT NOT NULL DEFAULT 'unspecified', revoked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, cert_id)
 		);`,
+		`CREATE TABLE cert_deleted_refs (
+			tenant_id TEXT NOT NULL, cert_id TEXT NOT NULL, ca_id TEXT NOT NULL, serial_number TEXT NOT NULL,
+			subject_cn TEXT NOT NULL, deleted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, cert_id)
+		);`,
 		`CREATE TABLE cert_acme_accounts (
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, email TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'valid',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id)

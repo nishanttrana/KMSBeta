@@ -96,12 +96,18 @@ func TestDeleteCertificate(t *testing.T) {
 	if err := svc.DeleteCertificate(ctx, "td", issued.ID); err != nil {
 		t.Fatalf("delete: %v", err)
 	}
-	got, err := svc.GetCertificate(ctx, "td", issued.ID)
-	if err != nil {
-		t.Fatalf("get after delete: %v", err)
+	if _, err := svc.GetCertificate(ctx, "td", issued.ID); err == nil {
+		t.Fatalf("expected not found after hard delete")
 	}
-	if strings.ToLower(got.Status) != CertStatusDeleted {
-		t.Fatalf("expected deleted status, got %+v", got)
+	deleted, err := svc.ListCertificates(ctx, "td", CertStatusDeleted, "", 50, 0)
+	if err != nil {
+		t.Fatalf("list deleted: %v", err)
+	}
+	if len(deleted) != 1 || deleted[0].ID != issued.ID {
+		t.Fatalf("expected deleted reference for cert, got %+v", deleted)
+	}
+	if deleted[0].CertPEM != "" || strings.TrimSpace(deleted[0].SubjectCN) == "" {
+		t.Fatalf("expected reference-only deleted row, got %+v", deleted[0])
 	}
 }
 
@@ -141,6 +147,82 @@ func TestDeleteInternalMTLSCertificateBlocked(t *testing.T) {
 	}
 	if strings.ToLower(got.Status) == CertStatusDeleted {
 		t.Fatalf("internal-mtls certificate must not be marked deleted")
+	}
+}
+
+func TestDeleteCARequiresNoChildrenAndNoCertificates(t *testing.T) {
+	svc, _ := newCertsService(t)
+	ctx := context.Background()
+	root, err := svc.CreateCA(ctx, CreateCARequest{
+		TenantID:   "tca-del",
+		Name:       "root-ca",
+		CALevel:    "root",
+		Algorithm:  "ECDSA-P384",
+		KeyBackend: "software",
+		Subject:    "CN=Root CA,O=Vecta",
+	})
+	if err != nil {
+		t.Fatalf("create root: %v", err)
+	}
+	leaf, err := svc.CreateCA(ctx, CreateCARequest{
+		TenantID:   "tca-del",
+		Name:       "leaf-ca",
+		ParentCAID: root.ID,
+		CALevel:    "intermediate",
+		Algorithm:  "ECDSA-P384",
+		KeyBackend: "software",
+		Subject:    "CN=Leaf CA,O=Vecta",
+	})
+	if err != nil {
+		t.Fatalf("create leaf: %v", err)
+	}
+
+	if err := svc.DeleteCA(ctx, "tca-del", root.ID); err == nil || !strings.Contains(strings.ToLower(err.Error()), "child") {
+		t.Fatalf("expected child CA delete block, got %v", err)
+	}
+
+	issued, _, err := svc.IssueCertificate(ctx, IssueCertificateRequest{
+		TenantID:  "tca-del",
+		CAID:      leaf.ID,
+		SubjectCN: "svc.ca-delete.local",
+		CertType:  "tls-server",
+		Algorithm: "ECDSA-P256",
+	})
+	if err != nil {
+		t.Fatalf("issue leaf cert: %v", err)
+	}
+	if err := svc.DeleteCA(ctx, "tca-del", leaf.ID); err == nil || !strings.Contains(strings.ToLower(err.Error()), "issued certificates") {
+		t.Fatalf("expected issued certificate delete block, got %v", err)
+	}
+	if err := svc.DeleteCertificate(ctx, "tca-del", issued.ID); err != nil {
+		t.Fatalf("delete cert: %v", err)
+	}
+	if err := svc.DeleteCA(ctx, "tca-del", leaf.ID); err != nil {
+		t.Fatalf("delete leaf ca: %v", err)
+	}
+	if _, err := svc.store.GetCA(ctx, "tca-del", leaf.ID); err == nil {
+		t.Fatalf("expected deleted CA to be removed")
+	}
+}
+
+func TestDeleteRuntimeRootCABlocked(t *testing.T) {
+	svc, _ := newCertsService(t)
+	ctx := context.Background()
+	tenant := "t-runtime-del"
+	runtimeName := svc.runtimeRootCAName(ctx, tenant)
+	ca, err := svc.CreateCA(ctx, CreateCARequest{
+		TenantID:   tenant,
+		Name:       runtimeName,
+		CALevel:    "root",
+		Algorithm:  "ECDSA-P384",
+		KeyBackend: "software",
+		Subject:    "CN=Runtime Root,O=Vecta",
+	})
+	if err != nil {
+		t.Fatalf("create runtime root: %v", err)
+	}
+	if err := svc.DeleteCA(ctx, tenant, ca.ID); err == nil || !strings.Contains(strings.ToLower(err.Error()), "runtime root") {
+		t.Fatalf("expected runtime root delete block, got %v", err)
 	}
 }
 

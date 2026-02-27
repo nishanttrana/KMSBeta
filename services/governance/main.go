@@ -60,8 +60,16 @@ func main() {
 	}
 
 	baseURL := envOr("APP_BASE_URL", "http://localhost:8050")
+	certsURL := envOr("CERTS_URL", "http://certs:8030")
 	store := NewSQLStore(dbConn)
-	svc := NewService(store, publisher, nil, NewGRPCCallbackExecutor(5*time.Second), baseURL)
+	svc := NewService(
+		store,
+		publisher,
+		nil,
+		NewGRPCCallbackExecutor(5*time.Second),
+		baseURL,
+		WithCertsURL(certsURL),
+	)
 	handler := NewHandler(svc)
 
 	go func() {

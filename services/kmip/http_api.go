@@ -13,16 +13,62 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/ovh/kmip-go/ttlv"
 )
 
 func (h *Handler) HTTPHandler() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /kmip/capabilities", h.handleCapabilities)
 	mux.HandleFunc("GET /kmip/profiles", h.handleListClientProfiles)
 	mux.HandleFunc("POST /kmip/profiles", h.handleCreateClientProfile)
+	mux.HandleFunc("DELETE /kmip/profiles/{id}", h.handleDeleteClientProfile)
 	mux.HandleFunc("GET /kmip/clients", h.handleListClients)
 	mux.HandleFunc("GET /kmip/clients/{id}", h.handleGetClient)
 	mux.HandleFunc("POST /kmip/clients", h.handleCreateClient)
+	mux.HandleFunc("DELETE /kmip/clients/{id}", h.handleDeleteClient)
 	return mux
+}
+
+func (h *Handler) handleCapabilities(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	versionsRaw := parseSupportedProtocolVersions()
+	versions := make([]string, 0, len(versionsRaw))
+	highestVersion := ""
+	for _, v := range versionsRaw {
+		version := fmt.Sprintf("%d.%d", v.ProtocolVersionMajor, v.ProtocolVersionMinor)
+		if highestVersion == "" {
+			highestVersion = version
+		}
+		versions = append(versions, version)
+	}
+	opsRaw := supportedKMIPOperations()
+	ops := make([]string, 0, len(opsRaw))
+	for _, op := range opsRaw {
+		ops = append(ops, strings.TrimSpace(ttlv.EnumStr(op)))
+	}
+	objRaw := supportedKMIPObjectTypes()
+	objects := make([]string, 0, len(objRaw))
+	for _, objType := range objRaw {
+		objects = append(objects, strings.TrimSpace(ttlv.EnumStr(objType)))
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"capabilities": map[string]interface{}{
+			"library":                   "github.com/ovh/kmip-go",
+			"library_version":           "v0.7.2",
+			"protocol":                  "TTLV over TLS",
+			"port":                      KMIPPort,
+			"highest_supported_version": highestVersion,
+			"supported_versions":        versions,
+			"operations":                ops,
+			"object_types":              objects,
+		},
+		"request_id": reqID,
+	})
 }
 
 func (h *Handler) handleListClientProfiles(w http.ResponseWriter, r *http.Request) {
@@ -52,6 +98,51 @@ func (h *Handler) handleCreateClientProfile(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]interface{}{"profile": profile, "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteClientProfile(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	profileID := strings.TrimSpace(r.PathValue("id"))
+	if profileID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "profile id is required", reqID, tenantID)
+		return
+	}
+	profile, err := h.store.GetClientProfile(r.Context(), tenantID, profileID)
+	if err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "delete_profile_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	attachedClients, err := h.store.CountClientsByProfile(r.Context(), tenantID, profileID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "delete_profile_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if attachedClients > 0 {
+		writeErr(w, http.StatusConflict, "profile_in_use", "profile is assigned to existing kmip clients; delete those clients first", reqID, tenantID)
+		return
+	}
+	if err := h.store.DeleteClientProfile(r.Context(), tenantID, profileID); err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "delete_profile_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	_ = h.publishAudit(r.Context(), "audit.kmip.client_profile_deleted", tenantID, map[string]interface{}{
+		"profile_id": profileID,
+		"name":       profile.Name,
+		"role":       profile.Role,
+	})
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "deleted", "request_id": reqID})
 }
 
 func (h *Handler) handleListClients(w http.ResponseWriter, r *http.Request) {
@@ -104,6 +195,44 @@ func (h *Handler) handleCreateClient(w http.ResponseWriter, r *http.Request) {
 		"issued_key_pem":  out.IssuedKeyPEM,
 		"request_id":      reqID,
 	})
+}
+
+func (h *Handler) handleDeleteClient(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	clientID := strings.TrimSpace(r.PathValue("id"))
+	if clientID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "client id is required", reqID, tenantID)
+		return
+	}
+	client, err := h.store.GetClientByID(r.Context(), tenantID, clientID)
+	if err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "delete_client_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if err := h.store.DeleteClient(r.Context(), tenantID, clientID); err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "delete_client_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	_ = h.publishAudit(r.Context(), "audit.kmip.client_deleted", tenantID, map[string]interface{}{
+		"client_id":        clientID,
+		"name":             client.Name,
+		"role":             client.Role,
+		"profile_id":       client.ProfileID,
+		"cert_fingerprint": client.CertFingerprintSHA256,
+	})
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "deleted", "request_id": reqID})
 }
 
 func (h *Handler) createClientProfile(ctx context.Context, req CreateKMIPClientProfileRequest) (KMIPClientProfile, error) {

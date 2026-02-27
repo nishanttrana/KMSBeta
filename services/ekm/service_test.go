@@ -179,6 +179,34 @@ func TestServiceDatabaseAndWrapRotateFlow(t *testing.T) {
 	if deployPkg.TargetOS != "linux" || len(deployPkg.Files) < 3 {
 		t.Fatalf("unexpected deploy package: %+v", deployPkg)
 	}
+	linuxFiles := map[string]bool{}
+	for _, file := range deployPkg.Files {
+		linuxFiles[file.Path] = true
+	}
+	if !linuxFiles["heartbeat.sh"] || !linuxFiles["install.sh"] {
+		t.Fatalf("linux package should include linux scripts: %+v", deployPkg.Files)
+	}
+	if linuxFiles["heartbeat.ps1"] || linuxFiles["install.ps1"] {
+		t.Fatalf("linux package must not include windows scripts: %+v", deployPkg.Files)
+	}
+
+	winPkg, err := svc.BuildAgentDeployPackage(ctx, "tenant-b", agent.ID, "windows")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if winPkg.TargetOS != "windows" || len(winPkg.Files) < 3 {
+		t.Fatalf("unexpected windows deploy package: %+v", winPkg)
+	}
+	winFiles := map[string]bool{}
+	for _, file := range winPkg.Files {
+		winFiles[file.Path] = true
+	}
+	if !winFiles["heartbeat.ps1"] || !winFiles["install.ps1"] {
+		t.Fatalf("windows package should include windows scripts: %+v", winPkg.Files)
+	}
+	if winFiles["heartbeat.sh"] || winFiles["install.sh"] {
+		t.Fatalf("windows package must not include linux scripts: %+v", winPkg.Files)
+	}
 }
 
 func TestServiceDeleteAgentCascadeAndAudit(t *testing.T) {
