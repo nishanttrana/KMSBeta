@@ -445,9 +445,12 @@ docker_image_exists() {
 }
 
 adjust_unsupported_profiles() {
-  # cluster-manager in this package is image-only (no local build context).
+  if [[ "${CLUSTER_DEPLOYMENT_MODE:-standalone}" != "standalone" ]]; then
+    FEATURE_clustering="true"
+  fi
+
   if [[ "${FEATURE_clustering:-false}" == "true" ]]; then
-    if ! docker_image_exists "vecta/cluster:latest"; then
+    if [[ "${BUILD_MODE:-build-missing}" == "no-build" ]] && ! docker_image_exists "vecta/cluster:latest"; then
       add_warning "clustering requested but image vecta/cluster:latest is unavailable. Disabling clustering and mpc_engine."
       FEATURE_clustering="false"
       FEATURE_mpc_engine="false"
@@ -649,15 +652,37 @@ collect_inputs() {
   fi
 
   prompt_yes_no CLUSTER_ENABLED "Enable cluster network" "false"
+  CLUSTER_DEPLOYMENT_MODE="standalone"
+  CLUSTER_REPLICATION_PROFILE="cluster-profile-base"
+  CLUSTER_JOIN_ENDPOINT=""
+  CLUSTER_JOIN_TOKEN=""
+  CLUSTER_NODE_ROLE="leader"
   if [[ "${CLUSTER_ENABLED}" == "true" ]]; then
     prompt_default CLUSTER_INTERFACE "Cluster interface" "eth1"
     prompt_default CLUSTER_ADDRESS "Cluster IPv4/CIDR" "172.16.0.100/24"
     validate_ipv4_cidr "${CLUSTER_ADDRESS}" || die "Cluster IPv4/CIDR must look like 172.16.0.100/24."
     prompt_default CLUSTER_MTU "Cluster MTU" "9000"
+    echo
+    echo "Cluster deployment mode:"
+    echo "  1) new installation (leader / seed node)"
+    echo "  2) join existing cluster (follower)"
+    read -r -p "Choose cluster mode [1/2] (default 1): " CLUSTER_MODE_CHOICE || true
+    CLUSTER_MODE_CHOICE="$(trim "${CLUSTER_MODE_CHOICE}")"
+    case "${CLUSTER_MODE_CHOICE:-1}" in
+      1) CLUSTER_DEPLOYMENT_MODE="new-install"; CLUSTER_NODE_ROLE="leader" ;;
+      2) CLUSTER_DEPLOYMENT_MODE="join-existing"; CLUSTER_NODE_ROLE="follower" ;;
+      *) die "Invalid cluster mode choice." ;;
+    esac
+    prompt_default CLUSTER_REPLICATION_PROFILE "Selective replication profile ID" "cluster-profile-base"
+    if [[ "${CLUSTER_DEPLOYMENT_MODE}" == "join-existing" ]]; then
+      prompt_default CLUSTER_JOIN_ENDPOINT "Existing cluster manager endpoint (https://host:8210)" "https://10.0.1.100:8210"
+      prompt_default CLUSTER_JOIN_TOKEN "Cluster join token (issued by leader)" ""
+    fi
   else
     CLUSTER_INTERFACE="eth1"
     CLUSTER_ADDRESS=""
     CLUSTER_MTU="9000"
+    CLUSTER_NODE_ROLE="leader"
   fi
 
   prompt_default NTP_SERVERS_CSV "NTP servers (comma-separated)" "pool.ntp.org"
@@ -754,6 +779,9 @@ collect_inputs() {
   fi
   prompt_default BIND_IP "Docker published bind IP" "${bind_ip_default}"
   validate_ipv4 "${BIND_IP}" || die "Bind IP must be a valid IPv4 address."
+  CLUSTER_NODE_ENDPOINT="${MGMT_ADDRESS%%/*}"
+  CLUSTER_NODE_ENDPOINT="$(trim "${CLUSTER_NODE_ENDPOINT}")"
+  [[ -z "${CLUSTER_NODE_ENDPOINT}" ]] && CLUSTER_NODE_ENDPOINT="${BIND_IP}"
 
   prompt_default HTTP_PORT "Public HTTP port" "80"
   prompt_default HTTPS_PORT "Public HTTPS port" "443"
@@ -883,6 +911,11 @@ spec:
         reporting_alerting: ${FEATURE_reporting_alerting}
         sbom_cbom: ${FEATURE_sbom_cbom}
         secrets: ${FEATURE_secrets}
+    cluster_bootstrap:
+        mode: ${CLUSTER_DEPLOYMENT_MODE}
+        replication_profile_id: ${CLUSTER_REPLICATION_PROFILE}
+        join_endpoint: ${CLUSTER_JOIN_ENDPOINT}
+        join_token: ${CLUSTER_JOIN_TOKEN}
     hsm_mode: ${HSM_MODE}
     cert_security:
         cert_storage_mode: ${CERT_STORAGE_MODE}
@@ -1067,6 +1100,32 @@ AUTH_BOOTSTRAP_ADMIN_USERNAME=${ADMIN_USERNAME}
 AUTH_BOOTSTRAP_ADMIN_PASSWORD=${ADMIN_PASSWORD}
 AUTH_BOOTSTRAP_ADMIN_EMAIL=${ADMIN_EMAIL}
 AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE=${FORCE_PASSWORD_CHANGE}
+CLUSTER_NODE_ID=${APPLIANCE_ID}
+CLUSTER_NODE_NAME=${APPLIANCE_ID}
+CLUSTER_NODE_ROLE=${CLUSTER_NODE_ROLE}
+CLUSTER_NODE_ENDPOINT=${CLUSTER_NODE_ENDPOINT}
+CLUSTER_BOOTSTRAP_PROFILE_ID=${CLUSTER_REPLICATION_PROFILE}
+CLUSTER_JOIN_ENDPOINT=${CLUSTER_JOIN_ENDPOINT}
+CLUSTER_JOIN_TOKEN=${CLUSTER_JOIN_TOKEN}
+CLUSTER_SYNC_SHARED_SECRET=${CLUSTER_SYNC_SHARED_SECRET:-}
+CLUSTER_SYNC_ANTI_REPLAY_SEC=${CLUSTER_SYNC_ANTI_REPLAY_SEC:-120}
+CLUSTER_SYNC_REQUIRE_MTLS=${CLUSTER_SYNC_REQUIRE_MTLS:-false}
+CLUSTER_SYNC_TLS_CA_FILE=${CLUSTER_SYNC_TLS_CA_FILE:-}
+CLUSTER_SYNC_TLS_CERT_FILE=${CLUSTER_SYNC_TLS_CERT_FILE:-}
+CLUSTER_SYNC_TLS_KEY_FILE=${CLUSTER_SYNC_TLS_KEY_FILE:-}
+CLUSTER_SYNC_TLS_SERVER_NAME=${CLUSTER_SYNC_TLS_SERVER_NAME:-}
+CLUSTER_SYNC_TLS_INSECURE_SKIP_VERIFY=${CLUSTER_SYNC_TLS_INSECURE_SKIP_VERIFY:-false}
+CLUSTER_HTTP_TLS_ENABLE=${CLUSTER_HTTP_TLS_ENABLE:-false}
+CLUSTER_HTTP_TLS_CERT_FILE=${CLUSTER_HTTP_TLS_CERT_FILE:-}
+CLUSTER_HTTP_TLS_KEY_FILE=${CLUSTER_HTTP_TLS_KEY_FILE:-}
+CLUSTER_HTTP_TLS_CLIENT_CA_FILE=${CLUSTER_HTTP_TLS_CLIENT_CA_FILE:-}
+CLUSTER_HTTP_REQUIRE_CLIENT_CERT=${CLUSTER_HTTP_REQUIRE_CLIENT_CERT:-true}
+CLUSTER_HSM_PARTITION_LABEL=${CLUSTER_HSM_PARTITION_LABEL:-}
+CLUSTER_HSM_KEY_REPLICATION_ENABLED=${CLUSTER_HSM_KEY_REPLICATION_ENABLED:-false}
+CLUSTER_MEK_IN_HSM=${CLUSTER_MEK_IN_HSM:-false}
+CLUSTER_MEK_LOGICAL_ID=${CLUSTER_MEK_LOGICAL_ID:-}
+KEYCORE_MEK_IN_HSM=${KEYCORE_MEK_IN_HSM:-false}
+KEYCORE_MEK_LOGICAL_ID=${KEYCORE_MEK_LOGICAL_ID:-}
 FIRSTBOOT_CONFIG_DIR=./infra/deployment
 FIRSTBOOT_PORT=${FIRSTBOOT_PORT}
 EOF

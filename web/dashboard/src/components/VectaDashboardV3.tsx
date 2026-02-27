@@ -231,6 +231,12 @@ import {
   listMPCKeys
 } from "../lib/mpc";
 import {
+  createClusterJoinRequest,
+  deleteClusterProfile,
+  getClusterOverview,
+  upsertClusterProfile
+} from "../lib/cluster";
+import {
   deleteBitLockerClient,
   getBitLockerDeployPackage,
   getBitLockerClient,
@@ -12074,7 +12080,6 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
   const [dbSearch,setDbSearch]=useState("");
   const [bitLockerSearch,setBitLockerSearch]=useState("");
   const [dbMenu,setDbMenu]=useState("");
-  const [bitLockerMenu,setBitLockerMenu]=useState("");
   const promptDialog=usePromptDialog();
 
   const parseAgentMeta=(agent)=>{
@@ -12528,6 +12533,11 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
     }
   };
 
+  const openBitLockerOptions=(client)=>{
+    setSelectedAgent(client||null);
+    setModal("bitlocker-options");
+  };
+
   const statusBadge=(agent)=>{
     const health=String(healthByID[agent.id]?.health||"").toLowerCase();
     const baseStatus=String(agent.status||"").toLowerCase();
@@ -12805,8 +12815,6 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
             {filteredBitLockerClients.map((client)=>{
               const badge=bitLockerBadge(client);
               const encryptionPct=Math.max(0,Math.min(100,Number(client.encryption_percentage||0)));
-              const menuKey=String(client.id||"");
-              const menuOpen=bitLockerMenu===menuKey;
               const opBusy=(op)=>bitLockerOpClientID===`${String(client.id||"").trim()}:${op}`;
               const deleteBusy=bitLockerDeletingClientID===String(client.id||"").trim();
               return <div key={client.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr .9fr .8fr .8fr .8fr auto",alignItems:"center",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:10}}>
@@ -12817,20 +12825,9 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
                 <div style={{color:C.dim}}>{`${encryptionPct.toFixed(1)}%`}</div>
                 <div><B c={badge.color}>{badge.label}</B></div>
                 <div style={{position:"relative",justifySelf:"end"}}>
-                  <button onClick={()=>setBitLockerMenu(menuOpen?"":menuKey)} style={{border:`1px solid ${C.border}`,background:"transparent",color:C.accent,borderRadius:8,padding:"4px 6px",cursor:"pointer"}}>
+                  <button onClick={()=>openBitLockerOptions(client)} style={{border:`1px solid ${C.border}`,background:"transparent",color:C.accent,borderRadius:8,padding:"4px 6px",cursor:"pointer"}}>
                     <MoreVertical size={13} strokeWidth={2}/>
                   </button>
-                  {menuOpen&&<div style={{position:"absolute",right:0,top:30,zIndex:20,minWidth:170,background:C.surface,border:`1px solid ${C.borderHi}`,borderRadius:8,padding:6,display:"grid",gap:4}}>
-                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"enable");}} disabled={opBusy("enable")} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>{opBusy("enable")?"Enabling...":"Enable"}</button>
-                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"pause");}} disabled={opBusy("pause")} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>{opBusy("pause")?"Pausing...":"Pause"}</button>
-                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"resume");}} disabled={opBusy("resume")} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>{opBusy("resume")?"Resuming...":"Resume"}</button>
-                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"rotate");}} disabled={opBusy("rotate")} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>{opBusy("rotate")?"Rotating...":"Rotate Key"}</button>
-                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"fetch_recovery");}} disabled={opBusy("fetch_recovery")} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>{opBusy("fetch_recovery")?"Fetching...":"Fetch Recovery"}</button>
-                    <button onClick={()=>{setBitLockerMenu("");void openBitLockerActivity(client);}} style={{textAlign:"left",background:"transparent",border:"none",color:C.text,cursor:"pointer",padding:"6px 8px"}}>Activity</button>
-                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"disable");}} disabled={opBusy("disable")} style={{textAlign:"left",background:"transparent",border:"none",color:C.red,cursor:"pointer",padding:"6px 8px"}}>{opBusy("disable")?"Disabling...":"Disable"}</button>
-                    <button onClick={()=>{setBitLockerMenu("");void runBitLockerOperation(client,"remove");}} disabled={opBusy("remove")} style={{textAlign:"left",background:"transparent",border:"none",color:C.red,cursor:"pointer",padding:"6px 8px"}}>{opBusy("remove")?"Removing...":"Remove"}</button>
-                    <button onClick={()=>{setBitLockerMenu("");void openBitLockerDelete(client);}} disabled={deleteBusy} style={{textAlign:"left",background:"transparent",border:"none",color:C.red,cursor:"pointer",padding:"6px 8px"}}>{deleteBusy?"Deleting...":"Delete Client"}</button>
-                  </div>}
                 </div>
               </div>;
             })}
@@ -12937,6 +12934,33 @@ const EKM=({session,onToast,subView,onSubViewChange})=>{
           </div>
         </Card>
       </Row2>
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
+        <Btn onClick={()=>setModal(null)}>Close</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="bitlocker-options"} onClose={()=>setModal(null)} title={`BitLocker Options: ${String(selectedAgent?.name||"")}`}>
+      <div style={{display:"grid",gap:8}}>
+        <Row2>
+          <Btn small onClick={()=>{selectedAgent&&void runBitLockerOperation(selectedAgent,"enable");}} disabled={!selectedAgent||bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:enable`}>{bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:enable`?"Enabling...":"Enable"}</Btn>
+          <Btn small onClick={()=>{selectedAgent&&void runBitLockerOperation(selectedAgent,"pause");}} disabled={!selectedAgent||bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:pause`}>{bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:pause`?"Pausing...":"Pause"}</Btn>
+        </Row2>
+        <Row2>
+          <Btn small onClick={()=>{selectedAgent&&void runBitLockerOperation(selectedAgent,"resume");}} disabled={!selectedAgent||bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:resume`}>{bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:resume`?"Resuming...":"Resume"}</Btn>
+          <Btn small onClick={()=>{selectedAgent&&void runBitLockerOperation(selectedAgent,"rotate");}} disabled={!selectedAgent||bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:rotate`}>{bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:rotate`?"Rotating...":"Rotate Key"}</Btn>
+        </Row2>
+        <Row2>
+          <Btn small onClick={()=>{selectedAgent&&void runBitLockerOperation(selectedAgent,"fetch_recovery");}} disabled={!selectedAgent||bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:fetch_recovery`}>{bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:fetch_recovery`?"Fetching...":"Fetch Recovery"}</Btn>
+          <Btn small onClick={()=>{if(selectedAgent){void openBitLockerActivity(selectedAgent);}}} disabled={!selectedAgent}>Activity</Btn>
+        </Row2>
+        <Row2>
+          <Btn small danger onClick={()=>{selectedAgent&&void runBitLockerOperation(selectedAgent,"disable");}} disabled={!selectedAgent||bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:disable`}>{bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:disable`?"Disabling...":"Disable"}</Btn>
+          <Btn small danger onClick={()=>{selectedAgent&&void runBitLockerOperation(selectedAgent,"remove");}} disabled={!selectedAgent||bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:remove`}>{bitLockerOpClientID===`${String(selectedAgent?.id||"").trim()}:remove`?"Removing...":"Remove"}</Btn>
+        </Row2>
+        <Btn small danger onClick={()=>{if(selectedAgent){void openBitLockerDelete(selectedAgent);}}} disabled={!selectedAgent||bitLockerDeletingClientID===String(selectedAgent?.id||"").trim()}>
+          {bitLockerDeletingClientID===String(selectedAgent?.id||"").trim()?"Deleting...":"Delete Client"}
+        </Btn>
+      </div>
       <div style={{display:"flex",justifyContent:"flex-end",marginTop:12}}>
         <Btn onClick={()=>setModal(null)}>Close</Btn>
       </div>
@@ -14849,12 +14873,422 @@ const KMIP=({session,onToast})=>{
   </div>;
 };
 
-const Cluster=()=><div>
-  <Section title="Cluster Nodes">
-    {[["Node 1 (Leader)","10.0.1.100","Auth, KeyCore, Audit, Policy, Gov, BYOK, HYOK, Payment, DataProtect"],["Node 2 (Follower)","10.0.1.101","Auth, KeyCore, Audit, Policy"],["Node 3 (Follower)","10.0.1.102","Auth, KeyCore, Audit, Payment, EKM"]].map(([n,ip,svcs])=>
-      <Card key={n} style={{marginBottom:6}}><div style={{fontSize:12,color:C.text,fontWeight:600}}>{n}</div><div style={{fontSize:10,color:C.dim,fontFamily:"monospace"}}>{ip}</div><div style={{fontSize:9,color:C.muted,marginTop:4}}>{svcs}</div></Card>)}
-  </Section>
-</div>;
+const CLUSTER_COMPONENT_CHOICES=[
+  {id:"auth",label:"Auth"},
+  {id:"keycore",label:"KeyCore"},
+  {id:"audit",label:"Audit"},
+  {id:"policy",label:"Policy"},
+  {id:"governance",label:"Gov"},
+  {id:"payment",label:"Payment"},
+  {id:"dataprotect",label:"DataProtect"},
+  {id:"byok",label:"BYOK"},
+  {id:"hyok",label:"HYOK"},
+  {id:"ekm",label:"EKM"},
+  {id:"kmip",label:"KMIP"},
+  {id:"certs",label:"Certs"},
+  {id:"secrets",label:"Secrets"},
+  {id:"qkd",label:"QKD"},
+  {id:"mpc",label:"MPC"}
+];
+
+const clusterComponentLabel=(value:string)=>{
+  const key=String(value||"").trim().toLowerCase();
+  const hit=CLUSTER_COMPONENT_CHOICES.find((item)=>item.id===key);
+  return hit?hit.label:String(value||"");
+};
+
+const Cluster=({session,onToast,subView})=>{
+  const [loading,setLoading]=useState(false);
+  const [overview,setOverview]=useState<any>(null);
+  const [profileName,setProfileName]=useState("");
+  const [profileDescription,setProfileDescription]=useState("");
+  const [profileComponents,setProfileComponents]=useState<string[]>(["auth","keycore","audit","policy","governance"]);
+  const [profileDefault,setProfileDefault]=useState(false);
+  const [savingProfile,setSavingProfile]=useState(false);
+  const [joinForm,setJoinForm]=useState<any>({node_id:"",node_name:"",endpoint:"",profile_id:"",expires_minutes:30});
+  const [joinBusy,setJoinBusy]=useState(false);
+  const [joinBundle,setJoinBundle]=useState<any>(null);
+  const clusterView=String(subView||"settings").trim().toLowerCase();
+
+  const refresh=async(silent=false)=>{
+    if(!session?.token){
+      setOverview(null);
+      return;
+    }
+    if(!silent){
+      setLoading(true);
+    }
+    try{
+      const out=await getClusterOverview(session);
+      setOverview(out||{nodes:[],profiles:[]});
+      const profiles=Array.isArray(out?.profiles)?out.profiles:[];
+      setJoinForm((prev:any)=>{
+        const current=String(prev?.profile_id||"").trim();
+        if(current){
+          return prev;
+        }
+        const defaultProfile=profiles.find((item:any)=>Boolean(item?.is_default))||profiles[0]||null;
+        return {...prev,profile_id:String(defaultProfile?.id||"")};
+      });
+    }catch(error){
+      onToast?.(`Cluster load failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(()=>{
+    if(!session?.token){
+      setOverview(null);
+      return;
+    }
+    void refresh(false);
+  },[session?.token,session?.tenantId]);
+
+  const nodes=Array.isArray(overview?.nodes)?overview.nodes:[];
+  const profiles=Array.isArray(overview?.profiles)?overview.profiles:[];
+  const summary=overview?.summary||{};
+  const selectiveNote=String(overview?.selective_component_sync?.note||"Nodes sync only the state for their enabled components.");
+
+  const toggleProfileComponent=(componentID:string)=>{
+    setProfileComponents((prev)=>{
+      const exists=prev.includes(componentID);
+      if(exists){
+        return prev.filter((item)=>item!==componentID);
+      }
+      return [...prev,componentID];
+    });
+  };
+
+  const saveProfile=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to update cluster profiles.");
+      return;
+    }
+    if(!String(profileName||"").trim()){
+      onToast?.("Profile name is required.");
+      return;
+    }
+    if(!profileComponents.length){
+      onToast?.("Select at least one component for replication profile.");
+      return;
+    }
+    setSavingProfile(true);
+    try{
+      await upsertClusterProfile(session,{
+        name:String(profileName).trim(),
+        description:String(profileDescription||"").trim(),
+        components:profileComponents,
+        is_default:Boolean(profileDefault)
+      });
+      setProfileName("");
+      setProfileDescription("");
+      setProfileDefault(false);
+      setProfileComponents(["auth","keycore","audit","policy","governance"]);
+      await refresh(true);
+      onToast?.("Cluster replication profile saved.");
+    }catch(error){
+      onToast?.(`Profile save failed: ${errMsg(error)}`);
+    }finally{
+      setSavingProfile(false);
+    }
+  };
+
+  const removeProfile=async(profile:any)=>{
+    const profileID=String(profile?.id||"").trim();
+    if(!profileID){
+      return;
+    }
+    if(Boolean(profile?.is_default)){
+      onToast?.("Default profile cannot be deleted.");
+      return;
+    }
+    if(!window.confirm(`Delete replication profile \"${String(profile?.name||profileID)}\"?`)){
+      return;
+    }
+    try{
+      await deleteClusterProfile(session,profileID);
+      await refresh(true);
+      onToast?.("Cluster replication profile deleted.");
+    }catch(error){
+      onToast?.(`Delete profile failed: ${errMsg(error)}`);
+    }
+  };
+
+  const createJoinBundle=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required to issue a cluster join bundle.");
+      return;
+    }
+    const nodeID=String(joinForm?.node_id||"").trim();
+    const profileID=String(joinForm?.profile_id||"").trim();
+    if(!nodeID||!profileID){
+      onToast?.("Node ID and replication profile are required.");
+      return;
+    }
+    setJoinBusy(true);
+    try{
+      const out=await createClusterJoinRequest(session,{
+        target_node_id:nodeID,
+        target_node_name:String(joinForm?.node_name||nodeID).trim(),
+        endpoint:String(joinForm?.endpoint||"").trim(),
+        profile_id:profileID,
+        expires_minutes:Number(joinForm?.expires_minutes||30),
+        requested_by:String(session?.username||"admin")
+      });
+      setJoinBundle(out||null);
+      onToast?.("Secure cluster join bundle issued.");
+    }catch(error){
+      onToast?.(`Join request failed: ${errMsg(error)}`);
+    }finally{
+      setJoinBusy(false);
+    }
+  };
+
+  const copyJoinBundle=async()=>{
+    if(!joinBundle){
+      return;
+    }
+    try{
+      await navigator.clipboard.writeText(JSON.stringify(joinBundle,null,2));
+      onToast?.("Join bundle copied.");
+    }catch{
+      onToast?.("Copy failed. Please copy manually.");
+    }
+  };
+
+  const roleBadge=(role:string)=>{
+    const leader=String(role||"").trim().toLowerCase()==="leader";
+    return <span style={{
+      display:"inline-flex",
+      alignItems:"center",
+      gap:6,
+      padding:"5px 10px",
+      borderRadius:999,
+      background:leader?"rgba(6,214,224,.10)":"rgba(45,212,160,.08)",
+      color:leader?C.accent:C.green,
+      fontSize:10,
+      fontWeight:700
+    }}>
+      <span className={`sync-dot ${leader?"sync-dot--leader":"sync-dot--slow"}`} style={{width:6,height:6,borderRadius:999,background:leader?C.accent:C.green}}/>
+      {leader?"Leader":"Follower"}
+    </span>;
+  };
+  const strictRoleBadge=(role:string)=>{
+    const leader=String(role||"").trim().toLowerCase()==="leader";
+    return <span style={{
+      display:"inline-flex",
+      alignItems:"center",
+      gap:6,
+      padding:"8px 12px",
+      borderRadius:999,
+      background:leader?"rgba(6,214,224,.10)":"rgba(45,212,160,.08)",
+      color:leader?C.accent:C.green,
+      fontSize:11,
+      fontWeight:700
+    }}>
+      <span className={`sync-dot ${leader?"sync-dot--leader":"sync-dot--slow"}`} style={{width:6,height:6,borderRadius:999,background:leader?C.accent:C.green}}/>
+      {leader?"Leader":"Follower"}
+    </span>;
+  };
+  const nodeStatusColor=(status:string)=>{
+    const normalized=String(status||"").trim().toLowerCase();
+    if(normalized==="online"){
+      return "green";
+    }
+    if(normalized==="degraded"){
+      return "amber";
+    }
+    if(normalized==="down"){
+      return "red";
+    }
+    return "blue";
+  };
+
+  if(clusterView==="health"){
+    return <div>
+      <Section
+        title="Cluster Health"
+        actions={<div style={{display:"flex",gap:8,alignItems:"center"}}>
+          {loading?<B c="blue">Loading</B>:null}
+          <Btn onClick={()=>void refresh(false)}>Refresh</Btn>
+        </div>}
+      >
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))",gap:12}}>
+          {nodes.map((node:any)=>{
+            const role=String(node?.role||"follower").trim().toLowerCase();
+            const components=(Array.isArray(node?.enabled_components)?node.enabled_components:[]).map((item:any)=>String(item||"").trim()).filter(Boolean);
+            return <div
+              key={`cluster-health-${String(node?.id||Math.random())}`}
+              style={{
+                background:C.card,
+                border:role==="leader"?`1px solid ${C.accent}`:`1px solid ${C.border}`,
+                borderRadius:12,
+                padding:14
+              }}
+            >
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                <div>
+                  <div style={{fontSize:29/2,color:C.white,fontWeight:700,lineHeight:1.2}}>{String(node?.name||node?.id||"-")}</div>
+                  <div style={{fontSize:10,color:C.muted,fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>{String(node?.endpoint||"unknown")}</div>
+                </div>
+                {strictRoleBadge(role)}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}}>
+                <div>
+                  <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>CPU</div>
+                  <div style={{fontSize:24/2,color:C.white,fontWeight:700,marginTop:3}}>{Number(node?.cpu_percent||0).toFixed(0)}%</div>
+                </div>
+                <div>
+                  <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>RAM</div>
+                  <div style={{fontSize:24/2,color:C.white,fontWeight:700,marginTop:3}}>{Number(node?.ram_gb||0).toFixed(1)} GB</div>
+                </div>
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:12}}>
+                {components.map((component:string)=><span key={`${String(node?.id||"node")}-strict-${component}`} style={{
+                  border:`1px solid ${C.border}`,
+                  borderRadius:999,
+                  background:C.blueDim,
+                  color:C.blue,
+                  fontSize:11,
+                  fontWeight:700,
+                  padding:"4px 9px"
+                }}>{clusterComponentLabel(component)}</span>)}
+              </div>
+            </div>;
+          })}
+        </div>
+        {!nodes.length?<Card style={{marginTop:10}}><div style={{fontSize:10,color:C.dim}}>No cluster nodes discovered yet.</div></Card>:null}
+        <div style={{
+          marginTop:12,
+          border:`1px solid ${C.borderHi}`,
+          borderRadius:12,
+          background:C.card,
+          padding:"14px 16px"
+        }}>
+          <span style={{fontSize:12,color:C.accent,fontWeight:700}}>Selective Component Sync:</span>
+          <span style={{fontSize:12,color:C.dim,marginLeft:6}}>{selectiveNote}</span>
+        </div>
+      </Section>
+    </div>;
+  }
+
+  return <div>
+    <Section
+      title="Cluster Settings"
+      actions={<div style={{display:"flex",gap:8,alignItems:"center"}}>
+        {loading?<B c="blue">Loading</B>:null}
+        <Btn onClick={()=>void refresh(false)}>Refresh</Btn>
+      </div>}
+    >
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:10}}>
+        {nodes.map((node:any)=>{
+          const components=(Array.isArray(node?.enabled_components)?node.enabled_components:[]).map((item:any)=>String(item||"").trim()).filter(Boolean);
+          return <Card key={String(node?.id||Math.random())} style={{borderColor:C.borderHi,padding:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <div style={{fontSize:18,fontWeight:700,color:C.text}}>{String(node?.name||node?.id||"-")}</div>
+              {roleBadge(String(node?.role||"follower"))}
+            </div>
+            <div style={{fontSize:10,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{String(node?.endpoint||"unknown")}</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:8}}>
+              <div>
+                <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.7}}>CPU</div>
+                <div style={{fontSize:16,color:C.text,fontWeight:700}}>{Number(node?.cpu_percent||0).toFixed(0)}%</div>
+              </div>
+              <div>
+                <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.7}}>RAM</div>
+                <div style={{fontSize:16,color:C.text,fontWeight:700}}>{Number(node?.ram_gb||0).toFixed(1)} GB</div>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
+              {components.map((component:string)=><B key={`${String(node?.id||"node")}-${component}`} c={nodeStatusColor(String(node?.status||"unknown"))}>{clusterComponentLabel(component)}</B>)}
+            </div>
+          </Card>;
+        })}
+      </div>
+      {!nodes.length?<Card style={{marginTop:10}}><div style={{fontSize:10,color:C.dim}}>No nodes registered yet. Use secure join bundle to add follower nodes.</div></Card>:null}
+      <Card style={{marginTop:10,borderColor:C.borderHi}}>
+        <div style={{fontSize:12,color:C.accent,fontWeight:700,marginBottom:3}}>Selective Component Sync</div>
+        <div style={{fontSize:10,color:C.dim}}>{selectiveNote}</div>
+      </Card>
+      <div style={{display:"flex",gap:8,marginTop:8,flexWrap:"wrap"}}>
+        <B c="blue">Leader: {String(summary?.leader_node_id||"not elected")}</B>
+        <B c="green">Online: {Number(summary?.online_nodes||0)}</B>
+        <B c="amber">Degraded: {Number(summary?.degraded_nodes||0)}</B>
+        <B c="red">Down: {Number(summary?.down_nodes||0)}</B>
+      </div>
+    </Section>
+
+    <Row2>
+      <Card style={{padding:12}}>
+        <div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:8}}>Cluster Replication Profiles</div>
+        <FG label="Profile Name" required><Inp value={profileName} onChange={(e)=>setProfileName(e.target.value)} placeholder="payment-replication"/></FG>
+        <FG label="Description"><Inp value={profileDescription} onChange={(e)=>setProfileDescription(e.target.value)} placeholder="Sync only base KMS + payment components"/></FG>
+        <FG label="Components to Sync">
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:6}}>
+            {CLUSTER_COMPONENT_CHOICES.map((component)=><label key={component.id} style={{display:"flex",gap:6,alignItems:"center",fontSize:10,color:C.dim}}>
+              <input type="checkbox" checked={profileComponents.includes(component.id)} onChange={()=>toggleProfileComponent(component.id)}/>
+              {component.label}
+            </label>)}
+          </div>
+        </FG>
+        <label style={{display:"flex",gap:6,alignItems:"center",fontSize:10,color:C.dim,marginTop:8}}>
+          <input type="checkbox" checked={profileDefault} onChange={(e)=>setProfileDefault(Boolean(e.target.checked))}/>
+          Set as default profile for new nodes
+        </label>
+        <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
+          <Btn primary disabled={savingProfile} onClick={()=>void saveProfile()}>{savingProfile?"Saving...":"Save Profile"}</Btn>
+        </div>
+        <div style={{display:"grid",gap:8,marginTop:10}}>
+          {profiles.map((profile:any)=><Card key={String(profile?.id||Math.random())} style={{padding:8,borderColor:C.border}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+              <div>
+                <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(profile?.name||profile?.id||"-")}</div>
+                <div style={{fontSize:9,color:C.dim,fontFamily:"'JetBrains Mono',monospace"}}>{String(profile?.id||"-")}</div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                {Boolean(profile?.is_default)?<B c="green">Default</B>:null}
+                {!Boolean(profile?.is_default)?<Btn small onClick={()=>void removeProfile(profile)}>Delete</Btn>:null}
+              </div>
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:4,marginTop:6}}>
+              {(Array.isArray(profile?.components)?profile.components:[]).map((component:any)=><B key={`${String(profile?.id||"profile")}-${String(component)}`} c="blue">{clusterComponentLabel(String(component||""))}</B>)}
+            </div>
+          </Card>)}
+        </div>
+      </Card>
+
+      <Card style={{padding:12}}>
+        <div style={{fontSize:12,color:C.text,fontWeight:700,marginBottom:8}}>Add Node To Cluster</div>
+        <FG label="Node ID" required><Inp value={joinForm.node_id} onChange={(e)=>setJoinForm((p:any)=>({...p,node_id:e.target.value}))} placeholder="vecta-kms-02"/></FG>
+        <FG label="Node Name"><Inp value={joinForm.node_name} onChange={(e)=>setJoinForm((p:any)=>({...p,node_name:e.target.value}))} placeholder="vecta-kms-02"/></FG>
+        <FG label="Node Endpoint"><Inp value={joinForm.endpoint} onChange={(e)=>setJoinForm((p:any)=>({...p,endpoint:e.target.value}))} placeholder="10.0.1.101"/></FG>
+        <FG label="Replication Profile" required>
+          <Sel value={String(joinForm.profile_id||"")} onChange={(e)=>setJoinForm((p:any)=>({...p,profile_id:e.target.value}))}>
+            <option value="">Select profile</option>
+            {profiles.map((profile:any)=><option key={String(profile?.id||Math.random())} value={String(profile?.id||"")}>{String(profile?.name||profile?.id||"-")}</option>)}
+          </Sel>
+        </FG>
+        <FG label="Join Token Expiry (minutes)">
+          <Inp type="number" min={5} max={240} value={String(joinForm.expires_minutes||30)} onChange={(e)=>setJoinForm((p:any)=>({...p,expires_minutes:Number(e.target.value||30)}))}/>
+        </FG>
+        <div style={{display:"flex",justifyContent:"flex-end",marginTop:10}}>
+          <Btn primary disabled={joinBusy} onClick={()=>void createJoinBundle()}>{joinBusy?"Issuing...":"Generate Secure Join Bundle"}</Btn>
+        </div>
+        {joinBundle?<Card style={{marginTop:10,padding:8,borderColor:C.borderHi}}>
+          <div style={{fontSize:10,color:C.accent,fontWeight:700,marginBottom:5}}>Join Bundle</div>
+          <div style={{fontSize:10,color:C.dim,marginBottom:5}}>Provide this once to the joining node installer.</div>
+          <Txt mono readOnly value={JSON.stringify(joinBundle,null,2)} style={{minHeight:170}}/>
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}>
+            <Btn small primary onClick={()=>void copyJoinBundle()}>Copy Bundle</Btn>
+          </div>
+        </Card>:null}
+      </Card>
+    </Row2>
+  </div>;
+};
 
 const Approvals=({session,onToast})=>{
   const [loading,setLoading]=useState(false);
@@ -17546,13 +17980,24 @@ const PKCS11=({session,onToast})=>{
 
   const statusBadge=(status:string)=>{
     const s=String(status||"").toLowerCase();
-    if(s==="active"){
-      return <B c="green">Active</B>;
-    }
-    if(s==="degraded"){
-      return <B c="amber">Degraded</B>;
-    }
-    return <B c="red">Down</B>;
+    const tone=s==="active"?"green":s==="degraded"?"amber":"red";
+    const label=s==="active"?"Active":s==="degraded"?"Degraded":"Down";
+    const color=tone==="green"?C.green:tone==="amber"?C.amber:C.red;
+    const bg=tone==="green"?C.greenDim:tone==="amber"?C.amberDim:C.redDim;
+    return <span style={{
+      display:"inline-flex",
+      alignItems:"center",
+      gap:6,
+      padding:"4px 10px",
+      borderRadius:999,
+      fontSize:11,
+      fontWeight:700,
+      color,
+      background:bg
+    }}>
+      <span className={`sync-dot ${tone==="green"?"sync-dot--leader":"sync-dot--slow"}`} style={{width:6,height:6,borderRadius:999,background:color}}/>
+      {label}
+    </span>;
   };
 
   const fmtOps=(n:any)=>{
@@ -21665,6 +22110,10 @@ const SUB_PANES={
     {id:"bitlocker",label:"BitLocker",hint:"Windows endpoint key lifecycle",icon:Lock,feature:"ekm_database"},
     {id:"kmip",label:"KMIP",hint:"Profiles, clients, mTLS onboarding",icon:Link,feature:"kmip_server"}
   ],
+  cluster:[
+    {id:"settings",label:"Cluster Settings",hint:"Replication profiles, secure join bundles, and node setup controls",icon:Settings,feature:"clustering"},
+    {id:"health",label:"Cluster Health",hint:"Live node health view with selective component sync status",icon:Gauge,feature:"clustering"}
+  ],
   admin:[
     {id:"system",label:"System Administration",hint:"Platform health, runtime hardening, FIPS and governance settings",icon:Settings},
     {id:"tenant",label:"Tenant Administration",hint:"Tenant lifecycle, disable/delete workflow, and quorum-governed administration",icon:Building2},
@@ -21689,7 +22138,7 @@ export default function VectaDashboard(props){
   const [toast,setToast]=useState("");
   const [keyCatalog,setKeyCatalog]=useState([]);
   const [tagCatalog,setTagCatalog]=useState([]);
-  const [subPaneSelection,setSubPaneSelection]=useState({workbench:"crypto",dataprotection:"fieldenc",cloudctl:"byok",ekm:"db",admin:"system"});
+  const [subPaneSelection,setSubPaneSelection]=useState({workbench:"crypto",dataprotection:"fieldenc",cloudctl:"byok",ekm:"db",cluster:"settings",admin:"system"});
   const [fipsMode,setFipsMode]=useState<"enabled"|"disabled">("disabled");
   const [reportedUnread,setReportedUnread]=useState(Number(unreadAlerts||0));
   const [cliStatus,setCLIStatus]=useState<any>(null);
@@ -21978,6 +22427,10 @@ export default function VectaDashboard(props){
     return(
       <div style={{minHeight:"100vh",background:C.bg,fontFamily:"'IBM Plex Sans',-apple-system,sans-serif",color:C.text,display:"flex",flexDirection:"column"}}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+          @keyframes syncDotPulse{0%,100%{opacity:.95;transform:scale(1)}50%{opacity:.58;transform:scale(.82)}}
+          .sync-dot{display:inline-block;animation:syncDotPulse 1.9s ease-in-out infinite;transform-origin:center}
+          .sync-dot--leader{animation-duration:1.6s}
+          .sync-dot--slow{animation-duration:2.2s}
           *::-webkit-scrollbar{width:5px;height:5px} *::-webkit-scrollbar-track{background:transparent} *::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"0 20px",height:48,borderBottom:`1px solid ${C.border}`,background:C.surface}}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -22020,6 +22473,10 @@ export default function VectaDashboard(props){
     <div style={{display:"flex",height:"100vh",background:C.bg,fontFamily:"'IBM Plex Sans',-apple-system,sans-serif",color:C.text,overflow:"hidden"}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+        @keyframes syncDotPulse{0%,100%{opacity:.95;transform:scale(1)}50%{opacity:.58;transform:scale(.82)}}
+        .sync-dot{display:inline-block;animation:syncDotPulse 1.9s ease-in-out infinite;transform-origin:center}
+        .sync-dot--leader{animation-duration:1.6s}
+        .sync-dot--slow{animation-duration:2.2s}
         *::-webkit-scrollbar{width:5px;height:5px} *::-webkit-scrollbar-track{background:transparent} *::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
       <div style={{width:collapsed?56:210,background:C.sidebar,borderRight:`1px solid ${C.border}`,display:"flex",flexDirection:"column",transition:"width .2s",flexShrink:0,overflow:"hidden"}}>
         <div style={{padding:collapsed?"8px 6px":"8px 10px 8px 14px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",gap:collapsed?6:8,minHeight:collapsed?66:44,justifyContent:collapsed?"center":"space-between",flexDirection:collapsed?"column":"row"}}>

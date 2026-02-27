@@ -37,6 +37,7 @@ import (
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/pkcs12"
 	"golang.org/x/crypto/sha3"
+	"vecta-kms/pkg/clustersync"
 	"vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/metering"
 	"vecta-kms/pkg/payment"
@@ -47,6 +48,7 @@ type Service struct {
 	cache    KeyCache
 	exists   *bloom.BloomFilter
 	events   AuditPublisher
+	cluster  clustersync.Publisher
 	meter    *metering.Meter
 	mek      []byte
 	policy   PolicyEvaluator
@@ -78,6 +80,13 @@ func (s *Service) SetGovernanceApprovalClient(client *governanceApprovalClient) 
 		return
 	}
 	s.approval = client
+}
+
+func (s *Service) SetClusterSyncPublisher(pub clustersync.Publisher) {
+	if pub == nil {
+		return
+	}
+	s.cluster = pub
 }
 
 type CreateKeyRequest struct {
@@ -2246,10 +2255,18 @@ func (s *Service) GetVersion(ctx context.Context, tenantID string, keyID string,
 }
 
 func (s *Service) publishAudit(ctx context.Context, subject string, tenantID string, data map[string]any) error {
-	if s.events == nil {
-		return nil
+	var outErr error
+	if s.events != nil {
+		if err := publishAuditEvent(ctx, s.events, subject, tenantID, data); err != nil {
+			outErr = err
+		}
 	}
-	return publishAuditEvent(ctx, s.events, subject, tenantID, data)
+	if req, ok := s.keycoreSyncRequest(ctx, subject, tenantID, data); ok && s.cluster != nil {
+		if err := s.cluster.Publish(ctx, req); err != nil && outErr == nil {
+			outErr = err
+		}
+	}
+	return outErr
 }
 
 func approvalPayloadHash(operation string, payload map[string]string) string {

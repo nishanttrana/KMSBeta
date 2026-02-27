@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc"
 
 	pkgauth "vecta-kms/pkg/auth"
+	pkgclustersync "vecta-kms/pkg/clustersync"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
@@ -90,6 +91,13 @@ func main() {
 		policy = NewHTTPPolicyClient(policyURL, 3*time.Second)
 	}
 	svc := NewService(store, cache, publisher, meter, mek, policy, policyFailClosed)
+	svc.SetClusterSyncPublisher(pkgclustersync.NewHTTPPublisher(
+		envOr("CLUSTER_URL", "http://cluster-manager:8210"),
+		envOr("CLUSTER_BOOTSTRAP_PROFILE_ID", "cluster-profile-base"),
+		envOr("CLUSTER_NODE_ID", "vecta-kms-01"),
+		envOr("CLUSTER_SYNC_SHARED_SECRET", ""),
+		2*time.Second,
+	))
 	governanceURL := stringsTrimSpace(os.Getenv("GOVERNANCE_URL"))
 	if governanceURL != "" {
 		svc.SetFIPSModeProvider(NewHTTPFIPSModeProvider(governanceURL, 3*time.Second, 5*time.Second))

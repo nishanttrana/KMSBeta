@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -22,7 +23,6 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 
-	pkgclustersync "vecta-kms/pkg/clustersync"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
@@ -32,7 +32,7 @@ import (
 
 func main() {
 	cfg := pkgconfig.Load()
-	logger := log.New(os.Stdout, "[kms-policy] ", log.LstdFlags|log.LUTC)
+	logger := log.New(os.Stdout, "[kms-cluster-manager] ", log.LstdFlags|log.LUTC)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -55,36 +55,48 @@ func main() {
 	var publisher EventPublisher
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
-		publisher = pkgevents.NewPublisher(js, 3, "audit.policy.dead_letter")
+		publisher = pkgevents.NewPublisher(js, 3, "audit.cluster.dead_letter")
 	} else {
-		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
+		logger.Printf("nats unavailable, cluster event publishing disabled: %v", err)
 	}
 
-	store := NewSQLStore(dbConn)
-	svc := NewService(store, publisher)
-	svc.SetClusterSyncPublisher(pkgclustersync.NewHTTPPublisher(
-		envOr("CLUSTER_URL", "http://cluster-manager:8210"),
-		envOr("CLUSTER_BOOTSTRAP_PROFILE_ID", "cluster-profile-base"),
-		envOr("CLUSTER_NODE_ID", "vecta-kms-01"),
-		envOr("CLUSTER_SYNC_SHARED_SECRET", ""),
-		2*time.Second,
-	))
+	svc := NewService(NewSQLStore(dbConn), publisher)
 	handler := NewHandler(svc)
 
-	httpPort := envOr("HTTP_PORT", "8040")
+	httpPort := envOr("HTTP_PORT", "8210")
 	httpSrv := &http.Server{
 		Addr:              ":" + httpPort,
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+	httpTLSEnabled := envBool("CLUSTER_HTTP_TLS_ENABLE", false)
+	httpTLSCertFile := strings.TrimSpace(os.Getenv("CLUSTER_HTTP_TLS_CERT_FILE"))
+	httpTLSKeyFile := strings.TrimSpace(os.Getenv("CLUSTER_HTTP_TLS_KEY_FILE"))
+	if httpTLSEnabled {
+		tlsCfg, tlsErr := buildClusterHTTPServerTLSConfig()
+		if tlsErr != nil {
+			logger.Fatalf("cluster http tls config failed: %v", tlsErr)
+		}
+		httpSrv.TLSConfig = tlsCfg
+	}
 	go func() {
+		if httpTLSEnabled {
+			logger.Printf("https(mtls) listening on :%s", httpPort)
+			if httpTLSCertFile == "" || httpTLSKeyFile == "" {
+				logger.Fatalf("cluster http tls enabled but cert/key file missing")
+			}
+			if err := httpSrv.ListenAndServeTLS(httpTLSCertFile, httpTLSKeyFile); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Fatalf("https server failed: %v", err)
+			}
+			return
+		}
 		logger.Printf("http listening on :%s", httpPort)
 		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server failed: %v", err)
 		}
 	}()
 
-	grpcPort := envOr("GRPC_PORT", "18040")
+	grpcPort := envOr("GRPC_PORT", "18210")
 	tlsCfg, err := devMTLSConfig()
 	if err != nil {
 		logger.Fatalf("mtls config failed: %v", err)
@@ -101,7 +113,7 @@ func main() {
 		}
 	}()
 
-	if reg, err := pkgconsul.NewRegistrar(cfg.ConsulAddress, "kms-policy-"+httpPort, "kms-policy", "127.0.0.1", mustAtoi(grpcPort)); err == nil {
+	if reg, err := pkgconsul.NewRegistrar(cfg.ConsulAddress, "kms-cluster-manager-"+httpPort, "kms-cluster-manager", "127.0.0.1", mustAtoi(grpcPort)); err == nil {
 		if err := reg.Register(ctx); err != nil {
 			logger.Printf("consul register failed: %v", err)
 		} else {
@@ -116,22 +128,8 @@ func main() {
 	grpcSrv.GracefulStop()
 }
 
-func migrationPath() string {
-	candidates := []string{
-		filepath.Join("/app", "migrations"),
-		filepath.Join("services", "policy", "migrations"),
-		filepath.Join(".", "migrations"),
-	}
-	for _, c := range candidates {
-		if st, err := os.Stat(c); err == nil && st.IsDir() {
-			return c
-		}
-	}
-	return filepath.Join("/app", "migrations")
-}
-
 func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
-	nc, err := nats.Connect(url, nats.Name("kms-policy"))
+	nc, err := nats.Connect(url, nats.Name("kms-cluster-manager"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -140,8 +138,22 @@ func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
 		nc.Close()
 		return nil, nil, err
 	}
-	_, _ = js.AddStream(&nats.StreamConfig{Name: "AUDIT_POLICY", Subjects: []string{"audit.policy.*"}})
+	_, _ = js.AddStream(&nats.StreamConfig{Name: "AUDIT_CLUSTER", Subjects: []string{"audit.cluster.*"}})
+	_, _ = js.AddStream(&nats.StreamConfig{Name: "CLUSTER_SYNC", Subjects: []string{"cluster.sync.*"}})
 	return nc, js, nil
+}
+
+func migrationPath() string {
+	candidates := []string{
+		filepath.Join("services", "cluster-manager", "migrations"),
+		filepath.Join(".", "migrations"),
+	}
+	for _, c := range candidates {
+		if st, err := os.Stat(c); err == nil && st.IsDir() {
+			return c
+		}
+	}
+	return filepath.Join("services", "cluster-manager", "migrations")
 }
 
 func devMTLSConfig() (*tls.Config, error) {
@@ -152,7 +164,7 @@ func devMTLSConfig() (*tls.Config, error) {
 	serial, _ := rand.Int(rand.Reader, big.NewInt(1<<62))
 	tpl := &x509.Certificate{
 		SerialNumber:          serial,
-		Subject:               pkix.Name{CommonName: "kms-policy-local"},
+		Subject:               pkix.Name{CommonName: "kms-cluster-manager-local"},
 		NotBefore:             time.Now().Add(-time.Hour),
 		NotAfter:              time.Now().Add(24 * time.Hour),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
@@ -176,18 +188,59 @@ func devMTLSConfig() (*tls.Config, error) {
 	}, nil
 }
 
-func envOr(k string, d string) string {
-	v := strings.TrimSpace(os.Getenv(k))
-	if v == "" {
-		return d
+func envOr(key string, defaultValue string) string {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return defaultValue
 	}
-	return v
+	return value
 }
 
-func mustAtoi(s string) int {
-	n := 0
-	for i := 0; i < len(s); i++ {
-		n = n*10 + int(s[i]-'0')
+func mustAtoi(v string) int {
+	n, err := strconv.Atoi(strings.TrimSpace(v))
+	if err != nil {
+		return 0
 	}
 	return n
+}
+
+func envBool(key string, defaultValue bool) bool {
+	raw := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+	if raw == "" {
+		return defaultValue
+	}
+	switch raw {
+	case "1", "true", "yes", "y", "on":
+		return true
+	case "0", "false", "no", "n", "off":
+		return false
+	default:
+		return defaultValue
+	}
+}
+
+func buildClusterHTTPServerTLSConfig() (*tls.Config, error) {
+	tlsCfg := &tls.Config{
+		MinVersion: tls.VersionTLS13,
+	}
+	requireClientCert := envBool("CLUSTER_HTTP_REQUIRE_CLIENT_CERT", true)
+	clientCAPath := strings.TrimSpace(os.Getenv("CLUSTER_HTTP_TLS_CLIENT_CA_FILE"))
+	if requireClientCert {
+		if clientCAPath == "" {
+			return nil, errors.New("CLUSTER_HTTP_REQUIRE_CLIENT_CERT=true but CLUSTER_HTTP_TLS_CLIENT_CA_FILE is empty")
+		}
+		caPEM, err := os.ReadFile(clientCAPath)
+		if err != nil {
+			return nil, err
+		}
+		pool := x509.NewCertPool()
+		if !pool.AppendCertsFromPEM(caPEM) {
+			return nil, errors.New("invalid CLUSTER_HTTP_TLS_CLIENT_CA_FILE")
+		}
+		tlsCfg.ClientCAs = pool
+		tlsCfg.ClientAuth = tls.RequireAndVerifyClientCert
+	} else {
+		tlsCfg.ClientAuth = tls.NoClientCert
+	}
+	return tlsCfg, nil
 }

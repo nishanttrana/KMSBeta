@@ -9,6 +9,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/clustersync"
 )
 
 type EventPublisher interface {
@@ -16,8 +18,9 @@ type EventPublisher interface {
 }
 
 type Service struct {
-	store  Store
-	events EventPublisher
+	store   Store
+	events  EventPublisher
+	cluster clustersync.Publisher
 }
 
 func NewService(store Store, events EventPublisher) *Service {
@@ -25,6 +28,13 @@ func NewService(store Store, events EventPublisher) *Service {
 		store:  store,
 		events: events,
 	}
+}
+
+func (s *Service) SetClusterSyncPublisher(pub clustersync.Publisher) {
+	if pub == nil {
+		return
+	}
+	s.cluster = pub
 }
 
 func (s *Service) CreatePolicy(ctx context.Context, req CreatePolicyRequest) (Policy, error) {
@@ -273,21 +283,28 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluatePolicyRequest) (Eval
 }
 
 func (s *Service) publishAudit(ctx context.Context, subject string, tenantID string, data map[string]any) error {
-	if s.events == nil {
-		return nil
+	var outErr error
+	if s.events != nil {
+		raw, err := json.Marshal(map[string]any{
+			"tenant_id": tenantID,
+			"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
+			"service":   "policy",
+			"action":    subject,
+			"result":    "success",
+			"data":      data,
+		})
+		if err != nil {
+			outErr = err
+		} else if err := s.events.Publish(ctx, subject, raw); err != nil {
+			outErr = err
+		}
 	}
-	raw, err := json.Marshal(map[string]any{
-		"tenant_id": tenantID,
-		"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
-		"service":   "policy",
-		"action":    subject,
-		"result":    "success",
-		"data":      data,
-	})
-	if err != nil {
-		return err
+	if req, ok := policySyncRequest(subject, tenantID, data); ok && s.cluster != nil {
+		if err := s.cluster.Publish(ctx, req); err != nil && outErr == nil {
+			outErr = err
+		}
 	}
-	return s.events.Publish(ctx, subject, raw)
+	return outErr
 }
 
 func normalizeTenant(requestTenant string, yamlTenant string) (string, error) {

@@ -23,6 +23,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 
+	pkgclustersync "vecta-kms/pkg/clustersync"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
@@ -65,6 +66,13 @@ func main() {
 	store := NewSQLStore(dbConn)
 	svc := NewService(store, ac, wal, pub)
 	handler := NewHandler(svc, store)
+	handler.SetClusterSyncPublisher(pkgclustersync.NewHTTPPublisher(
+		envOr("CLUSTER_URL", "http://cluster-manager:8210"),
+		envOr("CLUSTER_BOOTSTRAP_PROFILE_ID", "cluster-profile-base"),
+		envOr("CLUSTER_NODE_ID", "vecta-kms-01"),
+		envOr("CLUSTER_SYNC_SHARED_SECRET", ""),
+		2*time.Second,
+	))
 
 	if _, err := nc.Subscribe("audit.>", func(msg *nats.Msg) {
 		if err := svc.HandleNATSMessage(ctx, msg); err != nil && ac.FailClosed {

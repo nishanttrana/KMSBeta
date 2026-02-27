@@ -7,11 +7,14 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/clustersync"
 )
 
 type Handler struct {
 	svc      *Service
 	store    Store
+	cluster  clustersync.Publisher
 	channels map[string]interface{}
 	mux      *http.ServeMux
 }
@@ -31,6 +34,13 @@ func NewHandler(svc *Service, store Store) *Handler {
 	}
 	h.mux = h.routes()
 	return h
+}
+
+func (h *Handler) SetClusterSyncPublisher(pub clustersync.Publisher) {
+	if pub == nil {
+		return
+	}
+	h.cluster = pub
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) { h.mux.ServeHTTP(w, r) }
@@ -319,6 +329,16 @@ func (h *Handler) alertAction(w http.ResponseWriter, r *http.Request, action str
 		writeErr(w, http.StatusInternalServerError, "update_failed", err.Error(), reqID, tenantID)
 		return
 	}
+	payload := map[string]interface{}{
+		"alert_id": r.PathValue("id"),
+		"actor":    req.Actor,
+		"action":   action,
+		"note":     note,
+	}
+	if suppressUntil != nil {
+		payload["suppress_until"] = suppressUntil.UTC().Format(time.RFC3339)
+	}
+	h.publishClusterSync(r, tenantID, "alert", r.PathValue("id"), "alert_"+action, payload)
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "request_id": reqID})
 }
 
@@ -347,10 +367,23 @@ func (h *Handler) handleCreateRule(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
 		return
 	}
+	rule.ID = strings.TrimSpace(rule.ID)
+	if rule.ID == "" {
+		rule.ID = newID("rule")
+	}
 	if err := h.store.CreateRule(r.Context(), tenantID, rule); err != nil {
 		writeErr(w, http.StatusInternalServerError, "create_failed", err.Error(), reqID, tenantID)
 		return
 	}
+	h.publishClusterSync(r, tenantID, "alert_rule", rule.ID, "rule_created", map[string]interface{}{
+		"rule_id":    rule.ID,
+		"name":       rule.Name,
+		"severity":   rule.Severity,
+		"title":      rule.Title,
+		"condition":  rule.Condition,
+		"tenant_id":  tenantID,
+		"request_id": reqID,
+	})
 	writeJSON(w, http.StatusCreated, map[string]interface{}{"status": "ok", "request_id": reqID})
 }
 
@@ -391,6 +424,15 @@ func (h *Handler) handleUpdateRule(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "update_failed", err.Error(), reqID, tenantID)
 		return
 	}
+	h.publishClusterSync(r, tenantID, "alert_rule", rule.ID, "rule_updated", map[string]interface{}{
+		"rule_id":    rule.ID,
+		"name":       rule.Name,
+		"severity":   rule.Severity,
+		"title":      rule.Title,
+		"condition":  rule.Condition,
+		"tenant_id":  tenantID,
+		"request_id": reqID,
+	})
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "request_id": reqID})
 }
 
@@ -412,6 +454,11 @@ func (h *Handler) handleDeleteRule(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "delete_failed", err.Error(), reqID, tenantID)
 		return
 	}
+	h.publishClusterSync(r, tenantID, "alert_rule", id, "rule_deleted", map[string]interface{}{
+		"rule_id":    id,
+		"tenant_id":  tenantID,
+		"request_id": reqID,
+	})
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "request_id": reqID})
 }
 
@@ -436,6 +483,13 @@ func (h *Handler) handleUpdateChannels(w http.ResponseWriter, r *http.Request) {
 	for k, v := range body {
 		h.channels[k] = v
 	}
+	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
+	if tenantID == "" {
+		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	}
+	h.publishClusterSync(r, tenantID, "alert_channel_config", tenantID, "channels_updated", map[string]interface{}{
+		"channels": body,
+	})
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "request_id": reqID})
 }
 
@@ -504,5 +558,31 @@ func writeErr(w http.ResponseWriter, status int, code string, message string, re
 			"request_id": requestID,
 			"tenant_id":  tenantID,
 		},
+	})
+}
+
+func (h *Handler) publishClusterSync(r *http.Request, tenantID string, entityType string, entityID string, operation string, payload map[string]interface{}) {
+	if h == nil || h.cluster == nil {
+		return
+	}
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return
+	}
+	entityID = strings.TrimSpace(entityID)
+	if entityID == "" {
+		entityID = tenantID
+	}
+	operation = strings.TrimSpace(operation)
+	if operation == "" {
+		return
+	}
+	_ = h.cluster.Publish(r.Context(), clustersync.PublishRequest{
+		TenantID:   tenantID,
+		Component:  "audit",
+		EntityType: strings.TrimSpace(entityType),
+		EntityID:   entityID,
+		Operation:  operation,
+		Payload:    payload,
 	})
 }
