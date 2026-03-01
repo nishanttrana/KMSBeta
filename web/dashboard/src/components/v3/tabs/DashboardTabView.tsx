@@ -2,7 +2,7 @@
 import {
   ArrowRight, BarChart3, Bell, CheckCircle2, ClipboardCheck, Cloud,
   Cpu, Database, FileText, Gauge, GitBranch, KeyRound, Lock,
-  ScrollText, Server, Settings, ShieldCheck, TrendingDown, TrendingUp,
+  ScrollText, Settings, ShieldCheck, TrendingDown, TrendingUp,
   X, Zap
 } from "lucide-react";
 import { B, Btn, Card, FG, Modal } from "../legacyPrimitives";
@@ -19,28 +19,6 @@ function statusTone(status: string) {
 function statusPill(label: string, tone: string, pulse = false) {
   return <B c={tone as any} pulse={pulse}>{label}</B>;
 }
-
-const SERVICE_ICONS: Record<string, any> = {
-  "kms-auth": ShieldCheck,
-  "kms-keycore": KeyRound,
-  "kms-audit": ScrollText,
-  "kms-policy": Settings,
-  "kms-compliance": ClipboardCheck,
-  "kms-posture": Gauge,
-  "kms-reporting": BarChart3,
-  "kms-cluster": GitBranch,
-};
-
-const SERVICE_LABELS: Record<string, string> = {
-  "kms-auth": "Auth",
-  "kms-keycore": "Key Core",
-  "kms-audit": "Audit",
-  "kms-policy": "Policy",
-  "kms-compliance": "Compliance",
-  "kms-posture": "Posture",
-  "kms-reporting": "Reporting",
-  "kms-cluster": "Cluster",
-};
 
 const WIDGET_CONF: Record<string, { icon: any; label: string; color: string }> = {
   keys: { icon: KeyRound, label: "Keys", color: C.accent },
@@ -88,7 +66,6 @@ export const DashboardTabView = (props: any) => {
   const nodes = clusterNodes.length
     ? clusterNodes
     : [{ id: "local", name: "vecta-kms-01", status: "online", role: "leader", address: "127.0.0.1" }];
-  const serviceHealth = homeSummary?.serviceHealth || {};
   const auditChainOk = homeSummary?.auditChainOk !== false;
   const opsGrowthPos = Number(homeSummary?.opsGrowthPct || 0) >= 0;
   const complianceTrendPos = Number(homeSummary?.complianceDeltaWeek || 0) >= 0;
@@ -160,7 +137,7 @@ export const DashboardTabView = (props: any) => {
 
       {/* KPI Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 10 }}>
-        <Card style={{ borderLeft: `3px solid ${C.accent}` }}>
+        <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>Total Keys</div>
             <KeyRound size={13} color={C.accent} />
@@ -175,7 +152,7 @@ export const DashboardTabView = (props: any) => {
           </div>
         </Card>
 
-        <Card style={{ borderLeft: `3px solid ${C.green}` }}>
+        <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>Ops/Day</div>
             <Zap size={13} color={C.green} />
@@ -190,7 +167,7 @@ export const DashboardTabView = (props: any) => {
           </div>
         </Card>
 
-        <Card style={{ borderLeft: `3px solid ${C.blue}` }}>
+        <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>Compliance</div>
             <ShieldCheck size={13} color={C.blue} />
@@ -205,7 +182,7 @@ export const DashboardTabView = (props: any) => {
           </div>
         </Card>
 
-        <Card style={{ borderLeft: `3px solid ${C.red}` }}>
+        <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>Alerts</div>
             <Bell size={13} color={C.red} />
@@ -223,7 +200,7 @@ export const DashboardTabView = (props: any) => {
 
       {/* Expiring Certificates Warning */}
       {Number(homeSummary?.expiring || 0) > 0 && (
-        <Card style={{ borderColor: C.amber, background: C.amberDim, borderLeft: `3px solid ${C.amber}` }}>
+        <Card style={{ borderColor: C.amber, background: C.amberDim }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <FileText size={14} color={C.amber} />
@@ -238,40 +215,6 @@ export const DashboardTabView = (props: any) => {
           </div>
         </Card>
       )}
-
-      {/* Services Health */}
-      <Card>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>
-            <Server size={12} color={C.dim} />
-            Services Health
-          </div>
-          <span style={{ fontSize: 9, color: C.muted, letterSpacing: 0.5 }}>8 microservices</span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
-          {Object.entries(SERVICE_LABELS).map(([svcId, label]) => {
-            const status = String(serviceHealth[svcId] || "ok").toLowerCase();
-            const tone = status === "ok" ? "green" : status === "degraded" ? "amber" : "red";
-            const dotColor = (C as any)[tone] || C.green;
-            const iconBg = status === "ok" ? C.greenDim : status === "degraded" ? C.amberDim : C.redDim;
-            const ServiceIcon = SERVICE_ICONS[svcId] || Server;
-            return (
-              <div
-                key={svcId}
-                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5, padding: "10px 6px", background: C.bg, borderRadius: 8, border: `1px solid ${C.border}` }}
-              >
-                <div style={{ width: 30, height: 30, borderRadius: 999, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <ServiceIcon size={13} color={dotColor} />
-                </div>
-                <span style={{ fontSize: 9, color: C.text, fontWeight: 600, textAlign: "center" }}>{label}</span>
-                <span style={{ fontSize: 8, color: dotColor, textTransform: "uppercase", fontWeight: 700, letterSpacing: 0.5 }}>
-                  {status === "ok" ? "HEALTHY" : status.toUpperCase()}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
 
       {/* Pinned Tab Widgets */}
       {pinnedList.length > 0 && (
@@ -289,7 +232,7 @@ export const DashboardTabView = (props: any) => {
               const secondary = getWidgetSecondary(tabId);
               const primaryColor = getWidgetPrimaryColor(tabId);
               return (
-                <Card key={`pinned-${tabId}`} style={{ borderLeft: `3px solid ${conf.color}` }}>
+                <Card key={`pinned-${tabId}`}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
                       <TabIcon size={11} color={conf.color} />
@@ -320,7 +263,7 @@ export const DashboardTabView = (props: any) => {
 
       {/* Infrastructure Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 10 }}>
-        <Card onClick={() => setModal?.("fde")} style={{ borderLeft: `3px solid ${C.accent}`, cursor: "pointer" }}>
+        <Card onClick={() => setModal?.("fde")} style={{ cursor: "pointer" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>
               <Lock size={12} color={C.dim} />
@@ -339,7 +282,7 @@ export const DashboardTabView = (props: any) => {
           <div style={{ fontSize: 11, color: C.green }}>Integrity passed | Recovery: 3-of-5</div>
         </Card>
 
-        <Card style={{ borderLeft: `3px solid ${globalFipsEnabled ? C.green : C.blue}` }}>
+        <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>
               <ShieldCheck size={12} color={C.dim} />
@@ -368,7 +311,7 @@ export const DashboardTabView = (props: any) => {
           </div>
         </Card>
 
-        <Card style={{ borderLeft: `3px solid ${networkStatus === "ok" ? C.green : C.amber}` }}>
+        <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>
               <Cloud size={12} color={C.dim} />

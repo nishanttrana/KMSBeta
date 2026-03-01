@@ -649,7 +649,7 @@ export default function VectaDashboardV3Shell(props: Props) {
             </TabErrorBoundary>
           </div>
         </div>
-        {toast && <div style={{ position: "fixed", right: 16, bottom: 16, background: C.surface, border: `1px solid ${C.borderHi}`, borderLeft: `3px solid ${/fail|error/i.test(toast) ? C.red : /verified|intact|refreshed|success/i.test(toast) ? C.green : C.accent}`, borderRadius: 8, padding: "10px 12px", fontSize: 11, color: C.text, zIndex: 1200, maxWidth: 380, animation: "slideIn .2s ease-out" }}>{toast}</div>}
+        {toast && <div style={{ position: "fixed", right: 16, bottom: 16, background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: 8, padding: "10px 12px", fontSize: 11, color: C.text, zIndex: 1200, maxWidth: 380, animation: "slideIn .2s ease-out" }}>{toast}</div>}
       </div>
     </div>
   );
