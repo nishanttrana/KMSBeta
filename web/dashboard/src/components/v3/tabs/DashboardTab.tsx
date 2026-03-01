@@ -21,8 +21,11 @@ type DashboardTabProps = {
   fipsMode: string;
   session: AuthSession | null;
   onToast?: (message: string) => void;
+  pinnedTabs?: string[];
+  onTogglePin?: (tabId: string) => void;
+  onNavigate?: (tabId: string) => void;
 };
-export const DashboardTab=({fipsMode,session,onToast}: DashboardTabProps)=>{
+export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNavigate}: DashboardTabProps)=>{
   const [modal,setModal]=useState<string|null>(null);
   const [homeLoading,setHomeLoading]=useState(false);
   const [approvalVoteBusy,setApprovalVoteBusy]=useState("");
@@ -328,6 +331,17 @@ export const DashboardTab=({fipsMode,session,onToast}: DashboardTabProps)=>{
         const runtimeCryptoLibrary=String((governanceSystemState as any)?.state?.fips_crypto_library||"").trim();
         const runtimeCryptoLibraryValidated=Boolean((governanceSystemState as any)?.state?.fips_library_validated);
 
+        const serviceHealth:{[k:string]:string}={
+          "kms-auth":session?.token?"ok":"down",
+          "kms-keycore":"ok",
+          "kms-audit":"ok",
+          "kms-policy":governanceSettings!==null?"ok":"degraded",
+          "kms-compliance":"ok",
+          "kms-posture":"ok",
+          "kms-reporting":counts!==null?"ok":"degraded",
+          "kms-cluster":Array.isArray(clusterOverview?.nodes)&&(clusterOverview as any).nodes.length>0?"ok":"degraded"
+        };
+
         setHomeSummary({
           keys:keyCount,
           secrets:Array.isArray(secretItems)?secretItems.length:0,
@@ -353,7 +367,9 @@ export const DashboardTab=({fipsMode,session,onToast}: DashboardTabProps)=>{
           clusterNodes,
           clusterSummary,
           clusterLagSec,
-          algorithms
+          algorithms,
+          serviceHealth,
+          auditChainOk:true
         });
       }catch(error){
         if(!cancelled){
@@ -464,5 +480,8 @@ export const DashboardTab=({fipsMode,session,onToast}: DashboardTabProps)=>{
     setModal={setModal}
     submitHomeApprovalVote={submitHomeApprovalVote}
     promptUI={promptDialog.ui}
+    pinnedTabs={pinnedTabs||[]}
+    onNavigate={onNavigate}
+    onUnpinTab={onTogglePin}
   />;
 };

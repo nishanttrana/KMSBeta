@@ -19,6 +19,8 @@ import {
   Link,
   List,
   Lock,
+  Pin,
+  PinOff,
   Plug,
   ScrollText,
   Settings,
@@ -274,6 +276,22 @@ export default function VectaDashboardV3Shell(props: Props) {
   const [tab, setTab] = useState(initialTab);
   const [collapsed, setCollapsed] = useState(false);
   const [t, setT] = useState(new Date());
+  const [pinnedTabs, setPinnedTabs] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("vecta_pinned_tabs");
+      const parsed = JSON.parse(raw || "[]");
+      return Array.isArray(parsed) ? parsed.filter((v: any) => typeof v === "string") : [];
+    } catch { return []; }
+  });
+
+  const togglePin = (tabId: string) => {
+    if (tabId === "home") return;
+    setPinnedTabs((prev) => {
+      const next = prev.includes(tabId) ? prev.filter((id) => id !== tabId) : [...prev, tabId];
+      try { localStorage.setItem("vecta_pinned_tabs", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
   const [toast, setToast] = useState("");
   const [keyCatalog, setKeyCatalog] = useState<any[]>([]);
   const [tagCatalog, setTagCatalog] = useState<any[]>([]);
@@ -474,8 +492,9 @@ export default function VectaDashboardV3Shell(props: Props) {
   const Tab = TABS[tab] || DashboardTab;
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: C.bg, fontFamily: "'IBM Plex Sans',-apple-system,sans-serif", color: C.text, overflow: "hidden" }}>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}} *::-webkit-scrollbar{width:5px;height:5px} *::-webkit-scrollbar-track{background:transparent} *::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
+    <div style={{ display: "flex", height: "100vh", background: C.bg, fontFamily: "'IBM Plex Sans',-apple-system,sans-serif", color: C.text, overflow: "hidden", paddingTop: 2 }}>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}} @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}} *::-webkit-scrollbar{width:5px;height:5px} *::-webkit-scrollbar-track{background:transparent} *::-webkit-scrollbar-thumb{background:${C.border};border-radius:3px}`}</style>
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 2, zIndex: 9999, background: `linear-gradient(90deg,${C.accent},${C.purple},${C.blue})` }} />
       <div style={{ width: collapsed ? 56 : 210, background: C.sidebar, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", transition: "width .2s", flexShrink: 0, overflow: "hidden" }}>
         <div style={{ padding: collapsed ? "8px 6px" : "8px 10px 8px 14px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: collapsed ? 6 : 8, minHeight: collapsed ? 66 : 44, justifyContent: collapsed ? "center" : "space-between", flexDirection: collapsed ? "column" : "row" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, justifyContent: "center", width: collapsed ? "100%" : "auto" }}>
@@ -504,13 +523,16 @@ export default function VectaDashboardV3Shell(props: Props) {
                     }
                     selectTab(it.id);
                   }}
-                  style={{ display: "flex", alignItems: "center", gap: 8, padding: collapsed ? "8px" : "6px 14px", cursor: "pointer", background: tab === it.id ? C.accentDim : "transparent", borderLeft: tab === it.id ? `2px solid ${C.accent}` : "2px solid transparent", transition: "all .15s" }}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: collapsed ? "8px" : "6px 14px", cursor: "pointer", background: tab === it.id ? `linear-gradient(90deg,${C.accentDim} 0%,rgba(6,214,224,.03) 100%)` : "transparent", borderLeft: tab === it.id ? `2px solid ${C.accent}` : "2px solid transparent", transition: "all .15s" }}
                   title={it.label}
+                  onMouseEnter={(e) => { if (tab !== it.id) e.currentTarget.style.background = `rgba(6,214,224,.04)`; }}
+                  onMouseLeave={(e) => { if (tab !== it.id) e.currentTarget.style.background = "transparent"; }}
                 >
-                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", color: tab === it.id ? C.text : C.dim, flexShrink: 0, width: collapsed ? "100%" : "auto" }}>
+                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", color: tab === it.id ? C.accent : C.dim, flexShrink: 0, width: collapsed ? "100%" : "auto" }}>
                     <it.icon size={collapsed ? 16 : 14} strokeWidth={2} />
                   </span>
-                  {!collapsed && <span style={{ fontSize: 11, color: tab === it.id ? C.text : C.dim, fontWeight: tab === it.id ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{it.label}</span>}
+                  {!collapsed && <span style={{ fontSize: 11, color: tab === it.id ? C.text : C.dim, fontWeight: tab === it.id ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>{it.label}</span>}
+                  {!collapsed && pinnedTabs.includes(it.id) && <span title="Pinned to dashboard" style={{ width: 5, height: 5, borderRadius: 3, background: C.accent, flexShrink: 0 }} />}
                 </div>
               ))}
             </div>
@@ -519,8 +541,20 @@ export default function VectaDashboardV3Shell(props: Props) {
       </div>
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 20px", height: 44, borderBottom: `1px solid ${C.border}`, flexShrink: 0, background: C.surface }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: C.text, letterSpacing: -0.3 }}>{TITLES[tab]}</span>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 20px", height: 46, borderBottom: `1px solid ${C.border}`, flexShrink: 0, background: C.surface, boxShadow: `0 1px 8px rgba(0,0,0,.25)` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.text, letterSpacing: -0.3 }}>{TITLES[tab]}</span>
+            {tab !== "home" && (
+              <button
+                onClick={() => togglePin(tab)}
+                title={pinnedTabs.includes(tab) ? "Unpin from Dashboard" : "Pin to Dashboard"}
+                style={{ display: "inline-flex", alignItems: "center", gap: 4, background: pinnedTabs.includes(tab) ? C.accentDim : "transparent", border: `1px solid ${pinnedTabs.includes(tab) ? C.accent : C.border}`, borderRadius: 6, padding: "3px 7px", cursor: "pointer", color: pinnedTabs.includes(tab) ? C.accent : C.muted, fontSize: 9, fontWeight: 600, letterSpacing: 0.3, transition: "all .15s" }}
+              >
+                {pinnedTabs.includes(tab) ? <PinOff size={11} strokeWidth={2} /> : <Pin size={11} strokeWidth={2} />}
+                {pinnedTabs.includes(tab) ? "Pinned" : "Pin"}
+              </button>
+            )}
+          </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <B c={globalFipsEnabled ? "green" : "blue"} pulse={globalFipsEnabled}>{globalFipsEnabled ? "FIPS STRICT" : "STANDARD MODE"}</B>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -608,11 +642,14 @@ export default function VectaDashboardV3Shell(props: Props) {
                 onUnreadSync={setReportedUnread}
                 subView={activeSubPaneSelection}
                 onSubViewChange={(next: string) => setSubPaneSelection((prev: any) => ({ ...prev, [tab]: String(next || "") }))}
+                pinnedTabs={pinnedTabs}
+                onTogglePin={togglePin}
+                onNavigate={(tabId: string) => selectTab(tabId)}
               />
             </TabErrorBoundary>
           </div>
         </div>
-        {toast && <div style={{ position: "fixed", right: 16, bottom: 16, background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: 8, padding: "10px 12px", fontSize: 11, color: C.text, zIndex: 1200, maxWidth: 380 }}>{toast}</div>}
+        {toast && <div style={{ position: "fixed", right: 16, bottom: 16, background: C.surface, border: `1px solid ${C.borderHi}`, borderLeft: `3px solid ${/fail|error/i.test(toast) ? C.red : /verified|intact|refreshed|success/i.test(toast) ? C.green : C.accent}`, borderRadius: 8, padding: "10px 12px", fontSize: 11, color: C.text, zIndex: 1200, maxWidth: 380, animation: "slideIn .2s ease-out" }}>{toast}</div>}
       </div>
     </div>
   );
