@@ -9,6 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
 func main() {
@@ -16,6 +18,9 @@ func main() {
 	server := NewServer(logger)
 
 	port := envOr("FIRSTBOOT_PORT", "9443")
+	if err := pkgruntimecfg.ValidateHTTPPort(port); err != nil {
+		logger.Fatalf("config validation failed: %v", err)
+	}
 	srv := &http.Server{
 		Addr:              ":" + port,
 		Handler:           server,

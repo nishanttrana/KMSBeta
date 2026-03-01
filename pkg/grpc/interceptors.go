@@ -12,6 +12,8 @@ import (
 	health "google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/peer"
+
+	"vecta-kms/pkg/tlsprofile"
 )
 
 func MTLSUnaryInterceptor() ggrpc.UnaryServerInterceptor {
@@ -41,6 +43,7 @@ func LoggingUnaryInterceptor(logger *log.Logger) ggrpc.UnaryServerInterceptor {
 }
 
 func NewServer(tlsConfig *tls.Config, logger *log.Logger) *ggrpc.Server {
+	tlsConfig = tlsprofile.ApplyServerDefaults(tlsConfig)
 	opts := []ggrpc.ServerOption{
 		ggrpc.Creds(credentials.NewTLS(tlsConfig)),
 		ggrpc.ChainUnaryInterceptor(MTLSUnaryInterceptor(), LoggingUnaryInterceptor(logger)),

@@ -630,7 +630,12 @@ SELECT tenant_id, COALESCE(fips_mode,'disabled'), COALESCE(fips_mode_policy,'str
        COALESCE(mgmt_ip,''), COALESCE(cluster_ip,''), COALESCE(dns_servers,''), COALESCE(ntp_servers,''),
        COALESCE(tls_mode,'internal_ca'), COALESCE(tls_cert_pem,''), COALESCE(tls_key_pem,''), COALESCE(tls_ca_bundle_pem,''),
        COALESCE(backup_schedule,'daily@02:00'), COALESCE(backup_target,'local'), COALESCE(backup_retention_days,30), COALESCE(backup_encrypted,true),
-       COALESCE(proxy_endpoint,''), COALESCE(snmp_target,''), COALESCE(updated_by,''), updated_at
+       COALESCE(proxy_endpoint,''), COALESCE(snmp_target,''),
+       COALESCE(posture_force_quorum_destructive_ops,false),
+       COALESCE(posture_require_step_up_auth,false),
+       COALESCE(posture_pause_connector_sync,false),
+       COALESCE(posture_guardrail_policy_required,false),
+       COALESCE(updated_by,''), updated_at
 FROM governance_system_state
 WHERE tenant_id=$1
 `, tenantID)
@@ -644,28 +649,37 @@ WHERE tenant_id=$1
 		&out.MgmtIP, &out.ClusterIP, &out.DNSServers, &out.NTPServers,
 		&out.TLSMode, &out.TLSCertPEM, &out.TLSKeyPEM, &out.TLSCABundlePEM,
 		&out.BackupSchedule, &out.BackupTarget, &out.BackupRetentionDays, &out.BackupEncrypted,
-		&out.ProxyEndpoint, &out.SNMPTarget, &out.UpdatedBy, &updatedRaw,
+		&out.ProxyEndpoint, &out.SNMPTarget,
+		&out.PostureForceQuorumDestructiveOps,
+		&out.PostureRequireStepUpAuth,
+		&out.PosturePauseConnectorSync,
+		&out.PostureGuardrailPolicyRequired,
+		&out.UpdatedBy, &updatedRaw,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return GovernanceSystemState{
-			TenantID:             tenantID,
-			FIPSMode:             "disabled",
-			FIPSModePolicy:       "strict",
-			FIPSCryptoLibrary:    "go-boringcrypto",
-			FIPSLibraryValidated: true,
-			FIPSTLSProfile:       "tls12_fips_suites",
-			FIPSRNGMode:          "ctr_drbg",
-			FIPSEntropySource:    "os-csprng",
-			FIPSEntropyHealth:    "unknown",
-			HSMMode:              "software",
-			ClusterMode:          "standalone",
-			LicenseStatus:        "inactive",
-			TLSMode:              "internal_ca",
-			BackupSchedule:       "daily@02:00",
-			BackupTarget:         "local",
-			BackupRetentionDays:  30,
-			BackupEncrypted:      true,
-			UpdatedBy:            "system",
+			TenantID:                         tenantID,
+			FIPSMode:                         "disabled",
+			FIPSModePolicy:                   "strict",
+			FIPSCryptoLibrary:                "go-boringcrypto",
+			FIPSLibraryValidated:             true,
+			FIPSTLSProfile:                   "tls12_fips_suites",
+			FIPSRNGMode:                      "ctr_drbg",
+			FIPSEntropySource:                "os-csprng",
+			FIPSEntropyHealth:                "unknown",
+			HSMMode:                          "software",
+			ClusterMode:                      "standalone",
+			LicenseStatus:                    "inactive",
+			TLSMode:                          "internal_ca",
+			BackupSchedule:                   "daily@02:00",
+			BackupTarget:                     "local",
+			BackupRetentionDays:              30,
+			BackupEncrypted:                  true,
+			PostureForceQuorumDestructiveOps: false,
+			PostureRequireStepUpAuth:         false,
+			PosturePauseConnectorSync:        false,
+			PostureGuardrailPolicyRequired:   false,
+			UpdatedBy:                        "system",
 		}, nil
 	}
 	if err != nil {
@@ -686,8 +700,10 @@ INSERT INTO governance_system_state (
     mgmt_ip, cluster_ip, dns_servers, ntp_servers,
     tls_mode, tls_cert_pem, tls_key_pem, tls_ca_bundle_pem,
     backup_schedule, backup_target, backup_retention_days, backup_encrypted,
-    proxy_endpoint, snmp_target, updated_by, updated_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,CURRENT_TIMESTAMP)
+    proxy_endpoint, snmp_target,
+    posture_force_quorum_destructive_ops, posture_require_step_up_auth, posture_pause_connector_sync, posture_guardrail_policy_required,
+    updated_by, updated_at
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,CURRENT_TIMESTAMP)
 ON CONFLICT (tenant_id) DO UPDATE
 SET fips_mode=EXCLUDED.fips_mode,
     fips_mode_policy=EXCLUDED.fips_mode_policy,
@@ -713,6 +729,10 @@ SET fips_mode=EXCLUDED.fips_mode,
     backup_encrypted=EXCLUDED.backup_encrypted,
     proxy_endpoint=EXCLUDED.proxy_endpoint,
     snmp_target=EXCLUDED.snmp_target,
+    posture_force_quorum_destructive_ops=EXCLUDED.posture_force_quorum_destructive_ops,
+    posture_require_step_up_auth=EXCLUDED.posture_require_step_up_auth,
+    posture_pause_connector_sync=EXCLUDED.posture_pause_connector_sync,
+    posture_guardrail_policy_required=EXCLUDED.posture_guardrail_policy_required,
     updated_by=EXCLUDED.updated_by,
     updated_at=CURRENT_TIMESTAMP
 `, state.TenantID, nullable(state.FIPSMode), nullable(state.FIPSModePolicy),
@@ -722,7 +742,9 @@ SET fips_mode=EXCLUDED.fips_mode,
 		nullable(state.MgmtIP), nullable(state.ClusterIP), nullable(state.DNSServers), nullable(state.NTPServers),
 		nullable(state.TLSMode), nullable(state.TLSCertPEM), nullable(state.TLSKeyPEM), nullable(state.TLSCABundlePEM),
 		nullable(state.BackupSchedule), nullable(state.BackupTarget), state.BackupRetentionDays, state.BackupEncrypted,
-		nullable(state.ProxyEndpoint), nullable(state.SNMPTarget), nullable(state.UpdatedBy))
+		nullable(state.ProxyEndpoint), nullable(state.SNMPTarget),
+		state.PostureForceQuorumDestructiveOps, state.PostureRequireStepUpAuth, state.PosturePauseConnectorSync, state.PostureGuardrailPolicyRequired,
+		nullable(state.UpdatedBy))
 	return err
 }
 

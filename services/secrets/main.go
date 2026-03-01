@@ -29,11 +29,15 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
 func main() {
 	cfg := pkgconfig.Load()
-	logger := log.New(os.Stdout, "[kms-secrets] ", log.LstdFlags|log.LUTC)
+
+	if err := pkgruntimecfg.ValidateServiceConfig("kms-secrets", cfg); err != nil {
+		log.Fatalf("config validation failed: %v", err)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 

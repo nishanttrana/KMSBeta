@@ -495,6 +495,80 @@ func TestFieldEncryptionLeaseRequiresExportableKey(t *testing.T) {
 	if strings.TrimSpace(lease.LeaseID) == "" {
 		t.Fatalf("expected lease id for exportable key")
 	}
+	if got := strings.TrimSpace(firstString(lease.LeasePackage["alg"])); got != fieldLeaseHPKEAlgorithmID {
+		t.Fatalf("expected HPKE lease package algorithm %q, got %q", fieldLeaseHPKEAlgorithmID, got)
+	}
+	if strings.TrimSpace(firstString(lease.LeasePackage["enc_b64"])) == "" {
+		t.Fatalf("expected HPKE enc_b64 field in lease package")
+	}
+	if strings.TrimSpace(firstString(lease.LeasePackage["ciphertext_b64"])) == "" {
+		t.Fatalf("expected HPKE ciphertext_b64 field in lease package")
+	}
+	if strings.TrimSpace(firstString(lease.LeasePackage["iv_b64"])) != "" {
+		t.Fatalf("expected iv_b64 to be empty in HPKE lease package")
+	}
+}
+
+func TestFieldEncryptionLeaseDualWrapCompatibility(t *testing.T) {
+	t.Setenv(fieldLeaseWrapModeEnv, fieldLeaseWrapModeDual)
+	svc, _, _ := newDataProtectService(t)
+	ctx := context.Background()
+	tenantID := "tenant-field-exportable-dual"
+
+	_, err := svc.UpdateDataProtectionPolicy(ctx, DataProtectionPolicy{
+		TenantID:                tenantID,
+		LocalCryptoAllowed:      true,
+		CacheEnabled:            true,
+		CacheTTLSeconds:         300,
+		LeaseMaxOps:             100,
+		MaxCachedKeys:           4,
+		RequireSignedNonce:      true,
+		AntiReplayWindowSeconds: 600,
+		RequireMTLS:             false,
+	})
+	if err != nil {
+		t.Fatalf("update policy: %v", err)
+	}
+
+	reg, signPriv := registerWrapperForAuthTest(t, svc, tenantID, "wrapper-export-dual-1", "app-export-dual-1", "deafbeef0099")
+	ts := time.Now().UTC().Format(time.RFC3339)
+	lease, err := svc.IssueFieldEncryptionLease(ctx, FieldEncryptionLeaseRequest{
+		TenantID:     tenantID,
+		WrapperID:    reg.Wrapper.WrapperID,
+		KeyID:        "key-1",
+		Operation:    "encrypt",
+		Nonce:        "lease-export-dual-1",
+		Timestamp:    ts,
+		SignatureB64: signWrapperPayload("lease", tenantID, reg.Wrapper.WrapperID, "key-1", "encrypt", "lease-export-dual-1", ts, signPriv),
+		AuthToken:    reg.AuthProfile.Token,
+		ClientCertFP: reg.Wrapper.CertFingerprint,
+	})
+	if err != nil {
+		t.Fatalf("IssueFieldEncryptionLease(dual): %v", err)
+	}
+	if got := strings.TrimSpace(firstString(lease.LeasePackage["alg"])); got != fieldLeaseHPKEAlgorithmID {
+		t.Fatalf("expected HPKE algorithm in dual mode, got %q", got)
+	}
+	if got := strings.TrimSpace(firstString(lease.LeasePackage["compatibility_mode"])); got != "dual" {
+		t.Fatalf("expected compatibility_mode dual, got %q", got)
+	}
+	rawLegacy, ok := lease.LeasePackage["legacy_package"]
+	if !ok || rawLegacy == nil {
+		t.Fatalf("expected legacy_package in dual mode")
+	}
+	legacy, ok := rawLegacy.(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected legacy_package object, got %T", rawLegacy)
+	}
+	if got := strings.TrimSpace(firstString(legacy["alg"])); got != "X25519+AES-256-GCM" {
+		t.Fatalf("expected legacy algorithm, got %q", got)
+	}
+	if strings.TrimSpace(firstString(legacy["ephemeral_pub_b64"])) == "" {
+		t.Fatalf("expected legacy ephemeral_pub_b64 in dual mode")
+	}
+	if strings.TrimSpace(firstString(legacy["iv_b64"])) == "" {
+		t.Fatalf("expected legacy iv_b64 in dual mode")
+	}
 }
 
 func signedAttestationPayload(t *testing.T, signer ed25519.PrivateKey, payload map[string]interface{}) ([]byte, string) {

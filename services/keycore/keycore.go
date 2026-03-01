@@ -55,7 +55,10 @@ type Service struct {
 	pf       bool
 	fipsMode FIPSModeProvider
 	approval *governanceApprovalClient
+	posture  GovernancePostureControlsProvider
 }
+
+var errTagInUse = errors.New("tag in use")
 
 func NewService(store Store, cache KeyCache, events AuditPublisher, meter *metering.Meter, mek []byte, policy PolicyEvaluator, policyFailClosed bool) *Service {
 	f := bloom.NewWithEstimates(10_000_000, 0.01)
@@ -72,6 +75,7 @@ func NewService(store Store, cache KeyCache, events AuditPublisher, meter *meter
 		policy:   policy,
 		pf:       policyFailClosed,
 		fipsMode: staticFIPSModeProvider{enabled: false},
+		posture:  staticPostureControlsProvider{},
 	}
 }
 
@@ -80,6 +84,13 @@ func (s *Service) SetGovernanceApprovalClient(client *governanceApprovalClient) 
 		return
 	}
 	s.approval = client
+}
+
+func (s *Service) SetGovernancePostureControlsProvider(provider GovernancePostureControlsProvider) {
+	if provider == nil {
+		provider = staticPostureControlsProvider{}
+	}
+	s.posture = provider
 }
 
 func (s *Service) SetClusterSyncPublisher(pub clustersync.Publisher) {
@@ -1916,7 +1927,7 @@ func (s *Service) SetKeyStatus(ctx context.Context, tenantID string, keyID strin
 	return nil
 }
 
-func (s *Service) ScheduleKeyDestroy(ctx context.Context, tenantID string, keyID string, days int, justification string) (time.Time, error) {
+func (s *Service) ScheduleKeyDestroy(ctx context.Context, tenantID string, keyID string, days int, justification string, requesterID string, requesterEmail string, requesterIP string) (time.Time, error) {
 	if days < 1 {
 		return time.Time{}, errors.New("destroy_after_days must be at least 1")
 	}
@@ -1930,6 +1941,20 @@ func (s *Service) ScheduleKeyDestroy(ctx context.Context, tenantID string, keyID
 		}
 		return time.Time{}, errors.New("key is already deleted")
 	}
+	if err := s.enforcePostureStepUp(ctx, tenantID, "key.destroy"); err != nil {
+		return time.Time{}, err
+	}
+	if err := s.enforcePostureQuorumOnDestroy(ctx, tenantID, key, "destroy", map[string]string{
+		"key_id":          keyID,
+		"mode":            "scheduled",
+		"destroy_days":    fmt.Sprintf("%d", days),
+		"justification":   strings.TrimSpace(justification),
+		"requester_id":    strings.TrimSpace(requesterID),
+		"requester_email": strings.TrimSpace(requesterEmail),
+		"requester_ip":    strings.TrimSpace(requesterIP),
+	}); err != nil {
+		return time.Time{}, err
+	}
 	if err := s.checkPolicy(ctx, PolicyEvaluateRequest{
 		TenantID:          tenantID,
 		Operation:         "key.destroy",
@@ -1941,6 +1966,9 @@ func (s *Service) ScheduleKeyDestroy(ctx context.Context, tenantID string, keyID
 		OpsLimit:          key.OpsLimit,
 		KeyStatus:         key.Status,
 		DaysSinceRotation: daysSince(key.UpdatedAt),
+		Labels: map[string]any{
+			"step_up_authenticated": stepUpAuthFromContext(ctx),
+		},
 	}); err != nil {
 		return time.Time{}, err
 	}
@@ -1975,7 +2003,7 @@ func (s *Service) ScheduleKeyDestroy(ctx context.Context, tenantID string, keyID
 	return destroyAt, nil
 }
 
-func (s *Service) DestroyKeyImmediately(ctx context.Context, tenantID string, keyID string, justification string) error {
+func (s *Service) DestroyKeyImmediately(ctx context.Context, tenantID string, keyID string, justification string, requesterID string, requesterEmail string, requesterIP string) error {
 	key, err := s.GetKey(ctx, tenantID, keyID)
 	if err != nil {
 		return err
@@ -1985,6 +2013,19 @@ func (s *Service) DestroyKeyImmediately(ctx context.Context, tenantID string, ke
 			return errors.New("key is already pending deletion")
 		}
 		return errors.New("key is already deleted")
+	}
+	if err := s.enforcePostureStepUp(ctx, tenantID, "key.destroy"); err != nil {
+		return err
+	}
+	if err := s.enforcePostureQuorumOnDestroy(ctx, tenantID, key, "destroy", map[string]string{
+		"key_id":          keyID,
+		"mode":            "immediate",
+		"justification":   strings.TrimSpace(justification),
+		"requester_id":    strings.TrimSpace(requesterID),
+		"requester_email": strings.TrimSpace(requesterEmail),
+		"requester_ip":    strings.TrimSpace(requesterIP),
+	}); err != nil {
+		return err
 	}
 	if err := s.checkPolicy(ctx, PolicyEvaluateRequest{
 		TenantID:          tenantID,
@@ -1997,6 +2038,9 @@ func (s *Service) DestroyKeyImmediately(ctx context.Context, tenantID string, ke
 		OpsLimit:          key.OpsLimit,
 		KeyStatus:         key.Status,
 		DaysSinceRotation: daysSince(key.UpdatedAt),
+		Labels: map[string]any{
+			"step_up_authenticated": stepUpAuthFromContext(ctx),
+		},
 	}); err != nil {
 		return err
 	}
@@ -2067,6 +2111,29 @@ func (s *Service) SetExportAllowed(ctx context.Context, tenantID string, keyID s
 	if isDeletedLike(key.Status) {
 		return errors.New("cannot change export policy for deleted keys")
 	}
+	if err := s.enforcePostureStepUp(ctx, tenantID, "key.export_policy_update"); err != nil {
+		return err
+	}
+	if err := s.enforcePostureSyncPause(ctx, tenantID, "key.export"); err != nil {
+		return err
+	}
+	if err := s.checkPolicy(ctx, PolicyEvaluateRequest{
+		TenantID:          tenantID,
+		Operation:         "key.export_policy_update",
+		KeyID:             keyID,
+		Algorithm:         key.Algorithm,
+		Purpose:           key.Purpose,
+		IVMode:            key.IVMode,
+		OpsTotal:          key.OpsTotal,
+		OpsLimit:          key.OpsLimit,
+		KeyStatus:         key.Status,
+		DaysSinceRotation: daysSince(key.UpdatedAt),
+		Labels: map[string]any{
+			"step_up_authenticated": stepUpAuthFromContext(ctx),
+		},
+	}); err != nil {
+		return err
+	}
 	if err := s.store.SetExportAllowed(ctx, tenantID, keyID, allowed); err != nil {
 		return err
 	}
@@ -2086,6 +2153,12 @@ func (s *Service) ExportCurrentVersion(ctx context.Context, tenantID string, key
 	if isDeletedLike(key.Status) {
 		return Key{}, KeyVersion{}, errors.New("cannot export a deleted key")
 	}
+	if err := s.enforcePostureStepUp(ctx, tenantID, "key.export"); err != nil {
+		return Key{}, KeyVersion{}, err
+	}
+	if err := s.enforcePostureSyncPause(ctx, tenantID, "key.export"); err != nil {
+		return Key{}, KeyVersion{}, err
+	}
 	if err := s.enforceKeyAccess(ctx, key, "export"); err != nil {
 		return Key{}, KeyVersion{}, err
 	}
@@ -2103,6 +2176,9 @@ func (s *Service) ExportCurrentVersion(ctx context.Context, tenantID string, key
 		OpsLimit:          key.OpsLimit,
 		KeyStatus:         key.Status,
 		DaysSinceRotation: daysSince(key.UpdatedAt),
+		Labels: map[string]any{
+			"step_up_authenticated": stepUpAuthFromContext(ctx),
+		},
 	}); err != nil {
 		return Key{}, KeyVersion{}, err
 	}
@@ -2114,13 +2190,25 @@ func (s *Service) ExportCurrentVersion(ctx context.Context, tenantID string, key
 }
 
 func (s *Service) ListTagCatalog(ctx context.Context, tenantID string) ([]TagDefinition, error) {
+	tenantID = strings.TrimSpace(tenantID)
 	if tenantID == "" {
 		return nil, errors.New("tenant_id is required")
 	}
 	if err := s.store.EnsureDefaultTags(ctx, tenantID); err != nil {
 		return nil, err
 	}
-	return s.store.ListTagCatalog(ctx, tenantID)
+	tags, err := s.store.ListTagCatalog(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	usageCounts, err := s.tagUsageCounts(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range tags {
+		tags[i].UsageCount = usageCounts[strings.ToLower(strings.TrimSpace(tags[i].Name))]
+	}
+	return tags, nil
 }
 
 func (s *Service) UpsertTag(ctx context.Context, tag TagDefinition) (TagDefinition, error) {
@@ -2159,7 +2247,51 @@ func (s *Service) DeleteTag(ctx context.Context, tenantID string, name string) e
 	if tenantID == "" || name == "" {
 		return errors.New("tenant_id and name are required")
 	}
+	usageCounts, err := s.tagUsageCounts(ctx, tenantID)
+	if err != nil {
+		return err
+	}
+	if count := usageCounts[strings.ToLower(name)]; count > 0 {
+		return fmt.Errorf("%w: tag %q is assigned to %d active key(s)", errTagInUse, name, count)
+	}
 	return s.store.DeleteTag(ctx, tenantID, name)
+}
+
+func (s *Service) tagUsageCounts(ctx context.Context, tenantID string) (map[string]int64, error) {
+	const pageSize = 500
+	offset := 0
+	counts := make(map[string]int64)
+	for {
+		keys, err := s.store.ListKeys(ctx, tenantID, pageSize, offset)
+		if err != nil {
+			return nil, err
+		}
+		if len(keys) == 0 {
+			break
+		}
+		for _, key := range keys {
+			if normalizeLifecycleStatus(key.Status) == "deleted" {
+				continue
+			}
+			seen := make(map[string]struct{})
+			for _, tag := range key.Tags {
+				normalized := strings.ToLower(strings.TrimSpace(tag))
+				if normalized == "" {
+					continue
+				}
+				if _, exists := seen[normalized]; exists {
+					continue
+				}
+				seen[normalized] = struct{}{}
+				counts[normalized]++
+			}
+		}
+		if len(keys) < pageSize {
+			break
+		}
+		offset += len(keys)
+	}
+	return counts, nil
 }
 
 func (s *Service) ResetUsage(ctx context.Context, tenantID string, keyID string) error {
@@ -2172,6 +2304,30 @@ func (s *Service) ResetUsage(ctx context.Context, tenantID string, keyID string)
 }
 
 func (s *Service) SetApproval(ctx context.Context, tenantID string, keyID string, required bool, policyID string) error {
+	key, err := s.GetKey(ctx, tenantID, keyID)
+	if err != nil {
+		return err
+	}
+	if err := s.enforcePostureStepUp(ctx, tenantID, "key.approval_update"); err != nil {
+		return err
+	}
+	if err := s.checkPolicy(ctx, PolicyEvaluateRequest{
+		TenantID:          tenantID,
+		Operation:         "key.approval_update",
+		KeyID:             keyID,
+		Algorithm:         key.Algorithm,
+		Purpose:           key.Purpose,
+		IVMode:            key.IVMode,
+		OpsTotal:          key.OpsTotal,
+		OpsLimit:          key.OpsLimit,
+		KeyStatus:         key.Status,
+		DaysSinceRotation: daysSince(key.UpdatedAt),
+		Labels: map[string]any{
+			"step_up_authenticated": stepUpAuthFromContext(ctx),
+		},
+	}); err != nil {
+		return err
+	}
 	if err := s.store.SetApproval(ctx, tenantID, keyID, required, policyID); err != nil {
 		return err
 	}
@@ -4193,6 +4349,59 @@ func (s *Service) checkPolicy(ctx context.Context, req PolicyEvaluateRequest) er
 	default:
 		return nil
 	}
+}
+
+func (s *Service) postureControls(ctx context.Context, tenantID string) (GovernancePostureControls, error) {
+	if s.posture == nil {
+		return GovernancePostureControls{}, nil
+	}
+	return s.posture.Controls(ctx, tenantID)
+}
+
+func (s *Service) enforcePostureStepUp(ctx context.Context, tenantID string, operation string) error {
+	controls, err := s.postureControls(ctx, tenantID)
+	if err != nil {
+		return fmt.Errorf("posture controls check failed: %w", err)
+	}
+	if !controls.RequireStepUpAuth {
+		return nil
+	}
+	if stepUpAuthFromContext(ctx) {
+		return nil
+	}
+	return stepUpRequiredError{Operation: operation}
+}
+
+func (s *Service) enforcePostureSyncPause(ctx context.Context, tenantID string, operation string) error {
+	controls, err := s.postureControls(ctx, tenantID)
+	if err != nil {
+		return fmt.Errorf("posture controls check failed: %w", err)
+	}
+	if !controls.PauseConnectorSync {
+		return nil
+	}
+	switch strings.ToLower(strings.TrimSpace(operation)) {
+	case "key.export", "key.wrap", "key.unwrap":
+		return policyDeniedError{Reason: "connector-related key operation blocked by posture connector-sync pause"}
+	default:
+		return nil
+	}
+}
+
+func (s *Service) enforcePostureQuorumOnDestroy(ctx context.Context, tenantID string, key Key, operation string, payload map[string]string) error {
+	controls, err := s.postureControls(ctx, tenantID)
+	if err != nil {
+		return fmt.Errorf("posture controls check failed: %w", err)
+	}
+	if !controls.ForceQuorumDestructiveOps {
+		return nil
+	}
+	guardKey := key
+	guardKey.ApprovalRequired = true
+	if err := s.ensureApprovalAllowed(ctx, guardKey, tenantID, operation, payload); err != nil {
+		return err
+	}
+	return nil
 }
 
 func daysSince(ts time.Time) int {

@@ -1,0 +1,39 @@
+name: Canary Rollout
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Docker compose service name"
+        required: true
+        default: "dashboard"
+      health_url:
+        description: "Health probe URL for canary validation"
+        required: true
+        default: "http://127.0.0.1:5173"
+      max_error_percent:
+        description: "Allowed non-2xx percentage before rollback"
+        required: true
+        default: "5"
+      sample_count:
+        description: "Number of health probes"
+        required: true
+        default: "30"
+
+jobs:
+  canary:
+    name: Canary Deploy and Auto Rollback
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Canary rollout
+        shell: bash
+        run: |
+          chmod +x infra/scripts/canary-rollout.sh
+          infra/scripts/canary-rollout.sh \
+            "${{ github.event.inputs.service }}" \
+            "${{ github.event.inputs.health_url }}" \
+            "${{ github.event.inputs.max_error_percent }}" \
+            "${{ github.event.inputs.sample_count }}"

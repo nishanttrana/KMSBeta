@@ -206,6 +206,23 @@ func createReportingSchemaForTest(conn *pkgdb.DB) error {
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id)
 		);`,
+		`CREATE TABLE reporting_error_telemetry (
+			tenant_id TEXT NOT NULL,
+			id TEXT NOT NULL,
+			source TEXT NOT NULL DEFAULT '',
+			service TEXT NOT NULL DEFAULT '',
+			component TEXT NOT NULL DEFAULT '',
+			level TEXT NOT NULL DEFAULT 'error',
+			message TEXT NOT NULL DEFAULT '',
+			stack_trace TEXT NOT NULL DEFAULT '',
+			context_json TEXT NOT NULL DEFAULT '{}',
+			fingerprint TEXT NOT NULL DEFAULT '',
+			request_id TEXT NOT NULL DEFAULT '',
+			release_tag TEXT NOT NULL DEFAULT '',
+			build_version TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, id)
+		);`,
 	}
 	for _, stmt := range stmts {
 		if _, err := conn.SQL().Exec(stmt); err != nil {

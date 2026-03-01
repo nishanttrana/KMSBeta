@@ -33,11 +33,17 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	"vecta-kms/pkg/metering"
+	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
+
+var logger = log.New(os.Stdout, "[keycore] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
 	cfg := pkgconfig.Load()
-	logger := log.New(os.Stdout, "[kms-keycore] ", log.LstdFlags|log.LUTC)
+
+	if err := pkgruntimecfg.ValidateServiceConfig("kms-keycore", cfg); err != nil {
+		log.Fatalf("config validation failed: %v", err)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -102,6 +108,7 @@ func main() {
 	if governanceURL != "" {
 		svc.SetFIPSModeProvider(NewHTTPFIPSModeProvider(governanceURL, 3*time.Second, 5*time.Second))
 		svc.SetGovernanceApprovalClient(newGovernanceApprovalClient(governanceURL, 5*time.Second))
+		svc.SetGovernancePostureControlsProvider(NewHTTPGovernancePostureControlsProvider(governanceURL, 3*time.Second, 5*time.Second))
 		logger.Printf("governance fips mode integration enabled")
 	}
 	handler := NewHandler(svc)

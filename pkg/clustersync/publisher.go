@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/tlsprofile"
 )
 
 type PublishRequest struct {
@@ -229,10 +231,16 @@ func newPublisherHTTPClient(baseURL string, timeout time.Duration) (*http.Client
 		}
 		tlsCfg.Certificates = []tls.Certificate{clientCert}
 	}
+	tlsCfg = tlsprofile.ApplyClientDefaults(tlsCfg)
 	client.Transport = &http.Transport{
-		Proxy:             http.ProxyFromEnvironment,
-		ForceAttemptHTTP2: true,
-		TLSClientConfig:   tlsCfg,
+		Proxy:               http.ProxyFromEnvironment,
+		ForceAttemptHTTP2:   true,
+		TLSClientConfig:     tlsCfg,
+		MaxIdleConns:        parsePositiveIntEnv("CLUSTER_SYNC_MAX_IDLE_CONNS", 128),
+		MaxIdleConnsPerHost: parsePositiveIntEnv("CLUSTER_SYNC_MAX_IDLE_CONNS_PER_HOST", 32),
+		MaxConnsPerHost:     parsePositiveIntEnv("CLUSTER_SYNC_MAX_CONNS_PER_HOST", 64),
+		IdleConnTimeout:     90 * time.Second,
+		TLSHandshakeTimeout: 10 * time.Second,
 	}
 	return client, nil
 }
@@ -250,4 +258,16 @@ func parseBoolEnv(key string, def bool) bool {
 	default:
 		return def
 	}
+}
+
+func parsePositiveIntEnv(key string, def int) int {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return def
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n <= 0 {
+		return def
+	}
+	return n
 }

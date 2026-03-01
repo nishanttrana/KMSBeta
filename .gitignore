@@ -10,3 +10,5 @@ infra/certs/out/**
 
 # Node dependency caches
 web/dashboard/node_modules/
+web/dashboard/test-results/
+web/dashboard/playwright-report/

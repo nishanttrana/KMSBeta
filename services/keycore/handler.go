@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -60,6 +61,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if rawToken != "" {
 		ctx = context.WithValue(ctx, rawBearerTokenCtxKey, rawToken)
 	}
+	ctx = contextWithStepUpAuth(ctx, parseStepUpAuthSignal(r))
 	if err := h.enforceSignedRequestPolicy(r.WithContext(ctx)); err != nil {
 		code := http.StatusUnauthorized
 		if strings.Contains(strings.ToLower(err.Error()), "replay") {
@@ -70,6 +72,21 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx = contextWithAccessActor(ctx, accessActorFromHTTPRequest(r.WithContext(ctx)))
 	h.mux.ServeHTTP(w, r.WithContext(ctx))
+}
+
+func parseStepUpAuthSignal(r *http.Request) bool {
+	candidates := []string{
+		r.Header.Get("X-Step-Up-Auth"),
+		r.Header.Get("X-MFA-Verified"),
+		r.Header.Get("X-StepUp-Verified"),
+	}
+	for _, raw := range candidates {
+		switch strings.ToLower(strings.TrimSpace(raw)) {
+		case "1", "true", "yes", "on", "verified", "mfa":
+			return true
+		}
+	}
+	return false
 }
 
 func (h *Handler) routes() *http.ServeMux {
@@ -390,6 +407,9 @@ func (h *Handler) handleDestroyKey(w http.ResponseWriter, r *http.Request) {
 		DestroyAfterDays int    `json:"destroy_after_days"`
 		ConfirmName      string `json:"confirm_name"`
 		Justification    string `json:"justification"`
+		RequesterID      string `json:"requester_id"`
+		RequesterEmail   string `json:"requester_email"`
+		RequesterIP      string `json:"requester_ip"`
 		Checks           struct {
 			NoActiveWorkloads bool `json:"no_active_workloads"`
 			BackupCompleted   bool `json:"backup_completed"`
@@ -416,6 +436,10 @@ func (h *Handler) handleDestroyKey(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", "justification is required", reqID, tenantID)
 		return
 	}
+	actor := accessActorFromContext(r.Context())
+	requesterID := firstNonEmptyString(strings.TrimSpace(req.RequesterID), strings.TrimSpace(actor.UserID), strings.TrimSpace(actor.Username), "keycore")
+	requesterEmail := firstNonEmptyString(strings.TrimSpace(req.RequesterEmail), strings.TrimSpace(actor.Username), "keycore@vecta.local")
+	requesterIP := firstNonEmptyString(strings.TrimSpace(req.RequesterIP), strings.TrimSpace(r.Header.Get("X-Forwarded-For")), clientIP(r))
 	key, err := h.svc.GetKey(r.Context(), tenantID, r.PathValue("id"))
 	if err != nil {
 		writeErr(w, http.StatusNotFound, "not_found", err.Error(), reqID, tenantID)
@@ -427,11 +451,26 @@ func (h *Handler) handleDestroyKey(w http.ResponseWriter, r *http.Request) {
 	}
 	switch mode {
 	case "scheduled":
-		destroyAt, err := h.svc.ScheduleKeyDestroy(r.Context(), tenantID, r.PathValue("id"), req.DestroyAfterDays, req.Justification)
+		destroyAt, err := h.svc.ScheduleKeyDestroy(r.Context(), tenantID, r.PathValue("id"), req.DestroyAfterDays, req.Justification, requesterID, requesterEmail, requesterIP)
 		if err != nil {
 			var denied policyDeniedError
 			if errors.As(err, &denied) {
 				writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, tenantID)
+				return
+			}
+			var approval approvalRequiredError
+			if errors.As(err, &approval) {
+				writeJSON(w, http.StatusAccepted, map[string]any{
+					"status":              "pending_approval",
+					"approval_request_id": approval.RequestID,
+					"mode":                "scheduled",
+					"request_id":          reqID,
+				})
+				return
+			}
+			var stepUp stepUpRequiredError
+			if errors.As(err, &stepUp) {
+				writeErr(w, http.StatusPreconditionRequired, "step_up_required", stepUp.Error(), reqID, tenantID)
 				return
 			}
 			writeErr(w, http.StatusBadRequest, "destroy_schedule_failed", err.Error(), reqID, tenantID)
@@ -444,10 +483,25 @@ func (h *Handler) handleDestroyKey(w http.ResponseWriter, r *http.Request) {
 			"request_id": reqID,
 		})
 	case "immediate":
-		if err := h.svc.DestroyKeyImmediately(r.Context(), tenantID, r.PathValue("id"), req.Justification); err != nil {
+		if err := h.svc.DestroyKeyImmediately(r.Context(), tenantID, r.PathValue("id"), req.Justification, requesterID, requesterEmail, requesterIP); err != nil {
 			var denied policyDeniedError
 			if errors.As(err, &denied) {
 				writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, tenantID)
+				return
+			}
+			var approval approvalRequiredError
+			if errors.As(err, &approval) {
+				writeJSON(w, http.StatusAccepted, map[string]any{
+					"status":              "pending_approval",
+					"approval_request_id": approval.RequestID,
+					"mode":                "immediate",
+					"request_id":          reqID,
+				})
+				return
+			}
+			var stepUp stepUpRequiredError
+			if errors.As(err, &stepUp) {
+				writeErr(w, http.StatusPreconditionRequired, "step_up_required", stepUp.Error(), reqID, tenantID)
 				return
 			}
 			writeErr(w, http.StatusBadRequest, "destroy_failed", err.Error(), reqID, tenantID)
@@ -747,6 +801,11 @@ func (h *Handler) handleSetExportPolicy(w http.ResponseWriter, r *http.Request) 
 			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, tenantID)
 			return
 		}
+		var stepUp stepUpRequiredError
+		if errors.As(err, &stepUp) {
+			writeErr(w, http.StatusPreconditionRequired, "step_up_required", stepUp.Error(), reqID, tenantID)
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "export_policy_failed", err.Error(), reqID, tenantID)
 		return
 	}
@@ -785,6 +844,16 @@ func (h *Handler) handleSetApproval(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.SetApproval(r.Context(), tenantID, r.PathValue("id"), req.Required, req.PolicyID); err != nil {
+		var denied policyDeniedError
+		if errors.As(err, &denied) {
+			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, tenantID)
+			return
+		}
+		var stepUp stepUpRequiredError
+		if errors.As(err, &stepUp) {
+			writeErr(w, http.StatusPreconditionRequired, "step_up_required", stepUp.Error(), reqID, tenantID)
+			return
+		}
 		writeErr(w, http.StatusInternalServerError, "approval_failed", err.Error(), reqID, tenantID)
 		return
 	}
@@ -1234,11 +1303,12 @@ func (h *Handler) handleListTags(w http.ResponseWriter, r *http.Request) {
 	out := make([]map[string]any, 0, len(items))
 	for _, t := range items {
 		out = append(out, map[string]any{
-			"tenant_id":  t.TenantID,
-			"name":       t.Name,
-			"color":      t.Color,
-			"is_system":  t.IsSystem,
-			"created_by": t.CreatedBy,
+			"tenant_id":   t.TenantID,
+			"name":        t.Name,
+			"color":       t.Color,
+			"is_system":   t.IsSystem,
+			"usage_count": t.UsageCount,
+			"created_by":  t.CreatedBy,
 		})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": out, "request_id": reqID})
@@ -1290,6 +1360,9 @@ func (h *Handler) handleDeleteTag(w http.ResponseWriter, r *http.Request) {
 		code := http.StatusBadRequest
 		if errors.Is(err, errStoreNotFound) {
 			code = http.StatusNotFound
+		}
+		if errors.Is(err, errTagInUse) {
+			code = http.StatusConflict
 		}
 		writeErr(w, code, "delete_tag_failed", err.Error(), reqID, tenantID)
 		return
@@ -1844,6 +1917,24 @@ func splitCSVHeader(raw string) []string {
 		out = append(out, value)
 	}
 	return out
+}
+
+func clientIP(r *http.Request) string {
+	forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For"))
+	if forwarded != "" {
+		parts := strings.Split(forwarded, ",")
+		if len(parts) > 0 {
+			candidate := strings.TrimSpace(parts[0])
+			if candidate != "" {
+				return candidate
+			}
+		}
+	}
+	host, _, err := net.SplitHostPort(strings.TrimSpace(r.RemoteAddr))
+	if err == nil && strings.TrimSpace(host) != "" {
+		return strings.TrimSpace(host)
+	}
+	return strings.TrimSpace(r.RemoteAddr)
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload map[string]any) {

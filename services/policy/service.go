@@ -21,12 +21,14 @@ type Service struct {
 	store   Store
 	events  EventPublisher
 	cluster clustersync.Publisher
+	posture GovernancePostureControlsProvider
 }
 
 func NewService(store Store, events EventPublisher) *Service {
 	return &Service{
-		store:  store,
-		events: events,
+		store:   store,
+		events:  events,
+		posture: staticPostureControlsProvider{},
 	}
 }
 
@@ -35,6 +37,13 @@ func (s *Service) SetClusterSyncPublisher(pub clustersync.Publisher) {
 		return
 	}
 	s.cluster = pub
+}
+
+func (s *Service) SetGovernancePostureControlsProvider(provider GovernancePostureControlsProvider) {
+	if provider == nil {
+		provider = staticPostureControlsProvider{}
+	}
+	s.posture = provider
 }
 
 func (s *Service) CreatePolicy(ctx context.Context, req CreatePolicyRequest) (Policy, error) {
@@ -212,6 +221,111 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluatePolicyRequest) (Eval
 	}
 	if strings.TrimSpace(req.Operation) == "" {
 		return EvaluatePolicyResponse{}, errors.New("operation is required")
+	}
+	if s.posture != nil {
+		controls, err := s.posture.Controls(ctx, req.TenantID)
+		if err != nil {
+			return EvaluatePolicyResponse{}, err
+		}
+		if controls.PauseConnectorSync && isConnectorSyncOperation(req.Operation) {
+			out := EvaluatePolicyResponse{
+				Decision: DecisionDeny,
+				Reason:   "connector sync operations are blocked by posture enforcement",
+				Outcomes: []RuleOutcome{
+					{
+						PolicyID:      "posture-control",
+						PolicyVersion: 1,
+						RuleName:      "pause_connector_sync",
+						Action:        "deny",
+						Message:       "Connector sync is paused by posture controls.",
+					},
+				},
+			}
+			_ = s.store.InsertEvaluation(ctx, EvaluationRecord{
+				ID:         newID("peval"),
+				TenantID:   req.TenantID,
+				PolicyID:   "posture-control",
+				Operation:  req.Operation,
+				KeyID:      req.KeyID,
+				Decision:   out.Decision,
+				Reason:     out.Reason,
+				Request:    evaluateRequestMap(req),
+				Outcomes:   out.Outcomes,
+				OccurredAt: time.Now().UTC(),
+			})
+			_ = s.publishAudit(ctx, "audit.policy.violated", req.TenantID, map[string]any{
+				"operation": req.Operation,
+				"key_id":    req.KeyID,
+				"reason":    out.Reason,
+			})
+			return out, nil
+		}
+		if controls.GuardrailPolicyRequired && isHighRiskOperation(req.Operation) {
+			out := EvaluatePolicyResponse{
+				Decision: DecisionDeny,
+				Reason:   "high-risk operation blocked by posture guardrail policy",
+				Outcomes: []RuleOutcome{
+					{
+						PolicyID:      "posture-control",
+						PolicyVersion: 1,
+						RuleName:      "guardrail_policy_required",
+						Action:        "deny",
+						Message:       "High-risk operation is blocked while guardrail policy mode is active.",
+					},
+				},
+			}
+			_ = s.store.InsertEvaluation(ctx, EvaluationRecord{
+				ID:         newID("peval"),
+				TenantID:   req.TenantID,
+				PolicyID:   "posture-control",
+				Operation:  req.Operation,
+				KeyID:      req.KeyID,
+				Decision:   out.Decision,
+				Reason:     out.Reason,
+				Request:    evaluateRequestMap(req),
+				Outcomes:   out.Outcomes,
+				OccurredAt: time.Now().UTC(),
+			})
+			_ = s.publishAudit(ctx, "audit.policy.violated", req.TenantID, map[string]any{
+				"operation": req.Operation,
+				"key_id":    req.KeyID,
+				"reason":    out.Reason,
+			})
+			return out, nil
+		}
+		if controls.RequireStepUpAuth && isHighRiskOperation(req.Operation) && !labelBool(req.Labels, "step_up_authenticated") {
+			out := EvaluatePolicyResponse{
+				Decision: DecisionDeny,
+				Reason:   "step-up authentication is required by posture enforcement",
+				Outcomes: []RuleOutcome{
+					{
+						PolicyID:      "posture-control",
+						PolicyVersion: 1,
+						RuleName:      "require_step_up_auth",
+						Action:        "deny",
+						Message:       "Step-up authentication is required for this high-risk operation.",
+					},
+				},
+			}
+			_ = s.store.InsertEvaluation(ctx, EvaluationRecord{
+				ID:         newID("peval"),
+				TenantID:   req.TenantID,
+				PolicyID:   "posture-control",
+				Operation:  req.Operation,
+				KeyID:      req.KeyID,
+				Decision:   out.Decision,
+				Reason:     out.Reason,
+				Request:    evaluateRequestMap(req),
+				Outcomes:   out.Outcomes,
+				OccurredAt: time.Now().UTC(),
+			})
+			_ = s.publishAudit(ctx, "audit.policy.violated", req.TenantID, map[string]any{
+				"operation": req.Operation,
+				"key_id":    req.KeyID,
+				"reason":    out.Reason,
+			})
+			return out, nil
+		}
 	}
 	policies, err := s.store.ListActiveForEval(ctx, req.TenantID)
 	if err != nil {

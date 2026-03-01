@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 const (
 	KMIPPort = "5696"
@@ -177,4 +180,96 @@ type CreateKMIPClientResult struct {
 	Client        KMIPClient `json:"client"`
 	IssuedCertPEM string     `json:"issued_cert_pem"`
 	IssuedKeyPEM  string     `json:"issued_key_pem"`
+}
+
+type KMIPInteropTarget struct {
+	ID                 string    `json:"id"`
+	TenantID           string    `json:"tenant_id"`
+	Name               string    `json:"name"`
+	Vendor             string    `json:"vendor"`
+	Endpoint           string    `json:"endpoint"`
+	ServerName         string    `json:"server_name"`
+	ExpectedMinVersion string    `json:"expected_min_version"`
+	TestKeyOperation   bool      `json:"test_key_operation"`
+	CAPEM              string    `json:"-"`
+	ClientCertPEM      string    `json:"-"`
+	ClientKeyPEM       string    `json:"-"`
+	LastStatus         string    `json:"last_status"`
+	LastError          string    `json:"last_error"`
+	LastReportJSON     string    `json:"last_report_json"`
+	LastCheckedAt      time.Time `json:"last_checked_at"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+}
+
+type KMIPInteropTargetView struct {
+	ID                 string    `json:"id"`
+	TenantID           string    `json:"tenant_id"`
+	Name               string    `json:"name"`
+	Vendor             string    `json:"vendor"`
+	Endpoint           string    `json:"endpoint"`
+	ServerName         string    `json:"server_name"`
+	ExpectedMinVersion string    `json:"expected_min_version"`
+	TestKeyOperation   bool      `json:"test_key_operation"`
+	HasCAPEM           bool      `json:"has_ca_pem"`
+	HasClientCertPEM   bool      `json:"has_client_cert_pem"`
+	HasClientKeyPEM    bool      `json:"has_client_key_pem"`
+	LastStatus         string    `json:"last_status"`
+	LastError          string    `json:"last_error"`
+	LastReportJSON     string    `json:"last_report_json"`
+	LastCheckedAt      time.Time `json:"last_checked_at"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+}
+
+type CreateKMIPInteropTargetRequest struct {
+	TenantID           string `json:"tenant_id"`
+	Name               string `json:"name"`
+	Vendor             string `json:"vendor"`
+	Endpoint           string `json:"endpoint"`
+	ServerName         string `json:"server_name"`
+	ExpectedMinVersion string `json:"expected_min_version"`
+	TestKeyOperation   bool   `json:"test_key_operation"`
+	CAPEM              string `json:"ca_pem"`
+	ClientCertPEM      string `json:"client_cert_pem"`
+	ClientKeyPEM       string `json:"client_key_pem"`
+}
+
+type KMIPInteropValidationResult struct {
+	TargetID           string    `json:"target_id"`
+	Vendor             string    `json:"vendor"`
+	Endpoint           string    `json:"endpoint"`
+	Verified           bool      `json:"verified"`
+	HandshakeOK        bool      `json:"handshake_ok"`
+	DiscoverVersionsOK bool      `json:"discover_versions_ok"`
+	QueryOK            bool      `json:"query_ok"`
+	KeyOperationOK     bool      `json:"key_operation_ok"`
+	RoundtripOK        bool      `json:"roundtrip_ok"`
+	NegotiatedVersion  string    `json:"negotiated_version"`
+	DiscoveredVersions []string  `json:"discovered_versions"`
+	LatencyMS          int64     `json:"latency_ms"`
+	Error              string    `json:"error"`
+	CheckedAt          time.Time `json:"checked_at"`
+}
+
+func toInteropTargetView(in KMIPInteropTarget) KMIPInteropTargetView {
+	return KMIPInteropTargetView{
+		ID:                 in.ID,
+		TenantID:           in.TenantID,
+		Name:               in.Name,
+		Vendor:             in.Vendor,
+		Endpoint:           in.Endpoint,
+		ServerName:         in.ServerName,
+		ExpectedMinVersion: in.ExpectedMinVersion,
+		TestKeyOperation:   in.TestKeyOperation,
+		HasCAPEM:           strings.TrimSpace(in.CAPEM) != "",
+		HasClientCertPEM:   strings.TrimSpace(in.ClientCertPEM) != "",
+		HasClientKeyPEM:    strings.TrimSpace(in.ClientKeyPEM) != "",
+		LastStatus:         in.LastStatus,
+		LastError:          in.LastError,
+		LastReportJSON:     in.LastReportJSON,
+		LastCheckedAt:      in.LastCheckedAt,
+		CreatedAt:          in.CreatedAt,
+		UpdatedAt:          in.UpdatedAt,
+	}
 }

@@ -34,6 +34,12 @@ type Store interface {
 	GetClientByID(ctx context.Context, tenantID string, clientID string) (KMIPClient, error)
 	GetClientByFingerprint(ctx context.Context, fingerprint string) (KMIPClient, error)
 	DeleteClient(ctx context.Context, tenantID string, clientID string) error
+
+	CreateInteropTarget(ctx context.Context, target KMIPInteropTarget) error
+	ListInteropTargets(ctx context.Context, tenantID string) ([]KMIPInteropTarget, error)
+	GetInteropTarget(ctx context.Context, tenantID string, targetID string) (KMIPInteropTarget, error)
+	DeleteInteropTarget(ctx context.Context, tenantID string, targetID string) error
+	UpdateInteropTargetValidation(ctx context.Context, tenantID string, targetID string, status string, lastErr string, reportJSON string, checkedAt time.Time) error
 }
 
 type SQLStore struct {
@@ -352,6 +358,103 @@ WHERE tenant_id = $1 AND id = $2
 	return nil
 }
 
+func (s *SQLStore) CreateInteropTarget(ctx context.Context, target KMIPInteropTarget) error {
+	now := time.Now().UTC()
+	testKeyOperation := 0
+	if target.TestKeyOperation {
+		testKeyOperation = 1
+	}
+	lastChecked := nullTime(target.LastCheckedAt)
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO kmip_interop_targets (
+	id, tenant_id, name, vendor, endpoint, server_name, expected_min_version, test_key_operation,
+	ca_pem, client_cert_pem, client_key_pem,
+	last_status, last_error, last_report_json, last_checked_at, created_at, updated_at
+) VALUES (
+	$1,$2,$3,$4,$5,$6,$7,$8,
+	$9,$10,$11,
+	$12,$13,$14,$15,$16,$17
+)
+`, target.ID, target.TenantID, target.Name, target.Vendor, target.Endpoint, target.ServerName, target.ExpectedMinVersion, testKeyOperation,
+		strings.TrimSpace(target.CAPEM), strings.TrimSpace(target.ClientCertPEM), strings.TrimSpace(target.ClientKeyPEM),
+		strings.TrimSpace(target.LastStatus), strings.TrimSpace(target.LastError), validJSONOr(target.LastReportJSON, "{}"), lastChecked, now, now)
+	return err
+}
+
+func (s *SQLStore) ListInteropTargets(ctx context.Context, tenantID string) ([]KMIPInteropTarget, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, tenant_id, name, vendor, endpoint, server_name, expected_min_version, test_key_operation,
+	   ca_pem, client_cert_pem, client_key_pem,
+	   last_status, last_error, last_report_json, last_checked_at, created_at, updated_at
+FROM kmip_interop_targets
+WHERE tenant_id = $1
+ORDER BY created_at DESC
+`, strings.TrimSpace(tenantID))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]KMIPInteropTarget, 0)
+	for rows.Next() {
+		item, scanErr := scanInteropTarget(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) GetInteropTarget(ctx context.Context, tenantID string, targetID string) (KMIPInteropTarget, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT id, tenant_id, name, vendor, endpoint, server_name, expected_min_version, test_key_operation,
+	   ca_pem, client_cert_pem, client_key_pem,
+	   last_status, last_error, last_report_json, last_checked_at, created_at, updated_at
+FROM kmip_interop_targets
+WHERE tenant_id = $1 AND id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(targetID))
+	out, err := scanInteropTarget(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return KMIPInteropTarget{}, errNotFound
+	}
+	return out, err
+}
+
+func (s *SQLStore) DeleteInteropTarget(ctx context.Context, tenantID string, targetID string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM kmip_interop_targets
+WHERE tenant_id = $1 AND id = $2
+`, strings.TrimSpace(tenantID), strings.TrimSpace(targetID))
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) UpdateInteropTargetValidation(ctx context.Context, tenantID string, targetID string, status string, lastErr string, reportJSON string, checkedAt time.Time) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE kmip_interop_targets
+SET last_status = $1,
+	last_error = $2,
+	last_report_json = $3,
+	last_checked_at = $4,
+	updated_at = $5
+WHERE tenant_id = $6 AND id = $7
+`, strings.TrimSpace(status), strings.TrimSpace(lastErr), validJSONOr(reportJSON, "{}"), nullTime(checkedAt), time.Now().UTC(), strings.TrimSpace(tenantID), strings.TrimSpace(targetID))
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
 func scanObject(scanner interface {
 	Scan(dest ...interface{}) error
 }) (ObjectMapping, error) {
@@ -466,6 +569,36 @@ func scanClient(scanner interface {
 	out.CertFingerprintSHA256 = strings.ToUpper(strings.TrimSpace(fingerprintRaw))
 	out.CertNotBefore = parseTimeValue(certBeforeRaw)
 	out.CertNotAfter = parseTimeValue(certAfterRaw)
+	out.CreatedAt = parseTimeValue(createdRaw)
+	out.UpdatedAt = parseTimeValue(updatedRaw)
+	return out, nil
+}
+
+func scanInteropTarget(scanner interface {
+	Scan(dest ...interface{}) error
+}) (KMIPInteropTarget, error) {
+	var (
+		out            KMIPInteropTarget
+		testKeyRaw     interface{}
+		lastCheckedRaw interface{}
+		createdRaw     interface{}
+		updatedRaw     interface{}
+		reportRaw      string
+	)
+	err := scanner.Scan(
+		&out.ID, &out.TenantID, &out.Name, &out.Vendor, &out.Endpoint, &out.ServerName, &out.ExpectedMinVersion, &testKeyRaw,
+		&out.CAPEM, &out.ClientCertPEM, &out.ClientKeyPEM,
+		&out.LastStatus, &out.LastError, &reportRaw, &lastCheckedRaw, &createdRaw, &updatedRaw,
+	)
+	if err != nil {
+		return KMIPInteropTarget{}, err
+	}
+	out.TestKeyOperation = parseBoolValue(testKeyRaw)
+	if strings.TrimSpace(reportRaw) == "" || !json.Valid([]byte(reportRaw)) {
+		reportRaw = "{}"
+	}
+	out.LastReportJSON = reportRaw
+	out.LastCheckedAt = parseTimeValue(lastCheckedRaw)
 	out.CreatedAt = parseTimeValue(createdRaw)
 	out.UpdatedAt = parseTimeValue(updatedRaw)
 	return out, nil

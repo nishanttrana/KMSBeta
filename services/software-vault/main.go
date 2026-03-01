@@ -24,11 +24,15 @@ import (
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
 func main() {
 	cfg := pkgconfig.Load()
-	logger := log.New(os.Stdout, "[kms-software-vault] ", log.LstdFlags|log.LUTC)
+
+	if err := pkgruntimecfg.ValidateServiceConfig("kms-software-vault", cfg); err != nil {
+		log.Fatalf("config validation failed: %v", err)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 

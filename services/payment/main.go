@@ -28,11 +28,15 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	"vecta-kms/pkg/metering"
+	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
 func main() {
 	cfg := pkgconfig.Load()
-	logger := log.New(os.Stdout, "[kms-payment] ", log.LstdFlags|log.LUTC)
+
+	if err := pkgruntimecfg.ValidateServiceConfig("kms-payment", cfg); err != nil {
+		log.Fatalf("config validation failed: %v", err)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 

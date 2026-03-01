@@ -129,6 +129,15 @@ This package contains a JDBC/runtime wrapper pattern for local field crypto with
   - optional signed client certificate from CSR,
   - immutable wrapper binding (tenant/app/keys/fingerprint).
 - Local key material is only from lease package (/field-encryption/leases) and must be submitted as signed usage receipts (/field-encryption/receipts).
+- Lease package wrapping defaults to RFC 9180 HPKE:
+  - KEM: DHKEM(X25519)
+  - KDF: HKDF-SHA256
+  - AEAD: AES-256-GCM
+  - package fields: alg, enc_b64, ciphertext_b64, aad_b64, info_b64.
+- Compatibility modes for migration:
+  - DATAPROTECT_LEASE_WRAP_MODE=hpke (default)
+  - DATAPROTECT_LEASE_WRAP_MODE=dual (hpke + legacy nested package)
+  - DATAPROTECT_LEASE_WRAP_MODE=legacy (X25519+AES-256-GCM)
 - Wrapper API calls must send:
   - X-Wrapper-Token: JWT from registration auth_profile,
   - X-Wrapper-Cert-Fingerprint: SHA-256 cert fingerprint (when policy requires mTLS).

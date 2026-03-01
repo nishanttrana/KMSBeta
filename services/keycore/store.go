@@ -139,13 +139,14 @@ type KeyDeletionRecord struct {
 type KeyLabels map[string]string
 
 type TagDefinition struct {
-	TenantID  string    `json:"tenant_id"`
-	Name      string    `json:"name"`
-	Color     string    `json:"color"`
-	IsSystem  bool      `json:"is_system"`
-	CreatedBy string    `json:"created_by,omitempty"`
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	TenantID   string    `json:"tenant_id"`
+	Name       string    `json:"name"`
+	Color      string    `json:"color"`
+	IsSystem   bool      `json:"is_system"`
+	UsageCount int64     `json:"usage_count,omitempty"`
+	CreatedBy  string    `json:"created_by,omitempty"`
+	CreatedAt  time.Time `json:"created_at,omitempty"`
+	UpdatedAt  time.Time `json:"updated_at,omitempty"`
 }
 
 type KeyVersion struct {

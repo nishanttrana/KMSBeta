@@ -15,16 +15,17 @@ type PolicyEvaluator interface {
 }
 
 type PolicyEvaluateRequest struct {
-	TenantID          string `json:"tenant_id"`
-	Operation         string `json:"operation"`
-	KeyID             string `json:"key_id,omitempty"`
-	Algorithm         string `json:"algorithm,omitempty"`
-	Purpose           string `json:"purpose,omitempty"`
-	IVMode            string `json:"iv_mode,omitempty"`
-	OpsTotal          int64  `json:"ops_total,omitempty"`
-	OpsLimit          int64  `json:"ops_limit,omitempty"`
-	DaysSinceRotation int    `json:"days_since_rotation,omitempty"`
-	KeyStatus         string `json:"key_status,omitempty"`
+	TenantID          string         `json:"tenant_id"`
+	Operation         string         `json:"operation"`
+	KeyID             string         `json:"key_id,omitempty"`
+	Algorithm         string         `json:"algorithm,omitempty"`
+	Purpose           string         `json:"purpose,omitempty"`
+	IVMode            string         `json:"iv_mode,omitempty"`
+	OpsTotal          int64          `json:"ops_total,omitempty"`
+	OpsLimit          int64          `json:"ops_limit,omitempty"`
+	DaysSinceRotation int            `json:"days_since_rotation,omitempty"`
+	KeyStatus         string         `json:"key_status,omitempty"`
+	Labels            map[string]any `json:"labels,omitempty"`
 }
 
 type PolicyEvaluateResponse struct {

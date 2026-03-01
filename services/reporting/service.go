@@ -16,21 +16,34 @@ import (
 )
 
 type Service struct {
-	store      Store
-	audit      AuditClient
-	compliance ComplianceClient
-	events     EventPublisher
-	hub        *feedHub
-	mu         sync.Mutex
+	store               Store
+	audit               AuditClient
+	compliance          ComplianceClient
+	events              EventPublisher
+	hub                 *feedHub
+	telemetryRetention  time.Duration
+	telemetryPurgeBatch int
+	mu                  sync.Mutex
 }
 
 func NewService(store Store, audit AuditClient, compliance ComplianceClient, events EventPublisher) *Service {
 	return &Service{
-		store:      store,
-		audit:      audit,
-		compliance: compliance,
-		events:     events,
-		hub:        newFeedHub(),
+		store:               store,
+		audit:               audit,
+		compliance:          compliance,
+		events:              events,
+		hub:                 newFeedHub(),
+		telemetryRetention:  30 * 24 * time.Hour,
+		telemetryPurgeBatch: 10000,
+	}
+}
+
+func (s *Service) ConfigureTelemetryRetention(retention time.Duration, purgeBatch int) {
+	if retention > 0 {
+		s.telemetryRetention = retention
+	}
+	if purgeBatch > 0 {
+		s.telemetryPurgeBatch = purgeBatch
 	}
 }
 
@@ -38,12 +51,18 @@ func (s *Service) StartScheduler(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(1 * time.Minute)
 		defer ticker.Stop()
+		telemetryPurgeTick := 0
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
 				_ = s.RunDueSchedules(context.Background())
+				telemetryPurgeTick++
+				if telemetryPurgeTick >= 60 {
+					telemetryPurgeTick = 0
+					_ = s.PurgeErrorTelemetry(context.Background())
+				}
 			}
 		}
 	}()
@@ -802,6 +821,64 @@ func (s *Service) ScheduleReport(ctx context.Context, tenantID string, name stri
 
 func (s *Service) ListScheduledReports(ctx context.Context, tenantID string) ([]ScheduledReport, error) {
 	return s.store.ListScheduledReports(ctx, tenantID)
+}
+
+func (s *Service) CaptureErrorTelemetry(ctx context.Context, tenantID string, item ErrorTelemetryEvent) (ErrorTelemetryEvent, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return ErrorTelemetryEvent{}, newServiceError(400, "bad_request", "tenant_id is required")
+	}
+	msg := strings.TrimSpace(item.Message)
+	if msg == "" {
+		return ErrorTelemetryEvent{}, newServiceError(400, "bad_request", "message is required")
+	}
+	if len(msg) > 4096 {
+		msg = msg[:4096]
+	}
+	stack := strings.TrimSpace(item.StackTrace)
+	if len(stack) > 32768 {
+		stack = stack[:32768]
+	}
+	normalized := ErrorTelemetryEvent{
+		ID:          newID("tel"),
+		TenantID:    tenantID,
+		Source:      strings.ToLower(defaultString(item.Source, "backend")),
+		Service:     strings.ToLower(defaultString(item.Service, "unknown")),
+		Component:   strings.ToLower(strings.TrimSpace(item.Component)),
+		Level:       normalizeTelemetryLevel(item.Level),
+		Message:     msg,
+		StackTrace:  stack,
+		Context:     item.Context,
+		Fingerprint: strings.TrimSpace(item.Fingerprint),
+		RequestID:   strings.TrimSpace(item.RequestID),
+		ReleaseTag:  strings.TrimSpace(item.ReleaseTag),
+		BuildVer:    strings.TrimSpace(item.BuildVer),
+		CreatedAt:   time.Now().UTC(),
+	}
+	if normalized.Context == nil {
+		normalized.Context = map[string]interface{}{}
+	}
+	if err := s.store.CreateErrorTelemetry(ctx, normalized); err != nil {
+		return ErrorTelemetryEvent{}, err
+	}
+	return normalized, nil
+}
+
+func (s *Service) ListErrorTelemetry(ctx context.Context, tenantID string, q ErrorTelemetryQuery) ([]ErrorTelemetryEvent, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, newServiceError(400, "bad_request", "tenant_id is required")
+	}
+	return s.store.ListErrorTelemetry(ctx, tenantID, q)
+}
+
+func (s *Service) PurgeErrorTelemetry(ctx context.Context) error {
+	if s.telemetryRetention <= 0 {
+		return nil
+	}
+	cutoff := time.Now().UTC().Add(-s.telemetryRetention)
+	_, err := s.store.PurgeErrorTelemetryBefore(ctx, cutoff, s.telemetryPurgeBatch)
+	return err
 }
 
 func (s *Service) RunDueSchedules(ctx context.Context) error {

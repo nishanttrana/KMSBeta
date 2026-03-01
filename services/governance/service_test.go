@@ -169,6 +169,10 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 			backup_encrypted INTEGER NOT NULL DEFAULT 1,
 			proxy_endpoint TEXT,
 			snmp_target TEXT,
+			posture_force_quorum_destructive_ops INTEGER NOT NULL DEFAULT 0,
+			posture_require_step_up_auth INTEGER NOT NULL DEFAULT 0,
+			posture_pause_connector_sync INTEGER NOT NULL DEFAULT 0,
+			posture_guardrail_policy_required INTEGER NOT NULL DEFAULT 0,
 			updated_by TEXT,
 			updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 		);`,

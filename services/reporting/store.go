@@ -49,6 +49,9 @@ type Store interface {
 	GetReportJob(ctx context.Context, tenantID string, id string) (ReportJob, error)
 	ListReportJobs(ctx context.Context, tenantID string, limit int, offset int) ([]ReportJob, error)
 	DeleteReportJob(ctx context.Context, tenantID string, id string) error
+	CreateErrorTelemetry(ctx context.Context, item ErrorTelemetryEvent) error
+	ListErrorTelemetry(ctx context.Context, tenantID string, q ErrorTelemetryQuery) ([]ErrorTelemetryEvent, error)
+	PurgeErrorTelemetryBefore(ctx context.Context, before time.Time, limit int) (int64, error)
 
 	CreateScheduledReport(ctx context.Context, item ScheduledReport) error
 	ListScheduledReports(ctx context.Context, tenantID string) ([]ScheduledReport, error)
@@ -659,6 +662,110 @@ WHERE tenant_id = $1 AND id = $2
 	return nil
 }
 
+func (s *SQLStore) CreateErrorTelemetry(ctx context.Context, item ErrorTelemetryEvent) error {
+	if item.Context == nil {
+		item.Context = map[string]interface{}{}
+	}
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO reporting_error_telemetry (
+	tenant_id, id, source, service, component, level, message, stack_trace,
+	context_json, fingerprint, request_id, release_tag, build_version, created_at
+) VALUES (
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,COALESCE($14, CURRENT_TIMESTAMP)
+)
+`,
+		item.TenantID,
+		item.ID,
+		item.Source,
+		item.Service,
+		item.Component,
+		item.Level,
+		item.Message,
+		item.StackTrace,
+		mustJSON(item.Context, "{}"),
+		item.Fingerprint,
+		item.RequestID,
+		item.ReleaseTag,
+		item.BuildVer,
+		nullableTime(item.CreatedAt),
+	)
+	return err
+}
+
+func (s *SQLStore) ListErrorTelemetry(ctx context.Context, tenantID string, q ErrorTelemetryQuery) ([]ErrorTelemetryEvent, error) {
+	if q.Limit <= 0 || q.Limit > 1000 {
+		q.Limit = 100
+	}
+	if q.Offset < 0 {
+		q.Offset = 0
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT tenant_id, id, source, service, component, level, message, stack_trace,
+	   context_json, fingerprint, request_id, release_tag, build_version, created_at
+FROM reporting_error_telemetry
+WHERE tenant_id = $1
+  AND ($2 = '' OR source = $2)
+  AND ($3 = '' OR service = $3)
+  AND ($4 = '' OR component = $4)
+  AND ($5 = '' OR level = $5)
+  AND ($6 = '' OR fingerprint = $6)
+  AND ($7 = '' OR request_id = $7)
+  AND created_at >= COALESCE($8, created_at)
+  AND created_at <= COALESCE($9, created_at)
+ORDER BY created_at DESC
+LIMIT $10 OFFSET $11
+`,
+		tenantID,
+		strings.ToLower(strings.TrimSpace(q.Source)),
+		strings.ToLower(strings.TrimSpace(q.Service)),
+		strings.ToLower(strings.TrimSpace(q.Component)),
+		strings.ToLower(strings.TrimSpace(q.Level)),
+		strings.TrimSpace(q.Fingerprint),
+		strings.TrimSpace(q.RequestID),
+		nullableTime(q.From),
+		nullableTime(q.To),
+		q.Limit,
+		q.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]ErrorTelemetryEvent, 0)
+	for rows.Next() {
+		item, err := scanErrorTelemetry(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) PurgeErrorTelemetryBefore(ctx context.Context, before time.Time, limit int) (int64, error) {
+	if before.IsZero() {
+		return 0, nil
+	}
+	if limit <= 0 || limit > 100000 {
+		limit = 10000
+	}
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM reporting_error_telemetry
+WHERE (tenant_id, id) IN (
+	SELECT tenant_id, id
+	FROM reporting_error_telemetry
+	WHERE created_at < $1
+	ORDER BY created_at ASC
+	LIMIT $2
+)
+`, before.UTC(), limit)
+	if err != nil {
+		return 0, err
+	}
+	affected, _ := res.RowsAffected()
+	return affected, nil
+}
+
 func (s *SQLStore) CreateScheduledReport(ctx context.Context, item ScheduledReport) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO reporting_scheduled_reports (
@@ -876,6 +983,45 @@ func scanScheduledReport(scanner interface {
 	item.NextRunAt = parseTimeValue(nextRunRaw)
 	item.CreatedAt = parseTimeValue(createdRaw)
 	item.UpdatedAt = parseTimeValue(updatedRaw)
+	return item, nil
+}
+
+func scanErrorTelemetry(scanner interface {
+	Scan(dest ...interface{}) error
+}) (ErrorTelemetryEvent, error) {
+	var (
+		item        ErrorTelemetryEvent
+		contextJSON string
+		createdRaw  interface{}
+	)
+	err := scanner.Scan(
+		&item.TenantID,
+		&item.ID,
+		&item.Source,
+		&item.Service,
+		&item.Component,
+		&item.Level,
+		&item.Message,
+		&item.StackTrace,
+		&contextJSON,
+		&item.Fingerprint,
+		&item.RequestID,
+		&item.ReleaseTag,
+		&item.BuildVer,
+		&createdRaw,
+	)
+	if err != nil {
+		return ErrorTelemetryEvent{}, err
+	}
+	item.Source = strings.ToLower(strings.TrimSpace(item.Source))
+	item.Service = strings.ToLower(strings.TrimSpace(item.Service))
+	item.Component = strings.ToLower(strings.TrimSpace(item.Component))
+	item.Level = normalizeTelemetryLevel(item.Level)
+	_ = json.Unmarshal([]byte(contextJSON), &item.Context)
+	if item.Context == nil {
+		item.Context = map[string]interface{}{}
+	}
+	item.CreatedAt = parseTimeValue(createdRaw)
 	return item, nil
 }
 

@@ -5,12 +5,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -27,6 +29,10 @@ func (h *Handler) HTTPHandler() http.Handler {
 	mux.HandleFunc("GET /kmip/clients/{id}", h.handleGetClient)
 	mux.HandleFunc("POST /kmip/clients", h.handleCreateClient)
 	mux.HandleFunc("DELETE /kmip/clients/{id}", h.handleDeleteClient)
+	mux.HandleFunc("GET /kmip/interop/targets", h.handleListInteropTargets)
+	mux.HandleFunc("POST /kmip/interop/targets", h.handleCreateInteropTarget)
+	mux.HandleFunc("DELETE /kmip/interop/targets/{id}", h.handleDeleteInteropTarget)
+	mux.HandleFunc("POST /kmip/interop/targets/{id}/validate", h.handleValidateInteropTarget)
 	return mux
 }
 
@@ -51,24 +57,146 @@ func (h *Handler) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 	for _, op := range opsRaw {
 		ops = append(ops, strings.TrimSpace(ttlv.EnumStr(op)))
 	}
+	missingOps := diffKMIPCapabilities(knownKMIP32Operations(), ops)
 	objRaw := supportedKMIPObjectTypes()
 	objects := make([]string, 0, len(objRaw))
 	for _, objType := range objRaw {
 		objects = append(objects, strings.TrimSpace(ttlv.EnumStr(objType)))
 	}
+	missingObjects := diffKMIPCapabilities(knownKMIP32ObjectTypes(), objects)
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"capabilities": map[string]interface{}{
-			"library":                   "github.com/ovh/kmip-go",
-			"library_version":           "v0.7.2",
-			"protocol":                  "TTLV over TLS",
-			"port":                      KMIPPort,
-			"highest_supported_version": highestVersion,
-			"supported_versions":        versions,
-			"operations":                ops,
-			"object_types":              objects,
+			"library":                    "github.com/ovh/kmip-go",
+			"library_version":            kmipLibraryVersion(),
+			"protocol":                   "TTLV over TLS",
+			"port":                       KMIPPort,
+			"highest_supported_version":  highestVersion,
+			"supported_versions":         versions,
+			"operations":                 ops,
+			"implemented_operations":     ops,
+			"unimplemented_operations":   missingOps,
+			"object_types":               objects,
+			"implemented_object_types":   objects,
+			"unimplemented_object_types": missingObjects,
+			"auth_modes": []string{
+				"mTLS client certificate",
+			},
+			"interoperability_scope": []string{
+				"Generic KMIP clients implementing KMIP 1.0-3.2 over TTLV/TLS",
+			},
+			"integration_targets": knownIntegrationTargets(),
+			"integration_note":    "Compatibility is protocol-level (KMIP 1.0-3.2 over TTLV/TLS + mTLS). Product-specific enablement and policy mapping must be validated per vendor deployment profile.",
 		},
 		"request_id": reqID,
 	})
+}
+
+func kmipLibraryVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok || info == nil {
+		return "unknown"
+	}
+	for _, dep := range info.Deps {
+		if dep == nil {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(dep.Path), "github.com/ovh/kmip-go") {
+			v := strings.TrimSpace(dep.Version)
+			if v != "" {
+				return v
+			}
+		}
+	}
+	return "unknown"
+}
+
+func diffKMIPCapabilities(reference []string, implemented []string) []string {
+	if len(reference) == 0 {
+		return []string{}
+	}
+	seen := make(map[string]struct{}, len(implemented))
+	for _, value := range implemented {
+		key := strings.ToLower(strings.TrimSpace(value))
+		if key == "" {
+			continue
+		}
+		seen[key] = struct{}{}
+	}
+	out := make([]string, 0)
+	for _, value := range reference {
+		key := strings.ToLower(strings.TrimSpace(value))
+		if key == "" {
+			continue
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		out = append(out, value)
+	}
+	return out
+}
+
+func knownKMIP32Operations() []string {
+	return []string{
+		"Create",
+		"Register",
+		"Get",
+		"GetAttributes",
+		"Locate",
+		"Activate",
+		"Revoke",
+		"Destroy",
+		"ReKey",
+		"Encrypt",
+		"Decrypt",
+		"Sign",
+		"SignatureVerify",
+		"Query",
+		"DiscoverVersions",
+		"CreateKeyPair",
+		"ModifyAttribute",
+		"DeleteAttribute",
+		"GetAttributeList",
+		"Certify",
+		"ReCertify",
+		"Check",
+		"Import",
+		"Export",
+		"Archive",
+		"Recover",
+		"Validate",
+		"MAC",
+		"MACVerify",
+		"Hash",
+		"DeriveKey",
+		"GetUsageAllocation",
+	}
+}
+
+func knownKMIP32ObjectTypes() []string {
+	return []string{
+		"SymmetricKey",
+		"PublicKey",
+		"PrivateKey",
+		"SecretData",
+		"Certificate",
+		"OpaqueObject",
+		"SplitKey",
+		"Template",
+		"PGPKey",
+	}
+}
+
+func knownIntegrationTargets() []string {
+	return []string{
+		"MySQL (KMIP-capable editions)",
+		"MongoDB Enterprise",
+		"VMware vSphere / ESXi",
+		"Scality",
+		"NetApp",
+		"HPE storage platforms",
+		"Dell platforms",
+	}
 }
 
 func (h *Handler) handleListClientProfiles(w http.ResponseWriter, r *http.Request) {
@@ -235,6 +363,133 @@ func (h *Handler) handleDeleteClient(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "deleted", "request_id": reqID})
 }
 
+func (h *Handler) handleListInteropTargets(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.store.ListInteropTargets(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "list_interop_targets_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	views := make([]KMIPInteropTargetView, 0, len(items))
+	for _, item := range items {
+		views = append(views, toInteropTargetView(item))
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": views, "request_id": reqID})
+}
+
+func (h *Handler) handleCreateInteropTarget(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req CreateKMIPInteropTargetRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	target, err := h.createInteropTarget(r.Context(), req)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "create_interop_target_failed", err.Error(), reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"target":     toInteropTargetView(target),
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleDeleteInteropTarget(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	targetID := strings.TrimSpace(r.PathValue("id"))
+	if targetID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "interop target id is required", reqID, tenantID)
+		return
+	}
+	target, err := h.store.GetInteropTarget(r.Context(), tenantID, targetID)
+	if err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "delete_interop_target_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if err := h.store.DeleteInteropTarget(r.Context(), tenantID, targetID); err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "delete_interop_target_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	_ = h.publishAudit(r.Context(), "audit.kmip.interop_target_deleted", tenantID, map[string]interface{}{
+		"target_id": target.ID,
+		"name":      target.Name,
+		"vendor":    target.Vendor,
+		"endpoint":  target.Endpoint,
+	})
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "deleted", "request_id": reqID})
+}
+
+func (h *Handler) handleValidateInteropTarget(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	targetID := strings.TrimSpace(r.PathValue("id"))
+	if targetID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "interop target id is required", reqID, tenantID)
+		return
+	}
+	target, err := h.store.GetInteropTarget(r.Context(), tenantID, targetID)
+	if err != nil {
+		code := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "validate_interop_target_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	report := h.runInteropValidation(r.Context(), target)
+	status := "failed"
+	if report.Verified {
+		status = "verified"
+	}
+	if err := h.store.UpdateInteropTargetValidation(r.Context(), tenantID, targetID, status, report.Error, marshalInteropValidationReport(report), report.CheckedAt); err != nil {
+		writeErr(w, http.StatusInternalServerError, "validate_interop_target_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	updated, err := h.store.GetInteropTarget(r.Context(), tenantID, targetID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "validate_interop_target_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	_ = h.publishAudit(r.Context(), "audit.kmip.interop_validated", tenantID, map[string]interface{}{
+		"target_id":          updated.ID,
+		"name":               updated.Name,
+		"vendor":             updated.Vendor,
+		"endpoint":           updated.Endpoint,
+		"status":             status,
+		"verified":           report.Verified,
+		"discover_ok":        report.DiscoverVersionsOK,
+		"query_ok":           report.QueryOK,
+		"key_operation_ok":   report.KeyOperationOK,
+		"negotiated_version": report.NegotiatedVersion,
+		"error":              report.Error,
+	})
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"target":     toInteropTargetView(updated),
+		"result":     report,
+		"request_id": reqID,
+	})
+}
+
 func (h *Handler) createClientProfile(ctx context.Context, req CreateKMIPClientProfileRequest) (KMIPClientProfile, error) {
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.Name = strings.TrimSpace(req.Name)
@@ -296,6 +551,71 @@ func (h *Handler) createClientProfile(ctx context.Context, req CreateKMIPClientP
 		return KMIPClientProfile{}, err
 	}
 	return h.store.GetClientProfile(ctx, req.TenantID, profile.ID)
+}
+
+func (h *Handler) createInteropTarget(ctx context.Context, req CreateKMIPInteropTargetRequest) (KMIPInteropTarget, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	req.Name = strings.TrimSpace(req.Name)
+	req.Vendor = normalizeInteropVendor(req.Vendor)
+	req.Endpoint = normalizeInteropEndpoint(req.Endpoint)
+	req.ServerName = strings.TrimSpace(req.ServerName)
+	req.ExpectedMinVersion = strings.TrimSpace(req.ExpectedMinVersion)
+	if req.ExpectedMinVersion == "" {
+		req.ExpectedMinVersion = "1.0"
+	}
+
+	if req.TenantID == "" || req.Name == "" || req.Endpoint == "" {
+		return KMIPInteropTarget{}, errors.New("tenant_id, name and endpoint are required")
+	}
+	if _, _, err := parseVersionParts(req.ExpectedMinVersion); err != nil {
+		return KMIPInteropTarget{}, errors.New("expected_min_version must be in MAJOR.MINOR format")
+	}
+	if strings.TrimSpace(req.CAPEM) == "" {
+		return KMIPInteropTarget{}, errors.New("ca_pem is required")
+	}
+	if strings.TrimSpace(req.ClientCertPEM) == "" || strings.TrimSpace(req.ClientKeyPEM) == "" {
+		return KMIPInteropTarget{}, errors.New("client_cert_pem and client_key_pem are required")
+	}
+	if _, err := tls.X509KeyPair([]byte(req.ClientCertPEM), []byte(req.ClientKeyPEM)); err != nil {
+		return KMIPInteropTarget{}, errors.New("invalid client certificate/key pair")
+	}
+	if _, err := parseAllCertificates(req.CAPEM); err != nil {
+		return KMIPInteropTarget{}, errors.New("invalid ca_pem chain")
+	}
+
+	target := KMIPInteropTarget{
+		ID:                 newID("kmit"),
+		TenantID:           req.TenantID,
+		Name:               req.Name,
+		Vendor:             req.Vendor,
+		Endpoint:           req.Endpoint,
+		ServerName:         req.ServerName,
+		ExpectedMinVersion: req.ExpectedMinVersion,
+		TestKeyOperation:   req.TestKeyOperation,
+		CAPEM:              strings.TrimSpace(req.CAPEM),
+		ClientCertPEM:      strings.TrimSpace(req.ClientCertPEM),
+		ClientKeyPEM:       strings.TrimSpace(req.ClientKeyPEM),
+		LastStatus:         "unknown",
+		LastError:          "",
+		LastReportJSON:     "{}",
+	}
+	if err := h.store.CreateInteropTarget(ctx, target); err != nil {
+		return KMIPInteropTarget{}, err
+	}
+	out, err := h.store.GetInteropTarget(ctx, req.TenantID, target.ID)
+	if err != nil {
+		return KMIPInteropTarget{}, err
+	}
+	_ = h.publishAudit(ctx, "audit.kmip.interop_target_created", req.TenantID, map[string]interface{}{
+		"target_id":            out.ID,
+		"name":                 out.Name,
+		"vendor":               out.Vendor,
+		"endpoint":             out.Endpoint,
+		"server_name":          out.ServerName,
+		"expected_min_version": out.ExpectedMinVersion,
+		"test_key_operation":   out.TestKeyOperation,
+	})
+	return out, nil
 }
 
 func (h *Handler) createClient(ctx context.Context, req CreateKMIPClientRequest) (CreateKMIPClientResult, error) {

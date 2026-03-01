@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/fips140"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -15,6 +16,7 @@ import (
 	"net/url"
 	"runtime"
 	"runtime/debug"
+	"runtime/trace"
 	"strconv"
 	"strings"
 	"time"
@@ -29,12 +31,29 @@ type Service struct {
 	events   EventPublisher
 	email    EmailSender
 	callback CallbackExecutor
+	snmp     SNMPPublisher
 	baseURL  string
 	certsURL string
 	http     *http.Client
 }
 
 var runtimeCryptoLibraryLabel, runtimeCryptoLibraryValidated = detectRuntimeCryptoLibrary()
+
+func runtimeFIPSModuleVersion() string {
+	version := strings.TrimSpace(fips140.Version())
+	if version == "" {
+		return "unknown"
+	}
+	return version
+}
+
+func runtimeFlightRecorderReady() bool {
+	fr := trace.NewFlightRecorder(trace.FlightRecorderConfig{
+		MinAge:   2 * time.Second,
+		MaxBytes: 1 << 20,
+	})
+	return fr != nil
+}
 
 func detectRuntimeCryptoLibrary() (string, bool) {
 	goVersion := strings.TrimSpace(runtime.Version())
@@ -70,17 +89,20 @@ func detectRuntimeCryptoLibrary() (string, bool) {
 	if cgoEnabled == "" {
 		cgoEnabled = "unknown"
 	}
+	moduleVersion := runtimeFIPSModuleVersion()
+	runtimeEnabled := fips140.Enabled()
+	runtimeEnforced := fips140.Enforced()
 	lowerExperiment := strings.ToLower(goExperiment)
 	if strings.Contains(lowerExperiment, "boringcrypto") {
 		if xcryptoVersion != "" {
-			return fmt.Sprintf("Go BoringCrypto (%s, GOEXPERIMENT=%s, x/crypto=%s)", goVersion, goExperiment, xcryptoVersion), true
+			return fmt.Sprintf("Go BoringCrypto (%s, GOEXPERIMENT=%s, x/crypto=%s, fips140=%s enabled=%t enforced=%t)", goVersion, goExperiment, xcryptoVersion, moduleVersion, runtimeEnabled, runtimeEnforced), true
 		}
-		return fmt.Sprintf("Go BoringCrypto (%s, GOEXPERIMENT=%s)", goVersion, goExperiment), true
+		return fmt.Sprintf("Go BoringCrypto (%s, GOEXPERIMENT=%s, fips140=%s enabled=%t enforced=%t)", goVersion, goExperiment, moduleVersion, runtimeEnabled, runtimeEnforced), true
 	}
 	if xcryptoVersion != "" {
-		return fmt.Sprintf("Go std crypto (%s, GOEXPERIMENT=%s, CGO=%s, x/crypto=%s)", goVersion, goExperiment, cgoEnabled, xcryptoVersion), false
+		return fmt.Sprintf("Go std crypto (%s, GOEXPERIMENT=%s, CGO=%s, x/crypto=%s, fips140=%s enabled=%t enforced=%t)", goVersion, goExperiment, cgoEnabled, xcryptoVersion, moduleVersion, runtimeEnabled, runtimeEnforced), runtimeEnabled
 	}
-	return fmt.Sprintf("Go std crypto (%s, GOEXPERIMENT=%s, CGO=%s)", goVersion, goExperiment, cgoEnabled), false
+	return fmt.Sprintf("Go std crypto (%s, GOEXPERIMENT=%s, CGO=%s, fips140=%s enabled=%t enforced=%t)", goVersion, goExperiment, cgoEnabled, moduleVersion, runtimeEnabled, runtimeEnforced), runtimeEnabled
 }
 
 type ServiceOption func(*Service)
@@ -99,6 +121,14 @@ func WithHTTPClient(client *http.Client) ServiceOption {
 	}
 }
 
+func WithSNMPPublisher(publisher SNMPPublisher) ServiceOption {
+	return func(s *Service) {
+		if publisher != nil {
+			s.snmp = publisher
+		}
+	}
+}
+
 func NewService(store Store, events EventPublisher, email EmailSender, callback CallbackExecutor, baseURL string, opts ...ServiceOption) *Service {
 	if callback == nil {
 		callback = NoopCallbackExecutor{}
@@ -108,6 +138,7 @@ func NewService(store Store, events EventPublisher, email EmailSender, callback 
 		events:   events,
 		email:    email,
 		callback: callback,
+		snmp:     noopSNMPPublisher{},
 		baseURL:  strings.TrimSpace(baseURL),
 		http: &http.Client{
 			Timeout: 15 * time.Second,
@@ -521,6 +552,10 @@ func (s *Service) UpdateSystemState(ctx context.Context, state GovernanceSystemS
 	if state.TenantID == "" {
 		return GovernanceSystemState{}, errors.New("tenant_id is required")
 	}
+	if fips140.Enforced() {
+		state.FIPSModePolicy = "strict"
+		state.FIPSMode = "enabled"
+	}
 	if state.UpdatedBy == "" {
 		state.UpdatedBy = "system"
 	}
@@ -544,19 +579,87 @@ func (s *Service) UpdateSystemState(ctx context.Context, state GovernanceSystemS
 		return GovernanceSystemState{}, err
 	}
 	_ = s.publishAudit(ctx, "audit.governance.system_state_updated", state.TenantID, map[string]interface{}{
-		"fips_mode":         state.FIPSMode,
-		"fips_mode_policy":  state.FIPSModePolicy,
-		"fips_tls_profile":  state.FIPSTLSProfile,
-		"fips_rng_mode":     state.FIPSRNGMode,
-		"hsm_mode":          state.HSMMode,
-		"cluster_mode":      state.ClusterMode,
-		"license_status":    state.LicenseStatus,
-		"crypto_library":    state.FIPSCryptoLibrary,
-		"library_validated": state.FIPSLibraryValidated,
-		"tls_mode":          state.TLSMode,
-		"hybrid_rollout":    shouldApplyHybrid,
+		"fips_mode":                            state.FIPSMode,
+		"fips_mode_policy":                     state.FIPSModePolicy,
+		"fips_tls_profile":                     state.FIPSTLSProfile,
+		"fips_rng_mode":                        state.FIPSRNGMode,
+		"hsm_mode":                             state.HSMMode,
+		"cluster_mode":                         state.ClusterMode,
+		"license_status":                       state.LicenseStatus,
+		"crypto_library":                       state.FIPSCryptoLibrary,
+		"library_validated":                    state.FIPSLibraryValidated,
+		"runtime_enabled":                      state.FIPSRuntimeEnabled,
+		"runtime_enforced":                     state.FIPSRuntimeEnforced,
+		"module_version":                       state.FIPSModuleVersion,
+		"tls_mode":                             state.TLSMode,
+		"hybrid_rollout":                       shouldApplyHybrid,
+		"posture_force_quorum_destructive_ops": state.PostureForceQuorumDestructiveOps,
+		"posture_require_step_up_auth":         state.PostureRequireStepUpAuth,
+		"posture_pause_connector_sync":         state.PosturePauseConnectorSync,
+		"posture_guardrail_policy_required":    state.PostureGuardrailPolicyRequired,
 	})
+	if strings.TrimSpace(state.SNMPTarget) != "" {
+		if err := s.publishSNMPSnapshot(ctx, state.TenantID, state, "system_state_updated", nil); err != nil {
+			_ = s.publishAudit(ctx, "audit.governance.snmp_publish_failed", state.TenantID, map[string]interface{}{
+				"target": state.SNMPTarget,
+				"error":  err.Error(),
+				"event":  "system_state_updated",
+			})
+		} else {
+			_ = s.publishAudit(ctx, "audit.governance.snmp_publish_ok", state.TenantID, map[string]interface{}{
+				"target": state.SNMPTarget,
+				"event":  "system_state_updated",
+			})
+		}
+	}
 	return s.GetSystemState(ctx, state.TenantID)
+}
+
+func (s *Service) ApplyPostureControls(ctx context.Context, patch PostureControlPatch) (GovernanceSystemState, error) {
+	patch.TenantID = strings.TrimSpace(patch.TenantID)
+	if patch.TenantID == "" {
+		return GovernanceSystemState{}, errors.New("tenant_id is required")
+	}
+	current, err := s.GetSystemState(ctx, patch.TenantID)
+	if err != nil {
+		return GovernanceSystemState{}, err
+	}
+	updated := current
+	changed := false
+	if patch.ForceQuorumDestructiveOps != nil {
+		changed = changed || updated.PostureForceQuorumDestructiveOps != *patch.ForceQuorumDestructiveOps
+		updated.PostureForceQuorumDestructiveOps = *patch.ForceQuorumDestructiveOps
+	}
+	if patch.RequireStepUpAuth != nil {
+		changed = changed || updated.PostureRequireStepUpAuth != *patch.RequireStepUpAuth
+		updated.PostureRequireStepUpAuth = *patch.RequireStepUpAuth
+	}
+	if patch.PauseConnectorSync != nil {
+		changed = changed || updated.PosturePauseConnectorSync != *patch.PauseConnectorSync
+		updated.PosturePauseConnectorSync = *patch.PauseConnectorSync
+	}
+	if patch.GuardrailPolicyRequired != nil {
+		changed = changed || updated.PostureGuardrailPolicyRequired != *patch.GuardrailPolicyRequired
+		updated.PostureGuardrailPolicyRequired = *patch.GuardrailPolicyRequired
+	}
+	if !changed {
+		return current, nil
+	}
+	updated.UpdatedBy = firstNonEmpty(strings.TrimSpace(patch.UpdatedBy), "posture-engine")
+	out, err := s.UpdateSystemState(ctx, updated)
+	if err != nil {
+		return GovernanceSystemState{}, err
+	}
+	_ = s.publishAudit(ctx, "audit.governance.posture_controls_updated", patch.TenantID, map[string]interface{}{
+		"source_finding_id":                    strings.TrimSpace(patch.SourceFindingID),
+		"source_action_id":                     strings.TrimSpace(patch.SourceActionID),
+		"reason":                               strings.TrimSpace(patch.Reason),
+		"posture_force_quorum_destructive_ops": out.PostureForceQuorumDestructiveOps,
+		"posture_require_step_up_auth":         out.PostureRequireStepUpAuth,
+		"posture_pause_connector_sync":         out.PosturePauseConnectorSync,
+		"posture_guardrail_policy_required":    out.PostureGuardrailPolicyRequired,
+	})
+	return out, nil
 }
 
 var internalHybridMTLSServices = []string{
@@ -792,7 +895,17 @@ func (s *Service) SystemIntegrity(ctx context.Context, tenantID string) (SystemI
 		checks["proxy"] = "configured"
 	}
 	if strings.TrimSpace(sys.SNMPTarget) != "" {
-		checks["snmp"] = "configured"
+		if _, err := parseSNMPTarget(sys.SNMPTarget); err != nil {
+			checks["snmp"] = "invalid_target"
+		} else if s.snmp != nil {
+			if err := s.snmp.ProbeTarget(ctx, sys.SNMPTarget); err != nil {
+				checks["snmp"] = "unreachable"
+			} else {
+				checks["snmp"] = "reachable"
+			}
+		} else {
+			checks["snmp"] = "configured"
+		}
 	}
 	if strings.TrimSpace(sys.LicenseKey) == "" {
 		checks["license"] = "inactive"
@@ -800,8 +913,11 @@ func (s *Service) SystemIntegrity(ctx context.Context, tenantID string) (SystemI
 
 	status := "healthy"
 	for _, value := range checks {
-		if value == "missing" || value == "inactive" {
+		switch value {
+		case "missing", "inactive", "invalid_target", "unreachable", "error":
 			status = "degraded"
+		}
+		if status == "degraded" {
 			break
 		}
 	}
@@ -812,6 +928,139 @@ func (s *Service) SystemIntegrity(ctx context.Context, tenantID string) (SystemI
 		Checks:    checks,
 		Timestamp: time.Now().UTC(),
 	}, nil
+}
+
+func (s *Service) TestSNMP(ctx context.Context, tenantID string, overrideTarget string) error {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return errors.New("tenant_id is required")
+	}
+	if s.snmp == nil {
+		return errors.New("snmp publisher is not configured")
+	}
+	state, err := s.GetSystemState(ctx, tenantID)
+	if err != nil {
+		return err
+	}
+	target := strings.TrimSpace(overrideTarget)
+	if target == "" {
+		target = strings.TrimSpace(state.SNMPTarget)
+	}
+	if target == "" {
+		return errors.New("snmp_target is not configured")
+	}
+	state.SNMPTarget = target
+	if err := s.publishSNMPSnapshot(ctx, tenantID, state, "snmp_test", map[string]interface{}{"test": true}); err != nil {
+		return err
+	}
+	_ = s.publishAudit(ctx, "audit.governance.snmp_test_ok", tenantID, map[string]interface{}{
+		"target": target,
+	})
+	return nil
+}
+
+func (s *Service) publishSNMPSnapshot(ctx context.Context, tenantID string, state GovernanceSystemState, event string, extra map[string]interface{}) error {
+	if s.snmp == nil {
+		return nil
+	}
+	target := strings.TrimSpace(state.SNMPTarget)
+	if target == "" {
+		return nil
+	}
+	integrity, err := s.SystemIntegrity(ctx, tenantID)
+	if err != nil {
+		integrity = SystemIntegrityStatus{
+			TenantID:  tenantID,
+			Status:    "unknown",
+			Checks:    map[string]string{"error": err.Error()},
+			Timestamp: time.Now().UTC(),
+		}
+	}
+	settings, settingsErr := s.GetSettings(ctx, tenantID)
+	if settingsErr == nil {
+		settings.SMTPPassword = ""
+	}
+	snapshot := map[string]interface{}{
+		"tenant_id":              tenantID,
+		"event":                  strings.TrimSpace(defaultString(event, "snapshot")),
+		"generated_at":           time.Now().UTC().Format(time.RFC3339Nano),
+		"system_state":           sanitizeSystemStateForSNMP(state),
+		"integrity":              integrity,
+		"governance_settings":    sanitizeSettingsForSNMP(settings, settingsErr),
+		"runtime_crypto_library": runtimeCryptoLibraryLabel,
+	}
+	if len(extra) > 0 {
+		snapshot["extra"] = extra
+	}
+	return s.snmp.PublishSnapshot(ctx, target, snapshot)
+}
+
+func sanitizeSystemStateForSNMP(state GovernanceSystemState) map[string]interface{} {
+	return map[string]interface{}{
+		"tenant_id":                            state.TenantID,
+		"fips_mode":                            state.FIPSMode,
+		"fips_mode_policy":                     state.FIPSModePolicy,
+		"fips_crypto_library":                  state.FIPSCryptoLibrary,
+		"fips_library_validated":               state.FIPSLibraryValidated,
+		"fips_runtime_enabled":                 state.FIPSRuntimeEnabled,
+		"fips_runtime_enforced":                state.FIPSRuntimeEnforced,
+		"fips_module_version":                  state.FIPSModuleVersion,
+		"fips_tls_profile":                     state.FIPSTLSProfile,
+		"fips_rng_mode":                        state.FIPSRNGMode,
+		"fips_entropy_source":                  state.FIPSEntropySource,
+		"fips_entropy_health":                  state.FIPSEntropyHealth,
+		"fips_entropy_bits_per_byte":           state.FIPSEntropyBitsByte,
+		"fips_entropy_sample_bytes":            state.FIPSEntropyBytes,
+		"fips_entropy_read_micros":             state.FIPSEntropyReadUs,
+		"hsm_mode":                             state.HSMMode,
+		"cluster_mode":                         state.ClusterMode,
+		"license_status":                       state.LicenseStatus,
+		"mgmt_ip":                              state.MgmtIP,
+		"cluster_ip":                           state.ClusterIP,
+		"dns_servers":                          state.DNSServers,
+		"ntp_servers":                          state.NTPServers,
+		"tls_mode":                             state.TLSMode,
+		"backup_schedule":                      state.BackupSchedule,
+		"backup_target":                        state.BackupTarget,
+		"backup_retention_days":                state.BackupRetentionDays,
+		"backup_encrypted":                     state.BackupEncrypted,
+		"proxy_endpoint":                       state.ProxyEndpoint,
+		"snmp_target":                          state.SNMPTarget,
+		"posture_force_quorum_destructive_ops": state.PostureForceQuorumDestructiveOps,
+		"posture_require_step_up_auth":         state.PostureRequireStepUpAuth,
+		"posture_pause_connector_sync":         state.PosturePauseConnectorSync,
+		"posture_guardrail_policy_required":    state.PostureGuardrailPolicyRequired,
+		"go_runtime_version":                   state.GoRuntimeVersion,
+		"flight_recorder_ready":                state.FlightRecorderReady,
+		"runtime_secret_ready":                 state.RuntimeSecretReady,
+		"updated_by":                           state.UpdatedBy,
+		"updated_at":                           state.UpdatedAt,
+	}
+}
+
+func sanitizeSettingsForSNMP(settings GovernanceSettings, settingsErr error) map[string]interface{} {
+	if settingsErr != nil {
+		return map[string]interface{}{"status": "unavailable", "error": settingsErr.Error()}
+	}
+	return map[string]interface{}{
+		"status":                           "ok",
+		"approval_expiry_minutes":          settings.ApprovalExpiryMinutes,
+		"expiry_check_interval_seconds":    settings.ExpiryCheckIntervalSeconds,
+		"approval_delivery_mode":           settings.ApprovalDeliveryMode,
+		"smtp_host":                        settings.SMTPHost,
+		"smtp_port":                        settings.SMTPPort,
+		"smtp_username":                    settings.SMTPUsername,
+		"smtp_from":                        settings.SMTPFrom,
+		"smtp_starttls":                    settings.SMTPStartTLS,
+		"notify_dashboard":                 settings.NotifyDashboard,
+		"notify_email":                     settings.NotifyEmail,
+		"notify_slack":                     settings.NotifySlack,
+		"notify_teams":                     settings.NotifyTeams,
+		"delivery_webhook_timeout_seconds": settings.DeliveryWebhookTimeoutSec,
+		"challenge_response_enabled":       settings.ChallengeResponseEnabled,
+		"updated_by":                       settings.UpdatedBy,
+		"updated_at":                       settings.UpdatedAt,
+	}
 }
 
 func (s *Service) ExpireWorkerTick(ctx context.Context) error {
@@ -851,8 +1100,11 @@ func normalizeSystemState(in GovernanceSystemState) GovernanceSystemState {
 	in.FIPSCryptoLibrary = strings.TrimSpace(in.FIPSCryptoLibrary)
 	if in.FIPSCryptoLibrary == "" {
 		in.FIPSCryptoLibrary = runtimeCryptoLibraryLabel
-		in.FIPSLibraryValidated = runtimeCryptoLibraryValidated
 	}
+	in.FIPSLibraryValidated = in.FIPSLibraryValidated || runtimeCryptoLibraryValidated || fips140.Enabled()
+	in.FIPSRuntimeEnabled = fips140.Enabled()
+	in.FIPSRuntimeEnforced = fips140.Enforced()
+	in.FIPSModuleVersion = runtimeFIPSModuleVersion()
 	in.FIPSTLSProfile = strings.ToLower(strings.TrimSpace(in.FIPSTLSProfile))
 	switch in.FIPSTLSProfile {
 	case "tls12_fips_suites", "tls13_only":
@@ -898,6 +1150,12 @@ func normalizeSystemState(in GovernanceSystemState) GovernanceSystemState {
 	in.NTPServers = strings.TrimSpace(in.NTPServers)
 	in.ProxyEndpoint = strings.TrimSpace(in.ProxyEndpoint)
 	in.SNMPTarget = strings.TrimSpace(in.SNMPTarget)
+	in.GoRuntimeVersion = strings.TrimSpace(runtime.Version())
+	if in.GoRuntimeVersion == "" {
+		in.GoRuntimeVersion = "unknown"
+	}
+	in.FlightRecorderReady = runtimeFlightRecorderReady()
+	in.RuntimeSecretReady = false
 	in.UpdatedBy = strings.TrimSpace(in.UpdatedBy)
 	in.FIPSEntropySource = strings.TrimSpace(in.FIPSEntropySource)
 	if in.FIPSEntropySource == "" {
@@ -926,7 +1184,21 @@ func normalizeSystemState(in GovernanceSystemState) GovernanceSystemState {
 
 func enrichFIPSRuntimeState(in GovernanceSystemState) GovernanceSystemState {
 	in.FIPSCryptoLibrary = runtimeCryptoLibraryLabel
-	in.FIPSLibraryValidated = runtimeCryptoLibraryValidated
+	in.FIPSRuntimeEnabled = fips140.Enabled()
+	in.FIPSRuntimeEnforced = fips140.Enforced()
+	in.FIPSModuleVersion = runtimeFIPSModuleVersion()
+	in.FIPSLibraryValidated = runtimeCryptoLibraryValidated || in.FIPSRuntimeEnabled
+	in.GoRuntimeVersion = strings.TrimSpace(runtime.Version())
+	if in.GoRuntimeVersion == "" {
+		in.GoRuntimeVersion = "unknown"
+	}
+	in.FlightRecorderReady = runtimeFlightRecorderReady()
+	// runtime/secret is experimental and not available in this toolchain by default.
+	in.RuntimeSecretReady = false
+	if in.FIPSRuntimeEnforced {
+		in.FIPSModePolicy = "strict"
+		in.FIPSMode = "enabled"
+	}
 	if in.FIPSRNGMode == "hsm_trng" && !isHSMReadyForTRNG(in.HSMMode) {
 		in.FIPSEntropyAt = time.Now().UTC()
 		in.FIPSEntropySource = "hsm-not-connected"

@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -27,11 +28,17 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
+
+var logger = log.New(os.Stdout, "[reporting] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
 	cfg := pkgconfig.Load()
-	logger := log.New(os.Stdout, "[kms-reporting] ", log.LstdFlags|log.LUTC)
+
+	if err := pkgruntimecfg.ValidateServiceConfig("kms-reporting", cfg); err != nil {
+		log.Fatalf("config validation failed: %v", err)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -64,6 +71,10 @@ func main() {
 		NewHTTPAuditClient(envOr("AUDIT_URL", "http://127.0.0.1:8070"), 5*time.Second),
 		NewHTTPComplianceClient(envOr("COMPLIANCE_URL", "http://127.0.0.1:8110"), 5*time.Second),
 		publisher,
+	)
+	svc.ConfigureTelemetryRetention(
+		time.Duration(envOrInt("REPORTING_TELEMETRY_RETENTION_DAYS", 30))*24*time.Hour,
+		envOrInt("REPORTING_TELEMETRY_PURGE_BATCH", 10000),
 	)
 	svc.StartScheduler(ctx)
 
@@ -185,6 +196,18 @@ func mustAtoi(s string) int {
 	n := 0
 	for i := 0; i < len(s); i++ {
 		n = n*10 + int(s[i]-'0')
+	}
+	return n
+}
+
+func envOrInt(key string, fallback int) int {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil || n <= 0 {
+		return fallback
 	}
 	return n
 }

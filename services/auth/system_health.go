@@ -63,7 +63,6 @@ type SystemHealthChecker struct {
 	dockerSockPath  string
 	composeProject  string
 	restartHTTP     *http.Client
-	restartSafeSet  map[string]struct{}
 	restartBlockMap map[string]string
 }
 
@@ -102,7 +101,6 @@ func NewSystemHealthChecker(consulAddr string, logger *log.Logger) *SystemHealth
 		dockerSockPath:  dockerSock,
 		composeProject:  composeProject,
 		restartHTTP:     dockerHTTP,
-		restartSafeSet:  restartSafeServices(),
 		restartBlockMap: blockedRestartServices(),
 	}
 }
@@ -119,29 +117,6 @@ func envFlag(key string, defaultValue bool) bool {
 		return false
 	default:
 		return defaultValue
-	}
-}
-
-func restartSafeServices() map[string]struct{} {
-	return map[string]struct{}{
-		"ai":             {},
-		"certs":          {},
-		"cloud":          {},
-		"compliance":     {},
-		"dataprotect":    {},
-		"discovery":      {},
-		"ekm":            {},
-		"governance":     {},
-		"hyok":           {},
-		"kmip":           {},
-		"mpc":            {},
-		"payment":        {},
-		"pqc":            {},
-		"qkd":            {},
-		"reporting":      {},
-		"sbom":           {},
-		"secrets":        {},
-		"software-vault": {},
 	}
 }
 
@@ -791,9 +766,6 @@ func (c *SystemHealthChecker) restartTarget(serviceName string) (string, bool, s
 	}
 	if blockedReason, blocked := c.restartBlockMap[target]; blocked {
 		return "", false, "restart blocked for " + blockedReason
-	}
-	if _, allowed := c.restartSafeSet[target]; !allowed {
-		return "", false, "restart not allowed for this service"
 	}
 	return target, true, ""
 }

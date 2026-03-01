@@ -142,6 +142,36 @@ type ScheduledReport struct {
 	UpdatedAt  time.Time              `json:"updated_at"`
 }
 
+type ErrorTelemetryEvent struct {
+	ID          string                 `json:"id"`
+	TenantID    string                 `json:"tenant_id"`
+	Source      string                 `json:"source"`
+	Service     string                 `json:"service"`
+	Component   string                 `json:"component"`
+	Level       string                 `json:"level"`
+	Message     string                 `json:"message"`
+	StackTrace  string                 `json:"stack_trace"`
+	Context     map[string]interface{} `json:"context"`
+	Fingerprint string                 `json:"fingerprint"`
+	RequestID   string                 `json:"request_id"`
+	ReleaseTag  string                 `json:"release_tag"`
+	BuildVer    string                 `json:"build_version"`
+	CreatedAt   time.Time              `json:"created_at"`
+}
+
+type ErrorTelemetryQuery struct {
+	Source      string
+	Service     string
+	Component   string
+	Level       string
+	Fingerprint string
+	RequestID   string
+	From        time.Time
+	To          time.Time
+	Limit       int
+	Offset      int
+}
+
 type AlertQuery struct {
 	Severity   string
 	Status     string

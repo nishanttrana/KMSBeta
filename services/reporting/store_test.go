@@ -184,3 +184,51 @@ func TestStoreRulesChannelsAndReports(t *testing.T) {
 		t.Fatalf("expected one due schedule got %d", len(due))
 	}
 }
+
+func TestStoreErrorTelemetryOps(t *testing.T) {
+	_, store, _, _, _ := newReportingService(t)
+	tenantID := "tenant-telemetry"
+	now := time.Now().UTC()
+
+	event := ErrorTelemetryEvent{
+		ID:          "tel1",
+		TenantID:    tenantID,
+		Source:      "frontend",
+		Service:     "dashboard",
+		Component:   "window.onerror",
+		Level:       "error",
+		Message:     "Tab failed to render",
+		StackTrace:  "Error: Tab failed",
+		Context:     map[string]interface{}{"tab": "dashboard"},
+		Fingerprint: "fp_abc",
+		RequestID:   "req_1",
+		ReleaseTag:  "dashboard",
+		BuildVer:    "v1",
+		CreatedAt:   now,
+	}
+	if err := store.CreateErrorTelemetry(context.Background(), event); err != nil {
+		t.Fatalf("create telemetry event: %v", err)
+	}
+
+	items, err := store.ListErrorTelemetry(context.Background(), tenantID, ErrorTelemetryQuery{
+		Service: "dashboard",
+		Limit:   10,
+	})
+	if err != nil {
+		t.Fatalf("list telemetry events: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected one telemetry event got %d", len(items))
+	}
+	if items[0].Message != event.Message {
+		t.Fatalf("unexpected telemetry message: %s", items[0].Message)
+	}
+
+	affected, err := store.PurgeErrorTelemetryBefore(context.Background(), now.Add(time.Minute), 100)
+	if err != nil {
+		t.Fatalf("purge telemetry events: %v", err)
+	}
+	if affected != 1 {
+		t.Fatalf("expected 1 purged row got %d", affected)
+	}
+}

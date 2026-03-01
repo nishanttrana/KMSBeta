@@ -6,6 +6,7 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/hpke"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -17,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -413,80 +415,80 @@ func (s *Service) UpdateDataProtectionPolicy(ctx context.Context, in DataProtect
 	}
 	item = normalizeDataProtectionPolicy(item)
 	_ = s.publishAudit(ctx, "audit.dataprotect.policy_updated", item.TenantID, map[string]interface{}{
-		"allowed_data_algorithms":            item.AllowedDataAlgorithms,
-		"algorithm_profile_policy":           item.AlgorithmProfilePolicy,
-		"require_aad_for_aead":               item.RequireAADForAEAD,
-		"required_aad_claims":                item.RequiredAADClaims,
-		"enforce_aad_tenant_binding":         item.EnforceAADTenantBinding,
-		"allowed_aad_environments":           item.AllowedAADEvironments,
-		"max_fields_per_operation":           item.MaxFieldsPerOperation,
-		"max_document_bytes":                 item.MaxDocumentBytes,
-		"max_app_crypto_request_bytes":       item.MaxAppCryptoRequestBytes,
-		"max_app_crypto_batch_size":          item.MaxAppCryptoBatchSize,
-		"require_symmetric_keys":             item.RequireSymmetricKeys,
-		"require_fips_keys":                  item.RequireFIPSKeys,
-		"min_key_size_bits":                  item.MinKeySizeBits,
-		"allowed_encrypt_field_paths":        item.AllowedEncryptFieldPaths,
-		"allowed_decrypt_field_paths":        item.AllowedDecryptFieldPaths,
-		"denied_decrypt_field_paths":         item.DeniedDecryptFieldPaths,
-		"block_wildcard_field_paths":         item.BlockWildcardFieldPaths,
-		"allow_deterministic_encryption":     item.AllowDeterministicEncryption,
-		"allow_searchable_encryption":        item.AllowSearchableEncryption,
-		"allow_range_search":                 item.AllowRangeSearch,
-		"envelope_kek_allowlist":             item.EnvelopeKEKAllowlist,
-		"max_wrapped_dek_age_minutes":        item.MaxWrappedDEKAgeMinutes,
-		"require_rewrap_on_dek_age_exceeded": item.RequireRewrapOnDEKAgeExceeded,
-		"allow_vaultless_tokenization":       item.AllowVaultlessTokenization,
-		"tokenization_mode_policy":           item.TokenizationModePolicy,
-		"token_format_policy":                item.TokenFormatPolicy,
-		"custom_token_formats":               item.CustomTokenFormats,
+		"allowed_data_algorithms":             item.AllowedDataAlgorithms,
+		"algorithm_profile_policy":            item.AlgorithmProfilePolicy,
+		"require_aad_for_aead":                item.RequireAADForAEAD,
+		"required_aad_claims":                 item.RequiredAADClaims,
+		"enforce_aad_tenant_binding":          item.EnforceAADTenantBinding,
+		"allowed_aad_environments":            item.AllowedAADEvironments,
+		"max_fields_per_operation":            item.MaxFieldsPerOperation,
+		"max_document_bytes":                  item.MaxDocumentBytes,
+		"max_app_crypto_request_bytes":        item.MaxAppCryptoRequestBytes,
+		"max_app_crypto_batch_size":           item.MaxAppCryptoBatchSize,
+		"require_symmetric_keys":              item.RequireSymmetricKeys,
+		"require_fips_keys":                   item.RequireFIPSKeys,
+		"min_key_size_bits":                   item.MinKeySizeBits,
+		"allowed_encrypt_field_paths":         item.AllowedEncryptFieldPaths,
+		"allowed_decrypt_field_paths":         item.AllowedDecryptFieldPaths,
+		"denied_decrypt_field_paths":          item.DeniedDecryptFieldPaths,
+		"block_wildcard_field_paths":          item.BlockWildcardFieldPaths,
+		"allow_deterministic_encryption":      item.AllowDeterministicEncryption,
+		"allow_searchable_encryption":         item.AllowSearchableEncryption,
+		"allow_range_search":                  item.AllowRangeSearch,
+		"envelope_kek_allowlist":              item.EnvelopeKEKAllowlist,
+		"max_wrapped_dek_age_minutes":         item.MaxWrappedDEKAgeMinutes,
+		"require_rewrap_on_dek_age_exceeded":  item.RequireRewrapOnDEKAgeExceeded,
+		"allow_vaultless_tokenization":        item.AllowVaultlessTokenization,
+		"tokenization_mode_policy":            item.TokenizationModePolicy,
+		"token_format_policy":                 item.TokenFormatPolicy,
+		"custom_token_formats":                item.CustomTokenFormats,
 		"reuse_existing_token_for_same_input": item.ReuseExistingTokenForSameInput,
-		"enforce_unique_token_per_vault":     item.EnforceUniqueTokenPerVault,
-		"require_token_ttl":                  item.RequireTokenTTL,
-		"max_token_ttl_hours":                item.MaxTokenTTLHours,
-		"allow_token_renewal":                item.AllowTokenRenewal,
-		"max_token_renewals":                 item.MaxTokenRenewals,
-		"allow_one_time_tokens":              item.AllowOneTimeTokens,
-		"detokenize_allowed_purposes":        item.DetokenizeAllowedPurposes,
-		"detokenize_allowed_workflows":       item.DetokenizeAllowedWorkflows,
-		"require_detokenize_justification":   item.RequireDetokenizeJustification,
-		"allow_bulk_tokenize":                item.AllowBulkTokenize,
-		"allow_bulk_detokenize":              item.AllowBulkDetokenize,
-		"allow_redaction_detect_only":        item.AllowRedactionDetectOnly,
-		"allowed_redaction_detectors":        item.AllowedRedactionDetectors,
-		"allowed_redaction_actions":          item.AllowedRedactionActions,
-		"allow_custom_regex_tokens":          item.AllowCustomRegexTokens,
-		"max_custom_regex_length":            item.MaxCustomRegexLength,
-		"max_custom_regex_groups":            item.MaxCustomRegexGroups,
-		"max_token_batch":                    item.MaxTokenBatch,
-		"max_detokenize_batch":               item.MaxDetokenizeBatch,
-		"require_token_context_tags":         item.RequireTokenContextTags,
-		"required_token_context_keys":        item.RequiredTokenContextKeys,
-		"masking_role_policy":                item.MaskingRolePolicy,
-		"token_metadata_retention_days":      item.TokenMetadataRetentionDays,
-		"redaction_event_retention_days":     item.RedactionEventRetentionDays,
-		"require_registered_wrapper":         item.RequireRegisteredWrapper,
-		"local_crypto_allowed":               item.LocalCryptoAllowed,
-		"cache_enabled":                      item.CacheEnabled,
-		"cache_ttl_sec":                      item.CacheTTLSeconds,
-		"lease_max_ops":                      item.LeaseMaxOps,
-		"max_cached_keys":                    item.MaxCachedKeys,
-		"allowed_local_algorithms":           item.AllowedLocalAlgorithms,
-		"allowed_key_classes_for_local":      item.AllowedKeyClassesForLocal,
-		"force_remote_ops":                   item.ForceRemoteOps,
-		"require_mtls":                       item.RequireMTLS,
-		"require_signed_nonce":               item.RequireSignedNonce,
-		"anti_replay_window_sec":             item.AntiReplayWindowSeconds,
-		"attested_wrapper_only":              item.AttestedWrapperOnly,
-		"revoke_on_policy_change":            item.RevokeOnPolicyChange,
-		"rekey_on_policy_change":             item.RekeyOnPolicyChange,
-		"receipt_reconciliation_enabled":     item.ReceiptReconciliationEnabled,
-		"receipt_heartbeat_sec":              item.ReceiptHeartbeatSec,
-		"receipt_missing_grace_sec":          item.ReceiptMissingGraceSec,
-		"require_tpm_attestation":            item.RequireTPMAttestation,
-		"require_non_exportable_wrapper_key": item.RequireNonExportableWrapperKey,
-		"attestation_ak_allowlist":           item.AttestationAKAllowlist,
-		"attestation_allowed_pcrs":           item.AttestationAllowedPCRs,
+		"enforce_unique_token_per_vault":      item.EnforceUniqueTokenPerVault,
+		"require_token_ttl":                   item.RequireTokenTTL,
+		"max_token_ttl_hours":                 item.MaxTokenTTLHours,
+		"allow_token_renewal":                 item.AllowTokenRenewal,
+		"max_token_renewals":                  item.MaxTokenRenewals,
+		"allow_one_time_tokens":               item.AllowOneTimeTokens,
+		"detokenize_allowed_purposes":         item.DetokenizeAllowedPurposes,
+		"detokenize_allowed_workflows":        item.DetokenizeAllowedWorkflows,
+		"require_detokenize_justification":    item.RequireDetokenizeJustification,
+		"allow_bulk_tokenize":                 item.AllowBulkTokenize,
+		"allow_bulk_detokenize":               item.AllowBulkDetokenize,
+		"allow_redaction_detect_only":         item.AllowRedactionDetectOnly,
+		"allowed_redaction_detectors":         item.AllowedRedactionDetectors,
+		"allowed_redaction_actions":           item.AllowedRedactionActions,
+		"allow_custom_regex_tokens":           item.AllowCustomRegexTokens,
+		"max_custom_regex_length":             item.MaxCustomRegexLength,
+		"max_custom_regex_groups":             item.MaxCustomRegexGroups,
+		"max_token_batch":                     item.MaxTokenBatch,
+		"max_detokenize_batch":                item.MaxDetokenizeBatch,
+		"require_token_context_tags":          item.RequireTokenContextTags,
+		"required_token_context_keys":         item.RequiredTokenContextKeys,
+		"masking_role_policy":                 item.MaskingRolePolicy,
+		"token_metadata_retention_days":       item.TokenMetadataRetentionDays,
+		"redaction_event_retention_days":      item.RedactionEventRetentionDays,
+		"require_registered_wrapper":          item.RequireRegisteredWrapper,
+		"local_crypto_allowed":                item.LocalCryptoAllowed,
+		"cache_enabled":                       item.CacheEnabled,
+		"cache_ttl_sec":                       item.CacheTTLSeconds,
+		"lease_max_ops":                       item.LeaseMaxOps,
+		"max_cached_keys":                     item.MaxCachedKeys,
+		"allowed_local_algorithms":            item.AllowedLocalAlgorithms,
+		"allowed_key_classes_for_local":       item.AllowedKeyClassesForLocal,
+		"force_remote_ops":                    item.ForceRemoteOps,
+		"require_mtls":                        item.RequireMTLS,
+		"require_signed_nonce":                item.RequireSignedNonce,
+		"anti_replay_window_sec":              item.AntiReplayWindowSeconds,
+		"attested_wrapper_only":               item.AttestedWrapperOnly,
+		"revoke_on_policy_change":             item.RevokeOnPolicyChange,
+		"rekey_on_policy_change":              item.RekeyOnPolicyChange,
+		"receipt_reconciliation_enabled":      item.ReceiptReconciliationEnabled,
+		"receipt_heartbeat_sec":               item.ReceiptHeartbeatSec,
+		"receipt_missing_grace_sec":           item.ReceiptMissingGraceSec,
+		"require_tpm_attestation":             item.RequireTPMAttestation,
+		"require_non_exportable_wrapper_key":  item.RequireNonExportableWrapperKey,
+		"attestation_ak_allowlist":            item.AttestationAKAllowlist,
+		"attestation_allowed_pcrs":            item.AttestationAllowedPCRs,
 	})
 	return item, nil
 }
@@ -2089,7 +2091,87 @@ func wrapperMetadataTruthy(metadata map[string]string, key string) bool {
 	return val == "1" || val == "true" || val == "yes" || val == "on"
 }
 
+const (
+	fieldLeaseWrapModeEnv     = "DATAPROTECT_LEASE_WRAP_MODE"
+	fieldLeaseWrapModeHPKE    = "hpke"
+	fieldLeaseWrapModeLegacy  = "legacy"
+	fieldLeaseWrapModeDual    = "dual"
+	fieldLeaseHPKEAlgorithmID = "HPKE-X25519-HKDF-SHA256-AES256GCM"
+)
+
 func (s *Service) wrapLeaseKeyForWrapper(tenantID string, wrapperID string, keyID string, operation string, wrapperPubKeyB64 string, rawKey []byte) (map[string]interface{}, error) {
+	switch leaseWrapModeFromEnv() {
+	case fieldLeaseWrapModeLegacy:
+		return s.wrapLeaseKeyForWrapperLegacy(tenantID, wrapperID, keyID, operation, wrapperPubKeyB64, rawKey)
+	case fieldLeaseWrapModeDual:
+		hpkePayload, err := s.wrapLeaseKeyForWrapperHPKE(tenantID, wrapperID, keyID, operation, wrapperPubKeyB64, rawKey)
+		if err != nil {
+			return nil, err
+		}
+		legacyPayload, err := s.wrapLeaseKeyForWrapperLegacy(tenantID, wrapperID, keyID, operation, wrapperPubKeyB64, rawKey)
+		if err != nil {
+			return nil, err
+		}
+		hpkePayload["compatibility_mode"] = "dual"
+		hpkePayload["legacy_package"] = legacyPayload
+		return hpkePayload, nil
+	default:
+		return s.wrapLeaseKeyForWrapperHPKE(tenantID, wrapperID, keyID, operation, wrapperPubKeyB64, rawKey)
+	}
+}
+
+func leaseWrapModeFromEnv() string {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(fieldLeaseWrapModeEnv))) {
+	case fieldLeaseWrapModeLegacy:
+		return fieldLeaseWrapModeLegacy
+	case fieldLeaseWrapModeDual:
+		return fieldLeaseWrapModeDual
+	default:
+		return fieldLeaseWrapModeHPKE
+	}
+}
+
+func (s *Service) wrapLeaseKeyForWrapperHPKE(tenantID string, wrapperID string, keyID string, operation string, wrapperPubKeyB64 string, rawKey []byte) (map[string]interface{}, error) {
+	pubRaw, err := b64d(wrapperPubKeyB64)
+	if err != nil {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "wrapper encryption key must be valid base64")
+	}
+	curve := ecdh.X25519()
+	wrapperPub, err := curve.NewPublicKey(pubRaw)
+	if err != nil {
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "wrapper encryption key must be valid X25519 key")
+	}
+	hpkePub, err := hpke.NewDHKEMPublicKey(wrapperPub)
+	if err != nil {
+		return nil, err
+	}
+	op := strings.ToLower(strings.TrimSpace(operation))
+	aad := []byte(tenantID + "|" + wrapperID + "|" + keyID + "|" + op)
+	info := []byte("vecta-field-lease/v1/" + strings.TrimSpace(tenantID) + "/" + strings.TrimSpace(wrapperID))
+	enc, sender, err := hpke.NewSender(hpkePub, hpke.HKDFSHA256(), hpke.AES256GCM(), info)
+	if err != nil {
+		return nil, err
+	}
+	ciphertext, err := sender.Seal(aad, rawKey)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{
+		"alg":             fieldLeaseHPKEAlgorithmID,
+		"lease_wrap_mode": "hpke-v1",
+		"kem":             "DHKEM(X25519)",
+		"kdf":             "HKDF-SHA256",
+		"aead":            "AES-256-GCM",
+		"enc_b64":         b64(enc),
+		"ciphertext_b64":  b64(ciphertext),
+		"aad_b64":         b64(aad),
+		"info_b64":        b64(info),
+		"key_id":          keyID,
+		"operation":       op,
+	}, nil
+}
+
+func (s *Service) wrapLeaseKeyForWrapperLegacy(tenantID string, wrapperID string, keyID string, operation string, wrapperPubKeyB64 string, rawKey []byte) (map[string]interface{}, error) {
 	pubRaw, err := b64d(wrapperPubKeyB64)
 	if err != nil {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "wrapper encryption key must be valid base64")
@@ -2110,18 +2192,20 @@ func (s *Service) wrapLeaseKeyForWrapper(tenantID string, wrapperID string, keyI
 	defer zeroizeAll(shared)
 	kek := keyFromHash(shared, "field-wrapper-lease")
 	defer zeroizeAll(kek)
-	aad := []byte(tenantID + "|" + wrapperID + "|" + keyID + "|" + strings.ToLower(strings.TrimSpace(operation)))
+	op := strings.ToLower(strings.TrimSpace(operation))
+	aad := []byte(tenantID + "|" + wrapperID + "|" + keyID + "|" + op)
 	iv, ciphertext, err := encryptWithAlgorithm(kek, "AES-GCM", rawKey, aad, false)
 	if err != nil {
 		return nil, err
 	}
 	return map[string]interface{}{
 		"alg":               "X25519+AES-256-GCM",
+		"lease_wrap_mode":   "legacy-v1",
 		"ephemeral_pub_b64": b64(ephemeralKey.PublicKey().Bytes()),
 		"ciphertext_b64":    b64(ciphertext),
 		"iv_b64":            b64(iv),
 		"key_id":            keyID,
-		"operation":         strings.ToLower(strings.TrimSpace(operation)),
+		"operation":         op,
 	}, nil
 }
 
@@ -3094,15 +3178,15 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			return nil, newServiceError(http.StatusForbidden, "policy_denied", "token format is blocked for selected token type")
 		}
 		vault = TokenVault{
-			ID:          "vaultless",
-			TenantID:    req.TenantID,
-			Mode:        "vaultless",
-			Name:        "vaultless",
-			TokenType:   req.TokenType,
-			Format:      req.Format,
+			ID:                "vaultless",
+			TenantID:          req.TenantID,
+			Mode:              "vaultless",
+			Name:              "vaultless",
+			TokenType:         req.TokenType,
+			Format:            req.Format,
 			CustomTokenFormat: req.CustomTokenFormat,
-			KeyID:       req.KeyID,
-			CustomRegex: req.CustomRegex,
+			KeyID:             req.KeyID,
+			CustomRegex:       req.CustomRegex,
 		}
 	} else {
 		var err error
@@ -3198,13 +3282,13 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 				if !existing.ExpiresAt.IsZero() && s.now().After(existing.ExpiresAt) {
 					// expired mapping must not be reused.
 				} else {
-				results = append(results, map[string]interface{}{
-					"input":    value,
-					"token":    existing.Token,
-					"vault_id": req.VaultID,
-					"reused":   true,
-				})
-				continue
+					results = append(results, map[string]interface{}{
+						"input":    value,
+						"token":    existing.Token,
+						"vault_id": req.VaultID,
+						"reused":   true,
+					})
+					continue
 				}
 			} else if !errors.Is(err, errNotFound) {
 				return nil, err

@@ -7,6 +7,8 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
+	"encoding/pem"
 	"errors"
 	"log"
 	"math/big"
@@ -22,16 +24,23 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 
+	pkgauth "vecta-kms/pkg/auth"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
+
+var logger = log.New(os.Stdout, "[governance] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
 	cfg := pkgconfig.Load()
-	logger := log.New(os.Stdout, "[kms-governance] ", log.LstdFlags|log.LUTC)
+
+	if err := pkgruntimecfg.ValidateServiceConfig("kms-governance", cfg); err != nil {
+		log.Fatalf("config validation failed: %v", err)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -62,6 +71,10 @@ func main() {
 	baseURL := envOr("APP_BASE_URL", "http://localhost:8050")
 	certsURL := envOr("CERTS_URL", "http://certs:8030")
 	store := NewSQLStore(dbConn)
+	var snmpPublisher SNMPPublisher = noopSNMPPublisher{}
+	if strings.EqualFold(strings.TrimSpace(envOr("GOVERNANCE_SNMP_ENABLED", "true")), "true") {
+		snmpPublisher = NewGoSNMPPublisher()
+	}
 	svc := NewService(
 		store,
 		publisher,
@@ -69,8 +82,15 @@ func main() {
 		NewGRPCCallbackExecutor(5*time.Second),
 		baseURL,
 		WithCertsURL(certsURL),
+		WithSNMPPublisher(snmpPublisher),
 	)
 	handler := NewHandler(svc)
+	if tokenParser, err := loadJWTParser(); err != nil {
+		logger.Printf("jwt parser disabled: %v", err)
+	} else if tokenParser != nil {
+		handler.SetTokenParser(tokenParser)
+		logger.Printf("jwt parser enabled for system-admin governance endpoints")
+	}
 
 	go func() {
 		for {
@@ -196,6 +216,67 @@ func devMTLSConfig() (*tls.Config, error) {
 		Certificates: []tls.Certificate{cert},
 		ClientAuth:   tls.RequireAndVerifyClientCert,
 		ClientCAs:    cp,
+	}, nil
+}
+
+func loadJWTParser() (func(string) (*pkgauth.Claims, error), error) {
+	pubPEM := strings.TrimSpace(os.Getenv("GOVERNANCE_JWT_PUBLIC_KEY_PEM"))
+	if pubPEM == "" {
+		if b64 := strings.TrimSpace(os.Getenv("GOVERNANCE_JWT_PUBLIC_KEY_B64")); b64 != "" {
+			raw, err := base64.StdEncoding.DecodeString(b64)
+			if err != nil {
+				return nil, err
+			}
+			pubPEM = string(raw)
+		}
+	}
+	if pubPEM == "" {
+		pubPEM = strings.TrimSpace(os.Getenv("KEYCORE_JWT_PUBLIC_KEY_PEM"))
+	}
+	if pubPEM == "" {
+		if b64 := strings.TrimSpace(os.Getenv("KEYCORE_JWT_PUBLIC_KEY_B64")); b64 != "" {
+			raw, err := base64.StdEncoding.DecodeString(b64)
+			if err != nil {
+				return nil, err
+			}
+			pubPEM = string(raw)
+		}
+	}
+	if pubPEM == "" {
+		path := strings.TrimSpace(os.Getenv("JWT_PUBLIC_KEY_PATH"))
+		if path == "" {
+			path = "certs/jwt_public.pem"
+		}
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil, nil
+			}
+			return nil, err
+		}
+		pubPEM = string(raw)
+	}
+	pubPEM = strings.ReplaceAll(pubPEM, `\n`, "\n")
+	block, _ := pem.Decode([]byte(pubPEM))
+	if block == nil {
+		return nil, errors.New("invalid JWT public key PEM")
+	}
+	var pub *rsa.PublicKey
+	if parsed, err := x509.ParsePKIXPublicKey(block.Bytes); err == nil {
+		if p, ok := parsed.(*rsa.PublicKey); ok {
+			pub = p
+		}
+	}
+	if pub == nil {
+		if p, err := x509.ParsePKCS1PublicKey(block.Bytes); err == nil {
+			pub = p
+		}
+	}
+	if pub == nil {
+		return nil, errors.New("unable to parse RSA JWT public key")
+	}
+	return func(token string) (*pkgauth.Claims, error) {
+		return pkgauth.ParseRS256(token, pub)
 	}, nil
 }
 

@@ -168,6 +168,19 @@ func normalizeSeverity(v string) string {
 	}
 }
 
+func normalizeTelemetryLevel(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "critical":
+		return "critical"
+	case "warning", "warn":
+		return "warning"
+	case "info":
+		return "info"
+	default:
+		return "error"
+	}
+}
+
 func severityRank(v string) int {
 	switch normalizeSeverity(v) {
 	case severityCritical:

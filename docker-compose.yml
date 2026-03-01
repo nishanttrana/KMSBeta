@@ -151,8 +151,6 @@ services:
       context: ./web/dashboard
       dockerfile: Dockerfile
     image: vecta/dashboard:latest
-    environment:
-      DASHBOARD_IN_DOCKER: "true"
     ports:
       - "5173:5173"
     depends_on:
@@ -165,7 +163,7 @@ services:
       policy:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5173').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:5173 >/dev/null 2>&1"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -659,6 +657,31 @@ services:
       - "18140:18140"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18140"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  posture:
+    <<: *kms-service
+    profiles: ["posture_management"]
+    build:
+      context: .
+      dockerfile: services/posture/Dockerfile
+    image: vecta/posture:latest
+    environment:
+      <<: *kms-common-env
+      AUDIT_URL: http://audit:8070
+      HTTP_PORT: "8220"
+      GRPC_PORT: "18220"
+      POSTURE_ENGINE_INTERVAL_SEC: ${POSTURE_ENGINE_INTERVAL_SEC:-60}
+      POSTURE_HOT_RETENTION_HOURS: ${POSTURE_HOT_RETENTION_HOURS:-72}
+      POSTURE_AUDIT_SYNC_LIMIT: ${POSTURE_AUDIT_SYNC_LIMIT:-500}
+      POSTURE_AUTO_REMEDIATE: ${POSTURE_AUTO_REMEDIATE:-false}
+    ports:
+      - "8220:8220"
+      - "18220:18220"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18220"]
       interval: 15s
       timeout: 5s
       retries: 10

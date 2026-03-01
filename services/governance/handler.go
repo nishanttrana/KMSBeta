@@ -8,11 +8,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	pkgauth "vecta-kms/pkg/auth"
 )
 
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc        *Service
+	mux        *http.ServeMux
+	parseToken func(string) (*pkgauth.Claims, error)
 }
 
 func NewHandler(svc *Service) *Handler {
@@ -21,8 +24,24 @@ func NewHandler(svc *Service) *Handler {
 	return h
 }
 
+func (h *Handler) SetTokenParser(parser func(string) (*pkgauth.Claims, error)) {
+	h.parseToken = parser
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.mux.ServeHTTP(w, r)
+	ctx := r.Context()
+	if h.parseToken != nil {
+		rawToken := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
+		if rawToken != "" {
+			claims, err := h.parseToken(rawToken)
+			if err != nil {
+				writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid token", requestID(r), "")
+				return
+			}
+			ctx = pkgauth.ContextWithClaims(ctx, claims)
+		}
+	}
+	h.mux.ServeHTTP(w, r.WithContext(ctx))
 }
 
 func (h *Handler) routes() *http.ServeMux {
@@ -40,6 +59,8 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /governance/backups/{id}/key", h.handleDownloadBackupKey)
 	mux.HandleFunc("GET /governance/system/state", h.handleGetSystemState)
 	mux.HandleFunc("PUT /governance/system/state", h.handleUpdateSystemState)
+	mux.HandleFunc("PUT /governance/system/posture-controls", h.handleUpdatePostureControls)
+	mux.HandleFunc("POST /governance/system/snmp/test", h.handleTestSystemSNMP)
 	mux.HandleFunc("GET /governance/system/integrity", h.handleSystemIntegrity)
 
 	mux.HandleFunc("GET /governance/policies", h.handleListPolicies)
@@ -64,8 +85,8 @@ func (h *Handler) routes() *http.ServeMux {
 
 func (h *Handler) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, false)
+	if !ok {
 		return
 	}
 	settings, err := h.svc.GetSettings(r.Context(), tenantID)
@@ -79,17 +100,16 @@ func (h *Handler) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
+	if !ok {
+		return
+	}
 	var settings GovernanceSettings
 	if err := decodeJSON(r, &settings); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
-	if settings.TenantID == "" {
-		settings.TenantID = strings.TrimSpace(r.URL.Query().Get("tenant_id"))
-	}
-	if settings.TenantID == "" {
-		settings.TenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	}
+	settings.TenantID = tenantID
 	updated, err := h.svc.UpdateSettings(r.Context(), settings)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "settings_update_failed", err.Error(), reqID, settings.TenantID)
@@ -101,6 +121,10 @@ func (h *Handler) handleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleTestSMTP(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
+	if !ok {
+		return
+	}
 	var body struct {
 		TenantID string `json:"tenant_id"`
 		To       string `json:"to"`
@@ -109,12 +133,7 @@ func (h *Handler) handleTestSMTP(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
-	if body.TenantID == "" {
-		body.TenantID = strings.TrimSpace(r.URL.Query().Get("tenant_id"))
-	}
-	if body.TenantID == "" {
-		body.TenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	}
+	body.TenantID = tenantID
 	if err := h.svc.TestSMTP(r.Context(), body.TenantID, body.To); err != nil {
 		writeErr(w, http.StatusBadRequest, "smtp_test_failed", err.Error(), reqID, body.TenantID)
 		return
@@ -124,6 +143,10 @@ func (h *Handler) handleTestSMTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleTestWebhook(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
+	if !ok {
+		return
+	}
 	var body struct {
 		TenantID   string `json:"tenant_id"`
 		Channel    string `json:"channel"`
@@ -133,12 +156,7 @@ func (h *Handler) handleTestWebhook(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
-	if body.TenantID == "" {
-		body.TenantID = strings.TrimSpace(r.URL.Query().Get("tenant_id"))
-	}
-	if body.TenantID == "" {
-		body.TenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	}
+	body.TenantID = tenantID
 	if err := h.svc.TestWebhook(r.Context(), body.TenantID, body.Channel, body.WebhookURL); err != nil {
 		writeErr(w, http.StatusBadRequest, "webhook_test_failed", err.Error(), reqID, body.TenantID)
 		return
@@ -152,8 +170,8 @@ func (h *Handler) handleTestWebhook(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleGetSystemState(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, false)
+	if !ok {
 		return
 	}
 	state, err := h.svc.GetSystemState(r.Context(), tenantID)
@@ -166,17 +184,16 @@ func (h *Handler) handleGetSystemState(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleCreateBackup(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
+	if !ok {
+		return
+	}
 	var in CreateBackupInput
 	if err := decodeJSON(r, &in); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
-	if strings.TrimSpace(in.TenantID) == "" {
-		in.TenantID = strings.TrimSpace(r.URL.Query().Get("tenant_id"))
-	}
-	if strings.TrimSpace(in.TenantID) == "" {
-		in.TenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	}
+	in.TenantID = tenantID
 	job, err := h.svc.CreateBackup(r.Context(), in)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "backup_create_failed", err.Error(), reqID, in.TenantID)
@@ -190,17 +207,16 @@ func (h *Handler) handleCreateBackup(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleRestoreBackup(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
+	if !ok {
+		return
+	}
 	var in RestoreBackupInput
 	if err := decodeJSON(r, &in); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
-	if strings.TrimSpace(in.TenantID) == "" {
-		in.TenantID = strings.TrimSpace(r.URL.Query().Get("tenant_id"))
-	}
-	if strings.TrimSpace(in.TenantID) == "" {
-		in.TenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	}
+	in.TenantID = tenantID
 	out, err := h.svc.RestoreBackup(r.Context(), in)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "backup_restore_failed", err.Error(), reqID, in.TenantID)
@@ -214,8 +230,8 @@ func (h *Handler) handleRestoreBackup(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleListBackups(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, false)
+	if !ok {
 		return
 	}
 	scope := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("scope")))
@@ -234,8 +250,8 @@ func (h *Handler) handleListBackups(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleGetBackup(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, false)
+	if !ok {
 		return
 	}
 	item, err := h.svc.GetBackup(r.Context(), tenantID, r.PathValue("id"))
@@ -255,8 +271,8 @@ func (h *Handler) handleGetBackup(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleDeleteBackup(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
+	if !ok {
 		return
 	}
 	actor := strings.TrimSpace(r.URL.Query().Get("actor"))
@@ -280,8 +296,8 @@ func (h *Handler) handleDeleteBackup(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleDownloadBackupArtifact(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, false)
+	if !ok {
 		return
 	}
 	content, err := h.svc.GetBackupArtifactDownload(r.Context(), tenantID, r.PathValue("id"))
@@ -301,8 +317,8 @@ func (h *Handler) handleDownloadBackupArtifact(w http.ResponseWriter, r *http.Re
 
 func (h *Handler) handleDownloadBackupKey(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, false)
+	if !ok {
 		return
 	}
 	content, err := h.svc.GetBackupKeyDownload(r.Context(), tenantID, r.PathValue("id"))
@@ -329,17 +345,16 @@ func (h *Handler) handleDownloadBackupKey(w http.ResponseWriter, r *http.Request
 
 func (h *Handler) handleUpdateSystemState(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
+	if !ok {
+		return
+	}
 	var state GovernanceSystemState
 	if err := decodeJSON(r, &state); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
-	if state.TenantID == "" {
-		state.TenantID = strings.TrimSpace(r.URL.Query().Get("tenant_id"))
-	}
-	if state.TenantID == "" {
-		state.TenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	}
+	state.TenantID = tenantID
 	updated, err := h.svc.UpdateSystemState(r.Context(), state)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "system_state_update_failed", err.Error(), reqID, state.TenantID)
@@ -348,10 +363,30 @@ func (h *Handler) handleUpdateSystemState(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, map[string]interface{}{"state": updated, "request_id": reqID})
 }
 
+func (h *Handler) handleUpdatePostureControls(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
+	if !ok {
+		return
+	}
+	var patch PostureControlPatch
+	if err := decodeJSON(r, &patch); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	patch.TenantID = tenantID
+	out, err := h.svc.ApplyPostureControls(r.Context(), patch)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "posture_controls_update_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"state": out, "request_id": reqID})
+}
+
 func (h *Handler) handleSystemIntegrity(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, w, reqID)
-	if tenantID == "" {
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, false)
+	if !ok {
 		return
 	}
 	out, err := h.svc.SystemIntegrity(r.Context(), tenantID)
@@ -360,6 +395,30 @@ func (h *Handler) handleSystemIntegrity(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"integrity": out, "request_id": reqID})
+}
+
+func (h *Handler) handleTestSystemSNMP(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
+	if !ok {
+		return
+	}
+	var body struct {
+		TenantID string `json:"tenant_id"`
+		Target   string `json:"target"`
+	}
+	if err := decodeJSON(r, &body); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	if err := h.svc.TestSNMP(r.Context(), tenantID, body.Target); err != nil {
+		writeErr(w, http.StatusBadRequest, "snmp_test_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":     "snmp_ok",
+		"request_id": reqID,
+	})
 }
 
 func (h *Handler) handleCreatePolicy(w http.ResponseWriter, r *http.Request) {
@@ -642,6 +701,61 @@ func mustTenant(r *http.Request, w http.ResponseWriter, reqID string) string {
 		return ""
 	}
 	return tenantID
+}
+
+func (h *Handler) requireSystemAdminTenant(w http.ResponseWriter, r *http.Request, reqID string, write bool) (string, bool) {
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return "", false
+	}
+	if !strings.EqualFold(tenantID, "root") {
+		writeErr(w, http.StatusForbidden, "forbidden", "system administration is root-only", reqID, tenantID)
+		return "", false
+	}
+	if h.parseToken == nil {
+		return "root", true
+	}
+	claims, ok := pkgauth.ClaimsFromContext(r.Context())
+	if !ok || claims == nil {
+		writeErr(w, http.StatusUnauthorized, "unauthorized", "admin token is required", reqID, tenantID)
+		return "", false
+	}
+	claimsTenantID := strings.TrimSpace(claims.TenantID)
+	if claimsTenantID != "" && !strings.EqualFold(claimsTenantID, "root") {
+		writeErr(w, http.StatusForbidden, "forbidden", "token tenant is not allowed for system administration", reqID, claimsTenantID)
+		return "", false
+	}
+	if !claimsAllowSystemAdmin(claims, write) {
+		writeErr(w, http.StatusForbidden, "forbidden", "system administration requires root admin privileges", reqID, tenantID)
+		return "", false
+	}
+	return "root", true
+}
+
+func claimsAllowSystemAdmin(claims *pkgauth.Claims, write bool) bool {
+	if claims == nil {
+		return false
+	}
+	role := strings.ToLower(strings.TrimSpace(claims.Role))
+	if role == "super-admin" || role == "admin" {
+		return true
+	}
+	for _, permission := range claims.Permissions {
+		perm := strings.ToLower(strings.TrimSpace(permission))
+		if perm == "*" {
+			return true
+		}
+		if write {
+			if perm == "auth.tenant.write" || perm == "auth.policy.write" {
+				return true
+			}
+			continue
+		}
+		if perm == "auth.tenant.read" || perm == "auth.policy.read" || perm == "auth.tenant.write" || perm == "auth.policy.write" {
+			return true
+		}
+	}
+	return false
 }
 
 func decodeJSON(r *http.Request, out interface{}) error {

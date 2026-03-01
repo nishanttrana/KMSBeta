@@ -1,26 +1,61 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"runtime/debug"
 	"strings"
 	"time"
 )
 
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc          *Service
+	mux          *http.ServeMux
+	releaseTag   string
+	buildVersion string
 }
 
 func NewHandler(svc *Service) *Handler {
-	h := &Handler{svc: svc}
+	h := &Handler{
+		svc:          svc,
+		releaseTag:   firstNonEmpty(strings.TrimSpace(os.Getenv("RELEASE_TAG")), "reporting"),
+		buildVersion: firstNonEmpty(strings.TrimSpace(os.Getenv("BUILD_VERSION")), "dev"),
+	}
 	h.mux = h.routes()
 	return h
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := firstNonEmpty(tenantFromRequest(r), "root")
+	defer func() {
+		rec := recover()
+		if rec == nil {
+			return
+		}
+		message := fmt.Sprintf("panic recovered in reporting handler: %v", rec)
+		_, _ = h.svc.CaptureErrorTelemetry(context.Background(), tenantID, ErrorTelemetryEvent{
+			Source:     "backend",
+			Service:    "reporting",
+			Component:  firstNonEmpty(r.Method+" "+r.URL.Path, "http"),
+			Level:      "critical",
+			Message:    message,
+			StackTrace: string(debug.Stack()),
+			Context: map[string]interface{}{
+				"method": r.Method,
+				"path":   r.URL.Path,
+			},
+			RequestID:  reqID,
+			ReleaseTag: h.releaseTag,
+			BuildVer:   h.buildVersion,
+		})
+		writeErr(w, http.StatusInternalServerError, "internal_error", "internal server error", reqID, tenantID)
+	}()
 	h.mux.ServeHTTP(w, r)
 }
 
@@ -57,6 +92,8 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("DELETE /reports/jobs/{id}", h.handleDeleteReportJob)
 	mux.HandleFunc("GET /reports/scheduled", h.handleListScheduledReports)
 	mux.HandleFunc("POST /reports/scheduled", h.handleCreateScheduledReport)
+	mux.HandleFunc("POST /telemetry/errors", h.handleCaptureErrorTelemetry)
+	mux.HandleFunc("GET /telemetry/errors", h.handleListErrorTelemetry)
 
 	mux.HandleFunc("GET /alerts/stats", h.handleAlertStats)
 	mux.HandleFunc("GET /alerts/stats/mttr", h.handleMTTRStats)
@@ -622,6 +659,81 @@ func (h *Handler) handleCreateScheduledReport(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusCreated, map[string]interface{}{"item": item, "request_id": reqID})
 }
 
+func (h *Handler) handleCaptureErrorTelemetry(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var body struct {
+		TenantID    string                 `json:"tenant_id"`
+		Source      string                 `json:"source"`
+		Service     string                 `json:"service"`
+		Component   string                 `json:"component"`
+		Level       string                 `json:"level"`
+		Message     string                 `json:"message"`
+		StackTrace  string                 `json:"stack_trace"`
+		Context     map[string]interface{} `json:"context"`
+		Fingerprint string                 `json:"fingerprint"`
+		RequestID   string                 `json:"request_id"`
+		ReleaseTag  string                 `json:"release_tag"`
+		BuildVer    string                 `json:"build_version"`
+	}
+	if err := decodeJSON(r, &body); err != nil {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
+		return
+	}
+	body.TenantID = firstNonEmpty(body.TenantID, tenantFromRequest(r))
+	if strings.TrimSpace(body.TenantID) == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
+		return
+	}
+	if strings.TrimSpace(body.Message) == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "message is required", reqID, body.TenantID)
+		return
+	}
+	item, err := h.svc.CaptureErrorTelemetry(r.Context(), body.TenantID, ErrorTelemetryEvent{
+		Source:      body.Source,
+		Service:     body.Service,
+		Component:   body.Component,
+		Level:       body.Level,
+		Message:     body.Message,
+		StackTrace:  body.StackTrace,
+		Context:     body.Context,
+		Fingerprint: body.Fingerprint,
+		RequestID:   firstNonEmpty(body.RequestID, reqID),
+		ReleaseTag:  body.ReleaseTag,
+		BuildVer:    body.BuildVer,
+	})
+	if err != nil {
+		h.writeServiceError(w, err, reqID, body.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]interface{}{"item": item, "request_id": reqID})
+}
+
+func (h *Handler) handleListErrorTelemetry(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	q := ErrorTelemetryQuery{
+		Source:      strings.ToLower(strings.TrimSpace(r.URL.Query().Get("source"))),
+		Service:     strings.ToLower(strings.TrimSpace(r.URL.Query().Get("service"))),
+		Component:   strings.ToLower(strings.TrimSpace(r.URL.Query().Get("component"))),
+		Level:       strings.ToLower(strings.TrimSpace(r.URL.Query().Get("level"))),
+		Fingerprint: strings.TrimSpace(r.URL.Query().Get("fingerprint")),
+		RequestID:   strings.TrimSpace(r.URL.Query().Get("request_id")),
+		Limit:       atoi(r.URL.Query().Get("limit")),
+		Offset:      atoi(r.URL.Query().Get("offset")),
+	}
+	q.From = parseTimeString(r.URL.Query().Get("from"))
+	q.To = parseTimeString(r.URL.Query().Get("to"))
+	items, err := h.svc.ListErrorTelemetry(r.Context(), tenantID, q)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
 func (h *Handler) handleAlertStats(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	tenantID := mustTenant(r, reqID, w)
@@ -667,9 +779,33 @@ func (h *Handler) handleTopSources(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {
 	var svcErr serviceError
 	if errors.As(err, &svcErr) {
+		if svcErr.HTTPStatus >= http.StatusInternalServerError {
+			_, _ = h.svc.CaptureErrorTelemetry(context.Background(), firstNonEmpty(tenantID, "root"), ErrorTelemetryEvent{
+				Source:      "backend",
+				Service:     "reporting",
+				Component:   "service_error",
+				Level:       "error",
+				Message:     defaultString(svcErr.Message, "reporting service error"),
+				Fingerprint: svcErr.Code,
+				RequestID:   reqID,
+				ReleaseTag:  h.releaseTag,
+				BuildVer:    h.buildVersion,
+			})
+		}
 		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, reqID, tenantID)
 		return
 	}
+	_, _ = h.svc.CaptureErrorTelemetry(context.Background(), firstNonEmpty(tenantID, "root"), ErrorTelemetryEvent{
+		Source:      "backend",
+		Service:     "reporting",
+		Component:   "unhandled_error",
+		Level:       "error",
+		Message:     err.Error(),
+		Fingerprint: "internal_error",
+		RequestID:   reqID,
+		ReleaseTag:  h.releaseTag,
+		BuildVer:    h.buildVersion,
+	})
 	writeErr(w, httpStatusForErr(err), "internal_error", err.Error(), reqID, tenantID)
 }
 

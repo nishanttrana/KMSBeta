@@ -28,11 +28,17 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
+
+var logger = log.New(os.Stdout, "[policy] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
 	cfg := pkgconfig.Load()
-	logger := log.New(os.Stdout, "[kms-policy] ", log.LstdFlags|log.LUTC)
+
+	if err := pkgruntimecfg.ValidateServiceConfig("kms-policy", cfg); err != nil {
+		log.Fatalf("config validation failed: %v", err)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -62,6 +68,10 @@ func main() {
 
 	store := NewSQLStore(dbConn)
 	svc := NewService(store, publisher)
+	if governanceURL := strings.TrimSpace(os.Getenv("GOVERNANCE_URL")); governanceURL != "" {
+		svc.SetGovernancePostureControlsProvider(NewHTTPGovernancePostureControlsProvider(governanceURL, 3*time.Second, 5*time.Second))
+		logger.Printf("governance posture controls integration enabled")
+	}
 	svc.SetClusterSyncPublisher(pkgclustersync.NewHTTPPublisher(
 		envOr("CLUSTER_URL", "http://cluster-manager:8210"),
 		envOr("CLUSTER_BOOTSTRAP_PROFILE_ID", "cluster-profile-base"),

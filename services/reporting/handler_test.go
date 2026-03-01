@@ -210,3 +210,43 @@ func TestHandlerRulesChannelsAndReports(t *testing.T) {
 		t.Fatalf("list schedules status=%d body=%s", listSchedRR.Code, listSchedRR.Body.String())
 	}
 }
+
+func TestHandlerTelemetryEndpoints(t *testing.T) {
+	h, _, _, _, _ := newReportingHandler(t)
+	tenantID := "tenant-telemetry-handler"
+	createReq := httptest.NewRequest(http.MethodPost, "/telemetry/errors", strings.NewReader(`{
+		"tenant_id":"`+tenantID+`",
+		"source":"frontend",
+		"service":"dashboard",
+		"component":"window.onerror",
+		"level":"error",
+		"message":"globalFipsEnabled is not defined",
+		"stack_trace":"Error: globalFipsEnabled is not defined",
+		"context":{"tab":"dashboard"},
+		"fingerprint":"fp_123",
+		"request_id":"req_abc",
+		"release_tag":"dashboard",
+		"build_version":"v1"
+	}`))
+	createReq.Header.Set("Content-Type", "application/json")
+	createRR := httptest.NewRecorder()
+	h.ServeHTTP(createRR, createReq)
+	if createRR.Code != http.StatusAccepted {
+		t.Fatalf("create telemetry status=%d body=%s", createRR.Code, createRR.Body.String())
+	}
+
+	listReq := httptest.NewRequest(http.MethodGet, "/telemetry/errors?tenant_id="+tenantID+"&service=dashboard", nil)
+	listRR := httptest.NewRecorder()
+	h.ServeHTTP(listRR, listReq)
+	if listRR.Code != http.StatusOK {
+		t.Fatalf("list telemetry status=%d body=%s", listRR.Code, listRR.Body.String())
+	}
+	var payload map[string]interface{}
+	if err := json.Unmarshal(listRR.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode telemetry list payload: %v", err)
+	}
+	items, _ := payload["items"].([]interface{})
+	if len(items) != 1 {
+		t.Fatalf("expected one telemetry item got %d", len(items))
+	}
+}
