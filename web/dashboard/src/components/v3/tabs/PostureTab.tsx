@@ -13,6 +13,27 @@ import {
   ShieldAlert,
   Wrench
 } from "lucide-react";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar as RBar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  RadialBarChart,
+  RadialBar,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
+} from "recharts";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { B, Btn, Card, Chk, Inp, Row2, Section, Sel } from "../legacyPrimitives";
@@ -76,6 +97,14 @@ function fmtTS(value: any) {
   return dt.toLocaleString();
 }
 
+function shortTS(value: any) {
+  const raw = String(value || "").trim();
+  if (!raw) return "-";
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) return raw;
+  return `${dt.getMonth() + 1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2, "0")}`;
+}
+
 function extractDomainMetrics(topSignals: any) {
   const root = topSignals && typeof topSignals === "object" ? topSignals : {};
   const nested = root.domain_metrics && typeof root.domain_metrics === "object" ? root.domain_metrics : {};
@@ -103,22 +132,46 @@ function extractDomainMetrics(topSignals: any) {
   });
 }
 
-function buildRiskTrendPoints(history: any[]) {
-  const items = Array.isArray(history) ? history.slice(0, 30).reverse() : [];
-  if (!items.length) return [];
-  const maxRisk = Math.max(1, ...items.map((entry: any) => toNum(entry?.risk_24h)));
-  const span = Math.max(1, items.length - 1);
-  return items.map((entry: any, index: number) => {
-    const value = Math.max(0, Math.min(100, toNum(entry?.risk_24h)));
-    return {
-      id: String(entry?.id || `${entry?.captured_at || index}`),
-      x: (index / span) * 100,
-      y: 100 - (value / maxRisk) * 100,
-      value,
-      label: fmtTS(entry?.captured_at)
-    };
-  });
-}
+/* ── Recharts custom tooltip ── */
+const ChartTooltip = ({ containerStyle, children }: any) => (
+  <div style={{ background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: 8, padding: "8px 12px", fontSize: 10, color: C.text, boxShadow: "0 4px 20px rgba(0,0,0,.5)", ...containerStyle }}>
+    {children}
+  </div>
+);
+
+const RiskTrendTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <ChartTooltip>
+      <div style={{ fontWeight: 700, marginBottom: 4, color: C.accent }}>{label}</div>
+      <div>Risk Score: <span style={{ fontWeight: 700, color: C.text }}>{payload[0]?.value}</span></div>
+    </ChartTooltip>
+  );
+};
+
+const DomainBarTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <ChartTooltip>
+      <div style={{ fontWeight: 700, marginBottom: 4, color: C.accent }}>{label}</div>
+      {payload.map((entry: any) => (
+        <div key={entry.dataKey} style={{ color: entry.color }}>
+          {entry.name}: <span style={{ fontWeight: 700, color: C.text }}>{entry.value}</span>
+        </div>
+      ))}
+    </ChartTooltip>
+  );
+};
+
+const HistogramTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <ChartTooltip>
+      <div style={{ fontWeight: 700, marginBottom: 4, color: C.accent }}>Score Range: {label}</div>
+      <div>Findings: <span style={{ fontWeight: 700, color: C.text }}>{payload[0]?.value}</span></div>
+    </ChartTooltip>
+  );
+};
 
 export const PostureTab = ({ session, onToast }) => {
   const [loading, setLoading] = useState(false);
@@ -185,8 +238,93 @@ export const PostureTab = ({ session, onToast }) => {
   const visibleFindings = useMemo(() => filteredFindings.slice(0, 120), [filteredFindings]);
   const visibleActions = useMemo(() => (Array.isArray(actions) ? actions.slice(0, 120) : []), [actions]);
   const domainMetrics = useMemo(() => extractDomainMetrics(risk?.top_signals), [risk?.top_signals]);
-  const trendPoints = useMemo(() => buildRiskTrendPoints(history), [history]);
-  const trendPolyline = trendPoints.map((point: any) => `${point.x},${point.y}`).join(" ");
+
+  /* ── Risk trend data for Recharts ── */
+  const trendData = useMemo(() => {
+    const items = Array.isArray(history) ? history.slice(0, 60).reverse() : [];
+    return items.map((entry: any) => ({
+      name: shortTS(entry?.captured_at),
+      risk: Math.max(0, Math.min(100, toNum(entry?.risk_24h)))
+    }));
+  }, [history]);
+
+  /* ── Domain bar chart data ── */
+  const domainBarData = useMemo(() => {
+    return domainMetrics.map((d: any) => ({
+      name: d.label,
+      Events: d.events,
+      Failures: d.failures
+    }));
+  }, [domainMetrics]);
+
+  /* ── Severity distribution donut data ── */
+  const severityDonut = useMemo(() => {
+    const rows = Array.isArray(findings) ? findings : [];
+    const counts = { critical: 0, high: 0, warning: 0, info: 0 };
+    rows.forEach((f: any) => {
+      const s = String(f?.severity || "").toLowerCase();
+      if (s === "critical") counts.critical++;
+      else if (s === "high") counts.high++;
+      else if (s === "warning" || s === "medium") counts.warning++;
+      else counts.info++;
+    });
+    return [
+      { name: "Critical", value: counts.critical, fill: C.red },
+      { name: "High", value: counts.high, fill: C.amber },
+      { name: "Warning", value: counts.warning, fill: "#d97706" },
+      { name: "Info", value: counts.info, fill: C.blue }
+    ].filter((d) => d.value > 0);
+  }, [findings]);
+
+  /* ── Risk score histogram data ── */
+  const riskHistogram = useMemo(() => {
+    const rows = Array.isArray(findings) ? findings : [];
+    const buckets = [
+      { name: "0-20", count: 0, fill: C.green },
+      { name: "21-40", count: 0, fill: C.green },
+      { name: "41-60", count: 0, fill: C.amber },
+      { name: "61-80", count: 0, fill: C.amber },
+      { name: "81-100", count: 0, fill: C.red }
+    ];
+    rows.forEach((f: any) => {
+      const score = toNum(f?.risk_score);
+      if (score <= 20) buckets[0].count++;
+      else if (score <= 40) buckets[1].count++;
+      else if (score <= 60) buckets[2].count++;
+      else if (score <= 80) buckets[3].count++;
+      else buckets[4].count++;
+    });
+    return buckets;
+  }, [findings]);
+
+  /* ── Findings status counts for progress bar ── */
+  const statusCounts = useMemo(() => {
+    const rows = Array.isArray(findings) ? findings : [];
+    const counts = { open: 0, acknowledged: 0, resolved: 0, reopened: 0 };
+    rows.forEach((f: any) => {
+      const s = String(f?.status || "").toLowerCase();
+      if (s === "open") counts.open++;
+      else if (s === "acknowledged") counts.acknowledged++;
+      else if (s === "resolved") counts.resolved++;
+      else if (s === "reopened") counts.reopened++;
+      else counts.open++;
+    });
+    return counts;
+  }, [findings]);
+
+  const statusTotal = statusCounts.open + statusCounts.acknowledged + statusCounts.resolved + statusCounts.reopened;
+
+  /* ── Radar chart data for engine scores ── */
+  const radarData = useMemo(() => {
+    const pred = Math.max(0, Math.min(100, Number(risk?.predictive_score || 0)));
+    const prev = Math.max(0, Math.min(100, Number(risk?.preventive_score || 0)));
+    const corr = Math.max(0, Math.min(100, Number(risk?.corrective_score || 0)));
+    return [
+      { axis: "Predictive", value: pred },
+      { axis: "Preventive", value: prev },
+      { axis: "Corrective", value: corr }
+    ];
+  }, [risk?.predictive_score, risk?.preventive_score, risk?.corrective_score]);
 
   const executeAction = async (action: any) => {
     const id = String(action?.id || "").trim();
@@ -236,87 +374,204 @@ export const PostureTab = ({ session, onToast }) => {
   const prev = Math.max(0, Math.min(100, Number(risk?.preventive_score || 0)));
   const corr = Math.max(0, Math.min(100, Number(risk?.corrective_score || 0)));
   const riskTone24 = riskTone(risk24);
+  const riskColor24 = riskTone24 === "red" ? C.red : riskTone24 === "amber" ? C.amber : C.green;
+  const riskTone7d = riskTone(risk7d);
+  const riskColor7d = riskTone7d === "red" ? C.red : riskTone7d === "amber" ? C.amber : C.green;
+
+  /* ── Radial gauge data ── */
+  const gaugeData = [
+    { name: "7d", value: risk7d, fill: riskColor7d },
+    { name: "24h", value: risk24, fill: riskColor24 }
+  ];
 
   return (
     <div>
       <Section title="Posture Management" subtitle="Predictive, preventive, and corrective posture controls across core KMS + BYOK/HYOK/EKM/KMIP/BitLocker/SDK domains.">
-        <Row2>
+
+        {/* ═══════ ROW 1: Risk Gauge + Engine Radar + Severity Donut ═══════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+
+          {/* ── Risk Gauge (RadialBarChart) ── */}
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <ShieldAlert size={14} color={C.accent} />
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Risk Window</span>
               </div>
               <B c={riskTone24}>{`${risk24}/100`}</B>
             </div>
-            <div style={{ fontSize: 10, color: C.dim, marginBottom: 4 }}>
-              24h risk: <span style={{ color: C.text, fontWeight: 700 }}>{risk24}</span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ResponsiveContainer width="100%" height={140}>
+                <RadialBarChart
+                  cx="50%" cy="50%"
+                  innerRadius="40%" outerRadius="90%"
+                  startAngle={210} endAngle={-30}
+                  data={gaugeData}
+                  barSize={10}
+                >
+                  <RadialBar
+                    dataKey="value"
+                    cornerRadius={5}
+                    background={{ fill: C.border }}
+                  />
+                </RadialBarChart>
+              </ResponsiveContainer>
             </div>
-            <div style={{ fontSize: 10, color: C.dim, marginBottom: 4 }}>
-              7d risk: <span style={{ color: C.text, fontWeight: 700 }}>{risk7d}</span>
+            <div style={{ display: "flex", justifyContent: "center", gap: 16, marginTop: 2 }}>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 9, color: C.muted }}>24h</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: riskColor24 }}>{risk24}</div>
+              </div>
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 9, color: C.muted }}>7d</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: riskColor7d }}>{risk7d}</div>
+              </div>
             </div>
-            <div style={{ fontSize: 9, color: C.muted }}>Captured: {fmtTS(risk?.captured_at)}</div>
+            <div style={{ fontSize: 9, color: C.muted, textAlign: "center", marginTop: 4 }}>Captured: {fmtTS(risk?.captured_at)}</div>
           </Card>
+
+          {/* ── Engine Score Radar ── */}
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <Activity size={14} color={C.green} />
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Engine Scores</span>
               </div>
               <B c="blue">Live</B>
             </div>
-            <div style={{ fontSize: 10, color: C.dim, marginBottom: 4 }}>
-              Predictive: <span style={{ color: C.text, fontWeight: 700 }}>{pred}</span>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <ResponsiveContainer width="100%" height={160}>
+                <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
+                  <PolarGrid stroke={C.border} />
+                  <PolarAngleAxis
+                    dataKey="axis"
+                    tick={{ fill: C.dim, fontSize: 10 }}
+                  />
+                  <PolarRadiusAxis
+                    angle={90}
+                    domain={[0, 100]}
+                    tick={{ fill: C.muted, fontSize: 8 }}
+                    tickCount={4}
+                  />
+                  <Radar
+                    dataKey="value"
+                    stroke={C.accent}
+                    fill={C.accent}
+                    fillOpacity={0.2}
+                    strokeWidth={2}
+                  />
+                </RadarChart>
+              </ResponsiveContainer>
             </div>
-            <div style={{ fontSize: 10, color: C.dim, marginBottom: 4 }}>
-              Preventive: <span style={{ color: C.text, fontWeight: 700 }}>{prev}</span>
-            </div>
-            <div style={{ fontSize: 10, color: C.dim, marginBottom: 6 }}>
-              Corrective: <span style={{ color: C.text, fontWeight: 700 }}>{corr}</span>
-            </div>
-            <div style={{ display: "grid", gap: 4 }}>
-              {[
-                { key: "Predictive", value: pred, color: C.blue },
-                { key: "Preventive", value: prev, color: C.amber },
-                { key: "Corrective", value: corr, color: C.green }
-              ].map((item) => (
-                <div key={item.key}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginBottom: 2 }}>
-                    <span>{item.key}</span>
-                    <span>{item.value}</span>
-                  </div>
-                  <div style={{ height: 5, borderRadius: 999, background: C.panel2, border: `1px solid ${C.border}` }}>
-                    <div style={{ width: `${Math.max(2, Math.min(100, item.value))}%`, height: "100%", borderRadius: 999, background: item.color }} />
-                  </div>
-                </div>
-              ))}
+            <div style={{ display: "flex", justifyContent: "center", gap: 14, marginTop: 2 }}>
+              <div style={{ fontSize: 9, color: C.muted }}>
+                Predictive: <span style={{ color: C.blue, fontWeight: 700 }}>{pred}</span>
+              </div>
+              <div style={{ fontSize: 9, color: C.muted }}>
+                Preventive: <span style={{ color: C.amber, fontWeight: 700 }}>{prev}</span>
+              </div>
+              <div style={{ fontSize: 9, color: C.muted }}>
+                Corrective: <span style={{ color: C.green, fontWeight: 700 }}>{corr}</span>
+              </div>
             </div>
           </Card>
+
+          {/* ── Severity Donut ── */}
           <Card>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <Wrench size={14} color={C.amber} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Open Items</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Findings Breakdown</span>
               </div>
               <B c={Number(dashboard?.critical_findings || 0) > 0 ? "red" : "green"}>{Number(dashboard?.critical_findings || 0)} critical</B>
             </div>
-            <div style={{ fontSize: 10, color: C.dim, marginBottom: 4 }}>
-              Open findings: <span style={{ color: C.text, fontWeight: 700 }}>{Number(dashboard?.open_findings || 0)}</span>
+            {severityDonut.length > 0 ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <ResponsiveContainer width="100%" height={160}>
+                  <PieChart>
+                    <Pie
+                      data={severityDonut}
+                      cx="50%" cy="50%"
+                      innerRadius={35}
+                      outerRadius={55}
+                      paddingAngle={3}
+                      dataKey="value"
+                      strokeWidth={0}
+                    >
+                      {severityDonut.map((entry, idx) => (
+                        <Cell key={idx} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        return (
+                          <ChartTooltip>
+                            <span style={{ color: payload[0]?.payload?.fill, fontWeight: 700 }}>{payload[0]?.name}</span>: {payload[0]?.value}
+                          </ChartTooltip>
+                        );
+                      }}
+                    />
+                    <Legend
+                      verticalAlign="bottom"
+                      height={28}
+                      iconType="circle"
+                      iconSize={8}
+                      formatter={(value) => <span style={{ color: C.dim, fontSize: 9 }}>{value}</span>}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 10, color: C.muted }}>No findings data</span>
+              </div>
+            )}
+            <div style={{ display: "flex", justifyContent: "center", gap: 14, marginTop: 2 }}>
+              <div style={{ fontSize: 9, color: C.muted }}>
+                Open: <span style={{ color: C.text, fontWeight: 700 }}>{Number(dashboard?.open_findings || 0)}</span>
+              </div>
+              <div style={{ fontSize: 9, color: C.muted }}>
+                Pending: <span style={{ color: C.text, fontWeight: 700 }}>{Array.isArray(actions) ? actions.length : 0}</span>
+              </div>
+              <div style={{ fontSize: 9, color: C.muted }}>
+                Tenant: <span style={{ color: C.text, fontWeight: 700 }}>{String(session?.tenantId || "-")}</span>
+              </div>
             </div>
-            <div style={{ fontSize: 10, color: C.dim, marginBottom: 4 }}>
-              Pending actions: <span style={{ color: C.text, fontWeight: 700 }}>{Array.isArray(actions) ? actions.length : 0}</span>
-            </div>
-            <div style={{ fontSize: 9, color: C.muted }}>Tenant: {String(session?.tenantId || "-")}</div>
           </Card>
-        </Row2>
+        </div>
 
-        <Card title="Domain Posture (24h)" style={{ marginTop: 10 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 8 }}>
+        {/* ═══════ ROW 2: Domain Bar Chart + Domain Detail Cards ═══════ */}
+        <Card style={{ marginTop: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Domain Posture (24h)</span>
+            <B c="accent">Events vs Failures</B>
+          </div>
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={domainBarData} barGap={2} barCategoryGap="20%">
+              <XAxis
+                dataKey="name"
+                tick={{ fill: C.dim, fontSize: 10 }}
+                axisLine={{ stroke: C.border }}
+                tickLine={false}
+              />
+              <YAxis
+                tick={{ fill: C.muted, fontSize: 9 }}
+                axisLine={false}
+                tickLine={false}
+                width={35}
+              />
+              <Tooltip content={DomainBarTooltip} cursor={{ fill: "rgba(6,214,224,.04)" }} />
+              <RBar dataKey="Events" fill={C.blue} radius={[3, 3, 0, 0]} />
+              <RBar dataKey="Failures" fill={C.red} radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 8, marginTop: 10 }}>
             {domainMetrics.map((domain: any) => {
               const Icon = domain.icon;
               const tone = riskTone(domain.rate);
               return (
-                <div key={domain.key} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 10, background: C.panel2 }}>
+                <div key={domain.key} style={{ border: `1px solid ${C.border}`, borderRadius: 10, padding: 10, background: C.card }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <Icon size={12} color={C.accent} />
@@ -343,15 +598,39 @@ export const PostureTab = ({ session, onToast }) => {
                       Missing receipts: <span style={{ color: domain.receiptMissing > 0 ? C.red : C.green }}>{domain.receiptMissing}</span>
                     </div>
                   )}
-                  <div style={{ height: 6, borderRadius: 999, border: `1px solid ${C.border}`, background: C.panel }}>
-                    <div
-                      style={{
-                        width: `${Math.max(2, Math.min(100, domain.rate))}%`,
-                        height: "100%",
-                        borderRadius: 999,
-                        background: tone === "red" ? C.red : tone === "amber" ? C.amber : C.green
-                      }}
-                    />
+                  {/* Failure rate bar */}
+                  <div style={{ marginBottom: 4 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: C.muted, marginBottom: 2 }}>
+                      <span>Failure Rate</span>
+                      <span>{domain.rate.toFixed(1)}%</span>
+                    </div>
+                    <div style={{ height: 5, borderRadius: 999, border: `1px solid ${C.border}`, background: C.bg }}>
+                      <div
+                        style={{
+                          width: `${Math.max(2, Math.min(100, domain.rate))}%`,
+                          height: "100%",
+                          borderRadius: 999,
+                          background: tone === "red" ? C.red : tone === "amber" ? C.amber : C.green
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {/* Latency bar */}
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: C.muted, marginBottom: 2 }}>
+                      <span>Latency</span>
+                      <span>{domain.latency > 0 ? `${domain.latency.toFixed(0)}ms` : "-"}</span>
+                    </div>
+                    <div style={{ height: 5, borderRadius: 999, border: `1px solid ${C.border}`, background: C.bg }}>
+                      <div
+                        style={{
+                          width: `${Math.max(2, Math.min(100, domain.latency > 0 ? Math.min(100, (domain.latency / 500) * 100) : 0))}%`,
+                          height: "100%",
+                          borderRadius: 999,
+                          background: domain.latency >= 500 ? C.red : domain.latency >= 100 ? C.amber : C.green
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               );
@@ -359,33 +638,95 @@ export const PostureTab = ({ session, onToast }) => {
           </div>
         </Card>
 
-        <Card title="Risk Trend" style={{ marginTop: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <div style={{ fontSize: 10, color: C.dim }}>Latest 24h risk snapshots</div>
-            <B c="blue">{trendPoints.length ? `${trendPoints[trendPoints.length - 1]?.value || 0} latest` : "No history"}</B>
-          </div>
-          {trendPoints.length ? (
-            <div>
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: "100%", height: 120, display: "block", border: `1px solid ${C.border}`, borderRadius: 8, background: C.panel2 }}>
-                <line x1="0" x2="100" y1="80" y2="80" stroke={C.border} strokeWidth="0.6" />
-                <line x1="0" x2="100" y1="60" y2="60" stroke={C.border} strokeWidth="0.6" />
-                <line x1="0" x2="100" y1="40" y2="40" stroke={C.border} strokeWidth="0.6" />
-                <line x1="0" x2="100" y1="20" y2="20" stroke={C.border} strokeWidth="0.6" />
-                <polyline fill="none" stroke={C.accent} strokeWidth="2" points={trendPolyline} />
-                {trendPoints.map((point: any, index: number) => (
-                  <circle key={`${point.id}-${index}`} cx={point.x} cy={point.y} r="1.6" fill={C.accent} />
-                ))}
-              </svg>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.muted, marginTop: 4 }}>
-                <span>{trendPoints[0]?.label || "-"}</span>
-                <span>{trendPoints[trendPoints.length - 1]?.label || "-"}</span>
-              </div>
+        {/* ═══════ ROW 3: Risk Trend AreaChart + Risk Score Histogram ═══════ */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 10, marginTop: 10 }}>
+          {/* ── Risk Trend AreaChart ── */}
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Risk Trend</span>
+              <B c="blue">{trendData.length ? `${trendData[trendData.length - 1]?.risk || 0} latest` : "No history"}</B>
             </div>
-          ) : (
-            <div style={{ fontSize: 10, color: C.muted }}>No risk history yet.</div>
-          )}
-        </Card>
+            {trendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={trendData}>
+                  <defs>
+                    <linearGradient id="riskGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={C.accent} stopOpacity={0.25} />
+                      <stop offset="95%" stopColor={C.accent} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: C.muted, fontSize: 8 }}
+                    axisLine={{ stroke: C.border }}
+                    tickLine={false}
+                    interval="preserveStartEnd"
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    tick={{ fill: C.muted, fontSize: 9 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={30}
+                  />
+                  <Tooltip content={RiskTrendTooltip} cursor={{ stroke: C.borderHi, strokeDasharray: "3 3" }} />
+                  <Area
+                    type="monotone"
+                    dataKey="risk"
+                    stroke={C.accent}
+                    strokeWidth={2}
+                    fill="url(#riskGradient)"
+                    dot={{ fill: C.accent, r: 2, strokeWidth: 0 }}
+                    activeDot={{ fill: C.accent, r: 4, stroke: C.bg, strokeWidth: 2 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 10, color: C.muted }}>No risk history yet.</span>
+              </div>
+            )}
+          </Card>
 
+          {/* ── Risk Score Distribution Histogram ── */}
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Risk Distribution</span>
+              <B c="accent">{findings.length} findings</B>
+            </div>
+            {findings.length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={riskHistogram}>
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: C.dim, fontSize: 9 }}
+                    axisLine={{ stroke: C.border }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fill: C.muted, fontSize: 9 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={25}
+                    allowDecimals={false}
+                  />
+                  <Tooltip content={HistogramTooltip} cursor={{ fill: "rgba(6,214,224,.04)" }} />
+                  <RBar dataKey="count" radius={[4, 4, 0, 0]}>
+                    {riskHistogram.map((entry, idx) => (
+                      <Cell key={idx} fill={entry.fill} />
+                    ))}
+                  </RBar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ fontSize: 10, color: C.muted }}>No findings data</span>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        {/* ═══════ Control Bar ═══════ */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10, marginBottom: 10, alignItems: "center" }}>
           <Inp w={250} value={findingSearch} onChange={(e) => setFindingSearch(e.target.value)} placeholder="Search finding title/engine/type..." />
           <Sel w={130} value={findingSeverity} onChange={(e) => setFindingSeverity(String(e.target.value || ""))}>
@@ -419,7 +760,54 @@ export const PostureTab = ({ session, onToast }) => {
           </Btn>
         </div>
 
-        <Card title="Findings">
+        {/* ═══════ Findings Status Progress Bar ═══════ */}
+        {statusTotal > 0 && (
+          <Card style={{ marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Findings Resolution Status</span>
+              <span style={{ fontSize: 9, color: C.muted }}>{statusTotal} total</span>
+            </div>
+            <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden", border: `1px solid ${C.border}` }}>
+              {statusCounts.resolved > 0 && (
+                <div style={{ width: `${(statusCounts.resolved / statusTotal) * 100}%`, background: C.green, transition: "width .4s" }} title={`Resolved: ${statusCounts.resolved}`} />
+              )}
+              {statusCounts.acknowledged > 0 && (
+                <div style={{ width: `${(statusCounts.acknowledged / statusTotal) * 100}%`, background: C.blue, transition: "width .4s" }} title={`Acknowledged: ${statusCounts.acknowledged}`} />
+              )}
+              {statusCounts.open > 0 && (
+                <div style={{ width: `${(statusCounts.open / statusTotal) * 100}%`, background: C.amber, transition: "width .4s" }} title={`Open: ${statusCounts.open}`} />
+              )}
+              {statusCounts.reopened > 0 && (
+                <div style={{ width: `${(statusCounts.reopened / statusTotal) * 100}%`, background: C.red, transition: "width .4s" }} title={`Reopened: ${statusCounts.reopened}`} />
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 14, marginTop: 6, flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: C.green }} />
+                Resolved ({statusCounts.resolved})
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: C.blue }} />
+                Acknowledged ({statusCounts.acknowledged})
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: C.amber }} />
+                Open ({statusCounts.open})
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim }}>
+                <div style={{ width: 8, height: 8, borderRadius: 2, background: C.red }} />
+                Reopened ({statusCounts.reopened})
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* ═══════ Findings Table ═══════ */}
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Findings</span>
+            <span style={{ fontSize: 9, color: C.muted }}>{visibleFindings.length} shown</span>
+          </div>
           <div style={{ maxHeight: 280, overflow: "auto", border: `1px solid ${C.border}`, borderRadius: 8 }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -479,7 +867,12 @@ export const PostureTab = ({ session, onToast }) => {
           )}
         </Card>
 
-        <Card title="Remediation Actions" style={{ marginTop: 10 }}>
+        {/* ═══════ Remediation Actions Table ═══════ */}
+        <Card style={{ marginTop: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Remediation Actions</span>
+            <span style={{ fontSize: 9, color: C.muted }}>{visibleActions.length} actions</span>
+          </div>
           <div style={{ maxHeight: 220, overflow: "auto", border: `1px solid ${C.border}`, borderRadius: 8 }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
