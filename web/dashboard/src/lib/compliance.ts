@@ -212,3 +212,102 @@ export async function updateComplianceAssessmentSchedule(
     }
   );
 }
+
+/* ── Posture Breakdown ── */
+
+export type PostureBreakdown = {
+  overall_score: number;
+  key_hygiene: number;
+  policy_compliance: number;
+  access_security: number;
+  crypto_posture: number;
+  pqc_readiness: number;
+  framework_scores: Record<string, number>;
+  metrics: Record<string, number>;
+  gap_count: number;
+};
+
+export async function getCompliancePostureBreakdown(session: AuthSession): Promise<PostureBreakdown> {
+  const out = await serviceRequest<{ posture?: PostureBreakdown }>(
+    session,
+    "compliance",
+    `/compliance/posture/breakdown?${tenantQuery(session)}`
+  );
+  return out?.posture || ({} as PostureBreakdown);
+}
+
+/* ── Key Hygiene ── */
+
+export type KeyHygieneReport = {
+  total_keys: number;
+  approved_algorithm_percent: number;
+  rotation_coverage_percent: number;
+  policy_coverage_percent: number;
+  orphaned_count: number;
+  expiring_count: number;
+  deprecated_count: number;
+  pqc_readiness_percent: number;
+  algorithm_distribution: Record<string, number>;
+  orphaned_keys: any[];
+  expiring_keys: any[];
+};
+
+export async function getComplianceKeyHygiene(session: AuthSession): Promise<KeyHygieneReport> {
+  const out = await serviceRequest<{ report?: KeyHygieneReport }>(
+    session,
+    "compliance",
+    `/compliance/keys/hygiene?${tenantQuery(session)}`
+  );
+  return out?.report || ({} as KeyHygieneReport);
+}
+
+/* ── Framework Gaps ── */
+
+export type ComplianceGap = {
+  id: string;
+  framework_id: string;
+  control_id: string;
+  severity: string;
+  title: string;
+  description: string;
+  status: string;
+  detected_at?: string;
+  resolved_at?: string;
+};
+
+export async function getComplianceFrameworkGaps(session: AuthSession, frameworkId: string): Promise<ComplianceGap[]> {
+  const out = await serviceRequest<{ items?: ComplianceGap[] }>(
+    session,
+    "compliance",
+    `/compliance/frameworks/${encodeURIComponent(frameworkId)}/gaps?${tenantQuery(session)}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+/* ── Audit Correlations & Anomalies ── */
+
+export type AuditCorrelation = {
+  correlation_id: string;
+  count: number;
+  first_seen: string;
+  last_seen: string;
+  top_actions: string[];
+};
+
+export type AuditAnomaly = {
+  id: string;
+  type: string;
+  severity: string;
+  description: string;
+  count: number;
+  detected_at: string;
+};
+
+export async function getComplianceAuditAnomalies(session: AuthSession): Promise<AuditAnomaly[]> {
+  const out = await serviceRequest<{ items?: AuditAnomaly[] }>(
+    session,
+    "compliance",
+    `/compliance/audit/anomalies?${tenantQuery(session)}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}

@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   B,
-  Bar,
   Btn,
   Card,
   Chk,
@@ -16,9 +15,34 @@ import {
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
 import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar as RBar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  RadialBarChart,
+  RadialBar,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
+} from "recharts";
+import {
   deleteComplianceTemplate,
   getComplianceAssessment,
   getComplianceAssessmentSchedule,
+  getCompliancePostureBreakdown,
+  getComplianceKeyHygiene,
+  getComplianceFrameworkGaps,
+  getComplianceAuditAnomalies,
   listComplianceAssessmentHistory,
   listComplianceFrameworkCatalog,
   listComplianceTemplates,
@@ -31,11 +55,29 @@ import {
   deleteReportingReportJob,
   downloadReportingReport,
   generateReportingReport,
+  getReportingAlertStats,
+  getReportingMTTR,
   getReportingReportJob,
+  getReportingTopSources,
   listReportingReportJobs,
   listReportingReportTemplates,
   listReportingScheduledReports
 } from "../../../lib/reporting";
+
+/* ── Shared chart tooltip ── */
+const ChartTip = ({ children, style }: any) => (
+  <div style={{ background: C.surface, border: `1px solid ${C.borderHi}`, borderRadius: 8, padding: "8px 12px", fontSize: 10, color: C.text, boxShadow: "0 4px 20px rgba(0,0,0,.5)", ...style }}>
+    {children}
+  </div>
+);
+
+function shortDate(value: any) {
+  const raw = String(value || "").trim();
+  if (!raw) return "-";
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) return raw;
+  return `${dt.getMonth() + 1}/${dt.getDate()}`;
+}
 
 export const ComplianceTab = ({ session, onToast }: any) => {
   const promptDialog = usePromptDialog();
@@ -52,22 +94,27 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [deletingTemplate, setDeletingTemplate] = useState(false);
   const [view, setView] = useState("assessment");
+
+  /* ── NEW: compliance functional state ── */
+  const [postureBreakdown, setPostureBreakdown] = useState<any>(null);
+  const [keyHygiene, setKeyHygiene] = useState<any>(null);
+  const [frameworkGaps, setFrameworkGaps] = useState<any[]>([]);
+  const [anomalies, setAnomalies] = useState<any[]>([]);
+
+  /* ── Reporting state ── */
   const [reportTemplates, setReportTemplates] = useState<any[]>([]);
   const [reportJobs, setReportJobs] = useState<any[]>([]);
   const [scheduledReports, setScheduledReports] = useState<any[]>([]);
-  const [reportForm, setReportForm] = useState<any>({
-    template_id: "",
-    format: "pdf"
-  });
-  const [scheduleForm, setScheduleForm] = useState<any>({
-    name: "weekly-compliance",
-    template_id: "",
-    format: "pdf",
-    schedule: "weekly",
-    recipients: ""
-  });
+  const [reportForm, setReportForm] = useState<any>({ template_id: "", format: "pdf" });
+  const [scheduleForm, setScheduleForm] = useState<any>({ name: "weekly-compliance", template_id: "", format: "pdf", schedule: "weekly", recipients: "" });
   const [reportBusy, setReportBusy] = useState(false);
 
+  /* ── NEW: alert stats state ── */
+  const [alertStats, setAlertStats] = useState<any>(null);
+  const [mttr, setMttr] = useState<any>(null);
+  const [topSources, setTopSources] = useState<any>(null);
+
+  /* ── Template seed logic (unchanged) ── */
   const frameworkSeed = useMemo(() => {
     const list = Array.isArray(frameworkCatalog) ? frameworkCatalog : [];
     return list
@@ -92,93 +139,38 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   }, [frameworkCatalog]);
 
   const buildTemplateDraft = (input: any = {}) => {
-    const numOr = (value: any, fallback: number) => {
-      const n = Number(value);
-      return Number.isFinite(n) ? n : fallback;
-    };
-
+    const numOr = (value: any, fallback: number) => { const n = Number(value); return Number.isFinite(n) ? n : fallback; };
     const sourceFrameworks = Array.isArray(input?.frameworks) ? input.frameworks : [];
     const sourceByID: any = {};
-    sourceFrameworks.forEach((fw: any) => {
-      const id = String(fw?.framework_id || "").trim();
-      if (id) sourceByID[id] = fw;
-    });
-
+    sourceFrameworks.forEach((fw: any) => { const id = String(fw?.framework_id || "").trim(); if (id) sourceByID[id] = fw; });
     const mergedFrameworks = frameworkSeed.map((base: any) => {
       const incoming = sourceByID[base.framework_id] || {};
       const controlByID: any = {};
-      (Array.isArray(incoming?.controls) ? incoming.controls : []).forEach((ctrl: any) => {
-        const id = String(ctrl?.id || "").trim();
-        if (id) controlByID[id] = ctrl;
-      });
-
+      (Array.isArray(incoming?.controls) ? incoming.controls : []).forEach((ctrl: any) => { const id = String(ctrl?.id || "").trim(); if (id) controlByID[id] = ctrl; });
       const mergedControls = (Array.isArray(base?.controls) ? base.controls : []).map((ctrl: any) => {
         const incomingCtrl = controlByID[ctrl.id] || {};
-        return {
-          ...ctrl,
-          ...incomingCtrl,
-          id: ctrl.id,
-          title: String(incomingCtrl?.title || ctrl.title || ""),
-          category: String(incomingCtrl?.category || ctrl.category || ""),
-          requirement: String(incomingCtrl?.requirement || ctrl.requirement || ""),
-          enabled: incomingCtrl?.enabled === undefined ? Boolean(ctrl.enabled) : Boolean(incomingCtrl.enabled),
-          weight: Math.max(0.1, numOr(incomingCtrl?.weight, ctrl.weight || 1)),
-          threshold: Math.max(1, Math.min(100, Math.round(numOr(incomingCtrl?.threshold, ctrl.threshold || 80))))
-        };
+        return { ...ctrl, ...incomingCtrl, id: ctrl.id, title: String(incomingCtrl?.title || ctrl.title || ""), category: String(incomingCtrl?.category || ctrl.category || ""), requirement: String(incomingCtrl?.requirement || ctrl.requirement || ""), enabled: incomingCtrl?.enabled === undefined ? Boolean(ctrl.enabled) : Boolean(incomingCtrl.enabled), weight: Math.max(0.1, numOr(incomingCtrl?.weight, ctrl.weight || 1)), threshold: Math.max(1, Math.min(100, Math.round(numOr(incomingCtrl?.threshold, ctrl.threshold || 80)))) };
       });
-
-      return {
-        ...base,
-        ...incoming,
-        framework_id: base.framework_id,
-        label: String(incoming?.label || base.label || base.framework_id),
-        enabled: incoming?.enabled === undefined ? Boolean(base.enabled) : Boolean(incoming.enabled),
-        weight: Math.max(0.1, numOr(incoming?.weight, base.weight || 1)),
-        controls: mergedControls
-      };
+      return { ...base, ...incoming, framework_id: base.framework_id, label: String(incoming?.label || base.label || base.framework_id), enabled: incoming?.enabled === undefined ? Boolean(base.enabled) : Boolean(incoming.enabled), weight: Math.max(0.1, numOr(incoming?.weight, base.weight || 1)), controls: mergedControls };
     });
-
-    return {
-      id: String(input?.id || ""),
-      tenant_id: String(input?.tenant_id || session?.tenantId || ""),
-      name: String(input?.name || "Custom Compliance Template"),
-      description: String(input?.description || ""),
-      enabled: input?.enabled === undefined ? true : Boolean(input.enabled),
-      frameworks: mergedFrameworks
-    };
+    return { id: String(input?.id || ""), tenant_id: String(input?.tenant_id || session?.tenantId || ""), name: String(input?.name || "Custom Compliance Template"), description: String(input?.description || ""), enabled: input?.enabled === undefined ? true : Boolean(input.enabled), frameworks: mergedFrameworks };
   };
 
+  /* ── Data loaders ── */
   const loadTemplates = async () => {
-    if (!session?.token) {
-      setTemplates([]);
-      setFrameworkCatalog([]);
-      return { templates: [], frameworks: [] };
-    }
-
+    if (!session?.token) { setTemplates([]); setFrameworkCatalog([]); return { templates: [], frameworks: [] }; }
     try {
-      const [tplOut, catalogOut] = await Promise.all([
-        listComplianceTemplates(session),
-        listComplianceFrameworkCatalog(session)
-      ]);
+      const [tplOut, catalogOut] = await Promise.all([listComplianceTemplates(session), listComplianceFrameworkCatalog(session)]);
       const nextTemplates = Array.isArray(tplOut) ? tplOut : [];
       const nextCatalog = Array.isArray(catalogOut) ? catalogOut : [];
       setTemplates(nextTemplates);
       setFrameworkCatalog(nextCatalog);
       return { templates: nextTemplates, frameworks: nextCatalog };
-    } catch (error) {
-      onToast?.(`Compliance templates load failed: ${errMsg(error)}`);
-      return { templates: [], frameworks: [] };
-    }
+    } catch (error) { onToast?.(`Compliance templates load failed: ${errMsg(error)}`); return { templates: [], frameworks: [] }; }
   };
 
   const loadAssessment = async (opts: any = {}) => {
-    if (!session?.token) {
-      setAssessment(null);
-      setHistory([]);
-      setSchedule({ enabled: false, frequency: "daily" });
-      return;
-    }
-
+    if (!session?.token) { setAssessment(null); setHistory([]); setSchedule({ enabled: false, frequency: "daily" }); setPostureBreakdown(null); setKeyHygiene(null); setFrameworkGaps([]); setAnomalies([]); return; }
     if (!opts?.silent) setLoading(true);
     try {
       const payload = await loadTemplates();
@@ -187,74 +179,68 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       const effectiveTemplateID = hasTemplate ? candidateTemplateID : "default";
       if (effectiveTemplateID !== selectedTemplateID) setSelectedTemplateID(effectiveTemplateID);
 
-      const [assessOut, scheduleOut, historyOut] = await Promise.all([
+      const [assessOut, scheduleOut, historyOut, breakdownOut, hygieneOut, anomalyOut] = await Promise.all([
         getComplianceAssessment(session, effectiveTemplateID),
         getComplianceAssessmentSchedule(session),
-        listComplianceAssessmentHistory(session, 20, effectiveTemplateID)
+        listComplianceAssessmentHistory(session, 20, effectiveTemplateID),
+        getCompliancePostureBreakdown(session).catch(() => null),
+        getComplianceKeyHygiene(session).catch(() => null),
+        getComplianceAuditAnomalies(session).catch(() => [])
       ]);
 
       setAssessment(assessOut || null);
       setSchedule(scheduleOut || { enabled: false, frequency: "daily" });
       setHistory(Array.isArray(historyOut) ? historyOut : []);
+      setPostureBreakdown(breakdownOut || null);
+      setKeyHygiene(hygieneOut || null);
+      setAnomalies(Array.isArray(anomalyOut) ? anomalyOut : []);
 
-      if (effectiveTemplateID === "default") {
-        setTemplateDraft(null);
-      } else {
+      /* load gaps for first framework with a score */
+      const fwScores = assessOut?.framework_scores || {};
+      const firstFW = Object.keys(fwScores)[0];
+      if (firstFW) {
+        const gaps = await getComplianceFrameworkGaps(session, firstFW).catch(() => []);
+        setFrameworkGaps(Array.isArray(gaps) ? gaps : []);
+      }
+
+      if (effectiveTemplateID === "default") { setTemplateDraft(null); }
+      else {
         const selected = payload.templates.find((item: any) => String(item?.id || "") === effectiveTemplateID);
         setTemplateDraft(selected ? buildTemplateDraft(selected) : null);
       }
-    } catch (error) {
-      onToast?.(`Compliance assessment load failed: ${errMsg(error)}`);
-    } finally {
-      if (!opts?.silent) setLoading(false);
-    }
+    } catch (error) { onToast?.(`Compliance assessment load failed: ${errMsg(error)}`); }
+    finally { if (!opts?.silent) setLoading(false); }
   };
 
   const loadReporting = async () => {
-    if (!session?.token) {
-      setReportTemplates([]);
-      setReportJobs([]);
-      setScheduledReports([]);
-      return;
-    }
+    if (!session?.token) { setReportTemplates([]); setReportJobs([]); setScheduledReports([]); setAlertStats(null); setMttr(null); setTopSources(null); return; }
     try {
-      const [templatesOut, jobsOut, scheduledOut] = await Promise.all([
+      const [templatesOut, jobsOut, scheduledOut, statsOut, mttrOut, topOut] = await Promise.all([
         listReportingReportTemplates(session),
         listReportingReportJobs(session, 40, 0),
-        listReportingScheduledReports(session)
+        listReportingScheduledReports(session),
+        getReportingAlertStats(session).catch(() => null),
+        getReportingMTTR(session).catch(() => null),
+        getReportingTopSources(session).catch(() => null)
       ]);
-      const templates = Array.isArray(templatesOut) ? templatesOut : [];
-      const jobs = Array.isArray(jobsOut) ? jobsOut : [];
-      const scheduled = Array.isArray(scheduledOut) ? scheduledOut : [];
-      setReportTemplates(templates);
-      setReportJobs(jobs);
-      setScheduledReports(scheduled);
-      if (!reportForm.template_id && templates.length) {
-        setReportForm((prev: any) => ({ ...prev, template_id: String(templates[0]?.id || "") }));
-      }
-      if (!scheduleForm.template_id && templates.length) {
-        setScheduleForm((prev: any) => ({ ...prev, template_id: String(templates[0]?.id || "") }));
-      }
-    } catch (error) {
-      onToast?.(`Reporting load failed: ${errMsg(error)}`);
-    }
+      const tpls = Array.isArray(templatesOut) ? templatesOut : [];
+      setReportTemplates(tpls);
+      setReportJobs(Array.isArray(jobsOut) ? jobsOut : []);
+      setScheduledReports(Array.isArray(scheduledOut) ? scheduledOut : []);
+      setAlertStats(statsOut || null);
+      setMttr(mttrOut || null);
+      setTopSources(topOut || null);
+      if (!reportForm.template_id && tpls.length) setReportForm((prev: any) => ({ ...prev, template_id: String(tpls[0]?.id || "") }));
+      if (!scheduleForm.template_id && tpls.length) setScheduleForm((prev: any) => ({ ...prev, template_id: String(tpls[0]?.id || "") }));
+    } catch (error) { onToast?.(`Reporting load failed: ${errMsg(error)}`); }
   };
 
-  useEffect(() => {
-    void loadAssessment({ templateId: "default" });
-  }, [session?.token, session?.tenantId]);
+  useEffect(() => { void loadAssessment({ templateId: "default" }); }, [session?.token, session?.tenantId]);
+  useEffect(() => { if (view === "reporting") void loadReporting(); }, [view, session?.token, session?.tenantId]);
 
-  useEffect(() => {
-    if (view === "reporting") {
-      void loadReporting();
-    }
-  }, [view, session?.token, session?.tenantId]);
-
+  /* ── Actions (unchanged) ── */
   const runNow = async () => {
-    if (!session?.token) {
-      onToast?.("Login is required.");
-      return;
-    }
+    if (!session?.token) { onToast?.("Login is required."); return; }
     setRunning(true);
     try {
       const out = await runComplianceAssessment(session, { templateId: selectedTemplateID, recompute: true });
@@ -262,122 +248,56 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       const hist = await listComplianceAssessmentHistory(session, 20, selectedTemplateID);
       setHistory(Array.isArray(hist) ? hist : []);
       onToast?.("Compliance assessment completed.");
-    } catch (error) {
-      onToast?.(`Assessment run failed: ${errMsg(error)}`);
-    } finally {
-      setRunning(false);
-    }
+    } catch (error) { onToast?.(`Assessment run failed: ${errMsg(error)}`); }
+    finally { setRunning(false); }
   };
 
   const saveSchedule = async () => {
-    if (!session?.token) {
-      onToast?.("Login is required.");
-      return;
-    }
+    if (!session?.token) { onToast?.("Login is required."); return; }
     setSavingSchedule(true);
     try {
-      const out = await updateComplianceAssessmentSchedule(session, {
-        enabled: Boolean(schedule?.enabled),
-        frequency: String(schedule?.frequency || "daily") as any
-      });
+      const out = await updateComplianceAssessmentSchedule(session, { enabled: Boolean(schedule?.enabled), frequency: String(schedule?.frequency || "daily") as any });
       setSchedule(out || schedule);
       onToast?.("Assessment schedule updated.");
-    } catch (error) {
-      onToast?.(`Schedule update failed: ${errMsg(error)}`);
-    } finally {
-      setSavingSchedule(false);
-    }
+    } catch (error) { onToast?.(`Schedule update failed: ${errMsg(error)}`); }
+    finally { setSavingSchedule(false); }
   };
 
   const createTemplate = async () => {
-    if (!session?.token) {
-      onToast?.("Login is required.");
-      return;
-    }
-
-    const nameInput = await promptDialog.prompt({
-      title: "Create Compliance Template",
-      message: "Provide a name for the custom compliance template.",
-      placeholder: "Template name",
-      confirmLabel: "Create",
-      cancelLabel: "Cancel",
-      validate: (value: string) => (String(value || "").trim() ? "" : "Template name is required.")
-    });
-
+    if (!session?.token) { onToast?.("Login is required."); return; }
+    const nameInput = await promptDialog.prompt({ title: "Create Compliance Template", message: "Provide a name for the custom compliance template.", placeholder: "Template name", confirmLabel: "Create", cancelLabel: "Cancel", validate: (value: string) => (String(value || "").trim() ? "" : "Template name is required.") });
     const name = String(nameInput || "").trim();
     if (!name) return;
-
     setSavingTemplate(true);
     try {
-      const out = await upsertComplianceTemplate(session, {
-        name,
-        description: "",
-        enabled: true,
-        frameworks: Array.isArray(templateDraft?.frameworks) && templateDraft.frameworks.length ? templateDraft.frameworks : frameworkSeed
-      } as any);
+      const out = await upsertComplianceTemplate(session, { name, description: "", enabled: true, frameworks: Array.isArray(templateDraft?.frameworks) && templateDraft.frameworks.length ? templateDraft.frameworks : frameworkSeed } as any);
       const nextID = String(out?.id || "").trim();
       if (nextID) setSelectedTemplateID(nextID);
       await loadAssessment({ silent: true, templateId: nextID || "default" });
       onToast?.("Compliance template created.");
-    } catch (error) {
-      onToast?.(`Template create failed: ${errMsg(error)}`);
-    } finally {
-      setSavingTemplate(false);
-    }
+    } catch (error) { onToast?.(`Template create failed: ${errMsg(error)}`); }
+    finally { setSavingTemplate(false); }
   };
 
   const saveTemplate = async () => {
-    if (!session?.token) {
-      onToast?.("Login is required.");
-      return;
-    }
-    if (selectedTemplateID === "default") {
-      onToast?.("Built-in template is read-only. Create a custom template first.");
-      return;
-    }
-    if (!templateDraft) {
-      onToast?.("No template selected.");
-      return;
-    }
-
+    if (!session?.token) { onToast?.("Login is required."); return; }
+    if (selectedTemplateID === "default") { onToast?.("Built-in template is read-only. Create a custom template first."); return; }
+    if (!templateDraft) { onToast?.("No template selected."); return; }
     setSavingTemplate(true);
     try {
-      const out = await upsertComplianceTemplate(session, {
-        id: selectedTemplateID,
-        name: String(templateDraft?.name || "").trim(),
-        description: String(templateDraft?.description || "").trim(),
-        enabled: Boolean(templateDraft?.enabled),
-        frameworks: Array.isArray(templateDraft?.frameworks) ? templateDraft.frameworks : []
-      } as any);
+      const out = await upsertComplianceTemplate(session, { id: selectedTemplateID, name: String(templateDraft?.name || "").trim(), description: String(templateDraft?.description || "").trim(), enabled: Boolean(templateDraft?.enabled), frameworks: Array.isArray(templateDraft?.frameworks) ? templateDraft.frameworks : [] } as any);
       setTemplateDraft(buildTemplateDraft(out || templateDraft));
       await loadAssessment({ silent: true, templateId: selectedTemplateID });
       onToast?.("Compliance template saved.");
-    } catch (error) {
-      onToast?.(`Template save failed: ${errMsg(error)}`);
-    } finally {
-      setSavingTemplate(false);
-    }
+    } catch (error) { onToast?.(`Template save failed: ${errMsg(error)}`); }
+    finally { setSavingTemplate(false); }
   };
 
   const removeTemplate = async () => {
-    if (!session?.token) {
-      onToast?.("Login is required.");
-      return;
-    }
-    if (selectedTemplateID === "default") {
-      onToast?.("Built-in template cannot be deleted.");
-      return;
-    }
-
-    const ok = await promptDialog.confirm({
-      title: "Delete Template",
-      message: "Delete selected compliance template?",
-      confirmLabel: "Delete",
-      cancelLabel: "Cancel",
-      danger: true
-    });
+    if (!session?.token) { onToast?.("Login is required."); return; }
+    if (selectedTemplateID === "default") { onToast?.("Built-in template cannot be deleted."); return; }
+    const ok = await promptDialog.confirm({ title: "Delete Template", message: "Delete selected compliance template?", confirmLabel: "Delete", cancelLabel: "Cancel", danger: true });
     if (!ok) return;
-
     setDeletingTemplate(true);
     try {
       await deleteComplianceTemplate(session, selectedTemplateID);
@@ -385,20 +305,14 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       setTemplateDraft(null);
       await loadAssessment({ silent: true, templateId: "default" });
       onToast?.("Compliance template deleted.");
-    } catch (error) {
-      onToast?.(`Template delete failed: ${errMsg(error)}`);
-    } finally {
-      setDeletingTemplate(false);
-    }
+    } catch (error) { onToast?.(`Template delete failed: ${errMsg(error)}`); }
+    finally { setDeletingTemplate(false); }
   };
 
   const patchFramework = (frameworkID: string, patch: any) => {
     setTemplateDraft((prev: any) => {
       if (!prev) return prev;
-      const frameworks = (Array.isArray(prev?.frameworks) ? prev.frameworks : []).map((fw: any) => {
-        if (String(fw?.framework_id || "") !== frameworkID) return fw;
-        return { ...fw, ...patch };
-      });
+      const frameworks = (Array.isArray(prev?.frameworks) ? prev.frameworks : []).map((fw: any) => String(fw?.framework_id || "") !== frameworkID ? fw : { ...fw, ...patch });
       return { ...prev, frameworks };
     });
   };
@@ -408,37 +322,75 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       if (!prev) return prev;
       const frameworks = (Array.isArray(prev?.frameworks) ? prev.frameworks : []).map((fw: any) => {
         if (String(fw?.framework_id || "") !== frameworkID) return fw;
-        const controls = (Array.isArray(fw?.controls) ? fw.controls : []).map((ctrl: any) => {
-          if (String(ctrl?.id || "") !== controlID) return ctrl;
-          return { ...ctrl, ...patch };
-        });
+        const controls = (Array.isArray(fw?.controls) ? fw.controls : []).map((ctrl: any) => String(ctrl?.id || "") !== controlID ? ctrl : { ...ctrl, ...patch });
         return { ...fw, controls };
       });
       return { ...prev, frameworks };
     });
   };
 
-  const templateOptions = [
-    { id: "default", name: "Built-in Baseline" },
-    ...(Array.isArray(templates) ? templates : []).map((item: any) => ({ id: String(item?.id || ""), name: String(item?.name || item?.id || "Custom Template") }))
-  ];
+  const triggerReportNow = async () => {
+    if (!session?.token) { onToast?.("Login is required."); return; }
+    if (!String(reportForm?.template_id || "").trim()) { onToast?.("Select a report template."); return; }
+    setReportBusy(true);
+    try {
+      const created = await generateReportingReport(session, { template_id: String(reportForm.template_id || "").trim(), format: String(reportForm.format || "pdf").trim().toLowerCase(), requested_by: String(session?.username || "dashboard") });
+      const stable = await getReportingReportJob(session, String(created?.id || ""));
+      onToast?.(`Report queued: ${String(stable?.id || created?.id || "").slice(0, 12)}...`);
+      await loadReporting();
+    } catch (error) { onToast?.(`Report generation failed: ${errMsg(error)}`); }
+    finally { setReportBusy(false); }
+  };
+
+  const downloadJob = async (job: any) => {
+    if (!session?.token) return;
+    try {
+      const out = await downloadReportingReport(session, String(job?.id || ""));
+      const raw = String(out?.content || "");
+      const binary = atob(raw);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], { type: String(out?.content_type || "application/octet-stream") });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${String(job?.template_id || "report")}-${String(job?.id || "job")}.${String(job?.format || "bin").toLowerCase()}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (error) { onToast?.(`Download failed: ${errMsg(error)}`); }
+  };
+
+  const deleteJob = async (job: any) => {
+    if (!session?.token) return;
+    const ok = await promptDialog.confirm({ title: "Delete Report", message: `Delete report job ${String(job?.id || "").slice(0, 16)}?`, confirmLabel: "Delete", cancelLabel: "Cancel", danger: true });
+    if (!ok) return;
+    try { await deleteReportingReportJob(session, String(job?.id || "")); onToast?.("Report deleted."); await loadReporting(); }
+    catch (error) { onToast?.(`Delete report failed: ${errMsg(error)}`); }
+  };
+
+  const createScheduleReport = async () => {
+    if (!session?.token) { onToast?.("Login is required."); return; }
+    if (!String(scheduleForm?.template_id || "").trim()) { onToast?.("Select a template for schedule."); return; }
+    setReportBusy(true);
+    try {
+      await createReportingScheduledReport(session, { name: String(scheduleForm?.name || "weekly-compliance").trim() || "weekly-compliance", template_id: String(scheduleForm?.template_id || "").trim(), format: String(scheduleForm?.format || "pdf").trim().toLowerCase(), schedule: String(scheduleForm?.schedule || "weekly").trim().toLowerCase() as any, recipients: String(scheduleForm?.recipients || "").split(",").map((v) => String(v || "").trim()).filter(Boolean) });
+      onToast?.("Scheduled report created.");
+      await loadReporting();
+    } catch (error) { onToast?.(`Create schedule failed: ${errMsg(error)}`); }
+    finally { setReportBusy(false); }
+  };
+
+  /* ── Computed data ── */
+  const templateOptions = [{ id: "default", name: "Built-in Baseline" }, ...(Array.isArray(templates) ? templates : []).map((item: any) => ({ id: String(item?.id || ""), name: String(item?.name || item?.id || "Custom Template") }))];
 
   const frameworkScores = assessment?.framework_scores || {};
   const labelByID: any = {};
-  (Array.isArray(frameworkCatalog) ? frameworkCatalog : []).forEach((fw: any) => {
-    const id = String(fw?.id || "").trim();
-    if (id) labelByID[id] = String(`${String(fw?.name || id).trim()} ${String(fw?.version || "").trim()}`).trim();
-  });
-  (Array.isArray(templateDraft?.frameworks) ? templateDraft.frameworks : []).forEach((fw: any) => {
-    const id = String(fw?.framework_id || "").trim();
-    if (id && String(fw?.label || "").trim()) labelByID[id] = String(fw.label);
-  });
+  (Array.isArray(frameworkCatalog) ? frameworkCatalog : []).forEach((fw: any) => { const id = String(fw?.id || "").trim(); if (id) labelByID[id] = String(`${String(fw?.name || id).trim()} ${String(fw?.version || "").trim()}`).trim(); });
+  (Array.isArray(templateDraft?.frameworks) ? templateDraft.frameworks : []).forEach((fw: any) => { const id = String(fw?.framework_id || "").trim(); if (id && String(fw?.label || "").trim()) labelByID[id] = String(fw.label); });
 
-  const frameworkIDs = Array.from(new Set([
-    ...Object.keys(frameworkScores || {}),
-    ...(Array.isArray(templateDraft?.frameworks) ? templateDraft.frameworks.map((fw: any) => String(fw?.framework_id || "")).filter(Boolean) : [])
-  ]));
-
+  const frameworkIDs = Array.from(new Set([...Object.keys(frameworkScores || {}), ...(Array.isArray(templateDraft?.frameworks) ? templateDraft.frameworks.map((fw: any) => String(fw?.framework_id || "")).filter(Boolean) : [])]));
   const palette = [C.green, C.blue, C.amber, C.accent];
   const frameworkRows = frameworkIDs.map((id, idx) => {
     const score = Math.max(0, Math.min(100, Number(frameworkScores?.[id] || 0)));
@@ -449,161 +401,243 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   const pqcReady = Math.max(0, Math.min(100, Number(pqc?.ready_percent || assessment?.posture?.pqc_readiness || 0)));
   const findings = Array.isArray(assessment?.findings) ? assessment.findings : [];
   const score = Math.max(0, Math.min(100, Number(assessment?.overall_score || assessment?.posture?.overall_score || 0)));
+  const scoreColor = score >= 85 ? C.green : score >= 65 ? C.blue : C.amber;
 
   const toneForFinding = (severity: string) => {
     const s = String(severity || "").toLowerCase();
     if (s === "critical") return "red";
-    if (s === "high") return "amber";
-    if (s === "warning" || s === "medium") return "amber";
+    if (s === "high" || s === "warning" || s === "medium") return "amber";
     return "blue";
   };
+
+  /* ── Chart data ── */
+  const radarData = useMemo(() => frameworkRows.map((r) => ({ framework: r.label.split(" ")[0], score: r.score })), [frameworkRows]);
 
   const trendData = useMemo(() => {
     const items = Array.isArray(history) ? [...history] : [];
     items.sort((a: any, b: any) => new Date(String(a?.created_at || 0)).getTime() - new Date(String(b?.created_at || 0)).getTime());
-    return items.slice(-12).map((item: any) => ({
-      id: String(item?.id || ""),
-      score: Math.max(0, Math.min(100, Number(item?.overall_score || 0))),
-      at: String(item?.created_at || "")
+    return items.slice(-20).map((item: any) => ({
+      name: shortDate(item?.created_at),
+      score: Math.max(0, Math.min(100, Number(item?.overall_score || 0)))
     }));
   }, [history]);
 
-  const trendPoints = trendData.map((item: any, index: number) => {
-    const x = trendData.length === 1 ? 50 : (index / (trendData.length - 1)) * 100;
-    const y = 100 - Math.max(0, Math.min(100, Number(item?.score || 0)));
-    return {
-      ...item,
-      x,
-      y: Math.max(4, Math.min(96, y)),
-      label: new Date(String(item?.at || Date.now())).toLocaleDateString(undefined, { month: "short", day: "numeric" })
-    };
-  });
-  const trendPolyline = trendPoints.map((point: any) => `${point.x},${point.y}`).join(" ");
+  const gaugeData = useMemo(() => [{ name: "Score", value: score, fill: scoreColor }], [score, scoreColor]);
 
-  const triggerReportNow = async () => {
-    if (!session?.token) {
-      onToast?.("Login is required.");
-      return;
-    }
-    if (!String(reportForm?.template_id || "").trim()) {
-      onToast?.("Select a report template.");
-      return;
-    }
-    setReportBusy(true);
-    try {
-      const created = await generateReportingReport(session, {
-        template_id: String(reportForm.template_id || "").trim(),
-        format: String(reportForm.format || "pdf").trim().toLowerCase(),
-        requested_by: String(session?.username || "dashboard")
-      });
-      const stable = await getReportingReportJob(session, String(created?.id || ""));
-      onToast?.(`Report queued: ${String(stable?.id || created?.id || "").slice(0, 12)}...`);
-      await loadReporting();
-    } catch (error) {
-      onToast?.(`Report generation failed: ${errMsg(error)}`);
-    } finally {
-      setReportBusy(false);
-    }
-  };
+  const pqcDonut = useMemo(() => {
+    const migrated = Number(pqc?.ml_kem_migrated || 0) + Number(pqc?.ml_dsa_migrated || 0);
+    const pending = Number(pqc?.pending || 0);
+    const data = [];
+    if (migrated > 0) data.push({ name: "Migrated", value: migrated, fill: C.green });
+    if (pending > 0) data.push({ name: "Pending", value: pending, fill: C.amber });
+    if (!data.length) data.push({ name: "No Data", value: 1, fill: C.border });
+    return data;
+  }, [pqc]);
 
-  const downloadJob = async (job: any) => {
-    if (!session?.token) return;
-    try {
-      const out = await downloadReportingReport(session, String(job?.id || ""));
-      const raw = String(out?.content || "");
-      const binary = atob(raw);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i += 1) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: String(out?.content_type || "application/octet-stream") });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      const ext = String(job?.format || "bin").toLowerCase();
-      a.href = url;
-      a.download = `${String(job?.template_id || "report")}-${String(job?.id || "job")}.${ext}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      onToast?.(`Download failed: ${errMsg(error)}`);
-    }
-  };
-
-  const deleteJob = async (job: any) => {
-    if (!session?.token) return;
-    const ok = await promptDialog.confirm({
-      title: "Delete Report",
-      message: `Delete report job ${String(job?.id || "").slice(0, 16)}?`,
-      confirmLabel: "Delete",
-      cancelLabel: "Cancel",
-      danger: true
+  const findingSeverityCounts = useMemo(() => {
+    const counts = { critical: 0, high: 0, warning: 0, info: 0 };
+    findings.forEach((f: any) => {
+      const s = String(f?.severity || "").toLowerCase();
+      if (s === "critical") counts.critical++;
+      else if (s === "high") counts.high++;
+      else if (s === "warning" || s === "medium") counts.warning++;
+      else counts.info++;
     });
-    if (!ok) return;
-    try {
-      await deleteReportingReportJob(session, String(job?.id || ""));
-      onToast?.("Report deleted.");
-      await loadReporting();
-    } catch (error) {
-      onToast?.(`Delete report failed: ${errMsg(error)}`);
-    }
-  };
+    return counts;
+  }, [findings]);
+  const findingTotal = findingSeverityCounts.critical + findingSeverityCounts.high + findingSeverityCounts.warning + findingSeverityCounts.info;
 
-  const createSchedule = async () => {
-    if (!session?.token) {
-      onToast?.("Login is required.");
-      return;
-    }
-    if (!String(scheduleForm?.template_id || "").trim()) {
-      onToast?.("Select a template for schedule.");
-      return;
-    }
-    setReportBusy(true);
-    try {
-      await createReportingScheduledReport(session, {
-        name: String(scheduleForm?.name || "weekly-compliance").trim() || "weekly-compliance",
-        template_id: String(scheduleForm?.template_id || "").trim(),
-        format: String(scheduleForm?.format || "pdf").trim().toLowerCase(),
-        schedule: String(scheduleForm?.schedule || "weekly").trim().toLowerCase() as any,
-        recipients: String(scheduleForm?.recipients || "")
-          .split(",")
-          .map((v) => String(v || "").trim())
-          .filter(Boolean)
-      });
-      onToast?.("Scheduled report created.");
-      await loadReporting();
-    } catch (error) {
-      onToast?.(`Create schedule failed: ${errMsg(error)}`);
-    } finally {
-      setReportBusy(false);
-    }
-  };
+  /* posture breakdown bar data */
+  const breakdownBars = useMemo(() => {
+    if (!postureBreakdown) return [];
+    return [
+      { name: "Key Hygiene", value: Math.round(Number(postureBreakdown.key_hygiene || 0)), fill: C.blue },
+      { name: "Policy", value: Math.round(Number(postureBreakdown.policy_compliance || 0)), fill: C.green },
+      { name: "Access", value: Math.round(Number(postureBreakdown.access_security || 0)), fill: C.amber },
+      { name: "Crypto", value: Math.round(Number(postureBreakdown.crypto_posture || 0)), fill: C.accent },
+      { name: "PQC", value: Math.round(Number(postureBreakdown.pqc_readiness || 0)), fill: C.purple }
+    ];
+  }, [postureBreakdown]);
 
+  /* key hygiene algorithm distribution */
+  const algoDistribution = useMemo(() => {
+    if (!keyHygiene?.algorithm_distribution) return [];
+    return Object.entries(keyHygiene.algorithm_distribution)
+      .map(([name, count]) => ({ name, count: Number(count || 0) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+  }, [keyHygiene]);
+
+  /* ── Alert stats chart data ── */
+  const severityDonut = useMemo(() => {
+    if (!alertStats?.by_severity) return [];
+    const map: any = alertStats.by_severity;
+    return [
+      { name: "Critical", value: Number(map.critical || 0), fill: C.red },
+      { name: "High", value: Number(map.high || 0), fill: C.amber },
+      { name: "Warning", value: Number(map.warning || 0), fill: "#d97706" },
+      { name: "Info", value: Number(map.info || 0), fill: C.blue }
+    ].filter((d) => d.value > 0);
+  }, [alertStats]);
+
+  const dailyTrend = useMemo(() => {
+    if (!alertStats?.daily_trend) return [];
+    return Object.entries(alertStats.daily_trend)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-14)
+      .map(([date, count]) => ({ name: shortDate(date), alerts: Number(count || 0) }));
+  }, [alertStats]);
+
+  const statusBar = useMemo(() => {
+    if (!alertStats?.by_status) return null;
+    const map: any = alertStats.by_status;
+    const total = Object.values(map).reduce((s: number, v: any) => s + Number(v || 0), 0) as number;
+    if (!total) return null;
+    return {
+      new: Number(map.new || 0),
+      acknowledged: Number(map.acknowledged || 0),
+      resolved: Number(map.resolved || 0),
+      false_positive: Number(map.false_positive || 0),
+      total
+    };
+  }, [alertStats]);
+
+  const mttrBars = useMemo(() => {
+    if (!mttr) return [];
+    return ["critical", "high", "warning", "info"]
+      .filter((k) => Number(mttr[k] || 0) > 0)
+      .map((k) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), minutes: Math.round(Number(mttr[k] || 0)), fill: k === "critical" ? C.red : k === "high" ? C.amber : k === "warning" ? "#d97706" : C.blue }));
+  }, [mttr]);
+
+  const topActors = useMemo(() => Array.isArray(topSources?.top_actors) ? topSources.top_actors.slice(0, 5) : [], [topSources]);
+  const topIPs = useMemo(() => Array.isArray(topSources?.top_ips) ? topSources.top_ips.slice(0, 5) : [], [topSources]);
+  const topServices = useMemo(() => Array.isArray(topSources?.top_services) ? topSources.top_services.slice(0, 5) : [], [topSources]);
+
+  /* ══════════════════════════ REPORTING VIEW ══════════════════════════ */
   if (view === "reporting") {
     return (
       <div>
         <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-          <Btn
-            small
-            onClick={() => setView("assessment")}
-            style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}
-          >
-            Assessment
-          </Btn>
-          <Btn
-            small
-            onClick={() => setView("reporting")}
-            style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}
-          >
-            Reporting
-          </Btn>
+          <Btn small onClick={() => setView("assessment")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Assessment</Btn>
+          <Btn small onClick={() => setView("reporting")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}>Reporting</Btn>
         </div>
 
-        <Section
-          title="Compliance Reporting"
-          actions={<Btn small onClick={() => void loadReporting()} disabled={reportBusy}>{reportBusy ? "Working..." : "Refresh"}</Btn>}
-        >
+        <Section title="Compliance Reporting" actions={<Btn small onClick={() => void loadReporting()} disabled={reportBusy}>{reportBusy ? "Working..." : "Refresh"}</Btn>}>
+
+          {/* ═══ Alert Analytics Dashboard ═══ */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+            {/* Severity Donut */}
+            <Card>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Alert Severity</span>
+                <B c="accent">{alertStats?.total || 0} total</B>
+              </div>
+              {severityDonut.length > 0 ? (
+                <ResponsiveContainer width="100%" height={160}>
+                  <PieChart>
+                    <Pie data={severityDonut} cx="50%" cy="50%" innerRadius={35} outerRadius={55} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                      {severityDonut.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                    </Pie>
+                    <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ color: payload[0]?.payload?.fill, fontWeight: 700 }}>{payload[0]?.name}</span>: {payload[0]?.value}</ChartTip> : null} />
+                    <Legend verticalAlign="bottom" height={24} iconType="circle" iconSize={8} formatter={(v) => <span style={{ color: C.dim, fontSize: 9 }}>{v}</span>} />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No alert data</span></div>
+              )}
+            </Card>
+
+            {/* Daily Alert Trend */}
+            <Card>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Daily Trend</span>
+                <B c="blue">{dailyTrend.length} days</B>
+              </div>
+              {dailyTrend.length > 0 ? (
+                <ResponsiveContainer width="100%" height={160}>
+                  <AreaChart data={dailyTrend}>
+                    <defs>
+                      <linearGradient id="alertGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={C.accent} stopOpacity={0.25} />
+                        <stop offset="95%" stopColor={C.accent} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" tick={{ fill: C.muted, fontSize: 8 }} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
+                    <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={25} allowDecimals={false} />
+                    <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><div style={{ fontWeight: 700, color: C.accent, marginBottom: 2 }}>{label}</div>Alerts: <span style={{ fontWeight: 700 }}>{payload[0]?.value}</span></ChartTip> : null} cursor={{ stroke: C.borderHi, strokeDasharray: "3 3" }} />
+                    <Area type="monotone" dataKey="alerts" stroke={C.accent} strokeWidth={2} fill="url(#alertGrad)" dot={{ fill: C.accent, r: 2, strokeWidth: 0 }} activeDot={{ fill: C.accent, r: 4, stroke: C.bg, strokeWidth: 2 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No daily trend data</span></div>
+              )}
+            </Card>
+
+            {/* MTTR by Severity */}
+            <Card>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Mean Time to Resolve</span>
+                <B c="green">MTTR</B>
+              </div>
+              {mttrBars.length > 0 ? (
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart data={mttrBars} layout="vertical">
+                    <XAxis type="number" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} unit="m" />
+                    <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
+                    <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} min</ChartTip> : null} cursor={{ fill: "rgba(6,214,224,.04)" }} />
+                    <RBar dataKey="minutes" radius={[0, 4, 4, 0]}>
+                      {mttrBars.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                    </RBar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No MTTR data</span></div>
+              )}
+            </Card>
+          </div>
+
+          {/* ═══ Alert Status Progress Bar ═══ */}
+          {statusBar && (
+            <Card style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Alert Resolution Status</span>
+                <span style={{ fontSize: 9, color: C.muted }}>{statusBar.total} total</span>
+              </div>
+              <div style={{ display: "flex", height: 14, borderRadius: 7, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                {statusBar.resolved > 0 && <div style={{ width: `${(statusBar.resolved / statusBar.total) * 100}%`, background: C.green }} title={`Resolved: ${statusBar.resolved}`} />}
+                {statusBar.acknowledged > 0 && <div style={{ width: `${(statusBar.acknowledged / statusBar.total) * 100}%`, background: C.blue }} title={`Acknowledged: ${statusBar.acknowledged}`} />}
+                {statusBar.new > 0 && <div style={{ width: `${(statusBar.new / statusBar.total) * 100}%`, background: C.amber }} title={`New: ${statusBar.new}`} />}
+                {statusBar.false_positive > 0 && <div style={{ width: `${(statusBar.false_positive / statusBar.total) * 100}%`, background: C.muted }} title={`False Positive: ${statusBar.false_positive}`} />}
+              </div>
+              <div style={{ display: "flex", gap: 14, marginTop: 6, flexWrap: "wrap" }}>
+                {[["Resolved", statusBar.resolved, C.green], ["Acknowledged", statusBar.acknowledged, C.blue], ["New", statusBar.new, C.amber], ["False Positive", statusBar.false_positive, C.muted]].map(([label, count, color]) => (
+                  <div key={String(label)} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: color as string }} />
+                    {label} ({count})
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* ═══ Top Sources ═══ */}
+          {(topActors.length > 0 || topIPs.length > 0 || topServices.length > 0) && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+              {[["Top Actors", topActors, C.accent], ["Top Source IPs", topIPs, C.blue], ["Top Services", topServices, C.green]].map(([title, items, color]) => (
+                <Card key={String(title)}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 6, display: "block" }}>{title as string}</span>
+                  {(items as any[]).length > 0 ? (items as any[]).map((item: any, idx: number) => (
+                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
+                      <span style={{ fontSize: 10, color: C.dim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "70%" }}>{String(item?.key || "-")}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: color as string }}>{Number(item?.count || 0)}</span>
+                    </div>
+                  )) : <span style={{ fontSize: 10, color: C.muted }}>No data</span>}
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* ═══ Report Generation + Schedule (existing, kept) ═══ */}
           <Row2>
             <Card>
               <div style={{ fontSize: 12, color: C.text, fontWeight: 700, marginBottom: 8 }}>Generate Report</div>
@@ -611,9 +645,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                 <FG label="Template">
                   <Sel value={String(reportForm?.template_id || "")} onChange={(e) => setReportForm((prev: any) => ({ ...prev, template_id: e.target.value }))}>
                     <option value="">Select template</option>
-                    {(Array.isArray(reportTemplates) ? reportTemplates : []).map((t: any) => (
-                      <option key={String(t?.id || "")} value={String(t?.id || "")}>{String(t?.name || t?.id || "template")}</option>
-                    ))}
+                    {(Array.isArray(reportTemplates) ? reportTemplates : []).map((t: any) => <option key={String(t?.id || "")} value={String(t?.id || "")}>{String(t?.name || t?.id || "template")}</option>)}
                   </Sel>
                 </FG>
                 <FG label="Format">
@@ -626,7 +658,6 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                 <div><Btn small primary onClick={() => void triggerReportNow()} disabled={reportBusy}>{reportBusy ? "Generating..." : "Run Report"}</Btn></div>
               </div>
             </Card>
-
             <Card>
               <div style={{ fontSize: 12, color: C.text, fontWeight: 700, marginBottom: 8 }}>Create Schedule</div>
               <div style={{ display: "grid", gap: 8 }}>
@@ -634,31 +665,25 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                 <FG label="Template">
                   <Sel value={String(scheduleForm?.template_id || "")} onChange={(e) => setScheduleForm((prev: any) => ({ ...prev, template_id: e.target.value }))}>
                     <option value="">Select template</option>
-                    {(Array.isArray(reportTemplates) ? reportTemplates : []).map((t: any) => (
-                      <option key={String(t?.id || "")} value={String(t?.id || "")}>{String(t?.name || t?.id || "template")}</option>
-                    ))}
+                    {(Array.isArray(reportTemplates) ? reportTemplates : []).map((t: any) => <option key={String(t?.id || "")} value={String(t?.id || "")}>{String(t?.name || t?.id || "template")}</option>)}
                   </Sel>
                 </FG>
                 <Row2>
                   <FG label="Format">
                     <Sel value={String(scheduleForm?.format || "pdf")} onChange={(e) => setScheduleForm((prev: any) => ({ ...prev, format: e.target.value }))}>
-                      <option value="pdf">PDF</option>
-                      <option value="json">JSON</option>
-                      <option value="csv">CSV</option>
+                      <option value="pdf">PDF</option><option value="json">JSON</option><option value="csv">CSV</option>
                     </Sel>
                   </FG>
                   <FG label="Schedule">
                     <Sel value={String(scheduleForm?.schedule || "weekly")} onChange={(e) => setScheduleForm((prev: any) => ({ ...prev, schedule: e.target.value }))}>
-                      <option value="hourly">Hourly</option>
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
+                      <option value="hourly">Hourly</option><option value="daily">Daily</option><option value="weekly">Weekly</option>
                     </Sel>
                   </FG>
                 </Row2>
                 <FG label="Recipients (comma separated)">
                   <Inp value={String(scheduleForm?.recipients || "")} onChange={(e) => setScheduleForm((prev: any) => ({ ...prev, recipients: e.target.value }))} placeholder="admin@org.com,security@org.com" />
                 </FG>
-                <div><Btn small onClick={() => void createSchedule()} disabled={reportBusy}>{reportBusy ? "Saving..." : "Create Schedule"}</Btn></div>
+                <div><Btn small onClick={() => void createScheduleReport()} disabled={reportBusy}>{reportBusy ? "Saving..." : "Create Schedule"}</Btn></div>
               </div>
             </Card>
           </Row2>
@@ -686,7 +711,6 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                 {!Array.isArray(reportJobs) || !reportJobs.length ? <div style={{ fontSize: 10, color: C.muted }}>No reports generated yet.</div> : null}
               </div>
             </Card>
-
             <Card>
               <div style={{ fontSize: 12, color: C.text, fontWeight: 700, marginBottom: 8 }}>Scheduled Reports</div>
               <div style={{ display: "grid", gap: 6, maxHeight: 240, overflowY: "auto" }}>
@@ -710,23 +734,12 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     );
   }
 
+  /* ══════════════════════════ ASSESSMENT VIEW ══════════════════════════ */
   return (
     <div>
       <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
-        <Btn
-          small
-          onClick={() => setView("assessment")}
-          style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}
-        >
-          Assessment
-        </Btn>
-        <Btn
-          small
-          onClick={() => setView("reporting")}
-          style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}
-        >
-          Reporting
-        </Btn>
+        <Btn small onClick={() => setView("assessment")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}>Assessment</Btn>
+        <Btn small onClick={() => setView("reporting")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Reporting</Btn>
       </div>
       <Section
         title="Compliance Posture"
@@ -745,9 +758,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 8px", border: `1px solid ${C.border}`, borderRadius: 8 }}>
               <Chk label="Scheduled" checked={Boolean(schedule?.enabled)} onChange={() => setSchedule((prev: any) => ({ ...prev, enabled: !prev?.enabled }))} />
               <Sel w={96} value={String(schedule?.frequency || "daily")} onChange={(e) => setSchedule((prev: any) => ({ ...prev, frequency: e.target.value }))}>
-                <option value="hourly">Hourly</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
+                <option value="hourly">Hourly</option><option value="daily">Daily</option><option value="weekly">Weekly</option>
               </Sel>
               <Btn small onClick={() => void saveSchedule()} disabled={savingSchedule}>{savingSchedule ? "Saving..." : "Save"}</Btn>
             </div>
@@ -758,6 +769,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
           Assessment is calculated from real key/certificate posture and scored against the selected template ({selectedTemplateID === "default" ? "Built-in Baseline" : "Custom Template"}).
         </div>
 
+        {/* ═══ Template Configuration (unchanged) ═══ */}
         {selectedTemplateID !== "default" && templateDraft ? (
           <Card>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -794,76 +806,186 @@ export const ComplianceTab = ({ session, onToast }: any) => {
             </div>
           </Card>
         ) : null}
-
         {selectedTemplateID === "default" ? <Card><div style={{ fontSize: 10, color: C.muted }}>Built-in Baseline is read-only. Create a custom template to configure framework/control weights, thresholds, and enabled controls.</div></Card> : null}
 
         <div style={{ height: 10 }} />
 
-        <Row2>
+        {/* ═══ ROW 1: Score Gauge + Framework Radar + PQC Donut ═══ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
+          {/* Overall Score Gauge */}
           <Card>
-            <div style={{ display: "grid", gridTemplateColumns: "126px 1fr", gap: 10 }}>
-              <Card style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                <div style={{ fontSize: 48, lineHeight: 1, fontWeight: 800, color: C.accent }}>{score}</div>
-                <div style={{ fontSize: 11, color: C.dim }}>/ 100</div>
-                <div style={{ width: "100%", marginTop: 8 }}><Bar pct={score} color={score >= 85 ? C.green : score >= 65 ? C.blue : C.amber} /></div>
-              </Card>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
-                {frameworkRows.map((row) => (
-                  <Card key={row.id}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, marginBottom: 4 }}>
-                      <span style={{ color: C.text, fontWeight: 700 }}>{row.label}</span>
-                      <span style={{ color: row.score >= 85 ? C.green : row.score >= 65 ? C.blue : C.amber, fontWeight: 700 }}>{row.score}%</span>
-                    </div>
-                    <Bar pct={row.score} color={row.color} />
-                  </Card>
-                ))}
-              </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Overall Score</span>
+              <B c={score >= 85 ? "green" : score >= 65 ? "blue" : "amber"}>{score}/100</B>
             </div>
+            <ResponsiveContainer width="100%" height={150}>
+              <RadialBarChart cx="50%" cy="50%" innerRadius="50%" outerRadius="90%" startAngle={210} endAngle={-30} data={gaugeData} barSize={14}>
+                <RadialBar dataKey="value" cornerRadius={7} background={{ fill: C.border }} />
+              </RadialBarChart>
+            </ResponsiveContainer>
+            <div style={{ textAlign: "center", fontSize: 28, fontWeight: 800, color: scoreColor, marginTop: -8 }}>{score}</div>
+            <div style={{ textAlign: "center", fontSize: 9, color: C.muted }}>Compliance Score</div>
           </Card>
 
+          {/* Framework Radar */}
           <Card>
-            <div style={{ fontSize: 11, color: C.text, fontWeight: 700, marginBottom: 8 }}>Post-Quantum Readiness</div>
-            <div style={{ fontSize: 54, lineHeight: 1, fontWeight: 800, color: C.green, textAlign: "center", marginTop: 4 }}>{`${Math.round(pqcReady)}%`}</div>
-            <div style={{ fontSize: 11, color: C.dim, textAlign: "center", marginTop: 6 }}>PQC-ready keys</div>
-            <div style={{ height: 8 }} />
-            {[["ML-KEM migrated", Number(pqc?.ml_kem_migrated || 0)], ["ML-DSA migrated", Number(pqc?.ml_dsa_migrated || 0)], ["Pending", Number(pqc?.pending || 0)]].map(([k, v]) => (
-              <div key={String(k)} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
-                <span style={{ color: C.muted }}>{k}</span>
-                <span style={{ color: C.text, fontWeight: 700 }}>{Number(v).toLocaleString()}</span>
-              </div>
-            ))}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Framework Coverage</span>
+              <B c="accent">{frameworkRows.length} frameworks</B>
+            </div>
+            {radarData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="65%">
+                  <PolarGrid stroke={C.border} />
+                  <PolarAngleAxis dataKey="framework" tick={{ fill: C.dim, fontSize: 9 }} />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: C.muted, fontSize: 8 }} tickCount={4} />
+                  <Radar dataKey="score" stroke={C.accent} fill={C.accent} fillOpacity={0.2} strokeWidth={2} />
+                </RadarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: 180, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No framework data</span></div>
+            )}
           </Card>
-        </Row2>
+
+          {/* PQC Readiness Donut */}
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Post-Quantum Readiness</span>
+              <B c="green">{Math.round(pqcReady)}%</B>
+            </div>
+            <ResponsiveContainer width="100%" height={140}>
+              <PieChart>
+                <Pie data={pqcDonut} cx="50%" cy="50%" innerRadius={35} outerRadius={50} paddingAngle={3} dataKey="value" strokeWidth={0}>
+                  {pqcDonut.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                </Pie>
+                <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ color: payload[0]?.payload?.fill, fontWeight: 700 }}>{payload[0]?.name}</span>: {payload[0]?.value}</ChartTip> : null} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, marginTop: 2 }}>
+              {[["ML-KEM", Number(pqc?.ml_kem_migrated || 0)], ["ML-DSA", Number(pqc?.ml_dsa_migrated || 0)], ["Pending", Number(pqc?.pending || 0)]].map(([k, v]) => (
+                <div key={String(k)} style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.text }}>{Number(v).toLocaleString()}</div>
+                  <div style={{ fontSize: 8, color: C.muted }}>{k}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
 
         <div style={{ height: 10 }} />
+
+        {/* ═══ ROW 2: Posture Breakdown + Key Hygiene ═══ */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {/* Posture Category Breakdown */}
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Posture Breakdown</span>
+              <B c="accent">{postureBreakdown ? `${Number(postureBreakdown.gap_count || 0)} gaps` : "-"}</B>
+            </div>
+            {breakdownBars.length > 0 ? (
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={breakdownBars} layout="vertical">
+                  <XAxis type="number" domain={[0, 100]} tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
+                  <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value}/100</ChartTip> : null} cursor={{ fill: "rgba(6,214,224,.04)" }} />
+                  <RBar dataKey="value" radius={[0, 4, 4, 0]}>
+                    {breakdownBars.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                  </RBar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>Run an assessment to populate posture breakdown.</span></div>
+            )}
+          </Card>
+
+          {/* Key Hygiene / Algorithm Distribution */}
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Key Hygiene</span>
+              <B c="blue">{keyHygiene ? `${Number(keyHygiene.total_keys || 0)} keys` : "-"}</B>
+            </div>
+            {algoDistribution.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height={110}>
+                  <BarChart data={algoDistribution}>
+                    <XAxis dataKey="name" tick={{ fill: C.dim, fontSize: 8 }} axisLine={{ stroke: C.border }} tickLine={false} />
+                    <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={25} allowDecimals={false} />
+                    <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accent }}>{label}</span>: {payload[0]?.value} keys</ChartTip> : null} cursor={{ fill: "rgba(6,214,224,.04)" }} />
+                    <RBar dataKey="count" fill={C.accent} radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginTop: 8 }}>
+                  {[
+                    ["Rotation", `${Math.round(Number(keyHygiene?.rotation_coverage_percent || 0))}%`, C.green],
+                    ["Orphaned", Number(keyHygiene?.orphaned_count || 0), C.amber],
+                    ["Expired", Number(keyHygiene?.expiring_count || 0), C.red]
+                  ].map(([label, value, color]) => (
+                    <div key={String(label)} style={{ textAlign: "center", padding: "6px 0", border: `1px solid ${C.border}`, borderRadius: 8 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: color as string }}>{value}</div>
+                      <div style={{ fontSize: 8, color: C.muted }}>{label}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No key hygiene data</span></div>
+            )}
+          </Card>
+        </div>
+
+        <div style={{ height: 10 }} />
+
+        {/* ═══ Score Trendline (AreaChart) ═══ */}
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <div style={{ fontSize: 12, color: C.text, fontWeight: 700 }}>Score Trendline (Previous Scans)</div>
-            <B c="blue">{trendPoints.length ? `${trendPoints[trendPoints.length - 1]?.score || 0} latest` : "No history"}</B>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Score Trendline</span>
+            <B c="blue">{trendData.length ? `${trendData[trendData.length - 1]?.score || 0} latest` : "No history"}</B>
           </div>
-          {trendPoints.length ? (
-            <div>
-              <div style={{ height: 140, border: `1px solid ${C.border}`, borderRadius: 10, padding: 8, background: C.card }}>
-                <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
-                  {[100, 75, 50, 25, 0].map((tick: number) => <line key={tick} x1="0" x2="100" y1={100 - tick} y2={100 - tick} stroke={C.border} strokeWidth="0.6" />)}
-                  <polyline fill="none" stroke={C.accent} strokeWidth="2" points={trendPolyline} />
-                  {trendPoints.map((point: any, index: number) => <circle key={`${point.id}-${index}`} cx={point.x} cy={point.y} r="2" fill={C.accent} />)}
-                </svg>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: C.dim, marginTop: 6 }}>
-                <span>{trendPoints[0]?.label || "-"}</span>
-                <span>{trendPoints[trendPoints.length - 1]?.label || "-"}</span>
-              </div>
-            </div>
+          {trendData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={160}>
+              <AreaChart data={trendData}>
+                <defs>
+                  <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={C.accent} stopOpacity={0.25} />
+                    <stop offset="95%" stopColor={C.accent} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" tick={{ fill: C.muted, fontSize: 8 }} axisLine={{ stroke: C.border }} tickLine={false} interval="preserveStartEnd" />
+                <YAxis domain={[0, 100]} tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={30} />
+                <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><div style={{ fontWeight: 700, color: C.accent, marginBottom: 2 }}>{label}</div>Score: <span style={{ fontWeight: 700 }}>{payload[0]?.value}</span></ChartTip> : null} cursor={{ stroke: C.borderHi, strokeDasharray: "3 3" }} />
+                <Area type="monotone" dataKey="score" stroke={C.accent} strokeWidth={2} fill="url(#scoreGrad)" dot={{ fill: C.accent, r: 2, strokeWidth: 0 }} activeDot={{ fill: C.accent, r: 4, stroke: C.bg, strokeWidth: 2 }} />
+              </AreaChart>
+            </ResponsiveContainer>
           ) : <div style={{ fontSize: 10, color: C.muted }}>Run more assessments to populate trendline.</div>}
         </Card>
 
         <div style={{ height: 10 }} />
+
+        {/* ═══ Findings severity bar + list ═══ */}
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <div style={{ fontSize: 12, color: C.text, fontWeight: 700 }}>Findings</div>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Findings</span>
             <B c={findings.length ? "amber" : "green"}>{findings.length ? `${findings.length} open` : "No open findings"}</B>
           </div>
+          {/* Severity distribution bar */}
+          {findingTotal > 0 && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", border: `1px solid ${C.border}` }}>
+                {findingSeverityCounts.critical > 0 && <div style={{ width: `${(findingSeverityCounts.critical / findingTotal) * 100}%`, background: C.red }} title={`Critical: ${findingSeverityCounts.critical}`} />}
+                {findingSeverityCounts.high > 0 && <div style={{ width: `${(findingSeverityCounts.high / findingTotal) * 100}%`, background: C.amber }} title={`High: ${findingSeverityCounts.high}`} />}
+                {findingSeverityCounts.warning > 0 && <div style={{ width: `${(findingSeverityCounts.warning / findingTotal) * 100}%`, background: "#d97706" }} title={`Warning: ${findingSeverityCounts.warning}`} />}
+                {findingSeverityCounts.info > 0 && <div style={{ width: `${(findingSeverityCounts.info / findingTotal) * 100}%`, background: C.blue }} title={`Info: ${findingSeverityCounts.info}`} />}
+              </div>
+              <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
+                {[["Critical", findingSeverityCounts.critical, C.red], ["High", findingSeverityCounts.high, C.amber], ["Warning", findingSeverityCounts.warning, "#d97706"], ["Info", findingSeverityCounts.info, C.blue]].filter(([,c]) => (c as number) > 0).map(([label, count, color]) => (
+                  <div key={String(label)} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: color as string }} />
+                    {label} ({count})
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div style={{ display: "grid", gap: 8 }}>
             {findings.map((finding: any, index: number) => (
               <Card key={String(finding?.id || finding?.title || index)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
@@ -882,6 +1004,71 @@ export const ComplianceTab = ({ session, onToast }: any) => {
         </Card>
 
         <div style={{ height: 10 }} />
+
+        {/* ═══ Compliance Gaps ═══ */}
+        {frameworkGaps.length > 0 && (
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Compliance Gaps</span>
+              <B c="red">{frameworkGaps.length} gaps</B>
+            </div>
+            <div style={{ maxHeight: 220, overflow: "auto", border: `1px solid ${C.border}`, borderRadius: 8 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                    <th style={{ textAlign: "left", padding: "8px 10px", fontSize: 10, color: C.muted }}>Title</th>
+                    <th style={{ textAlign: "left", padding: "8px 10px", fontSize: 10, color: C.muted }}>Severity</th>
+                    <th style={{ textAlign: "left", padding: "8px 10px", fontSize: 10, color: C.muted }}>Status</th>
+                    <th style={{ textAlign: "left", padding: "8px 10px", fontSize: 10, color: C.muted }}>Detected</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {frameworkGaps.map((gap: any, idx: number) => (
+                    <tr key={String(gap?.id || idx)} style={{ borderBottom: `1px solid ${C.border}` }}>
+                      <td style={{ padding: "8px 10px", fontSize: 11, color: C.text }}>
+                        <div style={{ fontWeight: 600 }}>{String(gap?.title || "-")}</div>
+                        <div style={{ fontSize: 9, color: C.muted }}>{String(gap?.description || "").slice(0, 100)}</div>
+                      </td>
+                      <td style={{ padding: "8px 10px", fontSize: 10 }}>
+                        <B c={toneForFinding(String(gap?.severity || ""))}>{String(gap?.severity || "-")}</B>
+                      </td>
+                      <td style={{ padding: "8px 10px", fontSize: 10, color: C.dim }}>{String(gap?.status || "-")}</td>
+                      <td style={{ padding: "8px 10px", fontSize: 10, color: C.muted }}>{gap?.detected_at ? new Date(String(gap.detected_at)).toLocaleDateString() : "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+
+        {/* ═══ Anomalies ═══ */}
+        {anomalies.length > 0 && (
+          <Card style={{ marginTop: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Security Anomalies</span>
+              <B c="red">{anomalies.length} detected</B>
+            </div>
+            <div style={{ display: "grid", gap: 6 }}>
+              {anomalies.slice(0, 10).map((a: any, idx: number) => (
+                <div key={String(a?.id || idx)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: C.text, fontWeight: 600 }}>{String(a?.type || "-")}</div>
+                    <div style={{ fontSize: 9, color: C.dim }}>{String(a?.description || "")}</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 9, color: C.muted }}>{a?.detected_at ? new Date(String(a.detected_at)).toLocaleDateString() : "-"}</span>
+                    <B c={toneForFinding(String(a?.severity || ""))}>{String(a?.severity || "info")}</B>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        <div style={{ height: 10 }} />
+
+        {/* ═══ Assessment History ═══ */}
         <Card>
           <div style={{ fontSize: 12, color: C.text, fontWeight: 700, marginBottom: 8 }}>Assessment History</div>
           <div style={{ display: "grid", gap: 6 }}>

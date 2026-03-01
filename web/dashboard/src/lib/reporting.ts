@@ -262,6 +262,25 @@ export async function escalateAlert(session: AuthSession, alertID: string, sever
   });
 }
 
+export type TopSourcesResponse = {
+  top_actors?: Array<{ key: string; count: number }>;
+  top_ips?: Array<{ key: string; count: number }>;
+  top_services?: Array<{ key: string; count: number }>;
+};
+
+export async function getReportingTopSources(session: AuthSession): Promise<TopSourcesResponse> {
+  const out = await serviceRequest<TopSourcesResponse>(
+    session,
+    "reporting",
+    `/alerts/stats/top-sources?${tenantQuery(session)}`
+  );
+  return {
+    top_actors: Array.isArray(out?.top_actors) ? out.top_actors : [],
+    top_ips: Array.isArray(out?.top_ips) ? out.top_ips : [],
+    top_services: Array.isArray(out?.top_services) ? out.top_services : []
+  };
+}
+
 export async function listReportingReportTemplates(session: AuthSession): Promise<ReportTemplate[]> {
   const out = await serviceRequest<TemplatesResponse>(session, "reporting", "/reports/templates");
   return Array.isArray(out?.items) ? out.items : [];
