@@ -108,7 +108,7 @@ export const tabConfig: TabConfig[] = [
     group: "core",
     description: "Operational and compliance posture overview",
     icon: Activity,
-    emoji: "âŒ˜"
+    emoji: "D"
   },
   {
     id: "keys",
@@ -117,7 +117,7 @@ export const tabConfig: TabConfig[] = [
     group: "core",
     description: "Key inventory and lifecycle management",
     icon: KeyRound,
-    emoji: "ðŸ”‘"
+    emoji: "K"
   },
   {
     id: "crypto_console",
@@ -126,7 +126,7 @@ export const tabConfig: TabConfig[] = [
     group: "core",
     description: "Ad-hoc cryptographic operation simulator",
     icon: SlidersHorizontal,
-    emoji: "âš¡"
+    emoji: "C"
   },
   {
     id: "audit_log",
@@ -135,7 +135,7 @@ export const tabConfig: TabConfig[] = [
     group: "core",
     description: "Real-time and historical audit streams",
     icon: FileLock2,
-    emoji: "ðŸ“"
+    emoji: "L"
   },
   {
     id: "vault",
@@ -144,7 +144,7 @@ export const tabConfig: TabConfig[] = [
     group: "secrets_certs",
     description: "Universal secret store",
     icon: Lock,
-    emoji: "ðŸ”’",
+    emoji: "V",
     requiredAnyFeatures: ["secrets"]
   },
   {
@@ -154,7 +154,7 @@ export const tabConfig: TabConfig[] = [
     group: "secrets_certs",
     description: "Internal mini PKI and protocol operations",
     icon: FileCheck2,
-    emoji: "ðŸ“œ",
+    emoji: "C",
     requiredAnyFeatures: ["certs"]
   },
   {
@@ -164,7 +164,7 @@ export const tabConfig: TabConfig[] = [
     group: "data_protection",
     description: "Tokenization, masking, and field-level encryption",
     icon: Shield,
-    emoji: "ðŸŽ­",
+    emoji: "T",
     requiredAnyFeatures: ["data_protection"]
   },
   {
@@ -174,7 +174,7 @@ export const tabConfig: TabConfig[] = [
     group: "data_protection",
     description: "TR-31, PIN blocks, and ISO 20022 signing",
     icon: Wallet,
-    emoji: "ðŸ’³",
+    emoji: "P",
     requiredAnyFeatures: ["payment_crypto"]
   },
   {
@@ -184,7 +184,7 @@ export const tabConfig: TabConfig[] = [
     group: "data_protection",
     description: "Client SDK and mechanism telemetry",
     icon: Fingerprint,
-    emoji: "ðŸ”Œ"
+    emoji: "P"
   },
   {
     id: "byok",
@@ -193,7 +193,7 @@ export const tabConfig: TabConfig[] = [
     group: "cloud_integration",
     description: "Cloud external key management",
     icon: Cloud,
-    emoji: "â˜",
+    emoji: "B",
     requiredAnyFeatures: ["cloud_byok"]
   },
   {
@@ -203,7 +203,7 @@ export const tabConfig: TabConfig[] = [
     group: "cloud_integration",
     description: "Hold-your-own-key proxy flows",
     icon: GlobeLock,
-    emoji: "ðŸ”",
+    emoji: "H",
     requiredAnyFeatures: ["hyok_proxy"]
   },
   {
@@ -213,7 +213,7 @@ export const tabConfig: TabConfig[] = [
     group: "cloud_integration",
     description: "Database encryption key manager integrations",
     icon: Database,
-    emoji: "ðŸ—„",
+    emoji: "E",
     requiredAnyFeatures: ["ekm_database"]
   },
   {
@@ -223,7 +223,7 @@ export const tabConfig: TabConfig[] = [
     group: "cloud_integration",
     description: "KMIP client and object operations",
     icon: Waypoints,
-    emoji: "ðŸ”—",
+    emoji: "K",
     requiredAnyFeatures: ["kmip_server"]
   },
   {
@@ -233,7 +233,7 @@ export const tabConfig: TabConfig[] = [
     group: "infrastructure",
     description: "Hardware and software vault provider plane",
     icon: Cpu,
-    emoji: "ðŸ›¡",
+    emoji: "H",
     requiredAnyFeatures: ["hsm_hardware", "hsm_software"]
   },
   {
@@ -243,7 +243,7 @@ export const tabConfig: TabConfig[] = [
     group: "infrastructure",
     description: "Quantum key distribution interface status",
     icon: Workflow,
-    emoji: "âš›",
+    emoji: "Q",
     requiredAnyFeatures: ["qkd_interface"]
   },
   {
@@ -253,7 +253,7 @@ export const tabConfig: TabConfig[] = [
     group: "infrastructure",
     description: "Threshold signing and ceremony orchestration",
     icon: Blocks,
-    emoji: "ðŸ§©",
+    emoji: "M",
     requiredAnyFeatures: ["mpc_engine"]
   },
   {
@@ -263,7 +263,7 @@ export const tabConfig: TabConfig[] = [
     group: "infrastructure",
     description: "Node topology, health, and leader state",
     icon: Layers3,
-    emoji: "â˜",
+    emoji: "C",
     requiredAnyFeatures: ["clustering"]
   },
   {
@@ -273,7 +273,7 @@ export const tabConfig: TabConfig[] = [
     group: "governance_compliance",
     description: "Multi-quorum governance requests",
     icon: ShieldAlert,
-    emoji: "âœ…",
+    emoji: "A",
     requiredAnyFeatures: ["governance"]
   },
   {
@@ -283,7 +283,7 @@ export const tabConfig: TabConfig[] = [
     group: "governance_compliance",
     description: "Alerting channels and active incidents",
     icon: BellRing,
-    emoji: "ðŸ””",
+    emoji: "!",
     requiredAnyFeatures: ["reporting_alerting"]
   },
   {
@@ -293,7 +293,7 @@ export const tabConfig: TabConfig[] = [
     group: "governance_compliance",
     description: "Posture scoring and framework gap analysis",
     icon: Landmark,
-    emoji: "ðŸ“‹",
+    emoji: "C",
     requiredAnyFeatures: ["compliance_dashboard"]
   },
   {
@@ -303,7 +303,7 @@ export const tabConfig: TabConfig[] = [
     group: "governance_compliance",
     description: "Software and crypto BOM intelligence",
     icon: Library,
-    emoji: "ðŸ“Š",
+    emoji: "S",
     requiredAnyFeatures: ["sbom_cbom"]
   },
   {
@@ -313,7 +313,7 @@ export const tabConfig: TabConfig[] = [
     group: "admin",
     description: "Tenant, feature, network, FIPS, and license controls",
     icon: Building2,
-    emoji: "âš™"
+    emoji: "A"
   }
 ];
 

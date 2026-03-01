@@ -1,5 +1,6 @@
 import YAML from "yaml";
 import type { FeatureKey } from "../config/tabs";
+import { trackedFetch } from "./serviceApi";
 
 export type DeploymentConfig = {
   apiVersion?: string;
@@ -15,26 +16,26 @@ const defaultDeployment: DeploymentConfig = {
   apiVersion: "kms.vecta.com/v1",
   kind: "DeploymentConfig",
   spec: {
-    hsm_mode: "software",
+    hsm_mode: "auto",
     features: {
       secrets: true,
       certs: true,
       governance: true,
-      cloud_byok: false,
-      hyok_proxy: false,
+      cloud_byok: true,
+      hyok_proxy: true,
       kmip_server: true,
-      qkd_interface: false,
-      ekm_database: false,
+      qkd_interface: true,
+      ekm_database: true,
       payment_crypto: true,
       compliance_dashboard: true,
       sbom_cbom: true,
       reporting_alerting: true,
-      ai_llm: false,
+      ai_llm: true,
       pqc_migration: true,
-      crypto_discovery: false,
-      mpc_engine: false,
+      crypto_discovery: true,
+      mpc_engine: true,
       data_protection: true,
-      clustering: false
+      clustering: true
     }
   }
 };
@@ -48,7 +49,7 @@ const candidateUrls = [
 export async function loadDeploymentConfig(): Promise<DeploymentConfig> {
   for (const url of candidateUrls) {
     try {
-      const response = await fetch(url, { cache: "no-store" });
+      const response = await trackedFetch(url, { cache: "no-store" });
       if (!response.ok) {
         continue;
       }

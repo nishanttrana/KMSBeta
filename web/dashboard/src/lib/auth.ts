@@ -1,3 +1,5 @@
+import { trackedFetch } from "./serviceApi";
+
 export type UIAuthConfig = {
   tenant_id: string;
   admin_username: string;
@@ -13,10 +15,10 @@ export type AuthSession = {
   token: string;
   mode: "backend" | "local";
   mustChangePassword: boolean;
-  role?: string;
-  permissions?: string[];
-  idleTimeoutMinutes?: number;
-  expiresAt?: string;
+  role?: string | undefined;
+  permissions?: string[] | undefined;
+  idleTimeoutMinutes?: number | undefined;
+  expiresAt?: string | undefined;
 };
 
 const defaultUIAuth: UIAuthConfig = {
@@ -35,7 +37,7 @@ const SESSION_KEY = "vecta_ui_session";
 
 export async function loadUIAuthConfig(): Promise<UIAuthConfig> {
   try {
-    const response = await fetch(AUTH_CONFIG_URL, { cache: "no-store" });
+    const response = await trackedFetch(AUTH_CONFIG_URL, { cache: "no-store" });
     if (!response.ok) {
       return defaultUIAuth;
     }
@@ -115,7 +117,7 @@ export async function login(
   const tenantId = String(tenantOverride || config.tenant_id || "").trim() || config.tenant_id;
   if (config.prefer_backend_auth) {
     try {
-      const response = await fetch("/auth/login", {
+      const response = await trackedFetch("/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -202,7 +204,7 @@ export async function changePassword(
     throw new Error("New password must be at least 12 characters");
   }
   if (session.mode === "backend") {
-    const response = await fetch("/auth/change-password", {
+    const response = await trackedFetch("/auth/change-password", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -248,7 +250,7 @@ export async function refreshSession(session: AuthSession): Promise<AuthSession>
   if (!session || session.mode !== "backend") {
     return session;
   }
-  const response = await fetch("/auth/refresh", {
+  const response = await trackedFetch("/auth/refresh", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -304,7 +306,7 @@ function decodeTokenClaims(token: string): TokenClaims | null {
     return null;
   }
   try {
-    const payload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payload = (parts[1] || "").replace(/-/g, "+").replace(/_/g, "/");
     const padded = payload.padEnd(Math.ceil(payload.length / 4) * 4, "=");
     const json = atob(padded);
     const parsed = JSON.parse(json) as TokenClaims;

@@ -10,13 +10,15 @@ import {
   FG,
   Inp,
   Row2,
+  Row3,
   Section,
   Sel,
+  Stat,
   Txt,
   usePromptDialog
-} from "../../components/v3/legacyPrimitives";
-import { C } from "../../components/v3/theme";
-import { errMsg } from "../../components/v3/runtimeUtils";
+} from "../legacyPrimitives";
+import { C } from "../theme";
+import { errMsg } from "../runtimeUtils";
 import {
   appDecryptFields,
   appEncryptFields,
@@ -46,8 +48,8 @@ import {
   submitFieldEncryptionUsageReceipt,
   tokenizeValues,
   updateDataProtectionPolicy
-} from "../../lib/dataprotect";
-import { getPaymentPolicy, updatePaymentPolicy } from "../../lib/payment";
+} from "../../../lib/dataprotect";
+import { getPaymentPolicy, updatePaymentPolicy } from "../../../lib/payment";
 import { PKCS11Tab } from "./PKCS11Tab";
 
 function normalizeKeyState(state: string): string {
@@ -1265,7 +1267,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                     <div>
                       <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(item?.display_name||item?.wrapper_id||"")}</div>
-                      <div style={{fontSize:9,color:C.muted}}>{String(item?.wrapper_id||"")} · {String(item?.app_id||"")}</div>
+                      <div style={{fontSize:9,color:C.muted}}>{String(item?.wrapper_id||"")} ï¿½ {String(item?.app_id||"")}</div>
                     </div>
                     <B c={badgeColor as any}>{status||"pending"}</B>
                   </div>
@@ -1285,7 +1287,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                     <div>
                       <div style={{fontSize:11,color:C.text,fontWeight:700}}>{String(item?.lease_id||"")}</div>
-                      <div style={{fontSize:9,color:C.muted}}>{`${String(item?.wrapper_id||"")} · ${String(item?.operation||"")} · used ${Number(item?.used_ops||0)}/${Number(item?.max_ops||0)}`}</div>
+                      <div style={{fontSize:9,color:C.muted}}>{`${String(item?.wrapper_id||"")} ï¿½ ${String(item?.operation||"")} ï¿½ used ${Number(item?.used_ops||0)}/${Number(item?.max_ops||0)}`}</div>
                     </div>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       <B c={revoked?"red":"green"}>{revoked?"revoked":"active"}</B>

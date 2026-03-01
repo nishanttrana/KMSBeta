@@ -24,6 +24,13 @@ export type GovernanceSettings = {
   updated_at?: string;
 };
 
+export type GovernanceSystemState = Record<string, unknown>;
+
+export type GovernanceSystemStateResponse = {
+  state: GovernanceSystemState;
+  request_id?: string;
+};
+
 export type GovernancePolicy = {
   id: string;
   tenant_id: string;
@@ -120,6 +127,47 @@ export async function getGovernanceSettings(session: AuthSession): Promise<Gover
     `/governance/settings?tenant_id=${encodeURIComponent(session.tenantId)}`
   );
   return out.settings;
+}
+
+export async function getGovernanceSystemState(session: AuthSession): Promise<GovernanceSystemStateResponse> {
+  const out = await serviceRequest<GovernanceSystemStateResponse>(
+    session,
+    "governance",
+    `/governance/system/state?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  const requestID = String(out?.request_id || "").trim();
+  return {
+    state: out?.state && typeof out.state === "object" ? out.state : {},
+    ...(requestID ? { request_id: requestID } : {})
+  };
+}
+
+export async function patchGovernanceSystemState(
+  session: AuthSession,
+  input: GovernanceSystemState
+): Promise<GovernanceSystemStateResponse> {
+  const out = await serviceRequest<GovernanceSystemStateResponse>(session, "governance", "/governance/system/state", {
+    method: "PUT",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      ...(input || {})
+    })
+  });
+  const requestID = String(out?.request_id || "").trim();
+  return {
+    state: out?.state && typeof out.state === "object" ? out.state : {},
+    ...(requestID ? { request_id: requestID } : {})
+  };
+}
+
+export async function testGovernanceSystemSNMP(session: AuthSession, target: string): Promise<void> {
+  await serviceRequest<Record<string, unknown>>(session, "governance", "/governance/system/snmp/test", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      target: String(target || "").trim()
+    })
+  });
 }
 
 export async function updateGovernanceSettings(

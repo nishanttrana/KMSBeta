@@ -1,4 +1,5 @@
 import type { AuthSession } from "./auth";
+import { serviceRequestRaw } from "./serviceApi";
 
 export type KeyItem = {
   id: string;
@@ -51,6 +52,7 @@ type APITagItem = {
   name: string;
   color: string;
   is_system: boolean;
+  usage_count?: number;
   created_by?: string;
 };
 
@@ -320,6 +322,7 @@ export type TagItem = {
   name: string;
   color: string;
   is_system: boolean;
+  usage_count?: number;
   created_by?: string;
 };
 
@@ -336,7 +339,7 @@ export type EncryptResult = {
   iv: string;
   version: number;
   keyId: string;
-  kcv?: string;
+  kcv?: string | undefined;
 };
 
 export type DecryptResult = {
@@ -499,20 +502,7 @@ async function parseError(response: Response): Promise<string> {
 }
 
 async function apiRequest<T>(session: AuthSession, path: string, init?: RequestInit): Promise<T> {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 20_000);
-  const response = await fetch(`/svc/keycore${path}`, {
-    ...init,
-    signal: controller.signal,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.token}`,
-      "X-Tenant-ID": session.tenantId,
-      ...(init?.headers || {})
-    }
-  }).finally(() => {
-    window.clearTimeout(timeout);
-  });
+  const response = await serviceRequestRaw(session, "keycore", path, init, 20_000);
   if (!response.ok) {
     throw new Error(await parseError(response));
   }

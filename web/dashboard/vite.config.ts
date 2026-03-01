@@ -88,6 +88,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/svc\/reporting/, "")
       },
+      "/svc/posture": {
+        target: serviceURL("posture", 8220),
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/svc\/posture/, "")
+      },
       "/svc/qkd": {
         target: serviceURL("qkd", 8150),
         changeOrigin: true,

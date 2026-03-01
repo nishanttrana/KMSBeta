@@ -28,3 +28,108 @@ body {
     radial-gradient(circle at 95% 0%, rgba(167, 139, 250, 0.12), transparent 34%),
     linear-gradient(180deg, #060a11 0%, #0a0f1a 100%);
 }
+
+.vecta-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: rgba(6, 10, 17, 0.18);
+  backdrop-filter: blur(1.5px);
+  animation: vecta-loading-fade-in 160ms ease-out;
+}
+
+.vecta-loading-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid rgba(6, 214, 224, 0.35);
+  background: linear-gradient(135deg, rgba(8, 20, 36, 0.94), rgba(10, 24, 42, 0.9));
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.35);
+}
+
+.vecta-loading-card--compact {
+  min-width: 92px;
+  padding: 12px;
+  border-radius: 999px;
+  background: rgba(8, 20, 36, 0.9);
+}
+
+.vecta-loading-logo-wrap {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+}
+
+.vecta-loading-logo {
+  width: 36px;
+  height: 36px;
+  filter: drop-shadow(0 0 10px rgba(6, 214, 224, 0.4));
+  animation: vecta-loading-logo-float 1.6s ease-in-out infinite;
+}
+
+.vecta-loading-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(6, 214, 224, 0.5);
+  animation: vecta-loading-pulse 1.2s ease-out infinite;
+}
+
+.vecta-loading-text {
+  color: rgba(226, 232, 240, 0.92);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+@keyframes vecta-loading-pulse {
+  0% {
+    transform: scale(0.78);
+    opacity: 0.62;
+  }
+  80% {
+    transform: scale(1.24);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.24);
+    opacity: 0;
+  }
+}
+
+@keyframes vecta-loading-logo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes vecta-loading-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vecta-loading-overlay,
+  .vecta-loading-pulse,
+  .vecta-loading-logo {
+    animation: none;
+  }
+}

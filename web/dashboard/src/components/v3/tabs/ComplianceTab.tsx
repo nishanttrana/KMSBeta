@@ -12,9 +12,9 @@ import {
   Section,
   Sel,
   usePromptDialog
-} from "../../components/v3/legacyPrimitives";
-import { C } from "../../components/v3/theme";
-import { errMsg } from "../../components/v3/runtimeUtils";
+} from "../legacyPrimitives";
+import { C } from "../theme";
+import { errMsg } from "../runtimeUtils";
 import {
   deleteComplianceTemplate,
   getComplianceAssessment,
@@ -25,7 +25,7 @@ import {
   runComplianceAssessment,
   updateComplianceAssessmentSchedule,
   upsertComplianceTemplate
-} from "../../lib/compliance";
+} from "../../../lib/compliance";
 import {
   createReportingScheduledReport,
   deleteReportingReportJob,
@@ -35,7 +35,7 @@ import {
   listReportingReportJobs,
   listReportingReportTemplates,
   listReportingScheduledReports
-} from "../../lib/reporting";
+} from "../../../lib/reporting";
 
 export const ComplianceTab = ({ session, onToast }: any) => {
   const promptDialog = usePromptDialog();

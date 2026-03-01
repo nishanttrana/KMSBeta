@@ -200,7 +200,7 @@ export async function rotateCloudBinding(
   session: AuthSession,
   bindingId: string,
   reason = "manual"
-): Promise<{ binding: CloudKeyBinding; versionId?: string }> {
+): Promise<{ binding: CloudKeyBinding; versionId?: string | undefined }> {
   const payload = await serviceRequest<RotateResponse>(session, "cloud", `/cloud/bindings/${encodeURIComponent(bindingId)}/rotate`, {
     method: "POST",
     body: JSON.stringify({

@@ -64,6 +64,7 @@ export function Sidebar(props: SidebarProps) {
                 <div className="space-y-0.5">
                   {tabs.map((tab) => {
                     const selected = activeTab === tab.id;
+                    const Icon = tab.icon;
                     return (
                       <button
                         key={tab.id}
@@ -77,7 +78,9 @@ export function Sidebar(props: SidebarProps) {
                           collapsed && "justify-center px-0"
                         )}
                       >
-                        <span className={cx("text-[14px]", collapsed && "w-full text-center text-[16px]")}>{tab.emoji}</span>
+                        <span className={cx("text-[14px]", collapsed && "w-full text-center text-[16px]")}>
+                          <Icon size={collapsed ? 16 : 14} strokeWidth={2} />
+                        </span>
                         {!collapsed ? (
                           <span className="min-w-0">
                             <span className="block truncate text-[11px] font-medium">{tab.label}</span>

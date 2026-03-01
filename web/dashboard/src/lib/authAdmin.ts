@@ -50,8 +50,12 @@ export type SystemServiceHealth = {
   name: string;
   status: string;
   source?: string;
+  address?: string;
+  port?: number;
   instances?: number;
   output?: string;
+  restart_allowed?: boolean;
+  restart_block_reason?: string;
 };
 
 export type SystemHealthSummary = {
@@ -269,6 +273,11 @@ type TenantDisableResponse = {
   tenant_id: string;
   readiness?: TenantDeleteReadiness;
 };
+type RestartServiceResponse = {
+  status?: string;
+  service?: string;
+  request_id?: string;
+};
 
 export async function listAuthUsers(session: AuthSession, tenantID?: string): Promise<AuthUser[]> {
   const targetTenant = String(tenantID || "").trim();
@@ -282,12 +291,29 @@ export async function listAuthTenants(session: AuthSession): Promise<AuthTenant[
   return Array.isArray(out?.items) ? out.items : [];
 }
 
-export async function getAuthSystemHealth(session: AuthSession): Promise<AuthSystemHealthSnapshot> {
-  const out = await serviceRequest<AuthSystemHealthSnapshot>(session, "auth", "/auth/system-health");
+export async function getAuthSystemHealth(
+  session: AuthSession,
+  options?: { skipGlobalLoading?: boolean }
+): Promise<AuthSystemHealthSnapshot> {
+  const out = await serviceRequest<AuthSystemHealthSnapshot>(session, "auth", "/auth/system-health", {
+    skipGlobalLoading: Boolean(options?.skipGlobalLoading)
+  });
   return {
     ...out,
     services: Array.isArray(out?.services) ? out.services : []
   };
+}
+
+export async function restartAuthSystemService(
+  session: AuthSession,
+  serviceName: string
+): Promise<RestartServiceResponse> {
+  return serviceRequest<RestartServiceResponse>(session, "auth", "/auth/system-health/restart", {
+    method: "POST",
+    body: JSON.stringify({
+      service: String(serviceName || "").trim()
+    })
+  });
 }
 
 export async function createAuthTenant(

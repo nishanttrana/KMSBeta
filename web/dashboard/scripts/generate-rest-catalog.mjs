@@ -123,6 +123,13 @@ function toCatalogItem(service, method, routePath) {
 }
 
 async function main() {
+  try {
+    await fs.access(servicesRoot);
+  } catch {
+    process.stdout.write(`Skipped route discovery: services root not found at ${servicesRoot}\n`);
+    return;
+  }
+
   const files = await walk(servicesRoot);
   const routeRegex = /mux\.HandleFunc\("([A-Z]+)\s+([^"]+)"\s*,/g;
   const unique = new Map();

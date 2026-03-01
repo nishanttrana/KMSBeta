@@ -7,11 +7,77 @@ type APIErrorShape = {
 };
 
 const REQUEST_TIMEOUT_MS = 20_000;
+type RequestCountListener = (count: number) => void;
+export type ServiceRequestInit = RequestInit & {
+  skipGlobalLoading?: boolean;
+};
+
+let inFlightRequests = 0;
+const requestCountListeners = new Set<RequestCountListener>();
+
+function emitRequestCount(): void {
+  requestCountListeners.forEach((listener) => {
+    try {
+      listener(inFlightRequests);
+    } catch {
+      // Listener failures must not affect request flow.
+    }
+  });
+}
+
+function beginRequest(): void {
+  inFlightRequests += 1;
+  emitRequestCount();
+}
+
+function endRequest(): void {
+  inFlightRequests = Math.max(0, inFlightRequests - 1);
+  emitRequestCount();
+}
+
+export function getGlobalInFlightRequestCount(): number {
+  return inFlightRequests;
+}
+
+export function subscribeGlobalInFlightRequestCount(listener: RequestCountListener): () => void {
+  requestCountListeners.add(listener);
+  listener(inFlightRequests);
+  return () => {
+    requestCountListeners.delete(listener);
+  };
+}
+
+export async function trackedFetch(input: RequestInfo | URL, init?: RequestInit, track = true): Promise<Response> {
+  if (track) {
+    beginRequest();
+  }
+  try {
+    return await fetch(input, init);
+  } finally {
+    if (track) {
+      endRequest();
+    }
+  }
+}
 
 function timeoutSignal(timeoutMs: number): AbortSignal {
   const controller = new AbortController();
   window.setTimeout(() => controller.abort(), timeoutMs);
   return controller.signal;
+}
+
+function buildServiceRequestInit(session: AuthSession, init: ServiceRequestInit | undefined, timeoutMs: number): RequestInit {
+  const { skipGlobalLoading: _skipGlobalLoading, ...requestInit } = (init || {}) as ServiceRequestInit;
+  return {
+    ...requestInit,
+    signal: timeoutSignal(timeoutMs),
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.token}`,
+      "X-Tenant-ID": session.tenantId,
+      ...(requestInit?.headers || {})
+    }
+  };
 }
 
 async function parseError(response: Response): Promise<string> {
@@ -28,20 +94,10 @@ export async function serviceRequest<T = unknown>(
   session: AuthSession,
   service: string,
   path: string,
-  init?: RequestInit,
+  init?: ServiceRequestInit,
   timeoutMs = REQUEST_TIMEOUT_MS
 ): Promise<T> {
-  const url = `/svc/${service}${path}`;
-  const response = await fetch(url, {
-    ...init,
-    signal: timeoutSignal(timeoutMs),
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${session.token}`,
-      "X-Tenant-ID": session.tenantId,
-      ...(init?.headers || {})
-    }
-  });
+  const response = await serviceRequestRaw(session, service, path, init, timeoutMs);
   if (!response.ok) {
     throw new Error(await parseError(response));
   }
@@ -55,3 +111,14 @@ export async function serviceRequest<T = unknown>(
   return (await response.text()) as T;
 }
 
+export async function serviceRequestRaw(
+  session: AuthSession,
+  service: string,
+  path: string,
+  init?: ServiceRequestInit,
+  timeoutMs = REQUEST_TIMEOUT_MS
+): Promise<Response> {
+  const url = `/svc/${service}${path}`;
+  const track = !Boolean(init?.skipGlobalLoading);
+  return trackedFetch(url, buildServiceRequestInit(session, init, timeoutMs), track);
+}

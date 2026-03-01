@@ -6247,6 +6247,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "governance-post-governance-system-snmp-test",
+    "group": "Governance (governance)",
+    "title": "POST /governance/system/snmp/test",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/system/snmp/test?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "POST /svc/governance/governance/system/snmp/test?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "governance-put-governance-policies-id",
     "group": "Governance (governance)",
     "title": "PUT /governance/policies/{id}",
@@ -6284,6 +6312,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Governance service.",
     "requestExample": "PUT /svc/governance/governance/settings?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-put-governance-system-posture-controls",
+    "group": "Governance (governance)",
+    "title": "PUT /governance/system/posture-controls",
+    "service": "governance",
+    "method": "PUT",
+    "pathTemplate": "/governance/system/posture-controls?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "PUT /svc/governance/governance/system/posture-controls?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -9943,6 +9999,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "kmip-delete-kmip-interop-targets-id",
+    "group": "KMIP (kmip)",
+    "title": "DELETE /kmip/interop/targets/{id}",
+    "service": "kmip",
+    "method": "DELETE",
+    "pathTemplate": "/kmip/interop/targets/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KMIP service.",
+    "requestExample": "DELETE /svc/kmip/kmip/interop/targets/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "kmip-delete-kmip-profiles-id",
     "group": "KMIP (kmip)",
     "title": "DELETE /kmip/profiles/{id}",
@@ -10055,6 +10139,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "kmip-get-kmip-interop-targets",
+    "group": "KMIP (kmip)",
+    "title": "GET /kmip/interop/targets",
+    "service": "kmip",
+    "method": "GET",
+    "pathTemplate": "/kmip/interop/targets?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KMIP service.",
+    "requestExample": "GET /svc/kmip/kmip/interop/targets?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "kmip-get-kmip-profiles",
     "group": "KMIP (kmip)",
     "title": "GET /kmip/profiles",
@@ -10092,6 +10204,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KMIP service.",
     "requestExample": "POST /svc/kmip/kmip/clients?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "kmip-post-kmip-interop-targets",
+    "group": "KMIP (kmip)",
+    "title": "POST /kmip/interop/targets",
+    "service": "kmip",
+    "method": "POST",
+    "pathTemplate": "/kmip/interop/targets?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KMIP service.",
+    "requestExample": "POST /svc/kmip/kmip/interop/targets?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "kmip-post-kmip-interop-targets-id-validate",
+    "group": "KMIP (kmip)",
+    "title": "POST /kmip/interop/targets/{id}/validate",
+    "service": "kmip",
+    "method": "POST",
+    "pathTemplate": "/kmip/interop/targets/{id}/validate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KMIP service.",
+    "requestExample": "POST /svc/kmip/kmip/interop/targets/{id}/validate?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -13219,6 +13387,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "reporting-get-telemetry-errors",
+    "group": "Reporting (reporting)",
+    "title": "GET /telemetry/errors",
+    "service": "reporting",
+    "method": "GET",
+    "pathTemplate": "/telemetry/errors?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Reporting service.",
+    "requestExample": "GET /svc/reporting/telemetry/errors?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "reporting-post-alerts-bulk-acknowledge",
     "group": "Reporting (reporting)",
     "title": "POST /alerts/bulk/acknowledge",
@@ -13340,6 +13536,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Reporting service.",
     "requestExample": "POST /svc/reporting/reports/scheduled?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "reporting-post-telemetry-errors",
+    "group": "Reporting (reporting)",
+    "title": "POST /telemetry/errors",
+    "service": "reporting",
+    "method": "POST",
+    "pathTemplate": "/telemetry/errors?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Reporting service.",
+    "requestExample": "POST /svc/reporting/telemetry/errors?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

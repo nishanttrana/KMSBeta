@@ -4,7 +4,14 @@ export function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-export function Panel(props: PropsWithChildren<{ title: string; subtitle?: string; actions?: ReactNode; className?: string }>) {
+export function Panel(
+  props: PropsWithChildren<{
+    title: string;
+    subtitle?: string | undefined;
+    actions?: ReactNode | undefined;
+    className?: string | undefined;
+  }>
+) {
   const { title, subtitle, actions, children, className } = props;
   return (
     <section className={cx("rounded-xl border border-cyber-border bg-cyber-card p-3 shadow-lg shadow-black/25", className)}>
@@ -21,7 +28,12 @@ export function Panel(props: PropsWithChildren<{ title: string; subtitle?: strin
 }
 
 export function Button(
-  props: PropsWithChildren<{ onClick?: () => void; kind?: "primary" | "secondary" | "danger"; className?: string; type?: "button" | "submit" }>
+  props: PropsWithChildren<{
+    onClick?: (() => void) | undefined;
+    kind?: "primary" | "secondary" | "danger" | undefined;
+    className?: string | undefined;
+    type?: "button" | "submit" | undefined;
+  }>
 ) {
   const { onClick, kind = "primary", children, className, type = "button" } = props;
   const classes =
@@ -44,9 +56,9 @@ export function Button(
 export function TextInput(props: {
   value: string;
   onChange: (value: string) => void;
-  placeholder?: string;
-  className?: string;
-  type?: "text" | "password";
+  placeholder?: string | undefined;
+  className?: string | undefined;
+  type?: "text" | "password" | undefined;
 }) {
   const { value, onChange, placeholder, className, type = "text" } = props;
   return (
@@ -63,7 +75,7 @@ export function TextInput(props: {
   );
 }
 
-export function SelectInput(props: { value: string; onChange: (value: string) => void; options: string[]; className?: string }) {
+export function SelectInput(props: { value: string; onChange: (value: string) => void; options: string[]; className?: string | undefined }) {
   const { value, onChange, options, className } = props;
   return (
     <select

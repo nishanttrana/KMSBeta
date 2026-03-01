@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FeatureKey } from "./config/tabs";
+import { isSystemAdminSession } from "./config/moduleRegistry";
+import { BrandedLoadingOverlay } from "./components/BrandedLoadingOverlay";
 import { LoginScreen } from "./components/LoginScreen";
 import VectaDashboardV3 from "./components/VectaDashboardV3";
 import { clearSession, getSession, loadUIAuthConfig, refreshSession, saveSession, type AuthSession } from "./lib/auth";
@@ -8,6 +10,7 @@ import { getAuthSystemHealth, type AuthSystemHealthSnapshot } from "./lib/authAd
 import { enabledFeatures, loadDeploymentConfig } from "./lib/deployment";
 import { mapToLiveEvent, parseWSMessage, wsBaseURL } from "./lib/liveFeed";
 import { getUnreadAlertCounts } from "./lib/reporting";
+import { getGlobalInFlightRequestCount, subscribeGlobalInFlightRequestCount } from "./lib/serviceApi";
 import { useLiveStore } from "./store/live";
 
 const FEATURE_KEYS: FeatureKey[] = [
@@ -77,6 +80,13 @@ const FEATURE_ALIAS: Record<string, FeatureKey> = {
   hsm_hw: "hsm_hardware",
   hsm_sw: "hsm_software"
 };
+
+const ENFORCE_RUNTIME_FEATURE_FILTER =
+  String(import.meta.env.VITE_ENFORCE_RUNTIME_FEATURE_FILTER || "")
+    .trim()
+    .toLowerCase() === "true";
+const GLOBAL_LOADING_SHOW_DELAY_MS = 650;
+const GLOBAL_LOADING_MIN_VISIBLE_MS = 260;
 
 type FeaturePermissionScope = {
   hasRules: boolean;
@@ -225,6 +235,9 @@ function deriveRuntimeFeatures(
   configuredFeatures: Set<FeatureKey>,
   snapshot?: AuthSystemHealthSnapshot
 ): Set<FeatureKey> {
+  if (!ENFORCE_RUNTIME_FEATURE_FILTER) {
+    return new Set(configuredFeatures);
+  }
   const services = Array.isArray(snapshot?.services) ? snapshot.services : [];
   if (!services.length) {
     return new Set(configuredFeatures);
@@ -235,6 +248,11 @@ function deriveRuntimeFeatures(
       .map((item) => normalizeServiceName(String(item?.name || "")))
       .filter(Boolean)
   );
+  if (availableServices.size < 8) {
+    // Incomplete health payload can hide modules by accident; keep configured
+    // features visible unless runtime filtering is explicitly trusted.
+    return new Set(configuredFeatures);
+  }
   const out = new Set<FeatureKey>();
   configuredFeatures.forEach((feature) => {
     const deps = FEATURE_DEPENDENCIES[feature];
@@ -250,6 +268,9 @@ function deriveRuntimeFeatures(
 }
 
 function applyPermissionScope(features: Set<FeatureKey>, session: AuthSession | null): Set<FeatureKey> {
+  if (isSystemAdminSession(session)) {
+    return new Set(features);
+  }
   const scope = parseFeaturePermissionScope(session);
   if (!scope.hasRules) {
     return new Set(features);
@@ -273,6 +294,9 @@ function applyPermissionScope(features: Set<FeatureKey>, session: AuthSession | 
 export default function App() {
   const [session, setSession] = useState<AuthSession | null>(getSession());
   const [unreadAlerts, setUnreadAlerts] = useState(0);
+  const [inFlightRequests, setInFlightRequests] = useState<number>(getGlobalInFlightRequestCount());
+  const [showBrandedLoader, setShowBrandedLoader] = useState(false);
+  const visibleSinceRef = useRef<number>(0);
   const { alerts, audit, pushAlert, pushAudit } = useLiveStore();
 
   const deploymentQuery = useQuery({
@@ -292,7 +316,7 @@ export default function App() {
       if (!session) {
         return undefined;
       }
-      return getAuthSystemHealth(session);
+      return getAuthSystemHealth(session, { skipGlobalLoading: true });
     },
     staleTime: 10_000,
     refetchInterval: 15_000
@@ -305,8 +329,45 @@ export default function App() {
   );
   const featureSet = useMemo(
     () => applyPermissionScope(runtimeFeatureSet, session),
-    [runtimeFeatureSet, session?.permissions, session?.token]
+    [runtimeFeatureSet, session]
   );
+
+  useEffect(() => {
+    return subscribeGlobalInFlightRequestCount((count) => {
+      setInFlightRequests(count);
+    });
+  }, []);
+
+  useEffect(() => {
+    let timer: number | undefined;
+    if (inFlightRequests > 0) {
+      if (!showBrandedLoader) {
+        timer = window.setTimeout(() => {
+          visibleSinceRef.current = Date.now();
+          setShowBrandedLoader(true);
+        }, GLOBAL_LOADING_SHOW_DELAY_MS);
+      }
+      return () => {
+        if (timer) {
+          window.clearTimeout(timer);
+        }
+      };
+    }
+
+    if (showBrandedLoader) {
+      const elapsed = Date.now() - visibleSinceRef.current;
+      const waitMs = Math.max(0, GLOBAL_LOADING_MIN_VISIBLE_MS - elapsed);
+      timer = window.setTimeout(() => {
+        setShowBrandedLoader(false);
+      }, waitMs);
+    }
+
+    return () => {
+      if (timer) {
+        window.clearTimeout(timer);
+      }
+    };
+  }, [inFlightRequests, showBrandedLoader]);
 
   useEffect(() => {
     if (!session) {
@@ -371,7 +432,7 @@ export default function App() {
     let cancelled = false;
     const refreshUnread = async () => {
       try {
-        const counts = await getUnreadAlertCounts(session);
+        const counts = await getUnreadAlertCounts(session, { skipGlobalLoading: true });
         if (cancelled) {
           return;
         }
@@ -454,7 +515,7 @@ export default function App() {
       window.clearInterval(id);
       window.clearTimeout(initial);
     };
-  }, [session?.mode, session?.token, session?.expiresAt]);
+  }, [session]);
 
   useEffect(() => {
     if (!session) {
@@ -488,7 +549,7 @@ export default function App() {
         window.removeEventListener(eventName, resetTimer);
       });
     };
-  }, [session?.token, session?.idleTimeoutMinutes]);
+  }, [session]);
 
   if (!uiAuthQuery.data) {
     return (
@@ -524,6 +585,7 @@ export default function App() {
           setSession(null);
         }}
       />
+      <BrandedLoadingOverlay visible={showBrandedLoader} />
     </main>
   );
 }

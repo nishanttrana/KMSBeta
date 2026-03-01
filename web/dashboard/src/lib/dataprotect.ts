@@ -194,9 +194,9 @@ export type FieldEncryptionIssuedCertificate = {
 
 export type FieldEncryptionRegistrationResult = {
   wrapper: FieldEncryptionWrapper;
-  auth_profile?: FieldEncryptionAuthProfile;
-  certificate?: FieldEncryptionIssuedCertificate;
-  warnings?: string[];
+  auth_profile?: FieldEncryptionAuthProfile | undefined;
+  certificate?: FieldEncryptionIssuedCertificate | undefined;
+  warnings?: string[] | undefined;
 };
 
 export type FieldEncryptionLease = {

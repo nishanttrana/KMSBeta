@@ -158,8 +158,13 @@ export async function listReportingAlerts(
   return Array.isArray(out?.items) ? out.items : [];
 }
 
-export async function getUnreadAlertCounts(session: AuthSession): Promise<Record<string, number>> {
-  const out = await serviceRequest<UnreadResponse>(session, "reporting", `/alerts/unread?${tenantQuery(session)}`);
+export async function getUnreadAlertCounts(
+  session: AuthSession,
+  options?: { skipGlobalLoading?: boolean }
+): Promise<Record<string, number>> {
+  const out = await serviceRequest<UnreadResponse>(session, "reporting", `/alerts/unread?${tenantQuery(session)}`, {
+    skipGlobalLoading: Boolean(options?.skipGlobalLoading)
+  });
   return out?.counts && typeof out.counts === "object" ? out.counts : {};
 }
 
@@ -311,7 +316,13 @@ export async function listReportingReportJobs(session: AuthSession, limit = 50, 
 export async function downloadReportingReport(
   session: AuthSession,
   jobID: string
-): Promise<{ content: string; content_type: string; template_id?: string; generated_at?: string; report_job_id?: string }> {
+): Promise<{
+  content: string;
+  content_type: string;
+  template_id?: string | undefined;
+  generated_at?: string | undefined;
+  report_job_id?: string | undefined;
+}> {
   const out = await serviceRequest<ReportDownloadResponse>(
     session,
     "reporting",
