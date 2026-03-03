@@ -1,17 +1,21 @@
 // @ts-nocheck
 import { useEffect, useMemo, useState } from "react";
-import { MoreVertical, RefreshCcw } from "lucide-react";
+import { MoreVertical, RefreshCcw, Shield, ShieldCheck, ShieldX, ShieldAlert, KeyRound, FileText, Clock, AlertTriangle, Lock, Unlock, Download, Trash2, RotateCcw, Eye, Settings, Zap, Server, Globe, Fingerprint, CheckCircle2, XCircle, ChevronDown, ChevronRight } from "lucide-react";
 import {
   acmeChallengeComplete,
+  acmeChallengeInfo,
   acmeFinalize,
   acmeNewAccount,
   acmeNewOrder,
+  cmpv2Confirm,
   cmpv2Request,
   createCA,
   deleteCA,
   deleteCertificate,
   downloadCertificateAsset,
+  estCSRAttributes,
   estServerKeygen,
+  estSimpleEnroll,
   getCRL,
   getOCSP,
   issueCertificate,
@@ -24,6 +28,7 @@ import {
   renewCertificate,
   revokeCertificate,
   scepEnroll,
+  scepGetCert,
   signCertificateCSR,
   updateProtocolConfig,
   uploadThirdPartyCertificate,
@@ -143,25 +148,68 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
   const showEnrollmentPane=activeCertPane==="cert-enrollment";
   const showOverviewPane=!showEnrollmentPane;
 
+  const [caLoading,setCALoading]=useState(false);
+  const [certLoading,setCertLoading]=useState(false);
+
+  const loadAllCertificates=async()=>{
+    const out=[];
+    let offset=0;
+    while(offset<=10000){
+      const batch=await listCertificates(session,{limit:500,offset});
+      out.push(...(Array.isArray(batch)?batch:[]));
+      if(!Array.isArray(batch)||batch.length<500){
+        break;
+      }
+      offset+=500;
+    }
+    return out;
+  };
+
+  const refreshCAs=async()=>{
+    if(!session) return;
+    setCALoading(true);
+    try{
+      const caItems=await listCAs(session);
+      setCAs(Array.isArray(caItems)?caItems:[]);
+      if(!issueCAID&&Array.isArray(caItems)&&caItems.length){
+        setIssueCAID(caItems[0].id);
+      }
+      if(!csrCAID&&Array.isArray(caItems)&&caItems.length){
+        setCSRCAID(caItems[0].id);
+      }
+    }catch(e){
+      onToast?.(`CA refresh failed: ${errMsg(e)}`);
+    }finally{
+      setCALoading(false);
+    }
+  };
+
+  const refreshCerts=async()=>{
+    if(!session) return;
+    setCertLoading(true);
+    try{
+      const [certItems,inventoryItems,alertPolicy]=await Promise.all([
+        loadAllCertificates(),
+        listInventory(session),
+        getCertExpiryAlertPolicy(session)
+      ]);
+      setCerts(Array.isArray(certItems)?certItems:[]);
+      setInventory(Array.isArray(inventoryItems)?inventoryItems:[]);
+      setAlertPolicyDaysBefore(Math.max(1,Math.min(3650,Number(alertPolicy?.days_before||30))));
+      setAlertPolicyIncludeExternal(Boolean(alertPolicy?.include_external ?? true));
+    }catch(e){
+      onToast?.(`Certificates refresh failed: ${errMsg(e)}`);
+    }finally{
+      setCertLoading(false);
+    }
+  };
+
   const refresh=async()=>{
     if(!session){
       return;
     }
     setLoading(true);
     try{
-      const loadAllCertificates=async()=>{
-        const out=[];
-        let offset=0;
-        while(offset<=10000){
-          const batch=await listCertificates(session,{limit:500,offset});
-          out.push(...(Array.isArray(batch)?batch:[]));
-          if(!Array.isArray(batch)||batch.length<500){
-            break;
-          }
-          offset+=500;
-        }
-        return out;
-      };
       const [caItems,certItems,profileItems,inventoryItems,protocolItems,protocolSchemaItems,alertPolicy]=await Promise.all([
         listCAs(session),
         loadAllCertificates(),
@@ -380,7 +428,6 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     const all=Array.isArray(certs)?certs:[];
     const active=all.filter((c)=>String(c.status||"").toLowerCase()==="active").length;
     const revoked=all.filter((c)=>String(c.status||"").toLowerCase()==="revoked").length;
-    const deleted=all.filter((c)=>String(c.status||"").toLowerCase()==="deleted").length;
     const pqc=all.filter((c)=>{
       const cls=String(c.cert_class||"").toLowerCase();
       return cls==="pqc"||cls==="hybrid";
@@ -397,12 +444,15 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       const left=ts-Date.now();
       return left>=0&&left<=alertPolicyDaysBefore*24*3600*1000;
     }).length;
-    return {active,revoked,deleted,pqc,expiring,total:all.length,cas:(Array.isArray(cas)?cas:[]).length};
+    return {active,revoked,pqc,expiring,total:all.length,cas:(Array.isArray(cas)?cas:[]).length};
   },[cas,certs,inventory,certByID,alertPolicyDaysBefore,alertPolicyIncludeExternal]);
 
   const expiryItems=useMemo(()=>{
     const items=(Array.isArray(inventory)?inventory:[]).map((it)=>{
       const cert=certByID.get(String(it.cert_id||""));
+      if(!cert) return null;
+      const certStatus=String(cert.status||"").toLowerCase();
+      if(certStatus==="revoked"||certStatus==="deleted") return null;
       if(!alertPolicyIncludeExternal&&String(cert?.ca_id||"").toLowerCase()==="external-ca"){
         return null;
       }
@@ -460,8 +510,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     return {
       all: all.length,
       active: all.filter((c)=>String(c.status||"").toLowerCase()==="active").length,
-      revoked: all.filter((c)=>String(c.status||"").toLowerCase()==="revoked").length,
-      deleted: all.filter((c)=>String(c.status||"").toLowerCase()==="deleted").length
+      revoked: all.filter((c)=>String(c.status||"").toLowerCase()==="revoked").length
     };
   },[certs]);
   const caStatusCounts=useMemo(()=>{
@@ -999,8 +1048,8 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     }
     await runCertAction(`delete-${cert.id}`,async()=>{
       await deleteCertificate(session,String(cert.id||""));
-      onToast?.(`Certificate moved to Deleted: ${label}`);
-      await refresh();
+      onToast?.(`Certificate permanently deleted: ${label}`);
+      await refreshCerts();
     });
   };
 
@@ -1048,19 +1097,45 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       return;
     }
     const label=String(ca?.name||ca?.id||"CA");
+    const caID=String(ca?.id||"");
+    const issuedCount=(certsByCA[caID]||[]).length;
+    // First try normal delete
     const ok=await promptDialog.confirm({
       title:"Delete Certificate Authority",
-      message:`Delete CA '${label}'?\n\nThis permanently removes CA metadata and cannot be undone.\n\nDelete will be blocked if this CA has child CAs or issued certificates.`,
-      confirmLabel:"Delete CA",
+      message:issuedCount>0
+        ?`Delete CA '${label}'?\n\n${issuedCount} issued certificate(s) exist. This will fail unless you choose Force Delete.\n\nForce Delete: revokes all certificates under this CA, permanently removes certificate material, and deletes the CA.\n\nThis action CANNOT be undone.`
+        :`Delete CA '${label}'?\n\nThis permanently removes the CA and cannot be undone.\n\nDelete will be blocked if this CA has child CAs.`,
+      confirmLabel:issuedCount>0?"Force Delete CA":"Delete CA",
       danger:true
     });
     if(!ok){
       return;
     }
-    await runCertAction(`delete-ca-${String(ca?.id||"")}`,async()=>{
-      await deleteCA(session,String(ca?.id||""));
-      onToast?.(`CA deleted: ${label}`);
-      await refresh();
+    await runCertAction(`delete-ca-${caID}`,async()=>{
+      try{
+        await deleteCA(session,caID,issuedCount>0);
+        onToast?.(`CA deleted: ${label}${issuedCount>0?` (${issuedCount} certificate(s) removed)`:""}`);
+        await Promise.all([refreshCAs(),refreshCerts()]);
+      }catch(firstErr){
+        const errStr=String((firstErr as any)?.message||firstErr||"");
+        if(errStr.includes("issued certificate")&&!issuedCount){
+          // Backend reported certs we didn't see — offer force
+          const forceOk=await promptDialog.confirm({
+            title:"Force Delete CA",
+            message:`CA '${label}' has issued certificates in the backend.\n\nForce Delete will revoke and permanently remove ALL certificates under this CA, then delete the CA.\n\nThis action CANNOT be undone.`,
+            confirmLabel:"Force Delete",
+            danger:true
+          });
+          if(!forceOk){
+            return;
+          }
+          await deleteCA(session,caID,true);
+          onToast?.(`CA force-deleted: ${label}`);
+          await Promise.all([refreshCAs(),refreshCerts()]);
+        }else{
+          throw firstErr;
+        }
+      }
     });
   };
 
@@ -1114,15 +1189,18 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     const certID=String(crt.id||"");
     const statusRaw=String(crt.status||"unknown");
     const status=statusRaw.toLowerCase();
-    return <div key={certID} style={{padding:"6px 8px",border:`1px solid ${C.border}`,borderRadius:8,background:"rgba(7,13,25,.65)"}}>
-      <div style={{minWidth:0}}>
-        <div style={{fontSize:11,color:C.text,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(crt.subject_cn||crt.id||"certificate")}</div>
-        <div style={{fontSize:9,color:C.muted,fontFamily:"'JetBrains Mono',monospace",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{certID}</div>
-        <div style={{display:"flex",gap:6,marginTop:4,alignItems:"center",flexWrap:"wrap"}}>
-          <B c={status==="active"?"green":status==="revoked"||status==="deleted"?"red":"amber"}>{statusRaw||"unknown"}</B>
-          <span style={{fontSize:9,color:C.dim}}>{String(crt.algorithm||"-")}</span>
-          <span style={{fontSize:9,color:C.dim}}>exp: {formatDestroyAt(String(crt.not_after||"-"))}</span>
+    const statusIcon=status==="active"?<CheckCircle2 size={10} color={C.green}/>:status==="revoked"?<XCircle size={10} color={C.red}/>:status==="deleted"?<Trash2 size={10} color={C.blue}/>:<ShieldAlert size={10} color={C.amber}/>;
+    return <div key={certID} style={{padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:"rgba(7,13,25,.65)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+        <div style={{minWidth:0,flex:1}}>
+          <div style={{fontSize:11,color:C.text,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(crt.subject_cn||crt.id||"certificate")}</div>
+          <div style={{display:"flex",gap:8,marginTop:3,alignItems:"center",flexWrap:"wrap"}}>
+            <div style={{display:"inline-flex",alignItems:"center",gap:3}}>{statusIcon}<B c={status==="active"?"green":status==="revoked"||status==="deleted"?"red":"amber"}>{statusRaw||"unknown"}</B></div>
+            <span style={{fontSize:9,color:C.accent,fontFamily:"'JetBrains Mono',monospace",background:C.accentDim,padding:"1px 5px",borderRadius:3}}>{String(crt.algorithm||"-")}</span>
+            <span style={{fontSize:9,color:C.dim}}>{formatDestroyAt(String(crt.not_after||"-"))}</span>
+          </div>
         </div>
+        <div style={{fontSize:8,color:C.muted,fontFamily:"'JetBrains Mono',monospace",maxWidth:80,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{certID.slice(0,12)}...</div>
       </div>
     </div>;
   };
@@ -1147,24 +1225,37 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     const status=String(ca.status||"unknown").toLowerCase();
     const crlBusy=String(rowActionBusy||"")===`crl-${caID}`;
     const deleteCABusy=String(rowActionBusy||"")===`delete-ca-${caID}`;
-    return <Card key={caID} style={{padding:8,marginLeft:depth*16,background:depth===0?"rgba(6,214,224,.08)":"rgba(148,163,184,.10)",borderColor:depth===0?C.accentDim:C.border}}>
+    return <Card key={caID} style={{padding:10,marginLeft:depth*20,background:depth===0?`linear-gradient(135deg,rgba(6,214,224,.06) 0%,${C.card} 100%)`:`linear-gradient(135deg,rgba(148,163,184,.06) 0%,${C.card} 100%)`,borderColor:depth===0?C.accentDim:C.border}}>
       <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"flex-start"}}>
-        <div style={{minWidth:0}}>
-          <button onClick={()=>toggleCA(caID)} style={{background:"transparent",border:"none",padding:0,margin:0,color:C.accent,cursor:"pointer",fontSize:11,fontWeight:700}}>{open?"v":">"} {depth===0?"Root":"Intermediate"}: {String(ca.name||caID)}</button>
-          <div style={{fontSize:9,color:C.muted,marginTop:3}}>{`${String(ca.algorithm||"-")} | ${String(ca.ca_level||"root")} | ${String(ca.key_backend||"software")}`}</div>
+        <div style={{minWidth:0,flex:1}}>
+          <button onClick={()=>toggleCA(caID)} style={{background:"transparent",border:"none",padding:0,margin:0,color:depth===0?C.accent:C.text,cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+            {open?<ChevronDown size={14}/>:<ChevronRight size={14}/>}
+            <Shield size={14} color={depth===0?C.accent:C.dim}/>
+            <span>{depth===0?"Root CA":"Intermediate CA"}: {String(ca.name||caID)}</span>
+          </button>
+          <div style={{display:"flex",gap:10,marginTop:5,marginLeft:34,flexWrap:"wrap",alignItems:"center"}}>
+            <span style={{fontSize:9,color:C.accent,fontFamily:"'JetBrains Mono',monospace",background:C.accentDim,padding:"2px 6px",borderRadius:4}}>{String(ca.algorithm||"-")}</span>
+            <span style={{fontSize:9,color:C.dim}}>{String(ca.key_backend||"software")==="keycore"?"HSM-backed":"Software vault"}</span>
+            <span style={{fontSize:9,color:C.muted}}>Created: {formatDestroyAt(String(ca.created_at||""))}</span>
+          </div>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",justifyContent:"flex-end",flexShrink:0}}>
           <B c={status==="active"?"green":status==="revoked"?"red":"amber"}>{String(ca.status||"unknown")}</B>
-          <Btn small onClick={()=>void actCRL(ca)} disabled={crlBusy}>{crlBusy?"Generating...":"CRL"}</Btn>
-          <Btn small danger onClick={()=>void actDeleteCA(ca)} disabled={deleteCABusy}>{deleteCABusy?"Deleting...":"Delete"}</Btn>
+          <B c="blue">{certList.length} cert{certList.length!==1?"s":""}</B>
+          <Btn small onClick={()=>void actCRL(ca)} disabled={crlBusy}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Download size={10}/>{crlBusy?"...":"CRL"}</span></Btn>
+          <Btn small danger onClick={()=>void actDeleteCA(ca)} disabled={deleteCABusy}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Trash2 size={10}/>{deleteCABusy?"...":"Delete"}</span></Btn>
         </div>
       </div>
       {open?<>
-        {children.length?<div style={{display:"grid",gap:8,marginTop:8}}>{children.map((child)=>renderCANode(child,depth+1))}</div>:null}
-        <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${C.border}`}}>
-          <button onClick={()=>toggleIssued(caID)} style={{background:"transparent",border:"none",padding:0,color:C.blue,cursor:"pointer",fontSize:10,fontWeight:700}}>{issuedOpen?"v":">"} Issued Certificates ({certList.length})</button>
+        {children.length?<div style={{display:"grid",gap:8,marginTop:10}}>{children.map((child)=>renderCANode(child,depth+1))}</div>:null}
+        <div style={{marginTop:10,paddingTop:8,borderTop:`1px solid ${C.border}`}}>
+          <button onClick={()=>toggleIssued(caID)} style={{background:"transparent",border:"none",padding:0,color:C.blue,cursor:"pointer",fontSize:10,fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
+            {issuedOpen?<ChevronDown size={12}/>:<ChevronRight size={12}/>}
+            <FileText size={12}/>
+            Issued Certificates ({certList.length})
+          </button>
           {issuedOpen?<div style={{display:"grid",gap:6,marginTop:6,maxHeight:200,overflowY:"auto",paddingRight:4}}>
-            {certList.length?certList.map((crt)=>renderIssuedCertRow(crt)):<div style={{fontSize:10,color:C.muted}}>No issued certificates under this CA.</div>}
+            {certList.length?certList.map((crt)=>renderIssuedCertRow(crt)):<div style={{fontSize:10,color:C.muted,padding:"6px 0"}}>No issued certificates under this CA.</div>}
           </div>:null}
         </div>
       </>:null}
@@ -1173,58 +1264,224 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
 
   return <div>
     {showOverviewPane&&<>
-      <div style={{display:"flex",gap:12,marginBottom:14}}>
-        <Stat l="Active Certs" v={String(stats.active)} c="green"/>
-        <Stat l="Revoked" v={String(stats.revoked)} c="red"/>
-        <Stat l="Deleted" v={String(stats.deleted)} c="blue"/>
-        <Stat l="CAs" v={String(stats.cas)} s={`${roots.length} root`} c="accent"/>
-        <Stat l="PQC Certs" v={String(stats.pqc)} s={`${stats.total?Math.round((stats.pqc*100)/stats.total):0}% of total`} c="purple"/>
-        <Stat l={`Expiring (${alertPolicyDaysBefore}d)`} v={String(stats.expiring)} c="amber"/>
-      </div>
-      <div style={{fontSize:9,color:C.muted,marginBottom:10}}>
-        OCSP status meanings: <span style={{color:C.green}}>good</span> = valid and not revoked, <span style={{color:C.red}}>revoked</span> = explicitly revoked, <span style={{color:C.amber}}>expired</span> = validity ended.
+      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:14}}>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,rgba(45,212,160,.04) 100%)`}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <ShieldCheck size={14} color={C.green}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Active</span>
+          </div>
+          <div style={{fontSize:22,fontWeight:800,color:C.green,lineHeight:1}}>{String(stats.active)}</div>
+          <div style={{fontSize:9,color:C.muted,marginTop:4}}>{stats.total?`${Math.round((stats.active*100)/stats.total)}% of total`:"—"}</div>
+        </Card>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,rgba(239,68,68,.04) 100%)`}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <ShieldX size={14} color={C.red}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Revoked</span>
+          </div>
+          <div style={{fontSize:22,fontWeight:800,color:C.red,lineHeight:1}}>{String(stats.revoked)}</div>
+        </Card>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,rgba(6,214,224,.04) 100%)`}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <Shield size={14} color={C.accent}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>CAs</span>
+          </div>
+          <div style={{fontSize:22,fontWeight:800,color:C.accent,lineHeight:1}}>{String(stats.cas)}</div>
+          <div style={{fontSize:9,color:C.muted,marginTop:4}}>{roots.length} root</div>
+        </Card>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,rgba(167,139,250,.04) 100%)`}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <Fingerprint size={14} color={C.purple}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>PQC</span>
+          </div>
+          <div style={{fontSize:22,fontWeight:800,color:C.purple,lineHeight:1}}>{String(stats.pqc)}</div>
+          <div style={{fontSize:9,color:C.muted,marginTop:4}}>{stats.total?Math.round((stats.pqc*100)/stats.total):0}% of total</div>
+        </Card>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.expiring>0?"rgba(245,158,11,.04)":"rgba(45,212,160,.04)"} 100%)`}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <Clock size={14} color={stats.expiring>0?C.amber:C.green}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Expiring</span>
+          </div>
+          <div style={{fontSize:22,fontWeight:800,color:stats.expiring>0?C.amber:C.green,lineHeight:1}}>{String(stats.expiring)}</div>
+          <div style={{fontSize:9,color:C.muted,marginTop:4}}>within {alertPolicyDaysBefore}d</div>
+        </Card>
       </div>
     </>}
 
-    {showEnrollmentPane&&<Section title="Enrollment Protocols">
+    {showEnrollmentPane&&<>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:10,marginBottom:14}}>
+        <Card style={{padding:"12px 14px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <Server size={14} color={C.accent}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Protocols</span>
+          </div>
+          <div style={{fontSize:22,fontWeight:800,color:C.accent,lineHeight:1}}>{protocolMeta.length}</div>
+          <div style={{fontSize:9,color:C.muted,marginTop:4}}>configured</div>
+        </Card>
+        <Card style={{padding:"12px 14px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <CheckCircle2 size={14} color={C.green}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Enabled</span>
+          </div>
+          <div style={{fontSize:22,fontWeight:800,color:C.green,lineHeight:1}}>{protocolMeta.filter((m)=>{const cfg=protocolByName[m.name];return cfg?Boolean(cfg.enabled):true;}).length}</div>
+        </Card>
+        <Card style={{padding:"12px 14px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <XCircle size={14} color={C.red}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Disabled</span>
+          </div>
+          <div style={{fontSize:22,fontWeight:800,color:C.red,lineHeight:1}}>{protocolMeta.filter((m)=>{const cfg=protocolByName[m.name];return cfg?!Boolean(cfg.enabled):false;}).length}</div>
+        </Card>
+        <Card style={{padding:"12px 14px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <Globe size={14} color={C.blue}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>ACME</span>
+          </div>
+          <div style={{fontSize:11,fontWeight:700,color:protocolByName["acme"]?Boolean(protocolByName["acme"].enabled)?C.green:C.red:C.green,lineHeight:1.4}}>{protocolByName["acme"]?Boolean(protocolByName["acme"].enabled)?"Active":"Off":"Active"}</div>
+          <div style={{fontSize:9,color:C.muted}}>RFC 8555</div>
+        </Card>
+        <Card style={{padding:"12px 14px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <Lock size={14} color={C.purple}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>EST</span>
+          </div>
+          <div style={{fontSize:11,fontWeight:700,color:protocolByName["est"]?Boolean(protocolByName["est"].enabled)?C.green:C.red:C.green,lineHeight:1.4}}>{protocolByName["est"]?Boolean(protocolByName["est"].enabled)?"Active":"Off":"Active"}</div>
+          <div style={{fontSize:9,color:C.muted}}>RFC 7030</div>
+        </Card>
+        <Card style={{padding:"12px 14px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <KeyRound size={14} color={C.amber}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>SCEP</span>
+          </div>
+          <div style={{fontSize:11,fontWeight:700,color:protocolByName["scep"]?Boolean(protocolByName["scep"].enabled)?C.green:C.red:C.green,lineHeight:1.4}}>{protocolByName["scep"]?Boolean(protocolByName["scep"].enabled)?"Active":"Off":"Active"}</div>
+          <div style={{fontSize:9,color:C.muted}}>RFC 8894</div>
+        </Card>
+      </div>
+      <Section title="Enrollment Protocols">
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
         {protocolMeta.map((meta)=>{
           const cfg=protocolByName[meta.name];
           const enabled=cfg?Boolean(cfg.enabled):true;
           const canTest=meta.name!=="runtime-mtls";
-          return <Card key={meta.name} style={{padding:12}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-              <div style={{fontSize:16,fontWeight:700,color:C.text}}>{meta.title}</div>
+          const protocolIcon=meta.name==="acme"?<Globe size={18} color={C.blue}/>:meta.name==="est"?<Lock size={18} color={C.purple}/>:meta.name==="scep"?<KeyRound size={18} color={C.amber}/>:meta.name==="cmpv2"?<Server size={18} color={C.green}/>:<Shield size={18} color={C.accent}/>;
+          const configObj=(() => { try { return JSON.parse(String(cfg?.config_json||"{}")); } catch { return {}; } })();
+          const endpoints:Array<{label:string;path:string}>=
+            meta.name==="acme"?[
+              {label:"Directory",path:"/acme/directory"},
+              {label:"New Nonce",path:"/acme/new-nonce"},
+              {label:"New Account",path:"/acme/new-account"},
+              {label:"New Order",path:"/acme/new-order"},
+              {label:"Challenge",path:"/acme/challenge/{id}"},
+              {label:"Finalize",path:"/acme/finalize/{id}"},
+              {label:"Cert Download",path:"/acme/cert/{id}"}
+            ]:meta.name==="est"?[
+              {label:"CA Certs",path:"/est/.well-known/est/cacerts"},
+              {label:"CSR Attributes",path:"/est/.well-known/est/csrattrs"},
+              {label:"Simple Enroll",path:"/est/.well-known/est/simpleenroll"},
+              {label:"Simple Re-enroll",path:"/est/.well-known/est/simplereenroll"},
+              {label:"Server Keygen",path:"/est/.well-known/est/serverkeygen"}
+            ]:meta.name==="scep"?[
+              {label:"GetCACaps",path:"/scep/pkiclient.exe?operation=getcacaps"},
+              {label:"GetCACert",path:"/scep/pkiclient.exe?operation=getcacert"},
+              {label:"GetCert",path:"/scep/pkiclient.exe?operation=getcert"},
+              {label:"PKIOperation",path:"/scep/pkiclient.exe?operation=pkioperation"}
+            ]:meta.name==="cmpv2"?[
+              {label:"PKI Request (IR/CR/KUR/RR)",path:"/cmpv2"},
+              {label:"PKI Confirm",path:"/cmpv2/confirm"}
+            ]:[];
+          const features:string[]=
+            meta.name==="acme"?[
+              `Challenges: ${(configObj.challenge_types||["http-01","dns-01"]).join(", ")}`,
+              `Wildcard: ${configObj.allow_wildcard!==false?"Yes":"No"}`,
+              `EAB Required: ${configObj.require_eab?"Yes":"No"}`,
+              `Rate Limit: ${configObj.rate_limit_per_hour||1000}/hr`,
+              `Nonce replay protection`,
+              `Challenge token generation`
+            ]:meta.name==="est"?[
+              `Auth: ${String(configObj.auth_mode||"mtls").toUpperCase()}`,
+              `Server Keygen: ${configObj.server_keygen!==false?"Yes":"No"}`,
+              `Re-enroll: ${configObj.allow_reenroll!==false?"Yes":"No"}`,
+              `CSR PoP: ${configObj.require_csr_pop!==false?"Required":"Optional"}`,
+              `CSR Attributes endpoint (RFC 7030 section 4.5)`,
+              `Wire format: application/pkcs10 + DER response`
+            ]:meta.name==="scep"?[
+              `Challenge Password: ${configObj.challenge_password_required?"Required":"Optional"}`,
+              `Renewal: ${configObj.allow_renewal!==false?"Allowed":"Disabled"}`,
+              `Digest: ${(configObj.digest_algorithms||["sha256","sha384"]).join(", ")}`,
+              `Encryption: ${(configObj.encryption_algorithms||["aes256","aes128"]).join(", ")}`,
+              `PKIMessage parsing via smallstep/scep`,
+              `GetCert retrieval by serial number`
+            ]:meta.name==="cmpv2"?[
+              `Messages: ${(configObj.message_types||["ir","cr","kur","rr"]).join(", ").toUpperCase()}`,
+              `Protection: ${configObj.require_message_protection!==false?"Required":"Optional"}`,
+              `Transaction ID: ${configObj.require_transaction_id!==false?"Required":"Optional"}`,
+              `Implicit Confirm: ${configObj.allow_implicit_confirm!==false?"Yes":"No"}`,
+              `PKI Confirmation (pkiconf) endpoint`,
+              `Structured error responses`
+            ]:[];
+          const impl=meta.schema?.implementation;
+          return <Card key={meta.name} style={{padding:14,background:`linear-gradient(135deg,${C.card} 0%,${enabled?"rgba(45,212,160,.03)":"rgba(239,68,68,.03)"} 100%)`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <div style={{width:36,height:36,borderRadius:8,background:enabled?C.greenDim:C.redDim,display:"flex",alignItems:"center",justifyContent:"center"}}>{protocolIcon}</div>
+                <div>
+                  <div style={{fontSize:15,fontWeight:700,color:C.text}}>{meta.title}</div>
+                  <div style={{fontSize:9,color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{meta.rfc}</div>
+                </div>
+              </div>
               <B c={enabled?"green":"red"}>{enabled?"Active":"Disabled"}</B>
             </div>
-            <div style={{fontSize:10,color:C.accent,marginBottom:4}}>{meta.rfc}</div>
-            <div style={{fontSize:11,color:C.dim,marginBottom:8}}>{meta.desc}</div>
-            <div style={{display:"flex",gap:6}}>
-              <Btn small onClick={()=>openProtocolModal(meta.name)}>Configure</Btn>
+            <div style={{fontSize:11,color:C.dim,marginBottom:6,lineHeight:1.5}}>{meta.desc}</div>
+            {impl?<div style={{fontSize:9,color:C.muted,marginBottom:6}}>Engine: {impl.engine} | {(impl.sdks||[]).join(", ")}</div>:null}
+            {features.length>0?<div style={{marginBottom:8}}>
+              <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Capabilities</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+                {features.map((f,i)=><span key={i} style={{fontSize:9,padding:"2px 6px",borderRadius:4,background:C.surfaceHi||C.accentDim,color:C.text,border:`1px solid ${C.border}`}}>{f}</span>)}
+              </div>
+            </div>:null}
+            {endpoints.length>0?<div style={{marginBottom:8}}>
+              <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Endpoints</div>
+              <div style={{display:"grid",gap:2}}>
+                {endpoints.map((ep,i)=><div key={i} style={{display:"flex",gap:6,fontSize:9,alignItems:"center"}}>
+                  <span style={{color:C.green,fontWeight:600,minWidth:90}}>{ep.label}</span>
+                  <code style={{color:C.accent,fontFamily:"'JetBrains Mono',monospace",fontSize:8}}>{ep.path}</code>
+                </div>)}
+              </div>
+            </div>:null}
+            {cfg?.updated_at?<div style={{fontSize:9,color:C.muted,marginBottom:8}}>Last updated: {formatDestroyAt(String(cfg.updated_at||""))} by {String(cfg.updated_by||"system")}</div>:null}
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <Btn small onClick={()=>openProtocolModal(meta.name)}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Settings size={10}/>Configure</span></Btn>
               <Btn
                 small
                 primary
                 disabled={!enabled||testingProtocol===meta.name||!canTest}
                 onClick={()=>void runProtocolTest(meta.name)}
               >
-                {!canTest?"N/A":testingProtocol===meta.name?"Testing...":"Test Enroll"}
+                <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Zap size={10}/>{!canTest?"N/A":testingProtocol===meta.name?"Testing...":"Test Enroll"}</span>
               </Btn>
+              {meta.name==="acme"&&enabled?<Btn small onClick={()=>setModal("acme-wizard")}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Globe size={10}/>ACME Wizard</span></Btn>:null}
+              {meta.name==="est"&&enabled?<Btn small onClick={()=>setModal("est-wizard")}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Lock size={10}/>EST Enroll</span></Btn>:null}
+              {meta.name==="scep"&&enabled?<Btn small onClick={()=>setModal("scep-wizard")}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><KeyRound size={10}/>SCEP Enroll</span></Btn>:null}
+              {meta.name==="cmpv2"&&enabled?<Btn small onClick={()=>setModal("cmpv2-wizard")}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Server size={10}/>CMPv2 Request</span></Btn>:null}
             </div>
           </Card>;
         })}
       </div>
-    </Section>}
+    </Section>
+    </>}
 
     {showOverviewPane&&<div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:10,marginBottom:12}}>
-      <Card style={{padding:10}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <div style={{fontSize:12,fontWeight:700,color:C.text}}>CA Hierarchy</div>
+      <Card style={{padding:12}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <Shield size={16} color={C.accent}/>
+            <div style={{fontSize:13,fontWeight:700,color:C.text}}>CA Hierarchy</div>
+          </div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
             <Btn small onClick={()=>setCAStatusView("all")} style={{background:caStatusView==="all"?C.accentDim:"transparent",color:caStatusView==="all"?C.accent:C.text}}>{`All ${caStatusCounts.all}`}</Btn>
             <Btn small onClick={()=>setCAStatusView("active")} style={{background:caStatusView==="active"?C.greenDim:"transparent",color:caStatusView==="active"?C.green:C.text}}>{`Active ${caStatusCounts.active}`}</Btn>
             <Btn small onClick={()=>setCAStatusView("revoked")} style={{background:caStatusView==="revoked"?C.redDim:"transparent",color:caStatusView==="revoked"?C.red:C.text}}>{`Revoked ${caStatusCounts.revoked}`}</Btn>
-            <Btn small onClick={()=>void refresh()} disabled={loading}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>{loading?"Refreshing...":"Refresh"}</span></Btn>
-            <Btn small primary onClick={()=>setModal("create-ca")}>+ Create CA</Btn>
+            <Btn small onClick={()=>void refreshCAs()} disabled={caLoading}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>{caLoading?"...":"Refresh"}</span></Btn>
+            <Btn small primary onClick={()=>setModal("create-ca")}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Shield size={11}/>Create CA</span></Btn>
           </div>
         </div>
         {!roots.length&&!loading?<div style={{fontSize:10,color:C.muted}}>No CA found. Create a root CA to start issuance.</div>:null}
@@ -1239,8 +1496,11 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       </Card>
 
       <div style={{display:"grid",gap:10}}>
-        <Card style={{padding:10}}>
-          <div style={{fontSize:12,fontWeight:700,color:C.text,marginBottom:4}}>Expiry Calendar</div>
+        <Card style={{padding:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+            <Clock size={14} color={C.amber}/>
+            <div style={{fontSize:13,fontWeight:700,color:C.text}}>Expiry Calendar</div>
+          </div>
           <div style={{fontSize:9,color:C.muted,marginBottom:8}}>{`Alert window: ${alertPolicyDaysBefore} day(s)${alertPolicyIncludeExternal?" including":" excluding"} external certs`}</div>
           <div style={{display:"grid",gap:8}}>
             {expiryItems.map((it)=>{
@@ -1260,38 +1520,40 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       </div>
     </div>}
 
-    {showOverviewPane&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>
-      <Btn small primary onClick={()=>setModal("issue")} style={{height:34,padding:"0 14px"}}>+ Issue</Btn>
-      <Btn small onClick={()=>setModal("sign-csr")} style={{height:34,padding:"0 14px"}}>Sign CSR</Btn>
-      <Btn small onClick={()=>setModal("issue-pqc")} style={{height:34,padding:"0 14px"}}>PQC</Btn>
-      <Btn small onClick={()=>setModal("upload-3p")} style={{height:34,padding:"0 14px"}}>Upload 3rd-Party</Btn>
-      <Btn small onClick={()=>setModal("cert-alert-policy")} style={{height:34,padding:"0 14px"}}>Alert Policy</Btn>
-    </div>}
+    {showOverviewPane&&<Card style={{padding:"10px 14px",marginBottom:12,background:`linear-gradient(135deg,${C.card} 0%,rgba(6,214,224,.03) 100%)`,borderColor:C.accentDim}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.text}}>Certificate Operations</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <Btn small primary onClick={()=>setModal("issue")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><FileText size={11}/>Issue Certificate</span></Btn>
+          <Btn small onClick={()=>setModal("sign-csr")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Fingerprint size={11}/>Sign CSR</span></Btn>
+          <Btn small onClick={()=>setModal("issue-pqc")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Shield size={11}/>PQC Issue</span></Btn>
+          <Btn small onClick={()=>setModal("upload-3p")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Globe size={11}/>Upload 3rd-Party</span></Btn>
+          <Btn small onClick={()=>setModal("cert-alert-policy")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><AlertTriangle size={11}/>Alert Policy</span></Btn>
+        </div>
+      </div>
+    </Card>}
 
     {showOverviewPane&&<Section title="Certificates">
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
           <Inp
-            placeholder="Search certificate by name, ID, algorithm..."
+            placeholder="Search by name, ID, algorithm, class..."
             w={320}
             value={certSearch}
             onChange={(e)=>setCertSearch(e.target.value)}
             style={{height:34,borderRadius:9,fontSize:11}}
           />
-        <Btn small onClick={()=>setCertStatusView("all")} style={{background:certStatusView==="all"?C.accentDim:"transparent",color:certStatusView==="all"?C.accent:C.text}}>
-          {`All (${certStatusCounts.all})`}
+        <Btn small onClick={()=>setCertStatusView("all")} style={{background:certStatusView==="all"?C.accentDim:"transparent",color:certStatusView==="all"?C.accent:C.text,borderColor:certStatusView==="all"?C.accent:"transparent"}}>
+          <span style={{display:"inline-flex",alignItems:"center",gap:4}}><FileText size={10}/>{`All (${certStatusCounts.all})`}</span>
         </Btn>
-        <Btn small onClick={()=>setCertStatusView("active")} style={{background:certStatusView==="active"?C.greenDim:"transparent",color:certStatusView==="active"?C.green:C.text}}>
-          {`Active (${certStatusCounts.active})`}
+        <Btn small onClick={()=>setCertStatusView("active")} style={{background:certStatusView==="active"?C.greenDim:"transparent",color:certStatusView==="active"?C.green:C.text,borderColor:certStatusView==="active"?C.green:"transparent"}}>
+          <span style={{display:"inline-flex",alignItems:"center",gap:4}}><CheckCircle2 size={10}/>{`Active (${certStatusCounts.active})`}</span>
         </Btn>
-        <Btn small onClick={()=>setCertStatusView("revoked")} style={{background:certStatusView==="revoked"?C.redDim:"transparent",color:certStatusView==="revoked"?C.red:C.text}}>
-          {`Revoked (${certStatusCounts.revoked})`}
-        </Btn>
-        <Btn small onClick={()=>setCertStatusView("deleted")} style={{background:certStatusView==="deleted"?C.blueDim:"transparent",color:certStatusView==="deleted"?C.blue:C.text}}>
-          {`Deleted (${certStatusCounts.deleted})`}
+        <Btn small onClick={()=>setCertStatusView("revoked")} style={{background:certStatusView==="revoked"?C.redDim:"transparent",color:certStatusView==="revoked"?C.red:C.text,borderColor:certStatusView==="revoked"?C.red:"transparent"}}>
+          <span style={{display:"inline-flex",alignItems:"center",gap:4}}><XCircle size={10}/>{`Revoked (${certStatusCounts.revoked})`}</span>
         </Btn>
         </div>
-        <Btn small onClick={()=>void refresh()} disabled={loading}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>{loading?"Refreshing...":"Refresh"}</span></Btn>
+        <Btn small onClick={()=>void refreshCerts()} disabled={certLoading}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>{certLoading?"Refreshing...":"Refresh"}</span></Btn>
       </div>
       <Card style={{padding:0,overflow:"hidden"}}>
         <div style={{display:"grid",gridTemplateColumns:"1.3fr 1fr .8fr .8fr .9fr .55fr",gap:0,padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
@@ -1306,7 +1568,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
               </div>
               <div style={{color:C.accent}}>{c.algorithm}</div>
               <div style={{color:C.dim,textTransform:"uppercase"}}>{c.cert_class}</div>
-              <div><B c={String(c.status).toLowerCase()==="active"?"green":String(c.status).toLowerCase()==="revoked"||String(c.status).toLowerCase()==="deleted"?"red":"amber"}>{c.status}</B></div>
+              <div style={{display:"flex",alignItems:"center",gap:4}}>{String(c.status).toLowerCase()==="active"?<CheckCircle2 size={11} color={C.green}/>:String(c.status).toLowerCase()==="revoked"?<XCircle size={11} color={C.red}/>:String(c.status).toLowerCase()==="deleted"?<Trash2 size={11} color={C.blue}/>:<ShieldAlert size={11} color={C.amber}/>}<B c={String(c.status).toLowerCase()==="active"?"green":String(c.status).toLowerCase()==="revoked"||String(c.status).toLowerCase()==="deleted"?"red":"amber"}>{c.status}</B></div>
               <div style={{color:C.dim}}>{formatDestroyAt(String(c.not_after||"-"))}</div>
               <div style={{display:"flex",justifyContent:"flex-end",position:"relative"}} onClick={(e)=>e.stopPropagation()}>
                 {(() => {
@@ -1354,16 +1616,20 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
                   display:"grid",
                   gap:2
                 }}>
-                  <button
+                  {status!=="deleted"?<button
                     onClick={(e)=>{
                       e.stopPropagation();
                       setOpenCertActionMenuId("");
                       actDownloadCert(c);
                     }}
-                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                    onMouseEnter={(e)=>{(e.currentTarget as any).style.background=C.accentDim;}}
+                    onMouseLeave={(e)=>{(e.currentTarget as any).style.background="transparent";}}
+                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6,display:"flex",alignItems:"center",gap:6}}
                   >
-                    Download
-                  </button>
+                    <Download size={12} color={C.accent}/> Download
+                  </button>:<div style={{padding:"6px 8px",fontSize:10,color:C.muted,display:"flex",alignItems:"center",gap:6}}>
+                    <XCircle size={12} color={C.muted}/> Download unavailable (deleted)
+                  </div>}
                   {canRenew?<button
                     onClick={(e)=>{
                       e.stopPropagation();
@@ -1371,9 +1637,11 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
                       void actRenewCert(c);
                     }}
                     disabled={busy===`renew-${certID}`}
-                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`renew-${certID}`?"not-allowed":"pointer",borderRadius:6}}
+                    onMouseEnter={(e)=>{(e.currentTarget as any).style.background=C.greenDim;}}
+                    onMouseLeave={(e)=>{(e.currentTarget as any).style.background="transparent";}}
+                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`renew-${certID}`?"not-allowed":"pointer",borderRadius:6,display:"flex",alignItems:"center",gap:6}}
                   >
-                    {busy===`renew-${certID}`?"Renewing...":"Renew"}
+                    <RotateCcw size={12} color={C.green}/> {busy===`renew-${certID}`?"Renewing...":"Renew"}
                   </button>:null}
                   {canRevoke?<button
                     onClick={(e)=>{
@@ -1382,9 +1650,11 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
                       void actRevokeCert(c);
                     }}
                     disabled={busy===`revoke-${certID}`}
-                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`revoke-${certID}`?"not-allowed":"pointer",borderRadius:6}}
+                    onMouseEnter={(e)=>{(e.currentTarget as any).style.background=C.amberDim;}}
+                    onMouseLeave={(e)=>{(e.currentTarget as any).style.background="transparent";}}
+                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`revoke-${certID}`?"not-allowed":"pointer",borderRadius:6,display:"flex",alignItems:"center",gap:6}}
                   >
-                    {busy===`revoke-${certID}`?"Revoking...":"Revoke"}
+                    <ShieldX size={12} color={C.amber}/> {busy===`revoke-${certID}`?"Revoking...":"Revoke"}
                   </button>:null}
                   <button
                     onClick={(e)=>{
@@ -1393,22 +1663,29 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
                       void actOCSP(c);
                     }}
                     disabled={busy===`ocsp-${certID}`}
-                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`ocsp-${certID}`?"not-allowed":"pointer",borderRadius:6}}
+                    onMouseEnter={(e)=>{(e.currentTarget as any).style.background=C.blueDim;}}
+                    onMouseLeave={(e)=>{(e.currentTarget as any).style.background="transparent";}}
+                    style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`ocsp-${certID}`?"not-allowed":"pointer",borderRadius:6,display:"flex",alignItems:"center",gap:6}}
                   >
-                    {busy===`ocsp-${certID}`?"Checking...":"OCSP"}
+                    <Eye size={12} color={C.blue}/> {busy===`ocsp-${certID}`?"Checking...":"OCSP Status"}
                   </button>
-                  {canDelete?<button
+                  {canDelete?<>
+                  <div style={{height:1,background:C.border,margin:"2px 0"}}/>
+                  <button
                     onClick={(e)=>{
                       e.stopPropagation();
                       setOpenCertActionMenuId("");
                       void actDeleteCert(c);
                     }}
                     disabled={busy===`delete-${certID}`}
-                    style={{background:"transparent",border:"none",color:C.red,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`delete-${certID}`?"not-allowed":"pointer",borderRadius:6}}
+                    onMouseEnter={(e)=>{(e.currentTarget as any).style.background=C.redDim;}}
+                    onMouseLeave={(e)=>{(e.currentTarget as any).style.background="transparent";}}
+                    style={{background:"transparent",border:"none",color:C.red,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:busy===`delete-${certID}`?"not-allowed":"pointer",borderRadius:6,display:"flex",alignItems:"center",gap:6}}
                   >
-                    {busy===`delete-${certID}`?"Deleting...":"Delete"}
-                  </button>:<div style={{padding:"6px 8px",fontSize:10,color:C.muted}}>
-                    {status==="deleted"?"Already deleted":"Managed runtime mTLS cert (renew/rotate only)"}
+                    <Trash2 size={12} color={C.red}/> {busy===`delete-${certID}`?"Deleting...":"Delete Permanently"}
+                  </button>
+                  </>:<div style={{padding:"6px 8px",fontSize:10,color:C.muted,display:"flex",alignItems:"center",gap:6}}>
+                    {status==="deleted"?<><Trash2 size={12} color={C.muted}/> Already deleted</>:<><Lock size={12} color={C.muted}/> Managed mTLS (renew/rotate only)</>}
                   </div>}
                 </div>}
                 </>;
@@ -1744,6 +2021,269 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
         </div>
       </div>
     </Modal>
+
+    {/* ── ACME Enrollment Wizard ── */}
+    <Modal open={modal==="acme-wizard"} onClose={()=>setModal(null)} title="ACME Certificate Enrollment (RFC 8555)" wide>
+      {(()=>{
+        const activeCA=(Array.isArray(cas)?cas:[]).find((c)=>String(c.status||"").toLowerCase()==="active");
+        return <>
+          <div style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
+            Full ACME protocol flow: create account, create order with domain validation challenge,
+            respond to challenge, and finalize to obtain a certificate. Nonce replay protection and
+            rate limiting are enforced server-side.
+          </div>
+          <div style={{display:"grid",gap:8,marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8}}>
+              {["1. Account","2. Order","3. Challenge","4. Finalize"].map((step,i)=>
+                <div key={i} style={{textAlign:"center",padding:"8px 4px",borderRadius:8,background:C.accentDim,border:`1px solid ${C.border}`}}>
+                  <div style={{fontSize:10,fontWeight:700,color:C.accent}}>{step}</div>
+                </div>
+              )}
+            </div>
+          </div>
+          {!activeCA?<div style={{fontSize:11,color:C.red,marginBottom:8}}>No active CA found. Create a CA first.</div>:null}
+          <FG label="Account Email">
+            <Inp placeholder="admin@example.com" w="100%" id="acme-wiz-email"/>
+          </FG>
+          <FG label="Domain (Subject CN)">
+            <Inp placeholder="app.example.com" w="100%" id="acme-wiz-cn"/>
+          </FG>
+          <FG label="SANs (comma-separated)">
+            <Inp placeholder="app.example.com, www.example.com" w="100%" id="acme-wiz-sans"/>
+          </FG>
+          <FG label="Challenge Type">
+            <Sel id="acme-wiz-challenge" value="http-01" style={{width:"100%"}}>
+              <option value="http-01">HTTP-01 (file-based)</option>
+              <option value="dns-01">DNS-01 (TXT record)</option>
+              <option value="tls-alpn-01">TLS-ALPN-01</option>
+            </Sel>
+          </FG>
+          <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+            <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+            <Btn primary disabled={!activeCA||submitting} onClick={async()=>{
+              if(!session||!activeCA)return;
+              setSubmitting(true);
+              try{
+                const email=String((document.getElementById("acme-wiz-email") as any)?.value||"").trim()||`acme-${Date.now()}@example.com`;
+                const cn=String((document.getElementById("acme-wiz-cn") as any)?.value||"").trim()||`acme-${Date.now()}.local`;
+                const sansRaw=String((document.getElementById("acme-wiz-sans") as any)?.value||"").trim();
+                const sans=sansRaw?sansRaw.split(",").map(s=>s.trim()).filter(Boolean):[cn];
+                const account=await acmeNewAccount(session,email);
+                onToast?.(`ACME account created: ${account.account_id}`);
+                const order=await acmeNewOrder(session,{ca_id:activeCA.id,account_id:account.account_id,subject_cn:cn,sans});
+                onToast?.(`ACME order created: ${order.order_id} (challenge: ${order.challenge_id})`);
+                const info=await acmeChallengeInfo(session,order.challenge_id,order.order_id).catch(()=>null);
+                if(info){
+                  onToast?.(`Challenge token: ${info.token.substring(0,20)}... Instructions: ${info.instructions.substring(0,80)}...`);
+                }
+                await acmeChallengeComplete(session,order.challenge_id,order.order_id);
+                onToast?.("Challenge validated successfully.");
+                const cert=await acmeFinalize(session,order.order_id,"");
+                onToast?.(`Certificate issued: ${cert.id} (${cert.subject_cn})`);
+                await refresh();
+                setModal(null);
+              }catch(e){onToast?.(`ACME wizard failed: ${errMsg(e)}`);}
+              finally{setSubmitting(false);}
+            }}>{submitting?"Processing...":"Run Full ACME Flow"}</Btn>
+          </div>
+        </>;
+      })()}
+    </Modal>
+
+    {/* ── EST Enrollment Wizard ── */}
+    <Modal open={modal==="est-wizard"} onClose={()=>setModal(null)} title="EST Certificate Enrollment (RFC 7030)" wide>
+      {(()=>{
+        const activeCA=(Array.isArray(cas)?cas:[]).find((c)=>String(c.status||"").toLowerCase()==="active");
+        return <>
+          <div style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
+            EST (Enrollment over Secure Transport) is used for IoT device enrollment, re-enrollment,
+            and server-side key generation. Supports mTLS, bearer, and basic auth modes.
+            CSR attributes endpoint provides algorithm and profile guidance.
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
+            <Card style={{padding:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.text,marginBottom:4}}>Simple Enroll</div>
+              <div style={{fontSize:9,color:C.dim}}>Submit a CSR for certificate issuance</div>
+            </Card>
+            <Card style={{padding:10}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.text,marginBottom:4}}>Server Keygen</div>
+              <div style={{fontSize:9,color:C.dim}}>Server generates key pair + certificate</div>
+            </Card>
+          </div>
+          {!activeCA?<div style={{fontSize:11,color:C.red,marginBottom:8}}>No active CA found.</div>:null}
+          <FG label="Subject CN">
+            <Inp placeholder="device-001.iot.local" w="100%" id="est-wiz-cn"/>
+          </FG>
+          <FG label="SANs (comma-separated)">
+            <Inp placeholder="device-001.iot.local" w="100%" id="est-wiz-sans"/>
+          </FG>
+          <FG label="Auth Method">
+            <Sel id="est-wiz-auth" style={{width:"100%"}}>
+              <option value="mtls">mTLS (default)</option>
+              <option value="bearer">Bearer Token</option>
+              <option value="basic">HTTP Basic</option>
+            </Sel>
+          </FG>
+          <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+            <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+            <Btn small onClick={async()=>{
+              if(!session)return;
+              try{
+                const attrs=await estCSRAttributes(session);
+                onToast?.(`EST CSR Attributes - Algorithms: ${attrs.algorithms.join(", ")} | Profiles: ${attrs.profile_ids.length}`);
+              }catch(e){onToast?.(`CSR attrs failed: ${errMsg(e)}`);}
+            }}>Query CSR Attrs</Btn>
+            <Btn primary disabled={!activeCA||submitting} onClick={async()=>{
+              if(!session||!activeCA)return;
+              setSubmitting(true);
+              try{
+                const cn=String((document.getElementById("est-wiz-cn") as any)?.value||"").trim()||`est-device-${Date.now()}.local`;
+                const sansRaw=String((document.getElementById("est-wiz-sans") as any)?.value||"").trim();
+                const sans=sansRaw?sansRaw.split(",").map(s=>s.trim()).filter(Boolean):[cn];
+                const cert=await estServerKeygen(session,{ca_id:activeCA.id,subject_cn:cn,sans});
+                onToast?.(`EST certificate issued: ${cert.id} (${cert.subject_cn})`);
+                await refresh();
+                setModal(null);
+              }catch(e){onToast?.(`EST enrollment failed: ${errMsg(e)}`);}
+              finally{setSubmitting(false);}
+            }}>{submitting?"Enrolling...":"Server Keygen Enroll"}</Btn>
+          </div>
+        </>;
+      })()}
+    </Modal>
+
+    {/* ── SCEP Enrollment Wizard ── */}
+    <Modal open={modal==="scep-wizard"} onClose={()=>setModal(null)} title="SCEP Certificate Enrollment (RFC 8894)" wide>
+      {(()=>{
+        const activeCA=(Array.isArray(cas)?cas:[]).find((c)=>String(c.status||"").toLowerCase()==="active");
+        return <>
+          <div style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
+            SCEP (Simple Certificate Enrollment Protocol) is widely used for MDM and legacy device enrollment.
+            Supports PKCSReq, RenewalReq, and UpdateReq message types. Full PKIMessage wire format
+            is supported via the smallstep/scep library including PKCS#7 envelope encryption/decryption.
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
+            {[{t:"PKCSReq",d:"Initial enrollment"},{t:"RenewalReq",d:"Certificate renewal"},{t:"GetCert",d:"Retrieve by serial"}].map((op)=>
+              <Card key={op.t} style={{padding:10}}>
+                <div style={{fontSize:10,fontWeight:700,color:C.text}}>{op.t}</div>
+                <div style={{fontSize:9,color:C.dim}}>{op.d}</div>
+              </Card>
+            )}
+          </div>
+          {!activeCA?<div style={{fontSize:11,color:C.red,marginBottom:8}}>No active CA found.</div>:null}
+          <FG label="Message Type">
+            <Sel id="scep-wiz-msgtype" style={{width:"100%"}}>
+              <option value="pkcsreq">PKCSReq (Initial Enrollment)</option>
+              <option value="renewalreq">RenewalReq (Renewal)</option>
+              <option value="updatereq">UpdateReq (Key Update)</option>
+            </Sel>
+          </FG>
+          <FG label="Challenge Password (if required)">
+            <Inp placeholder="challenge-secret" w="100%" id="scep-wiz-pass" type="password"/>
+          </FG>
+          <FG label="Transaction ID">
+            <Inp placeholder="auto-generated" w="100%" id="scep-wiz-txn"/>
+          </FG>
+          <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+            <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+            <Btn primary disabled={!activeCA||submitting} onClick={async()=>{
+              if(!session||!activeCA)return;
+              setSubmitting(true);
+              try{
+                const msgType=String((document.getElementById("scep-wiz-msgtype") as any)?.value||"pkcsreq");
+                const challenge=String((document.getElementById("scep-wiz-pass") as any)?.value||"").trim();
+                const txnId=String((document.getElementById("scep-wiz-txn") as any)?.value||"").trim()||`txn-${Date.now()}`;
+                const cert=await scepEnroll(session,{
+                  ca_id:activeCA.id,
+                  message_type:msgType,
+                  challenge_password:challenge,
+                  transaction_id:txnId
+                });
+                onToast?.(`SCEP certificate issued: ${cert.id} (txn: ${txnId})`);
+                await refresh();
+                setModal(null);
+              }catch(e){onToast?.(`SCEP enrollment failed: ${errMsg(e)}`);}
+              finally{setSubmitting(false);}
+            }}>{submitting?"Enrolling...":"Submit SCEP Request"}</Btn>
+          </div>
+        </>;
+      })()}
+    </Modal>
+
+    {/* ── CMPv2 Request Wizard ── */}
+    <Modal open={modal==="cmpv2-wizard"} onClose={()=>setModal(null)} title="CMPv2 PKI Request (RFC 4210)" wide>
+      {(()=>{
+        const activeCA=(Array.isArray(cas)?cas:[]).find((c)=>String(c.status||"").toLowerCase()==="active");
+        return <>
+          <div style={{fontSize:11,color:C.dim,marginBottom:12,lineHeight:1.6}}>
+            CMPv2 (Certificate Management Protocol v2) supports enterprise PKI operations including
+            initial registration (IR), certification request (CR), key update (KUR), and revocation (RR).
+            Message protection and transaction tracking are enforced per policy. PKI confirmation endpoint
+            provides formal acceptance acknowledgment.
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:8,marginBottom:12}}>
+            {[{t:"IR",d:"Initial Registration"},{t:"CR",d:"Certification Request"},{t:"KUR",d:"Key Update"},{t:"RR",d:"Revocation"}].map((op)=>
+              <Card key={op.t} style={{padding:10,textAlign:"center"}}>
+                <div style={{fontSize:12,fontWeight:700,color:C.accent}}>{op.t}</div>
+                <div style={{fontSize:9,color:C.dim}}>{op.d}</div>
+              </Card>
+            )}
+          </div>
+          {!activeCA?<div style={{fontSize:11,color:C.red,marginBottom:8}}>No active CA found.</div>:null}
+          <FG label="Message Type">
+            <Sel id="cmpv2-wiz-type" style={{width:"100%"}}>
+              <option value="ir">IR -- Initial Registration (new cert)</option>
+              <option value="cr">CR -- Certification Request (new cert)</option>
+              <option value="kur">KUR -- Key Update Request (renewal)</option>
+              <option value="rr">RR -- Revocation Request</option>
+            </Sel>
+          </FG>
+          <FG label="Subject CN (for IR/CR)">
+            <Inp placeholder="cmp-client.enterprise.local" w="100%" id="cmpv2-wiz-cn"/>
+          </FG>
+          <FG label="Cert ID (for KUR/RR)">
+            <Inp placeholder="crt_..." w="100%" id="cmpv2-wiz-certid"/>
+          </FG>
+          <FG label="Transaction ID">
+            <Inp placeholder="auto-generated" w="100%" id="cmpv2-wiz-txn"/>
+          </FG>
+          <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+            <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+            <Btn primary disabled={!activeCA||submitting} onClick={async()=>{
+              if(!session||!activeCA)return;
+              setSubmitting(true);
+              try{
+                const msgType=String((document.getElementById("cmpv2-wiz-type") as any)?.value||"ir") as "ir"|"cr"|"kur"|"rr";
+                const cn=String((document.getElementById("cmpv2-wiz-cn") as any)?.value||"").trim()||`cmp-${Date.now()}.local`;
+                const certId=String((document.getElementById("cmpv2-wiz-certid") as any)?.value||"").trim();
+                const txnId=String((document.getElementById("cmpv2-wiz-txn") as any)?.value||"").trim()||`cmp-${Date.now()}`;
+                const cert=await cmpv2Request(session,{
+                  ca_id:activeCA.id,
+                  message_type:msgType,
+                  cert_id:certId,
+                  transaction_id:txnId,
+                  protected:true,
+                  protection_alg:"pbm-sha256",
+                  payload_json:(msgType==="ir"||msgType==="cr")?JSON.stringify({subject_cn:cn,sans:[cn],cert_type:"tls-client"}):""
+                });
+                onToast?.(`CMPv2 ${msgType.toUpperCase()} succeeded: ${cert.id}`);
+                // Send PKI confirmation
+                if(msgType==="ir"||msgType==="cr"){
+                  try{
+                    const confirm=await cmpv2Confirm(session,txnId,cert.id);
+                    onToast?.(`PKI Confirm: ${confirm.status} - ${confirm.message}`);
+                  }catch(e2){onToast?.(`PKI Confirm: ${errMsg(e2)}`);}
+                }
+                await refresh();
+                setModal(null);
+              }catch(e){onToast?.(`CMPv2 request failed: ${errMsg(e)}`);}
+              finally{setSubmitting(false);}
+            }}>{submitting?"Processing...":"Submit CMPv2 Request"}</Btn>
+          </div>
+        </>;
+      })()}
+    </Modal>
+    {promptDialog.ui}
   </div>;
 };
 

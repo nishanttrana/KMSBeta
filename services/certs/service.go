@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -63,6 +64,14 @@ type Service struct {
 	securityInitError string
 	fipsStrict        bool
 	keycoreFailClosed bool
+
+	// ACME nonce store (in-memory, thread-safe)
+	acmeNonceMu sync.Mutex
+	acmeNonces  map[string]time.Time // nonce → created_at
+
+	// ACME per-tenant rate limiter (rolling window)
+	acmeRateMu     sync.Mutex
+	acmeRateWindow map[string][]time.Time // tenantID → timestamps
 }
 
 type RuntimeCertMaterializerConfig struct {
@@ -116,6 +125,8 @@ func NewServiceWithSecurity(store Store, events EventPublisher, keycore KeyCoreS
 		securityInitError: strings.TrimSpace(sec.SecurityErr),
 		fipsStrict:        fipsStrict,
 		keycoreFailClosed: keycoreFailClosed,
+		acmeNonces:        make(map[string]time.Time, 256),
+		acmeRateWindow:    make(map[string][]time.Time, 16),
 	}
 }
 
@@ -269,7 +280,7 @@ func (s *Service) ListCAs(ctx context.Context, tenantID string) ([]CA, error) {
 	return s.store.ListCAs(ctx, tenantID)
 }
 
-func (s *Service) DeleteCA(ctx context.Context, tenantID string, caID string) error {
+func (s *Service) DeleteCA(ctx context.Context, tenantID string, caID string, force bool) error {
 	tenantID = strings.TrimSpace(tenantID)
 	caID = strings.TrimSpace(caID)
 	if tenantID == "" || caID == "" {
@@ -287,25 +298,54 @@ func (s *Service) DeleteCA(ctx context.Context, tenantID string, caID string) er
 		return err
 	}
 	if childCount > 0 {
-		return fmt.Errorf("cannot delete CA with child CAs: %d", childCount)
+		return fmt.Errorf("cannot delete CA: %d child CA(s) exist — delete child CAs first", childCount)
 	}
 	certCount, err := s.store.CountCertificatesByCA(ctx, tenantID, caID)
 	if err != nil {
 		return err
 	}
 	if certCount > 0 {
-		return fmt.Errorf("cannot delete CA with issued certificates: %d", certCount)
+		if !force {
+			return fmt.Errorf("cannot delete CA: %d issued certificate(s) exist — use force delete to revoke and remove all certificates under this CA", certCount)
+		}
+		// Force mode: revoke all active certs then delete them
+		certs, listErr := s.store.ListCertificates(ctx, tenantID, "", "", 10000, 0)
+		if listErr != nil {
+			return fmt.Errorf("force delete: failed to list certificates: %w", listErr)
+		}
+		for _, cert := range certs {
+			if strings.TrimSpace(cert.CAID) != caID {
+				continue
+			}
+			if strings.EqualFold(strings.TrimSpace(cert.CertClass), "internal-mtls") ||
+				strings.Contains(strings.ToLower(strings.TrimSpace(cert.Protocol)), "internal-mtls") {
+				continue // skip internal-mtls certs
+			}
+			if strings.EqualFold(strings.TrimSpace(cert.Status), CertStatusActive) ||
+				strings.EqualFold(strings.TrimSpace(cert.Status), CertStatusExpired) {
+				_ = s.store.RevokeCertificate(ctx, tenantID, cert.ID, "ca_deleted")
+			}
+			_ = s.store.DeleteCertificate(ctx, tenantID, cert.ID)
+			_ = s.publishAudit(ctx, "audit.cert.deleted", tenantID, map[string]interface{}{
+				"cert_id":       cert.ID,
+				"ca_id":         cert.CAID,
+				"subject_cn":    cert.SubjectCN,
+				"serial_number": cert.SerialNumber,
+				"reason":        "ca_force_deleted",
+			})
+		}
 	}
 	if err := s.store.DeleteCA(ctx, tenantID, caID); err != nil {
 		return err
 	}
 	_ = s.publishAudit(ctx, "audit.cert.ca_deleted", tenantID, map[string]interface{}{
-		"ca_id":       caID,
-		"name":        ca.Name,
-		"algorithm":   ca.Algorithm,
-		"ca_level":    ca.CALevel,
-		"ca_type":     ca.CAType,
-		"key_backend": ca.KeyBackend,
+		"ca_id":        caID,
+		"name":         ca.Name,
+		"algorithm":    ca.Algorithm,
+		"ca_level":     ca.CALevel,
+		"ca_type":      ca.CAType,
+		"key_backend":  ca.KeyBackend,
+		"force_delete": force,
 	})
 	return nil
 }
@@ -581,6 +621,10 @@ func (s *Service) DownloadCertificate(ctx context.Context, req DownloadCertifica
 	c, err := s.GetCertificate(ctx, req.TenantID, req.CertID)
 	if err != nil {
 		return "", "", err
+	}
+	if strings.EqualFold(strings.TrimSpace(c.Status), CertStatusDeleted) ||
+		strings.EqualFold(strings.TrimSpace(c.CertClass), "deleted-ref") {
+		return "", "", errors.New("cannot download deleted certificate — material has been permanently removed")
 	}
 	issuingCA, err := s.store.GetCA(ctx, req.TenantID, c.CAID)
 	if err != nil {
@@ -1419,6 +1463,9 @@ func (s *Service) AcmeNewOrder(ctx context.Context, req ACMENewOrderRequest) (Ac
 	if err != nil {
 		return AcmeOrder{}, err
 	}
+	if err := s.acmeCheckRateLimit(req.TenantID, options.RateLimitPerHour); err != nil {
+		return AcmeOrder{}, err
+	}
 	req.SANs = dedupStrings(req.SANs)
 	if len(req.SANs) > options.MaxSANs {
 		return AcmeOrder{}, fmt.Errorf("acme san limit exceeded: %d > %d", len(req.SANs), options.MaxSANs)
@@ -2117,6 +2164,258 @@ func validateESTAuth(authMethod string, authToken string, requiredMode string) e
 		return nil
 	default:
 		return errors.New("unsupported est auth mode")
+	}
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ACME nonce store — in-memory with auto-expiry (10 min TTL)
+// ──────────────────────────────────────────────────────────────────────────────
+
+const acmeNonceTTL = 10 * time.Minute
+
+func (s *Service) ACMEIssueNonce() string {
+	nonce := newID("nonce")
+	s.acmeNonceMu.Lock()
+	defer s.acmeNonceMu.Unlock()
+	s.acmeNonces[nonce] = time.Now().UTC()
+	// Lazy evict expired nonces (keep map bounded)
+	if len(s.acmeNonces) > 5000 {
+		cutoff := time.Now().UTC().Add(-acmeNonceTTL)
+		for k, v := range s.acmeNonces {
+			if v.Before(cutoff) {
+				delete(s.acmeNonces, k)
+			}
+		}
+	}
+	return nonce
+}
+
+func (s *Service) ACMEConsumeNonce(nonce string) bool {
+	nonce = strings.TrimSpace(nonce)
+	if nonce == "" {
+		return false
+	}
+	s.acmeNonceMu.Lock()
+	defer s.acmeNonceMu.Unlock()
+	created, ok := s.acmeNonces[nonce]
+	if !ok {
+		return false
+	}
+	delete(s.acmeNonces, nonce)
+	return time.Since(created) < acmeNonceTTL
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ACME rate limiting — sliding window per tenant
+// ──────────────────────────────────────────────────────────────────────────────
+
+func (s *Service) acmeCheckRateLimit(tenantID string, limitPerHour int) error {
+	if limitPerHour <= 0 {
+		return nil
+	}
+	s.acmeRateMu.Lock()
+	defer s.acmeRateMu.Unlock()
+	now := time.Now().UTC()
+	cutoff := now.Add(-time.Hour)
+	window := s.acmeRateWindow[tenantID]
+	// Evict entries older than 1 hour
+	j := 0
+	for _, t := range window {
+		if t.After(cutoff) {
+			window[j] = t
+			j++
+		}
+	}
+	window = window[:j]
+	if len(window) >= limitPerHour {
+		s.acmeRateWindow[tenantID] = window
+		return fmt.Errorf("acme rate limit exceeded: %d requests/hour (limit %d)", len(window), limitPerHour)
+	}
+	s.acmeRateWindow[tenantID] = append(window, now)
+	return nil
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ACME challenge token generation (http-01, dns-01, tls-alpn-01)
+// ──────────────────────────────────────────────────────────────────────────────
+
+type ACMEChallengeInfo struct {
+	Type         string `json:"type"`
+	URL          string `json:"url"`
+	Token        string `json:"token"`
+	Instructions string `json:"instructions"`
+	Status       string `json:"status"`
+}
+
+func (s *Service) ACMEChallengeInfo(ctx context.Context, tenantID string, orderID string) (ACMEChallengeInfo, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	orderID = strings.TrimSpace(orderID)
+	if tenantID == "" || orderID == "" {
+		return ACMEChallengeInfo{}, errors.New("tenant_id and order_id are required")
+	}
+	order, err := s.store.GetACMEOrder(ctx, tenantID, orderID)
+	if err != nil {
+		return ACMEChallengeInfo{}, err
+	}
+	// Derive a deterministic-but-unique challenge token from the order's challenge_id
+	tokenRaw := sha256.Sum256([]byte("acme-token-v1:" + order.ChallengeID + ":" + order.ID))
+	token := base64.RawURLEncoding.EncodeToString(tokenRaw[:])
+
+	// Determine challenge type from the order creation context
+	challType := "http-01" // default
+	// Try to extract from the order's metadata (stored as part of the challenge flow)
+	if strings.Contains(strings.ToLower(order.ChallengeID), "dns") {
+		challType = "dns-01"
+	}
+
+	info := ACMEChallengeInfo{
+		Type:   challType,
+		URL:    "/acme/challenge/" + order.ChallengeID,
+		Token:  token,
+		Status: order.Status,
+	}
+	switch challType {
+	case "http-01":
+		info.Instructions = fmt.Sprintf(
+			"Create a file at http://%s/.well-known/acme-challenge/%s containing the token value. "+
+				"The server will verify this URL is reachable before issuing the certificate.",
+			order.SubjectCN, token)
+	case "dns-01":
+		dnsValue := sha256.Sum256([]byte(token))
+		info.Instructions = fmt.Sprintf(
+			"Create a DNS TXT record at _acme-challenge.%s with value %s. "+
+				"The server will query DNS to verify domain ownership.",
+			order.SubjectCN, base64.RawURLEncoding.EncodeToString(dnsValue[:]))
+	case "tls-alpn-01":
+		info.Instructions = fmt.Sprintf(
+			"Configure a TLS server on %s:443 with ALPN protocol 'acme-tls/1' "+
+				"and a self-signed certificate containing the acmeIdentifier extension with the token hash.",
+			order.SubjectCN)
+	}
+	return info, nil
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// EST CSR Attributes (RFC 7030 §4.5)
+// ──────────────────────────────────────────────────────────────────────────────
+
+type ESTCSRAttributes struct {
+	Algorithms      []string `json:"algorithms"`
+	KeyLengths      []int    `json:"key_lengths"`
+	ChallengeFormat string   `json:"challenge_format"`
+	ProfileIDs      []string `json:"profile_ids"`
+}
+
+func (s *Service) ESTCSRAttributes(ctx context.Context, tenantID string) (ESTCSRAttributes, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return ESTCSRAttributes{}, errors.New("tenant_id is required")
+	}
+	if err := s.ensureProtocolEnabled(ctx, tenantID, protocolEST); err != nil {
+		return ESTCSRAttributes{}, err
+	}
+	profiles, err := s.store.ListProfiles(ctx, tenantID)
+	if err != nil {
+		return ESTCSRAttributes{}, err
+	}
+	profileIDs := make([]string, 0, len(profiles))
+	for _, p := range profiles {
+		profileIDs = append(profileIDs, p.ID)
+	}
+	return ESTCSRAttributes{
+		Algorithms:      []string{"ECDSA-P256", "ECDSA-P384", "RSA-2048", "RSA-4096", "Ed25519"},
+		KeyLengths:      []int{256, 384, 2048, 4096},
+		ChallengeFormat: "pkcs10",
+		ProfileIDs:      profileIDs,
+	}, nil
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SCEP GetCert — retrieve an issued certificate by serial or cert_id
+// ──────────────────────────────────────────────────────────────────────────────
+
+func (s *Service) SCEPGetCert(ctx context.Context, tenantID string, serial string, certID string) (Certificate, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	serial = strings.TrimSpace(serial)
+	certID = strings.TrimSpace(certID)
+	if tenantID == "" {
+		return Certificate{}, errors.New("tenant_id is required")
+	}
+	if err := s.ensureProtocolEnabled(ctx, tenantID, protocolSCEP); err != nil {
+		return Certificate{}, err
+	}
+	if certID != "" {
+		return s.store.GetCertificate(ctx, tenantID, certID)
+	}
+	if serial != "" {
+		return s.store.GetCertificateBySerial(ctx, tenantID, serial)
+	}
+	return Certificate{}, errors.New("serial_number or cert_id is required for scep GetCert")
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// CMPv2 PKI Confirmation (pkiconf) and error message support
+// ──────────────────────────────────────────────────────────────────────────────
+
+type CMPv2ConfirmResponse struct {
+	TransactionID string `json:"transaction_id"`
+	Status        string `json:"status"`
+	CertID        string `json:"cert_id"`
+	Message       string `json:"message"`
+}
+
+func (s *Service) CMPv2Confirm(ctx context.Context, tenantID string, transactionID string, certID string) (CMPv2ConfirmResponse, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	transactionID = strings.TrimSpace(transactionID)
+	certID = strings.TrimSpace(certID)
+	if tenantID == "" {
+		return CMPv2ConfirmResponse{}, errors.New("tenant_id is required")
+	}
+	if err := s.ensureProtocolEnabled(ctx, tenantID, protocolCMPv2); err != nil {
+		return CMPv2ConfirmResponse{}, err
+	}
+	options, err := s.cmpv2Options(ctx, tenantID)
+	if err != nil {
+		return CMPv2ConfirmResponse{}, err
+	}
+	if options.RequireTransactionID && transactionID == "" {
+		return CMPv2ConfirmResponse{}, errors.New("cmpv2 transaction_id is required for confirmation")
+	}
+	// Verify the referenced certificate exists and is active
+	if certID != "" {
+		cert, err := s.store.GetCertificate(ctx, tenantID, certID)
+		if err != nil {
+			return CMPv2ConfirmResponse{}, fmt.Errorf("cmpv2 pkiconf: cert not found: %w", err)
+		}
+		if strings.ToLower(strings.TrimSpace(cert.Status)) != CertStatusActive {
+			return CMPv2ConfirmResponse{}, fmt.Errorf("cmpv2 pkiconf: cert %s is not active (status=%s)", certID, cert.Status)
+		}
+	}
+	_ = s.publishAudit(ctx, "audit.cert.cmpv2_confirm", tenantID, map[string]interface{}{
+		"transaction_id": transactionID,
+		"cert_id":        certID,
+	})
+	return CMPv2ConfirmResponse{
+		TransactionID: transactionID,
+		Status:        "accepted",
+		CertID:        certID,
+		Message:       "PKI confirmation accepted",
+	}, nil
+}
+
+type CMPv2ErrorResponse struct {
+	TransactionID string `json:"transaction_id"`
+	Status        string `json:"status"`
+	ErrorCode     string `json:"error_code"`
+	ErrorMessage  string `json:"error_message"`
+}
+
+func (s *Service) CMPv2Error(tenantID string, transactionID string, errorCode string, errorMessage string) CMPv2ErrorResponse {
+	return CMPv2ErrorResponse{
+		TransactionID: strings.TrimSpace(transactionID),
+		Status:        "rejection",
+		ErrorCode:     strings.TrimSpace(errorCode),
+		ErrorMessage:  strings.TrimSpace(errorMessage),
 	}
 }
 

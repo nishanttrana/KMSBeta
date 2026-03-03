@@ -581,6 +581,68 @@ export async function getEKMTDEPublicKey(
   };
 }
 
+export type EKMDatabaseInstance = {
+  id: string;
+  tenant_id: string;
+  agent_id: string;
+  name: string;
+  engine: string;
+  host: string;
+  port: number;
+  database_name: string;
+  tde_enabled: boolean;
+  tde_state: string;
+  key_id: string;
+  auto_provisioned: boolean;
+  metadata_json?: string;
+  last_seen_at?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type ListDatabasesResponse = { items: EKMDatabaseInstance[] };
+type RegisterDatabaseResponse = { database: EKMDatabaseInstance; auto_provisioned_key?: unknown };
+
+export async function listEKMDatabases(
+  session: AuthSession,
+  agentID?: string
+): Promise<EKMDatabaseInstance[]> {
+  let url = `/ekm/databases?${tenantQuery(session)}`;
+  if (agentID) url += `&agent_id=${encodeURIComponent(agentID)}`;
+  const out = await serviceRequest<ListDatabasesResponse>(session, "ekm", url);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function registerEKMDatabase(
+  session: AuthSession,
+  input: {
+    agent_id: string;
+    name: string;
+    engine?: string;
+    host?: string;
+    port?: number;
+    database_name?: string;
+    tde_enabled?: boolean;
+    auto_provision_key?: boolean;
+  }
+): Promise<EKMDatabaseInstance> {
+  const out = await serviceRequest<RegisterDatabaseResponse>(session, "ekm", "/ekm/databases", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      agent_id: String(input.agent_id || "").trim(),
+      name: String(input.name || "").trim(),
+      engine: String(input.engine || "mssql").trim(),
+      host: String(input.host || "").trim(),
+      port: Math.max(0, Math.trunc(Number(input.port || 0))),
+      database_name: String(input.database_name || "").trim(),
+      tde_enabled: input.tde_enabled !== false,
+      auto_provision_key: input.auto_provision_key !== false
+    })
+  });
+  return out.database;
+}
+
 export async function getEKMSDKOverview(session: AuthSession, tenantOverride?: string): Promise<EKMSDKOverview> {
   const out = await serviceRequest<SDKOverviewResponse>(
     session,

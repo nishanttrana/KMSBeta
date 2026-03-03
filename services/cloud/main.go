@@ -32,6 +32,8 @@ import (
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
+var logger = log.New(os.Stdout, "[cloud] ", log.LstdFlags|log.Lmicroseconds)
+
 func main() {
 	cfg := pkgconfig.Load()
 

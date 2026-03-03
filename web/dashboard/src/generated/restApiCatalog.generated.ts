@@ -927,6 +927,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "certs-get-acme-challenge-id",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /acme/challenge/{id}",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/acme/challenge/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/acme/challenge/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "certs-get-acme-directory",
     "group": "Certificates / PKI (certs)",
     "title": "GET /acme/directory",
@@ -1403,6 +1431,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "certs-get-est-well-known-est-csrattrs",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /est/.well-known/est/csrattrs",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/est/.well-known/est/csrattrs?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/est/.well-known/est/csrattrs?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "certs-get-scep-pkiclient-exe",
     "group": "Certificates / PKI (certs)",
     "title": "GET /scep/pkiclient.exe",
@@ -1412,6 +1468,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "GET /svc/certs/scep/pkiclient.exe?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-head-acme-new-nonce",
+    "group": "Certificates / PKI (certs)",
+    "title": "HEAD /acme/new-nonce",
+    "service": "certs",
+    "method": "HEAD",
+    "pathTemplate": "/acme/new-nonce?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "HEAD /svc/certs/acme/new-nonce?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -1888,6 +1972,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "POST /svc/certs/cmpv2?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-post-cmpv2-confirm",
+    "group": "Certificates / PKI (certs)",
+    "title": "POST /cmpv2/confirm",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/cmpv2/confirm?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "POST /svc/certs/cmpv2/confirm?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -14311,6 +14423,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "secrets-get-secrets-id-audit",
+    "group": "Secret Vault (secrets)",
+    "title": "GET /secrets/{id}/audit",
+    "service": "secrets",
+    "method": "GET",
+    "pathTemplate": "/secrets/{id}/audit?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "GET /svc/secrets/secrets/{id}/audit?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "secrets-get-secrets-id-value",
     "group": "Secret Vault (secrets)",
     "title": "GET /secrets/{id}/value",
@@ -14320,6 +14460,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Secrets service.",
     "requestExample": "GET /svc/secrets/secrets/{id}/value?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "secrets-get-secrets-id-versions",
+    "group": "Secret Vault (secrets)",
+    "title": "GET /secrets/{id}/versions",
+    "service": "secrets",
+    "method": "GET",
+    "pathTemplate": "/secrets/{id}/versions?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "GET /svc/secrets/secrets/{id}/versions?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "secrets-get-secrets-stats",
+    "group": "Secret Vault (secrets)",
+    "title": "GET /secrets/stats",
+    "service": "secrets",
+    "method": "GET",
+    "pathTemplate": "/secrets/stats?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "GET /svc/secrets/secrets/stats?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -14488,6 +14684,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Secrets service.",
     "requestExample": "POST /svc/secrets/secrets?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "secrets-post-secrets-id-rotate",
+    "group": "Secret Vault (secrets)",
+    "title": "POST /secrets/{id}/rotate",
+    "service": "secrets",
+    "method": "POST",
+    "pathTemplate": "/secrets/{id}/rotate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Secrets service.",
+    "requestExample": "POST /svc/secrets/secrets/{id}/rotate?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

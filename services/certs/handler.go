@@ -66,14 +66,17 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /certs/internal/mtls/{service}", h.handleIssueInternalMTLS)
 
 	mux.HandleFunc("GET /acme/directory", h.handleACMEDirectory)
+	mux.HandleFunc("HEAD /acme/new-nonce", h.handleACMENonce)
 	mux.HandleFunc("POST /acme/new-nonce", h.handleACMENonce)
 	mux.HandleFunc("POST /acme/new-account", h.handleACMENewAccount)
 	mux.HandleFunc("POST /acme/new-order", h.handleACMENewOrder)
+	mux.HandleFunc("GET /acme/challenge/{id}", h.handleACMEChallengeInfo)
 	mux.HandleFunc("POST /acme/challenge/{id}", h.handleACMEChallenge)
 	mux.HandleFunc("POST /acme/finalize/{id}", h.handleACMEFinalize)
 	mux.HandleFunc("GET /acme/cert/{id}", h.handleACMECertDownload)
 
 	mux.HandleFunc("GET /est/.well-known/est/cacerts", h.handleESTCACerts)
+	mux.HandleFunc("GET /est/.well-known/est/csrattrs", h.handleESTCSRAttrs)
 	mux.HandleFunc("POST /est/.well-known/est/simpleenroll", h.handleESTSimpleEnroll)
 	mux.HandleFunc("POST /est/.well-known/est/simplereenroll", h.handleESTSimpleReenroll)
 	mux.HandleFunc("POST /est/.well-known/est/serverkeygen", h.handleESTServerKeygen)
@@ -82,6 +85,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /scep/pkiclient.exe", h.handleSCEPPKIOperation)
 
 	mux.HandleFunc("POST /cmpv2", h.handleCMPv2)
+	mux.HandleFunc("POST /cmpv2/confirm", h.handleCMPv2Confirm)
 	return mux
 }
 
@@ -120,7 +124,8 @@ func (h *Handler) handleDeleteCA(w http.ResponseWriter, r *http.Request) {
 	if tenantID == "" {
 		return
 	}
-	if err := h.svc.DeleteCA(r.Context(), tenantID, r.PathValue("id")); err != nil {
+	force, _ := strconv.ParseBool(strings.TrimSpace(r.URL.Query().Get("force")))
+	if err := h.svc.DeleteCA(r.Context(), tenantID, r.PathValue("id"), force); err != nil {
 		status := http.StatusBadRequest
 		if errors.Is(err, errStoreNotFound) {
 			status = http.StatusNotFound
@@ -647,7 +652,10 @@ func (h *Handler) handleACMEDirectory(w http.ResponseWriter, r *http.Request) {
 		"newAccount": base + "/acme/new-account",
 		"newOrder":   base + "/acme/new-order",
 		"revokeCert": base + "/certs/{id}/revoke",
+		"keyChange":  base + "/acme/key-change",
 		"meta": map[string]interface{}{
+			"termsOfService":          "https://vecta-kms.local/acme/terms",
+			"website":                 "https://vecta-kms.local",
 			"externalAccountRequired": options.RequireEAB,
 			"wildcardAllowed":         options.AllowWildcard,
 			"ipIdentifiersAllowed":    options.AllowIPIdentifiers,
@@ -658,12 +666,22 @@ func (h *Handler) handleACMEDirectory(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) handleACMENonce(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Replay-Nonce", newID("nonce"))
+	nonce := h.svc.ACMEIssueNonce()
+	w.Header().Set("Replay-Nonce", nonce)
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) handleACMENewAccount(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
+	// Validate replay nonce (skip for dashboard JSON clients that may not have one)
+	if nonce := strings.TrimSpace(r.Header.Get("Replay-Nonce")); nonce != "" {
+		if !h.svc.ACMEConsumeNonce(nonce) {
+			w.Header().Set("Replay-Nonce", h.svc.ACMEIssueNonce())
+			writeErr(w, http.StatusBadRequest, "badNonce", "invalid or expired replay nonce", reqID, "")
+			return
+		}
+	}
 	var req ACMENewAccountRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
@@ -674,6 +692,7 @@ func (h *Handler) handleACMENewAccount(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "acme_account_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
+	w.Header().Set("Replay-Nonce", h.svc.ACMEIssueNonce())
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"account_id": acct.ID,
 		"status":     acct.Status,
@@ -683,6 +702,13 @@ func (h *Handler) handleACMENewAccount(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleACMENewOrder(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
+	if nonce := strings.TrimSpace(r.Header.Get("Replay-Nonce")); nonce != "" {
+		if !h.svc.ACMEConsumeNonce(nonce) {
+			w.Header().Set("Replay-Nonce", h.svc.ACMEIssueNonce())
+			writeErr(w, http.StatusBadRequest, "badNonce", "invalid or expired replay nonce", reqID, "")
+			return
+		}
+	}
 	var req ACMENewOrderRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
@@ -693,12 +719,46 @@ func (h *Handler) handleACMENewOrder(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "acme_order_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
+	base := baseURL(r)
+	w.Header().Set("Replay-Nonce", h.svc.ACMEIssueNonce())
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
-		"order_id":     order.ID,
-		"challenge_id": order.ChallengeID,
-		"status":       order.Status,
-		"finalize_url": baseURL(r) + "/acme/finalize/" + order.ID,
-		"request_id":   reqID,
+		"order_id":      order.ID,
+		"challenge_id":  order.ChallengeID,
+		"status":        order.Status,
+		"finalize_url":  base + "/acme/finalize/" + order.ID,
+		"challenge_url": base + "/acme/challenge/" + order.ChallengeID,
+		"authorizations": []map[string]interface{}{
+			{
+				"identifier": map[string]string{"type": "dns", "value": order.SubjectCN},
+				"status":     order.Status,
+				"challenges": []map[string]string{
+					{"type": "http-01", "url": base + "/acme/challenge/" + order.ChallengeID, "status": order.Status},
+				},
+			},
+		},
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleACMEChallengeInfo(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	orderID := strings.TrimSpace(r.URL.Query().Get("order_id"))
+	if orderID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "order_id query parameter is required", reqID, tenantID)
+		return
+	}
+	info, err := h.svc.ACMEChallengeInfo(r.Context(), tenantID, orderID)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "challenge_info_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"challenge":  info,
+		"request_id": reqID,
 	})
 }
 
@@ -722,6 +782,13 @@ func (h *Handler) handleACMEChallenge(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleACMEFinalize(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
+	if nonce := strings.TrimSpace(r.Header.Get("Replay-Nonce")); nonce != "" {
+		if !h.svc.ACMEConsumeNonce(nonce) {
+			w.Header().Set("Replay-Nonce", h.svc.ACMEIssueNonce())
+			writeErr(w, http.StatusBadRequest, "badNonce", "invalid or expired replay nonce", reqID, "")
+			return
+		}
+	}
 	var req ACMEFinalizeRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
@@ -733,6 +800,7 @@ func (h *Handler) handleACMEFinalize(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "acme_finalize_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
+	w.Header().Set("Replay-Nonce", h.svc.ACMEIssueNonce())
 	writeJSON(w, http.StatusOK, map[string]interface{}{"certificate": out, "private_key_pem": keyPEM, "request_id": reqID})
 }
 
@@ -767,6 +835,20 @@ func (h *Handler) handleESTCACerts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"cacerts": bundle, "request_id": reqID})
+}
+
+func (h *Handler) handleESTCSRAttrs(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	attrs, err := h.svc.ESTCSRAttributes(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "csrattrs_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"csrattrs": attrs, "request_id": reqID})
 }
 
 func (h *Handler) handleESTSimpleEnroll(w http.ResponseWriter, r *http.Request) {
@@ -911,8 +993,23 @@ func (h *Handler) handleSCEPGet(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(caps))
 		return
 	}
+	if op == "getcert" {
+		serial := strings.TrimSpace(r.URL.Query().Get("serial_number"))
+		certID := strings.TrimSpace(r.URL.Query().Get("cert_id"))
+		cert, err := h.svc.SCEPGetCert(r.Context(), tenantID, serial, certID)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "scep_getcert_failed", err.Error(), reqID, tenantID)
+			return
+		}
+		if wantsJSONProtocolResponse(r) {
+			writeJSON(w, http.StatusOK, map[string]interface{}{"certificate": cert, "request_id": reqID})
+			return
+		}
+		writeCertificateDER(w, cert.CertPEM, "application/x-x509-ca-cert")
+		return
+	}
 	if op != "getcacert" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "unsupported scep operation", reqID, tenantID)
+		writeErr(w, http.StatusBadRequest, "bad_request", "unsupported scep operation: "+op, reqID, tenantID)
 		return
 	}
 	bundle, err := h.svc.CACertBundle(r.Context(), tenantID)
@@ -1114,6 +1211,32 @@ func (h *Handler) handleCMPv2(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"certificate": out, "private_key_pem": keyPEM, "request_id": reqID})
+}
+
+func (h *Handler) handleCMPv2Confirm(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var body struct {
+		TenantID      string `json:"tenant_id"`
+		TransactionID string `json:"transaction_id"`
+		CertID        string `json:"cert_id"`
+	}
+	if err := decodeJSON(r, &body); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	resp, err := h.svc.CMPv2Confirm(r.Context(), body.TenantID, body.TransactionID, body.CertID)
+	if err != nil {
+		errResp := h.svc.CMPv2Error(body.TenantID, body.TransactionID, "badRequest", err.Error())
+		writeJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"error":      errResp,
+			"request_id": reqID,
+		})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"confirmation": resp,
+		"request_id":   reqID,
+	})
 }
 
 func decodeJSON(r *http.Request, out interface{}) error {

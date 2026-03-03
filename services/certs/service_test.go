@@ -103,11 +103,8 @@ func TestDeleteCertificate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list deleted: %v", err)
 	}
-	if len(deleted) != 1 || deleted[0].ID != issued.ID {
-		t.Fatalf("expected deleted reference for cert, got %+v", deleted)
-	}
-	if deleted[0].CertPEM != "" || strings.TrimSpace(deleted[0].SubjectCN) == "" {
-		t.Fatalf("expected reference-only deleted row, got %+v", deleted[0])
+	if len(deleted) != 0 {
+		t.Fatalf("expected empty list after hard delete, got %+v", deleted)
 	}
 }
 
@@ -177,7 +174,7 @@ func TestDeleteCARequiresNoChildrenAndNoCertificates(t *testing.T) {
 		t.Fatalf("create leaf: %v", err)
 	}
 
-	if err := svc.DeleteCA(ctx, "tca-del", root.ID); err == nil || !strings.Contains(strings.ToLower(err.Error()), "child") {
+	if err := svc.DeleteCA(ctx, "tca-del", root.ID, false); err == nil || !strings.Contains(strings.ToLower(err.Error()), "child") {
 		t.Fatalf("expected child CA delete block, got %v", err)
 	}
 
@@ -191,13 +188,13 @@ func TestDeleteCARequiresNoChildrenAndNoCertificates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("issue leaf cert: %v", err)
 	}
-	if err := svc.DeleteCA(ctx, "tca-del", leaf.ID); err == nil || !strings.Contains(strings.ToLower(err.Error()), "issued certificates") {
+	if err := svc.DeleteCA(ctx, "tca-del", leaf.ID, false); err == nil || !strings.Contains(strings.ToLower(err.Error()), "issued certificate") {
 		t.Fatalf("expected issued certificate delete block, got %v", err)
 	}
 	if err := svc.DeleteCertificate(ctx, "tca-del", issued.ID); err != nil {
 		t.Fatalf("delete cert: %v", err)
 	}
-	if err := svc.DeleteCA(ctx, "tca-del", leaf.ID); err != nil {
+	if err := svc.DeleteCA(ctx, "tca-del", leaf.ID, false); err != nil {
 		t.Fatalf("delete leaf ca: %v", err)
 	}
 	if _, err := svc.store.GetCA(ctx, "tca-del", leaf.ID); err == nil {
@@ -221,7 +218,7 @@ func TestDeleteRuntimeRootCABlocked(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create runtime root: %v", err)
 	}
-	if err := svc.DeleteCA(ctx, tenant, ca.ID); err == nil || !strings.Contains(strings.ToLower(err.Error()), "runtime root") {
+	if err := svc.DeleteCA(ctx, tenant, ca.ID, false); err == nil || !strings.Contains(strings.ToLower(err.Error()), "runtime root") {
 		t.Fatalf("expected runtime root delete block, got %v", err)
 	}
 }

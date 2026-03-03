@@ -139,7 +139,43 @@ type CRLResponse = { crl_pem: string; generated_at: string };
 type OCSPResponse = { status: string; reason?: string; produced_at?: string };
 type DownloadResponse = { content: string; content_type: string };
 type AcmeNewAccountResponse = { account_id: string; status: string };
-type AcmeNewOrderResponse = { order_id: string; challenge_id: string; status: string; finalize_url?: string };
+type AcmeNewOrderResponse = {
+  order_id: string;
+  challenge_id: string;
+  status: string;
+  finalize_url?: string;
+  challenge_url?: string;
+  authorizations?: Array<{
+    identifier: { type: string; value: string };
+    status: string;
+    challenges: Array<{ type: string; url: string; status: string }>;
+  }>;
+};
+type AcmeChallengeInfoResponse = {
+  challenge: {
+    type: string;
+    url: string;
+    token: string;
+    instructions: string;
+    status: string;
+  };
+};
+type ESTCSRAttrsResponse = {
+  csrattrs: {
+    algorithms: string[];
+    key_lengths: number[];
+    challenge_format: string;
+    profile_ids: string[];
+  };
+};
+type CMPv2ConfirmResponse = {
+  confirmation: {
+    transaction_id: string;
+    status: string;
+    cert_id: string;
+    message: string;
+  };
+};
 
 export type CreateCAInput = {
   name: string;
@@ -267,11 +303,16 @@ export async function createCA(session: AuthSession, input: CreateCAInput): Prom
   return out.ca;
 }
 
-export async function deleteCA(session: AuthSession, caId: string): Promise<void> {
+export async function deleteCA(session: AuthSession, caId: string, force = false): Promise<void> {
+  const q = new URLSearchParams();
+  q.set("tenant_id", session.tenantId);
+  if (force) {
+    q.set("force", "true");
+  }
   await serviceRequest<StatusResponse>(
     session,
     "certs",
-    `/certs/ca/${encodeURIComponent(String(caId || "").trim())}?${tenantQuery(session)}`,
+    `/certs/ca/${encodeURIComponent(String(caId || "").trim())}?${q.toString()}`,
     {
       method: "DELETE"
     }
@@ -672,4 +713,108 @@ export async function issueInternalMTLS(
 		certificate: out.certificate,
 		privateKeyPEM: out.private_key_pem || ""
 	};
+}
+
+// ── ACME challenge info (GET) ──────────────────────────────────────
+export async function acmeChallengeInfo(
+  session: AuthSession,
+  challengeId: string,
+  orderId: string
+): Promise<AcmeChallengeInfoResponse["challenge"]> {
+  const out = await serviceRequest<AcmeChallengeInfoResponse>(
+    session,
+    "certs",
+    `/acme/challenge/${encodeURIComponent(challengeId)}?${tenantQuery(session)}&order_id=${encodeURIComponent(orderId)}`,
+    { method: "GET" }
+  );
+  return out.challenge;
+}
+
+// ── EST CSR Attributes (RFC 7030 §4.5) ────────────────────────────
+export async function estCSRAttributes(session: AuthSession): Promise<ESTCSRAttrsResponse["csrattrs"]> {
+  const out = await serviceRequest<ESTCSRAttrsResponse>(
+    session,
+    "certs",
+    `/est/.well-known/est/csrattrs?${tenantQuery(session)}`
+  );
+  return out.csrattrs;
+}
+
+// ── EST SimpleEnroll (JSON path) ──────────────────────────────────
+export async function estSimpleEnroll(
+  session: AuthSession,
+  input: { ca_id: string; csr_pem: string; profile_id?: string; auth_method?: string; auth_token?: string }
+): Promise<CertificateItem> {
+  const out = await serviceRequest<CertResponse>(
+    session,
+    "certs",
+    "/est/.well-known/est/simpleenroll",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        tenant_id: session.tenantId,
+        ca_id: input.ca_id,
+        csr_pem: input.csr_pem || "",
+        profile_id: input.profile_id || "",
+        auth_method: input.auth_method || "",
+        auth_token: input.auth_token || ""
+      })
+    }
+  );
+  return out.certificate;
+}
+
+// ── SCEP GetCert ──────────────────────────────────────────────────
+export async function scepGetCert(
+  session: AuthSession,
+  input: { serial_number?: string; cert_id?: string }
+): Promise<CertificateItem> {
+  const q = new URLSearchParams();
+  q.set("tenant_id", session.tenantId);
+  q.set("operation", "getcert");
+  q.set("format", "json");
+  if (input.serial_number) q.set("serial_number", input.serial_number);
+  if (input.cert_id) q.set("cert_id", input.cert_id);
+  const out = await serviceRequest<CertResponse>(
+    session,
+    "certs",
+    `/scep/pkiclient.exe?${q.toString()}`
+  );
+  return out.certificate;
+}
+
+// ── SCEP GetCACaps ────────────────────────────────────────────────
+export async function scepGetCACaps(session: AuthSession): Promise<string> {
+  const q = new URLSearchParams();
+  q.set("tenant_id", session.tenantId);
+  q.set("operation", "getcacaps");
+  const out = await serviceRequest<{ capabilities?: string }>(
+    session,
+    "certs",
+    `/scep/pkiclient.exe?${q.toString()}`
+  );
+  // The response might come as plain text; serviceRequest handles JSON
+  return String((out as any) || "");
+}
+
+// ── CMPv2 PKI Confirm ─────────────────────────────────────────────
+export async function cmpv2Confirm(
+  session: AuthSession,
+  transactionId: string,
+  certId: string
+): Promise<CMPv2ConfirmResponse["confirmation"]> {
+  const out = await serviceRequest<CMPv2ConfirmResponse>(
+    session,
+    "certs",
+    "/cmpv2/confirm",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        tenant_id: session.tenantId,
+        transaction_id: transactionId,
+        cert_id: certId
+      })
+    }
+  );
+  return out.confirmation;
 }

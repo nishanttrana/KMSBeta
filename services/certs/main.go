@@ -33,6 +33,8 @@ import (
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
+var logger = log.Default()
+
 func main() {
 	cfg := pkgconfig.Load()
 

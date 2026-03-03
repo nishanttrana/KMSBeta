@@ -134,11 +134,8 @@ func TestStoreReserveOTSAndCertificateLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list deleted refs: %v", err)
 	}
-	if len(deletedRefs) != 1 || deletedRefs[0].ID != "c1" {
-		t.Fatalf("expected one deleted reference, got %+v", deletedRefs)
-	}
-	if deletedRefs[0].CertPEM != "" || !strings.EqualFold(deletedRefs[0].Status, CertStatusDeleted) {
-		t.Fatalf("expected reference-only deleted row, got %+v", deletedRefs[0])
+	if len(deletedRefs) != 0 {
+		t.Fatalf("expected empty list after hard delete, got %+v", deletedRefs)
 	}
 }
 

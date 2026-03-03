@@ -278,8 +278,8 @@ func TestHandlerDeleteCertificate(t *testing.T) {
 		t.Fatalf("expected deleted refs list status=%d body=%s", listDeletedRR.Code, listDeletedRR.Body.String())
 	}
 	body := strings.ToLower(listDeletedRR.Body.String())
-	if !strings.Contains(body, issued.ID) || !strings.Contains(body, "\"status\":\"deleted\"") {
-		t.Fatalf("expected deleted reference in list body=%s", listDeletedRR.Body.String())
+	if strings.Contains(body, issued.ID) {
+		t.Fatalf("expected hard-deleted cert to not appear in any listing body=%s", listDeletedRR.Body.String())
 	}
 }
 

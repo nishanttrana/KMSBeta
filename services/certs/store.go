@@ -354,45 +354,8 @@ func (s *SQLStore) ListCertificates(ctx context.Context, tenantID string, status
 	status = strings.TrimSpace(status)
 	certClass = strings.TrimSpace(certClass)
 	if strings.EqualFold(status, CertStatusDeleted) {
-		rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT cert_id AS id,
-       tenant_id,
-       ca_id,
-       serial_number,
-       subject_cn,
-       '[]' AS sans_json,
-       '' AS cert_type,
-       'deleted-ref' AS algorithm,
-       '' AS profile_id,
-       'deleted-ref' AS protocol,
-       'deleted-ref' AS cert_class,
-       '' AS cert_pem,
-       'deleted' AS status,
-       deleted_at AS not_before,
-       deleted_at AS not_after,
-       NULL AS revoked_at,
-       '' AS revocation_reason,
-       deleted_at AS created_at,
-       deleted_at AS updated_at,
-       '' AS key_ref
-FROM cert_deleted_refs
-WHERE tenant_id = $1
-ORDER BY deleted_at DESC
-LIMIT $2 OFFSET $3
-`, tenantID, limit, offset)
-		if err != nil {
-			return nil, err
-		}
-		defer rows.Close() //nolint:errcheck
-		out := make([]Certificate, 0)
-		for rows.Next() {
-			c, scanErr := scanCertificate(rows)
-			if scanErr != nil {
-				return nil, scanErr
-			}
-			out = append(out, c)
-		}
-		return out, rows.Err()
+		// Deleted certificates are fully purged from DB; only audit logs retain references.
+		return []Certificate{}, nil
 	}
 
 	if status == "" && certClass == "" {
@@ -401,29 +364,6 @@ SELECT id, tenant_id, ca_id, serial_number, subject_cn, sans_json, cert_type, al
        COALESCE(profile_id,''), protocol, cert_class, cert_pem, status, not_before, not_after,
        revoked_at, COALESCE(revocation_reason,''), created_at, updated_at, COALESCE(key_ref,'')
 FROM cert_certificates
-WHERE tenant_id = $1
-UNION ALL
-SELECT cert_id AS id,
-       tenant_id,
-       ca_id,
-       serial_number,
-       subject_cn,
-       '[]' AS sans_json,
-       '' AS cert_type,
-       'deleted-ref' AS algorithm,
-       '' AS profile_id,
-       'deleted-ref' AS protocol,
-       'deleted-ref' AS cert_class,
-       '' AS cert_pem,
-       'deleted' AS status,
-       deleted_at AS not_before,
-       deleted_at AS not_after,
-       NULL AS revoked_at,
-       '' AS revocation_reason,
-       deleted_at AS created_at,
-       deleted_at AS updated_at,
-       '' AS key_ref
-FROM cert_deleted_refs
 WHERE tenant_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -537,36 +477,18 @@ func (s *SQLStore) DeleteCertificate(ctx context.Context, tenantID string, certI
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	row := tx.QueryRowContext(ctx, `
-SELECT ca_id, serial_number, subject_cn
-FROM cert_certificates
-WHERE tenant_id = $1 AND id = $2
-`, tenantID, certID)
-	var (
-		caID      string
-		serial    string
-		subjectCN string
-	)
-	if err := row.Scan(&caID, &serial, &subjectCN); err != nil {
+	// Verify the certificate exists before deleting
+	var exists int
+	if err := tx.QueryRowContext(ctx, `
+SELECT 1 FROM cert_certificates WHERE tenant_id = $1 AND id = $2
+`, tenantID, certID).Scan(&exists); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errStoreNotFound
 		}
 		return err
 	}
 
-	now := time.Now().UTC()
-	if _, err := tx.ExecContext(ctx, `
-INSERT INTO cert_deleted_refs (tenant_id, cert_id, ca_id, serial_number, subject_cn, deleted_at)
-VALUES ($1,$2,$3,$4,$5,$6)
-ON CONFLICT (tenant_id, cert_id) DO UPDATE
-SET ca_id = EXCLUDED.ca_id,
-    serial_number = EXCLUDED.serial_number,
-    subject_cn = EXCLUDED.subject_cn,
-    deleted_at = EXCLUDED.deleted_at
-`, tenantID, certID, caID, serial, subjectCN, now); err != nil {
-		return err
-	}
-
+	// Clean up related records
 	if _, err := tx.ExecContext(ctx, `
 DELETE FROM cert_revocations
 WHERE tenant_id = $1 AND cert_id = $2
@@ -586,7 +508,15 @@ WHERE tenant_id = $1 AND cert_id = $2
 `, tenantID, certID); err != nil {
 		return err
 	}
+	// Also remove from deleted refs if any stale entry exists
+	if _, err := tx.ExecContext(ctx, `
+DELETE FROM cert_deleted_refs
+WHERE tenant_id = $1 AND cert_id = $2
+`, tenantID, certID); err != nil {
+		return err
+	}
 
+	// Hard-delete the certificate from DB
 	res, err := tx.ExecContext(ctx, `
 DELETE FROM cert_certificates
 WHERE tenant_id = $1 AND id = $2
