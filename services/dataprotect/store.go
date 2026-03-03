@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -1638,4 +1641,86 @@ func scanFLEMetadata(scanner interface {
 	}
 	item.CreatedAt = parseTimeValue(createdRaw)
 	return item, nil
+}
+
+func newAuditID() string {
+	b := make([]byte, 16)
+	_, _ = rand.Read(b)
+	return fmt.Sprintf("dpaudit_%s", hex.EncodeToString(b))
+}
+
+func (s *SQLStore) WriteAuditEntry(ctx context.Context, entry DataProtectAuditEntry) error {
+	if entry.ID == "" {
+		entry.ID = newAuditID()
+	}
+	if entry.CreatedAt.IsZero() {
+		entry.CreatedAt = time.Now().UTC()
+	}
+	_, err := s.db.SQL().ExecContext(ctx,
+		`INSERT INTO dataprotect_audit_log (id, tenant_id, operation, category, actor, detail, metadata, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		entry.ID, entry.TenantID, entry.Operation, entry.Category, entry.Actor, entry.Detail, entry.Metadata, entry.CreatedAt,
+	)
+	return err
+}
+
+func (s *SQLStore) ListAuditLog(ctx context.Context, tenantID string, category string, limit int, offset int) ([]DataProtectAuditEntry, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	var rows *sql.Rows
+	var err error
+	if category != "" {
+		rows, err = s.db.SQL().QueryContext(ctx,
+			`SELECT id, tenant_id, operation, category, actor, detail, metadata, created_at
+			 FROM dataprotect_audit_log
+			 WHERE tenant_id = $1 AND category = $2
+			 ORDER BY created_at DESC
+			 LIMIT $3 OFFSET $4`,
+			tenantID, category, limit, offset,
+		)
+	} else {
+		rows, err = s.db.SQL().QueryContext(ctx,
+			`SELECT id, tenant_id, operation, category, actor, detail, metadata, created_at
+			 FROM dataprotect_audit_log
+			 WHERE tenant_id = $1
+			 ORDER BY created_at DESC
+			 LIMIT $2 OFFSET $3`,
+			tenantID, limit, offset,
+		)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DataProtectAuditEntry
+	for rows.Next() {
+		var e DataProtectAuditEntry
+		var createdRaw interface{}
+		if err := rows.Scan(&e.ID, &e.TenantID, &e.Operation, &e.Category, &e.Actor, &e.Detail, &e.Metadata, &createdRaw); err != nil {
+			return nil, err
+		}
+		e.CreatedAt = parseTimeValue(createdRaw)
+		items = append(items, e)
+	}
+	return items, rows.Err()
+}
+
+func (s *SQLStore) GetStats(ctx context.Context, tenantID string) (DataProtectStats, error) {
+	st := DataProtectStats{TenantID: tenantID}
+	row := func(q string) int {
+		var n int
+		_ = s.db.SQL().QueryRowContext(ctx, q, tenantID).Scan(&n)
+		return n
+	}
+	st.TokenVaults = row("SELECT COUNT(*) FROM token_vaults WHERE tenant_id = $1")
+	st.TotalTokens = row("SELECT COUNT(*) FROM token_records WHERE tenant_id = $1")
+	st.MaskingPolicies = row("SELECT COUNT(*) FROM masking_policies WHERE tenant_id = $1")
+	st.RedactionPolicies = row("SELECT COUNT(*) FROM redaction_policies WHERE tenant_id = $1")
+	st.RegisteredWrappers = row("SELECT COUNT(*) FROM field_encryption_wrappers WHERE tenant_id = $1")
+	st.TotalLeases = row("SELECT COUNT(*) FROM field_encryption_leases WHERE tenant_id = $1")
+	st.ActiveLeases = row("SELECT COUNT(*) FROM field_encryption_leases WHERE tenant_id = $1 AND revoked = 0")
+	st.AuditEntries = row("SELECT COUNT(*) FROM dataprotect_audit_log WHERE tenant_id = $1")
+	st.FieldProfiles = row("SELECT COUNT(*) FROM field_protection_profiles WHERE tenant_id = $1")
+	return st, nil
 }

@@ -3391,6 +3391,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "dataprotect-get-audit-log",
+    "group": "Data Protection (dataprotect)",
+    "title": "GET /audit-log",
+    "service": "dataprotect",
+    "method": "GET",
+    "pathTemplate": "/audit-log?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Data Protect service.",
+    "requestExample": "GET /svc/dataprotect/audit-log?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "dataprotect-get-field-encryption-leases",
     "group": "Data Protection (dataprotect)",
     "title": "GET /field-encryption/leases",
@@ -3596,6 +3624,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Data Protect service.",
     "requestExample": "GET /svc/dataprotect/redaction-policies?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "dataprotect-get-stats",
+    "group": "Data Protection (dataprotect)",
+    "title": "GET /stats",
+    "service": "dataprotect",
+    "method": "GET",
+    "pathTemplate": "/stats?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Data Protect service.",
+    "requestExample": "GET /svc/dataprotect/stats?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

@@ -865,3 +865,54 @@ export async function downloadFieldEncryptionWrapperSDK(
   );
   return out.artifact;
 }
+
+export type DataProtectAuditEntry = {
+  id: string;
+  tenant_id: string;
+  operation: string;
+  category: string;
+  actor: string;
+  detail: string;
+  metadata: string;
+  created_at: string;
+};
+
+export type DataProtectStats = {
+  tenant_id: string;
+  token_vaults: number;
+  total_tokens: number;
+  masking_policies: number;
+  redaction_policies: number;
+  registered_wrappers: number;
+  active_leases: number;
+  total_leases: number;
+  audit_entries: number;
+  field_profiles: number;
+};
+
+export async function getDataProtectStats(
+  session: AuthSession
+): Promise<DataProtectStats> {
+  return serviceRequest<DataProtectStats>(
+    session,
+    "dataprotect",
+    `/stats?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+}
+
+export async function getDataProtectAuditLog(
+  session: AuthSession,
+  opts?: { category?: string; limit?: number; offset?: number }
+): Promise<DataProtectAuditEntry[]> {
+  const q = new URLSearchParams();
+  q.set("tenant_id", session.tenantId);
+  if (opts?.category) q.set("category", opts.category);
+  if (opts?.limit) q.set("limit", String(opts.limit));
+  if (opts?.offset) q.set("offset", String(opts.offset));
+  const out = await serviceRequest<{ items: DataProtectAuditEntry[] }>(
+    session,
+    "dataprotect",
+    `/audit-log?${q.toString()}`
+  );
+  return out.items || [];
+}

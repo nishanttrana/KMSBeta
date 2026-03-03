@@ -5172,3 +5172,25 @@ func isAllowedRedactionDetector(pattern RedactionPattern, allowed []string) bool
 		return pType == "REGEX" && containsString(allowed, "CUSTOM")
 	}
 }
+
+func (s *Service) writeAudit(ctx context.Context, tenantID, operation, category, actor, detail string) {
+	entry := DataProtectAuditEntry{
+		TenantID:  tenantID,
+		Operation: operation,
+		Category:  category,
+		Actor:     actor,
+		Detail:    detail,
+		Metadata:  "{}",
+	}
+	if err := s.store.WriteAuditEntry(ctx, entry); err != nil {
+		logger.Printf("audit write failed: %v", err)
+	}
+}
+
+func (s *Service) ListAuditLog(ctx context.Context, tenantID string, category string, limit int, offset int) ([]DataProtectAuditEntry, error) {
+	return s.store.ListAuditLog(ctx, tenantID, category, limit, offset)
+}
+
+func (s *Service) GetStats(ctx context.Context, tenantID string) (DataProtectStats, error) {
+	return s.store.GetStats(ctx, tenantID)
+}

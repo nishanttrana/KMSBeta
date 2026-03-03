@@ -71,6 +71,10 @@ type Store interface {
 	ListFieldProtectionProfiles(ctx context.Context, tenantID string, appID string, wrapperID string, status string, limit int, offset int) ([]FieldProtectionProfile, error)
 	ResolveFieldProtectionProfiles(ctx context.Context, tenantID string, appID string, wrapperID string, limit int) ([]FieldProtectionProfile, error)
 	DeleteFieldProtectionProfile(ctx context.Context, tenantID string, profileID string) error
+
+	WriteAuditEntry(ctx context.Context, entry DataProtectAuditEntry) error
+	ListAuditLog(ctx context.Context, tenantID string, category string, limit int, offset int) ([]DataProtectAuditEntry, error)
+	GetStats(ctx context.Context, tenantID string) (DataProtectStats, error)
 }
 
 type DataProtectionPolicy struct {
@@ -561,4 +565,28 @@ type FieldEncryptionSDKArtifact struct {
 	Content     string `json:"content"`
 	SizeBytes   int    `json:"size_bytes"`
 	SHA256      string `json:"sha256"`
+}
+
+type DataProtectAuditEntry struct {
+	ID        string    `json:"id"`
+	TenantID  string    `json:"tenant_id"`
+	Operation string    `json:"operation"`
+	Category  string    `json:"category"`
+	Actor     string    `json:"actor"`
+	Detail    string    `json:"detail"`
+	Metadata  string    `json:"metadata"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type DataProtectStats struct {
+	TenantID           string `json:"tenant_id"`
+	TokenVaults        int    `json:"token_vaults"`
+	TotalTokens        int    `json:"total_tokens"`
+	MaskingPolicies    int    `json:"masking_policies"`
+	RedactionPolicies  int    `json:"redaction_policies"`
+	RegisteredWrappers int    `json:"registered_wrappers"`
+	ActiveLeases       int    `json:"active_leases"`
+	TotalLeases        int    `json:"total_leases"`
+	AuditEntries       int    `json:"audit_entries"`
+	FieldProfiles      int    `json:"field_profiles"`
 }

@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -79,6 +81,9 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /field-encryption/leases/{id}/renew", h.handleRenewFieldEncryptionLease)
 	mux.HandleFunc("POST /field-encryption/leases/{id}/revoke", h.handleRevokeFieldEncryptionLease)
 
+	mux.HandleFunc("GET /audit-log", h.handleListAuditLog)
+	mux.HandleFunc("GET /stats", h.handleGetStats)
+
 	return mux
 }
 
@@ -95,6 +100,7 @@ func (h *Handler) handleTokenize(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), req.TenantID, "tokenize", "tokenization", actorFromRequest(r), fmt.Sprintf("tokenized %d value(s) mode=%s", len(items), req.Mode))
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
 }
 
@@ -111,6 +117,7 @@ func (h *Handler) handleDetokenize(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), req.TenantID, "detokenize", "tokenization", actorFromRequest(r), fmt.Sprintf("detokenized %d token(s)", len(items)))
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
 }
 
@@ -141,6 +148,7 @@ func (h *Handler) handleCreateTokenVault(w http.ResponseWriter, r *http.Request)
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), tenantID, "create_vault", "tokenization", actorFromRequest(r), fmt.Sprintf("created token vault %s type=%s", item.Name, item.TokenType))
 	writeJSON(w, http.StatusCreated, map[string]interface{}{"vault": item, "request_id": reqID})
 }
 
@@ -181,10 +189,12 @@ func (h *Handler) handleDeleteTokenVault(w http.ResponseWriter, r *http.Request)
 	}
 	approved := strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("governance_approved")), "true") ||
 		strings.EqualFold(strings.TrimSpace(r.Header.Get("X-Governance-Approved")), "true")
-	if err := h.svc.DeleteTokenVault(r.Context(), tenantID, r.PathValue("id"), approved); err != nil {
+	vaultID := r.PathValue("id")
+	if err := h.svc.DeleteTokenVault(r.Context(), tenantID, vaultID, approved); err != nil {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), tenantID, "delete_vault", "tokenization", actorFromRequest(r), fmt.Sprintf("deleted token vault %s", vaultID))
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "request_id": reqID})
 }
 
@@ -201,6 +211,7 @@ func (h *Handler) handleFPEEncrypt(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), req.TenantID, "fpe_encrypt", "encryption", actorFromRequest(r), fmt.Sprintf("FPE encrypt algo=%s", req.Algorithm))
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
 }
 
@@ -217,6 +228,7 @@ func (h *Handler) handleFPEDecrypt(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), req.TenantID, "fpe_decrypt", "encryption", actorFromRequest(r), fmt.Sprintf("FPE decrypt algo=%s", req.Algorithm))
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
 }
 
@@ -242,6 +254,7 @@ func (h *Handler) handleMaskWithMode(w http.ResponseWriter, r *http.Request, pre
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), req.TenantID, "mask", "masking", actorFromRequest(r), fmt.Sprintf("mask policy=%s preview=%v", req.PolicyID, preview))
 	writeJSON(w, http.StatusOK, map[string]interface{}{"masked": out, "request_id": reqID})
 }
 
@@ -328,6 +341,11 @@ func (h *Handler) handleRedactWithMode(w http.ResponseWriter, r *http.Request, d
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
+	mode := "apply"
+	if detect {
+		mode = "detect"
+	}
+	go h.svc.writeAudit(context.Background(), req.TenantID, "redact", "redaction", actorFromRequest(r), fmt.Sprintf("redact mode=%s policy=%s", mode, req.PolicyID))
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
 }
 
@@ -374,6 +392,7 @@ func (h *Handler) handleAppEncryptFields(w http.ResponseWriter, r *http.Request)
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), req.TenantID, "encrypt_fields", "encryption", actorFromRequest(r), fmt.Sprintf("field encrypt algo=%s fields=%d", req.Algorithm, len(req.Fields)))
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
 }
 
@@ -390,6 +409,7 @@ func (h *Handler) handleAppDecryptFields(w http.ResponseWriter, r *http.Request)
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), req.TenantID, "decrypt_fields", "encryption", actorFromRequest(r), fmt.Sprintf("field decrypt algo=%s fields=%d", req.Algorithm, len(req.Fields)))
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
 }
 
@@ -406,6 +426,7 @@ func (h *Handler) handleAppEnvelopeEncrypt(w http.ResponseWriter, r *http.Reques
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), req.TenantID, "envelope_encrypt", "encryption", actorFromRequest(r), fmt.Sprintf("envelope encrypt algo=%s", req.Algorithm))
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
 }
 
@@ -422,6 +443,7 @@ func (h *Handler) handleAppEnvelopeDecrypt(w http.ResponseWriter, r *http.Reques
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), req.TenantID, "envelope_decrypt", "encryption", actorFromRequest(r), "envelope decrypt")
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
 }
 
@@ -438,6 +460,7 @@ func (h *Handler) handleAppSearchableEncrypt(w http.ResponseWriter, r *http.Requ
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), req.TenantID, "searchable_encrypt", "encryption", actorFromRequest(r), "searchable encrypt AES-SIV")
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
 }
 
@@ -454,6 +477,7 @@ func (h *Handler) handleAppSearchableDecrypt(w http.ResponseWriter, r *http.Requ
 		h.writeServiceError(w, err, reqID, req.TenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), req.TenantID, "searchable_decrypt", "encryption", actorFromRequest(r), "searchable decrypt AES-SIV")
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
 }
 
@@ -492,6 +516,7 @@ func (h *Handler) handleSetDataProtectionPolicy(w http.ResponseWriter, r *http.R
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
 	}
+	go h.svc.writeAudit(context.Background(), tenantID, "update_policy", "policy", actorFromRequest(r), fmt.Sprintf("data protection policy updated by %s", req.UpdatedBy))
 	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
 }
 
@@ -849,6 +874,16 @@ func tenantFromRequest(r *http.Request) string {
 	return strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 }
 
+func actorFromRequest(r *http.Request) string {
+	if v := strings.TrimSpace(r.Header.Get("X-Actor")); v != "" {
+		return v
+	}
+	if v := strings.TrimSpace(r.Header.Get("X-Username")); v != "" {
+		return v
+	}
+	return "dashboard"
+}
+
 func firstTenant(values ...string) string {
 	for _, v := range values {
 		if strings.TrimSpace(v) != "" {
@@ -936,4 +971,50 @@ func writeErr(w http.ResponseWriter, status int, code string, message string, re
 			"tenant_id":  tenantID,
 		},
 	})
+}
+
+func (h *Handler) handleListAuditLog(w http.ResponseWriter, r *http.Request) {
+	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
+	if tenantID == "" {
+		tenantID = "default"
+	}
+	category := strings.TrimSpace(r.URL.Query().Get("category"))
+	limit := 100
+	if v := strings.TrimSpace(r.URL.Query().Get("limit")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 500 {
+			limit = n
+		}
+	}
+	offset := 0
+	if v := strings.TrimSpace(r.URL.Query().Get("offset")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+	entries, err := h.svc.ListAuditLog(r.Context(), tenantID, category, limit, offset)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "audit_log_failed", err.Error(), "", tenantID)
+		return
+	}
+	if entries == nil {
+		entries = []DataProtectAuditEntry{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"items": entries})
+}
+
+func (h *Handler) handleGetStats(w http.ResponseWriter, r *http.Request) {
+	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
+	if tenantID == "" {
+		tenantID = "default"
+	}
+	stats, err := h.svc.GetStats(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "stats_failed", err.Error(), "", tenantID)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(stats)
 }

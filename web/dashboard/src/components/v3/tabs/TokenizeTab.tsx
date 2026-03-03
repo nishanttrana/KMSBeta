@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCcw } from "lucide-react";
+import { RefreshCcw, Shield, Lock, VenetianMask, CreditCard, ScrollText, KeyRound, Gauge, Database, FileKey } from "lucide-react";
 import {
   B,
   Bar,
@@ -38,6 +38,8 @@ import {
   fpeDecrypt,
   fpeEncrypt,
   getDataProtectionPolicy,
+  getDataProtectStats,
+  getDataProtectAuditLog,
   initFieldEncryptionWrapperRegistration,
   issueFieldEncryptionLease,
   listFieldEncryptionLeases,
@@ -448,7 +450,7 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,alignItems:"start"}}>
       <Card style={{padding:18}}>
         <div style={{fontSize:30,fontWeight:700,color:C.text,marginBottom:8,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif",lineHeight:1}}>{panelTitle}</div>
-        <div style={{fontSize:11,color:C.muted,marginBottom:12}}>All operations below execute against backend `dataprotect` APIs.</div>
+        <div style={{fontSize:11,color:C.muted,marginBottom:12}}>All operations execute against the <span style={{color:C.accent}}>dataprotect</span> backend with real cryptography.</div>
         {op==="Tokenize"&&<>
           <FG label="Tokenization Mode" required>
             <Sel value={tokenMode} onChange={(e)=>setTokenMode((e.target.value==="vaultless"?"vaultless":"vault") as "vault"|"vaultless")}>
@@ -1164,7 +1166,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
       <Card>
         <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Execution Model</div>
         <div style={{fontSize:10,color:C.dim,lineHeight:1.5}}>
-          Wrapper registration is mandatory when <code>require_registered_wrapper</code> is enabled. Lease issuance enforces nonce/timestamp/signature checks and policy gates (cache/local crypto).
+          Wrapper registration is mandatory when <code style={{color:C.accent}}>require_registered_wrapper</code> is enabled. Lease issuance enforces nonce/timestamp/signature checks and policy gates (cache/local crypto).
         </div>
       </Card>
     </Section>
@@ -1586,7 +1588,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
       <Card>
         <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Policy Scope</div>
         <div style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
-          This tab controls only data-encryption behavior for Field-Level, Envelope and Searchable application encryption flows.
+          This tab controls data-encryption behavior for Field-Level, Envelope and Searchable application encryption flows. Changes apply immediately to all SDKs, wrappers, and REST API consumers.
         </div>
       </Card>
     </Section>
@@ -2162,7 +2164,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
       <Card>
         <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Policy Scope</div>
         <div style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
-          This tab controls tokenization behavior, masking/redaction modes, regex policy, and token lifetime constraints.
+          Controls tokenization behavior, masking/redaction modes, regex policy, and token lifetime constraints. Changes propagate to all wrappers, SDKs, and REST API consumers.
         </div>
       </Card>
     </Section>
@@ -2691,7 +2693,7 @@ const PaymentCryptoPolicy=({session,onToast})=>{
       <Card>
         <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:6}}>Policy Scope</div>
         <div style={{fontSize:10,color:C.dim,lineHeight:1.4}}>
-          This tab enforces configurable payment cryptography policy across REST and Payment TCP interfaces (TR-31, PIN, MAC, ISO20022).
+          Enforces configurable payment cryptography policy across REST and Payment TCP interfaces (TR-31, PIN, MAC, ISO20022). Changes apply immediately to all payment crypto operations.
         </div>
       </Card>
     </Section>
@@ -2871,8 +2873,65 @@ const PaymentCryptoPolicy=({session,onToast})=>{
   </div>;
 };
 
+const AuditLogViewer=({session,onToast})=>{
+  const [entries,setEntries]=useState<any[]>([]);
+  const [loading,setLoading]=useState(false);
+  const [category,setCategory]=useState("");
+  const refresh=async()=>{
+    if(!session?.token)return;
+    setLoading(true);
+    try{
+      const items=await getDataProtectAuditLog(session,{category:category||undefined,limit:50});
+      setEntries(items||[]);
+    }catch(error){
+      onToast?.(`Audit log load failed: ${errMsg(error)}`);
+    }finally{
+      setLoading(false);
+    }
+  };
+  useEffect(()=>{if(session?.token)void refresh();},[session?.token,session?.tenantId]);
+  const catColors={tokenization:C.accent,encryption:"#60a5fa",masking:"#a78bfa",redaction:"#f472b6",policy:"#fbbf24",general:C.muted};
+  return <Section title="Audit Log" actions={<>
+    <Sel value={category} onChange={(e)=>setCategory(e.target.value)} style={{minWidth:130,fontSize:11}}>
+      <option value="">All Categories</option>
+      <option value="tokenization">Tokenization</option>
+      <option value="encryption">Encryption</option>
+      <option value="masking">Masking</option>
+      <option value="redaction">Redaction</option>
+      <option value="policy">Policy</option>
+    </Sel>
+    <Btn small onClick={()=>void refresh()} disabled={loading}>{loading?"Loading...":"Refresh"}</Btn>
+  </>}>
+    <Card style={{maxHeight:320,overflowY:"auto"}}>
+      {entries.length?<div style={{display:"grid",gap:4}}>
+        {entries.map((e,i)=>{
+          const catColor=catColors[e?.category]||C.muted;
+          const ts=e?.created_at?new Date(e.created_at).toLocaleString():"";
+          return <div key={e?.id||i} style={{display:"grid",gridTemplateColumns:"3px 1fr",gap:0,borderRadius:6,overflow:"hidden",border:`1px solid ${C.line}`}}>
+            <div style={{background:catColor}}/>
+            <div style={{padding:"6px 10px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+              <div>
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <span style={{fontSize:11,fontWeight:700,color:C.text}}>{e?.operation||""}</span>
+                  <B c={e?.category==="policy"?"yellow":e?.category==="encryption"?"blue":"accent"} style={{fontSize:9}}>{e?.category||""}</B>
+                </div>
+                <div style={{fontSize:10,color:C.dim}}>{e?.detail||""}</div>
+              </div>
+              <div style={{textAlign:"right",flexShrink:0}}>
+                <div style={{fontSize:9,color:C.muted}}>{e?.actor||""}</div>
+                <div style={{fontSize:9,color:C.dim}}>{ts}</div>
+              </div>
+            </div>
+          </div>;
+        })}
+      </div>:<div style={{fontSize:11,color:C.dim,padding:12,textAlign:"center"}}>No audit entries found. Perform data protection operations to generate audit trail.</div>}
+    </Card>
+  </Section>;
+};
+
 export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewChange})=>{
   const [dataSubtab,setDataSubtab]=useState("fieldenc");
+  const [stats,setStats]=useState<any>(null);
   const currentSubtab=String(subView||dataSubtab||"fieldenc");
   const selectSubtab=(next:string)=>{
     if(onSubViewChange){
@@ -2883,8 +2942,34 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
   };
   const showInlineSubTabs=!onSubViewChange;
 
-  return <div>
-    {showInlineSubTabs&&<div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+  useEffect(()=>{
+    if(!session?.token)return;
+    getDataProtectStats(session).then(setStats).catch(()=>{});
+  },[session?.token,session?.tenantId]);
+
+  const statItems=[
+    {l:"Token Vaults",v:stats?.token_vaults,icon:Database,color:C.accent},
+    {l:"Tokens",v:stats?.total_tokens,icon:Shield,color:"#60a5fa"},
+    {l:"Mask Policies",v:stats?.masking_policies,icon:VenetianMask,color:"#a78bfa"},
+    {l:"Redact Policies",v:stats?.redaction_policies,icon:ScrollText,color:"#f472b6"},
+    {l:"Wrappers",v:stats?.registered_wrappers,icon:KeyRound,color:"#34d399"},
+    {l:"Active Leases",v:stats?.active_leases,icon:FileKey,color:"#fbbf24"},
+  ];
+
+  return <div style={{display:"grid",gap:12}}>
+    {stats&&<div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:10}}>
+      {statItems.map((s,i)=>{
+        const Icon=s.icon;
+        return <Card key={i} style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
+          <Icon size={18} style={{color:s.color,flexShrink:0}}/>
+          <div>
+            <div style={{fontSize:20,fontWeight:800,color:C.text,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif",lineHeight:1}}>{s.v??"-"}</div>
+            <div style={{fontSize:9,color:C.muted,letterSpacing:0.5,textTransform:"uppercase"}}>{s.l}</div>
+          </div>
+        </Card>;
+      })}
+    </div>}
+    {showInlineSubTabs&&<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
       <Btn small primary={currentSubtab==="fieldenc"} onClick={()=>selectSubtab("fieldenc")}>Field Encryption</Btn>
       <Btn small primary={currentSubtab==="dataenc-policy"} onClick={()=>selectSubtab("dataenc-policy")}>Data Encryption Policy</Btn>
       <Btn small primary={currentSubtab==="token-policy"} onClick={()=>selectSubtab("token-policy")}>Token / Mask / Redact Policy</Btn>
@@ -2900,10 +2985,7 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
         : currentSubtab==="dataenc-policy"
           ? <DataEncryptionPolicy session={session} onToast={onToast}/>
           : <FieldEncryptionRuntime session={session} keyCatalog={keyCatalog} onToast={onToast}/>}
+    <AuditLogViewer session={session} onToast={onToast}/>
   </div>;
 };
-
-// 
-// TAB: PAYMENT CRYPTO (interactive)
-// 
 
