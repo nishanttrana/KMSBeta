@@ -33,7 +33,7 @@ import {
 import type { AuthSession } from "../lib/auth";
 import { canAccessModule, isSystemAdminSession } from "../config/moduleRegistry";
 import type { FeatureKey } from "../config/tabs";
-import { listAuthTenants } from "../lib/authAdmin";
+import { getAuthCLIStatus, listAuthTenants } from "../lib/authAdmin";
 import { getGovernanceSystemState } from "../lib/governance";
 import { listKeys, listTags } from "../lib/keycore";
 import { getUnreadAlertCounts } from "../lib/reporting";
@@ -297,6 +297,7 @@ export default function VectaDashboardV3Shell(props: Props) {
   const [tagCatalog, setTagCatalog] = useState<any[]>([]);
   const [fipsMode, setFipsMode] = useState<"enabled" | "disabled">("disabled");
   const [reportedUnread, setReportedUnread] = useState(Number(unreadAlerts || 0));
+  const [cliEnabled, setCliEnabled] = useState(false);
   const [tenantOptions, setTenantOptions] = useState<Array<{ id: string; name: string; status?: string }>>([]);
   const [tenantScope, setTenantScope] = useState(String(sessionBase?.tenantId || ""));
   const [subPaneSelection, setSubPaneSelection] = useState<any>(() => {
@@ -386,6 +387,18 @@ export default function VectaDashboardV3Shell(props: Props) {
       stop = true;
     };
   }, [session]);
+
+  useEffect(() => {
+    if (!session?.token) { setCliEnabled(false); return; }
+    let stop = false;
+    (async () => {
+      try {
+        const status = await getAuthCLIStatus(session);
+        if (!stop) setCliEnabled(Boolean(status?.enabled));
+      } catch { if (!stop) setCliEnabled(false); }
+    })();
+    return () => { stop = true; };
+  }, [session?.token]);
 
   useEffect(() => {
     if (!toast) return;
@@ -569,7 +582,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                   ))}
               </Sel>
             </div>
-            <Btn small onClick={() => selectTab("admin")}>CLI</Btn>
+            {isSystemAdminSession(session) && <Btn small onClick={() => selectTab("admin")} style={cliEnabled ? {} : { opacity: 0.4 }}>{cliEnabled ? "CLI" : "CLI (off)"}</Btn>}
             <span style={{ fontSize: 11, color: C.accent, fontFamily: "'JetBrains Mono',monospace" }}>{t.toLocaleTimeString()}</span>
             <span style={{ fontSize: 9, color: C.muted, fontFamily: "'JetBrains Mono',monospace" }}>{UI_BUILD_ID}</span>
             <span
