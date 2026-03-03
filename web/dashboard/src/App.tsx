@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FeatureKey } from "./config/tabs";
 import { isSystemAdminSession } from "./config/moduleRegistry";
-import { BrandedLoadingOverlay } from "./components/BrandedLoadingOverlay";
+import { BrandedLoadingOverlay, InitialLoadingScreen } from "./components/BrandedLoadingOverlay";
 import { LoginScreen } from "./components/LoginScreen";
 import VectaDashboardV3 from "./components/VectaDashboardV3";
 import { clearSession, getSession, loadUIAuthConfig, refreshSession, saveSession, type AuthSession } from "./lib/auth";
@@ -552,11 +552,7 @@ export default function App() {
   }, [session]);
 
   if (!uiAuthQuery.data) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-cyber-bg text-cyber-text">
-        Loading authentication profile...
-      </main>
-    );
+    return <InitialLoadingScreen />;
   }
 
   if (!session) {
