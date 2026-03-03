@@ -376,6 +376,68 @@ func (s *Service) GenerateKeyPair(ctx context.Context, req GenerateKeyPairReques
 	return secret, publicVal, req.KeyType, nil
 }
 
+func (s *Service) ListVersions(ctx context.Context, tenantID string, secretID string) ([]SecretVersionInfo, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	secretID = strings.TrimSpace(secretID)
+	if tenantID == "" || secretID == "" {
+		return nil, errors.New("tenant_id and secret_id are required")
+	}
+	versions, err := s.store.ListVersions(ctx, tenantID, secretID)
+	if err != nil {
+		return nil, err
+	}
+	_ = s.publishAudit(ctx, "audit.secrets.versions_listed", tenantID, map[string]interface{}{
+		"secret_id": secretID,
+		"count":     len(versions),
+	})
+	return versions, nil
+}
+
+func (s *Service) GetSecretAuditLog(ctx context.Context, tenantID string, secretID string, limit int) ([]SecretAuditEntry, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	secretID = strings.TrimSpace(secretID)
+	if tenantID == "" || secretID == "" {
+		return nil, errors.New("tenant_id and secret_id are required")
+	}
+	entries, err := s.store.GetSecretAuditLog(ctx, tenantID, secretID, limit)
+	if err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+func (s *Service) RotateSecret(ctx context.Context, tenantID string, secretID string, newValue string, updatedBy string) (Secret, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	secretID = strings.TrimSpace(secretID)
+	if tenantID == "" || secretID == "" || newValue == "" {
+		return Secret{}, errors.New("tenant_id, secret_id and value are required")
+	}
+	if updatedBy == "" {
+		updatedBy = "system"
+	}
+	updated, err := s.UpdateSecret(ctx, tenantID, secretID, UpdateSecretRequest{
+		Value:     &newValue,
+		UpdatedBy: updatedBy,
+	})
+	if err != nil {
+		return Secret{}, err
+	}
+	_ = s.publishAudit(ctx, "audit.secrets.rotated", tenantID, map[string]interface{}{
+		"secret_id":       secretID,
+		"new_version":     updated.CurrentVersion,
+		"rotated_by":      updatedBy,
+	})
+	return updated, nil
+}
+
+func (s *Service) GetStats(ctx context.Context, tenantID string) (VaultStats, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return VaultStats{}, errors.New("tenant_id is required")
+	}
+	return s.store.GetStats(ctx, tenantID)
+}
+
 func generateSSHKeyPair(keyType string) (string, string, error) {
 	var (
 		privAny interface{}

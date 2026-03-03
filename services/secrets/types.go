@@ -102,3 +102,26 @@ type SecretValueResponse struct {
 	Format      string `json:"format"`
 	ContentType string `json:"content_type"`
 }
+
+type SecretVersionInfo struct {
+	Version   int       `json:"version"`
+	ValueHash string    `json:"value_hash"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type SecretAuditEntry struct {
+	ID        string    `json:"id"`
+	SecretID  string    `json:"secret_id"`
+	Action    string    `json:"action"`
+	Actor     string    `json:"actor"`
+	Detail    string    `json:"detail"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type VaultStats struct {
+	TotalSecrets   int            `json:"total_secrets"`
+	ByType         map[string]int `json:"by_type"`
+	TotalVersions  int            `json:"total_versions"`
+	ExpiringWithin int            `json:"expiring_within_30d"`
+	Expired        int            `json:"expired"`
+}

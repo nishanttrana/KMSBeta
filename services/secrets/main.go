@@ -32,6 +32,8 @@ import (
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
+var logger = log.New(os.Stderr, "[kms-secrets] ", log.LstdFlags|log.Lmsgprefix)
+
 func main() {
 	cfg := pkgconfig.Load()
 

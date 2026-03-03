@@ -34,6 +34,10 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("DELETE /secrets/{id}", h.handleDeleteSecret)
 	mux.HandleFunc("POST /secrets/generate/ssh_key", h.handleGenerateSSHKey)
 	mux.HandleFunc("POST /secrets/generate/keypair", h.handleGenerateKeyPair)
+	mux.HandleFunc("GET /secrets/{id}/versions", h.handleListVersions)
+	mux.HandleFunc("GET /secrets/{id}/audit", h.handleSecretAuditLog)
+	mux.HandleFunc("POST /secrets/{id}/rotate", h.handleRotateSecret)
+	mux.HandleFunc("GET /secrets/stats", h.handleStats)
 
 	// HashiCorp Vault / OpenBao compatibility (KV v1 + KV v2 subset)
 	mux.HandleFunc("GET /v1/sys/health", h.handleVaultSysHealth)
@@ -204,6 +208,86 @@ func (h *Handler) handleGenerateKeyPair(w http.ResponseWriter, r *http.Request) 
 		"request_id":  reqID,
 		"contentType": "text/plain",
 	})
+}
+
+func (h *Handler) handleListVersions(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	versions, err := h.svc.ListVersions(r.Context(), tenantID, r.PathValue("id"))
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			status = http.StatusNotFound
+		}
+		writeErr(w, status, "versions_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"versions": versions, "request_id": reqID})
+}
+
+func (h *Handler) handleSecretAuditLog(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	limit := atoi(r.URL.Query().Get("limit"))
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	entries, err := h.svc.GetSecretAuditLog(r.Context(), tenantID, r.PathValue("id"), limit)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "audit_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"entries": entries, "request_id": reqID})
+}
+
+func (h *Handler) handleRotateSecret(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req struct {
+		Value     string `json:"value"`
+		UpdatedBy string `json:"updated_by"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	if req.Value == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "value is required for rotation", reqID, tenantID)
+		return
+	}
+	out, err := h.svc.RotateSecret(r.Context(), tenantID, r.PathValue("id"), req.Value, req.UpdatedBy)
+	if err != nil {
+		status := http.StatusBadRequest
+		if errors.Is(err, errNotFound) {
+			status = http.StatusNotFound
+		}
+		writeErr(w, status, "rotate_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"secret": out, "request_id": reqID})
+}
+
+func (h *Handler) handleStats(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	stats, err := h.svc.GetStats(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "stats_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"stats": stats, "request_id": reqID})
 }
 
 func (h *Handler) handleVaultSysHealth(w http.ResponseWriter, r *http.Request) {

@@ -1,420 +1,508 @@
+// @ts-nocheck
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshCcw } from "lucide-react";
+import {
+  Clock, Copy, Download, Eye, EyeOff, FileText, History, KeyRound,
+  Lock, Plus, RefreshCcw, RotateCcw, ScrollText, Search, Shield,
+  ShieldAlert, Trash2, Upload
+} from "lucide-react";
 import type { AuthSession } from "../../../lib/auth";
 import {
   createSecret,
   deleteSecret as deleteVaultSecret,
   generateKeyPairSecret,
+  getSecretAuditLog,
   getSecretValue,
-  listSecrets
+  getVaultStats,
+  listSecrets,
+  listSecretVersions,
+  rotateSecret,
+  updateSecret,
+  type SecretAuditEntry,
+  type SecretItem,
+  type SecretVersionInfo,
+  type VaultStats
 } from "../../../lib/secrets";
-import { Btn, Chk, FG, Inp, Modal, Row2, Section, Sel, Txt, usePromptDialog } from "../legacyPrimitives";
+import { B, Bar, Btn, Card, Chk, FG, Inp, Modal, Row2, Row3, Section, Sel, Stat, Tabs, Txt, usePromptDialog } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 
-function safeFileName(input: string, fallback = "secret"): string {
-  const raw = String(input || "").trim();
-  const normalized = raw.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/^_+|_+$/g, "");
-  return normalized || fallback;
+/* ── helpers ── */
+function safeFileName(input, fallback = "secret") {
+  return String(input || "").trim().replace(/[^a-zA-Z0-9._-]/g, "_").replace(/^_+|_+$/g, "") || fallback;
+}
+function fmtDate(v) {
+  if (!v) return "—";
+  try { const d = new Date(v); return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) + " " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }); } catch { return "—"; }
+}
+function fmtDateShort(v) {
+  if (!v) return "—";
+  try { return new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" }); } catch { return "—"; }
+}
+function fmtAgo(v) {
+  if (!v) return "";
+  try {
+    const ms = Date.now() - new Date(v).getTime();
+    if (ms < 60000) return "just now";
+    if (ms < 3600000) return `${Math.floor(ms / 60000)}m ago`;
+    if (ms < 86400000) return `${Math.floor(ms / 3600000)}h ago`;
+    return `${Math.floor(ms / 86400000)}d ago`;
+  } catch { return ""; }
+}
+function copyToClipboard(text, onToast) {
+  navigator.clipboard.writeText(text).then(() => onToast?.("Copied to clipboard.")).catch(() => onToast?.("Copy failed."));
 }
 
-type VaultTabProps = {
-  session: AuthSession | null;
-  onToast?: (message: string) => void;
+/* ── constants ── */
+const CATEGORIES = [
+  { id: "all", label: "All" },
+  { id: "credentials", label: "Credentials" },
+  { id: "ssh", label: "SSH" },
+  { id: "pgp", label: "PGP" },
+  { id: "x509", label: "X.509 / TLS" },
+  { id: "tokens", label: "Tokens / API" },
+  { id: "keys", label: "Key Material" },
+  { id: "other", label: "Other" }
+];
+
+const GENERATE_TYPE_OPTIONS = [
+  { value: "ed25519", label: "Ed25519 (SSH - recommended)" },
+  { value: "rsa-4096", label: "RSA-4096 (SSH)" },
+  { value: "ecdsa-p384", label: "ECDSA-P384 (SSH)" },
+  { value: "pgp-rsa-4096", label: "PGP / GPG (RSA-4096)" },
+  { value: "age-x25519", label: "age (X25519)" },
+  { value: "wireguard-curve25519", label: "WireGuard (Curve25519)" }
+];
+
+const SUPPORTED_TYPES = [
+  "api_key", "password", "database_credentials", "token", "oauth_client_secret",
+  "ssh_private_key", "ssh_public_key", "pgp_private_key", "pgp_public_key", "ppk",
+  "x509_certificate", "pkcs12", "jwk", "kerberos_keytab", "wireguard_private_key",
+  "wireguard_public_key", "age_key", "tls_private_key", "tls_certificate", "binary_blob",
+  "bitlocker_keys"
+];
+
+const TYPE_BADGE_MAP = {
+  api_key: { t: "API Key", bg: "#1f5a8a", fg: "#72d4ff", icon: KeyRound },
+  password: { t: "Password", bg: "#4a2040", fg: "#ff80b5", icon: Lock },
+  database_credentials: { t: "DB Credentials", bg: "#4f2030", fg: "#ff6980", icon: Lock },
+  token: { t: "Token", bg: "#3d3511", fg: "#ffd06d", icon: Shield },
+  oauth_client_secret: { t: "OAuth", bg: "#412916", fg: "#ffb575", icon: Shield },
+  ssh_private_key: { t: "SSH Key", bg: "#124c46", fg: "#46efc2", icon: KeyRound },
+  ssh_public_key: { t: "SSH Public", bg: "#124c46", fg: "#46efc2", icon: KeyRound },
+  pgp_private_key: { t: "PGP Key", bg: "#3b2a61", fg: "#b497ff", icon: KeyRound },
+  pgp_public_key: { t: "PGP Public", bg: "#3b2a61", fg: "#b497ff", icon: KeyRound },
+  ppk: { t: "PPK", bg: "#2c2f7c", fg: "#9db0ff", icon: KeyRound },
+  x509_certificate: { t: "X.509 Cert", bg: "#1f3f79", fg: "#72adff", icon: FileText },
+  tls_certificate: { t: "TLS Cert", bg: "#1f3f79", fg: "#72adff", icon: FileText },
+  tls_private_key: { t: "TLS Key", bg: "#1f3f79", fg: "#72adff", icon: KeyRound },
+  pkcs12: { t: "PKCS#12", bg: "#423311", fg: "#ffd06d", icon: FileText },
+  jwk: { t: "JWK", bg: "#2f3d14", fg: "#b3ff62", icon: KeyRound },
+  kerberos_keytab: { t: "Kerberos", bg: "#113c4d", fg: "#5fdfff", icon: Shield },
+  wireguard_private_key: { t: "WireGuard", bg: "#123862", fg: "#5bc3ff", icon: KeyRound },
+  wireguard_public_key: { t: "WireGuard Pub", bg: "#123862", fg: "#5bc3ff", icon: KeyRound },
+  age_key: { t: "age Key", bg: "#2a3a4e", fg: "#8ec8ff", icon: KeyRound },
+  bitlocker_keys: { t: "BitLocker", bg: "#3f2a19", fg: "#ffc78a", icon: Lock },
+  binary_blob: { t: "Binary", bg: "#223047", fg: "#93b1df", icon: FileText }
 };
 
-export const VaultTab=({session,onToast}: VaultTabProps)=>{
-  const [modal,setModal]=useState<string|null>(null);
-  const [busy,setBusy]=useState(false);
-  const [loading,setLoading]=useState(false);
-  const [refreshing,setRefreshing]=useState(false);
-  const [refreshTick,setRefreshTick]=useState(0);
-  const [secrets,setSecrets]=useState<any[]>([]);
-  const [search,setSearch]=useState("");
-  const [category,setCategory]=useState("all");
+function getBadge(type) {
+  return TYPE_BADGE_MAP[String(type || "").toLowerCase()] || { t: type || "secret", bg: "#223047", fg: "#93b1df", icon: Shield };
+}
 
-  const [createName,setCreateName]=useState("");
-  const [createType,setCreateType]=useState("api_key");
-  const [createValue,setCreateValue]=useState("");
-  const [createTTLMode,setCreateTTLMode]=useState("none");
-  const [createTTLCustom,setCreateTTLCustom]=useState("");
-  const [createLeaseBased,setCreateLeaseBased]=useState(false);
-  const [createDeliveryFormat,setCreateDeliveryFormat]=useState("raw");
+function matchesCategory(secret, cat) {
+  if (cat === "all") return true;
+  const t = String(secret?.secret_type || "").toLowerCase();
+  if (cat === "credentials") return ["password", "database_credentials", "oauth_client_secret"].includes(t);
+  if (cat === "ssh") return t.includes("ssh_") || t === "ppk";
+  if (cat === "pgp") return t.includes("pgp_");
+  if (cat === "x509") return ["x509_certificate", "tls_certificate", "tls_private_key", "pkcs12"].includes(t);
+  if (cat === "tokens") return ["api_key", "token", "oauth_client_secret"].includes(t);
+  if (cat === "keys") return ["jwk", "wireguard_private_key", "wireguard_public_key", "age_key", "kerberos_keytab", "bitlocker_keys"].includes(t);
+  if (cat === "other") return t === "binary_blob";
+  return true;
+}
 
-  const [generateType,setGenerateType]=useState("ed25519");
-  const [generateName,setGenerateName]=useState("");
-  const [generatedPublicKey,setGeneratedPublicKey]=useState("");
+function ttlLabel(s) {
+  const ttl = Number(s?.lease_ttl_seconds || 0);
+  if (ttl <= 0) return "No expiry";
+  if (ttl >= 86400) return `${Math.round(ttl / 86400)}d`;
+  if (ttl >= 3600) return `${Math.round(ttl / 3600)}h`;
+  if (ttl >= 60) return `${Math.round(ttl / 60)}m`;
+  return `${ttl}s`;
+}
 
-  const [selectedSecret,setSelectedSecret]=useState<any|null>(null);
-  const [valueFormat,setValueFormat]=useState("raw");
-  const [retrievedValue,setRetrievedValue]=useState("");
-  const [retrievedType,setRetrievedType]=useState("");
-  const promptDialog=usePromptDialog();
+function expiryStatus(s) {
+  if (!s?.expires_at) return null;
+  const ms = new Date(s.expires_at).getTime() - Date.now();
+  if (ms <= 0) return { label: "Expired", color: C.red };
+  if (ms < 7 * 86400000) return { label: "Expiring soon", color: C.amber };
+  return null;
+}
 
-  const categories=[
-    {id:"all",label:"All"},
-    {id:"ssh",label:"SSH"},
-    {id:"pgp",label:"PGP"},
-    {id:"ppk",label:"PPK"},
-    {id:"x509",label:"X.509"},
-    {id:"pkcs12",label:"PKCS#12"},
-    {id:"jwk",label:"JWK"},
-    {id:"kerberos",label:"Kerberos"},
-    {id:"oauth",label:"OAuth"},
-    {id:"wireguard",label:"WireGuard"},
-    {id:"aws",label:"AWS"}
-  ];
+function defaultFormatForType(secret) {
+  const t = String(secret?.secret_type || "");
+  if (t === "ssh_private_key") return "pem";
+  if (t.includes("pgp_")) return "armored";
+  if (t === "ppk") return "ppk";
+  if (t === "jwk") return "jwk";
+  if (t === "pkcs12") return "extract";
+  return "raw";
+}
 
-  const generateTypeOptions=[
-    {value:"ed25519",label:"Ed25519 (SSH - recommended)"},
-    {value:"rsa-4096",label:"RSA-4096 (SSH)"},
-    {value:"ecdsa-p384",label:"ECDSA-P384 (SSH)"},
-    {value:"pgp-rsa-4096",label:"PGP / GPG (RSA-4096)"},
-    {value:"age-x25519",label:"age (X25519)"},
-    {value:"wireguard-curve25519",label:"WireGuard (Curve25519)"}
-  ];
+function ttlToSeconds(mode, custom) {
+  if (mode === "none") return 0;
+  if (mode === "1h") return 3600;
+  if (mode === "24h") return 86400;
+  if (mode === "7d") return 604800;
+  if (mode === "30d") return 2592000;
+  if (mode === "90d") return 7776000;
+  if (mode === "365d") return 31536000;
+  if (mode === "custom") return Math.max(0, Math.trunc(Number(custom || 0)));
+  return 0;
+}
 
-  const supportedTypes=[
-    "api_key","password","database_credentials","token","oauth_client_secret",
-    "ssh_private_key","ssh_public_key","pgp_private_key","pgp_public_key","ppk",
-    "x509_certificate","pkcs12","jwk","kerberos_keytab","wireguard_private_key",
-    "wireguard_public_key","age_key","tls_private_key","tls_certificate","binary_blob",
-    "bitlocker_keys"
-  ];
+/* ── MAIN COMPONENT ── */
+export const VaultTab = ({ session, onToast }: { session: AuthSession | null; onToast?: (m: string) => void }) => {
+  const [modal, setModal] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [secrets, setSecrets] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [sortBy, setSortBy] = useState("updated");
 
-  const ttlToSeconds=(mode:string,custom:string)=>{
-    if(mode==="none") return 0;
-    if(mode==="1h") return 3600;
-    if(mode==="24h") return 86400;
-    if(mode==="7d") return 604800;
-    if(mode==="30d") return 2592000;
-    if(mode==="90d") return 7776000;
-    if(mode==="365d") return 31536000;
-    if(mode==="custom"){
-      return Math.max(0,Math.trunc(Number(custom||0)));
-    }
-    return 0;
-  };
+  // Create form
+  const [createName, setCreateName] = useState("");
+  const [createType, setCreateType] = useState("api_key");
+  const [createValue, setCreateValue] = useState("");
+  const [createDesc, setCreateDesc] = useState("");
+  const [createTTLMode, setCreateTTLMode] = useState("none");
+  const [createTTLCustom, setCreateTTLCustom] = useState("");
+  const [createLeaseBased, setCreateLeaseBased] = useState(false);
+  const [createDeliveryFormat, setCreateDeliveryFormat] = useState("raw");
 
-  const normalizeType=(value:string)=>String(value||"").trim().toLowerCase().replace(/\s+/g,"_");
+  // Generate form
+  const [generateType, setGenerateType] = useState("ed25519");
+  const [generateName, setGenerateName] = useState("");
+  const [generatedPublicKey, setGeneratedPublicKey] = useState("");
 
-  const loadSecrets=useCallback(async(force=false)=>{
-    if(!session){
-      return;
-    }
+  // Retrieve/detail
+  const [selectedSecret, setSelectedSecret] = useState(null);
+  const [valueFormat, setValueFormat] = useState("raw");
+  const [retrievedValue, setRetrievedValue] = useState("");
+  const [retrievedType, setRetrievedType] = useState("");
+  const [showValue, setShowValue] = useState(false);
+
+  // Version history
+  const [versions, setVersions] = useState([]);
+
+  // Audit log
+  const [auditEntries, setAuditEntries] = useState([]);
+
+  // Rotate
+  const [rotateValue, setRotateValue] = useState("");
+
+  const promptDialog = usePromptDialog();
+
+  /* ── data loading ── */
+  const loadAll = useCallback(async (force = false) => {
+    if (!session) return;
     setLoading(true);
-    try{
-      const items=await listSecrets(session,{limit:500,offset:0,noCache:Boolean(force)});
-      setSecrets(Array.isArray(items)?items:[]);
-    }catch(error){
-      onToast?.(`Secrets load failed: ${errMsg(error)}`);
-    }finally{
+    try {
+      const [items, vaultStats] = await Promise.all([
+        listSecrets(session, { limit: 500, offset: 0, noCache: force }),
+        getVaultStats(session).catch(() => null)
+      ]);
+      setSecrets(Array.isArray(items) ? items : []);
+      if (vaultStats) setStats(vaultStats);
+    } catch (e) {
+      onToast?.(`Secrets load failed: ${errMsg(e)}`);
+    } finally {
       setLoading(false);
     }
-  },[onToast,session]);
+  }, [session, onToast]);
 
-  useEffect(()=>{
-    void loadSecrets(false);
-  },[loadSecrets,refreshTick]);
+  useEffect(() => { void loadAll(false); }, [loadAll]);
 
-  const handleRefresh=async()=>{
-    if(!session){
-      return;
-    }
+  const handleRefresh = async () => {
     setRefreshing(true);
-    try{
-      await loadSecrets(true);
-      onToast?.("Secrets refreshed.");
-    }finally{
-      setRefreshing(false);
-    }
+    try { await loadAll(true); onToast?.("Vault refreshed."); } finally { setRefreshing(false); }
   };
 
-  const matchesCategory=useCallback((secret:any)=>{
-    if(category==="all") return true;
-    const type=String(secret?.secret_type||"").toLowerCase();
-    const name=String(secret?.name||"").toLowerCase();
-    const labels=Object.entries(secret?.labels||{}).map(([k,v])=>`${k}=${v}`).join(" ").toLowerCase();
-    if(category==="ssh") return type.includes("ssh_");
-    if(category==="pgp") return type.includes("pgp_");
-    if(category==="ppk") return type==="ppk";
-    if(category==="x509") return type==="x509_certificate"||type==="tls_certificate"||type==="tls_private_key";
-    if(category==="pkcs12") return type==="pkcs12";
-    if(category==="jwk") return type==="jwk";
-    if(category==="kerberos") return type==="kerberos_keytab";
-    if(category==="oauth") return type==="oauth_client_secret"||type==="token";
-    if(category==="wireguard") return type.includes("wireguard_");
-    if(category==="aws") return name.includes("aws")||labels.includes("aws");
-    return true;
-  },[category]);
-
-  const ttlCompact=(secret:any)=>{
-    const ttlSec=Number(secret?.lease_ttl_seconds||0);
-    if(ttlSec<=0) return "8";
-    if(ttlSec>=86400) return `${Math.round(ttlSec/86400)}d`;
-    if(ttlSec>=3600) return `${Math.round(ttlSec/3600)}h`;
-    if(ttlSec>=60) return `${Math.round(ttlSec/60)}m`;
-    return `${ttlSec}s`;
-  };
-
-  const secretBadge=(secret:any)=>{
-    const type=String(secret?.secret_type||"").toLowerCase();
-    const map:any={
-      api_key:{t:"api key",bg:"#1f5a8a",fg:"#72d4ff"},
-      database_credentials:{t:"database cred",bg:"#4f2030",fg:"#ff6980"},
-      ssh_private_key:{t:"ssh key",bg:"#124c46",fg:"#46efc2"},
-      pgp_private_key:{t:"pgp key",bg:"#3b2a61",fg:"#b497ff"},
-      ppk:{t:"ppk key",bg:"#2c2f7c",fg:"#9db0ff"},
-      x509_certificate:{t:"x509 cert",bg:"#1f3f79",fg:"#72adff"},
-      tls_certificate:{t:"x509 cert",bg:"#1f3f79",fg:"#72adff"},
-      pkcs12:{t:"pkcs#12",bg:"#423311",fg:"#ffd06d"},
-      jwk:{t:"jwk",bg:"#2f3d14",fg:"#b3ff62"},
-      kerberos_keytab:{t:"kerberos keytab",bg:"#113c4d",fg:"#5fdfff"},
-      oauth_client_secret:{t:"oauth secret",bg:"#412916",fg:"#ffb575"},
-      wireguard_private_key:{t:"wireguard key",bg:"#123862",fg:"#5bc3ff"},
-      bitlocker_keys:{t:"bitlocker keys",bg:"#3f2a19",fg:"#ffc78a"}
-    };
-    return map[type]||{t:type||"secret",bg:"#223047",fg:"#93b1df"};
-  };
-
-  const defaultFormatForType=(secret:any)=>{
-    const type=String(secret?.secret_type||"");
-    if(type==="ssh_private_key") return "pem";
-    if(type==="pgp_private_key"||type==="pgp_public_key") return "armored";
-    if(type==="ppk") return "ppk";
-    if(type==="jwk") return "jwk";
-    if(type==="pkcs12") return "extract";
-    return "raw";
-  };
-
-  const downloadNameFor=(secret:any,format:string)=>{
-    const base=safeFileName(String(secret?.name||secret?.id||"secret"),"secret");
-    const extMap:any={pem:"pem",openssh:"pub",ppk:"ppk",armored:"asc",jwk:"json",extract:"json",raw:"txt"};
-    return `${base}.${extMap[String(format||"raw")]||"txt"}`;
-  };
-
-  const downloadTextFile=(filename:string,content:string,mime="text/plain;charset=utf-8")=>{
-    const blob=new Blob([String(content||"")],{type:mime});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url;
-    a.download=filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const filteredSecrets=useMemo(()=>{
-    const q=String(search||"").trim().toLowerCase();
-    return secrets.filter((s:any)=>{
-      if(!matchesCategory(s)) return false;
-      if(!q) return true;
-      return [s.name,s.id,s.secret_type,s.description].some((v)=>String(v||"").toLowerCase().includes(q));
+  /* ── filtering & sorting ── */
+  const filtered = useMemo(() => {
+    const q = String(search || "").trim().toLowerCase();
+    let items = secrets.filter((s) => {
+      if (!matchesCategory(s, category)) return false;
+      if (!q) return true;
+      return [s.name, s.id, s.secret_type, s.description, s.created_by].some((v) => String(v || "").toLowerCase().includes(q));
     });
-  },[secrets,search,matchesCategory]);
+    if (sortBy === "name") items.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+    else if (sortBy === "type") items.sort((a, b) => String(a.secret_type || "").localeCompare(String(b.secret_type || "")));
+    else if (sortBy === "created") items.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    else items.sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
+    return items;
+  }, [secrets, search, category, sortBy]);
 
-  const submitCreate=async()=>{
-    if(!session){
-      return;
-    }
-    if(!createName.trim()||!createType.trim()||!createValue){
-      onToast?.("Secret name, type, and value are required.");
-      return;
+  /* ── actions ── */
+  const submitCreate = async () => {
+    if (!session) return;
+    if (!createName.trim() || !createType.trim() || !createValue) {
+      onToast?.("Secret name, type, and value are required."); return;
     }
     setBusy(true);
-    try{
-      await createSecret(session,{
-        name:createName.trim(),
-        secret_type:normalizeType(createType),
-        value:createValue,
-        labels:{delivery_format:createDeliveryFormat},
-        lease_ttl_seconds:ttlToSeconds(createTTLMode,createTTLCustom),
-        metadata:{source:"dashboard",lease_based:createLeaseBased}
+    try {
+      await createSecret(session, {
+        name: createName.trim(),
+        secret_type: createType.trim().toLowerCase().replace(/\s+/g, "_"),
+        value: createValue,
+        description: createDesc.trim(),
+        labels: { delivery_format: createDeliveryFormat },
+        lease_ttl_seconds: ttlToSeconds(createTTLMode, createTTLCustom),
+        metadata: { source: "dashboard", lease_based: createLeaseBased }
       });
-      onToast?.("Secret stored.");
-      setModal(null);
-      setCreateName("");
-      setCreateValue("");
-      setCreateType("api_key");
-      setCreateTTLMode("none");
-      setCreateTTLCustom("");
-      setCreateLeaseBased(false);
-      setCreateDeliveryFormat("raw");
-      setRefreshTick((n)=>n+1);
-    }catch(error){
-      onToast?.(`Store secret failed: ${errMsg(error)}`);
-    }finally{
-      setBusy(false);
-    }
+      onToast?.("Secret stored securely.");
+      setModal(null); setCreateName(""); setCreateValue(""); setCreateDesc(""); setCreateType("api_key"); setCreateTTLMode("none"); setCreateTTLCustom(""); setCreateLeaseBased(false); setCreateDeliveryFormat("raw");
+      await loadAll(true);
+    } catch (e) { onToast?.(`Store failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
 
-  const submitGenerate=async()=>{
-    if(!session){
-      return;
-    }
-    if(!generateName.trim()){
-      onToast?.("Key name is required.");
-      return;
-    }
+  const submitGenerate = async () => {
+    if (!session || !generateName.trim()) { onToast?.("Key name is required."); return; }
     setBusy(true);
-    try{
-      const out=await generateKeyPairSecret(session,{
-        name:generateName.trim(),
-        key_type:generateType,
-        labels:{source:"dashboard",key_type:generateType},
-        lease_ttl_seconds:0
-      });
-      setGeneratedPublicKey(String(out.public_key||""));
-      onToast?.(`${String(out.key_type||generateType)} key pair generated and private key stored in vault.`);
-      setRefreshTick((n)=>n+1);
-    }catch(error){
-      onToast?.(`Generate key pair failed: ${errMsg(error)}`);
-    }finally{
-      setBusy(false);
-    }
+    try {
+      const out = await generateKeyPairSecret(session, { name: generateName.trim(), key_type: generateType, labels: { source: "dashboard", key_type: generateType }, lease_ttl_seconds: 0 });
+      setGeneratedPublicKey(String(out.public_key || ""));
+      onToast?.(`${String(out.key_type || generateType)} key pair generated. Private key stored in vault.`);
+      await loadAll(true);
+    } catch (e) { onToast?.(`Generate failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
 
-  const openRetrieve=async(secret:any)=>{
-    if(!session){
-      return;
-    }
+  const openDetail = async (secret) => {
+    if (!session) return;
     setSelectedSecret(secret);
-    const format=defaultFormatForType(secret);
-    setValueFormat(format);
-    setRetrievedValue("");
-    setRetrievedType("");
-    setModal("retrieve");
+    const format = defaultFormatForType(secret);
+    setValueFormat(format); setRetrievedValue(""); setRetrievedType(""); setShowValue(false);
+    setVersions([]); setAuditEntries([]);
+    setModal("detail");
     setBusy(true);
-    try{
-      const out=await getSecretValue(session,secret.id,format);
-      setRetrievedValue(String(out.value||""));
-      setRetrievedType(String(out.content_type||""));
-    }catch(error){
-      onToast?.(`Read secret failed: ${errMsg(error)}`);
-    }finally{
-      setBusy(false);
-    }
+    try {
+      const [val, vers, audit] = await Promise.all([
+        getSecretValue(session, secret.id, format).catch(() => ({ value: "", content_type: "" })),
+        listSecretVersions(session, secret.id).catch(() => []),
+        getSecretAuditLog(session, secret.id).catch(() => [])
+      ]);
+      setRetrievedValue(String(val.value || "")); setRetrievedType(String(val.content_type || ""));
+      setVersions(vers); setAuditEntries(audit);
+    } catch (e) { onToast?.(`Read failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
 
-  const fetchFormat=async()=>{
-    if(!session||!selectedSecret){
-      return;
-    }
+  const fetchFormat = async () => {
+    if (!session || !selectedSecret) return;
     setBusy(true);
-    try{
-      const out=await getSecretValue(session,selectedSecret.id,valueFormat);
-      setRetrievedValue(String(out.value||""));
-      setRetrievedType(String(out.content_type||""));
-      onToast?.(`Secret fetched in ${valueFormat} format.`);
-    }catch(error){
-      onToast?.(`Format retrieval failed: ${errMsg(error)}`);
-    }finally{
-      setBusy(false);
-    }
+    try {
+      const out = await getSecretValue(session, selectedSecret.id, valueFormat);
+      setRetrievedValue(String(out.value || "")); setRetrievedType(String(out.content_type || ""));
+      onToast?.(`Fetched in ${valueFormat} format.`);
+    } catch (e) { onToast?.(`Format fetch failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
 
-  const downloadSecret=async(secret:any)=>{
-    if(!session){
-      return;
-    }
+  const downloadSecret = async (secret) => {
+    if (!session) return;
     setBusy(true);
-    try{
-      const format=defaultFormatForType(secret);
-      const out=await getSecretValue(session,secret.id,format);
-      downloadTextFile(downloadNameFor(secret,format),String(out.value||""),String(out.content_type||"text/plain"));
-      onToast?.(`Downloaded ${String(secret.name||"secret")}.`);
-    }catch(error){
-      onToast?.(`Download failed: ${errMsg(error)}`);
-    }finally{
-      setBusy(false);
-    }
+    try {
+      const format = defaultFormatForType(secret);
+      const out = await getSecretValue(session, secret.id, format);
+      const base = safeFileName(String(secret?.name || secret?.id || "secret"));
+      const extMap = { pem: "pem", openssh: "pub", ppk: "ppk", armored: "asc", jwk: "json", extract: "json", raw: "txt" };
+      const fn = `${base}.${extMap[format] || "txt"}`;
+      const blob = new Blob([String(out.value || "")], { type: String(out.content_type || "text/plain") });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a"); a.href = url; a.download = fn; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      onToast?.(`Downloaded ${secret.name}.`);
+    } catch (e) { onToast?.(`Download failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
 
-  const removeSecret=async(secret:any)=>{
-    if(!session){
-      return;
-    }
-    const confirmed=await promptDialog.confirm({
-      title:"Delete Secret",
-      message:`Delete secret ${String(secret?.name||"")}?`,
-      confirmLabel:"Delete",
-      danger:true
-    });
-    if(!confirmed){
-      return;
-    }
+  const removeSecret = async (secret) => {
+    if (!session) return;
+    const ok = await promptDialog.confirm({ title: "Delete Secret", message: `Permanently delete "${secret.name}"? This cannot be undone.`, confirmLabel: "Delete", danger: true });
+    if (!ok) return;
     setBusy(true);
-    try{
-      await deleteVaultSecret(session,String(secret?.id||""));
-      onToast?.("Secret deleted.");
-      await loadSecrets(true);
-    }catch(error){
-      onToast?.(`Delete failed: ${errMsg(error)}`);
-    }finally{
-      setBusy(false);
-    }
+    try {
+      await deleteVaultSecret(session, secret.id);
+      onToast?.("Secret deleted."); setModal(null);
+      await loadAll(true);
+    } catch (e) { onToast?.(`Delete failed: ${errMsg(e)}`); } finally { setBusy(false); }
   };
+
+  const submitRotate = async () => {
+    if (!session || !selectedSecret || !rotateValue) { onToast?.("New value is required for rotation."); return; }
+    setBusy(true);
+    try {
+      const updated = await rotateSecret(session, selectedSecret.id, rotateValue);
+      onToast?.(`Secret rotated to version ${updated.current_version}.`);
+      setModal(null); setRotateValue("");
+      await loadAll(true);
+    } catch (e) { onToast?.(`Rotation failed: ${errMsg(e)}`); } finally { setBusy(false); }
+  };
+
+  /* ── stats ── */
+  const totalSecrets = stats?.total_secrets ?? secrets.length;
+  const totalVersions = stats?.total_versions ?? 0;
+  const expiringSoon = stats?.expiring_within_30d ?? 0;
+  const expired = stats?.expired ?? 0;
+  const typeBreakdown = stats?.by_type || {};
 
   return <div>
+    {/* ── KPI Stats ── */}
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 10, marginBottom: 18 }}>
+      <Stat l="Total Secrets" v={totalSecrets} s={`${Object.keys(typeBreakdown).length} types`} c="accent" i={Lock} />
+      <Stat l="Versions" v={totalVersions} s="Total stored" c="blue" i={History} />
+      <Stat l="Expiring (30d)" v={expiringSoon} s={expired > 0 ? `${expired} already expired` : "None expired"} c={expiringSoon > 0 ? "amber" : "green"} i={Clock} />
+      <Stat l="Envelope Encrypted" v="AES-256" s="MEK-wrapped DEK per secret" c="green" i={Shield} />
+    </div>
+
+    {/* ── Toolbar ── */}
     <Section title="Secret Vault" actions={<>
-      <Btn small onClick={()=>void handleRefresh()} disabled={refreshing||busy}><span style={{display:"inline-flex",alignItems:"center",gap:6}}><RefreshCcw size={12}/>{refreshing?"Refreshing...":"Refresh"}</span></Btn>
+      <Btn small onClick={handleRefresh} disabled={refreshing || busy}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><RefreshCcw size={11} />{refreshing ? "Refreshing..." : "Refresh"}</span>
+      </Btn>
     </>}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:14,flexWrap:"wrap"}}>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          {categories.map((cat)=><button key={cat.id} onClick={()=>setCategory(cat.id)} style={{
-            height:40,padding:"0 12px",borderRadius:10,
-            border:`1px solid ${category===cat.id?C.accent:C.border}`,
-            background:category===cat.id?"linear-gradient(180deg,#1ed3ee,#11b8df)":"transparent",
-            color:category===cat.id?"#032432":C.text,fontSize:11,cursor:"pointer",fontWeight:600
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {CATEGORIES.map((cat) => <button key={cat.id} onClick={() => setCategory(cat.id)} style={{
+            height: 32, padding: "0 12px", borderRadius: 8,
+            border: `1px solid ${category === cat.id ? C.accent : C.border}`,
+            background: category === cat.id ? C.accentDim : "transparent",
+            color: category === cat.id ? C.accent : C.muted, fontSize: 10, cursor: "pointer", fontWeight: 600
           }}>{cat.label}</button>)}
         </div>
-        <div style={{display:"flex",gap:10}}>
-          <Btn primary onClick={()=>setModal("create")} style={{height:40,padding:"0 20px",borderRadius:11,fontWeight:700}}>+ Store Secret</Btn>
-          <Btn onClick={()=>setModal("generate")} style={{height:40,padding:"0 20px",borderRadius:11,fontWeight:600}}>Generate</Btn>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Btn primary onClick={() => setModal("create")} style={{ height: 34, padding: "0 18px", borderRadius: 8, fontWeight: 700 }}>
+            <Plus size={12} /> Store Secret
+          </Btn>
+          <Btn onClick={() => { setGeneratedPublicKey(""); setGenerateName(""); setModal("generate"); }} style={{ height: 34, padding: "0 14px", borderRadius: 8 }}>
+            <KeyRound size={12} /> Generate
+          </Btn>
         </div>
       </div>
-      <div style={{marginBottom:10}}>
-        <Inp placeholder="Search secrets by name, id, type..." value={search} onChange={(e)=>setSearch(e.target.value)} style={{maxWidth:420,height:40}}/>
+
+      {/* ── Search + Sort ── */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ position: "relative", flex: 1, minWidth: 200, maxWidth: 400 }}>
+          <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.muted }} />
+          <Inp placeholder="Search secrets..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ paddingLeft: 30, height: 34 }} />
+        </div>
+        <Sel value={sortBy} onChange={(e) => setSortBy(e.target.value)} w={150} style={{ height: 34 }}>
+          <option value="updated">Recently Updated</option>
+          <option value="created">Recently Created</option>
+          <option value="name">Name A-Z</option>
+          <option value="type">By Type</option>
+        </Sel>
+        <div style={{ fontSize: 10, color: C.muted }}>{filtered.length} secret{filtered.length !== 1 ? "s" : ""}</div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(300px,1fr))",gap:12}}>
-        {filteredSecrets.map((s:any)=>{
-          const badge=secretBadge(s);
-          return <div key={s.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:16,minHeight:122}}>
-            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10}}>
-              <div style={{fontSize:13,fontWeight:800,color:C.text,lineHeight:1.25}}>{s.name}</div>
-              <span style={{background:badge.bg,color:badge.fg,borderRadius:999,padding:"4px 10px",fontSize:11,fontWeight:700,whiteSpace:"nowrap"}}>{badge.t}</span>
+
+      {/* ── Type Distribution Bar ── */}
+      {Object.keys(typeBreakdown).length > 0 && totalSecrets > 0 && <div style={{ marginBottom: 14 }}>
+        <div style={{ display: "flex", height: 6, borderRadius: 3, overflow: "hidden", background: C.border }}>
+          {Object.entries(typeBreakdown).map(([t, c]) => {
+            const badge = getBadge(t);
+            return <div key={t} style={{ width: `${(c / totalSecrets) * 100}%`, background: badge.fg, minWidth: 2 }} title={`${badge.t}: ${c}`} />;
+          })}
+        </div>
+        <div style={{ display: "flex", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
+          {Object.entries(typeBreakdown).map(([t, c]) => {
+            const badge = getBadge(t);
+            return <span key={t} style={{ fontSize: 9, color: C.muted, display: "inline-flex", alignItems: "center", gap: 4 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: badge.fg, display: "inline-block" }} />
+              {badge.t} ({c})
+            </span>;
+          })}
+        </div>
+      </div>}
+
+      {/* ── Secret Cards Grid ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: 10 }}>
+        {filtered.map((s) => {
+          const badge = getBadge(s.secret_type);
+          const BadgeIcon = badge.icon;
+          const exp = expiryStatus(s);
+          return <div key={s.id} onClick={() => void openDetail(s)} style={{
+            background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px",
+            cursor: "pointer", transition: "border-color .15s, box-shadow .15s",
+            borderLeft: `3px solid ${badge.fg}`,
+          }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = badge.fg; e.currentTarget.style.boxShadow = `0 0 0 1px ${badge.fg}22`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.borderLeftColor = badge.fg; e.currentTarget.style.boxShadow = "none"; }}
+          >
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text, lineHeight: 1.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</div>
+                {s.description && <div style={{ fontSize: 10, color: C.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.description}</div>}
+              </div>
+              <span style={{ background: badge.bg, color: badge.fg, borderRadius: 6, padding: "3px 8px", fontSize: 9, fontWeight: 700, whiteSpace: "nowrap", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <BadgeIcon size={10} /> {badge.t}
+              </span>
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,fontSize:11,color:C.muted}}>
-              <span>TTL: {ttlCompact(s)}</span>
-              <span style={{fontSize:11,color:"#89a5cf"}}>{`v${Number(s.current_version||1)}`}</span>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10, color: C.muted }}>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Clock size={9} /> {ttlLabel(s)}</span>
+                <span style={{ color: "#89a5cf" }}>v{s.current_version}</span>
+                {exp && <span style={{ color: exp.color, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                  <ShieldAlert size={9} /> {exp.label}
+                </span>}
+              </div>
+              <span>{fmtAgo(s.updated_at)}</span>
             </div>
-            <div style={{display:"flex",gap:8,marginTop:12}}>
-              <Btn small onClick={()=>void openRetrieve(s)} disabled={busy}>Retrieve</Btn>
-              <Btn small onClick={()=>void downloadSecret(s)} disabled={busy}>Download</Btn>
-              <Btn small danger onClick={()=>void removeSecret(s)} disabled={busy}>Delete</Btn>
+
+            <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+              <Btn small onClick={(e) => { e.stopPropagation(); void downloadSecret(s); }} disabled={busy}><Download size={10} /> Download</Btn>
+              <Btn small danger onClick={(e) => { e.stopPropagation(); void removeSecret(s); }} disabled={busy}><Trash2 size={10} /> Delete</Btn>
             </div>
           </div>;
         })}
       </div>
-      {!filteredSecrets.length?<div style={{marginTop:12,fontSize:11,color:C.muted}}>{loading?"Loading secrets...":"No secrets found for current filter."}</div>:null}
+
+      {/* ── Empty State ── */}
+      {!filtered.length && <div style={{ textAlign: "center", padding: "40px 20px" }}>
+        {loading ? <div style={{ fontSize: 12, color: C.muted }}>Loading secrets...</div> : <>
+          <Lock size={40} strokeWidth={1} color={C.muted} style={{ marginBottom: 12 }} />
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.dim, marginBottom: 6 }}>
+            {secrets.length === 0 ? "No secrets stored yet" : "No secrets match your filter"}
+          </div>
+          <div style={{ fontSize: 10, color: C.muted, maxWidth: 360, margin: "0 auto", lineHeight: 1.6 }}>
+            {secrets.length === 0
+              ? "Store API keys, database credentials, SSH keys, certificates, tokens, and other sensitive material. All values are envelope-encrypted at rest with AES-256-GCM."
+              : "Try adjusting your search or category filter."}
+          </div>
+          {secrets.length === 0 && <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "center" }}>
+            <Btn primary onClick={() => setModal("create")}><Plus size={12} /> Store Your First Secret</Btn>
+            <Btn onClick={() => { setGeneratedPublicKey(""); setGenerateName(""); setModal("generate"); }}><KeyRound size={12} /> Generate Key Pair</Btn>
+          </div>}
+        </>}
+      </div>}
     </Section>
 
-    <Modal open={modal==="create"} onClose={()=>setModal(null)} title="Store New Secret" wide>
+    {/* ══════════════ STORE SECRET MODAL ══════════════ */}
+    <Modal open={modal === "create"} onClose={() => setModal(null)} title="Store New Secret" wide>
       <Row2>
-        <FG label="Name" required><Inp placeholder="prod-api-key-stripe" value={createName} onChange={(e)=>setCreateName(e.target.value)}/></FG>
+        <FG label="Name" required hint="Unique identifier for this secret"><Inp placeholder="prod-api-key-stripe" value={createName} onChange={(e) => setCreateName(e.target.value)} /></FG>
         <FG label="Type" required>
-          <Sel value={createType} onChange={(e)=>setCreateType(e.target.value)}>
-            {supportedTypes.map((type)=><option key={type} value={type}>{type}</option>)}
+          <Sel value={createType} onChange={(e) => setCreateType(e.target.value)}>
+            {SUPPORTED_TYPES.map((t) => <option key={t} value={t}>{getBadge(t).t}</option>)}
           </Sel>
         </FG>
       </Row2>
-      <FG label="Secret Value" required hint="Envelope-encrypted at rest. Never stored plaintext.">
-        <Txt placeholder="Paste API key, PEM block, JSON..." rows={6} value={createValue} onChange={(e)=>setCreateValue(e.target.value)}/>
+      <FG label="Description" hint="Optional context for this secret"><Inp placeholder="Stripe production API key for billing service" value={createDesc} onChange={(e) => setCreateDesc(e.target.value)} /></FG>
+      <FG label="Secret Value" required hint="Envelope-encrypted at rest with AES-256-GCM. Never stored plaintext.">
+        <Txt placeholder="Paste API key, PEM block, JSON, password..." rows={6} value={createValue} onChange={(e) => setCreateValue(e.target.value)} />
       </FG>
       <Row2>
-        <FG label="TTL">
-          <Sel value={createTTLMode} onChange={(e)=>setCreateTTLMode(e.target.value)}>
+        <FG label="TTL / Expiration">
+          <Sel value={createTTLMode} onChange={(e) => setCreateTTLMode(e.target.value)}>
             <option value="none">No expiry</option>
             <option value="1h">1 hour</option>
             <option value="24h">24 hours</option>
@@ -426,7 +514,7 @@ export const VaultTab=({session,onToast}: VaultTabProps)=>{
           </Sel>
         </FG>
         <FG label="Delivery Format">
-          <Sel value={createDeliveryFormat} onChange={(e)=>setCreateDeliveryFormat(e.target.value)}>
+          <Sel value={createDeliveryFormat} onChange={(e) => setCreateDeliveryFormat(e.target.value)}>
             <option value="raw">As stored (raw)</option>
             <option value="pem">PEM</option>
             <option value="jwk">JWK</option>
@@ -435,43 +523,161 @@ export const VaultTab=({session,onToast}: VaultTabProps)=>{
           </Sel>
         </FG>
       </Row2>
-      {createTTLMode==="custom"?<FG label="Custom TTL (seconds)">
-        <Inp type="number" min="0" value={createTTLCustom} onChange={(e)=>setCreateTTLCustom(e.target.value)}/>
-      </FG>:null}
-      <Chk label="Lease-based access (must renew TTL)" checked={createLeaseBased} onChange={()=>setCreateLeaseBased((v)=>!v)}/>
-      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)} disabled={busy}>Cancel</Btn><Btn primary onClick={()=>void submitCreate()} disabled={busy}>{busy?"Storing...":"Store Secret"}</Btn></div>
+      {createTTLMode === "custom" && <FG label="Custom TTL (seconds)"><Inp type="number" min="0" value={createTTLCustom} onChange={(e) => setCreateTTLCustom(e.target.value)} /></FG>}
+      <Chk label="Lease-based access (must renew TTL before expiry)" checked={createLeaseBased} onChange={() => setCreateLeaseBased((v) => !v)} />
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
+        <Btn onClick={() => setModal(null)} disabled={busy}>Cancel</Btn>
+        <Btn primary onClick={() => void submitCreate()} disabled={busy}>{busy ? "Encrypting..." : "Store Secret"}</Btn>
+      </div>
     </Modal>
 
-    <Modal open={modal==="generate"} onClose={()=>setModal(null)} title="Generate Key Pair">
+    {/* ══════════════ GENERATE KEY PAIR MODAL ══════════════ */}
+    <Modal open={modal === "generate"} onClose={() => setModal(null)} title="Generate Key Pair">
       <FG label="Key Type" required>
-        <Sel value={generateType} onChange={(e)=>setGenerateType(e.target.value)}>
-          {generateTypeOptions.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
+        <Sel value={generateType} onChange={(e) => setGenerateType(e.target.value)}>
+          {GENERATE_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </Sel>
       </FG>
-      <FG label="Name" required><Inp placeholder="deploy-key-gh" value={generateName} onChange={(e)=>setGenerateName(e.target.value)}/></FG>
-      {generatedPublicKey&&<FG label="Generated Public Key"><Txt rows={3} value={generatedPublicKey} readOnly/></FG>}
-      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)} disabled={busy}>Cancel</Btn><Btn primary onClick={()=>void submitGenerate()} disabled={busy}>{busy?"Generating...":"Generate"}</Btn></div>
+      <FG label="Name" required hint="Private key stored in vault, public key displayed for copy"><Inp placeholder="deploy-key-production" value={generateName} onChange={(e) => setGenerateName(e.target.value)} /></FG>
+      {generatedPublicKey && <FG label="Generated Public Key">
+        <Txt rows={4} value={generatedPublicKey} readOnly />
+        <div style={{ marginTop: 6 }}><Btn small onClick={() => copyToClipboard(generatedPublicKey, onToast)}><Copy size={10} /> Copy Public Key</Btn></div>
+      </FG>}
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
+        <Btn onClick={() => setModal(null)} disabled={busy}>Cancel</Btn>
+        <Btn primary onClick={() => void submitGenerate()} disabled={busy}>{busy ? "Generating..." : "Generate Key Pair"}</Btn>
+      </div>
     </Modal>
 
-    <Modal open={modal==="retrieve"} onClose={()=>setModal(null)} title={`Retrieve Secret${selectedSecret?`: ${selectedSecret.name}`:""}`} wide>
-      <Row2>
-        <FG label="Output Format">
-          <Sel value={valueFormat} onChange={(e)=>setValueFormat(e.target.value)}>
-            <option value="raw">raw</option>
-            <option value="pem">pem</option>
-            <option value="openssh">openssh</option>
-            <option value="ppk">ppk</option>
-            <option value="extract">extract</option>
-            <option value="jwk">jwk</option>
-            <option value="armored">armored</option>
-          </Sel>
-        </FG>
-        <FG label="Content Type"><Inp value={retrievedType} readOnly/></FG>
-      </Row2>
-      <FG label="Value"><Txt rows={10} value={retrievedValue} readOnly/></FG>
-      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)} disabled={busy}>Close</Btn><Btn primary onClick={()=>void fetchFormat()} disabled={busy}>{busy?"Fetching...":"Fetch Format"}</Btn></div>
+    {/* ══════════════ SECRET DETAIL MODAL ══════════════ */}
+    <Modal open={modal === "detail"} onClose={() => setModal(null)} title={selectedSecret ? `Secret: ${selectedSecret.name}` : "Secret Detail"} wide>
+      {selectedSecret && <>
+        {/* ── Metadata ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 16 }}>
+          <div style={{ background: C.card, borderRadius: 8, padding: "10px 12px" }}>
+            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", marginBottom: 4 }}>Type</div>
+            <div style={{ fontSize: 12, color: getBadge(selectedSecret.secret_type).fg, fontWeight: 600 }}>{getBadge(selectedSecret.secret_type).t}</div>
+          </div>
+          <div style={{ background: C.card, borderRadius: 8, padding: "10px 12px" }}>
+            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", marginBottom: 4 }}>Version</div>
+            <div style={{ fontSize: 12, color: C.accent, fontWeight: 600 }}>v{selectedSecret.current_version}</div>
+          </div>
+          <div style={{ background: C.card, borderRadius: 8, padding: "10px 12px" }}>
+            <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", marginBottom: 4 }}>TTL</div>
+            <div style={{ fontSize: 12, color: C.text, fontWeight: 600 }}>{ttlLabel(selectedSecret)}</div>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16, fontSize: 10, color: C.dim }}>
+          <div><span style={{ color: C.muted }}>Created: </span>{fmtDate(selectedSecret.created_at)}</div>
+          <div><span style={{ color: C.muted }}>Updated: </span>{fmtDate(selectedSecret.updated_at)}</div>
+          <div><span style={{ color: C.muted }}>Created by: </span>{selectedSecret.created_by || "—"}</div>
+          <div><span style={{ color: C.muted }}>ID: </span><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }}>{selectedSecret.id}</span></div>
+          {selectedSecret.expires_at && <div><span style={{ color: C.muted }}>Expires: </span><span style={{ color: expiryStatus(selectedSecret)?.color || C.text }}>{fmtDate(selectedSecret.expires_at)}</span></div>}
+          {selectedSecret.description && <div style={{ gridColumn: "1/3" }}><span style={{ color: C.muted }}>Description: </span>{selectedSecret.description}</div>}
+        </div>
+
+        {/* ── Retrieve Value ── */}
+        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}><Eye size={13} /> Secret Value</div>
+          <Row2>
+            <FG label="Output Format">
+              <Sel value={valueFormat} onChange={(e) => setValueFormat(e.target.value)}>
+                <option value="raw">raw</option><option value="pem">pem</option><option value="openssh">openssh</option>
+                <option value="ppk">ppk</option><option value="extract">extract</option><option value="jwk">jwk</option>
+                <option value="armored">armored</option>
+              </Sel>
+            </FG>
+            <FG label="Content Type"><Inp value={retrievedType} readOnly /></FG>
+          </Row2>
+          <FG label="Value">
+            <div style={{ position: "relative" }}>
+              <Txt rows={6} value={showValue ? retrievedValue : (retrievedValue ? "••••••••••••••••••••••••••••" : "(loading...)")} readOnly />
+              <div style={{ position: "absolute", top: 6, right: 8, display: "flex", gap: 4 }}>
+                <button onClick={() => setShowValue(!showValue)} style={{ background: "rgba(0,0,0,.3)", border: "none", color: C.muted, cursor: "pointer", padding: "3px 6px", borderRadius: 4, fontSize: 9, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                  {showValue ? <><EyeOff size={10} /> Hide</> : <><Eye size={10} /> Reveal</>}
+                </button>
+                {showValue && <button onClick={() => copyToClipboard(retrievedValue, onToast)} style={{ background: "rgba(0,0,0,.3)", border: "none", color: C.muted, cursor: "pointer", padding: "3px 6px", borderRadius: 4, fontSize: 9, display: "inline-flex", alignItems: "center", gap: 3 }}>
+                  <Copy size={10} /> Copy
+                </button>}
+              </div>
+            </div>
+          </FG>
+          <div style={{ display: "flex", gap: 6 }}>
+            <Btn small primary onClick={() => void fetchFormat()} disabled={busy}>{busy ? "Fetching..." : "Fetch Format"}</Btn>
+            <Btn small onClick={() => void downloadSecret(selectedSecret)} disabled={busy}><Download size={10} /> Download</Btn>
+          </div>
+        </div>
+
+        {/* ── Version History ── */}
+        {versions.length > 0 && <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}><History size={13} /> Version History</div>
+          <div style={{ maxHeight: 160, overflow: "auto" }}>
+            {versions.map((v) => <div key={v.version} style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 10px", fontSize: 10,
+              borderRadius: 6, marginBottom: 4,
+              background: v.version === selectedSecret.current_version ? C.accentDim : "transparent",
+              border: `1px solid ${v.version === selectedSecret.current_version ? C.accent : C.border}`
+            }}>
+              <span style={{ fontWeight: 600, color: v.version === selectedSecret.current_version ? C.accent : C.text }}>
+                v{v.version} {v.version === selectedSecret.current_version && <B c="accent">current</B>}
+              </span>
+              <span style={{ color: C.muted, fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }}>
+                SHA256: {String(v.value_hash || "").substring(0, 16)}...
+              </span>
+              <span style={{ color: C.muted }}>{fmtDate(v.created_at)}</span>
+            </div>)}
+          </div>
+        </div>}
+
+        {/* ── Audit Log ── */}
+        {auditEntries.length > 0 && <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, marginBottom: 14 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}><ScrollText size={13} /> Audit Log</div>
+          <div style={{ maxHeight: 180, overflow: "auto" }}>
+            {auditEntries.map((e) => <div key={e.id} style={{ display: "flex", gap: 10, padding: "6px 10px", fontSize: 10, borderRadius: 6, marginBottom: 3, background: C.card, border: `1px solid ${C.border}` }}>
+              <span style={{ color: actionColor(e.action), fontWeight: 600, minWidth: 60 }}>{e.action}</span>
+              <span style={{ color: C.dim, flex: 1 }}>{e.detail}</span>
+              <span style={{ color: C.muted, whiteSpace: "nowrap" }}>{e.actor}</span>
+              <span style={{ color: C.muted, whiteSpace: "nowrap" }}>{fmtDate(e.created_at)}</span>
+            </div>)}
+          </div>
+        </div>}
+
+        {/* ── Actions ── */}
+        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 14, display: "flex", gap: 8, justifyContent: "space-between" }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Btn onClick={() => { setRotateValue(""); setModal("rotate"); }}><RotateCcw size={12} /> Rotate Value</Btn>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Btn danger onClick={() => void removeSecret(selectedSecret)} disabled={busy}><Trash2 size={12} /> Delete</Btn>
+            <Btn onClick={() => setModal(null)}>Close</Btn>
+          </div>
+        </div>
+      </>}
+    </Modal>
+
+    {/* ══════════════ ROTATE SECRET MODAL ══════════════ */}
+    <Modal open={modal === "rotate"} onClose={() => setModal(null)} title={`Rotate Secret: ${selectedSecret?.name || ""}`}>
+      <div style={{ fontSize: 10, color: C.dim, marginBottom: 12, lineHeight: 1.5 }}>
+        Rotating a secret creates a new encrypted version while preserving all previous versions. Current version: <strong style={{ color: C.accent }}>v{selectedSecret?.current_version}</strong>
+      </div>
+      <FG label="New Secret Value" required hint="Will be encrypted and stored as the next version">
+        <Txt placeholder="Paste new value..." rows={6} value={rotateValue} onChange={(e) => setRotateValue(e.target.value)} />
+      </FG>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
+        <Btn onClick={() => setModal(null)} disabled={busy}>Cancel</Btn>
+        <Btn primary onClick={() => void submitRotate()} disabled={busy}>{busy ? "Rotating..." : "Rotate Secret"}</Btn>
+      </div>
     </Modal>
 
     {promptDialog.ui}
   </div>;
 };
+
+function actionColor(action) {
+  if (action === "created") return C.green;
+  if (action === "rotated") return C.amber;
+  if (action === "deleted") return C.red;
+  if (action === "updated") return C.blue;
+  return C.accent;
+}

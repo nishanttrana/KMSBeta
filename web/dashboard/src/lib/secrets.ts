@@ -170,6 +170,61 @@ export async function generateSSHKeySecret(
   });
 }
 
+export type SecretVersionInfo = {
+  version: number;
+  value_hash: string;
+  created_at: string;
+};
+
+export type SecretAuditEntry = {
+  id: string;
+  secret_id: string;
+  action: string;
+  actor: string;
+  detail: string;
+  created_at: string;
+};
+
+export type VaultStats = {
+  total_secrets: number;
+  by_type: Record<string, number>;
+  total_versions: number;
+  expiring_within_30d: number;
+  expired: number;
+};
+
+export async function getVaultStats(session: AuthSession): Promise<VaultStats> {
+  const res = await serviceRequest<{ stats: VaultStats }>(session, "secrets", `/secrets/stats?tenant_id=${encodeURIComponent(session.tenantId)}`);
+  return res.stats;
+}
+
+export async function listSecretVersions(session: AuthSession, secretId: string): Promise<SecretVersionInfo[]> {
+  const res = await serviceRequest<{ versions: SecretVersionInfo[] }>(
+    session, "secrets",
+    `/secrets/${encodeURIComponent(secretId)}/versions?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  return Array.isArray(res?.versions) ? res.versions : [];
+}
+
+export async function getSecretAuditLog(session: AuthSession, secretId: string, limit = 50): Promise<SecretAuditEntry[]> {
+  const res = await serviceRequest<{ entries: SecretAuditEntry[] }>(
+    session, "secrets",
+    `/secrets/${encodeURIComponent(secretId)}/audit?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}`
+  );
+  return Array.isArray(res?.entries) ? res.entries : [];
+}
+
+export async function rotateSecret(session: AuthSession, secretId: string, newValue: string): Promise<SecretItem> {
+  const payload = await serviceRequest<{ secret: SecretItem }>(session, "secrets", `/secrets/${encodeURIComponent(secretId)}/rotate?tenant_id=${encodeURIComponent(session.tenantId)}`, {
+    method: "POST",
+    body: JSON.stringify({
+      value: newValue,
+      updated_by: session.username || "dashboard"
+    })
+  });
+  return payload.secret;
+}
+
 export async function generateKeyPairSecret(
   session: AuthSession,
   input: {
