@@ -21,7 +21,8 @@ import {
   SlidersHorizontal,
   Wallet,
   Waypoints,
-  Workflow
+  Workflow,
+  Atom
 } from "lucide-react";
 
 export type FeatureKey =
@@ -44,7 +45,8 @@ export type FeatureKey =
   | "data_protection"
   | "clustering"
   | "hsm_hardware"
-  | "hsm_software";
+  | "hsm_software"
+  | "qrng_generator";
 
 export type TabId =
   | "dashboard"
@@ -60,6 +62,7 @@ export type TabId =
   | "kmip"
   | "hsm_primus"
   | "qkd"
+  | "qrng"
   | "mpc"
   | "cluster"
   | "approvals"
@@ -245,6 +248,16 @@ export const tabConfig: TabConfig[] = [
     icon: Workflow,
     emoji: "Q",
     requiredAnyFeatures: ["qkd_interface"]
+  },
+  {
+    id: "qrng",
+    label: "QRNG",
+    shortLabel: "QRNG",
+    group: "infrastructure",
+    description: "Quantum random number generator entropy sources",
+    icon: Atom,
+    emoji: "Q",
+    requiredAnyFeatures: ["qrng_generator"]
   },
   {
     id: "mpc",

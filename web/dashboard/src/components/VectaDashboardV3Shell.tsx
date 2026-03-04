@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Atom,
   BarChart3,
   Bell,
   Building2,
@@ -65,6 +66,7 @@ import { PostureTab } from "./v3/tabs/PostureTab";
 import { AuditLogTab } from "./v3/tabs/AuditLogTab";
 import { MPCTab } from "./v3/tabs/MPCTab";
 import { QKDTab } from "./v3/tabs/QKDTab";
+import { QRNGTab } from "./v3/tabs/QRNGTab";
 
 type Props = {
   session: AuthSession;
@@ -138,6 +140,7 @@ const CloudKeyControl = CloudKeyControlTab;
 const EKM = EKMTab;
 const HSM = HSMTab;
 const QKD = QKDTab;
+const QRNG = QRNGTab;
 const MPC = MPCTab;
 const AuditLog = AuditLogTab;
 const Compliance = ComplianceTab;
@@ -163,6 +166,7 @@ const TABS: Record<string, any> = {
   ekm: EKM,
   hsm: HSM,
   qkd: QKD,
+  qrng: QRNG,
   mpc: MPC,
   cluster: ClusterTab,
   approvals: GovernanceTab,
@@ -193,6 +197,7 @@ const TITLES: Record<string, string> = {
   ekm: "Enterprise Key Management",
   hsm: "HSM",
   qkd: "QKD Interface",
+  qrng: "QRNG Entropy",
   mpc: "MPC Engine",
   cluster: "Cluster",
   approvals: "Approvals",
@@ -208,7 +213,7 @@ const TITLES: Record<string, string> = {
 const NAV = [
   { g: "CORE", items: [{ id: "home", icon: HomeIcon, label: "Dashboard" }, { id: "keys", icon: KeyRound, label: "Key Management" }, { id: "certs", icon: FileText, label: "Certificates / PKI" }, { id: "cloudctl", icon: Cloud, label: "Cloud Key Control" }, { id: "ekm", icon: Database, label: "Enterprise Key Management" }, { id: "vault", icon: Lock, label: "Secret Vault" }, { id: "dataprotection", icon: ShieldCheck, label: "Data Protection" }] },
   { g: "WORKBENCH", items: [{ id: "workbench", icon: LayoutGrid, label: "Workbench" }] },
-  { g: "INFRASTRUCTURE", items: [{ id: "hsm", icon: Cpu, label: "HSM" }, { id: "qkd", icon: GitBranch, label: "QKD Interface" }, { id: "mpc", icon: Cpu, label: "MPC Engine" }, { id: "cluster", icon: GitBranch, label: "Cluster" }] },
+  { g: "INFRASTRUCTURE", items: [{ id: "hsm", icon: Cpu, label: "HSM" }, { id: "qkd", icon: GitBranch, label: "QKD Interface" }, { id: "qrng", icon: Atom, label: "QRNG Entropy" }, { id: "mpc", icon: Cpu, label: "MPC Engine" }, { id: "cluster", icon: GitBranch, label: "Cluster" }] },
   { g: "GOVERNANCE", items: [{ id: "approvals", icon: CheckCircle2, label: "Approvals" }, { id: "alerts", icon: Bell, label: "Alert Center" }, { id: "audit", icon: ScrollText, label: "Audit Log" }, { id: "posture", icon: Gauge, label: "Posture Management" }, { id: "compliance", icon: ClipboardCheck, label: "Compliance" }, { id: "sbom", icon: BarChart3, label: "SBOM / CBOM" }] },
   { g: "ADMIN", items: [{ id: "admin", icon: Settings, label: "Administration" }] }
 ];

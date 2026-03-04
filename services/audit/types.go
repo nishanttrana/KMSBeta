@@ -93,3 +93,40 @@ type AuditConfig struct {
 	EscalationThreshold int
 	EscalationMinutes   int
 }
+
+// ── Merkle Tree Types ───────────────────────────────────────
+
+type MerkleEpoch struct {
+	ID          string    `json:"id"`
+	TenantID    string    `json:"tenant_id"`
+	EpochNumber int       `json:"epoch_number"`
+	SeqFrom     int64     `json:"seq_from"`
+	SeqTo       int64     `json:"seq_to"`
+	LeafCount   int       `json:"leaf_count"`
+	TreeRoot    string    `json:"tree_root"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type MerkleLeaf struct {
+	EpochID   string `json:"epoch_id"`
+	TenantID  string `json:"tenant_id"`
+	LeafIndex int    `json:"leaf_index"`
+	EventID   string `json:"event_id"`
+	Sequence  int64  `json:"sequence"`
+	LeafHash  string `json:"leaf_hash"`
+}
+
+type MerkleEpochResult struct {
+	Epoch  MerkleEpoch `json:"epoch"`
+	Leaves int         `json:"leaves"`
+}
+
+type MerkleProofResponse struct {
+	EventID   string         `json:"event_id"`
+	Sequence  int64          `json:"sequence"`
+	EpochID   string         `json:"epoch_id"`
+	LeafHash  string         `json:"leaf_hash"`
+	LeafIndex int            `json:"leaf_index"`
+	Siblings  []ProofSibling `json:"siblings"`
+	Root      string         `json:"root"`
+}

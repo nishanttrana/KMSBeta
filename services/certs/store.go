@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -54,6 +57,12 @@ type Store interface {
 	CreateACMEOrder(ctx context.Context, order AcmeOrder) error
 	GetACMEOrder(ctx context.Context, tenantID string, orderID string) (AcmeOrder, error)
 	UpdateACMEOrder(ctx context.Context, tenantID string, orderID string, status string, csrPEM string, certID string) error
+
+	// Certificate Transparency (Merkle)
+	BuildCertMerkleEpoch(ctx context.Context, tenantID string, maxLeaves int) (*CertMerkleEpochResult, error)
+	ListCertMerkleEpochs(ctx context.Context, tenantID string, limit int) ([]CertMerkleEpoch, error)
+	GetCertMerkleEpoch(ctx context.Context, tenantID string, epochID string) (CertMerkleEpoch, error)
+	GetCertMerkleProof(ctx context.Context, tenantID string, certID string) (*CertMerkleProofResponse, error)
 }
 
 type SQLStore struct {
@@ -1026,4 +1035,215 @@ func itoa(v int) string {
 		buf[i] = '-'
 	}
 	return string(buf[i:])
+}
+
+// ── Certificate Transparency (Merkle) ────────────────────────
+
+func certLeafHash(certPEM string) string {
+	h := sha256.Sum256([]byte(certPEM))
+	return hex.EncodeToString(h[:])
+}
+
+func (s *SQLStore) BuildCertMerkleEpoch(ctx context.Context, tenantID string, maxLeaves int) (*CertMerkleEpochResult, error) {
+	if maxLeaves <= 0 {
+		maxLeaves = 500
+	}
+
+	// Find certificates not yet logged in any Merkle epoch
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT c.id, c.serial_number, c.subject_cn, c.cert_pem
+FROM cert_certificates c
+WHERE c.tenant_id=$1
+  AND NOT EXISTS (
+    SELECT 1 FROM cert_merkle_leaves ml
+    WHERE ml.tenant_id=c.tenant_id AND ml.cert_id=c.id
+  )
+ORDER BY c.created_at ASC
+LIMIT $2
+`, tenantID, maxLeaves)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type leafData struct {
+		certID       string
+		serialNumber string
+		subjectCN    string
+		certPEM      string
+	}
+	var leaves []leafData
+	for rows.Next() {
+		var l leafData
+		if err := rows.Scan(&l.certID, &l.serialNumber, &l.subjectCN, &l.certPEM); err != nil {
+			return nil, err
+		}
+		leaves = append(leaves, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(leaves) == 0 {
+		return nil, nil
+	}
+
+	// Hash each certificate PEM to produce leaf hashes
+	hashes := make([]string, len(leaves))
+	for i, l := range leaves {
+		hashes[i] = certLeafHash(l.certPEM)
+	}
+
+	tree := BuildMerkleTree(hashes)
+	root := tree.Root()
+
+	// Next epoch number
+	var epochNum int
+	err = s.db.SQL().QueryRowContext(ctx, `
+SELECT COALESCE(MAX(epoch_number), 0) + 1 FROM cert_merkle_epochs WHERE tenant_id=$1
+`, tenantID).Scan(&epochNum)
+	if err != nil {
+		return nil, err
+	}
+
+	epochID := newID("cme")
+
+	tx, err := s.db.SQL().BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, `
+INSERT INTO cert_merkle_epochs (id, tenant_id, epoch_number, leaf_count, tree_root, created_at)
+VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+`, epochID, tenantID, epochNum, len(leaves), root)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, l := range leaves {
+		_, err = tx.ExecContext(ctx, `
+INSERT INTO cert_merkle_leaves (epoch_id, tenant_id, leaf_index, cert_id, serial_number, subject_cn, leaf_hash, logged_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+`, epochID, tenantID, i, l.certID, l.serialNumber, l.subjectCN, hashes[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	epoch := CertMerkleEpoch{
+		ID:          epochID,
+		TenantID:    tenantID,
+		EpochNumber: epochNum,
+		LeafCount:   len(leaves),
+		TreeRoot:    root,
+	}
+	return &CertMerkleEpochResult{Epoch: epoch, Leaves: len(leaves)}, nil
+}
+
+func (s *SQLStore) ListCertMerkleEpochs(ctx context.Context, tenantID string, limit int) ([]CertMerkleEpoch, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, tenant_id, epoch_number, leaf_count, tree_root, created_at
+FROM cert_merkle_epochs
+WHERE tenant_id=$1
+ORDER BY epoch_number DESC
+LIMIT $2
+`, tenantID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []CertMerkleEpoch
+	for rows.Next() {
+		var e CertMerkleEpoch
+		var createdRaw interface{}
+		if err := rows.Scan(&e.ID, &e.TenantID, &e.EpochNumber, &e.LeafCount, &e.TreeRoot, &createdRaw); err != nil {
+			return nil, err
+		}
+		e.CreatedAt = parseTimeValue(createdRaw)
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) GetCertMerkleEpoch(ctx context.Context, tenantID string, epochID string) (CertMerkleEpoch, error) {
+	var e CertMerkleEpoch
+	var createdRaw interface{}
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT id, tenant_id, epoch_number, leaf_count, tree_root, created_at
+FROM cert_merkle_epochs
+WHERE tenant_id=$1 AND id=$2
+`, tenantID, epochID).Scan(&e.ID, &e.TenantID, &e.EpochNumber, &e.LeafCount, &e.TreeRoot, &createdRaw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return CertMerkleEpoch{}, errStoreNotFound
+	}
+	if err != nil {
+		return CertMerkleEpoch{}, err
+	}
+	e.CreatedAt = parseTimeValue(createdRaw)
+	return e, nil
+}
+
+func (s *SQLStore) GetCertMerkleProof(ctx context.Context, tenantID string, certID string) (*CertMerkleProofResponse, error) {
+	// Find which epoch contains this certificate
+	var leaf CertMerkleLeaf
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT epoch_id, tenant_id, leaf_index, cert_id, serial_number, subject_cn, leaf_hash
+FROM cert_merkle_leaves
+WHERE tenant_id=$1 AND cert_id=$2
+`, tenantID, certID).Scan(&leaf.EpochID, &leaf.TenantID, &leaf.LeafIndex, &leaf.CertID, &leaf.SerialNumber, &leaf.SubjectCN, &leaf.LeafHash)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, errStoreNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch all leaves in this epoch to rebuild tree
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT leaf_hash FROM cert_merkle_leaves
+WHERE tenant_id=$1 AND epoch_id=$2
+ORDER BY leaf_index ASC
+`, tenantID, leaf.EpochID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var hashes []string
+	for rows.Next() {
+		var h string
+		if err := rows.Scan(&h); err != nil {
+			return nil, err
+		}
+		hashes = append(hashes, h)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	tree := BuildMerkleTree(hashes)
+	proof, ok := GenerateProof(tree, leaf.LeafIndex)
+	if !ok {
+		return nil, fmt.Errorf("failed to generate proof for leaf %d", leaf.LeafIndex)
+	}
+
+	return &CertMerkleProofResponse{
+		CertID:       leaf.CertID,
+		SerialNumber: leaf.SerialNumber,
+		SubjectCN:    leaf.SubjectCN,
+		EpochID:      leaf.EpochID,
+		LeafHash:     leaf.LeafHash,
+		LeafIndex:    leaf.LeafIndex,
+		Siblings:     proof.Siblings,
+		Root:         proof.Root,
+	}, nil
 }

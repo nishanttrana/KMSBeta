@@ -33,11 +33,17 @@ import {
   resolveAuditAlert,
   exportEventsAsCSV,
   exportEventsAsCEF,
+  listMerkleEpochs,
+  getEventMerkleProof,
+  verifyMerkleProof,
+  buildMerkleEpoch,
   type AuditEvent,
   type AuditAlert,
   type AuditAlertStats,
   type AuditConfig,
-  type ChainVerifyResult
+  type ChainVerifyResult,
+  type MerkleEpoch,
+  type MerkleProofResponse
 } from "../../../lib/audit";
 
 /* ── constants ── */
@@ -171,6 +177,155 @@ const TD: React.CSSProperties = {
 };
 
 /* ── main component ── */
+
+// ── Merkle Tree Integrity Section ────────────────────────────
+
+const MerkleSection = ({ session }: { session: any }) => {
+  const [epochs, setEpochs] = useState<MerkleEpoch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [building, setBuilding] = useState(false);
+  const [proofResult, setProofResult] = useState<{ eventId: string; proof?: MerkleProofResponse; verified?: boolean; error?: string } | null>(null);
+  const [proofEventId, setProofEventId] = useState("");
+
+  const loadEpochs = async () => {
+    try {
+      setLoading(true);
+      const items = await listMerkleEpochs(session, 50);
+      setEpochs(items);
+    } catch { /* ignore */ } finally { setLoading(false); }
+  };
+
+  useEffect(() => { loadEpochs(); }, []);
+
+  const handleBuild = async () => {
+    try {
+      setBuilding(true);
+      const result = await buildMerkleEpoch(session, 1000);
+      if (result.epoch) {
+        loadEpochs();
+      }
+    } catch { /* ignore */ } finally { setBuilding(false); }
+  };
+
+  const handleVerifyEvent = async () => {
+    const id = proofEventId.trim();
+    if (!id) return;
+    try {
+      const proof = await getEventMerkleProof(session, id);
+      const result = await verifyMerkleProof(session, {
+        leaf_hash: proof.leaf_hash,
+        leaf_index: proof.leaf_index,
+        siblings: proof.siblings,
+        root: proof.root,
+      });
+      setProofResult({ eventId: id, proof, verified: result.valid });
+    } catch (e) {
+      setProofResult({ eventId: id, error: errMsg(e) });
+    }
+  };
+
+  return (
+    <div>
+      <Section t="Merkle Tree Integrity" act={
+        <div style={{ display: "flex", gap: 8 }}>
+          <Btn l={building ? "Building..." : "Build Epoch"} c={C.green} click={handleBuild} />
+          <Btn l="Refresh" c={C.cyan} click={loadEpochs} />
+        </div>
+      }>
+        <Card>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>
+            Merkle trees are built over batches of audit events (epochs). Each epoch produces a root hash that
+            cryptographically commits to all events in the batch. Any single event can be verified with an O(log N)
+            inclusion proof — no need to replay the full chain.
+          </div>
+
+          {/* Epoch table */}
+          {epochs.length === 0 && !loading ? (
+            <div style={{ color: C.dim, padding: 16, textAlign: "center" }}>
+              No Merkle epochs built yet. Click "Build Epoch" to create the first one from existing audit events.
+            </div>
+          ) : (
+            <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${C.border}`, color: C.dim, textAlign: "left" }}>
+                  <th style={{ padding: "6px" }}>Epoch</th>
+                  <th style={{ padding: "6px" }}>Seq Range</th>
+                  <th style={{ padding: "6px" }}>Leaves</th>
+                  <th style={{ padding: "6px" }}>Root Hash</th>
+                  <th style={{ padding: "6px" }}>Built</th>
+                </tr>
+              </thead>
+              <tbody>
+                {epochs.map((e) => (
+                  <tr key={e.id} style={{ borderBottom: `1px solid ${C.border}10` }}>
+                    <td style={{ padding: "6px", color: C.cyan, fontWeight: 600 }}>#{e.epoch_number}</td>
+                    <td style={{ padding: "6px", color: C.fg }}>{e.seq_from} — {e.seq_to}</td>
+                    <td style={{ padding: "6px" }}>{e.leaf_count}</td>
+                    <td style={{ padding: "6px", fontFamily: "monospace", fontSize: 10, color: C.green }}>
+                      {e.tree_root.slice(0, 16)}...{e.tree_root.slice(-8)}
+                    </td>
+                    <td style={{ padding: "6px", color: C.dim, fontSize: 10 }}>
+                      {e.created_at ? new Date(e.created_at).toLocaleString() : "--"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </Card>
+      </Section>
+
+      {/* Event Proof Verification */}
+      <Section t="Event Inclusion Proof">
+        <Card>
+          <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 12 }}>
+            <div style={{ flex: 1 }}>
+              <Inp l="Event ID" v={proofEventId} set={setProofEventId} placeholder="evt_..." />
+            </div>
+            <Btn l="Verify" c={C.cyan} click={handleVerifyEvent} />
+          </div>
+
+          {proofResult && (
+            <div style={{ padding: 12, borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, fontSize: 11 }}>
+              {proofResult.error ? (
+                <div style={{ color: C.red }}>{proofResult.error}</div>
+              ) : proofResult.proof ? (
+                <div>
+                  <div style={{ marginBottom: 8 }}>
+                    <span style={{ fontWeight: 600, color: proofResult.verified ? C.green : C.red }}>
+                      {proofResult.verified ? "VERIFIED" : "VERIFICATION FAILED"}
+                    </span>
+                    {" — "}Event <span style={{ color: C.cyan }}>{proofResult.eventId}</span>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, color: C.dim }}>
+                    <div>Epoch: <span style={{ color: C.fg }}>{proofResult.proof.epoch_id.slice(0, 12)}</span></div>
+                    <div>Leaf Index: <span style={{ color: C.fg }}>{proofResult.proof.leaf_index}</span></div>
+                    <div>Sequence: <span style={{ color: C.fg }}>{proofResult.proof.sequence}</span></div>
+                    <div>Proof Steps: <span style={{ color: C.fg }}>{proofResult.proof.siblings.length}</span></div>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>Root Hash</div>
+                    <div style={{ fontFamily: "monospace", fontSize: 10, color: C.green, wordBreak: "break-all" }}>
+                      {proofResult.proof.root}
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>Inclusion Path</div>
+                    {proofResult.proof.siblings.map((s, i) => (
+                      <div key={i} style={{ fontFamily: "monospace", fontSize: 10, color: C.dim, marginBottom: 2 }}>
+                        [{i}] {s.position.toUpperCase()}: {s.hash.slice(0, 24)}...
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </Card>
+      </Section>
+    </div>
+  );
+};
 
 export const AuditLogTab = ({ session, onToast }: any) => {
   const [loading, setLoading] = useState(false);
@@ -903,12 +1058,13 @@ export const AuditLogTab = ({ session, onToast }: any) => {
   return (
     <div>
       <IntegrityBar />
-      <Tabs tabs={["Events", "Analytics", "Alerts", "Forensics"]} active={subTab} onChange={setSubTab} />
+      <Tabs tabs={["Events", "Analytics", "Alerts", "Forensics", "Merkle"]} active={subTab} onChange={setSubTab} />
 
       {subTab === "Events" && renderEvents()}
       {subTab === "Analytics" && renderAnalytics()}
       {subTab === "Alerts" && renderAlerts()}
       {subTab === "Forensics" && renderForensics()}
+      {subTab === "Merkle" && <MerkleSection session={session} />}
 
       {renderEventModal()}
 

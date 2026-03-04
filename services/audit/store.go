@@ -12,6 +12,7 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 )
 
+
 var errNotFound = errors.New("not found")
 
 type Store interface {
@@ -31,6 +32,12 @@ type Store interface {
 	DeleteRule(ctx context.Context, tenantID string, id string) error
 
 	CountDistinctIPsForTarget(ctx context.Context, tenantID string, targetID string, since time.Time) (int, error)
+
+	// Merkle tree operations
+	BuildMerkleEpoch(ctx context.Context, tenantID string, maxLeaves int) (*MerkleEpochResult, error)
+	ListMerkleEpochs(ctx context.Context, tenantID string, limit int) ([]MerkleEpoch, error)
+	GetMerkleEpoch(ctx context.Context, tenantID string, epochID string) (MerkleEpoch, error)
+	GetEventMerkleProof(ctx context.Context, tenantID string, eventID string) (*MerkleProofResponse, error)
 }
 
 type SQLStore struct {
@@ -611,6 +618,219 @@ func parseTimeValue(v interface{}) time.Time {
 	default:
 		return time.Time{}
 	}
+}
+
+// ── Merkle Tree Store Methods ─────────────────────────────────
+
+func (s *SQLStore) BuildMerkleEpoch(ctx context.Context, tenantID string, maxLeaves int) (*MerkleEpochResult, error) {
+	if maxLeaves <= 0 {
+		maxLeaves = 1000
+	}
+
+	// Find the last epoch's seq_to for this tenant
+	var lastSeqTo int64
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT COALESCE(MAX(seq_to), 0) FROM audit_merkle_epochs WHERE tenant_id=$1
+`, tenantID).Scan(&lastSeqTo)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+
+	// Fetch next batch of events after the last epoch
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, sequence, chain_hash FROM audit_events
+WHERE tenant_id=$1 AND sequence > $2
+ORDER BY sequence ASC
+LIMIT $3
+`, tenantID, lastSeqTo, maxLeaves)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type leaf struct {
+		eventID   string
+		sequence  int64
+		chainHash string
+	}
+	var leaves []leaf
+	for rows.Next() {
+		var l leaf
+		if err := rows.Scan(&l.eventID, &l.sequence, &l.chainHash); err != nil {
+			return nil, err
+		}
+		leaves = append(leaves, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(leaves) == 0 {
+		return nil, nil // nothing to build
+	}
+
+	// Build Merkle tree from chain_hash values
+	hashes := make([]string, len(leaves))
+	for i, l := range leaves {
+		hashes[i] = l.chainHash
+	}
+	tree := BuildMerkleTree(hashes)
+	root := tree.Root()
+
+	// Get next epoch number
+	var epochNum int
+	err = s.db.SQL().QueryRowContext(ctx, `
+SELECT COALESCE(MAX(epoch_number), 0) + 1 FROM audit_merkle_epochs WHERE tenant_id=$1
+`, tenantID).Scan(&epochNum)
+	if err != nil {
+		return nil, err
+	}
+
+	epochID := newID("mke")
+	seqFrom := leaves[0].sequence
+	seqTo := leaves[len(leaves)-1].sequence
+
+	// Insert epoch + leaves in a transaction
+	tx, err := s.db.SQL().BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.ExecContext(ctx, `
+INSERT INTO audit_merkle_epochs (id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+`, epochID, tenantID, epochNum, seqFrom, seqTo, len(leaves), root)
+	if err != nil {
+		return nil, err
+	}
+
+	for i, l := range leaves {
+		_, err = tx.ExecContext(ctx, `
+INSERT INTO audit_merkle_leaves (epoch_id, tenant_id, leaf_index, event_id, sequence, leaf_hash)
+VALUES ($1, $2, $3, $4, $5, $6)
+`, epochID, tenantID, i, l.eventID, l.sequence, hashes[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	epoch := MerkleEpoch{
+		ID:          epochID,
+		TenantID:    tenantID,
+		EpochNumber: epochNum,
+		SeqFrom:     seqFrom,
+		SeqTo:       seqTo,
+		LeafCount:   len(leaves),
+		TreeRoot:    root,
+	}
+	return &MerkleEpochResult{Epoch: epoch, Leaves: len(leaves)}, nil
+}
+
+func (s *SQLStore) ListMerkleEpochs(ctx context.Context, tenantID string, limit int) ([]MerkleEpoch, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root, created_at
+FROM audit_merkle_epochs
+WHERE tenant_id=$1
+ORDER BY epoch_number DESC
+LIMIT $2
+`, tenantID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []MerkleEpoch
+	for rows.Next() {
+		var e MerkleEpoch
+		var createdRaw interface{}
+		if err := rows.Scan(&e.ID, &e.TenantID, &e.EpochNumber, &e.SeqFrom, &e.SeqTo, &e.LeafCount, &e.TreeRoot, &createdRaw); err != nil {
+			return nil, err
+		}
+		e.CreatedAt = parseTimeValue(createdRaw)
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) GetMerkleEpoch(ctx context.Context, tenantID string, epochID string) (MerkleEpoch, error) {
+	var e MerkleEpoch
+	var createdRaw interface{}
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root, created_at
+FROM audit_merkle_epochs
+WHERE tenant_id=$1 AND id=$2
+`, tenantID, epochID).Scan(&e.ID, &e.TenantID, &e.EpochNumber, &e.SeqFrom, &e.SeqTo, &e.LeafCount, &e.TreeRoot, &createdRaw)
+	if errors.Is(err, sql.ErrNoRows) {
+		return MerkleEpoch{}, errNotFound
+	}
+	if err != nil {
+		return MerkleEpoch{}, err
+	}
+	e.CreatedAt = parseTimeValue(createdRaw)
+	return e, nil
+}
+
+func (s *SQLStore) GetEventMerkleProof(ctx context.Context, tenantID string, eventID string) (*MerkleProofResponse, error) {
+	// Find which epoch contains this event
+	var leaf MerkleLeaf
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT epoch_id, tenant_id, leaf_index, event_id, sequence, leaf_hash
+FROM audit_merkle_leaves
+WHERE tenant_id=$1 AND event_id=$2
+`, tenantID, eventID).Scan(&leaf.EpochID, &leaf.TenantID, &leaf.LeafIndex, &leaf.EventID, &leaf.Sequence, &leaf.LeafHash)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, errNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch all leaves for this epoch to rebuild the tree
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT leaf_hash FROM audit_merkle_leaves
+WHERE tenant_id=$1 AND epoch_id=$2
+ORDER BY leaf_index ASC
+`, tenantID, leaf.EpochID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var hashes []string
+	for rows.Next() {
+		var h string
+		if err := rows.Scan(&h); err != nil {
+			return nil, err
+		}
+		hashes = append(hashes, h)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Rebuild tree and generate proof
+	tree := BuildMerkleTree(hashes)
+	proof, ok := GenerateProof(tree, leaf.LeafIndex)
+	if !ok {
+		return nil, fmt.Errorf("failed to generate proof for leaf %d", leaf.LeafIndex)
+	}
+
+	return &MerkleProofResponse{
+		EventID:   leaf.EventID,
+		Sequence:  leaf.Sequence,
+		EpochID:   leaf.EpochID,
+		LeafHash:  leaf.LeafHash,
+		LeafIndex: leaf.LeafIndex,
+		Siblings:  proof.Siblings,
+		Root:      proof.Root,
+	}, nil
 }
 
 func parseTimeString(v string) time.Time {

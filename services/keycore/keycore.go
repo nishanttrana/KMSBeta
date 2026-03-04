@@ -56,6 +56,7 @@ type Service struct {
 	fipsMode FIPSModeProvider
 	approval *governanceApprovalClient
 	posture  GovernancePostureControlsProvider
+	qrng    QRNGClient
 }
 
 var errTagInUse = errors.New("tag in use")
@@ -2964,6 +2965,8 @@ func normalizeRandomSource(source string) string {
 		return "hsm-trng"
 	case "qkd-seeded-csprng", "qkd":
 		return "qkd-seeded-csprng"
+	case "qrng", "qrng-seeded-csprng":
+		return "qrng-seeded-csprng"
 	default:
 		return ""
 	}
@@ -3126,7 +3129,7 @@ func (s *Service) Random(ctx context.Context, req RandomRequest) (RandomResponse
 	}
 	source := normalizeRandomSource(req.Source)
 	if source == "" {
-		return RandomResponse{}, errors.New("source must be kms-csprng, hsm-trng, or qkd-seeded-csprng")
+		return RandomResponse{}, errors.New("source must be kms-csprng, hsm-trng, qkd-seeded-csprng, or qrng-seeded-csprng")
 	}
 	if req.Length <= 0 {
 		req.Length = 32
@@ -3134,9 +3137,25 @@ func (s *Service) Random(ctx context.Context, req RandomRequest) (RandomResponse
 	if req.Length > 4096 {
 		return RandomResponse{}, errors.New("length must be <= 4096 bytes")
 	}
-	raw := make([]byte, req.Length)
-	if _, err := rand.Read(raw); err != nil {
-		return RandomResponse{}, err
+
+	var raw []byte
+	if source == "qrng-seeded-csprng" && s.qrng != nil {
+		// Draw from QRNG pool (already conditioned with SHA-256 + XOR'd with OS CSPRNG)
+		var err error
+		raw, err = s.qrng.DrawEntropy(ctx, req.TenantID, req.Length)
+		if err != nil {
+			// Graceful fallback to OS CSPRNG
+			raw = make([]byte, req.Length)
+			if _, err := rand.Read(raw); err != nil {
+				return RandomResponse{}, err
+			}
+			source = "kms-csprng" // report actual source used
+		}
+	} else {
+		raw = make([]byte, req.Length)
+		if _, err := rand.Read(raw); err != nil {
+			return RandomResponse{}, err
+		}
 	}
 	out := base64.StdEncoding.EncodeToString(raw)
 	crypto.Zeroize(raw)

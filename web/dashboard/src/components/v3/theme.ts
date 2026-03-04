@@ -22,5 +22,7 @@ export const C = {
   text: "#e2e8f0",
   dim: "#94a3b8",
   muted: "#64748b",
-  white: "#ffffff"
+  white: "#ffffff",
+  glow: "rgba(6,214,224,0.12)",
+  glowStrong: "rgba(6,214,224,0.25)"
 };

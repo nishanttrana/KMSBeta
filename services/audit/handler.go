@@ -72,6 +72,13 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /alerts/channels", h.handleGetChannels)
 	mux.HandleFunc("PUT /alerts/channels", h.handleUpdateChannels)
 	mux.HandleFunc("POST /alerts/channels/test", h.handleTestChannel)
+
+	// Merkle tree integrity routes
+	mux.HandleFunc("POST /audit/merkle/build", h.handleMerkleBuild)
+	mux.HandleFunc("GET /audit/merkle/epochs", h.handleMerkleEpochs)
+	mux.HandleFunc("GET /audit/merkle/epochs/{id}", h.handleMerkleEpoch)
+	mux.HandleFunc("GET /audit/events/{id}/proof", h.handleEventProof)
+	mux.HandleFunc("POST /audit/merkle/verify", h.handleMerkleVerify)
 	return mux
 }
 
@@ -584,5 +591,113 @@ func (h *Handler) publishClusterSync(r *http.Request, tenantID string, entityTyp
 		EntityID:   entityID,
 		Operation:  operation,
 		Payload:    payload,
+	})
+}
+
+// ── Merkle Tree Handlers ─────────────────────────────────────
+
+func (h *Handler) handleMerkleBuild(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	maxLeaves := atoi(r.URL.Query().Get("max_leaves"))
+	if maxLeaves <= 0 {
+		maxLeaves = 1000
+	}
+	result, err := h.store.BuildMerkleEpoch(r.Context(), tenantID, maxLeaves)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "build_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if result == nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"status":     "no_new_events",
+			"request_id": reqID,
+		})
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"epoch":      result.Epoch,
+		"leaves":     result.Leaves,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleMerkleEpochs(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	limit := atoi(r.URL.Query().Get("limit"))
+	items, err := h.store.ListMerkleEpochs(r.Context(), tenantID, limit)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleMerkleEpoch(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	epoch, err := h.store.GetMerkleEpoch(r.Context(), tenantID, r.PathValue("id"))
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "epoch not found", reqID, tenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"epoch": epoch, "request_id": reqID})
+}
+
+func (h *Handler) handleEventProof(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	proof, err := h.store.GetEventMerkleProof(r.Context(), tenantID, r.PathValue("id"))
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "event not in any merkle epoch", reqID, tenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "proof_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"proof": proof, "request_id": reqID})
+}
+
+func (h *Handler) handleMerkleVerify(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req struct {
+		LeafHash  string         `json:"leaf_hash"`
+		LeafIndex int            `json:"leaf_index"`
+		Siblings  []ProofSibling `json:"siblings"`
+		Root      string         `json:"root"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	proof := MerkleProof{
+		LeafHash:  req.LeafHash,
+		LeafIndex: req.LeafIndex,
+		Siblings:  req.Siblings,
+		Root:      req.Root,
+	}
+	valid := VerifyProof(proof)
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"valid":      valid,
+		"root":       req.Root,
+		"request_id": reqID,
 	})
 }

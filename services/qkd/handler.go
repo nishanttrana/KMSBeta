@@ -43,6 +43,14 @@ func (h *Handler) routes() *http.ServeMux {
 
 	mux.HandleFunc("GET /qkd/v1/config", h.handleGetConfig)
 	mux.HandleFunc("PUT /qkd/v1/config", h.handleUpdateConfig)
+
+	mux.HandleFunc("POST /qkd/v1/sae", h.handleRegisterSAE)
+	mux.HandleFunc("GET /qkd/v1/sae", h.handleListSAEs)
+	mux.HandleFunc("GET /qkd/v1/sae/{id}", h.handleGetSAE)
+	mux.HandleFunc("PUT /qkd/v1/sae/{id}", h.handleUpdateSAE)
+	mux.HandleFunc("DELETE /qkd/v1/sae/{id}", h.handleDeleteSAE)
+	mux.HandleFunc("POST /qkd/v1/sae/{id}/distribute", h.handleDistributeKeys)
+	mux.HandleFunc("GET /qkd/v1/distributions", h.handleListDistributions)
 	return mux
 }
 

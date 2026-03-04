@@ -818,3 +818,91 @@ export async function cmpv2Confirm(
   );
   return out.confirmation;
 }
+
+// ── Certificate Transparency (Merkle) ─────────────────────────────
+
+export type CertMerkleEpoch = {
+  id: string;
+  tenant_id: string;
+  epoch_number: number;
+  leaf_count: number;
+  tree_root: string;
+  created_at?: string;
+};
+
+export type CertMerkleProofSibling = {
+  hash: string;
+  position: "left" | "right";
+};
+
+export type CertMerkleProofResponse = {
+  cert_id: string;
+  serial_number: string;
+  subject_cn: string;
+  epoch_id: string;
+  leaf_hash: string;
+  leaf_index: number;
+  siblings: CertMerkleProofSibling[];
+  root: string;
+};
+
+export type CertMerkleVerifyResult = {
+  valid: boolean;
+  root: string;
+  request_id: string;
+};
+
+export async function listCertMerkleEpochs(
+  session: AuthSession,
+  limit = 50
+): Promise<CertMerkleEpoch[]> {
+  const qs = new URLSearchParams();
+  qs.set("tenant_id", session.tenantId);
+  if (limit > 0) qs.set("limit", String(limit));
+  const out = await serviceRequest<{ items: CertMerkleEpoch[] }>(
+    session, "certs", `/certs/merkle/epochs?${qs.toString()}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getCertMerkleEpoch(
+  session: AuthSession,
+  epochId: string
+): Promise<CertMerkleEpoch> {
+  const out = await serviceRequest<{ epoch: CertMerkleEpoch }>(
+    session, "certs", `/certs/merkle/epochs/${encodeURIComponent(epochId)}?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  return out.epoch;
+}
+
+export async function buildCertMerkleEpoch(
+  session: AuthSession,
+  maxLeaves = 500
+): Promise<{ epoch?: CertMerkleEpoch; leaves?: number; status?: string }> {
+  const out = await serviceRequest<{ epoch?: CertMerkleEpoch; leaves?: number; status?: string }>(
+    session, "certs", `/certs/merkle/build?tenant_id=${encodeURIComponent(session.tenantId)}&max_leaves=${maxLeaves}`,
+    { method: "POST" }
+  );
+  return out;
+}
+
+export async function getCertMerkleProof(
+  session: AuthSession,
+  certId: string
+): Promise<CertMerkleProofResponse> {
+  const out = await serviceRequest<{ proof: CertMerkleProofResponse }>(
+    session, "certs", `/certs/merkle/proof/${encodeURIComponent(certId)}?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  return out.proof;
+}
+
+export async function verifyCertMerkleProof(
+  session: AuthSession,
+  proof: { leaf_hash: string; leaf_index: number; siblings: CertMerkleProofSibling[]; root: string }
+): Promise<CertMerkleVerifyResult> {
+  const out = await serviceRequest<CertMerkleVerifyResult>(
+    session, "certs", `/certs/merkle/verify?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    { method: "POST", body: JSON.stringify(proof) }
+  );
+  return out;
+}
