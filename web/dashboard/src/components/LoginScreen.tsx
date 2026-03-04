@@ -1,7 +1,9 @@
 import { Check, Info, KeyRound, Lock, ShieldCheck, UserRound, X, Zap } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AuthSession, UIAuthConfig } from "../lib/auth";
 import { changePassword, login } from "../lib/auth";
+import type { SSOProviderInfo } from "../lib/authAdmin";
+import { getSSOLoginURL, listSSOProviders } from "../lib/authAdmin";
 
 /* ────────────────────────────────────────────────────────────────────
    Animated Network Grid — circuit-board-like grid with glowing data
@@ -174,6 +176,40 @@ export function LoginScreen(props: LoginScreenProps) {
   const [loading, setLoading] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [showPolicyHint, setShowPolicyHint] = useState(false);
+  const [ssoProviders, setSsoProviders] = useState<SSOProviderInfo[]>([]);
+  const [ssoLoading, setSsoLoading] = useState<string | null>(null);
+
+  // Fetch SSO providers when tenant changes
+  const activeTenantId = useRootTenant ? ROOT_TENANT_ID : tenantInput.trim();
+  useEffect(() => {
+    if (!activeTenantId) {
+      setSsoProviders([]);
+      return;
+    }
+    let cancelled = false;
+    listSSOProviders(activeTenantId).then((providers) => {
+      if (!cancelled) setSsoProviders(providers);
+    }).catch(() => {
+      if (!cancelled) setSsoProviders([]);
+    });
+    return () => { cancelled = true; };
+  }, [activeTenantId]);
+
+  const handleSSOLogin = async (provider: string) => {
+    if (!activeTenantId) {
+      setAuthError("Tenant is required for SSO login.");
+      return;
+    }
+    setSsoLoading(provider);
+    setAuthError(null);
+    try {
+      const redirectURL = await getSSOLoginURL(provider, activeTenantId);
+      window.location.href = redirectURL;
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "SSO login failed");
+      setSsoLoading(null);
+    }
+  };
 
   const passwordChecks = useMemo(() => {
     const pw = newPassword;
@@ -378,6 +414,28 @@ export function LoginScreen(props: LoginScreenProps) {
                 Default admin: <strong className="text-cyber-muted">{config.admin_username}</strong>. Password configured in{" "}
                 <code className="rounded bg-cyber-elevated px-1 text-cyber-accent/60">ui-auth.json</code>.
               </p>
+
+              {/* SSO provider buttons */}
+              {ssoProviders.length > 0 && (
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-cyber-border/40" />
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-cyber-muted/60">or sign in with</span>
+                    <div className="h-px flex-1 bg-cyber-border/40" />
+                  </div>
+                  {ssoProviders.map((sp) => (
+                    <button
+                      key={sp.provider}
+                      type="button"
+                      onClick={() => handleSSOLogin(sp.provider)}
+                      disabled={ssoLoading === sp.provider}
+                      className="w-full rounded-lg border border-cyber-border bg-cyber-elevated/60 px-4 py-2.5 text-sm font-medium text-cyber-text transition-all duration-150 hover:border-cyber-accent/40 hover:bg-cyber-elevated active:scale-[0.98] disabled:opacity-60"
+                    >
+                      {ssoLoading === sp.provider ? "Redirecting..." : sp.display_name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4">

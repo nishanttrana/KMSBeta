@@ -468,6 +468,10 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
     if (!session?.token) {
       return;
     }
+    if (idpProvider === "saml" || idpProvider === "oidc") {
+      onToast("Directory discovery is not available for SAML/OIDC providers.");
+      return;
+    }
     setIdpUsersLoading(true);
     try {
       const rows = await listAuthIdentityProviderUsers(session, idpProvider, {
@@ -489,6 +493,10 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
     if (!session?.token) {
       return;
     }
+    if (idpProvider === "saml" || idpProvider === "oidc") {
+      onToast("Directory discovery is not available for SAML/OIDC providers.");
+      return;
+    }
     setIdpGroupsLoading(true);
     try {
       const rows = await listAuthIdentityProviderGroups(session, idpProvider, {
@@ -507,6 +515,10 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
 
   const discoverIdpMembers = useCallback(async () => {
     if (!session?.token || !String(idpSelectedGroupID || "").trim()) {
+      return;
+    }
+    if (idpProvider === "saml" || idpProvider === "oidc") {
+      onToast("Directory discovery is not available for SAML/OIDC providers.");
       return;
     }
     setIdpMembersLoading(true);

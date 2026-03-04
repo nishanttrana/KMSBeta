@@ -5,7 +5,7 @@ import { isSystemAdminSession } from "./config/moduleRegistry";
 import { BrandedLoadingOverlay, InitialLoadingScreen } from "./components/BrandedLoadingOverlay";
 import { LoginScreen } from "./components/LoginScreen";
 import VectaDashboardV3 from "./components/VectaDashboardV3";
-import { clearSession, getSession, loadUIAuthConfig, refreshSession, saveSession, type AuthSession } from "./lib/auth";
+import { clearSession, createSSOSession, extractSSOParams, getSession, loadUIAuthConfig, refreshSession, saveSession, type AuthSession } from "./lib/auth";
 import { getAuthSystemHealth, type AuthSystemHealthSnapshot } from "./lib/authAdmin";
 import { enabledFeatures, loadDeploymentConfig } from "./lib/deployment";
 import { mapToLiveEvent, parseWSMessage, wsBaseURL } from "./lib/liveFeed";
@@ -292,7 +292,16 @@ function applyPermissionScope(features: Set<FeatureKey>, session: AuthSession | 
 }
 
 export default function App() {
-  const [session, setSession] = useState<AuthSession | null>(getSession());
+  const [session, setSession] = useState<AuthSession | null>(() => {
+    // Check for SSO callback params first
+    const ssoParams = extractSSOParams();
+    if (ssoParams) {
+      const ssoSession = createSSOSession(ssoParams);
+      saveSession(ssoSession);
+      return ssoSession;
+    }
+    return getSession();
+  });
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [inFlightRequests, setInFlightRequests] = useState<number>(getGlobalInFlightRequestCount());
   const [showBrandedLoader, setShowBrandedLoader] = useState(false);

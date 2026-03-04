@@ -181,7 +181,13 @@ export type HSMProviderConfig = {
   updated_at?: string;
 };
 
-export type IdentityProviderName = "ad" | "entra";
+export type IdentityProviderName = "ad" | "entra" | "saml" | "oidc" | "ldap";
+
+export type SSOProviderInfo = {
+  provider: string;
+  display_name: string;
+  type: "saml" | "oidc";
+};
 
 export type IdentityProviderConfigView = {
   tenant_id: string;
@@ -823,4 +829,23 @@ export async function deleteAuthGroupRoleBinding(
     `/auth/groups/${encodeURIComponent(String(groupID || "").trim())}/role${qs}`,
     { method: "DELETE" }
   );
+}
+
+// --- SSO public endpoints (no auth required) ---
+
+export async function listSSOProviders(tenantID: string): Promise<SSOProviderInfo[]> {
+  const qs = `?tenant_id=${encodeURIComponent(tenantID)}`;
+  const resp = await fetch(`/svc/auth/auth/sso/providers${qs}`, { cache: "no-store" });
+  if (!resp.ok) return [];
+  const data = (await resp.json()) as { providers?: SSOProviderInfo[] };
+  return data.providers ?? [];
+}
+
+export async function getSSOLoginURL(provider: string, tenantID: string): Promise<string> {
+  const qs = `?tenant_id=${encodeURIComponent(tenantID)}`;
+  const resp = await fetch(`/svc/auth/auth/sso/${encodeURIComponent(provider)}/login${qs}`, { cache: "no-store" });
+  if (!resp.ok) throw new Error("Failed to initiate SSO login");
+  const data = (await resp.json()) as { redirect_url?: string };
+  if (!data.redirect_url) throw new Error("No redirect URL returned");
+  return data.redirect_url;
 }

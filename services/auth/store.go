@@ -37,6 +37,7 @@ type Store interface {
 
 	CreateUser(ctx context.Context, u User) error
 	GetUserByUsername(ctx context.Context, tenantID string, username string) (User, error)
+	GetUserByEmail(ctx context.Context, tenantID string, email string) (User, error)
 	GetUserByID(ctx context.Context, tenantID string, userID string) (User, error)
 	ListUsers(ctx context.Context, tenantID string) ([]User, error)
 	UpdateUserRole(ctx context.Context, tenantID string, userID string, role string) error
@@ -540,6 +541,28 @@ SELECT id, tenant_id, username, email, pwd_hash, totp_secret, role, status, must
 FROM auth_users
 WHERE tenant_id=$1 AND username=$2
 `, tenantID, username).Scan(
+		&u.ID, &u.TenantID, &u.Username, &u.Email, &u.Password, &totp, &u.Role, &u.Status, &u.MustChangePassword, &u.CreatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return User{}, errNotFound
+	}
+	if err != nil {
+		return User{}, err
+	}
+	if totp.Valid {
+		u.TOTPSecret = []byte(totp.String)
+	}
+	return u, nil
+}
+
+func (s *SQLStore) GetUserByEmail(ctx context.Context, tenantID string, email string) (User, error) {
+	var u User
+	var totp sql.NullString
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT id, tenant_id, username, email, pwd_hash, totp_secret, role, status, must_change_password, created_at
+FROM auth_users
+WHERE tenant_id=$1 AND email=$2
+`, tenantID, email).Scan(
 		&u.ID, &u.TenantID, &u.Username, &u.Email, &u.Password, &totp, &u.Role, &u.Status, &u.MustChangePassword, &u.CreatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {

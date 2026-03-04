@@ -109,6 +109,13 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /auth/api-keys", h.withAuth(h.handleCreateAPIKey, "auth.api_key.write"))
 	mux.HandleFunc("DELETE /auth/api-keys/{id}", h.withAuth(h.handleDeleteAPIKey, "auth.api_key.write"))
 
+	// SSO routes (public, no auth required)
+	mux.HandleFunc("GET /auth/sso/providers", h.handleListSSOProviders)
+	mux.HandleFunc("GET /auth/sso/{provider}/login", h.handleSSOLogin)
+	mux.HandleFunc("POST /auth/sso/{provider}/callback", h.handleSSOCallback)
+	mux.HandleFunc("GET /auth/sso/{provider}/callback", h.handleSSOCallback)
+	mux.HandleFunc("GET /auth/sso/saml/metadata", h.handleSAMLMetadata)
+
 	mux.HandleFunc("GET /auth/clients", h.withAuth(h.handleListClients, "auth.client.read"))
 	mux.HandleFunc("GET /auth/clients/{id}", h.withAuth(h.handleGetClient, "auth.client.read"))
 	mux.HandleFunc("PUT /auth/clients/{id}", h.withAuth(h.handleUpdateClient, "auth.client.write"))
@@ -494,9 +501,16 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	u, err := h.store.GetUserByUsername(r.Context(), req.TenantID, req.Username)
 	if err != nil || !VerifyPassword(u.Password, req.Password) {
-		_, _ = h.logic.limiter.FailWithPolicy(rlKey, time.Now().UTC(), securityPolicy.MaxFailedAttempts, lockoutWindow)
-		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid credentials", reqID, req.TenantID)
-		return
+		// Fallback: try LDAP bind authentication if configured
+		ldapUser, ldapErr := h.tryLDAPBind(r.Context(), req.TenantID, req.Username, req.Password)
+		if ldapErr == nil {
+			u = ldapUser
+			err = nil
+		} else {
+			_, _ = h.logic.limiter.FailWithPolicy(rlKey, time.Now().UTC(), securityPolicy.MaxFailedAttempts, lockoutWindow)
+			writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid credentials", reqID, req.TenantID)
+			return
+		}
 	}
 	if normalizeUserStatus(u.Status) != "active" {
 		_, _ = h.logic.limiter.FailWithPolicy(rlKey, time.Now().UTC(), securityPolicy.MaxFailedAttempts, lockoutWindow)
