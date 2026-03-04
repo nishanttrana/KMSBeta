@@ -185,3 +185,72 @@ type TestGenerateRequest struct {
 	QBERMin     float64 `json:"qber_min"`
 	QBERMax     float64 `json:"qber_max"`
 }
+
+// ── Slave SAE Registry ─────────────────────────────────────
+
+const (
+	SAEStatusActive   = "active"
+	SAEStatusInactive = "inactive"
+	SAEStatusError    = "error"
+
+	SAEModeETSI  = "etsi"
+	SAEModeCisco = "cisco-ckm"
+	SAEModeRelay = "relay"
+)
+
+type SlaveSAE struct {
+	ID               string    `json:"id"`
+	TenantID         string    `json:"tenant_id"`
+	Name             string    `json:"name"`
+	Endpoint         string    `json:"endpoint"`
+	AuthToken        string    `json:"auth_token,omitempty"`
+	Protocol         string    `json:"protocol"`
+	Role             string    `json:"role"`
+	Mode             string    `json:"mode"`
+	Status           string    `json:"status"`
+	LastSyncAt       time.Time `json:"last_sync_at"`
+	KeysDistributed  int64     `json:"keys_distributed"`
+	KeysAvailable    int64     `json:"keys_available"`
+	MaxKeyRate       float64   `json:"max_key_rate"`
+	QBERThreshold    float64   `json:"qber_threshold"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+type Distribution struct {
+	ID            string    `json:"id"`
+	TenantID      string    `json:"tenant_id"`
+	SlaveSAEID    string    `json:"slave_sae_id"`
+	KeyCount      int       `json:"key_count"`
+	KeySizeBits   int       `json:"key_size_bits"`
+	Status        string    `json:"status"`
+	ErrorMessage  string    `json:"error_message,omitempty"`
+	DistributedAt time.Time `json:"distributed_at"`
+}
+
+type RegisterSAERequest struct {
+	TenantID      string  `json:"tenant_id"`
+	Name          string  `json:"name"`
+	Endpoint      string  `json:"endpoint"`
+	AuthToken     string  `json:"auth_token"`
+	Protocol      string  `json:"protocol"`
+	Role          string  `json:"role"`
+	Mode          string  `json:"mode"`
+	MaxKeyRate    float64 `json:"max_key_rate"`
+	QBERThreshold float64 `json:"qber_threshold"`
+}
+
+type DistributeKeysRequest struct {
+	TenantID    string `json:"tenant_id"`
+	SlaveSAEID  string `json:"slave_sae_id"`
+	Count       int    `json:"count"`
+	KeySizeBits int    `json:"key_size_bits"`
+}
+
+type DistributeKeysResponse struct {
+	DistributionID string   `json:"distribution_id"`
+	SlaveSAEID     string   `json:"slave_sae_id"`
+	KeyCount       int      `json:"key_count"`
+	KeyIDs         []string `json:"key_ids"`
+	Status         string   `json:"status"`
+}

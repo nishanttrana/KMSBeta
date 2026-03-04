@@ -33,7 +33,11 @@ import {
   updateProtocolConfig,
   uploadThirdPartyCertificate,
   getCertExpiryAlertPolicy,
-  updateCertExpiryAlertPolicy
+  updateCertExpiryAlertPolicy,
+  listCertMerkleEpochs,
+  buildCertMerkleEpoch,
+  getCertMerkleProof,
+  verifyCertMerkleProof
 } from "../../../lib/certs";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
@@ -142,6 +146,10 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
   const [alertPolicyDaysBefore,setAlertPolicyDaysBefore]=useState(30);
   const [alertPolicyIncludeExternal,setAlertPolicyIncludeExternal]=useState(true);
   const [alertPolicySaving,setAlertPolicySaving]=useState(false);
+  const [ctEpochs,setCTEpochs]=useState([]);
+  const [ctBuilding,setCTBuilding]=useState(false);
+  const [ctProofCertId,setCTProofCertId]=useState("");
+  const [ctProofResult,setCTProofResult]=useState(null);
   const promptDialog=usePromptDialog();
   const requestedCertPane=String(subView||"cert-overview").trim().toLowerCase();
   const activeCertPane=requestedCertPane==="cert-enrollment"?"cert-enrollment":"cert-overview";
@@ -210,14 +218,15 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     }
     setLoading(true);
     try{
-      const [caItems,certItems,profileItems,inventoryItems,protocolItems,protocolSchemaItems,alertPolicy]=await Promise.all([
+      const [caItems,certItems,profileItems,inventoryItems,protocolItems,protocolSchemaItems,alertPolicy,ctEpochItems]=await Promise.all([
         listCAs(session),
         loadAllCertificates(),
         listProfiles(session),
         listInventory(session),
         listProtocolConfigs(session),
         listProtocolSchemas(session),
-        getCertExpiryAlertPolicy(session)
+        getCertExpiryAlertPolicy(session),
+        listCertMerkleEpochs(session,50).catch(()=>[])
       ]);
       setCAs(Array.isArray(caItems)?caItems:[]);
       setCerts(Array.isArray(certItems)?certItems:[]);
@@ -227,6 +236,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       setProtocolSchemas(Array.isArray(protocolSchemaItems)?protocolSchemaItems:[]);
       setAlertPolicyDaysBefore(Math.max(1,Math.min(3650,Number(alertPolicy?.days_before||30))));
       setAlertPolicyIncludeExternal(Boolean(alertPolicy?.include_external ?? true));
+      setCTEpochs(Array.isArray(ctEpochItems)?ctEpochItems:[]);
       if(!issueCAID&&Array.isArray(caItems)&&caItems.length){
         setIssueCAID(caItems[0].id);
       }
@@ -1532,6 +1542,106 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
         </div>
       </div>
     </Card>}
+
+    {/* ═══ Certificate Transparency (Merkle) ═══ */}
+    {showOverviewPane&&<Section title="Certificate Transparency" actions={
+      <div style={{display:"flex",gap:6}}>
+        <Btn small onClick={async()=>{
+          setCTBuilding(true);
+          try{
+            const res=await buildCertMerkleEpoch(session,500);
+            if(res?.epoch){
+              const updated=await listCertMerkleEpochs(session,50).catch(()=>[]);
+              setCTEpochs(Array.isArray(updated)?updated:[]);
+              onToast?.(`CT epoch #${res.epoch.epoch_number} built (${res.leaves} certs)`);
+            }else{
+              onToast?.("No new certificates to log.");
+            }
+          }catch(e){onToast?.(`CT build failed: ${errMsg(e)}`);}
+          finally{setCTBuilding(false);}
+        }} disabled={ctBuilding}>{ctBuilding?"Building...":"Build Epoch"}</Btn>
+        <Btn small onClick={async()=>{
+          const items=await listCertMerkleEpochs(session,50).catch(()=>[]);
+          setCTEpochs(Array.isArray(items)?items:[]);
+        }}>Refresh</Btn>
+      </div>
+    }>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+        <Stat l="CT Epochs" v={ctEpochs.length} c="green" i={Shield}/>
+        <Stat l="Logged Certs" v={ctEpochs.reduce((s,e)=>s+(e.leaf_count||0),0)} c="accent" i={FileText}/>
+      </div>
+
+      <Card style={{padding:0,overflow:"hidden",marginBottom:12}}>
+        <div style={{display:"grid",gridTemplateColumns:".5fr .6fr 1fr 1fr",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>
+          <div>Epoch</div><div>Certs</div><div>Root Hash</div><div style={{textAlign:"right"}}>Built</div>
+        </div>
+        <div style={{maxHeight:180,overflowY:"auto"}}>
+          {ctEpochs.map((ep)=>(
+            <div key={ep.id} style={{display:"grid",gridTemplateColumns:".5fr .6fr 1fr 1fr",padding:"8px 12px",borderBottom:`1px solid ${C.border}`,fontSize:11,alignItems:"center"}}>
+              <div style={{color:C.accent,fontWeight:600}}>#{ep.epoch_number}</div>
+              <div style={{color:C.text}}>{ep.leaf_count}</div>
+              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.green}}>{ep.tree_root?`${ep.tree_root.slice(0,16)}...${ep.tree_root.slice(-8)}`:"—"}</div>
+              <div style={{fontSize:10,color:C.dim,textAlign:"right"}}>{ep.created_at?new Date(ep.created_at).toLocaleString():"—"}</div>
+            </div>
+          ))}
+          {!ctEpochs.length&&<div style={{padding:14,fontSize:10,color:C.dim,textAlign:"center"}}>No CT epochs built yet. Click "Build Epoch" to log certificates into a Merkle tree.</div>}
+        </div>
+      </Card>
+
+      <Card>
+        <div style={{fontSize:11,fontWeight:600,color:C.text,marginBottom:8}}>Certificate Inclusion Proof</div>
+        <div style={{display:"flex",gap:8,alignItems:"flex-end",marginBottom:10}}>
+          <div style={{flex:1}}>
+            <Inp placeholder="Certificate ID (e.g. crt_...)" value={ctProofCertId} onChange={(e)=>setCTProofCertId(e.target.value)} style={{fontSize:11}}/>
+          </div>
+          <Btn small primary onClick={async()=>{
+            const id=ctProofCertId.trim();
+            if(!id){onToast?.("Enter a certificate ID.");return;}
+            try{
+              const proof=await getCertMerkleProof(session,id);
+              const vr=await verifyCertMerkleProof(session,{leaf_hash:proof.leaf_hash,leaf_index:proof.leaf_index,siblings:proof.siblings,root:proof.root});
+              setCTProofResult({certId:id,proof,verified:vr.valid});
+            }catch(e){
+              setCTProofResult({certId:id,error:errMsg(e)});
+            }
+          }}>Verify</Btn>
+        </div>
+
+        {ctProofResult&&(
+          <div style={{padding:12,borderRadius:8,background:C.card,border:`1px solid ${C.border}`,fontSize:11}}>
+            {ctProofResult.error?(
+              <div style={{color:C.red}}>{ctProofResult.error}</div>
+            ):ctProofResult.proof?(
+              <div>
+                <div style={{marginBottom:8}}>
+                  <B c={ctProofResult.verified?"green":"red"}>{ctProofResult.verified?"VERIFIED":"FAILED"}</B>
+                  {" "}<span style={{color:C.dim}}>Certificate</span>{" "}
+                  <span style={{fontFamily:"'JetBrains Mono',monospace",color:C.accent,fontSize:10}}>{ctProofResult.certId}</span>
+                </div>
+                {ctProofResult.proof.subject_cn&&<div style={{fontSize:10,color:C.dim,marginBottom:6}}>Subject: <span style={{color:C.text}}>{ctProofResult.proof.subject_cn}</span> | Serial: <span style={{color:C.text}}>{ctProofResult.proof.serial_number}</span></div>}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,color:C.dim,fontSize:10,marginBottom:8}}>
+                  <div>Epoch: <span style={{color:C.text}}>{ctProofResult.proof.epoch_id?.slice(0,12)}</span></div>
+                  <div>Leaf Index: <span style={{color:C.text}}>{ctProofResult.proof.leaf_index}</span></div>
+                  <div>Proof Steps: <span style={{color:C.text}}>{ctProofResult.proof.siblings?.length||0}</span></div>
+                </div>
+                <div style={{marginBottom:6}}>
+                  <div style={{fontSize:10,color:C.muted,marginBottom:3}}>Root Hash</div>
+                  <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.green,wordBreak:"break-all"}}>{ctProofResult.proof.root}</div>
+                </div>
+                <div>
+                  <div style={{fontSize:10,color:C.muted,marginBottom:3}}>Inclusion Path</div>
+                  {(ctProofResult.proof.siblings||[]).map((s,i)=>(
+                    <div key={i} style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.dim,marginBottom:2}}>
+                      [{i}] {s.position.toUpperCase()}: {s.hash.slice(0,24)}...
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ):null}
+          </div>
+        )}
+      </Card>
+    </Section>}
 
     {showOverviewPane&&<Section title="Certificates">
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>

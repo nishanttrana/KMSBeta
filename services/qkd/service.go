@@ -1046,3 +1046,227 @@ func strconvItoa(v int) string {
 	}
 	return string(b[i:])
 }
+
+// ── Slave SAE Management ───────────────────────────────────
+
+func (s *Service) RegisterSlaveSAE(ctx context.Context, req RegisterSAERequest) (SlaveSAE, error) {
+	tenantID := strings.TrimSpace(req.TenantID)
+	if tenantID == "" {
+		return SlaveSAE{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return SlaveSAE{}, newServiceError(http.StatusBadRequest, "bad_request", "name is required")
+	}
+	mode := strings.ToLower(strings.TrimSpace(req.Mode))
+	if mode == "" {
+		mode = SAEModeETSI
+	}
+	role := strings.ToLower(strings.TrimSpace(req.Role))
+	if role == "" {
+		role = "consumer"
+	}
+	protocol := strings.TrimSpace(req.Protocol)
+	if protocol == "" {
+		protocol = "ETSI GS QKD 014"
+	}
+	qberT := req.QBERThreshold
+	if qberT <= 0 || qberT > 1 {
+		qberT = 0.11
+	}
+	now := time.Now().UTC()
+	sae := SlaveSAE{
+		ID:            newID("sae"),
+		TenantID:      tenantID,
+		Name:          name,
+		Endpoint:      strings.TrimSpace(req.Endpoint),
+		AuthToken:     strings.TrimSpace(req.AuthToken),
+		Protocol:      protocol,
+		Role:          role,
+		Mode:          mode,
+		Status:        SAEStatusActive,
+		MaxKeyRate:    req.MaxKeyRate,
+		QBERThreshold: qberT,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	if err := s.store.CreateSlaveSAE(ctx, sae); err != nil {
+		return SlaveSAE{}, err
+	}
+	s.log(ctx, tenantID, "sae_registered", "info", "slave SAE registered: "+sae.Name, map[string]interface{}{
+		"sae_id": sae.ID, "mode": sae.Mode, "endpoint": sae.Endpoint,
+	})
+	sae.AuthToken = ""
+	return sae, nil
+}
+
+func (s *Service) UpdateSlaveSAE(ctx context.Context, tenantID string, saeID string, req RegisterSAERequest) (SlaveSAE, error) {
+	existing, err := s.store.GetSlaveSAE(ctx, tenantID, saeID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return SlaveSAE{}, newServiceError(http.StatusNotFound, "not_found", "slave SAE not found")
+		}
+		return SlaveSAE{}, err
+	}
+	if n := strings.TrimSpace(req.Name); n != "" {
+		existing.Name = n
+	}
+	if e := strings.TrimSpace(req.Endpoint); e != "" {
+		existing.Endpoint = e
+	}
+	if t := strings.TrimSpace(req.AuthToken); t != "" {
+		existing.AuthToken = t
+	}
+	if p := strings.TrimSpace(req.Protocol); p != "" {
+		existing.Protocol = p
+	}
+	if r := strings.TrimSpace(req.Role); r != "" {
+		existing.Role = strings.ToLower(r)
+	}
+	if m := strings.TrimSpace(req.Mode); m != "" {
+		existing.Mode = strings.ToLower(m)
+	}
+	if req.MaxKeyRate > 0 {
+		existing.MaxKeyRate = req.MaxKeyRate
+	}
+	if req.QBERThreshold > 0 && req.QBERThreshold <= 1 {
+		existing.QBERThreshold = req.QBERThreshold
+	}
+	existing.UpdatedAt = time.Now().UTC()
+	if err := s.store.UpdateSlaveSAE(ctx, existing); err != nil {
+		return SlaveSAE{}, err
+	}
+	s.log(ctx, tenantID, "sae_updated", "info", "slave SAE updated: "+existing.Name, map[string]interface{}{
+		"sae_id": existing.ID,
+	})
+	existing.AuthToken = ""
+	return existing, nil
+}
+
+func (s *Service) ListSlaveSAEs(ctx context.Context, tenantID string) ([]SlaveSAE, error) {
+	items, err := s.store.ListSlaveSAEs(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []SlaveSAE{}
+	}
+	return items, nil
+}
+
+func (s *Service) GetSlaveSAE(ctx context.Context, tenantID string, id string) (SlaveSAE, error) {
+	sae, err := s.store.GetSlaveSAE(ctx, tenantID, id)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return SlaveSAE{}, newServiceError(http.StatusNotFound, "not_found", "slave SAE not found")
+		}
+		return SlaveSAE{}, err
+	}
+	sae.AuthToken = ""
+	return sae, nil
+}
+
+func (s *Service) DeleteSlaveSAE(ctx context.Context, tenantID string, id string) error {
+	if err := s.store.DeleteSlaveSAE(ctx, tenantID, id); err != nil {
+		if errors.Is(err, errNotFound) {
+			return newServiceError(http.StatusNotFound, "not_found", "slave SAE not found")
+		}
+		return err
+	}
+	s.log(ctx, tenantID, "sae_deleted", "info", "slave SAE deleted", map[string]interface{}{
+		"sae_id": id,
+	})
+	return nil
+}
+
+func (s *Service) DistributeKeys(ctx context.Context, req DistributeKeysRequest) (DistributeKeysResponse, error) {
+	tenantID := strings.TrimSpace(req.TenantID)
+	if tenantID == "" {
+		return DistributeKeysResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	saeID := strings.TrimSpace(req.SlaveSAEID)
+	if saeID == "" {
+		return DistributeKeysResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "slave_sae_id is required")
+	}
+	count := req.Count
+	if count <= 0 {
+		count = 1
+	}
+	if count > 500 {
+		count = 500
+	}
+
+	cfg, err := s.GetConfig(ctx, tenantID)
+	if err != nil {
+		return DistributeKeysResponse{}, err
+	}
+	if err := s.requireServiceEnabled(cfg); err != nil {
+		return DistributeKeysResponse{}, err
+	}
+
+	sae, err := s.store.GetSlaveSAE(ctx, tenantID, saeID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return DistributeKeysResponse{}, newServiceError(http.StatusNotFound, "not_found", "slave SAE not found")
+		}
+		return DistributeKeysResponse{}, err
+	}
+	if sae.Status != SAEStatusActive {
+		return DistributeKeysResponse{}, newServiceError(http.StatusConflict, "sae_inactive", "slave SAE is not active")
+	}
+
+	// Retrieve available keys from the pool for this tenant (any slave)
+	keys, err := s.store.ListAvailableKeysBySlave(ctx, tenantID, "", count)
+	if err != nil {
+		return DistributeKeysResponse{}, err
+	}
+	if len(keys) == 0 {
+		return DistributeKeysResponse{}, newServiceError(http.StatusConflict, "pool_empty", "no available keys in pool")
+	}
+
+	keyIDs := make([]string, len(keys))
+	for i, k := range keys {
+		keyIDs[i] = k.ID
+	}
+
+	// Mark keys as consumed
+	if err := s.store.UpdateKeysStatus(ctx, tenantID, keyIDs, []string{KeyStatusAvailable}, KeyStatusConsumed); err != nil {
+		return DistributeKeysResponse{}, err
+	}
+
+	distID := newID("dist")
+	dist := Distribution{
+		ID:            distID,
+		TenantID:      tenantID,
+		SlaveSAEID:    saeID,
+		KeyCount:      len(keyIDs),
+		KeySizeBits:   req.KeySizeBits,
+		Status:        "completed",
+		DistributedAt: time.Now().UTC(),
+	}
+	_ = s.store.CreateDistribution(ctx, dist)
+	_ = s.store.IncrementSAEDistributed(ctx, tenantID, saeID, int64(len(keyIDs)))
+
+	s.log(ctx, tenantID, "keys_distributed", "info",
+		"distributed "+strconvItoa(len(keyIDs))+" keys to "+sae.Name,
+		map[string]interface{}{"sae_id": saeID, "distribution_id": distID, "key_count": len(keyIDs)})
+
+	return DistributeKeysResponse{
+		DistributionID: distID,
+		SlaveSAEID:     saeID,
+		KeyCount:       len(keyIDs),
+		KeyIDs:         keyIDs,
+		Status:         "completed",
+	}, nil
+}
+
+func (s *Service) ListDistributions(ctx context.Context, tenantID string, slaveSAEID string, limit int) ([]Distribution, error) {
+	items, err := s.store.ListDistributions(ctx, tenantID, slaveSAEID, limit)
+	if err != nil {
+		return nil, err
+	}
+	if items == nil {
+		items = []Distribution{}
+	}
+	return items, nil
+}

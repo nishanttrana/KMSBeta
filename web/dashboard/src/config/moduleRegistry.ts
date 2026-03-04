@@ -16,6 +16,7 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   kmip: "kmip_server",
   hsm: "hsm_hardware_or_software",
   qkd: "qkd_interface",
+  qrng: "qrng_generator",
   mpc: "mpc_engine",
   cluster: "clustering",
   approvals: "governance",

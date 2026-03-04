@@ -1,0 +1,4 @@
+ALTER TABLE governance_system_state
+    ADD COLUMN IF NOT EXISTS qrng_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS qrng_default_source TEXT NOT NULL DEFAULT '',
+    ADD COLUMN IF NOT EXISTS qrng_min_entropy_bpb REAL NOT NULL DEFAULT 7.0;

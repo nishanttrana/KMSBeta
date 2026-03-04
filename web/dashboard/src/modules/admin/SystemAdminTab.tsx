@@ -1489,6 +1489,35 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
       <Row2>
         <Card style={{padding:10,borderRadius:8}}>
+          <div style={{fontSize:10,color:C.muted,marginBottom:8}}>QRNG Entropy Source</div>
+          <Chk label="Enable QRNG entropy integration" checked={Boolean(systemState?.qrng_enabled)} onChange={()=>setSystemState((p:any)=>({...p,qrng_enabled:!p.qrng_enabled}))}/>
+          <div style={{marginTop:8}}>
+            <FG label="Default QRNG Source ID"><Inp value={String(systemState?.qrng_default_source||"")} onChange={(e:any)=>setSystemState((p:any)=>({...p,qrng_default_source:e.target.value}))} placeholder="qrng_xxxxxxxxxxxxxxxx"/></FG>
+          </div>
+          <div style={{marginTop:8}}>
+            <FG label="Minimum Entropy (bits/byte)"><Inp value={String(systemState?.qrng_min_entropy_bpb||"7.0")} onChange={(e:any)=>setSystemState((p:any)=>({...p,qrng_min_entropy_bpb:parseFloat(e.target.value)||7.0}))} placeholder="7.0"/></FG>
+          </div>
+          <div style={{fontSize:9,color:C.muted,marginTop:6}}>
+            When enabled, KeyCore uses QRNG-seeded CSPRNG for key generation. External QRNG sources inject quantum entropy
+            that is XOR-mixed with OS CSPRNG for defense-in-depth. NIST SP 800-90B health tests run on every ingest.
+          </div>
+        </Card>
+        <Card style={{padding:10,borderRadius:8}}>
+          <div style={{fontSize:10,color:C.muted,marginBottom:8}}>QRNG Integration Status</div>
+          <div style={{fontSize:11,color:C.text,lineHeight:1.7}}>
+            <div>Status: <span style={{color:Boolean(systemState?.qrng_enabled)?C.green:C.dim,fontWeight:600}}>{Boolean(systemState?.qrng_enabled)?"ENABLED":"DISABLED"}</span></div>
+            <div>Default Source: <span style={{color:C.accent}}>{String(systemState?.qrng_default_source||"none")}</span></div>
+            <div>Min Entropy: <span style={{color:C.text}}>{Number(systemState?.qrng_min_entropy_bpb||7.0).toFixed(1)} bpb</span></div>
+            <div style={{marginTop:8,fontSize:9,color:C.muted}}>
+              Supported vendors: ID Quantique Quantis, QuintessenceLabs qStream, Toshiba QRNG, AWS CloudHSM QRNG, Azure Quantum, Custom.
+              QRNG is NOT FIPS 140-3 approved — under FIPS mode, the system falls back to KMS-CSPRNG automatically.
+            </div>
+          </div>
+        </Card>
+      </Row2>
+
+      <Row2>
+        <Card style={{padding:10,borderRadius:8}}>
           <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Interfaces / Network</div>
           <Row2>
             <FG label="Management IP"><Inp value={String(systemState?.mgmt_ip||"")} onChange={(e)=>setSystemState((p)=>({...p,mgmt_ip:e.target.value}))} placeholder="10.0.1.100"/></FG>

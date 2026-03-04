@@ -635,6 +635,7 @@ SELECT tenant_id, COALESCE(fips_mode,'disabled'), COALESCE(fips_mode_policy,'str
        COALESCE(posture_require_step_up_auth,false),
        COALESCE(posture_pause_connector_sync,false),
        COALESCE(posture_guardrail_policy_required,false),
+       COALESCE(qrng_enabled,false), COALESCE(qrng_default_source,''), COALESCE(qrng_min_entropy_bpb,7.0),
        COALESCE(updated_by,''), updated_at
 FROM governance_system_state
 WHERE tenant_id=$1
@@ -654,6 +655,7 @@ WHERE tenant_id=$1
 		&out.PostureRequireStepUpAuth,
 		&out.PosturePauseConnectorSync,
 		&out.PostureGuardrailPolicyRequired,
+		&out.QRNGEnabled, &out.QRNGDefaultSource, &out.QRNGMinEntropyBPB,
 		&out.UpdatedBy, &updatedRaw,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -679,6 +681,9 @@ WHERE tenant_id=$1
 			PostureRequireStepUpAuth:         false,
 			PosturePauseConnectorSync:        false,
 			PostureGuardrailPolicyRequired:   false,
+			QRNGEnabled:                      false,
+			QRNGDefaultSource:                "",
+			QRNGMinEntropyBPB:                7.0,
 			UpdatedBy:                        "system",
 		}, nil
 	}
@@ -702,8 +707,9 @@ INSERT INTO governance_system_state (
     backup_schedule, backup_target, backup_retention_days, backup_encrypted,
     proxy_endpoint, snmp_target,
     posture_force_quorum_destructive_ops, posture_require_step_up_auth, posture_pause_connector_sync, posture_guardrail_policy_required,
+    qrng_enabled, qrng_default_source, qrng_min_entropy_bpb,
     updated_by, updated_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,CURRENT_TIMESTAMP)
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,CURRENT_TIMESTAMP)
 ON CONFLICT (tenant_id) DO UPDATE
 SET fips_mode=EXCLUDED.fips_mode,
     fips_mode_policy=EXCLUDED.fips_mode_policy,
@@ -733,6 +739,9 @@ SET fips_mode=EXCLUDED.fips_mode,
     posture_require_step_up_auth=EXCLUDED.posture_require_step_up_auth,
     posture_pause_connector_sync=EXCLUDED.posture_pause_connector_sync,
     posture_guardrail_policy_required=EXCLUDED.posture_guardrail_policy_required,
+    qrng_enabled=EXCLUDED.qrng_enabled,
+    qrng_default_source=EXCLUDED.qrng_default_source,
+    qrng_min_entropy_bpb=EXCLUDED.qrng_min_entropy_bpb,
     updated_by=EXCLUDED.updated_by,
     updated_at=CURRENT_TIMESTAMP
 `, state.TenantID, nullable(state.FIPSMode), nullable(state.FIPSModePolicy),
@@ -744,6 +753,7 @@ SET fips_mode=EXCLUDED.fips_mode,
 		nullable(state.BackupSchedule), nullable(state.BackupTarget), state.BackupRetentionDays, state.BackupEncrypted,
 		nullable(state.ProxyEndpoint), nullable(state.SNMPTarget),
 		state.PostureForceQuorumDestructiveOps, state.PostureRequireStepUpAuth, state.PosturePauseConnectorSync, state.PostureGuardrailPolicyRequired,
+		state.QRNGEnabled, nullable(state.QRNGDefaultSource), state.QRNGMinEntropyBPB,
 		nullable(state.UpdatedBy))
 	return err
 }

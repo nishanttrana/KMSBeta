@@ -301,6 +301,103 @@ export async function listAuditAlertRules(session: AuthSession): Promise<AuditAl
   return Array.isArray(out?.items) ? out.items : [];
 }
 
+// ── Merkle Tree Types & API ─────────────────────────────────
+
+export type MerkleEpoch = {
+  id: string;
+  tenant_id: string;
+  epoch_number: number;
+  seq_from: number;
+  seq_to: number;
+  leaf_count: number;
+  tree_root: string;
+  created_at: string;
+};
+
+export type MerkleProofSibling = {
+  hash: string;
+  position: "left" | "right";
+};
+
+export type MerkleProofResponse = {
+  event_id: string;
+  sequence: number;
+  epoch_id: string;
+  leaf_hash: string;
+  leaf_index: number;
+  siblings: MerkleProofSibling[];
+  root: string;
+};
+
+export type MerkleVerifyResult = {
+  valid: boolean;
+  root: string;
+  request_id: string;
+};
+
+export async function listMerkleEpochs(
+  session: AuthSession,
+  limit = 50
+): Promise<MerkleEpoch[]> {
+  const out = await serviceRequest<{ items?: MerkleEpoch[] }>(
+    session, "audit",
+    `/audit/merkle/epochs?${tenantQuery(session)}&limit=${limit}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getMerkleEpoch(
+  session: AuthSession,
+  epochId: string
+): Promise<MerkleEpoch> {
+  const out = await serviceRequest<{ epoch?: MerkleEpoch }>(
+    session, "audit",
+    `/audit/merkle/epochs/${encodeURIComponent(epochId)}?${tenantQuery(session)}`
+  );
+  if (!out?.epoch) throw new Error("Epoch not found");
+  return out.epoch;
+}
+
+export async function getEventMerkleProof(
+  session: AuthSession,
+  eventId: string
+): Promise<MerkleProofResponse> {
+  const out = await serviceRequest<{ proof?: MerkleProofResponse }>(
+    session, "audit",
+    `/audit/events/${encodeURIComponent(eventId)}/proof?${tenantQuery(session)}`
+  );
+  if (!out?.proof) throw new Error("Proof not available (event may not be in a Merkle epoch yet)");
+  return out.proof;
+}
+
+export async function buildMerkleEpoch(
+  session: AuthSession,
+  maxLeaves = 1000
+): Promise<{ epoch?: MerkleEpoch; leaves?: number; status?: string }> {
+  const out = await serviceRequest<{ epoch?: MerkleEpoch; leaves?: number; status?: string }>(
+    session, "audit",
+    `/audit/merkle/build?${tenantQuery(session)}&max_leaves=${maxLeaves}`,
+    { method: "POST" }
+  );
+  return out || {};
+}
+
+export async function verifyMerkleProof(
+  session: AuthSession,
+  proof: { leaf_hash: string; leaf_index: number; siblings: MerkleProofSibling[]; root: string }
+): Promise<MerkleVerifyResult> {
+  const out = await serviceRequest<MerkleVerifyResult>(
+    session, "audit",
+    `/audit/merkle/verify`,
+    { method: "POST", body: JSON.stringify(proof) }
+  );
+  return {
+    valid: Boolean(out?.valid),
+    root: String(out?.root || ""),
+    request_id: String(out?.request_id || ""),
+  };
+}
+
 function downloadBlob(content: string, filename: string, mimeType: string): void {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);

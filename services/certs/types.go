@@ -335,3 +335,41 @@ type InternalMTLSRequest struct {
 	Protocol     string `json:"protocol"`
 	ValidityDays int64  `json:"validity_days"`
 }
+
+// ── Certificate Transparency (Merkle) types ──────────────────
+
+type CertMerkleEpoch struct {
+	ID          string    `json:"id"`
+	TenantID    string    `json:"tenant_id"`
+	EpochNumber int       `json:"epoch_number"`
+	LeafCount   int       `json:"leaf_count"`
+	TreeRoot    string    `json:"tree_root"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type CertMerkleLeaf struct {
+	EpochID      string `json:"epoch_id"`
+	TenantID     string `json:"tenant_id"`
+	LeafIndex    int    `json:"leaf_index"`
+	CertID       string `json:"cert_id"`
+	SerialNumber string `json:"serial_number"`
+	SubjectCN    string `json:"subject_cn"`
+	LeafHash     string `json:"leaf_hash"`
+	LoggedAt     string `json:"logged_at"`
+}
+
+type CertMerkleEpochResult struct {
+	Epoch  CertMerkleEpoch `json:"epoch"`
+	Leaves int             `json:"leaves"`
+}
+
+type CertMerkleProofResponse struct {
+	CertID       string         `json:"cert_id"`
+	SerialNumber string         `json:"serial_number"`
+	SubjectCN    string         `json:"subject_cn"`
+	EpochID      string         `json:"epoch_id"`
+	LeafHash     string         `json:"leaf_hash"`
+	LeafIndex    int            `json:"leaf_index"`
+	Siblings     []ProofSibling `json:"siblings"`
+	Root         string         `json:"root"`
+}

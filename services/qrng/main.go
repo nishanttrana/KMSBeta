@@ -32,12 +32,12 @@ import (
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
-var logger = log.New(os.Stdout, "[qkd] ", log.LstdFlags|log.Lmicroseconds)
+var logger = log.New(os.Stdout, "[qrng] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
 	cfg := pkgconfig.Load()
 
-	if err := pkgruntimecfg.ValidateServiceConfig("kms-qkd", cfg); err != nil {
+	if err := pkgruntimecfg.ValidateServiceConfig("kms-qrng", cfg); err != nil {
 		log.Fatalf("config validation failed: %v", err)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -53,7 +53,7 @@ func main() {
 	if err != nil {
 		logger.Fatalf("db open failed: %v", err)
 	}
-	defer dbConn.Close() //nolint:errcheck
+	defer dbConn.Close()
 
 	if err := dbConn.RunMigrations(ctx, migrationPath()); err != nil {
 		logger.Fatalf("migration failed: %v", err)
@@ -62,21 +62,15 @@ func main() {
 	var publisher EventPublisher
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
-		publisher = pkgevents.NewPublisher(js, 3, "audit.qkd.dead_letter")
+		publisher = pkgevents.NewPublisher(js, 3, "audit.qrng.dead_letter")
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
 
-	keycoreURL := envOr("KEYCORE_URL", "http://127.0.0.1:8010")
-	svc := NewService(
-		NewSQLStore(dbConn),
-		NewHTTPKeyCoreClient(keycoreURL, 3*time.Second),
-		publisher,
-		loadMEK(),
-	)
+	svc := NewService(NewSQLStore(dbConn), publisher)
 	handler := NewHandler(svc)
 
-	httpPort := envOr("HTTP_PORT", "8150")
+	httpPort := envOr("HTTP_PORT", "8230")
 	httpSrv := &http.Server{
 		Addr:              ":" + httpPort,
 		Handler:           handler,
@@ -89,7 +83,7 @@ func main() {
 		}
 	}()
 
-	grpcPort := envOr("GRPC_PORT", "18150")
+	grpcPort := envOr("GRPC_PORT", "18230")
 	tlsCfg, err := devMTLSConfig()
 	if err != nil {
 		logger.Fatalf("mtls config failed: %v", err)
@@ -106,11 +100,11 @@ func main() {
 		}
 	}()
 
-	if reg, err := pkgconsul.NewRegistrar(cfg.ConsulAddress, "kms-qkd-"+httpPort, "kms-qkd", "127.0.0.1", mustAtoi(grpcPort)); err == nil {
+	if reg, err := pkgconsul.NewRegistrar(cfg.ConsulAddress, "kms-qrng-"+httpPort, "kms-qrng", "127.0.0.1", mustAtoi(grpcPort)); err == nil {
 		if err := reg.Register(ctx); err != nil {
 			logger.Printf("consul register failed: %v", err)
 		} else {
-			defer reg.Deregister(context.Background()) //nolint:errcheck
+			defer reg.Deregister(context.Background())
 		}
 	}
 
@@ -122,7 +116,7 @@ func main() {
 }
 
 func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
-	nc, err := nats.Connect(url, nats.Name("kms-qkd"))
+	nc, err := nats.Connect(url, nats.Name("kms-qrng"))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -131,13 +125,13 @@ func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
 		nc.Close()
 		return nil, nil, err
 	}
-	_, _ = js.AddStream(&nats.StreamConfig{Name: "AUDIT_QKD", Subjects: []string{"audit.qkd.*"}})
+	_, _ = js.AddStream(&nats.StreamConfig{Name: "AUDIT_QRNG", Subjects: []string{"audit.qrng.*"}})
 	return nc, js, nil
 }
 
 func migrationPath() string {
 	candidates := []string{
-		filepath.Join("services", "qkd", "migrations"),
+		filepath.Join("services", "qrng", "migrations"),
 		filepath.Join(".", "migrations"),
 	}
 	for _, c := range candidates {
@@ -145,7 +139,7 @@ func migrationPath() string {
 			return c
 		}
 	}
-	return filepath.Join("services", "qkd", "migrations")
+	return filepath.Join("services", "qrng", "migrations")
 }
 
 func devMTLSConfig() (*tls.Config, error) {
@@ -156,7 +150,7 @@ func devMTLSConfig() (*tls.Config, error) {
 	serial, _ := rand.Int(rand.Reader, big.NewInt(1<<62))
 	tpl := &x509.Certificate{
 		SerialNumber:          serial,
-		Subject:               pkix.Name{CommonName: "kms-qkd-local"},
+		Subject:               pkix.Name{CommonName: "kms-qrng-local"},
 		NotBefore:             time.Now().Add(-time.Hour),
 		NotAfter:              time.Now().Add(24 * time.Hour),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
@@ -181,14 +175,13 @@ func devMTLSConfig() (*tls.Config, error) {
 }
 
 func loadMEK() []byte {
-	b64 := strings.TrimSpace(os.Getenv("QKD_MEK_B64"))
+	b64 := strings.TrimSpace(os.Getenv("QRNG_MEK_B64"))
 	if b64 != "" {
 		if raw, err := base64.StdEncoding.DecodeString(b64); err == nil && len(raw) >= 32 {
 			return raw[:32]
 		}
 	}
-	// Security: deterministic fallback is for local/dev only; production must provide QKD_MEK_B64.
-	sum := sha256.Sum256([]byte("vecta-qkd-dev-mek"))
+	sum := sha256.Sum256([]byte("vecta-qrng-dev-mek"))
 	return sum[:]
 }
 

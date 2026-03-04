@@ -209,6 +209,11 @@ func (s *Service) InitiateSign(ctx context.Context, req SignInitiateRequest) (MP
 		return MPCCeremony{}, newServiceError(400, "bad_request", "participants must satisfy threshold")
 	}
 
+	// Evaluate signing policies
+	if err := s.evaluatePolicies(ctx, req.TenantID, req.KeyID, len(participants)); err != nil {
+		return MPCCeremony{}, err
+	}
+
 	ceremony := MPCCeremony{
 		ID:                   newID("sign"),
 		TenantID:             req.TenantID,
@@ -883,4 +888,279 @@ func cloneMap(in map[string]interface{}) map[string]interface{} {
 		out[k] = v
 	}
 	return out
+}
+
+// ── Enterprise methods ───────────────────────────────────────
+
+func (s *Service) RegisterParticipant(ctx context.Context, req RegisterParticipantRequest) (MPCParticipant, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	req.Name = strings.TrimSpace(req.Name)
+	if req.TenantID == "" || req.Name == "" {
+		return MPCParticipant{}, newServiceError(400, "bad_request", "tenant_id and name are required")
+	}
+	item := MPCParticipant{
+		ID:        newID("part"),
+		TenantID:  req.TenantID,
+		Name:      req.Name,
+		Endpoint:  strings.TrimSpace(req.Endpoint),
+		PublicKey: strings.TrimSpace(req.PublicKey),
+		Status:    "active",
+	}
+	if err := s.store.CreateParticipant(ctx, item); err != nil {
+		return MPCParticipant{}, err
+	}
+	_ = s.publishAudit(ctx, "audit.mpc.participant_registered", req.TenantID, map[string]interface{}{
+		"participant_id": item.ID, "name": item.Name,
+	})
+	return s.store.GetParticipant(ctx, req.TenantID, item.ID)
+}
+
+func (s *Service) UpdateParticipant(ctx context.Context, tenantID string, id string, req UpdateParticipantRequest) (MPCParticipant, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	id = strings.TrimSpace(id)
+	if tenantID == "" || id == "" {
+		return MPCParticipant{}, newServiceError(400, "bad_request", "tenant_id and id are required")
+	}
+	if err := s.store.UpdateParticipant(ctx, tenantID, id, req); err != nil {
+		return MPCParticipant{}, err
+	}
+	return s.store.GetParticipant(ctx, tenantID, id)
+}
+
+func (s *Service) ListParticipants(ctx context.Context, tenantID string) ([]MPCParticipant, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, newServiceError(400, "bad_request", "tenant_id is required")
+	}
+	return s.store.ListParticipants(ctx, tenantID)
+}
+
+func (s *Service) DeleteParticipant(ctx context.Context, tenantID string, id string) error {
+	tenantID = strings.TrimSpace(tenantID)
+	id = strings.TrimSpace(id)
+	if tenantID == "" || id == "" {
+		return newServiceError(400, "bad_request", "tenant_id and id are required")
+	}
+	return s.store.DeleteParticipant(ctx, tenantID, id)
+}
+
+func (s *Service) CreatePolicy(ctx context.Context, req CreatePolicyRequest) (MPCPolicy, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	req.Name = strings.TrimSpace(req.Name)
+	if req.TenantID == "" || req.Name == "" {
+		return MPCPolicy{}, newServiceError(400, "bad_request", "tenant_id and name are required")
+	}
+	policyID := newID("pol")
+	policy := MPCPolicy{
+		ID:          policyID,
+		TenantID:    req.TenantID,
+		Name:        req.Name,
+		Description: strings.TrimSpace(req.Description),
+		KeyIDs:      strings.TrimSpace(req.KeyIDs),
+		Enabled:     req.Enabled,
+	}
+	if err := s.store.CreatePolicy(ctx, policy); err != nil {
+		return MPCPolicy{}, err
+	}
+	for _, rp := range req.Rules {
+		rule := MPCPolicyRule{
+			ID:       newID("rule"),
+			PolicyID: policyID,
+			TenantID: req.TenantID,
+			RuleType: strings.TrimSpace(rp.RuleType),
+			Params:   strings.TrimSpace(rp.Params),
+		}
+		if err := s.store.CreatePolicyRule(ctx, rule); err != nil {
+			return MPCPolicy{}, err
+		}
+	}
+	_ = s.publishAudit(ctx, "audit.mpc.policy_created", req.TenantID, map[string]interface{}{
+		"policy_id": policyID, "name": req.Name, "rules": len(req.Rules),
+	})
+	return s.store.GetPolicy(ctx, req.TenantID, policyID)
+}
+
+func (s *Service) UpdatePolicy(ctx context.Context, tenantID string, id string, req UpdatePolicyRequest) (MPCPolicy, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	id = strings.TrimSpace(id)
+	if tenantID == "" || id == "" {
+		return MPCPolicy{}, newServiceError(400, "bad_request", "tenant_id and id are required")
+	}
+	if err := s.store.UpdatePolicy(ctx, tenantID, id, req); err != nil {
+		return MPCPolicy{}, err
+	}
+	// Replace rules if provided
+	if len(req.Rules) > 0 {
+		_ = s.store.DeletePolicyRules(ctx, tenantID, id)
+		for _, rp := range req.Rules {
+			rule := MPCPolicyRule{
+				ID:       newID("rule"),
+				PolicyID: id,
+				TenantID: tenantID,
+				RuleType: strings.TrimSpace(rp.RuleType),
+				Params:   strings.TrimSpace(rp.Params),
+			}
+			if err := s.store.CreatePolicyRule(ctx, rule); err != nil {
+				return MPCPolicy{}, err
+			}
+		}
+	}
+	return s.store.GetPolicy(ctx, tenantID, id)
+}
+
+func (s *Service) ListPolicies(ctx context.Context, tenantID string) ([]MPCPolicy, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, newServiceError(400, "bad_request", "tenant_id is required")
+	}
+	return s.store.ListPolicies(ctx, tenantID)
+}
+
+func (s *Service) DeletePolicy(ctx context.Context, tenantID string, id string) error {
+	tenantID = strings.TrimSpace(tenantID)
+	id = strings.TrimSpace(id)
+	if tenantID == "" || id == "" {
+		return newServiceError(400, "bad_request", "tenant_id and id are required")
+	}
+	return s.store.DeletePolicy(ctx, tenantID, id)
+}
+
+func (s *Service) RevokeKey(ctx context.Context, tenantID string, id string, reason string) (MPCKey, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	id = strings.TrimSpace(id)
+	if tenantID == "" || id == "" {
+		return MPCKey{}, newServiceError(400, "bad_request", "tenant_id and id are required")
+	}
+	if err := s.store.RevokeKey(ctx, tenantID, id, reason, s.now()); err != nil {
+		return MPCKey{}, err
+	}
+	_ = s.publishAudit(ctx, "audit.mpc.key_revoked", tenantID, map[string]interface{}{
+		"key_id": id, "reason": reason,
+	})
+	return s.GetMPCKey(ctx, tenantID, id)
+}
+
+func (s *Service) SetKeyGroup(ctx context.Context, tenantID string, id string, group string) (MPCKey, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	id = strings.TrimSpace(id)
+	if tenantID == "" || id == "" {
+		return MPCKey{}, newServiceError(400, "bad_request", "tenant_id and id are required")
+	}
+	if err := s.store.SetKeyGroup(ctx, tenantID, id, group); err != nil {
+		return MPCKey{}, err
+	}
+	return s.GetMPCKey(ctx, tenantID, id)
+}
+
+func (s *Service) ListCeremonies(ctx context.Context, tenantID string, filter CeremonyFilter, limit int) ([]MPCCeremony, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, newServiceError(400, "bad_request", "tenant_id is required")
+	}
+	return s.store.ListCeremonies(ctx, tenantID, filter, limit)
+}
+
+func (s *Service) GetOverview(ctx context.Context, tenantID string) (map[string]interface{}, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return nil, newServiceError(400, "bad_request", "tenant_id is required")
+	}
+	stats, err := s.store.GetOverviewStats(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	ceremonies, _ := s.store.ListCeremonies(ctx, tenantID, CeremonyFilter{}, 10)
+	participants, _ := s.store.ListParticipants(ctx, tenantID)
+	return map[string]interface{}{
+		"stats":              stats,
+		"recent_ceremonies":  ceremonies,
+		"participants":       participants,
+	}, nil
+}
+
+// evaluatePolicies checks all enabled policies for the given key.
+func (s *Service) evaluatePolicies(ctx context.Context, tenantID string, keyID string, signerCount int) error {
+	policies, err := s.store.ListPolicies(ctx, tenantID)
+	if err != nil {
+		return nil // fail open if store error
+	}
+	for _, policy := range policies {
+		if !policy.Enabled {
+			continue
+		}
+		// Check if policy applies to this key
+		if policy.KeyIDs != "" && !containsString(strings.Split(policy.KeyIDs, ","), keyID) {
+			continue
+		}
+		for _, rule := range policy.Rules {
+			if err := s.evaluateRule(ctx, tenantID, keyID, rule, signerCount); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *Service) evaluateRule(ctx context.Context, tenantID string, keyID string, rule MPCPolicyRule, signerCount int) error {
+	params := parseJSONObject(rule.Params)
+	switch rule.RuleType {
+	case "quorum_override":
+		minSigners := extractInt(params["min_signers"])
+		if minSigners > 0 && signerCount < minSigners {
+			return newServiceError(403, "policy_violation",
+				fmt.Sprintf("policy requires at least %d signers, got %d", minSigners, signerCount))
+		}
+	case "velocity_limit":
+		maxPerHour := extractInt(params["max_per_hour"])
+		if maxPerHour > 0 {
+			recent, _ := s.store.ListCeremonies(ctx, tenantID, CeremonyFilter{Type: "sign"}, 500)
+			oneHourAgo := s.now().Add(-time.Hour)
+			count := 0
+			for _, c := range recent {
+				if c.KeyID == keyID && c.CreatedAt.After(oneHourAgo) {
+					count++
+				}
+			}
+			if count >= maxPerHour {
+				return newServiceError(429, "policy_violation",
+					fmt.Sprintf("velocity limit: %d sign ceremonies in last hour (max %d)", count, maxPerHour))
+			}
+		}
+	case "time_window":
+		allowedHours := firstString(params["allowed_hours"])
+		if allowedHours != "" {
+			tz := firstString(params["timezone"])
+			loc := time.UTC
+			if tz != "" {
+				if parsed, err := time.LoadLocation(tz); err == nil {
+					loc = parsed
+				}
+			}
+			now := s.now().In(loc)
+			parts := strings.SplitN(allowedHours, "-", 2)
+			if len(parts) == 2 {
+				startH, startM := parseHourMin(parts[0])
+				endH, endM := parseHourMin(parts[1])
+				nowMins := now.Hour()*60 + now.Minute()
+				startMins := startH*60 + startM
+				endMins := endH*60 + endM
+				if nowMins < startMins || nowMins > endMins {
+					return newServiceError(403, "policy_violation",
+						fmt.Sprintf("signing not allowed outside %s (current: %02d:%02d %s)", allowedHours, now.Hour(), now.Minute(), loc))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func parseHourMin(s string) (int, int) {
+	s = strings.TrimSpace(s)
+	parts := strings.SplitN(s, ":", 2)
+	h := atoi(parts[0])
+	m := 0
+	if len(parts) > 1 {
+		m = atoi(parts[1])
+	}
+	return h, m
 }

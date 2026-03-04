@@ -65,6 +65,13 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /certs/upload-3p", h.handleUploadThirdPartyCert)
 	mux.HandleFunc("POST /certs/internal/mtls/{service}", h.handleIssueInternalMTLS)
 
+	// Certificate Transparency (Merkle)
+	mux.HandleFunc("POST /certs/merkle/build", h.handleMerkleBuild)
+	mux.HandleFunc("GET /certs/merkle/epochs", h.handleMerkleEpochs)
+	mux.HandleFunc("GET /certs/merkle/epochs/{id}", h.handleMerkleEpoch)
+	mux.HandleFunc("GET /certs/merkle/proof/{id}", h.handleCertProof)
+	mux.HandleFunc("POST /certs/merkle/verify", h.handleMerkleVerify)
+
 	mux.HandleFunc("GET /acme/directory", h.handleACMEDirectory)
 	mux.HandleFunc("HEAD /acme/new-nonce", h.handleACMENonce)
 	mux.HandleFunc("POST /acme/new-nonce", h.handleACMENonce)
@@ -1394,4 +1401,113 @@ func scepMessageTypeToOperation(mt scepwire.MessageType) string {
 	default:
 		return ""
 	}
+}
+
+// ── Certificate Transparency (Merkle) handlers ──────────────
+
+func (h *Handler) handleMerkleBuild(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	maxLeaves := 500
+	if v := r.URL.Query().Get("max_leaves"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			maxLeaves = n
+		}
+	}
+	result, err := h.svc.store.BuildCertMerkleEpoch(r.Context(), tenantID, maxLeaves)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "merkle_build_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if result == nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{"status": "no_new_certs", "request_id": reqID})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"epoch": result.Epoch, "leaves": result.Leaves, "request_id": reqID})
+}
+
+func (h *Handler) handleMerkleEpochs(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	limit := 50
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	items, err := h.svc.store.ListCertMerkleEpochs(r.Context(), tenantID, limit)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "merkle_list_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if items == nil {
+		items = []CertMerkleEpoch{}
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleMerkleEpoch(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	epochID := r.PathValue("id")
+	epoch, err := h.svc.store.GetCertMerkleEpoch(r.Context(), tenantID, epochID)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, errStoreNotFound) {
+			status = http.StatusNotFound
+		}
+		writeErr(w, status, "merkle_epoch_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"epoch": epoch, "request_id": reqID})
+}
+
+func (h *Handler) handleCertProof(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	certID := r.PathValue("id")
+	proof, err := h.svc.store.GetCertMerkleProof(r.Context(), tenantID, certID)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errors.Is(err, errStoreNotFound) {
+			status = http.StatusNotFound
+		}
+		writeErr(w, status, "cert_proof_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"proof": proof, "request_id": reqID})
+}
+
+func (h *Handler) handleMerkleVerify(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var body struct {
+		LeafHash  string         `json:"leaf_hash"`
+		LeafIndex int            `json:"leaf_index"`
+		Siblings  []ProofSibling `json:"siblings"`
+		Root      string         `json:"root"`
+	}
+	if err := decodeJSON(r, &body); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	proof := MerkleProof{
+		LeafHash:  body.LeafHash,
+		LeafIndex: body.LeafIndex,
+		Siblings:  body.Siblings,
+		Root:      body.Root,
+	}
+	valid := VerifyProof(proof)
+	writeJSON(w, http.StatusOK, map[string]interface{}{"valid": valid, "root": body.Root, "request_id": reqID})
 }

@@ -191,6 +191,9 @@ type GovernanceSystemState struct {
 	PostureRequireStepUpAuth         bool      `json:"posture_require_step_up_auth"`
 	PosturePauseConnectorSync        bool      `json:"posture_pause_connector_sync"`
 	PostureGuardrailPolicyRequired   bool      `json:"posture_guardrail_policy_required"`
+	QRNGEnabled                      bool      `json:"qrng_enabled"`
+	QRNGDefaultSource                string    `json:"qrng_default_source"`
+	QRNGMinEntropyBPB                float64   `json:"qrng_min_entropy_bpb"`
 	UpdatedBy                        string    `json:"updated_by"`
 	UpdatedAt                        time.Time `json:"updated_at"`
 }

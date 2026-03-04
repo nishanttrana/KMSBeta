@@ -47,6 +47,24 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /mpc/keys", h.handleKeys)
 	mux.HandleFunc("GET /mpc/keys/{id}", h.handleKey)
 	mux.HandleFunc("POST /mpc/keys/{id}/rotate", h.handleKeyRotate)
+	mux.HandleFunc("POST /mpc/keys/{id}/revoke", h.handleKeyRevoke)
+	mux.HandleFunc("PUT /mpc/keys/{id}/group", h.handleKeyGroup)
+
+	// Enterprise routes
+	mux.HandleFunc("GET /mpc/overview", h.handleOverview)
+	mux.HandleFunc("GET /mpc/ceremonies", h.handleCeremonies)
+
+	mux.HandleFunc("POST /mpc/participants", h.handleCreateParticipant)
+	mux.HandleFunc("GET /mpc/participants", h.handleListParticipants)
+	mux.HandleFunc("GET /mpc/participants/{id}", h.handleGetParticipant)
+	mux.HandleFunc("PUT /mpc/participants/{id}", h.handleUpdateParticipant)
+	mux.HandleFunc("DELETE /mpc/participants/{id}", h.handleDeleteParticipant)
+
+	mux.HandleFunc("POST /mpc/policies", h.handleCreatePolicy)
+	mux.HandleFunc("GET /mpc/policies", h.handleListPolicies)
+	mux.HandleFunc("GET /mpc/policies/{id}", h.handleGetPolicy)
+	mux.HandleFunc("PUT /mpc/policies/{id}", h.handleUpdatePolicy)
+	mux.HandleFunc("DELETE /mpc/policies/{id}", h.handleDeletePolicy)
 
 	return mux
 }
@@ -307,6 +325,225 @@ func (h *Handler) handleKeyRotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"item": item, "request_id": reqID})
+}
+
+// ── Enterprise handlers ──────────────────────────────────────
+
+func (h *Handler) handleOverview(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	overview, err := h.svc.GetOverview(r.Context(), tenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"overview": overview, "request_id": reqID})
+}
+
+func (h *Handler) handleCeremonies(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	filter := CeremonyFilter{
+		Type:   strings.TrimSpace(r.URL.Query().Get("type")),
+		Status: strings.TrimSpace(r.URL.Query().Get("status")),
+	}
+	limit := atoi(r.URL.Query().Get("limit"))
+	items, err := h.svc.ListCeremonies(r.Context(), tenantID, filter, limit)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleKeyRevoke(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req RevokeKeyRequest
+	_ = decodeJSONAllowEmpty(r, &req)
+	item, err := h.svc.RevokeKey(r.Context(), tenantID, r.PathValue("id"), req.Reason)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"item": item, "request_id": reqID})
+}
+
+func (h *Handler) handleKeyGroup(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req SetKeyGroupRequest
+	_ = decodeJSONAllowEmpty(r, &req)
+	item, err := h.svc.SetKeyGroup(r.Context(), tenantID, r.PathValue("id"), req.Group)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"item": item, "request_id": reqID})
+}
+
+func (h *Handler) handleCreateParticipant(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req RegisterParticipantRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
+	item, err := h.svc.RegisterParticipant(r.Context(), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{"participant": item, "request_id": reqID})
+}
+
+func (h *Handler) handleListParticipants(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.svc.ListParticipants(r.Context(), tenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleGetParticipant(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	item, err := h.svc.store.GetParticipant(r.Context(), tenantID, r.PathValue("id"))
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"participant": item, "request_id": reqID})
+}
+
+func (h *Handler) handleUpdateParticipant(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req UpdateParticipantRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	item, err := h.svc.UpdateParticipant(r.Context(), tenantID, r.PathValue("id"), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"participant": item, "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteParticipant(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	if err := h.svc.DeleteParticipant(r.Context(), tenantID, r.PathValue("id")); err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"deleted": true, "request_id": reqID})
+}
+
+func (h *Handler) handleCreatePolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req CreatePolicyRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
+	item, err := h.svc.CreatePolicy(r.Context(), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]interface{}{"policy": item, "request_id": reqID})
+}
+
+func (h *Handler) handleListPolicies(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.svc.ListPolicies(r.Context(), tenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleGetPolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	item, err := h.svc.store.GetPolicy(r.Context(), tenantID, r.PathValue("id"))
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
+}
+
+func (h *Handler) handleUpdatePolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req UpdatePolicyRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	item, err := h.svc.UpdatePolicy(r.Context(), tenantID, r.PathValue("id"), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
+}
+
+func (h *Handler) handleDeletePolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	if err := h.svc.DeletePolicy(r.Context(), tenantID, r.PathValue("id")); err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"deleted": true, "request_id": reqID})
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {

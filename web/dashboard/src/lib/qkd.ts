@@ -186,3 +186,105 @@ export async function runQKDTestGenerate(session: AuthSession, input: QKDGenerat
   });
   return out.result;
 }
+
+// ── Slave SAE Registry ─────────────────────────────────────
+
+export type SlaveSAE = {
+  id: string;
+  tenant_id: string;
+  name: string;
+  endpoint: string;
+  auth_token?: string;
+  protocol: string;
+  role: string;
+  mode: string;
+  status: string;
+  last_sync_at?: string;
+  keys_distributed: number;
+  keys_available: number;
+  max_key_rate: number;
+  qber_threshold: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type Distribution = {
+  id: string;
+  tenant_id: string;
+  slave_sae_id: string;
+  key_count: number;
+  key_size_bits: number;
+  status: string;
+  error_message?: string;
+  distributed_at?: string;
+};
+
+export type RegisterSAEInput = {
+  name: string;
+  endpoint: string;
+  auth_token?: string;
+  protocol?: string;
+  role?: string;
+  mode?: string;
+  max_key_rate?: number;
+  qber_threshold?: number;
+};
+
+export type DistributeKeysInput = {
+  count: number;
+  key_size_bits?: number;
+};
+
+type SAEResponse = { sae: SlaveSAE };
+type SAEListResponse = { items: SlaveSAE[] };
+type DistributeResponse = { result: { distribution_id: string; slave_sae_id: string; key_count: number; key_ids: string[]; status: string } };
+type DistributionListResponse = { items: Distribution[] };
+
+export async function registerSlaveSAE(session: AuthSession, input: RegisterSAEInput): Promise<SlaveSAE> {
+  const out = await serviceRequest<SAEResponse>(session, "qkd", "/qkd/v1/sae", {
+    method: "POST",
+    body: JSON.stringify({ tenant_id: session.tenantId, ...input })
+  });
+  return out.sae;
+}
+
+export async function listSlaveSAEs(session: AuthSession): Promise<SlaveSAE[]> {
+  const out = await serviceRequest<SAEListResponse>(session, "qkd", `/qkd/v1/sae?${tenantQuery(session)}`);
+  return Array.isArray(out.items) ? out.items : [];
+}
+
+export async function getSlaveSAE(session: AuthSession, id: string): Promise<SlaveSAE> {
+  const out = await serviceRequest<SAEResponse>(session, "qkd", `/qkd/v1/sae/${encodeURIComponent(id)}?${tenantQuery(session)}`);
+  return out.sae;
+}
+
+export async function updateSlaveSAE(session: AuthSession, id: string, input: RegisterSAEInput): Promise<SlaveSAE> {
+  const out = await serviceRequest<SAEResponse>(session, "qkd", `/qkd/v1/sae/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify({ tenant_id: session.tenantId, ...input })
+  });
+  return out.sae;
+}
+
+export async function deleteSlaveSAE(session: AuthSession, id: string): Promise<void> {
+  await serviceRequest<{ deleted: boolean }>(session, "qkd", `/qkd/v1/sae/${encodeURIComponent(id)}?${tenantQuery(session)}`, {
+    method: "DELETE"
+  });
+}
+
+export async function distributeKeys(session: AuthSession, saeId: string, input: DistributeKeysInput): Promise<DistributeResponse["result"]> {
+  const out = await serviceRequest<DistributeResponse>(session, "qkd", `/qkd/v1/sae/${encodeURIComponent(saeId)}/distribute`, {
+    method: "POST",
+    body: JSON.stringify({ tenant_id: session.tenantId, slave_sae_id: saeId, ...input })
+  });
+  return out.result;
+}
+
+export async function listDistributions(session: AuthSession, slaveSaeId?: string, limit = 50): Promise<Distribution[]> {
+  const qs = new URLSearchParams();
+  qs.set("tenant_id", session.tenantId);
+  if (slaveSaeId) qs.set("slave_sae_id", slaveSaeId);
+  if (limit > 0) qs.set("limit", String(limit));
+  const out = await serviceRequest<DistributionListResponse>(session, "qkd", `/qkd/v1/distributions?${qs.toString()}`);
+  return Array.isArray(out.items) ? out.items : [];
+}

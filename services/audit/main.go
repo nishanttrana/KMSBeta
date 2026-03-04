@@ -125,6 +125,33 @@ func main() {
 		}
 	}()
 
+	// Merkle epoch builder — builds epochs every hour or when 1000+ events accumulate
+	go func() {
+		t := time.NewTicker(1 * time.Hour)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				rows, err := dbConn.SQL().QueryContext(ctx, `SELECT DISTINCT tenant_id FROM audit_events`)
+				if err != nil {
+					continue
+				}
+				for rows.Next() {
+					var tenantID string
+					if err := rows.Scan(&tenantID); err == nil {
+						if result, err := store.BuildMerkleEpoch(ctx, tenantID, 1000); err == nil && result != nil {
+							logger.Printf("merkle epoch built: tenant=%s epoch=%d root=%s leaves=%d",
+								tenantID, result.Epoch.EpochNumber, result.Epoch.TreeRoot, result.Leaves)
+						}
+					}
+				}
+				rows.Close() //nolint:errcheck
+			}
+		}
+	}()
+
 	httpPort := envOr("HTTP_PORT", "8070")
 	httpSrv := &http.Server{
 		Addr:              ":" + httpPort,

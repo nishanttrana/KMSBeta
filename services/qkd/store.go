@@ -42,6 +42,16 @@ type Store interface {
 
 	InsertLog(ctx context.Context, entry QKDLogEntry) error
 	ListLogs(ctx context.Context, tenantID string, limit int) ([]QKDLogEntry, error)
+
+	CreateSlaveSAE(ctx context.Context, sae SlaveSAE) error
+	UpdateSlaveSAE(ctx context.Context, sae SlaveSAE) error
+	GetSlaveSAE(ctx context.Context, tenantID string, id string) (SlaveSAE, error)
+	ListSlaveSAEs(ctx context.Context, tenantID string) ([]SlaveSAE, error)
+	DeleteSlaveSAE(ctx context.Context, tenantID string, id string) error
+	IncrementSAEDistributed(ctx context.Context, tenantID string, id string, count int64) error
+
+	CreateDistribution(ctx context.Context, d Distribution) error
+	ListDistributions(ctx context.Context, tenantID string, slaveSAEID string, limit int) ([]Distribution, error)
 }
 
 type SQLStore struct {
@@ -632,4 +642,147 @@ func toString(v interface{}) string {
 	default:
 		return ""
 	}
+}
+
+// ── Slave SAE Store Methods ────────────────────────────────
+
+func (s *SQLStore) CreateSlaveSAE(ctx context.Context, sae SlaveSAE) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO qkd_slave_sae (id, tenant_id, name, endpoint, auth_token, protocol, role, mode, status,
+    max_key_rate, qber_threshold, created_at, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+		sae.ID, sae.TenantID, sae.Name, sae.Endpoint, sae.AuthToken, sae.Protocol, sae.Role, sae.Mode,
+		sae.Status, sae.MaxKeyRate, sae.QBERThreshold, sae.CreatedAt.UTC(), sae.UpdatedAt.UTC())
+	return err
+}
+
+func (s *SQLStore) UpdateSlaveSAE(ctx context.Context, sae SlaveSAE) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE qkd_slave_sae SET name=$3, endpoint=$4, auth_token=$5, protocol=$6, role=$7, mode=$8,
+    status=$9, max_key_rate=$10, qber_threshold=$11, updated_at=$12
+WHERE tenant_id=$1 AND id=$2`,
+		sae.TenantID, sae.ID, sae.Name, sae.Endpoint, sae.AuthToken, sae.Protocol, sae.Role, sae.Mode,
+		sae.Status, sae.MaxKeyRate, sae.QBERThreshold, sae.UpdatedAt.UTC())
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) GetSlaveSAE(ctx context.Context, tenantID string, id string) (SlaveSAE, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT id, tenant_id, name, endpoint, auth_token, protocol, role, mode, status,
+    last_sync_at, keys_distributed, keys_available, max_key_rate, qber_threshold, created_at, updated_at
+FROM qkd_slave_sae WHERE tenant_id=$1 AND id=$2`, tenantID, id)
+	var out SlaveSAE
+	var lastSync sql.NullTime
+	err := row.Scan(&out.ID, &out.TenantID, &out.Name, &out.Endpoint, &out.AuthToken,
+		&out.Protocol, &out.Role, &out.Mode, &out.Status,
+		&lastSync, &out.KeysDistributed, &out.KeysAvailable, &out.MaxKeyRate, &out.QBERThreshold,
+		&out.CreatedAt, &out.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return SlaveSAE{}, errNotFound
+	}
+	if lastSync.Valid {
+		out.LastSyncAt = lastSync.Time.UTC()
+	}
+	return out, err
+}
+
+func (s *SQLStore) ListSlaveSAEs(ctx context.Context, tenantID string) ([]SlaveSAE, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, tenant_id, name, endpoint, '', protocol, role, mode, status,
+    last_sync_at, keys_distributed, keys_available, max_key_rate, qber_threshold, created_at, updated_at
+FROM qkd_slave_sae WHERE tenant_id=$1 ORDER BY updated_at DESC`, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []SlaveSAE
+	for rows.Next() {
+		var item SlaveSAE
+		var lastSync sql.NullTime
+		if err := rows.Scan(&item.ID, &item.TenantID, &item.Name, &item.Endpoint, &item.AuthToken,
+			&item.Protocol, &item.Role, &item.Mode, &item.Status,
+			&lastSync, &item.KeysDistributed, &item.KeysAvailable, &item.MaxKeyRate, &item.QBERThreshold,
+			&item.CreatedAt, &item.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if lastSync.Valid {
+			item.LastSyncAt = lastSync.Time.UTC()
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) DeleteSlaveSAE(ctx context.Context, tenantID string, id string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `DELETE FROM qkd_slave_sae WHERE tenant_id=$1 AND id=$2`, tenantID, id)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) IncrementSAEDistributed(ctx context.Context, tenantID string, id string, count int64) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+UPDATE qkd_slave_sae SET keys_distributed = keys_distributed + $3, last_sync_at = $4, updated_at = $4
+WHERE tenant_id=$1 AND id=$2`, tenantID, id, count, time.Now().UTC())
+	return err
+}
+
+func (s *SQLStore) CreateDistribution(ctx context.Context, d Distribution) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO qkd_distributions (id, tenant_id, slave_sae_id, key_count, key_size_bits, status, error_message, distributed_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+		d.ID, d.TenantID, d.SlaveSAEID, d.KeyCount, d.KeySizeBits, d.Status, d.ErrorMessage, d.DistributedAt.UTC())
+	return err
+}
+
+func (s *SQLStore) ListDistributions(ctx context.Context, tenantID string, slaveSAEID string, limit int) ([]Distribution, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	q := `SELECT id, tenant_id, slave_sae_id, key_count, key_size_bits, status, error_message, distributed_at
+FROM qkd_distributions WHERE tenant_id=$1`
+	args := []interface{}{tenantID}
+	if strings.TrimSpace(slaveSAEID) != "" {
+		q += ` AND slave_sae_id=$2`
+		args = append(args, slaveSAEID)
+	}
+	q += ` ORDER BY distributed_at DESC LIMIT ` + intToStr(limit)
+
+	rows, err := s.db.SQL().QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Distribution
+	for rows.Next() {
+		var d Distribution
+		if err := rows.Scan(&d.ID, &d.TenantID, &d.SlaveSAEID, &d.KeyCount, &d.KeySizeBits,
+			&d.Status, &d.ErrorMessage, &d.DistributedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
+}
+
+func intToStr(n int) string {
+	if n <= 0 {
+		return "50"
+	}
+	s := ""
+	for n > 0 {
+		s = string(rune('0'+n%10)) + s
+		n /= 10
+	}
+	return s
 }

@@ -22,6 +22,8 @@ type Store interface {
 	UpdateMPCKey(ctx context.Context, item MPCKey) error
 	GetMPCKey(ctx context.Context, tenantID string, id string) (MPCKey, error)
 	ListMPCKeys(ctx context.Context, tenantID string, limit int, offset int) ([]MPCKey, error)
+	RevokeKey(ctx context.Context, tenantID string, id string, reason string, revokedAt interface{}) error
+	SetKeyGroup(ctx context.Context, tenantID string, id string, group string) error
 
 	ReplaceShares(ctx context.Context, tenantID string, keyID string, shares []MPCShare, oldStatus string) error
 	ListShares(ctx context.Context, tenantID string, keyID string) ([]MPCShare, error)
@@ -33,8 +35,25 @@ type Store interface {
 	CreateCeremony(ctx context.Context, item MPCCeremony) error
 	UpdateCeremony(ctx context.Context, item MPCCeremony) error
 	GetCeremony(ctx context.Context, tenantID string, id string) (MPCCeremony, error)
+	ListCeremonies(ctx context.Context, tenantID string, filter CeremonyFilter, limit int) ([]MPCCeremony, error)
 	ListCeremonyContributions(ctx context.Context, tenantID string, ceremonyID string) ([]MPCContribution, error)
 	UpsertCeremonyContribution(ctx context.Context, item MPCContribution) error
+
+	CreateParticipant(ctx context.Context, item MPCParticipant) error
+	GetParticipant(ctx context.Context, tenantID string, id string) (MPCParticipant, error)
+	ListParticipants(ctx context.Context, tenantID string) ([]MPCParticipant, error)
+	UpdateParticipant(ctx context.Context, tenantID string, id string, req UpdateParticipantRequest) error
+	DeleteParticipant(ctx context.Context, tenantID string, id string) error
+
+	CreatePolicy(ctx context.Context, item MPCPolicy) error
+	GetPolicy(ctx context.Context, tenantID string, id string) (MPCPolicy, error)
+	ListPolicies(ctx context.Context, tenantID string) ([]MPCPolicy, error)
+	UpdatePolicy(ctx context.Context, tenantID string, id string, req UpdatePolicyRequest) error
+	DeletePolicy(ctx context.Context, tenantID string, id string) error
+	CreatePolicyRule(ctx context.Context, item MPCPolicyRule) error
+	DeletePolicyRules(ctx context.Context, tenantID string, policyID string) error
+
+	GetOverviewStats(ctx context.Context, tenantID string) (MPCOverviewStats, error)
 }
 
 type MPCKey struct {
@@ -50,6 +69,10 @@ type MPCKey struct {
 	Status            string                 `json:"status"`
 	ShareVersion      int                    `json:"share_version"`
 	Metadata          map[string]interface{} `json:"metadata"`
+	KeyGroup          string                 `json:"key_group"`
+	ExpiresAt         time.Time              `json:"expires_at,omitempty"`
+	RevokedAt         time.Time              `json:"revoked_at,omitempty"`
+	RevocationReason  string                 `json:"revocation_reason,omitempty"`
 	CreatedAt         time.Time              `json:"created_at"`
 	UpdatedAt         time.Time              `json:"updated_at"`
 	LastRotatedAt     time.Time              `json:"last_rotated_at"`
@@ -162,4 +185,101 @@ type KeyRotateRequest struct {
 	TenantID  string `json:"tenant_id"`
 	Actor     string `json:"actor"`
 	Algorithm string `json:"algorithm"`
+}
+
+// ── Enterprise types ──────────────────────────────────────────
+
+type MPCParticipant struct {
+	ID         string    `json:"id"`
+	TenantID   string    `json:"tenant_id"`
+	Name       string    `json:"name"`
+	Endpoint   string    `json:"endpoint"`
+	PublicKey  string    `json:"public_key"`
+	Status     string    `json:"status"`
+	LastSeenAt time.Time `json:"last_seen_at,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
+}
+
+type MPCPolicy struct {
+	ID          string          `json:"id"`
+	TenantID    string          `json:"tenant_id"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	KeyIDs      string          `json:"key_ids"`
+	Enabled     bool            `json:"enabled"`
+	Rules       []MPCPolicyRule `json:"rules,omitempty"`
+	CreatedAt   time.Time       `json:"created_at"`
+	UpdatedAt   time.Time       `json:"updated_at"`
+}
+
+type MPCPolicyRule struct {
+	ID        string    `json:"id"`
+	PolicyID  string    `json:"policy_id"`
+	TenantID  string    `json:"tenant_id"`
+	RuleType  string    `json:"rule_type"`
+	Params    string    `json:"params"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type MPCOverviewStats struct {
+	TotalKeys           int `json:"total_keys"`
+	ActiveKeys          int `json:"active_keys"`
+	RevokedKeys         int `json:"revoked_keys"`
+	TotalCeremonies     int `json:"total_ceremonies"`
+	PendingCeremonies   int `json:"pending_ceremonies"`
+	CompletedCeremonies int `json:"completed_ceremonies"`
+	FailedCeremonies    int `json:"failed_ceremonies"`
+	ActiveParticipants  int `json:"active_participants"`
+	TotalParticipants   int `json:"total_participants"`
+	ActivePolicies      int `json:"active_policies"`
+}
+
+type RegisterParticipantRequest struct {
+	TenantID  string `json:"tenant_id"`
+	Name      string `json:"name"`
+	Endpoint  string `json:"endpoint"`
+	PublicKey string `json:"public_key"`
+}
+
+type UpdateParticipantRequest struct {
+	Name      string `json:"name,omitempty"`
+	Endpoint  string `json:"endpoint,omitempty"`
+	PublicKey string `json:"public_key,omitempty"`
+	Status    string `json:"status,omitempty"`
+}
+
+type CreatePolicyRequest struct {
+	TenantID    string                   `json:"tenant_id"`
+	Name        string                   `json:"name"`
+	Description string                   `json:"description"`
+	KeyIDs      string                   `json:"key_ids"`
+	Enabled     bool                     `json:"enabled"`
+	Rules       []CreatePolicyRuleParams `json:"rules"`
+}
+
+type CreatePolicyRuleParams struct {
+	RuleType string `json:"rule_type"`
+	Params   string `json:"params"`
+}
+
+type UpdatePolicyRequest struct {
+	Name        string                   `json:"name,omitempty"`
+	Description string                   `json:"description,omitempty"`
+	KeyIDs      string                   `json:"key_ids,omitempty"`
+	Enabled     *bool                    `json:"enabled,omitempty"`
+	Rules       []CreatePolicyRuleParams `json:"rules,omitempty"`
+}
+
+type RevokeKeyRequest struct {
+	Reason string `json:"reason"`
+}
+
+type SetKeyGroupRequest struct {
+	Group string `json:"group"`
+}
+
+type CeremonyFilter struct {
+	Type   string
+	Status string
 }
