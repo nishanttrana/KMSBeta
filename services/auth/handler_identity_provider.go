@@ -28,7 +28,7 @@ func (h *Handler) handleListIdentityProviderConfigs(w http.ResponseWriter, r *ht
 		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
 		return
 	}
-	providers := []string{identityProviderAD, identityProviderEntra}
+	providers := []string{identityProviderAD, identityProviderEntra, identityProviderSAML, identityProviderOIDC, identityProviderLDAP}
 	items := make([]IdentityProviderConfigView, 0, len(providers))
 	for _, provider := range providers {
 		cfg, getErr := h.store.GetIdentityProviderConfig(r.Context(), targetTenant, provider)
@@ -59,7 +59,7 @@ func (h *Handler) handleGetIdentityProviderConfig(w http.ResponseWriter, r *http
 	}
 	provider, ok := normalizeIdentityProvider(r.PathValue("provider"))
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "bad_request", "provider must be ad or entra", reqID, targetTenant)
+		writeErr(w, http.StatusBadRequest, "bad_request", "unsupported provider", reqID, targetTenant)
 		return
 	}
 	cfg, getErr := h.store.GetIdentityProviderConfig(r.Context(), targetTenant, provider)
@@ -83,7 +83,7 @@ func (h *Handler) handleUpsertIdentityProviderConfig(w http.ResponseWriter, r *h
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
 	provider, ok := normalizeIdentityProvider(r.PathValue("provider"))
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "bad_request", "provider must be ad or entra", reqID, claims.TenantID)
+		writeErr(w, http.StatusBadRequest, "bad_request", "unsupported provider", reqID, claims.TenantID)
 		return
 	}
 	var req identityProviderPatchRequest
@@ -139,7 +139,7 @@ func (h *Handler) handleTestIdentityProviderConnection(w http.ResponseWriter, r 
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
 	provider, ok := normalizeIdentityProvider(r.PathValue("provider"))
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "bad_request", "provider must be ad or entra", reqID, claims.TenantID)
+		writeErr(w, http.StatusBadRequest, "bad_request", "unsupported provider", reqID, claims.TenantID)
 		return
 	}
 	var req identityProviderPatchRequest
@@ -203,7 +203,7 @@ func (h *Handler) handleListIdentityProviderUsers(w http.ResponseWriter, r *http
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
 	provider, ok := normalizeIdentityProvider(r.PathValue("provider"))
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "bad_request", "provider must be ad or entra", reqID, claims.TenantID)
+		writeErr(w, http.StatusBadRequest, "bad_request", "unsupported provider", reqID, claims.TenantID)
 		return
 	}
 	targetTenant, err := h.resolveTenantScope(r, claims, "auth.tenant.read", r.URL.Query().Get("tenant_id"))
@@ -253,7 +253,7 @@ func (h *Handler) handleListIdentityProviderGroups(w http.ResponseWriter, r *htt
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
 	provider, ok := normalizeIdentityProvider(r.PathValue("provider"))
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "bad_request", "provider must be ad or entra", reqID, claims.TenantID)
+		writeErr(w, http.StatusBadRequest, "bad_request", "unsupported provider", reqID, claims.TenantID)
 		return
 	}
 	targetTenant, err := h.resolveTenantScope(r, claims, "auth.tenant.read", r.URL.Query().Get("tenant_id"))
@@ -303,7 +303,7 @@ func (h *Handler) handleListIdentityProviderGroupMembers(w http.ResponseWriter, 
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
 	provider, ok := normalizeIdentityProvider(r.PathValue("provider"))
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "bad_request", "provider must be ad or entra", reqID, claims.TenantID)
+		writeErr(w, http.StatusBadRequest, "bad_request", "unsupported provider", reqID, claims.TenantID)
 		return
 	}
 	targetTenant, err := h.resolveTenantScope(r, claims, "auth.tenant.read", r.URL.Query().Get("tenant_id"))
@@ -368,7 +368,7 @@ func (h *Handler) handleImportIdentityUsers(w http.ResponseWriter, r *http.Reque
 	}
 	provider, ok := normalizeIdentityProvider(req.Provider)
 	if !ok {
-		writeErr(w, http.StatusBadRequest, "bad_request", "provider must be ad or entra", reqID, claims.TenantID)
+		writeErr(w, http.StatusBadRequest, "bad_request", "unsupported provider", reqID, claims.TenantID)
 		return
 	}
 	targetTenant, err := h.resolveTenantScope(r, claims, "auth.tenant.write", req.TenantID, r.URL.Query().Get("tenant_id"))
@@ -570,6 +570,79 @@ func sanitizeIdentityProviderConfigRecord(cfg IdentityProviderConfig) (IdentityP
 		out.Secrets = map[string]any{}
 		if secret != "" {
 			out.Secrets["client_secret"] = secret
+		}
+		return out, nil
+	case identityProviderSAML:
+		out.Config = map[string]any{
+			"sp_entity_id":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "sp_entity_id", "")),
+			"acs_url":           strings.TrimSpace(identityProviderConfigMapString(out.Config, "acs_url", "")),
+			"idp_metadata_url":  strings.TrimSpace(identityProviderConfigMapString(out.Config, "idp_metadata_url", "")),
+			"idp_sso_url":       strings.TrimSpace(identityProviderConfigMapString(out.Config, "idp_sso_url", "")),
+			"name_id_format":    strings.TrimSpace(identityProviderConfigMapString(out.Config, "name_id_format", "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress")),
+			"sign_requests":     identityProviderConfigMapBool(out.Config, "sign_requests", false),
+			"auto_create_users": identityProviderConfigMapBool(out.Config, "auto_create_users", false),
+			"default_role":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "default_role", "viewer")),
+			"attr_username":     strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_username", "username")),
+			"attr_email":        strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_email", "email")),
+			"attr_display_name": strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_display_name", "displayName")),
+		}
+		cert := strings.TrimSpace(identityProviderConfigMapString(out.Secrets, "idp_certificate", ""))
+		spKey := strings.TrimSpace(identityProviderConfigMapString(out.Secrets, "sp_private_key", ""))
+		out.Secrets = map[string]any{}
+		if cert != "" {
+			out.Secrets["idp_certificate"] = cert
+		}
+		if spKey != "" {
+			out.Secrets["sp_private_key"] = spKey
+		}
+		return out, nil
+	case identityProviderOIDC:
+		out.Config = map[string]any{
+			"issuer_url":        strings.TrimSpace(identityProviderConfigMapString(out.Config, "issuer_url", "")),
+			"client_id":         strings.TrimSpace(identityProviderConfigMapString(out.Config, "client_id", "")),
+			"redirect_uri":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "redirect_uri", "")),
+			"scopes":            strings.TrimSpace(identityProviderConfigMapString(out.Config, "scopes", "openid profile email")),
+			"response_type":     strings.TrimSpace(identityProviderConfigMapString(out.Config, "response_type", "code")),
+			"auto_create_users": identityProviderConfigMapBool(out.Config, "auto_create_users", false),
+			"default_role":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "default_role", "viewer")),
+			"attr_username":     strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_username", "preferred_username")),
+			"attr_email":        strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_email", "email")),
+			"attr_display_name": strings.TrimSpace(identityProviderConfigMapString(out.Config, "attr_display_name", "name")),
+		}
+		secret := strings.TrimSpace(identityProviderConfigMapString(out.Secrets, "client_secret", ""))
+		out.Secrets = map[string]any{}
+		if secret != "" {
+			out.Secrets["client_secret"] = secret
+		}
+		return out, nil
+	case identityProviderLDAP:
+		timeoutSec := identityProviderConfigMapInt(out.Config, "timeout_sec", 10)
+		if timeoutSec < 3 {
+			timeoutSec = 3
+		}
+		if timeoutSec > 60 {
+			timeoutSec = 60
+		}
+		out.Config = map[string]any{
+			"server_url":           strings.TrimSpace(identityProviderConfigMapString(out.Config, "server_url", "")),
+			"base_dn":              strings.TrimSpace(identityProviderConfigMapString(out.Config, "base_dn", "")),
+			"bind_dn":              strings.TrimSpace(identityProviderConfigMapString(out.Config, "bind_dn", "")),
+			"user_search_filter":   strings.TrimSpace(identityProviderConfigMapString(out.Config, "user_search_filter", "(objectClass=inetOrgPerson)")),
+			"user_login_attr":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "user_login_attr", "uid")),
+			"user_email_attr":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "user_email_attr", "mail")),
+			"user_display_attr":    strings.TrimSpace(identityProviderConfigMapString(out.Config, "user_display_attr", "displayName")),
+			"group_search_filter":  strings.TrimSpace(identityProviderConfigMapString(out.Config, "group_search_filter", "(objectClass=groupOfNames)")),
+			"group_name_attr":      strings.TrimSpace(identityProviderConfigMapString(out.Config, "group_name_attr", "cn")),
+			"use_start_tls":        identityProviderConfigMapBool(out.Config, "use_start_tls", false),
+			"insecure_skip_verify": identityProviderConfigMapBool(out.Config, "insecure_skip_verify", false),
+			"timeout_sec":          timeoutSec,
+			"auto_create_users":    identityProviderConfigMapBool(out.Config, "auto_create_users", false),
+			"default_role":         strings.TrimSpace(identityProviderConfigMapString(out.Config, "default_role", "viewer")),
+		}
+		secret := strings.TrimSpace(identityProviderConfigMapString(out.Secrets, "bind_password", ""))
+		out.Secrets = map[string]any{}
+		if secret != "" {
+			out.Secrets["bind_password"] = secret
 		}
 		return out, nil
 	default:

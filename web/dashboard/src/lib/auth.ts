@@ -329,3 +329,44 @@ function deriveSessionAuthFromToken(
     permissions
   };
 }
+
+// --- SSO callback helpers ---
+
+export type SSOParams = {
+  provider: string;
+  token: string;
+  tenantId: string;
+};
+
+export function extractSSOParams(): SSOParams | null {
+  const params = new URLSearchParams(window.location.search);
+  const provider = params.get("sso_provider");
+  const token = params.get("sso_token");
+  const tenantId = params.get("sso_tenant");
+  if (!provider || !token || !tenantId) return null;
+  // Clean SSO params from URL
+  params.delete("sso_provider");
+  params.delete("sso_token");
+  params.delete("sso_tenant");
+  const remaining = params.toString();
+  const cleanURL = window.location.pathname + (remaining ? `?${remaining}` : "");
+  window.history.replaceState({}, "", cleanURL);
+  return { provider, token, tenantId };
+}
+
+export function createSSOSession(ssoParams: SSOParams): AuthSession {
+  const authz = deriveSessionAuthFromToken(ssoParams.token);
+  const claims = decodeTokenClaims(ssoParams.token);
+  const username = String((claims as Record<string, unknown>)?.user_id || ssoParams.provider).trim();
+  return {
+    tenantId: ssoParams.tenantId,
+    username,
+    token: ssoParams.token,
+    mode: "backend",
+    mustChangePassword: false,
+    role: authz.role,
+    permissions: authz.permissions,
+    idleTimeoutMinutes: undefined,
+    expiresAt: undefined
+  };
+}

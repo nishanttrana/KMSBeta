@@ -22,6 +22,9 @@ import (
 const (
 	identityProviderAD    = "ad"
 	identityProviderEntra = "entra"
+	identityProviderSAML  = "saml"
+	identityProviderOIDC  = "oidc"
+	identityProviderLDAP  = "ldap"
 )
 
 type ExternalDirectoryUser struct {
@@ -67,6 +70,12 @@ func normalizeIdentityProvider(provider string) (string, bool) {
 		return identityProviderAD, true
 	case identityProviderEntra:
 		return identityProviderEntra, true
+	case identityProviderSAML:
+		return identityProviderSAML, true
+	case identityProviderOIDC:
+		return identityProviderOIDC, true
+	case identityProviderLDAP:
+		return identityProviderLDAP, true
 	default:
 		return "", false
 	}
@@ -109,6 +118,50 @@ func defaultIdentityProviderConfig(tenantID string, provider string) IdentityPro
 			"graph_base":     "https://graph.microsoft.com/v1.0",
 			"timeout_sec":    10,
 		}
+	case identityProviderSAML:
+		cfg.Config = map[string]any{
+			"sp_entity_id":      "",
+			"acs_url":           "",
+			"idp_metadata_url":  "",
+			"idp_sso_url":       "",
+			"name_id_format":    "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+			"sign_requests":     false,
+			"auto_create_users": false,
+			"default_role":      "viewer",
+			"attr_username":     "username",
+			"attr_email":        "email",
+			"attr_display_name": "displayName",
+		}
+	case identityProviderOIDC:
+		cfg.Config = map[string]any{
+			"issuer_url":        "",
+			"client_id":         "",
+			"redirect_uri":      "",
+			"scopes":            "openid profile email",
+			"response_type":     "code",
+			"auto_create_users": false,
+			"default_role":      "viewer",
+			"attr_username":     "preferred_username",
+			"attr_email":        "email",
+			"attr_display_name": "name",
+		}
+	case identityProviderLDAP:
+		cfg.Config = map[string]any{
+			"server_url":           "",
+			"base_dn":              "",
+			"bind_dn":              "",
+			"user_search_filter":   "(objectClass=inetOrgPerson)",
+			"user_login_attr":      "uid",
+			"user_email_attr":      "mail",
+			"user_display_attr":    "displayName",
+			"group_search_filter":  "(objectClass=groupOfNames)",
+			"group_name_attr":      "cn",
+			"use_start_tls":        false,
+			"insecure_skip_verify": false,
+			"timeout_sec":          10,
+			"auto_create_users":    false,
+			"default_role":         "viewer",
+		}
 	}
 	return cfg
 }
@@ -147,6 +200,13 @@ func identityProviderConfigView(cfg IdentityProviderConfig) IdentityProviderConf
 		view.SecretPresence["bind_password_set"] = strings.TrimSpace(anyString(cfg.Secrets["bind_password"])) != ""
 	case identityProviderEntra:
 		view.SecretPresence["client_secret_set"] = strings.TrimSpace(anyString(cfg.Secrets["client_secret"])) != ""
+	case identityProviderSAML:
+		view.SecretPresence["idp_certificate_set"] = strings.TrimSpace(anyString(cfg.Secrets["idp_certificate"])) != ""
+		view.SecretPresence["sp_private_key_set"] = strings.TrimSpace(anyString(cfg.Secrets["sp_private_key"])) != ""
+	case identityProviderOIDC:
+		view.SecretPresence["client_secret_set"] = strings.TrimSpace(anyString(cfg.Secrets["client_secret"])) != ""
+	case identityProviderLDAP:
+		view.SecretPresence["bind_password_set"] = strings.TrimSpace(anyString(cfg.Secrets["bind_password"])) != ""
 	}
 	return view
 }
@@ -247,6 +307,10 @@ func newDirectoryClient(cfg IdentityProviderConfig) (directoryClient, error) {
 		return newADDirectoryClient(normalized), nil
 	case identityProviderEntra:
 		return newEntraDirectoryClient(normalized), nil
+	case identityProviderLDAP:
+		return newLDAPDirectoryClient(normalized), nil
+	case identityProviderSAML, identityProviderOIDC:
+		return nil, fmt.Errorf("%s provider does not support directory discovery", normalized.Provider)
 	default:
 		return nil, fmt.Errorf("unsupported identity provider: %s", normalized.Provider)
 	}
@@ -839,6 +903,271 @@ func (c *entraDirectoryClient) ListGroupMembers(ctx context.Context, groupID str
 			Email:       email,
 			DisplayName: display,
 			Source:      identityProviderEntra,
+		})
+	}
+	return out, nil
+}
+
+// --- Generic LDAP directory client (OpenLDAP, FreeIPA, etc.) ---
+
+type ldapDirectoryClient struct {
+	URL                string
+	BaseDN             string
+	BindDN             string
+	BindPassword       string
+	UserLoginAttr      string
+	UserEmailAttr      string
+	UserDisplayAttr    string
+	UserSearchFilter   string
+	GroupNameAttr      string
+	GroupSearchFilter  string
+	InsecureSkipVerify bool
+	UseStartTLS        bool
+	Timeout            time.Duration
+}
+
+func newLDAPDirectoryClient(cfg IdentityProviderConfig) *ldapDirectoryClient {
+	timeoutSec := identityProviderConfigMapInt(cfg.Config, "timeout_sec", 10)
+	if timeoutSec < 3 {
+		timeoutSec = 3
+	}
+	if timeoutSec > 60 {
+		timeoutSec = 60
+	}
+	return &ldapDirectoryClient{
+		URL:                identityProviderConfigMapString(cfg.Config, "server_url", ""),
+		BaseDN:             identityProviderConfigMapString(cfg.Config, "base_dn", ""),
+		BindDN:             identityProviderConfigMapString(cfg.Config, "bind_dn", ""),
+		BindPassword:       identityProviderConfigMapString(cfg.Secrets, "bind_password", ""),
+		UserLoginAttr:      identityProviderConfigMapString(cfg.Config, "user_login_attr", "uid"),
+		UserEmailAttr:      identityProviderConfigMapString(cfg.Config, "user_email_attr", "mail"),
+		UserDisplayAttr:    identityProviderConfigMapString(cfg.Config, "user_display_attr", "displayName"),
+		UserSearchFilter:   identityProviderConfigMapString(cfg.Config, "user_search_filter", "(objectClass=inetOrgPerson)"),
+		GroupNameAttr:      identityProviderConfigMapString(cfg.Config, "group_name_attr", "cn"),
+		GroupSearchFilter:  identityProviderConfigMapString(cfg.Config, "group_search_filter", "(objectClass=groupOfNames)"),
+		InsecureSkipVerify: identityProviderConfigMapBool(cfg.Config, "insecure_skip_verify", false),
+		UseStartTLS:        identityProviderConfigMapBool(cfg.Config, "use_start_tls", false),
+		Timeout:            time.Duration(timeoutSec) * time.Second,
+	}
+}
+
+func (c *ldapDirectoryClient) dial(_ context.Context) (*ldap.Conn, error) {
+	if strings.TrimSpace(c.URL) == "" {
+		return nil, errors.New("ldap server_url is required")
+	}
+	if strings.TrimSpace(c.BaseDN) == "" {
+		return nil, errors.New("ldap base_dn is required")
+	}
+	dialer := &net.Dialer{Timeout: c.Timeout}
+	conn, err := ldap.DialURL(c.URL, ldap.DialWithDialer(dialer))
+	if err != nil {
+		return nil, err
+	}
+	if strings.HasPrefix(strings.ToLower(strings.TrimSpace(c.URL)), "ldap://") && c.UseStartTLS {
+		if err := conn.StartTLS(&tls.Config{
+			MinVersion:         tls.VersionTLS12,
+			InsecureSkipVerify: c.InsecureSkipVerify, //nolint:gosec
+		}); err != nil {
+			conn.Close()
+			return nil, err
+		}
+	}
+	if strings.TrimSpace(c.BindDN) != "" {
+		if err := conn.Bind(c.BindDN, c.BindPassword); err != nil {
+			conn.Close()
+			return nil, err
+		}
+	}
+	return conn, nil
+}
+
+func (c *ldapDirectoryClient) Test(ctx context.Context) (map[string]any, error) {
+	conn, err := c.dial(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close() //nolint:errcheck
+	req := ldap.NewSearchRequest(
+		c.BaseDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 1, 0, false,
+		c.UserSearchFilter, []string{"dn"}, nil,
+	)
+	res, err := conn.Search(req)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"provider":      identityProviderLDAP,
+		"directory_url": c.URL,
+		"base_dn":       c.BaseDN,
+		"sample_users":  len(res.Entries),
+	}, nil
+}
+
+func (c *ldapDirectoryClient) ListUsers(ctx context.Context, query string, limit int) ([]ExternalDirectoryUser, error) {
+	conn, err := c.dial(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close() //nolint:errcheck
+
+	limit = clampIdentityLimit(limit, 50, 200)
+	filter := strings.TrimSpace(c.UserSearchFilter)
+	if filter == "" {
+		filter = "(objectClass=inetOrgPerson)"
+	}
+	q := strings.TrimSpace(query)
+	if q != "" {
+		escaped := ldap.EscapeFilter(q)
+		match := fmt.Sprintf("(|(%s=*%s*)(%s=*%s*)(%s=*%s*))", c.UserLoginAttr, escaped, c.UserEmailAttr, escaped, c.UserDisplayAttr, escaped)
+		filter = fmt.Sprintf("(&%s%s)", filter, match)
+	}
+	req := ldap.NewSearchRequest(
+		c.BaseDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, limit, 0, false,
+		filter, []string{c.UserLoginAttr, c.UserEmailAttr, c.UserDisplayAttr, "dn"}, nil,
+	)
+	res, err := conn.Search(req)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]ExternalDirectoryUser, 0, len(res.Entries))
+	for _, entry := range res.Entries {
+		username := sanitizeImportedUsername(entry.GetAttributeValue(c.UserLoginAttr))
+		email := strings.TrimSpace(entry.GetAttributeValue(c.UserEmailAttr))
+		displayName := strings.TrimSpace(entry.GetAttributeValue(c.UserDisplayAttr))
+		if username == "" {
+			username = fallbackIdentityUsername(email, displayName, entry.DN)
+		}
+		if username == "" {
+			continue
+		}
+		if email == "" {
+			email = fmt.Sprintf("%s@directory.local", username)
+		}
+		items = append(items, ExternalDirectoryUser{
+			ExternalID:  entry.DN,
+			Username:    username,
+			Email:       email,
+			DisplayName: displayName,
+			Source:      identityProviderLDAP,
+			DN:          entry.DN,
+		})
+	}
+	return items, nil
+}
+
+func (c *ldapDirectoryClient) ListGroups(ctx context.Context, query string, limit int) ([]ExternalDirectoryGroup, error) {
+	conn, err := c.dial(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close() //nolint:errcheck
+
+	limit = clampIdentityLimit(limit, 50, 200)
+	filter := strings.TrimSpace(c.GroupSearchFilter)
+	if filter == "" {
+		filter = "(objectClass=groupOfNames)"
+	}
+	q := strings.TrimSpace(query)
+	if q != "" {
+		escaped := ldap.EscapeFilter(q)
+		match := fmt.Sprintf("(%s=*%s*)", c.GroupNameAttr, escaped)
+		filter = fmt.Sprintf("(&%s%s)", filter, match)
+	}
+	req := ldap.NewSearchRequest(
+		c.BaseDN, ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, limit, 0, false,
+		filter, []string{c.GroupNameAttr, "description", "member", "dn"}, nil,
+	)
+	res, err := conn.Search(req)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]ExternalDirectoryGroup, 0, len(res.Entries))
+	for _, entry := range res.Entries {
+		name := strings.TrimSpace(entry.GetAttributeValue(c.GroupNameAttr))
+		if name == "" {
+			continue
+		}
+		items = append(items, ExternalDirectoryGroup{
+			ExternalID:  entry.DN,
+			Name:        name,
+			Description: strings.TrimSpace(entry.GetAttributeValue("description")),
+			Source:      identityProviderLDAP,
+			DN:          entry.DN,
+			MemberCount: len(entry.GetAttributeValues("member")),
+		})
+	}
+	return items, nil
+}
+
+func (c *ldapDirectoryClient) ListGroupMembers(ctx context.Context, groupID string, limit int) ([]ExternalDirectoryUser, error) {
+	groupDN := strings.TrimSpace(groupID)
+	if groupDN == "" {
+		return nil, errors.New("group id is required")
+	}
+	conn, err := c.dial(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close() //nolint:errcheck
+
+	limit = clampIdentityLimit(limit, 100, 500)
+	groupReq := ldap.NewSearchRequest(
+		groupDN, ldap.ScopeBaseObject, ldap.NeverDerefAliases, 1, 0, false,
+		"(objectClass=*)", []string{"member", "uniqueMember"}, nil,
+	)
+	groupRes, err := conn.Search(groupReq)
+	if err != nil {
+		return nil, err
+	}
+	if len(groupRes.Entries) == 0 {
+		return []ExternalDirectoryUser{}, nil
+	}
+	memberDNs := groupRes.Entries[0].GetAttributeValues("member")
+	if len(memberDNs) == 0 {
+		memberDNs = groupRes.Entries[0].GetAttributeValues("uniqueMember")
+	}
+	if len(memberDNs) > limit {
+		memberDNs = memberDNs[:limit]
+	}
+	out := make([]ExternalDirectoryUser, 0, len(memberDNs))
+	seen := map[string]struct{}{}
+	for _, memberDN := range memberDNs {
+		memberDN = strings.TrimSpace(memberDN)
+		if memberDN == "" {
+			continue
+		}
+		if _, ok := seen[memberDN]; ok {
+			continue
+		}
+		seen[memberDN] = struct{}{}
+		userReq := ldap.NewSearchRequest(
+			memberDN, ldap.ScopeBaseObject, ldap.NeverDerefAliases, 1, 0, false,
+			"(objectClass=*)", []string{c.UserLoginAttr, c.UserEmailAttr, c.UserDisplayAttr, "dn"}, nil,
+		)
+		userRes, userErr := conn.Search(userReq)
+		if userErr != nil || len(userRes.Entries) == 0 {
+			continue
+		}
+		entry := userRes.Entries[0]
+		username := sanitizeImportedUsername(entry.GetAttributeValue(c.UserLoginAttr))
+		email := strings.TrimSpace(entry.GetAttributeValue(c.UserEmailAttr))
+		displayName := strings.TrimSpace(entry.GetAttributeValue(c.UserDisplayAttr))
+		if username == "" {
+			username = fallbackIdentityUsername(email, displayName, entry.DN)
+		}
+		if username == "" {
+			continue
+		}
+		if email == "" {
+			email = fmt.Sprintf("%s@directory.local", username)
+		}
+		out = append(out, ExternalDirectoryUser{
+			ExternalID:  entry.DN,
+			Username:    username,
+			Email:       email,
+			DisplayName: displayName,
+			Source:      identityProviderLDAP,
+			DN:          entry.DN,
 		})
 	}
 	return out, nil
