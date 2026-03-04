@@ -243,7 +243,6 @@ services:
     image: vecta/hsm-integration:latest
     environment:
       HSM_INTEGRATION_USER: ${AUTH_BOOTSTRAP_CLI_USERNAME:-cli-user}
-      HSM_INTEGRATION_PASSWORD: ${AUTH_BOOTSTRAP_CLI_PASSWORD:-VectaCLI@2026}
       HSM_INTEGRATION_WORKSPACE_ROOT: ${AUTH_CLI_HSM_WORKSPACE_ROOT:-/var/lib/vecta/hsm/providers}
     ports:
       - "2222:22"

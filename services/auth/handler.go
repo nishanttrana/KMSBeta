@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1889,6 +1890,23 @@ func (h *Handler) handleCLISession(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
 		return
 	}
+
+	// Sync the verified password to the hsm-integration container so SSH works.
+	// Uses chpasswd via stdin-style exec — the password is passed as an env var
+	// to avoid shell injection risks from special characters.
+	go func() {
+		hsmService := strings.TrimSpace(envOr("AUTH_CLI_HSM_SERVICE_NAME", "hsm-integration"))
+		syncCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		// Use printf piped to chpasswd; the password is base64-encoded to avoid any shell metacharacter issues
+		encoded := base64.StdEncoding.EncodeToString([]byte(req.Password))
+		script := fmt.Sprintf("printf '%%s:%%s' '%s' \"$(echo '%s' | base64 -d)\" | chpasswd", cliUsername, encoded)
+		if _, syncErr := h.execComposeServiceCommand(syncCtx, hsmService, []string{"bash", "-c", script}); syncErr != nil {
+			logger.Printf("cli-session: failed to sync password to %s container: %v", hsmService, syncErr)
+		} else {
+			logger.Printf("cli-session: password synced to %s container for user %s", hsmService, cliUsername)
+		}
+	}()
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":                "ok",

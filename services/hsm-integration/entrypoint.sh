@@ -2,7 +2,6 @@
 set -euo pipefail
 
 HSM_USER="${HSM_INTEGRATION_USER:-cli-user}"
-HSM_PASSWORD="${HSM_INTEGRATION_PASSWORD:-VectaCLI@2026}"
 WORKSPACE_ROOT="${HSM_INTEGRATION_WORKSPACE_ROOT:-/var/lib/vecta/hsm/providers}"
 
 sanitize_user() {
@@ -18,7 +17,9 @@ if ! id -u "${HSM_USER}" >/dev/null 2>&1; then
   useradd --create-home --shell /bin/bash "${HSM_USER}"
 fi
 
-echo "${HSM_USER}:${HSM_PASSWORD}" | chpasswd
+# Lock password by default — the KMS auth service syncs the password
+# from user management when an SSH session is opened via the dashboard.
+passwd -l "${HSM_USER}" 2>/dev/null || true
 usermod -aG sudo "${HSM_USER}"
 
 cat > /etc/sudoers.d/90-hsm-integration <<EOF
@@ -44,7 +45,11 @@ if [ -f "${SSHD_CONFIG}" ]; then
   sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' "${SSHD_CONFIG}"
   sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin no/' "${SSHD_CONFIG}"
   sed -i 's/^#\?PubkeyAuthentication .*/PubkeyAuthentication yes/' "${SSHD_CONFIG}"
-  sed -i 's/^#\?ChallengeResponseAuthentication .*/ChallengeResponseAuthentication no/' "${SSHD_CONFIG}"
+  sed -i 's/^#\?ChallengeResponseAuthentication .*/ChallengeResponseAuthentication yes/' "${SSHD_CONFIG}"
+  sed -i 's/^#\?KbdInteractiveAuthentication .*/KbdInteractiveAuthentication yes/' "${SSHD_CONFIG}"
+  if ! grep -q "^KbdInteractiveAuthentication " "${SSHD_CONFIG}"; then
+    echo "KbdInteractiveAuthentication yes" >> "${SSHD_CONFIG}"
+  fi
   sed -i 's/^#\?UsePAM .*/UsePAM yes/' "${SSHD_CONFIG}"
   sed -i 's|^#\?Subsystem sftp .*|Subsystem sftp /usr/lib/openssh/sftp-server|' "${SSHD_CONFIG}" || true
   if ! grep -q "^AllowUsers " "${SSHD_CONFIG}"; then
