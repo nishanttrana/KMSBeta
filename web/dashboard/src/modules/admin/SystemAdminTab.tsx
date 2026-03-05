@@ -444,7 +444,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     {id:"if-3",name:"management",description:"Admin Management Plane",service:"auth",protocol:"mtls",cert_type:"rsa-4096",auto_create_cert:true,bind_address:"127.0.0.1",port:9443,enabled:true},
     {id:"if-4",name:"hsm-bridge",description:"HSM Communication",service:"hsm-proxy",protocol:"mtls",cert_type:"ecdsa-p384",auto_create_cert:false,bind_address:"127.0.0.1",port:9500,enabled:true},
     {id:"if-5",name:"ekm-data",description:"EKM/TDE Endpoint",service:"ekm",protocol:"tls13",cert_type:"ecdsa-p256",auto_create_cert:true,bind_address:"0.0.0.0",port:8444,enabled:true},
-    {id:"if-6",name:"audit-stream",description:"Audit Event Stream",service:"audit",protocol:"mtls",cert_type:"ecdsa-p256",auto_create_cert:true,bind_address:"0.0.0.0",port:8445,enabled:false}
+    {id:"if-6",name:"audit-stream",description:"Audit Event Stream",service:"audit",protocol:"mtls",cert_type:"ecdsa-p256",auto_create_cert:true,bind_address:"0.0.0.0",port:8445,enabled:true}
   ];
   const NET_IF_SERVICES=["keycore","auth","audit","kmip","ekm","hsm-proxy","nats-bridge","rest-api","byok","hyok","certs","secrets","dataprotect"];
   const NET_IF_PROTOCOLS=[{v:"tls13",l:"TLS 1.3"},{v:"mtls",l:"Mutual TLS (mTLS)"},{v:"pqc_tls",l:"PQC-TLS (ML-KEM)"},{v:"hybrid",l:"Hybrid (PQC + Traditional)"}];
@@ -1661,38 +1661,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         {!netInterfaces.length&&<div style={{textAlign:"center",padding:24,color:C.muted,fontSize:11}}>No interfaces configured. Click &quot;+ Add Interface&quot; to create one.</div>}
       </div>
 
-      {/* Existing Interface Ports (from Key Access Hardening) */}
-      <div style={{marginTop:20}}>
-        <div style={{fontSize:12,fontWeight:700,color:C.text,marginBottom:10}}>Legacy Interface Port Bindings</div>
-        <Card style={{padding:10,borderRadius:8}}>
-          <Row2>
-            <FG label="Interface">
-              <Sel value={String(newInterfacePort?.interface_name||"rest")} onChange={(e)=>setNewInterfacePort((p)=>({...p,interface_name:e.target.value}))}>
-                {INTERFACE_OPTIONS.map((opt)=><option key={opt} value={opt}>{opt}</option>)}
-              </Sel>
-            </FG>
-            <FG label="Bind Address"><Inp value={String(newInterfacePort?.bind_address||"0.0.0.0")} onChange={(e)=>setNewInterfacePort((p)=>({...p,bind_address:e.target.value}))}/></FG>
-          </Row2>
-          <Row2>
-            <FG label="Port"><Inp type="number" value={String(newInterfacePort?.port||443)} onChange={(e)=>setNewInterfacePort((p)=>({...p,port:Math.max(1,Math.min(65535,Number(e.target.value||443)))}))}/></FG>
-            <FG label="Description"><Inp value={String(newInterfacePort?.description||"")} onChange={(e)=>setNewInterfacePort((p)=>({...p,description:e.target.value}))}/></FG>
-          </Row2>
-          <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:8}}>
-            <Chk label="Enabled" checked={Boolean(newInterfacePort?.enabled)} onChange={()=>setNewInterfacePort((p)=>({...p,enabled:!Boolean(p?.enabled)}))}/>
-            <Btn small primary onClick={()=>void addInterfacePort()}>Save Port</Btn>
-          </div>
-          <div style={{display:"grid",gap:6}}>
-            {interfacePorts.map((port:any)=>{
-              const iface=String(port?.interface_name||"");
-              return <div key={iface} style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
-                <div style={{fontSize:10,color:C.dim}}>{`${iface} ${String(port?.bind_address||"0.0.0.0")}:${Number(port?.port||0)} ${Boolean(port?.enabled)?"enabled":"disabled"}`}</div>
-                <Btn small danger onClick={()=>void removeInterfacePort(iface)}>Delete</Btn>
-              </div>;
-            })}
-            {!interfacePorts.length&&<div style={{fontSize:10,color:C.muted}}>No legacy interface ports configured.</div>}
-          </div>
-        </Card>
-      </div>
     </Section>
 
     {/* Add/Edit Interface Modal */}

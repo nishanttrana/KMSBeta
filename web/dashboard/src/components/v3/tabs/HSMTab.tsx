@@ -422,6 +422,87 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
       </Card>}
     </Section>
 
+    {/* ── Key Export Conditions ── */}
+    <Section title="Key Export Policy & Conditions">
+      <Card style={{padding:14}}>
+        <div style={{fontSize:11,fontWeight:600,color:C.muted,marginBottom:10}}>WHEN CAN AN HSM KEY BE EXPORTED?</div>
+        <div style={{fontSize:10,color:C.dim,marginBottom:12}}>
+          Keys stored in an HSM follow a dual-check export model. Both the KMS policy <b>and</b> the HSM attributes must permit export for key material to leave the HSM boundary.
+        </div>
+        <div style={{display:"grid",gap:8}}>
+          {[
+            { condition: "KMS Export Policy", field: "export_allowed = true", desc: "Set via key policy in the Keys tab. If false, the key cannot be exported regardless of HSM attributes.", icon: Shield },
+            { condition: "HSM Extractable Attribute", field: "CKA_EXTRACTABLE = true", desc: "Set during key generation in the HSM. If false, the HSM firmware prevents the key from being wrapped.", icon: Key },
+            { condition: "HSM Sensitive Attribute", field: "CKA_SENSITIVE", desc: "When true, key material never appears in plaintext outside HSM. Export requires wrapping with a KEK.", icon: Lock },
+            { condition: "Wrapping Key Available", field: "wrapping_key_id required", desc: "A wrapping key (KEK) must exist and be accessible to wrap the target key for secure export.", icon: HardDrive },
+            { condition: "Approval Workflow (if configured)", field: "approval_required = true", desc: "If quorum policy is attached, M-of-N approvals must be granted before export proceeds.", icon: CheckCircle2 },
+          ].map((item) => (
+            <div key={item.condition} style={{display:"grid",gridTemplateColumns:"32px 1fr",gap:10,padding:"8px 10px",borderRadius:6,background:"rgba(255,255,255,.02)",border:`1px solid ${C.border}`}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center"}}><item.icon size={16} style={{color:C.accent}}/></div>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:C.text}}>{item.condition}</div>
+                <div style={{fontSize:9,color:C.accent,fontFamily:"'JetBrains Mono',monospace",marginTop:2}}>{item.field}</div>
+                <div style={{fontSize:10,color:C.dim,marginTop:3}}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{marginTop:12,padding:"8px 12px",borderRadius:6,background:`${C.amber}12`,border:`1px solid ${C.amber}33`,fontSize:10,color:C.dim}}>
+          <b style={{color:C.amber}}>Sync behavior:</b> Non-exportable keys sync as <code style={{color:C.accent}}>metadata_only</code> across cluster nodes. Exportable keys sync as <code style={{color:C.accent}}>wrapped_blob_allowed</code>, meaning a wrapped copy can be replicated.
+        </div>
+      </Card>
+    </Section>
+
+    {/* ── HSM Certificate Storage ── */}
+    <Section title="Certificate Storage in HSM">
+      <Card style={{padding:14}}>
+        <div style={{fontSize:11,fontWeight:600,color:C.muted,marginBottom:10}}>STORE CERTIFICATES IN HSM</div>
+        <div style={{fontSize:10,color:C.dim,marginBottom:12}}>
+          Just like individual keys, X.509 certificates can be stored with their private keys inside the HSM. The KMS holds a reference (metadata) while the actual private key and optionally the certificate object remain on the HSM.
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+          <Card style={{padding:10,background:"rgba(255,255,255,.02)"}}>
+            <div style={{fontSize:10,fontWeight:700,color:C.green,marginBottom:6}}>HSM-Backed CA</div>
+            <div style={{display:"grid",gap:4,fontSize:10,color:C.dim}}>
+              <div>1. Create CA with <code style={{color:C.accent}}>key_backend: "hsm"</code></div>
+              <div>2. Specify <code style={{color:C.accent}}>key_ref</code> pointing to HSM key ID</div>
+              <div>3. Signing operations use HSM via PKCS#11</div>
+              <div>4. Private key never leaves HSM boundary</div>
+            </div>
+          </Card>
+          <Card style={{padding:10,background:"rgba(255,255,255,.02)"}}>
+            <div style={{fontSize:10,fontWeight:700,color:C.blue,marginBottom:6}}>HSM-Backed Certificates</div>
+            <div style={{display:"grid",gap:4,fontSize:10,color:C.dim}}>
+              <div>1. Generate key pair inside HSM</div>
+              <div>2. Export CSR from HSM key</div>
+              <div>3. Issue certificate via KMS CA</div>
+              <div>4. Store cert object on HSM via PKCS#11 <code style={{color:C.accent}}>C_CreateObject</code></div>
+            </div>
+          </Card>
+        </div>
+        <div style={{display:"grid",gap:6}}>
+          {[
+            { label: "CA Key Backend", value: `key_backend = "hsm" | key_ref = "<key-id>"`, desc: "Set when creating a CA to use HSM for signing" },
+            { label: "Certificate Key Ref", value: `key_ref = "<hsm-key-id>"`, desc: "Links issued certificate to its HSM private key" },
+            { label: "HSM Partition", value: `hsm_partition_label = "${selectedPartition||"<partition>"}"`, desc: "PKCS#11 partition where cert objects are stored" },
+            { label: "Object Class", value: "CKO_CERTIFICATE (X.509)", desc: "PKCS#11 object type for certificate storage" },
+            { label: "Trust Attributes", value: "CKA_TRUSTED, CKA_CERTIFICATE_CATEGORY", desc: "PKCS#11 attributes for CA trust chain" },
+          ].map((item) => (
+            <div key={item.label} style={{display:"grid",gridTemplateColumns:"160px 1fr",gap:8,padding:"6px 0",borderBottom:`1px solid ${C.border}`}}>
+              <div style={{fontSize:10,fontWeight:600,color:C.text}}>{item.label}</div>
+              <div>
+                <div style={{fontSize:10,color:C.accent,fontFamily:"'JetBrains Mono',monospace"}}>{item.value}</div>
+                <div style={{fontSize:9,color:C.dim}}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{marginTop:12,padding:"8px 12px",borderRadius:6,background:`${C.blue}12`,border:`1px solid ${C.blue}33`,fontSize:10,color:C.dim}}>
+          <b style={{color:C.blue}}>Supported HSM vendors:</b> Any PKCS#11 v2.40+ compliant HSM — Thales Luna, Entrust nShield, AWS CloudHSM, Marvell LiquidSecurity, Utimaco, YubiHSM, SoftHSM (dev).
+        </div>
+      </Card>
+    </Section>
+
     {/* ── Generate Key Modal ── */}
     <Modal open={modal==="gen"} onClose={()=>setModal(null)} title="Generate Key in HSM">
       <div style={{fontSize:10,color:C.muted,marginBottom:10}}>Generate a new cryptographic key object directly inside the HSM {activeVendor?.partitionTerm||"partition"}. The key never leaves the HSM boundary.</div>

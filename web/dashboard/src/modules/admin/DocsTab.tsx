@@ -96,6 +96,10 @@ const NAV = [
   { id: "api-cloud", label: "API: Cloud / BYOK" },
   { id: "api-hyok", label: "API: HYOK" },
   { id: "api-ekm", label: "API: EKM" },
+  { id: "api-ekm-bitlocker", label: "API: BitLocker" },
+  { id: "api-ekm-sdk", label: "API: PKCS#11/JCA" },
+  { id: "guide-agent-deploy", label: "Guide: Agent Deploy" },
+  { id: "guide-key-cache", label: "Guide: Key Cache" },
   { id: "api-mpc", label: "API: MPC" },
   { id: "api-qkd", label: "API: QKD" },
   { id: "api-compliance", label: "API: Compliance" },
@@ -129,6 +133,9 @@ const NAV = [
   { id: "config-profiles", label: "Config: Docker Profiles" },
   { id: "config-fastinstall", label: "Config: Fast Install" },
   { id: "api-fde", label: "API: Disk Encryption" },
+  { id: "guide-crypto-inventory", label: "Guide: Crypto Inventory" },
+  { id: "guide-vault-hierarchy", label: "Guide: Vault Hierarchy" },
+  { id: "guide-hsm-certs", label: "Guide: HSM Certificates" },
   { id: "troubleshooting", label: "Troubleshooting" },
 ];
 
@@ -1187,6 +1194,184 @@ const SectionApiEkm = () => (
         ["POST", "/ekm/tde/keys/{id}/unwrap", "Unwrap a TDE key (agent-to-KMS operation)"],
       ]} />
     </Collapse>
+  </div>
+);
+
+const SectionApiEkmBitlocker = () => (
+  <div>
+    <div style={S.h1}>API: BitLocker Management</div>
+    <P>Service: kms-ekm | Endpoints: 13 | Agent mode: bitlocker</P>
+
+    <H2>Overview</H2>
+    <P>Vecta KMS provides centralized BitLocker management for Windows endpoints. The BitLocker subsystem handles client registration, encryption operations, recovery key escrow, network discovery, and job-based asynchronous operation execution.</P>
+
+    <H2>Architecture</H2>
+    <P>The BitLocker agent runs on Windows endpoints as a service (VectaEKMAgent with agent_mode=bitlocker). It registers with the KMS, sends periodic heartbeats, and polls for queued jobs. Operations like enabling encryption or rotating recovery passwords are queued by the dashboard and executed by the agent.</P>
+
+    <H2>Job Queue Pattern</H2>
+    <P>1. Dashboard or admin queues an operation via POST /ekm/bitlocker/clients/&#123;id&#125;/operations</P>
+    <P>2. Agent polls GET /ekm/bitlocker/clients/&#123;id&#125;/jobs/next every 10 seconds</P>
+    <P>3. Agent executes the operation locally (PowerShell cmdlets)</P>
+    <P>4. Agent reports result via POST /ekm/bitlocker/clients/&#123;id&#125;/jobs/&#123;job_id&#125;/result</P>
+
+    <Collapse title="Client Management" defaultOpen>
+      <EndpointTable rows={[
+        ["POST", "/ekm/bitlocker/clients/register", "Register Windows machine for BitLocker management"],
+        ["GET", "/ekm/bitlocker/clients", "List all registered BitLocker clients"],
+        ["GET", "/ekm/bitlocker/clients/{id}", "Get detailed client status (TPM, encryption %)"],
+        ["GET", "/ekm/bitlocker/clients/{id}/delete-preview", "Preview deletion impact (orphaned recovery keys)"],
+        ["DELETE", "/ekm/bitlocker/clients/{id}", "Remove client registration"],
+        ["POST", "/ekm/bitlocker/clients/{id}/heartbeat", "Agent heartbeat with encryption status"],
+      ]} />
+    </Collapse>
+    <Collapse title="Operations & Jobs">
+      <EndpointTable rows={[
+        ["POST", "/ekm/bitlocker/clients/{id}/operations", "Queue operation: enable, disable, suspend, resume, rotate_recovery, status, tpm_status"],
+        ["GET", "/ekm/bitlocker/clients/{id}/jobs/next", "Agent polls for next pending job"],
+        ["POST", "/ekm/bitlocker/clients/{id}/jobs/{job_id}/result", "Agent submits job result"],
+      ]} />
+    </Collapse>
+    <Collapse title="Recovery & Discovery">
+      <EndpointTable rows={[
+        ["GET", "/ekm/bitlocker/recovery", "List escrowed recovery keys (admin only)"],
+        ["POST", "/ekm/bitlocker/network/scan", "Scan subnet for BitLocker-capable endpoints"],
+        ["GET", "/ekm/bitlocker/clients/{id}/deploy", "Download agent installer for this client"],
+      ]} />
+    </Collapse>
+
+    <H2>Supported Operations</H2>
+    <P>enable — Enable BitLocker with specified protector (TPM, recovery_password, tpm_and_pin)</P>
+    <P>disable — Disable BitLocker encryption (decrypts volume)</P>
+    <P>suspend — Temporarily suspend BitLocker protection (e.g., for BIOS updates)</P>
+    <P>resume — Resume suspended BitLocker protection</P>
+    <P>rotate_recovery — Remove old recovery passwords and generate a new one</P>
+    <P>status — Query current BitLocker volume status</P>
+    <P>tpm_status — Query TPM presence and readiness</P>
+  </div>
+);
+
+const SectionApiEkmSdk = () => (
+  <div>
+    <div style={S.h1}>API: PKCS#11 &amp; JCA Providers</div>
+    <P>SDK packages for integrating applications with Vecta KMS key operations</P>
+
+    <H2>PKCS#11 Provider</H2>
+    <P>A shared library (libvecta-pkcs11.so / .dll / .dylib) that implements the OASIS PKCS#11 v2.40 interface. Applications using PKCS#11 (OpenSSL, OpenSC, database EKM providers) can use Vecta KMS keys without code changes.</P>
+
+    <H3>Supported Mechanisms</H3>
+    <P>AES-GCM encrypt/decrypt (local cache or remote), RSA sign/verify (always remote), ECDSA sign/verify (always remote), key enumeration via C_FindObjects.</P>
+
+    <H3>Installation</H3>
+    <P>Linux: Copy libvecta-pkcs11.so to /opt/vecta/lib/ and set VECTA_* environment variables.</P>
+    <P>Windows: Copy vecta-pkcs11.dll to C:\Program Files\Vecta\ and configure in registry.</P>
+    <P>macOS: Copy libvecta-pkcs11.dylib to /usr/local/lib/vecta/.</P>
+
+    <H2>JCA Provider</H2>
+    <P>A Java Cryptography Architecture provider (vecta-jca-provider.jar) for Java 11+. No external dependencies — uses only java.net.http.</P>
+
+    <H3>Registered Services</H3>
+    <P>Cipher: AES/GCM/NoPadding — local cache if key is exportable, else remote KMS</P>
+    <P>Signature: SHA256withRSA, SHA256withECDSA — always remote (asymmetric)</P>
+    <P>KeyStore: VectaKMS — enumerate and load keys from KMS</P>
+    <P>SecureRandom: VectaQRNG — quantum random bytes from QRNG endpoint, fallback to local</P>
+
+    <H3>Setup</H3>
+    <P>Programmatic: Security.addProvider(new VectaKMSProvider())</P>
+    <P>Or add to java.security: security.provider.N=com.vecta.kms.VectaKMSProvider</P>
+
+    <Collapse title="SDK Endpoints" defaultOpen>
+      <EndpointTable rows={[
+        ["GET", "/ekm/sdk/overview", "List available SDK packages with versions and platforms"],
+        ["GET", "/ekm/sdk/download/{package}?platform={platform}", "Download SDK package binary"],
+      ]} />
+    </Collapse>
+
+    <H2>Authentication</H2>
+    <P>Both providers support the same multi-auth chain: mTLS (transport) → JWT (auto-refresh) → API Key (X-API-Key header) → Bearer token. Configure via environment variables: VECTA_BASE_URL, VECTA_TENANT_ID, VECTA_AUTH_TOKEN, VECTA_MTLS_CERT, VECTA_MTLS_KEY, VECTA_MTLS_CA, VECTA_API_KEY, VECTA_JWT_ENDPOINT.</P>
+
+    <H2>Key Caching</H2>
+    <P>Set VECTA_KEY_CACHE_TTL (seconds) to enable local caching. Exportable keys are cached in process memory for fast AES-GCM operations. Non-exportable keys always proxy to KMS. Cache TTL of 0 disables caching.</P>
+  </div>
+);
+
+const SectionGuideAgentDeploy = () => (
+  <div>
+    <div style={S.h1}>Guide: EKM Agent Deployment</div>
+    <P>Step-by-step guide for deploying Vecta EKM agents on database servers and Windows endpoints.</P>
+
+    <H2>Prerequisites</H2>
+    <P>1. Vecta KMS running with EKM service enabled (ekm_database feature)</P>
+    <P>2. Network connectivity from the agent host to KMS (HTTPS port 443 or custom)</P>
+    <P>3. Authentication credential: mTLS certificate, API key, or bearer token</P>
+    <P>4. For TDE agents: database admin credentials for TDE state inspection</P>
+
+    <H2>Step 1: Generate Authentication Credentials</H2>
+    <P>Option A (mTLS): Generate a client certificate signed by the KMS CA:</P>
+    <P>  openssl req -new -key agent.key -out agent.csr -subj "/CN=ekm-agent-01/O=vecta"</P>
+    <P>  Submit CSR to KMS cert authority or use the Certificates tab to issue.</P>
+    <P>Option B (API Key): Create an API key in the Admin tab with ekm-agent role.</P>
+    <P>Option C (Bearer Token): Use a static token from the Auth settings.</P>
+
+    <H2>Step 2: Configure Agent</H2>
+    <P>Edit agent-config.json (or use environment variables):</P>
+    <P>  tenant_id: Your tenant identifier</P>
+    <P>  agent_id: Unique agent name (e.g., "mssql-prod-01")</P>
+    <P>  api_base_url: KMS URL (e.g., "https://kms.example.com/svc/ekm")</P>
+    <P>  db_engine: "mssql" or "oracle"</P>
+    <P>  For mTLS: mtls_cert_path, mtls_key_path, mtls_ca_path</P>
+    <P>  For key caching: key_cache_enabled=true, key_cache_ttl_sec=300</P>
+
+    <H2>Step 3: Install on Windows</H2>
+    <P>Run the PowerShell installer from an elevated prompt:</P>
+    <P>  .\install-ekm-agent.ps1 -TenantId root -AgentId mssql-prod-01 -DbEngine mssql ...</P>
+    <P>This creates the VectaEKMAgent Windows service.</P>
+
+    <H2>Step 4: Verify</H2>
+    <P>1. Check Windows Services: VectaEKMAgent should be Running</P>
+    <P>2. In KMS Dashboard: EKM tab → Agents → agent should show "connected"</P>
+    <P>3. Check heartbeat: Agent health should show TDE state and PKCS#11 readiness</P>
+
+    <H2>MSSQL TDE Walkthrough</H2>
+    <P>After agent registration, the agent inspects sys.dm_database_encryption_keys to report TDE state. To enable TDE: create a TDE key via the dashboard, assign it to the agent, and the agent will configure the database server's EKM provider to use the Vecta key for DEK wrapping.</P>
+
+    <H2>Oracle TDE Walkthrough</H2>
+    <P>For Oracle, the agent checks V$ENCRYPTION_WALLET for wallet status. Configure Oracle to use an external keystore pointing to the Vecta PKCS#11 provider: ALTER SYSTEM SET ENCRYPTION WALLET OPEN IDENTIFIED BY "vecta-external".</P>
+  </div>
+);
+
+const SectionGuideKeyCache = () => (
+  <div>
+    <div style={S.h1}>Guide: Local Key Cache Architecture</div>
+    <P>How Vecta agents optimize crypto performance with local key caching.</P>
+
+    <H2>Export-or-Remote Pattern</H2>
+    <P>When an agent starts or a key is assigned, it checks the key's export_allowed flag:</P>
+    <P>- If exportable: The key material is exported from KMS (wrapped in transit), unwrapped locally, and stored in locked memory (mlock). Subsequent encrypt/decrypt operations use the local copy — no network round-trip.</P>
+    <P>- If not exportable: All crypto operations are proxied to the KMS server. This is slower but ensures key material never leaves the KMS boundary.</P>
+
+    <H2>Cache Behavior</H2>
+    <P>TTL: Cached keys expire after key_cache_ttl_sec (default 300s). After expiry, the agent re-exports from KMS.</P>
+    <P>Eviction: A background goroutine runs every 30s to remove expired entries.</P>
+    <P>Shutdown: All cached material is zeroized (overwritten with zeros) and munlocked on agent shutdown.</P>
+
+    <H2>Memory Security</H2>
+    <P>Key material is stored in mlock'd pages — the OS kernel will not swap these pages to disk, preventing key exposure via swap files. On agent shutdown or cache eviction, material is explicitly zeroized before munlocking.</P>
+    <P>Functions used: crypto.Mlock() (lock pages), crypto.Munlock() (unlock pages), crypto.Zeroize() (overwrite with zeros).</P>
+
+    <H2>Supported Algorithms</H2>
+    <P>Local cache operations currently support AES-GCM only (128/192/256-bit). Asymmetric operations (RSA, ECDSA) are always proxied to KMS regardless of cache settings.</P>
+
+    <H2>When to Enable</H2>
+    <P>Enable key caching (key_cache_enabled=true) when:</P>
+    <P>- High-throughput encryption (hundreds of ops/sec)</P>
+    <P>- Low latency requirements (sub-millisecond encrypt/decrypt)</P>
+    <P>- Offline resilience (agent can continue encrypting during brief KMS outages within TTL window)</P>
+    <P>Keep caching disabled when:</P>
+    <P>- Compliance requires all crypto operations in the HSM/KMS boundary</P>
+    <P>- Keys are marked non-exportable by policy</P>
+
+    <H2>Tuning</H2>
+    <P>key_cache_ttl_sec: Lower values = more frequent re-export (better security, higher latency). Higher values = fewer round-trips (better performance, longer key exposure window). Recommended: 300s for most workloads, 60s for high-security environments.</P>
   </div>
 );
 
@@ -2574,6 +2759,163 @@ Response:
   </div>
 );
 
+/* ───────── Crypto Inventory Guide ───────── */
+const SectionGuideCryptoInventory = () => (
+  <div>
+    <div style={S.h1}>Cryptographic Inventory (KeyInsight)</div>
+    <P>The Crypto Inventory feature provides Fortanix KeyInsight-style visibility into all cryptographic assets across your organization. Access it via Compliance → Crypto Inventory tab.</P>
+    <H2>Inventory Score</H2>
+    <P>A composite score (0-100) calculated from risk findings across keys and certificates. Critical findings reduce the score by 15 points per affected asset, high by 8, and warnings by 3. Target: 80+ for healthy posture.</P>
+    <H2>Risk Detection Rules</H2>
+    <table style={S.table}>
+      <thead><tr><th style={S.th}>Finding</th><th style={S.th}>Severity</th><th style={S.th}>Applies To</th></tr></thead>
+      <tbody>
+        {[
+          ["Weak algorithm (RSA-1024, DES, 3DES, RC4)", "Critical", "Keys"],
+          ["Key status compromised/destroyed", "Critical", "Keys"],
+          ["Certificate expired", "Critical", "Certificates"],
+          ["Weak signing (SHA-1, MD5)", "Critical", "Certificates"],
+          ["Key older than 1 year without rotation", "High", "Keys"],
+          ["Certificate expiring within 30 days", "High", "Certificates"],
+          ["Certificate expiring within 90 days", "Warning", "Certificates"],
+          ["Key is exportable without HSM protection", "Warning", "Keys"],
+        ].map(([finding, sev, type], i) => (
+          <tr key={i}><td style={{...S.td, fontFamily: "inherit"}}>{finding}</td><td style={S.td}>{sev}</td><td style={S.td}>{type}</td></tr>
+        ))}
+      </tbody>
+    </table>
+    <H2>PQC Readiness</H2>
+    <P>Keys are classified into three categories: PQC Native (ML-KEM, ML-DSA, SLH-DSA, Kyber, Dilithium), Hybrid (combined classical + PQC), and Classical (AES, RSA, ECDSA). The donut chart shows your quantum readiness breakdown.</P>
+    <H2>Charts</H2>
+    <P>Algorithm Distribution (horizontal bar), Key Age Distribution (vertical bar), PQC Readiness (donut), Certificate Expiry Timeline (stacked bar with color coding: red=expired, amber=within 30d, green=safe).</P>
+  </div>
+);
+
+/* ───────── Vault Hierarchy Guide ───────── */
+const SectionGuideVaultHierarchy = () => (
+  <div>
+    <div style={S.h1}>Vault Hierarchy & OpenBao Compatibility</div>
+    <P>The Secret Vault supports path-based folder hierarchy for organizing secrets by department, project, or environment. This is compatible with HashiCorp Vault and OpenBao path-based access policies.</P>
+    <H2>Path Structure</H2>
+    <Code>{`/ (root)
+├── engineering/
+│   ├── api-keys/
+│   │   ├── stripe-prod-key
+│   │   └── sendgrid-key
+│   └── database/
+│       ├── prod-postgres-creds
+│       └── staging-redis-password
+├── finance/
+│   └── payment-gateway-secret
+├── devops/
+│   ├── ci-cd-tokens/
+│   └── infrastructure/
+│       ├── aws-access-keys
+│       └── gcp-service-account
+└── shared/
+    └── tls-certificates/`}</Code>
+    <H2>Path Derivation</H2>
+    <P>Secrets are assigned to paths via their <IC>labels.path</IC> or <IC>metadata.folder</IC> field. Secrets with slash-delimited names (e.g., <IC>engineering/api-keys/stripe</IC>) are automatically organized into the corresponding folder. Create folders from the UI to navigate and store secrets in specific paths.</P>
+    <H2>OpenBao API Compatibility</H2>
+    <EndpointTable rows={[
+      ["GET", "/v1/secret/data/{path}", "Read secret at path (KV v2)"],
+      ["POST", "/v1/secret/data/{path}", "Create/update secret at path"],
+      ["GET", "/v1/secret/metadata/{path}", "Read secret metadata and versions"],
+      ["POST", "/v1/secret/delete/{path}", "Soft delete secret versions"],
+      ["POST", "/v1/secret/undelete/{path}", "Restore soft-deleted versions"],
+      ["GET", "/v1/secret/metadata/?list=true", "List secrets and folders at path"],
+      ["GET", "/v1/sys/mounts/secret", "Mount configuration for secret engine"],
+    ]} />
+    <H2>Event Hooks</H2>
+    <P>OpenBao-compatible event hooks fire on secret lifecycle events. Configure webhook endpoints in Administration → Event Hooks to receive notifications.</P>
+    <table style={S.table}>
+      <thead><tr><th style={S.th}>Hook</th><th style={S.th}>Trigger</th></tr></thead>
+      <tbody>
+        {[
+          ["secret.created", "New secret stored at any path"],
+          ["secret.updated", "Secret value modified"],
+          ["secret.rotated", "Version rotation completed"],
+          ["secret.deleted", "Soft or hard delete"],
+          ["secret.accessed", "Secret value read (for audit)"],
+          ["secret.expired", "TTL/lease expired — cleanup trigger"],
+          ["folder.policy_changed", "Path ACL policy modified"],
+        ].map(([hook, trigger], i) => (
+          <tr key={i}><td style={S.td}>{hook}</td><td style={{...S.td, fontFamily: "inherit"}}>{trigger}</td></tr>
+        ))}
+      </tbody>
+    </table>
+    <H2>Path-Based ACL Policies</H2>
+    <Code>{`# Example: engineering team can read/write their path
+path "secret/data/engineering/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+
+# Finance team: read-only access to shared secrets
+path "secret/data/shared/*" {
+  capabilities = ["read", "list"]
+}
+
+# Deny access to other departments
+path "secret/data/finance/*" {
+  capabilities = ["deny"]
+}`}</Code>
+  </div>
+);
+
+/* ───────── HSM Certificate Storage Guide ───────── */
+const SectionGuideHsmCerts = () => (
+  <div>
+    <div style={S.h1}>HSM Certificate Storage</div>
+    <P>Certificates and their private keys can be stored inside the HSM, ensuring private key material never leaves the hardware boundary. The KMS holds metadata references while the HSM performs all signing operations.</P>
+    <H2>HSM-Backed Certificate Authority</H2>
+    <P>When creating a CA, set <IC>key_backend: "hsm"</IC> and provide the <IC>key_ref</IC> pointing to a key already generated inside the HSM. All signing operations are performed via PKCS#11.</P>
+    <Code>{`POST /svc/certs/cas
+{
+  "name": "Production Root CA",
+  "algorithm": "ECDSA-P384",
+  "key_backend": "hsm",
+  "key_ref": "hsm-key-id-001",
+  "subject": "CN=Production Root CA,O=Acme Corp",
+  "ca_level": "root",
+  "validity_years": 10
+}`}</Code>
+    <H2>Key Export Conditions</H2>
+    <P>An HSM key can only be exported when ALL of the following conditions are met:</P>
+    <table style={S.table}>
+      <thead><tr><th style={S.th}>Condition</th><th style={S.th}>Field</th><th style={S.th}>Where</th></tr></thead>
+      <tbody>
+        {[
+          ["KMS export policy allows it", "export_allowed = true", "Key policy"],
+          ["HSM extractable attribute set", "CKA_EXTRACTABLE = true", "HSM key generation"],
+          ["HSM non-exportable label not set", 'hsm_non_exportable != "true"', "Key labels"],
+          ["Wrapping key available for secure transport", "wrapping_key_id required", "Export request"],
+          ["Quorum approvals granted (if policy attached)", "M-of-N approvals", "Governance workflow"],
+        ].map(([cond, field, where], i) => (
+          <tr key={i}><td style={{...S.td, fontFamily: "inherit"}}>{cond}</td><td style={S.td}>{field}</td><td style={{...S.td, fontFamily: "inherit"}}>{where}</td></tr>
+        ))}
+      </tbody>
+    </table>
+    <H2>Cluster Sync Behavior</H2>
+    <Code>{`// Non-exportable keys:
+key_material_sync = "metadata_only"
+// → Only key ID, algorithm, status, and HSM references are synced
+
+// Exportable keys:
+key_material_sync = "wrapped_blob_allowed"
+// → Wrapped key material can be replicated across cluster nodes`}</Code>
+    <H2>Certificate Object Storage on HSM</H2>
+    <P>Beyond private keys, the full X.509 certificate can be stored as a PKCS#11 <IC>CKO_CERTIFICATE</IC> object on the HSM. This enables the HSM to serve as the complete trust store.</P>
+    <Code>{`// PKCS#11 certificate object attributes:
+CKA_CLASS           = CKO_CERTIFICATE
+CKA_CERTIFICATE_TYPE = CKC_X_509
+CKA_SUBJECT         = <DER-encoded subject>
+CKA_VALUE           = <DER-encoded certificate>
+CKA_TRUSTED         = CK_TRUE    // for CA certificates
+CKA_CERTIFICATE_CATEGORY = 2     // CA certificate
+CKA_ID              = <matching key ID for association>`}</Code>
+  </div>
+);
+
 /* ───────── SECTION MAP ───────── */
 const SECTIONS: Record<string, () => JSX.Element> = {
   overview: SectionOverview,
@@ -2594,6 +2936,10 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "api-cloud": SectionApiCloud,
   "api-hyok": SectionApiHyok,
   "api-ekm": SectionApiEkm,
+  "api-ekm-bitlocker": SectionApiEkmBitlocker,
+  "api-ekm-sdk": SectionApiEkmSdk,
+  "guide-agent-deploy": SectionGuideAgentDeploy,
+  "guide-key-cache": SectionGuideKeyCache,
   "api-mpc": SectionApiMpc,
   "api-qkd": SectionApiQkd,
   "api-compliance": SectionApiCompliance,
@@ -2627,6 +2973,9 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "config-profiles": SectionConfigProfiles,
   "config-fastinstall": SectionConfigFastInstall,
   "api-fde": SectionApiFde,
+  "guide-crypto-inventory": SectionGuideCryptoInventory,
+  "guide-vault-hierarchy": SectionGuideVaultHierarchy,
+  "guide-hsm-certs": SectionGuideHsmCerts,
   troubleshooting: SectionTroubleshooting,
 };
 

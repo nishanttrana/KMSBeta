@@ -186,10 +186,17 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
       icon:Gauge
     }]:[]),
     {
-      label:"Channels",
+      label:"Notification Channels",
       value:String(enabledChannels.length),
-      sub:enabledChannels.length?enabledChannels.map((ch:any)=>String(ch.name||"")).slice(0,5).join(", "):"none",
+      sub:enabledChannels.length?enabledChannels.map((ch:any)=>String(ch.name||"")).slice(0,3).join(", "):"No channels configured",
       tone:"blue",
+      icon:RadioIcon
+    },
+    {
+      label:"Delivery Destinations",
+      value:enabledChannels.length?enabledChannels.map((ch:any)=>String(ch.name||"").toUpperCase()).slice(0,3).join(", "):"—",
+      sub:`${enabledChannels.length} active ${enabledChannels.length===1?"destination":"destinations"}`,
+      tone:"purple",
       icon:RadioIcon
     }
   ];
@@ -280,7 +287,7 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
   const palette=C as Record<string,string>;
 
   return <div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10,marginBottom:12}}>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10,marginBottom:12}}>
       {alertCards.map((card)=><Card key={card.label} style={{padding:"12px 14px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>{card.label}</div>
@@ -289,16 +296,6 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
         <div style={{fontSize:24,fontWeight:700,letterSpacing:-.3,color:palette[card.tone]||C.accent,marginTop:4}}>{card.value}</div>
         <div style={{fontSize:10,color:C.dim,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.sub}</div>
       </Card>)}
-      <Card style={{padding:"12px 14px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Delivery Destinations</div>
-          <div style={{color:C.dim}}><RadioIcon size={14} strokeWidth={2}/></div>
-        </div>
-        <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:8}}>
-          {enabledChannels.length?enabledChannels.map((ch:any)=><B key={String(ch.name||"")} c="purple">{String(ch.name||"").toUpperCase()}</B>):<span style={{fontSize:10,color:C.muted}}>None configured</span>}
-        </div>
-        <div style={{fontSize:10,color:C.dim,marginTop:4}}>{enabledChannels.length} active {enabledChannels.length===1?"destination":"destinations"}</div>
-      </Card>
     </div>
 
     <Section

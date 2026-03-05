@@ -2939,5 +2939,659 @@ export const REST_API_CATALOG = [
       { code: 403, meaning: "Not a system admin" },
       { code: 500, meaning: "Network configuration apply failed" }
     ]
+  },
+
+  // ── EKM Agent ──
+  {
+    id: "ekm-agent-status",
+    group: "EKM Agent",
+    title: "Get Agent Status",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/agents/{{agent_id}}",
+    bodyTemplate: "",
+    description: "Returns full status, configuration, and last heartbeat data for a specific EKM agent.",
+    requestExample: "GET /svc/ekm/ekm/agents/agent-mssql-01",
+    responseExample: { agent: { id: "agent-mssql-01", status: "connected", tde_state: "enabled", last_heartbeat: "2026-03-05T12:00:00Z" } },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Agent not found" }
+    ]
+  },
+  {
+    id: "ekm-agent-health",
+    group: "EKM Agent",
+    title: "Agent Health Check",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/agents/{{agent_id}}/health",
+    bodyTemplate: "",
+    description: "Returns real-time agent health: connectivity, TDE state, PKCS#11 readiness, OS metrics.",
+    requestExample: "GET /svc/ekm/ekm/agents/agent-mssql-01/health",
+    responseExample: { status: "healthy", tde_state: "enabled", pkcs11_ready: true, cpu_pct: 12.5, mem_pct: 45.2 },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Agent not found" }
+    ]
+  },
+  {
+    id: "ekm-agent-logs",
+    group: "EKM Agent",
+    title: "Get Agent Logs",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/agents/{{agent_id}}/logs?limit={{limit}}",
+    bodyTemplate: "",
+    description: "Returns recent operation logs for an EKM agent, including heartbeats, rotations, and errors.",
+    requestExample: "GET /svc/ekm/ekm/agents/agent-mssql-01/logs?limit=50",
+    responseExample: { logs: [{ timestamp: "2026-03-05T12:00:00Z", level: "info", message: "heartbeat sent" }] },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Agent not found" }
+    ]
+  },
+  {
+    id: "ekm-agent-deploy",
+    group: "EKM Agent",
+    title: "Download Agent Package",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/agents/{{agent_id}}/deploy",
+    bodyTemplate: "",
+    description: "Downloads the agent deployment package (ZIP) pre-configured for this agent's settings.",
+    requestExample: "GET /svc/ekm/ekm/agents/agent-mssql-01/deploy",
+    responseExample: { content_type: "application/zip", filename: "vecta-ekm-agent-mssql-01.zip" },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Agent not found" }
+    ]
+  },
+  {
+    id: "ekm-agent-rotate",
+    group: "EKM Agent",
+    title: "Rotate Agent TDE Key",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/agents/{{agent_id}}/rotate",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "reason": "scheduled_rotation",\n  "force": false\n}',
+    description: "Triggers TDE key rotation for the agent's database. Creates a new key version and re-wraps the DEK.",
+    requestExample: "POST /svc/ekm/ekm/agents/agent-mssql-01/rotate",
+    responseExample: { status: "rotated", new_key_version: "v3", rotated_at: "2026-03-05T12:00:00Z" },
+    errorCodes: [
+      { code: 400, meaning: "Agent not in rotatable state" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Agent not found" }
+    ]
+  },
+  {
+    id: "ekm-agent-delete",
+    group: "EKM Agent",
+    title: "Delete Agent",
+    service: "ekm",
+    method: "DELETE",
+    pathTemplate: "/ekm/agents/{{agent_id}}",
+    bodyTemplate: "",
+    description: "Removes an EKM agent registration. Database must have local key backup before removal.",
+    requestExample: "DELETE /svc/ekm/ekm/agents/agent-mssql-01",
+    responseExample: { status: "deleted", agent_id: "agent-mssql-01" },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Agent not found" },
+      { code: 409, meaning: "Agent has active TDE keys without backup" }
+    ]
+  },
+  {
+    id: "ekm-agent-heartbeat",
+    group: "EKM Agent",
+    title: "Agent Heartbeat",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/agents/{{agent_id}}/heartbeat",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "status": "connected",\n  "tde_state": "enabled",\n  "active_key_id": "tde-key-001",\n  "active_key_version": "v1",\n  "metadata_json": "{}"\n}',
+    description: "Sends agent heartbeat with status, TDE state, OS metrics, and PKCS#11 health.",
+    requestExample: "POST /svc/ekm/ekm/agents/agent-mssql-01/heartbeat",
+    responseExample: { status: "ack", server_time: "2026-03-05T12:00:00Z" },
+    errorCodes: [
+      { code: 400, meaning: "Invalid heartbeat payload" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Agent not registered" }
+    ]
+  },
+
+  // ── BitLocker ──
+  {
+    id: "ekm-bitlocker-register",
+    group: "BitLocker",
+    title: "Register BitLocker Client",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/bitlocker/clients/register",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "agent_id": "bl-win-01",\n  "name": "Desktop-Finance-01",\n  "host": "10.0.1.50",\n  "bitlocker_mount_point": "C:",\n  "bitlocker_protector_type": "recovery_password"\n}',
+    description: "Registers a Windows machine for centralized BitLocker management.",
+    requestExample: "POST /svc/ekm/ekm/bitlocker/clients/register",
+    responseExample: { client: { id: "bl-win-01", status: "registered", assigned_protector: "recovery_password" } },
+    errorCodes: [
+      { code: 400, meaning: "Invalid client registration payload" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 409, meaning: "Client already registered" }
+    ]
+  },
+  {
+    id: "ekm-bitlocker-list",
+    group: "BitLocker",
+    title: "List BitLocker Clients",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/bitlocker/clients?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Lists all registered BitLocker clients with encryption status and last heartbeat.",
+    requestExample: "GET /svc/ekm/ekm/bitlocker/clients?tenant_id=root",
+    responseExample: { items: [{ id: "bl-win-01", name: "Desktop-Finance-01", protection_status: "On", last_heartbeat: "2026-03-05T12:00:00Z" }] },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "ekm-bitlocker-get",
+    group: "BitLocker",
+    title: "Get BitLocker Client",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/bitlocker/clients/{{client_id}}",
+    bodyTemplate: "",
+    description: "Returns detailed BitLocker client info: encryption status, protector, mount point, TPM state.",
+    requestExample: "GET /svc/ekm/ekm/bitlocker/clients/bl-win-01",
+    responseExample: { client: { id: "bl-win-01", protection_status: "On", encryption_method: "XtsAes256", tpm_present: true, tpm_ready: true } },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Client not found" }
+    ]
+  },
+  {
+    id: "ekm-bitlocker-delete-preview",
+    group: "BitLocker",
+    title: "Preview BitLocker Client Deletion",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/bitlocker/clients/{{client_id}}/delete-preview",
+    bodyTemplate: "",
+    description: "Shows impact of deleting a BitLocker client, including escrowed recovery keys that will be orphaned.",
+    requestExample: "GET /svc/ekm/ekm/bitlocker/clients/bl-win-01/delete-preview",
+    responseExample: { client_id: "bl-win-01", recovery_keys_count: 2, warning: "Recovery keys will be orphaned" },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Client not found" }
+    ]
+  },
+  {
+    id: "ekm-bitlocker-delete",
+    group: "BitLocker",
+    title: "Delete BitLocker Client",
+    service: "ekm",
+    method: "DELETE",
+    pathTemplate: "/ekm/bitlocker/clients/{{client_id}}",
+    bodyTemplate: "",
+    description: "Removes a BitLocker client registration and optionally purges escrowed recovery keys.",
+    requestExample: "DELETE /svc/ekm/ekm/bitlocker/clients/bl-win-01",
+    responseExample: { status: "deleted", client_id: "bl-win-01" },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Client not found" }
+    ]
+  },
+  {
+    id: "ekm-bitlocker-heartbeat",
+    group: "BitLocker",
+    title: "BitLocker Client Heartbeat",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/bitlocker/clients/{{client_id}}/heartbeat",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "status": "connected",\n  "protection_status": "On",\n  "encryption_percentage": 100\n}',
+    description: "Sends heartbeat from BitLocker agent with current encryption status and OS metrics.",
+    requestExample: "POST /svc/ekm/ekm/bitlocker/clients/bl-win-01/heartbeat",
+    responseExample: { status: "ack" },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Client not registered" }
+    ]
+  },
+  {
+    id: "ekm-bitlocker-operations",
+    group: "BitLocker",
+    title: "Execute BitLocker Operation",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/bitlocker/clients/{{client_id}}/operations",
+    bodyTemplate: '{\n  "operation": "enable",\n  "mount_point": "C:",\n  "protector_type": "recovery_password"\n}',
+    description: "Queues a BitLocker operation (enable, disable, suspend, resume, rotate_recovery, status, tpm_status).",
+    requestExample: "POST /svc/ekm/ekm/bitlocker/clients/bl-win-01/operations",
+    responseExample: { job_id: "job-abc123", status: "queued", operation: "enable" },
+    errorCodes: [
+      { code: 400, meaning: "Invalid operation" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Client not found" }
+    ]
+  },
+  {
+    id: "ekm-bitlocker-jobs-next",
+    group: "BitLocker",
+    title: "Poll Next BitLocker Job",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/bitlocker/clients/{{client_id}}/jobs/next",
+    bodyTemplate: "",
+    description: "Agent polls for the next pending job. Returns empty if no jobs are queued.",
+    requestExample: "GET /svc/ekm/ekm/bitlocker/clients/bl-win-01/jobs/next",
+    responseExample: { job_id: "job-abc123", operation: "enable", params: { mount_point: "C:", protector_type: "recovery_password" } },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Client not found" }
+    ]
+  },
+  {
+    id: "ekm-bitlocker-job-result",
+    group: "BitLocker",
+    title: "Submit Job Result",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/bitlocker/clients/{{client_id}}/jobs/{{job_id}}/result",
+    bodyTemplate: '{\n  "job_id": "job-abc123",\n  "status": "completed",\n  "result": "BitLocker enabled successfully",\n  "error": ""\n}',
+    description: "Agent submits the result of a completed BitLocker job.",
+    requestExample: "POST /svc/ekm/ekm/bitlocker/clients/bl-win-01/jobs/job-abc123/result",
+    responseExample: { status: "recorded" },
+    errorCodes: [
+      { code: 400, meaning: "Invalid result payload" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Job not found" }
+    ]
+  },
+  {
+    id: "ekm-bitlocker-recovery",
+    group: "BitLocker",
+    title: "Get Recovery Keys",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/bitlocker/recovery?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Lists escrowed BitLocker recovery keys. Supports filtering by client ID.",
+    requestExample: "GET /svc/ekm/ekm/bitlocker/recovery?tenant_id=root",
+    responseExample: { keys: [{ client_id: "bl-win-01", recovery_password: "123456-...", created_at: "2026-03-01T10:00:00Z" }] },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Requires admin role" }
+    ]
+  },
+  {
+    id: "ekm-bitlocker-network-scan",
+    group: "BitLocker",
+    title: "Network Scan for BitLocker",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/bitlocker/network/scan",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "subnet": "10.0.1.0/24",\n  "timeout_sec": 30\n}',
+    description: "Scans a subnet for Windows endpoints that support BitLocker, returning discovered devices.",
+    requestExample: "POST /svc/ekm/ekm/bitlocker/network/scan",
+    responseExample: { discovered: [{ ip: "10.0.1.50", hostname: "DESKTOP-FIN01", os: "Windows 11 Pro", tpm_present: true }] },
+    errorCodes: [
+      { code: 400, meaning: "Invalid subnet" },
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "ekm-bitlocker-deploy",
+    group: "BitLocker",
+    title: "Download BitLocker Agent",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/bitlocker/clients/{{client_id}}/deploy",
+    bodyTemplate: "",
+    description: "Downloads the BitLocker agent installer package pre-configured for this client.",
+    requestExample: "GET /svc/ekm/ekm/bitlocker/clients/bl-win-01/deploy",
+    responseExample: { content_type: "application/zip", filename: "vecta-bitlocker-agent-bl-win-01.zip" },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Client not found" }
+    ]
+  },
+
+  // ── TDE Keys ──
+  {
+    id: "ekm-tde-create",
+    group: "TDE Keys",
+    title: "Create TDE Key",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/tde/keys",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "label": "mssql-prod-dek",\n  "algorithm": "AES-256-GCM",\n  "export_allowed": true\n}',
+    description: "Creates a new TDE encryption key for database transparent data encryption.",
+    requestExample: "POST /svc/ekm/ekm/tde/keys",
+    responseExample: { key: { key_id: "tde-key-001", label: "mssql-prod-dek", algorithm: "AES-256-GCM", version: 1, created_at: "2026-03-05T12:00:00Z" } },
+    errorCodes: [
+      { code: 400, meaning: "Invalid key parameters" },
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "ekm-tde-wrap",
+    group: "TDE Keys",
+    title: "Wrap (Encrypt) with TDE Key",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/tde/keys/{{key_id}}/wrap",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "plaintext": "{{base64_plaintext}}"\n}',
+    description: "Wraps (encrypts) data using a TDE key. Used by agents to encrypt DEKs.",
+    requestExample: "POST /svc/ekm/ekm/tde/keys/tde-key-001/wrap",
+    responseExample: { ciphertext: "base64...", iv: "base64..." },
+    errorCodes: [
+      { code: 400, meaning: "Invalid plaintext" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Key not found" }
+    ]
+  },
+  {
+    id: "ekm-tde-unwrap",
+    group: "TDE Keys",
+    title: "Unwrap (Decrypt) with TDE Key",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/tde/keys/{{key_id}}/unwrap",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "ciphertext": "{{base64_ciphertext}}",\n  "iv": "{{base64_iv}}"\n}',
+    description: "Unwraps (decrypts) data using a TDE key. Used by agents to decrypt DEKs.",
+    requestExample: "POST /svc/ekm/ekm/tde/keys/tde-key-001/unwrap",
+    responseExample: { plaintext: "base64..." },
+    errorCodes: [
+      { code: 400, meaning: "Invalid ciphertext" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Key not found" }
+    ]
+  },
+  {
+    id: "ekm-tde-rotate",
+    group: "TDE Keys",
+    title: "Rotate TDE Key",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/tde/keys/{{key_id}}/rotate",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "reason": "compliance_rotation"\n}',
+    description: "Rotates a TDE key to a new version. Old versions remain available for unwrap/decrypt.",
+    requestExample: "POST /svc/ekm/ekm/tde/keys/tde-key-001/rotate",
+    responseExample: { key: { key_id: "tde-key-001", version: 3, rotated_at: "2026-03-05T12:00:00Z" } },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Key not found" }
+    ]
+  },
+  {
+    id: "ekm-tde-public",
+    group: "TDE Keys",
+    title: "Get TDE Key Public Info",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/tde/keys/{{key_id}}/public",
+    bodyTemplate: "",
+    description: "Returns public metadata for a TDE key: algorithm, version, export status. No key material exposed.",
+    requestExample: "GET /svc/ekm/ekm/tde/keys/tde-key-001/public",
+    responseExample: { key_id: "tde-key-001", algorithm: "AES-256-GCM", version: 3, export_allowed: true },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Key not found" }
+    ]
+  },
+
+  // ── EKM Database ──
+  {
+    id: "ekm-db-register",
+    group: "EKM Database",
+    title: "Register EKM Database",
+    service: "ekm",
+    method: "POST",
+    pathTemplate: "/ekm/databases/register",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "MSSQL-Prod",\n  "engine": "mssql",\n  "host": "10.0.0.15",\n  "port": 1433\n}',
+    description: "Registers a database instance for EKM key management and TDE monitoring.",
+    requestExample: "POST /svc/ekm/ekm/databases/register",
+    responseExample: { database: { id: "db-001", name: "MSSQL-Prod", engine: "mssql", status: "registered" } },
+    errorCodes: [
+      { code: 400, meaning: "Invalid database parameters" },
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "ekm-db-list",
+    group: "EKM Database",
+    title: "List EKM Databases",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/databases?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Lists all registered databases with their TDE encryption status.",
+    requestExample: "GET /svc/ekm/ekm/databases?tenant_id=root",
+    responseExample: { items: [{ id: "db-001", name: "MSSQL-Prod", engine: "mssql", tde_state: "enabled" }] },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "ekm-db-get",
+    group: "EKM Database",
+    title: "Get EKM Database",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/databases/{{database_id}}",
+    bodyTemplate: "",
+    description: "Returns detailed info for a registered database: TDE state, assigned agent, key mapping.",
+    requestExample: "GET /svc/ekm/ekm/databases/db-001",
+    responseExample: { database: { id: "db-001", name: "MSSQL-Prod", tde_state: "enabled", agent_id: "agent-mssql-01", key_id: "tde-key-001" } },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Database not found" }
+    ]
+  },
+
+  // ── EKM SDK ──
+  {
+    id: "ekm-sdk-overview",
+    group: "EKM SDK",
+    title: "SDK Overview",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/sdk/overview",
+    bodyTemplate: "",
+    description: "Returns available SDK packages: PKCS#11 provider, JCA provider, agent binaries, with version and platform info.",
+    requestExample: "GET /svc/ekm/ekm/sdk/overview",
+    responseExample: { packages: [{ name: "pkcs11-provider", version: "1.0.0", platforms: ["linux-amd64", "windows-amd64", "darwin-arm64"] }, { name: "jca-provider", version: "1.0.0", platforms: ["java11+"] }] },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "ekm-sdk-download",
+    group: "EKM SDK",
+    title: "Download SDK Package",
+    service: "ekm",
+    method: "GET",
+    pathTemplate: "/ekm/sdk/download/{{package_name}}?platform={{platform}}",
+    bodyTemplate: "",
+    description: "Downloads an SDK package (PKCS#11 .so/.dll/.dylib, JCA .jar, agent binary) for the specified platform.",
+    requestExample: "GET /svc/ekm/ekm/sdk/download/pkcs11-provider?platform=linux-amd64",
+    responseExample: { content_type: "application/octet-stream", filename: "libvecta-pkcs11.so" },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Package or platform not found" }
+    ]
+  },
+
+  /* ── Vault Hierarchy (OpenBao-compatible) ── */
+  {
+    id: "vault-list-path",
+    group: "Vault Hierarchy",
+    title: "List Secrets at Path",
+    service: "secrets",
+    method: "GET",
+    pathTemplate: "/v1/secret/metadata/{{path}}?list=true",
+    bodyTemplate: "",
+    description: "Lists secrets and subfolders at the specified path. OpenBao/Vault KV v2 compatible.",
+    requestExample: "GET /svc/secrets/v1/secret/metadata/engineering/?list=true",
+    responseExample: { keys: ["api-keys/", "database/", "prod-stripe-key"] },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Path access denied by ACL policy" }
+    ]
+  },
+  {
+    id: "vault-read-path",
+    group: "Vault Hierarchy",
+    title: "Read Secret at Path",
+    service: "secrets",
+    method: "GET",
+    pathTemplate: "/v1/secret/data/{{path}}",
+    bodyTemplate: "",
+    description: "Reads a secret at the specified path. Returns versioned KV v2 data with metadata.",
+    requestExample: "GET /svc/secrets/v1/secret/data/engineering/api-keys/stripe-prod",
+    responseExample: { data: { data: { value: "sk_live_..." }, metadata: { version: 3, created_time: "2026-03-05T10:00:00Z" } } },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Path access denied by ACL policy" },
+      { code: 404, meaning: "Secret not found at path" }
+    ]
+  },
+  {
+    id: "vault-write-path",
+    group: "Vault Hierarchy",
+    title: "Write Secret at Path",
+    service: "secrets",
+    method: "POST",
+    pathTemplate: "/v1/secret/data/{{path}}",
+    bodyTemplate: '{ "data": { "value": "{{secret_value}}" }, "options": { "cas": 0 } }',
+    description: "Creates or updates a secret at the specified path. Supports check-and-set (CAS) for optimistic locking.",
+    requestExample: 'POST /svc/secrets/v1/secret/data/engineering/api-keys/stripe-prod\n{"data":{"value":"sk_live_new..."}}',
+    responseExample: { data: { version: 4, created_time: "2026-03-05T10:05:00Z" } },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Write access denied by ACL policy" },
+      { code: 409, meaning: "CAS version mismatch" }
+    ]
+  },
+  {
+    id: "vault-delete-path",
+    group: "Vault Hierarchy",
+    title: "Delete Secret Versions",
+    service: "secrets",
+    method: "POST",
+    pathTemplate: "/v1/secret/delete/{{path}}",
+    bodyTemplate: '{ "versions": [1, 2] }',
+    description: "Soft-deletes specific versions of a secret. Versions can be restored with undelete.",
+    requestExample: 'POST /svc/secrets/v1/secret/delete/engineering/api-keys/old-key\n{"versions":[1,2]}',
+    responseExample: {},
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Delete access denied" },
+      { code: 404, meaning: "Secret not found" }
+    ]
+  },
+  {
+    id: "vault-undelete-path",
+    group: "Vault Hierarchy",
+    title: "Undelete Secret Versions",
+    service: "secrets",
+    method: "POST",
+    pathTemplate: "/v1/secret/undelete/{{path}}",
+    bodyTemplate: '{ "versions": [1, 2] }',
+    description: "Restores previously soft-deleted secret versions.",
+    requestExample: 'POST /svc/secrets/v1/secret/undelete/engineering/api-keys/old-key\n{"versions":[1]}',
+    responseExample: {},
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Secret or versions not found" }
+    ]
+  },
+
+  /* ── HSM Certificate Operations ── */
+  {
+    id: "hsm-store-cert",
+    group: "HSM Certificates",
+    title: "Store Certificate in HSM",
+    service: "certs",
+    method: "POST",
+    pathTemplate: "/certs/certificates/{{cert_id}}/hsm-store",
+    bodyTemplate: '{ "hsm_provider": "{{provider_name}}", "partition_label": "{{partition}}", "slot_id": "{{slot_id}}" }',
+    description: "Stores a certificate as a PKCS#11 CKO_CERTIFICATE object on the HSM. The private key must already exist in the HSM.",
+    requestExample: 'POST /svc/certs/certificates/cert-001/hsm-store\n{"hsm_provider":"customer-hsm","partition_label":"prod-partition"}',
+    responseExample: { stored: true, hsm_object_handle: 42, partition: "prod-partition" },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Certificate not found" },
+      { code: 409, meaning: "Certificate already stored in HSM" },
+      { code: 502, meaning: "HSM communication failure" }
+    ]
+  },
+  {
+    id: "hsm-create-ca",
+    group: "HSM Certificates",
+    title: "Create HSM-Backed CA",
+    service: "certs",
+    method: "POST",
+    pathTemplate: "/certs/cas",
+    bodyTemplate: '{ "name": "{{ca_name}}", "algorithm": "ECDSA-P384", "key_backend": "hsm", "key_ref": "{{hsm_key_id}}", "subject": "CN={{subject}}", "ca_level": "root" }',
+    description: "Creates a certificate authority with its signing key stored in the HSM. All signing operations are delegated to the HSM via PKCS#11.",
+    requestExample: 'POST /svc/certs/cas\n{"name":"Prod Root CA","algorithm":"ECDSA-P384","key_backend":"hsm","key_ref":"hsm-key-001","subject":"CN=Prod Root CA,O=Acme"}',
+    responseExample: { id: "ca-001", name: "Prod Root CA", key_backend: "hsm", key_ref: "hsm-key-001", status: "active" },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 400, meaning: "Invalid CA configuration" },
+      { code: 404, meaning: "HSM key_ref not found" },
+      { code: 502, meaning: "HSM communication failure" }
+    ]
+  },
+  {
+    id: "hsm-export-key",
+    group: "HSM Certificates",
+    title: "Export Key from HSM",
+    service: "keycore",
+    method: "POST",
+    pathTemplate: "/keys/{{key_id}}/export",
+    bodyTemplate: '{ "wrapping_key_id": "{{wrapping_key_id}}", "export_mode": "aes-gcm-wrapped-by-kek" }',
+    description: "Exports an HSM key wrapped by a KEK. Requires: export_allowed=true, CKA_EXTRACTABLE=true, and hsm_non_exportable!=true. Approval may be required.",
+    requestExample: 'POST /svc/keycore/keys/key-001/export\n{"wrapping_key_id":"kek-001","export_mode":"aes-gcm-wrapped-by-kek"}',
+    responseExample: { wrapped_key: "base64...", algorithm: "AES-256-GCM", wrapping_key_id: "kek-001" },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Export denied by key policy or HSM attributes" },
+      { code: 404, meaning: "Key not found" },
+      { code: 409, meaning: "Pending approval required" }
+    ]
+  },
+
+  /* ── Crypto Inventory ── */
+  {
+    id: "inventory-scan",
+    group: "Crypto Inventory",
+    title: "Run Inventory Scan",
+    service: "compliance",
+    method: "POST",
+    pathTemplate: "/compliance/inventory/scan",
+    bodyTemplate: '{ "include_keys": true, "include_certs": true, "include_hsm": true }',
+    description: "Triggers a full cryptographic inventory scan across keys, certificates, and HSM objects. Returns risk findings and scores.",
+    requestExample: 'POST /svc/compliance/inventory/scan\n{"include_keys":true,"include_certs":true}',
+    responseExample: { scan_id: "scan-001", total_keys: 150, total_certs: 45, risk_findings: 12, score: 82 },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 429, meaning: "Scan already in progress" }
+    ]
+  },
+  {
+    id: "inventory-report",
+    group: "Crypto Inventory",
+    title: "Get Inventory Report",
+    service: "compliance",
+    method: "GET",
+    pathTemplate: "/compliance/inventory/report?format={{format}}",
+    bodyTemplate: "",
+    description: "Returns the latest cryptographic inventory report with algorithm distribution, age analysis, PQC readiness, and risk findings.",
+    requestExample: "GET /svc/compliance/inventory/report?format=json",
+    responseExample: { score: 82, total_keys: 150, total_certs: 45, pqc_ready: 12, classical: 133, hybrid: 5, findings: [{ risk: "critical", reason: "Weak algorithm" }] },
+    errorCodes: [
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "No inventory scan has been run yet" }
+    ]
   }
 ];

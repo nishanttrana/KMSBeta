@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Clock, Copy, Download, Eye, EyeOff, FileText, History, KeyRound,
+  Clock, Copy, Download, Eye, EyeOff, FileText, Folder, History, KeyRound,
   Lock, Plus, RefreshCcw, RotateCcw, ScrollText, Search, Shield,
   ShieldAlert, Trash2, Upload
 } from "lucide-react";
@@ -173,6 +173,11 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
   const [category, setCategory] = useState("all");
   const [sortBy, setSortBy] = useState("updated");
 
+  // Folder hierarchy (OpenBao-compatible path structure)
+  const [currentPath, setCurrentPath] = useState("/");
+  const [folderModalOpen, setFolderModalOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+
   // Create form
   const [createName, setCreateName] = useState("");
   const [createType, setCreateType] = useState("api_key");
@@ -247,6 +252,65 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
     return items;
   }, [secrets, search, category, sortBy]);
 
+  /* ── folder hierarchy (OpenBao-compatible path structure) ── */
+  const getSecretPath = (s: any): string => {
+    const labels = s?.labels || s?.metadata || {};
+    const path = String(labels?.path || labels?.folder || "").trim();
+    if (path && path !== "/") return path.startsWith("/") ? path : `/${path}`;
+    // Derive path from secret name convention: "dept/project/name" or "dept.project.name"
+    const name = String(s?.name || "");
+    const parts = name.includes("/") ? name.split("/") : name.includes(".") && name.split(".").length > 2 ? name.split(".") : null;
+    if (parts && parts.length >= 2) return `/${parts.slice(0, -1).join("/")}`;
+    return "/";
+  };
+
+  const folderTree = useMemo(() => {
+    const folders = new Map<string, { secrets: any[], subfolders: Set<string> }>();
+    // Always ensure root exists
+    folders.set("/", { secrets: [], subfolders: new Set() });
+
+    filtered.forEach((s) => {
+      const path = getSecretPath(s);
+      if (!folders.has(path)) folders.set(path, { secrets: [], subfolders: new Set() });
+      folders.get(path)!.secrets.push(s);
+
+      // Register parent folders
+      const parts = path.split("/").filter(Boolean);
+      for (let i = 0; i < parts.length; i++) {
+        const parentPath = i === 0 ? "/" : `/${parts.slice(0, i).join("/")}`;
+        const childPath = `/${parts.slice(0, i + 1).join("/")}`;
+        if (!folders.has(parentPath)) folders.set(parentPath, { secrets: [], subfolders: new Set() });
+        folders.get(parentPath)!.subfolders.add(childPath);
+      }
+    });
+    return folders;
+  }, [filtered]);
+
+  const currentFolderData = useMemo(() => {
+    const data = folderTree.get(currentPath);
+    if (!data) return { secrets: filtered, subfolders: [] };
+    return { secrets: data.secrets, subfolders: Array.from(data.subfolders).sort() };
+  }, [folderTree, currentPath, filtered]);
+
+  const breadcrumbs = useMemo(() => {
+    const parts = currentPath.split("/").filter(Boolean);
+    const crumbs = [{ label: "root", path: "/" }];
+    parts.forEach((part, i) => {
+      crumbs.push({ label: part, path: `/${parts.slice(0, i + 1).join("/")}` });
+    });
+    return crumbs;
+  }, [currentPath]);
+
+  const countSecretsInPath = (path: string): number => {
+    let count = 0;
+    folderTree.forEach((data, key) => {
+      if (key === path || key.startsWith(path === "/" ? "/" : `${path}/`)) {
+        count += data.secrets.length;
+      }
+    });
+    return path === "/" ? filtered.length : count;
+  };
+
   /* ── actions ── */
   const submitCreate = async () => {
     if (!session) return;
@@ -260,9 +324,9 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
         secret_type: createType.trim().toLowerCase().replace(/\s+/g, "_"),
         value: createValue,
         description: createDesc.trim(),
-        labels: { delivery_format: createDeliveryFormat },
+        labels: { delivery_format: createDeliveryFormat, path: currentPath === "/" ? "/" : currentPath },
         lease_ttl_seconds: ttlToSeconds(createTTLMode, createTTLCustom),
-        metadata: { source: "dashboard", lease_based: createLeaseBased, envelope_encryption: envelopeEncryption }
+        metadata: { source: "dashboard", lease_based: createLeaseBased, envelope_encryption: envelopeEncryption, path: currentPath }
       });
       onToast?.("Secret stored securely.");
       setModal(null); setCreateName(""); setCreateValue(""); setCreateDesc(""); setCreateType("api_key"); setCreateTTLMode("none"); setCreateTTLCustom(""); setCreateLeaseBased(false); setCreateDeliveryFormat("raw");
@@ -441,9 +505,89 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
         </div>
       </div>}
 
+      {/* ── Folder Hierarchy (OpenBao-compatible) ── */}
+      <div style={{ marginBottom: 14 }}>
+        {/* Breadcrumb Navigation */}
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginRight: 4 }}>Path:</span>
+          {breadcrumbs.map((crumb, i) => (
+            <span key={crumb.path} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+              {i > 0 && <span style={{ color: C.muted, fontSize: 10 }}>/</span>}
+              <span
+                onClick={() => setCurrentPath(crumb.path)}
+                style={{ fontSize: 10, color: crumb.path === currentPath ? C.accent : C.text, cursor: "pointer", fontWeight: crumb.path === currentPath ? 700 : 400, padding: "2px 4px", borderRadius: 4, background: crumb.path === currentPath ? C.accentDim : "transparent" }}
+              >{crumb.label}</span>
+            </span>
+          ))}
+          <span style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+            <Btn small onClick={() => { setNewFolderName(""); setFolderModalOpen(true); }} style={{ height: 24, fontSize: 9 }}>+ Folder</Btn>
+          </span>
+        </div>
+
+        {/* Subfolder Cards */}
+        {currentFolderData.subfolders.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 8, marginBottom: 10 }}>
+            {currentFolderData.subfolders.map((folderPath) => {
+              const folderName = folderPath.split("/").filter(Boolean).pop() || folderPath;
+              const secretCount = countSecretsInPath(folderPath);
+              return (
+                <div
+                  key={folderPath}
+                  onClick={() => setCurrentPath(folderPath)}
+                  style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, cursor: "pointer", transition: "border-color .15s" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.accent; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; }}
+                >
+                  <div style={{ width: 28, height: 28, borderRadius: 6, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Folder size={14} color={C.accent} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: C.text }}>{folderName}</div>
+                    <div style={{ fontSize: 9, color: C.dim }}>{secretCount} secret{secretCount !== 1 ? "s" : ""}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Path info */}
+        <div style={{ fontSize: 9, color: C.dim, marginBottom: 4 }}>
+          {currentPath === "/" ? `${filtered.length} secrets total across all paths` : `${currentFolderData.secrets.length} secrets in ${currentPath}`}
+          {currentPath !== "/" && <span onClick={() => setCurrentPath("/")} style={{ color: C.accent, cursor: "pointer", marginLeft: 8 }}>Show all</span>}
+        </div>
+      </div>
+
+      {/* Create Folder Modal */}
+      {folderModalOpen && <Modal open={folderModalOpen} title="Create Folder" onClose={() => setFolderModalOpen(false)}>
+        <div style={{ fontSize: 10, color: C.dim, marginBottom: 10 }}>
+          Create a folder path for organizing secrets by department, project, or environment. Compatible with OpenBao/Vault path-based access policies.
+        </div>
+        <FG label="Folder Name" hint="e.g. engineering, production, finance/accounts">
+          <Inp value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} placeholder="department-name" />
+        </FG>
+        <div style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>
+          Full path: <code style={{ color: C.accent }}>{currentPath === "/" ? "/" : currentPath + "/"}{newFolderName || "<name>"}</code>
+        </div>
+        <div style={{ marginTop: 10, padding: "8px 12px", borderRadius: 6, background: `${C.blue}12`, border: `1px solid ${C.blue}33`, fontSize: 10, color: C.dim }}>
+          <b style={{ color: C.blue }}>OpenBao compatible:</b> Folder paths map to Vault/OpenBao secret engine paths. Use <code style={{ color: C.accent }}>secret/data/{"{path}"}</code> for KV v2 access. Hooks and policies apply at each path level.
+        </div>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
+          <Btn onClick={() => setFolderModalOpen(false)}>Cancel</Btn>
+          <Btn primary onClick={() => {
+            const folderName = newFolderName.trim().replace(/[^a-zA-Z0-9._/-]/g, "-").replace(/\/+/g, "/").replace(/^\/|\/$/g, "");
+            if (!folderName) { onToast?.("Folder name is required."); return; }
+            const newPath = currentPath === "/" ? `/${folderName}` : `${currentPath}/${folderName}`;
+            setCurrentPath(newPath);
+            setFolderModalOpen(false);
+            onToast?.(`Navigated to ${newPath}. Store secrets here to populate the folder.`);
+          }} disabled={!newFolderName.trim()}>Create & Navigate</Btn>
+        </div>
+      </Modal>}
+
       {/* ── Secret Cards Grid ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(320px,1fr))", gap: 10 }}>
-        {filtered.map((s) => {
+        {(currentPath === "/" ? filtered : currentFolderData.secrets).map((s) => {
           const badge = getBadge(s.secret_type);
           const BadgeIcon = badge.icon;
           const exp = expiryStatus(s);
@@ -502,6 +646,54 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
           </div>}
         </>}
       </div>}
+    </Section>
+
+    {/* ── OpenBao Compatibility & Hooks ── */}
+    <Section title="OpenBao Compatibility">
+      <Card style={{ padding: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>API Compatibility</div>
+            <div style={{ display: "grid", gap: 4, fontSize: 10, color: C.dim }}>
+              {[
+                { api: "secret/data/{path}", desc: "KV v2 read/write — maps to vault paths" },
+                { api: "secret/metadata/{path}", desc: "KV v2 metadata — version history" },
+                { api: "secret/delete/{path}", desc: "Soft delete secret versions" },
+                { api: "secret/undelete/{path}", desc: "Restore soft-deleted versions" },
+                { api: "sys/mounts/secret", desc: "Mount configuration" },
+                { api: "sys/policies/acl/{name}", desc: "Path-based ACL policies" },
+              ].map((item) => (
+                <div key={item.api} style={{ display: "flex", gap: 8, padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <code style={{ color: C.accent, fontSize: 9, fontFamily: "'JetBrains Mono',monospace", minWidth: 200 }}>{item.api}</code>
+                  <span>{item.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>Event Hooks</div>
+            <div style={{ display: "grid", gap: 4, fontSize: 10, color: C.dim }}>
+              {[
+                { hook: "secret.created", desc: "Fires when a new secret is stored at any path" },
+                { hook: "secret.updated", desc: "Fires when secret value is modified" },
+                { hook: "secret.rotated", desc: "Fires on version rotation — triggers downstream sync" },
+                { hook: "secret.deleted", desc: "Fires on soft or hard delete" },
+                { hook: "secret.accessed", desc: "Fires on read — for audit and access tracking" },
+                { hook: "secret.expired", desc: "Fires when TTL/lease expires — auto-cleanup trigger" },
+                { hook: "folder.policy_changed", desc: "Fires when path ACL policy is modified" },
+              ].map((item) => (
+                <div key={item.hook} style={{ display: "flex", gap: 8, padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <code style={{ color: C.green, fontSize: 9, fontFamily: "'JetBrains Mono',monospace", minWidth: 180 }}>{item.hook}</code>
+                  <span>{item.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div style={{ marginTop: 12, padding: "8px 12px", borderRadius: 6, background: `${C.purple}12`, border: `1px solid ${C.purple}33`, fontSize: 10, color: C.dim }}>
+          <b style={{ color: C.purple }}>OpenBao extensions:</b> Custom plugin backends, transit engine for encryption-as-a-service, and identity/entity aliases are supported through the hooks system. Configure webhooks in Administration → Event Hooks.
+        </div>
+      </Card>
     </Section>
 
     {/* ══════════════ STORE SECRET MODAL ══════════════ */}
