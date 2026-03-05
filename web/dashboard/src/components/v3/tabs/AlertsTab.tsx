@@ -164,41 +164,13 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
   },[channels]);
 
   const alertCards=[
-    {
-      label:"Open Alerts",
-      value:String(openItems.length),
-      sub:`${criticalItems.length} critical, ${highItems.length} high`,
-      tone:"red",
-      icon:Bell
-    },
-    {
-      label:"Today Total",
-      value:String(todayTotal),
-      sub:stats?.total?`${Math.max(0,Math.round((resolvedItems.length/Math.max(1,stats.total))*100))}% triaged`:"from audit events",
-      tone:"accent",
-      icon:Bell
-    },
-    ...(mttrAvg>0?[{
-      label:"Avg Response",
-      value:`${(mttrAvg/60).toFixed(1)}h`,
-      sub:`MTTR ${Math.round(mttrAvg)}m`,
-      tone:"green",
-      icon:Gauge
-    }]:[]),
-    {
-      label:"Notification Channels",
-      value:String(enabledChannels.length),
-      sub:enabledChannels.length?enabledChannels.map((ch:any)=>String(ch.name||"")).slice(0,3).join(", "):"No channels configured",
-      tone:"blue",
-      icon:RadioIcon
-    },
-    {
-      label:"Delivery Destinations",
-      value:enabledChannels.length?enabledChannels.map((ch:any)=>String(ch.name||"").toUpperCase()).slice(0,3).join(", "):"—",
-      sub:`${enabledChannels.length} active ${enabledChannels.length===1?"destination":"destinations"}`,
-      tone:"purple",
-      icon:RadioIcon
-    }
+    {label:"Open",value:String(openItems.length),sub:`${criticalItems.length} crit / ${highItems.length} high`,tone:"red",icon:Bell},
+    {label:"Critical",value:String(criticalItems.length),sub:criticalItems.length?"needs attention":"clear",tone:criticalItems.length?"red":"green",icon:Bell},
+    {label:"Today",value:String(todayTotal),sub:stats?.total?`${Math.max(0,Math.round((resolvedItems.length/Math.max(1,stats.total))*100))}% triaged`:"audit events",tone:"accent",icon:Bell},
+    {label:"MTTR",value:mttrAvg>0?`${(mttrAvg/60).toFixed(1)}h`:"—",sub:mttrAvg>0?`${Math.round(mttrAvg)}m avg`:"no data",tone:"green",icon:Gauge},
+    {label:"Resolved",value:String(resolvedItems.length),sub:`${suppressedItems.length} suppressed`,tone:"green",icon:Bell},
+    {label:"Channels",value:String(enabledChannels.length),sub:enabledChannels.length?enabledChannels.map((ch:any)=>String(ch.name||"")).slice(0,3).join(", "):"none",tone:"blue",icon:RadioIcon},
+    {label:"Total",value:String(stats?.total||sortedItems.length),sub:`${Object.keys(stats?.by_severity||{}).length} severities`,tone:"accent",icon:Gauge},
   ];
 
   const filterTabs=[
@@ -287,14 +259,14 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
   const palette=C as Record<string,string>;
 
   return <div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:10,marginBottom:12}}>
-      {alertCards.map((card)=><Card key={card.label} style={{padding:"12px 14px"}}>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6,marginBottom:10}}>
+      {alertCards.map((card)=><Card key={card.label} style={{padding:"8px 10px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>{card.label}</div>
-          <div style={{color:C.dim}}><card.icon size={14} strokeWidth={2}/></div>
+          <div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:.8,fontWeight:600}}>{card.label}</div>
+          <card.icon size={11} strokeWidth={2} color={palette[card.tone]||C.dim}/>
         </div>
-        <div style={{fontSize:24,fontWeight:700,letterSpacing:-.3,color:palette[card.tone]||C.accent,marginTop:4}}>{card.value}</div>
-        <div style={{fontSize:10,color:C.dim,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.sub}</div>
+        <div style={{fontSize:18,fontWeight:700,letterSpacing:-.3,color:palette[card.tone]||C.accent,marginTop:2,lineHeight:1.1}}>{card.value}</div>
+        <div style={{fontSize:9,color:C.dim,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.sub}</div>
       </Card>)}
     </div>
 
