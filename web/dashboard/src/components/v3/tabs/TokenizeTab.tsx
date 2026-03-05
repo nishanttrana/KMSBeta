@@ -2890,7 +2890,7 @@ const AuditLogViewer=({session,onToast})=>{
     }
   };
   useEffect(()=>{if(session?.token)void refresh();},[session?.token,session?.tenantId]);
-  const catColors={tokenization:C.accent,encryption:"#60a5fa",masking:"#a78bfa",redaction:"#f472b6",policy:"#fbbf24",general:C.muted};
+  const catColors={tokenization:C.accent,encryption:C.blue,masking:C.purple,redaction:C.pink,policy:C.yellow,general:C.muted};
   return <Section title="Audit Log" actions={<>
     <Sel value={category} onChange={(e)=>setCategory(e.target.value)} style={{minWidth:130,fontSize:11}}>
       <option value="">All Categories</option>
@@ -2949,11 +2949,11 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
 
   const statItems=[
     {l:"Token Vaults",v:stats?.token_vaults,icon:Database,color:C.accent},
-    {l:"Tokens",v:stats?.total_tokens,icon:Shield,color:"#60a5fa"},
-    {l:"Mask Policies",v:stats?.masking_policies,icon:VenetianMask,color:"#a78bfa"},
-    {l:"Redact Policies",v:stats?.redaction_policies,icon:ScrollText,color:"#f472b6"},
-    {l:"Wrappers",v:stats?.registered_wrappers,icon:KeyRound,color:"#34d399"},
-    {l:"Active Leases",v:stats?.active_leases,icon:FileKey,color:"#fbbf24"},
+    {l:"Tokens",v:stats?.total_tokens,icon:Shield,color:C.blue},
+    {l:"Mask Policies",v:stats?.masking_policies,icon:VenetianMask,color:C.purple},
+    {l:"Redact Policies",v:stats?.redaction_policies,icon:ScrollText,color:C.pink},
+    {l:"Wrappers",v:stats?.registered_wrappers,icon:KeyRound,color:C.green},
+    {l:"Active Leases",v:stats?.active_leases,icon:FileKey,color:C.yellow},
   ];
 
   return <div style={{display:"grid",gap:12}}>

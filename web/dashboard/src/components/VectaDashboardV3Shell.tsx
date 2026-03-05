@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Atom,
   BarChart3,
@@ -29,44 +29,54 @@ import {
   VenetianMask,
   Zap,
   CreditCard,
-  Users
+  Users,
+  Server,
+  Layers,
+  RefreshCw,
+  Sparkles
 } from "lucide-react";
 import type { AuthSession } from "../lib/auth";
 import { canAccessModule, isSystemAdminSession } from "../config/moduleRegistry";
 import type { FeatureKey } from "../config/tabs";
 import { getAuthCLIStatus, listAuthTenants } from "../lib/authAdmin";
 import { getGovernanceSystemState } from "../lib/governance";
-import { listKeys, listTags } from "../lib/keycore";
+import { listKeys, listKeysPaginated, listTags } from "../lib/keycore";
 import { getUnreadAlertCounts } from "../lib/reporting";
 import { B, Btn, Sel } from "./v3/legacyPrimitives";
 import { isFipsModeEnabled, normalizeFipsModeValue, TabErrorBoundary } from "./v3/runtimeUtils";
 import { C } from "./v3/theme";
-import { AdminTab } from "./v3/tabs/AdminTab";
-import { AlertsTab } from "./v3/tabs/AlertsTab";
-import { ClusterTab } from "./v3/tabs/ClusterTab";
-import { DashboardTab } from "./v3/tabs/DashboardTab";
-import { GovernanceTab } from "./v3/tabs/GovernanceTab";
-import { RestAPITab } from "./v3/tabs/RestAPITab";
-import { VaultTab } from "./v3/tabs/VaultTab";
-import { EKMTab } from "./v3/tabs/EKMTab";
-import { DataEncryptionTab, DataProtectionTab, TokenizeTab } from "./v3/tabs/DataProtectionTabs";
-import { PKCS11Tab } from "./v3/tabs/PKCS11Tab";
-import { BYOKTab } from "./v3/tabs/BYOKTab";
-import { HYOKTab } from "./v3/tabs/HYOKTab";
-import { CloudKeyControlTab } from "./v3/tabs/CloudKeyControlTab";
-import { WorkbenchTab } from "./v3/tabs/WorkbenchTab";
-import { CryptoTab } from "./v3/tabs/CryptoTab";
-import { PaymentTab } from "./v3/tabs/PaymentTab";
-import { HSMTab } from "./v3/tabs/HSMTab";
-import { CertsTab } from "./v3/tabs/CertsTab";
-import { KeysTab } from "./v3/tabs/KeysTab";
-import { ComplianceTab } from "./v3/tabs/ComplianceTab";
-import { SBOMTab } from "./v3/tabs/SBOMTab";
-import { PostureTab } from "./v3/tabs/PostureTab";
-import { AuditLogTab } from "./v3/tabs/AuditLogTab";
-import { MPCTab } from "./v3/tabs/MPCTab";
-import { QKDTab } from "./v3/tabs/QKDTab";
-import { QRNGTab } from "./v3/tabs/QRNGTab";
+
+// Lazy-loaded tab components for code splitting
+const AdminTab = lazy(() => import("./v3/tabs/AdminTab").then(m => ({ default: m.AdminTab })));
+const AlertsTab = lazy(() => import("./v3/tabs/AlertsTab").then(m => ({ default: m.AlertsTab })));
+const ClusterTab = lazy(() => import("./v3/tabs/ClusterTab").then(m => ({ default: m.ClusterTab })));
+const DashboardTab = lazy(() => import("./v3/tabs/DashboardTab").then(m => ({ default: m.DashboardTab })));
+const GovernanceTab = lazy(() => import("./v3/tabs/GovernanceTab").then(m => ({ default: m.GovernanceTab })));
+const RestAPITab = lazy(() => import("./v3/tabs/RestAPITab").then(m => ({ default: m.RestAPITab })));
+const VaultTab = lazy(() => import("./v3/tabs/VaultTab").then(m => ({ default: m.VaultTab })));
+const EKMTab = lazy(() => import("./v3/tabs/EKMTab").then(m => ({ default: m.EKMTab })));
+const DataProtectionTabs = lazy(() => import("./v3/tabs/DataProtectionTabs").then(m => ({ default: m.DataProtectionTab })));
+const TokenizeTab = lazy(() => import("./v3/tabs/DataProtectionTabs").then(m => ({ default: m.TokenizeTab })));
+const DataEncryptionTab = lazy(() => import("./v3/tabs/DataProtectionTabs").then(m => ({ default: m.DataEncryptionTab })));
+const PKCS11Tab = lazy(() => import("./v3/tabs/PKCS11Tab").then(m => ({ default: m.PKCS11Tab })));
+const BYOKTab = lazy(() => import("./v3/tabs/BYOKTab").then(m => ({ default: m.BYOKTab })));
+const HYOKTab = lazy(() => import("./v3/tabs/HYOKTab").then(m => ({ default: m.HYOKTab })));
+const CloudKeyControlTab = lazy(() => import("./v3/tabs/CloudKeyControlTab").then(m => ({ default: m.CloudKeyControlTab })));
+const WorkbenchTab = lazy(() => import("./v3/tabs/WorkbenchTab").then(m => ({ default: m.WorkbenchTab })));
+const CryptoTab = lazy(() => import("./v3/tabs/CryptoTab").then(m => ({ default: m.CryptoTab })));
+const PaymentTab = lazy(() => import("./v3/tabs/PaymentTab").then(m => ({ default: m.PaymentTab })));
+const HSMTab = lazy(() => import("./v3/tabs/HSMTab").then(m => ({ default: m.HSMTab })));
+const CertsTab = lazy(() => import("./v3/tabs/CertsTab").then(m => ({ default: m.CertsTab })));
+const KeysTab = lazy(() => import("./v3/tabs/KeysTab").then(m => ({ default: m.KeysTab })));
+const ComplianceTab = lazy(() => import("./v3/tabs/ComplianceTab").then(m => ({ default: m.ComplianceTab })));
+const SBOMTab = lazy(() => import("./v3/tabs/SBOMTab").then(m => ({ default: m.SBOMTab })));
+const PostureTab = lazy(() => import("./v3/tabs/PostureTab").then(m => ({ default: m.PostureTab })));
+const AuditLogTab = lazy(() => import("./v3/tabs/AuditLogTab").then(m => ({ default: m.AuditLogTab })));
+const MPCTab = lazy(() => import("./v3/tabs/MPCTab").then(m => ({ default: m.MPCTab })));
+const QKDTab = lazy(() => import("./v3/tabs/QKDTab").then(m => ({ default: m.QKDTab })));
+const QRNGTab = lazy(() => import("./v3/tabs/QRNGTab").then(m => ({ default: m.QRNGTab })));
+const DocsViewTab = lazy(() => import("./v3/tabs/DocsViewTab").then(m => ({ default: m.DocsViewTab })));
+const AITab = lazy(() => import("./v3/tabs/AITab").then(m => ({ default: m.AITab })));
 
 type Props = {
   session: AuthSession;
@@ -78,21 +88,22 @@ type Props = {
   markAlertsRead: () => void;
 };
 
-const DASHBOARD_TAB_QUERY_KEY = "tab";
-const DASHBOARD_SUB_QUERY_KEY = "sub";
-const UI_BUILD_ID = "mod-shell-01";
-
-function readLocationState(): { tab: string; sub: string } {
-  try {
-    const qp = new URLSearchParams(window.location.search);
-    return {
-      tab: String(qp.get(DASHBOARD_TAB_QUERY_KEY) || "").trim().toLowerCase(),
-      sub: String(qp.get(DASHBOARD_SUB_QUERY_KEY) || "").trim()
-    };
-  } catch {
-    return { tab: "", sub: "" };
-  }
-}
+const TAB_STORAGE_KEY = "vecta_active_tab";
+const TZ_STORAGE_KEY = "vecta_timezone";
+const COMMON_TIMEZONES = [
+  { label: "Local", value: "local" },
+  { label: "UTC", value: "UTC" },
+  { label: "US/Eastern", value: "America/New_York" },
+  { label: "US/Central", value: "America/Chicago" },
+  { label: "US/Pacific", value: "America/Los_Angeles" },
+  { label: "Europe/London", value: "Europe/London" },
+  { label: "Europe/Berlin", value: "Europe/Berlin" },
+  { label: "Asia/Dubai", value: "Asia/Dubai" },
+  { label: "Asia/Kolkata", value: "Asia/Kolkata" },
+  { label: "Asia/Singapore", value: "Asia/Singapore" },
+  { label: "Asia/Tokyo", value: "Asia/Tokyo" },
+  { label: "Australia/Sydney", value: "Australia/Sydney" }
+];
 
 function canSeeFeature(need: any, enabledFeatures: Set<FeatureKey>, session?: any): boolean {
   if (isSystemAdminSession(session)) {
@@ -126,57 +137,37 @@ function toViewKey(k: any): any {
   };
 }
 
-const Keys = KeysTab;
-const Crypto = CryptoTab;
-const Workbench = WorkbenchTab;
-const Certs = CertsTab;
-const Tokenize = TokenizeTab;
-const DataEncryption = DataEncryptionTab;
-const DataProtection = DataProtectionTab;
-const Payment = PaymentTab;
-const BYOK = BYOKTab;
-const HYOK = HYOKTab;
-const CloudKeyControl = CloudKeyControlTab;
-const EKM = EKMTab;
-const HSM = HSMTab;
-const QKD = QKDTab;
-const QRNG = QRNGTab;
-const MPC = MPCTab;
-const AuditLog = AuditLogTab;
-const Compliance = ComplianceTab;
-const Posture = PostureTab;
-const SBOM = SBOMTab;
-const PKCS11 = PKCS11Tab;
-
 const TABS: Record<string, any> = {
   home: DashboardTab,
-  keys: Keys,
-  workbench: Workbench,
-  crypto: Crypto,
+  keys: KeysTab,
+  workbench: WorkbenchTab,
+  crypto: CryptoTab,
   restapi: RestAPITab,
   vault: VaultTab,
-  certs: Certs,
-  dataprotection: DataProtection,
-  tokenize: Tokenize,
-  dataenc: DataEncryption,
-  payment: Payment,
-  cloudctl: CloudKeyControl,
-  byok: BYOK,
-  hyok: HYOK,
-  ekm: EKM,
-  hsm: HSM,
-  qkd: QKD,
-  qrng: QRNG,
-  mpc: MPC,
+  certs: CertsTab,
+  dataprotection: DataProtectionTabs,
+  tokenize: TokenizeTab,
+  dataenc: DataEncryptionTab,
+  payment: PaymentTab,
+  cloudctl: CloudKeyControlTab,
+  byok: BYOKTab,
+  hyok: HYOKTab,
+  ekm: EKMTab,
+  hsm: HSMTab,
+  qkd: QKDTab,
+  qrng: QRNGTab,
+  mpc: MPCTab,
   cluster: ClusterTab,
   approvals: GovernanceTab,
   alerts: AlertsTab,
-  audit: AuditLog,
-  posture: Posture,
-  compliance: Compliance,
-  sbom: SBOM,
-  pkcs11: PKCS11,
-  admin: AdminTab
+  audit: AuditLogTab,
+  posture: PostureTab,
+  compliance: ComplianceTab,
+  sbom: SBOMTab,
+  pkcs11: PKCS11Tab,
+  admin: AdminTab,
+  docs: DocsViewTab,
+  ai: AITab
 };
 
 const TITLES: Record<string, string> = {
@@ -207,7 +198,9 @@ const TITLES: Record<string, string> = {
   compliance: "Compliance",
   sbom: "SBOM / CBOM",
   pkcs11: "PKCS#11 / JCA",
-  admin: "Administration"
+  admin: "Administration",
+  docs: "Documentation",
+  ai: "AI Assistant"
 };
 
 const NAV = [
@@ -215,7 +208,8 @@ const NAV = [
   { g: "WORKBENCH", items: [{ id: "workbench", icon: LayoutGrid, label: "Workbench" }] },
   { g: "INFRASTRUCTURE", items: [{ id: "hsm", icon: Cpu, label: "HSM" }, { id: "qkd", icon: GitBranch, label: "QKD Interface" }, { id: "qrng", icon: Atom, label: "QRNG Entropy" }, { id: "mpc", icon: Cpu, label: "MPC Engine" }, { id: "cluster", icon: GitBranch, label: "Cluster" }] },
   { g: "GOVERNANCE", items: [{ id: "approvals", icon: CheckCircle2, label: "Approvals" }, { id: "alerts", icon: Bell, label: "Alert Center" }, { id: "audit", icon: ScrollText, label: "Audit Log" }, { id: "posture", icon: Gauge, label: "Posture Management" }, { id: "compliance", icon: ClipboardCheck, label: "Compliance" }, { id: "sbom", icon: BarChart3, label: "SBOM / CBOM" }] },
-  { g: "ADMIN", items: [{ id: "admin", icon: Settings, label: "Administration" }] }
+  { g: "AI", items: [{ id: "ai", icon: Sparkles, label: "AI Assistant" }] },
+  { g: "ADMIN", items: [{ id: "admin", icon: Settings, label: "Administration" }, { id: "docs", icon: FileText, label: "Documentation" }] }
 ];
 
 const SUB_PANES: Record<string, any[]> = {
@@ -252,12 +246,15 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "hsm-thales", label: "Thales Luna HSM", hint: "NTLS endpoint, Luna slot and partition settings", icon: Cpu, feature: "hsm_hardware_or_software" },
     { id: "hsm-utimaco", label: "Utimaco HSM", hint: "CryptoServer slot/partition profile and provider settings", icon: Cpu, feature: "hsm_hardware_or_software" },
     { id: "hsm-entrust", label: "Entrust nShield HSM", hint: "Security World connector, slot profile and token mapping", icon: ShieldCheck, feature: "hsm_hardware_or_software" },
-    { id: "hsm-securosys", label: "Securosys HSM", hint: "Securosys provider, slot and partition configuration", icon: ShieldCheck, feature: "hsm_hardware_or_software" },
+    { id: "hsm-securosys", label: "Vecta KMS HSM", hint: "Vecta KMS provider, slot and partition configuration", icon: ShieldCheck, feature: "hsm_hardware_or_software" },
     { id: "hsm-generic", label: "Generic PKCS#11 HSM", hint: "Vendor-neutral PKCS#11 library onboarding profile", icon: Plug, feature: "hsm_hardware_or_software" }
   ],
   cluster: [
-    { id: "settings", label: "Cluster Settings", hint: "Replication profiles and existing-instance node controls", icon: Settings, feature: "clustering" },
-    { id: "health", label: "Cluster Health", hint: "Live node health view with selective component sync status", icon: Gauge, feature: "clustering" }
+    { id: "topology", label: "Topology", hint: "Visual cluster map with node connections and health", icon: GitBranch, feature: "clustering" },
+    { id: "nodes", label: "Node Management", hint: "Detailed node metrics, role changes, and components", icon: Server, feature: "clustering" },
+    { id: "profiles", label: "Deploy Profiles", hint: "Replication profiles with deployment tier presets", icon: Layers, feature: "clustering" },
+    { id: "sync", label: "Sync Monitor", hint: "Real-time sync events, checkpoints, and replication lag", icon: RefreshCw, feature: "clustering" },
+    { id: "logs", label: "Cluster Logs", hint: "Cluster operation audit log with filtering", icon: ScrollText, feature: "clustering" }
   ],
   admin: [
     { id: "system", label: "System Administration", hint: "Platform health, runtime hardening, FIPS and governance settings", icon: Settings },
@@ -268,19 +265,30 @@ const SUB_PANES: Record<string, any[]> = {
 
 export default function VectaDashboardV3Shell(props: Props) {
   const { session: sessionBase, enabledFeatures, alerts, audit, unreadAlerts, onLogout, markAlertsRead } = props;
-  const locationState = useMemo(() => readLocationState(), []);
-
-  const initialTab = useMemo(() => {
-    const requested = String(locationState.tab || "").trim();
-    if (requested && Object.prototype.hasOwnProperty.call(TABS, requested)) {
-      return requested;
-    }
+  const [tab, setTab] = useState(() => {
+    try {
+      const hash = window.location.hash.replace("#", "");
+      if (hash) return hash;
+      const stored = localStorage.getItem(TAB_STORAGE_KEY);
+      if (stored) return stored;
+    } catch {}
     return "home";
-  }, [locationState.tab]);
-
-  const [tab, setTab] = useState(initialTab);
+  });
   const [collapsed, setCollapsed] = useState(false);
   const [t, setT] = useState(new Date());
+  const [tz, setTz] = useState(() => {
+    try { return localStorage.getItem(TZ_STORAGE_KEY) || "local"; } catch { return "local"; }
+  });
+  const [tzOpen, setTzOpen] = useState(false);
+  const formattedTime = useMemo(() => {
+    if (tz === "local") return t.toLocaleTimeString();
+    try { return t.toLocaleTimeString(undefined, { timeZone: tz }); } catch { return t.toLocaleTimeString(); }
+  }, [t, tz]);
+  const changeTz = useCallback((val: string) => {
+    setTz(val);
+    setTzOpen(false);
+    try { localStorage.setItem(TZ_STORAGE_KEY, val); } catch {}
+  }, []);
   const [pinnedTabs, setPinnedTabs] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem("vecta_pinned_tabs");
@@ -305,23 +313,16 @@ export default function VectaDashboardV3Shell(props: Props) {
   const [cliEnabled, setCliEnabled] = useState(false);
   const [tenantOptions, setTenantOptions] = useState<Array<{ id: string; name: string; status?: string }>>([]);
   const [tenantScope, setTenantScope] = useState(String(sessionBase?.tenantId || ""));
-  const [subPaneSelection, setSubPaneSelection] = useState<any>(() => {
-    const defaults: Record<string, string> = {
-      workbench: "crypto",
-      dataprotection: "fieldenc",
-      cloudctl: "byok",
-      ekm: "db",
-      certs: "cert-overview",
-      hsm: "hsm-generic",
-      cluster: "settings",
-      admin: "system"
-    };
-    const requestedSub = String(locationState.sub || "").trim();
-    if (requestedSub && initialTab) {
-      return { ...defaults, [initialTab]: requestedSub };
-    }
-    return defaults;
-  });
+  const [subPaneSelection, setSubPaneSelection] = useState<any>(() => ({
+    workbench: "crypto",
+    dataprotection: "fieldenc",
+    cloudctl: "byok",
+    ekm: "db",
+    certs: "cert-overview",
+    hsm: "hsm-generic",
+    cluster: "topology",
+    admin: "system"
+  }));
 
   const session = useMemo(
     () => ({
@@ -373,13 +374,13 @@ export default function VectaDashboardV3Shell(props: Props) {
     let stop = false;
     (async () => {
       try {
-        const [keys, tags, state] = await Promise.all([
-          listKeys(session, { includeDeleted: true }),
+        const [keysPage, tags, state] = await Promise.all([
+          listKeysPaginated(session, { limit: 100, includeDeleted: true }),
           listTags(session),
           getGovernanceSystemState(session)
         ]);
         if (stop) return;
-        setKeyCatalog((Array.isArray(keys) ? keys : []).map(toViewKey));
+        setKeyCatalog((Array.isArray(keysPage.items) ? keysPage.items : []).map(toViewKey));
         setTagCatalog(Array.isArray(tags) ? tags : []);
         setFipsMode(normalizeFipsModeValue(String((state as any)?.state?.fips_mode || "disabled")));
       } catch {
@@ -467,19 +468,10 @@ export default function VectaDashboardV3Shell(props: Props) {
   );
   const globalFipsEnabled = isFipsModeEnabled(fipsMode);
 
-  const openRestApiWindow = () => {
-    const url = new URL(window.location.href);
-    url.pathname = "/";
-    url.search = `?${DASHBOARD_TAB_QUERY_KEY}=workbench&${DASHBOARD_SUB_QUERY_KEY}=restapi`;
-    url.hash = "";
-    const opened = window.open(url.toString(), "_blank");
-    if (!opened) {
-      window.location.assign(url.toString());
-    }
-  };
-
   const selectTab = (nextTab: string) => {
     setTab(nextTab);
+    try { localStorage.setItem(TAB_STORAGE_KEY, nextTab); } catch {}
+    try { window.history.replaceState(null, "", `#${nextTab}`); } catch {}
     const paneItems = (Array.isArray(SUB_PANES[nextTab]) ? SUB_PANES[nextTab] : []).filter((item) =>
       canSeeFeature(item?.feature, enabledFeatures || new Set<FeatureKey>(), session)
     );
@@ -488,24 +480,16 @@ export default function VectaDashboardV3Shell(props: Props) {
     }
   };
 
+  // One-time cleanup: strip query params, set hash to current tab
   useEffect(() => {
     try {
-      const currentTab = String(tab || "").trim();
-      if (!currentTab) return;
-      const qp = new URLSearchParams(window.location.search);
-      qp.set(DASHBOARD_TAB_QUERY_KEY, currentTab);
-      const currentSub = String(activeSubPaneSelection || "").trim();
-      if (currentSub) qp.set(DASHBOARD_SUB_QUERY_KEY, currentSub);
-      else qp.delete(DASHBOARD_SUB_QUERY_KEY);
-      qp.delete("restapi");
-      const qs = qp.toString();
-      const nextURL = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
-      const currentURL = `${window.location.pathname}${window.location.search}`;
-      if (nextURL !== currentURL) window.history.replaceState(window.history.state, "", nextURL);
-    } catch {
-      // ignore
-    }
-  }, [tab, activeSubPaneSelection]);
+      if (window.location.search) {
+        window.history.replaceState(null, "", window.location.pathname + `#${tab}`);
+      } else if (!window.location.hash) {
+        window.history.replaceState(null, "", `#${tab}`);
+      }
+    } catch {}
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const Tab = TABS[tab] || DashboardTab;
 
@@ -534,13 +518,7 @@ export default function VectaDashboardV3Shell(props: Props) {
               {g.items.map((it: any) => (
                 <div
                   key={it.id}
-                  onClick={() => {
-                    if (it.id === "restapi") {
-                      openRestApiWindow();
-                      return;
-                    }
-                    selectTab(it.id);
-                  }}
+                  onClick={() => selectTab(it.id)}
                   style={{ display: "flex", alignItems: "center", gap: 8, padding: collapsed ? "8px" : "6px 14px", cursor: "pointer", background: tab === it.id ? `linear-gradient(90deg,${C.accentDim} 0%,rgba(6,214,224,.03) 100%)` : "transparent", borderLeft: tab === it.id ? `2px solid ${C.accent}` : "2px solid transparent", transition: "all .15s" }}
                   title={it.label}
                   onMouseEnter={(e) => { if (tab !== it.id) e.currentTarget.style.background = `rgba(6,214,224,.04)`; }}
@@ -588,8 +566,17 @@ export default function VectaDashboardV3Shell(props: Props) {
               </Sel>
             </div>
             {isSystemAdminSession(session) && <Btn small onClick={() => selectTab("admin")} style={cliEnabled ? {} : { opacity: 0.4 }}>{cliEnabled ? "CLI" : "CLI (off)"}</Btn>}
-            <span style={{ fontSize: 11, color: C.accent, fontFamily: "'JetBrains Mono',monospace" }}>{t.toLocaleTimeString()}</span>
-            <span style={{ fontSize: 9, color: C.muted, fontFamily: "'JetBrains Mono',monospace" }}>{UI_BUILD_ID}</span>
+            <div style={{ position: "relative" }}>
+              <span onClick={() => setTzOpen((v) => !v)} style={{ fontSize: 11, color: C.accent, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer" }} title={`Timezone: ${tz === "local" ? "Local" : tz}`}>{formattedTime}</span>
+              {tz !== "local" && <span style={{ fontSize: 8, color: C.muted, fontFamily: "'JetBrains Mono',monospace", marginLeft: 4 }}>{tz.split("/").pop()}</span>}
+              {tzOpen && (
+                <div style={{ position: "absolute", top: 22, right: 0, zIndex: 1000, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 4, minWidth: 160, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
+                  {COMMON_TIMEZONES.map((item) => (
+                    <div key={item.value} onClick={() => changeTz(item.value)} style={{ padding: "5px 10px", fontSize: 10, color: tz === item.value ? C.accent : C.text, cursor: "pointer", borderRadius: 4, background: tz === item.value ? C.accentDim : "transparent", fontWeight: tz === item.value ? 700 : 400 }}>{item.label}</div>
+                  ))}
+                </div>
+              )}
+            </div>
             <span
               onClick={() => {
                 selectTab("alerts");
@@ -618,13 +605,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                   return (
                     <div
                       key={String(item.id)}
-                      onClick={() => {
-                        if (tab === "workbench" && String(item.id) === "restapi") {
-                          openRestApiWindow();
-                          return;
-                        }
-                        setSubPaneSelection((prev: any) => ({ ...prev, [tab]: String(item.id) }));
-                      }}
+                      onClick={() => setSubPaneSelection((prev: any) => ({ ...prev, [tab]: String(item.id) }))}
                       style={{ border: `1px solid ${isActive ? C.accent : C.border}`, background: isActive ? C.accentDim : "transparent", borderRadius: 8, padding: "10px 10px", cursor: "pointer" }}
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -645,25 +626,27 @@ export default function VectaDashboardV3Shell(props: Props) {
 
           <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
             <TabErrorBoundary resetKey={`${tab}:${activeSubPaneSelection}`}>
-              <Tab
-                session={session}
-                keyCatalog={keyCatalog}
-                setKeyCatalog={setKeyCatalog}
-                tagCatalog={tagCatalog}
-                setTagCatalog={setTagCatalog}
-                alerts={alerts}
-                audit={audit}
-                onToast={setToast}
-                onLogout={onLogout}
-                fipsMode={fipsMode}
-                onFipsModeChange={setFipsMode}
-                onUnreadSync={setReportedUnread}
-                subView={activeSubPaneSelection}
-                onSubViewChange={(next: string) => setSubPaneSelection((prev: any) => ({ ...prev, [tab]: String(next || "") }))}
-                pinnedTabs={pinnedTabs}
-                onTogglePin={togglePin}
-                onNavigate={(tabId: string) => selectTab(tabId)}
-              />
+              <Suspense fallback={<div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: C.dim, fontSize: 12 }}>Loading module...</div>}>
+                <Tab
+                  session={session}
+                  keyCatalog={keyCatalog}
+                  setKeyCatalog={setKeyCatalog}
+                  tagCatalog={tagCatalog}
+                  setTagCatalog={setTagCatalog}
+                  alerts={alerts}
+                  audit={audit}
+                  onToast={setToast}
+                  onLogout={onLogout}
+                  fipsMode={fipsMode}
+                  onFipsModeChange={setFipsMode}
+                  onUnreadSync={setReportedUnread}
+                  subView={activeSubPaneSelection}
+                  onSubViewChange={(next: string) => setSubPaneSelection((prev: any) => ({ ...prev, [tab]: String(next || "") }))}
+                  pinnedTabs={pinnedTabs}
+                  onTogglePin={togglePin}
+                  onNavigate={(tabId: string) => selectTab(tabId)}
+                />
+              </Suspense>
             </TabErrorBoundary>
           </div>
         </div>

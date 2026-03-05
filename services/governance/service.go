@@ -510,6 +510,14 @@ func (s *Service) UpdateSettings(ctx context.Context, settings GovernanceSetting
 	if err := s.store.UpsertSettings(ctx, normalized); err != nil {
 		return GovernanceSettings{}, err
 	}
+	_ = s.publishAudit(ctx, "audit.governance.settings_updated", normalized.TenantID, map[string]interface{}{
+		"smtp_host":       normalized.SMTPHost,
+		"smtp_port":       normalized.SMTPPort,
+		"smtp_from":       normalized.SMTPFrom,
+		"approval_expiry": normalized.ApprovalExpiryMinutes,
+		"notify_email":    normalized.NotifyEmail,
+		"notify_slack":    normalized.NotifySlack,
+	})
 	return s.GetSettings(ctx, normalized.TenantID)
 }
 
@@ -532,11 +540,18 @@ func (s *Service) TestSMTP(ctx context.Context, tenantID string, to string) erro
 		From:     settings.SMTPFrom,
 		StartTLS: settings.SMTPStartTLS,
 	})
-	return sender.Send(ctx, EmailMessage{
+	if err := sender.Send(ctx, EmailMessage{
 		To:      to,
 		Subject: "[Vecta KMS] SMTP configuration test",
 		Body:    "SMTP connectivity test for governance approvals.",
+	}); err != nil {
+		return err
+	}
+	_ = s.publishAudit(ctx, "audit.governance.smtp_test", tenantID, map[string]interface{}{
+		"recipient": to,
+		"result":    "success",
 	})
+	return nil
 }
 
 func (s *Service) GetSystemState(ctx context.Context, tenantID string) (GovernanceSystemState, error) {

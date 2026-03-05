@@ -23,7 +23,8 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   alerts: "reporting_alerting",
   posture: ["governance", "compliance_dashboard"],
   compliance: "compliance_dashboard",
-  sbom: "sbom_cbom"
+  sbom: "sbom_cbom",
+  ai: "ai_llm"
 };
 
 function normalizePermissionTokens(session: unknown): Set<string> {

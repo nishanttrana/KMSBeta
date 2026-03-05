@@ -924,6 +924,9 @@ func (s *Service) UpdateParticipant(ctx context.Context, tenantID string, id str
 	if err := s.store.UpdateParticipant(ctx, tenantID, id, req); err != nil {
 		return MPCParticipant{}, err
 	}
+	_ = s.publishAudit(ctx, "audit.mpc.participant_updated", tenantID, map[string]interface{}{
+		"participant_id": id,
+	})
 	return s.store.GetParticipant(ctx, tenantID, id)
 }
 
@@ -941,7 +944,13 @@ func (s *Service) DeleteParticipant(ctx context.Context, tenantID string, id str
 	if tenantID == "" || id == "" {
 		return newServiceError(400, "bad_request", "tenant_id and id are required")
 	}
-	return s.store.DeleteParticipant(ctx, tenantID, id)
+	if err := s.store.DeleteParticipant(ctx, tenantID, id); err != nil {
+		return err
+	}
+	_ = s.publishAudit(ctx, "audit.mpc.participant_deleted", tenantID, map[string]interface{}{
+		"participant_id": id,
+	})
+	return nil
 }
 
 func (s *Service) CreatePolicy(ctx context.Context, req CreatePolicyRequest) (MPCPolicy, error) {
@@ -1005,6 +1014,9 @@ func (s *Service) UpdatePolicy(ctx context.Context, tenantID string, id string, 
 			}
 		}
 	}
+	_ = s.publishAudit(ctx, "audit.mpc.policy_updated", tenantID, map[string]interface{}{
+		"policy_id": id, "rules_replaced": len(req.Rules) > 0,
+	})
 	return s.store.GetPolicy(ctx, tenantID, id)
 }
 
@@ -1022,7 +1034,13 @@ func (s *Service) DeletePolicy(ctx context.Context, tenantID string, id string) 
 	if tenantID == "" || id == "" {
 		return newServiceError(400, "bad_request", "tenant_id and id are required")
 	}
-	return s.store.DeletePolicy(ctx, tenantID, id)
+	if err := s.store.DeletePolicy(ctx, tenantID, id); err != nil {
+		return err
+	}
+	_ = s.publishAudit(ctx, "audit.mpc.policy_deleted", tenantID, map[string]interface{}{
+		"policy_id": id,
+	})
+	return nil
 }
 
 func (s *Service) RevokeKey(ctx context.Context, tenantID string, id string, reason string) (MPCKey, error) {
@@ -1049,6 +1067,9 @@ func (s *Service) SetKeyGroup(ctx context.Context, tenantID string, id string, g
 	if err := s.store.SetKeyGroup(ctx, tenantID, id, group); err != nil {
 		return MPCKey{}, err
 	}
+	_ = s.publishAudit(ctx, "audit.mpc.key_group_set", tenantID, map[string]interface{}{
+		"key_id": id, "group": group,
+	})
 	return s.GetMPCKey(ctx, tenantID, id)
 }
 

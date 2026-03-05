@@ -21,6 +21,7 @@ HOST_OS="linux"
 STEP_INDEX=0
 STEP_TOTAL=19
 INSTALL_WARNINGS=()
+INSTALL_MODE="interactive"
 
 FEATURE_KEYS=(
   secrets
@@ -882,10 +883,11 @@ populate_feature_values() {
 write_deployment_yaml() {
   mkdir -p "${DEPLOY_DIR}"
   cat > "${DEPLOYMENT_FILE}" <<EOF
-apiVersion: kms.securosys.com/v1
+apiVersion: kms.vecta.io/v1
 kind: DeploymentConfig
 metadata:
     appliance_id: ${APPLIANCE_ID}
+    install_mode: ${INSTALL_MODE}
     created_at: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 spec:
     core:
@@ -1562,7 +1564,71 @@ print_summary() {
   echo
 }
 
+collect_fast_inputs() {
+  info "Fast installation mode: deploying core services only (keycore, dashboard, postgres)"
+  info "Additional features can be enabled later via the dashboard onboarding wizard."
+  FEATURE_ALL="false"
+  prompt_default INSTALL_DIR "Install directory" "${SOURCE_DIR}"
+  prompt_default APPLIANCE_ID "Appliance ID" "vecta-$(hostname -s 2>/dev/null || echo kms)"
+  prompt_default TENANT_ID "Primary tenant ID" "root"
+  TENANT_NAME="Root Tenant"
+  prompt_default ADMIN_USERNAME "Admin username" "admin"
+  prompt_default ADMIN_EMAIL "Admin email" "admin@vecta.local"
+  prompt_secret ADMIN_PASSWORD "Admin password"
+  FORCE_PASSWORD_CHANGE="true"
+  LICENSE_KEY="SEC-KMS-ENT-2026-ABCD"
+  MAX_KEYS="5000000"
+  MAX_TENANTS="50"
+  BIND_IP="0.0.0.0"
+  HTTP_PORT="80"
+  HTTPS_PORT="443"
+  DASHBOARD_PORT="5173"
+  FIRSTBOOT_PORT="9443"
+  ENABLE_FIRSTBOOT_UI="true"
+  BUILD_MODE="build-missing"
+  BUILD_PARALLEL_LIMIT="$(nproc 2>/dev/null || echo 4)"
+  ENABLE_FDE="false"
+  FDE_DEVICE="/dev/sda3"
+  FDE_RECOVERY_SHARES="5"
+  FDE_RECOVERY_THRESHOLD="3"
+  FDE_PASS_HASH=""
+  HSM_MODE="software"
+  CERT_STORAGE_MODE="db_encrypted"
+  ROOT_KEY_MODE="software"
+  CERTS_SEALED_KEY_PATH="/var/lib/vecta/certs/crwk.sealed"
+  CERTS_PASSPHRASE_FILE_PATH="/etc/vecta/certs-bootstrap.secret"
+  CERTS_USE_TPM_SEAL="false"
+  FIPS_MODE="standard"
+  CLUSTER_ENABLED="false"
+  CLUSTER_DEPLOYMENT_MODE="standalone"
+  CLUSTER_NODE_NAME=""
+  CLUSTER_NODE_ENDPOINT=""
+  CLUSTER_JOIN_TOKEN=""
+  CLUSTER_BOOTSTRAP=""
+  CLUSTER_SEED_ENDPOINT=""
+  CLUSTER_TLS_PROFILE="mtls_ecdsa_p256"
+  CLUSTER_RAFT_DATA_DIR="/var/lib/vecta/raft"
+  split_csv_to_array "*" LICENSE_FEATURES
+  IMAGE_BUNDLE_PATH=""
+  local detected_ip_cidr
+  detected_ip_cidr="$(detect_primary_ip_cidr 2>/dev/null || echo "10.0.1.100/24")"
+  MGMT_ADDRESS="${detected_ip_cidr}"
+  MGMT_GATEWAY=""
+  MGMT_DNS_CSV="8.8.8.8,1.1.1.1"
+}
+
 main() {
+  # Parse CLI arguments
+  for arg in "$@"; do
+    case "${arg}" in
+      --fast|fast) INSTALL_MODE="fast" ;;
+      --interactive) INSTALL_MODE="interactive" ;;
+      --mgmt-ip=*) CLI_MGMT_IP="${arg#*=}" ;;
+      --cluster-ip=*) CLI_CLUSTER_IP="${arg#*=}" ;;
+      --bind-ip=*) CLI_BIND_IP="${arg#*=}" ;;
+    esac
+  done
+
   set_project_paths "${ROOT_DIR}"
 
   step "Validate target OS and local permissions"
@@ -1591,8 +1657,13 @@ main() {
   setup_docker_command
   wait_for_docker
 
-  step "Collect deployment configuration inputs"
-  collect_inputs
+  if [[ "${INSTALL_MODE}" == "fast" ]]; then
+    step "Collect fast-mode deployment configuration"
+    collect_fast_inputs
+  else
+    step "Collect deployment configuration inputs"
+    collect_inputs
+  fi
 
   step "Place KMS files in target install directory"
   prepare_install_directory

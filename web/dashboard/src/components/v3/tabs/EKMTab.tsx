@@ -228,9 +228,9 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
     const ts=new Date(String(lastRotated||"")).getTime();
     if(!Number.isFinite(ts)) return {label:"Unknown",color:C.textDim,daysSince:0,policyDays};
     const daysSince=Math.floor((Date.now()-ts)/(86400000));
-    if(daysSince<=policyDays*0.7) return {label:`${daysSince}d / ${policyDays}d`,color:"#22c55e",daysSince,policyDays};
-    if(daysSince<=policyDays) return {label:`${daysSince}d / ${policyDays}d`,color:"#f59e0b",daysSince,policyDays};
-    return {label:`${daysSince}d / ${policyDays}d (overdue)`,color:"#ef4444",daysSince,policyDays};
+    if(daysSince<=policyDays*0.7) return {label:`${daysSince}d / ${policyDays}d`,color:C.green,daysSince,policyDays};
+    if(daysSince<=policyDays) return {label:`${daysSince}d / ${policyDays}d`,color:C.amber,daysSince,policyDays};
+    return {label:`${daysSince}d / ${policyDays}d (overdue)`,color:C.red,daysSince,policyDays};
   };
 
   /* ── Data fetching ── */
@@ -522,21 +522,21 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
     const health=String(healthByID[agent.id]?.health||"").toLowerCase();
     const baseStatus=String(agent.status||"").toLowerCase();
     const tdeState=String(agent.tde_state||"").toLowerCase();
-    if(health==="down"||baseStatus==="disconnected") return {label:"Down",bg:"#7f1d1d",fg:"#fca5a5"};
-    if(health==="degraded"||baseStatus==="degraded") return {label:"Degraded",bg:"#78350f",fg:"#fcd34d"};
-    if(tdeState==="enabled") return {label:"Active",bg:"#14532d",fg:"#86efac"};
-    if(baseStatus==="connected") return {label:"Standby",bg:"#1e3a5f",fg:"#93c5fd"};
-    return {label:"Unknown",bg:"#374151",fg:"#d1d5db"};
+    if(health==="down"||baseStatus==="disconnected") return {label:"Down",bg:C.redDim,fg:C.red};
+    if(health==="degraded"||baseStatus==="degraded") return {label:"Degraded",bg:C.amberDim,fg:C.amber};
+    if(tdeState==="enabled") return {label:"Active",bg:C.greenDim,fg:C.green};
+    if(baseStatus==="connected") return {label:"Standby",bg:C.blueDim,fg:C.blue};
+    return {label:"Unknown",bg:"transparent",fg:C.muted};
   };
 
   const bitLockerStatusBadge=(client)=>{
     const protection=String(client?.protection_status||"").toLowerCase();
     const health=String(client?.health||"").toLowerCase();
     const status=String(client?.status||"").toLowerCase();
-    if(health==="down"||status==="disconnected") return {label:"Down",bg:"#7f1d1d",fg:"#fca5a5"};
-    if(protection==="protected"||protection==="on") return {label:"Protected",bg:"#14532d",fg:"#86efac"};
-    if(protection==="suspended"||health==="degraded") return {label:"Suspended",bg:"#78350f",fg:"#fcd34d"};
-    return {label:"Unknown",bg:"#374151",fg:"#d1d5db"};
+    if(health==="down"||status==="disconnected") return {label:"Down",bg:C.redDim,fg:C.red};
+    if(protection==="protected"||protection==="on") return {label:"Protected",bg:C.greenDim,fg:C.green};
+    if(protection==="suspended"||health==="degraded") return {label:"Suspended",bg:C.amberDim,fg:C.amber};
+    return {label:"Unknown",bg:"transparent",fg:C.muted};
   };
 
   /* ── Filtered lists ── */
@@ -560,11 +560,11 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10,marginBottom:16}}>
         {[
           {label:"Total Agents",value:dbStats.total},
-          {label:"Active",value:dbStats.active,color:"#22c55e"},
-          {label:"Degraded",value:dbStats.degraded,color:"#f59e0b"},
-          {label:"Down",value:dbStats.down,color:"#ef4444"},
+          {label:"Active",value:dbStats.active,color:C.green},
+          {label:"Degraded",value:dbStats.degraded,color:C.amber},
+          {label:"Down",value:dbStats.down,color:C.red},
           {label:"Managed DBs",value:dbStats.managedDBs},
-          {label:"TDE Enabled",value:dbStats.tdeEnabled,color:"#22c55e"}
+          {label:"TDE Enabled",value:dbStats.tdeEnabled,color:C.green}
         ].map((s,i)=>(<Card key={i}><div style={{textAlign:"center"}}><div style={{fontSize:22,fontWeight:700,color:s.color||C.text}}>{s.value}</div><div style={{fontSize:11,color:C.textDim}}>{s.label}</div></div></Card>))}
       </div>
 
@@ -598,7 +598,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
                       <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12}} onClick={()=>{setDbMenu("");openLogs(agent);}}>View Logs</div>
                       <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12}} onClick={()=>{setDbMenu("");openHealthDetail(agent);}}>Health Details</div>
                       <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12}} onClick={()=>{setDbMenu("");runRotate(agent);}}>Rotate Key</div>
-                      <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12,color:"#ef4444"}} onClick={()=>{setDbMenu("");runDelete(agent);}}>Delete</div>
+                      <div style={{padding:"5px 10px",cursor:"pointer",fontSize:12,color:C.red}} onClick={()=>{setDbMenu("");runDelete(agent);}}>Delete</div>
                     </div>)}
                   </div>
 
@@ -694,18 +694,18 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
                           <div style={{color:C.textDim}}>OS: {h.metrics.os_name} {h.metrics.os_version}</div>
                           <div style={{color:C.textDim}}>CPU: {h.metrics.cpu_usage_pct?.toFixed(1)}% | MEM: {h.metrics.memory_usage_pct?.toFixed(1)}% | DISK: {h.metrics.disk_usage_pct?.toFixed(1)}%</div>
                         </>):(<div style={{color:C.textDim}}>No metrics</div>)}
-                        {Array.isArray(h?.warnings)&&h.warnings.length>0&&(<div style={{color:"#f59e0b",marginTop:4}}>{h.warnings.join("; ")}</div>)}
+                        {Array.isArray(h?.warnings)&&h.warnings.length>0&&(<div style={{color:C.amber,marginTop:4}}>{h.warnings.join("; ")}</div>)}
                       </div>
                     </div>
                     {agentDBs.length>0&&(<div style={{marginTop:8}}>
                       <div style={{fontWeight:600,marginBottom:4}}>Managed Databases ({agentDBs.length})</div>
                       {agentDBs.map(db=>(<div key={db.id} style={{fontSize:11,color:C.textDim,padding:"2px 0"}}>
-                        {db.name} ({db.engine.toUpperCase()}) on {db.host}:{db.port} - TDE: <span style={{color:db.tde_enabled?"#22c55e":"#ef4444",fontWeight:500}}>{db.tde_state||"unknown"}</span>
+                        {db.name} ({db.engine.toUpperCase()}) on {db.host}:{db.port} - TDE: <span style={{color:db.tde_enabled?C.green:C.red,fontWeight:500}}>{db.tde_state||"unknown"}</span>
                       </div>))}
                     </div>)}
                     <div style={{display:"flex",gap:6,marginTop:8}}>
                       <Btn onClick={()=>openHealthDetail(agent)} style={{fontSize:11,padding:"3px 8px"}}>Full Health</Btn>
-                      <Btn onClick={()=>runDelete(agent)} disabled={deletingAgentID===agent.id} style={{fontSize:11,padding:"3px 8px",color:"#ef4444"}}>{deletingAgentID===agent.id?"Deleting...":"Delete"}</Btn>
+                      <Btn onClick={()=>runDelete(agent)} disabled={deletingAgentID===agent.id} style={{fontSize:11,padding:"3px 8px",color:C.red}}>{deletingAgentID===agent.id?"Deleting...":"Delete"}</Btn>
                     </div>
                   </div>)}
                 </div>);
@@ -727,7 +727,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
             <span>{db.engine.toUpperCase()}</span>
             <span style={{fontSize:11,color:C.textDim}}>{agents.find(a=>a.id===db.agent_id)?.name||db.agent_id}</span>
             <span style={{color:C.textDim}}>{db.host}{db.port>0?`:${db.port}`:""}</span>
-            <span><span style={{padding:"2px 6px",borderRadius:4,fontSize:10,fontWeight:600,background:db.tde_enabled?"#14532d":"#374151",color:db.tde_enabled?"#86efac":"#d1d5db"}}>{db.tde_state||"unknown"}</span></span>
+            <span><span style={{padding:"2px 6px",borderRadius:4,fontSize:10,fontWeight:600,background:db.tde_enabled?C.greenDim:"transparent",color:db.tde_enabled?C.green:C.muted}}>{db.tde_state||"unknown"}</span></span>
             <span style={{color:C.textDim}}>{formatAgo(db.last_seen_at)}</span>
           </div>))}
         </div>
@@ -740,10 +740,10 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16}}>
         {[
           {label:"Total Clients",value:blStats.total},
-          {label:"Protected",value:blStats.protected,color:"#22c55e"},
-          {label:"Suspended",value:blStats.suspended,color:"#f59e0b"},
-          {label:"Down",value:blStats.down,color:"#ef4444"},
-          {label:"TPM Ready",value:blStats.tpmReady,color:"#60a5fa"}
+          {label:"Protected",value:blStats.protected,color:C.green},
+          {label:"Suspended",value:blStats.suspended,color:C.amber},
+          {label:"Down",value:blStats.down,color:C.red},
+          {label:"TPM Ready",value:blStats.tpmReady,color:C.blue}
         ].map((s,i)=>(<Card key={i}><div style={{textAlign:"center"}}><div style={{fontSize:22,fontWeight:700,color:s.color||C.text}}>{s.value}</div><div style={{fontSize:11,color:C.textDim}}>{s.label}</div></div></Card>))}
       </div>
 
@@ -773,13 +773,13 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
 
                 {/* Encryption progress bar */}
                 <div style={{background:C.border,borderRadius:4,height:6,marginBottom:8}}>
-                  <div style={{background:client.encryption_percentage>=100?"#22c55e":"#3b82f6",borderRadius:4,height:6,width:`${Math.min(100,client.encryption_percentage||0)}%`,transition:"width 0.3s"}}/>
+                  <div style={{background:client.encryption_percentage>=100?C.green:C.blue,borderRadius:4,height:6,width:`${Math.min(100,client.encryption_percentage||0)}%`,transition:"width 0.3s"}}/>
                 </div>
 
                 <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                   {["enable","disable","pause","resume","rotate","fetch_recovery"].map((op)=>(<Btn key={op} onClick={()=>runBitLockerOperation(client,op)} disabled={bitLockerOpClientID===`${client.id}:${op}`} style={{fontSize:10,padding:"2px 6px",textTransform:"capitalize"}}>{bitLockerOpClientID===`${client.id}:${op}`?"...":op.replace("_"," ")}</Btn>))}
                   <Btn onClick={()=>openBitLockerActivity(client)} style={{fontSize:10,padding:"2px 6px"}}>Activity</Btn>
-                  <Btn onClick={()=>openBitLockerDelete(client)} style={{fontSize:10,padding:"2px 6px",color:"#ef4444"}}>Delete</Btn>
+                  <Btn onClick={()=>openBitLockerDelete(client)} style={{fontSize:10,padding:"2px 6px",color:C.red}}>Delete</Btn>
                 </div>
               </Card>);
             })}
@@ -802,7 +802,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
                 <span style={{display:"flex",gap:4}}>
                   <Btn onClick={()=>openBitLockerActivity(client)} style={{fontSize:10,padding:"2px 6px"}}>Activity</Btn>
                   <Btn onClick={()=>openBitLockerOptions(client)} style={{fontSize:10,padding:"2px 6px"}}>Ops</Btn>
-                  <Btn onClick={()=>openBitLockerDelete(client)} style={{fontSize:10,padding:"2px 6px",color:"#ef4444"}}>Del</Btn>
+                  <Btn onClick={()=>openBitLockerDelete(client)} style={{fontSize:10,padding:"2px 6px",color:C.red}}>Del</Btn>
                 </span>
               </div>);
             })}
@@ -849,7 +849,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
             {[{label:"CPU",value:m.cpu_usage_pct},{label:"Memory",value:m.memory_usage_pct},{label:"Disk",value:m.disk_usage_pct}].map(r=>(<div key={r.label} style={{marginBottom:8}}>
               <div style={{fontSize:12,color:C.textDim,marginBottom:2}}>{r.label}: {(r.value||0).toFixed(1)}%</div>
               <div style={{background:C.border,borderRadius:4,height:8}}>
-                <div style={{background:(r.value||0)>90?"#ef4444":(r.value||0)>70?"#f59e0b":"#22c55e",borderRadius:4,height:8,width:`${Math.min(100,r.value||0)}%`}}/>
+                <div style={{background:(r.value||0)>90?C.red:(r.value||0)>70?C.amber:C.green,borderRadius:4,height:8,width:`${Math.min(100,r.value||0)}%`}}/>
               </div>
             </div>))}
           </div>
@@ -857,12 +857,12 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
         <div style={{marginTop:16}}>
           <B style={{fontSize:13,marginBottom:6,display:"block"}}>PKCS#11 Status</B>
           <div style={{fontSize:12,color:C.textDim}}>Module Path: {meta.pkcs11_module_path||"n/a"}</div>
-          <div style={{fontSize:12,color:meta.pkcs11_ready?"#22c55e":"#ef4444"}}>Ready: {meta.pkcs11_ready?"Yes":"No"}{meta.pkcs11_reason&&` (${meta.pkcs11_reason})`}</div>
+          <div style={{fontSize:12,color:meta.pkcs11_ready?C.green:C.red}}>Ready: {meta.pkcs11_ready?"Yes":"No"}{meta.pkcs11_reason&&` (${meta.pkcs11_reason})`}</div>
         </div>
         <div style={{marginTop:16}}>
-          <B style={{fontSize:13,marginBottom:6,display:"block"}}>Health Status: <span style={{color:String(h.health||"")=="healthy"?"#22c55e":String(h.health||"")=="degraded"?"#f59e0b":"#ef4444"}}>{String(h.health||"unknown")}</span></B>
+          <B style={{fontSize:13,marginBottom:6,display:"block"}}>Health Status: <span style={{color:String(h.health||"")=="healthy"?C.green:String(h.health||"")=="degraded"?C.amber:C.red}}>{String(h.health||"unknown")}</span></B>
           {Array.isArray(h.warnings)&&h.warnings.length>0&&(<div style={{fontSize:12}}>
-            {h.warnings.map((w,i)=>(<div key={i} style={{color:"#f59e0b",marginBottom:2}}>- {w}</div>))}
+            {h.warnings.map((w,i)=>(<div key={i} style={{color:C.amber,marginBottom:2}}>- {w}</div>))}
           </div>)}
         </div>
       </Modal>);
@@ -917,7 +917,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
           <Btn onClick={()=>setModal(null)}>Cancel</Btn>
         </div>
       </>):(<>
-        <div style={{color:"#22c55e",marginBottom:8,fontSize:12}}>Agent registered. Download and deploy these files on the target host:</div>
+        <div style={{color:C.green,marginBottom:8,fontSize:12}}>Agent registered. Download and deploy these files on the target host:</div>
         {visibleDeployFiles.map((file,i)=>(<Card key={i} style={{marginBottom:8}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
             <B style={{fontSize:13}}>{file.path}</B>
@@ -939,9 +939,9 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
             {logs.map((log,i)=>(<div key={log.id||i} style={{display:"grid",gridTemplateColumns:"120px 80px 80px 1fr 1fr",padding:"4px 8px",fontSize:11,borderBottom:"1px solid "+C.border}}>
               <span style={{color:C.textDim}}>{formatAgo(log.created_at)}</span>
               <span>{log.operation}</span>
-              <span style={{color:log.status==="success"?"#22c55e":"#ef4444"}}>{log.status}</span>
+              <span style={{color:log.status==="success"?C.green:C.red}}>{log.status}</span>
               <span style={{fontFamily:"monospace",fontSize:10,color:C.textDim}}>{String(log.key_id||"").slice(0,16)}</span>
-              <span style={{color:"#ef4444",fontSize:10}}>{log.error_message||""}</span>
+              <span style={{color:C.red,fontSize:10}}>{log.error_message||""}</span>
             </div>))}
           </div>
         )
@@ -965,7 +965,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
           <Btn onClick={()=>setModal(null)}>Cancel</Btn>
         </div>
       </>):(<>
-        <div style={{color:"#22c55e",marginBottom:8,fontSize:12}}>Client registered. Download and deploy on the Windows host:</div>
+        <div style={{color:C.green,marginBottom:8,fontSize:12}}>Client registered. Download and deploy on the Windows host:</div>
         {Array.isArray(bitLockerDeployPackage.files)&&bitLockerDeployPackage.files.map((file,i)=>(<Card key={i} style={{marginBottom:8}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
             <B style={{fontSize:13}}>{file.path}</B>
@@ -982,12 +982,12 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
         {bitLockerDeletePreview&&(<div style={{marginBottom:12}}>
           <div style={{fontSize:12,color:C.textDim}}>Host: {bitLockerDeletePreview.host}</div>
           <div style={{fontSize:12,color:C.textDim}}>Recovery keys available: {bitLockerDeletePreview.recovery_keys_available}</div>
-          {bitLockerDeletePreview.latest_recovery_key_masked&&(<div style={{fontSize:12,color:"#f59e0b"}}>Latest recovery key (masked): {bitLockerDeletePreview.latest_recovery_key_masked}</div>)}
-          {bitLockerDeletePreview.latest_recovery_key&&(<div style={{fontSize:12,color:"#ef4444",fontFamily:"monospace",background:C.surface,padding:6,borderRadius:4,marginTop:4}}>Full key: {bitLockerDeletePreview.latest_recovery_key}</div>)}
+          {bitLockerDeletePreview.latest_recovery_key_masked&&(<div style={{fontSize:12,color:C.amber}}>Latest recovery key (masked): {bitLockerDeletePreview.latest_recovery_key_masked}</div>)}
+          {bitLockerDeletePreview.latest_recovery_key&&(<div style={{fontSize:12,color:C.red,fontFamily:"monospace",background:C.surface,padding:6,borderRadius:4,marginTop:4}}>Full key: {bitLockerDeletePreview.latest_recovery_key}</div>)}
         </div>)}
         <Chk label="I confirm that the recovery key has been backed up securely" checked={bitLockerDeleteConfirmBackup} onChange={(e)=>setBitLockerDeleteConfirmBackup(e.target.checked)}/>
         <div style={{display:"flex",gap:8,marginTop:12}}>
-          <Btn onClick={submitBitLockerDelete} disabled={bitLockerDeleteSubmitting||!bitLockerDeleteConfirmBackup} style={{color:"#ef4444"}}>{bitLockerDeleteSubmitting?"Deleting...":"Delete Client"}</Btn>
+          <Btn onClick={submitBitLockerDelete} disabled={bitLockerDeleteSubmitting||!bitLockerDeleteConfirmBackup} style={{color:C.red}}>{bitLockerDeleteSubmitting?"Deleting...":"Delete Client"}</Btn>
           <Btn onClick={()=>setModal(null)}>Cancel</Btn>
         </div>
       </>)}
@@ -1017,7 +1017,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
               <span style={{fontFamily:"monospace",minWidth:120}}>{row.ip}</span>
               <span style={{flex:1,color:C.textDim}}>{row.host}</span>
               <span style={{fontSize:11}}>{row.os_guess}</span>
-              <span style={{fontSize:11,color:row.confidence==="high"?"#22c55e":"#f59e0b"}}>{row.confidence}</span>
+              <span style={{fontSize:11,color:row.confidence==="high"?C.green:C.amber}}>{row.confidence}</span>
             </div>))}
           </div>
           <div style={{display:"flex",gap:8,marginTop:8}}>
@@ -1035,9 +1035,9 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
         {bitLockerJobs.length===0?(<div style={{color:C.textDim,fontSize:12}}>No jobs found.</div>):(
           <div style={{maxHeight:250,overflow:"auto",marginBottom:16}}>
             {bitLockerJobs.map((job,i)=>(<div key={job.id||i} style={{padding:"6px 0",borderBottom:"1px solid "+C.border,fontSize:12}}>
-              <div><B>{job.operation}</B> - <span style={{color:job.status==="succeeded"?"#22c55e":job.status==="failed"?"#ef4444":"#f59e0b"}}>{job.status}</span></div>
+              <div><B>{job.operation}</B> - <span style={{color:job.status==="succeeded"?C.green:job.status==="failed"?C.red:C.amber}}>{job.status}</span></div>
               <div style={{color:C.textDim,fontSize:11}}>Requested: {formatAgo(job.requested_at)} by {job.requested_by}</div>
-              {job.error_message&&(<div style={{color:"#ef4444",fontSize:11}}>{job.error_message}</div>)}
+              {job.error_message&&(<div style={{color:C.red,fontSize:11}}>{job.error_message}</div>)}
             </div>))}
           </div>
         )}

@@ -13,7 +13,7 @@ func TestHandlerAlertsIncidentsAndStats(t *testing.T) {
 	h, _, audit, _, _ := newReportingHandler(t)
 	tenantID := "tenant-h1"
 	audit.events[tenantID] = []map[string]interface{}{
-		{"id": "e1", "action": "key.created", "service": "keycore", "target_id": "k1", "timestamp": time.Now().UTC().Format(time.RFC3339)},
+		{"id": "e1", "action": "key.exported", "service": "keycore", "target_id": "k1", "timestamp": time.Now().UTC().Format(time.RFC3339)},
 	}
 
 	alertsReq := httptest.NewRequest(http.MethodGet, "/alerts?tenant_id="+tenantID, nil)

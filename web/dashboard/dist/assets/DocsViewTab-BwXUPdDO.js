@@ -1,0 +1,1 @@
+import{j as o}from"./index-CapNLOer.js";import{D as r}from"./DocsTab-B7iuXg-U.js";import"./chevron-down-BZ1uLkl8.js";import"./chevron-right-BQFz-8rU.js";const p=()=>o.jsx(r,{});export{p as DocsViewTab};

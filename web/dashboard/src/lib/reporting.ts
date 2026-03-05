@@ -63,6 +63,7 @@ export type ReportingAlertRule = {
   window_seconds: number;
   channels: string[];
   enabled: boolean;
+  expression?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -207,6 +208,19 @@ export async function createReportingRule(session: AuthSession, rule: ReportingA
     })
   });
   return out?.item || (out?.items && out.items[0]) || { ...rule, tenant_id: session.tenantId };
+}
+
+export async function updateReportingRule(session: AuthSession, ruleID: string, rule: Partial<ReportingAlertRule>): Promise<void> {
+  await serviceRequest(session, "reporting", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`, {
+    method: "PUT",
+    body: JSON.stringify({ ...rule, tenant_id: session.tenantId })
+  });
+}
+
+export async function deleteReportingRule(session: AuthSession, ruleID: string): Promise<void> {
+  await serviceRequest(session, "reporting", `/alerts/rules/${encodeURIComponent(ruleID)}?${tenantQuery(session)}`, {
+    method: "DELETE"
+  });
 }
 
 export async function acknowledgeAlert(session: AuthSession, alertID: string, actor?: string): Promise<void> {

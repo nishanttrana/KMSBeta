@@ -31,9 +31,21 @@ import {
   testGovernanceSMTP,
   testGovernanceWebhook,
   updateGovernanceSettings,
+  listGovernancePolicies,
+  createGovernancePolicy,
+  updateGovernancePolicy,
+  applyNetworkConfig,
   type GovernanceBackupJob,
   type GovernanceSettings
 } from "../../lib/governance";
+import {
+  listReportingRules,
+  createReportingRule,
+  updateReportingRule,
+  deleteReportingRule,
+  listReportingChannels,
+  type ReportingAlertRule
+} from "../../lib/reporting";
 import {
   B,
   Btn,
@@ -46,25 +58,31 @@ import {
   Row3,
   Section,
   Sel,
+  Stat,
   Tabs,
   usePromptDialog
 } from "../../components/v3/legacyPrimitives";
 import {
-  deleteKeyInterfacePolicy,
   deleteKeyInterfacePort,
   deleteTag,
   getKeyAccessSettings,
-  listKeyInterfacePolicies,
   listKeyInterfacePorts,
   listTags,
   updateKeyAccessSettings,
-  upsertKeyInterfacePolicy,
   upsertKeyInterfacePort,
   upsertTag
 } from "../../lib/keycore";
 import { errMsg } from "../../components/v3/runtimeUtils";
 import { C } from "../../components/v3/theme";
 import type { AdminTabProps } from "./types";
+import {
+  getFDEStatus,
+  runFDEIntegrityCheck,
+  rotateFDEVolumeKey,
+  testFDERecoveryShares,
+  getFDERecoveryShareStatus,
+  type FDEStatus as FDEStatusT
+} from "../../lib/fde";
 
 const tone=(status:string):"green"|"amber"|"red"|"blue"=>{
   const s=String(status||"").toLowerCase();
@@ -220,17 +238,6 @@ const SYSTEM_STATE_DEFAULT = {
   posture_guardrail_policy_required: false
 };
 
-const KEY_ACCESS_OPERATION_OPTIONS = [
-  { id: "encrypt", label: "Encrypt" },
-  { id: "decrypt", label: "Decrypt" },
-  { id: "sign", label: "Sign" },
-  { id: "verify", label: "Verify" },
-  { id: "wrap", label: "Wrap" },
-  { id: "unwrap", label: "Unwrap" },
-  { id: "derive", label: "Derive" },
-  { id: "export", label: "Export" }
-];
-
 const INTERFACE_OPTIONS = ["rest","ekm","payment-tcp","pkcs11","jca","kmip","hyok","byok"];
 
 type SystemAdminPanel =
@@ -243,10 +250,14 @@ type SystemAdminPanel =
   | "password"
   | "login"
   | "keyaccess"
+  | "interfaces"
   | "platform"
   | "cli"
   | "governance"
-  | "backup";
+  | "backup"
+  | "alertrules"
+  | "approvals"
+  | "diskencryption";
 const SYSTEM_ADMIN_OPEN_CLI_KEY = "vecta_system_admin_open_cli";
 const SYSTEM_ADMIN_TABS: Array<{label:string;panel:SystemAdminPanel}> = [
   { label:"Health", panel:"health" },
@@ -258,9 +269,13 @@ const SYSTEM_ADMIN_TABS: Array<{label:string;panel:SystemAdminPanel}> = [
   { label:"Password Policy", panel:"password" },
   { label:"Login Security", panel:"login" },
   { label:"Key Access Hardening", panel:"keyaccess" },
+  { label:"Interfaces", panel:"interfaces" },
   { label:"CLI / HSM", panel:"cli" },
   { label:"Governance", panel:"governance" },
-  { label:"Backup", panel:"backup" }
+  { label:"Backup", panel:"backup" },
+  { label:"Alert Rules", panel:"alertrules" },
+  { label:"Approval Policies", panel:"approvals" },
+  { label:"Disk Encryption", panel:"diskencryption" }
 ];
 
 const parseSNMPTargetToState = (rawTarget:string): Record<string, any> => {
@@ -387,19 +402,33 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [securityPolicy,setSecurityPolicy]=useState<Record<string,any>|null>(null);
   const [securityPolicyLoading,setSecurityPolicyLoading]=useState(false);
   const [securityPolicySaving,setSecurityPolicySaving]=useState(false);
+  const INHERIT_KEY="vecta_sys_inheritance_policy";
+  const [inheritancePolicy,setInheritancePolicyRaw]=useState<Record<string,string>>(()=>{
+    try{return JSON.parse(localStorage.getItem(INHERIT_KEY)||"{}")||{};}catch{return {};}
+  });
+  const setInheritancePolicy=useCallback((next:Record<string,string>)=>{
+    setInheritancePolicyRaw(next);
+    try{localStorage.setItem(INHERIT_KEY,JSON.stringify(next));}catch{}
+  },[]);
+  const toggleScope=(key:string)=>{
+    const cur=inheritancePolicy[key]||"kms_wide";
+    setInheritancePolicy({...inheritancePolicy,[key]:cur==="kms_wide"?"tenant_specific":"kms_wide"});
+  };
+  const ScopeBanner=({section}:{section:string})=>{
+    const isWide=(inheritancePolicy[section]||"kms_wide")==="kms_wide";
+    return(
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,padding:"8px 14px",background:isWide?`${C.accent}18`:`${C.amber}18`,borderRadius:8,border:`1px solid ${isWide?C.accent:C.amber}44`}}>
+        <span style={{fontSize:14}}>{isWide?"\u{1F512}":"\u{1F513}"}</span>
+        <span style={{flex:1,fontSize:12,color:C.text}}>{isWide?"KMS-Wide (Uniform) — All tenants inherit these settings":"Tenant-Specific — Tenants may override these settings"}</span>
+        <button onClick={()=>toggleScope(section)} style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:`1px solid ${C.border}`,background:C.surface,color:C.text,cursor:"pointer"}}>{isWide?"Allow Tenant Override":"Enforce KMS-Wide"}</button>
+      </div>
+    );
+  };
   const [accessSettings,setAccessSettings]=useState<Record<string,any>|null>(null);
   const [accessSettingsLoading,setAccessSettingsLoading]=useState(false);
   const [accessSettingsSaving,setAccessSettingsSaving]=useState(false);
-  const [interfacePolicies,setInterfacePolicies]=useState<Array<Record<string,any>>>([]);
   const [interfacePorts,setInterfacePorts]=useState<Array<Record<string,any>>>([]);
   const [interfaceConfigLoading,setInterfaceConfigLoading]=useState(false);
-  const [newInterfacePolicy,setNewInterfacePolicy]=useState<Record<string,any>>({
-    interface_name:"rest",
-    subject_type:"user",
-    subject_id:"",
-    operations:["encrypt"],
-    enabled:true
-  });
   const [newInterfacePort,setNewInterfacePort]=useState<Record<string,any>>({
     interface_name:"rest",
     bind_address:"0.0.0.0",
@@ -407,10 +436,192 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     enabled:true,
     description:""
   });
+  // ── Network Interfaces state ──
+  type NetIface = {id:string;name:string;description:string;service:string;protocol:string;cert_type:string;auto_create_cert:boolean;bind_address:string;port:number;enabled:boolean};
+  const DEFAULT_NET_INTERFACES:NetIface[]=[
+    {id:"if-1",name:"rest-api",description:"Primary REST API",service:"keycore",protocol:"tls13",cert_type:"ecdsa-p256",auto_create_cert:true,bind_address:"0.0.0.0",port:8443,enabled:true},
+    {id:"if-2",name:"kmip-tls",description:"KMIP Protocol Interface",service:"kmip",protocol:"mtls",cert_type:"ecdsa-p256",auto_create_cert:true,bind_address:"0.0.0.0",port:5696,enabled:true},
+    {id:"if-3",name:"management",description:"Admin Management Plane",service:"auth",protocol:"mtls",cert_type:"rsa-4096",auto_create_cert:true,bind_address:"127.0.0.1",port:9443,enabled:true},
+    {id:"if-4",name:"hsm-bridge",description:"HSM Communication",service:"hsm-proxy",protocol:"mtls",cert_type:"ecdsa-p384",auto_create_cert:false,bind_address:"127.0.0.1",port:9500,enabled:true},
+    {id:"if-5",name:"ekm-data",description:"EKM/TDE Endpoint",service:"ekm",protocol:"tls13",cert_type:"ecdsa-p256",auto_create_cert:true,bind_address:"0.0.0.0",port:8444,enabled:true},
+    {id:"if-6",name:"audit-stream",description:"Audit Event Stream",service:"audit",protocol:"mtls",cert_type:"ecdsa-p256",auto_create_cert:true,bind_address:"0.0.0.0",port:8445,enabled:false}
+  ];
+  const NET_IF_SERVICES=["keycore","auth","audit","kmip","ekm","hsm-proxy","nats-bridge","rest-api","byok","hyok","certs","secrets","dataprotect"];
+  const NET_IF_PROTOCOLS=[{v:"tls13",l:"TLS 1.3"},{v:"mtls",l:"Mutual TLS (mTLS)"},{v:"pqc_tls",l:"PQC-TLS (ML-KEM)"},{v:"hybrid",l:"Hybrid (PQC + Traditional)"}];
+  const NET_IF_CERT_TYPES=[{v:"rsa-2048",l:"RSA-2048"},{v:"rsa-4096",l:"RSA-4096"},{v:"ecdsa-p256",l:"ECDSA P-256"},{v:"ecdsa-p384",l:"ECDSA P-384"},{v:"ml-dsa-65",l:"ML-DSA-65 (Dilithium3)"},{v:"ml-dsa-87",l:"ML-DSA-87 (Dilithium5)"},{v:"hybrid-ml-dsa-ecdsa",l:"Hybrid ML-DSA + ECDSA"}];
+  const [netInterfaces,setNetInterfaces]=useState<NetIface[]>(DEFAULT_NET_INTERFACES);
+  const [netIfModalOpen,setNetIfModalOpen]=useState(false);
+  const [editingNetIf,setEditingNetIf]=useState<NetIface|null>(null);
+  const [ifName,setIfName]=useState("");
+  const [ifDesc,setIfDesc]=useState("");
+  const [ifService,setIfService]=useState("keycore");
+  const [ifProtocol,setIfProtocol]=useState("tls13");
+  const [ifCertType,setIfCertType]=useState("ecdsa-p256");
+  const [ifAutoCreateCert,setIfAutoCreateCert]=useState(true);
+  const [ifBindAddr,setIfBindAddr]=useState("0.0.0.0");
+  const [ifPort,setIfPort]=useState("8443");
+  const [ifEnabled,setIfEnabled]=useState(true);
+  const openNetIfModal=(iface?:NetIface)=>{
+    if(iface){setEditingNetIf(iface);setIfName(iface.name);setIfDesc(iface.description);setIfService(iface.service);setIfProtocol(iface.protocol);setIfCertType(iface.cert_type);setIfAutoCreateCert(iface.auto_create_cert);setIfBindAddr(iface.bind_address);setIfPort(String(iface.port));setIfEnabled(iface.enabled);}
+    else{setEditingNetIf(null);setIfName("");setIfDesc("");setIfService("keycore");setIfProtocol("tls13");setIfCertType("ecdsa-p256");setIfAutoCreateCert(true);setIfBindAddr("0.0.0.0");setIfPort("8443");setIfEnabled(true);}
+    setNetIfModalOpen(true);
+  };
+  const saveNetIf=()=>{
+    if(!ifName.trim()){onToast("Interface name is required.");return;}
+    const portNum=Number(ifPort||0);
+    if(portNum<1||portNum>65535){onToast("Port must be 1-65535.");return;}
+    if(editingNetIf){
+      setNetInterfaces((prev)=>prev.map((i)=>i.id===editingNetIf.id?{...i,name:ifName.trim(),description:ifDesc.trim(),service:ifService,protocol:ifProtocol,cert_type:ifCertType,auto_create_cert:ifAutoCreateCert,bind_address:ifBindAddr,port:portNum,enabled:ifEnabled}:i));
+      onToast("Interface updated.");
+    }else{
+      const newIf:NetIface={id:`if-${Date.now()}`,name:ifName.trim(),description:ifDesc.trim(),service:ifService,protocol:ifProtocol,cert_type:ifCertType,auto_create_cert:ifAutoCreateCert,bind_address:ifBindAddr,port:portNum,enabled:ifEnabled};
+      setNetInterfaces((prev)=>[...prev,newIf]);
+      onToast("Interface created.");
+    }
+    setNetIfModalOpen(false);
+  };
+  const deleteNetIf=(id:string)=>{setNetInterfaces((prev)=>prev.filter((i)=>i.id!==id));onToast("Interface removed.");};
+  const toggleNetIfEnabled=(id:string)=>{setNetInterfaces((prev)=>prev.map((i)=>i.id===id?{...i,enabled:!i.enabled}:i));};
+
+  // ── Disk Encryption state ──
+  const [fdeStatus,setFdeStatus]=useState<FDEStatusT|null>(null);
+  const [fdeLoading,setFdeLoading]=useState(false);
+  const [fdeIntegrityRunning,setFdeIntegrityRunning]=useState(false);
+  const [fdeKeyRotating,setFdeKeyRotating]=useState(false);
+  const [fdeRecoveryTesting,setFdeRecoveryTesting]=useState(false);
+  const [fdeRecoveryShares,setFdeRecoveryShares]=useState<any>(null);
+  const [fdeTestShareInputs,setFdeTestShareInputs]=useState<string[]>([]);
+
+  // ── Approval Policies state ──
+  const ADMIN_OPS=["user.create","user.delete","user.role_change","tenant.create","tenant.disable","tenant.delete","system.backup","system.restore","system.config_change","hsm.config_change","governance.policy_change","license.update"];
+  const KEY_OPS=["key.create","key.delete","key.rotate","key.export","key.import","key.bulk_delete","key.bulk_rotate","key.state_change","key.metadata_change","secret.create","secret.delete","secret.rotate","cert.create","cert.revoke","cert.ca_create","cert.enrollment"];
+  const ALL_GOV_SCOPES=[{v:"keys",l:"Key Operations"},{v:"secrets",l:"Secret Operations"},{v:"certs",l:"Certificate Operations"},{v:"users",l:"User Management"},{v:"system",l:"System Administration"},{v:"all",l:"All Operations"}];
+  const [govPolicies,setGovPolicies]=useState<any[]>([]);
+  const [govPoliciesLoading,setGovPoliciesLoading]=useState(false);
+  const [govPolicyModal,setGovPolicyModal]=useState(false);
+  const [govEditPolicy,setGovEditPolicy]=useState<any>(null);
+  const [gpName,setGpName]=useState("");
+  const [gpDesc,setGpDesc]=useState("");
+  const [gpScope,setGpScope]=useState("keys");
+  const [gpTriggers,setGpTriggers]=useState<string[]>([]);
+  const [gpQuorum,setGpQuorum]=useState("threshold");
+  const [gpRequired,setGpRequired]=useState(2);
+  const [gpTotal,setGpTotal]=useState(3);
+  const [gpApprovers,setGpApprovers]=useState("");
+  const [gpTimeout,setGpTimeout]=useState(48);
+  const [gpRetry,setGpRetry]=useState(3);
+  const [gpChannels,setGpChannels]=useState<string[]>(["dashboard"]);
+  const [gpEnforceHold,setGpEnforceHold]=useState(true);
+  const [gpStatus,setGpStatus]=useState("active");
+  const [gpSaving,setGpSaving]=useState(false);
+
+  const loadFDEStatus=useCallback(async()=>{
+    if(!session?.token){setFdeStatus(null);return;}
+    setFdeLoading(true);
+    try{
+      const [status,shares]=await Promise.all([getFDEStatus(session),getFDERecoveryShareStatus(session)]);
+      setFdeStatus(status||null);
+      setFdeRecoveryShares(shares||null);
+    }catch(error){onToast(`FDE status load failed: ${errMsg(error)}`);}
+    finally{setFdeLoading(false);}
+  },[onToast,session]);
+
+  const doFDEIntegrityCheck=useCallback(async()=>{
+    if(!session?.token)return;
+    setFdeIntegrityRunning(true);
+    try{const r=await runFDEIntegrityCheck(session);onToast(r.passed?"Integrity check passed.":"Integrity check FAILED — review logs.");await loadFDEStatus();}
+    catch(error){onToast(`Integrity check failed: ${errMsg(error)}`);}
+    finally{setFdeIntegrityRunning(false);}
+  },[loadFDEStatus,onToast,session]);
+
+  const doFDERotateKey=useCallback(async()=>{
+    if(!session?.token)return;
+    setFdeKeyRotating(true);
+    try{const r=await rotateFDEVolumeKey(session);onToast(`Key rotation started (job ${r.job_id}). Estimated ${r.estimated_duration_minutes} min.`);}
+    catch(error){onToast(`Key rotation failed: ${errMsg(error)}`);}
+    finally{setFdeKeyRotating(false);}
+  },[onToast,session]);
+
+  const doFDETestRecovery=useCallback(async()=>{
+    if(!session?.token)return;
+    const shares=fdeTestShareInputs.filter((s)=>s.trim());
+    if(shares.length<(fdeRecoveryShares?.threshold||3)){onToast(`Provide at least ${fdeRecoveryShares?.threshold||3} shares.`);return;}
+    setFdeRecoveryTesting(true);
+    try{const r=await testFDERecoveryShares(session,shares);onToast(r.valid?"Recovery shares are VALID.":"Recovery shares are INVALID.");}
+    catch(error){onToast(`Recovery test failed: ${errMsg(error)}`);}
+    finally{setFdeRecoveryTesting(false);}
+  },[fdeRecoveryShares?.threshold,fdeTestShareInputs,onToast,session]);
+
+  const loadGovPolicies=useCallback(async()=>{
+    if(!session?.token) return;
+    setGovPoliciesLoading(true);
+    try{const items=await listGovernancePolicies(session,{}); setGovPolicies(Array.isArray(items)?items:[]);}
+    catch(error){onToast(`Policy load failed: ${errMsg(error)}`);}
+    finally{setGovPoliciesLoading(false);}
+  },[session,onToast]);
+
+  const openGovPolicyModal=(policy?:any)=>{
+    if(policy){
+      setGovEditPolicy(policy);
+      setGpName(policy.name||"");setGpDesc(policy.description||"");setGpScope(policy.scope||"keys");
+      setGpTriggers(Array.isArray(policy.trigger_actions)?policy.trigger_actions:[]);
+      setGpQuorum(policy.quorum_mode||"threshold");setGpRequired(policy.required_approvals||2);setGpTotal(policy.total_approvers||3);
+      setGpApprovers((Array.isArray(policy.approver_users)?policy.approver_users:[]).join(", "));
+      setGpTimeout(policy.timeout_hours||48);setGpChannels(Array.isArray(policy.notification_channels)?policy.notification_channels:["dashboard"]);
+      setGpStatus(policy.status||"active");setGpEnforceHold(true);
+    }else{
+      setGovEditPolicy(null);setGpName("");setGpDesc("");setGpScope("keys");setGpTriggers([]);
+      setGpQuorum("threshold");setGpRequired(2);setGpTotal(3);setGpApprovers("");setGpTimeout(48);
+      setGpChannels(["dashboard"]);setGpStatus("active");setGpEnforceHold(true);
+    }
+    setGovPolicyModal(true);
+  };
+
+  const saveGovPolicy=async()=>{
+    if(!session?.token) return;
+    if(!gpName.trim()){onToast("Policy name is required.");return;}
+    if(!gpTriggers.length){onToast("Select at least one trigger action.");return;}
+    const approverList=String(gpApprovers||"").split(",").map((a)=>a.trim()).filter(Boolean);
+    if(!approverList.length){onToast("At least one approver is required.");return;}
+    setGpSaving(true);
+    const payload={
+      name:gpName.trim(),description:gpDesc.trim(),scope:gpScope,
+      trigger_actions:gpTriggers,quorum_mode:gpQuorum,
+      required_approvals:Math.max(1,gpRequired),total_approvers:Math.max(gpRequired,gpTotal),
+      approver_users:approverList,timeout_hours:Math.max(1,gpTimeout),
+      notification_channels:gpChannels,status:gpStatus
+    };
+    try{
+      if(govEditPolicy){await updateGovernancePolicy(session,govEditPolicy.id,payload); onToast("Policy updated.");}
+      else{await createGovernancePolicy(session,payload); onToast("Policy created.");}
+      setGovPolicyModal(false);
+      await loadGovPolicies();
+    }catch(error){if(!sessionGuard(error)) onToast(`Policy save failed: ${errMsg(error)}`);}
+    finally{setGpSaving(false);}
+  };
+
+  const toggleGpTrigger=(op:string)=>{setGpTriggers((prev)=>prev.includes(op)?prev.filter((t)=>t!==op):[...prev,op]);};
+  const toggleGpChannel=(ch:string)=>{setGpChannels((prev)=>prev.includes(ch)?prev.filter((c)=>c!==ch):[...prev,ch]);};
+
   const [newTagName,setNewTagName]=useState("");
-  const [newTagColor,setNewTagColor]=useState("#14B8A6");
+  const [newTagColor,setNewTagColor]=useState(C.teal);
   const [tagSaving,setTagSaving]=useState(false);
   const initialLoadTokenRef=useRef("");
+
+  const [alertRules,setAlertRules]=useState<ReportingAlertRule[]>([]);
+  const [alertRulesLoading,setAlertRulesLoading]=useState(false);
+  const [ruleModalOpen,setRuleModalOpen]=useState(false);
+  const [editingRule,setEditingRule]=useState<ReportingAlertRule|null>(null);
+  const [ruleName,setRuleName]=useState("");
+  const [ruleCondition,setRuleCondition]=useState<"threshold"|"expression">("threshold");
+  const [rulePattern,setRulePattern]=useState("");
+  const [ruleSeverity,setRuleSeverity]=useState("warning");
+  const [ruleThreshold,setRuleThreshold]=useState(1);
+  const [ruleWindowSeconds,setRuleWindowSeconds]=useState(300);
+  const [ruleExpression,setRuleExpression]=useState("");
+  const [ruleChannels,setRuleChannels]=useState<string[]>(["screen"]);
+  const [ruleChannelsAvail,setRuleChannelsAvail]=useState<string[]>(["screen","email","slack","teams","webhook"]);
+  const [ruleSaving,setRuleSaving]=useState(false);
 
   const sessionGuard=useCallback((error:unknown)=>{
     const msg=errMsg(error).toLowerCase();
@@ -421,6 +632,74 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     }
     return false;
   },[onLogout,onToast]);
+
+  const refreshAlertRules=useCallback(async()=>{
+    if(!session?.token) return;
+    setAlertRulesLoading(true);
+    try{
+      const [rulesOut,channelsOut]=await Promise.all([listReportingRules(session),listReportingChannels(session)]);
+      setAlertRules(rulesOut);
+      const names=channelsOut.filter((ch)=>ch.enabled&&String(ch.name||"").toLowerCase()!=="pager").map((ch)=>ch.name).filter(Boolean);
+      if(names.length) setRuleChannelsAvail(names);
+    }catch(error){if(!sessionGuard(error)) onToast(`Alert rules load failed: ${errMsg(error)}`);}
+    finally{setAlertRulesLoading(false);}
+  },[session,sessionGuard,onToast]);
+
+  const openRuleModal=useCallback((rule?:ReportingAlertRule)=>{
+    if(rule){
+      setEditingRule(rule);
+      setRuleName(rule.name||"");
+      const cond=String(rule.condition||"").toLowerCase();
+      setRuleCondition(cond==="expression"?"expression":"threshold");
+      setRulePattern(rule.event_pattern||"");
+      setRuleSeverity(rule.severity||"warning");
+      setRuleThreshold(Math.max(1,Number(rule.threshold||1)));
+      setRuleWindowSeconds(Math.max(1,Number(rule.window_seconds||300)));
+      setRuleExpression(rule.expression||"");
+      setRuleChannels(Array.isArray(rule.channels)?[...rule.channels]:["screen"]);
+    }else{
+      setEditingRule(null);
+      setRuleName("");setRuleCondition("threshold");setRulePattern("");setRuleSeverity("warning");
+      setRuleThreshold(1);setRuleWindowSeconds(300);setRuleExpression("");setRuleChannels(["screen"]);
+    }
+    setRuleModalOpen(true);
+  },[]);
+
+  const handleSaveRule=useCallback(async()=>{
+    if(!session?.token) return;
+    const name=String(ruleName||"").trim();
+    if(!name){onToast("Rule name is required."); return;}
+    if(ruleCondition==="threshold"&&!String(rulePattern||"").trim()){onToast("Event pattern is required for threshold rules."); return;}
+    if(ruleCondition==="expression"&&!String(ruleExpression||"").trim()){onToast("Expression is required for expression rules."); return;}
+    setRuleSaving(true);
+    try{
+      const body:ReportingAlertRule={
+        name,
+        condition:ruleCondition,
+        severity:ruleSeverity,
+        event_pattern:ruleCondition==="threshold"?String(rulePattern||"").trim():"*",
+        threshold:ruleCondition==="threshold"?Math.max(1,Math.trunc(ruleThreshold)):1,
+        window_seconds:ruleCondition==="threshold"?Math.max(1,Math.trunc(ruleWindowSeconds)):60,
+        expression:ruleCondition==="expression"?String(ruleExpression||"").trim():"",
+        channels:ruleChannels.filter(Boolean),
+        enabled:editingRule?.enabled!==false
+      };
+      if(editingRule?.id){
+        await updateReportingRule(session,editingRule.id,body);
+        onToast("Alert rule updated.");
+      }else{
+        await createReportingRule(session,body);
+        onToast("Alert rule created.");
+      }
+      setRuleModalOpen(false);
+      await refreshAlertRules();
+    }catch(error){if(!sessionGuard(error)) onToast(`Alert rule save failed: ${errMsg(error)}`);}
+    finally{setRuleSaving(false);}
+  },[session,ruleName,ruleCondition,rulePattern,ruleSeverity,ruleThreshold,ruleWindowSeconds,ruleExpression,ruleChannels,editingRule,refreshAlertRules,sessionGuard,onToast]);
+
+  const toggleRuleChannel=useCallback((ch:string)=>{
+    setRuleChannels((prev)=>prev.includes(ch)?prev.filter((c)=>c!==ch):[...prev,ch]);
+  },[]);
 
   const loadHealth=useCallback(async()=>{
     if(!session?.token){setHealth({services:[],summary:{}});return;}
@@ -554,20 +833,17 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const loadAccessHardening=useCallback(async()=>{
     if(!session?.token){
       setAccessSettings(null);
-      setInterfacePolicies([]);
       setInterfacePorts([]);
       return;
     }
     setAccessSettingsLoading(true);
     setInterfaceConfigLoading(true);
     try{
-      const [settings,policies,ports]=await Promise.all([
+      const [settings,ports]=await Promise.all([
         getKeyAccessSettings(session),
-        listKeyInterfacePolicies(session),
         listKeyInterfacePorts(session)
       ]);
       setAccessSettings((settings&&typeof settings==="object")?settings:null);
-      setInterfacePolicies(Array.isArray(policies)?policies:[]);
       setInterfacePorts(Array.isArray(ports)?ports:[]);
     }catch(error){
       if(!sessionGuard(error)) onToast(`Key access hardening load failed: ${errMsg(error)}`);
@@ -596,38 +872,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       setAccessSettingsSaving(false);
     }
   },[accessSettings,onToast,session,sessionGuard]);
-
-  const addInterfacePolicy=useCallback(async()=>{
-    if(!session?.token){return;}
-    const subject=String(newInterfacePolicy?.subject_id||"").trim();
-    const ops=Array.isArray(newInterfacePolicy?.operations)?newInterfacePolicy.operations:[];
-    if(!subject){onToast("Subject ID is required.");return;}
-    if(!ops.length){onToast("Select at least one operation.");return;}
-    try{
-      await upsertKeyInterfacePolicy(session,{
-        interface_name:String(newInterfacePolicy?.interface_name||"rest"),
-        subject_type:String(newInterfacePolicy?.subject_type||"user")==="group"?"group":"user",
-        subject_id:subject,
-        operations:ops,
-        enabled:Boolean(newInterfacePolicy?.enabled)
-      });
-      onToast("Interface subject policy saved.");
-      await loadAccessHardening();
-    }catch(error){
-      if(!sessionGuard(error)) onToast(`Interface subject policy save failed: ${errMsg(error)}`);
-    }
-  },[loadAccessHardening,newInterfacePolicy,onToast,session,sessionGuard]);
-
-  const removeInterfacePolicy=useCallback(async(id:string)=>{
-    if(!session?.token||!String(id||"").trim()){return;}
-    try{
-      await deleteKeyInterfacePolicy(session,String(id).trim());
-      onToast("Interface subject policy deleted.");
-      await loadAccessHardening();
-    }catch(error){
-      if(!sessionGuard(error)) onToast(`Interface subject policy delete failed: ${errMsg(error)}`);
-    }
-  },[loadAccessHardening,onToast,session,sessionGuard]);
 
   const addInterfacePort=useCallback(async()=>{
     if(!session?.token){return;}
@@ -678,7 +922,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     if(!name){onToast("Tag name is required.");return;}
     setTagSaving(true);
     try{
-      await upsertTag(session,name,String(newTagColor||"#14B8A6"));
+      await upsertTag(session,name,String(newTagColor||C.teal));
       setNewTagName("");
       await loadTags();
       onToast("Tag saved.");
@@ -907,6 +1151,12 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     }catch{}
   },[]);
 
+  useEffect(()=>{
+    if(panel==="alertrules"&&session?.token) void refreshAlertRules();
+    if(panel==="approvals"&&session?.token) void loadGovPolicies();
+    if(panel==="diskencryption"&&session?.token) void loadFDEStatus();
+  },[panel,session?.token,refreshAlertRules,loadGovPolicies,loadFDEStatus]);
+
   const restartableServiceNames = useMemo(
     ()=> (health.services||[])
       .filter((svc)=>restartAllowedFor(svc))
@@ -1018,9 +1268,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   return <div style={{display:"grid",gap:8}}>
     <style>{`
       @keyframes vectaStatusPulse {
-        0% { transform: scale(1); opacity: 0.85; box-shadow: 0 0 0 0 rgba(20,184,166,0.35); }
-        70% { transform: scale(1.08); opacity: 1; box-shadow: 0 0 0 5px rgba(20,184,166,0); }
-        100% { transform: scale(1); opacity: 0.85; box-shadow: 0 0 0 0 rgba(20,184,166,0); }
+        0% { transform: scale(1); opacity: 0.85; box-shadow: 0 0 0 0 ${C.teal}59; }
+        70% { transform: scale(1.08); opacity: 1; box-shadow: 0 0 0 5px ${C.teal}00; }
+        100% { transform: scale(1); opacity: 0.85; box-shadow: 0 0 0 0 ${C.teal}00; }
       }
       .vecta-hb-dot {
         display:inline-block;
@@ -1030,10 +1280,10 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         margin-right:6px;
         vertical-align:middle;
       }
-      .vecta-hb-running { background:#14B8A6; animation:vectaStatusPulse 1.8s ease-in-out infinite; }
-      .vecta-hb-degraded { background:#F59E0B; animation:vectaStatusPulse 2.2s ease-in-out infinite; }
-      .vecta-hb-down { background:#EF4444; animation:none; opacity:0.95; }
-      .vecta-hb-unknown { background:#3B82F6; animation:vectaStatusPulse 2.6s ease-in-out infinite; }
+      .vecta-hb-running { background:${C.teal}; animation:vectaStatusPulse 1.8s ease-in-out infinite; }
+      .vecta-hb-degraded { background:${C.amber}; animation:vectaStatusPulse 2.2s ease-in-out infinite; }
+      .vecta-hb-down { background:${C.red}; animation:none; opacity:0.95; }
+      .vecta-hb-unknown { background:${C.blue}; animation:vectaStatusPulse 2.6s ease-in-out infinite; }
     `}</style>
     <Tabs
       tabs={SYSTEM_ADMIN_TABS.map((item)=>item.label)}
@@ -1130,6 +1380,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     <Section title="Network" actions={<div style={{display:"flex",gap:8}}>
       <Btn small onClick={()=>void loadSystemState()} disabled={systemStateLoading}>{systemStateLoading?"Refreshing...":"Refresh"}</Btn>
       <Btn small primary onClick={()=>void saveSystemState()} disabled={systemStateLoading||systemStateSaving}>{systemStateSaving?"Saving...":"Save"}</Btn>
+      <Btn small onClick={async()=>{try{const r=await applyNetworkConfig(session!);onToast(r?.message||"Network config applied.");}catch(e){onToast(`Apply failed: ${errMsg(e)}`);}}} disabled={!session?.token||systemStateSaving}>Apply Network Config</Btn>
     </div>}>
       <Card style={{padding:10,borderRadius:8}}>
         <Row2>
@@ -1153,6 +1404,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <FG label="Proxy Endpoint"><Inp value={String(systemState?.proxy_endpoint||"")} onChange={(e)=>setSystemState((p)=>({...p,proxy_endpoint:e.target.value}))} placeholder="https://proxy.bank.local:8443"/></FG>
         </Row2>
         <div style={{fontSize:10,color:C.dim,marginTop:8}}>{networkSummary}</div>
+      </Card>
+      <Card style={{padding:8,borderRadius:8,marginTop:8,background:`${C.amber}11`,border:`1px solid ${C.amber}33`}}>
+        <div style={{fontSize:10,color:C.amber,fontWeight:600}}>Changing the management or cluster IP will update Docker network bindings on next restart. This may cause a brief connectivity disruption. Ensure you can reach the appliance on the new IP before applying.</div>
       </Card>
     </Section>
     </>}
@@ -1266,7 +1520,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         <div style={{marginTop:10,display:"grid",gap:6}}>
           {(Array.isArray(tagCatalog)?tagCatalog:[]).map((tag:any)=>{
             const name=String(tag?.name||"");
-            const color=String(tag?.color||"#14B8A6");
+            const color=String(tag?.color||C.teal);
             const usageCount=Math.max(0,Number(tag?.usage_count||0));
             return <div key={name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
               <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -1287,6 +1541,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
     {panel==="password"&&<>
     <Section title="Password Policy" actions={<div style={{display:"flex",gap:8}}><Btn small onClick={()=>void loadPasswordPolicy()} disabled={passwordPolicyLoading||passwordPolicySaving}>{passwordPolicyLoading?"Reloading...":"Reload Policy"}</Btn><Btn small primary onClick={()=>void savePasswordPolicy()} disabled={passwordPolicyLoading||passwordPolicySaving||!passwordPolicy}>{passwordPolicySaving?"Saving...":"Save Policy"}</Btn></div>}>
+      <ScopeBanner section="passwordPolicy"/>
       <Card style={{padding:10,borderRadius:8}}>
         <Row2>
           <FG label="Min Length"><Inp type="number" value={String(passwordPolicy?.min_length||12)} onChange={(e)=>setPasswordPolicy((p)=>({...p,min_length:Math.max(8,Number(e.target.value||12))}))}/></FG>
@@ -1311,6 +1566,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
     {panel==="login"&&<>
     <Section title="Login Security" actions={<Btn small primary onClick={()=>void saveSecurityPolicy()} disabled={securityPolicyLoading||securityPolicySaving||!securityPolicy}>{securityPolicySaving?"Saving...":"Save"}</Btn>}>
+      <ScopeBanner section="loginSecurity"/>
       <Card style={{padding:10,borderRadius:8}}>
         <Row3>
           <FG label="Max Failed Attempts"><Inp type="number" value={String(securityPolicy?.max_failed_attempts||5)} onChange={(e)=>setSecurityPolicy((p)=>({...p,max_failed_attempts:Math.max(3,Number(e.target.value||5))}))}/></FG>
@@ -1355,53 +1611,60 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         </div>
       </Card>
 
-      <Row2>
-        <Card style={{padding:10,borderRadius:8}}>
-          <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>Interface Subject Policies</div>
-          <Row3>
-            <FG label="Interface">
-              <Sel value={String(newInterfacePolicy?.interface_name||"rest")} onChange={(e)=>setNewInterfacePolicy((p)=>({...p,interface_name:e.target.value}))}>
-                {INTERFACE_OPTIONS.map((opt)=><option key={opt} value={opt}>{opt}</option>)}
-              </Sel>
-            </FG>
-            <FG label="Subject Type">
-              <Sel value={String(newInterfacePolicy?.subject_type||"user")} onChange={(e)=>setNewInterfacePolicy((p)=>({...p,subject_type:e.target.value}))}>
-                <option value="user">user</option>
-                <option value="group">group</option>
-              </Sel>
-            </FG>
-            <FG label="Subject ID"><Inp value={String(newInterfacePolicy?.subject_id||"")} onChange={(e)=>setNewInterfacePolicy((p)=>({...p,subject_id:e.target.value}))}/></FG>
-          </Row3>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:8,marginBottom:8}}>
-            {KEY_ACCESS_OPERATION_OPTIONS.map((op)=>{
-              const selected = Array.isArray(newInterfacePolicy?.operations) && newInterfacePolicy.operations.includes(op.id);
-              return <Chk key={op.id} label={op.label} checked={selected} onChange={()=>{
-                setNewInterfacePolicy((p)=>{
-                  const ops = Array.isArray(p?.operations)?[...p.operations]:[];
-                  const next = ops.includes(op.id) ? ops.filter((item)=>item!==op.id) : [...ops, op.id];
-                  return {...p,operations:next};
-                });
-              }}/>;
-            })}
-          </div>
-          <div style={{display:"flex",justifyContent:"space-between",gap:8,marginBottom:8}}>
-            <Chk label="Enabled" checked={Boolean(newInterfacePolicy?.enabled)} onChange={()=>setNewInterfacePolicy((p)=>({...p,enabled:!Boolean(p?.enabled)}))}/>
-            <Btn small primary onClick={()=>void addInterfacePolicy()}>Save Policy</Btn>
-          </div>
-          <div style={{display:"grid",gap:6}}>
-            {interfacePolicies.map((policy:any)=>{
-              const id=String(policy?.id||"");
-              return <div key={id} style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8,borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
-                <div style={{fontSize:10,color:C.dim}}>{`${String(policy?.interface_name||"-")} / ${String(policy?.subject_type||"-")} / ${String(policy?.subject_id||"-")} / ${(Array.isArray(policy?.operations)?policy.operations:[]).join(",")}`}</div>
-                <Btn small danger onClick={()=>void removeInterfacePolicy(id)}>Delete</Btn>
-              </div>;
-            })}
-            {!interfacePolicies.length?<div style={{fontSize:10,color:C.muted}}>No subject policies.</div>:null}
-          </div>
-        </Card>
+    </Section>
+    </>}
 
+    {panel==="interfaces"&&<>
+    <Section title="Network Interfaces" actions={<Btn small primary onClick={()=>openNetIfModal()}>+ Add Interface</Btn>}>
+      <div style={{fontSize:11,color:C.dim,marginBottom:14}}>Configure KMS network interfaces, protocols, TLS certificates, and port bindings. Each interface defines a network endpoint for a KMS service.</div>
+
+      {/* Stats Row */}
+      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+        <Stat l="Total Interfaces" v={netInterfaces.length} c="accent"/>
+        <Stat l="Active" v={netInterfaces.filter((i)=>i.enabled).length} c="green"/>
+        <Stat l="mTLS Enabled" v={netInterfaces.filter((i)=>i.protocol==="mtls").length} c="blue"/>
+        <Stat l="PQC/Hybrid" v={netInterfaces.filter((i)=>i.protocol==="pqc_tls"||i.protocol==="hybrid").length} c="purple"/>
+      </div>
+
+      {/* Interface Table */}
+      <div style={{display:"grid",gap:8}}>
+        {netInterfaces.map((iface)=>{
+          const protLabel=NET_IF_PROTOCOLS.find((p)=>p.v===iface.protocol)?.l||iface.protocol;
+          const certLabel=NET_IF_CERT_TYPES.find((c)=>c.v===iface.cert_type)?.l||iface.cert_type;
+          return(
+            <Card key={iface.id} style={{padding:"10px 14px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:13,fontWeight:700,color:C.text}}>{iface.name}</span>
+                    <B c={iface.enabled?"green":"orange"}>{iface.enabled?"Active":"Disabled"}</B>
+                    <B c="blue">{iface.service}</B>
+                  </div>
+                  <div style={{fontSize:10,color:C.muted,marginTop:2}}>{iface.description}</div>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>toggleNetIfEnabled(iface.id)} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${C.border}`,background:iface.enabled?`${C.green}22`:C.surface,color:iface.enabled?C.green:C.dim,cursor:"pointer"}}>{iface.enabled?"Disable":"Enable"}</button>
+                  <button onClick={()=>openNetIfModal(iface)} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${C.border}`,background:C.surface,color:C.text,cursor:"pointer"}}>Edit</button>
+                  <button onClick={()=>deleteNetIf(iface.id)} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${C.red}44`,background:`${C.red}11`,color:C.red,cursor:"pointer"}}>Delete</button>
+                </div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Protocol</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{protLabel}</div></div>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Certificate</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{certLabel}</div></div>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Endpoint</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{iface.bind_address}:{iface.port}</div></div>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Auto-Cert</div><div style={{fontSize:10,color:iface.auto_create_cert?C.green:C.dim,fontWeight:600,marginTop:2}}>{iface.auto_create_cert?"Yes":"No"}</div></div>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Status</div><div style={{fontSize:10,color:iface.enabled?C.green:C.amber,fontWeight:600,marginTop:2}}>{iface.enabled?"Listening":"Stopped"}</div></div>
+              </div>
+            </Card>
+          );
+        })}
+        {!netInterfaces.length&&<div style={{textAlign:"center",padding:24,color:C.muted,fontSize:11}}>No interfaces configured. Click &quot;+ Add Interface&quot; to create one.</div>}
+      </div>
+
+      {/* Existing Interface Ports (from Key Access Hardening) */}
+      <div style={{marginTop:20}}>
+        <div style={{fontSize:12,fontWeight:700,color:C.text,marginBottom:10}}>Legacy Interface Port Bindings</div>
         <Card style={{padding:10,borderRadius:8}}>
-          <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>Interface Ports</div>
           <Row2>
             <FG label="Interface">
               <Sel value={String(newInterfacePort?.interface_name||"rest")} onChange={(e)=>setNewInterfacePort((p)=>({...p,interface_name:e.target.value}))}>
@@ -1426,11 +1689,61 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
                 <Btn small danger onClick={()=>void removeInterfacePort(iface)}>Delete</Btn>
               </div>;
             })}
-            {!interfacePorts.length?<div style={{fontSize:10,color:C.muted}}>No interface ports.</div>:null}
+            {!interfacePorts.length&&<div style={{fontSize:10,color:C.muted}}>No legacy interface ports configured.</div>}
           </div>
         </Card>
-      </Row2>
+      </div>
     </Section>
+
+    {/* Add/Edit Interface Modal */}
+    {netIfModalOpen&&<Modal open={netIfModalOpen} title={editingNetIf?"Edit Interface":"Add New Interface"} onClose={()=>setNetIfModalOpen(false)}>
+      <div style={{display:"grid",gap:10}}>
+        <Row2>
+          <FG label="Interface Name"><Inp value={ifName} onChange={(e)=>setIfName(e.target.value)} placeholder="e.g. rest-api"/></FG>
+          <FG label="Description"><Inp value={ifDesc} onChange={(e)=>setIfDesc(e.target.value)} placeholder="Primary REST endpoint"/></FG>
+        </Row2>
+        <Row2>
+          <FG label="Service">
+            <Sel value={ifService} onChange={(e)=>setIfService(e.target.value)}>
+              {NET_IF_SERVICES.map((s)=><option key={s} value={s}>{s}</option>)}
+            </Sel>
+          </FG>
+          <FG label="Protocol">
+            <Sel value={ifProtocol} onChange={(e)=>setIfProtocol(e.target.value)}>
+              {NET_IF_PROTOCOLS.map((p)=><option key={p.v} value={p.v}>{p.l}</option>)}
+            </Sel>
+          </FG>
+        </Row2>
+        <Row2>
+          <FG label="Certificate Type">
+            <Sel value={ifCertType} onChange={(e)=>setIfCertType(e.target.value)}>
+              {NET_IF_CERT_TYPES.map((c)=><option key={c.v} value={c.v}>{c.l}</option>)}
+            </Sel>
+          </FG>
+          <FG label="Bind Address"><Inp value={ifBindAddr} onChange={(e)=>setIfBindAddr(e.target.value)} placeholder="0.0.0.0"/></FG>
+        </Row2>
+        <Row2>
+          <FG label="Port"><Inp type="number" value={ifPort} onChange={(e)=>setIfPort(e.target.value)} placeholder="8443"/></FG>
+          <div style={{display:"flex",flexDirection:"column",gap:8,paddingTop:20}}>
+            <Chk label="Auto-Create Certificate from KMS CA" checked={ifAutoCreateCert} onChange={()=>setIfAutoCreateCert((v)=>!v)}/>
+            <Chk label="Enabled" checked={ifEnabled} onChange={()=>setIfEnabled((v)=>!v)}/>
+          </div>
+        </Row2>
+
+        {/* Protocol info banner */}
+        <div style={{padding:"8px 12px",borderRadius:8,background:`${C.blue}12`,border:`1px solid ${C.blue}33`,fontSize:10,color:C.dim}}>
+          {ifProtocol==="tls13"&&"TLS 1.3 — Standard server-side TLS. Clients authenticate via tokens/API keys."}
+          {ifProtocol==="mtls"&&"Mutual TLS — Both server and client present certificates. Strongest transport security for service-to-service communication."}
+          {ifProtocol==="pqc_tls"&&"PQC-TLS — Post-Quantum Cryptography using ML-KEM for key exchange. Quantum-resistant but may have compatibility limitations."}
+          {ifProtocol==="hybrid"&&"Hybrid — Combines traditional (ECDH) + PQC (ML-KEM) key exchange. Recommended for transitional quantum readiness."}
+        </div>
+
+        <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}>
+          <Btn small onClick={()=>setNetIfModalOpen(false)}>Cancel</Btn>
+          <Btn small primary onClick={saveNetIf}>{editingNetIf?"Update Interface":"Create Interface"}</Btn>
+        </div>
+      </div>
+    </Modal>}
     </>}
 
     {panel==="platform"&&<>
@@ -1621,6 +1934,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
     {panel==="backup"&&<>
     <Section title="Encrypted Backups" actions={<div style={{display:"flex",gap:6}}><Btn small onClick={()=>void loadJobs()}>{jobsLoading?"Refreshing...":"Refresh Jobs"}</Btn><Btn small primary onClick={()=>void saveSystemState()} disabled={systemStateLoading||systemStateSaving}>{systemStateSaving?"Saving...":"Save Backup Policy"}</Btn></div>}>
+      <ScopeBanner section="backupPolicy"/>
       <Card style={{padding:10,borderRadius:8,marginBottom:8}}>
         <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Backup Policy</div>
         <Row2>
@@ -1670,6 +1984,317 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       </Card>
     </Section>
     </>}
+    {panel==="alertrules"&&<>
+    <Section title={<>{`Alert Rules`}<span style={{fontWeight:400,fontSize:11,color:C.muted,marginLeft:8}}>{alertRulesLoading?"loading...": `${alertRules.length} rule${alertRules.length!==1?"s":""}`}</span></>} actions={<div style={{display:"flex",gap:6}}><Btn small onClick={()=>void refreshAlertRules()} disabled={alertRulesLoading}>{alertRulesLoading?"Refreshing...":"Refresh"}</Btn><Btn small primary onClick={()=>openRuleModal()}>Create Rule</Btn></div>}>
+      {alertRules.map((rule)=>{const id=String(rule.id||""); const cond=String(rule.condition||"threshold"); return <Card key={id} style={{padding:10,borderRadius:8,marginBottom:8}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div style={{minWidth:0,flex:1}}>
+            <div style={{fontSize:13,color:C.text,fontWeight:700}}>{rule.name||"Unnamed Rule"}</div>
+            <div style={{fontSize:10,color:C.dim,marginTop:2}}>
+              {cond==="expression"
+                ?<span>Expression: <span style={{fontFamily:"'JetBrains Mono', monospace",color:C.text}}>{rule.expression||"-"}</span></span>
+                :<span>Pattern: <span style={{fontFamily:"'JetBrains Mono', monospace",color:C.text}}>{rule.event_pattern||"*"}</span> | Threshold: {rule.threshold||1} in {rule.window_seconds||300}s</span>}
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:4,fontSize:10}}>
+              <span style={{color:rule.severity==="critical"?C.red:rule.severity==="high"?C.orange:rule.severity==="warning"?C.amber:C.blue}}>{rule.severity||"warning"}</span>
+              <span style={{color:C.muted}}>channels: {(rule.channels||[]).join(", ")||"none"}</span>
+              <span style={{color:rule.enabled!==false?C.green:C.muted}}>{rule.enabled!==false?"enabled":"disabled"}</span>
+            </div>
+          </div>
+          <div style={{display:"flex",gap:6,flexShrink:0,marginLeft:8}}>
+            <Btn small onClick={async()=>{if(!session?.token||!id) return; try{await updateReportingRule(session,id,{enabled:rule.enabled===false}); onToast(rule.enabled===false?"Rule enabled.":"Rule disabled."); await refreshAlertRules();}catch(error){if(!sessionGuard(error)) onToast(`Toggle failed: ${errMsg(error)}`);}}}>
+              {rule.enabled!==false?"Disable":"Enable"}
+            </Btn>
+            <Btn small onClick={()=>openRuleModal(rule)}>Edit</Btn>
+            <Btn small danger onClick={async()=>{if(!session?.token||!id) return; try{await deleteReportingRule(session,id); onToast("Rule deleted."); await refreshAlertRules();}catch(error){if(!sessionGuard(error)) onToast(`Delete failed: ${errMsg(error)}`);}}}>Delete</Btn>
+          </div>
+        </div>
+      </Card>;})}
+      {!alertRules.length&&!alertRulesLoading?<div style={{fontSize:11,color:C.muted,padding:"16px 0",textAlign:"center"}}>No alert rules configured. Create a rule to generate alerts for specific event patterns or expressions.</div>:null}
+    </Section>
+
+    <Modal open={ruleModalOpen} onClose={()=>setRuleModalOpen(false)} title={editingRule?"Edit Alert Rule":"Create Alert Rule"}>
+      <FG label="Rule Name"><Inp value={ruleName} onChange={(e)=>setRuleName(e.target.value)} placeholder="e.g. brute_force_detection"/></FG>
+      <FG label="Condition Type">
+        <Sel value={ruleCondition} onChange={(e)=>setRuleCondition(e.target.value as "threshold"|"expression")}>
+          <option value="threshold">Pattern Match (Threshold)</option>
+          <option value="expression">Expression</option>
+        </Sel>
+      </FG>
+      {ruleCondition==="threshold"&&<>
+        <FG label="Event Pattern (glob)"><Inp value={rulePattern} onChange={(e)=>setRulePattern(e.target.value)} placeholder="e.g. auth.login_failed or key.*"/></FG>
+        <Row2>
+          <FG label="Threshold (count)"><Inp type="number" value={String(ruleThreshold)} onChange={(e)=>setRuleThreshold(Math.max(1,Number(e.target.value||1)))}/></FG>
+          <FG label="Window (seconds)"><Inp type="number" value={String(ruleWindowSeconds)} onChange={(e)=>setRuleWindowSeconds(Math.max(1,Number(e.target.value||300)))}/></FG>
+        </Row2>
+      </>}
+      {ruleCondition==="expression"&&<>
+        <FG label="Expression">
+          <Inp value={ruleExpression} onChange={(e)=>setRuleExpression(e.target.value)} placeholder={'e.g. action == "key.exported" AND actor_id != "admin"'}/>
+        </FG>
+        <div style={{fontSize:9,color:C.muted,marginTop:4,lineHeight:1.5,fontFamily:"'JetBrains Mono', monospace"}}>
+          <div><B>Fields:</B> action, severity, actor_id, source_ip, service, target_type, target_id</div>
+          <div><B>Operators:</B> == != contains startsWith matches</div>
+          <div><B>Combinators:</B> AND OR ( )</div>
+          <div style={{marginTop:4}}><B>Examples:</B></div>
+          <div>action == "key.exported" AND severity != "info"</div>
+          <div>source_ip startsWith "10.0." OR service == "auth"</div>
+          <div>(action matches "key.*" OR action matches "cert.*") AND actor_id != "admin"</div>
+        </div>
+      </>}
+      <FG label="Severity">
+        <Sel value={ruleSeverity} onChange={(e)=>setRuleSeverity(e.target.value)}>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="warning">Warning</option>
+          <option value="info">Info</option>
+        </Sel>
+      </FG>
+      <FG label="Notification Channels">
+        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+          {ruleChannelsAvail.map((ch)=><Chk key={ch} label={ch} checked={ruleChannels.includes(ch)} onChange={()=>toggleRuleChannel(ch)}/>)}
+        </div>
+      </FG>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn small onClick={()=>setRuleModalOpen(false)}>Cancel</Btn>
+        <Btn small primary onClick={()=>void handleSaveRule()} disabled={ruleSaving}>{ruleSaving?"Saving...":(editingRule?"Update Rule":"Create Rule")}</Btn>
+      </div>
+    </Modal>
+    </>}
+
+    {panel==="approvals"&&<>
+    <Section title="Approval Policies" actions={<div style={{display:"flex",gap:6}}>
+      <Btn small onClick={()=>void loadGovPolicies()} disabled={govPoliciesLoading}>{govPoliciesLoading?"Refreshing...":"Refresh"}</Btn>
+      <Btn small primary onClick={()=>openGovPolicyModal()}>+ Create Policy</Btn>
+    </div>}>
+      <div style={{fontSize:11,color:C.dim,marginBottom:14}}>
+        Define quorum-based approval policies for every administrative and key operation in the KMS. Operations matching a policy will be held until the required approvals are granted via dashboard, email, Slack, or Teams within the configured timeout window.
+      </div>
+
+      {/* Stats */}
+      <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
+        <Stat l="Total Policies" v={govPolicies.length} c="accent"/>
+        <Stat l="Active" v={govPolicies.filter((p)=>p.status==="active").length} c="green"/>
+        <Stat l="Key Ops" v={govPolicies.filter((p)=>p.scope==="keys").length} c="blue"/>
+        <Stat l="Admin Ops" v={govPolicies.filter((p)=>p.scope==="system"||p.scope==="users").length} c="purple"/>
+        <Stat l="All Scopes" v={govPolicies.filter((p)=>p.scope==="all").length} c="amber"/>
+      </div>
+
+      {/* Policy List */}
+      <div style={{display:"grid",gap:8}}>
+        {govPolicies.map((policy)=>{
+          const qMode=String(policy.quorum_mode||"threshold");
+          const qLabel=qMode==="and"?"Unanimous (AND)":qMode==="or"?"Any Single (OR)":`${policy.required_approvals}-of-${policy.total_approvers} (Threshold)`;
+          const scopeLabel=ALL_GOV_SCOPES.find((s)=>s.v===policy.scope)?.l||policy.scope;
+          const triggers=Array.isArray(policy.trigger_actions)?policy.trigger_actions:[];
+          const channels=Array.isArray(policy.notification_channels)?policy.notification_channels:[];
+          const approvers=Array.isArray(policy.approver_users)?policy.approver_users:[];
+          return(
+            <Card key={policy.id} style={{borderLeft:`3px solid ${policy.status==="active"?C.green:C.dim}`,padding:"12px 14px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:13,fontWeight:700,color:C.text}}>{policy.name}</span>
+                    <B c={policy.status==="active"?"green":"orange"}>{policy.status}</B>
+                    <B c="blue">{scopeLabel}</B>
+                  </div>
+                  {policy.description&&<div style={{fontSize:10,color:C.muted,marginTop:2}}>{policy.description}</div>}
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={()=>openGovPolicyModal(policy)} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${C.border}`,background:C.surface,color:C.text,cursor:"pointer"}}>Edit</button>
+                  <button onClick={async()=>{if(!session?.token) return; try{await updateGovernancePolicy(session,policy.id,{status:policy.status==="active"?"inactive":"active"}); onToast(policy.status==="active"?"Policy disabled.":"Policy activated."); await loadGovPolicies();}catch(e){onToast(`Toggle failed: ${errMsg(e)}`);}}} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${policy.status==="active"?C.amber:C.green}44`,background:policy.status==="active"?`${C.amber}11`:`${C.green}11`,color:policy.status==="active"?C.amber:C.green,cursor:"pointer"}}>{policy.status==="active"?"Disable":"Enable"}</button>
+                </div>
+              </div>
+
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:8}}>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Quorum Mode</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{qLabel}</div></div>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Timeout</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{policy.timeout_hours||48}h</div></div>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Channels</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{channels.join(", ")||"dashboard"}</div></div>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Hold State</div><div style={{fontSize:10,color:C.green,fontWeight:600,marginTop:2}}>Enforced</div></div>
+              </div>
+
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {triggers.slice(0,8).map((t:string)=><span key={t} style={{fontSize:9,padding:"2px 6px",background:`${C.blue}18`,border:`1px solid ${C.blue}33`,borderRadius:4,color:C.blue}}>{t}</span>)}
+                {triggers.length>8&&<span style={{fontSize:9,color:C.muted}}>+{triggers.length-8} more</span>}
+              </div>
+              {approvers.length>0&&<div style={{marginTop:6,fontSize:9,color:C.dim}}>Approvers: {approvers.join(", ")}</div>}
+            </Card>
+          );
+        })}
+        {!govPolicies.length&&!govPoliciesLoading&&<div style={{textAlign:"center",padding:24,color:C.muted,fontSize:11,background:C.surface,borderRadius:10,border:`1px solid ${C.border}`}}>
+          No approval policies configured. Create a policy to enforce quorum-based approvals for key operations, user management, or system administration tasks.
+        </div>}
+      </div>
+    </Section>
+
+    {/* Create/Edit Approval Policy Modal */}
+    {govPolicyModal&&<Modal open={govPolicyModal} title={govEditPolicy?"Edit Approval Policy":"Create Approval Policy"} onClose={()=>setGovPolicyModal(false)} wide>
+      <div style={{display:"grid",gap:12}}>
+        <Row2>
+          <FG label="Policy Name"><Inp value={gpName} onChange={(e)=>setGpName(e.target.value)} placeholder="e.g. Key Deletion Requires 2-of-3"/></FG>
+          <FG label="Description"><Inp value={gpDesc} onChange={(e)=>setGpDesc(e.target.value)} placeholder="Approval required before sensitive key operations"/></FG>
+        </Row2>
+
+        <Row2>
+          <FG label="Scope">
+            <Sel value={gpScope} onChange={(e)=>setGpScope(e.target.value)}>
+              {ALL_GOV_SCOPES.map((s)=><option key={s.v} value={s.v}>{s.l}</option>)}
+            </Sel>
+          </FG>
+          <FG label="Quorum Mode">
+            <Sel value={gpQuorum} onChange={(e)=>setGpQuorum(e.target.value)}>
+              <option value="threshold">Threshold (M-of-N)</option>
+              <option value="and">Unanimous (AND) — All must approve</option>
+              <option value="or">Any Single (OR) — One approval suffices</option>
+            </Sel>
+          </FG>
+        </Row2>
+
+        {gpQuorum==="threshold"&&<Row2>
+          <FG label="Required Approvals (M)"><Inp type="number" value={String(gpRequired)} onChange={(e)=>setGpRequired(Math.max(1,Number(e.target.value||2)))}/></FG>
+          <FG label="Total Approvers in Group (N)"><Inp type="number" value={String(gpTotal)} onChange={(e)=>setGpTotal(Math.max(gpRequired,Number(e.target.value||3)))}/></FG>
+        </Row2>}
+
+        <FG label="Approver Emails (comma-separated — group members, any member can approve per quorum)">
+          <Inp value={gpApprovers} onChange={(e)=>setGpApprovers(e.target.value)} placeholder="admin@vecta.local, security-lead@corp.com, ops@corp.com"/>
+        </FG>
+
+        {/* Trigger Actions */}
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:8}}>Trigger Actions — Operations requiring approval</div>
+          {(gpScope==="keys"||gpScope==="secrets"||gpScope==="certs"||gpScope==="all")&&<>
+            <div style={{fontSize:9,color:C.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:0.6}}>Key / Secret / Certificate Operations</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10}}>
+              {KEY_OPS.map((op)=><Chk key={op} label={op.replace("key.","").replace("secret.","").replace("cert.","")} checked={gpTriggers.includes(op)} onChange={()=>toggleGpTrigger(op)}/>)}
+            </div>
+          </>}
+          {(gpScope==="system"||gpScope==="users"||gpScope==="all")&&<>
+            <div style={{fontSize:9,color:C.muted,marginBottom:4,textTransform:"uppercase",letterSpacing:0.6}}>Administrative Operations</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:10}}>
+              {ADMIN_OPS.map((op)=><Chk key={op} label={op.replace("user.","").replace("tenant.","").replace("system.","").replace("governance.","").replace("hsm.","").replace("license.","")} checked={gpTriggers.includes(op)} onChange={()=>toggleGpTrigger(op)}/>)}
+            </div>
+          </>}
+          <div style={{display:"flex",gap:8}}>
+            <Btn small onClick={()=>{const ops=gpScope==="keys"||gpScope==="secrets"||gpScope==="certs"?KEY_OPS:gpScope==="system"||gpScope==="users"?ADMIN_OPS:[...KEY_OPS,...ADMIN_OPS]; setGpTriggers(ops);}}>Select All</Btn>
+            <Btn small onClick={()=>setGpTriggers([])}>Clear All</Btn>
+          </div>
+        </div>
+
+        <Row2>
+          <FG label="Timeout Window (hours) — approval must be given within this time">
+            <Inp type="number" value={String(gpTimeout)} onChange={(e)=>setGpTimeout(Math.max(1,Number(e.target.value||48)))}/>
+          </FG>
+          <FG label="Status">
+            <Sel value={gpStatus} onChange={(e)=>setGpStatus(e.target.value)}>
+              <option value="active">Active — Enforcing</option>
+              <option value="inactive">Inactive — Paused</option>
+            </Sel>
+          </FG>
+        </Row2>
+
+        {/* Notification Channels */}
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:8}}>Notification Channels — How approvers receive approval requests</div>
+          <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+            <Chk label="Dashboard (on-screen)" checked={gpChannels.includes("dashboard")} onChange={()=>toggleGpChannel("dashboard")}/>
+            <Chk label="Email (SMTP)" checked={gpChannels.includes("email")} onChange={()=>toggleGpChannel("email")}/>
+            <Chk label="Slack (Webhook)" checked={gpChannels.includes("slack")} onChange={()=>toggleGpChannel("slack")}/>
+            <Chk label="Teams (Webhook)" checked={gpChannels.includes("teams")} onChange={()=>toggleGpChannel("teams")}/>
+          </div>
+        </div>
+
+        {/* Hold State Enforcement */}
+        <div style={{padding:"10px 14px",background:`${C.green}12`,border:`1px solid ${C.green}33`,borderRadius:8}}>
+          <Chk label="Enforce Hold State — Operations are held (queued) until approval is granted or timeout expires. Denied or timed-out operations are rejected." checked={gpEnforceHold} onChange={()=>setGpEnforceHold((v)=>!v)}/>
+          <div style={{fontSize:9,color:C.dim,marginTop:4,marginLeft:24}}>
+            When enabled: the KMS suspends the operation, notifies all approvers via configured channels, and waits for quorum. The operation proceeds only after sufficient approvals. If the timeout expires without quorum, the operation is automatically denied.
+          </div>
+        </div>
+
+        {/* Quorum explanation */}
+        <div style={{padding:"8px 12px",borderRadius:8,background:`${C.blue}12`,border:`1px solid ${C.blue}33`,fontSize:10,color:C.dim}}>
+          {gpQuorum==="threshold"&&`Threshold (M-of-N): ${gpRequired} out of ${gpTotal} designated approvers must approve. Any group member can cast their vote. ${gpTotal-gpRequired+1} denials will reject the operation.`}
+          {gpQuorum==="and"&&"Unanimous (AND): ALL designated approvers must vote to approve. A single denial from any approver immediately rejects the operation."}
+          {gpQuorum==="or"&&"Any Single (OR): ONE approval from any designated approver is sufficient to proceed. All approvers must deny to reject."}
+        </div>
+
+        <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}>
+          <Btn small onClick={()=>setGovPolicyModal(false)}>Cancel</Btn>
+          <Btn small primary onClick={()=>void saveGovPolicy()} disabled={gpSaving}>{gpSaving?"Saving...":(govEditPolicy?"Update Policy":"Create Policy")}</Btn>
+        </div>
+      </div>
+    </Modal>}
+    </>}
+
+    {panel==="diskencryption"&&<>
+    <Section title="Full Disk Encryption" actions={<div style={{display:"flex",gap:8}}>
+      <Btn small onClick={()=>void loadFDEStatus()} disabled={fdeLoading}>{fdeLoading?"Refreshing...":"Refresh"}</Btn>
+    </div>}>
+      <Card style={{padding:10,borderRadius:8,marginBottom:10}}>
+        <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+          <Stat l="Status" v={fdeStatus?.enabled?"Encrypted":"Not Encrypted"} c={fdeStatus?.enabled?"green":"red"}/>
+          <Stat l="Algorithm" v={fdeStatus?.algorithm||"-"} c="accent"/>
+          <Stat l="LUKS Version" v={fdeStatus?.luks_version||"-"} c="blue"/>
+          <Stat l="Key Derivation" v={fdeStatus?.key_derivation||"-"} c="purple"/>
+        </div>
+        <Row2>
+          <FG label="Device"><Inp value={String(fdeStatus?.device||"-")} readOnly/></FG>
+          <FG label="Unlock Method"><Inp value={String(fdeStatus?.unlock_method||"-")} readOnly/></FG>
+        </Row2>
+        <div style={{marginTop:8,height:6,borderRadius:3,background:C.surface,overflow:"hidden"}}>
+          <div style={{height:"100%",borderRadius:3,background:C.accent,width:`${fdeStatus?.volume_size_gb?Math.min(100,(fdeStatus.used_gb/fdeStatus.volume_size_gb)*100):0}%`,transition:"width .3s ease"}}/>
+        </div>
+        <div style={{fontSize:10,color:C.dim,marginTop:4}}>{`${fdeStatus?.used_gb||0} / ${fdeStatus?.volume_size_gb||0} GB used`}</div>
+      </Card>
+
+      <Card style={{padding:10,borderRadius:8,marginBottom:10}}>
+        <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>Key Slots</div>
+        <div style={{display:"grid",gap:6}}>
+          {(fdeStatus?.key_slots||[]).map((slot:any)=>
+            <div key={slot.slot} style={{display:"flex",gap:8,alignItems:"center"}}>
+              <B c={slot.status==="active"?"green":"dim"}>Slot {slot.slot}</B>
+              <span style={{fontSize:10,color:C.dim}}>{slot.type} — {slot.status}</span>
+            </div>
+          )}
+          {!(fdeStatus?.key_slots||[]).length&&<div style={{fontSize:10,color:C.muted}}>No key slot data available.</div>}
+        </div>
+      </Card>
+
+      <Row2>
+        <Card style={{padding:10,borderRadius:8}}>
+          <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>Integrity Check</div>
+          <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Last check: {fdeStatus?.integrity_last_check||"Never"} | Status: <B c={fdeStatus?.integrity_status==="healthy"?"green":"amber"}>{fdeStatus?.integrity_status||"Unknown"}</B></div>
+          <Btn small primary onClick={()=>void doFDEIntegrityCheck()} disabled={fdeIntegrityRunning}>{fdeIntegrityRunning?"Checking...":"Run Integrity Check"}</Btn>
+        </Card>
+        <Card style={{padding:10,borderRadius:8}}>
+          <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>Volume Key Rotation</div>
+          <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Re-encrypt the volume with a new master key. This is a long-running operation and cannot be interrupted.</div>
+          <Btn small danger onClick={()=>void doFDERotateKey()} disabled={fdeKeyRotating}>{fdeKeyRotating?"Rotating...":"Rotate Volume Key"}</Btn>
+        </Card>
+      </Row2>
+
+      <Card style={{padding:10,borderRadius:8,marginTop:10}}>
+        <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>Recovery Shares (Shamir {fdeRecoveryShares?.threshold||"?"}-of-{fdeRecoveryShares?.total||"?"})</div>
+        <div style={{display:"grid",gap:6,marginBottom:10}}>
+          {(fdeRecoveryShares?.shares||[]).map((share:any)=>
+            <div key={share.index} style={{display:"flex",gap:8,alignItems:"center"}}>
+              <B c={share.verified?"green":"amber"}>Share {share.index}</B>
+              <span style={{fontSize:10,color:C.dim}}>{share.label} | {share.verified?`Verified ${share.last_verified||""}`:"Not verified"}</span>
+            </div>
+          )}
+          {!(fdeRecoveryShares?.shares||[]).length&&<div style={{fontSize:10,color:C.muted}}>No recovery share data.</div>}
+        </div>
+        <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Test recovery by providing {fdeRecoveryShares?.threshold||3} share values:</div>
+        {Array.from({length:fdeRecoveryShares?.threshold||3}).map((_,i)=>
+          <FG key={i} label={`Share ${i+1}`}>
+            <Inp type="password" value={fdeTestShareInputs[i]||""} onChange={(e)=>setFdeTestShareInputs((prev)=>{const next=[...prev];next[i]=e.target.value;return next;})} placeholder="Paste recovery share hex value"/>
+          </FG>
+        )}
+        <Btn small primary onClick={()=>void doFDETestRecovery()} disabled={fdeRecoveryTesting} style={{marginTop:8}}>{fdeRecoveryTesting?"Testing...":"Test Recovery Shares"}</Btn>
+      </Card>
+    </Section>
+    </>}
+
     {promptDialog.ui}
   </div>;
 };

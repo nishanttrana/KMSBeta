@@ -1,4 +1,4 @@
-apiVersion: kms.securosys.com/v1
+apiVersion: kms.vecta.io/v1
 kind: DeploymentConfig
 metadata:
     appliance_id: kms-dev-01

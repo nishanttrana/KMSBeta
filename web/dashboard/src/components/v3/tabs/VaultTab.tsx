@@ -82,31 +82,31 @@ const SUPPORTED_TYPES = [
 ];
 
 const TYPE_BADGE_MAP = {
-  api_key: { t: "API Key", bg: "#1f5a8a", fg: "#72d4ff", icon: KeyRound },
-  password: { t: "Password", bg: "#4a2040", fg: "#ff80b5", icon: Lock },
-  database_credentials: { t: "DB Credentials", bg: "#4f2030", fg: "#ff6980", icon: Lock },
-  token: { t: "Token", bg: "#3d3511", fg: "#ffd06d", icon: Shield },
-  oauth_client_secret: { t: "OAuth", bg: "#412916", fg: "#ffb575", icon: Shield },
-  ssh_private_key: { t: "SSH Key", bg: "#124c46", fg: "#46efc2", icon: KeyRound },
-  ssh_public_key: { t: "SSH Public", bg: "#124c46", fg: "#46efc2", icon: KeyRound },
-  pgp_private_key: { t: "PGP Key", bg: "#3b2a61", fg: "#b497ff", icon: KeyRound },
-  pgp_public_key: { t: "PGP Public", bg: "#3b2a61", fg: "#b497ff", icon: KeyRound },
-  ppk: { t: "PPK", bg: "#2c2f7c", fg: "#9db0ff", icon: KeyRound },
-  x509_certificate: { t: "X.509 Cert", bg: "#1f3f79", fg: "#72adff", icon: FileText },
-  tls_certificate: { t: "TLS Cert", bg: "#1f3f79", fg: "#72adff", icon: FileText },
-  tls_private_key: { t: "TLS Key", bg: "#1f3f79", fg: "#72adff", icon: KeyRound },
-  pkcs12: { t: "PKCS#12", bg: "#423311", fg: "#ffd06d", icon: FileText },
-  jwk: { t: "JWK", bg: "#2f3d14", fg: "#b3ff62", icon: KeyRound },
-  kerberos_keytab: { t: "Kerberos", bg: "#113c4d", fg: "#5fdfff", icon: Shield },
-  wireguard_private_key: { t: "WireGuard", bg: "#123862", fg: "#5bc3ff", icon: KeyRound },
-  wireguard_public_key: { t: "WireGuard Pub", bg: "#123862", fg: "#5bc3ff", icon: KeyRound },
-  age_key: { t: "age Key", bg: "#2a3a4e", fg: "#8ec8ff", icon: KeyRound },
-  bitlocker_keys: { t: "BitLocker", bg: "#3f2a19", fg: "#ffc78a", icon: Lock },
-  binary_blob: { t: "Binary", bg: "#223047", fg: "#93b1df", icon: FileText }
+  api_key: { t: "API Key", bg: C.blueDim, fg: C.blue, icon: KeyRound },
+  password: { t: "Password", bg: C.pinkDim, fg: C.pink, icon: Lock },
+  database_credentials: { t: "DB Credentials", bg: C.redDim, fg: C.red, icon: Lock },
+  token: { t: "Token", bg: C.yellowDim, fg: C.yellow, icon: Shield },
+  oauth_client_secret: { t: "OAuth", bg: C.orangeDim, fg: C.orange, icon: Shield },
+  ssh_private_key: { t: "SSH Key", bg: C.tealDim, fg: C.teal, icon: KeyRound },
+  ssh_public_key: { t: "SSH Public", bg: C.tealDim, fg: C.teal, icon: KeyRound },
+  pgp_private_key: { t: "PGP Key", bg: C.purpleDim, fg: C.purple, icon: KeyRound },
+  pgp_public_key: { t: "PGP Public", bg: C.purpleDim, fg: C.purple, icon: KeyRound },
+  ppk: { t: "PPK", bg: C.purpleDim, fg: C.purple, icon: KeyRound },
+  x509_certificate: { t: "X.509 Cert", bg: C.blueDim, fg: C.blue, icon: FileText },
+  tls_certificate: { t: "TLS Cert", bg: C.blueDim, fg: C.blue, icon: FileText },
+  tls_private_key: { t: "TLS Key", bg: C.blueDim, fg: C.blue, icon: KeyRound },
+  pkcs12: { t: "PKCS#12", bg: C.yellowDim, fg: C.yellow, icon: FileText },
+  jwk: { t: "JWK", bg: C.greenDim, fg: C.green, icon: KeyRound },
+  kerberos_keytab: { t: "Kerberos", bg: C.cyanDim, fg: C.cyan, icon: Shield },
+  wireguard_private_key: { t: "WireGuard", bg: C.blueDim, fg: C.blue, icon: KeyRound },
+  wireguard_public_key: { t: "WireGuard Pub", bg: C.blueDim, fg: C.blue, icon: KeyRound },
+  age_key: { t: "age Key", bg: C.blueDim, fg: C.blue, icon: KeyRound },
+  bitlocker_keys: { t: "BitLocker", bg: C.yellowDim, fg: C.yellow, icon: Lock },
+  binary_blob: { t: "Binary", bg: C.blueDim, fg: C.blue, icon: FileText }
 };
 
 function getBadge(type) {
-  return TYPE_BADGE_MAP[String(type || "").toLowerCase()] || { t: type || "secret", bg: "#223047", fg: "#93b1df", icon: Shield };
+  return TYPE_BADGE_MAP[String(type || "").toLowerCase()] || { t: type || "secret", bg: C.blueDim, fg: C.blue, icon: Shield };
 }
 
 function matchesCategory(secret, cat) {
@@ -182,6 +182,7 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
   const [createTTLCustom, setCreateTTLCustom] = useState("");
   const [createLeaseBased, setCreateLeaseBased] = useState(false);
   const [createDeliveryFormat, setCreateDeliveryFormat] = useState("raw");
+  const [envelopeEncryption, setEnvelopeEncryption] = useState(true);
 
   // Generate form
   const [generateType, setGenerateType] = useState("ed25519");
@@ -261,7 +262,7 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
         description: createDesc.trim(),
         labels: { delivery_format: createDeliveryFormat },
         lease_ttl_seconds: ttlToSeconds(createTTLMode, createTTLCustom),
-        metadata: { source: "dashboard", lease_based: createLeaseBased }
+        metadata: { source: "dashboard", lease_based: createLeaseBased, envelope_encryption: envelopeEncryption }
       });
       onToast?.("Secret stored securely.");
       setModal(null); setCreateName(""); setCreateValue(""); setCreateDesc(""); setCreateType("api_key"); setCreateTTLMode("none"); setCreateTTLCustom(""); setCreateLeaseBased(false); setCreateDeliveryFormat("raw");
@@ -361,7 +362,24 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
       <Stat l="Total Secrets" v={totalSecrets} s={`${Object.keys(typeBreakdown).length} types`} c="accent" i={Lock} />
       <Stat l="Versions" v={totalVersions} s="Total stored" c="blue" i={History} />
       <Stat l="Expiring (30d)" v={expiringSoon} s={expired > 0 ? `${expired} already expired` : "None expired"} c={expiringSoon > 0 ? "amber" : "green"} i={Clock} />
-      <Stat l="Envelope Encrypted" v="AES-256" s="MEK-wrapped DEK per secret" c="green" i={Shield} />
+      <div style={{ flex: 1, background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Envelope Encryption</span>
+          <Shield size={14} strokeWidth={2} color={C.dim} />
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 6 }}>
+          <div
+            onClick={() => setEnvelopeEncryption(!envelopeEncryption)}
+            style={{ width: 40, height: 22, borderRadius: 11, background: envelopeEncryption ? C.green : C.border, cursor: "pointer", position: "relative", transition: "background .2s", flexShrink: 0 }}
+          >
+            <div style={{ width: 16, height: 16, borderRadius: 8, background: C.white, position: "absolute", top: 3, left: envelopeEncryption ? 21 : 3, transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,.3)" }} />
+          </div>
+          <span style={{ fontSize: 15, fontWeight: 700, color: envelopeEncryption ? C.green : C.muted, letterSpacing: -0.5 }}>
+            {envelopeEncryption ? "AES-256-GCM" : "Off"}
+          </span>
+        </div>
+        <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>{envelopeEncryption ? "MEK-wrapped DEK per secret — all values encrypted at rest" : "Secrets stored without envelope encryption"}</div>
+      </div>
     </div>
 
     {/* ── Toolbar ── */}
@@ -450,7 +468,7 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10, color: C.muted }}>
               <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Clock size={9} /> {ttlLabel(s)}</span>
-                <span style={{ color: "#89a5cf" }}>v{s.current_version}</span>
+                <span style={{ color: C.dim }}>v{s.current_version}</span>
                 {exp && <span style={{ color: exp.color, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 3 }}>
                   <ShieldAlert size={9} /> {exp.label}
                 </span>}
@@ -475,7 +493,7 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
           </div>
           <div style={{ fontSize: 10, color: C.muted, maxWidth: 360, margin: "0 auto", lineHeight: 1.6 }}>
             {secrets.length === 0
-              ? "Store API keys, database credentials, SSH keys, certificates, tokens, and other sensitive material. All values are envelope-encrypted at rest with AES-256-GCM."
+              ? `Store API keys, database credentials, SSH keys, certificates, tokens, and other sensitive material.${envelopeEncryption ? " All values are envelope-encrypted at rest with AES-256-GCM." : ""}`
               : "Try adjusting your search or category filter."}
           </div>
           {secrets.length === 0 && <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "center" }}>
@@ -497,7 +515,7 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
         </FG>
       </Row2>
       <FG label="Description" hint="Optional context for this secret"><Inp placeholder="Stripe production API key for billing service" value={createDesc} onChange={(e) => setCreateDesc(e.target.value)} /></FG>
-      <FG label="Secret Value" required hint="Envelope-encrypted at rest with AES-256-GCM. Never stored plaintext.">
+      <FG label="Secret Value" required hint={envelopeEncryption ? "Envelope-encrypted at rest with AES-256-GCM. Never stored plaintext." : "Encryption disabled — secret will be stored as-is."}>
         <Txt placeholder="Paste API key, PEM block, JSON, password..." rows={6} value={createValue} onChange={(e) => setCreateValue(e.target.value)} />
       </FG>
       <Row2>

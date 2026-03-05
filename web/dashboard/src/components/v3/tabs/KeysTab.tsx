@@ -1770,7 +1770,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         </Sel>
         </div>
         <div style={{display:"flex",gap:8,alignItems:"center",justifyContent:"flex-end",flexWrap:"wrap"}}>
-          <Btn onClick={()=>void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:108,color:"#c9d5e9",border:`1px solid ${C.borderHi}`}} disabled={refreshingKeys}>
+          <Btn onClick={()=>void refreshKeyInventory()} style={{height:40,padding:"0 16px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:108,color:C.text,border:`1px solid ${C.borderHi}`}} disabled={refreshingKeys}>
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><RefreshCcw size={13} strokeWidth={2.1}/>{refreshingKeys?"Refreshing...":"Refresh"}</span>
           </Btn>
           <Btn
@@ -1780,13 +1780,13 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
           >
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><Plus size={13} strokeWidth={2.2}/>Create Key</span>
           </Btn>
-          <Btn onClick={()=>setModal("form-key")} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:112,color:"#c9d5e9",border:`1px solid ${C.borderHi}`}}>
+          <Btn onClick={()=>setModal("form-key")} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:112,color:C.text,border:`1px solid ${C.borderHi}`}}>
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><PenTool size={13} strokeWidth={2.1}/>Form Key</span>
           </Btn>
-          <Btn onClick={()=>{resetImportForm();setModal("import");}} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:96,color:"#c9d5e9",border:`1px solid ${C.borderHi}`}}>
+          <Btn onClick={()=>{resetImportForm();setModal("import");}} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:96,color:C.text,border:`1px solid ${C.borderHi}`}}>
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><ArrowDownToLine size={13} strokeWidth={2.1}/>Import</span>
           </Btn>
-          <Btn onClick={()=>setModal("generate-pqc")} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:110,color:"#c9d5e9",border:`1px solid ${C.borderHi}`}}>
+          <Btn onClick={()=>setModal("generate-pqc")} style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:110,color:C.text,border:`1px solid ${C.borderHi}`}}>
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><Atom size={13} strokeWidth={2.1}/>PQC Key</span>
           </Btn>
         </div>

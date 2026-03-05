@@ -40,16 +40,17 @@ export function InitialLoadingScreen() {
       aria-busy="true"
     >
       <div className="vecta-initial-loading-inner">
-        <div className="vecta-loading-logo-wrap vecta-loading-logo-wrap--lg">
-          <svg className="vecta-loading-spinner vecta-loading-spinner--lg" viewBox="0 0 72 72">
-            <circle className="vecta-loading-spinner-track" cx="36" cy="36" r="32" />
-            <circle className="vecta-loading-spinner-arc" cx="36" cy="36" r="32" />
+        <div className="vecta-loading-logo-wrap vecta-loading-logo-wrap--xl">
+          <svg className="vecta-loading-spinner vecta-loading-spinner--xl" viewBox="0 0 120 120">
+            <circle className="vecta-loading-spinner-track" cx="60" cy="60" r="54" />
+            <circle className="vecta-loading-spinner-arc" cx="60" cy="60" r="54" />
           </svg>
-          <img className="vecta-loading-logo vecta-loading-logo--lg" src={vectaLogo} alt="Vecta KMS" />
+          <img className="vecta-loading-logo vecta-loading-logo--xl" src={vectaLogo} alt="Vecta KMS" />
         </div>
         <div className="vecta-initial-loading-label">
           <span>Vecta KMS</span>
         </div>
+        <div className="vecta-initial-loading-subtitle">Enterprise Key Management System</div>
         <div className="vecta-initial-loading-bar-track">
           <div className="vecta-initial-loading-bar-fill" />
         </div>

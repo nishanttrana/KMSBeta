@@ -385,6 +385,12 @@ func (s *Service) RetrieveDecKeys(ctx context.Context, tenantID string, slaveSAE
 		return RetrieveKeysResponse{}, err
 	}
 	_ = s.checkPoolWarning(ctx, tenantID, slaveSAEID, cfg)
+	_ = s.publishAudit(ctx, "audit.qkd.keys_retrieved", tenantID, map[string]interface{}{
+		"slave_sae_id": slaveSAEID,
+		"count":        len(out),
+		"mark_status":  status,
+		"key_ids":      ids,
+	})
 	s.log(ctx, tenantID, "keys_retrieved", "info", "QKD keys retrieved for consumption", map[string]interface{}{
 		"slave_sae_id": slaveSAEID,
 		"count":        len(out),
@@ -447,6 +453,12 @@ func (s *Service) OpenConnect(ctx context.Context, req OpenConnectRequest) (Open
 			"to":           LinkStatusUp,
 		})
 	}
+	_ = s.publishAudit(ctx, "audit.qkd.session_opened", req.TenantID, map[string]interface{}{
+		"session_id":   session.ID,
+		"device_id":    req.DeviceID,
+		"slave_sae_id": req.SlaveSAEID,
+		"app_id":       req.AppID,
+	})
 	s.log(ctx, req.TenantID, "session_opened", "info", "QKD connect session opened", map[string]interface{}{
 		"session_id":    session.ID,
 		"device_id":     req.DeviceID,
@@ -492,6 +504,10 @@ func (s *Service) GetKey(ctx context.Context, req GetKeyRequest) (GetKeyResponse
 		return GetKeyResponse{}, err
 	}
 	_ = s.store.TouchSession(ctx, req.TenantID, req.SessionID)
+	_ = s.publishAudit(ctx, "audit.qkd.session_get_key", req.TenantID, map[string]interface{}{
+		"session_id": req.SessionID,
+		"count":      len(keys.Keys),
+	})
 	s.log(ctx, req.TenantID, "session_get_key", "info", "QKD session key retrieval", map[string]interface{}{
 		"session_id": req.SessionID,
 		"count":      len(keys.Keys),
@@ -532,6 +548,11 @@ func (s *Service) CloseConnect(ctx context.Context, req CloseConnectRequest) (Cl
 			"to":           LinkStatusDown,
 		})
 	}
+	_ = s.publishAudit(ctx, "audit.qkd.session_closed", req.TenantID, map[string]interface{}{
+		"session_id":   req.SessionID,
+		"device_id":    sess.DeviceID,
+		"slave_sae_id": sess.SlaveSAEID,
+	})
 	s.log(ctx, req.TenantID, "session_closed", "info", "QKD connect session closed", map[string]interface{}{
 		"session_id":   req.SessionID,
 		"device_id":    sess.DeviceID,
@@ -858,6 +879,14 @@ func (s *Service) GenerateTestKeys(ctx context.Context, req TestGenerateRequest)
 	if err != nil {
 		return ReceiveKeysResponse{}, err
 	}
+	_ = s.publishAudit(ctx, "audit.qkd.test_keys_generated", req.TenantID, map[string]interface{}{
+		"slave_sae_id":  req.SlaveSAEID,
+		"device_id":     req.DeviceID,
+		"count":         req.Count,
+		"key_size_bits": req.KeySizeBits,
+		"accepted":      resp.AcceptedCount,
+		"discarded":     resp.DiscardedCount,
+	})
 	s.log(ctx, req.TenantID, "test_generate", "info", "QKD test keys generated and ingested", map[string]interface{}{
 		"slave_sae_id": req.SlaveSAEID,
 		"device_id":    req.DeviceID,
@@ -1096,6 +1125,9 @@ func (s *Service) RegisterSlaveSAE(ctx context.Context, req RegisterSAERequest) 
 	s.log(ctx, tenantID, "sae_registered", "info", "slave SAE registered: "+sae.Name, map[string]interface{}{
 		"sae_id": sae.ID, "mode": sae.Mode, "endpoint": sae.Endpoint,
 	})
+	_ = s.publishAudit(ctx, "audit.qkd.sae_registered", tenantID, map[string]interface{}{
+		"sae_id": sae.ID, "name": sae.Name, "mode": sae.Mode, "role": sae.Role, "protocol": sae.Protocol,
+	})
 	sae.AuthToken = ""
 	return sae, nil
 }
@@ -1139,6 +1171,9 @@ func (s *Service) UpdateSlaveSAE(ctx context.Context, tenantID string, saeID str
 	s.log(ctx, tenantID, "sae_updated", "info", "slave SAE updated: "+existing.Name, map[string]interface{}{
 		"sae_id": existing.ID,
 	})
+	_ = s.publishAudit(ctx, "audit.qkd.sae_updated", tenantID, map[string]interface{}{
+		"sae_id": existing.ID, "name": existing.Name, "mode": existing.Mode, "role": existing.Role,
+	})
 	existing.AuthToken = ""
 	return existing, nil
 }
@@ -1176,6 +1211,7 @@ func (s *Service) DeleteSlaveSAE(ctx context.Context, tenantID string, id string
 	s.log(ctx, tenantID, "sae_deleted", "info", "slave SAE deleted", map[string]interface{}{
 		"sae_id": id,
 	})
+	_ = s.publishAudit(ctx, "audit.qkd.sae_deleted", tenantID, map[string]interface{}{"sae_id": id})
 	return nil
 }
 
@@ -1247,6 +1283,12 @@ func (s *Service) DistributeKeys(ctx context.Context, req DistributeKeysRequest)
 	_ = s.store.CreateDistribution(ctx, dist)
 	_ = s.store.IncrementSAEDistributed(ctx, tenantID, saeID, int64(len(keyIDs)))
 
+	_ = s.publishAudit(ctx, "audit.qkd.keys_distributed", tenantID, map[string]interface{}{
+		"distribution_id": distID,
+		"sae_id":          saeID,
+		"sae_name":        sae.Name,
+		"key_count":       len(keyIDs),
+	})
 	s.log(ctx, tenantID, "keys_distributed", "info",
 		"distributed "+strconvItoa(len(keyIDs))+" keys to "+sae.Name,
 		map[string]interface{}{"sae_id": saeID, "distribution_id": distID, "key_count": len(keyIDs)})

@@ -85,11 +85,7 @@ func main() {
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8440")
-	httpSrv := &http.Server{
-		Addr:              ":" + httpPort,
-		Handler:           handler,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
+	httpSrv := pkgconfig.NewHTTPServer(httpPort, handler)
 	go func() {
 		logger.Printf("http listening on :%s", httpPort)
 		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

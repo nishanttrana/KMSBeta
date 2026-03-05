@@ -24,7 +24,7 @@ export type AuthSession = {
 const defaultUIAuth: UIAuthConfig = {
   tenant_id: "root",
   admin_username: "admin",
-  admin_password: "VectaAdmin@2026",
+  admin_password: "",
   force_password_change: true,
   prefer_backend_auth: true,
   allow_local_fallback: false
@@ -34,6 +34,30 @@ const AUTH_CONFIG_URL = "/config/ui-auth.json";
 const LOCAL_PASS_KEY = "vecta_ui_local_admin_password";
 const CHANGED_PASS_KEY = "vecta_ui_password_changed";
 const SESSION_KEY = "vecta_ui_session";
+
+// Session hardening: logout flag prevents refresh race from restoring a cleared session
+let _loggedOut = false;
+let _refreshAbortController: AbortController | null = null;
+
+export function isLoggedOut(): boolean {
+  return _loggedOut;
+}
+
+export function resetLogoutFlag(): void {
+  _loggedOut = false;
+}
+
+export function getRefreshAbortSignal(): AbortSignal {
+  _refreshAbortController = new AbortController();
+  return _refreshAbortController.signal;
+}
+
+export function abortPendingRefresh(): void {
+  if (_refreshAbortController) {
+    _refreshAbortController.abort();
+    _refreshAbortController = null;
+  }
+}
 
 export async function loadUIAuthConfig(): Promise<UIAuthConfig> {
   try {
@@ -57,6 +81,7 @@ export async function loadUIAuthConfig(): Promise<UIAuthConfig> {
 
 export function getSession(): AuthSession | null {
   try {
+    if (_loggedOut) return null;
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) {
       return null;
@@ -64,6 +89,15 @@ export function getSession(): AuthSession | null {
     const parsed = JSON.parse(raw) as AuthSession;
     if (!parsed?.token || !parsed?.username) {
       return null;
+    }
+    // Reject expired tokens
+    const expiresAt = String(parsed.expiresAt || "").trim();
+    if (expiresAt) {
+      const expMs = new Date(expiresAt).getTime();
+      if (Number.isFinite(expMs) && expMs <= Date.now()) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
     }
     return {
       ...parsed,
@@ -74,7 +108,7 @@ export function getSession(): AuthSession | null {
         Number.isFinite(Number(parsed.idleTimeoutMinutes)) && Number(parsed.idleTimeoutMinutes) > 0
           ? Math.trunc(Number(parsed.idleTimeoutMinutes))
           : undefined,
-      expiresAt: String(parsed.expiresAt || "").trim() || undefined
+      expiresAt: expiresAt || undefined
     };
   } catch {
     return null;
@@ -82,11 +116,37 @@ export function getSession(): AuthSession | null {
 }
 
 export function saveSession(session: AuthSession): void {
+  if (_loggedOut) return;
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
 export function clearSession(): void {
-  localStorage.removeItem(SESSION_KEY);
+  _loggedOut = true;
+  // Wipe all vecta auth artifacts from localStorage
+  const keysToRemove = [
+    SESSION_KEY,
+    LOCAL_PASS_KEY,
+    CHANGED_PASS_KEY,
+    "vecta_pinned_tabs",
+    "vecta_key_table_columns",
+    "vecta_system_admin_open_cli"
+  ];
+  keysToRemove.forEach((k) => localStorage.removeItem(k));
+}
+
+export async function logoutSession(session: AuthSession): Promise<void> {
+  if (!session || session.mode !== "backend") return;
+  try {
+    await trackedFetch("/auth/logout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.token}`
+      }
+    });
+  } catch {
+    // Best-effort — don't block UI logout on network failure
+  }
 }
 
 export function mustForcePasswordChange(config: UIAuthConfig): boolean {
@@ -246,7 +306,8 @@ export async function changePassword(
   };
 }
 
-export async function refreshSession(session: AuthSession): Promise<AuthSession> {
+export async function refreshSession(session: AuthSession, signal?: AbortSignal): Promise<AuthSession> {
+  if (_loggedOut) throw new Error("Session logged out");
   if (!session || session.mode !== "backend") {
     return session;
   }
@@ -255,8 +316,10 @@ export async function refreshSession(session: AuthSession): Promise<AuthSession>
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${session.token}`
-    }
+    },
+    signal: signal ?? null
   });
+  if (_loggedOut) throw new Error("Session logged out");
   const payload = (await response.json().catch(() => ({}))) as {
     access_token?: string;
     expires_at?: string;

@@ -322,6 +322,21 @@ export async function restartAuthSystemService(
   });
 }
 
+export async function updateAuthTenant(
+  session: AuthSession,
+  tenantID: string,
+  input: { name?: string; status?: string }
+): Promise<void> {
+  const target = String(tenantID || "").trim();
+  await serviceRequest<{ status: string }>(session, "auth", `/tenants/${encodeURIComponent(target)}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      name: input.name !== undefined ? String(input.name).trim() : undefined,
+      status: input.status !== undefined ? String(input.status).trim() : undefined
+    })
+  });
+}
+
 export async function createAuthTenant(
   session: AuthSession,
   input: {

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://kms.securosys.com/schemas/deployment.schema.json",
+  "$id": "https://kms.vecta.io/schemas/deployment.schema.json",
   "title": "Vecta KMS DeploymentConfig",
   "type": "object",
   "additionalProperties": false,
@@ -13,7 +13,7 @@
   "properties": {
     "apiVersion": {
       "type": "string",
-      "const": "kms.securosys.com/v1"
+      "const": "kms.vecta.io/v1"
     },
     "kind": {
       "type": "string",

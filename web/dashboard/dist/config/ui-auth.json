@@ -1,7 +1,7 @@
 {
   "tenant_id": "root",
   "admin_username": "admin",
-  "admin_password": "VectaAdmin@2026",
+  "admin_password": "",
   "force_password_change": true,
   "prefer_backend_auth": true,
   "allow_local_fallback": false

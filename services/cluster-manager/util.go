@@ -222,6 +222,24 @@ func normalizeComponentName(v string) string {
 		return "mpc"
 	case "cluster", "clustering":
 		return "cluster"
+	case "compliance", "compliance_dashboard":
+		return "compliance"
+	case "reporting", "reporting_alerting", "alerts":
+		return "reporting"
+	case "sbom", "sbom_cbom", "cbom":
+		return "sbom"
+	case "pqc", "pqc_migration", "post_quantum":
+		return "pqc"
+	case "discovery", "crypto_discovery":
+		return "discovery"
+	case "ai", "ai_llm":
+		return "ai"
+	case "posture", "security_posture":
+		return "posture"
+	case "qrng", "qrng_entropy":
+		return "qrng"
+	case "cloud", "cloud_key_control":
+		return "cloud"
 	default:
 		return ""
 	}
@@ -279,6 +297,24 @@ func componentDisplayName(component string) string {
 		return "MPC"
 	case "cluster":
 		return "Cluster"
+	case "compliance":
+		return "Compliance"
+	case "reporting":
+		return "Reporting"
+	case "sbom":
+		return "SBOM"
+	case "pqc":
+		return "PQC"
+	case "discovery":
+		return "Discovery"
+	case "ai":
+		return "AI"
+	case "posture":
+		return "Posture"
+	case "qrng":
+		return "QRNG"
+	case "cloud":
+		return "Cloud"
 	default:
 		return strings.TrimSpace(component)
 	}

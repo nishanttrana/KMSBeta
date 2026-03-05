@@ -84,6 +84,7 @@ type AlertRule struct {
 	WindowSecond int       `json:"window_seconds"`
 	Channels     []string  `json:"channels"`
 	Enabled      bool      `json:"enabled"`
+	Expression   string    `json:"expression"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }

@@ -475,7 +475,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     return [
       { name: "Critical", value: Number(map.critical || 0), fill: C.red },
       { name: "High", value: Number(map.high || 0), fill: C.amber },
-      { name: "Warning", value: Number(map.warning || 0), fill: "#d97706" },
+      { name: "Warning", value: Number(map.warning || 0), fill: C.amber },
       { name: "Info", value: Number(map.info || 0), fill: C.blue }
     ].filter((d) => d.value > 0);
   }, [alertStats]);
@@ -506,7 +506,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     if (!mttr) return [];
     return ["critical", "high", "warning", "info"]
       .filter((k) => Number(mttr[k] || 0) > 0)
-      .map((k) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), minutes: Math.round(Number(mttr[k] || 0)), fill: k === "critical" ? C.red : k === "high" ? C.amber : k === "warning" ? "#d97706" : C.blue }));
+      .map((k) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), minutes: Math.round(Number(mttr[k] || 0)), fill: k === "critical" ? C.red : k === "high" ? C.amber : k === "warning" ? C.amber : C.blue }));
   }, [mttr]);
 
   const topActors = useMemo(() => Array.isArray(topSources?.top_actors) ? topSources.top_actors.slice(0, 5) : [], [topSources]);
@@ -584,7 +584,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                   <BarChart data={mttrBars} layout="vertical">
                     <XAxis type="number" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} unit="m" />
                     <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
-                    <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} min</ChartTip> : null} cursor={{ fill: "rgba(6,214,224,.04)" }} />
+                    <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} min</ChartTip> : null} cursor={{ fill: C.accentDim }} />
                     <RBar dataKey="minutes" radius={[0, 4, 4, 0]}>
                       {mttrBars.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
                     </RBar>
@@ -887,7 +887,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                 <BarChart data={breakdownBars} layout="vertical">
                   <XAxis type="number" domain={[0, 100]} tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
-                  <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value}/100</ChartTip> : null} cursor={{ fill: "rgba(6,214,224,.04)" }} />
+                  <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value}/100</ChartTip> : null} cursor={{ fill: C.accentDim }} />
                   <RBar dataKey="value" radius={[0, 4, 4, 0]}>
                     {breakdownBars.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
                   </RBar>
@@ -910,7 +910,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                   <BarChart data={algoDistribution}>
                     <XAxis dataKey="name" tick={{ fill: C.dim, fontSize: 8 }} axisLine={{ stroke: C.border }} tickLine={false} />
                     <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={25} allowDecimals={false} />
-                    <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accent }}>{label}</span>: {payload[0]?.value} keys</ChartTip> : null} cursor={{ fill: "rgba(6,214,224,.04)" }} />
+                    <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accent }}>{label}</span>: {payload[0]?.value} keys</ChartTip> : null} cursor={{ fill: C.accentDim }} />
                     <RBar dataKey="count" fill={C.accent} radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -973,11 +973,11 @@ export const ComplianceTab = ({ session, onToast }: any) => {
               <div style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", border: `1px solid ${C.border}` }}>
                 {findingSeverityCounts.critical > 0 && <div style={{ width: `${(findingSeverityCounts.critical / findingTotal) * 100}%`, background: C.red }} title={`Critical: ${findingSeverityCounts.critical}`} />}
                 {findingSeverityCounts.high > 0 && <div style={{ width: `${(findingSeverityCounts.high / findingTotal) * 100}%`, background: C.amber }} title={`High: ${findingSeverityCounts.high}`} />}
-                {findingSeverityCounts.warning > 0 && <div style={{ width: `${(findingSeverityCounts.warning / findingTotal) * 100}%`, background: "#d97706" }} title={`Warning: ${findingSeverityCounts.warning}`} />}
+                {findingSeverityCounts.warning > 0 && <div style={{ width: `${(findingSeverityCounts.warning / findingTotal) * 100}%`, background: C.amber }} title={`Warning: ${findingSeverityCounts.warning}`} />}
                 {findingSeverityCounts.info > 0 && <div style={{ width: `${(findingSeverityCounts.info / findingTotal) * 100}%`, background: C.blue }} title={`Info: ${findingSeverityCounts.info}`} />}
               </div>
               <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
-                {[["Critical", findingSeverityCounts.critical, C.red], ["High", findingSeverityCounts.high, C.amber], ["Warning", findingSeverityCounts.warning, "#d97706"], ["Info", findingSeverityCounts.info, C.blue]].filter(([,c]) => (c as number) > 0).map(([label, count, color]) => (
+                {[["Critical", findingSeverityCounts.critical, C.red], ["High", findingSeverityCounts.high, C.amber], ["Warning", findingSeverityCounts.warning, C.amber], ["Info", findingSeverityCounts.info, C.blue]].filter(([,c]) => (c as number) > 0).map(([label, count, color]) => (
                   <div key={String(label)} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim }}>
                     <div style={{ width: 8, height: 8, borderRadius: 2, background: color as string }} />
                     {label} ({count})

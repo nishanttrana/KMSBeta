@@ -7,23 +7,55 @@ x-kms-common-env: &kms-common-env
   CONSUL_HTTP_ADDR: consul:8500
   CONSUL_SERVICE_ADDRESS: $$HOSTNAME
   CONSUL_HEALTH_CHECK_TYPE: tcp
+  REDIS_URL: redis://valkey:6379
+  DB_MAX_OPEN: "25"
+  DB_MAX_IDLE: "10"
+  RATE_LIMIT_RPS: "100"
+  RATE_LIMIT_BURST: "200"
 
 x-kms-service: &kms-service
   restart: unless-stopped
   networks:
     - kms_net
+  deploy:
+    resources:
+      limits:
+        cpus: '0.5'
+        memory: 256M
+      reservations:
+        cpus: '0.1'
+        memory: 48M
   depends_on:
     postgres:
-      condition: service_healthy
-    nats:
-      condition: service_healthy
-    consul:
       condition: service_healthy
 
 services:
   postgres:
     restart: unless-stopped
     image: postgres:16-alpine
+    command:
+      - postgres
+      - -c
+      - shared_buffers=${PG_SHARED_BUFFERS:-256MB}
+      - -c
+      - effective_cache_size=${PG_EFFECTIVE_CACHE:-768MB}
+      - -c
+      - work_mem=${PG_WORK_MEM:-4MB}
+      - -c
+      - maintenance_work_mem=${PG_MAINT_MEM:-64MB}
+      - -c
+      - max_connections=${PG_MAX_CONN:-200}
+      - -c
+      - wal_buffers=16MB
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - max_wal_size=${PG_MAX_WAL:-1GB}
+      - -c
+      - log_min_duration_statement=200
+    shm_size: '256m'
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
@@ -37,11 +69,49 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - kms_net
+
+  pgbouncer:
+    restart: unless-stopped
+    profiles: ["connection_pooling"]
+    image: edoburu/pgbouncer:1.23.0
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/vecta
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 2000
+      DEFAULT_POOL_SIZE: 50
+      MIN_POOL_SIZE: 10
+      RESERVE_POOL_SIZE: 5
+    ports:
+      - "6432:6432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U postgres"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
     networks:
       - kms_net
 
   nats:
     restart: unless-stopped
+    profiles: ["event_streaming"]
     image: nats:2.10-alpine
     command: ["-js"]
     ports:
@@ -57,6 +127,7 @@ services:
 
   valkey:
     restart: unless-stopped
+    profiles: ["distributed_cache"]
     image: valkey/valkey:7-alpine
     ports:
       - "6379:6379"
@@ -70,6 +141,7 @@ services:
 
   consul:
     restart: unless-stopped
+    profiles: ["service_discovery"]
     image: hashicorp/consul:1.20
     command: ["agent", "-server", "-bootstrap-expect=1", "-client=0.0.0.0", "-ui", "-config-file=/consul/config/consul.hcl"]
     ports:
@@ -202,6 +274,14 @@ services:
       context: .
       dockerfile: services/auth/Dockerfile
     image: vecta/auth:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
     environment:
       <<: *kms-common-env
       HTTP_PORT: "8001"
@@ -237,6 +317,7 @@ services:
 
   hsm-integration:
     restart: unless-stopped
+    profiles: ["hsm_cli"]
     build:
       context: .
       dockerfile: services/hsm-integration/Dockerfile
@@ -262,9 +343,16 @@ services:
       context: .
       dockerfile: services/keycore/Dockerfile
     image: vecta/keycore:latest
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
     environment:
       <<: *kms-common-env
-      REDIS_URL: valkey:6379
       HSM_MODE: ${HSM_MODE:-software}
       HSM_ENDPOINT: ${HSM_ENDPOINT:-hsm-connector:18430}
       GOVERNANCE_URL: http://governance:8050
@@ -285,12 +373,6 @@ services:
       GRPC_PORT: "18010"
     depends_on:
       postgres:
-        condition: service_healthy
-      nats:
-        condition: service_healthy
-      consul:
-        condition: service_healthy
-      valkey:
         condition: service_healthy
     ports:
       - "8010:8010"

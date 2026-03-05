@@ -23,16 +23,20 @@ const (
 )
 
 type Config struct {
-	PostgresDSN string
-	SQLitePath  string
-	UseSQLite   bool
-	MaxOpen     int
-	MaxIdle     int
+	PostgresDSN     string
+	PostgresRODSN   string // read-only replica DSN (empty = disabled)
+	SQLitePath      string
+	UseSQLite       bool
+	MaxOpen         int
+	MaxIdle         int
+	ConnMaxIdleTime time.Duration
+	ConnMaxLifetime time.Duration
 }
 
 type DB struct {
 	driver Driver
 	sqlDB  *sql.DB
+	roDB   *sql.DB // read-only replica (nil if not configured)
 }
 
 func Open(ctx context.Context, cfg Config) (*DB, error) {
@@ -51,32 +55,73 @@ func Open(ctx context.Context, cfg Config) (*DB, error) {
 		return nil, err
 	}
 
-	// Keep pool conservative for PgBouncer transaction pooling mode.
-	if cfg.MaxOpen <= 0 {
-		cfg.MaxOpen = 20
-	}
-	if cfg.MaxIdle <= 0 {
-		cfg.MaxIdle = 10
-	}
-	conn.SetMaxOpenConns(cfg.MaxOpen)
-	conn.SetMaxIdleConns(cfg.MaxIdle)
-	conn.SetConnMaxLifetime(30 * time.Minute)
+	applyPoolSettings(conn, cfg)
 
 	if err := conn.PingContext(ctx); err != nil {
 		_ = conn.Close()
 		return nil, err
 	}
 
-	return &DB{driver: driver, sqlDB: conn}, nil
+	d := &DB{driver: driver, sqlDB: conn}
+
+	// Open read-only replica if configured
+	if cfg.PostgresRODSN != "" && !cfg.UseSQLite {
+		roConn, err := sql.Open(string(DriverPostgres), cfg.PostgresRODSN)
+		if err == nil {
+			applyPoolSettings(roConn, cfg)
+			if pingErr := roConn.PingContext(ctx); pingErr == nil {
+				d.roDB = roConn
+			} else {
+				_ = roConn.Close()
+			}
+		}
+	}
+
+	return d, nil
+}
+
+func applyPoolSettings(conn *sql.DB, cfg Config) {
+	maxOpen := cfg.MaxOpen
+	if maxOpen <= 0 {
+		maxOpen = 50
+	}
+	maxIdle := cfg.MaxIdle
+	if maxIdle <= 0 {
+		maxIdle = 25
+	}
+	conn.SetMaxOpenConns(maxOpen)
+	conn.SetMaxIdleConns(maxIdle)
+
+	if cfg.ConnMaxLifetime > 0 {
+		conn.SetConnMaxLifetime(cfg.ConnMaxLifetime)
+	} else {
+		conn.SetConnMaxLifetime(30 * time.Minute)
+	}
+	if cfg.ConnMaxIdleTime > 0 {
+		conn.SetConnMaxIdleTime(cfg.ConnMaxIdleTime)
+	} else {
+		conn.SetConnMaxIdleTime(5 * time.Minute)
+	}
 }
 
 func (d *DB) SQL() *sql.DB {
 	return d.sqlDB
 }
 
+// ROSQL returns the read-only replica connection if available, else the primary.
+func (d *DB) ROSQL() *sql.DB {
+	if d.roDB != nil {
+		return d.roDB
+	}
+	return d.sqlDB
+}
+
 func (d *DB) Close() error {
 	if d == nil || d.sqlDB == nil {
 		return nil
+	}
+	if d.roDB != nil {
+		_ = d.roDB.Close()
 	}
 	return d.sqlDB.Close()
 }
