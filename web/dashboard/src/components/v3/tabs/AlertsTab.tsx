@@ -4,15 +4,13 @@ import type { AuthSession } from "../../../lib/auth";
 import {
   acknowledgeAlertsBulk,
   acknowledgeAlert,
-  createReportingRule,
   escalateAlert,
   getReportingAlertStats,
   getReportingMTTR,
   listReportingAlerts,
-  listReportingChannels,
-  listReportingRules
+  listReportingChannels
 } from "../../../lib/reporting";
-import { B, Btn, Card, Chk, FG, Inp, Modal, Row3, Section, Sel } from "../legacyPrimitives";
+import { B, Btn, Card, Section, Sel } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 
@@ -43,7 +41,6 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
   const [stats,setStats]=useState<any>({total:0,by_severity:{},by_status:{}});
   const [mttr,setMTTR]=useState<Record<string,number>>({});
   const [channels,setChannels]=useState<any[]>([]);
-  const [rules,setRules]=useState<any[]>([]);
   const [loading,setLoading]=useState(false);
   const [activeFilter,setActiveFilter]=useState("open");
   const [pageSize,setPageSize]=useState(10);
@@ -51,14 +48,6 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
   const [ackBusy,setAckBusy]=useState("");
   const [ackAllBusy,setAckAllBusy]=useState(false);
   const [escBusy,setEscBusy]=useState("");
-  const [ruleModal,setRuleModal]=useState(false);
-  const [ruleSaving,setRuleSaving]=useState(false);
-  const [ruleName,setRuleName]=useState("");
-  const [rulePattern,setRulePattern]=useState("key.*");
-  const [ruleSeverity,setRuleSeverity]=useState("high");
-  const [ruleThreshold,setRuleThreshold]=useState(1);
-  const [ruleWindowSeconds,setRuleWindowSeconds]=useState(300);
-  const [ruleChannels,setRuleChannels]=useState<string[]>([]);
 
   const refresh=useCallback(async(silent=false)=>{
     if(!session?.token){
@@ -66,7 +55,6 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
       setStats({total:0,by_severity:{},by_status:{}});
       setMTTR({});
       setChannels([]);
-      setRules([]);
       onUnreadSync?.(0);
       return;
     }
@@ -74,22 +62,18 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
       setLoading(true);
     }
     try{
-      const [alertsOut,statsOut,mttrOut,channelsOut,rulesOut]=await Promise.all([
+      const [alertsOut,statsOut,mttrOut,channelsOut]=await Promise.all([
         listReportingAlerts(session,{limit:500,offset:0}),
         getReportingAlertStats(session),
         getReportingMTTR(session),
-        listReportingChannels(session),
-        listReportingRules(session)
+        listReportingChannels(session)
       ]);
       setItems(Array.isArray(alertsOut)?alertsOut:[]);
       setStats(statsOut||{total:0,by_severity:{},by_status:{}});
       setMTTR(mttrOut&&typeof mttrOut==="object"?mttrOut:{});
       setChannels(Array.isArray(channelsOut)?channelsOut:[]);
-      setRules(Array.isArray(rulesOut)?rulesOut:[]);
       const unread=Math.max(0,(Array.isArray(alertsOut)?alertsOut:[]).filter((item:any)=>String(item?.status||"").toLowerCase()==="new").length);
       onUnreadSync?.(unread);
-      const defaults=(Array.isArray(channelsOut)?channelsOut:[]).filter((ch:any)=>Boolean(ch?.enabled)).map((ch:any)=>String(ch?.name||"").trim()).filter(Boolean);
-      setRuleChannels((prev)=>prev.length?prev:(defaults.length?defaults:["screen","email"]));
     }catch(error){
       onToast?.(`Alerts load failed: ${errMsg(error)}`);
     }finally{
@@ -176,38 +160,17 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
   },[mttr]);
 
   const enabledChannels=useMemo(()=>{
-    return (Array.isArray(channels)?channels:[]).filter((ch)=>Boolean(ch?.enabled));
+    return (Array.isArray(channels)?channels:[]).filter((ch)=>Boolean(ch?.enabled)&&String(ch?.name||"").toLowerCase()!=="pager");
   },[channels]);
 
   const alertCards=[
-    {
-      label:"Open Alerts",
-      value:String(openItems.length),
-      sub:`${criticalItems.length} critical, ${highItems.length} high`,
-      tone:"red",
-      icon:Bell
-    },
-    {
-      label:"Today Total",
-      value:String(todayTotal),
-      sub:stats?.total?`${Math.max(0,Math.round((resolvedItems.length/Math.max(1,stats.total))*100))}% triaged`:`${rules.length} active rules`,
-      tone:"accent",
-      icon:Bell
-    },
-    {
-      label:"Avg Response",
-      value:mttrAvg?`${(mttrAvg/60).toFixed(1)}h`:"-",
-      sub:mttrAvg?`MTTR ${Math.round(mttrAvg)}m`:"Awaiting resolved alerts",
-      tone:"green",
-      icon:Gauge
-    },
-    {
-      label:"Channels",
-      value:String(enabledChannels.length),
-      sub:enabledChannels.length?enabledChannels.map((ch:any)=>String(ch.name||"")).slice(0,5).join(", "):"none",
-      tone:"blue",
-      icon:RadioIcon
-    }
+    {label:"Open",value:String(openItems.length),sub:`${criticalItems.length} crit / ${highItems.length} high`,tone:"red",icon:Bell},
+    {label:"Critical",value:String(criticalItems.length),sub:criticalItems.length?"needs attention":"clear",tone:criticalItems.length?"red":"green",icon:Bell},
+    {label:"Today",value:String(todayTotal),sub:stats?.total?`${Math.max(0,Math.round((resolvedItems.length/Math.max(1,stats.total))*100))}% triaged`:"audit events",tone:"accent",icon:Bell},
+    {label:"MTTR",value:mttrAvg>0?`${(mttrAvg/60).toFixed(1)}h`:"—",sub:mttrAvg>0?`${Math.round(mttrAvg)}m avg`:"no data",tone:"green",icon:Gauge},
+    {label:"Resolved",value:String(resolvedItems.length),sub:`${suppressedItems.length} suppressed`,tone:"green",icon:Bell},
+    {label:"Channels",value:String(enabledChannels.length),sub:enabledChannels.length?enabledChannels.map((ch:any)=>String(ch.name||"")).slice(0,3).join(", "):"none",tone:"blue",icon:RadioIcon},
+    {label:"Total",value:String(stats?.total||sortedItems.length),sub:`${Object.keys(stats?.by_severity||{}).length} severities`,tone:"accent",icon:Gauge},
   ];
 
   const filterTabs=[
@@ -293,70 +256,17 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
     }
   };
 
-  const submitRule=async()=>{
-    if(!session?.token){
-      onToast?.("Login is required.");
-      return;
-    }
-    const name=String(ruleName||"").trim();
-    const pattern=String(rulePattern||"").trim();
-    if(!name||!pattern){
-      onToast?.("Rule name and event pattern are required.");
-      return;
-    }
-    setRuleSaving(true);
-    try{
-      await createReportingRule(session,{
-        name,
-        condition:"threshold",
-        severity:String(ruleSeverity||"high").toLowerCase(),
-        event_pattern:pattern,
-        threshold:Math.max(1,Math.trunc(Number(ruleThreshold||1))),
-        window_seconds:Math.max(10,Math.trunc(Number(ruleWindowSeconds||300))),
-        channels:(ruleChannels.length?ruleChannels:["screen"]).map((value)=>String(value||"").trim()).filter(Boolean),
-        enabled:true
-      });
-      onToast?.("Alert rule created.");
-      setRuleModal(false);
-      setRuleName("");
-      setRulePattern("key.*");
-      setRuleSeverity("high");
-      setRuleThreshold(1);
-      setRuleWindowSeconds(300);
-      await refresh(true);
-    }catch(error){
-      onToast?.(`Create alert rule failed: ${errMsg(error)}`);
-    }finally{
-      setRuleSaving(false);
-    }
-  };
-
-  const toggleRuleChannel=(name:string)=>{
-    const key=String(name||"").trim().toLowerCase();
-    if(!key){
-      return;
-    }
-    setRuleChannels((prev)=>{
-      const set=new Set((Array.isArray(prev)?prev:[]).map((v)=>String(v||"").trim().toLowerCase()).filter(Boolean));
-      if(set.has(key)){
-        set.delete(key);
-      }else{
-        set.add(key);
-      }
-      return Array.from(set);
-    });
-  };
   const palette=C as Record<string,string>;
 
   return <div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,minmax(0,1fr))",gap:10,marginBottom:12}}>
-      {alertCards.map((card)=><Card key={card.label} style={{padding:"12px 14px"}}>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6,marginBottom:10}}>
+      {alertCards.map((card)=><Card key={card.label} style={{padding:"8px 10px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>{card.label}</div>
-          <div style={{color:C.dim}}><card.icon size={14} strokeWidth={2}/></div>
+          <div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:.8,fontWeight:600}}>{card.label}</div>
+          <card.icon size={11} strokeWidth={2} color={palette[card.tone]||C.dim}/>
         </div>
-        <div style={{fontSize:24,fontWeight:700,letterSpacing:-.3,color:palette[card.tone]||C.accent,marginTop:4}}>{card.value}</div>
-        <div style={{fontSize:10,color:C.dim,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.sub}</div>
+        <div style={{fontSize:18,fontWeight:700,letterSpacing:-.3,color:palette[card.tone]||C.accent,marginTop:2,lineHeight:1.1}}>{card.value}</div>
+        <div style={{fontSize:9,color:C.dim,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{card.sub}</div>
       </Card>)}
     </div>
 
@@ -371,7 +281,6 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
         >
           {ackAllBusy?"Ack All...":"Acknowledge All"}
         </Btn>
-        <Btn small primary onClick={()=>setRuleModal(true)}>+ Create Alert Rule</Btn>
       </div>}
     >
       <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:10}}>
@@ -438,33 +347,6 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
         </div>
       </div>
     </Section>
-
-    <Modal open={ruleModal} onClose={()=>setRuleModal(false)} title="Create Alert Rule">
-      <FG label="Rule Name" required><Inp value={ruleName} onChange={(e)=>setRuleName(e.target.value)} placeholder="Key Export Spike"/></FG>
-      <FG label="Event Pattern" required><Inp value={rulePattern} onChange={(e)=>setRulePattern(e.target.value)} placeholder="key.exported" mono/></FG>
-      <Row3>
-        <FG label="Severity"><Sel value={ruleSeverity} onChange={(e)=>setRuleSeverity(e.target.value)}><option value="critical">critical</option><option value="high">high</option><option value="warning">warning</option><option value="info">info</option></Sel></FG>
-        <FG label="Threshold"><Inp type="number" min={1} value={String(ruleThreshold)} onChange={(e)=>setRuleThreshold(Math.max(1,Math.trunc(Number(e.target.value||1))))}/></FG>
-        <FG label="Window (seconds)"><Inp type="number" min={10} value={String(ruleWindowSeconds)} onChange={(e)=>setRuleWindowSeconds(Math.max(10,Math.trunc(Number(e.target.value||300))))}/></FG>
-      </Row3>
-      <FG label="Channels">
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:4}}>
-          {(Array.isArray(channels)?channels:[]).map((ch:any)=>{
-            const name=String(ch?.name||"").trim().toLowerCase();
-            if(!name){
-              return null;
-            }
-            return <Chk key={name} label={name} checked={ruleChannels.includes(name)} onChange={()=>toggleRuleChannel(name)}/>;
-          })}
-          {!Array.isArray(channels)||!channels.length?<div style={{fontSize:10,color:C.muted}}>No channels discovered.</div>:null}
-        </div>
-      </FG>
-      <div style={{fontSize:10,color:C.muted,marginTop:6}}>{`${rules.length} rules currently configured.`}</div>
-      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
-        <Btn onClick={()=>setRuleModal(false)} disabled={ruleSaving}>Cancel</Btn>
-        <Btn primary onClick={()=>void submitRule()} disabled={ruleSaving}>{ruleSaving?"Creating...":"Create Rule"}</Btn>
-      </div>
-    </Modal>
   </div>;
 };
 

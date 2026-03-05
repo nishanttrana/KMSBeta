@@ -410,7 +410,34 @@ function downloadBlob(content: string, filename: string, mimeType: string): void
   URL.revokeObjectURL(url);
 }
 
-export function exportEventsAsCSV(events: AuditEvent[]): void {
+async function sha256Hex(data: string): Promise<string> {
+  const encoded = new TextEncoder().encode(data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+  return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function signAuditExport(
+  session: AuthSession,
+  content: string,
+  signingKeyId: string
+): Promise<{ signature: string; digest: string; keyId: string; algorithm: string; timestamp: string }> {
+  const { signData } = await import("./keycore");
+  const digest = await sha256Hex(content);
+  const result = await signData(session, signingKeyId, digest, { algorithm: "rsassa-pkcs1-v1_5-sha256" });
+  return {
+    signature: String((result as any)?.signature || ""),
+    digest,
+    keyId: signingKeyId,
+    algorithm: "rsassa-pkcs1-v1_5-sha256",
+    timestamp: new Date().toISOString(),
+  };
+}
+
+export async function exportEventsAsCSV(
+  events: AuditEvent[],
+  session?: AuthSession,
+  signingKeyId?: string
+): Promise<void> {
   const headers = [
     "timestamp", "service", "action", "actor_id", "actor_type", "target_id",
     "target_type", "result", "risk_score", "source_ip", "fips_compliant",
@@ -420,7 +447,25 @@ export function exportEventsAsCSV(events: AuditEvent[]): void {
   const rows = events.map((e) =>
     headers.map((h) => JSON.stringify(String((e as Record<string, unknown>)[h] ?? ""))).join(",")
   );
-  downloadBlob([headers.join(","), ...rows].join("\n"), "audit-events.csv", "text/csv");
+  const content = [headers.join(","), ...rows].join("\n");
+  downloadBlob(content, "audit-events.csv", "text/csv");
+  if (session && signingKeyId) {
+    try {
+      const signed = await signAuditExport(session, content, signingKeyId);
+      const manifest = JSON.stringify({
+        file: "audit-events.csv",
+        sha256_digest: signed.digest,
+        signature_b64: signed.signature,
+        signing_key_id: signed.keyId,
+        algorithm: signed.algorithm,
+        signed_at: signed.timestamp,
+        event_count: events.length,
+      }, null, 2);
+      downloadBlob(manifest, "audit-events.csv.sig.json", "application/json");
+    } catch {
+      // Signing failed — CSV was already downloaded
+    }
+  }
 }
 
 function cefSeverity(riskScore: number): number {
@@ -430,10 +475,32 @@ function cefSeverity(riskScore: number): number {
   return 1;
 }
 
-export function exportEventsAsCEF(events: AuditEvent[]): void {
+export async function exportEventsAsCEF(
+  events: AuditEvent[],
+  session?: AuthSession,
+  signingKeyId?: string
+): Promise<void> {
   const lines = events.map((e) => {
     const sev = cefSeverity(Number(e.risk_score || 0));
     return `CEF:0|Vecta|KMS|1.0|${e.action}|${e.action}|${sev}|src=${e.source_ip || ""} suser=${e.actor_id || ""} dhost=${e.target_id || ""} outcome=${e.result || ""} msg=${e.action || ""} rt=${e.timestamp || ""}`;
   });
-  downloadBlob(lines.join("\n"), "audit-events.cef", "text/plain");
+  const content = lines.join("\n");
+  downloadBlob(content, "audit-events.cef", "text/plain");
+  if (session && signingKeyId) {
+    try {
+      const signed = await signAuditExport(session, content, signingKeyId);
+      const manifest = JSON.stringify({
+        file: "audit-events.cef",
+        sha256_digest: signed.digest,
+        signature_b64: signed.signature,
+        signing_key_id: signed.keyId,
+        algorithm: signed.algorithm,
+        signed_at: signed.timestamp,
+        event_count: events.length,
+      }, null, 2);
+      downloadBlob(manifest, "audit-events.cef.sig.json", "application/json");
+    } catch {
+      // Signing failed — CEF was already downloaded
+    }
+  }
 }

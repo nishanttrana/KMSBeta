@@ -1200,7 +1200,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     const statusRaw=String(crt.status||"unknown");
     const status=statusRaw.toLowerCase();
     const statusIcon=status==="active"?<CheckCircle2 size={10} color={C.green}/>:status==="revoked"?<XCircle size={10} color={C.red}/>:status==="deleted"?<Trash2 size={10} color={C.blue}/>:<ShieldAlert size={10} color={C.amber}/>;
-    return <div key={certID} style={{padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:"rgba(7,13,25,.65)"}}>
+    return <div key={certID} style={{padding:"7px 10px",border:`1px solid ${C.border}`,borderRadius:8,background:C.bg}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
         <div style={{minWidth:0,flex:1}}>
           <div style={{fontSize:11,color:C.text,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(crt.subject_cn||crt.id||"certificate")}</div>
@@ -1235,7 +1235,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     const status=String(ca.status||"unknown").toLowerCase();
     const crlBusy=String(rowActionBusy||"")===`crl-${caID}`;
     const deleteCABusy=String(rowActionBusy||"")===`delete-ca-${caID}`;
-    return <Card key={caID} style={{padding:10,marginLeft:depth*20,background:depth===0?`linear-gradient(135deg,rgba(6,214,224,.06) 0%,${C.card} 100%)`:`linear-gradient(135deg,rgba(148,163,184,.06) 0%,${C.card} 100%)`,borderColor:depth===0?C.accentDim:C.border}}>
+    return <Card key={caID} style={{padding:10,marginLeft:depth*20,background:depth===0?`linear-gradient(135deg,${C.accentDim} 0%,${C.card} 100%)`:`linear-gradient(135deg,${C.dimTint} 0%,${C.card} 100%)`,borderColor:depth===0?C.accentDim:C.border}}>
       <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"flex-start"}}>
         <div style={{minWidth:0,flex:1}}>
           <button onClick={()=>toggleCA(caID)} style={{background:"transparent",border:"none",padding:0,margin:0,color:depth===0?C.accent:C.text,cursor:"pointer",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
@@ -1275,7 +1275,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
   return <div>
     {showOverviewPane&&<>
       <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:14}}>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,rgba(45,212,160,.04) 100%)`}}>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.greenTint} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <ShieldCheck size={14} color={C.green}/>
             <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Active</span>
@@ -1283,14 +1283,14 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
           <div style={{fontSize:22,fontWeight:800,color:C.green,lineHeight:1}}>{String(stats.active)}</div>
           <div style={{fontSize:9,color:C.muted,marginTop:4}}>{stats.total?`${Math.round((stats.active*100)/stats.total)}% of total`:"—"}</div>
         </Card>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,rgba(239,68,68,.04) 100%)`}}>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.redTint} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <ShieldX size={14} color={C.red}/>
             <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Revoked</span>
           </div>
           <div style={{fontSize:22,fontWeight:800,color:C.red,lineHeight:1}}>{String(stats.revoked)}</div>
         </Card>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,rgba(6,214,224,.04) 100%)`}}>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.accentTint} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <Shield size={14} color={C.accent}/>
             <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>CAs</span>
@@ -1298,7 +1298,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
           <div style={{fontSize:22,fontWeight:800,color:C.accent,lineHeight:1}}>{String(stats.cas)}</div>
           <div style={{fontSize:9,color:C.muted,marginTop:4}}>{roots.length} root</div>
         </Card>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,rgba(167,139,250,.04) 100%)`}}>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.purpleTint} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <Fingerprint size={14} color={C.purple}/>
             <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>PQC</span>
@@ -1306,7 +1306,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
           <div style={{fontSize:22,fontWeight:800,color:C.purple,lineHeight:1}}>{String(stats.pqc)}</div>
           <div style={{fontSize:9,color:C.muted,marginTop:4}}>{stats.total?Math.round((stats.pqc*100)/stats.total):0}% of total</div>
         </Card>
-        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.expiring>0?"rgba(245,158,11,.04)":"rgba(45,212,160,.04)"} 100%)`}}>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.expiring>0?"${C.amberTint}":"${C.greenTint}"} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <Clock size={14} color={stats.expiring>0?C.amber:C.green}/>
             <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Expiring</span>
@@ -1429,7 +1429,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
               `Structured error responses`
             ]:[];
           const impl=meta.schema?.implementation;
-          return <Card key={meta.name} style={{padding:14,background:`linear-gradient(135deg,${C.card} 0%,${enabled?"rgba(45,212,160,.03)":"rgba(239,68,68,.03)"} 100%)`}}>
+          return <Card key={meta.name} style={{padding:14,background:`linear-gradient(135deg,${C.card} 0%,${enabled?"${C.greenTint3}":"${C.redTint3}"} 100%)`}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
                 <div style={{width:36,height:36,borderRadius:8,background:enabled?C.greenDim:C.redDim,display:"flex",alignItems:"center",justifyContent:"center"}}>{protocolIcon}</div>
@@ -1530,7 +1530,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       </div>
     </div>}
 
-    {showOverviewPane&&<Card style={{padding:"10px 14px",marginBottom:12,background:`linear-gradient(135deg,${C.card} 0%,rgba(6,214,224,.03) 100%)`,borderColor:C.accentDim}}>
+    {showOverviewPane&&<Card style={{padding:"10px 14px",marginBottom:12,background:`linear-gradient(135deg,${C.card} 0%,${C.accentTint3} 100%)`,borderColor:C.accentDim}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{fontSize:11,fontWeight:700,color:C.text}}>Certificate Operations</div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>

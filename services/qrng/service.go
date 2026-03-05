@@ -158,6 +158,9 @@ func (s *Service) UpdateSource(ctx context.Context, tenantID, id string, req Reg
 	if err := s.store.UpdateSource(ctx, existing); err != nil {
 		return QRNGSource{}, newServiceError(http.StatusInternalServerError, "store_error", err.Error())
 	}
+	_ = s.publishAudit(ctx, "audit.qrng.source_updated", tenantID, map[string]interface{}{
+		"source_id": existing.ID, "name": existing.Name, "vendor": existing.Vendor, "mode": existing.Mode,
+	})
 	existing.AuthToken = ""
 	return existing, nil
 }
@@ -324,6 +327,10 @@ func (s *Service) DrawEntropy(ctx context.Context, req DrawRequest) (DrawRespons
 	b64 := base64.StdEncoding.EncodeToString(raw)
 	zeroize(raw)
 
+	_ = s.publishAudit(ctx, "audit.qrng.entropy_drawn", tenantID, map[string]interface{}{
+		"byte_count": n,
+		"source":     "pool",
+	})
 	return DrawResponse{
 		EntropyB64: b64,
 		ByteCount:  n,

@@ -377,12 +377,56 @@ func collectServiceComponents(root string) []BOMComponent {
 }
 
 func collectGoModuleComponents(root string) []BOMComponent {
-	out := []BOMComponent{}
-	seen := map[string]struct{}{}
+	// Deduplicate by module name so each module appears exactly once with its
+	// resolved version. go.mod versions take precedence over go.sum; within
+	// go.sum entries for the same module, keep the highest version.
+	type modEntry struct {
+		name    string // original-cased module name
+		version string
+		source  string // "go.mod" or "go.sum"
+	}
+	best := map[string]*modEntry{} // key = lowercase module name
 
-	// Include transitive module graph from go.sum for complete coverage.
-	if raw, err := os.ReadFile(filepath.Join(root, "go.sum")); err == nil {
-		for _, line := range strings.Split(string(raw), "\n") {
+	// 1) Parse go.mod first — these are the actual resolved versions.
+	raw, err := os.ReadFile(filepath.Join(root, "go.mod"))
+	if err == nil {
+		lines := strings.Split(string(raw), "\n")
+		inRequire := false
+		for _, line := range lines {
+			l := strings.TrimSpace(line)
+			if l == "" || strings.HasPrefix(l, "//") {
+				continue
+			}
+			if l == "require (" {
+				inRequire = true
+				continue
+			}
+			if inRequire && l == ")" {
+				inRequire = false
+				continue
+			}
+			if strings.HasPrefix(l, "require ") {
+				l = strings.TrimSpace(strings.TrimPrefix(l, "require"))
+			} else if !inRequire {
+				continue
+			}
+			fields := strings.Fields(l)
+			if len(fields) < 2 {
+				continue
+			}
+			moduleName := fields[0]
+			version := fields[1]
+			if moduleName == "" || version == "" {
+				continue
+			}
+			best[strings.ToLower(moduleName)] = &modEntry{name: moduleName, version: version, source: "go.mod"}
+		}
+	}
+
+	// 2) Parse go.sum for transitive deps not in go.mod.
+	//    Keep only the highest version per module.
+	if sumRaw, err := os.ReadFile(filepath.Join(root, "go.sum")); err == nil {
+		for _, line := range strings.Split(string(sumRaw), "\n") {
 			fields := strings.Fields(strings.TrimSpace(line))
 			if len(fields) < 2 {
 				continue
@@ -393,73 +437,31 @@ func collectGoModuleComponents(root string) []BOMComponent {
 				continue
 			}
 			version = strings.TrimSuffix(version, "/go.mod")
-			key := strings.ToLower(moduleName + "@" + version)
-			if _, ok := seen[key]; ok {
-				continue
+			key := strings.ToLower(moduleName)
+			if existing, ok := best[key]; ok {
+				if existing.source == "go.mod" {
+					continue // go.mod entries always win
+				}
+				if compareSemver(version, existing.version) <= 0 {
+					continue // keep highest version among go.sum entries
+				}
 			}
-			seen[key] = struct{}{}
-			out = append(out, BOMComponent{
-				Name:      moduleName,
-				Version:   version,
-				Type:      "library",
-				PURL:      "pkg:golang/" + moduleName + "@" + strings.TrimPrefix(version, "v"),
-				Supplier:  "unknown",
-				Licenses:  []string{},
-				Hashes:    map[string]string{},
-				Metadata:  map[string]string{"source": "go.sum"},
-				Ecosystem: "go",
-			})
+			best[key] = &modEntry{name: moduleName, version: version, source: "go.sum"}
 		}
 	}
 
-	// Keep direct requirements with explicit source marker.
-	raw, err := os.ReadFile(filepath.Join(root, "go.mod"))
-	if err != nil {
-		return out
-	}
-	lines := strings.Split(string(raw), "\n")
-	inRequire := false
-	for _, line := range lines {
-		l := strings.TrimSpace(line)
-		if l == "" || strings.HasPrefix(l, "//") {
-			continue
-		}
-		if l == "require (" {
-			inRequire = true
-			continue
-		}
-		if inRequire && l == ")" {
-			inRequire = false
-			continue
-		}
-		if strings.HasPrefix(l, "require ") {
-			l = strings.TrimSpace(strings.TrimPrefix(l, "require"))
-		} else if !inRequire {
-			continue
-		}
-		fields := strings.Fields(l)
-		if len(fields) < 2 {
-			continue
-		}
-		moduleName := fields[0]
-		version := fields[1]
-		if moduleName == "" || version == "" {
-			continue
-		}
-		key := strings.ToLower(moduleName + "@" + version)
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
+	// 3) Build final component list.
+	out := make([]BOMComponent, 0, len(best))
+	for _, entry := range best {
 		out = append(out, BOMComponent{
-			Name:      moduleName,
-			Version:   version,
+			Name:      entry.name,
+			Version:   entry.version,
 			Type:      "library",
-			PURL:      "pkg:golang/" + moduleName + "@" + strings.TrimPrefix(version, "v"),
+			PURL:      "pkg:golang/" + entry.name + "@" + strings.TrimPrefix(entry.version, "v"),
 			Supplier:  "unknown",
 			Licenses:  []string{},
 			Hashes:    map[string]string{},
-			Metadata:  map[string]string{"source": "go.mod"},
+			Metadata:  map[string]string{"source": entry.source},
 			Ecosystem: "go",
 		})
 	}

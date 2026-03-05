@@ -20,6 +20,7 @@ var (
 type Store interface {
 	CreateKeyWithVersion(ctx context.Context, key Key, ver KeyVersion) error
 	ListKeys(ctx context.Context, tenantID string, limit int, offset int) ([]Key, error)
+	ListKeysCursor(ctx context.Context, tenantID string, limit int, afterCreatedAt *time.Time, afterID string) ([]Key, error)
 	GetKey(ctx context.Context, tenantID string, keyID string) (Key, error)
 	UpdateKeyMetadata(ctx context.Context, tenantID string, keyID string, req UpdateKeyRequest) error
 	UpdateIVMode(ctx context.Context, tenantID string, keyID string, ivMode string) error
@@ -228,7 +229,7 @@ func (s *SQLStore) ListKeys(ctx context.Context, tenantID string, limit int, off
 	if limit <= 0 || limit > 1000 {
 		limit = 100
 	}
-	rows, err := s.db.SQL().QueryContext(ctx, `
+	rows, err := s.db.ROSQL().QueryContext(ctx, `
 SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, current_version, kcv, kcv_algorithm, iv_mode,
        owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
        ops_limit, COALESCE(ops_limit_window, ''), ops_last_reset, approval_required,
@@ -250,8 +251,48 @@ FROM keys WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
 	return out, rows.Err()
 }
 
+func (s *SQLStore) ListKeysCursor(ctx context.Context, tenantID string, limit int, afterCreatedAt *time.Time, afterID string) ([]Key, error) {
+	if limit <= 0 || limit > 1000 {
+		limit = 100
+	}
+	var rows *sql.Rows
+	var err error
+	if afterCreatedAt != nil && afterID != "" {
+		rows, err = s.db.ROSQL().QueryContext(ctx, `
+SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, current_version, kcv, kcv_algorithm, iv_mode,
+       owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
+       ops_limit, COALESCE(ops_limit_window, ''), ops_last_reset, approval_required,
+       COALESCE(approval_policy_id,''), created_by, created_at, updated_at
+FROM keys WHERE tenant_id=$1 AND (created_at, id) < ($2, $3)
+ORDER BY created_at DESC, id DESC LIMIT $4
+`, tenantID, afterCreatedAt.UTC(), afterID, limit)
+	} else {
+		rows, err = s.db.ROSQL().QueryContext(ctx, `
+SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, current_version, kcv, kcv_algorithm, iv_mode,
+       owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
+       ops_limit, COALESCE(ops_limit_window, ''), ops_last_reset, approval_required,
+       COALESCE(approval_policy_id,''), created_by, created_at, updated_at
+FROM keys WHERE tenant_id=$1
+ORDER BY created_at DESC, id DESC LIMIT $2
+`, tenantID, limit)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []Key
+	for rows.Next() {
+		k, err := scanKey(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, k)
+	}
+	return out, rows.Err()
+}
+
 func (s *SQLStore) GetKey(ctx context.Context, tenantID string, keyID string) (Key, error) {
-	row := s.db.SQL().QueryRowContext(ctx, `
+	row := s.db.ROSQL().QueryRowContext(ctx, `
 SELECT id, tenant_id, name, algorithm, key_type, purpose, status, destroy_date, current_version, kcv, kcv_algorithm, iv_mode,
        owner, cloud, region, compliance, labels, tags, export_allowed, activation_date, expiry_date, ops_total, ops_encrypt, ops_decrypt, ops_sign,
        ops_limit, COALESCE(ops_limit_window, ''), ops_last_reset, approval_required,
@@ -504,7 +545,7 @@ DO UPDATE SET
 }
 
 func (s *SQLStore) ListTagCatalog(ctx context.Context, tenantID string) ([]TagDefinition, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
+	rows, err := s.db.ROSQL().QueryContext(ctx, `
 SELECT tenant_id, name, color, is_system, COALESCE(created_by,''), created_at, updated_at
 FROM key_tags
 WHERE tenant_id=$1
@@ -588,7 +629,7 @@ WHERE tenant_id=$3 AND id=$4
 
 func (s *SQLStore) GetApproval(ctx context.Context, tenantID string, keyID string) (ApprovalConfig, error) {
 	var cfg ApprovalConfig
-	err := s.db.SQL().QueryRowContext(ctx, `
+	err := s.db.ROSQL().QueryRowContext(ctx, `
 SELECT approval_required, COALESCE(approval_policy_id,'') FROM keys WHERE tenant_id=$1 AND id=$2
 `, tenantID, keyID).Scan(&cfg.Required, &cfg.PolicyID)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -599,7 +640,7 @@ SELECT approval_required, COALESCE(approval_policy_id,'') FROM keys WHERE tenant
 
 func (s *SQLStore) GetUsage(ctx context.Context, tenantID string, keyID string) (Usage, error) {
 	var u Usage
-	err := s.db.SQL().QueryRowContext(ctx, `
+	err := s.db.ROSQL().QueryRowContext(ctx, `
 SELECT ops_total, ops_encrypt, ops_decrypt, ops_sign, ops_limit, COALESCE(ops_limit_window,'')
 FROM keys WHERE tenant_id=$1 AND id=$2
 `, tenantID, keyID).Scan(&u.OpsTotal, &u.OpsEncrypt, &u.OpsDecrypt, &u.OpsSign, &u.OpsLimit, &u.Window)
@@ -610,7 +651,7 @@ FROM keys WHERE tenant_id=$1 AND id=$2
 }
 
 func (s *SQLStore) ListVersions(ctx context.Context, tenantID string, keyID string) ([]KeyVersion, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
+	rows, err := s.db.ROSQL().QueryContext(ctx, `
 SELECT id, tenant_id, key_id, version, encrypted_material, material_iv, wrapped_dek, public_key, kcv,
        COALESCE(rotated_from,0), COALESCE(rotation_reason,''), status, created_at
 FROM key_versions
@@ -635,7 +676,7 @@ ORDER BY version DESC
 
 func (s *SQLStore) GetVersion(ctx context.Context, tenantID string, keyID string, version int) (KeyVersion, error) {
 	var v KeyVersion
-	err := s.db.SQL().QueryRowContext(ctx, `
+	err := s.db.ROSQL().QueryRowContext(ctx, `
 SELECT id, tenant_id, key_id, version, encrypted_material, material_iv, wrapped_dek, public_key, kcv,
        COALESCE(rotated_from,0), COALESCE(rotation_reason,''), status, created_at
 FROM key_versions
@@ -725,7 +766,7 @@ func (s *SQLStore) GetIVLog(ctx context.Context, tenantID string, keyID string, 
 	if limit <= 0 || limit > 1000 {
 		limit = 100
 	}
-	rows, err := s.db.SQL().QueryContext(ctx, `
+	rows, err := s.db.ROSQL().QueryContext(ctx, `
 SELECT id, tenant_id, key_id, key_version, iv, operation, COALESCE(reference_id,''), created_at
 FROM key_iv_log WHERE tenant_id=$1 AND key_id=$2 ORDER BY created_at DESC LIMIT $3
 `, tenantID, keyID, limit)
@@ -746,7 +787,7 @@ FROM key_iv_log WHERE tenant_id=$1 AND key_id=$2 ORDER BY created_at DESC LIMIT 
 
 func (s *SQLStore) GetIVByReference(ctx context.Context, tenantID string, keyID string, reference string) (IVLogRecord, error) {
 	var rec IVLogRecord
-	err := s.db.SQL().QueryRowContext(ctx, `
+	err := s.db.ROSQL().QueryRowContext(ctx, `
 SELECT id, tenant_id, key_id, key_version, iv, operation, COALESCE(reference_id,''), created_at
 FROM key_iv_log WHERE tenant_id=$1 AND key_id=$2 AND reference_id=$3
 ORDER BY created_at DESC LIMIT 1

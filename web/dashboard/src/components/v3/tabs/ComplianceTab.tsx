@@ -114,6 +114,13 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   const [mttr, setMttr] = useState<any>(null);
   const [topSources, setTopSources] = useState<any>(null);
 
+  /* ── Crypto Inventory (KeyInsight) state ── */
+  const [inventoryKeys, setInventoryKeys] = useState<any[]>([]);
+  const [inventoryCerts, setInventoryCerts] = useState<any[]>([]);
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [inventorySearch, setInventorySearch] = useState("");
+  const [inventoryFilter, setInventoryFilter] = useState("all");
+
   /* ── Template seed logic (unchanged) ── */
   const frameworkSeed = useMemo(() => {
     const list = Array.isArray(frameworkCatalog) ? frameworkCatalog : [];
@@ -235,8 +242,25 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     } catch (error) { onToast?.(`Reporting load failed: ${errMsg(error)}`); }
   };
 
+  const loadInventory = async () => {
+    if (!session?.token) { setInventoryKeys([]); setInventoryCerts([]); return; }
+    setInventoryLoading(true);
+    try {
+      const base = String(session?.baseUrl || "").replace(/\/+$/, "");
+      const headers: any = { Authorization: `Bearer ${session.token}`, "X-Tenant-Id": String(session.tenantId || "root") };
+      const [keysRes, certsRes] = await Promise.all([
+        fetch(`${base}/svc/v1/keys?limit=500`, { headers }).then((r) => r.json()).catch(() => []),
+        fetch(`${base}/svc/certs/certificates?limit=500`, { headers }).then((r) => r.json()).catch(() => [])
+      ]);
+      setInventoryKeys(Array.isArray(keysRes) ? keysRes : Array.isArray(keysRes?.keys) ? keysRes.keys : []);
+      setInventoryCerts(Array.isArray(certsRes) ? certsRes : Array.isArray(certsRes?.certificates) ? certsRes.certificates : []);
+    } catch (error) { onToast?.(`Inventory load failed: ${errMsg(error)}`); }
+    finally { setInventoryLoading(false); }
+  };
+
   useEffect(() => { void loadAssessment({ templateId: "default" }); }, [session?.token, session?.tenantId]);
   useEffect(() => { if (view === "reporting") void loadReporting(); }, [view, session?.token, session?.tenantId]);
+  useEffect(() => { if (view === "inventory") void loadInventory(); }, [view, session?.token, session?.tenantId]);
 
   /* ── Actions (unchanged) ── */
   const runNow = async () => {
@@ -475,7 +499,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     return [
       { name: "Critical", value: Number(map.critical || 0), fill: C.red },
       { name: "High", value: Number(map.high || 0), fill: C.amber },
-      { name: "Warning", value: Number(map.warning || 0), fill: "#d97706" },
+      { name: "Warning", value: Number(map.warning || 0), fill: C.amber },
       { name: "Info", value: Number(map.info || 0), fill: C.blue }
     ].filter((d) => d.value > 0);
   }, [alertStats]);
@@ -506,12 +530,247 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     if (!mttr) return [];
     return ["critical", "high", "warning", "info"]
       .filter((k) => Number(mttr[k] || 0) > 0)
-      .map((k) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), minutes: Math.round(Number(mttr[k] || 0)), fill: k === "critical" ? C.red : k === "high" ? C.amber : k === "warning" ? "#d97706" : C.blue }));
+      .map((k) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), minutes: Math.round(Number(mttr[k] || 0)), fill: k === "critical" ? C.red : k === "high" ? C.amber : k === "warning" ? C.amber : C.blue }));
   }, [mttr]);
 
   const topActors = useMemo(() => Array.isArray(topSources?.top_actors) ? topSources.top_actors.slice(0, 5) : [], [topSources]);
   const topIPs = useMemo(() => Array.isArray(topSources?.top_ips) ? topSources.top_ips.slice(0, 5) : [], [topSources]);
   const topServices = useMemo(() => Array.isArray(topSources?.top_services) ? topSources.top_services.slice(0, 5) : [], [topSources]);
+
+  /* ══════════════════════════ INVENTORY (KeyInsight) VIEW ══════════════════════════ */
+  const invAlgoDistribution = useMemo(() => {
+    const map: Record<string, number> = {};
+    inventoryKeys.forEach((k: any) => { const algo = String(k?.algorithm || "unknown"); map[algo] = (map[algo] || 0) + 1; });
+    return Object.entries(map).sort(([, a], [, b]) => b - a).map(([name, count]) => ({ name, count }));
+  }, [inventoryKeys]);
+
+  const invAgeDistribution = useMemo(() => {
+    const buckets = { "<30d": 0, "30-90d": 0, "90-180d": 0, "180-365d": 0, ">1yr": 0 };
+    const now = Date.now();
+    inventoryKeys.forEach((k: any) => {
+      const created = new Date(String(k?.created_at || "")).getTime();
+      if (Number.isNaN(created)) return;
+      const days = Math.floor((now - created) / 86400000);
+      if (days < 30) buckets["<30d"]++;
+      else if (days < 90) buckets["30-90d"]++;
+      else if (days < 180) buckets["90-180d"]++;
+      else if (days < 365) buckets["180-365d"]++;
+      else buckets[">1yr"]++;
+    });
+    return Object.entries(buckets).map(([name, count]) => ({ name, count }));
+  }, [inventoryKeys]);
+
+  const invRiskItems = useMemo(() => {
+    const risks: any[] = [];
+    inventoryKeys.forEach((k: any) => {
+      const algo = String(k?.algorithm || "").toLowerCase();
+      const exportAllowed = Boolean(k?.export_allowed);
+      const status = String(k?.status || "").toLowerCase();
+      const hsmNonExportable = String(k?.labels?.hsm_non_exportable || "false") === "true";
+      if (algo.includes("rsa-1024") || algo.includes("des") || algo.includes("3des") || algo.includes("rc4"))
+        risks.push({ id: k?.id, name: k?.name || k?.id, risk: "critical", reason: `Weak algorithm: ${algo}`, type: "key" });
+      if (exportAllowed && !hsmNonExportable)
+        risks.push({ id: k?.id, name: k?.name || k?.id, risk: "warning", reason: "Key is exportable — consider restricting", type: "key" });
+      if (status === "compromised" || status === "destroyed")
+        risks.push({ id: k?.id, name: k?.name || k?.id, risk: "critical", reason: `Key status: ${status}`, type: "key" });
+      const created = new Date(String(k?.created_at || "")).getTime();
+      if (!Number.isNaN(created) && (Date.now() - created) > 365 * 86400000)
+        risks.push({ id: k?.id, name: k?.name || k?.id, risk: "high", reason: "Key older than 1 year — consider rotation", type: "key" });
+    });
+    inventoryCerts.forEach((c: any) => {
+      const notAfter = new Date(String(c?.not_after || "")).getTime();
+      if (!Number.isNaN(notAfter)) {
+        const daysLeft = Math.floor((notAfter - Date.now()) / 86400000);
+        if (daysLeft < 0) risks.push({ id: c?.id, name: c?.subject_cn || c?.id, risk: "critical", reason: "Certificate expired", type: "cert" });
+        else if (daysLeft < 30) risks.push({ id: c?.id, name: c?.subject_cn || c?.id, risk: "high", reason: `Certificate expires in ${daysLeft} days`, type: "cert" });
+        else if (daysLeft < 90) risks.push({ id: c?.id, name: c?.subject_cn || c?.id, risk: "warning", reason: `Certificate expires in ${daysLeft} days`, type: "cert" });
+      }
+      const algo = String(c?.algorithm || "").toLowerCase();
+      if (algo.includes("sha1") || algo.includes("md5"))
+        risks.push({ id: c?.id, name: c?.subject_cn || c?.id, risk: "critical", reason: `Weak signing: ${algo}`, type: "cert" });
+    });
+    return risks.sort((a, b) => (a.risk === "critical" ? 0 : a.risk === "high" ? 1 : 2) - (b.risk === "critical" ? 0 : b.risk === "high" ? 1 : 2));
+  }, [inventoryKeys, inventoryCerts]);
+
+  const invCertExpiryTimeline = useMemo(() => {
+    const buckets = { "Expired": 0, "<30d": 0, "30-90d": 0, "90-180d": 0, ">180d": 0 };
+    inventoryCerts.forEach((c: any) => {
+      const notAfter = new Date(String(c?.not_after || "")).getTime();
+      if (Number.isNaN(notAfter)) return;
+      const days = Math.floor((notAfter - Date.now()) / 86400000);
+      if (days < 0) buckets["Expired"]++;
+      else if (days < 30) buckets["<30d"]++;
+      else if (days < 90) buckets["30-90d"]++;
+      else if (days < 180) buckets["90-180d"]++;
+      else buckets[">180d"]++;
+    });
+    return Object.entries(buckets).map(([name, count]) => ({ name, count }));
+  }, [inventoryCerts]);
+
+  const invPqcReadiness = useMemo(() => {
+    let pqcReady = 0, hybrid = 0, classical = 0;
+    inventoryKeys.forEach((k: any) => {
+      const algo = String(k?.algorithm || "").toLowerCase();
+      if (algo.includes("ml-") || algo.includes("slh-") || algo.includes("dilithium") || algo.includes("kyber")) pqcReady++;
+      else if (algo.includes("hybrid")) hybrid++;
+      else classical++;
+    });
+    return [
+      { name: "PQC Native", count: pqcReady, fill: C.green },
+      { name: "Hybrid", count: hybrid, fill: C.blue },
+      { name: "Classical", count: classical, fill: C.amber }
+    ];
+  }, [inventoryKeys]);
+
+  const invHsmKeys = useMemo(() => inventoryKeys.filter((k: any) => k?.labels?.hsm_provider || k?.labels?.hsm_key_label), [inventoryKeys]);
+  const invExportableKeys = useMemo(() => inventoryKeys.filter((k: any) => Boolean(k?.export_allowed)), [inventoryKeys]);
+  const invFilteredRisks = useMemo(() => {
+    let items = invRiskItems;
+    if (inventoryFilter !== "all") items = items.filter((r) => r.risk === inventoryFilter);
+    if (inventorySearch) { const q = inventorySearch.toLowerCase(); items = items.filter((r) => String(r.name || "").toLowerCase().includes(q) || String(r.reason || "").toLowerCase().includes(q)); }
+    return items;
+  }, [invRiskItems, inventoryFilter, inventorySearch]);
+
+  const invScore = useMemo(() => {
+    if (!inventoryKeys.length && !inventoryCerts.length) return 100;
+    const criticals = invRiskItems.filter((r) => r.risk === "critical").length;
+    const highs = invRiskItems.filter((r) => r.risk === "high").length;
+    const warnings = invRiskItems.filter((r) => r.risk === "warning").length;
+    const total = inventoryKeys.length + inventoryCerts.length;
+    return Math.max(0, Math.round(100 - (criticals * 15 + highs * 8 + warnings * 3) / Math.max(1, total) * 10));
+  }, [invRiskItems, inventoryKeys.length, inventoryCerts.length]);
+
+  if (view === "inventory") {
+    const scoreTone = invScore >= 80 ? C.green : invScore >= 60 ? C.amber : C.red;
+    return (
+      <div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+          <Btn small onClick={() => setView("assessment")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Assessment</Btn>
+          <Btn small onClick={() => setView("reporting")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Reporting</Btn>
+          <Btn small onClick={() => setView("inventory")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}>Crypto Inventory</Btn>
+        </div>
+
+        <Section title="Cryptographic Inventory" actions={<Btn small onClick={() => void loadInventory()} disabled={inventoryLoading}>{inventoryLoading ? "Scanning..." : "Refresh Inventory"}</Btn>}>
+
+          {/* KPI Row */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))", gap: 10, marginBottom: 14 }}>
+            <Card style={{ padding: "10px 12px" }}>
+              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Inventory Score</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: scoreTone, marginTop: 4 }}>{invScore}</div>
+              <div style={{ fontSize: 10, color: C.dim }}>{invScore >= 80 ? "Healthy" : invScore >= 60 ? "Needs attention" : "At risk"}</div>
+            </Card>
+            <Card style={{ padding: "10px 12px" }}>
+              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Total Keys</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: C.accent, marginTop: 4 }}>{inventoryKeys.length}</div>
+              <div style={{ fontSize: 10, color: C.dim }}>{invAlgoDistribution.length} algorithms</div>
+            </Card>
+            <Card style={{ padding: "10px 12px" }}>
+              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Certificates</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: C.blue, marginTop: 4 }}>{inventoryCerts.length}</div>
+              <div style={{ fontSize: 10, color: C.dim }}>{invCertExpiryTimeline.find((b) => b.name === "Expired")?.count || 0} expired</div>
+            </Card>
+            <Card style={{ padding: "10px 12px" }}>
+              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>HSM Backed</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: C.purple, marginTop: 4 }}>{invHsmKeys.length}</div>
+              <div style={{ fontSize: 10, color: C.dim }}>{invExportableKeys.length} exportable</div>
+            </Card>
+            <Card style={{ padding: "10px 12px" }}>
+              <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>Risk Findings</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: C.red, marginTop: 4 }}>{invRiskItems.length}</div>
+              <div style={{ fontSize: 10, color: C.dim }}>{invRiskItems.filter((r) => r.risk === "critical").length} critical</div>
+            </Card>
+          </div>
+
+          {/* Charts Row */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 14 }}>
+            {/* Algorithm Distribution */}
+            <Card>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>Algorithm Distribution</div>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={invAlgoDistribution.slice(0, 8)} layout="vertical">
+                  <XAxis type="number" tick={{ fontSize: 9, fill: C.dim }} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: C.dim }} width={90} />
+                  <Tooltip content={({ payload }: any) => payload?.[0] ? <ChartTip>{`${payload[0].payload.name}: ${payload[0].value}`}</ChartTip> : null} />
+                  <RBar dataKey="count" fill={C.accent} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+
+            {/* Key Age Distribution */}
+            <Card>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>Key Age Distribution</div>
+              <ResponsiveContainer width="100%" height={180}>
+                <BarChart data={invAgeDistribution}>
+                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: C.dim }} />
+                  <YAxis tick={{ fontSize: 9, fill: C.dim }} />
+                  <Tooltip content={({ payload }: any) => payload?.[0] ? <ChartTip>{`${payload[0].payload.name}: ${payload[0].value} keys`}</ChartTip> : null} />
+                  <RBar dataKey="count" fill={C.blue} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+
+            {/* PQC Readiness */}
+            <Card>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>PQC Readiness</div>
+              <ResponsiveContainer width="100%" height={180}>
+                <PieChart>
+                  <Pie data={invPqcReadiness} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={2}>
+                    {invPqcReadiness.map((entry: any, i: number) => <Cell key={i} fill={entry.fill} />)}
+                  </Pie>
+                  <Legend iconSize={8} wrapperStyle={{ fontSize: 9 }} />
+                  <Tooltip content={({ payload }: any) => payload?.[0] ? <ChartTip>{`${payload[0].name}: ${payload[0].value}`}</ChartTip> : null} />
+                </PieChart>
+              </ResponsiveContainer>
+            </Card>
+          </div>
+
+          {/* Certificate Expiry Timeline */}
+          <Card style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.text, marginBottom: 8 }}>Certificate Expiry Timeline</div>
+            <ResponsiveContainer width="100%" height={120}>
+              <BarChart data={invCertExpiryTimeline}>
+                <XAxis dataKey="name" tick={{ fontSize: 9, fill: C.dim }} />
+                <YAxis tick={{ fontSize: 9, fill: C.dim }} />
+                <Tooltip content={({ payload }: any) => payload?.[0] ? <ChartTip>{`${payload[0].payload.name}: ${payload[0].value} certs`}</ChartTip> : null} />
+                <RBar dataKey="count" radius={[4, 4, 0, 0]}>
+                  {invCertExpiryTimeline.map((entry: any, i: number) => <Cell key={i} fill={entry.name === "Expired" ? C.red : entry.name === "<30d" ? C.amber : C.green} />)}
+                </RBar>
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Risk Findings Table */}
+          <Card>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Risk Findings ({invFilteredRisks.length})</div>
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                <Inp value={inventorySearch} onChange={(e: any) => setInventorySearch(e.target.value)} placeholder="Search..." style={{ width: 160, height: 28, fontSize: 10 }} />
+                <Sel w={100} value={inventoryFilter} onChange={(e: any) => setInventoryFilter(e.target.value)} style={{ height: 28, fontSize: 10 }}>
+                  <option value="all">All</option>
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="warning">Warning</option>
+                </Sel>
+              </div>
+            </div>
+            <div style={{ display: "grid", gap: 4, maxHeight: 340, overflowY: "auto" }}>
+              {invFilteredRisks.slice(0, 50).map((r: any, i: number) => (
+                <div key={`${r.id}-${i}`} style={{ display: "grid", gridTemplateColumns: "70px 60px 1fr", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.border}`, alignItems: "center" }}>
+                  <B c={r.risk === "critical" ? "red" : r.risk === "high" ? "amber" : "blue"}>{String(r.risk).toUpperCase()}</B>
+                  <B c={r.type === "key" ? "accent" : "purple"}>{r.type === "key" ? "KEY" : "CERT"}</B>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 11, color: C.text, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(r.name || r.id)}</div>
+                    <div style={{ fontSize: 9, color: C.dim }}>{r.reason}</div>
+                  </div>
+                </div>
+              ))}
+              {!invFilteredRisks.length && <div style={{ fontSize: 10, color: C.muted, padding: 12, textAlign: "center" }}>No risk findings detected. Your crypto inventory looks healthy.</div>}
+            </div>
+          </Card>
+        </Section>
+      </div>
+    );
+  }
 
   /* ══════════════════════════ REPORTING VIEW ══════════════════════════ */
   if (view === "reporting") {
@@ -520,6 +779,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
         <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
           <Btn small onClick={() => setView("assessment")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Assessment</Btn>
           <Btn small onClick={() => setView("reporting")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}>Reporting</Btn>
+          <Btn small onClick={() => setView("inventory")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Crypto Inventory</Btn>
         </div>
 
         <Section title="Compliance Reporting" actions={<Btn small onClick={() => void loadReporting()} disabled={reportBusy}>{reportBusy ? "Working..." : "Refresh"}</Btn>}>
@@ -584,7 +844,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                   <BarChart data={mttrBars} layout="vertical">
                     <XAxis type="number" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} unit="m" />
                     <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
-                    <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} min</ChartTip> : null} cursor={{ fill: "rgba(6,214,224,.04)" }} />
+                    <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} min</ChartTip> : null} cursor={{ fill: C.accentDim }} />
                     <RBar dataKey="minutes" radius={[0, 4, 4, 0]}>
                       {mttrBars.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
                     </RBar>
@@ -740,6 +1000,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
         <Btn small onClick={() => setView("assessment")} style={{ background: C.accentDim, borderColor: C.accent, color: C.accent, height: 28 }}>Assessment</Btn>
         <Btn small onClick={() => setView("reporting")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Reporting</Btn>
+        <Btn small onClick={() => setView("inventory")} style={{ background: "transparent", borderColor: C.border, color: C.text, height: 28 }}>Crypto Inventory</Btn>
       </div>
       <Section
         title="Compliance Posture"
@@ -887,7 +1148,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                 <BarChart data={breakdownBars} layout="vertical">
                   <XAxis type="number" domain={[0, 100]} tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
-                  <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value}/100</ChartTip> : null} cursor={{ fill: "rgba(6,214,224,.04)" }} />
+                  <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value}/100</ChartTip> : null} cursor={{ fill: C.accentDim }} />
                   <RBar dataKey="value" radius={[0, 4, 4, 0]}>
                     {breakdownBars.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
                   </RBar>
@@ -910,7 +1171,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                   <BarChart data={algoDistribution}>
                     <XAxis dataKey="name" tick={{ fill: C.dim, fontSize: 8 }} axisLine={{ stroke: C.border }} tickLine={false} />
                     <YAxis tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} width={25} allowDecimals={false} />
-                    <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accent }}>{label}</span>: {payload[0]?.value} keys</ChartTip> : null} cursor={{ fill: "rgba(6,214,224,.04)" }} />
+                    <Tooltip content={({ active, payload, label }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accent }}>{label}</span>: {payload[0]?.value} keys</ChartTip> : null} cursor={{ fill: C.accentDim }} />
                     <RBar dataKey="count" fill={C.accent} radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -973,11 +1234,11 @@ export const ComplianceTab = ({ session, onToast }: any) => {
               <div style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", border: `1px solid ${C.border}` }}>
                 {findingSeverityCounts.critical > 0 && <div style={{ width: `${(findingSeverityCounts.critical / findingTotal) * 100}%`, background: C.red }} title={`Critical: ${findingSeverityCounts.critical}`} />}
                 {findingSeverityCounts.high > 0 && <div style={{ width: `${(findingSeverityCounts.high / findingTotal) * 100}%`, background: C.amber }} title={`High: ${findingSeverityCounts.high}`} />}
-                {findingSeverityCounts.warning > 0 && <div style={{ width: `${(findingSeverityCounts.warning / findingTotal) * 100}%`, background: "#d97706" }} title={`Warning: ${findingSeverityCounts.warning}`} />}
+                {findingSeverityCounts.warning > 0 && <div style={{ width: `${(findingSeverityCounts.warning / findingTotal) * 100}%`, background: C.amber }} title={`Warning: ${findingSeverityCounts.warning}`} />}
                 {findingSeverityCounts.info > 0 && <div style={{ width: `${(findingSeverityCounts.info / findingTotal) * 100}%`, background: C.blue }} title={`Info: ${findingSeverityCounts.info}`} />}
               </div>
               <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
-                {[["Critical", findingSeverityCounts.critical, C.red], ["High", findingSeverityCounts.high, C.amber], ["Warning", findingSeverityCounts.warning, "#d97706"], ["Info", findingSeverityCounts.info, C.blue]].filter(([,c]) => (c as number) > 0).map(([label, count, color]) => (
+                {[["Critical", findingSeverityCounts.critical, C.red], ["High", findingSeverityCounts.high, C.amber], ["Warning", findingSeverityCounts.warning, C.amber], ["Info", findingSeverityCounts.info, C.blue]].filter(([,c]) => (c as number) > 0).map(([label, count, color]) => (
                   <div key={String(label)} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 9, color: C.dim }}>
                     <div style={{ width: 8, height: 8, borderRadius: 2, background: color as string }} />
                     {label} ({count})

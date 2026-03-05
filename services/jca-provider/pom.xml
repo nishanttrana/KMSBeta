@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.vecta.kms</groupId>
+    <artifactId>vecta-jca-provider</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>Vecta KMS JCA Provider</name>
+    <description>Java Cryptography Architecture provider backed by Vecta KMS with local key caching</description>
+
+    <properties>
+        <maven.compiler.source>11</maven.compiler.source>
+        <maven.compiler.target>11</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <!-- No external dependencies — uses only java.net.http (Java 11+) -->
+</project>

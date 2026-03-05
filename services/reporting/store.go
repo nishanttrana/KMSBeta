@@ -438,12 +438,12 @@ WHERE tenant_id = $2 AND id = $3
 func (s *SQLStore) CreateRule(ctx context.Context, item AlertRule) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO reporting_alert_rules (
-	tenant_id, id, name, condition, severity, event_pattern, threshold, window_seconds, channels_json, enabled, created_at, updated_at
+	tenant_id, id, name, condition, severity, event_pattern, threshold, window_seconds, channels_json, enabled, expression, created_at, updated_at
 ) VALUES (
-	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
 )
 `, item.TenantID, item.ID, item.Name, item.Condition, normalizeSeverity(item.Severity), item.EventPattern, item.Threshold,
-		max(item.WindowSecond, 0), mustJSON(item.Channels, "[]"), item.Enabled)
+		max(item.WindowSecond, 0), mustJSON(item.Channels, "[]"), item.Enabled, item.Expression)
 	return err
 }
 
@@ -458,9 +458,10 @@ SET name = $1,
 	window_seconds = $6,
 	channels_json = $7,
 	enabled = $8,
+	expression = $9,
 	updated_at = CURRENT_TIMESTAMP
-WHERE tenant_id = $9 AND id = $10
-`, item.Name, item.Condition, normalizeSeverity(item.Severity), item.EventPattern, item.Threshold, max(item.WindowSecond, 0), mustJSON(item.Channels, "[]"), item.Enabled, item.TenantID, item.ID)
+WHERE tenant_id = $10 AND id = $11
+`, item.Name, item.Condition, normalizeSeverity(item.Severity), item.EventPattern, item.Threshold, max(item.WindowSecond, 0), mustJSON(item.Channels, "[]"), item.Enabled, item.Expression, item.TenantID, item.ID)
 	return err
 }
 
@@ -474,7 +475,7 @@ WHERE tenant_id = $1 AND id = $2
 
 func (s *SQLStore) ListRules(ctx context.Context, tenantID string) ([]AlertRule, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, id, name, condition, severity, event_pattern, threshold, window_seconds, channels_json, enabled, created_at, updated_at
+SELECT tenant_id, id, name, condition, severity, event_pattern, threshold, window_seconds, channels_json, enabled, expression, created_at, updated_at
 FROM reporting_alert_rules
 WHERE tenant_id = $1
 ORDER BY created_at DESC
@@ -911,7 +912,7 @@ func scanRule(scanner interface {
 		createdRaw   interface{}
 		updatedRaw   interface{}
 	)
-	err := scanner.Scan(&item.TenantID, &item.ID, &item.Name, &item.Condition, &item.Severity, &item.EventPattern, &item.Threshold, &item.WindowSecond, &channelsJSON, &item.Enabled, &createdRaw, &updatedRaw)
+	err := scanner.Scan(&item.TenantID, &item.ID, &item.Name, &item.Condition, &item.Severity, &item.EventPattern, &item.Threshold, &item.WindowSecond, &channelsJSON, &item.Enabled, &item.Expression, &createdRaw, &updatedRaw)
 	if err != nil {
 		return AlertRule{}, err
 	}

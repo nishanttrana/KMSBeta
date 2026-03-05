@@ -195,7 +195,7 @@ func TestValidateDeploymentSchema(t *testing.T) {
 	}
 	t.Setenv("FIRSTBOOT_DEPLOYMENT_SCHEMA_PATH", schemaPath)
 
-	valid := []byte(`apiVersion: kms.securosys.com/v1
+	valid := []byte(`apiVersion: kms.vecta.io/v1
 kind: DeploymentConfig
 metadata:
   appliance_id: kms-test-01
@@ -236,7 +236,7 @@ spec:
 		t.Fatalf("expected valid deployment schema, got: %v", err)
 	}
 
-	invalid := []byte(`apiVersion: kms.securosys.com/v1
+	invalid := []byte(`apiVersion: kms.vecta.io/v1
 kind: DeploymentConfig
 metadata:
   appliance_id: kms-test-01

@@ -1455,6 +1455,10 @@ func componentFromServiceName(serviceName string) string {
 		return "ai"
 	case "kms-software-vault":
 		return "software-vault"
+	case "kms-posture":
+		return "posture"
+	case "kms-qrng":
+		return "qrng"
 	default:
 		return ""
 	}

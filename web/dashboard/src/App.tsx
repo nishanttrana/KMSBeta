@@ -1,17 +1,36 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FeatureKey } from "./config/tabs";
 import { isSystemAdminSession } from "./config/moduleRegistry";
 import { BrandedLoadingOverlay, InitialLoadingScreen } from "./components/BrandedLoadingOverlay";
 import { LoginScreen } from "./components/LoginScreen";
 import VectaDashboardV3 from "./components/VectaDashboardV3";
-import { clearSession, createSSOSession, extractSSOParams, getSession, loadUIAuthConfig, refreshSession, saveSession, type AuthSession } from "./lib/auth";
+import { IdleWarningModal } from "./components/IdleWarningModal";
+import {
+  abortPendingRefresh,
+  clearSession,
+  createSSOSession,
+  extractSSOParams,
+  getRefreshAbortSignal,
+  getSession,
+  isLoggedOut,
+  loadUIAuthConfig,
+  logoutSession,
+  refreshSession,
+  resetLogoutFlag,
+  saveSession,
+  type AuthSession
+} from "./lib/auth";
 import { getAuthSystemHealth, type AuthSystemHealthSnapshot } from "./lib/authAdmin";
-import { enabledFeatures, loadDeploymentConfig } from "./lib/deployment";
+import { enabledFeatures, loadDeploymentConfig, needsOnboarding } from "./lib/deployment";
 import { mapToLiveEvent, parseWSMessage, wsBaseURL } from "./lib/liveFeed";
 import { getUnreadAlertCounts } from "./lib/reporting";
 import { getGlobalInFlightRequestCount, subscribeGlobalInFlightRequestCount } from "./lib/serviceApi";
 import { useLiveStore } from "./store/live";
+
+const LazyOnboardingWizard = React.lazy(() =>
+  import("./components/FeatureOnboardingWizard").then((m) => ({ default: m.FeatureOnboardingWizard }))
+);
 
 const FEATURE_KEYS: FeatureKey[] = [
   "secrets",
@@ -296,12 +315,18 @@ export default function App() {
     // Check for SSO callback params first
     const ssoParams = extractSSOParams();
     if (ssoParams) {
+      resetLogoutFlag();
       const ssoSession = createSSOSession(ssoParams);
       saveSession(ssoSession);
       return ssoSession;
     }
     return getSession();
   });
+  const [onboardingComplete, setOnboardingComplete] = useState(
+    () => localStorage.getItem("vecta_onboarding_complete") === "true"
+  );
+  const [idleWarningVisible, setIdleWarningVisible] = useState(false);
+  const idleResetRef = useRef<(() => void) | null>(null);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
   const [inFlightRequests, setInFlightRequests] = useState<number>(getGlobalInFlightRequestCount());
   const [showBrandedLoader, setShowBrandedLoader] = useState(false);
@@ -469,9 +494,10 @@ export default function App() {
     }
     let cancelled = false;
     let refreshing = false;
+    const signal = getRefreshAbortSignal();
 
     const maybeRefresh = async () => {
-      if (refreshing) {
+      if (refreshing || isLoggedOut()) {
         return;
       }
       const expRaw = String(session.expiresAt || "").trim();
@@ -486,8 +512,8 @@ export default function App() {
       }
       refreshing = true;
       try {
-        const next = await refreshSession(session);
-        if (cancelled) {
+        const next = await refreshSession(session, signal);
+        if (cancelled || isLoggedOut()) {
           return;
         }
         saveSession(next);
@@ -501,7 +527,7 @@ export default function App() {
           return next;
         });
       } catch {
-        if (!cancelled) {
+        if (!cancelled && !isLoggedOut()) {
           clearSession();
           setSession(null);
         }
@@ -521,11 +547,24 @@ export default function App() {
 
     return () => {
       cancelled = true;
+      abortPendingRefresh();
       window.clearInterval(id);
       window.clearTimeout(initial);
     };
   }, [session]);
 
+  const handleLogout = useCallback(() => {
+    const currentSession = session;
+    abortPendingRefresh();
+    clearSession();
+    setSession(null);
+    setIdleWarningVisible(false);
+    if (currentSession) {
+      void logoutSession(currentSession);
+    }
+  }, [session]);
+
+  // Two-phase idle timeout: show warning at (total - 60s), then auto-logout
   useEffect(() => {
     if (!session) {
       return;
@@ -534,17 +573,23 @@ export default function App() {
     if (!Number.isFinite(idleMinutes) || idleMinutes <= 0) {
       return;
     }
-    const timeoutMs = Math.max(60_000, Math.trunc(idleMinutes * 60_000));
+    const WARNING_SECONDS = 60;
+    const totalMs = Math.max(60_000, Math.trunc(idleMinutes * 60_000));
+    const preWarningMs = Math.max(0, totalMs - WARNING_SECONDS * 1000);
+
     let timer: number | undefined;
     const resetTimer = () => {
+      setIdleWarningVisible(false);
       if (timer) {
         window.clearTimeout(timer);
       }
       timer = window.setTimeout(() => {
-        clearSession();
-        setSession(null);
-      }, timeoutMs);
+        setIdleWarningVisible(true);
+      }, preWarningMs);
     };
+
+    idleResetRef.current = resetTimer;
+
     const events: Array<keyof WindowEventMap> = ["mousemove", "mousedown", "keydown", "scroll", "touchstart"];
     events.forEach((eventName) => {
       window.addEventListener(eventName, resetTimer, { passive: true });
@@ -554,6 +599,7 @@ export default function App() {
       if (timer) {
         window.clearTimeout(timer);
       }
+      idleResetRef.current = null;
       events.forEach((eventName) => {
         window.removeEventListener(eventName, resetTimer);
       });
@@ -569,10 +615,27 @@ export default function App() {
       <LoginScreen
         config={uiAuthQuery.data}
         onAuthenticated={(nextSession) => {
+          resetLogoutFlag();
           saveSession(nextSession);
           setSession(nextSession);
         }}
       />
+    );
+  }
+
+  // Onboarding gate: show wizard for fast-mode installs with no features enabled
+  const showOnboarding = !onboardingComplete && deploymentQuery.data && needsOnboarding(deploymentQuery.data);
+  if (showOnboarding) {
+    return (
+      <React.Suspense fallback={<InitialLoadingScreen />}>
+        <LazyOnboardingWizard
+          session={session}
+          onComplete={() => {
+            setOnboardingComplete(true);
+            deploymentQuery.refetch();
+          }}
+        />
+      </React.Suspense>
     );
   }
 
@@ -585,10 +648,16 @@ export default function App() {
         audit={audit}
         unreadAlerts={unreadAlerts}
         markAlertsRead={() => undefined}
-        onLogout={() => {
-          clearSession();
-          setSession(null);
+        onLogout={handleLogout}
+      />
+      <IdleWarningModal
+        open={idleWarningVisible}
+        secondsRemaining={60}
+        onStayActive={() => {
+          setIdleWarningVisible(false);
+          idleResetRef.current?.();
         }}
+        onLogout={handleLogout}
       />
       <BrandedLoadingOverlay visible={showBrandedLoader} />
     </main>

@@ -25,7 +25,9 @@ import (
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 
+	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgauth "vecta-kms/pkg/auth"
+	pkgcache "vecta-kms/pkg/cache"
 	pkgclustersync "vecta-kms/pkg/clustersync"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
@@ -33,6 +35,7 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	"vecta-kms/pkg/metering"
+	pkgratelimit "vecta-kms/pkg/ratelimit"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -48,11 +51,14 @@ func main() {
 	defer stop()
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
-		PostgresDSN: cfg.PostgresDSN,
-		SQLitePath:  cfg.SQLitePath,
-		UseSQLite:   cfg.UseSQLite,
-		MaxOpen:     30,
-		MaxIdle:     15,
+		PostgresDSN:     cfg.PostgresDSN,
+		PostgresRODSN:   cfg.PostgresRODSN,
+		SQLitePath:      cfg.SQLitePath,
+		UseSQLite:       cfg.UseSQLite,
+		MaxOpen:         cfg.DBMaxOpen,
+		MaxIdle:         cfg.DBMaxIdle,
+		ConnMaxIdleTime: time.Duration(cfg.DBConnMaxIdleTimeSec) * time.Second,
+		ConnMaxLifetime: time.Duration(cfg.DBConnMaxLifetimeSec) * time.Second,
 	})
 	if err != nil {
 		logger.Fatalf("db open failed: %v", err)
@@ -71,13 +77,13 @@ func main() {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
 
-	var cache KeyCache = newMemoryCache(5 * time.Minute)
+	var cache KeyCache = NewKeyCache(pkgcache.NewMemory(5*time.Minute), 5*time.Minute)
 	if redisURL := envOr("REDIS_URL", ""); redisURL != "" {
 		opt, err := redis.ParseURL(redisURL)
 		if err == nil {
 			cli := redis.NewClient(opt)
 			if pingErr := cli.Ping(ctx).Err(); pingErr == nil {
-				cache = newRedisKeyCache(cli, 5*time.Minute)
+				cache = NewKeyCache(pkgcache.NewRedis(cli), 5*time.Minute)
 				defer cli.Close()
 				logger.Printf("redis metadata cache enabled")
 			}
@@ -124,12 +130,12 @@ func main() {
 		logger.Printf("jwt parser enabled for key access control")
 	}
 
+	rl := pkgratelimit.New(pkgratelimit.Config{
+		RequestsPerSecond: cfg.RateLimitRPS,
+		BurstSize:         cfg.RateLimitBurst,
+	})
 	httpPort := envOr("HTTP_PORT", "8010")
-	httpSrv := &http.Server{
-		Addr:              ":" + httpPort,
-		Handler:           handler,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
+	httpSrv := pkgconfig.NewHTTPServer(httpPort, rl.Middleware(pkgauditmw.Wrap(handler, publisher, "key")))
 	go func() {
 		logger.Printf("http listening on :%s", httpPort)
 		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

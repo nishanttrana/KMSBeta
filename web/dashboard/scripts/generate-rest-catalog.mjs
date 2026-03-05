@@ -34,7 +34,10 @@ const SERVICE_GROUP = {
   qkd: "QKD",
   reporting: "Reporting",
   sbom: "SBOM / CBOM",
-  secrets: "Secret Vault"
+  secrets: "Secret Vault",
+  posture: "Security Posture",
+  qrng: "QRNG",
+  "cluster-manager": "Cluster Management"
 };
 
 const SERVICE_LABEL = {
@@ -58,7 +61,10 @@ const SERVICE_LABEL = {
   qkd: "QKD",
   reporting: "Reporting",
   sbom: "SBOM",
-  secrets: "Secrets"
+  secrets: "Secrets",
+  posture: "Posture",
+  qrng: "QRNG",
+  "cluster-manager": "Cluster"
 };
 
 const ALLOWED_SERVICES = new Set(Object.keys(SERVICE_GROUP));

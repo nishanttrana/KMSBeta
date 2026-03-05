@@ -263,7 +263,7 @@ export const DashboardTabView = (props: any) => {
 
       {/* Infrastructure Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 10 }}>
-        <Card onClick={() => setModal?.("fde")} style={{ cursor: "pointer" }}>
+        <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>
               <Lock size={12} color={C.dim} />
@@ -425,18 +425,6 @@ export const DashboardTabView = (props: any) => {
           </Card>
         </div>
       </div>
-
-      <Modal open={modal === "fde"} onClose={() => setModal?.(null)} title="Full Disk Encryption Management">
-        <FG label="Encryption"><div style={{ fontSize: 11, color: C.green }}>AES-256-XTS via LUKS2 - Active</div></FG>
-        <FG label="Actions">
-          <Btn small>Run Integrity Check</Btn>
-          <Btn small style={{ marginLeft: 6 }}>Rotate Volume Key</Btn>
-          <Btn small style={{ marginLeft: 6 }}>Test Recovery Shares</Btn>
-        </FG>
-        <FG label="Recovery Shares (Shamir 3-of-5)">
-          <div style={{ fontSize: 10, color: C.dim }}>Share 1: Admin A | Share 2: Admin B | Share 3: Escrow | Share 4: Safe | Share 5: DR Site</div>
-        </FG>
-      </Modal>
 
       {promptUI}
     </div>

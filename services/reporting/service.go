@@ -115,6 +115,18 @@ func (s *Service) ingestAuditEvent(ctx context.Context, tenantID string, ev map[
 	if escalateTo != "" {
 		sev = maxSeverity(sev, escalateTo)
 	}
+
+	// Evaluate user-defined alert rules
+	ruleMatched, matchedRuleID, matchedRuleSev := s.evaluateAlertRules(ctx, tenantID, action, ev)
+	if ruleMatched {
+		sev = maxSeverity(sev, matchedRuleSev)
+	}
+
+	// Filter: info-level events without escalation or rule match are silent
+	if sev == severityInfo && escalateTo == "" && !ruleMatched {
+		return Alert{}, nil
+	}
+
 	category := categoryForAction(action)
 	title := titleForAction(action, ev)
 	desc := descriptionForEvent(ev)
@@ -136,6 +148,7 @@ func (s *Service) ingestAuditEvent(ctx context.Context, tenantID string, ev map[
 		SourceIP:      firstString(ev["source_ip"], ev["ip"]),
 		Status:        "new",
 		CorrelationID: firstString(ev["correlation_id"], ev["session_id"]),
+		RuleID:        matchedRuleID,
 		DedupCount:    1,
 	}
 	if incidentTitle != "" {
@@ -227,6 +240,62 @@ func (s *Service) evaluateEscalationRules(ctx context.Context, tenantID string, 
 		}
 	}
 	return "", ""
+}
+
+// evaluateAlertRules checks enabled tenant rules against the incoming event.
+// Returns true if any rule matched, along with the matched rule's ID and severity.
+func (s *Service) evaluateAlertRules(ctx context.Context, tenantID string, action string, ev map[string]interface{}) (matched bool, ruleID string, ruleSeverity string) {
+	rules, err := s.store.ListRules(ctx, tenantID)
+	if err != nil || len(rules) == 0 {
+		return false, "", ""
+	}
+	for _, rule := range rules {
+		if !rule.Enabled {
+			continue
+		}
+		switch strings.ToLower(strings.TrimSpace(rule.Condition)) {
+		case "threshold":
+			if !matchPattern(action, rule.EventPattern) {
+				continue
+			}
+			if rule.Threshold <= 1 {
+				return true, rule.ID, normalizeSeverity(rule.Severity)
+			}
+			window := time.Duration(rule.WindowSecond) * time.Second
+			if window <= 0 {
+				window = 5 * time.Minute
+			}
+			count, cerr := s.store.CountRecentAlerts(ctx, tenantID, rule.EventPattern, "", "", window)
+			if cerr != nil {
+				continue
+			}
+			if count+1 >= rule.Threshold {
+				return true, rule.ID, normalizeSeverity(rule.Severity)
+			}
+		case "expression":
+			expr := strings.TrimSpace(rule.Expression)
+			if expr == "" {
+				continue
+			}
+			fields := map[string]string{
+				"action":      action,
+				"severity":    strings.ToLower(firstString(ev["severity"])),
+				"actor_id":    firstString(ev["actor_id"], ev["user_id"]),
+				"source_ip":   firstString(ev["source_ip"], ev["ip"]),
+				"service":     firstString(ev["service"]),
+				"target_type": firstString(ev["target_type"], ev["resource_type"]),
+				"target_id":   firstString(ev["target_id"], ev["resource_id"]),
+			}
+			result, eerr := EvaluateExpression(expr, fields)
+			if eerr != nil {
+				continue
+			}
+			if result {
+				return true, rule.ID, normalizeSeverity(rule.Severity)
+			}
+		}
+	}
+	return false, "", ""
 }
 
 func categoryForAction(action string) string {
@@ -455,6 +524,11 @@ func (s *Service) CreateRule(ctx context.Context, tenantID string, item AlertRul
 	item.TenantID = tenantID
 	item.Severity = normalizeSeverity(item.Severity)
 	item.Enabled = true
+	if strings.EqualFold(strings.TrimSpace(item.Condition), "expression") {
+		if err := ValidateExpression(item.Expression); err != nil {
+			return AlertRule{}, newServiceError(400, "bad_request", "invalid expression: "+err.Error())
+		}
+	}
 	if err := s.store.CreateRule(ctx, item); err != nil {
 		return AlertRule{}, err
 	}
@@ -466,6 +540,11 @@ func (s *Service) UpdateRule(ctx context.Context, tenantID string, id string, it
 	item.ID = id
 	item.TenantID = tenantID
 	item.Severity = normalizeSeverity(item.Severity)
+	if strings.EqualFold(strings.TrimSpace(item.Condition), "expression") {
+		if err := ValidateExpression(item.Expression); err != nil {
+			return newServiceError(400, "bad_request", "invalid expression: "+err.Error())
+		}
+	}
 	if err := s.store.UpdateRule(ctx, item); err != nil {
 		return err
 	}

@@ -68,7 +68,7 @@ func generateConfigs(req WizardRequest) (GeneratedConfigs, error) {
 	passphraseFilePath := firstNonEmpty(certSecurity.PassphraseFilePath, paths["cert_bootstrap"])
 
 	deployment := map[string]any{
-		"apiVersion": "kms.securosys.com/v1",
+		"apiVersion": "kms.vecta.io/v1",
 		"kind":       "DeploymentConfig",
 		"metadata": map[string]any{
 			"appliance_id": req.Metadata.ApplianceID,

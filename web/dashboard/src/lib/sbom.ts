@@ -189,3 +189,46 @@ export async function diffCBOM(session: AuthSession, fromID: string, toID: strin
   );
   return out.diff;
 }
+
+export type PQCReadiness = {
+  total_assets: number;
+  pqc_ready_count: number;
+  pqc_readiness_percent: number;
+  deprecated_count: number;
+  algorithm_distribution: Record<string, number>;
+  strength_histogram: Record<string, number>;
+};
+
+type PQCReadinessResponse = { pqc_readiness: PQCReadiness };
+
+export async function diffSBOM(session: AuthSession, fromID: string, toID: string): Promise<BOMDiff> {
+  const out = await serviceRequest<DiffResponse>(
+    session,
+    "sbom",
+    `/sbom/diff?from=${encodeURIComponent(String(fromID || "").trim())}&to=${encodeURIComponent(String(toID || "").trim())}`
+  );
+  return out.diff;
+}
+
+export async function getCBOMPQCReadiness(session: AuthSession): Promise<PQCReadiness> {
+  const out = await serviceRequest<PQCReadinessResponse>(session, "sbom", `/cbom/pqc-readiness?${tenantQuery(session)}`);
+  return out.pqc_readiness;
+}
+
+export async function getSBOMByID(session: AuthSession, id: string): Promise<SBOMSnapshot> {
+  const out = await serviceRequest<SnapshotResponse<SBOMSnapshot>>(
+    session,
+    "sbom",
+    `/sbom/${encodeURIComponent(String(id || "").trim())}`
+  );
+  return out.item;
+}
+
+export async function getCBOMByID(session: AuthSession, id: string): Promise<CBOMSnapshot> {
+  const out = await serviceRequest<SnapshotResponse<CBOMSnapshot>>(
+    session,
+    "sbom",
+    `/cbom/${encodeURIComponent(String(id || "").trim())}?${tenantQuery(session)}`
+  );
+  return out.item;
+}

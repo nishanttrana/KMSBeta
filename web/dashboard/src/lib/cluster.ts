@@ -72,12 +72,47 @@ export type RemoveClusterNodeResult = {
   promoted_leader_node?: string;
 };
 
+export type ClusterSyncEvent = {
+  id: number;
+  tenant_id: string;
+  profile_id: string;
+  component: string;
+  entity_type: string;
+  entity_id: string;
+  operation: string;
+  payload: Record<string, any>;
+  source_node_id: string;
+  created_at: string;
+};
+
+export type ClusterLogEntry = {
+  id: number;
+  tenant_id: string;
+  node_id: string;
+  level: string;
+  event_type: string;
+  message: string;
+  details: Record<string, any>;
+  created_at: string;
+};
+
+export type ClusterSyncCheckpoint = {
+  tenant_id: string;
+  node_id: string;
+  profile_id: string;
+  last_event_id: number;
+  updated_at: string;
+};
+
 type OverviewResponse = { overview: ClusterOverview };
 type ProfilesResponse = { items: ClusterProfile[] };
 type ProfileResponse = { profile: ClusterProfile };
 type JoinResponse = { join: ClusterJoinBundle };
 type NodeResponse = { node: ClusterNode };
 type NodeRemoveResponse = { result: RemoveClusterNodeResult };
+type SyncEventsResponse = { items: ClusterSyncEvent[] };
+type SyncCheckpointResponse = { checkpoint: ClusterSyncCheckpoint };
+type LogsResponse = { items: ClusterLogEntry[] };
 
 function tenantQuery(session: AuthSession): string {
   return `tenant_id=${encodeURIComponent(session.tenantId)}`;
@@ -224,4 +259,44 @@ export async function removeClusterNode(
     }
   );
   return out.result;
+}
+
+export async function listClusterSyncEvents(
+  session: AuthSession,
+  profileId?: string,
+  afterId?: number,
+  limit?: number,
+  component?: string
+): Promise<ClusterSyncEvent[]> {
+  const params = new URLSearchParams({ tenant_id: session.tenantId });
+  if (profileId) params.set("profile_id", profileId);
+  if (afterId) params.set("after_id", String(afterId));
+  if (limit) params.set("limit", String(limit));
+  if (component) params.set("component", component);
+  const out = await serviceRequest<SyncEventsResponse>(session, "cluster", `/cluster/sync/events?${params}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getClusterSyncCheckpoint(
+  session: AuthSession,
+  nodeId: string,
+  profileId: string
+): Promise<ClusterSyncCheckpoint> {
+  const params = new URLSearchParams({ tenant_id: session.tenantId, node_id: nodeId, profile_id: profileId });
+  const out = await serviceRequest<SyncCheckpointResponse>(session, "cluster", `/cluster/sync/checkpoint?${params}`);
+  return out?.checkpoint || { tenant_id: session.tenantId, node_id: nodeId, profile_id: profileId, last_event_id: 0, updated_at: "" };
+}
+
+export async function listClusterLogs(
+  session: AuthSession,
+  nodeId?: string,
+  eventType?: string,
+  limit?: number
+): Promise<ClusterLogEntry[]> {
+  const params = new URLSearchParams({ tenant_id: session.tenantId });
+  if (nodeId) params.set("node_id", nodeId);
+  if (eventType) params.set("event_type", eventType);
+  if (limit) params.set("limit", String(limit));
+  const out = await serviceRequest<LogsResponse>(session, "cluster", `/cluster/logs?${params}`);
+  return Array.isArray(out?.items) ? out.items : [];
 }

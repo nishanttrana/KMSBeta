@@ -160,6 +160,13 @@ export async function patchGovernanceSystemState(
   };
 }
 
+export async function applyNetworkConfig(session: AuthSession): Promise<{ applied: boolean; message?: string }> {
+  return serviceRequest<{ applied: boolean; message?: string }>(session, "governance", "/governance/system/network/apply", {
+    method: "POST",
+    body: JSON.stringify({ tenant_id: session.tenantId })
+  });
+}
+
 export async function testGovernanceSystemSNMP(session: AuthSession, target: string): Promise<void> {
   await serviceRequest<Record<string, unknown>>(session, "governance", "/governance/system/snmp/test", {
     method: "POST",

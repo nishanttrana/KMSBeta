@@ -527,6 +527,38 @@ export async function listKeys(
   return payload.items || [];
 }
 
+export type PaginatedKeysResponse = {
+  items: KeyItem[];
+  next_cursor?: { after_created_at: string; after_id: string };
+  has_more: boolean;
+};
+
+export async function listKeysPaginated(
+  session: AuthSession,
+  options?: {
+    limit?: number;
+    afterCreatedAt?: string;
+    afterId?: string;
+    includeDeleted?: boolean;
+  }
+): Promise<PaginatedKeysResponse> {
+  const limit = Math.max(1, Math.min(1000, Math.trunc(Number(options?.limit || 100))));
+  const includeDeleted = Boolean(options?.includeDeleted);
+  let url = `/keys?tenant_id=${encodeURIComponent(session.tenantId)}&limit=${limit}&include_deleted=${includeDeleted ? "true" : "false"}`;
+  if (options?.afterCreatedAt && options?.afterId) {
+    url += `&after_created_at=${encodeURIComponent(options.afterCreatedAt)}&after_id=${encodeURIComponent(options.afterId)}`;
+  }
+  const payload = await apiRequest<PaginatedKeysResponse>(session, url);
+  const result: PaginatedKeysResponse = {
+    items: payload.items || [],
+    has_more: Boolean(payload.has_more),
+  };
+  if (payload.next_cursor) {
+    result.next_cursor = payload.next_cursor;
+  }
+  return result;
+}
+
 export async function createKey(session: AuthSession, input: CreateKeyInput): Promise<APICreateKeyResponse> {
   return apiRequest<APICreateKeyResponse>(session, "/keys", {
     method: "POST",

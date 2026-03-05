@@ -18,6 +18,7 @@ const (
 type Config struct {
 	Env              string
 	PostgresDSN      string
+	PostgresRODSN    string
 	SQLitePath       string
 	UseSQLite        bool
 	NATSURL          string
@@ -30,12 +31,23 @@ type Config struct {
 	JWTIssuer        string
 	JWTAudience      string
 	JWTPublicKeyPath string
+
+	// Database pool tuning
+	DBMaxOpen           int
+	DBMaxIdle           int
+	DBConnMaxIdleTimeSec int
+	DBConnMaxLifetimeSec int
+
+	// Rate limiting
+	RateLimitRPS   float64
+	RateLimitBurst int
 }
 
 func Load() Config {
 	return Config{
 		Env:              get("VECTA_ENV", "dev"),
 		PostgresDSN:      get("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5432/vecta?sslmode=disable"),
+		PostgresRODSN:    get("POSTGRES_RO_DSN", ""),
 		SQLitePath:       get("SQLITE_PATH", "vecta.db"),
 		UseSQLite:        getBool("SQLITE_FALLBACK", false),
 		NATSURL:          get("NATS_URL", "nats://localhost:4222"),
@@ -48,6 +60,14 @@ func Load() Config {
 		JWTIssuer:        get("JWT_ISSUER", "vecta-auth"),
 		JWTAudience:      get("JWT_AUDIENCE", "vecta-services"),
 		JWTPublicKeyPath: get("JWT_PUBLIC_KEY_PATH", "certs/jwt_public.pem"),
+
+		DBMaxOpen:            getInt("DB_MAX_OPEN", 50),
+		DBMaxIdle:            getInt("DB_MAX_IDLE", 25),
+		DBConnMaxIdleTimeSec: getInt("DB_CONN_MAX_IDLE_TIME_SEC", 300),
+		DBConnMaxLifetimeSec: getInt("DB_CONN_MAX_LIFETIME_SEC", 1800),
+
+		RateLimitRPS:   getFloat("RATE_LIMIT_RPS", 100),
+		RateLimitBurst: getInt("RATE_LIMIT_BURST", 200),
 	}
 }
 
@@ -94,4 +114,16 @@ func getInt(key string, d int) int {
 		return d
 	}
 	return i
+}
+
+func getFloat(key string, d float64) float64 {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return d
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return d
+	}
+	return f
 }

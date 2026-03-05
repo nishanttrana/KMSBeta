@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	pkgconfig "vecta-kms/pkg/config"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -21,11 +22,7 @@ func main() {
 	if err := pkgruntimecfg.ValidateHTTPPort(port); err != nil {
 		logger.Fatalf("config validation failed: %v", err)
 	}
-	srv := &http.Server{
-		Addr:              ":" + port,
-		Handler:           server,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
+	srv := pkgconfig.NewHTTPServer(port, server)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

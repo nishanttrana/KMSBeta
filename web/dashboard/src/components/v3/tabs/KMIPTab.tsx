@@ -36,6 +36,8 @@ export const KMIPTab=({session,onToast})=>{
   const [deletingInteropTargetID,setDeletingInteropTargetID]=useState("");
   const [validatingInteropTargetID,setValidatingInteropTargetID]=useState("");
   const [interopValidationResult,setInteropValidationResult]=useState(null);
+  const [capsExpanded,setCapsExpanded]=useState(false);
+  const [preferredKMIPVersion,setPreferredKMIPVersion]=useState("3.2");
   const [interopForm,setInteropForm]=useState({
     name:"",
     vendor:"generic",
@@ -515,75 +517,108 @@ export const KMIPTab=({session,onToast})=>{
       <Stat l="Registered Clients" v={String(stats.total)} c="accent"/>
       <Stat l="Active Clients" v={String(stats.active)} c="green"/>
       <Stat l="Expiring <=30d" v={String(stats.expiringSoon)} c={stats.expiringSoon>0?"amber":"blue"}/>
-      <Stat l="Protocol" v={kmipVersionLabel} s={`${kmipProtocolLabel}:${String(kmipCaps?.port||"5696")} | ${kmipLibraryLabel}`} c="purple"/>
+      <div style={{flex:"1 1 140px",background:C.elevated,borderRadius:10,padding:"10px 14px",border:`1px solid ${C.border}`,minWidth:160}}>
+        <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Protocol Version</div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{display:"flex",background:C.bg,borderRadius:8,border:`1px solid ${C.border}`,overflow:"hidden"}}>
+            {(supportedVersions.length>0?supportedVersions:["3.2","3.1","3.0","2.1"]).slice(0,4).map((v)=>(
+              <div key={v} onClick={()=>setPreferredKMIPVersion(String(v))} style={{
+                padding:"4px 10px",fontSize:11,fontWeight:preferredKMIPVersion===String(v)?700:500,
+                background:preferredKMIPVersion===String(v)?C.accent:"transparent",
+                color:preferredKMIPVersion===String(v)?C.white:C.dim,
+                cursor:"pointer",transition:"all .2s",borderRight:`1px solid ${C.border}`
+              }}>{String(v)}</div>
+            ))}
+          </div>
+          <span style={{fontSize:10,color:C.dim}}>{kmipProtocolLabel}:{String(kmipCaps?.port||"5696")}</span>
+        </div>
+        <div style={{fontSize:9,color:C.muted,marginTop:4}}>{kmipLibraryLabel}</div>
+      </div>
     </div>
 
 
     <Card style={{marginBottom:10}}>
-      <div style={{display:"grid",gap:8}}>
-        <div style={{fontSize:11,color:C.text,fontWeight:700}}>KMIP Capabilities (real server coverage)</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:12}}>
-          <div>
-            <div style={{fontSize:10,color:C.muted,marginBottom:4}}>Supported Protocol Versions</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {supportedVersions.map((v)=><B key={`ver-${String(v)}`} c="purple">{String(v)}</B>)}
-              {!supportedVersions.length?<span style={{fontSize:10,color:C.dim}}>-</span>:null}
-            </div>
-          </div>
-          <div>
-            <div style={{fontSize:10,color:C.muted,marginBottom:4}}>Authentication</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {authModes.map((v)=><B key={`auth-${String(v)}`} c="blue">{String(v)}</B>)}
-              {!authModes.length?<span style={{fontSize:10,color:C.dim}}>mTLS client certificate</span>:null}
-            </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:capsExpanded?12:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{fontSize:12,color:C.text,fontWeight:700}}>Server Capabilities</div>
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            {supportedVersions.length>0&&<B c="purple">{`${supportedVersions.length} versions`}</B>}
+            <B c="green">{`${implementedOps.length} ops`}</B>
+            <B c="green">{`${implementedObjects.length} types`}</B>
+            {unimplementedOps.length>0&&<B c="amber">{`${unimplementedOps.length} missing`}</B>}
           </div>
         </div>
-        <Row2>
-          <Card style={{borderColor:C.borderHi}}>
-            <div style={{fontSize:10,color:C.muted,marginBottom:4}}>Implemented Operations ({implementedOps.length})</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {implementedOps.map((op)=><B key={`op-impl-${String(op)}`} c="green">{String(op)}</B>)}
-              {!implementedOps.length?<span style={{fontSize:10,color:C.dim}}>-</span>:null}
-            </div>
-          </Card>
-          <Card style={{borderColor:C.borderHi}}>
-            <div style={{fontSize:10,color:C.muted,marginBottom:4}}>Missing KMIP 3.2 Operations ({unimplementedOps.length})</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {unimplementedOps.map((op)=><B key={`op-miss-${String(op)}`} c="amber">{String(op)}</B>)}
-              {!unimplementedOps.length?<span style={{fontSize:10,color:C.green}}>None</span>:null}
-            </div>
-          </Card>
-        </Row2>
-        <Row2>
-          <Card style={{borderColor:C.borderHi}}>
-            <div style={{fontSize:10,color:C.muted,marginBottom:4}}>Implemented Object Types ({implementedObjects.length})</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {implementedObjects.map((ot)=><B key={`ot-impl-${String(ot)}`} c="green">{String(ot)}</B>)}
-              {!implementedObjects.length?<span style={{fontSize:10,color:C.dim}}>-</span>:null}
-            </div>
-          </Card>
-          <Card style={{borderColor:C.borderHi}}>
-            <div style={{fontSize:10,color:C.muted,marginBottom:4}}>Missing KMIP 3.2 Object Types ({unimplementedObjects.length})</div>
-            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              {unimplementedObjects.map((ot)=><B key={`ot-miss-${String(ot)}`} c="amber">{String(ot)}</B>)}
-              {!unimplementedObjects.length?<span style={{fontSize:10,color:C.green}}>None</span>:null}
-            </div>
-          </Card>
-        </Row2>
-        <div style={{fontSize:10,color:C.dim}}>
-          {interoperabilityScope.length
-            ?interoperabilityScope.map((line)=>String(line)).join(" | ")
-            :"Generic KMIP interoperability is protocol-based. Product certification/qualification should be validated per target platform."}
-        </div>
-        <div>
-          <div style={{fontSize:10,color:C.muted,marginBottom:4}}>KMIP-Capable Integration Targets</div>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-            {integrationTargets.map((target)=><B key={`interop-${String(target)}`} c="blue">{String(target)}</B>)}
-            {!integrationTargets.length?<span style={{fontSize:10,color:C.dim}}>-</span>:null}
-          </div>
-          {integrationNote?<div style={{fontSize:10,color:C.dim,marginTop:6}}>{integrationNote}</div>:null}
-        </div>
+        <Btn small onClick={()=>setCapsExpanded(p=>!p)}>{capsExpanded?"Collapse":"Expand"}</Btn>
       </div>
+      {capsExpanded&&<div style={{display:"grid",gap:10}}>
+        {/* Protocol & Auth row */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div style={{background:C.elevated,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Protocol Versions</div>
+            <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+              {supportedVersions.map((v)=><B key={`ver-${String(v)}`} c="purple">{String(v)}</B>)}
+              {!supportedVersions.length&&<span style={{fontSize:10,color:C.dim}}>-</span>}
+            </div>
+          </div>
+          <div style={{background:C.elevated,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+            <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Authentication</div>
+            <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+              {authModes.map((v)=><B key={`auth-${String(v)}`} c="blue">{String(v)}</B>)}
+              {!authModes.length&&<span style={{fontSize:10,color:C.dim}}>mTLS client certificate</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* Operations — compact two-column */}
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <div style={{background:C.elevated,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Implemented Operations</div>
+              <B c="green">{implementedOps.length}</B>
+            </div>
+            <div style={{display:"flex",gap:4,flexWrap:"wrap",maxHeight:80,overflowY:"auto"}}>
+              {implementedOps.map((op)=><span key={`op-${String(op)}`} style={{fontSize:9,color:C.green,background:`${C.green}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(op)}</span>)}
+              {!implementedOps.length&&<span style={{fontSize:10,color:C.dim}}>-</span>}
+            </div>
+          </div>
+          <div style={{background:C.elevated,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.border}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <div style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Implemented Object Types</div>
+              <B c="green">{implementedObjects.length}</B>
+            </div>
+            <div style={{display:"flex",gap:4,flexWrap:"wrap",maxHeight:80,overflowY:"auto"}}>
+              {implementedObjects.map((ot)=><span key={`ot-${String(ot)}`} style={{fontSize:9,color:C.green,background:`${C.green}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(ot)}</span>)}
+              {!implementedObjects.length&&<span style={{fontSize:10,color:C.dim}}>-</span>}
+            </div>
+          </div>
+        </div>
+
+        {/* Missing coverage — only show if there are gaps */}
+        {(unimplementedOps.length>0||unimplementedObjects.length>0)&&<div style={{background:`${C.amber}08`,borderRadius:8,padding:"10px 12px",border:`1px solid ${C.amber}25`}}>
+          <div style={{fontSize:9,color:C.amber,textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>KMIP 3.2 Coverage Gaps</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            {unimplementedOps.length>0&&<div>
+              <div style={{fontSize:9,color:C.muted,marginBottom:4}}>Missing Operations ({unimplementedOps.length})</div>
+              <div style={{display:"flex",gap:4,flexWrap:"wrap",maxHeight:60,overflowY:"auto"}}>
+                {unimplementedOps.map((op)=><span key={`miss-${String(op)}`} style={{fontSize:9,color:C.amber,background:`${C.amber}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(op)}</span>)}
+              </div>
+            </div>}
+            {unimplementedObjects.length>0&&<div>
+              <div style={{fontSize:9,color:C.muted,marginBottom:4}}>Missing Object Types ({unimplementedObjects.length})</div>
+              <div style={{display:"flex",gap:4,flexWrap:"wrap",maxHeight:60,overflowY:"auto"}}>
+                {unimplementedObjects.map((ot)=><span key={`missot-${String(ot)}`} style={{fontSize:9,color:C.amber,background:`${C.amber}15`,padding:"2px 6px",borderRadius:4,fontFamily:"'JetBrains Mono',monospace"}}>{String(ot)}</span>)}
+              </div>
+            </div>}
+          </div>
+        </div>}
+
+        {/* Integration targets */}
+        {integrationTargets.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+          <span style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>Integration Targets:</span>
+          {integrationTargets.map((target)=><B key={`interop-${String(target)}`} c="blue">{String(target)}</B>)}
+        </div>}
+        {integrationNote&&<div style={{fontSize:9,color:C.dim,fontStyle:"italic"}}>{integrationNote}</div>}
+      </div>}
     </Card>    {issuedBundle?<Card style={{marginBottom:10,borderColor:C.green}}>
       <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
         <div>
@@ -901,7 +936,11 @@ export const KMIPTab=({session,onToast})=>{
       </Row2>
       <Row2>
         <FG label="Expected Min KMIP Version">
-          <Inp value={interopForm.expected_min_version} onChange={(e)=>setInteropForm((p)=>({...p,expected_min_version:e.target.value}))} placeholder="3.0"/>
+          <Sel value={interopForm.expected_min_version} onChange={(e)=>setInteropForm((p)=>({...p,expected_min_version:e.target.value}))}>
+            {(supportedVersions.length>0?supportedVersions:["3.2","3.1","3.0","2.2","2.1","2.0","1.4","1.3","1.2","1.1","1.0"]).map((v)=>(
+              <option key={v} value={String(v)}>{String(v)}</option>
+            ))}
+          </Sel>
         </FG>
         <FG label="Validation Options">
           <Chk label="Run test key operation (Create/Encrypt/Decrypt/Destroy)" checked={Boolean(interopForm.test_key_operation)} onChange={(e)=>setInteropForm((p)=>({...p,test_key_operation:e.target.checked}))}/>

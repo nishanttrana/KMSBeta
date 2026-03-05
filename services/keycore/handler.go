@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
@@ -95,6 +96,8 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /keys/import", h.handleImportKey)
 	mux.HandleFunc("POST /keys/form", h.handleFormKey)
 	mux.HandleFunc("POST /keys/bulk-import", h.handleBulkImport)
+	mux.HandleFunc("POST /keys/bulk-rotate", h.handleBulkRotate)
+	mux.HandleFunc("POST /keys/bulk-delete", h.handleBulkDelete)
 	mux.HandleFunc("GET /keys", h.handleListKeys)
 	mux.HandleFunc("GET /keys/{id}", h.handleGetKey)
 	mux.HandleFunc("PUT /keys/{id}", h.handleUpdateKey)
@@ -252,20 +255,120 @@ func (h *Handler) handleBulkImport(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
 		return
 	}
-	type item struct {
+	if len(req) > 500 {
+		writeErr(w, http.StatusBadRequest, "bad_request", "bulk import limited to 500 items", reqID, "")
+		return
+	}
+	type bulkItem struct {
 		KeyID string `json:"key_id"`
 		Error string `json:"error,omitempty"`
 	}
-	out := make([]item, 0, len(req))
-	for _, in := range req {
-		k, err := h.svc.ImportKey(r.Context(), in)
+	out := make([]bulkItem, len(req))
+	runParallelBulk(r.Context(), len(req), 10, func(i int) {
+		k, err := h.svc.ImportKey(r.Context(), req[i])
 		if err != nil {
-			out = append(out, item{Error: err.Error()})
-			continue
+			out[i] = bulkItem{Error: err.Error()}
+		} else {
+			out[i] = bulkItem{KeyID: k.ID}
 		}
-		out = append(out, item{KeyID: k.ID})
-	}
+	})
 	writeJSON(w, http.StatusOK, map[string]any{"items": out, "request_id": reqID})
+}
+
+func (h *Handler) handleBulkRotate(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req struct {
+		TenantID         string   `json:"tenant_id"`
+		KeyIDs           []string `json:"key_ids"`
+		Reason           string   `json:"reason"`
+		OldVersionAction string   `json:"old_version_action"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	if len(req.KeyIDs) > 500 {
+		writeErr(w, http.StatusBadRequest, "bad_request", "bulk rotate limited to 500 items", reqID, req.TenantID)
+		return
+	}
+	if req.OldVersionAction == "" {
+		req.OldVersionAction = "deactivate"
+	}
+	type bulkItem struct {
+		KeyID string `json:"key_id"`
+		Error string `json:"error,omitempty"`
+	}
+	out := make([]bulkItem, len(req.KeyIDs))
+	runParallelBulk(r.Context(), len(req.KeyIDs), 10, func(i int) {
+		_, err := h.svc.RotateKey(r.Context(), req.TenantID, req.KeyIDs[i], req.Reason, req.OldVersionAction)
+		if err != nil {
+			out[i] = bulkItem{KeyID: req.KeyIDs[i], Error: err.Error()}
+		} else {
+			out[i] = bulkItem{KeyID: req.KeyIDs[i]}
+		}
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"items": out, "request_id": reqID})
+}
+
+func (h *Handler) handleBulkDelete(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req struct {
+		TenantID         string   `json:"tenant_id"`
+		KeyIDs           []string `json:"key_ids"`
+		DestroyAfterDays int      `json:"destroy_after_days"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	if len(req.KeyIDs) > 500 {
+		writeErr(w, http.StatusBadRequest, "bad_request", "bulk delete limited to 500 items", reqID, req.TenantID)
+		return
+	}
+	if req.DestroyAfterDays <= 0 {
+		req.DestroyAfterDays = 30
+	}
+	type bulkItem struct {
+		KeyID     string     `json:"key_id"`
+		DestroyAt *time.Time `json:"destroy_at,omitempty"`
+		Error     string     `json:"error,omitempty"`
+	}
+	out := make([]bulkItem, len(req.KeyIDs))
+	runParallelBulk(r.Context(), len(req.KeyIDs), 10, func(i int) {
+		destroyAt, err := h.svc.ScheduleKeyDestroy(r.Context(), req.TenantID, req.KeyIDs[i], req.DestroyAfterDays, "bulk-delete", "", "", "")
+		if err != nil {
+			out[i] = bulkItem{KeyID: req.KeyIDs[i], Error: err.Error()}
+		} else {
+			out[i] = bulkItem{KeyID: req.KeyIDs[i], DestroyAt: &destroyAt}
+		}
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"items": out, "request_id": reqID})
+}
+
+// runParallelBulk executes fn(i) for i in [0, n) using at most workers goroutines.
+func runParallelBulk(_ context.Context, n int, workers int, fn func(i int)) {
+	if n <= 0 {
+		return
+	}
+	if workers <= 0 || workers > n {
+		workers = n
+	}
+	ch := make(chan int, n)
+	for i := 0; i < n; i++ {
+		ch <- i
+	}
+	close(ch)
+	var wg sync.WaitGroup
+	wg.Add(workers)
+	for w := 0; w < workers; w++ {
+		go func() {
+			defer wg.Done()
+			for i := range ch {
+				fn(i)
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 func (h *Handler) handleListKeys(w http.ResponseWriter, r *http.Request) {
@@ -279,6 +382,34 @@ func (h *Handler) handleListKeys(w http.ResponseWriter, r *http.Request) {
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 	rawIncludeDeleted := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("include_deleted")))
 	includeDeleted := rawIncludeDeleted == "1" || rawIncludeDeleted == "true" || rawIncludeDeleted == "yes" || rawIncludeDeleted == "on"
+
+	// Cursor-based pagination: use after_created_at + after_id if provided
+	afterCreatedAtStr := strings.TrimSpace(r.URL.Query().Get("after_created_at"))
+	afterID := strings.TrimSpace(r.URL.Query().Get("after_id"))
+	if afterCreatedAtStr != "" && afterID != "" {
+		t, err := time.Parse(time.RFC3339Nano, afterCreatedAtStr)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, "bad_request", "invalid after_created_at (use RFC3339)", reqID, tenantID)
+			return
+		}
+		keys, err := h.svc.ListKeysCursor(r.Context(), tenantID, limit, &t, afterID, includeDeleted)
+		if err != nil {
+			writeErr(w, http.StatusInternalServerError, "list_failed", err.Error(), reqID, tenantID)
+			return
+		}
+		resp := map[string]any{"items": renderKeys(keys), "request_id": reqID}
+		if len(keys) > 0 {
+			last := keys[len(keys)-1]
+			resp["next_cursor"] = map[string]string{
+				"after_created_at": last.CreatedAt.UTC().Format(time.RFC3339Nano),
+				"after_id":         last.ID,
+			}
+		}
+		resp["has_more"] = len(keys) == limit || (limit <= 0 && len(keys) == 100)
+		writeJSON(w, http.StatusOK, resp)
+		return
+	}
+
 	keys, err := h.svc.ListKeys(r.Context(), tenantID, limit, offset, includeDeleted)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "list_failed", err.Error(), reqID, tenantID)

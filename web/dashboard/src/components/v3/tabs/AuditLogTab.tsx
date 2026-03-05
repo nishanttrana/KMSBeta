@@ -62,8 +62,8 @@ const SERVICES = [
 const PAGE_SIZE = 100;
 
 const RESULT_COLORS: Record<string, string> = { success: C.green, failure: C.red, denied: C.amber };
-const SEVERITY_COLORS: Record<string, string> = { critical: C.red, high: "#f97316", medium: C.amber, low: C.blue, info: C.dim };
-const RISK_BUCKET_COLORS = [C.green, C.green, C.amber, "#f97316", C.red];
+const SEVERITY_COLORS: Record<string, string> = { critical: C.red, high: C.orange, medium: C.amber, low: C.blue, info: C.dim };
+const RISK_BUCKET_COLORS = [C.green, C.green, C.amber, C.orange, C.red];
 
 /* ── helpers ── */
 
@@ -100,7 +100,7 @@ function sevTone(s: string) {
 
 function riskColor(score: number): string {
   if (score >= 80) return C.red;
-  if (score >= 60) return "#f97316";
+  if (score >= 60) return C.orange;
   if (score >= 40) return C.amber;
   return C.green;
 }
@@ -342,6 +342,9 @@ export const AuditLogTab = ({ session, onToast }: any) => {
   const [timeRange, setTimeRange] = useState("24h");
   const [searchQuery, setSearchQuery] = useState("");
   const [offset, setOffset] = useState(0);
+
+  // audit export signing
+  const [signingKeyId, setSigningKeyId] = useState("");
 
   // sub-tab
   const [subTab, setSubTab] = useState("Events");
@@ -593,8 +596,9 @@ export const AuditLogTab = ({ session, onToast }: any) => {
           <option value="30d">Last 30d</option>
           <option value="all">All Time</option>
         </Sel>
-        <Btn small onClick={() => exportEventsAsCSV(filteredEvents)}>Export CSV</Btn>
-        <Btn small onClick={() => exportEventsAsCEF(filteredEvents)}>Export CEF</Btn>
+        <Inp style={{width:160,height:28,fontSize:10}} value={signingKeyId} onChange={(e:any)=>setSigningKeyId(e.target.value)} placeholder="Signing Key ID (optional)"/>
+        <Btn small onClick={() => void exportEventsAsCSV(filteredEvents, signingKeyId ? session : undefined, signingKeyId || undefined)}>{signingKeyId ? "Export Signed CSV" : "Export CSV"}</Btn>
+        <Btn small onClick={() => void exportEventsAsCEF(filteredEvents, signingKeyId ? session : undefined, signingKeyId || undefined)}>{signingKeyId ? "Export Signed CEF" : "Export CEF"}</Btn>
         <Btn small primary onClick={verifyChain} disabled={chainVerifying}>
           {chainVerifying ? "Verifying..." : "Verify Chain"}
         </Btn>

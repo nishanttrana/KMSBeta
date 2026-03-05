@@ -23,6 +23,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 
+	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgclustersync "vecta-kms/pkg/clustersync"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
@@ -44,11 +45,14 @@ func main() {
 	defer stop()
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
-		PostgresDSN: cfg.PostgresDSN,
-		SQLitePath:  cfg.SQLitePath,
-		UseSQLite:   cfg.UseSQLite,
-		MaxOpen:     25,
-		MaxIdle:     10,
+		PostgresDSN:     cfg.PostgresDSN,
+		PostgresRODSN:   cfg.PostgresRODSN,
+		SQLitePath:      cfg.SQLitePath,
+		UseSQLite:       cfg.UseSQLite,
+		MaxOpen:         cfg.DBMaxOpen,
+		MaxIdle:         cfg.DBMaxIdle,
+		ConnMaxIdleTime: time.Duration(cfg.DBConnMaxIdleTimeSec) * time.Second,
+		ConnMaxLifetime: time.Duration(cfg.DBConnMaxLifetimeSec) * time.Second,
 	})
 	if err != nil {
 		logger.Fatalf("db open failed: %v", err)
@@ -153,11 +157,7 @@ func main() {
 	}()
 
 	httpPort := envOr("HTTP_PORT", "8070")
-	httpSrv := &http.Server{
-		Addr:              ":" + httpPort,
-		Handler:           handler,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
+	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, pub, "logger"))
 	go func() {
 		logger.Printf("http listening on :%s", httpPort)
 		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

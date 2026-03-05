@@ -4,7 +4,11 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Server struct {
@@ -28,6 +32,7 @@ func (s *Server) routes() *http.ServeMux {
 	mux.HandleFunc("GET /wizard", s.handleWizardPage)
 	mux.HandleFunc("POST /api/v1/firstboot/preview", s.handlePreview)
 	mux.HandleFunc("POST /api/v1/firstboot/apply", s.handleApply)
+	mux.HandleFunc("POST /api/v1/firstboot/features/apply", s.handleFeaturesApply)
 	return mux
 }
 
@@ -95,6 +100,79 @@ func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 			"Verify health: /opt/vecta/infra/scripts/healthcheck-enabled-services.sh /etc/vecta/deployment.yaml",
 			"Switch to main UI: https://<appliance-ip>/",
 		},
+	})
+}
+
+// FeatureApplyRequest is a lightweight request for the onboarding wizard
+// that only updates the features section of deployment.yaml.
+type FeatureApplyRequest struct {
+	Metadata map[string]any         `json:"metadata"`
+	Spec     FeatureApplySpec       `json:"spec"`
+}
+
+type FeatureApplySpec struct {
+	Features map[string]bool `json:"features"`
+}
+
+func (s *Server) handleFeaturesApply(w http.ResponseWriter, r *http.Request) {
+	var req FeatureApplyRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error())
+		return
+	}
+	defer r.Body.Close()
+
+	deployPath := envOr("FIRSTBOOT_DEPLOYMENT_PATH", defaultDeploymentPath)
+
+	// Read existing deployment.yaml
+	existing, err := os.ReadFile(deployPath)
+	if err != nil && !os.IsNotExist(err) {
+		writeErr(w, http.StatusInternalServerError, "read_failed", err.Error())
+		return
+	}
+
+	var doc map[string]any
+	if len(existing) > 0 {
+		if err := yaml.Unmarshal(existing, &doc); err != nil {
+			writeErr(w, http.StatusInternalServerError, "parse_failed", err.Error())
+			return
+		}
+	}
+	if doc == nil {
+		doc = map[string]any{
+			"apiVersion": "kms.vecta.com/v1",
+			"kind":       "DeploymentConfig",
+		}
+	}
+
+	spec, _ := doc["spec"].(map[string]any)
+	if spec == nil {
+		spec = map[string]any{}
+	}
+	spec["features"] = req.Spec.Features
+	doc["spec"] = spec
+
+	out, err := yaml.Marshal(doc)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "marshal_failed", err.Error())
+		return
+	}
+
+	if err := os.MkdirAll(filepath.Dir(deployPath), 0o755); err != nil {
+		writeErr(w, http.StatusInternalServerError, "mkdir_failed", err.Error())
+		return
+	}
+	if err := os.WriteFile(deployPath, out, 0o644); err != nil {
+		writeErr(w, http.StatusInternalServerError, "write_failed", err.Error())
+		return
+	}
+
+	s.logger.Printf("Features updated via onboarding wizard: %v", req.Spec.Features)
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status":     "applied",
+		"applied_at": time.Now().UTC().Format(time.RFC3339),
+		"features":   req.Spec.Features,
 	})
 }
 

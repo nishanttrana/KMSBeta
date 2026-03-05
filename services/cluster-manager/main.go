@@ -23,6 +23,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 
+	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
@@ -43,11 +44,14 @@ func main() {
 	defer stop()
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
-		PostgresDSN: cfg.PostgresDSN,
-		SQLitePath:  cfg.SQLitePath,
-		UseSQLite:   cfg.UseSQLite,
-		MaxOpen:     20,
-		MaxIdle:     10,
+		PostgresDSN:     cfg.PostgresDSN,
+		PostgresRODSN:   cfg.PostgresRODSN,
+		SQLitePath:      cfg.SQLitePath,
+		UseSQLite:       cfg.UseSQLite,
+		MaxOpen:         cfg.DBMaxOpen,
+		MaxIdle:         cfg.DBMaxIdle,
+		ConnMaxIdleTime: time.Duration(cfg.DBConnMaxIdleTimeSec) * time.Second,
+		ConnMaxLifetime: time.Duration(cfg.DBConnMaxLifetimeSec) * time.Second,
 	})
 	if err != nil {
 		logger.Fatalf("db open failed: %v", err)
@@ -70,11 +74,7 @@ func main() {
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8210")
-	httpSrv := &http.Server{
-		Addr:              ":" + httpPort,
-		Handler:           handler,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
+	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "cluster"))
 	httpTLSEnabled := envBool("CLUSTER_HTTP_TLS_ENABLE", false)
 	httpTLSCertFile := strings.TrimSpace(os.Getenv("CLUSTER_HTTP_TLS_CERT_FILE"))
 	httpTLSKeyFile := strings.TrimSpace(os.Getenv("CLUSTER_HTTP_TLS_KEY_FILE"))

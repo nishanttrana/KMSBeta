@@ -266,27 +266,43 @@ func sdkFiles(provider string, targetOS string) map[string]string {
 
 func pkcs11SDKFiles(targetOS string) map[string]string {
 	osLabel := strings.ToUpper(defaultString(targetOS, "linux"))
-	readme := fmt.Sprintf(`# Vecta PKCS11 SDK (%s)
+	readme := fmt.Sprintf(`# Vecta PKCS#11 SDK (%s)
 
-This package provides a real C client starter for Vecta EKM/TDE APIs.
-Tenant binding model:
-- Client chooses tenant at registration ("register-client" operation).
-- Every crypto call requires explicit tenant_id argument.
-- Server enforces tenant isolation and rejects tenant mismatch.
+This package provides both a C client starter and the full PKCS#11 shared library provider.
+
+## Full PKCS#11 Provider
+
+The Vecta PKCS#11 provider (libvecta-pkcs11.so / .dll / .dylib) implements OASIS PKCS#11 v2.40.
+Source: services/pkcs11-provider/ in the Vecta KMS repository.
+
+Build from source:
+  cd services/pkcs11-provider && make build-linux   # or build-macos / build-windows
+
+Supported mechanisms:
+  AES-GCM (encrypt/decrypt — local cache or remote)
+  RSA (sign/verify — always remote)
+  ECDSA (sign/verify — always remote)
+
+## Authentication
+
+Four methods supported (priority order):
+  1. mTLS: Set VECTA_MTLS_CERT, VECTA_MTLS_KEY, VECTA_MTLS_CA
+  2. JWT: Set VECTA_API_KEY + VECTA_JWT_ENDPOINT (auto-refresh)
+  3. API Key: Set VECTA_API_KEY (sent as X-API-Key header)
+  4. Bearer: Set VECTA_AUTH_TOKEN (static token)
+
+## Key Caching
+
+Set VECTA_KEY_CACHE_TTL=300 to enable local key caching (seconds).
+Exportable keys are cached in mlock'd memory for fast AES-GCM.
+Non-exportable keys always proxy to KMS. TTL of 0 disables caching.
+
+## C Client Starter
 
 Files:
 - examples/c/vecta_kms_client.c (libcurl-based C client)
 - examples/c/Makefile
 - config/vecta-kms.env.example
-- scripts/run_sdk_demo.sh
-- scripts/run_sdk_demo.ps1
-
-Required environment:
-- VECTA_BASE_URL (example: https://kms.example.com/svc/ekm)
-- VECTA_AUTH_BASE_URL (example: https://kms.example.com)
-- VECTA_TOKEN (required for crypto operations)
-- VECTA_AGENT_ID
-- VECTA_DATABASE_ID
 
 Build:
   make -C examples/c
@@ -295,6 +311,9 @@ Examples:
   ./examples/c/vecta_kms_client register-client root app1 ops@acme.com service app-service
   ./examples/c/vecta_kms_client wrap root key_123 BASE64PLAINTEXT
   ./examples/c/vecta_kms_client public root key_123
+
+Environment:
+  VECTA_BASE_URL, VECTA_AUTH_BASE_URL, VECTA_TOKEN, VECTA_AGENT_ID, VECTA_DATABASE_ID
 
 Target OS profile: %s
 `, osLabel, osLabel)
@@ -601,14 +620,41 @@ if ($args.Count -lt 1) {
 }
 
 func jcaSDKFiles() map[string]string {
-	readme := `# Vecta Java SDK (JCA/JCE Starter)
+	readme := `# Vecta Java SDK (JCA/JCE Provider)
 
-This package includes a real Java client starter for Vecta KMS APIs over HTTPS + mTLS-friendly transport.
+This package includes both the full JCA security provider and a Java client starter.
 
-Tenant binding model:
-- Register client using explicit tenant ("register-client").
-- Every SDK method requires tenantId argument per call.
-- Server enforces tenant isolation and denies cross-tenant usage.
+## Full JCA Provider
+
+The Vecta JCA Provider (vecta-jca-provider.jar) for Java 11+ registers:
+  Cipher: AES/GCM/NoPadding (local cache if exportable, else remote KMS)
+  Signature: SHA256withRSA, SHA256withECDSA (always remote)
+  KeyStore: VectaKMS (enumerate/load keys from KMS)
+  SecureRandom: VectaQRNG (proxy to QRNG endpoint, fallback to local)
+
+Source: services/jca-provider/ in the Vecta KMS repository.
+
+Setup:
+  Security.addProvider(new VectaKMSProvider());
+  // OR add to java.security: security.provider.N=com.vecta.kms.VectaKMSProvider
+
+Build from source:
+  cd services/jca-provider && mvn package
+
+## Authentication
+
+Same four methods as PKCS#11 (priority order):
+  1. mTLS: VECTA_MTLS_CERT, VECTA_MTLS_KEY, VECTA_MTLS_CA
+  2. JWT: VECTA_API_KEY + VECTA_JWT_ENDPOINT
+  3. API Key: VECTA_API_KEY
+  4. Bearer: VECTA_AUTH_TOKEN
+
+## Key Caching
+
+Set VECTA_KEY_CACHE_TTL=300 for local key caching. Uses java.lang.ref.Cleaner
+for GC-triggered zeroization plus explicit Arrays.fill on eviction.
+
+## Java Client Starter
 
 Build:
   mvn -q -DskipTests package
@@ -618,11 +664,7 @@ Run:
   java -jar target/vecta-jca-provider.jar wrap root key_123 BASE64PLAINTEXT
 
 Environment:
-- VECTA_BASE_URL
-- VECTA_AUTH_BASE_URL
-- VECTA_TOKEN
-- VECTA_AGENT_ID
-- VECTA_DATABASE_ID
+  VECTA_BASE_URL, VECTA_AUTH_BASE_URL, VECTA_TOKEN, VECTA_AGENT_ID, VECTA_DATABASE_ID
 `
 	pom := `<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">

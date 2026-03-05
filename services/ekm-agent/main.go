@@ -17,6 +17,9 @@ import (
 	"time"
 
 	"github.com/kardianos/service"
+
+	"vecta-kms/pkg/agentauth"
+	"vecta-kms/pkg/keycache"
 )
 
 type program struct {
@@ -128,9 +131,23 @@ func (p *program) runLoop() {
 		p.logger.Printf("register failed: %v", err)
 	}
 
+	// Attempt key export into local cache after registration
+	if runner.keyCache.Enabled() && strings.TrimSpace(p.cfg.ActiveKeyID) != "" {
+		if err := runner.TryExportKey(ctx, p.cfg.ActiveKeyID); err != nil {
+			p.logger.Printf("key export to cache failed (will use remote): %v", err)
+		}
+	}
+
 	interval := time.Duration(maxInt(p.cfg.HeartbeatIntervalSec, 5)) * time.Second
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+
+	// BitLocker mode: add job polling ticker
+	var jobTicker *time.Ticker
+	if p.cfg.AgentMode == "bitlocker" {
+		jobTicker = time.NewTicker(10 * time.Second)
+		defer jobTicker.Stop()
+	}
 
 	// Support foreground graceful shutdown when not running via SCM.
 	sigCtx, sigCancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -140,9 +157,11 @@ func (p *program) runLoop() {
 		select {
 		case <-p.stopCh:
 			p.logger.Printf("stop requested")
+			runner.keyCache.Close()
 			return
 		case <-sigCtx.Done():
 			p.logger.Printf("signal received, stopping")
+			runner.keyCache.Close()
 			return
 		case <-ticker.C:
 			hbCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -151,6 +170,15 @@ func (p *program) runLoop() {
 			if err != nil {
 				p.logger.Printf("heartbeat failed: %v", err)
 			}
+		case <-func() <-chan time.Time {
+			if jobTicker != nil {
+				return jobTicker.C
+			}
+			return nil
+		}():
+			jobCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			runner.PollAndExecuteJob(jobCtx)
+			cancel()
 		}
 	}
 }
@@ -160,22 +188,54 @@ type AgentRunner struct {
 	httpClient *http.Client
 	logger     *log.Logger
 	inspector  TDEInspector
+	auth       *agentauth.Provider
+	keyCache   *keycache.Cache
 }
 
 func NewAgentRunner(cfg AgentConfig, logger *log.Logger) *AgentRunner {
+	// Build multi-auth provider
+	authCfg := agentauth.Config{
+		MTLSCertPath: cfg.MTLSCertPath,
+		MTLSKeyPath:  cfg.MTLSKeyPath,
+		MTLSCAPath:   cfg.MTLSCAPath,
+		APIKey:       cfg.APIKey,
+		JWTEndpoint:  cfg.JWTEndpoint,
+		AuthToken:    cfg.AuthToken,
+		TenantID:     cfg.TenantID,
+		Role:         cfg.Role,
+	}
+	auth, err := agentauth.New(authCfg)
+	if err != nil {
+		logger.Printf("WARNING: agentauth init failed (falling back to Bearer): %v", err)
+		auth, _ = agentauth.New(agentauth.Config{AuthToken: cfg.AuthToken, TenantID: cfg.TenantID})
+	}
+	logger.Printf("auth method: %s", auth.AuthMethod())
+
 	transport := &http.Transport{}
-	if cfg.TLSSkipVerify {
+	if auth.HasMTLS() {
+		transport.TLSClientConfig = auth.TLSConfig()
+	} else if cfg.TLSSkipVerify {
 		transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true} //nolint:gosec
 	}
 	client := &http.Client{
 		Timeout:   15 * time.Second,
 		Transport: transport,
 	}
+
+	cacheTTL := time.Duration(cfg.KeyCacheTTLSec) * time.Second
+	kc := keycache.New(cfg.KeyCacheEnabled, cacheTTL)
+	if cfg.KeyCacheEnabled {
+		kc.StartEvictionLoop(30 * time.Second)
+		logger.Printf("key cache enabled, ttl=%ds", cfg.KeyCacheTTLSec)
+	}
+
 	return &AgentRunner{
 		cfg:        cfg,
 		httpClient: client,
 		logger:     logger,
 		inspector:  NewTDEInspector(cfg),
+		auth:       auth,
+		keyCache:   kc,
 	}
 }
 
@@ -270,9 +330,8 @@ func (r *AgentRunner) postJSON(ctx context.Context, url string, payload interfac
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Tenant-ID", r.cfg.TenantID)
-	if strings.TrimSpace(r.cfg.AuthToken) != "" {
-		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(r.cfg.AuthToken))
+	if err := r.auth.ApplyAuth(req); err != nil {
+		return fmt.Errorf("apply auth: %w", err)
 	}
 	resp, err := r.httpClient.Do(req)
 	if err != nil {
@@ -281,6 +340,28 @@ func (r *AgentRunner) postJSON(ctx context.Context, url string, payload interfac
 	defer resp.Body.Close() //nolint:errcheck
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		return fmt.Errorf("http %s failed: status=%d", url, resp.StatusCode)
+	}
+	if out != nil {
+		return json.NewDecoder(resp.Body).Decode(out)
+	}
+	return nil
+}
+
+func (r *AgentRunner) getJSON(ctx context.Context, url string, out interface{}) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	if err := r.auth.ApplyAuth(req); err != nil {
+		return fmt.Errorf("apply auth: %w", err)
+	}
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close() //nolint:errcheck
+	if resp.StatusCode < 200 || resp.StatusCode > 299 {
+		return fmt.Errorf("http GET %s failed: status=%d", url, resp.StatusCode)
 	}
 	if out != nil {
 		return json.NewDecoder(resp.Body).Decode(out)

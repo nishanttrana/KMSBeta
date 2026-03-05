@@ -5,12 +5,27 @@ import { trackedFetch } from "./serviceApi";
 export type DeploymentConfig = {
   apiVersion?: string;
   kind?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: Record<string, unknown> & {
+    install_mode?: "fast" | "interactive";
+  };
   spec?: {
     hsm_mode?: "hardware" | "software" | "auto";
     features?: Partial<Record<FeatureKey, boolean>>;
   };
 };
+
+export function isFastModeInstall(config: DeploymentConfig): boolean {
+  return String((config.metadata as any)?.install_mode || "").trim().toLowerCase() === "fast";
+}
+
+export function hasAnyFeaturesEnabled(config: DeploymentConfig): boolean {
+  const features = config.spec?.features ?? {};
+  return Object.values(features).some(Boolean);
+}
+
+export function needsOnboarding(config: DeploymentConfig): boolean {
+  return isFastModeInstall(config) && !hasAnyFeaturesEnabled(config);
+}
 
 const defaultDeployment: DeploymentConfig = {
   apiVersion: "kms.vecta.com/v1",

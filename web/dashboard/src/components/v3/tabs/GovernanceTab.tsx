@@ -297,12 +297,12 @@ export const GovernanceTab = ({ session, onToast }: any) => {
       <Stat l="Pending" v={statusFilter === "pending" ? items.length : pendingCount} c="amber" i={Clock} />
       <Stat l="Approved" v={statusFilter === "approved" ? items.length : approvedCount} c="green" i={CheckCircle2} />
       <Stat l="Denied" v={statusFilter === "denied" ? items.length : deniedCount} c="red" i={XCircle} />
-      <Stat l="Delivery" v={String(settings?.approval_delivery_mode || "notify")} c="blue" i={Send} />
+      <Stat l="Notifications" v={settings?.approval_delivery_mode === "kms_only" ? "Dashboard Only" : "External + Dashboard"} c={settings?.approval_delivery_mode === "kms_only" ? "muted" : "blue"} i={Send} />
     </div>
 
     {/* ── Tabs ── */}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      <Tabs tabs={["Requests", "Policies", "Settings"]} active={tab === "requests" ? 0 : tab === "policies" ? 1 : 2} onChange={(i) => setTab(["requests", "policies", "settings"][i])} />
+      <Tabs tabs={["Requests", "Policies", "Settings"]} active={tab === "requests" ? "Requests" : tab === "policies" ? "Policies" : "Settings"} onChange={(t) => setTab(t === "Requests" ? "requests" : t === "Policies" ? "policies" : "settings")} />
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
         {tab === "requests" && <>
           <Sel value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ width: 120 }}>
@@ -476,7 +476,7 @@ export const GovernanceTab = ({ session, onToast }: any) => {
         <Card>
           <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 10, display: "flex", alignItems: "center", gap: 6 }}><Shield size={14} color={C.accent} /> Security</div>
           <div style={{ display: "grid", gap: 6 }}>
-            <SettingRow label="Delivery Mode" value={settings?.approval_delivery_mode || "notify"} color={C.accent} />
+            <SettingRow label="External Notifications" value={settings?.approval_delivery_mode === "kms_only" ? "Disabled (Dashboard Only)" : "Enabled (External + Dashboard)"} color={settings?.approval_delivery_mode === "kms_only" ? C.muted : C.green} />
             <SettingRow label="Challenge Response" value={settings?.challenge_response_enabled ? "Required" : "Disabled"} color={settings?.challenge_response_enabled ? C.amber : C.muted} />
             <SettingRow label="SMTP Host" value={settings?.smtp_host || "Not set"} color={settings?.smtp_host ? C.green : C.muted} />
             <SettingRow label="Expiry" value={`${settings?.approval_expiry_minutes || 2880} min`} color={C.dim} />
@@ -549,11 +549,18 @@ export const GovernanceTab = ({ session, onToast }: any) => {
 
     {/* ════════════ SETTINGS MODAL ════════════ */}
     <Modal open={settingsModal} onClose={() => setSettingsModal(false)} title="Governance Settings" wide>
-      <FG label="Delivery Mode">
-        <Sel value={deliveryMode} onChange={(e) => setDeliveryMode(e.target.value)}>
-          <option value="notify">Notify (send notifications)</option>
-          <option value="kms_only">KMS Only (dashboard-only approvals)</option>
-        </Sel>
+      <FG label="External Notifications" hint="When enabled, approval requests are sent to external channels (Email, Slack, Teams). When disabled, approvals are managed through the KMS dashboard only.">
+        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <div
+            onClick={() => setDeliveryMode(deliveryMode === "notify" ? "kms_only" : "notify")}
+            style={{ width: 40, height: 22, borderRadius: 11, background: deliveryMode === "notify" ? C.accent : C.border, cursor: "pointer", position: "relative", transition: "background .2s" }}
+          >
+            <div style={{ width: 16, height: 16, borderRadius: 8, background: C.white, position: "absolute", top: 3, left: deliveryMode === "notify" ? 21 : 3, transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,.3)" }} />
+          </div>
+          <span style={{ fontSize: 11, color: deliveryMode === "notify" ? C.accent : C.dim, fontWeight: 600 }}>
+            {deliveryMode === "notify" ? "Enabled — External + Dashboard" : "Disabled — Dashboard Only"}
+          </span>
+        </div>
       </FG>
       <FG label="Security">
         <Chk label="Require challenge-response code for dashboard votes" checked={challengeEnabled} onChange={setChallengeEnabled} />

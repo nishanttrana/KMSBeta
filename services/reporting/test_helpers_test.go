@@ -155,6 +155,7 @@ func createReportingSchemaForTest(conn *pkgdb.DB) error {
 			window_seconds INTEGER NOT NULL DEFAULT 0,
 			channels_json TEXT NOT NULL DEFAULT '[]',
 			enabled BOOLEAN NOT NULL DEFAULT TRUE,
+			expression TEXT NOT NULL DEFAULT '',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id)

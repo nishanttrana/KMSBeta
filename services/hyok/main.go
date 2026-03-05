@@ -24,6 +24,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 
+	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgauth "vecta-kms/pkg/auth"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
@@ -45,11 +46,14 @@ func main() {
 	defer stop()
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
-		PostgresDSN: cfg.PostgresDSN,
-		SQLitePath:  cfg.SQLitePath,
-		UseSQLite:   cfg.UseSQLite,
-		MaxOpen:     20,
-		MaxIdle:     10,
+		PostgresDSN:     cfg.PostgresDSN,
+		PostgresRODSN:   cfg.PostgresRODSN,
+		SQLitePath:      cfg.SQLitePath,
+		UseSQLite:       cfg.UseSQLite,
+		MaxOpen:         cfg.DBMaxOpen,
+		MaxIdle:         cfg.DBMaxIdle,
+		ConnMaxIdleTime: time.Duration(cfg.DBConnMaxIdleTimeSec) * time.Second,
+		ConnMaxLifetime: time.Duration(cfg.DBConnMaxLifetimeSec) * time.Second,
 	})
 	if err != nil {
 		logger.Fatalf("db open failed: %v", err)
@@ -89,11 +93,7 @@ func main() {
 	handler := NewHandler(svc, jwtParser)
 
 	httpPort := envOr("HTTP_PORT", "8120")
-	httpSrv := &http.Server{
-		Addr:              ":" + httpPort,
-		Handler:           handler,
-		ReadHeaderTimeout: 10 * time.Second,
-	}
+	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "hyok"))
 	go func() {
 		tlsCert := strings.TrimSpace(os.Getenv("HYOK_TLS_CERT_FILE"))
 		tlsKey := strings.TrimSpace(os.Getenv("HYOK_TLS_KEY_FILE"))

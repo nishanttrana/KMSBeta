@@ -1789,6 +1789,30 @@ func (s *Service) ListKeys(ctx context.Context, tenantID string, limit int, offs
 	return out, nil
 }
 
+func (s *Service) ListKeysCursor(ctx context.Context, tenantID string, limit int, afterCreatedAt *time.Time, afterID string, includeDeleted bool) ([]Key, error) {
+	if err := s.reconcileLifecycle(ctx, tenantID); err != nil {
+		return nil, err
+	}
+	keys, err := s.store.ListKeysCursor(ctx, tenantID, limit, afterCreatedAt, afterID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Key, 0, len(keys))
+	for _, k := range keys {
+		if normalizeLifecycleStatus(k.Status) == "deleted" {
+			_ = s.cache.Delete(ctx, tenantID, k.ID)
+			if includeDeleted {
+				out = append(out, k)
+			}
+			continue
+		}
+		out = append(out, k)
+		s.exists.AddString(existsToken(tenantID, k.ID))
+		_ = s.cache.Set(ctx, k)
+	}
+	return out, nil
+}
+
 func (s *Service) GetKey(ctx context.Context, tenantID string, keyID string) (Key, error) {
 	if err := s.reconcileLifecycle(ctx, tenantID); err != nil {
 		return Key{}, err
