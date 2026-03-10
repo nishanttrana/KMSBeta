@@ -66,6 +66,19 @@ type VulnerabilityMatch struct {
 	Reference        string `json:"reference"`
 }
 
+type ManualAdvisory struct {
+	ID                string    `json:"id"`
+	Component         string    `json:"component"`
+	Ecosystem         string    `json:"ecosystem"`
+	IntroducedVersion string    `json:"introduced_version"`
+	FixedVersion      string    `json:"fixed_version"`
+	Severity          string    `json:"severity"`
+	Summary           string    `json:"summary"`
+	Reference         string    `json:"reference"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
 type CryptoAsset struct {
 	ID           string                 `json:"id"`
 	TenantID     string                 `json:"tenant_id"`

@@ -24,6 +24,7 @@ type Service struct {
 	certs         CertsClient
 	discovery     DiscoveryClient
 	events        EventPublisher
+	vulnProvider  VulnerabilityProvider
 	workspaceRoot string
 }
 
@@ -38,6 +39,7 @@ func NewService(store Store, keycore KeyCoreClient, certs CertsClient, discovery
 		certs:         certs,
 		discovery:     discovery,
 		events:        events,
+		vulnProvider:  newDefaultVulnerabilityProvider(store),
 		workspaceRoot: root,
 	}
 }
@@ -112,11 +114,15 @@ func (s *Service) GenerateSBOM(ctx context.Context, trigger string) (SBOMSnapsho
 	if err != nil {
 		return SBOMSnapshot{}, err
 	}
+	vulnerabilityCount := 0
+	if matches, err := s.correlateVulnerabilities(ctx, item.Document.Components); err == nil {
+		vulnerabilityCount = len(matches)
+	}
 	_ = s.publishAudit(ctx, "audit.sbom.generated", "", map[string]interface{}{
 		"snapshot_id":       item.ID,
 		"component_count":   len(item.Document.Components),
 		"trigger":           defaultString(trigger, "manual"),
-		"vulnerability_cnt": len(correlateVulnerabilities(item.Document.Components)),
+		"vulnerability_cnt": vulnerabilityCount,
 	})
 	return item, nil
 }
@@ -160,7 +166,59 @@ func (s *Service) SBOMVulnerabilities(ctx context.Context) ([]VulnerabilityMatch
 	if err != nil {
 		return nil, err
 	}
-	return correlateVulnerabilities(item.Document.Components), nil
+	return s.correlateVulnerabilities(ctx, item.Document.Components)
+}
+
+func (s *Service) ListManualAdvisories(ctx context.Context) ([]ManualAdvisory, error) {
+	return s.store.ListManualAdvisories(ctx)
+}
+
+func (s *Service) SaveManualAdvisory(ctx context.Context, item ManualAdvisory) (ManualAdvisory, error) {
+	item.Component = strings.TrimSpace(item.Component)
+	item.Ecosystem = normalizeManualEcosystem(item.Ecosystem)
+	item.IntroducedVersion = strings.TrimSpace(item.IntroducedVersion)
+	item.FixedVersion = strings.TrimSpace(item.FixedVersion)
+	item.Severity = normalizeSeverity(item.Severity)
+	item.Summary = strings.TrimSpace(item.Summary)
+	item.Reference = strings.TrimSpace(item.Reference)
+	item.ID = strings.TrimSpace(item.ID)
+
+	if item.Component == "" {
+		return ManualAdvisory{}, newServiceError(400, "bad_request", "component is required")
+	}
+	if item.Severity == "unknown" {
+		return ManualAdvisory{}, newServiceError(400, "bad_request", "severity must be low, medium, high, or critical")
+	}
+	if item.Summary == "" {
+		return ManualAdvisory{}, newServiceError(400, "bad_request", "summary is required")
+	}
+	if item.ID == "" {
+		item.ID = newID("osv")
+	}
+	if item.IntroducedVersion != "" && item.FixedVersion != "" && compareSemver(item.IntroducedVersion, item.FixedVersion) >= 0 {
+		return ManualAdvisory{}, newServiceError(400, "bad_request", "introduced_version must be lower than fixed_version")
+	}
+	if err := s.store.UpsertManualAdvisory(ctx, item); err != nil {
+		return ManualAdvisory{}, err
+	}
+	items, err := s.store.ListManualAdvisories(ctx)
+	if err != nil {
+		return ManualAdvisory{}, err
+	}
+	for _, existing := range items {
+		if existing.ID == item.ID {
+			return existing, nil
+		}
+	}
+	return item, nil
+}
+
+func (s *Service) DeleteManualAdvisory(ctx context.Context, id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return newServiceError(400, "bad_request", "id is required")
+	}
+	return s.store.DeleteManualAdvisory(ctx, id)
 }
 
 func (s *Service) DiffSBOM(ctx context.Context, fromID string, toID string) (BOMDiff, error) {
@@ -178,8 +236,26 @@ func (s *Service) DiffSBOM(ctx context.Context, fromID string, toID string) (BOM
 	diff := diffComponents(from.Document.Components, to.Document.Components)
 	diff.FromID = fromID
 	diff.ToID = toID
-	diff.Metrics["vulnerability_delta"] = len(correlateVulnerabilities(to.Document.Components)) - len(correlateVulnerabilities(from.Document.Components))
+	fromMatches, fromErr := s.correlateVulnerabilities(ctx, from.Document.Components)
+	toMatches, toErr := s.correlateVulnerabilities(ctx, to.Document.Components)
+	if fromErr == nil && toErr == nil {
+		diff.Metrics["vulnerability_delta"] = len(toMatches) - len(fromMatches)
+	} else {
+		diff.Metrics["vulnerability_delta"] = 0
+	}
 	return diff, nil
+}
+
+func (s *Service) correlateVulnerabilities(ctx context.Context, components []BOMComponent) ([]VulnerabilityMatch, error) {
+	if s.vulnProvider == nil {
+		return correlateCatalogVulnerabilities(components), nil
+	}
+	items, err := s.vulnProvider.Match(ctx, components)
+	if err == nil {
+		return dedupeVulnerabilityMatches(items), nil
+	}
+	logger.Printf("external vulnerability providers failed, using local catalog fallback: %v", err)
+	return correlateCatalogVulnerabilities(components), nil
 }
 
 func (s *Service) ExportSBOM(ctx context.Context, id string, format string, encoding string) (ExportArtifact, error) {
@@ -1224,83 +1300,6 @@ func diffAssets(from CBOMDocument, to CBOMDocument) BOMDiff {
 			"pqc_readiness_delta": round2(to.PQCReadinessPercent - from.PQCReadinessPercent),
 		},
 		Compared: time.Now().UTC(),
-	}
-}
-
-type vulnerabilityRule struct {
-	ID           string
-	Source       string
-	Severity     string
-	Module       string
-	FixedVersion string
-	Summary      string
-	Reference    string
-}
-
-var vulnCatalog = []vulnerabilityRule{
-	{
-		ID:           "CVE-2024-45338",
-		Source:       "OSV",
-		Severity:     "high",
-		Module:       "golang.org/x/net",
-		FixedVersion: "v0.35.0",
-		Summary:      "Potential HTTP handling vulnerability fixed in newer x/net.",
-		Reference:    "https://osv.dev/",
-	},
-	{
-		ID:           "CVE-2024-24784",
-		Source:       "NVD",
-		Severity:     "medium",
-		Module:       "google.golang.org/grpc",
-		FixedVersion: "v1.72.0",
-		Summary:      "gRPC security fix available in newer version.",
-		Reference:    "https://nvd.nist.gov/",
-	},
-}
-
-func correlateVulnerabilities(components []BOMComponent) []VulnerabilityMatch {
-	out := []VulnerabilityMatch{}
-	for _, c := range components {
-		if strings.TrimSpace(c.Name) == "" || strings.TrimSpace(c.Version) == "" {
-			continue
-		}
-		for _, rule := range vulnCatalog {
-			if c.Name != rule.Module {
-				continue
-			}
-			if compareSemver(c.Version, rule.FixedVersion) >= 0 {
-				continue
-			}
-			out = append(out, VulnerabilityMatch{
-				ID:               rule.ID,
-				Source:           rule.Source,
-				Severity:         rule.Severity,
-				Component:        c.Name,
-				InstalledVersion: c.Version,
-				FixedVersion:     rule.FixedVersion,
-				Summary:          rule.Summary,
-				Reference:        rule.Reference,
-			})
-		}
-	}
-	sort.Slice(out, func(i, j int) bool {
-		return severityRank(out[i].Severity) > severityRank(out[j].Severity)
-	})
-	return out
-}
-
-func severityRank(v string) int {
-	switch strings.ToLower(strings.TrimSpace(v)) {
-	case "critical":
-		return 4
-	case "high":
-		return 3
-	case "medium":
-		return 2
-	case "low":
-		return 1
-	default:
-		return 0
 	}
 }
 

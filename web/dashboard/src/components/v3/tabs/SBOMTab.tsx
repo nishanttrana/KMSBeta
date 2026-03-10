@@ -9,6 +9,7 @@ import { B, Btn, Card, Inp, Modal, Row3, Section, Sel, Stat, Tabs } from "../leg
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
 import {
+  deleteSBOMAdvisory,
   diffCBOM,
   diffSBOM,
   exportCBOM,
@@ -19,9 +20,11 @@ import {
   getCBOMSummary,
   getLatestCBOM,
   getLatestSBOM,
+  listSBOMAdvisories,
   listCBOMHistory,
   listSBOMHistory,
-  listSBOMVulnerabilities
+  listSBOMVulnerabilities,
+  saveSBOMAdvisory
 } from "../../../lib/sbom";
 
 const ChartTip = ({ children }: { children: ReactNode }) => (
@@ -65,6 +68,23 @@ export const SBOMTab = ({ session, onToast }: any) => {
   const [vulnSearch, setVulnSearch] = useState("");
   const [componentSearch, setComponentSearch] = useState("");
   const [componentCategoryFilter, setComponentCategoryFilter] = useState("all");
+  const [manualAdvisories, setManualAdvisories] = useState<any[]>([]);
+  const [vulnLoading, setVulnLoading] = useState(false);
+  const [vulnLoaded, setVulnLoaded] = useState(false);
+  const [vulnAttempted, setVulnAttempted] = useState(false);
+  const [advisoryModalOpen, setAdvisoryModalOpen] = useState(false);
+  const [savingAdvisory, setSavingAdvisory] = useState(false);
+  const [deletingAdvisory, setDeletingAdvisory] = useState("");
+  const [advisoryForm, setAdvisoryForm] = useState<any>({
+    id: "",
+    component: "",
+    ecosystem: "go",
+    introduced_version: "",
+    fixed_version: "",
+    severity: "high",
+    summary: "",
+    reference: ""
+  });
 
   // ── Download helpers ──────────────────────────────────────────
   const downloadTextFile = (filename: string, content: string, mime = "application/json") => {
@@ -103,7 +123,11 @@ export const SBOMTab = ({ session, onToast }: any) => {
     if (!session?.token) {
       setSBOMLatest(null); setSBOMHistory([]); setSBOMVulns([]);
       setCBOMLatest(null); setCBOMSummary({}); setCBOMHistory([]);
+      setManualAdvisories([]);
       setPQCReadiness(null);
+      setVulnLoading(false);
+      setVulnLoaded(false);
+      setVulnAttempted(false);
       return;
     }
     const doRefresh = Boolean(opts?.refresh);
@@ -113,10 +137,10 @@ export const SBOMTab = ({ session, onToast }: any) => {
       if (doRefresh) {
         await Promise.all([generateSBOM(session, "manual"), generateCBOM(session, "manual")]);
       }
-      const [sbomOut, sbomHistoryOut, vulnOut, cbomOut, summaryOut, historyOut, pqcOut] = await Promise.all([
+      const [sbomOut, sbomHistoryOut, advisoryOut, cbomOut, summaryOut, historyOut, pqcOut] = await Promise.all([
         getLatestSBOM(session),
         listSBOMHistory(session, 12),
-        listSBOMVulnerabilities(session),
+        listSBOMAdvisories(session).catch(() => []),
         getLatestCBOM(session),
         getCBOMSummary(session),
         listCBOMHistory(session, 8),
@@ -124,12 +148,14 @@ export const SBOMTab = ({ session, onToast }: any) => {
       ]);
       setSBOMLatest(sbomOut || null);
       setSBOMHistory(Array.isArray(sbomHistoryOut) ? sbomHistoryOut : []);
-      setSBOMVulns(Array.isArray(vulnOut) ? vulnOut : []);
+      setManualAdvisories(Array.isArray(advisoryOut) ? advisoryOut : []);
       setCBOMLatest(cbomOut || null);
       setCBOMSummary(summaryOut || {});
       setCBOMHistory(Array.isArray(historyOut) ? historyOut : []);
       setPQCReadiness(pqcOut || null);
-      if (doRefresh) onToast?.("SBOM and CBOM refreshed from current components and cryptographic assets.");
+      if (doRefresh) {
+        onToast?.("SBOM and CBOM refreshed. Vulnerability findings are updating in the background.");
+      }
     } catch (error) {
       onToast?.(`SBOM/CBOM load failed: ${errMsg(error)}`);
     } finally {
@@ -138,10 +164,87 @@ export const SBOMTab = ({ session, onToast }: any) => {
     }
   };
 
+  const loadVulnerabilities = async (opts: any = {}) => {
+    if (!session?.token) {
+      setSBOMVulns([]);
+      setVulnLoading(false);
+      setVulnLoaded(false);
+      setVulnAttempted(false);
+      return;
+    }
+    if (vulnLoading && !opts?.force) return;
+    setVulnAttempted(true);
+    setVulnLoading(true);
+    try {
+      const out = await listSBOMVulnerabilities(session);
+      setSBOMVulns(Array.isArray(out) ? out : []);
+      setVulnLoaded(true);
+      if (opts?.notify) onToast?.("Vulnerability findings updated.");
+    } catch (error) {
+      if (!opts?.suppressToast) onToast?.(`Vulnerability scan failed: ${errMsg(error)}`);
+    } finally {
+      setVulnLoading(false);
+    }
+  };
+
+  const resetAdvisoryForm = () => setAdvisoryForm({
+    id: "",
+    component: "",
+    ecosystem: "go",
+    introduced_version: "",
+    fixed_version: "",
+    severity: "high",
+    summary: "",
+    reference: ""
+  });
+
+  const saveOfflineAdvisory = async () => {
+    if (!session?.token) { onToast?.("Login is required."); return; }
+    setSavingAdvisory(true);
+    try {
+      await saveSBOMAdvisory(session, advisoryForm);
+      await loadData({ silent: true });
+      void loadVulnerabilities({ force: true, suppressToast: true });
+      resetAdvisoryForm();
+      setAdvisoryModalOpen(false);
+      onToast?.("Offline advisory saved.");
+    } catch (error) {
+      onToast?.(`Offline advisory save failed: ${errMsg(error)}`);
+    } finally {
+      setSavingAdvisory(false);
+    }
+  };
+
+  const removeOfflineAdvisory = async (id: string) => {
+    if (!session?.token || !id) return;
+    if (!window.confirm(`Delete advisory ${id}?`)) return;
+    setDeletingAdvisory(id);
+    try {
+      await deleteSBOMAdvisory(session, id);
+      await loadData({ silent: true });
+      void loadVulnerabilities({ force: true, suppressToast: true });
+      onToast?.(`Advisory ${id} deleted.`);
+    } catch (error) {
+      onToast?.(`Delete advisory failed: ${errMsg(error)}`);
+    } finally {
+      setDeletingAdvisory("");
+    }
+  };
+
   useEffect(() => {
-    void loadData({ refresh: true });
+    setSBOMVulns([]);
+    setVulnLoading(false);
+    setVulnLoaded(false);
+    setVulnAttempted(false);
+    void loadData({ silent: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.token, session?.tenantId]);
+
+  useEffect(() => {
+    if (!session?.token || tab !== "Vulnerabilities" || vulnLoaded || vulnLoading || vulnAttempted) return;
+    void loadVulnerabilities({ suppressToast: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, session?.token, session?.tenantId, vulnLoaded, vulnLoading, vulnAttempted]);
 
   // ── Export functions ──────────────────────────────────────────
   const exportSBOMFile = async (format: string) => {
@@ -245,6 +348,16 @@ export const SBOMTab = ({ session, onToast }: any) => {
   // ── Computed data ─────────────────────────────────────────────
   const components = Array.isArray(sbomLatest?.document?.components) ? sbomLatest.document.components : [];
   const vulnerabilities = Array.isArray(sbomVulns) ? sbomVulns : [];
+  const vulnerabilitySources = useMemo(() => {
+    const counts: Record<string, number> = {};
+    vulnerabilities.forEach((item: any) => {
+      const raw = String(item?.source || "unknown").trim() || "unknown";
+      raw.split(",").map((part) => part.trim()).filter(Boolean).forEach((key) => {
+        counts[key] = Number(counts[key] || 0) + 1;
+      });
+    });
+    return counts;
+  }, [vulnerabilities]);
 
   const severityRank = (sev: string) => {
     const n = String(sev || "").toLowerCase();
@@ -272,7 +385,40 @@ export const SBOMTab = ({ session, onToast }: any) => {
   const containerComponents = components.filter((c: any) => String(c?.type || "").toLowerCase() === "container");
   const systemComponents = components.filter((c: any) => ["runtime", "infrastructure", "os-pkg"].includes(String(c?.type || "").toLowerCase()));
 
+  const normalizeComponentKey = (name: any, version?: any) => {
+    const base = String(name || "").trim().toLowerCase();
+    const ver = String(version || "").trim().toLowerCase();
+    if (!base) return "";
+    return ver ? `${base}@${ver}` : base;
+  };
+
+  const vulnerableComponentKeys = useMemo(() => {
+    const keys = new Set<string>();
+    vulnerabilities.forEach((item: any) => {
+      const nameKey = normalizeComponentKey(item?.component);
+      const versionKey = normalizeComponentKey(item?.component, item?.installed_version);
+      if (nameKey) keys.add(nameKey);
+      if (versionKey) keys.add(versionKey);
+    });
+    return keys;
+  }, [vulnerabilities]);
+
+  const isVulnerableComponent = (component: any) => {
+    const versionKey = normalizeComponentKey(component?.name, component?.version);
+    const nameKey = normalizeComponentKey(component?.name);
+    return vulnerableComponentKeys.has(versionKey) || vulnerableComponentKeys.has(nameKey);
+  };
+
+  const vulnerableComponentCount = components.filter((component: any) => isVulnerableComponent(component)).length;
+  const hasVulnerabilityCoverage = vulnLoaded;
+  const healthyComponentCount = hasVulnerabilityCoverage ? Math.max(0, components.length - vulnerableComponentCount) : 0;
+  const dependencyHealthPct = hasVulnerabilityCoverage && components.length > 0 ? Math.round((healthyComponentCount / components.length) * 100) : 0;
+  const dependencyHealthTone = !hasVulnerabilityCoverage ? "dim" : dependencyHealthPct >= 90 ? "green" : dependencyHealthPct >= 70 ? "amber" : "red";
+  const dependencyHealthColor = dependencyHealthTone === "green" ? C.green : dependencyHealthTone === "amber" ? C.amber : C.red;
+  const dependencyHealthGaugeData = [{ name: "Dependency health", value: dependencyHealthPct, fill: hasVulnerabilityCoverage ? dependencyHealthColor : C.dim }];
+
   const categorySeverity = (names: string[]) => {
+    if (!hasVulnerabilityCoverage) return { label: vulnLoading ? "Scanning" : "Pending", tone: "dim" };
     const set = new Set(names.map((n) => String(n || "").trim().toLowerCase()).filter(Boolean));
     const items = vulnerabilities.filter((v: any) => set.has(String(v?.component || "").trim().toLowerCase()));
     if (!items.length) return { label: "0 CVEs", tone: "green" };
@@ -398,7 +544,13 @@ export const SBOMTab = ({ session, onToast }: any) => {
   const pqcPct = Math.max(0, Math.min(100, Math.round(Number(pqcReadiness?.pqc_readiness_percent ?? cbomLatest?.document?.pqc_readiness_percent ?? 0))));
   const pqcGaugeData = [{ name: "PQC", value: pqcPct, fill: pqcPct >= 75 ? C.green : pqcPct >= 40 ? C.amber : C.red }];
   const deprecatedCount = Number(pqcReadiness?.deprecated_count ?? cbomLatest?.document?.deprecated_count ?? 0);
-  const criticalHighVulns = vulnerabilities.filter((v: any) => { const s = String(v?.severity || "").toLowerCase(); return s === "critical" || s === "high"; }).length;
+  const criticalHighVulns = hasVulnerabilityCoverage ? vulnerabilities.filter((v: any) => { const s = String(v?.severity || "").toLowerCase(); return s === "critical" || s === "high"; }).length : 0;
+  const vulnerabilitySummaryLabel = vulnLoading ? "Scanning..." : hasVulnerabilityCoverage ? `${vulnerabilities.length} total` : "Open Vulnerabilities to scan";
+  const dependencyHealthSummary = !hasVulnerabilityCoverage
+    ? (vulnLoading ? "Scanning dependency risk..." : "Open Vulnerabilities to calculate")
+    : components.length > 0
+      ? `${healthyComponentCount} of ${components.length} without known CVEs`
+      : "Refresh BOM to score";
 
   // ── Strength histogram data ───────────────────────────────────
   const strengthHist = pqcReadiness?.strength_histogram || cbomLatest?.document?.strength_histogram || {};
@@ -452,16 +604,18 @@ export const SBOMTab = ({ session, onToast }: any) => {
     {/* Header Stats Row */}
     <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 10 }}>
       <Stat l="Dependencies" v={components.length} s={sbomGenerated ? `Updated ${new Date(sbomGenerated).toLocaleDateString()}` : undefined} c="accent" i={Package} />
-      <Stat l="Critical CVEs" v={criticalHighVulns} s={`${vulnerabilities.length} total`} c="red" i={AlertTriangle} />
+      <Stat l="Critical CVEs" v={hasVulnerabilityCoverage ? criticalHighVulns : "--"} s={vulnerabilitySummaryLabel} c={hasVulnerabilityCoverage ? "red" : "dim"} i={AlertTriangle} />
       <Stat l="Crypto Assets" v={totalAssets} s={cbomGenerated ? `Updated ${new Date(cbomGenerated).toLocaleDateString()}` : undefined} c="blue" i={Atom} />
-      <Stat l="PQC Ready" v={`${pqcPct}%`} s={`${Number(pqcReadiness?.pqc_ready_count ?? cbomLatest?.document?.pqc_ready_count ?? 0)} of ${totalAssets}`} c="green" i={ShieldCheck} />
+      <Stat l="Clean Deps" v={hasVulnerabilityCoverage ? `${dependencyHealthPct}%` : "--"} s={dependencyHealthSummary} c={dependencyHealthTone} i={ShieldCheck} />
       <Stat l="Deprecated" v={deprecatedCount} s={deprecatedCount > 0 ? "Action needed" : "All clear"} c="amber" i={Ban} />
     </div>
 
     {/* Sub-tabs + Refresh */}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
       <Tabs tabs={["Overview", "Software BOM", "Crypto BOM", "Vulnerabilities"]} active={tab} onChange={setTab} />
-      <Btn small onClick={() => void loadData({ refresh: true })} disabled={refreshing || loading}>
+      <Btn small onClick={() => {
+        void loadData({ refresh: true }).then(() => loadVulnerabilities({ force: true, suppressToast: true }));
+      }} disabled={refreshing || loading}>
         <RefreshCcw size={12} />{refreshing ? "Refreshing..." : "Refresh BOM"}
       </Btn>
     </div>
@@ -489,19 +643,26 @@ export const SBOMTab = ({ session, onToast }: any) => {
           <div style={{ fontSize: 9, color: C.muted, marginTop: 4 }}>{`${sbomTrend.length} snapshots — total dependency count per scan`}</div>
         </Card>
 
-        {/* PQC Readiness Gauge + Quick Stats */}
+        {/* Dependency Health Gauge + Quick Stats */}
         <Card style={{ padding: "14px 16px" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 10 }}>PQC Readiness</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 10 }}>Dependency Health</div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ width: 160 }}>
               <ResponsiveContainer width="100%" height={140}>
-                <RadialBarChart cx="50%" cy="50%" innerRadius="55%" outerRadius="90%" startAngle={210} endAngle={-30} data={pqcGaugeData} barSize={14}>
+                <RadialBarChart cx="50%" cy="50%" innerRadius="55%" outerRadius="90%" startAngle={210} endAngle={-30} data={dependencyHealthGaugeData} barSize={14}>
                   <RadialBar dataKey="value" cornerRadius={7} background={{ fill: C.border }} />
                 </RadialBarChart>
               </ResponsiveContainer>
               <div style={{ textAlign: "center", marginTop: -10 }}>
-                <span style={{ fontSize: 24, fontWeight: 800, color: pqcPct >= 75 ? C.green : pqcPct >= 40 ? C.amber : C.red }}>{pqcPct}%</span>
-                <div style={{ fontSize: 9, color: C.muted }}>PQC Readiness</div>
+                <span style={{ fontSize: 24, fontWeight: 800, color: hasVulnerabilityCoverage ? dependencyHealthColor : C.dim }}>{hasVulnerabilityCoverage ? `${dependencyHealthPct}%` : "--"}</span>
+                <div style={{ fontSize: 9, color: C.muted }}>Dependencies without known CVEs</div>
+                <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>
+                  {!hasVulnerabilityCoverage
+                    ? (vulnLoading ? "Vulnerability findings are being calculated." : "Open the Vulnerabilities tab or refresh BOM to calculate this score.")
+                    : components.length > 0
+                      ? `${healthyComponentCount} of ${components.length} components are currently clean in the latest SBOM scan.`
+                      : "Refresh BOM to populate software inventory."}
+                </div>
               </div>
             </div>
             <div style={{ flex: 1, display: "grid", gap: 8 }}>
@@ -733,7 +894,32 @@ export const SBOMTab = ({ session, onToast }: any) => {
         </Sel>
         <Inp value={vulnSearch} onChange={(e: any) => setVulnSearch(e.target.value)} placeholder="Search CVE ID, component, summary..." style={{ height: 30, fontSize: 11, flex: 1, minWidth: 200 }} />
         <span style={{ fontSize: 10, color: C.muted }}>{filteredVulns.length} of {vulnerabilities.length} vulnerabilities</span>
+        <span style={{ fontSize: 10, color: C.dim }}>{vulnLoading ? "Scanning..." : hasVulnerabilityCoverage ? "Latest findings loaded" : "Scan starts on first open"}</span>
+        <Btn onClick={() => { resetAdvisoryForm(); setAdvisoryModalOpen(true); }}>Add Offline Advisory</Btn>
       </div>
+
+      <Card style={{ padding: "12px 14px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Detection Sources</div>
+            <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>
+              Manual advisories are merged first for air-gapped KMS use. OSV adds package intelligence, and Trivy contributes repository scan findings.
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {Object.entries(vulnerabilitySources).map(([source, count]) => (
+              <div key={source} style={{ padding: "6px 10px", border: `1px solid ${C.border}`, borderRadius: 999, fontSize: 10, color: C.text }}>
+                <span style={{ color: C.muted }}>{source}</span> {Number(count || 0)}
+              </div>
+            ))}
+            {!Object.keys(vulnerabilitySources).length && <div style={{ fontSize: 10, color: C.muted }}>No findings yet.</div>}
+          </div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginTop: 10, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 10, color: C.muted }}>{manualAdvisories.length} saved offline advisories</div>
+          <div style={{ fontSize: 10, color: C.muted }}>Trivy may need internet on first run unless its DB cache is preloaded.</div>
+        </div>
+      </Card>
 
       {/* Severity summary cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
@@ -750,11 +936,12 @@ export const SBOMTab = ({ session, onToast }: any) => {
       <Card style={{ padding: "12px 14px" }}>
         <div style={{ maxHeight: 480, overflowY: "auto" }}>
           {/* Table header */}
-          <div style={{ display: "grid", gridTemplateColumns: "80px 1.5fr 1fr 1fr 2fr 80px", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.borderHi}`, fontSize: 9, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, position: "sticky", top: 0, background: C.card, zIndex: 1 }}>
-            <span>Severity</span><span>Component</span><span>Installed</span><span>Fixed</span><span>Summary</span><span>Ref</span>
+          <div style={{ display: "grid", gridTemplateColumns: "80px 110px 1.35fr 1fr 1fr 2fr 80px", gap: 8, padding: "6px 0", borderBottom: `1px solid ${C.borderHi}`, fontSize: 9, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, position: "sticky", top: 0, background: C.card, zIndex: 1 }}>
+            <span>Severity</span><span>Source</span><span>Component</span><span>Installed</span><span>Fixed</span><span>Summary</span><span>Ref</span>
           </div>
-          {filteredVulns.map((v: any, idx: number) => <div key={`${v?.id}-${idx}`} style={{ display: "grid", gridTemplateColumns: "80px 1.5fr 1fr 1fr 2fr 80px", gap: 8, padding: "7px 0", borderBottom: `1px solid ${C.border}`, fontSize: 11, alignItems: "center" }}>
+          {filteredVulns.map((v: any, idx: number) => <div key={`${v?.id}-${idx}`} style={{ display: "grid", gridTemplateColumns: "80px 110px 1.35fr 1fr 1fr 2fr 80px", gap: 8, padding: "7px 0", borderBottom: `1px solid ${C.border}`, fontSize: 11, alignItems: "center" }}>
             <span><B c={sevTone(v?.severity)}>{String(v?.severity || "unknown")}</B></span>
+            <span style={{ color: String(v?.source || "").toLowerCase().includes("manual") ? C.yellow : String(v?.source || "").toLowerCase().includes("trivy") ? C.blue : C.accent, fontWeight: 600 }}>{String(v?.source || "-")}</span>
             <span style={{ color: C.text, fontWeight: 600 }}>{String(v?.component || "-")}</span>
             <span style={{ color: C.dim }}>{String(v?.installed_version || "-")}</span>
             <span style={{ color: C.green, fontWeight: 600 }}>{String(v?.fixed_version || "-")}</span>
@@ -769,6 +956,57 @@ export const SBOMTab = ({ session, onToast }: any) => {
     </>}
 
     {/* ── No data fallback ──────────────────────────────────── */}
+    <Modal open={advisoryModalOpen} onClose={() => setAdvisoryModalOpen(false)} title="Offline Advisory">
+      <div style={{ fontSize: 10, color: C.dim, marginBottom: 10 }}>
+        Add an OSV-style advisory manually for air-gapped environments. Saved advisories are merged into the live vulnerability list ahead of online sources.
+      </div>
+      <div style={{ display: "grid", gap: 8 }}>
+        <Inp value={advisoryForm.id} onChange={(e: any) => setAdvisoryForm((prev: any) => ({ ...prev, id: e.target.value }))} placeholder="Advisory ID, e.g. CVE-2026-1234" />
+        <Inp value={advisoryForm.component} onChange={(e: any) => setAdvisoryForm((prev: any) => ({ ...prev, component: e.target.value }))} placeholder="Component / package name" />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 8 }}>
+          <Sel value={advisoryForm.ecosystem} onChange={(e: any) => setAdvisoryForm((prev: any) => ({ ...prev, ecosystem: e.target.value }))}>
+            <option value="go">Go</option>
+            <option value="npm">npm</option>
+            <option value="any">Any ecosystem</option>
+          </Sel>
+          <Inp value={advisoryForm.introduced_version} onChange={(e: any) => setAdvisoryForm((prev: any) => ({ ...prev, introduced_version: e.target.value }))} placeholder="Introduced version (optional)" />
+          <Inp value={advisoryForm.fixed_version} onChange={(e: any) => setAdvisoryForm((prev: any) => ({ ...prev, fixed_version: e.target.value }))} placeholder="Fixed version" />
+        </div>
+        <Sel value={advisoryForm.severity} onChange={(e: any) => setAdvisoryForm((prev: any) => ({ ...prev, severity: e.target.value }))}>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </Sel>
+        <Inp value={advisoryForm.reference} onChange={(e: any) => setAdvisoryForm((prev: any) => ({ ...prev, reference: e.target.value }))} placeholder="Reference URL (optional)" />
+        <textarea
+          value={advisoryForm.summary}
+          onChange={(e: any) => setAdvisoryForm((prev: any) => ({ ...prev, summary: e.target.value }))}
+          placeholder="Summary"
+          style={{ minHeight: 92, borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface, color: C.text, padding: 12, resize: "vertical" }}
+        />
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
+        <Btn onClick={() => setAdvisoryModalOpen(false)}>Cancel</Btn>
+        <Btn onClick={() => void saveOfflineAdvisory()} disabled={savingAdvisory}>{savingAdvisory ? "Saving..." : "Save Advisory"}</Btn>
+      </div>
+      <div style={{ height: 12 }} />
+      <Card style={{ padding: "12px 14px", maxHeight: 260, overflowY: "auto" }}>
+        <div style={{ fontSize: 11, color: C.text, fontWeight: 700, marginBottom: 8 }}>Saved Offline Advisories</div>
+        {manualAdvisories.map((item: any) => (
+          <div key={String(item?.id)} style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr auto", gap: 8, alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
+            <div>
+              <div style={{ fontSize: 11, color: C.text, fontWeight: 600 }}>{String(item?.id || "-")} - {String(item?.component || "-")}</div>
+              <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>{String(item?.ecosystem || "any")} {item?.introduced_version ? `from ${item.introduced_version}` : ""} {item?.fixed_version ? `fixed ${item.fixed_version}` : ""}</div>
+            </div>
+            <div style={{ fontSize: 10, color: C.dim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{String(item?.summary || "-")}</div>
+            <Btn onClick={() => void removeOfflineAdvisory(String(item?.id || ""))} disabled={deletingAdvisory === String(item?.id || "")}>{deletingAdvisory === String(item?.id || "") ? "Deleting..." : "Delete"}</Btn>
+          </div>
+        ))}
+        {!manualAdvisories.length && <div style={{ fontSize: 10, color: C.muted }}>No offline advisories saved yet.</div>}
+      </Card>
+    </Modal>
+
     {!loading && !refreshing && !sbomLatest && !cbomLatest && <Card style={{ padding: 16 }}><div style={{ fontSize: 10, color: C.muted, textAlign: "center" }}>No BOM data available. Click "Refresh BOM" to generate your first Software and Cryptographic BOM snapshots.</div></Card>}
 
     {/* ── CBOM Diff Modal ───────────────────────────────────── */}

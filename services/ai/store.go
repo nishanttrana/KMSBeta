@@ -30,7 +30,7 @@ func NewSQLStore(db *pkgdb.DB) *SQLStore {
 
 func (s *SQLStore) GetConfig(ctx context.Context, tenantID string) (AIConfig, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, backend, endpoint, model, api_key_secret, max_context_tokens, temperature, context_sources_json, redaction_fields_json, updated_at
+SELECT tenant_id, backend, endpoint, model, api_key_secret, auth_json, mcp_json, max_context_tokens, temperature, context_sources_json, redaction_fields_json, updated_at
 FROM ai_configs
 WHERE tenant_id = $1
 `, strings.TrimSpace(tenantID))
@@ -44,21 +44,23 @@ WHERE tenant_id = $1
 func (s *SQLStore) UpsertConfig(ctx context.Context, item AIConfig) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO ai_configs (
-	tenant_id, backend, endpoint, model, api_key_secret, max_context_tokens, temperature, context_sources_json, redaction_fields_json, updated_at
+	tenant_id, backend, endpoint, model, api_key_secret, auth_json, mcp_json, max_context_tokens, temperature, context_sources_json, redaction_fields_json, updated_at
 ) VALUES (
-	$1,$2,$3,$4,$5,$6,$7,$8,$9,CURRENT_TIMESTAMP
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP
 )
 ON CONFLICT (tenant_id) DO UPDATE SET
 	backend = EXCLUDED.backend,
 	endpoint = EXCLUDED.endpoint,
 	model = EXCLUDED.model,
 	api_key_secret = EXCLUDED.api_key_secret,
+	auth_json = EXCLUDED.auth_json,
+	mcp_json = EXCLUDED.mcp_json,
 	max_context_tokens = EXCLUDED.max_context_tokens,
 	temperature = EXCLUDED.temperature,
 	context_sources_json = EXCLUDED.context_sources_json,
 	redaction_fields_json = EXCLUDED.redaction_fields_json,
 	updated_at = CURRENT_TIMESTAMP
-`, item.TenantID, item.Backend, item.Endpoint, item.Model, item.APIKeySecret, item.MaxContextTokens, item.Temperature, mustJSON(item.ContextSources, "{}"), mustJSON(item.RedactionFields, "[]"))
+`, item.TenantID, item.Backend, item.Endpoint, item.Model, item.APIKeySecret, mustJSON(item.ProviderAuth, "{}"), mustJSON(item.MCP, "{}"), item.MaxContextTokens, item.Temperature, mustJSON(item.ContextSources, "{}"), mustJSON(item.RedactionFields, "[]"))
 	return err
 }
 
@@ -105,6 +107,8 @@ func scanAIConfig(scanner interface {
 }) (AIConfig, error) {
 	var (
 		item             AIConfig
+		authJS           string
+		mcpJS            string
 		contextSourcesJS string
 		redactionJS      string
 		updatedRaw       interface{}
@@ -115,6 +119,8 @@ func scanAIConfig(scanner interface {
 		&item.Endpoint,
 		&item.Model,
 		&item.APIKeySecret,
+		&authJS,
+		&mcpJS,
 		&item.MaxContextTokens,
 		&item.Temperature,
 		&contextSourcesJS,
@@ -122,6 +128,12 @@ func scanAIConfig(scanner interface {
 		&updatedRaw,
 	); err != nil {
 		return AIConfig{}, err
+	}
+	if strings.TrimSpace(authJS) != "" {
+		_ = json.Unmarshal([]byte(authJS), &item.ProviderAuth)
+	}
+	if strings.TrimSpace(mcpJS) != "" {
+		_ = json.Unmarshal([]byte(mcpJS), &item.MCP)
 	}
 	if strings.TrimSpace(contextSourcesJS) != "" {
 		_ = json.Unmarshal([]byte(contextSourcesJS), &item.ContextSources)
@@ -164,11 +176,19 @@ func scanAIInteraction(scanner interface {
 
 func defaultAIConfig(tenantID string) AIConfig {
 	return AIConfig{
-		TenantID:         strings.TrimSpace(tenantID),
-		Backend:          "claude",
-		Endpoint:         "",
-		Model:            "claude-sonnet-4-20250514",
-		APIKeySecret:     "ai-api-key",
+		TenantID:     strings.TrimSpace(tenantID),
+		Backend:      "claude",
+		Endpoint:     "",
+		Model:        "claude-sonnet-4-20250514",
+		APIKeySecret: "ai-api-key",
+		ProviderAuth: ProviderAuthConfig{
+			Required: true,
+			Type:     "api_key",
+		},
+		MCP: MCPConfig{
+			Enabled:  false,
+			Endpoint: "",
+		},
 		MaxContextTokens: 100000,
 		Temperature:      0.1,
 		ContextSources: ContextSources{

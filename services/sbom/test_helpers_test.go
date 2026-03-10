@@ -68,6 +68,21 @@ func (f *fakeSBOMDiscovery) ListCryptoAssets(_ context.Context, tenantID string,
 	return items, nil
 }
 
+type stubVulnerabilityProvider struct {
+	err error
+	fn  func([]BOMComponent) []VulnerabilityMatch
+}
+
+func (s *stubVulnerabilityProvider) Match(_ context.Context, components []BOMComponent) ([]VulnerabilityMatch, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	if s.fn == nil {
+		return []VulnerabilityMatch{}, nil
+	}
+	return s.fn(components), nil
+}
+
 func newSBOMService(t *testing.T) (*Service, *SQLStore, *fakeSBOMKeyCore, *fakeSBOMCerts, *fakeSBOMDiscovery, *nopSBOMPublisher) {
 	t.Helper()
 	conn, err := pkgdb.Open(context.Background(), pkgdb.Config{
@@ -89,6 +104,7 @@ func newSBOMService(t *testing.T) (*Service, *SQLStore, *fakeSBOMKeyCore, *fakeS
 	discovery := &fakeSBOMDiscovery{items: map[string][]map[string]interface{}{}}
 	pub := &nopSBOMPublisher{}
 	svc := NewService(store, keycore, certs, discovery, pub)
+	svc.vulnProvider = &stubVulnerabilityProvider{fn: correlateCatalogVulnerabilities}
 	return svc, store, keycore, certs, discovery, pub
 }
 
@@ -120,6 +136,18 @@ func createSBOMSchemaForTest(conn *pkgdb.DB) error {
 			document_json TEXT NOT NULL DEFAULT '{}',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, id)
+		);`,
+		`CREATE TABLE sbom_manual_advisories (
+			id TEXT PRIMARY KEY,
+			component TEXT NOT NULL,
+			ecosystem TEXT NOT NULL DEFAULT '',
+			introduced_version TEXT NOT NULL DEFAULT '',
+			fixed_version TEXT NOT NULL DEFAULT '',
+			severity TEXT NOT NULL DEFAULT 'medium',
+			summary TEXT NOT NULL DEFAULT '',
+			reference TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 		);`,
 	}
 	for _, stmt := range stmts {

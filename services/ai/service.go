@@ -69,8 +69,10 @@ func (s *Service) UpdateConfig(ctx context.Context, tenantID string, in AIConfig
 	if err != nil {
 		return AIConfig{}, err
 	}
+	backendChanged := false
 	if strings.TrimSpace(in.Backend) != "" {
 		item.Backend = strings.TrimSpace(in.Backend)
+		backendChanged = true
 	}
 	if in.Endpoint != "" {
 		item.Endpoint = strings.TrimSpace(in.Endpoint)
@@ -80,6 +82,23 @@ func (s *Service) UpdateConfig(ctx context.Context, tenantID string, in AIConfig
 	}
 	if in.APIKeySecret != "" {
 		item.APIKeySecret = strings.TrimSpace(in.APIKeySecret)
+	}
+	if in.ProviderAuth != nil {
+		item.ProviderAuth = ProviderAuthConfig{
+			Required: in.ProviderAuth.Required,
+			Type:     strings.TrimSpace(in.ProviderAuth.Type),
+		}
+	} else if backendChanged {
+		item.ProviderAuth = ProviderAuthConfig{
+			Required: backendRequiresAuth(item.Backend),
+			Type:     defaultAuthTypeForBackend(item.Backend),
+		}
+	}
+	if in.MCP != nil {
+		item.MCP = MCPConfig{
+			Enabled:  in.MCP.Enabled,
+			Endpoint: strings.TrimSpace(in.MCP.Endpoint),
+		}
 	}
 	if in.MaxContextTokens > 0 {
 		item.MaxContextTokens = in.MaxContextTokens
@@ -192,7 +211,7 @@ func (s *Service) ExplainPolicy(ctx context.Context, req PolicyExplainRequest) (
 }
 
 func (s *Service) runPrompt(ctx context.Context, tenantID string, action string, userInput string, prompt string, cfg AIConfig, assembled assembledContext, includeContext bool) AIResponse {
-	out, backend, warnings := s.callLLM(ctx, cfg, prompt, action, assembled.Redacted)
+	out, backend, warnings := s.callLLM(ctx, cfg, applyMCPPromptContract(prompt, cfg), action, assembled.Redacted)
 	// Enforce response-side redaction so sensitive markers cannot leak back to clients.
 	out, textRedactions := redactText(out)
 	totalRedactions := assembled.RedactionCount + textRedactions
@@ -246,6 +265,10 @@ func (s *Service) callLLM(ctx context.Context, cfg AIConfig, prompt string, acti
 		} else if err != nil {
 			warnings = append(warnings, "secret lookup failed: "+err.Error())
 		}
+	}
+	if cfg.ProviderAuth.Required && strings.TrimSpace(apiKey) == "" {
+		warnings = append(warnings, "provider authentication required but no credential is configured")
+		return s.fallbackAnswer(action, prompt, redactedContext), "fallback", warnings
 	}
 	// Best-effort zeroization for transient API key buffers after outbound LLM call.
 	defer pkgcrypto.Zeroize([]byte(apiKey))
@@ -518,6 +541,23 @@ func (s *Service) renderPrompt(kind string, userInput string, contextWindow map[
 	}, "\n")
 }
 
+func applyMCPPromptContract(prompt string, cfg AIConfig) string {
+	if !cfg.MCP.Enabled {
+		return prompt
+	}
+	target := strings.TrimSpace(cfg.MCP.Endpoint)
+	if target == "" {
+		target = "configured MCP client"
+	}
+	return strings.Join([]string{
+		prompt,
+		"MCP compatibility mode is enabled.",
+		"Return strict JSON with keys: summary, actions, evidence, risk_level.",
+		"Do not include markdown wrappers or extra text outside JSON.",
+		"Ensure response is safe for machine consumption by " + target + ".",
+	}, "\n")
+}
+
 func (s *Service) publishAudit(ctx context.Context, subject string, tenantID string, data map[string]interface{}) error {
 	if s.events == nil {
 		return nil
@@ -536,12 +576,22 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 }
 
 func normalizeConfig(item AIConfig) AIConfig {
-	if strings.TrimSpace(item.Backend) == "" {
+	item.Backend = normalizeBackend(item.Backend)
+	if item.Backend == "" {
 		item.Backend = "claude"
 	}
+	item.Endpoint = strings.TrimSpace(item.Endpoint)
 	if strings.TrimSpace(item.Model) == "" {
 		item.Model = "claude-sonnet-4-20250514"
 	}
+	item.ProviderAuth.Type = normalizeAuthType(item.ProviderAuth.Type)
+	if item.ProviderAuth.Type == "" {
+		item.ProviderAuth.Type = defaultAuthTypeForBackend(item.Backend)
+	}
+	if backendRequiresAuth(item.Backend) {
+		item.ProviderAuth.Required = true
+	}
+	item.MCP.Endpoint = strings.TrimSpace(item.MCP.Endpoint)
 	if item.MaxContextTokens <= 0 {
 		item.MaxContextTokens = 100000
 	}
@@ -557,6 +607,8 @@ func normalizeConfig(item AIConfig) AIConfig {
 	normalized.Endpoint = item.Endpoint
 	normalized.Model = item.Model
 	normalized.APIKeySecret = item.APIKeySecret
+	normalized.ProviderAuth = item.ProviderAuth
+	normalized.MCP = item.MCP
 	normalized.MaxContextTokens = item.MaxContextTokens
 	normalized.Temperature = item.Temperature
 	if hasContextSources(item.ContextSources) {
@@ -572,6 +624,8 @@ func validateConfig(item AIConfig) error {
 		"claude":       {},
 		"openai":       {},
 		"azure-openai": {},
+		"copilot":      {},
+		"self-hosted":  {},
 		"ollama":       {},
 		"vllm":         {},
 		"llamacpp":     {},
@@ -584,6 +638,30 @@ func validateConfig(item AIConfig) error {
 		}
 		sort.Strings(keys)
 		return newServiceError(400, "bad_request", "unsupported backend; allowed="+strings.Join(keys, ","))
+	}
+	allowedAuth := map[string]struct{}{
+		"none":    {},
+		"api_key": {},
+		"bearer":  {},
+	}
+	authType := normalizeAuthType(item.ProviderAuth.Type)
+	if _, ok := allowedAuth[authType]; !ok {
+		return newServiceError(400, "bad_request", "unsupported provider_auth.type; allowed=api_key,bearer,none")
+	}
+	if backendRequiresAuth(backend) && !item.ProviderAuth.Required {
+		return newServiceError(400, "bad_request", "provider_auth.required must be true for "+backend)
+	}
+	if item.ProviderAuth.Required && authType == "none" {
+		return newServiceError(400, "bad_request", "provider_auth.type cannot be none when authentication is required")
+	}
+	if item.ProviderAuth.Required && strings.TrimSpace(item.APIKeySecret) == "" {
+		return newServiceError(400, "bad_request", "api_key_secret is required when provider authentication is enabled")
+	}
+	if strings.TrimSpace(item.Endpoint) == "" {
+		return newServiceError(400, "bad_request", "endpoint is required for AI provider integration")
+	}
+	if item.MCP.Enabled && strings.TrimSpace(item.MCP.Endpoint) == "" {
+		return newServiceError(400, "bad_request", "mcp.endpoint is required when mcp.enabled is true")
 	}
 	if item.MaxContextTokens < 256 {
 		return newServiceError(400, "bad_request", "max_context_tokens must be >= 256")

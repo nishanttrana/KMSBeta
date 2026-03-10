@@ -286,13 +286,31 @@ func (s *SQLStore) DeleteTenant(ctx context.Context, tenantID string) (TenantDel
 	} else if err != nil {
 		return summary, err
 	}
+	linkedDeletedByTable, err := purgeTenantLinkedRowsWithoutTenantID(ctx, tx, tenantID)
+	if err != nil {
+		return summary, err
+	}
+	for table, n := range linkedDeletedByTable {
+		summary.RowsPurged += n
+		if n > 0 {
+			summary.DeletedByTable[table] += n
+			summary.TablesPurged++
+		}
+	}
 
 	tables, err := discoverTenantTables(ctx, tx)
 	if err != nil {
 		return summary, err
 	}
-	auditTriggerDisabled := []string{}
+	purgeTables := make([]string, 0, len(tables))
 	for _, table := range tables {
+		if shouldPreserveTenantAuditTable(table) {
+			continue
+		}
+		purgeTables = append(purgeTables, table)
+	}
+	auditTriggerDisabled := []string{}
+	for _, table := range purgeTables {
 		if !isAuditEventsTable(table) {
 			continue
 		}
@@ -301,8 +319,8 @@ func (s *SQLStore) DeleteTenant(ctx context.Context, tenantID string) (TenantDel
 		}
 		auditTriggerDisabled = append(auditTriggerDisabled, table)
 	}
-	pending := append([]string(nil), tables...)
-	for attempts := 0; attempts < len(tables); attempts++ {
+	pending := append([]string(nil), purgeTables...)
+	for attempts := 0; attempts < len(purgeTables); attempts++ {
 		if len(pending) == 0 {
 			break
 		}
@@ -310,7 +328,7 @@ func (s *SQLStore) DeleteTenant(ctx context.Context, tenantID string) (TenantDel
 		next := make([]string, 0, len(pending))
 		for _, table := range pending {
 			stmt := buildTenantDeleteStatement(table)
-			res, execErr := tx.ExecContext(ctx, stmt, tenantID)
+			affected, execErr := execTenantDeleteWithSavepoint(ctx, tx, stmt, tenantID)
 			if execErr != nil {
 				if isForeignKeyDeleteError(execErr) {
 					next = append(next, table)
@@ -318,10 +336,9 @@ func (s *SQLStore) DeleteTenant(ctx context.Context, tenantID string) (TenantDel
 				}
 				return summary, execErr
 			}
-			n, _ := res.RowsAffected()
-			summary.RowsPurged += n
-			if n > 0 {
-				summary.DeletedByTable[table] += n
+			summary.RowsPurged += affected
+			if affected > 0 {
+				summary.DeletedByTable[table] += affected
 			}
 			summary.TablesPurged++
 			progress = true
@@ -1349,6 +1366,69 @@ func buildEnableTableUserTriggersStatement(table string) string {
 		return fmt.Sprintf(`ALTER TABLE "%s"."%s" ENABLE TRIGGER USER`, sqlQuoteIdentifier(parts[0]), sqlQuoteIdentifier(parts[1]))
 	}
 	return fmt.Sprintf(`ALTER TABLE "%s" ENABLE TRIGGER USER`, sqlQuoteIdentifier(parts[0]))
+}
+
+func shouldPreserveTenantAuditTable(table string) bool {
+	base := strings.ToLower(strings.TrimSpace(table))
+	if i := strings.Index(base, "."); i >= 0 {
+		base = strings.TrimSpace(base[i+1:])
+	}
+	if base == "" {
+		return false
+	}
+	if base == "alerts" || base == "alert_rules" {
+		return true
+	}
+	return strings.HasPrefix(base, "audit_")
+}
+
+func purgeTenantLinkedRowsWithoutTenantID(ctx context.Context, tx *sql.Tx, tenantID string) (map[string]int64, error) {
+	type purgeStep struct {
+		table string
+		stmt  string
+	}
+	steps := []purgeStep{
+		{
+			table: "approval_tokens",
+			stmt: `
+DELETE FROM approval_tokens
+WHERE request_id IN (
+	SELECT id FROM approval_requests WHERE tenant_id=$1
+)`,
+		},
+	}
+
+	out := map[string]int64{}
+	for _, step := range steps {
+		res, err := tx.ExecContext(ctx, step.stmt, tenantID)
+		if err != nil {
+			if isMissingTableOrColumn(err) {
+				continue
+			}
+			return nil, err
+		}
+		n, _ := res.RowsAffected()
+		out[step.table] = n
+	}
+	return out, nil
+}
+
+func execTenantDeleteWithSavepoint(ctx context.Context, tx *sql.Tx, stmt string, tenantID string) (int64, error) {
+	const savepoint = "tenant_purge_step"
+	if _, err := tx.ExecContext(ctx, "SAVEPOINT "+savepoint); err != nil {
+		return 0, err
+	}
+	res, err := tx.ExecContext(ctx, stmt, tenantID)
+	if err != nil {
+		_, _ = tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT "+savepoint)
+		_, _ = tx.ExecContext(ctx, "RELEASE SAVEPOINT "+savepoint)
+		return 0, err
+	}
+	if _, err := tx.ExecContext(ctx, "RELEASE SAVEPOINT "+savepoint); err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return n, nil
 }
 
 func isGroupRoleSchemaMissing(err error) bool {

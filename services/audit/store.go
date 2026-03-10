@@ -6,12 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
 	pkgdb "vecta-kms/pkg/db"
 )
-
 
 var errNotFound = errors.New("not found")
 
@@ -41,11 +41,15 @@ type Store interface {
 }
 
 type SQLStore struct {
-	db *pkgdb.DB
+	db         *pkgdb.DB
+	isPostgres bool
 }
 
 func NewSQLStore(db *pkgdb.DB) *SQLStore {
-	return &SQLStore{db: db}
+	return &SQLStore{
+		db:         db,
+		isPostgres: detectPostgresDriver(db),
+	}
 }
 
 type EventQuery struct {
@@ -107,9 +111,14 @@ WHERE tenant_id=$1 ORDER BY sequence DESC LIMIT 1
 	if event.Result == "" {
 		event.Result = "success"
 	}
+	event.SourceIP = normalizeSourceIP(event.SourceIP)
 	event.Sequence = sequence
 	event.PreviousHash = previousHash
 	event.ChainHash = chainHash(previousHash, eventHashInput(event))
+
+	if err := s.ensureAuditPartition(ctx, tx, event.Timestamp); err != nil {
+		return AuditEvent{}, Alert{}, err
+	}
 
 	tags, _ := json.Marshal(event.Tags)
 	details, _ := json.Marshal(event.Details)
@@ -621,6 +630,54 @@ func parseTimeValue(v interface{}) time.Time {
 }
 
 // ── Merkle Tree Store Methods ─────────────────────────────────
+
+func detectPostgresDriver(db *pkgdb.DB) bool {
+	if db == nil || db.SQL() == nil {
+		return false
+	}
+	driverType := strings.ToLower(fmt.Sprintf("%T", db.SQL().Driver()))
+	return strings.Contains(driverType, "pgx") || strings.Contains(driverType, "postgres") || strings.Contains(driverType, "stdlib")
+}
+
+func normalizeSourceIP(raw string) string {
+	value := strings.TrimSpace(raw)
+	if value == "" {
+		return ""
+	}
+	if i := strings.Index(value, ","); i >= 0 {
+		value = strings.TrimSpace(value[:i])
+	}
+	if host, _, err := net.SplitHostPort(value); err == nil {
+		value = host
+	}
+	value = strings.Trim(value, "[]")
+	ip := net.ParseIP(value)
+	if ip == nil {
+		return ""
+	}
+	return ip.String()
+}
+
+func (s *SQLStore) ensureAuditPartition(ctx context.Context, tx *sql.Tx, ts time.Time) error {
+	if !s.isPostgres {
+		return nil
+	}
+	t := ts.UTC()
+	if t.IsZero() {
+		t = time.Now().UTC()
+	}
+	monthStart := time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+	nextMonthStart := monthStart.AddDate(0, 1, 0)
+	partitionName := fmt.Sprintf("audit_events_%04d_%02d", monthStart.Year(), int(monthStart.Month()))
+	stmt := fmt.Sprintf(
+		`CREATE TABLE IF NOT EXISTS %s PARTITION OF audit_events FOR VALUES FROM ('%s') TO ('%s')`,
+		partitionName,
+		monthStart.Format("2006-01-02"),
+		nextMonthStart.Format("2006-01-02"),
+	)
+	_, err := tx.ExecContext(ctx, stmt)
+	return err
+}
 
 func (s *SQLStore) BuildMerkleEpoch(ctx context.Context, tenantID string, maxLeaves int) (*MerkleEpochResult, error) {
 	if maxLeaves <= 0 {

@@ -44,6 +44,28 @@ func TestHandlerSBOMEndpoints(t *testing.T) {
 		t.Fatalf("vulns sbom status=%d body=%s", vulnRR.Code, vulnRR.Body.String())
 	}
 
+	advReq := httptest.NewRequest(http.MethodPost, "/sbom/advisories", strings.NewReader(`{"id":"CVE-2026-5001","component":"golang.org/x/net","ecosystem":"go","fixed_version":"v0.60.0","severity":"high","summary":"offline advisory"}`))
+	advReq.Header.Set("Content-Type", "application/json")
+	advRR := httptest.NewRecorder()
+	h.ServeHTTP(advRR, advReq)
+	if advRR.Code != http.StatusAccepted {
+		t.Fatalf("save advisory status=%d body=%s", advRR.Code, advRR.Body.String())
+	}
+
+	listAdvReq := httptest.NewRequest(http.MethodGet, "/sbom/advisories", nil)
+	listAdvRR := httptest.NewRecorder()
+	h.ServeHTTP(listAdvRR, listAdvReq)
+	if listAdvRR.Code != http.StatusOK {
+		t.Fatalf("list advisory status=%d body=%s", listAdvRR.Code, listAdvRR.Body.String())
+	}
+
+	delAdvReq := httptest.NewRequest(http.MethodDelete, "/sbom/advisories/CVE-2026-5001", nil)
+	delAdvRR := httptest.NewRecorder()
+	h.ServeHTTP(delAdvRR, delAdvReq)
+	if delAdvRR.Code != http.StatusOK {
+		t.Fatalf("delete advisory status=%d body=%s", delAdvRR.Code, delAdvRR.Body.String())
+	}
+
 	expReq := httptest.NewRequest(http.MethodGet, "/sbom/"+snapshotID+"/export?format=spdx", nil)
 	expRR := httptest.NewRecorder()
 	h.ServeHTTP(expRR, expReq)

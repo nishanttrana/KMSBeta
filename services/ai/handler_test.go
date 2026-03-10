@@ -23,6 +23,8 @@ func TestHandlerQueryAndConfig(t *testing.T) {
 		"backend":"openai",
 		"endpoint":"https://api.example.test/v1/chat/completions",
 		"model":"gpt-4o-mini",
+		"provider_auth":{"required":true,"type":"bearer"},
+		"mcp":{"enabled":true,"endpoint":"mcp://kms-ai"},
 		"temperature":0.2
 	}`))
 	putReq.Header.Set("Content-Type", "application/json")

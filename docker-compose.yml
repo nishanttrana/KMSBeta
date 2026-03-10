@@ -624,6 +624,26 @@ services:
       timeout: 5s
       retries: 10
 
+  qrng:
+    <<: *kms-service
+    profiles: ["qrng_generator"]
+    build:
+      context: .
+      dockerfile: services/qrng/Dockerfile
+    image: vecta/qrng:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8230"
+      GRPC_PORT: "18230"
+    ports:
+      - "8230:8230"
+      - "18230:18230"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18230"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
   ekm:
     <<: *kms-service
     profiles: ["ekm_database"]

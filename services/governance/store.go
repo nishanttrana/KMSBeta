@@ -698,6 +698,7 @@ func (s *SQLStore) UpsertSystemState(ctx context.Context, state GovernanceSystem
 	if state.BackupRetentionDays <= 0 {
 		state.BackupRetentionDays = 30
 	}
+	state.QRNGDefaultSource = strings.TrimSpace(state.QRNGDefaultSource)
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO governance_system_state (
     tenant_id, fips_mode, fips_mode_policy, fips_crypto_library, fips_library_validated, fips_tls_profile, fips_rng_mode,
@@ -753,7 +754,7 @@ SET fips_mode=EXCLUDED.fips_mode,
 		nullable(state.BackupSchedule), nullable(state.BackupTarget), state.BackupRetentionDays, state.BackupEncrypted,
 		nullable(state.ProxyEndpoint), nullable(state.SNMPTarget),
 		state.PostureForceQuorumDestructiveOps, state.PostureRequireStepUpAuth, state.PosturePauseConnectorSync, state.PostureGuardrailPolicyRequired,
-		state.QRNGEnabled, nullable(state.QRNGDefaultSource), state.QRNGMinEntropyBPB,
+		state.QRNGEnabled, state.QRNGDefaultSource, state.QRNGMinEntropyBPB,
 		nullable(state.UpdatedBy))
 	return err
 }

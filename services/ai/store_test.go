@@ -13,6 +13,8 @@ func TestStoreConfigAndInteractions(t *testing.T) {
 	cfg.Backend = "openai"
 	cfg.Endpoint = "https://api.example.test/v1/chat/completions"
 	cfg.Model = "gpt-4o-mini"
+	cfg.ProviderAuth = ProviderAuthConfig{Required: true, Type: "bearer"}
+	cfg.MCP = MCPConfig{Enabled: true, Endpoint: "mcp://kms-ai"}
 	if err := store.UpsertConfig(context.Background(), cfg); err != nil {
 		t.Fatalf("upsert config: %v", err)
 	}
@@ -22,6 +24,12 @@ func TestStoreConfigAndInteractions(t *testing.T) {
 	}
 	if got.Backend != "openai" {
 		t.Fatalf("unexpected backend: %+v", got)
+	}
+	if !got.ProviderAuth.Required || got.ProviderAuth.Type != "bearer" {
+		t.Fatalf("unexpected provider auth: %+v", got.ProviderAuth)
+	}
+	if !got.MCP.Enabled || got.MCP.Endpoint != "mcp://kms-ai" {
+		t.Fatalf("unexpected mcp config: %+v", got.MCP)
 	}
 
 	interaction := AIInteraction{

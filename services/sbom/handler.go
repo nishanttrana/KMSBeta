@@ -30,6 +30,9 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /sbom/latest", h.handleLatestSBOM)
 	mux.HandleFunc("GET /sbom/history", h.handleSBOMHistory)
 	mux.HandleFunc("GET /sbom/vulnerabilities", h.handleSBOMVulnerabilities)
+	mux.HandleFunc("GET /sbom/advisories", h.handleListManualAdvisories)
+	mux.HandleFunc("POST /sbom/advisories", h.handleSaveManualAdvisory)
+	mux.HandleFunc("DELETE /sbom/advisories/{id}", h.handleDeleteManualAdvisory)
 	mux.HandleFunc("GET /sbom/diff", h.handleSBOMDiff)
 	mux.HandleFunc("GET /sbom/{id}/export", h.handleSBOMExport)
 	mux.HandleFunc("GET /sbom/{id}", h.handleSBOMByID)
@@ -116,6 +119,60 @@ func (h *Handler) handleSBOMVulnerabilities(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+type manualAdvisoryRequest struct {
+	ID                string `json:"id"`
+	Component         string `json:"component"`
+	Ecosystem         string `json:"ecosystem"`
+	IntroducedVersion string `json:"introduced_version"`
+	FixedVersion      string `json:"fixed_version"`
+	Severity          string `json:"severity"`
+	Summary           string `json:"summary"`
+	Reference         string `json:"reference"`
+}
+
+func (h *Handler) handleListManualAdvisories(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	items, err := h.svc.ListManualAdvisories(r.Context())
+	if err != nil {
+		h.writeServiceError(w, err, reqID, "")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleSaveManualAdvisory(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req manualAdvisoryRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", "invalid advisory payload", reqID, "")
+		return
+	}
+	item, err := h.svc.SaveManualAdvisory(r.Context(), ManualAdvisory{
+		ID:                req.ID,
+		Component:         req.Component,
+		Ecosystem:         req.Ecosystem,
+		IntroducedVersion: req.IntroducedVersion,
+		FixedVersion:      req.FixedVersion,
+		Severity:          req.Severity,
+		Summary:           req.Summary,
+		Reference:         req.Reference,
+	})
+	if err != nil {
+		h.writeServiceError(w, err, reqID, "")
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]interface{}{"item": item, "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteManualAdvisory(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	if err := h.svc.DeleteManualAdvisory(r.Context(), r.PathValue("id")); err != nil {
+		h.writeServiceError(w, err, reqID, "")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "deleted", "request_id": reqID})
 }
 
 func (h *Handler) handleSBOMDiff(w http.ResponseWriter, r *http.Request) {

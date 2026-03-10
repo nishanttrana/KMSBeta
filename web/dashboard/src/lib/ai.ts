@@ -9,12 +9,24 @@ export type ContextSources = {
   alerts: { enabled: boolean; unresolved: boolean; limit: number };
 };
 
+export type ProviderAuthConfig = {
+  required: boolean;
+  type: "none" | "api_key" | "bearer" | string;
+};
+
+export type MCPConfig = {
+  enabled: boolean;
+  endpoint: string;
+};
+
 export type AIConfig = {
   tenant_id: string;
   backend: string;
   endpoint: string;
   model: string;
   api_key_secret: string;
+  provider_auth: ProviderAuthConfig;
+  mcp: MCPConfig;
   max_context_tokens: number;
   temperature: number;
   context_sources: ContextSources;
@@ -27,6 +39,8 @@ export type AIConfigUpdate = {
   endpoint?: string;
   model?: string;
   api_key_secret?: string;
+  provider_auth?: ProviderAuthConfig;
+  mcp?: MCPConfig;
   max_context_tokens?: number;
   temperature?: number;
   context_sources?: Partial<ContextSources>;

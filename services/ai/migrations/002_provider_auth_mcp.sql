@@ -1,0 +1,5 @@
+ALTER TABLE ai_configs
+    ADD COLUMN IF NOT EXISTS auth_json TEXT NOT NULL DEFAULT '{}';
+
+ALTER TABLE ai_configs
+    ADD COLUMN IF NOT EXISTS mcp_json TEXT NOT NULL DEFAULT '{}';

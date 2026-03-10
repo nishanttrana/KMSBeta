@@ -14,7 +14,7 @@ import {
   type AIResponse,
 } from "../../../lib/ai";
 import { logUIAuditEvent } from "../../../lib/auditLogger";
-import { B, Btn, Card, Chk, FG, Inp, Section, Sel, Tabs } from "../legacyPrimitives";
+import { B, Btn, Card, Chk, FG, Inp, Row2, Section, Sel, Tabs } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 
@@ -38,11 +38,19 @@ const SUGGESTED_PROMPTS = [
 
 const LLM_BACKENDS = [
   { v: "claude", l: "Anthropic Claude" },
-  { v: "openai", l: "OpenAI" },
+  { v: "openai", l: "ChatGPT (OpenAI)" },
+  { v: "copilot", l: "GitHub Copilot" },
   { v: "azure-openai", l: "Azure OpenAI" },
+  { v: "self-hosted", l: "Self-hosted (OpenAI-compatible)" },
   { v: "ollama", l: "Ollama (Local)" },
   { v: "vllm", l: "vLLM" },
   { v: "llamacpp", l: "llama.cpp" },
+];
+
+const AUTH_TYPES = [
+  { v: "api_key", l: "API Key Header" },
+  { v: "bearer", l: "Bearer Token" },
+  { v: "none", l: "No Authentication" },
 ];
 
 type AITabProps = {
@@ -66,6 +74,10 @@ export const AITab = ({ session, onToast }: AITabProps) => {
   const [cfgEndpoint, setCfgEndpoint] = useState("");
   const [cfgModel, setCfgModel] = useState("");
   const [cfgApiKey, setCfgApiKey] = useState("");
+  const [cfgAuthRequired, setCfgAuthRequired] = useState(true);
+  const [cfgAuthType, setCfgAuthType] = useState("bearer");
+  const [cfgMCPEnabled, setCfgMCPEnabled] = useState(false);
+  const [cfgMCPEndpoint, setCfgMCPEndpoint] = useState("");
   const [cfgMaxTokens, setCfgMaxTokens] = useState(4096);
   const [cfgTemp, setCfgTemp] = useState(0.7);
   const [cfgCtxKeys, setCfgCtxKeys] = useState(true);
@@ -74,6 +86,7 @@ export const AITab = ({ session, onToast }: AITabProps) => {
   const [cfgCtxPosture, setCfgCtxPosture] = useState(true);
   const [cfgCtxAlerts, setCfgCtxAlerts] = useState(true);
   const [cfgRedactionFields, setCfgRedactionFields] = useState("encrypted_material,wrapped_dek,pwd_hash");
+  const authMandatory = useMemo(() => ["claude", "openai", "azure-openai", "copilot"].includes(cfgBackend), [cfgBackend]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -105,6 +118,10 @@ export const AITab = ({ session, onToast }: AITabProps) => {
       setCfgEndpoint(cfg.endpoint || "");
       setCfgModel(cfg.model || "");
       setCfgApiKey(cfg.api_key_secret || "");
+      setCfgAuthRequired(cfg.provider_auth?.required ?? true);
+      setCfgAuthType(cfg.provider_auth?.type || "bearer");
+      setCfgMCPEnabled(cfg.mcp?.enabled ?? false);
+      setCfgMCPEndpoint(cfg.mcp?.endpoint || "");
       setCfgMaxTokens(cfg.max_context_tokens || 4096);
       setCfgTemp(cfg.temperature || 0.7);
       setCfgCtxKeys(cfg.context_sources?.keys?.enabled ?? true);
@@ -124,6 +141,15 @@ export const AITab = ({ session, onToast }: AITabProps) => {
     if (subTab === "Configuration") void loadConfig();
   }, [subTab, loadConfig]);
 
+  useEffect(() => {
+    if (authMandatory && !cfgAuthRequired) {
+      setCfgAuthRequired(true);
+    }
+    if (cfgBackend === "ollama" && cfgAuthType !== "none") {
+      setCfgAuthType("none");
+    }
+  }, [authMandatory, cfgAuthRequired, cfgAuthType, cfgBackend]);
+
   const saveConfig = useCallback(async () => {
     if (!session?.token) return;
     setConfigSaving(true);
@@ -133,6 +159,14 @@ export const AITab = ({ session, onToast }: AITabProps) => {
         endpoint: cfgEndpoint,
         model: cfgModel,
         api_key_secret: cfgApiKey,
+        provider_auth: {
+          required: authMandatory ? true : cfgAuthRequired,
+          type: cfgAuthType,
+        },
+        mcp: {
+          enabled: cfgMCPEnabled,
+          endpoint: cfgMCPEndpoint,
+        },
         max_context_tokens: cfgMaxTokens,
         temperature: cfgTemp,
         context_sources: {
@@ -152,7 +186,7 @@ export const AITab = ({ session, onToast }: AITabProps) => {
     } finally {
       setConfigSaving(false);
     }
-  }, [cfgApiKey, cfgBackend, cfgCtxAlerts, cfgCtxAudit, cfgCtxKeys, cfgCtxPolicies, cfgCtxPosture, cfgEndpoint, cfgMaxTokens, cfgModel, cfgRedactionFields, cfgTemp, onToast, session]);
+  }, [authMandatory, cfgApiKey, cfgAuthRequired, cfgAuthType, cfgBackend, cfgCtxAlerts, cfgCtxAudit, cfgCtxKeys, cfgCtxPolicies, cfgCtxPosture, cfgEndpoint, cfgMCPEndpoint, cfgMCPEnabled, cfgMaxTokens, cfgModel, cfgRedactionFields, cfgTemp, onToast, session]);
 
   const handleSend = useCallback(async (text?: string, action?: string) => {
     const q = (text || input).trim();
@@ -210,7 +244,7 @@ export const AITab = ({ session, onToast }: AITabProps) => {
             <span style={{ fontSize: 10, color: C.green, fontWeight: 600 }}>Governance Enforced</span>
           </div>
         </div>
-        <Tabs tabs={["Chat", "Configuration"]} active={subTab} set={setSubTab} />
+        <Tabs tabs={["Chat", "Configuration"]} active={subTab} onChange={setSubTab} />
       </div>
 
       {subTab === "Chat" && (
@@ -339,7 +373,19 @@ export const AITab = ({ session, onToast }: AITabProps) => {
             </Row2>
             <Row2>
               <FG label="Endpoint URL"><Inp value={cfgEndpoint} onChange={(e: any) => setCfgEndpoint(e.target.value)} placeholder="https://api.openai.com/v1" /></FG>
-              <FG label="API Key / Secret Reference"><Inp type="password" value={cfgApiKey} onChange={(e: any) => setCfgApiKey(e.target.value)} placeholder="sk-... or vault secret ID" /></FG>
+              <FG label="Credential Secret Reference"><Inp type="password" value={cfgApiKey} onChange={(e: any) => setCfgApiKey(e.target.value)} placeholder="vault secret ID (or direct token for testing)" /></FG>
+            </Row2>
+            <Row2>
+              <FG label="Authentication Mode">
+                <Sel value={cfgAuthType} onChange={(e: any) => setCfgAuthType(e.target.value)} disabled={cfgBackend === "ollama"}>
+                  {AUTH_TYPES.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}
+                </Sel>
+              </FG>
+              <FG label="Authentication Required">
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 32 }}>
+                  <Chk label={authMandatory ? "Required for this backend" : "Require authentication"} checked={authMandatory ? true : cfgAuthRequired} onChange={() => { if (!authMandatory) setCfgAuthRequired(!cfgAuthRequired); }} />
+                </div>
+              </FG>
             </Row2>
             <Row2>
               <FG label="Max Context Tokens"><Inp type="number" value={String(cfgMaxTokens)} onChange={(e: any) => setCfgMaxTokens(Number(e.target.value || 4096))} /></FG>
@@ -355,6 +401,26 @@ export const AITab = ({ session, onToast }: AITabProps) => {
                 />
               </FG>
             </Row2>
+            <div style={{ fontSize: 10, color: C.dim, marginTop: 6 }}>
+              Use `self-hosted`, `vLLM`, `llama.cpp`, or `Ollama` for your own hosted models. Use `ChatGPT`, `Claude`, `Azure OpenAI`, or `Copilot` for managed providers.
+            </div>
+          </Card>
+
+          <Card style={{ padding: 10, borderRadius: 8, marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: C.text, fontWeight: 700, marginBottom: 8 }}>MCP Compatibility</div>
+            <Row2>
+              <FG label="Enable MCP-friendly Output">
+                <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 32 }}>
+                  <Chk label="Structured output for MCP clients" checked={cfgMCPEnabled} onChange={() => setCfgMCPEnabled(!cfgMCPEnabled)} />
+                </div>
+              </FG>
+              <FG label="MCP Endpoint / Client">
+                <Inp value={cfgMCPEndpoint} onChange={(e: any) => setCfgMCPEndpoint(e.target.value)} placeholder="mcp://kms-ai-gateway or client identifier" />
+              </FG>
+            </Row2>
+            <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
+              When enabled, AI responses follow a strict JSON contract so downstream MCP tools can consume them reliably.
+            </div>
           </Card>
 
           <Card style={{ padding: 10, borderRadius: 8, marginBottom: 10 }}>
@@ -384,7 +450,7 @@ export const AITab = ({ session, onToast }: AITabProps) => {
             </div>
             <div style={{ fontSize: 10, color: C.dim, marginTop: 4 }}>
               All AI operations are subject to KMS governance rules. The AI service cannot bypass approval policies, quorum requirements, or RBAC controls. Every query generates an audit trail.
-              Customers can integrate their own LLM by selecting the appropriate backend and providing their endpoint URL and credentials.
+              Customers can integrate their own hosted models or external providers with authenticated connectors and optional MCP compatibility mode.
             </div>
           </Card>
         </Section>

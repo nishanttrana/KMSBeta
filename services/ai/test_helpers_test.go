@@ -173,6 +173,8 @@ func createAISchemaForTest(conn *pkgdb.DB) error {
 			endpoint TEXT NOT NULL DEFAULT '',
 			model TEXT NOT NULL DEFAULT 'claude-sonnet-4-20250514',
 			api_key_secret TEXT NOT NULL DEFAULT 'ai-api-key',
+			auth_json TEXT NOT NULL DEFAULT '{}',
+			mcp_json TEXT NOT NULL DEFAULT '{}',
 			max_context_tokens INTEGER NOT NULL DEFAULT 100000,
 			temperature REAL NOT NULL DEFAULT 0.1,
 			context_sources_json TEXT NOT NULL DEFAULT '{}',

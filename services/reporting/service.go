@@ -122,8 +122,8 @@ func (s *Service) ingestAuditEvent(ctx context.Context, tenantID string, ev map[
 		sev = maxSeverity(sev, matchedRuleSev)
 	}
 
-	// Filter: info-level events without escalation or rule match are silent
-	if sev == severityInfo && escalateTo == "" && !ruleMatched {
+	// Alert Center is reserved for actionable signals; passive info events stay in audit logs.
+	if sev == severityInfo && escalateTo == "" {
 		return Alert{}, nil
 	}
 
@@ -334,21 +334,40 @@ func (s *Service) ensureDefaultChannels(ctx context.Context, tenantID string) ([
 		return nil, err
 	}
 	if len(existing) > 0 {
-		return existing, nil
+		return filterRetiredChannels(existing), nil
 	}
 	defaults := []NotificationChannel{
 		{TenantID: tenantID, Name: "screen", Enabled: true, Config: map[string]interface{}{"show_info": true}},
 		{TenantID: tenantID, Name: "email", Enabled: true, Config: map[string]interface{}{"severity_filter": []string{"critical", "high", "warning"}}},
 		{TenantID: tenantID, Name: "slack", Enabled: true, Config: map[string]interface{}{"severity_filter": []string{"critical", "high", "warning"}}},
 		{TenantID: tenantID, Name: "teams", Enabled: true, Config: map[string]interface{}{"severity_filter": []string{"critical", "high"}}},
-		{TenantID: tenantID, Name: "pagerduty", Enabled: true, Config: map[string]interface{}{"severity_filter": []string{"critical", "high"}}},
 		{TenantID: tenantID, Name: "webhook", Enabled: false, Config: map[string]interface{}{"severity_filter": []string{"critical", "high", "warning"}}},
 		{TenantID: tenantID, Name: "siem", Enabled: true, Config: map[string]interface{}{"include_info": true}},
 	}
 	for _, ch := range defaults {
 		_ = s.store.UpsertChannel(ctx, ch)
 	}
-	return s.store.ListChannels(ctx, tenantID)
+	seeded, err := s.store.ListChannels(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	return filterRetiredChannels(seeded), nil
+}
+
+func isRetiredChannel(name string) bool {
+	v := strings.ToLower(strings.TrimSpace(name))
+	return v == "pager" || v == "pagerduty"
+}
+
+func filterRetiredChannels(items []NotificationChannel) []NotificationChannel {
+	out := make([]NotificationChannel, 0, len(items))
+	for _, it := range items {
+		if isRetiredChannel(it.Name) {
+			continue
+		}
+		out = append(out, it)
+	}
+	return out
 }
 
 func (s *Service) dispatchChannels(tenantID string, severity string, action string) ([]NotificationChannel, []string, map[string]string) {
@@ -361,8 +380,8 @@ func (s *Service) dispatchChannels(tenantID string, severity string, action stri
 		if !ch.Enabled {
 			continue
 		}
-		name := strings.ToLower(ch.Name)
-		if name == "screen" {
+		name := strings.ToLower(strings.TrimSpace(ch.Name))
+		if name == "screen" || isRetiredChannel(name) {
 			continue
 		}
 		if !channelAllowsSeverity(ch.Config, severity) {
@@ -590,13 +609,18 @@ func (s *Service) ListChannels(ctx context.Context, tenantID string) ([]Notifica
 }
 
 func (s *Service) UpdateChannels(ctx context.Context, tenantID string, items []NotificationChannel) error {
+	accepted := 0
 	for _, it := range items {
+		if isRetiredChannel(it.Name) {
+			continue
+		}
 		it.TenantID = tenantID
 		if err := s.store.UpsertChannel(ctx, it); err != nil {
 			return err
 		}
+		accepted++
 	}
-	_ = s.publishAudit(ctx, "audit.reporting.channels_updated", tenantID, map[string]interface{}{"count": len(items)})
+	_ = s.publishAudit(ctx, "audit.reporting.channels_updated", tenantID, map[string]interface{}{"count": accepted})
 	return nil
 }
 

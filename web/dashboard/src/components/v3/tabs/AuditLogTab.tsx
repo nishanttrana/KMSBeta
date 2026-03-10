@@ -111,6 +111,32 @@ function abbrevHash(hash: string) {
   return `${h.slice(0, 6)}...${h.slice(-6)}`;
 }
 
+function isHTTPRequestAction(action: any) {
+  return String(action || "").trim().toLowerCase().includes(".http_request");
+}
+
+function formatAction(action: any) {
+  const raw = String(action || "").trim();
+  if (!raw) return "-";
+  const parts = raw.split(".").filter(Boolean);
+  if (parts.length >= 3 && parts[0].toLowerCase() === "audit") {
+    const actionWords = parts.slice(2).join(" ").replaceAll("_", " ");
+    return actionWords.replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return raw
+    .replaceAll("_", " ")
+    .replaceAll(".", " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatChainBreakReason(reason: any) {
+  return String(reason || "")
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function timeRangeToFrom(range: string): string {
   const now = Date.now();
   switch (range) {
@@ -393,7 +419,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
   /* ── client-side filters (service + search) ── */
 
   const filteredEvents = useMemo(() => {
-    let out = events;
+    let out = events.filter((e) => !isHTTPRequestAction(e.action));
     if (serviceFilter) out = out.filter((e) => e.service === serviceFilter);
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
@@ -499,8 +525,9 @@ export const AuditLogTab = ({ session, onToast }: any) => {
       if (forensicMode === "Timeline") results = await getAuditTimeline(session, id);
       else if (forensicMode === "Session") results = await getAuditSession(session, id);
       else results = await getAuditCorrelation(session, id);
-      setForensicEvents(results);
-      onToast?.(`${results.length} event(s) loaded.`);
+      const cleanResults = results.filter((ev) => !isHTTPRequestAction(ev.action));
+      setForensicEvents(cleanResults);
+      onToast?.(`${cleanResults.length} event(s) loaded.`);
     } catch (error) {
       onToast?.(`Forensic query failed: ${errMsg(error)}`);
     } finally {
@@ -519,7 +546,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
         if (mode === "Timeline") results = await getAuditTimeline(session, id);
         else if (mode === "Session") results = await getAuditSession(session, id);
         else results = await getAuditCorrelation(session, id);
-        setForensicEvents(results);
+        setForensicEvents(results.filter((ev) => !isHTTPRequestAction(ev.action)));
       } catch (error) {
         onToast?.(`Forensic query failed: ${errMsg(error)}`);
       } finally {
@@ -574,8 +601,12 @@ export const AuditLogTab = ({ session, onToast }: any) => {
 
   /* ── render: Events sub-tab ── */
 
-  const renderEvents = () => (
-    <>
+  const renderEvents = () => {
+    const chainBreaks = chainResult && !chainResult.ok ? (Array.isArray(chainResult.breaks) ? chainResult.breaks : []) : [];
+    const previewBreaks = chainBreaks.slice(0, 5);
+    const hiddenBreakCount = Math.max(0, chainBreaks.length - previewBreaks.length);
+
+    return <>
       {/* filter bar */}
       <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap", alignItems: "center" }}>
         <Inp placeholder="Search actions, actors, targets..." w={240} value={searchQuery}
@@ -606,15 +637,23 @@ export const AuditLogTab = ({ session, onToast }: any) => {
       </div>
 
       {/* chain breaks display */}
-      {chainResult && !chainResult.ok && chainResult.breaks.length > 0 && (
+      {chainBreaks.length > 0 && (
         <Card style={{ marginBottom: 10, borderColor: C.red }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: C.red, marginBottom: 6 }}>Chain Integrity Breaks Detected</div>
-          <div style={{ maxHeight: 120, overflow: "auto" }}>
-            {chainResult.breaks.map((b, i) => (
-              <div key={i} style={{ fontSize: 10, color: C.dim, marginBottom: 3 }}>
-                Seq #{b.sequence} — Event: {abbrevHash(b.event_id)} — {b.reason}
+          <div style={{ fontSize: 10, color: C.muted, marginBottom: 6 }}>
+            {chainBreaks.length} issue(s) found. Showing {previewBreaks.length} most recent.
+          </div>
+          <div style={{ display: "grid", gap: 4 }}>
+            {previewBreaks.map((b, i) => (
+              <div key={i} style={{ fontSize: 10, color: C.dim }} title={`Event ${b.event_id}`}>
+                Seq #{b.sequence} — {formatChainBreakReason(b.reason)}
               </div>
             ))}
+            {hiddenBreakCount > 0 && (
+              <div style={{ fontSize: 10, color: C.muted }}>
+                +{hiddenBreakCount} more break(s)
+              </div>
+            )}
           </div>
         </Card>
       )}
@@ -649,7 +688,9 @@ export const AuditLogTab = ({ session, onToast }: any) => {
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ""; }}>
                   <td style={TD}>{shortTS(ev.timestamp)}</td>
                   <td style={TD}><B c="blue">{(ev.service || "").replace("kms-", "")}</B></td>
-                  <td style={{ ...TD, color: C.text, fontWeight: 500 }}>{ev.action}</td>
+                  <td style={{ ...TD, color: C.text, fontWeight: 500 }} title={ev.action}>
+                    {formatAction(ev.action)}
+                  </td>
                   <td style={TD}>{ev.actor_id || "-"}</td>
                   <td style={TD}>{ev.target_id || "-"}</td>
                   <td style={TD}><B c={resultTone(ev.result)}>{ev.result}</B></td>
@@ -683,8 +724,8 @@ export const AuditLogTab = ({ session, onToast }: any) => {
           <Btn small disabled={events.length < PAGE_SIZE} onClick={() => setOffset(offset + PAGE_SIZE)}>Next</Btn>
         </div>
       </div>
-    </>
-  );
+    </>;
+  };
 
   /* ── render: Analytics sub-tab ── */
 
@@ -944,7 +985,9 @@ export const AuditLogTab = ({ session, onToast }: any) => {
                     <span style={{ fontSize: 9, color: C.muted }}>{fmtTS(ev.timestamp)}</span>
                     <B c="blue">{(ev.service || "").replace("kms-", "")}</B>
                     <B c={resultTone(ev.result)}>{ev.result}</B>
-                    <span style={{ fontSize: 10, color: C.text, fontWeight: 600 }}>{ev.action}</span>
+                    <span style={{ fontSize: 10, color: C.text, fontWeight: 600 }} title={ev.action}>
+                      {formatAction(ev.action)}
+                    </span>
                   </div>
                   <div style={{ fontSize: 9, color: C.dim }}>
                     Actor: {ev.actor_id || "-"} &bull; Target: {ev.target_id || "-"} &bull;

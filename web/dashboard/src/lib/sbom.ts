@@ -68,6 +68,19 @@ export type VulnerabilityMatch = {
   reference: string;
 };
 
+export type ManualAdvisory = {
+  id: string;
+  component: string;
+  ecosystem?: string;
+  introduced_version?: string;
+  fixed_version?: string;
+  severity: string;
+  summary: string;
+  reference?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type BOMDiff = {
   from_id: string;
   to_id: string;
@@ -89,9 +102,14 @@ type SnapshotResponse<T> = { item: T };
 type GenerateResponse<T> = { snapshot: T };
 type HistoryResponse<T> = { items: T[] };
 type VulnerabilityResponse = { items: VulnerabilityMatch[] };
+type AdvisoryResponse = { item: ManualAdvisory };
+type AdvisoryListResponse = { items: ManualAdvisory[] };
 type SummaryResponse = { summary: Record<string, unknown> };
 type ExportResponse = { export: ExportArtifact };
 type DiffResponse = { diff: BOMDiff };
+
+const SBOM_GENERATE_TIMEOUT_MS = 300_000;
+const SBOM_VULNERABILITY_TIMEOUT_MS = 300_000;
 
 function tenantQuery(session: AuthSession): string {
   return `tenant_id=${encodeURIComponent(session.tenantId)}`;
@@ -101,7 +119,7 @@ export async function generateSBOM(session: AuthSession, trigger = "manual"): Pr
   const out = await serviceRequest<GenerateResponse<SBOMSnapshot>>(session, "sbom", "/sbom/generate", {
     method: "POST",
     body: JSON.stringify({ trigger })
-  });
+  }, SBOM_GENERATE_TIMEOUT_MS);
   return out.snapshot;
 }
 
@@ -120,8 +138,33 @@ export async function listSBOMHistory(session: AuthSession, limit = 20): Promise
 }
 
 export async function listSBOMVulnerabilities(session: AuthSession): Promise<VulnerabilityMatch[]> {
-  const out = await serviceRequest<VulnerabilityResponse>(session, "sbom", "/sbom/vulnerabilities");
+  const out = await serviceRequest<VulnerabilityResponse>(
+    session,
+    "sbom",
+    "/sbom/vulnerabilities",
+    undefined,
+    SBOM_VULNERABILITY_TIMEOUT_MS
+  );
   return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function listSBOMAdvisories(session: AuthSession): Promise<ManualAdvisory[]> {
+  const out = await serviceRequest<AdvisoryListResponse>(session, "sbom", "/sbom/advisories");
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function saveSBOMAdvisory(session: AuthSession, advisory: ManualAdvisory): Promise<ManualAdvisory> {
+  const out = await serviceRequest<AdvisoryResponse>(session, "sbom", "/sbom/advisories", {
+    method: "POST",
+    body: JSON.stringify(advisory)
+  });
+  return out.item;
+}
+
+export async function deleteSBOMAdvisory(session: AuthSession, id: string): Promise<void> {
+  await serviceRequest(session, "sbom", `/sbom/advisories/${encodeURIComponent(String(id || "").trim())}`, {
+    method: "DELETE"
+  });
 }
 
 export async function exportSBOM(
@@ -145,7 +188,7 @@ export async function generateCBOM(session: AuthSession, trigger = "manual"): Pr
       tenant_id: session.tenantId,
       trigger
     })
-  });
+  }, SBOM_GENERATE_TIMEOUT_MS);
   return out.snapshot;
 }
 

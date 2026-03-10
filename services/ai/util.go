@@ -218,7 +218,51 @@ func parseJSONObject(v string) map[string]interface{} {
 }
 
 func normalizeBackend(v string) string {
-	return strings.ToLower(strings.TrimSpace(v))
+	s := strings.ToLower(strings.TrimSpace(v))
+	switch s {
+	case "chatgpt", "gpt", "openai-chatgpt":
+		return "openai"
+	case "github-copilot", "copilot-chat":
+		return "copilot"
+	case "self-hosted-openai", "self_hosted", "own-hosted":
+		return "self-hosted"
+	default:
+		return s
+	}
+}
+
+func normalizeAuthType(v string) string {
+	s := strings.ToLower(strings.TrimSpace(v))
+	switch s {
+	case "apikey", "api-key", "x-api-key":
+		return "api_key"
+	case "authorization":
+		return "bearer"
+	default:
+		return s
+	}
+}
+
+func backendRequiresAuth(backend string) bool {
+	switch normalizeBackend(backend) {
+	case "claude", "openai", "azure-openai", "copilot":
+		return true
+	default:
+		return false
+	}
+}
+
+func defaultAuthTypeForBackend(backend string) string {
+	switch normalizeBackend(backend) {
+	case "claude":
+		return "api_key"
+	case "openai", "azure-openai", "copilot", "self-hosted", "vllm", "llamacpp":
+		return "bearer"
+	case "ollama":
+		return "none"
+	default:
+		return "bearer"
+	}
 }
 
 func atoi(v string) int {

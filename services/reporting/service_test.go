@@ -32,6 +32,92 @@ func TestServiceSyncAlertsAndEscalation(t *testing.T) {
 	}
 }
 
+func TestServiceSkipsInfoOnlyTelemetryAlerts(t *testing.T) {
+	svc, _, audit, _, _ := newReportingService(t)
+	tenantID := "tenant-info"
+	now := time.Now().UTC().Format(time.RFC3339)
+	audit.events[tenantID] = []map[string]interface{}{
+		{"id": "e1", "action": "audit.posture.events_ingested", "service": "posture", "target_id": "evt-1", "timestamp": now},
+		{"id": "e2", "action": "audit.posture.risk_snapshot", "service": "posture", "target_id": "evt-2", "timestamp": now},
+		{"id": "e3", "action": "audit.cert.runtime_materialized", "service": "certs", "target_id": "evt-3", "timestamp": now},
+	}
+	if err := svc.SyncAlertsFromAudit(context.Background(), tenantID, 100); err != nil {
+		t.Fatalf("sync alerts: %v", err)
+	}
+	items, err := svc.ListAlerts(context.Background(), tenantID, AlertQuery{Limit: 100})
+	if err != nil {
+		t.Fatalf("list alerts: %v", err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("expected 0 actionable alerts, got %d", len(items))
+	}
+}
+
+func TestServiceCreatesAlertWhenRuleEscalatesInfoEvent(t *testing.T) {
+	svc, _, audit, _, _ := newReportingService(t)
+	tenantID := "tenant-rule"
+	_, err := svc.CreateRule(context.Background(), tenantID, AlertRule{
+		Name:         "Posture Snapshot Warning",
+		Condition:    "threshold",
+		Severity:     severityWarning,
+		EventPattern: "audit.posture.risk_snapshot",
+		Threshold:    1,
+		WindowSecond: 60,
+	})
+	if err != nil {
+		t.Fatalf("create rule: %v", err)
+	}
+	audit.events[tenantID] = []map[string]interface{}{
+		{"id": "e1", "action": "audit.posture.risk_snapshot", "service": "posture", "target_id": "evt-1", "timestamp": time.Now().UTC().Format(time.RFC3339)},
+	}
+	if err := svc.SyncAlertsFromAudit(context.Background(), tenantID, 100); err != nil {
+		t.Fatalf("sync alerts: %v", err)
+	}
+	items, err := svc.ListAlerts(context.Background(), tenantID, AlertQuery{Limit: 100})
+	if err != nil {
+		t.Fatalf("list alerts: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 alert after rule escalation, got %d", len(items))
+	}
+	if items[0].Severity != severityWarning {
+		t.Fatalf("expected severity %s got %s", severityWarning, items[0].Severity)
+	}
+	if items[0].AuditAction != "audit.posture.risk_snapshot" {
+		t.Fatalf("unexpected action %s", items[0].AuditAction)
+	}
+}
+
+func TestServiceListChannelsExcludesPagerDuty(t *testing.T) {
+	svc, store, _, _, _ := newReportingService(t)
+	tenantID := "tenant-channels"
+	if err := store.UpsertChannel(context.Background(), NotificationChannel{
+		TenantID: tenantID,
+		Name:     "pagerduty",
+		Enabled:  true,
+		Config:   map[string]interface{}{"severity_filter": []string{"critical"}},
+	}); err != nil {
+		t.Fatalf("seed pagerduty channel: %v", err)
+	}
+	if err := store.UpsertChannel(context.Background(), NotificationChannel{
+		TenantID: tenantID,
+		Name:     "email",
+		Enabled:  true,
+		Config:   map[string]interface{}{"severity_filter": []string{"critical", "high"}},
+	}); err != nil {
+		t.Fatalf("seed email channel: %v", err)
+	}
+	channels, err := svc.ListChannels(context.Background(), tenantID)
+	if err != nil {
+		t.Fatalf("list channels: %v", err)
+	}
+	for _, ch := range channels {
+		if strings.EqualFold(ch.Name, "pagerduty") {
+			t.Fatalf("pagerduty channel should be excluded")
+		}
+	}
+}
+
 func TestServiceReportsAndSchedules(t *testing.T) {
 	svc, _, audit, compliance, pub := newReportingService(t)
 	tenantID := "tenant-r"

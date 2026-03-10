@@ -43,6 +43,7 @@ func createSQLiteSchema(conn *pkgdb.DB) error {
 		`CREATE TABLE key_access_group_members (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, user_id TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, group_id, user_id));`,
 		`CREATE TABLE approval_policies (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, scope TEXT NOT NULL, trigger_actions TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active');`,
 		`CREATE TABLE approval_requests (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, action TEXT NOT NULL, target_type TEXT NOT NULL, target_id TEXT NOT NULL, status TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, expires_at TIMESTAMP, resolved_at TIMESTAMP);`,
+		`CREATE TABLE approval_tokens (id TEXT PRIMARY KEY, request_id TEXT NOT NULL, approver_email TEXT NOT NULL, token_hash BLOB NOT NULL, action TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
 	}
 	for _, q := range sql {
 		if _, err := conn.SQL().Exec(q); err != nil {
@@ -181,6 +182,14 @@ CREATE TABLE tenant_artifacts (
 )`); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := s.db.SQL().ExecContext(ctx, `
+CREATE TABLE audit_events (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    action TEXT NOT NULL
+)`); err != nil {
+		t.Fatal(err)
+	}
 	if err := s.CreateTenant(ctx, Tenant{ID: "tdel", Name: "DeleteMe", Status: "active"}); err != nil {
 		t.Fatal(err)
 	}
@@ -209,6 +218,27 @@ CREATE TABLE tenant_artifacts (
 	if _, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO tenant_artifacts (id, tenant_id, payload)
 VALUES ('a-del-1','tdel','x'), ('a-del-2','tdel','y'), ('a-keep-1','tkeep','z')
+`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO audit_events (id, tenant_id, action)
+VALUES ('ae-del-1','tdel','audit.auth.login'),
+       ('ae-keep-1','tkeep','audit.auth.login')
+`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO approval_requests (id, tenant_id, action, target_type, target_id, status)
+VALUES ('req-del','tdel','tenant.delete','tenant','tdel','pending'),
+       ('req-keep','tkeep','tenant.delete','tenant','tkeep','pending')
+`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO approval_tokens (id, request_id, approver_email, token_hash, action, expires_at)
+VALUES ('tok-del','req-del','ops@tdel.local',x'01','approve',CURRENT_TIMESTAMP),
+       ('tok-keep','req-keep','ops@tkeep.local',x'02','approve',CURRENT_TIMESTAMP)
 `); err != nil {
 		t.Fatal(err)
 	}
@@ -252,6 +282,37 @@ VALUES ('a-del-1','tdel','x'), ('a-del-2','tdel','y'), ('a-keep-1','tkeep','z')
 	}
 	if keepArtifacts != 1 {
 		t.Fatalf("expected keep tenant artifact count=1, got %d", keepArtifacts)
+	}
+	var delTokens int
+	if err := s.db.SQL().QueryRowContext(ctx, `
+SELECT COUNT(*)
+FROM approval_tokens t
+JOIN approval_requests r ON r.id=t.request_id
+WHERE r.tenant_id='tdel'
+`).Scan(&delTokens); err != nil {
+		t.Fatal(err)
+	}
+	if delTokens != 0 {
+		t.Fatalf("expected no approval tokens for deleted tenant, got %d", delTokens)
+	}
+	var keepTokens int
+	if err := s.db.SQL().QueryRowContext(ctx, `
+SELECT COUNT(*)
+FROM approval_tokens t
+JOIN approval_requests r ON r.id=t.request_id
+WHERE r.tenant_id='tkeep'
+`).Scan(&keepTokens); err != nil {
+		t.Fatal(err)
+	}
+	if keepTokens != 1 {
+		t.Fatalf("expected approval token count=1 for keep tenant, got %d", keepTokens)
+	}
+	var delAuditEvents int
+	if err := s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(*) FROM audit_events WHERE tenant_id='tdel'`).Scan(&delAuditEvents); err != nil {
+		t.Fatal(err)
+	}
+	if delAuditEvents != 1 {
+		t.Fatalf("expected audit events to be preserved for deleted tenant, got %d", delAuditEvents)
 	}
 }
 

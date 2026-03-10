@@ -74,28 +74,42 @@ type ContextSources struct {
 	Alerts   ContextAlertsConfig   `json:"alerts"`
 }
 
+type ProviderAuthConfig struct {
+	Required bool   `json:"required"`
+	Type     string `json:"type"`
+}
+
+type MCPConfig struct {
+	Enabled  bool   `json:"enabled"`
+	Endpoint string `json:"endpoint"`
+}
+
 type AIConfig struct {
-	TenantID         string         `json:"tenant_id"`
-	Backend          string         `json:"backend"`
-	Endpoint         string         `json:"endpoint"`
-	Model            string         `json:"model"`
-	APIKeySecret     string         `json:"api_key_secret"`
-	MaxContextTokens int            `json:"max_context_tokens"`
-	Temperature      float64        `json:"temperature"`
-	ContextSources   ContextSources `json:"context_sources"`
-	RedactionFields  []string       `json:"redaction_fields"`
-	UpdatedAt        time.Time      `json:"updated_at"`
+	TenantID         string             `json:"tenant_id"`
+	Backend          string             `json:"backend"`
+	Endpoint         string             `json:"endpoint"`
+	Model            string             `json:"model"`
+	APIKeySecret     string             `json:"api_key_secret"`
+	ProviderAuth     ProviderAuthConfig `json:"provider_auth"`
+	MCP              MCPConfig          `json:"mcp"`
+	MaxContextTokens int                `json:"max_context_tokens"`
+	Temperature      float64            `json:"temperature"`
+	ContextSources   ContextSources     `json:"context_sources"`
+	RedactionFields  []string           `json:"redaction_fields"`
+	UpdatedAt        time.Time          `json:"updated_at"`
 }
 
 type AIConfigUpdate struct {
-	Backend          string         `json:"backend"`
-	Endpoint         string         `json:"endpoint"`
-	Model            string         `json:"model"`
-	APIKeySecret     string         `json:"api_key_secret"`
-	MaxContextTokens int            `json:"max_context_tokens"`
-	Temperature      float64        `json:"temperature"`
-	ContextSources   ContextSources `json:"context_sources"`
-	RedactionFields  []string       `json:"redaction_fields"`
+	Backend          string              `json:"backend"`
+	Endpoint         string              `json:"endpoint"`
+	Model            string              `json:"model"`
+	APIKeySecret     string              `json:"api_key_secret"`
+	ProviderAuth     *ProviderAuthConfig `json:"provider_auth"`
+	MCP              *MCPConfig          `json:"mcp"`
+	MaxContextTokens int                 `json:"max_context_tokens"`
+	Temperature      float64             `json:"temperature"`
+	ContextSources   ContextSources      `json:"context_sources"`
+	RedactionFields  []string            `json:"redaction_fields"`
 }
 
 type QueryRequest struct {

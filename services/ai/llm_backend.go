@@ -34,7 +34,7 @@ func (b *HTTPLLMBackend) Generate(ctx context.Context, cfg AIConfig, prompt stri
 	switch backend {
 	case "claude":
 		return b.callClaude(ctx, endpoint, cfg, prompt, apiKey)
-	case "openai", "azure-openai", "vllm", "llamacpp":
+	case "openai", "azure-openai", "copilot", "self-hosted", "vllm", "llamacpp":
 		return b.callOpenAICompatible(ctx, endpoint, cfg, prompt, apiKey, backend == "azure-openai")
 	case "ollama":
 		return b.callOllama(ctx, endpoint, cfg, prompt)
@@ -55,10 +55,11 @@ func (b *HTTPLLMBackend) callClaude(ctx context.Context, endpoint string, cfg AI
 			},
 		},
 	}
-	out, err := b.doJSON(ctx, endpoint, reqBody, map[string]string{
-		"x-api-key":         apiKey,
+	headers := map[string]string{
 		"anthropic-version": "2023-06-01",
-	})
+	}
+	mergeAuthHeaders(headers, cfg, apiKey, "x-api-key")
+	out, err := b.doJSON(ctx, endpoint, reqBody, headers)
 	if err != nil {
 		return LLMResult{}, err
 	}
@@ -82,6 +83,7 @@ func (b *HTTPLLMBackend) callClaude(ctx context.Context, endpoint string, cfg AI
 }
 
 func (b *HTTPLLMBackend) callOpenAICompatible(ctx context.Context, endpoint string, cfg AIConfig, prompt string, apiKey string, azure bool) (LLMResult, error) {
+	_ = azure
 	reqBody := map[string]interface{}{
 		"model":       cfg.Model,
 		"temperature": cfg.Temperature,
@@ -91,10 +93,7 @@ func (b *HTTPLLMBackend) callOpenAICompatible(ctx context.Context, endpoint stri
 		},
 	}
 	headers := map[string]string{}
-	if strings.TrimSpace(apiKey) != "" {
-		headers["Authorization"] = "Bearer " + strings.TrimSpace(apiKey)
-		headers["api-key"] = strings.TrimSpace(apiKey)
-	}
+	mergeAuthHeaders(headers, cfg, apiKey, "api-key")
 	out, err := b.doJSON(ctx, endpoint, reqBody, headers)
 	if err != nil {
 		return LLMResult{}, err
@@ -112,6 +111,31 @@ func (b *HTTPLLMBackend) callOpenAICompatible(ctx context.Context, endpoint stri
 		CompletionTokens: extractInt(usage["completion_tokens"]),
 		Raw:              out,
 	}, nil
+}
+
+func mergeAuthHeaders(headers map[string]string, cfg AIConfig, apiKey string, apiKeyHeader string) {
+	cred := strings.TrimSpace(apiKey)
+	if cred == "" {
+		return
+	}
+	authType := normalizeAuthType(cfg.ProviderAuth.Type)
+	if authType == "" {
+		authType = defaultAuthTypeForBackend(cfg.Backend)
+	}
+	switch authType {
+	case "api_key":
+		header := strings.TrimSpace(apiKeyHeader)
+		if header == "" {
+			header = "x-api-key"
+		}
+		headers[header] = cred
+	case "bearer":
+		headers["Authorization"] = "Bearer " + cred
+	case "none":
+		return
+	default:
+		headers["Authorization"] = "Bearer " + cred
+	}
 }
 
 func (b *HTTPLLMBackend) callOllama(ctx context.Context, endpoint string, cfg AIConfig, prompt string) (LLMResult, error) {

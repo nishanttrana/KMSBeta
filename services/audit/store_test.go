@@ -162,3 +162,45 @@ func TestVerifyChain(t *testing.T) {
 		t.Fatalf("chain should be valid: ok=%v breaks=%v", ok, breaks)
 	}
 }
+
+func TestPersistEventNormalizesSourceIP(t *testing.T) {
+	s := newAuditStore(t)
+	ctx := context.Background()
+
+	_, _, err := s.PersistEventAndAlert(ctx, AuditEvent{
+		TenantID:  "t3",
+		Timestamp: time.Now().UTC(),
+		Service:   "auth",
+		Action:    "audit.auth.login_failed",
+		ActorID:   "u1",
+		ActorType: "human",
+		SourceIP:  "172.18.0.4:55712",
+		Result:    "failure",
+	}, Alert{
+		Severity:      "HIGH",
+		Category:      "auth",
+		Title:         "Login failed",
+		SourceService: "auth",
+	}, 60, 5, 10*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	events, err := s.QueryEvents(ctx, "t3", EventQuery{Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected one event, got %d", len(events))
+	}
+	if events[0].SourceIP != "172.18.0.4" {
+		t.Fatalf("expected normalized source ip, got %q", events[0].SourceIP)
+	}
+}
+
+func TestNormalizeSourceIPInvalidReturnsEmpty(t *testing.T) {
+	got := normalizeSourceIP("not-an-ip:443")
+	if got != "" {
+		t.Fatalf("expected empty source ip, got %q", got)
+	}
+}

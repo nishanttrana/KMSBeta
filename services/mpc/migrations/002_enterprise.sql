@@ -44,7 +44,7 @@ CREATE INDEX IF NOT EXISTS idx_mpc_policy_rules_policy
     ON mpc_policy_rules (tenant_id, policy_id);
 
 -- Key lifecycle columns
-ALTER TABLE mpc_keys ADD COLUMN key_group TEXT NOT NULL DEFAULT '';
-ALTER TABLE mpc_keys ADD COLUMN expires_at TIMESTAMP;
-ALTER TABLE mpc_keys ADD COLUMN revoked_at TIMESTAMP;
-ALTER TABLE mpc_keys ADD COLUMN revocation_reason TEXT NOT NULL DEFAULT '';
+ALTER TABLE mpc_keys ADD COLUMN IF NOT EXISTS key_group TEXT NOT NULL DEFAULT '';
+ALTER TABLE mpc_keys ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
+ALTER TABLE mpc_keys ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMP;
+ALTER TABLE mpc_keys ADD COLUMN IF NOT EXISTS revocation_reason TEXT NOT NULL DEFAULT '';

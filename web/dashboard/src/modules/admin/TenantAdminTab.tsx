@@ -791,7 +791,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
 
       {/* Readiness Indicators */}
       <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-        <Card style={{ flex: 1, borderTop: `2px solid ${readiness.can_disable ? C.green : C.amber}` }}>
+        <Card style={{ flex: 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Disable Ready</div>
@@ -800,7 +800,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
             <B c={readiness.can_disable ? "green" : "amber"} pulse={Boolean(readiness.can_disable)}>{readiness.can_disable ? "YES" : "NO"}</B>
           </div>
         </Card>
-        <Card style={{ flex: 1, borderTop: `2px solid ${readiness.can_delete ? C.green : C.red}` }}>
+        <Card style={{ flex: 1 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Delete Ready</div>

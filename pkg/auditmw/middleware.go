@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -41,6 +42,9 @@ func (rc *responseCapture) Write(b []byte) (int, error) {
 // latency to the request path.
 func Wrap(next http.Handler, publisher EventPublisher, serviceName string) http.Handler {
 	if publisher == nil {
+		return next
+	}
+	if !envOrBool("AUDIT_CAPTURE_HTTP_REQUESTS", false) {
 		return next
 	}
 	subject := "audit." + serviceName + ".http_request"
@@ -132,4 +136,12 @@ func sanitizeQuery(raw string) string {
 		}
 	}
 	return strings.Join(clean, "&")
+}
+
+func envOrBool(key string, def bool) bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	if v == "" {
+		return def
+	}
+	return v == "1" || v == "true" || v == "yes" || v == "on"
 }

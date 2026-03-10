@@ -91,3 +91,52 @@ func TestStoreCBOMSnapshotCRUD(t *testing.T) {
 		t.Fatalf("unexpected tenants: %+v", tenants)
 	}
 }
+
+func TestStoreManualAdvisoriesCRUD(t *testing.T) {
+	_, store, _, _, _, _ := newSBOMService(t)
+
+	item := ManualAdvisory{
+		ID:                "CVE-2026-9999",
+		Component:         "example/module",
+		Ecosystem:         "go",
+		IntroducedVersion: "v1.0.0",
+		FixedVersion:      "v1.2.0",
+		Severity:          "high",
+		Summary:           "Offline advisory for air-gapped validation.",
+		Reference:         "https://example.test/advisories/CVE-2026-9999",
+	}
+	if err := store.UpsertManualAdvisory(context.Background(), item); err != nil {
+		t.Fatalf("upsert manual advisory: %v", err)
+	}
+
+	list, err := store.ListManualAdvisories(context.Background())
+	if err != nil {
+		t.Fatalf("list manual advisories: %v", err)
+	}
+	if len(list) != 1 || list[0].ID != item.ID {
+		t.Fatalf("unexpected manual advisories: %+v", list)
+	}
+
+	item.Summary = "Updated summary."
+	if err := store.UpsertManualAdvisory(context.Background(), item); err != nil {
+		t.Fatalf("update manual advisory: %v", err)
+	}
+	list, err = store.ListManualAdvisories(context.Background())
+	if err != nil {
+		t.Fatalf("list manual advisories after update: %v", err)
+	}
+	if len(list) != 1 || list[0].Summary != item.Summary {
+		t.Fatalf("expected updated advisory, got %+v", list)
+	}
+
+	if err := store.DeleteManualAdvisory(context.Background(), item.ID); err != nil {
+		t.Fatalf("delete manual advisory: %v", err)
+	}
+	list, err = store.ListManualAdvisories(context.Background())
+	if err != nil {
+		t.Fatalf("list manual advisories after delete: %v", err)
+	}
+	if len(list) != 0 {
+		t.Fatalf("expected manual advisories to be deleted, got %+v", list)
+	}
+}

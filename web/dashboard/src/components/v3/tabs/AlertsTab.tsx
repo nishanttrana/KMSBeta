@@ -5,7 +5,6 @@ import {
   acknowledgeAlertsBulk,
   acknowledgeAlert,
   escalateAlert,
-  getReportingAlertStats,
   getReportingMTTR,
   listReportingAlerts,
   listReportingChannels
@@ -28,6 +27,145 @@ function formatAgo(value: unknown): string {
   if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
   if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
   return `${Math.floor(diffSec / 86400)}d ago`;
+}
+
+const NOISY_INFO_ACTIONS = new Set([
+  "audit.posture.events_ingested",
+  "audit.posture.risk_snapshot",
+  "audit.posture.preventive_controls_applied",
+  "audit.cert.runtime_materialized"
+]);
+
+const GENERIC_CORRELATION_TEXT = "generated from audit event correlation pipeline";
+
+const ACTION_REASON: Record<string, string> = {
+  "audit.posture.risk_snapshot": "Posture risk baseline changed and was captured by the monitoring engine.",
+  "audit.posture.events_ingested": "Posture engine ingested new security events that may affect risk.",
+  "audit.posture.preventive_controls_applied": "Posture preventive controls were applied automatically.",
+  "audit.cert.runtime_materialized": "Certificate runtime state was materialized for policy/runtime checks."
+};
+
+function toTitleWords(value: string): string {
+  return String(value || "")
+    .replace(/^audit\./i, "")
+    .replaceAll("_", " ")
+    .replaceAll(".", " ")
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function normalizeAlertAction(item: any): string {
+  const direct = String(item?.audit_action || item?.action || "").trim().toLowerCase();
+  if (direct) {
+    return direct;
+  }
+  const title = String(item?.title || "").trim().toLowerCase();
+  const base = title.split(":")[0] || "";
+  if (!base.startsWith("audit ")) {
+    return "";
+  }
+  return base.replace(/\s+/g, ".");
+}
+
+function isNoisyInfoAlert(item: any): boolean {
+  const severity = String(item?.severity || "").trim().toLowerCase();
+  if (severity !== "info") {
+    return false;
+  }
+  const action = normalizeAlertAction(item);
+  if (!action) {
+    return false;
+  }
+  if (action.endsWith(".http_request")) {
+    return true;
+  }
+  return NOISY_INFO_ACTIONS.has(action);
+}
+
+function actionLabelForAlert(item: any): string {
+  const action = normalizeAlertAction(item);
+  if (!action) {
+    return "General Security Event";
+  }
+  const parts = action.split(".").filter(Boolean);
+  if (parts[0] === "audit" && parts.length >= 3) {
+    return toTitleWords(parts.slice(2).join("."));
+  }
+  if (parts.length >= 2) {
+    return toTitleWords(parts.slice(1).join("."));
+  }
+  return toTitleWords(action);
+}
+
+function alertHeadline(item: any): string {
+  const rawTitle = String(item?.title || "").trim();
+  const targetID = String(item?.target_id || "").trim();
+  const genericAuditTitle = /^audit\s+.+:\s*evt_[a-z0-9_-]+$/i.test(rawTitle);
+  if (rawTitle && !genericAuditTitle) {
+    return rawTitle.replaceAll("_", " ");
+  }
+  const label = actionLabelForAlert(item);
+  if (targetID && targetID !== "-" && targetID.toLowerCase() !== "n/a" && !/^evt_/i.test(targetID)) {
+    return `${label} (${targetID})`;
+  }
+  return label;
+}
+
+function alertReason(item: any): string {
+  const raw = String(item?.description || "").trim();
+  if (raw && !raw.toLowerCase().includes(GENERIC_CORRELATION_TEXT)) {
+    return raw;
+  }
+  const action = normalizeAlertAction(item);
+  if (action && ACTION_REASON[action]) {
+    return ACTION_REASON[action];
+  }
+  if (action) {
+    return `Alert for ${actionLabelForAlert(item).toLowerCase()} activity detected by correlation engine.`;
+  }
+  return "Alert generated from correlated security telemetry.";
+}
+
+function alertContext(item: any): string {
+  const parts: string[] = [];
+  const service = String(item?.service || "").trim();
+  const actor = String(item?.actor_id || "").trim();
+  const sourceIP = String(item?.source_ip || "").trim();
+  const target = String(item?.target_id || "").trim();
+  const dedupCount = Number(item?.dedup_count || 0);
+  if (service && service !== "-") {
+    parts.push(`Service: ${service}`);
+  }
+  if (actor && actor !== "-" && actor.toLowerCase() !== "system") {
+    parts.push(`Actor: ${actor}`);
+  }
+  if (sourceIP && sourceIP !== "-" && sourceIP !== "::1") {
+    parts.push(`IP: ${sourceIP}`);
+  }
+  if (target && target !== "-" && target.toLowerCase() !== "n/a" && !/^evt_/i.test(target)) {
+    parts.push(`Target: ${target}`);
+  }
+  if (Number.isFinite(dedupCount) && dedupCount > 1) {
+    parts.push(`${dedupCount} similar events`);
+  }
+  return parts.length ? parts.join(" • ") : "Source: correlation engine";
+}
+
+function summarizeAlertStats(items: any[]) {
+  const bySeverity: Record<string, number> = {};
+  const byStatus: Record<string, number> = {};
+  for (const item of Array.isArray(items) ? items : []) {
+    const sev = String(item?.severity || "info").trim().toLowerCase() || "info";
+    const status = String(item?.status || "new").trim().toLowerCase() || "new";
+    bySeverity[sev] = (bySeverity[sev] || 0) + 1;
+    byStatus[status] = (byStatus[status] || 0) + 1;
+  }
+  return {
+    total: Array.isArray(items) ? items.length : 0,
+    by_severity: bySeverity,
+    by_status: byStatus
+  };
 }
 
 type AlertsTabProps = {
@@ -62,17 +200,17 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
       setLoading(true);
     }
     try{
-      const [alertsOut,statsOut,mttrOut,channelsOut]=await Promise.all([
+      const [alertsOut,mttrOut,channelsOut]=await Promise.all([
         listReportingAlerts(session,{limit:500,offset:0}),
-        getReportingAlertStats(session),
         getReportingMTTR(session),
         listReportingChannels(session)
       ]);
-      setItems(Array.isArray(alertsOut)?alertsOut:[]);
-      setStats(statsOut||{total:0,by_severity:{},by_status:{}});
+      const visibleItems=(Array.isArray(alertsOut)?alertsOut:[]).filter((item:any)=>!isNoisyInfoAlert(item));
+      setItems(visibleItems);
+      setStats(summarizeAlertStats(visibleItems));
       setMTTR(mttrOut&&typeof mttrOut==="object"?mttrOut:{});
       setChannels(Array.isArray(channelsOut)?channelsOut:[]);
-      const unread=Math.max(0,(Array.isArray(alertsOut)?alertsOut:[]).filter((item:any)=>String(item?.status||"").toLowerCase()==="new").length);
+      const unread=Math.max(0,visibleItems.filter((item:any)=>String(item?.status||"").toLowerCase()==="new").length);
       onUnreadSync?.(unread);
     }catch(error){
       onToast?.(`Alerts load failed: ${errMsg(error)}`);
@@ -160,7 +298,11 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
   },[mttr]);
 
   const enabledChannels=useMemo(()=>{
-    return (Array.isArray(channels)?channels:[]).filter((ch)=>Boolean(ch?.enabled)&&String(ch?.name||"").toLowerCase()!=="pager");
+    return (Array.isArray(channels)?channels:[]).filter((ch)=>{
+      if(!Boolean(ch?.enabled)) return false;
+      const name=String(ch?.name||"").toLowerCase();
+      return name!=="pager"&&name!=="pagerduty";
+    });
   },[channels]);
 
   const alertCards=[
@@ -304,16 +446,18 @@ export const AlertsTab=({session,onToast,onUnreadSync}: AlertsTabProps)=>{
           const tone=severityTone(sev);
           const canAck=status==="new";
           const canEscalate=status==="new"&&sev!=="critical";
-          return <Card key={String(item?.id||"")} style={{padding:"12px 14px",borderLeft:`3px solid ${palette[tone]||C.accent}`}}>
+          const actionLabel=actionLabelForAlert(item);
+          return <Card key={String(item?.id||"")} style={{padding:"12px 14px"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
               <div style={{minWidth:0,flex:1}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,flexWrap:"wrap"}}>
                   <B c={tone}>{sev.toUpperCase()}</B>
-                  <div style={{fontSize:13,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(item?.title||item?.id||"Alert")}</div>
+                  <div style={{fontSize:13,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{alertHeadline(item)}</div>
                 </div>
-                <div style={{fontSize:11,color:C.dim,marginBottom:5}}>{String(item?.description||"-")}</div>
+                <div style={{fontSize:10,color:C.muted,marginBottom:4}}>{`Alert For: ${actionLabel}`}</div>
+                <div style={{fontSize:11,color:C.dim,marginBottom:5}}>{alertReason(item)}</div>
                 <div style={{fontSize:9,color:C.muted}}>
-                  {`Source: ${String(item?.service||"-")}   Actor: ${String(item?.actor_id||"system")}   Target: ${String(item?.target_id||"-")}`}
+                  {alertContext(item)}
                 </div>
               </div>
               <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,minWidth:170}}>

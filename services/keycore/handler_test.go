@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	pkgcache "vecta-kms/pkg/cache"
 	"vecta-kms/pkg/metering"
 	"vecta-kms/pkg/payment"
 )
@@ -34,7 +35,7 @@ func newHandlerForTest(t *testing.T) (*Handler, *Service) {
 	t.Helper()
 	store := newStoreForTest(t)
 	mek := []byte("0123456789ABCDEF0123456789ABCDEF")
-	svc := NewService(store, newMemoryCache(5*time.Minute), nopPublisher{}, metering.NewMeter(0, time.Hour), mek, nil, false)
+	svc := NewService(store, NewKeyCache(pkgcache.NewMemory(5*time.Minute), 5*time.Minute), nopPublisher{}, metering.NewMeter(0, time.Hour), mek, nil, false)
 	return NewHandler(svc), svc
 }
 
@@ -131,7 +132,7 @@ func TestExternalIVValidation(t *testing.T) {
 func TestCreateKeyPolicyDeniedReturns403(t *testing.T) {
 	store := newStoreForTest(t)
 	mek := []byte("0123456789ABCDEF0123456789ABCDEF")
-	svc := NewService(store, newMemoryCache(5*time.Minute), nopPublisher{}, metering.NewMeter(0, time.Hour), mek, denyPolicyEvaluator{}, true)
+	svc := NewService(store, NewKeyCache(pkgcache.NewMemory(5*time.Minute), 5*time.Minute), nopPublisher{}, metering.NewMeter(0, time.Hour), mek, denyPolicyEvaluator{}, true)
 	h := NewHandler(svc)
 
 	body := map[string]any{

@@ -5,6 +5,7 @@ import { getCertExpiryAlertPolicy, listCertificates } from "../../../lib/certs";
 import { listSecrets } from "../../../lib/secrets";
 import { getUnreadAlertCounts } from "../../../lib/reporting";
 import { getClusterOverview } from "../../../lib/cluster";
+import { getComplianceAssessment, listComplianceAssessmentHistory } from "../../../lib/compliance";
 import {
   getGovernanceSettings,
   getGovernanceSystemState,
@@ -154,7 +155,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     const refreshHome=async()=>{
       setHomeLoading(true);
       try{
-        const [keys,secretItems,certItems,counts,policy,pendingRequests,governancePolicies,governanceSettings,clusterOverview,governanceSystemState]=await Promise.all([
+        const [keys,secretItems,certItems,counts,policy,pendingRequests,governancePolicies,governanceSettings,clusterOverview,governanceSystemState,complianceAssessment,complianceHistory]=await Promise.all([
           listKeys(session),
           listSecrets(session),
           listCertificates(session,{limit:1000,offset:0}),
@@ -164,7 +165,9 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
           listGovernancePolicies(session,{status:"active"}).catch(()=>[]),
           getGovernanceSettings(session).catch(()=>null),
           getClusterOverview(session).catch(()=>({nodes:[],profiles:[],summary:{total_nodes:0,online_nodes:0,degraded_nodes:0,down_nodes:0}})),
-          getGovernanceSystemState(session).catch(()=>null)
+          getGovernanceSystemState(session).catch(()=>null),
+          getComplianceAssessment(session,"default").catch(()=>null),
+          listComplianceAssessmentHistory(session,2,"default").catch(()=>[])
         ]);
         if(cancelled){
           return;
@@ -206,10 +209,29 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
         const keyGrowthWeek=Math.max(0,Math.round(keyCount*0.0045));
         const opsPerDay=Math.max(0,Math.round(keyCount*4.32));
         const opsGrowthPct=8.2;
-        const complianceBase=globalFipsEnabled?94:86;
-        const compliancePenalty=Math.min(32,(criticalAlerts*3)+(expiringItems.length*2));
-        const complianceScore=Math.max(0,Math.min(100,Math.round(complianceBase-compliancePenalty)));
-        const complianceDeltaWeek=Math.max(0,3-Math.min(3,criticalAlerts));
+        const complianceFallbackBase=globalFipsEnabled?94:86;
+        const complianceFallbackPenalty=Math.min(32,(criticalAlerts*3)+(expiringItems.length*2));
+        const complianceFallbackScore=Math.max(0,Math.min(100,Math.round(complianceFallbackBase-complianceFallbackPenalty)));
+        const complianceServiceScoreRaw=Number((complianceAssessment as any)?.overall_score ?? (complianceAssessment as any)?.posture?.overall_score);
+        const complianceServiceScore=Number.isFinite(complianceServiceScoreRaw)
+          ? Math.max(0,Math.min(100,Math.round(complianceServiceScoreRaw)))
+          : null;
+        const complianceScore=complianceServiceScore===null?complianceFallbackScore:complianceServiceScore;
+        const complianceDeltaWeek=(()=>{
+          const hist=(Array.isArray(complianceHistory)?complianceHistory:[])
+            .filter((entry:any)=>entry&&typeof entry==="object")
+            .slice()
+            .sort((a:any,b:any)=>new Date(String(b?.created_at||b?.updated_at||0)).getTime()-new Date(String(a?.created_at||a?.updated_at||0)).getTime());
+          if(hist.length<2){
+            return 0;
+          }
+          const latest=Number(hist[0]?.overall_score);
+          const previous=Number(hist[1]?.overall_score);
+          if(!Number.isFinite(latest)||!Number.isFinite(previous)){
+            return 0;
+          }
+          return Math.round(latest-previous);
+        })();
 
         const algoBuckets:any={};
         for(const item of keyItems){

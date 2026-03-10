@@ -623,6 +623,17 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [ruleChannelsAvail,setRuleChannelsAvail]=useState<string[]>(["screen","email","slack","teams","webhook"]);
   const [ruleSaving,setRuleSaving]=useState(false);
 
+  const isDeprecatedChannel=useCallback((name:string)=>{
+    const n=String(name||"").trim().toLowerCase();
+    return n==="pager"||n==="pagerduty";
+  },[]);
+
+  const sanitizeRuleChannels=useCallback((channels:string[])=>{
+    return Array.from(new Set((Array.isArray(channels)?channels:[])
+      .map((ch)=>String(ch||"").trim().toLowerCase())
+      .filter((ch)=>Boolean(ch)&&!isDeprecatedChannel(ch))));
+  },[isDeprecatedChannel]);
+
   const sessionGuard=useCallback((error:unknown)=>{
     const msg=errMsg(error).toLowerCase();
     if(msg.includes("invalid token")||msg.includes("unauthorized")){
@@ -639,11 +650,14 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     try{
       const [rulesOut,channelsOut]=await Promise.all([listReportingRules(session),listReportingChannels(session)]);
       setAlertRules(rulesOut);
-      const names=channelsOut.filter((ch)=>ch.enabled&&String(ch.name||"").toLowerCase()!=="pager").map((ch)=>ch.name).filter(Boolean);
+      const names=channelsOut
+        .filter((ch)=>ch.enabled&&!isDeprecatedChannel(String(ch.name||"")))
+        .map((ch)=>String(ch.name||"").trim().toLowerCase())
+        .filter(Boolean);
       if(names.length) setRuleChannelsAvail(names);
     }catch(error){if(!sessionGuard(error)) onToast(`Alert rules load failed: ${errMsg(error)}`);}
     finally{setAlertRulesLoading(false);}
-  },[session,sessionGuard,onToast]);
+  },[session,sessionGuard,onToast,isDeprecatedChannel]);
 
   const openRuleModal=useCallback((rule?:ReportingAlertRule)=>{
     if(rule){
@@ -656,14 +670,15 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       setRuleThreshold(Math.max(1,Number(rule.threshold||1)));
       setRuleWindowSeconds(Math.max(1,Number(rule.window_seconds||300)));
       setRuleExpression(rule.expression||"");
-      setRuleChannels(Array.isArray(rule.channels)?[...rule.channels]:["screen"]);
+      const cleanChannels=sanitizeRuleChannels(Array.isArray(rule.channels)?[...rule.channels]:["screen"]);
+      setRuleChannels(cleanChannels.length?cleanChannels:["screen"]);
     }else{
       setEditingRule(null);
       setRuleName("");setRuleCondition("threshold");setRulePattern("");setRuleSeverity("warning");
       setRuleThreshold(1);setRuleWindowSeconds(300);setRuleExpression("");setRuleChannels(["screen"]);
     }
     setRuleModalOpen(true);
-  },[]);
+  },[sanitizeRuleChannels]);
 
   const handleSaveRule=useCallback(async()=>{
     if(!session?.token) return;
@@ -681,7 +696,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         threshold:ruleCondition==="threshold"?Math.max(1,Math.trunc(ruleThreshold)):1,
         window_seconds:ruleCondition==="threshold"?Math.max(1,Math.trunc(ruleWindowSeconds)):60,
         expression:ruleCondition==="expression"?String(ruleExpression||"").trim():"",
-        channels:ruleChannels.filter(Boolean),
+        channels:sanitizeRuleChannels(ruleChannels),
         enabled:editingRule?.enabled!==false
       };
       if(editingRule?.id){
@@ -695,7 +710,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       await refreshAlertRules();
     }catch(error){if(!sessionGuard(error)) onToast(`Alert rule save failed: ${errMsg(error)}`);}
     finally{setRuleSaving(false);}
-  },[session,ruleName,ruleCondition,rulePattern,ruleSeverity,ruleThreshold,ruleWindowSeconds,ruleExpression,ruleChannels,editingRule,refreshAlertRules,sessionGuard,onToast]);
+  },[session,ruleName,ruleCondition,rulePattern,ruleSeverity,ruleThreshold,ruleWindowSeconds,ruleExpression,ruleChannels,editingRule,refreshAlertRules,sessionGuard,onToast,sanitizeRuleChannels]);
 
   const toggleRuleChannel=useCallback((ch:string)=>{
     setRuleChannels((prev)=>prev.includes(ch)?prev.filter((c)=>c!==ch):[...prev,ch]);

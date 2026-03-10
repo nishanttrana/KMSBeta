@@ -173,6 +173,9 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 			posture_require_step_up_auth INTEGER NOT NULL DEFAULT 0,
 			posture_pause_connector_sync INTEGER NOT NULL DEFAULT 0,
 			posture_guardrail_policy_required INTEGER NOT NULL DEFAULT 0,
+			qrng_enabled INTEGER NOT NULL DEFAULT 0,
+			qrng_default_source TEXT NOT NULL DEFAULT '',
+			qrng_min_entropy_bpb REAL NOT NULL DEFAULT 7.0,
 			updated_by TEXT,
 			updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 		);`,

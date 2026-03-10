@@ -98,3 +98,46 @@ func TestServiceExplainPolicy(t *testing.T) {
 		t.Fatalf("unexpected action: %s", out.Action)
 	}
 }
+
+func TestServiceConfigRequiresAuthForManagedBackends(t *testing.T) {
+	svc, _, _, _ := newAIService(t)
+	_, err := svc.UpdateConfig(context.Background(), "tenant-auth", AIConfigUpdate{
+		Backend:      "openai",
+		Endpoint:     "https://api.openai.com/v1/chat/completions",
+		APIKeySecret: "ai-api-key",
+		ProviderAuth: &ProviderAuthConfig{
+			Required: true,
+			Type:     "none",
+		},
+	})
+	if err == nil {
+		t.Fatalf("expected validation error for managed backend without auth")
+	}
+}
+
+func TestServiceConfigSupportsCopilotAndMCP(t *testing.T) {
+	svc, _, _, _ := newAIService(t)
+	out, err := svc.UpdateConfig(context.Background(), "tenant-copilot", AIConfigUpdate{
+		Backend:      "copilot",
+		Endpoint:     "https://api.githubcopilot.com/chat/completions",
+		Model:        "gpt-4o",
+		APIKeySecret: "copilot-token",
+		ProviderAuth: &ProviderAuthConfig{
+			Required: true,
+			Type:     "bearer",
+		},
+		MCP: &MCPConfig{
+			Enabled:  true,
+			Endpoint: "mcp://kms-ai",
+		},
+	})
+	if err != nil {
+		t.Fatalf("update config: %v", err)
+	}
+	if out.Backend != "copilot" {
+		t.Fatalf("expected copilot backend, got %s", out.Backend)
+	}
+	if !out.MCP.Enabled {
+		t.Fatalf("expected mcp to be enabled")
+	}
+}
