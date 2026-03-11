@@ -56,6 +56,27 @@ type Props = {
   onComplete: () => void;
 };
 
+type RuntimeApplyResult = {
+  enabled?: boolean;
+  executed?: boolean;
+  start_ok?: boolean;
+  health_checked?: boolean;
+  healthy?: boolean;
+  profiles?: string[];
+  services?: string[];
+  start_logs?: string[];
+  health_logs?: string[];
+  message?: string;
+  manual_steps?: string[];
+};
+
+type FeaturesApplyResponse = {
+  status?: string;
+  runtime_status?: string;
+  features?: Record<string, boolean>;
+  runtime_apply?: RuntimeApplyResult;
+};
+
 export function FeatureOnboardingWizard({ session, onComplete }: Props) {
   const [step, setStep] = useState<WizardStep>("welcome");
   const [selected, setSelected] = useState<Set<string>>(() =>
@@ -63,6 +84,7 @@ export function FeatureOnboardingWizard({ session, onComplete }: Props) {
   );
   const [deployLog, setDeployLog] = useState<string[]>([]);
   const [deployError, setDeployError] = useState("");
+  const [deployResult, setDeployResult] = useState<RuntimeApplyResult | null>(null);
 
   const toggleFeature = useCallback((key: string) => {
     setSelected((prev) => {
@@ -81,34 +103,41 @@ export function FeatureOnboardingWizard({ session, onComplete }: Props) {
 
   const handleDeploy = useCallback(async () => {
     setStep("deploying");
-    setDeployLog(["Starting feature deployment..."]);
+    setDeployLog(["Applying feature configuration..."]);
     setDeployError("");
+    setDeployResult(null);
     try {
       const features: Record<string, boolean> = {};
       FEATURE_TILES.forEach((tile) => { features[tile.key] = selected.has(tile.key); });
 
-      setDeployLog((p) => [...p, "Applying feature configuration..."]);
-      const response = await fetch("/svc/firstboot/api/v1/firstboot/apply", {
+      const response = await fetch("/svc/firstboot/api/v1/firstboot/features/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.token}` },
         body: JSON.stringify({ metadata: {}, spec: { features } }),
       });
-      if (!response.ok) throw new Error(`Deployment API returned ${response.status}`);
 
-      setDeployLog((p) => [...p, "Configuration applied successfully.", "Starting selected services..."]);
+      const payload = await response.json().catch(() => ({} as FeaturesApplyResponse)) as FeaturesApplyResponse;
+      const runtimeApply = payload?.runtime_apply || {};
+      const nextLog = [
+        payload?.status === "applied" ? "Feature configuration saved." : "Feature configuration update returned an unexpected status.",
+        ...(runtimeApply?.message ? [runtimeApply.message] : []),
+        ...(Array.isArray(runtimeApply?.start_logs) ? runtimeApply.start_logs : []),
+        ...(Array.isArray(runtimeApply?.health_logs) ? runtimeApply.health_logs : []),
+        ...(Array.isArray(runtimeApply?.manual_steps) ? runtimeApply.manual_steps : []),
+      ].filter(Boolean);
+      setDeployResult(runtimeApply);
+      setDeployLog(nextLog.length ? nextLog : ["Feature configuration processed."]);
 
-      // Simulate service startup progress
-      const enabledFeatures = FEATURE_TILES.filter((t) => selected.has(t.key));
-      for (const feat of enabledFeatures) {
-        await new Promise((r) => setTimeout(r, 400));
-        setDeployLog((p) => [...p, `Starting ${feat.label}...`]);
+      if (!response.ok) {
+        const runtimeMessage = String(runtimeApply?.message || "").trim();
+        throw new Error(runtimeMessage || `Deployment API returned ${response.status}`);
       }
-      await new Promise((r) => setTimeout(r, 600));
-      setDeployLog((p) => [...p, "All selected services are running."]);
+
       setStep("complete");
     } catch (err) {
-      setDeployError(String(err));
-      setDeployLog((p) => [...p, `Error: ${err}`]);
+      const message = err instanceof Error ? err.message : String(err);
+      setDeployError(message);
+      setDeployLog((p) => [...p, `Error: ${message}`]);
     }
   }, [selected, session]);
 
@@ -255,8 +284,26 @@ export function FeatureOnboardingWizard({ session, onComplete }: Props) {
             </div>
             <h2 style={{ fontSize: 24, fontWeight: 800, color: C.text, margin: "0 0 12px" }}>All Set!</h2>
             <p style={{ fontSize: 13, color: C.dim, maxWidth: 450, margin: "0 auto 28px", lineHeight: 1.6 }}>
-              Your selected features are deployed and ready to use. You can manage features anytime from the Administration panel.
+              {deployResult?.executed
+                ? deployResult?.healthy
+                  ? "Your selected features are deployed and healthy."
+                  : "Your feature configuration was applied. Review the deployment details below."
+                : "Your feature configuration was applied. Complete the remaining startup steps below if needed."}
             </p>
+            {deployResult?.services?.length ? (
+              <div style={{ margin: "0 auto 20px", maxWidth: 560, textAlign: "left", padding: "12px 14px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface }}>
+                <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Services</div>
+                <div style={{ fontSize: 11, color: C.text, lineHeight: 1.6 }}>{deployResult.services.join(", ")}</div>
+              </div>
+            ) : null}
+            {deployResult?.manual_steps?.length ? (
+              <div style={{ margin: "0 auto 20px", maxWidth: 560, textAlign: "left", padding: "12px 14px", borderRadius: 10, border: `1px solid ${C.border}`, background: C.surface }}>
+                <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Next Steps</div>
+                {deployResult.manual_steps.map((line, index) => (
+                  <div key={index} style={{ fontSize: 11, color: C.text, lineHeight: 1.6 }}>{line}</div>
+                ))}
+              </div>
+            ) : null}
             <Btn small primary onClick={handleFinish} style={{ padding: "10px 28px", fontSize: 14 }}>
               Go to Dashboard <ChevronRight size={16} style={{ marginLeft: 4 }} />
             </Btn>

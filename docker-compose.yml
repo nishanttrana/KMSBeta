@@ -256,10 +256,14 @@ services:
       FIRSTBOOT_FIPS_PATH: "${FIRSTBOOT_FIPS_PATH:-/config/fips.yaml}"
       FIRSTBOOT_FDE_PATH: "${FIRSTBOOT_FDE_PATH:-/config/fde.yaml}"
       FIRSTBOOT_AUTH_PATH: "${FIRSTBOOT_AUTH_PATH:-/config/auth-bootstrap.yaml}"
+      FIRSTBOOT_PROJECT_ROOT: "${FIRSTBOOT_PROJECT_ROOT:-/opt/vecta}"
+      FIRSTBOOT_RUNTIME_APPLY_ENABLED: "${FIRSTBOOT_RUNTIME_APPLY_ENABLED:-false}"
     ports:
       - "9443:9443"
     volumes:
       - ${FIRSTBOOT_CONFIG_DIR:-./infra/deployment}:/config
+      - ${FIRSTBOOT_PROJECT_ROOT:-.}:${FIRSTBOOT_PROJECT_ROOT:-/opt/vecta}:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:9443/healthz | grep -q ok"]
       interval: 10s

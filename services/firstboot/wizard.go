@@ -88,12 +88,21 @@ func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "write_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	runtimeApply, runtimeErr := applyRuntimeChanges(gen.Paths["deployment"])
+	statusCode := http.StatusOK
+	statusText := "applied"
+	if runtimeErr != nil {
+		statusCode = http.StatusBadGateway
+		statusText = "applied_with_runtime_error"
+	}
+	writeJSON(w, statusCode, map[string]any{
 		"status":          "applied",
+		"runtime_status":  statusText,
 		"generated_at":    gen.GeneratedAt.Format(time.RFC3339),
 		"warnings":        gen.Warnings,
 		"paths":           gen.Paths,
 		"recovery_shares": gen.RecoveryShares,
+		"runtime_apply":   runtimeApply,
 		"next_steps": []string{
 			"On appliance builds, vecta-deployment.path will auto-start vecta-stack.service.",
 			"Local/dev mode: run /opt/vecta/infra/scripts/start-kms.sh /etc/vecta/deployment.yaml",
@@ -106,8 +115,8 @@ func (s *Server) handleApply(w http.ResponseWriter, r *http.Request) {
 // FeatureApplyRequest is a lightweight request for the onboarding wizard
 // that only updates the features section of deployment.yaml.
 type FeatureApplyRequest struct {
-	Metadata map[string]any         `json:"metadata"`
-	Spec     FeatureApplySpec       `json:"spec"`
+	Metadata map[string]any   `json:"metadata"`
+	Spec     FeatureApplySpec `json:"spec"`
 }
 
 type FeatureApplySpec struct {
@@ -169,10 +178,20 @@ func (s *Server) handleFeaturesApply(w http.ResponseWriter, r *http.Request) {
 
 	s.logger.Printf("Features updated via onboarding wizard: %v", req.Spec.Features)
 
-	writeJSON(w, http.StatusOK, map[string]any{
-		"status":     "applied",
-		"applied_at": time.Now().UTC().Format(time.RFC3339),
-		"features":   req.Spec.Features,
+	runtimeApply, runtimeErr := applyRuntimeChanges(deployPath)
+	statusCode := http.StatusOK
+	statusText := "applied"
+	if runtimeErr != nil {
+		statusCode = http.StatusBadGateway
+		statusText = "applied_with_runtime_error"
+	}
+
+	writeJSON(w, statusCode, map[string]any{
+		"status":         "applied",
+		"runtime_status": statusText,
+		"applied_at":     time.Now().UTC().Format(time.RFC3339),
+		"features":       req.Spec.Features,
+		"runtime_apply":  runtimeApply,
 	})
 }
 

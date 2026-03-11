@@ -68,7 +68,15 @@ function Set-ComposeEnvironment {
 }
 
 function Invoke-ComposeUp {
-    docker compose -f $composeFile up -d --remove-orphans
+    $args = @("compose", "-f", $composeFile, "up", "-d")
+    $removeOrphans = $true
+    if ($env:START_KMS_REMOVE_ORPHANS -and $env:START_KMS_REMOVE_ORPHANS.Trim().ToLowerInvariant() -eq "false") {
+        $removeOrphans = $false
+    }
+    if ($removeOrphans) {
+        $args += "--remove-orphans"
+    }
+    docker @args
     if ($LASTEXITCODE -ne 0) {
         throw "docker compose up failed with exit code $LASTEXITCODE"
     }

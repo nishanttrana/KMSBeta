@@ -128,6 +128,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/svc\/cluster/, "")
       },
+      "/svc/firstboot": {
+        target: serviceURL("firstboot", 9443),
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/svc\/firstboot/, "")
+      },
       "/svc/software-vault": {
         target: serviceURL("software-vault", 8440),
         changeOrigin: true,

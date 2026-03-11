@@ -6,9 +6,8 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/kms-firstboot ./services/firstboot
 
 FROM alpine:3.20
-RUN addgroup -S app && adduser -S app -G app
+RUN apk add --no-cache bash docker-cli docker-cli-compose
 WORKDIR /app
 COPY --from=build /out/kms-firstboot /app/kms-firstboot
-USER app
 EXPOSE 9443
 ENTRYPOINT ["/app/kms-firstboot"]

@@ -60,6 +60,12 @@ step() {
   info "Step ${STEP_INDEX}/${STEP_TOTAL}: $1"
 }
 
+require_modern_bash() {
+  if [[ -z "${BASH_VERSINFO:-}" || "${BASH_VERSINFO[0]}" -lt 4 ]]; then
+    die "Bash 4+ is required. On macOS install a newer bash (for example via Homebrew). On Windows use Git Bash or WSL."
+  fi
+}
+
 detect_cpu_count() {
   local cpus="2"
   if command -v nproc >/dev/null 2>&1; then
@@ -242,6 +248,20 @@ validate_ipv4() {
 }
 
 ensure_linux() {
+  local forced
+  forced="$(trim "${INSTALLER_FORCE_HOST_OS:-}")"
+  case "${forced}" in
+    linux|macos|windows)
+      HOST_OS="${forced}"
+      return
+      ;;
+    "")
+      ;;
+    *)
+      die "Invalid INSTALLER_FORCE_HOST_OS value: ${forced}. Expected linux, macos, or windows."
+      ;;
+  esac
+
   local os
   os="$(uname -s 2>/dev/null || echo "")"
   case "${os}" in
@@ -251,6 +271,9 @@ ensure_linux() {
     Darwin)
       HOST_OS="macos"
       ;;
+    MINGW*|MSYS*|CYGWIN*)
+      HOST_OS="windows"
+      ;;
     *)
       die "Unsupported host OS: ${os}. Supported installers are Linux (install.sh), macOS (install-macos.sh), or Windows via install-windows.ps1."
       ;;
@@ -258,6 +281,10 @@ ensure_linux() {
 }
 
 setup_sudo() {
+  if [[ "${HOST_OS}" != "linux" ]]; then
+    SUDO=""
+    return
+  fi
   if [[ "${EUID}" -ne 0 ]]; then
     command -v sudo >/dev/null 2>&1 || die "sudo is required when running as non-root user."
     SUDO="sudo"
@@ -307,6 +334,64 @@ port_conflicts_for_bind() {
   local port="$2"
   local proto="$3"
 
+  if [[ "${HOST_OS}" == "windows" ]]; then
+    command -v powershell.exe >/dev/null 2>&1 || return 1
+    local ps_script out
+    ps_script=$(cat <<EOF
+\$port = ${port}
+\$bind = '${bind_ip//\'/''}'
+\$hits = @()
+if ('${proto}' -eq 'udp') {
+  \$hits = @(Get-NetUDPEndpoint -LocalPort \$port -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalAddress)
+} else {
+  \$hits = @(Get-NetTCPConnection -State Listen -LocalPort \$port -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalAddress)
+}
+foreach (\$ip in \$hits) {
+  if ([string]::IsNullOrWhiteSpace(\$ip)) { continue }
+  if (\$bind -eq '0.0.0.0' -or \$bind -eq '::' -or \$ip -eq '0.0.0.0' -or \$ip -eq '::' -or \$ip -eq '*' -or \$ip -eq \$bind) {
+    'conflict'
+    break
+  }
+}
+EOF
+)
+    out="$(powershell.exe -NoProfile -NonInteractive -Command "${ps_script}" 2>/dev/null | tr -d '\r' || true)"
+    [[ "${out}" == *conflict* ]] && return 0
+    return 1
+  fi
+
+  if [[ "${HOST_OS}" == "macos" ]]; then
+    command -v lsof >/dev/null 2>&1 || return 1
+    local out=""
+    if [[ "${proto}" == "udp" ]]; then
+      out="$(lsof -nP -iUDP:${port} -Fn 2>/dev/null | sed -n 's/^n//p' || true)"
+    else
+      out="$(lsof -nP -iTCP:${port} -sTCP:LISTEN -Fn 2>/dev/null | sed -n 's/^n//p' || true)"
+    fi
+    [[ -z "${out}" ]] && return 1
+
+    if [[ "${bind_ip}" == "0.0.0.0" || "${bind_ip}" == "::" ]]; then
+      return 0
+    fi
+
+    local entry addr
+    while IFS= read -r entry; do
+      [[ -z "${entry}" ]] && continue
+      addr="${entry%%:*}"
+      addr="${addr#[}"
+      addr="${addr%]}"
+      case "${addr}" in
+        "*"|"0.0.0.0"|"::")
+          return 0
+          ;;
+      esac
+      if [[ "${addr}" == "${bind_ip}" ]]; then
+        return 0
+      fi
+    done <<< "${out}"
+    return 1
+  fi
+
   command -v ss >/dev/null 2>&1 || return 1
 
   local out=""
@@ -350,9 +435,16 @@ install_prerequisites() {
     info "Docker and Docker Compose plugin already present."
     return
   fi
+  if [[ "${HOST_OS}" == "windows" ]] && command -v docker.exe >/dev/null 2>&1 && docker.exe compose version >/dev/null 2>&1; then
+    info "Docker Desktop CLI already present."
+    return
+  fi
 
   if [[ "${HOST_OS}" == "macos" ]]; then
     die "Docker is not available. Install Docker Desktop for macOS, then re-run this installer."
+  fi
+  if [[ "${HOST_OS}" == "windows" ]]; then
+    die "Docker is not available. Install Docker Desktop for Windows and ensure docker compose works in your shell."
   fi
 
   if command -v apt-get >/dev/null 2>&1; then
@@ -417,6 +509,10 @@ EOF
 setup_docker_command() {
   if docker info >/dev/null 2>&1; then
     DOCKER_BIN=(docker)
+    return
+  fi
+  if [[ "${HOST_OS}" == "windows" ]] && command -v docker.exe >/dev/null 2>&1 && docker.exe info >/dev/null 2>&1; then
+    DOCKER_BIN=(docker.exe)
     return
   fi
   if [[ -n "${SUDO}" ]] && sudo docker info >/dev/null 2>&1; then
@@ -490,41 +586,113 @@ load_image_bundle_if_requested() {
 }
 
 detect_default_route_interface() {
-  if ! command -v ip >/dev/null 2>&1; then
-    return 0
-  fi
-  ip -o -4 route show default 2>/dev/null \
-    | awk '{for (i=1;i<=NF;i++) if ($i=="dev" && i+1<=NF) {print $(i+1); exit}}' \
-    || true
+  case "${HOST_OS}" in
+    linux)
+      if ! command -v ip >/dev/null 2>&1; then
+        return 0
+      fi
+      ip -o -4 route show default 2>/dev/null \
+        | awk '{for (i=1;i<=NF;i++) if ($i=="dev" && i+1<=NF) {print $(i+1); exit}}' \
+        || true
+      ;;
+    macos)
+      route -n get default 2>/dev/null | awk '/interface:/{print $2; exit}' || true
+      ;;
+    windows)
+      powershell.exe -NoProfile -NonInteractive -Command "(Get-NetIPConfiguration | Where-Object { \$_.IPv4DefaultGateway -ne \$null -and \$_.IPv4Address -ne \$null } | Sort-Object InterfaceMetric | Select-Object -First 1 -ExpandProperty InterfaceAlias)" 2>/dev/null | tr -d '\r'
+      ;;
+  esac
 }
 
 detect_default_gateway() {
   local iface="${1:-}"
-  if ! command -v ip >/dev/null 2>&1; then
-    return 0
+  case "${HOST_OS}" in
+    linux)
+      if ! command -v ip >/dev/null 2>&1; then
+        return 0
+      fi
+      if [[ -n "${iface}" ]]; then
+        ip -o -4 route show default dev "${iface}" 2>/dev/null \
+          | awk '{for (i=1;i<=NF;i++) if ($i=="via" && i+1<=NF) {print $(i+1); exit}}' \
+          || true
+        return 0
+      fi
+      ip -o -4 route show default 2>/dev/null \
+        | awk '{for (i=1;i<=NF;i++) if ($i=="via" && i+1<=NF) {print $(i+1); exit}}' \
+        || true
+      ;;
+    macos)
+      route -n get default 2>/dev/null | awk '/gateway:/{print $2; exit}' || true
+      ;;
+    windows)
+      if [[ -n "${iface}" ]]; then
+        powershell.exe -NoProfile -NonInteractive -Command "\$cfg = Get-NetIPConfiguration -InterfaceAlias '${iface//\'/''}' -ErrorAction SilentlyContinue; if (\$cfg -and \$cfg.IPv4DefaultGateway) { \$cfg.IPv4DefaultGateway.NextHop }" 2>/dev/null | tr -d '\r'
+      else
+        powershell.exe -NoProfile -NonInteractive -Command "(Get-NetIPConfiguration | Where-Object { \$_.IPv4DefaultGateway -ne \$null -and \$_.IPv4Address -ne \$null } | Sort-Object InterfaceMetric | Select-Object -First 1).IPv4DefaultGateway.NextHop" 2>/dev/null | tr -d '\r'
+      fi
+      ;;
+  esac
+}
+
+hex_netmask_to_cidr() {
+  local mask="$1"
+  mask="${mask#0x}"
+  local value=0
+  if [[ "${mask}" =~ ^[0-9A-Fa-f]{8}$ ]]; then
+    value=$((16#${mask}))
+  elif [[ "${mask}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+    local IFS='.'
+    local octet
+    for octet in ${mask}; do
+      value=$(( (value << 8) + octet ))
+    done
+  else
+    printf "%s" "24"
+    return
   fi
-  if [[ -n "${iface}" ]]; then
-    ip -o -4 route show default dev "${iface}" 2>/dev/null \
-      | awk '{for (i=1;i<=NF;i++) if ($i=="via" && i+1<=NF) {print $(i+1); exit}}' \
-      || true
-    return 0
-  fi
-  ip -o -4 route show default 2>/dev/null \
-    | awk '{for (i=1;i<=NF;i++) if ($i=="via" && i+1<=NF) {print $(i+1); exit}}' \
-    || true
+
+  local bits=0
+  while (( value > 0 )); do
+    (( bits += value & 1 ))
+    (( value >>= 1 ))
+  done
+  printf "%s" "${bits}"
 }
 
 detect_interface_ipv4_cidr() {
   local iface="$1"
   local out=""
-  if ! command -v ip >/dev/null 2>&1 || [[ -z "${iface}" ]]; then
-    return 0
-  fi
-  out="$(ip -o -4 addr show dev "${iface}" scope global 2>/dev/null | awk '{print $4; exit}')" || true
-  if [[ -z "${out}" ]]; then
-    out="$(ip -o -4 addr show dev "${iface}" 2>/dev/null | awk '{print $4; exit}')" || true
-  fi
-  printf "%s" "${out}"
+  case "${HOST_OS}" in
+    linux)
+      if ! command -v ip >/dev/null 2>&1 || [[ -z "${iface}" ]]; then
+        return 0
+      fi
+      out="$(ip -o -4 addr show dev "${iface}" scope global 2>/dev/null | awk '{print $4; exit}')" || true
+      if [[ -z "${out}" ]]; then
+        out="$(ip -o -4 addr show dev "${iface}" 2>/dev/null | awk '{print $4; exit}')" || true
+      fi
+      printf "%s" "${out}"
+      ;;
+    macos)
+      [[ -n "${iface}" ]] || return 0
+      local ip_addr netmask prefix
+      ip_addr="$(ipconfig getifaddr "${iface}" 2>/dev/null || true)"
+      [[ -n "${ip_addr}" ]] || return 0
+      netmask="$(ifconfig "${iface}" 2>/dev/null | awk '/inet /{for(i=1;i<=NF;i++) if($i=="netmask") {print $(i+1); exit}}' || true)"
+      prefix="$(hex_netmask_to_cidr "${netmask}")"
+      printf "%s/%s" "${ip_addr}" "${prefix}"
+      ;;
+    windows)
+      [[ -n "${iface}" ]] || return 0
+      powershell.exe -NoProfile -NonInteractive -Command "\$cfg = Get-NetIPConfiguration -InterfaceAlias '${iface//\'/''}' -ErrorAction SilentlyContinue; if (\$cfg -and \$cfg.IPv4Address) { \$addr = \$cfg.IPv4Address | Select-Object -First 1; '\{0}/\{1}' -f \$addr.IPAddress, \$addr.PrefixLength }" 2>/dev/null | tr -d '\r'
+      ;;
+  esac
+}
+
+detect_primary_ip_cidr() {
+  local iface=""
+  iface="$(detect_default_route_interface)"
+  detect_interface_ipv4_cidr "${iface}"
 }
 
 is_valid_ipv4() {
@@ -536,6 +704,21 @@ detect_default_dns_csv() {
   local -A seen=()
   local -a dns=()
   local candidate=""
+
+  if [[ "${HOST_OS}" == "windows" ]]; then
+    powershell.exe -NoProfile -NonInteractive -Command "\$cfg = Get-NetIPConfiguration | Where-Object { \$_.IPv4DefaultGateway -ne \$null -and \$_.IPv4Address -ne \$null } | Sort-Object InterfaceMetric | Select-Object -First 1; if (\$cfg -and \$cfg.DNSServer) { (\$cfg.DNSServer.ServerAddresses | Where-Object { \$_ -match '^[0-9]+\.' }) -join ',' }" 2>/dev/null | tr -d '\r'
+    return 0
+  fi
+
+  if [[ "${HOST_OS}" == "macos" ]]; then
+    while read -r candidate; do
+      candidate="$(trim "${candidate}")"
+      if is_valid_ipv4 "${candidate}" && [[ -z "${seen[${candidate}]:-}" ]]; then
+        seen["${candidate}"]=1
+        dns+=("${candidate}")
+      fi
+    done < <(scutil --dns 2>/dev/null | awk '/nameserver\[[0-9]+\] :/ {print $3}')
+  fi
 
   if command -v resolvectl >/dev/null 2>&1; then
     while read -r candidate; do
@@ -572,6 +755,25 @@ detect_default_dns_csv() {
     fi
   done
   printf "%s" "${csv}"
+}
+
+normalize_host_path() {
+  local path="$1"
+  case "${HOST_OS}" in
+    windows)
+      if [[ "${path}" =~ ^[A-Za-z]:[\\/].* ]]; then
+        if command -v cygpath >/dev/null 2>&1; then
+          cygpath -u "${path}"
+          return
+        fi
+        if command -v wslpath >/dev/null 2>&1; then
+          wslpath -a "${path}"
+          return
+        fi
+      fi
+      ;;
+  esac
+  printf "%s" "${path}"
 }
 
 feature_default_from_template() {
@@ -667,6 +869,7 @@ collect_inputs() {
 
   prompt_default INSTALL_DIR "Directory where KMS files should be placed" "${ROOT_DIR}"
   INSTALL_DIR="$(trim "${INSTALL_DIR}")"
+  INSTALL_DIR="$(normalize_host_path "${INSTALL_DIR}")"
   [[ "${INSTALL_DIR}" == /* ]] || INSTALL_DIR="$(pwd)/${INSTALL_DIR}"
   INSTALL_DIR="${INSTALL_DIR%/}"
 
@@ -675,7 +878,13 @@ collect_inputs() {
   prompt_default TENANT_NAME "Default tenant name" "Root"
 
   detected_iface="$(detect_default_route_interface)"
-  [[ -z "${detected_iface}" ]] && detected_iface="eth0"
+  if [[ -z "${detected_iface}" ]]; then
+    case "${HOST_OS}" in
+      macos) detected_iface="en0" ;;
+      windows) detected_iface="Ethernet" ;;
+      *) detected_iface="eth0" ;;
+    esac
+  fi
   prompt_default MGMT_INTERFACE "Management interface" "${detected_iface}"
   prompt_default MGMT_MODE "Management mode (static/dhcp)" "static"
   MGMT_MODE="${MGMT_MODE,,}"
@@ -683,6 +892,9 @@ collect_inputs() {
 
   detected_ip_cidr="$(detect_interface_ipv4_cidr "${MGMT_INTERFACE}")"
   [[ -z "${detected_ip_cidr}" ]] && detected_ip_cidr="10.0.1.100/24"
+  if [[ -n "${CLI_MGMT_IP:-}" ]]; then
+    detected_ip_cidr="${CLI_MGMT_IP}"
+  fi
   detected_gw="$(detect_default_gateway "${MGMT_INTERFACE}")"
   [[ -z "${detected_gw}" ]] && detected_gw="$(detect_default_gateway)"
   [[ -z "${detected_gw}" ]] && detected_gw="10.0.1.1"
@@ -722,7 +934,11 @@ collect_inputs() {
   CLUSTER_JOIN_TOKEN=""
   CLUSTER_NODE_ROLE="leader"
   if [[ "${CLUSTER_ENABLED}" == "true" ]]; then
-    prompt_default CLUSTER_INTERFACE "Cluster interface" "eth1"
+    local cluster_iface_default="${MGMT_INTERFACE}"
+    if [[ "${HOST_OS}" == "linux" ]]; then
+      cluster_iface_default="eth1"
+    fi
+    prompt_default CLUSTER_INTERFACE "Cluster interface" "${cluster_iface_default}"
     prompt_default CLUSTER_ADDRESS "Cluster IPv4/CIDR" "172.16.0.100/24"
     validate_ipv4_cidr "${CLUSTER_ADDRESS}" || die "Cluster IPv4/CIDR must look like 172.16.0.100/24."
     prompt_default CLUSTER_MTU "Cluster MTU" "9000"
@@ -855,6 +1071,9 @@ collect_inputs() {
   else
     bind_ip_default="${detected_ip_cidr%%/*}"
     [[ -z "${bind_ip_default}" ]] && bind_ip_default="0.0.0.0"
+  fi
+  if [[ -n "${CLI_BIND_IP:-}" ]]; then
+    bind_ip_default="${CLI_BIND_IP}"
   fi
   prompt_default BIND_IP "Docker published bind IP" "${bind_ip_default}"
   validate_ipv4 "${BIND_IP}" || die "Bind IP must be a valid IPv4 address."
@@ -1210,6 +1429,8 @@ KEYCORE_MEK_IN_HSM=${KEYCORE_MEK_IN_HSM:-false}
 KEYCORE_MEK_LOGICAL_ID=${KEYCORE_MEK_LOGICAL_ID:-}
 FIRSTBOOT_CONFIG_DIR=./infra/deployment
 FIRSTBOOT_PORT=${FIRSTBOOT_PORT}
+FIRSTBOOT_PROJECT_ROOT=${ROOT_DIR}
+FIRSTBOOT_RUNTIME_APPLY_ENABLED=true
 EOF
 }
 
@@ -1395,13 +1616,13 @@ start_stack() {
     info "Starting first-boot wizard service..."
     case "${BUILD_MODE}" in
       no-build)
-        compose_exec --profile firstboot up -d --no-build firstboot || warn "First-boot container not started in no-build mode (image missing)."
+        compose_exec up -d --no-deps --no-build firstboot || warn "First-boot container not started in no-build mode (image missing)."
         ;;
       build-missing)
-        compose_exec --profile firstboot up -d firstboot
+        compose_exec up -d --no-deps firstboot
         ;;
       rebuild-all)
-        compose_exec --profile firstboot up -d --build firstboot
+        compose_exec up -d --build --no-deps firstboot
         ;;
     esac
   fi
@@ -1592,6 +1813,11 @@ wait_for_stack_ready() {
 }
 
 print_summary() {
+  local display_ip="${BIND_IP}"
+  if [[ "${display_ip}" == "0.0.0.0" || "${display_ip}" == "::" ]]; then
+    display_ip="${MGMT_ADDRESS%%/*}"
+    [[ -z "${display_ip}" ]] && display_ip="127.0.0.1"
+  fi
   echo
   echo "------------------------------------------------------------"
   echo "Vecta KMS deployment complete on this VM."
@@ -1615,17 +1841,17 @@ print_summary() {
   fi
   echo
   echo "Access URLs:"
-  echo "  Dashboard : http://${BIND_IP}:${DASHBOARD_PORT}"
-  echo "  HTTPS Edge: https://${BIND_IP}:${HTTPS_PORT}"
+  echo "  Dashboard : http://${display_ip}:${DASHBOARD_PORT}"
+  echo "  HTTPS Edge: https://${display_ip}:${HTTPS_PORT}"
   if [[ "${ENABLE_FIRSTBOOT_UI}" == "true" ]]; then
-    echo "  First boot: http://${BIND_IP}:${FIRSTBOOT_PORT}/wizard"
+    echo "  First boot: http://${display_ip}:${FIRSTBOOT_PORT}/wizard"
   fi
   echo
   echo "Default admin credentials:"
   echo "  Username : ${ADMIN_USERNAME}"
   echo "  Email    : ${ADMIN_EMAIL}"
   echo "  Password : ${ADMIN_PASSWORD}"
-  if [[ "${EUID}" -ne 0 ]]; then
+  if [[ "${HOST_OS}" == "linux" && "${EUID}" -ne 0 ]]; then
     echo
     echo "Note: If this is your first Docker install, run:"
     echo "  newgrp docker"
@@ -1644,10 +1870,11 @@ print_summary() {
 }
 
 collect_fast_inputs() {
-  info "Fast installation mode: deploying core services only (keycore, dashboard, postgres)"
+  info "Fast installation mode: deploying the base KMS stack and first-boot UI"
   info "Additional features can be enabled later via the dashboard onboarding wizard."
   FEATURE_ALL="false"
   prompt_default INSTALL_DIR "Install directory" "${SOURCE_DIR}"
+  INSTALL_DIR="$(trim "$(normalize_host_path "${INSTALL_DIR}")")"
   prompt_default APPLIANCE_ID "Appliance ID" "vecta-$(hostname -s 2>/dev/null || echo kms)"
   prompt_default TENANT_ID "Primary tenant ID" "root"
   TENANT_NAME="Root Tenant"
@@ -1658,7 +1885,6 @@ collect_fast_inputs() {
   LICENSE_KEY="SEC-KMS-ENT-2026-ABCD"
   MAX_KEYS="5000000"
   MAX_TENANTS="50"
-  BIND_IP="0.0.0.0"
   HTTP_PORT="80"
   HTTPS_PORT="443"
   DASHBOARD_PORT="5173"
@@ -1691,9 +1917,20 @@ collect_fast_inputs() {
   IMAGE_BUNDLE_PATH=""
   local detected_ip_cidr
   detected_ip_cidr="$(detect_primary_ip_cidr 2>/dev/null || echo "10.0.1.100/24")"
+  if [[ -n "${CLI_MGMT_IP:-}" ]]; then
+    detected_ip_cidr="${CLI_MGMT_IP}"
+  fi
   MGMT_ADDRESS="${detected_ip_cidr}"
   MGMT_GATEWAY=""
   MGMT_DNS_CSV="8.8.8.8,1.1.1.1"
+  local bind_ip_default
+  bind_ip_default="${detected_ip_cidr%%/*}"
+  [[ -z "${bind_ip_default}" ]] && bind_ip_default="10.0.1.100"
+  if [[ -n "${CLI_BIND_IP:-}" ]]; then
+    bind_ip_default="${CLI_BIND_IP}"
+  fi
+  prompt_default BIND_IP "Docker published bind IP" "${bind_ip_default}"
+  validate_ipv4 "${BIND_IP}" || die "Bind IP must be a valid IPv4 address."
 }
 
 main() {
@@ -1709,6 +1946,7 @@ main() {
   done
 
   set_project_paths "${ROOT_DIR}"
+  require_modern_bash
 
   step "Validate target OS and local permissions"
   ensure_linux

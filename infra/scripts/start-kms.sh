@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DEPLOYMENT_FILE="/etc/vecta/deployment.yaml"
 SKIP_HEALTH=0
+REMOVE_ORPHANS="${START_KMS_REMOVE_ORPHANS:-true}"
 
 for arg in "$@"; do
   case "${arg}" in
@@ -119,11 +120,16 @@ if [[ -n "${CERTS_CRWK_USE_TPM_SEAL_CFG}" ]]; then
 fi
 
 echo "starting KMS with COMPOSE_PROFILES=${COMPOSE_PROFILES}"
-if ! docker compose -f "${ROOT_DIR}/docker-compose.yml" up -d --remove-orphans; then
+up_args=(-d)
+if [[ "${REMOVE_ORPHANS}" == "true" ]]; then
+  up_args+=(--remove-orphans)
+fi
+
+if ! docker compose -f "${ROOT_DIR}/docker-compose.yml" up "${up_args[@]}"; then
   echo "startup failed, attempting one forced recovery pass" >&2
   bash "${STOP_SCRIPT}" "${DEPLOYMENT_FILE}" --force || true
   sleep 2
-  docker compose -f "${ROOT_DIR}/docker-compose.yml" up -d --remove-orphans
+  docker compose -f "${ROOT_DIR}/docker-compose.yml" up "${up_args[@]}"
 fi
 
 if [[ -f "${MESH_BOOTSTRAP}" ]]; then

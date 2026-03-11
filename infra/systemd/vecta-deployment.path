@@ -3,6 +3,8 @@ Description=Watch Vecta deployment config and trigger stack startup
 
 [Path]
 PathExists=/etc/vecta/deployment.yaml
+PathChanged=/etc/vecta/deployment.yaml
+PathModified=/etc/vecta/deployment.yaml
 Unit=vecta-stack.service
 
 [Install]
