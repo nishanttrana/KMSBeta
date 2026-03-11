@@ -9,10 +9,7 @@ export default tseslint.config(
       "dist/**",
       "node_modules/**",
       "src/generated/**",
-      "scripts/**",
-      // Legacy monolith and extracted bridge tabs remain quarantined.
-      "src/legacy/VectaDashboardV3Legacy.tsx",
-      "src/legacy/tabs/**"
+      "scripts/**"
     ]
   },
   js.configs.recommended,
@@ -50,7 +47,7 @@ export default tseslint.config(
   },
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/generated/**", "src/lib/**", "src/legacy/VectaDashboardV3Legacy.tsx", "src/legacy/tabs/**"],
+    ignores: ["src/generated/**", "src/lib/**"],
     rules: {
       // Enforce API access through generated/service client modules only.
       "no-restricted-globals": ["error", "fetch"],

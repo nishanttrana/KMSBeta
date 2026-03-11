@@ -12,3 +12,9 @@ infra/certs/out/**
 web/dashboard/node_modules/
 web/dashboard/test-results/
 web/dashboard/playwright-report/
+web/dashboard/tsconfig.tsbuildinfo
+
+# Local scratch and generated binaries
+.tmp_*
+governance.exe
+posture.exe
