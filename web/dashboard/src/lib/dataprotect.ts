@@ -523,10 +523,6 @@ export async function fpeDecrypt(session: AuthSession, input: FPEInput): Promise
   return out?.result || {};
 }
 
-export async function listMaskingPolicies(session: AuthSession): Promise<MaskingPolicy[]> {
-  const out = await serviceRequest<MaskPoliciesResponse>(session, "dataprotect", `/masking-policies?tenant_id=${encodeURIComponent(session.tenantId)}`);
-  return Array.isArray(out?.items) ? out.items : [];
-}
 
 export async function createMaskingPolicy(session: AuthSession, input: CreateMaskingPolicyInput): Promise<MaskingPolicy> {
   const out = await serviceRequest<MaskPolicyResponse>(session, "dataprotect", "/masking-policies", {
@@ -555,10 +551,6 @@ export async function applyMask(
   return out?.masked || {};
 }
 
-export async function listRedactionPolicies(session: AuthSession): Promise<RedactionPolicy[]> {
-  const out = await serviceRequest<RedactionPoliciesResponse>(session, "dataprotect", `/redaction-policies?tenant_id=${encodeURIComponent(session.tenantId)}`);
-  return Array.isArray(out?.items) ? out.items : [];
-}
 
 export async function createRedactionPolicy(session: AuthSession, input: CreateRedactionPolicyInput): Promise<RedactionPolicy> {
   const out = await serviceRequest<RedactionPolicyResponse>(session, "dataprotect", "/redaction-policies", {
@@ -812,42 +804,6 @@ export async function revokeFieldEncryptionLease(
   });
 }
 
-export async function renewFieldEncryptionLease(
-  session: AuthSession,
-  leaseId: string,
-  input: FieldEncryptionLeaseInput
-): Promise<FieldEncryptionLease> {
-  const wrapperToken = String(input.wrapper_token || "").trim();
-  const certFP = String(input.client_cert_fingerprint || "").trim();
-  const headers: Record<string, string> = {};
-  if (wrapperToken) {
-    headers["X-Wrapper-Token"] = wrapperToken;
-  }
-  if (certFP) {
-    headers["X-Wrapper-Cert-Fingerprint"] = certFP;
-  }
-  const out = await serviceRequest<FieldEncryptionLeaseResponse>(
-    session,
-    "dataprotect",
-    `/field-encryption/leases/${encodeURIComponent(leaseId)}/renew?tenant_id=${encodeURIComponent(session.tenantId)}`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        tenant_id: session.tenantId,
-        wrapper_id: input.wrapper_id,
-        key_id: input.key_id,
-        operation: input.operation,
-        nonce: input.nonce,
-        timestamp: input.timestamp,
-        signature_b64: input.signature_b64,
-        requested_ttl_sec: input.requested_ttl_sec,
-        requested_max_ops: input.requested_max_ops
-      })
-    }
-  );
-  return out.lease;
-}
 
 export async function downloadFieldEncryptionWrapperSDK(
   session: AuthSession,
@@ -916,3 +872,4 @@ export async function getDataProtectAuditLog(
   );
   return out.items || [];
 }
+

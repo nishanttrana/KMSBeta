@@ -201,20 +201,6 @@ export async function verifyAuditChain(session: AuthSession): Promise<ChainVerif
   };
 }
 
-export async function getAuditStats(session: AuthSession): Promise<AuditAlertStats> {
-  const out = await serviceRequest<{ alerts?: AuditAlertStats }>(
-    session, "audit",
-    `/audit/stats?${tenantQuery(session)}`
-  );
-  const stats: Partial<AuditAlertStats> = out?.alerts || {};
-  return {
-    open_by_severity: stats.open_by_severity && typeof stats.open_by_severity === "object" ? stats.open_by_severity : {},
-    total_open: Math.max(0, Number(stats.total_open || 0)),
-    total_acknowledged: Math.max(0, Number(stats.total_acknowledged || 0)),
-    total_resolved: Math.max(0, Number(stats.total_resolved || 0))
-  };
-}
-
 export async function getAuditConfig(session: AuthSession): Promise<AuditConfig> {
   const out = await serviceRequest<AuditConfig>(
     session, "audit",
@@ -293,14 +279,6 @@ export async function getAuditAlertStats(session: AuthSession): Promise<AuditAle
   };
 }
 
-export async function listAuditAlertRules(session: AuthSession): Promise<AuditAlertRule[]> {
-  const out = await serviceRequest<{ items?: AuditAlertRule[] }>(
-    session, "audit",
-    `/alerts/rules?${tenantQuery(session)}`
-  );
-  return Array.isArray(out?.items) ? out.items : [];
-}
-
 // ── Merkle Tree Types & API ─────────────────────────────────
 
 export type MerkleEpoch = {
@@ -344,18 +322,6 @@ export async function listMerkleEpochs(
     `/audit/merkle/epochs?${tenantQuery(session)}&limit=${limit}`
   );
   return Array.isArray(out?.items) ? out.items : [];
-}
-
-export async function getMerkleEpoch(
-  session: AuthSession,
-  epochId: string
-): Promise<MerkleEpoch> {
-  const out = await serviceRequest<{ epoch?: MerkleEpoch }>(
-    session, "audit",
-    `/audit/merkle/epochs/${encodeURIComponent(epochId)}?${tenantQuery(session)}`
-  );
-  if (!out?.epoch) throw new Error("Epoch not found");
-  return out.epoch;
 }
 
 export async function getEventMerkleProof(

@@ -136,10 +136,6 @@ export async function deleteSecret(session: AuthSession, secretId: string): Prom
   });
 }
 
-export async function getSecret(session: AuthSession, secretId: string): Promise<SecretItem> {
-  const payload = await serviceRequest<SecretResponse>(session, "secrets", `/secrets/${encodeURIComponent(secretId)}?tenant_id=${encodeURIComponent(session.tenantId)}`);
-  return payload.secret;
-}
 
 export async function getSecretValue(
   session: AuthSession,
@@ -153,22 +149,6 @@ export async function getSecretValue(
   );
 }
 
-export async function generateSSHKeySecret(
-  session: AuthSession,
-  input: { name: string; description?: string; labels?: Record<string, string>; lease_ttl_seconds?: number }
-): Promise<GenerateSSHResponse> {
-  return serviceRequest<GenerateSSHResponse>(session, "secrets", "/secrets/generate/ssh_key", {
-    method: "POST",
-    body: JSON.stringify({
-      tenant_id: session.tenantId,
-      name: input.name,
-      description: input.description || "",
-      labels: input.labels || {},
-      lease_ttl_seconds: Math.trunc(Number(input.lease_ttl_seconds || 0)),
-      created_by: session.username || "dashboard"
-    })
-  });
-}
 
 export type SecretVersionInfo = {
   version: number;
@@ -248,3 +228,4 @@ export async function generateKeyPairSecret(
     })
   });
 }
+

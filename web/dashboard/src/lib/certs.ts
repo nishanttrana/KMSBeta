@@ -682,38 +682,6 @@ export async function cmpv2Request(session: AuthSession, input: CMPv2Input): Pro
   return out.certificate;
 }
 
-export async function issueInternalMTLS(
-	session: AuthSession,
-	serviceName: string,
-	input?: IssueInternalMTLSInput
-): Promise<{ certificate: CertificateItem; privateKeyPEM?: string }> {
-	const service = String(serviceName || "").trim().toLowerCase();
-	if (!service) {
-		throw new Error("service name is required");
-	}
-	const out = await serviceRequest<CertResponse>(
-		session,
-		"certs",
-		`/certs/internal/mtls/${encodeURIComponent(service)}?${tenantQuery(session)}`,
-		{
-			method: "POST",
-			body: JSON.stringify({
-				tenant_id: session.tenantId,
-				ca_id: String(input?.ca_id || "").trim(),
-				algorithm: String(input?.algorithm || "").trim(),
-				cert_class: String(input?.cert_class || "").trim(),
-				protocol: String(input?.protocol || "").trim(),
-				validity_days: Number.isFinite(Number(input?.validity_days))
-					? Math.max(1, Math.min(3650, Math.trunc(Number(input?.validity_days || 365))))
-					: 365
-			})
-		}
-	);
-	return {
-		certificate: out.certificate,
-		privateKeyPEM: out.private_key_pem || ""
-	};
-}
 
 // ── ACME challenge info (GET) ──────────────────────────────────────
 export async function acmeChallengeInfo(
@@ -784,18 +752,6 @@ export async function scepGetCert(
 }
 
 // ── SCEP GetCACaps ────────────────────────────────────────────────
-export async function scepGetCACaps(session: AuthSession): Promise<string> {
-  const q = new URLSearchParams();
-  q.set("tenant_id", session.tenantId);
-  q.set("operation", "getcacaps");
-  const out = await serviceRequest<{ capabilities?: string }>(
-    session,
-    "certs",
-    `/scep/pkiclient.exe?${q.toString()}`
-  );
-  // The response might come as plain text; serviceRequest handles JSON
-  return String((out as any) || "");
-}
 
 // ── CMPv2 PKI Confirm ─────────────────────────────────────────────
 export async function cmpv2Confirm(
@@ -865,15 +821,6 @@ export async function listCertMerkleEpochs(
   return Array.isArray(out?.items) ? out.items : [];
 }
 
-export async function getCertMerkleEpoch(
-  session: AuthSession,
-  epochId: string
-): Promise<CertMerkleEpoch> {
-  const out = await serviceRequest<{ epoch: CertMerkleEpoch }>(
-    session, "certs", `/certs/merkle/epochs/${encodeURIComponent(epochId)}?tenant_id=${encodeURIComponent(session.tenantId)}`
-  );
-  return out.epoch;
-}
 
 export async function buildCertMerkleEpoch(
   session: AuthSession,
@@ -906,3 +853,4 @@ export async function verifyCertMerkleProof(
   );
   return out;
 }
+

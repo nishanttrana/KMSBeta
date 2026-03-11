@@ -53,30 +53,7 @@ export const C = {
   dimTint: "rgba(148,163,184,.06)"
 };
 
-// Severity → theme color mapping (consistent across all tabs)
-export function severityColor(sev: string): string {
-  switch (String(sev || "").toLowerCase()) {
-    case "critical": return C.red;
-    case "high": return C.orange;
-    case "warning": return C.amber;
-    case "info": return C.blue;
-    case "low": return C.green;
-    default: return C.muted;
-  }
-}
-
-export function severityDimColor(sev: string): string {
-  switch (String(sev || "").toLowerCase()) {
-    case "critical": return C.redDim;
-    case "high": return C.orangeDim;
-    case "warning": return C.amberDim;
-    case "info": return C.blueDim;
-    case "low": return C.greenDim;
-    default: return "transparent";
-  }
-}
-
-// Status → theme color mapping (active/enabled/running/revoked/expired/etc.)
+// Status -> theme color mapping (active/enabled/running/revoked/expired/etc.)
 export function statusColor(status: string): string {
   switch (String(status || "").toLowerCase()) {
     case "active": case "enabled": case "running": case "valid": case "completed": case "healthy":
@@ -90,15 +67,4 @@ export function statusColor(status: string): string {
     default:
       return C.blue;
   }
-}
-
-export function statusDimColor(status: string): string {
-  const color = statusColor(status);
-  const palette = C as Record<string, string>;
-  if (color === C.green) return C.greenDim;
-  if (color === C.red) return C.redDim;
-  if (color === C.amber) return C.amberDim;
-  if (color === C.orange) return C.orangeDim;
-  if (color === C.blue) return C.blueDim;
-  return palette["accentDim"] || "transparent";
 }

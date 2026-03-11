@@ -158,15 +158,6 @@ export async function listComplianceTemplates(session: AuthSession): Promise<Com
   return Array.isArray(out?.items) ? out.items : [];
 }
 
-export async function getComplianceTemplate(session: AuthSession, templateID: string): Promise<ComplianceTemplate> {
-  const out = await serviceRequest<{ template?: ComplianceTemplate }>(
-    session,
-    "compliance",
-    `/compliance/templates/${encodeURIComponent(String(templateID || "").trim())}?${tenantQuery(session)}`
-  );
-  return out?.template || ({} as ComplianceTemplate);
-}
-
 export async function upsertComplianceTemplate(
   session: AuthSession,
   payload: Partial<ComplianceTemplate> & Pick<ComplianceTemplate, "name">

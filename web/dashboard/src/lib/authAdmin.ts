@@ -611,20 +611,6 @@ export async function listAuthIdentityProviders(
   return Array.isArray(out?.items) ? out.items : [];
 }
 
-export async function getAuthIdentityProviderConfig(
-  session: AuthSession,
-  provider: IdentityProviderName,
-  tenantID?: string
-): Promise<IdentityProviderConfigView> {
-  const targetTenant = String(tenantID || "").trim();
-  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
-  const out = await serviceRequest<IdentityProviderResponse>(
-    session,
-    "auth",
-    `/auth/identity/providers/${encodeURIComponent(String(provider || "").trim())}${qs}`
-  );
-  return out?.config;
-}
 
 export async function upsertAuthIdentityProviderConfig(
   session: AuthSession,
@@ -864,3 +850,4 @@ export async function getSSOLoginURL(provider: string, tenantID: string): Promis
   if (!data.redirect_url) throw new Error("No redirect URL returned");
   return data.redirect_url;
 }
+

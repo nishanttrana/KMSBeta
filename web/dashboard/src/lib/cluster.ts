@@ -123,11 +123,6 @@ export async function getClusterOverview(session: AuthSession): Promise<ClusterO
   return out?.overview || { nodes: [], profiles: [] };
 }
 
-export async function listClusterProfiles(session: AuthSession): Promise<ClusterProfile[]> {
-  const out = await serviceRequest<ProfilesResponse>(session, "cluster", `/cluster/profiles?${tenantQuery(session)}`);
-  return Array.isArray(out?.items) ? out.items : [];
-}
-
 export async function upsertClusterProfile(
   session: AuthSession,
   input: {
@@ -156,32 +151,6 @@ export async function deleteClusterProfile(session: AuthSession, profileID: stri
   await serviceRequest(session, "cluster", `/cluster/profiles/${encodeURIComponent(profileID)}?${tenantQuery(session)}`, {
     method: "DELETE"
   });
-}
-
-export async function createClusterJoinRequest(
-  session: AuthSession,
-  input: {
-    target_node_id: string;
-    target_node_name?: string;
-    endpoint?: string;
-    profile_id: string;
-    expires_minutes?: number;
-    requested_by?: string;
-  }
-): Promise<ClusterJoinBundle> {
-  const out = await serviceRequest<JoinResponse>(session, "cluster", "/cluster/join/request", {
-    method: "POST",
-    body: JSON.stringify({
-      tenant_id: session.tenantId,
-      target_node_id: input.target_node_id,
-      target_node_name: input.target_node_name || input.target_node_id,
-      endpoint: input.endpoint || "",
-      profile_id: input.profile_id,
-      expires_minutes: Number(input.expires_minutes || 30),
-      requested_by: input.requested_by || session.username || "admin"
-    })
-  });
-  return out.join;
 }
 
 export async function upsertClusterNode(

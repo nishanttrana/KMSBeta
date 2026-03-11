@@ -263,12 +263,3 @@ export async function listCloudBindings(
   const payload = await serviceRequest<ListBindingsResponse>(session, "cloud", `/cloud/bindings${suffix}`);
   return Array.isArray(payload?.items) ? payload.items : [];
 }
-
-export async function getCloudBinding(session: AuthSession, bindingId: string): Promise<CloudKeyBinding> {
-  const payload = await serviceRequest<GetBindingResponse>(
-    session,
-    "cloud",
-    `/cloud/bindings/${encodeURIComponent(bindingId)}`
-  );
-  return payload.binding;
-}

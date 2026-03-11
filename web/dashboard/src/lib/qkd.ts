@@ -253,10 +253,6 @@ export async function listSlaveSAEs(session: AuthSession): Promise<SlaveSAE[]> {
   return Array.isArray(out.items) ? out.items : [];
 }
 
-export async function getSlaveSAE(session: AuthSession, id: string): Promise<SlaveSAE> {
-  const out = await serviceRequest<SAEResponse>(session, "qkd", `/qkd/v1/sae/${encodeURIComponent(id)}?${tenantQuery(session)}`);
-  return out.sae;
-}
 
 export async function updateSlaveSAE(session: AuthSession, id: string, input: RegisterSAEInput): Promise<SlaveSAE> {
   const out = await serviceRequest<SAEResponse>(session, "qkd", `/qkd/v1/sae/${encodeURIComponent(id)}`, {
@@ -288,3 +284,4 @@ export async function listDistributions(session: AuthSession, slaveSaeId?: strin
   const out = await serviceRequest<DistributionListResponse>(session, "qkd", `/qkd/v1/distributions?${qs.toString()}`);
   return Array.isArray(out.items) ? out.items : [];
 }
+

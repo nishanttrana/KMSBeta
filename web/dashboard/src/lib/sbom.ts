@@ -257,21 +257,3 @@ export async function getCBOMPQCReadiness(session: AuthSession): Promise<PQCRead
   const out = await serviceRequest<PQCReadinessResponse>(session, "sbom", `/cbom/pqc-readiness?${tenantQuery(session)}`);
   return out.pqc_readiness;
 }
-
-export async function getSBOMByID(session: AuthSession, id: string): Promise<SBOMSnapshot> {
-  const out = await serviceRequest<SnapshotResponse<SBOMSnapshot>>(
-    session,
-    "sbom",
-    `/sbom/${encodeURIComponent(String(id || "").trim())}`
-  );
-  return out.item;
-}
-
-export async function getCBOMByID(session: AuthSession, id: string): Promise<CBOMSnapshot> {
-  const out = await serviceRequest<SnapshotResponse<CBOMSnapshot>>(
-    session,
-    "sbom",
-    `/cbom/${encodeURIComponent(String(id || "").trim())}?${tenantQuery(session)}`
-  );
-  return out.item;
-}

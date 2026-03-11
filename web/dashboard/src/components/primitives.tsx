@@ -4,29 +4,6 @@ export function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
-export function Panel(
-  props: PropsWithChildren<{
-    title: string;
-    subtitle?: string | undefined;
-    actions?: ReactNode | undefined;
-    className?: string | undefined;
-  }>
-) {
-  const { title, subtitle, actions, children, className } = props;
-  return (
-    <section className={cx("rounded-xl border border-cyber-border bg-cyber-card p-3 shadow-lg shadow-black/25", className)}>
-      <header className="mb-2 flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-heading text-base font-semibold tracking-wide text-cyber-text">{title}</h3>
-          {subtitle ? <p className="text-xs text-cyber-muted">{subtitle}</p> : null}
-        </div>
-        {actions}
-      </header>
-      {children}
-    </section>
-  );
-}
-
 export function Button(
   props: PropsWithChildren<{
     onClick?: (() => void) | undefined;
@@ -50,48 +27,6 @@ export function Button(
     >
       {children}
     </button>
-  );
-}
-
-export function TextInput(props: {
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string | undefined;
-  className?: string | undefined;
-  type?: "text" | "password" | undefined;
-}) {
-  const { value, onChange, placeholder, className, type = "text" } = props;
-  return (
-    <input
-      type={type}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={placeholder}
-      className={cx(
-        "w-full rounded-md border border-cyber-border bg-cyber-panel px-3 py-2 text-xs text-cyber-text outline-none ring-cyber-accent/40 focus:ring",
-        className
-      )}
-    />
-  );
-}
-
-export function SelectInput(props: { value: string; onChange: (value: string) => void; options: string[]; className?: string | undefined }) {
-  const { value, onChange, options, className } = props;
-  return (
-    <select
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      className={cx(
-        "w-full rounded-md border border-cyber-border bg-cyber-panel px-3 py-2 text-xs text-cyber-text outline-none ring-cyber-accent/40 focus:ring",
-        className
-      )}
-    >
-      {options.map((item) => (
-        <option key={item} value={item}>
-          {item}
-        </option>
-      ))}
-    </select>
   );
 }
 

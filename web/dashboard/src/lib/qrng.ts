@@ -83,10 +83,6 @@ export function listQRNGSources(tenantId: string): Promise<QRNGSource[]> {
   return api<{ items: QRNGSource[] }>(`/qrng/v1/sources?tenant_id=${tenantId}`).then(r => Array.isArray(r.items) ? r.items : []);
 }
 
-export function getQRNGSource(tenantId: string, id: string): Promise<QRNGSource> {
-  return api<{ source: QRNGSource }>(`/qrng/v1/sources/${id}?tenant_id=${tenantId}`).then(r => r.source);
-}
-
 export function registerQRNGSource(input: RegisterSourceInput): Promise<QRNGSource> {
   return api<{ source: QRNGSource }>(`/qrng/v1/sources`, {
     method: "POST",
@@ -109,26 +105,8 @@ export function getQRNGPoolStatus(tenantId: string): Promise<QRNGPoolStatus> {
   return api<{ pool: QRNGPoolStatus }>(`/qrng/v1/pool/status?tenant_id=${tenantId}`).then(r => r.pool);
 }
 
-export function getQRNGOverview(tenantId: string): Promise<QRNGOverview> {
-  return api<{ overview: QRNGOverview }>(`/qrng/v1/overview?tenant_id=${tenantId}`).then(r => r.overview);
-}
-
 export function listQRNGHealthEvents(tenantId: string, limit = 50): Promise<QRNGHealthEvent[]> {
   return api<{ items: QRNGHealthEvent[] }>(`/qrng/v1/health?tenant_id=${tenantId}&limit=${limit}`).then(r => Array.isArray(r.items) ? r.items : []);
-}
-
-export function ingestEntropy(tenantId: string, sourceId: string, entropyB64: string): Promise<IngestResult> {
-  return api<{ result: IngestResult }>(`/qrng/v1/ingest`, {
-    method: "POST",
-    body: JSON.stringify({ tenant_id: tenantId, source_id: sourceId, entropy: entropyB64 }),
-  }).then(r => r.result);
-}
-
-export function drawEntropy(tenantId: string, bytes: number): Promise<{ entropy: string; byte_count: number }> {
-  return api<{ result: { entropy: string; byte_count: number } }>(`/qrng/v1/draw`, {
-    method: "POST",
-    body: JSON.stringify({ tenant_id: tenantId, bytes }),
-  }).then(r => r.result);
 }
 
 export const QRNG_VENDORS = [
