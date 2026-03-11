@@ -110,6 +110,7 @@ const NAV = [
   { id: "api-pqc", label: "API: PQC" },
   { id: "api-discovery", label: "API: Discovery" },
   { id: "api-ai", label: "API: AI / LLM" },
+  { id: "api-openapi", label: "API: OpenAPI / Swagger" },
   { id: "ui-guide", label: "UI Guide: Dashboard" },
   { id: "ui-keys", label: "UI Guide: Keys" },
   { id: "ui-workbench", label: "UI Guide: Workbench" },
@@ -2917,6 +2918,98 @@ CKA_ID              = <matching key ID for association>`}</Code>
 );
 
 /* ───────── SECTION MAP ───────── */
+const SectionApiOpenAPI = () => {
+  const [selected, setSelected] = useState<"ai" | "sbom">("ai");
+  const current = selected === "ai"
+    ? {
+        title: "AI Service",
+        description: "AI configuration, provider authentication, MCP compatibility, and assistant workflows.",
+        viewer: "/openapi/ai.html",
+        yaml: "/openapi/ai.openapi.yaml",
+        json: "/openapi/ai.openapi.json",
+      }
+    : {
+        title: "SBOM / CBOM Service",
+        description: "SBOM generation, OSV and Trivy correlation, manual offline advisories, exports, and CBOM PQC readiness.",
+        viewer: "/openapi/sbom.html",
+        yaml: "/openapi/sbom.openapi.yaml",
+        json: "/openapi/sbom.openapi.json",
+      };
+
+  return (
+    <div>
+      <div style={S.h1}>OpenAPI / Swagger Specs</div>
+      <P>Generated OpenAPI 3.0.3 contracts are published directly from the dashboard under <IC>/openapi</IC>. The embedded viewer below uses a local Swagger UI bundle, so it works without external CDN dependencies.</P>
+      <H2>Available Specs</H2>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+        {[
+          { id: "ai", label: "AI Service", detail: "Provider config, auth modes, MCP, assistant actions" },
+          { id: "sbom", label: "SBOM / CBOM", detail: "Vulnerability findings, offline advisories, CBOM readiness" },
+        ].map((item) => {
+          const active = selected === item.id;
+          return (
+            <Card
+              key={item.id}
+              onClick={() => setSelected(item.id as "ai" | "sbom")}
+              style={{
+                padding: 12,
+                cursor: "pointer",
+                border: `1px solid ${active ? C.accent : C.border}`,
+                background: active ? C.accentDim : C.card,
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 700, color: active ? C.accent : C.text, marginBottom: 4 }}>{item.label}</div>
+              <div style={{ fontSize: 10, color: C.dim, lineHeight: 1.5 }}>{item.detail}</div>
+            </Card>
+          );
+        })}
+      </div>
+
+      <H2>{current.title}</H2>
+      <P>{current.description}</P>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        {[
+          ["Open Full Viewer", current.viewer],
+          ["Download YAML", current.yaml],
+          ["Download JSON", current.json],
+        ].map(([label, href]) => (
+          <a
+            key={label}
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              fontSize: 10,
+              fontWeight: 600,
+              color: C.accent,
+              textDecoration: "none",
+              border: `1px solid ${C.border}`,
+              background: C.card,
+              borderRadius: 8,
+              padding: "8px 10px",
+            }}
+          >
+            {label}
+          </a>
+        ))}
+      </div>
+
+      <Code>{`# Regenerate and validate OpenAPI artifacts
+npm.cmd --prefix web/dashboard run generate:openapi
+npm.cmd --prefix web/dashboard run validate:openapi`}</Code>
+
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden", background: C.card }}>
+        <iframe
+          key={current.viewer}
+          title={`${current.title} Swagger Viewer`}
+          src={current.viewer}
+          style={{ width: "100%", height: "78vh", border: 0, background: C.bg }}
+        />
+      </div>
+    </div>
+  );
+};
+
 const SECTIONS: Record<string, () => JSX.Element> = {
   overview: SectionOverview,
   deploy: SectionDeploy,
@@ -2950,6 +3043,7 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "api-pqc": SectionApiPqc,
   "api-discovery": SectionApiDiscovery,
   "api-ai": SectionApiAi,
+  "api-openapi": SectionApiOpenAPI,
   "ui-guide": SectionUIDashboard,
   "ui-keys": SectionUIKeys,
   "ui-workbench": SectionUIWorkbench,

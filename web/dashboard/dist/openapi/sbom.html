@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vecta KMS SBOM / CBOM OpenAPI</title>
+  <link rel="stylesheet" href="./swagger-ui/swagger-ui.css" />
+  <style>
+    body { margin: 0; background: #060a11; color: #e2e8f0; font-family: system-ui, sans-serif; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 18px; border-bottom: 1px solid #1a2944; background: linear-gradient(90deg, rgba(6,214,224,.12), rgba(15,21,33,.95)); }
+    .title { font-size: 14px; font-weight: 700; color: #06d6e0; }
+    .links a { color: #94a3b8; text-decoration: none; margin-left: 12px; font-size: 12px; }
+    .links a:hover { color: #06d6e0; }
+    #swagger-ui { min-height: calc(100vh - 54px); }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="title">Vecta KMS SBOM / CBOM OpenAPI</div>
+    <div class="links">
+      <a href="./sbom.openapi.yaml" target="_blank" rel="noreferrer">YAML</a>
+      <a href="./sbom.openapi.json" target="_blank" rel="noreferrer">JSON</a>
+    </div>
+  </div>
+  <div id="swagger-ui"></div>
+  <script src="./swagger-ui/swagger-ui-bundle.js"></script>
+  <script src="./swagger-ui/swagger-ui-standalone-preset.js"></script>
+  <script>
+    window.onload = function () {
+      window.ui = SwaggerUIBundle({
+        url: "./sbom.openapi.json",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+        layout: "StandaloneLayout",
+        docExpansion: "list",
+        defaultModelsExpandDepth: 1,
+        displayRequestDuration: true
+      });
+    };
+  </script>
+</body>
+</html>

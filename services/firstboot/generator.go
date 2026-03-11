@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"crypto/rand"
@@ -97,11 +97,13 @@ func generateConfigs(req WizardRequest) (GeneratedConfigs, error) {
 				"hyok_proxy":           req.Spec.Features.HYOKProxy,
 				"kmip_server":          req.Spec.Features.KMIPServer,
 				"qkd_interface":        req.Spec.Features.QKDInterface,
+				"qrng_generator":       req.Spec.Features.QRNGGenerator,
 				"ekm_database":         req.Spec.Features.EKMDatabase,
 				"payment_crypto":       req.Spec.Features.PaymentCrypto,
 				"compliance_dashboard": req.Spec.Features.ComplianceDashboard,
 				"sbom_cbom":            req.Spec.Features.SBOMCBOM,
 				"reporting_alerting":   req.Spec.Features.ReportingAlerting,
+				"posture_management":   req.Spec.Features.PostureManagement,
 				"ai_llm":               req.Spec.Features.AILLM,
 				"pqc_migration":        req.Spec.Features.PQCMigration,
 				"crypto_discovery":     req.Spec.Features.CryptoDiscovery,
@@ -338,11 +340,13 @@ func validateLicenseEntitlements(features FeatureConfig, allowed []string) error
 		"hyok_proxy":           features.HYOKProxy,
 		"kmip_server":          features.KMIPServer,
 		"qkd_interface":        features.QKDInterface,
+		"qrng_generator":       features.QRNGGenerator,
 		"ekm_database":         features.EKMDatabase,
 		"payment_crypto":       features.PaymentCrypto,
 		"compliance_dashboard": features.ComplianceDashboard,
 		"sbom_cbom":            features.SBOMCBOM,
 		"reporting_alerting":   features.ReportingAlerting,
+		"posture_management":   features.PostureManagement,
 		"ai_llm":               features.AILLM,
 		"pqc_migration":        features.PQCMigration,
 		"crypto_discovery":     features.CryptoDiscovery,

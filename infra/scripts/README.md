@@ -8,6 +8,21 @@
 - `healthcheck-enabled-services.ps1`: native PowerShell health checks for Windows.
 - Deployment schema: `infra/deployment/deployment.schema.json`.
 
+Feature-to-profile coverage includes:
+
+- core security modules: `secrets`, `certs`, `governance`, `data_protection`
+- integrations: `cloud_byok`, `hyok_proxy`, `kmip_server`, `ekm_database`
+- advanced crypto: `qkd_interface`, `qrng_generator`, `pqc_migration`, `mpc_engine`
+- monitoring and governance: `compliance_dashboard`, `sbom_cbom`, `reporting_alerting`, `posture_management`, `crypto_discovery`, `ai_llm`
+- HA and replication: `clustering`
+
+Installer and first-boot flows also understand these built-in cluster replication profile IDs:
+
+- `cluster-profile-base`
+- `cluster-profile-standard`
+- `cluster-profile-security`
+- `cluster-profile-full`
+
 Example (Linux):
 
 ```bash

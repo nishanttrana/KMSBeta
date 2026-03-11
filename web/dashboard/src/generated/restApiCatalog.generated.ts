@@ -5,43 +5,110 @@ export const DISCOVERED_REST_API_CATALOG = [
   {
     "id": "ai-get-ai-config",
     "group": "AI Security (ai)",
-    "title": "GET /ai/config",
+    "title": "Get AI Configuration",
     "service": "ai",
     "method": "GET",
     "pathTemplate": "/ai/config?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
-    "description": "Auto-discovered route from AI service.",
+    "description": "Returns the tenant AI provider configuration, including backend selection, provider authentication mode, MCP compatibility, context collection settings, and redaction fields.",
     "requestExample": "GET /svc/ai/ai/config?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "config": {
+        "tenant_id": "root",
+        "backend": "claude",
+        "endpoint": "https://api.anthropic.com/v1/messages",
+        "model": "claude-sonnet-4-6",
+        "api_key_secret": "ai-provider-token",
+        "provider_auth": {
+          "required": true,
+          "type": "bearer"
+        },
+        "mcp": {
+          "enabled": false,
+          "endpoint": ""
+        },
+        "max_context_tokens": 8000,
+        "temperature": 0.3,
+        "context_sources": {
+          "keys": {
+            "enabled": true,
+            "limit": 25,
+            "fields": [
+              "id",
+              "name",
+              "algorithm",
+              "status"
+            ]
+          },
+          "policies": {
+            "enabled": true,
+            "all": false,
+            "limit": 20
+          },
+          "audit": {
+            "enabled": true,
+            "last_hours": 24,
+            "limit": 100
+          },
+          "posture": {
+            "enabled": true,
+            "current": true
+          },
+          "alerts": {
+            "enabled": true,
+            "unresolved": true,
+            "limit": 50
+          }
+        },
+        "redaction_fields": [
+          "encrypted_material",
+          "wrapped_dek",
+          "pwd_hash",
+          "api_key",
+          "passphrase"
+        ],
+        "updated_at": "2026-03-11T09:30:00Z"
+      }
     },
     "errorCodes": [
+      {
+        "code": 400,
+        "meaning": "tenant_id is missing from query or X-Tenant-ID"
+      },
       {
         "code": 401,
         "meaning": "Authentication required or token invalid"
       },
       {
         "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
+        "meaning": "Caller lacks permission to read AI configuration"
       }
     ]
   },
   {
     "id": "ai-post-ai-analyze-incident",
     "group": "AI Security (ai)",
-    "title": "POST /ai/analyze/incident",
+    "title": "Analyze Incident",
     "service": "ai",
     "method": "POST",
     "pathTemplate": "/ai/analyze/incident?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from AI service.",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"incident_id\": \"inc-001\",\n  \"title\": \"Unauthorized key export attempt\",\n  \"description\": \"A privileged user attempted an export against a production key.\",\n  \"details\": {\n    \"key_id\": \"key_123\",\n    \"actor\": \"ops-admin\",\n    \"approval_status\": \"missing\"\n  }\n}",
+    "description": "Generates an AI-assisted incident analysis for a specific security or governance event and returns a narrative response with context-aware warnings.",
     "requestExample": "POST /svc/ai/ai/analyze/incident?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "result": {
+        "action": "incident_analysis",
+        "tenant_id": "root",
+        "answer": "The export attempt appears blocked by governance controls. Review the actor's role bindings and pending approvals.",
+        "backend": "claude",
+        "model": "claude-sonnet-4-6",
+        "redactions_applied": 1,
+        "context_summary": {
+          "incident_id": "inc-001"
+        },
+        "warnings": [],
+        "generated_at": "2026-03-11T09:41:00Z"
+      }
     },
     "errorCodes": [
       {
@@ -61,71 +128,112 @@ export const DISCOVERED_REST_API_CATALOG = [
   {
     "id": "ai-post-ai-explain-policy",
     "group": "AI Security (ai)",
-    "title": "POST /ai/explain/policy",
+    "title": "Explain Policy",
     "service": "ai",
     "method": "POST",
     "pathTemplate": "/ai/explain/policy?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from AI service.",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"policy_id\": \"policy-rotate-90d\",\n  \"policy\": {\n    \"id\": \"policy-rotate-90d\",\n    \"name\": \"Rotate every 90 days\",\n    \"status\": \"active\"\n  }\n}",
+    "description": "Produces a natural-language explanation of a policy by ID or from an inline policy document, including likely enforcement intent and plain-English warnings.",
     "requestExample": "POST /svc/ai/ai/explain/policy?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "result": {
+        "action": "policy_explanation",
+        "tenant_id": "root",
+        "answer": "This policy requires 90-day rotation and blocks long-lived production keys from remaining active without renewal.",
+        "backend": "claude",
+        "model": "claude-sonnet-4-6",
+        "redactions_applied": 0,
+        "context_summary": {
+          "policy_id": "policy-rotate-90d"
+        },
+        "warnings": [],
+        "generated_at": "2026-03-11T09:43:00Z"
+      }
     },
     "errorCodes": [
+      {
+        "code": 400,
+        "meaning": "policy_id is missing and no inline policy document was provided"
+      },
       {
         "code": 401,
         "meaning": "Authentication required or token invalid"
       },
       {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
+        "code": 404,
+        "meaning": "Referenced policy could not be found"
       }
     ]
   },
   {
     "id": "ai-post-ai-query",
     "group": "AI Security (ai)",
-    "title": "POST /ai/query",
+    "title": "Query AI Assistant",
     "service": "ai",
     "method": "POST",
     "pathTemplate": "/ai/query?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from AI service.",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"query\": \"Analyze recent unresolved alerts and recommend actions\",\n  \"include_context\": true\n}",
+    "description": "Submits a natural-language AI assistant request. When include_context=true, the service may attach redacted keys, policy, audit, posture, and alert context according to the saved tenant AI configuration.",
     "requestExample": "POST /svc/ai/ai/query?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "result": {
+        "action": "query",
+        "tenant_id": "root",
+        "answer": "There are 3 unresolved high severity alerts. Start with the posture risk spike and the stale approval backlog.",
+        "backend": "claude",
+        "model": "claude-sonnet-4-6",
+        "redactions_applied": 4,
+        "context_summary": {
+          "keys": 12,
+          "policies": 6,
+          "audit_events": 45,
+          "alerts": 3
+        },
+        "warnings": [],
+        "generated_at": "2026-03-11T09:40:00Z"
+      }
     },
     "errorCodes": [
+      {
+        "code": 400,
+        "meaning": "Query is empty or request JSON is invalid"
+      },
       {
         "code": 401,
         "meaning": "Authentication required or token invalid"
       },
       {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
+        "code": 503,
+        "meaning": "Provider unavailable and no fallback response could be generated"
       }
     ]
   },
   {
     "id": "ai-post-ai-recommend-posture",
     "group": "AI Security (ai)",
-    "title": "POST /ai/recommend/posture",
+    "title": "Recommend Posture Improvements",
     "service": "ai",
     "method": "POST",
     "pathTemplate": "/ai/recommend/posture?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from AI service.",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"focus\": \"key-rotation\"\n}",
+    "description": "Uses current posture, audit, and policy context to generate prioritized remediation guidance for the requested focus area or for the overall KMS posture.",
     "requestExample": "POST /svc/ai/ai/recommend/posture?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "result": {
+        "action": "posture_recommendation",
+        "tenant_id": "root",
+        "answer": "Enable automatic rotation for stale AES keys and resolve open posture findings tied to weak legacy algorithms.",
+        "backend": "fallback",
+        "model": "deterministic-rules",
+        "redactions_applied": 0,
+        "context_summary": {
+          "focus": "key-rotation"
+        },
+        "warnings": [
+          "LLM provider unavailable; returned fallback guidance."
+        ],
+        "generated_at": "2026-03-11T09:42:00Z"
+      }
     },
     "errorCodes": [
       {
@@ -145,28 +253,42 @@ export const DISCOVERED_REST_API_CATALOG = [
   {
     "id": "ai-put-ai-config",
     "group": "AI Security (ai)",
-    "title": "PUT /ai/config",
+    "title": "Update AI Configuration",
     "service": "ai",
     "method": "PUT",
     "pathTemplate": "/ai/config?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from AI service.",
+    "bodyTemplate": "{\n  \"backend\": \"copilot\",\n  \"endpoint\": \"https://api.githubcopilot.com/chat/completions\",\n  \"model\": \"gpt-4o\",\n  \"api_key_secret\": \"copilot-token\",\n  \"provider_auth\": {\n    \"required\": true,\n    \"type\": \"bearer\"\n  },\n  \"mcp\": {\n    \"enabled\": true,\n    \"endpoint\": \"mcp://kms-ai\"\n  },\n  \"max_context_tokens\": 12000,\n  \"temperature\": 0.2,\n  \"context_sources\": {\n    \"keys\": { \"enabled\": true, \"limit\": 25, \"fields\": [\"id\", \"name\", \"algorithm\", \"status\"] },\n    \"policies\": { \"enabled\": true, \"all\": false, \"limit\": 20 },\n    \"audit\": { \"enabled\": true, \"last_hours\": 24, \"limit\": 100 },\n    \"posture\": { \"enabled\": true, \"current\": true },\n    \"alerts\": { \"enabled\": true, \"unresolved\": true, \"limit\": 50 }\n  },\n  \"redaction_fields\": [\"encrypted_material\", \"wrapped_dek\", \"pwd_hash\", \"api_key\", \"passphrase\"]\n}",
+    "description": "Updates the tenant AI provider configuration. Managed providers require provider_auth.required=true with api_key or bearer auth. MCP-enabled configurations must also provide an MCP endpoint.",
     "requestExample": "PUT /svc/ai/ai/config?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "config": {
+        "tenant_id": "root",
+        "backend": "copilot",
+        "endpoint": "https://api.githubcopilot.com/chat/completions",
+        "model": "gpt-4o",
+        "provider_auth": {
+          "required": true,
+          "type": "bearer"
+        },
+        "mcp": {
+          "enabled": true,
+          "endpoint": "mcp://kms-ai"
+        },
+        "updated_at": "2026-03-11T09:35:00Z"
+      }
     },
     "errorCodes": [
+      {
+        "code": 400,
+        "meaning": "Backend, endpoint, auth mode, or MCP settings are invalid"
+      },
       {
         "code": 401,
         "meaning": "Authentication required or token invalid"
       },
       {
         "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
+        "meaning": "Caller lacks permission to update AI configuration"
       }
     ]
   },
@@ -6891,6 +7013,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "governance-get-governance-system-fde-recovery-shares",
+    "group": "Governance (governance)",
+    "title": "GET /governance/system/fde/recovery-shares",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/system/fde/recovery-shares?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "GET /svc/governance/governance/system/fde/recovery-shares?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-get-governance-system-fde-status",
+    "group": "Governance (governance)",
+    "title": "GET /governance/system/fde/status",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/system/fde/status?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "GET /svc/governance/governance/system/fde/status?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "governance-get-governance-system-integrity",
     "group": "Governance (governance)",
     "title": "GET /governance/system/integrity",
@@ -7180,6 +7358,118 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Governance service.",
     "requestExample": "POST /svc/governance/governance/settings/webhook/test?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-post-governance-system-fde-integrity-check",
+    "group": "Governance (governance)",
+    "title": "POST /governance/system/fde/integrity-check",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/system/fde/integrity-check?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "POST /svc/governance/governance/system/fde/integrity-check?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-post-governance-system-fde-rotate-key",
+    "group": "Governance (governance)",
+    "title": "POST /governance/system/fde/rotate-key",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/system/fde/rotate-key?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "POST /svc/governance/governance/system/fde/rotate-key?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-post-governance-system-fde-test-recovery",
+    "group": "Governance (governance)",
+    "title": "POST /governance/system/fde/test-recovery",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/system/fde/test-recovery?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "POST /svc/governance/governance/system/fde/test-recovery?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-post-governance-system-network-apply",
+    "group": "Governance (governance)",
+    "title": "POST /governance/system/network/apply",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/system/network/apply?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "POST /svc/governance/governance/system/network/apply?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -10727,6 +11017,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-post-keys-bulk-delete",
+    "group": "Key Management (keycore)",
+    "title": "POST /keys/bulk-delete",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/bulk-delete?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/keys/bulk-delete?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-post-keys-bulk-import",
     "group": "Key Management (keycore)",
     "title": "POST /keys/bulk-import",
@@ -10736,6 +11054,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/keys/bulk-import?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-keys-bulk-rotate",
+    "group": "Key Management (keycore)",
+    "title": "POST /keys/bulk-rotate",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/bulk-rotate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/keys/bulk-rotate?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -15711,6 +16057,30 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "sbom-delete-sbom-advisories-id",
+    "group": "SBOM / CBOM (sbom)",
+    "title": "Delete Offline Advisory",
+    "service": "sbom",
+    "method": "DELETE",
+    "pathTemplate": "/sbom/advisories/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Deletes a manually managed offline advisory by advisory ID.",
+    "requestExample": "DELETE /svc/sbom/sbom/advisories/CVE-2026-5000?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "status": "deleted"
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 404,
+        "meaning": "Advisory ID was not found"
+      }
+    ]
+  },
+  {
     "id": "sbom-get-cbom-id",
     "group": "SBOM / CBOM (sbom)",
     "title": "GET /cbom/{id}",
@@ -15853,15 +16223,30 @@ export const DISCOVERED_REST_API_CATALOG = [
   {
     "id": "sbom-get-cbom-pqc-readiness",
     "group": "SBOM / CBOM (sbom)",
-    "title": "GET /cbom/pqc-readiness",
+    "title": "Get CBOM PQC Readiness",
     "service": "sbom",
     "method": "GET",
     "pathTemplate": "/cbom/pqc-readiness?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
-    "description": "Auto-discovered route from SBOM service.",
+    "description": "Returns post-quantum readiness metrics derived from the latest tenant CBOM, including total assets, PQC-ready counts, deprecated counts, algorithm distribution, and strength histogram.",
     "requestExample": "GET /svc/sbom/cbom/pqc-readiness?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "pqc_readiness": {
+        "total_assets": 42,
+        "pqc_ready_count": 8,
+        "pqc_readiness_percent": 19,
+        "deprecated_count": 4,
+        "algorithm_distribution": {
+          "AES": 16,
+          "RSA": 9,
+          "ECDSA": 9,
+          "ML-DSA": 8
+        },
+        "strength_histogram": {
+          "128": 8,
+          "256": 34
+        }
+      }
     },
     "errorCodes": [
       {
@@ -15946,6 +16331,47 @@ export const DISCOVERED_REST_API_CATALOG = [
     "requestExample": "GET /svc/sbom/sbom/{id}/export?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "sbom-get-sbom-advisories",
+    "group": "SBOM / CBOM (sbom)",
+    "title": "List Offline Advisories",
+    "service": "sbom",
+    "method": "GET",
+    "pathTemplate": "/sbom/advisories?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Lists manually managed offline advisories that are merged into the SBOM vulnerability view before online providers. This supports air-gapped KMS deployments.",
+    "requestExample": "GET /svc/sbom/sbom/advisories?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "items": [
+        {
+          "id": "CVE-2026-5000",
+          "component": "example/module",
+          "ecosystem": "go",
+          "introduced_version": "v1.0.0",
+          "fixed_version": "v1.3.0",
+          "severity": "critical",
+          "summary": "Offline advisory",
+          "reference": "https://example.test/CVE-2026-5000",
+          "created_at": "2026-03-11T09:46:00Z",
+          "updated_at": "2026-03-11T09:46:00Z"
+        }
+      ]
     },
     "errorCodes": [
       {
@@ -16049,15 +16475,36 @@ export const DISCOVERED_REST_API_CATALOG = [
   {
     "id": "sbom-get-sbom-vulnerabilities",
     "group": "SBOM / CBOM (sbom)",
-    "title": "GET /sbom/vulnerabilities",
+    "title": "List SBOM Vulnerabilities",
     "service": "sbom",
     "method": "GET",
     "pathTemplate": "/sbom/vulnerabilities?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
-    "description": "Auto-discovered route from SBOM service.",
+    "description": "Returns merged vulnerability findings for the latest SBOM snapshot. Results can include Manual OSV advisories for air-gapped use, live OSV package matches, and Trivy repository scan results.",
     "requestExample": "GET /svc/sbom/sbom/vulnerabilities?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "items": [
+        {
+          "id": "CVE-2026-1000",
+          "source": "OSV",
+          "severity": "high",
+          "component": "golang.org/x/net",
+          "installed_version": "v0.20.0",
+          "fixed_version": "v0.35.0",
+          "summary": "HTTP issue in golang.org/x/net.",
+          "reference": "https://osv.dev/vulnerability/GO-2026-0001"
+        },
+        {
+          "id": "CVE-2025-29923",
+          "source": "Trivy",
+          "severity": "low",
+          "component": "github.com/redis/go-redis/v9",
+          "installed_version": "v9.7.0",
+          "fixed_version": "9.7.3",
+          "summary": "go-redis vulnerability",
+          "reference": "https://avd.aquasec.com/nvd/cve-2025-29923"
+        }
+      ]
     },
     "errorCodes": [
       {
@@ -16066,26 +16513,31 @@ export const DISCOVERED_REST_API_CATALOG = [
       },
       {
         "code": 403,
-        "meaning": "Caller lacks permission for this operation"
+        "meaning": "Caller lacks SBOM read privilege"
       },
       {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
+        "code": 500,
+        "meaning": "Snapshot load or vulnerability provider processing failed"
       }
     ]
   },
   {
     "id": "sbom-post-cbom-generate",
     "group": "SBOM / CBOM (sbom)",
-    "title": "POST /cbom/generate",
+    "title": "Generate CBOM Snapshot",
     "service": "sbom",
     "method": "POST",
     "pathTemplate": "/cbom/generate?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from SBOM service.",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"trigger\": \"manual\"\n}",
+    "description": "Builds a fresh cryptographic BOM snapshot for the tenant, including algorithm distribution, PQC readiness, deprecated assets, and source inventory.",
     "requestExample": "POST /svc/sbom/cbom/generate?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "status": "accepted",
+      "snapshot": {
+        "id": "cbom_20260311_001",
+        "tenant_id": "{{tenant_id}}",
+        "created_at": "2026-03-11T09:47:00Z"
+      }
     },
     "errorCodes": [
       {
@@ -16103,17 +16555,56 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "sbom-post-sbom-advisories",
+    "group": "SBOM / CBOM (sbom)",
+    "title": "Create or Update Offline Advisory",
+    "service": "sbom",
+    "method": "POST",
+    "pathTemplate": "/sbom/advisories?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"id\": \"CVE-2026-5000\",\n  \"component\": \"example/module\",\n  \"ecosystem\": \"go\",\n  \"introduced_version\": \"v1.0.0\",\n  \"fixed_version\": \"v1.3.0\",\n  \"severity\": \"critical\",\n  \"summary\": \"Offline advisory for an air-gapped deployment\",\n  \"reference\": \"https://example.test/CVE-2026-5000\"\n}",
+    "description": "Creates or updates a manual advisory record for offline or disconnected environments. These advisories are treated as an internal OSV-style source during vulnerability matching.",
+    "requestExample": "POST /svc/sbom/sbom/advisories?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "item": {
+        "id": "CVE-2026-5000",
+        "component": "example/module",
+        "ecosystem": "go",
+        "fixed_version": "v1.3.0",
+        "severity": "critical",
+        "summary": "Offline advisory for an air-gapped deployment"
+      }
+    },
+    "errorCodes": [
+      {
+        "code": 400,
+        "meaning": "Advisory payload is invalid or required fields are missing"
+      },
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 409,
+        "meaning": "Conflicting advisory data prevented save"
+      }
+    ]
+  },
+  {
     "id": "sbom-post-sbom-generate",
     "group": "SBOM / CBOM (sbom)",
-    "title": "POST /sbom/generate",
+    "title": "Generate SBOM Snapshot",
     "service": "sbom",
     "method": "POST",
     "pathTemplate": "/sbom/generate?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from SBOM service.",
+    "bodyTemplate": "{\n  \"trigger\": \"manual\"\n}",
+    "description": "Builds a fresh software BOM snapshot from the local workspace. The snapshot is used by history, diff, export, and vulnerability correlation endpoints.",
     "requestExample": "POST /svc/sbom/sbom/generate?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "status": "accepted",
+      "snapshot": {
+        "id": "sbom_20260311_001",
+        "created_at": "2026-03-11T09:45:00Z"
+      }
     },
     "errorCodes": [
       {

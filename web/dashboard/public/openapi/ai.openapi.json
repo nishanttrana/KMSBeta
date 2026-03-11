@@ -1,0 +1,857 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Vecta KMS AI Service API",
+    "version": "1.0.0",
+    "description": "OpenAPI contract for AI configuration and assistant workflows. Use `/svc/ai` through the dashboard proxy or `http://localhost:8090` directly."
+  },
+  "servers": [
+    {
+      "url": "/svc/ai",
+      "description": "Dashboard reverse proxy"
+    },
+    {
+      "url": "http://localhost:8090",
+      "description": "Direct AI service"
+    }
+  ],
+  "tags": [
+    {
+      "name": "AI Config"
+    },
+    {
+      "name": "AI Assistant"
+    }
+  ],
+  "paths": {
+    "/ai/config": {
+      "get": {
+        "tags": [
+          "AI Config"
+        ],
+        "operationId": "getAIConfig",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant AI configuration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIConfigEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled AI service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "AI Config"
+        ],
+        "operationId": "updateAIConfig",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AIConfigUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Merged AI configuration.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIConfigEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Configuration validation failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled AI service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai/query": {
+      "post": {
+        "tags": [
+          "AI Assistant"
+        ],
+        "operationId": "queryAI",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QueryRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AI query result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIResultEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant or query.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled AI service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai/analyze/incident": {
+      "post": {
+        "tags": [
+          "AI Assistant"
+        ],
+        "operationId": "analyzeIncident",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IncidentAnalysisRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Incident analysis result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIResultEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant or malformed payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled AI service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai/recommend/posture": {
+      "post": {
+        "tags": [
+          "AI Assistant"
+        ],
+        "operationId": "recommendPosture",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostureRecommendationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Posture recommendation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIResultEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant or malformed payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled AI service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ai/explain/policy": {
+      "post": {
+        "tags": [
+          "AI Assistant"
+        ],
+        "operationId": "explainPolicy",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyExplainRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Policy explanation result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AIResultEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant or malformed payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled AI service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "RequestIdHeader": {
+        "name": "X-Request-ID",
+        "in": "header",
+        "required": false,
+        "description": "Optional client correlation id. The service generates one when omitted.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "TenantHeader": {
+        "name": "X-Tenant-ID",
+        "in": "header",
+        "required": false,
+        "description": "Alternative tenant scope header accepted by tenant-aware handlers.",
+        "schema": {
+          "type": "string",
+          "example": "root"
+        }
+      },
+      "TenantQuery": {
+        "name": "tenant_id",
+        "in": "query",
+        "required": false,
+        "description": "Tenant scope. Required for tenant-aware operations unless supplied in the request body or `X-Tenant-ID`.",
+        "schema": {
+          "type": "string",
+          "example": "root"
+        }
+      }
+    },
+    "schemas": {
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "request_id",
+              "tenant_id"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "example": "bad_request"
+              },
+              "message": {
+                "type": "string",
+                "example": "tenant_id is required"
+              },
+              "request_id": {
+                "type": "string",
+                "example": "req_1a2b3c4d5e6f7a8b"
+              },
+              "tenant_id": {
+                "type": "string",
+                "example": "root"
+              }
+            }
+          }
+        }
+      },
+      "StringList": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "ContextKeysConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fields": {
+            "$ref": "#/components/schemas/StringList"
+          }
+        }
+      },
+      "ContextPoliciesConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "all": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ContextAuditConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "last_hours": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ContextPostureConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "current": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ContextAlertsConfig": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "unresolved": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "ContextSources": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "$ref": "#/components/schemas/ContextKeysConfig"
+          },
+          "policies": {
+            "$ref": "#/components/schemas/ContextPoliciesConfig"
+          },
+          "audit": {
+            "$ref": "#/components/schemas/ContextAuditConfig"
+          },
+          "posture": {
+            "$ref": "#/components/schemas/ContextPostureConfig"
+          },
+          "alerts": {
+            "$ref": "#/components/schemas/ContextAlertsConfig"
+          }
+        }
+      },
+      "ProviderAuthConfig": {
+        "type": "object",
+        "required": [
+          "required",
+          "type"
+        ],
+        "properties": {
+          "required": {
+            "type": "boolean"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "api_key",
+              "bearer",
+              "none"
+            ]
+          }
+        }
+      },
+      "MCPConfig": {
+        "type": "object",
+        "required": [
+          "enabled",
+          "endpoint"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "endpoint": {
+            "type": "string",
+            "example": "mcp://kms-ai"
+          }
+        }
+      },
+      "AIConfig": {
+        "type": "object",
+        "required": [
+          "tenant_id",
+          "backend",
+          "endpoint",
+          "model",
+          "api_key_secret",
+          "provider_auth",
+          "mcp",
+          "max_context_tokens",
+          "temperature",
+          "context_sources",
+          "redaction_fields",
+          "updated_at"
+        ],
+        "properties": {
+          "tenant_id": {
+            "type": "string",
+            "example": "root"
+          },
+          "backend": {
+            "type": "string",
+            "enum": [
+              "claude",
+              "openai",
+              "azure-openai",
+              "copilot",
+              "self-hosted",
+              "ollama",
+              "vllm",
+              "llamacpp"
+            ]
+          },
+          "endpoint": {
+            "type": "string",
+            "example": "https://api.anthropic.com/v1/messages"
+          },
+          "model": {
+            "type": "string",
+            "example": "claude-sonnet-4-20250514"
+          },
+          "api_key_secret": {
+            "type": "string",
+            "example": "ai-provider-token"
+          },
+          "provider_auth": {
+            "$ref": "#/components/schemas/ProviderAuthConfig"
+          },
+          "mcp": {
+            "$ref": "#/components/schemas/MCPConfig"
+          },
+          "max_context_tokens": {
+            "type": "integer",
+            "minimum": 256
+          },
+          "temperature": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "context_sources": {
+            "$ref": "#/components/schemas/ContextSources"
+          },
+          "redaction_fields": {
+            "$ref": "#/components/schemas/StringList"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AIConfigUpdate": {
+        "type": "object",
+        "properties": {
+          "backend": {
+            "type": "string",
+            "enum": [
+              "claude",
+              "openai",
+              "azure-openai",
+              "copilot",
+              "self-hosted",
+              "ollama",
+              "vllm",
+              "llamacpp"
+            ]
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "api_key_secret": {
+            "type": "string"
+          },
+          "provider_auth": {
+            "$ref": "#/components/schemas/ProviderAuthConfig"
+          },
+          "mcp": {
+            "$ref": "#/components/schemas/MCPConfig"
+          },
+          "max_context_tokens": {
+            "type": "integer",
+            "minimum": 256
+          },
+          "temperature": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "context_sources": {
+            "$ref": "#/components/schemas/ContextSources"
+          },
+          "redaction_fields": {
+            "$ref": "#/components/schemas/StringList"
+          }
+        }
+      },
+      "QueryRequest": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "tenant_id": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1
+          },
+          "include_context": {
+            "type": "boolean"
+          }
+        }
+      },
+      "IncidentAnalysisRequest": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string"
+          },
+          "incident_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "PostureRecommendationRequest": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string"
+          },
+          "focus": {
+            "type": "string"
+          }
+        }
+      },
+      "PolicyExplainRequest": {
+        "type": "object",
+        "properties": {
+          "tenant_id": {
+            "type": "string"
+          },
+          "policy_id": {
+            "type": "string"
+          },
+          "policy": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "AIResponse": {
+        "type": "object",
+        "required": [
+          "action",
+          "tenant_id",
+          "answer",
+          "backend",
+          "model",
+          "redactions_applied",
+          "context_summary",
+          "generated_at"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "query",
+              "incident_analysis",
+              "posture_recommendation",
+              "policy_explanation"
+            ]
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "backend": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "redactions_applied": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "context_summary": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "warnings": {
+            "$ref": "#/components/schemas/StringList"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AIConfigEnvelope": {
+        "type": "object",
+        "required": [
+          "config",
+          "request_id"
+        ],
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/AIConfig"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
+      "AIResultEnvelope": {
+        "type": "object",
+        "required": [
+          "result",
+          "request_id"
+        ],
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/AIResponse"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

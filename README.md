@@ -102,6 +102,8 @@ Enterprise Key Management System with full lifecycle cryptographic operations, c
 .\install-windows.ps1
 ```
 
+The installer and first-boot flow generate `infra/deployment/deployment.yaml`, understand the newer optional profiles such as `posture_management` and `qrng_generator`, and support built-in cluster replication presets: `cluster-profile-base`, `cluster-profile-standard`, `cluster-profile-security`, and `cluster-profile-full`.
+
 ### Development
 
 ```bash
@@ -217,6 +219,10 @@ NIST SP 800-57, PCI-DSS v4.0, HIPAA, SOC 2 Type II, GDPR, eIDAS, ISO 27001, FIPS
 ## Runtime Documentation
 
 See [RUNTIME_CONTROL_FLOW.md](RUNTIME_CONTROL_FLOW.md) for the complete runtime control flow map of all services and feature profiles.
+
+See [docs/REST_API_ADDITIONS.md](docs/REST_API_ADDITIONS.md) for detailed REST API documentation covering the newer AI configuration, AI assistant, SBOM vulnerability, offline advisory, and CBOM readiness workflows.
+
+See [docs/openapi/README.md](docs/openapi/README.md) for generated OpenAPI/Swagger specs for the AI and SBOM/CBOM service APIs.
 
 ## License
 

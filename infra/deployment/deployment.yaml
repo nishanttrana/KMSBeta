@@ -22,9 +22,11 @@ spec:
         hyok_proxy: false
         kmip_server: true
         mpc_engine: false
+        posture_management: true
         payment_crypto: true
         pqc_migration: true
         qkd_interface: false
+        qrng_generator: false
         reporting_alerting: true
         sbom_cbom: true
         secrets: true

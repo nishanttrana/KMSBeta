@@ -2828,10 +2828,23 @@ export const REST_API_CATALOG = [
     service: "ai",
     method: "POST",
     pathTemplate: "/ai/query",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "query": "What keys are expiring this month?",\n  "include_context": ["keys", "policies", "audit"]\n}',
-    description: "Sends a natural-language query to the AI assistant with optional KMS context sources.",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "query": "Analyze recent unresolved alerts and recommend actions",\n  "include_context": true\n}',
+    description: "Submits a natural-language request to the AI assistant. If include_context is true, the assistant will use the configured redacted KMS context sources for the tenant.",
     requestExample: "POST /svc/ai/ai/query",
-    responseExample: { response: "There are 3 keys expiring this month...", model: "claude-sonnet-4-6", tokens_used: 420, context_sources_used: ["keys", "policies"], redactions_applied: 0, warnings: [] },
+    responseExample: {
+      result: {
+        action: "query",
+        tenant_id: "root",
+        answer: "There are 3 unresolved alerts. Start with the posture risk spike and the pending approval backlog.",
+        backend: "claude",
+        model: "claude-sonnet-4-6",
+        redactions_applied: 4,
+        context_summary: { keys: 12, policies: 6, audit_events: 45, alerts: 3 },
+        warnings: [],
+        generated_at: "2026-03-11T09:40:00Z"
+      },
+      request_id: "req_123"
+    },
     errorCodes: [
       { code: 400, meaning: "Empty query or invalid context source" },
       { code: 401, meaning: "JWT missing/invalid/expired" },
@@ -2845,10 +2858,23 @@ export const REST_API_CATALOG = [
     service: "ai",
     method: "POST",
     pathTemplate: "/ai/analyze/incident",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "incident_id": "inc-001",\n  "description": "Unauthorized key export attempt detected"\n}',
-    description: "AI-powered incident analysis with root cause suggestions and remediation steps.",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "incident_id": "inc-001",\n  "title": "Unauthorized key export attempt",\n  "description": "A privileged user attempted an export against a production key.",\n  "details": {\n    "key_id": "key_123",\n    "actor": "ops-admin",\n    "approval_status": "missing"\n  }\n}',
+    description: "Builds an AI-assisted incident analysis for a security or governance event and returns a narrative recommendation payload.",
     requestExample: "POST /svc/ai/ai/analyze/incident",
-    responseExample: { analysis: "The unauthorized export attempt was...", severity: "high", recommendations: ["Revoke key export permission", "Enable quorum approval"], confidence: 0.87 },
+    responseExample: {
+      result: {
+        action: "incident_analysis",
+        tenant_id: "root",
+        answer: "The export attempt appears blocked by governance controls. Review the actor role bindings and missing approvals.",
+        backend: "claude",
+        model: "claude-sonnet-4-6",
+        redactions_applied: 1,
+        context_summary: { incident_id: "inc-001" },
+        warnings: [],
+        generated_at: "2026-03-11T09:41:00Z"
+      },
+      request_id: "req_124"
+    },
     errorCodes: [
       { code: 400, meaning: "Missing incident details" },
       { code: 401, meaning: "JWT missing/invalid/expired" },
@@ -2863,9 +2889,22 @@ export const REST_API_CATALOG = [
     method: "POST",
     pathTemplate: "/ai/recommend/posture",
     bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "focus": "key-rotation"\n}',
-    description: "Generates security posture improvement recommendations based on current KMS state.",
+    description: "Generates posture remediation guidance using the configured AI provider or the deterministic fallback response path when the provider is unavailable.",
     requestExample: "POST /svc/ai/ai/recommend/posture",
-    responseExample: { recommendations: [{ area: "Key Rotation", priority: "high", suggestion: "Enable automatic rotation for 12 keys older than 90 days" }], overall_score: 78 },
+    responseExample: {
+      result: {
+        action: "posture_recommendation",
+        tenant_id: "root",
+        answer: "Enable automatic rotation for stale AES keys and resolve posture findings tied to weak legacy algorithms.",
+        backend: "fallback",
+        model: "deterministic-rules",
+        redactions_applied: 0,
+        context_summary: { focus: "key-rotation" },
+        warnings: ["LLM provider unavailable; returned fallback guidance."],
+        generated_at: "2026-03-11T09:42:00Z"
+      },
+      request_id: "req_125"
+    },
     errorCodes: [
       { code: 401, meaning: "JWT missing/invalid/expired" },
       { code: 503, meaning: "AI backend unavailable" }
@@ -2878,10 +2917,23 @@ export const REST_API_CATALOG = [
     service: "ai",
     method: "POST",
     pathTemplate: "/ai/explain/policy",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "policy_id": "pol-001"\n}',
-    description: "Returns a natural-language explanation of a KMS policy including its effective permissions and scope.",
+    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "policy_id": "policy-rotate-90d",\n  "policy": {\n    "id": "policy-rotate-90d",\n    "name": "Rotate every 90 days",\n    "status": "active"\n  }\n}',
+    description: "Returns a natural-language explanation of a KMS policy by ID or from an inline policy document.",
     requestExample: "POST /svc/ai/ai/explain/policy",
-    responseExample: { explanation: "This policy allows encrypt and decrypt operations...", effective_scope: "tenant=root, key_group=production", warnings: [] },
+    responseExample: {
+      result: {
+        action: "policy_explanation",
+        tenant_id: "root",
+        answer: "This policy requires 90-day rotation and prevents long-lived production keys from remaining active without renewal.",
+        backend: "claude",
+        model: "claude-sonnet-4-6",
+        redactions_applied: 0,
+        context_summary: { policy_id: "policy-rotate-90d" },
+        warnings: [],
+        generated_at: "2026-03-11T09:43:00Z"
+      },
+      request_id: "req_126"
+    },
     errorCodes: [
       { code: 400, meaning: "Missing or invalid policy_id" },
       { code: 401, meaning: "JWT missing/invalid/expired" },
@@ -2896,9 +2948,31 @@ export const REST_API_CATALOG = [
     method: "GET",
     pathTemplate: "/ai/config?tenant_id={{tenant_id}}",
     bodyTemplate: "",
-    description: "Returns the current AI service configuration including provider, model, and context settings.",
+    description: "Returns the tenant AI configuration including provider backend, provider authentication mode, MCP compatibility, context controls, and redaction policy.",
     requestExample: "GET /svc/ai/ai/config?tenant_id=root",
-    responseExample: { provider: "claude", model: "claude-sonnet-4-6", endpoint: "", temperature: 0.3, max_context_tokens: 8000, context_sources: { keys: true, policies: true, audit: true, posture: true, alerts: false }, redaction_fields: ["passphrase", "secret"] },
+    responseExample: {
+      config: {
+        tenant_id: "root",
+        backend: "claude",
+        endpoint: "https://api.anthropic.com/v1/messages",
+        model: "claude-sonnet-4-6",
+        api_key_secret: "ai-provider-token",
+        provider_auth: { required: true, type: "bearer" },
+        mcp: { enabled: false, endpoint: "" },
+        max_context_tokens: 8000,
+        temperature: 0.3,
+        context_sources: {
+          keys: { enabled: true, limit: 25, fields: ["id", "name", "algorithm", "status"] },
+          policies: { enabled: true, all: false, limit: 20 },
+          audit: { enabled: true, last_hours: 24, limit: 100 },
+          posture: { enabled: true, current: true },
+          alerts: { enabled: true, unresolved: true, limit: 50 }
+        },
+        redaction_fields: ["encrypted_material", "wrapped_dek", "pwd_hash", "api_key", "passphrase"],
+        updated_at: "2026-03-11T09:30:00Z"
+      },
+      request_id: "req_127"
+    },
     errorCodes: [
       { code: 401, meaning: "JWT missing/invalid/expired" },
       { code: 403, meaning: "Not a system admin" }
@@ -2910,13 +2984,24 @@ export const REST_API_CATALOG = [
     title: "Update AI Config",
     service: "ai",
     method: "PUT",
-    pathTemplate: "/ai/config",
-    bodyTemplate: '{\n  "tenant_id": "{{tenant_id}}",\n  "provider": "claude",\n  "model": "claude-sonnet-4-6",\n  "temperature": 0.3\n}',
-    description: "Updates the AI service configuration. Partial updates are supported.",
-    requestExample: "PUT /svc/ai/ai/config",
-    responseExample: { status: "updated", updated_at: "2026-03-05T12:00:00Z" },
+    pathTemplate: "/ai/config?tenant_id={{tenant_id}}",
+    bodyTemplate: '{\n  "backend": "copilot",\n  "endpoint": "https://api.githubcopilot.com/chat/completions",\n  "model": "gpt-4o",\n  "api_key_secret": "copilot-token",\n  "provider_auth": {\n    "required": true,\n    "type": "bearer"\n  },\n  "mcp": {\n    "enabled": true,\n    "endpoint": "mcp://kms-ai"\n  },\n  "max_context_tokens": 12000,\n  "temperature": 0.2,\n  "context_sources": {\n    "keys": { "enabled": true, "limit": 25, "fields": ["id", "name", "algorithm", "status"] },\n    "policies": { "enabled": true, "all": false, "limit": 20 },\n    "audit": { "enabled": true, "last_hours": 24, "limit": 100 },\n    "posture": { "enabled": true, "current": true },\n    "alerts": { "enabled": true, "unresolved": true, "limit": 50 }\n  },\n  "redaction_fields": ["encrypted_material", "wrapped_dek", "pwd_hash", "api_key", "passphrase"]\n}',
+    description: "Updates the AI configuration for the tenant. Managed providers require provider_auth.required=true with api_key or bearer auth. MCP-enabled configurations must also set mcp.endpoint.",
+    requestExample: "PUT /svc/ai/ai/config?tenant_id=root",
+    responseExample: {
+      config: {
+        tenant_id: "root",
+        backend: "copilot",
+        endpoint: "https://api.githubcopilot.com/chat/completions",
+        model: "gpt-4o",
+        provider_auth: { required: true, type: "bearer" },
+        mcp: { enabled: true, endpoint: "mcp://kms-ai" },
+        updated_at: "2026-03-11T09:35:00Z"
+      },
+      request_id: "req_128"
+    },
     errorCodes: [
-      { code: 400, meaning: "Invalid configuration values" },
+      { code: 400, meaning: "Invalid backend, endpoint, provider_auth, or MCP configuration values" },
       { code: 401, meaning: "JWT missing/invalid/expired" },
       { code: 403, meaning: "Not a system admin" }
     ]

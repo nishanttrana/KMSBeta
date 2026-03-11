@@ -62,11 +62,13 @@ func TestGenerateConfigs(t *testing.T) {
 				HYOKProxy:           false,
 				KMIPServer:          true,
 				QKDInterface:        false,
+				QRNGGenerator:       false,
 				EKMDatabase:         false,
 				PaymentCrypto:       true,
 				ComplianceDashboard: true,
 				SBOMCBOM:            true,
 				ReportingAlerting:   true,
+				PostureManagement:   true,
 				AILLM:               false,
 				PQCMigration:        true,
 				CryptoDiscovery:     false,
@@ -215,11 +217,13 @@ spec:
     hyok_proxy: false
     kmip_server: true
     qkd_interface: false
+    qrng_generator: false
     ekm_database: false
     payment_crypto: true
     compliance_dashboard: true
     sbom_cbom: true
     reporting_alerting: true
+    posture_management: true
     ai_llm: false
     pqc_migration: true
     crypto_discovery: false

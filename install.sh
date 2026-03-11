@@ -31,11 +31,13 @@ FEATURE_KEYS=(
   hyok_proxy
   kmip_server
   qkd_interface
+  qrng_generator
   ekm_database
   payment_crypto
   compliance_dashboard
   sbom_cbom
   reporting_alerting
+  posture_management
   ai_llm
   pqc_migration
   crypto_discovery
@@ -597,6 +599,67 @@ feature_default_from_template() {
   fi
 }
 
+requested_feature_enabled() {
+  local key="$1"
+  if [[ "${FEATURE_ALL:-false}" == "true" ]]; then
+    printf "%s" "true"
+    return
+  fi
+  feature_default_from_template "${key}" "false"
+}
+
+suggest_cluster_profile_id() {
+  local has_standard="false"
+  local has_security="false"
+  local has_specialized="false"
+  local key enabled
+
+  for key in secrets certs cloud_byok ekm_database data_protection; do
+    enabled="$(requested_feature_enabled "${key}")"
+    if [[ "${enabled}" == "true" ]]; then
+      has_standard="true"
+      break
+    fi
+  done
+
+  for key in compliance_dashboard posture_management crypto_discovery sbom_cbom reporting_alerting; do
+    enabled="$(requested_feature_enabled "${key}")"
+    if [[ "${enabled}" == "true" ]]; then
+      has_security="true"
+      break
+    fi
+  done
+
+  for key in payment_crypto hyok_proxy kmip_server pqc_migration qkd_interface qrng_generator mpc_engine ai_llm; do
+    enabled="$(requested_feature_enabled "${key}")"
+    if [[ "${enabled}" == "true" ]]; then
+      has_specialized="true"
+      break
+    fi
+  done
+
+  if [[ "${has_specialized}" == "true" ]]; then
+    printf "%s" "cluster-profile-full"
+  elif [[ "${has_security}" == "true" ]]; then
+    printf "%s" "cluster-profile-security"
+  elif [[ "${has_standard}" == "true" ]]; then
+    printf "%s" "cluster-profile-standard"
+  else
+    printf "%s" "cluster-profile-base"
+  fi
+}
+
+is_builtin_cluster_profile_id() {
+  case "$(trim "$1")" in
+    cluster-profile-base|cluster-profile-standard|cluster-profile-security|cluster-profile-full)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 collect_inputs() {
   info "Collecting deployment parameters..."
 
@@ -674,7 +737,6 @@ collect_inputs() {
       2) CLUSTER_DEPLOYMENT_MODE="join-existing"; CLUSTER_NODE_ROLE="follower" ;;
       *) die "Invalid cluster mode choice." ;;
     esac
-    prompt_default CLUSTER_REPLICATION_PROFILE "Selective replication profile ID" "cluster-profile-base"
     if [[ "${CLUSTER_DEPLOYMENT_MODE}" == "join-existing" ]]; then
       prompt_default CLUSTER_JOIN_ENDPOINT "Existing cluster manager endpoint (http://host:8210)" "http://10.0.1.100:8210"
       prompt_default CLUSTER_JOIN_TOKEN "Cluster join credential (bundle JSON/file or token_id:join_secret)" ""
@@ -770,6 +832,21 @@ collect_inputs() {
     FEATURE_ALL="true"
   else
     FEATURE_ALL="false"
+  fi
+
+  if [[ "${CLUSTER_ENABLED}" == "true" ]]; then
+    local suggested_cluster_profile
+    suggested_cluster_profile="$(suggest_cluster_profile_id)"
+    echo
+    echo "Cluster replication profile presets:"
+    echo "  - cluster-profile-base      : auth, keycore, policy, governance"
+    echo "  - cluster-profile-standard  : base + secrets, certs, BYOK, EKM, data protection"
+    echo "  - cluster-profile-security  : standard + compliance, posture, discovery, SBOM, reporting"
+    echo "  - cluster-profile-full      : all cluster-aware services including AI, KMIP, QKD, QRNG, MPC, PQC"
+    prompt_default CLUSTER_REPLICATION_PROFILE "Cluster replication profile ID" "${suggested_cluster_profile}"
+    if ! is_builtin_cluster_profile_id "${CLUSTER_REPLICATION_PROFILE}"; then
+      add_warning "Custom cluster replication profile '${CLUSTER_REPLICATION_PROFILE}' must already exist in cluster-manager before follower nodes join."
+    fi
   fi
 
   local bind_ip_default
@@ -908,9 +985,11 @@ spec:
         hyok_proxy: ${FEATURE_hyok_proxy}
         kmip_server: ${FEATURE_kmip_server}
         mpc_engine: ${FEATURE_mpc_engine}
+        posture_management: ${FEATURE_posture_management}
         payment_crypto: ${FEATURE_payment_crypto}
         pqc_migration: ${FEATURE_pqc_migration}
         qkd_interface: ${FEATURE_qkd_interface}
+        qrng_generator: ${FEATURE_qrng_generator}
         reporting_alerting: ${FEATURE_reporting_alerting}
         sbom_cbom: ${FEATURE_sbom_cbom}
         secrets: ${FEATURE_secrets}

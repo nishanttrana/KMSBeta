@@ -9,7 +9,7 @@ The default image is Ubuntu 24.04 minimal server with baseline hardening plus li
 - `http/user-data`, `http/meta-data`: Ubuntu 24.04 autoinstall seed.
 - `scripts/base.sh`: Base package setup.
 - `scripts/install-docker.sh`: Docker Engine + Compose plugin setup.
-- `scripts/install-vecta.sh`: Installs this repository into `/opt/vecta`, installs systemd units.
+- `scripts/install-vecta.sh`: Installs this repository into `/opt/vecta`, stages `/etc/vecta` deployment assets, and installs systemd units.
 - `scripts/hardening.sh`: Baseline host hardening.
 - `lightweight-hardened.pkrvars.hcl`: Optional smaller VM profile for lightweight hardened builds.
 - `scripts/export-ova.sh`: Exports VM output to OVA (requires VMware `ovftool`).
@@ -81,3 +81,4 @@ packer build \
 - OVA exported to `infra/packer/output/<vm-name>-<timestamp>.ova` when `ovftool` is available.
 - VirtualBox build writes OVA to `infra/packer/output/<vm-name>-vbox/`.
 - Installed appliance units include `vecta-deployment.path`, so writing `/etc/vecta/deployment.yaml` from the first-boot wizard auto-triggers `vecta-stack.service`.
+- Appliance install also stages `/etc/vecta/deployment.schema.json` and `/etc/vecta/examples/deployment.example.yaml` for offline profile review.

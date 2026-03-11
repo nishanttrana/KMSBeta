@@ -28,6 +28,40 @@ const defaultDownHeartbeatSec = 90
 
 var requiredCoreComponents = []string{"auth", "keycore", "policy", "governance"}
 
+type clusterProfilePreset struct {
+	ID          string
+	Name        string
+	Description string
+	Components  []string
+}
+
+var builtinClusterProfilePresets = []clusterProfilePreset{
+	{
+		ID:          "cluster-profile-base",
+		Name:        defaultProfileName,
+		Description: "Base KMS platform state sync for auth, keycore, policy, and governance.",
+		Components:  []string{},
+	},
+	{
+		ID:          "cluster-profile-standard",
+		Name:        "standard-platform",
+		Description: "Base platform plus secrets, certificates, BYOK, EKM, and data protection replication.",
+		Components:  []string{"secrets", "certs", "byok", "ekm", "dataprotect"},
+	},
+	{
+		ID:          "cluster-profile-security",
+		Name:        "security-suite",
+		Description: "Standard platform plus compliance, posture, discovery, SBOM, and reporting replication.",
+		Components:  []string{"secrets", "certs", "byok", "ekm", "dataprotect", "compliance", "posture", "discovery", "sbom", "reporting"},
+	},
+	{
+		ID:          "cluster-profile-full",
+		Name:        "full-platform",
+		Description: "Full platform replication including AI, KMIP, payment, PQC, QKD, QRNG, MPC, and HYOK services.",
+		Components:  []string{"secrets", "certs", "byok", "ekm", "dataprotect", "compliance", "posture", "discovery", "sbom", "reporting", "payment", "hyok", "kmip", "pqc", "qkd", "qrng", "mpc", "ai"},
+	},
+}
+
 type Service struct {
 	store                  Store
 	events                 EventPublisher
@@ -982,32 +1016,63 @@ func (s *Service) ensureBootstrap(ctx context.Context, tenantID string) error {
 	if err != nil {
 		return err
 	}
-	if len(profiles) == 0 {
-		defaultProfile := ClusterProfile{
-			ID:          s.bootstrapProfileID,
-			TenantID:    tenantID,
-			Name:        defaultProfileName,
-			Description: "Base KMS platform state sync for auth/keycore/policy/governance.",
-			Components:  append([]string{}, requiredCoreComponents...),
-			IsDefault:   true,
-		}
-		if err := s.store.UpsertProfile(ctx, defaultProfile); err != nil {
-			return err
-		}
-		if err := s.store.SetDefaultProfile(ctx, tenantID, defaultProfile.ID); err != nil {
-			return err
-		}
-		profiles = []ClusterProfile{defaultProfile}
+	bootstrapProfileID := strings.TrimSpace(s.bootstrapProfileID)
+	if bootstrapProfileID == "" {
+		bootstrapProfileID = "cluster-profile-base"
+	}
+	preferredDefaultProfileID := bootstrapProfileID
+	if _, ok := builtinClusterProfileByID(tenantID, preferredDefaultProfileID, true); !ok {
+		preferredDefaultProfileID = "cluster-profile-base"
 	}
 	defaultProfileID := ""
+	if len(profiles) == 0 {
+		for _, preset := range builtinClusterProfiles(tenantID, preferredDefaultProfileID) {
+			if err := s.store.UpsertProfile(ctx, preset); err != nil {
+				return err
+			}
+		}
+		if err := s.store.SetDefaultProfile(ctx, tenantID, preferredDefaultProfileID); err != nil {
+			return err
+		}
+		profiles, err = s.store.ListProfiles(ctx, tenantID)
+		if err != nil {
+			return err
+		}
+	}
 	for _, profile := range profiles {
 		if profile.IsDefault {
 			defaultProfileID = profile.ID
 			break
 		}
 	}
+	if _, ok := builtinClusterProfileByID(tenantID, bootstrapProfileID, defaultProfileID == bootstrapProfileID); ok {
+		found := false
+		for _, profile := range profiles {
+			if strings.TrimSpace(profile.ID) == bootstrapProfileID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			preset, _ := builtinClusterProfileByID(tenantID, bootstrapProfileID, false)
+			if err := s.store.UpsertProfile(ctx, preset); err != nil {
+				return err
+			}
+			profiles = append(profiles, preset)
+		}
+	}
 	if defaultProfileID == "" {
-		defaultProfileID = profiles[0].ID
+		defaultProfileID = preferredDefaultProfileID
+		found := false
+		for _, profile := range profiles {
+			if strings.TrimSpace(profile.ID) == defaultProfileID {
+				found = true
+				break
+			}
+		}
+		if !found && len(profiles) > 0 {
+			defaultProfileID = profiles[0].ID
+		}
 		_ = s.store.SetDefaultProfile(ctx, tenantID, defaultProfileID)
 	}
 	nodeID := strings.TrimSpace(s.bootstrapNodeID)
@@ -1735,6 +1800,39 @@ func (s *Service) demoteOtherLeaders(ctx context.Context, tenantID string, selec
 		})
 	}
 	return nil
+}
+
+func builtinClusterProfiles(tenantID string, defaultProfileID string) []ClusterProfile {
+	out := make([]ClusterProfile, 0, len(builtinClusterProfilePresets))
+	for _, preset := range builtinClusterProfilePresets {
+		out = append(out, ClusterProfile{
+			ID:          preset.ID,
+			TenantID:    tenantID,
+			Name:        preset.Name,
+			Description: preset.Description,
+			Components:  ensureProfileComponents(preset.Components),
+			IsDefault:   strings.TrimSpace(preset.ID) == strings.TrimSpace(defaultProfileID),
+		})
+	}
+	return out
+}
+
+func builtinClusterProfileByID(tenantID string, profileID string, isDefault bool) (ClusterProfile, bool) {
+	profileID = strings.TrimSpace(profileID)
+	for _, preset := range builtinClusterProfilePresets {
+		if strings.TrimSpace(preset.ID) != profileID {
+			continue
+		}
+		return ClusterProfile{
+			ID:          preset.ID,
+			TenantID:    tenantID,
+			Name:        preset.Name,
+			Description: preset.Description,
+			Components:  ensureProfileComponents(preset.Components),
+			IsDefault:   isDefault,
+		}, true
+	}
+	return ClusterProfile{}, false
 }
 
 func (s *Service) seedNodeSyncEvents(ctx context.Context, node ClusterNode, profile ClusterProfile, sourceNodeID string) ([]int64, error) {

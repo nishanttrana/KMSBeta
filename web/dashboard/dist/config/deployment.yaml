@@ -19,11 +19,13 @@ spec:
     hyok_proxy: true
     kmip_server: true
     qkd_interface: true
+    qrng_generator: true
     ekm_database: true
     payment_crypto: true
     compliance_dashboard: true
     sbom_cbom: true
     reporting_alerting: true
+    posture_management: true
     ai_llm: true
     pqc_migration: true
     crypto_discovery: true

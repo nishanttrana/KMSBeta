@@ -31,6 +31,9 @@ jobs:
       - name: Generate REST catalog
         run: npm run generate:rest-catalog
 
+      - name: Validate OpenAPI artifacts
+        run: npm run validate:openapi
+
       - name: Lint
         run: npm run lint
 

@@ -3,6 +3,7 @@ set -euo pipefail
 
 SRC_DIR="/tmp/vecta-kms-src"
 DEST_DIR="/opt/vecta"
+CONFIG_DIR="/etc/vecta"
 
 if [[ ! -d "${SRC_DIR}" ]]; then
   echo "missing source directory: ${SRC_DIR}" >&2
@@ -12,6 +13,11 @@ fi
 sudo rm -rf "${DEST_DIR}"
 sudo mkdir -p "${DEST_DIR}"
 sudo cp -a "${SRC_DIR}/." "${DEST_DIR}/"
+sudo install -d -m 0750 "${CONFIG_DIR}"
+sudo install -d -m 0750 "${CONFIG_DIR}/examples"
+sudo install -m 0644 "${DEST_DIR}/infra/deployment/deployment.schema.json" "${CONFIG_DIR}/deployment.schema.json"
+sudo install -m 0644 "${DEST_DIR}/infra/deployment/deployment.yaml" "${CONFIG_DIR}/examples/deployment.example.yaml"
+sudo install -m 0644 "${DEST_DIR}/infra/deployment/README.md" "${CONFIG_DIR}/examples/README.md"
 
 sudo install -D -m 0644 "${DEST_DIR}/infra/systemd/vecta-firstboot.service" /etc/systemd/system/vecta-firstboot.service
 sudo install -D -m 0644 "${DEST_DIR}/infra/systemd/vecta-stack.service" /etc/systemd/system/vecta-stack.service

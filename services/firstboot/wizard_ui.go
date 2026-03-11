@@ -253,11 +253,13 @@ const wizardHTML = `<!doctype html>
             <label class="check"><input id="f_hyok_proxy" type="checkbox"> hyok_proxy</label>
             <label class="check"><input id="f_kmip_server" type="checkbox" checked> kmip_server</label>
             <label class="check"><input id="f_qkd_interface" type="checkbox"> qkd_interface</label>
+            <label class="check"><input id="f_qrng_generator" type="checkbox"> qrng_generator</label>
             <label class="check"><input id="f_ekm_database" type="checkbox"> ekm_database</label>
             <label class="check"><input id="f_payment_crypto" type="checkbox" checked> payment_crypto</label>
             <label class="check"><input id="f_compliance_dashboard" type="checkbox" checked> compliance_dashboard</label>
             <label class="check"><input id="f_sbom_cbom" type="checkbox" checked> sbom_cbom</label>
             <label class="check"><input id="f_reporting_alerting" type="checkbox" checked> reporting_alerting</label>
+            <label class="check"><input id="f_posture_management" type="checkbox" checked> posture_management</label>
             <label class="check"><input id="f_ai_llm" type="checkbox"> ai_llm</label>
             <label class="check"><input id="f_pqc_migration" type="checkbox" checked> pqc_migration</label>
             <label class="check"><input id="f_crypto_discovery" type="checkbox"> crypto_discovery</label>
@@ -471,11 +473,13 @@ const wizardHTML = `<!doctype html>
             hyok_proxy: isChecked("f_hyok_proxy"),
             kmip_server: isChecked("f_kmip_server"),
             qkd_interface: isChecked("f_qkd_interface"),
+            qrng_generator: isChecked("f_qrng_generator"),
             ekm_database: isChecked("f_ekm_database"),
             payment_crypto: isChecked("f_payment_crypto"),
             compliance_dashboard: isChecked("f_compliance_dashboard"),
             sbom_cbom: isChecked("f_sbom_cbom"),
             reporting_alerting: isChecked("f_reporting_alerting"),
+            posture_management: isChecked("f_posture_management"),
             ai_llm: isChecked("f_ai_llm"),
             pqc_migration: isChecked("f_pqc_migration"),
             crypto_discovery: isChecked("f_crypto_discovery"),

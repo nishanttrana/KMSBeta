@@ -123,11 +123,13 @@ type FeatureConfig struct {
 	HYOKProxy           bool `json:"hyok_proxy"`
 	KMIPServer          bool `json:"kmip_server"`
 	QKDInterface        bool `json:"qkd_interface"`
+	QRNGGenerator       bool `json:"qrng_generator"`
 	EKMDatabase         bool `json:"ekm_database"`
 	PaymentCrypto       bool `json:"payment_crypto"`
 	ComplianceDashboard bool `json:"compliance_dashboard"`
 	SBOMCBOM            bool `json:"sbom_cbom"`
 	ReportingAlerting   bool `json:"reporting_alerting"`
+	PostureManagement   bool `json:"posture_management"`
 	AILLM               bool `json:"ai_llm"`
 	PQCMigration        bool `json:"pqc_migration"`
 	CryptoDiscovery     bool `json:"crypto_discovery"`
