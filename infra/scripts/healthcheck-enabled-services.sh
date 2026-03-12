@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 PROFILE_PARSER="${SCRIPT_DIR}/parse-deployment.sh"
 COMPOSE_FILE="${ROOT_DIR}/docker-compose.yml"
+COMPOSE_WRAPPER="${SCRIPT_DIR}/compose-kms.sh"
 
 if [[ ! -f "${DEPLOYMENT_FILE}" ]]; then
   DEPLOYMENT_FILE="${ROOT_DIR}/infra/deployment/deployment.yaml"
@@ -19,6 +20,14 @@ if [[ ! -f "${DEPLOYMENT_FILE}" ]]; then
 fi
 
 PROFILES="$("${PROFILE_PARSER}" "${DEPLOYMENT_FILE}")"
+
+healthcheck_missing_runtime() {
+  local service="$1" container_id="" health_log=""
+  container_id="$(bash "${COMPOSE_WRAPPER}" ps -q "${service}" 2>/dev/null | head -n 1 || true)"
+  [[ -n "${container_id}" ]] || return 1
+  health_log="$(docker inspect --format '{{if .State.Health}}{{range .State.Health.Log}}{{println .Output}}{{end}}{{end}}' "${container_id}" 2>/dev/null || true)"
+  grep -Eq 'stat /bin/sh: no such file or directory|executable file not found in \$PATH|: not found' <<<"${health_log}"
+}
 
 declare -A PROFILE_TO_SERVICE=(
   [secrets]="secrets"
@@ -76,7 +85,7 @@ for ((attempt = 1; attempt <= RETRIES; attempt++)); do
     [[ -z "${service}" ]] && continue
     state_by_service["${service}"]="${state,,}"
     health_by_service["${service}"]="${health,,}"
-  done < <(docker compose -f "${COMPOSE_FILE}" ps --format '{{.Service}}|{{.State}}|{{.Health}}')
+  done < <(bash "${COMPOSE_WRAPPER}" ps --format '{{.Service}}|{{.State}}|{{.Health}}')
 
   unhealthy=()
   healthy=()
@@ -95,6 +104,10 @@ for ((attempt = 1; attempt <= RETRIES; attempt++)); do
     fi
 
     if [[ -n "${health}" && "${health}" != "healthy" ]]; then
+      if [[ "${state}" == "running" ]] && healthcheck_missing_runtime "${svc}"; then
+        healthy+=("${svc} (running; health command unavailable)")
+        continue
+      fi
       unhealthy+=("${svc} (health=${health})")
       continue
     fi

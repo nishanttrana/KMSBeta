@@ -21,6 +21,7 @@ PARSER="${ROOT_DIR}/infra/scripts/parse-deployment.sh"
 STOP_SCRIPT="${ROOT_DIR}/infra/scripts/stop-kms.sh"
 MESH_BOOTSTRAP="${ROOT_DIR}/infra/consul/bootstrap-mesh.sh"
 HEALTH_SCRIPT="${ROOT_DIR}/infra/scripts/healthcheck-enabled-services.sh"
+COMPOSE_WRAPPER="${ROOT_DIR}/infra/scripts/compose-kms.sh"
 
 wait_docker() {
   local timeout_seconds="${1:-90}"
@@ -33,6 +34,52 @@ wait_docker() {
   done
   echo "docker daemon is not reachable after ${timeout_seconds}s" >&2
   return 1
+}
+
+prepare_certs_volumes() {
+  local project_name="${COMPOSE_PROJECT_NAME:-vecta-kms}"
+  local certs_volume="${project_name}_certs-key-data"
+  local runtime_volume="${project_name}_runtime-certs"
+  local passphrase_path="${CERTS_CRWK_PASSPHRASE_FILE:-/var/lib/vecta/certs/bootstrap.passphrase}"
+  local bootstrap_secret="${CERTS_CRWK_BOOTSTRAP_PASSPHRASE:-vecta-dev-passphrase}"
+  local prepared=0 helper_image=""
+
+  docker volume create "${certs_volume}" >/dev/null 2>&1 || true
+  docker volume create "${runtime_volume}" >/dev/null 2>&1 || true
+
+  for helper_image in postgres:16.13-alpine alpine:3.20 busybox:1.36; do
+    if docker run --rm \
+      --volume "${certs_volume}:/data" \
+      --volume "${runtime_volume}:/runtime" \
+      --env "CERTS_CRWK_PASSPHRASE_FILE=${passphrase_path}" \
+      --env "BOOTSTRAP_SECRET=${bootstrap_secret}" \
+      "${helper_image}" \
+      sh -lc '
+        set -eu
+        mkdir -p /data /runtime
+        chown -R 100:101 /data /runtime
+        chmod 700 /data /runtime
+        case "${CERTS_CRWK_PASSPHRASE_FILE:-/var/lib/vecta/certs/bootstrap.passphrase}" in
+          /var/lib/vecta/certs/*)
+            target="/data/${CERTS_CRWK_PASSPHRASE_FILE#/var/lib/vecta/certs/}"
+            mkdir -p "$(dirname "$target")"
+            if [ ! -s "$target" ]; then
+              printf %s "${BOOTSTRAP_SECRET:-vecta-dev-passphrase}" > "$target"
+            fi
+            chown 100:101 "$target"
+            chmod 600 "$target"
+            ;;
+        esac
+      ' >/dev/null 2>&1; then
+      prepared=1
+      break
+    fi
+  done
+
+  if [[ "${prepared}" -ne 1 ]]; then
+    echo "unable to prepare certificate bootstrap volumes" >&2
+    return 1
+  fi
 }
 
 if [[ ! -f "${DEPLOYMENT_FILE}" ]]; then
@@ -119,17 +166,19 @@ if [[ -n "${CERTS_CRWK_USE_TPM_SEAL_CFG}" ]]; then
   export CERTS_CRWK_USE_TPM_SEAL="${CERTS_CRWK_USE_TPM_SEAL_CFG}"
 fi
 
+prepare_certs_volumes
+
 echo "starting KMS with COMPOSE_PROFILES=${COMPOSE_PROFILES}"
 up_args=(-d)
 if [[ "${REMOVE_ORPHANS}" == "true" ]]; then
   up_args+=(--remove-orphans)
 fi
 
-if ! docker compose -f "${ROOT_DIR}/docker-compose.yml" up "${up_args[@]}"; then
+if ! bash "${COMPOSE_WRAPPER}" up "${up_args[@]}"; then
   echo "startup failed, attempting one forced recovery pass" >&2
   bash "${STOP_SCRIPT}" "${DEPLOYMENT_FILE}" --force || true
   sleep 2
-  docker compose -f "${ROOT_DIR}/docker-compose.yml" up "${up_args[@]}"
+  bash "${COMPOSE_WRAPPER}" up "${up_args[@]}"
 fi
 
 if [[ -f "${MESH_BOOTSTRAP}" ]]; then

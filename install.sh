@@ -565,7 +565,7 @@ wait_for_docker() {
 }
 
 compose_exec() {
-  "${DOCKER_BIN[@]}" compose -f "${COMPOSE_FILE}" -f "${OVERRIDE_FILE}" "$@"
+  KMS_DOCKER_BIN="${DOCKER_BIN[*]}" bash "${ROOT_DIR}/infra/scripts/compose-kms.sh" "$@"
 }
 
 docker_image_exists() {
@@ -1597,13 +1597,6 @@ generate_override_file() {
 }
 
 seed_cert_bootstrap_secret() {
-  if [[ "${CERT_STORAGE_MODE}" != "db_encrypted" || "${ROOT_KEY_MODE}" != "software" ]]; then
-    return
-  fi
-  if [[ -z "${CERTS_BOOTSTRAP_PASSPHRASE:-}" ]]; then
-    die "Certificate bootstrap passphrase is empty in software root key mode."
-  fi
-
   local project_name="${COMPOSE_PROJECT_NAME:-vecta-kms}"
   if [[ -f "${ENV_FILE}" ]]; then
     local env_project
@@ -1612,28 +1605,46 @@ seed_cert_bootstrap_secret() {
     [[ -n "${env_project}" ]] && project_name="${env_project}"
   fi
 
-  local volume_name="${project_name}_certs-key-data"
-  local target_path="${CERTS_PASSPHRASE_FILE_PATH}"
-  info "Seeding certificate bootstrap secret into Docker volume ${volume_name} ..."
-  "${DOCKER_BIN[@]}" volume create "${volume_name}" >/dev/null
+  local certs_volume="${project_name}_certs-key-data"
+  local runtime_volume="${project_name}_runtime-certs"
+  local seed_bootstrap_secret="false"
+  local bootstrap_secret="${CERTS_BOOTSTRAP_PASSPHRASE:-}"
+  local target_path="${CERTS_PASSPHRASE_FILE_PATH:-/var/lib/vecta/certs/bootstrap.passphrase}"
 
-  local seeded="false"
+  if [[ "${CERT_STORAGE_MODE}" == "db_encrypted" && "${ROOT_KEY_MODE}" == "software" ]]; then
+    if [[ -z "${bootstrap_secret}" ]]; then
+      die "Certificate bootstrap passphrase is empty in software root key mode."
+    fi
+    seed_bootstrap_secret="true"
+  fi
+
+  info "Preparing certificate bootstrap volumes (${certs_volume}, ${runtime_volume}) ..."
+  "${DOCKER_BIN[@]}" volume create "${certs_volume}" >/dev/null
+  "${DOCKER_BIN[@]}" volume create "${runtime_volume}" >/dev/null
+
+  local prepared="false"
   local image
-  for image in alpine:3.20 busybox:1.36; do
+  for image in postgres:16.13-alpine alpine:3.20 busybox:1.36; do
     if "${DOCKER_BIN[@]}" run --rm \
-      -v "${volume_name}:/var/lib/vecta/certs" \
-      -e BOOTSTRAP_SECRET="${CERTS_BOOTSTRAP_PASSPHRASE}" \
+      -v "${certs_volume}:/var/lib/vecta/certs" \
+      -v "${runtime_volume}:/run/vecta/certs" \
+      -e BOOTSTRAP_SECRET="${bootstrap_secret}" \
+      -e SEED_BOOTSTRAP_SECRET="${seed_bootstrap_secret}" \
+      -e TARGET_PATH="${target_path}" \
       "${image}" \
-      sh -c 'set -eu; target="'"${target_path}"'"; umask 077; mkdir -p "$(dirname "$target")"; chown -R 100:101 /var/lib/vecta/certs; printf "%s\n" "$BOOTSTRAP_SECRET" > "$target"; chown 100:101 "$target"; chmod 700 /var/lib/vecta/certs; chmod 640 "$target"' >/dev/null 2>&1; then
-      seeded="true"
+      sh -c 'set -eu; umask 077; mkdir -p /var/lib/vecta/certs /run/vecta/certs; chown -R 100:101 /var/lib/vecta/certs /run/vecta/certs; chmod 700 /var/lib/vecta/certs /run/vecta/certs; if [ "${SEED_BOOTSTRAP_SECRET}" = "true" ]; then mkdir -p "$(dirname "$TARGET_PATH")"; printf "%s\n" "$BOOTSTRAP_SECRET" > "$TARGET_PATH"; chown 100:101 "$TARGET_PATH"; chmod 640 "$TARGET_PATH"; fi' >/dev/null 2>&1; then
+      prepared="true"
       break
     fi
   done
 
-  if [[ "${seeded}" != "true" ]]; then
-    die "Unable to seed certificate bootstrap secret into Docker volume ${volume_name}."
+  if [[ "${prepared}" != "true" ]]; then
+    die "Unable to prepare certificate bootstrap volumes (${certs_volume}, ${runtime_volume})."
   fi
-  CERTS_BOOTSTRAP_PASSPHRASE=""
+
+  if [[ "${seed_bootstrap_secret}" == "true" ]]; then
+    CERTS_BOOTSTRAP_PASSPHRASE=""
+  fi
 }
 
 apply_mandatory_clean_reset() {
@@ -2104,7 +2115,7 @@ main() {
 
   step "Apply mandatory clean reset (empty DB and no historical data)"
   apply_mandatory_clean_reset
-  step "Seed certificate bootstrap secret for CRWK (software mode)"
+  step "Prepare certificate bootstrap volumes"
   seed_cert_bootstrap_secret
   step "Configure build runtime and preload image bundle"
   configure_build_runtime

@@ -10,7 +10,7 @@ $root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $parser = Join-Path $PSScriptRoot "parse-deployment.ps1"
 $healthScript = Join-Path $PSScriptRoot "healthcheck-enabled-services.ps1"
 $stopScript = Join-Path $PSScriptRoot "stop-kms.ps1"
-$composeFile = Join-Path $root "docker-compose.yml"
+$composeHelper = Join-Path $PSScriptRoot "compose-kms.ps1"
 $projectName = "vecta-kms"
 
 function Wait-DockerDaemon {
@@ -68,7 +68,7 @@ function Set-ComposeEnvironment {
 }
 
 function Invoke-ComposeUp {
-    $args = @("compose", "-f", $composeFile, "up", "-d")
+    $args = @("up", "-d")
     $removeOrphans = $true
     if ($env:START_KMS_REMOVE_ORPHANS -and $env:START_KMS_REMOVE_ORPHANS.Trim().ToLowerInvariant() -eq "false") {
         $removeOrphans = $false
@@ -76,10 +76,43 @@ function Invoke-ComposeUp {
     if ($removeOrphans) {
         $args += "--remove-orphans"
     }
-    docker @args
+    & $composeHelper @args
     if ($LASTEXITCODE -ne 0) {
         throw "docker compose up failed with exit code $LASTEXITCODE"
     }
+}
+
+function Prepare-CertVolumes {
+    $certsVolume = "${projectName}_certs-key-data"
+    $runtimeVolume = "${projectName}_runtime-certs"
+    $passphrasePath = if ($env:CERTS_CRWK_PASSPHRASE_FILE) {
+        $env:CERTS_CRWK_PASSPHRASE_FILE
+    } else {
+        "/var/lib/vecta/certs/bootstrap.passphrase"
+    }
+    $bootstrapSecret = if ($env:CERTS_CRWK_BOOTSTRAP_PASSPHRASE) {
+        $env:CERTS_CRWK_BOOTSTRAP_PASSPHRASE
+    } else {
+        "vecta-dev-passphrase"
+    }
+
+    docker volume create $certsVolume *> $null
+    docker volume create $runtimeVolume *> $null
+
+    foreach ($helperImage in @("postgres:16.13-alpine", "alpine:3.20", "busybox:1.36")) {
+        docker run --rm `
+            --volume "${certsVolume}:/data" `
+            --volume "${runtimeVolume}:/runtime" `
+            --env "CERTS_CRWK_PASSPHRASE_FILE=$passphrasePath" `
+            --env "BOOTSTRAP_SECRET=$bootstrapSecret" `
+            $helperImage `
+            sh -lc 'set -eu; mkdir -p /data /runtime; chown -R 100:101 /data /runtime; chmod 700 /data /runtime; case "${CERTS_CRWK_PASSPHRASE_FILE:-/var/lib/vecta/certs/bootstrap.passphrase}" in /var/lib/vecta/certs/*) target="/data/${CERTS_CRWK_PASSPHRASE_FILE#/var/lib/vecta/certs/}"; mkdir -p "$(dirname "$target")"; if [ ! -s "$target" ]; then printf %s "${BOOTSTRAP_SECRET:-vecta-dev-passphrase}" > "$target"; fi; chown 100:101 "$target"; chmod 600 "$target";; esac' *> $null
+        if ($LASTEXITCODE -eq 0) {
+            return
+        }
+    }
+
+    throw "unable to prepare certificate bootstrap volumes"
 }
 
 function Recover-Once {
@@ -111,6 +144,7 @@ function Recover-Once {
 $resolvedDeploymentFile = Resolve-DeploymentPath -InputPath $DeploymentFile
 Wait-DockerDaemon -TimeoutSeconds $DockerWaitSeconds
 Set-ComposeEnvironment -DeploymentPath $resolvedDeploymentFile
+Prepare-CertVolumes
 
 Write-Host "starting KMS with COMPOSE_PROFILES=$($env:COMPOSE_PROFILES)"
 try {

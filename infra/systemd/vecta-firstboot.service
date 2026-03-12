@@ -12,8 +12,8 @@ Group=root
 WorkingDirectory=/opt/vecta
 Environment=FIRSTBOOT_CONFIG_DIR=/etc/vecta
 ExecStartPre=/usr/bin/mkdir -p /etc/vecta
-ExecStart=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml --profile firstboot up -d firstboot
-ExecStop=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml stop firstboot
+ExecStart=/bin/bash /opt/vecta/infra/scripts/compose-kms.sh --profile firstboot up -d firstboot
+ExecStop=/bin/bash /opt/vecta/infra/scripts/compose-kms.sh stop firstboot
 NoNewPrivileges=true
 
 [Install]

@@ -9,9 +9,9 @@ Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/vecta
 EnvironmentFile=-/etc/vecta/vecta.env
-ExecStart=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml up -d hsm-connector
-ExecStop=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml stop hsm-connector
-ExecReload=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml up -d hsm-connector
+ExecStart=/bin/bash /opt/vecta/infra/scripts/compose-kms.sh up -d hsm-connector
+ExecStop=/bin/bash /opt/vecta/infra/scripts/compose-kms.sh stop hsm-connector
+ExecReload=/bin/bash /opt/vecta/infra/scripts/compose-kms.sh up -d hsm-connector
 TimeoutStartSec=300
 TimeoutStopSec=120
 

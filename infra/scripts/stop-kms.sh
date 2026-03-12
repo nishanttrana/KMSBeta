@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PARSER="${ROOT_DIR}/infra/scripts/parse-deployment.sh"
 PROJECT_NAME="vecta-kms"
 NETWORK_NAME="${PROJECT_NAME}_kms_net"
+COMPOSE_WRAPPER="${ROOT_DIR}/infra/scripts/compose-kms.sh"
 
 DEPLOYMENT_FILE="/etc/vecta/deployment.yaml"
 FORCE=0
@@ -55,7 +56,7 @@ fi
 
 echo "stopping KMS stack"
 set +e
-docker compose -f "${ROOT_DIR}/docker-compose.yml" down --remove-orphans
+bash "${COMPOSE_WRAPPER}" down --remove-orphans
 down_status=$?
 set -e
 

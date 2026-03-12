@@ -9,9 +9,9 @@ Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/vecta
 EnvironmentFile=-/etc/vecta/vecta.env
-ExecStart=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml up -d pqc
-ExecStop=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml stop pqc
-ExecReload=/usr/bin/docker compose -f /opt/vecta/docker-compose.yml up -d pqc
+ExecStart=/bin/bash /opt/vecta/infra/scripts/compose-kms.sh up -d pqc
+ExecStop=/bin/bash /opt/vecta/infra/scripts/compose-kms.sh stop pqc
+ExecReload=/bin/bash /opt/vecta/infra/scripts/compose-kms.sh up -d pqc
 TimeoutStartSec=300
 TimeoutStopSec=120
 

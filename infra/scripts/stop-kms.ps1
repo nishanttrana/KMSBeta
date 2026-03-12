@@ -8,7 +8,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
-$composeFile = Join-Path $root "docker-compose.yml"
+$composeHelper = Join-Path $PSScriptRoot "compose-kms.ps1"
 $parser = Join-Path $PSScriptRoot "parse-deployment.ps1"
 $projectName = "vecta-kms"
 $networkName = "${projectName}_kms_net"
@@ -83,7 +83,7 @@ Set-ComposeProfiles -DeploymentPath $resolvedDeploymentFile
 Write-Host "stopping KMS stack"
 $prevErrorPreference = $ErrorActionPreference
 $ErrorActionPreference = "Continue"
-docker compose -f $composeFile down --remove-orphans
+& $composeHelper down --remove-orphans
 $downExit = $LASTEXITCODE
 $ErrorActionPreference = $prevErrorPreference
 if ($downExit -ne 0) {

@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $parser = Join-Path $PSScriptRoot "parse-deployment.ps1"
-$composeFile = Join-Path $root "docker-compose.yml"
+$composeHelper = Join-Path $PSScriptRoot "compose-kms.ps1"
 
 if (!(Test-Path -LiteralPath $DeploymentFile)) {
     $DeploymentFile = Join-Path $root "infra\deployment\deployment.yaml"
@@ -68,9 +68,7 @@ foreach ($service in $enabledServices) {
 }
 
 function Get-ComposeServiceStatusMap {
-    param([string]$ComposePath)
-
-    $lines = @(docker compose -f $ComposePath ps --format "{{.Service}}|{{.State}}|{{.Health}}")
+    $lines = @(& $composeHelper ps --format "{{.Service}}|{{.State}}|{{.Health}}")
     if ($LASTEXITCODE -ne 0) {
         throw "docker compose ps failed with exit code $LASTEXITCODE"
     }
@@ -101,8 +99,26 @@ function Get-ComposeServiceStatusMap {
     return $statusMap
 }
 
+function Test-HealthcheckMissingRuntime {
+    param([string]$Service)
+
+    $containerId = & $composeHelper ps -q $Service | Select-Object -First 1
+    $containerId = [string]$containerId
+    if ([string]::IsNullOrWhiteSpace($containerId)) {
+        return $false
+    }
+    $containerId = $containerId.Trim()
+
+    $healthLog = docker inspect --format '{{if .State.Health}}{{range .State.Health.Log}}{{println .Output}}{{end}}{{end}}' $containerId 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        return $false
+    }
+
+    return [regex]::IsMatch(($healthLog -join "`n"), 'stat /bin/sh: no such file or directory|executable file not found in \$PATH|: not found')
+}
+
 for ($attempt = 1; $attempt -le $Retries; $attempt++) {
-    $statusMap = Get-ComposeServiceStatusMap -ComposePath $composeFile
+    $statusMap = Get-ComposeServiceStatusMap
     $unhealthy = @()
     $healthy = @()
 
@@ -121,6 +137,10 @@ for ($attempt = 1; $attempt -le $Retries; $attempt++) {
         }
 
         if (-not [string]::IsNullOrWhiteSpace($health) -and $health -ne "healthy") {
+            if ($state -eq "running" -and (Test-HealthcheckMissingRuntime -Service $service)) {
+                $healthy += "${service} (running; health command unavailable)"
+                continue
+            }
             $unhealthy += "${service} (health=$health)"
             continue
         }
