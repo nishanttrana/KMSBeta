@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.13-alpine
     environment:
       POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
@@ -9,28 +9,45 @@ services:
       - "5432:5432"
 
   nats:
-    image: nats:2.10-alpine
-    command: ["-js"]
+    image: nats:2.12.4-alpine
+    volumes:
+      - ./infra/nats/nats-server.conf:/etc/nats/nats-server.conf:ro
+      - nats-data:/data
     ports:
       - "4222:4222"
       - "8222:8222"
 
   valkey:
-    image: valkey/valkey:7-alpine
+    image: valkey/valkey:9.0.3-alpine
+    command: ["valkey-server", "/etc/valkey/valkey.conf"]
+    volumes:
+      - ./infra/valkey/valkey.conf:/etc/valkey/valkey.conf:ro
+      - valkey-data:/data
     ports:
       - "6379:6379"
 
   consul:
-    image: hashicorp/consul:1.20
+    image: hashicorp/consul:1.21.5
     command: ["agent", "-dev", "-client=0.0.0.0"]
     ports:
       - "8500:8500"
 
   etcd:
-    image: quay.io/coreos/etcd:v3.5.18
-    environment:
-      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
-      ETCD_ADVERTISE_CLIENT_URLS: http://0.0.0.0:2379
-    command: ["etcd"]
+    image: quay.io/coreos/etcd:v3.6.8
+    command:
+      - etcd
+      - --data-dir=/etcd-data
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://0.0.0.0:2379
+      - --auto-compaction-mode=periodic
+      - --auto-compaction-retention=1h
+      - --log-format=json
+    volumes:
+      - etcd-data:/etcd-data
     ports:
       - "2379:2379"
+
+volumes:
+  etcd-data:
+  nats-data:
+  valkey-data:

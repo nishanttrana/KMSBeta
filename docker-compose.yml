@@ -32,7 +32,7 @@ x-kms-service: &kms-service
 services:
   postgres:
     restart: unless-stopped
-    image: postgres:16-alpine
+    image: postgres:16.13-alpine
     command:
       - postgres
       - -c
@@ -112,8 +112,10 @@ services:
   nats:
     restart: unless-stopped
     profiles: ["event_streaming"]
-    image: nats:2.10-alpine
-    command: ["-js"]
+    image: nats:2.12.4-alpine
+    volumes:
+      - ./infra/nats/nats-server.conf:/etc/nats/nats-server.conf:ro
+      - nats-data:/data
     ports:
       - "4222:4222"
       - "8222:8222"
@@ -128,7 +130,11 @@ services:
   valkey:
     restart: unless-stopped
     profiles: ["distributed_cache"]
-    image: valkey/valkey:7-alpine
+    image: valkey/valkey:9.0.3-alpine
+    command: ["valkey-server", "/etc/valkey/valkey.conf"]
+    volumes:
+      - ./infra/valkey/valkey.conf:/etc/valkey/valkey.conf:ro
+      - valkey-data:/data
     ports:
       - "6379:6379"
     healthcheck:
@@ -142,7 +148,7 @@ services:
   consul:
     restart: unless-stopped
     profiles: ["service_discovery"]
-    image: hashicorp/consul:1.20
+    image: hashicorp/consul:1.21.5
     command: ["agent", "-server", "-bootstrap-expect=1", "-client=0.0.0.0", "-ui", "-config-file=/consul/config/consul.hcl"]
     ports:
       - "8500:8500"
@@ -161,13 +167,19 @@ services:
 
   etcd:
     restart: unless-stopped
-    image: quay.io/coreos/etcd:v3.5.18
-    environment:
-      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
-      ETCD_ADVERTISE_CLIENT_URLS: http://0.0.0.0:2379
-    command: ["etcd"]
+    image: quay.io/coreos/etcd:v3.6.8
+    command:
+      - etcd
+      - --data-dir=/etcd-data
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://0.0.0.0:2379
+      - --auto-compaction-mode=periodic
+      - --auto-compaction-retention=1h
+      - --log-format=json
     ports:
       - "2379:2379"
+    volumes:
+      - etcd-data:/etcd-data
     healthcheck:
       test: ["CMD", "etcdctl", "endpoint", "health", "--endpoints=http://127.0.0.1:2379"]
       interval: 10s
@@ -179,21 +191,12 @@ services:
 
   envoy:
     restart: unless-stopped
-    image: envoyproxy/envoy:v1.31-latest
+    image: envoyproxy/envoy:v1.37.1
+    user: root
+    entrypoint: ["/bin/sh"]
     command:
-      - /bin/sh
       - -ec
-      - |
-        for i in $(seq 1 120); do
-          [ -s /run/vecta/runtime-certs/envoy/tls.crt ] && [ -s /run/vecta/runtime-certs/envoy/tls.key ] && break
-          sleep 1
-        done
-        mkdir -p /tmp/envoy-certs
-        cp /run/vecta/runtime-certs/envoy/tls.crt /tmp/envoy-certs/tls.crt
-        cp /run/vecta/runtime-certs/envoy/tls.key /tmp/envoy-certs/tls.key
-        chmod 0644 /tmp/envoy-certs/tls.crt
-        chmod 0644 /tmp/envoy-certs/tls.key
-        exec /usr/local/bin/envoy -c /etc/envoy/envoy.yaml --service-cluster vecta-edge
+      - for i in $(seq 1 120); do [ -s /run/vecta/runtime-certs/envoy/tls.crt ] && [ -s /run/vecta/runtime-certs/envoy/tls.key ] && break; sleep 1; done; mkdir -p /tmp/envoy-certs; cp /run/vecta/runtime-certs/envoy/tls.crt /tmp/envoy-certs/tls.crt; cp /run/vecta/runtime-certs/envoy/tls.key /tmp/envoy-certs/tls.key; chmod 0644 /tmp/envoy-certs/tls.crt; chmod 0644 /tmp/envoy-certs/tls.key; exec /usr/local/bin/envoy -c /etc/envoy/envoy.yaml --service-cluster vecta-edge
     volumes:
       - ./infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
       - runtime-certs:/run/vecta/runtime-certs:ro
@@ -996,10 +999,13 @@ networks:
 volumes:
   postgres-data:
   consul-data:
+  etcd-data:
+  nats-data:
   auth-data:
   hsm-integration-data:
   keycore-data:
   certs-key-data:
+  valkey-data:
   runtime-certs:
     driver: local
     driver_opts:

@@ -36,6 +36,8 @@ static_resources:
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
           common_tls_context:
+            tls_params:
+              tls_minimum_protocol_version: TLSv1_2
             tls_certificates:
             - certificate_chain:
                 filename: /tmp/envoy-certs/tls.crt
@@ -48,11 +50,20 @@ static_resources:
           stat_prefix: edge_https
           use_remote_address: true
           normalize_path: true
+          merge_slashes: true
+          stream_idle_timeout: 60s
+          common_http_protocol_options:
+            idle_timeout: 300s
           route_config:
             name: kms_routes
             virtual_hosts:
             - name: kms_api
               domains: ["*"]
+              response_headers_to_add:
+              - append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                header: { key: "strict-transport-security", value: "max-age=31536000; includeSubDomains" }
+              - append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                header: { key: "x-content-type-options", value: "nosniff" }
               routes:
               - match: { prefix: "/api/auth" }
                 route: { cluster: auth_http, timeout: 30s, prefix_rewrite: "/" }
@@ -169,6 +180,24 @@ static_resources:
                   status: 200
                   body:
                     inline_string: "Vecta KMS Envoy edge is running"
+          access_log:
+          - name: envoy.access_loggers.stdout
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+              log_format:
+                json_format:
+                  authority: "%REQ(:AUTHORITY)%"
+                  bytes_received: "%BYTES_RECEIVED%"
+                  bytes_sent: "%BYTES_SENT%"
+                  duration_ms: "%DURATION%"
+                  method: "%REQ(:METHOD)%"
+                  path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+                  protocol: "%PROTOCOL%"
+                  request_id: "%REQ(X-REQUEST-ID)%"
+                  response_code: "%RESPONSE_CODE%"
+                  response_flags: "%RESPONSE_FLAGS%"
+                  upstream_cluster: "%UPSTREAM_CLUSTER%"
+                  upstream_host: "%UPSTREAM_HOST%"
           http_filters:
           - name: envoy.filters.http.local_ratelimit
             typed_config:
@@ -185,7 +214,7 @@ static_resources:
                 runtime_key: local_rate_limit_enforced
                 default_value: { numerator: 100, denominator: HUNDRED }
               response_headers_to_add:
-              - append: false
+              - append_action: OVERWRITE_IF_EXISTS_OR_ADD
                 header: { key: "x-rate-limited-by", value: "envoy-local" }
           - name: envoy.filters.http.router
             typed_config:
@@ -375,7 +404,6 @@ static_resources:
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: kmip, port_value: 5696 }}}}]}]
 
 admin:
-  access_log_path: /tmp/admin_access.log
   address:
     socket_address:
       address: 0.0.0.0
