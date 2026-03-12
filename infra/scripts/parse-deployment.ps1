@@ -80,6 +80,10 @@ switch ($hsmMode) {
     default { throw "invalid hsm_mode in ${File}: $hsmMode" }
 }
 
+$profiles.Add("event_streaming")
+$profiles.Add("service_discovery")
+$profiles.Add("distributed_cache")
+
 $seen = @{}
 $ordered = New-Object System.Collections.Generic.List[string]
 foreach ($p in $profiles) {

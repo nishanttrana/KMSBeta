@@ -133,6 +133,11 @@ prompt_default() {
   local var_name="$1"
   local prompt_text="$2"
   local default_value="$3"
+  local current_value="${!var_name-}"
+  if [[ -n "${current_value}" ]]; then
+    printf -v "${var_name}" "%s" "$(trim "${current_value}")"
+    return
+  fi
   local input_value=""
   read -r -p "${prompt_text} [${default_value}]: " input_value || true
   input_value="$(trim "${input_value}")"
@@ -146,6 +151,14 @@ prompt_default() {
 prompt_secret() {
   local var_name="$1"
   local prompt_text="$2"
+  local current_value="${!var_name-}"
+  if [[ -n "${current_value}" ]]; then
+    if [[ "${#current_value}" -lt 12 ]]; then
+      die "${var_name} must be at least 12 characters when pre-set."
+    fi
+    printf -v "${var_name}" "%s" "${current_value}"
+    return
+  fi
   local first=""
   local second=""
   while true; do
@@ -170,6 +183,23 @@ prompt_yes_no() {
   local var_name="$1"
   local prompt_text="$2"
   local default_value="$3"
+  local current_value="${!var_name-}"
+  if [[ -n "${current_value}" ]]; then
+    current_value="${current_value,,}"
+    case "${current_value}" in
+      y|yes|true|n|no|false|1|0|on|off)
+        if [[ "${current_value}" == "y" || "${current_value}" == "yes" || "${current_value}" == "true" || "${current_value}" == "1" || "${current_value}" == "on" ]]; then
+          printf -v "${var_name}" "true"
+        else
+          printf -v "${var_name}" "false"
+        fi
+        return
+        ;;
+      *)
+        die "Invalid pre-set boolean for ${var_name}: ${current_value}"
+        ;;
+    esac
+  fi
   local default_hint="Y/n"
   local input=""
   local normalized_default="true"
@@ -776,6 +806,19 @@ normalize_host_path() {
   printf "%s" "${path}"
 }
 
+docker_mount_source_path() {
+  local path="$1"
+  case "${HOST_OS}" in
+    windows)
+      if command -v cygpath >/dev/null 2>&1; then
+        cygpath -aw "${path}"
+        return
+      fi
+      ;;
+  esac
+  printf "%s" "${path}"
+}
+
 feature_default_from_template() {
   local key="$1"
   local default_value="$2"
@@ -1166,6 +1209,13 @@ prepare_install_directory() {
 
 populate_feature_values() {
   local default_true
+  if [[ "${INSTALL_MODE}" == "fast" ]]; then
+    for feature in "${FEATURE_KEYS[@]}"; do
+      printf -v "FEATURE_${feature}" "%s" "false"
+    done
+    FEATURE_certs="true"
+    return
+  fi
   for feature in "${FEATURE_KEYS[@]}"; do
     if [[ "${FEATURE_ALL}" == "true" ]]; then
       printf -v "FEATURE_${feature}" "%s" "true"
@@ -1384,9 +1434,11 @@ EOF
 
 write_env_file() {
   local profiles
+  local compose_project_name
   profiles="$(bash "${PARSER_SCRIPT}" "${DEPLOYMENT_FILE}")"
+  compose_project_name="${COMPOSE_PROJECT_NAME:-vecta-kms}"
   cat > "${ENV_FILE}" <<EOF
-COMPOSE_PROJECT_NAME=vecta-kms
+COMPOSE_PROJECT_NAME=${compose_project_name}
 COMPOSE_PROFILES=${profiles}
 CBOM_SCHEDULE_TENANTS=${TENANT_ID}
 HSM_MODE=${HSM_MODE}
@@ -1437,6 +1489,7 @@ EOF
 generate_override_file() {
   declare -A ports_by_service
   declare -A assigned_host_ports
+  local -a override_warnings=()
   local parse_output
   parse_output="$(awk '
     /^[[:space:]]{2}[a-z0-9-]+:[[:space:]]*$/ {
@@ -1479,7 +1532,7 @@ generate_override_file() {
     local svc mapping
     for svc in $(printf "%s\n" "${!ports_by_service[@]}" | sort); do
       echo "  ${svc}:"
-      echo "    ports:"
+      echo "    ports: !override"
       while IFS= read -r mapping; do
         [[ -z "${mapping}" ]] && continue
         local proto=""
@@ -1510,7 +1563,7 @@ generate_override_file() {
             next_port=$((next_port + 1))
             (( next_port <= 65535 )) || die "Unable to allocate a free host port for ${svc}:${container_port}/${proto_name}"
           done
-          add_warning "Remapped ${svc}:${container_port}/${proto_name} host port ${host_port} -> ${next_port} (duplicate mapping)."
+          override_warnings+=("Remapped ${svc}:${container_port}/${proto_name} host port ${host_port} -> ${next_port} (duplicate mapping).")
           host_port="${next_port}"
           assignment_key="${proto_name}:${host_port}"
         fi
@@ -1524,7 +1577,7 @@ generate_override_file() {
             remap_port=$((remap_port + 1))
             (( remap_port <= 65535 )) || die "Unable to allocate a free host port for ${svc}:${container_port}/${proto_name}"
           done
-          add_warning "Remapped ${svc}:${container_port}/${proto_name} host port ${host_port} -> ${remap_port} (port in use)."
+          override_warnings+=("Remapped ${svc}:${container_port}/${proto_name} host port ${host_port} -> ${remap_port} (port in use).")
           host_port="${remap_port}"
           assignment_key="${proto_name}:${host_port}"
         fi
@@ -1536,6 +1589,11 @@ generate_override_file() {
   } > "${tmp_override}"
 
   mv "${tmp_override}" "${OVERRIDE_FILE}"
+
+  local override_warning
+  for override_warning in "${override_warnings[@]}"; do
+    add_warning "${override_warning}"
+  done
 }
 
 seed_cert_bootstrap_secret() {
@@ -1546,7 +1604,7 @@ seed_cert_bootstrap_secret() {
     die "Certificate bootstrap passphrase is empty in software root key mode."
   fi
 
-  local project_name="vecta-kms"
+  local project_name="${COMPOSE_PROJECT_NAME:-vecta-kms}"
   if [[ -f "${ENV_FILE}" ]]; then
     local env_project
     env_project="$(awk -F= '/^COMPOSE_PROJECT_NAME=/ {print $2; exit}' "${ENV_FILE}" | tr -d '\r' || true)"
@@ -1555,11 +1613,7 @@ seed_cert_bootstrap_secret() {
   fi
 
   local volume_name="${project_name}_certs-key-data"
-  local tmp_secret=""
-  tmp_secret="$(mktemp)"
-  chmod 600 "${tmp_secret}" || true
-  printf "%s\n" "${CERTS_BOOTSTRAP_PASSPHRASE}" > "${tmp_secret}"
-
+  local target_path="${CERTS_PASSPHRASE_FILE_PATH}"
   info "Seeding certificate bootstrap secret into Docker volume ${volume_name} ..."
   "${DOCKER_BIN[@]}" volume create "${volume_name}" >/dev/null
 
@@ -1568,15 +1622,13 @@ seed_cert_bootstrap_secret() {
   for image in alpine:3.20 busybox:1.36; do
     if "${DOCKER_BIN[@]}" run --rm \
       -v "${volume_name}:/var/lib/vecta/certs" \
-      -v "${tmp_secret}:/tmp/bootstrap.secret:ro" \
-      -e TARGET_PATH="${CERTS_PASSPHRASE_FILE_PATH}" \
+      -e BOOTSTRAP_SECRET="${CERTS_BOOTSTRAP_PASSPHRASE}" \
       "${image}" \
-      sh -c 'set -eu; umask 077; mkdir -p "$(dirname "$TARGET_PATH")"; cp /tmp/bootstrap.secret "$TARGET_PATH"; chmod 600 "$TARGET_PATH"' >/dev/null 2>&1; then
+      sh -c 'set -eu; target="'"${target_path}"'"; umask 077; mkdir -p "$(dirname "$target")"; chown -R 100:101 /var/lib/vecta/certs; printf "%s\n" "$BOOTSTRAP_SECRET" > "$target"; chown 100:101 "$target"; chmod 700 /var/lib/vecta/certs; chmod 640 "$target"' >/dev/null 2>&1; then
       seeded="true"
       break
     fi
   done
-  rm -f "${tmp_secret}" || true
 
   if [[ "${seeded}" != "true" ]]; then
     die "Unable to seed certificate bootstrap secret into Docker volume ${volume_name}."
@@ -1882,6 +1934,7 @@ collect_fast_inputs() {
   prompt_default ADMIN_EMAIL "Admin email" "admin@vecta.local"
   prompt_secret ADMIN_PASSWORD "Admin password"
   FORCE_PASSWORD_CHANGE="true"
+  local detected_iface detected_gw detected_dns_csv detected_hostname detected_domain
   LICENSE_KEY="SEC-KMS-ENT-2026-ABCD"
   MAX_KEYS="5000000"
   MAX_TENANTS="50"
@@ -1890,7 +1943,7 @@ collect_fast_inputs() {
   DASHBOARD_PORT="5173"
   FIRSTBOOT_PORT="9443"
   ENABLE_FIRSTBOOT_UI="true"
-  BUILD_MODE="build-missing"
+  BUILD_MODE="${BUILD_MODE:-build-missing}"
   BUILD_PARALLEL_LIMIT="$(nproc 2>/dev/null || echo 4)"
   ENABLE_FDE="false"
   FDE_DEVICE="/dev/sda3"
@@ -1901,18 +1954,35 @@ collect_fast_inputs() {
   CERT_STORAGE_MODE="db_encrypted"
   ROOT_KEY_MODE="software"
   CERTS_SEALED_KEY_PATH="/var/lib/vecta/certs/crwk.sealed"
-  CERTS_PASSPHRASE_FILE_PATH="/etc/vecta/certs-bootstrap.secret"
+  CERTS_PASSPHRASE_FILE_PATH="/var/lib/vecta/certs/bootstrap.passphrase"
   CERTS_USE_TPM_SEAL="false"
+  CERTS_BOOTSTRAP_PASSPHRASE="$(generate_random_secret 48)"
   FIPS_MODE="standard"
+  detected_iface="$(detect_default_route_interface)"
+  if [[ -z "${detected_iface}" ]]; then
+    case "${HOST_OS}" in
+      macos) detected_iface="en0" ;;
+      windows) detected_iface="Ethernet" ;;
+      *) detected_iface="eth0" ;;
+    esac
+  fi
+  MGMT_INTERFACE="${detected_iface}"
+  MGMT_MODE="static"
   CLUSTER_ENABLED="false"
   CLUSTER_DEPLOYMENT_MODE="standalone"
-  CLUSTER_NODE_NAME=""
+  CLUSTER_REPLICATION_PROFILE="cluster-profile-base"
+  CLUSTER_NODE_ROLE="leader"
+  CLUSTER_NODE_NAME="${APPLIANCE_ID}"
   CLUSTER_NODE_ENDPOINT=""
   CLUSTER_JOIN_TOKEN=""
+  CLUSTER_JOIN_ENDPOINT=""
   CLUSTER_BOOTSTRAP=""
   CLUSTER_SEED_ENDPOINT=""
   CLUSTER_TLS_PROFILE="mtls_ecdsa_p256"
   CLUSTER_RAFT_DATA_DIR="/var/lib/vecta/raft"
+  CLUSTER_INTERFACE="${MGMT_INTERFACE}"
+  CLUSTER_ADDRESS=""
+  CLUSTER_MTU="9000"
   split_csv_to_array "*" LICENSE_FEATURES
   IMAGE_BUNDLE_PATH=""
   local detected_ip_cidr
@@ -1921,8 +1991,30 @@ collect_fast_inputs() {
     detected_ip_cidr="${CLI_MGMT_IP}"
   fi
   MGMT_ADDRESS="${detected_ip_cidr}"
-  MGMT_GATEWAY=""
-  MGMT_DNS_CSV="8.8.8.8,1.1.1.1"
+  detected_gw="$(detect_default_gateway "${MGMT_INTERFACE}")"
+  [[ -z "${detected_gw}" ]] && detected_gw="$(detect_default_gateway)"
+  [[ -z "${detected_gw}" ]] && detected_gw="10.0.1.1"
+  MGMT_GATEWAY="${detected_gw}"
+  detected_dns_csv="$(detect_default_dns_csv)"
+  [[ -z "${detected_dns_csv}" ]] && detected_dns_csv="8.8.8.8,1.1.1.1"
+  MGMT_DNS_CSV="${detected_dns_csv}"
+  split_csv_to_array "${MGMT_DNS_CSV}" MGMT_DNS
+  detected_hostname="$(hostname -s 2>/dev/null || true)"
+  [[ -z "${detected_hostname}" ]] && detected_hostname="vecta-kms"
+  detected_domain="$(hostname -d 2>/dev/null || true)"
+  [[ -z "${detected_domain}" ]] && detected_domain="local"
+  HOSTNAME_VALUE="${detected_hostname}"
+  DOMAIN_VALUE="${detected_domain}"
+  MGMT_IPV6_ENABLED="false"
+  MGMT_IPV6_ADDRESS=""
+  split_csv_to_array "pool.ntp.org" NTP_SERVERS
+  TLS_MODE="self-signed"
+  TLS_CERT_PATH="/etc/vecta/tls/server.crt"
+  TLS_KEY_PATH="/etc/vecta/tls/server.key"
+  TLS_CA_PATH="/etc/vecta/tls/ca.crt"
+  SYSLOG_ENABLED="true"
+  SYSLOG_SERVER="syslog.local:514"
+  SYSLOG_PROTOCOL="tcp+tls"
   local bind_ip_default
   bind_ip_default="${detected_ip_cidr%%/*}"
   [[ -z "${bind_ip_default}" ]] && bind_ip_default="10.0.1.100"
@@ -1931,6 +2023,10 @@ collect_fast_inputs() {
   fi
   prompt_default BIND_IP "Docker published bind IP" "${bind_ip_default}"
   validate_ipv4 "${BIND_IP}" || die "Bind IP must be a valid IPv4 address."
+  CLUSTER_NODE_ENDPOINT="${MGMT_ADDRESS%%/*}"
+  CLUSTER_NODE_ENDPOINT="$(trim "${CLUSTER_NODE_ENDPOINT}")"
+  [[ -z "${CLUSTER_NODE_ENDPOINT}" ]] && CLUSTER_NODE_ENDPOINT="${BIND_IP}"
+  return 0
 }
 
 main() {

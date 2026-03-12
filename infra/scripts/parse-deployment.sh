@@ -87,6 +87,8 @@ case "${hsm_mode}" in
     ;;
 esac
 
+profiles+=("event_streaming" "service_discovery" "distributed_cache")
+
 declare -A SEEN=()
 ordered=()
 for p in "${profiles[@]}"; do
