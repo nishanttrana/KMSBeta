@@ -1,10 +1,9 @@
 # Systemd Units
 
-This directory provides appliance systemd units for first-boot and runtime stack control.
+This directory provides appliance systemd units for runtime stack control.
 
 ## Primary Units
 
-- `vecta-firstboot.service`: Starts the `firstboot` Docker Compose service on port `9443` until `/etc/vecta/deployment.yaml` exists.
 - `vecta-stack.service`: Starts/stops the selected Docker Compose services based on `/etc/vecta/deployment.yaml`.
 - `vecta-deployment.path`: Watches `/etc/vecta/deployment.yaml` and triggers `vecta-stack.service` automatically.
 - `vecta-healthcheck.service`: Runs profile-aware health checks.
@@ -25,7 +24,6 @@ bash infra/systemd/install-systemd.sh
 ## Runtime
 
 ```bash
-sudo systemctl start vecta-firstboot.service
 sudo systemctl start vecta-stack.service
 sudo systemctl status vecta-healthcheck.timer
 ```

@@ -15,7 +15,7 @@ fi
 
 pick_bash() {
   local candidate
-  for candidate in "${BASH:-}" /opt/homebrew/bin/bash /usr/local/bin/bash /bin/bash; do
+  for candidate in "${BASH:-}" "${HOME}/.local/bin/bash" /opt/homebrew/bin/bash /usr/local/bin/bash /bin/bash; do
     [[ -n "${candidate}" && -x "${candidate}" ]] || continue
     if "${candidate}" -lc '[[ "${BASH_VERSINFO[0]}" -ge 4 ]]' >/dev/null 2>&1; then
       printf "%s" "${candidate}"
@@ -28,7 +28,7 @@ pick_bash() {
 BASH_BIN="$(pick_bash || true)"
 if [[ -z "${BASH_BIN}" ]]; then
   echo "[ERROR] install.sh requires Bash 4+." >&2
-  echo "Install a newer bash first, for example: brew install bash" >&2
+  echo "Install a newer bash first, for example: brew install bash or install one at ~/.local/bin/bash" >&2
   exit 1
 fi
 

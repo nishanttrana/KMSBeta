@@ -80,7 +80,6 @@ const Collapse = ({ title, children, defaultOpen = false }: { title: string; chi
 const NAV = [
   { id: "overview", label: "Platform Overview" },
   { id: "deploy", label: "Deployment Guide" },
-  { id: "firstboot", label: "First Boot Wizard" },
   { id: "credentials", label: "Default Credentials" },
   { id: "architecture", label: "Architecture" },
   { id: "services", label: "Service Reference" },
@@ -231,7 +230,6 @@ docker compose up -d
       ["—", "5173", "Web Dashboard UI"],
       ["—", "80 / 443", "Envoy edge proxy (HTTP / HTTPS)"],
       ["—", "5696", "KMIP protocol endpoint"],
-      ["—", "9443", "First-boot wizard (profile: firstboot)"],
       ["—", "2222", "HSM CLI SSH (profile: hsm_cli)"],
       ["—", "4222 / 8222", "NATS messaging (profile: event_streaming)"],
       ["—", "6379", "Valkey/Redis cache (profile: distributed_cache)"],
@@ -250,36 +248,6 @@ curl -s -X POST http://localhost:8001/auth/login \\
   -d '{"username":"admin","password":"<your-password>","tenant_id":"root"}'
 
 # The response includes a JWT token for subsequent API calls`}</Code>
-  </div>
-);
-
-const SectionFirstBoot = () => (
-  <div>
-    <div style={S.h1}>First Boot Wizard</div>
-    <P>The first-boot wizard provides a guided 7-step setup for initial deployment. Enable it with the <IC>firstboot</IC> Docker profile.</P>
-    <Code>{`docker compose --profile firstboot up -d
-# Access wizard at https://localhost:9443/wizard`}</Code>
-
-    <H2>Step 0: Full Disk Encryption (FDE)</H2>
-    <P>Configure LUKS2 full-disk encryption for data at rest on the appliance. Set the number of Shamir recovery shares and threshold required for recovery. This step generates a master passphrase split into N shares where K shares are needed to reconstruct.</P>
-
-    <H2>Step 1: Network Configuration</H2>
-    <P>Configure management, cluster, and HSM network interfaces. Set static IP or DHCP, DNS, gateway, hostname, domain, NTP servers, syslog endpoint, firewall rules, and TLS certificate paths. Supports separate interfaces for management (eth0), cluster (eth1), and HSM (eth2) traffic.</P>
-
-    <H2>Step 2: FIPS Mode</H2>
-    <P>Choose between Strict (FIPS 140-3 compliant: blocks non-FIPS algorithms, enforces BoringCrypto, minimum key sizes) and Standard (allows legacy algorithms with warnings). See the FIPS Configuration section for details.</P>
-
-    <H2>Step 3: Feature Selector</H2>
-    <P>Enable or disable KMS modules. Each feature maps to a Docker profile. Disabled features reduce attack surface and resource usage. Features include: Secrets Vault, Certificates/PKI, Governance, Cloud BYOK, HYOK Proxy, KMIP Server, QKD Interface, EKM Database, Payment Crypto, Compliance, SBOM/CBOM, Reporting, Posture Management, PQC Migration, Crypto Discovery, MPC Engine, Data Protection, AI/LLM.</P>
-
-    <H2>Step 4: HSM Mode</H2>
-    <P>Select the cryptographic backend: Software (built-in software vault), Hardware (external HSM via PKCS#11 — supports Thales Luna, Utimaco, Entrust nShield, Vecta KMS, AWS CloudHSM, Azure Managed HSM), or Auto (hardware if available, software fallback).</P>
-
-    <H2>Step 5: License & Admin Credentials</H2>
-    <P>Enter the license key and set the initial admin username, password, and email. The bootstrap admin is created in the "root" tenant with tenant-admin role.</P>
-
-    <H2>Step 6: Review & Apply</H2>
-    <P>Review all settings and apply. The wizard generates deployment.yaml, network.yaml, fips.yaml, fde.yaml, and auth-bootstrap.yaml configuration files. These are consumed by services on startup.</P>
   </div>
 );
 
@@ -2527,7 +2495,6 @@ docker compose ps`}</Code>
       ["distributed_cache", "valkey", "Valkey/Redis cache"],
       ["service_discovery", "consul", "Consul service registry"],
       ["clustering", "etcd, cluster-manager", "Multi-node clustering"],
-      ["firstboot", "firstboot", "First-boot configuration wizard"],
       ["secrets", "kms-secrets", "Secrets vault"],
       ["certs", "kms-certs", "Certificate PKI"],
       ["governance", "kms-governance", "Governance and approvals"],
@@ -2611,7 +2578,7 @@ docker stats`}</Code>
 const SectionConfigFastInstall = () => (
   <div>
     <div style={S.h1}>Config: Fast Installation Mode</div>
-    <P>Fast install mode provides a streamlined deployment path that gets the KMS core running with minimal prompts. After the first login, an interactive onboarding wizard lets the administrator select which feature modules to enable.</P>
+    <P>Fast install mode provides a streamlined script-driven deployment path that gets the baseline KMS running with minimal prompts. Additional modules can be enabled later by editing <IC>infra/deployment/deployment.yaml</IC> and rerunning the installer or the runtime start script.</P>
 
     <H2>Usage</H2>
     <Code>{`# Fast install with defaults
@@ -2624,17 +2591,10 @@ const SectionConfigFastInstall = () => (
 ./install.sh`}</Code>
 
     <H2>What Gets Deployed</H2>
-    <P>In fast mode, only the core platform services are started: auth, keycore, governance, audit, policy engine, PostgreSQL, Envoy proxy, and the dashboard. All optional feature services (secrets, certs, cloud BYOK, etc.) are left disabled until enabled via the onboarding wizard or the Administration panel.</P>
+    <P>In fast mode, the installer writes a deployment file from the built-in baseline template and starts that service set directly. The baseline includes the core platform services plus certificate management, while other optional modules remain off until the deployment file is changed.</P>
 
-    <H2>Onboarding Wizard</H2>
-    <P>After the first admin login on a fast-mode install, a full-screen feature selection wizard appears. Features are grouped into categories (Core Services, Data Protection, Cloud & Integration, Governance & Compliance, Infrastructure) with recommended defaults pre-selected. The wizard supports three presets:</P>
-    <P>- <B c="green">Minimal</B> — No optional features, just core platform</P>
-    <P>- <B c="accent">Recommended</B> — Secrets Vault, Certificates/PKI, Governance, Reporting & Alerts, Data Protection</P>
-    <P>- <B c="muted">Full</B> — All 18 feature modules enabled</P>
-    <P>After selecting features, the wizard calls the firstboot API to update deployment.yaml and starts the selected service containers.</P>
-
-    <H2>Detection</H2>
-    <P>The dashboard detects fast-mode installs by checking <IC>metadata.install_mode</IC> in deployment.yaml. If <IC>install_mode === "fast"</IC> and no features are enabled, the onboarding wizard is shown. Once completed, it sets <IC>localStorage vecta_onboarding_complete</IC> to prevent re-display.</P>
+    <H2>Changing Features Later</H2>
+    <P>Feature enablement remains file-driven. Edit <IC>infra/deployment/deployment.yaml</IC>, then rerun <IC>./install.sh --fast</IC> or start the stack with <IC>./infra/scripts/start-kms.sh</IC> so Docker Compose recalculates the active profiles.</P>
 
     <Collapse title="deployment.yaml metadata">
       <Code>{`apiVersion: kms.vecta.com/v1
@@ -2649,24 +2609,6 @@ spec:
     # ... all features default to false in fast mode`}</Code>
     </Collapse>
 
-    <Collapse title="Firstboot Features Apply Endpoint">
-      <EndpointTable rows={[
-        ["POST", "/api/v1/firstboot/features/apply", "Update features in deployment.yaml (onboarding wizard)"],
-      ]} />
-      <Code>{`POST /svc/firstboot/api/v1/firstboot/features/apply
-{
-  "metadata": {},
-  "spec": {
-    "features": {
-      "secrets": true,
-      "certs": true,
-      "governance": true,
-      "reporting_alerting": true,
-      "data_protection": true
-    }
-  }
-}`}</Code>
-    </Collapse>
   </div>
 );
 
@@ -3013,7 +2955,6 @@ npm.cmd --prefix web/dashboard run validate:openapi`}</Code>
 const SECTIONS: Record<string, () => JSX.Element> = {
   overview: SectionOverview,
   deploy: SectionDeploy,
-  firstboot: SectionFirstBoot,
   credentials: SectionCredentials,
   architecture: SectionArchitecture,
   services: SectionServiceRef,
@@ -3095,7 +3036,7 @@ export const DocsTab = () => {
         </div>
         {/* Group labels */}
         {[
-          { label: "Getting Started", ids: ["overview", "deploy", "firstboot", "credentials", "architecture", "services"] },
+          { label: "Getting Started", ids: ["overview", "deploy", "credentials", "architecture", "services"] },
           { label: "REST API Reference", ids: NAV.filter((n) => n.id.startsWith("api-")).map((n) => n.id) },
           { label: "UI Guide", ids: NAV.filter((n) => n.id.startsWith("ui-")).map((n) => n.id) },
           { label: "Configuration", ids: NAV.filter((n) => n.id.startsWith("config-")).map((n) => n.id) },

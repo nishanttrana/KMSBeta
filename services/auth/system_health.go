@@ -129,7 +129,6 @@ func blockedRestartServices() map[string]string {
 		"dashboard":       "dashboard UI service",
 		"envoy":           "edge proxy service",
 		"etcd":            "distributed coordination backend",
-		"firstboot":       "bootstrap service",
 		"hsm-connector":   "hardware HSM connector",
 		"keycore":         "core key management service",
 		"nats":            "messaging backend",

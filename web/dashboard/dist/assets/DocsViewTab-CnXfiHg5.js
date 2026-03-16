@@ -1,0 +1,1 @@
+import{H as o}from"./index-BFudbtbq.js";import{D as r}from"./DocsTab-BI4J0gZM.js";import"./chevron-down-mTN5fDBm.js";import"./chevron-right-CPzWEbyi.js";const p=()=>o.jsx(r,{});export{p as DocsViewTab};

@@ -8,6 +8,7 @@ infra/deployment/certs-bootstrap.secret
 # Local environment overrides
 .env.local
 .env.*.local
+docker-compose.override.yml
 
 # Node dependency caches
 web/dashboard/node_modules/

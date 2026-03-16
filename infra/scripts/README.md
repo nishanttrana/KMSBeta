@@ -16,7 +16,7 @@ Feature-to-profile coverage includes:
 - monitoring and governance: `compliance_dashboard`, `sbom_cbom`, `reporting_alerting`, `posture_management`, `crypto_discovery`, `ai_llm`
 - HA and replication: `clustering`
 
-Installer and first-boot flows also understand these built-in cluster replication profile IDs:
+Installer flows also understand these built-in cluster replication profile IDs:
 
 - `cluster-profile-base`
 - `cluster-profile-standard`
@@ -45,12 +45,6 @@ Stop + recover examples:
 ```powershell
 .\infra\scripts\stop-kms.ps1 -DeploymentFile .\infra\deployment\deployment.yaml -Force
 .\infra\scripts\recover-kms.ps1 -DeploymentFile .\infra\deployment\deployment.yaml
-```
-
-First-boot wizard container (local/dev):
-
-```powershell
-docker compose --profile firstboot up -d firstboot
 ```
 
 ## Default One-Command Startup

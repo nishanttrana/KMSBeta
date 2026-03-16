@@ -22,6 +22,7 @@ STOP_SCRIPT="${ROOT_DIR}/infra/scripts/stop-kms.sh"
 MESH_BOOTSTRAP="${ROOT_DIR}/infra/consul/bootstrap-mesh.sh"
 HEALTH_SCRIPT="${ROOT_DIR}/infra/scripts/healthcheck-enabled-services.sh"
 COMPOSE_WRAPPER="${ROOT_DIR}/infra/scripts/compose-kms.sh"
+BASH_BIN="${BASH:-bash}"
 
 wait_docker() {
   local timeout_seconds="${1:-90}"
@@ -174,11 +175,11 @@ if [[ "${REMOVE_ORPHANS}" == "true" ]]; then
   up_args+=(--remove-orphans)
 fi
 
-if ! bash "${COMPOSE_WRAPPER}" up "${up_args[@]}"; then
+if ! "${BASH_BIN}" "${COMPOSE_WRAPPER}" up "${up_args[@]}"; then
   echo "startup failed, attempting one forced recovery pass" >&2
-  bash "${STOP_SCRIPT}" "${DEPLOYMENT_FILE}" --force || true
+  "${BASH_BIN}" "${STOP_SCRIPT}" "${DEPLOYMENT_FILE}" --force || true
   sleep 2
-  bash "${COMPOSE_WRAPPER}" up "${up_args[@]}"
+  "${BASH_BIN}" "${COMPOSE_WRAPPER}" up "${up_args[@]}"
 fi
 
 if [[ -f "${MESH_BOOTSTRAP}" ]]; then
@@ -186,7 +187,7 @@ if [[ -f "${MESH_BOOTSTRAP}" ]]; then
 fi
 
 if [[ "${SKIP_HEALTH}" -ne 1 ]]; then
-  bash "${HEALTH_SCRIPT}" "${DEPLOYMENT_FILE}"
+  "${BASH_BIN}" "${HEALTH_SCRIPT}" "${DEPLOYMENT_FILE}"
 fi
 
 echo "KMS startup completed"

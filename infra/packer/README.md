@@ -80,5 +80,5 @@ packer build \
 - VM build artifacts under `infra/packer/output/`.
 - OVA exported to `infra/packer/output/<vm-name>-<timestamp>.ova` when `ovftool` is available.
 - VirtualBox build writes OVA to `infra/packer/output/<vm-name>-vbox/`.
-- Installed appliance units include `vecta-deployment.path`, so writing `/etc/vecta/deployment.yaml` from the first-boot wizard auto-triggers `vecta-stack.service`.
+- Installed appliance units include `vecta-deployment.path`, so updating `/etc/vecta/deployment.yaml` auto-triggers `vecta-stack.service`.
 - Appliance install also stages `/etc/vecta/deployment.schema.json` and `/etc/vecta/examples/deployment.example.yaml` for offline profile review.

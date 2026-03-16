@@ -110,7 +110,6 @@ const RESTART_BLOCKED_TARGETS = new Set([
   "dashboard",
   "envoy",
   "etcd",
-  "firstboot",
   "hsm-connector",
   "keycore",
   "nats",
@@ -2281,4 +2280,3 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     {promptDialog.ui}
   </div>;
 };
-

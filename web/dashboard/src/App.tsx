@@ -22,15 +22,11 @@ import {
   type AuthSession
 } from "./lib/auth";
 import { getAuthSystemHealth, type AuthSystemHealthSnapshot } from "./lib/authAdmin";
-import { enabledFeatures, loadDeploymentConfig, needsOnboarding } from "./lib/deployment";
+import { enabledFeatures, loadDeploymentConfig } from "./lib/deployment";
 import { mapToLiveEvent, parseWSMessage, wsBaseURL } from "./lib/liveFeed";
 import { getUnreadAlertCounts } from "./lib/reporting";
 import { getGlobalInFlightRequestCount, subscribeGlobalInFlightRequestCount } from "./lib/serviceApi";
 import { useLiveStore } from "./store/live";
-
-const LazyOnboardingWizard = React.lazy(() =>
-  import("./components/FeatureOnboardingWizard").then((m) => ({ default: m.FeatureOnboardingWizard }))
-);
 
 const FEATURE_KEYS: FeatureKey[] = [
   "secrets",
@@ -322,9 +318,6 @@ export default function App() {
     }
     return getSession();
   });
-  const [onboardingComplete, setOnboardingComplete] = useState(
-    () => localStorage.getItem("vecta_onboarding_complete") === "true"
-  );
   const [idleWarningVisible, setIdleWarningVisible] = useState(false);
   const idleResetRef = useRef<(() => void) | null>(null);
   const [unreadAlerts, setUnreadAlerts] = useState(0);
@@ -620,22 +613,6 @@ export default function App() {
           setSession(nextSession);
         }}
       />
-    );
-  }
-
-  // Onboarding gate: show wizard for fast-mode installs with no features enabled
-  const showOnboarding = !onboardingComplete && deploymentQuery.data && needsOnboarding(deploymentQuery.data);
-  if (showOnboarding) {
-    return (
-      <React.Suspense fallback={<InitialLoadingScreen />}>
-        <LazyOnboardingWizard
-          session={session}
-          onComplete={() => {
-            setOnboardingComplete(true);
-            deploymentQuery.refetch();
-          }}
-        />
-      </React.Suspense>
     );
   }
 

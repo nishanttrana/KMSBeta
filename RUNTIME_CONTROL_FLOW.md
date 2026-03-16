@@ -9,7 +9,6 @@ This document describes the **actual runtime flow** and **control flow** of the 
 - `infra/scripts/parse-deployment.sh`
 - `install.sh`
 - `services/*/handler.go`
-- `services/firstboot/wizard.go`
 - `services/certs/main.go`
 - `services/certs/root_key_provider.go`
 
@@ -53,11 +52,10 @@ This document describes the **actual runtime flow** and **control flow** of the 
 | `data_protection` | `data_protection` | `dataprotect` |
 | `clustering` | `clustering` | `etcd`, `cluster-manager` |
 
-### 1.3 Optional Bootstrap and Crypto-Provider Profiles
+### 1.3 Optional Crypto-Provider Profiles
 
 | Profile | Service | Notes |
 |---|---|---|
-| `firstboot` | `firstboot` | Optional wizard UI at `/wizard` |
 | `hsm_hardware` | `hsm-connector` | External HSM connector runtime |
 | `hsm_software` | `software-vault` | Software crypto provider runtime |
 
@@ -70,8 +68,7 @@ flowchart TD
   C --> D[Mandatory clean reset: compose down -v]
   D --> E[Seed cert bootstrap secret in certs-key-data volume when root_key_mode=software]
   E --> F[Start stack: docker compose up -d]
-  F --> G[Optional firstboot profile start]
-  G --> H[Wait readiness and print URLs]
+  F --> G[Wait readiness and print URLs]
 ```
 
 ### Startup behavior details
@@ -236,15 +233,3 @@ If a feature flag is false, corresponding profile service is not started.
 | `dataprotect` | tokenize/mask/redact and app data encryption |
 | `cluster-manager` + `etcd` | clustering control plane |
 | `hsm-connector` / `software-vault` | cryptographic provider mode backends |
-| `firstboot` | optional setup UI fallback at `/wizard` |
-
-## 8. First-Boot Wizard Usage Scenarios
-
-First-boot is **optional** in current installer flow and is useful when:
-
-1. You need guided config preview/apply from browser UI.
-2. You deploy appliance-like environments and want day-0 setup UI.
-3. You need to regenerate config files in controlled workflow.
-
-For scripted clean installs, `install.sh` is sufficient and first-boot can remain disabled.
-

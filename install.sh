@@ -22,6 +22,7 @@ STEP_INDEX=0
 STEP_TOTAL=19
 INSTALL_WARNINGS=()
 INSTALL_MODE="interactive"
+BASH_BIN="${BASH:-bash}"
 
 FEATURE_KEYS=(
   secrets
@@ -565,12 +566,92 @@ wait_for_docker() {
 }
 
 compose_exec() {
-  KMS_DOCKER_BIN="${DOCKER_BIN[*]}" bash "${ROOT_DIR}/infra/scripts/compose-kms.sh" "$@"
+  KMS_DOCKER_BIN="${DOCKER_BIN[*]}" "${BASH_BIN}" "${ROOT_DIR}/infra/scripts/compose-kms.sh" "$@"
+}
+
+compose_service_metadata() {
+  local config_output=""
+  if ! config_output="$(compose_exec config 2>/dev/null)"; then
+    return 1
+  fi
+
+  printf '%s\n' "${config_output}" | awk '
+    /^services:[[:space:]]*$/ {
+      in_services=1
+      next
+    }
+    in_services == 1 && /^[^[:space:]]/ {
+      in_services=0
+      if (current != "") {
+        print current "|" image "|" has_build
+      }
+      current=""
+      image=""
+      has_build=0
+    }
+    in_services == 1 && /^[[:space:]]{2}[[:alnum:]_.-]+:[[:space:]]*$/ {
+      if (current != "") {
+        print current "|" image "|" has_build
+      }
+      current=$1
+      sub(":$", "", current)
+      image=""
+      has_build=0
+      next
+    }
+    in_services == 1 && current != "" && /^[[:space:]]{4}image:[[:space:]]*/ {
+      image=$0
+      sub(/^[[:space:]]{4}image:[[:space:]]*/, "", image)
+      gsub(/^["'"'"']|["'"'"']$/, "", image)
+      next
+    }
+    in_services == 1 && current != "" && /^[[:space:]]{4}build:[[:space:]]*$/ {
+      has_build=1
+      next
+    }
+    END {
+      if (current != "") {
+        print current "|" image "|" has_build
+      }
+    }
+  '
 }
 
 docker_image_exists() {
   local image_ref="$1"
   "${DOCKER_BIN[@]}" image inspect "${image_ref}" >/dev/null 2>&1
+}
+
+ensure_local_build_base_images() {
+  case "${BUILD_MODE:-build-missing}" in
+    no-build)
+      return 0
+      ;;
+  esac
+
+  local -a base_images=(
+    "vecta-local/golang:1.26-alpine|golang:1.26-alpine"
+    "vecta-local/alpine:3.20|alpine:3.20"
+    "vecta-local/alpine:3.21|alpine:3.21"
+    "vecta-local/node:20-alpine|node:20-alpine"
+    "vecta-local/nginx:1.27-alpine|nginx:1.27-alpine"
+    "vecta-local/trivy:0.69.3|aquasec/trivy:0.69.3"
+  )
+
+  local spec alias_ref source_ref
+  for spec in "${base_images[@]}"; do
+    alias_ref="${spec%%|*}"
+    source_ref="${spec##*|}"
+    if docker_image_exists "${alias_ref}"; then
+      continue
+    fi
+    if ! docker_image_exists "${source_ref}"; then
+      info "Pulling local build base image ${source_ref} ..."
+      "${DOCKER_BIN[@]}" pull "${source_ref}" >/dev/null
+    fi
+    info "Tagging local build base image ${source_ref} as ${alias_ref}"
+    "${DOCKER_BIN[@]}" tag "${source_ref}" "${alias_ref}"
+  done
 }
 
 adjust_unsupported_profiles() {
@@ -600,6 +681,41 @@ configure_build_runtime() {
   export DOCKER_BUILDKIT=1
   export COMPOSE_PARALLEL_LIMIT="${BUILD_PARALLEL_LIMIT}"
   info "Build runtime: mode=${BUILD_MODE}, parallel_limit=${COMPOSE_PARALLEL_LIMIT}, buildkit=${DOCKER_BUILDKIT}"
+}
+
+build_services_sequentially() {
+  local mode="$1"
+  local -a build_targets=()
+  local service image has_build
+
+  while IFS='|' read -r service image has_build; do
+    [[ -n "${service}" ]] || continue
+    [[ "${has_build}" == "1" ]] || continue
+    case "${mode}" in
+      missing)
+        if [[ -n "${image}" ]] && docker_image_exists "${image}"; then
+          continue
+        fi
+        ;;
+      all)
+        ;;
+      *)
+        die "Unknown build mode selector: ${mode}"
+        ;;
+    esac
+    build_targets+=("${service}")
+  done < <(compose_service_metadata)
+
+  if [[ "${#build_targets[@]}" -eq 0 ]]; then
+    info "No service images require local builds."
+    return 0
+  fi
+
+  local svc
+  for svc in "${build_targets[@]}"; do
+    info "Building service image: ${svc}"
+    compose_exec build "${svc}"
+  done
 }
 
 load_image_bundle_if_requested() {
@@ -989,7 +1105,9 @@ collect_inputs() {
     echo "Cluster deployment mode:"
     echo "  1) new installation (leader / seed node)"
     echo "  2) join existing cluster (follower)"
-    read -r -p "Choose cluster mode [1/2] (default 1): " CLUSTER_MODE_CHOICE || true
+    if [[ -z "${CLUSTER_MODE_CHOICE:-}" ]]; then
+      read -r -p "Choose cluster mode [1/2] (default 1): " CLUSTER_MODE_CHOICE || true
+    fi
     CLUSTER_MODE_CHOICE="$(trim "${CLUSTER_MODE_CHOICE}")"
     case "${CLUSTER_MODE_CHOICE:-1}" in
       1) CLUSTER_DEPLOYMENT_MODE="new-install"; CLUSTER_NODE_ROLE="leader" ;;
@@ -1056,8 +1174,8 @@ collect_inputs() {
   prompt_default CERTS_PASSPHRASE_FILE_PATH "CRWK passphrase file path" "/var/lib/vecta/certs/bootstrap.passphrase"
   prompt_yes_no CERTS_USE_TPM_SEAL "Use TPM sealing for CRWK blob" "false"
 
-  CERTS_BOOTSTRAP_PASSPHRASE=""
-  CERTS_BOOTSTRAP_AUTOGEN="false"
+  CERTS_BOOTSTRAP_PASSPHRASE="${CERTS_BOOTSTRAP_PASSPHRASE:-}"
+  CERTS_BOOTSTRAP_AUTOGEN="${CERTS_BOOTSTRAP_AUTOGEN:-false}"
   if [[ "${ROOT_KEY_MODE}" == "software" ]]; then
     prompt_yes_no CERTS_BOOTSTRAP_AUTOGEN "Auto-generate certificate bootstrap passphrase" "true"
     if [[ "${CERTS_BOOTSTRAP_AUTOGEN}" == "true" ]]; then
@@ -1084,7 +1202,9 @@ collect_inputs() {
   echo "Feature profile:"
   echo "  1) recommended (current template defaults)"
   echo "  2) all (enable every feature profile)"
-  read -r -p "Choose feature profile [1/2] (default 1): " FEATURE_PROFILE || true
+  if [[ -z "${FEATURE_PROFILE:-}" ]]; then
+    read -r -p "Choose feature profile [1/2] (default 1): " FEATURE_PROFILE || true
+  fi
   FEATURE_PROFILE="$(trim "${FEATURE_PROFILE}")"
   FEATURE_PROFILE="${FEATURE_PROFILE:-1}"
   if [[ "${FEATURE_PROFILE}" == "2" ]]; then
@@ -1127,7 +1247,6 @@ collect_inputs() {
   prompt_default HTTP_PORT "Public HTTP port" "80"
   prompt_default HTTPS_PORT "Public HTTPS port" "443"
   prompt_default DASHBOARD_PORT "Dashboard port" "5173"
-  prompt_default FIRSTBOOT_PORT "First-boot wizard port" "9443"
 
   local detected_cpus
   detected_cpus="$(detect_cpu_count)"
@@ -1140,7 +1259,9 @@ collect_inputs() {
   echo "  1) Fast start (no build, requires preloaded images)"
   echo "  2) Build missing images only (recommended)"
   echo "  3) Rebuild all images (slow)"
-  read -r -p "Choose build mode [1/2/3] (default 2): " BUILD_MODE_CHOICE || true
+  if [[ -z "${BUILD_MODE_CHOICE:-}" ]]; then
+    read -r -p "Choose build mode [1/2/3] (default 2): " BUILD_MODE_CHOICE || true
+  fi
   BUILD_MODE_CHOICE="$(trim "${BUILD_MODE_CHOICE}")"
   case "${BUILD_MODE_CHOICE:-2}" in
     1) BUILD_MODE="no-build" ;;
@@ -1152,7 +1273,6 @@ collect_inputs() {
   prompt_default IMAGE_BUNDLE_PATH "Optional prebuilt image bundle (.tar) path (blank to skip)" ""
   IMAGE_BUNDLE_PATH="$(trim "${IMAGE_BUNDLE_PATH}")"
 
-  prompt_yes_no ENABLE_FIRSTBOOT_UI "Start optional first-boot wizard container as well" "false"
   prompt_yes_no ENABLE_FDE "Enable FDE configuration in fde.yaml" "false"
 
   if [[ "${ENABLE_FDE}" == "true" ]]; then
@@ -1311,7 +1431,6 @@ firewall:
         management:
             - ${HTTPS_PORT}
             - 5696
-            - ${FIRSTBOOT_PORT}
     metadata: {}
     overrides: {}
 hsm:
@@ -1435,7 +1554,7 @@ EOF
 write_env_file() {
   local profiles
   local compose_project_name
-  profiles="$(bash "${PARSER_SCRIPT}" "${DEPLOYMENT_FILE}")"
+  profiles="$("${BASH_BIN}" "${PARSER_SCRIPT}" "${DEPLOYMENT_FILE}")"
   compose_project_name="${COMPOSE_PROJECT_NAME:-vecta-kms}"
   cat > "${ENV_FILE}" <<EOF
 COMPOSE_PROJECT_NAME=${compose_project_name}
@@ -1479,10 +1598,6 @@ CLUSTER_MEK_IN_HSM=${CLUSTER_MEK_IN_HSM:-false}
 CLUSTER_MEK_LOGICAL_ID=${CLUSTER_MEK_LOGICAL_ID:-}
 KEYCORE_MEK_IN_HSM=${KEYCORE_MEK_IN_HSM:-false}
 KEYCORE_MEK_LOGICAL_ID=${KEYCORE_MEK_LOGICAL_ID:-}
-FIRSTBOOT_CONFIG_DIR=./infra/deployment
-FIRSTBOOT_PORT=${FIRSTBOOT_PORT}
-FIRSTBOOT_PROJECT_ROOT=${ROOT_DIR}
-FIRSTBOOT_RUNTIME_APPLY_ENABLED=true
 EOF
 }
 
@@ -1550,7 +1665,6 @@ generate_override_file() {
           envoy:80) host_port="${HTTP_PORT}"; pinned_port="true" ;;
           envoy:443) host_port="${HTTPS_PORT}"; pinned_port="true" ;;
           dashboard:5173) host_port="${DASHBOARD_PORT}"; pinned_port="true" ;;
-          firstboot:9443) host_port="${FIRSTBOOT_PORT}"; pinned_port="true" ;;
         esac
 
         local assignment_key="${proto_name}:${host_port}"
@@ -1654,7 +1768,7 @@ apply_mandatory_clean_reset() {
 
 start_stack() {
   export COMPOSE_PROFILES
-  COMPOSE_PROFILES="$(bash "${PARSER_SCRIPT}" "${DEPLOYMENT_FILE}")"
+  COMPOSE_PROFILES="$("${BASH_BIN}" "${PARSER_SCRIPT}" "${DEPLOYMENT_FILE}")"
   export HSM_MODE
 
   info "Starting KMS stack with COMPOSE_PROFILES=${COMPOSE_PROFILES}"
@@ -1665,30 +1779,18 @@ start_stack() {
       fi
       ;;
     build-missing)
-      compose_exec up -d --remove-orphans
+      build_services_sequentially missing
+      compose_exec up -d --no-build --remove-orphans
       ;;
     rebuild-all)
-      compose_exec up -d --build --remove-orphans
+      build_services_sequentially all
+      compose_exec up -d --no-build --remove-orphans
       ;;
     *)
       die "Unknown BUILD_MODE value: ${BUILD_MODE}"
       ;;
   esac
 
-  if [[ "${ENABLE_FIRSTBOOT_UI}" == "true" ]]; then
-    info "Starting first-boot wizard service..."
-    case "${BUILD_MODE}" in
-      no-build)
-        compose_exec up -d --no-deps --no-build firstboot || warn "First-boot container not started in no-build mode (image missing)."
-        ;;
-      build-missing)
-        compose_exec up -d --no-deps firstboot
-        ;;
-      rebuild-all)
-        compose_exec up -d --build --no-deps firstboot
-        ;;
-    esac
-  fi
 }
 
 extract_join_credential_payload() {
@@ -1906,9 +2008,6 @@ print_summary() {
   echo "Access URLs:"
   echo "  Dashboard : http://${display_ip}:${DASHBOARD_PORT}"
   echo "  HTTPS Edge: https://${display_ip}:${HTTPS_PORT}"
-  if [[ "${ENABLE_FIRSTBOOT_UI}" == "true" ]]; then
-    echo "  First boot: http://${display_ip}:${FIRSTBOOT_PORT}/wizard"
-  fi
   echo
   echo "Default admin credentials:"
   echo "  Username : ${ADMIN_USERNAME}"
@@ -1933,8 +2032,8 @@ print_summary() {
 }
 
 collect_fast_inputs() {
-  info "Fast installation mode: deploying the base KMS stack and first-boot UI"
-  info "Additional features can be enabled later via the dashboard onboarding wizard."
+  info "Fast installation mode: deploying the base KMS stack from script defaults."
+  info "To change enabled modules later, update infra/deployment/deployment.yaml and rerun the installer or start script."
   FEATURE_ALL="false"
   prompt_default INSTALL_DIR "Install directory" "${SOURCE_DIR}"
   INSTALL_DIR="$(trim "$(normalize_host_path "${INSTALL_DIR}")")"
@@ -1952,8 +2051,6 @@ collect_fast_inputs() {
   HTTP_PORT="80"
   HTTPS_PORT="443"
   DASHBOARD_PORT="5173"
-  FIRSTBOOT_PORT="9443"
-  ENABLE_FIRSTBOOT_UI="true"
   BUILD_MODE="${BUILD_MODE:-build-missing}"
   BUILD_PARALLEL_LIMIT="$(nproc 2>/dev/null || echo 4)"
   ENABLE_FDE="false"
@@ -2120,6 +2217,7 @@ main() {
   step "Configure build runtime and preload image bundle"
   configure_build_runtime
   load_image_bundle_if_requested
+  ensure_local_build_base_images
   step "Start docker services"
   start_stack
   step "Wait for stack readiness"

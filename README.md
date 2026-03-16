@@ -45,7 +45,6 @@ Enterprise Key Management System with full lifecycle cryptographic operations, c
 | **ai** | — | AI/ML model encryption and key management |
 | **software-vault** | — | Software-based secure enclave for key storage |
 | **cluster-manager** | — | Raft-based cluster coordination, leader election, replication |
-| **firstboot** | — | First-boot setup wizard for initial configuration |
 | **hsm-integration** | — | HSM backend abstraction — PKCS#11, proprietary APIs |
 
 ## Agent & Provider Packages
@@ -102,7 +101,7 @@ Enterprise Key Management System with full lifecycle cryptographic operations, c
 .\install-windows.ps1
 ```
 
-The installer and first-boot flow generate `infra/deployment/deployment.yaml`, understand the newer optional profiles such as `posture_management` and `qrng_generator`, and support built-in cluster replication presets: `cluster-profile-base`, `cluster-profile-standard`, `cluster-profile-security`, and `cluster-profile-full`.
+The installer generates `infra/deployment/deployment.yaml`, understands the newer optional profiles such as `posture_management` and `qrng_generator`, and supports built-in cluster replication presets: `cluster-profile-base`, `cluster-profile-standard`, `cluster-profile-security`, and `cluster-profile-full`.
 
 ### Development
 

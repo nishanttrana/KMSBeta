@@ -9,7 +9,6 @@ Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/vecta
 EnvironmentFile=-/etc/vecta/vecta.env
-ExecStartPre=-/bin/bash /opt/vecta/infra/scripts/compose-kms.sh stop firstboot
 ExecStart=/bin/bash /opt/vecta/infra/scripts/start-kms.sh /etc/vecta/deployment.yaml
 ExecStop=/bin/bash /opt/vecta/infra/scripts/stop-kms.sh /etc/vecta/deployment.yaml --force
 ExecReload=/bin/bash /opt/vecta/infra/scripts/start-kms.sh /etc/vecta/deployment.yaml

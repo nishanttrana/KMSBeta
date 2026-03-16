@@ -5,3 +5,7 @@ postgres-data
 consul-data
 .DS_Store
 Thumbs.db
+lost+found
+*/lost+found
+.Trash-*
+System Volume Information
