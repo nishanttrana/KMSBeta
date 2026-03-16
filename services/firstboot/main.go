@@ -23,6 +23,7 @@ func main() {
 		logger.Fatalf("config validation failed: %v", err)
 	}
 	srv := pkgconfig.NewHTTPServer(port, server)
+	srv.WriteTimeout = 0
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()

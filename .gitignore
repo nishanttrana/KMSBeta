@@ -3,6 +3,7 @@ infra/certs/out/**
 !infra/certs/out/
 !infra/certs/out/.gitkeep
 !infra/certs/out/README.md
+infra/deployment/certs-bootstrap.secret
 
 # Local environment overrides
 .env.local

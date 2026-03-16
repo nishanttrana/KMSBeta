@@ -24,6 +24,7 @@ const (
 	defaultFDEPath           = "/etc/vecta/fde.yaml"
 	defaultAuthPath          = "/etc/vecta/auth-bootstrap.yaml"
 	defaultCertBootstrapPath = "/etc/vecta/certs-bootstrap.secret"
+	defaultVolumePassphrase  = "/var/lib/vecta/certs/bootstrap.passphrase"
 	defaultCertSealedKeyPath = "/var/lib/vecta/certs/crwk.sealed"
 )
 
@@ -65,7 +66,7 @@ func generateConfigs(req WizardRequest) (GeneratedConfigs, error) {
 		warnings = append(warnings, "certificate bootstrap passphrase was auto-generated and written to cert bootstrap secret file")
 	}
 	sealedPath := firstNonEmpty(certSecurity.SealedKeyPath, defaultCertSealedKeyPath)
-	passphraseFilePath := firstNonEmpty(certSecurity.PassphraseFilePath, paths["cert_bootstrap"])
+	passphraseFilePath := firstNonEmpty(certSecurity.PassphraseFilePath, defaultVolumePassphrase)
 
 	deployment := map[string]any{
 		"apiVersion": "kms.vecta.io/v1",

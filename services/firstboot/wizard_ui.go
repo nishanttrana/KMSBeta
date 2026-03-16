@@ -366,6 +366,8 @@ const wizardHTML = `<!doctype html>
     const payloadPreview = document.getElementById("payload_preview");
     const out = document.getElementById("out");
     const statusEl = document.getElementById("status");
+    let redirectTimer = null;
+    let statusPollTimer = null;
     let currentStep = 0;
 
     function val(id) {
@@ -520,9 +522,80 @@ const wizardHTML = `<!doctype html>
       payloadPreview.textContent = JSON.stringify(buildPayload(), null, 2);
     }
 
+    function clearTimers() {
+      if (redirectTimer) {
+        clearTimeout(redirectTimer);
+        redirectTimer = null;
+      }
+      if (statusPollTimer) {
+        clearTimeout(statusPollTimer);
+        statusPollTimer = null;
+      }
+    }
+
+    function applyResultPayload(data) {
+      if (data && data.result && typeof data.result === "object") {
+        return data.result;
+      }
+      return data;
+    }
+
+    function resultReadyURL(result) {
+      if (!result || typeof result !== "object") {
+        return "";
+      }
+      return result.login_url || result.redirect_url || result.dashboard_url || "";
+    }
+
+    function scheduleRedirect(result) {
+      const target = resultReadyURL(result);
+      if (!target) {
+        return false;
+      }
+      const delaySeconds = Number.isFinite(result.redirect_delay_seconds) ? result.redirect_delay_seconds : 6;
+      statusEl.textContent = "ready to sign in, redirecting...";
+      redirectTimer = setTimeout(() => {
+        window.location.href = target;
+      }, Math.max(delaySeconds, 2) * 1000);
+      return true;
+    }
+
+    async function pollApplyStatus(path) {
+      try {
+        const res = await fetch(path);
+        const data = await res.json();
+        out.textContent = JSON.stringify(data, null, 2);
+
+        if (data.status === "running" || data.status === "accepted") {
+          statusEl.textContent = "deploying...";
+          statusPollTimer = setTimeout(() => pollApplyStatus(path), 2000);
+          return;
+        }
+
+        const result = applyResultPayload(data);
+        if ((data.status === "ready" || (data.status === "succeeded" && result.login_ready)) && scheduleRedirect(result)) {
+          return;
+        }
+        if (data.status === "succeeded") {
+          statusEl.textContent = "verifying readiness...";
+          statusPollTimer = setTimeout(() => pollApplyStatus(path), 2000);
+          return;
+        }
+        if (data.status === "ready") {
+          statusEl.textContent = "ready to sign in";
+          return;
+        }
+        statusEl.textContent = data.status === "failed" || !res.ok ? "failed" : "done";
+      } catch (err) {
+        out.textContent = String(err);
+        statusEl.textContent = "failed";
+      }
+    }
+
     async function submit(path) {
-      statusEl.textContent = "working...";
+      statusEl.textContent = path.includes("/apply") ? "deploying..." : "working...";
       out.textContent = "";
+      clearTimers();
       try {
         const payload = buildPayload();
         const res = await fetch(path, {
@@ -532,6 +605,14 @@ const wizardHTML = `<!doctype html>
         });
         const data = await res.json();
         out.textContent = JSON.stringify(data, null, 2);
+        if (path.includes("/apply") && res.status === 202 && data.status_url) {
+          statusEl.textContent = "deploying...";
+          statusPollTimer = setTimeout(() => pollApplyStatus(data.status_url), 1500);
+          return;
+        }
+        if (res.ok && path.includes("/apply") && scheduleRedirect(applyResultPayload(data))) {
+          return;
+        }
         statusEl.textContent = res.ok ? "done" : "failed";
       } catch (err) {
         out.textContent = String(err);
