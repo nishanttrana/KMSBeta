@@ -43,10 +43,27 @@ type SystemHealthSummary struct {
 	AllOK    bool `json:"all_ok"`
 }
 
+type PublishedInterface struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Description    string `json:"description,omitempty"`
+	Service        string `json:"service"`
+	Protocol       string `json:"protocol"`
+	CertType       string `json:"cert_type,omitempty"`
+	AutoCreateCert bool   `json:"auto_create_cert"`
+	BindAddress    string `json:"bind_address"`
+	Port           int    `json:"port"`
+	ContainerPort  int    `json:"container_port,omitempty"`
+	Enabled        bool   `json:"enabled"`
+	Status         string `json:"status"`
+	Source         string `json:"source,omitempty"`
+}
+
 type SystemHealthSnapshot struct {
-	Services    []ServiceHealth     `json:"services"`
-	Summary     SystemHealthSummary `json:"summary"`
-	CollectedAt string              `json:"collected_at"`
+	Services    []ServiceHealth      `json:"services"`
+	Interfaces  []PublishedInterface `json:"interfaces"`
+	Summary     SystemHealthSummary  `json:"summary"`
+	CollectedAt string               `json:"collected_at"`
 }
 
 type serviceTarget struct {
@@ -294,6 +311,7 @@ func (c *SystemHealthChecker) Snapshot(ctx context.Context) (SystemHealthSnapsho
 	services := make(map[string]ServiceHealth)
 	pinnedDown := make(map[string]bool)
 	var sourceErr error
+	interfaces := []PublishedInterface{}
 
 	if c.restartHTTP != nil {
 		items, err := c.collectComposeServiceHealth(ctx)
@@ -309,6 +327,15 @@ func (c *SystemHealthChecker) Snapshot(ctx context.Context) (SystemHealthSnapsho
 			if strings.ToLower(item.Status) != "running" {
 				pinnedDown[key] = true
 			}
+		}
+		liveInterfaces, ifaceErr := c.collectComposePublishedInterfaces(ctx)
+		if ifaceErr != nil {
+			sourceErr = mergeSourceErr(sourceErr, ifaceErr)
+			if c.logger != nil {
+				c.logger.Printf("system health: interface discovery failed: %v", ifaceErr)
+			}
+		} else {
+			interfaces = liveInterfaces
 		}
 	}
 
@@ -360,6 +387,7 @@ func (c *SystemHealthChecker) Snapshot(ctx context.Context) (SystemHealthSnapsho
 	summary := summarizeServiceHealth(list)
 	return SystemHealthSnapshot{
 		Services:    list,
+		Interfaces:  interfaces,
 		Summary:     summary,
 		CollectedAt: time.Now().UTC().Format(time.RFC3339),
 	}, sourceErr
@@ -559,43 +587,10 @@ type composeAggregate struct {
 }
 
 func (c *SystemHealthChecker) collectComposeServiceHealth(ctx context.Context) ([]ServiceHealth, error) {
-	if c.restartHTTP == nil {
-		return nil, fmt.Errorf("%w: docker client unavailable", errRestartUnavailable)
-	}
-	if _, statErr := os.Stat(c.dockerSockPath); statErr != nil {
-		return nil, fmt.Errorf("%w: docker socket unavailable at %s", errRestartUnavailable, c.dockerSockPath)
-	}
-
-	filters := map[string][]string{
-		"label": {
-			"com.docker.compose.project=" + c.composeProject,
-		},
-	}
-	rawFilters, err := json.Marshal(filters)
+	items, err := c.listComposeContainers(ctx, "")
 	if err != nil {
-		return nil, fmt.Errorf("%w: failed to encode docker filters", errRestartFailed)
+		return nil, err
 	}
-
-	path := "http://docker/containers/json?all=1&filters=" + url.QueryEscape(string(rawFilters))
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, path, nil)
-	if err != nil {
-		return nil, fmt.Errorf("%w: failed to build docker query", errRestartFailed)
-	}
-	resp, err := c.restartHTTP.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("%w: failed to query docker containers", errRestartUnavailable)
-	}
-	defer resp.Body.Close() //nolint:errcheck
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("%w: docker query failed (%d): %s", errRestartFailed, resp.StatusCode, bodySnippet(resp.Body))
-	}
-
-	var items []dockerContainerItem
-	if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
-		return nil, fmt.Errorf("%w: failed to decode docker response", errRestartFailed)
-	}
-
 	agg := make(map[string]*composeAggregate)
 	for _, item := range items {
 		serviceName := strings.TrimSpace(item.Label["com.docker.compose.service"])
@@ -641,8 +636,139 @@ func (c *SystemHealthChecker) collectComposeServiceHealth(ctx context.Context) (
 	return out, nil
 }
 
+func (c *SystemHealthChecker) collectComposePublishedInterfaces(ctx context.Context) ([]PublishedInterface, error) {
+	items, err := c.listComposeContainers(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	type aggregate struct {
+		iface     PublishedInterface
+		addresses []string
+	}
+	seenAddress := func(values []string, candidate string) bool {
+		for _, item := range values {
+			if item == candidate {
+				return true
+			}
+		}
+		return false
+	}
+	merged := map[string]*aggregate{}
+	for _, item := range items {
+		serviceName := strings.ToLower(strings.TrimSpace(item.Label["com.docker.compose.service"]))
+		if serviceName == "" {
+			continue
+		}
+		state := strings.ToLower(strings.TrimSpace(item.State))
+		for _, binding := range item.Ports {
+			if binding.PublicPort <= 0 {
+				continue
+			}
+			bindAddress := strings.TrimSpace(binding.IP)
+			if bindAddress == "" {
+				bindAddress = "0.0.0.0"
+			}
+			key := fmt.Sprintf("%s|%d|%d|%s", serviceName, binding.PublicPort, binding.PrivatePort, binding.Type)
+
+			meta := publishedInterfaceMetadata(serviceName, binding.PublicPort, binding.PrivatePort)
+			if current, ok := merged[key]; ok {
+				if !seenAddress(current.addresses, bindAddress) {
+					current.addresses = append(current.addresses, bindAddress)
+				}
+				if interfaceStatusRank(composeInterfaceStatus(state)) > interfaceStatusRank(current.iface.Status) {
+					current.iface.Status = composeInterfaceStatus(state)
+				}
+				current.iface.Enabled = current.iface.Enabled || (state != "exited" && state != "dead")
+				continue
+			}
+			merged[key] = &aggregate{
+				iface: PublishedInterface{
+					ID:             fmt.Sprintf("%s-%d", serviceName, binding.PublicPort),
+					Name:           meta.Name,
+					Description:    meta.Description,
+					Service:        serviceName,
+					Protocol:       meta.Protocol,
+					CertType:       meta.CertType,
+					AutoCreateCert: meta.AutoCreateCert,
+					BindAddress:    bindAddress,
+					Port:           binding.PublicPort,
+					ContainerPort:  binding.PrivatePort,
+					Enabled:        state != "exited" && state != "dead",
+					Status:         composeInterfaceStatus(state),
+					Source:         "docker",
+				},
+				addresses: []string{bindAddress},
+			}
+		}
+	}
+
+	out := make([]PublishedInterface, 0, len(merged))
+	for _, item := range merged {
+		sort.Strings(item.addresses)
+		item.iface.BindAddress = strings.Join(item.addresses, " / ")
+		out = append(out, item.iface)
+	}
+
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Port != out[j].Port {
+			return out[i].Port < out[j].Port
+		}
+		if out[i].Service != out[j].Service {
+			return out[i].Service < out[j].Service
+		}
+		return out[i].Name < out[j].Name
+	})
+	return out, nil
+}
+
+func (c *SystemHealthChecker) listComposeContainers(ctx context.Context, composeService string) ([]dockerContainerItem, error) {
+	if c.restartHTTP == nil {
+		return nil, fmt.Errorf("%w: docker client unavailable", errRestartUnavailable)
+	}
+	if _, statErr := os.Stat(c.dockerSockPath); statErr != nil {
+		return nil, fmt.Errorf("%w: docker socket unavailable at %s", errRestartUnavailable, c.dockerSockPath)
+	}
+
+	filters := map[string][]string{
+		"label": {
+			"com.docker.compose.project=" + c.composeProject,
+		},
+	}
+	if strings.TrimSpace(composeService) != "" {
+		filters["label"] = append(filters["label"], "com.docker.compose.service="+strings.TrimSpace(composeService))
+	}
+	rawFilters, err := json.Marshal(filters)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to encode docker filters", errRestartFailed)
+	}
+
+	path := "http://docker/containers/json?all=1&filters=" + url.QueryEscape(string(rawFilters))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to build docker query", errRestartFailed)
+	}
+	resp, err := c.restartHTTP.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to query docker containers", errRestartUnavailable)
+	}
+	defer resp.Body.Close() //nolint:errcheck
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("%w: docker query failed (%d): %s", errRestartFailed, resp.StatusCode, bodySnippet(resp.Body))
+	}
+
+	var items []dockerContainerItem
+	if err := json.NewDecoder(resp.Body).Decode(&items); err != nil {
+		return nil, fmt.Errorf("%w: failed to decode docker response", errRestartFailed)
+	}
+	return items, nil
+}
+
 func composeServiceToHealthName(serviceName string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(serviceName)) {
+	case "dashboard":
+		return "dashboard", true
 	case "auth":
 		return "kms-auth", true
 	case "keycore":
@@ -703,6 +829,103 @@ func composeServiceToHealthName(serviceName string) (string, bool) {
 		return "etcd", true
 	default:
 		return "", false
+	}
+}
+
+type interfaceMetadata struct {
+	Name           string
+	Description    string
+	Protocol       string
+	CertType       string
+	AutoCreateCert bool
+}
+
+func publishedInterfaceMetadata(serviceName string, publicPort int, privatePort int) interfaceMetadata {
+	serviceName = strings.ToLower(strings.TrimSpace(serviceName))
+	switch serviceName {
+	case "dashboard":
+		return interfaceMetadata{
+			Name:           "dashboard-ui",
+			Description:    "Direct Web Dashboard UI",
+			Protocol:       "HTTP",
+			CertType:       "None",
+			AutoCreateCert: false,
+		}
+	case "envoy":
+		switch publicPort {
+		case 80:
+			return interfaceMetadata{Name: "edge-http", Description: "HTTP edge listener / redirect", Protocol: "HTTP", CertType: "None"}
+		case 443:
+			return interfaceMetadata{Name: "rest-api", Description: "Primary HTTPS API gateway", Protocol: "TLS 1.3", CertType: "Managed TLS", AutoCreateCert: true}
+		case 5696:
+			return interfaceMetadata{Name: "kmip-tls", Description: "KMIP Protocol Interface", Protocol: "Mutual TLS (mTLS)", CertType: "Managed TLS", AutoCreateCert: true}
+		case 9901:
+			return interfaceMetadata{Name: "envoy-admin", Description: "Envoy admin interface", Protocol: "HTTP", CertType: "None"}
+		}
+	case "hsm-integration":
+		return interfaceMetadata{Name: "hsm-cli-ssh", Description: "HSM integration SSH endpoint", Protocol: "SSH", CertType: "Host key"}
+	}
+
+	switch {
+	case publicPort == 5696:
+		return interfaceMetadata{Name: serviceName + "-kmip", Description: prettyServiceLabel(serviceName) + " KMIP interface", Protocol: "Mutual TLS (mTLS)", CertType: "Managed TLS", AutoCreateCert: true}
+	case publicPort >= 18000 && publicPort < 19000:
+		return interfaceMetadata{Name: serviceName + "-grpc", Description: prettyServiceLabel(serviceName) + " gRPC endpoint", Protocol: "gRPC", CertType: "None"}
+	case publicPort == 15696:
+		return interfaceMetadata{Name: serviceName + "-grpc", Description: prettyServiceLabel(serviceName) + " gRPC endpoint", Protocol: "gRPC", CertType: "None"}
+	case publicPort == 5432 || publicPort == 4222 || publicPort == 6379 || publicPort == 9170:
+		return interfaceMetadata{Name: serviceName + "-tcp", Description: prettyServiceLabel(serviceName) + " TCP endpoint", Protocol: "TCP", CertType: "None"}
+	case publicPort == 8500 || publicPort == 2379 || publicPort == 9901 || publicPort == 5173 || publicPort == 8230:
+		return interfaceMetadata{Name: serviceName + "-http", Description: prettyServiceLabel(serviceName) + " HTTP endpoint", Protocol: "HTTP", CertType: "None"}
+	case privatePort >= 8000 && privatePort < 9000:
+		return interfaceMetadata{Name: serviceName + "-http", Description: prettyServiceLabel(serviceName) + " API endpoint", Protocol: "HTTP", CertType: "None"}
+	default:
+		return interfaceMetadata{Name: serviceName + "-" + strconv.Itoa(publicPort), Description: prettyServiceLabel(serviceName) + " published port", Protocol: strings.ToUpper(firstNonEmpty("tcp")), CertType: "None"}
+	}
+}
+
+func prettyServiceLabel(serviceName string) string {
+	raw := strings.TrimSpace(strings.ReplaceAll(serviceName, "-", " "))
+	if raw == "" {
+		return "Service"
+	}
+	parts := strings.Fields(raw)
+	for i, part := range parts {
+		if part == "" {
+			continue
+		}
+		parts[i] = strings.ToUpper(part[:1]) + part[1:]
+	}
+	return strings.Join(parts, " ")
+}
+
+func composeInterfaceStatus(state string) string {
+	switch strings.ToLower(strings.TrimSpace(state)) {
+	case "running":
+		return "listening"
+	case "restarting":
+		return "restarting"
+	case "paused", "created":
+		return "starting"
+	case "exited", "dead":
+		return "stopped"
+	default:
+		return "unknown"
+	}
+}
+
+func interfaceStatusRank(status string) int {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "listening":
+		return 4
+	case "restarting":
+		return 3
+	case "starting":
+		return 2
+	case "stopped":
+		return 1
+	default:
+		return 0
 	}
 }
 
@@ -799,9 +1022,18 @@ func serviceNameToComposeService(name string) string {
 }
 
 type dockerContainerItem struct {
-	ID    string            `json:"Id"`
-	State string            `json:"State"`
-	Label map[string]string `json:"Labels"`
+	ID    string              `json:"Id"`
+	State string              `json:"State"`
+	Label map[string]string   `json:"Labels"`
+	Names []string            `json:"Names"`
+	Ports []dockerPortBinding `json:"Ports"`
+}
+
+type dockerPortBinding struct {
+	IP          string `json:"IP"`
+	PrivatePort int    `json:"PrivatePort"`
+	PublicPort  int    `json:"PublicPort"`
+	Type        string `json:"Type"`
 }
 
 func (c *SystemHealthChecker) findComposeContainer(ctx context.Context, composeService string) (string, error) {

@@ -53,6 +53,8 @@ type Store interface {
 	ListKeyInterfaceSubjectPolicies(ctx context.Context, tenantID string, interfaceName string) ([]KeyInterfaceSubjectPolicy, error)
 	UpsertKeyInterfaceSubjectPolicy(ctx context.Context, policy KeyInterfaceSubjectPolicy) (KeyInterfaceSubjectPolicy, error)
 	DeleteKeyInterfaceSubjectPolicy(ctx context.Context, tenantID string, id string) error
+	GetKeyInterfaceTLSConfig(ctx context.Context, tenantID string) (KeyInterfaceTLSConfig, error)
+	UpsertKeyInterfaceTLSConfig(ctx context.Context, cfg KeyInterfaceTLSConfig) (KeyInterfaceTLSConfig, error)
 	ListKeyInterfacePorts(ctx context.Context, tenantID string) ([]KeyInterfacePort, error)
 	UpsertKeyInterfacePort(ctx context.Context, port KeyInterfacePort) (KeyInterfacePort, error)
 	DeleteKeyInterfacePort(ctx context.Context, tenantID string, interfaceName string) error

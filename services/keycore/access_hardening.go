@@ -45,22 +45,40 @@ type KeyInterfacePort struct {
 	InterfaceName string    `json:"interface_name"`
 	BindAddress   string    `json:"bind_address"`
 	Port          int       `json:"port"`
+	Protocol      string    `json:"protocol,omitempty"`
+	CertSource    string    `json:"certificate_source,omitempty"`
+	CAID          string    `json:"ca_id,omitempty"`
+	CertificateID string    `json:"certificate_id,omitempty"`
 	Enabled       bool      `json:"enabled"`
 	Description   string    `json:"description,omitempty"`
 	UpdatedBy     string    `json:"updated_by,omitempty"`
 	UpdatedAt     time.Time `json:"updated_at,omitempty"`
 }
 
+type KeyInterfaceTLSConfig struct {
+	TenantID      string    `json:"tenant_id"`
+	CertSource    string    `json:"certificate_source"`
+	CAID          string    `json:"ca_id,omitempty"`
+	CertificateID string    `json:"certificate_id,omitempty"`
+	UpdatedBy     string    `json:"updated_by,omitempty"`
+	UpdatedAt     time.Time `json:"updated_at,omitempty"`
+}
+
 func defaultInterfacePorts(tenantID string) []KeyInterfacePort {
 	return []KeyInterfacePort{
-		{TenantID: tenantID, InterfaceName: "rest", BindAddress: "0.0.0.0", Port: 443, Enabled: true, Description: "REST API"},
-		{TenantID: tenantID, InterfaceName: "ekm", BindAddress: "0.0.0.0", Port: 5696, Enabled: true, Description: "EKM / TDE"},
-		{TenantID: tenantID, InterfaceName: "payment-tcp", BindAddress: "0.0.0.0", Port: 9170, Enabled: true, Description: "Payment Crypto TCP"},
-		{TenantID: tenantID, InterfaceName: "pkcs11", BindAddress: "0.0.0.0", Port: 8101, Enabled: true, Description: "PKCS#11 gRPC bridge"},
-		{TenantID: tenantID, InterfaceName: "jca", BindAddress: "0.0.0.0", Port: 8102, Enabled: true, Description: "JCA/JCE bridge"},
-		{TenantID: tenantID, InterfaceName: "kmip", BindAddress: "0.0.0.0", Port: 5698, Enabled: true, Description: "KMIP"},
-		{TenantID: tenantID, InterfaceName: "hyok", BindAddress: "0.0.0.0", Port: 9444, Enabled: true, Description: "HYOK"},
-		{TenantID: tenantID, InterfaceName: "byok", BindAddress: "0.0.0.0", Port: 9445, Enabled: true, Description: "BYOK"},
+		{TenantID: tenantID, InterfaceName: "dashboard-ui", BindAddress: "0.0.0.0", Port: 5173, Protocol: "http", CertSource: "none", Enabled: true, Description: "Direct Web Dashboard UI"},
+		{TenantID: tenantID, InterfaceName: "rest", BindAddress: "0.0.0.0", Port: 443, Protocol: "https", CertSource: "internal_ca", Enabled: true, Description: "REST API"},
+		{TenantID: tenantID, InterfaceName: "kmip", BindAddress: "0.0.0.0", Port: 5696, Protocol: "mtls", CertSource: "internal_ca", Enabled: true, Description: "KMIP Protocol Interface"},
+		{TenantID: tenantID, InterfaceName: "ekm", BindAddress: "0.0.0.0", Port: 8130, Protocol: "http", CertSource: "none", Enabled: true, Description: "EKM / TDE Endpoint"},
+		{TenantID: tenantID, InterfaceName: "payment-tcp", BindAddress: "0.0.0.0", Port: 9170, Protocol: "tcp", CertSource: "none", Enabled: true, Description: "Payment Crypto TCP"},
+		{TenantID: tenantID, InterfaceName: "hyok", BindAddress: "0.0.0.0", Port: 8120, Protocol: "http", CertSource: "none", Enabled: true, Description: "HYOK API"},
+	}
+}
+
+func defaultKeyInterfaceTLSConfig(tenantID string) KeyInterfaceTLSConfig {
+	return KeyInterfaceTLSConfig{
+		TenantID:   strings.TrimSpace(tenantID),
+		CertSource: "internal_ca",
 	}
 }
 
@@ -119,19 +137,21 @@ func normalizeInterfaceName(raw string) string {
 	}
 	v = strings.ReplaceAll(v, "_", "-")
 	switch v {
+	case "dashboard", "dashboard-ui", "dashboard-ui-http":
+		return "dashboard-ui"
 	case "rest", "api":
+		return "rest"
+	case "rest-api":
 		return "rest"
 	case "ekm", "tde":
 		return "ekm"
+	case "ekm-data":
+		return "ekm"
 	case "payment", "paymenttcp", "payment-tcp", "paytcp":
 		return "payment-tcp"
-	case "pkcs11", "pkcs-11":
-		return "pkcs11"
-	case "jca", "jce":
-		return "jca"
-	case "kmip":
+	case "kmip", "kmip-tls":
 		return "kmip"
-	case "hyok":
+	case "hyok", "hyok-api":
 		return "hyok"
 	case "byok":
 		return "byok"
@@ -141,6 +161,31 @@ func normalizeInterfaceName(raw string) string {
 }
 
 func normalizePortConfig(in KeyInterfacePort) (KeyInterfacePort, error) {
+	out := applyInterfacePortDefaults(in)
+	if out.Port < 1 || out.Port > 65535 {
+		return KeyInterfacePort{}, errors.New("port must be between 1 and 65535")
+	}
+	switch out.CertSource {
+	case "internal_ca", "none":
+		out.CAID = ""
+		out.CertificateID = ""
+	case "pki_ca":
+		out.CertificateID = ""
+		if out.CAID == "" {
+			return KeyInterfacePort{}, errors.New("ca_id is required when certificate_source is pki_ca")
+		}
+	case "uploaded_certificate":
+		out.CAID = ""
+		if out.CertificateID == "" {
+			return KeyInterfacePort{}, errors.New("certificate_id is required when certificate_source is uploaded_certificate")
+		}
+	}
+	out.Description = strings.TrimSpace(out.Description)
+	out.UpdatedBy = strings.TrimSpace(out.UpdatedBy)
+	return out, nil
+}
+
+func applyInterfacePortDefaults(in KeyInterfacePort) KeyInterfacePort {
 	out := in
 	out.TenantID = strings.TrimSpace(out.TenantID)
 	out.InterfaceName = normalizeInterfaceName(out.InterfaceName)
@@ -148,12 +193,120 @@ func normalizePortConfig(in KeyInterfacePort) (KeyInterfacePort, error) {
 	if out.BindAddress == "" {
 		out.BindAddress = "0.0.0.0"
 	}
-	if out.Port < 1 || out.Port > 65535 {
-		return KeyInterfacePort{}, errors.New("port must be between 1 and 65535")
+	out.Protocol = normalizeInterfaceProtocol(out.InterfaceName, out.Protocol)
+	out.CertSource = normalizeInterfaceCertSource(out.Protocol, out.CertSource)
+	out.CAID = strings.TrimSpace(out.CAID)
+	out.CertificateID = strings.TrimSpace(out.CertificateID)
+	if !interfaceProtocolUsesCertificate(out.Protocol) {
+		out.CertSource = "none"
+		out.CAID = ""
+		out.CertificateID = ""
 	}
 	out.Description = strings.TrimSpace(out.Description)
 	out.UpdatedBy = strings.TrimSpace(out.UpdatedBy)
+	return out
+}
+
+func normalizeInterfaceTLSConfig(in KeyInterfaceTLSConfig) (KeyInterfaceTLSConfig, error) {
+	out := in
+	out.TenantID = strings.TrimSpace(out.TenantID)
+	out.CertSource = normalizeInterfaceCertSource("https", out.CertSource)
+	out.CAID = strings.TrimSpace(out.CAID)
+	out.CertificateID = strings.TrimSpace(out.CertificateID)
+	switch out.CertSource {
+	case "internal_ca":
+		out.CAID = ""
+		out.CertificateID = ""
+	case "pki_ca":
+		out.CertificateID = ""
+		if out.CAID == "" {
+			return KeyInterfaceTLSConfig{}, errors.New("ca_id is required when certificate_source is pki_ca")
+		}
+	case "uploaded_certificate":
+		out.CAID = ""
+		if out.CertificateID == "" {
+			return KeyInterfaceTLSConfig{}, errors.New("certificate_id is required when certificate_source is uploaded_certificate")
+		}
+	default:
+		return KeyInterfaceTLSConfig{}, errors.New("invalid certificate_source")
+	}
+	out.UpdatedBy = strings.TrimSpace(out.UpdatedBy)
 	return out, nil
+}
+
+func normalizeInterfaceProtocol(interfaceName string, raw string) string {
+	v := strings.ToLower(strings.TrimSpace(raw))
+	switch v {
+	case "http":
+		return "http"
+	case "https":
+		return "https"
+	case "tls", "tls13", "tls-1.3", "tls_1_3":
+		return "tls13"
+	case "mtls", "m-tls", "mutual-tls":
+		return "mtls"
+	case "tcp":
+		return "tcp"
+	}
+	switch normalizeInterfaceName(interfaceName) {
+	case "rest":
+		return "https"
+	case "kmip":
+		return "mtls"
+	case "payment-tcp":
+		return "tcp"
+	default:
+		return "http"
+	}
+}
+
+func interfaceProtocolUsesCertificate(protocol string) bool {
+	switch strings.ToLower(strings.TrimSpace(protocol)) {
+	case "https", "tls13", "mtls":
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeInterfaceCertSource(protocol string, raw string) string {
+	if !interfaceProtocolUsesCertificate(protocol) {
+		return "none"
+	}
+	v := strings.ToLower(strings.TrimSpace(raw))
+	switch v {
+	case "", "internal", "internal-ca", "internal_ca", "auto":
+		return "internal_ca"
+	case "pki", "ca", "pki-ca", "pki_ca":
+		return "pki_ca"
+	case "uploaded", "certificate", "uploaded-certificate", "uploaded_certificate", "external":
+		return "uploaded_certificate"
+	default:
+		return "internal_ca"
+	}
+}
+
+func applyTLSConfigToPort(port KeyInterfacePort, cfg KeyInterfaceTLSConfig) KeyInterfacePort {
+	out := port
+	if !interfaceProtocolUsesCertificate(out.Protocol) {
+		out.CertSource = "none"
+		out.CAID = ""
+		out.CertificateID = ""
+		return out
+	}
+	out.CertSource = cfg.CertSource
+	switch cfg.CertSource {
+	case "pki_ca":
+		out.CAID = cfg.CAID
+		out.CertificateID = ""
+	case "uploaded_certificate":
+		out.CAID = ""
+		out.CertificateID = cfg.CertificateID
+	default:
+		out.CAID = ""
+		out.CertificateID = ""
+	}
+	return out
 }
 
 func normalizeInterfacePolicy(in KeyInterfaceSubjectPolicy) (KeyInterfaceSubjectPolicy, error) {
@@ -360,14 +513,67 @@ func (s *Service) ListKeyInterfacePorts(ctx context.Context, tenantID string) ([
 	if tenantID == "" {
 		return nil, errors.New("tenant_id is required")
 	}
+	cfg, err := s.store.GetKeyInterfaceTLSConfig(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
 	items, err := s.store.ListKeyInterfacePorts(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
 	if len(items) == 0 {
-		return defaultInterfacePorts(tenantID), nil
+		items = defaultInterfacePorts(tenantID)
+	}
+	for i := range items {
+		items[i] = applyInterfacePortDefaults(items[i])
+		items[i] = applyTLSConfigToPort(items[i], cfg)
 	}
 	return items, nil
+}
+
+func (s *Service) GetKeyInterfaceTLSConfig(ctx context.Context, tenantID string) (KeyInterfaceTLSConfig, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return KeyInterfaceTLSConfig{}, errors.New("tenant_id is required")
+	}
+	cfg, err := s.store.GetKeyInterfaceTLSConfig(ctx, tenantID)
+	if err != nil {
+		return KeyInterfaceTLSConfig{}, err
+	}
+	return normalizeInterfaceTLSConfig(cfg)
+}
+
+func (s *Service) UpdateKeyInterfaceTLSConfig(ctx context.Context, in KeyInterfaceTLSConfig) (KeyInterfaceTLSConfig, error) {
+	cfg, err := normalizeInterfaceTLSConfig(in)
+	if err != nil {
+		return KeyInterfaceTLSConfig{}, err
+	}
+	out, err := s.store.UpsertKeyInterfaceTLSConfig(ctx, cfg)
+	if err != nil {
+		return KeyInterfaceTLSConfig{}, err
+	}
+	items, err := s.store.ListKeyInterfacePorts(ctx, cfg.TenantID)
+	if err != nil {
+		return KeyInterfaceTLSConfig{}, err
+	}
+	for _, item := range items {
+		item = applyInterfacePortDefaults(item)
+		if !interfaceProtocolUsesCertificate(item.Protocol) {
+			continue
+		}
+		next := applyTLSConfigToPort(item, out)
+		next.UpdatedBy = cfg.UpdatedBy
+		if _, err := s.store.UpsertKeyInterfacePort(ctx, next); err != nil {
+			return KeyInterfaceTLSConfig{}, err
+		}
+	}
+	_ = s.publishAudit(ctx, "audit.key.interface_tls_config_updated", out.TenantID, map[string]any{
+		"certificate_source": out.CertSource,
+		"ca_id":              out.CAID,
+		"certificate_id":     out.CertificateID,
+		"updated_by":         out.UpdatedBy,
+	})
+	return out, nil
 }
 
 func (s *Service) UpsertKeyInterfacePort(ctx context.Context, in KeyInterfacePort) (KeyInterfacePort, error) {
@@ -375,6 +581,11 @@ func (s *Service) UpsertKeyInterfacePort(ctx context.Context, in KeyInterfacePor
 	if err != nil {
 		return KeyInterfacePort{}, err
 	}
+	cfg, err := s.store.GetKeyInterfaceTLSConfig(ctx, p.TenantID)
+	if err != nil {
+		return KeyInterfacePort{}, err
+	}
+	p = applyTLSConfigToPort(p, cfg)
 	out, err := s.store.UpsertKeyInterfacePort(ctx, p)
 	if err != nil {
 		return KeyInterfacePort{}, err
@@ -383,6 +594,10 @@ func (s *Service) UpsertKeyInterfacePort(ctx context.Context, in KeyInterfacePor
 		"interface_name": out.InterfaceName,
 		"bind_address":   out.BindAddress,
 		"port":           out.Port,
+		"protocol":       out.Protocol,
+		"cert_source":    out.CertSource,
+		"ca_id":          out.CAID,
+		"certificate_id": out.CertificateID,
 		"enabled":        out.Enabled,
 		"description":    out.Description,
 	})

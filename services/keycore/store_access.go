@@ -217,6 +217,7 @@ func isMissingKeyAccessTableError(err error) bool {
 		strings.Contains(msg, "no such table: key_access_policy_settings") ||
 		strings.Contains(msg, "no such table: key_interface_subject_policies") ||
 		strings.Contains(msg, "no such table: key_interface_ports") ||
+		strings.Contains(msg, "no such table: key_interface_tls_defaults") ||
 		strings.Contains(msg, "no such table: key_request_nonce_cache") ||
 		strings.Contains(msg, "relation \"key_access_grants\" does not exist") ||
 		strings.Contains(msg, "relation \"key_access_group_members\" does not exist") ||
@@ -224,6 +225,7 @@ func isMissingKeyAccessTableError(err error) bool {
 		strings.Contains(msg, "relation \"key_access_policy_settings\" does not exist") ||
 		strings.Contains(msg, "relation \"key_interface_subject_policies\" does not exist") ||
 		strings.Contains(msg, "relation \"key_interface_ports\" does not exist") ||
+		strings.Contains(msg, "relation \"key_interface_tls_defaults\" does not exist") ||
 		strings.Contains(msg, "relation \"key_request_nonce_cache\" does not exist")
 }
 
@@ -428,7 +430,7 @@ DELETE FROM key_interface_subject_policies WHERE tenant_id=$1 AND id=$2
 
 func (s *SQLStore) ListKeyInterfacePorts(ctx context.Context, tenantID string) ([]KeyInterfacePort, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, interface_name, bind_address, port, enabled, COALESCE(description,''), COALESCE(updated_by,''), updated_at
+SELECT tenant_id, interface_name, bind_address, port, COALESCE(protocol,''), COALESCE(certificate_source,''), COALESCE(ca_id,''), COALESCE(certificate_id,''), enabled, COALESCE(description,''), COALESCE(updated_by,''), updated_at
 FROM key_interface_ports
 WHERE tenant_id=$1
 ORDER BY interface_name ASC
@@ -443,7 +445,7 @@ ORDER BY interface_name ASC
 	out := make([]KeyInterfacePort, 0)
 	for rows.Next() {
 		var item KeyInterfacePort
-		if err := rows.Scan(&item.TenantID, &item.InterfaceName, &item.BindAddress, &item.Port, &item.Enabled, &item.Description, &item.UpdatedBy, &item.UpdatedAt); err != nil {
+		if err := rows.Scan(&item.TenantID, &item.InterfaceName, &item.BindAddress, &item.Port, &item.Protocol, &item.CertSource, &item.CAID, &item.CertificateID, &item.Enabled, &item.Description, &item.UpdatedBy, &item.UpdatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, item)
@@ -451,23 +453,64 @@ ORDER BY interface_name ASC
 	return out, rows.Err()
 }
 
+func (s *SQLStore) GetKeyInterfaceTLSConfig(ctx context.Context, tenantID string) (KeyInterfaceTLSConfig, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, COALESCE(certificate_source,''), COALESCE(ca_id,''), COALESCE(certificate_id,''), COALESCE(updated_by,''), updated_at
+FROM key_interface_tls_defaults
+WHERE tenant_id=$1
+`, tenantID)
+	var out KeyInterfaceTLSConfig
+	if err := row.Scan(&out.TenantID, &out.CertSource, &out.CAID, &out.CertificateID, &out.UpdatedBy, &out.UpdatedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) || isMissingKeyAccessTableError(err) {
+			return defaultKeyInterfaceTLSConfig(tenantID), nil
+		}
+		return KeyInterfaceTLSConfig{}, err
+	}
+	return out, nil
+}
+
+func (s *SQLStore) UpsertKeyInterfaceTLSConfig(ctx context.Context, cfg KeyInterfaceTLSConfig) (KeyInterfaceTLSConfig, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+INSERT INTO key_interface_tls_defaults (tenant_id, certificate_source, ca_id, certificate_id, updated_by, updated_at)
+VALUES ($1,$2,$3,$4,$5,CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id)
+DO UPDATE SET
+    certificate_source=EXCLUDED.certificate_source,
+    ca_id=EXCLUDED.ca_id,
+    certificate_id=EXCLUDED.certificate_id,
+    updated_by=EXCLUDED.updated_by,
+    updated_at=CURRENT_TIMESTAMP
+RETURNING tenant_id, COALESCE(certificate_source,''), COALESCE(ca_id,''), COALESCE(certificate_id,''), COALESCE(updated_by,''), updated_at
+`, cfg.TenantID, cfg.CertSource, nullable(cfg.CAID), nullable(cfg.CertificateID), nullable(cfg.UpdatedBy))
+
+	var out KeyInterfaceTLSConfig
+	if err := row.Scan(&out.TenantID, &out.CertSource, &out.CAID, &out.CertificateID, &out.UpdatedBy, &out.UpdatedAt); err != nil {
+		return KeyInterfaceTLSConfig{}, err
+	}
+	return out, nil
+}
+
 func (s *SQLStore) UpsertKeyInterfacePort(ctx context.Context, port KeyInterfacePort) (KeyInterfacePort, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-INSERT INTO key_interface_ports (tenant_id, interface_name, bind_address, port, enabled, description, updated_by, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP)
+INSERT INTO key_interface_ports (tenant_id, interface_name, bind_address, port, protocol, certificate_source, ca_id, certificate_id, enabled, description, updated_by, updated_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP)
 ON CONFLICT (tenant_id, interface_name)
 DO UPDATE SET
     bind_address=EXCLUDED.bind_address,
     port=EXCLUDED.port,
+    protocol=EXCLUDED.protocol,
+    certificate_source=EXCLUDED.certificate_source,
+    ca_id=EXCLUDED.ca_id,
+    certificate_id=EXCLUDED.certificate_id,
     enabled=EXCLUDED.enabled,
     description=EXCLUDED.description,
     updated_by=EXCLUDED.updated_by,
     updated_at=CURRENT_TIMESTAMP
-RETURNING tenant_id, interface_name, bind_address, port, enabled, COALESCE(description,''), COALESCE(updated_by,''), updated_at
-`, port.TenantID, port.InterfaceName, port.BindAddress, port.Port, port.Enabled, nullable(port.Description), nullable(port.UpdatedBy))
+RETURNING tenant_id, interface_name, bind_address, port, COALESCE(protocol,''), COALESCE(certificate_source,''), COALESCE(ca_id,''), COALESCE(certificate_id,''), enabled, COALESCE(description,''), COALESCE(updated_by,''), updated_at
+`, port.TenantID, port.InterfaceName, port.BindAddress, port.Port, port.Protocol, port.CertSource, nullable(port.CAID), nullable(port.CertificateID), port.Enabled, nullable(port.Description), nullable(port.UpdatedBy))
 
 	var out KeyInterfacePort
-	if err := row.Scan(&out.TenantID, &out.InterfaceName, &out.BindAddress, &out.Port, &out.Enabled, &out.Description, &out.UpdatedBy, &out.UpdatedAt); err != nil {
+	if err := row.Scan(&out.TenantID, &out.InterfaceName, &out.BindAddress, &out.Port, &out.Protocol, &out.CertSource, &out.CAID, &out.CertificateID, &out.Enabled, &out.Description, &out.UpdatedBy, &out.UpdatedAt); err != nil {
 		return KeyInterfacePort{}, err
 	}
 	return out, nil

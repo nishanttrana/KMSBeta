@@ -1094,6 +1094,77 @@ export const REST_API_CATALOG = [
       { code: 422, meaning: "Key type/state incompatible with derivation" }
     ]
   },
+  {
+    id: "key-interface-ports-list",
+    group: "Key Management",
+    title: "List Interface Ports",
+    service: "keycore",
+    method: "GET",
+    pathTemplate: "/access/interface-ports?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Lists user-facing request interfaces with their effective protocol, bind address, and TLS certificate binding after runtime defaults are applied.",
+    requestExample: "GET /svc/keycore/access/interface-ports?tenant_id=root",
+    responseExample: {
+      items: [
+        { interface_name: "rest", bind_address: "0.0.0.0", port: 443, protocol: "https", certificate_source: "internal_ca", enabled: true },
+        { interface_name: "kmip", bind_address: "0.0.0.0", port: 5696, protocol: "mtls", certificate_source: "internal_ca", enabled: true }
+      ]
+    },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Caller lacks interface read privilege" }
+    ]
+  },
+  {
+    id: "key-interface-tls-config-get",
+    group: "Key Management",
+    title: "Get Interface TLS Defaults",
+    service: "keycore",
+    method: "GET",
+    pathTemplate: "/access/interface-tls-config?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Returns the authoritative TLS certificate binding used for HTTPS, TLS 1.3, and mTLS request interfaces.",
+    requestExample: "GET /svc/keycore/access/interface-tls-config?tenant_id=root",
+    responseExample: {
+      config: {
+        tenant_id: "root",
+        certificate_source: "pki_ca",
+        ca_id: "ca_ops_root",
+        certificate_id: ""
+      }
+    },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Caller lacks interface TLS read privilege" }
+    ]
+  },
+  {
+    id: "key-interface-tls-config-update",
+    group: "Key Management",
+    title: "Update Interface TLS Defaults",
+    service: "keycore",
+    method: "PUT",
+    pathTemplate: "/access/interface-tls-config",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "certificate_source": "pki_ca",\n  "ca_id": "ca_ops_root"\n}',
+    description: "Updates the authoritative TLS certificate binding for request interfaces and reapplies it to all TLS-enabled interface records.",
+    requestExample: "PUT /svc/keycore/access/interface-tls-config",
+    responseExample: {
+      config: {
+        tenant_id: "root",
+        certificate_source: "uploaded_certificate",
+        ca_id: "",
+        certificate_id: "crt_edge_root"
+      }
+    },
+    errorCodes: [
+      { code: 400, meaning: "Invalid certificate source or missing CA/certificate selection" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Caller lacks interface TLS write privilege" }
+    ]
+  },
 
   /* ── Secret Vault ────────────────────────────────────────────────── */
   {

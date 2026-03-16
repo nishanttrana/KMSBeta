@@ -136,12 +136,31 @@ docker-compose up -d
 
 | Interface | Port | Protocol | Description |
 |-----------|------|----------|-------------|
-| rest-api | 8443 | TLS 1.3 | Primary REST API |
+| dashboard-ui | 5173 | HTTP / HTTPS | Direct web dashboard |
+| rest-api | 443 | HTTPS / TLS 1.3 / mTLS | Primary REST API |
 | kmip-tls | 5696 | mTLS | KMIP protocol |
-| management | 9443 | mTLS | Admin management plane |
-| hsm-bridge | 9500 | mTLS | HSM communication |
-| ekm-data | 8444 | TLS 1.3 | EKM/TDE endpoint |
-| audit-stream | 8445 | mTLS | Audit event stream |
+| ekm-data | 8130 | HTTP / HTTPS / TLS 1.3 | EKM/TDE endpoint |
+| payment-tcp | 9170 | TCP | Payment crypto endpoint |
+| hyok-api | 8120 | HTTP / HTTPS / TLS 1.3 | HYOK endpoint |
+
+### Runtime TLS And Interface Precedence
+
+- `System Administration -> Runtime Crypto -> Configure TLS` is the authoritative certificate binding for user-facing TLS interfaces.
+- `System Administration -> Interfaces` controls bind address, port, listener protocol, and enable/disable state for request-handling endpoints.
+- If an interface uses `HTTPS`, `TLS 1.3`, or `mTLS`, the certificate source selected in Runtime Crypto wins over any interface-level certificate fields.
+- Certificate binding can be backed by:
+  - internal CA auto-issuance
+  - a CA selected from the PKI / CA inventory
+  - an uploaded certificate selected from the PKI / CA inventory
+
+### Runtime TLS API
+
+- `GET /svc/keycore/access/interface-tls-config?tenant_id=root`
+  - returns the effective certificate binding used by TLS-enabled request interfaces
+- `PUT /svc/keycore/access/interface-tls-config`
+  - updates the authoritative TLS certificate binding and reapplies it to TLS-enabled interfaces
+- `GET /svc/keycore/access/interface-ports?tenant_id=root`
+  - returns the effective request interfaces after the runtime TLS binding has been applied
 
 ## Security Features
 

@@ -131,6 +131,13 @@ func TestHandlerAssessmentRunAndSchedule(t *testing.T) {
 		{"id": "c1", "algorithm": "RSA-1024-SHA1", "status": "active", "not_after": time.Now().UTC().Add(5 * 24 * time.Hour).Format(time.RFC3339)},
 	}
 
+	getBeforeRunReq := httptest.NewRequest(http.MethodGet, "/compliance/assessment?tenant_id=t4", nil)
+	getBeforeRunRR := httptest.NewRecorder()
+	h.ServeHTTP(getBeforeRunRR, getBeforeRunReq)
+	if getBeforeRunRR.Code != http.StatusNotFound || !strings.Contains(getBeforeRunRR.Body.String(), "has not been run yet") {
+		t.Fatalf("get assessment before run status=%d body=%s", getBeforeRunRR.Code, getBeforeRunRR.Body.String())
+	}
+
 	runReq := httptest.NewRequest(http.MethodPost, "/compliance/assessment/run?tenant_id=t4", nil)
 	runRR := httptest.NewRecorder()
 	h.ServeHTTP(runRR, runReq)

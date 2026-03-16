@@ -24,6 +24,7 @@ func (h *Handler) handleSystemHealth(w http.ResponseWriter, r *http.Request) {
 				"all_ok":   false,
 			},
 			"services":   []any{},
+			"interfaces": []any{},
 			"request_id": reqID,
 			"warning":    "system health checker is not configured",
 		})
@@ -37,6 +38,7 @@ func (h *Handler) handleSystemHealth(w http.ResponseWriter, r *http.Request) {
 	payload := map[string]any{
 		"summary":      snapshot.Summary,
 		"services":     snapshot.Services,
+		"interfaces":   snapshot.Interfaces,
 		"collected_at": snapshot.CollectedAt,
 		"request_id":   reqID,
 	}

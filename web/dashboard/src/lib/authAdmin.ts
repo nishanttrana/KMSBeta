@@ -67,9 +67,26 @@ export type SystemHealthSummary = {
   all_ok?: boolean;
 };
 
+export type SystemPublishedInterface = {
+  id: string;
+  name: string;
+  description?: string;
+  service: string;
+  protocol: string;
+  cert_type?: string;
+  auto_create_cert?: boolean;
+  bind_address: string;
+  port: number;
+  container_port?: number;
+  enabled?: boolean;
+  status?: string;
+  source?: string;
+};
+
 export type AuthSystemHealthSnapshot = {
   summary?: SystemHealthSummary;
   services?: SystemServiceHealth[];
+  interfaces?: SystemPublishedInterface[];
   collected_at?: string;
   warning?: string;
   request_id?: string;
@@ -306,7 +323,8 @@ export async function getAuthSystemHealth(
   });
   return {
     ...out,
-    services: Array.isArray(out?.services) ? out.services : []
+    services: Array.isArray(out?.services) ? out.services : [],
+    interfaces: Array.isArray(out?.interfaces) ? out.interfaces : []
   };
 }
 
@@ -850,4 +868,3 @@ export async function getSSOLoginURL(provider: string, tenantID: string): Promis
   if (!data.redirect_url) throw new Error("No redirect URL returned");
   return data.redirect_url;
 }
-

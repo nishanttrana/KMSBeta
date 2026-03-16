@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AuthSession } from "../../../lib/auth";
+import { listAuditEvents } from "../../../lib/audit";
 import { listKeys } from "../../../lib/keycore";
 import { getCertExpiryAlertPolicy, listCertificates } from "../../../lib/certs";
 import { listSecrets } from "../../../lib/secrets";
@@ -40,9 +41,11 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     criticalAlerts:0,
     keyGrowthWeek:0,
     opsPerDay:0,
-    opsGrowthPct:8.2,
-    complianceScore:87,
-    complianceDeltaWeek:3,
+    opsGrowthPct:0,
+    opsHasBaseline:false,
+    complianceScore:0,
+    complianceDeltaWeek:0,
+    complianceHasAssessment:false,
     alertDays:30,
     expiring:0,
     myPendingApprovals:0,
@@ -120,6 +123,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     (Array.isArray(details?.approver_emails)?details.approver_emails:[]).forEach((item:any)=>add(item));
     return out;
   };
+  const isRealComplianceAssessment=(item:any)=>Boolean(item&&typeof item==="object"&&String(item?.id||"").trim()&&!/^auto$/i.test(String(item?.trigger||"").trim()));
   const refreshEmpty=()=>({
     keys:0,
     secrets:0,
@@ -128,9 +132,11 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     criticalAlerts:0,
     keyGrowthWeek:0,
     opsPerDay:0,
-    opsGrowthPct:8.2,
-    complianceScore:87,
-    complianceDeltaWeek:3,
+    opsGrowthPct:0,
+    opsHasBaseline:false,
+    complianceScore:0,
+    complianceDeltaWeek:0,
+    complianceHasAssessment:false,
     alertDays:30,
     expiring:0,
     myPendingApprovals:0,
@@ -155,7 +161,7 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
     const refreshHome=async()=>{
       setHomeLoading(true);
       try{
-        const [keys,secretItems,certItems,counts,policy,pendingRequests,governancePolicies,governanceSettings,clusterOverview,governanceSystemState,complianceAssessment,complianceHistory]=await Promise.all([
+        const [keys,secretItems,certItems,counts,policy,pendingRequests,governancePolicies,governanceSettings,clusterOverview,governanceSystemState,complianceAssessment,complianceHistory,auditEvents]=await Promise.all([
           listKeys(session),
           listSecrets(session),
           listCertificates(session,{limit:1000,offset:0}),
@@ -167,7 +173,8 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
           getClusterOverview(session).catch(()=>({nodes:[],profiles:[],summary:{total_nodes:0,online_nodes:0,degraded_nodes:0,down_nodes:0}})),
           getGovernanceSystemState(session).catch(()=>null),
           getComplianceAssessment(session,"default").catch(()=>null),
-          listComplianceAssessmentHistory(session,2,"default").catch(()=>[])
+          listComplianceAssessmentHistory(session,2,"default").catch(()=>[]),
+          listAuditEvents(session,{limit:500}).catch(()=>[])
         ]);
         if(cancelled){
           return;
@@ -207,18 +214,39 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
         const unreadTotal=Object.values(counts||{}).reduce((sum:any,val:any)=>sum+Math.max(0,Number(val||0)),0);
         const criticalAlerts=Math.max(0,Number(counts?.critical||counts?.high||0));
         const keyGrowthWeek=Math.max(0,Math.round(keyCount*0.0045));
-        const opsPerDay=Math.max(0,Math.round(keyCount*4.32));
-        const opsGrowthPct=8.2;
-        const complianceFallbackBase=globalFipsEnabled?94:86;
-        const complianceFallbackPenalty=Math.min(32,(criticalAlerts*3)+(expiringItems.length*2));
-        const complianceFallbackScore=Math.max(0,Math.min(100,Math.round(complianceFallbackBase-complianceFallbackPenalty)));
-        const complianceServiceScoreRaw=Number((complianceAssessment as any)?.overall_score ?? (complianceAssessment as any)?.posture?.overall_score);
-        const complianceServiceScore=Number.isFinite(complianceServiceScoreRaw)
+        const auditItems=(Array.isArray(auditEvents)?auditEvents:[]).filter((entry:any)=>entry&&typeof entry==="object");
+        const dayMs=24*60*60*1000;
+        const last24hStart=now-dayMs;
+        const previousWeekStart=now-(8*dayMs);
+        const previousWeekEnd=last24hStart;
+        const opsLast24h=auditItems.filter((entry:any)=>{
+          const ts=new Date(String(entry?.timestamp||entry?.created_at||"")).getTime();
+          return Number.isFinite(ts)&&ts>=last24hStart&&ts<=now;
+        }).length;
+        const previousWeekEvents=auditItems.filter((entry:any)=>{
+          const ts=new Date(String(entry?.timestamp||entry?.created_at||"")).getTime();
+          return Number.isFinite(ts)&&ts>=previousWeekStart&&ts<previousWeekEnd;
+        }).length;
+        const previousWeekDailyAvg=previousWeekEvents/7;
+        const opsHasBaseline=previousWeekEvents>0;
+        const opsPerDay=Math.max(0,opsLast24h);
+        const opsGrowthPct=opsHasBaseline&&previousWeekDailyAvg>0
+          ? Number((((opsLast24h-previousWeekDailyAvg)/previousWeekDailyAvg)*100).toFixed(1))
+          : 0;
+        const complianceHistoryItems=(Array.isArray(complianceHistory)?complianceHistory:[]).filter((entry:any)=>isRealComplianceAssessment(entry));
+        const latestComplianceAssessment=isRealComplianceAssessment(complianceAssessment)
+          ? complianceAssessment
+          : (complianceHistoryItems[0]||null);
+        const complianceHasAssessment=Boolean(latestComplianceAssessment)||complianceHistoryItems.length>0;
+        const complianceServiceScoreRaw=Number((latestComplianceAssessment as any)?.overall_score ?? (latestComplianceAssessment as any)?.posture?.overall_score);
+        const complianceScore=complianceHasAssessment&&Number.isFinite(complianceServiceScoreRaw)
           ? Math.max(0,Math.min(100,Math.round(complianceServiceScoreRaw)))
-          : null;
-        const complianceScore=complianceServiceScore===null?complianceFallbackScore:complianceServiceScore;
+          : 0;
         const complianceDeltaWeek=(()=>{
-          const hist=(Array.isArray(complianceHistory)?complianceHistory:[])
+          if(!complianceHasAssessment){
+            return 0;
+          }
+          const hist=complianceHistoryItems
             .filter((entry:any)=>entry&&typeof entry==="object")
             .slice()
             .sort((a:any,b:any)=>new Date(String(b?.created_at||b?.updated_at||0)).getTime()-new Date(String(a?.created_at||a?.updated_at||0)).getTime());
@@ -373,8 +401,10 @@ export const DashboardTab=({fipsMode,session,onToast,pinnedTabs,onTogglePin,onNa
           keyGrowthWeek,
           opsPerDay,
           opsGrowthPct,
+          opsHasBaseline,
           complianceScore,
           complianceDeltaWeek,
+          complianceHasAssessment,
           alertDays,
           expiring:expiringItems.length,
           myPendingApprovals:userPendingApprovals.length,

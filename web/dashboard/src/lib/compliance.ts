@@ -1,5 +1,5 @@
 import type { AuthSession } from "./auth";
-import { serviceRequest } from "./serviceApi";
+import { serviceRequest, serviceRequestRaw } from "./serviceApi";
 
 export type AssessmentFinding = {
   id: string;
@@ -100,13 +100,30 @@ function queryWithTemplate(session: AuthSession, templateId?: string): string {
   return params.toString();
 }
 
-export async function getComplianceAssessment(session: AuthSession, templateId = ""): Promise<AssessmentResult> {
-  const out = await serviceRequest<{ assessment?: AssessmentResult }>(
+async function parseComplianceError(response: Response): Promise<string> {
+  const fallback = `Request failed (${response.status})`;
+  try {
+    const payload = (await response.json()) as { error?: { message?: string } };
+    return payload?.error?.message || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export async function getComplianceAssessment(session: AuthSession, templateId = ""): Promise<AssessmentResult | null> {
+  const response = await serviceRequestRaw(
     session,
     "compliance",
     `/compliance/assessment?${queryWithTemplate(session, templateId)}`
   );
-  return out?.assessment || ({} as AssessmentResult);
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(await parseComplianceError(response));
+  }
+  const out = (await response.json()) as { assessment?: AssessmentResult };
+  return out?.assessment || null;
 }
 
 export async function runComplianceAssessment(

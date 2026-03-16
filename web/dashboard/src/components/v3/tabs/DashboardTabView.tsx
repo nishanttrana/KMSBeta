@@ -67,6 +67,8 @@ export const DashboardTabView = (props: any) => {
     ? clusterNodes
     : [{ id: "local", name: "vecta-kms-01", status: "online", role: "leader", address: "127.0.0.1" }];
   const auditChainOk = homeSummary?.auditChainOk !== false;
+  const complianceHasAssessment = Boolean(homeSummary?.complianceHasAssessment);
+  const opsHasBaseline = Boolean(homeSummary?.opsHasBaseline);
   const opsGrowthPos = Number(homeSummary?.opsGrowthPct || 0) >= 0;
   const complianceTrendPos = Number(homeSummary?.complianceDeltaWeek || 0) >= 0;
   const alertTrendPos = Number(homeSummary?.criticalAlerts || 0) === 0;
@@ -97,7 +99,7 @@ export const DashboardTabView = (props: any) => {
       case "alerts": return `${fmtInt(homeSummary?.criticalAlerts || 0)} critical`;
       case "audit": return auditChainOk ? "Chain verified" : "Chain broken!";
       case "posture": return "24h risk score";
-      case "compliance": return `+${fmtInt(homeSummary?.complianceDeltaWeek || 0)} this week`;
+      case "compliance": return complianceHasAssessment ? `+${fmtInt(homeSummary?.complianceDeltaWeek || 0)} this week` : "No score yet";
       case "cluster": return `Lag: ${clusterLagText}`;
       case "approvals": case "governance": return "pending review";
       case "hsm": return globalFipsEnabled ? "FIPS strict" : "Standard mode";
@@ -158,10 +160,16 @@ export const DashboardTabView = (props: any) => {
             <Zap size={13} color={C.green} />
           </div>
           <div style={{ fontSize: 30, fontWeight: 700, color: C.green, lineHeight: 1.08, marginTop: 6, fontFamily: "'JetBrains Mono',monospace" }}>{fmtCompact(homeSummary.opsPerDay)}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: opsGrowthPos ? C.green : C.red, marginTop: 6 }}>
-            {opsGrowthPos ? <TrendingUp size={10} strokeWidth={2} /> : <TrendingDown size={10} strokeWidth={2} />}
-            {`${Number(homeSummary.opsGrowthPct || 0).toFixed(1)}% vs last week`}
-          </div>
+          {opsHasBaseline ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: opsGrowthPos ? C.green : C.red, marginTop: 6 }}>
+              {opsGrowthPos ? <TrendingUp size={10} strokeWidth={2} /> : <TrendingDown size={10} strokeWidth={2} />}
+              {`${Math.abs(Number(homeSummary.opsGrowthPct || 0)).toFixed(1)}% vs last week`}
+            </div>
+          ) : (
+            <div style={{ fontSize: 10, color: C.dim, marginTop: 6 }}>
+              No prior-week baseline yet
+            </div>
+          )}
           <div style={{ height: 3, borderRadius: 999, background: C.border, overflow: "hidden", marginTop: 8 }}>
             <div style={{ height: "100%", width: "62%", background: C.green, borderRadius: 999, transition: "width .5s" }} />
           </div>
@@ -173,10 +181,16 @@ export const DashboardTabView = (props: any) => {
             <ShieldCheck size={13} color={C.blue} />
           </div>
           <div style={{ fontSize: 30, fontWeight: 700, color: C.blue, lineHeight: 1.08, marginTop: 6, fontFamily: "'JetBrains Mono',monospace" }}>{`${homeSummary.complianceScore}/100`}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: complianceTrendPos ? C.green : C.red, marginTop: 6 }}>
-            {complianceTrendPos ? <TrendingUp size={10} strokeWidth={2} /> : <TrendingDown size={10} strokeWidth={2} />}
-            {`+${fmtInt(homeSummary.complianceDeltaWeek)} this week`}
-          </div>
+          {complianceHasAssessment ? (
+            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: complianceTrendPos ? C.green : C.red, marginTop: 6 }}>
+              {complianceTrendPos ? <TrendingUp size={10} strokeWidth={2} /> : <TrendingDown size={10} strokeWidth={2} />}
+              {`+${fmtInt(homeSummary.complianceDeltaWeek)} this week`}
+            </div>
+          ) : (
+            <div style={{ fontSize: 10, color: C.dim, marginTop: 6 }}>
+              No score yet
+            </div>
+          )}
           <div style={{ height: 3, borderRadius: 999, background: C.border, overflow: "hidden", marginTop: 8 }}>
             <div style={{ height: "100%", width: `${Math.max(0, Math.min(100, Number(homeSummary?.complianceScore || 0)))}%`, background: C.blue, borderRadius: 999, transition: "width .5s" }} />
           </div>
@@ -322,7 +336,7 @@ export const DashboardTabView = (props: any) => {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <div><div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>Mgmt</div><div style={{ fontSize: 12, fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{String(homeSystemState?.mgmt_ip || "n/a")}</div></div>
             <div><div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>Cluster</div><div style={{ fontSize: 12, fontWeight: 700, color: C.text, fontFamily: "'JetBrains Mono',monospace" }}>{String(homeSystemState?.cluster_ip || "n/a")}</div></div>
-            <div><div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>TLS</div><div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(homeSystemState?.tls_cert_mode || "internal_ca")}</div></div>
+            <div><div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>TLS</div><div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(homeSystemState?.tls_mode || "internal_ca")}</div></div>
             <div><div style={{ fontSize: 12, color: C.muted, marginBottom: 3 }}>HSM</div><div style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(homeSystemState?.hsm_mode || "software")}</div></div>
           </div>
         </Card>

@@ -79,6 +79,10 @@ function shortDate(value: any) {
   return `${dt.getMonth() + 1}/${dt.getDate()}`;
 }
 
+function isRealAssessment(item: any) {
+  return Boolean(item && typeof item === "object" && String(item?.id || "").trim() && !/^auto$/i.test(String(item?.trigger || "").trim()));
+}
+
 export const ComplianceTab = ({ session, onToast }: any) => {
   const promptDialog = usePromptDialog();
   const [assessment, setAssessment] = useState<any>(null);
@@ -186,28 +190,42 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       const effectiveTemplateID = hasTemplate ? candidateTemplateID : "default";
       if (effectiveTemplateID !== selectedTemplateID) setSelectedTemplateID(effectiveTemplateID);
 
-      const [assessOut, scheduleOut, historyOut, breakdownOut, hygieneOut, anomalyOut] = await Promise.all([
+      const [assessOut, scheduleOut, historyOut] = await Promise.all([
         getComplianceAssessment(session, effectiveTemplateID),
         getComplianceAssessmentSchedule(session),
-        listComplianceAssessmentHistory(session, 20, effectiveTemplateID),
-        getCompliancePostureBreakdown(session).catch(() => null),
-        getComplianceKeyHygiene(session).catch(() => null),
-        getComplianceAuditAnomalies(session).catch(() => [])
+        listComplianceAssessmentHistory(session, 20, effectiveTemplateID)
       ]);
 
-      setAssessment(assessOut || null);
+      const visibleHistory = (Array.isArray(historyOut) ? historyOut : []).filter((item: any) => isRealAssessment(item));
+      const visibleAssessment = isRealAssessment(assessOut) ? assessOut : (visibleHistory[0] || null);
+      setAssessment(visibleAssessment);
       setSchedule(scheduleOut || { enabled: false, frequency: "daily" });
-      setHistory(Array.isArray(historyOut) ? historyOut : []);
-      setPostureBreakdown(breakdownOut || null);
-      setKeyHygiene(hygieneOut || null);
-      setAnomalies(Array.isArray(anomalyOut) ? anomalyOut : []);
+      setHistory(visibleHistory);
+      const hasAssessment = Boolean(visibleAssessment) || visibleHistory.length > 0;
+      if (hasAssessment) {
+        const [breakdownOut, hygieneOut, anomalyOut] = await Promise.all([
+          getCompliancePostureBreakdown(session).catch(() => null),
+          getComplianceKeyHygiene(session).catch(() => null),
+          getComplianceAuditAnomalies(session).catch(() => [])
+        ]);
+        setPostureBreakdown(breakdownOut || null);
+        setKeyHygiene(hygieneOut || null);
+        setAnomalies(Array.isArray(anomalyOut) ? anomalyOut : []);
 
-      /* load gaps for first framework with a score */
-      const fwScores = assessOut?.framework_scores || {};
-      const firstFW = Object.keys(fwScores)[0];
-      if (firstFW) {
-        const gaps = await getComplianceFrameworkGaps(session, firstFW).catch(() => []);
-        setFrameworkGaps(Array.isArray(gaps) ? gaps : []);
+        /* load gaps for first framework with a score */
+        const fwScores = assessOut?.framework_scores || {};
+        const firstFW = Object.keys(fwScores)[0];
+        if (firstFW) {
+          const gaps = await getComplianceFrameworkGaps(session, firstFW).catch(() => []);
+          setFrameworkGaps(Array.isArray(gaps) ? gaps : []);
+        } else {
+          setFrameworkGaps([]);
+        }
+      } else {
+        setPostureBreakdown(null);
+        setKeyHygiene(null);
+        setFrameworkGaps([]);
+        setAnomalies([]);
       }
 
       if (effectiveTemplateID === "default") { setTemplateDraft(null); }
@@ -267,10 +285,8 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     if (!session?.token) { onToast?.("Login is required."); return; }
     setRunning(true);
     try {
-      const out = await runComplianceAssessment(session, { templateId: selectedTemplateID, recompute: true });
-      setAssessment(out || null);
-      const hist = await listComplianceAssessmentHistory(session, 20, selectedTemplateID);
-      setHistory(Array.isArray(hist) ? hist : []);
+      await runComplianceAssessment(session, { templateId: selectedTemplateID, recompute: true });
+      await loadAssessment({ silent: true, templateId: selectedTemplateID });
       onToast?.("Compliance assessment completed.");
     } catch (error) { onToast?.(`Assessment run failed: ${errMsg(error)}`); }
     finally { setRunning(false); }
@@ -1029,6 +1045,20 @@ export const ComplianceTab = ({ session, onToast }: any) => {
         <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>
           Assessment is calculated from real key/certificate posture and scored against the selected template ({selectedTemplateID === "default" ? "Built-in Baseline" : "Custom Template"}).
         </div>
+
+        {!assessment ? (
+          <Card style={{ borderColor: C.amber, background: C.amberDim, marginBottom: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+              <div>
+                <div style={{ fontSize: 12, color: C.text, fontWeight: 700, marginBottom: 4 }}>No compliance scan has been run yet</div>
+                <div style={{ fontSize: 10, color: C.dim }}>
+                  The score stays at 0 until the first assessment completes. Run a scan to generate posture, framework coverage, and findings.
+                </div>
+              </div>
+              <Btn small primary onClick={() => void runNow()} disabled={running}>{running ? "Running..." : "Run First Scan"}</Btn>
+            </div>
+          </Card>
+        ) : null}
 
         {/* ═══ Template Configuration (unchanged) ═══ */}
         {selectedTemplateID !== "default" && templateDraft ? (

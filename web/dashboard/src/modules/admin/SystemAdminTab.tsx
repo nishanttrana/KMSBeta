@@ -16,7 +16,13 @@ import {
   type CLIStatus,
   type HSMProviderConfig
 } from "../../lib/authAdmin";
-import { getCertSecurityStatus } from "../../lib/certs";
+import {
+  getCertSecurityStatus,
+  listCAs,
+  listCertificates,
+  type CertCA,
+  type CertificateItem
+} from "../../lib/certs";
 import {
   createGovernanceBackup,
   deleteGovernanceBackup,
@@ -66,11 +72,14 @@ import {
   deleteKeyInterfacePort,
   deleteTag,
   getKeyAccessSettings,
+  getKeyInterfaceTLSConfig,
   listKeyInterfacePorts,
   listTags,
+  updateKeyInterfaceTLSConfig,
   updateKeyAccessSettings,
   upsertKeyInterfacePort,
-  upsertTag
+  upsertTag,
+  type KeyInterfaceTLSConfig
 } from "../../lib/keycore";
 import { errMsg } from "../../components/v3/runtimeUtils";
 import { C } from "../../components/v3/theme";
@@ -100,6 +109,14 @@ const heartbeatToneClass=(status:string):string=>{
   if(s==="degraded") return "vecta-hb-degraded";
   if(s==="down") return "vecta-hb-down";
   return "vecta-hb-unknown";
+};
+
+const interfaceTone=(status:string):"green"|"amber"|"red"|"blue"=>{
+  const s=String(status||"").toLowerCase();
+  if(s==="listening"||s==="running") return "green";
+  if(s==="starting"||s==="restarting") return "amber";
+  if(s==="stopped"||s==="down"||s==="failed"||s==="disabled"||s==="not detected") return "red";
+  return "blue";
 };
 
 const RESTART_BLOCKED_TARGETS = new Set([
@@ -197,6 +214,119 @@ const fileToBase64 = (file: File): Promise<string> =>
     reader.readAsDataURL(file);
   });
 
+const formatBackupFileSize = (bytes: number): string => {
+  const size = Math.max(0, Number(bytes || 0));
+  if (size >= 1024 * 1024) {
+    return `${(size / (1024 * 1024)).toFixed(1).replace(/\.0$/, "")} MB`;
+  }
+  if (size >= 1024) {
+    return `${Math.max(1, Math.round(size / 1024))} KB`;
+  }
+  return `${size} B`;
+};
+
+const BackupRestoreFilePicker = ({
+  accept,
+  file,
+  onFileChange,
+  emptyLabel,
+  hint
+}: {
+  accept: string;
+  file: File | null;
+  onFileChange: (file: File | null) => void;
+  emptyLabel: string;
+  hint: string;
+}) => {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const hasFile = Boolean(file);
+
+  return (
+    <div style={{ display: "grid", gap: 8 }}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        onChange={(e) => onFileChange((e.target.files && e.target.files[0]) ? e.target.files[0] : null)}
+        style={{ display: "none" }}
+      />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          minHeight: 72,
+          padding: "12px 14px",
+          borderRadius: 12,
+          border: `1px solid ${hasFile ? C.accent : C.borderHi}`,
+          background: hasFile
+            ? `linear-gradient(135deg, ${C.accentDim}, ${C.blueDim})`
+            : `linear-gradient(180deg, ${C.surface}, ${C.bg})`,
+          boxShadow: hasFile
+            ? `0 0 0 1px ${C.glow} inset, 0 12px 28px rgba(2,8,23,.35)`
+            : `0 10px 22px rgba(2,8,23,.22)`,
+          boxSizing: "border-box"
+        }}
+      >
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          <Btn
+            type="button"
+            small
+            primary
+            onClick={() => inputRef.current?.click()}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 10,
+              boxShadow: `0 0 18px ${C.glowStrong}`
+            }}
+          >
+            {hasFile ? "Replace" : "Upload"}
+          </Btn>
+          {hasFile ? (
+            <Btn
+              type="button"
+              small
+              onClick={() => {
+                onFileChange(null);
+                if (inputRef.current) {
+                  inputRef.current.value = "";
+                }
+              }}
+              style={{
+                borderColor: C.borderHi,
+                color: C.dim,
+                background: "rgba(15,21,33,.72)",
+                borderRadius: 10,
+                padding: "8px 12px"
+              }}
+            >
+              Clear
+            </Btn>
+          ) : null}
+        </div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: hasFile ? C.text : C.dim,
+              fontWeight: hasFile ? 700 : 500,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap"
+            }}
+          >
+            {hasFile ? file?.name : emptyLabel}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+            <B c={hasFile ? "accent" : "blue"}>{hasFile ? formatBackupFileSize(file?.size || 0) : accept}</B>
+            <span style={{ fontSize: 9, color: C.muted }}>{hint}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SYSTEM_STATE_DEFAULT = {
   fips_mode: "disabled",
   fips_mode_policy: "standard",
@@ -237,7 +367,247 @@ const SYSTEM_STATE_DEFAULT = {
   posture_guardrail_policy_required: false
 };
 
-const INTERFACE_OPTIONS = ["rest","ekm","payment-tcp","pkcs11","jca","kmip","hyok","byok"];
+const INTERFACE_TLS_CONFIG_DEFAULT: KeyInterfaceTLSConfig = {
+  tenant_id: "",
+  certificate_source: "internal_ca",
+  ca_id: "",
+  certificate_id: ""
+};
+
+type ConfigurableInterfaceDefinition = {
+  key: string;
+  label: string;
+  description: string;
+  service: string;
+  defaultBindAddress: string;
+  defaultPort: number;
+  defaultProtocol: InterfaceProtocol;
+  defaultCertSource: InterfaceCertSource;
+  allowedProtocols: InterfaceProtocol[];
+};
+
+type InterfaceProtocol = "http" | "https" | "tls13" | "mtls" | "tcp";
+type InterfaceCertSource = "none" | "internal_ca" | "pki_ca" | "uploaded_certificate";
+type InterfaceTLSBinding = {
+  certSource: InterfaceCertSource;
+  caID: string;
+  certificateID: string;
+};
+
+const INTERFACE_PROTOCOL_LABELS: Record<InterfaceProtocol, string> = {
+  http: "HTTP",
+  https: "HTTPS",
+  tls13: "TLS 1.3",
+  mtls: "Mutual TLS (mTLS)",
+  tcp: "TCP"
+};
+
+const INTERFACE_CERT_SOURCE_LABELS: Record<InterfaceCertSource, string> = {
+  none: "None",
+  internal_ca: "Internal CA (auto-issue)",
+  pki_ca: "CA from Certificates / PKI",
+  uploaded_certificate: "Uploaded certificate from PKI"
+};
+
+const TLS_CERT_MODE_OPTIONS: Array<{ value: InterfaceCertSource; label: string }> = [
+  { value: "internal_ca", label: INTERFACE_CERT_SOURCE_LABELS.internal_ca },
+  { value: "pki_ca", label: INTERFACE_CERT_SOURCE_LABELS.pki_ca },
+  { value: "uploaded_certificate", label: INTERFACE_CERT_SOURCE_LABELS.uploaded_certificate }
+];
+
+const interfaceProtocolUsesCertificate = (protocol:string): boolean => {
+  const value = String(protocol || "").trim().toLowerCase();
+  return value==="https" || value==="tls13" || value==="mtls";
+};
+
+const normalizeInterfaceProtocol = (raw:string, fallback: InterfaceProtocol = "http"): InterfaceProtocol => {
+  const value = String(raw || "").trim().toLowerCase();
+  switch (value) {
+    case "http":
+      return "http";
+    case "https":
+      return "https";
+    case "tls":
+    case "tls13":
+    case "tls-1.3":
+    case "tls_1_3":
+      return "tls13";
+    case "mtls":
+    case "m-tls":
+    case "mutual-tls":
+      return "mtls";
+    case "tcp":
+      return "tcp";
+    default:
+      return fallback;
+  }
+};
+
+const normalizeInterfaceCertSource = (raw:string, protocol:string, fallback: InterfaceCertSource = "internal_ca"): InterfaceCertSource => {
+  if(!interfaceProtocolUsesCertificate(protocol)){
+    return "none";
+  }
+  const value = String(raw || "").trim().toLowerCase();
+  switch (value) {
+    case "":
+    case "internal":
+    case "internal-ca":
+    case "internal_ca":
+    case "auto":
+      return "internal_ca";
+    case "pki":
+    case "ca":
+    case "pki-ca":
+    case "pki_ca":
+      return "pki_ca";
+    case "uploaded":
+    case "certificate":
+    case "uploaded-certificate":
+    case "uploaded_certificate":
+    case "external":
+      return "uploaded_certificate";
+    default:
+      return fallback;
+  }
+};
+
+const buildInterfaceTLSBinding = (
+  protocol:string,
+  certSourceRaw:string,
+  caIDRaw:string,
+  certificateIDRaw:string,
+  fallback: InterfaceCertSource = "internal_ca"
+): InterfaceTLSBinding => {
+  const certSource = normalizeInterfaceCertSource(certSourceRaw, protocol, fallback);
+  return {
+    certSource,
+    caID: certSource==="pki_ca" ? String(caIDRaw || "").trim() : "",
+    certificateID: certSource==="uploaded_certificate" ? String(certificateIDRaw || "").trim() : ""
+  };
+};
+
+const tlsBindingSignature = (binding: InterfaceTLSBinding): string => (
+  `${binding.certSource}|${binding.caID}|${binding.certificateID}`
+);
+
+const CONFIGURABLE_INTERFACE_DEFS: ConfigurableInterfaceDefinition[] = [
+  {
+    key: "dashboard-ui",
+    label: "dashboard-ui",
+    description: "Direct Web Dashboard UI",
+    service: "dashboard",
+    defaultBindAddress: "0.0.0.0",
+    defaultPort: 5173,
+    defaultProtocol: "http",
+    defaultCertSource: "none",
+    allowedProtocols: ["http","https"]
+  },
+  {
+    key: "rest",
+    label: "rest-api",
+    description: "Primary REST API",
+    service: "envoy",
+    defaultBindAddress: "0.0.0.0",
+    defaultPort: 443,
+    defaultProtocol: "https",
+    defaultCertSource: "internal_ca",
+    allowedProtocols: ["https","tls13","mtls"]
+  },
+  {
+    key: "kmip",
+    label: "kmip-tls",
+    description: "KMIP Protocol Interface",
+    service: "kmip",
+    defaultBindAddress: "0.0.0.0",
+    defaultPort: 5696,
+    defaultProtocol: "mtls",
+    defaultCertSource: "internal_ca",
+    allowedProtocols: ["tls13","mtls"]
+  },
+  {
+    key: "ekm",
+    label: "ekm-data",
+    description: "EKM / TDE Endpoint",
+    service: "ekm",
+    defaultBindAddress: "0.0.0.0",
+    defaultPort: 8130,
+    defaultProtocol: "http",
+    defaultCertSource: "none",
+    allowedProtocols: ["http","https","tls13"]
+  },
+  {
+    key: "payment-tcp",
+    label: "payment-tcp",
+    description: "Payment Crypto TCP",
+    service: "payment",
+    defaultBindAddress: "0.0.0.0",
+    defaultPort: 9170,
+    defaultProtocol: "tcp",
+    defaultCertSource: "none",
+    allowedProtocols: ["tcp"]
+  },
+  {
+    key: "hyok",
+    label: "hyok-api",
+    description: "HYOK API",
+    service: "hyok",
+    defaultBindAddress: "0.0.0.0",
+    defaultPort: 8120,
+    defaultProtocol: "http",
+    defaultCertSource: "none",
+    allowedProtocols: ["http","https","tls13"]
+  }
+];
+
+const INTERFACE_OPTIONS = CONFIGURABLE_INTERFACE_DEFS.map((item)=>item.key);
+const INTERFACE_DEF_MAP = CONFIGURABLE_INTERFACE_DEFS.reduce<Record<string, ConfigurableInterfaceDefinition>>((acc, item)=>{
+  acc[item.key] = item;
+  return acc;
+}, {});
+const INTERFACE_ORDER = CONFIGURABLE_INTERFACE_DEFS.reduce<Record<string, number>>((acc, item, index)=>{
+  acc[item.key] = index;
+  return acc;
+}, {});
+
+const normalizeConfigurableInterfaceName = (raw:string): string => {
+  const value = String(raw || "").trim().toLowerCase().replace(/_/g, "-");
+  switch (value) {
+    case "dashboard":
+    case "dashboard-ui":
+    case "dashboard-ui-http":
+      return "dashboard-ui";
+    case "rest":
+    case "api":
+    case "rest-api":
+      return "rest";
+    case "kmip":
+    case "kmip-tls":
+      return "kmip";
+    case "ekm":
+    case "tde":
+    case "ekm-data":
+      return "ekm";
+    case "payment":
+    case "paymenttcp":
+    case "payment-tcp":
+    case "paytcp":
+      return "payment-tcp";
+    case "hyok":
+    case "hyok-api":
+      return "hyok";
+    default:
+      return value;
+  }
+};
+
+const interfaceStatusRank = (status:string):number => {
+  const value = String(status || "").trim().toLowerCase();
+  if (value === "listening" || value === "running") return 4;
+  if (value === "starting" || value === "restarting") return 3;
+  if (value === "configured" || value === "unknown") return 2;
+  if (value === "disabled" || value === "stopped") return 1;
+  return 0;
+};
 
 type SystemAdminPanel =
   | "health"
@@ -428,59 +798,46 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [accessSettingsSaving,setAccessSettingsSaving]=useState(false);
   const [interfacePorts,setInterfacePorts]=useState<Array<Record<string,any>>>([]);
   const [interfaceConfigLoading,setInterfaceConfigLoading]=useState(false);
-  const [newInterfacePort,setNewInterfacePort]=useState<Record<string,any>>({
-    interface_name:"rest",
-    bind_address:"0.0.0.0",
-    port:443,
-    enabled:true,
-    description:""
-  });
-  // ── Network Interfaces state ──
-  type NetIface = {id:string;name:string;description:string;service:string;protocol:string;cert_type:string;auto_create_cert:boolean;bind_address:string;port:number;enabled:boolean};
-  const DEFAULT_NET_INTERFACES:NetIface[]=[
-    {id:"if-1",name:"rest-api",description:"Primary REST API",service:"keycore",protocol:"tls13",cert_type:"ecdsa-p256",auto_create_cert:true,bind_address:"0.0.0.0",port:8443,enabled:true},
-    {id:"if-2",name:"kmip-tls",description:"KMIP Protocol Interface",service:"kmip",protocol:"mtls",cert_type:"ecdsa-p256",auto_create_cert:true,bind_address:"0.0.0.0",port:5696,enabled:true},
-    {id:"if-3",name:"management",description:"Admin Management Plane",service:"auth",protocol:"mtls",cert_type:"rsa-4096",auto_create_cert:true,bind_address:"127.0.0.1",port:9443,enabled:true},
-    {id:"if-4",name:"hsm-bridge",description:"HSM Communication",service:"hsm-proxy",protocol:"mtls",cert_type:"ecdsa-p384",auto_create_cert:false,bind_address:"127.0.0.1",port:9500,enabled:true},
-    {id:"if-5",name:"ekm-data",description:"EKM/TDE Endpoint",service:"ekm",protocol:"tls13",cert_type:"ecdsa-p256",auto_create_cert:true,bind_address:"0.0.0.0",port:8444,enabled:true},
-    {id:"if-6",name:"audit-stream",description:"Audit Event Stream",service:"audit",protocol:"mtls",cert_type:"ecdsa-p256",auto_create_cert:true,bind_address:"0.0.0.0",port:8445,enabled:true}
-  ];
-  const NET_IF_SERVICES=["keycore","auth","audit","kmip","ekm","hsm-proxy","nats-bridge","rest-api","byok","hyok","certs","secrets","dataprotect"];
-  const NET_IF_PROTOCOLS=[{v:"tls13",l:"TLS 1.3"},{v:"mtls",l:"Mutual TLS (mTLS)"},{v:"pqc_tls",l:"PQC-TLS (ML-KEM)"},{v:"hybrid",l:"Hybrid (PQC + Traditional)"}];
-  const NET_IF_CERT_TYPES=[{v:"rsa-2048",l:"RSA-2048"},{v:"rsa-4096",l:"RSA-4096"},{v:"ecdsa-p256",l:"ECDSA P-256"},{v:"ecdsa-p384",l:"ECDSA P-384"},{v:"ml-dsa-65",l:"ML-DSA-65 (Dilithium3)"},{v:"ml-dsa-87",l:"ML-DSA-87 (Dilithium5)"},{v:"hybrid-ml-dsa-ecdsa",l:"Hybrid ML-DSA + ECDSA"}];
-  const [netInterfaces,setNetInterfaces]=useState<NetIface[]>(DEFAULT_NET_INTERFACES);
+  const [interfaceTLSConfig,setInterfaceTLSConfig]=useState<KeyInterfaceTLSConfig>(INTERFACE_TLS_CONFIG_DEFAULT);
+  const [interfaceTLSConfigLoading,setInterfaceTLSConfigLoading]=useState(false);
+  type NetIface = {
+    id: string;
+    interface_name: string;
+    name: string;
+    description: string;
+    service: string;
+    protocol: InterfaceProtocol;
+    protocol_label: string;
+    cert_source: InterfaceCertSource;
+    cert_label: string;
+    ca_id: string;
+    certificate_id: string;
+    auto_create_cert: boolean;
+    bind_address: string;
+    port: number;
+    enabled: boolean;
+    status: string;
+    runtime_bind_address: string|undefined;
+    runtime_port: number|undefined;
+    runtime_source: string|undefined;
+    updated_at: string|undefined;
+  };
   const [netIfModalOpen,setNetIfModalOpen]=useState(false);
   const [editingNetIf,setEditingNetIf]=useState<NetIface|null>(null);
-  const [ifName,setIfName]=useState("");
+  const [ifName,setIfName]=useState(INTERFACE_OPTIONS[0] || "rest");
   const [ifDesc,setIfDesc]=useState("");
-  const [ifService,setIfService]=useState("keycore");
-  const [ifProtocol,setIfProtocol]=useState("tls13");
-  const [ifCertType,setIfCertType]=useState("ecdsa-p256");
-  const [ifAutoCreateCert,setIfAutoCreateCert]=useState(true);
+  const [ifProtocol,setIfProtocol]=useState<InterfaceProtocol>("https");
+  const [ifCertSource,setIfCertSource]=useState<InterfaceCertSource>("internal_ca");
+  const [ifCAID,setIfCAID]=useState("");
+  const [ifCertificateID,setIfCertificateID]=useState("");
   const [ifBindAddr,setIfBindAddr]=useState("0.0.0.0");
-  const [ifPort,setIfPort]=useState("8443");
+  const [ifPort,setIfPort]=useState("443");
   const [ifEnabled,setIfEnabled]=useState(true);
-  const openNetIfModal=(iface?:NetIface)=>{
-    if(iface){setEditingNetIf(iface);setIfName(iface.name);setIfDesc(iface.description);setIfService(iface.service);setIfProtocol(iface.protocol);setIfCertType(iface.cert_type);setIfAutoCreateCert(iface.auto_create_cert);setIfBindAddr(iface.bind_address);setIfPort(String(iface.port));setIfEnabled(iface.enabled);}
-    else{setEditingNetIf(null);setIfName("");setIfDesc("");setIfService("keycore");setIfProtocol("tls13");setIfCertType("ecdsa-p256");setIfAutoCreateCert(true);setIfBindAddr("0.0.0.0");setIfPort("8443");setIfEnabled(true);}
-    setNetIfModalOpen(true);
-  };
-  const saveNetIf=()=>{
-    if(!ifName.trim()){onToast("Interface name is required.");return;}
-    const portNum=Number(ifPort||0);
-    if(portNum<1||portNum>65535){onToast("Port must be 1-65535.");return;}
-    if(editingNetIf){
-      setNetInterfaces((prev)=>prev.map((i)=>i.id===editingNetIf.id?{...i,name:ifName.trim(),description:ifDesc.trim(),service:ifService,protocol:ifProtocol,cert_type:ifCertType,auto_create_cert:ifAutoCreateCert,bind_address:ifBindAddr,port:portNum,enabled:ifEnabled}:i));
-      onToast("Interface updated.");
-    }else{
-      const newIf:NetIface={id:`if-${Date.now()}`,name:ifName.trim(),description:ifDesc.trim(),service:ifService,protocol:ifProtocol,cert_type:ifCertType,auto_create_cert:ifAutoCreateCert,bind_address:ifBindAddr,port:portNum,enabled:ifEnabled};
-      setNetInterfaces((prev)=>[...prev,newIf]);
-      onToast("Interface created.");
-    }
-    setNetIfModalOpen(false);
-  };
-  const deleteNetIf=(id:string)=>{setNetInterfaces((prev)=>prev.filter((i)=>i.id!==id));onToast("Interface removed.");};
-  const toggleNetIfEnabled=(id:string)=>{setNetInterfaces((prev)=>prev.map((i)=>i.id===id?{...i,enabled:!i.enabled}:i));};
+  const [fipsConfigModalOpen,setFipsConfigModalOpen]=useState(false);
+  const [tlsConfigModalOpen,setTlsConfigModalOpen]=useState(false);
+  const [tlsCatalogLoading,setTlsCatalogLoading]=useState(false);
+  const [caOptions,setCAOptions]=useState<CertCA[]>([]);
+  const [certificateOptions,setCertificateOptions]=useState<CertificateItem[]>([]);
 
   // ── Disk Encryption state ──
   const [fdeStatus,setFdeStatus]=useState<FDEStatusT|null>(null);
@@ -642,6 +999,27 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     }
     return false;
   },[onLogout,onToast]);
+
+  const loadTLSCatalog=useCallback(async()=>{
+    if(!session?.token){
+      setCAOptions([]);
+      setCertificateOptions([]);
+      return;
+    }
+    setTlsCatalogLoading(true);
+    try{
+      const [cas,certs]=await Promise.all([
+        listCAs(session),
+        listCertificates(session,{ status: "active", limit: 200 })
+      ]);
+      setCAOptions(Array.isArray(cas)?cas.filter((item)=>String(item?.status||"").toLowerCase()==="active"):[]);
+      setCertificateOptions(Array.isArray(certs)?certs.filter((item)=>String(item?.status||"").toLowerCase()==="active"):[]);
+    }catch(error){
+      if(!sessionGuard(error)) onToast(`TLS catalog load failed: ${errMsg(error)}`);
+    }finally{
+      setTlsCatalogLoading(false);
+    }
+  },[onToast,session,sessionGuard]);
 
   const refreshAlertRules=useCallback(async()=>{
     if(!session?.token) return;
@@ -848,22 +1226,27 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     if(!session?.token){
       setAccessSettings(null);
       setInterfacePorts([]);
+      setInterfaceTLSConfig(INTERFACE_TLS_CONFIG_DEFAULT);
       return;
     }
     setAccessSettingsLoading(true);
     setInterfaceConfigLoading(true);
+    setInterfaceTLSConfigLoading(true);
     try{
-      const [settings,ports]=await Promise.all([
+      const [settings,ports,tlsConfig]=await Promise.all([
         getKeyAccessSettings(session),
-        listKeyInterfacePorts(session)
+        listKeyInterfacePorts(session),
+        getKeyInterfaceTLSConfig(session)
       ]);
       setAccessSettings((settings&&typeof settings==="object")?settings:null);
       setInterfacePorts(Array.isArray(ports)?ports:[]);
+      setInterfaceTLSConfig((tlsConfig&&typeof tlsConfig==="object")?tlsConfig:INTERFACE_TLS_CONFIG_DEFAULT);
     }catch(error){
       if(!sessionGuard(error)) onToast(`Key access hardening load failed: ${errMsg(error)}`);
     }finally{
       setAccessSettingsLoading(false);
       setInterfaceConfigLoading(false);
+      setInterfaceTLSConfigLoading(false);
     }
   },[onToast,session,sessionGuard]);
 
@@ -886,39 +1269,6 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       setAccessSettingsSaving(false);
     }
   },[accessSettings,onToast,session,sessionGuard]);
-
-  const addInterfacePort=useCallback(async()=>{
-    if(!session?.token){return;}
-    const iface=String(newInterfacePort?.interface_name||"").trim();
-    const bind=String(newInterfacePort?.bind_address||"").trim()||"0.0.0.0";
-    const port=Number(newInterfacePort?.port||0);
-    if(!iface){onToast("Interface is required.");return;}
-    if(!Number.isFinite(port)||port<=0||port>65535){onToast("Valid port (1-65535) is required.");return;}
-    try{
-      await upsertKeyInterfacePort(session,{
-        interface_name:iface,
-        bind_address:bind,
-        port,
-        enabled:Boolean(newInterfacePort?.enabled),
-        description:String(newInterfacePort?.description||"").trim()
-      });
-      onToast("Interface port mapping saved.");
-      await loadAccessHardening();
-    }catch(error){
-      if(!sessionGuard(error)) onToast(`Interface port save failed: ${errMsg(error)}`);
-    }
-  },[loadAccessHardening,newInterfacePort,onToast,session,sessionGuard]);
-
-  const removeInterfacePort=useCallback(async(interfaceName:string)=>{
-    if(!session?.token||!String(interfaceName||"").trim()){return;}
-    try{
-      await deleteKeyInterfacePort(session,String(interfaceName).trim());
-      onToast("Interface port mapping deleted.");
-      await loadAccessHardening();
-    }catch(error){
-      if(!sessionGuard(error)) onToast(`Interface port delete failed: ${errMsg(error)}`);
-    }
-  },[loadAccessHardening,onToast,session,sessionGuard]);
 
   const loadTags=useCallback(async()=>{
     if(!session?.token){setTagCatalog([]);return;}
@@ -992,8 +1342,10 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       const parsedSnmp = parseSNMPTargetToState(String((state as Record<string, any>)?.snmp_target || snmpTarget));
       setSystemState((prev)=>({...SYSTEM_STATE_DEFAULT,...prev,...state,...parsedSnmp,snmp_target:snmpTarget}));
       onToast("System administration platform settings updated.");
+      return true;
     }catch(error){
       if(!sessionGuard(error)) onToast(`System state save failed: ${errMsg(error)}`);
+      return false;
     }finally{
       setSystemStateSaving(false);
     }
@@ -1141,6 +1493,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     void loadPasswordPolicy();
     void loadSecurityPolicy();
     void loadAccessHardening();
+    void loadTLSCatalog();
     void loadTags();
   },[
     session?.token,
@@ -1154,6 +1507,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     loadPasswordPolicy,
     loadSecurityPolicy,
     loadSystemState,
+    loadTLSCatalog,
     loadTags
   ]);
   useEffect(()=>{
@@ -1169,7 +1523,15 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     if(panel==="alertrules"&&session?.token) void refreshAlertRules();
     if(panel==="approvals"&&session?.token) void loadGovPolicies();
     if(panel==="diskencryption"&&session?.token) void loadFDEStatus();
-  },[panel,session?.token,refreshAlertRules,loadGovPolicies,loadFDEStatus]);
+    if((panel==="interfaces"||panel==="runtime")&&session?.token&&(caOptions.length===0&&certificateOptions.length===0)) void loadTLSCatalog();
+  },[caOptions.length,certificateOptions.length,loadFDEStatus,loadGovPolicies,loadTLSCatalog,panel,refreshAlertRules,session?.token]);
+
+  useEffect(()=>{
+    setSystemState((prev)=>({
+      ...prev,
+      fips_mode: fipsMode==="enabled" ? "enabled" : "disabled"
+    }));
+  },[fipsMode]);
 
   const restartableServiceNames = useMemo(
     ()=> (health.services||[])
@@ -1178,6 +1540,446 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       .filter(Boolean),
     [health.services]
   );
+
+  const liveInterfaces = useMemo(
+    ()=> Array.isArray(health?.interfaces) ? health.interfaces : [],
+    [health?.interfaces]
+  );
+
+  const hiddenConfiguredInterfaceCount = useMemo(
+    ()=> (Array.isArray(interfacePorts) ? interfacePorts : []).filter((item)=>!INTERFACE_DEF_MAP[normalizeConfigurableInterfaceName(String(item?.interface_name||""))]).length,
+    [interfacePorts]
+  );
+
+  const configuredPortRecords = useMemo<Array<Record<string,any>>>(
+    ()=> (Array.isArray(interfacePorts) && interfacePorts.length
+      ? interfacePorts
+      : CONFIGURABLE_INTERFACE_DEFS.map((item)=>({
+          interface_name: item.key,
+          bind_address: item.defaultBindAddress,
+          port: item.defaultPort,
+          protocol: item.defaultProtocol,
+          certificate_source: item.defaultCertSource,
+          enabled: true,
+          description: item.description
+        }))),
+    [interfacePorts]
+  );
+
+  const persistedTLSBinding = useMemo<InterfaceTLSBinding>(
+    ()=> buildInterfaceTLSBinding(
+      "https",
+      String(interfaceTLSConfig?.certificate_source||"internal_ca"),
+      String(interfaceTLSConfig?.ca_id||""),
+      String(interfaceTLSConfig?.certificate_id||""),
+      "internal_ca"
+    ),
+    [interfaceTLSConfig?.ca_id,interfaceTLSConfig?.certificate_id,interfaceTLSConfig?.certificate_source]
+  );
+
+  const tlsDefaultsOutOfSync = useMemo(
+    ()=> {
+      const expected = tlsBindingSignature(persistedTLSBinding);
+      return configuredPortRecords.some((raw)=>{
+        const interfaceName = normalizeConfigurableInterfaceName(String(raw?.interface_name||""));
+        const meta = INTERFACE_DEF_MAP[interfaceName];
+        if(!meta){
+          return false;
+        }
+        const protocol = normalizeInterfaceProtocol(String(raw?.protocol||""), meta.defaultProtocol);
+        if(!interfaceProtocolUsesCertificate(protocol)){
+          return false;
+        }
+        return tlsBindingSignature(buildInterfaceTLSBinding(
+          protocol,
+          String(raw?.certificate_source||""),
+          String(raw?.ca_id||""),
+          String(raw?.certificate_id||""),
+          meta.defaultCertSource
+        )) !== expected;
+      });
+    },
+    [configuredPortRecords,persistedTLSBinding]
+  );
+
+  const systemTLSCertSource = useMemo(
+    ()=> persistedTLSBinding.certSource,
+    [persistedTLSBinding.certSource]
+  );
+
+  const systemTLSCAID = useMemo(
+    ()=> systemTLSCertSource==="pki_ca" ? persistedTLSBinding.caID : "",
+    [persistedTLSBinding.caID,systemTLSCertSource]
+  );
+
+  const systemTLSCertificateID = useMemo(
+    ()=> systemTLSCertSource==="uploaded_certificate" ? persistedTLSBinding.certificateID : "",
+    [persistedTLSBinding.certificateID,systemTLSCertSource]
+  );
+
+  const configuredInterfaces = useMemo<NetIface[]>(
+    ()=> configuredPortRecords
+      .reduce<NetIface[]>((items,raw)=>{
+        const interfaceName = normalizeConfigurableInterfaceName(String(raw?.interface_name||""));
+        const meta = INTERFACE_DEF_MAP[interfaceName];
+        if(!meta){
+          return items;
+        }
+        const desiredPort = Number(raw?.port||meta.defaultPort);
+        const configuredProtocol = normalizeInterfaceProtocol(String(raw?.protocol||""), meta.defaultProtocol);
+        const effectiveTLSBinding = interfaceProtocolUsesCertificate(configuredProtocol)
+          ? {
+              certSource: persistedTLSBinding.certSource,
+              caID: persistedTLSBinding.caID,
+              certificateID: persistedTLSBinding.certificateID
+            }
+          : {
+              certSource: "none" as InterfaceCertSource,
+              caID: "",
+              certificateID: ""
+            };
+        const configuredCertSource = effectiveTLSBinding.certSource;
+        const caID = effectiveTLSBinding.caID;
+        const certificateID = effectiveTLSBinding.certificateID;
+        const runtimeMatch = [...liveInterfaces]
+          .filter((item)=>{
+            const runtimeName = normalizeConfigurableInterfaceName(String(item?.name||""));
+            return runtimeName === interfaceName || Number(item?.port||0) === desiredPort;
+          })
+          .sort((a,b)=>interfaceStatusRank(String(b?.status||""))-interfaceStatusRank(String(a?.status||"")))[0];
+        const enabled = Boolean(raw?.enabled);
+        const status = enabled
+          ? String(runtimeMatch?.status||"not detected")
+          : "disabled";
+        const caName = caOptions.find((item)=>String(item?.id||"")===caID)?.name;
+        const certificateName = certificateOptions.find((item)=>String(item?.id||"")===certificateID)?.subject_cn;
+        const certificateLabel = configuredCertSource==="internal_ca"
+          ? "Internal CA (auto-issue)"
+          : configuredCertSource==="pki_ca"
+            ? (caName ? `CA: ${caName}` : "CA from Certificates / PKI")
+            : configuredCertSource==="uploaded_certificate"
+              ? (certificateName ? `Certificate: ${certificateName}` : "Uploaded certificate from PKI")
+              : "None";
+        items.push({
+          id: interfaceName,
+          interface_name: interfaceName,
+          name: meta.label,
+          description: String(raw?.description||"").trim() || meta.description,
+          service: meta.service,
+          protocol: configuredProtocol,
+          protocol_label: INTERFACE_PROTOCOL_LABELS[configuredProtocol],
+          cert_source: configuredCertSource,
+          cert_label: certificateLabel,
+          ca_id: caID,
+          certificate_id: certificateID,
+          auto_create_cert: configuredCertSource==="internal_ca" || configuredCertSource==="pki_ca",
+          bind_address: String(raw?.bind_address||meta.defaultBindAddress).trim() || meta.defaultBindAddress,
+          port: desiredPort,
+          enabled,
+          status,
+          runtime_bind_address: runtimeMatch?.bind_address,
+          runtime_port: runtimeMatch?.port,
+          runtime_source: runtimeMatch?.source,
+          updated_at: String(raw?.updated_at||"").trim() || undefined
+        });
+        return items;
+      },[])
+      .sort((a,b)=>(INTERFACE_ORDER[a.interface_name]??999)-(INTERFACE_ORDER[b.interface_name]??999)),
+    [caOptions,certificateOptions,configuredPortRecords,liveInterfaces,persistedTLSBinding.caID,persistedTLSBinding.certSource,persistedTLSBinding.certificateID]
+  );
+
+  const availableInterfaceDefs = useMemo(
+    ()=> CONFIGURABLE_INTERFACE_DEFS.filter((item)=>item.key===editingNetIf?.interface_name || !configuredInterfaces.some((iface)=>iface.interface_name===item.key)),
+    [configuredInterfaces,editingNetIf?.interface_name]
+  );
+
+  const selectedInterfaceDef = useMemo(
+    ()=> INTERFACE_DEF_MAP[normalizeConfigurableInterfaceName(ifName)] || availableInterfaceDefs[0] || CONFIGURABLE_INTERFACE_DEFS[0],
+    [availableInterfaceDefs,ifName]
+  );
+
+  const availableProtocolOptions = useMemo<InterfaceProtocol[]>(
+    ()=> Array.isArray(selectedInterfaceDef?.allowedProtocols) && selectedInterfaceDef.allowedProtocols.length
+      ? selectedInterfaceDef.allowedProtocols
+      : ["http"],
+    [selectedInterfaceDef]
+  );
+
+  const interfaceTLSRequired = useMemo(
+    ()=> interfaceProtocolUsesCertificate(ifProtocol),
+    [ifProtocol]
+  );
+
+  const selectedTLSCAName = useMemo(
+    ()=> caOptions.find((item)=>String(item?.id||"")===String(ifCAID||""))?.name || "",
+    [caOptions,ifCAID]
+  );
+
+  const selectedTLSCertificateName = useMemo(
+    ()=> certificateOptions.find((item)=>String(item?.id||"")===String(ifCertificateID||""))?.subject_cn || "",
+    [certificateOptions,ifCertificateID]
+  );
+
+  const systemTLSCAName = useMemo(
+    ()=> caOptions.find((item)=>String(item?.id||"")===systemTLSCAID)?.name || "",
+    [caOptions,systemTLSCAID]
+  );
+
+  const systemTLSCertificateName = useMemo(
+    ()=> certificateOptions.find((item)=>String(item?.id||"")===systemTLSCertificateID)?.subject_cn || "",
+    [certificateOptions,systemTLSCertificateID]
+  );
+
+  const interfaceCardStats = useMemo(
+    ()=>({
+      total: configuredInterfaces.length,
+      enabled: configuredInterfaces.filter((item)=>item.enabled).length,
+      listening: configuredInterfaces.filter((item)=>String(item.status||"").toLowerCase()==="listening").length,
+      external: configuredInterfaces.filter((item)=>String(item.bind_address||"").trim()!=="127.0.0.1").length
+    }),
+    [configuredInterfaces]
+  );
+
+  const applyInterfaceSelection = useCallback((rawName:string)=>{
+    const nextName = normalizeConfigurableInterfaceName(rawName);
+    const meta = INTERFACE_DEF_MAP[nextName];
+    if(!meta){
+      return;
+    }
+    const protocol = meta.defaultProtocol;
+    const usesCertificate = interfaceProtocolUsesCertificate(protocol);
+    const certSource = usesCertificate ? systemTLSCertSource : "none";
+    setIfName(meta.key);
+    setIfDesc(meta.description);
+    setIfBindAddr(meta.defaultBindAddress);
+    setIfPort(String(meta.defaultPort));
+    setIfProtocol(protocol);
+    setIfCertSource(certSource);
+    setIfCAID(certSource==="pki_ca" ? systemTLSCAID : "");
+    setIfCertificateID(certSource==="uploaded_certificate" ? systemTLSCertificateID : "");
+  },[systemTLSCAID,systemTLSCertSource,systemTLSCertificateID]);
+
+  useEffect(()=>{
+    if(!availableProtocolOptions.includes(ifProtocol)){
+      const fallback = availableProtocolOptions[0] || selectedInterfaceDef?.defaultProtocol || "http";
+      setIfProtocol(fallback);
+      return;
+    }
+    if(!interfaceTLSRequired){
+      if(ifCertSource!=="none") setIfCertSource("none");
+      if(ifCAID) setIfCAID("");
+      if(ifCertificateID) setIfCertificateID("");
+      return;
+    }
+    if(ifCertSource!==systemTLSCertSource){
+      setIfCertSource(systemTLSCertSource);
+    }
+    if(systemTLSCertSource==="pki_ca"){
+      if(ifCAID!==systemTLSCAID){
+        setIfCAID(systemTLSCAID);
+      }
+      if(ifCertificateID){
+        setIfCertificateID("");
+      }
+      return;
+    }
+    if(systemTLSCertSource==="uploaded_certificate"){
+      if(ifCertificateID!==systemTLSCertificateID){
+        setIfCertificateID(systemTLSCertificateID);
+      }
+      if(ifCAID){
+        setIfCAID("");
+      }
+      return;
+    }
+    if(ifCAID){
+      setIfCAID("");
+    }
+    if(ifCertificateID){
+      setIfCertificateID("");
+    }
+  },[
+    availableProtocolOptions,
+    ifCAID,
+    ifCertSource,
+    ifCertificateID,
+    ifProtocol,
+    interfaceTLSRequired,
+    systemTLSCertSource,
+    systemTLSCAID,
+    systemTLSCertificateID
+  ]);
+
+  const openNetIfModal = useCallback((iface?:NetIface)=>{
+    void loadTLSCatalog();
+    if(iface){
+      setEditingNetIf(iface);
+      setIfName(iface.interface_name);
+      setIfDesc(iface.description);
+      setIfProtocol(iface.protocol);
+      setIfCertSource(interfaceProtocolUsesCertificate(iface.protocol) ? systemTLSCertSource : "none");
+      setIfCAID(interfaceProtocolUsesCertificate(iface.protocol) && systemTLSCertSource==="pki_ca" ? systemTLSCAID : "");
+      setIfCertificateID(interfaceProtocolUsesCertificate(iface.protocol) && systemTLSCertSource==="uploaded_certificate" ? systemTLSCertificateID : "");
+      setIfBindAddr(iface.bind_address);
+      setIfPort(String(iface.port));
+      setIfEnabled(iface.enabled);
+      setNetIfModalOpen(true);
+      return;
+    }
+    const fallback = availableInterfaceDefs[0] || CONFIGURABLE_INTERFACE_DEFS[0];
+    const fallbackProtocol = fallback?.defaultProtocol || "http";
+    const fallbackUsesTLS = interfaceProtocolUsesCertificate(fallbackProtocol);
+    const fallbackCertSource = fallbackUsesTLS ? systemTLSCertSource : "none";
+    setEditingNetIf(null);
+    setIfName(fallback?.key||"rest");
+    setIfDesc(fallback?.description||"");
+    setIfProtocol(fallbackProtocol);
+    setIfCertSource(fallbackCertSource);
+    setIfCAID(fallbackCertSource==="pki_ca" ? systemTLSCAID : "");
+    setIfCertificateID(fallbackCertSource==="uploaded_certificate" ? systemTLSCertificateID : "");
+    setIfBindAddr(fallback?.defaultBindAddress||"0.0.0.0");
+    setIfPort(String(fallback?.defaultPort||443));
+    setIfEnabled(true);
+    setNetIfModalOpen(true);
+  },[availableInterfaceDefs,loadTLSCatalog,systemTLSCAID,systemTLSCertSource,systemTLSCertificateID]);
+
+  const saveNetIf = useCallback(async()=>{
+    if(!session?.token){
+      return;
+    }
+    const interfaceName = normalizeConfigurableInterfaceName(ifName);
+    const meta = INTERFACE_DEF_MAP[interfaceName];
+    if(!meta){
+      onToast("Select a valid interface.");
+      return;
+    }
+    const bindAddress = String(ifBindAddr||"").trim() || meta.defaultBindAddress;
+    const portNum = Number(ifPort||0);
+    const protocol = normalizeInterfaceProtocol(ifProtocol, meta.defaultProtocol);
+    if(!meta.allowedProtocols.includes(protocol)){
+      onToast("Select a valid protocol for this interface.");
+      return;
+    }
+    const certSource = interfaceProtocolUsesCertificate(protocol) ? systemTLSCertSource : "none";
+    const effectiveCAID = certSource==="pki_ca" ? systemTLSCAID : "";
+    const effectiveCertificateID = certSource==="uploaded_certificate" ? systemTLSCertificateID : "";
+    if(!Number.isFinite(portNum)||portNum<1||portNum>65535){
+      onToast("Port must be 1-65535.");
+      return;
+    }
+    if(interfaceProtocolUsesCertificate(protocol) && certSource==="pki_ca" && !effectiveCAID){
+      onToast("Configure TLS first and select a CA from Certificates / PKI.");
+      return;
+    }
+    if(interfaceProtocolUsesCertificate(protocol) && certSource==="uploaded_certificate" && !effectiveCertificateID){
+      onToast("Configure TLS first and select an uploaded certificate from Certificates / PKI.");
+      return;
+    }
+    try{
+      await upsertKeyInterfacePort(session,{
+        interface_name: interfaceName,
+        bind_address: bindAddress,
+        port: portNum,
+        protocol,
+        certificate_source: certSource,
+        ca_id: effectiveCAID,
+        certificate_id: effectiveCertificateID,
+        enabled: ifEnabled,
+        description: String(ifDesc||"").trim() || meta.description
+      });
+      onToast(editingNetIf?"Interface updated.":"Interface created.");
+      setNetIfModalOpen(false);
+      setEditingNetIf(null);
+      await loadAccessHardening();
+    }catch(error){
+      if(!sessionGuard(error)) onToast(`Interface save failed: ${errMsg(error)}`);
+    }
+  },[editingNetIf,ifBindAddr,ifDesc,ifEnabled,ifName,ifPort,ifProtocol,loadAccessHardening,onToast,session,sessionGuard,systemTLSCAID,systemTLSCertSource,systemTLSCertificateID]);
+
+  const deleteNetIf = useCallback(async(interfaceName:string)=>{
+    if(!session?.token){
+      return;
+    }
+    const normalizedName = normalizeConfigurableInterfaceName(interfaceName);
+    const meta = INTERFACE_DEF_MAP[normalizedName];
+    const ok = await promptDialog.confirm({
+      title: "Delete Interface",
+      message: `Remove ${meta?.label||normalizedName} from the configurable interface list?`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      danger: true
+    });
+    if(!ok){
+      return;
+    }
+    try{
+      await deleteKeyInterfacePort(session,normalizedName);
+      onToast("Interface removed.");
+      await loadAccessHardening();
+    }catch(error){
+      if(!sessionGuard(error)) onToast(`Interface delete failed: ${errMsg(error)}`);
+    }
+  },[loadAccessHardening,onToast,promptDialog,session,sessionGuard]);
+
+  const toggleNetIfEnabled = useCallback(async(iface:NetIface)=>{
+    if(!session?.token){
+      return;
+    }
+    try{
+      await upsertKeyInterfacePort(session,{
+        interface_name: iface.interface_name,
+        bind_address: iface.bind_address,
+        port: iface.port,
+        protocol: iface.protocol,
+        certificate_source: iface.cert_source,
+        ca_id: iface.ca_id,
+        certificate_id: iface.certificate_id,
+        enabled: !iface.enabled,
+        description: iface.description
+      });
+      onToast(!iface.enabled ? "Interface enabled." : "Interface disabled.");
+      await loadAccessHardening();
+    }catch(error){
+      if(!sessionGuard(error)) onToast(`Interface update failed: ${errMsg(error)}`);
+    }
+  },[loadAccessHardening,onToast,session,sessionGuard]);
+
+  const saveFipsConfig = useCallback(async()=>{
+    const nextMode = String(systemState?.fips_mode||"disabled")==="enabled" ? "enabled" : "disabled";
+    onFipsModeChange(nextMode);
+    const ok = await saveSystemState();
+    if(ok){
+      setFipsConfigModalOpen(false);
+    }
+  },[onFipsModeChange,saveSystemState,systemState?.fips_mode]);
+
+  const saveTLSConfig = useCallback(async()=>{
+    const certSource = systemTLSCertSource;
+    if(certSource==="pki_ca" && !systemTLSCAID){
+      onToast("Select a CA from Certificates / PKI for TLS issuance.");
+      return;
+    }
+    if(certSource==="uploaded_certificate" && !systemTLSCertificateID){
+      onToast("Select an uploaded certificate from Certificates / PKI.");
+      return;
+    }
+    const ok = await saveSystemState();
+    if(!ok){
+      return;
+    }
+    try{
+      await updateKeyInterfaceTLSConfig(session!,{
+        certificate_source: certSource,
+        ca_id: certSource==="pki_ca" ? systemTLSCAID : "",
+        certificate_id: certSource==="uploaded_certificate" ? systemTLSCertificateID : ""
+      });
+      await loadAccessHardening();
+      onToast("TLS defaults updated and applied to TLS-enabled interfaces.");
+      setTlsConfigModalOpen(false);
+    }catch(error){
+      if(!sessionGuard(error)) onToast(`TLS configuration save failed: ${errMsg(error)}`);
+    }
+  },[loadAccessHardening,onToast,saveSystemState,session,sessionGuard,systemTLSCAID,systemTLSCertSource,systemTLSCertificateID]);
 
   const restartAllAllowedServices = useCallback(async()=>{
     if(!session?.token){
@@ -1245,11 +2047,22 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const certSecuritySummary = certSecurityLoading
     ? "loading..."
     : `${String(certSecurity?.storage||"db_encrypted")} / ${String(certSecurity?.hsm_mode||"software")} / ${String(certSecurity?.status||"ready")}`;
+  const tlsPolicyLabel = String(systemState?.tls_mode||"internal_ca")
+    .replace("internal_ca","TLS defaults")
+    .replace("custom","Custom TLS")
+    .replace("tls13_only","TLS 1.3 only")
+    .replace("tls13_hybrid_ui","TLS 1.3 + Hybrid PQC (WebUI)")
+    .replace("tls13_hybrid_kms","TLS 1.3 + Hybrid PQC (KMS internal)");
+  const tlsDefaultCertSummary = systemTLSCertSource==="internal_ca"
+    ? "Internal CA auto-issue"
+    : systemTLSCertSource==="pki_ca"
+      ? (systemTLSCAName ? `CA: ${systemTLSCAName}` : "CA from Certificates / PKI")
+      : (systemTLSCertificateName ? `Certificate: ${systemTLSCertificateName}` : "Uploaded certificate from PKI");
   const networkSummary = [
     String(systemState?.mgmt_ip||"IP"),
     String(systemState?.dns_servers||"DNS"),
     String(systemState?.ntp_servers||"NTP"),
-    String(systemState?.tls_mode||"TLS")
+    String(systemState?.proxy_endpoint||"Proxy")
   ].join(", ");
   const backupSummary = `${String(systemState?.backup_schedule||"daily@02:00")} / ${String(systemState?.backup_target||"local")} / retention ${Number(systemState?.backup_retention_days||30)}d`;
   const passwordSummary = passwordPolicyLoading
@@ -1366,7 +2179,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       title="Runtime Crypto Mode"
       actions={<div style={{display:"flex",gap:8}}>
         <Btn small onClick={()=>void loadSystemState()} disabled={systemStateLoading}>{systemStateLoading?"Refreshing...":"Refresh Mode"}</Btn>
-        <Btn small onClick={()=>setPanel("platform")}>Configure FIPS</Btn>
+        <Btn small onClick={()=>{void Promise.all([loadTLSCatalog(),loadAccessHardening()]);setTlsConfigModalOpen(true);}}>Configure TLS</Btn>
+        <Btn small onClick={()=>setFipsConfigModalOpen(true)}>Configure FIPS</Btn>
       </div>}
     >
       <Card style={{padding:10,borderRadius:8}}>
@@ -1378,17 +2192,136 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <div style={{textAlign:"right"}}><span style={{fontSize:10,color:C.muted}}>Entropy:</span><span style={{fontSize:13,color:C.text,fontWeight:700,marginLeft:4}}>{`${entropyBits.toFixed(3)} bits/byte`}</span></div>
         </div>
         <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>
-          <Btn small primary={fipsMode!=="enabled"} onClick={()=>onFipsModeChange("enabled")}>Enable FIPS</Btn>
-          <Btn small primary={fipsMode!=="disabled"} onClick={()=>onFipsModeChange("disabled")}>Disable FIPS</Btn>
+          <Btn small primary={fipsMode!=="enabled"} onClick={()=>{setSystemState((p)=>({...p,fips_mode:"enabled"}));onFipsModeChange("enabled");}}>Enable FIPS</Btn>
+          <Btn small primary={fipsMode!=="disabled"} onClick={()=>{setSystemState((p)=>({...p,fips_mode:"disabled"}));onFipsModeChange("disabled");}}>Disable FIPS</Btn>
           <span style={{fontSize:11,color:C.green,fontWeight:700,border:`1px solid ${C.border}`,background:C.bg,borderRadius:999,padding:"4px 9px",alignSelf:"center"}}>
             <span className={`vecta-hb-dot ${heartbeatToneClass(fipsMode==="enabled"?"running":"unknown")}`} />
             OK
           </span>
         </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
+          <B c="blue">{tlsPolicyLabel}</B>
+          <B c="accent">{tlsDefaultCertSummary}</B>
+        </div>
         <div style={{fontSize:10,color:C.dim,marginTop:8}}>{runtimeLibraryLine}</div>
       </Card>
     </Section>
     </>}
+
+    <Modal open={fipsConfigModalOpen} onClose={()=>setFipsConfigModalOpen(false)} title="Configure FIPS Runtime">
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
+        <B c="blue">{runtimeModeLabel}</B>
+        <B c="accent">{runtimeTlsLabel}</B>
+        <B c={String(systemState?.fips_entropy_health||"ok").toLowerCase()==="ok"?"green":"amber"}>{`${entropyBits.toFixed(3)} bits/byte`}</B>
+      </div>
+      <Row2>
+        <FG label="FIPS Policy">
+          <Sel value={String(systemState?.fips_mode_policy||"standard")} onChange={(e)=>setSystemState((p)=>({...p,fips_mode_policy:String(e.target.value||"standard"),fips_mode:String(e.target.value)==="strict"?"enabled":"disabled"}))}>
+            <option value="strict">Strict (non-approved blocked)</option>
+            <option value="standard">Standard (log-only)</option>
+          </Sel>
+        </FG>
+        <FG label="FIPS Mode">
+          <Inp value={String(systemState?.fips_mode||"disabled")} readOnly />
+        </FG>
+      </Row2>
+      <Row2>
+        <FG label="TLS Profile">
+          <Sel value={String(systemState?.fips_tls_profile||"tls12_fips_suites")} onChange={(e)=>setSystemState((p)=>({...p,fips_tls_profile:String(e.target.value||"tls12_fips_suites")}))}>
+            <option value="tls12_fips_suites">TLS 1.2+ FIPS suites</option>
+            <option value="tls13_only">TLS 1.3 only</option>
+          </Sel>
+        </FG>
+        <FG label="RNG Mode">
+          <Sel value={String(systemState?.fips_rng_mode||"ctr_drbg")} onChange={(e)=>setSystemState((p)=>({...p,fips_rng_mode:String(e.target.value||"ctr_drbg")}))}>
+            <option value="ctr_drbg">CTR_DRBG</option>
+            <option value="hmac_drbg">HMAC_DRBG</option>
+            <option value="hsm_trng">HSM_TRNG</option>
+          </Sel>
+        </FG>
+      </Row2>
+      <FG label="Entropy Source">
+        <Sel value={String(systemState?.fips_entropy_source||"os-csprng")} onChange={(e)=>setSystemState((p)=>({...p,fips_entropy_source:String(e.target.value||"os-csprng")}))}>
+          <option value="os-csprng">OS CSPRNG</option>
+          <option value="software">Software</option>
+          <option value="hsm-trng">HSM TRNG</option>
+        </Sel>
+      </FG>
+      <div style={{
+        display:"grid",
+        gap:4,
+        fontSize:10,
+        color:C.dim,
+        marginTop:8,
+        padding:"10px 12px",
+        border:`1px solid ${C.border}`,
+        borderRadius:10,
+        background:C.bg
+      }}>
+        <div>{`Entropy health: ${String(systemState?.fips_entropy_health||"unknown")} | ${entropyBits.toFixed(3)} bits/byte`}</div>
+        <div>{`Sample: ${entropySampleBytes} bytes in ${entropySampleMicros} us`}</div>
+        <div>{`Runtime: enabled=${Boolean(systemState?.fips_runtime_enabled)} enforced=${Boolean(systemState?.fips_runtime_enforced)}`}</div>
+        <div>{runtimeLibraryLine}</div>
+      </div>
+      <div style={{fontSize:10,color:C.dim,marginTop:8}}>
+        Runtime Crypto stays on this tab. Network addresses live under Network, and certificate issuance for exposed TLS interfaces is governed from Configure TLS.
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn small onClick={()=>setFipsConfigModalOpen(false)}>Cancel</Btn>
+        <Btn small primary onClick={()=>void saveFipsConfig()} disabled={systemStateSaving}>{systemStateSaving?"Saving...":"Save FIPS"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={tlsConfigModalOpen} onClose={()=>{setTlsConfigModalOpen(false);void loadAccessHardening();}} title="Configure TLS Defaults">
+      <FG label="TLS Runtime Policy">
+        <Sel value={String(systemState?.tls_mode||"internal_ca")} onChange={(e)=>setSystemState((p)=>({...p,tls_mode:String(e.target.value||"internal_ca")}))}>
+          <option value="internal_ca">Standard TLS defaults</option>
+          <option value="custom">Custom TLS</option>
+          <option value="tls13_only">TLS 1.3 only</option>
+          <option value="tls13_hybrid_ui">TLS 1.3 + Hybrid PQC (WebUI)</option>
+          <option value="tls13_hybrid_kms">TLS 1.3 + Hybrid PQC (KMS internal)</option>
+        </Sel>
+      </FG>
+      <FG label="Default Certificate Source">
+        <Sel value={systemTLSCertSource} onChange={(e)=>setInterfaceTLSConfig((p)=>({
+          ...p,
+          certificate_source: String(e.target.value||"internal_ca"),
+          ca_id: String(e.target.value)==="pki_ca" ? String(p?.ca_id||"") : "",
+          certificate_id: String(e.target.value)==="uploaded_certificate" ? String(p?.certificate_id||"") : ""
+        }))} disabled={interfaceTLSConfigLoading}>
+          {TLS_CERT_MODE_OPTIONS.map((item)=><option key={item.value} value={item.value}>{item.label}</option>)}
+        </Sel>
+      </FG>
+      {systemTLSCertSource==="pki_ca"&&<FG label="Default Issuing CA">
+        <Sel value={systemTLSCAID} onChange={(e)=>setInterfaceTLSConfig((p)=>({...p,ca_id:String(e.target.value||"")}))} disabled={tlsCatalogLoading||interfaceTLSConfigLoading}>
+          <option value="">{tlsCatalogLoading?"Loading CAs...":"Select CA"}</option>
+          {caOptions.map((item)=><option key={item.id} value={item.id}>{item.name}</option>)}
+        </Sel>
+      </FG>}
+      {systemTLSCertSource==="uploaded_certificate"&&<FG label="Default Certificate">
+        <Sel value={systemTLSCertificateID} onChange={(e)=>setInterfaceTLSConfig((p)=>({...p,certificate_id:String(e.target.value||"")}))} disabled={tlsCatalogLoading||interfaceTLSConfigLoading}>
+          <option value="">{tlsCatalogLoading?"Loading certificates...":"Select certificate"}</option>
+          {certificateOptions.map((item)=><option key={item.id} value={item.id}>{item.subject_cn}</option>)}
+        </Sel>
+      </FG>}
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:6}}>
+        <B c="blue">{tlsPolicyLabel}</B>
+        <B c="accent">{tlsDefaultCertSummary}</B>
+      </div>
+      {tlsDefaultsOutOfSync&&<div style={{fontSize:10,color:C.amber,marginTop:8}}>
+        TLS-capable interfaces are currently using mixed certificate bindings. Saving here will normalize REST, KMIP, and other TLS endpoints to this one shared TLS configuration.
+      </div>}
+      <div style={{fontSize:10,color:C.dim,marginTop:6}}>
+        Interface ports, bind addresses, and HTTP versus HTTPS/TLS exposure are configured in the Interfaces tab. The certificate source selected here is authoritative and is applied across all TLS-enabled interfaces.
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",gap:8,marginTop:12}}>
+        <Btn small onClick={()=>{setTlsConfigModalOpen(false);setPanel("interfaces");void loadAccessHardening();}}>Open Interfaces</Btn>
+        <div style={{display:"flex",gap:8}}>
+          <Btn small onClick={()=>{setTlsConfigModalOpen(false);void loadAccessHardening();}}>Cancel</Btn>
+          <Btn small primary onClick={()=>void saveTLSConfig()} disabled={systemStateSaving||interfaceTLSConfigLoading}>{systemStateSaving?"Saving...":"Save TLS"}</Btn>
+        </div>
+      </div>
+    </Modal>
 
     {panel==="network"&&<>
     <Section title="Network" actions={<div style={{display:"flex",gap:8}}>
@@ -1406,16 +2339,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <FG label="NTP Servers"><Inp value={String(systemState?.ntp_servers||"")} onChange={(e)=>setSystemState((p)=>({...p,ntp_servers:e.target.value}))} placeholder="pool.ntp.org"/></FG>
         </Row2>
         <Row2>
-          <FG label="TLS Mode">
-            <Sel value={String(systemState?.tls_mode||"internal_ca")} onChange={(e)=>setSystemState((p)=>({...p,tls_mode:e.target.value}))}>
-              <option value="internal_ca">Internal CA</option>
-              <option value="custom">Custom</option>
-              <option value="tls13_only">TLS 1.3 only</option>
-              <option value="tls13_hybrid_ui">TLS 1.3 + Hybrid PQC (WebUI)</option>
-              <option value="tls13_hybrid_kms">TLS 1.3 + Hybrid PQC (KMS Internal)</option>
-            </Sel>
-          </FG>
           <FG label="Proxy Endpoint"><Inp value={String(systemState?.proxy_endpoint||"")} onChange={(e)=>setSystemState((p)=>({...p,proxy_endpoint:e.target.value}))} placeholder="https://proxy.bank.local:8443"/></FG>
+          <FG label="Routing Note"><Inp value="TLS listener and certificate settings are managed from Runtime Crypto and Interfaces." readOnly /></FG>
         </Row2>
         <div style={{fontSize:10,color:C.dim,marginTop:8}}>{networkSummary}</div>
       </Card>
@@ -1629,103 +2554,103 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     </>}
 
     {panel==="interfaces"&&<>
-    <Section title="Network Interfaces" actions={<Btn small primary onClick={()=>openNetIfModal()}>+ Add Interface</Btn>}>
-      <div style={{fontSize:11,color:C.dim,marginBottom:14}}>Configure KMS network interfaces, protocols, TLS certificates, and port bindings. Each interface defines a network endpoint for a KMS service.</div>
+    <Section title="Network Interfaces" actions={<div style={{display:"flex",gap:8}}>
+      <Btn small onClick={()=>void Promise.all([loadAccessHardening(),loadHealth()])} disabled={interfaceConfigLoading||healthLoading}>{interfaceConfigLoading||healthLoading?"Refreshing...":"Refresh"}</Btn>
+      <Btn small primary onClick={()=>openNetIfModal()} disabled={!availableInterfaceDefs.length}>+ Add Interface</Btn>
+    </div>}>
+      <div style={{fontSize:11,color:C.dim,marginBottom:14}}>
+        Only user-configurable request-handling endpoints are shown here. Internal service ports and runtime-only listeners are intentionally hidden from this view. TLS certificate issuance and certificate binding come from Runtime Crypto -&gt; Configure TLS and apply to every TLS-enabled interface here.
+      </div>
+      {String(health?.warning||"").trim()&&<div style={{fontSize:10,color:C.amber,marginBottom:12}}>{String(health.warning)}</div>}
+      {hiddenConfiguredInterfaceCount>0&&<div style={{fontSize:10,color:C.dim,marginBottom:12}}>{`${hiddenConfiguredInterfaceCount} internal or legacy interface entr${hiddenConfiguredInterfaceCount===1?"y is":"ies are"} hidden from this panel.`}</div>}
 
-      {/* Stats Row */}
       <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap"}}>
-        <Stat l="Total Interfaces" v={netInterfaces.length} c="accent"/>
-        <Stat l="Active" v={netInterfaces.filter((i)=>i.enabled).length} c="green"/>
-        <Stat l="mTLS Enabled" v={netInterfaces.filter((i)=>i.protocol==="mtls").length} c="blue"/>
-        <Stat l="PQC/Hybrid" v={netInterfaces.filter((i)=>i.protocol==="pqc_tls"||i.protocol==="hybrid").length} c="purple"/>
+        <Stat l="Configured" v={interfaceCardStats.total} c="accent"/>
+        <Stat l="Enabled" v={interfaceCardStats.enabled} c="green"/>
+        <Stat l="Listening" v={interfaceCardStats.listening} c="blue"/>
+        <Stat l="External Bind" v={interfaceCardStats.external} c="purple"/>
       </div>
 
-      {/* Interface Table */}
       <div style={{display:"grid",gap:8}}>
-        {netInterfaces.map((iface)=>{
-          const protLabel=NET_IF_PROTOCOLS.find((p)=>p.v===iface.protocol)?.l||iface.protocol;
-          const certLabel=NET_IF_CERT_TYPES.find((c)=>c.v===iface.cert_type)?.l||iface.cert_type;
+        {configuredInterfaces.map((iface)=>{
+          const statusTone = interfaceTone(String(iface.status||""));
+          const statusColor = statusTone==="green"?C.green:statusTone==="amber"?C.amber:statusTone==="red"?C.red:C.dim;
           return(
             <Card key={iface.id} style={{padding:"10px 14px"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8,gap:10}}>
                 <div>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                     <span style={{fontSize:13,fontWeight:700,color:C.text}}>{iface.name}</span>
-                    <B c={iface.enabled?"green":"orange"}>{iface.enabled?"Active":"Disabled"}</B>
+                    <B c={iface.enabled?"green":"red"}>{iface.enabled?"Active":"Disabled"}</B>
                     <B c="blue">{iface.service}</B>
                   </div>
                   <div style={{fontSize:10,color:C.muted,marginTop:2}}>{iface.description}</div>
                 </div>
-                <div style={{display:"flex",gap:6}}>
-                  <button onClick={()=>toggleNetIfEnabled(iface.id)} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${C.border}`,background:iface.enabled?`${C.green}22`:C.surface,color:iface.enabled?C.green:C.dim,cursor:"pointer"}}>{iface.enabled?"Disable":"Enable"}</button>
-                  <button onClick={()=>openNetIfModal(iface)} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${C.border}`,background:C.surface,color:C.text,cursor:"pointer"}}>Edit</button>
-                  <button onClick={()=>deleteNetIf(iface.id)} style={{fontSize:10,padding:"3px 8px",borderRadius:5,border:`1px solid ${C.red}44`,background:`${C.red}11`,color:C.red,cursor:"pointer"}}>Delete</button>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                  <Btn small onClick={()=>void toggleNetIfEnabled(iface)}>{iface.enabled?"Disable":"Enable"}</Btn>
+                  <Btn small onClick={()=>openNetIfModal(iface)}>Edit</Btn>
+                  <Btn small danger onClick={()=>void deleteNetIf(iface.interface_name)}>Delete</Btn>
                 </div>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
-                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Protocol</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{protLabel}</div></div>
-                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Certificate</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{certLabel}</div></div>
-                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Endpoint</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{iface.bind_address}:{iface.port}</div></div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8}}>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Protocol</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{iface.protocol_label}</div></div>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Certificate</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{iface.cert_label}</div></div>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Configured Endpoint</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{`${iface.bind_address}:${iface.port}`}</div></div>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Runtime Endpoint</div><div style={{fontSize:10,color:iface.runtime_bind_address?C.text:C.dim,fontWeight:600,marginTop:2}}>{iface.runtime_bind_address?`${iface.runtime_bind_address}:${String(iface.runtime_port||iface.port)}`:"Not detected"}</div></div>
                 <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Auto-Cert</div><div style={{fontSize:10,color:iface.auto_create_cert?C.green:C.dim,fontWeight:600,marginTop:2}}>{iface.auto_create_cert?"Yes":"No"}</div></div>
-                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Status</div><div style={{fontSize:10,color:iface.enabled?C.green:C.amber,fontWeight:600,marginTop:2}}>{iface.enabled?"Listening":"Stopped"}</div></div>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Status</div><div style={{fontSize:10,color:statusColor,fontWeight:600,marginTop:2,textTransform:"capitalize"}}>{iface.status}</div></div>
               </div>
             </Card>
           );
         })}
-        {!netInterfaces.length&&<div style={{textAlign:"center",padding:24,color:C.muted,fontSize:11}}>No interfaces configured. Click &quot;+ Add Interface&quot; to create one.</div>}
+        {!configuredInterfaces.length&&<div style={{textAlign:"center",padding:24,color:C.muted,fontSize:11}}>No user-facing interfaces are configured yet. Add one to expose a request-handling endpoint.</div>}
       </div>
 
     </Section>
 
-    {/* Add/Edit Interface Modal */}
-    {netIfModalOpen&&<Modal open={netIfModalOpen} title={editingNetIf?"Edit Interface":"Add New Interface"} onClose={()=>setNetIfModalOpen(false)}>
-      <div style={{display:"grid",gap:10}}>
-        <Row2>
-          <FG label="Interface Name"><Inp value={ifName} onChange={(e)=>setIfName(e.target.value)} placeholder="e.g. rest-api"/></FG>
-          <FG label="Description"><Inp value={ifDesc} onChange={(e)=>setIfDesc(e.target.value)} placeholder="Primary REST endpoint"/></FG>
-        </Row2>
-        <Row2>
-          <FG label="Service">
-            <Sel value={ifService} onChange={(e)=>setIfService(e.target.value)}>
-              {NET_IF_SERVICES.map((s)=><option key={s} value={s}>{s}</option>)}
-            </Sel>
-          </FG>
-          <FG label="Protocol">
-            <Sel value={ifProtocol} onChange={(e)=>setIfProtocol(e.target.value)}>
-              {NET_IF_PROTOCOLS.map((p)=><option key={p.v} value={p.v}>{p.l}</option>)}
-            </Sel>
-          </FG>
-        </Row2>
-        <Row2>
-          <FG label="Certificate Type">
-            <Sel value={ifCertType} onChange={(e)=>setIfCertType(e.target.value)}>
-              {NET_IF_CERT_TYPES.map((c)=><option key={c.v} value={c.v}>{c.l}</option>)}
-            </Sel>
-          </FG>
-          <FG label="Bind Address"><Inp value={ifBindAddr} onChange={(e)=>setIfBindAddr(e.target.value)} placeholder="0.0.0.0"/></FG>
-        </Row2>
-        <Row2>
-          <FG label="Port"><Inp type="number" value={ifPort} onChange={(e)=>setIfPort(e.target.value)} placeholder="8443"/></FG>
-          <div style={{display:"flex",flexDirection:"column",gap:8,paddingTop:20}}>
-            <Chk label="Auto-Create Certificate from KMS CA" checked={ifAutoCreateCert} onChange={()=>setIfAutoCreateCert((v)=>!v)}/>
-            <Chk label="Enabled" checked={ifEnabled} onChange={()=>setIfEnabled((v)=>!v)}/>
-          </div>
-        </Row2>
-
-        {/* Protocol info banner */}
-        <div style={{padding:"8px 12px",borderRadius:8,background:`${C.blue}12`,border:`1px solid ${C.blue}33`,fontSize:10,color:C.dim}}>
-          {ifProtocol==="tls13"&&"TLS 1.3 — Standard server-side TLS. Clients authenticate via tokens/API keys."}
-          {ifProtocol==="mtls"&&"Mutual TLS — Both server and client present certificates. Strongest transport security for service-to-service communication."}
-          {ifProtocol==="pqc_tls"&&"PQC-TLS — Post-Quantum Cryptography using ML-KEM for key exchange. Quantum-resistant but may have compatibility limitations."}
-          {ifProtocol==="hybrid"&&"Hybrid — Combines traditional (ECDH) + PQC (ML-KEM) key exchange. Recommended for transitional quantum readiness."}
+    <Modal open={netIfModalOpen} onClose={()=>{setNetIfModalOpen(false);setEditingNetIf(null);}} title={editingNetIf?"Edit Interface":"Add Interface"}>
+      <FG label="Interface">
+        <Sel value={ifName} onChange={(e)=>applyInterfaceSelection(e.target.value)} disabled={Boolean(editingNetIf)}>
+          {availableInterfaceDefs.map((item)=><option key={item.key} value={item.key}>{item.label}</option>)}
+        </Sel>
+      </FG>
+      <FG label="Description"><Inp value={ifDesc} onChange={(e)=>setIfDesc(e.target.value)} placeholder={selectedInterfaceDef?.description||"Interface description"}/></FG>
+      <Row2>
+        <FG label="Bind Address"><Inp value={ifBindAddr} onChange={(e)=>setIfBindAddr(e.target.value)} placeholder={selectedInterfaceDef?.defaultBindAddress||"0.0.0.0"}/></FG>
+        <FG label="Port"><Inp type="number" value={ifPort} onChange={(e)=>setIfPort(e.target.value)} placeholder={String(selectedInterfaceDef?.defaultPort||443)}/></FG>
+      </Row2>
+      <Row3>
+        <FG label="Service"><Inp value={selectedInterfaceDef?.service||""} readOnly/></FG>
+        <FG label="Protocol">
+          <Sel value={ifProtocol} onChange={(e)=>setIfProtocol(normalizeInterfaceProtocol(e.target.value, selectedInterfaceDef?.defaultProtocol||"http"))}>
+            {availableProtocolOptions.map((protocol)=><option key={protocol} value={protocol}>{INTERFACE_PROTOCOL_LABELS[protocol]}</option>)}
+          </Sel>
+        </FG>
+        <FG label="Certificate Source">
+          <Inp value={interfaceTLSRequired ? INTERFACE_CERT_SOURCE_LABELS[ifCertSource] : "Not required"} readOnly/>
+        </FG>
+      </Row3>
+      {interfaceTLSRequired&&<>
+        <FG label="TLS Binding Source"><Inp value="Managed by Runtime Crypto -> Configure TLS" readOnly/></FG>
+        {ifCertSource==="pki_ca"&&<FG label="Issuing CA"><Inp value={selectedTLSCAName||"Select in Configure TLS"} readOnly/></FG>}
+        {ifCertSource==="uploaded_certificate"&&<FG label="Certificate"><Inp value={selectedTLSCertificateName||"Select in Configure TLS"} readOnly/></FG>}
+        <div style={{fontSize:10,color:C.dim,marginTop:6}}>
+          {ifCertSource==="internal_ca"
+            ? "This interface will auto-issue its TLS certificate from the internal CA selected in Configure TLS."
+            : ifCertSource==="pki_ca"
+              ? `This interface will request or renew a certificate from ${selectedTLSCAName||"the CA selected in Configure TLS"}.`
+              : `This interface will bind ${selectedTLSCertificateName||"the certificate selected in Configure TLS"}.`}
         </div>
-
-        <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:8}}>
-          <Btn small onClick={()=>setNetIfModalOpen(false)}>Cancel</Btn>
-          <Btn small primary onClick={saveNetIf}>{editingNetIf?"Update Interface":"Create Interface"}</Btn>
+        <div style={{fontSize:10,color:C.amber,marginTop:4}}>
+          Interface-level TLS certificate overrides are disabled. Change certificate source, issuing CA, or uploaded certificate from Runtime Crypto -&gt; Configure TLS.
         </div>
+      </>}
+      <Chk label="Enable this interface" checked={ifEnabled} onChange={()=>setIfEnabled((value)=>!value)}/>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn small onClick={()=>{setNetIfModalOpen(false);setEditingNetIf(null);}}>Cancel</Btn>
+        <Btn small primary onClick={()=>void saveNetIf()}>{editingNetIf?"Update Interface":"Create Interface"}</Btn>
       </div>
-    </Modal>}
+    </Modal>
     </>}
 
     {panel==="platform"&&<>
@@ -1813,27 +2738,21 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
       <Row2>
         <Card style={{padding:10,borderRadius:8}}>
-          <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Interfaces / Network</div>
-          <Row2>
-            <FG label="Management IP"><Inp value={String(systemState?.mgmt_ip||"")} onChange={(e)=>setSystemState((p)=>({...p,mgmt_ip:e.target.value}))} placeholder="10.0.1.100"/></FG>
-            <FG label="Cluster IP"><Inp value={String(systemState?.cluster_ip||"")} onChange={(e)=>setSystemState((p)=>({...p,cluster_ip:e.target.value}))} placeholder="172.16.0.100"/></FG>
-          </Row2>
-          <Row2>
-            <FG label="DNS Servers"><Inp value={String(systemState?.dns_servers||"")} onChange={(e)=>setSystemState((p)=>({...p,dns_servers:e.target.value}))} placeholder="8.8.8.8,1.1.1.1"/></FG>
-            <FG label="NTP Servers"><Inp value={String(systemState?.ntp_servers||"")} onChange={(e)=>setSystemState((p)=>({...p,ntp_servers:e.target.value}))} placeholder="pool.ntp.org"/></FG>
-          </Row2>
-          <Row2>
-            <FG label="TLS Mode">
-              <Sel value={String(systemState?.tls_mode||"internal_ca")} onChange={(e)=>setSystemState((p)=>({...p,tls_mode:e.target.value}))}>
-                <option value="internal_ca">Internal CA</option>
-                <option value="custom">Custom</option>
-                <option value="tls13_only">TLS 1.3 only</option>
-                <option value="tls13_hybrid_ui">TLS 1.3 + Hybrid PQC (WebUI)</option>
-                <option value="tls13_hybrid_kms">TLS 1.3 + Hybrid PQC (KMS Internal)</option>
-              </Sel>
-            </FG>
-            <FG label="Proxy Endpoint"><Inp value={String(systemState?.proxy_endpoint||"")} onChange={(e)=>setSystemState((p)=>({...p,proxy_endpoint:e.target.value}))} placeholder="https://proxy.bank.local:8443"/></FG>
-          </Row2>
+          <div style={{fontSize:10,color:C.muted,marginBottom:8}}>TLS / Interface Governance</div>
+          <div style={{display:"grid",gap:8}}>
+            <div style={{fontSize:11,color:C.text,fontWeight:700}}>{tlsPolicyLabel}</div>
+            <div style={{fontSize:10,color:C.dim}}>
+              Network addresses stay on the Network tab. User-facing listeners, HTTP versus HTTPS/TLS, mTLS, and certificate attachment stay on Interfaces.
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <B c="blue">{tlsPolicyLabel}</B>
+              <B c="accent">{tlsDefaultCertSummary}</B>
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:4}}>
+              <Btn small onClick={()=>setPanel("network")}>Open Network</Btn>
+              <Btn small primary onClick={()=>setPanel("interfaces")}>Open Interfaces</Btn>
+            </div>
+          </div>
         </Card>
 
       </Row2>
@@ -1938,19 +2857,21 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Restore Backup</div>
         <Row2>
           <FG label={`Artifact (${BACKUP_ARTIFACT_EXTENSION})`}>
-            <input
-              type="file"
+            <BackupRestoreFilePicker
               accept={BACKUP_ARTIFACT_EXTENSION}
-              onChange={(e)=>setBackupRestoreArtifactFile((e.target.files&&e.target.files[0])?e.target.files[0]:null)}
-              style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,background:C.bg,color:C.text}}
+              file={backupRestoreArtifactFile}
+              onFileChange={setBackupRestoreArtifactFile}
+              emptyLabel="Upload encrypted backup artifact"
+              hint="Encrypted Vecta backup bundle"
             />
           </FG>
           <FG label={`Key Package (${BACKUP_KEY_EXTENSION})`}>
-            <input
-              type="file"
+            <BackupRestoreFilePicker
               accept=".json,.key.json"
-              onChange={(e)=>setBackupRestoreKeyFile((e.target.files&&e.target.files[0])?e.target.files[0]:null)}
-              style={{width:"100%",padding:"8px 10px",borderRadius:8,border:`1px solid ${C.border}`,background:C.bg,color:C.text}}
+              file={backupRestoreKeyFile}
+              onFileChange={setBackupRestoreKeyFile}
+              emptyLabel="Upload companion key package"
+              hint="JSON key material envelope"
             />
           </FG>
         </Row2>

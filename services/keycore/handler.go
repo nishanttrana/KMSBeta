@@ -135,6 +135,8 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /access/interface-policies", h.handleListInterfacePolicies)
 	mux.HandleFunc("POST /access/interface-policies", h.handleUpsertInterfacePolicy)
 	mux.HandleFunc("DELETE /access/interface-policies/{id}", h.handleDeleteInterfacePolicy)
+	mux.HandleFunc("GET /access/interface-tls-config", h.handleGetInterfaceTLSConfig)
+	mux.HandleFunc("PUT /access/interface-tls-config", h.handlePutInterfaceTLSConfig)
 	mux.HandleFunc("GET /access/interface-ports", h.handleListInterfacePorts)
 	mux.HandleFunc("POST /access/interface-ports", h.handleUpsertInterfacePort)
 	mux.HandleFunc("DELETE /access/interface-ports/{name}", h.handleDeleteInterfacePort)
@@ -1346,6 +1348,54 @@ func (h *Handler) handleListInterfacePorts(w http.ResponseWriter, r *http.Reques
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"items":      items,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleGetInterfaceTLSConfig(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	cfg, err := h.svc.GetKeyInterfaceTLSConfig(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "get_interface_tls_config_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"config":     cfg,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handlePutInterfaceTLSConfig(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req KeyInterfaceTLSConfig
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	req.TenantID = tenantID
+	actor := accessActorFromContext(r.Context())
+	req.UpdatedBy = strings.TrimSpace(actor.UserID)
+	if req.UpdatedBy == "" {
+		req.UpdatedBy = strings.TrimSpace(actor.Username)
+	}
+	if req.UpdatedBy == "" {
+		req.UpdatedBy = "api"
+	}
+	out, err := h.svc.UpdateKeyInterfaceTLSConfig(r.Context(), req)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "put_interface_tls_config_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"config":     out,
 		"request_id": reqID,
 	})
 }

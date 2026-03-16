@@ -204,11 +204,17 @@ func (s *Service) GetLatestAssessment(ctx context.Context, tenantID string, temp
 		return AssessmentResult{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
 	}
 	templateID = normalizeTemplateID(templateID)
-	items, err := s.store.ListAssessmentRuns(ctx, tenantID, templateID, 1)
-	if err == nil && len(items) > 0 {
-		return items[0], nil
+	items, err := s.store.ListAssessmentRuns(ctx, tenantID, templateID, 20)
+	if err != nil {
+		return AssessmentResult{}, err
 	}
-	return s.RunAssessment(ctx, tenantID, "auto", false, templateID)
+	for _, item := range items {
+		if strings.EqualFold(strings.TrimSpace(item.Trigger), "auto") {
+			continue
+		}
+		return item, nil
+	}
+	return AssessmentResult{}, newServiceError(http.StatusNotFound, "not_found", "compliance assessment has not been run yet")
 }
 
 func (s *Service) ListAssessmentRuns(ctx context.Context, tenantID string, templateID string, limit int) ([]AssessmentResult, error) {

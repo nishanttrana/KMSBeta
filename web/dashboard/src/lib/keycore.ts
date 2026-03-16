@@ -115,8 +115,21 @@ export type KeyInterfacePort = {
   interface_name: string;
   bind_address: string;
   port: number;
+  protocol?: string;
+  certificate_source?: string;
+  ca_id?: string;
+  certificate_id?: string;
   enabled: boolean;
   description?: string;
+  updated_by?: string;
+  updated_at?: string;
+};
+
+export type KeyInterfaceTLSConfig = {
+  tenant_id: string;
+  certificate_source: "internal_ca" | "pki_ca" | "uploaded_certificate" | string;
+  ca_id?: string;
+  certificate_id?: string;
   updated_by?: string;
   updated_at?: string;
 };
@@ -155,6 +168,14 @@ type APIUpsertInterfacePolicyResponse = {
 
 type APIListInterfacePortsResponse = {
   items: KeyInterfacePort[];
+};
+
+type APIGetInterfaceTLSConfigResponse = {
+  config: KeyInterfaceTLSConfig;
+};
+
+type APIUpsertInterfaceTLSConfigResponse = {
+  config: KeyInterfaceTLSConfig;
 };
 
 type APIUpsertInterfacePortResponse = {
@@ -1122,6 +1143,29 @@ export async function listKeyInterfacePorts(session: AuthSession): Promise<KeyIn
     `/access/interface-ports?tenant_id=${encodeURIComponent(session.tenantId)}`
   );
   return Array.isArray(payload.items) ? payload.items : [];
+}
+
+export async function getKeyInterfaceTLSConfig(session: AuthSession): Promise<KeyInterfaceTLSConfig> {
+  const payload = await apiRequest<APIGetInterfaceTLSConfigResponse>(
+    session,
+    `/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  return payload.config;
+}
+
+export async function updateKeyInterfaceTLSConfig(
+  session: AuthSession,
+  input: Partial<KeyInterfaceTLSConfig>
+): Promise<KeyInterfaceTLSConfig> {
+  const payload = await apiRequest<APIUpsertInterfaceTLSConfigResponse>(
+    session,
+    `/access/interface-tls-config?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(input || {})
+    }
+  );
+  return payload.config;
 }
 
 export async function upsertKeyInterfacePort(

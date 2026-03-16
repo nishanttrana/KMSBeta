@@ -323,3 +323,69 @@ func zeroizeBytes(raw []byte) {
 		raw[i] = 0
 	}
 }
+
+func TestInterfaceTLSConfigAPIOverridesTLSInterfaceWrites(t *testing.T) {
+	h, _ := newHandlerForTest(t)
+
+	tlsConfigBody, _ := json.Marshal(map[string]any{
+		"certificate_source": "pki_ca",
+		"ca_id":              "ca_root_ops",
+	})
+	putReq := httptest.NewRequest(http.MethodPut, "/access/interface-tls-config?tenant_id=t1", bytes.NewReader(tlsConfigBody))
+	putRR := httptest.NewRecorder()
+	h.ServeHTTP(putRR, putReq)
+	if putRR.Code != http.StatusOK {
+		t.Fatalf("put tls config status=%d body=%s", putRR.Code, putRR.Body.String())
+	}
+
+	portBody, _ := json.Marshal(map[string]any{
+		"interface_name":     "rest",
+		"bind_address":       "0.0.0.0",
+		"port":               8443,
+		"protocol":           "https",
+		"certificate_source": "uploaded_certificate",
+		"certificate_id":     "crt_external",
+		"enabled":            true,
+		"description":        "REST API",
+	})
+	postReq := httptest.NewRequest(http.MethodPost, "/access/interface-ports?tenant_id=t1", bytes.NewReader(portBody))
+	postRR := httptest.NewRecorder()
+	h.ServeHTTP(postRR, postReq)
+	if postRR.Code != http.StatusOK {
+		t.Fatalf("upsert interface port status=%d body=%s", postRR.Code, postRR.Body.String())
+	}
+
+	var postOut map[string]any
+	if err := json.Unmarshal(postRR.Body.Bytes(), &postOut); err != nil {
+		t.Fatalf("decode upsert response: %v", err)
+	}
+	item, _ := postOut["item"].(map[string]any)
+	if got := stringValue(item, "certificate_source"); got != "pki_ca" {
+		t.Fatalf("expected pki_ca override, got %q body=%s", got, postRR.Body.String())
+	}
+	if got := stringValue(item, "ca_id"); got != "ca_root_ops" {
+		t.Fatalf("expected ca_root_ops override, got %q body=%s", got, postRR.Body.String())
+	}
+	if got := stringValue(item, "certificate_id"); got != "" {
+		t.Fatalf("expected certificate_id cleared, got %q body=%s", got, postRR.Body.String())
+	}
+
+	getReq := httptest.NewRequest(http.MethodGet, "/access/interface-tls-config?tenant_id=t1", nil)
+	getRR := httptest.NewRecorder()
+	h.ServeHTTP(getRR, getReq)
+	if getRR.Code != http.StatusOK {
+		t.Fatalf("get tls config status=%d body=%s", getRR.Code, getRR.Body.String())
+	}
+
+	var getOut map[string]any
+	if err := json.Unmarshal(getRR.Body.Bytes(), &getOut); err != nil {
+		t.Fatalf("decode get response: %v", err)
+	}
+	cfg, _ := getOut["config"].(map[string]any)
+	if got := stringValue(cfg, "certificate_source"); got != "pki_ca" {
+		t.Fatalf("expected pki_ca config, got %q body=%s", got, getRR.Body.String())
+	}
+	if got := stringValue(cfg, "ca_id"); got != "ca_root_ops" {
+		t.Fatalf("expected ca_root_ops config, got %q body=%s", got, getRR.Body.String())
+	}
+}

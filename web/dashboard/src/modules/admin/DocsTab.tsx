@@ -2244,7 +2244,7 @@ const SectionUIAdmin = () => (
     <H3>What you can do:</H3>
     <P>- Service Health Dashboard: See real-time heartbeat status for all 26+ microservices. Green = healthy, Red = down, Amber = degraded</P>
     <P>- FIPS Mode: Toggle between Strict (FIPS 140-3 compliant) and Standard modes. Strict mode blocks non-FIPS algorithms</P>
-    <P>- Runtime Hardening: Configure security settings like TLS minimum version, cipher suites, and header policies</P>
+    <P>- Runtime Hardening: Configure FIPS runtime policy, entropy source visibility, TLS runtime mode, and request-interface TLS certificate defaults</P>
     <P>- CLI Status: View the SSH CLI daemon status. Connect via <IC>ssh cli-user@host -p 2222</IC> for HSM operations</P>
     <P>- HSM Configuration: Configure the cryptographic backend (software vault, hardware HSM, or auto mode)</P>
     <P>- Alert Rules: Create rules that trigger alerts based on events (e.g., "alert on any key destruction", "alert on failed logins exceeding threshold")</P>
@@ -2351,7 +2351,7 @@ const SectionConfigFips = () => (
     <P>Allows legacy algorithms with warnings. Tags non-FIPS keys. Default TLS version 1.2. Useful for development, testing, and gradual migration to FIPS compliance.</P>
 
     <H2>Enabling FIPS Mode</H2>
-    <P>FIPS mode is set during first boot (Step 2) or toggled in System Administration. When switching from Standard to Strict, the system validates all existing keys and blocks the transition if non-compliant keys are active.</P>
+    <P>FIPS mode is toggled in System Administration. The Runtime Crypto dialog shows the effective runtime library, entropy health, entropy rate in bits per byte, sample size, read latency, RNG mode, and whether runtime enforcement is enabled. When switching from Standard to Strict, the system validates all existing keys and blocks the transition if non-compliant keys are active.</P>
   </div>
 );
 
@@ -2397,13 +2397,16 @@ const SectionConfigNetwork = () => (
       ["HSM (eth2)", "(unconfigured)", "Optional dedicated HSM communication"],
     ]} />
     <H2>TLS Configuration</H2>
-    <P>TLS modes: custom (provide cert/key/CA paths), self-signed (auto-generated), acme (automatic via ACME protocol). Envoy terminates TLS at the edge and forwards to backend services.</P>
+    <P>Runtime Crypto controls the TLS runtime mode and the authoritative certificate binding for request interfaces. Interfaces controls which request endpoints are exposed, the bind address, the port, and whether a listener uses HTTP, HTTPS, TLS 1.3, or mTLS.</P>
+    <P>When a request-handling interface uses HTTPS, TLS 1.3, or mTLS, the certificate source selected in Runtime Crypto takes precedence over any per-interface certificate fields. The interface layer inherits one shared certificate binding from either the internal CA, a CA from the PKI tab, or an uploaded certificate from the PKI tab.</P>
     <Code>{`# TLS paths
 CERTS_RUNTIME_MATERIALIZER_ENABLED=true
 CERTS_RUNTIME_MATERIALIZER_DIR=/run/vecta/certs
 CERTS_RUNTIME_MATERIALIZER_INTERVAL=5m
 CERTS_RUNTIME_ENVOY_CN=vecta-envoy
 CERTS_RUNTIME_ENVOY_SANS=localhost,envoy,127.0.0.1`}</Code>
+    <H2>Runtime TLS APIs</H2>
+    <P>Use <IC>GET /svc/keycore/access/interface-tls-config?tenant_id=root</IC> to read the current interface TLS binding and <IC>PUT /svc/keycore/access/interface-tls-config</IC> to change it. Use <IC>GET /svc/keycore/access/interface-ports?tenant_id=root</IC> to inspect the effective request interfaces after TLS defaults are applied.</P>
     <H2>Firewall</H2>
     <P>Built-in firewall with port allowlists per interface: management (443, 5696, 9443), cluster (2379, 2380, 5432, 4222, 8160), hsm (2300, 2310).</P>
     <H2>Syslog</H2>
