@@ -1,12 +1,22 @@
 import {
+  Children,
+  isValidElement,
   useState,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
   type ButtonHTMLAttributes,
   type CSSProperties,
   type InputHTMLAttributes,
+  type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
   type SelectHTMLAttributes,
+  type ReactElement,
   type TextareaHTMLAttributes
 } from "react";
+import { createPortal } from "react-dom";
 import {
   Atom,
   Bell,
@@ -14,6 +24,7 @@ import {
   Check,
   CheckCircle2,
   Clock3,
+  ChevronDown,
   Database,
   FileText,
   Gauge,
@@ -198,7 +209,404 @@ type SelProps = SelectHTMLAttributes<HTMLSelectElement> & {
   style?: CSSProperties;
 };
 
-export const Sel = ({ children, w, style, ...p }: SelProps) => <select style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 7, padding: "8px 30px 8px 10px", color: C.text, fontSize: 11, width: w || "100%", outline: "none", cursor: "pointer", boxSizing: "border-box", appearance: "none", WebkitAppearance: "none", MozAppearance: "none", backgroundImage: "linear-gradient(45deg, transparent 50%, #7f93b3 50%), linear-gradient(135deg, #7f93b3 50%, transparent 50%)", backgroundPosition: "calc(100% - 14px) calc(50% - 2px), calc(100% - 9px) calc(50% - 2px)", backgroundSize: "5px 5px, 5px 5px", backgroundRepeat: "no-repeat", ...(style || {}) }} {...p}>{children}</select>;
+type ParsedSelOption = {
+  key: string;
+  value: string;
+  label: ReactNode;
+  disabled: boolean;
+  group?: string;
+};
+
+function parseSelOptions(children: ReactNode, groupLabel?: string, acc: ParsedSelOption[] = []): ParsedSelOption[] {
+  Children.forEach(children, (child, index) => {
+    if (!isValidElement(child)) {
+      return;
+    }
+    const element = child as ReactElement<any>;
+    if (element.type === "option") {
+      const rawValue = element.props?.value ?? element.props?.children ?? "";
+      const item: ParsedSelOption = {
+        key: String(element.key ?? `${groupLabel || "option"}-${index}-${String(rawValue)}`),
+        value: String(rawValue ?? ""),
+        label: element.props?.children,
+        disabled: Boolean(element.props?.disabled)
+      };
+      if (groupLabel) {
+        item.group = groupLabel;
+      }
+      acc.push(item);
+      return;
+    }
+    if (element.type === "optgroup") {
+      parseSelOptions(element.props?.children, String(element.props?.label || ""), acc);
+      return;
+    }
+    if (element.props?.children) {
+      parseSelOptions(element.props.children, groupLabel, acc);
+    }
+  });
+  return acc;
+}
+
+function findSelectableOptionIndex(options: ParsedSelOption[], start: number, direction: 1 | -1): number {
+  if (!options.length) {
+    return -1;
+  }
+  let idx = start;
+  for (let i = 0; i < options.length; i += 1) {
+    idx = (idx + direction + options.length) % options.length;
+    if (!options[idx]?.disabled) {
+      return idx;
+    }
+  }
+  return -1;
+}
+
+export const Sel = ({ children, w, style, value, defaultValue, onChange, disabled = false, id, name, className, autoFocus, onFocus, onBlur, onKeyDown, onMouseDown, ...p }: SelProps) => {
+  const options = useMemo(() => parseSelOptions(children), [children]);
+  const controlled = value !== undefined;
+  const initialValue = String(value ?? defaultValue ?? options.find((item) => !item.disabled)?.value ?? "");
+  const [internalValue, setInternalValue] = useState(initialValue);
+  const selectedValue = String(controlled ? value ?? "" : internalValue);
+  const selectedOption = options.find((item) => item.value === selectedValue) || options.find((item) => !item.disabled) || options[0];
+  const selectedIndex = Math.max(0, options.findIndex((item) => item.value === (selectedOption?.value ?? "")));
+  const [open, setOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(selectedIndex);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const selectId = useId();
+  const listboxID = `${id || selectId}-listbox`;
+  const width = w || style?.width || "100%";
+  const { width: _styleWidth, ...triggerStyle } = style || {};
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
+
+  useEffect(() => {
+    if (!controlled) {
+      return;
+    }
+    setInternalValue(String(value ?? ""));
+  }, [controlled, value]);
+
+  useEffect(() => {
+    if (options.length === 0) {
+      return;
+    }
+    const exists = options.some((item) => item.value === selectedValue);
+    if (!exists && !controlled) {
+      const fallback = options.find((item) => !item.disabled) || options[0];
+      setInternalValue(String(fallback?.value ?? ""));
+    }
+  }, [controlled, options, selectedValue]);
+
+  useEffect(() => {
+    if (open) {
+      return;
+    }
+    setHighlightedIndex(selectedIndex);
+  }, [open, selectedIndex]);
+
+  useEffect(() => {
+    if (!autoFocus) {
+      return;
+    }
+    triggerRef.current?.focus();
+  }, [autoFocus]);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+    const updatePosition = () => {
+      const trigger = triggerRef.current;
+      if (!trigger) {
+        return;
+      }
+      const rect = trigger.getBoundingClientRect();
+      const viewportPadding = 16;
+      const preferredWidth = Math.max(rect.width, 220);
+      const menuHeight = menuRef.current?.offsetHeight || 280;
+      const shouldOpenAbove = rect.bottom + 8 + menuHeight > window.innerHeight - viewportPadding && rect.top - 8 - menuHeight > viewportPadding;
+      const top = shouldOpenAbove
+        ? Math.max(viewportPadding, rect.top - menuHeight - 8)
+        : Math.min(window.innerHeight - viewportPadding - Math.min(menuHeight, 320), rect.bottom + 8);
+      const maxHeight = shouldOpenAbove
+        ? Math.max(120, rect.top - viewportPadding - 8)
+        : Math.max(120, window.innerHeight - rect.bottom - viewportPadding - 8);
+      setMenuStyle({
+        position: "fixed",
+        top,
+        left: Math.min(rect.left, window.innerWidth - preferredWidth - viewportPadding),
+        width: preferredWidth,
+        maxHeight,
+        overflowY: "auto",
+        zIndex: 2400
+      });
+    };
+    updatePosition();
+    const onWindowChange = () => updatePosition();
+    window.addEventListener("resize", onWindowChange);
+    window.addEventListener("scroll", onWindowChange, true);
+    return () => {
+      window.removeEventListener("resize", onWindowChange);
+      window.removeEventListener("scroll", onWindowChange, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (triggerRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
+      }
+      setOpen(false);
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const active = menuRef.current?.querySelector<HTMLElement>(`[data-option-index="${highlightedIndex}"]`);
+    active?.scrollIntoView({ block: "nearest" });
+  }, [highlightedIndex, open]);
+
+  const emitChange = (nextValue: string) => {
+    if (!controlled) {
+      setInternalValue(nextValue);
+    }
+    onChange?.({
+      target: { value: nextValue, id, name } as EventTarget & HTMLSelectElement,
+      currentTarget: { value: nextValue, id, name } as EventTarget & HTMLSelectElement
+    } as React.ChangeEvent<HTMLSelectElement>);
+  };
+
+  const chooseOption = (option: ParsedSelOption) => {
+    if (option.disabled) {
+      return;
+    }
+    emitChange(option.value);
+    setOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  const moveHighlight = (direction: 1 | -1) => {
+    const nextIndex = findSelectableOptionIndex(options, highlightedIndex, direction);
+    if (nextIndex >= 0) {
+      setHighlightedIndex(nextIndex);
+    }
+  };
+
+  const handleTriggerKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (disabled) {
+      onKeyDown?.(event as unknown as ReactKeyboardEvent<HTMLSelectElement>);
+      return;
+    }
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        setHighlightedIndex(findSelectableOptionIndex(options, selectedIndex - 1, 1));
+      } else {
+        moveHighlight(1);
+      }
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        setHighlightedIndex(findSelectableOptionIndex(options, selectedIndex + 1, -1));
+      } else {
+        moveHighlight(-1);
+      }
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+      } else if (options[highlightedIndex]) {
+        chooseOption(options[highlightedIndex]);
+      }
+    } else if (event.key === "Tab" && open) {
+      setOpen(false);
+    }
+    onKeyDown?.(event as unknown as ReactKeyboardEvent<HTMLSelectElement>);
+  };
+
+  const optionGroups = useMemo(() => {
+    const groups = new Map<string, ParsedSelOption[]>();
+    options.forEach((item) => {
+      const key = item.group || "";
+      const existing = groups.get(key) || [];
+      existing.push(item);
+      groups.set(key, existing);
+    });
+    return Array.from(groups.entries());
+  }, [options]);
+
+  const buttonProps = p as unknown as ButtonHTMLAttributes<HTMLButtonElement>;
+
+  const menu = open && !disabled ? createPortal(
+    <div
+      ref={menuRef}
+      role="listbox"
+      id={listboxID}
+      aria-labelledby={id}
+      style={{
+        ...menuStyle,
+        background: `linear-gradient(180deg, ${C.surface} 0%, ${C.card} 100%)`,
+        border: `1px solid ${C.borderHi}`,
+        borderRadius: 12,
+        boxShadow: `0 22px 48px rgba(0,0,0,.45), 0 0 0 1px ${C.glow}`,
+        padding: 8,
+        backdropFilter: "blur(12px)"
+      }}
+    >
+      {optionGroups.map(([groupLabel, groupOptions]) => (
+        <div key={groupLabel || "ungrouped"} style={{ display: "grid", gap: 4 }}>
+          {groupLabel ? (
+            <div style={{ padding: "6px 10px 2px", fontSize: 9, fontWeight: 700, letterSpacing: 1, color: C.muted, textTransform: "uppercase" }}>
+              {groupLabel}
+            </div>
+          ) : null}
+          {groupOptions.map((option) => {
+            const optionIndex = options.findIndex((item) => item.key === option.key);
+            const selected = option.value === (selectedOption?.value ?? "");
+            const highlighted = optionIndex === highlightedIndex;
+            return (
+              <button
+                key={option.key}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                data-option-index={optionIndex}
+                disabled={option.disabled}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setHighlightedIndex(optionIndex)}
+                onClick={() => chooseOption(option)}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "16px minmax(0,1fr)",
+                  alignItems: "center",
+                  gap: 10,
+                  width: "100%",
+                  padding: "10px 12px",
+                  borderRadius: 10,
+                  border: `1px solid ${highlighted ? C.borderHi : "transparent"}`,
+                  background: selected
+                    ? `linear-gradient(135deg, ${C.accentDim} 0%, rgba(6,214,224,.16) 100%)`
+                    : highlighted
+                      ? C.cardHover
+                      : "transparent",
+                  color: option.disabled ? C.muted : selected ? C.text : C.dim,
+                  fontSize: 11,
+                  fontWeight: selected ? 700 : 500,
+                  textAlign: "left",
+                  cursor: option.disabled ? "not-allowed" : "pointer",
+                  opacity: option.disabled ? 0.5 : 1
+                }}
+              >
+                <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", color: selected ? C.accent : "transparent" }}>
+                  <Check size={12} strokeWidth={2.6} />
+                </span>
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      ))}
+    </div>,
+    document.body
+  ) : null;
+
+  return (
+    <>
+      <div style={{ position: "relative", width, minWidth: triggerStyle.minWidth, maxWidth: triggerStyle.maxWidth }} className={className}>
+        <button
+          ref={triggerRef}
+          type="button"
+          id={id}
+          name={name}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-controls={open ? listboxID : undefined}
+          disabled={disabled}
+          onClick={() => {
+            if (!disabled) {
+              setOpen((prev) => !prev);
+            }
+          }}
+          onFocus={onFocus as any}
+          onBlur={onBlur as any}
+          onMouseDown={onMouseDown as any}
+          onKeyDown={handleTriggerKeyDown}
+          style={{
+            background: open ? `linear-gradient(180deg, ${C.cardHover} 0%, ${C.card} 100%)` : C.card,
+            border: `1px solid ${open ? C.accent : C.border}`,
+            borderRadius: 7,
+            padding: "8px 34px 8px 10px",
+            color: disabled ? C.muted : C.text,
+            fontSize: 11,
+            width: "100%",
+            minHeight: 34,
+            outline: "none",
+            cursor: disabled ? "not-allowed" : "pointer",
+            boxSizing: "border-box",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            boxShadow: open ? `0 0 0 1px ${C.glow}` : "none",
+            transition: "border-color 140ms ease, box-shadow 140ms ease, background 140ms ease",
+            ...triggerStyle
+          }}
+          {...buttonProps}
+        >
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "left", flex: 1 }}>
+            {selectedOption?.label ?? "Select"}
+          </span>
+          <span
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              right: 10,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: open ? C.accent : C.muted,
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 140ms ease, color 140ms ease"
+            }}
+          >
+            <ChevronDown size={14} strokeWidth={2.2} />
+          </span>
+        </button>
+        <select
+          aria-hidden="true"
+          tabIndex={-1}
+          value={selectedOption?.value ?? ""}
+          onChange={() => undefined}
+          style={{ display: "none" }}
+        >
+          {children}
+        </select>
+      </div>
+      {menu}
+    </>
+  );
+};
 
 type ChkProps = {
   label: ReactNode;

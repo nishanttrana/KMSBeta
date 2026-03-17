@@ -25,6 +25,11 @@ type ComplianceClient interface {
 	GetPosture(ctx context.Context, tenantID string) (map[string]interface{}, error)
 }
 
+type PostureClient interface {
+	ListFindings(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
+	ListActions(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
+}
+
 type Alert struct {
 	ID             string            `json:"id"`
 	TenantID       string            `json:"tenant_id"`

@@ -19,6 +19,7 @@ type Service struct {
 	store               Store
 	audit               AuditClient
 	compliance          ComplianceClient
+	posture             PostureClient
 	events              EventPublisher
 	hub                 *feedHub
 	telemetryRetention  time.Duration
@@ -26,11 +27,12 @@ type Service struct {
 	mu                  sync.Mutex
 }
 
-func NewService(store Store, audit AuditClient, compliance ComplianceClient, events EventPublisher) *Service {
+func NewService(store Store, audit AuditClient, compliance ComplianceClient, posture PostureClient, events EventPublisher) *Service {
 	return &Service{
 		store:               store,
 		audit:               audit,
 		compliance:          compliance,
+		posture:             posture,
 		events:              events,
 		hub:                 newFeedHub(),
 		telemetryRetention:  30 * 24 * time.Hour,
@@ -634,6 +636,7 @@ func (s *Service) Templates() []ReportTemplate {
 		{ID: "certificate_lifecycle", Name: "Certificate Lifecycle Report", Description: "Issue, renew, revoke, and expiry-related certificate events.", Formats: []string{"pdf", "csv", "json"}},
 		{ID: "compliance_audit", Name: "Compliance Audit Report", Description: "Framework-specific evidence-backed posture report.", Formats: []string{"pdf", "json"}},
 		{ID: "posture_summary", Name: "Posture Summary", Description: "Posture trends and gap summary.", Formats: []string{"pdf", "json"}},
+		{ID: "evidence_pack", Name: "Evidence Pack", Description: "One-click audit package with posture findings, actions, approvals, alerts, and timestamps.", Formats: []string{"pdf", "json"}},
 		{ID: "alert_summary", Name: "Alert Summary", Description: "Severity volume and MTTR metrics.", Formats: []string{"pdf", "csv", "json"}},
 		{ID: "custom", Name: "Custom Report", Description: "User-defined report template and filters.", Formats: []string{"pdf", "csv", "json"}},
 	}
@@ -691,6 +694,9 @@ func (s *Service) renderReport(ctx context.Context, job ReportJob) (string, stri
 	posture := map[string]interface{}{}
 	if s.compliance != nil {
 		posture, _ = s.compliance.GetPosture(ctx, job.TenantID)
+	}
+	if normalizeTemplateID(job.TemplateID) == "evidence_pack" {
+		return s.renderEvidencePack(ctx, job, alerts, incidents, posture)
 	}
 	selectedAlerts := filterAlertsByTemplate(alerts, job.TemplateID)
 	severityCounts := map[string]int{
@@ -793,6 +799,87 @@ func (s *Service) renderReport(ctx context.Context, job ReportJob) (string, stri
 	}
 }
 
+func (s *Service) renderEvidencePack(ctx context.Context, job ReportJob, alerts []Alert, incidents []Incident, posture map[string]interface{}) (string, string, error) {
+	postureFindings := []map[string]interface{}{}
+	postureActions := []map[string]interface{}{}
+	if s.posture != nil {
+		postureFindings, _ = s.posture.ListFindings(ctx, job.TenantID, 250)
+		postureActions, _ = s.posture.ListActions(ctx, job.TenantID, 250)
+	}
+	mttr, _ := s.MTTRStats(ctx, job.TenantID)
+	mttd, _ := s.MTTDStats(ctx, job.TenantID)
+	payload := map[string]interface{}{
+		"job_id":           job.ID,
+		"template_id":      job.TemplateID,
+		"tenant_scope":     job.TenantID,
+		"generated_at":     time.Now().UTC(),
+		"posture":          posture,
+		"alerts":           alerts,
+		"incidents":        incidents,
+		"posture_findings": postureFindings,
+		"posture_actions":  postureActions,
+		"approval_actions": filterApprovalActions(postureActions),
+		"timings": map[string]interface{}{
+			"mttr_minutes": mttr,
+			"mttd_minutes": mttd,
+		},
+		"summary": map[string]interface{}{
+			"alert_count":           len(alerts),
+			"incident_count":        len(incidents),
+			"posture_finding_count": len(postureFindings),
+			"posture_action_count":  len(postureActions),
+			"approval_action_count": len(filterApprovalActions(postureActions)),
+		},
+	}
+	switch strings.ToLower(job.Format) {
+	case "json":
+		raw, _ := json.MarshalIndent(payload, "", "  ")
+		return string(raw), "application/json", nil
+	case "pdf":
+		lines := []string{
+			"Vecta KMS Evidence Pack",
+			"Tenant Scope: " + job.TenantID,
+			"Generated: " + time.Now().UTC().Format(time.RFC3339),
+			fmt.Sprintf("Posture findings: %d", len(postureFindings)),
+			fmt.Sprintf("Posture actions: %d", len(postureActions)),
+			fmt.Sprintf("Approval-required actions: %d", len(filterApprovalActions(postureActions))),
+			fmt.Sprintf("Alerts: %d", len(alerts)),
+			fmt.Sprintf("Incidents: %d", len(incidents)),
+			"",
+			"Posture Findings",
+		}
+		for idx, item := range postureFindings {
+			if idx >= 80 {
+				lines = append(lines, fmt.Sprintf("... %d additional findings omitted ...", len(postureFindings)-idx))
+				break
+			}
+			lines = append(lines, fmt.Sprintf("%04d. %s | %s | %s", idx+1, firstString(item["title"]), firstString(item["severity"]), firstString(item["status"])))
+		}
+		lines = append(lines, "", "Remediation Actions")
+		for idx, item := range postureActions {
+			if idx >= 80 {
+				lines = append(lines, fmt.Sprintf("... %d additional actions omitted ...", len(postureActions)-idx))
+				break
+			}
+			lines = append(lines, fmt.Sprintf("%04d. %s | %s | approval=%s", idx+1, firstString(item["action_type"]), firstString(item["status"]), firstString(item["approval_required"])))
+		}
+		lines = append(lines, "", "Evidence Timing")
+		for sev, value := range mttd {
+			lines = append(lines, fmt.Sprintf("MTTD %s: %.1f minutes", sev, value))
+		}
+		for sev, value := range mttr {
+			lines = append(lines, fmt.Sprintf("MTTR %s: %.1f minutes", sev, value))
+		}
+		pdf, err := pdfutil.RenderTextPDF("Vecta KMS Evidence Pack", lines)
+		if err != nil {
+			return "", "", err
+		}
+		return encodeBase64(pdf), "application/pdf", nil
+	default:
+		return "", "", newServiceError(400, "bad_request", "unsupported report format")
+	}
+}
+
 func reportScopeLabel(templateID string) string {
 	switch normalizeTemplateID(templateID) {
 	case "key_generation":
@@ -807,6 +894,8 @@ func reportScopeLabel(templateID string) string {
 		return "BYOK cloud connector operations"
 	case "certificate_lifecycle":
 		return "Certificate lifecycle operations"
+	case "evidence_pack":
+		return "Audit-ready evidence pack"
 	default:
 		return "All reporting events"
 	}
@@ -818,7 +907,7 @@ func normalizeTemplateID(templateID string) string {
 
 func filterAlertsByTemplate(alerts []Alert, templateID string) []Alert {
 	tid := normalizeTemplateID(templateID)
-	if tid == "" || tid == "custom" || tid == "alert_summary" || tid == "compliance_audit" || tid == "posture_summary" {
+	if tid == "" || tid == "custom" || tid == "alert_summary" || tid == "compliance_audit" || tid == "posture_summary" || tid == "evidence_pack" {
 		return alerts
 	}
 	out := make([]Alert, 0, len(alerts))
@@ -1064,6 +1153,43 @@ func (s *Service) MTTRStats(ctx context.Context, tenantID string) (map[string]fl
 	return out, nil
 }
 
+func (s *Service) MTTDStats(ctx context.Context, tenantID string) (map[string]float64, error) {
+	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: 5000})
+	if err != nil {
+		return nil, err
+	}
+	type agg struct {
+		sum float64
+		n   int
+	}
+	acc := map[string]agg{}
+	for _, it := range items {
+		if s.audit == nil || strings.TrimSpace(it.AuditEventID) == "" || it.CreatedAt.IsZero() {
+			continue
+		}
+		ev, err := s.audit.GetEvent(ctx, tenantID, it.AuditEventID)
+		if err != nil {
+			continue
+		}
+		ts := parseTimeString(firstString(ev["timestamp"], ev["created_at"]))
+		if ts.IsZero() || it.CreatedAt.Before(ts) {
+			continue
+		}
+		sev := normalizeSeverity(it.Severity)
+		cur := acc[sev]
+		cur.sum += it.CreatedAt.Sub(ts).Minutes()
+		cur.n++
+		acc[sev] = cur
+	}
+	out := map[string]float64{}
+	for sev, a := range acc {
+		if a.n > 0 {
+			out[sev] = a.sum / float64(a.n)
+		}
+	}
+	return out, nil
+}
+
 func (s *Service) TopSources(ctx context.Context, tenantID string) (map[string]interface{}, error) {
 	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: 5000})
 	if err != nil {
@@ -1088,6 +1214,17 @@ func (s *Service) TopSources(ctx context.Context, tenantID string) (map[string]i
 		"ips":      topKV(ips, 10),
 		"services": topKV(services, 10),
 	}, nil
+}
+
+func filterApprovalActions(actions []map[string]interface{}) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0)
+	for _, item := range actions {
+		if !extractBool(item["approval_required"]) {
+			continue
+		}
+		out = append(out, item)
+	}
+	return out
 }
 
 type kv struct {

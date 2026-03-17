@@ -81,6 +81,14 @@ function actionStatusTone(status: string) {
   return "blue";
 }
 
+function healthTone(status: string) {
+  const v = String(status || "").toLowerCase();
+  if (v === "failing" || v === "failed" || v === "critical") return "red";
+  if (v === "stale" || v === "warning" || v === "degraded") return "amber";
+  if (v === "healthy" || v === "verified" || v === "ok") return "green";
+  return "blue";
+}
+
 function riskTone(score: number): "green" | "amber" | "red" {
   if (score >= 75) return "red";
   if (score >= 40) return "amber";
@@ -172,6 +180,7 @@ export const PostureTab = ({ session, onToast }: any) => {
   const [actionStatus, setActionStatus] = useState("");
   const [actionSearch, setActionSearch] = useState("");
   const [tab, setTab] = useState("Dashboard");
+  const [mode, setMode] = useState("Executive");
   const [selectedFinding, setSelectedFinding] = useState<any>(null);
   const [selectedAction, setSelectedAction] = useState<any>(null);
 
@@ -270,6 +279,22 @@ export const PostureTab = ({ session, onToast }: any) => {
   }, [actions, actionSearch]);
 
   const domainMetrics = useMemo(() => extractDomainMetrics(risk?.top_signals), [risk?.top_signals]);
+  const riskDrivers = useMemo(() => Array.isArray(dashboard?.risk_drivers?.drivers) ? dashboard.risk_drivers.drivers : [], [dashboard?.risk_drivers]);
+  const cockpitGroups = useMemo(() => Array.isArray(dashboard?.remediation_cockpit) ? dashboard.remediation_cockpit : [], [dashboard?.remediation_cockpit]);
+  const scenarioCards = useMemo(() => Array.isArray(dashboard?.scenario_simulator) ? dashboard.scenario_simulator : [], [dashboard?.scenario_simulator]);
+  const validationBadges = useMemo(() => Array.isArray(dashboard?.validation_badges) ? dashboard.validation_badges : [], [dashboard?.validation_badges]);
+  const blastHotspots = useMemo(() => Array.isArray(dashboard?.blast_radius) ? dashboard.blast_radius : [], [dashboard?.blast_radius]);
+  const slaOverview = dashboard?.sla_overview || {};
+  const validationByDomain = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    validationBadges.forEach((badge: any) => {
+      const key = String(badge?.domain || "").toLowerCase();
+      if (!key) return;
+      if (!map[key]) map[key] = [];
+      map[key].push(badge);
+    });
+    return map;
+  }, [validationBadges]);
 
   const trendData = useMemo(() => {
     const items = Array.isArray(history) ? history.slice(0, 60).reverse() : [];
@@ -352,7 +377,8 @@ export const PostureTab = ({ session, onToast }: any) => {
 
   // ── Domain drill-down helper ──────────────────────────────────
   const drillDomain = (domainKey: string) => {
-    setFindingEngine(domainKey);
+    setFindingEngine("");
+    setFindingSearch(domainKey);
     setTab("Findings");
   };
 
@@ -370,7 +396,10 @@ export const PostureTab = ({ session, onToast }: any) => {
 
     {/* Sub-tabs + Controls */}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      <Tabs tabs={["Dashboard", "Findings", "Actions", "Domains"]} active={tab} onChange={setTab} />
+      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+        <Tabs tabs={["Dashboard", "Findings", "Actions", "Domains"]} active={tab} onChange={setTab} />
+        <Tabs tabs={["Executive", "Operations"]} active={mode} onChange={setMode} />
+      </div>
       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
         <Chk label="Sync audit" checked={syncAudit} onChange={() => setSyncAudit((v) => !v)} />
         <Btn small onClick={() => load(false)} disabled={loading}><RefreshCcw size={12} /> {loading ? "..." : "Refresh"}</Btn>
@@ -382,6 +411,139 @@ export const PostureTab = ({ session, onToast }: any) => {
     {/* DASHBOARD TAB                                                 */}
     {/* ══════════════════════════════════════════════════════════════ */}
     {tab === "Dashboard" && <>
+      {mode === "Executive" && <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 10 }}>
+        <Card style={{ padding: "14px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Risk Driver Explainer</span>
+            <B c={Number(dashboard?.risk_drivers?.net_delta || 0) > 0 ? "red" : Number(dashboard?.risk_drivers?.net_delta || 0) < 0 ? "green" : "blue"}>
+              {Number(dashboard?.risk_drivers?.net_delta || 0) >= 0 ? "+" : ""}{Number(dashboard?.risk_drivers?.net_delta || 0)} vs last scan
+            </B>
+          </div>
+          <div style={{ fontSize: 10, color: C.dim, marginBottom: 10 }}>{String(dashboard?.risk_drivers?.summary || "No scan delta available yet.")}</div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {riskDrivers.slice(0, 5).map((driver: any) => (
+              <div key={String(driver?.id || driver?.label)} style={{ display: "grid", gridTemplateColumns: "90px 1fr", gap: 10, padding: "8px 0", borderTop: `1px solid ${C.border}` }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: C.accent }}>{Number(driver?.delta_points || 0) >= 0 ? "+" : ""}{Number(driver?.delta_points || 0)}</div>
+                  <div style={{ fontSize: 8, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{String(driver?.domain || "risk")}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: C.text, fontWeight: 700 }}>{String(driver?.label || "-")}</div>
+                  <div style={{ fontSize: 10, color: C.dim, marginTop: 3, lineHeight: 1.45 }}>{String(driver?.explanation || "")}</div>
+                </div>
+              </div>
+            ))}
+            {!riskDrivers.length && <div style={{ fontSize: 10, color: C.muted }}>Run posture scans over time to build risk delta explainers.</div>}
+          </div>
+        </Card>
+
+        <div style={{ display: "grid", gap: 10 }}>
+          <Card style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Validation Badges</span>
+              <B c="green">{validationBadges.filter((badge: any) => String(badge?.status || "").toLowerCase() === "healthy").length} healthy</B>
+            </div>
+            <div style={{ display: "grid", gap: 6 }}>
+              {validationBadges.slice(0, 6).map((badge: any) => (
+                <div key={`${badge?.domain}-${badge?.kind}`} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10, background: C.surface }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                    <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(badge?.label || "-")}</div>
+                    <B c={healthTone(String(badge?.status || ""))}>{String(badge?.status || "unknown")}</B>
+                  </div>
+                  <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>{String(badge?.detail || "-")}</div>
+                </div>
+              ))}
+              {!validationBadges.length && <div style={{ fontSize: 10, color: C.muted }}>No validation telemetry yet.</div>}
+            </div>
+          </Card>
+
+          <Card style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Remediation SLA</span>
+              <B c={Number(slaOverview?.overdue_count || 0) > 0 ? "red" : "green"}>{Number(slaOverview?.overdue_count || 0)} overdue</B>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+              {[["Open", Number(slaOverview?.open_count || 0), C.blue], ["Due Soon", Number(slaOverview?.due_soon_count || 0), C.amber], ["Avg Age", `${Math.round(Number(slaOverview?.average_age_hours || 0))}h`, C.accent]].map(([label, value, color]) => (
+                <div key={String(label)} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10, textAlign: "center" }}>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: color as string }}>{value}</div>
+                  <div style={{ fontSize: 8, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{label}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>}
+
+      {mode === "Operations" && <div style={{ display: "grid", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
+          {cockpitGroups.map((group: any) => (
+            <Card key={String(group?.id || group?.label)} style={{ padding: "14px 16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>{String(group?.label || "-")}</span>
+                <B c={group?.id === "approval-required" ? "red" : group?.id === "manual" ? "amber" : "green"}>{Number(group?.count || 0)}</B>
+              </div>
+              <div style={{ fontSize: 9, color: C.dim, marginBottom: 8 }}>{String(group?.description || "")}</div>
+              <div style={{ display: "grid", gap: 6 }}>
+                {(Array.isArray(group?.actions) ? group.actions : []).slice(0, 3).map((action: any) => (
+                  <div key={String(action?.id || action?.action_type)} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10, background: C.surface }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                      <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(action?.action_type || "-")}</div>
+                      <B c={actionStatusTone(String(action?.status || ""))}>{String(action?.status || "-")}</B>
+                    </div>
+                    <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>{String(action?.recommended_action || "")}</div>
+                    <div style={{ fontSize: 8, color: C.muted, marginTop: 4 }}>Impact: {Number(action?.impact_estimate?.risk_reduction || 0)} points, rollback: {String(action?.rollback_hint || "-")}</div>
+                  </div>
+                ))}
+                {!group?.count && <div style={{ fontSize: 10, color: C.muted }}>No actions in this bucket.</div>}
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <Card style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Blast Radius View</span>
+              <B c="amber">{blastHotspots.length} hotspots</B>
+            </div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {blastHotspots.slice(0, 4).map((blast: any, idx: number) => (
+                <div key={`${blast?.summary}-${idx}`} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10, background: C.surface }}>
+                  <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(blast?.summary || "-")}</div>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 8, color: C.muted, marginTop: 5 }}>
+                    <span>{Number(blast?.event_count || 0)} events</span>
+                    <span>{Array.isArray(blast?.services) ? blast.services.length : 0} services</span>
+                    <span>{Array.isArray(blast?.apps) ? blast.apps.length : 0} apps</span>
+                    <span>{Array.isArray(blast?.resources) ? blast.resources.length : 0} resources</span>
+                  </div>
+                </div>
+              ))}
+              {!blastHotspots.length && <div style={{ fontSize: 10, color: C.muted }}>No blast radius hotspots yet.</div>}
+            </div>
+          </Card>
+
+          <Card style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Scenario Simulator</span>
+              <B c="blue">Read-only</B>
+            </div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {scenarioCards.slice(0, 4).map((scenario: any) => (
+                <div key={String(scenario?.id || scenario?.label)} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10, background: C.surface }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                    <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(scenario?.label || "-")}</div>
+                    <B c={Number(scenario?.risk_delta || 0) < 0 ? "green" : "amber"}>{Number(scenario?.risk_delta || 0)}</B>
+                  </div>
+                  <div style={{ fontSize: 9, color: C.dim, marginTop: 4 }}>{String(scenario?.summary || "")}</div>
+                  {Array.isArray(scenario?.based_on) && scenario.based_on.length > 0 && <div style={{ fontSize: 8, color: C.muted, marginTop: 4 }}>Based on: {scenario.based_on.slice(0, 3).join(" · ")}</div>}
+                </div>
+              ))}
+              {!scenarioCards.length && <div style={{ fontSize: 10, color: C.muted }}>No open actions to simulate yet.</div>}
+            </div>
+          </Card>
+        </div>
+      </div>}
+
       {/* Row 1: Risk Gauge + Engine Radar + Severity Donut */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>
         {/* Risk Gauge */}
@@ -643,6 +805,17 @@ export const PostureTab = ({ session, onToast }: any) => {
             {domain.key === "kmip" && <div style={{ fontSize: 9, color: C.muted }}>Interop failed: <span style={{ color: domain.interop > 0 ? C.red : C.green, fontWeight: 700 }}>{domain.interop}</span></div>}
             {domain.key === "sdk" && <div style={{ fontSize: 9, color: C.muted }}>Missing receipts: <span style={{ color: domain.receiptMissing > 0 ? C.red : C.green, fontWeight: 700 }}>{domain.receiptMissing}</span></div>}
 
+            {(validationByDomain[domain.key] || []).length > 0 && <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+              {(validationByDomain[domain.key] || []).slice(0, 2).map((badge: any) => (
+                <div key={`${badge?.domain}-${badge?.kind}`} style={{ padding: "5px 8px", borderRadius: 999, border: `1px solid ${C.border}`, background: C.surface }}>
+                  <span style={{ fontSize: 8, color: C.muted }}>{String(badge?.kind || "").replace(/_/g, " ")}</span>{" "}
+                  <span style={{ fontSize: 8, color: healthTone(String(badge?.status || "")) === "red" ? C.red : healthTone(String(badge?.status || "")) === "amber" ? C.amber : healthTone(String(badge?.status || "")) === "green" ? C.green : C.blue, fontWeight: 700 }}>
+                    {String(badge?.status || "unknown")}
+                  </span>
+                </div>
+              ))}
+            </div>}
+
             {/* Failure rate bar */}
             <div style={{ marginTop: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, color: C.muted, marginBottom: 2 }}><span>Failure Rate</span><span>{domain.rate.toFixed(1)}%</span></div>
@@ -688,6 +861,37 @@ export const PostureTab = ({ session, onToast }: any) => {
         {selectedFinding.recommended_action && <Card style={{ padding: "10px 14px", marginBottom: 10 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Recommended Action</div>
           <div style={{ fontSize: 11, color: C.accent, lineHeight: 1.5 }}>{String(selectedFinding.recommended_action)}</div>
+        </Card>}
+
+        {Array.isArray(selectedFinding.risk_drivers) && selectedFinding.risk_drivers.length > 0 && <Card style={{ padding: "10px 14px", marginBottom: 10 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Risk Driver Explainer</div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {selectedFinding.risk_drivers.map((driver: any) => (
+              <div key={String(driver?.id || driver?.label)} style={{ display: "grid", gridTemplateColumns: "70px 1fr", gap: 10, alignItems: "start", paddingTop: 6, borderTop: `1px solid ${C.border}` }}>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: C.accent }}>+{Number(driver?.delta_points || 0)}</div>
+                  <div style={{ fontSize: 8, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{String(driver?.domain || "risk")}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.text }}>{String(driver?.label || "-")}</div>
+                  <div style={{ fontSize: 10, color: C.dim, marginTop: 3 }}>{String(driver?.explanation || "")}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>}
+
+        {selectedFinding.blast_radius && ((selectedFinding.blast_radius.event_count || 0) > 0 || (selectedFinding.blast_radius.services || []).length > 0) && <Card style={{ padding: "10px 14px", marginBottom: 10 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Blast Radius</div>
+          <div style={{ fontSize: 10, color: C.text, marginBottom: 6 }}>{String(selectedFinding.blast_radius.summary || "-")}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+            {[["Services", selectedFinding.blast_radius.services], ["Apps", selectedFinding.blast_radius.apps], ["Resources", selectedFinding.blast_radius.resources], ["Actors", selectedFinding.blast_radius.actors]].map(([label, values]) => (
+              <div key={String(label)} style={{ fontSize: 9, color: C.dim }}>
+                <div style={{ textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 4 }}>{label}</div>
+                <div style={{ color: C.text, lineHeight: 1.45 }}>{Array.isArray(values) && values.length ? values.slice(0, 4).join(", ") : "-"}</div>
+              </div>
+            ))}
+          </div>
         </Card>}
 
         {/* Evidence */}
@@ -740,6 +944,35 @@ export const PostureTab = ({ session, onToast }: any) => {
           <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 4 }}>Recommended Action</div>
           <div style={{ fontSize: 11, color: C.accent, lineHeight: 1.5 }}>{String(selectedAction.recommended_action || "-")}</div>
         </Card>
+
+        {(selectedAction.impact_estimate || selectedAction.rollback_hint) && <Card style={{ padding: "10px 14px", marginBottom: 10 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Impact Estimate</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
+            <div>
+              <div style={{ fontSize: 9, color: C.muted }}>Risk Reduction</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.green }}>{Number(selectedAction?.impact_estimate?.risk_reduction || 0)} pts</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 9, color: C.muted }}>Operational Cost</div>
+              <div style={{ fontSize: 11, color: C.text }}>{String(selectedAction?.impact_estimate?.operational_cost || "-")}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 9, color: C.muted }}>Time To Apply</div>
+              <div style={{ fontSize: 11, color: C.text }}>{String(selectedAction?.impact_estimate?.time_to_apply || "-")}</div>
+            </div>
+          </div>
+          {selectedAction?.rollback_hint && <div style={{ fontSize: 10, color: C.dim, marginTop: 8 }}>Rollback: {String(selectedAction.rollback_hint)}</div>}
+        </Card>}
+
+        {selectedAction.blast_radius && ((selectedAction.blast_radius.event_count || 0) > 0 || (selectedAction.blast_radius.services || []).length > 0) && <Card style={{ padding: "10px 14px", marginBottom: 10 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6 }}>Blast Radius</div>
+          <div style={{ fontSize: 10, color: C.text, marginBottom: 6 }}>{String(selectedAction.blast_radius.summary || "-")}</div>
+          <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+            Services: {Array.isArray(selectedAction.blast_radius.services) && selectedAction.blast_radius.services.length ? selectedAction.blast_radius.services.join(", ") : "-"}
+            <br />
+            Apps: {Array.isArray(selectedAction.blast_radius.apps) && selectedAction.blast_radius.apps.length ? selectedAction.blast_radius.apps.join(", ") : "-"}
+          </div>
+        </Card>}
 
         {/* Result */}
         {selectedAction.result_message && <Card style={{ padding: "10px 14px", marginBottom: 10 }}>

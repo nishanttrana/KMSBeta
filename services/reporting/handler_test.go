@@ -10,7 +10,7 @@ import (
 )
 
 func TestHandlerAlertsIncidentsAndStats(t *testing.T) {
-	h, _, audit, _, _ := newReportingHandler(t)
+	h, _, audit, _, _, _ := newReportingHandler(t)
 	tenantID := "tenant-h1"
 	audit.events[tenantID] = []map[string]interface{}{
 		{"id": "e1", "action": "key.exported", "service": "keycore", "target_id": "k1", "timestamp": time.Now().UTC().Format(time.RFC3339)},
@@ -66,6 +66,13 @@ func TestHandlerAlertsIncidentsAndStats(t *testing.T) {
 		t.Fatalf("mttr status=%d body=%s", mttrRR.Code, mttrRR.Body.String())
 	}
 
+	mttdReq := httptest.NewRequest(http.MethodGet, "/alerts/stats/mttd?tenant_id="+tenantID, nil)
+	mttdRR := httptest.NewRecorder()
+	h.ServeHTTP(mttdRR, mttdReq)
+	if mttdRR.Code != http.StatusOK {
+		t.Fatalf("mttd status=%d body=%s", mttdRR.Code, mttdRR.Body.String())
+	}
+
 	topReq := httptest.NewRequest(http.MethodGet, "/alerts/stats/top-sources?tenant_id="+tenantID, nil)
 	topRR := httptest.NewRecorder()
 	h.ServeHTTP(topRR, topReq)
@@ -75,9 +82,15 @@ func TestHandlerAlertsIncidentsAndStats(t *testing.T) {
 }
 
 func TestHandlerRulesChannelsAndReports(t *testing.T) {
-	h, _, _, compliance, _ := newReportingHandler(t)
+	h, _, _, compliance, posture, _ := newReportingHandler(t)
 	tenantID := "tenant-h2"
 	compliance.posture[tenantID] = map[string]interface{}{"overall_score": "77"}
+	posture.findings[tenantID] = []map[string]interface{}{
+		{"id": "finding-1", "title": "SDK receipt gaps", "severity": "high", "status": "open"},
+	}
+	posture.actions[tenantID] = []map[string]interface{}{
+		{"id": "action-1", "action_type": "restart_degraded_connector", "status": "suggested", "approval_required": false},
+	}
 
 	ruleReq := httptest.NewRequest(http.MethodPost, "/alerts/rules?tenant_id="+tenantID, strings.NewReader(`{
 		"name":"brute_force",
@@ -126,7 +139,7 @@ func TestHandlerRulesChannelsAndReports(t *testing.T) {
 
 	genReq := httptest.NewRequest(http.MethodPost, "/reports/generate", strings.NewReader(`{
 		"tenant_id":"`+tenantID+`",
-		"template_id":"alert_summary",
+		"template_id":"evidence_pack",
 		"format":"json",
 		"requested_by":"tester"
 	}`))
@@ -212,7 +225,7 @@ func TestHandlerRulesChannelsAndReports(t *testing.T) {
 }
 
 func TestHandlerTelemetryEndpoints(t *testing.T) {
-	h, _, _, _, _ := newReportingHandler(t)
+	h, _, _, _, _, _ := newReportingHandler(t)
 	tenantID := "tenant-telemetry-handler"
 	createReq := httptest.NewRequest(http.MethodPost, "/telemetry/errors", strings.NewReader(`{
 		"tenant_id":"`+tenantID+`",

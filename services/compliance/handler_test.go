@@ -145,6 +145,23 @@ func TestHandlerAssessmentRunAndSchedule(t *testing.T) {
 		t.Fatalf("run assessment status=%d body=%s", runRR.Code, runRR.Body.String())
 	}
 
+	keycore.keys["t4"] = append(keycore.keys["t4"], map[string]interface{}{
+		"id": "k2", "algorithm": "3DES", "status": "active", "current_version": 1, "ops_total": 0,
+	})
+	runAgainReq := httptest.NewRequest(http.MethodPost, "/compliance/assessment/run?tenant_id=t4", nil)
+	runAgainRR := httptest.NewRecorder()
+	h.ServeHTTP(runAgainRR, runAgainReq)
+	if runAgainRR.Code != http.StatusOK {
+		t.Fatalf("second assessment status=%d body=%s", runAgainRR.Code, runAgainRR.Body.String())
+	}
+
+	deltaReq := httptest.NewRequest(http.MethodGet, "/compliance/assessment/delta?tenant_id=t4", nil)
+	deltaRR := httptest.NewRecorder()
+	h.ServeHTTP(deltaRR, deltaReq)
+	if deltaRR.Code != http.StatusOK || !strings.Contains(deltaRR.Body.String(), "\"delta\"") {
+		t.Fatalf("delta status=%d body=%s", deltaRR.Code, deltaRR.Body.String())
+	}
+
 	putScheduleReq := httptest.NewRequest(http.MethodPut, "/compliance/assessment/schedule",
 		strings.NewReader(`{"tenant_id":"t4","enabled":true,"frequency":"daily"}`))
 	putScheduleReq.Header.Set("Content-Type", "application/json")

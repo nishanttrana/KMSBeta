@@ -96,6 +96,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /telemetry/errors", h.handleListErrorTelemetry)
 
 	mux.HandleFunc("GET /alerts/stats", h.handleAlertStats)
+	mux.HandleFunc("GET /alerts/stats/mttd", h.handleMTTDStats)
 	mux.HandleFunc("GET /alerts/stats/mttr", h.handleMTTRStats)
 	mux.HandleFunc("GET /alerts/stats/top-sources", h.handleTopSources)
 
@@ -762,6 +763,20 @@ func (h *Handler) handleMTTRStats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"mttr_minutes": out, "request_id": reqID})
 }
 
+func (h *Handler) handleMTTDStats(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	out, err := h.svc.MTTDStats(r.Context(), tenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"mttd_minutes": out, "request_id": reqID})
+}
+
 func (h *Handler) handleTopSources(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	tenantID := mustTenant(r, reqID, w)
@@ -773,7 +788,13 @@ func (h *Handler) handleTopSources(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"sources": out, "request_id": reqID})
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"top_actors":   out["actors"],
+		"top_ips":      out["ips"],
+		"top_services": out["services"],
+		"sources":      out,
+		"request_id":   reqID,
+	})
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {

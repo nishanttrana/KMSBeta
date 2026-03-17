@@ -20,6 +20,25 @@ export type PostureFinding = {
   resolved_at?: string;
   sla_due_at?: string;
   reopen_count?: number;
+  risk_drivers?: Array<{
+    id: string;
+    label: string;
+    domain?: string;
+    delta_points: number;
+    severity: string;
+    explanation: string;
+    evidence?: Record<string, unknown>;
+  }>;
+  blast_radius?: {
+    tenants?: string[];
+    apps?: string[];
+    services?: string[];
+    resources?: string[];
+    actors?: string[];
+    event_count?: number;
+    last_seen_at?: string;
+    summary?: string;
+  };
 };
 
 export type PostureRiskSnapshot = {
@@ -50,6 +69,65 @@ export type PostureAction = {
   result_message?: string;
   created_at?: string;
   updated_at?: string;
+  impact_estimate?: {
+    risk_reduction: number;
+    operational_cost?: string;
+    time_to_apply?: string;
+  };
+  rollback_hint?: string;
+  blast_radius?: {
+    tenants?: string[];
+    apps?: string[];
+    services?: string[];
+    resources?: string[];
+    actors?: string[];
+    event_count?: number;
+    last_seen_at?: string;
+    summary?: string;
+  };
+  priority?: string;
+};
+
+export type PostureRiskDriverExplainer = {
+  current_risk_24h: number;
+  previous_risk_24h: number;
+  net_delta: number;
+  summary: string;
+  drivers: NonNullable<PostureFinding["risk_drivers"]>;
+};
+
+export type PostureCockpitGroup = {
+  id: string;
+  label: string;
+  description?: string;
+  count: number;
+  actions: PostureAction[];
+};
+
+export type PostureValidationBadge = {
+  domain: string;
+  kind: string;
+  label: string;
+  status: string;
+  detail: string;
+  last_checked_at?: string;
+  last_success_at?: string;
+  metric?: number;
+};
+
+export type PostureScenario = {
+  id: string;
+  label: string;
+  category: string;
+  action_type?: string;
+  current_risk_24h: number;
+  projected_risk_24h: number;
+  risk_delta: number;
+  summary: string;
+  impact_estimate?: string;
+  rollback_hint?: string;
+  approval_required: boolean;
+  based_on?: string[];
 };
 
 export type PostureDashboard = {
@@ -58,6 +136,18 @@ export type PostureDashboard = {
   pending_actions?: PostureAction[];
   open_findings?: number;
   critical_findings?: number;
+  risk_drivers?: PostureRiskDriverExplainer;
+  remediation_cockpit?: PostureCockpitGroup[];
+  blast_radius?: Array<NonNullable<PostureFinding["blast_radius"]>>;
+  scenario_simulator?: PostureScenario[];
+  validation_badges?: PostureValidationBadge[];
+  sla_overview?: {
+    open_count: number;
+    overdue_count: number;
+    due_soon_count: number;
+    average_age_hours: number;
+    breached_ids?: string[];
+  };
 };
 
 function tenantQuery(session: AuthSession): string {

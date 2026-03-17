@@ -41,24 +41,26 @@ type NormalizedEvent struct {
 }
 
 type Finding struct {
-	ID                string                 `json:"id"`
-	TenantID          string                 `json:"tenant_id"`
-	Engine            string                 `json:"engine"`
-	FindingType       string                 `json:"finding_type"`
-	Title             string                 `json:"title"`
-	Description       string                 `json:"description"`
-	Severity          string                 `json:"severity"`
-	RiskScore         int                    `json:"risk_score"`
-	RecommendedAction string                 `json:"recommended_action"`
-	AutoActionAllowed bool                   `json:"auto_action_allowed"`
-	Status            string                 `json:"status"`
-	Fingerprint       string                 `json:"fingerprint"`
-	Evidence          map[string]interface{} `json:"evidence"`
-	DetectedAt        time.Time              `json:"detected_at"`
-	UpdatedAt         time.Time              `json:"updated_at"`
-	ResolvedAt        time.Time              `json:"resolved_at"`
-	SLADueAt          time.Time              `json:"sla_due_at"`
-	ReopenCount       int                    `json:"reopen_count"`
+	ID                string                   `json:"id"`
+	TenantID          string                   `json:"tenant_id"`
+	Engine            string                   `json:"engine"`
+	FindingType       string                   `json:"finding_type"`
+	Title             string                   `json:"title"`
+	Description       string                   `json:"description"`
+	Severity          string                   `json:"severity"`
+	RiskScore         int                      `json:"risk_score"`
+	RecommendedAction string                   `json:"recommended_action"`
+	AutoActionAllowed bool                     `json:"auto_action_allowed"`
+	Status            string                   `json:"status"`
+	Fingerprint       string                   `json:"fingerprint"`
+	Evidence          map[string]interface{}   `json:"evidence"`
+	DetectedAt        time.Time                `json:"detected_at"`
+	UpdatedAt         time.Time                `json:"updated_at"`
+	ResolvedAt        time.Time                `json:"resolved_at"`
+	SLADueAt          time.Time                `json:"sla_due_at"`
+	ReopenCount       int                      `json:"reopen_count"`
+	RiskDrivers       []RiskDriverContribution `json:"risk_drivers,omitempty"`
+	BlastRadius       BlastRadius              `json:"blast_radius,omitempty"`
 }
 
 type RiskSnapshot struct {
@@ -89,6 +91,10 @@ type RemediationAction struct {
 	ResultMessage     string                 `json:"result_message"`
 	CreatedAt         time.Time              `json:"created_at"`
 	UpdatedAt         time.Time              `json:"updated_at"`
+	ImpactEstimate    RemediationImpact      `json:"impact_estimate,omitempty"`
+	RollbackHint      string                 `json:"rollback_hint,omitempty"`
+	BlastRadius       BlastRadius            `json:"blast_radius,omitempty"`
+	Priority          string                 `json:"priority,omitempty"`
 }
 
 type FindingQuery struct {
@@ -172,4 +178,95 @@ type ActionCandidate struct {
 	SafetyGate         string
 	ApprovalRequired   bool
 	Evidence           map[string]interface{}
+}
+
+type RiskDriverContribution struct {
+	ID          string                 `json:"id"`
+	Label       string                 `json:"label"`
+	Domain      string                 `json:"domain,omitempty"`
+	DeltaPoints int                    `json:"delta_points"`
+	Severity    string                 `json:"severity"`
+	Explanation string                 `json:"explanation"`
+	Evidence    map[string]interface{} `json:"evidence,omitempty"`
+}
+
+type RiskDriverExplainer struct {
+	CurrentRisk24h  int                      `json:"current_risk_24h"`
+	PreviousRisk24h int                      `json:"previous_risk_24h"`
+	NetDelta        int                      `json:"net_delta"`
+	Summary         string                   `json:"summary"`
+	Drivers         []RiskDriverContribution `json:"drivers"`
+}
+
+type BlastRadius struct {
+	Tenants    []string  `json:"tenants,omitempty"`
+	Apps       []string  `json:"apps,omitempty"`
+	Services   []string  `json:"services,omitempty"`
+	Resources  []string  `json:"resources,omitempty"`
+	Actors     []string  `json:"actors,omitempty"`
+	EventCount int       `json:"event_count"`
+	LastSeenAt time.Time `json:"last_seen_at,omitempty"`
+	Summary    string    `json:"summary,omitempty"`
+}
+
+type RemediationImpact struct {
+	RiskReduction   int    `json:"risk_reduction"`
+	OperationalCost string `json:"operational_cost,omitempty"`
+	TimeToApply     string `json:"time_to_apply,omitempty"`
+}
+
+type RemediationCockpitGroup struct {
+	ID          string              `json:"id"`
+	Label       string              `json:"label"`
+	Description string              `json:"description,omitempty"`
+	Count       int                 `json:"count"`
+	Actions     []RemediationAction `json:"actions"`
+}
+
+type ValidationBadge struct {
+	Domain        string    `json:"domain"`
+	Kind          string    `json:"kind"`
+	Label         string    `json:"label"`
+	Status        string    `json:"status"`
+	Detail        string    `json:"detail"`
+	LastCheckedAt time.Time `json:"last_checked_at,omitempty"`
+	LastSuccessAt time.Time `json:"last_success_at,omitempty"`
+	Metric        float64   `json:"metric,omitempty"`
+}
+
+type ScenarioSimulation struct {
+	ID               string   `json:"id"`
+	Label            string   `json:"label"`
+	Category         string   `json:"category"`
+	ActionType       string   `json:"action_type,omitempty"`
+	CurrentRisk24h   int      `json:"current_risk_24h"`
+	ProjectedRisk24h int      `json:"projected_risk_24h"`
+	RiskDelta        int      `json:"risk_delta"`
+	Summary          string   `json:"summary"`
+	ImpactEstimate   string   `json:"impact_estimate,omitempty"`
+	RollbackHint     string   `json:"rollback_hint,omitempty"`
+	ApprovalRequired bool     `json:"approval_required"`
+	BasedOn          []string `json:"based_on,omitempty"`
+}
+
+type SLAOverview struct {
+	OpenCount       int      `json:"open_count"`
+	OverdueCount    int      `json:"overdue_count"`
+	DueSoonCount    int      `json:"due_soon_count"`
+	AverageAgeHours float64  `json:"average_age_hours"`
+	BreachedIDs     []string `json:"breached_ids,omitempty"`
+}
+
+type PostureDashboard struct {
+	Risk               RiskSnapshot              `json:"risk"`
+	RecentFindings     []Finding                 `json:"recent_findings"`
+	PendingActions     []RemediationAction       `json:"pending_actions"`
+	OpenFindings       int                       `json:"open_findings"`
+	CriticalFindings   int                       `json:"critical_findings"`
+	RiskDrivers        RiskDriverExplainer       `json:"risk_drivers"`
+	RemediationCockpit []RemediationCockpitGroup `json:"remediation_cockpit"`
+	BlastRadius        []BlastRadius             `json:"blast_radius"`
+	ScenarioSimulator  []ScenarioSimulation      `json:"scenario_simulator"`
+	ValidationBadges   []ValidationBadge         `json:"validation_badges"`
+	SLAOverview        SLAOverview               `json:"sla_overview"`
 }

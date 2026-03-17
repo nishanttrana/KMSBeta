@@ -74,6 +74,7 @@ func main() {
 		NewSQLStore(dbConn),
 		NewHTTPAuditClient(envOr("AUDIT_URL", "http://127.0.0.1:8070"), 5*time.Second),
 		NewHTTPComplianceClient(envOr("COMPLIANCE_URL", "http://127.0.0.1:8110"), 5*time.Second),
+		NewHTTPPostureClient(envOr("POSTURE_URL", "http://127.0.0.1:8220"), 5*time.Second),
 		publisher,
 	)
 	svc.ConfigureTelemetryRetention(

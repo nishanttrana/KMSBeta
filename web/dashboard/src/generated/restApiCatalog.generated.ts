@@ -3457,6 +3457,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "compliance-get-compliance-assessment-delta",
+    "group": "Compliance (compliance)",
+    "title": "GET /compliance/assessment/delta",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/assessment/delta?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "GET /svc/compliance/compliance/assessment/delta?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "compliance-get-compliance-assessment-history",
     "group": "Compliance (compliance)",
     "title": "GET /compliance/assessment/history",
@@ -15450,6 +15478,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Reporting service.",
     "requestExample": "GET /svc/reporting/alerts/stats?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "reporting-get-alerts-stats-mttd",
+    "group": "Reporting (reporting)",
+    "title": "GET /alerts/stats/mttd",
+    "service": "reporting",
+    "method": "GET",
+    "pathTemplate": "/alerts/stats/mttd?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Reporting service.",
+    "requestExample": "GET /svc/reporting/alerts/stats/mttd?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

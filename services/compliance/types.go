@@ -186,6 +186,48 @@ type AssessmentResult struct {
 	CreatedAt       time.Time           `json:"created_at"`
 }
 
+type AssessmentFindingDelta struct {
+	Title         string `json:"title"`
+	Severity      string `json:"severity"`
+	CurrentCount  int    `json:"current_count"`
+	PreviousCount int    `json:"previous_count"`
+	Delta         int    `json:"delta"`
+}
+
+type AssessmentDomainDelta struct {
+	Domain        string `json:"domain"`
+	Label         string `json:"label"`
+	CurrentScore  int    `json:"current_score"`
+	PreviousScore int    `json:"previous_score"`
+	Delta         int    `json:"delta"`
+	Status        string `json:"status"`
+}
+
+type AssessmentConnectorDelta struct {
+	Connector     string    `json:"connector"`
+	Label         string    `json:"label"`
+	CurrentFails  int       `json:"current_fails"`
+	PreviousFails int       `json:"previous_fails"`
+	Delta         int       `json:"delta"`
+	LastFailureAt time.Time `json:"last_failure_at,omitempty"`
+	Status        string    `json:"status"`
+}
+
+type AssessmentDelta struct {
+	LatestAssessmentID   string                     `json:"latest_assessment_id"`
+	PreviousAssessmentID string                     `json:"previous_assessment_id,omitempty"`
+	LatestScore          int                        `json:"latest_score"`
+	PreviousScore        int                        `json:"previous_score"`
+	ScoreDelta           int                        `json:"score_delta"`
+	Summary              string                     `json:"summary"`
+	AddedFindings        []AssessmentFindingDelta   `json:"added_findings"`
+	ResolvedFindings     []AssessmentFindingDelta   `json:"resolved_findings"`
+	RecoveredDomains     []AssessmentDomainDelta    `json:"recovered_domains"`
+	RegressedDomains     []AssessmentDomainDelta    `json:"regressed_domains"`
+	NewFailingConnectors []AssessmentConnectorDelta `json:"new_failing_connectors"`
+	ComparedAt           time.Time                  `json:"compared_at"`
+}
+
 type AssessmentSchedule struct {
 	TenantID  string    `json:"tenant_id"`
 	Enabled   bool      `json:"enabled"`

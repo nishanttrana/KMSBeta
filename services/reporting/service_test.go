@@ -10,7 +10,7 @@ import (
 )
 
 func TestServiceSyncAlertsAndEscalation(t *testing.T) {
-	svc, _, audit, _, pub := newReportingService(t)
+	svc, _, audit, _, _, pub := newReportingService(t)
 	tenantID := "tenant-a"
 	audit.events[tenantID] = []map[string]interface{}{
 		{"id": "e1", "action": "auth.login_failed", "source_ip": "10.0.0.1", "service": "auth", "target_id": "u1", "timestamp": time.Now().UTC().Format(time.RFC3339)},
@@ -33,7 +33,7 @@ func TestServiceSyncAlertsAndEscalation(t *testing.T) {
 }
 
 func TestServiceSkipsInfoOnlyTelemetryAlerts(t *testing.T) {
-	svc, _, audit, _, _ := newReportingService(t)
+	svc, _, audit, _, _, _ := newReportingService(t)
 	tenantID := "tenant-info"
 	now := time.Now().UTC().Format(time.RFC3339)
 	audit.events[tenantID] = []map[string]interface{}{
@@ -54,7 +54,7 @@ func TestServiceSkipsInfoOnlyTelemetryAlerts(t *testing.T) {
 }
 
 func TestServiceCreatesAlertWhenRuleEscalatesInfoEvent(t *testing.T) {
-	svc, _, audit, _, _ := newReportingService(t)
+	svc, _, audit, _, _, _ := newReportingService(t)
 	tenantID := "tenant-rule"
 	_, err := svc.CreateRule(context.Background(), tenantID, AlertRule{
 		Name:         "Posture Snapshot Warning",
@@ -89,7 +89,7 @@ func TestServiceCreatesAlertWhenRuleEscalatesInfoEvent(t *testing.T) {
 }
 
 func TestServiceListChannelsExcludesPagerDuty(t *testing.T) {
-	svc, store, _, _, _ := newReportingService(t)
+	svc, store, _, _, _, _ := newReportingService(t)
 	tenantID := "tenant-channels"
 	if err := store.UpsertChannel(context.Background(), NotificationChannel{
 		TenantID: tenantID,
@@ -119,12 +119,18 @@ func TestServiceListChannelsExcludesPagerDuty(t *testing.T) {
 }
 
 func TestServiceReportsAndSchedules(t *testing.T) {
-	svc, _, audit, compliance, pub := newReportingService(t)
+	svc, _, audit, compliance, posture, pub := newReportingService(t)
 	tenantID := "tenant-r"
 	audit.events[tenantID] = []map[string]interface{}{
 		{"id": "e1", "action": "key.created", "service": "keycore", "target_id": "k1", "timestamp": time.Now().UTC().Format(time.RFC3339)},
 	}
 	compliance.posture[tenantID] = map[string]interface{}{"overall_score": "84"}
+	posture.findings[tenantID] = []map[string]interface{}{
+		{"id": "f-1", "title": "KMIP interop failures", "severity": "high", "status": "open"},
+	}
+	posture.actions[tenantID] = []map[string]interface{}{
+		{"id": "a-1", "action_type": "restart_degraded_connector", "status": "suggested", "approval_required": false},
+	}
 	_ = svc.SyncAlertsFromAudit(context.Background(), tenantID, 50)
 
 	job, err := svc.GenerateReport(context.Background(), tenantID, "alert_summary", "json", "tester", map[string]interface{}{"window": "24h"})
@@ -193,5 +199,24 @@ func TestServiceReportsAndSchedules(t *testing.T) {
 	}
 	if pub.Count("audit.reporting.report_deleted") == 0 {
 		t.Fatalf("expected report deletion audit publication")
+	}
+
+	evidenceJob, err := svc.GenerateReport(context.Background(), tenantID, "evidence_pack", "json", "tester", nil)
+	if err != nil {
+		t.Fatalf("generate evidence pack: %v", err)
+	}
+	var evidence ReportJob
+	for i := 0; i < 50; i++ {
+		evidence, err = svc.GetReportJob(context.Background(), tenantID, evidenceJob.ID)
+		if err != nil {
+			t.Fatalf("get evidence pack: %v", err)
+		}
+		if evidence.Status == "completed" {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if !strings.Contains(evidence.ResultContent, "\"posture_findings\"") {
+		t.Fatalf("expected evidence pack content, got %s", evidence.ResultContent)
 	}
 }

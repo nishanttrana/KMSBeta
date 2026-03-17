@@ -1082,7 +1082,13 @@ func (s *Service) ExecuteAction(ctx context.Context, tenantID string, actionID s
 }
 
 func (s *Service) ListFindings(ctx context.Context, tenantID string, q FindingQuery) ([]Finding, error) {
-	return s.store.ListFindings(ctx, tenantID, q)
+	items, err := s.store.ListFindings(ctx, tenantID, q)
+	if err != nil {
+		return nil, err
+	}
+	history, _ := s.store.ListRiskSnapshots(ctx, tenantID, RiskQuery{Limit: 2})
+	events := s.fetchRecentAuditEvents(ctx, tenantID, max(250, min(1200, q.Limit*6)))
+	return s.enrichFindings(items, events, history), nil
 }
 
 func (s *Service) UpdateFindingStatus(ctx context.Context, tenantID string, id string, status string) error {
@@ -1090,7 +1096,15 @@ func (s *Service) UpdateFindingStatus(ctx context.Context, tenantID string, id s
 }
 
 func (s *Service) ListActions(ctx context.Context, tenantID string, q ActionQuery) ([]RemediationAction, error) {
-	return s.store.ListActions(ctx, tenantID, q)
+	items, err := s.store.ListActions(ctx, tenantID, q)
+	if err != nil {
+		return nil, err
+	}
+	findings, _ := s.store.ListFindings(ctx, tenantID, FindingQuery{Limit: 500})
+	history, _ := s.store.ListRiskSnapshots(ctx, tenantID, RiskQuery{Limit: 2})
+	events := s.fetchRecentAuditEvents(ctx, tenantID, max(250, min(1200, q.Limit*6)))
+	enrichedFindings := s.enrichFindings(findings, events, history)
+	return s.enrichActions(items, enrichedFindings, events), nil
 }
 
 func (s *Service) LatestRisk(ctx context.Context, tenantID string) (RiskSnapshot, error) {
@@ -1099,6 +1113,781 @@ func (s *Service) LatestRisk(ctx context.Context, tenantID string) (RiskSnapshot
 
 func (s *Service) RiskHistory(ctx context.Context, tenantID string, q RiskQuery) ([]RiskSnapshot, error) {
 	return s.store.ListRiskSnapshots(ctx, tenantID, q)
+}
+
+func (s *Service) Dashboard(ctx context.Context, tenantID string) (PostureDashboard, error) {
+	risk, err := s.store.GetLatestRiskSnapshot(ctx, tenantID)
+	if err != nil {
+		if tenantID == "" {
+			tenantID = "*"
+		}
+		risk = RiskSnapshot{TenantID: tenantID}
+	}
+	history, _ := s.store.ListRiskSnapshots(ctx, tenantID, RiskQuery{Limit: 6})
+	findings, err := s.store.ListFindings(ctx, tenantID, FindingQuery{Limit: 80})
+	if err != nil {
+		return PostureDashboard{}, err
+	}
+	actions, err := s.store.ListActions(ctx, tenantID, ActionQuery{Limit: 80})
+	if err != nil {
+		return PostureDashboard{}, err
+	}
+	events := s.fetchRecentAuditEvents(ctx, tenantID, 1200)
+	enrichedFindings := s.enrichFindings(findings, events, history)
+	enrichedActions := s.enrichActions(actions, enrichedFindings, events)
+	openCount := 0
+	criticalCount := 0
+	for _, item := range enrichedFindings {
+		status := strings.ToLower(strings.TrimSpace(item.Status))
+		if status == "open" || status == "reopened" || status == "acknowledged" {
+			openCount++
+			if normalizeSeverity(item.Severity) == severityCritical {
+				criticalCount++
+			}
+		}
+	}
+	return PostureDashboard{
+		Risk:               risk,
+		RecentFindings:     enrichedFindings,
+		PendingActions:     enrichedActions,
+		OpenFindings:       openCount,
+		CriticalFindings:   criticalCount,
+		RiskDrivers:        buildRiskDriverExplainer(risk, history, enrichedFindings),
+		RemediationCockpit: buildRemediationCockpit(enrichedActions),
+		BlastRadius:        buildBlastRadiusHotspots(enrichedFindings),
+		ScenarioSimulator:  buildScenarioSimulator(risk, enrichedActions, enrichedFindings),
+		ValidationBadges:   buildValidationBadges(risk, events),
+		SLAOverview:        buildSLAOverview(enrichedFindings),
+	}, nil
+}
+
+func (s *Service) fetchRecentAuditEvents(ctx context.Context, tenantID string, limit int) []map[string]interface{} {
+	if s.audit == nil {
+		return []map[string]interface{}{}
+	}
+	if limit <= 0 {
+		limit = 500
+	}
+	items, err := s.audit.ListEvents(ctx, tenantID, limit)
+	if err != nil {
+		return []map[string]interface{}{}
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return eventTimestamp(items[i]).After(eventTimestamp(items[j]))
+	})
+	return items
+}
+
+func (s *Service) enrichFindings(items []Finding, events []map[string]interface{}, history []RiskSnapshot) []Finding {
+	previousRisk := 0
+	for _, snap := range history {
+		if snap.Risk24h > 0 {
+			previousRisk = snap.Risk24h
+			break
+		}
+	}
+	out := make([]Finding, 0, len(items))
+	for _, item := range items {
+		item.RiskDrivers = deriveFindingRiskDrivers(item, previousRisk)
+		item.BlastRadius = deriveBlastRadius(item, events)
+		out = append(out, item)
+	}
+	return out
+}
+
+func (s *Service) enrichActions(items []RemediationAction, findings []Finding, events []map[string]interface{}) []RemediationAction {
+	byID := map[string]Finding{}
+	byFingerprint := map[string]Finding{}
+	for _, finding := range findings {
+		if strings.TrimSpace(finding.ID) != "" {
+			byID[finding.ID] = finding
+		}
+		if strings.TrimSpace(finding.Fingerprint) != "" {
+			byFingerprint[finding.Fingerprint] = finding
+		}
+	}
+	out := make([]RemediationAction, 0, len(items))
+	for _, item := range items {
+		finding, ok := byID[item.FindingID]
+		if !ok {
+			if fp := firstString(item.Evidence["finding_fingerprint"]); fp != "" {
+				finding = byFingerprint[fp]
+			}
+		}
+		if finding.ID == "" {
+			finding = Finding{
+				ID:          item.FindingID,
+				TenantID:    item.TenantID,
+				Fingerprint: firstString(item.Evidence["finding_fingerprint"]),
+				Evidence:    item.Evidence,
+			}
+			finding.BlastRadius = deriveBlastRadius(finding, events)
+		}
+		item.BlastRadius = finding.BlastRadius
+		item.ImpactEstimate = deriveActionImpact(item, finding)
+		item.RollbackHint = deriveRollbackHint(item)
+		item.Priority = deriveActionPriority(item, finding)
+		out = append(out, item)
+	}
+	return out
+}
+
+func buildRiskDriverExplainer(risk RiskSnapshot, history []RiskSnapshot, findings []Finding) RiskDriverExplainer {
+	current := risk.Risk24h
+	previous := 0
+	for _, snap := range history {
+		if strings.TrimSpace(snap.ID) != "" && snap.ID == risk.ID {
+			continue
+		}
+		if snap.Risk24h > 0 {
+			previous = snap.Risk24h
+			break
+		}
+	}
+	drivers := make([]RiskDriverContribution, 0, 8)
+	for _, finding := range findings {
+		status := strings.ToLower(strings.TrimSpace(finding.Status))
+		if status == "resolved" {
+			continue
+		}
+		drivers = append(drivers, finding.RiskDrivers...)
+	}
+	sort.SliceStable(drivers, func(i, j int) bool {
+		return drivers[i].DeltaPoints > drivers[j].DeltaPoints
+	})
+	if len(drivers) > 6 {
+		drivers = drivers[:6]
+	}
+	netDelta := current - previous
+	summary := "Risk is stable relative to the previous scan."
+	if netDelta > 0 {
+		summary = fmt.Sprintf("Risk increased by %d points since the previous scan because of the signals below.", netDelta)
+	} else if netDelta < 0 {
+		summary = fmt.Sprintf("Risk improved by %d points since the previous scan; remaining drivers are still contributing pressure.", -netDelta)
+	}
+	return RiskDriverExplainer{
+		CurrentRisk24h:  current,
+		PreviousRisk24h: previous,
+		NetDelta:        netDelta,
+		Summary:         summary,
+		Drivers:         drivers,
+	}
+}
+
+func deriveFindingRiskDrivers(item Finding, previousRisk int) []RiskDriverContribution {
+	evidence := item.Evidence
+	if evidence == nil {
+		evidence = map[string]interface{}{}
+	}
+	domain := normalizeDomain(firstString(evidence["domain"]))
+	drivers := make([]RiskDriverContribution, 0, 4)
+	add := func(id string, label string, points int, explanation string, driverEvidence map[string]interface{}) {
+		if points <= 0 || strings.TrimSpace(explanation) == "" {
+			return
+		}
+		drivers = append(drivers, RiskDriverContribution{
+			ID:          id,
+			Label:       label,
+			Domain:      domain,
+			DeltaPoints: points,
+			Severity:    normalizeSeverity(item.Severity),
+			Explanation: explanation,
+			Evidence:    driverEvidence,
+		})
+	}
+
+	if delta := intAbs(int(extractFloat64(evidence["failure_rate_delta_points"]))); delta > 0 {
+		points := min(30, max(6, delta))
+		add("failure-rate", "Failure-rate drift", points, fmt.Sprintf("%s failure rate moved by %d points over the previous window.", domainLabel(domain, item.Title), delta), map[string]interface{}{
+			"failure_rate_delta_points": extractFloat64(evidence["failure_rate_delta_points"]),
+		})
+	}
+	if interop := extractInt64(evidence["interop_failed_24h"]); interop > 0 {
+		points := min(28, int(interop)*6)
+		add("kmip-interop", "KMIP interop failures", points, fmt.Sprintf("KMIP validation failed %d time(s) in the last 24h.", interop), map[string]interface{}{
+			"interop_failed_24h": interop,
+			"kmip_failures_24h":  extractInt64(evidence["kmip_failures_24h"]),
+		})
+	}
+	if receipts := extractInt64(evidence["receipt_missing_24h"]); receipts > 0 {
+		points := min(24, int(receipts)*4)
+		add("sdk-receipts", "SDK receipt gaps", points, fmt.Sprintf("Wrapper receipts were missing %d time(s), which weakens local operation attestations.", receipts), map[string]interface{}{
+			"receipt_missing_24h": receipts,
+			"sdk_failures_24h":    extractInt64(evidence["sdk_failures_24h"]),
+		})
+	}
+	if current24 := extractInt64(evidence["current_24h"]); current24 > 0 {
+		prev24 := extractInt64(evidence["prev_24h"])
+		growth := int(current24 - prev24)
+		if growth > 0 {
+			points := min(22, max(5, growth))
+			add("recent-spike", "24h spike", points, fmt.Sprintf("Signal count increased from %d to %d over the last 24h.", prev24, current24), map[string]interface{}{
+				"current_24h": current24,
+				"prev_24h":    prev24,
+			})
+		}
+	}
+	if count24 := extractInt64(evidence["count_24h"]); count24 > 0 {
+		points := min(26, max(6, int(count24)*2))
+		add("blocked-attempts", "Blocked attempts", points, fmt.Sprintf("%d blocked or suspicious operation(s) contributed to this finding.", count24), map[string]interface{}{
+			"count_24h": count24,
+		})
+	}
+	if len(drivers) == 0 && item.RiskScore > 0 {
+		points := max(4, item.RiskScore/4)
+		add("risk-score", "Observed risk pressure", points, fmt.Sprintf("This finding currently contributes %d/100 of direct risk pressure.", item.RiskScore), map[string]interface{}{
+			"risk_score":       item.RiskScore,
+			"previous_risk":    previousRisk,
+			"current_severity": item.Severity,
+		})
+	}
+	sort.SliceStable(drivers, func(i, j int) bool {
+		return drivers[i].DeltaPoints > drivers[j].DeltaPoints
+	})
+	return drivers
+}
+
+func deriveBlastRadius(item Finding, events []map[string]interface{}) BlastRadius {
+	tenants := []string{}
+	apps := []string{}
+	services := []string{}
+	resources := []string{}
+	actors := []string{}
+	count := 0
+	lastSeen := time.Time{}
+	for _, ev := range events {
+		if !eventMatchesFinding(item, ev) {
+			continue
+		}
+		count++
+		ts := eventTimestamp(ev)
+		if ts.After(lastSeen) {
+			lastSeen = ts
+		}
+		appendUniqueString(&tenants, firstString(ev["tenant_id"], item.TenantID))
+		appendUniqueString(&services, firstString(ev["service"]))
+		appendUniqueString(&apps, firstString(ev["app"], ev["client_id"], ev["connector_id"], nestedMapString(ev, "details_json", "app")))
+		appendUniqueString(&resources, firstString(ev["resource_id"], ev["target_id"]))
+		appendUniqueString(&actors, firstString(ev["actor_id"], ev["user_id"]))
+	}
+	if len(tenants) == 0 && strings.TrimSpace(item.TenantID) != "" {
+		tenants = append(tenants, item.TenantID)
+	}
+	summary := fmt.Sprintf("%d matched event(s)", count)
+	if len(services) > 0 {
+		summary = fmt.Sprintf("%d matched event(s) across %d service(s)", count, len(services))
+	}
+	return BlastRadius{
+		Tenants:    tenants,
+		Apps:       apps,
+		Services:   services,
+		Resources:  resources,
+		Actors:     actors,
+		EventCount: count,
+		LastSeenAt: lastSeen,
+		Summary:    summary,
+	}
+}
+
+func buildBlastRadiusHotspots(findings []Finding) []BlastRadius {
+	type hotspot struct {
+		risk  int
+		blast BlastRadius
+	}
+	hotspots := make([]hotspot, 0, len(findings))
+	for _, finding := range findings {
+		status := strings.ToLower(strings.TrimSpace(finding.Status))
+		if status == "resolved" {
+			continue
+		}
+		blast := finding.BlastRadius
+		if blast.EventCount == 0 && len(blast.Services) == 0 && len(blast.Apps) == 0 {
+			continue
+		}
+		blast.Summary = fmt.Sprintf("%s: %s", finding.Title, blast.Summary)
+		hotspots = append(hotspots, hotspot{risk: finding.RiskScore, blast: blast})
+	}
+	sort.SliceStable(hotspots, func(i, j int) bool {
+		return hotspots[i].risk > hotspots[j].risk
+	})
+	out := make([]BlastRadius, 0, min(5, len(hotspots)))
+	for _, item := range hotspots {
+		out = append(out, item.blast)
+		if len(out) >= 5 {
+			break
+		}
+	}
+	return out
+}
+
+func buildRemediationCockpit(actions []RemediationAction) []RemediationCockpitGroup {
+	groups := []RemediationCockpitGroup{
+		{ID: "safe-auto-fix", Label: "Safe Auto-Fix", Description: "Low-impact actions that can be executed immediately."},
+		{ID: "approval-required", Label: "Approval Required", Description: "High-impact actions that require an approval token before execution."},
+		{ID: "manual", Label: "Manual", Description: "Operator-driven runbooks that need investigation or scheduling."},
+	}
+	addToGroup := func(groupID string, action RemediationAction) {
+		for idx := range groups {
+			if groups[idx].ID == groupID {
+				groups[idx].Actions = append(groups[idx].Actions, action)
+				groups[idx].Count++
+				return
+			}
+		}
+	}
+	for _, action := range actions {
+		status := strings.ToLower(strings.TrimSpace(action.Status))
+		if status == "executed" {
+			continue
+		}
+		switch {
+		case action.ApprovalRequired:
+			addToGroup("approval-required", action)
+		case strings.EqualFold(action.SafetyGate, "low-impact"):
+			addToGroup("safe-auto-fix", action)
+		default:
+			addToGroup("manual", action)
+		}
+	}
+	return groups
+}
+
+func buildScenarioSimulator(risk RiskSnapshot, actions []RemediationAction, findings []Finding) []ScenarioSimulation {
+	out := make([]ScenarioSimulation, 0, 6)
+	seen := map[string]struct{}{}
+	for _, action := range actions {
+		status := strings.ToLower(strings.TrimSpace(action.Status))
+		if status == "executed" {
+			continue
+		}
+		if _, ok := seen[action.ActionType]; ok {
+			continue
+		}
+		seen[action.ActionType] = struct{}{}
+		reduction := max(4, action.ImpactEstimate.RiskReduction)
+		projected := max(0, risk.Risk24h-reduction)
+		out = append(out, ScenarioSimulation{
+			ID:               action.ID,
+			Label:            scenarioLabel(action),
+			Category:         strings.ReplaceAll(strings.ToLower(strings.TrimSpace(action.SafetyGate)), "-", " "),
+			ActionType:       action.ActionType,
+			CurrentRisk24h:   risk.Risk24h,
+			ProjectedRisk24h: projected,
+			RiskDelta:        projected - risk.Risk24h,
+			Summary:          fmt.Sprintf("If %s is executed, modeled 24h risk drops from %d to %d.", strings.ToLower(strings.TrimSpace(action.RecommendedAction)), risk.Risk24h, projected),
+			ImpactEstimate:   fmt.Sprintf("Estimated reduction: %d points.", reduction),
+			RollbackHint:     action.RollbackHint,
+			ApprovalRequired: action.ApprovalRequired,
+			BasedOn:          summarizeBasedOn(action, findings),
+		})
+		if len(out) >= 4 {
+			break
+		}
+	}
+	return out
+}
+
+func buildValidationBadges(risk RiskSnapshot, events []map[string]interface{}) []ValidationBadge {
+	domains := []string{"byok", "hyok", "ekm", "kmip", "bitlocker", "sdk"}
+	out := make([]ValidationBadge, 0, len(domains)*2)
+	now := nowUTC()
+	for _, domain := range domains {
+		domainEvents := filterDomainEvents(events, domain)
+		lastAuthSuccess := latestEventTime(domainEvents, func(ev map[string]interface{}) bool {
+			return eventIsSuccess(ev) && eventLooksLikeAuth(ev)
+		})
+		lastKeySuccess := latestEventTime(domainEvents, func(ev map[string]interface{}) bool {
+			return eventIsSuccess(ev) && eventLooksLikeKeyOp(ev)
+		})
+		failures24h := 0
+		for _, ev := range domainEvents {
+			if eventIsFailure(ev) && eventTimestamp(ev).After(now.Add(-24*time.Hour)) {
+				failures24h++
+			}
+		}
+		authStatus := "unknown"
+		authDetail := "No successful connector auth seen recently."
+		if !lastAuthSuccess.IsZero() {
+			authAge := now.Sub(lastAuthSuccess)
+			authStatus = "healthy"
+			if authAge > 48*time.Hour {
+				authStatus = "stale"
+			}
+			if failures24h > 0 && authAge > 24*time.Hour {
+				authStatus = "failing"
+			}
+			authDetail = fmt.Sprintf("Last successful auth: %s", lastAuthSuccess.Format(time.RFC3339))
+		}
+		out = append(out, ValidationBadge{
+			Domain:        domain,
+			Kind:          "auth_freshness",
+			Label:         domainLabel(domain, "") + " auth freshness",
+			Status:        authStatus,
+			Detail:        authDetail,
+			LastCheckedAt: now,
+			LastSuccessAt: lastAuthSuccess,
+			Metric:        float64(failures24h),
+		})
+
+		keyStatus := "unknown"
+		keyDetail := "No successful key operation observed recently."
+		if !lastKeySuccess.IsZero() {
+			keyAge := now.Sub(lastKeySuccess)
+			keyStatus = "healthy"
+			if keyAge > 72*time.Hour {
+				keyStatus = "stale"
+			}
+			if failures24h > 0 && keyAge > 24*time.Hour {
+				keyStatus = "failing"
+			}
+			keyDetail = fmt.Sprintf("Last successful key operation: %s", lastKeySuccess.Format(time.RFC3339))
+		}
+		out = append(out, ValidationBadge{
+			Domain:        domain,
+			Kind:          "last_key_op",
+			Label:         domainLabel(domain, "") + " last successful key op",
+			Status:        keyStatus,
+			Detail:        keyDetail,
+			LastCheckedAt: now,
+			LastSuccessAt: lastKeySuccess,
+			Metric:        float64(extractInt64(risk.TopSignals[domain+"_failures_24h"])),
+		})
+	}
+	return out
+}
+
+func buildSLAOverview(findings []Finding) SLAOverview {
+	now := nowUTC()
+	out := SLAOverview{}
+	totalAgeHours := 0.0
+	for _, finding := range findings {
+		status := strings.ToLower(strings.TrimSpace(finding.Status))
+		if status == "resolved" {
+			continue
+		}
+		out.OpenCount++
+		if !finding.DetectedAt.IsZero() {
+			totalAgeHours += now.Sub(finding.DetectedAt).Hours()
+		}
+		if !finding.SLADueAt.IsZero() {
+			switch {
+			case finding.SLADueAt.Before(now):
+				out.OverdueCount++
+				appendUniqueString(&out.BreachedIDs, finding.ID)
+			case finding.SLADueAt.Before(now.Add(24 * time.Hour)):
+				out.DueSoonCount++
+			}
+		}
+	}
+	if out.OpenCount > 0 {
+		out.AverageAgeHours = totalAgeHours / float64(out.OpenCount)
+	}
+	return out
+}
+
+func deriveActionImpact(action RemediationAction, finding Finding) RemediationImpact {
+	reduction := max(4, finding.RiskScore/3)
+	if strings.EqualFold(action.SafetyGate, "low-impact") {
+		reduction = max(5, finding.RiskScore/2)
+	}
+	if action.ApprovalRequired {
+		reduction = max(reduction, 12)
+	}
+	cost := "low"
+	switch strings.ToLower(strings.TrimSpace(action.SafetyGate)) {
+	case "high-impact":
+		cost = "high"
+	case "manual":
+		cost = "medium"
+	}
+	timeToApply := "15-30 minutes"
+	if action.ApprovalRequired {
+		timeToApply = "approval + maintenance window"
+	} else if strings.EqualFold(action.SafetyGate, "low-impact") {
+		timeToApply = "under 15 minutes"
+	}
+	return RemediationImpact{
+		RiskReduction:   reduction,
+		OperationalCost: cost,
+		TimeToApply:     timeToApply,
+	}
+}
+
+func deriveRollbackHint(action RemediationAction) string {
+	switch strings.TrimSpace(action.ActionType) {
+	case "restart_degraded_connector":
+		return "Re-enable the connector profile and rerun connector auth validation."
+	case "failover_hsm_profile":
+		return "Switch traffic back to the primary HSM profile after latency stabilizes."
+	case "quarantine_nonapproved_policy":
+		return "Restore the quarantined policy path after replacing the non-approved algorithm callsite."
+	case "quarantine_compromised_client_profile":
+		return "Reissue the client profile after session revocation and actor review."
+	case "rotate_affected_credentials":
+		return "Restore previous credentials only if audit confirms the delete anomaly was a false positive."
+	case "escalate_remediation":
+		return "Re-open the original remediation item and clear the temporary escalation owner."
+	default:
+		return "Roll back by restoring the previous connector/profile state after verification."
+	}
+}
+
+func deriveActionPriority(action RemediationAction, finding Finding) string {
+	if action.ApprovalRequired || normalizeSeverity(finding.Severity) == severityCritical {
+		return "urgent"
+	}
+	if strings.EqualFold(action.SafetyGate, "manual") || finding.RiskScore >= 60 {
+		return "high"
+	}
+	return "normal"
+}
+
+func scenarioLabel(action RemediationAction) string {
+	switch strings.TrimSpace(action.ActionType) {
+	case "restart_degraded_connector":
+		return "Restart degraded connector"
+	case "failover_hsm_profile":
+		return "Fail over HSM profile"
+	case "quarantine_nonapproved_policy":
+		return "Quarantine non-approved policy path"
+	case "quarantine_compromised_client_profile":
+		return "Quarantine compromised client"
+	case "rotate_affected_credentials":
+		return "Rotate affected credentials"
+	case "escalate_remediation":
+		return "Escalate overdue remediation"
+	default:
+		return strings.ReplaceAll(action.ActionType, "_", " ")
+	}
+}
+
+func summarizeBasedOn(action RemediationAction, findings []Finding) []string {
+	out := []string{}
+	for _, finding := range findings {
+		if finding.ID != action.FindingID {
+			continue
+		}
+		appendUniqueString(&out, finding.Title)
+		if finding.BlastRadius.EventCount > 0 {
+			appendUniqueString(&out, fmt.Sprintf("%d matched event(s)", finding.BlastRadius.EventCount))
+		}
+		for _, driver := range finding.RiskDrivers {
+			appendUniqueString(&out, fmt.Sprintf("%s (+%d)", driver.Label, driver.DeltaPoints))
+			if len(out) >= 3 {
+				return out
+			}
+		}
+	}
+	return out
+}
+
+func filterDomainEvents(events []map[string]interface{}, domain string) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(events))
+	for _, ev := range events {
+		if normalizeDomain(domainFromEvent(ev)) == domain {
+			out = append(out, ev)
+		}
+	}
+	return out
+}
+
+func latestEventTime(events []map[string]interface{}, match func(map[string]interface{}) bool) time.Time {
+	latest := time.Time{}
+	for _, ev := range events {
+		if !match(ev) {
+			continue
+		}
+		ts := eventTimestamp(ev)
+		if ts.After(latest) {
+			latest = ts
+		}
+	}
+	return latest
+}
+
+func eventMatchesFinding(item Finding, ev map[string]interface{}) bool {
+	domain := normalizeDomain(firstString(item.Evidence["domain"]))
+	action := strings.ToLower(firstString(ev["action"], ev["subject"]))
+	service := strings.ToLower(firstString(ev["service"]))
+	if domain != "" {
+		if strings.Contains(action, domain) || strings.Contains(service, domain) {
+			return true
+		}
+	}
+	switch strings.TrimSpace(item.FindingType) {
+	case "auth_failure_spike":
+		return strings.Contains(action, "auth.login_failed") || service == "auth"
+	case "crypto_failure_spike":
+		return strings.Contains(action, "decrypt") || strings.Contains(action, "unwrap")
+	case "hsm_latency_rising":
+		return strings.Contains(action, "hsm.") || service == "hsm"
+	case "cluster_sync_degradation", "cluster_state_drift":
+		return strings.Contains(action, "cluster.") || strings.Contains(service, "cluster")
+	case "connector_auth_flap":
+		return eventLooksLikeAuth(ev) && normalizeDomain(domainFromEvent(ev)) != ""
+	case "sdk_missing_receipts":
+		return strings.Contains(action, "receipt") || strings.Contains(action, "wrapper") || service == "sdk"
+	case "kmip_interop_validation_failures":
+		return strings.Contains(action, "kmip") || service == "kmip"
+	}
+	if strings.Contains(strings.ToLower(item.Title), "kmip") && (strings.Contains(action, "kmip") || service == "kmip") {
+		return true
+	}
+	if strings.Contains(strings.ToLower(item.Title), "sdk") && (strings.Contains(action, "sdk") || strings.Contains(action, "wrapper") || service == "sdk") {
+		return true
+	}
+	return false
+}
+
+func eventTimestamp(ev map[string]interface{}) time.Time {
+	return parseTimeString(firstString(ev["timestamp"], ev["created_at"], ev["event_ts"]))
+}
+
+func eventIsFailure(ev map[string]interface{}) bool {
+	result := strings.ToLower(firstString(ev["result"], ev["status"]))
+	return result == "failure" || result == "failed" || result == "denied" || result == "error"
+}
+
+func eventIsSuccess(ev map[string]interface{}) bool {
+	result := strings.ToLower(firstString(ev["result"], ev["status"]))
+	return result == "" || result == "success" || result == "ok" || result == "passed" || result == "verified"
+}
+
+func eventLooksLikeAuth(ev map[string]interface{}) bool {
+	action := strings.ToLower(firstString(ev["action"], ev["subject"]))
+	return strings.Contains(action, "auth") || strings.Contains(action, "mtls") || strings.Contains(action, "token")
+}
+
+func eventLooksLikeKeyOp(ev map[string]interface{}) bool {
+	action := strings.ToLower(firstString(ev["action"], ev["subject"]))
+	return strings.Contains(action, "key.") || strings.Contains(action, "wrap") || strings.Contains(action, "unwrap") || strings.Contains(action, "encrypt") || strings.Contains(action, "decrypt") || strings.Contains(action, "sign") || strings.Contains(action, "rotate")
+}
+
+func domainFromEvent(ev map[string]interface{}) string {
+	service := strings.ToLower(firstString(ev["service"]))
+	action := strings.ToLower(firstString(ev["action"], ev["subject"]))
+	switch {
+	case strings.Contains(service, "cloud") || strings.Contains(action, "byok") || strings.Contains(action, "cloud."):
+		return "byok"
+	case strings.Contains(service, "hyok") || strings.Contains(action, "hyok."):
+		return "hyok"
+	case strings.Contains(service, "ekm") || strings.Contains(action, "ekm."):
+		return "ekm"
+	case strings.Contains(service, "kmip") || strings.Contains(action, "kmip."):
+		return "kmip"
+	case strings.Contains(service, "bitlocker") || strings.Contains(action, "bitlocker"):
+		return "bitlocker"
+	case strings.Contains(service, "sdk") || strings.Contains(action, "sdk.") || strings.Contains(action, "wrapper"):
+		return "sdk"
+	default:
+		return ""
+	}
+}
+
+func normalizeDomain(v string) string {
+	v = strings.ToLower(strings.TrimSpace(v))
+	switch v {
+	case "sdk / wrapper":
+		return "sdk"
+	default:
+		return strings.ReplaceAll(v, " ", "")
+	}
+}
+
+func domainLabel(domain string, fallback string) string {
+	switch domain {
+	case "byok":
+		return "BYOK"
+	case "hyok":
+		return "HYOK"
+	case "ekm":
+		return "EKM"
+	case "kmip":
+		return "KMIP"
+	case "bitlocker":
+		return "BitLocker"
+	case "sdk":
+		return "SDK"
+	default:
+		if strings.TrimSpace(fallback) != "" {
+			return fallback
+		}
+		return "This domain"
+	}
+}
+
+func nestedMapString(ev map[string]interface{}, key string, nested string) string {
+	if ev == nil {
+		return ""
+	}
+	if raw, ok := ev[key].(map[string]interface{}); ok {
+		return firstString(raw[nested])
+	}
+	return ""
+}
+
+func appendUniqueString(target *[]string, value string) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return
+	}
+	for _, item := range *target {
+		if strings.EqualFold(strings.TrimSpace(item), value) {
+			return
+		}
+	}
+	*target = append(*target, value)
+}
+
+func extractFloat64(v interface{}) float64 {
+	switch x := v.(type) {
+	case float64:
+		return x
+	case float32:
+		return float64(x)
+	case int:
+		return float64(x)
+	case int64:
+		return float64(x)
+	case json.Number:
+		f, _ := x.Float64()
+		return f
+	case string:
+		var out float64
+		_, _ = fmt.Sscanf(strings.TrimSpace(x), "%f", &out)
+		return out
+	default:
+		return 0
+	}
+}
+
+func extractInt64(v interface{}) int64 {
+	switch x := v.(type) {
+	case int:
+		return int64(x)
+	case int64:
+		return x
+	case float64:
+		return int64(x)
+	case float32:
+		return int64(x)
+	case json.Number:
+		n, _ := x.Int64()
+		return n
+	case string:
+		var out int64
+		_, _ = fmt.Sscanf(strings.TrimSpace(x), "%d", &out)
+		return out
+	default:
+		return 0
+	}
+}
+
+func intAbs(v int) int {
+	if v < 0 {
+		return -v
+	}
+	return v
 }
 
 func (s *Service) normalizeEvent(in NormalizedEvent) (NormalizedEvent, error) {

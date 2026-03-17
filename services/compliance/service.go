@@ -226,6 +226,59 @@ func (s *Service) ListAssessmentRuns(ctx context.Context, tenantID string, templ
 	return s.store.ListAssessmentRuns(ctx, tenantID, templateID, limit)
 }
 
+func (s *Service) GetAssessmentDelta(ctx context.Context, tenantID string, templateID string) (AssessmentDelta, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	if tenantID == "" {
+		return AssessmentDelta{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+	templateID = normalizeTemplateID(templateID)
+	items, err := s.store.ListAssessmentRuns(ctx, tenantID, templateID, 30)
+	if err != nil {
+		return AssessmentDelta{}, err
+	}
+	real := make([]AssessmentResult, 0, len(items))
+	for _, item := range items {
+		if strings.EqualFold(strings.TrimSpace(item.Trigger), "auto") {
+			continue
+		}
+		real = append(real, item)
+	}
+	if len(real) == 0 {
+		return AssessmentDelta{}, newServiceError(http.StatusNotFound, "not_found", "compliance assessment has not been run yet")
+	}
+	latest := real[0]
+	out := AssessmentDelta{
+		LatestAssessmentID:   latest.ID,
+		LatestScore:          latest.OverallScore,
+		ComparedAt:           latest.CreatedAt,
+		AddedFindings:        []AssessmentFindingDelta{},
+		ResolvedFindings:     []AssessmentFindingDelta{},
+		RecoveredDomains:     []AssessmentDomainDelta{},
+		RegressedDomains:     []AssessmentDomainDelta{},
+		NewFailingConnectors: []AssessmentConnectorDelta{},
+		Summary:              "This is the first assessment for the selected template.",
+	}
+	if len(real) < 2 {
+		return out, nil
+	}
+	previous := real[1]
+	out.PreviousAssessmentID = previous.ID
+	out.PreviousScore = previous.OverallScore
+	out.ScoreDelta = latest.OverallScore - previous.OverallScore
+	out.AddedFindings, out.ResolvedFindings = diffAssessmentFindings(latest.Findings, previous.Findings)
+	out.RecoveredDomains, out.RegressedDomains = diffAssessmentDomains(latest.Posture, previous.Posture)
+	out.NewFailingConnectors = s.diffConnectorFailures(ctx, tenantID, previous.CreatedAt, latest.CreatedAt)
+	switch {
+	case out.ScoreDelta > 0:
+		out.Summary = "Posture improved since the previous scan."
+	case out.ScoreDelta < 0:
+		out.Summary = "Posture regressed since the previous scan."
+	default:
+		out.Summary = "Overall posture score is unchanged since the previous scan."
+	}
+	return out, nil
+}
+
 func (s *Service) RunAssessment(ctx context.Context, tenantID string, trigger string, recompute bool, templateID string) (AssessmentResult, error) {
 	tenantID = strings.TrimSpace(tenantID)
 	if tenantID == "" {
@@ -288,6 +341,211 @@ func (s *Service) RunAssessment(ctx context.Context, tenantID string, trigger st
 		"finding_count": len(out.Findings),
 	})
 	return out, nil
+}
+
+func diffAssessmentFindings(current []AssessmentFinding, previous []AssessmentFinding) ([]AssessmentFindingDelta, []AssessmentFindingDelta) {
+	type findingBucket struct {
+		severity string
+		count    int
+	}
+	currentMap := map[string]findingBucket{}
+	prevMap := map[string]findingBucket{}
+	for _, item := range current {
+		key := strings.TrimSpace(item.Title) + "|" + strings.ToLower(strings.TrimSpace(item.Severity))
+		currentMap[key] = findingBucket{severity: item.Severity, count: item.Count}
+	}
+	for _, item := range previous {
+		key := strings.TrimSpace(item.Title) + "|" + strings.ToLower(strings.TrimSpace(item.Severity))
+		prevMap[key] = findingBucket{severity: item.Severity, count: item.Count}
+	}
+
+	added := make([]AssessmentFindingDelta, 0)
+	resolved := make([]AssessmentFindingDelta, 0)
+	for key, cur := range currentMap {
+		prev := prevMap[key]
+		if cur.count <= prev.count {
+			continue
+		}
+		title := strings.Split(key, "|")[0]
+		added = append(added, AssessmentFindingDelta{
+			Title:         title,
+			Severity:      cur.severity,
+			CurrentCount:  cur.count,
+			PreviousCount: prev.count,
+			Delta:         cur.count - prev.count,
+		})
+	}
+	for key, prev := range prevMap {
+		cur := currentMap[key]
+		if prev.count <= cur.count {
+			continue
+		}
+		title := strings.Split(key, "|")[0]
+		resolved = append(resolved, AssessmentFindingDelta{
+			Title:         title,
+			Severity:      prev.severity,
+			CurrentCount:  cur.count,
+			PreviousCount: prev.count,
+			Delta:         cur.count - prev.count,
+		})
+	}
+	sort.SliceStable(added, func(i, j int) bool { return added[i].Delta > added[j].Delta })
+	sort.SliceStable(resolved, func(i, j int) bool { return resolved[i].Delta < resolved[j].Delta })
+	return added, resolved
+}
+
+func diffAssessmentDomains(current PostureSnapshot, previous PostureSnapshot) ([]AssessmentDomainDelta, []AssessmentDomainDelta) {
+	labels := map[string]string{
+		"key_hygiene":       "Key Hygiene",
+		"policy_compliance": "Policy Compliance",
+		"access_security":   "Access Security",
+		"crypto_posture":    "Crypto Posture",
+		"pqc_readiness":     "PQC Readiness",
+	}
+	currentScores := map[string]int{
+		"key_hygiene":       current.KeyHygiene,
+		"policy_compliance": current.PolicyCompliance,
+		"access_security":   current.AccessSecurity,
+		"crypto_posture":    current.CryptoPosture,
+		"pqc_readiness":     current.PQCReadiness,
+	}
+	previousScores := map[string]int{
+		"key_hygiene":       previous.KeyHygiene,
+		"policy_compliance": previous.PolicyCompliance,
+		"access_security":   previous.AccessSecurity,
+		"crypto_posture":    previous.CryptoPosture,
+		"pqc_readiness":     previous.PQCReadiness,
+	}
+	recovered := make([]AssessmentDomainDelta, 0)
+	regressed := make([]AssessmentDomainDelta, 0)
+	for key, currentScore := range currentScores {
+		prevScore := previousScores[key]
+		delta := currentScore - prevScore
+		switch {
+		case prevScore < 70 && currentScore >= 70:
+			recovered = append(recovered, AssessmentDomainDelta{Domain: key, Label: labels[key], CurrentScore: currentScore, PreviousScore: prevScore, Delta: delta, Status: "recovered"})
+		case prevScore >= 70 && currentScore < 70:
+			regressed = append(regressed, AssessmentDomainDelta{Domain: key, Label: labels[key], CurrentScore: currentScore, PreviousScore: prevScore, Delta: delta, Status: "regressed"})
+		case delta >= 10:
+			recovered = append(recovered, AssessmentDomainDelta{Domain: key, Label: labels[key], CurrentScore: currentScore, PreviousScore: prevScore, Delta: delta, Status: "improved"})
+		case delta <= -10:
+			regressed = append(regressed, AssessmentDomainDelta{Domain: key, Label: labels[key], CurrentScore: currentScore, PreviousScore: prevScore, Delta: delta, Status: "degraded"})
+		}
+	}
+	sort.SliceStable(recovered, func(i, j int) bool { return recovered[i].Delta > recovered[j].Delta })
+	sort.SliceStable(regressed, func(i, j int) bool { return regressed[i].Delta < regressed[j].Delta })
+	return recovered, regressed
+}
+
+func (s *Service) diffConnectorFailures(ctx context.Context, tenantID string, previousAt time.Time, latestAt time.Time) []AssessmentConnectorDelta {
+	if s.audit == nil || latestAt.IsZero() {
+		return []AssessmentConnectorDelta{}
+	}
+	windowEnd := latestAt
+	windowStart := previousAt
+	if windowStart.IsZero() || !windowStart.Before(windowEnd) {
+		windowStart = windowEnd.Add(-24 * time.Hour)
+	}
+	windowSize := windowEnd.Sub(windowStart)
+	prevWindowEnd := windowStart
+	prevWindowStart := prevWindowEnd.Add(-windowSize)
+	events, err := s.audit.ListEvents(ctx, tenantID, 2000)
+	if err != nil {
+		return []AssessmentConnectorDelta{}
+	}
+	type bucket struct {
+		currentFails  int
+		previousFails int
+		lastFailureAt time.Time
+	}
+	acc := map[string]*bucket{}
+	for _, ev := range events {
+		domain := complianceConnectorFromEvent(ev)
+		if domain == "" || !complianceConnectorFailure(ev) {
+			continue
+		}
+		ts := parseTimeString(firstString(ev["timestamp"], ev["created_at"]))
+		if ts.IsZero() {
+			continue
+		}
+		b := acc[domain]
+		if b == nil {
+			b = &bucket{}
+			acc[domain] = b
+		}
+		switch {
+		case (ts.Equal(windowStart) || ts.After(windowStart)) && (ts.Equal(windowEnd) || ts.Before(windowEnd)):
+			b.currentFails++
+			if ts.After(b.lastFailureAt) {
+				b.lastFailureAt = ts
+			}
+		case (ts.Equal(prevWindowStart) || ts.After(prevWindowStart)) && (ts.Equal(prevWindowEnd) || ts.Before(prevWindowEnd)):
+			b.previousFails++
+		}
+	}
+	out := make([]AssessmentConnectorDelta, 0, len(acc))
+	for connector, bucket := range acc {
+		if bucket.currentFails <= 0 || bucket.currentFails <= bucket.previousFails {
+			continue
+		}
+		out = append(out, AssessmentConnectorDelta{
+			Connector:     connector,
+			Label:         complianceConnectorLabel(connector),
+			CurrentFails:  bucket.currentFails,
+			PreviousFails: bucket.previousFails,
+			Delta:         bucket.currentFails - bucket.previousFails,
+			LastFailureAt: bucket.lastFailureAt,
+			Status:        "failing",
+		})
+	}
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Delta > out[j].Delta })
+	return out
+}
+
+func complianceConnectorFromEvent(ev map[string]interface{}) string {
+	service := strings.ToLower(firstString(ev["service"]))
+	action := strings.ToLower(firstString(ev["action"]))
+	switch {
+	case strings.Contains(service, "cloud") || strings.Contains(action, "byok") || strings.Contains(action, "cloud."):
+		return "byok"
+	case strings.Contains(service, "hyok") || strings.Contains(action, "hyok."):
+		return "hyok"
+	case strings.Contains(service, "ekm") || strings.Contains(action, "ekm."):
+		return "ekm"
+	case strings.Contains(service, "kmip") || strings.Contains(action, "kmip."):
+		return "kmip"
+	case strings.Contains(service, "bitlocker") || strings.Contains(action, "bitlocker"):
+		return "bitlocker"
+	case strings.Contains(service, "sdk") || strings.Contains(action, "sdk.") || strings.Contains(action, "wrapper"):
+		return "sdk"
+	default:
+		return ""
+	}
+}
+
+func complianceConnectorLabel(v string) string {
+	switch v {
+	case "byok":
+		return "BYOK"
+	case "hyok":
+		return "HYOK"
+	case "ekm":
+		return "EKM"
+	case "kmip":
+		return "KMIP"
+	case "bitlocker":
+		return "BitLocker"
+	case "sdk":
+		return "SDK / Wrapper"
+	default:
+		return strings.ToUpper(v)
+	}
+}
+
+func complianceConnectorFailure(ev map[string]interface{}) bool {
+	result := strings.ToLower(firstString(ev["result"], ev["status"]))
+	action := strings.ToLower(firstString(ev["action"]))
+	return result == "failure" || result == "failed" || result == "error" || result == "denied" || strings.Contains(action, "failed")
 }
 
 func (s *Service) GetAssessmentSchedule(ctx context.Context, tenantID string) (AssessmentSchedule, error) {

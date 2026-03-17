@@ -29,6 +29,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /compliance/posture/history", h.handlePostureHistory)
 	mux.HandleFunc("GET /compliance/posture/breakdown", h.handlePostureBreakdown)
 	mux.HandleFunc("GET /compliance/assessment", h.handleAssessment)
+	mux.HandleFunc("GET /compliance/assessment/delta", h.handleAssessmentDelta)
 	mux.HandleFunc("POST /compliance/assessment/run", h.handleRunAssessment)
 	mux.HandleFunc("GET /compliance/assessment/history", h.handleAssessmentHistory)
 	mux.HandleFunc("GET /compliance/assessment/schedule", h.handleAssessmentSchedule)
@@ -119,6 +120,21 @@ func (h *Handler) handleAssessment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"assessment": item, "request_id": reqID})
+}
+
+func (h *Handler) handleAssessmentDelta(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	templateID := strings.TrimSpace(r.URL.Query().Get("template_id"))
+	item, err := h.svc.GetAssessmentDelta(r.Context(), tenantID, templateID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"delta": item, "request_id": reqID})
 }
 
 func (h *Handler) handleRunAssessment(w http.ResponseWriter, r *http.Request) {

@@ -38,6 +38,7 @@ import {
 import {
   deleteComplianceTemplate,
   getComplianceAssessment,
+  getComplianceAssessmentDelta,
   getComplianceAssessmentSchedule,
   getCompliancePostureBreakdown,
   getComplianceKeyHygiene,
@@ -56,6 +57,7 @@ import {
   downloadReportingReport,
   generateReportingReport,
   getReportingAlertStats,
+  getReportingMTTD,
   getReportingMTTR,
   getReportingReportJob,
   getReportingTopSources,
@@ -86,6 +88,7 @@ function isRealAssessment(item: any) {
 export const ComplianceTab = ({ session, onToast }: any) => {
   const promptDialog = usePromptDialog();
   const [assessment, setAssessment] = useState<any>(null);
+  const [assessmentDelta, setAssessmentDelta] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [schedule, setSchedule] = useState<any>({ enabled: false, frequency: "daily" });
   const [templates, setTemplates] = useState<any[]>([]);
@@ -115,6 +118,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
 
   /* ── NEW: alert stats state ── */
   const [alertStats, setAlertStats] = useState<any>(null);
+  const [mttd, setMttd] = useState<any>(null);
   const [mttr, setMttr] = useState<any>(null);
   const [topSources, setTopSources] = useState<any>(null);
 
@@ -181,7 +185,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   };
 
   const loadAssessment = async (opts: any = {}) => {
-    if (!session?.token) { setAssessment(null); setHistory([]); setSchedule({ enabled: false, frequency: "daily" }); setPostureBreakdown(null); setKeyHygiene(null); setFrameworkGaps([]); setAnomalies([]); return; }
+    if (!session?.token) { setAssessment(null); setAssessmentDelta(null); setHistory([]); setSchedule({ enabled: false, frequency: "daily" }); setPostureBreakdown(null); setKeyHygiene(null); setFrameworkGaps([]); setAnomalies([]); setMttr(null); setMttd(null); return; }
     if (!opts?.silent) setLoading(true);
     try {
       const payload = await loadTemplates();
@@ -203,14 +207,20 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       setHistory(visibleHistory);
       const hasAssessment = Boolean(visibleAssessment) || visibleHistory.length > 0;
       if (hasAssessment) {
-        const [breakdownOut, hygieneOut, anomalyOut] = await Promise.all([
+        const [breakdownOut, hygieneOut, anomalyOut, deltaOut, mttrOut, mttdOut] = await Promise.all([
           getCompliancePostureBreakdown(session).catch(() => null),
           getComplianceKeyHygiene(session).catch(() => null),
-          getComplianceAuditAnomalies(session).catch(() => [])
+          getComplianceAuditAnomalies(session).catch(() => []),
+          getComplianceAssessmentDelta(session, effectiveTemplateID).catch(() => null),
+          getReportingMTTR(session).catch(() => null),
+          getReportingMTTD(session).catch(() => null)
         ]);
         setPostureBreakdown(breakdownOut || null);
         setKeyHygiene(hygieneOut || null);
         setAnomalies(Array.isArray(anomalyOut) ? anomalyOut : []);
+        setAssessmentDelta(deltaOut || null);
+        setMttr(mttrOut || null);
+        setMttd(mttdOut || null);
 
         /* load gaps for first framework with a score */
         const fwScores = assessOut?.framework_scores || {};
@@ -226,6 +236,9 @@ export const ComplianceTab = ({ session, onToast }: any) => {
         setKeyHygiene(null);
         setFrameworkGaps([]);
         setAnomalies([]);
+        setAssessmentDelta(null);
+        setMttr(null);
+        setMttd(null);
       }
 
       if (effectiveTemplateID === "default") { setTemplateDraft(null); }
@@ -238,14 +251,15 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   };
 
   const loadReporting = async () => {
-    if (!session?.token) { setReportTemplates([]); setReportJobs([]); setScheduledReports([]); setAlertStats(null); setMttr(null); setTopSources(null); return; }
+    if (!session?.token) { setReportTemplates([]); setReportJobs([]); setScheduledReports([]); setAlertStats(null); setMttr(null); setMttd(null); setTopSources(null); return; }
     try {
-      const [templatesOut, jobsOut, scheduledOut, statsOut, mttrOut, topOut] = await Promise.all([
+      const [templatesOut, jobsOut, scheduledOut, statsOut, mttrOut, mttdOut, topOut] = await Promise.all([
         listReportingReportTemplates(session),
         listReportingReportJobs(session, 40, 0),
         listReportingScheduledReports(session),
         getReportingAlertStats(session).catch(() => null),
         getReportingMTTR(session).catch(() => null),
+        getReportingMTTD(session).catch(() => null),
         getReportingTopSources(session).catch(() => null)
       ]);
       const tpls = Array.isArray(templatesOut) ? templatesOut : [];
@@ -254,6 +268,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       setScheduledReports(Array.isArray(scheduledOut) ? scheduledOut : []);
       setAlertStats(statsOut || null);
       setMttr(mttrOut || null);
+      setMttd(mttdOut || null);
       setTopSources(topOut || null);
       if (!reportForm.template_id && tpls.length) setReportForm((prev: any) => ({ ...prev, template_id: String(tpls[0]?.id || "") }));
       if (!scheduleForm.template_id && tpls.length) setScheduleForm((prev: any) => ({ ...prev, template_id: String(tpls[0]?.id || "") }));
@@ -380,6 +395,25 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       await loadReporting();
     } catch (error) { onToast?.(`Report generation failed: ${errMsg(error)}`); }
     finally { setReportBusy(false); }
+  };
+
+  const exportEvidencePack = async (format = "pdf") => {
+    if (!session?.token) { onToast?.("Login is required."); return; }
+    setReportBusy(true);
+    try {
+      const created = await generateReportingReport(session, {
+        template_id: "evidence_pack",
+        format,
+        requested_by: String(session?.username || "dashboard")
+      });
+      const stable = await getReportingReportJob(session, String(created?.id || ""));
+      onToast?.(`Evidence pack queued: ${String(stable?.id || created?.id || "").slice(0, 12)}...`);
+      await loadReporting();
+    } catch (error) {
+      onToast?.(`Evidence pack export failed: ${errMsg(error)}`);
+    } finally {
+      setReportBusy(false);
+    }
   };
 
   const downloadJob = async (job: any) => {
@@ -548,6 +582,13 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       .filter((k) => Number(mttr[k] || 0) > 0)
       .map((k) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), minutes: Math.round(Number(mttr[k] || 0)), fill: k === "critical" ? C.red : k === "high" ? C.amber : k === "warning" ? C.amber : C.blue }));
   }, [mttr]);
+
+  const mttdBars = useMemo(() => {
+    if (!mttd) return [];
+    return ["critical", "high", "warning", "info"]
+      .filter((k) => Number(mttd[k] || 0) > 0)
+      .map((k) => ({ name: k.charAt(0).toUpperCase() + k.slice(1), minutes: Math.round(Number(mttd[k] || 0)), fill: k === "critical" ? C.red : k === "high" ? C.amber : k === "warning" ? C.amber : C.blue }));
+  }, [mttd]);
 
   const topActors = useMemo(() => Array.isArray(topSources?.top_actors) ? topSources.top_actors.slice(0, 5) : [], [topSources]);
   const topIPs = useMemo(() => Array.isArray(topSources?.top_ips) ? topSources.top_ips.slice(0, 5) : [], [topSources]);
@@ -1031,6 +1072,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
             <Btn small onClick={() => void saveTemplate()} disabled={savingTemplate || selectedTemplateID === "default"}>{savingTemplate ? "Saving..." : "Save Template"}</Btn>
             <Btn small onClick={() => void removeTemplate()} disabled={deletingTemplate || selectedTemplateID === "default"}>{deletingTemplate ? "Deleting..." : "Delete Template"}</Btn>
             <Btn small onClick={() => void loadAssessment({ templateId: selectedTemplateID })} disabled={loading}>Refresh</Btn>
+            <Btn small onClick={() => void exportEvidencePack("pdf")} disabled={reportBusy}>Evidence Pack</Btn>
             <Btn small primary onClick={() => void runNow()} disabled={running}>{running ? "Running..." : "Run Assessment"}</Btn>
             <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 8px", border: `1px solid ${C.border}`, borderRadius: 8 }}>
               <Chk label="Scheduled" checked={Boolean(schedule?.enabled)} onChange={() => setSchedule((prev: any) => ({ ...prev, enabled: !prev?.enabled }))} />
@@ -1100,6 +1142,132 @@ export const ComplianceTab = ({ session, onToast }: any) => {
         {selectedTemplateID === "default" ? <Card><div style={{ fontSize: 10, color: C.muted }}>Built-in Baseline is read-only. Create a custom template to configure framework/control weights, thresholds, and enabled controls.</div></Card> : null}
 
         <div style={{ height: 10 }} />
+
+        {assessmentDelta && (
+          <>
+            <Card style={{ marginBottom: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>What Changed Since Last Scan</span>
+                <B c={Number(assessmentDelta?.score_delta || 0) > 0 ? "green" : Number(assessmentDelta?.score_delta || 0) < 0 ? "red" : "blue"}>
+                  {Number(assessmentDelta?.score_delta || 0) >= 0 ? "+" : ""}{Number(assessmentDelta?.score_delta || 0)} score delta
+                </B>
+              </div>
+              <div style={{ fontSize: 10, color: C.dim, marginBottom: 10 }}>{String(assessmentDelta?.summary || "No prior comparison available.")}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Added Findings</div>
+                  <div style={{ display: "grid", gap: 6 }}>
+                    {(Array.isArray(assessmentDelta?.added_findings) ? assessmentDelta.added_findings : []).slice(0, 4).map((item: any, idx: number) => (
+                      <div key={`added-${idx}`} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                          <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(item?.title || "-")}</div>
+                          <B c="red">+{Number(item?.delta || 0)}</B>
+                        </div>
+                        <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>{String(item?.severity || "").toUpperCase()} • {Number(item?.current_count || 0)} current</div>
+                      </div>
+                    ))}
+                    {(!assessmentDelta?.added_findings || !assessmentDelta.added_findings.length) && <div style={{ fontSize: 10, color: C.muted }}>No new findings.</div>}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Resolved Findings</div>
+                  <div style={{ display: "grid", gap: 6 }}>
+                    {(Array.isArray(assessmentDelta?.resolved_findings) ? assessmentDelta.resolved_findings : []).slice(0, 4).map((item: any, idx: number) => (
+                      <div key={`resolved-${idx}`} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                          <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(item?.title || "-")}</div>
+                          <B c="green">{Number(item?.delta || 0)}</B>
+                        </div>
+                        <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>{String(item?.severity || "").toUpperCase()} • {Number(item?.previous_count || 0)} previous</div>
+                      </div>
+                    ))}
+                    {(!assessmentDelta?.resolved_findings || !assessmentDelta.resolved_findings.length) && <div style={{ fontSize: 10, color: C.muted }}>No resolved findings.</div>}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ height: 10 }} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Recovered Domains</div>
+                  <div style={{ display: "grid", gap: 6 }}>
+                    {(Array.isArray(assessmentDelta?.recovered_domains) ? assessmentDelta.recovered_domains : []).slice(0, 4).map((item: any, idx: number) => (
+                      <div key={`recovered-${idx}`} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                          <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(item?.label || item?.domain || "-")}</div>
+                          <B c="green">+{Number(item?.delta || 0)}</B>
+                        </div>
+                        <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>{Number(item?.previous_score || 0)} → {Number(item?.current_score || 0)} • {String(item?.status || "")}</div>
+                      </div>
+                    ))}
+                    {(!assessmentDelta?.recovered_domains || !assessmentDelta.recovered_domains.length) && <div style={{ fontSize: 10, color: C.muted }}>No recovered domains.</div>}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>New Failing Connectors</div>
+                  <div style={{ display: "grid", gap: 6 }}>
+                    {(Array.isArray(assessmentDelta?.new_failing_connectors) ? assessmentDelta.new_failing_connectors : []).slice(0, 4).map((item: any, idx: number) => (
+                      <div key={`connector-${idx}`} style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                          <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{String(item?.label || item?.connector || "-")}</div>
+                          <B c="red">+{Number(item?.delta || 0)}</B>
+                        </div>
+                        <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>{Number(item?.previous_fails || 0)} → {Number(item?.current_fails || 0)} failures</div>
+                      </div>
+                    ))}
+                    {(!assessmentDelta?.new_failing_connectors || !assessmentDelta.new_failing_connectors.length) && <div style={{ fontSize: 10, color: C.muted }}>No newly failing connectors.</div>}
+                  </div>
+                </div>
+              </div>
+            </Card>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+              <Card>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Mean Time to Detect</span>
+                  <B c="blue">MTTD</B>
+                </div>
+                {mttdBars.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={150}>
+                    <BarChart data={mttdBars} layout="vertical">
+                      <XAxis type="number" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} unit="m" />
+                      <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
+                      <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} min</ChartTip> : null} cursor={{ fill: C.accentDim }} />
+                      <RBar dataKey="minutes" radius={[0, 4, 4, 0]}>
+                        {mttdBars.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                      </RBar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div style={{ height: 150, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No MTTD data yet.</span></div>
+                )}
+              </Card>
+
+              <Card>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Mean Time to Resolve</span>
+                  <B c="green">MTTR</B>
+                </div>
+                {mttrBars.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={150}>
+                    <BarChart data={mttrBars} layout="vertical">
+                      <XAxis type="number" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} unit="m" />
+                      <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={55} />
+                      <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: payload[0]?.payload?.fill }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} min</ChartTip> : null} cursor={{ fill: C.accentDim }} />
+                      <RBar dataKey="minutes" radius={[0, 4, 4, 0]}>
+                        {mttrBars.map((entry, idx) => <Cell key={idx} fill={entry.fill} />)}
+                      </RBar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div style={{ height: 150, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 10, color: C.muted }}>No MTTR data yet.</span></div>
+                )}
+              </Card>
+            </div>
+          </>
+        )}
 
         {/* ═══ ROW 1: Score Gauge + Framework Radar + PQC Donut ═══ */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10 }}>

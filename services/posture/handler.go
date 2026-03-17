@@ -296,26 +296,24 @@ func (h *Handler) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	if tenantID == "" {
 		tenantID = "*"
 	}
-	risk, _ := h.svc.LatestRisk(r.Context(), tenantID)
-	findings, _ := h.svc.ListFindings(r.Context(), tenantID, FindingQuery{Limit: 20})
-	actions, _ := h.svc.ListActions(r.Context(), tenantID, ActionQuery{Limit: 20})
-	openCount := 0
-	criticalCount := 0
-	for _, item := range findings {
-		if item.Status == "open" || item.Status == "reopened" || item.Status == "acknowledged" {
-			openCount++
-		}
-		if item.Severity == severityCritical && (item.Status == "open" || item.Status == "reopened" || item.Status == "acknowledged") {
-			criticalCount++
-		}
+	out, err := h.svc.Dashboard(r.Context(), tenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"risk":              risk,
-		"recent_findings":   findings,
-		"pending_actions":   actions,
-		"open_findings":     openCount,
-		"critical_findings": criticalCount,
-		"request_id":        reqID,
+		"risk":                out.Risk,
+		"recent_findings":     out.RecentFindings,
+		"pending_actions":     out.PendingActions,
+		"open_findings":       out.OpenFindings,
+		"critical_findings":   out.CriticalFindings,
+		"risk_drivers":        out.RiskDrivers,
+		"remediation_cockpit": out.RemediationCockpit,
+		"blast_radius":        out.BlastRadius,
+		"scenario_simulator":  out.ScenarioSimulator,
+		"validation_badges":   out.ValidationBadges,
+		"sla_overview":        out.SLAOverview,
+		"request_id":          reqID,
 	})
 }
 

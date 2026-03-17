@@ -124,6 +124,21 @@ func TestServiceAssessmentRunAndSchedule(t *testing.T) {
 	if !sched.Enabled || sched.NextRunAt.IsZero() {
 		t.Fatalf("unexpected schedule: %+v", sched)
 	}
+
+	keycore.keys["tenant-c"] = append(keycore.keys["tenant-c"], map[string]interface{}{
+		"id": "k2", "algorithm": "3DES", "status": "active", "current_version": 1, "ops_total": 0,
+	})
+	secondRun, err := svc.RunAssessment(ctx, "tenant-c", "manual", true, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	delta, err := svc.GetAssessmentDelta(ctx, "tenant-c", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if delta.LatestAssessmentID != secondRun.ID {
+		t.Fatalf("expected latest assessment id %s got %s", secondRun.ID, delta.LatestAssessmentID)
+	}
 }
 
 func TestServiceTemplateAssessmentScoring(t *testing.T) {

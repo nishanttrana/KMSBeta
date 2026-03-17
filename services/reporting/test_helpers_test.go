@@ -65,7 +65,28 @@ func (f *fakeReportingCompliance) GetPosture(_ context.Context, tenantID string)
 	return item, nil
 }
 
-func newReportingService(t *testing.T) (*Service, *SQLStore, *fakeReportingAudit, *fakeReportingCompliance, *nopReportingPublisher) {
+type fakeReportingPosture struct {
+	findings map[string][]map[string]interface{}
+	actions  map[string][]map[string]interface{}
+}
+
+func (f *fakeReportingPosture) ListFindings(_ context.Context, tenantID string, _ int) ([]map[string]interface{}, error) {
+	items := f.findings[tenantID]
+	if items == nil {
+		return []map[string]interface{}{}, nil
+	}
+	return items, nil
+}
+
+func (f *fakeReportingPosture) ListActions(_ context.Context, tenantID string, _ int) ([]map[string]interface{}, error) {
+	items := f.actions[tenantID]
+	if items == nil {
+		return []map[string]interface{}{}, nil
+	}
+	return items, nil
+}
+
+func newReportingService(t *testing.T) (*Service, *SQLStore, *fakeReportingAudit, *fakeReportingCompliance, *fakeReportingPosture, *nopReportingPublisher) {
 	t.Helper()
 	conn, err := pkgdb.Open(context.Background(), pkgdb.Config{
 		UseSQLite:  true,
@@ -83,15 +104,16 @@ func newReportingService(t *testing.T) (*Service, *SQLStore, *fakeReportingAudit
 	store := NewSQLStore(conn)
 	audit := &fakeReportingAudit{events: map[string][]map[string]interface{}{}}
 	comp := &fakeReportingCompliance{posture: map[string]map[string]interface{}{}}
+	posture := &fakeReportingPosture{findings: map[string][]map[string]interface{}{}, actions: map[string][]map[string]interface{}{}}
 	pub := &nopReportingPublisher{}
-	svc := NewService(store, audit, comp, pub)
-	return svc, store, audit, comp, pub
+	svc := NewService(store, audit, comp, posture, pub)
+	return svc, store, audit, comp, posture, pub
 }
 
-func newReportingHandler(t *testing.T) (*Handler, *Service, *fakeReportingAudit, *fakeReportingCompliance, *nopReportingPublisher) {
+func newReportingHandler(t *testing.T) (*Handler, *Service, *fakeReportingAudit, *fakeReportingCompliance, *fakeReportingPosture, *nopReportingPublisher) {
 	t.Helper()
-	svc, _, audit, comp, pub := newReportingService(t)
-	return NewHandler(svc), svc, audit, comp, pub
+	svc, _, audit, comp, posture, pub := newReportingService(t)
+	return NewHandler(svc), svc, audit, comp, posture, pub
 }
 
 func createReportingSchemaForTest(conn *pkgdb.DB) error {

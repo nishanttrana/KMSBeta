@@ -42,6 +42,10 @@ type MTTRResponse = {
   mttr_minutes?: Record<string, number>;
 };
 
+type MTTDResponse = {
+  mttd_minutes?: Record<string, number>;
+};
+
 type ChannelsResponse = {
   items?: Array<{
     tenant_id: string;
@@ -185,6 +189,11 @@ export async function getReportingAlertStats(
 export async function getReportingMTTR(session: AuthSession): Promise<Record<string, number>> {
   const out = await serviceRequest<MTTRResponse>(session, "reporting", `/alerts/stats/mttr?${tenantQuery(session)}`);
   return out?.mttr_minutes && typeof out.mttr_minutes === "object" ? out.mttr_minutes : {};
+}
+
+export async function getReportingMTTD(session: AuthSession): Promise<Record<string, number>> {
+  const out = await serviceRequest<MTTDResponse>(session, "reporting", `/alerts/stats/mttd?${tenantQuery(session)}`);
+  return out?.mttd_minutes && typeof out.mttd_minutes === "object" ? out.mttd_minutes : {};
 }
 
 export async function listReportingChannels(

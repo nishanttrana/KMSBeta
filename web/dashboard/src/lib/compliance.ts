@@ -30,6 +30,55 @@ export type AssessmentResult = {
   created_at: string;
 };
 
+export type AssessmentDelta = {
+  latest_assessment_id: string;
+  previous_assessment_id?: string;
+  latest_score: number;
+  previous_score: number;
+  score_delta: number;
+  summary: string;
+  added_findings: Array<{
+    title: string;
+    severity: string;
+    current_count: number;
+    previous_count: number;
+    delta: number;
+  }>;
+  resolved_findings: Array<{
+    title: string;
+    severity: string;
+    current_count: number;
+    previous_count: number;
+    delta: number;
+  }>;
+  recovered_domains: Array<{
+    domain: string;
+    label: string;
+    current_score: number;
+    previous_score: number;
+    delta: number;
+    status: string;
+  }>;
+  regressed_domains: Array<{
+    domain: string;
+    label: string;
+    current_score: number;
+    previous_score: number;
+    delta: number;
+    status: string;
+  }>;
+  new_failing_connectors: Array<{
+    connector: string;
+    label: string;
+    current_fails: number;
+    previous_fails: number;
+    delta: number;
+    last_failure_at?: string;
+    status: string;
+  }>;
+  compared_at?: string;
+};
+
 export type AssessmentSchedule = {
   tenant_id: string;
   enabled: boolean;
@@ -154,6 +203,22 @@ export async function listComplianceAssessmentHistory(session: AuthSession, limi
   return Array.isArray(out?.items) ? out.items : [];
 }
 
+export async function getComplianceAssessmentDelta(session: AuthSession, templateId = ""): Promise<AssessmentDelta | null> {
+  const response = await serviceRequestRaw(
+    session,
+    "compliance",
+    `/compliance/assessment/delta?${queryWithTemplate(session, templateId)}`
+  );
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(await parseComplianceError(response));
+  }
+  const out = (await response.json()) as { delta?: AssessmentDelta };
+  return out?.delta || null;
+}
+
 export async function getComplianceAssessmentSchedule(session: AuthSession): Promise<AssessmentSchedule> {
   const out = await serviceRequest<{ schedule?: AssessmentSchedule }>(session, "compliance", `/compliance/assessment/schedule?${tenantQuery(session)}`);
   return (
@@ -236,12 +301,12 @@ export type PostureBreakdown = {
 };
 
 export async function getCompliancePostureBreakdown(session: AuthSession): Promise<PostureBreakdown> {
-  const out = await serviceRequest<{ posture?: PostureBreakdown }>(
+  const out = await serviceRequest<{ posture?: PostureBreakdown; breakdown?: PostureBreakdown }>(
     session,
     "compliance",
     `/compliance/posture/breakdown?${tenantQuery(session)}`
   );
-  return out?.posture || ({} as PostureBreakdown);
+  return out?.breakdown || out?.posture || ({} as PostureBreakdown);
 }
 
 /* ── Key Hygiene ── */

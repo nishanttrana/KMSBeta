@@ -8,7 +8,7 @@ import (
 )
 
 func TestStoreAlertAndIncidentOps(t *testing.T) {
-	_, store, _, _, _ := newReportingService(t)
+	_, store, _, _, _, _ := newReportingService(t)
 	tenantID := "tenant-s"
 
 	alert := Alert{
@@ -78,7 +78,7 @@ func TestStoreAlertAndIncidentOps(t *testing.T) {
 }
 
 func TestStoreRulesChannelsAndReports(t *testing.T) {
-	_, store, _, _, _ := newReportingService(t)
+	_, store, _, _, _, _ := newReportingService(t)
 	tenantID := "tenant-rules"
 
 	rule := AlertRule{
@@ -186,7 +186,7 @@ func TestStoreRulesChannelsAndReports(t *testing.T) {
 }
 
 func TestStoreErrorTelemetryOps(t *testing.T) {
-	_, store, _, _, _ := newReportingService(t)
+	_, store, _, _, _, _ := newReportingService(t)
 	tenantID := "tenant-telemetry"
 	now := time.Now().UTC()
 

@@ -33,7 +33,7 @@ import {
 } from "../../../lib/qrng";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
-import { Bar, Btn, Card, FG, Inp, Modal, Row2, Row3, Section, Stat } from "../legacyPrimitives";
+import { Bar, Btn, Card, FG, Inp, Modal, Row2, Row3, Section, Sel, Stat } from "../legacyPrimitives";
 
 type Props = { session: AuthSession; onToast?: (msg: string) => void };
 type ModalType = null | "register" | "edit";
@@ -291,17 +291,17 @@ export function QRNGTab({ session, onToast }: Props) {
         <div style={{ display: "grid", gap: 12 }}>
           <FG label="Source Name"><Inp value={regName} onChange={(e) => setRegName(e.target.value)} placeholder="My QRNG Source" /></FG>
           <FG label="Vendor">
-            <select value={regVendor} onChange={(e) => setRegVendor(e.target.value)} style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 7, padding: "8px 10px", color: C.text, fontSize: 11, width: "100%" }}>
+            <Sel value={regVendor} onChange={(e) => setRegVendor(e.target.value)}>
               {QRNG_VENDORS.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
-            </select>
+            </Sel>
           </FG>
           <FG label="Endpoint URL"><Inp value={regEndpoint} onChange={(e) => setRegEndpoint(e.target.value)} placeholder="https://qrng.example.com/api" /></FG>
           <FG label="Auth Token"><Inp type="password" value={regAuthToken} onChange={(e) => setRegAuthToken(e.target.value)} placeholder="Bearer token or API key" /></FG>
           <FG label="Mode">
-            <select value={regMode} onChange={(e) => setRegMode(e.target.value)} style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderRadius: 7, padding: "8px 10px", color: C.text, fontSize: 11, width: "100%" }}>
+            <Sel value={regMode} onChange={(e) => setRegMode(e.target.value)}>
               <option value="push">Push (source sends entropy to KMS)</option>
               <option value="pull">Pull (KMS fetches from source)</option>
-            </select>
+            </Sel>
           </FG>
           <Row2>
             <FG label="Min Entropy (bpb)"><Inp value={regMinEntropy} onChange={(e) => setRegMinEntropy(e.target.value)} placeholder="7.0" /></FG>
