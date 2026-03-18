@@ -89,7 +89,7 @@ func main() {
 		WithSNMPPublisher(snmpPublisher),
 	)
 	handler := NewHandler(svc)
-	if tokenParser, err := loadJWTParser(); err != nil {
+	if tokenParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience); err != nil {
 		logger.Printf("jwt parser disabled: %v", err)
 	} else if tokenParser != nil {
 		handler.SetTokenParser(tokenParser)
@@ -160,7 +160,7 @@ func main() {
 }
 
 func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
-	nc, err := nats.Connect(url, nats.Name("kms-governance"))
+	nc, err := pkgevents.Connect(url, "kms-governance", logger.Printf)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -219,7 +219,7 @@ func devMTLSConfig() (*tls.Config, error) {
 	}, nil
 }
 
-func loadJWTParser() (func(string) (*pkgauth.Claims, error), error) {
+func loadJWTParser(issuer string, audience string) (func(string) (*pkgauth.Claims, error), error) {
 	pubPEM := strings.TrimSpace(os.Getenv("GOVERNANCE_JWT_PUBLIC_KEY_PEM"))
 	if pubPEM == "" {
 		if b64 := strings.TrimSpace(os.Getenv("GOVERNANCE_JWT_PUBLIC_KEY_B64")); b64 != "" {
@@ -276,7 +276,11 @@ func loadJWTParser() (func(string) (*pkgauth.Claims, error), error) {
 		return nil, errors.New("unable to parse RSA JWT public key")
 	}
 	return func(token string) (*pkgauth.Claims, error) {
-		return pkgauth.ParseRS256(token, pub)
+		return pkgauth.ParseRS256WithOptions(token, pub, pkgauth.ParseOptions{
+			Issuer:   issuer,
+			Audience: audience,
+			Leeway:   30 * time.Second,
+		})
 	}, nil
 }
 

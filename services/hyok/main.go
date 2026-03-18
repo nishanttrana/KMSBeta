@@ -77,7 +77,7 @@ func main() {
 	governanceURL := envOr("GOVERNANCE_URL", "http://127.0.0.1:8050")
 	policyFailClosed := envBool("HYOK_POLICY_FAIL_CLOSED", true)
 
-	jwtParser, err := loadJWTParser()
+	jwtParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience)
 	if err != nil {
 		logger.Fatalf("jwt parser setup failed: %v", err)
 	}
@@ -144,7 +144,7 @@ func main() {
 }
 
 func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
-	nc, err := nats.Connect(url, nats.Name("kms-hyok"))
+	nc, err := pkgevents.Connect(url, "kms-hyok", logger.Printf)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -189,7 +189,7 @@ func loadHTTPServerTLSConfig() *tls.Config {
 	return cfg
 }
 
-func loadJWTParser() (JWTParser, error) {
+func loadJWTParser(issuer string, audience string) (JWTParser, error) {
 	pubPEM := strings.TrimSpace(os.Getenv("HYOK_JWT_PUBLIC_KEY_PEM"))
 	if pubPEM == "" {
 		if b64 := strings.TrimSpace(os.Getenv("HYOK_JWT_PUBLIC_KEY_B64")); b64 != "" {
@@ -223,7 +223,11 @@ func loadJWTParser() (JWTParser, error) {
 		return nil, errors.New("unable to parse RSA public key")
 	}
 	return func(token string) (*pkgauth.Claims, error) {
-		return pkgauth.ParseRS256(token, pub)
+		return pkgauth.ParseRS256WithOptions(token, pub, pkgauth.ParseOptions{
+			Issuer:   issuer,
+			Audience: audience,
+			Leeway:   30 * time.Second,
+		})
 	}, nil
 }
 

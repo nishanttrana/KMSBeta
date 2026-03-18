@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from "react";
+import { Component, type JSX, type ReactNode } from "react";
 
 export function errMsg(error: unknown): string {
   if (error instanceof Error) {

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"google.golang.org/grpc"
@@ -27,19 +28,55 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+type ParseOptions struct {
+	Issuer   string
+	Audience string
+	Leeway   time.Duration
+}
+
 func ParseRS256(tokenString string, publicKey *rsa.PublicKey) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+	return ParseRS256WithOptions(tokenString, publicKey, ParseOptions{})
+}
+
+func ParseRS256WithOptions(tokenString string, publicKey *rsa.PublicKey, options ParseOptions) (*Claims, error) {
+	return ParseRS256WithClaims(tokenString, &Claims{}, publicKey, options)
+}
+
+func ParseRS256WithClaims[T jwt.Claims](tokenString string, claims T, publicKey *rsa.PublicKey, options ParseOptions) (T, error) {
+	var zero T
+	tokenString = strings.TrimSpace(tokenString)
+	if tokenString == "" {
+		return zero, errors.New("missing bearer token")
+	}
+	if publicKey == nil {
+		return zero, errors.New("missing rsa public key")
+	}
+	parserOptions := []jwt.ParserOption{
+		jwt.WithValidMethods([]string{jwt.SigningMethodRS256.Alg()}),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuedAt(),
+	}
+	if options.Leeway > 0 {
+		parserOptions = append(parserOptions, jwt.WithLeeway(options.Leeway))
+	}
+	if strings.TrimSpace(options.Issuer) != "" {
+		parserOptions = append(parserOptions, jwt.WithIssuer(strings.TrimSpace(options.Issuer)))
+	}
+	if strings.TrimSpace(options.Audience) != "" {
+		parserOptions = append(parserOptions, jwt.WithAudience(strings.TrimSpace(options.Audience)))
+	}
+	parser := jwt.NewParser(parserOptions...)
+	token, err := parser.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if token.Method.Alg() != jwt.SigningMethodRS256.Alg() {
 			return nil, errors.New("invalid signing method")
 		}
 		return publicKey, nil
 	})
 	if err != nil {
-		return nil, err
+		return zero, err
 	}
-	claims, ok := token.Claims.(*Claims)
-	if !ok || !token.Valid {
-		return nil, errors.New("invalid claims")
+	if !token.Valid {
+		return zero, errors.New("invalid claims")
 	}
 	return claims, nil
 }

@@ -194,7 +194,7 @@ func main() {
 }
 
 func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
-	nc, err := nats.Connect(url, nats.Name("kms-certs"))
+	nc, err := pkgevents.Connect(url, "kms-certs", logger.Printf)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -6,7 +6,7 @@ Enterprise Key Management System with full lifecycle cryptographic operations, c
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     Web Dashboard (React/Vite)                  │
+│                 Web Dashboard (React 19 / Vite 8)               │
 ├────────┬────────┬────────┬────────┬────────┬────────┬──────────┤
 │KeyCore │ Auth   │ Audit  │ Certs  │ EKM    │ Secrets│ HSM      │
 │Service │Service │Service │Service │Service │Service │Integ     │
@@ -84,7 +84,7 @@ Enterprise Key Management System with full lifecycle cryptographic operations, c
 ### Prerequisites
 
 - Go 1.26+
-- Node.js 18+ (for dashboard)
+- Node.js 20.19+ or 22.12+ (for dashboard)
 - SQLite 3.35+ (embedded)
 - Optional: JDK 11+ (for JCA provider), GCC/CGo (for PKCS#11 provider)
 
@@ -102,6 +102,12 @@ Enterprise Key Management System with full lifecycle cryptographic operations, c
 ```
 
 The installer generates `infra/deployment/deployment.yaml`, understands the newer optional profiles such as `posture_management` and `qrng_generator`, and supports built-in cluster replication presets: `cluster-profile-base`, `cluster-profile-standard`, `cluster-profile-security`, and `cluster-profile-full`.
+
+### Dependency Baseline
+
+- Dashboard toolchain: React 19, Vite 8, Tailwind CSS 4, Vitest 4
+- Core transport/runtime libraries: `github.com/nats-io/nats.go` 1.49, `github.com/redis/go-redis/v9` 9.18, `github.com/golang-jwt/jwt/v5` 5.3
+- Verified with `npm audit` and `govulncheck` after the upgrade pass
 
 ### Development
 
@@ -168,10 +174,13 @@ docker-compose up -d
 - **Post-quantum** ready: ML-KEM, ML-DSA, SLH-DSA, hybrid key exchange
 - **HSM integration**: PKCS#11, proprietary APIs, key reference model
 - **mTLS everywhere**: Certificate-based service-to-service authentication
+- **Strict JWT validation**: RS256 service tokens require `exp` and `iat`, and request parsers enforce issuer/audience bindings with bounded leeway
 - **Tamper-evident audit**: Blockchain-anchored hash chain for log integrity
 - **Quorum approvals**: M-of-N approval workflows for sensitive operations
 - **Shamir secret sharing**: Recovery key splitting (3-of-5 default)
 - **Key cache security**: mlock'd memory, automatic zeroization on eviction
+- **Resilient event streaming**: NATS clients use hardened reconnect, ping, and buffer defaults across services
+- **TLS-forward cache defaults**: Valkey/Redis connections use bounded timeouts, connection lifetime limits, and a TLS 1.3 floor when `rediss://` is configured
 - **Rate limiting**: Per-tenant, per-endpoint throttling
 - **Nonce replay protection**: Configurable replay window with TTL
 

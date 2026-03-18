@@ -78,7 +78,7 @@ func main() {
 		metering.NewMeter(0, 0),
 	)
 	handler := NewHandler(svc)
-	maybeStartPaymentTCPServer(ctx, svc, logger)
+	maybeStartPaymentTCPServer(ctx, svc, logger, cfg.JWTIssuer, cfg.JWTAudience)
 
 	httpPort := envOr("HTTP_PORT", "8170")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "payment"))
@@ -122,7 +122,7 @@ func main() {
 }
 
 func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
-	nc, err := nats.Connect(url, nats.Name("kms-payment"))
+	nc, err := pkgevents.Connect(url, "kms-payment", logger.Printf)
 	if err != nil {
 		return nil, nil, err
 	}

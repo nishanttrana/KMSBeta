@@ -12,8 +12,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	pkgauth "vecta-kms/pkg/auth"
 )
 
 type Handler struct {
@@ -893,20 +896,11 @@ func parseBitLockerJWT(rawToken string) (*bitLockerJWTClaims, error) {
 	if bitLockerJWTPub == nil {
 		return nil, errors.New("jwt public key is not configured")
 	}
-	token, err := jwt.ParseWithClaims(rawToken, &bitLockerJWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if token.Method.Alg() != jwt.SigningMethodRS256.Alg() {
-			return nil, errors.New("invalid signing method")
-		}
-		return bitLockerJWTPub, nil
+	return pkgauth.ParseRS256WithClaims(rawToken, &bitLockerJWTClaims{}, bitLockerJWTPub, pkgauth.ParseOptions{
+		Issuer:   strings.TrimSpace(os.Getenv("JWT_ISSUER")),
+		Audience: strings.TrimSpace(os.Getenv("JWT_AUDIENCE")),
+		Leeway:   30 * time.Second,
 	})
-	if err != nil {
-		return nil, err
-	}
-	claims, ok := token.Claims.(*bitLockerJWTClaims)
-	if !ok || !token.Valid {
-		return nil, errors.New("invalid claims")
-	}
-	return claims, nil
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {

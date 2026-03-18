@@ -46,7 +46,11 @@ func NewAuthLogic(privateKey *rsa.PrivateKey, issuer string, audience string) *A
 }
 
 func (a *AuthLogic) ParseJWT(token string) (*pkgauth.Claims, error) {
-	return pkgauth.ParseRS256(token, a.publicKey)
+	return pkgauth.ParseRS256WithOptions(token, a.publicKey, pkgauth.ParseOptions{
+		Issuer:   a.issuer,
+		Audience: a.audience,
+		Leeway:   30 * time.Second,
+	})
 }
 
 func (a *AuthLogic) IssueJWT(tenantID string, role string, permissions []string, userID string, mustChangePassword bool) (string, time.Time, error) {

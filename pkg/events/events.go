@@ -14,6 +14,41 @@ type Publisher struct {
 	deadLetter string
 }
 
+func Connect(url string, clientName string, logf func(string, ...interface{})) (*nats.Conn, error) {
+	opts := []nats.Option{
+		nats.Name(clientName),
+		nats.MaxReconnects(-1),
+		nats.ReconnectWait(2 * time.Second),
+		nats.Timeout(5 * time.Second),
+		nats.PingInterval(20 * time.Second),
+		nats.MaxPingsOutstanding(3),
+		nats.ReconnectBufSize(8 * 1024 * 1024),
+	}
+	if logf != nil {
+		opts = append(opts,
+			nats.DisconnectErrHandler(func(_ *nats.Conn, err error) {
+				if err != nil {
+					logf("nats disconnected: %v", err)
+					return
+				}
+				logf("nats disconnected")
+			}),
+			nats.ReconnectHandler(func(nc *nats.Conn) {
+				logf("nats reconnected: %s", nc.ConnectedUrl())
+			}),
+			nats.ClosedHandler(func(_ *nats.Conn) {
+				logf("nats connection closed")
+			}),
+			nats.ErrorHandler(func(_ *nats.Conn, _ *nats.Subscription, err error) {
+				if err != nil {
+					logf("nats async error: %v", err)
+				}
+			}),
+		)
+	}
+	return nats.Connect(url, opts...)
+}
+
 func NewPublisher(js nats.JetStreamContext, retries int, deadLetter string) *Publisher {
 	if retries <= 0 {
 		retries = 3

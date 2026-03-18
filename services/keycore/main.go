@@ -81,6 +81,31 @@ func main() {
 	if redisURL := envOr("REDIS_URL", ""); redisURL != "" {
 		opt, err := redis.ParseURL(redisURL)
 		if err == nil {
+			if opt.DialTimeout == 0 {
+				opt.DialTimeout = 5 * time.Second
+			}
+			if opt.ReadTimeout == 0 {
+				opt.ReadTimeout = 3 * time.Second
+			}
+			if opt.WriteTimeout == 0 {
+				opt.WriteTimeout = 3 * time.Second
+			}
+			if opt.PoolTimeout == 0 {
+				opt.PoolTimeout = 4 * time.Second
+			}
+			if opt.ConnMaxIdleTime == 0 {
+				opt.ConnMaxIdleTime = 5 * time.Minute
+			}
+			if opt.ConnMaxLifetime == 0 {
+				opt.ConnMaxLifetime = 30 * time.Minute
+			}
+			if opt.MinIdleConns == 0 {
+				opt.MinIdleConns = 2
+			}
+			if opt.TLSConfig != nil && opt.TLSConfig.MinVersion < tls.VersionTLS13 {
+				opt.TLSConfig = opt.TLSConfig.Clone()
+				opt.TLSConfig.MinVersion = tls.VersionTLS13
+			}
 			cli := redis.NewClient(opt)
 			if pingErr := cli.Ping(ctx).Err(); pingErr == nil {
 				cache = NewKeyCache(pkgcache.NewRedis(cli), 5*time.Minute)
@@ -123,7 +148,7 @@ func main() {
 		logger.Printf("governance fips mode integration enabled")
 	}
 	handler := NewHandler(svc)
-	if tokenParser, err := loadJWTParser(); err != nil {
+	if tokenParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience); err != nil {
 		logger.Printf("jwt parser disabled: %v", err)
 	} else if tokenParser != nil {
 		handler.SetTokenParser(tokenParser)
@@ -189,7 +214,7 @@ func migrationPath() string {
 }
 
 func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
-	nc, err := nats.Connect(url, nats.Name("kms-keycore"))
+	nc, err := pkgevents.Connect(url, "kms-keycore", logger.Printf)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -309,7 +334,7 @@ func envBool(k string, d bool) bool {
 	return v == "true" || v == "1" || v == "yes"
 }
 
-func loadJWTParser() (func(string) (*pkgauth.Claims, error), error) {
+func loadJWTParser(issuer string, audience string) (func(string) (*pkgauth.Claims, error), error) {
 	pubPEM := strings.TrimSpace(os.Getenv("KEYCORE_JWT_PUBLIC_KEY_PEM"))
 	if pubPEM == "" {
 		if b64 := strings.TrimSpace(os.Getenv("KEYCORE_JWT_PUBLIC_KEY_B64")); b64 != "" {
@@ -343,6 +368,10 @@ func loadJWTParser() (func(string) (*pkgauth.Claims, error), error) {
 		return nil, errors.New("unable to parse RSA public key")
 	}
 	return func(token string) (*pkgauth.Claims, error) {
-		return pkgauth.ParseRS256(token, pub)
+		return pkgauth.ParseRS256WithOptions(token, pub, pkgauth.ParseOptions{
+			Issuer:   issuer,
+			Audience: audience,
+			Leeway:   30 * time.Second,
+		})
 	}, nil
 }

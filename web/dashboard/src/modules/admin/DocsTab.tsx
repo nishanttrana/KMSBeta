@@ -2317,15 +2317,17 @@ const SectionConfigEnv = () => (
     <H2>Infrastructure</H2>
     <EnvTable rows={[
       ["NATS_URL", "nats://nats:4222", "NATS JetStream URL (optional)"],
-      ["REDIS_URL", "redis://valkey:6379", "Valkey/Redis cache URL (optional)"],
+      ["REDIS_URL", "redis://valkey:6379", "Valkey/Redis cache URL (optional; rediss:// inherits a TLS 1.3 floor)"],
       ["CONSUL_HTTP_ADDR", "consul:8500", "Consul address (optional)"],
     ]} />
+    <P>NATS clients now use a shared hardened connection profile: bounded connect timeout, automatic reconnect with backoff, liveness pings, and reconnect buffer limits so short control-plane outages do not drop audit and event traffic.</P>
     <H2>JWT & Security</H2>
     <EnvTable rows={[
       ["JWT_ISSUER", "vecta-auth", "JWT token issuer"],
       ["JWT_AUDIENCE", "vecta-services", "JWT token audience"],
       ["JWT_PUBLIC_KEY_PATH", "certs/jwt_public.pem", "Path to JWT public key"],
     ]} />
+    <P>Service JWT validation now requires RS256, `exp`, and `iat`, and request parsers enforce `JWT_ISSUER` and `JWT_AUDIENCE` with a small leeway for clock skew. Keep these values aligned across auth, keycore, governance, HYOK, payment, and other request-handling services.</P>
     <H2>Auth Bootstrap</H2>
     <EnvTable rows={[
       ["AUTH_BOOTSTRAP_TENANT_ID", "root", "Default tenant ID"],
@@ -2423,6 +2425,7 @@ CERTS_RUNTIME_MATERIALIZER_DIR=/run/vecta/certs
 CERTS_RUNTIME_MATERIALIZER_INTERVAL=5m
 CERTS_RUNTIME_ENVOY_CN=vecta-envoy
 CERTS_RUNTIME_ENVOY_SANS=localhost,envoy,127.0.0.1`}</Code>
+    <P>When Redis is configured with <IC>rediss://</IC>, the runtime cache client enforces a TLS 1.3 minimum and applies bounded dial, read, write, pool, idle, and lifetime limits so cache transport stays aligned with the platform TLS baseline.</P>
     <H2>Runtime TLS APIs</H2>
     <P>Use <IC>GET /svc/keycore/access/interface-tls-config?tenant_id=root</IC> to read the current interface TLS binding and <IC>PUT /svc/keycore/access/interface-tls-config</IC> to change it. Use <IC>GET /svc/keycore/access/interface-ports?tenant_id=root</IC> to inspect the effective request interfaces after TLS defaults are applied.</P>
     <H2>Firewall</H2>

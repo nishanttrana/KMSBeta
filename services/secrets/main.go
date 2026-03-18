@@ -130,7 +130,7 @@ func migrationPath() string {
 }
 
 func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
-	nc, err := nats.Connect(url, nats.Name("kms-secrets"))
+	nc, err := pkgevents.Connect(url, "kms-secrets", logger.Printf)
 	if err != nil {
 		return nil, nil, err
 	}

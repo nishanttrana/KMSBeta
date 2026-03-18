@@ -226,7 +226,7 @@ func walHMACKey() []byte {
 }
 
 func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
-	nc, err := nats.Connect(url, nats.Name("kms-audit"))
+	nc, err := pkgevents.Connect(url, "kms-audit", logger.Printf)
 	if err != nil {
 		return nil, nil, err
 	}

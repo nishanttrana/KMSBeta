@@ -1666,7 +1666,20 @@ func (s *Service) verifyWrapperAuthProfileToken(rawToken string, wrapper FieldEn
 		return newServiceError(http.StatusUnauthorized, "auth_required", "wrapper token is required")
 	}
 	claims := jwt.MapClaims{}
-	token, err := jwt.ParseWithClaims(rawToken, claims, func(token *jwt.Token) (interface{}, error) {
+	parserOptions := []jwt.ParserOption{
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithExpirationRequired(),
+		jwt.WithIssuedAt(),
+		jwt.WithLeeway(30 * time.Second),
+	}
+	if strings.TrimSpace(s.jwtIss) != "" {
+		parserOptions = append(parserOptions, jwt.WithIssuer(strings.TrimSpace(s.jwtIss)))
+	}
+	if strings.TrimSpace(s.jwtAud) != "" {
+		parserOptions = append(parserOptions, jwt.WithAudience(strings.TrimSpace(s.jwtAud)))
+	}
+	parser := jwt.NewParser(parserOptions...)
+	token, err := parser.ParseWithClaims(rawToken, claims, func(token *jwt.Token) (interface{}, error) {
 		if token.Method == nil || token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 			return nil, errors.New("unsupported signing method")
 		}
@@ -1691,17 +1704,6 @@ func (s *Service) verifyWrapperAuthProfileToken(rawToken string, wrapper FieldEn
 		return newServiceError(http.StatusForbidden, "access_denied", "wrapper token binding mismatch")
 	}
 
-	if strings.TrimSpace(s.jwtIss) != "" {
-		iss := strings.TrimSpace(firstString(claims["iss"]))
-		if !strings.EqualFold(iss, strings.TrimSpace(s.jwtIss)) {
-			return newServiceError(http.StatusForbidden, "access_denied", "wrapper token issuer mismatch")
-		}
-	}
-	if strings.TrimSpace(s.jwtAud) != "" {
-		if !claimContainsAudience(claims["aud"], s.jwtAud) {
-			return newServiceError(http.StatusForbidden, "access_denied", "wrapper token audience mismatch")
-		}
-	}
 	if strings.TrimSpace(requiredScope) != "" && !claimContainsScope(claims["scope"], requiredScope) {
 		return newServiceError(http.StatusForbidden, "access_denied", "wrapper token scope is insufficient")
 	}

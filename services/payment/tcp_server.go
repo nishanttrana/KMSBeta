@@ -40,7 +40,7 @@ type paymentTCPResponse struct {
 	} `json:"error,omitempty"`
 }
 
-func loadPaymentJWTParser() (func(string) (*pkgauth.Claims, error), error) {
+func loadPaymentJWTParser(issuer string, audience string) (func(string) (*pkgauth.Claims, error), error) {
 	pubPEM := strings.TrimSpace(os.Getenv("PAYMENT_JWT_PUBLIC_KEY_PEM"))
 	if pubPEM == "" {
 		if b64 := strings.TrimSpace(os.Getenv("PAYMENT_JWT_PUBLIC_KEY_B64")); b64 != "" {
@@ -85,7 +85,11 @@ func loadPaymentJWTParser() (func(string) (*pkgauth.Claims, error), error) {
 		return nil, errors.New("unable to parse RSA JWT public key")
 	}
 	return func(token string) (*pkgauth.Claims, error) {
-		return pkgauth.ParseRS256(token, pub)
+		return pkgauth.ParseRS256WithOptions(token, pub, pkgauth.ParseOptions{
+			Issuer:   issuer,
+			Audience: audience,
+			Leeway:   30 * time.Second,
+		})
 	}, nil
 }
 
@@ -310,7 +314,7 @@ func mustBoolEnv(name string, defaultValue bool) bool {
 	return raw == "1" || raw == "true" || raw == "yes" || raw == "on"
 }
 
-func maybeStartPaymentTCPServer(ctx context.Context, svc *Service, logger *log.Logger) {
+func maybeStartPaymentTCPServer(ctx context.Context, svc *Service, logger *log.Logger, issuer string, audience string) {
 	if !mustBoolEnv("PAYMENT_TCP_ENABLED", true) {
 		logger.Printf("payment tcp interface disabled by env")
 		return
@@ -320,7 +324,7 @@ func maybeStartPaymentTCPServer(ctx context.Context, svc *Service, logger *log.L
 		logger.Printf("payment tcp disabled: %v", err)
 		return
 	}
-	parser, err := loadPaymentJWTParser()
+	parser, err := loadPaymentJWTParser(issuer, audience)
 	if err != nil {
 		logger.Printf("payment tcp jwt parser init warning: %v", err)
 	}
