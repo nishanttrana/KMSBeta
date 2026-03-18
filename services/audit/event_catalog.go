@@ -33,13 +33,17 @@ func buildAuditEventCatalog() map[string]EventMeta {
 	}
 
 	overrides := map[string]EventMeta{
-		"audit.audit.chain_broken":         {Severity: "CRITICAL", Category: "audit"},
-		"audit.auth.mfa_failed":            {Severity: "HIGH", Category: "auth"},
-		"audit.cluster.node_failed":        {Severity: "HIGH", Category: "cluster"},
-		"audit.key.compromised":            {Severity: "CRITICAL", Category: "key"},
-		"audit.key.fips.violation_blocked": {Severity: "CRITICAL", Category: "key"},
-		"audit.fde.unlock_failed":          {Severity: "CRITICAL", Category: "dataprotect"},
-		"audit.integrity_check_failed":     {Severity: "CRITICAL", Category: "audit"},
+		"audit.audit.chain_broken":                 {Severity: "CRITICAL", Category: "audit"},
+		"audit.auth.mfa_failed":                    {Severity: "HIGH", Category: "auth"},
+		"audit.cluster.node_failed":                {Severity: "HIGH", Category: "cluster"},
+		"audit.compliance.assessment_delta_viewed": {Severity: "LOW", Category: "compliance"},
+		"audit.key.compromised":                    {Severity: "CRITICAL", Category: "key"},
+		"audit.key.fips.violation_blocked":         {Severity: "CRITICAL", Category: "key"},
+		"audit.fde.unlock_failed":                  {Severity: "CRITICAL", Category: "dataprotect"},
+		"audit.integrity_check_failed":             {Severity: "CRITICAL", Category: "audit"},
+		"audit.posture.dashboard_viewed":           {Severity: "LOW", Category: "posture"},
+		"audit.reporting.evidence_pack_requested":  {Severity: "MEDIUM", Category: "reporting"},
+		"audit.reporting.mttd_stats_viewed":        {Severity: "LOW", Category: "reporting"},
 	}
 	for action, meta := range overrides {
 		catalog[action] = meta

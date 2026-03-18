@@ -9,6 +9,12 @@ const generatedPaths = [
   "docs/openapi/ai.openapi.json",
   "docs/openapi/sbom.openapi.yaml",
   "docs/openapi/sbom.openapi.json",
+  "docs/openapi/posture.openapi.yaml",
+  "docs/openapi/posture.openapi.json",
+  "docs/openapi/compliance.openapi.yaml",
+  "docs/openapi/compliance.openapi.json",
+  "docs/openapi/reporting.openapi.yaml",
+  "docs/openapi/reporting.openapi.json",
   "web/dashboard/public/openapi",
 ];
 

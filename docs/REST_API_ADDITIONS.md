@@ -1,6 +1,6 @@
 # REST API Additions
 
-This document covers the REST API surfaces that were added or expanded for the recent AI and SBOM functionality.
+This document covers the REST API surfaces that were added or expanded for the recent AI, SBOM, posture, compliance, and reporting functionality.
 
 Machine-readable OpenAPI specs for these services are available in [docs/openapi/README.md](openapi/README.md).
 
@@ -39,6 +39,87 @@ npm.cmd --prefix web/dashboard run validate:openapi
   }
 }
 ```
+
+## Security Posture Management
+
+Service prefix:
+
+```text
+/svc/posture/posture
+```
+
+Key additions:
+
+- `GET /posture/dashboard` now returns the richer posture dashboard payload used by the UI:
+  - `risk_drivers`
+  - `remediation_cockpit`
+  - `blast_radius`
+  - `scenario_simulator`
+  - `validation_badges`
+  - `sla_overview`
+- `GET /posture/findings` returns findings enriched with `risk_drivers` and `blast_radius`.
+- `GET /posture/actions` returns remediation actions enriched with:
+  - `impact_estimate`
+  - `rollback_hint`
+  - `blast_radius`
+  - `priority`
+- `POST /posture/actions/{id}/execute` executes an approved or safe remediation action.
+
+These routes are also published in the generated `posture.openapi.*` spec.
+
+## Compliance
+
+Service prefix:
+
+```text
+/svc/compliance/compliance
+```
+
+Key additions:
+
+- `GET /compliance/assessment/delta`
+  - Compares the latest and previous real assessment
+  - Returns `added_findings`, `resolved_findings`, `recovered_domains`, `regressed_domains`, and `new_failing_connectors`
+- `GET /compliance/assessment/history`
+  - Supports trend rendering and "what changed since last scan" workflows
+- `POST /compliance/assessment/run`
+  - Supports template-scoped manual assessments with optional recompute
+
+These routes are also published in the generated `compliance.openapi.*` spec.
+
+## Reporting and Evidence Packs
+
+Service prefix:
+
+```text
+/svc/reporting
+```
+
+Key additions:
+
+- `GET /reports/templates`
+  - Includes the `evidence_pack` template used by the Compliance tab
+- `POST /reports/generate`
+  - Supports `template_id=evidence_pack` for one-click audit exports containing posture findings, actions, approvals, incidents, timestamps, and tenant scope
+- `GET /alerts/stats/mttd`
+  - Returns mean time to detect by severity
+- `GET /alerts/stats/mttr`
+  - Returns mean time to resolve by severity
+- `GET /alerts/stats/top-sources`
+  - Returns the top actors, IPs, and services behind alert generation
+
+These routes are also published in the generated `reporting.openapi.*` spec.
+
+## Backup Coverage Notes
+
+Governance backups already include the stored state behind posture/compliance/reporting when the corresponding tables exist, while still excluding:
+
+- audit event partitions
+- alert runtime tables
+- operational log tables
+- the backup job catalog itself
+
+Backup artifact and key downloads now carry explicit `backup_coverage` metadata so operators can see which capability classes were preserved.
 
 ## AI Service
 

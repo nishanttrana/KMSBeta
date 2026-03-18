@@ -1,0 +1,702 @@
+openapi: 3.0.3
+info:
+  title: Vecta KMS Security Posture API
+  version: 1.0.0
+  description: OpenAPI contract for posture dashboards, risk drivers, remediation
+    cockpit, blast radius views, and scenario simulation. Use `/svc/posture`
+    through the dashboard proxy or `http://localhost:8220` directly.
+servers:
+  - url: /svc/posture
+    description: Dashboard reverse proxy
+  - url: http://localhost:8220
+    description: Direct posture service
+tags:
+  - name: Posture Dashboard
+  - name: Posture Findings
+  - name: Posture Actions
+paths:
+  /posture/dashboard:
+    get:
+      tags:
+        - Posture Dashboard
+      operationId: getPostureDashboard
+      parameters: &a4
+        - &a1
+          $ref: "#/components/parameters/RequestIdHeader"
+        - &a2
+          $ref: "#/components/parameters/TenantQuery"
+        - &a3
+          $ref: "#/components/parameters/TenantHeader"
+      responses:
+        "200":
+          description: Posture dashboard with risk drivers, remediation cockpit, blast
+            radius, validation badges, and SLA overview.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostureDashboardEnvelope"
+        "500":
+          description: Unhandled posture dashboard failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /posture/findings:
+    get:
+      tags:
+        - Posture Findings
+      operationId: listPostureFindings
+      parameters:
+        - *a1
+        - *a2
+        - *a3
+        - name: engine
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: severity
+          in: query
+          required: false
+          schema:
+            type: string
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Filtered posture findings.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FindingListEnvelope"
+        "400":
+          description: Missing tenant scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Unhandled posture findings failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /posture/actions:
+    get:
+      tags:
+        - Posture Actions
+      operationId: listPostureActions
+      parameters:
+        - *a1
+        - *a2
+        - *a3
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: action_type
+          in: query
+          required: false
+          schema:
+            type: string
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Remediation actions, including approval-required and manual actions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionListEnvelope"
+        "400":
+          description: Missing tenant scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Unhandled posture action failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /posture/risk:
+    get:
+      tags:
+        - Posture Dashboard
+      operationId: getLatestPostureRisk
+      parameters: *a4
+      responses:
+        "200":
+          description: Latest risk snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskEnvelope"
+        "500":
+          description: Unhandled posture risk failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /posture/risk/history:
+    get:
+      tags:
+        - Posture Dashboard
+      operationId: listPostureRiskHistory
+      parameters:
+        - *a1
+        - *a2
+        - *a3
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Historical risk snapshots.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskHistoryEnvelope"
+        "500":
+          description: Unhandled posture history failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /posture/scan:
+    post:
+      tags:
+        - Posture Dashboard
+      operationId: runPostureScan
+      parameters:
+        - *a1
+        - *a2
+        - *a3
+        - name: sync_audit
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Manual posture scan result.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - risk
+                  - tenant_id
+                  - request_id
+                properties:
+                  risk:
+                    $ref: "#/components/schemas/RiskSnapshot"
+                  tenant_id:
+                    type: string
+                  request_id:
+                    type: string
+        "400":
+          description: Missing tenant scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Unhandled posture scan failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /posture/actions/{id}/execute:
+    post:
+      tags:
+        - Posture Actions
+      operationId: executePostureAction
+      parameters:
+        - *a1
+        - *a2
+        - *a3
+        - $ref: "#/components/parameters/IdPath"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                actor:
+                  type: string
+                approval_request_id:
+                  type: string
+      responses:
+        "200":
+          description: Action execution accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - ok
+                  - request_id
+                properties:
+                  ok:
+                    type: boolean
+                  request_id:
+                    type: string
+        "400":
+          description: Missing tenant scope or malformed payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Unhandled posture action execution failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+components:
+  parameters:
+    RequestIdHeader:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Optional client correlation id. The service generates one when omitted.
+      schema:
+        type: string
+    TenantHeader:
+      name: X-Tenant-ID
+      in: header
+      required: false
+      description: Alternative tenant scope header accepted by tenant-aware handlers.
+      schema:
+        type: string
+        example: root
+    TenantQuery:
+      name: tenant_id
+      in: query
+      required: false
+      description: Tenant scope. Required for tenant-aware operations unless supplied
+        in the request body or `X-Tenant-ID`.
+      schema:
+        type: string
+        example: root
+    LimitQuery:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        example: 20
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+            - request_id
+            - tenant_id
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            request_id:
+              type: string
+            tenant_id:
+              type: string
+    RiskSnapshot:
+      type: object
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        risk_24h:
+          type: integer
+        risk_7d:
+          type: integer
+        predictive_score:
+          type: integer
+        preventive_score:
+          type: integer
+        corrective_score:
+          type: integer
+        top_signals: &a5
+          type: object
+          additionalProperties: true
+        captured_at: &a6
+          type: string
+          format: date-time
+    RiskDriverContribution:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        domain:
+          type: string
+        delta_points:
+          type: integer
+        severity:
+          type: string
+        explanation:
+          type: string
+        evidence: *a5
+    RiskDriverExplainer:
+      type: object
+      properties:
+        current_risk_24h:
+          type: integer
+        previous_risk_24h:
+          type: integer
+        net_delta:
+          type: integer
+        summary:
+          type: string
+        drivers:
+          type: array
+          items:
+            $ref: "#/components/schemas/RiskDriverContribution"
+    BlastRadius:
+      type: object
+      properties:
+        tenants:
+          type: array
+          items:
+            type: string
+        apps:
+          type: array
+          items:
+            type: string
+        services:
+          type: array
+          items:
+            type: string
+        resources:
+          type: array
+          items:
+            type: string
+        actors:
+          type: array
+          items:
+            type: string
+        event_count:
+          type: integer
+        last_seen_at: *a6
+        summary:
+          type: string
+    RemediationImpact:
+      type: object
+      properties:
+        risk_reduction:
+          type: integer
+        operational_cost:
+          type: string
+        time_to_apply:
+          type: string
+    Finding:
+      type: object
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        engine:
+          type: string
+        finding_type:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+        risk_score:
+          type: integer
+        recommended_action:
+          type: string
+        auto_action_allowed:
+          type: boolean
+        status:
+          type: string
+        fingerprint:
+          type: string
+        evidence: *a5
+        detected_at: *a6
+        updated_at: *a6
+        resolved_at: *a6
+        sla_due_at: *a6
+        reopen_count:
+          type: integer
+        risk_drivers:
+          type: array
+          items:
+            $ref: "#/components/schemas/RiskDriverContribution"
+        blast_radius:
+          $ref: "#/components/schemas/BlastRadius"
+    RemediationAction:
+      type: object
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        finding_id:
+          type: string
+        action_type:
+          type: string
+        recommended_action:
+          type: string
+        safety_gate:
+          type: string
+        approval_required:
+          type: boolean
+        approval_request_id:
+          type: string
+        status:
+          type: string
+        executed_by:
+          type: string
+        executed_at: *a6
+        evidence: *a5
+        result_message:
+          type: string
+        created_at: *a6
+        updated_at: *a6
+        impact_estimate:
+          $ref: "#/components/schemas/RemediationImpact"
+        rollback_hint:
+          type: string
+        blast_radius:
+          $ref: "#/components/schemas/BlastRadius"
+        priority:
+          type: string
+    RemediationCockpitGroup:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        count:
+          type: integer
+        actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RemediationAction"
+    ValidationBadge:
+      type: object
+      properties:
+        domain:
+          type: string
+        kind:
+          type: string
+        label:
+          type: string
+        status:
+          type: string
+        detail:
+          type: string
+        last_checked_at: *a6
+        last_success_at: *a6
+        metric:
+          type: number
+    ScenarioSimulation:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        category:
+          type: string
+        action_type:
+          type: string
+        current_risk_24h:
+          type: integer
+        projected_risk_24h:
+          type: integer
+        risk_delta:
+          type: integer
+        summary:
+          type: string
+        impact_estimate:
+          type: string
+        rollback_hint:
+          type: string
+        approval_required:
+          type: boolean
+        based_on:
+          type: array
+          items:
+            type: string
+    SLAOverview:
+      type: object
+      properties:
+        open_count:
+          type: integer
+        overdue_count:
+          type: integer
+        due_soon_count:
+          type: integer
+        average_age_hours:
+          type: number
+        breached_ids:
+          type: array
+          items:
+            type: string
+    PostureDashboard:
+      type: object
+      properties:
+        risk:
+          $ref: "#/components/schemas/RiskSnapshot"
+        recent_findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Finding"
+        pending_actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RemediationAction"
+        open_findings:
+          type: integer
+        critical_findings:
+          type: integer
+        risk_drivers:
+          $ref: "#/components/schemas/RiskDriverExplainer"
+        remediation_cockpit:
+          type: array
+          items:
+            $ref: "#/components/schemas/RemediationCockpitGroup"
+        blast_radius:
+          type: array
+          items:
+            $ref: "#/components/schemas/BlastRadius"
+        scenario_simulator:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScenarioSimulation"
+        validation_badges:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationBadge"
+        sla_overview:
+          $ref: "#/components/schemas/SLAOverview"
+    PostureDashboardEnvelope:
+      type: object
+      required:
+        - risk
+        - recent_findings
+        - pending_actions
+        - open_findings
+        - critical_findings
+        - risk_drivers
+        - remediation_cockpit
+        - blast_radius
+        - scenario_simulator
+        - validation_badges
+        - sla_overview
+        - request_id
+      properties:
+        risk:
+          $ref: "#/components/schemas/RiskSnapshot"
+        recent_findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Finding"
+        pending_actions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RemediationAction"
+        open_findings:
+          type: integer
+        critical_findings:
+          type: integer
+        risk_drivers:
+          $ref: "#/components/schemas/RiskDriverExplainer"
+        remediation_cockpit:
+          type: array
+          items:
+            $ref: "#/components/schemas/RemediationCockpitGroup"
+        blast_radius:
+          type: array
+          items:
+            $ref: "#/components/schemas/BlastRadius"
+        scenario_simulator:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScenarioSimulation"
+        validation_badges:
+          type: array
+          items:
+            $ref: "#/components/schemas/ValidationBadge"
+        sla_overview:
+          $ref: "#/components/schemas/SLAOverview"
+        request_id:
+          type: string
+    FindingListEnvelope:
+      type: object
+      required:
+        - items
+        - request_id
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Finding"
+        request_id:
+          type: string
+    ActionListEnvelope:
+      type: object
+      required:
+        - items
+        - request_id
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RemediationAction"
+        request_id:
+          type: string
+    RiskEnvelope:
+      type: object
+      required:
+        - risk
+        - request_id
+      properties:
+        risk:
+          $ref: "#/components/schemas/RiskSnapshot"
+        request_id:
+          type: string
+    RiskHistoryEnvelope:
+      type: object
+      required:
+        - items
+        - request_id
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RiskSnapshot"
+        request_id:
+          type: string

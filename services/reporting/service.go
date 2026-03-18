@@ -665,6 +665,14 @@ func (s *Service) GenerateReport(ctx context.Context, tenantID string, templateI
 	}
 	go s.processReportJob(job)
 	_ = s.publishAudit(ctx, "audit.reporting.report_requested", tenantID, map[string]interface{}{"job_id": job.ID, "template_id": templateID, "format": format})
+	if normalizeTemplateID(templateID) == "evidence_pack" {
+		_ = s.publishAudit(ctx, "audit.reporting.evidence_pack_requested", tenantID, map[string]interface{}{
+			"job_id":       job.ID,
+			"template_id":  templateID,
+			"format":       format,
+			"requested_by": job.RequestedBy,
+		})
+	}
 	return job, nil
 }
 
@@ -807,7 +815,7 @@ func (s *Service) renderEvidencePack(ctx context.Context, job ReportJob, alerts 
 		postureActions, _ = s.posture.ListActions(ctx, job.TenantID, 250)
 	}
 	mttr, _ := s.MTTRStats(ctx, job.TenantID)
-	mttd, _ := s.MTTDStats(ctx, job.TenantID)
+	mttd, _, _ := s.computeMTTDStats(ctx, job.TenantID)
 	payload := map[string]interface{}{
 		"job_id":           job.ID,
 		"template_id":      job.TemplateID,
@@ -1153,10 +1161,10 @@ func (s *Service) MTTRStats(ctx context.Context, tenantID string) (map[string]fl
 	return out, nil
 }
 
-func (s *Service) MTTDStats(ctx context.Context, tenantID string) (map[string]float64, error) {
+func (s *Service) computeMTTDStats(ctx context.Context, tenantID string) (map[string]float64, int, error) {
 	items, err := s.store.ListAlerts(ctx, tenantID, AlertQuery{Limit: 5000})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	type agg struct {
 		sum float64
@@ -1187,6 +1195,24 @@ func (s *Service) MTTDStats(ctx context.Context, tenantID string) (map[string]fl
 			out[sev] = a.sum / float64(a.n)
 		}
 	}
+	return out, len(items), nil
+}
+
+func (s *Service) MTTDStats(ctx context.Context, tenantID string) (map[string]float64, error) {
+	out, alertCount, err := s.computeMTTDStats(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	severities := make([]string, 0, len(out))
+	for sev := range out {
+		severities = append(severities, sev)
+	}
+	sort.Strings(severities)
+	_ = s.publishAudit(ctx, "audit.reporting.mttd_stats_viewed", tenantID, map[string]interface{}{
+		"alert_count":  alertCount,
+		"bucket_count": len(out),
+		"severities":   severities,
+	})
 	return out, nil
 }
 

@@ -1,0 +1,791 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Vecta KMS Compliance API",
+    "version": "1.0.0",
+    "description": "OpenAPI contract for compliance posture, assessment runs, delta views, and template-driven framework scoring. Use `/svc/compliance` through the dashboard proxy or `http://localhost:8110` directly."
+  },
+  "servers": [
+    {
+      "url": "/svc/compliance",
+      "description": "Dashboard reverse proxy"
+    },
+    {
+      "url": "http://localhost:8110",
+      "description": "Direct compliance service"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Compliance Posture"
+    },
+    {
+      "name": "Compliance Assessments"
+    },
+    {
+      "name": "Compliance Templates"
+    }
+  ],
+  "paths": {
+    "/compliance/posture": {
+      "get": {
+        "tags": [
+          "Compliance Posture"
+        ],
+        "operationId": "getCompliancePosture",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          },
+          {
+            "name": "refresh",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current compliance posture snapshot.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "posture",
+                    "request_id"
+                  ],
+                  "properties": {
+                    "posture": {
+                      "type": "object",
+                      "additionalProperties": true
+                    },
+                    "request_id": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled compliance posture failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compliance/assessment": {
+      "get": {
+        "tags": [
+          "Compliance Assessments"
+        ],
+        "operationId": "getLatestComplianceAssessment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          },
+          {
+            "name": "template_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest non-auto assessment.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No compliance assessment exists yet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled assessment retrieval failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compliance/assessment/delta": {
+      "get": {
+        "tags": [
+          "Compliance Assessments"
+        ],
+        "operationId": "getComplianceAssessmentDelta",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          },
+          {
+            "name": "template_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delta between the latest and previous real assessments.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentDeltaEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No compliance assessment exists yet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled assessment delta failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compliance/assessment/run": {
+      "post": {
+        "tags": [
+          "Compliance Assessments"
+        ],
+        "operationId": "runComplianceAssessment",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "template_id": {
+                    "type": "string"
+                  },
+                  "recompute": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Manual compliance assessment result.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant scope or malformed payload.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled assessment run failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compliance/assessment/history": {
+      "get": {
+        "tags": [
+          "Compliance Assessments"
+        ],
+        "operationId": "listComplianceAssessmentHistory",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          },
+          {
+            "name": "template_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/LimitQuery"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Assessment history for the selected template scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentHistoryEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled assessment history failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compliance/templates": {
+      "get": {
+        "tags": [
+          "Compliance Templates"
+        ],
+        "operationId": "listComplianceTemplates",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestIdHeader"
+          },
+          {
+            "$ref": "#/components/parameters/TenantQuery"
+          },
+          {
+            "$ref": "#/components/parameters/TenantHeader"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved compliance templates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComplianceTemplateListEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing tenant scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unhandled template retrieval failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "RequestIdHeader": {
+        "name": "X-Request-ID",
+        "in": "header",
+        "required": false,
+        "description": "Optional client correlation id. The service generates one when omitted.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "TenantHeader": {
+        "name": "X-Tenant-ID",
+        "in": "header",
+        "required": false,
+        "description": "Alternative tenant scope header accepted by tenant-aware handlers.",
+        "schema": {
+          "type": "string",
+          "example": "root"
+        }
+      },
+      "TenantQuery": {
+        "name": "tenant_id",
+        "in": "query",
+        "required": false,
+        "description": "Tenant scope. Required for tenant-aware operations unless supplied in the request body or `X-Tenant-ID`.",
+        "schema": {
+          "type": "string",
+          "example": "root"
+        }
+      },
+      "LimitQuery": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "example": 20
+        }
+      },
+      "IdPath": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "request_id",
+              "tenant_id"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "request_id": {
+                "type": "string"
+              },
+              "tenant_id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "AssessmentResult": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "trigger": {
+            "type": "string"
+          },
+          "template_id": {
+            "type": "string"
+          },
+          "template_name": {
+            "type": "string"
+          },
+          "overall_score": {
+            "type": "integer"
+          },
+          "framework_scores": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "pqc": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "cert_metrics": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            }
+          },
+          "posture": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AssessmentFindingDelta": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "current_count": {
+            "type": "integer"
+          },
+          "previous_count": {
+            "type": "integer"
+          },
+          "delta": {
+            "type": "integer"
+          }
+        }
+      },
+      "AssessmentDomainDelta": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "current_score": {
+            "type": "integer"
+          },
+          "previous_score": {
+            "type": "integer"
+          },
+          "delta": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "AssessmentConnectorDelta": {
+        "type": "object",
+        "properties": {
+          "connector": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "current_fails": {
+            "type": "integer"
+          },
+          "previous_fails": {
+            "type": "integer"
+          },
+          "delta": {
+            "type": "integer"
+          },
+          "last_failure_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "AssessmentDelta": {
+        "type": "object",
+        "properties": {
+          "latest_assessment_id": {
+            "type": "string"
+          },
+          "previous_assessment_id": {
+            "type": "string"
+          },
+          "latest_score": {
+            "type": "integer"
+          },
+          "previous_score": {
+            "type": "integer"
+          },
+          "score_delta": {
+            "type": "integer"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "added_findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentFindingDelta"
+            }
+          },
+          "resolved_findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentFindingDelta"
+            }
+          },
+          "recovered_domains": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentDomainDelta"
+            }
+          },
+          "regressed_domains": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentDomainDelta"
+            }
+          },
+          "new_failing_connectors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentConnectorDelta"
+            }
+          },
+          "compared_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ComplianceTemplate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenant_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "frameworks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AssessmentEnvelope": {
+        "type": "object",
+        "required": [
+          "assessment",
+          "request_id"
+        ],
+        "properties": {
+          "assessment": {
+            "$ref": "#/components/schemas/AssessmentResult"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
+      "AssessmentHistoryEnvelope": {
+        "type": "object",
+        "required": [
+          "items",
+          "request_id"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssessmentResult"
+            }
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
+      "AssessmentDeltaEnvelope": {
+        "type": "object",
+        "required": [
+          "delta",
+          "request_id"
+        ],
+        "properties": {
+          "delta": {
+            "$ref": "#/components/schemas/AssessmentDelta"
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      },
+      "ComplianceTemplateListEnvelope": {
+        "type": "object",
+        "required": [
+          "items",
+          "request_id"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ComplianceTemplate"
+            }
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

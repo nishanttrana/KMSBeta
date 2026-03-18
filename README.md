@@ -238,9 +238,9 @@ NIST SP 800-57, PCI-DSS v4.0, HIPAA, SOC 2 Type II, GDPR, eIDAS, ISO 27001, FIPS
 
 See [RUNTIME_CONTROL_FLOW.md](RUNTIME_CONTROL_FLOW.md) for the complete runtime control flow map of all services and feature profiles.
 
-See [docs/REST_API_ADDITIONS.md](docs/REST_API_ADDITIONS.md) for detailed REST API documentation covering the newer AI configuration, AI assistant, SBOM vulnerability, offline advisory, and CBOM readiness workflows.
+See [docs/REST_API_ADDITIONS.md](docs/REST_API_ADDITIONS.md) for detailed REST API documentation covering the newer AI configuration, AI assistant, SBOM vulnerability, offline advisory, CBOM readiness, posture dashboards, compliance deltas, evidence packs, and alert timing workflows.
 
-See [docs/openapi/README.md](docs/openapi/README.md) for generated OpenAPI/Swagger specs for the AI and SBOM/CBOM service APIs.
+See [docs/openapi/README.md](docs/openapi/README.md) for generated OpenAPI/Swagger specs for the AI, SBOM/CBOM, posture, compliance, and reporting service APIs.
 
 ## License
 

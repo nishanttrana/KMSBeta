@@ -875,6 +875,908 @@ function buildSBOMSpec() {
   };
 }
 
+function buildPostureComponents() {
+  return {
+    parameters: {
+      RequestIdHeader: headerRequestId,
+      TenantHeader: headerTenant,
+      TenantQuery: queryTenant,
+      LimitQuery: queryLimit,
+      IdPath: pathId,
+    },
+    schemas: {
+      ErrorEnvelope: {
+        type: "object",
+        required: ["error"],
+        properties: {
+          error: {
+            type: "object",
+            required: ["code", "message", "request_id", "tenant_id"],
+            properties: {
+              code: { type: "string" },
+              message: { type: "string" },
+              request_id: { type: "string" },
+              tenant_id: { type: "string" },
+            },
+          },
+        },
+      },
+      RiskSnapshot: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          tenant_id: { type: "string" },
+          risk_24h: { type: "integer" },
+          risk_7d: { type: "integer" },
+          predictive_score: { type: "integer" },
+          preventive_score: { type: "integer" },
+          corrective_score: { type: "integer" },
+          top_signals: objectAny,
+          captured_at: isoDateTime,
+        },
+      },
+      RiskDriverContribution: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          label: { type: "string" },
+          domain: { type: "string" },
+          delta_points: { type: "integer" },
+          severity: { type: "string" },
+          explanation: { type: "string" },
+          evidence: objectAny,
+        },
+      },
+      RiskDriverExplainer: {
+        type: "object",
+        properties: {
+          current_risk_24h: { type: "integer" },
+          previous_risk_24h: { type: "integer" },
+          net_delta: { type: "integer" },
+          summary: { type: "string" },
+          drivers: { type: "array", items: { $ref: "#/components/schemas/RiskDriverContribution" } },
+        },
+      },
+      BlastRadius: {
+        type: "object",
+        properties: {
+          tenants: { type: "array", items: { type: "string" } },
+          apps: { type: "array", items: { type: "string" } },
+          services: { type: "array", items: { type: "string" } },
+          resources: { type: "array", items: { type: "string" } },
+          actors: { type: "array", items: { type: "string" } },
+          event_count: { type: "integer" },
+          last_seen_at: isoDateTime,
+          summary: { type: "string" },
+        },
+      },
+      RemediationImpact: {
+        type: "object",
+        properties: {
+          risk_reduction: { type: "integer" },
+          operational_cost: { type: "string" },
+          time_to_apply: { type: "string" },
+        },
+      },
+      Finding: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          tenant_id: { type: "string" },
+          engine: { type: "string" },
+          finding_type: { type: "string" },
+          title: { type: "string" },
+          description: { type: "string" },
+          severity: { type: "string" },
+          risk_score: { type: "integer" },
+          recommended_action: { type: "string" },
+          auto_action_allowed: { type: "boolean" },
+          status: { type: "string" },
+          fingerprint: { type: "string" },
+          evidence: objectAny,
+          detected_at: isoDateTime,
+          updated_at: isoDateTime,
+          resolved_at: isoDateTime,
+          sla_due_at: isoDateTime,
+          reopen_count: { type: "integer" },
+          risk_drivers: { type: "array", items: { $ref: "#/components/schemas/RiskDriverContribution" } },
+          blast_radius: { $ref: "#/components/schemas/BlastRadius" },
+        },
+      },
+      RemediationAction: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          tenant_id: { type: "string" },
+          finding_id: { type: "string" },
+          action_type: { type: "string" },
+          recommended_action: { type: "string" },
+          safety_gate: { type: "string" },
+          approval_required: { type: "boolean" },
+          approval_request_id: { type: "string" },
+          status: { type: "string" },
+          executed_by: { type: "string" },
+          executed_at: isoDateTime,
+          evidence: objectAny,
+          result_message: { type: "string" },
+          created_at: isoDateTime,
+          updated_at: isoDateTime,
+          impact_estimate: { $ref: "#/components/schemas/RemediationImpact" },
+          rollback_hint: { type: "string" },
+          blast_radius: { $ref: "#/components/schemas/BlastRadius" },
+          priority: { type: "string" },
+        },
+      },
+      RemediationCockpitGroup: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          label: { type: "string" },
+          description: { type: "string" },
+          count: { type: "integer" },
+          actions: { type: "array", items: { $ref: "#/components/schemas/RemediationAction" } },
+        },
+      },
+      ValidationBadge: {
+        type: "object",
+        properties: {
+          domain: { type: "string" },
+          kind: { type: "string" },
+          label: { type: "string" },
+          status: { type: "string" },
+          detail: { type: "string" },
+          last_checked_at: isoDateTime,
+          last_success_at: isoDateTime,
+          metric: { type: "number" },
+        },
+      },
+      ScenarioSimulation: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          label: { type: "string" },
+          category: { type: "string" },
+          action_type: { type: "string" },
+          current_risk_24h: { type: "integer" },
+          projected_risk_24h: { type: "integer" },
+          risk_delta: { type: "integer" },
+          summary: { type: "string" },
+          impact_estimate: { type: "string" },
+          rollback_hint: { type: "string" },
+          approval_required: { type: "boolean" },
+          based_on: { type: "array", items: { type: "string" } },
+        },
+      },
+      SLAOverview: {
+        type: "object",
+        properties: {
+          open_count: { type: "integer" },
+          overdue_count: { type: "integer" },
+          due_soon_count: { type: "integer" },
+          average_age_hours: { type: "number" },
+          breached_ids: { type: "array", items: { type: "string" } },
+        },
+      },
+      PostureDashboard: {
+        type: "object",
+        properties: {
+          risk: { $ref: "#/components/schemas/RiskSnapshot" },
+          recent_findings: { type: "array", items: { $ref: "#/components/schemas/Finding" } },
+          pending_actions: { type: "array", items: { $ref: "#/components/schemas/RemediationAction" } },
+          open_findings: { type: "integer" },
+          critical_findings: { type: "integer" },
+          risk_drivers: { $ref: "#/components/schemas/RiskDriverExplainer" },
+          remediation_cockpit: { type: "array", items: { $ref: "#/components/schemas/RemediationCockpitGroup" } },
+          blast_radius: { type: "array", items: { $ref: "#/components/schemas/BlastRadius" } },
+          scenario_simulator: { type: "array", items: { $ref: "#/components/schemas/ScenarioSimulation" } },
+          validation_badges: { type: "array", items: { $ref: "#/components/schemas/ValidationBadge" } },
+          sla_overview: { $ref: "#/components/schemas/SLAOverview" },
+        },
+      },
+      PostureDashboardEnvelope: {
+        type: "object",
+        required: ["risk", "recent_findings", "pending_actions", "open_findings", "critical_findings", "risk_drivers", "remediation_cockpit", "blast_radius", "scenario_simulator", "validation_badges", "sla_overview", "request_id"],
+        properties: {
+          risk: { $ref: "#/components/schemas/RiskSnapshot" },
+          recent_findings: { type: "array", items: { $ref: "#/components/schemas/Finding" } },
+          pending_actions: { type: "array", items: { $ref: "#/components/schemas/RemediationAction" } },
+          open_findings: { type: "integer" },
+          critical_findings: { type: "integer" },
+          risk_drivers: { $ref: "#/components/schemas/RiskDriverExplainer" },
+          remediation_cockpit: { type: "array", items: { $ref: "#/components/schemas/RemediationCockpitGroup" } },
+          blast_radius: { type: "array", items: { $ref: "#/components/schemas/BlastRadius" } },
+          scenario_simulator: { type: "array", items: { $ref: "#/components/schemas/ScenarioSimulation" } },
+          validation_badges: { type: "array", items: { $ref: "#/components/schemas/ValidationBadge" } },
+          sla_overview: { $ref: "#/components/schemas/SLAOverview" },
+          request_id: { type: "string" },
+        },
+      },
+      FindingListEnvelope: {
+        type: "object",
+        required: ["items", "request_id"],
+        properties: {
+          items: { type: "array", items: { $ref: "#/components/schemas/Finding" } },
+          request_id: { type: "string" },
+        },
+      },
+      ActionListEnvelope: {
+        type: "object",
+        required: ["items", "request_id"],
+        properties: {
+          items: { type: "array", items: { $ref: "#/components/schemas/RemediationAction" } },
+          request_id: { type: "string" },
+        },
+      },
+      RiskEnvelope: {
+        type: "object",
+        required: ["risk", "request_id"],
+        properties: {
+          risk: { $ref: "#/components/schemas/RiskSnapshot" },
+          request_id: { type: "string" },
+        },
+      },
+      RiskHistoryEnvelope: {
+        type: "object",
+        required: ["items", "request_id"],
+        properties: {
+          items: { type: "array", items: { $ref: "#/components/schemas/RiskSnapshot" } },
+          request_id: { type: "string" },
+        },
+      },
+    },
+  };
+}
+
+function buildPostureSpec() {
+  const tenantParams = [
+    { $ref: "#/components/parameters/RequestIdHeader" },
+    { $ref: "#/components/parameters/TenantQuery" },
+    { $ref: "#/components/parameters/TenantHeader" },
+  ];
+
+  return {
+    openapi: "3.0.3",
+    info: {
+      title: "Vecta KMS Security Posture API",
+      version: "1.0.0",
+      description: "OpenAPI contract for posture dashboards, risk drivers, remediation cockpit, blast radius views, and scenario simulation. Use `/svc/posture` through the dashboard proxy or `http://localhost:8220` directly.",
+    },
+    servers: [
+      { url: "/svc/posture", description: "Dashboard reverse proxy" },
+      { url: "http://localhost:8220", description: "Direct posture service" },
+    ],
+    tags: [
+      { name: "Posture Dashboard" },
+      { name: "Posture Findings" },
+      { name: "Posture Actions" },
+    ],
+    paths: {
+      "/posture/dashboard": {
+        get: {
+          tags: ["Posture Dashboard"],
+          operationId: "getPostureDashboard",
+          parameters: tenantParams,
+          responses: {
+            200: { description: "Posture dashboard with risk drivers, remediation cockpit, blast radius, validation badges, and SLA overview.", content: media({ $ref: "#/components/schemas/PostureDashboardEnvelope" }) },
+            500: err("Unhandled posture dashboard failure."),
+          },
+        },
+      },
+      "/posture/findings": {
+        get: {
+          tags: ["Posture Findings"],
+          operationId: "listPostureFindings",
+          parameters: [
+            ...tenantParams,
+            { name: "engine", in: "query", required: false, schema: { type: "string" } },
+            { name: "status", in: "query", required: false, schema: { type: "string" } },
+            { name: "severity", in: "query", required: false, schema: { type: "string" } },
+            { $ref: "#/components/parameters/LimitQuery" },
+          ],
+          responses: {
+            200: { description: "Filtered posture findings.", content: media({ $ref: "#/components/schemas/FindingListEnvelope" }) },
+            400: err("Missing tenant scope."),
+            500: err("Unhandled posture findings failure."),
+          },
+        },
+      },
+      "/posture/actions": {
+        get: {
+          tags: ["Posture Actions"],
+          operationId: "listPostureActions",
+          parameters: [
+            ...tenantParams,
+            { name: "status", in: "query", required: false, schema: { type: "string" } },
+            { name: "action_type", in: "query", required: false, schema: { type: "string" } },
+            { $ref: "#/components/parameters/LimitQuery" },
+          ],
+          responses: {
+            200: { description: "Remediation actions, including approval-required and manual actions.", content: media({ $ref: "#/components/schemas/ActionListEnvelope" }) },
+            400: err("Missing tenant scope."),
+            500: err("Unhandled posture action failure."),
+          },
+        },
+      },
+      "/posture/risk": {
+        get: {
+          tags: ["Posture Dashboard"],
+          operationId: "getLatestPostureRisk",
+          parameters: tenantParams,
+          responses: {
+            200: { description: "Latest risk snapshot.", content: media({ $ref: "#/components/schemas/RiskEnvelope" }) },
+            500: err("Unhandled posture risk failure."),
+          },
+        },
+      },
+      "/posture/risk/history": {
+        get: {
+          tags: ["Posture Dashboard"],
+          operationId: "listPostureRiskHistory",
+          parameters: [...tenantParams, { $ref: "#/components/parameters/LimitQuery" }],
+          responses: {
+            200: { description: "Historical risk snapshots.", content: media({ $ref: "#/components/schemas/RiskHistoryEnvelope" }) },
+            500: err("Unhandled posture history failure."),
+          },
+        },
+      },
+      "/posture/scan": {
+        post: {
+          tags: ["Posture Dashboard"],
+          operationId: "runPostureScan",
+          parameters: [
+            ...tenantParams,
+            { name: "sync_audit", in: "query", required: false, schema: { type: "boolean", default: false } },
+          ],
+          responses: {
+            200: { description: "Manual posture scan result.", content: media({ type: "object", required: ["risk", "tenant_id", "request_id"], properties: { risk: { $ref: "#/components/schemas/RiskSnapshot" }, tenant_id: { type: "string" }, request_id: { type: "string" } } }) },
+            400: err("Missing tenant scope."),
+            500: err("Unhandled posture scan failure."),
+          },
+        },
+      },
+      "/posture/actions/{id}/execute": {
+        post: {
+          tags: ["Posture Actions"],
+          operationId: "executePostureAction",
+          parameters: [...tenantParams, { $ref: "#/components/parameters/IdPath" }],
+          requestBody: {
+            required: false,
+            content: media({
+              type: "object",
+              properties: {
+                actor: { type: "string" },
+                approval_request_id: { type: "string" },
+              },
+            }),
+          },
+          responses: {
+            200: { description: "Action execution accepted.", content: media({ type: "object", required: ["ok", "request_id"], properties: { ok: { type: "boolean" }, request_id: { type: "string" } } }) },
+            400: err("Missing tenant scope or malformed payload."),
+            500: err("Unhandled posture action execution failure."),
+          },
+        },
+      },
+    },
+    components: buildPostureComponents(),
+  };
+}
+
+function buildComplianceComponents() {
+  return {
+    parameters: {
+      RequestIdHeader: headerRequestId,
+      TenantHeader: headerTenant,
+      TenantQuery: queryTenant,
+      LimitQuery: queryLimit,
+      IdPath: pathId,
+    },
+    schemas: {
+      ErrorEnvelope: {
+        type: "object",
+        required: ["error"],
+        properties: {
+          error: {
+            type: "object",
+            required: ["code", "message", "request_id", "tenant_id"],
+            properties: {
+              code: { type: "string" },
+              message: { type: "string" },
+              request_id: { type: "string" },
+              tenant_id: { type: "string" },
+            },
+          },
+        },
+      },
+      AssessmentResult: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          tenant_id: { type: "string" },
+          trigger: { type: "string" },
+          template_id: { type: "string" },
+          template_name: { type: "string" },
+          overall_score: { type: "integer" },
+          framework_scores: intMap,
+          findings: { type: "array", items: objectAny },
+          pqc: objectAny,
+          cert_metrics: { type: "object", additionalProperties: { type: "number" } },
+          posture: objectAny,
+          created_at: isoDateTime,
+        },
+      },
+      AssessmentFindingDelta: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          severity: { type: "string" },
+          current_count: { type: "integer" },
+          previous_count: { type: "integer" },
+          delta: { type: "integer" },
+        },
+      },
+      AssessmentDomainDelta: {
+        type: "object",
+        properties: {
+          domain: { type: "string" },
+          label: { type: "string" },
+          current_score: { type: "integer" },
+          previous_score: { type: "integer" },
+          delta: { type: "integer" },
+          status: { type: "string" },
+        },
+      },
+      AssessmentConnectorDelta: {
+        type: "object",
+        properties: {
+          connector: { type: "string" },
+          label: { type: "string" },
+          current_fails: { type: "integer" },
+          previous_fails: { type: "integer" },
+          delta: { type: "integer" },
+          last_failure_at: isoDateTime,
+          status: { type: "string" },
+        },
+      },
+      AssessmentDelta: {
+        type: "object",
+        properties: {
+          latest_assessment_id: { type: "string" },
+          previous_assessment_id: { type: "string" },
+          latest_score: { type: "integer" },
+          previous_score: { type: "integer" },
+          score_delta: { type: "integer" },
+          summary: { type: "string" },
+          added_findings: { type: "array", items: { $ref: "#/components/schemas/AssessmentFindingDelta" } },
+          resolved_findings: { type: "array", items: { $ref: "#/components/schemas/AssessmentFindingDelta" } },
+          recovered_domains: { type: "array", items: { $ref: "#/components/schemas/AssessmentDomainDelta" } },
+          regressed_domains: { type: "array", items: { $ref: "#/components/schemas/AssessmentDomainDelta" } },
+          new_failing_connectors: { type: "array", items: { $ref: "#/components/schemas/AssessmentConnectorDelta" } },
+          compared_at: isoDateTime,
+        },
+      },
+      ComplianceTemplate: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          tenant_id: { type: "string" },
+          name: { type: "string" },
+          description: { type: "string" },
+          enabled: { type: "boolean" },
+          frameworks: { type: "array", items: objectAny },
+          created_at: isoDateTime,
+          updated_at: isoDateTime,
+        },
+      },
+      AssessmentEnvelope: {
+        type: "object",
+        required: ["assessment", "request_id"],
+        properties: {
+          assessment: { $ref: "#/components/schemas/AssessmentResult" },
+          request_id: { type: "string" },
+        },
+      },
+      AssessmentHistoryEnvelope: {
+        type: "object",
+        required: ["items", "request_id"],
+        properties: {
+          items: { type: "array", items: { $ref: "#/components/schemas/AssessmentResult" } },
+          request_id: { type: "string" },
+        },
+      },
+      AssessmentDeltaEnvelope: {
+        type: "object",
+        required: ["delta", "request_id"],
+        properties: {
+          delta: { $ref: "#/components/schemas/AssessmentDelta" },
+          request_id: { type: "string" },
+        },
+      },
+      ComplianceTemplateListEnvelope: {
+        type: "object",
+        required: ["items", "request_id"],
+        properties: {
+          items: { type: "array", items: { $ref: "#/components/schemas/ComplianceTemplate" } },
+          request_id: { type: "string" },
+        },
+      },
+    },
+  };
+}
+
+function buildComplianceSpec() {
+  const tenantParams = [
+    { $ref: "#/components/parameters/RequestIdHeader" },
+    { $ref: "#/components/parameters/TenantQuery" },
+    { $ref: "#/components/parameters/TenantHeader" },
+  ];
+
+  return {
+    openapi: "3.0.3",
+    info: {
+      title: "Vecta KMS Compliance API",
+      version: "1.0.0",
+      description: "OpenAPI contract for compliance posture, assessment runs, delta views, and template-driven framework scoring. Use `/svc/compliance` through the dashboard proxy or `http://localhost:8110` directly.",
+    },
+    servers: [
+      { url: "/svc/compliance", description: "Dashboard reverse proxy" },
+      { url: "http://localhost:8110", description: "Direct compliance service" },
+    ],
+    tags: [
+      { name: "Compliance Posture" },
+      { name: "Compliance Assessments" },
+      { name: "Compliance Templates" },
+    ],
+    paths: {
+      "/compliance/posture": {
+        get: {
+          tags: ["Compliance Posture"],
+          operationId: "getCompliancePosture",
+          parameters: [
+            ...tenantParams,
+            { name: "refresh", in: "query", required: false, schema: { type: "boolean", default: false } },
+          ],
+          responses: {
+            200: { description: "Current compliance posture snapshot.", content: media({ type: "object", required: ["posture", "request_id"], properties: { posture: objectAny, request_id: { type: "string" } } }) },
+            400: err("Missing tenant scope."),
+            500: err("Unhandled compliance posture failure."),
+          },
+        },
+      },
+      "/compliance/assessment": {
+        get: {
+          tags: ["Compliance Assessments"],
+          operationId: "getLatestComplianceAssessment",
+          parameters: [
+            ...tenantParams,
+            { name: "template_id", in: "query", required: false, schema: { type: "string" } },
+          ],
+          responses: {
+            200: { description: "Latest non-auto assessment.", content: media({ $ref: "#/components/schemas/AssessmentEnvelope" }) },
+            400: err("Missing tenant scope."),
+            404: err("No compliance assessment exists yet."),
+            500: err("Unhandled assessment retrieval failure."),
+          },
+        },
+      },
+      "/compliance/assessment/delta": {
+        get: {
+          tags: ["Compliance Assessments"],
+          operationId: "getComplianceAssessmentDelta",
+          parameters: [
+            ...tenantParams,
+            { name: "template_id", in: "query", required: false, schema: { type: "string" } },
+          ],
+          responses: {
+            200: { description: "Delta between the latest and previous real assessments.", content: media({ $ref: "#/components/schemas/AssessmentDeltaEnvelope" }) },
+            400: err("Missing tenant scope."),
+            404: err("No compliance assessment exists yet."),
+            500: err("Unhandled assessment delta failure."),
+          },
+        },
+      },
+      "/compliance/assessment/run": {
+        post: {
+          tags: ["Compliance Assessments"],
+          operationId: "runComplianceAssessment",
+          parameters: tenantParams,
+          requestBody: {
+            required: false,
+            content: media({
+              type: "object",
+              properties: {
+                template_id: { type: "string" },
+                recompute: { type: "boolean", default: true },
+              },
+            }),
+          },
+          responses: {
+            200: { description: "Manual compliance assessment result.", content: media({ $ref: "#/components/schemas/AssessmentEnvelope" }) },
+            400: err("Missing tenant scope or malformed payload."),
+            500: err("Unhandled assessment run failure."),
+          },
+        },
+      },
+      "/compliance/assessment/history": {
+        get: {
+          tags: ["Compliance Assessments"],
+          operationId: "listComplianceAssessmentHistory",
+          parameters: [
+            ...tenantParams,
+            { name: "template_id", in: "query", required: false, schema: { type: "string" } },
+            { $ref: "#/components/parameters/LimitQuery" },
+          ],
+          responses: {
+            200: { description: "Assessment history for the selected template scope.", content: media({ $ref: "#/components/schemas/AssessmentHistoryEnvelope" }) },
+            400: err("Missing tenant scope."),
+            500: err("Unhandled assessment history failure."),
+          },
+        },
+      },
+      "/compliance/templates": {
+        get: {
+          tags: ["Compliance Templates"],
+          operationId: "listComplianceTemplates",
+          parameters: tenantParams,
+          responses: {
+            200: { description: "Saved compliance templates.", content: media({ $ref: "#/components/schemas/ComplianceTemplateListEnvelope" }) },
+            400: err("Missing tenant scope."),
+            500: err("Unhandled template retrieval failure."),
+          },
+        },
+      },
+    },
+    components: buildComplianceComponents(),
+  };
+}
+
+function buildReportingComponents() {
+  return {
+    parameters: {
+      RequestIdHeader: headerRequestId,
+      TenantHeader: headerTenant,
+      TenantQuery: queryTenant,
+      LimitQuery: queryLimit,
+      IdPath: pathId,
+    },
+    schemas: {
+      ErrorEnvelope: {
+        type: "object",
+        required: ["error"],
+        properties: {
+          error: {
+            type: "object",
+            required: ["code", "message", "request_id", "tenant_id"],
+            properties: {
+              code: { type: "string" },
+              message: { type: "string" },
+              request_id: { type: "string" },
+              tenant_id: { type: "string" },
+            },
+          },
+        },
+      },
+      ReportTemplate: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          description: { type: "string" },
+          formats: { type: "array", items: { type: "string" } },
+        },
+      },
+      ReportJob: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          tenant_id: { type: "string" },
+          template_id: { type: "string" },
+          format: { type: "string" },
+          status: { type: "string" },
+          filters: objectAny,
+          result_content: { type: "string" },
+          result_content_type: { type: "string" },
+          requested_by: { type: "string" },
+          error: { type: "string" },
+          created_at: isoDateTime,
+          updated_at: isoDateTime,
+          completed_at: isoDateTime,
+        },
+      },
+      ReportTemplateListEnvelope: {
+        type: "object",
+        required: ["items", "request_id"],
+        properties: {
+          items: { type: "array", items: { $ref: "#/components/schemas/ReportTemplate" } },
+          request_id: { type: "string" },
+        },
+      },
+      ReportJobEnvelope: {
+        type: "object",
+        required: ["job", "request_id"],
+        properties: {
+          job: { $ref: "#/components/schemas/ReportJob" },
+          request_id: { type: "string" },
+        },
+      },
+      ReportJobListEnvelope: {
+        type: "object",
+        required: ["items", "request_id"],
+        properties: {
+          items: { type: "array", items: { $ref: "#/components/schemas/ReportJob" } },
+          request_id: { type: "string" },
+        },
+      },
+      MTTDEnvelope: {
+        type: "object",
+        required: ["mttd_minutes", "request_id"],
+        properties: {
+          mttd_minutes: { type: "object", additionalProperties: { type: "number" } },
+          request_id: { type: "string" },
+        },
+      },
+      MTTREnvelope: {
+        type: "object",
+        required: ["mttr_minutes", "request_id"],
+        properties: {
+          mttr_minutes: { type: "object", additionalProperties: { type: "number" } },
+          request_id: { type: "string" },
+        },
+      },
+      TopSourcesEnvelope: {
+        type: "object",
+        required: ["sources", "request_id"],
+        properties: {
+          top_actors: { type: "array", items: objectAny },
+          top_ips: { type: "array", items: objectAny },
+          top_services: { type: "array", items: objectAny },
+          sources: objectAny,
+          request_id: { type: "string" },
+        },
+      },
+    },
+  };
+}
+
+function buildReportingSpec() {
+  const tenantParams = [
+    { $ref: "#/components/parameters/RequestIdHeader" },
+    { $ref: "#/components/parameters/TenantQuery" },
+    { $ref: "#/components/parameters/TenantHeader" },
+  ];
+
+  return {
+    openapi: "3.0.3",
+    info: {
+      title: "Vecta KMS Reporting and Alerting API",
+      version: "1.0.0",
+      description: "OpenAPI contract for report templates, evidence-pack generation, report jobs, and alert timing analytics including MTTD. Use `/svc/reporting` through the dashboard proxy or `http://localhost:8140` directly.",
+    },
+    servers: [
+      { url: "/svc/reporting", description: "Dashboard reverse proxy" },
+      { url: "http://localhost:8140", description: "Direct reporting service" },
+    ],
+    tags: [
+      { name: "Reporting" },
+      { name: "Reporting Stats" },
+    ],
+    paths: {
+      "/reports/templates": {
+        get: {
+          tags: ["Reporting"],
+          operationId: "listReportTemplates",
+          parameters: [{ $ref: "#/components/parameters/RequestIdHeader" }],
+          responses: {
+            200: { description: "Available report templates, including Evidence Pack.", content: media({ $ref: "#/components/schemas/ReportTemplateListEnvelope" }) },
+            500: err("Unhandled template retrieval failure."),
+          },
+        },
+      },
+      "/reports/generate": {
+        post: {
+          tags: ["Reporting"],
+          operationId: "generateReport",
+          parameters: tenantParams,
+          requestBody: {
+            required: true,
+            content: media({
+              type: "object",
+              required: ["tenant_id", "template_id"],
+              properties: {
+                tenant_id: { type: "string", example: "root" },
+                template_id: { type: "string", enum: ["key_generation", "key_rotation", "kms_operations", "hyok_activity", "byok_activity", "certificate_lifecycle", "compliance_audit", "posture_summary", "evidence_pack", "alert_summary", "custom"] },
+                format: { type: "string", enum: ["pdf", "csv", "json"], default: "pdf" },
+                requested_by: { type: "string" },
+                filters: objectAny,
+              },
+            }),
+          },
+          responses: {
+            202: { description: "Report generation queued.", content: media({ $ref: "#/components/schemas/ReportJobEnvelope" }) },
+            400: err("Missing tenant scope or malformed payload."),
+            500: err("Unhandled report generation failure."),
+          },
+        },
+      },
+      "/reports/jobs": {
+        get: {
+          tags: ["Reporting"],
+          operationId: "listReportJobs",
+          parameters: [...tenantParams, { $ref: "#/components/parameters/LimitQuery" }],
+          responses: {
+            200: { description: "Report jobs for the current tenant.", content: media({ $ref: "#/components/schemas/ReportJobListEnvelope" }) },
+            400: err("Missing tenant scope."),
+            500: err("Unhandled report job listing failure."),
+          },
+        },
+      },
+      "/reports/jobs/{id}": {
+        get: {
+          tags: ["Reporting"],
+          operationId: "getReportJob",
+          parameters: [...tenantParams, { $ref: "#/components/parameters/IdPath" }],
+          responses: {
+            200: { description: "Single report job state.", content: media({ $ref: "#/components/schemas/ReportJobEnvelope" }) },
+            400: err("Missing tenant scope."),
+            404: err("Report job not found."),
+            500: err("Unhandled report job retrieval failure."),
+          },
+        },
+      },
+      "/reports/jobs/{id}/download": {
+        get: {
+          tags: ["Reporting"],
+          operationId: "downloadReportJob",
+          parameters: [...tenantParams, { $ref: "#/components/parameters/IdPath" }],
+          responses: {
+            200: { description: "Completed report content.", content: media({ type: "object", required: ["content", "content_type", "template_id", "generated_at", "report_job_id", "request_id"], properties: { content: { type: "string" }, content_type: { type: "string" }, template_id: { type: "string" }, generated_at: isoDateTime, report_job_id: { type: "string" }, request_id: { type: "string" } } }) },
+            400: err("Missing tenant scope."),
+            404: err("Report job not found."),
+            409: err("Report job is not completed yet."),
+            500: err("Unhandled report download failure."),
+          },
+        },
+      },
+      "/alerts/stats/mttd": {
+        get: {
+          tags: ["Reporting Stats"],
+          operationId: "getMTTDStats",
+          parameters: tenantParams,
+          responses: {
+            200: { description: "Mean time to detect by severity.", content: media({ $ref: "#/components/schemas/MTTDEnvelope" }) },
+            400: err("Missing tenant scope."),
+            500: err("Unhandled MTTD retrieval failure."),
+          },
+        },
+      },
+      "/alerts/stats/mttr": {
+        get: {
+          tags: ["Reporting Stats"],
+          operationId: "getMTTRStats",
+          parameters: tenantParams,
+          responses: {
+            200: { description: "Mean time to resolve by severity.", content: media({ $ref: "#/components/schemas/MTTREnvelope" }) },
+            400: err("Missing tenant scope."),
+            500: err("Unhandled MTTR retrieval failure."),
+          },
+        },
+      },
+      "/alerts/stats/top-sources": {
+        get: {
+          tags: ["Reporting Stats"],
+          operationId: "getTopAlertSources",
+          parameters: tenantParams,
+          responses: {
+            200: { description: "Top alert-producing actors, IPs, and services.", content: media({ $ref: "#/components/schemas/TopSourcesEnvelope" }) },
+            400: err("Missing tenant scope."),
+            500: err("Unhandled top-source retrieval failure."),
+          },
+        },
+      },
+    },
+    components: buildReportingComponents(),
+  };
+}
+
 async function writeSpec(name, spec) {
   const yaml = YAML.stringify(spec);
   const json = `${JSON.stringify(spec, null, 2)}\n`;
@@ -950,11 +1852,17 @@ async function writeViewerPages() {
   await fs.mkdir(publicOutDir, { recursive: true });
   await fs.writeFile(path.join(publicOutDir, "ai.html"), viewerHTML("Vecta KMS AI Service OpenAPI", "ai.openapi.json"), "utf8");
   await fs.writeFile(path.join(publicOutDir, "sbom.html"), viewerHTML("Vecta KMS SBOM / CBOM OpenAPI", "sbom.openapi.json"), "utf8");
+  await fs.writeFile(path.join(publicOutDir, "posture.html"), viewerHTML("Vecta KMS Security Posture OpenAPI", "posture.openapi.json"), "utf8");
+  await fs.writeFile(path.join(publicOutDir, "compliance.html"), viewerHTML("Vecta KMS Compliance OpenAPI", "compliance.openapi.json"), "utf8");
+  await fs.writeFile(path.join(publicOutDir, "reporting.html"), viewerHTML("Vecta KMS Reporting OpenAPI", "reporting.openapi.json"), "utf8");
 }
 
 async function main() {
   await writeSpec("ai", buildAISpec());
   await writeSpec("sbom", buildSBOMSpec());
+  await writeSpec("posture", buildPostureSpec());
+  await writeSpec("compliance", buildComplianceSpec());
+  await writeSpec("reporting", buildReportingSpec());
   await copySwaggerUIAssets();
   await writeViewerPages();
   console.log(`Generated OpenAPI specs -> ${docsOutDir} and ${publicOutDir}`);

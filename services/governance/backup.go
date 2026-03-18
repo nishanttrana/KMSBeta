@@ -48,21 +48,30 @@ type backupSnapshotPayload struct {
 	Scope           string                     `json:"scope"`
 	RequestTenantID string                     `json:"request_tenant_id"`
 	TargetTenantID  string                     `json:"target_tenant_id,omitempty"`
+	Coverage        backupCoverageSummary      `json:"coverage"`
 	TableRowCounts  map[string]int64           `json:"table_row_counts"`
 	Tables          map[string]json.RawMessage `json:"tables"`
 }
 
 type backupArtifactEnvelope struct {
-	Version          string `json:"version"`
-	Encryption       string `json:"encryption"`
-	BackupFormat     string `json:"backup_format"`
-	Scope            string `json:"scope"`
-	RequestTenantID  string `json:"request_tenant_id"`
-	TargetTenantID   string `json:"target_tenant_id,omitempty"`
-	CapturedAt       string `json:"captured_at,omitempty"`
-	CiphertextB64    string `json:"ciphertext_base64"`
-	NonceB64         string `json:"nonce_base64"`
-	CiphertextSHA256 string `json:"ciphertext_sha256,omitempty"`
+	Version          string                `json:"version"`
+	Encryption       string                `json:"encryption"`
+	BackupFormat     string                `json:"backup_format"`
+	Scope            string                `json:"scope"`
+	RequestTenantID  string                `json:"request_tenant_id"`
+	TargetTenantID   string                `json:"target_tenant_id,omitempty"`
+	CapturedAt       string                `json:"captured_at,omitempty"`
+	Coverage         backupCoverageSummary `json:"coverage"`
+	CiphertextB64    string                `json:"ciphertext_base64"`
+	NonceB64         string                `json:"nonce_base64"`
+	CiphertextSHA256 string                `json:"ciphertext_sha256,omitempty"`
+}
+
+type backupCoverageSummary struct {
+	IncludedCapabilities []string `json:"included_capabilities"`
+	IncludedTables       []string `json:"included_tables,omitempty"`
+	ExcludedCategories   []string `json:"excluded_categories,omitempty"`
+	Notes                []string `json:"notes,omitempty"`
 }
 
 func normalizeBackupScope(raw string) string {
@@ -105,7 +114,7 @@ func (s *Service) CreateBackup(ctx context.Context, in CreateBackupInput) (Backu
 		bindToHSM = *in.BindToHSM
 	}
 
-	payload, rowCountTotal, tableCount, err := s.captureBackupPayload(ctx, store, in.TenantID, scope, targetTenantID)
+	payload, rowCountTotal, tableCount, coverage, err := s.captureBackupPayload(ctx, store, in.TenantID, scope, targetTenantID)
 	if err != nil {
 		return BackupJob{}, err
 	}
@@ -136,7 +145,7 @@ func (s *Service) CreateBackup(ctx context.Context, in CreateBackupInput) (Backu
 	}
 	binding := store.loadHSMBinding(ctx, hsmTenantID)
 	hsmBound := bindToHSM && binding.Enabled
-	keyPackage, keyPackageRaw, err := buildBackupKeyPackage(backupKey, hsmBound, binding, in.TenantID, targetTenantID)
+	keyPackage, keyPackageRaw, err := buildBackupKeyPackage(backupKey, hsmBound, binding, in.TenantID, targetTenantID, coverage)
 	if err != nil {
 		return BackupJob{}, err
 	}
@@ -276,6 +285,7 @@ func (s *Service) GetBackupArtifactDownload(ctx context.Context, tenantID string
 		RequestTenantID:  item.TenantID,
 		TargetTenantID:   item.TargetTenantID,
 		CapturedAt:       item.CompletedAt.UTC().Format(time.RFC3339Nano),
+		Coverage:         backupCoverageFromJob(item),
 		CiphertextB64:    base64.StdEncoding.EncodeToString(item.ArtifactCiphertext),
 		NonceB64:         base64.StdEncoding.EncodeToString(item.ArtifactNonce),
 		CiphertextSHA256: item.CiphertextSHA256,
@@ -293,6 +303,7 @@ func (s *Service) GetBackupArtifactDownload(ctx context.Context, tenantID string
 		"backup_format":        item.BackupFormat,
 		"encryption_algorithm": item.EncryptionAlgorithm,
 		"hsm_bound":            item.HSMBound,
+		"coverage":             envelope.Coverage,
 	}, nil
 }
 
@@ -578,10 +589,10 @@ func (s *Service) resolveRestoreBackupKey(ctx context.Context, store *SQLStore, 
 	}
 }
 
-func (s *Service) captureBackupPayload(ctx context.Context, store *SQLStore, requestTenantID string, scope string, targetTenantID string) ([]byte, int64, int, error) {
+func (s *Service) captureBackupPayload(ctx context.Context, store *SQLStore, requestTenantID string, scope string, targetTenantID string) ([]byte, int64, int, backupCoverageSummary, error) {
 	tables, err := store.listBackupTables(ctx)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, backupCoverageSummary{}, err
 	}
 	sort.Strings(tables)
 	payload := backupSnapshotPayload{
@@ -590,10 +601,12 @@ func (s *Service) captureBackupPayload(ctx context.Context, store *SQLStore, req
 		Scope:           scope,
 		RequestTenantID: requestTenantID,
 		TargetTenantID:  targetTenantID,
+		Coverage:        backupCoverageSummary{},
 		TableRowCounts:  map[string]int64{},
 		Tables:          map[string]json.RawMessage{},
 	}
 	var rowCountTotal int64
+	includedTables := make([]string, 0, len(tables))
 	for _, table := range tables {
 		if table == "" {
 			continue
@@ -603,39 +616,41 @@ func (s *Service) captureBackupPayload(ctx context.Context, store *SQLStore, req
 		}
 		hasTenantID, err := store.tableHasTenantIDColumn(ctx, table)
 		if err != nil {
-			return nil, 0, 0, err
+			return nil, 0, 0, backupCoverageSummary{}, err
 		}
 		if scope == backupScopeTenant && !hasTenantID {
 			continue
 		}
 		rowsJSON, rowCount, err := store.dumpTableRows(ctx, table, scope, targetTenantID, hasTenantID)
 		if err != nil {
-			return nil, 0, 0, err
+			return nil, 0, 0, backupCoverageSummary{}, err
 		}
 		if rowCount == 0 {
 			continue
 		}
+		includedTables = append(includedTables, table)
 		payload.Tables[table] = rowsJSON
 		payload.TableRowCounts[table] = rowCount
 		rowCountTotal += rowCount
 	}
+	payload.Coverage = buildBackupCoverageSummary(includedTables)
 	raw, err := json.Marshal(payload)
 	if err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, backupCoverageSummary{}, err
 	}
 	var compressed bytes.Buffer
 	gz := gzip.NewWriter(&compressed)
 	if _, err := gz.Write(raw); err != nil {
 		_ = gz.Close()
-		return nil, 0, 0, err
+		return nil, 0, 0, backupCoverageSummary{}, err
 	}
 	if err := gz.Close(); err != nil {
-		return nil, 0, 0, err
+		return nil, 0, 0, backupCoverageSummary{}, err
 	}
-	return compressed.Bytes(), rowCountTotal, len(payload.Tables), nil
+	return compressed.Bytes(), rowCountTotal, len(payload.Tables), payload.Coverage, nil
 }
 
-func buildBackupKeyPackage(backupKey []byte, hsmBound bool, binding backupHSMBinding, requestTenantID string, targetTenantID string) (map[string]interface{}, []byte, error) {
+func buildBackupKeyPackage(backupKey []byte, hsmBound bool, binding backupHSMBinding, requestTenantID string, targetTenantID string, coverage backupCoverageSummary) (map[string]interface{}, []byte, error) {
 	if hsmBound {
 		secret := strings.TrimSpace(os.Getenv("BACKUP_HSM_WRAP_SECRET"))
 		if secret == "" {
@@ -665,7 +680,8 @@ func buildBackupKeyPackage(backupKey []byte, hsmBound bool, binding backupHSMBin
 				"token_label":      binding.TokenLabel,
 				"library_path_sha": sha256Hex(binding.LibraryPath),
 			},
-			"note": "Backup key is wrapped using local HSM binding metadata. Keep this package with backup artifact for restore.",
+			"backup_coverage": coverage,
+			"note":            "Backup key is wrapped using local HSM binding metadata. Keep this package with backup artifact for restore.",
 		}
 		raw, err := json.Marshal(pkg)
 		if err != nil {
@@ -681,6 +697,7 @@ func buildBackupKeyPackage(backupKey []byte, hsmBound bool, binding backupHSMBin
 		"target_tenant_id":  targetTenantID,
 		"backup_key_b64":    base64.StdEncoding.EncodeToString(backupKey),
 		"backup_key_sha256": sha256Hex(string(backupKey)),
+		"backup_coverage":   coverage,
 		"note":              "Store this key package separately from the encrypted backup artifact.",
 	}
 	raw, err := json.Marshal(pkg)
@@ -705,6 +722,9 @@ func sanitizeBackupJobSummary(job *BackupJob) {
 		summary := map[string]interface{}{}
 		if mode != "" {
 			summary["mode"] = mode
+		}
+		if coverage, ok := job.KeyPackage["backup_coverage"].(map[string]interface{}); ok && len(coverage) > 0 {
+			summary["backup_coverage"] = coverage
 		}
 		if hsmBinding, ok := job.KeyPackage["hsm_binding"].(map[string]interface{}); ok {
 			summary["hsm_binding"] = hsmBinding
@@ -820,18 +840,26 @@ WHERE tenant_id=$1 AND id=$2
 }
 
 func (s *SQLStore) listBackupJobs(ctx context.Context, tenantID string, scope string, status string, limit int) ([]BackupJob, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
+	query := `
 SELECT id, tenant_id, scope, COALESCE(target_tenant_id,''), status, backup_format, encryption_algorithm,
        ciphertext_sha256, artifact_size_bytes, row_count_total, table_count, hsm_bound,
        COALESCE(hsm_provider_name,''), COALESCE(hsm_slot_id,''), COALESCE(hsm_partition_label,''), COALESCE(hsm_token_label,''), COALESCE(hsm_binding_fingerprint,''),
        key_package_json::text, COALESCE(created_by,''), created_at, completed_at, COALESCE(failure_reason,'')
 FROM governance_backup_jobs
 WHERE tenant_id=$1
-  AND ($2='' OR scope=$2)
-  AND ($3='' OR status=$3)
-ORDER BY created_at DESC
-LIMIT $4
-`, tenantID, scope, status, limit)
+`
+	args := []interface{}{tenantID}
+	if scope != "" {
+		args = append(args, scope)
+		query += fmt.Sprintf("  AND scope=$%d\n", len(args))
+	}
+	if status != "" {
+		args = append(args, status)
+		query += fmt.Sprintf("  AND status=$%d\n", len(args))
+	}
+	args = append(args, limit)
+	query += fmt.Sprintf("ORDER BY created_at DESC\nLIMIT $%d\n", len(args))
+	rows, err := s.db.SQL().QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1115,6 +1143,121 @@ func isExcludedFromBackupTable(tableName string) bool {
 	}
 	if strings.Contains(name, "_log") || strings.HasSuffix(name, "log") || strings.Contains(name, "logs") {
 		return true
+	}
+	return false
+}
+
+func buildBackupCoverageSummary(tables []string) backupCoverageSummary {
+	seenTables := map[string]struct{}{}
+	capabilities := map[string]struct{}{}
+	includedTables := make([]string, 0, len(tables))
+	addCapability := func(value string) {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			capabilities[value] = struct{}{}
+		}
+	}
+	for _, table := range tables {
+		table = strings.ToLower(strings.TrimSpace(table))
+		if table == "" {
+			continue
+		}
+		if _, exists := seenTables[table]; exists {
+			continue
+		}
+		seenTables[table] = struct{}{}
+		includedTables = append(includedTables, table)
+		switch {
+		case strings.HasPrefix(table, "posture_"):
+			addCapability("security_posture_management")
+		case strings.HasPrefix(table, "compliance_"):
+			addCapability("compliance_assessments")
+		case strings.HasPrefix(table, "reporting_"):
+			addCapability("reporting_jobs_and_incidents")
+		case strings.HasPrefix(table, "governance_"):
+			addCapability("governance_and_approvals")
+		case strings.HasPrefix(table, "cert") || strings.Contains(table, "_cert"):
+			addCapability("certificate_pki")
+		case strings.HasPrefix(table, "key") || strings.Contains(table, "_key"):
+			addCapability("key_management")
+		case strings.HasPrefix(table, "policy_") || table == "policies" || table == "policy_versions" || table == "policy_evaluations":
+			addCapability("policy_controls")
+		}
+	}
+	capabilityList := make([]string, 0, len(capabilities))
+	for capability := range capabilities {
+		capabilityList = append(capabilityList, capability)
+	}
+	sort.Strings(capabilityList)
+	sort.Strings(includedTables)
+	notes := []string{}
+	if containsString(capabilityList, "security_posture_management") || containsString(capabilityList, "compliance_assessments") || containsString(capabilityList, "reporting_jobs_and_incidents") {
+		notes = append(notes, "Posture findings, compliance assessments, report jobs, incidents, and evidence-pack inputs are preserved when their service tables are present.")
+	}
+	notes = append(notes, "Audit event partitions, alert runtime tables, and operational log tables remain excluded from encrypted backup payloads.")
+	return backupCoverageSummary{
+		IncludedCapabilities: capabilityList,
+		IncludedTables:       includedTables,
+		ExcludedCategories: []string{
+			"audit_event_partitions",
+			"alert_runtime_tables",
+			"operational_log_tables",
+			"backup_job_catalog",
+		},
+		Notes: notes,
+	}
+}
+
+func backupCoverageFromJob(job BackupJob) backupCoverageSummary {
+	var summary backupCoverageSummary
+	if len(job.KeyPackageRaw) > 0 {
+		var parsed map[string]interface{}
+		if err := json.Unmarshal(job.KeyPackageRaw, &parsed); err == nil {
+			if raw, ok := parsed["backup_coverage"]; ok {
+				summary = parseBackupCoverageSummary(raw)
+			}
+		}
+	}
+	if len(summary.IncludedCapabilities) == 0 && len(summary.IncludedTables) == 0 && len(job.KeyPackage) > 0 {
+		if raw, ok := job.KeyPackage["backup_coverage"]; ok {
+			summary = parseBackupCoverageSummary(raw)
+		}
+	}
+	return summary
+}
+
+func parseBackupCoverageSummary(raw interface{}) backupCoverageSummary {
+	coverageMap, ok := raw.(map[string]interface{})
+	if !ok {
+		return backupCoverageSummary{}
+	}
+	return backupCoverageSummary{
+		IncludedCapabilities: interfaceStrings(coverageMap["included_capabilities"]),
+		IncludedTables:       interfaceStrings(coverageMap["included_tables"]),
+		ExcludedCategories:   interfaceStrings(coverageMap["excluded_categories"]),
+		Notes:                interfaceStrings(coverageMap["notes"]),
+	}
+}
+
+func interfaceStrings(raw interface{}) []string {
+	items, ok := raw.([]interface{})
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		if value := strings.TrimSpace(fmt.Sprintf("%v", item)); value != "" {
+			out = append(out, value)
+		}
+	}
+	return out
+}
+
+func containsString(items []string, expected string) bool {
+	for _, item := range items {
+		if strings.EqualFold(strings.TrimSpace(item), strings.TrimSpace(expected)) {
+			return true
+		}
 	}
 	return false
 }

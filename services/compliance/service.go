@@ -259,6 +259,17 @@ func (s *Service) GetAssessmentDelta(ctx context.Context, tenantID string, templ
 		Summary:              "This is the first assessment for the selected template.",
 	}
 	if len(real) < 2 {
+		_ = s.publishAudit(ctx, "audit.compliance.assessment_delta_viewed", tenantID, map[string]interface{}{
+			"template_id":            templateID,
+			"latest_assessment_id":   out.LatestAssessmentID,
+			"previous_assessment_id": out.PreviousAssessmentID,
+			"score_delta":            out.ScoreDelta,
+			"added_findings":         len(out.AddedFindings),
+			"resolved_findings":      len(out.ResolvedFindings),
+			"recovered_domains":      len(out.RecoveredDomains),
+			"regressed_domains":      len(out.RegressedDomains),
+			"new_failing_connectors": len(out.NewFailingConnectors),
+		})
 		return out, nil
 	}
 	previous := real[1]
@@ -276,6 +287,17 @@ func (s *Service) GetAssessmentDelta(ctx context.Context, tenantID string, templ
 	default:
 		out.Summary = "Overall posture score is unchanged since the previous scan."
 	}
+	_ = s.publishAudit(ctx, "audit.compliance.assessment_delta_viewed", tenantID, map[string]interface{}{
+		"template_id":            templateID,
+		"latest_assessment_id":   out.LatestAssessmentID,
+		"previous_assessment_id": out.PreviousAssessmentID,
+		"score_delta":            out.ScoreDelta,
+		"added_findings":         len(out.AddedFindings),
+		"resolved_findings":      len(out.ResolvedFindings),
+		"recovered_domains":      len(out.RecoveredDomains),
+		"regressed_domains":      len(out.RegressedDomains),
+		"new_failing_connectors": len(out.NewFailingConnectors),
+	})
 	return out, nil
 }
 

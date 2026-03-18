@@ -1146,7 +1146,7 @@ func (s *Service) Dashboard(ctx context.Context, tenantID string) (PostureDashbo
 			}
 		}
 	}
-	return PostureDashboard{
+	out := PostureDashboard{
 		Risk:               risk,
 		RecentFindings:     enrichedFindings,
 		PendingActions:     enrichedActions,
@@ -1158,7 +1158,16 @@ func (s *Service) Dashboard(ctx context.Context, tenantID string) (PostureDashbo
 		ScenarioSimulator:  buildScenarioSimulator(risk, enrichedActions, enrichedFindings),
 		ValidationBadges:   buildValidationBadges(risk, events),
 		SLAOverview:        buildSLAOverview(enrichedFindings),
-	}, nil
+	}
+	_ = s.publish(ctx, "audit.posture.dashboard_viewed", tenantID, map[string]interface{}{
+		"risk_24h":          out.Risk.Risk24h,
+		"open_findings":     out.OpenFindings,
+		"critical_findings": out.CriticalFindings,
+		"risk_driver_count": len(out.RiskDrivers.Drivers),
+		"blast_radius":      len(out.BlastRadius),
+		"action_count":      len(out.PendingActions),
+	})
+	return out, nil
 }
 
 func (s *Service) fetchRecentAuditEvents(ctx context.Context, tenantID string, limit int) []map[string]interface{} {

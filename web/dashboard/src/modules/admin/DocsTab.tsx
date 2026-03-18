@@ -757,6 +757,7 @@ const SectionApiAudit = () => (
   <div>
     <div style={S.h1}>API: Audit & Alerting</div>
     <P>Service: kms-audit | Port: 8070 (HTTP) / 18070 (gRPC)</P>
+    <P>The audit stream now records posture/compliance/reporting interactions for the newer operational views too. Operators will see subjects such as <IC>audit.posture.dashboard_viewed</IC>, <IC>audit.compliance.assessment_delta_viewed</IC>, <IC>audit.reporting.evidence_pack_requested</IC>, and <IC>audit.reporting.mttd_stats_viewed</IC> in the same tamper-evident audit timeline.</P>
     <Collapse title="Audit Events" defaultOpen>
       <EndpointTable rows={[
         ["POST", "/audit/publish", "Publish audit event (internal)"],
@@ -787,6 +788,14 @@ const SectionApiAudit = () => (
         ["GET", "/alerts/channels", "Get alert channels (SMTP, Slack, webhook)"],
         ["PUT", "/alerts/channels", "Update alert channels"],
         ["POST", "/alerts/channels/test", "Test alert channel delivery"],
+      ]} />
+    </Collapse>
+    <Collapse title="New Posture / Compliance / Reporting Subjects">
+      <EndpointTable rows={[
+        ["AUDIT", "audit.posture.dashboard_viewed", "Recorded when the enriched posture dashboard is fetched, including risk-driver and cockpit counts"],
+        ["AUDIT", "audit.compliance.assessment_delta_viewed", "Recorded when the operator opens the 'What Changed Since Last Scan' delta view"],
+        ["AUDIT", "audit.reporting.evidence_pack_requested", "Recorded when an Evidence Pack export is requested"],
+        ["AUDIT", "audit.reporting.mttd_stats_viewed", "Recorded when MTTD timing analytics are fetched"],
       ]} />
     </Collapse>
   </div>
@@ -1536,12 +1545,16 @@ const SectionApiCompliance = () => (
 
     <H2>How It Works</H2>
     <P>1. Select a compliance framework (or run all). 2. The assessment engine queries key metadata, audit logs, policy configs, and access controls. 3. Each framework control is evaluated as Pass, Fail, or Warning. 4. A compliance score (0-100%) is computed. 5. Control gaps are listed with specific remediation steps. 6. Results are stored in assessment history for trend tracking.</P>
+    <P>The latest implementation also exposes a dedicated delta read model for the UI's "What Changed Since Last Scan" panel. That response compares the most recent two real assessments and highlights newly added findings, resolved findings, recovered or regressed domains, and newly failing connectors.</P>
 
     <Collapse title="Compliance Endpoints" defaultOpen>
       <EndpointTable rows={[
         ["GET", "/compliance/posture", "Get overall compliance posture score and breakdown by framework"],
+        ["GET", "/compliance/assessment", "Get the latest completed non-auto assessment for the selected template scope"],
+        ["GET", "/compliance/assessment/delta", "Compare the latest and previous assessments to drive the delta panel in the Compliance tab"],
         ["POST", "/compliance/assessment/run", "Run a compliance assessment (specify framework or 'all')"],
         ["GET", "/compliance/assessment/history", "View past assessment results and score trends over time"],
+        ["GET", "/compliance/templates", "List saved compliance templates used for executive or operations scoring views"],
         ["GET", "/compliance/frameworks", "List available compliance frameworks with descriptions"],
         ["GET", "/compliance/frameworks/{id}/gaps", "Get control gaps for a specific framework with remediation guidance"],
         ["GET", "/compliance/keys/hygiene", "Key hygiene report: rotation compliance, algorithm strength, expiry status"],
@@ -1657,17 +1670,18 @@ const SectionApiPosture = () => (
     <P>- Automated remediation: Execute fix actions directly from findings (e.g., "rotate this key", "renew this certificate", "resync this cloud binding")</P>
     <P>- Audit preparation: Demonstrate to auditors that security posture is continuously monitored and tracked</P>
     <P>- Incident response: When investigating a security event, quickly assess which systems might be affected</P>
+    <P>The enriched dashboard payload also supports two operator styles directly from the API: an executive read with score/trend/top drivers, and an operations read with findings, remediation groups, blast radius, validation badges, and scenario simulation.</P>
 
     <Collapse title="Posture Endpoints" defaultOpen>
       <EndpointTable rows={[
-        ["GET", "/posture/dashboard", "Get posture dashboard: overall score, domain breakdown, recent findings"],
+        ["GET", "/posture/dashboard", "Get posture dashboard with risk drivers, remediation cockpit groups, blast radius hotspots, validation badges, scenario simulator, and SLA overview"],
         ["GET", "/posture/health", "Get security health status for all integrated systems"],
         ["GET", "/posture/risk", "Get risk metrics by domain (BYOK, HYOK, EKM, KMIP, BitLocker, SDK)"],
         ["GET", "/posture/risk/history", "Risk score history over time for trend analysis"],
-        ["GET", "/posture/findings", "List security findings with severity, affected resource, and remediation"],
+        ["GET", "/posture/findings", "List security findings enriched with risk-driver explainers and blast-radius metadata"],
         ["PUT", "/posture/findings/{id}/status", "Update finding status (open, in_progress, resolved, accepted)"],
-        ["GET", "/posture/actions", "List available remediation actions for open findings"],
-        ["POST", "/posture/actions/{id}/execute", "Execute a remediation action (e.g., rotate key, renew cert)"],
+        ["GET", "/posture/actions", "List remediation actions grouped in the UI as safe auto-fix, approval-required, and manual, including rollback hints and impact estimates"],
+        ["POST", "/posture/actions/{id}/execute", "Execute a remediation action (e.g., rotate key, renew cert) once safety or approval requirements are met"],
         ["POST", "/posture/scan", "Trigger a manual posture scan across all domains"],
       ]} />
     </Collapse>
@@ -1699,6 +1713,7 @@ const SectionApiReporting = () => (
   <div>
     <div style={S.h1}>API: Reporting & Alerting</div>
     <P>Service: kms-reporting | Port: 8140 (HTTP) / 18140 (gRPC) | Profile: reporting_alerting</P>
+    <P>Reporting now backs the Compliance evidence-export flow as well. The <IC>evidence_pack</IC> template bundles posture findings, remediation actions, approval-required actions, incidents, and timing metrics into one exportable artifact.</P>
     <Collapse title="Alerts" defaultOpen>
       <EndpointTable rows={[
         ["GET", "/alerts", "List alerts (filterable by severity, status)"],
@@ -1706,13 +1721,16 @@ const SectionApiReporting = () => (
         ["PUT", "/alerts/", "Update alert (acknowledge, resolve)"],
         ["POST", "/alerts/bulk/acknowledge", "Bulk acknowledge alerts"],
         ["GET", "/alerts/stats", "Alert statistics"],
+        ["GET", "/alerts/stats/mttd", "Mean time to detect by severity, used by the Compliance timing widgets"],
         ["GET", "/alerts/stats/mttr", "Mean time to resolution"],
+        ["GET", "/alerts/stats/top-sources", "Top actors, IPs, and services contributing to alert volume"],
       ]} />
     </Collapse>
     <Collapse title="Reports">
       <EndpointTable rows={[
-        ["GET", "/reports/templates", "List report templates"],
-        ["POST", "/reports/generate", "Generate report from template"],
+        ["GET", "/reports/templates", "List report templates, including posture_summary, compliance_audit, and evidence_pack"],
+        ["POST", "/reports/generate", "Generate report from template; use evidence_pack for one-click audit exports"],
+        ["GET", "/reports/jobs", "List generated report jobs and their status"],
         ["GET", "/reports/jobs/{id}/download", "Download generated report"],
         ["POST", "/reports/scheduled", "Create scheduled report"],
       ]} />
@@ -2449,6 +2467,7 @@ const SectionConfigBackup = () => (
     <div style={S.h1}>Configuration: Backup & Restore</div>
     <H2>Backup Features</H2>
     <P>Scope: system-wide or tenant-specific. Format: JSON GZip compressed with AES-256-GCM encryption. Artifacts use .vbk extension with separate .key.json key package.</P>
+    <P>Backups now carry explicit <IC>backup_coverage</IC> metadata in the artifact/key package so operators can see which capability classes were preserved. When the related service tables exist, posture findings, compliance assessments, reporting jobs, incidents, and evidence-pack source data are included in the encrypted snapshot.</P>
     <H2>Creating a Backup</H2>
     <Code>{`# Via API
 curl -X POST http://localhost:8050/governance/backups \\
@@ -2475,7 +2494,7 @@ curl -O http://localhost:8050/governance/backups/{id}/key \\
       ["BACKUP_HSM_PARTITION_LABEL", "(empty)", "HSM partition for backup key"],
     ]} />
     <H2>Excluded Tables</H2>
-    <P>Backup excludes: governance_backup_jobs, audit logs, alert tables, and operational log tables. These are regenerated or are point-in-time data.</P>
+    <P>Backup excludes: governance_backup_jobs, audit logs, alert runtime tables, and operational log tables. These are regenerated or are point-in-time data. Reporting incidents and report jobs remain included; live alert feeds and audit partitions do not.</P>
   </div>
 );
 
@@ -2864,38 +2883,63 @@ CKA_ID              = <matching key ID for association>`}</Code>
 
 /* ───────── SECTION MAP ───────── */
 const SectionApiOpenAPI = () => {
-  const [selected, setSelected] = useState<"ai" | "sbom">("ai");
-  const current = selected === "ai"
-    ? {
-        title: "AI Service",
-        description: "AI configuration, provider authentication, MCP compatibility, and assistant workflows.",
-        viewer: "/openapi/ai.html",
-        yaml: "/openapi/ai.openapi.yaml",
-        json: "/openapi/ai.openapi.json",
-      }
-    : {
-        title: "SBOM / CBOM Service",
-        description: "SBOM generation, OSV and Trivy correlation, manual offline advisories, exports, and CBOM PQC readiness.",
-        viewer: "/openapi/sbom.html",
-        yaml: "/openapi/sbom.openapi.yaml",
-        json: "/openapi/sbom.openapi.json",
-      };
+  const [selected, setSelected] = useState<"ai" | "sbom" | "posture" | "compliance" | "reporting">("ai");
+  const current = {
+    ai: {
+      title: "AI Service",
+      description: "AI configuration, provider authentication, MCP compatibility, and assistant workflows.",
+      viewer: "/openapi/ai.html",
+      yaml: "/openapi/ai.openapi.yaml",
+      json: "/openapi/ai.openapi.json",
+    },
+    sbom: {
+      title: "SBOM / CBOM Service",
+      description: "SBOM generation, OSV and Trivy correlation, manual offline advisories, exports, and CBOM PQC readiness.",
+      viewer: "/openapi/sbom.html",
+      yaml: "/openapi/sbom.openapi.yaml",
+      json: "/openapi/sbom.openapi.json",
+    },
+    posture: {
+      title: "Security Posture Service",
+      description: "Posture dashboard, risk drivers, remediation cockpit, blast radius, scenario simulation, and action execution.",
+      viewer: "/openapi/posture.html",
+      yaml: "/openapi/posture.openapi.yaml",
+      json: "/openapi/posture.openapi.json",
+    },
+    compliance: {
+      title: "Compliance Service",
+      description: "Compliance posture, assessment runs/history, delta views, and template-backed scoring workflows.",
+      viewer: "/openapi/compliance.html",
+      yaml: "/openapi/compliance.openapi.yaml",
+      json: "/openapi/compliance.openapi.json",
+    },
+    reporting: {
+      title: "Reporting Service",
+      description: "Evidence-pack generation, report jobs, alert timing analytics, MTTD, and MTTR workflows.",
+      viewer: "/openapi/reporting.html",
+      yaml: "/openapi/reporting.openapi.yaml",
+      json: "/openapi/reporting.openapi.json",
+    },
+  }[selected];
 
   return (
     <div>
       <div style={S.h1}>OpenAPI / Swagger Specs</div>
       <P>Generated OpenAPI 3.0.3 contracts are published directly from the dashboard under <IC>/openapi</IC>. The embedded viewer below uses a local Swagger UI bundle, so it works without external CDN dependencies.</P>
       <H2>Available Specs</H2>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10, marginBottom: 14 }}>
         {[
           { id: "ai", label: "AI Service", detail: "Provider config, auth modes, MCP, assistant actions" },
           { id: "sbom", label: "SBOM / CBOM", detail: "Vulnerability findings, offline advisories, CBOM readiness" },
+          { id: "posture", label: "Security Posture", detail: "Risk drivers, cockpit groups, blast radius, scenarios" },
+          { id: "compliance", label: "Compliance", detail: "Assessments, delta view, templates, posture history" },
+          { id: "reporting", label: "Reporting", detail: "Evidence packs, report jobs, MTTD / MTTR statistics" },
         ].map((item) => {
           const active = selected === item.id;
           return (
             <Card
               key={item.id}
-              onClick={() => setSelected(item.id as "ai" | "sbom")}
+              onClick={() => setSelected(item.id as "ai" | "sbom" | "posture" | "compliance" | "reporting")}
               style={{
                 padding: 12,
                 cursor: "pointer",

@@ -1,0 +1,483 @@
+openapi: 3.0.3
+info:
+  title: Vecta KMS Reporting and Alerting API
+  version: 1.0.0
+  description: OpenAPI contract for report templates, evidence-pack generation,
+    report jobs, and alert timing analytics including MTTD. Use `/svc/reporting`
+    through the dashboard proxy or `http://localhost:8140` directly.
+servers:
+  - url: /svc/reporting
+    description: Dashboard reverse proxy
+  - url: http://localhost:8140
+    description: Direct reporting service
+tags:
+  - name: Reporting
+  - name: Reporting Stats
+paths:
+  /reports/templates:
+    get:
+      tags:
+        - Reporting
+      operationId: listReportTemplates
+      parameters:
+        - $ref: "#/components/parameters/RequestIdHeader"
+      responses:
+        "200":
+          description: Available report templates, including Evidence Pack.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportTemplateListEnvelope"
+        "500":
+          description: Unhandled template retrieval failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /reports/generate:
+    post:
+      tags:
+        - Reporting
+      operationId: generateReport
+      parameters: &a4
+        - &a1
+          $ref: "#/components/parameters/RequestIdHeader"
+        - &a2
+          $ref: "#/components/parameters/TenantQuery"
+        - &a3
+          $ref: "#/components/parameters/TenantHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tenant_id
+                - template_id
+              properties:
+                tenant_id:
+                  type: string
+                  example: root
+                template_id:
+                  type: string
+                  enum:
+                    - key_generation
+                    - key_rotation
+                    - kms_operations
+                    - hyok_activity
+                    - byok_activity
+                    - certificate_lifecycle
+                    - compliance_audit
+                    - posture_summary
+                    - evidence_pack
+                    - alert_summary
+                    - custom
+                format:
+                  type: string
+                  enum:
+                    - pdf
+                    - csv
+                    - json
+                  default: pdf
+                requested_by:
+                  type: string
+                filters: &a5
+                  type: object
+                  additionalProperties: true
+      responses:
+        "202":
+          description: Report generation queued.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportJobEnvelope"
+        "400":
+          description: Missing tenant scope or malformed payload.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Unhandled report generation failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /reports/jobs:
+    get:
+      tags:
+        - Reporting
+      operationId: listReportJobs
+      parameters:
+        - *a1
+        - *a2
+        - *a3
+        - $ref: "#/components/parameters/LimitQuery"
+      responses:
+        "200":
+          description: Report jobs for the current tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportJobListEnvelope"
+        "400":
+          description: Missing tenant scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Unhandled report job listing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /reports/jobs/{id}:
+    get:
+      tags:
+        - Reporting
+      operationId: getReportJob
+      parameters:
+        - *a1
+        - *a2
+        - *a3
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Single report job state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportJobEnvelope"
+        "400":
+          description: Missing tenant scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Report job not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Unhandled report job retrieval failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /reports/jobs/{id}/download:
+    get:
+      tags:
+        - Reporting
+      operationId: downloadReportJob
+      parameters:
+        - *a1
+        - *a2
+        - *a3
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Completed report content.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - content
+                  - content_type
+                  - template_id
+                  - generated_at
+                  - report_job_id
+                  - request_id
+                properties:
+                  content:
+                    type: string
+                  content_type:
+                    type: string
+                  template_id:
+                    type: string
+                  generated_at: &a6
+                    type: string
+                    format: date-time
+                  report_job_id:
+                    type: string
+                  request_id:
+                    type: string
+        "400":
+          description: Missing tenant scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Report job not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: Report job is not completed yet.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Unhandled report download failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /alerts/stats/mttd:
+    get:
+      tags:
+        - Reporting Stats
+      operationId: getMTTDStats
+      parameters: *a4
+      responses:
+        "200":
+          description: Mean time to detect by severity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MTTDEnvelope"
+        "400":
+          description: Missing tenant scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Unhandled MTTD retrieval failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /alerts/stats/mttr:
+    get:
+      tags:
+        - Reporting Stats
+      operationId: getMTTRStats
+      parameters: *a4
+      responses:
+        "200":
+          description: Mean time to resolve by severity.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MTTREnvelope"
+        "400":
+          description: Missing tenant scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Unhandled MTTR retrieval failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+  /alerts/stats/top-sources:
+    get:
+      tags:
+        - Reporting Stats
+      operationId: getTopAlertSources
+      parameters: *a4
+      responses:
+        "200":
+          description: Top alert-producing actors, IPs, and services.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TopSourcesEnvelope"
+        "400":
+          description: Missing tenant scope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "500":
+          description: Unhandled top-source retrieval failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+components:
+  parameters:
+    RequestIdHeader:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: Optional client correlation id. The service generates one when omitted.
+      schema:
+        type: string
+    TenantHeader:
+      name: X-Tenant-ID
+      in: header
+      required: false
+      description: Alternative tenant scope header accepted by tenant-aware handlers.
+      schema:
+        type: string
+        example: root
+    TenantQuery:
+      name: tenant_id
+      in: query
+      required: false
+      description: Tenant scope. Required for tenant-aware operations unless supplied
+        in the request body or `X-Tenant-ID`.
+      schema:
+        type: string
+        example: root
+    LimitQuery:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        example: 20
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: object
+          required:
+            - code
+            - message
+            - request_id
+            - tenant_id
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            request_id:
+              type: string
+            tenant_id:
+              type: string
+    ReportTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        formats:
+          type: array
+          items:
+            type: string
+    ReportJob:
+      type: object
+      properties:
+        id:
+          type: string
+        tenant_id:
+          type: string
+        template_id:
+          type: string
+        format:
+          type: string
+        status:
+          type: string
+        filters: *a5
+        result_content:
+          type: string
+        result_content_type:
+          type: string
+        requested_by:
+          type: string
+        error:
+          type: string
+        created_at: *a6
+        updated_at: *a6
+        completed_at: *a6
+    ReportTemplateListEnvelope:
+      type: object
+      required:
+        - items
+        - request_id
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportTemplate"
+        request_id:
+          type: string
+    ReportJobEnvelope:
+      type: object
+      required:
+        - job
+        - request_id
+      properties:
+        job:
+          $ref: "#/components/schemas/ReportJob"
+        request_id:
+          type: string
+    ReportJobListEnvelope:
+      type: object
+      required:
+        - items
+        - request_id
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportJob"
+        request_id:
+          type: string
+    MTTDEnvelope:
+      type: object
+      required:
+        - mttd_minutes
+        - request_id
+      properties:
+        mttd_minutes:
+          type: object
+          additionalProperties:
+            type: number
+        request_id:
+          type: string
+    MTTREnvelope:
+      type: object
+      required:
+        - mttr_minutes
+        - request_id
+      properties:
+        mttr_minutes:
+          type: object
+          additionalProperties:
+            type: number
+        request_id:
+          type: string
+    TopSourcesEnvelope:
+      type: object
+      required:
+        - sources
+        - request_id
+      properties:
+        top_actors:
+          type: array
+          items: *a5
+        top_ips:
+          type: array
+          items: *a5
+        top_services:
+          type: array
+          items: *a5
+        sources: *a5
+        request_id:
+          type: string
