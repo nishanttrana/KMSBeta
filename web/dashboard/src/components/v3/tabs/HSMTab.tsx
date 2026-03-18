@@ -270,6 +270,13 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
       </div>
     </div>
 
+    {activeVendorID==="securosys"&&<Card style={{padding:12,marginBottom:12,background:"rgba(6,214,224,.06)",border:`1px solid ${C.accent}33`}}>
+      <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:6}}>Securosys Primus Setup</div>
+      <div style={{fontSize:10,color:C.muted,lineHeight:1.6}}>
+        Upload the Primus PKCS#11 library, discover the published PKCS#11 slot IDs, then bind the selected slot to the target Primus partition user. The default provider profile is <code style={{color:C.accent}}>securosys-primus</code> and the default PIN environment variable is <code style={{color:C.accent}}>SECUROSYS_HSM_PIN</code>.
+      </div>
+    </Card>}
+
     {/* ── Onboarding Steps ── */}
     <Card style={{padding:14,marginBottom:12}}>
       <div style={{fontSize:11,fontWeight:600,color:C.muted,marginBottom:8}}>PKCS#11 LIBRARY ONBOARDING</div>
@@ -498,7 +505,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
           ))}
         </div>
         <div style={{marginTop:12,padding:"8px 12px",borderRadius:6,background:`${C.blue}12`,border:`1px solid ${C.blue}33`,fontSize:10,color:C.dim}}>
-          <b style={{color:C.blue}}>Supported HSM vendors:</b> Any PKCS#11 v2.40+ compliant HSM — Thales Luna, Entrust nShield, AWS CloudHSM, Marvell LiquidSecurity, Utimaco, YubiHSM, SoftHSM (dev).
+          <b style={{color:C.blue}}>Supported HSM vendors:</b> Any PKCS#11 v2.40+ compliant HSM — Securosys Primus, Thales Luna, Entrust nShield, AWS CloudHSM, Marvell LiquidSecurity, Utimaco, YubiHSM, SoftHSM (dev).
         </div>
       </Card>
     </Section>

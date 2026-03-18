@@ -246,7 +246,7 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "hsm-thales", label: "Thales Luna HSM", hint: "NTLS endpoint, Luna slot and partition settings", icon: Cpu, feature: "hsm_hardware_or_software" },
     { id: "hsm-utimaco", label: "Utimaco HSM", hint: "CryptoServer slot/partition profile and provider settings", icon: Cpu, feature: "hsm_hardware_or_software" },
     { id: "hsm-entrust", label: "Entrust nShield HSM", hint: "Security World connector, slot profile and token mapping", icon: ShieldCheck, feature: "hsm_hardware_or_software" },
-    { id: "hsm-securosys", label: "Vecta KMS HSM", hint: "Vecta KMS provider, slot and partition configuration", icon: ShieldCheck, feature: "hsm_hardware_or_software" },
+    { id: "hsm-securosys", label: "Securosys HSM", hint: "Primus PKCS#11 provider, slot ID and partition user configuration", icon: ShieldCheck, feature: "hsm_hardware_or_software" },
     { id: "hsm-generic", label: "Generic PKCS#11 HSM", hint: "Vendor-neutral PKCS#11 library onboarding profile", icon: Plug, feature: "hsm_hardware_or_software" }
   ],
   cluster: [

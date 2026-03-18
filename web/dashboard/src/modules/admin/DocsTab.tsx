@@ -2108,8 +2108,8 @@ const SectionUIHsm = () => (
     <P>Configure CryptoServer endpoint, slot, and authentication for Utimaco CryptoServer Se/Ce series.</P>
     <H3>Entrust nShield HSM</H3>
     <P>Configure Security World connector, module protection, and PKCS#11 settings for Entrust nShield Connect/Solo.</P>
-    <H3>Vecta KMS HSM</H3>
-    <P>Configure provider API and partition for Vecta KMS Primus HSM.</P>
+    <H3>Securosys HSM</H3>
+    <P>Configure the Primus PKCS#11 provider, service proxy or API endpoint, slot ID, partition user, and token label for Securosys HSM deployments.</P>
     <H3>Generic PKCS#11</H3>
     <P>Vendor-neutral PKCS#11 onboarding. Specify library path, slot ID/label, PIN, and key attributes.</P>
     <H2>HSM Operations</H2>
@@ -2391,7 +2391,7 @@ const SectionConfigHsm = () => (
       ["SOFTWARE_VAULT_MLOCK_REQUIRED", "false", "Lock vault memory (prevents swapping)"],
     ]} />
     <H2>Hardware HSM Providers</H2>
-    <P>Supported: AWS CloudHSM, Azure Managed HSM, Thales Luna, Utimaco CryptoServer, Entrust nShield, Vecta KMS Primus, Generic PKCS#11. Each provider is configured via the HSM tab in the dashboard with vendor-specific parameters (endpoint, slot, partition, credentials, library path).</P>
+    <P>Supported: AWS CloudHSM, Azure Managed HSM, Thales Luna, Utimaco CryptoServer, Entrust nShield, Securosys Primus, Generic PKCS#11. Each provider is configured via the HSM tab in the dashboard with vendor-specific parameters such as endpoint, slot ID, partition user, token label, credentials, and PKCS#11 library path.</P>
     <H2>CLI SSH Access</H2>
     <Code>{`# Enable CLI user
 AUTH_BOOTSTRAP_CLI_ENABLED=true
