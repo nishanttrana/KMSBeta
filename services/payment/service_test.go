@@ -86,9 +86,9 @@ func TestServiceTR31PINAndMACFlows(t *testing.T) {
 	}
 
 	validateResp, err := svc.ValidateTR31(ctx, ValidateTR31Request{
-		TenantID:    "tenant-b",
-		KeyBlock:    createResp.KeyBlock,
-		KBPKKeyB64:  kbpkB64,
+		TenantID:   "tenant-b",
+		KeyBlock:   createResp.KeyBlock,
+		KBPKKeyB64: kbpkB64,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -111,11 +111,11 @@ func TestServiceTR31PINAndMACFlows(t *testing.T) {
 	}
 
 	translated, err := svc.TranslateTR31(ctx, TranslateTR31Request{
-		TenantID:           "tenant-b",
-		SourceFormat:       TR31FormatD,
-		TargetFormat:       TR31FormatAESKWP,
-		SourceBlock:        createResp.KeyBlock,
-		SourceKBPKKeyB64:   kbpkB64,
+		TenantID:         "tenant-b",
+		SourceFormat:     TR31FormatD,
+		TargetFormat:     TR31FormatAESKWP,
+		SourceBlock:      createResp.KeyBlock,
+		SourceKBPKKeyB64: kbpkB64,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -298,5 +298,170 @@ func TestServiceISOAndLAUFlows(t *testing.T) {
 	}
 	if !lauOK {
 		t.Fatal("expected lau verification true")
+	}
+}
+
+func TestServicePaymentAP2ProfileDefaultsAndUpdate(t *testing.T) {
+	svc, _, _, pub := newPaymentService(t)
+	ctx := context.Background()
+
+	defaultProfile, err := svc.GetPaymentAP2Profile(ctx, "tenant-ap2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if defaultProfile.Enabled {
+		t.Fatal("expected AP2 default profile disabled")
+	}
+	if !strings.EqualFold(defaultProfile.DefaultCurrency, "USD") {
+		t.Fatalf("unexpected default currency: %+v", defaultProfile)
+	}
+
+	updated, err := svc.UpdatePaymentAP2Profile(ctx, PaymentAP2Profile{
+		TenantID:                      "tenant-ap2",
+		Enabled:                       true,
+		AllowedProtocolBindings:       []string{"a2a", "mcp", "x402"},
+		AllowedTransactionModes:       []string{"human_present", "human_not_present"},
+		AllowedPaymentRails:           []string{"card", "ach"},
+		AllowedCurrencies:             []string{"usd", "eur"},
+		DefaultCurrency:               "eur",
+		RequireIntentMandate:          true,
+		RequireCartMandate:            true,
+		RequirePaymentMandate:         true,
+		RequireMerchantSignature:      true,
+		RequireVerifiableCredential:   true,
+		RequireWalletAttestation:      true,
+		RequireRiskSignals:            true,
+		RequireTokenizedInstrument:    true,
+		AllowX402Extension:            true,
+		MaxHumanPresentAmountMinor:    500000,
+		MaxHumanNotPresentAmountMinor: 120000,
+		TrustedCredentialIssuers:      []string{"issuer.example"},
+		UpdatedBy:                     "admin",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !updated.Enabled || !containsString(updated.AllowedProtocolBindings, "x402") {
+		t.Fatalf("unexpected updated AP2 profile: %+v", updated)
+	}
+	if pub.Count("audit.payment.ap2_profile_updated") == 0 {
+		t.Fatal("expected AP2 profile audit event")
+	}
+}
+
+func TestServiceEvaluatePaymentAP2(t *testing.T) {
+	svc, _, _, pub := newPaymentService(t)
+	ctx := context.Background()
+
+	_, err := svc.UpdatePaymentAP2Profile(ctx, PaymentAP2Profile{
+		TenantID:                      "tenant-eval",
+		Enabled:                       true,
+		AllowedProtocolBindings:       []string{"a2a", "mcp"},
+		AllowedTransactionModes:       []string{"human_present", "human_not_present"},
+		AllowedPaymentRails:           []string{"card", "ach"},
+		AllowedCurrencies:             []string{"USD"},
+		DefaultCurrency:               "USD",
+		RequireIntentMandate:          true,
+		RequireCartMandate:            true,
+		RequirePaymentMandate:         true,
+		RequireMerchantSignature:      true,
+		RequireVerifiableCredential:   true,
+		RequireWalletAttestation:      false,
+		RequireRiskSignals:            true,
+		RequireTokenizedInstrument:    true,
+		AllowX402Extension:            false,
+		MaxHumanPresentAmountMinor:    900000,
+		MaxHumanNotPresentAmountMinor: 200000,
+		TrustedCredentialIssuers:      []string{"issuer.example"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	allowResp, err := svc.EvaluatePaymentAP2(ctx, PaymentAP2EvaluateRequest{
+		TenantID:                   "tenant-eval",
+		AgentID:                    "agent-1",
+		MerchantID:                 "merchant-1",
+		Operation:                  "authorize",
+		ProtocolBinding:            "a2a",
+		TransactionMode:            "human_not_present",
+		PaymentRail:                "card",
+		Currency:                   "USD",
+		AmountMinor:                150000,
+		HasIntentMandate:           true,
+		HasCartMandate:             true,
+		HasPaymentMandate:          true,
+		HasMerchantSignature:       true,
+		HasVerifiableCredential:    true,
+		HasWalletAttestation:       false,
+		HasRiskSignals:             true,
+		PaymentInstrumentTokenized: true,
+		CredentialIssuer:           "issuer.example",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !allowResp.Allowed || allowResp.Decision != "allow" || strings.TrimSpace(allowResp.RequestFingerprint) == "" {
+		t.Fatalf("unexpected allow response: %+v", allowResp)
+	}
+
+	reviewResp, err := svc.EvaluatePaymentAP2(ctx, PaymentAP2EvaluateRequest{
+		TenantID:                   "tenant-eval",
+		AgentID:                    "agent-2",
+		MerchantID:                 "merchant-1",
+		Operation:                  "authorize",
+		ProtocolBinding:            "mcp",
+		TransactionMode:            "human_not_present",
+		PaymentRail:                "card",
+		Currency:                   "USD",
+		AmountMinor:                350000,
+		HasIntentMandate:           true,
+		HasCartMandate:             true,
+		HasPaymentMandate:          true,
+		HasMerchantSignature:       true,
+		HasVerifiableCredential:    true,
+		HasRiskSignals:             true,
+		PaymentInstrumentTokenized: true,
+		CredentialIssuer:           "untrusted.example",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reviewResp.Decision != "review" || reviewResp.Allowed {
+		t.Fatalf("expected review response: %+v", reviewResp)
+	}
+	if !containsString(reviewResp.AppliedControls, "step_up_approval") {
+		t.Fatalf("expected step-up control: %+v", reviewResp)
+	}
+
+	denyResp, err := svc.EvaluatePaymentAP2(ctx, PaymentAP2EvaluateRequest{
+		TenantID:                   "tenant-eval",
+		AgentID:                    "agent-3",
+		MerchantID:                 "merchant-1",
+		Operation:                  "authorize",
+		ProtocolBinding:            "x402",
+		TransactionMode:            "human_not_present",
+		PaymentRail:                "stablecoin",
+		Currency:                   "USD",
+		AmountMinor:                120000,
+		HasIntentMandate:           false,
+		HasCartMandate:             false,
+		HasPaymentMandate:          false,
+		HasMerchantSignature:       false,
+		HasVerifiableCredential:    false,
+		HasRiskSignals:             false,
+		PaymentInstrumentTokenized: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if denyResp.Decision != "deny" || denyResp.Allowed {
+		t.Fatalf("expected deny response: %+v", denyResp)
+	}
+	if !containsString(denyResp.MissingArtifacts, "intent_mandate") {
+		t.Fatalf("expected missing intent mandate: %+v", denyResp)
+	}
+	if pub.Count("audit.payment.ap2_evaluated") == 0 {
+		t.Fatal("expected AP2 evaluation audit event")
 	}
 }

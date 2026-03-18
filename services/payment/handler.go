@@ -33,6 +33,9 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /payment/keys/{id}/rotate", h.handleRotatePaymentKey)
 	mux.HandleFunc("GET /payment/policy", h.handleGetPaymentPolicy)
 	mux.HandleFunc("PUT /payment/policy", h.handleSetPaymentPolicy)
+	mux.HandleFunc("GET /payment/ap2/profile", h.handleGetPaymentAP2Profile)
+	mux.HandleFunc("PUT /payment/ap2/profile", h.handleSetPaymentAP2Profile)
+	mux.HandleFunc("POST /payment/ap2/evaluate", h.handleEvaluatePaymentAP2)
 	mux.HandleFunc("GET /payment/crypto/operations", h.handleListPaymentCryptoOperations)
 	mux.HandleFunc("POST /payment/crypto", h.handlePaymentCryptoDispatch)
 

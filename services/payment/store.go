@@ -25,6 +25,8 @@ type Store interface {
 
 	GetPaymentPolicy(ctx context.Context, tenantID string) (PaymentPolicy, error)
 	UpsertPaymentPolicy(ctx context.Context, item PaymentPolicy) (PaymentPolicy, error)
+	GetPaymentAP2Profile(ctx context.Context, tenantID string) (PaymentAP2Profile, error)
+	UpsertPaymentAP2Profile(ctx context.Context, item PaymentAP2Profile) (PaymentAP2Profile, error)
 
 	CreateInjectionTerminal(ctx context.Context, item PaymentInjectionTerminal) error
 	GetInjectionTerminal(ctx context.Context, tenantID string, id string) (PaymentInjectionTerminal, error)

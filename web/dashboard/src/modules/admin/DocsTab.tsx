@@ -153,7 +153,7 @@ const SectionOverview = () => (
         ["Secrets Vault", "Store and manage credentials, SSH keys, PGP keys, tokens, certificates"],
         ["Certificate PKI", "Full CA hierarchy, ACME, EST, SCEP, CMPv2, OCSP, CRL management"],
         ["Data Protection", "Tokenization, masking, redaction, FPE, envelope encryption, searchable encryption"],
-        ["Payment Crypto", "TR-31 key blocks, PIN translation, CVV, MAC, ISO 20022, key injection"],
+        ["Payment Crypto", "TR-31 key blocks, PIN translation, CVV, MAC, ISO 20022, AP2 agent payments, key injection"],
         ["Cloud Key Control", "BYOK (AWS, Azure, GCP, Oracle, Salesforce) and HYOK (DKE, Cache-Only, EKM)"],
         ["Post-Quantum", "PQC algorithms (ML-KEM, ML-DSA, SLH-DSA), migration planning, CBOM"],
         ["MPC", "Distributed key generation, threshold signing, multi-party decryption"],
@@ -168,7 +168,7 @@ const SectionOverview = () => (
       ))}
     </div>
     <H2>Supported Standards</H2>
-    <P>FIPS 140-3, PKCS#11, KMIP 2.1, ACME (RFC 8555), EST (RFC 7030), SCEP, CMPv2, TR-31, ISO 20022, ETSI QKD 014/004, X.509v3, OCSP, CRL, Shamir Secret Sharing, Merkle Hash Trees, CycloneDX SBOM/CBOM, SPDX.</P>
+    <P>FIPS 140-3, PKCS#11, KMIP 2.1, ACME (RFC 8555), EST (RFC 7030), SCEP, CMPv2, TR-31, ISO 20022, AP2, ETSI QKD 014/004, X.509v3, OCSP, CRL, Shamir Secret Sharing, Merkle Hash Trees, CycloneDX SBOM/CBOM, SPDX.</P>
   </div>
 );
 
@@ -757,7 +757,7 @@ const SectionApiAudit = () => (
   <div>
     <div style={S.h1}>API: Audit & Alerting</div>
     <P>Service: kms-audit | Port: 8070 (HTTP) / 18070 (gRPC)</P>
-    <P>The audit stream now records posture/compliance/reporting interactions for the newer operational views too. Operators will see subjects such as <IC>audit.posture.dashboard_viewed</IC>, <IC>audit.compliance.assessment_delta_viewed</IC>, <IC>audit.reporting.evidence_pack_requested</IC>, and <IC>audit.reporting.mttd_stats_viewed</IC> in the same tamper-evident audit timeline.</P>
+    <P>The audit stream now records posture/compliance/reporting interactions for the newer operational views too. Operators will see subjects such as <IC>audit.posture.dashboard_viewed</IC>, <IC>audit.compliance.assessment_delta_viewed</IC>, <IC>audit.reporting.evidence_pack_requested</IC>, <IC>audit.reporting.mttd_stats_viewed</IC>, <IC>audit.payment.ap2_profile_updated</IC>, and <IC>audit.payment.ap2_evaluated</IC> in the same tamper-evident audit timeline.</P>
     <Collapse title="Audit Events" defaultOpen>
       <EndpointTable rows={[
         ["POST", "/audit/publish", "Publish audit event (internal)"],
@@ -796,6 +796,8 @@ const SectionApiAudit = () => (
         ["AUDIT", "audit.compliance.assessment_delta_viewed", "Recorded when the operator opens the 'What Changed Since Last Scan' delta view"],
         ["AUDIT", "audit.reporting.evidence_pack_requested", "Recorded when an Evidence Pack export is requested"],
         ["AUDIT", "audit.reporting.mttd_stats_viewed", "Recorded when MTTD timing analytics are fetched"],
+        ["AUDIT", "audit.payment.ap2_profile_updated", "Recorded when a tenant AP2 policy profile is created or changed"],
+        ["AUDIT", "audit.payment.ap2_evaluated", "Recorded when an AP2 agent-payment request is evaluated for allow, review, or deny"],
       ]} />
     </Collapse>
   </div>
@@ -969,6 +971,7 @@ const SectionApiPayment = () => (
   <div>
     <div style={S.h1}>API: Payment Cryptography</div>
     <P>Service: kms-payment | Port: 8170 (HTTP) / 18170 (gRPC) | Profile: payment_crypto</P>
+    <P>The payment service now also exposes AP2 agent payment policy and evaluation endpoints so you can bind agentic payment flows to mandates, credentials, wallet trust, rails, and amount thresholds before authorization. AP2 profile changes and evaluations are written to the audit timeline, and the policy itself is stored as tenant payment control-plane state rather than local node config.</P>
     <Collapse title="TR-31 Key Blocks" defaultOpen>
       <EndpointTable rows={[
         ["POST", "/payment/tr31/create", "Create TR-31 key block"],
@@ -1006,6 +1009,15 @@ const SectionApiPayment = () => (
         ["POST", "/payment/iso20022/lau/generate", "Generate LAU"],
         ["POST", "/payment/iso20022/lau/verify", "Verify LAU"],
       ]} />
+    </Collapse>
+    <Collapse title="AP2 Agent Payments">
+      <EndpointTable rows={[
+        ["GET", "/payment/ap2/profile", "Fetch tenant AP2 policy profile"],
+        ["PUT", "/payment/ap2/profile", "Update tenant AP2 policy profile"],
+        ["POST", "/payment/ap2/evaluate", "Evaluate an agent payment request against AP2 policy"],
+      ]} />
+      <P>AP2 evaluation checks the protocol binding (`a2a`, `mcp`, optional `x402`), transaction mode, payment rail, currency, required mandates, verifiable credential, wallet attestation, tokenization state, and tenant thresholds. The result is an explicit `allow`, `review`, or `deny` decision with missing artifacts and applied controls.</P>
+      <P>Typical flow: read the current tenant profile, enable and save the policy with your allowed bindings, rails, currencies, thresholds, and trust requirements, then submit candidate agent-payment requests to the evaluator before handing the request to the downstream authorization path. Use the audit timeline to prove when policy changed and when a request was evaluated.</P>
     </Collapse>
     <Collapse title="Key Injection">
       <EndpointTable rows={[
@@ -1948,7 +1960,7 @@ const SectionUIWorkbench = () => (
     <H3>Data Encryption</H3>
     <P>Field-level and envelope encryption interface. Select encryption mode (field, envelope, searchable), choose a key, enter data, and encrypt/decrypt.</P>
     <H3>Payment Crypto</H3>
-    <P>Payment cryptography operations: TR-31 key block creation/parsing/translation, PIN translation/verification, CVV computation, MAC generation, ISO 20022 message encryption/signing, LAU generation, and key injection terminal management.</P>
+    <P>Payment cryptography operations: TR-31 key block creation/parsing/translation, PIN translation/verification, CVV computation, MAC generation, ISO 20022 message encryption/signing, AP2 agent payment policy and evaluator workflows, and key injection terminal management.</P>
   </div>
 );
 
@@ -2249,6 +2261,8 @@ const SectionUICluster = () => (
     <P>Real-time sync events, checkpoints, and replication lag metrics. View pending sync items and acknowledged events.</P>
     <H3>Cluster Logs</H3>
     <P>Filterable cluster operation audit log showing joins, departures, role changes, sync events, and failures.</P>
+    <H3>Payment / AP2 State</H3>
+    <P>AP2 policy is not configured per node. It is stored as tenant payment configuration in the shared control plane, so clustered operators manage one tenant AP2 profile and every payment-service instance sees the same policy set once the control-plane state is consistent.</P>
   </div>
 );
 
@@ -2458,6 +2472,7 @@ const SectionConfigCluster = () => (
     ]} />
     <H2>Node Roles</H2>
     <P>Leader: accepts writes, coordinates replication. Follower: receives replicated data, can serve reads. Replica: read-only copy for horizontal read scaling. Roles can be changed dynamically via the Cluster tab or API.</P>
+    <P>Tenant AP2 policy is part of the payment service control-plane state. There is no separate node-local AP2 configuration file to manage. In clustered deployments, keep the payment service attached to the shared tenant data plane so the same AP2 profile and evaluation behavior is observed across nodes.</P>
     <Code>{`docker compose --profile clustering up -d
 
 # Verify cluster
@@ -2470,7 +2485,7 @@ const SectionConfigBackup = () => (
     <div style={S.h1}>Configuration: Backup & Restore</div>
     <H2>Backup Features</H2>
     <P>Scope: system-wide or tenant-specific. Format: JSON GZip compressed with AES-256-GCM encryption. Artifacts use .vbk extension with separate .key.json key package.</P>
-    <P>Backups now carry explicit <IC>backup_coverage</IC> metadata in the artifact/key package so operators can see which capability classes were preserved. When the related service tables exist, posture findings, compliance assessments, reporting jobs, incidents, and evidence-pack source data are included in the encrypted snapshot.</P>
+    <P>Backups now carry explicit <IC>backup_coverage</IC> metadata in the artifact/key package so operators can see which capability classes were preserved. When the related service tables exist, posture findings, compliance assessments, reporting jobs, incidents, evidence-pack source data, and payment/AP2 tenant policy state are included in the encrypted snapshot.</P>
     <H2>Creating a Backup</H2>
     <Code>{`# Via API
 curl -X POST http://localhost:8050/governance/backups \\

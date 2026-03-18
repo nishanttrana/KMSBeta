@@ -6,9 +6,11 @@ import {
   createInjectionJob,
   createTR31,
   decryptISO20022,
+  evaluatePaymentAP2,
   encryptISO20022,
   generateLAU,
   generatePVV,
+  getPaymentAP2Profile,
   listInjectionJobs,
   listInjectionTerminals,
   listPaymentKeys,
@@ -17,6 +19,7 @@ import {
   signISO20022,
   translatePIN,
   translateTR31,
+  updatePaymentAP2Profile,
   validateTR31,
   verifyCVV,
   verifyInjectionChallenge,
@@ -27,7 +30,7 @@ import {
 } from "../../../lib/payment";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
-import { B, Btn, Card, FG, Inp, Row2, Sel, Tabs, Txt } from "../legacyPrimitives";
+import { B, Btn, Card, Chk, FG, Inp, Row2, Sel, Tabs, Txt } from "../legacyPrimitives";
 
 function normalizeKeyState(state: string): string {
   const raw = String(state || "").toLowerCase().trim();
@@ -67,6 +70,56 @@ function renderKeyOptions(keyChoices: any[]): any[] {
       {k.name} {k.algo ? `(${k.algo})` : ""}
     </option>
   ));
+}
+
+const defaultAP2ProfileState = {
+  tenant_id: "",
+  enabled: false,
+  allowed_protocol_bindings: ["a2a", "mcp"],
+  allowed_transaction_modes: ["human_present", "human_not_present"],
+  allowed_payment_rails: ["card", "ach", "rtp"],
+  allowed_currencies: ["USD"],
+  default_currency: "USD",
+  require_intent_mandate: true,
+  require_cart_mandate: true,
+  require_payment_mandate: true,
+  require_merchant_signature: true,
+  require_verifiable_credential: true,
+  require_wallet_attestation: false,
+  require_risk_signals: true,
+  require_tokenized_instrument: true,
+  allow_x402_extension: false,
+  max_human_present_amount_minor: 1000000,
+  max_human_not_present_amount_minor: 250000,
+  trusted_credential_issuers: []
+};
+
+const defaultAP2EvalState = {
+  agent_id: "shopping-agent-1",
+  merchant_id: "merchant-demo",
+  operation: "authorize",
+  protocol_binding: "a2a",
+  transaction_mode: "human_not_present",
+  payment_rail: "card",
+  currency: "USD",
+  amount_minor: 12500,
+  has_intent_mandate: true,
+  has_cart_mandate: true,
+  has_payment_mandate: true,
+  has_merchant_signature: true,
+  has_verifiable_credential: true,
+  has_wallet_attestation: false,
+  has_risk_signals: true,
+  payment_instrument_tokenized: true,
+  credential_issuer: ""
+};
+
+function csvList(value: any): string {
+  return Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean).join(", ") : "";
+}
+
+function parseCsvList(value: string): string[] {
+  return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
 }
 
 export const PaymentTab=({session,keyCatalog,onToast})=>{
@@ -150,6 +203,17 @@ export const PaymentTab=({session,keyCatalog,onToast})=>{
   const [lauContext,setLAUContext]=useState("swift");
   const [lauMessage,setLAUMessage]=useState("<AppHdr><MsgDefIdr>pacs.008</MsgDefIdr></AppHdr>");
   const [lauValue,setLAUValue]=useState("");
+  const [ap2Profile,setAP2Profile]=useState<any>(defaultAP2ProfileState);
+  const [ap2BindingsText,setAP2BindingsText]=useState("a2a, mcp");
+  const [ap2ModesText,setAP2ModesText]=useState("human_present, human_not_present");
+  const [ap2RailsText,setAP2RailsText]=useState("card, ach, rtp");
+  const [ap2CurrenciesText,setAP2CurrenciesText]=useState("USD");
+  const [ap2IssuersText,setAP2IssuersText]=useState("");
+  const [ap2ProfileLoading,setAP2ProfileLoading]=useState(false);
+  const [ap2ProfileSaving,setAP2ProfileSaving]=useState(false);
+  const [ap2Eval,setAP2Eval]=useState<any>(defaultAP2EvalState);
+  const [ap2EvalRunning,setAP2EvalRunning]=useState(false);
+  const [ap2EvalResult,setAP2EvalResult]=useState<any>(null);
 
   useEffect(()=>{
     if(!keyChoices.length){
@@ -228,11 +292,91 @@ export const PaymentTab=({session,keyCatalog,onToast})=>{
     }
   };
 
+  const hydrateAP2Profile=(profile:any)=>{
+    const merged={...defaultAP2ProfileState,...(profile||{})};
+    setAP2Profile(merged);
+    setAP2BindingsText(csvList(merged.allowed_protocol_bindings)||"a2a, mcp");
+    setAP2ModesText(csvList(merged.allowed_transaction_modes)||"human_present, human_not_present");
+    setAP2RailsText(csvList(merged.allowed_payment_rails)||"card, ach, rtp");
+    setAP2CurrenciesText(csvList(merged.allowed_currencies)||String(merged.default_currency||"USD"));
+    setAP2IssuersText(csvList(merged.trusted_credential_issuers));
+  };
+
+  const refreshAP2Profile=async(silent=false)=>{
+    if(!session?.token){
+      return;
+    }
+    if(!silent){
+      setAP2ProfileLoading(true);
+    }
+    try{
+      const profile=await getPaymentAP2Profile(session);
+      hydrateAP2Profile(profile);
+    }catch(error){
+      onToast?.(`AP2 profile load failed: ${errMsg(error)}`);
+    }finally{
+      if(!silent){
+        setAP2ProfileLoading(false);
+      }
+    }
+  };
+
+  const saveAP2Profile=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required.");
+      return;
+    }
+    setAP2ProfileSaving(true);
+    try{
+      const updated=await updatePaymentAP2Profile(session,{
+        ...ap2Profile,
+        allowed_protocol_bindings:parseCsvList(ap2BindingsText),
+        allowed_transaction_modes:parseCsvList(ap2ModesText),
+        allowed_payment_rails:parseCsvList(ap2RailsText),
+        allowed_currencies:parseCsvList(ap2CurrenciesText),
+        trusted_credential_issuers:parseCsvList(ap2IssuersText),
+        max_human_present_amount_minor:Number(ap2Profile?.max_human_present_amount_minor||0),
+        max_human_not_present_amount_minor:Number(ap2Profile?.max_human_not_present_amount_minor||0)
+      });
+      hydrateAP2Profile(updated);
+      setResultText(JSON.stringify({ap2_profile:updated},null,2));
+      onToast?.("AP2 profile updated.");
+    }catch(error){
+      onToast?.(`AP2 profile update failed: ${errMsg(error)}`);
+    }finally{
+      setAP2ProfileSaving(false);
+    }
+  };
+
+  const runAP2Evaluation=async()=>{
+    if(!session?.token){
+      onToast?.("Login is required for AP2 evaluation.");
+      return;
+    }
+    setAP2EvalRunning(true);
+    try{
+      const result=await evaluatePaymentAP2(session,{
+        ...ap2Eval,
+        amount_minor:Number(ap2Eval?.amount_minor||0)
+      });
+      setAP2EvalResult(result);
+      setResultText(JSON.stringify({ap2_evaluation:result},null,2));
+      onToast?.(`AP2 decision: ${String(result?.decision||"unknown")}`);
+    }catch(error){
+      const msg=errMsg(error);
+      onToast?.(`AP2 evaluation failed: ${msg}`);
+      setResultText(JSON.stringify({error:msg},null,2));
+    }finally{
+      setAP2EvalRunning(false);
+    }
+  };
+
   useEffect(()=>{
     if(!session?.token){
       return;
     }
     void refreshInjectionData(true);
+    void refreshAP2Profile(true);
   },[session?.token,session?.tenantId]);
 
   const registerTerminal=async()=>{
@@ -503,7 +647,7 @@ export const PaymentTab=({session,keyCatalog,onToast})=>{
   };
 
   return <div>
-    <Tabs tabs={["TR-31 Create","TR-31 Translate","PIN Translate","PIN Verify","PVV Generate","CVV Compute","MAC Generate","ISO 20022 Sign","ISO 20022 Encrypt","LAU Generate","Payment Key Injection"]} active={op} onChange={setOp}/>
+    <Tabs tabs={["TR-31 Create","TR-31 Translate","PIN Translate","PIN Verify","PVV Generate","CVV Compute","MAC Generate","ISO 20022 Sign","ISO 20022 Encrypt","LAU Generate","AP2 Agent Payments","Payment Key Injection"]} active={op} onChange={setOp}/>
     <Row2>
       <Card>
         {op==="TR-31 Create"&&<>
@@ -623,6 +767,117 @@ export const PaymentTab=({session,keyCatalog,onToast})=>{
           <FG label="LAU (for verify)"><Txt value={lauValue} onChange={(e)=>setLAUValue(e.target.value)} rows={3} mono/></FG>
         </>}
 
+        {op==="AP2 Agent Payments"&&<>
+          <div style={{marginBottom:12,padding:12,border:`1px solid ${C.borderHi}`,borderRadius:12,background:`linear-gradient(180deg, ${C.card}, ${C.bg})`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:6}}>
+              <div>
+                <div style={{fontSize:12,fontWeight:700,color:C.text,marginBottom:4}}>AP2 Agent Payments</div>
+                <div style={{fontSize:10,color:C.dim,lineHeight:1.6}}>
+                  Configure the tenant policy for Google’s Agents to Payments (AP2) model and evaluate whether an agent payment request is ready for allow, review, or deny.
+                  This maps AP2 concepts directly into KMS controls: intent mandate, cart mandate, payment mandate, verifiable credentials, wallet attestation, and protocol binding over A2A, MCP, or x402.
+                </div>
+                <div style={{fontSize:10,color:C.muted,lineHeight:1.6,marginTop:6}}>
+                  AP2 profile changes are tenant-scoped, written to the audit timeline, and stored in shared payment control-plane state so operators do not manage separate node-local AP2 config.
+                </div>
+              </div>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                <B c="blue">A2A</B>
+                <B c="accent">MCP</B>
+                <B c="amber">x402</B>
+                <B c="green">Mandates</B>
+              </div>
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <Btn small onClick={()=>void refreshAP2Profile()} disabled={ap2ProfileLoading||ap2ProfileSaving}>{ap2ProfileLoading?"Refreshing...":"Refresh AP2 Profile"}</Btn>
+              <Btn small primary onClick={()=>void saveAP2Profile()} disabled={ap2ProfileLoading||ap2ProfileSaving}>{ap2ProfileSaving?"Saving...":"Save AP2 Profile"}</Btn>
+            </div>
+          </div>
+
+          <div style={{fontSize:11,color:C.text,fontWeight:700,marginBottom:8}}>AP2 Runtime Policy</div>
+          <Row2>
+            <FG label="Protocol Bindings" hint="Comma-separated: a2a, mcp, x402">
+              <Inp value={ap2BindingsText} onChange={(e)=>setAP2BindingsText(e.target.value)} />
+            </FG>
+            <FG label="Transaction Modes" hint="Comma-separated: human_present, human_not_present">
+              <Inp value={ap2ModesText} onChange={(e)=>setAP2ModesText(e.target.value)} />
+            </FG>
+          </Row2>
+          <Row2>
+            <FG label="Payment Rails" hint="Comma-separated: card, ach, rtp, wire, stablecoin">
+              <Inp value={ap2RailsText} onChange={(e)=>setAP2RailsText(e.target.value)} />
+            </FG>
+            <FG label="Allowed Currencies" hint="Comma-separated ISO currency codes">
+              <Inp value={ap2CurrenciesText} onChange={(e)=>setAP2CurrenciesText(e.target.value)} />
+            </FG>
+          </Row2>
+          <Row2>
+            <FG label="Default Currency">
+              <Inp value={String(ap2Profile?.default_currency||"USD")} onChange={(e)=>setAP2Profile((prev:any)=>({...prev,default_currency:e.target.value.toUpperCase()}))} mono/>
+            </FG>
+            <FG label="Trusted Credential Issuers" hint="Optional comma-separated issuer IDs / URIs">
+              <Inp value={ap2IssuersText} onChange={(e)=>setAP2IssuersText(e.target.value)} />
+            </FG>
+          </Row2>
+          <Row2>
+            <FG label="Max Human-Present Amount (minor units)">
+              <Inp type="number" value={String(ap2Profile?.max_human_present_amount_minor||0)} onChange={(e)=>setAP2Profile((prev:any)=>({...prev,max_human_present_amount_minor:Number(e.target.value||0)}))} mono/>
+            </FG>
+            <FG label="Max Human-Not-Present Amount (minor units)">
+              <Inp type="number" value={String(ap2Profile?.max_human_not_present_amount_minor||0)} onChange={(e)=>setAP2Profile((prev:any)=>({...prev,max_human_not_present_amount_minor:Number(e.target.value||0)}))} mono/>
+            </FG>
+          </Row2>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12,padding:10,border:`1px solid ${C.border}`,borderRadius:10}}>
+            <Chk label="Enable AP2 policy" checked={Boolean(ap2Profile?.enabled)} onChange={()=>setAP2Profile((prev:any)=>({...prev,enabled:!Boolean(prev?.enabled)}))}/>
+            <Chk label="Allow x402 binding" checked={Boolean(ap2Profile?.allow_x402_extension)} onChange={()=>setAP2Profile((prev:any)=>({...prev,allow_x402_extension:!Boolean(prev?.allow_x402_extension)}))}/>
+            <Chk label="Require intent mandate" checked={Boolean(ap2Profile?.require_intent_mandate)} onChange={()=>setAP2Profile((prev:any)=>({...prev,require_intent_mandate:!Boolean(prev?.require_intent_mandate)}))}/>
+            <Chk label="Require cart mandate" checked={Boolean(ap2Profile?.require_cart_mandate)} onChange={()=>setAP2Profile((prev:any)=>({...prev,require_cart_mandate:!Boolean(prev?.require_cart_mandate)}))}/>
+            <Chk label="Require payment mandate" checked={Boolean(ap2Profile?.require_payment_mandate)} onChange={()=>setAP2Profile((prev:any)=>({...prev,require_payment_mandate:!Boolean(prev?.require_payment_mandate)}))}/>
+            <Chk label="Require merchant signature" checked={Boolean(ap2Profile?.require_merchant_signature)} onChange={()=>setAP2Profile((prev:any)=>({...prev,require_merchant_signature:!Boolean(prev?.require_merchant_signature)}))}/>
+            <Chk label="Require verifiable credential" checked={Boolean(ap2Profile?.require_verifiable_credential)} onChange={()=>setAP2Profile((prev:any)=>({...prev,require_verifiable_credential:!Boolean(prev?.require_verifiable_credential)}))}/>
+            <Chk label="Require wallet attestation" checked={Boolean(ap2Profile?.require_wallet_attestation)} onChange={()=>setAP2Profile((prev:any)=>({...prev,require_wallet_attestation:!Boolean(prev?.require_wallet_attestation)}))}/>
+            <Chk label="Require risk signals" checked={Boolean(ap2Profile?.require_risk_signals)} onChange={()=>setAP2Profile((prev:any)=>({...prev,require_risk_signals:!Boolean(prev?.require_risk_signals)}))}/>
+            <Chk label="Require tokenized instrument" checked={Boolean(ap2Profile?.require_tokenized_instrument)} onChange={()=>setAP2Profile((prev:any)=>({...prev,require_tokenized_instrument:!Boolean(prev?.require_tokenized_instrument)}))}/>
+          </div>
+
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <div style={{fontSize:11,color:C.text,fontWeight:700}}>AP2 Request Evaluator</div>
+            {ap2EvalResult?.decision?<B c={String(ap2EvalResult?.decision||"").toLowerCase()==="allow"?"green":String(ap2EvalResult?.decision||"").toLowerCase()==="review"?"amber":"red"}>{String(ap2EvalResult?.decision||"").toUpperCase()}</B>:null}
+          </div>
+          <Row2>
+            <FG label="Agent ID"><Inp value={String(ap2Eval?.agent_id||"")} onChange={(e)=>setAP2Eval((prev:any)=>({...prev,agent_id:e.target.value}))}/></FG>
+            <FG label="Merchant ID"><Inp value={String(ap2Eval?.merchant_id||"")} onChange={(e)=>setAP2Eval((prev:any)=>({...prev,merchant_id:e.target.value}))}/></FG>
+          </Row2>
+          <Row2>
+            <FG label="Protocol Binding"><Sel value={String(ap2Eval?.protocol_binding||"a2a")} onChange={(e)=>setAP2Eval((prev:any)=>({...prev,protocol_binding:e.target.value}))}><option value="a2a">A2A</option><option value="mcp">MCP</option><option value="x402">x402</option></Sel></FG>
+            <FG label="Transaction Mode"><Sel value={String(ap2Eval?.transaction_mode||"human_not_present")} onChange={(e)=>setAP2Eval((prev:any)=>({...prev,transaction_mode:e.target.value}))}><option value="human_present">Human Present</option><option value="human_not_present">Human Not Present</option></Sel></FG>
+          </Row2>
+          <Row2>
+            <FG label="Payment Rail"><Sel value={String(ap2Eval?.payment_rail||"card")} onChange={(e)=>setAP2Eval((prev:any)=>({...prev,payment_rail:e.target.value}))}><option value="card">Card</option><option value="ach">ACH</option><option value="rtp">RTP</option><option value="wire">Wire</option><option value="stablecoin">Stablecoin</option></Sel></FG>
+            <FG label="Operation"><Sel value={String(ap2Eval?.operation||"authorize")} onChange={(e)=>setAP2Eval((prev:any)=>({...prev,operation:e.target.value}))}><option value="authorize">Authorize</option><option value="capture">Capture</option><option value="refund">Refund</option></Sel></FG>
+          </Row2>
+          <Row2>
+            <FG label="Currency"><Inp value={String(ap2Eval?.currency||"USD")} onChange={(e)=>setAP2Eval((prev:any)=>({...prev,currency:e.target.value.toUpperCase()}))} mono/></FG>
+            <FG label="Amount (minor units)"><Inp type="number" value={String(ap2Eval?.amount_minor||0)} onChange={(e)=>setAP2Eval((prev:any)=>({...prev,amount_minor:Number(e.target.value||0)}))} mono/></FG>
+          </Row2>
+          <FG label="Credential Issuer" hint="Optional issuer ID / URI from the verifiable credential used in AP2.">
+            <Inp value={String(ap2Eval?.credential_issuer||"")} onChange={(e)=>setAP2Eval((prev:any)=>({...prev,credential_issuer:e.target.value}))}/>
+          </FG>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:8,padding:10,border:`1px solid ${C.border}`,borderRadius:10}}>
+            <Chk label="Intent mandate present" checked={Boolean(ap2Eval?.has_intent_mandate)} onChange={()=>setAP2Eval((prev:any)=>({...prev,has_intent_mandate:!Boolean(prev?.has_intent_mandate)}))}/>
+            <Chk label="Cart mandate present" checked={Boolean(ap2Eval?.has_cart_mandate)} onChange={()=>setAP2Eval((prev:any)=>({...prev,has_cart_mandate:!Boolean(prev?.has_cart_mandate)}))}/>
+            <Chk label="Payment mandate present" checked={Boolean(ap2Eval?.has_payment_mandate)} onChange={()=>setAP2Eval((prev:any)=>({...prev,has_payment_mandate:!Boolean(prev?.has_payment_mandate)}))}/>
+            <Chk label="Merchant signature present" checked={Boolean(ap2Eval?.has_merchant_signature)} onChange={()=>setAP2Eval((prev:any)=>({...prev,has_merchant_signature:!Boolean(prev?.has_merchant_signature)}))}/>
+            <Chk label="Verifiable credential present" checked={Boolean(ap2Eval?.has_verifiable_credential)} onChange={()=>setAP2Eval((prev:any)=>({...prev,has_verifiable_credential:!Boolean(prev?.has_verifiable_credential)}))}/>
+            <Chk label="Wallet attestation present" checked={Boolean(ap2Eval?.has_wallet_attestation)} onChange={()=>setAP2Eval((prev:any)=>({...prev,has_wallet_attestation:!Boolean(prev?.has_wallet_attestation)}))}/>
+            <Chk label="Risk signals present" checked={Boolean(ap2Eval?.has_risk_signals)} onChange={()=>setAP2Eval((prev:any)=>({...prev,has_risk_signals:!Boolean(prev?.has_risk_signals)}))}/>
+            <Chk label="Payment instrument tokenized" checked={Boolean(ap2Eval?.payment_instrument_tokenized)} onChange={()=>setAP2Eval((prev:any)=>({...prev,payment_instrument_tokenized:!Boolean(prev?.payment_instrument_tokenized)}))}/>
+          </div>
+          {ap2EvalResult?.reasons?.length?<div style={{marginBottom:8,padding:10,border:`1px solid ${String(ap2EvalResult?.decision||"").toLowerCase()==="allow"?C.green:String(ap2EvalResult?.decision||"").toLowerCase()==="review"?C.amber:C.red}`,borderRadius:10,background:String(ap2EvalResult?.decision||"").toLowerCase()==="allow"?C.greenDim:String(ap2EvalResult?.decision||"").toLowerCase()==="review"?C.amberDim:C.redDim}}>
+            <div style={{fontSize:10,color:C.text,fontWeight:700,marginBottom:4}}>Decision Summary</div>
+            <div style={{fontSize:10,color:C.dim,lineHeight:1.6}}>{String((Array.isArray(ap2EvalResult?.reasons)?ap2EvalResult.reasons:[ap2EvalResult?.reasons]).filter(Boolean).join(" • "))}</div>
+          </div>:null}
+        </>}
+
         {op==="Payment Key Injection"&&<>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <div style={{fontSize:11,color:C.muted,fontWeight:700}}>PoS Terminal Onboarding and Remote Injection</div>
@@ -680,16 +935,21 @@ export const PaymentTab=({session,keyCatalog,onToast})=>{
           primary
           full
           style={{marginTop:10}}
-          onClick={()=>{if(op==="Payment Key Injection"){void createInjection();return;}void runPaymentOp();}}
-          disabled={op==="Payment Key Injection"?injectionLoading:running}
+          onClick={()=>{
+            if(op==="Payment Key Injection"){void createInjection();return;}
+            if(op==="AP2 Agent Payments"){void runAP2Evaluation();return;}
+            void runPaymentOp();
+          }}
+          disabled={op==="Payment Key Injection"?injectionLoading:op==="AP2 Agent Payments"?ap2EvalRunning:running}
         >
           {op==="Payment Key Injection"
             ? (injectionLoading?"Submitting...":"Create Injection Job")
-            : (running?"Executing...":"Execute")}
+            : op==="AP2 Agent Payments"
+              ? (ap2EvalRunning?"Evaluating...":"Evaluate AP2 Request")
+              : (running?"Executing...":"Execute")}
         </Btn>
       </Card>
       <Card><FG label="Result"><Txt value={resultText} rows={18} readOnly/></FG></Card>
     </Row2>
   </div>;
 };
-

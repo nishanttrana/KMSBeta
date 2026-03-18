@@ -39,7 +39,7 @@ Enterprise Key Management System with full lifecycle cryptographic operations, c
 | **qkd** | — | Quantum Key Distribution integration |
 | **qrng** | — | Quantum Random Number Generator |
 | **mpc** | — | Multi-party computation for distributed key ceremonies |
-| **payment** | — | Payment HSM integration (PCI PIN, DUKPT, TR-31) |
+| **payment** | — | Payment HSM integration (PCI PIN, DUKPT, TR-31, ISO 20022, AP2 agent payments) |
 | **dataprotect** | — | Data protection — tokenization, masking, format-preserving encryption |
 | **sbom** | — | Software Bill of Materials tracking and vulnerability scanning |
 | **ai** | — | AI/ML model encryption and key management |
@@ -74,7 +74,7 @@ Enterprise Key Management System with full lifecycle cryptographic operations, c
 | `grpc` | gRPC transport utilities |
 | `metering` | Usage metering and billing |
 | `mpc` | Multi-party computation protocol helpers |
-| `payment` | Payment HSM protocol helpers |
+| `payment` | Payment HSM, AP2 agent payment policy, and payment protocol helpers |
 | `pdfutil` | PDF generation for compliance reports |
 | `ratelimit` | Rate limiting middleware |
 | `runtimecfg` | Runtime configuration hot-reload |
@@ -167,6 +167,81 @@ docker-compose up -d
   - updates the authoritative TLS certificate binding and reapplies it to TLS-enabled interfaces
 - `GET /svc/keycore/access/interface-ports?tenant_id=root`
   - returns the effective request interfaces after the runtime TLS binding has been applied
+
+## AP2 Agent Payments
+
+- The Payments tab now includes a real AP2 control plane for agentic payments based on Google’s Agents to Payments model.
+- Tenant admins can configure AP2 policy over the payment service REST API:
+  - `GET /svc/payment/payment/ap2/profile?tenant_id=root`
+  - `PUT /svc/payment/payment/ap2/profile?tenant_id=root`
+- Operators can evaluate an agent payment request before enabling a flow:
+  - `POST /svc/payment/payment/ap2/evaluate`
+- AP2 policy covers:
+  - allowed protocol binding (`a2a`, `mcp`, optional `x402`)
+  - allowed rails and currencies
+  - human-present vs human-not-present thresholds
+  - required intent/cart/payment mandates
+  - required merchant signature, verifiable credential, wallet attestation, risk signals, and tokenized instrument
+- AP2 activity is auditable end-to-end:
+  - `audit.payment.ap2_profile_updated`
+  - `audit.payment.ap2_evaluated`
+- AP2 state is persisted as tenant payment policy data, so it follows the same control-plane storage and backup path as the rest of the payment service rather than living in node-local memory or local files.
+
+### Using AP2
+
+1. Open `Payments -> AP2 Agent Payments`.
+2. Enable AP2 and define the allowed bindings, rails, currencies, thresholds, and trusted credential issuers for the tenant.
+3. Save the AP2 profile. This persists the profile for the tenant and emits `audit.payment.ap2_profile_updated`.
+4. Use the AP2 evaluator in the same pane, or call `POST /svc/payment/payment/ap2/evaluate`, with the protocol binding, rail, amount, currency, and proof flags for mandates, credentials, wallet trust, and tokenization.
+5. Use the returned `allow`, `review`, or `deny` decision to gate the downstream payment authorization flow.
+
+Example:
+
+```bash
+curl -X PUT http://localhost:8170/payment/ap2/profile?tenant_id=root \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenant_id": "root",
+    "enabled": true,
+    "allowed_protocol_bindings": ["a2a", "mcp"],
+    "allowed_payment_rails": ["card", "ach", "rtp"],
+    "allowed_currencies": ["USD", "EUR"],
+    "default_currency": "USD",
+    "require_intent_mandate": true,
+    "require_cart_mandate": true,
+    "require_payment_mandate": true,
+    "require_verifiable_credential": true,
+    "require_risk_signals": true,
+    "require_tokenized_instrument": true,
+    "max_human_present_amount_minor": 1000000,
+    "max_human_not_present_amount_minor": 250000
+  }'
+```
+
+```bash
+curl -X POST http://localhost:8170/payment/ap2/evaluate?tenant_id=root \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenant_id": "root",
+    "agent_id": "shopping-agent-1",
+    "merchant_id": "merchant-demo",
+    "operation": "authorize",
+    "protocol_binding": "a2a",
+    "transaction_mode": "human_not_present",
+    "payment_rail": "card",
+    "currency": "USD",
+    "amount_minor": 12500,
+    "has_intent_mandate": true,
+    "has_cart_mandate": true,
+    "has_payment_mandate": true,
+    "has_merchant_signature": true,
+    "has_verifiable_credential": true,
+    "has_risk_signals": true,
+    "payment_instrument_tokenized": true
+  }'
+```
 
 ## Security Features
 

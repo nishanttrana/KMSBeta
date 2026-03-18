@@ -1172,6 +1172,8 @@ func buildBackupCoverageSummary(tables []string) backupCoverageSummary {
 			addCapability("security_posture_management")
 		case strings.HasPrefix(table, "compliance_"):
 			addCapability("compliance_assessments")
+		case strings.HasPrefix(table, "payment_"):
+			addCapability("payment_cryptography_and_ap2_policy")
 		case strings.HasPrefix(table, "reporting_"):
 			addCapability("reporting_jobs_and_incidents")
 		case strings.HasPrefix(table, "governance_"):

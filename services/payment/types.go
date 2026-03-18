@@ -72,6 +72,64 @@ type PaymentPolicy struct {
 	UpdatedAt                       time.Time           `json:"updated_at"`
 }
 
+type PaymentAP2Profile struct {
+	TenantID                      string    `json:"tenant_id"`
+	Enabled                       bool      `json:"enabled"`
+	AllowedProtocolBindings       []string  `json:"allowed_protocol_bindings"`
+	AllowedTransactionModes       []string  `json:"allowed_transaction_modes"`
+	AllowedPaymentRails           []string  `json:"allowed_payment_rails"`
+	AllowedCurrencies             []string  `json:"allowed_currencies"`
+	DefaultCurrency               string    `json:"default_currency"`
+	RequireIntentMandate          bool      `json:"require_intent_mandate"`
+	RequireCartMandate            bool      `json:"require_cart_mandate"`
+	RequirePaymentMandate         bool      `json:"require_payment_mandate"`
+	RequireMerchantSignature      bool      `json:"require_merchant_signature"`
+	RequireVerifiableCredential   bool      `json:"require_verifiable_credential"`
+	RequireWalletAttestation      bool      `json:"require_wallet_attestation"`
+	RequireRiskSignals            bool      `json:"require_risk_signals"`
+	RequireTokenizedInstrument    bool      `json:"require_tokenized_instrument"`
+	AllowX402Extension            bool      `json:"allow_x402_extension"`
+	MaxHumanPresentAmountMinor    int64     `json:"max_human_present_amount_minor"`
+	MaxHumanNotPresentAmountMinor int64     `json:"max_human_not_present_amount_minor"`
+	TrustedCredentialIssuers      []string  `json:"trusted_credential_issuers"`
+	UpdatedBy                     string    `json:"updated_by,omitempty"`
+	UpdatedAt                     time.Time `json:"updated_at"`
+}
+
+type PaymentAP2EvaluateRequest struct {
+	TenantID                   string `json:"tenant_id"`
+	AgentID                    string `json:"agent_id"`
+	MerchantID                 string `json:"merchant_id"`
+	Operation                  string `json:"operation"`
+	ProtocolBinding            string `json:"protocol_binding"`
+	TransactionMode            string `json:"transaction_mode"`
+	PaymentRail                string `json:"payment_rail"`
+	Currency                   string `json:"currency"`
+	AmountMinor                int64  `json:"amount_minor"`
+	HasIntentMandate           bool   `json:"has_intent_mandate"`
+	HasCartMandate             bool   `json:"has_cart_mandate"`
+	HasPaymentMandate          bool   `json:"has_payment_mandate"`
+	HasMerchantSignature       bool   `json:"has_merchant_signature"`
+	HasVerifiableCredential    bool   `json:"has_verifiable_credential"`
+	HasWalletAttestation       bool   `json:"has_wallet_attestation"`
+	HasRiskSignals             bool   `json:"has_risk_signals"`
+	PaymentInstrumentTokenized bool   `json:"payment_instrument_tokenized"`
+	CredentialIssuer           string `json:"credential_issuer"`
+}
+
+type PaymentAP2EvaluateResponse struct {
+	Decision                string            `json:"decision"`
+	Allowed                 bool              `json:"allowed"`
+	RequiredMandates        []string          `json:"required_mandates"`
+	MissingArtifacts        []string          `json:"missing_artifacts"`
+	Reasons                 []string          `json:"reasons"`
+	AppliedControls         []string          `json:"applied_controls"`
+	RecommendedNextSteps    []string          `json:"recommended_next_steps"`
+	MaxPermittedAmountMinor int64             `json:"max_permitted_amount_minor"`
+	RequestFingerprint      string            `json:"request_fingerprint"`
+	Profile                 PaymentAP2Profile `json:"profile"`
+}
+
 type PaymentCryptoDispatchRequest struct {
 	TenantID  string          `json:"tenant_id"`
 	Operation string          `json:"operation"`

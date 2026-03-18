@@ -16,6 +16,7 @@ type PaymentKey = {
 
 type PaymentKeyListResponse = { items: PaymentKey[] };
 type PaymentPolicyResponse = { policy: PaymentPolicy };
+type PaymentAP2ProfileResponse = { profile: PaymentAP2Profile };
 
 export type PaymentPolicy = {
   tenant_id: string;
@@ -55,6 +56,43 @@ export type PaymentPolicy = {
   block_wildcard_pan: boolean;
   updated_by?: string;
   updated_at?: string;
+};
+
+export type PaymentAP2Profile = {
+  tenant_id: string;
+  enabled: boolean;
+  allowed_protocol_bindings: string[];
+  allowed_transaction_modes: string[];
+  allowed_payment_rails: string[];
+  allowed_currencies: string[];
+  default_currency: string;
+  require_intent_mandate: boolean;
+  require_cart_mandate: boolean;
+  require_payment_mandate: boolean;
+  require_merchant_signature: boolean;
+  require_verifiable_credential: boolean;
+  require_wallet_attestation: boolean;
+  require_risk_signals: boolean;
+  require_tokenized_instrument: boolean;
+  allow_x402_extension: boolean;
+  max_human_present_amount_minor: number;
+  max_human_not_present_amount_minor: number;
+  trusted_credential_issuers: string[];
+  updated_by?: string;
+  updated_at?: string;
+};
+
+export type PaymentAP2Evaluation = {
+  decision: string;
+  allowed: boolean;
+  required_mandates: string[];
+  missing_artifacts: string[];
+  reasons: string[];
+  applied_controls: string[];
+  recommended_next_steps: string[];
+  max_permitted_amount_minor: number;
+  request_fingerprint: string;
+  profile: PaymentAP2Profile;
 };
 
 export type PaymentInjectionTerminal = {
@@ -120,6 +158,57 @@ export async function updatePaymentPolicy(
     })
   });
   return (out?.policy || {}) as PaymentPolicy;
+}
+
+export async function getPaymentAP2Profile(session: AuthSession): Promise<PaymentAP2Profile> {
+  const out = await serviceRequest<PaymentAP2ProfileResponse>(session, "payment", `/payment/ap2/profile?${tenantQuery(session)}`);
+  return (out?.profile || {}) as PaymentAP2Profile;
+}
+
+export async function updatePaymentAP2Profile(
+  session: AuthSession,
+  input: Partial<PaymentAP2Profile>
+): Promise<PaymentAP2Profile> {
+  const out = await serviceRequest<PaymentAP2ProfileResponse>(session, "payment", `/payment/ap2/profile?${tenantQuery(session)}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      ...input
+    })
+  });
+  return (out?.profile || {}) as PaymentAP2Profile;
+}
+
+export async function evaluatePaymentAP2(
+  session: AuthSession,
+  input: {
+    agent_id?: string;
+    merchant_id?: string;
+    operation?: string;
+    protocol_binding: string;
+    transaction_mode: string;
+    payment_rail: string;
+    currency: string;
+    amount_minor: number;
+    has_intent_mandate?: boolean;
+    has_cart_mandate?: boolean;
+    has_payment_mandate?: boolean;
+    has_merchant_signature?: boolean;
+    has_verifiable_credential?: boolean;
+    has_wallet_attestation?: boolean;
+    has_risk_signals?: boolean;
+    payment_instrument_tokenized?: boolean;
+    credential_issuer?: string;
+  }
+): Promise<PaymentAP2Evaluation> {
+  const out = await serviceRequest<{ result: PaymentAP2Evaluation }>(session, "payment", "/payment/ap2/evaluate", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      ...input
+    })
+  });
+  return (out?.result || {}) as PaymentAP2Evaluation;
 }
 
 export async function createTR31(

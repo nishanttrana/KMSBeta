@@ -205,3 +205,67 @@ func TestHandlerMACISOAndLAUEndpoints(t *testing.T) {
 		t.Fatalf("lau generate status=%d body=%s", lauRR.Code, lauRR.Body.String())
 	}
 }
+
+func TestHandlerPaymentAP2Endpoints(t *testing.T) {
+	h, _, _, _ := newPaymentHandler(t)
+
+	getReq := httptest.NewRequest(http.MethodGet, "/payment/ap2/profile?tenant_id=t-ap2", nil)
+	getRR := httptest.NewRecorder()
+	h.ServeHTTP(getRR, getReq)
+	if getRR.Code != http.StatusOK || !strings.Contains(getRR.Body.String(), "\"default_currency\":\"USD\"") {
+		t.Fatalf("get AP2 profile status=%d body=%s", getRR.Code, getRR.Body.String())
+	}
+
+	putReq := httptest.NewRequest(http.MethodPut, "/payment/ap2/profile?tenant_id=t-ap2", bytes.NewReader([]byte(`{
+		"tenant_id":"t-ap2",
+		"enabled":true,
+		"allowed_protocol_bindings":["a2a","mcp","x402"],
+		"allowed_transaction_modes":["human_present","human_not_present"],
+		"allowed_payment_rails":["card","ach"],
+		"allowed_currencies":["USD","EUR"],
+		"default_currency":"EUR",
+		"require_intent_mandate":true,
+		"require_cart_mandate":true,
+		"require_payment_mandate":true,
+		"require_merchant_signature":true,
+		"require_verifiable_credential":true,
+		"require_wallet_attestation":true,
+		"require_risk_signals":true,
+		"require_tokenized_instrument":true,
+		"allow_x402_extension":true,
+		"max_human_present_amount_minor":500000,
+		"max_human_not_present_amount_minor":100000,
+		"trusted_credential_issuers":["issuer.example"]
+	}`)))
+	putRR := httptest.NewRecorder()
+	h.ServeHTTP(putRR, putReq)
+	if putRR.Code != http.StatusOK || !strings.Contains(putRR.Body.String(), "\"enabled\":true") {
+		t.Fatalf("put AP2 profile status=%d body=%s", putRR.Code, putRR.Body.String())
+	}
+
+	evalReq := httptest.NewRequest(http.MethodPost, "/payment/ap2/evaluate?tenant_id=t-ap2", bytes.NewReader([]byte(`{
+		"tenant_id":"t-ap2",
+		"agent_id":"agent-1",
+		"merchant_id":"merchant-1",
+		"operation":"authorize",
+		"protocol_binding":"a2a",
+		"transaction_mode":"human_not_present",
+		"payment_rail":"card",
+		"currency":"EUR",
+		"amount_minor":90000,
+		"has_intent_mandate":true,
+		"has_cart_mandate":true,
+		"has_payment_mandate":true,
+		"has_merchant_signature":true,
+		"has_verifiable_credential":true,
+		"has_wallet_attestation":true,
+		"has_risk_signals":true,
+		"payment_instrument_tokenized":true,
+		"credential_issuer":"issuer.example"
+	}`)))
+	evalRR := httptest.NewRecorder()
+	h.ServeHTTP(evalRR, evalReq)
+	if evalRR.Code != http.StatusOK || !strings.Contains(evalRR.Body.String(), "\"decision\":\"allow\"") {
+		t.Fatalf("evaluate AP2 status=%d body=%s", evalRR.Code, evalRR.Body.String())
+	}
+}

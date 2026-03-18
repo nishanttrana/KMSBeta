@@ -18,4 +18,13 @@ func TestAuditEventCatalogClassification(t *testing.T) {
 	if cat := classifyCategory("audit.key.encrypt"); cat != "key" {
 		t.Fatalf("unexpected category for key.encrypt: %s", cat)
 	}
+	if sev := classifySeverity("audit.payment.ap2_profile_updated", "success"); sev != "MEDIUM" {
+		t.Fatalf("unexpected severity for payment.ap2_profile_updated: %s", sev)
+	}
+	if sev := classifySeverity("audit.payment.ap2_evaluated", "success"); sev != "LOW" {
+		t.Fatalf("unexpected severity for payment.ap2_evaluated: %s", sev)
+	}
+	if cat := classifyCategory("audit.payment.ap2_evaluated"); cat != "payment" {
+		t.Fatalf("unexpected category for payment.ap2_evaluated: %s", cat)
+	}
 }

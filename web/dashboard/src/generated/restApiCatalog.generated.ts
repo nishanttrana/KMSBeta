@@ -12697,6 +12697,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "payment-get-payment-ap2-profile",
+    "group": "Payment Crypto (payment)",
+    "title": "GET /payment/ap2/profile",
+    "service": "payment",
+    "method": "GET",
+    "pathTemplate": "/payment/ap2/profile?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Payment service.",
+    "requestExample": "GET /svc/payment/payment/ap2/profile?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "payment-get-payment-crypto-operations",
     "group": "Payment Crypto (payment)",
     "title": "GET /payment/crypto/operations",
@@ -12902,6 +12930,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Payment service.",
     "requestExample": "GET /svc/payment/payment/tr31/key-usages?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "payment-post-payment-ap2-evaluate",
+    "group": "Payment Crypto (payment)",
+    "title": "POST /payment/ap2/evaluate",
+    "service": "payment",
+    "method": "POST",
+    "pathTemplate": "/payment/ap2/evaluate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Payment service.",
+    "requestExample": "POST /svc/payment/payment/ap2/evaluate?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -13714,6 +13770,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Payment service.",
     "requestExample": "POST /svc/payment/payment/tr31/validate?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "payment-put-payment-ap2-profile",
+    "group": "Payment Crypto (payment)",
+    "title": "PUT /payment/ap2/profile",
+    "service": "payment",
+    "method": "PUT",
+    "pathTemplate": "/payment/ap2/profile?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Payment service.",
+    "requestExample": "PUT /svc/payment/payment/ap2/profile?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

@@ -41,6 +41,8 @@ func buildAuditEventCatalog() map[string]EventMeta {
 		"audit.key.fips.violation_blocked":         {Severity: "CRITICAL", Category: "key"},
 		"audit.fde.unlock_failed":                  {Severity: "CRITICAL", Category: "dataprotect"},
 		"audit.integrity_check_failed":             {Severity: "CRITICAL", Category: "audit"},
+		"audit.payment.ap2_profile_updated":        {Severity: "MEDIUM", Category: "payment"},
+		"audit.payment.ap2_evaluated":              {Severity: "LOW", Category: "payment"},
 		"audit.posture.dashboard_viewed":           {Severity: "LOW", Category: "posture"},
 		"audit.reporting.evidence_pack_requested":  {Severity: "MEDIUM", Category: "reporting"},
 		"audit.reporting.mttd_stats_viewed":        {Severity: "LOW", Category: "reporting"},
