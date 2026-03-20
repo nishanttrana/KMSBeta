@@ -25,11 +25,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) routes() *http.ServeMux {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /pqc/policy", h.handleGetPolicy)
+	mux.HandleFunc("PUT /pqc/policy", h.handleUpdatePolicy)
+	mux.HandleFunc("GET /pqc/inventory", h.handleGetInventory)
 	mux.HandleFunc("POST /pqc/scan", h.handleStartScan)
 	mux.HandleFunc("GET /pqc/scans", h.handleListScans)
 	mux.HandleFunc("GET /pqc/scans/{id}", h.handleGetScan)
 	mux.HandleFunc("GET /pqc/readiness", h.handleGetReadiness)
 
+	mux.HandleFunc("GET /pqc/migration/report", h.handleGetMigrationReport)
 	mux.HandleFunc("POST /pqc/migration/plans", h.handleCreatePlan)
 	mux.HandleFunc("GET /pqc/migration/plans", h.handleListPlans)
 	mux.HandleFunc("GET /pqc/migration/plans/{id}", h.handleGetPlan)
@@ -40,6 +44,50 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /pqc/timeline", h.handleTimeline)
 	mux.HandleFunc("GET /pqc/cbom/export", h.handleExportCBOM)
 	return mux
+}
+
+func (h *Handler) handleGetPolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	item, err := h.svc.GetPolicy(r.Context(), tenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
+}
+
+func (h *Handler) handleUpdatePolicy(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req PQCPolicy
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	req.TenantID = firstTenant(req.TenantID, tenantFromRequest(r))
+	item, err := h.svc.UpdatePolicy(r.Context(), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": item, "request_id": reqID})
+}
+
+func (h *Handler) handleGetInventory(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	item, err := h.svc.GetInventory(r.Context(), tenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"inventory": item, "request_id": reqID})
 }
 
 func (h *Handler) handleStartScan(w http.ResponseWriter, r *http.Request) {
@@ -114,6 +162,20 @@ func (h *Handler) handleCreatePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]interface{}{"plan": item, "request_id": reqID})
+}
+
+func (h *Handler) handleGetMigrationReport(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	item, err := h.svc.GetMigrationReport(r.Context(), tenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"report": item, "request_id": reqID})
 }
 
 func (h *Handler) handleListPlans(w http.ResponseWriter, r *http.Request) {

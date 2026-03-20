@@ -206,6 +206,12 @@ func normalizeComponentName(v string) string {
 		return "hyok"
 	case "payment", "payment_crypto":
 		return "payment"
+	case "autokey", "autokey_provisioning", "key_handle_provisioning":
+		return "autokey"
+	case "workload", "workload_identity", "spiffe", "spiffe_federation":
+		return "workload"
+	case "confidential", "confidential_compute", "attested_key_release":
+		return "confidential"
 	case "dataprotect", "data_protection", "field_encryption":
 		return "dataprotect"
 	case "ekm", "enterprise_key_management":
@@ -281,6 +287,12 @@ func componentDisplayName(component string) string {
 		return "HYOK"
 	case "payment":
 		return "Payment"
+	case "autokey":
+		return "Autokey"
+	case "workload":
+		return "Workload Identity"
+	case "confidential":
+		return "Confidential"
 	case "dataprotect":
 		return "DataProtect"
 	case "ekm":

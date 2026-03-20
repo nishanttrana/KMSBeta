@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+	pkgrestauth "vecta-kms/pkg/restauth"
 )
 
 type requestSecurityCtxKey string
@@ -1996,6 +1998,13 @@ func (h *Handler) enforceSignedRequestPolicy(r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	if claims != nil && strings.TrimSpace(claims.ClientID) != "" {
+		authMode := normalizeRESTClientAuthMode(claims.AuthMode)
+		if authMode != "api_key" {
+			return h.enforceSenderConstrainedClientRequest(r, tenantID, settings, claims)
+		}
+	}
 	if !settings.EnforceSignedRequests {
 		return nil
 	}
@@ -2040,6 +2049,196 @@ func (h *Handler) enforceSignedRequestPolicy(r *http.Request) error {
 	return nil
 }
 
+func (h *Handler) enforceSenderConstrainedClientRequest(r *http.Request, tenantID string, settings KeyAccessSettings, claims *pkgauth.Claims) error {
+	authMode := normalizeRESTClientAuthMode(claims.AuthMode)
+	clientID := strings.TrimSpace(claims.ClientID)
+	rawToken, _ := r.Context().Value(rawBearerTokenCtxKey).(string)
+	observation := RESTClientSecurityObservation{AuthMode: authMode, ObservedAt: time.Now().UTC()}
+	record := func() {
+		_ = h.svc.store.RecordRESTClientSecurityObservation(r.Context(), tenantID, clientID, observation)
+	}
+	auditFailure := func(subject string, payload map[string]any) {
+		record()
+		if payload == nil {
+			payload = map[string]any{}
+		}
+		payload["client_id"] = clientID
+		payload["auth_mode"] = authMode
+		payload["interface_name"] = "rest"
+		_ = h.svc.publishAudit(r.Context(), subject, tenantID, payload)
+	}
+	switch authMode {
+	case "oauth_mtls":
+		_, presentedThumb, subjectDN, uriSAN := presentedRESTClientCertBinding(r)
+		expectedThumb := ""
+		if claims.Confirmation != nil {
+			expectedThumb = strings.TrimSpace(claims.Confirmation.X5TS256)
+		}
+		if expectedThumb == "" || presentedThumb == "" || expectedThumb != presentedThumb {
+			if presentedThumb == "" {
+				observation.UnsignedBlocked = true
+			} else {
+				observation.SignatureFailure = true
+			}
+			auditFailure("audit.key.rest_mtls_binding_failed", map[string]any{
+				"presented_subject_dn": subjectDN,
+				"presented_uri_san":    uriSAN,
+			})
+			return errors.New("oauth mTLS certificate binding mismatch")
+		}
+		observation.Verified = true
+		record()
+		return nil
+	case "dpop":
+		proof, verifyErr := pkgrestauth.VerifyDPoPProof(r.Header.Get("DPoP"), r.Method, pkgrestauth.RequestDPoPCandidates(r), rawToken, time.Duration(settings.ReplayWindowSeconds)*time.Second)
+		if verifyErr != nil {
+			if strings.Contains(strings.ToLower(verifyErr.Error()), "missing") {
+				observation.UnsignedBlocked = true
+				auditFailure("audit.key.rest_unsigned_blocked", map[string]any{"reason": verifyErr.Error()})
+			} else {
+				observation.SignatureFailure = true
+				auditFailure("audit.key.rest_signature_failed", map[string]any{"reason": verifyErr.Error()})
+			}
+			return verifyErr
+		}
+		if claims.Confirmation == nil || strings.TrimSpace(claims.Confirmation.JKT) == "" || strings.TrimSpace(claims.Confirmation.JKT) != strings.TrimSpace(proof.JKT) {
+			observation.SignatureFailure = true
+			auditFailure("audit.key.rest_signature_failed", map[string]any{"reason": "dpop token binding mismatch"})
+			return errors.New("dpop token binding mismatch")
+		}
+		if claims.ReplayProtection {
+			if err := h.svc.store.ReserveRequestNonce(r.Context(), tenantID, "dpop:"+clientID+":"+proof.JTI, proof.IssuedAt.Add(time.Duration(settings.NonceTTLSeconds)*time.Second)); err != nil {
+				observation.ReplayViolation = true
+				auditFailure("audit.key.request_replay_detected", map[string]any{"nonce": proof.JTI, "reason": err.Error()})
+				return err
+			}
+		}
+		observation.Verified = true
+		record()
+		return nil
+	case "http_message_signature":
+		binding, err := h.svc.store.GetRESTClientSecurityBinding(r.Context(), tenantID, clientID)
+		if err != nil {
+			observation.SignatureFailure = true
+			auditFailure("audit.key.rest_signature_failed", map[string]any{"reason": "client signature binding not found"})
+			return errors.New("client signature binding not found")
+		}
+		publicKey, err := pkgrestauth.ParsePublicKeyPEM(binding.HTTPSignaturePublicKeyPEM)
+		if err != nil {
+			observation.SignatureFailure = true
+			auditFailure("audit.key.rest_signature_failed", map[string]any{"reason": "client signature public key invalid"})
+			return errors.New("client signature public key invalid")
+		}
+		bodyBytes, err := snapshotRequestBody(r)
+		if err != nil {
+			observation.SignatureFailure = true
+			auditFailure("audit.key.rest_signature_failed", map[string]any{"reason": "failed to read request body"})
+			return errors.New("failed to read request body")
+		}
+		result, verifyErr := pkgrestauth.VerifyHTTPMessageSignature(r.Header, r.Method, requestPathWithQueryForSignature(r), requestAuthorityForSignature(r), bodyBytes, publicKey, binding.HTTPSignatureKeyID, time.Duration(settings.ReplayWindowSeconds)*time.Second)
+		if verifyErr != nil {
+			if strings.Contains(strings.ToLower(verifyErr.Error()), "missing") {
+				observation.UnsignedBlocked = true
+				auditFailure("audit.key.rest_unsigned_blocked", map[string]any{"reason": verifyErr.Error()})
+			} else {
+				observation.SignatureFailure = true
+				auditFailure("audit.key.rest_signature_failed", map[string]any{"reason": verifyErr.Error()})
+			}
+			return verifyErr
+		}
+		if claims.HTTPMessageSignatureKeyID != "" && strings.TrimSpace(claims.HTTPMessageSignatureKeyID) != strings.TrimSpace(result.KeyID) {
+			observation.SignatureFailure = true
+			auditFailure("audit.key.rest_signature_failed", map[string]any{"reason": "http message signature key binding mismatch"})
+			return errors.New("http message signature key binding mismatch")
+		}
+		if claims.ReplayProtection {
+			nonce := strings.TrimSpace(result.Nonce)
+			if nonce == "" {
+				observation.UnsignedBlocked = true
+				auditFailure("audit.key.rest_unsigned_blocked", map[string]any{"reason": "nonce is required for replay-protected HTTP message signatures"})
+				return errors.New("nonce is required for replay-protected HTTP message signatures")
+			}
+			if err := h.svc.store.ReserveRequestNonce(r.Context(), tenantID, "httpsig:"+clientID+":"+nonce, result.CreatedAt.Add(time.Duration(settings.NonceTTLSeconds)*time.Second)); err != nil {
+				observation.ReplayViolation = true
+				auditFailure("audit.key.request_replay_detected", map[string]any{"nonce": nonce, "reason": err.Error()})
+				return err
+			}
+		}
+		observation.Verified = true
+		record()
+		return nil
+	default:
+		return nil
+	}
+}
+
+func snapshotRequestBody(r *http.Request) ([]byte, error) {
+	if r == nil || r.Body == nil {
+		return nil, nil
+	}
+	raw, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	r.Body = io.NopCloser(bytes.NewReader(raw))
+	return raw, nil
+}
+
+func normalizeRESTClientAuthMode(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "oauth_mtls", "oauth-mtls", "mtls", "oauth+mtls":
+		return "oauth_mtls"
+	case "dpop":
+		return "dpop"
+	case "http_message_signature", "http-signature", "message_signature", "signature":
+		return "http_message_signature"
+	default:
+		return "api_key"
+	}
+}
+
+func presentedRESTClientCertBinding(r *http.Request) (fingerprintHex string, thumbprintB64URL string, subjectDN string, uriSAN string) {
+	xfcc := pkgrestauth.ParseForwardedClientCert(r.Header.Get("X-Forwarded-Client-Cert"))
+	fingerprintHex = pkgrestauth.NormalizeCertFingerprint(firstNonEmptyRESTHeaderString(xfcc.HashHex, r.Header.Get("X-Client-Cert-SHA256")))
+	thumbprintB64URL = pkgrestauth.FingerprintHexToThumbprintB64URL(fingerprintHex)
+	subjectDN = strings.TrimSpace(firstNonEmptyRESTHeaderString(xfcc.Subject, r.Header.Get("X-Client-Cert-Subject")))
+	if len(xfcc.URISANs) > 0 {
+		uriSAN = strings.TrimSpace(xfcc.URISANs[0])
+	}
+	if uriSAN == "" {
+		uriSAN = strings.TrimSpace(r.Header.Get("X-Client-Cert-URI-SAN"))
+	}
+	return fingerprintHex, thumbprintB64URL, subjectDN, uriSAN
+}
+
+func requestPathWithQueryForSignature(r *http.Request) string {
+	if r == nil || r.URL == nil {
+		return "/"
+	}
+	for _, candidate := range []string{r.Header.Get("X-Envoy-Original-Path"), r.Header.Get("X-Original-Uri"), r.URL.RequestURI(), r.URL.Path} {
+		if trimmed := strings.TrimSpace(candidate); trimmed != "" {
+			return trimmed
+		}
+	}
+	return "/"
+}
+
+func requestAuthorityForSignature(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	return strings.TrimSpace(firstNonEmptyRESTHeaderString(r.Header.Get("X-Forwarded-Host"), r.Host))
+}
+
+func firstNonEmptyRESTHeaderString(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
 func accessActorFromHTTPRequest(r *http.Request) AccessActor {
 	ctx := r.Context()
 	actor := AccessActor{}
@@ -2053,6 +2252,9 @@ func accessActorFromHTTPRequest(r *http.Request) AccessActor {
 		actor.Permissions = append([]string{}, claims.Permissions...)
 		actor.ClientID = strings.TrimSpace(claims.ClientID)
 		actor.SubjectID = strings.TrimSpace(claims.Subject)
+		actor.WorkloadIdentity = strings.TrimSpace(claims.WorkloadIdentity)
+		actor.WorkloadTrustDomain = strings.TrimSpace(claims.WorkloadTrustDomain)
+		actor.AllowedKeyIDs = append([]string{}, claims.AllowedKeyIDs...)
 		actor.Authenticated = actor.UserID != "" || actor.Username != ""
 	}
 	if actor.UserID == "" {

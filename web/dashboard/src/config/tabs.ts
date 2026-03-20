@@ -35,6 +35,9 @@ export type FeatureKey =
   | "qkd_interface"
   | "ekm_database"
   | "payment_crypto"
+  | "autokey_provisioning"
+  | "workload_identity"
+  | "confidential_compute"
   | "compliance_dashboard"
   | "sbom_cbom"
   | "reporting_alerting"
@@ -56,6 +59,8 @@ export type TabId =
   | "certificates"
   | "tokenize_mask"
   | "payment"
+  | "autokey"
+  | "pqc"
   | "byok"
   | "hyok"
   | "ekm"
@@ -179,6 +184,26 @@ export const tabConfig: TabConfig[] = [
     icon: Wallet,
     emoji: "P",
     requiredAnyFeatures: ["payment_crypto"]
+  },
+  {
+    id: "autokey",
+    label: "Autokey",
+    shortLabel: "Autokey",
+    group: "data_protection",
+    description: "Policy-driven key handle provisioning and approval workflows",
+    icon: Layers3,
+    emoji: "A",
+    requiredAnyFeatures: ["autokey_provisioning"]
+  },
+  {
+    id: "pqc",
+    label: "Post-Quantum Crypto",
+    shortLabel: "PQC",
+    group: "data_protection",
+    description: "ML-KEM, ML-DSA, SLH-DSA policy, readiness, and migration",
+    icon: Atom,
+    emoji: "Q",
+    requiredAnyFeatures: ["pqc_migration"]
   },
   {
     id: "pkcs11_jca",
@@ -331,4 +356,3 @@ export const tabConfig: TabConfig[] = [
 ];
 
 export const tabOrder: TabId[] = tabConfig.map((t) => t.id);
-

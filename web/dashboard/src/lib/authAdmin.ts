@@ -92,6 +92,58 @@ export type AuthSystemHealthSnapshot = {
   request_id?: string;
 };
 
+export type AuthClientRegistration = {
+  id: string;
+  tenant_id: string;
+  client_name: string;
+  client_type: string;
+  interface_name?: string;
+  subject_id?: string;
+  description?: string;
+  contact_email?: string;
+  requested_role?: string;
+  status: string;
+  approval_id?: string;
+  ip_whitelist?: string[];
+  rate_limit?: number;
+  api_key_prefix?: string;
+  auth_mode?: string;
+  replay_protection_enabled?: boolean;
+  mtls_cert_fingerprint?: string;
+  mtls_subject_dn?: string;
+  mtls_uri_san?: string;
+  http_signature_key_id?: string;
+  http_signature_public_key_pem?: string;
+  http_signature_algorithm?: string;
+  verified_request_count?: number;
+  replay_violation_count?: number;
+  signature_failure_count?: number;
+  unsigned_reject_count?: number;
+  last_verified_request_at?: string;
+  last_replay_violation_at?: string;
+  last_signature_failure_at?: string;
+  last_unsigned_reject_at?: string;
+  last_auth_mode_used?: string;
+  approved_at?: string;
+  created_at?: string;
+};
+
+export type RESTClientSecuritySummary = {
+  tenant_id: string;
+  total_clients: number;
+  sender_constrained_clients: number;
+  oauth_mtls_clients: number;
+  dpop_clients: number;
+  http_message_signature_clients: number;
+  replay_protected_clients: number;
+  non_compliant_clients: number;
+  verified_requests: number;
+  replay_violations: number;
+  signature_failures: number;
+  unsigned_rejects: number;
+  last_violation_at?: string;
+};
+
 export type PasswordPolicy = {
   tenant_id: string;
   min_length: number;
@@ -301,6 +353,14 @@ type RestartServiceResponse = {
   service?: string;
   request_id?: string;
 };
+type AuthClientsResponse = { items?: AuthClientRegistration[] };
+type AuthClientResponse = { client?: AuthClientRegistration };
+type RESTClientSecuritySummaryResponse = { summary?: RESTClientSecuritySummary };
+type RotateClientKeyResponse = {
+  api_key?: string;
+  api_key_prefix?: string;
+  request_id?: string;
+};
 
 export async function listAuthUsers(session: AuthSession, tenantID?: string): Promise<AuthUser[]> {
   const targetTenant = String(tenantID || "").trim();
@@ -326,6 +386,68 @@ export async function getAuthSystemHealth(
     services: Array.isArray(out?.services) ? out.services : [],
     interfaces: Array.isArray(out?.interfaces) ? out.interfaces : []
   };
+}
+
+export async function listAuthClients(session: AuthSession): Promise<AuthClientRegistration[]> {
+  const out = await serviceRequest<AuthClientsResponse>(session, "auth", "/auth/clients");
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getAuthClient(session: AuthSession, clientID: string): Promise<AuthClientRegistration> {
+  const out = await serviceRequest<AuthClientResponse>(
+    session,
+    "auth",
+    `/auth/clients/${encodeURIComponent(String(clientID || "").trim())}`
+  );
+  return out?.client as AuthClientRegistration;
+}
+
+export async function updateAuthClient(
+  session: AuthSession,
+  clientID: string,
+  input: Partial<AuthClientRegistration>
+): Promise<void> {
+  await serviceRequest<{ status?: string }>(
+    session,
+    "auth",
+    `/auth/clients/${encodeURIComponent(String(clientID || "").trim())}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(input || {})
+    }
+  );
+}
+
+export async function rotateAuthClientKey(
+  session: AuthSession,
+  clientID: string
+): Promise<RotateClientKeyResponse> {
+  return serviceRequest<RotateClientKeyResponse>(
+    session,
+    "auth",
+    `/auth/clients/${encodeURIComponent(String(clientID || "").trim())}/rotate-key`,
+    {
+      method: "POST",
+      body: JSON.stringify({})
+    }
+  );
+}
+
+export async function revokeAuthClient(session: AuthSession, clientID: string): Promise<void> {
+  await serviceRequest<{ status?: string }>(
+    session,
+    "auth",
+    `/auth/clients/${encodeURIComponent(String(clientID || "").trim())}/revoke`,
+    {
+      method: "POST",
+      body: JSON.stringify({})
+    }
+  );
+}
+
+export async function getAuthRESTClientSecuritySummary(session: AuthSession): Promise<RESTClientSecuritySummary> {
+  const out = await serviceRequest<RESTClientSecuritySummaryResponse>(session, "auth", "/auth/rest-client-security/summary");
+  return out?.summary as RESTClientSecuritySummary;
 }
 
 export async function restartAuthSystemService(

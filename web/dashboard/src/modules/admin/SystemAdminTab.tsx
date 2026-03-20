@@ -388,6 +388,7 @@ type ConfigurableInterfaceDefinition = {
 
 type InterfaceProtocol = "http" | "https" | "tls13" | "mtls" | "tcp";
 type InterfaceCertSource = "none" | "internal_ca" | "pki_ca" | "uploaded_certificate";
+type InterfacePQCMode = "inherit" | "classical" | "hybrid" | "pqc_only";
 type InterfaceTLSBinding = {
   certSource: InterfaceCertSource;
   caID: string;
@@ -409,6 +410,13 @@ const INTERFACE_CERT_SOURCE_LABELS: Record<InterfaceCertSource, string> = {
   uploaded_certificate: "Uploaded certificate from PKI"
 };
 
+const INTERFACE_PQC_MODE_LABELS: Record<InterfacePQCMode, string> = {
+  inherit: "Inherit PQC Policy",
+  classical: "Classical Only",
+  hybrid: "Hybrid PQC",
+  pqc_only: "PQC Only"
+};
+
 const TLS_CERT_MODE_OPTIONS: Array<{ value: InterfaceCertSource; label: string }> = [
   { value: "internal_ca", label: INTERFACE_CERT_SOURCE_LABELS.internal_ca },
   { value: "pki_ca", label: INTERFACE_CERT_SOURCE_LABELS.pki_ca },
@@ -418,6 +426,29 @@ const TLS_CERT_MODE_OPTIONS: Array<{ value: InterfaceCertSource; label: string }
 const interfaceProtocolUsesCertificate = (protocol:string): boolean => {
   const value = String(protocol || "").trim().toLowerCase();
   return value==="https" || value==="tls13" || value==="mtls";
+};
+
+const normalizeInterfacePQCMode = (raw:string, protocol:string): InterfacePQCMode => {
+  if(!interfaceProtocolUsesCertificate(protocol)){
+    return "classical";
+  }
+  switch(String(raw || "").trim().toLowerCase()){
+    case "":
+    case "inherit":
+    case "default":
+      return "inherit";
+    case "classical":
+    case "legacy":
+      return "classical";
+    case "hybrid":
+      return "hybrid";
+    case "pqc":
+    case "pqc_only":
+    case "pqc-only":
+      return "pqc_only";
+    default:
+      return "inherit";
+  }
 };
 
 const normalizeInterfaceProtocol = (raw:string, fallback: InterfaceProtocol = "http"): InterfaceProtocol => {
@@ -808,6 +839,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     service: string;
     protocol: InterfaceProtocol;
     protocol_label: string;
+    pqc_mode: InterfacePQCMode;
+    pqc_label: string;
     cert_source: InterfaceCertSource;
     cert_label: string;
     ca_id: string;
@@ -827,6 +860,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [ifName,setIfName]=useState(INTERFACE_OPTIONS[0] || "rest");
   const [ifDesc,setIfDesc]=useState("");
   const [ifProtocol,setIfProtocol]=useState<InterfaceProtocol>("https");
+  const [ifPQCMode,setIfPQCMode]=useState<InterfacePQCMode>("inherit");
   const [ifCertSource,setIfCertSource]=useState<InterfaceCertSource>("internal_ca");
   const [ifCAID,setIfCAID]=useState("");
   const [ifCertificateID,setIfCertificateID]=useState("");
@@ -1559,6 +1593,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           bind_address: item.defaultBindAddress,
           port: item.defaultPort,
           protocol: item.defaultProtocol,
+          pqc_mode: interfaceProtocolUsesCertificate(item.defaultProtocol) ? "inherit" : "classical",
           certificate_source: item.defaultCertSource,
           enabled: true,
           description: item.description
@@ -1627,6 +1662,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         }
         const desiredPort = Number(raw?.port||meta.defaultPort);
         const configuredProtocol = normalizeInterfaceProtocol(String(raw?.protocol||""), meta.defaultProtocol);
+        const configuredPQCMode = normalizeInterfacePQCMode(String(raw?.pqc_mode||""), configuredProtocol);
         const effectiveTLSBinding = interfaceProtocolUsesCertificate(configuredProtocol)
           ? {
               certSource: persistedTLSBinding.certSource,
@@ -1668,6 +1704,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           service: meta.service,
           protocol: configuredProtocol,
           protocol_label: INTERFACE_PROTOCOL_LABELS[configuredProtocol],
+          pqc_mode: configuredPQCMode,
+          pqc_label: INTERFACE_PQC_MODE_LABELS[configuredPQCMode],
           cert_source: configuredCertSource,
           cert_label: certificateLabel,
           ca_id: caID,
@@ -1749,11 +1787,13 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     const protocol = meta.defaultProtocol;
     const usesCertificate = interfaceProtocolUsesCertificate(protocol);
     const certSource = usesCertificate ? systemTLSCertSource : "none";
+    const pqcMode = normalizeInterfacePQCMode(String(meta.defaultProtocol==="http"||meta.defaultProtocol==="tcp" ? "classical" : "inherit"), protocol);
     setIfName(meta.key);
     setIfDesc(meta.description);
     setIfBindAddr(meta.defaultBindAddress);
     setIfPort(String(meta.defaultPort));
     setIfProtocol(protocol);
+    setIfPQCMode(pqcMode);
     setIfCertSource(certSource);
     setIfCAID(certSource==="pki_ca" ? systemTLSCAID : "");
     setIfCertificateID(certSource==="uploaded_certificate" ? systemTLSCertificateID : "");
@@ -1766,10 +1806,16 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       return;
     }
     if(!interfaceTLSRequired){
+      if(ifPQCMode!=="classical") setIfPQCMode("classical");
       if(ifCertSource!=="none") setIfCertSource("none");
       if(ifCAID) setIfCAID("");
       if(ifCertificateID) setIfCertificateID("");
       return;
+    }
+    if(ifPQCMode==="classical"){
+      // allow explicit classical override
+    } else if(!["inherit","hybrid","pqc_only"].includes(ifPQCMode)){
+      setIfPQCMode("inherit");
     }
     if(ifCertSource!==systemTLSCertSource){
       setIfCertSource(systemTLSCertSource);
@@ -1803,6 +1849,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     ifCAID,
     ifCertSource,
     ifCertificateID,
+    ifPQCMode,
     ifProtocol,
     interfaceTLSRequired,
     systemTLSCertSource,
@@ -1817,6 +1864,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       setIfName(iface.interface_name);
       setIfDesc(iface.description);
       setIfProtocol(iface.protocol);
+      setIfPQCMode(iface.pqc_mode);
       setIfCertSource(interfaceProtocolUsesCertificate(iface.protocol) ? systemTLSCertSource : "none");
       setIfCAID(interfaceProtocolUsesCertificate(iface.protocol) && systemTLSCertSource==="pki_ca" ? systemTLSCAID : "");
       setIfCertificateID(interfaceProtocolUsesCertificate(iface.protocol) && systemTLSCertSource==="uploaded_certificate" ? systemTLSCertificateID : "");
@@ -1834,6 +1882,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     setIfName(fallback?.key||"rest");
     setIfDesc(fallback?.description||"");
     setIfProtocol(fallbackProtocol);
+    setIfPQCMode(normalizeInterfacePQCMode(fallbackUsesTLS ? "inherit" : "classical", fallbackProtocol));
     setIfCertSource(fallbackCertSource);
     setIfCAID(fallbackCertSource==="pki_ca" ? systemTLSCAID : "");
     setIfCertificateID(fallbackCertSource==="uploaded_certificate" ? systemTLSCertificateID : "");
@@ -1856,6 +1905,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     const bindAddress = String(ifBindAddr||"").trim() || meta.defaultBindAddress;
     const portNum = Number(ifPort||0);
     const protocol = normalizeInterfaceProtocol(ifProtocol, meta.defaultProtocol);
+    const pqcMode = normalizeInterfacePQCMode(ifPQCMode, protocol);
     if(!meta.allowedProtocols.includes(protocol)){
       onToast("Select a valid protocol for this interface.");
       return;
@@ -1881,6 +1931,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         bind_address: bindAddress,
         port: portNum,
         protocol,
+        pqc_mode: pqcMode,
         certificate_source: certSource,
         ca_id: effectiveCAID,
         certificate_id: effectiveCertificateID,
@@ -1894,7 +1945,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     }catch(error){
       if(!sessionGuard(error)) onToast(`Interface save failed: ${errMsg(error)}`);
     }
-  },[editingNetIf,ifBindAddr,ifDesc,ifEnabled,ifName,ifPort,ifProtocol,loadAccessHardening,onToast,session,sessionGuard,systemTLSCAID,systemTLSCertSource,systemTLSCertificateID]);
+  },[editingNetIf,ifBindAddr,ifDesc,ifEnabled,ifName,ifPQCMode,ifPort,ifProtocol,loadAccessHardening,onToast,session,sessionGuard,systemTLSCAID,systemTLSCertSource,systemTLSCertificateID]);
 
   const deleteNetIf = useCallback(async(interfaceName:string)=>{
     if(!session?.token){
@@ -1931,6 +1982,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         bind_address: iface.bind_address,
         port: iface.port,
         protocol: iface.protocol,
+        pqc_mode: iface.pqc_mode,
         certificate_source: iface.cert_source,
         ca_id: iface.ca_id,
         certificate_id: iface.certificate_id,
@@ -2592,8 +2644,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
                   <Btn small danger onClick={()=>void deleteNetIf(iface.interface_name)}>Delete</Btn>
                 </div>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8}}>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:8}}>
                 <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Protocol</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{iface.protocol_label}</div></div>
+                <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Quantum Mode</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{iface.pqc_label}</div></div>
                 <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Certificate</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{iface.cert_label}</div></div>
                 <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Configured Endpoint</div><div style={{fontSize:10,color:C.text,fontWeight:600,marginTop:2}}>{`${iface.bind_address}:${iface.port}`}</div></div>
                 <div><div style={{fontSize:8,color:C.muted,textTransform:"uppercase",letterSpacing:0.6}}>Runtime Endpoint</div><div style={{fontSize:10,color:iface.runtime_bind_address?C.text:C.dim,fontWeight:600,marginTop:2}}>{iface.runtime_bind_address?`${iface.runtime_bind_address}:${String(iface.runtime_port||iface.port)}`:"Not detected"}</div></div>
@@ -2626,9 +2679,18 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             {availableProtocolOptions.map((protocol)=><option key={protocol} value={protocol}>{INTERFACE_PROTOCOL_LABELS[protocol]}</option>)}
           </Sel>
         </FG>
+        <FG label="Quantum Mode">
+          <Sel value={ifPQCMode} onChange={(e)=>setIfPQCMode(normalizeInterfacePQCMode(e.target.value, ifProtocol))} disabled={!interfaceTLSRequired}>
+            {(interfaceTLSRequired ? (["inherit","classical","hybrid","pqc_only"] as InterfacePQCMode[]) : (["classical"] as InterfacePQCMode[])).map((mode)=><option key={mode} value={mode}>{INTERFACE_PQC_MODE_LABELS[mode]}</option>)}
+          </Sel>
+        </FG>
+      </Row3>
+      <Row3>
         <FG label="Certificate Source">
           <Inp value={interfaceTLSRequired ? INTERFACE_CERT_SOURCE_LABELS[ifCertSource] : "Not required"} readOnly/>
         </FG>
+        <FG label="Hybrid TLS Guidance"><Inp value={interfaceTLSRequired ? (ifPQCMode==="hybrid" ? "Classical + PQC handshake path enabled" : ifPQCMode==="pqc_only" ? "PQC-only handshake target" : ifPQCMode==="classical" ? "Legacy TLS only" : "Uses tenant PQC policy default") : "Not applicable"} readOnly/></FG>
+        <FG label="Policy Source"><Inp value={interfaceTLSRequired ? (ifPQCMode==="inherit" ? "Inherited from Post-Quantum Crypto policy" : "Interface override") : "Classical only"} readOnly/></FG>
       </Row3>
       {interfaceTLSRequired&&<>
         <FG label="TLS Binding Source"><Inp value="Managed by Runtime Crypto -> Configure TLS" readOnly/></FG>
@@ -2640,6 +2702,15 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             : ifCertSource==="pki_ca"
               ? `This interface will request or renew a certificate from ${selectedTLSCAName||"the CA selected in Configure TLS"}.`
               : `This interface will bind ${selectedTLSCertificateName||"the certificate selected in Configure TLS"}.`}
+        </div>
+        <div style={{fontSize:10,color:C.dim,marginTop:4}}>
+          {ifPQCMode==="hybrid"
+            ? "Hybrid mode keeps a classical compatibility path while advertising PQC migration intent for this listener."
+            : ifPQCMode==="pqc_only"
+              ? "PQC-only mode marks this listener as migration-complete and removes classical fallback from readiness reporting."
+              : ifPQCMode==="classical"
+                ? "Classical-only mode will be reported as non-migrated in PQC readiness and compliance views."
+                : "Inherit mode follows the tenant PQC policy profile from the Post-Quantum Crypto tab."}
         </div>
         <div style={{fontSize:10,color:C.amber,marginTop:4}}>
           Interface-level TLS certificate overrides are disabled. Change certificate source, issuing CA, or uploaded certificate from Runtime Crypto -&gt; Configure TLS.

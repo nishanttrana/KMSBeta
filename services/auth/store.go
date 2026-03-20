@@ -48,10 +48,12 @@ type Store interface {
 	GetClientRegistration(ctx context.Context, tenantID string, registrationID string) (ClientRegistration, error)
 	ListClientRegistrations(ctx context.Context, tenantID string) ([]ClientRegistration, error)
 	UpdateClientRegistrationSettings(ctx context.Context, tenantID string, registrationID string, whitelist []string, rateLimit int) error
+	UpdateClientRegistrationSecurity(ctx context.Context, tenantID string, registrationID string, cfg ClientSecurityConfig) error
 	ActivateClientRegistration(ctx context.Context, tenantID string, registrationID string, apiKey APIKey, approver string, approvalID string) error
 	RevokeClientRegistration(ctx context.Context, tenantID string, registrationID string) error
 	RotateClientAPIKey(ctx context.Context, tenantID string, registrationID string, keyHash []byte, keyPrefix string) error
 	GetAPIKeyByHash(ctx context.Context, tenantID string, keyHash []byte) (APIKey, error)
+	ReserveRequestNonce(ctx context.Context, tenantID string, nonce string, expiresAt time.Time) error
 
 	CreateAPIKey(ctx context.Context, k APIKey) error
 	DeleteAPIKey(ctx context.Context, tenantID string, keyID string) error
@@ -105,22 +107,66 @@ type User struct {
 }
 
 type ClientRegistration struct {
-	ID            string    `json:"id"`
-	TenantID      string    `json:"tenant_id"`
-	ClientName    string    `json:"client_name"`
-	ClientType    string    `json:"client_type"`
-	InterfaceName string    `json:"interface_name"`
-	SubjectID     string    `json:"subject_id"`
-	Description   string    `json:"description"`
-	ContactEmail  string    `json:"contact_email"`
-	RequestedRole string    `json:"requested_role"`
-	Status        string    `json:"status"`
-	ApprovalID    string    `json:"approval_id"`
-	IPWhitelist   []string  `json:"ip_whitelist"`
-	RateLimit     int       `json:"rate_limit"`
-	APIKeyPrefix  string    `json:"api_key_prefix"`
-	ApprovedAt    time.Time `json:"approved_at"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID                        string    `json:"id"`
+	TenantID                  string    `json:"tenant_id"`
+	ClientName                string    `json:"client_name"`
+	ClientType                string    `json:"client_type"`
+	InterfaceName             string    `json:"interface_name"`
+	SubjectID                 string    `json:"subject_id"`
+	Description               string    `json:"description"`
+	ContactEmail              string    `json:"contact_email"`
+	RequestedRole             string    `json:"requested_role"`
+	Status                    string    `json:"status"`
+	ApprovalID                string    `json:"approval_id"`
+	IPWhitelist               []string  `json:"ip_whitelist"`
+	RateLimit                 int       `json:"rate_limit"`
+	APIKeyPrefix              string    `json:"api_key_prefix"`
+	AuthMode                  string    `json:"auth_mode"`
+	ReplayProtectionEnabled   bool      `json:"replay_protection_enabled"`
+	MTLSCertFingerprint       string    `json:"mtls_cert_fingerprint,omitempty"`
+	MTLSSubjectDN             string    `json:"mtls_subject_dn,omitempty"`
+	MTLSURISAN                string    `json:"mtls_uri_san,omitempty"`
+	HTTPSignatureKeyID        string    `json:"http_signature_key_id,omitempty"`
+	HTTPSignaturePublicKeyPEM string    `json:"http_signature_public_key_pem,omitempty"`
+	HTTPSignatureAlgorithm    string    `json:"http_signature_algorithm,omitempty"`
+	VerifiedRequestCount      int       `json:"verified_request_count"`
+	ReplayViolationCount      int       `json:"replay_violation_count"`
+	SignatureFailureCount     int       `json:"signature_failure_count"`
+	UnsignedRejectCount       int       `json:"unsigned_reject_count"`
+	LastVerifiedRequestAt     time.Time `json:"last_verified_request_at,omitempty"`
+	LastReplayViolationAt     time.Time `json:"last_replay_violation_at,omitempty"`
+	LastSignatureFailureAt    time.Time `json:"last_signature_failure_at,omitempty"`
+	LastUnsignedRejectAt      time.Time `json:"last_unsigned_reject_at,omitempty"`
+	LastAuthModeUsed          string    `json:"last_auth_mode_used,omitempty"`
+	ApprovedAt                time.Time `json:"approved_at"`
+	CreatedAt                 time.Time `json:"created_at"`
+}
+
+type ClientSecurityConfig struct {
+	AuthMode                  string `json:"auth_mode"`
+	ReplayProtectionEnabled   bool   `json:"replay_protection_enabled"`
+	MTLSCertFingerprint       string `json:"mtls_cert_fingerprint,omitempty"`
+	MTLSSubjectDN             string `json:"mtls_subject_dn,omitempty"`
+	MTLSURISAN                string `json:"mtls_uri_san,omitempty"`
+	HTTPSignatureKeyID        string `json:"http_signature_key_id,omitempty"`
+	HTTPSignaturePublicKeyPEM string `json:"http_signature_public_key_pem,omitempty"`
+	HTTPSignatureAlgorithm    string `json:"http_signature_algorithm,omitempty"`
+}
+
+type RESTClientSecuritySummary struct {
+	TenantID                    string    `json:"tenant_id"`
+	TotalClients                int       `json:"total_clients"`
+	SenderConstrainedClients    int       `json:"sender_constrained_clients"`
+	OAuthMTLSClients            int       `json:"oauth_mtls_clients"`
+	DPoPClients                 int       `json:"dpop_clients"`
+	HTTPMessageSignatureClients int       `json:"http_message_signature_clients"`
+	ReplayProtectedClients      int       `json:"replay_protected_clients"`
+	VerifiedRequests            int       `json:"verified_requests"`
+	ReplayViolations            int       `json:"replay_violations"`
+	SignatureFailures           int       `json:"signature_failures"`
+	UnsignedRejects             int       `json:"unsigned_rejects"`
+	NonCompliantClients         int       `json:"non_compliant_clients"`
+	LastViolationAt             time.Time `json:"last_violation_at,omitempty"`
 }
 
 type APIKey struct {
@@ -688,12 +734,18 @@ func (s *SQLStore) CreateClientRegistration(ctx context.Context, reg ClientRegis
 	if err != nil {
 		return err
 	}
+	authMode := strings.TrimSpace(reg.AuthMode)
+	if authMode == "" {
+		authMode = "api_key"
+	}
 	_, err = s.db.SQL().ExecContext(ctx, `
 INSERT INTO auth_client_registrations (
     id, tenant_id, client_name, client_type, interface_name, subject_id, description, contact_email, requested_role,
-    status, approval_id, ip_whitelist, rate_limit, created_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,CURRENT_TIMESTAMP)
-`, reg.ID, reg.TenantID, reg.ClientName, reg.ClientType, reg.InterfaceName, reg.SubjectID, reg.Description, reg.ContactEmail, reg.RequestedRole, reg.Status, reg.ApprovalID, wl, reg.RateLimit)
+    status, approval_id, ip_whitelist, rate_limit, auth_mode, replay_protection_enabled,
+    mtls_cert_fingerprint, mtls_subject_dn, mtls_uri_san, http_signature_key_id, http_signature_public_key_pem,
+    http_signature_algorithm, created_at
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,CURRENT_TIMESTAMP)
+`, reg.ID, reg.TenantID, reg.ClientName, reg.ClientType, reg.InterfaceName, reg.SubjectID, reg.Description, reg.ContactEmail, reg.RequestedRole, reg.Status, reg.ApprovalID, wl, reg.RateLimit, authMode, reg.ReplayProtectionEnabled, nullableString(reg.MTLSCertFingerprint), nullableString(reg.MTLSSubjectDN), nullableString(reg.MTLSURISAN), nullableString(reg.HTTPSignatureKeyID), nullableString(reg.HTTPSignaturePublicKeyPEM), nullableString(reg.HTTPSignatureAlgorithm))
 	return err
 }
 
@@ -701,14 +753,26 @@ func (s *SQLStore) GetClientRegistration(ctx context.Context, tenantID string, r
 	var reg ClientRegistration
 	var raw []byte
 	var approvedAt sql.NullTime
+	var lastVerifiedAt sql.NullTime
+	var lastReplayAt sql.NullTime
+	var lastSignatureFailureAt sql.NullTime
+	var lastUnsignedRejectAt sql.NullTime
 	err := s.db.SQL().QueryRowContext(ctx, `
 SELECT id, tenant_id, client_name, client_type, interface_name, subject_id, description, contact_email, requested_role,
-       status, approval_id, ip_whitelist, rate_limit, api_key_prefix, approved_at, created_at
+       status, approval_id, ip_whitelist, rate_limit, api_key_prefix, auth_mode, replay_protection_enabled,
+       COALESCE(mtls_cert_fingerprint,''), COALESCE(mtls_subject_dn,''), COALESCE(mtls_uri_san,''),
+       COALESCE(http_signature_key_id,''), COALESCE(http_signature_public_key_pem,''), COALESCE(http_signature_algorithm,''),
+       COALESCE(verified_request_count,0), COALESCE(replay_violation_count,0), COALESCE(signature_failure_count,0), COALESCE(unsigned_reject_count,0),
+       last_verified_request_at, last_replay_violation_at, last_signature_failure_at, last_unsigned_reject_at,
+       COALESCE(last_auth_mode_used,''), approved_at, created_at
 FROM auth_client_registrations
 WHERE tenant_id=$1 AND id=$2
 `, tenantID, registrationID).Scan(
 		&reg.ID, &reg.TenantID, &reg.ClientName, &reg.ClientType, &reg.InterfaceName, &reg.SubjectID, &reg.Description, &reg.ContactEmail, &reg.RequestedRole,
-		&reg.Status, &reg.ApprovalID, &raw, &reg.RateLimit, &reg.APIKeyPrefix, &approvedAt, &reg.CreatedAt,
+		&reg.Status, &reg.ApprovalID, &raw, &reg.RateLimit, &reg.APIKeyPrefix, &reg.AuthMode, &reg.ReplayProtectionEnabled,
+		&reg.MTLSCertFingerprint, &reg.MTLSSubjectDN, &reg.MTLSURISAN, &reg.HTTPSignatureKeyID, &reg.HTTPSignaturePublicKeyPEM, &reg.HTTPSignatureAlgorithm,
+		&reg.VerifiedRequestCount, &reg.ReplayViolationCount, &reg.SignatureFailureCount, &reg.UnsignedRejectCount,
+		&lastVerifiedAt, &lastReplayAt, &lastSignatureFailureAt, &lastUnsignedRejectAt, &reg.LastAuthModeUsed, &approvedAt, &reg.CreatedAt,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ClientRegistration{}, errNotFound
@@ -724,13 +788,30 @@ WHERE tenant_id=$1 AND id=$2
 	if approvedAt.Valid {
 		reg.ApprovedAt = approvedAt.Time
 	}
+	if lastVerifiedAt.Valid {
+		reg.LastVerifiedRequestAt = lastVerifiedAt.Time
+	}
+	if lastReplayAt.Valid {
+		reg.LastReplayViolationAt = lastReplayAt.Time
+	}
+	if lastSignatureFailureAt.Valid {
+		reg.LastSignatureFailureAt = lastSignatureFailureAt.Time
+	}
+	if lastUnsignedRejectAt.Valid {
+		reg.LastUnsignedRejectAt = lastUnsignedRejectAt.Time
+	}
 	return reg, nil
 }
 
 func (s *SQLStore) ListClientRegistrations(ctx context.Context, tenantID string) ([]ClientRegistration, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT id, tenant_id, client_name, client_type, interface_name, subject_id, description, contact_email, requested_role,
-       status, approval_id, ip_whitelist, rate_limit, api_key_prefix, created_at
+       status, approval_id, ip_whitelist, rate_limit, api_key_prefix, auth_mode, replay_protection_enabled,
+       COALESCE(mtls_cert_fingerprint,''), COALESCE(mtls_subject_dn,''), COALESCE(mtls_uri_san,''),
+       COALESCE(http_signature_key_id,''), COALESCE(http_signature_algorithm,''),
+       COALESCE(verified_request_count,0), COALESCE(replay_violation_count,0), COALESCE(signature_failure_count,0), COALESCE(unsigned_reject_count,0),
+       last_verified_request_at, last_replay_violation_at, last_signature_failure_at, last_unsigned_reject_at,
+       COALESCE(last_auth_mode_used,''), created_at
 FROM auth_client_registrations
 WHERE tenant_id=$1
 ORDER BY created_at DESC
@@ -743,9 +824,16 @@ ORDER BY created_at DESC
 	for rows.Next() {
 		var reg ClientRegistration
 		var raw []byte
+		var lastVerifiedAt sql.NullTime
+		var lastReplayAt sql.NullTime
+		var lastSignatureFailureAt sql.NullTime
+		var lastUnsignedRejectAt sql.NullTime
 		if err := rows.Scan(
 			&reg.ID, &reg.TenantID, &reg.ClientName, &reg.ClientType, &reg.InterfaceName, &reg.SubjectID, &reg.Description, &reg.ContactEmail, &reg.RequestedRole,
-			&reg.Status, &reg.ApprovalID, &raw, &reg.RateLimit, &reg.APIKeyPrefix, &reg.CreatedAt,
+			&reg.Status, &reg.ApprovalID, &raw, &reg.RateLimit, &reg.APIKeyPrefix, &reg.AuthMode, &reg.ReplayProtectionEnabled,
+			&reg.MTLSCertFingerprint, &reg.MTLSSubjectDN, &reg.MTLSURISAN, &reg.HTTPSignatureKeyID, &reg.HTTPSignatureAlgorithm,
+			&reg.VerifiedRequestCount, &reg.ReplayViolationCount, &reg.SignatureFailureCount, &reg.UnsignedRejectCount,
+			&lastVerifiedAt, &lastReplayAt, &lastSignatureFailureAt, &lastUnsignedRejectAt, &reg.LastAuthModeUsed, &reg.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -753,6 +841,18 @@ ORDER BY created_at DESC
 			if err := json.Unmarshal(raw, &reg.IPWhitelist); err != nil {
 				return nil, err
 			}
+		}
+		if lastVerifiedAt.Valid {
+			reg.LastVerifiedRequestAt = lastVerifiedAt.Time
+		}
+		if lastReplayAt.Valid {
+			reg.LastReplayViolationAt = lastReplayAt.Time
+		}
+		if lastSignatureFailureAt.Valid {
+			reg.LastSignatureFailureAt = lastSignatureFailureAt.Time
+		}
+		if lastUnsignedRejectAt.Valid {
+			reg.LastUnsignedRejectAt = lastUnsignedRejectAt.Time
 		}
 		out = append(out, reg)
 	}
@@ -774,6 +874,28 @@ WHERE tenant_id=$3 AND id=$4
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) UpdateClientRegistrationSecurity(ctx context.Context, tenantID string, registrationID string, cfg ClientSecurityConfig) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE auth_client_registrations
+SET auth_mode=$1,
+    replay_protection_enabled=$2,
+    mtls_cert_fingerprint=$3,
+    mtls_subject_dn=$4,
+    mtls_uri_san=$5,
+    http_signature_key_id=$6,
+    http_signature_public_key_pem=$7,
+    http_signature_algorithm=$8
+WHERE tenant_id=$9 AND id=$10
+`, cfg.AuthMode, cfg.ReplayProtectionEnabled, nullableString(cfg.MTLSCertFingerprint), nullableString(cfg.MTLSSubjectDN), nullableString(cfg.MTLSURISAN), nullableString(cfg.HTTPSignatureKeyID), nullableString(cfg.HTTPSignaturePublicKeyPEM), nullableString(cfg.HTTPSignatureAlgorithm), tenantID, registrationID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
 		return errNotFound
 	}
 	return nil
@@ -891,6 +1013,29 @@ WHERE tenant_id=$1 AND key_hash=$2
 		out.ExpiresAt = &t
 	}
 	return out, nil
+}
+
+func (s *SQLStore) ReserveRequestNonce(ctx context.Context, tenantID string, nonce string, expiresAt time.Time) error {
+	tenantID = strings.TrimSpace(tenantID)
+	nonce = strings.TrimSpace(nonce)
+	if tenantID == "" || nonce == "" {
+		return errors.New("tenant_id and nonce are required")
+	}
+	return s.db.WithTenantTx(ctx, tenantID, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM auth_request_nonce_cache WHERE tenant_id=$1 AND expires_at <= CURRENT_TIMESTAMP`, tenantID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO auth_request_nonce_cache (tenant_id, nonce, expires_at, created_at)
+VALUES ($1,$2,$3,CURRENT_TIMESTAMP)
+`, tenantID, nonce, expiresAt.UTC()); err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(strings.ToLower(err.Error()), "unique") {
+				return errors.New("replay detected: nonce already used")
+			}
+			return err
+		}
+		return nil
+	})
 }
 
 func (s *SQLStore) CreateAPIKey(ctx context.Context, k APIKey) error {

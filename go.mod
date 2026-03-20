@@ -10,7 +10,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.12
 	github.com/aws/aws-sdk-go-v2/service/kms v1.50.3
 	github.com/bits-and-blooms/bloom/v3 v3.7.1
+	github.com/cloudflare/circl v1.6.3
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
+	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/go-ldap/ldap/v3 v3.4.13
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/gosnmp/gosnmp v1.42.1
@@ -103,6 +105,7 @@ require (
 	github.com/sony/gobreaker v0.5.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.16 // indirect
 	github.com/tklauser/numcpus v0.11.0 // indirect
+	github.com/x448/float16 v0.8.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect

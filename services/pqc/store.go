@@ -97,6 +97,52 @@ LIMIT $2 OFFSET $3
 	return out, rows.Err()
 }
 
+func (s *SQLStore) GetPolicy(ctx context.Context, tenantID string) (PQCPolicy, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, profile_id, default_kem, default_signature, interface_default_mode, certificate_default_mode,
+	hqc_backup_enabled, flag_classical_usage, flag_classical_certificates, flag_non_migrated_interfaces,
+	require_pqc_for_new_keys, COALESCE(updated_by,''), updated_at
+FROM pqc_policies
+WHERE tenant_id = $1
+`, strings.TrimSpace(tenantID))
+	item, err := scanPolicy(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return PQCPolicy{}, errNotFound
+	}
+	return item, err
+}
+
+func (s *SQLStore) UpsertPolicy(ctx context.Context, item PQCPolicy) (PQCPolicy, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+INSERT INTO pqc_policies (
+	tenant_id, profile_id, default_kem, default_signature, interface_default_mode, certificate_default_mode,
+	hqc_backup_enabled, flag_classical_usage, flag_classical_certificates, flag_non_migrated_interfaces,
+	require_pqc_for_new_keys, updated_by, updated_at
+) VALUES (
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP
+)
+ON CONFLICT (tenant_id) DO UPDATE SET
+	profile_id = EXCLUDED.profile_id,
+	default_kem = EXCLUDED.default_kem,
+	default_signature = EXCLUDED.default_signature,
+	interface_default_mode = EXCLUDED.interface_default_mode,
+	certificate_default_mode = EXCLUDED.certificate_default_mode,
+	hqc_backup_enabled = EXCLUDED.hqc_backup_enabled,
+	flag_classical_usage = EXCLUDED.flag_classical_usage,
+	flag_classical_certificates = EXCLUDED.flag_classical_certificates,
+	flag_non_migrated_interfaces = EXCLUDED.flag_non_migrated_interfaces,
+	require_pqc_for_new_keys = EXCLUDED.require_pqc_for_new_keys,
+	updated_by = EXCLUDED.updated_by,
+	updated_at = CURRENT_TIMESTAMP
+RETURNING tenant_id, profile_id, default_kem, default_signature, interface_default_mode, certificate_default_mode,
+	hqc_backup_enabled, flag_classical_usage, flag_classical_certificates, flag_non_migrated_interfaces,
+	require_pqc_for_new_keys, COALESCE(updated_by,''), updated_at
+`, item.TenantID, item.ProfileID, item.DefaultKEM, item.DefaultSignature, item.InterfaceDefaultMode, item.CertificateDefaultMode,
+		item.HQCBackupEnabled, item.FlagClassicalUsage, item.FlagClassicalCerts, item.FlagNonMigratedIfaces,
+		item.RequirePQCForNewKeys, item.UpdatedBy)
+	return scanPolicy(row)
+}
+
 func (s *SQLStore) CreateMigrationPlan(ctx context.Context, item MigrationPlan) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO pqc_migration_plans (
@@ -265,6 +311,34 @@ func scanReadiness(scanner interface {
 	item.Metadata = parseJSONObject(metadataJS)
 	item.CreatedAt = parseTimeValue(createdRaw)
 	item.CompletedAt = parseTimeValue(completedRaw)
+	return item, nil
+}
+
+func scanPolicy(scanner interface {
+	Scan(dest ...interface{}) error
+}) (PQCPolicy, error) {
+	var (
+		item       PQCPolicy
+		updatedRaw interface{}
+	)
+	if err := scanner.Scan(
+		&item.TenantID,
+		&item.ProfileID,
+		&item.DefaultKEM,
+		&item.DefaultSignature,
+		&item.InterfaceDefaultMode,
+		&item.CertificateDefaultMode,
+		&item.HQCBackupEnabled,
+		&item.FlagClassicalUsage,
+		&item.FlagClassicalCerts,
+		&item.FlagNonMigratedIfaces,
+		&item.RequirePQCForNewKeys,
+		&item.UpdatedBy,
+		&updatedRaw,
+	); err != nil {
+		return PQCPolicy{}, err
+	}
+	item.UpdatedAt = parseTimeValue(updatedRaw)
 	return item, nil
 }
 

@@ -1105,6 +1105,426 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "autokey-delete-autokey-service-policies-service",
+    "group": "Autokey (autokey)",
+    "title": "DELETE /autokey/service-policies/{service}",
+    "service": "autokey",
+    "method": "DELETE",
+    "pathTemplate": "/autokey/service-policies/{service}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "DELETE /svc/autokey/autokey/service-policies/{service}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-delete-autokey-templates-id",
+    "group": "Autokey (autokey)",
+    "title": "DELETE /autokey/templates/{id}",
+    "service": "autokey",
+    "method": "DELETE",
+    "pathTemplate": "/autokey/templates/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "DELETE /svc/autokey/autokey/templates/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-get-autokey-handles",
+    "group": "Autokey (autokey)",
+    "title": "GET /autokey/handles",
+    "service": "autokey",
+    "method": "GET",
+    "pathTemplate": "/autokey/handles?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "GET /svc/autokey/autokey/handles?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-get-autokey-requests",
+    "group": "Autokey (autokey)",
+    "title": "GET /autokey/requests",
+    "service": "autokey",
+    "method": "GET",
+    "pathTemplate": "/autokey/requests?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "GET /svc/autokey/autokey/requests?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-get-autokey-requests-id",
+    "group": "Autokey (autokey)",
+    "title": "GET /autokey/requests/{id}",
+    "service": "autokey",
+    "method": "GET",
+    "pathTemplate": "/autokey/requests/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "GET /svc/autokey/autokey/requests/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-get-autokey-service-policies",
+    "group": "Autokey (autokey)",
+    "title": "GET /autokey/service-policies",
+    "service": "autokey",
+    "method": "GET",
+    "pathTemplate": "/autokey/service-policies?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "GET /svc/autokey/autokey/service-policies?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-get-autokey-settings",
+    "group": "Autokey (autokey)",
+    "title": "GET /autokey/settings",
+    "service": "autokey",
+    "method": "GET",
+    "pathTemplate": "/autokey/settings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "GET /svc/autokey/autokey/settings?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-get-autokey-summary",
+    "group": "Autokey (autokey)",
+    "title": "GET /autokey/summary",
+    "service": "autokey",
+    "method": "GET",
+    "pathTemplate": "/autokey/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "GET /svc/autokey/autokey/summary?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-get-autokey-templates",
+    "group": "Autokey (autokey)",
+    "title": "GET /autokey/templates",
+    "service": "autokey",
+    "method": "GET",
+    "pathTemplate": "/autokey/templates?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "GET /svc/autokey/autokey/templates?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-post-autokey-requests",
+    "group": "Autokey (autokey)",
+    "title": "POST /autokey/requests",
+    "service": "autokey",
+    "method": "POST",
+    "pathTemplate": "/autokey/requests?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "POST /svc/autokey/autokey/requests?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-post-autokey-service-policies",
+    "group": "Autokey (autokey)",
+    "title": "POST /autokey/service-policies",
+    "service": "autokey",
+    "method": "POST",
+    "pathTemplate": "/autokey/service-policies?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "POST /svc/autokey/autokey/service-policies?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-post-autokey-templates",
+    "group": "Autokey (autokey)",
+    "title": "POST /autokey/templates",
+    "service": "autokey",
+    "method": "POST",
+    "pathTemplate": "/autokey/templates?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "POST /svc/autokey/autokey/templates?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-put-autokey-service-policies-service",
+    "group": "Autokey (autokey)",
+    "title": "PUT /autokey/service-policies/{service}",
+    "service": "autokey",
+    "method": "PUT",
+    "pathTemplate": "/autokey/service-policies/{service}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "PUT /svc/autokey/autokey/service-policies/{service}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-put-autokey-settings",
+    "group": "Autokey (autokey)",
+    "title": "PUT /autokey/settings",
+    "service": "autokey",
+    "method": "PUT",
+    "pathTemplate": "/autokey/settings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "PUT /svc/autokey/autokey/settings?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "autokey-put-autokey-templates-id",
+    "group": "Autokey (autokey)",
+    "title": "PUT /autokey/templates/{id}",
+    "service": "autokey",
+    "method": "PUT",
+    "pathTemplate": "/autokey/templates/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Autokey service.",
+    "requestExample": "PUT /svc/autokey/autokey/templates/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "certs-delete-certs-id",
     "group": "Certificates / PKI (certs)",
     "title": "DELETE /certs/{id}",
@@ -1226,6 +1646,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "GET /svc/certs/acme/directory?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-get-acme-renewal-info-id",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /acme/renewal-info/{id}",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/acme/renewal-info/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/acme/renewal-info/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -1702,6 +2150,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "GET /svc/certs/certs/protocols/schema?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-get-certs-renewal-intelligence",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /certs/renewal-intelligence",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/renewal-intelligence?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/certs/renewal-intelligence?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-get-certs-renewal-intelligence-id",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /certs/renewal-intelligence/{id}",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/certs/renewal-intelligence/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/certs/renewal-intelligence/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -2262,6 +2766,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "POST /svc/certs/certs/profiles?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-post-certs-renewal-intelligence-refresh",
+    "group": "Certificates / PKI (certs)",
+    "title": "POST /certs/renewal-intelligence/refresh",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/certs/renewal-intelligence/refresh?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "POST /svc/certs/certs/renewal-intelligence/refresh?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4224,6 +4756,289 @@ export const DISCOVERED_REST_API_CATALOG = [
     "requestExample": "PUT /svc/compliance/compliance/assessment/schedule?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "confidential-get-confidential-policy",
+    "group": "Confidential Compute (confidential)",
+    "title": "Get Attestation Policy",
+    "service": "confidential",
+    "method": "GET",
+    "pathTemplate": "/confidential/policy?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Returns the tenant-scoped attested key release policy used by the Confidential Compute service.",
+    "requestExample": "GET /svc/confidential/confidential/policy?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "policy": {
+        "tenant_id": "root",
+        "enabled": true,
+        "provider": "aws_nitro_enclaves",
+        "mode": "enforce",
+        "key_scopes": [
+          "payments-prod"
+        ],
+        "approved_images": [
+          "123456789012.dkr.ecr.us-east-1.amazonaws.com/payments/authorizer:v1.4.2"
+        ],
+        "approved_subjects": [
+          "spiffe://root/workloads/payments-authorizer"
+        ],
+        "allowed_attesters": [
+          "aws.nitro-enclaves"
+        ],
+        "required_measurements": {
+          "pcr0": "baseline-image-hash",
+          "pcr8": "secure-boot-chain-hash"
+        },
+        "required_claims": {
+          "environment": "prod",
+          "team": "payments"
+        },
+        "require_secure_boot": true,
+        "require_debug_disabled": true,
+        "max_evidence_age_sec": 300,
+        "cluster_scope": "node_allowlist",
+        "allowed_cluster_nodes": [
+          "vecta-kms-01",
+          "vecta-kms-02"
+        ],
+        "fallback_action": "deny",
+        "updated_at": "2026-03-18T11:00:00Z"
+      }
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "confidential-get-confidential-releases",
+    "group": "Confidential Compute (confidential)",
+    "title": "List Attested Release History",
+    "service": "confidential",
+    "method": "GET",
+    "pathTemplate": "/confidential/releases?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Lists stored attested release decisions for the tenant.",
+    "requestExample": "GET /svc/confidential/confidential/releases?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "items": [
+        {
+          "id": "rel_01J123EXAMPLE",
+          "tenant_id": "root",
+          "key_id": "key-prod-root",
+          "key_scope": "payments-prod",
+          "provider": "aws_nitro_enclaves",
+          "workload_identity": "spiffe://root/workloads/payments-authorizer",
+          "cluster_node_id": "vecta-kms-01",
+          "decision": "release",
+          "allowed": true,
+          "cryptographically_verified": true,
+          "verification_issuer": "aws.nitro-enclaves",
+          "attestation_document_hash": "sha256:document-hash",
+          "measurement_hash": "sha256:measurement-hash",
+          "policy_version": "sha256:policy-version",
+          "created_at": "2026-03-18T11:16:00Z"
+        }
+      ]
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "confidential-get-confidential-releases-id",
+    "group": "Confidential Compute (confidential)",
+    "title": "Get Attested Release Record",
+    "service": "confidential",
+    "method": "GET",
+    "pathTemplate": "/confidential/releases/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Returns a single stored attested release record for the tenant.",
+    "requestExample": "GET /svc/confidential/confidential/releases/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "item": {
+        "id": "rel_01J123EXAMPLE",
+        "tenant_id": "root",
+        "key_id": "key-prod-root",
+        "key_scope": "payments-prod",
+        "provider": "aws_nitro_enclaves",
+        "decision": "release",
+        "allowed": true,
+        "cryptographically_verified": true,
+        "verification_issuer": "aws.nitro-enclaves",
+        "verification_mode": "aws_cose_sign1_x509",
+        "attestation_document_hash": "sha256:document-hash",
+        "measurement_hash": "sha256:measurement-hash",
+        "claims_hash": "sha256:claims-hash",
+        "policy_version": "sha256:policy-version",
+        "created_at": "2026-03-18T11:16:00Z"
+      }
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "confidential-get-confidential-summary",
+    "group": "Confidential Compute (confidential)",
+    "title": "Get Confidential Compute Summary",
+    "service": "confidential",
+    "method": "GET",
+    "pathTemplate": "/confidential/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Returns summary metrics for the tenant attested release program, including recent release decisions and cluster node spread.",
+    "requestExample": "GET /svc/confidential/confidential/summary?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "summary": {
+        "tenant_id": "root",
+        "policy_enabled": true,
+        "provider": "aws_nitro_enclaves",
+        "approved_image_count": 2,
+        "key_scope_count": 1,
+        "release_count_24h": 14,
+        "deny_count_24h": 2,
+        "review_count_24h": 1,
+        "cryptographically_verified_count_24h": 13,
+        "unique_cluster_nodes": 2,
+        "latest_decision": "release",
+        "last_decision_at": "2026-03-18T11:15:00Z"
+      }
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "confidential-post-confidential-evaluate",
+    "group": "Confidential Compute (confidential)",
+    "title": "Evaluate Attested Key Release",
+    "service": "confidential",
+    "method": "POST",
+    "pathTemplate": "/confidential/evaluate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"key_id\": \"key-prod-root\",\n  \"key_scope\": \"payments-prod\",\n  \"provider\": \"aws_nitro_enclaves\",\n  \"attestation_format\": \"cose_sign1\",\n  \"attestation_document\": \"{{base64_cose_sign1_attestation_document}}\",\n  \"audience\": \"kms-key-release\",\n  \"nonce\": \"nonce-demo-001\",\n  \"cluster_node_id\": \"vecta-kms-01\",\n  \"requester\": \"platform-ops\",\n  \"release_reason\": \"authorize payment enclave\",\n  \"dry_run\": true\n}",
+    "description": "Cryptographically verifies an AWS, Azure, or GCP attestation document, derives signed claims and measurements, and then evaluates the result against the tenant attested-release policy.",
+    "requestExample": "POST /svc/confidential/confidential/evaluate?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "result": {
+        "release_id": "rel_01J123EXAMPLE",
+        "decision": "release",
+        "allowed": true,
+        "reasons": [],
+        "matched_claims": [
+          "environment",
+          "team"
+        ],
+        "matched_measurements": [
+          "pcr0",
+          "pcr8"
+        ],
+        "missing_claims": [],
+        "missing_measurements": [],
+        "measurement_hash": "sha256:measurement-hash",
+        "claims_hash": "sha256:claims-hash",
+        "policy_version": "sha256:policy-version",
+        "provider": "aws_nitro_enclaves",
+        "cluster_node_id": "vecta-kms-01",
+        "cryptographically_verified": true,
+        "verification_mode": "aws_cose_sign1_x509",
+        "verification_issuer": "aws.nitro-enclaves",
+        "verification_key_id": "02",
+        "attestation_document_hash": "sha256:document-hash",
+        "attestation_document_format": "cose_sign1",
+        "evaluated_at": "2026-03-18T11:16:00Z"
+      }
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "confidential-put-confidential-policy",
+    "group": "Confidential Compute (confidential)",
+    "title": "Update Attestation Policy",
+    "service": "confidential",
+    "method": "PUT",
+    "pathTemplate": "/confidential/policy?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"enabled\": true,\n  \"provider\": \"aws_nitro_enclaves\",\n  \"mode\": \"enforce\",\n  \"key_scopes\": [\"payments-prod\"],\n  \"approved_images\": [\"123456789012.dkr.ecr.us-east-1.amazonaws.com/payments/authorizer:v1.4.2\"],\n  \"approved_subjects\": [\"spiffe://root/workloads/payments-authorizer\"],\n  \"allowed_attesters\": [\"aws.nitro-enclaves\"],\n  \"required_measurements\": { \"pcr0\": \"baseline-image-hash\", \"pcr8\": \"secure-boot-chain-hash\" },\n  \"required_claims\": { \"environment\": \"prod\", \"team\": \"payments\" },\n  \"require_secure_boot\": true,\n  \"require_debug_disabled\": true,\n  \"max_evidence_age_sec\": 300,\n  \"cluster_scope\": \"node_allowlist\",\n  \"allowed_cluster_nodes\": [\"vecta-kms-01\"],\n  \"fallback_action\": \"deny\"\n}",
+    "description": "Creates or updates the tenant attestation policy for attested key release.",
+    "requestExample": "PUT /svc/confidential/confidential/policy?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "policy": {
+        "tenant_id": "root",
+        "enabled": true,
+        "provider": "aws_nitro_enclaves",
+        "mode": "enforce",
+        "updated_at": "2026-03-18T11:02:00Z"
+      }
     },
     "errorCodes": [
       {
@@ -8331,15 +9146,27 @@ export const DISCOVERED_REST_API_CATALOG = [
   {
     "id": "auth-get-auth-clients",
     "group": "Identity & Access (auth)",
-    "title": "GET /auth/clients",
+    "title": "List Client Registrations",
     "service": "auth",
     "method": "GET",
     "pathTemplate": "/auth/clients?tenant_id={{tenant_id}}",
     "bodyTemplate": "",
-    "description": "Auto-discovered route from Auth service.",
+    "description": "Lists registered clients with sender-constrained auth mode, replay protection state, and verification counters.",
     "requestExample": "GET /svc/auth/auth/clients?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "items": [
+        {
+          "id": "reg_123",
+          "client_name": "payments-sdk",
+          "status": "approved",
+          "auth_mode": "oauth_mtls",
+          "replay_protection_enabled": true,
+          "verified_request_count": 1487,
+          "replay_violation_count": 0,
+          "signature_failure_count": 0,
+          "unsigned_reject_count": 0
+        }
+      ]
     },
     "errorCodes": [
       {
@@ -8620,6 +9447,48 @@ export const DISCOVERED_REST_API_CATALOG = [
     "requestExample": "GET /svc/auth/auth/register/{id}/status?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "auth-get-auth-rest-client-security-summary",
+    "group": "Identity & Access (auth)",
+    "title": "Get REST Client Security Summary",
+    "service": "auth",
+    "method": "GET",
+    "pathTemplate": "/auth/rest-client-security/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Returns sender-constrained auth posture for tenant REST clients, including replay protection coverage, signature failures, unsigned request blocks, and non-compliant legacy clients.",
+    "requestExample": "GET /svc/auth/auth/rest-client-security/summary?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "summary": {
+        "tenant_id": "root",
+        "total_clients": 7,
+        "sender_constrained_clients": 5,
+        "oauth_mtls_clients": 2,
+        "dpop_clients": 2,
+        "http_message_signature_clients": 1,
+        "replay_protected_clients": 5,
+        "non_compliant_clients": 2,
+        "verified_requests": 2157,
+        "replay_violations": 1,
+        "signature_failures": 3,
+        "unsigned_rejects": 4,
+        "last_violation_at": "2026-03-20T10:15:00Z"
+      }
     },
     "errorCodes": [
       {
@@ -9003,28 +9872,34 @@ export const DISCOVERED_REST_API_CATALOG = [
   {
     "id": "auth-post-auth-client-token",
     "group": "Identity & Access (auth)",
-    "title": "POST /auth/client-token",
+    "title": "Issue REST Client Token",
     "service": "auth",
     "method": "POST",
     "pathTemplate": "/auth/client-token?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Auth service.",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"client_id\": \"reg_123\",\n  \"api_key\": \"vk_live_xxx\"\n}",
+    "description": "Issues a tenant-scoped client access token. Depending on the registered client auth mode, the request must also carry a validated mTLS binding, DPoP proof, or HTTP Message Signature.",
     "requestExample": "POST /svc/auth/auth/client-token?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "access_token": "<jwt>",
+      "expires_in": 3600,
+      "token_type": "Bearer",
+      "sender_constrained": true,
+      "auth_mode": "dpop",
+      "replay_protection": true,
+      "request_id": "req_123"
     },
     "errorCodes": [
       {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
         "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
+        "meaning": "Client proof is malformed or the request body is invalid"
+      },
+      {
+        "code": 401,
+        "meaning": "Client proof, certificate binding, or API credential did not verify"
+      },
+      {
+        "code": 409,
+        "meaning": "Replay nonce was already used inside the protected window"
       }
     ]
   },
@@ -9393,6 +10268,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "auth-post-auth-workload-token",
+    "group": "Identity & Access (auth)",
+    "title": "POST /auth/workload-token",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/auth/workload-token?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "POST /svc/auth/auth/workload-token?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "auth-post-tenants",
     "group": "Identity & Access (auth)",
     "title": "POST /tenants",
@@ -9507,15 +10410,16 @@ export const DISCOVERED_REST_API_CATALOG = [
   {
     "id": "auth-put-auth-clients-id",
     "group": "Identity & Access (auth)",
-    "title": "PUT /auth/clients/{id}",
+    "title": "Update Client Registration Security",
     "service": "auth",
     "method": "PUT",
     "pathTemplate": "/auth/clients/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Auth service.",
+    "bodyTemplate": "{\n  \"ip_whitelist\": [\"10.10.10.0/24\"],\n  \"rate_limit\": 1500,\n  \"auth_mode\": \"http_message_signature\",\n  \"replay_protection_enabled\": true,\n  \"http_signature_key_id\": \"sdk-signing-key-01\",\n  \"http_signature_public_key_pem\": \"-----BEGIN PUBLIC KEY-----\\n...\\n-----END PUBLIC KEY-----\",\n  \"http_signature_algorithm\": \"ed25519\"\n}",
+    "description": "Updates the client allowlist, rate limit, auth mode, and sender-constrained request binding. This is where operators move REST clients from legacy bearer mode to OAuth mTLS, DPoP, or HTTP Message Signatures.",
     "requestExample": "PUT /svc/auth/auth/clients/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
+      "status": "ok",
+      "request_id": "req_123"
     },
     "errorCodes": [
       {
@@ -14125,6 +15029,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "pqc-get-pqc-inventory",
+    "group": "PQC (pqc)",
+    "title": "GET /pqc/inventory",
+    "service": "pqc",
+    "method": "GET",
+    "pathTemplate": "/pqc/inventory?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from PQC service.",
+    "requestExample": "GET /svc/pqc/pqc/inventory?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "pqc-get-pqc-migration-plans",
     "group": "PQC (pqc)",
     "title": "GET /pqc/migration/plans",
@@ -14190,6 +15122,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from PQC service.",
     "requestExample": "GET /svc/pqc/pqc/migration/plans/{id}/runs?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "pqc-get-pqc-migration-report",
+    "group": "PQC (pqc)",
+    "title": "GET /pqc/migration/report",
+    "service": "pqc",
+    "method": "GET",
+    "pathTemplate": "/pqc/migration/report?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from PQC service.",
+    "requestExample": "GET /svc/pqc/pqc/migration/report?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "pqc-get-pqc-policy",
+    "group": "PQC (pqc)",
+    "title": "GET /pqc/policy",
+    "service": "pqc",
+    "method": "GET",
+    "pathTemplate": "/pqc/policy?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from PQC service.",
+    "requestExample": "GET /svc/pqc/pqc/policy?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -14414,6 +15402,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from PQC service.",
     "requestExample": "POST /svc/pqc/pqc/scan?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "pqc-put-pqc-policy",
+    "group": "PQC (pqc)",
+    "title": "PUT /pqc/policy",
+    "service": "pqc",
+    "method": "PUT",
+    "pathTemplate": "/pqc/policy?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from PQC service.",
+    "requestExample": "PUT /svc/pqc/pqc/policy?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -17753,6 +18769,574 @@ export const DISCOVERED_REST_API_CATALOG = [
     "requestExample": "PUT /svc/posture/posture/findings/{id}/status?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-delete-workload-identity-federation-id",
+    "group": "Workload Identity (workload)",
+    "title": "DELETE /workload-identity/federation/{id}",
+    "service": "workload",
+    "method": "DELETE",
+    "pathTemplate": "/workload-identity/federation/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Workload service.",
+    "requestExample": "DELETE /svc/workload/workload-identity/federation/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-delete-workload-identity-registrations-id",
+    "group": "Workload Identity (workload)",
+    "title": "DELETE /workload-identity/registrations/{id}",
+    "service": "workload",
+    "method": "DELETE",
+    "pathTemplate": "/workload-identity/registrations/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Workload service.",
+    "requestExample": "DELETE /svc/workload/workload-identity/registrations/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-get-workload-identity-federation",
+    "group": "Workload Identity (workload)",
+    "title": "GET /workload-identity/federation",
+    "service": "workload",
+    "method": "GET",
+    "pathTemplate": "/workload-identity/federation?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Workload service.",
+    "requestExample": "GET /svc/workload/workload-identity/federation?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-get-workload-identity-graph",
+    "group": "Workload Identity (workload)",
+    "title": "Get Workload Authorization Graph",
+    "service": "workload",
+    "method": "GET",
+    "pathTemplate": "/workload-identity/graph?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Returns the workload-to-key authorization graph built from registrations plus observed workload-backed key usage in audit events.",
+    "requestExample": "GET /svc/workload/workload-identity/graph?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "graph": {
+        "tenant_id": "root",
+        "generated_at": "2026-03-19T09:10:00Z",
+        "nodes": [
+          {
+            "id": "workload:spiffe://root/workloads/payments-api",
+            "label": "spiffe://root/workloads/payments-api",
+            "kind": "workload",
+            "status": "enabled"
+          },
+          {
+            "id": "key:key_payments_prod",
+            "label": "key_payments_prod",
+            "kind": "key",
+            "status": "bound"
+          }
+        ],
+        "edges": [
+          {
+            "source": "workload:spiffe://root/workloads/payments-api",
+            "target": "key:key_payments_prod",
+            "label": "authorized",
+            "kind": "policy"
+          }
+        ]
+      }
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-get-workload-identity-issuances",
+    "group": "Workload Identity (workload)",
+    "title": "GET /workload-identity/issuances",
+    "service": "workload",
+    "method": "GET",
+    "pathTemplate": "/workload-identity/issuances?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Workload service.",
+    "requestExample": "GET /svc/workload/workload-identity/issuances?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-get-workload-identity-registrations",
+    "group": "Workload Identity (workload)",
+    "title": "GET /workload-identity/registrations",
+    "service": "workload",
+    "method": "GET",
+    "pathTemplate": "/workload-identity/registrations?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Workload service.",
+    "requestExample": "GET /svc/workload/workload-identity/registrations?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-get-workload-identity-settings",
+    "group": "Workload Identity (workload)",
+    "title": "Get Workload Identity Settings",
+    "service": "workload",
+    "method": "GET",
+    "pathTemplate": "/workload-identity/settings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Returns the tenant SPIFFE trust-domain settings, issuance defaults, federation mode, and token-exchange controls.",
+    "requestExample": "GET /svc/workload/workload-identity/settings?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "settings": {
+        "tenant_id": "root",
+        "enabled": true,
+        "trust_domain": "root",
+        "federation_enabled": true,
+        "token_exchange_enabled": true,
+        "disable_static_api_keys": true,
+        "default_x509_ttl_seconds": 43200,
+        "default_jwt_ttl_seconds": 1800,
+        "rotation_window_seconds": 1800,
+        "allowed_audiences": [
+          "kms",
+          "kms-workload",
+          "kms-rest"
+        ],
+        "jwt_signer_key_id": "wid-root-1",
+        "updated_at": "2026-03-19T09:00:00Z"
+      }
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-get-workload-identity-summary",
+    "group": "Workload Identity (workload)",
+    "title": "Get Workload Identity Summary",
+    "service": "workload",
+    "method": "GET",
+    "pathTemplate": "/workload-identity/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Returns health and drift counters for workload identity, including expiring or expired SVIDs, over-privileged registrations, token exchange activity, and key usage.",
+    "requestExample": "GET /svc/workload/workload-identity/summary?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "summary": {
+        "tenant_id": "root",
+        "enabled": true,
+        "trust_domain": "root",
+        "registration_count": 4,
+        "enabled_registration_count": 4,
+        "federated_trust_domain_count": 1,
+        "issuance_count_24h": 8,
+        "token_exchange_count_24h": 21,
+        "key_usage_count_24h": 57,
+        "unique_workloads_using_keys_24h": 3,
+        "unique_keys_used_24h": 4,
+        "expiring_svid_count": 1,
+        "expired_svid_count": 0,
+        "over_privileged_count": 1,
+        "rotation_healthy": true
+      }
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-get-workload-identity-usage",
+    "group": "Workload Identity (workload)",
+    "title": "List Workload Key Usage",
+    "service": "workload",
+    "method": "GET",
+    "pathTemplate": "/workload-identity/usage?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Returns recent audit-backed key operations that were authenticated through workload identity instead of a static API credential.",
+    "requestExample": "GET /svc/workload/workload-identity/usage?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "items": [
+        {
+          "event_id": "evt_01J123EXAMPLE",
+          "tenant_id": "root",
+          "workload_identity": "spiffe://root/workloads/payments-api",
+          "trust_domain": "root",
+          "key_id": "key_payments_prod",
+          "operation": "encrypt",
+          "interface_name": "rest",
+          "client_id": "wid_01J123EXAMPLE",
+          "result": "success",
+          "created_at": "2026-03-19T09:15:00Z"
+        }
+      ]
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-post-workload-identity-federation",
+    "group": "Workload Identity (workload)",
+    "title": "POST /workload-identity/federation",
+    "service": "workload",
+    "method": "POST",
+    "pathTemplate": "/workload-identity/federation?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Workload service.",
+    "requestExample": "POST /svc/workload/workload-identity/federation?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-post-workload-identity-issue",
+    "group": "Workload Identity (workload)",
+    "title": "Issue SVID",
+    "service": "workload",
+    "method": "POST",
+    "pathTemplate": "/workload-identity/issue?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"registration_id\": \"wid_01J123EXAMPLE\",\n  \"svid_type\": \"jwt\",\n  \"audiences\": [\"kms\"],\n  \"ttl_seconds\": 1800,\n  \"requested_by\": \"platform-ops\"\n}",
+    "description": "Issues a JWT-SVID or X.509-SVID for a registered workload using the tenant trust domain signer material.",
+    "requestExample": "POST /svc/workload/workload-identity/issue?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "issued": {
+        "issuance_id": "iss_01J123EXAMPLE",
+        "registration_id": "wid_01J123EXAMPLE",
+        "spiffe_id": "spiffe://root/workloads/payments-api",
+        "svid_type": "jwt",
+        "serial_or_key_id": "wid-root-1",
+        "expires_at": "2026-03-19T09:35:00Z",
+        "rotation_due_at": "2026-03-19T09:05:00Z",
+        "cryptographically_signed": true
+      }
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-post-workload-identity-registrations",
+    "group": "Workload Identity (workload)",
+    "title": "Create Workload Registration",
+    "service": "workload",
+    "method": "POST",
+    "pathTemplate": "/workload-identity/registrations?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"name\": \"payments-api\",\n  \"spiffe_id\": \"spiffe://root/workloads/payments-api\",\n  \"selectors\": [\"docker:image:payments-api\", \"env:prod\"],\n  \"allowed_interfaces\": [\"rest\", \"payment-tcp\"],\n  \"allowed_key_ids\": [\"key_payments_prod\"],\n  \"permissions\": [\"key.encrypt\", \"key.decrypt\", \"key.sign\"],\n  \"issue_jwt_svid\": true,\n  \"issue_x509_svid\": true,\n  \"enabled\": true\n}",
+    "description": "Registers a workload identity and binds it to allowed interfaces, permissions, and keys.",
+    "requestExample": "POST /svc/workload/workload-identity/registrations?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "registration": {
+        "id": "wid_01J123EXAMPLE",
+        "tenant_id": "root",
+        "name": "payments-api",
+        "spiffe_id": "spiffe://root/workloads/payments-api",
+        "allowed_interfaces": [
+          "rest",
+          "payment-tcp"
+        ],
+        "allowed_key_ids": [
+          "key_payments_prod"
+        ],
+        "permissions": [
+          "key.encrypt",
+          "key.decrypt",
+          "key.sign"
+        ],
+        "enabled": true,
+        "created_at": "2026-03-19T09:05:00Z"
+      }
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-post-workload-identity-token-exchange",
+    "group": "Workload Identity (workload)",
+    "title": "Exchange SVID For KMS Token",
+    "service": "workload",
+    "method": "POST",
+    "pathTemplate": "/workload-identity/token/exchange?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"registration_id\": \"wid_01J123EXAMPLE\",\n  \"interface_name\": \"rest\",\n  \"audience\": \"kms\",\n  \"requested_permissions\": [\"key.encrypt\", \"key.decrypt\"],\n  \"requested_key_ids\": [\"key_payments_prod\"],\n  \"jwt_svid\": \"eyJhbGciOiJFZERTQSIsImtpZCI6IndpZC1yb290In0...\"\n}",
+    "description": "Validates a presented SVID against the tenant or federated trust bundle, applies interface and key scoping, and returns a short-lived KMS bearer token.",
+    "requestExample": "POST /svc/workload/workload-identity/token/exchange?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "exchange": {
+        "tenant_id": "root",
+        "registration_id": "wid_01J123EXAMPLE",
+        "spiffe_id": "spiffe://root/workloads/payments-api",
+        "trust_domain": "root",
+        "svid_type": "jwt",
+        "interface_name": "rest",
+        "allowed_permissions": [
+          "key.encrypt",
+          "key.decrypt"
+        ],
+        "allowed_key_ids": [
+          "key_payments_prod"
+        ],
+        "kms_access_token_expiry": "2026-03-19T09:20:00Z"
+      }
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-put-workload-identity-federation-id",
+    "group": "Workload Identity (workload)",
+    "title": "PUT /workload-identity/federation/{id}",
+    "service": "workload",
+    "method": "PUT",
+    "pathTemplate": "/workload-identity/federation/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Workload service.",
+    "requestExample": "PUT /svc/workload/workload-identity/federation/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-put-workload-identity-registrations-id",
+    "group": "Workload Identity (workload)",
+    "title": "PUT /workload-identity/registrations/{id}",
+    "service": "workload",
+    "method": "PUT",
+    "pathTemplate": "/workload-identity/registrations/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Workload service.",
+    "requestExample": "PUT /svc/workload/workload-identity/registrations/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "workload-put-workload-identity-settings",
+    "group": "Workload Identity (workload)",
+    "title": "Update Workload Identity Settings",
+    "service": "workload",
+    "method": "PUT",
+    "pathTemplate": "/workload-identity/settings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\",\n  \"enabled\": true,\n  \"trust_domain\": \"root\",\n  \"federation_enabled\": true,\n  \"token_exchange_enabled\": true,\n  \"disable_static_api_keys\": true,\n  \"default_x509_ttl_seconds\": 43200,\n  \"default_jwt_ttl_seconds\": 1800,\n  \"rotation_window_seconds\": 1800,\n  \"allowed_audiences\": [\"kms\", \"kms-workload\", \"kms-rest\"]\n}",
+    "description": "Creates or updates the tenant workload-identity policy, including the SPIFFE trust domain and whether static API keys should be phased out for workloads.",
+    "requestExample": "PUT /svc/workload/workload-identity/settings?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "settings": {
+        "tenant_id": "root",
+        "enabled": true,
+        "trust_domain": "root",
+        "disable_static_api_keys": true,
+        "updated_at": "2026-03-19T09:02:00Z"
+      }
     },
     "errorCodes": [
       {

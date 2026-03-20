@@ -35,6 +35,7 @@ static_resources:
         name: envoy.transport_sockets.tls
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          require_client_certificate: false
           common_tls_context:
             tls_params:
               tls_minimum_protocol_version: TLSv1_2
@@ -43,12 +44,21 @@ static_resources:
                 filename: /tmp/envoy-certs/tls.crt
               private_key:
                 filename: /tmp/envoy-certs/tls.key
+            validation_context:
+              trusted_ca:
+                filename: /tmp/envoy-certs/ca.crt
       filters:
       - name: envoy.filters.network.http_connection_manager
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
           stat_prefix: edge_https
           use_remote_address: true
+          forward_client_cert_details: SANITIZE_SET
+          set_current_client_cert_details:
+            cert: true
+            dns: true
+            subject: true
+            uri: true
           normalize_path: true
           merge_slashes: true
           stream_idle_timeout: 60s

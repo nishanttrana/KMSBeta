@@ -122,7 +122,26 @@ function parseCsvList(value: string): string[] {
   return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
 }
 
+const traditionalPaymentOps = [
+  "TR-31 Create",
+  "TR-31 Translate",
+  "PIN Translate",
+  "PIN Verify",
+  "PVV Generate",
+  "CVV Compute",
+  "MAC Generate",
+  "Payment Key Injection"
+];
+
+const modernPaymentOps = [
+  "ISO 20022 Sign",
+  "ISO 20022 Encrypt",
+  "LAU Generate",
+  "AP2 Agent Payments"
+];
+
 export const PaymentTab=({session,keyCatalog,onToast})=>{
+  const [opGroup,setOpGroup]=useState("Traditional Payment");
   const [op,setOp]=useState("TR-31 Create");
   const keyChoices=keyChoicesFromCatalog(keyCatalog);
   const [running,setRunning]=useState(false);
@@ -378,6 +397,13 @@ export const PaymentTab=({session,keyCatalog,onToast})=>{
     void refreshInjectionData(true);
     void refreshAP2Profile(true);
   },[session?.token,session?.tenantId]);
+
+  useEffect(()=>{
+    const visibleOps=opGroup==="Modern Payment"?modernPaymentOps:traditionalPaymentOps;
+    if(!visibleOps.includes(op)){
+      setOp(visibleOps[0]);
+    }
+  },[op,opGroup]);
 
   const registerTerminal=async()=>{
     if(!session?.token){
@@ -646,8 +672,13 @@ export const PaymentTab=({session,keyCatalog,onToast})=>{
     }
   };
 
+  const visibleOps=opGroup==="Modern Payment"?modernPaymentOps:traditionalPaymentOps;
+
   return <div>
-    <Tabs tabs={["TR-31 Create","TR-31 Translate","PIN Translate","PIN Verify","PVV Generate","CVV Compute","MAC Generate","ISO 20022 Sign","ISO 20022 Encrypt","LAU Generate","AP2 Agent Payments","Payment Key Injection"]} active={op} onChange={setOp}/>
+    <Tabs tabs={["Traditional Payment","Modern Payment"]} active={opGroup} onChange={setOpGroup}/>
+    <div style={{marginTop:10}}>
+      <Tabs tabs={visibleOps} active={op} onChange={setOp}/>
+    </div>
     <Row2>
       <Card>
         {op==="TR-31 Create"&&<>

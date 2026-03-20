@@ -56,6 +56,31 @@ func (c *HTTPKeyCoreClient) ListKeys(ctx context.Context, tenantID string, limit
 	return items, nil
 }
 
+func (c *HTTPKeyCoreClient) ListInterfacePorts(ctx context.Context, tenantID string) ([]map[string]interface{}, error) {
+	if strings.TrimSpace(c.baseURL) == "" {
+		return []map[string]interface{}{}, nil
+	}
+	q := url.Values{}
+	q.Set("tenant_id", strings.TrimSpace(tenantID))
+	out, err := c.doJSON(ctx, http.MethodGet, "/access/interface-ports?"+q.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+	rawItems, ok := out["items"].([]interface{})
+	if !ok {
+		return []map[string]interface{}{}, nil
+	}
+	items := make([]map[string]interface{}, 0, len(rawItems))
+	for _, it := range rawItems {
+		m, ok := it.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		items = append(items, m)
+	}
+	return items, nil
+}
+
 func (c *HTTPKeyCoreClient) RotateKey(ctx context.Context, tenantID string, keyID string, reason string) error {
 	if strings.TrimSpace(c.baseURL) == "" {
 		return nil

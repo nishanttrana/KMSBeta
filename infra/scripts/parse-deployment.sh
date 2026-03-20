@@ -18,6 +18,9 @@ FEATURE_ORDER=(
   qrng_generator
   ekm_database
   payment_crypto
+  autokey_provisioning
+  workload_identity
+  confidential_compute
   compliance_dashboard
   sbom_cbom
   reporting_alerting

@@ -51,6 +51,9 @@ import {
   runPostureScan,
   updatePostureFindingStatus
 } from "../../../lib/posture";
+import { getAuthRESTClientSecuritySummary } from "../../../lib/authAdmin";
+import { getAutokeySummary } from "../../../lib/autokey";
+import { getWorkloadIdentitySummary } from "../../../lib/workloadIdentity";
 
 // ── Constants & Helpers ─────────────────────────────────────────
 
@@ -173,6 +176,9 @@ export const PostureTab = ({ session, onToast }: any) => {
   const [history, setHistory] = useState<any[]>([]);
   const [findings, setFindings] = useState<any[]>([]);
   const [actions, setActions] = useState<any[]>([]);
+  const [autokeySummary, setAutokeySummary] = useState<any>(null);
+  const [workloadSummary, setWorkloadSummary] = useState<any>(null);
+  const [restClientSecurity, setRestClientSecurity] = useState<any>(null);
   const [findingStatus, setFindingStatus] = useState("");
   const [findingSeverity, setFindingSeverity] = useState("");
   const [findingSearch, setFindingSearch] = useState("");
@@ -188,23 +194,29 @@ export const PostureTab = ({ session, onToast }: any) => {
 
   const load = async (silent = false) => {
     if (!session?.token) {
-      setRisk({}); setDashboard({}); setHistory([]); setFindings([]); setActions([]);
+      setRisk({}); setDashboard({}); setHistory([]); setFindings([]); setActions([]); setAutokeySummary(null); setWorkloadSummary(null); setRestClientSecurity(null);
       return;
     }
     if (!silent) setLoading(true);
     try {
-      const [dash, latestRisk, riskHistory, findingRows, actionRows] = await Promise.all([
+      const [dash, latestRisk, riskHistory, findingRows, actionRows, autokeySummaryOut, workloadSummaryOut, restClientSecurityOut] = await Promise.all([
         getPostureDashboard(session),
         getPostureRisk(session),
         listPostureRiskHistory(session, 60),
         listPostureFindings(session, { limit: 300, status: findingStatus, severity: findingSeverity, engine: findingEngine }),
-        listPostureActions(session, { limit: 300, status: actionStatus })
+        listPostureActions(session, { limit: 300, status: actionStatus }),
+        getAutokeySummary(session).catch(() => null),
+        getWorkloadIdentitySummary(session).catch(() => null),
+        getAuthRESTClientSecuritySummary(session).catch(() => null)
       ]);
       setDashboard(dash || {});
       setRisk(latestRisk || dash?.risk || {});
       setHistory(Array.isArray(riskHistory) ? riskHistory : []);
       setFindings(Array.isArray(findingRows) ? findingRows : []);
       setActions(Array.isArray(actionRows) ? actionRows : []);
+      setAutokeySummary(autokeySummaryOut || null);
+      setWorkloadSummary(workloadSummaryOut || null);
+      setRestClientSecurity(restClientSecurityOut || null);
       if (!silent) onToast?.("Posture view refreshed.");
     } catch (error) {
       onToast?.(`Posture load failed: ${errMsg(error)}`);
@@ -285,6 +297,49 @@ export const PostureTab = ({ session, onToast }: any) => {
   const validationBadges = useMemo(() => Array.isArray(dashboard?.validation_badges) ? dashboard.validation_badges : [], [dashboard?.validation_badges]);
   const blastHotspots = useMemo(() => Array.isArray(dashboard?.blast_radius) ? dashboard.blast_radius : [], [dashboard?.blast_radius]);
   const slaOverview = dashboard?.sla_overview || {};
+  const workloadIdentityStatus = useMemo(() => {
+    if (!workloadSummary) {
+      return { tone: "blue", label: "Unavailable" };
+    }
+    if (!workloadSummary?.enabled) {
+      return { tone: "amber", label: "Disabled" };
+    }
+    if (Number(workloadSummary?.expired_svid_count || 0) > 0 || Number(workloadSummary?.over_privileged_count || 0) > 0) {
+      return { tone: "red", label: "Drift detected" };
+    }
+    if (Number(workloadSummary?.expiring_svid_count || 0) > 0) {
+      return { tone: "amber", label: "Rotation due" };
+    }
+    return { tone: "green", label: "Healthy" };
+  }, [workloadSummary]);
+
+  const autokeyStatus = useMemo(() => {
+    if (!autokeySummary) {
+      return { label: "Unavailable", tone: "blue" };
+    }
+    if (!autokeySummary?.enabled) {
+      return { label: "Disabled", tone: "amber" };
+    }
+    if (Number(autokeySummary?.failed_count || 0) > 0) {
+      return { label: "Failures", tone: "red" };
+    }
+    if (Number(autokeySummary?.pending_approvals || 0) > 0 || Number(autokeySummary?.policy_mismatch_count || 0) > 0) {
+      return { label: "Review", tone: "amber" };
+    }
+    return { label: "Aligned", tone: "green" };
+  }, [autokeySummary]);
+  const restClientSecurityStatus = useMemo(() => {
+    if (!restClientSecurity || Number(restClientSecurity?.total_clients || 0) === 0) {
+      return { tone: "blue", label: "No REST clients" };
+    }
+    if (Number(restClientSecurity?.replay_violations || 0) > 0 || Number(restClientSecurity?.signature_failures || 0) > 0) {
+      return { tone: "red", label: "Active failures" };
+    }
+    if (Number(restClientSecurity?.non_compliant_clients || 0) > 0 || Number(restClientSecurity?.unsigned_rejects || 0) > 0) {
+      return { tone: "amber", label: "Migration pending" };
+    }
+    return { tone: "green", label: "Hardened" };
+  }, [restClientSecurity]);
   const validationByDomain = useMemo(() => {
     const map: Record<string, any[]> = {};
     validationBadges.forEach((badge: any) => {
@@ -459,6 +514,42 @@ export const PostureTab = ({ session, onToast }: any) => {
 
           <Card style={{ padding: "14px 16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Autokey Drift</span>
+              <B c={autokeyStatus.tone}>{autokeyStatus.label}</B>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+              <Stat l="Managed Handles" v={String(Number(autokeySummary?.handle_count || 0))} c="green" />
+              <Stat l="Pending Approvals" v={String(Number(autokeySummary?.pending_approvals || 0))} c={Number(autokeySummary?.pending_approvals || 0) > 0 ? "amber" : "green"} />
+              <Stat l="Policy Mismatches" v={String(Number(autokeySummary?.policy_mismatch_count || 0))} c={Number(autokeySummary?.policy_mismatch_count || 0) > 0 ? "amber" : "green"} />
+              <Stat l="Provisioned 24h" v={String(Number(autokeySummary?.provisioned_24h || 0))} c="blue" />
+            </div>
+            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+              {Boolean(autokeySummary?.enabled)
+                ? "Autokey templates and per-service defaults are active. Watch approval backlog and policy mismatches to keep self-service provisioning aligned."
+                : "Autokey is disabled, so teams still need manual key creation instead of central-policy handle provisioning."}
+            </div>
+          </Card>
+
+          <Card style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Workload Identity Drift</span>
+              <B c={workloadIdentityStatus.tone}>{workloadIdentityStatus.label}</B>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+              <Stat l="Expired SVIDs" v={String(Number(workloadSummary?.expired_svid_count || 0))} c={Number(workloadSummary?.expired_svid_count || 0) > 0 ? "red" : "green"} />
+              <Stat l="Over-Privileged" v={String(Number(workloadSummary?.over_privileged_count || 0))} c={Number(workloadSummary?.over_privileged_count || 0) > 0 ? "amber" : "green"} />
+              <Stat l="Trust Domain" v={String(workloadSummary?.trust_domain || "-")} c="accent" />
+              <Stat l="Key Use 24h" v={String(Number(workloadSummary?.key_usage_count_24h || 0))} c="blue" />
+            </div>
+            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+              {Boolean(workloadSummary?.disable_static_api_keys)
+                ? "Static API keys are disabled for workload callers."
+                : "Static API keys are still allowed; move workload-facing clients to SPIFFE/SVID token exchange."}
+            </div>
+          </Card>
+
+          <Card style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Remediation SLA</span>
               <B c={Number(slaOverview?.overdue_count || 0) > 0 ? "red" : "green"}>{Number(slaOverview?.overdue_count || 0)} overdue</B>
             </div>
@@ -469,6 +560,24 @@ export const PostureTab = ({ session, onToast }: any) => {
                   <div style={{ fontSize: 8, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{label}</div>
                 </div>
               ))}
+            </div>
+          </Card>
+
+          <Card style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>REST Client Security</span>
+              <B c={restClientSecurityStatus.tone}>{restClientSecurityStatus.label}</B>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+              <Stat l="Sender-Constrained" v={`${Number(restClientSecurity?.sender_constrained_clients || 0)}/${Number(restClientSecurity?.total_clients || 0)}`} c={Number(restClientSecurity?.non_compliant_clients || 0) > 0 ? "amber" : "green"} />
+              <Stat l="Replay Protected" v={String(Number(restClientSecurity?.replay_protected_clients || 0))} c="blue" />
+              <Stat l="Replay Violations" v={String(Number(restClientSecurity?.replay_violations || 0))} c={Number(restClientSecurity?.replay_violations || 0) > 0 ? "red" : "green"} />
+              <Stat l="Unsigned Rejects" v={String(Number(restClientSecurity?.unsigned_rejects || 0))} c={Number(restClientSecurity?.unsigned_rejects || 0) > 0 ? "amber" : "green"} />
+            </div>
+            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+              {Number(restClientSecurity?.non_compliant_clients || 0) > 0
+                ? `${Number(restClientSecurity?.non_compliant_clients || 0)} REST clients still use legacy API key or bearer mode. Move them to OAuth mTLS, DPoP, or HTTP Message Signatures to remove replayable tokens from the posture backlog.`
+                : "All tracked REST clients are using sender-constrained authentication modes."}
             </div>
           </Card>
         </div>

@@ -140,6 +140,7 @@ func envFlag(key string, defaultValue bool) bool {
 func blockedRestartServices() map[string]string {
 	return map[string]string{
 		"audit":           "core audit service",
+		"autokey":         "autokey policy and handle provisioning service",
 		"auth":            "core authentication service",
 		"cluster-manager": "cluster control-plane service",
 		"consul":          "service discovery backend",
@@ -148,6 +149,7 @@ func blockedRestartServices() map[string]string {
 		"etcd":            "distributed coordination backend",
 		"hsm-connector":   "hardware HSM connector",
 		"keycore":         "core key management service",
+		"workload":        "workload identity control-plane service",
 		"nats":            "messaging backend",
 		"policy":          "core policy service",
 		"postgres":        "database backend",
@@ -202,6 +204,9 @@ func knownBackendTargets() []serviceTarget {
 		{name: "kms-reporting", address: "reporting:18140"},
 		{name: "kms-qkd", address: "qkd:18150"},
 		{name: "kms-payment", address: "payment:18170"},
+		{name: "kms-confidential", address: "confidential:18240"},
+		{name: "kms-workload-identity", address: "workload:18250"},
+		{name: "kms-autokey", address: "autokey:18260"},
 		{name: "kms-sbom", address: "sbom:18180"},
 		{name: "kms-mpc", address: "mpc:18190"},
 		{name: "kms-dataprotect", address: "dataprotect:18200"},

@@ -17,14 +17,26 @@ type ctxKey string
 
 const claimsKey ctxKey = "claims"
 
+type ConfirmationClaims struct {
+	X5TS256 string `json:"x5t#S256,omitempty"`
+	JKT     string `json:"jkt,omitempty"`
+}
+
 type Claims struct {
-	TenantID           string   `json:"tenant_id"`
-	AzureTenantID      string   `json:"tid,omitempty"`
-	Role               string   `json:"role"`
-	Permissions        []string `json:"permissions"`
-	UserID             string   `json:"user_id"`
-	ClientID           string   `json:"client_id,omitempty"`
-	MustChangePassword bool     `json:"must_change_password,omitempty"`
+	TenantID                  string              `json:"tenant_id"`
+	AzureTenantID             string              `json:"tid,omitempty"`
+	Role                      string              `json:"role"`
+	Permissions               []string            `json:"permissions"`
+	UserID                    string              `json:"user_id"`
+	ClientID                  string              `json:"client_id,omitempty"`
+	AuthMode                  string              `json:"auth_mode,omitempty"`
+	WorkloadIdentity          string              `json:"workload_identity,omitempty"`
+	WorkloadTrustDomain       string              `json:"workload_trust_domain,omitempty"`
+	AllowedKeyIDs             []string            `json:"allowed_key_ids,omitempty"`
+	HTTPMessageSignatureKeyID string              `json:"http_message_signature_key_id,omitempty"`
+	ReplayProtection          bool                `json:"replay_protection,omitempty"`
+	Confirmation              *ConfirmationClaims `json:"cnf,omitempty"`
+	MustChangePassword        bool                `json:"must_change_password,omitempty"`
 	jwt.RegisteredClaims
 }
 

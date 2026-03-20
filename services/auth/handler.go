@@ -20,6 +20,7 @@ import (
 	pkgauth "vecta-kms/pkg/auth"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/metering"
+	pkgrestauth "vecta-kms/pkg/restauth"
 )
 
 type AuditPublisher interface {
@@ -61,6 +62,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /auth/register/{id}/status", h.handleRegistrationStatus)
 	mux.HandleFunc("POST /auth/login", h.handleLogin)
 	mux.HandleFunc("POST /auth/client-token", h.handleClientToken)
+	mux.HandleFunc("POST /auth/workload-token", h.handleIssueWorkloadToken)
 	mux.HandleFunc("GET /auth/system-health", h.withAuth(h.handleSystemHealth, "auth.self.read"))
 	mux.HandleFunc("POST /auth/system-health/restart", h.withAuth(h.handleRestartSystemService, "auth.service.restart"))
 	mux.HandleFunc("POST /auth/refresh", h.withAuth(h.handleRefresh, "auth.token.refresh"))
@@ -121,6 +123,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("PUT /auth/clients/{id}", h.withAuth(h.handleUpdateClient, "auth.client.write"))
 	mux.HandleFunc("POST /auth/clients/{id}/revoke", h.withAuth(h.handleRevokeClient, "auth.client.write"))
 	mux.HandleFunc("POST /auth/clients/{id}/rotate-key", h.withAuth(h.handleRotateClientKey, "auth.client.write"))
+	mux.HandleFunc("GET /auth/rest-client-security/summary", h.withAuth(h.handleRESTClientSecuritySummary, "auth.client.read"))
 	return mux
 }
 
@@ -156,23 +159,26 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		Description   string `json:"description"`
 		ContactEmail  string `json:"contact_email"`
 		RequestedRole string `json:"requested_role"`
+		AuthMode      string `json:"auth_mode"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
 		return
 	}
 	reg := ClientRegistration{
-		ID:            NewID("reg"),
-		TenantID:      strings.TrimSpace(req.TenantID),
-		ClientName:    strings.TrimSpace(req.ClientName),
-		ClientType:    strings.TrimSpace(req.ClientType),
-		InterfaceName: strings.ToLower(strings.TrimSpace(req.InterfaceName)),
-		SubjectID:     strings.TrimSpace(req.SubjectID),
-		Description:   req.Description,
-		ContactEmail:  req.ContactEmail,
-		RequestedRole: req.RequestedRole,
-		Status:        "pending",
-		RateLimit:     1000,
+		ID:                      NewID("reg"),
+		TenantID:                strings.TrimSpace(req.TenantID),
+		ClientName:              strings.TrimSpace(req.ClientName),
+		ClientType:              strings.TrimSpace(req.ClientType),
+		InterfaceName:           strings.ToLower(strings.TrimSpace(req.InterfaceName)),
+		SubjectID:               strings.TrimSpace(req.SubjectID),
+		Description:             req.Description,
+		ContactEmail:            req.ContactEmail,
+		RequestedRole:           req.RequestedRole,
+		Status:                  "pending",
+		RateLimit:               1000,
+		AuthMode:                normalizeClientAuthMode(req.AuthMode),
+		ReplayProtectionEnabled: true,
 	}
 	if reg.TenantID == "" || reg.ClientName == "" {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id and client_name are required", reqID, reg.TenantID)
@@ -211,7 +217,7 @@ func (h *Handler) handleRegister(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "store_error", "failed to create registration", reqID, reg.TenantID)
 		return
 	}
-	if err := h.publishAudit(r.Context(), "audit.auth.client_registered", reqID, reg.TenantID, map[string]any{"registration_id": reg.ID}); err != nil {
+	if err := h.publishAudit(r.Context(), "audit.auth.client_registered", reqID, reg.TenantID, map[string]any{"registration_id": reg.ID, "auth_mode": reg.AuthMode}); err != nil {
 		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, reg.TenantID)
 		return
 	}
@@ -301,6 +307,11 @@ func (h *Handler) handleActivateRegistration(w http.ResponseWriter, r *http.Requ
 
 func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
+	rawBody, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", "failed to read request body", reqID, "")
+		return
+	}
 	var req struct {
 		TenantID      string   `json:"tenant_id"`
 		ClientID      string   `json:"client_id"`
@@ -309,7 +320,7 @@ func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 		Permissions   []string `json:"permissions"`
 		TTLSeconds    int      `json:"ttl_seconds"`
 	}
-	if err := decodeJSON(r, &req); err != nil {
+	if err := decodeJSONBytes(rawBody, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
 		return
 	}
@@ -387,6 +398,96 @@ func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusForbidden, "forbidden", "interface_name is immutable for this registration", reqID, tenantID)
 		return
 	}
+	authMode := normalizeClientAuthMode(reg.AuthMode)
+	replayProtectionEnabled := reg.ReplayProtectionEnabled
+	securityPayload := map[string]any{
+		"client_id":      clientID,
+		"interface_name": interfaceName,
+		"auth_mode":      authMode,
+	}
+	confirmation := &pkgauth.ConfirmationClaims{}
+	switch authMode {
+	case "oauth_mtls":
+		presentedHex, presentedThumb, subjectDN, uriSAN := presentedClientCertBinding(r)
+		if presentedThumb == "" {
+			_ = h.publishAudit(r.Context(), "audit.auth.mtls_binding_failed", reqID, tenantID, securityPayload)
+			writeErr(w, http.StatusUnauthorized, "unauthorized", "oauth mTLS client token requires a verified client certificate", reqID, tenantID)
+			return
+		}
+		if expected := pkgrestauth.NormalizeCertFingerprint(reg.MTLSCertFingerprint); expected != "" && expected != presentedHex {
+			securityPayload["presented_cert_fingerprint"] = presentedHex
+			securityPayload["expected_cert_fingerprint"] = expected
+			_ = h.publishAudit(r.Context(), "audit.auth.mtls_binding_failed", reqID, tenantID, securityPayload)
+			writeErr(w, http.StatusForbidden, "forbidden", "presented client certificate does not match the registered mTLS binding", reqID, tenantID)
+			return
+		}
+		if expected := strings.TrimSpace(reg.MTLSSubjectDN); expected != "" && !strings.EqualFold(expected, subjectDN) {
+			securityPayload["presented_subject_dn"] = subjectDN
+			securityPayload["expected_subject_dn"] = expected
+			_ = h.publishAudit(r.Context(), "audit.auth.mtls_binding_failed", reqID, tenantID, securityPayload)
+			writeErr(w, http.StatusForbidden, "forbidden", "presented client certificate subject does not match the registered mTLS binding", reqID, tenantID)
+			return
+		}
+		if expected := strings.TrimSpace(reg.MTLSURISAN); expected != "" && !strings.EqualFold(expected, uriSAN) {
+			securityPayload["presented_uri_san"] = uriSAN
+			securityPayload["expected_uri_san"] = expected
+			_ = h.publishAudit(r.Context(), "audit.auth.mtls_binding_failed", reqID, tenantID, securityPayload)
+			writeErr(w, http.StatusForbidden, "forbidden", "presented client certificate URI SAN does not match the registered mTLS binding", reqID, tenantID)
+			return
+		}
+		confirmation.X5TS256 = presentedThumb
+		securityPayload["cert_thumbprint"] = presentedThumb
+	case "dpop":
+		proof, verifyErr := pkgrestauth.VerifyDPoPProof(r.Header.Get("DPoP"), r.Method, pkgrestauth.RequestDPoPCandidates(r), "", 5*time.Minute)
+		if verifyErr != nil {
+			securityPayload["reason"] = verifyErr.Error()
+			_ = h.publishAudit(r.Context(), "audit.auth.client_dpop_failed", reqID, tenantID, securityPayload)
+			writeErr(w, http.StatusUnauthorized, "unauthorized", verifyErr.Error(), reqID, tenantID)
+			return
+		}
+		if replayProtectionEnabled {
+			if err := h.store.ReserveRequestNonce(r.Context(), tenantID, "dpop:"+clientID+":"+proof.JTI, proof.IssuedAt.Add(10*time.Minute)); err != nil {
+				securityPayload["jti"] = proof.JTI
+				securityPayload["reason"] = err.Error()
+				_ = h.publishAudit(r.Context(), "audit.auth.dpop_replay_detected", reqID, tenantID, securityPayload)
+				writeErr(w, http.StatusConflict, "request_security_violation", err.Error(), reqID, tenantID)
+				return
+			}
+		}
+		confirmation.JKT = proof.JKT
+		securityPayload["dpop_jkt"] = proof.JKT
+	case "http_message_signature":
+		if strings.TrimSpace(reg.HTTPSignaturePublicKeyPEM) == "" || strings.TrimSpace(reg.HTTPSignatureKeyID) == "" {
+			writeErr(w, http.StatusForbidden, "forbidden", "http message signature client is missing registered key material", reqID, tenantID)
+			return
+		}
+		publicKey, parseErr := pkgrestauth.ParsePublicKeyPEM(reg.HTTPSignaturePublicKeyPEM)
+		if parseErr != nil {
+			writeErr(w, http.StatusInternalServerError, "store_error", "registered HTTP signature public key is invalid", reqID, tenantID)
+			return
+		}
+		signatureResult, verifyErr := pkgrestauth.VerifyHTTPMessageSignature(r.Header, r.Method, requestPathWithQueryForSignature(r), requestAuthorityForSignature(r), rawBody, publicKey, reg.HTTPSignatureKeyID, 5*time.Minute)
+		if verifyErr != nil {
+			securityPayload["reason"] = verifyErr.Error()
+			_ = h.publishAudit(r.Context(), "audit.auth.client_http_signature_failed", reqID, tenantID, securityPayload)
+			writeErr(w, http.StatusUnauthorized, "unauthorized", verifyErr.Error(), reqID, tenantID)
+			return
+		}
+		if replayProtectionEnabled {
+			nonce := strings.TrimSpace(signatureResult.Nonce)
+			if nonce == "" {
+				nonce = signatureResult.Label + ":" + strconv.FormatInt(signatureResult.CreatedAt.Unix(), 10)
+			}
+			if err := h.store.ReserveRequestNonce(r.Context(), tenantID, "httpsig:"+clientID+":"+nonce, signatureResult.CreatedAt.Add(10*time.Minute)); err != nil {
+				securityPayload["nonce"] = nonce
+				securityPayload["reason"] = err.Error()
+				_ = h.publishAudit(r.Context(), "audit.auth.http_signature_replay_detected", reqID, tenantID, securityPayload)
+				writeErr(w, http.StatusConflict, "request_security_violation", err.Error(), reqID, tenantID)
+				return
+			}
+		}
+		securityPayload["http_signature_key_id"] = signatureResult.KeyID
+	}
 
 	allowedSet := map[string]struct{}{}
 	for _, p := range apiKey.Permissions {
@@ -435,16 +536,22 @@ func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 		interfaceName,
 		effectivePerms,
 		time.Duration(ttlSeconds)*time.Second,
+		authMode,
+		confirmation,
+		replayProtectionEnabled,
+		strings.TrimSpace(reg.HTTPSignatureKeyID),
 	)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "jwt_issue_failed", "failed to issue client token", reqID, tenantID)
 		return
 	}
 	if err := h.publishAudit(r.Context(), "audit.auth.client_token_issued", reqID, tenantID, map[string]any{
-		"client_id":      clientID,
-		"subject_id":     boundSubject,
-		"interface_name": interfaceName,
-		"ttl_seconds":    ttlSeconds,
+		"client_id":          clientID,
+		"subject_id":         boundSubject,
+		"interface_name":     interfaceName,
+		"ttl_seconds":        ttlSeconds,
+		"auth_mode":          authMode,
+		"sender_constrained": authMode != "api_key",
 	}); err != nil {
 		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, tenantID)
 		return
@@ -2091,8 +2198,16 @@ func (h *Handler) handleUpdateClient(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	claims, _ := pkgauth.ClaimsFromContext(r.Context())
 	var req struct {
-		IPWhitelist []string `json:"ip_whitelist"`
-		RateLimit   int      `json:"rate_limit"`
+		IPWhitelist               []string `json:"ip_whitelist"`
+		RateLimit                 int      `json:"rate_limit"`
+		AuthMode                  string   `json:"auth_mode"`
+		ReplayProtectionEnabled   *bool    `json:"replay_protection_enabled"`
+		MTLSCertFingerprint       string   `json:"mtls_cert_fingerprint"`
+		MTLSSubjectDN             string   `json:"mtls_subject_dn"`
+		MTLSURISAN                string   `json:"mtls_uri_san"`
+		HTTPSignatureKeyID        string   `json:"http_signature_key_id"`
+		HTTPSignaturePublicKeyPEM string   `json:"http_signature_public_key_pem"`
+		HTTPSignatureAlgorithm    string   `json:"http_signature_algorithm"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
@@ -2109,7 +2224,48 @@ func (h *Handler) handleUpdateClient(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, code, "store_error", "failed to update client", reqID, claims.TenantID)
 		return
 	}
-	if err := h.publishAudit(r.Context(), "audit.auth.client_updated", reqID, claims.TenantID, map[string]any{"client_id": r.PathValue("id")}); err != nil {
+	current, err := h.store.GetClientRegistration(r.Context(), claims.TenantID, r.PathValue("id"))
+	if errors.Is(err, errNotFound) {
+		writeErr(w, http.StatusNotFound, "not_found", "client not found", reqID, claims.TenantID)
+		return
+	}
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to load existing client settings", reqID, claims.TenantID)
+		return
+	}
+	cfg := ClientSecurityConfig{
+		AuthMode:                  normalizeClientAuthMode(firstNonEmptyAuthString(req.AuthMode, current.AuthMode)),
+		ReplayProtectionEnabled:   current.ReplayProtectionEnabled,
+		MTLSCertFingerprint:       firstNonEmptyAuthString(req.MTLSCertFingerprint, current.MTLSCertFingerprint),
+		MTLSSubjectDN:             firstNonEmptyAuthString(req.MTLSSubjectDN, current.MTLSSubjectDN),
+		MTLSURISAN:                firstNonEmptyAuthString(req.MTLSURISAN, current.MTLSURISAN),
+		HTTPSignatureKeyID:        firstNonEmptyAuthString(req.HTTPSignatureKeyID, current.HTTPSignatureKeyID),
+		HTTPSignaturePublicKeyPEM: firstNonEmptyAuthString(req.HTTPSignaturePublicKeyPEM, current.HTTPSignaturePublicKeyPEM),
+		HTTPSignatureAlgorithm:    firstNonEmptyAuthString(req.HTTPSignatureAlgorithm, current.HTTPSignatureAlgorithm),
+	}
+	if req.ReplayProtectionEnabled != nil {
+		cfg.ReplayProtectionEnabled = *req.ReplayProtectionEnabled
+	}
+	if err := validateClientSecurityConfig(cfg); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, claims.TenantID)
+		return
+	}
+	if err := h.store.UpdateClientRegistrationSecurity(r.Context(), claims.TenantID, r.PathValue("id"), cfg); err != nil {
+		code := http.StatusInternalServerError
+		if errors.Is(err, errNotFound) {
+			code = http.StatusNotFound
+		}
+		writeErr(w, code, "store_error", "failed to update client sender constraints", reqID, claims.TenantID)
+		return
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.client_updated", reqID, claims.TenantID, map[string]any{
+		"client_id":                  r.PathValue("id"),
+		"auth_mode":                  cfg.AuthMode,
+		"replay_protection_enabled":  cfg.ReplayProtectionEnabled,
+		"http_signature_algorithm":   cfg.HTTPSignatureAlgorithm,
+		"mtls_binding_present":       strings.TrimSpace(cfg.MTLSCertFingerprint) != "" || strings.TrimSpace(cfg.MTLSSubjectDN) != "" || strings.TrimSpace(cfg.MTLSURISAN) != "",
+		"http_signature_key_present": strings.TrimSpace(cfg.HTTPSignaturePublicKeyPEM) != "",
+	}); err != nil {
 		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
 		return
 	}
@@ -2159,6 +2315,61 @@ func (h *Handler) handleRotateClientKey(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"api_key": rawKey, "api_key_prefix": prefix, "request_id": reqID})
+}
+
+func (h *Handler) handleRESTClientSecuritySummary(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	claims, _ := pkgauth.ClaimsFromContext(r.Context())
+	items, err := h.store.ListClientRegistrations(r.Context(), claims.TenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "store_error", "failed to load rest client security summary", reqID, claims.TenantID)
+		return
+	}
+	summary := RESTClientSecuritySummary{TenantID: claims.TenantID}
+	var latestViolation time.Time
+	for _, item := range items {
+		summary.TotalClients++
+		mode := normalizeClientAuthMode(item.AuthMode)
+		switch mode {
+		case "oauth_mtls":
+			summary.SenderConstrainedClients++
+			summary.OAuthMTLSClients++
+		case "dpop":
+			summary.SenderConstrainedClients++
+			summary.DPoPClients++
+		case "http_message_signature":
+			summary.SenderConstrainedClients++
+			summary.HTTPMessageSignatureClients++
+		default:
+			summary.NonCompliantClients++
+		}
+		if item.ReplayProtectionEnabled {
+			summary.ReplayProtectedClients++
+		}
+		summary.VerifiedRequests += item.VerifiedRequestCount
+		summary.ReplayViolations += item.ReplayViolationCount
+		summary.SignatureFailures += item.SignatureFailureCount
+		summary.UnsignedRejects += item.UnsignedRejectCount
+		for _, ts := range []time.Time{item.LastReplayViolationAt, item.LastSignatureFailureAt, item.LastUnsignedRejectAt} {
+			if !ts.IsZero() && ts.After(latestViolation) {
+				latestViolation = ts
+			}
+		}
+	}
+	if !latestViolation.IsZero() {
+		summary.LastViolationAt = latestViolation
+	}
+	if err := h.publishAudit(r.Context(), "audit.auth.rest_client_security_viewed", reqID, claims.TenantID, map[string]any{
+		"total_clients":              summary.TotalClients,
+		"sender_constrained_clients": summary.SenderConstrainedClients,
+		"replay_violations":          summary.ReplayViolations,
+		"signature_failures":         summary.SignatureFailures,
+		"unsigned_rejects":           summary.UnsignedRejects,
+	}); err != nil {
+		writeErr(w, http.StatusServiceUnavailable, "event_publish_failed", "failed to publish audit event", reqID, claims.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"summary": summary, "request_id": reqID})
 }
 
 func (h *Handler) resolveTenantScope(r *http.Request, claims *pkgauth.Claims, crossTenantPerm string, candidates ...string) (string, error) {
@@ -2398,9 +2609,99 @@ func (h *Handler) publishAudit(ctx context.Context, subject string, requestID st
 	return h.events.Publish(ctx, subject, raw)
 }
 
+func normalizeClientAuthMode(raw string) string {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "oauth_mtls", "oauth-mtls", "mtls", "oauth+mtls":
+		return "oauth_mtls"
+	case "dpop":
+		return "dpop"
+	case "http_message_signature", "http-signature", "message_signature", "signature":
+		return "http_message_signature"
+	default:
+		return "api_key"
+	}
+}
+
+func validateClientSecurityConfig(cfg ClientSecurityConfig) error {
+	cfg.AuthMode = normalizeClientAuthMode(cfg.AuthMode)
+	if cfg.AuthMode == "http_message_signature" {
+		if strings.TrimSpace(cfg.HTTPSignatureKeyID) == "" {
+			return errors.New("http_signature_key_id is required for HTTP Message Signature mode")
+		}
+		if strings.TrimSpace(cfg.HTTPSignaturePublicKeyPEM) == "" {
+			return errors.New("http_signature_public_key_pem is required for HTTP Message Signature mode")
+		}
+		if _, err := pkgrestauth.ParsePublicKeyPEM(cfg.HTTPSignaturePublicKeyPEM); err != nil {
+			return errors.New("http_signature_public_key_pem is invalid")
+		}
+		if strings.TrimSpace(cfg.HTTPSignatureAlgorithm) == "" {
+			cfg.HTTPSignatureAlgorithm = "ed25519"
+		}
+	}
+	return nil
+}
+
+func presentedClientCertBinding(r *http.Request) (fingerprintHex string, thumbprintB64URL string, subjectDN string, uriSAN string) {
+	xfcc := pkgrestauth.ParseForwardedClientCert(r.Header.Get("X-Forwarded-Client-Cert"))
+	fingerprintHex = pkgrestauth.NormalizeCertFingerprint(firstNonEmptyAuthString(
+		xfcc.HashHex,
+		r.Header.Get("X-Client-Cert-SHA256"),
+	))
+	thumbprintB64URL = pkgrestauth.FingerprintHexToThumbprintB64URL(fingerprintHex)
+	subjectDN = strings.TrimSpace(firstNonEmptyAuthString(xfcc.Subject, r.Header.Get("X-Client-Cert-Subject")))
+	if len(xfcc.URISANs) > 0 {
+		uriSAN = strings.TrimSpace(xfcc.URISANs[0])
+	}
+	if uriSAN == "" {
+		uriSAN = strings.TrimSpace(r.Header.Get("X-Client-Cert-URI-SAN"))
+	}
+	return fingerprintHex, thumbprintB64URL, subjectDN, uriSAN
+}
+
+func requestPathWithQueryForSignature(r *http.Request) string {
+	if r == nil || r.URL == nil {
+		return "/"
+	}
+	if raw := strings.TrimSpace(r.Header.Get("X-Envoy-Original-Path")); raw != "" {
+		return raw
+	}
+	if raw := strings.TrimSpace(r.Header.Get("X-Original-Uri")); raw != "" {
+		return raw
+	}
+	if raw := strings.TrimSpace(r.URL.RequestURI()); raw != "" {
+		return raw
+	}
+	if raw := strings.TrimSpace(r.URL.Path); raw != "" {
+		return raw
+	}
+	return "/"
+}
+
+func requestAuthorityForSignature(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	return strings.TrimSpace(firstNonEmptyAuthString(r.Header.Get("X-Forwarded-Host"), r.Host))
+}
+
+func firstNonEmptyAuthString(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
 func decodeJSON(r *http.Request, out interface{}) error {
 	defer r.Body.Close() //nolint:errcheck
 	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	return dec.Decode(out)
+}
+
+func decodeJSONBytes(raw []byte, out interface{}) error {
+	dec := json.NewDecoder(strings.NewReader(string(raw)))
 	dec.DisallowUnknownFields()
 	return dec.Decode(out)
 }

@@ -1,1 +1,0 @@
-import{L as e}from"./legacyPrimitives-C5eNGjR4.js";import{t}from"./DocsTab-BJBupcEn.js";var n=e(),r=()=>(0,n.jsx)(t,{});export{r as DocsViewTab};

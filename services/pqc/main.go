@@ -72,6 +72,7 @@ func main() {
 	svc := NewService(
 		NewSQLStore(dbConn),
 		NewHTTPKeyCoreClient(envOr("KEYCORE_URL", "http://127.0.0.1:8010"), 5*time.Second),
+		NewHTTPCertsClient(envOr("CERTS_URL", "http://127.0.0.1:8030"), 5*time.Second),
 		NewHTTPDiscoveryClient(envOr("DISCOVERY_URL", "http://127.0.0.1:8100"), 5*time.Second),
 		publisher,
 	)

@@ -116,6 +116,7 @@ export type KeyInterfacePort = {
   bind_address: string;
   port: number;
   protocol?: string;
+  pqc_mode?: string;
   certificate_source?: string;
   ca_id?: string;
   certificate_id?: string;

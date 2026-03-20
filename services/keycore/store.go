@@ -59,6 +59,8 @@ type Store interface {
 	UpsertKeyInterfacePort(ctx context.Context, port KeyInterfacePort) (KeyInterfacePort, error)
 	DeleteKeyInterfacePort(ctx context.Context, tenantID string, interfaceName string) error
 	ReserveRequestNonce(ctx context.Context, tenantID string, nonce string, expiresAt time.Time) error
+	GetRESTClientSecurityBinding(ctx context.Context, tenantID string, clientID string) (RESTClientSecurityBinding, error)
+	RecordRESTClientSecurityObservation(ctx context.Context, tenantID string, clientID string, observation RESTClientSecurityObservation) error
 
 	ListVersions(ctx context.Context, tenantID string, keyID string) ([]KeyVersion, error)
 	GetVersion(ctx context.Context, tenantID string, keyID string, version int) (KeyVersion, error)

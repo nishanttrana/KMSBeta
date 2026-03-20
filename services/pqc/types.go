@@ -11,6 +11,7 @@ type EventPublisher interface {
 
 type KeyCoreClient interface {
 	ListKeys(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
+	ListInterfacePorts(ctx context.Context, tenantID string) ([]map[string]interface{}, error)
 	RotateKey(ctx context.Context, tenantID string, keyID string, reason string) error
 }
 
@@ -18,11 +19,18 @@ type DiscoveryClient interface {
 	ListCryptoAssets(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
 }
 
+type CertsClient interface {
+	ListCertificates(ctx context.Context, tenantID string, limit int) ([]map[string]interface{}, error)
+}
+
 type Store interface {
 	CreateReadinessScan(ctx context.Context, item ReadinessScan) error
 	GetReadinessScan(ctx context.Context, tenantID string, id string) (ReadinessScan, error)
 	GetLatestReadinessScan(ctx context.Context, tenantID string) (ReadinessScan, error)
 	ListReadinessScans(ctx context.Context, tenantID string, limit int, offset int) ([]ReadinessScan, error)
+
+	GetPolicy(ctx context.Context, tenantID string) (PQCPolicy, error)
+	UpsertPolicy(ctx context.Context, item PQCPolicy) (PQCPolicy, error)
 
 	CreateMigrationPlan(ctx context.Context, item MigrationPlan) error
 	UpdateMigrationPlan(ctx context.Context, item MigrationPlan) error
@@ -45,6 +53,91 @@ type AssetRisk struct {
 	MigrationTarget string  `json:"migration_target"`
 	Priority        int     `json:"priority"`
 	Reason          string  `json:"reason"`
+}
+
+type PQCPolicy struct {
+	TenantID               string    `json:"tenant_id"`
+	ProfileID              string    `json:"profile_id"`
+	DefaultKEM             string    `json:"default_kem"`
+	DefaultSignature       string    `json:"default_signature"`
+	InterfaceDefaultMode   string    `json:"interface_default_mode"`
+	CertificateDefaultMode string    `json:"certificate_default_mode"`
+	HQCBackupEnabled       bool      `json:"hqc_backup_enabled"`
+	FlagClassicalUsage     bool      `json:"flag_classical_usage"`
+	FlagClassicalCerts     bool      `json:"flag_classical_certificates"`
+	FlagNonMigratedIfaces  bool      `json:"flag_non_migrated_interfaces"`
+	RequirePQCForNewKeys   bool      `json:"require_pqc_for_new_keys"`
+	UpdatedBy              string    `json:"updated_by,omitempty"`
+	UpdatedAt              time.Time `json:"updated_at,omitempty"`
+}
+
+type InventoryBreakdown struct {
+	Total      int            `json:"total"`
+	Classical  int            `json:"classical"`
+	Hybrid     int            `json:"hybrid"`
+	PQCOnly    int            `json:"pqc_only"`
+	Algorithms map[string]int `json:"algorithms,omitempty"`
+}
+
+type ClassicalUsageItem struct {
+	AssetType string  `json:"asset_type"`
+	AssetID   string  `json:"asset_id"`
+	Name      string  `json:"name"`
+	Algorithm string  `json:"algorithm"`
+	Location  string  `json:"location"`
+	QSLScore  float64 `json:"qsl_score"`
+	Reason    string  `json:"reason"`
+}
+
+type InterfacePQCItem struct {
+	InterfaceName    string `json:"interface_name"`
+	Description      string `json:"description"`
+	BindAddress      string `json:"bind_address"`
+	Port             int    `json:"port"`
+	Protocol         string `json:"protocol"`
+	PQCMode          string `json:"pqc_mode"`
+	EffectivePQCMode string `json:"effective_pqc_mode"`
+	Enabled          bool   `json:"enabled"`
+	Status           string `json:"status"`
+	CertSource       string `json:"certificate_source"`
+	CAID             string `json:"ca_id,omitempty"`
+	CertificateID    string `json:"certificate_id,omitempty"`
+}
+
+type CertificatePQCItem struct {
+	CertID         string `json:"cert_id"`
+	SubjectCN      string `json:"subject_cn"`
+	Algorithm      string `json:"algorithm"`
+	CertClass      string `json:"cert_class"`
+	Status         string `json:"status"`
+	NotAfter       string `json:"not_after,omitempty"`
+	MigrationState string `json:"migration_state"`
+}
+
+type PQCInventory struct {
+	TenantID                string               `json:"tenant_id"`
+	GeneratedAt             time.Time            `json:"generated_at"`
+	Policy                  PQCPolicy            `json:"policy"`
+	ReadinessScore          int                  `json:"readiness_score"`
+	QuantumReadinessPercent float64              `json:"quantum_readiness_percent"`
+	Keys                    InventoryBreakdown   `json:"keys"`
+	Certificates            InventoryBreakdown   `json:"certificates"`
+	Interfaces              InventoryBreakdown   `json:"interfaces"`
+	ClassicalUsage          []ClassicalUsageItem `json:"classical_usage"`
+	NonMigratedInterfaces   []InterfacePQCItem   `json:"non_migrated_interfaces"`
+	NonMigratedCertificates []CertificatePQCItem `json:"non_migrated_certificates"`
+	Recommendations         []string             `json:"recommendations"`
+}
+
+type PQCMigrationReport struct {
+	TenantID        string              `json:"tenant_id"`
+	GeneratedAt     time.Time           `json:"generated_at"`
+	Policy          PQCPolicy           `json:"policy"`
+	Inventory       PQCInventory        `json:"inventory"`
+	LatestReadiness ReadinessScan       `json:"latest_readiness"`
+	Timeline        []TimelineMilestone `json:"timeline"`
+	TopRisks        []AssetRisk         `json:"top_risks"`
+	NextActions     []string            `json:"next_actions"`
 }
 
 type ReadinessScan struct {

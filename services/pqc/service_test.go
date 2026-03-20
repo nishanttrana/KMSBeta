@@ -21,6 +21,51 @@ func TestPQCServiceReadinessPlanExecuteRollback(t *testing.T) {
 		t.Fatalf("expected scan audit events")
 	}
 
+	policy, err := svc.GetPolicy(ctx, tenantID)
+	if err != nil {
+		t.Fatalf("get policy: %v", err)
+	}
+	if policy.ProfileID == "" || policy.InterfaceDefaultMode == "" {
+		t.Fatalf("unexpected default policy: %+v", policy)
+	}
+	updatedPolicy, err := svc.UpdatePolicy(ctx, PQCPolicy{
+		TenantID:               tenantID,
+		ProfileID:              "quantum_first",
+		DefaultKEM:             "ML-KEM-1024",
+		DefaultSignature:       "ML-DSA-87",
+		InterfaceDefaultMode:   "pqc_only",
+		CertificateDefaultMode: "pqc_only",
+		HQCBackupEnabled:       true,
+		FlagClassicalUsage:     true,
+		FlagClassicalCerts:     true,
+		FlagNonMigratedIfaces:  true,
+		RequirePQCForNewKeys:   true,
+		UpdatedBy:              "tester",
+	})
+	if err != nil {
+		t.Fatalf("update policy: %v", err)
+	}
+	if updatedPolicy.ProfileID != "quantum_first" || updatedPolicy.DefaultSignature != "ML-DSA-87" {
+		t.Fatalf("unexpected updated policy: %+v", updatedPolicy)
+	}
+	inventory, err := svc.GetInventory(ctx, tenantID)
+	if err != nil {
+		t.Fatalf("inventory: %v", err)
+	}
+	if inventory.Keys.Total == 0 || inventory.Interfaces.Total == 0 || inventory.Certificates.Total == 0 {
+		t.Fatalf("unexpected inventory: %+v", inventory)
+	}
+	if len(inventory.NonMigratedInterfaces) == 0 || len(inventory.NonMigratedCertificates) == 0 {
+		t.Fatalf("expected migration gaps: %+v", inventory)
+	}
+	report, err := svc.GetMigrationReport(ctx, tenantID)
+	if err != nil {
+		t.Fatalf("migration report: %v", err)
+	}
+	if report.Inventory.ReadinessScore <= 0 || len(report.TopRisks) == 0 || len(report.Timeline) == 0 {
+		t.Fatalf("unexpected migration report: %+v", report)
+	}
+
 	plan, err := svc.CreateMigrationPlan(ctx, PlanRequest{TenantID: tenantID, Name: "plan", CreatedBy: "tester"})
 	if err != nil {
 		t.Fatalf("create plan: %v", err)

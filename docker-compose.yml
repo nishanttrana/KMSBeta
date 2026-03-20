@@ -12,6 +12,7 @@ x-kms-common-env: &kms-common-env
   DB_MAX_IDLE: "10"
   RATE_LIMIT_RPS: "100"
   RATE_LIMIT_BURST: "200"
+  WORKLOAD_IDENTITY_SHARED_SECRET: ${WORKLOAD_IDENTITY_SHARED_SECRET:-change-me-workload-secret}
 
 x-kms-service: &kms-service
   restart: unless-stopped
@@ -192,7 +193,7 @@ services:
     entrypoint: ["/bin/sh"]
     command:
       - -ec
-      - for i in $(seq 1 120); do [ -s /run/vecta/runtime-certs/envoy/tls.crt ] && [ -s /run/vecta/runtime-certs/envoy/tls.key ] && break; sleep 1; done; mkdir -p /tmp/envoy-certs; cp /run/vecta/runtime-certs/envoy/tls.crt /tmp/envoy-certs/tls.crt; cp /run/vecta/runtime-certs/envoy/tls.key /tmp/envoy-certs/tls.key; chmod 0644 /tmp/envoy-certs/tls.crt; chmod 0644 /tmp/envoy-certs/tls.key; exec /usr/local/bin/envoy -c /etc/envoy/envoy.yaml --service-cluster vecta-edge
+      - for i in $(seq 1 120); do [ -s /run/vecta/runtime-certs/envoy/tls.crt ] && [ -s /run/vecta/runtime-certs/envoy/tls.key ] && [ -s /run/vecta/runtime-certs/ca/ca.crt ] && break; sleep 1; done; mkdir -p /tmp/envoy-certs; cp /run/vecta/runtime-certs/envoy/tls.crt /tmp/envoy-certs/tls.crt; cp /run/vecta/runtime-certs/envoy/tls.key /tmp/envoy-certs/tls.key; cp /run/vecta/runtime-certs/ca/ca.crt /tmp/envoy-certs/ca.crt; chmod 0644 /tmp/envoy-certs/tls.crt; chmod 0644 /tmp/envoy-certs/tls.key; chmod 0644 /tmp/envoy-certs/ca.crt; exec /usr/local/bin/envoy -c /etc/envoy/envoy.yaml --service-cluster vecta-edge
     volumes:
       - ./infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
       - runtime-certs:/run/vecta/runtime-certs:ro
@@ -663,6 +664,71 @@ services:
       timeout: 5s
       retries: 10
 
+  confidential:
+    <<: *kms-service
+    profiles: ["confidential_compute"]
+    build:
+      context: .
+      dockerfile: services/confidential/Dockerfile
+    image: vecta/confidential:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8240"
+      GRPC_PORT: "18240"
+      CLUSTER_NODE_ID: ${CLUSTER_NODE_ID:-vecta-kms-01}
+    ports:
+      - "8240:8240"
+      - "18240:18240"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18240"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  workload:
+    <<: *kms-service
+    profiles: ["workload_identity"]
+    build:
+      context: .
+      dockerfile: services/workload/Dockerfile
+    image: vecta/workload-identity:latest
+    environment:
+      <<: *kms-common-env
+      AUTH_URL: http://auth:8001
+      AUDIT_URL: http://audit:8070
+      HTTP_PORT: "8250"
+      GRPC_PORT: "18250"
+    ports:
+      - "8250:8250"
+      - "18250:18250"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18250"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  autokey:
+    <<: *kms-service
+    profiles: ["autokey_provisioning"]
+    build:
+      context: .
+      dockerfile: services/autokey/Dockerfile
+    image: vecta/autokey:latest
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      GOVERNANCE_URL: http://governance:8050
+      HTTP_PORT: "8260"
+      GRPC_PORT: "18260"
+    ports:
+      - "8260:8260"
+      - "18260:18260"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18260"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
   compliance:
     <<: *kms-service
     profiles: ["compliance_dashboard"]
@@ -796,6 +862,7 @@ services:
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
+      CERTS_URL: http://certs:8030
       DISCOVERY_URL: http://discovery:8100
       HTTP_PORT: "8060"
       GRPC_PORT: "18060"

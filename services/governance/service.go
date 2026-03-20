@@ -678,7 +678,7 @@ func (s *Service) ApplyPostureControls(ctx context.Context, patch PostureControl
 }
 
 var internalHybridMTLSServices = []string{
-	"auth", "keycore", "policy", "governance", "audit", "certs", "secrets", "cloud", "ekm", "hyok", "kmip", "payment", "pqc", "dataprotect", "cluster-manager", "compliance", "reporting", "sbom",
+	"auth", "keycore", "policy", "governance", "audit", "certs", "secrets", "cloud", "ekm", "hyok", "kmip", "payment", "workload", "pqc", "dataprotect", "cluster-manager", "compliance", "reporting", "sbom",
 }
 
 type certsCAItem struct {

@@ -11,6 +11,7 @@ import {
   Cloud,
   Cpu,
   Database,
+  Fingerprint,
   FileText,
   Gauge,
   GitBranch,
@@ -65,6 +66,10 @@ const CloudKeyControlTab = lazy(() => import("./v3/tabs/CloudKeyControlTab").the
 const WorkbenchTab = lazy(() => import("./v3/tabs/WorkbenchTab").then(m => ({ default: m.WorkbenchTab })));
 const CryptoTab = lazy(() => import("./v3/tabs/CryptoTab").then(m => ({ default: m.CryptoTab })));
 const PaymentTab = lazy(() => import("./v3/tabs/PaymentTab").then(m => ({ default: m.PaymentTab })));
+const AutokeyTab = lazy(() => import("./v3/tabs/AutokeyTab").then(m => ({ default: m.AutokeyTab })));
+const PostQuantumTab = lazy(() => import("./v3/tabs/PostQuantumTab").then(m => ({ default: m.PostQuantumTab })));
+const ConfidentialComputeTab = lazy(() => import("./v3/tabs/ConfidentialComputeTab").then(m => ({ default: m.ConfidentialComputeTab })));
+const WorkloadIdentityTab = lazy(() => import("./v3/tabs/WorkloadIdentityTab").then(m => ({ default: m.WorkloadIdentityTab })));
 const HSMTab = lazy(() => import("./v3/tabs/HSMTab").then(m => ({ default: m.HSMTab })));
 const CertsTab = lazy(() => import("./v3/tabs/CertsTab").then(m => ({ default: m.CertsTab })));
 const KeysTab = lazy(() => import("./v3/tabs/KeysTab").then(m => ({ default: m.KeysTab })));
@@ -149,6 +154,10 @@ const TABS: Record<string, any> = {
   tokenize: TokenizeTab,
   dataenc: DataEncryptionTab,
   payment: PaymentTab,
+  autokey: AutokeyTab,
+  pqc: PostQuantumTab,
+  confidential: ConfidentialComputeTab,
+  workload: WorkloadIdentityTab,
   cloudctl: CloudKeyControlTab,
   byok: BYOKTab,
   hyok: HYOKTab,
@@ -182,6 +191,10 @@ const TITLES: Record<string, string> = {
   tokenize: "Tokenize / Mask / Redact",
   dataenc: "Data Encryption",
   payment: "Payment Crypto",
+  autokey: "Autokey",
+  pqc: "Post-Quantum Crypto",
+  confidential: "Confidential Compute",
+  workload: "Workload Identity",
   cloudctl: "Cloud Key Control",
   byok: "BYOK",
   hyok: "HYOK",
@@ -204,7 +217,7 @@ const TITLES: Record<string, string> = {
 };
 
 const NAV = [
-  { g: "CORE", items: [{ id: "home", icon: HomeIcon, label: "Dashboard" }, { id: "keys", icon: KeyRound, label: "Key Management" }, { id: "certs", icon: FileText, label: "Certificates / PKI" }, { id: "cloudctl", icon: Cloud, label: "Cloud Key Control" }, { id: "ekm", icon: Database, label: "Enterprise Key Management" }, { id: "vault", icon: Lock, label: "Secret Vault" }, { id: "dataprotection", icon: ShieldCheck, label: "Data Protection" }] },
+  { g: "CORE", items: [{ id: "home", icon: HomeIcon, label: "Dashboard" }, { id: "keys", icon: KeyRound, label: "Key Management" }, { id: "certs", icon: FileText, label: "Certificates / PKI" }, { id: "cloudctl", icon: Cloud, label: "Cloud Key Control" }, { id: "ekm", icon: Database, label: "Enterprise Key Management" }, { id: "vault", icon: Lock, label: "Secret Vault" }, { id: "dataprotection", icon: ShieldCheck, label: "Data Protection" }, { id: "autokey", icon: Layers, label: "Autokey" }, { id: "pqc", icon: Atom, label: "Post-Quantum Crypto" }, { id: "confidential", icon: Fingerprint, label: "Confidential Compute" }, { id: "workload", icon: Users, label: "Workload Identity" }] },
   { g: "WORKBENCH", items: [{ id: "workbench", icon: LayoutGrid, label: "Workbench" }] },
   { g: "INFRASTRUCTURE", items: [{ id: "hsm", icon: Cpu, label: "HSM" }, { id: "qkd", icon: GitBranch, label: "QKD Interface" }, { id: "qrng", icon: Atom, label: "QRNG Entropy" }, { id: "mpc", icon: Cpu, label: "MPC Engine" }, { id: "cluster", icon: GitBranch, label: "Cluster" }] },
   { g: "GOVERNANCE", items: [{ id: "approvals", icon: CheckCircle2, label: "Approvals" }, { id: "alerts", icon: Bell, label: "Alert Center" }, { id: "audit", icon: ScrollText, label: "Audit Log" }, { id: "posture", icon: Gauge, label: "Posture Management" }, { id: "compliance", icon: ClipboardCheck, label: "Compliance" }, { id: "sbom", icon: BarChart3, label: "SBOM / CBOM" }] },
@@ -218,13 +231,13 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "restapi", label: "REST API", hint: "Authenticated API explorer and endpoint documentation", icon: FileText },
     { id: "tokenize", label: "Tokenize / Mask / Redact", hint: "Vault and vaultless tokenization with masking/redaction", icon: VenetianMask, feature: "data_protection" },
     { id: "dataenc", label: "Data Encryption", hint: "Field-level, envelope, searchable and FPE crypto", icon: Database, feature: "data_protection" },
-    { id: "payment", label: "Payment Crypto", hint: "TR-31, PIN, CVV, MAC and ISO20022 operations", icon: CreditCard, feature: "payment_crypto" }
+    { id: "payment", label: "Payment Crypto", hint: "Traditional and modern payment crypto operations for testing", icon: CreditCard, feature: "payment_crypto" }
   ],
   dataprotection: [
     { id: "fieldenc", label: "Field Encryption", hint: "Wrapper registration, challenge-response and local crypto lease control", icon: KeyRound, feature: "data_protection" },
     { id: "dataenc-policy", label: "Data Encryption Policy", hint: "Policy controls only for data encryption interfaces", icon: List, feature: "data_protection" },
     { id: "token-policy", label: "Token / Mask / Redact Policy", hint: "Policy controls only for tokenization, masking and redaction", icon: VenetianMask, feature: "data_protection" },
-    { id: "payment-policy", label: "Payment Policy", hint: "Policy controls only for payment cryptography operations", icon: CreditCard, feature: "payment_crypto" },
+    { id: "payment-policy", label: "Payment Policy", hint: "KMS-wide payment guardrails for REST and payment interfaces", icon: CreditCard, feature: "payment_crypto" },
     { id: "pkcs11", label: "PKCS#11 / JCA", hint: "SDK providers, mechanism usage and client telemetry", icon: Plug }
   ],
   cloudctl: [

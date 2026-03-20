@@ -51,15 +51,18 @@ type AccessGroup struct {
 }
 
 type AccessActor struct {
-	UserID        string
-	Username      string
-	Role          string
-	Permissions   []string
-	Groups        []string
-	ClientID      string
-	InterfaceName string
-	SubjectID     string
-	Authenticated bool
+	UserID              string
+	Username            string
+	Role                string
+	Permissions         []string
+	Groups              []string
+	ClientID            string
+	InterfaceName       string
+	SubjectID           string
+	WorkloadIdentity    string
+	WorkloadTrustDomain string
+	AllowedKeyIDs       []string
+	Authenticated       bool
 }
 
 func contextWithAccessActor(ctx context.Context, actor AccessActor) context.Context {
@@ -203,6 +206,48 @@ func normalizeActorGroups(groups []string) []string {
 	return out
 }
 
+func normalizeActorKeyIDs(values []string) []string {
+	set := map[string]struct{}{}
+	for _, raw := range values {
+		value := strings.TrimSpace(raw)
+		if value == "" {
+			continue
+		}
+		set[value] = struct{}{}
+	}
+	out := make([]string, 0, len(set))
+	for value := range set {
+		out = append(out, value)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func actorPermissionAllowsOperation(perms []string, operation string) bool {
+	norm, err := normalizeAccessOperation(operation)
+	if err != nil {
+		return false
+	}
+	for _, raw := range perms {
+		perm := strings.ToLower(strings.TrimSpace(raw))
+		switch perm {
+		case "*", norm, "key." + norm, "key.*", "workload-key." + norm, "workload-key.*":
+			return true
+		}
+	}
+	return false
+}
+
+func workloadKeyAllowed(actor AccessActor, keyID string) bool {
+	allowed := normalizeActorKeyIDs(actor.AllowedKeyIDs)
+	for _, value := range allowed {
+		if value == "*" || strings.EqualFold(value, strings.TrimSpace(keyID)) {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation string) error {
 	normOperation, err := normalizeAccessOperation(operation)
 	if err != nil {
@@ -216,6 +261,24 @@ func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation strin
 	grants, err := s.store.ListKeyAccessGrants(ctx, key.TenantID, key.ID)
 	if err != nil {
 		return err
+	}
+
+	if strings.TrimSpace(actor.WorkloadIdentity) != "" {
+		if !actor.Authenticated {
+			return errors.New("access denied: authenticated workload token required")
+		}
+		if !actorPermissionAllowsOperation(actor.Permissions, normOperation) {
+			return errors.New("access denied: workload token does not permit this operation")
+		}
+		if !workloadKeyAllowed(actor, key.ID) {
+			return errors.New("access denied: key is not bound to workload identity")
+		}
+		if settings.RequireInterfacePolicies {
+			if err := s.enforceInterfaceSubjectPolicy(ctx, key.TenantID, actor, normOperation, normalizeActorGroups(actor.Groups)); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
 
 	now := time.Now().UTC()

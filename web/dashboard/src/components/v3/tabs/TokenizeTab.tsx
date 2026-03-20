@@ -51,8 +51,8 @@ import {
   tokenizeValues,
   updateDataProtectionPolicy
 } from "../../../lib/dataprotect";
-import { getPaymentPolicy, updatePaymentPolicy } from "../../../lib/payment";
 import { PKCS11Tab } from "./PKCS11Tab";
+import { PaymentPolicyTab } from "./PaymentPolicyTab";
 
 function normalizeKeyState(state: string): string {
   const normalized = String(state || "").trim().toLowerCase();
@@ -2932,7 +2932,6 @@ const AuditLogViewer=({session,onToast})=>{
 export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewChange})=>{
   const [dataSubtab,setDataSubtab]=useState("fieldenc");
   const [stats,setStats]=useState<any>(null);
-  const [paymentStats,setPaymentStats]=useState<any>(null);
   const currentSubtab=String(subView||dataSubtab||"fieldenc");
   const selectSubtab=(next:string)=>{
     if(onSubViewChange){
@@ -2948,30 +2947,6 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
     getDataProtectStats(session).then(setStats).catch(()=>{});
   },[session?.token,session?.tenantId]);
 
-  useEffect(()=>{
-    if(!session?.token){
-      setPaymentStats(null);
-      return;
-    }
-    if(currentSubtab!=="payment-policy"){
-      return;
-    }
-    getPaymentPolicy(session).then((pp)=>{
-      setPaymentStats({
-        allowed_tr31_versions:Array.isArray(pp?.allowed_tr31_versions)?pp.allowed_tr31_versions:[],
-        allow_tcp_interface:Boolean(pp?.allow_tcp_interface),
-        require_jwt_on_tcp:Boolean(pp?.require_jwt_on_tcp),
-        allowed_pin_block_formats:Array.isArray(pp?.allowed_pin_block_formats)?pp.allowed_pin_block_formats:[],
-        dual_control_required_operations:Array.isArray(pp?.dual_control_required_operations)?pp.dual_control_required_operations:[],
-        hsm_required_operations:Array.isArray(pp?.hsm_required_operations)?pp.hsm_required_operations:[],
-        runtime_environment:String(pp?.runtime_environment||"prod").toLowerCase()==="test"?"Test":"Prod",
-        require_key_id_for_operations:Boolean(pp?.require_key_id_for_operations),
-      });
-    }).catch(()=>{
-      setPaymentStats(null);
-    });
-  },[session?.token,session?.tenantId,currentSubtab]);
-
   const statItems=[
     {l:"Token Vaults",v:stats?.token_vaults,icon:Database,color:C.accent},
     {l:"Tokens",v:stats?.total_tokens,icon:Shield,color:C.blue},
@@ -2980,17 +2955,8 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
     {l:"Wrappers",v:stats?.registered_wrappers,icon:KeyRound,color:C.green},
     {l:"Active Leases",v:stats?.active_leases,icon:FileKey,color:C.yellow},
   ];
-
-  const paymentStatItems=[
-    {l:"TR-31 Versions",v:String((paymentStats?.allowed_tr31_versions||[]).length||0),s:(paymentStats?.allowed_tr31_versions||[]).join(", ")||"No versions configured",icon:CreditCard,color:C.accent},
-    {l:"Payment TCP",v:paymentStats?.allow_tcp_interface?"On":"Off",s:paymentStats?.allow_tcp_interface?(paymentStats?.require_jwt_on_tcp?"JWT required":"JWT optional"):"Interface disabled",icon:Gauge,color:paymentStats?.allow_tcp_interface?C.blue:C.amber},
-    {l:"PIN Formats",v:String((paymentStats?.allowed_pin_block_formats||[]).length||0),s:(paymentStats?.allowed_pin_block_formats||[]).join(", ")||"No formats allowed",icon:KeyRound,color:C.purple},
-    {l:"Dual Control",v:String((paymentStats?.dual_control_required_operations||[]).length||0),s:"Approval-gated operations",icon:Shield,color:C.amber},
-    {l:"HSM Required",v:String((paymentStats?.hsm_required_operations||[]).length||0),s:"Hardware-bound operations",icon:Lock,color:C.green},
-    {l:"Runtime",v:String(paymentStats?.runtime_environment||"-"),s:paymentStats?.require_key_id_for_operations?"Key ID required":"Inline key material allowed",icon:FileKey,color:C.yellow},
-  ];
-  const activeStatItems=currentSubtab==="payment-policy"?paymentStatItems:statItems;
-  const showStats=currentSubtab==="payment-policy"?true:Boolean(stats);
+  const activeStatItems=statItems;
+  const showStats=currentSubtab==="payment-policy"?false:Boolean(stats);
 
   return <div style={{display:"grid",gap:12}}>
     {showStats&&<div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:10}}>
@@ -3017,7 +2983,7 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
       : currentSubtab==="token-policy"
         ? <TokenizeMaskRedactPolicy session={session} onToast={onToast}/>
         : currentSubtab==="payment-policy"
-          ? <PaymentCryptoPolicy session={session} onToast={onToast}/>
+          ? <PaymentPolicyTab session={session} onToast={onToast}/>
         : currentSubtab==="dataenc-policy"
           ? <DataEncryptionPolicy session={session} onToast={onToast}/>
           : <FieldEncryptionRuntime session={session} keyCatalog={keyCatalog} onToast={onToast}/>}

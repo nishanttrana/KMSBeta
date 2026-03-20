@@ -79,6 +79,10 @@ func (a *AuthLogic) IssueClientJWT(
 	interfaceName string,
 	permissions []string,
 	ttl time.Duration,
+	authMode string,
+	confirmation *pkgauth.ConfirmationClaims,
+	replayProtection bool,
+	httpSignatureKeyID string,
 ) (string, time.Time, error) {
 	if ttl <= 0 {
 		ttl = 5 * time.Minute
@@ -89,11 +93,15 @@ func (a *AuthLogic) IssueClientJWT(
 	now := time.Now().UTC()
 	expiresAt := now.Add(ttl)
 	claims := &pkgauth.Claims{
-		TenantID:    strings.TrimSpace(tenantID),
-		Role:        "client-service",
-		Permissions: permissions,
-		UserID:      strings.TrimSpace(subjectID),
-		ClientID:    strings.TrimSpace(clientID),
+		TenantID:                  strings.TrimSpace(tenantID),
+		Role:                      "client-service",
+		Permissions:               permissions,
+		UserID:                    strings.TrimSpace(subjectID),
+		ClientID:                  strings.TrimSpace(clientID),
+		AuthMode:                  strings.TrimSpace(authMode),
+		ReplayProtection:          replayProtection,
+		Confirmation:              confirmation,
+		HTTPMessageSignatureKeyID: strings.TrimSpace(httpSignatureKeyID),
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   strings.TrimSpace(subjectID),
 			Issuer:    a.issuer,
@@ -102,6 +110,47 @@ func (a *AuthLogic) IssueClientJWT(
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now.Add(-5 * time.Second)),
 			ID:        fmt.Sprintf("%s:%s:%d", strings.TrimSpace(clientID), strings.TrimSpace(interfaceName), now.UnixNano()),
+		},
+	}
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(a.privateKey)
+	return signed, expiresAt, err
+}
+
+func (a *AuthLogic) IssueWorkloadJWT(
+	tenantID string,
+	clientID string,
+	spiffeID string,
+	interfaceName string,
+	permissions []string,
+	allowedKeyIDs []string,
+	trustDomain string,
+	ttl time.Duration,
+) (string, time.Time, error) {
+	if ttl <= 0 {
+		ttl = 5 * time.Minute
+	}
+	if ttl > 15*time.Minute {
+		ttl = 15 * time.Minute
+	}
+	now := time.Now().UTC()
+	expiresAt := now.Add(ttl)
+	claims := &pkgauth.Claims{
+		TenantID:            strings.TrimSpace(tenantID),
+		Role:                "workload-service",
+		Permissions:         permissions,
+		UserID:              strings.TrimSpace(spiffeID),
+		ClientID:            strings.TrimSpace(clientID),
+		WorkloadIdentity:    strings.TrimSpace(spiffeID),
+		WorkloadTrustDomain: strings.TrimSpace(trustDomain),
+		AllowedKeyIDs:       dedupeStrings(allowedKeyIDs),
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   strings.TrimSpace(spiffeID),
+			Issuer:    a.issuer,
+			Audience:  jwt.ClaimStrings{a.audience},
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now.Add(-5 * time.Second)),
+			ID:        fmt.Sprintf("wid:%s:%s:%d", strings.TrimSpace(clientID), strings.TrimSpace(interfaceName), now.UnixNano()),
 		},
 	}
 	signed, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(a.privateKey)
@@ -201,6 +250,24 @@ func GenerateAPIKey() (raw string, keyHash []byte, prefix string, err error) {
 	hash := make([]byte, len(sum))
 	copy(hash, sum[:])
 	return raw, hash, raw[:min(len(raw), 10)], nil
+}
+
+func dedupeStrings(values []string) []string {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(values))
+	for _, item := range values {
+		trimmed := strings.TrimSpace(item)
+		if trimmed == "" {
+			continue
+		}
+		key := strings.ToLower(trimmed)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, trimmed)
+	}
+	return out
 }
 
 func NewID(prefix string) string {

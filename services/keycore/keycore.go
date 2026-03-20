@@ -33,6 +33,9 @@ import (
 	"time"
 
 	"github.com/bits-and-blooms/bloom/v3"
+	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
+	"github.com/cloudflare/circl/sign/mldsa/mldsa87"
+	"github.com/cloudflare/circl/sign/slhdsa"
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/pkcs12"
@@ -56,7 +59,7 @@ type Service struct {
 	fipsMode FIPSModeProvider
 	approval *governanceApprovalClient
 	posture  GovernancePostureControlsProvider
-	qrng    QRNGClient
+	qrng     QRNGClient
 }
 
 var errTagInUse = errors.New("tag in use")
@@ -443,6 +446,12 @@ func materialLengthForAlgorithm(algorithm string) int {
 	switch {
 	case strings.Contains(a, "ML-KEM"):
 		l = mlkem.SeedSize
+	case strings.Contains(a, "ML-DSA-87"):
+		l = mldsa87.PrivateKeySize
+	case strings.Contains(a, "ML-DSA-65"):
+		l = mldsa65.PrivateKeySize
+	case strings.Contains(a, "SLH-DSA"):
+		l = 128
 	case strings.Contains(a, "AES-128"):
 		l = 16
 	case strings.Contains(a, "AES-192"):
@@ -660,6 +669,38 @@ func derivePublicFromPrivateMaterial(algorithm string, privateRaw []byte) ([]byt
 			return nil, errors.New("unsupported KEM algorithm")
 		}
 	}
+	if isMLDSAKeyAlgorithm(algorithm) {
+		switch normalizeMLDSAAlgorithm(algorithm) {
+		case "ml-dsa-65":
+			var priv mldsa65.PrivateKey
+			if err := priv.UnmarshalBinary(privateRaw); err != nil {
+				return nil, errors.New("invalid ML-DSA-65 private key material")
+			}
+			pub, ok := priv.Public().(*mldsa65.PublicKey)
+			if !ok || pub == nil {
+				return nil, errors.New("could not derive ML-DSA-65 public key")
+			}
+			return pub.Bytes(), nil
+		case "ml-dsa-87":
+			var priv mldsa87.PrivateKey
+			if err := priv.UnmarshalBinary(privateRaw); err != nil {
+				return nil, errors.New("invalid ML-DSA-87 private key material")
+			}
+			pub, ok := priv.Public().(*mldsa87.PublicKey)
+			if !ok || pub == nil {
+				return nil, errors.New("could not derive ML-DSA-87 public key")
+			}
+			return pub.Bytes(), nil
+		}
+	}
+	if isSLHDSAKeyAlgorithm(algorithm) {
+		var priv slhdsa.PrivateKey
+		if err := priv.UnmarshalBinary(privateRaw); err != nil {
+			return nil, errors.New("invalid SLH-DSA private key material")
+		}
+		pub := priv.PublicKey()
+		return pub.MarshalBinary()
+	}
 	if key, err := x509.ParsePKCS8PrivateKey(privateRaw); err == nil {
 		switch k := key.(type) {
 		case *rsa.PrivateKey:
@@ -853,7 +894,7 @@ func inferPurposeFromAlgorithm(algorithm string) string {
 		return "key-agreement"
 	case strings.Contains(alg, "RSA") && strings.Contains(alg, "OAEP"):
 		return "encrypt-decrypt"
-	case strings.Contains(alg, "RSA"), strings.Contains(alg, "ECDSA"), strings.Contains(alg, "ED25519"), strings.Contains(alg, "ED448"), strings.Contains(alg, "DSA"):
+	case strings.Contains(alg, "RSA"), strings.Contains(alg, "ECDSA"), strings.Contains(alg, "ED25519"), strings.Contains(alg, "ED448"), strings.Contains(alg, "DSA"), strings.Contains(alg, "ML-DSA"), strings.Contains(alg, "SLH-DSA"):
 		return "sign-verify"
 	default:
 		return "encrypt-decrypt"
@@ -2493,6 +2534,26 @@ func (s *Service) GetVersion(ctx context.Context, tenantID string, keyID string,
 }
 
 func (s *Service) publishAudit(ctx context.Context, subject string, tenantID string, data map[string]any) error {
+	if data == nil {
+		data = map[string]any{}
+	}
+	actor := accessActorFromContext(ctx)
+	if strings.TrimSpace(actor.WorkloadIdentity) != "" {
+		data["workload_identity"] = actor.WorkloadIdentity
+		if strings.TrimSpace(actor.WorkloadTrustDomain) != "" {
+			data["workload_trust_domain"] = actor.WorkloadTrustDomain
+		}
+		if strings.TrimSpace(actor.ClientID) != "" {
+			data["client_id"] = actor.ClientID
+		}
+		if strings.TrimSpace(actor.InterfaceName) != "" {
+			data["interface_name"] = actor.InterfaceName
+		}
+		if len(actor.AllowedKeyIDs) > 0 {
+			data["allowed_key_ids"] = append([]string{}, actor.AllowedKeyIDs...)
+		}
+		data["auth_mode"] = "workload_identity"
+	}
 	var outErr error
 	if s.events != nil {
 		if err := publishAuditEvent(ctx, s.events, subject, tenantID, data); err != nil {
@@ -3007,6 +3068,26 @@ func normalizeKEMAlgorithm(algorithm string) string {
 	}
 }
 
+func normalizeMLDSAAlgorithm(algorithm string) string {
+	switch strings.ToLower(strings.TrimSpace(algorithm)) {
+	case "ml-dsa-65", "mldsa-65", "ml_dsa_65", "dilithium3":
+		return "ml-dsa-65"
+	case "ml-dsa-87", "mldsa-87", "ml_dsa_87", "dilithium5":
+		return "ml-dsa-87"
+	default:
+		return ""
+	}
+}
+
+func normalizeSLHDSAAlgorithm(algorithm string) string {
+	switch strings.ToLower(strings.TrimSpace(algorithm)) {
+	case "slh-dsa-256f", "slh_dsa_256f", "slh-dsa-shake-256f", "slh_dsa_shake_256f", "sphincs+-shake-256f", "sphincs-shake-256f":
+		return "slh-dsa-256f"
+	default:
+		return ""
+	}
+}
+
 func isPublicKeyType(keyType string) bool {
 	return strings.Contains(strings.ToLower(strings.TrimSpace(keyType)), "public")
 }
@@ -3041,6 +3122,14 @@ func isEd25519KeyAlgorithm(algorithm string) bool {
 
 func isMLKEMKeyAlgorithm(algorithm string) bool {
 	return normalizeKEMAlgorithm(algorithm) != ""
+}
+
+func isMLDSAKeyAlgorithm(algorithm string) bool {
+	return normalizeMLDSAAlgorithm(algorithm) != ""
+}
+
+func isSLHDSAKeyAlgorithm(algorithm string) bool {
+	return normalizeSLHDSAAlgorithm(algorithm) != ""
 }
 
 func isSupportedSymmetricCipherAlgorithm(algorithm string) bool {
@@ -3079,7 +3168,7 @@ func ensureKeySupportsOperation(key Key, op string) error {
 		if isHMACKeyAlgorithm(algorithm) {
 			return nil
 		}
-		if isRSAKeyAlgorithm(algorithm) || isECDSAKeyAlgorithm(algorithm) || isEd25519KeyAlgorithm(algorithm) {
+		if isRSAKeyAlgorithm(algorithm) || isECDSAKeyAlgorithm(algorithm) || isEd25519KeyAlgorithm(algorithm) || isMLDSAKeyAlgorithm(algorithm) || isSLHDSAKeyAlgorithm(algorithm) {
 			if isPublicKeyType(key.KeyType) {
 				return errors.New("sign requires a private or full key component")
 			}
@@ -3087,7 +3176,7 @@ func ensureKeySupportsOperation(key Key, op string) error {
 		}
 		return fmt.Errorf("sign is not supported for algorithm %s", key.Algorithm)
 	case "verify":
-		if isHMACKeyAlgorithm(algorithm) || isRSAKeyAlgorithm(algorithm) || isECDSAKeyAlgorithm(algorithm) || isEd25519KeyAlgorithm(algorithm) {
+		if isHMACKeyAlgorithm(algorithm) || isRSAKeyAlgorithm(algorithm) || isECDSAKeyAlgorithm(algorithm) || isEd25519KeyAlgorithm(algorithm) || isMLDSAKeyAlgorithm(algorithm) || isSLHDSAKeyAlgorithm(algorithm) {
 			return nil
 		}
 		return fmt.Errorf("verify is not supported for algorithm %s", key.Algorithm)
@@ -3711,6 +3800,54 @@ func parseEd25519PublicMaterial(raw []byte) (ed25519.PublicKey, error) {
 	return pub, nil
 }
 
+func parseMLDSA65PrivateMaterial(raw []byte) (*mldsa65.PrivateKey, error) {
+	var key mldsa65.PrivateKey
+	if err := key.UnmarshalBinary(raw); err != nil {
+		return nil, errors.New("invalid ML-DSA-65 private key material")
+	}
+	return &key, nil
+}
+
+func parseMLDSA65PublicMaterial(raw []byte) (*mldsa65.PublicKey, error) {
+	var key mldsa65.PublicKey
+	if err := key.UnmarshalBinary(raw); err != nil {
+		return nil, errors.New("invalid ML-DSA-65 public key material")
+	}
+	return &key, nil
+}
+
+func parseMLDSA87PrivateMaterial(raw []byte) (*mldsa87.PrivateKey, error) {
+	var key mldsa87.PrivateKey
+	if err := key.UnmarshalBinary(raw); err != nil {
+		return nil, errors.New("invalid ML-DSA-87 private key material")
+	}
+	return &key, nil
+}
+
+func parseMLDSA87PublicMaterial(raw []byte) (*mldsa87.PublicKey, error) {
+	var key mldsa87.PublicKey
+	if err := key.UnmarshalBinary(raw); err != nil {
+		return nil, errors.New("invalid ML-DSA-87 public key material")
+	}
+	return &key, nil
+}
+
+func parseSLHDSAPrivateMaterial(raw []byte) (*slhdsa.PrivateKey, error) {
+	var key slhdsa.PrivateKey
+	if err := key.UnmarshalBinary(raw); err != nil {
+		return nil, errors.New("invalid SLH-DSA private key material")
+	}
+	return &key, nil
+}
+
+func parseSLHDSAPublicMaterial(raw []byte) (*slhdsa.PublicKey, error) {
+	var key slhdsa.PublicKey
+	if err := key.UnmarshalBinary(raw); err != nil {
+		return nil, errors.New("invalid SLH-DSA public key material")
+	}
+	return &key, nil
+}
+
 func defaultSigningHashForECDSACurve(curve elliptic.Curve) stdcrypto.Hash {
 	if curve == nil || curve.Params() == nil {
 		return stdcrypto.SHA256
@@ -3813,6 +3950,35 @@ func signWithKeyAlgorithm(keyAlgorithm string, keyType string, keyMaterial []byt
 			return nil, err
 		}
 		return ed25519.Sign(priv, data), nil
+	case isMLDSAKeyAlgorithm(alg):
+		if isPublicKeyType(keyType) {
+			return nil, errors.New("ml-dsa sign requires private key material")
+		}
+		switch normalizeMLDSAAlgorithm(keyAlgorithm) {
+		case "ml-dsa-65":
+			priv, err := parseMLDSA65PrivateMaterial(keyMaterial)
+			if err != nil {
+				return nil, err
+			}
+			return priv.Sign(rand.Reader, data, stdcrypto.Hash(0))
+		case "ml-dsa-87":
+			priv, err := parseMLDSA87PrivateMaterial(keyMaterial)
+			if err != nil {
+				return nil, err
+			}
+			return priv.Sign(rand.Reader, data, stdcrypto.Hash(0))
+		default:
+			return nil, fmt.Errorf("unsupported ML-DSA algorithm %s", keyAlgorithm)
+		}
+	case isSLHDSAKeyAlgorithm(alg):
+		if isPublicKeyType(keyType) {
+			return nil, errors.New("slh-dsa sign requires private key material")
+		}
+		priv, err := parseSLHDSAPrivateMaterial(keyMaterial)
+		if err != nil {
+			return nil, err
+		}
+		return priv.Sign(rand.Reader, data, stdcrypto.Hash(0))
 	default:
 		return nil, fmt.Errorf("sign is not supported for algorithm %s", keyAlgorithm)
 	}
@@ -3898,6 +4064,69 @@ func verifyWithKeyAlgorithm(keyAlgorithm string, keyType string, keyMaterial []b
 			pub = priv.Public().(ed25519.PublicKey)
 		}
 		return ed25519.Verify(pub, data, signature), nil
+	case isMLDSAKeyAlgorithm(alg):
+		switch normalizeMLDSAAlgorithm(keyAlgorithm) {
+		case "ml-dsa-65":
+			var pub *mldsa65.PublicKey
+			if isPublicKeyType(keyType) {
+				parsed, err := parseMLDSA65PublicMaterial(keyMaterial)
+				if err != nil {
+					return false, err
+				}
+				pub = parsed
+			} else {
+				priv, err := parseMLDSA65PrivateMaterial(keyMaterial)
+				if err != nil {
+					return false, err
+				}
+				parsed, ok := priv.Public().(*mldsa65.PublicKey)
+				if !ok || parsed == nil {
+					return false, errors.New("invalid ML-DSA-65 public key material")
+				}
+				pub = parsed
+			}
+			return mldsa65.Verify(pub, data, nil, signature), nil
+		case "ml-dsa-87":
+			var pub *mldsa87.PublicKey
+			if isPublicKeyType(keyType) {
+				parsed, err := parseMLDSA87PublicMaterial(keyMaterial)
+				if err != nil {
+					return false, err
+				}
+				pub = parsed
+			} else {
+				priv, err := parseMLDSA87PrivateMaterial(keyMaterial)
+				if err != nil {
+					return false, err
+				}
+				parsed, ok := priv.Public().(*mldsa87.PublicKey)
+				if !ok || parsed == nil {
+					return false, errors.New("invalid ML-DSA-87 public key material")
+				}
+				pub = parsed
+			}
+			return mldsa87.Verify(pub, data, nil, signature), nil
+		default:
+			return false, fmt.Errorf("unsupported ML-DSA algorithm %s", keyAlgorithm)
+		}
+	case isSLHDSAKeyAlgorithm(alg):
+		var pub *slhdsa.PublicKey
+		if isPublicKeyType(keyType) {
+			parsed, err := parseSLHDSAPublicMaterial(keyMaterial)
+			if err != nil {
+				return false, err
+			}
+			pub = parsed
+		} else {
+			priv, err := parseSLHDSAPrivateMaterial(keyMaterial)
+			if err != nil {
+				return false, err
+			}
+			derived := priv.PublicKey()
+			pub = &derived
+		}
+		msg := slhdsa.NewMessage(data)
+		return slhdsa.Verify(pub, msg, signature, nil), nil
 	default:
 		return false, fmt.Errorf("verify is not supported for algorithm %s", keyAlgorithm)
 	}
@@ -4295,6 +4524,38 @@ func generateMaterialForCreate(algorithm string, keyType string) ([]byte, error)
 			return nil, err
 		}
 		return privDER, nil
+	}
+	if isMLDSAKeyAlgorithm(algorithm) {
+		switch normalizeMLDSAAlgorithm(algorithm) {
+		case "ml-dsa-65":
+			pub, priv, err := mldsa65.GenerateKey(rand.Reader)
+			if err != nil {
+				return nil, err
+			}
+			if isPublicKeyType(keyType) {
+				return pub.Bytes(), nil
+			}
+			return priv.Bytes(), nil
+		case "ml-dsa-87":
+			pub, priv, err := mldsa87.GenerateKey(rand.Reader)
+			if err != nil {
+				return nil, err
+			}
+			if isPublicKeyType(keyType) {
+				return pub.Bytes(), nil
+			}
+			return priv.Bytes(), nil
+		}
+	}
+	if isSLHDSAKeyAlgorithm(algorithm) {
+		pub, priv, err := slhdsa.GenerateKey(rand.Reader, slhdsa.SHAKE_256f)
+		if err != nil {
+			return nil, err
+		}
+		if isPublicKeyType(keyType) {
+			return pub.MarshalBinary()
+		}
+		return priv.MarshalBinary()
 	}
 	if strings.Contains(up, "ED448") || strings.Contains(up, "X448") {
 		return nil, errors.New("requested algorithm is not supported in this build")
