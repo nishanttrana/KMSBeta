@@ -43,6 +43,8 @@ export const CLUSTER_COMPONENT_CHOICES: Array<{ id: string; label: string; core?
   { id: "discovery", label: "Discovery", category: "security" },
   { id: "sbom", label: "SBOM/CBOM", category: "security" },
   { id: "reporting", label: "Reporting", category: "security" },
+  { id: "workload", label: "Workload Identity", category: "security" },
+  { id: "confidential", label: "Confidential Compute", category: "security" },
   // Specialized
   { id: "payment", label: "Payment", category: "specialized" },
   { id: "hyok", label: "HYOK", category: "specialized" },
@@ -67,7 +69,7 @@ export const DEPLOYMENT_TIERS = [
   {
     id: "standard",
     label: "Standard",
-    description: "Core + secrets, certificates, cloud keys, EKM, data protection",
+    description: "Core + secrets, certificates with renewal intelligence, cloud keys, EKM, data protection",
     components: ["auth", "keycore", "policy", "governance", "secrets", "certs", "cloud", "ekm", "dataprotect"],
     color: C.green,
     icon: "standard"
@@ -75,8 +77,8 @@ export const DEPLOYMENT_TIERS = [
   {
     id: "security",
     label: "Security Suite",
-    description: "Standard + compliance, posture, discovery, SBOM, reporting",
-    components: ["auth", "keycore", "policy", "governance", "secrets", "certs", "cloud", "ekm", "dataprotect", "compliance", "posture", "discovery", "sbom", "reporting"],
+    description: "Standard + compliance, posture, discovery, workload identity, SBOM, reporting",
+    components: ["auth", "keycore", "policy", "governance", "secrets", "certs", "cloud", "ekm", "dataprotect", "compliance", "posture", "discovery", "workload", "sbom", "reporting", "confidential"],
     color: C.purple,
     icon: "security"
   },
@@ -245,7 +247,7 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
   const nodes = Array.isArray(overview?.nodes) ? overview.nodes : [];
   const profiles = Array.isArray(overview?.profiles) ? overview.profiles : [];
   const summary = overview?.summary || {};
-  const selectiveNote = String(overview?.selective_component_sync?.note || "Nodes sync only the state for their enabled components.");
+  const selectiveNote = String(overview?.selective_component_sync?.note || "Nodes sync only the state for their enabled components. Auth replication includes REST client sender-constraint profiles and per-client security counters, certs replication includes coordinated renewal windows and ARI hotspot state, while short-lived anti-replay nonce caches stay node-local.");
 
   const profileComponentScope = (profileID: string) => {
     const profile = profiles.find((item: any) => String(item?.id || "").trim() === String(profileID || "").trim());

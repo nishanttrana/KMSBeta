@@ -112,7 +112,77 @@ extract_cert_security_field() {
   ' "${DEPLOYMENT_FILE}" 2>/dev/null || true
 }
 
-COMPOSE_PROFILES="$("${PARSER}" "${DEPLOYMENT_FILE}")"
+extract_cert_security_acme_field() {
+  local key="$1"
+  awk -v wanted="${key}" '
+    BEGIN { in_cert=0; in_acme=0 }
+    /^[[:space:]]*cert_security:[[:space:]]*$/ { in_cert=1; next }
+    in_cert == 1 {
+      if ($0 !~ /^[[:space:]]{4,}/) { in_cert=0; in_acme=0; next }
+      if ($0 ~ /^[[:space:]]{8,}acme_renewal:[[:space:]]*$/) { in_acme=1; next }
+      if (in_acme == 1) {
+        if ($0 !~ /^[[:space:]]{12,}/) { in_acme=0; next }
+        if ($0 ~ "^[[:space:]]{12,}" wanted ":[[:space:]]*") {
+          line=$0
+          gsub("#.*$", "", line)
+          sub("^[^:]*:[[:space:]]*", "", line)
+          gsub(/[[:space:]]+$/, "", line)
+          print line
+          exit
+        }
+      }
+    }
+  ' "${DEPLOYMENT_FILE}" 2>/dev/null || true
+}
+
+json_escape() {
+  local value="${1:-}"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\t'/\\t}"
+  printf '"%s"' "${value}"
+}
+
+apply_acme_renewal_policy() {
+  local ari_enabled="${CERTS_ENABLE_ARI:-true}"
+  local poll_hours="${CERTS_ARI_POLL_HOURS:-24}"
+  local window_bias="${CERTS_ARI_WINDOW_BIAS_PERCENT:-35}"
+  local emergency_hours="${CERTS_EMERGENCY_ROTATION_THRESHOLD_HOURS:-48}"
+  local mass_threshold="${CERTS_MASS_RENEWAL_RISK_THRESHOLD:-8}"
+  local config_json body attempt http_code response_file
+
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "warning: curl not available; skipping ACME renewal policy bootstrap" >&2
+    return 0
+  fi
+
+  config_json=$(printf '{"challenge_types":["http-01","dns-01","tls-alpn-01"],"auto_renew":true,"enable_ari":%s,"ari_poll_hours":%s,"ari_window_bias_percent":%s,"emergency_rotation_threshold_hours":%s,"mass_renewal_risk_threshold":%s,"require_eab":false,"allow_wildcard":true,"allow_ip_identifiers":false,"max_sans":100,"default_validity_days":397,"rate_limit_per_hour":1000}' \
+    "${ari_enabled}" "${poll_hours}" "${window_bias}" "${emergency_hours}" "${mass_threshold}")
+  body=$(printf '{"enabled":true,"updated_by":"start-kms","config_json":%s}' "$(json_escape "${config_json}")")
+  response_file="$(mktemp)"
+
+  for attempt in $(seq 1 20); do
+    http_code="$(curl -sS -o "${response_file}" -w "%{http_code}" \
+      -H 'Content-Type: application/json' \
+      -X PUT \
+      --data "${body}" \
+      'http://127.0.0.1:8030/certs/protocols/acme?tenant_id=root' || true)"
+    if [[ "${http_code}" == "200" ]]; then
+      rm -f "${response_file}"
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "warning: unable to apply ACME renewal policy from deployment config" >&2
+  cat "${response_file}" >&2 || true
+  rm -f "${response_file}"
+  return 0
+}
+
+COMPOSE_PROFILES="$("${BASH_BIN}" "${PARSER}" "${DEPLOYMENT_FILE}")"
 export COMPOSE_PROFILES
 
 HSM_MODE="$(awk '
@@ -148,6 +218,11 @@ CERTS_ROOT_KEY_MODE_CFG="$(extract_cert_security_field root_key_mode)"
 CERTS_CRWK_SEALED_PATH_CFG="$(extract_cert_security_field sealed_key_path)"
 CERTS_CRWK_PASSPHRASE_FILE_CFG="$(extract_cert_security_field passphrase_file_path)"
 CERTS_CRWK_USE_TPM_SEAL_CFG="$(extract_cert_security_field use_tpm_seal)"
+CERTS_ENABLE_ARI_CFG="$(extract_cert_security_acme_field enable_ari)"
+CERTS_ARI_POLL_HOURS_CFG="$(extract_cert_security_acme_field ari_poll_hours)"
+CERTS_ARI_WINDOW_BIAS_PERCENT_CFG="$(extract_cert_security_acme_field ari_window_bias_percent)"
+CERTS_EMERGENCY_ROTATION_THRESHOLD_HOURS_CFG="$(extract_cert_security_acme_field emergency_rotation_threshold_hours)"
+CERTS_MASS_RENEWAL_RISK_THRESHOLD_CFG="$(extract_cert_security_acme_field mass_renewal_risk_threshold)"
 
 if [[ -n "${CERTS_STORAGE_MODE_CFG}" ]]; then
   export CERTS_STORAGE_MODE="${CERTS_STORAGE_MODE_CFG}"
@@ -165,6 +240,21 @@ elif [[ -f "/etc/vecta/certs-bootstrap.secret" ]]; then
 fi
 if [[ -n "${CERTS_CRWK_USE_TPM_SEAL_CFG}" ]]; then
   export CERTS_CRWK_USE_TPM_SEAL="${CERTS_CRWK_USE_TPM_SEAL_CFG}"
+fi
+if [[ -n "${CERTS_ENABLE_ARI_CFG}" ]]; then
+  export CERTS_ENABLE_ARI="${CERTS_ENABLE_ARI_CFG}"
+fi
+if [[ -n "${CERTS_ARI_POLL_HOURS_CFG}" ]]; then
+  export CERTS_ARI_POLL_HOURS="${CERTS_ARI_POLL_HOURS_CFG}"
+fi
+if [[ -n "${CERTS_ARI_WINDOW_BIAS_PERCENT_CFG}" ]]; then
+  export CERTS_ARI_WINDOW_BIAS_PERCENT="${CERTS_ARI_WINDOW_BIAS_PERCENT_CFG}"
+fi
+if [[ -n "${CERTS_EMERGENCY_ROTATION_THRESHOLD_HOURS_CFG}" ]]; then
+  export CERTS_EMERGENCY_ROTATION_THRESHOLD_HOURS="${CERTS_EMERGENCY_ROTATION_THRESHOLD_HOURS_CFG}"
+fi
+if [[ -n "${CERTS_MASS_RENEWAL_RISK_THRESHOLD_CFG}" ]]; then
+  export CERTS_MASS_RENEWAL_RISK_THRESHOLD="${CERTS_MASS_RENEWAL_RISK_THRESHOLD_CFG}"
 fi
 
 prepare_certs_volumes
@@ -185,6 +275,8 @@ fi
 if [[ -f "${MESH_BOOTSTRAP}" ]]; then
   CONSUL_HTTP_ADDR="${CONSUL_HTTP_ADDR:-http://127.0.0.1:8500}" sh "${MESH_BOOTSTRAP}" || true
 fi
+
+apply_acme_renewal_policy
 
 if [[ "${SKIP_HEALTH}" -ne 1 ]]; then
   "${BASH_BIN}" "${HEALTH_SCRIPT}" "${DEPLOYMENT_FILE}"

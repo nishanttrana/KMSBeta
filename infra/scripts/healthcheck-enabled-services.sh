@@ -20,7 +20,7 @@ if [[ ! -f "${DEPLOYMENT_FILE}" ]]; then
   exit 1
 fi
 
-PROFILES="$("${PROFILE_PARSER}" "${DEPLOYMENT_FILE}")"
+PROFILES="$("${BASH_BIN}" "${PROFILE_PARSER}" "${DEPLOYMENT_FILE}")"
 
 healthcheck_missing_runtime() {
   local service="$1" container_id="" health_log=""
@@ -28,6 +28,16 @@ healthcheck_missing_runtime() {
   [[ -n "${container_id}" ]] || return 1
   health_log="$(docker inspect --format '{{if .State.Health}}{{range .State.Health.Log}}{{println .Output}}{{end}}{{end}}' "${container_id}" 2>/dev/null || true)"
   grep -Eq 'stat /bin/sh: no such file or directory|executable file not found in \$PATH|: not found' <<<"${health_log}"
+}
+
+validate_certs_renewal_endpoints() {
+  if ! command -v curl >/dev/null 2>&1; then
+    return 0
+  fi
+  local directory summary
+  directory="$(curl -fsS 'http://127.0.0.1:8030/acme/directory?tenant_id=root' 2>/dev/null || true)"
+  summary="$(curl -fsS 'http://127.0.0.1:8030/certs/renewal-intelligence?tenant_id=root' 2>/dev/null || true)"
+  [[ "${directory}" == *'"renewalInfo"'* ]] && [[ "${summary}" == *'"summary"'* ]]
 }
 
 declare -A PROFILE_TO_SERVICE=(
@@ -41,6 +51,8 @@ declare -A PROFILE_TO_SERVICE=(
   [qrng_generator]="qrng"
   [ekm_database]="ekm"
   [payment_crypto]="payment"
+  [autokey_provisioning]="autokey"
+  [confidential_compute]="confidential"
   [compliance_dashboard]="compliance"
   [sbom_cbom]="sbom"
   [reporting_alerting]="reporting"
@@ -115,6 +127,12 @@ for ((attempt = 1; attempt <= RETRIES; attempt++)); do
 
     healthy+=("${svc}")
   done
+
+  if [[ "${#unhealthy[@]}" -eq 0 ]]; then
+    if [[ -n "${wanted[certs]:-}" ]] && ! validate_certs_renewal_endpoints; then
+      unhealthy+=("certs (acme renewal endpoints unavailable)")
+    fi
+  fi
 
   if [[ "${#unhealthy[@]}" -eq 0 ]]; then
     for svc in "${healthy[@]}"; do

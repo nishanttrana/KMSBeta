@@ -52,6 +52,11 @@ type Store interface {
 	ListCertExpiryAlertStates(ctx context.Context, tenantID string) ([]CertExpiryAlertState, error)
 	UpsertCertExpiryAlertState(ctx context.Context, item CertExpiryAlertState) error
 	DeleteCertExpiryAlertState(ctx context.Context, tenantID string, certID string) error
+	GetCertRenewalInfo(ctx context.Context, tenantID string, certID string) (CertRenewalInfo, error)
+	GetCertRenewalInfoByARIID(ctx context.Context, tenantID string, ariID string) (CertRenewalInfo, error)
+	ListCertRenewalInfo(ctx context.Context, tenantID string, limit int) ([]CertRenewalInfo, error)
+	UpsertCertRenewalInfo(ctx context.Context, item CertRenewalInfo) error
+	DeleteCertRenewalInfo(ctx context.Context, tenantID string, certID string) error
 
 	CreateACMEAccount(ctx context.Context, account AcmeAccount) error
 	CreateACMEOrder(ctx context.Context, order AcmeOrder) error

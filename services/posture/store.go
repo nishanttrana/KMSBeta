@@ -197,6 +197,15 @@ SELECT
 		WHEN action LIKE 'cert.expiry%' OR action LIKE 'key.expiry%' OR action LIKE '%expiry_warning%'
 		THEN 1 ELSE 0 END), 0) AS expiry_backlog_count,
 	COALESCE(SUM(CASE
+		WHEN action LIKE 'audit.cert.renewal_window_missed%' OR action LIKE 'cert.renewal_window_missed%'
+		THEN 1 ELSE 0 END), 0) AS cert_renewal_missed_count,
+	COALESCE(SUM(CASE
+		WHEN action LIKE 'audit.cert.emergency_rotation_started%' OR action LIKE 'cert.emergency_rotation_started%'
+		THEN 1 ELSE 0 END), 0) AS cert_emergency_rotations,
+	COALESCE(SUM(CASE
+		WHEN action LIKE 'audit.cert.mass_renewal_risk_detected%' OR action LIKE 'cert.mass_renewal_risk_detected%'
+		THEN 1 ELSE 0 END), 0) AS cert_mass_renewal_risks,
+	COALESCE(SUM(CASE
 		WHEN action LIKE 'fips.non_approved%' OR error_code = 'fips_non_approved_algorithm'
 		THEN 1 ELSE 0 END), 0) AS non_approved_algo_count,
 	COALESCE(AVG(CASE
@@ -385,6 +394,9 @@ WHERE tenant_id = $1
 		&out.ConnectorAuthFlaps,
 		&out.ReplicationRetry,
 		&out.ExpiryBacklogCount,
+		&out.CertRenewalMissedCount,
+		&out.CertEmergencyRotations,
+		&out.CertMassRenewalRisks,
 		&out.NonApprovedAlgoCount,
 		&out.HSMLatencyAvgMS,
 		&out.ClusterLagAvgMS,

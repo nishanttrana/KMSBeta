@@ -51,7 +51,7 @@ if [[ ! -f "${DEPLOYMENT_FILE}" ]]; then
 fi
 
 if [[ -f "${DEPLOYMENT_FILE}" ]]; then
-  COMPOSE_PROFILES="$("${PARSER}" "${DEPLOYMENT_FILE}")"
+  COMPOSE_PROFILES="$("${BASH_BIN}" "${PARSER}" "${DEPLOYMENT_FILE}")"
   export COMPOSE_PROFILES
 fi
 

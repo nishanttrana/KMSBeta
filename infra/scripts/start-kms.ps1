@@ -65,6 +65,45 @@ function Set-ComposeEnvironment {
             default { $env:HSM_ENDPOINT = "software-vault:18440" }
         }
     }
+
+    $inCertSecurity = $false
+    $inAcmeRenewal = $false
+    foreach ($rawLine in (Get-Content -LiteralPath $DeploymentPath)) {
+        $line = ($rawLine -replace '#.*$', '').TrimEnd()
+        if ([string]::IsNullOrWhiteSpace($line)) { continue }
+
+        if ($line -match '^\s*cert_security:\s*$') {
+            $inCertSecurity = $true
+            $inAcmeRenewal = $false
+            continue
+        }
+        if ($inCertSecurity -and $line -notmatch '^\s{4,}') {
+            $inCertSecurity = $false
+            $inAcmeRenewal = $false
+        }
+        if (-not $inCertSecurity) { continue }
+
+        if ($line -match '^\s{8,}acme_renewal:\s*$') {
+            $inAcmeRenewal = $true
+            continue
+        }
+        if ($inAcmeRenewal -and $line -notmatch '^\s{12,}') {
+            $inAcmeRenewal = $false
+        }
+        if (-not $inAcmeRenewal) { continue }
+
+        if ($line -match '^\s{12,}enable_ari:\s*(true|false)') {
+            $env:CERTS_ENABLE_ARI = $matches[1].ToLowerInvariant()
+        } elseif ($line -match '^\s{12,}ari_poll_hours:\s*([0-9]+)') {
+            $env:CERTS_ARI_POLL_HOURS = $matches[1]
+        } elseif ($line -match '^\s{12,}ari_window_bias_percent:\s*([0-9]+)') {
+            $env:CERTS_ARI_WINDOW_BIAS_PERCENT = $matches[1]
+        } elseif ($line -match '^\s{12,}emergency_rotation_threshold_hours:\s*([0-9]+)') {
+            $env:CERTS_EMERGENCY_ROTATION_THRESHOLD_HOURS = $matches[1]
+        } elseif ($line -match '^\s{12,}mass_renewal_risk_threshold:\s*([0-9]+)') {
+            $env:CERTS_MASS_RENEWAL_RISK_THRESHOLD = $matches[1]
+        }
+    }
 }
 
 function Invoke-ComposeUp {
@@ -80,6 +119,40 @@ function Invoke-ComposeUp {
     if ($LASTEXITCODE -ne 0) {
         throw "docker compose up failed with exit code $LASTEXITCODE"
     }
+}
+
+function Apply-ACMERenewalPolicy {
+    $config = @{
+        challenge_types = @("http-01", "dns-01", "tls-alpn-01")
+        auto_renew = $true
+        enable_ari = if ($env:CERTS_ENABLE_ARI) { $env:CERTS_ENABLE_ARI.Trim().ToLowerInvariant() -eq "true" } else { $true }
+        ari_poll_hours = if ($env:CERTS_ARI_POLL_HOURS) { [int]$env:CERTS_ARI_POLL_HOURS } else { 24 }
+        ari_window_bias_percent = if ($env:CERTS_ARI_WINDOW_BIAS_PERCENT) { [int]$env:CERTS_ARI_WINDOW_BIAS_PERCENT } else { 35 }
+        emergency_rotation_threshold_hours = if ($env:CERTS_EMERGENCY_ROTATION_THRESHOLD_HOURS) { [int]$env:CERTS_EMERGENCY_ROTATION_THRESHOLD_HOURS } else { 48 }
+        mass_renewal_risk_threshold = if ($env:CERTS_MASS_RENEWAL_RISK_THRESHOLD) { [int]$env:CERTS_MASS_RENEWAL_RISK_THRESHOLD } else { 8 }
+        require_eab = $false
+        allow_wildcard = $true
+        allow_ip_identifiers = $false
+        max_sans = 100
+        default_validity_days = 397
+        rate_limit_per_hour = 1000
+    }
+    $body = @{
+        enabled = $true
+        updated_by = "start-kms"
+        config_json = ($config | ConvertTo-Json -Depth 4 -Compress)
+    } | ConvertTo-Json -Depth 4 -Compress
+
+    for ($attempt = 1; $attempt -le 20; $attempt++) {
+        try {
+            Invoke-RestMethod -Method Put -Uri "http://127.0.0.1:8030/certs/protocols/acme?tenant_id=root" -ContentType "application/json" -Body $body | Out-Null
+            return
+        } catch {
+            Start-Sleep -Seconds 2
+        }
+    }
+
+    Write-Warning "unable to apply ACME renewal policy from deployment config"
 }
 
 function Prepare-CertVolumes {
@@ -155,6 +228,8 @@ try {
     Start-Sleep -Seconds 2
     Invoke-ComposeUp
 }
+
+Apply-ACMERenewalPolicy
 
 if (-not $SkipHealthChecks) {
     if (!(Test-Path -LiteralPath $healthScript)) {

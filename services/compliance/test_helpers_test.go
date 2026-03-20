@@ -93,6 +93,10 @@ func (f *fakeComplianceCerts) ListCertificates(_ context.Context, tenantID strin
 	return out, nil
 }
 
+func (f *fakeComplianceCerts) GetRenewalSummary(_ context.Context, _ string) (CertRenewalSummary, error) {
+	return CertRenewalSummary{}, nil
+}
+
 type fakeComplianceAudit struct {
 	events map[string][]map[string]interface{}
 	stats  map[string]map[string]interface{}

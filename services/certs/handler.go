@@ -59,6 +59,9 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /certs/security/status", h.handleSecurityStatus)
 	mux.HandleFunc("GET /certs/alert-policy", h.handleGetAlertPolicy)
 	mux.HandleFunc("PUT /certs/alert-policy", h.handleUpsertAlertPolicy)
+	mux.HandleFunc("GET /certs/renewal-intelligence", h.handleGetRenewalSummary)
+	mux.HandleFunc("GET /certs/renewal-intelligence/{id}", h.handleGetRenewalInfo)
+	mux.HandleFunc("POST /certs/renewal-intelligence/refresh", h.handleRefreshRenewalSummary)
 	mux.HandleFunc("GET /certs/protocols", h.handleListProtocolConfigs)
 	mux.HandleFunc("GET /certs/protocols/schema", h.handleListProtocolSchemas)
 	mux.HandleFunc("PUT /certs/protocols/{protocol}", h.handleUpsertProtocolConfig)
@@ -77,6 +80,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /acme/new-nonce", h.handleACMENonce)
 	mux.HandleFunc("POST /acme/new-account", h.handleACMENewAccount)
 	mux.HandleFunc("POST /acme/new-order", h.handleACMENewOrder)
+	mux.HandleFunc("GET /acme/renewal-info/{id}", h.handleACMERenewalInfo)
 	mux.HandleFunc("GET /acme/challenge/{id}", h.handleACMEChallengeInfo)
 	mux.HandleFunc("POST /acme/challenge/{id}", h.handleACMEChallenge)
 	mux.HandleFunc("POST /acme/finalize/{id}", h.handleACMEFinalize)
@@ -658,12 +662,14 @@ func (h *Handler) handleACMEDirectory(w http.ResponseWriter, r *http.Request) {
 		"newNonce":   base + "/acme/new-nonce",
 		"newAccount": base + "/acme/new-account",
 		"newOrder":   base + "/acme/new-order",
+		"renewalInfo": base + "/acme/renewal-info/{id}",
 		"revokeCert": base + "/certs/{id}/revoke",
 		"keyChange":  base + "/acme/key-change",
 		"meta": map[string]interface{}{
 			"termsOfService":          "https://vecta-kms.local/acme/terms",
 			"website":                 "https://vecta-kms.local",
 			"externalAccountRequired": options.RequireEAB,
+			"ariEnabled":              options.EnableARI,
 			"wildcardAllowed":         options.AllowWildcard,
 			"ipIdentifiersAllowed":    options.AllowIPIdentifiers,
 			"challengeTypes":          options.ChallengeTypes,

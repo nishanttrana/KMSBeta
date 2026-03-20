@@ -101,6 +101,55 @@ export type CertExpiryAlertPolicy = {
   updated_at?: string;
 };
 
+export type CertRenewalInfo = {
+  tenant_id: string;
+  cert_id: string;
+  ari_id: string;
+  ca_id: string;
+  ca_name: string;
+  subject_cn: string;
+  protocol: string;
+  not_after?: string;
+  window_start?: string;
+  window_end?: string;
+  scheduled_renewal_at?: string;
+  explanation_url?: string;
+  retry_after_seconds?: number;
+  next_poll_at?: string;
+  renewal_state: string;
+  risk_level: string;
+  missed_window_at?: string;
+  emergency_rotation_at?: string;
+  mass_renewal_bucket?: string;
+  window_source?: string;
+  metadata_json?: string;
+  updated_at?: string;
+};
+
+export type CertRenewalScheduleEntry = {
+  bucket: string;
+  ca_id: string;
+  ca_name: string;
+  count: number;
+  risk_level: string;
+  scheduled_start?: string;
+  scheduled_end?: string;
+  cert_ids?: string[];
+};
+
+export type CertRenewalSummary = {
+  tenant_id: string;
+  ari_enabled: boolean;
+  recommended_poll_hours: number;
+  renewal_windows?: CertRenewalInfo[];
+  ca_directed_schedule?: CertRenewalScheduleEntry[];
+  mass_renewal_risks?: CertRenewalScheduleEntry[];
+  missed_window_count: number;
+  emergency_rotation_count: number;
+  due_soon_count: number;
+  non_compliant_count: number;
+};
+
 export type CertSecurityStatus = {
   storage_mode: string;
   root_key_mode: string;
@@ -130,6 +179,8 @@ type InventoryResponse = { items: InventoryCertificateItem[] };
 type ProtocolsResponse = { items: ProtocolConfig[] };
 type ProtocolSchemasResponse = { items: ProtocolSchema[] };
 type AlertPolicyResponse = { policy: CertExpiryAlertPolicy };
+type RenewalSummaryResponse = { summary: CertRenewalSummary };
+type RenewalInfoResponse = { item: CertRenewalInfo };
 type CertSecurityStatusResponse = { status: CertSecurityStatus };
 type CAResponse = { ca: CertCA };
 type CertResponse = { certificate: CertificateItem; private_key_pem?: string };
@@ -514,6 +565,36 @@ export async function updateCertExpiryAlertPolicy(
   return out.policy;
 }
 
+export async function getCertRenewalSummary(session: AuthSession): Promise<CertRenewalSummary> {
+  const out = await serviceRequest<RenewalSummaryResponse>(
+    session,
+    "certs",
+    `/certs/renewal-intelligence?${tenantQuery(session)}`
+  );
+  return out.summary;
+}
+
+export async function refreshCertRenewalSummary(session: AuthSession): Promise<CertRenewalSummary> {
+  const out = await serviceRequest<RenewalSummaryResponse>(
+    session,
+    "certs",
+    `/certs/renewal-intelligence/refresh?${tenantQuery(session)}`,
+    {
+      method: "POST"
+    }
+  );
+  return out.summary;
+}
+
+export async function getCertRenewalInfo(session: AuthSession, certId: string): Promise<CertRenewalInfo> {
+  const out = await serviceRequest<RenewalInfoResponse>(
+    session,
+    "certs",
+    `/certs/renewal-intelligence/${encodeURIComponent(String(certId || "").trim())}?${tenantQuery(session)}`
+  );
+  return out.item;
+}
+
 export async function uploadThirdPartyCertificate(
   session: AuthSession,
   input: UploadThirdPartyCertificateInput
@@ -853,4 +934,3 @@ export async function verifyCertMerkleProof(
   );
   return out;
 }
-

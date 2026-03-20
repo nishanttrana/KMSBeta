@@ -28,6 +28,8 @@ $profileToService = @{
     "qrng_generator" = @("qrng")
     "ekm_database" = @("ekm")
     "payment_crypto" = @("payment")
+    "autokey_provisioning" = @("autokey")
+    "confidential_compute" = @("confidential")
     "compliance_dashboard" = @("compliance")
     "sbom_cbom" = @("sbom")
     "reporting_alerting" = @("reporting")
@@ -117,6 +119,16 @@ function Test-HealthcheckMissingRuntime {
     return [regex]::IsMatch(($healthLog -join "`n"), 'stat /bin/sh: no such file or directory|executable file not found in \$PATH|: not found')
 }
 
+function Test-CertsRenewalEndpoints {
+    try {
+        $directory = Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8030/acme/directory?tenant_id=root"
+        $summary = Invoke-RestMethod -Method Get -Uri "http://127.0.0.1:8030/certs/renewal-intelligence?tenant_id=root"
+        return ($null -ne $directory.renewalInfo) -and ($null -ne $summary.summary)
+    } catch {
+        return $false
+    }
+}
+
 for ($attempt = 1; $attempt -le $Retries; $attempt++) {
     $statusMap = Get-ComposeServiceStatusMap
     $unhealthy = @()
@@ -146,6 +158,12 @@ for ($attempt = 1; $attempt -le $Retries; $attempt++) {
         }
 
         $healthy += $service
+    }
+
+    if ($unhealthy.Count -eq 0) {
+        if ($seen.ContainsKey("certs") -and -not (Test-CertsRenewalEndpoints)) {
+            $unhealthy += "certs (acme renewal endpoints unavailable)"
+        }
     }
 
     if ($unhealthy.Count -eq 0) {

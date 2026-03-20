@@ -1341,6 +1341,9 @@ func (s *Service) RunTenantExpiryAlertSweep(ctx context.Context, tenantID string
 	if tenantID == "" {
 		return errors.New("tenant_id is required")
 	}
+	if err := s.RefreshTenantRenewalIntelligence(ctx, tenantID); err != nil {
+		return err
+	}
 	policy, err := s.GetCertExpiryAlertPolicy(ctx, tenantID)
 	if err != nil {
 		return err

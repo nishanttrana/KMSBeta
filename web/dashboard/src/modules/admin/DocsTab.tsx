@@ -91,6 +91,9 @@ const NAV = [
   { id: "api-policy", label: "API: Policy" },
   { id: "api-governance", label: "API: Governance" },
   { id: "api-dataprotect", label: "API: Data Protection" },
+  { id: "api-autokey", label: "API: Autokey" },
+  { id: "api-confidential", label: "API: Confidential Compute" },
+  { id: "api-workload", label: "API: Workload Identity" },
   { id: "api-payment", label: "API: Payment" },
   { id: "api-cloud", label: "API: Cloud / BYOK" },
   { id: "api-hyok", label: "API: HYOK" },
@@ -116,6 +119,10 @@ const NAV = [
   { id: "ui-vault", label: "UI Guide: Vault" },
   { id: "ui-certs", label: "UI Guide: Certificates" },
   { id: "ui-dataprotect", label: "UI Guide: Data Protection" },
+  { id: "ui-autokey", label: "UI Guide: Autokey" },
+  { id: "ui-pqc", label: "UI Guide: Post-Quantum Crypto" },
+  { id: "ui-confidential", label: "UI Guide: Confidential Compute" },
+  { id: "ui-workload", label: "UI Guide: Workload Identity" },
   { id: "ui-cloud", label: "UI Guide: Cloud Control" },
   { id: "ui-ekm", label: "UI Guide: EKM" },
   { id: "ui-hsm", label: "UI Guide: HSM" },
@@ -144,7 +151,7 @@ const NAV = [
 const SectionOverview = () => (
   <div>
     <div style={S.h1}>Vecta KMS Platform Documentation</div>
-    <P>Vecta KMS is an enterprise-grade Key Management System providing comprehensive cryptographic key lifecycle management, secrets management, certificate PKI, data protection, payment cryptography, and cloud key control. The platform consists of 26+ microservices, a web dashboard, and an Envoy edge proxy.</P>
+    <P>Vecta KMS is an enterprise-grade Key Management System providing comprehensive cryptographic key lifecycle management, secrets management, certificate PKI, data protection, payment cryptography, cloud key control, and workload identity. The platform consists of 27+ microservices, a web dashboard, and an Envoy edge proxy.</P>
     <H2>Key Capabilities</H2>
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
       {[
@@ -153,6 +160,9 @@ const SectionOverview = () => (
         ["Secrets Vault", "Store and manage credentials, SSH keys, PGP keys, tokens, certificates"],
         ["Certificate PKI", "Full CA hierarchy, ACME, EST, SCEP, CMPv2, OCSP, CRL management"],
         ["Data Protection", "Tokenization, masking, redaction, FPE, envelope encryption, searchable encryption"],
+        ["Autokey", "Policy-driven key handle provisioning, resource templates, service defaults, and approval-backed self-service requests"],
+        ["Confidential Compute", "Attested key release with approved images, claims, measurements, and cluster-node gating"],
+        ["Workload Identity", "SPIFFE trust domains, X.509-SVID/JWT-SVID issuance, federation, and workload-to-key authorization"],
         ["Payment Crypto", "TR-31 key blocks, PIN translation, CVV, MAC, ISO 20022, AP2 agent payments, key injection"],
         ["Cloud Key Control", "BYOK (AWS, Azure, GCP, Oracle, Salesforce) and HYOK (DKE, Cache-Only, EKM)"],
         ["Post-Quantum", "PQC algorithms (ML-KEM, ML-DSA, SLH-DSA), migration planning, CBOM"],
@@ -168,7 +178,7 @@ const SectionOverview = () => (
       ))}
     </div>
     <H2>Supported Standards</H2>
-    <P>FIPS 140-3, PKCS#11, KMIP 2.1, ACME (RFC 8555), EST (RFC 7030), SCEP, CMPv2, TR-31, ISO 20022, AP2, ETSI QKD 014/004, X.509v3, OCSP, CRL, Shamir Secret Sharing, Merkle Hash Trees, CycloneDX SBOM/CBOM, SPDX.</P>
+    <P>FIPS 140-3, PKCS#11, KMIP 2.1, ACME (RFC 8555), ACME Renewal Information (RFC 9773), EST (RFC 7030), SCEP, CMPv2, SPIFFE, X.509-SVID, JWT-SVID, TR-31, ISO 20022, AP2, ETSI QKD 014/004, X.509v3, OCSP, CRL, Shamir Secret Sharing, Merkle Hash Trees, CycloneDX SBOM/CBOM, SPDX.</P>
   </div>
 );
 
@@ -323,6 +333,8 @@ const SectionArchitecture = () => (
       ["kms-certs", "8030 / 18030", "Certificate PKI (profile: certs)"],
       ["kms-governance", "8050 / 18050", "Approval workflows (profile: governance)"],
       ["kms-dataprotect", "8200 / 18200", "Tokenization, masking (profile: data_protection)"],
+      ["kms-autokey", "8260 / 18260", "Policy-driven key handle provisioning (profile: autokey_provisioning)"],
+      ["kms-confidential", "8240 / 18240", "Attested key release / confidential compute (profile: confidential_compute)"],
       ["kms-payment", "8170 / 18170", "Payment cryptography (profile: payment_crypto)"],
     ]} />
 
@@ -459,10 +471,14 @@ const SectionApiAuth = () => (
       <EndpointTable rows={[
         ["POST", "/auth/api-keys", "Create API key for programmatic access"],
         ["DELETE", "/auth/api-keys/{id}", "Revoke API key"],
+        ["POST", "/auth/client-token", "Issue client token with OAuth mTLS, DPoP, or HTTP Message Signature binding"],
         ["GET", "/auth/clients", "List registered clients"],
+        ["PUT", "/auth/clients/{id}", "Update client auth mode, replay protection, and sender-constrained binding"],
         ["POST", "/auth/clients/{id}/rotate-key", "Rotate client credentials"],
+        ["GET", "/auth/rest-client-security/summary", "Get tenant REST client security posture summary"],
       ]} />
     </Collapse>
+    <P>Sender-constrained client auth is now first-class for REST callers. Use <IC>OAuth mTLS</IC> when the client can present a certificate, <IC>DPoP</IC> when the client can generate a proof JWT per request, and <IC>HTTP Message Signatures</IC> when the client owns a stable signing key. Replay failures, unsigned requests, and signature verification failures are all visible in audit, posture, and compliance.</P>
     <Collapse title="CLI & HSM">
       <EndpointTable rows={[
         ["GET", "/auth/cli/status", "Get CLI SSH daemon status"],
@@ -664,6 +680,9 @@ const SectionApiCerts = () => (
     <H2>Enrollment Protocols Explained</H2>
     <H3>ACME (RFC 8555)</H3>
     <P>Automated Certificate Management Environment. The same protocol used by Let's Encrypt. Clients request certificates, complete challenges (HTTP-01, DNS-01, TLS-ALPN-01) to prove domain ownership, and receive certificates automatically. Ideal for web servers, load balancers, and any system that supports ACME (certbot, cert-manager, Caddy).</P>
+    <H3>ACME Renewal Information (RFC 9773)</H3>
+    <P>Vecta KMS also publishes coordinated renewal windows so ACME clients renew inside CA-directed windows instead of all polling on a fixed cron. This reduces thundering-herd renewals, highlights mass-renewal hotspots, and lets operators catch missed windows before they become outages.</P>
+    <P>The deployment file now exposes this under <IC>spec.cert_security.acme_renewal</IC>, and the runtime start scripts apply those ARI settings back into the live ACME protocol policy on startup so certificate renewal timing stays deployment-driven.</P>
     <H3>EST (RFC 7030)</H3>
     <P>Enrollment over Secure Transport. A modern, TLS-based protocol for certificate enrollment. Simpler than SCEP, supports initial enrollment and re-enrollment. Used by enterprise devices, IoT gateways, and modern network equipment.</P>
     <H3>SCEP (Simple Certificate Enrollment Protocol)</H3>
@@ -694,10 +713,18 @@ const SectionApiCerts = () => (
     <Collapse title="ACME Protocol (RFC 8555)">
       <EndpointTable rows={[
         ["GET", "/acme/directory", "ACME directory (entry point for ACME clients)"],
+        ["GET", "/acme/renewal-info/{id}", "ACME Renewal Information (RFC 9773) with suggested renewal window and Retry-After"],
         ["POST", "/acme/new-account", "Register a new ACME account"],
         ["POST", "/acme/new-order", "Create a certificate order for a domain"],
         ["POST", "/acme/challenge/{id}", "Complete domain validation challenge"],
         ["POST", "/acme/finalize/{id}", "Finalize order and download certificate"],
+      ]} />
+    </Collapse>
+    <Collapse title="Renewal Intelligence">
+      <EndpointTable rows={[
+        ["GET", "/certs/renewal-intelligence", "List coordinated renewal windows, CA-directed schedule groups, and hotspot counts"],
+        ["GET", "/certs/renewal-intelligence/{id}", "Get one certificate renewal record"],
+        ["POST", "/certs/renewal-intelligence/refresh", "Force recomputation of renewal windows and hotspot analysis"],
       ]} />
     </Collapse>
     <Collapse title="EST / SCEP / CMPv2">
@@ -796,6 +823,7 @@ const SectionApiAudit = () => (
         ["AUDIT", "audit.compliance.assessment_delta_viewed", "Recorded when the operator opens the 'What Changed Since Last Scan' delta view"],
         ["AUDIT", "audit.reporting.evidence_pack_requested", "Recorded when an Evidence Pack export is requested"],
         ["AUDIT", "audit.reporting.mttd_stats_viewed", "Recorded when MTTD timing analytics are fetched"],
+        ["AUDIT", "audit.payment.policy_updated", "Recorded when the unified payment policy is saved across traditional or modern controls"],
         ["AUDIT", "audit.payment.ap2_profile_updated", "Recorded when a tenant AP2 policy profile is created or changed"],
         ["AUDIT", "audit.payment.ap2_evaluated", "Recorded when an AP2 agent-payment request is evaluated for allow, review, or deny"],
       ]} />
@@ -967,12 +995,255 @@ curl -X POST http://localhost:8200/fpe/encrypt \\
   </div>
 );
 
+const SectionApiConfidential = () => (
+  <div>
+    <div style={S.h1}>API: Confidential Compute</div>
+    <P>Service: kms-confidential | Port: 8240 (HTTP) / 18240 (gRPC) | Profile: confidential_compute</P>
+    <P>Confidential Compute provides attested key release so keys are released only to workloads whose enclave or TEE evidence matches tenant policy. Policies are tenant-scoped, cluster-aware, and designed for Nitro Enclaves, NitroTPM, Azure Secure Key Release, GCP Confidential Space, or a generic attestation broker.</P>
+    <Collapse title="Tenant Attestation Policy" defaultOpen>
+      <EndpointTable rows={[
+        ["GET", "/confidential/policy", "Fetch the tenant attestation policy"],
+        ["PUT", "/confidential/policy", "Create or update the tenant attestation policy"],
+      ]} />
+      <P>Policy includes provider, enforce vs monitor mode, approved key scopes, approved images, approved workload subjects, allowed attesters, required claims, required measurements, secure boot, debug-disabled, evidence freshness, cluster scope, node allowlists, and fallback action.</P>
+    </Collapse>
+    <Collapse title="Evaluate Release">
+      <EndpointTable rows={[
+        ["GET", "/confidential/summary", "Return tenant summary metrics for the attested release program"],
+        ["POST", "/confidential/evaluate", "Evaluate an attested release request against the tenant policy"],
+      ]} />
+      <P>For AWS, Azure, and GCP, the service first cryptographically verifies the attestation document against the provider trust chain or issuer JWKS. It then derives signed claims, measurements, image identity, attester, freshness, secure-boot posture, and debug state before applying tenant policy.</P>
+      <P>The evaluation response includes the final decision, whether release is allowed, reasons, matched and missing claims, matched and missing measurements, missing attributes, measurement hash, claims hash, policy version, provider, cluster node, cryptographic verification status, verification issuer, verification key ID, document hash, document format, and release expiry window.</P>
+    </Collapse>
+    <Collapse title="Release History">
+      <EndpointTable rows={[
+        ["GET", "/confidential/releases", "List historical attested release decisions for the tenant"],
+        ["GET", "/confidential/releases/{id}", "Get a single historical attested release record"],
+      ]} />
+      <P>Release history is stored as shared control-plane state in PostgreSQL, so it follows cluster replication and backup metadata instead of being trapped on a single node.</P>
+    </Collapse>
+    <H2>Audit Trail</H2>
+    <P>Every policy update and release evaluation emits audit events with the tenant, key, workload identity, attester, image metadata, measurement hash, claims hash, cluster node, decision, policy version, cryptographic verification status, verification issuer, verification key ID, and attestation document hash. This makes attested key release visible in the audit stream and suitable for operator review and evidence capture.</P>
+    <Code>{`# Fetch tenant policy
+curl -H "Authorization: Bearer $TOKEN" \\
+  "http://localhost:8240/confidential/policy?tenant_id=root"
+
+# Evaluate a dry-run AWS attested release
+curl -X POST http://localhost:8240/confidential/evaluate \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "tenant_id": "root",
+    "key_id": "key-prod-root",
+    "key_scope": "payments-prod",
+    "provider": "aws_nitro_enclaves",
+    "attestation_format": "cose_sign1",
+    "attestation_document": "BASE64_AWS_NITRO_ATTESTATION_DOCUMENT",
+    "audience": "kms-key-release",
+    "nonce": "nonce-demo-001",
+    "cluster_node_id": "vecta-kms-01",
+    "requester": "platform-ops",
+    "release_reason": "authorize payment enclave",
+    "dry_run": true
+  }'
+
+# Evaluate an Azure attested release
+curl -X POST http://localhost:8240/confidential/evaluate \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "tenant_id": "root",
+    "key_id": "key-prod-root",
+    "key_scope": "payments-prod",
+    "provider": "azure_secure_key_release",
+    "attestation_format": "jwt",
+    "attestation_document": "AZURE_ATTESTATION_JWT",
+    "audience": "kms-key-release",
+    "cluster_node_id": "vecta-kms-01",
+    "requester": "platform-ops",
+    "release_reason": "authorize SKR key release",
+    "dry_run": true
+  }'`}</Code>
+  </div>
+);
+
+const SectionApiAutokey = () => (
+  <div>
+    <div style={S.h1}>API: Autokey</div>
+    <P>Service: kms-autokey | Port: 8260 (HTTP) / 18260 (gRPC) | Profile: autokey_provisioning</P>
+    <P>Autokey provides tenant-scoped policy-driven key handle provisioning. Teams request managed handles on demand while the KMS enforces resource templates, per-service defaults, approval policy, and final key creation through KeyCore.</P>
+    <Collapse title="Tenant Settings & Summary" defaultOpen>
+      <EndpointTable rows={[
+        ["GET", "/autokey/settings", "Fetch tenant Autokey settings"],
+        ["PUT", "/autokey/settings", "Create or update tenant Autokey settings"],
+        ["GET", "/autokey/summary", "Return tenant Autokey posture, approval backlog, and coverage counters"],
+      ]} />
+      <P>Settings define enablement, enforce vs audit mode, approval and justification requirements, template-override behavior, and the default approval policy. The summary drives the live Autokey, Posture, and Compliance cards.</P>
+    </Collapse>
+    <Collapse title="Resource Templates & Service Defaults">
+      <EndpointTable rows={[
+        ["GET", "/autokey/templates", "List tenant resource templates"],
+        ["POST", "/autokey/templates", "Create a resource template"],
+        ["PUT", "/autokey/templates/{id}", "Update a resource template"],
+        ["DELETE", "/autokey/templates/{id}", "Delete a resource template"],
+        ["GET", "/autokey/service-policies", "List per-service Autokey defaults"],
+        ["POST", "/autokey/service-policies", "Create a per-service Autokey default"],
+        ["PUT", "/autokey/service-policies/{service}", "Update a per-service Autokey default"],
+        ["DELETE", "/autokey/service-policies/{service}", "Delete a per-service Autokey default"],
+      ]} />
+      <P>Templates define handle and key naming patterns, algorithm, purpose, labels, tags, IV mode, export rules, and approval defaults. Service defaults bind those templates to a concrete application or service and can enforce central crypto policy.</P>
+    </Collapse>
+    <Collapse title="Provisioning Requests & Managed Handles">
+      <EndpointTable rows={[
+        ["POST", "/autokey/requests", "Create a key-handle provisioning request"],
+        ["GET", "/autokey/requests", "List provisioning requests and approval state"],
+        ["GET", "/autokey/requests/{id}", "Read a single request"],
+        ["GET", "/autokey/handles", "List managed key-handle bindings"],
+      ]} />
+      <P>When approval is required, the service creates a governance request and waits for approval. Once approved, it provisions the real key via KeyCore and records the managed handle binding. Existing bindings are reused automatically for the same service/resource tuple.</P>
+    </Collapse>
+    <H2>Audit Trail</H2>
+    <P>Autokey emits audit records for settings changes, template updates, service-policy updates, summary views, request creation, pending approval, provisioning success, policy denial, and runtime failure. This makes it possible to answer who requested a handle, whether it matched policy, and whether the final generated key stayed aligned with org controls.</P>
+    <Code>{`# Fetch tenant summary
+curl -H "Authorization: Bearer $TOKEN" \\
+  "http://localhost:8260/autokey/summary?tenant_id=root"
+
+# Save a tenant resource template
+curl -X POST http://localhost:8260/autokey/templates \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "tenant_id": "root",
+    "name": "Payment application handle",
+    "service_name": "payment",
+    "resource_type": "application",
+    "handle_name_pattern": "{{service}}/{{resource_type}}/{{resource_slug}}",
+    "key_name_pattern": "ak-{{service}}-{{resource_slug}}",
+    "algorithm": "aes256-gcm",
+    "key_type": "symmetric",
+    "purpose": "encrypt_decrypt",
+    "approval_required": true,
+    "enabled": true
+  }'
+
+# Request a managed handle
+curl -X POST http://localhost:8260/autokey/requests \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "tenant_id": "root",
+    "service_name": "payment",
+    "resource_type": "application",
+    "resource_ref": "payments-api-prod",
+    "justification": "Need a managed AES key for payment-service envelope encryption",
+    "requester_id": "platform-ops"
+  }'`}</Code>
+  </div>
+);
+
+const SectionApiWorkload = () => (
+  <div>
+    <div style={S.h1}>API: Workload Identity</div>
+    <P>Service: kms-workload-identity | Port: 8250 (HTTP) / 18250 (gRPC) | Profile: workload_identity</P>
+    <P>Workload Identity provides tenant-scoped SPIFFE trust domains, X.509-SVID and JWT-SVID issuance, workload federation bundles, workload-to-key authorization, and exchange of short-lived SVIDs into short-lived KMS access tokens.</P>
+    <Collapse title="Tenant Settings" defaultOpen>
+      <EndpointTable rows={[
+        ["GET", "/workload-identity/settings", "Fetch tenant SPIFFE and token-exchange settings"],
+        ["PUT", "/workload-identity/settings", "Create or update tenant workload identity settings"],
+        ["GET", "/workload-identity/summary", "Return workload identity health, drift, and usage counters"],
+      ]} />
+      <P>Settings include the tenant trust domain, federation enablement, token exchange enablement, static API key disablement, default X.509/JWT TTLs, rotation window, and allowed JWT-SVID audiences.</P>
+    </Collapse>
+    <Collapse title="Registrations & Federation">
+      <EndpointTable rows={[
+        ["GET", "/workload-identity/registrations", "List registered workloads and their allowed interfaces / key scopes"],
+        ["POST", "/workload-identity/registrations", "Create a workload registration"],
+        ["PUT", "/workload-identity/registrations/{id}", "Update a workload registration"],
+        ["DELETE", "/workload-identity/registrations/{id}", "Delete a workload registration"],
+        ["GET", "/workload-identity/federation", "List federated trust-domain bundles"],
+        ["POST", "/workload-identity/federation", "Create a federation bundle"],
+        ["PUT", "/workload-identity/federation/{id}", "Update a federation bundle"],
+        ["DELETE", "/workload-identity/federation/{id}", "Delete a federation bundle"],
+      ]} />
+      <P>Registrations bind SPIFFE identities to allowed interfaces, allowed key IDs, and operation permissions. Federation bundles let this tenant validate JWT-SVIDs or X.509-SVIDs from other trust domains.</P>
+    </Collapse>
+    <Collapse title="Issuance & Token Exchange">
+      <EndpointTable rows={[
+        ["POST", "/workload-identity/issue", "Issue an X.509-SVID or JWT-SVID for a registered workload"],
+        ["GET", "/workload-identity/issuances", "List recent SVID issuance history"],
+        ["POST", "/workload-identity/token/exchange", "Exchange a valid SVID for a short-lived KMS access token"],
+      ]} />
+      <P>Exchange verifies the presented SVID against the local or federated trust bundle, applies workload interface and key scoping, and mints a short-lived JWT that Keycore enforces during actual key operations.</P>
+    </Collapse>
+    <Collapse title="Usage & Authorization Graph">
+      <EndpointTable rows={[
+        ["GET", "/workload-identity/graph", "Return the workload-to-key authorization graph"],
+        ["GET", "/workload-identity/usage", "Return recent audit-backed workload key usage events"],
+      ]} />
+      <P>These endpoints are built from the shared control plane and the audit stream, so operators can see which workloads are authorized for which keys and which workloads have actually used those keys recently.</P>
+    </Collapse>
+    <H2>Audit Trail</H2>
+    <P>Workload settings changes, registration/federation updates, SVID issuance, token exchange, summary views, graph views, and key-usage views all emit audit events. Key operations performed through exchanged workload tokens also carry the workload identity, trust domain, interface name, and scoped key bindings into the key audit stream.</P>
+    <Code>{`# Save tenant workload identity settings
+curl -X PUT http://localhost:8250/workload-identity/settings?tenant_id=root \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "tenant_id": "root",
+    "enabled": true,
+    "trust_domain": "root",
+    "federation_enabled": true,
+    "token_exchange_enabled": true,
+    "disable_static_api_keys": true,
+    "default_x509_ttl_seconds": 43200,
+    "default_jwt_ttl_seconds": 1800,
+    "rotation_window_seconds": 1800,
+    "allowed_audiences": ["kms", "kms-workload", "kms-rest"]
+  }'
+
+# Register a workload
+curl -X POST http://localhost:8250/workload-identity/registrations \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "tenant_id": "root",
+    "name": "payments-api",
+    "spiffe_id": "spiffe://root/workloads/payments-api",
+    "allowed_interfaces": ["rest", "payment-tcp"],
+    "allowed_key_ids": ["key_payments_prod"],
+    "permissions": ["key.encrypt", "key.decrypt", "key.sign"],
+    "issue_jwt_svid": true,
+    "issue_x509_svid": true,
+    "enabled": true
+  }'
+
+# Exchange a JWT-SVID for a short-lived KMS token
+curl -X POST http://localhost:8250/workload-identity/token/exchange \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "tenant_id": "root",
+    "registration_id": "wid_abcd1234",
+    "interface_name": "rest",
+    "audience": "kms",
+    "jwt_svid": "eyJhbGciOiJFZERTQSIsImtpZCI6IndpZC1yb290In0..."
+  }'`}</Code>
+  </div>
+);
+
 const SectionApiPayment = () => (
   <div>
     <div style={S.h1}>API: Payment Cryptography</div>
     <P>Service: kms-payment | Port: 8170 (HTTP) / 18170 (gRPC) | Profile: payment_crypto</P>
-    <P>The payment service now also exposes AP2 agent payment policy and evaluation endpoints so you can bind agentic payment flows to mandates, credentials, wallet trust, rails, and amount thresholds before authorization. AP2 profile changes and evaluations are written to the audit timeline, and the policy itself is stored as tenant payment control-plane state rather than local node config.</P>
-    <Collapse title="TR-31 Key Blocks" defaultOpen>
+    <P>The payment API now supports a dedicated operator split between <IC>Traditional Payment</IC> and <IC>Modern Payment</IC>. The underlying REST model stays stable: <IC>/payment/policy</IC> stores unified tenant payment guardrails, while AP2 continues to use its own dedicated profile and evaluation endpoints.</P>
+    <Collapse title="Traditional Payment Policy" defaultOpen>
+      <EndpointTable rows={[
+        ["GET", "/payment/policy", "Fetch unified tenant payment policy for the Traditional Payment UI"],
+        ["PUT", "/payment/policy", "Update TR-31, KBPK, PIN, CVV, MAC, TCP, and runtime guardrails"],
+      ]} />
+      <P>Traditional payment policy covers TR-31 versions, exportability, KBPK class controls, PIN formats and translation pairs, CVV service codes, issuer profiles, MAC controls, decimalization rules, Payment TCP exposure, and approval / HSM gates for classic payment operations.</P>
+    </Collapse>
+    <Collapse title="Traditional Payment Operations">
       <EndpointTable rows={[
         ["POST", "/payment/tr31/create", "Create TR-31 key block"],
         ["POST", "/payment/tr31/parse", "Parse TR-31 block"],
@@ -1000,7 +1271,16 @@ const SectionApiPayment = () => (
         ["POST", "/payment/mac/verify", "Verify MAC value"],
       ]} />
     </Collapse>
-    <Collapse title="ISO 20022">
+    <Collapse title="Modern Payment Policy">
+      <EndpointTable rows={[
+        ["GET", "/payment/policy", "Fetch unified tenant payment policy for the Modern Payment UI"],
+        ["PUT", "/payment/policy", "Update ISO 20022 payload, LAU, canonicalization, and signature-suite guardrails"],
+        ["GET", "/payment/ap2/profile", "Fetch tenant AP2 policy profile"],
+        ["PUT", "/payment/ap2/profile", "Update tenant AP2 policy profile"],
+      ]} />
+      <P>Modern payment policy covers ISO 20022 limits and cryptographic profile choices plus AP2 bindings, rails, currencies, mandates, wallet trust, credential issuers, tokenization requirements, and agent-payment thresholds.</P>
+    </Collapse>
+    <Collapse title="Modern Payment Operations">
       <EndpointTable rows={[
         ["POST", "/payment/iso20022/encrypt", "Encrypt ISO 20022 message"],
         ["POST", "/payment/iso20022/decrypt", "Decrypt ISO 20022 message"],
@@ -1008,16 +1288,10 @@ const SectionApiPayment = () => (
         ["POST", "/payment/iso20022/verify", "Verify ISO 20022 signature"],
         ["POST", "/payment/iso20022/lau/generate", "Generate LAU"],
         ["POST", "/payment/iso20022/lau/verify", "Verify LAU"],
-      ]} />
-    </Collapse>
-    <Collapse title="AP2 Agent Payments">
-      <EndpointTable rows={[
-        ["GET", "/payment/ap2/profile", "Fetch tenant AP2 policy profile"],
-        ["PUT", "/payment/ap2/profile", "Update tenant AP2 policy profile"],
         ["POST", "/payment/ap2/evaluate", "Evaluate an agent payment request against AP2 policy"],
       ]} />
       <P>AP2 evaluation checks the protocol binding (`a2a`, `mcp`, optional `x402`), transaction mode, payment rail, currency, required mandates, verifiable credential, wallet attestation, tokenization state, and tenant thresholds. The result is an explicit `allow`, `review`, or `deny` decision with missing artifacts and applied controls.</P>
-      <P>Typical flow: read the current tenant profile, enable and save the policy with your allowed bindings, rails, currencies, thresholds, and trust requirements, then submit candidate agent-payment requests to the evaluator before handing the request to the downstream authorization path. Use the audit timeline to prove when policy changed and when a request was evaluated.</P>
+      <P>Typical flow: save unified payment guardrails from <IC>Payment Policy</IC>, then use the Payments workbench to run modern ISO 20022 and AP2 operations before handing the request to the downstream authorization path. Use the audit timeline to prove when policy changed and when a request was evaluated.</P>
     </Collapse>
     <Collapse title="Key Injection">
       <EndpointTable rows={[
@@ -1805,9 +2079,13 @@ const SectionApiPqc = () => (
 
     <Collapse title="PQC Endpoints" defaultOpen>
       <EndpointTable rows={[
+        ["GET", "/pqc/policy", "Read the tenant PQC policy profile, default ML-KEM / ML-DSA / SLH-DSA choices, interface default mode, and migration guardrails"],
+        ["PUT", "/pqc/policy", "Update the tenant PQC policy profile and readiness flags"],
+        ["GET", "/pqc/inventory", "Return live PQC inventory split into classical, hybrid, and PQC-only for keys, certificates, and request-handling interfaces"],
         ["POST", "/pqc/scan", "Start a PQC readiness scan across all keys and crypto operations"],
         ["GET", "/pqc/scans", "List completed scans with results"],
         ["GET", "/pqc/readiness", "Get overall PQC readiness score and breakdown"],
+        ["GET", "/pqc/migration/report", "Get a consolidated migration report with latest readiness, top risks, timeline, and next actions"],
         ["POST", "/pqc/migration/plans", "Create a migration plan (maps classical → PQC algorithms)"],
         ["GET", "/pqc/migration/plans", "List migration plans with status"],
         ["POST", "/pqc/migration/plans/{id}/execute", "Execute a migration plan"],
@@ -1955,12 +2233,13 @@ const SectionUIWorkbench = () => (
     <P>Interactive cryptographic operations interface. Select a key from the catalog, choose an operation (Encrypt, Decrypt, Sign, Verify, Hash, Random, KEM Encap/Decap, Derive), enter input data (plaintext or base64), and execute. Results display inline with copy-to-clipboard support. Supports FIPS mode validation.</P>
     <H3>REST API Explorer</H3>
     <P>Browse all REST API endpoints organized by service. Select an endpoint, fill in parameters, and execute authenticated requests. Includes cURL preview generation, custom JWT authentication option, and request/response inspection panel.</P>
+    <P>The REST API screen also includes a dedicated <IC>REST Client Security</IC> panel that manages sender-constrained auth for SDKs and automation. For each registered client you can choose <IC>OAuth mTLS</IC>, <IC>DPoP</IC>, or <IC>HTTP Message Signatures</IC>, enable replay protection, review signature failures, and track which clients are still using replayable legacy bearer/API-key mode.</P>
     <H3>Tokenize / Mask / Redact</H3>
     <P>Interactive tokenization, masking, and redaction tool. Enter sensitive data, select the operation type, configure options (vault-based vs vaultless, format-preserving, masking pattern), and execute. Preview mode available for masking.</P>
     <H3>Data Encryption</H3>
     <P>Field-level and envelope encryption interface. Select encryption mode (field, envelope, searchable), choose a key, enter data, and encrypt/decrypt.</P>
     <H3>Payment Crypto</H3>
-    <P>Payment cryptography operations: TR-31 key block creation/parsing/translation, PIN translation/verification, CVV computation, MAC generation, ISO 20022 message encryption/signing, AP2 agent payment policy and evaluator workflows, and key injection terminal management.</P>
+    <P>Payment cryptography operations are grouped into <IC>Traditional Payment</IC> and <IC>Modern Payment</IC> for testing and execution. Traditional handles TR-31, PIN, CVV, MAC, and key injection. Modern handles ISO 20022, LAU, and AP2 evaluation.</P>
   </div>
 );
 
@@ -2018,6 +2297,8 @@ const SectionUICerts = () => (
     <H2>Enrollment Protocols Sub-Pane</H2>
     <P>Configure automated certificate enrollment so devices and services can request certificates without manual intervention.</P>
     <P>- ACME: Compatible with certbot, cert-manager, Caddy, and other ACME clients. Supports HTTP-01, DNS-01, and TLS-ALPN-01 challenges</P>
+    <P>- ACME Renewal Information: The overview pane shows coordinated renewal windows, CA-directed schedules, and mass-renewal risk so operators can spread rotations instead of relying on blind cron timing</P>
+    <P>- Compliance and Posture integration: missed windows, emergency rotations, and renewal hotspots flow into compliance posture and posture findings instead of staying isolated in the PKI view</P>
     <P>- EST: Modern TLS-based enrollment for enterprise devices and IoT</P>
     <P>- SCEP: Legacy protocol for MDM platforms (Intune, Jamf) and network equipment (Cisco, Juniper)</P>
     <P>- CMPv2: Full-featured protocol for telecom and high-security PKI environments</P>
@@ -2038,9 +2319,71 @@ const SectionUIDataprotect = () => (
     <H3>Token / Mask / Redact Policy</H3>
     <P>Configure tokenization policies (vault-based, vaultless, format-preserving), masking policies (patterns, partial masking), and redaction policies (auto-detection, rule-based).</P>
     <H3>Payment Policy</H3>
-    <P>Configure payment cryptography policies: allowed operations, key usage restrictions, terminal authentication requirements.</P>
+    <P>Configure the KMS-wide payment guardrails for REST and payment interfaces. This policy is split into <IC>Traditional Payment</IC> for TR-31, KBPK, PIN, CVV, MAC, Payment TCP, rotation, and runtime handling, and <IC>Modern Payment</IC> for ISO 20022 and AP2 trust configuration.</P>
     <H3>PKCS#11 / JCA</H3>
     <P>View SDK provider registrations and client telemetry. Monitor PKCS#11 and JCA provider usage, connection health, and operation statistics.</P>
+  </div>
+);
+
+const SectionUIAutokey = () => (
+  <div>
+    <div style={S.h1}>UI Guide: Autokey</div>
+    <P>The Autokey tab appears as its own top-level module immediately after <IC>Data Protection</IC>. It is the tenant control plane for policy-driven key handle provisioning so teams can request managed keys without bypassing central crypto policy.</P>
+    <H2>Overview</H2>
+    <P>Review tenant Autokey mode, template count, per-service defaults, managed-handle coverage, approval backlog, and policy mismatches. These counters are backed by the dedicated <IC>kms-autokey</IC> microservice, not static UI placeholders.</P>
+    <H2>Settings</H2>
+    <P>Enable or disable Autokey for the tenant, choose enforce vs audit mode, require approval and justification, control template overrides, and set the default approval policy and rotation baseline.</P>
+    <H2>Templates</H2>
+    <P>Create reusable resource templates for service/resource combinations. Templates define handle naming, key naming, key algorithm, purpose, tags, labels, IV handling, approval defaults, and other crypto metadata that should be stamped onto generated keys.</P>
+    <H2>Service Defaults</H2>
+    <P>Configure per-service defaults that point to a preferred template and can enforce a central algorithm, key type, purpose, and approval mode for a given service. This is where operators decide the approved key posture for teams such as payments, SDK wrappers, EKM agents, or application workloads.</P>
+    <H2>Requests & Handles</H2>
+    <P>Submit a self-service Autokey request for a resource, then track whether it reused an existing binding, went to governance approval, or provisioned a new KeyCore key. The managed handle catalog shows the final service/resource-to-key binding that applications should use.</P>
+  </div>
+);
+
+const SectionUIConfidential = () => (
+  <div>
+    <div style={S.h1}>UI Guide: Confidential Compute</div>
+    <P>The Confidential Compute tab appears as its own top-level module immediately after <IC>Data Protection</IC>. It is designed for tenant-scoped attested key release workflows where keys should only be released to workloads running inside verified enclaves or TEEs.</P>
+    <H2>Attestation Policy</H2>
+    <P>Configure the tenant release gate: attestation provider, approved key scopes, approved images, workload identities, attesters, required claims, required measurements, secure boot and debug controls, evidence freshness, cluster scope, and node allowlists.</P>
+    <H2>Evaluate Release</H2>
+    <P>Simulate or execute a release decision by entering a real attestation payload. The UI shows the final decision, matched versus missing claims and measurements, the measurement and claims hashes, cluster node, provider, and the exact policy version that produced the verdict.</P>
+    <H2>Release History</H2>
+    <P>Inspect historical release decisions by tenant. Operators can search by key, workload, provider, node, decision, or reason to support runtime troubleshooting, evidence collection, and enclave rollout reviews.</P>
+  </div>
+);
+
+const SectionUIWorkload = () => (
+  <div>
+    <div style={S.h1}>UI Guide: Workload Identity</div>
+    <P>The Workload Identity tab appears as its own top-level module immediately after <IC>Confidential Compute</IC>. It is the tenant control plane for SPIFFE trust domains, SVID issuance, workload-to-key authorization, and federation across trust domains.</P>
+    <H2>Overview</H2>
+    <P>Review the tenant trust domain, enabled registrations, federated domains, SVID rotation health, key usage, and over-privileged registrations. The summary cards are backed by the dedicated <IC>kms-workload-identity</IC> microservice, not static UI counters.</P>
+    <H2>Registrations</H2>
+    <P>Register workloads by SPIFFE ID, selectors, allowed interfaces, allowed key IDs, and workload permissions. This is where you decide which workloads may call REST, KMIP, HYOK, EKM, or payment interfaces and which keys they may use.</P>
+    <H2>Federation</H2>
+    <P>Configure federated trust domains by adding JWT JWKS bundles or X.509 CA bundles. This allows the tenant to validate SVIDs issued outside the local trust domain and support multi-cluster or partner trust relationships.</P>
+    <H2>Issuance & Exchange</H2>
+    <P>Issue JWT-SVIDs or X.509-SVIDs, then exchange them into short-lived KMS bearer tokens for a specific interface. Operators can use this pane to validate end-to-end workload authentication before moving production clients off static API keys.</P>
+    <H2>Usage</H2>
+    <P>Inspect recent workload-backed key operations and the workload-to-key authorization graph. This helps answer which workload used which key, whether the calling interface was correct, and whether workload bindings are broader than intended.</P>
+  </div>
+);
+
+const SectionUIPqc = () => (
+  <div>
+    <div style={S.h1}>UI Guide: Post-Quantum Crypto</div>
+    <P>The Post-Quantum Crypto tab appears as its own top-level module immediately after <IC>Data Protection</IC>. It is the tenant control plane for ML-KEM, ML-DSA, SLH-DSA, hybrid migration policy, interface readiness, and certificate drift.</P>
+    <H2>Overview</H2>
+    <P>Review the tenant quantum-readiness score, key / certificate / interface inventory, RSA-ECC usage still active, and the exact interfaces and certificates that remain non-migrated. This view is backed by the dedicated <IC>kms-pqc</IC> microservice rather than a static dashboard estimate.</P>
+    <H2>Policy</H2>
+    <P>Choose a PQC profile such as <IC>Balanced Hybrid</IC> or <IC>Quantum First</IC>, set the default ML-KEM and signature family, choose the tenant default mode for exposed interfaces and certificates, and decide whether HQC tracking and stricter migration guardrails should be enabled.</P>
+    <H2>Migration Report</H2>
+    <P>Inspect the latest readiness scan, projected milestones, top risks, and recommended actions. Operators can use this report to sequence migration work across keys, certificates, and externally exposed listeners.</P>
+    <H2>Interfaces</H2>
+    <P>Hybrid mode per request-handling interface is configured from <IC>Administration -&gt; Interfaces</IC>. Interfaces can inherit the tenant PQC policy or override it to classical, hybrid, or PQC-only for readiness and compliance reporting.</P>
   </div>
 );
 
@@ -2262,7 +2605,7 @@ const SectionUICluster = () => (
     <H3>Cluster Logs</H3>
     <P>Filterable cluster operation audit log showing joins, departures, role changes, sync events, and failures.</P>
     <H3>Payment / AP2 State</H3>
-    <P>AP2 policy is not configured per node. It is stored as tenant payment configuration in the shared control plane, so clustered operators manage one tenant AP2 profile and every payment-service instance sees the same policy set once the control-plane state is consistent.</P>
+    <P>Traditional payment policy, modern ISO 20022 policy, and AP2 state are not configured per node. They are stored as tenant payment configuration in the shared control plane, so clustered operators manage one policy surface and every payment-service instance sees the same guardrails once the control plane is consistent.</P>
   </div>
 );
 
@@ -2472,7 +2815,7 @@ const SectionConfigCluster = () => (
     ]} />
     <H2>Node Roles</H2>
     <P>Leader: accepts writes, coordinates replication. Follower: receives replicated data, can serve reads. Replica: read-only copy for horizontal read scaling. Roles can be changed dynamically via the Cluster tab or API.</P>
-    <P>Tenant AP2 policy is part of the payment service control-plane state. There is no separate node-local AP2 configuration file to manage. In clustered deployments, keep the payment service attached to the shared tenant data plane so the same AP2 profile and evaluation behavior is observed across nodes.</P>
+    <P>Tenant payment policy is part of the payment service control-plane state. There is no separate node-local traditional-payment, ISO 20022, or AP2 configuration file to manage. In clustered deployments, keep the payment service attached to the shared tenant data plane so the same payment-policy and evaluation behavior is observed across nodes.</P>
     <Code>{`docker compose --profile clustering up -d
 
 # Verify cluster
@@ -2485,7 +2828,7 @@ const SectionConfigBackup = () => (
     <div style={S.h1}>Configuration: Backup & Restore</div>
     <H2>Backup Features</H2>
     <P>Scope: system-wide or tenant-specific. Format: JSON GZip compressed with AES-256-GCM encryption. Artifacts use .vbk extension with separate .key.json key package.</P>
-    <P>Backups now carry explicit <IC>backup_coverage</IC> metadata in the artifact/key package so operators can see which capability classes were preserved. When the related service tables exist, posture findings, compliance assessments, reporting jobs, incidents, evidence-pack source data, and payment/AP2 tenant policy state are included in the encrypted snapshot.</P>
+    <P>Backups now carry explicit <IC>backup_coverage</IC> metadata in the artifact/key package so operators can see which capability classes were preserved. When the related service tables exist, posture findings, compliance assessments, reporting jobs, incidents, evidence-pack source data, and tenant payment policy state across traditional payment, ISO 20022, and AP2 are included in the encrypted snapshot.</P>
     <H2>Creating a Backup</H2>
     <Code>{`# Via API
 curl -X POST http://localhost:8050/governance/backups \\
@@ -2544,6 +2887,8 @@ docker compose ps`}</Code>
       ["qkd_interface", "kms-qkd", "Quantum key distribution"],
       ["ekm_database", "kms-ekm", "Enterprise key manager"],
       ["payment_crypto", "kms-payment", "Payment cryptography"],
+      ["autokey_provisioning", "kms-autokey", "Policy-driven Autokey provisioning"],
+      ["confidential_compute", "kms-confidential", "Attested key release / confidential compute"],
       ["compliance_dashboard", "kms-compliance", "Compliance reporting"],
       ["sbom_cbom", "kms-sbom", "SBOM/CBOM generation"],
       ["reporting_alerting", "kms-reporting", "Reporting and alerting"],
@@ -2634,7 +2979,7 @@ const SectionConfigFastInstall = () => (
     <P>In fast mode, the installer writes a deployment file from the built-in baseline template and starts that service set directly. The baseline includes the core platform services plus certificate management, while other optional modules remain off until the deployment file is changed.</P>
 
     <H2>Changing Features Later</H2>
-    <P>Feature enablement remains file-driven. Edit <IC>infra/deployment/deployment.yaml</IC>, then rerun <IC>./install.sh --fast</IC> or start the stack with <IC>./infra/scripts/start-kms.sh</IC> so Docker Compose recalculates the active profiles.</P>
+    <P>Feature enablement remains file-driven. Edit <IC>infra/deployment/deployment.yaml</IC>, then rerun <IC>./install.sh --fast</IC> or start the stack with <IC>./infra/scripts/start-kms.sh</IC> so Docker Compose recalculates the active profiles. Certificate lifecycle automation is also deployment-driven now via <IC>spec.cert_security.acme_renewal</IC>, which the startup scripts push into the live ACME policy automatically.</P>
 
     <Collapse title="deployment.yaml metadata">
       <Code>{`apiVersion: kms.vecta.com/v1
@@ -3031,6 +3376,9 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "api-policy": SectionApiPolicy,
   "api-governance": SectionApiGovernance,
   "api-dataprotect": SectionApiDataprotect,
+  "api-autokey": SectionApiAutokey,
+  "api-confidential": SectionApiConfidential,
+  "api-workload": SectionApiWorkload,
   "api-payment": SectionApiPayment,
   "api-cloud": SectionApiCloud,
   "api-hyok": SectionApiHyok,
@@ -3056,6 +3404,10 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "ui-vault": SectionUIVault,
   "ui-certs": SectionUICerts,
   "ui-dataprotect": SectionUIDataprotect,
+  "ui-autokey": SectionUIAutokey,
+  "ui-pqc": SectionUIPqc,
+  "ui-confidential": SectionUIConfidential,
+  "ui-workload": SectionUIWorkload,
   "ui-cloud": SectionUICloud,
   "ui-ekm": SectionUIEkm,
   "ui-hsm": SectionUIHsm,

@@ -8,6 +8,11 @@
 - `healthcheck-enabled-services.ps1`: native PowerShell health checks for Windows.
 - Deployment schema: `infra/deployment/deployment.schema.json`.
 
+Certificate lifecycle note:
+
+- `start-kms.*` reads `spec.cert_security.acme_renewal` from `deployment.yaml` and applies the ACME protocol policy after startup.
+- `healthcheck-enabled-services.*` verifies that the ACME directory advertises `renewalInfo` and that `/certs/renewal-intelligence` is live when `certs` is enabled.
+
 Feature-to-profile coverage includes:
 
 - core security modules: `secrets`, `certs`, `governance`, `data_protection`

@@ -379,6 +379,68 @@ func TestProtocolConfigCanDisableACME(t *testing.T) {
 	}
 }
 
+func TestRenewalIntelligenceSummary(t *testing.T) {
+	svc, _ := newCertsService(t)
+	ctx := context.Background()
+	_, err := svc.UpsertProtocolConfig(ctx, UpsertProtocolConfigRequest{
+		TenantID:   "t-ari",
+		Protocol:   "acme",
+		Enabled:    true,
+		ConfigJSON: `{"enable_ari":true,"ari_poll_hours":12,"mass_renewal_risk_threshold":1,"emergency_rotation_threshold_hours":720}`,
+		UpdatedBy:  "test",
+	})
+	if err != nil {
+		t.Fatalf("upsert protocol config: %v", err)
+	}
+	ca, err := svc.CreateCA(ctx, CreateCARequest{
+		TenantID:   "t-ari",
+		Name:       "ari-root",
+		CALevel:    "root",
+		Algorithm:  "ECDSA-P384",
+		KeyBackend: "software",
+		Subject:    "CN=ARI Root",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = svc.IssueCertificate(ctx, IssueCertificateRequest{
+		TenantID:     "t-ari",
+		CAID:         ca.ID,
+		SubjectCN:    "ari.example.local",
+		SANs:         []string{"ari.example.local"},
+		CertType:     "tls-server",
+		Algorithm:    "ECDSA-P256",
+		ServerKeygen: true,
+		ValidityDays: 30,
+		Protocol:     "acme",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.RefreshTenantRenewalIntelligence(ctx, "t-ari"); err != nil {
+		t.Fatalf("refresh renewal intelligence: %v", err)
+	}
+	summary, err := svc.GetRenewalSummary(ctx, "t-ari")
+	if err != nil {
+		t.Fatalf("renewal summary: %v", err)
+	}
+	if !summary.ARIEnabled {
+		t.Fatalf("expected ari to be enabled")
+	}
+	if len(summary.RenewalWindows) != 1 {
+		t.Fatalf("expected one renewal window, got %d", len(summary.RenewalWindows))
+	}
+	if len(summary.CADirectedSchedule) != 1 {
+		t.Fatalf("expected one schedule group, got %d", len(summary.CADirectedSchedule))
+	}
+	if len(summary.MassRenewalRisks) != 1 {
+		t.Fatalf("expected one mass-renewal risk, got %d", len(summary.MassRenewalRisks))
+	}
+	if summary.RenewalWindows[0].ARIID == "" {
+		t.Fatalf("expected ari id")
+	}
+}
+
 func TestUploadThirdPartyCertificate(t *testing.T) {
 	svc, _ := newCertsService(t)
 	ctx := context.Background()

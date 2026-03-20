@@ -88,6 +88,33 @@
             },
             "use_tpm_seal": {
               "type": "boolean"
+            },
+            "acme_renewal": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enable_ari": {
+                  "type": "boolean"
+                },
+                "ari_poll_hours": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 168
+                },
+                "ari_window_bias_percent": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 90
+                },
+                "emergency_rotation_threshold_hours": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "mass_renewal_risk_threshold": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
             }
           }
         },
@@ -133,6 +160,9 @@
             "qrng_generator",
             "ekm_database",
             "payment_crypto",
+            "autokey_provisioning",
+            "workload_identity",
+            "confidential_compute",
             "compliance_dashboard",
             "sbom_cbom",
             "reporting_alerting",
@@ -155,6 +185,9 @@
             "qrng_generator": { "type": "boolean" },
             "ekm_database": { "type": "boolean" },
             "payment_crypto": { "type": "boolean" },
+            "autokey_provisioning": { "type": "boolean" },
+            "workload_identity": { "type": "boolean" },
+            "confidential_compute": { "type": "boolean" },
             "compliance_dashboard": { "type": "boolean" },
             "sbom_cbom": { "type": "boolean" },
             "reporting_alerting": { "type": "boolean" },

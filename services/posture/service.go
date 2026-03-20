@@ -289,7 +289,14 @@ func (s *Service) runTenantScan(ctx context.Context, tenantID string) (RiskSnaps
 	if risk24 == 0 {
 		risk24 = clampRisk(current24.TotalEvents / 200)
 	}
-	risk7 := clampRisk(risk24 + (current7d.TotalEvents-prev7d.TotalEvents)/50 + current7d.ExpiryBacklogCount)
+	risk7 := clampRisk(
+		risk24 +
+			(current7d.TotalEvents-prev7d.TotalEvents)/50 +
+			current7d.ExpiryBacklogCount +
+			current7d.CertRenewalMissedCount*2 +
+			current7d.CertEmergencyRotations*3 +
+			current7d.CertMassRenewalRisks,
+	)
 
 	snap := RiskSnapshot{
 		ID:              newID("risk"),
@@ -300,38 +307,41 @@ func (s *Service) runTenantScan(ctx context.Context, tenantID string) (RiskSnaps
 		PreventiveScore: preventiveScore,
 		CorrectiveScore: correctiveScore,
 		TopSignals: mergeTopSignals(topSignals, map[string]interface{}{
-			"events_24h":              current24.TotalEvents,
-			"failed_auth_24h":         current24.FailedAuthCount,
-			"failed_crypto_24h":       current24.FailedCryptoCount,
-			"policy_denies_24h":       current24.PolicyDenyCount,
-			"key_deletes_24h":         current24.KeyDeleteCount,
-			"cert_deletes_24h":        current24.CertDeleteCount,
-			"hsm_latency_avg_ms_24h":  current24.HSMLatencyAvgMS,
-			"cluster_lag_avg_ms_24h":  current24.ClusterLagAvgMS,
-			"connector_flaps_24h":     current24.ConnectorAuthFlaps,
-			"replication_retry_24h":   current24.ReplicationRetry,
-			"expiry_backlog_24h":      current24.ExpiryBacklogCount,
-			"non_approved_algo_24h":   current24.NonApprovedAlgoCount,
-			"tenant_mismatch_24h":     current24.TenantMismatchCount,
-			"quorum_bypass_24h":       current24.QuorumBypassCount,
-			"cluster_drift_24h":       current24.ClusterDriftCount,
-			"byok_events_24h":         current24.BYOKEvents,
-			"byok_failures_24h":       current24.BYOKFailures,
-			"hyok_events_24h":         current24.HYOKEvents,
-			"hyok_failures_24h":       current24.HYOKFailures,
-			"ekm_events_24h":          current24.EKMEvents,
-			"ekm_failures_24h":        current24.EKMFailures,
-			"kmip_events_24h":         current24.KMIPEvents,
-			"kmip_failures_24h":       current24.KMIPFailures,
-			"kmip_interop_failed_24h": current24.KMIPInteropFailures,
-			"bitlocker_events_24h":    current24.BitLockerEvents,
-			"bitlocker_failures_24h":  current24.BitLockerFailures,
-			"sdk_events_24h":          current24.SDKEvents,
-			"sdk_failures_24h":        current24.SDKFailures,
-			"sdk_receipt_missing_24h": current24.SDKReceiptMissing,
-			"domain_metrics":          buildDomainMetrics(current24),
-			"risk_horizon_24h":        risk24,
-			"risk_horizon_7d":         risk7,
+			"events_24h":                  current24.TotalEvents,
+			"failed_auth_24h":             current24.FailedAuthCount,
+			"failed_crypto_24h":           current24.FailedCryptoCount,
+			"policy_denies_24h":           current24.PolicyDenyCount,
+			"key_deletes_24h":             current24.KeyDeleteCount,
+			"cert_deletes_24h":            current24.CertDeleteCount,
+			"hsm_latency_avg_ms_24h":      current24.HSMLatencyAvgMS,
+			"cluster_lag_avg_ms_24h":      current24.ClusterLagAvgMS,
+			"connector_flaps_24h":         current24.ConnectorAuthFlaps,
+			"replication_retry_24h":       current24.ReplicationRetry,
+			"expiry_backlog_24h":          current24.ExpiryBacklogCount,
+			"cert_renewal_missed_24h":     current24.CertRenewalMissedCount,
+			"cert_emergency_rotation_24h": current24.CertEmergencyRotations,
+			"cert_mass_renewal_risk_24h":  current24.CertMassRenewalRisks,
+			"non_approved_algo_24h":       current24.NonApprovedAlgoCount,
+			"tenant_mismatch_24h":         current24.TenantMismatchCount,
+			"quorum_bypass_24h":           current24.QuorumBypassCount,
+			"cluster_drift_24h":           current24.ClusterDriftCount,
+			"byok_events_24h":             current24.BYOKEvents,
+			"byok_failures_24h":           current24.BYOKFailures,
+			"hyok_events_24h":             current24.HYOKEvents,
+			"hyok_failures_24h":           current24.HYOKFailures,
+			"ekm_events_24h":              current24.EKMEvents,
+			"ekm_failures_24h":            current24.EKMFailures,
+			"kmip_events_24h":             current24.KMIPEvents,
+			"kmip_failures_24h":           current24.KMIPFailures,
+			"kmip_interop_failed_24h":     current24.KMIPInteropFailures,
+			"bitlocker_events_24h":        current24.BitLockerEvents,
+			"bitlocker_failures_24h":      current24.BitLockerFailures,
+			"sdk_events_24h":              current24.SDKEvents,
+			"sdk_failures_24h":            current24.SDKFailures,
+			"sdk_receipt_missing_24h":     current24.SDKReceiptMissing,
+			"domain_metrics":              buildDomainMetrics(current24),
+			"risk_horizon_24h":            risk24,
+			"risk_horizon_7d":             risk7,
 		}),
 		CapturedAt: now,
 	}
@@ -397,19 +407,22 @@ func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, pre
 	findings := make([]FindingCandidate, 0, 10)
 	score := 0
 	signal := map[string]interface{}{
-		"predictive_failed_auth":        current24.FailedAuthCount,
-		"predictive_failed_crypto":      current24.FailedCryptoCount,
-		"predictive_policy_denies":      current24.PolicyDenyCount,
-		"predictive_hsm_latency_ms":     current24.HSMLatencyAvgMS,
-		"predictive_cluster_lag_ms":     current24.ClusterLagAvgMS,
-		"predictive_expiry_backlog":     current24.ExpiryBacklogCount,
-		"predictive_connector_flaps":    current24.ConnectorAuthFlaps,
-		"predictive_byok_failures":      current24.BYOKFailures,
-		"predictive_hyok_failures":      current24.HYOKFailures,
-		"predictive_ekm_failures":       current24.EKMFailures,
-		"predictive_kmip_failures":      current24.KMIPFailures,
-		"predictive_bitlocker_failures": current24.BitLockerFailures,
-		"predictive_sdk_failures":       current24.SDKFailures,
+		"predictive_failed_auth":             current24.FailedAuthCount,
+		"predictive_failed_crypto":           current24.FailedCryptoCount,
+		"predictive_policy_denies":           current24.PolicyDenyCount,
+		"predictive_hsm_latency_ms":          current24.HSMLatencyAvgMS,
+		"predictive_cluster_lag_ms":          current24.ClusterLagAvgMS,
+		"predictive_expiry_backlog":          current24.ExpiryBacklogCount,
+		"predictive_cert_renewal_missed":     current24.CertRenewalMissedCount,
+		"predictive_cert_emergency_rotation": current24.CertEmergencyRotations,
+		"predictive_cert_mass_renewal_risks": current24.CertMassRenewalRisks,
+		"predictive_connector_flaps":         current24.ConnectorAuthFlaps,
+		"predictive_byok_failures":           current24.BYOKFailures,
+		"predictive_hyok_failures":           current24.HYOKFailures,
+		"predictive_ekm_failures":            current24.EKMFailures,
+		"predictive_kmip_failures":           current24.KMIPFailures,
+		"predictive_bitlocker_failures":      current24.BitLockerFailures,
+		"predictive_sdk_failures":            current24.SDKFailures,
 	}
 
 	if isSpike(current24.FailedAuthCount, prev24.FailedAuthCount, 25, 2.0) {
@@ -708,6 +721,66 @@ func (s *Service) predictiveEngine(tenantID string, current24 SignalSummary, pre
 		})
 	}
 
+	if current24.CertRenewalMissedCount > 0 {
+		risk := clampRisk(42 + current24.CertRenewalMissedCount*10)
+		score += risk / 2
+		findings = append(findings, FindingCandidate{
+			Engine:            "predictive",
+			FindingType:       "certificate_renewal_windows_missed",
+			Title:             "Coordinated certificate renewal windows were missed",
+			Description:       "Certificates missed their CA-directed renewal window, increasing outage and emergency-rotation risk.",
+			Severity:          severityHigh,
+			RiskScore:         risk,
+			RecommendedAction: "Re-sequence renewal jobs to honor the ARI window and clear certificate backlog before the next CA-directed slot.",
+			AutoActionAllowed: false,
+			Fingerprint:       fingerprint(tenantID, "predictive", "certificate_renewal_windows_missed"),
+			Evidence: map[string]interface{}{
+				"missed_windows_24h": current24.CertRenewalMissedCount,
+				"missed_windows_7d":  current7d.CertRenewalMissedCount,
+			},
+		})
+	}
+
+	if current24.CertEmergencyRotations > 0 {
+		risk := clampRisk(65 + current24.CertEmergencyRotations*8)
+		score += risk / 2
+		findings = append(findings, FindingCandidate{
+			Engine:            "predictive",
+			FindingType:       "certificate_emergency_rotation_active",
+			Title:             "Certificates entered emergency rotation state",
+			Description:       "Remaining certificate lifetime crossed the emergency threshold after renewal coordination was missed or delayed.",
+			Severity:          severityCritical,
+			RiskScore:         risk,
+			RecommendedAction: "Execute emergency certificate rotation immediately and verify interface rollout completion before expiry.",
+			AutoActionAllowed: false,
+			Fingerprint:       fingerprint(tenantID, "predictive", "certificate_emergency_rotation_active"),
+			Evidence: map[string]interface{}{
+				"emergency_rotations_24h": current24.CertEmergencyRotations,
+				"emergency_rotations_7d":  current7d.CertEmergencyRotations,
+			},
+		})
+	}
+
+	if current24.CertMassRenewalRisks > 0 {
+		risk := clampRisk(28 + current24.CertMassRenewalRisks*9)
+		score += risk / 3
+		findings = append(findings, FindingCandidate{
+			Engine:            "predictive",
+			FindingType:       "certificate_mass_renewal_hotspot",
+			Title:             "Mass-renewal hotspot detected for certificate rotations",
+			Description:       "Too many certificates are scheduled in the same CA/day bucket, creating a thundering-herd renewal window.",
+			Severity:          severityWarning,
+			RiskScore:         risk,
+			RecommendedAction: "Spread renewals across the CA-directed schedule and rebalance certificate jobs by service or interface.",
+			AutoActionAllowed: true,
+			Fingerprint:       fingerprint(tenantID, "predictive", "certificate_mass_renewal_hotspot"),
+			Evidence: map[string]interface{}{
+				"mass_renewal_risks_24h": current24.CertMassRenewalRisks,
+				"mass_renewal_risks_7d":  current7d.CertMassRenewalRisks,
+			},
+		})
+	}
+
 	if current24.NonApprovedAlgoCount > 0 {
 		risk := clampRisk(70 + current24.NonApprovedAlgoCount*5)
 		score += risk / 2
@@ -890,6 +963,25 @@ func (s *Service) preventiveEngine(tenantID string, current24 SignalSummary, pre
 		})
 	}
 
+	if current24.CertMassRenewalRisks >= 1 {
+		risk := clampRisk(24 + current24.CertMassRenewalRisks*7)
+		score += risk / 4
+		findings = append(findings, FindingCandidate{
+			Engine:            "preventive",
+			FindingType:       "certificate_schedule_rebalancing_required",
+			Title:             "Preemptive certificate schedule rebalancing required",
+			Description:       "Certificate renewal coordination shows a hotspot before the mass-rotation window becomes an outage event.",
+			Severity:          severityWarning,
+			RiskScore:         risk,
+			RecommendedAction: "Rebalance certificate renewals across ARI windows before the next CA-directed batch.",
+			AutoActionAllowed: true,
+			Fingerprint:       fingerprint(tenantID, "preventive", "certificate_schedule_rebalancing_required"),
+			Evidence: map[string]interface{}{
+				"mass_renewal_risks_24h": current24.CertMassRenewalRisks,
+			},
+		})
+	}
+
 	if isSpike(current24.PolicyDenyCount, prev24.PolicyDenyCount, 25, 1.6) {
 		risk := clampRisk(25 + current24.PolicyDenyCount/2)
 		score += risk / 4
@@ -911,10 +1003,11 @@ func (s *Service) preventiveEngine(tenantID string, current24 SignalSummary, pre
 	}
 
 	return findings, clampRisk(score), map[string]interface{}{
-		"preventive_delete_volume_24h": totalDeletes,
-		"preventive_failed_auth_24h":   current24.FailedAuthCount,
-		"preventive_connector_flaps":   current24.ConnectorAuthFlaps,
-		"preventive_expiry_backlog":    current24.ExpiryBacklogCount,
+		"preventive_delete_volume_24h":       totalDeletes,
+		"preventive_failed_auth_24h":         current24.FailedAuthCount,
+		"preventive_connector_flaps":         current24.ConnectorAuthFlaps,
+		"preventive_expiry_backlog":          current24.ExpiryBacklogCount,
+		"preventive_cert_mass_renewal_risks": current24.CertMassRenewalRisks,
 	}
 }
 
@@ -1020,6 +1113,42 @@ func (s *Service) correctiveEngine(ctx context.Context, tenantID string, now tim
 				},
 			})
 			score += 10
+		case "certificate_renewal_windows_missed":
+			actions = append(actions, ActionCandidate{
+				FindingFingerprint: item.Fingerprint,
+				ActionType:         "rebalance_certificate_renewal_schedule",
+				RecommendedAction:  "Rebalance certificate renewal jobs and re-open missed ARI windows where possible.",
+				SafetyGate:         "manual",
+				ApprovalRequired:   true,
+				Evidence: map[string]interface{}{
+					"finding_id": item.ID,
+				},
+			})
+			score += 8
+		case "certificate_emergency_rotation_active":
+			actions = append(actions, ActionCandidate{
+				FindingFingerprint: item.Fingerprint,
+				ActionType:         "execute_emergency_certificate_rotation",
+				RecommendedAction:  "Execute emergency certificate rotation and validate deployment propagation across interfaces.",
+				SafetyGate:         "high-impact",
+				ApprovalRequired:   true,
+				Evidence: map[string]interface{}{
+					"finding_id": item.ID,
+				},
+			})
+			score += 12
+		case "certificate_mass_renewal_hotspot", "certificate_schedule_rebalancing_required":
+			actions = append(actions, ActionCandidate{
+				FindingFingerprint: item.Fingerprint,
+				ActionType:         "spread_certificate_rotation_window",
+				RecommendedAction:  "Spread certificate rotations across CA-directed windows to avoid batch renewal concentration.",
+				SafetyGate:         "low-impact",
+				ApprovalRequired:   false,
+				Evidence: map[string]interface{}{
+					"finding_id": item.ID,
+				},
+			})
+			score += 6
 		}
 	}
 
@@ -1738,6 +1867,8 @@ func eventMatchesFinding(item Finding, ev map[string]interface{}) bool {
 		return strings.Contains(action, "receipt") || strings.Contains(action, "wrapper") || service == "sdk"
 	case "kmip_interop_validation_failures":
 		return strings.Contains(action, "kmip") || service == "kmip"
+	case "certificate_renewal_windows_missed", "certificate_emergency_rotation_active", "certificate_mass_renewal_hotspot", "certificate_schedule_rebalancing_required":
+		return strings.Contains(action, "cert.renewal") || strings.Contains(action, "emergency_rotation") || strings.Contains(action, "mass_renewal") || service == "certs"
 	}
 	if strings.Contains(strings.ToLower(item.Title), "kmip") && (strings.Contains(action, "kmip") || service == "kmip") {
 		return true

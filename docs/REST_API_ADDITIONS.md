@@ -40,6 +40,43 @@ npm.cmd --prefix web/dashboard run validate:openapi
 }
 ```
 
+## Sender-Constrained REST Client Security
+
+Service prefix:
+
+```text
+/svc/auth/auth
+```
+
+Key additions:
+
+- `POST /auth/client-token`
+  - Issues client access tokens that can now be bound to a client certificate thumbprint (`oauth_mtls`) or proof key thumbprint (`dpop`)
+  - Accepts HTTP Message Signature-protected token requests for clients registered in `http_message_signature` mode
+- `GET /auth/clients`
+  - Returns client registrations with `auth_mode`, replay-protection state, and verification counters
+- `PUT /auth/clients/{id}`
+  - Updates per-client auth mode, mTLS binding fields, HTTP Message Signature key material, rate limit, and IP allowlist
+- `GET /auth/rest-client-security/summary`
+  - Returns aggregate sender-constrained auth posture:
+    - sender-constrained vs legacy clients
+    - replay-protected clients
+    - replay violations
+    - signature failures
+    - unsigned-request rejects
+
+Operational notes:
+
+- Resource requests protected by sender-constrained auth now emit specific audit subjects for:
+  - certificate binding failures
+  - DPoP failures and replay attempts
+  - HTTP Message Signature failures and replay attempts
+  - unsigned request blocks
+- The dashboard uses this summary directly in:
+  - `REST API -> REST Client Security`
+  - `Posture`
+  - `Compliance`
+
 ## Security Posture Management
 
 Service prefix:
@@ -87,6 +124,113 @@ Key additions:
 
 These routes are also published in the generated `compliance.openapi.*` spec.
 
+## Policy-Driven Autokey / Key Handle Provisioning
+
+Service prefix:
+
+```text
+/svc/autokey/autokey
+```
+
+Key additions:
+
+- `GET /autokey/settings`
+  - Returns the tenant Autokey control settings:
+    - enablement
+    - enforce vs audit mode
+    - approval/justification requirements
+    - template override rules
+- `PUT /autokey/settings`
+  - Updates the tenant Autokey control settings
+- `GET /autokey/templates`
+  - Lists resource templates used to generate managed handle names, key names, algorithms, purposes, labels, and approval defaults
+- `POST /autokey/templates`
+- `PUT /autokey/templates/{id}`
+- `DELETE /autokey/templates/{id}`
+  - Create, update, and delete Autokey templates
+- `GET /autokey/service-policies`
+  - Lists per-service default policies that define the default template and central key policy for a workload or service
+- `POST /autokey/service-policies`
+- `PUT /autokey/service-policies/{service}`
+- `DELETE /autokey/service-policies/{service}`
+  - Create, update, and delete per-service Autokey defaults
+- `POST /autokey/requests`
+  - Creates a key-handle provisioning request
+  - The service either:
+    - reuses an existing managed handle
+    - creates a pending governance request
+    - provisions the real key immediately through KeyCore
+- `GET /autokey/requests`
+  - Lists request history with status, policy-match result, approval state, and fulfilled key/handle binding
+- `GET /autokey/requests/{id}`
+  - Returns one request
+- `GET /autokey/handles`
+  - Lists the managed handle catalog for the tenant
+- `GET /autokey/summary`
+  - Returns the dashboard/posture/compliance summary:
+    - template count
+    - service-policy count
+    - handle count
+    - pending approvals
+    - provisioned in last 24h
+    - denied/failed count
+    - policy matched vs mismatched count
+
+Operational notes:
+
+- Autokey is tenant-scoped control-plane state, not node-local state.
+- Approval-required requests use the existing Governance approval engine.
+- Final key creation is delegated to KeyCore, so created keys remain standard KMS keys with Autokey labels.
+- The dashboard uses this summary directly in:
+  - `Autokey`
+  - `Posture`
+  - `Compliance`
+
+## Certificate Renewal Intelligence and ACME ARI
+
+Service prefix:
+
+```text
+/svc/certs
+```
+
+Key additions:
+
+- `GET /certs/renewal-intelligence`
+  - Returns the tenant renewal summary used by PKI and Compliance:
+    - coordinated renewal windows
+    - CA-directed schedule groups
+    - mass-renewal hotspots
+    - missed-window and emergency-rotation counters
+- `GET /certs/renewal-intelligence/{id}`
+  - Returns one certificate renewal record by certificate ID
+- `POST /certs/renewal-intelligence/refresh`
+  - Recomputes coordinated windows and hotspot analysis immediately
+- `GET /acme/renewal-info/{id}`
+  - Returns RFC 9773 ACME Renewal Information with:
+    - `suggestedWindow.start`
+    - `suggestedWindow.end`
+    - `explanationURL`
+    - `Retry-After` response header
+
+Operational notes:
+
+- ACME protocol settings now support:
+  - `enable_ari`
+  - `ari_poll_hours`
+  - `ari_window_bias_percent`
+  - `emergency_rotation_threshold_hours`
+  - `mass_renewal_risk_threshold`
+- Renewal intelligence is tenant-scoped PKI state derived from certificate validity and CA grouping.
+- Cluster replication treats this as part of the `certs` control-plane state, so coordinated windows and hotspot markers follow the replicated PKI state instead of staying node-local.
+- Compliance posture now carries renewal-window metrics, and Security Posture now raises findings for missed windows, emergency rotations, and mass-renewal hotspots using the audited cert lifecycle events.
+- Governance backup coverage includes certificate renewal intelligence when the `cert_renewal_intelligence` table is present.
+- Audit subjects now include:
+  - `audit.cert.renewal_schedule_viewed`
+  - `audit.cert.renewal_window_missed`
+  - `audit.cert.emergency_rotation_started`
+  - `audit.cert.mass_renewal_risk_detected`
+
 ## Reporting and Evidence Packs
 
 Service prefix:
@@ -119,7 +263,7 @@ Governance backups already include the stored state behind posture/compliance/re
 - operational log tables
 - the backup job catalog itself
 
-Backup artifact and key downloads now carry explicit `backup_coverage` metadata so operators can see which capability classes were preserved.
+Backup artifact and key downloads now carry explicit `backup_coverage` metadata so operators can see which capability classes were preserved. When Autokey tables are present, tenant Autokey settings, resource templates, per-service defaults, request catalogs, and managed key-handle bindings are included in the encrypted snapshot.
 
 ## AI Service
 

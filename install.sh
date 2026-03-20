@@ -35,6 +35,9 @@ FEATURE_KEYS=(
   qrng_generator
   ekm_database
   payment_crypto
+  autokey_provisioning
+  workload_identity
+  confidential_compute
   compliance_dashboard
   sbom_cbom
   reporting_alerting
@@ -975,7 +978,7 @@ suggest_cluster_profile_id() {
   local has_specialized="false"
   local key enabled
 
-  for key in secrets certs cloud_byok ekm_database data_protection; do
+  for key in secrets certs autokey_provisioning cloud_byok ekm_database data_protection; do
     enabled="$(requested_feature_enabled "${key}")"
     if [[ "${enabled}" == "true" ]]; then
       has_standard="true"
@@ -991,7 +994,7 @@ suggest_cluster_profile_id() {
     fi
   done
 
-  for key in payment_crypto hyok_proxy kmip_server pqc_migration qkd_interface qrng_generator mpc_engine ai_llm; do
+  for key in payment_crypto autokey_provisioning workload_identity confidential_compute hyok_proxy kmip_server pqc_migration qkd_interface qrng_generator mpc_engine ai_llm; do
     enabled="$(requested_feature_enabled "${key}")"
     if [[ "${enabled}" == "true" ]]; then
       has_specialized="true"
@@ -1173,6 +1176,11 @@ collect_inputs() {
   prompt_default CERTS_SEALED_KEY_PATH "CRWK sealed key path" "/var/lib/vecta/certs/crwk.sealed"
   prompt_default CERTS_PASSPHRASE_FILE_PATH "CRWK passphrase file path" "/var/lib/vecta/certs/bootstrap.passphrase"
   prompt_yes_no CERTS_USE_TPM_SEAL "Use TPM sealing for CRWK blob" "false"
+  prompt_yes_no CERTS_ENABLE_ARI "Enable ACME Renewal Information (RFC 9773)" "true"
+  prompt_default CERTS_ARI_POLL_HOURS "ACME ARI poll interval (hours)" "24"
+  prompt_default CERTS_ARI_WINDOW_BIAS_PERCENT "Renewal window bias (% of remaining lifetime)" "35"
+  prompt_default CERTS_EMERGENCY_ROTATION_THRESHOLD_HOURS "Emergency rotation threshold (hours)" "48"
+  prompt_default CERTS_MASS_RENEWAL_RISK_THRESHOLD "Mass-renewal hotspot threshold (certificates per CA/day bucket)" "8"
 
   CERTS_BOOTSTRAP_PASSPHRASE="${CERTS_BOOTSTRAP_PASSPHRASE:-}"
   CERTS_BOOTSTRAP_AUTOGEN="${CERTS_BOOTSTRAP_AUTOGEN:-false}"
@@ -1376,6 +1384,9 @@ spec:
         mpc_engine: ${FEATURE_mpc_engine}
         posture_management: ${FEATURE_posture_management}
         payment_crypto: ${FEATURE_payment_crypto}
+        autokey_provisioning: ${FEATURE_autokey_provisioning}
+        workload_identity: ${FEATURE_workload_identity}
+        confidential_compute: ${FEATURE_confidential_compute}
         pqc_migration: ${FEATURE_pqc_migration}
         qkd_interface: ${FEATURE_qkd_interface}
         qrng_generator: ${FEATURE_qrng_generator}
@@ -1394,6 +1405,12 @@ spec:
         sealed_key_path: ${CERTS_SEALED_KEY_PATH}
         passphrase_file_path: ${CERTS_PASSPHRASE_FILE_PATH}
         use_tpm_seal: ${CERTS_USE_TPM_SEAL}
+        acme_renewal:
+            enable_ari: ${CERTS_ENABLE_ARI}
+            ari_poll_hours: ${CERTS_ARI_POLL_HOURS}
+            ari_window_bias_percent: ${CERTS_ARI_WINDOW_BIAS_PERCENT}
+            emergency_rotation_threshold_hours: ${CERTS_EMERGENCY_ROTATION_THRESHOLD_HOURS}
+            mass_renewal_risk_threshold: ${CERTS_MASS_RENEWAL_RISK_THRESHOLD}
     license:
         activated_at: "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
         features_allowed:

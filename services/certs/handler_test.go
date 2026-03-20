@@ -235,6 +235,72 @@ func TestHandlerProtocolSchemas(t *testing.T) {
 	}
 }
 
+func TestHandlerRenewalEndpoints(t *testing.T) {
+	h, svc := newCertsHandler(t)
+	ctx := context.Background()
+	_, err := svc.UpsertProtocolConfig(ctx, UpsertProtocolConfigRequest{
+		TenantID:   "t-renew",
+		Protocol:   "acme",
+		Enabled:    true,
+		ConfigJSON: `{"enable_ari":true,"ari_poll_hours":6}`,
+		UpdatedBy:  "tester",
+	})
+	if err != nil {
+		t.Fatalf("upsert protocol config: %v", err)
+	}
+	ca, err := svc.CreateCA(ctx, CreateCARequest{
+		TenantID:   "t-renew",
+		Name:       "renew-root",
+		CALevel:    "root",
+		Algorithm:  "ECDSA-P384",
+		KeyBackend: "software",
+		Subject:    "CN=Renew Root",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	cert, _, err := svc.IssueCertificate(ctx, IssueCertificateRequest{
+		TenantID:     "t-renew",
+		CAID:         ca.ID,
+		SubjectCN:    "renew.t.local",
+		SANs:         []string{"renew.t.local"},
+		CertType:     "tls-server",
+		Algorithm:    "ECDSA-P256",
+		ServerKeygen: true,
+		ValidityDays: 30,
+		Protocol:     "acme",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.RefreshTenantRenewalIntelligence(ctx, "t-renew"); err != nil {
+		t.Fatalf("refresh renewal intelligence: %v", err)
+	}
+
+	summaryReq := httptest.NewRequest(http.MethodGet, "/certs/renewal-intelligence?tenant_id=t-renew", nil)
+	summaryRR := httptest.NewRecorder()
+	h.ServeHTTP(summaryRR, summaryReq)
+	if summaryRR.Code != http.StatusOK {
+		t.Fatalf("renewal summary status=%d body=%s", summaryRR.Code, summaryRR.Body.String())
+	}
+	if !strings.Contains(summaryRR.Body.String(), "\"ari_enabled\":true") {
+		t.Fatalf("expected ari summary body=%s", summaryRR.Body.String())
+	}
+
+	infoReq := httptest.NewRequest(http.MethodGet, "/acme/renewal-info/"+cert.ID+"?tenant_id=t-renew", nil)
+	infoRR := httptest.NewRecorder()
+	h.ServeHTTP(infoRR, infoReq)
+	if infoRR.Code != http.StatusOK {
+		t.Fatalf("acme renewal info status=%d body=%s", infoRR.Code, infoRR.Body.String())
+	}
+	if !strings.Contains(infoRR.Body.String(), "\"suggestedWindow\"") {
+		t.Fatalf("expected suggestedWindow body=%s", infoRR.Body.String())
+	}
+	if infoRR.Header().Get("Retry-After") == "" {
+		t.Fatalf("expected Retry-After header")
+	}
+}
+
 func TestHandlerDeleteCertificate(t *testing.T) {
 	h, svc := newCertsHandler(t)
 	ctx := context.Background()

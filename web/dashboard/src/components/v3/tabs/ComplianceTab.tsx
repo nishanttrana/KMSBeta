@@ -65,6 +65,11 @@ import {
   listReportingReportTemplates,
   listReportingScheduledReports
 } from "../../../lib/reporting";
+import { getAuthRESTClientSecuritySummary } from "../../../lib/authAdmin";
+import { getAutokeySummary } from "../../../lib/autokey";
+import { getCertRenewalSummary } from "../../../lib/certs";
+import { getPQCInventory } from "../../../lib/pqc";
+import { getWorkloadIdentitySummary } from "../../../lib/workloadIdentity";
 
 /* ── Shared chart tooltip ── */
 const ChartTip = ({ children, style }: any) => (
@@ -107,6 +112,11 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   const [keyHygiene, setKeyHygiene] = useState<any>(null);
   const [frameworkGaps, setFrameworkGaps] = useState<any[]>([]);
   const [anomalies, setAnomalies] = useState<any[]>([]);
+  const [pqcInventory, setPqcInventory] = useState<any>(null);
+  const [autokeySummary, setAutokeySummary] = useState<any>(null);
+  const [workloadSummary, setWorkloadSummary] = useState<any>(null);
+  const [restClientSecurity, setRestClientSecurity] = useState<any>(null);
+  const [certRenewalSummary, setCertRenewalSummary] = useState<any>(null);
 
   /* ── Reporting state ── */
   const [reportTemplates, setReportTemplates] = useState<any[]>([]);
@@ -185,7 +195,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   };
 
   const loadAssessment = async (opts: any = {}) => {
-    if (!session?.token) { setAssessment(null); setAssessmentDelta(null); setHistory([]); setSchedule({ enabled: false, frequency: "daily" }); setPostureBreakdown(null); setKeyHygiene(null); setFrameworkGaps([]); setAnomalies([]); setMttr(null); setMttd(null); return; }
+    if (!session?.token) { setAssessment(null); setAssessmentDelta(null); setHistory([]); setSchedule({ enabled: false, frequency: "daily" }); setPostureBreakdown(null); setKeyHygiene(null); setFrameworkGaps([]); setAnomalies([]); setPqcInventory(null); setAutokeySummary(null); setWorkloadSummary(null); setRestClientSecurity(null); setCertRenewalSummary(null); setMttr(null); setMttd(null); return; }
     if (!opts?.silent) setLoading(true);
     try {
       const payload = await loadTemplates();
@@ -194,10 +204,14 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       const effectiveTemplateID = hasTemplate ? candidateTemplateID : "default";
       if (effectiveTemplateID !== selectedTemplateID) setSelectedTemplateID(effectiveTemplateID);
 
-      const [assessOut, scheduleOut, historyOut] = await Promise.all([
+      const [assessOut, scheduleOut, historyOut, autokeySummaryOut, workloadSummaryOut, restClientSecurityOut, certRenewalSummaryOut] = await Promise.all([
         getComplianceAssessment(session, effectiveTemplateID),
         getComplianceAssessmentSchedule(session),
-        listComplianceAssessmentHistory(session, 20, effectiveTemplateID)
+        listComplianceAssessmentHistory(session, 20, effectiveTemplateID),
+        getAutokeySummary(session).catch(() => null),
+        getWorkloadIdentitySummary(session).catch(() => null),
+        getAuthRESTClientSecuritySummary(session).catch(() => null),
+        getCertRenewalSummary(session).catch(() => null)
       ]);
 
       const visibleHistory = (Array.isArray(historyOut) ? historyOut : []).filter((item: any) => isRealAssessment(item));
@@ -205,13 +219,18 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       setAssessment(visibleAssessment);
       setSchedule(scheduleOut || { enabled: false, frequency: "daily" });
       setHistory(visibleHistory);
+      setAutokeySummary(autokeySummaryOut || null);
+      setWorkloadSummary(workloadSummaryOut || null);
+      setRestClientSecurity(restClientSecurityOut || null);
+      setCertRenewalSummary(certRenewalSummaryOut || null);
       const hasAssessment = Boolean(visibleAssessment) || visibleHistory.length > 0;
       if (hasAssessment) {
-        const [breakdownOut, hygieneOut, anomalyOut, deltaOut, mttrOut, mttdOut] = await Promise.all([
+        const [breakdownOut, hygieneOut, anomalyOut, deltaOut, pqcInventoryOut, mttrOut, mttdOut] = await Promise.all([
           getCompliancePostureBreakdown(session).catch(() => null),
           getComplianceKeyHygiene(session).catch(() => null),
           getComplianceAuditAnomalies(session).catch(() => []),
           getComplianceAssessmentDelta(session, effectiveTemplateID).catch(() => null),
+          getPQCInventory(session).catch(() => null),
           getReportingMTTR(session).catch(() => null),
           getReportingMTTD(session).catch(() => null)
         ]);
@@ -219,6 +238,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
         setKeyHygiene(hygieneOut || null);
         setAnomalies(Array.isArray(anomalyOut) ? anomalyOut : []);
         setAssessmentDelta(deltaOut || null);
+        setPqcInventory(pqcInventoryOut || null);
         setMttr(mttrOut || null);
         setMttd(mttdOut || null);
 
@@ -237,6 +257,11 @@ export const ComplianceTab = ({ session, onToast }: any) => {
         setFrameworkGaps([]);
         setAnomalies([]);
         setAssessmentDelta(null);
+        setPqcInventory(null);
+        setAutokeySummary(autokeySummaryOut || null);
+        setWorkloadSummary(workloadSummaryOut || null);
+        setRestClientSecurity(restClientSecurityOut || null);
+        setCertRenewalSummary(certRenewalSummaryOut || null);
         setMttr(null);
         setMttd(null);
       }
@@ -1330,6 +1355,213 @@ export const ComplianceTab = ({ session, onToast }: any) => {
             </div>
           </Card>
         </div>
+
+        <div style={{ height: 10 }} />
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>PQC Migration Gaps</span>
+            <B c={Number(pqcInventory?.classical_usage?.length || 0) > 0 || Number(pqcInventory?.non_migrated_interfaces?.length || 0) > 0 || Number(pqcInventory?.non_migrated_certificates?.length || 0) > 0 ? "amber" : "green"}>
+              {`${Number(pqcInventory?.readiness_score || 0)}/100`}
+            </B>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+            <Stat l="RSA / ECC Active" v={String(Number(pqcInventory?.classical_usage?.length || 0))} c={Number(pqcInventory?.classical_usage?.length || 0) > 0 ? "amber" : "green"} />
+            <Stat l="Interfaces Pending" v={String(Number(pqcInventory?.non_migrated_interfaces?.length || 0))} c={Number(pqcInventory?.non_migrated_interfaces?.length || 0) > 0 ? "amber" : "green"} />
+            <Stat l="Certificates Pending" v={String(Number(pqcInventory?.non_migrated_certificates?.length || 0))} c={Number(pqcInventory?.non_migrated_certificates?.length || 0) > 0 ? "amber" : "green"} />
+            <Stat l="Tenant PQC Policy" v={String(pqcInventory?.policy?.profile_id || "balanced_hybrid").replaceAll("_", " ")} c="accent" />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Non-Migrated Interfaces</div>
+              {(pqcInventory?.non_migrated_interfaces || []).slice(0, 4).map((item: any) => (
+                <div key={`${item.interface_name}-${item.port}`} style={{ padding: "7px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{item.interface_name}</span>
+                    <span style={{ fontSize: 10, color: C.red }}>{item.effective_pqc_mode}</span>
+                  </div>
+                  <div style={{ fontSize: 9, color: C.dim }}>{`${item.protocol.toUpperCase()} ${item.bind_address}:${item.port}`}</div>
+                </div>
+              ))}
+              {!(pqcInventory?.non_migrated_interfaces || []).length && <div style={{ fontSize: 10, color: C.muted }}>No interface migration gaps.</div>}
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Non-Migrated Certificates</div>
+              {(pqcInventory?.non_migrated_certificates || []).slice(0, 4).map((item: any) => (
+                <div key={item.cert_id} style={{ padding: "7px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{item.subject_cn}</span>
+                    <span style={{ fontSize: 10, color: C.red }}>{item.algorithm}</span>
+                  </div>
+                  <div style={{ fontSize: 9, color: C.dim }}>{item.status || "active"}</div>
+                </div>
+              ))}
+              {!(pqcInventory?.non_migrated_certificates || []).length && <div style={{ fontSize: 10, color: C.muted }}>No certificate migration gaps.</div>}
+            </div>
+          </div>
+        </Card>
+
+        <div style={{ height: 10 }} />
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Autokey Controls</span>
+            <B c={!autokeySummary?.enabled ? "amber" : Number(autokeySummary?.failed_count || 0) > 0 ? "red" : Number(autokeySummary?.pending_approvals || 0) > 0 || Number(autokeySummary?.policy_mismatch_count || 0) > 0 ? "amber" : "green"}>
+              {!autokeySummary?.enabled ? "Disabled" : Number(autokeySummary?.failed_count || 0) > 0 ? "Failures" : Number(autokeySummary?.pending_approvals || 0) > 0 || Number(autokeySummary?.policy_mismatch_count || 0) > 0 ? "Needs review" : "Aligned"}
+            </B>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+            <Stat l="Templates" v={String(Number(autokeySummary?.template_count || 0))} c="blue" />
+            <Stat l="Service Defaults" v={String(Number(autokeySummary?.service_policy_count || 0))} c="blue" />
+            <Stat l="Pending Approvals" v={String(Number(autokeySummary?.pending_approvals || 0))} c={Number(autokeySummary?.pending_approvals || 0) > 0 ? "amber" : "green"} />
+            <Stat l="Policy Mismatches" v={String(Number(autokeySummary?.policy_mismatch_count || 0))} c={Number(autokeySummary?.policy_mismatch_count || 0) > 0 ? "amber" : "green"} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Policy Alignment</div>
+              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
+                  {Number(autokeySummary?.policy_mismatch_count || 0) > 0 ? "Generated requests diverged from org policy" : "Generated requests matched org policy"}
+                </div>
+                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                  {Number(autokeySummary?.policy_matched_count || 0)} matched • {Number(autokeySummary?.denied_count || 0)} denied • {Number(autokeySummary?.failed_count || 0)} failed
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
+              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Autokey request governance</div>
+                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                  Review approval backlog, keep default service policies enforced, and use tenant templates so generated handles stay aligned with org cryptography standards.
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <div style={{ height: 10 }} />
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Workload Identity Controls</span>
+            <B c={!workloadSummary?.enabled ? "amber" : Number(workloadSummary?.expired_svid_count || 0) > 0 || Number(workloadSummary?.over_privileged_count || 0) > 0 ? "red" : "green"}>
+              {!workloadSummary?.enabled ? "Disabled" : Number(workloadSummary?.expired_svid_count || 0) > 0 || Number(workloadSummary?.over_privileged_count || 0) > 0 ? "Needs review" : "Aligned"}
+            </B>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+            <Stat l="Trust Domain" v={String(workloadSummary?.trust_domain || "-")} c="accent" />
+            <Stat l="Expired SVIDs" v={String(Number(workloadSummary?.expired_svid_count || 0))} c={Number(workloadSummary?.expired_svid_count || 0) > 0 ? "red" : "green"} />
+            <Stat l="Over-Privileged" v={String(Number(workloadSummary?.over_privileged_count || 0))} c={Number(workloadSummary?.over_privileged_count || 0) > 0 ? "amber" : "green"} />
+            <Stat l="Static API Keys" v={Boolean(workloadSummary?.disable_static_api_keys) ? "Disabled" : "Allowed"} c={Boolean(workloadSummary?.disable_static_api_keys) ? "green" : "amber"} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Rotation & Usage</div>
+              <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                  <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>{Boolean(workloadSummary?.rotation_healthy) ? "Rotation healthy" : "Rotation attention needed"}</div>
+                  <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                    {Number(workloadSummary?.expiring_svid_count || 0)} expiring • {Number(workloadSummary?.token_exchange_count_24h || 0)} token exchanges • {Number(workloadSummary?.unique_workloads_using_keys_24h || 0)} workloads used keys in the last 24h
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
+              <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                  <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Identity hardening</div>
+                  <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                    Review registrations with wildcard access, rotate expiring SVIDs, and disable static API keys so workload callers use SPIFFE/SVID exchange instead of long-lived bearer secrets.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <div style={{ height: 10 }} />
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Certificate Renewal Controls</span>
+            <B c={Number(certRenewalSummary?.emergency_rotation_count || 0) > 0 ? "red" : Number(certRenewalSummary?.missed_window_count || 0) > 0 || Number(certRenewalSummary?.mass_renewal_risks?.length || 0) > 0 ? "amber" : "green"}>
+              {Number(certRenewalSummary?.emergency_rotation_count || 0) > 0 ? "Emergency rotation" : Number(certRenewalSummary?.missed_window_count || 0) > 0 || Number(certRenewalSummary?.mass_renewal_risks?.length || 0) > 0 ? "Needs review" : "Aligned"}
+            </B>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+            <Stat l="ARI Mode" v={Boolean(certRenewalSummary?.ari_enabled) ? "Enabled" : "Local"} c={Boolean(certRenewalSummary?.ari_enabled) ? "green" : "amber"} />
+            <Stat l="Missed Windows" v={String(Number(certRenewalSummary?.missed_window_count || 0))} c={Number(certRenewalSummary?.missed_window_count || 0) > 0 ? "amber" : "green"} />
+            <Stat l="Emergency Rotations" v={String(Number(certRenewalSummary?.emergency_rotation_count || 0))} c={Number(certRenewalSummary?.emergency_rotation_count || 0) > 0 ? "red" : "green"} />
+            <Stat l="Mass-Renewal Risks" v={String(Number(certRenewalSummary?.mass_renewal_risks?.length || 0))} c={Number(certRenewalSummary?.mass_renewal_risks?.length || 0) > 0 ? "amber" : "green"} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Window Discipline</div>
+              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
+                  {Number(certRenewalSummary?.missed_window_count || 0) > 0 ? "Renewal windows were missed" : "Coordinated renewal windows are being met"}
+                </div>
+                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                  {Number(certRenewalSummary?.due_soon_count || 0)} certificates are due soon. Poll every {Number(certRenewalSummary?.recommended_poll_hours || 24)} hours and keep clients renewing inside the CA-directed window.
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Risk Hotspots</div>
+              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
+                  {Number(certRenewalSummary?.mass_renewal_risks?.length || 0) > 0 ? "Mass-renewal concentration detected" : "No mass-renewal hotspot detected"}
+                </div>
+                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                  {Number(certRenewalSummary?.mass_renewal_risks?.length || 0) > 0 ? "Distribute certificate cohorts across more renewal days or widen the ARI bias window to avoid one-day rotation spikes." : "Renewal schedule is distributed across CA buckets without triggering the current hotspot threshold."}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <div style={{ height: 10 }} />
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>REST Client Authentication Controls</span>
+            <B c={Number(restClientSecurity?.total_clients || 0) === 0 ? "blue" : Number(restClientSecurity?.replay_violations || 0) > 0 || Number(restClientSecurity?.signature_failures || 0) > 0 ? "red" : Number(restClientSecurity?.non_compliant_clients || 0) > 0 || Number(restClientSecurity?.unsigned_rejects || 0) > 0 ? "amber" : "green"}>
+              {Number(restClientSecurity?.total_clients || 0) === 0 ? "No REST clients" : Number(restClientSecurity?.replay_violations || 0) > 0 || Number(restClientSecurity?.signature_failures || 0) > 0 ? "Control failures" : Number(restClientSecurity?.non_compliant_clients || 0) > 0 || Number(restClientSecurity?.unsigned_rejects || 0) > 0 ? "Migration pending" : "Aligned"}
+            </B>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+            <Stat l="Sender-Constrained" v={`${Number(restClientSecurity?.sender_constrained_clients || 0)}/${Number(restClientSecurity?.total_clients || 0)}`} c={Number(restClientSecurity?.non_compliant_clients || 0) > 0 ? "amber" : "green"} />
+            <Stat l="Replay Violations" v={String(Number(restClientSecurity?.replay_violations || 0))} c={Number(restClientSecurity?.replay_violations || 0) > 0 ? "red" : "green"} />
+            <Stat l="Signature Failures" v={String(Number(restClientSecurity?.signature_failures || 0))} c={Number(restClientSecurity?.signature_failures || 0) > 0 ? "red" : "green"} />
+            <Stat l="Unsigned Rejects" v={String(Number(restClientSecurity?.unsigned_rejects || 0))} c={Number(restClientSecurity?.unsigned_rejects || 0) > 0 ? "amber" : "green"} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Current Control State</div>
+              <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                  <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Signed vs unsigned REST traffic</div>
+                  <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                    {Number(restClientSecurity?.unsigned_rejects || 0)} unsigned requests were blocked. {Number(restClientSecurity?.verified_requests || 0)} signed or bound requests were accepted through the hardened path.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
+              <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                  <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Sender-constrained migration</div>
+                  <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                    Move legacy bearer clients to OAuth mTLS, DPoP, or HTTP Message Signatures and investigate any replay or signature failures before treating REST control posture as compliant.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
 
         <div style={{ height: 10 }} />
 

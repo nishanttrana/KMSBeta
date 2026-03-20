@@ -24,6 +24,9 @@ spec:
         mpc_engine: false
         posture_management: true
         payment_crypto: true
+        autokey_provisioning: true
+        workload_identity: true
+        confidential_compute: true
         pqc_migration: true
         qkd_interface: false
         qrng_generator: false
@@ -37,6 +40,12 @@ spec:
         sealed_key_path: /var/lib/vecta/certs/crwk.sealed
         passphrase_file_path: /etc/vecta/certs-bootstrap.secret
         use_tpm_seal: false
+        acme_renewal:
+            enable_ari: true
+            ari_poll_hours: 24
+            ari_window_bias_percent: 35
+            emergency_rotation_threshold_hours: 48
+            mass_renewal_risk_threshold: 8
     license:
         activated_at: "2026-02-19T16:06:36Z"
         features_allowed:

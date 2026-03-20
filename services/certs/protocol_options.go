@@ -10,6 +10,11 @@ type ACMEProtocolOptions struct {
 	RFC                 string   `json:"rfc"`
 	ChallengeTypes      []string `json:"challenge_types"`
 	AutoRenew           bool     `json:"auto_renew"`
+	EnableARI           bool     `json:"enable_ari"`
+	ARIPollHours        int      `json:"ari_poll_hours"`
+	ARIWindowBiasPercent int     `json:"ari_window_bias_percent"`
+	EmergencyRotationThresholdHours int `json:"emergency_rotation_threshold_hours"`
+	MassRenewalRiskThreshold int  `json:"mass_renewal_risk_threshold"`
 	RequireEAB          bool     `json:"require_eab"`
 	AllowWildcard       bool     `json:"allow_wildcard"`
 	AllowIPIdentifiers  bool     `json:"allow_ip_identifiers"`
@@ -61,6 +66,11 @@ func defaultACMEProtocolOptions() ACMEProtocolOptions {
 		RFC:                 "8555",
 		ChallengeTypes:      []string{"http-01", "dns-01"},
 		AutoRenew:           true,
+		EnableARI:           true,
+		ARIPollHours:        defaultARIPollHours,
+		ARIWindowBiasPercent: defaultARIWindowBiasPercent,
+		EmergencyRotationThresholdHours: defaultEmergencyRotationThresholdHr,
+		MassRenewalRiskThreshold: defaultMassRenewalRiskThreshold,
 		RequireEAB:          false,
 		AllowWildcard:       true,
 		AllowIPIdentifiers:  false,
@@ -173,7 +183,9 @@ func defaultProtocolConfigJSON(protocol string) string {
 func parseACMEProtocolOptions(raw string) (ACMEProtocolOptions, error) {
 	cfg := defaultACMEProtocolOptions()
 	if err := applyKnownJSON(raw, &cfg, map[string]struct{}{
-		"rfc": {}, "challenge_types": {}, "auto_renew": {}, "require_eab": {}, "allow_wildcard": {},
+		"rfc": {}, "challenge_types": {}, "auto_renew": {}, "enable_ari": {}, "ari_poll_hours": {},
+		"ari_window_bias_percent": {}, "emergency_rotation_threshold_hours": {}, "mass_renewal_risk_threshold": {},
+		"require_eab": {}, "allow_wildcard": {},
 		"allow_ip_identifiers": {}, "max_sans": {}, "default_validity_days": {}, "rate_limit_per_hour": {},
 	}); err != nil {
 		return ACMEProtocolOptions{}, err
@@ -194,6 +206,24 @@ func parseACMEProtocolOptions(raw string) (ACMEProtocolOptions, error) {
 	}
 	if cfg.RateLimitPerHour <= 0 {
 		cfg.RateLimitPerHour = 1000
+	}
+	if cfg.ARIPollHours <= 0 {
+		cfg.ARIPollHours = defaultARIPollHours
+	}
+	if cfg.ARIPollHours > 168 {
+		cfg.ARIPollHours = 168
+	}
+	if cfg.ARIWindowBiasPercent <= 0 {
+		cfg.ARIWindowBiasPercent = defaultARIWindowBiasPercent
+	}
+	if cfg.ARIWindowBiasPercent > 90 {
+		cfg.ARIWindowBiasPercent = 90
+	}
+	if cfg.EmergencyRotationThresholdHours <= 0 {
+		cfg.EmergencyRotationThresholdHours = defaultEmergencyRotationThresholdHr
+	}
+	if cfg.MassRenewalRiskThreshold <= 0 {
+		cfg.MassRenewalRiskThreshold = defaultMassRenewalRiskThreshold
 	}
 	return cfg, nil
 }

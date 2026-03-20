@@ -49,12 +49,14 @@ func (s *Service) GetPosture(ctx context.Context, tenantID string, refresh bool)
 func (s *Service) RecomputePosture(ctx context.Context, tenantID string) (PostureSnapshot, error) {
 	keys, _ := s.fetchKeys(ctx, tenantID)
 	certs, _ := s.fetchCerts(ctx, tenantID)
+	renewal, _ := s.fetchCertRenewalSummary(ctx, tenantID)
 	policies, _ := s.fetchPolicies(ctx, tenantID)
 	events, _ := s.fetchEvents(ctx, tenantID, 500)
 	alertStats, _ := s.fetchAlertStats(ctx, tenantID)
 
 	hygieneReport, keyHygieneScore := computeKeyHygiene(keys, policies)
 	certReport, certScore, certMetrics := computeCertHygiene(certs)
+	certScore = clampScore(certScore - renewalPenaltyScore(renewal))
 	keyHygieneScore = clampScore(int(0.75*float64(keyHygieneScore) + 0.25*float64(certScore)))
 	policyScore, policyMetrics := computePolicyCompliance(keys, policies, events, alertStats)
 	accessScore, accessMetrics := computeAccessSecurity(events, alertStats)
@@ -72,23 +74,28 @@ func (s *Service) RecomputePosture(ctx context.Context, tenantID string) (Postur
 	}
 
 	metrics := map[string]float64{
-		"approved_algorithm_pct": hygieneReport.ApprovedAlgorithmPct,
-		"rotation_coverage_pct":  hygieneReport.RotationCoveragePct,
-		"policy_coverage_pct":    hygieneReport.PolicyCoveragePct,
-		"orphaned_count":         float64(hygieneReport.OrphanedCount),
-		"deprecated_count":       float64(hygieneReport.DeprecatedCount),
-		"mfa_adoption_pct":       accessMetrics["mfa_adoption_pct"],
-		"failed_auth_rate_pct":   accessMetrics["failed_auth_rate_pct"],
-		"policy_violation_count": policyMetrics["policy_violation_count"],
-		"qsl_avg":                qslAvg,
-		"pqc_ready_pct":          cryptoMetrics["pqc_ready_pct"],
-		"cert_total":             float64(certReport.TotalCerts),
-		"cert_active":            float64(certReport.ActiveCount),
-		"cert_revoked":           float64(certReport.RevokedCount),
-		"cert_expired":           float64(certReport.ExpiredCount),
-		"cert_expiring_30d":      float64(certReport.Expiring30Days),
-		"cert_weak_algorithms":   float64(certReport.WeakAlgorithmCount),
-		"cert_pqc_class_pct":     certReport.PQCClassPct,
+		"approved_algorithm_pct":   hygieneReport.ApprovedAlgorithmPct,
+		"rotation_coverage_pct":    hygieneReport.RotationCoveragePct,
+		"policy_coverage_pct":      hygieneReport.PolicyCoveragePct,
+		"orphaned_count":           float64(hygieneReport.OrphanedCount),
+		"deprecated_count":         float64(hygieneReport.DeprecatedCount),
+		"mfa_adoption_pct":         accessMetrics["mfa_adoption_pct"],
+		"failed_auth_rate_pct":     accessMetrics["failed_auth_rate_pct"],
+		"policy_violation_count":   policyMetrics["policy_violation_count"],
+		"qsl_avg":                  qslAvg,
+		"pqc_ready_pct":            cryptoMetrics["pqc_ready_pct"],
+		"cert_total":               float64(certReport.TotalCerts),
+		"cert_active":              float64(certReport.ActiveCount),
+		"cert_revoked":             float64(certReport.RevokedCount),
+		"cert_expired":             float64(certReport.ExpiredCount),
+		"cert_expiring_30d":        float64(certReport.Expiring30Days),
+		"cert_weak_algorithms":     float64(certReport.WeakAlgorithmCount),
+		"cert_pqc_class_pct":       certReport.PQCClassPct,
+		"cert_ari_enabled":         boolToFloat(renewal.ARIEnabled),
+		"cert_missed_windows":      float64(renewal.MissedWindowCount),
+		"cert_emergency_rotations": float64(renewal.EmergencyRotationCount),
+		"cert_mass_renewal_risks":  float64(renewal.MassRenewalRiskCount),
+		"cert_due_soon_windows":    float64(renewal.DueSoonCount),
 	}
 	for k, v := range certMetrics {
 		metrics[k] = v
@@ -331,7 +338,8 @@ func (s *Service) RunAssessment(ctx context.Context, tenantID string, trigger st
 	certs, _ := s.fetchCerts(ctx, tenantID)
 
 	_, _, certMetrics := computeCertHygiene(certs)
-	findings := buildAssessmentFindings(keys, certs, posture)
+	renewal, _ := s.fetchCertRenewalSummary(ctx, tenantID)
+	findings := buildAssessmentFindings(keys, certs, renewal, posture)
 	pqc := summarizeAssessmentPQC(keys)
 
 	out := AssessmentResult{
@@ -1328,6 +1336,17 @@ func (s *Service) fetchCerts(ctx context.Context, tenantID string) ([]map[string
 	return items, nil
 }
 
+func (s *Service) fetchCertRenewalSummary(ctx context.Context, tenantID string) (CertRenewalSummary, error) {
+	if s.certs == nil {
+		return CertRenewalSummary{}, nil
+	}
+	summary, err := s.certs.GetRenewalSummary(ctx, tenantID)
+	if err != nil {
+		return CertRenewalSummary{}, nil
+	}
+	return summary, nil
+}
+
 func (s *Service) fetchPolicies(ctx context.Context, tenantID string) ([]map[string]interface{}, error) {
 	if s.policy == nil {
 		return []map[string]interface{}{}, nil
@@ -2047,7 +2066,7 @@ func summarizeAssessmentPQC(keys []map[string]interface{}) AssessmentPQC {
 	return out
 }
 
-func buildAssessmentFindings(keys []map[string]interface{}, certs []map[string]interface{}, posture PostureSnapshot) []AssessmentFinding {
+func buildAssessmentFindings(keys []map[string]interface{}, certs []map[string]interface{}, renewal CertRenewalSummary, posture PostureSnapshot) []AssessmentFinding {
 	findings := make([]AssessmentFinding, 0)
 
 	rsa1024 := 0
@@ -2138,6 +2157,33 @@ func buildAssessmentFindings(keys []map[string]interface{}, certs []map[string]i
 			Count:    certWeak,
 		})
 	}
+	if renewal.MissedWindowCount > 0 {
+		findings = append(findings, AssessmentFinding{
+			ID:       newID("finding"),
+			Severity: "high",
+			Title:    strconvItoa(renewal.MissedWindowCount) + " coordinated renewal windows missed",
+			Fix:      "Honor the CA-directed renewal window from ACME Renewal Information and clear renewal backlog immediately.",
+			Count:    renewal.MissedWindowCount,
+		})
+	}
+	if renewal.EmergencyRotationCount > 0 {
+		findings = append(findings, AssessmentFinding{
+			ID:       newID("finding"),
+			Severity: "critical",
+			Title:    strconvItoa(renewal.EmergencyRotationCount) + " certificates in emergency rotation state",
+			Fix:      "Execute emergency certificate rotation now and validate interface deployment health before expiry.",
+			Count:    renewal.EmergencyRotationCount,
+		})
+	}
+	if renewal.MassRenewalRiskCount > 0 {
+		findings = append(findings, AssessmentFinding{
+			ID:       newID("finding"),
+			Severity: "warning",
+			Title:    strconvItoa(renewal.MassRenewalRiskCount) + " mass-renewal hotspot groups detected",
+			Fix:      "Spread renewal load across the CA-directed schedule to avoid a thundering-herd rotation window.",
+			Count:    renewal.MassRenewalRiskCount,
+		})
+	}
 	if posture.PQCReadiness < 50 {
 		findings = append(findings, AssessmentFinding{
 			ID:       newID("finding"),
@@ -2152,6 +2198,27 @@ func buildAssessmentFindings(keys []map[string]interface{}, certs []map[string]i
 		return severityWeight(findings[i].Severity) > severityWeight(findings[j].Severity)
 	})
 	return findings
+}
+
+func renewalPenaltyScore(summary CertRenewalSummary) int {
+	penalty := 0
+	penalty += summary.MissedWindowCount * 8
+	penalty += summary.EmergencyRotationCount * 15
+	penalty += summary.MassRenewalRiskCount * 5
+	if !summary.ARIEnabled {
+		penalty += 6
+	}
+	if penalty > 45 {
+		penalty = 45
+	}
+	return penalty
+}
+
+func boolToFloat(v bool) float64 {
+	if v {
+		return 1
+	}
+	return 0
 }
 
 func severityWeight(severity string) int {

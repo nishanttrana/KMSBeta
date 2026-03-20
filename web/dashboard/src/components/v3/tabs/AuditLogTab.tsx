@@ -50,7 +50,8 @@ import {
 
 const SERVICES = [
   "kms-keycore", "kms-auth", "kms-policy", "kms-audit", "kms-compliance",
-  "kms-posture", "kms-reporting", "kms-cluster", "kms-billing", "kms-payment",
+  "kms-certs", "certs",
+  "kms-posture", "kms-reporting", "kms-cluster", "kms-billing", "kms-payment", "kms-confidential",
   "kms-connector-aws", "kms-connector-azure", "kms-connector-gcp",
   "kms-connector-hashicorp", "kms-connector-thales",
   "kms-sdk-go", "kms-sdk-python", "kms-sdk-java", "kms-sdk-node", "kms-sdk-rest",

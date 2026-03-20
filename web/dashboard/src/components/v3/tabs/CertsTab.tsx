@@ -34,6 +34,8 @@ import {
   uploadThirdPartyCertificate,
   getCertExpiryAlertPolicy,
   updateCertExpiryAlertPolicy,
+  getCertRenewalSummary,
+  refreshCertRenewalSummary,
   listCertMerkleEpochs,
   buildCertMerkleEpoch,
   getCertMerkleProof,
@@ -146,6 +148,8 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
   const [alertPolicyDaysBefore,setAlertPolicyDaysBefore]=useState(30);
   const [alertPolicyIncludeExternal,setAlertPolicyIncludeExternal]=useState(true);
   const [alertPolicySaving,setAlertPolicySaving]=useState(false);
+  const [renewalSummary,setRenewalSummary]=useState(null);
+  const [renewalRefreshing,setRenewalRefreshing]=useState(false);
   const [ctEpochs,setCTEpochs]=useState([]);
   const [ctBuilding,setCTBuilding]=useState(false);
   const [ctProofCertId,setCTProofCertId]=useState("");
@@ -205,6 +209,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       setInventory(Array.isArray(inventoryItems)?inventoryItems:[]);
       setAlertPolicyDaysBefore(Math.max(1,Math.min(3650,Number(alertPolicy?.days_before||30))));
       setAlertPolicyIncludeExternal(Boolean(alertPolicy?.include_external ?? true));
+      setRenewalSummary(await getCertRenewalSummary(session).catch(()=>null));
     }catch(e){
       onToast?.(`Certificates refresh failed: ${errMsg(e)}`);
     }finally{
@@ -218,7 +223,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     }
     setLoading(true);
     try{
-      const [caItems,certItems,profileItems,inventoryItems,protocolItems,protocolSchemaItems,alertPolicy,ctEpochItems]=await Promise.all([
+      const [caItems,certItems,profileItems,inventoryItems,protocolItems,protocolSchemaItems,alertPolicy,renewalSummaryOut,ctEpochItems]=await Promise.all([
         listCAs(session),
         loadAllCertificates(),
         listProfiles(session),
@@ -226,6 +231,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
         listProtocolConfigs(session),
         listProtocolSchemas(session),
         getCertExpiryAlertPolicy(session),
+        getCertRenewalSummary(session).catch(()=>null),
         listCertMerkleEpochs(session,50).catch(()=>[])
       ]);
       setCAs(Array.isArray(caItems)?caItems:[]);
@@ -236,6 +242,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       setProtocolSchemas(Array.isArray(protocolSchemaItems)?protocolSchemaItems:[]);
       setAlertPolicyDaysBefore(Math.max(1,Math.min(3650,Number(alertPolicy?.days_before||30))));
       setAlertPolicyIncludeExternal(Boolean(alertPolicy?.include_external ?? true));
+      setRenewalSummary(renewalSummaryOut||null);
       setCTEpochs(Array.isArray(ctEpochItems)?ctEpochItems:[]);
       if(!issueCAID&&Array.isArray(caItems)&&caItems.length){
         setIssueCAID(caItems[0].id);
@@ -301,7 +308,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
 
   const protocolDefaultConfigs=useMemo(()=>{
     const fallback={
-      acme:{rfc:"8555",challenge_types:["http-01","dns-01"],auto_renew:true,require_eab:false,allow_wildcard:true,allow_ip_identifiers:false,max_sans:100,default_validity_days:397,rate_limit_per_hour:1000},
+      acme:{rfc:"8555",challenge_types:["http-01","dns-01"],auto_renew:true,enable_ari:true,ari_poll_hours:24,ari_window_bias_percent:35,emergency_rotation_threshold_hours:48,mass_renewal_risk_threshold:8,require_eab:false,allow_wildcard:true,allow_ip_identifiers:false,max_sans:100,default_validity_days:397,rate_limit_per_hour:1000},
       est:{rfc:"7030",device_enrollment:true,server_keygen:true,auth_mode:"mtls",require_csr_pop:true,allow_reenroll:true,default_validity_days:397,max_csr_bytes:32768},
       scep:{rfc:"8894",legacy_mdm:true,challenge_password_required:false,challenge_password:"",allow_renewal:true,default_validity_days:397,max_csr_bytes:32768,digest_algorithms:["sha256","sha384"],encryption_algorithms:["aes256","aes128","des3"]},
       cmpv2:{rfc:"4210",enterprise_pki:true,message_types:["ir","cr","kur","rr"],require_message_protection:true,require_transaction_id:true,allow_implicit_confirm:true,default_validity_days:397},
@@ -319,7 +326,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
 
   const protocolOptionDocs=useMemo(()=>{
     const fallback={
-      acme:["challenge_types: http-01 | dns-01 | tls-alpn-01","require_eab: enforce external account binding","allow_wildcard / allow_ip_identifiers","max_sans / default_validity_days / rate_limit_per_hour"],
+      acme:["challenge_types: http-01 | dns-01 | tls-alpn-01","enable_ari + ari_poll_hours","ari_window_bias_percent + emergency_rotation_threshold_hours","mass_renewal_risk_threshold","require_eab: enforce external account binding","allow_wildcard / allow_ip_identifiers","max_sans / default_validity_days / rate_limit_per_hour"],
       est:["auth_mode: mtls | basic | bearer | none","require_csr_pop: CSR proof-of-possession required","server_keygen and allow_reenroll toggles","default_validity_days and max_csr_bytes guardrails"],
       scep:["challenge_password_required + challenge_password","allow_renewal toggle","digest_algorithms and encryption_algorithms policies","default_validity_days and max_csr_bytes guardrails"],
       cmpv2:["message_types: ir | cr | kur | rr","require_message_protection and require_transaction_id","allow_implicit_confirm toggle","default_validity_days policy"],
@@ -454,8 +461,10 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       const left=ts-Date.now();
       return left>=0&&left<=alertPolicyDaysBefore*24*3600*1000;
     }).length;
-    return {active,revoked,pqc,expiring,total:all.length,cas:(Array.isArray(cas)?cas:[]).length};
-  },[cas,certs,inventory,certByID,alertPolicyDaysBefore,alertPolicyIncludeExternal]);
+    const missedWindows=Number(renewalSummary?.missed_window_count||0);
+    const emergencyRotations=Number(renewalSummary?.emergency_rotation_count||0);
+    return {active,revoked,pqc,expiring,missedWindows,emergencyRotations,total:all.length,cas:(Array.isArray(cas)?cas:[]).length};
+  },[cas,certs,inventory,certByID,alertPolicyDaysBefore,alertPolicyIncludeExternal,renewalSummary]);
 
   const expiryItems=useMemo(()=>{
     const items=(Array.isArray(inventory)?inventory:[]).map((it)=>{
@@ -479,6 +488,18 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     items.sort((a,b)=>a.daysLeft-b.daysLeft);
     return items.slice(0,5);
   },[inventory,certByID,alertPolicyIncludeExternal]);
+
+  const renewalWindows=useMemo(()=>{
+    return (Array.isArray(renewalSummary?.renewal_windows)?renewalSummary.renewal_windows:[]).slice(0,5);
+  },[renewalSummary]);
+
+  const renewalSchedule=useMemo(()=>{
+    return (Array.isArray(renewalSummary?.ca_directed_schedule)?renewalSummary.ca_directed_schedule:[]).slice(0,5);
+  },[renewalSummary]);
+
+  const massRenewalRisks=useMemo(()=>{
+    return (Array.isArray(renewalSummary?.mass_renewal_risks)?renewalSummary.mass_renewal_risks:[]).slice(0,5);
+  },[renewalSummary]);
 
   const filteredCerts=useMemo(()=>{
     const q=String(certSearch||"").trim().toLowerCase();
@@ -1174,6 +1195,22 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     }
   };
 
+  const refreshRenewalIntel=async()=>{
+    if(!session){
+      return;
+    }
+    setRenewalRefreshing(true);
+    try{
+      const out=await refreshCertRenewalSummary(session);
+      setRenewalSummary(out||null);
+      onToast?.("Renewal intelligence refreshed.");
+    }catch(error){
+      onToast?.(`Renewal intelligence refresh failed: ${errMsg(error)}`);
+    }finally{
+      setRenewalRefreshing(false);
+    }
+  };
+
   const placeCertMenuFromButton=(button,menuWidth,menuHeight)=>{
     const rect=button.getBoundingClientRect();
     const left=Math.max(8,Math.min(window.innerWidth-menuWidth-8,rect.right-menuWidth));
@@ -1274,7 +1311,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
 
   return <div>
     {showOverviewPane&&<>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:14}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:14}}>
         <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${C.greenTint} 100%)`}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
             <ShieldCheck size={14} color={C.green}/>
@@ -1313,6 +1350,22 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
           </div>
           <div style={{fontSize:22,fontWeight:800,color:stats.expiring>0?C.amber:C.green,lineHeight:1}}>{String(stats.expiring)}</div>
           <div style={{fontSize:9,color:C.muted,marginTop:4}}>within {alertPolicyDaysBefore}d</div>
+        </Card>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.missedWindows>0?C.redTint:C.blueTint} 100%)`}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <AlertTriangle size={14} color={stats.missedWindows>0?C.red:C.blue}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Missed Windows</span>
+          </div>
+          <div style={{fontSize:22,fontWeight:800,color:stats.missedWindows>0?C.red:C.blue,lineHeight:1}}>{String(stats.missedWindows)}</div>
+          <div style={{fontSize:9,color:C.muted,marginTop:4}}>RFC 9773 renewal windows</div>
+        </Card>
+        <Card style={{padding:"12px 14px",background:`linear-gradient(135deg,${C.card} 0%,${stats.emergencyRotations>0?C.redTint:C.accentTint} 100%)`}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <ShieldAlert size={14} color={stats.emergencyRotations>0?C.red:C.accent}/>
+            <span style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:.5}}>Emergency Rotation</span>
+          </div>
+          <div style={{fontSize:22,fontWeight:800,color:stats.emergencyRotations>0?C.red:C.accent,lineHeight:1}}>{String(stats.emergencyRotations)}</div>
+          <div style={{fontSize:9,color:C.muted,marginTop:4}}>{renewalSummary?.ari_enabled===false?"Local coordinated policy":"CA-directed schedule active"}</div>
         </Card>
       </div>
     </>}
@@ -1380,6 +1433,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
               {label:"New Nonce",path:"/acme/new-nonce"},
               {label:"New Account",path:"/acme/new-account"},
               {label:"New Order",path:"/acme/new-order"},
+              {label:"Renewal Info",path:"/acme/renewal-info/{id}"},
               {label:"Challenge",path:"/acme/challenge/{id}"},
               {label:"Finalize",path:"/acme/finalize/{id}"},
               {label:"Cert Download",path:"/acme/cert/{id}"}
@@ -1401,6 +1455,10 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
           const features:string[]=
             meta.name==="acme"?[
               `Challenges: ${(configObj.challenge_types||["http-01","dns-01"]).join(", ")}`,
+              `ARI: ${configObj.enable_ari!==false?"Enabled":"Disabled"}`,
+              `Renewal Poll: ${configObj.ari_poll_hours||24}h`,
+              `Window Bias: ${configObj.ari_window_bias_percent||35}%`,
+              `Mass Risk Threshold: ${configObj.mass_renewal_risk_threshold||8}`,
               `Wildcard: ${configObj.allow_wildcard!==false?"Yes":"No"}`,
               `EAB Required: ${configObj.require_eab?"Yes":"No"}`,
               `Rate Limit: ${configObj.rate_limit_per_hour||1000}/hr`,
@@ -1525,6 +1583,81 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
               </div>;
             })}
             {!expiryItems.length?<div style={{fontSize:10,color:C.muted}}>No certificates available.</div>:null}
+          </div>
+        </Card>
+        <Card style={{padding:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <RefreshCcw size={14} color={C.accent}/>
+              <div style={{fontSize:13,fontWeight:700,color:C.text}}>Renewal Windows</div>
+            </div>
+            <B c={renewalSummary?.ari_enabled===false?"amber":"green"}>{renewalSummary?.ari_enabled===false?"Local":"ARI"}</B>
+          </div>
+          <div style={{fontSize:9,color:C.muted,marginBottom:8}}>
+            {`Poll every ${Number(renewalSummary?.recommended_poll_hours||24)}h • Missed ${Number(renewalSummary?.missed_window_count||0)} • Emergency ${Number(renewalSummary?.emergency_rotation_count||0)}`}
+          </div>
+          <div style={{display:"grid",gap:8}}>
+            {renewalWindows.map((item)=>{
+              const risk=String(item.risk_level||"low").toLowerCase();
+              const tone=risk==="critical"?"red":risk==="high"||risk==="medium"?"amber":"green";
+              return <div key={item.cert_id} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}>
+                  <div style={{fontSize:11,color:C.text,maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(item.subject_cn||item.cert_id)}</div>
+                  <B c={tone}>{String(item.renewal_state||"scheduled").replaceAll("_"," ")}</B>
+                </div>
+                <div style={{fontSize:9,color:C.dim,marginTop:3}}>
+                  {`${String(item.ca_name||item.ca_id||"CA")} • ${formatDestroyAt(String(item.window_start||""))} -> ${formatDestroyAt(String(item.window_end||""))}`}
+                </div>
+              </div>;
+            })}
+            {!renewalWindows.length?<div style={{fontSize:10,color:C.muted}}>No coordinated renewal windows available yet.</div>:null}
+          </div>
+        </Card>
+        <Card style={{padding:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+            <Server size={14} color={C.blue}/>
+            <div style={{fontSize:13,fontWeight:700,color:C.text}}>CA-Directed Schedule</div>
+          </div>
+          <div style={{display:"grid",gap:8}}>
+            {renewalSchedule.map((item)=>{
+              const risk=String(item.risk_level||"low").toLowerCase();
+              const tone=risk==="critical"?"red":risk==="high"||risk==="medium"?"amber":"green";
+              return <div key={`${item.ca_id}-${item.bucket}`} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}>
+                  <div style={{fontSize:11,color:C.text}}>{String(item.ca_name||item.ca_id||"CA")}</div>
+                  <B c={tone}>{`${item.count} certs`}</B>
+                </div>
+                <div style={{fontSize:9,color:C.dim,marginTop:3}}>
+                  {`${String(item.bucket||"-")} • ${formatDestroyAt(String(item.scheduled_start||""))} -> ${formatDestroyAt(String(item.scheduled_end||""))}`}
+                </div>
+              </div>;
+            })}
+            {!renewalSchedule.length?<div style={{fontSize:10,color:C.muted}}>No CA-directed schedule groups yet.</div>:null}
+          </div>
+        </Card>
+        <Card style={{padding:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <ShieldAlert size={14} color={massRenewalRisks.length?C.amber:C.green}/>
+              <div style={{fontSize:13,fontWeight:700,color:C.text}}>Mass-Renewal Risk</div>
+            </div>
+            <Btn small onClick={()=>void refreshRenewalIntel()} disabled={renewalRefreshing}>
+              {renewalRefreshing?"Refreshing...":"Refresh"}
+            </Btn>
+          </div>
+          <div style={{display:"grid",gap:8}}>
+            {massRenewalRisks.map((item)=>(
+              <div key={`${item.ca_id}-${item.bucket}-risk`} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}>
+                  <div style={{fontSize:11,color:C.text}}>{String(item.ca_name||item.ca_id||"CA")}</div>
+                  <B c="amber">{`${item.count} in bucket`}</B>
+                </div>
+                <div style={{fontSize:9,color:C.dim,marginTop:3}}>
+                  {`${String(item.bucket||"-")} • stagger certificates or widen renewal bias if this becomes an operational hotspot.`}
+                </div>
+              </div>
+            ))}
+            {!massRenewalRisks.length?<div style={{fontSize:10,color:C.muted}}>No mass-renewal hotspots detected.</div>:null}
           </div>
         </Card>
       </div>
@@ -2396,4 +2529,3 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     {promptDialog.ui}
   </div>;
 };
-

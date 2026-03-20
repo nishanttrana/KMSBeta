@@ -1135,6 +1135,9 @@ func isExcludedFromBackupTable(tableName string) bool {
 	if name == "governance_backup_jobs" {
 		return true
 	}
+	if name == "auth_request_nonce_cache" {
+		return true
+	}
 	if strings.Contains(name, "audit") {
 		return true
 	}
@@ -1172,8 +1175,16 @@ func buildBackupCoverageSummary(tables []string) backupCoverageSummary {
 			addCapability("security_posture_management")
 		case strings.HasPrefix(table, "compliance_"):
 			addCapability("compliance_assessments")
+		case table == "auth_client_registrations":
+			addCapability("identity_and_rest_client_security")
+		case strings.HasPrefix(table, "confidential_"):
+			addCapability("attested_key_release_and_confidential_compute")
+		case strings.HasPrefix(table, "workload_identity_"):
+			addCapability("workload_identity_and_spiffe_federation")
 		case strings.HasPrefix(table, "payment_"):
 			addCapability("payment_cryptography_and_ap2_policy")
+		case strings.HasPrefix(table, "autokey_"):
+			addCapability("policy_driven_autokey_and_key_handle_provisioning")
 		case strings.HasPrefix(table, "reporting_"):
 			addCapability("reporting_jobs_and_incidents")
 		case strings.HasPrefix(table, "governance_"):
@@ -1196,6 +1207,15 @@ func buildBackupCoverageSummary(tables []string) backupCoverageSummary {
 	if containsString(capabilityList, "security_posture_management") || containsString(capabilityList, "compliance_assessments") || containsString(capabilityList, "reporting_jobs_and_incidents") {
 		notes = append(notes, "Posture findings, compliance assessments, report jobs, incidents, and evidence-pack inputs are preserved when their service tables are present.")
 	}
+	if containsString(capabilityList, "identity_and_rest_client_security") {
+		notes = append(notes, "REST client registrations, sender-constrained auth modes, and verification counters are preserved. Short-lived replay nonce caches are intentionally excluded from backup payloads.")
+	}
+	if containsString(capabilityList, "policy_driven_autokey_and_key_handle_provisioning") {
+		notes = append(notes, "Autokey tenant settings, resource templates, per-service defaults, request approvals, and managed key-handle bindings are preserved when Autokey service tables are present.")
+	}
+	if containsString(capabilityList, "certificate_pki") {
+		notes = append(notes, "Certificate PKI backups include coordinated renewal windows, ACME Renewal Information state, missed-window markers, and emergency-rotation tracking when cert renewal intelligence tables are present.")
+	}
 	notes = append(notes, "Audit event partitions, alert runtime tables, and operational log tables remain excluded from encrypted backup payloads.")
 	return backupCoverageSummary{
 		IncludedCapabilities: capabilityList,
@@ -1205,6 +1225,7 @@ func buildBackupCoverageSummary(tables []string) backupCoverageSummary {
 			"alert_runtime_tables",
 			"operational_log_tables",
 			"backup_job_catalog",
+			"request_nonce_replay_caches",
 		},
 		Notes: notes,
 	}
