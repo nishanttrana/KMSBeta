@@ -1,6 +1,15 @@
 # REST API Additions
 
-This document covers the REST API surfaces that were added or expanded for the recent AI, SBOM, posture, compliance, and reporting functionality.
+This document covers the REST API surfaces that were added or expanded for the recent AI, SBOM, posture, compliance, reporting, identity, PQC, confidential-compute, Autokey, and certificate-lifecycle functionality.
+
+Operator-oriented explanations live here too:
+
+- [Architecture Guide](ARCHITECTURE.md)
+- [Administrator Guide](ADMIN_GUIDE.md)
+- [Component Guide](COMPONENT_GUIDE.md)
+- [Feature Reference](FEATURE_REFERENCE.md)
+- [Operations Guide](OPERATIONS_GUIDE.md)
+- [Workflow Examples](WORKFLOW_EXAMPLES.md)
 
 Machine-readable OpenAPI specs for these services are available in [docs/openapi/README.md](openapi/README.md).
 
