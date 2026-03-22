@@ -202,6 +202,91 @@ export const REST_API_CATALOG = [
     ]
   },
   {
+    id: "cert-star-summary",
+    group: "Management",
+    title: "Get ACME STAR Summary",
+    service: "certs",
+    method: "GET",
+    pathTemplate: "/certs/star/summary?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Returns tenant ACME STAR posture including subscription counts, due-soon subscriptions, delegated coverage, and rollout-group risk.",
+    requestExample: "GET /svc/certs/certs/star/summary?tenant_id=root",
+    responseExample: { summary: { enabled: true, subscription_count: 12, due_soon_count: 2, mass_rollout_risk_count: 1 } },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id or invalid query" },
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "cert-star-list",
+    group: "Management",
+    title: "List ACME STAR Subscriptions",
+    service: "certs",
+    method: "GET",
+    pathTemplate: "/certs/star/subscriptions?tenant_id={{tenant_id}}&limit=100",
+    bodyTemplate: "",
+    description: "Lists STAR subscriptions with delegated subscriber metadata, issuance counters, and next renewal timing.",
+    requestExample: "GET /svc/certs/certs/star/subscriptions?tenant_id=root&limit=100",
+    responseExample: { items: [{ id: "star_01", subject_cn: "edge.root.example", validity_hours: 24, auto_renew: true, status: "active" }] },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id or invalid query" },
+      { code: 401, meaning: "JWT missing/invalid/expired" }
+    ]
+  },
+  {
+    id: "cert-star-create",
+    group: "Management",
+    title: "Create ACME STAR Subscription",
+    service: "certs",
+    method: "POST",
+    pathTemplate: "/certs/star/subscriptions",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "name": "mesh-edge",\n  "ca_id": "ca_runtime",\n  "subject_cn": "edge.root.example",\n  "sans": ["edge.root.example"],\n  "validity_hours": 24,\n  "renew_before_minutes": 120,\n  "auto_renew": true,\n  "allow_delegation": true,\n  "delegated_subscriber": "spiffe://prod/ns/edge/sa/gateway",\n  "rollout_group": "mesh-us-east-1"\n}',
+    description: "Creates a short-lived automatically renewed certificate subscription under the tenant ACME STAR policy.",
+    requestExample: "POST /svc/certs/certs/star/subscriptions",
+    responseExample: { subscription: { id: "star_01", latest_cert_id: "crt_901", status: "active" } },
+    errorCodes: [
+      { code: 400, meaning: "CA/subject/STAR policy invalid" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 422, meaning: "Subscription blocked by PKI or STAR policy" }
+    ]
+  },
+  {
+    id: "cert-star-refresh",
+    group: "Management",
+    title: "Refresh ACME STAR Subscription",
+    service: "certs",
+    method: "POST",
+    pathTemplate: "/certs/star/subscriptions/{id}/refresh",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "force": true,\n  "requested_by": "platform-ops"\n}',
+    description: "Forces immediate re-issuance for one ACME STAR subscription.",
+    requestExample: "POST /svc/certs/certs/star/subscriptions/{id}/refresh",
+    responseExample: { subscription: { id: "star_01", latest_cert_id: "crt_902", issuance_count: 7, status: "active" } },
+    errorCodes: [
+      { code: 400, meaning: "Subscription not ready or request invalid" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Subscription not found" }
+    ]
+  },
+  {
+    id: "cert-star-delete",
+    group: "Management",
+    title: "Delete ACME STAR Subscription",
+    service: "certs",
+    method: "DELETE",
+    pathTemplate: "/certs/star/subscriptions/{id}?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Deletes a STAR subscription and stops future automated renewals for it.",
+    requestExample: "DELETE /svc/certs/certs/star/subscriptions/{id}?tenant_id=root",
+    responseExample: { status: "deleted" },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id or invalid request" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 404, meaning: "Subscription not found" }
+    ]
+  },
+  {
     id: "gov-requests",
     group: "Management",
     title: "List Governance Requests",
@@ -661,6 +746,111 @@ export const REST_API_CATALOG = [
       { code: 400, meaning: "Invalid payload or password policy violation" },
       { code: 401, meaning: "JWT missing/invalid/expired" },
       { code: 409, meaning: "Username already exists in tenant" }
+    ]
+  },
+  {
+    id: "auth-scim-settings-get",
+    group: "Auth & Identity",
+    title: "Get SCIM Settings",
+    service: "auth",
+    method: "GET",
+    pathTemplate: "/auth/scim/settings?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Returns tenant SCIM provisioning settings such as enablement, default role/status, deprovision behavior, and token prefix state.",
+    requestExample: "GET /svc/auth/auth/scim/settings?tenant_id=root",
+    responseExample: {
+      settings: {
+        tenant_id: "root",
+        enabled: true,
+        default_role: "readonly",
+        default_status: "active",
+        deprovision_mode: "disable",
+        group_role_mappings_enabled: true,
+        token_prefix: "scim_abcd1234"
+      }
+    },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Caller lacks SCIM configuration read privilege" }
+    ]
+  },
+  {
+    id: "auth-scim-settings-update",
+    group: "Auth & Identity",
+    title: "Update SCIM Settings",
+    service: "auth",
+    method: "PUT",
+    pathTemplate: "/auth/scim/settings",
+    bodyTemplate:
+      '{\n  "tenant_id": "{{tenant_id}}",\n  "enabled": true,\n  "default_role": "readonly",\n  "default_status": "active",\n  "default_must_change_password": false,\n  "deprovision_mode": "disable",\n  "group_role_mappings_enabled": true\n}',
+    description: "Creates or updates tenant SCIM provisioning controls for inbound user and group lifecycle.",
+    requestExample: "PUT /svc/auth/auth/scim/settings",
+    responseExample: { settings: { tenant_id: "root", enabled: true, default_role: "readonly" } },
+    errorCodes: [
+      { code: 400, meaning: "Invalid role, status, or deprovision mode" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Caller lacks SCIM configuration write privilege" }
+    ]
+  },
+  {
+    id: "auth-scim-users-list",
+    group: "Auth & Identity",
+    title: "List SCIM Users",
+    service: "auth",
+    method: "GET",
+    pathTemplate: "/auth/scim/users?tenant_id={{tenant_id}}",
+    bodyTemplate: "",
+    description: "Lists tenant users created or managed through SCIM provisioning, including external IDs and sync state.",
+    requestExample: "GET /svc/auth/auth/scim/users?tenant_id=root",
+    responseExample: {
+      items: [{ id: "usr_01", username: "alice.scim", email: "alice@example.com", external_id: "okta-user-01", status: "active" }]
+    },
+    errorCodes: [
+      { code: 400, meaning: "Missing tenant_id" },
+      { code: 401, meaning: "JWT missing/invalid/expired" },
+      { code: 403, meaning: "Caller lacks SCIM inventory read privilege" }
+    ]
+  },
+  {
+    id: "scim-users-create",
+    group: "Auth & Identity",
+    title: "SCIM Create User",
+    service: "auth",
+    method: "POST",
+    pathTemplate: "/scim/v2/Users",
+    bodyTemplate:
+      '{\n  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],\n  "externalId": "okta-user-01",\n  "userName": "alice.scim",\n  "displayName": "Alice SCIM",\n  "active": true,\n  "emails": [{"value": "alice@example.com", "primary": true}],\n  "roles": [{"value": "readonly"}]\n}',
+    description: "RFC 7644 SCIM user provisioning endpoint for IdPs such as Okta or Entra ID. Uses the tenant SCIM bearer token rather than a JWT admin session.",
+    requestExample: "POST /svc/auth/scim/v2/Users",
+    responseExample: {
+      id: "usr_01",
+      userName: "alice.scim",
+      externalId: "okta-user-01",
+      active: true
+    },
+    errorCodes: [
+      { code: 400, meaning: "Invalid SCIM user payload" },
+      { code: 401, meaning: "SCIM bearer token missing or invalid" },
+      { code: 403, meaning: "SCIM disabled for tenant or write not permitted" }
+    ]
+  },
+  {
+    id: "scim-groups-create",
+    group: "Auth & Identity",
+    title: "SCIM Create Group",
+    service: "auth",
+    method: "POST",
+    pathTemplate: "/scim/v2/Groups",
+    bodyTemplate:
+      '{\n  "schemas": ["urn:ietf:params:scim:schemas:core:2.0:Group"],\n  "externalId": "okta-group-ops",\n  "displayName": "Operations",\n  "members": [{"value": "usr_01"}]\n}',
+    description: "RFC 7644 SCIM group provisioning endpoint used to mirror directory groups and later map them to tenant roles inside KMS.",
+    requestExample: "POST /svc/auth/scim/v2/Groups",
+    responseExample: { id: "grp_01", displayName: "Operations", externalId: "okta-group-ops", members: [{ value: "usr_01" }] },
+    errorCodes: [
+      { code: 400, meaning: "Invalid group payload or unknown member" },
+      { code: 401, meaning: "SCIM bearer token missing or invalid" },
+      { code: 403, meaning: "SCIM disabled for tenant or write not permitted" }
     ]
   },
   {

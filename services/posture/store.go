@@ -204,6 +204,7 @@ SELECT
 		THEN 1 ELSE 0 END), 0) AS cert_emergency_rotations,
 	COALESCE(SUM(CASE
 		WHEN action LIKE 'audit.cert.mass_renewal_risk_detected%' OR action LIKE 'cert.mass_renewal_risk_detected%'
+		  OR action LIKE 'audit.cert.star_mass_rollout_risk_detected%' OR action LIKE 'cert.star_mass_rollout_risk_detected%'
 		THEN 1 ELSE 0 END), 0) AS cert_mass_renewal_risks,
 	COALESCE(SUM(CASE
 		WHEN action LIKE 'fips.non_approved%' OR error_code = 'fips_non_approved_algorithm'

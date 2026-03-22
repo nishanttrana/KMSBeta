@@ -70,6 +70,23 @@ type Store interface {
 	ListIdentityProviderConfigs(ctx context.Context, tenantID string) ([]IdentityProviderConfig, error)
 	GetIdentityProviderConfig(ctx context.Context, tenantID string, provider string) (IdentityProviderConfig, error)
 	UpsertIdentityProviderConfig(ctx context.Context, cfg IdentityProviderConfig) (IdentityProviderConfig, error)
+
+	GetSCIMSettings(ctx context.Context, tenantID string) (SCIMSettings, error)
+	UpsertSCIMSettings(ctx context.Context, settings SCIMSettings, tokenHash []byte) (SCIMSettings, error)
+	GetSCIMSettingsByTokenHash(ctx context.Context, tokenHash []byte) (SCIMSettings, error)
+	GetSCIMSummary(ctx context.Context, tenantID string) (SCIMSummary, error)
+	ListSCIMUsers(ctx context.Context, tenantID string) ([]SCIMUserRecord, error)
+	GetSCIMUserByID(ctx context.Context, tenantID string, userID string) (SCIMUserRecord, error)
+	GetSCIMUserByExternalID(ctx context.Context, tenantID string, externalID string) (SCIMUserRecord, error)
+	UpsertSCIMUser(ctx context.Context, user SCIMUserRecord) (SCIMUserRecord, bool, error)
+	ApplySCIMUserPatch(ctx context.Context, tenantID string, userID string, patch SCIMUserPatch) (SCIMUserRecord, error)
+	DeprovisionSCIMUser(ctx context.Context, tenantID string, userID string, mode string) (string, error)
+	ListSCIMGroups(ctx context.Context, tenantID string) ([]SCIMGroupRecord, error)
+	GetSCIMGroupByID(ctx context.Context, tenantID string, groupID string) (SCIMGroupRecord, error)
+	GetSCIMGroupByExternalID(ctx context.Context, tenantID string, externalID string) (SCIMGroupRecord, error)
+	UpsertSCIMGroup(ctx context.Context, group SCIMGroupRecord) (SCIMGroupRecord, bool, error)
+	ReplaceSCIMGroupMembers(ctx context.Context, tenantID string, groupID string, userIDs []string) error
+	DeleteSCIMGroup(ctx context.Context, tenantID string, groupID string) error
 }
 
 type SQLStore struct {
@@ -258,6 +275,74 @@ type GroupRoleBinding struct {
 	GroupID   string    `json:"group_id"`
 	RoleName  string    `json:"role_name"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type SCIMSettings struct {
+	TenantID                  string    `json:"tenant_id"`
+	Enabled                   bool      `json:"enabled"`
+	TokenPrefix               string    `json:"token_prefix,omitempty"`
+	DefaultRole               string    `json:"default_role"`
+	DefaultStatus             string    `json:"default_status"`
+	DefaultMustChangePassword bool      `json:"default_must_change_password"`
+	DeprovisionMode           string    `json:"deprovision_mode"`
+	GroupRoleMappingsEnabled  bool      `json:"group_role_mappings_enabled"`
+	UpdatedBy                 string    `json:"updated_by"`
+	CreatedAt                 time.Time `json:"created_at"`
+	UpdatedAt                 time.Time `json:"updated_at"`
+}
+
+type SCIMSummary struct {
+	TenantID                 string    `json:"tenant_id"`
+	Enabled                  bool      `json:"enabled"`
+	TokenConfigured          bool      `json:"token_configured"`
+	TokenPrefix              string    `json:"token_prefix,omitempty"`
+	DefaultRole              string    `json:"default_role"`
+	DefaultStatus            string    `json:"default_status"`
+	DeprovisionMode          string    `json:"deprovision_mode"`
+	GroupRoleMappingsEnabled bool      `json:"group_role_mappings_enabled"`
+	ManagedUsers             int       `json:"managed_users"`
+	ActiveUsers              int       `json:"active_users"`
+	DisabledUsers            int       `json:"disabled_users"`
+	ManagedGroups            int       `json:"managed_groups"`
+	ManagedMemberships       int       `json:"managed_memberships"`
+	RoleMappedGroups         int       `json:"role_mapped_groups"`
+	LastProvisionedAt        time.Time `json:"last_provisioned_at,omitempty"`
+	LastDeprovisionedAt      time.Time `json:"last_deprovisioned_at,omitempty"`
+}
+
+type SCIMUserRecord struct {
+	User
+	ExternalID   string    `json:"external_id,omitempty"`
+	DisplayName  string    `json:"display_name,omitempty"`
+	GivenName    string    `json:"given_name,omitempty"`
+	FamilyName   string    `json:"family_name,omitempty"`
+	SCIMManaged  bool      `json:"scim_managed"`
+	LastSyncedAt time.Time `json:"last_synced_at,omitempty"`
+}
+
+type SCIMUserPatch struct {
+	Username    *string
+	Email       *string
+	ExternalID  *string
+	DisplayName *string
+	GivenName   *string
+	FamilyName  *string
+	Role        *string
+	Status      *string
+}
+
+type SCIMGroupRecord struct {
+	ID          string    `json:"id"`
+	TenantID    string    `json:"tenant_id"`
+	ExternalID  string    `json:"external_id,omitempty"`
+	DisplayName string    `json:"display_name"`
+	Description string    `json:"description,omitempty"`
+	Active      bool      `json:"active"`
+	SCIMManaged bool      `json:"scim_managed"`
+	MemberIDs   []string  `json:"member_ids,omitempty"`
+	MemberCount int       `json:"member_count"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 func (s *SQLStore) CreateTenant(ctx context.Context, t Tenant) error {
@@ -561,13 +646,23 @@ func (s *SQLStore) ListGroupRolesForUser(ctx context.Context, tenantID string, u
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT DISTINCT gr.role_name
 FROM auth_group_role_bindings gr
-JOIN key_access_group_members gm
+JOIN (
+    SELECT tenant_id, group_id, user_id FROM key_access_group_members
+    UNION
+    SELECT tenant_id, group_id, user_id
+    FROM auth_scim_group_members
+    WHERE COALESCE((
+        SELECT group_role_mappings_enabled
+        FROM auth_scim_settings
+        WHERE tenant_id=$1
+    ), TRUE)=TRUE
+) gm
   ON gm.tenant_id = gr.tenant_id AND gm.group_id = gr.group_id
 WHERE gr.tenant_id=$1 AND gm.user_id=$2
 ORDER BY gr.role_name
 `, tenantID, userID)
 	if err != nil {
-		if isGroupRoleSchemaMissing(err) || isGroupMembershipSchemaMissing(err) {
+		if isGroupRoleSchemaMissing(err) || isGroupMembershipSchemaMissing(err) || isSCIMSchemaMissing(err) {
 			return []string{}, nil
 		}
 		return nil, err
@@ -1355,6 +1450,597 @@ ON CONFLICT (tenant_id, provider) DO UPDATE SET
 	return s.GetIdentityProviderConfig(ctx, cfg.TenantID, cfg.Provider)
 }
 
+func (s *SQLStore) GetSCIMSettings(ctx context.Context, tenantID string) (SCIMSettings, error) {
+	var out SCIMSettings
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, enabled, COALESCE(token_prefix,''), default_role, default_status,
+       default_must_change_password, deprovision_mode, group_role_mappings_enabled,
+       updated_by, created_at, updated_at
+FROM auth_scim_settings
+WHERE tenant_id=$1
+`, tenantID).Scan(
+		&out.TenantID,
+		&out.Enabled,
+		&out.TokenPrefix,
+		&out.DefaultRole,
+		&out.DefaultStatus,
+		&out.DefaultMustChangePassword,
+		&out.DeprovisionMode,
+		&out.GroupRoleMappingsEnabled,
+		&out.UpdatedBy,
+		&out.CreatedAt,
+		&out.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return SCIMSettings{}, errNotFound
+	}
+	return out, err
+}
+
+func (s *SQLStore) UpsertSCIMSettings(ctx context.Context, settings SCIMSettings, tokenHash []byte) (SCIMSettings, error) {
+	settings.TenantID = strings.TrimSpace(settings.TenantID)
+	if settings.TenantID == "" {
+		return SCIMSettings{}, errors.New("tenant_id is required")
+	}
+	currentTokenHash, currentPrefix, _ := s.getSCIMTokenState(ctx, settings.TenantID)
+	if len(tokenHash) == 0 {
+		tokenHash = currentTokenHash
+		if strings.TrimSpace(settings.TokenPrefix) == "" {
+			settings.TokenPrefix = currentPrefix
+		}
+	}
+	if strings.TrimSpace(settings.TokenPrefix) == "" {
+		settings.TokenPrefix = currentPrefix
+	}
+	var tokenArg any
+	if len(tokenHash) > 0 {
+		tokenArg = tokenHash
+	}
+	if _, err := s.GetTenant(ctx, settings.TenantID); err != nil {
+		return SCIMSettings{}, err
+	}
+	var existing bool
+	if _, err := s.GetSCIMSettings(ctx, settings.TenantID); err == nil {
+		existing = true
+	} else if !errors.Is(err, errNotFound) {
+		return SCIMSettings{}, err
+	}
+	if existing {
+		_, err := s.db.SQL().ExecContext(ctx, `
+UPDATE auth_scim_settings
+SET enabled=$1,
+    token_hash=$2,
+    token_prefix=$3,
+    default_role=$4,
+    default_status=$5,
+    default_must_change_password=$6,
+    deprovision_mode=$7,
+    group_role_mappings_enabled=$8,
+    updated_by=$9,
+    updated_at=CURRENT_TIMESTAMP
+WHERE tenant_id=$10
+`, settings.Enabled, tokenArg, settings.TokenPrefix, settings.DefaultRole, settings.DefaultStatus, settings.DefaultMustChangePassword, settings.DeprovisionMode, settings.GroupRoleMappingsEnabled, settings.UpdatedBy, settings.TenantID)
+		if err != nil {
+			return SCIMSettings{}, err
+		}
+	} else {
+		_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO auth_scim_settings (
+    tenant_id, enabled, token_hash, token_prefix, default_role, default_status,
+    default_must_change_password, deprovision_mode, group_role_mappings_enabled,
+    updated_by, created_at, updated_at
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+`, settings.TenantID, settings.Enabled, tokenArg, settings.TokenPrefix, settings.DefaultRole, settings.DefaultStatus, settings.DefaultMustChangePassword, settings.DeprovisionMode, settings.GroupRoleMappingsEnabled, settings.UpdatedBy)
+		if err != nil {
+			return SCIMSettings{}, err
+		}
+	}
+	return s.GetSCIMSettings(ctx, settings.TenantID)
+}
+
+func (s *SQLStore) GetSCIMSettingsByTokenHash(ctx context.Context, tokenHash []byte) (SCIMSettings, error) {
+	var out SCIMSettings
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT tenant_id, enabled, COALESCE(token_prefix,''), default_role, default_status,
+       default_must_change_password, deprovision_mode, group_role_mappings_enabled,
+       updated_by, created_at, updated_at
+FROM auth_scim_settings
+WHERE token_hash=$1 AND enabled=TRUE
+`, tokenHash).Scan(
+		&out.TenantID,
+		&out.Enabled,
+		&out.TokenPrefix,
+		&out.DefaultRole,
+		&out.DefaultStatus,
+		&out.DefaultMustChangePassword,
+		&out.DeprovisionMode,
+		&out.GroupRoleMappingsEnabled,
+		&out.UpdatedBy,
+		&out.CreatedAt,
+		&out.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return SCIMSettings{}, errNotFound
+	}
+	return out, err
+}
+
+func (s *SQLStore) GetSCIMSummary(ctx context.Context, tenantID string) (SCIMSummary, error) {
+	settings, err := s.GetSCIMSettings(ctx, tenantID)
+	if errors.Is(err, errNotFound) {
+		settings = SCIMSettings{
+			TenantID:                 tenantID,
+			DefaultRole:              "readonly",
+			DefaultStatus:            "active",
+			DeprovisionMode:          "disable",
+			GroupRoleMappingsEnabled: true,
+		}
+	} else if err != nil {
+		return SCIMSummary{}, err
+	}
+	out := SCIMSummary{
+		TenantID:                 tenantID,
+		Enabled:                  settings.Enabled,
+		TokenConfigured:          strings.TrimSpace(settings.TokenPrefix) != "",
+		TokenPrefix:              settings.TokenPrefix,
+		DefaultRole:              settings.DefaultRole,
+		DefaultStatus:            settings.DefaultStatus,
+		DeprovisionMode:          settings.DeprovisionMode,
+		GroupRoleMappingsEnabled: settings.GroupRoleMappingsEnabled,
+	}
+	_ = s.db.SQL().QueryRowContext(ctx, `
+SELECT
+  COALESCE(SUM(CASE WHEN u.status='active' THEN 1 ELSE 0 END),0) AS active_users,
+  COALESCE(SUM(CASE WHEN u.status<>'active' THEN 1 ELSE 0 END),0) AS disabled_users,
+  COUNT(*)
+FROM auth_scim_user_links l
+JOIN auth_users u ON u.tenant_id = l.tenant_id AND u.id = l.user_id
+WHERE l.tenant_id=$1 AND l.scim_managed=TRUE
+`, tenantID).Scan(&out.ActiveUsers, &out.DisabledUsers, &out.ManagedUsers)
+	_ = s.db.SQL().QueryRowContext(ctx, `
+SELECT COALESCE(COUNT(*),0) FROM auth_scim_groups WHERE tenant_id=$1 AND scim_managed=TRUE
+`, tenantID).Scan(&out.ManagedGroups)
+	_ = s.db.SQL().QueryRowContext(ctx, `
+SELECT COALESCE(COUNT(*),0) FROM auth_scim_group_members WHERE tenant_id=$1
+`, tenantID).Scan(&out.ManagedMemberships)
+	_ = s.db.SQL().QueryRowContext(ctx, `
+SELECT COALESCE(COUNT(*),0) FROM auth_group_role_bindings WHERE tenant_id=$1
+`, tenantID).Scan(&out.RoleMappedGroups)
+	var lastProvisioned sql.NullTime
+	var lastDeprovisioned sql.NullTime
+	_ = s.db.SQL().QueryRowContext(ctx, `
+SELECT MAX(last_synced_at), MAX(deprovisioned_at)
+FROM auth_scim_user_links
+WHERE tenant_id=$1
+`, tenantID).Scan(&lastProvisioned, &lastDeprovisioned)
+	if lastProvisioned.Valid {
+		out.LastProvisionedAt = lastProvisioned.Time
+	}
+	if lastDeprovisioned.Valid {
+		out.LastDeprovisionedAt = lastDeprovisioned.Time
+	}
+	return out, nil
+}
+
+func (s *SQLStore) ListSCIMUsers(ctx context.Context, tenantID string) ([]SCIMUserRecord, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT u.id, u.tenant_id, u.username, u.email, u.role, u.status, u.must_change_password, u.created_at,
+       COALESCE(l.external_id,''), COALESCE(l.display_name,''), COALESCE(l.given_name,''), COALESCE(l.family_name,''),
+       COALESCE(l.scim_managed,FALSE), l.last_synced_at
+FROM auth_users u
+JOIN auth_scim_user_links l ON l.tenant_id = u.tenant_id AND l.user_id = u.id
+WHERE u.tenant_id=$1
+ORDER BY u.username
+`, tenantID)
+	if err != nil {
+		if isSCIMSchemaMissing(err) {
+			return []SCIMUserRecord{}, nil
+		}
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]SCIMUserRecord, 0)
+	for rows.Next() {
+		var item SCIMUserRecord
+		var syncedAt sql.NullTime
+		if err := rows.Scan(
+			&item.ID, &item.TenantID, &item.Username, &item.Email, &item.Role, &item.Status, &item.MustChangePassword, &item.CreatedAt,
+			&item.ExternalID, &item.DisplayName, &item.GivenName, &item.FamilyName, &item.SCIMManaged, &syncedAt,
+		); err != nil {
+			return nil, err
+		}
+		if syncedAt.Valid {
+			item.LastSyncedAt = syncedAt.Time
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) GetSCIMUserByID(ctx context.Context, tenantID string, userID string) (SCIMUserRecord, error) {
+	var item SCIMUserRecord
+	var syncedAt sql.NullTime
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT u.id, u.tenant_id, u.username, u.email, u.role, u.status, u.must_change_password, u.created_at,
+       COALESCE(l.external_id,''), COALESCE(l.display_name,''), COALESCE(l.given_name,''), COALESCE(l.family_name,''),
+       COALESCE(l.scim_managed,FALSE), l.last_synced_at
+FROM auth_users u
+JOIN auth_scim_user_links l ON l.tenant_id = u.tenant_id AND l.user_id = u.id
+WHERE u.tenant_id=$1 AND u.id=$2
+`, tenantID, userID).Scan(
+		&item.ID, &item.TenantID, &item.Username, &item.Email, &item.Role, &item.Status, &item.MustChangePassword, &item.CreatedAt,
+		&item.ExternalID, &item.DisplayName, &item.GivenName, &item.FamilyName, &item.SCIMManaged, &syncedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return SCIMUserRecord{}, errNotFound
+	}
+	if err != nil {
+		return SCIMUserRecord{}, err
+	}
+	if syncedAt.Valid {
+		item.LastSyncedAt = syncedAt.Time
+	}
+	return item, nil
+}
+
+func (s *SQLStore) GetSCIMUserByExternalID(ctx context.Context, tenantID string, externalID string) (SCIMUserRecord, error) {
+	var userID string
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT user_id
+FROM auth_scim_user_links
+WHERE tenant_id=$1 AND external_id=$2
+`, tenantID, externalID).Scan(&userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return SCIMUserRecord{}, errNotFound
+	}
+	if err != nil {
+		return SCIMUserRecord{}, err
+	}
+	return s.GetSCIMUserByID(ctx, tenantID, userID)
+}
+
+func (s *SQLStore) UpsertSCIMUser(ctx context.Context, user SCIMUserRecord) (SCIMUserRecord, bool, error) {
+	if strings.TrimSpace(user.TenantID) == "" {
+		return SCIMUserRecord{}, false, errors.New("tenant_id is required")
+	}
+	if strings.TrimSpace(user.Username) == "" || strings.TrimSpace(user.Email) == "" {
+		return SCIMUserRecord{}, false, errors.New("username and email are required")
+	}
+	if strings.TrimSpace(user.Role) == "" {
+		return SCIMUserRecord{}, false, errors.New("role is required")
+	}
+	if strings.TrimSpace(user.Status) == "" {
+		user.Status = "active"
+	}
+	var created bool
+	err := s.db.WithTenantTx(ctx, user.TenantID, func(tx *sql.Tx) error {
+		existingID := ""
+		if strings.TrimSpace(user.ExternalID) != "" {
+			if err := tx.QueryRowContext(ctx, `
+SELECT user_id FROM auth_scim_user_links WHERE tenant_id=$1 AND external_id=$2
+`, user.TenantID, user.ExternalID).Scan(&existingID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return err
+			}
+		}
+		if existingID == "" {
+			if err := tx.QueryRowContext(ctx, `
+SELECT id FROM auth_users WHERE tenant_id=$1 AND username=$2
+`, user.TenantID, user.Username).Scan(&existingID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return err
+			}
+		}
+		if existingID == "" {
+			if err := tx.QueryRowContext(ctx, `
+SELECT id FROM auth_users WHERE tenant_id=$1 AND email=$2
+`, user.TenantID, user.Email).Scan(&existingID); err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return err
+			}
+		}
+		if existingID == "" {
+			created = true
+			if strings.TrimSpace(user.ID) == "" {
+				user.ID = NewID("usr")
+			}
+			if _, err := tx.ExecContext(ctx, `
+INSERT INTO auth_users (
+    id, tenant_id, username, email, pwd_hash, totp_secret, role, status, must_change_password, created_at, updated_at
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+`, user.ID, user.TenantID, user.Username, user.Email, user.Password, nil, user.Role, user.Status, user.MustChangePassword); err != nil {
+				return err
+			}
+			existingID = user.ID
+		} else {
+			user.ID = existingID
+			if _, err := tx.ExecContext(ctx, `
+UPDATE auth_users
+SET username=$1, email=$2, role=$3, status=$4, must_change_password=$5, updated_at=CURRENT_TIMESTAMP
+WHERE tenant_id=$6 AND id=$7
+`, user.Username, user.Email, user.Role, user.Status, user.MustChangePassword, user.TenantID, existingID); err != nil {
+				return err
+			}
+		}
+		if _, err := tx.ExecContext(ctx, `
+INSERT INTO auth_scim_user_links (
+    tenant_id, user_id, external_id, display_name, given_name, family_name, scim_managed,
+    source, last_synced_at, deprovisioned_at, created_at, updated_at
+) VALUES ($1,$2,$3,$4,$5,$6,TRUE,'scim',CURRENT_TIMESTAMP,NULL,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id, user_id) DO UPDATE SET
+    external_id=EXCLUDED.external_id,
+    display_name=EXCLUDED.display_name,
+    given_name=EXCLUDED.given_name,
+    family_name=EXCLUDED.family_name,
+    scim_managed=TRUE,
+    source='scim',
+    last_synced_at=CURRENT_TIMESTAMP,
+    deprovisioned_at=NULL,
+    updated_at=CURRENT_TIMESTAMP
+`, user.TenantID, existingID, nullableString(user.ExternalID), user.DisplayName, user.GivenName, user.FamilyName); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return SCIMUserRecord{}, false, err
+	}
+	item, err := s.GetSCIMUserByID(ctx, user.TenantID, user.ID)
+	return item, created, err
+}
+
+func (s *SQLStore) ApplySCIMUserPatch(ctx context.Context, tenantID string, userID string, patch SCIMUserPatch) (SCIMUserRecord, error) {
+	item, err := s.GetSCIMUserByID(ctx, tenantID, userID)
+	if err != nil {
+		return SCIMUserRecord{}, err
+	}
+	if patch.Username != nil {
+		item.Username = strings.TrimSpace(*patch.Username)
+	}
+	if patch.Email != nil {
+		item.Email = strings.TrimSpace(*patch.Email)
+	}
+	if patch.ExternalID != nil {
+		item.ExternalID = strings.TrimSpace(*patch.ExternalID)
+	}
+	if patch.DisplayName != nil {
+		item.DisplayName = strings.TrimSpace(*patch.DisplayName)
+	}
+	if patch.GivenName != nil {
+		item.GivenName = strings.TrimSpace(*patch.GivenName)
+	}
+	if patch.FamilyName != nil {
+		item.FamilyName = strings.TrimSpace(*patch.FamilyName)
+	}
+	if patch.Role != nil {
+		item.Role = strings.TrimSpace(*patch.Role)
+	}
+	if patch.Status != nil {
+		item.Status = strings.TrimSpace(*patch.Status)
+	}
+	item.Password = make([]byte, 1)
+	updated, _, err := s.UpsertSCIMUser(ctx, item)
+	return updated, err
+}
+
+func (s *SQLStore) DeprovisionSCIMUser(ctx context.Context, tenantID string, userID string, mode string) (string, error) {
+	item, err := s.GetSCIMUserByID(ctx, tenantID, userID)
+	if err != nil {
+		return "", err
+	}
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	if mode == "" {
+		mode = "disable"
+	}
+	err = s.db.WithTenantTx(ctx, tenantID, func(tx *sql.Tx) error {
+		if mode == "delete" {
+			if _, err := tx.ExecContext(ctx, `DELETE FROM auth_scim_group_members WHERE tenant_id=$1 AND user_id=$2`, tenantID, userID); err != nil {
+				return err
+			}
+			if _, err := tx.ExecContext(ctx, `DELETE FROM auth_scim_user_links WHERE tenant_id=$1 AND user_id=$2`, tenantID, userID); err != nil {
+				return err
+			}
+			if _, err := tx.ExecContext(ctx, `DELETE FROM auth_users WHERE tenant_id=$1 AND id=$2`, tenantID, userID); err != nil {
+				return err
+			}
+			return nil
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE auth_users SET status='disabled', updated_at=CURRENT_TIMESTAMP WHERE tenant_id=$1 AND id=$2`, tenantID, userID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, `UPDATE auth_scim_user_links SET deprovisioned_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP WHERE tenant_id=$1 AND user_id=$2`, tenantID, userID); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if mode == "delete" {
+		return "deleted", nil
+	}
+	_ = item
+	return "disabled", nil
+}
+
+func (s *SQLStore) ListSCIMGroups(ctx context.Context, tenantID string) ([]SCIMGroupRecord, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT g.id, g.tenant_id, COALESCE(g.external_id,''), g.display_name, COALESCE(g.description,''), g.active, g.scim_managed,
+       g.created_at, g.updated_at, COALESCE(COUNT(m.user_id),0) AS member_count
+FROM auth_scim_groups g
+LEFT JOIN auth_scim_group_members m ON m.tenant_id = g.tenant_id AND m.group_id = g.id
+WHERE g.tenant_id=$1
+GROUP BY g.id, g.tenant_id, g.external_id, g.display_name, g.description, g.active, g.scim_managed, g.created_at, g.updated_at
+ORDER BY g.display_name
+`, tenantID)
+	if err != nil {
+		if isSCIMSchemaMissing(err) {
+			return []SCIMGroupRecord{}, nil
+		}
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]SCIMGroupRecord, 0)
+	for rows.Next() {
+		var item SCIMGroupRecord
+		if err := rows.Scan(&item.ID, &item.TenantID, &item.ExternalID, &item.DisplayName, &item.Description, &item.Active, &item.SCIMManaged, &item.CreatedAt, &item.UpdatedAt, &item.MemberCount); err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) GetSCIMGroupByID(ctx context.Context, tenantID string, groupID string) (SCIMGroupRecord, error) {
+	var item SCIMGroupRecord
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT id, tenant_id, COALESCE(external_id,''), display_name, COALESCE(description,''), active, scim_managed, created_at, updated_at
+FROM auth_scim_groups
+WHERE tenant_id=$1 AND id=$2
+`, tenantID, groupID).Scan(
+		&item.ID, &item.TenantID, &item.ExternalID, &item.DisplayName, &item.Description, &item.Active, &item.SCIMManaged, &item.CreatedAt, &item.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return SCIMGroupRecord{}, errNotFound
+	}
+	if err != nil {
+		return SCIMGroupRecord{}, err
+	}
+	memberRows, err := s.db.SQL().QueryContext(ctx, `
+SELECT user_id FROM auth_scim_group_members WHERE tenant_id=$1 AND group_id=$2 ORDER BY user_id
+`, tenantID, groupID)
+	if err == nil {
+		defer memberRows.Close() //nolint:errcheck
+		for memberRows.Next() {
+			var userID string
+			if scanErr := memberRows.Scan(&userID); scanErr != nil {
+				return SCIMGroupRecord{}, scanErr
+			}
+			item.MemberIDs = append(item.MemberIDs, userID)
+		}
+		item.MemberCount = len(item.MemberIDs)
+	}
+	return item, nil
+}
+
+func (s *SQLStore) GetSCIMGroupByExternalID(ctx context.Context, tenantID string, externalID string) (SCIMGroupRecord, error) {
+	var groupID string
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT id FROM auth_scim_groups WHERE tenant_id=$1 AND external_id=$2
+`, tenantID, externalID).Scan(&groupID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return SCIMGroupRecord{}, errNotFound
+	}
+	if err != nil {
+		return SCIMGroupRecord{}, err
+	}
+	return s.GetSCIMGroupByID(ctx, tenantID, groupID)
+}
+
+func (s *SQLStore) UpsertSCIMGroup(ctx context.Context, group SCIMGroupRecord) (SCIMGroupRecord, bool, error) {
+	if strings.TrimSpace(group.TenantID) == "" {
+		return SCIMGroupRecord{}, false, errors.New("tenant_id is required")
+	}
+	if strings.TrimSpace(group.DisplayName) == "" {
+		return SCIMGroupRecord{}, false, errors.New("display_name is required")
+	}
+	if strings.TrimSpace(group.ID) == "" {
+		group.ID = NewID("grp")
+	}
+	var created bool
+	var existingID string
+	if strings.TrimSpace(group.ExternalID) != "" {
+		if existing, err := s.GetSCIMGroupByExternalID(ctx, group.TenantID, group.ExternalID); err == nil {
+			existingID = existing.ID
+		} else if !errors.Is(err, errNotFound) {
+			return SCIMGroupRecord{}, false, err
+		}
+	}
+	if existingID == "" {
+		if existing, err := s.GetSCIMGroupByID(ctx, group.TenantID, group.ID); err == nil {
+			existingID = existing.ID
+		} else if !errors.Is(err, errNotFound) {
+			return SCIMGroupRecord{}, false, err
+		}
+	}
+	if existingID == "" {
+		created = true
+	} else {
+		group.ID = existingID
+	}
+	if _, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO auth_scim_groups (
+    id, tenant_id, external_id, display_name, description, active, scim_managed, created_at, updated_at
+) VALUES ($1,$2,$3,$4,$5,$6,TRUE,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id, id) DO UPDATE SET
+    external_id=EXCLUDED.external_id,
+    display_name=EXCLUDED.display_name,
+    description=EXCLUDED.description,
+    active=EXCLUDED.active,
+    scim_managed=TRUE,
+    updated_at=CURRENT_TIMESTAMP
+`, group.ID, group.TenantID, nullableString(group.ExternalID), group.DisplayName, group.Description, group.Active); err != nil {
+		return SCIMGroupRecord{}, false, err
+	}
+	item, err := s.GetSCIMGroupByID(ctx, group.TenantID, group.ID)
+	return item, created, err
+}
+
+func (s *SQLStore) ReplaceSCIMGroupMembers(ctx context.Context, tenantID string, groupID string, userIDs []string) error {
+	return s.db.WithTenantTx(ctx, tenantID, func(tx *sql.Tx) error {
+		if _, err := tx.ExecContext(ctx, `DELETE FROM auth_scim_group_members WHERE tenant_id=$1 AND group_id=$2`, tenantID, groupID); err != nil {
+			return err
+		}
+		seen := map[string]struct{}{}
+		for _, userID := range userIDs {
+			userID = strings.TrimSpace(userID)
+			if userID == "" {
+				continue
+			}
+			if _, ok := seen[userID]; ok {
+				continue
+			}
+			seen[userID] = struct{}{}
+			var exists string
+			if err := tx.QueryRowContext(ctx, `SELECT id FROM auth_users WHERE tenant_id=$1 AND id=$2`, tenantID, userID).Scan(&exists); err != nil {
+				if errors.Is(err, sql.ErrNoRows) {
+					return fmt.Errorf("user %s is not provisioned in tenant %s", userID, tenantID)
+				}
+				return err
+			}
+			if _, err := tx.ExecContext(ctx, `
+INSERT INTO auth_scim_group_members (tenant_id, group_id, user_id, created_at, updated_at)
+VALUES ($1,$2,$3,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
+`, tenantID, groupID, userID); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (s *SQLStore) DeleteSCIMGroup(ctx context.Context, tenantID string, groupID string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `DELETE FROM auth_scim_groups WHERE tenant_id=$1 AND id=$2`, tenantID, groupID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) getSCIMTokenState(ctx context.Context, tenantID string) ([]byte, string, error) {
+	var tokenHash []byte
+	var prefix string
+	err := s.db.SQL().QueryRowContext(ctx, `
+SELECT token_hash, COALESCE(token_prefix,'')
+FROM auth_scim_settings
+WHERE tenant_id=$1
+`, tenantID).Scan(&tokenHash, &prefix)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, "", errNotFound
+	}
+	return tokenHash, prefix, err
+}
+
 func discoverTenantTables(ctx context.Context, tx *sql.Tx) ([]string, error) {
 	rows, err := tx.QueryContext(ctx, `
 SELECT table_schema, table_name
@@ -1591,6 +2277,15 @@ func isGroupMembershipSchemaMissing(err error) bool {
 	}
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "key_access_group_members") &&
+		(strings.Contains(msg, "no such table") || strings.Contains(msg, "does not exist"))
+}
+
+func isSCIMSchemaMissing(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return (strings.Contains(msg, "auth_scim_") || strings.Contains(msg, "scim")) &&
 		(strings.Contains(msg, "no such table") || strings.Contains(msg, "does not exist"))
 }
 

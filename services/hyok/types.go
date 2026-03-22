@@ -71,6 +71,8 @@ type ProxyCryptoRequest struct {
 	ReferenceID    string   `json:"reference_id"`
 	RequesterID    string   `json:"requester_id"`
 	RequesterEmail string   `json:"requester_email"`
+	JustificationCode string `json:"justification_code,omitempty"`
+	JustificationText string `json:"justification_text,omitempty"`
 	ApproverEmails []string `json:"approver_emails"`
 }
 

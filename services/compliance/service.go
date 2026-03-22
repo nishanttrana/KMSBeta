@@ -96,6 +96,10 @@ func (s *Service) RecomputePosture(ctx context.Context, tenantID string) (Postur
 		"cert_emergency_rotations": float64(renewal.EmergencyRotationCount),
 		"cert_mass_renewal_risks":  float64(renewal.MassRenewalRiskCount),
 		"cert_due_soon_windows":    float64(renewal.DueSoonCount),
+		"cert_star_subscriptions":  float64(renewal.STARSubscriptionCount),
+		"cert_star_delegated":      float64(renewal.STARDelegatedCount),
+		"cert_star_due_soon":       float64(renewal.STARDueSoonCount),
+		"cert_star_rollout_risks":  float64(renewal.STARMassRolloutRiskCount),
 	}
 	for k, v := range certMetrics {
 		metrics[k] = v
@@ -2184,6 +2188,15 @@ func buildAssessmentFindings(keys []map[string]interface{}, certs []map[string]i
 			Count:    renewal.MassRenewalRiskCount,
 		})
 	}
+	if renewal.STARMassRolloutRiskCount > 0 {
+		findings = append(findings, AssessmentFinding{
+			ID:       newID("finding"),
+			Severity: "warning",
+			Title:    strconvItoa(renewal.STARMassRolloutRiskCount) + " STAR short-lived cert rollout groups need rebalancing",
+			Fix:      "Spread STAR renewals across more rollout groups or adjust renew-before windows so delegated subscribers do not renew simultaneously.",
+			Count:    renewal.STARMassRolloutRiskCount,
+		})
+	}
 	if posture.PQCReadiness < 50 {
 		findings = append(findings, AssessmentFinding{
 			ID:       newID("finding"),
@@ -2205,6 +2218,14 @@ func renewalPenaltyScore(summary CertRenewalSummary) int {
 	penalty += summary.MissedWindowCount * 8
 	penalty += summary.EmergencyRotationCount * 15
 	penalty += summary.MassRenewalRiskCount * 5
+	penalty += summary.STARMassRolloutRiskCount * 4
+	if summary.STARDueSoonCount > 0 {
+		if summary.STARDueSoonCount > 6 {
+			penalty += 6
+		} else {
+			penalty += summary.STARDueSoonCount
+		}
+	}
 	if !summary.ARIEnabled {
 		penalty += 6
 	}

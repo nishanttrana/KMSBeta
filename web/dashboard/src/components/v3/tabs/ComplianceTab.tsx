@@ -65,10 +65,13 @@ import {
   listReportingReportTemplates,
   listReportingScheduledReports
 } from "../../../lib/reporting";
-import { getAuthRESTClientSecuritySummary } from "../../../lib/authAdmin";
+import { getAuthRESTClientSecuritySummary, getAuthSCIMSummary } from "../../../lib/authAdmin";
 import { getAutokeySummary } from "../../../lib/autokey";
 import { getCertRenewalSummary } from "../../../lib/certs";
+import { getKeyAccessSummary } from "../../../lib/keyaccess";
+import { getMPCOverview } from "../../../lib/mpc";
 import { getPQCInventory } from "../../../lib/pqc";
+import { getSigningSummary } from "../../../lib/signing";
 import { getWorkloadIdentitySummary } from "../../../lib/workloadIdentity";
 
 /* ── Shared chart tooltip ── */
@@ -115,8 +118,12 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   const [pqcInventory, setPqcInventory] = useState<any>(null);
   const [autokeySummary, setAutokeySummary] = useState<any>(null);
   const [workloadSummary, setWorkloadSummary] = useState<any>(null);
+  const [scimSummary, setScimSummary] = useState<any>(null);
   const [restClientSecurity, setRestClientSecurity] = useState<any>(null);
   const [certRenewalSummary, setCertRenewalSummary] = useState<any>(null);
+  const [keyAccessSummary, setKeyAccessSummary] = useState<any>(null);
+  const [signingSummary, setSigningSummary] = useState<any>(null);
+  const [mpcOverview, setMpcOverview] = useState<any>(null);
 
   /* ── Reporting state ── */
   const [reportTemplates, setReportTemplates] = useState<any[]>([]);
@@ -195,7 +202,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   };
 
   const loadAssessment = async (opts: any = {}) => {
-    if (!session?.token) { setAssessment(null); setAssessmentDelta(null); setHistory([]); setSchedule({ enabled: false, frequency: "daily" }); setPostureBreakdown(null); setKeyHygiene(null); setFrameworkGaps([]); setAnomalies([]); setPqcInventory(null); setAutokeySummary(null); setWorkloadSummary(null); setRestClientSecurity(null); setCertRenewalSummary(null); setMttr(null); setMttd(null); return; }
+    if (!session?.token) { setAssessment(null); setAssessmentDelta(null); setHistory([]); setSchedule({ enabled: false, frequency: "daily" }); setPostureBreakdown(null); setKeyHygiene(null); setFrameworkGaps([]); setAnomalies([]); setPqcInventory(null); setAutokeySummary(null); setWorkloadSummary(null); setScimSummary(null); setRestClientSecurity(null); setCertRenewalSummary(null); setKeyAccessSummary(null); setSigningSummary(null); setMpcOverview(null); setMttr(null); setMttd(null); return; }
     if (!opts?.silent) setLoading(true);
     try {
       const payload = await loadTemplates();
@@ -204,14 +211,18 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       const effectiveTemplateID = hasTemplate ? candidateTemplateID : "default";
       if (effectiveTemplateID !== selectedTemplateID) setSelectedTemplateID(effectiveTemplateID);
 
-      const [assessOut, scheduleOut, historyOut, autokeySummaryOut, workloadSummaryOut, restClientSecurityOut, certRenewalSummaryOut] = await Promise.all([
+      const [assessOut, scheduleOut, historyOut, autokeySummaryOut, workloadSummaryOut, scimSummaryOut, restClientSecurityOut, certRenewalSummaryOut, keyAccessSummaryOut, signingSummaryOut, mpcOverviewOut] = await Promise.all([
         getComplianceAssessment(session, effectiveTemplateID),
         getComplianceAssessmentSchedule(session),
         listComplianceAssessmentHistory(session, 20, effectiveTemplateID),
         getAutokeySummary(session).catch(() => null),
         getWorkloadIdentitySummary(session).catch(() => null),
+        getAuthSCIMSummary(session).catch(() => null),
         getAuthRESTClientSecuritySummary(session).catch(() => null),
-        getCertRenewalSummary(session).catch(() => null)
+        getCertRenewalSummary(session).catch(() => null),
+        getKeyAccessSummary(session).catch(() => null),
+        getSigningSummary(session).catch(() => null),
+        getMPCOverview(session).catch(() => null)
       ]);
 
       const visibleHistory = (Array.isArray(historyOut) ? historyOut : []).filter((item: any) => isRealAssessment(item));
@@ -221,8 +232,12 @@ export const ComplianceTab = ({ session, onToast }: any) => {
       setHistory(visibleHistory);
       setAutokeySummary(autokeySummaryOut || null);
       setWorkloadSummary(workloadSummaryOut || null);
+      setScimSummary(scimSummaryOut || null);
       setRestClientSecurity(restClientSecurityOut || null);
       setCertRenewalSummary(certRenewalSummaryOut || null);
+      setKeyAccessSummary(keyAccessSummaryOut || null);
+      setSigningSummary(signingSummaryOut || null);
+      setMpcOverview(mpcOverviewOut || null);
       const hasAssessment = Boolean(visibleAssessment) || visibleHistory.length > 0;
       if (hasAssessment) {
         const [breakdownOut, hygieneOut, anomalyOut, deltaOut, pqcInventoryOut, mttrOut, mttdOut] = await Promise.all([
@@ -262,6 +277,9 @@ export const ComplianceTab = ({ session, onToast }: any) => {
         setWorkloadSummary(workloadSummaryOut || null);
         setRestClientSecurity(restClientSecurityOut || null);
         setCertRenewalSummary(certRenewalSummaryOut || null);
+        setKeyAccessSummary(keyAccessSummaryOut || null);
+        setSigningSummary(signingSummaryOut || null);
+        setMpcOverview(mpcOverviewOut || null);
         setMttr(null);
         setMttd(null);
       }
@@ -1485,6 +1503,45 @@ export const ComplianceTab = ({ session, onToast }: any) => {
 
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>SCIM Provisioning Controls</span>
+            <B c={!scimSummary?.enabled ? "amber" : !scimSummary?.token_configured ? "amber" : Number(scimSummary?.disabled_users || 0) > 0 ? "amber" : "green"}>
+              {!scimSummary?.enabled ? "Disabled" : !scimSummary?.token_configured ? "Token missing" : Number(scimSummary?.disabled_users || 0) > 0 ? "Needs review" : "Aligned"}
+            </B>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+            <Stat l="Managed Users" v={String(Number(scimSummary?.managed_users || 0))} c="blue" />
+            <Stat l="Managed Groups" v={String(Number(scimSummary?.managed_groups || 0))} c="green" />
+            <Stat l="Disabled Users" v={String(Number(scimSummary?.disabled_users || 0))} c={Number(scimSummary?.disabled_users || 0) > 0 ? "amber" : "green"} />
+            <Stat l="Role-Mapped Groups" v={String(Number(scimSummary?.role_mapped_groups || 0))} c="blue" />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Provisioning State</div>
+              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
+                  {Boolean(scimSummary?.enabled) && Boolean(scimSummary?.token_configured) ? "Tenant can accept SCIM pushes" : "Provisioning handshake is incomplete"}
+                </div>
+                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                  {Boolean(scimSummary?.token_configured) ? `Token prefix ${String(scimSummary?.token_prefix || "").trim() || "configured"} is registered for the tenant.` : "Rotate the SCIM bearer token and configure the IdP connector before enabling production provisioning."}
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
+              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Identity lifecycle hygiene</div>
+                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                  Keep group-to-role mappings reviewed, disable orphaned identities on deprovision, and audit tenants where SCIM is enabled but token rotation or role mappings are incomplete.
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <div style={{ height: 10 }} />
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Certificate Renewal Controls</span>
             <B c={Number(certRenewalSummary?.emergency_rotation_count || 0) > 0 ? "red" : Number(certRenewalSummary?.missed_window_count || 0) > 0 || Number(certRenewalSummary?.mass_renewal_risks?.length || 0) > 0 ? "amber" : "green"}>
               {Number(certRenewalSummary?.emergency_rotation_count || 0) > 0 ? "Emergency rotation" : Number(certRenewalSummary?.missed_window_count || 0) > 0 || Number(certRenewalSummary?.mass_renewal_risks?.length || 0) > 0 ? "Needs review" : "Aligned"}
@@ -1557,6 +1614,123 @@ export const ComplianceTab = ({ session, onToast }: any) => {
                   <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
                     Move legacy bearer clients to OAuth mTLS, DPoP, or HTTP Message Signatures and investigate any replay or signature failures before treating REST control posture as compliant.
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <div style={{ height: 10 }} />
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Key Access Justification Controls</span>
+            <B c={!keyAccessSummary?.enabled ? "amber" : Number(keyAccessSummary?.bypass_count_24h || 0) > 0 ? "red" : Number(keyAccessSummary?.unjustified_count_24h || 0) > 0 || Number(keyAccessSummary?.approval_count_24h || 0) > 0 ? "amber" : "green"}>
+              {!keyAccessSummary?.enabled ? "Disabled" : Number(keyAccessSummary?.bypass_count_24h || 0) > 0 ? "Bypass detected" : Number(keyAccessSummary?.unjustified_count_24h || 0) > 0 || Number(keyAccessSummary?.approval_count_24h || 0) > 0 ? "Needs review" : "Aligned"}
+            </B>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+            <Stat l="Rules" v={String(Number(keyAccessSummary?.rule_count || 0))} c="blue" />
+            <Stat l="Requests 24h" v={String(Number(keyAccessSummary?.total_requests_24h || 0))} c="accent" />
+            <Stat l="Unjustified" v={String(Number(keyAccessSummary?.unjustified_count_24h || 0))} c={Number(keyAccessSummary?.unjustified_count_24h || 0) > 0 ? "amber" : "green"} />
+            <Stat l="Bypass Signals" v={String(Number(keyAccessSummary?.bypass_count_24h || 0))} c={Number(keyAccessSummary?.bypass_count_24h || 0) > 0 ? "red" : "green"} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Policy Outcome</div>
+              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
+                  {Number(keyAccessSummary?.unjustified_count_24h || 0) > 0 ? "Some external key requests lacked valid justification" : "External key requests matched declared reason-code policy"}
+                </div>
+                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                  {Number(keyAccessSummary?.allow_count_24h || 0)} allowed • {Number(keyAccessSummary?.deny_count_24h || 0)} denied • {Number(keyAccessSummary?.approval_count_24h || 0)} held for approval
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
+              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Usage justification enforcement</div>
+                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                  Require valid reason codes for HYOK, EKM, and external decrypt/sign calls and investigate any bypass or policy-scope mismatch before accepting the external-access control posture.
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <div style={{ height: 10 }} />
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Artifact Signing Controls</span>
+            <B c={!signingSummary?.enabled ? "amber" : Number(signingSummary?.verification_failures_24h || 0) > 0 ? "red" : Number(signingSummary?.transparency_logged_24h || 0) < Number(signingSummary?.record_count_24h || 0) ? "amber" : "green"}>
+              {!signingSummary?.enabled ? "Disabled" : Number(signingSummary?.verification_failures_24h || 0) > 0 ? "Verification failures" : Number(signingSummary?.transparency_logged_24h || 0) < Number(signingSummary?.record_count_24h || 0) ? "Transparency gaps" : "Aligned"}
+            </B>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+            <Stat l="Profiles" v={String(Number(signingSummary?.profile_count || 0))} c="blue" />
+            <Stat l="Signed 24h" v={String(Number(signingSummary?.record_count_24h || 0))} c="accent" />
+            <Stat l="Transparency Logged" v={String(Number(signingSummary?.transparency_logged_24h || 0))} c={Number(signingSummary?.transparency_logged_24h || 0) < Number(signingSummary?.record_count_24h || 0) ? "amber" : "green"} />
+            <Stat l="Verify Failures" v={String(Number(signingSummary?.verification_failures_24h || 0))} c={Number(signingSummary?.verification_failures_24h || 0) > 0 ? "red" : "green"} />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Provenance State</div>
+              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
+                  {Number(signingSummary?.transparency_logged_24h || 0) < Number(signingSummary?.record_count_24h || 0) ? "Some signatures were not logged with transparency metadata" : "Recent signatures were logged with transparency metadata"}
+                </div>
+                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                  {Number(signingSummary?.workload_signed_24h || 0)} workload-signed • {Number(signingSummary?.oidc_signed_24h || 0)} OIDC-signed • {Array.isArray(signingSummary?.artifact_counts) ? signingSummary.artifact_counts.length : 0} artifact classes active
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
+              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Supply-chain signing hygiene</div>
+                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                  Enforce trust constraints on workload or OIDC identities, require transparency logging for release profiles, and investigate verification failures before treating build provenance as compliant.
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        <div style={{ height: 10 }} />
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Threshold Signing / FROST Controls</span>
+            <B c={Number(mpcOverview?.stats?.failed_ceremonies || 0) > 0 ? "red" : Number(mpcOverview?.stats?.pending_ceremonies || 0) > 0 ? "amber" : Number(mpcOverview?.stats?.active_keys || 0) > 0 ? "green" : "amber"}>
+              {Number(mpcOverview?.stats?.failed_ceremonies || 0) > 0 ? "Failures" : Number(mpcOverview?.stats?.pending_ceremonies || 0) > 0 ? "Pending ceremony" : Number(mpcOverview?.stats?.active_keys || 0) > 0 ? "Aligned" : "No active keys"}
+            </B>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+            <Stat l="Active Keys" v={String(Number(mpcOverview?.stats?.active_keys || 0))} c="green" />
+            <Stat l="Pending Ceremonies" v={String(Number(mpcOverview?.stats?.pending_ceremonies || 0))} c={Number(mpcOverview?.stats?.pending_ceremonies || 0) > 0 ? "amber" : "green"} />
+            <Stat l="Failed Ceremonies" v={String(Number(mpcOverview?.stats?.failed_ceremonies || 0))} c={Number(mpcOverview?.stats?.failed_ceremonies || 0) > 0 ? "red" : "green"} />
+            <Stat l="Participants" v={String(Number(mpcOverview?.stats?.total_participants || 0))} c="blue" />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Ceremony State</div>
+              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>
+                  {Number(mpcOverview?.stats?.pending_ceremonies || 0) > 0 ? "Quorum-backed ceremonies are waiting on contributors" : "No pending threshold ceremonies"}
+                </div>
+                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                  {Number(mpcOverview?.stats?.completed_ceremonies || 0)} completed • {Number(mpcOverview?.stats?.active_policies || 0)} active policies • {Number(mpcOverview?.stats?.total_keys || 0)} total quorum-backed keys
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 6 }}>Compliance Actions</div>
+              <div style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 10 }}>
+                <div style={{ fontSize: 10, color: C.text, fontWeight: 700 }}>Quorum ceremony discipline</div>
+                <div style={{ fontSize: 8, color: C.dim, marginTop: 4 }}>
+                  Keep participant roster and threshold policy current, investigate failed ceremonies, and review stalled approvals so high-assurance signing does not fall back to single-holder controls.
                 </div>
               </div>
             </div>

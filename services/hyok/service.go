@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 )
 
 type EventPublisher interface {
@@ -24,6 +26,7 @@ type Service struct {
 	policy           PolicyClient
 	governance       GovernanceClient
 	events           EventPublisher
+	keyAccess        pkgkeyaccess.Client
 	policyFailClosed bool
 }
 
@@ -36,6 +39,10 @@ func NewService(store Store, keycore KeyCoreClient, policy PolicyClient, governa
 		events:           events,
 		policyFailClosed: policyFailClosed,
 	}
+}
+
+func (s *Service) SetKeyAccessClient(client pkgkeyaccess.Client) {
+	s.keyAccess = client
 }
 
 func (s *Service) ConfigureEndpoint(ctx context.Context, cfg EndpointConfig) (EndpointConfig, error) {
@@ -307,6 +314,67 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 		return ProxyCryptoResponse{}, newServiceError(http.StatusForbidden, "policy_denied", firstNonEmpty(policyReason, "blocked by policy"))
 	}
 
+	keyAccessResult := pkgkeyaccess.EvaluateResponse{Action: "allow"}
+	if s.keyAccess != nil {
+		keyAccessResult, err = s.keyAccess.Evaluate(ctx, pkgkeyaccess.EvaluateRequest{
+			TenantID:          tenantID,
+			Service:           "hyok",
+			Connector:         protocol,
+			Operation:         operation,
+			KeyID:             keyID,
+			ResourceID:        strings.TrimSpace(endpointPath),
+			RequestID:         logEntry.ID,
+			RequesterID:       logEntry.RequesterID,
+			RequesterEmail:    logEntry.RequesterEmail,
+			RequesterIP:       identity.RemoteIP,
+			JustificationCode: strings.TrimSpace(req.JustificationCode),
+			JustificationText: strings.TrimSpace(req.JustificationText),
+			Metadata: map[string]interface{}{
+				"endpoint":     strings.TrimSpace(endpointPath),
+				"auth_mode":    identity.Mode,
+				"auth_subject": logEntry.AuthSubject,
+				"reference_id": strings.TrimSpace(req.ReferenceID),
+			},
+		})
+		if err != nil {
+			keyAccessResult = pkgkeyaccess.EvaluateResponse{Action: "allow", Reason: "key access justifications service unavailable"}
+		}
+	}
+	if strings.EqualFold(keyAccessResult.Action, "deny") {
+		reason := firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy")
+		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "denied", "{}", reason, "", policyDecision)
+		_ = s.publishAudit(ctx, "audit.hyok.request_denied", tenantID, map[string]interface{}{
+			"request_id":          logEntry.ID,
+			"protocol":            protocol,
+			"operation":           operation,
+			"key_id":              keyID,
+			"reason":              reason,
+			"justification_code":  req.JustificationCode,
+			"key_access_decision": keyAccessResult.Action,
+		})
+		return ProxyCryptoResponse{}, newServiceError(http.StatusForbidden, "key_access_denied", reason)
+	}
+	if keyAccessResult.ApprovalRequired {
+		resp := ProxyCryptoResponse{
+			Status:            "pending_approval",
+			KeyID:             keyID,
+			Protocol:          protocol,
+			Operation:         operation,
+			ApprovalRequestID: keyAccessResult.ApprovalRequestID,
+		}
+		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "pending_approval", mustJSON(resp), "", keyAccessResult.ApprovalRequestID, policyDecision)
+		_ = s.publishAudit(ctx, protocolEventSubject(protocol, operation), tenantID, map[string]interface{}{
+			"request_id":          logEntry.ID,
+			"protocol":            protocol,
+			"operation":           operation,
+			"key_id":              keyID,
+			"approval_request_id": keyAccessResult.ApprovalRequestID,
+			"status":              "pending_approval",
+			"justification_code":  req.JustificationCode,
+		})
+		return resp, nil
+	}
+
 	if cfg.GovernanceRequired {
 		if s.governance == nil {
 			err := newServiceError(http.StatusFailedDependency, "governance_unavailable", "governance client is not configured")
@@ -370,6 +438,7 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 		"operation":       operation,
 		"key_id":          keyID,
 		"policy_decision": policyDecision,
+		"justification_code": req.JustificationCode,
 		"status":          "success",
 	})
 	return resp, nil

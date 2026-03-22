@@ -1,6 +1,6 @@
 # Vecta KMS
 
-Vecta KMS is a multi-service key management platform for centralized cryptographic operations, internal PKI, workload identity, attested key release, payment crypto, compliance, and security posture management.
+Vecta KMS is a multi-service key management platform for centralized cryptographic operations, internal PKI, SCIM-based identity provisioning, workload identity, attested key release, payment crypto, compliance, and security posture management.
 
 This README is the landing page. Detailed operator documentation now lives under [`docs/`](docs/README.md).
 
@@ -41,19 +41,19 @@ Vecta KMS is organized into five working areas:
 - Assurance and operations
   - `compliance`, `posture`, `reporting`, `discovery`, `sbom`
 - Advanced crypto and identity
-  - `autokey`, `workload`, `confidential`, `pqc`, `qkd`, `qrng`, `mpc`, `ai`
+  - `autokey`, `keyaccess`, `signing`, `workload`, `confidential`, `pqc`, `qkd`, `qrng`, `mpc`, `ai`
 
 ## Service Map
 
 | Service | Main Role | Typical Use Cases |
 | --- | --- | --- |
 | `keycore` | Key lifecycle and crypto execution | application keys, wrap/unwrap, sign/verify, encryption, KEM |
-| `auth` | Identity, tenants, users, clients | login, RBAC, SSO, API clients, sender-constrained auth |
+| `auth` | Identity, tenants, users, clients | login, RBAC, SCIM provisioning, SSO, API clients, sender-constrained auth |
 | `audit` | Tamper-evident event storage | audit review, investigations, control evidence |
 | `policy` | Runtime guardrails | algorithm restrictions, approval requirements, access policy |
 | `governance` | Quorum and operational approvals | destructive actions, backups, posture controls, FDE checks |
 | `cluster-manager` | Cluster profile and replication control | multi-node deployments, sync policy, node lifecycle |
-| `certs` | Internal PKI and certificate automation | CA hierarchy, ACME, EST, SCEP, CRL/OCSP, renewal intelligence |
+| `certs` | Internal PKI and certificate automation | CA hierarchy, ACME, ACME ARI/STAR, EST, SCEP, CRL/OCSP, renewal intelligence |
 | `secrets` | Secret storage and generation | application secrets, generated credentials, Vault-style access |
 | `dataprotect` | Tokenization and masking | PCI tokenization, data masking, FPE-style data protection |
 | `cloud` | BYOK/HYOK orchestration | cloud key import, sync, rotation tracking |
@@ -66,10 +66,12 @@ Vecta KMS is organized into five working areas:
 | `discovery` | Crypto asset inventory | scan results, asset classification, posture input |
 | `sbom` | SBOM/CBOM and vulnerability context | software inventory, PQC readiness, compliance input |
 | `autokey` | Policy-driven key handle provisioning | self-service key requests under central policy |
+| `keyaccess` | External key-use justification policy | HYOK/EKM/cloud decrypt or sign requests with reason codes and approvals |
+| `signing` | Artifact and code signing control plane | Git, blob, and OCI signing with workload or OIDC identity constraints |
 | `workload` | SPIFFE/SVID and workload identity | workload-to-key auth, token exchange, federation |
 | `confidential` | Attested key release | enclave/TEE gated key release |
 | `pqc` | Post-quantum migration and policy | ML-KEM, ML-DSA, SLH-DSA, hybrid rollout |
-| `qkd`, `qrng`, `mpc`, `ai` | Specialist advanced crypto capabilities | quantum integrations, high-assurance ceremonies, AI model protection |
+| `qkd`, `qrng`, `mpc`, `ai` | Specialist advanced crypto capabilities | quantum integrations, FROST-style threshold ceremonies, AI model protection |
 
 ## Quick Start
 

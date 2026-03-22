@@ -289,6 +289,8 @@ func componentDisplayName(component string) string {
 		return "Payment"
 	case "autokey":
 		return "Autokey"
+	case "signing":
+		return "Artifact Signing"
 	case "workload":
 		return "Workload Identity"
 	case "confidential":

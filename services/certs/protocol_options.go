@@ -15,6 +15,12 @@ type ACMEProtocolOptions struct {
 	ARIWindowBiasPercent int     `json:"ari_window_bias_percent"`
 	EmergencyRotationThresholdHours int `json:"emergency_rotation_threshold_hours"`
 	MassRenewalRiskThreshold int  `json:"mass_renewal_risk_threshold"`
+	EnableSTAR          bool     `json:"enable_star"`
+	DefaultSTARValidityHours int `json:"default_star_validity_hours"`
+	MaxSTARValidityHours int     `json:"max_star_validity_hours"`
+	AllowSTARDelegation bool     `json:"allow_star_delegation"`
+	MaxSTARSubscriptions int     `json:"max_star_subscriptions"`
+	STARMassRolloutThreshold int `json:"star_mass_rollout_threshold"`
 	RequireEAB          bool     `json:"require_eab"`
 	AllowWildcard       bool     `json:"allow_wildcard"`
 	AllowIPIdentifiers  bool     `json:"allow_ip_identifiers"`
@@ -71,6 +77,12 @@ func defaultACMEProtocolOptions() ACMEProtocolOptions {
 		ARIWindowBiasPercent: defaultARIWindowBiasPercent,
 		EmergencyRotationThresholdHours: defaultEmergencyRotationThresholdHr,
 		MassRenewalRiskThreshold: defaultMassRenewalRiskThreshold,
+		EnableSTAR:          true,
+		DefaultSTARValidityHours: 24,
+		MaxSTARValidityHours: 168,
+		AllowSTARDelegation: true,
+		MaxSTARSubscriptions: 500,
+		STARMassRolloutThreshold: 12,
 		RequireEAB:          false,
 		AllowWildcard:       true,
 		AllowIPIdentifiers:  false,
@@ -185,6 +197,8 @@ func parseACMEProtocolOptions(raw string) (ACMEProtocolOptions, error) {
 	if err := applyKnownJSON(raw, &cfg, map[string]struct{}{
 		"rfc": {}, "challenge_types": {}, "auto_renew": {}, "enable_ari": {}, "ari_poll_hours": {},
 		"ari_window_bias_percent": {}, "emergency_rotation_threshold_hours": {}, "mass_renewal_risk_threshold": {},
+		"enable_star": {}, "default_star_validity_hours": {}, "max_star_validity_hours": {}, "allow_star_delegation": {},
+		"max_star_subscriptions": {}, "star_mass_rollout_threshold": {},
 		"require_eab": {}, "allow_wildcard": {},
 		"allow_ip_identifiers": {}, "max_sans": {}, "default_validity_days": {}, "rate_limit_per_hour": {},
 	}); err != nil {
@@ -224,6 +238,27 @@ func parseACMEProtocolOptions(raw string) (ACMEProtocolOptions, error) {
 	}
 	if cfg.MassRenewalRiskThreshold <= 0 {
 		cfg.MassRenewalRiskThreshold = defaultMassRenewalRiskThreshold
+	}
+	if cfg.DefaultSTARValidityHours <= 0 {
+		cfg.DefaultSTARValidityHours = defaultACMEProtocolOptions().DefaultSTARValidityHours
+	}
+	if cfg.MaxSTARValidityHours <= 0 {
+		cfg.MaxSTARValidityHours = defaultACMEProtocolOptions().MaxSTARValidityHours
+	}
+	if cfg.MaxSTARValidityHours < cfg.DefaultSTARValidityHours {
+		cfg.MaxSTARValidityHours = cfg.DefaultSTARValidityHours
+	}
+	if cfg.MaxSTARValidityHours > 24*14 {
+		cfg.MaxSTARValidityHours = 24 * 14
+	}
+	if cfg.MaxSTARSubscriptions <= 0 {
+		cfg.MaxSTARSubscriptions = defaultACMEProtocolOptions().MaxSTARSubscriptions
+	}
+	if cfg.MaxSTARSubscriptions > 5000 {
+		cfg.MaxSTARSubscriptions = 5000
+	}
+	if cfg.STARMassRolloutThreshold <= 0 {
+		cfg.STARMassRolloutThreshold = defaultACMEProtocolOptions().STARMassRolloutThreshold
 	}
 	return cfg, nil
 }

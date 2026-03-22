@@ -62,6 +62,11 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /certs/renewal-intelligence", h.handleGetRenewalSummary)
 	mux.HandleFunc("GET /certs/renewal-intelligence/{id}", h.handleGetRenewalInfo)
 	mux.HandleFunc("POST /certs/renewal-intelligence/refresh", h.handleRefreshRenewalSummary)
+	mux.HandleFunc("GET /certs/star/summary", h.handleGetSTARSummary)
+	mux.HandleFunc("GET /certs/star/subscriptions", h.handleListSTARSubscriptions)
+	mux.HandleFunc("POST /certs/star/subscriptions", h.handleCreateSTARSubscription)
+	mux.HandleFunc("POST /certs/star/subscriptions/{id}/refresh", h.handleRefreshSTARSubscription)
+	mux.HandleFunc("DELETE /certs/star/subscriptions/{id}", h.handleDeleteSTARSubscription)
 	mux.HandleFunc("GET /certs/protocols", h.handleListProtocolConfigs)
 	mux.HandleFunc("GET /certs/protocols/schema", h.handleListProtocolSchemas)
 	mux.HandleFunc("PUT /certs/protocols/{protocol}", h.handleUpsertProtocolConfig)
@@ -670,6 +675,9 @@ func (h *Handler) handleACMEDirectory(w http.ResponseWriter, r *http.Request) {
 			"website":                 "https://vecta-kms.local",
 			"externalAccountRequired": options.RequireEAB,
 			"ariEnabled":              options.EnableARI,
+			"starEnabled":             options.EnableSTAR,
+			"starDelegationAllowed":   options.AllowSTARDelegation,
+			"defaultSTARValidityHours": options.DefaultSTARValidityHours,
 			"wildcardAllowed":         options.AllowWildcard,
 			"ipIdentifiersAllowed":    options.AllowIPIdentifiers,
 			"challengeTypes":          options.ChallengeTypes,

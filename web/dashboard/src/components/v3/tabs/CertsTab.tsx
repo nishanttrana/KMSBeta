@@ -35,6 +35,10 @@ import {
   getCertExpiryAlertPolicy,
   updateCertExpiryAlertPolicy,
   getCertRenewalSummary,
+  getCertSTARSummary,
+  createCertSTARSubscription,
+  refreshCertSTARSubscription,
+  deleteCertSTARSubscription,
   refreshCertRenewalSummary,
   listCertMerkleEpochs,
   buildCertMerkleEpoch,
@@ -150,10 +154,27 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
   const [alertPolicySaving,setAlertPolicySaving]=useState(false);
   const [renewalSummary,setRenewalSummary]=useState(null);
   const [renewalRefreshing,setRenewalRefreshing]=useState(false);
+  const [starSummary,setStarSummary]=useState(null);
+  const [starRefreshing,setStarRefreshing]=useState(false);
   const [ctEpochs,setCTEpochs]=useState([]);
   const [ctBuilding,setCTBuilding]=useState(false);
   const [ctProofCertId,setCTProofCertId]=useState("");
   const [ctProofResult,setCTProofResult]=useState(null);
+  const [starName,setStarName]=useState("");
+  const [starAccountID,setStarAccountID]=useState("");
+  const [starCAID,setStarCAID]=useState("");
+  const [starProfileID,setStarProfileID]=useState("");
+  const [starSubjectCN,setStarSubjectCN]=useState("");
+  const [starSANs,setStarSANs]=useState("");
+  const [starCertType,setStarCertType]=useState("tls-server");
+  const [starAlgorithm,setStarAlgorithm]=useState("ECDSA-P384");
+  const [starValidityHours,setStarValidityHours]=useState("24");
+  const [starRenewBeforeMinutes,setStarRenewBeforeMinutes]=useState("120");
+  const [starAutoRenew,setStarAutoRenew]=useState(true);
+  const [starAllowDelegation,setStarAllowDelegation]=useState(false);
+  const [starDelegatedSubscriber,setStarDelegatedSubscriber]=useState("");
+  const [starRolloutGroup,setStarRolloutGroup]=useState("");
+  const [starMetadataText,setStarMetadataText]=useState("{\n  \"workload\": \"edge-gateway\"\n}");
   const promptDialog=usePromptDialog();
   const requestedCertPane=String(subView||"cert-overview").trim().toLowerCase();
   const activeCertPane=requestedCertPane==="cert-enrollment"?"cert-enrollment":"cert-overview";
@@ -189,6 +210,9 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       if(!csrCAID&&Array.isArray(caItems)&&caItems.length){
         setCSRCAID(caItems[0].id);
       }
+      if(!starCAID&&Array.isArray(caItems)&&caItems.length){
+        setStarCAID(caItems[0].id);
+      }
     }catch(e){
       onToast?.(`CA refresh failed: ${errMsg(e)}`);
     }finally{
@@ -210,6 +234,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       setAlertPolicyDaysBefore(Math.max(1,Math.min(3650,Number(alertPolicy?.days_before||30))));
       setAlertPolicyIncludeExternal(Boolean(alertPolicy?.include_external ?? true));
       setRenewalSummary(await getCertRenewalSummary(session).catch(()=>null));
+      setStarSummary(await getCertSTARSummary(session).catch(()=>null));
     }catch(e){
       onToast?.(`Certificates refresh failed: ${errMsg(e)}`);
     }finally{
@@ -223,7 +248,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     }
     setLoading(true);
     try{
-      const [caItems,certItems,profileItems,inventoryItems,protocolItems,protocolSchemaItems,alertPolicy,renewalSummaryOut,ctEpochItems]=await Promise.all([
+      const [caItems,certItems,profileItems,inventoryItems,protocolItems,protocolSchemaItems,alertPolicy,renewalSummaryOut,starSummaryOut,ctEpochItems]=await Promise.all([
         listCAs(session),
         loadAllCertificates(),
         listProfiles(session),
@@ -232,6 +257,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
         listProtocolSchemas(session),
         getCertExpiryAlertPolicy(session),
         getCertRenewalSummary(session).catch(()=>null),
+        getCertSTARSummary(session).catch(()=>null),
         listCertMerkleEpochs(session,50).catch(()=>[])
       ]);
       setCAs(Array.isArray(caItems)?caItems:[]);
@@ -243,12 +269,16 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       setAlertPolicyDaysBefore(Math.max(1,Math.min(3650,Number(alertPolicy?.days_before||30))));
       setAlertPolicyIncludeExternal(Boolean(alertPolicy?.include_external ?? true));
       setRenewalSummary(renewalSummaryOut||null);
+      setStarSummary(starSummaryOut||null);
       setCTEpochs(Array.isArray(ctEpochItems)?ctEpochItems:[]);
       if(!issueCAID&&Array.isArray(caItems)&&caItems.length){
         setIssueCAID(caItems[0].id);
       }
       if(!csrCAID&&Array.isArray(caItems)&&caItems.length){
         setCSRCAID(caItems[0].id);
+      }
+      if(!starCAID&&Array.isArray(caItems)&&caItems.length){
+        setStarCAID(caItems[0].id);
       }
     }catch(e){
       onToast?.(`PKI refresh failed: ${errMsg(e)}`);
@@ -308,7 +338,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
 
   const protocolDefaultConfigs=useMemo(()=>{
     const fallback={
-      acme:{rfc:"8555",challenge_types:["http-01","dns-01"],auto_renew:true,enable_ari:true,ari_poll_hours:24,ari_window_bias_percent:35,emergency_rotation_threshold_hours:48,mass_renewal_risk_threshold:8,require_eab:false,allow_wildcard:true,allow_ip_identifiers:false,max_sans:100,default_validity_days:397,rate_limit_per_hour:1000},
+      acme:{rfc:"8555",challenge_types:["http-01","dns-01"],auto_renew:true,enable_ari:true,ari_poll_hours:24,ari_window_bias_percent:35,emergency_rotation_threshold_hours:48,mass_renewal_risk_threshold:8,enable_star:true,default_star_validity_hours:24,max_star_validity_hours:168,allow_star_delegation:true,max_star_subscriptions:500,star_mass_rollout_threshold:12,require_eab:false,allow_wildcard:true,allow_ip_identifiers:false,max_sans:100,default_validity_days:397,rate_limit_per_hour:1000},
       est:{rfc:"7030",device_enrollment:true,server_keygen:true,auth_mode:"mtls",require_csr_pop:true,allow_reenroll:true,default_validity_days:397,max_csr_bytes:32768},
       scep:{rfc:"8894",legacy_mdm:true,challenge_password_required:false,challenge_password:"",allow_renewal:true,default_validity_days:397,max_csr_bytes:32768,digest_algorithms:["sha256","sha384"],encryption_algorithms:["aes256","aes128","des3"]},
       cmpv2:{rfc:"4210",enterprise_pki:true,message_types:["ir","cr","kur","rr"],require_message_protection:true,require_transaction_id:true,allow_implicit_confirm:true,default_validity_days:397},
@@ -326,7 +356,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
 
   const protocolOptionDocs=useMemo(()=>{
     const fallback={
-      acme:["challenge_types: http-01 | dns-01 | tls-alpn-01","enable_ari + ari_poll_hours","ari_window_bias_percent + emergency_rotation_threshold_hours","mass_renewal_risk_threshold","require_eab: enforce external account binding","allow_wildcard / allow_ip_identifiers","max_sans / default_validity_days / rate_limit_per_hour"],
+      acme:["challenge_types: http-01 | dns-01 | tls-alpn-01","enable_ari + ari_poll_hours","ari_window_bias_percent + emergency_rotation_threshold_hours","mass_renewal_risk_threshold","enable_star + default_star_validity_hours + max_star_validity_hours","allow_star_delegation + max_star_subscriptions + star_mass_rollout_threshold","require_eab: enforce external account binding","allow_wildcard / allow_ip_identifiers","max_sans / default_validity_days / rate_limit_per_hour"],
       est:["auth_mode: mtls | basic | bearer | none","require_csr_pop: CSR proof-of-possession required","server_keygen and allow_reenroll toggles","default_validity_days and max_csr_bytes guardrails"],
       scep:["challenge_password_required + challenge_password","allow_renewal toggle","digest_algorithms and encryption_algorithms policies","default_validity_days and max_csr_bytes guardrails"],
       cmpv2:["message_types: ir | cr | kur | rr","require_message_protection and require_transaction_id","allow_implicit_confirm toggle","default_validity_days policy"],
@@ -500,6 +530,14 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
   const massRenewalRisks=useMemo(()=>{
     return (Array.isArray(renewalSummary?.mass_renewal_risks)?renewalSummary.mass_renewal_risks:[]).slice(0,5);
   },[renewalSummary]);
+
+  const starSubscriptions=useMemo(()=>{
+    return (Array.isArray(starSummary?.subscriptions)?starSummary.subscriptions:[]).slice(0,5);
+  },[starSummary]);
+
+  const starMassRolloutRisks=useMemo(()=>{
+    return (Array.isArray(starSummary?.mass_rollout_risks)?starSummary.mass_rollout_risks:[]).slice(0,5);
+  },[starSummary]);
 
   const filteredCerts=useMemo(()=>{
     const q=String(certSearch||"").trim().toLowerCase();
@@ -1211,6 +1249,115 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     }
   };
 
+  const refreshSTARIntel=async()=>{
+    if(!session){
+      return;
+    }
+    setStarRefreshing(true);
+    try{
+      const out=await getCertSTARSummary(session);
+      setStarSummary(out||null);
+      onToast?.("ACME STAR subscriptions refreshed.");
+    }catch(error){
+      onToast?.(`ACME STAR refresh failed: ${errMsg(error)}`);
+    }finally{
+      setStarRefreshing(false);
+    }
+  };
+
+  const submitCreateSTARSubscription=async()=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    if(!String(starCAID||"").trim()){
+      onToast?.("Select a CA for the STAR subscription.");
+      return;
+    }
+    if(!String(starSubjectCN||"").trim()){
+      onToast?.("Subject CN is required for the STAR subscription.");
+      return;
+    }
+    setSubmitting(true);
+    try{
+      let metadata;
+      const rawMetadata=String(starMetadataText||"").trim();
+      if(rawMetadata){
+        metadata=JSON.parse(rawMetadata);
+      }
+      const created=await createCertSTARSubscription(session,{
+        name:String(starName||"").trim(),
+        account_id:String(starAccountID||"").trim(),
+        ca_id:String(starCAID||"").trim(),
+        profile_id:String(starProfileID||"").trim(),
+        subject_cn:String(starSubjectCN||"").trim(),
+        sans:String(starSANs||"").split(",").map((v)=>String(v||"").trim()).filter(Boolean),
+        cert_type:String(starCertType||"tls-server").trim(),
+        cert_class:"star",
+        algorithm:String(starAlgorithm||"ECDSA-P384").trim(),
+        validity_hours:Math.max(1,Math.min(336,Math.trunc(Number(starValidityHours||24)))),
+        renew_before_minutes:Math.max(5,Math.min(24*60,Math.trunc(Number(starRenewBeforeMinutes||120)))),
+        auto_renew:Boolean(starAutoRenew),
+        allow_delegation:Boolean(starAllowDelegation),
+        delegated_subscriber:Boolean(starAllowDelegation)?String(starDelegatedSubscriber||"").trim():"",
+        rollout_group:String(starRolloutGroup||"").trim(),
+        metadata
+      });
+      onToast?.(`ACME STAR subscription created: ${String(created.name||created.subject_cn||created.id)}`);
+      setModal(null);
+      setStarName("");
+      setStarAccountID("");
+      setStarSubjectCN("");
+      setStarSANs("");
+      setStarProfileID("");
+      setStarRolloutGroup("");
+      setStarDelegatedSubscriber("");
+      setStarMetadataText("{\n  \"workload\": \"edge-gateway\"\n}");
+      await Promise.all([refreshRenewalIntel(),refreshSTARIntel(),refreshCerts()]);
+    }catch(error){
+      onToast?.(`ACME STAR create failed: ${errMsg(error)}`);
+    }finally{
+      setSubmitting(false);
+    }
+  };
+
+  const actRefreshSTARSubscription=async(item,force=false)=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    await runCertAction(`star-refresh-${item.id}`,async()=>{
+      const out=await refreshCertSTARSubscription(session,String(item.id||""),{
+        force:Boolean(force),
+        requested_by:session.username||"dashboard"
+      });
+      onToast?.(`ACME STAR renewed: ${String(out.subject_cn||out.name||out.id)}`);
+      await Promise.all([refreshRenewalIntel(),refreshSTARIntel()]);
+    });
+  };
+
+  const actDeleteSTARSubscription=async(item)=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    const label=String(item?.name||item?.subject_cn||item?.id||"STAR subscription");
+    const ok=await promptDialog.confirm({
+      title:"Delete ACME STAR Subscription",
+      message:`Delete ACME STAR subscription '${label}'?\n\nThis stops future automated STAR renewals for the delegated or short-lived workload.`,
+      confirmLabel:"Delete",
+      danger:true
+    });
+    if(!ok){
+      return;
+    }
+    await runCertAction(`star-delete-${item.id}`,async()=>{
+      await deleteCertSTARSubscription(session,String(item.id||""));
+      onToast?.(`ACME STAR subscription deleted: ${label}`);
+      await Promise.all([refreshRenewalIntel(),refreshSTARIntel()]);
+    });
+  };
+
   const placeCertMenuFromButton=(button,menuWidth,menuHeight)=>{
     const rect=button.getBoundingClientRect();
     const left=Math.max(8,Math.min(window.innerWidth-menuWidth-8,rect.right-menuWidth));
@@ -1434,6 +1581,8 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
               {label:"New Account",path:"/acme/new-account"},
               {label:"New Order",path:"/acme/new-order"},
               {label:"Renewal Info",path:"/acme/renewal-info/{id}"},
+              {label:"STAR Summary",path:"/certs/star/summary"},
+              {label:"STAR Subscriptions",path:"/certs/star/subscriptions"},
               {label:"Challenge",path:"/acme/challenge/{id}"},
               {label:"Finalize",path:"/acme/finalize/{id}"},
               {label:"Cert Download",path:"/acme/cert/{id}"}
@@ -1459,6 +1608,9 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
               `Renewal Poll: ${configObj.ari_poll_hours||24}h`,
               `Window Bias: ${configObj.ari_window_bias_percent||35}%`,
               `Mass Risk Threshold: ${configObj.mass_renewal_risk_threshold||8}`,
+              `STAR: ${configObj.enable_star!==false?"Enabled":"Disabled"}`,
+              `STAR Default Lifetime: ${configObj.default_star_validity_hours||24}h`,
+              `STAR Delegation: ${configObj.allow_star_delegation!==false?"Allowed":"Disabled"}`,
               `Wildcard: ${configObj.allow_wildcard!==false?"Yes":"No"}`,
               `EAB Required: ${configObj.require_eab?"Yes":"No"}`,
               `Rate Limit: ${configObj.rate_limit_per_hour||1000}/hr`,
@@ -1527,6 +1679,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
                 <span style={{display:"inline-flex",alignItems:"center",gap:4}}><Zap size={10}/>{!canTest?"N/A":testingProtocol===meta.name?"Testing...":"Test Enroll"}</span>
               </Btn>
               {meta.name==="acme"&&enabled?<Btn small onClick={()=>setModal("acme-wizard")}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Globe size={10}/>ACME Wizard</span></Btn>:null}
+              {meta.name==="acme"&&enabled?<Btn small onClick={()=>setModal("acme-star")}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Clock size={10}/>STAR</span></Btn>:null}
               {meta.name==="est"&&enabled?<Btn small onClick={()=>setModal("est-wizard")}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Lock size={10}/>EST Enroll</span></Btn>:null}
               {meta.name==="scep"&&enabled?<Btn small onClick={()=>setModal("scep-wizard")}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><KeyRound size={10}/>SCEP Enroll</span></Btn>:null}
               {meta.name==="cmpv2"&&enabled?<Btn small onClick={()=>setModal("cmpv2-wizard")}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><Server size={10}/>CMPv2 Request</span></Btn>:null}
@@ -1658,6 +1811,63 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
               </div>
             ))}
             {!massRenewalRisks.length?<div style={{fontSize:10,color:C.muted}}>No mass-renewal hotspots detected.</div>:null}
+          </div>
+        </Card>
+        <Card style={{padding:12}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:6}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <Clock size={14} color={starSummary?.enabled===false?C.red:C.accent}/>
+              <div style={{fontSize:13,fontWeight:700,color:C.text}}>ACME STAR</div>
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <Btn small onClick={()=>void refreshSTARIntel()} disabled={starRefreshing}>{starRefreshing?"Refreshing...":"Refresh"}</Btn>
+              <Btn small primary onClick={()=>setModal("acme-star")}>New</Btn>
+            </div>
+          </div>
+          <div style={{fontSize:9,color:C.muted,marginBottom:8}}>
+            {starSummary?.enabled===false
+              ?"ACME STAR is disabled in the ACME protocol policy for this tenant."
+              :`Subscriptions ${Number(starSummary?.subscription_count||renewalSummary?.star_subscription_count||0)} • Delegated ${Number(starSummary?.delegated_count||renewalSummary?.star_delegated_count||0)} • Due soon ${Number(starSummary?.due_soon_count||renewalSummary?.star_due_soon_count||0)}`}
+          </div>
+          {String(starSummary?.recommended_window_hint||"").trim()?<div style={{fontSize:10,color:C.dim,marginBottom:8}}>{String(starSummary?.recommended_window_hint||"")}</div>:null}
+          <div style={{display:"grid",gap:8}}>
+            {starSubscriptions.map((item)=>{
+              const status=String(item.status||"active").toLowerCase();
+              const tone=status==="active"?C.green:status==="error"?C.red:C.amber;
+              return <div key={item.id} style={{borderBottom:`1px solid ${C.border}`,paddingBottom:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}>
+                  <div style={{minWidth:0}}>
+                    <div style={{fontSize:11,color:C.text,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{String(item.name||item.subject_cn||item.id)}</div>
+                    <div style={{fontSize:9,color:C.dim,marginTop:3}}>
+                      {`${String(item.subject_cn||"-")} • ${item.validity_hours||24}h • renew ${item.renew_before_minutes||120}m early`}
+                    </div>
+                  </div>
+                  <B c={status==="active"?"green":status==="error"?"red":"amber"}>{status}</B>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center",marginTop:6}}>
+                  <div style={{fontSize:9,color:C.dim}}>
+                    {`${item.delegated_subscriber?`Delegated to ${item.delegated_subscriber}`:"Tenant-managed"} • next ${formatDestroyAt(String(item.next_renewal_at||""))}`}
+                  </div>
+                  <div style={{display:"flex",gap:6}}>
+                    <Btn small onClick={()=>void actRefreshSTARSubscription(item,true)} disabled={rowActionBusy===`star-refresh-${item.id}`}>Renew</Btn>
+                    <Btn small danger onClick={()=>void actDeleteSTARSubscription(item)} disabled={rowActionBusy===`star-delete-${item.id}`}>Delete</Btn>
+                  </div>
+                </div>
+                {item.last_error?<div style={{fontSize:9,color:C.red,marginTop:4}}>{String(item.last_error||"")}</div>:null}
+              </div>;
+            })}
+            {!starSubscriptions.length?<div style={{fontSize:10,color:C.muted}}>No ACME STAR subscriptions yet. Create one for short-lived edge, mesh, or delegated subscriber certificates.</div>:null}
+            {starMassRolloutRisks.map((risk)=>(
+              <div key={`star-risk-${risk.rollout_group}`} style={{borderTop:`1px dashed ${C.border}`,paddingTop:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"center"}}>
+                  <div style={{fontSize:10,color:C.text,fontWeight:700}}>{`STAR rollout ${String(risk.rollout_group||"-")}`}</div>
+                  <B c={String(risk.risk_level||"medium").toLowerCase()==="high"?"red":"amber"}>{`${risk.count} subs`}</B>
+                </div>
+                <div style={{fontSize:9,color:C.dim,marginTop:3}}>
+                  {`${formatDestroyAt(String(risk.scheduled_start||""))} -> ${formatDestroyAt(String(risk.scheduled_end||""))}${Array.isArray(risk.delegated_targets)&&risk.delegated_targets.length?` • delegated: ${risk.delegated_targets.join(", ")}`:""}`}
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       </div>
@@ -2261,6 +2471,82 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
         <div style={{display:"flex",gap:8}}>
           <Btn onClick={()=>setModal(null)} disabled={submitting}>Cancel</Btn>
           <Btn primary onClick={()=>void saveProtocol()} disabled={submitting||loading}>{submitting?"Saving...":"Save Configuration"}</Btn>
+        </div>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="acme-star"} onClose={()=>setModal(null)} title="ACME STAR Short-Lived Certificates" wide>
+      <div style={{display:"grid",gap:10}}>
+        <div style={{fontSize:11,color:C.dim,lineHeight:1.6}}>
+          Create short-lived automatically renewed certificates for gateways, service mesh edges, and delegated subscribers. STAR subscriptions keep issuance cadence, rollout grouping, and delegated subscriber metadata under the tenant ACME policy.
+        </div>
+        <Row2>
+          <FG label="Display Name"><Inp value={starName} onChange={(e)=>setStarName(e.target.value)} placeholder="mesh-gateway-star"/></FG>
+          <FG label="ACME Account ID"><Inp value={starAccountID} onChange={(e)=>setStarAccountID(e.target.value)} placeholder="acct_ops_prod"/></FG>
+        </Row2>
+        <Row2>
+          <FG label="Issuing CA" required>
+            <Sel value={starCAID} onChange={(e)=>setStarCAID(e.target.value)}>
+              <option value="">Select CA</option>
+              {cas.map((c)=><option key={c.id} value={c.id}>{c.name} ({c.algorithm})</option>)}
+            </Sel>
+          </FG>
+          <FG label="Profile">
+            <Sel value={starProfileID} onChange={(e)=>setStarProfileID(e.target.value)}>
+              <option value="">Default profile</option>
+              {profiles.map((p)=><option key={p.id} value={p.id}>{p.name}</option>)}
+            </Sel>
+          </FG>
+        </Row2>
+        <Row2>
+          <FG label="Subject CN" required><Inp value={starSubjectCN} onChange={(e)=>setStarSubjectCN(e.target.value)} placeholder="gateway.tenant.example"/></FG>
+          <FG label="SANs (comma separated)"><Inp value={starSANs} onChange={(e)=>setStarSANs(e.target.value)} placeholder="gateway.tenant.example, api.tenant.example"/></FG>
+        </Row2>
+        <Row2>
+          <FG label="Certificate Type">
+            <Sel value={starCertType} onChange={(e)=>setStarCertType(e.target.value)}>
+              <option value="tls-server">TLS Server</option>
+              <option value="tls-client">TLS Client</option>
+              <option value="tls-server-client">TLS Server + Client</option>
+            </Sel>
+          </FG>
+          <FG label="Algorithm">
+            <Sel value={starAlgorithm} onChange={(e)=>setStarAlgorithm(e.target.value)}>
+              <option value="ECDSA-P256">ECDSA-P256</option>
+              <option value="ECDSA-P384">ECDSA-P384</option>
+              <option value="RSA-3072-SHA256">RSA-3072</option>
+              <option value="RSA-4096-SHA384">RSA-4096</option>
+            </Sel>
+          </FG>
+        </Row2>
+        <Row2>
+          <FG label="Validity (hours)"><Inp type="number" min={1} max={336} value={starValidityHours} onChange={(e)=>setStarValidityHours(e.target.value)}/></FG>
+          <FG label="Renew Before (minutes)"><Inp type="number" min={5} max={1440} value={starRenewBeforeMinutes} onChange={(e)=>setStarRenewBeforeMinutes(e.target.value)}/></FG>
+        </Row2>
+        <Row2>
+          <FG label="Rollout Group"><Inp value={starRolloutGroup} onChange={(e)=>setStarRolloutGroup(e.target.value)} placeholder="mesh-us-east-1"/></FG>
+          <FG label="Delegated Subscriber"><Inp value={starDelegatedSubscriber} onChange={(e)=>setStarDelegatedSubscriber(e.target.value)} placeholder="spiffe://prod/ns/gateway/sa/edge" disabled={!starAllowDelegation}/></FG>
+        </Row2>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <Chk label="Auto-renew subscription" checked={starAutoRenew} onChange={()=>setStarAutoRenew((v)=>!v)}/>
+          <Chk label="Allow delegated subscriber" checked={starAllowDelegation} onChange={()=>setStarAllowDelegation((v)=>!v)}/>
+        </div>
+        <FG label="Metadata (JSON)">
+          <Txt rows={6} value={starMetadataText} onChange={(e)=>setStarMetadataText(e.target.value)} />
+        </FG>
+        <div style={{fontSize:10,color:C.muted}}>
+          REST: <span style={{fontFamily:"'JetBrains Mono', monospace"}}>/certs/star/summary</span>, <span style={{fontFamily:"'JetBrains Mono', monospace"}}>/certs/star/subscriptions</span>. ACME directory metadata also advertises STAR capability and default short-lived validity.
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",gap:8,alignItems:"flex-start"}}>
+          <div style={{fontSize:10,color:C.dim,maxWidth:520}}>
+            {starSummary?.enabled===false
+              ?"Enable ACME STAR in the ACME protocol configuration before creating subscriptions."
+              :"Use delegated subscribers when the certificate consumer should identify itself separately while KMS still controls renewal cadence and rollout safety."}
+          </div>
+          <div style={{display:"flex",gap:8}}>
+            <Btn onClick={()=>setModal(null)} disabled={submitting}>Cancel</Btn>
+            <Btn primary onClick={()=>void submitCreateSTARSubscription()} disabled={submitting||starSummary?.enabled===false}>{submitting?"Creating...":"Create STAR Subscription"}</Btn>
+          </div>
         </div>
       </div>
     </Modal>

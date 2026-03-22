@@ -1,6 +1,6 @@
 # REST API Additions
 
-This document covers the REST API surfaces that were added or expanded for the recent AI, SBOM, posture, compliance, reporting, identity, PQC, confidential-compute, Autokey, and certificate-lifecycle functionality.
+This document covers the REST API surfaces that were added or expanded for the recent AI, SBOM, posture, compliance, reporting, identity, SCIM provisioning, PQC, confidential-compute, Autokey, and certificate-lifecycle functionality.
 
 Operator-oriented explanations live here too:
 
@@ -83,6 +83,80 @@ Operational notes:
   - unsigned request blocks
 - The dashboard uses this summary directly in:
   - `REST API -> REST Client Security`
+  - `Posture`
+  - `Compliance`
+
+## SCIM 2.0 Provisioning
+
+Service prefix:
+
+```text
+/svc/auth
+```
+
+Key additions:
+
+- `GET /auth/scim/settings`
+  - Returns tenant SCIM provisioning settings:
+    - enablement
+    - default role and status
+    - whether local password change is required on first login
+    - deprovision mode (`disable` or `delete`)
+    - whether group-role mappings are active
+- `PUT /auth/scim/settings`
+  - Updates tenant SCIM provisioning settings
+- `POST /auth/scim/settings/rotate-token`
+  - Rotates the tenant SCIM bearer token used by the external IdP connector
+  - Returns the raw bearer token once so it can be pasted into the IdP
+- `GET /auth/scim/summary`
+  - Returns the tenant SCIM operations summary used by the dashboard, posture, and compliance cards:
+    - managed users
+    - managed groups
+    - memberships
+    - role-mapped groups
+    - last provisioned and deprovisioned timestamps
+- `GET /auth/scim/users`
+  - Lists SCIM-managed KMS users and their external IDs
+- `GET /auth/scim/groups`
+  - Lists SCIM-managed KMS groups and their membership counts
+- `GET /scim/v2/ServiceProviderConfig`
+- `GET /scim/v2/Schemas`
+- `GET /scim/v2/ResourceTypes`
+  - RFC 7643 / RFC 7644 discovery endpoints
+- `GET /scim/v2/Users`
+- `POST /scim/v2/Users`
+- `GET /scim/v2/Users/{id}`
+- `PUT /scim/v2/Users/{id}`
+- `PATCH /scim/v2/Users/{id}`
+- `DELETE /scim/v2/Users/{id}`
+  - RFC 7644 user lifecycle endpoints
+- `GET /scim/v2/Groups`
+- `POST /scim/v2/Groups`
+- `GET /scim/v2/Groups/{id}`
+- `PUT /scim/v2/Groups/{id}`
+- `PATCH /scim/v2/Groups/{id}`
+- `DELETE /scim/v2/Groups/{id}`
+  - RFC 7644 group lifecycle endpoints
+
+Operational notes:
+
+- SCIM is tenant-scoped state that lives with the Auth service and replicates with the normal auth control-plane state.
+- Group-to-role enforcement is not stored inside the SCIM payload itself; directory groups are provisioned first, then mapped to existing KMS roles through the group-role binding path.
+- Deprovision can either disable users for evidence retention or remove them entirely.
+- SCIM lifecycle operations emit dedicated audit subjects, including:
+  - `audit.auth.scim_settings_updated`
+  - `audit.auth.scim_token_rotated`
+  - `audit.auth.scim_user_provisioned`
+  - `audit.auth.scim_user_updated`
+  - `audit.auth.scim_user_disabled`
+  - `audit.auth.scim_user_deprovisioned`
+  - `audit.auth.scim_group_provisioned`
+  - `audit.auth.scim_group_updated`
+  - `audit.auth.scim_group_deleted`
+- In clustered deployments, SCIM settings, managed identities, managed groups, and memberships are part of the replicated Auth control plane rather than node-local runtime cache.
+- Backup coverage should therefore include SCIM settings and membership state alongside the rest of the Auth domain.
+- The dashboard uses SCIM summary directly in:
+  - `Administration -> User Admin -> SCIM Provisioning`
   - `Posture`
   - `Compliance`
 
@@ -239,6 +313,161 @@ Operational notes:
   - `audit.cert.renewal_window_missed`
   - `audit.cert.emergency_rotation_started`
   - `audit.cert.mass_renewal_risk_detected`
+
+## Key Access Justifications
+
+Service prefix:
+
+```text
+/svc/keyaccess
+```
+
+Key additions:
+
+- `GET /key-access/settings`
+  - Returns tenant enablement, default action, and whether code or text justifications are mandatory
+- `PUT /key-access/settings`
+  - Updates the tenant external-key justification enforcement mode
+- `GET /key-access/summary`
+  - Returns counters used by Dashboard, Posture, and Compliance:
+    - total requests
+    - allowed / denied / approval-held
+    - unjustified requests
+    - bypass signals
+- `GET /key-access/codes`
+  - Lists reason-code rules
+- `POST /key-access/codes`
+  - Creates a new reason-code rule
+- `PUT /key-access/codes/{id}`
+  - Updates a rule
+- `DELETE /key-access/codes/{id}`
+  - Deletes a rule
+- `GET /key-access/decisions`
+  - Lists evaluated decisions
+
+Operational notes:
+
+- This is tenant-scoped control-plane policy for HYOK, EKM, cloud, and similar external-key usage paths.
+- Approval-required branches reuse Governance rather than introducing a second approval engine.
+- Cluster replication carries settings, rules, and decision history, while short-lived anti-replay or request caches remain node-local.
+- Governance backup coverage includes key-access settings, rules, and decision history.
+
+## Artifact Signing And Keyless Provenance
+
+Service prefix:
+
+```text
+/svc/signing
+```
+
+Key additions:
+
+- `GET /signing/settings`
+  - Returns tenant artifact-signing policy and allowed identity modes
+- `PUT /signing/settings`
+  - Updates tenant signing defaults and transparency requirements
+- `GET /signing/summary`
+  - Returns the dashboard/posture/compliance summary:
+    - profile count
+    - signed records in last 24h
+    - transparency logged count
+    - workload vs OIDC signing distribution
+    - verification failures
+- `GET /signing/profiles`
+  - Lists signing profiles
+- `POST /signing/profiles`
+  - Creates a signing profile
+- `PUT /signing/profiles/{id}`
+  - Updates a signing profile
+- `DELETE /signing/profiles/{id}`
+  - Deletes a signing profile
+- `GET /signing/records`
+  - Lists prior signing records
+- `POST /signing/blob`
+  - Signs a generic blob
+- `POST /signing/git`
+  - Signs Git-oriented artifact metadata
+- `POST /signing/verify`
+  - Re-verifies a stored record
+
+Operational notes:
+
+- Signing profiles are tenant-scoped control-plane state, not runtime-only cache.
+- Signing records carry transparency-linked metadata that is preserved in governance backup coverage.
+- Cluster replication carries signing settings, profiles, and signature records so provenance state survives node failover.
+
+## Threshold Signing And MPC/FROST Workflows
+
+Service prefix:
+
+```text
+/svc/mpc
+```
+
+Important routes already in the platform and now treated as first-class evidence surfaces:
+
+- `GET /mpc/overview`
+- `GET /mpc/participants`
+- `GET /mpc/policies`
+- `GET /mpc/keys`
+- `GET /mpc/ceremonies`
+- `POST /mpc/dkg/initiate`
+- `POST /mpc/sign/initiate`
+- `POST /mpc/sign/{id}/contribute`
+- `GET /mpc/sign/{id}/result`
+
+Operational notes:
+
+- The KMS uses the existing MPC service for quorum-backed key ceremonies and FROST-style operational separation of trust.
+- Cluster replication already includes MPC state in the full cluster profile.
+- Governance backup coverage now includes MPC participant, policy, key, share-backup, and ceremony metadata.
+- Audit classification now explicitly recognizes DKG, threshold signing, threshold decryption, share backup, participant, and policy lifecycle events.
+
+## ACME STAR Short-Lived Certificates
+
+Service prefix:
+
+```text
+/svc/certs
+```
+
+Key additions:
+
+- `GET /certs/star/summary`
+  - Returns tenant STAR posture used by PKI and Compliance:
+    - total subscriptions
+    - delegated subscriber count
+    - due-soon subscriptions
+    - rollout-group risk counts
+- `GET /certs/star/subscriptions`
+  - Lists STAR subscriptions with issuance counters, next renewal time, and latest certificate pointer
+- `POST /certs/star/subscriptions`
+  - Creates a short-lived subscription under the tenant ACME STAR policy
+- `POST /certs/star/subscriptions/{id}/refresh`
+  - Forces immediate re-issuance for a STAR subscription
+- `DELETE /certs/star/subscriptions/{id}`
+  - Removes a STAR subscription and stops future renewal activity for it
+
+Operational notes:
+
+- ACME protocol settings now support:
+  - `enable_star`
+  - `default_star_validity_hours`
+  - `max_star_validity_hours`
+  - `allow_star_delegation`
+  - `max_star_subscriptions`
+  - `star_mass_rollout_threshold`
+- STAR subscriptions are tenant-scoped PKI control-plane state, not node-local cache.
+- Cluster replication carries delegated subscriber metadata, next-renewal cadence, latest certificate pointers, and rollout-group assignments with the `certs` service state.
+- Governance backup coverage includes the STAR subscription catalog and delegated subscriber metadata in the certificate backup scope.
+- Audit subjects now include:
+  - `audit.cert.star_summary_viewed`
+  - `audit.cert.star_subscription_created`
+  - `audit.cert.star_subscription_renewed`
+  - `audit.cert.star_subscription_deleted`
+  - `audit.cert.star_subscription_failed`
+  - `audit.cert.star_delegation_configured`
+  - `audit.cert.star_mass_rollout_risk_detected`
 
 ## Reporting and Evidence Packs
 

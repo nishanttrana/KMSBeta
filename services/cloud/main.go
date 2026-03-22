@@ -30,6 +30,7 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -79,6 +80,7 @@ func main() {
 		publisher,
 		loadMEK(),
 	)
+	svc.SetKeyAccessClient(pkgkeyaccess.NewHTTPClient(envOr("KEY_ACCESS_URL", ""), 3*time.Second))
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8080")

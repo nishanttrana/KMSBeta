@@ -57,6 +57,58 @@ Operators can answer:
 - Posture: risky or non-migrated client auth posture
 - Compliance: sender-constrained coverage and residual gaps
 
+## SCIM 2.0 Provisioning
+
+### What It Is
+
+SCIM 2.0 provisioning lets an external identity provider create, update, disable, deprovision, and group users in the tenant automatically instead of relying on manual KMS user administration.
+
+The KMS implementation covers:
+
+- tenant-scoped SCIM settings
+- SCIM bearer-token authentication for the provisioning connector
+- RFC 7644 user and group resources
+- group-driven RBAC through existing KMS group-role bindings
+- deprovision-by-disable or deprovision-by-delete behavior
+
+### Why Teams Use It
+
+Use it when:
+
+- Okta, Microsoft Entra ID, or another IdP is the source of truth
+- operators want identity lifecycle changes to flow into KMS automatically
+- role assignment should follow directory groups rather than one-off user edits
+
+### UI
+
+- `Administration -> User Admin -> SCIM Provisioning`
+- `Posture`
+- `Compliance`
+
+### Primary APIs
+
+- `GET /svc/auth/auth/scim/settings?tenant_id=root`
+- `PUT /svc/auth/auth/scim/settings`
+- `POST /svc/auth/auth/scim/settings/rotate-token`
+- `GET /svc/auth/auth/scim/summary?tenant_id=root`
+- `POST /svc/auth/scim/v2/Users`
+- `POST /svc/auth/scim/v2/Groups`
+
+### Operational Outcome
+
+Operators can answer:
+
+- whether the tenant SCIM connector is enabled and tokenized
+- how many identities and groups are SCIM-managed
+- whether disabled identities are accumulating
+- whether inbound directory groups are actually mapped to KMS roles
+
+### Evidence Surfaces
+
+- Audit: settings changes, token rotation, user provisioning, disable/deprovision, group provisioning, group deletion
+- Posture: drift when SCIM is disabled, tokenless, or leaving disabled identities behind
+- Compliance: lifecycle hygiene and group-to-role mapping coverage
+
 ## Workload Identity
 
 ### What It Is
@@ -226,6 +278,134 @@ Operators can provide:
 - Posture: policy drift or excessive exceptions
 - Compliance: whether generated keys matched org standards
 
+## Key Access Justifications And External Key Governance
+
+### What It Is
+
+Key Access Justifications is the tenant policy layer for external key use. It requires callers to declare why a key is being used before HYOK, EKM, cloud, or other externally mediated decrypt, sign, wrap, or unwrap paths are allowed.
+
+### Why Teams Use It
+
+Use it when:
+
+- every external decrypt or sign request needs a business reason code
+- sensitive reason codes should trigger approval instead of an immediate allow
+- auditors or cloud-risk teams need a clean trail of approved, denied, bypassed, and unjustified access attempts
+
+### UI
+
+- `Key Access Justifications`
+- `Compliance`
+- `Posture`
+
+### Primary APIs
+
+- `GET /svc/keyaccess/key-access/settings?tenant_id=root`
+- `PUT /svc/keyaccess/key-access/settings`
+- `GET /svc/keyaccess/key-access/codes?tenant_id=root`
+- `POST /svc/keyaccess/key-access/codes`
+- `GET /svc/keyaccess/key-access/decisions?tenant_id=root`
+
+### Operational Outcome
+
+Operators can answer:
+
+- why an external key request happened
+- whether it matched allowed service and operation scope
+- whether it was held for approval, denied, or treated as a bypass
+
+### Evidence Surfaces
+
+- Audit: every evaluated decision, approval-required branch, and rule change
+- Posture: unjustified usage and bypass signals
+- Compliance: whether external-key access aligns to declared policy
+
+## Artifact Signing And Keyless Provenance
+
+### What It Is
+
+Artifact Signing is the tenant control plane for KMS-backed provenance on blobs, Git artifacts, and OCI-style release metadata. It combines signing profiles, identity constraints, transparency-style metadata, and later verification.
+
+### Why Teams Use It
+
+Use it when:
+
+- release pipelines should sign with KMS-backed keys instead of exporting private keys
+- signing identity should be limited to a workload SPIFFE identity or OIDC issuer/subject
+- software supply-chain review needs more than a raw signature blob
+
+### UI
+
+- `Artifact Signing`
+- `Compliance`
+- `Posture`
+
+### Primary APIs
+
+- `GET /svc/signing/signing/settings?tenant_id=root`
+- `GET /svc/signing/signing/profiles?tenant_id=root`
+- `POST /svc/signing/signing/blob`
+- `POST /svc/signing/signing/git`
+- `POST /svc/signing/signing/verify`
+
+### Operational Outcome
+
+Operators can see:
+
+- which signing profiles are active
+- whether signatures were logged with transparency metadata
+- whether recent signatures were workload-bound or OIDC-bound
+- which signatures failed later verification
+
+### Evidence Surfaces
+
+- Audit: settings, profile changes, signing, verification
+- Posture: transparency gaps and verification failures
+- Compliance: provenance coverage and signing-policy adherence
+
+## Threshold Signing And Quorum Crypto
+
+### What It Is
+
+The MPC service gives the KMS a quorum-backed cryptography path where no single party owns the complete private key. In practice this supports FROST-style operational models for threshold signing ceremonies, participant approval, and share-backed recovery.
+
+### Why Teams Use It
+
+Use it when:
+
+- a root CA or treasury signer must require multiple contributors
+- a single admin or host must never be able to sign alone
+- ceremony history itself is part of the control evidence
+
+### UI
+
+- `MPC / FROST`
+- `Compliance`
+- `Posture`
+- `Governance`
+
+### Primary APIs
+
+- `POST /svc/mpc/mpc/dkg/initiate`
+- `POST /svc/mpc/mpc/sign/initiate`
+- `POST /svc/mpc/mpc/sign/{id}/contribute`
+- `GET /svc/mpc/mpc/sign/{id}/result`
+- `GET /svc/mpc/mpc/overview?tenant_id=root`
+
+### Operational Outcome
+
+Operators can answer:
+
+- how many active quorum-backed keys exist
+- which ceremonies are stalled, pending, completed, or failed
+- whether participant roster and threshold policy still match the intended control model
+
+### Evidence Surfaces
+
+- Audit: DKG, sign, decrypt, participant, share, and policy ceremony history
+- Posture: pending or failed ceremony drift
+- Compliance: split-operator and quorum-control evidence
+
 ## ACME Renewal Intelligence
 
 ### What It Is
@@ -267,6 +447,48 @@ Operators can see:
 - Audit: missed windows, emergency rotation, schedule checks
 - Posture: renewal risk and drift
 - Compliance: certificate lifecycle control status
+
+## ACME STAR Short-Lived Certificates
+
+### What It Is
+
+The PKI layer also supports ACME STAR-style short-lived subscriptions so tenants can issue continuously renewed certificates for gateways, mesh edges, and delegated subscribers without treating every renewal like a fresh manual operation.
+
+### Why Teams Use It
+
+Use it when:
+
+- workloads should always use short-lived credentials
+- subscriber delegation is needed but renewal cadence must stay centrally governed
+- operators need to spot rollout-group concentration before many short-lived certs renew together
+
+### UI
+
+- `Certificates`
+- `Compliance`
+
+### Primary APIs
+
+- `GET /svc/certs/certs/star/summary?tenant_id=root`
+- `GET /svc/certs/certs/star/subscriptions?tenant_id=root`
+- `POST /svc/certs/certs/star/subscriptions`
+- `POST /svc/certs/certs/star/subscriptions/{id}/refresh`
+- `DELETE /svc/certs/certs/star/subscriptions/{id}?tenant_id=root`
+
+### Operational Outcome
+
+Operators can:
+
+- create delegated or tenant-managed STAR subscriptions
+- see next renewal timing and issuance count per subscription
+- detect due-soon subscriptions and rollout-group concentration
+- track delegated subscribers separately from tenant-owned subscriptions
+
+### Evidence Surfaces
+
+- Audit: subscription create, renew, delete, failure, delegation, rollout-risk detection
+- Posture: certificate mass-rollout and lifecycle drift
+- Compliance: short-lived cert coverage and rollout-risk penalties
 
 ## Payment Policy And Payment Crypto
 

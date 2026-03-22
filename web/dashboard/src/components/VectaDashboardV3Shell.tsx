@@ -67,6 +67,8 @@ const WorkbenchTab = lazy(() => import("./v3/tabs/WorkbenchTab").then(m => ({ de
 const CryptoTab = lazy(() => import("./v3/tabs/CryptoTab").then(m => ({ default: m.CryptoTab })));
 const PaymentTab = lazy(() => import("./v3/tabs/PaymentTab").then(m => ({ default: m.PaymentTab })));
 const AutokeyTab = lazy(() => import("./v3/tabs/AutokeyTab").then(m => ({ default: m.AutokeyTab })));
+const ArtifactSigningTab = lazy(() => import("./v3/tabs/ArtifactSigningTab").then(m => ({ default: m.ArtifactSigningTab })));
+const KeyAccessTab = lazy(() => import("./v3/tabs/KeyAccessTab").then(m => ({ default: m.KeyAccessTab })));
 const PostQuantumTab = lazy(() => import("./v3/tabs/PostQuantumTab").then(m => ({ default: m.PostQuantumTab })));
 const ConfidentialComputeTab = lazy(() => import("./v3/tabs/ConfidentialComputeTab").then(m => ({ default: m.ConfidentialComputeTab })));
 const WorkloadIdentityTab = lazy(() => import("./v3/tabs/WorkloadIdentityTab").then(m => ({ default: m.WorkloadIdentityTab })));
@@ -155,6 +157,8 @@ const TABS: Record<string, any> = {
   dataenc: DataEncryptionTab,
   payment: PaymentTab,
   autokey: AutokeyTab,
+  signing: ArtifactSigningTab,
+  keyaccess: KeyAccessTab,
   pqc: PostQuantumTab,
   confidential: ConfidentialComputeTab,
   workload: WorkloadIdentityTab,
@@ -192,6 +196,8 @@ const TITLES: Record<string, string> = {
   dataenc: "Data Encryption",
   payment: "Payment Crypto",
   autokey: "Autokey",
+  signing: "Artifact Signing",
+  keyaccess: "Key Access Justifications",
   pqc: "Post-Quantum Crypto",
   confidential: "Confidential Compute",
   workload: "Workload Identity",
@@ -202,7 +208,7 @@ const TITLES: Record<string, string> = {
   hsm: "HSM",
   qkd: "QKD Interface",
   qrng: "QRNG Entropy",
-  mpc: "MPC Engine",
+  mpc: "MPC / FROST",
   cluster: "Cluster",
   approvals: "Approvals",
   alerts: "Alert Center",
@@ -217,9 +223,9 @@ const TITLES: Record<string, string> = {
 };
 
 const NAV = [
-  { g: "CORE", items: [{ id: "home", icon: HomeIcon, label: "Dashboard" }, { id: "keys", icon: KeyRound, label: "Key Management" }, { id: "certs", icon: FileText, label: "Certificates / PKI" }, { id: "cloudctl", icon: Cloud, label: "Cloud Key Control" }, { id: "ekm", icon: Database, label: "Enterprise Key Management" }, { id: "vault", icon: Lock, label: "Secret Vault" }, { id: "dataprotection", icon: ShieldCheck, label: "Data Protection" }, { id: "autokey", icon: Layers, label: "Autokey" }, { id: "pqc", icon: Atom, label: "Post-Quantum Crypto" }, { id: "confidential", icon: Fingerprint, label: "Confidential Compute" }, { id: "workload", icon: Users, label: "Workload Identity" }] },
+  { g: "CORE", items: [{ id: "home", icon: HomeIcon, label: "Dashboard" }, { id: "keys", icon: KeyRound, label: "Key Management" }, { id: "certs", icon: FileText, label: "Certificates / PKI" }, { id: "cloudctl", icon: Cloud, label: "Cloud Key Control" }, { id: "ekm", icon: Database, label: "Enterprise Key Management" }, { id: "vault", icon: Lock, label: "Secret Vault" }, { id: "dataprotection", icon: ShieldCheck, label: "Data Protection" }, { id: "autokey", icon: Layers, label: "Autokey" }, { id: "signing", icon: FileText, label: "Artifact Signing" }, { id: "keyaccess", icon: ShieldCheck, label: "Key Access Justifications" }, { id: "pqc", icon: Atom, label: "Post-Quantum Crypto" }, { id: "confidential", icon: Fingerprint, label: "Confidential Compute" }, { id: "workload", icon: Users, label: "Workload Identity" }] },
   { g: "WORKBENCH", items: [{ id: "workbench", icon: LayoutGrid, label: "Workbench" }] },
-  { g: "INFRASTRUCTURE", items: [{ id: "hsm", icon: Cpu, label: "HSM" }, { id: "qkd", icon: GitBranch, label: "QKD Interface" }, { id: "qrng", icon: Atom, label: "QRNG Entropy" }, { id: "mpc", icon: Cpu, label: "MPC Engine" }, { id: "cluster", icon: GitBranch, label: "Cluster" }] },
+  { g: "INFRASTRUCTURE", items: [{ id: "hsm", icon: Cpu, label: "HSM" }, { id: "qkd", icon: GitBranch, label: "QKD Interface" }, { id: "qrng", icon: Atom, label: "QRNG Entropy" }, { id: "mpc", icon: Cpu, label: "MPC / FROST" }, { id: "cluster", icon: GitBranch, label: "Cluster" }] },
   { g: "GOVERNANCE", items: [{ id: "approvals", icon: CheckCircle2, label: "Approvals" }, { id: "alerts", icon: Bell, label: "Alert Center" }, { id: "audit", icon: ScrollText, label: "Audit Log" }, { id: "posture", icon: Gauge, label: "Posture Management" }, { id: "compliance", icon: ClipboardCheck, label: "Compliance" }, { id: "sbom", icon: BarChart3, label: "SBOM / CBOM" }] },
   { g: "AI", items: [{ id: "ai", icon: Sparkles, label: "AI Assistant" }] },
   { g: "ADMIN", items: [{ id: "admin", icon: Settings, label: "Administration" }, { id: "docs", icon: FileText, label: "Documentation" }] }

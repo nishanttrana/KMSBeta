@@ -21,6 +21,15 @@ func defaultString(v string, d string) string {
 	return strings.TrimSpace(v)
 }
 
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
 func normalizeProvider(v string) string {
 	switch strings.ToLower(strings.TrimSpace(v)) {
 	case ProviderAWS:

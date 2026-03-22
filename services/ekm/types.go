@@ -193,6 +193,10 @@ type WrapDEKRequest struct {
 	ReferenceID  string `json:"reference_id"`
 	AgentID      string `json:"agent_id"`
 	DatabaseID   string `json:"database_id"`
+	RequesterID       string `json:"requester_id,omitempty"`
+	RequesterEmail    string `json:"requester_email,omitempty"`
+	JustificationCode string `json:"justification_code,omitempty"`
+	JustificationText string `json:"justification_text,omitempty"`
 }
 
 type WrapDEKResponse struct {
@@ -200,6 +204,8 @@ type WrapDEKResponse struct {
 	Version       int    `json:"version"`
 	CiphertextB64 string `json:"ciphertext"`
 	IVB64         string `json:"iv"`
+	Status            string `json:"status,omitempty"`
+	ApprovalRequestID string `json:"approval_request_id,omitempty"`
 }
 
 type UnwrapDEKRequest struct {
@@ -208,23 +214,35 @@ type UnwrapDEKRequest struct {
 	IVB64         string `json:"iv"`
 	AgentID       string `json:"agent_id"`
 	DatabaseID    string `json:"database_id"`
+	RequesterID       string `json:"requester_id,omitempty"`
+	RequesterEmail    string `json:"requester_email,omitempty"`
+	JustificationCode string `json:"justification_code,omitempty"`
+	JustificationText string `json:"justification_text,omitempty"`
 }
 
 type UnwrapDEKResponse struct {
 	KeyID        string `json:"key_id"`
 	Version      int    `json:"version"`
 	PlaintextB64 string `json:"plaintext"`
+	Status            string `json:"status,omitempty"`
+	ApprovalRequestID string `json:"approval_request_id,omitempty"`
 }
 
 type RotateTDEKeyRequest struct {
 	TenantID string `json:"tenant_id"`
 	Reason   string `json:"reason"`
+	RequesterID       string `json:"requester_id,omitempty"`
+	RequesterEmail    string `json:"requester_email,omitempty"`
+	JustificationCode string `json:"justification_code,omitempty"`
+	JustificationText string `json:"justification_text,omitempty"`
 }
 
 type RotateTDEKeyResponse struct {
 	KeyID            string   `json:"key_id"`
 	VersionID        string   `json:"version_id"`
 	AffectedAgentIDs []string `json:"affected_agent_ids"`
+	Status            string   `json:"status,omitempty"`
+	ApprovalRequestID string   `json:"approval_request_id,omitempty"`
 }
 
 type DeleteAgentRequest struct {

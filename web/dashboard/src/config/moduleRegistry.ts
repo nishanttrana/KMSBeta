@@ -10,6 +10,8 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   dataenc: "data_protection",
   payment: "payment_crypto",
   autokey: "autokey_provisioning",
+  signing: "artifact_signing",
+  keyaccess: "key_access_justifications",
   workload: "workload_identity",
   pqc: "pqc_migration",
   confidential: "confidential_compute",

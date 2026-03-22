@@ -47,6 +47,8 @@ type CloudKeyBinding struct {
 	SyncStatus   string    `json:"sync_status"`
 	LastSyncedAt time.Time `json:"last_synced_at"`
 	MetadataJSON string    `json:"metadata_json"`
+	OperationStatus  string `json:"operation_status,omitempty"`
+	ApprovalRequestID string `json:"approval_request_id,omitempty"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
@@ -60,6 +62,7 @@ type SyncJob struct {
 	Status       string    `json:"status"`
 	SummaryJSON  string    `json:"summary_json"`
 	ErrorMessage string    `json:"error_message"`
+	ApprovalRequestID string `json:"approval_request_id,omitempty"`
 	StartedAt    time.Time `json:"started_at"`
 	CompletedAt  time.Time `json:"completed_at"`
 	CreatedAt    time.Time `json:"created_at"`
@@ -99,12 +102,22 @@ type ImportKeyToCloudRequest struct {
 	VectaRegion  string `json:"vecta_region"`
 	CloudRegion  string `json:"cloud_region"`
 	MetadataJSON string `json:"metadata_json"`
+	RequesterID       string `json:"requester_id,omitempty"`
+	RequesterEmail    string `json:"requester_email,omitempty"`
+	RequesterIP       string `json:"requester_ip,omitempty"`
+	JustificationCode string `json:"justification_code,omitempty"`
+	JustificationText string `json:"justification_text,omitempty"`
 }
 
 type RotateCloudKeyRequest struct {
 	TenantID  string `json:"tenant_id"`
 	BindingID string `json:"binding_id"`
 	Reason    string `json:"reason"`
+	RequesterID       string `json:"requester_id,omitempty"`
+	RequesterEmail    string `json:"requester_email,omitempty"`
+	RequesterIP       string `json:"requester_ip,omitempty"`
+	JustificationCode string `json:"justification_code,omitempty"`
+	JustificationText string `json:"justification_text,omitempty"`
 }
 
 type SyncCloudKeysRequest struct {
@@ -112,6 +125,11 @@ type SyncCloudKeysRequest struct {
 	Provider  string `json:"provider"`
 	AccountID string `json:"account_id"`
 	Mode      string `json:"mode"`
+	RequesterID       string `json:"requester_id,omitempty"`
+	RequesterEmail    string `json:"requester_email,omitempty"`
+	RequesterIP       string `json:"requester_ip,omitempty"`
+	JustificationCode string `json:"justification_code,omitempty"`
+	JustificationText string `json:"justification_text,omitempty"`
 }
 
 type DiscoverInventoryRequest struct {

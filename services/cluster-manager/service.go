@@ -39,26 +39,26 @@ var builtinClusterProfilePresets = []clusterProfilePreset{
 	{
 		ID:          "cluster-profile-base",
 		Name:        defaultProfileName,
-		Description: "Base KMS platform state sync for auth, keycore, policy, and governance.",
+		Description: "Base KMS platform state sync for auth, tenant policy, governance, REST client security, and SCIM provisioning state.",
 		Components:  []string{},
 	},
 	{
 		ID:          "cluster-profile-standard",
 		Name:        "standard-platform",
-		Description: "Base platform plus secrets, certificates with coordinated renewal intelligence, Autokey, BYOK, EKM, and data protection replication.",
-		Components:  []string{"secrets", "certs", "autokey", "byok", "ekm", "dataprotect"},
+		Description: "Base platform plus secrets, certificates with coordinated renewal intelligence, Autokey, artifact signing, key-access governance, BYOK, EKM, and data protection replication.",
+		Components:  []string{"secrets", "certs", "autokey", "signing", "keyaccess", "byok", "ekm", "dataprotect"},
 	},
 	{
 		ID:          "cluster-profile-security",
 		Name:        "security-suite",
-		Description: "Standard platform plus compliance, posture, discovery, workload identity, confidential compute, Autokey, SBOM, and reporting replication.",
-		Components:  []string{"secrets", "certs", "autokey", "byok", "ekm", "dataprotect", "compliance", "posture", "discovery", "workload", "confidential", "sbom", "reporting"},
+		Description: "Standard platform plus compliance, posture, discovery, workload identity, confidential compute, Autokey, artifact signing, key-access governance, SBOM, and reporting replication.",
+		Components:  []string{"secrets", "certs", "autokey", "signing", "keyaccess", "byok", "ekm", "dataprotect", "compliance", "posture", "discovery", "workload", "confidential", "sbom", "reporting"},
 	},
 	{
 		ID:          "cluster-profile-full",
 		Name:        "full-platform",
-		Description: "Full platform replication including AI, Autokey, workload identity, confidential compute, KMIP, payment, PQC, QKD, QRNG, MPC, and HYOK services.",
-		Components:  []string{"secrets", "certs", "autokey", "byok", "ekm", "dataprotect", "compliance", "posture", "discovery", "workload", "confidential", "sbom", "reporting", "payment", "hyok", "kmip", "pqc", "qkd", "qrng", "mpc", "ai"},
+		Description: "Full platform replication including AI, Autokey, artifact signing, key-access governance, workload identity, confidential compute, KMIP, payment, PQC, QKD, QRNG, MPC, and HYOK services.",
+		Components:  []string{"secrets", "certs", "autokey", "signing", "keyaccess", "byok", "ekm", "dataprotect", "compliance", "posture", "discovery", "workload", "confidential", "sbom", "reporting", "payment", "hyok", "kmip", "pqc", "qkd", "qrng", "mpc", "ai"},
 	},
 }
 
@@ -150,7 +150,7 @@ func (s *Service) GetOverview(ctx context.Context, tenantID string) (ClusterOver
 	}
 	out := ClusterOverview{Nodes: nodes, Profiles: profiles}
 	out.SelectiveComponentSync.Enabled = true
-	out.SelectiveComponentSync.Note = "Nodes sync only the state for their enabled components. Auth replication includes REST client sender-constraint profiles and per-client security counters, certs replication includes ACME Renewal Information windows and coordinated renewal hotspot state, Autokey replication includes tenant templates, service defaults, request catalogs, and managed handles, while short-lived anti-replay nonce caches stay node-local."
+	out.SelectiveComponentSync.Note = "Nodes sync only the state for their enabled components. Auth replication includes REST client sender-constraint profiles, per-client security counters, SCIM tenant settings, SCIM-managed users and groups, and role-mapped memberships; certs replication includes ACME Renewal Information windows, ACME STAR subscriptions and delegated subscriber metadata, and coordinated renewal hotspot state; Autokey replication includes tenant templates, service defaults, request catalogs, and managed handles; artifact-signing replication includes signing profiles, trust constraints, and transparency-linked signature records; key-access replication includes tenant justification rules, approval policy bindings, and decision history, while short-lived anti-replay nonce caches stay node-local."
 	for _, node := range nodes {
 		if node.Role == "leader" && out.Summary.LeaderNodeID == "" {
 			out.Summary.LeaderNodeID = node.ID
@@ -1448,8 +1448,12 @@ func splitComponentTokens(raw string) []string {
 func componentFromHint(raw string) string {
 	v := strings.ToLower(strings.TrimSpace(raw))
 	switch v {
-	case "auth", "keycore", "policy", "governance", "audit", "payment", "workload", "confidential", "dataprotect", "byok", "hyok", "ekm", "kmip", "certs", "secrets", "qkd", "mpc", "cluster", "compliance", "reporting", "sbom", "pqc", "discovery", "ai":
+	case "auth", "keycore", "policy", "governance", "audit", "payment", "workload", "confidential", "dataprotect", "byok", "hyok", "ekm", "kmip", "certs", "secrets", "qkd", "mpc", "cluster", "compliance", "reporting", "sbom", "pqc", "discovery", "ai", "keyaccess", "signing":
 		return v
+	case "key_access", "key_access_justifications", "key-access", "kaj":
+		return "keyaccess"
+	case "artifact_signing", "artifact-signing", "supply_chain_signing", "supply-chain-signing":
+		return "signing"
 	case "workload_identity", "spiffe", "spiffe_federation":
 		return "workload"
 	case "cloud", "cloud_control", "cloud-key-control":
@@ -1490,6 +1494,8 @@ func componentFromServiceName(serviceName string) string {
 		return "payment"
 	case "kms-workload-identity":
 		return "workload"
+	case "kms-key-access":
+		return "keyaccess"
 	case "kms-confidential":
 		return "confidential"
 	case "kms-dataprotect":

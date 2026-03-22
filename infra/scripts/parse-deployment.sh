@@ -19,6 +19,8 @@ FEATURE_ORDER=(
   ekm_database
   payment_crypto
   autokey_provisioning
+  artifact_signing
+  key_access_justifications
   workload_identity
   confidential_compute
   compliance_dashboard

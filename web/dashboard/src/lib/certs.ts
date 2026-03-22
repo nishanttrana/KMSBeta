@@ -148,6 +148,65 @@ export type CertRenewalSummary = {
   emergency_rotation_count: number;
   due_soon_count: number;
   non_compliant_count: number;
+  star_subscription_count?: number;
+  star_delegated_count?: number;
+  star_due_soon_count?: number;
+  star_mass_rollout_risk_count?: number;
+};
+
+export type CertSTARSubscription = {
+  id: string;
+  tenant_id: string;
+  name: string;
+  account_id: string;
+  ca_id: string;
+  profile_id?: string;
+  subject_cn: string;
+  sans?: string[];
+  cert_type: string;
+  cert_class: string;
+  algorithm: string;
+  validity_hours: number;
+  renew_before_minutes: number;
+  auto_renew: boolean;
+  allow_delegation: boolean;
+  delegated_subscriber?: string;
+  latest_cert_id?: string;
+  issuance_count: number;
+  status: string;
+  rollout_group?: string;
+  last_issued_at?: string;
+  next_renewal_at?: string;
+  last_error?: string;
+  created_by?: string;
+  metadata_json?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type CertSTARRisk = {
+  rollout_group: string;
+  count: number;
+  risk_level: string;
+  scheduled_start?: string;
+  scheduled_end?: string;
+  subscription_ids?: string[];
+  delegated_targets?: string[];
+};
+
+export type CertSTARSummary = {
+  tenant_id: string;
+  enabled: boolean;
+  delegation_enabled: boolean;
+  subscription_count: number;
+  delegated_count: number;
+  auto_renew_count: number;
+  due_soon_count: number;
+  error_count: number;
+  mass_rollout_risk_count: number;
+  subscriptions?: CertSTARSubscription[];
+  mass_rollout_risks?: CertSTARRisk[];
+  recommended_window_hint?: string;
 };
 
 export type CertSecurityStatus = {
@@ -181,6 +240,9 @@ type ProtocolSchemasResponse = { items: ProtocolSchema[] };
 type AlertPolicyResponse = { policy: CertExpiryAlertPolicy };
 type RenewalSummaryResponse = { summary: CertRenewalSummary };
 type RenewalInfoResponse = { item: CertRenewalInfo };
+type STARSummaryResponse = { summary: CertSTARSummary };
+type STARSubscriptionsResponse = { items: CertSTARSubscription[] };
+type STARSubscriptionResponse = { subscription: CertSTARSubscription };
 type CertSecurityStatusResponse = { status: CertSecurityStatus };
 type CAResponse = { ca: CertCA };
 type CertResponse = { certificate: CertificateItem; private_key_pem?: string };
@@ -285,6 +347,31 @@ export type UpdateProtocolConfigInput = {
   enabled: boolean;
   config_json?: string;
   updated_by?: string;
+};
+
+export type CreateCertSTARSubscriptionInput = {
+  name?: string;
+  account_id?: string;
+  ca_id: string;
+  profile_id?: string;
+  subject_cn: string;
+  sans?: string[];
+  cert_type?: string;
+  cert_class?: string;
+  algorithm?: string;
+  validity_hours?: number;
+  renew_before_minutes?: number;
+  auto_renew?: boolean;
+  allow_delegation?: boolean;
+  delegated_subscriber?: string;
+  rollout_group?: string;
+  metadata?: Record<string, unknown>;
+  created_by?: string;
+};
+
+export type RefreshCertSTARSubscriptionInput = {
+  force?: boolean;
+  requested_by?: string;
 };
 
 export type AcmeOrderInput = {
@@ -593,6 +680,74 @@ export async function getCertRenewalInfo(session: AuthSession, certId: string): 
     `/certs/renewal-intelligence/${encodeURIComponent(String(certId || "").trim())}?${tenantQuery(session)}`
   );
   return out.item;
+}
+
+export async function getCertSTARSummary(session: AuthSession): Promise<CertSTARSummary> {
+  const out = await serviceRequest<STARSummaryResponse>(
+    session,
+    "certs",
+    `/certs/star/summary?${tenantQuery(session)}`
+  );
+  return out.summary;
+}
+
+export async function listCertSTARSubscriptions(session: AuthSession, limit = 200): Promise<CertSTARSubscription[]> {
+  const q = new URLSearchParams();
+  q.set("tenant_id", session.tenantId);
+  q.set("limit", String(Math.max(1, Math.min(5000, Math.trunc(Number(limit || 200))))));
+  const out = await serviceRequest<STARSubscriptionsResponse>(
+    session,
+    "certs",
+    `/certs/star/subscriptions?${q.toString()}`
+  );
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function createCertSTARSubscription(
+  session: AuthSession,
+  input: CreateCertSTARSubscriptionInput
+): Promise<CertSTARSubscription> {
+  const out = await serviceRequest<STARSubscriptionResponse>(session, "certs", "/certs/star/subscriptions", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: session.tenantId,
+      ...input,
+      created_by: String(input.created_by || session.username || "dashboard").trim() || "dashboard"
+    })
+  });
+  return out.subscription;
+}
+
+export async function refreshCertSTARSubscription(
+  session: AuthSession,
+  subscriptionId: string,
+  input?: RefreshCertSTARSubscriptionInput
+): Promise<CertSTARSubscription> {
+  const out = await serviceRequest<STARSubscriptionResponse>(
+    session,
+    "certs",
+    `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || "").trim())}/refresh`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        tenant_id: session.tenantId,
+        force: Boolean(input?.force),
+        requested_by: String(input?.requested_by || session.username || "dashboard").trim() || "dashboard"
+      })
+    }
+  );
+  return out.subscription;
+}
+
+export async function deleteCertSTARSubscription(session: AuthSession, subscriptionId: string): Promise<void> {
+  await serviceRequest<StatusResponse>(
+    session,
+    "certs",
+    `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || "").trim())}?${tenantQuery(session)}`,
+    {
+      method: "DELETE"
+    }
+  );
 }
 
 export async function uploadThirdPartyCertificate(

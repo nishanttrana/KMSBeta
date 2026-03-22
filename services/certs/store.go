@@ -57,6 +57,10 @@ type Store interface {
 	ListCertRenewalInfo(ctx context.Context, tenantID string, limit int) ([]CertRenewalInfo, error)
 	UpsertCertRenewalInfo(ctx context.Context, item CertRenewalInfo) error
 	DeleteCertRenewalInfo(ctx context.Context, tenantID string, certID string) error
+	GetACMESTARSubscription(ctx context.Context, tenantID string, id string) (ACMESTARSubscription, error)
+	ListACMESTARSubscriptions(ctx context.Context, tenantID string, limit int) ([]ACMESTARSubscription, error)
+	UpsertACMESTARSubscription(ctx context.Context, item ACMESTARSubscription) error
+	DeleteACMESTARSubscription(ctx context.Context, tenantID string, id string) error
 
 	CreateACMEAccount(ctx context.Context, account AcmeAccount) error
 	CreateACMEOrder(ctx context.Context, order AcmeOrder) error

@@ -72,6 +72,13 @@ For certificate-aware environments:
 
 - ACME directory should advertise `renewalInfo`
 - renewal intelligence endpoints should be live
+- ACME STAR summary should load if STAR is enabled for the tenant
+
+For tenant identity automation:
+
+- SCIM-enabled tenants should return a healthy summary from `/svc/auth/auth/scim/summary`
+- Auth should show no migration or startup failures for SCIM tables
+- the dashboard should surface SCIM inventory in `Administration -> User Admin -> SCIM Provisioning`
 
 ## Service Health Checklist
 
@@ -112,6 +119,8 @@ Verify only if enabled:
 - `reporting`
 - `discovery`
 - `autokey`
+- `keyaccess`
+- `signing`
 - `workload`
 - `confidential`
 - `pqc`
@@ -141,6 +150,9 @@ Pay special attention to:
 - certificate emergency rotation
 - missed renewal windows
 - attestation denials
+- SCIM token rotation
+- bulk user disable or deprovision activity
+- unexpected SCIM group deletions or membership churn
 
 ### Check Backup Freshness
 
@@ -155,6 +167,9 @@ Use `Governance` to confirm:
 - run or review compliance assessments
 - review posture drift and open findings
 - review REST client security posture
+- review key access justification decisions, bypasses, and approval backlog
+- review artifact signing profiles, transparency coverage, and verification failures
+- review SCIM provisioning summary, disabled identities, and role-mapped group counts
 - review workload identity registrations and expiries
 - review certificate renewal windows
 - review AP2 or payment policy changes if payment features are enabled
@@ -162,6 +177,7 @@ Use `Governance` to confirm:
 ## Monthly Operational Tasks
 
 - review tenant and role inventory
+- review SCIM connector state, token age, deprovision mode, and group-role mapping posture
 - review cluster replication profile
 - review Autokey templates and exceptions
 - review PQC readiness and migration backlog
@@ -174,12 +190,17 @@ Use `Governance` to confirm:
 Backups should preserve control-plane state such as:
 
 - tenants, users, and clients
+- SCIM settings, managed users, managed groups, and memberships
 - keys and handles
 - certificates and renewal intelligence
+- ACME STAR subscription state and delegated subscriber metadata
 - Autokey state
+- key access justification settings, rules, and decision history
+- artifact signing settings, profiles, signature records, and transparency metadata
 - workload identity state
 - confidential-compute policy
 - PQC migration state
+- MPC key and ceremony metadata when threshold workflows are enabled
 - governance metadata
 
 ### What Not To Treat As Recovery State
@@ -219,6 +240,13 @@ Confirm:
 - how nodes are identified and joined
 - whether outbound network requirements are satisfied
 
+For Auth and SCIM specifically, confirm that shared identity state includes:
+
+- tenant SCIM settings
+- SCIM-managed user and group resources
+- group memberships and role-mapping inputs
+- audit visibility for provisioning and deprovision events across nodes
+
 ### After Cluster Changes
 
 Verify:
@@ -228,6 +256,8 @@ Verify:
 - tenant visibility
 - interface and certificate consistency
 - backup coverage still matches the effective state model
+- SCIM summary counts match across the cluster for the same tenant
+- SCIM-driven group-to-role behavior is consistent regardless of which node serves the login or admin request
 
 ## Feature Enablement And Startup
 
@@ -238,6 +268,7 @@ Examples:
 - certificate renewal intelligence should be applied after `certs` startup
 - cluster profile should reflect enabled optional services
 - optional services such as `autokey`, `workload`, `confidential`, and `pqc` should appear in health and dashboard state
+- auth startup should include SCIM schema readiness before the tenant provisioning UI is treated as healthy
 
 ## Troubleshooting By Symptom
 
@@ -259,6 +290,17 @@ Check:
 - mTLS bindings
 - HTTP Message Signature failures
 - audit events for replay or unsigned calls
+
+### "SCIM users or groups are not appearing"
+
+Check:
+
+- `auth` health and migration state
+- tenant SCIM settings and whether the connector is enabled
+- SCIM token age and most recent token rotation event
+- the IdP SCIM base URL and bearer token
+- audit events for `scim_user_provisioned`, `scim_user_disabled`, `scim_user_deprovisioned`, `scim_group_provisioned`, and `scim_group_deleted`
+- cluster replication if only some nodes show the new identities
 
 ### "Certificates are expiring unexpectedly"
 

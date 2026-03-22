@@ -18,6 +18,7 @@ $featureOrder = @(
     "ekm_database",
     "payment_crypto",
     "autokey_provisioning",
+    "artifact_signing",
     "workload_identity",
     "confidential_compute",
     "compliance_dashboard",

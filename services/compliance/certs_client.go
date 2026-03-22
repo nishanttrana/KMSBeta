@@ -30,6 +30,10 @@ type CertRenewalSummary struct {
 	NonCompliantCount       int  `json:"non_compliant_count"`
 	MassRenewalRiskCount    int  `json:"mass_renewal_risk_count"`
 	CADirectedScheduleCount int  `json:"ca_directed_schedule_count"`
+	STARSubscriptionCount   int  `json:"star_subscription_count"`
+	STARDelegatedCount      int  `json:"star_delegated_count"`
+	STARDueSoonCount        int  `json:"star_due_soon_count"`
+	STARMassRolloutRiskCount int `json:"star_mass_rollout_risk_count"`
 }
 
 func NewHTTPCertsClient(baseURL string, timeout time.Duration) *HTTPCertsClient {
@@ -92,6 +96,10 @@ func (c *HTTPCertsClient) GetRenewalSummary(ctx context.Context, tenantID string
 		EmergencyRotationCount: intValue(raw["emergency_rotation_count"]),
 		DueSoonCount:           intValue(raw["due_soon_count"]),
 		NonCompliantCount:      intValue(raw["non_compliant_count"]),
+		STARSubscriptionCount:  intValue(raw["star_subscription_count"]),
+		STARDelegatedCount:     intValue(raw["star_delegated_count"]),
+		STARDueSoonCount:       intValue(raw["star_due_soon_count"]),
+		STARMassRolloutRiskCount: intValue(raw["star_mass_rollout_risk_count"]),
 	}
 	if items, ok := raw["mass_renewal_risks"].([]interface{}); ok {
 		summary.MassRenewalRiskCount = len(items)

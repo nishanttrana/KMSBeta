@@ -30,6 +30,8 @@ const defaultDeployment: DeploymentConfig = {
       ekm_database: true,
       payment_crypto: true,
       autokey_provisioning: true,
+      artifact_signing: true,
+      key_access_justifications: true,
       workload_identity: true,
       confidential_compute: true,
       compliance_dashboard: true,

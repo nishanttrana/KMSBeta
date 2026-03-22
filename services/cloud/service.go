@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"strings"
 	"time"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
+	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 )
 
 type EventPublisher interface {
@@ -20,6 +22,7 @@ type Service struct {
 	providers *ProviderRegistry
 	events    EventPublisher
 	mek       []byte
+	keyAccess pkgkeyaccess.Client
 }
 
 func NewService(store Store, keycore KeyCoreClient, providers *ProviderRegistry, events EventPublisher, mek []byte) *Service {
@@ -36,6 +39,10 @@ func NewService(store Store, keycore KeyCoreClient, providers *ProviderRegistry,
 		events:    events,
 		mek:       append([]byte{}, mek[:32]...),
 	}
+}
+
+func (s *Service) SetKeyAccessClient(client pkgkeyaccess.Client) {
+	s.keyAccess = client
 }
 
 func (s *Service) RegisterAccount(ctx context.Context, req RegisterCloudAccountRequest) (CloudAccount, error) {
@@ -195,6 +202,66 @@ func (s *Service) ImportKeyToCloud(ctx context.Context, req ImportKeyToCloudRequ
 	if err != nil {
 		return CloudKeyBinding{}, err
 	}
+	keyAccessResult, err := s.evaluateKeyAccess(ctx, pkgkeyaccess.EvaluateRequest{
+		TenantID:          req.TenantID,
+		Service:           "cloud",
+		Connector:         provider.Name(),
+		Operation:         "import",
+		KeyID:             req.KeyID,
+		ResourceID:        firstNonEmpty(account.ID, region),
+		TargetType:        "cloud_key_binding",
+		RequestID:         newID("cloudreq"),
+		RequesterID:       strings.TrimSpace(req.RequesterID),
+		RequesterEmail:    strings.TrimSpace(req.RequesterEmail),
+		RequesterIP:       strings.TrimSpace(req.RequesterIP),
+		JustificationCode: strings.TrimSpace(req.JustificationCode),
+		JustificationText: strings.TrimSpace(req.JustificationText),
+		Metadata: map[string]interface{}{
+			"provider":     provider.Name(),
+			"account_id":   account.ID,
+			"account_name": account.Name,
+			"region":       region,
+			"vecta_region": strings.TrimSpace(req.VectaRegion),
+			"cloud_region": strings.TrimSpace(req.CloudRegion),
+		},
+	})
+	if err != nil {
+		return CloudKeyBinding{}, err
+	}
+	if strings.EqualFold(keyAccessResult.Action, "deny") {
+		reason := firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy")
+		_ = s.publishAudit(ctx, "audit.cloud.key_access_denied", req.TenantID, map[string]interface{}{
+			"provider":           provider.Name(),
+			"account_id":         account.ID,
+			"key_id":             req.KeyID,
+			"operation":          "import",
+			"justification_code": req.JustificationCode,
+			"reason":             reason,
+		})
+		return CloudKeyBinding{}, newServiceError(http.StatusForbidden, "key_access_denied", reason)
+	}
+	if keyAccessResult.ApprovalRequired {
+		pending := CloudKeyBinding{
+			TenantID:          req.TenantID,
+			KeyID:             req.KeyID,
+			Provider:          provider.Name(),
+			AccountID:         account.ID,
+			Region:            region,
+			SyncStatus:        "pending_approval",
+			OperationStatus:   "pending_approval",
+			ApprovalRequestID: keyAccessResult.ApprovalRequestID,
+			MetadataJSON:      req.MetadataJSON,
+		}
+		_ = s.publishAudit(ctx, "audit.cloud.approval_required", req.TenantID, map[string]interface{}{
+			"provider":            provider.Name(),
+			"account_id":          account.ID,
+			"key_id":              req.KeyID,
+			"operation":           "import",
+			"approval_request_id": keyAccessResult.ApprovalRequestID,
+			"justification_code":  req.JustificationCode,
+		})
+		return pending, nil
+	}
 	keyMeta, err := s.keycore.GetKey(ctx, req.TenantID, req.KeyID)
 	if err != nil {
 		return CloudKeyBinding{}, err
@@ -273,6 +340,58 @@ func (s *Service) RotateCloudKey(ctx context.Context, req RotateCloudKeyRequest)
 	provider, err := s.providers.Get(binding.Provider)
 	if err != nil {
 		return CloudKeyBinding{}, "", err
+	}
+	keyAccessResult, err := s.evaluateKeyAccess(ctx, pkgkeyaccess.EvaluateRequest{
+		TenantID:          req.TenantID,
+		Service:           "cloud",
+		Connector:         binding.Provider,
+		Operation:         "rotate",
+		KeyID:             binding.KeyID,
+		ResourceID:        binding.ID,
+		TargetType:        "cloud_key_binding",
+		RequestID:         newID("cloudreq"),
+		RequesterID:       strings.TrimSpace(req.RequesterID),
+		RequesterEmail:    strings.TrimSpace(req.RequesterEmail),
+		RequesterIP:       strings.TrimSpace(req.RequesterIP),
+		JustificationCode: strings.TrimSpace(req.JustificationCode),
+		JustificationText: strings.TrimSpace(req.JustificationText),
+		Metadata: map[string]interface{}{
+			"provider":      binding.Provider,
+			"account_id":    binding.AccountID,
+			"binding_id":    binding.ID,
+			"cloud_key_id":  binding.CloudKeyID,
+			"cloud_key_ref": binding.CloudKeyRef,
+			"region":        binding.Region,
+			"reason":        req.Reason,
+		},
+	})
+	if err != nil {
+		return CloudKeyBinding{}, "", err
+	}
+	if strings.EqualFold(keyAccessResult.Action, "deny") {
+		reason := firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy")
+		_ = s.publishAudit(ctx, "audit.cloud.key_access_denied", req.TenantID, map[string]interface{}{
+			"binding_id":          binding.ID,
+			"provider":            binding.Provider,
+			"key_id":              binding.KeyID,
+			"operation":           "rotate",
+			"justification_code":  req.JustificationCode,
+			"reason":              reason,
+		})
+		return CloudKeyBinding{}, "", newServiceError(http.StatusForbidden, "key_access_denied", reason)
+	}
+	if keyAccessResult.ApprovalRequired {
+		binding.OperationStatus = "pending_approval"
+		binding.ApprovalRequestID = keyAccessResult.ApprovalRequestID
+		_ = s.publishAudit(ctx, "audit.cloud.approval_required", req.TenantID, map[string]interface{}{
+			"binding_id":          binding.ID,
+			"provider":            binding.Provider,
+			"key_id":              binding.KeyID,
+			"operation":           "rotate",
+			"approval_request_id": keyAccessResult.ApprovalRequestID,
+			"justification_code":  req.JustificationCode,
+		})
+		return binding, "", nil
 	}
 
 	_ = s.publishAudit(ctx, "audit.cloud.sync_started", req.TenantID, map[string]interface{}{
@@ -375,6 +494,63 @@ func (s *Service) SyncCloudKeys(ctx context.Context, req SyncCloudKeysRequest) (
 	}
 	if req.Provider != "" && !supportedProvider(req.Provider) {
 		return SyncJob{}, errors.New("unsupported provider")
+	}
+	keyAccessResult, err := s.evaluateKeyAccess(ctx, pkgkeyaccess.EvaluateRequest{
+		TenantID:          req.TenantID,
+		Service:           "cloud",
+		Connector:         req.Provider,
+		Operation:         "sync",
+		ResourceID:        firstNonEmpty(req.AccountID, req.Provider, req.Mode),
+		TargetType:        "cloud_sync",
+		RequestID:         newID("cloudreq"),
+		RequesterID:       strings.TrimSpace(req.RequesterID),
+		RequesterEmail:    strings.TrimSpace(req.RequesterEmail),
+		RequesterIP:       strings.TrimSpace(req.RequesterIP),
+		JustificationCode: strings.TrimSpace(req.JustificationCode),
+		JustificationText: strings.TrimSpace(req.JustificationText),
+		Metadata: map[string]interface{}{
+			"provider":   req.Provider,
+			"account_id": req.AccountID,
+			"mode":       req.Mode,
+		},
+	})
+	if err != nil {
+		return SyncJob{}, err
+	}
+	if strings.EqualFold(keyAccessResult.Action, "deny") {
+		reason := firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy")
+		_ = s.publishAudit(ctx, "audit.cloud.key_access_denied", req.TenantID, map[string]interface{}{
+			"provider":           req.Provider,
+			"account_id":         req.AccountID,
+			"operation":          "sync",
+			"mode":               req.Mode,
+			"justification_code": req.JustificationCode,
+			"reason":             reason,
+		})
+		return SyncJob{}, newServiceError(http.StatusForbidden, "key_access_denied", reason)
+	}
+	if keyAccessResult.ApprovalRequired {
+		job := SyncJob{
+			ID:                newID("cjob"),
+			TenantID:          req.TenantID,
+			Provider:          req.Provider,
+			AccountID:         req.AccountID,
+			Mode:              req.Mode,
+			Status:            "pending_approval",
+			SummaryJSON:       "{}",
+			ApprovalRequestID: keyAccessResult.ApprovalRequestID,
+			StartedAt:         nowUTC(),
+			CreatedAt:         nowUTC(),
+		}
+		_ = s.publishAudit(ctx, "audit.cloud.approval_required", req.TenantID, map[string]interface{}{
+			"provider":            req.Provider,
+			"account_id":          req.AccountID,
+			"operation":           "sync",
+			"mode":                req.Mode,
+			"approval_request_id": keyAccessResult.ApprovalRequestID,
+			"justification_code":  req.JustificationCode,
+		})
+		return job, nil
 	}
 	job := SyncJob{
 		ID:          newID("cjob"),
@@ -665,4 +841,15 @@ func mergeMetadata(existing string, updates map[string]interface{}) string {
 	}
 	raw, _ := json.Marshal(current)
 	return string(raw)
+}
+
+func (s *Service) evaluateKeyAccess(ctx context.Context, req pkgkeyaccess.EvaluateRequest) (pkgkeyaccess.EvaluateResponse, error) {
+	if s.keyAccess == nil {
+		return pkgkeyaccess.EvaluateResponse{Action: "allow"}, nil
+	}
+	out, err := s.keyAccess.Evaluate(ctx, req)
+	if err != nil {
+		return pkgkeyaccess.EvaluateResponse{Action: "allow", Reason: "key access justifications service unavailable"}, nil
+	}
+	return out, nil
 }

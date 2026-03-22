@@ -36,6 +36,8 @@ FEATURE_KEYS=(
   ekm_database
   payment_crypto
   autokey_provisioning
+  artifact_signing
+  key_access_justifications
   workload_identity
   confidential_compute
   compliance_dashboard
@@ -978,7 +980,7 @@ suggest_cluster_profile_id() {
   local has_specialized="false"
   local key enabled
 
-  for key in secrets certs autokey_provisioning cloud_byok ekm_database data_protection; do
+  for key in secrets certs autokey_provisioning artifact_signing key_access_justifications cloud_byok ekm_database data_protection; do
     enabled="$(requested_feature_enabled "${key}")"
     if [[ "${enabled}" == "true" ]]; then
       has_standard="true"
@@ -994,7 +996,7 @@ suggest_cluster_profile_id() {
     fi
   done
 
-  for key in payment_crypto autokey_provisioning workload_identity confidential_compute hyok_proxy kmip_server pqc_migration qkd_interface qrng_generator mpc_engine ai_llm; do
+  for key in payment_crypto autokey_provisioning artifact_signing key_access_justifications workload_identity confidential_compute hyok_proxy kmip_server pqc_migration qkd_interface qrng_generator mpc_engine ai_llm; do
     enabled="$(requested_feature_enabled "${key}")"
     if [[ "${enabled}" == "true" ]]; then
       has_specialized="true"
@@ -1385,6 +1387,8 @@ spec:
         posture_management: ${FEATURE_posture_management}
         payment_crypto: ${FEATURE_payment_crypto}
         autokey_provisioning: ${FEATURE_autokey_provisioning}
+        artifact_signing: ${FEATURE_artifact_signing}
+        key_access_justifications: ${FEATURE_key_access_justifications}
         workload_identity: ${FEATURE_workload_identity}
         confidential_compute: ${FEATURE_confidential_compute}
         pqc_migration: ${FEATURE_pqc_migration}

@@ -92,6 +92,8 @@ const NAV = [
   { id: "api-governance", label: "API: Governance" },
   { id: "api-dataprotect", label: "API: Data Protection" },
   { id: "api-autokey", label: "API: Autokey" },
+  { id: "api-keyaccess", label: "API: Key Access" },
+  { id: "api-signing", label: "API: Artifact Signing" },
   { id: "api-confidential", label: "API: Confidential Compute" },
   { id: "api-workload", label: "API: Workload Identity" },
   { id: "api-payment", label: "API: Payment" },
@@ -102,7 +104,7 @@ const NAV = [
   { id: "api-ekm-sdk", label: "API: PKCS#11/JCA" },
   { id: "guide-agent-deploy", label: "Guide: Agent Deploy" },
   { id: "guide-key-cache", label: "Guide: Key Cache" },
-  { id: "api-mpc", label: "API: MPC" },
+  { id: "api-mpc", label: "API: MPC / FROST" },
   { id: "api-qkd", label: "API: QKD" },
   { id: "api-compliance", label: "API: Compliance" },
   { id: "api-sbom", label: "API: SBOM / CBOM" },
@@ -120,6 +122,8 @@ const NAV = [
   { id: "ui-certs", label: "UI Guide: Certificates" },
   { id: "ui-dataprotect", label: "UI Guide: Data Protection" },
   { id: "ui-autokey", label: "UI Guide: Autokey" },
+  { id: "ui-keyaccess", label: "UI Guide: Key Access" },
+  { id: "ui-signing", label: "UI Guide: Artifact Signing" },
   { id: "ui-pqc", label: "UI Guide: Post-Quantum Crypto" },
   { id: "ui-confidential", label: "UI Guide: Confidential Compute" },
   { id: "ui-workload", label: "UI Guide: Workload Identity" },
@@ -162,6 +166,7 @@ const SectionOverview = () => (
         ["Data Protection", "Tokenization, masking, redaction, FPE, envelope encryption, searchable encryption"],
         ["Autokey", "Policy-driven key handle provisioning, resource templates, service defaults, and approval-backed self-service requests"],
         ["Confidential Compute", "Attested key release with approved images, claims, measurements, and cluster-node gating"],
+        ["SCIM Provisioning", "Tenant-scoped RFC 7643/7644 user and group provisioning with directory-driven RBAC mapping"],
         ["Workload Identity", "SPIFFE trust domains, X.509-SVID/JWT-SVID issuance, federation, and workload-to-key authorization"],
         ["Payment Crypto", "TR-31 key blocks, PIN translation, CVV, MAC, ISO 20022, AP2 agent payments, key injection"],
         ["Cloud Key Control", "BYOK (AWS, Azure, GCP, Oracle, Salesforce) and HYOK (DKE, Cache-Only, EKM)"],
@@ -178,7 +183,7 @@ const SectionOverview = () => (
       ))}
     </div>
     <H2>Supported Standards</H2>
-    <P>FIPS 140-3, PKCS#11, KMIP 2.1, ACME (RFC 8555), ACME Renewal Information (RFC 9773), EST (RFC 7030), SCEP, CMPv2, SPIFFE, X.509-SVID, JWT-SVID, TR-31, ISO 20022, AP2, ETSI QKD 014/004, X.509v3, OCSP, CRL, Shamir Secret Sharing, Merkle Hash Trees, CycloneDX SBOM/CBOM, SPDX.</P>
+    <P>FIPS 140-3, PKCS#11, KMIP 2.1, ACME (RFC 8555), ACME Renewal Information (RFC 9773), ACME STAR (RFC 8739), EST (RFC 7030), SCEP, CMPv2, SPIFFE, X.509-SVID, JWT-SVID, TR-31, ISO 20022, AP2, ETSI QKD 014/004, X.509v3, OCSP, CRL, Shamir Secret Sharing, Merkle Hash Trees, CycloneDX SBOM/CBOM, SPDX.</P>
   </div>
 );
 
@@ -446,6 +451,29 @@ const SectionApiAuth = () => (
         ["PUT", "/auth/users/{id}/role", "Update user role"],
         ["PUT", "/auth/users/{id}/status", "Enable/disable user"],
         ["POST", "/auth/users/{id}/reset-password", "Reset user password (admin)"],
+        ["GET", "/auth/scim/settings", "Read tenant SCIM provisioning settings"],
+        ["PUT", "/auth/scim/settings", "Update tenant SCIM defaults and lifecycle policy"],
+        ["POST", "/auth/scim/settings/rotate-token", "Rotate the tenant SCIM bearer token"],
+        ["GET", "/auth/scim/summary", "Read tenant SCIM provisioning summary"],
+        ["GET", "/auth/scim/users", "List SCIM-managed KMS users"],
+        ["GET", "/auth/scim/groups", "List SCIM-managed KMS groups"],
+      ]} />
+    </Collapse>
+    <Collapse title="SCIM 2.0 Provisioning">
+      <EndpointTable rows={[
+        ["GET", "/scim/v2/ServiceProviderConfig", "SCIM discovery for provisioning client capabilities"],
+        ["GET", "/scim/v2/Schemas", "List SCIM schemas supported by the tenant connector"],
+        ["GET", "/scim/v2/ResourceTypes", "List SCIM resource types (Users, Groups)"],
+        ["GET", "/scim/v2/Users", "List provisioned SCIM users for the tenant connector"],
+        ["POST", "/scim/v2/Users", "Provision or update a SCIM user"],
+        ["PUT", "/scim/v2/Users/{id}", "Replace a SCIM user resource"],
+        ["PATCH", "/scim/v2/Users/{id}", "Patch a SCIM user resource"],
+        ["DELETE", "/scim/v2/Users/{id}", "Disable or delete a SCIM user per tenant policy"],
+        ["GET", "/scim/v2/Groups", "List provisioned SCIM groups"],
+        ["POST", "/scim/v2/Groups", "Provision or update a SCIM group"],
+        ["PUT", "/scim/v2/Groups/{id}", "Replace a SCIM group resource"],
+        ["PATCH", "/scim/v2/Groups/{id}", "Patch a SCIM group resource"],
+        ["DELETE", "/scim/v2/Groups/{id}", "Delete a SCIM group and memberships"],
       ]} />
     </Collapse>
     <Collapse title="Tenant Management">
@@ -479,6 +507,8 @@ const SectionApiAuth = () => (
       ]} />
     </Collapse>
     <P>Sender-constrained client auth is now first-class for REST callers. Use <IC>OAuth mTLS</IC> when the client can present a certificate, <IC>DPoP</IC> when the client can generate a proof JWT per request, and <IC>HTTP Message Signatures</IC> when the client owns a stable signing key. Replay failures, unsigned requests, and signature verification failures are all visible in audit, posture, and compliance.</P>
+    <P>SCIM provisioning is also tenant-scoped in the Auth service. Rotate a dedicated SCIM bearer token per tenant, point Okta or Entra ID at the <IC>/scim/v2</IC> base path, and then use KMS group-role bindings to turn provisioned directory groups into tenant RBAC.</P>
+    <P>Operationally, SCIM behaves like shared Auth control-plane state. Tenant SCIM settings, managed users, managed groups, and memberships replicate with the Auth domain in clustered deployments and appear in backup coverage metadata. Provisioning, disable, delete, and token-rotation activity is also emitted into the audit stream so operators can trace identity lifecycle changes end to end.</P>
     <Collapse title="CLI & HSM">
       <EndpointTable rows={[
         ["GET", "/auth/cli/status", "Get CLI SSH daemon status"],
@@ -683,6 +713,9 @@ const SectionApiCerts = () => (
     <H3>ACME Renewal Information (RFC 9773)</H3>
     <P>Vecta KMS also publishes coordinated renewal windows so ACME clients renew inside CA-directed windows instead of all polling on a fixed cron. This reduces thundering-herd renewals, highlights mass-renewal hotspots, and lets operators catch missed windows before they become outages.</P>
     <P>The deployment file now exposes this under <IC>spec.cert_security.acme_renewal</IC>, and the runtime start scripts apply those ARI settings back into the live ACME protocol policy on startup so certificate renewal timing stays deployment-driven.</P>
+    <H3>ACME STAR (short-lived automatically renewed certificates)</H3>
+    <P>For gateways, service mesh edges, and delegated subscribers, Vecta KMS also supports ACME STAR-style subscriptions. Instead of treating every short-lived certificate as a separate manual request, operators create a subscription that keeps the lifetime, renew-before window, rollout group, and optional delegated subscriber under central policy.</P>
+    <P>This lets teams issue very short-lived certificates while still seeing which subscriptions are due soon, which rollout groups are becoming concentrated, and which delegated subscribers are bound to those subscriptions.</P>
     <H3>EST (RFC 7030)</H3>
     <P>Enrollment over Secure Transport. A modern, TLS-based protocol for certificate enrollment. Simpler than SCEP, supports initial enrollment and re-enrollment. Used by enterprise devices, IoT gateways, and modern network equipment.</P>
     <H3>SCEP (Simple Certificate Enrollment Protocol)</H3>
@@ -718,6 +751,11 @@ const SectionApiCerts = () => (
         ["POST", "/acme/new-order", "Create a certificate order for a domain"],
         ["POST", "/acme/challenge/{id}", "Complete domain validation challenge"],
         ["POST", "/acme/finalize/{id}", "Finalize order and download certificate"],
+        ["GET", "/certs/star/summary", "Tenant ACME STAR summary: subscription count, due-soon, delegated subscriber coverage, rollout risk"],
+        ["GET", "/certs/star/subscriptions", "List ACME STAR subscriptions and latest certificate pointers"],
+        ["POST", "/certs/star/subscriptions", "Create a new ACME STAR short-lived subscription"],
+        ["POST", "/certs/star/subscriptions/{id}/refresh", "Force immediate STAR renewal for one subscription"],
+        ["DELETE", "/certs/star/subscriptions/{id}", "Delete a STAR subscription and stop further automated renewals"],
       ]} />
     </Collapse>
     <Collapse title="Renewal Intelligence">
@@ -1138,6 +1176,65 @@ curl -X POST http://localhost:8260/autokey/requests \\
     "justification": "Need a managed AES key for payment-service envelope encryption",
     "requester_id": "platform-ops"
   }'`}</Code>
+  </div>
+);
+
+const SectionApiKeyAccess = () => (
+  <div>
+    <div style={S.h1}>API: Key Access Justifications</div>
+    <P>Service: kms-key-access | Port: 8270 (HTTP) / 18270 (gRPC) | Profile: key_access_justifications</P>
+    <P>This service governs external key use with reason codes, optional free-text justifications, and approval-aware routing for HYOK, EKM, cloud, and other externalized decrypt or signing flows.</P>
+    <Collapse title="Tenant Settings & Summary" defaultOpen>
+      <EndpointTable rows={[
+        ["GET", "/key-access/settings", "Fetch tenant justification policy settings"],
+        ["PUT", "/key-access/settings", "Update tenant enforcement mode, default action, and approval linkage"],
+        ["GET", "/key-access/summary", "Return counters used by Dashboard, Posture, and Compliance"],
+      ]} />
+      <P>The summary is the fast operator view for whether requests were justified, denied, approval-held, or treated as bypass signals in the last 24 hours.</P>
+    </Collapse>
+    <Collapse title="Reason Codes & Decisions">
+      <EndpointTable rows={[
+        ["GET", "/key-access/codes", "List reason-code rules"],
+        ["POST", "/key-access/codes", "Create a reason-code rule"],
+        ["PUT", "/key-access/codes/{id}", "Update a reason-code rule"],
+        ["DELETE", "/key-access/codes/{id}", "Delete a rule"],
+        ["GET", "/key-access/decisions", "List evaluated decisions and their reasons"],
+      ]} />
+      <P>Rules bind a justification code to one or more services and operations. A rule can allow directly, deny, or send the request into Governance approval. Decision history is persisted and replicated as tenant control-plane state.</P>
+    </Collapse>
+    <H2>Audit Trail</H2>
+    <P>Audit records cover settings changes, rule lifecycle, summary views, decision views, evaluated requests, and approval-required branches. This is where operators answer who requested external key access, which code matched, and whether the request was bypassed or blocked.</P>
+  </div>
+);
+
+const SectionApiSigning = () => (
+  <div>
+    <div style={S.h1}>API: Artifact Signing</div>
+    <P>Service: kms-signing | Port: 8280 (HTTP) / 18280 (gRPC) | Profile: artifact_signing</P>
+    <P>The signing service provides KMS-backed artifact and code signing with per-profile identity constraints, transparency-style metadata, and later verification. It is intended for release pipelines, Git artifact provenance, and software supply-chain workflows.</P>
+    <Collapse title="Tenant Settings & Summary" defaultOpen>
+      <EndpointTable rows={[
+        ["GET", "/signing/settings", "Fetch tenant artifact-signing settings"],
+        ["PUT", "/signing/settings", "Update default profile, transparency requirement, and allowed identity modes"],
+        ["GET", "/signing/summary", "Return signing counters used by Dashboard, Posture, and Compliance"],
+      ]} />
+      <P>The summary reports recent signing activity, transparency coverage, workload-vs-OIDC identity distribution, and verification failures.</P>
+    </Collapse>
+    <Collapse title="Profiles, Records, and Operations">
+      <EndpointTable rows={[
+        ["GET", "/signing/profiles", "List tenant signing profiles"],
+        ["POST", "/signing/profiles", "Create a signing profile"],
+        ["PUT", "/signing/profiles/{id}", "Update a signing profile"],
+        ["DELETE", "/signing/profiles/{id}", "Delete a signing profile"],
+        ["GET", "/signing/records", "List signed artifact records"],
+        ["POST", "/signing/blob", "Sign a generic blob with a selected profile"],
+        ["POST", "/signing/git", "Sign Git-oriented artifact metadata"],
+        ["POST", "/signing/verify", "Re-verify a stored signature record"],
+      ]} />
+      <P>Profiles bind the key, artifact class, identity mode, repository patterns, issuer and subject rules, and whether transparency logging is mandatory.</P>
+    </Collapse>
+    <H2>Transparency Metadata</H2>
+    <P>Each signing record stores a transparency entry ID, transparency hash, and monotonic transparency index. This is not a full Rekor implementation, but it gives operators a verifiable, KMS-local provenance chain that survives backup and cluster replication.</P>
   </div>
 );
 
@@ -1641,7 +1738,7 @@ const SectionGuideKeyCache = () => (
 
 const SectionApiMpc = () => (
   <div>
-    <div style={S.h1}>API: Multi-Party Computation (MPC)</div>
+    <div style={S.h1}>API: Multi-Party Computation (MPC / FROST)</div>
     <P>Service: kms-mpc | Port: 8190 (HTTP) / 18190 (gRPC) | Profile: mpc_engine</P>
 
     <H2>What is MPC?</H2>
@@ -1651,7 +1748,7 @@ const SectionApiMpc = () => (
     <H3>DKG (Distributed Key Generation)</H3>
     <P>A ceremony where multiple participants collaboratively generate a shared key pair. Each participant receives a key share, and no one ever sees the complete private key — not even during generation. The public key is available to everyone for encryption and verification. DKG uses Shamir Secret Sharing and verifiable secret sharing protocols.</P>
     <H3>Threshold Signing (t-of-n)</H3>
-    <P>To produce a digital signature, at least t participants (out of n total) must contribute their partial signatures. These partial signatures are mathematically combined into a valid signature indistinguishable from a standard single-key signature. For example, with a 3-of-5 threshold, any 3 of the 5 shareholders can sign, but 2 cannot.</P>
+    <P>To produce a digital signature, at least t participants (out of n total) must contribute their partial signatures. These partial signatures are mathematically combined into a valid signature indistinguishable from a standard single-key signature. For example, with a 3-of-5 threshold, any 3 of the 5 shareholders can sign, but 2 cannot. Operationally, this maps to the FROST-style control model teams expect for high-assurance threshold signing, even though the service still exposes generic MPC ceremony primitives.</P>
     <H3>Threshold Decryption</H3>
     <P>Similar to threshold signing, but for decryption. Data encrypted with the shared public key can only be decrypted when t participants contribute their decryption shares. This prevents any single party from accessing encrypted data alone.</P>
 
@@ -2342,6 +2439,36 @@ const SectionUIAutokey = () => (
   </div>
 );
 
+const SectionUIKeyAccess = () => (
+  <div>
+    <div style={S.h1}>UI Guide: Key Access Justifications</div>
+    <P>The Key Access Justifications tab is the tenant control plane for explainable external key use. It is where platform teams define allowed reason codes, default actions, and approval routing for external decrypt, sign, wrap, and unwrap requests.</P>
+    <H2>Overview</H2>
+    <P>The top cards show whether the feature is enabled, the request volume, approvals, unjustified requests, and bypass signals. These counters are live service summaries, not placeholder metrics.</P>
+    <H2>Settings</H2>
+    <P>Choose whether the tenant runs in audit or enforce mode, what the default action should be, whether a reason code or free-text explanation is mandatory, and which approval policy should be used when a rule requires human review.</P>
+    <H2>Justifications</H2>
+    <P>Create reason-code rules and bind them to services and operations. This is where you define policies such as allowing payment signing for ISO 20022, requiring approval for tenant-mail decrypt, or denying unknown codes by default.</P>
+    <H2>Decisions</H2>
+    <P>Review evaluated requests, the matched code, approval request ID, requester context, and whether a bypass was detected. Operators should treat this as the operational ledger for external key-governance behavior.</P>
+  </div>
+);
+
+const SectionUISigning = () => (
+  <div>
+    <div style={S.h1}>UI Guide: Artifact Signing</div>
+    <P>The Artifact Signing tab is the tenant control plane for code-signing and release provenance backed by KMS-managed keys. It is designed for teams that want workload-bound or OIDC-bound signing instead of exporting signing keys into CI systems.</P>
+    <H2>Overview</H2>
+    <P>The summary cards show whether artifact signing is enabled, how many profiles exist, signing volume in the last 24 hours, workload vs OIDC identity distribution, and whether transparency-linked verification is healthy.</P>
+    <H2>Profiles</H2>
+    <P>Create profiles per artifact type, select the signing key and algorithm, choose the identity mode, and constrain the allowed repositories, issuers, subjects, or workload identities. This is the main place where operators convert an abstract signing key into a controlled release-signing policy.</P>
+    <H2>Sign</H2>
+    <P>Use the blob or Git signing actions to create a new signature record. The service stores the envelope metadata, the signature, and the transparency hash so the operation remains auditable later.</P>
+    <H2>Records</H2>
+    <P>Inspect prior signing records, look at the bound identity metadata, and re-run verification. This is the day-2 operator view for release provenance and signing failure triage.</P>
+  </div>
+);
+
 const SectionUIConfidential = () => (
   <div>
     <div style={S.h1}>UI Guide: Confidential Compute</div>
@@ -2474,7 +2601,7 @@ const SectionUIHsm = () => (
 
 const SectionUIAdvanced = () => (
   <div>
-    <div style={S.h1}>UI Guide: Advanced (QKD, QRNG, MPC)</div>
+    <div style={S.h1}>UI Guide: Advanced (QKD, QRNG, MPC / FROST)</div>
     <P>The Advanced tab contains next-generation cryptographic technologies: quantum key distribution, quantum random number generation, and multi-party computation. These features are for organizations with advanced security requirements.</P>
 
     <H2>QKD Tab — Quantum Key Distribution</H2>
@@ -2499,8 +2626,8 @@ const SectionUIAdvanced = () => (
     <H3>How to use:</H3>
     <P>1. Click "Add Source" to register a QRNG device or cloud service (ID Quantique Quantis, ANU QRNG API, etc.). 2. Configure pull or push mode. 3. Set the minimum entropy threshold — if the pool drops below this level, the system alerts you. 4. Once configured, all KMS key generation automatically uses quantum-grade entropy. No code changes needed.</P>
 
-    <H2>MPC Tab — Multi-Party Computation</H2>
-    <P>This tab manages distributed key operations where multiple parties must cooperate.</P>
+    <H2>MPC Tab — Multi-Party Computation / FROST</H2>
+    <P>This tab manages distributed key operations where multiple parties must cooperate. For threshold-signing users, this is the place to think about quorum-backed signing keys and FROST-style ceremony workflows.</P>
     <H3>What customers see:</H3>
     <P>- Overview: Active ceremonies, MPC keys, participant count, recent activity</P>
     <P>- Operations: Start DKG (distributed key generation), threshold signing, or threshold decryption workflows. Monitor ceremony progress as participants contribute</P>
@@ -2649,6 +2776,9 @@ const SectionUIAdmin = () => (
     <P>- cli-user: SSH CLI access for HSM operations (slot discovery, key generation, provider installation)</P>
     <H3>Identity Providers:</H3>
     <P>Connect external identity sources: LDAP/Active Directory (sync users and groups), SAML 2.0 (SSO with Okta, Azure AD, PingIdentity), OIDC (SSO with Google, Auth0, Keycloak). Users authenticate via their corporate identity provider and are mapped to KMS roles.</P>
+    <H3>SCIM Provisioning:</H3>
+    <P>The SCIM Provisioning panel sits in User Admin and turns tenant identity lifecycle into an automated flow. Enable SCIM for a tenant, choose the default role and lifecycle behavior, rotate the tenant bearer token once, and paste it into Okta or Entra ID. Users and groups then arrive through the RFC 7644 interface, while KMS group-role bindings control what those groups can do after provisioning.</P>
+    <P>Choose <IC>Disable User</IC> if you need identity evidence to remain in KMS after offboarding, or <IC>Delete User</IC> if the tenant wants hard deprovision. The summary cards show managed users, groups, disabled users, and whether the connector token has actually been rotated.</P>
   </div>
 );
 
@@ -3377,6 +3507,8 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "api-governance": SectionApiGovernance,
   "api-dataprotect": SectionApiDataprotect,
   "api-autokey": SectionApiAutokey,
+  "api-keyaccess": SectionApiKeyAccess,
+  "api-signing": SectionApiSigning,
   "api-confidential": SectionApiConfidential,
   "api-workload": SectionApiWorkload,
   "api-payment": SectionApiPayment,
@@ -3405,6 +3537,8 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "ui-certs": SectionUICerts,
   "ui-dataprotect": SectionUIDataprotect,
   "ui-autokey": SectionUIAutokey,
+  "ui-keyaccess": SectionUIKeyAccess,
+  "ui-signing": SectionUISigning,
   "ui-pqc": SectionUIPqc,
   "ui-confidential": SectionUIConfidential,
   "ui-workload": SectionUIWorkload,

@@ -71,7 +71,14 @@ func (s *Service) GetRenewalSummary(ctx context.Context, tenantID string) (CertR
 		}
 	}
 	options, _ := s.acmeOptions(ctx, tenantID)
-	return buildCertRenewalSummary(tenantID, items, options), nil
+	out := buildCertRenewalSummary(tenantID, items, options)
+	if star, err := s.GetACMESTARSummary(ctx, tenantID); err == nil {
+		out.STARSubscriptionCount = star.SubscriptionCount
+		out.STARDelegatedCount = star.DelegatedCount
+		out.STARDueSoonCount = star.DueSoonCount
+		out.STARMassRolloutRiskCount = star.MassRolloutRiskCount
+	}
+	return out, nil
 }
 
 func (s *Service) RefreshTenantRenewalIntelligence(ctx context.Context, tenantID string) error {

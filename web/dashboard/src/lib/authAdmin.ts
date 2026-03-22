@@ -26,6 +26,62 @@ export type GroupRoleBinding = {
   updated_at?: string;
 };
 
+export type SCIMSettings = {
+  tenant_id: string;
+  enabled: boolean;
+  token_prefix?: string;
+  default_role: string;
+  default_status: string;
+  default_must_change_password: boolean;
+  deprovision_mode: string;
+  group_role_mappings_enabled: boolean;
+  updated_by?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SCIMSummary = {
+  tenant_id: string;
+  enabled: boolean;
+  token_configured: boolean;
+  token_prefix?: string;
+  default_role: string;
+  default_status: string;
+  deprovision_mode: string;
+  group_role_mappings_enabled: boolean;
+  managed_users: number;
+  active_users: number;
+  disabled_users: number;
+  managed_groups: number;
+  managed_memberships: number;
+  role_mapped_groups: number;
+  last_provisioned_at?: string;
+  last_deprovisioned_at?: string;
+};
+
+export type SCIMUser = AuthUser & {
+  external_id?: string;
+  display_name?: string;
+  given_name?: string;
+  family_name?: string;
+  scim_managed?: boolean;
+  last_synced_at?: string;
+};
+
+export type SCIMGroup = {
+  id: string;
+  tenant_id: string;
+  external_id?: string;
+  display_name: string;
+  description?: string;
+  active: boolean;
+  scim_managed?: boolean;
+  member_ids?: string[];
+  member_count?: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type TenantActivityBlocker = {
   code: string;
   label: string;
@@ -335,6 +391,10 @@ type TenantsResponse = { items: AuthTenant[] };
 type TenantCreateResponse = { status: string; tenant_id: string };
 type GroupRoleBindingsResponse = { items: GroupRoleBinding[] };
 type GroupRoleBindingResponse = { binding: GroupRoleBinding };
+type SCIMSettingsResponse = { settings?: SCIMSettings; bearer_token?: string; request_id?: string };
+type SCIMSummaryResponse = { summary?: SCIMSummary };
+type SCIMUsersResponse = { items?: SCIMUser[] };
+type SCIMGroupsResponse = { items?: SCIMGroup[] };
 type TenantReadinessResponse = { readiness: TenantDeleteReadiness };
 type TenantDeleteResponse = {
   status: string;
@@ -970,6 +1030,65 @@ export async function deleteAuthGroupRoleBinding(
     `/auth/groups/${encodeURIComponent(String(groupID || "").trim())}/role${qs}`,
     { method: "DELETE" }
   );
+}
+
+export async function getAuthSCIMSettings(session: AuthSession, tenantID?: string): Promise<SCIMSettings> {
+  const targetTenant = String(tenantID || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
+  const out = await serviceRequest<SCIMSettingsResponse>(session, "auth", `/auth/scim/settings${qs}`);
+  return out?.settings as SCIMSettings;
+}
+
+export async function updateAuthSCIMSettings(
+  session: AuthSession,
+  input: Partial<SCIMSettings> & { tenant_id?: string }
+): Promise<SCIMSettings> {
+  const out = await serviceRequest<SCIMSettingsResponse>(session, "auth", "/auth/scim/settings", {
+    method: "PUT",
+    body: JSON.stringify({
+      tenant_id: String(input?.tenant_id || "").trim(),
+      enabled: input?.enabled,
+      default_role: input?.default_role,
+      default_status: input?.default_status,
+      default_must_change_password: input?.default_must_change_password,
+      deprovision_mode: input?.deprovision_mode,
+      group_role_mappings_enabled: input?.group_role_mappings_enabled
+    })
+  });
+  return out?.settings as SCIMSettings;
+}
+
+export async function rotateAuthSCIMToken(
+  session: AuthSession,
+  tenantID?: string
+): Promise<{ settings?: SCIMSettings; bearer_token?: string; request_id?: string }> {
+  return serviceRequest<SCIMSettingsResponse>(session, "auth", "/auth/scim/settings/rotate-token", {
+    method: "POST",
+    body: JSON.stringify({
+      tenant_id: String(tenantID || "").trim()
+    })
+  });
+}
+
+export async function getAuthSCIMSummary(session: AuthSession, tenantID?: string): Promise<SCIMSummary> {
+  const targetTenant = String(tenantID || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
+  const out = await serviceRequest<SCIMSummaryResponse>(session, "auth", `/auth/scim/summary${qs}`);
+  return out?.summary as SCIMSummary;
+}
+
+export async function listAuthSCIMUsers(session: AuthSession, tenantID?: string): Promise<SCIMUser[]> {
+  const targetTenant = String(tenantID || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
+  const out = await serviceRequest<SCIMUsersResponse>(session, "auth", `/auth/scim/users${qs}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function listAuthSCIMGroups(session: AuthSession, tenantID?: string): Promise<SCIMGroup[]> {
+  const targetTenant = String(tenantID || "").trim();
+  const qs = targetTenant ? `?tenant_id=${encodeURIComponent(targetTenant)}` : "";
+  const out = await serviceRequest<SCIMGroupsResponse>(session, "auth", `/auth/scim/groups${qs}`);
+  return Array.isArray(out?.items) ? out.items : [];
 }
 
 // --- SSO public endpoints (no auth required) ---

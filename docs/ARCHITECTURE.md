@@ -27,7 +27,7 @@ The platform is split into four layers:
 3. Integration and protocol surfaces
    - `cloud`, `ekm`, `kmip`, `payment`, `hsm-integration`, `ekm-agent`
 4. Assurance and advanced capability services
-   - `compliance`, `posture`, `reporting`, `discovery`, `sbom`, `autokey`, `workload`, `confidential`, `pqc`, `qkd`, `qrng`, `mpc`, `ai`
+   - `compliance`, `posture`, `reporting`, `discovery`, `sbom`, `autokey`, `keyaccess`, `signing`, `workload`, `confidential`, `pqc`, `qkd`, `qrng`, `mpc`, `ai`
 
 ## Core Concepts
 
@@ -96,12 +96,15 @@ Choose KeyCore when your need is fundamentally about cryptographic material and 
 `auth` manages:
 
 - users, tenants, roles, groups
+- tenant-scoped SCIM settings, SCIM-managed users, SCIM-managed groups, and group memberships
 - SSO and identity provider bindings
 - human and machine login flows
 - API client registration
 - sender-constrained REST client settings
 
 Choose Auth when the main question is "who is allowed to talk to KMS and how?"
+
+For directory-led identity estates, Auth is also the SCIM control-plane boundary. The Auth service owns inbound RFC 7643 and RFC 7644 provisioning, deprovision policy, SCIM token rotation, and the translation from provisioned directory groups into existing KMS role bindings.
 
 ### Audit
 
@@ -140,7 +143,15 @@ Applications and automation typically use:
 - `/svc/auth/...`
 - `/svc/certs/...`
 - `/svc/autokey/...`
+- `/svc/keyaccess/...`
+- `/svc/signing/...`
 - `/svc/workload/...`
+
+Identity providers also use the Auth path for SCIM:
+
+- `/svc/auth/auth/scim/settings`
+- `/svc/auth/auth/scim/summary`
+- `/svc/auth/scim/v2/...`
 
 This is the preferred path for new application integrations unless the application already depends on a protocol such as KMIP or EKM.
 
@@ -155,6 +166,8 @@ Specialized clients use protocol-native surfaces:
 ### Cluster Path
 
 Multi-node control uses `cluster-manager` plus deployment profile and startup scripts. This is how shared state, selective replication, and node lifecycle are coordinated.
+
+For identity-heavy deployments, cluster behavior matters because Auth-scoped control-plane state such as tenants, users, groups, SCIM settings, provisioned memberships, and group-to-role mapping inputs should remain consistent across nodes. Operators should think of SCIM as replicated identity state, not as a one-node connector cache.
 
 ## Trust Boundaries
 
@@ -182,6 +195,8 @@ KeyCore is the execution boundary for most crypto operations. Other services sho
 
 Audit is the source of truth for event evidence, while posture, compliance, and reporting interpret that evidence for different audiences.
 
+That includes identity lifecycle evidence. SCIM user creation, disable, delete, group provisioning, token rotation, and settings changes are emitted into Audit so tenant onboarding and deprovision flows are inspectable after the fact.
+
 ## Data And State Model
 
 Not all state is equal. A useful way to think about the platform is:
@@ -191,8 +206,11 @@ Not all state is equal. A useful way to think about the platform is:
 This is the configuration and catalog state that should usually survive restarts and often replicate across nodes:
 
 - tenants, users, and clients
+- SCIM settings, managed users, managed groups, and memberships
 - keys and handles
 - PKI inventory
+- key access justification settings, rules, and decision history
+- artifact signing profiles, settings, and transparency-linked signature records
 - workload identity registrations
 - confidential-compute policy
 - PQC policy and migration data
@@ -316,6 +334,8 @@ If the primary need is:
 - cloud binding: use `cloud`
 - enterprise protocol integration: use `kmip`, `ekm`, or `payment`
 - self-service key provisioning: use `autokey`
+- per-request external key-use explanation and approval: use `keyaccess`
+- workload-aware or OIDC-bound artifact provenance: use `signing`
 - workload-native access: use `workload`
 - TEE-gated release: use `confidential`
 - migration away from classical-only crypto: use `pqc`

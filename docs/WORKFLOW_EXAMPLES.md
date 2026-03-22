@@ -191,6 +191,57 @@ Best for:
 - appliance and service mesh deployments
 - environments where coordinated renewals matter more than simple cron-based rotation
 
+### 4A. Issue Short-Lived Certificates With ACME STAR
+
+Goal:
+
+- keep workload certificates intentionally short-lived
+- let delegated subscribers retrieve certs without losing central renewal policy
+- detect mass rollout risk before many short-lived subscriptions renew together
+
+Components used:
+
+- `certs`
+- `audit`
+- `posture`
+- `compliance`
+
+Steps:
+
+1. Enable ACME STAR in the ACME protocol policy.
+2. Choose a tenant CA and optional certificate profile.
+3. Create a STAR subscription with a short lifetime, renew-before window, and rollout group.
+4. If needed, set a delegated subscriber identity.
+5. Monitor next renewal time, latest certificate, and rollout risk in `Certificates`.
+
+STAR summary sample:
+
+```bash
+curl -X GET http://127.0.0.1:5173/svc/certs/certs/star/summary?tenant_id=root \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+STAR create sample:
+
+```bash
+curl -X POST http://127.0.0.1:5173/svc/certs/certs/star/subscriptions \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenant_id": "root",
+    "name": "mesh-edge",
+    "ca_id": "ca_runtime",
+    "subject_cn": "edge.root.example",
+    "sans": ["edge.root.example"],
+    "validity_hours": 24,
+    "renew_before_minutes": 120,
+    "auto_renew": true,
+    "allow_delegation": true,
+    "delegated_subscriber": "spiffe://prod/ns/edge/sa/gateway",
+    "rollout_group": "mesh-us-east-1"
+  }'
+```
+
 ## 5. Configure Sender-Constrained REST Clients
 
 Goal:
@@ -233,6 +284,131 @@ Best for:
 - agents
 - automation systems
 - environments that want to eliminate replayable bearer-only access
+
+## 5A. Govern HYOK Or EKM Requests With Key Access Justifications
+
+Goal:
+
+- require external key requests to declare intent
+- send sensitive usage to approval instead of immediate allow
+
+Components used:
+
+- `keyaccess`
+- `governance`
+- `audit`
+- `hyok` or `ekm`
+
+Steps:
+
+1. Enable Key Access Justifications for the tenant.
+2. Create reason codes for each allowed service and operation pair.
+3. Bind high-risk codes to an approval policy.
+4. Route HYOK or EKM callers through the governed path.
+5. Review decisions and bypass signals in Audit, Posture, and Compliance.
+
+Settings sample:
+
+```bash
+curl -X PUT http://127.0.0.1:5173/svc/keyaccess/key-access/settings \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenant_id": "root",
+    "enabled": true,
+    "mode": "enforce",
+    "default_action": "deny",
+    "require_justification_code": true,
+    "require_justification_text": false
+  }'
+```
+
+Reason-code sample:
+
+```bash
+curl -X POST http://127.0.0.1:5173/svc/keyaccess/key-access/codes \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenant_id": "root",
+    "code": "iso20022_payment",
+    "label": "ISO 20022 payment signing",
+    "action": "allow",
+    "services": ["payment", "hyok"],
+    "operations": ["sign", "decrypt"],
+    "enabled": true
+  }'
+```
+
+Best for:
+
+- regulated external-key workflows
+- explainable cloud or HYOK decrypt/sign access
+- approval-aware high-value key use
+
+## 5B. Sign Release Artifacts With KMS-Backed Identity Policy
+
+Goal:
+
+- sign build outputs without exporting private keys
+- bind release signing to workload or OIDC identity
+
+Components used:
+
+- `signing`
+- `keycore`
+- `workload` or external OIDC
+- `audit`
+
+Steps:
+
+1. Enable Artifact Signing for the tenant.
+2. Create a signing profile with the correct key, artifact type, and identity mode.
+3. Restrict allowed workload or OIDC claims.
+4. Sign the blob or Git artifact.
+5. Verify the record and inspect transparency metadata.
+
+Profile sample:
+
+```bash
+curl -X POST http://127.0.0.1:5173/svc/signing/signing/profiles \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenant_id": "root",
+    "name": "prod-release-git",
+    "artifact_type": "git",
+    "key_id": "key_signing_prod",
+    "signing_algorithm": "ecdsa-sha384",
+    "identity_mode": "workload",
+    "allowed_workload_patterns": ["spiffe://root/workloads/release-*"],
+    "transparency_required": true,
+    "enabled": true
+  }'
+```
+
+Sign sample:
+
+```bash
+curl -X POST http://127.0.0.1:5173/svc/signing/signing/git \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenant_id": "root",
+    "profile_id": "sigprof_prod_release",
+    "artifact_name": "kms-dashboard",
+    "commit_sha": "7a33a1b9",
+    "repository": "github.com/example/kms-dashboard",
+    "workload_identity": "spiffe://root/workloads/release-runner",
+    "payload": "release-metadata"
+  }'
+```
+
+Best for:
+
+- software supply-chain controls
+- CI/CD signing
+- KMS-managed provenance
 
 ## 6. Protect Databases With EKM And Agents
 
@@ -425,6 +601,54 @@ Best for:
 - migration inventory and planning
 - executive reporting on quantum readiness
 
+## 10A. Run A Threshold Signing Ceremony For A High-Assurance Key
+
+Goal:
+
+- require multiple operators or services to sign together
+- keep a full ceremony trail for high-value keys
+
+Components used:
+
+- `mpc`
+- `governance`
+- `audit`
+
+Steps:
+
+1. Register participants.
+2. Create a threshold policy.
+3. Initiate DKG or sign ceremony.
+4. Collect enough contributions to reach the threshold.
+5. Retrieve the signature result and review the ceremony trail.
+
+Overview sample:
+
+```bash
+curl -X GET http://127.0.0.1:5173/svc/mpc/mpc/overview?tenant_id=root \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Sign-initiate sample:
+
+```bash
+curl -X POST http://127.0.0.1:5173/svc/mpc/mpc/sign/initiate \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenant_id": "root",
+    "key_id": "mpc_root_ca_01",
+    "message_hash": "4dbaf4...e3",
+    "participants": ["alice@bank.com", "bob@bank.com", "hsm-partition"]
+  }'
+```
+
+Best for:
+
+- root CA ceremony control
+- high-value transaction signing
+- split-operator trust separation
+
 ## 11. Run Compliance And Posture As Daily Operations
 
 Goal:
@@ -492,3 +716,71 @@ Best for:
 - AWS, Azure, and GCP estates
 - customer-controlled key requirements
 - cloud-to-platform inventory and drift tracking
+
+## 13. Provision KMS Users And Groups From Okta Or Entra With SCIM
+
+Goal:
+
+- let the identity provider manage KMS users and groups automatically
+- map external directory groups to tenant roles without manual per-user edits
+
+Components used:
+
+- `auth`
+- `audit`
+- `posture`
+- `compliance`
+
+Steps:
+
+1. Open `Administration -> User Admin -> SCIM Provisioning`.
+2. Enable SCIM for the tenant, choose the default role and deprovision mode, and keep group-role mapping enabled if directory groups should drive RBAC.
+3. Rotate the bearer token and copy it into Okta, Entra ID, or another SCIM client.
+4. In the IdP, configure the SCIM base URL as the KMS auth service SCIM endpoint.
+5. Push users and groups from the directory.
+6. Map provisioned group IDs to KMS roles using the group-role bindings view.
+7. Confirm the SCIM summary, posture, compliance, and audit views show the new managed identities.
+
+Sample admin setup:
+
+```bash
+curl -X PUT http://127.0.0.1:5173/svc/auth/auth/scim/settings \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tenant_id": "root",
+    "enabled": true,
+    "default_role": "readonly",
+    "default_status": "active",
+    "deprovision_mode": "disable",
+    "group_role_mappings_enabled": true
+  }'
+
+curl -X POST http://127.0.0.1:5173/svc/auth/auth/scim/settings/rotate-token \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"tenant_id":"root"}'
+```
+
+Sample IdP push:
+
+```bash
+curl -X POST http://127.0.0.1:5173/svc/auth/scim/v2/Users \
+  -H "Authorization: Bearer scim_xxxxx" \
+  -H "Content-Type: application/scim+json" \
+  -d '{
+    "schemas": ["urn:ietf:params:scim:schemas:core:2.0:User"],
+    "externalId": "okta-user-01",
+    "userName": "alice.scim",
+    "displayName": "Alice SCIM",
+    "active": true,
+    "emails": [{"value": "alice@example.com", "primary": true}],
+    "roles": [{"value": "readonly"}]
+  }'
+```
+
+Best for:
+
+- enterprise onboarding with Okta or Entra ID
+- lifecycle-driven disable/deprovision workflows
+- group-driven RBAC for platform and security teams

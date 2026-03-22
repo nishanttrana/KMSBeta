@@ -49,6 +49,10 @@ type CertRenewalSummary struct {
 	EmergencyRotationCount  int                        `json:"emergency_rotation_count"`
 	DueSoonCount            int                        `json:"due_soon_count"`
 	NonCompliantCount       int                        `json:"non_compliant_count"`
+	STARSubscriptionCount   int                        `json:"star_subscription_count"`
+	STARDelegatedCount      int                        `json:"star_delegated_count"`
+	STARDueSoonCount        int                        `json:"star_due_soon_count"`
+	STARMassRolloutRiskCount int                       `json:"star_mass_rollout_risk_count"`
 }
 
 type ACMERenewalWindow struct {

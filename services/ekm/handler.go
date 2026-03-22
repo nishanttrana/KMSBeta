@@ -570,7 +570,11 @@ func (h *Handler) handleWrapDEK(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
+	status := http.StatusOK
+	if strings.EqualFold(out.Status, "pending_approval") {
+		status = http.StatusAccepted
+	}
+	writeJSON(w, status, map[string]interface{}{"result": out, "request_id": reqID})
 }
 
 func (h *Handler) handleUnwrapDEK(w http.ResponseWriter, r *http.Request) {
@@ -591,7 +595,11 @@ func (h *Handler) handleUnwrapDEK(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
+	status := http.StatusOK
+	if strings.EqualFold(out.Status, "pending_approval") {
+		status = http.StatusAccepted
+	}
+	writeJSON(w, status, map[string]interface{}{"result": out, "request_id": reqID})
 }
 
 func (h *Handler) handleRotateTDEKey(w http.ResponseWriter, r *http.Request) {
@@ -612,7 +620,11 @@ func (h *Handler) handleRotateTDEKey(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, err, reqID, tenantID)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"rotation": out, "request_id": reqID})
+	status := http.StatusOK
+	if strings.EqualFold(out.Status, "pending_approval") {
+		status = http.StatusAccepted
+	}
+	writeJSON(w, status, map[string]interface{}{"rotation": out, "request_id": reqID})
 }
 
 func (h *Handler) handleGetPublicKey(w http.ResponseWriter, r *http.Request) {

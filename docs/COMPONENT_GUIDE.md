@@ -94,12 +94,14 @@ curl -X POST http://127.0.0.1:5173/svc/keycore/keys?tenant_id=root \
 What it does:
 
 - manages tenants, users, roles, groups, SSO, clients, and tokens
+- provides tenant-scoped SCIM 2.0 provisioning for users and groups
 - issues login tokens, client tokens, and workload tokens
 - enforces modern REST auth modes such as OAuth mTLS, DPoP, and HTTP Message Signatures
 
 Use cases:
 
 - create a new tenant and bootstrap admins
+- let Okta, Entra ID, or another IdP provision KMS users and groups automatically
 - onboard SSO through OIDC or SAML
 - register SDK and automation clients
 - enforce sender-constrained auth for high-risk API clients
@@ -110,6 +112,10 @@ Common APIs:
 - `GET /svc/auth/auth/me`
 - `GET /svc/auth/tenants`
 - `POST /svc/auth/tenants`
+- `GET /svc/auth/auth/scim/settings`
+- `POST /svc/auth/auth/scim/settings/rotate-token`
+- `POST /svc/auth/scim/v2/Users`
+- `POST /svc/auth/scim/v2/Groups`
 - `GET /svc/auth/auth/clients`
 - `PUT /svc/auth/auth/clients/{id}`
 
@@ -204,14 +210,16 @@ How to use it:
 What it does:
 
 - runs the internal CA and certificate inventory
-- supports ACME, EST, SCEP, CMPv2, CRL, OCSP, internal mTLS issuance, and certificate renewal intelligence
+- supports ACME, ACME STAR, EST, SCEP, CMPv2, CRL, OCSP, internal mTLS issuance, and certificate renewal intelligence
 - exposes ACME Renewal Information so renewals are coordinated rather than cron-only
+- maintains ACME STAR subscriptions for short-lived and delegated-subscriber certificates
 
 Use cases:
 
 - issue internal service certificates
 - onboard external CSRs
 - automate ACME issuance for services and gateways
+- run short-lived delegated certificates for mesh edges and gateways
 - detect mass-renewal hotspots, missed renewal windows, and emergency rotation conditions
 
 Common APIs:
@@ -220,6 +228,8 @@ Common APIs:
 - `POST /svc/certs/certs?tenant_id=root`
 - `GET /svc/certs/certs?tenant_id=root`
 - `GET /svc/certs/certs/renewal-intelligence?tenant_id=root`
+- `GET /svc/certs/certs/star/summary?tenant_id=root`
+- `POST /svc/certs/certs/star/subscriptions`
 - `GET /svc/certs/acme/directory?tenant_id=root`
 - `GET /svc/certs/acme/renewal-info/{id}?tenant_id=root`
 
@@ -513,6 +523,49 @@ Common APIs:
 - `POST /svc/autokey/autokey/requests?tenant_id=root`
 - `GET /svc/autokey/autokey/handles?tenant_id=root`
 
+### Key Access Justifications
+
+What it does:
+
+- enforces per-request justification codes for external decrypt, sign, wrap, and unwrap operations
+- can deny, allow, or send requests to governance approval depending on reason code and service scope
+
+Use cases:
+
+- regulated HYOK or EKM operations where every external key use needs an explainable reason
+- cloud and external-key workflows where a requester must declare intent before key release or signing
+- investigations into bypassed or unjustified usage
+
+Common APIs:
+
+- `GET /svc/keyaccess/key-access/settings?tenant_id=root`
+- `GET /svc/keyaccess/key-access/summary?tenant_id=root`
+- `GET /svc/keyaccess/key-access/codes?tenant_id=root`
+- `GET /svc/keyaccess/key-access/decisions?tenant_id=root`
+
+### Artifact Signing
+
+What it does:
+
+- manages signing profiles for blobs, Git artifacts, and OCI-related release metadata
+- binds signing to workload identity or OIDC subject constraints
+- stores transparency-style signature metadata and verification state
+
+Use cases:
+
+- release pipeline signing with workload-issued identity instead of copied private keys
+- Git or blob signing backed by KMS-managed signing keys
+- visibility into who signed which artifact and whether the signature can still be verified
+
+Common APIs:
+
+- `GET /svc/signing/signing/settings?tenant_id=root`
+- `GET /svc/signing/signing/summary?tenant_id=root`
+- `GET /svc/signing/signing/profiles?tenant_id=root`
+- `POST /svc/signing/signing/blob`
+- `POST /svc/signing/signing/git`
+- `POST /svc/signing/signing/verify`
+
 ### Workload Identity
 
 What it does:
@@ -600,11 +653,13 @@ Use cases:
 What it does:
 
 - supports multi-party computation and distributed ceremonies for cases where no single node should hold unilateral control
+- provides quorum-backed threshold workflows that map cleanly to FROST-style operational models for high-assurance signing
 
 Use cases:
 
 - high-assurance signing or ceremony workflows
 - distributed trust separation between teams or sites
+- split-operator approval for CA roots, treasury operations, or high-value signers
 
 ### AI
 

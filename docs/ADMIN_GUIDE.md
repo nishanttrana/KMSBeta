@@ -138,6 +138,28 @@ Typical tasks:
 - review and approve requests
 - inspect generated handles
 
+### Key Access Justifications
+
+Use this area when external decrypt, sign, unwrap, or HYOK/EKM requests should carry a declared business reason and optionally route into approval.
+
+Typical tasks:
+
+- define reason codes such as `iso20022_payment`, `database_tde_startup`, or `tenant_mail_decrypt`
+- bind those codes to service and operation scope
+- require free-text justification or approval for sensitive actions
+- review bypass or unjustified request decisions
+
+### Artifact Signing
+
+Use this area when release pipelines, Git workflows, or OCI publishing should be signed by KMS-backed keys under identity policy rather than ad hoc developer-held keys.
+
+Typical tasks:
+
+- define signing profiles per artifact class
+- bind profiles to workload identity or OIDC subject rules
+- require transparency logging
+- review signature records and verification failures
+
 ### Compliance
 
 Use this area to understand control alignment and framework posture.
@@ -239,6 +261,31 @@ For each automation or SDK client:
 - choose `bearer`, `oauth_mtls`, `dpop`, or `http_message_signature`
 - record allowed IP or certificate bindings if used
 
+### Enable SCIM Provisioning If Directory Is The Source Of Truth
+
+If Okta, Entra ID, or another identity provider owns the user lifecycle, do not mirror that lifecycle manually inside KMS.
+
+Use `Administration -> User Admin -> SCIM Provisioning` to:
+
+- enable SCIM for the tenant
+- choose the default tenant role and default active status
+- choose whether deprovision should disable or delete users
+- decide whether directory groups should drive KMS RBAC through group-role mappings
+- rotate the dedicated SCIM bearer token
+
+Then configure the IdP with:
+
+- SCIM base URL: `/svc/auth/scim/v2`
+- bearer token from the last token rotation action
+- group push enabled if tenant RBAC should follow directory groups
+
+After the first sync, confirm:
+
+- `Administration -> User Admin -> SCIM Provisioning` shows managed users and groups
+- `Posture` does not flag tokenless or disabled-identity drift
+- `Compliance` shows healthy lifecycle coverage
+- `Audit Log` shows provisioning and mapping events
+
 ### Decide On Workload Identity
 
 If workloads are dynamic, containerized, or service-mesh integrated, prefer `Workload Identity` over static API keys.
@@ -286,6 +333,13 @@ If ACME renewal is enabled:
 - verify `renewalInfo` is advertised
 - review renewal windows
 - check for mass-renewal hotspots
+
+If ACME STAR is enabled:
+
+- create STAR subscriptions for short-lived gateways or mesh workloads
+- decide whether subscriber delegation is allowed for the tenant
+- review due-soon subscriptions and rollout groups
+- check that delegated subscribers still match the intended workload or edge identity
 
 This is especially useful in service-heavy environments where many certificates share issuance history.
 
@@ -345,6 +399,9 @@ Use the Audit Log to answer questions such as:
 - which workload used this key?
 - did the AP2 evaluation deny because of policy or missing claims?
 - was a certificate renewed inside the requested window?
+- when was the tenant SCIM token rotated?
+- who provisioned, disabled, or deprovisioned a SCIM-managed identity?
+- which SCIM group change changed effective tenant RBAC?
 
 ### Compliance And Posture Review
 
@@ -362,6 +419,16 @@ Use both surfaces together:
 3. Move high-value clients to sender-constrained auth.
 4. Confirm replay protection and failure counters.
 5. Watch `Audit Log` and `Posture` for blocked or malformed traffic.
+
+### Playbook: Onboard SCIM Provisioning
+
+1. Open `Administration -> User Admin -> SCIM Provisioning`.
+2. Enable SCIM and choose default role, active status, deprovision mode, and group-role mapping behavior.
+3. Rotate the SCIM token and copy it into the identity provider.
+4. Point the IdP SCIM connector at `/svc/auth/scim/v2`.
+5. Push users and groups from the directory.
+6. Map KMS groups to tenant roles if directory groups should grant operator or application access.
+7. Review `Audit Log`, `Posture`, and `Compliance` to confirm the identities are healthy and policy-aligned.
 
 ### Playbook: Roll Out Workload Identity
 
@@ -414,6 +481,7 @@ Use both surfaces together:
 ### Monthly
 
 - review tenant and role hygiene
+- review SCIM tenant state, disabled identities, and group-role mapping coverage
 - review Autokey template drift
 - review workload registrations and federation state
 - review PQC readiness and migration backlog

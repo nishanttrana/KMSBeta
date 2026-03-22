@@ -36,6 +36,8 @@ export type FeatureKey =
   | "ekm_database"
   | "payment_crypto"
   | "autokey_provisioning"
+  | "artifact_signing"
+  | "key_access_justifications"
   | "workload_identity"
   | "confidential_compute"
   | "compliance_dashboard"
@@ -61,6 +63,7 @@ export type TabId =
   | "payment"
   | "autokey"
   | "pqc"
+  | "artifact_signing"
   | "byok"
   | "hyok"
   | "ekm"
@@ -196,6 +199,16 @@ export const tabConfig: TabConfig[] = [
     requiredAnyFeatures: ["autokey_provisioning"]
   },
   {
+    id: "artifact_signing",
+    label: "Artifact Signing",
+    shortLabel: "Signing",
+    group: "data_protection",
+    description: "Keyless artifact, blob, and Git signing with transparency metadata",
+    icon: Library,
+    emoji: "S",
+    requiredAnyFeatures: ["artifact_signing"]
+  },
+  {
     id: "pqc",
     label: "Post-Quantum Crypto",
     shortLabel: "PQC",
@@ -286,10 +299,10 @@ export const tabConfig: TabConfig[] = [
   },
   {
     id: "mpc",
-    label: "MPC",
+    label: "MPC / FROST",
     shortLabel: "MPC",
     group: "infrastructure",
-    description: "Threshold signing and ceremony orchestration",
+    description: "Threshold signing, FROST-style quorum workflows, and ceremony orchestration",
     icon: Blocks,
     emoji: "M",
     requiredAnyFeatures: ["mpc_engine"]

@@ -86,6 +86,57 @@ func createSQLiteSchema(conn *pkgdb.DB) error {
 		`CREATE TABLE auth_identity_provider_configs (tenant_id TEXT NOT NULL, provider TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 0, config_json TEXT NOT NULL DEFAULT '{}', secret_json TEXT NOT NULL DEFAULT '{}', updated_by TEXT NOT NULL DEFAULT 'system', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, provider));`,
 		`CREATE TABLE auth_group_role_bindings (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, role_name TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, group_id));`,
 		`CREATE TABLE key_access_group_members (tenant_id TEXT NOT NULL, group_id TEXT NOT NULL, user_id TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, group_id, user_id));`,
+		`CREATE TABLE auth_scim_settings (
+			tenant_id TEXT PRIMARY KEY,
+			enabled INTEGER NOT NULL DEFAULT 0,
+			token_hash BLOB,
+			token_prefix TEXT NOT NULL DEFAULT '',
+			default_role TEXT NOT NULL DEFAULT 'readonly',
+			default_status TEXT NOT NULL DEFAULT 'active',
+			default_must_change_password INTEGER NOT NULL DEFAULT 0,
+			deprovision_mode TEXT NOT NULL DEFAULT 'disable',
+			group_role_mappings_enabled INTEGER NOT NULL DEFAULT 1,
+			updated_by TEXT NOT NULL DEFAULT 'system',
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);`,
+		`CREATE TABLE auth_scim_user_links (
+			tenant_id TEXT NOT NULL,
+			user_id TEXT NOT NULL,
+			external_id TEXT,
+			display_name TEXT NOT NULL DEFAULT '',
+			given_name TEXT NOT NULL DEFAULT '',
+			family_name TEXT NOT NULL DEFAULT '',
+			scim_managed INTEGER NOT NULL DEFAULT 1,
+			source TEXT NOT NULL DEFAULT 'scim',
+			last_synced_at TIMESTAMP,
+			deprovisioned_at TIMESTAMP,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, user_id)
+		);`,
+		`CREATE UNIQUE INDEX idx_auth_scim_user_links_external_id ON auth_scim_user_links(tenant_id, external_id);`,
+		`CREATE TABLE auth_scim_groups (
+			id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			external_id TEXT,
+			display_name TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			active INTEGER NOT NULL DEFAULT 1,
+			scim_managed INTEGER NOT NULL DEFAULT 1,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, id)
+		);`,
+		`CREATE UNIQUE INDEX idx_auth_scim_groups_external_id ON auth_scim_groups(tenant_id, external_id);`,
+		`CREATE TABLE auth_scim_group_members (
+			tenant_id TEXT NOT NULL,
+			group_id TEXT NOT NULL,
+			user_id TEXT NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, group_id, user_id)
+		);`,
 		`CREATE TABLE approval_policies (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, name TEXT NOT NULL, scope TEXT NOT NULL, trigger_actions TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'active');`,
 		`CREATE TABLE approval_requests (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, action TEXT NOT NULL, target_type TEXT NOT NULL, target_id TEXT NOT NULL, status TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, expires_at TIMESTAMP, resolved_at TIMESTAMP);`,
 		`CREATE TABLE approval_tokens (id TEXT PRIMARY KEY, request_id TEXT NOT NULL, approver_email TEXT NOT NULL, token_hash BLOB NOT NULL, action TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
@@ -213,6 +264,176 @@ func TestSQLStoreSessionAndAPIKey(t *testing.T) {
 	}
 	if err := s.DeleteSession(ctx, "t3", "s1"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSQLStoreSCIMProvisioningRoundTrip(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	if err := s.CreateTenant(ctx, Tenant{ID: "tscim", Name: "SCIM Tenant", Status: "active"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CreateTenantRole(ctx, TenantRole{TenantID: "tscim", RoleName: "tenant-admin", Permissions: []string{"auth.user.write"}}); err != nil {
+		t.Fatal(err)
+	}
+	settings, err := s.UpsertSCIMSettings(ctx, SCIMSettings{
+		TenantID:                 "tscim",
+		Enabled:                  true,
+		TokenPrefix:              "scim_test_prefix",
+		DefaultRole:              "viewer",
+		DefaultStatus:            "active",
+		DeprovisionMode:          "disable",
+		GroupRoleMappingsEnabled: true,
+		UpdatedBy:                "tester",
+	}, []byte("token-hash"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !settings.Enabled || settings.TokenPrefix != "scim_test_prefix" {
+		t.Fatalf("unexpected settings %+v", settings)
+	}
+	shadowHash, _ := HashPassword("ScimShadow!2026")
+	user, created, err := s.UpsertSCIMUser(ctx, SCIMUserRecord{
+		User: User{
+			TenantID:           "tscim",
+			Username:           "alice.scim",
+			Email:              "alice.scim@example.com",
+			Password:           shadowHash,
+			Role:               "viewer",
+			Status:             "active",
+			MustChangePassword: false,
+		},
+		ExternalID:  "okta-user-01",
+		SCIMManaged: true,
+		DisplayName: "Alice SCIM",
+		GivenName:   "Alice",
+		FamilyName:  "Provisioned",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !created || user.ExternalID != "okta-user-01" {
+		t.Fatalf("unexpected scim user %+v created=%v", user, created)
+	}
+	group, created, err := s.UpsertSCIMGroup(ctx, SCIMGroupRecord{
+		TenantID:    "tscim",
+		ExternalID:  "okta-group-ops",
+		DisplayName: "Operations",
+		Active:      true,
+		SCIMManaged: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !created {
+		t.Fatal("expected scim group to be created")
+	}
+	if err := s.ReplaceSCIMGroupMembers(ctx, "tscim", group.ID, []string{user.ID}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.UpsertGroupRoleBinding(ctx, GroupRoleBinding{
+		TenantID: "tscim",
+		GroupID:  group.ID,
+		RoleName: "tenant-admin",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	roles, err := s.ListGroupRolesForUser(ctx, "tscim", user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(roles) != 1 || roles[0] != "tenant-admin" {
+		t.Fatalf("unexpected scim group roles %#v", roles)
+	}
+	if _, err := s.UpsertSCIMSettings(ctx, SCIMSettings{
+		TenantID:                 "tscim",
+		Enabled:                  true,
+		TokenPrefix:              "scim_test_prefix",
+		DefaultRole:              "viewer",
+		DefaultStatus:            "active",
+		DeprovisionMode:          "disable",
+		GroupRoleMappingsEnabled: false,
+		UpdatedBy:                "tester",
+	}, []byte("token-hash")); err != nil {
+		t.Fatal(err)
+	}
+	roles, err = s.ListGroupRolesForUser(ctx, "tscim", user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(roles) != 0 {
+		t.Fatalf("expected scim group mappings to be disabled, got %#v", roles)
+	}
+	summary, err := s.GetSCIMSummary(ctx, "tscim")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.ManagedUsers != 1 || summary.ManagedGroups != 1 || summary.ManagedMemberships != 1 {
+		t.Fatalf("unexpected scim summary %+v", summary)
+	}
+}
+
+func TestSQLStoreSCIMDeprovisionModes(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	if err := s.CreateTenant(ctx, Tenant{ID: "tscim2", Name: "SCIM Tenant 2", Status: "active"}); err != nil {
+		t.Fatal(err)
+	}
+	shadowHash, _ := HashPassword("ScimShadow!2026")
+	user, _, err := s.UpsertSCIMUser(ctx, SCIMUserRecord{
+		User: User{
+			TenantID: "tscim2",
+			Username: "bob.scim",
+			Email:    "bob.scim@example.com",
+			Password: shadowHash,
+			Role:     "viewer",
+			Status:   "active",
+		},
+		ExternalID:  "entra-user-01",
+		SCIMManaged: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := s.DeprovisionSCIMUser(ctx, "tscim2", user.ID, "disable")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result != "disabled" {
+		t.Fatalf("unexpected disable result %s", result)
+	}
+	disabled, err := s.GetSCIMUserByID(ctx, "tscim2", user.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if disabled.Status != "disabled" {
+		t.Fatalf("expected disabled user, got %+v", disabled)
+	}
+
+	user2, _, err := s.UpsertSCIMUser(ctx, SCIMUserRecord{
+		User: User{
+			TenantID: "tscim2",
+			Username: "carol.scim",
+			Email:    "carol.scim@example.com",
+			Password: shadowHash,
+			Role:     "viewer",
+			Status:   "active",
+		},
+		ExternalID:  "entra-user-02",
+		SCIMManaged: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err = s.DeprovisionSCIMUser(ctx, "tscim2", user2.ID, "delete")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result != "deleted" {
+		t.Fatalf("unexpected delete result %s", result)
+	}
+	if _, err := s.GetSCIMUserByID(ctx, "tscim2", user2.ID); !errors.Is(err, errNotFound) {
+		t.Fatalf("expected user to be deleted, got err=%v", err)
 	}
 }
 

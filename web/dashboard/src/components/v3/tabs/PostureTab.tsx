@@ -51,8 +51,11 @@ import {
   runPostureScan,
   updatePostureFindingStatus
 } from "../../../lib/posture";
-import { getAuthRESTClientSecuritySummary } from "../../../lib/authAdmin";
+import { getAuthRESTClientSecuritySummary, getAuthSCIMSummary } from "../../../lib/authAdmin";
 import { getAutokeySummary } from "../../../lib/autokey";
+import { getKeyAccessSummary } from "../../../lib/keyaccess";
+import { getMPCOverview } from "../../../lib/mpc";
+import { getSigningSummary } from "../../../lib/signing";
 import { getWorkloadIdentitySummary } from "../../../lib/workloadIdentity";
 
 // ── Constants & Helpers ─────────────────────────────────────────
@@ -178,7 +181,11 @@ export const PostureTab = ({ session, onToast }: any) => {
   const [actions, setActions] = useState<any[]>([]);
   const [autokeySummary, setAutokeySummary] = useState<any>(null);
   const [workloadSummary, setWorkloadSummary] = useState<any>(null);
+  const [scimSummary, setScimSummary] = useState<any>(null);
   const [restClientSecurity, setRestClientSecurity] = useState<any>(null);
+  const [keyAccessSummary, setKeyAccessSummary] = useState<any>(null);
+  const [signingSummary, setSigningSummary] = useState<any>(null);
+  const [mpcOverview, setMpcOverview] = useState<any>(null);
   const [findingStatus, setFindingStatus] = useState("");
   const [findingSeverity, setFindingSeverity] = useState("");
   const [findingSearch, setFindingSearch] = useState("");
@@ -194,12 +201,12 @@ export const PostureTab = ({ session, onToast }: any) => {
 
   const load = async (silent = false) => {
     if (!session?.token) {
-      setRisk({}); setDashboard({}); setHistory([]); setFindings([]); setActions([]); setAutokeySummary(null); setWorkloadSummary(null); setRestClientSecurity(null);
+      setRisk({}); setDashboard({}); setHistory([]); setFindings([]); setActions([]); setAutokeySummary(null); setWorkloadSummary(null); setScimSummary(null); setRestClientSecurity(null); setKeyAccessSummary(null); setSigningSummary(null); setMpcOverview(null);
       return;
     }
     if (!silent) setLoading(true);
     try {
-      const [dash, latestRisk, riskHistory, findingRows, actionRows, autokeySummaryOut, workloadSummaryOut, restClientSecurityOut] = await Promise.all([
+      const [dash, latestRisk, riskHistory, findingRows, actionRows, autokeySummaryOut, workloadSummaryOut, scimSummaryOut, restClientSecurityOut, keyAccessSummaryOut, signingSummaryOut, mpcOverviewOut] = await Promise.all([
         getPostureDashboard(session),
         getPostureRisk(session),
         listPostureRiskHistory(session, 60),
@@ -207,7 +214,11 @@ export const PostureTab = ({ session, onToast }: any) => {
         listPostureActions(session, { limit: 300, status: actionStatus }),
         getAutokeySummary(session).catch(() => null),
         getWorkloadIdentitySummary(session).catch(() => null),
-        getAuthRESTClientSecuritySummary(session).catch(() => null)
+        getAuthSCIMSummary(session).catch(() => null),
+        getAuthRESTClientSecuritySummary(session).catch(() => null),
+        getKeyAccessSummary(session).catch(() => null),
+        getSigningSummary(session).catch(() => null),
+        getMPCOverview(session).catch(() => null)
       ]);
       setDashboard(dash || {});
       setRisk(latestRisk || dash?.risk || {});
@@ -216,7 +227,11 @@ export const PostureTab = ({ session, onToast }: any) => {
       setActions(Array.isArray(actionRows) ? actionRows : []);
       setAutokeySummary(autokeySummaryOut || null);
       setWorkloadSummary(workloadSummaryOut || null);
+      setScimSummary(scimSummaryOut || null);
       setRestClientSecurity(restClientSecurityOut || null);
+      setKeyAccessSummary(keyAccessSummaryOut || null);
+      setSigningSummary(signingSummaryOut || null);
+      setMpcOverview(mpcOverviewOut || null);
       if (!silent) onToast?.("Posture view refreshed.");
     } catch (error) {
       onToast?.(`Posture load failed: ${errMsg(error)}`);
@@ -328,6 +343,22 @@ export const PostureTab = ({ session, onToast }: any) => {
     }
     return { label: "Aligned", tone: "green" };
   }, [autokeySummary]);
+
+  const scimStatus = useMemo(() => {
+    if (!scimSummary) {
+      return { tone: "blue", label: "No SCIM data" };
+    }
+    if (!scimSummary?.enabled) {
+      return { tone: "amber", label: "Disabled" };
+    }
+    if (!scimSummary?.token_configured) {
+      return { tone: "amber", label: "Token missing" };
+    }
+    if (Number(scimSummary?.disabled_users || 0) > 0) {
+      return { tone: "amber", label: "Disabled identities" };
+    }
+    return { tone: "green", label: "Provisioning active" };
+  }, [scimSummary]);
   const restClientSecurityStatus = useMemo(() => {
     if (!restClientSecurity || Number(restClientSecurity?.total_clients || 0) === 0) {
       return { tone: "blue", label: "No REST clients" };
@@ -340,6 +371,52 @@ export const PostureTab = ({ session, onToast }: any) => {
     }
     return { tone: "green", label: "Hardened" };
   }, [restClientSecurity]);
+  const keyAccessStatus = useMemo(() => {
+    if (!keyAccessSummary) {
+      return { tone: "blue", label: "Unavailable" };
+    }
+    if (!keyAccessSummary?.enabled) {
+      return { tone: "amber", label: "Disabled" };
+    }
+    if (Number(keyAccessSummary?.bypass_count_24h || 0) > 0) {
+      return { tone: "red", label: "Bypass detected" };
+    }
+    if (Number(keyAccessSummary?.unjustified_count_24h || 0) > 0 || Number(keyAccessSummary?.approval_count_24h || 0) > 0) {
+      return { tone: "amber", label: "Review activity" };
+    }
+    return { tone: "green", label: "Governed" };
+  }, [keyAccessSummary]);
+  const signingStatus = useMemo(() => {
+    if (!signingSummary) {
+      return { tone: "blue", label: "Unavailable" };
+    }
+    if (!signingSummary?.enabled) {
+      return { tone: "amber", label: "Disabled" };
+    }
+    if (Number(signingSummary?.verification_failures_24h || 0) > 0) {
+      return { tone: "red", label: "Verification failures" };
+    }
+    if (Number(signingSummary?.transparency_logged_24h || 0) < Number(signingSummary?.record_count_24h || 0)) {
+      return { tone: "amber", label: "Transparency gaps" };
+    }
+    return { tone: "green", label: "Verified" };
+  }, [signingSummary]);
+  const mpcStatus = useMemo(() => {
+    const stats = mpcOverview?.stats;
+    if (!stats) {
+      return { tone: "blue", label: "Unavailable" };
+    }
+    if (Number(stats?.failed_ceremonies || 0) > 0) {
+      return { tone: "red", label: "Failed ceremonies" };
+    }
+    if (Number(stats?.pending_ceremonies || 0) > 0) {
+      return { tone: "amber", label: "Ceremonies pending" };
+    }
+    if (Number(stats?.active_keys || 0) > 0) {
+      return { tone: "green", label: "Ready" };
+    }
+    return { tone: "amber", label: "No active quorum keys" };
+  }, [mpcOverview]);
   const validationByDomain = useMemo(() => {
     const map: Record<string, any[]> = {};
     validationBadges.forEach((badge: any) => {
@@ -550,6 +627,26 @@ export const PostureTab = ({ session, onToast }: any) => {
 
           <Card style={{ padding: "14px 16px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>SCIM Provisioning Drift</span>
+              <B c={scimStatus.tone}>{scimStatus.label}</B>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+              <Stat l="Managed Users" v={String(Number(scimSummary?.managed_users || 0))} c="blue" />
+              <Stat l="Managed Groups" v={String(Number(scimSummary?.managed_groups || 0))} c="green" />
+              <Stat l="Disabled Users" v={String(Number(scimSummary?.disabled_users || 0))} c={Number(scimSummary?.disabled_users || 0) > 0 ? "amber" : "green"} />
+              <Stat l="Role-Mapped Groups" v={String(Number(scimSummary?.role_mapped_groups || 0))} c="blue" />
+            </div>
+            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+              {Boolean(scimSummary?.enabled)
+                ? (Boolean(scimSummary?.token_configured)
+                  ? "Tenant SCIM provisioning is active. Track disabled identities and unmapped groups so inbound provisioning stays aligned with least-privilege RBAC."
+                  : "SCIM is enabled but the bearer token has not been rotated yet, so external provisioning cannot authenticate.")
+                : "SCIM provisioning is disabled, so user and group onboarding still depends on manual admin actions or directory import jobs."}
+            </div>
+          </Card>
+
+          <Card style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Remediation SLA</span>
               <B c={Number(slaOverview?.overdue_count || 0) > 0 ? "red" : "green"}>{Number(slaOverview?.overdue_count || 0)} overdue</B>
             </div>
@@ -578,6 +675,60 @@ export const PostureTab = ({ session, onToast }: any) => {
               {Number(restClientSecurity?.non_compliant_clients || 0) > 0
                 ? `${Number(restClientSecurity?.non_compliant_clients || 0)} REST clients still use legacy API key or bearer mode. Move them to OAuth mTLS, DPoP, or HTTP Message Signatures to remove replayable tokens from the posture backlog.`
                 : "All tracked REST clients are using sender-constrained authentication modes."}
+            </div>
+          </Card>
+
+          <Card style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Key Access Justifications</span>
+              <B c={keyAccessStatus.tone}>{keyAccessStatus.label}</B>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+              <Stat l="Requests 24h" v={String(Number(keyAccessSummary?.total_requests_24h || 0))} c="blue" />
+              <Stat l="Approval Holds" v={String(Number(keyAccessSummary?.approval_count_24h || 0))} c={Number(keyAccessSummary?.approval_count_24h || 0) > 0 ? "amber" : "green"} />
+              <Stat l="Unjustified" v={String(Number(keyAccessSummary?.unjustified_count_24h || 0))} c={Number(keyAccessSummary?.unjustified_count_24h || 0) > 0 ? "amber" : "green"} />
+              <Stat l="Bypass Signals" v={String(Number(keyAccessSummary?.bypass_count_24h || 0))} c={Number(keyAccessSummary?.bypass_count_24h || 0) > 0 ? "red" : "green"} />
+            </div>
+            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+              {Boolean(keyAccessSummary?.enabled)
+                ? "External decrypt, sign, wrap, and HYOK/EKM access paths are governed by justification codes and optional approval rules. Treat bypass or unjustified requests as posture regressions."
+                : "Per-request usage justifications are disabled, so external key use is not being explained or policy-bound at request time."}
+            </div>
+          </Card>
+
+          <Card style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Artifact Signing</span>
+              <B c={signingStatus.tone}>{signingStatus.label}</B>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+              <Stat l="Profiles" v={String(Number(signingSummary?.profile_count || 0))} c="accent" />
+              <Stat l="Signed 24h" v={String(Number(signingSummary?.record_count_24h || 0))} c="blue" />
+              <Stat l="Transparency Logged" v={String(Number(signingSummary?.transparency_logged_24h || 0))} c={Number(signingSummary?.transparency_logged_24h || 0) < Number(signingSummary?.record_count_24h || 0) ? "amber" : "green"} />
+              <Stat l="Verify Failures" v={String(Number(signingSummary?.verification_failures_24h || 0))} c={Number(signingSummary?.verification_failures_24h || 0) > 0 ? "red" : "green"} />
+            </div>
+            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+              {Boolean(signingSummary?.enabled)
+                ? "Artifact and Git signing are backed by KMS keys, workload/OIDC identity constraints, and transparency-linked records. Watch verification failures and unsigned transparency gaps before treating supply-chain posture as healthy."
+                : "Artifact signing is disabled, so release provenance and workload-bound signing policy are not enforced for blobs, OCI metadata, or Git artifacts."}
+            </div>
+          </Card>
+
+          <Card style={{ padding: "14px 16px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: C.text }}>Threshold Signing / FROST</span>
+              <B c={mpcStatus.tone}>{mpcStatus.label}</B>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8, marginBottom: 10 }}>
+              <Stat l="Active Keys" v={String(Number(mpcOverview?.stats?.active_keys || 0))} c="green" />
+              <Stat l="Pending Ceremonies" v={String(Number(mpcOverview?.stats?.pending_ceremonies || 0))} c={Number(mpcOverview?.stats?.pending_ceremonies || 0) > 0 ? "amber" : "green"} />
+              <Stat l="Participants" v={String(Number(mpcOverview?.stats?.total_participants || 0))} c="blue" />
+              <Stat l="Failed Ceremonies" v={String(Number(mpcOverview?.stats?.failed_ceremonies || 0))} c={Number(mpcOverview?.stats?.failed_ceremonies || 0) > 0 ? "red" : "green"} />
+            </div>
+            <div style={{ fontSize: 9, color: C.dim, lineHeight: 1.5 }}>
+              {Number(mpcOverview?.stats?.total_keys || 0) > 0
+                ? "Quorum-backed signing and decryption ceremonies are active. Use this to spot stalled ceremonies, participant drift, or failed threshold operations before they affect high-assurance workflows."
+                : "No quorum-backed keys are currently active. Create MPC/FROST ceremony policy when high-assurance signing or split-operator approval must avoid a single private-key holder."}
             </div>
           </Card>
         </div>

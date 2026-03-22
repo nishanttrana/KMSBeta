@@ -1175,7 +1175,7 @@ func buildBackupCoverageSummary(tables []string) backupCoverageSummary {
 			addCapability("security_posture_management")
 		case strings.HasPrefix(table, "compliance_"):
 			addCapability("compliance_assessments")
-		case table == "auth_client_registrations":
+		case table == "auth_client_registrations" || strings.HasPrefix(table, "auth_scim_"):
 			addCapability("identity_and_rest_client_security")
 		case strings.HasPrefix(table, "confidential_"):
 			addCapability("attested_key_release_and_confidential_compute")
@@ -1185,6 +1185,12 @@ func buildBackupCoverageSummary(tables []string) backupCoverageSummary {
 			addCapability("payment_cryptography_and_ap2_policy")
 		case strings.HasPrefix(table, "autokey_"):
 			addCapability("policy_driven_autokey_and_key_handle_provisioning")
+		case strings.HasPrefix(table, "signing_"):
+			addCapability("artifact_signing_and_transparency_metadata")
+		case strings.HasPrefix(table, "key_access_"):
+			addCapability("key_access_justifications_and_external_key_governance")
+		case strings.HasPrefix(table, "mpc_"):
+			addCapability("threshold_signing_and_quorum_crypto")
 		case strings.HasPrefix(table, "reporting_"):
 			addCapability("reporting_jobs_and_incidents")
 		case strings.HasPrefix(table, "governance_"):
@@ -1208,10 +1214,22 @@ func buildBackupCoverageSummary(tables []string) backupCoverageSummary {
 		notes = append(notes, "Posture findings, compliance assessments, report jobs, incidents, and evidence-pack inputs are preserved when their service tables are present.")
 	}
 	if containsString(capabilityList, "identity_and_rest_client_security") {
-		notes = append(notes, "REST client registrations, sender-constrained auth modes, and verification counters are preserved. Short-lived replay nonce caches are intentionally excluded from backup payloads.")
+		notes = append(notes, "REST client registrations, sender-constrained auth modes, verification counters, SCIM tenant settings, external identity links, SCIM-managed groups, and provisioning memberships are preserved. Short-lived replay nonce caches are intentionally excluded from backup payloads.")
 	}
 	if containsString(capabilityList, "policy_driven_autokey_and_key_handle_provisioning") {
 		notes = append(notes, "Autokey tenant settings, resource templates, per-service defaults, request approvals, and managed key-handle bindings are preserved when Autokey service tables are present.")
+	}
+	if containsString(capabilityList, "artifact_signing_and_transparency_metadata") {
+		notes = append(notes, "Artifact signing backups preserve signing profiles, tenant keyless-signing policy, transparency-linked signature records, and bound workload/OIDC identity metadata. Live workload tokens and ephemeral verification caches remain excluded.")
+	}
+	if containsString(capabilityList, "key_access_justifications_and_external_key_governance") {
+		notes = append(notes, "Key Access Justifications backups preserve tenant settings, reason-code policies, approval policy bindings, and external-key decision history. Runtime request nonce or replay caches remain excluded from encrypted backup payloads.")
+	}
+	if containsString(capabilityList, "threshold_signing_and_quorum_crypto") {
+		notes = append(notes, "Threshold-signing backups preserve MPC participant rosters, quorum policies, distributed key metadata, ceremony history, and share backup metadata. Live share-contribution exchanges and in-flight ceremony payload caches remain excluded.")
+	}
+	if containsString(capabilityList, "certificate_pki") {
+		notes = append(notes, "Certificate PKI backups include ACME Renewal Information state and ACME STAR subscription catalogs, including delegated subscriber metadata, issuance pointers, and rollout-group scheduling data.")
 	}
 	if containsString(capabilityList, "certificate_pki") {
 		notes = append(notes, "Certificate PKI backups include coordinated renewal windows, ACME Renewal Information state, missed-window markers, and emergency-rotation tracking when cert renewal intelligence tables are present.")
