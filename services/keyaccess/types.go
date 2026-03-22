@@ -35,20 +35,37 @@ type KeyAccessSettings struct {
 	UpdatedAt                time.Time `json:"updated_at,omitempty"`
 }
 
+// TimeWindow restricts a justification code to a specific UTC time range.
+// StartUTC and EndUTC use "HH:MM" 24-hour format. Days is an optional list
+// of weekday names ("mon","tue","wed","thu","fri","sat","sun"); empty means
+// every day. Example: BACKUP code valid Mon–Fri 01:00–05:00 UTC only.
+type TimeWindow struct {
+	StartUTC string   `json:"start_utc"`      // "01:00"
+	EndUTC   string   `json:"end_utc"`        // "05:00"
+	Days     []string `json:"days,omitempty"` // ["mon","fri"] or empty = all days
+}
+
 type KeyAccessRule struct {
-	ID               string    `json:"id"`
-	TenantID         string    `json:"tenant_id"`
-	Code             string    `json:"code"`
-	Label            string    `json:"label"`
-	Description      string    `json:"description,omitempty"`
-	Action           string    `json:"action"`
-	Services         []string  `json:"services"`
-	Operations       []string  `json:"operations"`
-	RequireText      bool      `json:"require_text"`
-	ApprovalPolicyID string    `json:"approval_policy_id,omitempty"`
-	Enabled          bool      `json:"enabled"`
-	UpdatedBy        string    `json:"updated_by,omitempty"`
-	UpdatedAt        time.Time `json:"updated_at,omitempty"`
+	ID               string       `json:"id"`
+	TenantID         string       `json:"tenant_id"`
+	Code             string       `json:"code"`
+	Label            string       `json:"label"`
+	Description      string       `json:"description,omitempty"`
+	Action           string       `json:"action"`
+	Services         []string     `json:"services"`
+	Operations       []string     `json:"operations"`
+	RequireText      bool         `json:"require_text"`
+	ApprovalPolicyID string       `json:"approval_policy_id,omitempty"`
+	// AllowedTimeWindows restricts when this code is valid (UTC). Empty = no
+	// restriction. Multiple windows are OR-ed (valid if any window matches).
+	AllowedTimeWindows  []TimeWindow `json:"allowed_time_windows,omitempty"`
+	// OutsideWindowAction overrides the rule Action when a request arrives
+	// outside all time windows. Accepted values: "deny", "require_approval".
+	// Defaults to "deny" when omitted.
+	OutsideWindowAction string       `json:"outside_window_action,omitempty"`
+	Enabled             bool         `json:"enabled"`
+	UpdatedBy           string       `json:"updated_by,omitempty"`
+	UpdatedAt           time.Time    `json:"updated_at,omitempty"`
 }
 
 type KeyAccessDecision struct {

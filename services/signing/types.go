@@ -37,23 +37,48 @@ type SigningSettings struct {
 	UpdatedAt            time.Time `json:"updated_at,omitempty"`
 }
 
+// SigningPolicy adds content-level constraints on top of identity checks.
+// All non-empty constraints are AND-ed: a signing request must satisfy every
+// populated field to be allowed. This closes the gap where any identity
+// matching the profile could otherwise sign arbitrary content.
+type SigningPolicy struct {
+	// RequiredBranchPatterns restricts signing to specific git ref patterns.
+	// Glob-style. Example: ["refs/heads/main", "refs/heads/release/*"]
+	// Empty = no branch restriction.
+	RequiredBranchPatterns []string `json:"required_branch_patterns,omitempty"`
+	// RequiredArtifactTags lists metadata tags that must be present on the
+	// artifact (passed via signing request metadata). Example: ["release", "signed-build"]
+	RequiredArtifactTags []string `json:"required_artifact_tags,omitempty"`
+	// AllowedDigests pins signing to an explicit SHA-256 allowlist. When set,
+	// only listed digests may be signed. Useful for gating on CI-produced hashes.
+	AllowedDigests []string `json:"allowed_digests,omitempty"`
+	// BlockNonCICommits rejects signing requests that lack a recognized CI
+	// identity claim (e.g., missing OIDC job_workflow_ref or workload selector).
+	BlockNonCICommits bool `json:"block_non_ci_commits"`
+	// RequireCommitSignature requires that git commit signing requests include
+	// a GPG or SSH commit signature in the request metadata before KMS signing.
+	RequireCommitSignature bool `json:"require_commit_signature"`
+}
+
 type SigningProfile struct {
-	ID                     string    `json:"id"`
-	TenantID               string    `json:"tenant_id"`
-	Name                   string    `json:"name"`
-	ArtifactType           string    `json:"artifact_type"`
-	KeyID                  string    `json:"key_id"`
-	SigningAlgorithm       string    `json:"signing_algorithm"`
-	IdentityMode           string    `json:"identity_mode"`
-	AllowedWorkloadPatterns []string `json:"allowed_workload_patterns"`
-	AllowedOIDCIssuers     []string  `json:"allowed_oidc_issuers"`
-	AllowedSubjectPatterns []string  `json:"allowed_subject_patterns"`
-	AllowedRepositories    []string  `json:"allowed_repositories"`
-	TransparencyRequired   bool      `json:"transparency_required"`
-	Enabled                bool      `json:"enabled"`
-	Description            string    `json:"description,omitempty"`
-	UpdatedBy              string    `json:"updated_by,omitempty"`
-	UpdatedAt              time.Time `json:"updated_at,omitempty"`
+	ID                      string        `json:"id"`
+	TenantID                string        `json:"tenant_id"`
+	Name                    string        `json:"name"`
+	ArtifactType            string        `json:"artifact_type"`
+	KeyID                   string        `json:"key_id"`
+	SigningAlgorithm        string        `json:"signing_algorithm"`
+	IdentityMode            string        `json:"identity_mode"`
+	AllowedWorkloadPatterns []string      `json:"allowed_workload_patterns"`
+	AllowedOIDCIssuers      []string      `json:"allowed_oidc_issuers"`
+	AllowedSubjectPatterns  []string      `json:"allowed_subject_patterns"`
+	AllowedRepositories     []string      `json:"allowed_repositories"`
+	// Policy adds content-level constraints beyond identity verification.
+	Policy                  SigningPolicy  `json:"policy"`
+	TransparencyRequired    bool          `json:"transparency_required"`
+	Enabled                 bool          `json:"enabled"`
+	Description             string        `json:"description,omitempty"`
+	UpdatedBy               string        `json:"updated_by,omitempty"`
+	UpdatedAt               time.Time     `json:"updated_at,omitempty"`
 }
 
 type SigningRecord struct {

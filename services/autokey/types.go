@@ -41,6 +41,11 @@ type Store interface {
 	GetHandle(ctx context.Context, tenantID string, id string) (AutokeyHandle, error)
 	ListHandles(ctx context.Context, tenantID string, serviceName string, limit int) ([]AutokeyHandle, error)
 	UpsertHandle(ctx context.Context, item AutokeyHandle) (AutokeyHandle, error)
+
+	// Template versioning — append-only history of every template change.
+	CreateTemplateVersion(ctx context.Context, item AutokeyTemplateVersion) error
+	ListTemplateVersions(ctx context.Context, tenantID string, templateID string) ([]AutokeyTemplateVersion, error)
+	GetTemplateVersion(ctx context.Context, tenantID string, templateID string, version int) (AutokeyTemplateVersion, error)
 }
 
 type AutokeySettings struct {
@@ -77,8 +82,25 @@ type AutokeyTemplate struct {
 	ApprovalPolicyID  string            `json:"approval_policy_id,omitempty"`
 	Description       string            `json:"description,omitempty"`
 	Enabled           bool              `json:"enabled"`
+	// Version is a monotonically increasing counter incremented on every update.
+	// Handles record the version they were created under so auditors can answer
+	// "was this key provisioned under the current template policy?"
+	Version           int               `json:"version"`
 	UpdatedBy         string            `json:"updated_by,omitempty"`
 	UpdatedAt         time.Time         `json:"updated_at,omitempty"`
+}
+
+// AutokeyTemplateVersion captures a point-in-time snapshot of a template.
+// A new record is written on every UpsertTemplate call, enabling full
+// template audit history and policy-drift detection for existing handles.
+type AutokeyTemplateVersion struct {
+	TemplateID string          `json:"template_id"`
+	TenantID   string          `json:"tenant_id"`
+	Version    int             `json:"version"`
+	Snapshot   AutokeyTemplate `json:"snapshot"`
+	ChangedBy  string          `json:"changed_by"`
+	ChangedAt  time.Time       `json:"changed_at"`
+	ChangeNote string          `json:"change_note,omitempty"`
 }
 
 type AutokeyServicePolicy struct {
@@ -135,21 +157,27 @@ type AutokeyRequest struct {
 }
 
 type AutokeyHandle struct {
-	ID            string                 `json:"id"`
-	TenantID      string                 `json:"tenant_id"`
-	ServiceName   string                 `json:"service_name"`
-	ResourceType  string                 `json:"resource_type"`
-	ResourceRef   string                 `json:"resource_ref"`
-	HandleName    string                 `json:"handle_name"`
-	KeyID         string                 `json:"key_id"`
-	TemplateID    string                 `json:"template_id,omitempty"`
-	RequestID     string                 `json:"request_id,omitempty"`
-	Status        string                 `json:"status"`
-	Managed       bool                   `json:"managed"`
-	PolicyMatched bool                   `json:"policy_matched"`
-	Spec          map[string]interface{} `json:"spec,omitempty"`
-	CreatedAt     time.Time              `json:"created_at,omitempty"`
-	UpdatedAt     time.Time              `json:"updated_at,omitempty"`
+	ID              string                 `json:"id"`
+	TenantID        string                 `json:"tenant_id"`
+	ServiceName     string                 `json:"service_name"`
+	ResourceType    string                 `json:"resource_type"`
+	ResourceRef     string                 `json:"resource_ref"`
+	HandleName      string                 `json:"handle_name"`
+	KeyID           string                 `json:"key_id"`
+	TemplateID      string                 `json:"template_id,omitempty"`
+	// TemplateVersion records which template version was active when this handle
+	// was created. Compare to the current AutokeyTemplate.Version to detect drift.
+	TemplateVersion int                    `json:"template_version,omitempty"`
+	RequestID       string                 `json:"request_id,omitempty"`
+	Status          string                 `json:"status"`
+	Managed         bool                   `json:"managed"`
+	PolicyMatched   bool                   `json:"policy_matched"`
+	// PolicyDrifted is true when TemplateVersion < current template Version,
+	// meaning the handle was created under a now-outdated policy.
+	PolicyDrifted   bool                   `json:"policy_drifted,omitempty"`
+	Spec            map[string]interface{} `json:"spec,omitempty"`
+	CreatedAt       time.Time              `json:"created_at,omitempty"`
+	UpdatedAt       time.Time              `json:"updated_at,omitempty"`
 }
 
 type AutokeySummary struct {

@@ -40,6 +40,11 @@ type Store interface {
 	CreateMigrationRun(ctx context.Context, item MigrationRun) error
 	UpdateMigrationRun(ctx context.Context, item MigrationRun) error
 	ListMigrationRuns(ctx context.Context, tenantID string, planID string) ([]MigrationRun, error)
+
+	// Asset timeline — one record per successfully migrated asset.
+	CreateAssetMigrationRecord(ctx context.Context, item AssetMigrationRecord) error
+	ListAssetMigrationRecords(ctx context.Context, tenantID string, assetID string, limit int, offset int) ([]AssetMigrationRecord, error)
+	GetAssetMigrationTimeline(ctx context.Context, tenantID string, planID string) ([]AssetMigrationRecord, error)
 }
 
 type AssetRisk struct {
@@ -171,7 +176,32 @@ type MigrationStep struct {
 	Reason       string                 `json:"reason"`
 	Metadata     map[string]interface{} `json:"metadata"`
 	ExecutedAt   time.Time              `json:"executed_at,omitempty"`
+	ExecutedBy   string                 `json:"executed_by,omitempty"`
 	RolledBackAt time.Time              `json:"rolled_back_at,omitempty"`
+	RolledBackBy string                 `json:"rolled_back_by,omitempty"`
+}
+
+// AssetMigrationRecord is an immutable audit entry written when a single asset
+// completes migration. Regulators can query this timeline per-asset to confirm
+// exactly when each key or certificate was quantum-hardened and under which plan.
+type AssetMigrationRecord struct {
+	ID            string    `json:"id"`
+	TenantID      string    `json:"tenant_id"`
+	AssetID       string    `json:"asset_id"`
+	AssetType     string    `json:"asset_type"` // "key", "certificate", "interface"
+	Name          string    `json:"name"`
+	Source        string    `json:"source"`         // "keycore", "certs", "discovery"
+	FromAlgorithm string    `json:"from_algorithm"`
+	ToAlgorithm   string    `json:"to_algorithm"`
+	PlanID        string    `json:"plan_id"`
+	RunID         string    `json:"run_id"`
+	StepID        string    `json:"step_id"`
+	MigratedAt    time.Time `json:"migrated_at"`
+	MigratedBy    string    `json:"migrated_by"`
+	DryRun        bool      `json:"dry_run"`
+	QSLBefore     float64   `json:"qsl_before"`
+	QSLAfter      float64   `json:"qsl_after"`
+	Notes         string    `json:"notes,omitempty"`
 }
 
 type MigrationPlan struct {

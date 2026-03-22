@@ -186,49 +186,107 @@ const TABS: Record<string, any> = {
 const TITLES: Record<string, string> = {
   home: "Dashboard",
   keys: "Key Management",
-  workbench: "Workbench",
+  vault: "Secret Vault",
+  audit: "Audit Log",
+  certs: "Certificates / PKI",
+  pqc: "Post-Quantum Crypto",
+  workbench: "Dev Workbench",
   crypto: "Crypto Console",
   restapi: "REST API",
-  vault: "Secret Vault",
-  certs: "Certificates / PKI",
   dataprotection: "Data Protection",
   tokenize: "Tokenize / Mask / Redact",
   dataenc: "Data Encryption",
   payment: "Payment Crypto",
-  autokey: "Autokey",
-  signing: "Artifact Signing",
-  keyaccess: "Key Access Justifications",
-  pqc: "Post-Quantum Crypto",
-  confidential: "Confidential Compute",
+  autokey: "Auto-Provisioning",
+  keyaccess: "Access Justifications",
+  signing: "Signing",
   workload: "Workload Identity",
-  cloudctl: "Cloud Key Control",
+  confidential: "Confidential Compute",
+  cloudctl: "Cloud Keys (BYOK / HYOK)",
   byok: "BYOK",
   hyok: "HYOK",
-  ekm: "Enterprise Key Management",
+  ekm: "EKM",
   hsm: "HSM",
-  qkd: "QKD Interface",
-  qrng: "QRNG Entropy",
+  qkd: "QKD",
+  qrng: "QRNG",
   mpc: "MPC / FROST",
   cluster: "Cluster",
   approvals: "Approvals",
   alerts: "Alert Center",
-  audit: "Audit Log",
-  posture: "Posture Management",
+  posture: "Posture",
   compliance: "Compliance",
   sbom: "SBOM / CBOM",
   pkcs11: "PKCS#11 / JCA",
   admin: "Administration",
-  docs: "Documentation",
-  ai: "AI Assistant"
+  ai: "AI Assistant",
+  docs: "Documentation"
 };
 
 const NAV = [
-  { g: "CORE", items: [{ id: "home", icon: HomeIcon, label: "Dashboard" }, { id: "keys", icon: KeyRound, label: "Key Management" }, { id: "certs", icon: FileText, label: "Certificates / PKI" }, { id: "cloudctl", icon: Cloud, label: "Cloud Key Control" }, { id: "ekm", icon: Database, label: "Enterprise Key Management" }, { id: "vault", icon: Lock, label: "Secret Vault" }, { id: "dataprotection", icon: ShieldCheck, label: "Data Protection" }, { id: "autokey", icon: Layers, label: "Autokey" }, { id: "signing", icon: FileText, label: "Artifact Signing" }, { id: "keyaccess", icon: ShieldCheck, label: "Key Access Justifications" }, { id: "pqc", icon: Atom, label: "Post-Quantum Crypto" }, { id: "confidential", icon: Fingerprint, label: "Confidential Compute" }, { id: "workload", icon: Users, label: "Workload Identity" }] },
-  { g: "WORKBENCH", items: [{ id: "workbench", icon: LayoutGrid, label: "Workbench" }] },
-  { g: "INFRASTRUCTURE", items: [{ id: "hsm", icon: Cpu, label: "HSM" }, { id: "qkd", icon: GitBranch, label: "QKD Interface" }, { id: "qrng", icon: Atom, label: "QRNG Entropy" }, { id: "mpc", icon: Cpu, label: "MPC / FROST" }, { id: "cluster", icon: GitBranch, label: "Cluster" }] },
-  { g: "GOVERNANCE", items: [{ id: "approvals", icon: CheckCircle2, label: "Approvals" }, { id: "alerts", icon: Bell, label: "Alert Center" }, { id: "audit", icon: ScrollText, label: "Audit Log" }, { id: "posture", icon: Gauge, label: "Posture Management" }, { id: "compliance", icon: ClipboardCheck, label: "Compliance" }, { id: "sbom", icon: BarChart3, label: "SBOM / CBOM" }] },
-  { g: "AI", items: [{ id: "ai", icon: Sparkles, label: "AI Assistant" }] },
-  { g: "ADMIN", items: [{ id: "admin", icon: Settings, label: "Administration" }, { id: "docs", icon: FileText, label: "Documentation" }] }
+  {
+    g: "CORE",
+    items: [
+      { id: "home",    icon: HomeIcon,  label: "Dashboard" },
+      { id: "keys",   icon: KeyRound,  label: "Key Management" },
+      { id: "vault",  icon: Lock,      label: "Secret Vault" },
+      { id: "audit",  icon: ScrollText, label: "Audit Log" }
+    ]
+  },
+  {
+    g: "CRYPTO & PKI",
+    items: [
+      { id: "certs",    icon: FileText, label: "Certificates / PKI" },
+      { id: "pqc",      icon: Atom,     label: "Post-Quantum Crypto" },
+      { id: "workbench", icon: LayoutGrid, label: "Dev Workbench" }
+    ]
+  },
+  {
+    g: "DATA & POLICY",
+    items: [
+      { id: "dataprotection", icon: ShieldCheck, label: "Data Protection" },
+      { id: "autokey",        icon: Layers,      label: "Auto-Provisioning" },
+      { id: "keyaccess",      icon: ShieldCheck, label: "Access Justifications" },
+      { id: "payment",        icon: CreditCard,  label: "Payment Crypto" }
+    ]
+  },
+  {
+    g: "CLOUD & IDENTITY",
+    items: [
+      { id: "cloudctl",   icon: Cloud,        label: "Cloud Keys (BYOK/HYOK)" },
+      { id: "ekm",        icon: Database,     label: "EKM" },
+      { id: "signing",    icon: FileText,     label: "Signing" },
+      { id: "workload",   icon: Users,        label: "Workload Identity" },
+      { id: "confidential", icon: Fingerprint, label: "Confidential Compute" }
+    ]
+  },
+  {
+    g: "INFRASTRUCTURE",
+    items: [
+      { id: "hsm",     icon: Cpu,       label: "HSM" },
+      { id: "qkd",     icon: GitBranch, label: "QKD" },
+      { id: "qrng",    icon: Atom,      label: "QRNG" },
+      { id: "mpc",     icon: Cpu,       label: "MPC / FROST" },
+      { id: "cluster", icon: GitBranch, label: "Cluster" }
+    ]
+  },
+  {
+    g: "GOVERNANCE",
+    items: [
+      { id: "approvals",  icon: CheckCircle2, label: "Approvals" },
+      { id: "alerts",     icon: Bell,         label: "Alert Center" },
+      { id: "posture",    icon: Gauge,        label: "Posture" },
+      { id: "compliance", icon: ClipboardCheck, label: "Compliance" },
+      { id: "sbom",       icon: BarChart3,    label: "SBOM / CBOM" }
+    ]
+  },
+  {
+    g: "ADMIN",
+    items: [
+      { id: "admin", icon: Settings,  label: "Administration" },
+      { id: "ai",    icon: Sparkles,  label: "AI Assistant" },
+      { id: "docs",  icon: FileText,  label: "Documentation" }
+    ]
+  }
 ];
 
 const SUB_PANES: Record<string, any[]> = {
@@ -236,8 +294,7 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "crypto", label: "Crypto Console", hint: "Interactive cryptographic operations and algorithm console", icon: Zap },
     { id: "restapi", label: "REST API", hint: "Authenticated API explorer and endpoint documentation", icon: FileText },
     { id: "tokenize", label: "Tokenize / Mask / Redact", hint: "Vault and vaultless tokenization with masking/redaction", icon: VenetianMask, feature: "data_protection" },
-    { id: "dataenc", label: "Data Encryption", hint: "Field-level, envelope, searchable and FPE crypto", icon: Database, feature: "data_protection" },
-    { id: "payment", label: "Payment Crypto", hint: "Traditional and modern payment crypto operations for testing", icon: CreditCard, feature: "payment_crypto" }
+    { id: "dataenc", label: "Data Encryption", hint: "Field-level, envelope, searchable and FPE crypto", icon: Database, feature: "data_protection" }
   ],
   dataprotection: [
     { id: "fieldenc", label: "Field Encryption", hint: "Wrapper registration, challenge-response and local crypto lease control", icon: KeyRound, feature: "data_protection" },
@@ -340,7 +397,8 @@ export default function VectaDashboardV3Shell(props: Props) {
     certs: "cert-overview",
     hsm: "hsm-generic",
     cluster: "topology",
-    admin: "system"
+    admin: "system",
+    payment: "payment-ops"
   }));
 
   const session = useMemo(

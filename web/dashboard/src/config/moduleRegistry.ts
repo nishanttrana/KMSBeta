@@ -3,33 +3,43 @@ import type { FeatureKey } from "./tabs";
 type ModuleFeatureNeed = FeatureKey | "hsm_hardware_or_software" | ModuleFeatureNeed[];
 
 const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
+  // CORE — always visible, no feature gate
+  // vault / secrets
   vault: "secrets",
+  // CRYPTO & PKI
   certs: "certs",
+  pqc: "pqc_migration",
+  // DATA & POLICY
   dataprotection: ["data_protection", "payment_crypto"],
   tokenize: "data_protection",
   dataenc: "data_protection",
   payment: "payment_crypto",
   autokey: "autokey_provisioning",
-  signing: "artifact_signing",
   keyaccess: "key_access_justifications",
+  // CLOUD & IDENTITY
+  signing: "artifact_signing",
   workload: "workload_identity",
-  pqc: "pqc_migration",
   confidential: "confidential_compute",
+  // Cloud Keys tab merges BYOK + HYOK — visible if either feature enabled
   cloudctl: ["cloud_byok", "hyok_proxy"],
   byok: "cloud_byok",
   hyok: "hyok_proxy",
+  // EKM tab covers both EKM agents and KMIP clients
   ekm: ["ekm_database", "kmip_server"],
   kmip: "kmip_server",
+  // INFRASTRUCTURE
   hsm: "hsm_hardware_or_software",
   qkd: "qkd_interface",
   qrng: "qrng_generator",
   mpc: "mpc_engine",
   cluster: "clustering",
+  // GOVERNANCE
   approvals: "governance",
   alerts: "reporting_alerting",
   posture: ["governance", "compliance_dashboard"],
   compliance: "compliance_dashboard",
   sbom: "sbom_cbom",
+  // ADMIN
   ai: "ai_llm"
 };
 
