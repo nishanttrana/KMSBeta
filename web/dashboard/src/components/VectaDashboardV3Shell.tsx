@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Atom,
   BarChart3,
@@ -200,21 +200,21 @@ const TITLES: Record<string, string> = {
   autokey: "Auto-Provisioning",
   keyaccess: "Access Justifications",
   signing: "Signing",
-  workload: "Workload Identity",
+  workload: "Workload & Identity",
   confidential: "Confidential Compute",
   cloudctl: "Cloud Keys (BYOK / HYOK)",
   byok: "BYOK",
   hyok: "HYOK",
   ekm: "EKM",
   hsm: "HSM",
-  qkd: "QKD",
-  qrng: "QRNG",
+  qkd: "Quantum Sources",
+  qrng: "QRNG Entropy",
   mpc: "MPC / FROST",
   cluster: "Cluster",
   approvals: "Approvals",
   alerts: "Alert Center",
   posture: "Posture",
-  compliance: "Compliance",
+  compliance: "Risk & Compliance",
   sbom: "SBOM / CBOM",
   pkcs11: "PKCS#11 / JCA",
   admin: "Administration",
@@ -235,9 +235,8 @@ const NAV = [
   {
     g: "CRYPTO & PKI",
     items: [
-      { id: "certs",    icon: FileText, label: "Certificates / PKI" },
-      { id: "pqc",      icon: Atom,     label: "Post-Quantum Crypto" },
-      { id: "workbench", icon: LayoutGrid, label: "Dev Workbench" }
+      { id: "certs", icon: FileText, label: "Certificates / PKI" },
+      { id: "pqc",   icon: Atom,     label: "Post-Quantum Crypto" }
     ]
   },
   {
@@ -252,19 +251,17 @@ const NAV = [
   {
     g: "CLOUD & IDENTITY",
     items: [
-      { id: "cloudctl",   icon: Cloud,        label: "Cloud Keys (BYOK/HYOK)" },
-      { id: "ekm",        icon: Database,     label: "EKM" },
-      { id: "signing",    icon: FileText,     label: "Signing" },
-      { id: "workload",   icon: Users,        label: "Workload Identity" },
-      { id: "confidential", icon: Fingerprint, label: "Confidential Compute" }
+      { id: "cloudctl", icon: Cloud,    label: "Cloud Keys (BYOK/HYOK)" },
+      { id: "ekm",      icon: Database, label: "EKM" },
+      { id: "signing",  icon: FileText, label: "Signing" },
+      { id: "workload", icon: Users,    label: "Workload & Identity" }
     ]
   },
   {
     g: "INFRASTRUCTURE",
     items: [
       { id: "hsm",     icon: Cpu,       label: "HSM" },
-      { id: "qkd",     icon: GitBranch, label: "QKD" },
-      { id: "qrng",    icon: Atom,      label: "QRNG" },
+      { id: "qkd",     icon: GitBranch, label: "Quantum Sources" },
       { id: "mpc",     icon: Cpu,       label: "MPC / FROST" },
       { id: "cluster", icon: GitBranch, label: "Cluster" }
     ]
@@ -272,19 +269,17 @@ const NAV = [
   {
     g: "GOVERNANCE",
     items: [
-      { id: "approvals",  icon: CheckCircle2, label: "Approvals" },
-      { id: "alerts",     icon: Bell,         label: "Alert Center" },
-      { id: "posture",    icon: Gauge,        label: "Posture" },
-      { id: "compliance", icon: ClipboardCheck, label: "Compliance" },
-      { id: "sbom",       icon: BarChart3,    label: "SBOM / CBOM" }
+      { id: "approvals",  icon: CheckCircle2,   label: "Approvals" },
+      { id: "alerts",     icon: Bell,           label: "Alert Center" },
+      { id: "compliance", icon: ClipboardCheck, label: "Risk & Compliance" }
     ]
   },
   {
     g: "ADMIN",
     items: [
-      { id: "admin", icon: Settings,  label: "Administration" },
-      { id: "ai",    icon: Sparkles,  label: "AI Assistant" },
-      { id: "docs",  icon: FileText,  label: "Documentation" }
+      { id: "admin",     icon: Settings,   label: "Administration" },
+      { id: "workbench", icon: LayoutGrid, label: "Dev Workbench" },
+      { id: "ai",        icon: Sparkles,   label: "AI Assistant" }
     ]
   }
 ];
@@ -332,10 +327,24 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "sync", label: "Sync Monitor", hint: "Real-time sync events, checkpoints, and replication lag", icon: RefreshCw, feature: "clustering" },
     { id: "logs", label: "Cluster Logs", hint: "Cluster operation audit log with filtering", icon: ScrollText, feature: "clustering" }
   ],
+  compliance: [
+    { id: "frameworks", label: "Frameworks & Scoring", hint: "PCI DSS, FIPS, NIST framework scores and gap analysis", icon: ClipboardCheck, feature: "compliance_dashboard" },
+    { id: "posture",    label: "Posture & Risk",       hint: "Drift detection, risk findings, blast radius and remediation actions", icon: Gauge, feature: "compliance_dashboard" },
+    { id: "sbom",       label: "SBOM / CBOM",          hint: "Software and crypto BOM intelligence for PQC readiness and evidence", icon: BarChart3, feature: "sbom_cbom" }
+  ],
+  qkd: [
+    { id: "qkd-main", label: "QKD Interface",   hint: "Quantum key distribution network links, key rate and session health", icon: GitBranch, feature: "qkd_interface" },
+    { id: "qrng",     label: "QRNG Entropy",    hint: "Quantum random number generator entropy sources and health metrics", icon: Atom, feature: "qrng_generator" }
+  ],
+  workload: [
+    { id: "registrations", label: "Workload Registrations", hint: "SPIFFE workload registrations, selectors and key bindings", icon: Users, feature: "workload_identity" },
+    { id: "confidential",  label: "Confidential Compute",   hint: "Attested key release for TEE and enclave workloads", icon: Fingerprint, feature: "confidential_compute" }
+  ],
   admin: [
     { id: "system", label: "System Administration", hint: "Platform health, runtime hardening, FIPS and governance settings", icon: Settings },
     { id: "tenant", label: "Tenant Administration", hint: "Tenant lifecycle disable/delete workflow", icon: Building2 },
-    { id: "users", label: "User Management", hint: "User and group administration with role assignments", icon: Users }
+    { id: "users",  label: "User Management",       hint: "User and group administration with role assignments", icon: Users },
+    { id: "docs",   label: "Documentation",         hint: "Platform guides, API reference and component documentation", icon: FileText }
   ]
 };
 
@@ -398,7 +407,10 @@ export default function VectaDashboardV3Shell(props: Props) {
     hsm: "hsm-generic",
     cluster: "topology",
     admin: "system",
-    payment: "payment-ops"
+    payment: "payment-ops",
+    compliance: "frameworks",
+    qkd: "qkd-main",
+    workload: "registrations"
   }));
 
   const session = useMemo(
@@ -568,7 +580,17 @@ export default function VectaDashboardV3Shell(props: Props) {
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const Tab = TABS[tab] || DashboardTab;
+  // Sub-pane routing: some merged tabs render a different component depending
+  // on which sub-pane is active. Falls back to the tab's own component.
+  function resolveTab(tabId: string, subView: string): React.ComponentType<any> {
+    if (tabId === "compliance" && subView === "posture") return PostureTab;
+    if (tabId === "compliance" && subView === "sbom") return SBOMTab;
+    if (tabId === "qkd" && subView === "qrng") return QRNGTab;
+    if (tabId === "workload" && subView === "confidential") return ConfidentialComputeTab;
+    if (tabId === "admin" && subView === "docs") return DocsViewTab;
+    return TABS[tabId] || DashboardTab;
+  }
+  const Tab = resolveTab(tab, activeSubPaneSelection);
 
   return (
     <div style={{ display: "flex", height: "100vh", background: C.bg, fontFamily: "'IBM Plex Sans',-apple-system,sans-serif", color: C.text, overflow: "hidden", paddingTop: 2 }}>

@@ -16,9 +16,10 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   payment: "payment_crypto",
   autokey: "autokey_provisioning",
   keyaccess: "key_access_justifications",
-  // CLOUD & IDENTITY
+  // CLOUD & IDENTITY — workload now hosts confidential as a sub-pane
   signing: "artifact_signing",
-  workload: "workload_identity",
+  // Workload & Identity tab visible if either workload or confidential is enabled
+  workload: ["workload_identity", "confidential_compute"],
   confidential: "confidential_compute",
   // Cloud Keys tab merges BYOK + HYOK — visible if either feature enabled
   cloudctl: ["cloud_byok", "hyok_proxy"],
@@ -27,17 +28,20 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   // EKM tab covers both EKM agents and KMIP clients
   ekm: ["ekm_database", "kmip_server"],
   kmip: "kmip_server",
-  // INFRASTRUCTURE
+  // INFRASTRUCTURE — qkd now hosts qrng as a sub-pane
   hsm: "hsm_hardware_or_software",
-  qkd: "qkd_interface",
+  // Quantum Sources tab visible if either QKD or QRNG feature is enabled
+  qkd: ["qkd_interface", "qrng_generator"],
   qrng: "qrng_generator",
   mpc: "mpc_engine",
   cluster: "clustering",
-  // GOVERNANCE
+  // GOVERNANCE — compliance now hosts posture + sbom as sub-panes
   approvals: "governance",
   alerts: "reporting_alerting",
+  // Risk & Compliance tab visible if any of its three sub-pane features is enabled
+  compliance: ["compliance_dashboard", "governance", "sbom_cbom"],
+  // kept for sub-pane routing; access is inherited from compliance gate
   posture: ["governance", "compliance_dashboard"],
-  compliance: "compliance_dashboard",
   sbom: "sbom_cbom",
   // ADMIN
   ai: "ai_llm"
