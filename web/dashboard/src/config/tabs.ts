@@ -11,7 +11,6 @@ import {
   FileCheck2,
   FileLock2,
   Fingerprint,
-  GlobeLock,
   KeyRound,
   Landmark,
   Layers3,
@@ -108,7 +107,6 @@ export type TabConfig = {
   description: string;
   icon: LucideIcon;
   emoji: string;
-  requiredAnyFeatures?: FeatureKey[];
 };
 
 export const groupLabels: Record<GroupId, string> = {
@@ -123,312 +121,48 @@ export const groupLabels: Record<GroupId, string> = {
 
 export const tabConfig: TabConfig[] = [
   // ── CORE ────────────────────────────────────────────────────────────
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    shortLabel: "Dashboard",
-    group: "core",
-    description: "Operational and compliance posture overview",
-    icon: Activity,
-    emoji: "D"
-  },
-  {
-    id: "keys",
-    label: "Keys",
-    shortLabel: "Keys",
-    group: "core",
-    description: "Key inventory, lifecycle management, auto-provisioning, and access policy",
-    icon: KeyRound,
-    emoji: "K"
-  },
-  {
-    id: "vault",
-    label: "Vault",
-    shortLabel: "Vault",
-    group: "core",
-    description: "Universal secret store",
-    icon: Lock,
-    emoji: "V",
-    requiredAnyFeatures: ["secrets"]
-  },
-  {
-    id: "audit_log",
-    label: "Audit Log",
-    shortLabel: "Audit",
-    group: "core",
-    description: "Real-time and historical audit streams",
-    icon: FileLock2,
-    emoji: "L"
-  },
+  { id: "dashboard",    label: "Dashboard",        shortLabel: "Dashboard", group: "core",                  description: "Operational and compliance posture overview",                                                              icon: Activity,          emoji: "D"  },
+  { id: "keys",         label: "Keys",             shortLabel: "Keys",      group: "core",                  description: "Key inventory, lifecycle management, auto-provisioning, and access policy",                              icon: KeyRound,          emoji: "K"  },
+  { id: "vault",        label: "Vault",            shortLabel: "Vault",     group: "core",                  description: "Universal secret store",                                                                                 icon: Lock,              emoji: "V"  },
+  { id: "audit_log",    label: "Audit Log",        shortLabel: "Audit",     group: "core",                  description: "Real-time and historical audit streams",                                                                 icon: FileLock2,         emoji: "L"  },
 
   // ── CRYPTO & PKI ────────────────────────────────────────────────────
-  {
-    id: "certificates",
-    label: "Certificates / PKI",
-    shortLabel: "Certs",
-    group: "crypto_pki",
-    description: "Internal mini PKI and protocol operations",
-    icon: FileCheck2,
-    emoji: "C",
-    requiredAnyFeatures: ["certs"]
-  },
-  {
-    id: "pqc",
-    label: "Post-Quantum Crypto",
-    shortLabel: "PQC",
-    group: "crypto_pki",
-    description: "ML-KEM, ML-DSA, SLH-DSA readiness scanning, migration plans, and per-asset timeline",
-    icon: Atom,
-    emoji: "Q",
-    requiredAnyFeatures: ["pqc_migration"]
-  },
-  {
-    id: "crypto_console",
-    label: "Crypto Console",
-    shortLabel: "Console",
-    group: "crypto_pki",
-    description: "Ad-hoc cryptographic operation simulator",
-    icon: SlidersHorizontal,
-    emoji: "C"
-  },
+  { id: "certificates", label: "Certificates / PKI", shortLabel: "Certs",   group: "crypto_pki",            description: "Internal mini PKI and protocol operations",                                                              icon: FileCheck2,        emoji: "C"  },
+  { id: "pqc",          label: "Post-Quantum Crypto", shortLabel: "PQC",    group: "crypto_pki",            description: "ML-KEM, ML-DSA, SLH-DSA readiness scanning, migration plans, and per-asset timeline",                   icon: Atom,              emoji: "Q"  },
+  { id: "crypto_console", label: "Crypto Console", shortLabel: "Console",   group: "crypto_pki",            description: "Ad-hoc cryptographic operation simulator",                                                               icon: SlidersHorizontal, emoji: "C"  },
 
   // ── DATA & POLICY ───────────────────────────────────────────────────
-  {
-    id: "tokenize_mask",
-    label: "Tokenize / Mask",
-    shortLabel: "Tokenize",
-    group: "data_policy",
-    description: "Tokenization, masking, and field-level encryption",
-    icon: Shield,
-    emoji: "T",
-    requiredAnyFeatures: ["data_protection"]
-  },
-  {
-    id: "payment",
-    label: "Payment",
-    shortLabel: "Payment",
-    group: "data_policy",
-    description: "TR-31, PIN blocks, and ISO 20022 signing",
-    icon: Wallet,
-    emoji: "P",
-    requiredAnyFeatures: ["payment_crypto"]
-  },
-  {
-    id: "autokey",
-    label: "Auto-Provisioning",
-    shortLabel: "Autokey",
-    group: "data_policy",
-    description: "Policy-driven key handle provisioning — request keys via templates, track handles and approval workflows",
-    icon: Layers3,
-    emoji: "A",
-    requiredAnyFeatures: ["autokey_provisioning"]
-  },
-  {
-    id: "key_access_justifications",
-    label: "Access Justifications",
-    shortLabel: "Key Access",
-    group: "data_policy",
-    description: "Justification codes, time-window rules, and access audit decisions for key operations",
-    icon: ShieldCheck,
-    emoji: "J",
-    requiredAnyFeatures: ["key_access_justifications"]
-  },
-  {
-    id: "pkcs11_jca",
-    label: "PKCS#11 / JCA",
-    shortLabel: "PKCS#11",
-    group: "data_policy",
-    description: "Client SDK providers and mechanism telemetry",
-    icon: Fingerprint,
-    emoji: "P"
-  },
+  { id: "tokenize_mask", label: "Tokenize / Mask", shortLabel: "Tokenize",  group: "data_policy",           description: "Tokenization, masking, and field-level encryption",                                                      icon: Shield,            emoji: "T"  },
+  { id: "payment",       label: "Payment",         shortLabel: "Payment",   group: "data_policy",           description: "TR-31, PIN blocks, and ISO 20022 signing",                                                               icon: Wallet,            emoji: "P"  },
+  { id: "autokey",       label: "Auto-Provisioning", shortLabel: "Autokey", group: "data_policy",           description: "Policy-driven key handle provisioning — request keys via templates, track handles and approval workflows", icon: Layers3,           emoji: "A"  },
+  { id: "key_access_justifications", label: "Access Justifications", shortLabel: "Key Access", group: "data_policy", description: "Justification codes, time-window rules, and access audit decisions for key operations",           icon: ShieldCheck,       emoji: "J"  },
+  { id: "pkcs11_jca",    label: "PKCS#11 / JCA",   shortLabel: "PKCS#11",  group: "data_policy",           description: "Client SDK providers and mechanism telemetry",                                                            icon: Fingerprint,       emoji: "P"  },
 
   // ── CLOUD & IDENTITY ────────────────────────────────────────────────
-  {
-    id: "byok",
-    label: "Cloud Keys (BYOK/HYOK)",
-    shortLabel: "Cloud Keys",
-    group: "cloud_identity",
-    description: "Cloud external key management — BYOK import/sync and HYOK hold-your-own-key proxy",
-    icon: Cloud,
-    emoji: "B",
-    requiredAnyFeatures: ["cloud_byok", "hyok_proxy"]
-  },
-  {
-    id: "ekm",
-    label: "EKM",
-    shortLabel: "EKM",
-    group: "cloud_identity",
-    description: "Database and endpoint encryption key manager integrations",
-    icon: Database,
-    emoji: "E",
-    requiredAnyFeatures: ["ekm_database"]
-  },
-  {
-    id: "kmip",
-    label: "KMIP",
-    shortLabel: "KMIP",
-    group: "cloud_identity",
-    description: "KMIP protocol client and object operations",
-    icon: Waypoints,
-    emoji: "K",
-    requiredAnyFeatures: ["kmip_server"]
-  },
-  {
-    id: "artifact_signing",
-    label: "Signing",
-    shortLabel: "Signing",
-    group: "cloud_identity",
-    description: "Artifact, blob, and Git signing with identity constraints, branch policy, and transparency log",
-    icon: Library,
-    emoji: "S",
-    requiredAnyFeatures: ["artifact_signing"]
-  },
-  {
-    id: "workload_identity",
-    label: "Workload Identity",
-    shortLabel: "Workload",
-    group: "cloud_identity",
-    description: "SPIFFE/SVID workload identity — register workloads, issue SVIDs, token exchange, rotation alerts",
-    icon: Users,
-    emoji: "W",
-    requiredAnyFeatures: ["workload_identity"]
-  },
-  {
-    id: "confidential_compute",
-    label: "Confidential Compute",
-    shortLabel: "Confidential",
-    group: "cloud_identity",
-    description: "Attested key release for TEE/enclave workloads",
-    icon: Fingerprint,
-    emoji: "C",
-    requiredAnyFeatures: ["confidential_compute"]
-  },
+  { id: "byok",          label: "Cloud Keys (BYOK/HYOK)", shortLabel: "Cloud Keys", group: "cloud_identity", description: "Cloud external key management — BYOK import/sync and HYOK hold-your-own-key proxy",                      icon: Cloud,             emoji: "B"  },
+  { id: "ekm",           label: "EKM",             shortLabel: "EKM",       group: "cloud_identity",        description: "Database and endpoint encryption key manager integrations",                                               icon: Database,          emoji: "E"  },
+  { id: "kmip",          label: "KMIP",            shortLabel: "KMIP",      group: "cloud_identity",        description: "KMIP protocol client and object operations",                                                             icon: Waypoints,         emoji: "K"  },
+  { id: "artifact_signing", label: "Signing",      shortLabel: "Signing",   group: "cloud_identity",        description: "Artifact, blob, and Git signing with identity constraints, branch policy, and transparency log",          icon: Library,           emoji: "S"  },
+  { id: "workload_identity", label: "Workload Identity", shortLabel: "Workload", group: "cloud_identity",   description: "SPIFFE/SVID workload identity — register workloads, issue SVIDs, token exchange, rotation alerts",        icon: Users,             emoji: "W"  },
+  { id: "confidential_compute", label: "Confidential Compute", shortLabel: "Confidential", group: "cloud_identity", description: "Attested key release for TEE/enclave workloads",                                                icon: Fingerprint,       emoji: "C"  },
 
   // ── INFRASTRUCTURE ──────────────────────────────────────────────────
-  {
-    id: "hsm_primus",
-    label: "HSM",
-    shortLabel: "HSM",
-    group: "infrastructure",
-    description: "Hardware and software vault provider plane",
-    icon: Cpu,
-    emoji: "H",
-    requiredAnyFeatures: ["hsm_hardware", "hsm_software"]
-  },
-  {
-    id: "qkd",
-    label: "QKD",
-    shortLabel: "QKD",
-    group: "infrastructure",
-    description: "Quantum key distribution interface status",
-    icon: Workflow,
-    emoji: "Q",
-    requiredAnyFeatures: ["qkd_interface"]
-  },
-  {
-    id: "qrng",
-    label: "QRNG",
-    shortLabel: "QRNG",
-    group: "infrastructure",
-    description: "Quantum random number generator entropy sources",
-    icon: Atom,
-    emoji: "Q",
-    requiredAnyFeatures: ["qrng_generator"]
-  },
-  {
-    id: "mpc",
-    label: "MPC / FROST",
-    shortLabel: "MPC",
-    group: "infrastructure",
-    description: "Threshold signing, FROST-style quorum workflows, and ceremony orchestration",
-    icon: Blocks,
-    emoji: "M",
-    requiredAnyFeatures: ["mpc_engine"]
-  },
-  {
-    id: "cluster",
-    label: "Cluster",
-    shortLabel: "Cluster",
-    group: "infrastructure",
-    description: "Node topology, health, and leader state",
-    icon: Layers3,
-    emoji: "C",
-    requiredAnyFeatures: ["clustering"]
-  },
+  { id: "hsm_primus",    label: "HSM",             shortLabel: "HSM",       group: "infrastructure",        description: "Hardware and software vault provider plane",                                                             icon: Cpu,               emoji: "H"  },
+  { id: "qkd",           label: "QKD",             shortLabel: "QKD",       group: "infrastructure",        description: "Quantum key distribution interface status",                                                              icon: Workflow,          emoji: "Q"  },
+  { id: "qrng",          label: "QRNG",            shortLabel: "QRNG",      group: "infrastructure",        description: "Quantum random number generator entropy sources",                                                        icon: Atom,              emoji: "Q"  },
+  { id: "mpc",           label: "MPC / FROST",     shortLabel: "MPC",       group: "infrastructure",        description: "Threshold signing, FROST-style quorum workflows, and ceremony orchestration",                            icon: Blocks,            emoji: "M"  },
+  { id: "cluster",       label: "Cluster",         shortLabel: "Cluster",   group: "infrastructure",        description: "Node topology, health, and leader state",                                                                icon: Layers3,           emoji: "C"  },
 
   // ── GOVERNANCE ──────────────────────────────────────────────────────
-  {
-    id: "approvals",
-    label: "Approvals",
-    shortLabel: "Approvals",
-    group: "governance_compliance",
-    description: "Multi-quorum governance requests",
-    icon: ShieldAlert,
-    emoji: "A",
-    requiredAnyFeatures: ["governance"]
-  },
-  {
-    id: "alert_center",
-    label: "Alert Center",
-    shortLabel: "Alerts",
-    group: "governance_compliance",
-    description: "Alerting channels, active incidents, and SVID rotation alerts",
-    icon: BellRing,
-    emoji: "!",
-    requiredAnyFeatures: ["reporting_alerting"]
-  },
-  {
-    id: "posture",
-    label: "Posture",
-    shortLabel: "Posture",
-    group: "governance_compliance",
-    description: "Risk detection, drift findings, and remediation actions",
-    icon: Gauge,
-    emoji: "P",
-    requiredAnyFeatures: ["compliance_dashboard", "governance"]
-  },
-  {
-    id: "compliance",
-    label: "Compliance",
-    shortLabel: "Compliance",
-    group: "governance_compliance",
-    description: "Posture scoring, framework gap analysis, and SBOM/CBOM intelligence",
-    icon: Landmark,
-    emoji: "C",
-    requiredAnyFeatures: ["compliance_dashboard"]
-  },
-  {
-    id: "sbom_cbom",
-    label: "SBOM / CBOM",
-    shortLabel: "SBOM",
-    group: "governance_compliance",
-    description: "Software and crypto BOM intelligence for PQC readiness and compliance",
-    icon: ScrollText,
-    emoji: "S",
-    requiredAnyFeatures: ["sbom_cbom"]
-  },
+  { id: "approvals",     label: "Approvals",       shortLabel: "Approvals", group: "governance_compliance", description: "Multi-quorum governance requests",                                                                       icon: ShieldAlert,       emoji: "A"  },
+  { id: "alert_center",  label: "Alert Center",    shortLabel: "Alerts",    group: "governance_compliance", description: "Alerting channels, active incidents, and SVID rotation alerts",                                          icon: BellRing,          emoji: "!"  },
+  { id: "posture",       label: "Posture",         shortLabel: "Posture",   group: "governance_compliance", description: "Risk detection, drift findings, and remediation actions",                                                icon: Gauge,             emoji: "P"  },
+  { id: "compliance",    label: "Compliance",      shortLabel: "Compliance", group: "governance_compliance", description: "Posture scoring, framework gap analysis, and SBOM/CBOM intelligence",                                  icon: Landmark,          emoji: "C"  },
+  { id: "sbom_cbom",     label: "SBOM / CBOM",     shortLabel: "SBOM",      group: "governance_compliance", description: "Software and crypto BOM intelligence for PQC readiness and compliance",                                 icon: ScrollText,        emoji: "S"  },
 
   // ── ADMIN ────────────────────────────────────────────────────────────
-  {
-    id: "ai_assistant",
-    label: "AI Assistant",
-    shortLabel: "AI",
-    group: "admin",
-    description: "AI-powered key management guidance and policy recommendations",
-    icon: Sparkles,
-    emoji: "AI",
-    requiredAnyFeatures: ["ai_llm"]
-  },
-  {
-    id: "administration",
-    label: "Administration",
-    shortLabel: "Admin",
-    group: "admin",
-    description: "Tenant, feature, network, FIPS, and license controls",
-    icon: Building2,
-    emoji: "A"
-  }
+  { id: "ai_assistant",  label: "AI Assistant",    shortLabel: "AI",        group: "admin",                 description: "AI-powered key management guidance and policy recommendations",                                          icon: Sparkles,          emoji: "AI" },
+  { id: "administration", label: "Administration", shortLabel: "Admin",     group: "admin",                 description: "Tenant, feature, network, FIPS, and license controls",                                                  icon: Building2,         emoji: "A"  }
 ];
 
 export const tabOrder: TabId[] = tabConfig.map((t) => t.id);

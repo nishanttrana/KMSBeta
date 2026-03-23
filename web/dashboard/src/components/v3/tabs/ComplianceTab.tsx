@@ -10,6 +10,7 @@ import {
   Row2,
   Section,
   Sel,
+  Stat,
   usePromptDialog
 } from "../legacyPrimitives";
 import { C } from "../theme";

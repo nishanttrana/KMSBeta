@@ -67,7 +67,8 @@ function hasPermission(session: unknown, token: string): boolean {
   return permissions.has("*") || permissions.has(want);
 }
 
-function matchesFeatureNeed(need: ModuleFeatureNeed | undefined, features: Set<FeatureKey>): boolean {
+export type { ModuleFeatureNeed };
+export function matchesFeatureNeed(need: ModuleFeatureNeed | undefined, features: Set<FeatureKey>): boolean {
   if (!need) {
     return true;
   }

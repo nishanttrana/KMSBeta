@@ -506,7 +506,7 @@ export const Sel = ({ children, w, style, value, defaultValue, onChange, disable
                   borderRadius: 10,
                   border: `1px solid ${highlighted ? C.borderHi : "transparent"}`,
                   background: selected
-                    ? `linear-gradient(135deg, ${C.accentDim} 0%, rgba(6,214,224,.16) 100%)`
+                    ? C.accentDim
                     : highlighted
                       ? C.cardHover
                       : "transparent",
@@ -518,7 +518,7 @@ export const Sel = ({ children, w, style, value, defaultValue, onChange, disable
                   opacity: option.disabled ? 0.5 : 1
                 }}
               >
-                <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", color: selected ? C.accent : "transparent" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", color: selected ? C.accentFg : "transparent" }}>
                   <Check size={12} strokeWidth={2.6} />
                 </span>
                 <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{option.label}</span>
@@ -554,7 +554,7 @@ export const Sel = ({ children, w, style, value, defaultValue, onChange, disable
           onKeyDown={handleTriggerKeyDown}
           style={{
             background: open ? `linear-gradient(180deg, ${C.cardHover} 0%, ${C.card} 100%)` : C.card,
-            border: `1px solid ${open ? C.accent : C.border}`,
+            border: `1px solid ${open ? C.accentFg : C.border}`,
             borderRadius: 7,
             padding: "8px 34px 8px 10px",
             color: disabled ? C.muted : C.text,
@@ -585,7 +585,7 @@ export const Sel = ({ children, w, style, value, defaultValue, onChange, disable
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              color: open ? C.accent : C.muted,
+              color: open ? C.accentFg : C.muted,
               transform: open ? "rotate(180deg)" : "rotate(0deg)",
               transition: "transform 140ms ease, color 140ms ease"
             }}
@@ -617,8 +617,8 @@ type ChkProps = {
 
 export const Chk = ({ label, checked, onChange, disabled = false }: ChkProps) => (
   <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: disabled ? C.muted : C.dim, cursor: disabled ? "not-allowed" : "pointer", marginBottom: 4, opacity: disabled ? 0.75 : 1 }}>
-    <div style={{ width: 16, height: 16, borderRadius: 4, border: `1px solid ${checked ? C.accent : C.border}`, background: checked ? C.accentDim : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} onClick={disabled ? undefined : onChange}>
-      {checked && <Check size={10} strokeWidth={3} color={C.accent} />}
+    <div style={{ width: 16, height: 16, borderRadius: 4, border: `1px solid ${checked ? C.accentFg : C.border}`, background: checked ? C.accentDim : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }} onClick={disabled ? undefined : onChange}>
+      {checked && <Check size={10} strokeWidth={3} color={C.accentFg} />}
     </div>{label}
   </label>
 );
@@ -631,8 +631,8 @@ type RadioProps = {
 
 export const Radio = ({ label, selected, onSelect }: RadioProps) => (
   <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: selected ? C.text : C.dim, cursor: "pointer", marginBottom: 4 }} onClick={onSelect}>
-    <div style={{ width: 14, height: 14, borderRadius: 7, border: `2px solid ${selected ? C.accent : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-      {selected && <div style={{ width: 6, height: 6, borderRadius: 3, background: C.accent }} />}
+    <div style={{ width: 14, height: 14, borderRadius: 7, border: `2px solid ${selected ? C.accentFg : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      {selected && <div style={{ width: 6, height: 6, borderRadius: 3, background: C.accentFg }} />}
     </div>{label}
   </label>
 );
@@ -647,7 +647,7 @@ type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export const Btn = ({ children, primary = false, danger = false, small = false, onClick, disabled = false, full = false, style, ...p }: BtnProps) => (
-  <button onClick={onClick} disabled={disabled} {...p} style={{ background: danger ? C.red : primary ? C.accent : "transparent", color: danger || primary ? C.bg : C.accent, border: `1px solid ${danger ? C.red : primary ? C.accent : C.border}`, borderRadius: 7, padding: small ? "5px 10px" : "8px 16px", fontSize: small ? 10 : 11, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, width: full ? "100%" : "auto", letterSpacing: 0.2, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, ...(style || {}) }}>{children}</button>
+  <button onClick={onClick} disabled={disabled} {...p} style={{ background: danger ? `linear-gradient(135deg,${C.red},#c0392b)` : primary ? `linear-gradient(135deg,${C.accent} 0%,${C.teal} 100%)` : "transparent", color: danger ? "#ffffff" : primary ? "#0a1826" : C.accentFg, border: `1px solid ${danger ? C.red : primary ? C.accent : C.border}`, borderRadius: 7, padding: small ? "5px 10px" : "8px 16px", fontSize: small ? 10 : 11, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, width: full ? "100%" : "auto", letterSpacing: 0.2, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: primary ? `0 2px 10px rgba(6,214,224,0.22)` : danger ? `0 2px 8px rgba(239,68,68,0.2)` : "none", transition: "opacity 0.15s, box-shadow 0.15s", ...(style || {}) }}>{children}</button>
 );
 
 type BadgeProps = {
@@ -658,10 +658,11 @@ type BadgeProps = {
 
 export const B = ({ children, c = "accent", pulse = false }: BadgeProps) => {
   const palette = C as Record<string, string>;
-  const textColor = palette[c] || C.accent;
-  const bgColor = palette[`${c}Dim`] || "rgba(255,255,255,.05)";
+  // Use *Fg for text (theme-reactive), *Dim for background, border from Dim
+  const textColor = palette[`${c}Fg`] || palette[c] || C.accentFg;
+  const bgColor = palette[`${c}Dim`] || C.accentDim;
   return (
-    <span style={{ display: "inline-block", padding: "2px 7px", borderRadius: 5, fontSize: 9, fontWeight: 600, color: textColor, background: bgColor, letterSpacing: 0.3, animation: pulse ? "pulse 2s infinite" : "none" }}>{children}</span>
+    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 5, fontSize: 9, fontWeight: 700, color: textColor, background: bgColor, letterSpacing: 0.4, border: `1px solid ${bgColor}`, animation: pulse ? "pulse 2s infinite" : "none" }}>{children}</span>
   );
 };
 
@@ -672,8 +673,8 @@ type TabsProps = {
 };
 
 export const Tabs = ({ tabs, active, onChange }: TabsProps) => (
-  <div style={{ display: "flex", gap: 2, marginBottom: 14, flexWrap: "wrap" }}>
-    {tabs.map((t) => <button key={t} onClick={() => onChange(t)} style={{ background: active === t ? C.accentDim : "transparent", color: active === t ? C.accent : C.muted, border: `1px solid ${active === t ? C.accent : C.border}`, borderRadius: 6, padding: "5px 10px", fontSize: 10, fontWeight: active === t ? 600 : 400, cursor: "pointer", letterSpacing: 0.2 }}>{t}</button>)}
+  <div style={{ display: "flex", gap: 3, marginBottom: 14, flexWrap: "wrap", padding: "3px", background: C.card, borderRadius: 9, border: `1px solid ${C.border}`, width: "fit-content" }}>
+    {tabs.map((t) => <button key={t} onClick={() => onChange(t)} style={{ background: active === t ? C.accentDim : "transparent", color: active === t ? C.accentFg : C.muted, border: `1px solid ${active === t ? C.accentFg : "transparent"}`, borderRadius: 6, padding: "5px 12px", fontSize: 10, fontWeight: active === t ? 700 : 400, cursor: "pointer", letterSpacing: 0.2, transition: "all .15s", boxShadow: active === t ? `0 1px 6px rgba(6,214,224,.12)` : "none" }}>{t}</button>)}
   </div>
 );
 
@@ -706,13 +707,15 @@ type StatProps = {
 export const Stat = ({ l, v, s, c = "accent", i }: StatProps) => {
   const Icon = typeof i === "function" ? i : statIconForLabel(String(l ?? ""));
   const palette = C as Record<string, string>;
+  // Use *Fg for theme-reactive text/icon colors
+  const accentColor = palette[`${c}Fg`] || palette[c] || C.accentFg;
   return (
-    <div style={{ flex: 1, background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: "12px 14px" }}>
+    <div style={{ flex: 1, background: `linear-gradient(135deg, ${C.card} 0%, ${C.surface} 100%)`, borderRadius: 10, border: `1px solid ${C.border}`, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.12)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{l}</span>
-        <span style={{ display: "inline-flex", color: C.dim }}><Icon size={14} strokeWidth={2} /></span>
+        <span style={{ display: "inline-flex", color: accentColor, opacity: 0.7 }}><Icon size={14} strokeWidth={2} /></span>
       </div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: palette[c] || C.accent, marginTop: 4, letterSpacing: -0.5 }}>{v}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: accentColor, marginTop: 4, letterSpacing: -0.5 }}>{v}</div>
       {s && <div style={{ fontSize: 9, color: C.dim, marginTop: 2 }}>{s}</div>}
     </div>
   );
@@ -751,7 +754,7 @@ type CardProps = {
 };
 
 export const Card = ({ children, onClick, style }: CardProps) => (
-  <div onClick={onClick} style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 14, cursor: onClick ? "pointer" : "default", transition: "border-color .15s", ...(style || {}) }} onMouseEnter={(e) => { if (onClick) e.currentTarget.style.borderColor = C.accent; }} onMouseLeave={(e) => { if (onClick) e.currentTarget.style.borderColor = C.border; }}>{children}</div>
+  <div onClick={onClick} style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 14, cursor: onClick ? "pointer" : "default", transition: "border-color .15s, box-shadow .15s", boxShadow: "0 1px 3px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.12)", ...(style || {}) }} onMouseEnter={(e) => { if (onClick) { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.boxShadow = `0 2px 16px rgba(6,214,224,0.1), 0 4px 20px rgba(0,0,0,.2)`; } }} onMouseLeave={(e) => { if (onClick) { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.12)"; } }}>{children}</div>
 );
 
 type RowProps = {

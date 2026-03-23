@@ -1,134 +1,166 @@
-# Documentation Index
+# Vecta KMS Documentation
 
-This directory contains the operator-focused documentation for Vecta KMS.
+Vecta KMS is an enterprise-grade, multi-tenant key management platform providing cryptographic key lifecycle management, PKI, data protection, cloud integration, workload identity, compliance, and advanced infrastructure features including HSM, QKD, QRNG, and MPC/FROST threshold signing.
 
-## Start Here
+---
 
-- [../README.md](../README.md)
-  - Repository landing page, quick start, and documentation map.
-- [COMPONENT_GUIDE.md](COMPONENT_GUIDE.md)
-  - Explains what each service or major component does, when to use it, and the primary UI/API entry points.
-- [ARCHITECTURE.md](ARCHITECTURE.md)
-  - Explains how the platform is put together, which services own which decisions, and how trust boundaries work.
-- [ADMIN_GUIDE.md](ADMIN_GUIDE.md)
-  - Explains how administrators should navigate the UI and run day-to-day operations.
-- [FEATURE_REFERENCE.md](FEATURE_REFERENCE.md)
-  - Explains the major platform features in a product-style format with usage guidance and operational impact.
-- [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md)
-  - Covers install, startup, health, backup, restore, and cluster operations.
-- [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md)
-  - Step-by-step scenarios for common deployments and operational tasks.
-- [REST_API_ADDITIONS.md](REST_API_ADDITIONS.md)
-  - Route-level detail for the newer REST surfaces.
+## Documentation Map
+
+### Start Here
+
+| Document | Audience | What It Covers |
+|---|---|---|
+| [GETTING_STARTED.md](GETTING_STARTED.md) | Everyone | Architecture overview, first login, first key, security model, dashboard tour |
+| [KEYS.md](KEYS.md) | All users | Key lifecycle, algorithms, access policy, crypto operations, rotation |
+| [CERTIFICATES.md](CERTIFICATES.md) | PKI, platform | PKI hierarchy, certificate lifecycle, ACME/EST/SCEP/CMPv2, STAR, ARI |
+| [DATA_PROTECTION.md](DATA_PROTECTION.md) | App, data teams | Tokenization, FPE, masking, payment crypto, PKCS#11/JCA, Autokey |
+| [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) | Cloud, integration | BYOK, HYOK, EKM/TDE, KMIP, artifact signing |
+| [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) | Security, platform | Workload identity, confidential compute, key access justifications, PQC migration |
+| [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) | Compliance, ops | Audit log, governance/approvals, compliance frameworks, alerts, posture, SBOM |
+| [INFRASTRUCTURE.md](INFRASTRUCTURE.md) | Platform, ops | HSM integration, cluster management, QKD, QRNG, MPC/FROST |
+| [ADMINISTRATION.md](ADMINISTRATION.md) | Administrators | Users, tenants, IdP, SCIM, API clients, FIPS, network config |
+| [API_REFERENCE.md](API_REFERENCE.md) | Developers | Complete endpoint reference, schemas, curl examples, error codes |
+
+### Legacy/Additional Docs
+
+| Document | What It Covers |
+|---|---|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Service architecture, trust boundaries |
+| [COMPONENT_GUIDE.md](COMPONENT_GUIDE.md) | Per-component quick reference |
+| [FEATURE_REFERENCE.md](FEATURE_REFERENCE.md) | Feature overview (concise) |
+| [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) | Install, startup, health, backup, cluster |
+| [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md) | Step-by-step scenario walkthroughs |
+| [REST_API_ADDITIONS.md](REST_API_ADDITIONS.md) | Supplementary REST surface detail |
+| [ADMIN_GUIDE.md](ADMIN_GUIDE.md) | Operator day-to-day guidance |
+| [openapi/](openapi/) | OpenAPI specifications |
+
+---
 
 ## Read By Role
 
 ### Platform Administrator
-
-Read in this order:
-
-1. [../README.md](../README.md)
-2. [ARCHITECTURE.md](ARCHITECTURE.md)
-3. [ADMIN_GUIDE.md](ADMIN_GUIDE.md)
-4. [COMPONENT_GUIDE.md](COMPONENT_GUIDE.md)
-5. [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md)
-6. [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md)
-
-Focus areas:
-
-- deployment configuration
-- startup and health checks
-- interfaces, TLS, and tenant operations
-- backup, restore, governance, and cluster controls
+1. [GETTING_STARTED.md](GETTING_STARTED.md) — architecture and first login
+2. [ADMINISTRATION.md](ADMINISTRATION.md) — users, tenants, FIPS, network
+3. [KEYS.md](KEYS.md) — key creation, access policy
+4. [INFRASTRUCTURE.md](INFRASTRUCTURE.md) — HSM, cluster
+5. [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) — backups, approvals, audit
 
 ### Security Architect
+1. [GETTING_STARTED.md](GETTING_STARTED.md) — security model
+2. [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) — workload identity, confidential compute, PQC
+3. [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) — compliance, posture, audit
+4. [KEYS.md](KEYS.md) — access policy, interface hardening
+5. [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) — HYOK, signing
 
-Read in this order:
+### Application Developer
+1. [GETTING_STARTED.md](GETTING_STARTED.md) — first steps
+2. [KEYS.md](KEYS.md) — creating and using keys
+3. [API_REFERENCE.md](API_REFERENCE.md) — endpoint reference
+4. [DATA_PROTECTION.md](DATA_PROTECTION.md) — tokenization, field encryption
+5. [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) — workload identity (no static API keys)
 
-1. [ARCHITECTURE.md](ARCHITECTURE.md)
-2. [FEATURE_REFERENCE.md](FEATURE_REFERENCE.md)
-3. [COMPONENT_GUIDE.md](COMPONENT_GUIDE.md)
-4. [REST_API_ADDITIONS.md](REST_API_ADDITIONS.md)
-5. [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md)
+### PKI / Integration Team
+1. [CERTIFICATES.md](CERTIFICATES.md) — PKI hierarchy, enrollment protocols
+2. [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) — BYOK, HYOK, KMIP, EKM
+3. [DATA_PROTECTION.md](DATA_PROTECTION.md) — payment crypto, PKCS#11
+4. [API_REFERENCE.md](API_REFERENCE.md) — full endpoint reference
 
-Focus areas:
+### Compliance / Audit Team
+1. [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) — all compliance features
+2. [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) — PQC readiness, access justifications
+3. [KEYS.md](KEYS.md) — key lifecycle audit evidence
+4. [API_REFERENCE.md](API_REFERENCE.md) — audit API endpoints
 
-- sender-constrained REST auth
-- workload identity and SVID exchange
-- attested key release
-- PQC migration
-- compliance, posture, and audit
-
-### Application Team
-
-Read in this order:
-
-1. [ARCHITECTURE.md](ARCHITECTURE.md)
-2. [COMPONENT_GUIDE.md](COMPONENT_GUIDE.md)
-3. [FEATURE_REFERENCE.md](FEATURE_REFERENCE.md)
-4. [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md)
-
-Focus areas:
-
-- creating and using keys
-- choosing API auth mode
-- workload identity onboarding
-- Autokey self-service
-- secret storage and rotation
-
-### PKI and Integration Team
-
-Read in this order:
-
-1. [ARCHITECTURE.md](ARCHITECTURE.md)
-2. [COMPONENT_GUIDE.md](COMPONENT_GUIDE.md)
-3. [FEATURE_REFERENCE.md](FEATURE_REFERENCE.md)
-4. [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md)
-5. [REST_API_ADDITIONS.md](REST_API_ADDITIONS.md)
-
-Focus areas:
-
-- internal PKI
-- ACME/EST/SCEP/CMPv2
-- KMIP
-- EKM agent and TDE
-- cloud BYOK/HYOK
-- payment interfaces
+---
 
 ## Read By Task
 
-| Task | Primary Doc |
-| --- | --- |
-| Understand what a component is for | [COMPONENT_GUIDE.md](COMPONENT_GUIDE.md) |
-| Understand how the platform is put together | [ARCHITECTURE.md](ARCHITECTURE.md) |
-| Learn how to operate the dashboard and admin surfaces | [ADMIN_GUIDE.md](ADMIN_GUIDE.md) |
-| Understand the major security and crypto features | [FEATURE_REFERENCE.md](FEATURE_REFERENCE.md) |
-| Find a realistic onboarding flow | [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md) |
-| Look up newer API surfaces | [REST_API_ADDITIONS.md](REST_API_ADDITIONS.md) |
-| Run startup, backup, or cluster operations | [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) |
-| Install or start the platform | [../README.md](../README.md), [../infra/scripts/README.md](../infra/scripts/README.md) |
-| Edit deployment YAML | [../infra/deployment/README.md](../infra/deployment/README.md) |
+| Task | Document |
+|---|---|
+| Install and start Vecta KMS | [GETTING_STARTED.md](GETTING_STARTED.md), [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) |
+| Create a cryptographic key | [KEYS.md](KEYS.md) |
+| Encrypt or sign data | [KEYS.md](KEYS.md), [API_REFERENCE.md](API_REFERENCE.md) |
+| Set up internal PKI | [CERTIFICATES.md](CERTIFICATES.md) |
+| Configure ACME / EST / SCEP | [CERTIFICATES.md](CERTIFICATES.md) |
+| Tokenize PAN / SSN data | [DATA_PROTECTION.md](DATA_PROTECTION.md) |
+| Integrate with AWS KMS (BYOK) | [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) |
+| Configure Microsoft DKE (HYOK) | [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) |
+| Protect MSSQL / Oracle with TDE | [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) |
+| Connect a KMIP appliance | [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) |
+| Sign container images / Git commits | [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) |
+| Set up workload identity (SPIFFE) | [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) |
+| Configure TEE attested key release | [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) |
+| Plan PQC migration | [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) |
+| Require access justification codes | [IDENTITY_AND_PQC.md](IDENTITY_AND_PQC.md) |
+| Run a compliance assessment | [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) |
+| Set up multi-quorum governance | [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) |
+| Search the audit log | [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) |
+| Export audit events to SIEM | [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) |
+| Integrate an HSM | [INFRASTRUCTURE.md](INFRASTRUCTURE.md) |
+| Set up a multi-node cluster | [INFRASTRUCTURE.md](INFRASTRUCTURE.md) |
+| Configure QKD or QRNG | [INFRASTRUCTURE.md](INFRASTRUCTURE.md) |
+| Deploy threshold MPC signing | [INFRASTRUCTURE.md](INFRASTRUCTURE.md) |
+| Create users and assign roles | [ADMINISTRATION.md](ADMINISTRATION.md) |
+| Configure Okta / Azure AD SSO | [ADMINISTRATION.md](ADMINISTRATION.md) |
+| Set up SCIM provisioning | [ADMINISTRATION.md](ADMINISTRATION.md) |
+| Enable FIPS mode | [ADMINISTRATION.md](ADMINISTRATION.md) |
+| Back up and restore the platform | [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) |
+| Look up an API endpoint | [API_REFERENCE.md](API_REFERENCE.md) |
 
-## Service-Specific References
+---
 
-- [KMIP](../services/kmip/README.md)
-- [Posture](../services/posture/README.md)
+## Service and API Quick Reference
+
+All API calls use the proxy path `http://{host}/svc/{service}/...`.
+
+| Service Name | Base Path | Primary Feature Area |
+|---|---|---|
+| `keycore` | `/svc/keycore/` | Key lifecycle, crypto operations, access policy |
+| `auth` | `/svc/auth/` | Authentication, users, tenants, clients, IdP, SCIM |
+| `certs` | `/svc/certs/` | PKI, certificate lifecycle, enrollment protocols |
+| `audit` | `/svc/audit/` | Audit log, alert management, Merkle proofs |
+| `governance` | `/svc/governance/` | Governance policies, approvals, backups, system state |
+| `reporting` | `/svc/reporting/` | Alert rules, reports, scheduled reports |
+| `compliance` | `/svc/compliance/` | Framework scoring, assessment, posture |
+| `posture` | `/svc/posture/` | Risk findings, drift detection, remediation |
+| `workload` | `/svc/workload/` | Workload identity, SPIFFE/SVID, token exchange |
+| `confidential` | `/svc/confidential/` | TEE attestation, attested key release |
+| `pqc` | `/svc/pqc/` | PQC policy, inventory, migration planning |
+| `keyaccess` | `/svc/keyaccess/` | Access justification rules and audit |
+| `dataprotect` | `/svc/dataprotect/` | Tokenization, masking, field encryption |
+| `payment` | `/svc/payment/` | TR-31, PIN blocks, ISO 20022 signing |
+| `autokey` | `/svc/autokey/` | Key provisioning templates and handle requests |
+| `cloud` | `/svc/cloud/` | BYOK, cloud key sync |
+| `hyok` | `/svc/hyok/` | HYOK proxy, hold-your-own-key policies |
+| `ekm` | `/svc/ekm/` | Database TDE, BitLocker endpoint management |
+| `kmip` | `/svc/kmip/` | KMIP profile management, object lifecycle |
+| `signing` | `/svc/signing/` | Artifact, blob, Git, container signing |
+| `mpc` | `/svc/mpc/` | MPC groups, FROST ceremonies, threshold signing |
+| `cluster` | `/svc/cluster/` | Cluster nodes, replication, sync monitoring |
+| `qkd` | `/svc/qkd/` | Quantum key distribution links |
+| `qrng` | `/svc/qrng/` | Quantum random number generation |
+| `secrets` | `/svc/secrets/` | Secret vault storage |
+| `sbom` | `/svc/sbom/` | SBOM/CBOM intelligence |
+| `ai` | `/svc/ai/` | AI guidance and policy recommendations |
+
+---
+
+## Conventions Used In This Documentation
+
+- API examples use `http://localhost:5173` as the base URL (dashboard dev proxy). Replace with your deployed host.
+- `tenant_id=root` is used as the sample tenant ID unless noted otherwise.
+- `$TOKEN` refers to the Bearer token from `POST /svc/auth/auth/login`.
+- Request body examples use realistic but fictional data.
+- All timestamps are ISO-8601 UTC.
+- Binary data (keys, ciphertext, signatures) is base64-encoded in all API payloads.
+
+---
+
+## Service-Specific README Files
+
+- [KMIP Service](../services/kmip/README.md)
+- [Posture Service](../services/posture/README.md)
 - [HSM Integration](../services/hsm-integration/README.md)
 - [EKM Agent](../services/ekm-agent/README.md)
-
-## Conventions Used In These Docs
-
-- API examples generally use the dashboard proxy path: `/svc/<service>/...`
-- `tenant_id=root` is used as the sample tenant unless noted otherwise
-- Examples assume a Bearer token in `Authorization`
-- UI paths use the visible dashboard labels, for example `Data Protection -> Payment Policy`
-
-## Practical Reading Path For New Environments
-
-1. Confirm install and startup from [../README.md](../README.md)
-2. Review [ARCHITECTURE.md](ARCHITECTURE.md) to understand how the platform is assembled
-3. Review [ADMIN_GUIDE.md](ADMIN_GUIDE.md) to understand how operators should use the platform
-4. Review [COMPONENT_GUIDE.md](COMPONENT_GUIDE.md) to understand the role of each service
-5. Review [FEATURE_REFERENCE.md](FEATURE_REFERENCE.md) to understand the major security and crypto capabilities
-6. Execute one or two relevant flows from [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md)
-7. Use [REST_API_ADDITIONS.md](REST_API_ADDITIONS.md) when automating or integrating
+- [PKCS#11 Provider](../services/pkcs11-provider/samples/README.md)
+- [JCA Provider](../services/jca-provider/samples/README.md)

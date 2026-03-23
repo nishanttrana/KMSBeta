@@ -2,8 +2,73 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
-:root {
+/* ===================================================================
+   THEME: DARK (default)
+   =================================================================== */
+:root,
+[data-theme="dark"] {
   color-scheme: dark;
+  /* Structural */
+  --c-bg:          #0e1726;
+  --c-sidebar:     #121e30;
+  --c-surface:     #162033;
+  --c-card:        #1b2a40;
+  --c-card-hover:  #1f3049;
+  --c-border:      #243654;
+  --c-border-hi:   #2e4468;
+  --c-text:        #eaf0f8;
+  --c-dim:         #a8bcd4;
+  --c-muted:       #7a92ad;
+  --c-glow:        rgba(6, 214, 224, 0.15);
+  --c-glow-strong: rgba(6, 214, 224, 0.32);
+  --c-accent-dim:  rgba(6, 214, 224, 0.10);
+  --c-dim-tint:    rgba(148, 163, 184, 0.06);
+  /* Semantic — bright neons for dark backgrounds */
+  --s-accent: #06d6e0;  --s-accent-dim: rgba(6,214,224,.10);   --s-accent-mid: rgba(6,214,224,.12);
+  --s-teal:   #14b8a6;  --s-teal-dim:   rgba(20,184,166,.08);
+  --s-green:  #2dd4a0;  --s-green-dim:  rgba(45,212,160,.08);
+  --s-red:    #ef4444;  --s-red-dim:    rgba(239,68,68,.08);
+  --s-amber:  #f59e0b;  --s-amber-dim:  rgba(245,158,11,.08);
+  --s-orange: #f97316;  --s-orange-dim: rgba(249,115,22,.08);
+  --s-purple: #a78bfa;  --s-purple-dim: rgba(167,139,250,.08);
+  --s-blue:   #3b82f6;  --s-blue-dim:   rgba(59,130,246,.08);
+  --s-pink:   #ec4899;  --s-pink-dim:   rgba(236,72,153,.08);
+  --s-cyan:   #22d3ee;  --s-cyan-dim:   rgba(34,211,238,.08);
+  --s-yellow: #facc15;  --s-yellow-dim: rgba(250,204,21,.08);
+}
+
+/* ===================================================================
+   THEME: LIGHT
+   =================================================================== */
+[data-theme="light"] {
+  color-scheme: light;
+  /* Structural */
+  --c-bg:          #eef2f7;
+  --c-sidebar:     #dde6f2;
+  --c-surface:     #f5f8fc;
+  --c-card:        #ffffff;
+  --c-card-hover:  #eaf2fb;
+  --c-border:      #c8d8ea;
+  --c-border-hi:   #a8c0d8;
+  --c-text:        #0b1829;
+  --c-dim:         #1e3248;
+  --c-muted:       #38536e;
+  --c-glow:        rgba(6, 214, 224, 0.25);
+  --c-glow-strong: rgba(6, 214, 224, 0.45);
+  --c-accent-dim:  rgba(8, 145, 178, 0.12);
+  --c-dim-tint:    rgba(30, 50, 72, 0.06);
+  /* Semantic — darker, high-contrast for light backgrounds */
+  --s-accent: #0891b2;  --s-accent-dim: rgba(8,145,178,.12);   --s-accent-mid: rgba(8,145,178,.14);
+  --s-teal:   #0f766e;  --s-teal-dim:   rgba(15,118,110,.12);
+  --s-green:  #059669;  --s-green-dim:  rgba(5,150,105,.12);
+  --s-red:    #dc2626;  --s-red-dim:    rgba(220,38,38,.10);
+  --s-amber:  #b45309;  --s-amber-dim:  rgba(180,83,9,.12);
+  --s-orange: #c2410c;  --s-orange-dim: rgba(194,65,12,.10);
+  --s-purple: #6d28d9;  --s-purple-dim: rgba(109,40,217,.10);
+  --s-blue:   #1d4ed8;  --s-blue-dim:   rgba(29,78,216,.10);
+  --s-pink:   #be185d;  --s-pink-dim:   rgba(190,24,93,.10);
+  --s-cyan:   #0e7490;  --s-cyan-dim:   rgba(14,116,144,.12);
+  --s-yellow: #854d0e;  --s-yellow-dim: rgba(133,77,14,.10);
 }
 
 html,
@@ -11,20 +76,30 @@ body,
 #root {
   margin: 0;
   min-height: 100%;
-  background: #060a11;
+  background: var(--c-bg);
 }
 
 * {
   box-sizing: border-box;
 }
 
+/* Smooth theme transitions on structural properties */
+*, *::before, *::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease, box-shadow 0.2s ease;
+}
+
+/* Opt-out for elements that shouldn't animate (avoids jank on hover/focus) */
+button, input, select, textarea, [role="button"] {
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.1s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
 body {
   font-family: "IBM Plex Sans", sans-serif;
-  color: #e2e8f0;
+  color: var(--c-text);
   background-image:
-    radial-gradient(circle at 8% -20%, rgba(6, 214, 224, 0.24), transparent 38%),
-    radial-gradient(circle at 95% 0%, rgba(167, 139, 250, 0.12), transparent 34%),
-    linear-gradient(180deg, #060a11 0%, #0a0f1a 100%);
+    radial-gradient(circle at 8% -20%, rgba(6, 214, 224, 0.14), transparent 38%),
+    radial-gradient(circle at 95% 0%, rgba(167, 139, 250, 0.08), transparent 34%),
+    linear-gradient(180deg, var(--c-bg) 0%, var(--c-sidebar) 100%);
 }
 
 /* ===================================================================
@@ -154,7 +229,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #060a11;
+  background: var(--c-bg);
   background-image:
     radial-gradient(circle at 8% -20%, rgba(6, 214, 224, 0.12), transparent 38%),
     radial-gradient(circle at 95% 0%, rgba(167, 139, 250, 0.06), transparent 34%);
@@ -285,19 +360,27 @@ body {
 }
 
 .vecta-accent-glow {
-  box-shadow: 0 0 0 1px rgba(6, 214, 224, 0.08),
-              0 0 12px rgba(6, 214, 224, 0.06);
+  box-shadow: 0 0 0 1px rgba(6, 214, 224, 0.12),
+              0 0 14px rgba(6, 214, 224, 0.08);
 }
 
 .vecta-accent-glow-strong {
-  box-shadow: 0 0 0 1px rgba(6, 214, 224, 0.15),
-              0 0 20px rgba(6, 214, 224, 0.1);
+  box-shadow: 0 0 0 1px rgba(6, 214, 224, 0.22),
+              0 0 24px rgba(6, 214, 224, 0.14);
 }
 
 .vecta-card-shadow {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2),
-              0 4px 12px rgba(0, 0, 0, 0.15),
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25),
+              0 4px 14px rgba(0, 0, 0, 0.18),
               0 0 0 1px rgba(26, 41, 68, 0.5);
+}
+
+.vecta-transition {
+  transition: all 0.15s ease;
+}
+
+.vecta-gradient-card {
+  background: linear-gradient(135deg, #131d2e 0%, #0f1521 100%);
 }
 
 /* Subtle noise texture for premium depth */
@@ -307,6 +390,6 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: 9998;
-  opacity: 0.018;
+  opacity: 0.022;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
