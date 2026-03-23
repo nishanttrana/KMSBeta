@@ -12,6 +12,42 @@ function serviceURL(serviceName: string, port: number): string {
 
 export default defineConfig({
   plugins: [react()],
+
+  build: {
+    // esbuild minifier (default) — fast and produces smaller output than terser
+    minify: "esbuild",
+    // No source maps in production bundles — don't ship internal code paths
+    sourcemap: false,
+    // Warn when any single chunk exceeds 600 kB before compression
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        // Split vendor libraries into stable long-lived chunks so they are
+        // cached independently from app code that changes on every release.
+        manualChunks: (id) => {
+          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) {
+            return "vendor-react";
+          }
+          if (id.includes("node_modules/recharts") || id.includes("node_modules/d3-") || id.includes("node_modules/victory-")) {
+            return "vendor-charts";
+          }
+          if (id.includes("node_modules/lucide-react")) {
+            return "vendor-icons";
+          }
+          if (id.includes("node_modules/@tanstack")) {
+            return "vendor-query";
+          }
+          if (id.includes("node_modules/zustand")) {
+            return "vendor-state";
+          }
+          if (id.includes("node_modules/swagger-ui-dist")) {
+            return "vendor-swagger";
+          }
+        }
+      }
+    }
+  },
+
   server: {
     port: 5173,
     host: true,
