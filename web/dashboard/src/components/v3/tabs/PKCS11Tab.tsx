@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
 import { downloadEKMSDK, getEKMSDKOverview } from "../../../lib/ekm";
 import { refreshSession } from "../../../lib/auth";

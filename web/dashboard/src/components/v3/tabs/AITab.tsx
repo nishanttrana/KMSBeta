@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, Send, Settings, Shield, Sparkles, Loader2, AlertTriangle } from "lucide-react";
 import type { AuthSession } from "../../../lib/auth";

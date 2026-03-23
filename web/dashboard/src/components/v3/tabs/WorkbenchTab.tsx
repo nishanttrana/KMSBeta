@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { RestAPITab } from "./RestAPITab";
 import { DataEncryptionTab, TokenizeTab } from "./TokenizeTab";
 import { CryptoTab } from "./CryptoTab";

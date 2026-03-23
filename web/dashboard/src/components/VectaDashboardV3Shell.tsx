@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Atom,
@@ -44,7 +45,7 @@ import { canAccessModule, isSystemAdminSession, matchesFeatureNeed } from "../co
 import type { FeatureKey } from "../config/tabs";
 import { getAuthCLIStatus, listAuthTenants } from "../lib/authAdmin";
 import { getGovernanceSystemState } from "../lib/governance";
-import { listKeys, listKeysPaginated, listTags } from "../lib/keycore";
+import { listKeysPaginated, listTags } from "../lib/keycore";
 import { getUnreadAlertCounts } from "../lib/reporting";
 import { B, Btn, Sel } from "./v3/legacyPrimitives";
 import { isFipsModeEnabled, normalizeFipsModeValue, TabErrorBoundary } from "./v3/runtimeUtils";
@@ -450,29 +451,51 @@ export default function VectaDashboardV3Shell(props: Props) {
     };
   }, [sessionBase]);
 
+  // React Query: catalog + governance — cached per tenant/token, background-refreshed every 60 s
+  const catalogKey = [session?.tenantId, session?.token];
+  const keysQuery = useQuery({
+    queryKey: ["catalog-keys", ...catalogKey],
+    queryFn: () => listKeysPaginated(session, { limit: 100, includeDeleted: true }),
+    enabled: Boolean(session?.token),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    retry: 2
+  });
+  const tagsQuery = useQuery({
+    queryKey: ["catalog-tags", ...catalogKey],
+    queryFn: () => listTags(session),
+    enabled: Boolean(session?.token),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    retry: 2
+  });
+  const govQuery = useQuery({
+    queryKey: ["catalog-gov", ...catalogKey],
+    queryFn: () => getGovernanceSystemState(session),
+    enabled: Boolean(session?.token),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    retry: 2
+  });
+
+  // Sync query results into component state (state keeps working for local mutations)
   useEffect(() => {
-    let stop = false;
-    (async () => {
-      try {
-        const [keysPage, tags, state] = await Promise.all([
-          listKeysPaginated(session, { limit: 100, includeDeleted: true }),
-          listTags(session),
-          getGovernanceSystemState(session)
-        ]);
-        if (stop) return;
-        setKeyCatalog((Array.isArray(keysPage.items) ? keysPage.items : []).map(toViewKey));
-        setTagCatalog(Array.isArray(tags) ? tags : []);
-        setFipsMode(normalizeFipsModeValue(String((state as any)?.state?.fips_mode || "disabled")));
-      } catch {
-        if (!stop) {
-          setFipsMode("disabled");
-        }
-      }
-    })();
-    return () => {
-      stop = true;
-    };
-  }, [session]);
+    if (keysQuery.data) {
+      setKeyCatalog((Array.isArray((keysQuery.data as any).items) ? (keysQuery.data as any).items : []).map(toViewKey));
+    }
+  }, [keysQuery.data]);
+
+  useEffect(() => {
+    if (tagsQuery.data) {
+      setTagCatalog(Array.isArray(tagsQuery.data) ? tagsQuery.data : []);
+    }
+  }, [tagsQuery.data]);
+
+  useEffect(() => {
+    if (govQuery.data !== undefined) {
+      setFipsMode(normalizeFipsModeValue(String((govQuery.data as any)?.state?.fips_mode || "disabled")));
+    }
+  }, [govQuery.data]);
 
   useEffect(() => {
     if (!session?.token) { setCliEnabled(false); return; }

@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
 import { Shield, CheckCircle2, XCircle, Clock, AlertTriangle, Settings, Bell, Users, FileText, Eye, ChevronDown, ChevronRight, Send, Slack, MessageSquare } from "lucide-react";
 import { Btn, Card, Inp, Sel, Stat, Section, Tabs, Modal, FG, Row2, B, Chk, usePromptDialog } from "../legacyPrimitives";

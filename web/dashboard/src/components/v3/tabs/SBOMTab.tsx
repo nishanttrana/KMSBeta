@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Atom, Ban, Package, RefreshCcw, ShieldCheck } from "lucide-react";
 import {

@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useState, useMemo } from "react";
 import { Card, Inp, B } from "../../components/v3/legacyPrimitives";
 import { C } from "../../components/v3/theme";

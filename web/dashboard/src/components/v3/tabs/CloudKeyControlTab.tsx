@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useState } from "react";
 import { Btn } from "../legacyPrimitives";
 import { BYOKTab } from "./BYOKTab";

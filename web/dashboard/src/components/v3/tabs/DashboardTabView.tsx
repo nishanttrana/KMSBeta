@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import {
   ArrowRight, BarChart3, Bell, CheckCircle2, ClipboardCheck, Cloud,
   Cpu, Database, FileText, Gauge, GitBranch, KeyRound, Lock,

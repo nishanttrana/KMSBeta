@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
 import { MoreVertical, RefreshCcw, Shield, ShieldCheck, ShieldX, ShieldAlert, KeyRound, FileText, Clock, AlertTriangle, Lock, Unlock, Download, Trash2, RotateCcw, Eye, Settings, Zap, Server, Globe, Fingerprint, CheckCircle2, XCircle, ChevronDown, ChevronRight } from "lucide-react";
 import {

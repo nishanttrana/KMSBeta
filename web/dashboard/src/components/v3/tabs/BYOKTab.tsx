@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
 import { LayoutGrid, List, MoreVertical, RefreshCcw, Globe, MapPin, Database, RotateCcw, ChevronDown, ChevronRight, ExternalLink, Copy, Search } from "lucide-react";
 import {
