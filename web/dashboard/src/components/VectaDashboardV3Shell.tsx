@@ -50,37 +50,54 @@ import { B, Btn, Sel } from "./v3/legacyPrimitives";
 import { isFipsModeEnabled, normalizeFipsModeValue, TabErrorBoundary } from "./v3/runtimeUtils";
 import { C } from "./v3/theme";
 
+// Wraps lazy() so a failed chunk load shows a fallback instead of a blank screen
+function safeTab<T extends Record<string, any>>(
+  importFn: () => Promise<T>,
+  pick: keyof T
+) {
+  return lazy(() =>
+    importFn()
+      .then((m) => ({ default: m[pick] as React.ComponentType<any> }))
+      .catch(() => ({
+        default: () => (
+          <div style={{ padding: 32, color: "#ef4444", fontFamily: "monospace", fontSize: 13 }}>
+            Module failed to load. Refresh the page to retry.
+          </div>
+        )
+      }))
+  );
+}
+
 // Lazy-loaded tab components for code splitting
-const AdminTab = lazy(() => import("./v3/tabs/AdminTab").then(m => ({ default: m.AdminTab })));
-const AlertsTab = lazy(() => import("./v3/tabs/AlertsTab").then(m => ({ default: m.AlertsTab })));
-const ClusterTab = lazy(() => import("./v3/tabs/ClusterTab").then(m => ({ default: m.ClusterTab })));
-const DashboardTab = lazy(() => import("./v3/tabs/DashboardTab").then(m => ({ default: m.DashboardTab })));
-const GovernanceTab = lazy(() => import("./v3/tabs/GovernanceTab").then(m => ({ default: m.GovernanceTab })));
-const VaultTab = lazy(() => import("./v3/tabs/VaultTab").then(m => ({ default: m.VaultTab })));
-const EKMTab = lazy(() => import("./v3/tabs/EKMTab").then(m => ({ default: m.EKMTab })));
-const DataProtectionTabs = lazy(() => import("./v3/tabs/DataProtectionTabs").then(m => ({ default: m.DataProtectionTab })));
-const PKCS11Tab = lazy(() => import("./v3/tabs/PKCS11Tab").then(m => ({ default: m.PKCS11Tab })));
-const CloudKeyControlTab = lazy(() => import("./v3/tabs/CloudKeyControlTab").then(m => ({ default: m.CloudKeyControlTab })));
-const WorkbenchTab = lazy(() => import("./v3/tabs/WorkbenchTab").then(m => ({ default: m.WorkbenchTab })));
-const PaymentTab = lazy(() => import("./v3/tabs/PaymentTab").then(m => ({ default: m.PaymentTab })));
-const AutokeyTab = lazy(() => import("./v3/tabs/AutokeyTab").then(m => ({ default: m.AutokeyTab })));
-const ArtifactSigningTab = lazy(() => import("./v3/tabs/ArtifactSigningTab").then(m => ({ default: m.ArtifactSigningTab })));
-const KeyAccessTab = lazy(() => import("./v3/tabs/KeyAccessTab").then(m => ({ default: m.KeyAccessTab })));
-const PostQuantumTab = lazy(() => import("./v3/tabs/PostQuantumTab").then(m => ({ default: m.PostQuantumTab })));
-const ConfidentialComputeTab = lazy(() => import("./v3/tabs/ConfidentialComputeTab").then(m => ({ default: m.ConfidentialComputeTab })));
-const WorkloadIdentityTab = lazy(() => import("./v3/tabs/WorkloadIdentityTab").then(m => ({ default: m.WorkloadIdentityTab })));
-const HSMTab = lazy(() => import("./v3/tabs/HSMTab").then(m => ({ default: m.HSMTab })));
-const CertsTab = lazy(() => import("./v3/tabs/CertsTab").then(m => ({ default: m.CertsTab })));
-const KeysTab = lazy(() => import("./v3/tabs/KeysTab").then(m => ({ default: m.KeysTab })));
-const ComplianceTab = lazy(() => import("./v3/tabs/ComplianceTab").then(m => ({ default: m.ComplianceTab })));
-const SBOMTab = lazy(() => import("./v3/tabs/SBOMTab").then(m => ({ default: m.SBOMTab })));
-const PostureTab = lazy(() => import("./v3/tabs/PostureTab").then(m => ({ default: m.PostureTab })));
-const AuditLogTab = lazy(() => import("./v3/tabs/AuditLogTab").then(m => ({ default: m.AuditLogTab })));
-const MPCTab = lazy(() => import("./v3/tabs/MPCTab").then(m => ({ default: m.MPCTab })));
-const QKDTab = lazy(() => import("./v3/tabs/QKDTab").then(m => ({ default: m.QKDTab })));
-const QRNGTab = lazy(() => import("./v3/tabs/QRNGTab").then(m => ({ default: m.QRNGTab })));
-const DocsViewTab = lazy(() => import("./v3/tabs/DocsViewTab").then(m => ({ default: m.DocsViewTab })));
-const AITab = lazy(() => import("./v3/tabs/AITab").then(m => ({ default: m.AITab })));
+const AdminTab            = safeTab(() => import("./v3/tabs/AdminTab"),              "AdminTab");
+const AlertsTab           = safeTab(() => import("./v3/tabs/AlertsTab"),             "AlertsTab");
+const ClusterTab          = safeTab(() => import("./v3/tabs/ClusterTab"),            "ClusterTab");
+const DashboardTab        = safeTab(() => import("./v3/tabs/DashboardTab"),          "DashboardTab");
+const GovernanceTab       = safeTab(() => import("./v3/tabs/GovernanceTab"),         "GovernanceTab");
+const VaultTab            = safeTab(() => import("./v3/tabs/VaultTab"),              "VaultTab");
+const EKMTab              = safeTab(() => import("./v3/tabs/EKMTab"),                "EKMTab");
+const DataProtectionTabs  = safeTab(() => import("./v3/tabs/DataProtectionTabs"),    "DataProtectionTab");
+const PKCS11Tab           = safeTab(() => import("./v3/tabs/PKCS11Tab"),             "PKCS11Tab");
+const CloudKeyControlTab  = safeTab(() => import("./v3/tabs/CloudKeyControlTab"),    "CloudKeyControlTab");
+const WorkbenchTab        = safeTab(() => import("./v3/tabs/WorkbenchTab"),          "WorkbenchTab");
+const AutokeyTab          = safeTab(() => import("./v3/tabs/AutokeyTab"),            "AutokeyTab");
+const ArtifactSigningTab  = safeTab(() => import("./v3/tabs/ArtifactSigningTab"),    "ArtifactSigningTab");
+const KeyAccessTab        = safeTab(() => import("./v3/tabs/KeyAccessTab"),          "KeyAccessTab");
+const PostQuantumTab      = safeTab(() => import("./v3/tabs/PostQuantumTab"),        "PostQuantumTab");
+const ConfidentialComputeTab = safeTab(() => import("./v3/tabs/ConfidentialComputeTab"), "ConfidentialComputeTab");
+const WorkloadIdentityTab = safeTab(() => import("./v3/tabs/WorkloadIdentityTab"),   "WorkloadIdentityTab");
+const HSMTab              = safeTab(() => import("./v3/tabs/HSMTab"),                "HSMTab");
+const CertsTab            = safeTab(() => import("./v3/tabs/CertsTab"),              "CertsTab");
+const KeysTab             = safeTab(() => import("./v3/tabs/KeysTab"),               "KeysTab");
+const ComplianceTab       = safeTab(() => import("./v3/tabs/ComplianceTab"),         "ComplianceTab");
+const SBOMTab             = safeTab(() => import("./v3/tabs/SBOMTab"),               "SBOMTab");
+const PostureTab          = safeTab(() => import("./v3/tabs/PostureTab"),            "PostureTab");
+const AuditLogTab         = safeTab(() => import("./v3/tabs/AuditLogTab"),           "AuditLogTab");
+const MPCTab              = safeTab(() => import("./v3/tabs/MPCTab"),                "MPCTab");
+const QKDTab              = safeTab(() => import("./v3/tabs/QKDTab"),                "QKDTab");
+const QRNGTab             = safeTab(() => import("./v3/tabs/QRNGTab"),               "QRNGTab");
+const DocsViewTab         = safeTab(() => import("./v3/tabs/DocsViewTab"),           "DocsViewTab");
+const AITab               = safeTab(() => import("./v3/tabs/AITab"),                 "AITab");
 
 type Props = {
   session: AuthSession;
@@ -98,9 +115,17 @@ const THEME_STORAGE_KEY = "vecta_theme";
 
 const ls = {
   get: (key: string, fallback = "") => { try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; } },
-  set: (key: string, val: string)   => { try { localStorage.setItem(key, val); } catch {} },
+  set: (key: string, val: string)   => {
+    try {
+      localStorage.setItem(key, val);
+    } catch (err) {
+      // DOMException: QuotaExceededError — storage full; preference won't persist
+      console.warn(`[storage] Failed to persist "${key}":`, err);
+    }
+  },
   getJSON: <T,>(key: string, fallback: T): T => { try { return JSON.parse(localStorage.getItem(key) || "null") ?? fallback; } catch { return fallback; } }
 };
+
 
 type ThemeMode = "dark" | "light" | "auto";
 
@@ -124,6 +149,24 @@ const COMMON_TIMEZONES = [
   { label: "Asia/Tokyo", value: "Asia/Tokyo" },
   { label: "Australia/Sydney", value: "Australia/Sydney" }
 ];
+// Allowlist — prevents storing invalid/malicious timezone strings
+const VALID_TIMEZONES = new Set(COMMON_TIMEZONES.map((tz) => tz.value));
+
+// Self-contained clock — own state means it never re-renders the parent shell
+function ClockDisplay({ tz, onClick }: { tz: string; onClick: () => void }) {
+  const [t, setT] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setT(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const formatted = useMemo(() => {
+    if (tz === "local") return t.toLocaleTimeString();
+    try { return t.toLocaleTimeString(undefined, { timeZone: tz }); } catch { return t.toLocaleTimeString(); }
+  }, [t, tz]);
+  return (
+    <span onClick={onClick} style={{ fontSize: 11, color: C.accentFg, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer" }} title={`Timezone: ${tz === "local" ? "Local" : tz}`}>{formatted}</span>
+  );
+}
 
 function toViewKey(k: any): any {
   return {
@@ -146,7 +189,6 @@ const TABS: Record<string, any> = {
   pqc: PostQuantumTab,
   workbench: WorkbenchTab,
   dataprotection: DataProtectionTabs,
-  payment: PaymentTab,
   autokey: AutokeyTab,
   keyaccess: KeyAccessTab,
   signing: ArtifactSigningTab,
@@ -186,8 +228,7 @@ const NAV = [
     items: [
       { id: "dataprotection", icon: ShieldCheck, label: "Data Protection" },
       { id: "autokey",        icon: Layers,      label: "Auto-Provisioning" },
-      { id: "keyaccess",      icon: ShieldCheck, label: "Access Justifications" },
-      { id: "payment",        icon: CreditCard,  label: "Payment Crypto" }
+      { id: "keyaccess",      icon: ShieldCheck, label: "Access Justifications" }
     ]
   },
   {
@@ -236,7 +277,8 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "crypto", label: "Crypto Console", hint: "Interactive cryptographic operations and algorithm console", icon: Zap },
     { id: "restapi", label: "REST API", hint: "Authenticated API explorer and endpoint documentation", icon: FileText },
     { id: "tokenize", label: "Tokenize / Mask / Redact", hint: "Vault and vaultless tokenization with masking/redaction", icon: VenetianMask, feature: "data_protection" },
-    { id: "dataenc", label: "Data Encryption", hint: "Field-level, envelope, searchable and FPE crypto", icon: Database, feature: "data_protection" }
+    { id: "dataenc", label: "Data Encryption", hint: "Field-level, envelope, searchable and FPE crypto", icon: Database, feature: "data_protection" },
+    { id: "payment", label: "Payment Crypto", hint: "TR-31, PIN blocks, ISO 20022 and payment HSM operations", icon: CreditCard, feature: "payment_crypto" }
   ],
   dataprotection: [
     { id: "fieldenc", label: "Field Encryption", hint: "Wrapper registration, challenge-response and local crypto lease control", icon: KeyRound, feature: "data_protection" },
@@ -303,14 +345,14 @@ export default function VectaDashboardV3Shell(props: Props) {
   });
   const [collapsed, setCollapsed] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => (ls.get(THEME_STORAGE_KEY) as ThemeMode) || "dark");
-  const [t, setT] = useState(new Date());
-  const [tz, setTz] = useState(() => ls.get(TZ_STORAGE_KEY) || "local");
+  const [tz, setTz] = useState(() => {
+    const stored = ls.get(TZ_STORAGE_KEY) || "local";
+    // Reject persisted values that are no longer in our allowlist
+    return VALID_TIMEZONES.has(stored) ? stored : "local";
+  });
   const [tzOpen, setTzOpen] = useState(false);
-  const formattedTime = useMemo(() => {
-    if (tz === "local") return t.toLocaleTimeString();
-    try { return t.toLocaleTimeString(undefined, { timeZone: tz }); } catch { return t.toLocaleTimeString(); }
-  }, [t, tz]);
   const changeTz = useCallback((val: string) => {
+    if (!VALID_TIMEZONES.has(val)) return; // Reject unknown timezones
     setTz(val);
     setTzOpen(false);
     ls.set(TZ_STORAGE_KEY, val);
@@ -344,7 +386,6 @@ export default function VectaDashboardV3Shell(props: Props) {
     hsm: "hsm-generic",
     cluster: "topology",
     admin: "system",
-    payment: "payment-ops",
     compliance: "frameworks",
     qkd: "qkd-main",
     workload: "registrations"
@@ -357,11 +398,6 @@ export default function VectaDashboardV3Shell(props: Props) {
     }),
     [sessionBase, tenantScope]
   );
-
-  useEffect(() => {
-    const id = setInterval(() => setT(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   // Apply data-theme to <html>; auto mode re-checks every minute
   useEffect(() => {
@@ -641,7 +677,7 @@ export default function VectaDashboardV3Shell(props: Props) {
             </div>
             {isSystemAdminSession(session) && <Btn small onClick={() => selectTab("admin")} style={cliEnabled ? {} : { opacity: 0.4 }}>{cliEnabled ? "CLI" : "CLI (off)"}</Btn>}
             <div style={{ position: "relative" }}>
-              <span onClick={() => setTzOpen((v) => !v)} style={{ fontSize: 11, color: C.accentFg, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer" }} title={`Timezone: ${tz === "local" ? "Local" : tz}`}>{formattedTime}</span>
+              <ClockDisplay tz={tz} onClick={() => setTzOpen((v) => !v)} />
               {tz !== "local" && <span style={{ fontSize: 8, color: C.muted, fontFamily: "'JetBrains Mono',monospace", marginLeft: 4 }}>{tz.split("/").pop()}</span>}
               {tzOpen && (
                 <div style={{ position: "absolute", top: 22, right: 0, zIndex: 1000, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 4, minWidth: 160, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>

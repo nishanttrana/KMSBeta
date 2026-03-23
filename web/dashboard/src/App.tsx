@@ -415,26 +415,40 @@ export default function App() {
     if (!session) {
       return;
     }
-    const alertsURL = import.meta.env.VITE_WS_ALERTS_URL || wsBaseURL("/alerts/stream");
-    const auditURL = import.meta.env.VITE_WS_AUDIT_URL || wsBaseURL("/audit/stream");
+    const rawAlertsURL = import.meta.env.VITE_WS_ALERTS_URL || wsBaseURL("/alerts/stream");
+    const rawAuditURL  = import.meta.env.VITE_WS_AUDIT_URL  || wsBaseURL("/audit/stream");
+    // Enforce wss:// in production to prevent downgrade to plaintext ws://
+    const enforceSecureWS = (url: string) => {
+      if (window.location.protocol === "https:" && url.startsWith("ws://")) {
+        console.warn("[ws] Upgrading insecure ws:// to wss://");
+        return url.replace(/^ws:\/\//, "wss://");
+      }
+      return url;
+    };
+    const alertsURL = enforceSecureWS(rawAlertsURL);
+    const auditURL  = enforceSecureWS(rawAuditURL);
 
     const alertSocket = new WebSocket(alertsURL);
     const auditSocket = new WebSocket(auditURL);
     let simulation: number | undefined;
 
     alertSocket.onmessage = (event) => {
-      const payload = parseWSMessage(event.data);
-      if (!payload) {
-        return;
+      try {
+        const payload = parseWSMessage(event.data);
+        if (!payload) return;
+        pushAlert(mapToLiveEvent(payload, "alert.stream"));
+      } catch (err) {
+        console.error("[ws/alerts] Failed to process message", err);
       }
-      pushAlert(mapToLiveEvent(payload, "alert.stream"));
     };
     auditSocket.onmessage = (event) => {
-      const payload = parseWSMessage(event.data);
-      if (!payload) {
-        return;
+      try {
+        const payload = parseWSMessage(event.data);
+        if (!payload) return;
+        pushAudit(mapToLiveEvent(payload, "audit.stream"));
+      } catch (err) {
+        console.error("[ws/audit] Failed to process message", err);
       }
-      pushAudit(mapToLiveEvent(payload, "audit.stream"));
     };
 
     const fallback = () => {
@@ -489,7 +503,7 @@ export default function App() {
     void refreshUnread();
     const id = window.setInterval(() => {
       void refreshUnread();
-    }, 10_000);
+    }, 60_000);
     return () => {
       cancelled = true;
       window.clearInterval(id);

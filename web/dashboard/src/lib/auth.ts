@@ -31,9 +31,15 @@ const defaultUIAuth: UIAuthConfig = {
 };
 
 const AUTH_CONFIG_URL = "/config/ui-auth.json";
-const LOCAL_PASS_KEY = "vecta_ui_local_admin_password";
 const CHANGED_PASS_KEY = "vecta_ui_password_changed";
 const SESSION_KEY = "vecta_ui_session";
+
+// In-memory session cache — primary store; localStorage is write-through
+// for page-refresh persistence only. Reduces XSS read-surface.
+let _sessionCache: AuthSession | null = null;
+
+// In-memory only — never persisted to localStorage
+let _localAdminPassword: string | null = null;
 
 // Session hardening: logout flag prevents refresh race from restoring a cleared session
 let _loggedOut = false;
@@ -82,6 +88,8 @@ export async function loadUIAuthConfig(): Promise<UIAuthConfig> {
 export function getSession(): AuthSession | null {
   try {
     if (_loggedOut) return null;
+    // Return in-memory cache first to avoid redundant localStorage reads
+    if (_sessionCache) return _sessionCache;
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) {
       return null;
@@ -99,7 +107,7 @@ export function getSession(): AuthSession | null {
         return null;
       }
     }
-    return {
+    const session = {
       ...parsed,
       mustChangePassword: Boolean(parsed.mustChangePassword),
       role: String(parsed.role || "").trim() || undefined,
@@ -110,6 +118,8 @@ export function getSession(): AuthSession | null {
           : undefined,
       expiresAt: expiresAt || undefined
     };
+    _sessionCache = session;
+    return session;
   } catch {
     return null;
   }
@@ -117,15 +127,17 @@ export function getSession(): AuthSession | null {
 
 export function saveSession(session: AuthSession): void {
   if (_loggedOut) return;
+  _sessionCache = session;
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
 export function clearSession(): void {
   _loggedOut = true;
+  _sessionCache = null;
+  _localAdminPassword = null;
   // Wipe all vecta auth artifacts from localStorage
   const keysToRemove = [
     SESSION_KEY,
-    LOCAL_PASS_KEY,
     CHANGED_PASS_KEY,
     "vecta_pinned_tabs",
     "vecta_key_table_columns",
@@ -161,11 +173,13 @@ export function markPasswordChanged(): void {
 }
 
 export function updateLocalAdminPassword(password: string): void {
-  localStorage.setItem(LOCAL_PASS_KEY, password);
+  // Stored in memory only — never written to localStorage to avoid
+  // plaintext credential exposure to XSS attacks.
+  _localAdminPassword = password;
 }
 
 function effectiveLocalPassword(config: UIAuthConfig): string {
-  return localStorage.getItem(LOCAL_PASS_KEY) ?? config.admin_password;
+  return _localAdminPassword ?? config.admin_password;
 }
 
 export async function login(
