@@ -946,7 +946,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
             <span style={{ color: C.dim }}>{String(v?.installed_version || "-")}</span>
             <span style={{ color: C.green, fontWeight: 600 }}>{String(v?.fixed_version || "-")}</span>
             <span style={{ color: C.dim, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(v?.summary || "-")}</span>
-            <span>{v?.reference ? <a href={String(v.reference)} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, fontSize: 10, textDecoration: "none" }}>Link</a> : <span style={{ color: C.muted, fontSize: 10 }}>—</span>}</span>
+            <span>{(() => { const ref = String(v?.reference || "").trim(); const safe = /^https?:\/\//i.test(ref); return safe ? <a href={ref} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, fontSize: 10, textDecoration: "none" }}>Link</a> : <span style={{ color: C.muted, fontSize: 10 }}>—</span>; })()}</span>
           </div>)}
           {!filteredVulns.length && <div style={{ padding: "20px 0", textAlign: "center", fontSize: 10, color: C.muted }}>
             {vulnerabilities.length === 0 ? "No vulnerabilities detected. Refresh BOM to scan." : "No vulnerabilities match the current filter."}

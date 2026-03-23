@@ -35,6 +35,12 @@ export default tseslint.config(
         }
       ],
       "@typescript-eslint/no-explicit-any": "off",
+      // Warn on @ts-nocheck — it silences ALL type errors including missing imports.
+      // Use @ts-expect-error with a description on specific lines instead.
+      "@typescript-eslint/ban-ts-comment": [
+        "warn",
+        { "ts-nocheck": "allow-with-description", minimumDescriptionLength: 10 }
+      ],
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "error"
     }
