@@ -61,6 +61,11 @@ export async function trackedFetch(input: RequestInfo | URL, init?: RequestInit,
 }
 
 function timeoutSignal(timeoutMs: number): AbortSignal {
+  // AbortSignal.timeout is available in all modern browsers and auto-cleans up
+  if (typeof AbortSignal.timeout === "function") {
+    return AbortSignal.timeout(timeoutMs);
+  }
+  // Fallback for older environments
   const controller = new AbortController();
   window.setTimeout(() => controller.abort(), timeoutMs);
   return controller.signal;
@@ -75,12 +80,18 @@ function buildServiceRequestInit(session: AuthSession, init: ServiceRequestInit 
       "Content-Type": "application/json",
       Authorization: `Bearer ${session.token}`,
       "X-Tenant-ID": session.tenantId,
+      "X-Request-ID": crypto.randomUUID(),
       ...(requestInit?.headers || {})
     }
   };
 }
 
 async function parseError(response: Response): Promise<string> {
+  if (response.status === 429) {
+    const retryAfter = response.headers.get("Retry-After");
+    const wait = retryAfter ? ` Retry after ${retryAfter}s.` : "";
+    return `Rate limit exceeded.${wait}`;
+  }
   const fallback = `Request failed (${response.status})`;
   try {
     const payload = (await response.json()) as APIErrorShape;

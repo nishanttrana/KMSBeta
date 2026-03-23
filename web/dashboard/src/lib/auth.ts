@@ -90,7 +90,7 @@ export function getSession(): AuthSession | null {
     if (_loggedOut) return null;
     // Return in-memory cache first to avoid redundant localStorage reads
     if (_sessionCache) return _sessionCache;
-    const raw = localStorage.getItem(SESSION_KEY);
+    const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) {
       return null;
     }
@@ -103,7 +103,7 @@ export function getSession(): AuthSession | null {
     if (expiresAt) {
       const expMs = new Date(expiresAt).getTime();
       if (Number.isFinite(expMs) && expMs <= Date.now()) {
-        localStorage.removeItem(SESSION_KEY);
+        sessionStorage.removeItem(SESSION_KEY);
         return null;
       }
     }
@@ -128,22 +128,18 @@ export function getSession(): AuthSession | null {
 export function saveSession(session: AuthSession): void {
   if (_loggedOut) return;
   _sessionCache = session;
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
 export function clearSession(): void {
   _loggedOut = true;
   _sessionCache = null;
   _localAdminPassword = null;
-  // Wipe all vecta auth artifacts from localStorage
-  const keysToRemove = [
-    SESSION_KEY,
-    CHANGED_PASS_KEY,
-    "vecta_pinned_tabs",
-    "vecta_key_table_columns",
-    "vecta_system_admin_open_cli"
-  ];
-  keysToRemove.forEach((k) => localStorage.removeItem(k));
+  // Clear session from sessionStorage (tab-scoped — cleared on tab close)
+  sessionStorage.removeItem(SESSION_KEY);
+  // Clear remaining auth artifacts from localStorage
+  [CHANGED_PASS_KEY, "vecta_pinned_tabs", "vecta_key_table_columns", "vecta_system_admin_open_cli"]
+    .forEach((k) => localStorage.removeItem(k));
 }
 
 export async function logoutSession(session: AuthSession): Promise<void> {

@@ -1,6 +1,19 @@
 import type { AuthSession } from "./auth";
 import { serviceRequestRaw } from "./serviceApi";
 
+// Allowlist of services the playground is permitted to call.
+// Prevents SSRF to arbitrary internal services via user-controlled input.
+const ALLOWED_SERVICES = new Set([
+  "keycore", "secrets", "certs", "policy", "governance", "pqc",
+  "audit", "cloud", "compliance", "hyok", "ekm", "kmip", "reporting",
+  "posture", "ai", "qkd", "qrng", "payment", "confidential", "workload",
+  "autokey", "signing", "keyaccess", "sbom", "dataprotect", "mpc",
+  "cluster", "software-vault", "auth"
+]);
+
+// Allowlist of HTTP methods
+const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"]);
+
 type ExecuteRestPlaygroundRequestInput = {
   baseSession: AuthSession | null;
   token: string;
@@ -25,11 +38,39 @@ function buildPlaygroundSession(input: ExecuteRestPlaygroundRequestInput): AuthS
 export async function executeRestPlaygroundRequest(
   input: ExecuteRestPlaygroundRequestInput
 ): Promise<Response> {
-  const method = String(input.method || "GET").trim().toUpperCase();
+  const service = String(input.service || "").trim().toLowerCase();
+  const path    = String(input.path    || "").trim();
+  const method  = String(input.method  || "GET").trim().toUpperCase();
+
+  // A01 — validate service is in the internal allowlist
+  if (!ALLOWED_SERVICES.has(service)) {
+    throw new Error(`Service "${service}" is not permitted`);
+  }
+
+  // A01 — block path traversal sequences
+  if (path.includes("..") || path.includes("//") || /[\r\n]/.test(path)) {
+    throw new Error("Invalid path");
+  }
+
+  // A03 — restrict HTTP method to safe allowlist
+  if (!ALLOWED_METHODS.has(method)) {
+    throw new Error(`Method "${method}" is not allowed`);
+  }
+
+  // A03 — validate body is valid JSON when provided
+  const rawBody = String(input.bodyJSON || "").trim();
+  if (rawBody) {
+    try {
+      JSON.parse(rawBody);
+    } catch {
+      throw new Error("Request body is not valid JSON");
+    }
+  }
+
   return serviceRequestRaw(
     buildPlaygroundSession(input),
-    String(input.service || "").trim(),
-    String(input.path || "").trim(),
+    service,
+    path,
     {
       method,
       headers: {
@@ -37,8 +78,7 @@ export async function executeRestPlaygroundRequest(
         Authorization: `Bearer ${input.token}`,
         "X-Tenant-ID": input.tenantId
       },
-      ...(String(input.bodyJSON || "").trim() ? { body: String(input.bodyJSON) } : {})
+      ...(rawBody ? { body: rawBody } : {})
     }
   );
 }
-
