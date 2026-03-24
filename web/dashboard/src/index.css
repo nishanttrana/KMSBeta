@@ -383,6 +383,16 @@ body {
   background: linear-gradient(135deg, #131d2e 0%, #0f1521 100%);
 }
 
+/* Shell animations — moved from inline <style> tag to avoid per-render string allocation */
+@keyframes pulse    { 0%,100% { opacity: 1 } 50% { opacity: .6 } }
+@keyframes slideIn  { from { opacity: 0; transform: translateX(20px) } to { opacity: 1; transform: translateX(0) } }
+
+/* Custom scrollbars — thin, accent-colored */
+*::-webkit-scrollbar         { width: 5px; height: 5px }
+*::-webkit-scrollbar-track   { background: transparent }
+*::-webkit-scrollbar-thumb   { background: var(--c-border-hi, #2e4468); border-radius: 3px }
+*::-webkit-scrollbar-thumb:hover { background: var(--s-accent, #06d6e0) }
+
 /* Subtle noise texture for premium depth */
 body::after {
   content: '';

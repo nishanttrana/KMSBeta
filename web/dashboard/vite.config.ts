@@ -18,13 +18,15 @@ export default defineConfig({
     minify: "esbuild",
     // No source maps in production bundles — don't ship internal code paths
     sourcemap: false,
-    // Warn when any single chunk exceeds 600 kB before compression
-    chunkSizeWarningLimit: 600,
+    // Warn when any single chunk exceeds 700 kB before compression.
+    // tab-restapi includes swagger-ui (~670 kB) but is lazy-loaded on demand.
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
         // Split vendor libraries into stable long-lived chunks so they are
         // cached independently from app code that changes on every release.
         manualChunks: (id) => {
+          // ── Vendor: stable long-cached chunks ────────────────────────────
           if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) {
             return "vendor-react";
           }
@@ -43,6 +45,12 @@ export default defineConfig({
           if (id.includes("node_modules/swagger-ui-dist")) {
             return "vendor-swagger";
           }
+          // ── App: split the heaviest tab sub-components into own chunks ───
+          // These are lazy-loaded from WorkbenchTab and only fetched on demand.
+          if (id.includes("/tabs/TokenizeTab")) return "tab-tokenize";
+          if (id.includes("/tabs/CryptoTab"))   return "tab-crypto";
+          if (id.includes("/tabs/RestAPITab"))   return "tab-restapi";
+          if (id.includes("/tabs/PaymentTab"))   return "tab-payment";
         }
       }
     }

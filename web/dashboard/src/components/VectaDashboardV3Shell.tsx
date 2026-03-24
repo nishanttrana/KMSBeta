@@ -100,6 +100,16 @@ const QRNGTab             = safeTab(() => import("./v3/tabs/QRNGTab"),          
 const DocsViewTab         = safeTab(() => import("./v3/tabs/DocsViewTab"),           "DocsViewTab");
 const AITab               = safeTab(() => import("./v3/tabs/AITab"),                 "AITab");
 
+// Static — defined outside component so it's never recreated on re-render.
+// Maps tab + sub-view to a specific override component (different from the default TABS entry).
+const SUB_OVERRIDES: Record<string, Record<string, React.ComponentType<any>>> = {
+  compliance:     { posture: PostureTab, sbom: SBOMTab },
+  dataprotection: { pkcs11: PKCS11Tab },
+  qkd:            { qrng: QRNGTab },
+  workload:       { confidential: ConfidentialComputeTab },
+  admin:          { docs: DocsViewTab }
+};
+
 type Props = {
   session: AuthSession;
   enabledFeatures: Set<FeatureKey>;
@@ -153,8 +163,8 @@ const COMMON_TIMEZONES = [
 // Allowlist — prevents storing invalid/malicious timezone strings
 const VALID_TIMEZONES = new Set(COMMON_TIMEZONES.map((tz) => tz.value));
 
-// Self-contained clock — own state means it never re-renders the parent shell
-function ClockDisplay({ tz, onClick }: { tz: string; onClick: () => void }) {
+// React.memo: only re-renders when tz or onClick reference changes — clock tick stays local
+const ClockDisplay = React.memo(function ClockDisplay({ tz, onClick }: { tz: string; onClick: () => void }) {
   const [t, setT] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setT(new Date()), 1000);
@@ -167,7 +177,7 @@ function ClockDisplay({ tz, onClick }: { tz: string; onClick: () => void }) {
   return (
     <span onClick={onClick} style={{ fontSize: 11, color: C.accentFg, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer" }} title={`Timezone: ${tz === "local" ? "Local" : tz}`}>{formatted}</span>
   );
-}
+});
 
 function toViewKey(k: any): any {
   return {
@@ -562,25 +572,36 @@ export default function VectaDashboardV3Shell(props: Props) {
     }
   }, [tab, visibleTabIDs]);
 
-  const features = enabledFeatures || new Set<FeatureKey>();
-  const filterPanes = (tabId: string) =>
-    (SUB_PANES[tabId] || []).filter((item) => isSystemAdminSession(session) || matchesFeatureNeed(item?.feature, features));
-  const activePaneItems = filterPanes(tab);
+  const features = useMemo(() => enabledFeatures || new Set<FeatureKey>(), [enabledFeatures]);
+
+  const filterPanes = useCallback(
+    (tabId: string) =>
+      (SUB_PANES[tabId] || []).filter(
+        (item) => isSystemAdminSession(session) || matchesFeatureNeed(item?.feature, features)
+      ),
+    [session, features]
+  );
+
+  const activePaneItems = useMemo(() => filterPanes(tab), [filterPanes, tab]);
+
   const selectedSubRaw = String((subPaneSelection as any)[tab] || "");
   const activeSubPaneSelection = String(
     activePaneItems.some((item) => String(item.id) === selectedSubRaw) ? selectedSubRaw : (activePaneItems[0]?.id || "")
   );
   const globalFipsEnabled = isFipsModeEnabled(fipsMode);
 
-  const selectTab = (nextTab: string) => {
-    setTab(nextTab);
-    ls.set(TAB_STORAGE_KEY, nextTab);
-    try { window.history.replaceState(null, "", `#${nextTab}`); } catch {}
-    const panes = filterPanes(nextTab);
-    if (panes.length) {
-      setSubPaneSelection((prev: any) => ({ ...prev, [nextTab]: String(prev?.[nextTab] || panes[0].id) }));
-    }
-  };
+  const selectTab = useCallback(
+    (nextTab: string) => {
+      setTab(nextTab);
+      ls.set(TAB_STORAGE_KEY, nextTab);
+      try { window.history.replaceState(null, "", `#${nextTab}`); } catch {}
+      const panes = filterPanes(nextTab);
+      if (panes.length) {
+        setSubPaneSelection((prev: any) => ({ ...prev, [nextTab]: String(prev?.[nextTab] || panes[0].id) }));
+      }
+    },
+    [filterPanes]
+  );
 
   // One-time cleanup: strip query params, set hash to current tab
   useEffect(() => {
@@ -593,23 +614,11 @@ export default function VectaDashboardV3Shell(props: Props) {
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sub-pane overrides: some merged tabs render a different component for a specific sub-view.
-  const SUB_OVERRIDES: Record<string, Record<string, React.ComponentType<any>>> = {
-    compliance:     { posture: PostureTab, sbom: SBOMTab },
-    dataprotection: { pkcs11: PKCS11Tab },
-    qkd:            { qrng: QRNGTab },
-    workload:       { confidential: ConfidentialComputeTab },
-    admin:          { docs: DocsViewTab }
-  };
-  function resolveTab(tabId: string, subView: string): React.ComponentType<any> {
-    return SUB_OVERRIDES[tabId]?.[subView] || TABS[tabId] || DashboardTab;
-  }
-  const Tab = resolveTab(tab, activeSubPaneSelection);
+  const Tab = SUB_OVERRIDES[tab]?.[activeSubPaneSelection] ?? TABS[tab] ?? DashboardTab;
 
   return (
     <div style={{ display: "flex", height: "100vh", background: C.bg, fontFamily: "'IBM Plex Sans',-apple-system,sans-serif", color: C.text, overflow: "hidden", paddingTop: 2 }}>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}} @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}} *::-webkit-scrollbar{width:5px;height:5px} *::-webkit-scrollbar-track{background:transparent} *::-webkit-scrollbar-thumb{background:${C.borderHi};border-radius:3px} *::-webkit-scrollbar-thumb:hover{background:${C.accent}60}`}</style>
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 2, zIndex: 9999, background: `linear-gradient(90deg,${C.accent},${C.purple},${C.blue})` }} />
+<div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 2, zIndex: 9999, background: `linear-gradient(90deg,${C.accent},${C.purple},${C.blue})` }} />
       <div style={{ width: collapsed ? 56 : 210, background: `linear-gradient(180deg, ${C.sidebar} 0%, ${C.bg} 100%)`, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", transition: "width .2s", flexShrink: 0, overflow: "hidden", boxShadow: "2px 0 16px rgba(0,0,0,.25)" }}>
         <div style={{ padding: collapsed ? "10px 6px" : "10px 12px 10px 14px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: collapsed ? 6 : 8, minHeight: collapsed ? 66 : 50, justifyContent: collapsed ? "center" : "space-between", flexDirection: collapsed ? "column" : "row" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, justifyContent: "center", width: collapsed ? "100%" : "auto" }}>
