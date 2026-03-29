@@ -72,6 +72,72 @@ type Store interface {
 	GetIVByReference(ctx context.Context, tenantID string, keyID string, reference string) (IVLogRecord, error)
 
 	RunCryptoTx(ctx context.Context, tenantID string, keyID string, op string, fn func(k Key, kv KeyVersion) (CryptoTxResult, error)) (CryptoTxResult, error)
+
+	// Envelope Encryption
+	ListKEKs(ctx context.Context, tenantID string) ([]KEK, error)
+	CreateKEK(ctx context.Context, kek KEK) (KEK, error)
+	RotateKEK(ctx context.Context, tenantID, kekID string) (KEK, error)
+	ListDEKs(ctx context.Context, tenantID string, kekID string) ([]DEK, error)
+	GetEnvelopeHierarchy(ctx context.Context, tenantID string) ([]EnvelopeHierarchyNode, error)
+	CreateRewrapJob(ctx context.Context, job RewrapJob) (RewrapJob, error)
+	ListRewrapJobs(ctx context.Context, tenantID string) ([]RewrapJob, error)
+
+	// Key Escrow
+	ListEscrowGuardians(ctx context.Context, tenantID string) ([]EscrowGuardian, error)
+	AddEscrowGuardian(ctx context.Context, g EscrowGuardian) (EscrowGuardian, error)
+	ListEscrowPolicies(ctx context.Context, tenantID string) ([]EscrowPolicy, error)
+	CreateEscrowPolicy(ctx context.Context, p EscrowPolicy) (EscrowPolicy, error)
+	ListEscrowedKeys(ctx context.Context, tenantID string) ([]EscrowedKey, error)
+	AddEscrowedKey(ctx context.Context, ek EscrowedKey) (EscrowedKey, error)
+	ListRecoveryRequests(ctx context.Context, tenantID string) ([]RecoveryRequest, error)
+	CreateRecoveryRequest(ctx context.Context, rr RecoveryRequest) (RecoveryRequest, error)
+	GetRecoveryRequest(ctx context.Context, tenantID, id string) (RecoveryRequest, error)
+	UpdateRecoveryRequestStatus(ctx context.Context, tenantID, id, status string, approvals []RecoveryApproval) (RecoveryRequest, error)
+
+	// Crypto Agility
+	GetAlgorithmDistribution(ctx context.Context, tenantID string) ([]AlgorithmUsage, error)
+	ListKeysByAlgorithm(ctx context.Context, tenantID, algorithm string) ([]Key, error)
+	ListMigrationPlans(ctx context.Context, tenantID string) ([]MigrationPlan, error)
+	CreateMigrationPlan(ctx context.Context, mp MigrationPlan) (MigrationPlan, error)
+	UpdateMigrationPlan(ctx context.Context, tenantID, id, status string, completedKeys int) (MigrationPlan, error)
+
+	// DR Drill
+	ListDrillSchedules(ctx context.Context, tenantID string) ([]DrillSchedule, error)
+	CreateDrillSchedule(ctx context.Context, ds DrillSchedule) (DrillSchedule, error)
+	DeleteDrillSchedule(ctx context.Context, tenantID, id string) error
+	CreateDrillRun(ctx context.Context, run DrillRun) (DrillRun, error)
+	UpdateDrillRun(ctx context.Context, run DrillRun) (DrillRun, error)
+	ListDrillRuns(ctx context.Context, tenantID string, limit int) ([]DrillRun, error)
+	GetDrillRun(ctx context.Context, tenantID, id string) (DrillRun, error)
+	GetDrillMetrics(ctx context.Context, tenantID string) (DrillMetrics, error)
+
+	// Ceremony
+	ListCeremonyGuardians(ctx context.Context, tenantID string) ([]CeremonyGuardian, error)
+	CreateCeremonyGuardian(ctx context.Context, g CeremonyGuardian) (CeremonyGuardian, error)
+	DeleteCeremonyGuardian(ctx context.Context, tenantID, id string) error
+	ListCeremonies(ctx context.Context, tenantID string) ([]Ceremony, error)
+	GetCeremony(ctx context.Context, tenantID, id string) (Ceremony, error)
+	CreateCeremony(ctx context.Context, c Ceremony, guardianIDs []string, guardians []CeremonyGuardian) (Ceremony, error)
+	UpdateCeremonyStatus(ctx context.Context, tenantID, id, status string, completedAt *time.Time) error
+	SubmitCeremonyShare(ctx context.Context, tenantID, ceremonyID, guardianID string) error
+
+	// Rotation
+	ListRotationPolicies(ctx context.Context, tenantID string) ([]RotationPolicy, error)
+	CreateRotationPolicy(ctx context.Context, p RotationPolicy) (RotationPolicy, error)
+	UpdateRotationPolicy(ctx context.Context, tenantID, id string, p RotationPolicy) (RotationPolicy, error)
+	DeleteRotationPolicy(ctx context.Context, tenantID, id string) error
+	ListRotationRuns(ctx context.Context, tenantID, policyID string) ([]RotationRun, error)
+	CreateRotationRun(ctx context.Context, r RotationRun) (RotationRun, error)
+	ListUpcomingRotations(ctx context.Context, tenantID string) ([]UpcomingRotation, error)
+
+	// Canary / Honeypot Keys
+	ListCanaryKeys(ctx context.Context, tenantID string) ([]CanaryKey, error)
+	CreateCanaryKey(ctx context.Context, key CanaryKey) error
+	GetCanaryKey(ctx context.Context, tenantID, id string) (CanaryKey, error)
+	DeleteCanaryKey(ctx context.Context, tenantID, id string) error
+	RecordCanaryTrip(ctx context.Context, event CanaryTripEvent) error
+	ListCanaryTrips(ctx context.Context, tenantID, canaryID string, limit int) ([]CanaryTripEvent, error)
+	GetCanarySummary(ctx context.Context, tenantID string) (map[string]interface{}, error)
 }
 
 type SQLStore struct {

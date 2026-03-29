@@ -38,6 +38,27 @@ type Store interface {
 	ListMerkleEpochs(ctx context.Context, tenantID string, limit int) ([]MerkleEpoch, error)
 	GetMerkleEpoch(ctx context.Context, tenantID string, epochID string) (MerkleEpoch, error)
 	GetEventMerkleProof(ctx context.Context, tenantID string, eventID string) (*MerkleProofResponse, error)
+
+	// Webhook operations
+	ListWebhooks(ctx context.Context, tenantID string) ([]Webhook, error)
+	CreateWebhook(ctx context.Context, w Webhook) (Webhook, error)
+	UpdateWebhook(ctx context.Context, tenantID string, id string, w Webhook) (Webhook, error)
+	DeleteWebhook(ctx context.Context, tenantID string, id string) error
+	GetWebhook(ctx context.Context, tenantID string, id string) (Webhook, error)
+	RecordDelivery(ctx context.Context, d WebhookDelivery) error
+	ListDeliveries(ctx context.Context, tenantID string, webhookID string, limit int) ([]WebhookDelivery, error)
+	IncrementFailureCount(ctx context.Context, tenantID string, id string) error
+	UpdateLastDelivery(ctx context.Context, tenantID string, id string, status string, at time.Time) error
+
+	// Ops metrics operations
+	RecordOp(ctx context.Context, tenantID string, service string, opType string, latencyMs int, isError bool) error
+	GetOpsOverview(ctx context.Context, tenantID string, window string) (OpsOverview, error)
+	GetOpsTimeSeries(ctx context.Context, tenantID string, window string) ([]OpsTimeSeries, error)
+	GetLatencyPercentiles(ctx context.Context, tenantID string) ([]LatencyPercentiles, error)
+	GetServiceStats(ctx context.Context, tenantID string) ([]ServiceOpsStats, error)
+	GetErrorBreakdown(ctx context.Context, tenantID string, window string) ([]ErrorBreakdown, error)
+	// GetAllServiceStats returns cross-tenant per-service/op-type aggregates for Prometheus.
+	GetAllServiceStats(ctx context.Context) ([]PrometheusMetricRow, error)
 }
 
 type SQLStore struct {

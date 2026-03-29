@@ -41,6 +41,18 @@ type Store interface {
 	UpsertAssessmentSchedule(ctx context.Context, item AssessmentSchedule) error
 	ListDueAssessmentSchedules(ctx context.Context, now time.Time, limit int) ([]AssessmentSchedule, error)
 	UpdateAssessmentScheduleRun(ctx context.Context, tenantID string, lastRunAt time.Time, nextRunAt time.Time) error
+
+	// Automated Incident Playbooks
+	ListPlaybooks(ctx context.Context, tenantID string) ([]Playbook, error)
+	CreatePlaybook(ctx context.Context, p Playbook) (Playbook, error)
+	GetPlaybook(ctx context.Context, tenantID, id string) (Playbook, error)
+	UpdatePlaybook(ctx context.Context, p Playbook) (Playbook, error)
+	DeletePlaybook(ctx context.Context, tenantID, id string) error
+	CreatePlaybookRun(ctx context.Context, run PlaybookRun) (PlaybookRun, error)
+	UpdatePlaybookRun(ctx context.Context, run PlaybookRun) (PlaybookRun, error)
+	IncrementPlaybookRunCount(ctx context.Context, tenantID, id string, lastRunAt time.Time) error
+	ListPlaybookRuns(ctx context.Context, tenantID, playbookID string, limit int) ([]PlaybookRun, error)
+	GetPlaybookSummary(ctx context.Context, tenantID string) (map[string]interface{}, error)
 }
 
 type SQLStore struct {

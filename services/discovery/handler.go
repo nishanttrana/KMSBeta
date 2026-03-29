@@ -36,6 +36,18 @@ func (h *Handler) routes() *http.ServeMux {
 
 	mux.HandleFunc("GET /discovery/summary", h.handleSummary)
 	mux.HandleFunc("GET /discovery/posture", h.handleSummary)
+
+	// PII & structured data scanning
+	mux.HandleFunc("POST /discovery/pii/scan", h.handlePIIScan)
+	mux.HandleFunc("GET /discovery/pii/patterns", h.handleListPIIPatterns)
+	mux.HandleFunc("GET /discovery/data-inventory", h.handleGetDataInventory)
+
+	// Source traceability / data lineage
+	mux.HandleFunc("POST /discovery/lineage/record", h.handleRecordLineageEvent)
+	mux.HandleFunc("GET /discovery/lineage/key/{key_id}", h.handleGetKeyLineage)
+	mux.HandleFunc("GET /discovery/lineage/graph", h.handleGetLineageGraph)
+	mux.HandleFunc("GET /discovery/lineage/impact/{key_id}", h.handleGetLineageImpact)
+
 	return mux
 }
 

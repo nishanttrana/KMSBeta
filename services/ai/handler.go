@@ -31,6 +31,12 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /ai/explain/policy", h.handleExplainPolicy)
 	mux.HandleFunc("GET /ai/config", h.handleGetConfig)
 	mux.HandleFunc("PUT /ai/config", h.handleUpdateConfig)
+	mux.HandleFunc("POST /ai/protect/scan", h.handleAIProtectScan)
+	mux.HandleFunc("POST /ai/protect/redact", h.handleAIProtectRedact)
+	mux.HandleFunc("GET /ai/protect/policies", h.handleListAIProtectPolicies)
+	mux.HandleFunc("POST /ai/protect/policies", h.handleCreateAIProtectPolicy)
+	mux.HandleFunc("DELETE /ai/protect/policies/{id}", h.handleDeleteAIProtectPolicy)
+	mux.HandleFunc("GET /ai/protect/audit", h.handleListAIProtectAudit)
 	return mux
 }
 

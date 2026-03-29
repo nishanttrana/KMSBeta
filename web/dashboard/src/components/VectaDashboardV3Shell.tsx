@@ -1,10 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
-import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Activity,
+  AlertTriangle,
   Atom,
   BarChart3,
+  BarChart2,
   Bell,
   Building2,
+  CalendarClock,
   CheckCircle2,
   ChevronsLeft,
   ChevronsRight,
@@ -12,103 +15,104 @@ import {
   Cloud,
   Cpu,
   Database,
-  Fingerprint,
   FileText,
   Gauge,
   GitBranch,
+  GitMerge,
+  Globe,
   Home as HomeIcon,
   KeyRound,
+  Layers,
+  Layers3 as LayersIcon,
   LayoutGrid,
   Link,
   List,
   Lock,
+  Network,
   Pin,
   PinOff,
+  Play,
   Plug,
+  ScanSearch,
   ScrollText,
   Settings,
   ShieldCheck,
+  Siren,
   VenetianMask,
+  Vault,
+  Webhook,
   Zap,
   CreditCard,
   Users,
   Server,
-  Layers,
-  Moon,
   RefreshCw,
   Sparkles,
-  Sun,
-  SunMoon
+  Archive
 } from "lucide-react";
 import type { AuthSession } from "../lib/auth";
-import { canAccessModule, isSystemAdminSession, matchesFeatureNeed } from "../config/moduleRegistry";
+import { canAccessModule, isSystemAdminSession } from "../config/moduleRegistry";
 import type { FeatureKey } from "../config/tabs";
+import { CommandPalette, type PaletteItem } from "./CommandPalette";
 import { getAuthCLIStatus, listAuthTenants } from "../lib/authAdmin";
 import { getGovernanceSystemState } from "../lib/governance";
-import { listKeysPaginated, listTags } from "../lib/keycore";
+import { listKeys, listKeysPaginated, listTags } from "../lib/keycore";
 import { getUnreadAlertCounts } from "../lib/reporting";
 import { B, Btn, Sel } from "./v3/legacyPrimitives";
 import { isFipsModeEnabled, normalizeFipsModeValue, TabErrorBoundary } from "./v3/runtimeUtils";
 import { C } from "./v3/theme";
 
-// Wraps lazy() so a failed chunk load shows a fallback instead of a blank screen
-function safeTab<T extends Record<string, any>>(
-  importFn: () => Promise<T>,
-  pick: keyof T
-) {
-  return lazy(() =>
-    importFn()
-      .then((m) => ({ default: m[pick] as React.ComponentType<any> }))
-      .catch(() => ({
-        default: () => (
-          <div style={{ padding: 32, color: "#ef4444", fontFamily: "monospace", fontSize: 13 }}>
-            Module failed to load. Refresh the page to retry.
-          </div>
-        )
-      }))
-  );
-}
-
 // Lazy-loaded tab components for code splitting
-const AdminTab            = safeTab(() => import("./v3/tabs/AdminTab"),              "AdminTab");
-const AlertsTab           = safeTab(() => import("./v3/tabs/AlertsTab"),             "AlertsTab");
-const ClusterTab          = safeTab(() => import("./v3/tabs/ClusterTab"),            "ClusterTab");
-const DashboardTab        = safeTab(() => import("./v3/tabs/DashboardTab"),          "DashboardTab");
-const GovernanceTab       = safeTab(() => import("./v3/tabs/GovernanceTab"),         "GovernanceTab");
-const VaultTab            = safeTab(() => import("./v3/tabs/VaultTab"),              "VaultTab");
-const EKMTab              = safeTab(() => import("./v3/tabs/EKMTab"),                "EKMTab");
-const DataProtectionTabs  = safeTab(() => import("./v3/tabs/DataProtectionTabs"),    "DataProtectionTab");
-const PKCS11Tab           = safeTab(() => import("./v3/tabs/PKCS11Tab"),             "PKCS11Tab");
-const CloudKeyControlTab  = safeTab(() => import("./v3/tabs/CloudKeyControlTab"),    "CloudKeyControlTab");
-const WorkbenchTab        = safeTab(() => import("./v3/tabs/WorkbenchTab"),          "WorkbenchTab");
-const AutokeyTab          = safeTab(() => import("./v3/tabs/AutokeyTab"),            "AutokeyTab");
-const ArtifactSigningTab  = safeTab(() => import("./v3/tabs/ArtifactSigningTab"),    "ArtifactSigningTab");
-const KeyAccessTab        = safeTab(() => import("./v3/tabs/KeyAccessTab"),          "KeyAccessTab");
-const PostQuantumTab      = safeTab(() => import("./v3/tabs/PostQuantumTab"),        "PostQuantumTab");
-const ConfidentialComputeTab = safeTab(() => import("./v3/tabs/ConfidentialComputeTab"), "ConfidentialComputeTab");
-const WorkloadIdentityTab = safeTab(() => import("./v3/tabs/WorkloadIdentityTab"),   "WorkloadIdentityTab");
-const HSMTab              = safeTab(() => import("./v3/tabs/HSMTab"),                "HSMTab");
-const CertsTab            = safeTab(() => import("./v3/tabs/CertsTab"),              "CertsTab");
-const KeysTab             = safeTab(() => import("./v3/tabs/KeysTab"),               "KeysTab");
-const ComplianceTab       = safeTab(() => import("./v3/tabs/ComplianceTab"),         "ComplianceTab");
-const SBOMTab             = safeTab(() => import("./v3/tabs/SBOMTab"),               "SBOMTab");
-const PostureTab          = safeTab(() => import("./v3/tabs/PostureTab"),            "PostureTab");
-const AuditLogTab         = safeTab(() => import("./v3/tabs/AuditLogTab"),           "AuditLogTab");
-const MPCTab              = safeTab(() => import("./v3/tabs/MPCTab"),                "MPCTab");
-const QKDTab              = safeTab(() => import("./v3/tabs/QKDTab"),                "QKDTab");
-const QRNGTab             = safeTab(() => import("./v3/tabs/QRNGTab"),               "QRNGTab");
-const DocsViewTab         = safeTab(() => import("./v3/tabs/DocsViewTab"),           "DocsViewTab");
-const AITab               = safeTab(() => import("./v3/tabs/AITab"),                 "AITab");
-
-// Static — defined outside component so it's never recreated on re-render.
-// Maps tab + sub-view to a specific override component (different from the default TABS entry).
-const SUB_OVERRIDES: Record<string, Record<string, React.ComponentType<any>>> = {
-  compliance:     { posture: PostureTab, sbom: SBOMTab },
-  dataprotection: { pkcs11: PKCS11Tab },
-  qkd:            { qrng: QRNGTab },
-  workload:       { confidential: ConfidentialComputeTab },
-  admin:          { docs: DocsViewTab }
-};
+const AdminTab = lazy(() => import("./v3/tabs/AdminTab").then(m => ({ default: m.AdminTab })));
+const AlertsTab = lazy(() => import("./v3/tabs/AlertsTab").then(m => ({ default: m.AlertsTab })));
+const ClusterTab = lazy(() => import("./v3/tabs/ClusterTab").then(m => ({ default: m.ClusterTab })));
+const DashboardTab = lazy(() => import("./v3/tabs/DashboardTab").then(m => ({ default: m.DashboardTab })));
+const GovernanceTab = lazy(() => import("./v3/tabs/GovernanceTab").then(m => ({ default: m.GovernanceTab })));
+const RestAPITab = lazy(() => import("./v3/tabs/RestAPITab").then(m => ({ default: m.RestAPITab })));
+const VaultTab = lazy(() => import("./v3/tabs/VaultTab").then(m => ({ default: m.VaultTab })));
+const EKMTab = lazy(() => import("./v3/tabs/EKMTab").then(m => ({ default: m.EKMTab })));
+const DataProtectionTabs = lazy(() => import("./v3/tabs/DataProtectionTabs").then(m => ({ default: m.DataProtectionTab })));
+const TokenizeTab = lazy(() => import("./v3/tabs/DataProtectionTabs").then(m => ({ default: m.TokenizeTab })));
+const DataEncryptionTab = lazy(() => import("./v3/tabs/DataProtectionTabs").then(m => ({ default: m.DataEncryptionTab })));
+const PKCS11Tab = lazy(() => import("./v3/tabs/PKCS11Tab").then(m => ({ default: m.PKCS11Tab })));
+const BYOKTab = lazy(() => import("./v3/tabs/BYOKTab").then(m => ({ default: m.BYOKTab })));
+const HYOKTab = lazy(() => import("./v3/tabs/HYOKTab").then(m => ({ default: m.HYOKTab })));
+const CloudKeyControlTab = lazy(() => import("./v3/tabs/CloudKeyControlTab").then(m => ({ default: m.CloudKeyControlTab })));
+const WorkbenchTab = lazy(() => import("./v3/tabs/WorkbenchTab").then(m => ({ default: m.WorkbenchTab })));
+const CryptoTab = lazy(() => import("./v3/tabs/CryptoTab").then(m => ({ default: m.CryptoTab })));
+const PaymentTab = lazy(() => import("./v3/tabs/PaymentTab").then(m => ({ default: m.PaymentTab })));
+const HSMTab = lazy(() => import("./v3/tabs/HSMTab").then(m => ({ default: m.HSMTab })));
+const CertsTab = lazy(() => import("./v3/tabs/CertsTab").then(m => ({ default: m.CertsTab })));
+const KeysTab = lazy(() => import("./v3/tabs/KeysTab").then(m => ({ default: m.KeysTab })));
+const ComplianceTab = lazy(() => import("./v3/tabs/ComplianceTab").then(m => ({ default: m.ComplianceTab })));
+const SBOMTab = lazy(() => import("./v3/tabs/SBOMTab").then(m => ({ default: m.SBOMTab })));
+const PostureTab = lazy(() => import("./v3/tabs/PostureTab").then(m => ({ default: m.PostureTab })));
+const AuditLogTab = lazy(() => import("./v3/tabs/AuditLogTab").then(m => ({ default: m.AuditLogTab })));
+const MPCTab = lazy(() => import("./v3/tabs/MPCTab").then(m => ({ default: m.MPCTab })));
+const QKDTab = lazy(() => import("./v3/tabs/QKDTab").then(m => ({ default: m.QKDTab })));
+const QRNGTab = lazy(() => import("./v3/tabs/QRNGTab").then(m => ({ default: m.QRNGTab })));
+const DocsViewTab = lazy(() => import("./v3/tabs/DocsViewTab").then(m => ({ default: m.DocsViewTab })));
+const AITab = lazy(() => import("./v3/tabs/AITab").then(m => ({ default: m.AITab })));
+const KeyCeremonyTab = lazy(() => import("./v3/tabs/KeyCeremonyTab").then(m => ({ default: m.KeyCeremonyTab })));
+const RotationSchedulerTab = lazy(() => import("./v3/tabs/RotationSchedulerTab").then(m => ({ default: m.RotationSchedulerTab })));
+const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
+const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
+const LeakScannerTab = lazy(() => import("./v3/tabs/LeakScannerTab").then(m => ({ default: m.LeakScannerTab })));
+const CTMonitorTab = lazy(() => import("./v3/tabs/CTMonitorTab").then(m => ({ default: m.CTMonitorTab })));
+const MTLSMeshTab = lazy(() => import("./v3/tabs/MTLSMeshTab").then(m => ({ default: m.MTLSMeshTab })));
+const EscrowTab = lazy(() => import("./v3/tabs/EscrowTab").then(m => ({ default: m.EscrowTab })));
+const EnvelopeEncTab = lazy(() => import("./v3/tabs/EnvelopeEncTab").then(m => ({ default: m.EnvelopeEncTab })));
+const DRDrillTab = lazy(() => import("./v3/tabs/DRDrillTab").then(m => ({ default: m.DRDrillTab })));
+const OpsMetricsTab = lazy(() => import("./v3/tabs/OpsMetricsTab").then(m => ({ default: m.OpsMetricsTab })));
+const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
+const DSPMTab = lazy(() => import("./v3/tabs/DSPMTab").then(m => ({ default: m.DSPMTab })));
+const DevSecOpsTab = lazy(() => import("./v3/tabs/DevSecOpsTab").then(m => ({ default: m.DevSecOpsTab })));
+const TDETab = lazy(() => import("./v3/tabs/TDETab").then(m => ({ default: m.TDETab })));
+const TFETab = lazy(() => import("./v3/tabs/TFETab").then(m => ({ default: m.TFETab })));
+const DataActivityTab = lazy(() => import("./v3/tabs/DataActivityTab").then(m => ({ default: m.DataActivityTab })));
+const AIProtectTab = lazy(() => import("./v3/tabs/AIProtectTab").then(m => ({ default: m.AIProtectTab })));
+const LineageTab = lazy(() => import("./v3/tabs/LineageTab").then(m => ({ default: m.LineageTab })));
+const CanaryKeysTab = lazy(() => import("./v3/tabs/CanaryKeysTab").then(m => ({ default: m.CanaryKeysTab })));
+const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ default: m.PlaybooksTab })));
 
 type Props = {
   session: AuthSession;
@@ -120,32 +124,8 @@ type Props = {
   markAlertsRead: () => void;
 };
 
-const TAB_STORAGE_KEY   = "vecta_active_tab";
-const TZ_STORAGE_KEY    = "vecta_timezone";
-const THEME_STORAGE_KEY = "vecta_theme";
-
-const ls = {
-  get: (key: string, fallback = "") => { try { return localStorage.getItem(key) ?? fallback; } catch { return fallback; } },
-  set: (key: string, val: string)   => {
-    try {
-      localStorage.setItem(key, val);
-    } catch (err) {
-      // DOMException: QuotaExceededError — storage full; preference won't persist
-      console.warn(`[storage] Failed to persist "${key}":`, err);
-    }
-  },
-  getJSON: <T,>(key: string, fallback: T): T => { try { return JSON.parse(localStorage.getItem(key) || "null") ?? fallback; } catch { return fallback; } }
-};
-
-
-type ThemeMode = "dark" | "light" | "auto";
-
-function resolvedTheme(mode: ThemeMode): "dark" | "light" {
-  if (mode !== "auto") return mode;
-  const h = new Date().getHours();
-  // Light 07:00–19:59, dark 20:00–06:59
-  return h >= 7 && h < 20 ? "light" : "dark";
-}
+const TAB_STORAGE_KEY = "vecta_active_tab";
+const TZ_STORAGE_KEY = "vecta_timezone";
 const COMMON_TIMEZONES = [
   { label: "Local", value: "local" },
   { label: "UTC", value: "UTC" },
@@ -160,24 +140,26 @@ const COMMON_TIMEZONES = [
   { label: "Asia/Tokyo", value: "Asia/Tokyo" },
   { label: "Australia/Sydney", value: "Australia/Sydney" }
 ];
-// Allowlist — prevents storing invalid/malicious timezone strings
-const VALID_TIMEZONES = new Set(COMMON_TIMEZONES.map((tz) => tz.value));
 
-// React.memo: only re-renders when tz or onClick reference changes — clock tick stays local
-const ClockDisplay = React.memo(function ClockDisplay({ tz, onClick }: { tz: string; onClick: () => void }) {
-  const [t, setT] = useState(new Date());
-  useEffect(() => {
-    const id = setInterval(() => setT(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  const formatted = useMemo(() => {
-    if (tz === "local") return t.toLocaleTimeString();
-    try { return t.toLocaleTimeString(undefined, { timeZone: tz }); } catch { return t.toLocaleTimeString(); }
-  }, [t, tz]);
-  return (
-    <span onClick={onClick} style={{ fontSize: 11, color: C.accentFg, fontFamily: "'JetBrains Mono',monospace", cursor: "pointer" }} title={`Timezone: ${tz === "local" ? "Local" : tz}`}>{formatted}</span>
-  );
-});
+function canSeeFeature(need: any, enabledFeatures: Set<FeatureKey>, session?: any): boolean {
+  if (isSystemAdminSession(session)) {
+    return true;
+  }
+  if (!need) {
+    return true;
+  }
+  if (Array.isArray(need)) {
+    return need.some((item) => canSeeFeature(item, enabledFeatures, session));
+  }
+  if (need === "hsm_hardware_or_software") {
+    return enabledFeatures.has("hsm_hardware") || enabledFeatures.has("hsm_software");
+  }
+  return enabledFeatures.has(need as FeatureKey);
+}
+
+function canSeeTab(tab: string, enabledFeatures: Set<FeatureKey>, session?: any): boolean {
+  return canAccessModule(tab, enabledFeatures, session);
+}
 
 function toViewKey(k: any): any {
   return {
@@ -194,94 +176,170 @@ function toViewKey(k: any): any {
 const TABS: Record<string, any> = {
   home: DashboardTab,
   keys: KeysTab,
-  vault: VaultTab,
-  audit: AuditLogTab,
-  certs: CertsTab,
-  pqc: PostQuantumTab,
   workbench: WorkbenchTab,
+  crypto: CryptoTab,
+  restapi: RestAPITab,
+  vault: VaultTab,
+  certs: CertsTab,
   dataprotection: DataProtectionTabs,
-  autokey: AutokeyTab,
-  keyaccess: KeyAccessTab,
-  signing: ArtifactSigningTab,
-  workload: WorkloadIdentityTab,
+  tokenize: TokenizeTab,
+  dataenc: DataEncryptionTab,
+  payment: PaymentTab,
   cloudctl: CloudKeyControlTab,
+  byok: BYOKTab,
+  hyok: HYOKTab,
   ekm: EKMTab,
   hsm: HSMTab,
   qkd: QKDTab,
+  qrng: QRNGTab,
   mpc: MPCTab,
   cluster: ClusterTab,
   approvals: GovernanceTab,
   alerts: AlertsTab,
+  audit: AuditLogTab,
+  posture: PostureTab,
   compliance: ComplianceTab,
+  sbom: SBOMTab,
+  pkcs11: PKCS11Tab,
   admin: AdminTab,
-  ai: AITab
+  docs: DocsViewTab,
+  ai: AITab,
+  ceremony: KeyCeremonyTab,
+  rotation: RotationSchedulerTab,
+  crypto_agility: CryptoAgilityTab,
+  webhooks: WebhooksTab,
+  leak_scanner: LeakScannerTab,
+  ct_monitor: CTMonitorTab,
+  mtls_mesh: MTLSMeshTab,
+  escrow: EscrowTab,
+  envelope_enc: EnvelopeEncTab,
+  dr_drill: DRDrillTab,
+  ops_metrics: OpsMetricsTab,
+  backup: BackupTab,
+  dspm: DSPMTab,
+  devsecops: DevSecOpsTab,
+  tde: TDETab,
+  tfe: TFETab,
+  data_activity: DataActivityTab,
+  ai_protect: AIProtectTab,
+  lineage: LineageTab,
+  canary: CanaryKeysTab,
+  playbooks: PlaybooksTab
+};
+
+const TITLES: Record<string, string> = {
+  home: "Dashboard",
+  keys: "Key Management",
+  workbench: "Workbench",
+  crypto: "Crypto Console",
+  restapi: "REST API",
+  vault: "Secret Vault",
+  certs: "Certificates / PKI",
+  dataprotection: "Data Protection",
+  tokenize: "Tokenize / Mask / Redact",
+  dataenc: "Data Encryption",
+  payment: "Payment Crypto",
+  cloudctl: "Cloud Key Control",
+  byok: "BYOK",
+  hyok: "HYOK",
+  ekm: "Enterprise Key Management",
+  hsm: "HSM",
+  qkd: "QKD Interface",
+  qrng: "QRNG Entropy",
+  mpc: "MPC Engine",
+  cluster: "Cluster",
+  approvals: "Approvals",
+  alerts: "Alert Center",
+  audit: "Audit Log",
+  posture: "Posture Management",
+  compliance: "Compliance",
+  sbom: "SBOM / CBOM",
+  pkcs11: "PKCS#11 / JCA",
+  admin: "Administration",
+  docs: "Documentation",
+  ai: "AI Assistant",
+  ceremony: "Key Ceremony",
+  rotation: "Rotation Scheduler",
+  crypto_agility: "Crypto Agility",
+  webhooks: "Webhooks & SIEM",
+  leak_scanner: "Leak Scanner",
+  ct_monitor: "CT Log Monitor",
+  mtls_mesh: "mTLS Mesh",
+  escrow: "Key Escrow",
+  envelope_enc: "Envelope Encryption",
+  dr_drill: "DR Drill",
+  ops_metrics: "Operations Metrics",
+  backup: "Backup & Restore",
+  dspm: "Data Security Posture",
+  devsecops: "DevSecOps / IaC",
+  tde: "Database TDE",
+  tfe: "File Encryption (TFE)",
+  data_activity: "Data Activity Monitor",
+  ai_protect: "AI/GenAI Data Protection",
+  lineage: "Source Traceability",
+  canary: "Canary / Honeypot Keys",
+  playbooks: "Incident Playbooks"
 };
 
 const NAV = [
-  {
-    g: "CORE",
-    items: [
-      { id: "home",    icon: HomeIcon,  label: "Dashboard" },
-      { id: "keys",   icon: KeyRound,  label: "Key Management" },
-      { id: "vault",  icon: Lock,      label: "Secret Vault" },
-      { id: "audit",  icon: ScrollText, label: "Audit Log" }
-    ]
-  },
-  {
-    g: "CRYPTO & PKI",
-    items: [
-      { id: "certs", icon: FileText, label: "Certificates / PKI" },
-      { id: "pqc",   icon: Atom,     label: "Post-Quantum Crypto" }
-    ]
-  },
-  {
-    g: "DATA & POLICY",
-    items: [
-      { id: "dataprotection", icon: ShieldCheck, label: "Data Protection" },
-      { id: "autokey",        icon: Layers,      label: "Auto-Provisioning" },
-      { id: "keyaccess",      icon: ShieldCheck, label: "Access Justifications" }
-    ]
-  },
-  {
-    g: "CLOUD & IDENTITY",
-    items: [
-      { id: "cloudctl", icon: Cloud,    label: "Cloud Keys (BYOK/HYOK)" },
-      { id: "ekm",      icon: Database, label: "EKM" },
-      { id: "signing",  icon: FileText, label: "Signing" },
-      { id: "workload", icon: Users,    label: "Workload & Identity" }
-    ]
-  },
-  {
-    g: "INFRASTRUCTURE",
-    items: [
-      { id: "hsm",     icon: Cpu,       label: "HSM" },
-      { id: "qkd",     icon: GitBranch, label: "Quantum Sources" },
-      { id: "mpc",     icon: Cpu,       label: "MPC / FROST" },
-      { id: "cluster", icon: GitBranch, label: "Cluster" }
-    ]
-  },
-  {
-    g: "GOVERNANCE",
-    items: [
-      { id: "approvals",  icon: CheckCircle2,   label: "Approvals" },
-      { id: "alerts",     icon: Bell,           label: "Alert Center" },
-      { id: "compliance", icon: ClipboardCheck, label: "Risk & Compliance" }
-    ]
-  },
-  {
-    g: "ADMIN",
-    items: [
-      { id: "admin",     icon: Settings,   label: "Administration" },
-      { id: "workbench", icon: LayoutGrid, label: "Dev Workbench" },
-      { id: "ai",        icon: Sparkles,   label: "AI Assistant" }
-    ]
-  }
+  { g: "CORE", items: [
+    { id: "home", icon: HomeIcon, label: "Dashboard" },
+    { id: "keys", icon: KeyRound, label: "Key Management" },
+    { id: "ops_metrics", icon: BarChart2, label: "Operations Metrics" },
+    { id: "certs", icon: FileText, label: "Certificates / PKI" },
+    { id: "cloudctl", icon: Cloud, label: "Cloud Key Control" },
+    { id: "ekm", icon: Database, label: "Enterprise Key Management" },
+    { id: "vault", icon: Lock, label: "Secret Vault" },
+    { id: "dataprotection", icon: ShieldCheck, label: "Data Protection" },
+  ]},
+  { g: "WORKBENCH", items: [{ id: "workbench", icon: LayoutGrid, label: "Workbench" }] },
+  { g: "SECRETS & CERTS", items: [
+    { id: "rotation", icon: CalendarClock, label: "Rotation Scheduler" },
+    { id: "ct_monitor", icon: Globe, label: "CT Log Monitor" },
+    { id: "escrow", icon: Vault, label: "Key Escrow" },
+    { id: "canary", icon: AlertTriangle, label: "Canary Keys" },
+  ]},
+  { g: "DATA PROTECTION", items: [
+    { id: "envelope_enc", icon: Layers, label: "Envelope Encryption" },
+    { id: "tde", icon: Database, label: "Database TDE" },
+    { id: "tfe", icon: Lock, label: "File Encryption (TFE)" },
+  ]},
+  { g: "INFRASTRUCTURE", items: [
+    { id: "hsm", icon: Cpu, label: "HSM" },
+    { id: "qkd", icon: GitBranch, label: "QKD Interface" },
+    { id: "qrng", icon: Atom, label: "QRNG Entropy" },
+    { id: "mpc", icon: Cpu, label: "MPC Engine" },
+    { id: "cluster", icon: GitBranch, label: "Cluster" },
+    { id: "ceremony", icon: GitMerge, label: "Key Ceremony" },
+    { id: "mtls_mesh", icon: Network, label: "mTLS Mesh" },
+    { id: "dr_drill", icon: Siren, label: "DR Drill" },
+    { id: "backup", icon: Archive, label: "Backup & Restore" },
+  ]},
+  { g: "GOVERNANCE", items: [
+    { id: "approvals", icon: CheckCircle2, label: "Approvals" },
+    { id: "alerts", icon: Bell, label: "Alert Center" },
+    { id: "audit", icon: ScrollText, label: "Audit Log" },
+    { id: "dspm", icon: ShieldCheck, label: "Data Security Posture" },
+    { id: "data_activity", icon: Activity, label: "Data Activity Monitor" },
+    { id: "posture", icon: Gauge, label: "Posture Management" },
+    { id: "compliance", icon: ClipboardCheck, label: "Compliance" },
+    { id: "sbom", icon: BarChart3, label: "SBOM / CBOM" },
+    { id: "crypto_agility", icon: Gauge, label: "Crypto Agility" },
+    { id: "leak_scanner", icon: ScanSearch, label: "Leak Scanner" },
+    { id: "lineage", icon: GitMerge, label: "Source Traceability" },
+    { id: "playbooks", icon: Play, label: "Incident Playbooks" },
+  ]},
+  { g: "AI", items: [
+    { id: "ai", icon: Sparkles, label: "AI Assistant" },
+    { id: "ai_protect", icon: ShieldCheck, label: "AI/GenAI Data Protection" },
+  ]},
+  { g: "ADMIN", items: [
+    { id: "admin", icon: Settings, label: "Administration" },
+    { id: "webhooks", icon: Webhook, label: "Webhooks & SIEM" },
+    { id: "devsecops", icon: GitBranch, label: "DevSecOps / IaC" },
+    { id: "docs", icon: FileText, label: "Documentation" },
+  ]}
 ];
-
-// Derived from NAV — single source of truth, no separate maintenance needed
-const TITLES: Record<string, string> = Object.fromEntries(
-  NAV.flatMap((g) => g.items).map((it) => [it.id, it.label])
-);
 
 const SUB_PANES: Record<string, any[]> = {
   workbench: [
@@ -289,13 +347,13 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "restapi", label: "REST API", hint: "Authenticated API explorer and endpoint documentation", icon: FileText },
     { id: "tokenize", label: "Tokenize / Mask / Redact", hint: "Vault and vaultless tokenization with masking/redaction", icon: VenetianMask, feature: "data_protection" },
     { id: "dataenc", label: "Data Encryption", hint: "Field-level, envelope, searchable and FPE crypto", icon: Database, feature: "data_protection" },
-    { id: "payment", label: "Payment Crypto", hint: "TR-31, PIN blocks, ISO 20022 and payment HSM operations", icon: CreditCard, feature: "payment_crypto" }
+    { id: "payment", label: "Payment Crypto", hint: "TR-31, PIN, CVV, MAC and ISO20022 operations", icon: CreditCard, feature: "payment_crypto" }
   ],
   dataprotection: [
     { id: "fieldenc", label: "Field Encryption", hint: "Wrapper registration, challenge-response and local crypto lease control", icon: KeyRound, feature: "data_protection" },
     { id: "dataenc-policy", label: "Data Encryption Policy", hint: "Policy controls only for data encryption interfaces", icon: List, feature: "data_protection" },
     { id: "token-policy", label: "Token / Mask / Redact Policy", hint: "Policy controls only for tokenization, masking and redaction", icon: VenetianMask, feature: "data_protection" },
-    { id: "payment-policy", label: "Payment Policy", hint: "KMS-wide payment guardrails for REST and payment interfaces", icon: CreditCard, feature: "payment_crypto" },
+    { id: "payment-policy", label: "Payment Policy", hint: "Policy controls only for payment cryptography operations", icon: CreditCard, feature: "payment_crypto" },
     { id: "pkcs11", label: "PKCS#11 / JCA", hint: "SDK providers, mechanism usage and client telemetry", icon: Plug }
   ],
   cloudctl: [
@@ -317,7 +375,7 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "hsm-thales", label: "Thales Luna HSM", hint: "NTLS endpoint, Luna slot and partition settings", icon: Cpu, feature: "hsm_hardware_or_software" },
     { id: "hsm-utimaco", label: "Utimaco HSM", hint: "CryptoServer slot/partition profile and provider settings", icon: Cpu, feature: "hsm_hardware_or_software" },
     { id: "hsm-entrust", label: "Entrust nShield HSM", hint: "Security World connector, slot profile and token mapping", icon: ShieldCheck, feature: "hsm_hardware_or_software" },
-    { id: "hsm-securosys", label: "Securosys HSM", hint: "Primus PKCS#11 provider, slot ID and partition user configuration", icon: ShieldCheck, feature: "hsm_hardware_or_software" },
+    { id: "hsm-securosys", label: "Vecta KMS HSM", hint: "Vecta KMS provider, slot and partition configuration", icon: ShieldCheck, feature: "hsm_hardware_or_software" },
     { id: "hsm-generic", label: "Generic PKCS#11 HSM", hint: "Vendor-neutral PKCS#11 library onboarding profile", icon: Plug, feature: "hsm_hardware_or_software" }
   ],
   cluster: [
@@ -327,56 +385,52 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "sync", label: "Sync Monitor", hint: "Real-time sync events, checkpoints, and replication lag", icon: RefreshCw, feature: "clustering" },
     { id: "logs", label: "Cluster Logs", hint: "Cluster operation audit log with filtering", icon: ScrollText, feature: "clustering" }
   ],
-  compliance: [
-    { id: "frameworks", label: "Frameworks & Scoring", hint: "PCI DSS, FIPS, NIST framework scores and gap analysis", icon: ClipboardCheck, feature: "compliance_dashboard" },
-    { id: "posture",    label: "Posture & Risk",       hint: "Drift detection, risk findings, blast radius and remediation actions", icon: Gauge, feature: "compliance_dashboard" },
-    { id: "sbom",       label: "SBOM / CBOM",          hint: "Software and crypto BOM intelligence for PQC readiness and evidence", icon: BarChart3, feature: "sbom_cbom" }
-  ],
-  qkd: [
-    { id: "qkd-main", label: "QKD Interface",   hint: "Quantum key distribution network links, key rate and session health", icon: GitBranch, feature: "qkd_interface" },
-    { id: "qrng",     label: "QRNG Entropy",    hint: "Quantum random number generator entropy sources and health metrics", icon: Atom, feature: "qrng_generator" }
-  ],
-  workload: [
-    { id: "registrations", label: "Workload Registrations", hint: "SPIFFE workload registrations, selectors and key bindings", icon: Users, feature: "workload_identity" },
-    { id: "confidential",  label: "Confidential Compute",   hint: "Attested key release for TEE and enclave workloads", icon: Fingerprint, feature: "confidential_compute" }
-  ],
   admin: [
     { id: "system", label: "System Administration", hint: "Platform health, runtime hardening, FIPS and governance settings", icon: Settings },
     { id: "tenant", label: "Tenant Administration", hint: "Tenant lifecycle disable/delete workflow", icon: Building2 },
-    { id: "users",  label: "User Management",       hint: "User and group administration with role assignments", icon: Users },
-    { id: "docs",   label: "Documentation",         hint: "Platform guides, API reference and component documentation", icon: FileText }
+    { id: "users", label: "User Management", hint: "User and group administration with role assignments", icon: Users }
   ]
 };
 
 export default function VectaDashboardV3Shell(props: Props) {
   const { session: sessionBase, enabledFeatures, alerts, audit, unreadAlerts, onLogout, markAlertsRead } = props;
   const [tab, setTab] = useState(() => {
-    try { const h = window.location.hash.replace("#", ""); if (h) return h; } catch {}
-    return ls.get(TAB_STORAGE_KEY) || "home";
+    try {
+      const hash = window.location.hash.replace("#", "");
+      if (hash) return hash;
+      const stored = localStorage.getItem(TAB_STORAGE_KEY);
+      if (stored) return stored;
+    } catch {}
+    return "home";
   });
   const [collapsed, setCollapsed] = useState(false);
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => (ls.get(THEME_STORAGE_KEY) as ThemeMode) || "dark");
+  const [t, setT] = useState(new Date());
   const [tz, setTz] = useState(() => {
-    const stored = ls.get(TZ_STORAGE_KEY) || "local";
-    // Reject persisted values that are no longer in our allowlist
-    return VALID_TIMEZONES.has(stored) ? stored : "local";
+    try { return localStorage.getItem(TZ_STORAGE_KEY) || "local"; } catch { return "local"; }
   });
   const [tzOpen, setTzOpen] = useState(false);
+  const formattedTime = useMemo(() => {
+    if (tz === "local") return t.toLocaleTimeString();
+    try { return t.toLocaleTimeString(undefined, { timeZone: tz }); } catch { return t.toLocaleTimeString(); }
+  }, [t, tz]);
   const changeTz = useCallback((val: string) => {
-    if (!VALID_TIMEZONES.has(val)) return; // Reject unknown timezones
     setTz(val);
     setTzOpen(false);
-    ls.set(TZ_STORAGE_KEY, val);
+    try { localStorage.setItem(TZ_STORAGE_KEY, val); } catch {}
   }, []);
-  const [pinnedTabs, setPinnedTabs] = useState<string[]>(() =>
-    ls.getJSON<string[]>("vecta_pinned_tabs", []).filter((v: any) => typeof v === "string")
-  );
+  const [pinnedTabs, setPinnedTabs] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("vecta_pinned_tabs");
+      const parsed = JSON.parse(raw || "[]");
+      return Array.isArray(parsed) ? parsed.filter((v: any) => typeof v === "string") : [];
+    } catch { return []; }
+  });
 
   const togglePin = (tabId: string) => {
     if (tabId === "home") return;
     setPinnedTabs((prev) => {
       const next = prev.includes(tabId) ? prev.filter((id) => id !== tabId) : [...prev, tabId];
-      ls.set("vecta_pinned_tabs", JSON.stringify(next));
+      try { localStorage.setItem("vecta_pinned_tabs", JSON.stringify(next)); } catch {}
       return next;
     });
   };
@@ -396,11 +450,9 @@ export default function VectaDashboardV3Shell(props: Props) {
     certs: "cert-overview",
     hsm: "hsm-generic",
     cluster: "topology",
-    admin: "system",
-    compliance: "frameworks",
-    qkd: "qkd-main",
-    workload: "registrations"
+    admin: "system"
   }));
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const session = useMemo(
     () => ({
@@ -410,23 +462,29 @@ export default function VectaDashboardV3Shell(props: Props) {
     [sessionBase, tenantScope]
   );
 
-  // Apply data-theme to <html>; auto mode re-checks every minute
   useEffect(() => {
-    const apply = () => document.documentElement.setAttribute("data-theme", resolvedTheme(themeMode));
-    apply();
-    if (themeMode === "auto") {
-      const id = setInterval(apply, 60000);
-      return () => clearInterval(id);
-    }
-  }, [themeMode]);
+    const id = setInterval(() => setT(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
-  const cycleTheme = () => {
-    setThemeMode((prev) => {
-      const next: ThemeMode = prev === "dark" ? "light" : prev === "light" ? "auto" : "dark";
-      ls.set(THEME_STORAGE_KEY, next);
-      return next;
-    });
-  };
+  // ⌘K / Ctrl+K — open command palette.
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement;
+      // Don't capture inside text inputs/textareas to avoid interfering with typing.
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) return;
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     setTenantScope(String(sessionBase?.tenantId || ""));
@@ -461,51 +519,29 @@ export default function VectaDashboardV3Shell(props: Props) {
     };
   }, [sessionBase]);
 
-  // React Query: catalog + governance — cached per tenant/token, background-refreshed every 60 s
-  const catalogKey = [session?.tenantId, session?.token];
-  const keysQuery = useQuery({
-    queryKey: ["catalog-keys", ...catalogKey],
-    queryFn: () => listKeysPaginated(session, { limit: 100, includeDeleted: true }),
-    enabled: Boolean(session?.token),
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-    retry: 2
-  });
-  const tagsQuery = useQuery({
-    queryKey: ["catalog-tags", ...catalogKey],
-    queryFn: () => listTags(session),
-    enabled: Boolean(session?.token),
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-    retry: 2
-  });
-  const govQuery = useQuery({
-    queryKey: ["catalog-gov", ...catalogKey],
-    queryFn: () => getGovernanceSystemState(session),
-    enabled: Boolean(session?.token),
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-    retry: 2
-  });
-
-  // Sync query results into component state (state keeps working for local mutations)
   useEffect(() => {
-    if (keysQuery.data) {
-      setKeyCatalog((Array.isArray((keysQuery.data as any).items) ? (keysQuery.data as any).items : []).map(toViewKey));
-    }
-  }, [keysQuery.data]);
-
-  useEffect(() => {
-    if (tagsQuery.data) {
-      setTagCatalog(Array.isArray(tagsQuery.data) ? tagsQuery.data : []);
-    }
-  }, [tagsQuery.data]);
-
-  useEffect(() => {
-    if (govQuery.data !== undefined) {
-      setFipsMode(normalizeFipsModeValue(String((govQuery.data as any)?.state?.fips_mode || "disabled")));
-    }
-  }, [govQuery.data]);
+    let stop = false;
+    (async () => {
+      try {
+        const [keysPage, tags, state] = await Promise.all([
+          listKeysPaginated(session, { limit: 100, includeDeleted: true }),
+          listTags(session),
+          getGovernanceSystemState(session)
+        ]);
+        if (stop) return;
+        setKeyCatalog((Array.isArray(keysPage.items) ? keysPage.items : []).map(toViewKey));
+        setTagCatalog(Array.isArray(tags) ? tags : []);
+        setFipsMode(normalizeFipsModeValue(String((state as any)?.state?.fips_mode || "disabled")));
+      } catch {
+        if (!stop) {
+          setFipsMode("disabled");
+        }
+      }
+    })();
+    return () => {
+      stop = true;
+    };
+  }, [session]);
 
   useEffect(() => {
     if (!session?.token) { setCliEnabled(false); return; }
@@ -553,7 +589,7 @@ export default function VectaDashboardV3Shell(props: Props) {
     () =>
       NAV.map((group) => ({
         ...group,
-        items: group.items.filter((item: any) => canAccessModule(String(item?.id || ""), enabledFeatures || new Set<FeatureKey>(), session))
+        items: group.items.filter((item: any) => canSeeTab(String(item?.id || ""), enabledFeatures || new Set<FeatureKey>(), session))
       })).filter((group) => group.items.length > 0),
     [enabledFeatures, session]
   );
@@ -572,36 +608,40 @@ export default function VectaDashboardV3Shell(props: Props) {
     }
   }, [tab, visibleTabIDs]);
 
-  const features = useMemo(() => enabledFeatures || new Set<FeatureKey>(), [enabledFeatures]);
-
-  const filterPanes = useCallback(
-    (tabId: string) =>
-      (SUB_PANES[tabId] || []).filter(
-        (item) => isSystemAdminSession(session) || matchesFeatureNeed(item?.feature, features)
-      ),
-    [session, features]
+  const activePaneItems = (Array.isArray(SUB_PANES[tab]) ? SUB_PANES[tab] : []).filter((item) =>
+    canSeeFeature(item?.feature, enabledFeatures || new Set<FeatureKey>(), session)
   );
-
-  const activePaneItems = useMemo(() => filterPanes(tab), [filterPanes, tab]);
-
   const selectedSubRaw = String((subPaneSelection as any)[tab] || "");
   const activeSubPaneSelection = String(
     activePaneItems.some((item) => String(item.id) === selectedSubRaw) ? selectedSubRaw : (activePaneItems[0]?.id || "")
   );
   const globalFipsEnabled = isFipsModeEnabled(fipsMode);
 
-  const selectTab = useCallback(
-    (nextTab: string) => {
-      setTab(nextTab);
-      ls.set(TAB_STORAGE_KEY, nextTab);
-      try { window.history.replaceState(null, "", `#${nextTab}`); } catch {}
-      const panes = filterPanes(nextTab);
-      if (panes.length) {
-        setSubPaneSelection((prev: any) => ({ ...prev, [nextTab]: String(prev?.[nextTab] || panes[0].id) }));
-      }
-    },
-    [filterPanes]
+  // Flatten visible nav into command-palette items.
+  const paletteItems = useMemo<PaletteItem[]>(
+    () =>
+      navGroups.flatMap((g: any) =>
+        (Array.isArray(g.items) ? g.items : []).map((item: any) => ({
+          id: String(item.id),
+          label: String(TITLES[item.id] || item.label || item.id),
+          group: String(g.g || ""),
+          icon: item.icon,
+        }))
+      ),
+    [navGroups]
   );
+
+  const selectTab = (nextTab: string) => {
+    setTab(nextTab);
+    try { localStorage.setItem(TAB_STORAGE_KEY, nextTab); } catch {}
+    try { window.history.replaceState(null, "", `#${nextTab}`); } catch {}
+    const paneItems = (Array.isArray(SUB_PANES[nextTab]) ? SUB_PANES[nextTab] : []).filter((item) =>
+      canSeeFeature(item?.feature, enabledFeatures || new Set<FeatureKey>(), session)
+    );
+    if (paneItems.length) {
+      setSubPaneSelection((prev: any) => ({ ...prev, [nextTab]: String(prev?.[nextTab] || paneItems[0].id) }));
+    }
+  };
 
   // One-time cleanup: strip query params, set hash to current tab
   useEffect(() => {
@@ -614,90 +654,312 @@ export default function VectaDashboardV3Shell(props: Props) {
     } catch {}
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const Tab = SUB_OVERRIDES[tab]?.[activeSubPaneSelection] ?? TABS[tab] ?? DashboardTab;
+  const Tab = TABS[tab] || DashboardTab;
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: C.bg, fontFamily: "'IBM Plex Sans',-apple-system,sans-serif", color: C.text, overflow: "hidden", paddingTop: 2 }}>
-<div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 2, zIndex: 9999, background: `linear-gradient(90deg,${C.accent},${C.purple},${C.blue})` }} />
-      <div style={{ width: collapsed ? 56 : 210, background: `linear-gradient(180deg, ${C.sidebar} 0%, ${C.bg} 100%)`, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", transition: "width .2s", flexShrink: 0, overflow: "hidden", boxShadow: "2px 0 16px rgba(0,0,0,.25)" }}>
-        <div style={{ padding: collapsed ? "10px 6px" : "10px 12px 10px 14px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: collapsed ? 6 : 8, minHeight: collapsed ? 66 : 50, justifyContent: collapsed ? "center" : "space-between", flexDirection: collapsed ? "column" : "row" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, justifyContent: "center", width: collapsed ? "100%" : "auto" }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: `linear-gradient(135deg,${C.accent},${C.purple})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 700, color: C.bg, flexShrink: 0, boxShadow: `0 2px 10px rgba(6,214,224,.35)` }}>V</div>
-            {!collapsed && <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 2, color: C.text, fontFamily: "'Rajdhani',sans-serif" }}>VECTA KMS</span>}
+    <div style={{ display: "flex", height: "100vh", background: C.bg, fontFamily: "'IBM Plex Sans',-apple-system,sans-serif", color: C.text, overflow: "hidden" }}>
+      {/* ── Global keyframes + scrollbar + transition helpers ── */}
+      <style>{`
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+        @keyframes slideIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes fadeDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spinArc{to{transform:rotate(360deg)}}
+        *::-webkit-scrollbar{width:4px;height:4px}
+        *::-webkit-scrollbar-track{background:transparent}
+        *::-webkit-scrollbar-thumb{background:${C.border};border-radius:4px}
+        *::-webkit-scrollbar-thumb:hover{background:${C.borderHi}}
+        .vk-nav-item{transition:background .12s,border-color .12s,color .12s}
+        .vk-nav-item:hover .vk-nav-icon{color:${C.accent}!important}
+        .vk-nav-item:hover .vk-nav-label{color:${C.text}!important}
+        .vk-subcard{transition:border-color .12s,background .12s,box-shadow .12s}
+        .vk-subcard:hover{border-color:${C.borderHi}!important;background:rgba(255,255,255,.02)!important}
+        .vk-subcard-active{border-color:${C.accent}!important;background:${C.accentDim}!important}
+        .vk-icon-btn{transition:border-color .12s,color .12s,background .12s}
+        .vk-icon-btn:hover{border-color:${C.borderHi}!important;color:${C.text}!important}
+        .vk-topbar-cluster{transition:border-color .12s}
+        .vk-topbar-cluster:hover{border-color:${C.borderHi}!important}
+        .vk-search-btn{transition:border-color .12s,color .12s}
+        .vk-search-btn:hover{border-color:${C.borderHi}!important;color:${C.text}!important}
+      `}</style>
+
+      {/* ── Rainbow accent bar (fixed, topmost) ── */}
+      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 2, zIndex: 9999, background: `linear-gradient(90deg,${C.accent},${C.purple},${C.blue})` }} />
+
+      {/* ══════════════════════════════════════════════
+          SIDEBAR
+      ══════════════════════════════════════════════ */}
+      <div style={{
+        width: collapsed ? 60 : 240,
+        background: C.sidebar,
+        borderRight: `1px solid ${C.border}`,
+        display: "flex",
+        flexDirection: "column",
+        transition: "width .2s cubic-bezier(.4,0,.2,1)",
+        flexShrink: 0,
+        overflow: "hidden",
+        paddingTop: 2,
+      }}>
+        {/* Brand header */}
+        <div style={{
+          height: 58,
+          borderBottom: `1px solid ${C.border}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: collapsed ? "center" : "space-between",
+          padding: collapsed ? "0 15px" : "0 14px",
+          flexShrink: 0,
+          gap: 10,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+            <div style={{
+              width: 32, height: 32,
+              borderRadius: 9,
+              background: `linear-gradient(135deg,${C.accent},${C.purple})`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 15, fontWeight: 800, color: C.bg,
+              flexShrink: 0,
+              boxShadow: `0 2px 10px rgba(6,214,224,.25)`,
+            }}>V</div>
+            {!collapsed && (
+              <div style={{ overflow: "hidden", flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1.4, color: C.text, lineHeight: 1.25, whiteSpace: "nowrap" }}>VECTA KMS</div>
+                <div style={{ fontSize: 9, color: C.accent, letterSpacing: 1.2, textTransform: "uppercase", opacity: 0.65, lineHeight: 1 }}>Key Management</div>
+              </div>
+            )}
           </div>
           <button
             onClick={() => setCollapsed((v) => !v)}
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            style={{ width: collapsed ? 20 : 24, height: collapsed ? 20 : 24, borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.dim, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "border-color .15s, color .15s" }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.accentFg; e.currentTarget.style.color = C.accentFg; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.dim; }}
+            className="vk-icon-btn"
+            style={{
+              width: 22, height: 22, borderRadius: 6,
+              border: `1px solid ${C.border}`, background: "transparent",
+              color: C.muted, display: "inline-flex", alignItems: "center", justifyContent: "center",
+              cursor: "pointer", flexShrink: 0,
+            }}
           >
-            {collapsed ? <ChevronsRight size={13} strokeWidth={2} /> : <ChevronsLeft size={13} strokeWidth={2} />}
+            {collapsed ? <ChevronsRight size={12} strokeWidth={2} /> : <ChevronsLeft size={12} strokeWidth={2} />}
           </button>
         </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
-          {navGroups.map((g: any, gi: number) => (
-            <div key={g.g} style={{ marginTop: gi > 0 ? 4 : 0 }}>
+
+        {/* Nav items */}
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 0" }}>
+          {navGroups.map((g: any) => (
+            <div key={g.g} style={{ marginBottom: 6 }}>
               {!collapsed && (
-                <div style={{ padding: "6px 14px 3px", display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ flex: 1, height: 1, background: C.border, opacity: 0.5 }} />
-                  <span style={{ fontSize: 8, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1.5, flexShrink: 0 }}>{g.g}</span>
+                <div style={{
+                  padding: "10px 16px 4px",
+                  fontSize: 9, fontWeight: 700,
+                  color: C.muted,
+                  textTransform: "uppercase",
+                  letterSpacing: 1.8,
+                }}>
+                  {g.g}
                 </div>
               )}
-              {g.items.map((it: any) => (
-                <div
-                  key={it.id}
-                  onClick={() => selectTab(it.id)}
-                  style={{ display: "flex", alignItems: "center", gap: 8, padding: collapsed ? "8px" : "7px 14px 7px 12px", cursor: "pointer", background: tab === it.id ? `linear-gradient(90deg, rgba(6,214,224,.13) 0%, rgba(6,214,224,.04) 100%)` : "transparent", borderLeft: tab === it.id ? `3px solid ${C.accent}` : "3px solid transparent", boxShadow: tab === it.id ? `inset 0 0 16px rgba(6,214,224,.05)` : "none", transition: "all .15s" }}
-                  title={it.label}
-                  onMouseEnter={(e) => { if (tab !== it.id) e.currentTarget.style.background = `rgba(6,214,224,.05)`; }}
-                  onMouseLeave={(e) => { if (tab !== it.id) e.currentTarget.style.background = "transparent"; }}
-                >
-                  <span style={{ display: "inline-flex", alignItems: "center", justifyContent: collapsed ? "center" : "flex-start", color: tab === it.id ? C.accentFg : C.muted, flexShrink: 0, width: collapsed ? "100%" : "auto", filter: tab === it.id ? `drop-shadow(0 0 4px ${C.accent}80)` : "none" }}>
-                    <it.icon size={collapsed ? 16 : 14} strokeWidth={tab === it.id ? 2.2 : 1.8} />
-                  </span>
-                  {!collapsed && <span style={{ fontSize: 11, color: tab === it.id ? C.text : C.dim, fontWeight: tab === it.id ? 600 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1 }}>{it.label}</span>}
-                  {!collapsed && pinnedTabs.includes(it.id) && <span title="Pinned to dashboard" style={{ width: 5, height: 5, borderRadius: 3, background: C.accentFg, flexShrink: 0 }} />}
-                </div>
-              ))}
+              {g.items.map((it: any) => {
+                const isActive = tab === it.id;
+                return (
+                  <div
+                    key={it.id}
+                    className="vk-nav-item"
+                    onClick={() => selectTab(it.id)}
+                    title={collapsed ? it.label : undefined}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: collapsed ? "9px 0" : "7px 16px",
+                      justifyContent: collapsed ? "center" : "flex-start",
+                      cursor: "pointer",
+                      background: isActive ? `linear-gradient(90deg,rgba(6,214,224,.1),rgba(6,214,224,.02))` : "transparent",
+                      borderLeft: isActive ? `2px solid ${C.accent}` : "2px solid transparent",
+                      marginLeft: collapsed ? 8 : 0,
+                      marginRight: collapsed ? 8 : 0,
+                      borderRadius: collapsed ? 8 : "0 6px 6px 0",
+                    }}
+                  >
+                    <span
+                      className="vk-nav-icon"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: isActive ? C.accent : C.muted,
+                        flexShrink: 0,
+                        width: collapsed ? "100%" : "auto",
+                      }}
+                    >
+                      <it.icon size={16} strokeWidth={isActive ? 2.5 : 2} />
+                    </span>
+                    {!collapsed && (
+                      <span
+                        className="vk-nav-label"
+                        style={{
+                          fontSize: 12,
+                          color: isActive ? C.text : C.dim,
+                          fontWeight: isActive ? 600 : 400,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          flex: 1,
+                        }}
+                      >
+                        {it.label}
+                      </span>
+                    )}
+                    {!collapsed && pinnedTabs.includes(it.id) && (
+                      <span title="Pinned" style={{
+                        width: 5, height: 5, borderRadius: "50%",
+                        background: C.accent, flexShrink: 0,
+                        boxShadow: `0 0 5px ${C.accent}`,
+                      }} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>
+
+        {/* User footer */}
+        <div style={{
+          borderTop: `1px solid ${C.border}`,
+          padding: collapsed ? "10px 0" : "10px 12px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: collapsed ? "center" : "flex-start",
+          gap: 10,
+          flexShrink: 0,
+        }}>
+          <div style={{
+            width: 30, height: 30,
+            borderRadius: 8,
+            background: `linear-gradient(135deg,rgba(6,214,224,.15),rgba(167,139,250,.1))`,
+            border: `1px solid rgba(6,214,224,.2)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 11, fontWeight: 700, color: C.accent,
+            flexShrink: 0,
+          }}>
+            {(session?.username || "NA").slice(0, 2).toUpperCase()}
+          </div>
+          {!collapsed && (
+            <>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {session?.username || "admin"}
+                </div>
+                <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, lineHeight: 1.4 }}>
+                  {isSystemAdminSession(session) ? "System Admin" : "Admin"}
+                </div>
+              </div>
+              <button
+                onClick={onLogout}
+                title="Sign out"
+                className="vk-icon-btn"
+                style={{
+                  width: 26, height: 26,
+                  borderRadius: 6,
+                  border: `1px solid ${C.border}`,
+                  background: "transparent",
+                  color: C.muted,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-label="Sign out">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16,17 21,12 16,7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
+      {/* ══════════════════════════════════════════════
+          MAIN AREA
+      ══════════════════════════════════════════════ */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 20px", height: 50, borderBottom: `1px solid ${C.border}`, flexShrink: 0, background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`, boxShadow: `0 1px 0 ${C.border}, 0 4px 20px rgba(0,0,0,.3)` }}>
+
+        {/* ── Topbar ── */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0 20px",
+          height: 52,
+          borderBottom: `1px solid ${C.border}`,
+          flexShrink: 0,
+          background: C.surface,
+          boxShadow: `0 1px 0 ${C.border}, 0 2px 16px rgba(0,0,0,.18)`,
+          paddingTop: 2,
+        }}>
+          {/* Left: page title + pin */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: C.text, letterSpacing: -0.4 }}>{TITLES[tab]}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.text, letterSpacing: -0.2 }}>{TITLES[tab]}</span>
             {tab !== "home" && (
               <button
                 onClick={() => togglePin(tab)}
                 title={pinnedTabs.includes(tab) ? "Unpin from Dashboard" : "Pin to Dashboard"}
-                style={{ display: "inline-flex", alignItems: "center", gap: 4, background: pinnedTabs.includes(tab) ? C.accentDim : "transparent", border: `1px solid ${pinnedTabs.includes(tab) ? C.accent : C.border}`, borderRadius: 6, padding: "3px 7px", cursor: "pointer", color: pinnedTabs.includes(tab) ? C.accentFg : C.muted, fontSize: 9, fontWeight: 600, letterSpacing: 0.3, transition: "all .15s" }}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                  background: pinnedTabs.includes(tab) ? C.accentDim : "transparent",
+                  border: `1px solid ${pinnedTabs.includes(tab) ? C.accent : C.border}`,
+                  borderRadius: 6, padding: "3px 8px", cursor: "pointer",
+                  color: pinnedTabs.includes(tab) ? C.accent : C.muted,
+                  fontSize: 9, fontWeight: 600, letterSpacing: 0.4,
+                  transition: "all .15s",
+                }}
               >
-                {pinnedTabs.includes(tab) ? <PinOff size={11} strokeWidth={2} /> : <Pin size={11} strokeWidth={2} />}
+                {pinnedTabs.includes(tab) ? <PinOff size={10} strokeWidth={2.5} /> : <Pin size={10} strokeWidth={2.5} />}
                 {pinnedTabs.includes(tab) ? "Pinned" : "Pin"}
               </button>
             )}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Theme toggle: cycles dark → light → auto */}
+
+          {/* Right: action strip */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+
+            {/* ⌘K search button */}
             <button
-              onClick={cycleTheme}
-              title={themeMode === "dark" ? "Dark theme (click for Light)" : themeMode === "light" ? "Light theme (click for Auto)" : "Auto theme by time (click for Dark)"}
-              style={{ display: "inline-flex", alignItems: "center", gap: 5, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "4px 9px", cursor: "pointer", color: C.dim, fontSize: 9, fontWeight: 600, letterSpacing: 0.4, textTransform: "uppercase", transition: "border-color .15s, color .15s" }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = C.accentFg; e.currentTarget.style.color = C.accentFg; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.dim; }}
+              onClick={() => setPaletteOpen(true)}
+              title="Command palette (⌘K)"
+              className="vk-search-btn"
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 7,
+                height: 30, padding: "0 10px",
+                borderRadius: 8,
+                border: `1px solid ${C.border}`,
+                background: "transparent",
+                color: C.muted,
+                cursor: "pointer",
+                fontSize: 11,
+              }}
             >
-              {themeMode === "dark"  ? <Moon size={12} strokeWidth={2} />    : null}
-              {themeMode === "light" ? <Sun size={12} strokeWidth={2} />     : null}
-              {themeMode === "auto"  ? <SunMoon size={12} strokeWidth={2} /> : null}
-              <span>{themeMode === "auto" ? "Auto" : themeMode === "light" ? "Light" : "Dark"}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <span style={{
+                fontSize: 9, background: C.card,
+                border: `1px solid ${C.border}`,
+                borderRadius: 4, padding: "1px 5px",
+                fontFamily: "'IBM Plex Mono',monospace",
+                color: C.muted,
+              }}>⌘K</span>
             </button>
-            <B c={globalFipsEnabled ? "green" : "blue"} pulse={globalFipsEnabled}>{globalFipsEnabled ? "FIPS STRICT" : "STANDARD MODE"}</B>
+
+            {/* FIPS badge */}
+            <B c={globalFipsEnabled ? "green" : "blue"} pulse={globalFipsEnabled}>
+              {globalFipsEnabled ? "FIPS STRICT" : "STANDARD"}
+            </B>
+
+            {/* Tenant selector */}
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>Tenant</span>
-              <Sel w={170} value={String(session?.tenantId || "")} onChange={(e) => setTenantScope(String(e.target.value || ""))} style={{ height: 28, borderRadius: 8, padding: "4px 24px 4px 8px", fontSize: 10 }}>
+              <span style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8, whiteSpace: "nowrap" }}>Tenant</span>
+              <Sel w={160} value={String(session?.tenantId || "")} onChange={(e) => setTenantScope(String(e.target.value || ""))} style={{ height: 28, borderRadius: 8, padding: "4px 24px 4px 8px", fontSize: 10 }}>
                 {(Array.isArray(tenantOptions) && tenantOptions.length ? tenantOptions : [{ id: String(session?.tenantId || ""), name: String(session?.tenantId || ""), status: "active" }])
                   .filter((item: any) => Boolean(String(item?.id || "").trim()))
                   .map((item: any) => (
@@ -707,60 +969,169 @@ export default function VectaDashboardV3Shell(props: Props) {
                   ))}
               </Sel>
             </div>
-            {isSystemAdminSession(session) && <Btn small onClick={() => selectTab("admin")} style={cliEnabled ? {} : { opacity: 0.4 }}>{cliEnabled ? "CLI" : "CLI (off)"}</Btn>}
+
+            {/* CLI (system admin only) */}
+            {isSystemAdminSession(session) && (
+              <Btn small onClick={() => selectTab("admin")} style={cliEnabled ? {} : { opacity: 0.4 }}>
+                {cliEnabled ? "CLI" : "CLI (off)"}
+              </Btn>
+            )}
+
+            {/* Clock + timezone picker */}
             <div style={{ position: "relative" }}>
-              <ClockDisplay tz={tz} onClick={() => setTzOpen((v) => !v)} />
-              {tz !== "local" && <span style={{ fontSize: 8, color: C.muted, fontFamily: "'JetBrains Mono',monospace", marginLeft: 4 }}>{tz.split("/").pop()}</span>}
+              <div
+                onClick={() => setTzOpen((v) => !v)}
+                style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", padding: "3px 8px", borderRadius: 6, border: `1px solid transparent`, transition: "border-color .12s" }}
+              >
+                <span style={{ fontSize: 11, color: C.accent, fontFamily: "'IBM Plex Mono',monospace" }} title={`Timezone: ${tz === "local" ? "Local" : tz}`}>
+                  {formattedTime}
+                </span>
+                {tz !== "local" && (
+                  <span style={{ fontSize: 8, color: C.muted, fontFamily: "'IBM Plex Mono',monospace" }}>{tz.split("/").pop()}</span>
+                )}
+              </div>
               {tzOpen && (
-                <div style={{ position: "absolute", top: 22, right: 0, zIndex: 1000, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 4, minWidth: 160, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
+                <div style={{
+                  position: "absolute", top: 32, right: 0, zIndex: 1000,
+                  background: C.card, border: `1px solid ${C.border}`,
+                  borderRadius: 10, padding: 6, minWidth: 170,
+                  boxShadow: "0 12px 36px rgba(0,0,0,.5)",
+                  animation: "fadeDown .15s ease-out",
+                }}>
                   {COMMON_TIMEZONES.map((item) => (
-                    <div key={item.value} onClick={() => changeTz(item.value)} style={{ padding: "5px 10px", fontSize: 10, color: tz === item.value ? C.accentFg : C.text, cursor: "pointer", borderRadius: 4, background: tz === item.value ? C.accentDim : "transparent", fontWeight: tz === item.value ? 700 : 400 }}>{item.label}</div>
+                    <div key={item.value} onClick={() => changeTz(item.value)} style={{ padding: "6px 10px", fontSize: 11, color: tz === item.value ? C.accent : C.text, cursor: "pointer", borderRadius: 6, background: tz === item.value ? C.accentDim : "transparent", fontWeight: tz === item.value ? 700 : 400 }}>
+                      {item.label}
+                    </div>
                   ))}
                 </div>
               )}
             </div>
-            <span
-              onClick={() => {
-                selectTab("alerts");
-                markAlertsRead?.();
+
+            {/* Alert bell */}
+            <button
+              onClick={() => { selectTab("alerts"); markAlertsRead?.(); }}
+              className="vk-icon-btn"
+              style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", position: "relative", color: C.dim,
+                width: 32, height: 32, borderRadius: 8,
+                border: `1px solid ${C.border}`,
+                background: "transparent",
               }}
-              style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative", color: C.dim }}
+              title="Alert center"
             >
               <Bell size={14} strokeWidth={2} />
-              <span style={{ position: "absolute", top: -4, right: -6, background: C.red, color: C.white, fontSize: 8, borderRadius: 6, padding: "1px 4px", fontWeight: 700 }}>{String(reportedUnread || 0)}</span>
-            </span>
-            <div style={{ width: 26, height: 26, borderRadius: 6, background: C.accentDim, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700, color: C.accentFg }}>
-              {(session?.username || "NA").slice(0, 2).toUpperCase()}
+              {reportedUnread > 0 && (
+                <span style={{
+                  position: "absolute", top: 4, right: 4,
+                  background: C.red, color: C.white,
+                  fontSize: 7, borderRadius: 999,
+                  padding: "1px 3px", fontWeight: 700,
+                  minWidth: 12, textAlign: "center",
+                  border: `1.5px solid ${C.surface}`,
+                  lineHeight: 1.4,
+                }}>
+                  {reportedUnread > 99 ? "99+" : reportedUnread}
+                </span>
+              )}
+            </button>
+
+            {/* User pill */}
+            <div
+              className="vk-topbar-cluster"
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "4px 6px 4px 8px",
+                borderRadius: 8,
+                border: `1px solid ${C.border}`,
+                background: C.card,
+              }}
+            >
+              <div style={{
+                width: 22, height: 22, borderRadius: 5,
+                background: `linear-gradient(135deg,rgba(6,214,224,.2),rgba(167,139,250,.15))`,
+                border: `1px solid rgba(6,214,224,.25)`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 9, fontWeight: 700, color: C.accent,
+              }}>
+                {(session?.username || "NA").slice(0, 2).toUpperCase()}
+              </div>
+              <span style={{ fontSize: 11, color: C.dim, maxWidth: 80, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {session?.username || "admin"}
+              </span>
+              <Btn small onClick={onLogout}>Logout</Btn>
             </div>
-            <Btn small onClick={onLogout}>Logout</Btn>
           </div>
         </div>
 
+        {/* ── Content row ── */}
         <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+
+          {/* Sub-pane module panel */}
           {activePaneItems.length > 0 && (
-            <div style={{ width: 224, flexShrink: 0, background: `linear-gradient(180deg, ${C.surface} 0%, ${C.bg} 100%)`, borderRight: `1px solid ${C.border}`, padding: "12px 8px", overflowY: "auto" }}>
-              <div style={{ fontSize: 8, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8, padding: "0 4px" }}>{`${TITLES[tab]} Modules`}</div>
-              <div style={{ display: "grid", gap: 4 }}>
+            <div style={{
+              width: 232, flexShrink: 0,
+              background: C.surface,
+              borderRight: `1px solid ${C.border}`,
+              padding: "14px 10px",
+              overflowY: "auto",
+            }}>
+              <div style={{
+                fontSize: 9, color: C.muted,
+                textTransform: "uppercase", letterSpacing: 1.6,
+                marginBottom: 10, padding: "0 2px",
+                fontWeight: 700,
+              }}>
+                {TITLES[tab]}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                 {activePaneItems.map((item: any) => {
                   const isActive = String(activeSubPaneSelection) === String(item.id);
                   const ItemIcon = item.icon || null;
                   return (
                     <div
                       key={String(item.id)}
+                      className={`vk-subcard${isActive ? " vk-subcard-active" : ""}`}
                       onClick={() => setSubPaneSelection((prev: any) => ({ ...prev, [tab]: String(item.id) }))}
-                      style={{ border: `1px solid ${isActive ? C.accent : C.border}`, borderLeft: `3px solid ${isActive ? C.accent : "transparent"}`, background: isActive ? `linear-gradient(135deg, rgba(6,214,224,.12) 0%, rgba(6,214,224,.04) 100%)` : "transparent", borderRadius: 8, padding: "9px 10px", cursor: "pointer", transition: "all .15s", boxShadow: isActive ? `0 2px 12px rgba(6,214,224,.1)` : "none" }}
-                      onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.background = `rgba(6,214,224,.04)`; }}
-                      onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+                      style={{
+                        border: `1px solid ${isActive ? C.accent : C.border}`,
+                        background: isActive ? C.accentDim : "transparent",
+                        borderRadius: 8,
+                        padding: "9px 10px",
+                        cursor: "pointer",
+                      }}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                         {ItemIcon && (
-                          <span style={{ width: 22, height: 22, borderRadius: 6, border: `1px solid ${isActive ? C.accent : C.border}`, background: isActive ? C.accentDim : C.card, display: "inline-flex", alignItems: "center", justifyContent: "center", color: isActive ? C.accentFg : C.dim, flexShrink: 0 }}>
+                          <span style={{
+                            width: 24, height: 24, borderRadius: 6,
+                            border: `1px solid ${isActive ? C.accent : C.border}`,
+                            background: isActive ? C.accentDim : C.card,
+                            display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            color: isActive ? C.accent : C.dim,
+                            flexShrink: 0,
+                          }}>
                             <ItemIcon size={12} strokeWidth={2} />
                           </span>
                         )}
-                        <div style={{ fontSize: 11, color: isActive ? C.text : C.dim, fontWeight: isActive ? 700 : 500, lineHeight: 1.2 }}>{String(item.label || item.id)}</div>
+                        <div style={{
+                          fontSize: 11,
+                          color: isActive ? C.text : C.dim,
+                          fontWeight: isActive ? 600 : 500,
+                          lineHeight: 1.25,
+                        }}>
+                          {String(item.label || item.id)}
+                        </div>
                       </div>
-                      {item.hint && <div style={{ fontSize: 9, color: C.muted, marginTop: 5, lineHeight: 1.4, paddingLeft: ItemIcon ? 30 : 0 }}>{String(item.hint)}</div>}
+                      {item.hint && (
+                        <div style={{
+                          fontSize: 9, color: C.muted,
+                          marginTop: 5, lineHeight: 1.45,
+                          paddingLeft: ItemIcon ? 33 : 0,
+                        }}>
+                          {String(item.hint)}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -768,9 +1139,18 @@ export default function VectaDashboardV3Shell(props: Props) {
             </div>
           )}
 
-          <div style={{ flex: 1, overflowY: "auto", padding: 16 }}>
+          {/* Tab content */}
+          <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
             <TabErrorBoundary resetKey={`${tab}:${activeSubPaneSelection}`}>
-              <Suspense fallback={<div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: C.dim, fontSize: 12 }}>Loading module...</div>}>
+              <Suspense fallback={
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, color: C.muted, fontSize: 12, gap: 10, flexDirection: "column" }}>
+                  <svg style={{ animation: "spinArc 1s linear infinite" }} width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" stroke={C.border} strokeWidth="2"/>
+                    <path d="M12 2a10 10 0 0 1 10 10" stroke={C.accent} strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  Loading module…
+                </div>
+              }>
                 <Tab
                   session={session}
                   keyCatalog={keyCatalog}
@@ -794,8 +1174,31 @@ export default function VectaDashboardV3Shell(props: Props) {
             </TabErrorBoundary>
           </div>
         </div>
-        {toast && <div style={{ position: "fixed", right: 16, bottom: 16, background: `linear-gradient(135deg, ${C.surface} 0%, ${C.card} 100%)`, border: `1px solid ${C.borderHi}`, borderLeft: `3px solid ${C.accent}`, borderRadius: 10, padding: "12px 16px", fontSize: 11, color: C.text, zIndex: 1200, maxWidth: 380, animation: "slideIn .2s ease-out", boxShadow: `0 8px 32px rgba(0,0,0,.4), 0 0 0 1px ${C.glow}` }}>{toast}</div>}
       </div>
+
+      {/* Shell-level toast (distinct from global ToastStack) */}
+      {toast && (
+        <div style={{
+          position: "fixed", right: 16, bottom: 72,
+          background: C.surface,
+          border: `1px solid ${C.borderHi}`,
+          borderRadius: 10,
+          padding: "10px 14px",
+          fontSize: 12, color: C.text,
+          zIndex: 1200, maxWidth: 380,
+          boxShadow: "0 8px 28px rgba(0,0,0,.45)",
+          animation: "slideIn .2s ease-out",
+        }}>
+          {toast}
+        </div>
+      )}
+
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        items={paletteItems}
+        onSelect={(id) => { selectTab(id); }}
+      />
     </div>
   );
 }

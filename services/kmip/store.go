@@ -40,6 +40,11 @@ type Store interface {
 	GetInteropTarget(ctx context.Context, tenantID string, targetID string) (KMIPInteropTarget, error)
 	DeleteInteropTarget(ctx context.Context, tenantID string, targetID string) error
 	UpdateInteropTargetValidation(ctx context.Context, tenantID string, targetID string, status string, lastErr string, reportJSON string, checkedAt time.Time) error
+
+	ListTDEDatabases(ctx context.Context, tenantID string) ([]TDEDatabase, error)
+	CreateTDEDatabase(ctx context.Context, db TDEDatabase) (TDEDatabase, error)
+	GetTDEDatabase(ctx context.Context, tenantID, id string) (TDEDatabase, error)
+	UpdateTDEDatabase(ctx context.Context, db TDEDatabase) (TDEDatabase, error)
 }
 
 type SQLStore struct {

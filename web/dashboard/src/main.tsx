@@ -1,12 +1,14 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import React from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import React, { Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
+import { OfflineBanner } from "./components/OfflineBanner";
+import { ToastStack } from "./components/ToastStack";
 import { getSession } from "./lib/auth";
+import { queryClient } from "./lib/queryClient";
 import { captureFrontendError } from "./lib/telemetry";
 import "./index.css";
-
-const queryClient = new QueryClient();
 
 function normalizeDashboardURL(): void {
   const current = new URL(window.location.href);
@@ -45,13 +47,13 @@ function installGlobalErrorTelemetry(): void {
       component: "window.onerror",
       filename: event.filename,
       lineno: event.lineno,
-      colno: event.colno
+      colno: event.colno,
     });
   });
 
   window.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => {
     void captureFrontendError(getSession(), event.reason, {
-      component: "window.onunhandledrejection"
+      component: "window.onunhandledrejection",
     });
   });
 }
@@ -61,8 +63,14 @@ installGlobalErrorTelemetry();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <OfflineBanner />
+        <ToastStack />
+        <Suspense fallback={null}>
+          <App />
+        </Suspense>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   </React.StrictMode>
 );

@@ -158,6 +158,74 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /keys/{id}/kem/decapsulate", h.handleKEMDecapsulate)
 	mux.HandleFunc("POST /crypto/hash", h.handleHash)
 	mux.HandleFunc("POST /crypto/random", h.handleRandom)
+
+	// Envelope Encryption
+	mux.HandleFunc("GET /envelope/keks", h.handleListKEKs)
+	mux.HandleFunc("POST /envelope/keks", h.handleCreateKEK)
+	mux.HandleFunc("POST /envelope/keks/{id}/rotate", h.handleRotateKEK)
+	mux.HandleFunc("GET /envelope/deks", h.handleListDEKs)
+	mux.HandleFunc("GET /envelope/hierarchy", h.handleGetHierarchy)
+	mux.HandleFunc("POST /envelope/rewrap", h.handleStartRewrap)
+	mux.HandleFunc("GET /envelope/rewrap-jobs", h.handleListRewrapJobs)
+
+	// Key Escrow
+	mux.HandleFunc("GET /escrow/guardians", h.handleListEscrowGuardians)
+	mux.HandleFunc("POST /escrow/guardians", h.handleAddEscrowGuardian)
+	mux.HandleFunc("GET /escrow/policies", h.handleListEscrowPolicies)
+	mux.HandleFunc("POST /escrow/policies", h.handleCreateEscrowPolicy)
+	mux.HandleFunc("GET /escrow/keys", h.handleListEscrowedKeys)
+	mux.HandleFunc("POST /escrow/keys", h.handleAddEscrowedKey)
+	mux.HandleFunc("GET /escrow/recovery", h.handleListRecoveryRequests)
+	mux.HandleFunc("POST /escrow/recovery", h.handleCreateRecoveryRequest)
+	mux.HandleFunc("POST /escrow/recovery/{id}/approve", h.handleApproveRecovery)
+	mux.HandleFunc("POST /escrow/recovery/{id}/deny", h.handleDenyRecovery)
+
+	// Crypto Agility
+	mux.HandleFunc("GET /agility/score", h.handleGetAgilityScore)
+	mux.HandleFunc("GET /agility/algorithms", h.handleGetAlgorithmInventory)
+	mux.HandleFunc("GET /agility/keys-by-algorithm", h.handleGetKeysByAlgorithm)
+	mux.HandleFunc("GET /agility/migration-plans", h.handleListMigrationPlans)
+	mux.HandleFunc("POST /agility/migration-plans", h.handleCreateMigrationPlan)
+	mux.HandleFunc("PATCH /agility/migration-plans/{id}", h.handleUpdateMigrationPlan)
+
+	// DR Drill
+	mux.HandleFunc("GET /dr-drill/schedules", h.handleListDrillSchedules)
+	mux.HandleFunc("POST /dr-drill/schedules", h.handleCreateDrillSchedule)
+	mux.HandleFunc("DELETE /dr-drill/schedules/{id}", h.handleDeleteDrillSchedule)
+	mux.HandleFunc("POST /dr-drill/trigger", h.handleTriggerDrill)
+	mux.HandleFunc("GET /dr-drill/runs", h.handleListDrillRuns)
+	mux.HandleFunc("GET /dr-drill/runs/{id}", h.handleGetDrillRun)
+	mux.HandleFunc("GET /dr-drill/metrics", h.handleGetDrillMetrics)
+
+	// Ceremony routes
+	mux.HandleFunc("GET /ceremony/guardians", h.handleListGuardians)
+	mux.HandleFunc("POST /ceremony/guardians", h.handleCreateGuardian)
+	mux.HandleFunc("DELETE /ceremony/guardians/{id}", h.handleDeleteGuardian)
+	mux.HandleFunc("GET /ceremony", h.handleListCeremonies)
+	mux.HandleFunc("GET /ceremony/{id}", h.handleGetCeremony)
+	mux.HandleFunc("POST /ceremony", h.handleCreateCeremony)
+	mux.HandleFunc("POST /ceremony/{id}/shares", h.handleSubmitShare)
+	mux.HandleFunc("POST /ceremony/{id}/complete", h.handleCompleteCeremony)
+	mux.HandleFunc("POST /ceremony/{id}/abort", h.handleAbortCeremony)
+
+	// Rotation routes
+	mux.HandleFunc("GET /rotation/policies", h.handleListRotationPolicies)
+	mux.HandleFunc("POST /rotation/policies", h.handleCreateRotationPolicy)
+	mux.HandleFunc("PATCH /rotation/policies/{id}", h.handleUpdateRotationPolicy)
+	mux.HandleFunc("DELETE /rotation/policies/{id}", h.handleDeleteRotationPolicy)
+	mux.HandleFunc("POST /rotation/policies/{id}/trigger", h.handleTriggerRotation)
+	mux.HandleFunc("GET /rotation/runs", h.handleListRotationRuns)
+	mux.HandleFunc("GET /rotation/upcoming", h.handleListUpcomingRotations)
+
+	// Canary / Honeypot Keys
+	mux.HandleFunc("GET /canary/summary", h.handleGetCanarySummary)
+	mux.HandleFunc("GET /canary", h.handleListCanaryKeys)
+	mux.HandleFunc("POST /canary", h.handleCreateCanaryKey)
+	mux.HandleFunc("GET /canary/{id}", h.handleGetCanaryKey)
+	mux.HandleFunc("DELETE /canary/{id}", h.handleDeleteCanaryKey)
+	mux.HandleFunc("POST /canary/{id}/trip", h.handleTripCanaryKey)
+	mux.HandleFunc("GET /canary/{id}/trips", h.handleListCanaryTrips)
+
 	return mux
 }
 

@@ -384,3 +384,49 @@ export async function getComplianceAuditAnomalies(session: AuthSession): Promise
   );
   return Array.isArray(out?.items) ? out.items : [];
 }
+
+/* ── Evidence Export ── */
+
+export type EvidenceExportOptions = {
+  framework?: string;
+  period?: "7d" | "30d" | "90d" | "1y";
+};
+
+/**
+ * Downloads a compliance evidence report as a JSON file.
+ * Triggers a browser download directly.
+ */
+export async function downloadEvidenceReport(
+  session: AuthSession,
+  opts: EvidenceExportOptions = {}
+): Promise<void> {
+  const { serviceRequestRaw } = await import("./serviceApi");
+  const params = new URLSearchParams();
+  params.set("tenant_id", session.tenantId);
+  params.set("framework", opts.framework || "gdpr");
+  params.set("period", opts.period || "30d");
+  params.set("format", "json");
+
+  const res = await serviceRequestRaw(
+    session,
+    "compliance",
+    `/compliance/evidence/export?${params.toString()}`
+  );
+  if (!res.ok) {
+    throw new Error(`Evidence export failed (${res.status})`);
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get("Content-Disposition") || "";
+  const match = /filename="([^"]+)"/.exec(disposition);
+  const filename = match?.[1] ?? `compliance-evidence-${opts.framework ?? "gdpr"}.json`;
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}

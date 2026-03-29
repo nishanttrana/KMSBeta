@@ -27,6 +27,11 @@ type Store interface {
 	GetAsset(ctx context.Context, tenantID string, id string) (CryptoAsset, error)
 	ListAssets(ctx context.Context, tenantID string, limit int, offset int, source string, assetType string, classification string) ([]CryptoAsset, error)
 	CountAssets(ctx context.Context, tenantID string) (int, error)
+
+	// Lineage / source traceability
+	InsertLineageEvent(ctx context.Context, e LineageEvent) (LineageEvent, error)
+	GetLineageByKey(ctx context.Context, tenantID, keyID string, limit int) ([]LineageEvent, error)
+	GetLineageGraph(ctx context.Context, tenantID string, since time.Time, limit int) ([]LineageEvent, error)
 }
 
 type DiscoveryScan struct {

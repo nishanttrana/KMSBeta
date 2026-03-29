@@ -34,6 +34,19 @@ type Store interface {
 	PurgeHotEventsBefore(ctx context.Context, before time.Time, limit int) (int64, error)
 	UpdateEngineState(ctx context.Context, tenantID string, lastAuditSyncAt time.Time, lastAuditEventTS time.Time, lastRunAt time.Time) error
 	GetEngineState(ctx context.Context, tenantID string) (time.Time, time.Time, time.Time, error)
+
+	// Leak scanner operations
+	ListLeakTargets(ctx context.Context, tenantID string) ([]LeakScanTarget, error)
+	GetLeakTarget(ctx context.Context, tenantID string, id string) (LeakScanTarget, error)
+	CreateLeakTarget(ctx context.Context, t LeakScanTarget) (LeakScanTarget, error)
+	DeleteLeakTarget(ctx context.Context, tenantID string, id string) error
+	CreateLeakScanJob(ctx context.Context, job LeakScanJob) (LeakScanJob, error)
+	UpdateLeakScanJob(ctx context.Context, tenantID string, id string, status string, progressPct int, findingsCount int, startedAt *time.Time, completedAt *time.Time, errMsg string) error
+	ListLeakScanJobs(ctx context.Context, tenantID string, targetID string, limit int) ([]LeakScanJob, error)
+	CreateLeakFinding(ctx context.Context, f LeakFinding) (LeakFinding, error)
+	ListLeakFindings(ctx context.Context, tenantID string, status string, severity string, limit int) ([]LeakFinding, error)
+	UpdateLeakFinding(ctx context.Context, tenantID string, id string, status string, resolvedBy string, notes string) error
+	IncrementTargetScanCount(ctx context.Context, tenantID string, targetID string, openFindings int) error
 }
 
 type SQLStore struct {

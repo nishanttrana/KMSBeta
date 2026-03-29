@@ -38,6 +38,7 @@ import {
 } from "recharts";
 import {
   deleteComplianceTemplate,
+  downloadEvidenceReport,
   getComplianceAssessment,
   getComplianceAssessmentDelta,
   getComplianceAssessmentSchedule,
@@ -125,6 +126,11 @@ export const ComplianceTab = ({ session, onToast }: any) => {
   const [keyAccessSummary, setKeyAccessSummary] = useState<any>(null);
   const [signingSummary, setSigningSummary] = useState<any>(null);
   const [mpcOverview, setMpcOverview] = useState<any>(null);
+
+  /* ── Evidence Export state ── */
+  const [evidenceFramework, setEvidenceFramework] = useState("gdpr");
+  const [evidencePeriod, setEvidencePeriod] = useState<"7d"|"30d"|"90d"|"1y">("30d");
+  const [evidenceBusy, setEvidenceBusy] = useState(false);
 
   /* ── Reporting state ── */
   const [reportTemplates, setReportTemplates] = useState<any[]>([]);
@@ -1952,6 +1958,58 @@ export const ComplianceTab = ({ session, onToast }: any) => {
           </div>
         </Card>
       </Section>
+
+      {/* ══ Compliance Evidence Export ══ */}
+      <Section
+        title="Compliance Evidence Export"
+        actions={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <FG label="Framework">
+              <Sel w={180} value={evidenceFramework} onChange={(e) => setEvidenceFramework(e.target.value)}>
+                <option value="gdpr">GDPR Article 32</option>
+                <option value="nis2">NIS2 Directive</option>
+                <option value="pci-dss-4.0">PCI DSS 4.0</option>
+                <option value="fips-140-3">FIPS 140-3</option>
+                <option value="nist-800-57">NIST SP 800-57</option>
+                <option value="eidas">eIDAS</option>
+              </Sel>
+            </FG>
+            <FG label="Period">
+              <Sel w={100} value={evidencePeriod} onChange={(e) => setEvidencePeriod(e.target.value as any)}>
+                <option value="7d">7 days</option>
+                <option value="30d">30 days</option>
+                <option value="90d">90 days</option>
+                <option value="1y">1 year</option>
+              </Sel>
+            </FG>
+            <Btn
+              small
+              primary
+              disabled={evidenceBusy}
+              onClick={async () => {
+                setEvidenceBusy(true);
+                try {
+                  await downloadEvidenceReport(session, { framework: evidenceFramework, period: evidencePeriod });
+                  onToast?.("Evidence report downloaded");
+                } catch (e) {
+                  onToast?.(errMsg(e), "error");
+                } finally {
+                  setEvidenceBusy(false);
+                }
+              }}
+            >
+              {evidenceBusy ? "Generating..." : "Download Evidence Report"}
+            </Btn>
+          </div>
+        }
+      >
+        <div style={{ fontSize: 10, color: C.muted }}>
+          Generates a structured compliance evidence document containing posture score, framework assessment,
+          control status, open gaps, and key hygiene metrics — suitable for regulatory submissions and auditor review.
+          The report is downloaded as a JSON file that can be imported into GRC platforms.
+        </div>
+      </Section>
+
       {promptDialog.ui}
     </div>
   );

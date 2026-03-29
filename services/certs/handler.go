@@ -102,6 +102,25 @@ func (h *Handler) routes() *http.ServeMux {
 
 	mux.HandleFunc("POST /cmpv2", h.handleCMPv2)
 	mux.HandleFunc("POST /cmpv2/confirm", h.handleCMPv2Confirm)
+
+	// CT Log Monitor
+	mux.HandleFunc("GET /ct-monitor/domains", h.handleListWatchedDomains)
+	mux.HandleFunc("POST /ct-monitor/domains", h.handleAddWatchedDomain)
+	mux.HandleFunc("PATCH /ct-monitor/domains/{id}", h.handleToggleWatchedDomain)
+	mux.HandleFunc("DELETE /ct-monitor/domains/{id}", h.handleDeleteWatchedDomain)
+	mux.HandleFunc("GET /ct-monitor/entries", h.handleListCTLogEntries)
+	mux.HandleFunc("GET /ct-monitor/alerts", h.handleListCTAlerts)
+	mux.HandleFunc("POST /ct-monitor/alerts/{id}/acknowledge", h.handleAcknowledgeCTAlert)
+
+	// mTLS Mesh
+	mux.HandleFunc("GET /mesh/services", h.handleListMeshServices)
+	mux.HandleFunc("POST /mesh/services", h.handleRegisterMeshService)
+	mux.HandleFunc("POST /mesh/services/{id}/renew", h.handleRenewServiceCert)
+	mux.HandleFunc("GET /mesh/certificates", h.handleListMeshCertificates)
+	mux.HandleFunc("GET /mesh/trust-anchors", h.handleListTrustAnchors)
+	mux.HandleFunc("POST /mesh/trust-anchors", h.handleAddTrustAnchor)
+	mux.HandleFunc("GET /mesh/topology", h.handleGetTopology)
+
 	return mux
 }
 

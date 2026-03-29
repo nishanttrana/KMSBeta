@@ -42,7 +42,19 @@ const defaultDeployment: DeploymentConfig = {
       crypto_discovery: true,
       mpc_engine: true,
       data_protection: true,
-      clustering: true
+      clustering: true,
+      key_ceremony: true,
+      rotation_scheduler: true,
+      crypto_agility: true,
+      webhook_siem: true,
+      leak_scanner: true,
+      ct_monitor: true,
+      mtls_mesh: true,
+      key_escrow: true,
+      envelope_enc: true,
+      dr_drill: true,
+      ops_metrics: true,
+      backup: true
     }
   }
 };

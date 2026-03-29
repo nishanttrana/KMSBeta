@@ -33,6 +33,12 @@ func (h *Handler) HTTPHandler() http.Handler {
 	mux.HandleFunc("POST /kmip/interop/targets", h.handleCreateInteropTarget)
 	mux.HandleFunc("DELETE /kmip/interop/targets/{id}", h.handleDeleteInteropTarget)
 	mux.HandleFunc("POST /kmip/interop/targets/{id}/validate", h.handleValidateInteropTarget)
+	mux.HandleFunc("GET /tde/databases", h.handleListTDEDatabases)
+	mux.HandleFunc("POST /tde/databases", h.handleRegisterTDEDatabase)
+	mux.HandleFunc("GET /tde/databases/{id}", h.handleGetTDEDatabase)
+	mux.HandleFunc("POST /tde/databases/{id}/provision", h.handleProvisionTDEKey)
+	mux.HandleFunc("POST /tde/databases/{id}/revoke", h.handleRevokeTDEKey)
+	mux.HandleFunc("GET /tde/status", h.handleGetTDEStatus)
 	return mux
 }
 

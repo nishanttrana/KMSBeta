@@ -60,6 +60,25 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /compliance/cbom/export", h.handleCBOMExport)
 	mux.HandleFunc("GET /compliance/cbom/pqc-readiness", h.handleCBOMPQCReadiness)
 	mux.HandleFunc("GET /compliance/cbom/diff", h.handleCBOMDiff)
+
+	// Compliance Evidence Export (GDPR Art.32, NIS2, PCI-DSS, etc.)
+	mux.HandleFunc("GET /compliance/evidence/export", h.handleEvidenceExport)
+
+	// Data Risk Intelligence (DRI)
+	mux.HandleFunc("GET /compliance/risk/keys", h.handleGetKeyRiskRanking)
+	mux.HandleFunc("GET /compliance/risk/summary", h.handleGetDataRiskSummary)
+	mux.HandleFunc("GET /compliance/risk/remediation", h.handleGetRiskRemediation)
+
+	// Automated Incident Playbooks
+	mux.HandleFunc("GET /compliance/playbooks/summary", h.handleGetPlaybookSummary)
+	mux.HandleFunc("GET /compliance/playbooks", h.handleListPlaybooks)
+	mux.HandleFunc("POST /compliance/playbooks", h.handleCreatePlaybook)
+	mux.HandleFunc("GET /compliance/playbooks/{id}", h.handleGetPlaybook)
+	mux.HandleFunc("PUT /compliance/playbooks/{id}", h.handleUpdatePlaybook)
+	mux.HandleFunc("DELETE /compliance/playbooks/{id}", h.handleDeletePlaybook)
+	mux.HandleFunc("POST /compliance/playbooks/{id}/run", h.handleRunPlaybook)
+	mux.HandleFunc("GET /compliance/playbooks/{id}/runs", h.handleListPlaybookRuns)
+
 	return mux
 }
 

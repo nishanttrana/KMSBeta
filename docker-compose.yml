@@ -1,15 +1,17 @@
 name: vecta-kms
 
 x-kms-common-env: &kms-common-env
-  POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/vecta?sslmode=disable
+  POSTGRES_DSN: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vecta}?sslmode=disable&connect_timeout=10
   SQLITE_FALLBACK: "false"
   NATS_URL: nats://nats:4222
   CONSUL_HTTP_ADDR: consul:8500
   CONSUL_SERVICE_ADDRESS: $$HOSTNAME
   CONSUL_HEALTH_CHECK_TYPE: tcp
   REDIS_URL: redis://valkey:6379
-  DB_MAX_OPEN: "25"
-  DB_MAX_IDLE: "10"
+  # Increased from 25/10 — each service gets up to 50 live connections;
+  # idle connections are recycled after 5 min so the pool self-heals.
+  DB_MAX_OPEN: "50"
+  DB_MAX_IDLE: "20"
   RATE_LIMIT_RPS: "100"
   RATE_LIMIT_BURST: "200"
   WORKLOAD_IDENTITY_SHARED_SECRET: ${WORKLOAD_IDENTITY_SHARED_SECRET:-change-me-workload-secret}
@@ -32,44 +34,134 @@ x-kms-service: &kms-service
 
 services:
   postgres:
+    # PostgreSQL 17 — SIMD-accelerated sort, faster COPY/bulk-ingest, improved
+    # vacuum, better parallel query, incremental sort, zstd WAL compression.
+    # UPGRADE NOTE: Major-version upgrade from PG16 requires a data migration:
+    #   docker compose down
+    #   docker volume rm vecta-kms_postgres-data   # ← destroys existing data
+    #   docker compose up -d                        # re-runs all SQL migrations
     restart: unless-stopped
-    image: postgres:16.13-alpine
+    image: postgres:17-alpine
     command:
       - postgres
+      # ---------- Memory --------------------------------------------------
       - -c
       - shared_buffers=${PG_SHARED_BUFFERS:-256MB}
       - -c
       - effective_cache_size=${PG_EFFECTIVE_CACHE:-768MB}
+      # work_mem raised: complex JSONB/GIN sorts and key-catalog queries need it
       - -c
-      - work_mem=${PG_WORK_MEM:-4MB}
+      - work_mem=${PG_WORK_MEM:-8MB}
       - -c
-      - maintenance_work_mem=${PG_MAINT_MEM:-64MB}
+      - maintenance_work_mem=${PG_MAINT_MEM:-128MB}
+      # ---------- Connections ---------------------------------------------
       - -c
       - max_connections=${PG_MAX_CONN:-200}
+      # Kill connections idle inside an open transaction after 60 s — prevents
+      # connection pool starvation during backend crashes.
+      - -c
+      - idle_in_transaction_session_timeout=60000
+      # Abort queries that run longer than 30 s (protects against runaway scans)
+      - -c
+      - statement_timeout=30000
+      # Fail a lock-acquire that waits more than 10 s (prevents pile-ups)
+      - -c
+      - lock_timeout=10000
+      # ---------- WAL / Checkpoints --------------------------------------
       - -c
       - wal_buffers=16MB
       - -c
       - checkpoint_completion_target=0.9
       - -c
-      - random_page_cost=1.1
-      - -c
       - max_wal_size=${PG_MAX_WAL:-1GB}
+      # zstd WAL compression reduces I/O 40-60 % on typical KMS workloads
+      - -c
+      - wal_compression=zstd
+      # ---------- Planner / Statistics -----------------------------------
+      - -c
+      - random_page_cost=1.1
+      # More histogram buckets → better selectivity estimates for JSONB columns
+      - -c
+      - default_statistics_target=200
+      # JIT compilation speeds up complex GIN / JSONB queries
+      - -c
+      - jit=on
+      # ---------- Autovacuum -------------------------------------------
+      # Trigger vacuum after 5 % dead tuples (default 20 %) — KMS tables see
+      # frequent updates to ops_total, last_used, updated_at.
+      - -c
+      - autovacuum_vacuum_scale_factor=0.05
+      - -c
+      - autovacuum_analyze_scale_factor=0.02
+      # ---------- Observability ------------------------------------------
       - -c
       - log_min_duration_statement=200
+      - -c
+      - log_checkpoints=on
+      - -c
+      - log_lock_waits=on
+      # Security audit: log every connect/disconnect with user and IP
+      - -c
+      - log_connections=on
+      - -c
+      - log_disconnections=on
+      # Capture up to 4 KB of query text in pg_stat_activity
+      - -c
+      - track_activity_query_size=4096
+      - -c
+      - track_io_timing=on
+      # ---------- Security -----------------------------------------------
+      # Enforce SCRAM-SHA-256 for all password storage (already PG17 default)
+      - -c
+      - password_encryption=scram-sha-256
+      # TCP keepalives: detect dead clients after 60 s idle + 3×10 s probes
+      - -c
+      - tcp_keepalives_idle=60
+      - -c
+      - tcp_keepalives_interval=10
+      - -c
+      - tcp_keepalives_count=3
+      # ---------- Extensions (preloaded at startup) ----------------------
+      # pg_stat_statements: track execution counts and timing for every query
+      #   → exposes /top slow queries via SELECT * FROM pg_stat_statements
+      # pg_trgm: trigram similarity for fuzzy key-name search
+      # auto_explain: log slow query plans automatically (threshold below)
+      - -c
+      - shared_preload_libraries=pg_stat_statements,pg_trgm,auto_explain
+      - -c
+      - pg_stat_statements.track=all
+      - -c
+      - pg_stat_statements.max=10000
+      - -c
+      - pg_stat_statements.track_planning=on
+      # Log full EXPLAIN plan for any query exceeding 1 s
+      - -c
+      - auto_explain.log_min_duration=1000
+      - -c
+      - auto_explain.log_analyze=on
+      - -c
+      - auto_explain.log_buffers=on
+      - -c
+      - auto_explain.log_format=json
     shm_size: '256m'
     environment:
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_DB: vecta
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-vecta}
+      # Mount a hardened pg_hba.conf (see infra/postgres/pg_hba.conf)
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     ports:
-      - "5432:5432"
+      # Bind only to localhost — the DB must not be reachable from outside the host.
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d vecta"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-vecta}"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 15s
     deploy:
       resources:
         limits:
@@ -86,7 +178,7 @@ services:
     profiles: ["connection_pooling"]
     image: edoburu/pgbouncer:1.23.0
     environment:
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/vecta
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vecta}
       POOL_MODE: transaction
       MAX_CLIENT_CONN: 2000
       DEFAULT_POOL_SIZE: 50
@@ -94,12 +186,12 @@ services:
       RESERVE_POOL_SIZE: 5
       LISTEN_PORT: 6432
     ports:
-      - "6432:6432"
+      - "127.0.0.1:6432:6432"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -1024,6 +1116,25 @@ services:
       timeout: 5s
       retries: 10
 
+  backup:
+    <<: *kms-service
+    build:
+      context: .
+      dockerfile: services/backup/Dockerfile
+    image: vecta/backup:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8290"
+      GRPC_PORT: "18290"
+    ports:
+      - "8290:8290"
+      - "18290:18290"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18290"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
   hsm-connector:
     <<: *kms-service
     profiles: ["hsm_hardware"]
@@ -1066,6 +1177,44 @@ services:
       - "18440:18440"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18440"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  tfe:
+    <<: *kms-service
+    build:
+      context: .
+      dockerfile: services/tfe/Dockerfile
+    image: vecta/tfe:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8450"
+      GRPC_PORT: "18450"
+    ports:
+      - "8450:8450"
+      - "18450:18450"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18450"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  dam:
+    <<: *kms-service
+    build:
+      context: .
+      dockerfile: services/dam/Dockerfile
+    image: vecta/dam:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8460"
+      GRPC_PORT: "18460"
+    ports:
+      - "8460:8460"
+      - "18460:18460"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18460"]
       interval: 15s
       timeout: 5s
       retries: 10

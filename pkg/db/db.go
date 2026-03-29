@@ -147,7 +147,43 @@ func (d *DB) WithTenantTx(ctx context.Context, tenantID string, fn func(tx *sql.
 	return tx.Commit()
 }
 
+// RunMigrations applies pending SQL migrations from migrationsDir in filename
+// order (001_*.sql, 002_*.sql, …).  Each migration is recorded in the
+// schema_migrations table so it is executed exactly once, even if the process
+// restarts mid-run.  A PostgreSQL advisory lock (key 9876543210) prevents two
+// services from running migrations concurrently during a rolling deploy.
 func (d *DB) RunMigrations(ctx context.Context, migrationsDir string) error {
+	if d.driver == DriverPostgres {
+		// Acquire an instance-level advisory lock for the duration of migration.
+		// pg_try_advisory_lock returns false immediately if another session holds
+		// the lock, so we spin with a short back-off rather than blocking forever.
+		const lockKey = 9876543210
+		for attempt := 0; attempt < 30; attempt++ {
+			var locked bool
+			if err := d.sqlDB.QueryRowContext(ctx, "SELECT pg_try_advisory_lock($1)", lockKey).Scan(&locked); err != nil {
+				return fmt.Errorf("migration lock acquire: %w", err)
+			}
+			if locked {
+				break
+			}
+			if attempt == 29 {
+				return fmt.Errorf("migration: could not acquire advisory lock after 30 attempts")
+			}
+			time.Sleep(time.Duration(attempt+1) * 500 * time.Millisecond)
+		}
+		defer d.sqlDB.ExecContext(ctx, "SELECT pg_advisory_unlock($1)", lockKey) //nolint:errcheck
+	}
+
+	// Ensure the tracking table exists (idempotent).
+	const createTracking = `
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			filename   TEXT PRIMARY KEY,
+			applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		)`
+	if _, err := d.sqlDB.ExecContext(ctx, createTracking); err != nil {
+		return fmt.Errorf("migration: create tracking table: %w", err)
+	}
+
 	files, err := os.ReadDir(migrationsDir)
 	if err != nil {
 		return err
@@ -159,13 +195,34 @@ func (d *DB) RunMigrations(ctx context.Context, migrationsDir string) error {
 		}
 	}
 	sort.Strings(sqlFiles)
-	for _, f := range sqlFiles {
-		b, err := os.ReadFile(f)
+
+	for _, path := range sqlFiles {
+		name := filepath.Base(path)
+
+		// Skip already-applied migrations.
+		var applied bool
+		if err := d.sqlDB.QueryRowContext(ctx,
+			"SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE filename = $1)", name,
+		).Scan(&applied); err != nil {
+			return fmt.Errorf("migration: check %s: %w", name, err)
+		}
+		if applied {
+			continue
+		}
+
+		b, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
 		if _, err := d.sqlDB.ExecContext(ctx, string(b)); err != nil {
-			return fmt.Errorf("migration %s failed: %w", f, err)
+			return fmt.Errorf("migration %s failed: %w", name, err)
+		}
+
+		// Record the migration as applied.
+		if _, err := d.sqlDB.ExecContext(ctx,
+			"INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING", name,
+		); err != nil {
+			return fmt.Errorf("migration: record %s: %w", name, err)
 		}
 	}
 	return nil

@@ -72,6 +72,31 @@ type Store interface {
 	ListCertMerkleEpochs(ctx context.Context, tenantID string, limit int) ([]CertMerkleEpoch, error)
 	GetCertMerkleEpoch(ctx context.Context, tenantID string, epochID string) (CertMerkleEpoch, error)
 	GetCertMerkleProof(ctx context.Context, tenantID string, certID string) (*CertMerkleProofResponse, error)
+
+	// CT Log Monitor
+	ListWatchedDomains(ctx context.Context, tenantID string) ([]WatchedDomain, error)
+	AddWatchedDomain(ctx context.Context, d WatchedDomain) (WatchedDomain, error)
+	UpdateWatchedDomain(ctx context.Context, tenantID, id string, enabled bool) (WatchedDomain, error)
+	DeleteWatchedDomain(ctx context.Context, tenantID, id string) error
+	ListCTLogEntries(ctx context.Context, tenantID, domain string, limit int) ([]CTLogEntry, error)
+	AddCTLogEntry(ctx context.Context, e CTLogEntry) (CTLogEntry, error)
+	ListCTAlerts(ctx context.Context, tenantID string) ([]CTAlert, error)
+	CreateCTAlert(ctx context.Context, a CTAlert) (CTAlert, error)
+	AcknowledgeCTAlert(ctx context.Context, tenantID, id string) (CTAlert, error)
+	BumpCTDomainCertCount(ctx context.Context, tenantID, domain string)
+	BumpCTDomainAlertCount(ctx context.Context, tenantID, domain string)
+
+	// mTLS Mesh
+	ListMeshServices(ctx context.Context, tenantID string) ([]MeshService, error)
+	GetMeshService(ctx context.Context, tenantID, id string) (MeshService, error)
+	CreateMeshService(ctx context.Context, svc MeshService) (MeshService, error)
+	UpdateMeshServiceCert(ctx context.Context, tenantID, id, certID, certCN string, certExpiry time.Time) error
+	CreateMeshCertificate(ctx context.Context, cert MeshCertificate) (MeshCertificate, error)
+	ListMeshCertificates(ctx context.Context, tenantID string) ([]MeshCertificate, error)
+	ListTrustAnchors(ctx context.Context, tenantID string) ([]TrustAnchor, error)
+	CreateTrustAnchor(ctx context.Context, ta TrustAnchor) (TrustAnchor, error)
+	GetMeshTopology(ctx context.Context, tenantID string) ([]MeshTopologyEdge, error)
+	UpsertTopologyEdge(ctx context.Context, edge MeshTopologyEdge) error
 }
 
 type SQLStore struct {

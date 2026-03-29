@@ -14,46 +14,22 @@ export default defineConfig({
   plugins: [react()],
 
   build: {
-    // esbuild minifier (default) — fast and produces smaller output than terser
+    // Target modern browsers — smaller output, native async/await, top-level await.
+    target: "es2022",
+    // esbuild minifier is 10–20× faster than the default terser.
     minify: "esbuild",
-    // No source maps in production bundles — don't ship internal code paths
-    sourcemap: false,
-    // Warn when any single chunk exceeds 700 kB before compression.
-    // tab-restapi includes swagger-ui (~670 kB) but is lazy-loaded on demand.
-    chunkSizeWarningLimit: 700,
+    // Skip gzip size report (saves ~300 ms on large builds).
+    reportCompressedSize: false,
     rollupOptions: {
       output: {
-        // Split vendor libraries into stable long-lived chunks so they are
-        // cached independently from app code that changes on every release.
-        manualChunks: (id) => {
-          // ── Vendor: stable long-cached chunks ────────────────────────────
-          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) {
-            return "vendor-react";
-          }
-          if (id.includes("node_modules/recharts") || id.includes("node_modules/d3-") || id.includes("node_modules/victory-")) {
-            return "vendor-charts";
-          }
-          if (id.includes("node_modules/lucide-react")) {
-            return "vendor-icons";
-          }
-          if (id.includes("node_modules/@tanstack")) {
-            return "vendor-query";
-          }
-          if (id.includes("node_modules/zustand")) {
-            return "vendor-state";
-          }
-          if (id.includes("node_modules/swagger-ui-dist")) {
-            return "vendor-swagger";
-          }
-          // ── App: split the heaviest tab sub-components into own chunks ───
-          // These are lazy-loaded from WorkbenchTab and only fetched on demand.
-          if (id.includes("/tabs/TokenizeTab")) return "tab-tokenize";
-          if (id.includes("/tabs/CryptoTab"))   return "tab-crypto";
-          if (id.includes("/tabs/RestAPITab"))   return "tab-restapi";
-          if (id.includes("/tabs/PaymentTab"))   return "tab-payment";
-        }
-      }
-    }
+        manualChunks: {
+          // React runtime — almost never changes, long cache TTL.
+          "react-vendor": ["react", "react-dom"],
+          // React Query — stable library, separate chunk.
+          "query-vendor": ["@tanstack/react-query"],
+        },
+      },
+    },
   },
 
   server: {
@@ -152,11 +128,6 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/svc\/payment/, "")
       },
-      "/svc/confidential": {
-        target: serviceURL("confidential", 8240),
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/svc\/confidential/, "")
-      },
       "/svc/sbom": {
         target: serviceURL("sbom", 8180),
         changeOrigin: true,
@@ -177,6 +148,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/svc\/cluster/, "")
       },
+      "/svc/firstboot": {
+        target: serviceURL("firstboot", 9443),
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/svc\/firstboot/, "")
+      },
       "/svc/software-vault": {
         target: serviceURL("software-vault", 8440),
         changeOrigin: true,
@@ -186,6 +162,21 @@ export default defineConfig({
         target: serviceURL("auth", 8001),
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/svc\/auth/, "")
+      },
+      "/svc/discovery": {
+        target: serviceURL("discovery", 8100),
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/svc\/discovery/, "")
+      },
+      "/svc/tfe": {
+        target: serviceURL("tfe", 8450),
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/svc\/tfe/, "")
+      },
+      "/svc/dam": {
+        target: serviceURL("dam", 8460),
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/svc\/dam/, "")
       },
       "/api": {
         target: runInDocker ? "https://envoy:443" : "https://127.0.0.1:443",

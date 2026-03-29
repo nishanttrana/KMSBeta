@@ -1,74 +1,11 @@
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap");
-@import "tailwindcss";
-@config "../tailwind.config.js";
 
-/* ===================================================================
-   THEME: DARK (default)
-   =================================================================== */
-:root,
-[data-theme="dark"] {
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
   color-scheme: dark;
-  /* Structural */
-  --c-bg:          #0e1726;
-  --c-sidebar:     #121e30;
-  --c-surface:     #162033;
-  --c-card:        #1b2a40;
-  --c-card-hover:  #1f3049;
-  --c-border:      #243654;
-  --c-border-hi:   #2e4468;
-  --c-text:        #eaf0f8;
-  --c-dim:         #a8bcd4;
-  --c-muted:       #7a92ad;
-  --c-glow:        rgba(6, 214, 224, 0.15);
-  --c-glow-strong: rgba(6, 214, 224, 0.32);
-  --c-accent-dim:  rgba(6, 214, 224, 0.10);
-  --c-dim-tint:    rgba(148, 163, 184, 0.06);
-  /* Semantic — bright neons for dark backgrounds */
-  --s-accent: #06d6e0;  --s-accent-dim: rgba(6,214,224,.10);   --s-accent-mid: rgba(6,214,224,.12);
-  --s-teal:   #14b8a6;  --s-teal-dim:   rgba(20,184,166,.08);
-  --s-green:  #2dd4a0;  --s-green-dim:  rgba(45,212,160,.08);
-  --s-red:    #ef4444;  --s-red-dim:    rgba(239,68,68,.08);
-  --s-amber:  #f59e0b;  --s-amber-dim:  rgba(245,158,11,.08);
-  --s-orange: #f97316;  --s-orange-dim: rgba(249,115,22,.08);
-  --s-purple: #a78bfa;  --s-purple-dim: rgba(167,139,250,.08);
-  --s-blue:   #3b82f6;  --s-blue-dim:   rgba(59,130,246,.08);
-  --s-pink:   #ec4899;  --s-pink-dim:   rgba(236,72,153,.08);
-  --s-cyan:   #22d3ee;  --s-cyan-dim:   rgba(34,211,238,.08);
-  --s-yellow: #facc15;  --s-yellow-dim: rgba(250,204,21,.08);
-}
-
-/* ===================================================================
-   THEME: LIGHT
-   =================================================================== */
-[data-theme="light"] {
-  color-scheme: light;
-  /* Structural */
-  --c-bg:          #eef2f7;
-  --c-sidebar:     #dde6f2;
-  --c-surface:     #f5f8fc;
-  --c-card:        #ffffff;
-  --c-card-hover:  #eaf2fb;
-  --c-border:      #c8d8ea;
-  --c-border-hi:   #a8c0d8;
-  --c-text:        #0b1829;
-  --c-dim:         #1e3248;
-  --c-muted:       #38536e;
-  --c-glow:        rgba(6, 214, 224, 0.25);
-  --c-glow-strong: rgba(6, 214, 224, 0.45);
-  --c-accent-dim:  rgba(8, 145, 178, 0.12);
-  --c-dim-tint:    rgba(30, 50, 72, 0.06);
-  /* Semantic — darker, high-contrast for light backgrounds */
-  --s-accent: #0891b2;  --s-accent-dim: rgba(8,145,178,.12);   --s-accent-mid: rgba(8,145,178,.14);
-  --s-teal:   #0f766e;  --s-teal-dim:   rgba(15,118,110,.12);
-  --s-green:  #059669;  --s-green-dim:  rgba(5,150,105,.12);
-  --s-red:    #dc2626;  --s-red-dim:    rgba(220,38,38,.10);
-  --s-amber:  #b45309;  --s-amber-dim:  rgba(180,83,9,.12);
-  --s-orange: #c2410c;  --s-orange-dim: rgba(194,65,12,.10);
-  --s-purple: #6d28d9;  --s-purple-dim: rgba(109,40,217,.10);
-  --s-blue:   #1d4ed8;  --s-blue-dim:   rgba(29,78,216,.10);
-  --s-pink:   #be185d;  --s-pink-dim:   rgba(190,24,93,.10);
-  --s-cyan:   #0e7490;  --s-cyan-dim:   rgba(14,116,144,.12);
-  --s-yellow: #854d0e;  --s-yellow-dim: rgba(133,77,14,.10);
 }
 
 html,
@@ -76,30 +13,20 @@ body,
 #root {
   margin: 0;
   min-height: 100%;
-  background: var(--c-bg);
+  background: #060a11;
 }
 
 * {
   box-sizing: border-box;
 }
 
-/* Smooth theme transitions on structural properties */
-*, *::before, *::after {
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease, box-shadow 0.2s ease;
-}
-
-/* Opt-out for elements that shouldn't animate (avoids jank on hover/focus) */
-button, input, select, textarea, [role="button"] {
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.1s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-}
-
 body {
   font-family: "IBM Plex Sans", sans-serif;
-  color: var(--c-text);
+  color: #e2e8f0;
   background-image:
-    radial-gradient(circle at 8% -20%, rgba(6, 214, 224, 0.14), transparent 38%),
-    radial-gradient(circle at 95% 0%, rgba(167, 139, 250, 0.08), transparent 34%),
-    linear-gradient(180deg, var(--c-bg) 0%, var(--c-sidebar) 100%);
+    radial-gradient(circle at 8% -20%, rgba(6, 214, 224, 0.24), transparent 38%),
+    radial-gradient(circle at 95% 0%, rgba(167, 139, 250, 0.12), transparent 34%),
+    linear-gradient(180deg, #060a11 0%, #0a0f1a 100%);
 }
 
 /* ===================================================================
@@ -229,7 +156,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--c-bg);
+  background: #060a11;
   background-image:
     radial-gradient(circle at 8% -20%, rgba(6, 214, 224, 0.12), transparent 38%),
     radial-gradient(circle at 95% 0%, rgba(167, 139, 250, 0.06), transparent 34%);
@@ -360,38 +287,164 @@ body {
 }
 
 .vecta-accent-glow {
-  box-shadow: 0 0 0 1px rgba(6, 214, 224, 0.12),
-              0 0 14px rgba(6, 214, 224, 0.08);
+  box-shadow: 0 0 0 1px rgba(6, 214, 224, 0.08),
+              0 0 12px rgba(6, 214, 224, 0.06);
 }
 
 .vecta-accent-glow-strong {
-  box-shadow: 0 0 0 1px rgba(6, 214, 224, 0.22),
-              0 0 24px rgba(6, 214, 224, 0.14);
+  box-shadow: 0 0 0 1px rgba(6, 214, 224, 0.15),
+              0 0 20px rgba(6, 214, 224, 0.1);
 }
 
 .vecta-card-shadow {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25),
-              0 4px 14px rgba(0, 0, 0, 0.18),
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2),
+              0 4px 12px rgba(0, 0, 0, 0.15),
               0 0 0 1px rgba(26, 41, 68, 0.5);
 }
 
-.vecta-transition {
-  transition: all 0.15s ease;
+/* ===================================================================
+   FOCUS RING — branded keyboard-focus indicator
+   =================================================================== */
+
+:focus-visible {
+  outline: 2px solid rgba(6, 214, 224, 0.55);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
-.vecta-gradient-card {
-  background: linear-gradient(135deg, #131d2e 0%, #0f1521 100%);
+/* ===================================================================
+   ENTERPRISE BADGE / TAG
+   =================================================================== */
+
+.vecta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+  line-height: 1.6;
 }
 
-/* Shell animations — moved from inline <style> tag to avoid per-render string allocation */
-@keyframes pulse    { 0%,100% { opacity: 1 } 50% { opacity: .6 } }
-@keyframes slideIn  { from { opacity: 0; transform: translateX(20px) } to { opacity: 1; transform: translateX(0) } }
+.vecta-badge-green  { color: #2dd4a0; background: rgba(45,212,160,.08);  border-color: rgba(45,212,160,.2);  }
+.vecta-badge-red    { color: #ef4444; background: rgba(239,68,68,.08);   border-color: rgba(239,68,68,.2);   }
+.vecta-badge-amber  { color: #f59e0b; background: rgba(245,158,11,.08);  border-color: rgba(245,158,11,.2);  }
+.vecta-badge-blue   { color: #3b82f6; background: rgba(59,130,246,.08);  border-color: rgba(59,130,246,.2);  }
+.vecta-badge-accent { color: #06d6e0; background: rgba(6,214,224,.08);   border-color: rgba(6,214,224,.2);   }
+.vecta-badge-purple { color: #a78bfa; background: rgba(167,139,250,.08); border-color: rgba(167,139,250,.2); }
 
-/* Custom scrollbars — thin, accent-colored */
-*::-webkit-scrollbar         { width: 5px; height: 5px }
-*::-webkit-scrollbar-track   { background: transparent }
-*::-webkit-scrollbar-thumb   { background: var(--c-border-hi, #2e4468); border-radius: 3px }
-*::-webkit-scrollbar-thumb:hover { background: var(--s-accent, #06d6e0) }
+/* ===================================================================
+   TABLES — enterprise data-grid polish
+   Applied to <table className="vecta-table"> across all tabs.
+   =================================================================== */
+
+.vecta-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.vecta-table thead tr {
+  border-bottom: 1px solid #1a2944;
+}
+
+.vecta-table thead th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.vecta-table tbody tr {
+  border-bottom: 1px solid rgba(26, 41, 68, 0.5);
+  transition: background 0.1s;
+}
+
+.vecta-table tbody tr:hover {
+  background: rgba(6, 214, 224, 0.03);
+}
+
+.vecta-table tbody td {
+  padding: 10px 12px;
+  color: #94a3b8;
+  vertical-align: middle;
+}
+
+/* ===================================================================
+   ENTERPRISE STAT CARD
+   =================================================================== */
+
+.vecta-stat-card {
+  background: #131d2e;
+  border: 1px solid #1a2944;
+  border-radius: 10px;
+  padding: 16px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.vecta-stat-card:hover {
+  border-color: #243656;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* ===================================================================
+   SECTION HEADER — standardised across tab content
+   =================================================================== */
+
+.vecta-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.vecta-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: -0.1px;
+}
+
+.vecta-section-subtitle {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+  line-height: 1.5;
+}
+
+/* ===================================================================
+   INPUT FONT INHERIT — all form controls use IBM Plex Sans
+   =================================================================== */
+
+input, textarea, select, button {
+  font-family: "IBM Plex Sans", -apple-system, sans-serif;
+}
+
+/* ===================================================================
+   SMOOTH TRANSITIONS for interactive elements
+   =================================================================== */
+
+a {
+  transition: color 0.12s;
+}
+
+/* Subtle noise texture for premium depth */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0.018;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 
 /* Login screen animations */
 @keyframes floatParticle {
@@ -416,15 +469,4 @@ body {
 @keyframes spinRingCCW {
   from { transform: rotate(0deg); }
   to   { transform: rotate(-360deg); }
-}
-
-/* Subtle noise texture for premium depth */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9998;
-  opacity: 0.022;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }

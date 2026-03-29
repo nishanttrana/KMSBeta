@@ -18,6 +18,12 @@ type Store interface {
 	UpsertConfig(ctx context.Context, item AIConfig) error
 	CreateInteraction(ctx context.Context, item AIInteraction) error
 	ListRecentInteractions(ctx context.Context, tenantID string, limit int) ([]AIInteraction, error)
+
+	ListAIProtectPolicies(ctx context.Context, tenantID string) ([]AIProtectPolicy, error)
+	CreateAIProtectPolicy(ctx context.Context, p AIProtectPolicy) (AIProtectPolicy, error)
+	DeleteAIProtectPolicy(ctx context.Context, tenantID, id string) error
+	InsertAIProtectAuditEntry(ctx context.Context, e AIProtectAuditEntry) error
+	ListAIProtectAuditEntries(ctx context.Context, tenantID string, limit int) ([]AIProtectAuditEntry, error)
 }
 
 type SQLStore struct {
