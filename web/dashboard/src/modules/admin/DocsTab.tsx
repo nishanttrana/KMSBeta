@@ -3459,7 +3459,7 @@ const SectionApiOpenAPI = () => {
             key={label}
             href={href}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             style={{
               fontSize: 10,
               fontWeight: 600,

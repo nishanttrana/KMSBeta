@@ -235,8 +235,26 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
     if (!session?.token || !tenantID) {
       return;
     }
-    if (!String(newUsername || "").trim() || !String(newEmail || "").trim() || !String(newPassword || "").trim()) {
+    const trimmedUsername = String(newUsername || "").trim();
+    const trimmedEmail = String(newEmail || "").trim();
+    const trimmedPassword = String(newPassword || "").trim();
+    if (!trimmedUsername || !trimmedEmail || !trimmedPassword) {
       onToast("Username, email, and password are required.");
+      return;
+    }
+    // Email format validation
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(trimmedEmail)) {
+      onToast("Invalid email format.");
+      return;
+    }
+    // Password complexity: min 12 chars, upper, lower, digit, special
+    if (trimmedPassword.length < 12) {
+      onToast("Password must be at least 12 characters.");
+      return;
+    }
+    if (!/[A-Z]/.test(trimmedPassword) || !/[a-z]/.test(trimmedPassword) || !/\d/.test(trimmedPassword) || !/[^A-Za-z0-9\s]/.test(trimmedPassword)) {
+      onToast("Password must include uppercase, lowercase, digit, and special character.");
       return;
     }
     setCreateBusy(true);
@@ -308,8 +326,17 @@ export function useUserAdminModel({ session, onToast }: Pick<AdminTabProps, "ses
       onToast("Select a user for reset.");
       return;
     }
-    if (!String(resetPasswordValue || "").trim()) {
+    const trimmedResetPw = String(resetPasswordValue || "").trim();
+    if (!trimmedResetPw) {
       onToast("Provide new password.");
+      return;
+    }
+    if (trimmedResetPw.length < 12) {
+      onToast("Reset password must be at least 12 characters.");
+      return;
+    }
+    if (!/[A-Z]/.test(trimmedResetPw) || !/[a-z]/.test(trimmedResetPw) || !/\d/.test(trimmedResetPw) || !/[^A-Za-z0-9\s]/.test(trimmedResetPw)) {
+      onToast("Reset password must include uppercase, lowercase, digit, and special character.");
       return;
     }
     setUpdateBusy(`${userID}:reset`);

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -233,11 +234,12 @@ func (h *Handler) handleSSOCallback(w http.ResponseWriter, r *http.Request) {
 		"provider": provider,
 	})
 
-	// Redirect back to frontend with SSO token
+	// Redirect back to frontend with SSO token via URL fragment (not query string)
+	// to prevent token leakage via Referrer header.
 	redirectBase := identityProviderConfigMapString(cfg.Config, "redirect_uri", "/")
-	// For SAML, redirect_uri is the ACS URL; use a frontend base instead
-	frontendURL := fmt.Sprintf("/?sso_provider=%s&sso_token=%s&sso_tenant=%s", provider, token, tenantID)
 	_ = redirectBase // might be used for OIDC origin check in the future
+	frontendURL := fmt.Sprintf("/#sso_provider=%s&sso_token=%s&sso_tenant=%s",
+		url.QueryEscape(provider), url.QueryEscape(token), url.QueryEscape(tenantID))
 
 	http.Redirect(w, r, frontendURL, http.StatusFound)
 }

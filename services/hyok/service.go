@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -85,7 +86,7 @@ func (s *Service) ListEndpoints(ctx context.Context, tenantID string) ([]Endpoin
 	for _, item := range current {
 		index[item.Protocol] = item
 	}
-	protocols := []string{ProtocolDKE, ProtocolSalesforce, ProtocolGoogleEKM, ProtocolGeneric}
+	protocols := []string{ProtocolDKE, ProtocolSalesforce, ProtocolGoogleEKM, ProtocolGeneric, ProtocolServiceNow, ProtocolAlibaba}
 	out := make([]EndpointConfig, 0, len(protocols))
 	for _, p := range protocols {
 		if item, ok := index[p]; ok {
@@ -507,8 +508,8 @@ func (s *Service) GetDKEPublicKey(ctx context.Context, tenantID string, keyID st
 		format = "pem"
 	}
 	if publicKey == "" {
-		publicKey = "DKE-PUBLIC-" + hashJSONPayload(map[string]string{"tenant_id": tenantID, "key_id": keyID})[:32]
-		format = "opaque"
+		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "error", "", "public key not available for key "+keyID, "", policyDecision)
+		return DKEPublicKeyResponse{}, fmt.Errorf("public key not available for key %s: ensure the key exists in KeyCore and has an RSA public component", keyID)
 	}
 	out := DKEPublicKeyResponse{
 		KeyID:      keyID,
@@ -780,6 +781,10 @@ func protocolEventSubject(protocol string, operation string) string {
 		default:
 			return "audit.hyok.wrap_request"
 		}
+	case ProtocolServiceNow:
+		return "audit.hyok.servicenow_request"
+	case ProtocolAlibaba:
+		return "audit.hyok.alibaba_request"
 	default:
 		return "audit.hyok.wrap_request"
 	}

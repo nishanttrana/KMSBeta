@@ -614,6 +614,12 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		if retryAfter < 1 {
 			retryAfter = 1
 		}
+		// A09: audit-log account lockout events
+		_ = h.publishAudit(r.Context(), "audit.auth.account_locked", reqID, req.TenantID, map[string]any{
+			"username":   req.Username,
+			"source_ip":  clientIP(r),
+			"locked_until": lockUntil.UTC().Format(time.RFC3339),
+		})
 		w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
 		writeJSON(w, http.StatusTooManyRequests, map[string]any{
 			"error": map[string]any{
@@ -636,23 +642,43 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 			err = nil
 		} else {
 			_, _ = h.logic.limiter.FailWithPolicy(rlKey, time.Now().UTC(), securityPolicy.MaxFailedAttempts, lockoutWindow)
+			// A09: audit-log login failure for invalid credentials
+			_ = h.publishAudit(r.Context(), "audit.auth.login_failed", reqID, req.TenantID, map[string]any{
+				"username":  req.Username,
+				"source_ip": clientIP(r),
+				"reason":    "invalid_credentials",
+			})
 			writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid credentials", reqID, req.TenantID)
 			return
 		}
 	}
 	if normalizeUserStatus(u.Status) != "active" {
 		_, _ = h.logic.limiter.FailWithPolicy(rlKey, time.Now().UTC(), securityPolicy.MaxFailedAttempts, lockoutWindow)
+		// A09: audit-log login attempt on disabled account
+		_ = h.publishAudit(r.Context(), "audit.auth.login_failed", reqID, req.TenantID, map[string]any{
+			"username":  req.Username,
+			"user_id":   u.ID,
+			"source_ip": clientIP(r),
+			"reason":    "user_disabled",
+		})
 		writeErr(w, http.StatusUnauthorized, "unauthorized", "user is disabled", reqID, req.TenantID)
 		return
 	}
 	if len(u.TOTPSecret) > 0 && !ValidateTOTP(string(u.TOTPSecret), req.TOTPCode, time.Now().UTC()) {
 		_, _ = h.logic.limiter.FailWithPolicy(rlKey, time.Now().UTC(), securityPolicy.MaxFailedAttempts, lockoutWindow)
+		// A09: audit-log MFA failure
+		_ = h.publishAudit(r.Context(), "audit.auth.login_failed", reqID, req.TenantID, map[string]any{
+			"username":  req.Username,
+			"user_id":   u.ID,
+			"source_ip": clientIP(r),
+			"reason":    "invalid_mfa_code",
+		})
 		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid mfa code", reqID, req.TenantID)
 		return
 	}
 	tokenPerms, err := h.resolveEffectivePermissions(r.Context(), req.TenantID, u.ID, u.Role)
 	if err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, req.TenantID)
+		writeErr(w, http.StatusForbidden, "forbidden", "insufficient permissions", reqID, req.TenantID)
 		return
 	}
 	if u.MustChangePassword {
@@ -766,6 +792,9 @@ func (h *Handler) handleChangePassword(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, code, "store_error", "failed to update password", reqID, claims.TenantID)
 		return
 	}
+	// Invalidate all existing sessions for this user to prevent session fixation
+	// after password change. A new session is created below.
+	_ = h.store.DeleteUserSessions(r.Context(), claims.TenantID, claims.UserID)
 	perms, err := h.resolveEffectivePermissions(r.Context(), claims.TenantID, user.ID, user.Role)
 	if err != nil {
 		writeErr(w, http.StatusForbidden, "forbidden", err.Error(), reqID, claims.TenantID)
@@ -2716,7 +2745,8 @@ func firstNonEmptyAuthString(values ...string) string {
 
 func decodeJSON(r *http.Request, out interface{}) error {
 	defer r.Body.Close() //nolint:errcheck
-	dec := json.NewDecoder(r.Body)
+	// A04: limit request body to 1 MB to prevent resource exhaustion
+	dec := json.NewDecoder(io.LimitReader(r.Body, 1<<20))
 	dec.DisallowUnknownFields()
 	return dec.Decode(out)
 }

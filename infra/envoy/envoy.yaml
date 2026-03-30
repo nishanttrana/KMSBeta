@@ -38,7 +38,7 @@ static_resources:
           require_client_certificate: false
           common_tls_context:
             tls_params:
-              tls_minimum_protocol_version: TLSv1_2
+              tls_minimum_protocol_version: TLSv1_3
             tls_certificates:
             - certificate_chain:
                 filename: /tmp/envoy-certs/tls.crt
@@ -74,6 +74,14 @@ static_resources:
                 header: { key: "strict-transport-security", value: "max-age=31536000; includeSubDomains" }
               - append_action: OVERWRITE_IF_EXISTS_OR_ADD
                 header: { key: "x-content-type-options", value: "nosniff" }
+              - append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                header: { key: "x-frame-options", value: "DENY" }
+              - append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                header: { key: "content-security-policy", value: "default-src 'self'" }
+              - append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                header: { key: "referrer-policy", value: "strict-origin-when-cross-origin" }
+              - append_action: OVERWRITE_IF_EXISTS_OR_ADD
+                header: { key: "permissions-policy", value: "camera=(), microphone=(), geolocation=()" }
               routes:
               - match: { prefix: "/api/auth" }
                 route: { cluster: auth_http, timeout: 30s, prefix_rewrite: "/" }
@@ -416,5 +424,5 @@ static_resources:
 admin:
   address:
     socket_address:
-      address: 0.0.0.0
+      address: 127.0.0.1
       port_value: 9901

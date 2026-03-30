@@ -6,6 +6,7 @@ infra/certs/out/**
 infra/deployment/certs-bootstrap.secret
 
 # Local environment overrides
+.env
 .env.local
 .env.*.local
 docker-compose.override.yml
@@ -20,3 +21,5 @@ web/dashboard/tsconfig.tsbuildinfo
 .tmp_*
 governance.exe
 posture.exe
+local-data/
+web/dashboard/dist/

@@ -236,7 +236,11 @@ func (h *Handler) handleListUsage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {
 	status := httpStatusForErr(err)
 	code := "internal_error"
-	message := err.Error()
+	// A05: avoid leaking internal error details for 5xx responses
+	message := "internal server error"
+	if status < 500 {
+		message = err.Error()
+	}
 	if svcErr, ok := err.(serviceError); ok {
 		code = svcErr.Code
 		message = svcErr.Message

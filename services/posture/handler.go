@@ -333,7 +333,8 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID stri
 		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, reqID, tenantID)
 		return
 	}
-	writeErr(w, http.StatusInternalServerError, "internal_error", err.Error(), reqID, tenantID)
+	// A05: never leak internal error details to the client
+	writeErr(w, http.StatusInternalServerError, "internal_error", "internal server error", reqID, tenantID)
 }
 
 func atoi(raw string, fallback int, min int, max int) int {

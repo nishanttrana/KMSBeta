@@ -60,6 +60,7 @@ type Store interface {
 
 	CreateSession(ctx context.Context, s Session) error
 	DeleteSession(ctx context.Context, tenantID string, sessionID string) error
+	DeleteUserSessions(ctx context.Context, tenantID string, userID string) error
 
 	GetPasswordPolicy(ctx context.Context, tenantID string) (PasswordPolicy, error)
 	UpsertPasswordPolicy(ctx context.Context, policy PasswordPolicy) (PasswordPolicy, error)
@@ -354,7 +355,8 @@ VALUES ($1,$2,$3,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
 }
 
 func (s *SQLStore) ListTenants(ctx context.Context) ([]Tenant, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `SELECT id,name,status,created_at FROM auth_tenants ORDER BY id`)
+	// A04: safety limit to prevent resource exhaustion on unbounded list
+	rows, err := s.db.SQL().QueryContext(ctx, `SELECT id,name,status,created_at FROM auth_tenants ORDER BY id LIMIT 1000`)
 	if err != nil {
 		return nil, err
 	}
@@ -758,11 +760,13 @@ WHERE tenant_id=$1 AND id=$2
 }
 
 func (s *SQLStore) ListUsers(ctx context.Context, tenantID string) ([]User, error) {
+	// A04: safety limit to prevent resource exhaustion on unbounded list
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT id, tenant_id, username, email, role, status, must_change_password, created_at
 FROM auth_users
 WHERE tenant_id=$1
 ORDER BY created_at DESC
+LIMIT 1000
 `, tenantID)
 	if err != nil {
 		return nil, err
@@ -910,6 +914,7 @@ SELECT id, tenant_id, client_name, client_type, interface_name, subject_id, desc
 FROM auth_client_registrations
 WHERE tenant_id=$1
 ORDER BY created_at DESC
+LIMIT 1000
 `, tenantID)
 	if err != nil {
 		return nil, err
@@ -1181,6 +1186,13 @@ DELETE FROM auth_sessions WHERE tenant_id=$1 AND id=$2
 		return errNotFound
 	}
 	return nil
+}
+
+func (s *SQLStore) DeleteUserSessions(ctx context.Context, tenantID string, userID string) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM auth_sessions WHERE tenant_id=$1 AND user_id=$2
+`, tenantID, userID)
+	return err
 }
 
 func (s *SQLStore) GetPasswordPolicy(ctx context.Context, tenantID string) (PasswordPolicy, error) {

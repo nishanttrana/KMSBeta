@@ -351,7 +351,7 @@ export function DRDrillTab({ session }: { session: any; enabledFeatures?: any; k
                       <td style={{ padding: "11px 14px", color: C.muted }}>{r.triggered_by}</td>
                       <td style={{ padding: "11px 14px" }}>
                         {r.report_url && (
-                          <a href={r.report_url} target="_blank" rel="noreferrer" style={{ color: C.accent, display: "flex", alignItems: "center", gap: 4, fontSize: 12, textDecoration: "none" }}><ExternalLink size={12} /> Report</a>
+                          <a href={r.report_url} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, display: "flex", alignItems: "center", gap: 4, fontSize: 12, textDecoration: "none" }}><ExternalLink size={12} /> Report</a>
                         )}
                       </td>
                     </tr>

@@ -570,12 +570,14 @@ const API_ENDPOINTS = [
   { group: "Discovery",      method: "POST",   path: "/svc/discovery/pii/scan",             desc: "Scan content for PII / PAN / PHI",         auth: true },
   { group: "Discovery",      method: "GET",    path: "/svc/discovery/summary",              desc: "Discovery fleet summary stats",             auth: true },
   { group: "Discovery",      method: "GET",    path: "/svc/discovery/lineage/{id}",         desc: "Data lineage for a specific asset",         auth: true },
-  // TDE
-  { group: "TDE",            method: "GET",    path: "/svc/kmip/tde/databases",             desc: "List TDE-registered databases",             auth: true },
-  { group: "TDE",            method: "POST",   path: "/svc/kmip/tde/databases",             desc: "Register a database for TDE",               auth: true },
-  { group: "TDE",            method: "POST",   path: "/svc/kmip/tde/databases/{id}/provision", desc: "Provision / rotate TDE master key",     auth: true },
-  { group: "TDE",            method: "POST",   path: "/svc/kmip/tde/databases/{id}/revoke", desc: "Revoke TDE key for a database",             auth: true },
-  { group: "TDE",            method: "GET",    path: "/svc/kmip/tde/status",                desc: "TDE fleet status summary",                  auth: true },
+  // EKM TDE (Database Encryption)
+  { group: "EKM",            method: "POST",   path: "/svc/ekm/agents/register",            desc: "Register EKM agent for TDE",                auth: true },
+  { group: "EKM",            method: "GET",    path: "/svc/ekm/agents",                     desc: "List EKM agents",                           auth: true },
+  { group: "EKM",            method: "GET",    path: "/svc/ekm/agents/{id}/deploy?os=linux", desc: "Download agent deploy package",             auth: true },
+  { group: "EKM",            method: "POST",   path: "/svc/ekm/databases",                  desc: "Register database under agent",             auth: true },
+  { group: "EKM",            method: "POST",   path: "/svc/ekm/tde/keys/{id}/rotate",       desc: "Rotate TDE key",                            auth: true },
+  { group: "EKM",            method: "POST",   path: "/svc/ekm/tde/keys/{id}/revoke",       desc: "Revoke TDE key",                            auth: true },
+  { group: "EKM",            method: "POST",   path: "/svc/ekm/databases/{id}/revoke-tde",  desc: "Revoke TDE for a database",                 auth: true },
   // TFE
   { group: "TFE",            method: "GET",    path: "/svc/tfe/agents",                     desc: "List registered TFE agents",                auth: true },
   { group: "TFE",            method: "POST",   path: "/svc/tfe/agents",                     desc: "Register a new TFE agent",                  auth: true },

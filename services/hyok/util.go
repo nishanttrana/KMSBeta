@@ -47,6 +47,10 @@ func normalizeProtocol(v string) string {
 		return ProtocolGoogleEKM
 	case ProtocolGeneric:
 		return ProtocolGeneric
+	case ProtocolServiceNow:
+		return ProtocolServiceNow
+	case ProtocolAlibaba:
+		return ProtocolAlibaba
 	default:
 		return ""
 	}
@@ -106,6 +110,14 @@ func validateProtocolOperation(protocol string, operation string) error {
 			"decrypt": {},
 			"wrap":    {},
 			"unwrap":  {},
+		},
+		ProtocolServiceNow: {
+			"wrap":   {},
+			"unwrap": {},
+		},
+		ProtocolAlibaba: {
+			"encrypt": {},
+			"decrypt": {},
 		},
 	}
 	if _, ok := allowed[protocol][operation]; !ok {

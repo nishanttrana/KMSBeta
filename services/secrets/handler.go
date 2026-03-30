@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
@@ -558,6 +560,10 @@ func mustVaultTenant(r *http.Request) string {
 	if tenantID == "" {
 		tenantID = "default"
 	}
+	// A01 fix: verify vault tenant matches JWT claims (if authenticated)
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		return "" // caller must check for empty return
+	}
 	return tenantID
 }
 
@@ -647,6 +653,11 @@ func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
 	}
 	if tenantID == "" {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
+		return ""
+	}
+	// A01 fix: verify the request tenant matches the authenticated JWT tenant
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", requestID(r), tenantID)
 		return ""
 	}
 	return tenantID

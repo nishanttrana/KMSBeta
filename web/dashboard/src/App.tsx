@@ -25,7 +25,7 @@ import { getAuthSystemHealth, type AuthSystemHealthSnapshot } from "./lib/authAd
 import { enabledFeatures, loadDeploymentConfig } from "./lib/deployment";
 import { mapToLiveEvent, parseWSMessage, wsBaseURL } from "./lib/liveFeed";
 import { getUnreadAlertCounts } from "./lib/reporting";
-import { getGlobalInFlightRequestCount, subscribeGlobalInFlightRequestCount } from "./lib/serviceApi";
+import { getGlobalInFlightRequestCount, setOnUnauthorizedHandler, subscribeGlobalInFlightRequestCount } from "./lib/serviceApi";
 import { useLiveStore } from "./store/live";
 
 const FEATURE_KEYS: FeatureKey[] = [
@@ -373,6 +373,16 @@ export default function App() {
     () => applyPermissionScope(runtimeFeatureSet, session),
     [runtimeFeatureSet, session]
   );
+
+  // Register global 401/403 handler to auto-logout on unauthorized API responses
+  useEffect(() => {
+    setOnUnauthorizedHandler(() => {
+      abortPendingRefresh();
+      clearSession();
+      setSession(null);
+      setIdleWarningVisible(false);
+    });
+  }, []);
 
   useEffect(() => {
     return subscribeGlobalInFlightRequestCount((count) => {

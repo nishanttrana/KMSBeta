@@ -7,6 +7,8 @@ const (
 	ProtocolSalesforce = "salesforce"
 	ProtocolGoogleEKM  = "google"
 	ProtocolGeneric    = "generic"
+	ProtocolServiceNow = "servicenow" // ServiceNow HYOK/Cache-Only Key
+	ProtocolAlibaba    = "alibaba"    // Alibaba Cloud EKM
 )
 
 const (

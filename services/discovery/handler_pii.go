@@ -34,7 +34,7 @@ var piiPatterns = []PIIPattern{
 	},
 	{
 		Label:       "ssn",
-		Regex:       regexp.MustCompile(`\b(?!000|666|9\d{2})\d{3}[-\s]?(?!00)\d{2}[-\s]?(?!0000)\d{4}\b`),
+		Regex:       regexp.MustCompile(`\b[0-9]{3}[-\s]?[0-9]{2}[-\s]?[0-9]{4}\b`),
 		Regulation:  []string{"GDPR", "CCPA"},
 		Severity:    "high",
 		Description: "US Social Security Number",

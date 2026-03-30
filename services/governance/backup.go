@@ -557,7 +557,7 @@ func (s *Service) resolveRestoreBackupKey(ctx context.Context, store *SQLStore, 
 		}
 		secret := strings.TrimSpace(os.Getenv("BACKUP_HSM_WRAP_SECRET"))
 		if secret == "" {
-			secret = "vecta-backup-wrap-secret-change-me"
+			return nil, errors.New("BACKUP_HSM_WRAP_SECRET environment variable is required but not set")
 		}
 		requestTenantID := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["request_tenant_id"]))
 		targetTenantID := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["target_tenant_id"]))
@@ -654,7 +654,7 @@ func buildBackupKeyPackage(backupKey []byte, hsmBound bool, binding backupHSMBin
 	if hsmBound {
 		secret := strings.TrimSpace(os.Getenv("BACKUP_HSM_WRAP_SECRET"))
 		if secret == "" {
-			secret = "vecta-backup-wrap-secret-change-me"
+			return nil, nil, errors.New("BACKUP_HSM_WRAP_SECRET environment variable is required but not set")
 		}
 		derived := sha256.Sum256([]byte(secret + "|" + binding.Fingerprint + "|" + requestTenantID + "|" + targetTenantID))
 		aad := []byte("vecta-kms:backup:hsm-binding:" + binding.FingerprintHash)
@@ -903,6 +903,10 @@ func (s *SQLStore) restoreSnapshot(ctx context.Context, scope string, targetTena
 	for name := range tables {
 		trimmed := strings.TrimSpace(name)
 		if trimmed == "" {
+			continue
+		}
+		// A03 defense-in-depth: reject table names with suspicious characters
+		if strings.ContainsAny(trimmed, ";'\\--/*") || strings.Contains(trimmed, "..") {
 			continue
 		}
 		tableNames = append(tableNames, trimmed)

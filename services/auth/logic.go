@@ -204,6 +204,10 @@ func GenerateTOTPSecret() (string, error) {
 	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(raw), nil
 }
 
+// totpUsedCodes tracks recently used TOTP codes to prevent replay attacks.
+// Key format: "secret_hash:code" -> expiry time.
+var totpUsedCodes sync.Map
+
 func ValidateTOTP(secret string, code string, now time.Time) bool {
 	secret = strings.TrimSpace(secret)
 	if secret == "" {
@@ -217,10 +221,35 @@ func ValidateTOTP(secret string, code string, now time.Time) bool {
 
 	for drift := int64(-1); drift <= 1; drift++ {
 		if hotpCode(decoded, now.Unix()/30+drift) == code {
+			// Replay protection: reject codes that were already used in this window.
+			replayKey := fmt.Sprintf("%x:%s", sha256.Sum256([]byte(secret)), code)
+			if expiry, loaded := totpUsedCodes.Load(replayKey); loaded {
+				if now.Before(expiry.(time.Time)) {
+					return false
+				}
+			}
+			// Mark code as used for 90 seconds (covers the full drift window).
+			totpUsedCodes.Store(replayKey, now.Add(90*time.Second))
 			return true
 		}
 	}
 	return false
+}
+
+func init() {
+	// Periodically clean expired TOTP replay entries to prevent memory leak.
+	go func() {
+		for {
+			time.Sleep(5 * time.Minute)
+			now := time.Now()
+			totpUsedCodes.Range(func(key, value any) bool {
+				if now.After(value.(time.Time)) {
+					totpUsedCodes.Delete(key)
+				}
+				return true
+			})
+		}
+	}()
 }
 
 func hotpCode(secret []byte, counter int64) string {

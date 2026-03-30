@@ -1,4 +1,5 @@
 import type { AuthSession } from "./auth";
+import { clearSession } from "./auth";
 
 type APIErrorShape = {
   error?: {
@@ -7,6 +8,22 @@ type APIErrorShape = {
 };
 
 const REQUEST_TIMEOUT_MS = 20_000;
+
+// Global handler for 401/403: clear session and redirect to login
+type UnauthorizedListener = () => void;
+let _onUnauthorized: UnauthorizedListener | null = null;
+export function setOnUnauthorizedHandler(handler: UnauthorizedListener): void {
+  _onUnauthorized = handler;
+}
+
+function handleUnauthorizedResponse(status: number): void {
+  if (status === 401 || status === 403) {
+    clearSession();
+    if (_onUnauthorized) {
+      _onUnauthorized();
+    }
+  }
+}
 type RequestCountListener = (count: number) => void;
 export type ServiceRequestInit = RequestInit & {
   skipGlobalLoading?: boolean;
@@ -110,6 +127,7 @@ export async function serviceRequest<T = unknown>(
 ): Promise<T> {
   const response = await serviceRequestRaw(session, service, path, init, timeoutMs);
   if (!response.ok) {
+    handleUnauthorizedResponse(response.status);
     throw new Error(await parseError(response));
   }
   if (response.status === 204) {

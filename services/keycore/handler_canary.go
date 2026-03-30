@@ -44,7 +44,7 @@ func (h *Handler) handleListCanaryKeys(w http.ResponseWriter, r *http.Request) {
 	}
 	keys, err := h.svc.store.ListCanaryKeys(r.Context(), tenantID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_canary_keys_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "list_canary_keys_failed", "failed to list canary keys", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"data": keys, "request_id": reqID})
@@ -100,7 +100,7 @@ func (h *Handler) handleCreateCanaryKey(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := h.svc.store.CreateCanaryKey(r.Context(), key); err != nil {
-		writeErr(w, http.StatusInternalServerError, "create_canary_key_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "create_canary_key_failed", "failed to create canary key", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"data": key, "request_id": reqID})
@@ -124,7 +124,7 @@ func (h *Handler) handleGetCanaryKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusNotFound, "not_found", "canary key not found", reqID, tenantID)
 			return
 		}
-		writeErr(w, http.StatusInternalServerError, "get_canary_key_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "get_canary_key_failed", "failed to retrieve canary key", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"data": key, "request_id": reqID})
@@ -147,7 +147,7 @@ func (h *Handler) handleDeleteCanaryKey(w http.ResponseWriter, r *http.Request) 
 			writeErr(w, http.StatusNotFound, "not_found", "canary key not found", reqID, tenantID)
 			return
 		}
-		writeErr(w, http.StatusInternalServerError, "delete_canary_key_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "delete_canary_key_failed", "failed to delete canary key", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"data": map[string]string{"status": "deactivated"}, "request_id": reqID})
@@ -173,7 +173,7 @@ func (h *Handler) handleTripCanaryKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusNotFound, "not_found", "canary key not found", reqID, tenantID)
 			return
 		}
-		writeErr(w, http.StatusInternalServerError, "get_canary_key_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "get_canary_key_failed", "failed to retrieve canary key", reqID, tenantID)
 		return
 	}
 

@@ -25,8 +25,29 @@ import {
   registerBitLockerClient,
   registerEKMAgent,
   scanBitLockerWindows,
-  rotateEKMAgentKey
+  rotateEKMAgentKey,
+  revokeDatabaseTDE,
+  validateAgentDeployment,
+  listAzureEKMConfigs,
+  createAzureEKMConfig,
+  deleteAzureEKMConfig,
+  testAzureConnection,
+  syncAzureKeys,
+  listAzureKeyMappings,
+  createAzureKeyMapping,
+  deleteAzureKeyMapping,
+  importKeyToAzure,
+  rotateAzureKey,
+  wrapAzureKey,
+  unwrapAzureKey,
+  listGoogleCSEConfigs,
+  createGoogleCSEConfig,
+  deleteGoogleCSEConfig,
+  listGoogleCSEKeys,
+  createGoogleCSEKey,
+  deleteGoogleCSEKey
 } from "../../../lib/ekm";
+import type { AzureEKMConfig, AzureKeyMapping } from "../../../lib/ekm";
 import { KMIPTab } from "./KMIPTab";
 
 /* ── Setup guide content per DB engine ── */
@@ -60,6 +81,51 @@ const SETUP_GUIDES: Record<string, { title: string; steps: string[] }> = {
       "9. Schedule key rotation via the dashboard Rotate button.",
       "10. Monitor agent health and TDE state from the dashboard."
     ]
+  },
+  postgresql: {
+    title: "PostgreSQL TDE with Vecta EKM (pg_tde)",
+    steps: [
+      "1. Register an EKM agent from this dashboard (Deploy Agent button).",
+      "2. Download the deploy package and deploy on the PostgreSQL host.",
+      "3. Install the pg_tde extension:\n   CREATE EXTENSION pg_tde;",
+      "4. Configure the PKCS#11 provider in postgresql.conf:\n   pg_tde.keyring_provider = 'pkcs11'\n   pg_tde.pkcs11_library = '/etc/vecta-ekm/libvecta-pkcs11.so'",
+      "5. Set the TDE master key:\n   SELECT pg_tde_set_master_key('vecta-master-key', 'pkcs11');",
+      "6. Enable encryption on a table:\n   CREATE TABLE sensitive_data (...) USING tde_heap;",
+      "7. Or enable TDE on an existing tablespace:\n   ALTER TABLESPACE pg_default SET (tde = on);",
+      "8. Verify status:\n   SELECT * FROM pg_tde_master_key_info();",
+      "9. Rotate the master key via the dashboard or:\n   SELECT pg_tde_rotate_master_key('vecta-new-key', 'pkcs11');",
+      "10. Monitor agent health and TDE state from the dashboard."
+    ]
+  },
+  mysql: {
+    title: "MySQL / MariaDB TDE with Vecta EKM (keyring_pkcs11)",
+    steps: [
+      "1. Register an EKM agent from this dashboard (Deploy Agent button).",
+      "2. Download the deploy package and deploy on the MySQL/MariaDB host.",
+      "3. Install the keyring_pkcs11 plugin in my.cnf:\n   [mysqld]\n   early-plugin-load=keyring_pkcs11=keyring_pkcs11.so\n   keyring_pkcs11_lib_path=/etc/vecta-ekm/libvecta-pkcs11.so",
+      "4. Restart MySQL to load the plugin:\n   systemctl restart mysqld",
+      "5. Verify keyring plugin is active:\n   SELECT PLUGIN_NAME, PLUGIN_STATUS FROM INFORMATION_SCHEMA.PLUGINS WHERE PLUGIN_NAME='keyring_pkcs11';",
+      "6. Enable encryption on an InnoDB tablespace:\n   ALTER TABLE sensitive_data ENCRYPTION='Y';",
+      "7. Enable general tablespace encryption:\n   CREATE TABLESPACE ts_encrypted ADD DATAFILE 'ts_encrypted.ibd' ENCRYPTION='Y';",
+      "8. Enable redo/undo log encryption (MySQL 8.0+):\n   SET GLOBAL innodb_redo_log_encrypt = ON;\n   SET GLOBAL innodb_undo_log_encrypt = ON;",
+      "9. Verify encryption status:\n   SELECT NAME, ENCRYPTION FROM INFORMATION_SCHEMA.INNODB_TABLESPACES WHERE ENCRYPTION='Y';",
+      "10. Rotate master key:\n   ALTER INSTANCE ROTATE INNODB MASTER KEY;"
+    ]
+  },
+  db2: {
+    title: "IBM DB2 TDE with Vecta EKM",
+    steps: [
+      "1. Register an EKM agent from this dashboard (Deploy Agent button).",
+      "2. Download the deploy package and deploy on the DB2 host.",
+      "3. Configure the keystore in the DB2 instance:\n   gsk8capicmd_64 -keydb -create -db /etc/vecta-ekm/db2keystore.kdb -pw <password> -type pkcs12",
+      "4. Set the PKCS#11 library path:\n   db2 UPDATE DBM CFG USING KEYSTORE_TYPE PKCS11\n   db2 UPDATE DBM CFG USING KEYSTORE_LOCATION /etc/vecta-ekm/libvecta-pkcs11.so",
+      "5. Create an encrypted database:\n   db2 CREATE DATABASE mydb ENCRYPT",
+      "6. Or enable encryption on an existing database:\n   db2 ALTER DATABASE mydb ENCRYPT",
+      "7. Set the master key label:\n   db2 \"CALL SYSPROC.ADMIN_ROTATE_MASTER_KEY('vecta-master-key')\"",
+      "8. Verify encryption status:\n   db2 \"SELECT * FROM TABLE(SYSPROC.ADMIN_GET_ENCRYPTION_INFO())\"",
+      "9. Rotate the master key via the dashboard or:\n   db2 \"CALL SYSPROC.ADMIN_ROTATE_MASTER_KEY('vecta-new-key')\"",
+      "10. Monitor agent health and TDE state from the dashboard."
+    ]
   }
 };
 
@@ -89,8 +155,15 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
   });
   const [expandedAgent,setExpandedAgent]=useState("");
   const [guideEngine,setGuideEngine]=useState("mssql");
-  const [dbRegForm,setDbRegForm]=useState({ agent_id:"", name:"", engine:"mssql", host:"", port:1433, database_name:"" });
+  const [dbRegForm,setDbRegForm]=useState({ agent_id:"", name:"", engine:"mssql", host:"", port:1433, database_name:"", rotation_policy:"90" });
   const [dbRegistering,setDbRegistering]=useState(false);
+  const [revokingDbId,setRevokingDbId]=useState("");
+  const [deployModalTab,setDeployModalTab]=useState<"download"|"guide"|"verify">("download");
+  const [verifyingAgentId,setVerifyingAgentId]=useState("");
+  const [verifyResult,setVerifyResult]=useState<any>(null);
+  const [expandedTdeGuide,setExpandedTdeGuide]=useState<Record<string,boolean>>({});
+  const [agentLogsPanel,setAgentLogsPanel]=useState<Record<string,any[]>>({});
+  const [agentLogsPanelLoading,setAgentLogsPanelLoading]=useState("");
 
   /* ── BitLocker state ── */
   const [bitLockerClients,setBitLockerClients]=useState([]);
@@ -132,6 +205,30 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
   const [dbMenu,setDbMenu]=useState("");
   const deployingRef=useRef(false);
   const promptDialog=usePromptDialog();
+
+  /* ── Azure EKM state ── */
+  const [azureConfigs,setAzureConfigs]=useState<AzureEKMConfig[]>([]);
+  const [azureMappings,setAzureMappings]=useState<AzureKeyMapping[]>([]);
+  const [azureLoading,setAzureLoading]=useState(false);
+  const [azureConfigForm,setAzureConfigForm]=useState({
+    azure_tenant_id:"", subscription_id:"", resource_group:"", vault_name:"", vault_url:"",
+    managed_hsm_name:"", managed_hsm_url:"", client_id:"", client_secret:"", auth_mode:"client_secret"
+  });
+  const [azureMappingForm,setAzureMappingForm]=useState({ config_id:"", vecta_key_id:"", azure_key_name:"", purpose:"tde" });
+  const [azureTestResults,setAzureTestResults]=useState<Record<string,{connected:boolean;error?:string}>>({});
+  const [azureSyncing,setAzureSyncing]=useState("");
+  const [azureOpLoading,setAzureOpLoading]=useState("");
+
+  /* ── Google CSE state ── */
+  const [googleCSEConfigs,setGoogleCSEConfigs]=useState<any[]>([]);
+  const [googleCSEKeys,setGoogleCSEKeys]=useState<any[]>([]);
+  const [googleCSELoading,setGoogleCSELoading]=useState(false);
+  const [googleCSEConfigForm,setGoogleCSEConfigForm]=useState({
+    google_workspace_customer_id:"", service_account_email:"", service_account_key_json:"",
+    allowed_domains:"", kacls_endpoint:""
+  });
+  const [googleCSEKeyForm,setGoogleCSEKeyForm]=useState({ config_id:"", key_name:"", vecta_key_id:"", purpose:"drive" });
+  const [googleCSEOpLoading,setGoogleCSEOpLoading]=useState("");
 
   /* ── Helpers ── */
   const formatAgo=(value:any)=>{
@@ -233,6 +330,61 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
     return {label:`${daysSince}d / ${policyDays}d (overdue)`,color:C.red,daysSince,policyDays};
   };
 
+  /* ── Database status badge ── */
+  const dbStatusBadge=(db:any)=>{
+    const state=String(db?.tde_state||"").toLowerCase();
+    if(state==="key_revoked") return {label:"Key Revoked",bg:C.redDim,fg:C.red};
+    if(state==="error") return {label:"Error",bg:C.amberDim,fg:C.amber};
+    if(state==="tde_enabled"||db?.tde_enabled) return {label:"TDE Enabled",bg:C.greenDim,fg:C.green};
+    if(state==="tde_disabled") return {label:"TDE Disabled",bg:"transparent",fg:C.muted};
+    if(state==="registered") return {label:"Registered",bg:C.blueDim,fg:C.blue};
+    return {label:state||"Unknown",bg:"transparent",fg:C.muted};
+  };
+
+  /* ── Rotation compliance for database ── */
+  const dbRotationCompliance=(db:any)=>{
+    const meta=(() => { try { return JSON.parse(String(db?.metadata_json||"{}")); } catch { return {}; } })();
+    const policyStr=String(meta?.rotation_policy_days||"0");
+    const policyDays=Number(policyStr);
+    if(!policyDays||policyDays<=0) return {label:"No policy",color:C.textDim,policyDays:0};
+    const lastRotated=db.updated_at||db.created_at||"";
+    const ts=new Date(String(lastRotated||"")).getTime();
+    if(!Number.isFinite(ts)) return {label:"Unknown",color:C.textDim,policyDays};
+    const daysSince=Math.floor((Date.now()-ts)/86400000);
+    if(daysSince<=policyDays*0.7) return {label:`${daysSince}d / ${policyDays}d`,color:C.green,policyDays};
+    if(daysSince<=policyDays) return {label:`${daysSince}d / ${policyDays}d`,color:C.amber,policyDays};
+    return {label:`${daysSince}d / ${policyDays}d (overdue)`,color:C.red,policyDays};
+  };
+
+  /* ── Revoke TDE for database ── */
+  const runRevokeTDE=async(db:any)=>{
+    const dbId=String(db?.id||"").trim();
+    if(!dbId) return;
+    const confirmed=await promptDialog.confirm({
+      title:"Revoke TDE Key",
+      message:`WARNING: This will revoke the TDE encryption key for database "${db.name}".\n\nThe database will become inaccessible until a new key is provisioned. This action should only be performed in emergency situations (e.g., suspected key compromise).\n\nAre you sure you want to proceed?`,
+      confirmLabel:"Revoke TDE Key",
+      danger:true
+    });
+    if(!confirmed) return;
+    setRevokingDbId(dbId);
+    try{
+      await revokeDatabaseTDE(session,dbId);
+      onToast?.(`TDE key revoked for database "${db.name}". Database is now locked.`);
+      await refresh(true);
+    }catch(e){ onToast?.(`Revoke failed: ${errMsg(e)}`); }finally{ setRevokingDbId(""); }
+  };
+
+  /* ── Load key access logs for an agent ── */
+  const loadAgentKeyAccessLogs=async(agentId:string)=>{
+    if(agentLogsPanelLoading===agentId) return;
+    setAgentLogsPanelLoading(agentId);
+    try{
+      const items=await listEKMAgentLogs(session,agentId,20);
+      setAgentLogsPanel(prev=>({...prev,[agentId]:items}));
+    }catch(e){ onToast?.(`Failed to load key access logs: ${errMsg(e)}`); }finally{ setAgentLogsPanelLoading(""); }
+  };
+
   /* ── Data fetching ── */
   const refresh=async(silent=false)=>{
     if(!silent) setLoading(true);
@@ -249,6 +401,10 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
       setHealthByID(healthMap);
       try{ const dbItems=await listEKMDatabases(session); setDatabases(Array.isArray(dbItems)?dbItems:[]); }catch{ setDatabases([]); }
       try{ const blItems=await listBitLockerClients(session,1000); setBitLockerClients(Array.isArray(blItems)?blItems:[]); }catch{ setBitLockerClients([]); }
+      try{ const azCfgs=await listAzureEKMConfigs(session); setAzureConfigs(Array.isArray(azCfgs)?azCfgs:[]); }catch{ setAzureConfigs([]); }
+      try{ const azMaps=await listAzureKeyMappings(session); setAzureMappings(Array.isArray(azMaps)?azMaps:[]); }catch{ setAzureMappings([]); }
+      try{ const gcseC=await listGoogleCSEConfigs(session); setGoogleCSEConfigs(Array.isArray(gcseC)?gcseC:[]); }catch{ setGoogleCSEConfigs([]); }
+      try{ const gcseK=await listGoogleCSEKeys(session); setGoogleCSEKeys(Array.isArray(gcseK)?gcseK:[]); }catch{ setGoogleCSEKeys([]); }
       const keyIDs=[...new Set(items.map((a)=>String(a.assigned_key_id||"").trim()).filter(Boolean))];
       const keyMeta={};
       await Promise.all(keyIDs.map(async(keyID)=>{
@@ -351,12 +507,13 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
   const openDeploy=()=>{
     deployingRef.current=false; setDeployPackage(null);
     setDeployForm({name:"",db_engine:"mssql",host:"",version:"",target_os:"linux",heartbeat_interval_sec:30,rotation_cycle_days:90});
+    setDeployModalTab("download"); setVerifyResult(null);
     setModal("deploy");
   };
 
   /* ── Register database ── */
   const openDbRegister=()=>{
-    setDbRegForm({agent_id:agents.length?agents[0].id:"",name:"",engine:"mssql",host:"",port:1433,database_name:""});
+    setDbRegForm({agent_id:agents.length?agents[0].id:"",name:"",engine:"mssql",host:"",port:1433,database_name:"",rotation_policy:"90"});
     setModal("db-register");
   };
 
@@ -366,10 +523,13 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
     if(!agentId||!name){ onToast?.("Agent and database name are required."); return; }
     setDbRegistering(true);
     try{
+      // Default port by engine
+      const defaultPorts:Record<string,number>={mssql:1433,oracle:1521,postgresql:5432,mysql:3306,db2:50000};
+      const port=Number(dbRegForm.port)||defaultPorts[dbRegForm.engine]||1433;
       await registerEKMDatabase(session,{
         agent_id:agentId, name, engine:dbRegForm.engine,
         host:String(dbRegForm.host||"").trim(),
-        port:Number(dbRegForm.port)||1433,
+        port,
         database_name:String(dbRegForm.database_name||"").trim(),
         tde_enabled:true, auto_provision_key:true
       });
@@ -719,18 +879,61 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
       {databases.length>0&&(<div style={{marginTop:20}}>
         <B style={{fontSize:14,marginBottom:8,display:"block"}}>Database Inventory ({databases.length})</B>
         <div style={{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
-          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1fr",padding:"8px 12px",background:C.surface,fontSize:11,fontWeight:600,color:C.textDim,borderBottom:"1px solid "+C.border}}>
-            <span>Database</span><span>Engine</span><span>Agent</span><span>Host</span><span>TDE State</span><span>Last Seen</span>
+          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1fr 1fr 100px",padding:"8px 12px",background:C.surface,fontSize:11,fontWeight:600,color:C.textDim,borderBottom:"1px solid "+C.border}}>
+            <span>Database</span><span>Engine</span><span>Agent</span><span>Host</span><span>TDE State</span><span>Rotation</span><span>Last Seen</span><span>Actions</span>
           </div>
-          {databases.map(db=>(<div key={db.id} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1fr",padding:"8px 12px",fontSize:12,borderBottom:"1px solid "+C.border}}>
-            <span><B>{db.name}</B>{db.database_name&&db.database_name!==db.name&&(<span style={{color:C.textDim,fontSize:11}}> ({db.database_name})</span>)}</span>
-            <span>{db.engine.toUpperCase()}</span>
-            <span style={{fontSize:11,color:C.textDim}}>{agents.find(a=>a.id===db.agent_id)?.name||db.agent_id}</span>
-            <span style={{color:C.textDim}}>{db.host}{db.port>0?`:${db.port}`:""}</span>
-            <span><span style={{padding:"2px 6px",borderRadius:4,fontSize:10,fontWeight:600,background:db.tde_enabled?C.greenDim:"transparent",color:db.tde_enabled?C.green:C.muted}}>{db.tde_state||"unknown"}</span></span>
-            <span style={{color:C.textDim}}>{formatAgo(db.last_seen_at)}</span>
-          </div>))}
+          {databases.map(db=>{
+            const badge=dbStatusBadge(db);
+            const rotComp=dbRotationCompliance(db);
+            return (<div key={db.id}>
+              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1fr 1fr 100px",padding:"8px 12px",fontSize:12,borderBottom:"1px solid "+C.border,alignItems:"center"}}>
+                <span><B>{db.name}</B>{db.database_name&&db.database_name!==db.name&&(<span style={{color:C.textDim,fontSize:11}}> ({db.database_name})</span>)}</span>
+                <span>{db.engine.toUpperCase()}</span>
+                <span style={{fontSize:11,color:C.textDim}}>{agents.find(a=>a.id===db.agent_id)?.name||db.agent_id}</span>
+                <span style={{color:C.textDim}}>{db.host}{db.port>0?`:${db.port}`:""}</span>
+                <span><span style={{padding:"2px 6px",borderRadius:4,fontSize:10,fontWeight:600,background:badge.bg,color:badge.fg}}>{badge.label}</span></span>
+                <span style={{color:rotComp.color,fontSize:11,fontWeight:500}}>{rotComp.label}</span>
+                <span style={{color:C.textDim}}>{formatAgo(db.last_seen_at)}</span>
+                <span style={{display:"flex",gap:4}}>
+                  <Btn onClick={()=>setExpandedTdeGuide(prev=>({...prev,[db.id]:!prev[db.id]}))} style={{fontSize:10,padding:"2px 6px"}}>Guide</Btn>
+                  <Btn onClick={()=>runRevokeTDE(db)} disabled={revokingDbId===db.id||badge.label==="Key Revoked"} style={{fontSize:10,padding:"2px 6px",color:C.red}}>{revokingDbId===db.id?"...":"Revoke"}</Btn>
+                </span>
+              </div>
+              {/* Collapsible TDE Setup Guide */}
+              {expandedTdeGuide[db.id]&&(<div style={{padding:"12px 16px",background:C.surface+"44",borderBottom:"1px solid "+C.border,fontSize:12}}>
+                <B style={{fontSize:12,marginBottom:6,display:"block"}}>TDE Setup Guide for {db.engine.toUpperCase()}</B>
+                {SETUP_GUIDES[db.engine]?(
+                  <div>{SETUP_GUIDES[db.engine].steps.map((step,i)=>(<div key={i} style={{fontSize:11,marginBottom:6,whiteSpace:"pre-wrap",fontFamily:step.includes("  ")?"monospace":"inherit",color:step.includes("  ")?C.accent:C.text,background:step.includes("  ")?C.surface:"transparent",padding:step.includes("  ")?"4px 8px":0,borderRadius:4}}>{step}</div>))}</div>
+                ):(<div style={{color:C.textDim}}>No setup guide available for {db.engine.toUpperCase()}.</div>)}
+              </div>)}
+            </div>);
+          })}
         </div>
+      </div>)}
+
+      {/* ── Key Access Logs Panel (per expanded agent) ── */}
+      {expandedAgent&&(<div style={{marginTop:20}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+          <B style={{fontSize:14}}>Recent Key Access - {agents.find(a=>a.id===expandedAgent)?.name||expandedAgent}</B>
+          <Btn onClick={()=>loadAgentKeyAccessLogs(expandedAgent)} disabled={agentLogsPanelLoading===expandedAgent} style={{fontSize:11,padding:"3px 8px"}}>{agentLogsPanelLoading===expandedAgent?"Loading...":"Load Logs"}</Btn>
+        </div>
+        {agentLogsPanel[expandedAgent]&&agentLogsPanel[expandedAgent].length>0?(
+          <div style={{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+            <div style={{display:"grid",gridTemplateColumns:"130px 90px 80px 1fr 1fr 80px",padding:"6px 10px",background:C.surface,fontSize:11,fontWeight:600,color:C.textDim,borderBottom:"1px solid "+C.border}}>
+              <span>Timestamp</span><span>Operation</span><span>Status</span><span>Key ID</span><span>Database</span><span>Latency</span>
+            </div>
+            {agentLogsPanel[expandedAgent].slice(0,20).map((log,i)=>(<div key={log.id||i} style={{display:"grid",gridTemplateColumns:"130px 90px 80px 1fr 1fr 80px",padding:"4px 10px",fontSize:11,borderBottom:"1px solid "+C.border}}>
+              <span style={{color:C.textDim}}>{formatAgo(log.created_at)}</span>
+              <span style={{fontWeight:500}}>{log.operation}</span>
+              <span style={{color:log.status==="success"?C.green:C.red}}>{log.status}</span>
+              <span style={{fontFamily:"monospace",fontSize:10,color:C.textDim}}>{String(log.key_id||"").slice(0,16)}</span>
+              <span style={{fontSize:10,color:C.textDim}}>{databases.find(d=>d.id===log.database_id)?.name||String(log.database_id||"").slice(0,16)||"n/a"}</span>
+              <span style={{color:C.textDim}}>{log.error_message||"--"}</span>
+            </div>))}
+          </div>
+        ):(agentLogsPanel[expandedAgent]?.length===0?(
+          <div style={{color:C.textDim,fontSize:12,padding:12,textAlign:"center"}}>No key access logs found for this agent.</div>
+        ):null)}
       </div>)}
     </div>)}
 
@@ -811,6 +1014,259 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
       )}
     </div>)}
 
+    {/* ═══════════════════════ AZURE EKM SUBTAB ═══════════════════════ */}
+    {subView==="azure"&&(<div>
+      {/* ── Summary stats bar ── */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16}}>
+        {[
+          {label:"Vault Configs",value:azureConfigs.length,color:C.accent},
+          {label:"Key Mappings",value:azureMappings.length,color:C.blue||C.accent},
+          {label:"Synced",value:azureMappings.filter(m=>m.sync_status==="synced").length,color:C.green},
+          {label:"Pending",value:azureMappings.filter(m=>m.sync_status==="pending").length,color:C.amber},
+          {label:"Errors",value:azureMappings.filter(m=>m.sync_status==="error").length,color:C.red}
+        ].map(s=>(<Card key={s.label} style={{padding:"10px 14px",textAlign:"center"}}>
+          <div style={{fontSize:20,fontWeight:700,color:s.color}}>{s.value}</div>
+          <div style={{fontSize:11,color:C.textDim}}>{s.label}</div>
+        </Card>))}
+      </div>
+
+      {/* ── Action bar ── */}
+      <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+        <Btn onClick={()=>setModal("azure-add-config")}>+ Add Azure Vault</Btn>
+        <Btn onClick={()=>setModal("azure-add-mapping")}>+ Add Key Mapping</Btn>
+        <Btn onClick={()=>refresh(true)} disabled={loading}><RefreshCcw size={14}/> Refresh</Btn>
+      </div>
+
+      {/* ── Vault Configs Table ── */}
+      <B style={{fontSize:14,marginBottom:8,display:"block"}}>Azure Key Vault Configurations</B>
+      {azureConfigs.length===0?(<div style={{color:C.textDim,fontSize:12,padding:16,textAlign:"center"}}>No Azure vault configurations. Click "+ Add Azure Vault" to connect.</div>):(
+        <div style={{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden",marginBottom:24}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 100px 80px 180px",padding:"8px 12px",fontSize:11,fontWeight:600,color:C.textDim,borderBottom:"1px solid "+C.border,background:C.surface}}>
+            <span>Vault Name</span><span>Azure Tenant</span><span>Auth Mode</span><span>Mappings</span><span>Status</span><span>Actions</span>
+          </div>
+          {azureConfigs.map(cfg=>(<div key={cfg.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 100px 80px 180px",padding:"8px 12px",fontSize:12,borderBottom:"1px solid "+C.border,alignItems:"center"}}>
+            <div>
+              <div style={{fontWeight:600}}>{cfg.vault_name}</div>
+              <div style={{fontSize:10,color:C.textDim,fontFamily:"monospace"}}>{cfg.vault_url}</div>
+              {cfg.managed_hsm_name&&(<div style={{fontSize:10,color:C.accent}}>HSM: {cfg.managed_hsm_name}</div>)}
+            </div>
+            <span style={{fontFamily:"monospace",fontSize:10,color:C.textDim}}>{cfg.azure_tenant_id}</span>
+            <span>{cfg.auth_mode}</span>
+            <span>{cfg.key_mappings}</span>
+            <span style={{color:cfg.status==="active"?C.green:C.red}}>{cfg.status}</span>
+            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+              <Btn onClick={async()=>{
+                setAzureTestResults(prev=>({...prev,[cfg.id]:{connected:false}}));
+                try{
+                  const res=await testAzureConnection(session,cfg.id);
+                  setAzureTestResults(prev=>({...prev,[cfg.id]:res}));
+                  onToast?.(res.connected?"Connection successful":"Connection failed: "+(res.error||"unknown"));
+                }catch(e){setAzureTestResults(prev=>({...prev,[cfg.id]:{connected:false,error:errMsg(e)}}));onToast?.(`Test failed: ${errMsg(e)}`);}
+              }} style={{fontSize:10,padding:"3px 8px"}}>Test</Btn>
+              <Btn onClick={async()=>{
+                setAzureSyncing(cfg.id);
+                try{
+                  const res=await syncAzureKeys(session,cfg.id);
+                  onToast?.(`Synced ${res.synced}/${res.total} keys`);
+                  await refresh(true);
+                }catch(e){onToast?.(`Sync failed: ${errMsg(e)}`);}finally{setAzureSyncing("");}
+              }} disabled={azureSyncing===cfg.id} style={{fontSize:10,padding:"3px 8px"}}>{azureSyncing===cfg.id?"Syncing...":"Sync"}</Btn>
+              <Btn onClick={async()=>{
+                if(!confirm("Delete this Azure vault configuration?")) return;
+                try{await deleteAzureEKMConfig(session,cfg.id);onToast?.("Config deleted");await refresh(true);}catch(e){onToast?.(`Delete failed: ${errMsg(e)}`);}
+              }} style={{fontSize:10,padding:"3px 8px",color:C.red}}>Delete</Btn>
+            </div>
+          </div>))}
+        </div>
+      )}
+
+      {/* ── Test results ── */}
+      {Object.keys(azureTestResults).length>0&&(<div style={{marginBottom:16}}>
+        {Object.entries(azureTestResults).map(([cfgId,res])=>{
+          const cfg=azureConfigs.find(c=>c.id===cfgId);
+          return (<div key={cfgId} style={{fontSize:12,padding:"6px 10px",background:res.connected?C.green+"15":C.red+"15",borderRadius:6,marginBottom:4}}>
+            <span style={{fontWeight:600}}>{cfg?.vault_name||cfgId}:</span>{" "}
+            <span style={{color:res.connected?C.green:C.red}}>{res.connected?"Connected":"Failed"}</span>
+            {res.error&&(<span style={{color:C.red,marginLeft:8,fontSize:11}}>{res.error}</span>)}
+          </div>);
+        })}
+      </div>)}
+
+      {/* ── Key Mappings Table ── */}
+      <B style={{fontSize:14,marginBottom:8,display:"block"}}>Key Mappings (Vecta KMS to Azure)</B>
+      {azureMappings.length===0?(<div style={{color:C.textDim,fontSize:12,padding:16,textAlign:"center"}}>No key mappings. Click "+ Add Key Mapping" to map a Vecta key to Azure.</div>):(
+        <div style={{border:"1px solid "+C.border,borderRadius:8,overflow:"hidden"}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 100px 80px 200px",padding:"8px 12px",fontSize:11,fontWeight:600,color:C.textDim,borderBottom:"1px solid "+C.border,background:C.surface}}>
+            <span>Azure Key</span><span>Vecta Key</span><span>Azure Key ID</span><span>Purpose</span><span>Sync</span><span>Actions</span>
+          </div>
+          {azureMappings.map(m=>(<div key={m.id} style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 100px 80px 200px",padding:"8px 12px",fontSize:12,borderBottom:"1px solid "+C.border,alignItems:"center"}}>
+            <span style={{fontWeight:600}}>{m.azure_key_name}</span>
+            <span style={{fontFamily:"monospace",fontSize:10,color:C.textDim}}>{m.vecta_key_id.slice(0,20)}</span>
+            <span style={{fontFamily:"monospace",fontSize:10,color:C.textDim}}>{m.azure_key_id?m.azure_key_id.split("/").slice(-2).join("/"):"(not imported)"}</span>
+            <span style={{textTransform:"uppercase",fontSize:10}}>{m.purpose}</span>
+            <span style={{color:m.sync_status==="synced"?C.green:m.sync_status==="error"?C.red:C.amber,fontSize:11}}>{m.sync_status}</span>
+            <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+              <Btn onClick={async()=>{
+                setAzureOpLoading(`import-${m.id}`);
+                try{const res=await importKeyToAzure(session,m.id);onToast?.(`Imported: ${res.azure_key_id}`);await refresh(true);}catch(e){onToast?.(`Import failed: ${errMsg(e)}`);}finally{setAzureOpLoading("");}
+              }} disabled={azureOpLoading===`import-${m.id}`} style={{fontSize:10,padding:"3px 6px"}}>{azureOpLoading===`import-${m.id}`?"...":"Import"}</Btn>
+              <Btn onClick={async()=>{
+                setAzureOpLoading(`rotate-${m.id}`);
+                try{const res=await rotateAzureKey(session,m.id);onToast?.(`Rotated: v${res.new_version}`);await refresh(true);}catch(e){onToast?.(`Rotate failed: ${errMsg(e)}`);}finally{setAzureOpLoading("");}
+              }} disabled={azureOpLoading===`rotate-${m.id}`} style={{fontSize:10,padding:"3px 6px"}}>{azureOpLoading===`rotate-${m.id}`?"...":"Rotate"}</Btn>
+              <Btn onClick={()=>{setModal("azure-wrap");setAzureMappingForm(prev=>({...prev,config_id:m.id}));}} style={{fontSize:10,padding:"3px 6px"}}>Wrap</Btn>
+              <Btn onClick={()=>{setModal("azure-unwrap");setAzureMappingForm(prev=>({...prev,config_id:m.id}));}} style={{fontSize:10,padding:"3px 6px"}}>Unwrap</Btn>
+              <Btn onClick={async()=>{
+                if(!confirm("Delete this key mapping?")) return;
+                try{await deleteAzureKeyMapping(session,m.id);onToast?.("Mapping deleted");await refresh(true);}catch(e){onToast?.(`Delete failed: ${errMsg(e)}`);}
+              }} style={{fontSize:10,padding:"3px 6px",color:C.red}}>Del</Btn>
+            </div>
+          </div>))}
+        </div>
+      )}
+    </div>)}
+
+    {/* ═══════════════════════ GOOGLE CSE SUBTAB ═══════════════════════ */}
+    {subView==="google-cse"&&(<div>
+      {/* ── Summary stats bar ── */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:16}}>
+        {[
+          {label:"CSE Configs",value:googleCSEConfigs.length,color:C.accent},
+          {label:"CSE Keys",value:googleCSEKeys.length,color:C.blue||C.accent},
+          {label:"Active Keys",value:googleCSEKeys.filter(k=>k.status==="active").length,color:C.green||"#4ade80"},
+          {label:"Total Wraps",value:googleCSEKeys.reduce((s,k)=>s+(k.wrap_count||0),0),color:C.purple||C.accent},
+          {label:"Total Unwraps",value:googleCSEKeys.reduce((s,k)=>s+(k.unwrap_count||0),0),color:C.orange||C.accent}
+        ].map(s=>(<Card key={s.label} style={{padding:"10px 14px",textAlign:"center"}}>
+          <div style={{fontSize:20,fontWeight:700,color:s.color}}>{s.value}</div>
+          <div style={{fontSize:10,color:C.textMuted,marginTop:2}}>{s.label}</div>
+        </Card>))}
+      </div>
+
+      {/* ── Add CSE Config ── */}
+      <Card style={{padding:14,marginBottom:14}}>
+        <B style={{fontSize:13,marginBottom:8,display:"block"}}>Add Google Workspace CSE Config</B>
+        <Row2>
+          <FG label="Workspace Customer ID"><Inp value={googleCSEConfigForm.google_workspace_customer_id} onChange={e=>setGoogleCSEConfigForm(p=>({...p,google_workspace_customer_id:e.target.value}))} placeholder="C0xxxxxxx"/></FG>
+          <FG label="Service Account Email"><Inp value={googleCSEConfigForm.service_account_email} onChange={e=>setGoogleCSEConfigForm(p=>({...p,service_account_email:e.target.value}))} placeholder="cse-service@project.iam.gserviceaccount.com"/></FG>
+        </Row2>
+        <Row2>
+          <FG label="Allowed Domains (comma-separated)"><Inp value={googleCSEConfigForm.allowed_domains} onChange={e=>setGoogleCSEConfigForm(p=>({...p,allowed_domains:e.target.value}))} placeholder="company.com, subsidiary.com"/></FG>
+          <FG label="KACLS Endpoint URL"><Inp value={googleCSEConfigForm.kacls_endpoint} onChange={e=>setGoogleCSEConfigForm(p=>({...p,kacls_endpoint:e.target.value}))} placeholder="https://kacls.example.com/ekm/kacls"/></FG>
+        </Row2>
+        <FG label="Service Account Key JSON"><Inp value={googleCSEConfigForm.service_account_key_json} onChange={e=>setGoogleCSEConfigForm(p=>({...p,service_account_key_json:e.target.value}))} placeholder='{"type":"service_account",...}' style={{fontFamily:"monospace",fontSize:11}}/></FG>
+        <Btn disabled={googleCSELoading||!googleCSEConfigForm.google_workspace_customer_id} onClick={async()=>{
+          setGoogleCSELoading(true);
+          try{
+            const domains=googleCSEConfigForm.allowed_domains.split(",").map(d=>d.trim()).filter(Boolean);
+            await createGoogleCSEConfig(session,{
+              google_workspace_customer_id:googleCSEConfigForm.google_workspace_customer_id,
+              service_account_email:googleCSEConfigForm.service_account_email,
+              service_account_key_json:googleCSEConfigForm.service_account_key_json,
+              allowed_domains:domains,
+              kacls_endpoint:googleCSEConfigForm.kacls_endpoint
+            });
+            onToast?.("Google CSE config created");
+            setGoogleCSEConfigForm({google_workspace_customer_id:"",service_account_email:"",service_account_key_json:"",allowed_domains:"",kacls_endpoint:""});
+            await refresh(true);
+          }catch(e){onToast?.(`Failed: ${errMsg(e)}`);}finally{setGoogleCSELoading(false);}
+        }} style={{marginTop:8}}>{googleCSELoading?"Creating...":"Create Config"}</Btn>
+      </Card>
+
+      {/* ── CSE Configs list ── */}
+      {googleCSEConfigs.length>0&&(<Card style={{padding:14,marginBottom:14}}>
+        <B style={{fontSize:13,marginBottom:8,display:"block"}}>Workspace Configurations</B>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {googleCSEConfigs.map(cfg=>(<div key={cfg.id} style={{background:C.surface,borderRadius:8,padding:10,border:`1px solid ${C.border}`}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:12,fontWeight:600}}>{cfg.google_workspace_customer_id}</div>
+                <div style={{fontSize:10,color:C.textMuted}}>{cfg.service_account_email||"No service account"} &middot; {(cfg.allowed_domains||[]).join(", ")}</div>
+                <div style={{fontSize:10,color:C.textMuted}}>KACLS: {cfg.kacls_endpoint||"Not configured"} &middot; Keys: {cfg.key_count||0} &middot; Status: <span style={{color:cfg.status==="active"?C.green||"#4ade80":C.red}}>{cfg.status}</span></div>
+                {cfg.last_activity_at&&(<div style={{fontSize:10,color:C.textMuted}}>Last activity: {formatAgo(cfg.last_activity_at)}</div>)}
+              </div>
+              <div style={{display:"flex",gap:4}}>
+                <Btn onClick={async()=>{
+                  if(!confirm("Delete this Google CSE config?")) return;
+                  try{await deleteGoogleCSEConfig(session,cfg.id);onToast?.("Config deleted");await refresh(true);}catch(e){onToast?.(`Delete failed: ${errMsg(e)}`);}
+                }} style={{fontSize:10,padding:"3px 6px",color:C.red}}>Delete</Btn>
+              </div>
+            </div>
+          </div>))}
+        </div>
+      </Card>)}
+
+      {/* ── Add CSE Key ── */}
+      {googleCSEConfigs.length>0&&(<Card style={{padding:14,marginBottom:14}}>
+        <B style={{fontSize:13,marginBottom:8,display:"block"}}>Create CSE Key</B>
+        <Row2>
+          <FG label="Config"><Sel value={googleCSEKeyForm.config_id} onChange={e=>setGoogleCSEKeyForm(p=>({...p,config_id:e.target.value}))}>
+            <option value="">Select config...</option>
+            {googleCSEConfigs.map(c=>(<option key={c.id} value={c.id}>{c.google_workspace_customer_id}</option>))}
+          </Sel></FG>
+          <FG label="Key Name"><Inp value={googleCSEKeyForm.key_name} onChange={e=>setGoogleCSEKeyForm(p=>({...p,key_name:e.target.value}))} placeholder="gmail-cse-key-1"/></FG>
+        </Row2>
+        <Row2>
+          <FG label="Vecta Key ID"><Inp value={googleCSEKeyForm.vecta_key_id} onChange={e=>setGoogleCSEKeyForm(p=>({...p,vecta_key_id:e.target.value}))} placeholder="key_xxxxxxxx"/></FG>
+          <FG label="Purpose"><Sel value={googleCSEKeyForm.purpose} onChange={e=>setGoogleCSEKeyForm(p=>({...p,purpose:e.target.value}))}>
+            <option value="drive">Google Drive</option>
+            <option value="gmail">Gmail</option>
+            <option value="calendar">Calendar</option>
+            <option value="meet">Meet</option>
+          </Sel></FG>
+        </Row2>
+        <Btn disabled={googleCSELoading||!googleCSEKeyForm.config_id||!googleCSEKeyForm.key_name||!googleCSEKeyForm.vecta_key_id} onClick={async()=>{
+          setGoogleCSELoading(true);
+          try{
+            await createGoogleCSEKey(session,{
+              config_id:googleCSEKeyForm.config_id,
+              key_name:googleCSEKeyForm.key_name,
+              vecta_key_id:googleCSEKeyForm.vecta_key_id,
+              purpose:googleCSEKeyForm.purpose
+            });
+            onToast?.("CSE key created");
+            setGoogleCSEKeyForm({config_id:"",key_name:"",vecta_key_id:"",purpose:"drive"});
+            await refresh(true);
+          }catch(e){onToast?.(`Failed: ${errMsg(e)}`);}finally{setGoogleCSELoading(false);}
+        }} style={{marginTop:8}}>{googleCSELoading?"Creating...":"Create Key"}</Btn>
+      </Card>)}
+
+      {/* ── CSE Keys list ── */}
+      {googleCSEKeys.length>0&&(<Card style={{padding:14,marginBottom:14}}>
+        <B style={{fontSize:13,marginBottom:8,display:"block"}}>CSE Keys</B>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {googleCSEKeys.map(k=>(<div key={k.id} style={{background:C.surface,borderRadius:8,padding:10,border:`1px solid ${C.border}`,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{fontSize:12,fontWeight:600}}>{k.key_name} <span style={{fontSize:10,fontWeight:400,color:C.textMuted}}>({k.purpose})</span></div>
+              <div style={{fontSize:10,color:C.textMuted}}>Vecta Key: {k.vecta_key_id} &middot; Status: <span style={{color:k.status==="active"?C.green||"#4ade80":C.red}}>{k.status}</span></div>
+              <div style={{fontSize:10,color:C.textMuted}}>Wraps: {k.wrap_count||0} &middot; Unwraps: {k.unwrap_count||0}{k.last_used_at?` \u00b7 Last used: ${formatAgo(k.last_used_at)}`:""}</div>
+              <div style={{fontSize:9,color:C.textMuted,fontFamily:"monospace",marginTop:2}}>URI: {k.google_key_uri}</div>
+            </div>
+            <div style={{display:"flex",gap:4}}>
+              <Btn onClick={async()=>{
+                if(!confirm("Delete this CSE key?")) return;
+                try{await deleteGoogleCSEKey(session,k.id);onToast?.("Key deleted");await refresh(true);}catch(e){onToast?.(`Delete failed: ${errMsg(e)}`);}
+              }} style={{fontSize:10,padding:"3px 6px",color:C.red}}>Delete</Btn>
+            </div>
+          </div>))}
+        </div>
+      </Card>)}
+
+      {/* ── KACLS Endpoint Info ── */}
+      <Card style={{padding:14}}>
+        <B style={{fontSize:13,marginBottom:8,display:"block"}}>KACLS Endpoint Information</B>
+        <div style={{fontSize:11,color:C.textMuted,lineHeight:1.6}}>
+          <div>Google CSE calls the following KACLS API endpoints on this Vecta KMS instance:</div>
+          <div style={{fontFamily:"monospace",fontSize:10,marginTop:6,background:C.surface,padding:8,borderRadius:6,border:`1px solid ${C.border}`}}>
+            <div>GET  /ekm/kacls/status &mdash; KACLS health check</div>
+            <div>POST /ekm/kacls/wrap &mdash; Wrap DEK for encryption</div>
+            <div>POST /ekm/kacls/unwrap &mdash; Unwrap DEK for decryption</div>
+            <div>POST /ekm/kacls/privilegedunwrap &mdash; Admin/legal hold unwrap</div>
+          </div>
+          <div style={{marginTop:8}}>Configure these endpoints in your Google Workspace Admin Console under <b>Security &gt; Client-side encryption &gt; External key service</b>.</div>
+        </div>
+      </Card>
+    </div>)}
+
     {/* ═══════════════════════ KMIP SUBTAB ═══════════════════════ */}
     {subView==="kmip"&&(<KMIPTab session={session} onToast={onToast}/>)}
 
@@ -875,16 +1331,33 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
       </Sel></FG>
       <Row2>
         <FG label="Database Name"><Inp value={dbRegForm.name} onChange={(e)=>setDbRegForm({...dbRegForm,name:e.target.value})} placeholder="mydb_prod"/></FG>
-        <FG label="Engine"><Sel value={dbRegForm.engine} onChange={(e)=>setDbRegForm({...dbRegForm,engine:e.target.value})}>
-          <option value="mssql">MSSQL</option><option value="oracle">Oracle</option>
+        <FG label="Engine"><Sel value={dbRegForm.engine} onChange={(e)=>{
+          const eng=e.target.value;
+          const defaultPorts:Record<string,number>={mssql:1433,oracle:1521,postgresql:5432,mysql:3306,db2:50000};
+          setDbRegForm({...dbRegForm,engine:eng,port:defaultPorts[eng]||1433});
+        }}>
+          <option value="mssql">Microsoft SQL Server</option>
+          <option value="oracle">Oracle Database</option>
+          <option value="postgresql">PostgreSQL</option>
+          <option value="mysql">MySQL / MariaDB</option>
+          <option value="db2">IBM DB2</option>
         </Sel></FG>
       </Row2>
       <Row2>
         <FG label="Host"><Inp value={dbRegForm.host} onChange={(e)=>setDbRegForm({...dbRegForm,host:e.target.value})} placeholder="db-server.local"/></FG>
         <FG label="Port"><Inp type="number" value={dbRegForm.port} onChange={(e)=>setDbRegForm({...dbRegForm,port:Number(e.target.value)})}/></FG>
       </Row2>
-      <FG label="Catalog / SID"><Inp value={dbRegForm.database_name} onChange={(e)=>setDbRegForm({...dbRegForm,database_name:e.target.value})} placeholder="AdventureWorks"/></FG>
-      <div style={{fontSize:11,color:C.textDim,marginTop:4}}>A TDE key will be auto-provisioned via KeyCore for this database.</div>
+      <Row2>
+        <FG label="Catalog / SID / Database"><Inp value={dbRegForm.database_name} onChange={(e)=>setDbRegForm({...dbRegForm,database_name:e.target.value})} placeholder="AdventureWorks"/></FG>
+        <FG label="Key Rotation Policy"><Sel value={dbRegForm.rotation_policy} onChange={(e)=>setDbRegForm({...dbRegForm,rotation_policy:e.target.value})}>
+          <option value="0">None</option>
+          <option value="30">Every 30 days</option>
+          <option value="90">Every 90 days</option>
+          <option value="180">Every 180 days</option>
+          <option value="365">Every 365 days</option>
+        </Sel></FG>
+      </Row2>
+      <div style={{fontSize:11,color:C.textDim,marginTop:4}}>A TDE key will be auto-provisioned via KeyCore for this database.{dbRegForm.rotation_policy!=="0"&&` Key rotation policy: every ${dbRegForm.rotation_policy} days.`}</div>
       <div style={{display:"flex",gap:8,marginTop:12}}>
         <Btn onClick={submitDbRegister} disabled={dbRegistering}>{dbRegistering?"Registering...":"Register Database"}</Btn>
         <Btn onClick={()=>setModal(null)}>Cancel</Btn>
@@ -897,7 +1370,11 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
         <Row2>
           <FG label="Agent Name"><Inp value={deployForm.name} onChange={(e)=>setDeployForm({...deployForm,name:e.target.value})} placeholder="prod-sql-01"/></FG>
           <FG label="DB Engine"><Sel value={deployForm.db_engine} onChange={(e)=>setDeployForm({...deployForm,db_engine:e.target.value})}>
-            <option value="mssql">MSSQL</option><option value="oracle">Oracle</option>
+            <option value="mssql">Microsoft SQL Server</option>
+            <option value="oracle">Oracle Database</option>
+            <option value="postgresql">PostgreSQL</option>
+            <option value="mysql">MySQL / MariaDB</option>
+            <option value="db2">IBM DB2</option>
           </Sel></FG>
         </Row2>
         <Row2>
@@ -917,14 +1394,51 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
           <Btn onClick={()=>setModal(null)}>Cancel</Btn>
         </div>
       </>):(<>
-        <div style={{color:C.green,marginBottom:8,fontSize:12}}>Agent registered. Download and deploy these files on the target host:</div>
-        {visibleDeployFiles.map((file,i)=>(<Card key={i} style={{marginBottom:8}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-            <B style={{fontSize:13}}>{file.path}</B>
-            <Btn onClick={()=>downloadText(file.path,file.content)} style={{fontSize:11,padding:"3px 8px"}}>Download</Btn>
-          </div>
-          <pre style={{fontSize:11,maxHeight:160,overflow:"auto",background:C.surface,padding:8,borderRadius:4,whiteSpace:"pre-wrap"}}>{String(file.content||"").slice(0,2000)}</pre>
-        </Card>))}
+        {/* Tabbed deploy modal */}
+        <div style={{display:"flex",gap:0,marginBottom:12,borderBottom:"1px solid "+C.border}}>
+          {([["download","Download Scripts"],["guide","Setup Guide"],["verify","Verify Connection"]] as const).map(([key,label])=>(
+            <div key={key} onClick={()=>setDeployModalTab(key)} style={{padding:"8px 16px",cursor:"pointer",fontSize:12,fontWeight:deployModalTab===key?600:400,color:deployModalTab===key?C.accent:C.textDim,borderBottom:deployModalTab===key?`2px solid ${C.accent}`:"2px solid transparent"}}>{label}</div>
+          ))}
+        </div>
+
+        {deployModalTab==="download"&&(<>
+          <div style={{color:C.green,marginBottom:8,fontSize:12}}>Agent registered. Download and deploy these files on the target host:</div>
+          {visibleDeployFiles.map((file,i)=>(<Card key={i} style={{marginBottom:8}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <B style={{fontSize:13}}>{file.path}</B>
+              <Btn onClick={()=>downloadText(file.path,file.content)} style={{fontSize:11,padding:"3px 8px"}}>Download</Btn>
+            </div>
+            <pre style={{fontSize:11,maxHeight:160,overflow:"auto",background:C.surface,padding:8,borderRadius:4,whiteSpace:"pre-wrap"}}>{String(file.content||"").slice(0,2000)}</pre>
+          </Card>))}
+        </>)}
+
+        {deployModalTab==="guide"&&(<>
+          <B style={{marginBottom:8,display:"block"}}>{SETUP_GUIDES[deployForm.db_engine]?.title||"Setup Guide"}</B>
+          {SETUP_GUIDES[deployForm.db_engine]?(
+            <div>{SETUP_GUIDES[deployForm.db_engine].steps.map((step,i)=>(<div key={i} style={{fontSize:12,marginBottom:8,whiteSpace:"pre-wrap",fontFamily:step.includes("  ")?"monospace":"inherit",color:step.includes("  ")?C.accent:C.text,background:step.includes("  ")?C.surface:"transparent",padding:step.includes("  ")?"6px 10px":0,borderRadius:4}}>{step}</div>))}</div>
+          ):(<div style={{color:C.textDim,fontSize:12}}>No setup guide available for this engine. Please refer to vendor documentation.</div>)}
+        </>)}
+
+        {deployModalTab==="verify"&&(<>
+          <div style={{fontSize:12,color:C.textDim,marginBottom:12}}>Verify that the deployed agent can connect to Vecta KMS and the PKCS#11 module is operational.</div>
+          <Btn onClick={async()=>{
+            const agentId=String(deployPackage?.agent_id||"").trim();
+            if(!agentId){ onToast?.("No agent ID available."); return; }
+            setVerifyingAgentId(agentId);setVerifyResult(null);
+            try{
+              const result=await validateAgentDeployment(session,agentId);
+              setVerifyResult(result);
+              onToast?.(result?.valid?"Agent verified successfully":"Verification returned issues");
+            }catch(e){ setVerifyResult({valid:false,error:errMsg(e)}); onToast?.(`Verify failed: ${errMsg(e)}`); }finally{ setVerifyingAgentId(""); }
+          }} disabled={!!verifyingAgentId}>{verifyingAgentId?"Verifying...":"Verify Connection"}</Btn>
+          {verifyResult&&(<div style={{marginTop:12,padding:10,borderRadius:6,background:verifyResult.valid?C.green+"15":C.red+"15",border:`1px solid ${verifyResult.valid?C.green:C.red}44`}}>
+            <div style={{fontSize:12,fontWeight:600,color:verifyResult.valid?C.green:C.red,marginBottom:4}}>{verifyResult.valid?"Verification Successful":"Verification Failed"}</div>
+            {verifyResult.error&&(<div style={{fontSize:11,color:C.red}}>{verifyResult.error}</div>)}
+            {verifyResult.agent_status&&(<div style={{fontSize:11,color:C.textDim}}>Agent Status: {verifyResult.agent_status}</div>)}
+            {verifyResult.pkcs11_status&&(<div style={{fontSize:11,color:C.textDim}}>PKCS#11: {verifyResult.pkcs11_status}</div>)}
+            {verifyResult.heartbeat_age_sec!=null&&(<div style={{fontSize:11,color:C.textDim}}>Last Heartbeat: {verifyResult.heartbeat_age_sec}s ago</div>)}
+          </div>)}
+        </>)}
       </>)}
     </Modal>)}
 
@@ -1069,6 +1583,113 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
           <div style={{fontSize:11,color:C.textDim}}>{desc}</div>
         </Btn>))}
       </div>
+    </Modal>)}
+
+    {/* ── Azure Add Config Modal ── */}
+    {modal==="azure-add-config"&&(<Modal open={true} title="Add Azure Key Vault Connection" onClose={()=>setModal(null)}>
+      <FG label="Azure AD Tenant ID"><Inp value={azureConfigForm.azure_tenant_id} onChange={(e)=>setAzureConfigForm({...azureConfigForm,azure_tenant_id:e.target.value})} placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"/></FG>
+      <Row2>
+        <FG label="Vault Name"><Inp value={azureConfigForm.vault_name} onChange={(e)=>setAzureConfigForm({...azureConfigForm,vault_name:e.target.value})} placeholder="my-keyvault"/></FG>
+        <FG label="Vault URL (auto-generated if empty)"><Inp value={azureConfigForm.vault_url} onChange={(e)=>setAzureConfigForm({...azureConfigForm,vault_url:e.target.value})} placeholder="https://my-keyvault.vault.azure.net"/></FG>
+      </Row2>
+      <Row2>
+        <FG label="Subscription ID"><Inp value={azureConfigForm.subscription_id} onChange={(e)=>setAzureConfigForm({...azureConfigForm,subscription_id:e.target.value})}/></FG>
+        <FG label="Resource Group"><Inp value={azureConfigForm.resource_group} onChange={(e)=>setAzureConfigForm({...azureConfigForm,resource_group:e.target.value})}/></FG>
+      </Row2>
+      <Row2>
+        <FG label="Managed HSM Name (optional)"><Inp value={azureConfigForm.managed_hsm_name} onChange={(e)=>setAzureConfigForm({...azureConfigForm,managed_hsm_name:e.target.value})}/></FG>
+        <FG label="Managed HSM URL (optional)"><Inp value={azureConfigForm.managed_hsm_url} onChange={(e)=>setAzureConfigForm({...azureConfigForm,managed_hsm_url:e.target.value})}/></FG>
+      </Row2>
+      <FG label="Auth Mode"><Sel value={azureConfigForm.auth_mode} onChange={(e)=>setAzureConfigForm({...azureConfigForm,auth_mode:e.target.value})}>
+        <option value="client_secret">Client Secret</option><option value="managed_identity">Managed Identity</option><option value="certificate">Certificate</option>
+      </Sel></FG>
+      <Row2>
+        <FG label="Client ID (App Registration)"><Inp value={azureConfigForm.client_id} onChange={(e)=>setAzureConfigForm({...azureConfigForm,client_id:e.target.value})}/></FG>
+        <FG label="Client Secret"><Inp type="password" value={azureConfigForm.client_secret} onChange={(e)=>setAzureConfigForm({...azureConfigForm,client_secret:e.target.value})}/></FG>
+      </Row2>
+      <div style={{fontSize:11,color:C.textDim,marginTop:4}}>Vecta KMS will authenticate to Azure AD and manage keys in the specified Key Vault as an external key provider.</div>
+      <div style={{display:"flex",gap:8,marginTop:12}}>
+        <Btn onClick={async()=>{
+          setAzureLoading(true);
+          try{
+            await createAzureEKMConfig(session,azureConfigForm);
+            onToast?.("Azure vault config created");
+            setModal(null);
+            setAzureConfigForm({azure_tenant_id:"",subscription_id:"",resource_group:"",vault_name:"",vault_url:"",managed_hsm_name:"",managed_hsm_url:"",client_id:"",client_secret:"",auth_mode:"client_secret"});
+            await refresh(true);
+          }catch(e){onToast?.(`Failed: ${errMsg(e)}`);}finally{setAzureLoading(false);}
+        }} disabled={azureLoading||!azureConfigForm.azure_tenant_id||!azureConfigForm.vault_name}>{azureLoading?"Creating...":"Create Config"}</Btn>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+      </div>
+    </Modal>)}
+
+    {/* ── Azure Add Mapping Modal ── */}
+    {modal==="azure-add-mapping"&&(<Modal open={true} title="Add Key Mapping" onClose={()=>setModal(null)}>
+      <FG label="Vault Config"><Sel value={azureMappingForm.config_id} onChange={(e)=>setAzureMappingForm({...azureMappingForm,config_id:e.target.value})}>
+        <option value="">Select a vault...</option>
+        {azureConfigs.map(c=>(<option key={c.id} value={c.id}>{c.vault_name} ({c.vault_url})</option>))}
+      </Sel></FG>
+      <Row2>
+        <FG label="Vecta Key ID"><Inp value={azureMappingForm.vecta_key_id} onChange={(e)=>setAzureMappingForm({...azureMappingForm,vecta_key_id:e.target.value})} placeholder="key-xxxxxxxxxx"/></FG>
+        <FG label="Azure Key Name"><Inp value={azureMappingForm.azure_key_name} onChange={(e)=>setAzureMappingForm({...azureMappingForm,azure_key_name:e.target.value})} placeholder="vecta-tde-key-01"/></FG>
+      </Row2>
+      <FG label="Purpose"><Sel value={azureMappingForm.purpose} onChange={(e)=>setAzureMappingForm({...azureMappingForm,purpose:e.target.value})}>
+        <option value="tde">TDE (Database Encryption)</option><option value="always_encrypted">Always Encrypted</option><option value="storage">Azure Storage Encryption</option><option value="disk">Azure Disk Encryption</option>
+      </Sel></FG>
+      <div style={{fontSize:11,color:C.textDim,marginTop:4}}>Maps a Vecta KMS key to an Azure Key Vault key. Use "Import" after creation to push the key to Azure.</div>
+      <div style={{display:"flex",gap:8,marginTop:12}}>
+        <Btn onClick={async()=>{
+          setAzureLoading(true);
+          try{
+            await createAzureKeyMapping(session,azureMappingForm);
+            onToast?.("Key mapping created");
+            setModal(null);
+            setAzureMappingForm({config_id:"",vecta_key_id:"",azure_key_name:"",purpose:"tde"});
+            await refresh(true);
+          }catch(e){onToast?.(`Failed: ${errMsg(e)}`);}finally{setAzureLoading(false);}
+        }} disabled={azureLoading||!azureMappingForm.config_id||!azureMappingForm.vecta_key_id||!azureMappingForm.azure_key_name}>{azureLoading?"Creating...":"Create Mapping"}</Btn>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+      </div>
+    </Modal>)}
+
+    {/* ── Azure Wrap Key Modal ── */}
+    {modal==="azure-wrap"&&(<Modal open={true} title="Wrap Key (Azure Key Vault)" onClose={()=>setModal(null)}>
+      <FG label="Plaintext (Base64)"><Inp value={azureMappingForm.vecta_key_id} onChange={(e)=>setAzureMappingForm({...azureMappingForm,vecta_key_id:e.target.value})} placeholder="Base64-encoded plaintext"/></FG>
+      <div style={{display:"flex",gap:8,marginTop:12}}>
+        <Btn onClick={async()=>{
+          setAzureLoading(true);
+          try{
+            const res=await wrapAzureKey(session,azureMappingForm.config_id,azureMappingForm.vecta_key_id);
+            onToast?.("Wrapped successfully");
+            setAzureMappingForm(prev=>({...prev,azure_key_name:res.wrapped}));
+          }catch(e){onToast?.(`Wrap failed: ${errMsg(e)}`);}finally{setAzureLoading(false);}
+        }} disabled={azureLoading}>{azureLoading?"Wrapping...":"Wrap"}</Btn>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+      </div>
+      {azureMappingForm.azure_key_name&&azureMappingForm.azure_key_name.length>20&&(<div style={{marginTop:12}}>
+        <B style={{fontSize:12}}>Wrapped Result:</B>
+        <pre style={{fontSize:10,background:C.surface,padding:8,borderRadius:4,maxHeight:120,overflow:"auto",wordBreak:"break-all"}}>{azureMappingForm.azure_key_name}</pre>
+      </div>)}
+    </Modal>)}
+
+    {/* ── Azure Unwrap Key Modal ── */}
+    {modal==="azure-unwrap"&&(<Modal open={true} title="Unwrap Key (Azure Key Vault)" onClose={()=>setModal(null)}>
+      <FG label="Ciphertext (Base64)"><Inp value={azureMappingForm.vecta_key_id} onChange={(e)=>setAzureMappingForm({...azureMappingForm,vecta_key_id:e.target.value})} placeholder="Base64-encoded ciphertext"/></FG>
+      <div style={{display:"flex",gap:8,marginTop:12}}>
+        <Btn onClick={async()=>{
+          setAzureLoading(true);
+          try{
+            const res=await unwrapAzureKey(session,azureMappingForm.config_id,azureMappingForm.vecta_key_id);
+            onToast?.("Unwrapped successfully");
+            setAzureMappingForm(prev=>({...prev,azure_key_name:res.unwrapped}));
+          }catch(e){onToast?.(`Unwrap failed: ${errMsg(e)}`);}finally{setAzureLoading(false);}
+        }} disabled={azureLoading}>{azureLoading?"Unwrapping...":"Unwrap"}</Btn>
+        <Btn onClick={()=>setModal(null)}>Cancel</Btn>
+      </div>
+      {azureMappingForm.azure_key_name&&azureMappingForm.azure_key_name.length>20&&(<div style={{marginTop:12}}>
+        <B style={{fontSize:12}}>Unwrapped Result:</B>
+        <pre style={{fontSize:10,background:C.surface,padding:8,borderRadius:4,maxHeight:120,overflow:"auto",wordBreak:"break-all"}}>{azureMappingForm.azure_key_name}</pre>
+      </div>)}
     </Modal>)}
 
     {promptDialog.ui}

@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/ssrfguard"
 )
 
 const (
@@ -81,11 +83,22 @@ func normalizeGovernanceSettings(in GovernanceSettings, strict bool) (Governance
 			}
 			in.NotifySlack = false
 		}
+		// SSRF protection: validate webhook URLs at save time
+		if in.SlackWebhookURL != "" {
+			if err := ssrfguard.ValidateWebhookURL(in.SlackWebhookURL); err != nil {
+				return GovernanceSettings{}, fmt.Errorf("slack_webhook_url blocked: %w", err)
+			}
+		}
 		if in.NotifyTeams && in.TeamsWebhookURL == "" {
 			if strict {
 				return GovernanceSettings{}, errors.New("teams_webhook_url is required when Teams notifications are enabled")
 			}
 			in.NotifyTeams = false
+		}
+		if in.TeamsWebhookURL != "" {
+			if err := ssrfguard.ValidateWebhookURL(in.TeamsWebhookURL); err != nil {
+				return GovernanceSettings{}, fmt.Errorf("teams_webhook_url blocked: %w", err)
+			}
 		}
 		if in.ChallengeResponseEnabled && !in.NotifyEmail {
 			if strict {
@@ -239,6 +252,10 @@ func (s *Service) postWebhookJSON(ctx context.Context, targetURL string, timeout
 	}
 	if parsed.Scheme != "https" && parsed.Scheme != "http" {
 		return errors.New("webhook URL must use http or https")
+	}
+	// SSRF protection: block requests to internal/private IPs and cloud metadata endpoints
+	if err := ssrfguard.ValidateWebhookURL(targetURL); err != nil {
+		return fmt.Errorf("webhook URL blocked: %w", err)
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {

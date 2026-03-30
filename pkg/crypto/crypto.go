@@ -9,6 +9,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"errors"
+	"runtime"
 )
 
 type IVMode string
@@ -103,10 +104,15 @@ func ConstantTimeEqual(a []byte, b []byte) bool {
 	return subtle.ConstantTimeCompare(a, b) == 1
 }
 
+// Zeroize overwrites a byte slice with zeros. The //go:noinline directive
+// prevents the compiler from dead-store-eliminating the zeroing loop.
+//
+//go:noinline
 func Zeroize(b []byte) {
 	for i := range b {
 		b[i] = 0
 	}
+	runtime.KeepAlive(b)
 }
 
 func aesGCMEncrypt(key []byte, iv []byte, plaintext []byte) ([]byte, error) {

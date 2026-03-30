@@ -27,6 +27,8 @@ func newRealProviderRegistry() *ProviderRegistry {
 	r.Register(newGCPProvider())
 	r.Register(newOCIProvider())
 	r.Register(newSalesforceProvider())
+	r.Register(newAlibabaProvider())
+	r.Register(newServiceNowProvider())
 	return r
 }
 

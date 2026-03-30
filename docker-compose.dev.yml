@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: vecta
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
 
   nats:
     image: nats:2.12.4-alpine
@@ -14,8 +14,8 @@ services:
       - ./infra/nats/nats-server.conf:/etc/nats/nats-server.conf:ro
       - nats-data:/data
     ports:
-      - "4222:4222"
-      - "8222:8222"
+      - "127.0.0.1:4222:4222"
+      - "127.0.0.1:8222:8222"
 
   valkey:
     image: valkey/valkey:9.0.3-alpine
@@ -24,13 +24,13 @@ services:
       - ./infra/valkey/valkey.conf:/etc/valkey/valkey.conf:ro
       - valkey-data:/data
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
 
   consul:
     image: hashicorp/consul:1.21.5
     command: ["agent", "-dev", "-client=0.0.0.0"]
     ports:
-      - "8500:8500"
+      - "127.0.0.1:8500:8500"
 
   etcd:
     image: quay.io/coreos/etcd:v3.6.8
@@ -45,7 +45,7 @@ services:
     volumes:
       - etcd-data:/etcd-data
     ports:
-      - "2379:2379"
+      - "127.0.0.1:2379:2379"
 
 volumes:
   etcd-data:

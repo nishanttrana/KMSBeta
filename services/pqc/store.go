@@ -397,3 +397,89 @@ func scanRun(scanner interface {
 	item.CompletedAt = parseTimeValue(completedRaw)
 	return item, nil
 }
+
+// --- Asset migration record methods ---
+
+func (s *SQLStore) CreateAssetMigrationRecord(ctx context.Context, item AssetMigrationRecord) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO pqc_asset_migration_records (
+  id, tenant_id, asset_id, asset_type, name, source, from_algorithm, to_algorithm,
+  plan_id, run_id, step_id, migrated_at, migrated_by, dry_run, qsl_before, qsl_after, notes
+) VALUES (
+  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP,$12,$13,$14,$15,$16
+)
+`, item.ID, item.TenantID, item.AssetID, item.AssetType, item.Name, item.Source,
+		item.FromAlgorithm, item.ToAlgorithm, item.PlanID, item.RunID, item.StepID,
+		item.MigratedBy, item.DryRun, item.QSLBefore, item.QSLAfter, item.Notes)
+	return err
+}
+
+func (s *SQLStore) ListAssetMigrationRecords(ctx context.Context, tenantID string, assetID string, limit int, offset int) ([]AssetMigrationRecord, error) {
+	if limit <= 0 || limit > 1000 {
+		limit = 100
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, tenant_id, asset_id, asset_type, name, source, from_algorithm, to_algorithm,
+       plan_id, run_id, step_id, migrated_at, COALESCE(migrated_by,''), dry_run, qsl_before, qsl_after, COALESCE(notes,'')
+FROM pqc_asset_migration_records
+WHERE tenant_id = $1 AND asset_id = $2
+ORDER BY migrated_at DESC
+LIMIT $3 OFFSET $4
+`, strings.TrimSpace(tenantID), strings.TrimSpace(assetID), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]AssetMigrationRecord, 0)
+	for rows.Next() {
+		item, err := scanAssetMigrationRecord(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) GetAssetMigrationTimeline(ctx context.Context, tenantID string, planID string) ([]AssetMigrationRecord, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, tenant_id, asset_id, asset_type, name, source, from_algorithm, to_algorithm,
+       plan_id, run_id, step_id, migrated_at, COALESCE(migrated_by,''), dry_run, qsl_before, qsl_after, COALESCE(notes,'')
+FROM pqc_asset_migration_records
+WHERE tenant_id = $1 AND plan_id = $2
+ORDER BY migrated_at ASC
+`, strings.TrimSpace(tenantID), strings.TrimSpace(planID))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := make([]AssetMigrationRecord, 0)
+	for rows.Next() {
+		item, err := scanAssetMigrationRecord(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func scanAssetMigrationRecord(scanner interface {
+	Scan(dest ...interface{}) error
+}) (AssetMigrationRecord, error) {
+	var item AssetMigrationRecord
+	var migratedRaw interface{}
+	err := scanner.Scan(
+		&item.ID, &item.TenantID, &item.AssetID, &item.AssetType, &item.Name, &item.Source,
+		&item.FromAlgorithm, &item.ToAlgorithm, &item.PlanID, &item.RunID, &item.StepID,
+		&migratedRaw, &item.MigratedBy, &item.DryRun, &item.QSLBefore, &item.QSLAfter, &item.Notes,
+	)
+	if err != nil {
+		return AssetMigrationRecord{}, err
+	}
+	item.MigratedAt = parseTimeValue(migratedRaw)
+	return item, nil
+}

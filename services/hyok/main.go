@@ -173,7 +173,7 @@ func migrationPath() string {
 }
 
 func loadHTTPServerTLSConfig() *tls.Config {
-	cfg := &tls.Config{MinVersion: tls.VersionTLS12}
+	cfg := &tls.Config{MinVersion: tls.VersionTLS13}
 	caFile := strings.TrimSpace(os.Getenv("HYOK_TLS_CLIENT_CA_FILE"))
 	if caFile == "" {
 		return cfg

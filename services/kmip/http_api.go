@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"github.com/ovh/kmip-go/ttlv"
+
+	"vecta-kms/pkg/tenantcheck"
 )
 
 func (h *Handler) HTTPHandler() http.Handler {
@@ -33,12 +35,6 @@ func (h *Handler) HTTPHandler() http.Handler {
 	mux.HandleFunc("POST /kmip/interop/targets", h.handleCreateInteropTarget)
 	mux.HandleFunc("DELETE /kmip/interop/targets/{id}", h.handleDeleteInteropTarget)
 	mux.HandleFunc("POST /kmip/interop/targets/{id}/validate", h.handleValidateInteropTarget)
-	mux.HandleFunc("GET /tde/databases", h.handleListTDEDatabases)
-	mux.HandleFunc("POST /tde/databases", h.handleRegisterTDEDatabase)
-	mux.HandleFunc("GET /tde/databases/{id}", h.handleGetTDEDatabase)
-	mux.HandleFunc("POST /tde/databases/{id}/provision", h.handleProvisionTDEKey)
-	mux.HandleFunc("POST /tde/databases/{id}/revoke", h.handleRevokeTDEKey)
-	mux.HandleFunc("GET /tde/status", h.handleGetTDEStatus)
 	return mux
 }
 
@@ -213,7 +209,7 @@ func (h *Handler) handleListClientProfiles(w http.ResponseWriter, r *http.Reques
 	}
 	items, err := h.store.ListClientProfiles(r.Context(), tenantID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_profiles_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "list_profiles_failed", "failed to list KMIP profiles", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
@@ -256,7 +252,7 @@ func (h *Handler) handleDeleteClientProfile(w http.ResponseWriter, r *http.Reque
 	}
 	attachedClients, err := h.store.CountClientsByProfile(r.Context(), tenantID, profileID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "delete_profile_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "delete_profile_failed", "failed to check profile usage", reqID, tenantID)
 		return
 	}
 	if attachedClients > 0 {
@@ -287,7 +283,7 @@ func (h *Handler) handleListClients(w http.ResponseWriter, r *http.Request) {
 	}
 	items, err := h.store.ListClients(r.Context(), tenantID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_clients_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "list_clients_failed", "failed to list KMIP clients", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
@@ -377,7 +373,7 @@ func (h *Handler) handleListInteropTargets(w http.ResponseWriter, r *http.Reques
 	}
 	items, err := h.store.ListInteropTargets(r.Context(), tenantID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_interop_targets_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "list_interop_targets_failed", "failed to list interop targets", reqID, tenantID)
 		return
 	}
 	views := make([]KMIPInteropTargetView, 0, len(items))
@@ -468,12 +464,12 @@ func (h *Handler) handleValidateInteropTarget(w http.ResponseWriter, r *http.Req
 		status = "verified"
 	}
 	if err := h.store.UpdateInteropTargetValidation(r.Context(), tenantID, targetID, status, report.Error, marshalInteropValidationReport(report), report.CheckedAt); err != nil {
-		writeErr(w, http.StatusInternalServerError, "validate_interop_target_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "validate_interop_target_failed", "failed to persist validation result", reqID, tenantID)
 		return
 	}
 	updated, err := h.store.GetInteropTarget(r.Context(), tenantID, targetID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "validate_interop_target_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "validate_interop_target_failed", "failed to read updated interop target", reqID, tenantID)
 		return
 	}
 	_ = h.publishAudit(r.Context(), "audit.kmip.interop_validated", tenantID, map[string]interface{}{
@@ -954,6 +950,11 @@ func mustTenant(r *http.Request, w http.ResponseWriter, requestID string) string
 	}
 	if tenantID == "" {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", requestID, "")
+		return ""
+	}
+	// A01 fix: verify the request tenant matches the authenticated JWT tenant
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", requestID, tenantID)
 		return ""
 	}
 	return tenantID

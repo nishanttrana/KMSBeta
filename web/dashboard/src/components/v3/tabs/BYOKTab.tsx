@@ -76,8 +76,8 @@ function copyToClipboard(text: string) {
   try { navigator.clipboard.writeText(text); } catch { /* ignore */ }
 }
 
-const CLOUD_PROVIDER_LABELS: Record<string, string> = { aws: "AWS KMS", azure: "Azure Key Vault", gcp: "Google Cloud KMS", oci: "Oracle Cloud Vault", salesforce: "Salesforce BYOK" };
-const CLOUD_PROVIDER_ORDER = ["aws", "azure", "gcp", "oci", "salesforce"];
+const CLOUD_PROVIDER_LABELS: Record<string, string> = { aws: "AWS KMS", azure: "Azure Key Vault", gcp: "Google Cloud KMS", oci: "Oracle Cloud Vault", salesforce: "Salesforce BYOK", alibaba: "Alibaba Cloud KMS", servicenow: "ServiceNow" };
+const CLOUD_PROVIDER_ORDER = ["aws", "azure", "gcp", "oci", "salesforce", "alibaba", "servicenow"];
 
 const CREDENTIAL_TEMPLATES: Record<string, string> = {
   aws: JSON.stringify({ access_key_id: "", secret_access_key: "", region: "us-east-1" }, null, 2),
@@ -85,6 +85,8 @@ const CREDENTIAL_TEMPLATES: Record<string, string> = {
   gcp: JSON.stringify({ type: "service_account", project_id: "", private_key_id: "", private_key: "", client_email: "", client_id: "" }, null, 2),
   oci: JSON.stringify({ tenancy_ocid: "", user_ocid: "", fingerprint: "", private_key: "", region: "us-ashburn-1", compartment_id: "" }, null, 2),
   salesforce: JSON.stringify({ org_id: "", instance_url: "https://login.salesforce.com", client_id: "", client_secret: "", username: "", password: "" }, null, 2),
+  alibaba: JSON.stringify({ access_key_id: "", access_key_secret: "" }, null, 2),
+  servicenow: JSON.stringify({ instance_url: "https://your-instance.service-now.com", username: "", password: "" }, null, 2),
 };
 
 const PROVIDER_REGIONS: Record<string, string[]> = {
@@ -93,6 +95,8 @@ const PROVIDER_REGIONS: Record<string, string[]> = {
   gcp: ["us-central1", "us-east1", "us-west1", "europe-west1", "europe-west4", "asia-east1", "asia-southeast1"],
   oci: ["us-ashburn-1", "us-phoenix-1", "eu-frankfurt-1", "eu-amsterdam-1", "ap-tokyo-1", "ap-mumbai-1"],
   salesforce: ["na", "eu", "ap"],
+  alibaba: ["cn-hangzhou", "cn-shanghai", "cn-beijing", "cn-shenzhen", "cn-hongkong", "ap-southeast-1", "eu-central-1", "us-east-1"],
+  servicenow: ["us"],
 };
 
 export const BYOKTab = ({ session, keyCatalog, onToast }) => {

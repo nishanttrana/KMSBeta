@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/tenantcheck"
 )
 
 // Handler is the HTTP handler for the DAM service.
@@ -243,6 +245,11 @@ func mustTenant(r *http.Request, w http.ResponseWriter, reqID string) string {
 	tenantID := firstNonEmpty(tenantFromRequest(r), strings.TrimSpace(r.URL.Query().Get("tenant_id")))
 	if tenantID == "" {
 		writeErr(w, http.StatusBadRequest, "missing_tenant", "X-Tenant-ID header or tenant_id query param required", reqID, "")
+		return ""
+	}
+	// A01 fix: verify the request tenant matches the authenticated JWT tenant
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
 		return ""
 	}
 	return tenantID
