@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/binary"
 	"errors"
-	"math/rand"
 	"net/http"
 	"strings"
 	"time"
@@ -140,7 +141,7 @@ func (h *Handler) runSimulatedScan(ctx context.Context, tenantID string, target 
 	_ = h.svc.store.UpdateLeakScanJob(ctx, tenantID, job.ID, "running", 10, 0, &startedAt, nil, "")
 
 	// Simulate scanning duration: 2–5 seconds.
-	sleepSec := 2 + rand.Intn(4) //nolint:gosec
+	sleepSec := 2 + cryptoIntn(4)
 	time.Sleep(time.Duration(sleepSec) * time.Second)
 
 	_ = h.svc.store.UpdateLeakScanJob(ctx, tenantID, job.ID, "running", 60, 0, &startedAt, nil, "")
@@ -250,4 +251,11 @@ func (h *Handler) handleUpdateLeakFinding(w http.ResponseWriter, r *http.Request
 		"ok":         true,
 		"request_id": reqID,
 	})
+}
+
+// cryptoIntn returns a cryptographically secure random int in [0, n).
+func cryptoIntn(n int) int {
+	var b [8]byte
+	_, _ = rand.Read(b[:])
+	return int(binary.LittleEndian.Uint64(b[:]) % uint64(n))
 }

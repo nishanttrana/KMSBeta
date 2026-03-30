@@ -17,7 +17,7 @@ func (h *Handler) handleGetOpsOverview(w http.ResponseWriter, r *http.Request) {
 	}
 	ov, err := h.store.GetOpsOverview(r.Context(), tenantID, window)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "query_failed", "internal query error", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -38,7 +38,7 @@ func (h *Handler) handleGetOpsTimeSeries(w http.ResponseWriter, r *http.Request)
 	}
 	items, err := h.store.GetOpsTimeSeries(r.Context(), tenantID, window)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "query_failed", "internal query error", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -56,7 +56,7 @@ func (h *Handler) handleGetLatencyPercentiles(w http.ResponseWriter, r *http.Req
 	}
 	items, err := h.store.GetLatencyPercentiles(r.Context(), tenantID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "query_failed", "internal query error", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -73,7 +73,7 @@ func (h *Handler) handleGetServiceStats(w http.ResponseWriter, r *http.Request) 
 	}
 	items, err := h.store.GetServiceStats(r.Context(), tenantID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "query_failed", "internal query error", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -94,7 +94,7 @@ func (h *Handler) handleGetErrorBreakdown(w http.ResponseWriter, r *http.Request
 	}
 	items, err := h.store.GetErrorBreakdown(r.Context(), tenantID, window)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "query_failed", "internal query error", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -125,7 +125,7 @@ func (h *Handler) handleRecordOp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.store.RecordOp(r.Context(), tenantID, req.Service, req.OpType, req.LatencyMs, req.IsError); err != nil {
-		writeErr(w, http.StatusInternalServerError, "record_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "record_failed", "failed to record operation", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{

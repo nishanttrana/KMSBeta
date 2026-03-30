@@ -18,7 +18,7 @@ func (h *Handler) handlePrometheusMetrics(w http.ResponseWriter, r *http.Request
 	// We use a special internal query that ignores tenant_id filter.
 	rows, err := h.store.GetAllServiceStats(ctx)
 	if err != nil {
-		http.Error(w, "# ERROR: "+err.Error()+"\n", http.StatusInternalServerError)
+		http.Error(w, "# ERROR: internal query error\n", http.StatusInternalServerError)
 		return
 	}
 

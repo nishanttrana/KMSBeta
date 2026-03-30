@@ -109,6 +109,8 @@ func newMockProviderRegistry() *ProviderRegistry {
 	r.Register(newMockProvider(ProviderGCP))
 	r.Register(newMockProvider(ProviderOCI))
 	r.Register(newMockProvider(ProviderSalesforce))
+	r.Register(newMockProvider(ProviderAlibaba))
+	r.Register(newMockProvider(ProviderServiceNow))
 	return r
 }
 
@@ -134,6 +136,10 @@ func (m *mockProvider) DefaultRegion() string {
 		return "us-ashburn-1"
 	case ProviderSalesforce:
 		return "global"
+	case ProviderAlibaba:
+		return "cn-hangzhou"
+	case ProviderServiceNow:
+		return "us"
 	default:
 		return "global"
 	}
@@ -229,6 +235,10 @@ func (m *mockProvider) buildRef(account CloudAccount, region string, cloudKeyID 
 		return fmt.Sprintf("ocid1.key.oc1.%s.%s", strings.ReplaceAll(region, "-", ""), cloudKeyID)
 	case ProviderSalesforce:
 		return fmt.Sprintf("salesforce://tenant-secrets/%s", cloudKeyID)
+	case ProviderAlibaba:
+		return fmt.Sprintf("acs:kms:%s:%s:key/%s", region, account.ID, cloudKeyID)
+	case ProviderServiceNow:
+		return fmt.Sprintf("servicenow://%s/encryption/key/%s", account.Name, cloudKeyID)
 	default:
 		return cloudKeyID
 	}

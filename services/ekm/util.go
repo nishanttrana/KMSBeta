@@ -48,6 +48,12 @@ func normalizeDBEngine(v string) string {
 		return "oracle"
 	case "postgres", "postgresql":
 		return "postgresql"
+	case "mysql":
+		return "mysql"
+	case "db2", "ibm-db2":
+		return "db2"
+	case "mariadb":
+		return "mariadb"
 	default:
 		return strings.ToLower(strings.TrimSpace(v))
 	}
@@ -56,6 +62,34 @@ func normalizeDBEngine(v string) string {
 func isSQLServerEngine(v string) bool {
 	e := normalizeDBEngine(v)
 	return e == "mssql"
+}
+
+// isSupportedTDEEngine returns true for all database engines that support TDE key management.
+func isSupportedTDEEngine(v string) bool {
+	switch normalizeDBEngine(v) {
+	case "mssql", "oracle", "postgresql", "mysql", "db2", "mariadb":
+		return true
+	default:
+		return false
+	}
+}
+
+// defaultPortForEngine returns the standard default port for a database engine.
+func defaultPortForEngine(engine string) int {
+	switch normalizeDBEngine(engine) {
+	case "mssql":
+		return 1433
+	case "oracle":
+		return 1521
+	case "postgresql":
+		return 5432
+	case "mysql", "mariadb":
+		return 3306
+	case "db2":
+		return 50000
+	default:
+		return 0
+	}
 }
 
 func normalizeRole(v string) string {
@@ -189,6 +223,15 @@ func shouldAuto(ptr *bool, fallback bool) bool {
 		return fallback
 	}
 	return *ptr
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
 }
 
 func firstString(values ...interface{}) string {

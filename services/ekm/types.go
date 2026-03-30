@@ -45,6 +45,7 @@ type DatabaseInstance struct {
 	Host            string    `json:"host"`
 	Port            int       `json:"port"`
 	DatabaseName    string    `json:"database_name"`
+	Status          string    `json:"status"` // registered, tde_enabled, tde_disabled, key_revoked, error
 	TDEEnabled      bool      `json:"tde_enabled"`
 	TDEState        string    `json:"tde_state"`
 	KeyID           string    `json:"key_id"`
@@ -53,6 +54,45 @@ type DatabaseInstance struct {
 	LastSeenAt      time.Time `json:"last_seen_at"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// Revocation types
+type RevokeTDEKeyRequest struct {
+	TenantID string `json:"tenant_id"`
+	Reason   string `json:"reason"`
+}
+
+type RevokeTDEKeyResponse struct {
+	KeyID             string   `json:"key_id"`
+	AffectedAgentIDs  []string `json:"affected_agent_ids"`
+	AffectedDatabases int      `json:"affected_databases"`
+}
+
+type RevokeDatabaseTDERequest struct {
+	TenantID string `json:"tenant_id"`
+	Reason   string `json:"reason"`
+}
+
+type RevokeDatabaseTDEResponse struct {
+	DatabaseID string `json:"database_id"`
+	KeyID      string `json:"key_id"`
+	Status     string `json:"status"`
+}
+
+// Validate deployment types
+type ValidateDeploymentRequest struct {
+	TenantID    string `json:"tenant_id"`
+	AgentID     string `json:"agent_id"`
+	Version     string `json:"version"`
+	Host        string `json:"host"`
+	DBEngine    string `json:"db_engine"`
+	Connectivity string `json:"connectivity"` // ok, degraded, failed
+}
+
+type ValidateDeploymentResponse struct {
+	AgentID  string `json:"agent_id"`
+	Status   string `json:"status"` // valid, invalid
+	Messages []string `json:"messages"`
 }
 
 type TDEKeyRecord struct {
@@ -423,6 +463,158 @@ type BitLockerNetworkScanResult struct {
 	WindowsHosts int                         `json:"windows_hosts"`
 	Candidates   []BitLockerNetworkCandidate `json:"candidates"`
 	DurationMS   int64                       `json:"duration_ms"`
+}
+
+// Azure EKM — Vecta KMS acts as external key provider for Azure services
+type AzureEKMConfig struct {
+	ID             string    `json:"id"`
+	TenantID       string    `json:"tenant_id"`
+	AzureTenantID  string    `json:"azure_tenant_id"`
+	SubscriptionID string    `json:"subscription_id"`
+	ResourceGroup  string    `json:"resource_group"`
+	VaultName      string    `json:"vault_name"`
+	VaultURL       string    `json:"vault_url"`
+	ManagedHSMName string    `json:"managed_hsm_name,omitempty"`
+	ManagedHSMURL  string    `json:"managed_hsm_url,omitempty"`
+	ClientID       string    `json:"client_id"`
+	ClientSecret   string    `json:"client_secret"`
+	AuthMode       string    `json:"auth_mode"`
+	Status         string    `json:"status"`
+	KeyMappings    int       `json:"key_mappings"`
+	LastSyncAt     time.Time `json:"last_sync_at"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type AzureKeyMapping struct {
+	ID              string    `json:"id"`
+	TenantID        string    `json:"tenant_id"`
+	ConfigID        string    `json:"config_id"`
+	VectaKeyID      string    `json:"vecta_key_id"`
+	AzureKeyName    string    `json:"azure_key_name"`
+	AzureKeyVersion string    `json:"azure_key_version"`
+	AzureKeyID      string    `json:"azure_key_id"`
+	Purpose         string    `json:"purpose"`
+	SyncStatus      string    `json:"sync_status"`
+	LastSyncAt      time.Time `json:"last_sync_at"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+type AzureSyncResult struct {
+	MappingID  string `json:"mapping_id"`
+	Status     string `json:"status"`
+	AzureKeyID string `json:"azure_key_id,omitempty"`
+	Error      string `json:"error,omitempty"`
+}
+
+type CreateAzureEKMConfigRequest struct {
+	TenantID       string `json:"tenant_id"`
+	AzureTenantID  string `json:"azure_tenant_id"`
+	SubscriptionID string `json:"subscription_id"`
+	ResourceGroup  string `json:"resource_group"`
+	VaultName      string `json:"vault_name"`
+	VaultURL       string `json:"vault_url"`
+	ManagedHSMName string `json:"managed_hsm_name,omitempty"`
+	ManagedHSMURL  string `json:"managed_hsm_url,omitempty"`
+	ClientID       string `json:"client_id"`
+	ClientSecret   string `json:"client_secret"`
+	AuthMode       string `json:"auth_mode"`
+}
+
+type CreateAzureKeyMappingRequest struct {
+	TenantID   string `json:"tenant_id"`
+	ConfigID   string `json:"config_id"`
+	VectaKeyID string `json:"vecta_key_id"`
+	AzureKeyName string `json:"azure_key_name"`
+	Purpose    string `json:"purpose"`
+}
+
+type AzureWrapUnwrapRequest struct {
+	TenantID  string `json:"tenant_id"`
+	Algorithm string `json:"algorithm"`
+	ValueB64  string `json:"value"`
+}
+
+// Google CSE — Vecta KMS acts as KACLS (Key Access Control List Service) for Google Workspace
+type GoogleCSEConfig struct {
+	ID                        string    `json:"id"`
+	TenantID                  string    `json:"tenant_id"`
+	GoogleWorkspaceCustomerID string    `json:"google_workspace_customer_id"`
+	ServiceAccountEmail       string    `json:"service_account_email"`
+	ServiceAccountKeyJSON     string    `json:"service_account_key_json"` // encrypted at rest
+	AllowedDomains            []string  `json:"allowed_domains"`         // e.g., ["company.com"]
+	KACLSEndpoint             string    `json:"kacls_endpoint"`          // public URL where Google calls us
+	Status                    string    `json:"status"`
+	KeyCount                  int       `json:"key_count"`
+	LastActivityAt            time.Time `json:"last_activity_at"`
+	CreatedAt                 time.Time `json:"created_at"`
+}
+
+type GoogleCSEKey struct {
+	ID           string    `json:"id"`
+	TenantID     string    `json:"tenant_id"`
+	ConfigID     string    `json:"config_id"`
+	KeyName      string    `json:"key_name"`
+	VectaKeyID   string    `json:"vecta_key_id"`  // Backing key in Vecta KMS
+	GoogleKeyURI string    `json:"google_key_uri"` // URI Google uses to reference this key
+	Purpose      string    `json:"purpose"`        // "gmail", "drive", "calendar", "meet"
+	Status       string    `json:"status"`         // "active", "disabled", "destroyed"
+	WrapCount    int64     `json:"wrap_count"`
+	UnwrapCount  int64     `json:"unwrap_count"`
+	LastUsedAt   time.Time `json:"last_used_at"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// KACLS API types per Google CSE spec
+type KACLSWrapRequest struct {
+	Authentication string `json:"authentication"` // JWT from Google
+	Authorization  string `json:"authorization"`  // JWT with user/resource claims
+	Key            string `json:"key"`            // base64url DEK to wrap
+	Reason         string `json:"reason,omitempty"`
+}
+
+type KACLSWrapResponse struct {
+	WrappedKey string `json:"wrapped_key"` // base64url wrapped DEK
+}
+
+type KACLSUnwrapRequest struct {
+	Authentication string `json:"authentication"`
+	Authorization  string `json:"authorization"`
+	WrappedKey     string `json:"wrapped_key"`
+	Reason         string `json:"reason,omitempty"`
+}
+
+type KACLSUnwrapResponse struct {
+	Key string `json:"key"` // base64url unwrapped DEK
+}
+
+type KACLSStatusResponse struct {
+	ServerType string `json:"server_type"` // "KACLS"
+	Vendor     string `json:"vendor"`      // "Vecta KMS"
+	Version    string `json:"version"`
+	Name       string `json:"name"`
+}
+
+type KACLSPrivilegedUnwrapRequest struct {
+	Authentication string `json:"authentication"`
+	WrappedKey     string `json:"wrapped_key"`
+	Reason         string `json:"reason"` // must be "ADMIN_ACCESS" or "LEGAL_HOLD"
+}
+
+type CreateGoogleCSEConfigRequest struct {
+	TenantID                  string   `json:"tenant_id"`
+	GoogleWorkspaceCustomerID string   `json:"google_workspace_customer_id"`
+	ServiceAccountEmail       string   `json:"service_account_email"`
+	ServiceAccountKeyJSON     string   `json:"service_account_key_json"`
+	AllowedDomains            []string `json:"allowed_domains"`
+	KACLSEndpoint             string   `json:"kacls_endpoint"`
+}
+
+type CreateGoogleCSEKeyRequest struct {
+	TenantID   string `json:"tenant_id"`
+	ConfigID   string `json:"config_id"`
+	KeyName    string `json:"key_name"`
+	VectaKeyID string `json:"vecta_key_id"`
+	Purpose    string `json:"purpose"`
 }
 
 type SDKProviderSummary struct {

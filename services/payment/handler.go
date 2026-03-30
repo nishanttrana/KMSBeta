@@ -574,7 +574,13 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, err error, requestID 
 		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, requestID, tenantID)
 		return
 	}
-	writeErr(w, httpStatusForErr(err), "internal_error", err.Error(), requestID, tenantID)
+	// A05: avoid leaking internal error details for 5xx responses
+	status := httpStatusForErr(err)
+	msg := err.Error()
+	if status >= 500 {
+		msg = "internal server error"
+	}
+	writeErr(w, status, "internal_error", msg, requestID, tenantID)
 }
 
 func decodeJSON(r *http.Request, out interface{}) error {

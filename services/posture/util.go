@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type serviceError struct {
@@ -269,6 +271,11 @@ func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
 	tenantID := strings.TrimSpace(tenantFromRequest(r))
 	if tenantID == "" {
 		writeErr(w, http.StatusBadRequest, "tenant_required", "tenant_id is required", reqID, "")
+		return ""
+	}
+	// A01 fix: verify the request tenant matches the authenticated JWT tenant
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
 		return ""
 	}
 	return tenantID

@@ -102,6 +102,11 @@ func (svc *BackupService) RestoreFromPoint(ctx context.Context, tenantID, id str
 	if rp.Status != "available" {
 		return fmt.Errorf("restore point %s is not in available state (current: %s)", id, rp.Status)
 	}
+	// Verify backup integrity before restore to prevent tampered data restoration.
+	expectedChecksum := svc.computeChecksum(tenantID, rp.RunID, rp.KeyCount, rp.BackupSizeBytes)
+	if rp.Checksum != expectedChecksum {
+		return fmt.Errorf("restore point %s integrity check failed: checksum mismatch (expected %s, got %s)", id, expectedChecksum, rp.Checksum)
+	}
 
 	if err := svc.store.UpdateRestorePointStatus(ctx, tenantID, id, "restoring"); err != nil {
 		return err

@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"vecta-kms/pkg/ssrfguard"
 )
 
 // OIDCDiscovery holds discovered OIDC endpoints from .well-known/openid-configuration.
@@ -76,7 +78,10 @@ func validateSSOState(state string) (tenantID string, provider string, err error
 	if !ok {
 		return "", "", errors.New("invalid or expired state parameter")
 	}
-	entry := raw.(*ssoStateEntry)
+	entry, ok2 := raw.(*ssoStateEntry)
+	if !ok2 {
+		return "", "", errors.New("corrupted state entry")
+	}
 	if time.Since(entry.CreatedAt) > 10*time.Minute {
 		return "", "", errors.New("state parameter has expired")
 	}
@@ -90,6 +95,10 @@ func discoverOIDCEndpoints(ctx context.Context, issuerURL string) (OIDCDiscovery
 		return OIDCDiscovery{}, errors.New("oidc issuer_url is required")
 	}
 	wellKnown := issuerURL + "/.well-known/openid-configuration"
+	// SSRF protection: ensure OIDC issuer URL does not point to internal services
+	if err := ssrfguard.ValidateWebhookURL(wellKnown); err != nil {
+		return OIDCDiscovery{}, fmt.Errorf("oidc issuer URL blocked: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, wellKnown, nil)
 	if err != nil {
 		return OIDCDiscovery{}, err
@@ -176,6 +185,10 @@ func exchangeOIDCCode(ctx context.Context, cfg IdentityProviderConfig, code stri
 		values.Set("client_secret", clientSecret)
 	}
 
+	// SSRF protection: validate token endpoint before making request
+	if err := ssrfguard.ValidateWebhookURL(discovery.TokenEndpoint); err != nil {
+		return SSOUserAttributes{}, fmt.Errorf("oidc token endpoint blocked: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, discovery.TokenEndpoint, strings.NewReader(values.Encode()))
 	if err != nil {
 		return SSOUserAttributes{}, err
@@ -267,6 +280,10 @@ func parseJWTClaims(token string) (map[string]any, error) {
 
 // fetchOIDCUserInfo fetches user info from the OIDC userinfo endpoint.
 func fetchOIDCUserInfo(ctx context.Context, endpoint string, accessToken string) (map[string]any, error) {
+	// SSRF protection: validate userinfo endpoint
+	if err := ssrfguard.ValidateWebhookURL(endpoint); err != nil {
+		return nil, fmt.Errorf("oidc userinfo endpoint blocked: %w", err)
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, err

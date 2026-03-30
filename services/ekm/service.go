@@ -117,8 +117,8 @@ func (s *Service) RegisterAgent(ctx context.Context, req RegisterAgentRequest, t
 	}
 
 	var provisioned *TDEKeyRecord
-	autoProvision := shouldAuto(req.AutoProvisionTDE, isSQLServerEngine(req.DBEngine))
-	if isNewAgent && autoProvision && isSQLServerEngine(req.DBEngine) {
+	autoProvision := shouldAuto(req.AutoProvisionTDE, isSupportedTDEEngine(req.DBEngine))
+	if isNewAgent && autoProvision && isSupportedTDEEngine(req.DBEngine) {
 		key, err := s.createTDEKey(ctx, CreateTDEKeyRequest{
 			TenantID:        req.TenantID,
 			Name:            "tde-agent-" + req.AgentID,
@@ -282,9 +282,7 @@ func (s *Service) RegisterDatabase(ctx context.Context, req RegisterDatabaseRequ
 		req.Engine = DefaultDBEngine
 	}
 	if req.Port <= 0 {
-		if isSQLServerEngine(req.Engine) {
-			req.Port = 1433
-		}
+		req.Port = defaultPortForEngine(req.Engine)
 	}
 	if req.TDEState == "unknown" {
 		if req.TDEEnabled {
@@ -302,8 +300,8 @@ func (s *Service) RegisterDatabase(ctx context.Context, req RegisterDatabaseRequ
 	}
 
 	var provisioned *TDEKeyRecord
-	autoProvision := shouldAuto(req.AutoProvisionKey, isSQLServerEngine(req.Engine))
-	if req.KeyID == "" && autoProvision && isSQLServerEngine(req.Engine) {
+	autoProvision := shouldAuto(req.AutoProvisionKey, isSupportedTDEEngine(req.Engine))
+	if req.KeyID == "" && autoProvision && isSupportedTDEEngine(req.Engine) {
 		key, err := s.createTDEKey(ctx, CreateTDEKeyRequest{
 			TenantID:        req.TenantID,
 			Name:            "tde-db-" + req.DatabaseID,
@@ -1139,11 +1137,12 @@ ROTATION_CYCLE_DAYS=%d
 PKCS11_MODULE_PATH=%s
 PKCS11_SLOT_ID=0
 PKCS11_PIN_ENV=PKCS11_PIN
-EKM_API_BASE_URL=https://kms.example.com/svc/ekm
+EKM_API_BASE_URL=${EKM_API_BASE_URL:-https://kms.example.com/svc/ekm}
 EKM_REGISTER_PATH=/ekm/agents/register
 EKM_HEARTBEAT_PATH=/ekm/agents/%s/heartbeat
 EKM_ROTATE_PATH=/ekm/agents/%s/rotate
-`, tenantID, agent.ID, agent.Name, engine, defaultString(agent.Host, "127.0.0.1"), defaultInt(agent.HeartbeatIntervalSec, DefaultHeartbeatSec), rotation, pkcs11ModuleHint, agent.ID, agent.ID))
+EKM_VALIDATE_PATH=/ekm/agents/%s/validate-deploy
+`, tenantID, agent.ID, agent.Name, engine, defaultString(agent.Host, "127.0.0.1"), defaultInt(agent.HeartbeatIntervalSec, DefaultHeartbeatSec), rotation, pkcs11ModuleHint, agent.ID, agent.ID, agent.ID))
 
 	pkcs11Cfg := `provider = "pkcs11"
 module_path = "${PKCS11_MODULE_PATH}"
@@ -1201,39 +1200,155 @@ Invoke-RestMethod -Method Post -Uri ($cfg["EKM_API_BASE_URL"] + $cfg["EKM_HEARTB
 `
 	linuxInstall := fmt.Sprintf(`#!/usr/bin/env bash
 set -euo pipefail
-mkdir -p /etc/vecta-ekm
-cat > /etc/vecta-ekm/agent.env <<'EOF'
+
+# ---- Pre-flight checks ----
+echo "[preflight] Checking prerequisites..."
+
+# Verify bash version >= 4
+if (( BASH_VERSINFO[0] < 4 )); then
+  echo "[error] bash 4+ required, found $BASH_VERSION" >&2; exit 1
+fi
+
+# Verify curl is available
+if ! command -v curl &>/dev/null; then
+  echo "[error] curl is required but not found. Install with: apt-get install curl / yum install curl" >&2; exit 1
+fi
+
+# Verify disk space (need at least 50MB free in /etc)
+AVAIL_KB=$(df -P /etc 2>/dev/null | awk 'NR==2{print $4}' || echo 0)
+if (( AVAIL_KB < 51200 )); then
+  echo "[error] Insufficient disk space in /etc (need 50MB, have ${AVAIL_KB}KB)" >&2; exit 1
+fi
+
+# Verify network connectivity to KMS
+EKM_URL="${EKM_API_BASE_URL:-https://kms.example.com/svc/ekm}"
+if ! curl -fsS --connect-timeout 5 --max-time 10 "${EKM_URL%%/}/ekm/agents" -o /dev/null 2>/dev/null; then
+  echo "[warn] Cannot reach KMS at $EKM_URL -- deployment may fail at validation step"
+fi
+
+echo "[preflight] All checks passed."
+
+# ---- Rollback function ----
+INSTALL_DIR="/etc/vecta-ekm"
+rollback() {
+  echo "[rollback] Installation failed, cleaning up..."
+  rm -rf "$INSTALL_DIR"
+  echo "[rollback] Removed $INSTALL_DIR. Please check errors above and retry."
+  exit 1
+}
+trap rollback ERR
+
+# ---- Install ----
+mkdir -p "$INSTALL_DIR"
+cat > "$INSTALL_DIR/agent.env" <<'EOF'
 %s
 EOF
-cat > /etc/vecta-ekm/pkcs11.conf <<'EOF'
+cat > "$INSTALL_DIR/pkcs11.conf" <<'EOF'
 %s
 EOF
-cat > /etc/vecta-ekm/heartbeat.sh <<'EOF'
+cat > "$INSTALL_DIR/heartbeat.sh" <<'EOF'
 %s
 EOF
-chmod 750 /etc/vecta-ekm/heartbeat.sh
-echo "Install vecta-ekm-agent binary and systemd service next."
-echo "Then run: systemctl daemon-reload && systemctl enable --now vecta-ekm-agent"
-echo "Schedule health heartbeat every 30s (systemd timer or cron) using /etc/vecta-ekm/heartbeat.sh"
-`, envFile, pkcs11Cfg, linuxHeartbeat)
+chmod 750 "$INSTALL_DIR/heartbeat.sh"
+
+echo "[install] Configuration written to $INSTALL_DIR"
+echo "[install] Next steps:"
+echo "  1. Install vecta-ekm-agent binary and systemd service"
+echo "  2. Run: systemctl daemon-reload && systemctl enable --now vecta-ekm-agent"
+echo "  3. Schedule heartbeat every 30s (systemd timer or cron) using $INSTALL_DIR/heartbeat.sh"
+echo "  4. Set EKM_API_BASE_URL in agent.env if KMS is not at the default address"
+
+# ---- Validate deployment ----
+echo "[validate] Contacting KMS to validate deployment..."
+VALIDATE_BODY=$(printf '{"tenant_id":"%%s","agent_id":"%%s","version":"1.0","connectivity":"ok"}' "%s" "%s")
+if curl -fsS -X POST "${EKM_URL%%/}/ekm/agents/%s/validate-deploy" \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: %s" \
+  -d "$VALIDATE_BODY" 2>/dev/null; then
+  echo ""
+  echo "[validate] Deployment validated successfully."
+else
+  echo "[warn] Could not validate deployment with KMS. Verify connectivity and try manually."
+fi
+
+trap - ERR
+echo "[done] Vecta EKM agent setup complete."
+`, envFile, pkcs11Cfg, linuxHeartbeat, tenantID, agent.ID, agent.ID, tenantID)
+
 	windowsInstall := fmt.Sprintf(`$ErrorActionPreference = "Stop"
-New-Item -ItemType Directory -Force -Path "C:\vecta-ekm" | Out-Null
-@"
+
+# ---- Pre-flight checks ----
+Write-Host "[preflight] Checking prerequisites..."
+
+# Verify PowerShell version >= 5.1
+if ($PSVersionTable.PSVersion.Major -lt 5) {
+  Write-Error "[error] PowerShell 5.1+ required, found $($PSVersionTable.PSVersion)"
+  exit 1
+}
+
+# Verify disk space (need at least 50MB)
+$freeGB = (Get-PSDrive C).Free / 1MB
+if ($freeGB -lt 50) {
+  Write-Error "[error] Insufficient disk space on C: (need 50MB, have $([Math]::Round($freeGB))MB)"
+  exit 1
+}
+
+# Verify network connectivity
+$ekmUrl = if ($env:EKM_API_BASE_URL) { $env:EKM_API_BASE_URL } else { "https://kms.example.com/svc/ekm" }
+try {
+  $null = Invoke-WebRequest -Uri "$ekmUrl/ekm/agents" -Method GET -TimeoutSec 5 -UseBasicParsing -ErrorAction SilentlyContinue
+} catch {
+  Write-Warning "[warn] Cannot reach KMS at $ekmUrl -- deployment may fail at validation step"
+}
+
+Write-Host "[preflight] All checks passed."
+
+# ---- Install ----
+$installDir = "C:\vecta-ekm"
+try {
+  New-Item -ItemType Directory -Force -Path $installDir | Out-Null
+  @"
 %s
-"@ | Set-Content -Path "C:\vecta-ekm\agent.env" -Encoding UTF8
-@"
+"@ | Set-Content -Path "$installDir\agent.env" -Encoding UTF8
+  @"
 %s
-"@ | Set-Content -Path "C:\vecta-ekm\pkcs11.conf" -Encoding UTF8
-@"
+"@ | Set-Content -Path "$installDir\pkcs11.conf" -Encoding UTF8
+  @"
 %s
-"@ | Set-Content -Path "C:\vecta-ekm\heartbeat.ps1" -Encoding UTF8
-Write-Host "Install vecta-ekm-agent.exe and create Windows service (NSSM/sc.exe)."
-Write-Host "Schedule heartbeat.ps1 in Windows Task Scheduler every 30 seconds."
-`, strings.ReplaceAll(envFile, "\n", "\r\n"), strings.ReplaceAll(pkcs11Cfg, "\n", "\r\n"), strings.ReplaceAll(windowsHeartbeat, "\n", "\r\n"))
+"@ | Set-Content -Path "$installDir\heartbeat.ps1" -Encoding UTF8
+
+  Write-Host "[install] Configuration written to $installDir"
+  Write-Host "[install] Next steps:"
+  Write-Host "  1. Install vecta-ekm-agent.exe and create Windows service (NSSM/sc.exe)"
+  Write-Host "  2. Schedule heartbeat.ps1 in Windows Task Scheduler every 30 seconds"
+  Write-Host "  3. Set EKM_API_BASE_URL environment variable if KMS is not at the default address"
+} catch {
+  Write-Error "[error] Installation failed: $_"
+  Write-Host "[rollback] Removing $installDir..."
+  Remove-Item -Recurse -Force $installDir -ErrorAction SilentlyContinue
+  exit 1
+}
+
+# ---- Validate deployment ----
+Write-Host "[validate] Contacting KMS to validate deployment..."
+try {
+  $body = @{ tenant_id = "%s"; agent_id = "%s"; version = "1.0"; connectivity = "ok" } | ConvertTo-Json -Compress
+  $null = Invoke-RestMethod -Method Post -Uri "$ekmUrl/ekm/agents/%s/validate-deploy" -ContentType "application/json" -Body $body -Headers @{"X-Tenant-ID"="%s"} -TimeoutSec 10
+  Write-Host "[validate] Deployment validated successfully."
+} catch {
+  Write-Warning "[warn] Could not validate deployment with KMS. Verify connectivity and try manually."
+}
+
+Write-Host "[done] Vecta EKM agent setup complete."
+`, strings.ReplaceAll(envFile, "\n", "\r\n"), strings.ReplaceAll(pkcs11Cfg, "\n", "\r\n"), strings.ReplaceAll(windowsHeartbeat, "\n", "\r\n"), tenantID, agent.ID, agent.ID, tenantID)
+
+	// Engine-specific TDE setup guide
+	tdeSetupGuide := buildTDESetupGuide(engine, agent.ID)
 
 	files := []DeployPackageFile{
 		{Path: "agent.env", Content: envFile, Mode: "0600"},
 		{Path: "pkcs11.conf", Content: pkcs11Cfg, Mode: "0600"},
+		{Path: "tde-setup.md", Content: tdeSetupGuide, Mode: "0644"},
 	}
 	if targetOS == "linux" {
 		files = append(files,
@@ -1257,8 +1372,8 @@ Write-Host "Schedule heartbeat.ps1 in Windows Task Scheduler every 30 seconds."
 		HeartbeatPath:       "/ekm/agents/" + agent.ID + "/heartbeat",
 		RegisterPath:        "/ekm/agents/register",
 		RotatePath:          "/ekm/agents/" + agent.ID + "/rotate",
-		SupportedDatabases:  []string{"mssql", "oracle"},
-		RecommendedProfiles: []string{"mssql-tde-pkcs11", "oracle-tde-pkcs11"},
+		SupportedDatabases:  []string{"mssql", "oracle", "postgresql", "mysql", "db2", "mariadb"},
+		RecommendedProfiles: recommendedProfilesForEngine(engine),
 		Files:               files,
 	}
 	_ = s.publishAudit(ctx, "audit.ekm.deploy_package_generated", tenantID, map[string]interface{}{
@@ -1267,6 +1382,188 @@ Write-Host "Schedule heartbeat.ps1 in Windows Task Scheduler every 30 seconds."
 		"db_engine": engine,
 	})
 	return pkg, nil
+}
+
+// RevokeTDEKey revokes a TDE key, marks all agents and databases using it.
+func (s *Service) RevokeTDEKey(ctx context.Context, keyID string, req RevokeTDEKeyRequest) (RevokeTDEKeyResponse, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	keyID = strings.TrimSpace(keyID)
+	if req.TenantID == "" || keyID == "" {
+		return RevokeTDEKeyResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and key id are required")
+	}
+	if s.keycore == nil {
+		return RevokeTDEKeyResponse{}, newServiceError(http.StatusFailedDependency, "keycore_unavailable", "keycore client is not configured")
+	}
+
+	key, err := s.store.GetTDEKey(ctx, req.TenantID, keyID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return RevokeTDEKeyResponse{}, newServiceError(http.StatusNotFound, "key_not_found", "tde key not found")
+		}
+		return RevokeTDEKeyResponse{}, err
+	}
+
+	// Destroy the key in KeyCore
+	keyName := strings.TrimSpace(key.Name)
+	if keyName == "" {
+		keyName = keyID
+	}
+	keyCoreID := strings.TrimSpace(key.KeyCoreKeyID)
+	if keyCoreID == "" {
+		keyCoreID = keyID
+	}
+	reason := defaultString(req.Reason, "key-revocation")
+	if err := s.keycore.DestroyKeyImmediately(ctx, req.TenantID, keyCoreID, keyName, "tde key revoke: "+reason); err != nil {
+		msg := strings.ToLower(strings.TrimSpace(err.Error()))
+		if !strings.Contains(msg, "not found") && !strings.Contains(msg, "already deleted") {
+			return RevokeTDEKeyResponse{}, newServiceError(http.StatusBadGateway, "key_destroy_failed", err.Error())
+		}
+	}
+
+	// Update key status to revoked
+	_ = s.store.UpdateTDEKeyStatus(ctx, req.TenantID, keyID, "revoked")
+
+	// Update all databases using this key
+	dbs, err := s.store.ListDatabasesByKey(ctx, req.TenantID, keyID)
+	if err != nil {
+		return RevokeTDEKeyResponse{}, err
+	}
+	seen := map[string]struct{}{}
+	affected := make([]string, 0)
+	for _, db := range dbs {
+		_ = s.store.UpdateDatabaseStatus(ctx, req.TenantID, db.ID, "key_revoked")
+		aid := strings.TrimSpace(db.AgentID)
+		if aid == "" {
+			continue
+		}
+		if _, ok := seen[aid]; ok {
+			continue
+		}
+		seen[aid] = struct{}{}
+		// Mark agents as having a revoked key via config bump
+		_ = s.store.BumpAgentConfigVersion(ctx, req.TenantID, aid, "", "")
+		affected = append(affected, aid)
+	}
+
+	_ = s.publishAudit(ctx, "audit.ekm.tde_key_revoked", req.TenantID, map[string]interface{}{
+		"key_id":              keyID,
+		"reason":              reason,
+		"affected_agent_ids":  affected,
+		"affected_databases":  len(dbs),
+	})
+
+	return RevokeTDEKeyResponse{
+		KeyID:             keyID,
+		AffectedAgentIDs:  affected,
+		AffectedDatabases: len(dbs),
+	}, nil
+}
+
+// RevokeDatabaseTDE revokes TDE for a single database without affecting others on the same agent.
+func (s *Service) RevokeDatabaseTDE(ctx context.Context, dbID string, req RevokeDatabaseTDERequest) (RevokeDatabaseTDEResponse, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	dbID = strings.TrimSpace(dbID)
+	if req.TenantID == "" || dbID == "" {
+		return RevokeDatabaseTDEResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and database id are required")
+	}
+
+	dbi, err := s.store.GetDatabase(ctx, req.TenantID, dbID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			return RevokeDatabaseTDEResponse{}, newServiceError(http.StatusNotFound, "database_not_found", "database not found")
+		}
+		return RevokeDatabaseTDEResponse{}, err
+	}
+
+	// Mark TDE as disabled for this database only
+	if err := s.store.UpdateDatabaseStatus(ctx, req.TenantID, dbID, "tde_disabled"); err != nil {
+		return RevokeDatabaseTDEResponse{}, err
+	}
+
+	reason := defaultString(req.Reason, "database-tde-revoke")
+	_ = s.publishAudit(ctx, "audit.ekm.database_tde_revoked", req.TenantID, map[string]interface{}{
+		"database_id": dbID,
+		"agent_id":    dbi.AgentID,
+		"key_id":      dbi.KeyID,
+		"engine":      dbi.Engine,
+		"reason":      reason,
+	})
+
+	return RevokeDatabaseTDEResponse{
+		DatabaseID: dbID,
+		KeyID:      dbi.KeyID,
+		Status:     "tde_disabled",
+	}, nil
+}
+
+// ValidateDeployment validates that an agent deployment is properly connected.
+func (s *Service) ValidateDeployment(ctx context.Context, agentID string, req ValidateDeploymentRequest) (ValidateDeploymentResponse, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	agentID = strings.TrimSpace(agentID)
+	if req.TenantID == "" || agentID == "" {
+		return ValidateDeploymentResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id and agent id are required")
+	}
+
+	messages := make([]string, 0)
+	status := "valid"
+
+	agent, err := s.store.GetAgent(ctx, req.TenantID, agentID)
+	if err != nil {
+		if errors.Is(err, errNotFound) {
+			// Agent not registered yet -- register it now from the validation request
+			regReq := RegisterAgentRequest{
+				TenantID: req.TenantID,
+				AgentID:  agentID,
+				Version:  strings.TrimSpace(req.Version),
+				Host:     strings.TrimSpace(req.Host),
+				DBEngine: strings.TrimSpace(req.DBEngine),
+			}
+			agent, _, err = s.RegisterAgent(ctx, regReq, "")
+			if err != nil {
+				return ValidateDeploymentResponse{}, err
+			}
+			messages = append(messages, "agent auto-registered during validation")
+		} else {
+			return ValidateDeploymentResponse{}, err
+		}
+	}
+
+	// Check agent connectivity
+	connectivity := strings.ToLower(strings.TrimSpace(req.Connectivity))
+	if connectivity == "failed" {
+		status = "invalid"
+		messages = append(messages, "agent reported connectivity failure")
+	} else if connectivity == "degraded" {
+		messages = append(messages, "agent reported degraded connectivity")
+	}
+
+	// Check version match
+	if strings.TrimSpace(req.Version) != "" && strings.TrimSpace(agent.Version) != "" {
+		if strings.TrimSpace(req.Version) != strings.TrimSpace(agent.Version) {
+			messages = append(messages, "agent version mismatch: expected "+agent.Version+" got "+req.Version)
+		}
+	}
+
+	// Update heartbeat to mark the agent as connected
+	now := time.Now().UTC()
+	_ = s.store.UpdateAgentHeartbeat(ctx, req.TenantID, agentID, AgentStatusConnected, agent.TDEState, "", "", 0, validJSONOr(agent.MetadataJSON, "{}"), now)
+
+	if len(messages) == 0 {
+		messages = append(messages, "deployment validated successfully")
+	}
+
+	_ = s.publishAudit(ctx, "audit.ekm.deployment_validated", req.TenantID, map[string]interface{}{
+		"agent_id":     agentID,
+		"status":       status,
+		"connectivity": connectivity,
+		"messages":     messages,
+	})
+
+	return ValidateDeploymentResponse{
+		AgentID:  agentID,
+		Status:   status,
+		Messages: messages,
+	}, nil
 }
 
 func (s *Service) refreshAgentConnectivity(ctx context.Context, agent Agent) (Agent, error) {
@@ -1303,6 +1600,151 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 		return err
 	}
 	return s.events.Publish(ctx, subject, raw)
+}
+
+func recommendedProfilesForEngine(engine string) []string {
+	switch normalizeDBEngine(engine) {
+	case "mssql":
+		return []string{"mssql-tde-pkcs11"}
+	case "oracle":
+		return []string{"oracle-tde-pkcs11"}
+	case "postgresql":
+		return []string{"postgresql-tde-pkcs11"}
+	case "mysql":
+		return []string{"mysql-tde-pkcs11"}
+	case "mariadb":
+		return []string{"mariadb-tde-pkcs11"}
+	case "db2":
+		return []string{"db2-tde-pkcs11"}
+	default:
+		return []string{"mssql-tde-pkcs11", "oracle-tde-pkcs11"}
+	}
+}
+
+func buildTDESetupGuide(engine string, agentID string) string {
+	header := `# Vecta EKM - TDE Setup Guide
+# Agent: ` + agentID + `
+# Engine: ` + engine + `
+#
+# This file contains SQL commands to configure Transparent Data Encryption (TDE)
+# using the Vecta EKM PKCS#11 provider. Replace placeholder values before executing.
+
+`
+	mssqlGuide := `## MSSQL (SQL Server) TDE Setup
+
+` + "```sql" + `
+-- Step 1: Create EKM Provider
+CREATE CRYPTOGRAPHIC PROVIDER VectaEKM FROM FILE = 'C:\vecta-ekm\vecta-pkcs11.dll';
+
+-- Step 2: Create credential mapped to EKM
+CREATE CREDENTIAL VectaEKMCred WITH IDENTITY = 'vecta-ekm', SECRET = '<agent-token>';
+ALTER LOGIN [sa] ADD CREDENTIAL VectaEKMCred;
+
+-- Step 3: Create asymmetric key from EKM
+CREATE ASYMMETRIC KEY VectaTDEKey FROM PROVIDER VectaEKM WITH ALGORITHM = RSA_2048, PROVIDER_KEY_NAME = '<key-name>';
+
+-- Step 4: Create database encryption key and enable TDE
+USE <database>;
+CREATE DATABASE ENCRYPTION KEY WITH ALGORITHM = AES_256 ENCRYPTION BY SERVER ASYMMETRIC KEY VectaTDEKey;
+ALTER DATABASE <database> SET ENCRYPTION ON;
+` + "```" + `
+
+`
+
+	oracleGuide := `## Oracle TDE Setup
+
+` + "```sql" + `
+-- Option A: Configure Oracle TDE wallet
+ALTER SYSTEM SET ENCRYPTION WALLET OPEN IDENTIFIED BY "<wallet-password>";
+
+-- Option B: PKCS#11 integration
+ALTER SYSTEM SET TDE_CONFIGURATION='KEYSTORE_CONFIGURATION=OKV|PKCS11' SCOPE=BOTH;
+
+-- Create master encryption key
+ADMINISTER KEY MANAGEMENT CREATE KEY USING TAG 'vecta-managed' IDENTIFIED BY "<password>" WITH BACKUP;
+ADMINISTER KEY MANAGEMENT SET KEY IDENTIFIED BY "<password>" WITH BACKUP;
+
+-- Encrypt tablespace
+ALTER TABLESPACE users ENCRYPTION ONLINE USING 'AES256' ENCRYPT;
+` + "```" + `
+
+`
+
+	postgresqlGuide := `## PostgreSQL TDE Setup (pg_tde extension or native 17+)
+
+` + "```sql" + `
+-- Configure encryption provider
+ALTER SYSTEM SET pg_tde.keyring_provider = 'pkcs11';
+ALTER SYSTEM SET pg_tde.pkcs11_library = '/usr/lib/vecta-ekm/libvecta-pkcs11.so';
+SELECT pg_reload_conf();
+
+-- Create encrypted tablespace
+CREATE TABLESPACE encrypted_ts LOCATION '/data/encrypted' WITH (encryption = 'aes-256');
+` + "```" + `
+
+`
+
+	mysqlGuide := `## MySQL TDE Setup (with PKCS#11 keyring)
+
+` + "```sql" + `
+-- Install PKCS#11 keyring plugin
+INSTALL PLUGIN keyring_pkcs11 SONAME 'keyring_pkcs11.so';
+SET GLOBAL keyring_pkcs11_lib_path = '/usr/lib/vecta-ekm/libvecta-pkcs11.so';
+
+-- Encrypt a table
+ALTER TABLE sensitive_data ENCRYPTION='Y';
+
+-- Encrypt a tablespace
+CREATE TABLESPACE encrypted_ts ADD DATAFILE 'encrypted01.ibd' ENCRYPTION='Y';
+` + "```" + `
+
+`
+
+	db2Guide := `## DB2 TDE Setup (native encryption with external keystore)
+
+` + "```sql" + `
+-- Configure DB2 to use external keystore
+UPDATE DBM CFG USING KEYSTORE_TYPE PKCS12 KEYSTORE_LOCATION /etc/vecta-ekm/db2keystore;
+
+-- Create encrypted database
+CREATE DATABASE mydb ENCRYPT;
+` + "```" + `
+
+`
+
+	mariadbGuide := `## MariaDB TDE Setup (with PKCS#11 encryption plugin)
+
+` + "```sql" + `
+-- Install file_key_management or PKCS#11 encryption plugin
+INSTALL SONAME 'file_key_management';
+
+-- Or use the Vecta PKCS#11 provider via keyring
+SET GLOBAL innodb_encrypt_tables = ON;
+SET GLOBAL innodb_encryption_threads = 4;
+
+-- Encrypt individual tables
+ALTER TABLE sensitive_data ENCRYPTED=YES ENCRYPTION_KEY_ID=1;
+` + "```" + `
+
+`
+
+	switch normalizeDBEngine(engine) {
+	case "mssql":
+		return header + mssqlGuide
+	case "oracle":
+		return header + oracleGuide
+	case "postgresql":
+		return header + postgresqlGuide
+	case "mysql":
+		return header + mysqlGuide
+	case "db2":
+		return header + db2Guide
+	case "mariadb":
+		return header + mariadbGuide
+	default:
+		// Include all guides when engine is unknown
+		return header + mssqlGuide + oracleGuide + postgresqlGuide + mysqlGuide + db2Guide + mariadbGuide
+	}
 }
 
 func strconvItoa(v int) string {

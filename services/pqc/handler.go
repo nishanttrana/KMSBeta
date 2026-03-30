@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
@@ -294,7 +296,13 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID stri
 		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, reqID, tenantID)
 		return
 	}
-	writeErr(w, httpStatusForErr(err), "internal_error", err.Error(), reqID, tenantID)
+	// A05: avoid leaking internal error details for 5xx responses
+	status := httpStatusForErr(err)
+	msg := err.Error()
+	if status >= 500 {
+		msg = "internal server error"
+	}
+	writeErr(w, status, "internal_error", msg, reqID, tenantID)
 }
 
 func decodeJSON(r *http.Request, out interface{}) error {
@@ -338,6 +346,11 @@ func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
 	tenantID := tenantFromRequest(r)
 	if tenantID == "" {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
+		return ""
+	}
+	// A01 fix: verify the request tenant matches the authenticated JWT tenant
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
 		return ""
 	}
 	return tenantID

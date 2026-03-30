@@ -62,8 +62,10 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var jsCtx nats.JetStreamContext
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
+		jsCtx = js
 		publisher = pkgevents.NewPublisher(js, 3, "audit.compliance.dead_letter")
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
@@ -73,8 +75,9 @@ func main() {
 	auditURL := envOr("AUDIT_URL", "http://127.0.0.1:8070")
 	policyURL := envOr("POLICY_URL", "http://127.0.0.1:8040")
 	certsURL := envOr("CERTS_URL", "http://127.0.0.1:8030")
+	store := NewSQLStore(dbConn)
 	svc := NewService(
-		NewSQLStore(dbConn),
+		store,
 		NewHTTPKeyCoreClient(keycoreURL, 5*time.Second),
 		NewHTTPPolicyClient(policyURL, 5*time.Second),
 		NewHTTPAuditClient(auditURL, 5*time.Second),
@@ -82,7 +85,16 @@ func main() {
 		publisher,
 	)
 	svc.StartScheduler(ctx)
+
+	// Playbook execution engine
+	executor := NewPlaybookExecutor(store, keycoreURL, certsURL, policyURL, auditURL, publisher, logger)
+
 	handler := NewHandler(svc)
+	handler.SetExecutor(executor)
+
+	// Start trigger listener for automatic playbook execution via NATS events
+	triggerListener := NewTriggerListener(store, executor, logger)
+	go triggerListener.StartListening(ctx, jsCtx)
 
 	httpPort := envOr("HTTP_PORT", "8110")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "compliance"))

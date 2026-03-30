@@ -6,6 +6,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
@@ -47,6 +49,18 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /discovery/lineage/key/{key_id}", h.handleGetKeyLineage)
 	mux.HandleFunc("GET /discovery/lineage/graph", h.handleGetLineageGraph)
 	mux.HandleFunc("GET /discovery/lineage/impact/{key_id}", h.handleGetLineageImpact)
+	mux.HandleFunc("GET /discovery/lineage/timeline/{key_id}", h.handleGetKeyTimeline)
+	mux.HandleFunc("GET /discovery/lineage/dependencies/{key_id}", h.handleGetKeyDependencies)
+	mux.HandleFunc("POST /discovery/lineage/search", h.handleLineageSearch)
+	mux.HandleFunc("GET /discovery/lineage/stats", h.handleGetLineageStats)
+
+	// Enterprise lineage
+	mux.HandleFunc("GET /discovery/lineage/provenance/{key_id}", h.handleGetKeyProvenance)
+	mux.HandleFunc("GET /discovery/lineage/data-flow/{key_id}", h.handleGetDataFlow)
+	mux.HandleFunc("GET /discovery/lineage/risk-heatmap", h.handleGetRiskHeatmap)
+	mux.HandleFunc("GET /discovery/lineage/access-patterns/{key_id}", h.handleGetAccessPatterns)
+	mux.HandleFunc("GET /discovery/lineage/chain-of-custody/{key_id}", h.handleGetChainOfCustody)
+	mux.HandleFunc("POST /discovery/lineage/tamper-check/{key_id}", h.handleTamperCheck)
 
 	return mux
 }
@@ -167,7 +181,13 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID stri
 		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, reqID, tenantID)
 		return
 	}
-	writeErr(w, httpStatusForErr(err), "internal_error", err.Error(), reqID, tenantID)
+	// A05: avoid leaking internal error details for 5xx responses
+	status := httpStatusForErr(err)
+	msg := err.Error()
+	if status >= 500 {
+		msg = "internal server error"
+	}
+	writeErr(w, status, "internal_error", msg, reqID, tenantID)
 }
 
 func decodeJSON(r *http.Request, out interface{}) error {
@@ -211,6 +231,11 @@ func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
 	tenantID := tenantFromRequest(r)
 	if tenantID == "" {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
+		return ""
+	}
+	// A01 fix: verify the request tenant matches the authenticated JWT tenant
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
 		return ""
 	}
 	return tenantID

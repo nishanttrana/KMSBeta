@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type JWTParser func(token string) (*pkgauth.Claims, error)
@@ -43,6 +44,10 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /hyok/generic/v1/keys/{id}/decrypt", h.handleGenericDecrypt)
 	mux.HandleFunc("POST /hyok/generic/v1/keys/{id}/wrap", h.handleGenericWrap)
 	mux.HandleFunc("POST /hyok/generic/v1/keys/{id}/unwrap", h.handleGenericUnwrap)
+	mux.HandleFunc("POST /hyok/servicenow/v1/keys/{id}/wrap", h.handleServiceNowWrap)
+	mux.HandleFunc("POST /hyok/servicenow/v1/keys/{id}/unwrap", h.handleServiceNowUnwrap)
+	mux.HandleFunc("POST /hyok/alibaba/v1/keys/{id}/encrypt", h.handleAlibabaEncrypt)
+	mux.HandleFunc("POST /hyok/alibaba/v1/keys/{id}/decrypt", h.handleAlibabaDecrypt)
 
 	mux.HandleFunc("GET /hyok/v1/endpoints", h.handleListEndpoints)
 	mux.HandleFunc("PUT /hyok/v1/endpoints/{protocol}", h.handleConfigureEndpoint)
@@ -127,6 +132,22 @@ func (h *Handler) handleGenericWrap(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleGenericUnwrap(w http.ResponseWriter, r *http.Request) {
 	h.handleCrypto(w, r, ProtocolGeneric, "unwrap")
+}
+
+func (h *Handler) handleServiceNowWrap(w http.ResponseWriter, r *http.Request) {
+	h.handleCrypto(w, r, ProtocolServiceNow, "wrap")
+}
+
+func (h *Handler) handleServiceNowUnwrap(w http.ResponseWriter, r *http.Request) {
+	h.handleCrypto(w, r, ProtocolServiceNow, "unwrap")
+}
+
+func (h *Handler) handleAlibabaEncrypt(w http.ResponseWriter, r *http.Request) {
+	h.handleCrypto(w, r, ProtocolAlibaba, "encrypt")
+}
+
+func (h *Handler) handleAlibabaDecrypt(w http.ResponseWriter, r *http.Request) {
+	h.handleCrypto(w, r, ProtocolAlibaba, "decrypt")
 }
 
 func (h *Handler) handleCrypto(w http.ResponseWriter, r *http.Request, protocol string, operation string) {
@@ -377,7 +398,8 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID stri
 		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, reqID, tenantID)
 		return
 	}
-	writeErr(w, http.StatusInternalServerError, "internal_error", err.Error(), reqID, tenantID)
+	// A05: never leak internal error details to the client
+	writeErr(w, http.StatusInternalServerError, "internal_error", "internal server error", reqID, tenantID)
 }
 
 func decodeJSON(r *http.Request, out interface{}) error {
@@ -420,6 +442,11 @@ func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
 	}
 	if tenantID == "" {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
+		return ""
+	}
+	// A01 fix: verify the request tenant matches the authenticated JWT tenant
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
 		return ""
 	}
 	return tenantID

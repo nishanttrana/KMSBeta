@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
@@ -41,11 +43,27 @@ func tenantFromRequest(r *http.Request) string {
 	return strings.TrimSpace(firstNonEmpty(r.URL.Query().Get("tenant_id"), r.Header.Get("X-Tenant-ID")))
 }
 
+// mustTenantChecked extracts tenant from the request and verifies it matches JWT claims.
+func mustTenantChecked(r *http.Request, w http.ResponseWriter, reqID string) (string, bool) {
+	tenantID := tenantFromRequest(r)
+	if tenantID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
+		return "", false
+	}
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
+		return "", false
+	}
+	return tenantID, true
+}
+
+
 func requestID(r *http.Request) string {
 	return firstNonEmpty(r.Header.Get("X-Request-ID"), newID("req"))
 }
 
-func decodeJSON(r *http.Request, out interface{}) error {
+func decodeJSON(w http.ResponseWriter, r *http.Request, out interface{}) error {
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 	return json.NewDecoder(r.Body).Decode(out)
 }
 
@@ -80,7 +98,7 @@ func (h *Handler) handleGetSettings(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handlePutSettings(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	var body KeyAccessSettings
-	if err := decodeJSON(r, &body); err != nil {
+	if err := decodeJSON(w, r, &body); err != nil {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
@@ -118,7 +136,7 @@ func (h *Handler) handleListRules(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleUpsertRule(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	var body KeyAccessRule
-	if err := decodeJSON(r, &body); err != nil {
+	if err := decodeJSON(w, r, &body); err != nil {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
@@ -162,7 +180,7 @@ func (h *Handler) handleListDecisions(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleEvaluate(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	var body EvaluateKeyAccessInput
-	if err := decodeJSON(r, &body); err != nil {
+	if err := decodeJSON(w, r, &body); err != nil {
 		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, tenantFromRequest(r))
 		return
 	}
@@ -181,7 +199,14 @@ func (h *Handler) handleEvaluate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {
-	writeErr(w, httpStatusForErr(err), serviceCode(err), err.Error(), reqID, strings.TrimSpace(tenantID))
+	// Only expose error details for client errors (4xx). For server errors (5xx),
+	// return a generic message to avoid leaking internal details (OWASP A05).
+	status := httpStatusForErr(err)
+	msg := err.Error()
+	if status >= 500 {
+		msg = "internal server error"
+	}
+	writeErr(w, status, serviceCode(err), msg, reqID, strings.TrimSpace(tenantID))
 }
 
 func serviceCode(err error) string {

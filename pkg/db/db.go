@@ -50,18 +50,40 @@ func Open(ctx context.Context, cfg Config) (*DB, error) {
 		dsn = cfg.SQLitePath
 	}
 
+	// Mask password in DSN for logging
+	logDSN := dsn
+	if driver == DriverPostgres {
+		if idx := strings.Index(logDSN, "://"); idx >= 0 {
+			if atIdx := strings.Index(logDSN[idx:], "@"); atIdx >= 0 {
+				logDSN = logDSN[:idx+3] + "***@" + logDSN[idx+atIdx+1:]
+			}
+		}
+	}
+	fmt.Fprintf(os.Stderr, "[db] opening driver=%s dsn=%s\n", driver, logDSN)
+
 	conn, err := sql.Open(string(driver), dsn)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("db open (driver=%s): %w", driver, err)
 	}
 
 	applyPoolSettings(conn, cfg)
 
 	if err := conn.PingContext(ctx); err != nil {
 		_ = conn.Close()
-		return nil, err
+		return nil, fmt.Errorf("db ping (driver=%s): %w", driver, err)
 	}
 
+	// Log the actual database we're connected to
+	if driver == DriverPostgres {
+		var dbName string
+		if err := conn.QueryRowContext(ctx, "SELECT current_database()").Scan(&dbName); err == nil {
+			fmt.Fprintf(os.Stderr, "[db] connected driver=%s database=%s\n", driver, dbName)
+		} else {
+			fmt.Fprintf(os.Stderr, "[db] connected driver=%s (could not read db name: %v)\n", driver, err)
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "[db] connected driver=%s\n", driver)
+	}
 	d := &DB{driver: driver, sqlDB: conn}
 
 	// Open read-only replica if configured
@@ -153,6 +175,7 @@ func (d *DB) WithTenantTx(ctx context.Context, tenantID string, fn func(tx *sql.
 // restarts mid-run.  A PostgreSQL advisory lock (key 9876543210) prevents two
 // services from running migrations concurrently during a rolling deploy.
 func (d *DB) RunMigrations(ctx context.Context, migrationsDir string) error {
+	fmt.Fprintf(os.Stderr, "[db] running migrations from %s (driver=%s)\n", migrationsDir, d.driver)
 	if d.driver == DriverPostgres {
 		// Acquire an instance-level advisory lock for the duration of migration.
 		// pg_try_advisory_lock returns false immediately if another session holds
@@ -183,10 +206,23 @@ func (d *DB) RunMigrations(ctx context.Context, migrationsDir string) error {
 	if _, err := d.sqlDB.ExecContext(ctx, createTracking); err != nil {
 		return fmt.Errorf("migration: create tracking table: %w", err)
 	}
+	// Verify the tracking table actually exists and count rows
+	var migCount int
+	if err := d.sqlDB.QueryRowContext(ctx, "SELECT count(*) FROM schema_migrations").Scan(&migCount); err != nil {
+		fmt.Fprintf(os.Stderr, "[db] WARNING: schema_migrations query failed: %v\n", err)
+	} else {
+		fmt.Fprintf(os.Stderr, "[db] schema_migrations table ensured, existing rows=%d\n", migCount)
+	}
+	// Also verify by checking pg_tables
+	if d.driver == DriverPostgres {
+		var tableExists bool
+		d.sqlDB.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM pg_tables WHERE schemaname='public' AND tablename='schema_migrations')").Scan(&tableExists)
+		fmt.Fprintf(os.Stderr, "[db] pg_tables confirms schema_migrations exists=%v\n", tableExists)
+	}
 
 	files, err := os.ReadDir(migrationsDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("migration: read dir %s: %w", migrationsDir, err)
 	}
 	var sqlFiles []string
 	for _, f := range files {
@@ -195,6 +231,7 @@ func (d *DB) RunMigrations(ctx context.Context, migrationsDir string) error {
 		}
 	}
 	sort.Strings(sqlFiles)
+	fmt.Fprintf(os.Stderr, "[db] found %d migration files\n", len(sqlFiles))
 
 	for _, path := range sqlFiles {
 		name := filepath.Base(path)
@@ -207,6 +244,7 @@ func (d *DB) RunMigrations(ctx context.Context, migrationsDir string) error {
 			return fmt.Errorf("migration: check %s: %w", name, err)
 		}
 		if applied {
+			fmt.Fprintf(os.Stderr, "[db] migration %s already applied, skipping\n", name)
 			continue
 		}
 
@@ -214,9 +252,11 @@ func (d *DB) RunMigrations(ctx context.Context, migrationsDir string) error {
 		if err != nil {
 			return err
 		}
+		fmt.Fprintf(os.Stderr, "[db] applying migration %s (%d bytes)\n", name, len(b))
 		if _, err := d.sqlDB.ExecContext(ctx, string(b)); err != nil {
 			return fmt.Errorf("migration %s failed: %w", name, err)
 		}
+		fmt.Fprintf(os.Stderr, "[db] migration %s applied OK\n", name)
 
 		// Record the migration as applied.
 		if _, err := d.sqlDB.ExecContext(ctx,

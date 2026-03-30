@@ -32,6 +32,14 @@ type Store interface {
 	InsertLineageEvent(ctx context.Context, e LineageEvent) (LineageEvent, error)
 	GetLineageByKey(ctx context.Context, tenantID, keyID string, limit int) ([]LineageEvent, error)
 	GetLineageGraph(ctx context.Context, tenantID string, since time.Time, limit int) ([]LineageEvent, error)
+
+	// Enterprise lineage
+	GetLineageEventsByType(ctx context.Context, tenantID, keyID string, eventTypes []string, limit int) ([]LineageEvent, error)
+	GetAccessEvents(ctx context.Context, tenantID, keyID string, since time.Time) ([]LineageEvent, error)
+	GetAllKeyProvenanceData(ctx context.Context, tenantID string, limit int) ([]LineageEvent, error)
+	CountEventsByHour(ctx context.Context, tenantID, keyID string, since time.Time) (map[int]int, error)
+	GetDistinctActors(ctx context.Context, tenantID, keyID string, since time.Time) ([]string, error)
+	GetNewActors(ctx context.Context, tenantID, keyID string, firstSeenSince, accessedSince time.Time) ([]string, error)
 }
 
 type DiscoveryScan struct {

@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/ssrfguard"
 )
 
 func (h *Handler) handleListWebhooks(w http.ResponseWriter, r *http.Request) {
@@ -21,7 +23,7 @@ func (h *Handler) handleListWebhooks(w http.ResponseWriter, r *http.Request) {
 	}
 	items, err := h.store.ListWebhooks(r.Context(), tenantID)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "query_failed", "failed to list webhooks", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -47,6 +49,11 @@ func (h *Handler) handleCreateWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.TrimSpace(req.URL) == "" {
 		writeErr(w, http.StatusBadRequest, "validation_error", "url is required", reqID, tenantID)
+		return
+	}
+	// SSRF protection: block webhooks targeting internal IPs or cloud metadata
+	if err := ssrfguard.ValidateWebhookURL(strings.TrimSpace(req.URL)); err != nil {
+		writeErr(w, http.StatusBadRequest, "validation_error", fmt.Sprintf("webhook URL blocked: %s", err.Error()), reqID, tenantID)
 		return
 	}
 	enabled := true
@@ -77,7 +84,7 @@ func (h *Handler) handleCreateWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	created, err := h.store.CreateWebhook(r.Context(), wh)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "create_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "create_failed", "failed to create webhook", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
@@ -107,7 +114,12 @@ func (h *Handler) handleUpdateWebhook(w http.ResponseWriter, r *http.Request) {
 		existing.Name = strings.TrimSpace(*req.Name)
 	}
 	if req.URL != nil {
-		existing.URL = strings.TrimSpace(*req.URL)
+		newURL := strings.TrimSpace(*req.URL)
+		if err := ssrfguard.ValidateWebhookURL(newURL); err != nil {
+			writeErr(w, http.StatusBadRequest, "validation_error", fmt.Sprintf("webhook URL blocked: %s", err.Error()), reqID, tenantID)
+			return
+		}
+		existing.URL = newURL
 	}
 	if req.Format != nil {
 		existing.Format = strings.TrimSpace(*req.Format)
@@ -126,7 +138,7 @@ func (h *Handler) handleUpdateWebhook(w http.ResponseWriter, r *http.Request) {
 	}
 	updated, err := h.store.UpdateWebhook(r.Context(), tenantID, id, existing)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "update_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "update_failed", "failed to update webhook", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -163,6 +175,12 @@ func (h *Handler) handleTestWebhook(w http.ResponseWriter, r *http.Request) {
 	wh, err := h.store.GetWebhook(r.Context(), tenantID, id)
 	if err != nil {
 		writeErr(w, http.StatusNotFound, "not_found", "webhook not found", reqID, tenantID)
+		return
+	}
+
+	// SSRF protection on test delivery
+	if err := ssrfguard.ValidateWebhookURL(wh.URL); err != nil {
+		writeErr(w, http.StatusBadRequest, "validation_error", fmt.Sprintf("webhook URL blocked: %s", err.Error()), reqID, tenantID)
 		return
 	}
 
@@ -266,7 +284,7 @@ func (h *Handler) handleListDeliveries(w http.ResponseWriter, r *http.Request) {
 	}
 	items, err := h.store.ListDeliveries(r.Context(), tenantID, id, limit)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "query_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "query_failed", "failed to list deliveries", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{

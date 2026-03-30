@@ -25,6 +25,8 @@ type Store interface {
 	GetDatabase(ctx context.Context, tenantID string, databaseID string) (DatabaseInstance, error)
 	ListDatabases(ctx context.Context, tenantID string, agentID string) ([]DatabaseInstance, error)
 	ListDatabasesByKey(ctx context.Context, tenantID string, keyID string) ([]DatabaseInstance, error)
+	UpdateDatabaseStatus(ctx context.Context, tenantID, dbID, status string) error
+	UpdateTDEKeyStatus(ctx context.Context, tenantID, keyID, status string) error
 
 	CreateTDEKey(ctx context.Context, key TDEKeyRecord) error
 	GetTDEKey(ctx context.Context, tenantID string, keyID string) (TDEKeyRecord, error)
@@ -53,6 +55,31 @@ type Store interface {
 	GetLatestBitLockerRecoveryKey(ctx context.Context, tenantID string, clientID string) (BitLockerRecoveryKeyRecord, error)
 	CountBitLockerRecoveryKeys(ctx context.Context, tenantID string, clientID string) (int, error)
 	PurgeBitLockerClient(ctx context.Context, tenantID string, clientID string) (int, int, int, error)
+
+	// Azure EKM
+	CreateAzureEKMConfig(ctx context.Context, cfg AzureEKMConfig) error
+	GetAzureEKMConfig(ctx context.Context, tenantID, configID string) (AzureEKMConfig, error)
+	ListAzureEKMConfigs(ctx context.Context, tenantID string) ([]AzureEKMConfig, error)
+	UpdateAzureEKMConfig(ctx context.Context, cfg AzureEKMConfig) error
+	DeleteAzureEKMConfig(ctx context.Context, tenantID, configID string) error
+	CreateAzureKeyMapping(ctx context.Context, m AzureKeyMapping) error
+	ListAzureKeyMappings(ctx context.Context, tenantID, configID string) ([]AzureKeyMapping, error)
+	UpdateAzureKeyMappingSync(ctx context.Context, tenantID, mappingID, azureKeyID, azureKeyVersion, syncStatus string) error
+	DeleteAzureKeyMapping(ctx context.Context, tenantID, mappingID string) error
+
+	// Google CSE KACLS
+	CreateGoogleCSEConfig(ctx context.Context, cfg GoogleCSEConfig) error
+	GetGoogleCSEConfig(ctx context.Context, tenantID, configID string) (GoogleCSEConfig, error)
+	ListGoogleCSEConfigs(ctx context.Context, tenantID string) ([]GoogleCSEConfig, error)
+	UpdateGoogleCSEConfig(ctx context.Context, cfg GoogleCSEConfig) error
+	DeleteGoogleCSEConfig(ctx context.Context, tenantID, configID string) error
+	CreateGoogleCSEKey(ctx context.Context, key GoogleCSEKey) error
+	GetGoogleCSEKey(ctx context.Context, tenantID, keyID string) (GoogleCSEKey, error)
+	GetGoogleCSEKeyByURI(ctx context.Context, tenantID, keyURI string) (GoogleCSEKey, error)
+	ListGoogleCSEKeys(ctx context.Context, tenantID, configID string) ([]GoogleCSEKey, error)
+	UpdateGoogleCSEKeyStatus(ctx context.Context, tenantID, keyID, status string) error
+	IncrementGoogleCSEKeyUsage(ctx context.Context, tenantID, keyID, operation string) error
+	DeleteGoogleCSEKey(ctx context.Context, tenantID, keyID string) error
 }
 
 type SQLStore struct {
@@ -113,6 +140,7 @@ WHERE tenant_id = $1 AND id = $2
 }
 
 func (s *SQLStore) ListAgents(ctx context.Context, tenantID string) ([]Agent, error) {
+	// A04: safety limit to prevent resource exhaustion on unbounded list
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT tenant_id, id, name, role, db_engine, host, version, status, tde_state,
 	   heartbeat_interval_sec, last_heartbeat_at, assigned_key_id, assigned_key_version,
@@ -120,6 +148,7 @@ SELECT tenant_id, id, name, role, db_engine, host, version, status, tde_state,
 FROM ekm_agents
 WHERE tenant_id = $1
 ORDER BY updated_at DESC
+LIMIT 1000
 `, tenantID)
 	if err != nil {
 		return nil, err
@@ -409,6 +438,41 @@ ORDER BY updated_at DESC
 		out = append(out, item)
 	}
 	return out, rows.Err()
+}
+
+func (s *SQLStore) UpdateDatabaseStatus(ctx context.Context, tenantID, dbID, status string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE ekm_databases
+SET tde_state = $1,
+    tde_enabled = CASE WHEN $1 IN ('enabled', 'tde_enabled') THEN true ELSE false END,
+    updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $2 AND id = $3
+`, strings.TrimSpace(status), tenantID, dbID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errNotFound
+	}
+	return nil
+}
+
+func (s *SQLStore) UpdateTDEKeyStatus(ctx context.Context, tenantID, keyID, status string) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE ekm_tde_keys
+SET status = $1,
+    updated_at = CURRENT_TIMESTAMP
+WHERE tenant_id = $2 AND id = $3
+`, strings.TrimSpace(status), tenantID, keyID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errNotFound
+	}
+	return nil
 }
 
 func (s *SQLStore) CreateTDEKey(ctx context.Context, key TDEKeyRecord) error {

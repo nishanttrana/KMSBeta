@@ -56,7 +56,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("discover versions: %v", err)
 	}
-	discover := discoverAny.(*payloads.DiscoverVersionsResponsePayload)
+	discover, ok := discoverAny.(*payloads.DiscoverVersionsResponsePayload)
+	if !ok {
+		log.Fatalf("discover: unexpected response type %T", discoverAny)
+	}
 
 	createAny, err := client.Request(ctx, &payloads.CreateRequestPayload{
 		ObjectType: kmip.ObjectTypeSymmetricKey,
@@ -74,7 +77,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("create: %v", err)
 	}
-	create := createAny.(*payloads.CreateResponsePayload)
+	create, ok := createAny.(*payloads.CreateResponsePayload)
+	if !ok {
+		log.Fatalf("create: unexpected response type %T", createAny)
+	}
 
 	_, err = client.Request(ctx, &payloads.ActivateRequestPayload{UniqueIdentifier: create.UniqueIdentifier})
 	if err != nil {
@@ -88,7 +94,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("encrypt: %v", err)
 	}
-	enc := encAny.(*payloads.EncryptResponsePayload)
+	enc, ok := encAny.(*payloads.EncryptResponsePayload)
+	if !ok {
+		log.Fatalf("encrypt: unexpected response type %T", encAny)
+	}
 
 	decAny, err := client.Request(ctx, &payloads.DecryptRequestPayload{
 		UniqueIdentifier: create.UniqueIdentifier,
@@ -98,7 +107,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("decrypt: %v", err)
 	}
-	dec := decAny.(*payloads.DecryptResponsePayload)
+	dec, ok := decAny.(*payloads.DecryptResponsePayload)
+	if !ok {
+		log.Fatalf("decrypt: unexpected response type %T", decAny)
+	}
 
 	fmt.Printf("discover_versions=%v\n", discover.ProtocolVersion)
 	fmt.Printf("negotiated_version=%v\n", client.Version())

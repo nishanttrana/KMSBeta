@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/httpsanitize"
 )
 
 // EvidenceReport is a structured compliance evidence document for regulatory submissions.
@@ -182,8 +184,8 @@ func (h *Handler) handleEvidenceExport(w http.ResponseWriter, r *http.Request) {
 	)
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
-	w.Header().Set("X-Request-ID", reqID)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, httpsanitize.ContentDispositionFilename(filename)))
+	w.Header().Set("X-Request-ID", httpsanitize.HeaderValue(reqID))
 	w.WriteHeader(http.StatusOK)
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")

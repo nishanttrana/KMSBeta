@@ -30,6 +30,11 @@ COPY services/hsm-integration/scripts/ /opt/vecta/hsm/scripts/
 RUN chmod 0755 /usr/local/bin/hsm-integration-entrypoint \
   && chmod 0755 /opt/vecta/hsm/scripts/*.sh
 
+RUN groupadd -r hsm && useradd -r -g hsm -d /var/lib/vecta/hsm -s /bin/bash hsm \
+  && chown -R hsm:hsm /var/lib/vecta/hsm /opt/vecta/hsm
+
 EXPOSE 22
+
+USER hsm
 
 ENTRYPOINT ["/usr/local/bin/hsm-integration-entrypoint"]

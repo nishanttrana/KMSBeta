@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
@@ -707,6 +709,11 @@ func mustTenant(r *http.Request, w http.ResponseWriter, reqID string) string {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
 		return ""
 	}
+	// A01 fix: verify the request tenant matches the authenticated JWT tenant
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
+		return ""
+	}
 	return tenantID
 }
 
@@ -767,7 +774,8 @@ func claimsAllowSystemAdmin(claims *pkgauth.Claims, write bool) bool {
 
 func decodeJSON(r *http.Request, out interface{}) error {
 	defer r.Body.Close() //nolint:errcheck
-	d := json.NewDecoder(r.Body)
+	// A04: limit request body to 1 MB to prevent resource exhaustion
+	d := json.NewDecoder(io.LimitReader(r.Body, 1<<20))
 	d.DisallowUnknownFields()
 	return d.Decode(out)
 }

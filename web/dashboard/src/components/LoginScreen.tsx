@@ -95,15 +95,6 @@ const ANIMATION_STYLES = `
   .float-label-input:not(:placeholder-shown) ~ .float-label {
     transform: translateY(0);
   }
-  .login-input-line {
-    border-bottom: 2px solid rgba(26,41,68,0.8);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  }
-  .login-input-line:focus {
-    outline: none;
-    border-bottom-color: rgba(6,214,224,0.7);
-    box-shadow: 0 1px 0 0 rgba(6,214,224,0.3);
-  }
   .orb-pulse { animation: orbPulse 6s ease-in-out infinite; }
   .orb-pulse-delay { animation: orbPulse 6s ease-in-out 2s infinite; }
   .orb-pulse-delay2 { animation: orbPulse 6s ease-in-out 4s infinite; }
@@ -349,7 +340,7 @@ function FloatingLabelInput(props: {
         onChange={(e) => onChange(e.target.value)}
         placeholder=" "
         autoComplete={type === "password" ? "current-password" : "username"}
-        className="float-label-input login-input-line w-full bg-transparent px-0 pb-1.5 pt-1 text-sm text-cyber-text caret-cyber-accent"
+        className="float-label-input w-full border-none bg-transparent px-0 pb-1.5 pt-1 text-sm text-cyber-text caret-cyber-accent"
         style={{ outline: "none" }}
       />
       <label htmlFor={id} className="float-label">
@@ -479,7 +470,17 @@ export function LoginScreen(props: LoginScreenProps) {
     setAuthError(null);
     try {
       const redirectURL = await getSSOLoginURL(provider, activeTenantId);
-      window.location.href = redirectURL;
+      // Validate redirect URL to prevent open redirect attacks
+      try {
+        const parsed = new URL(redirectURL);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+          throw new Error('Invalid redirect URL protocol');
+        }
+        window.location.href = redirectURL;
+      } catch {
+        setAuthError('SSO redirect URL is invalid');
+        setSsoLoading(null);
+      }
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "SSO login failed");
       setSsoLoading(null);
@@ -510,6 +511,19 @@ export function LoginScreen(props: LoginScreenProps) {
     const tenantId = useRootTenant ? ROOT_TENANT_ID : tenantInput.trim();
     if (!tenantId) {
       setAuthError("Tenant name is required when root tenant is not selected.");
+      return;
+    }
+    // Tenant ID format validation: alphanumeric, hyphens, underscores, max 64 chars
+    if (!/^[a-zA-Z0-9_-]{1,64}$/.test(tenantId)) {
+      setAuthError("Tenant ID must be 1-64 characters and contain only letters, digits, hyphens, or underscores.");
+      return;
+    }
+    if (!username.trim()) {
+      setAuthError("Username is required.");
+      return;
+    }
+    if (!password) {
+      setAuthError("Password is required.");
       return;
     }
     setLoading(true);
@@ -757,11 +771,6 @@ export function LoginScreen(props: LoginScreenProps) {
               </div>
             </div>
 
-            {/* Top accent line */}
-            <div
-              className="mb-6 h-px w-full"
-              style={{ background: "linear-gradient(90deg, rgba(6,214,224,0.5), rgba(167,139,250,0.3), transparent)" }}
-            />
 
             <p className="mb-6 text-xs text-cyber-muted">
               {session

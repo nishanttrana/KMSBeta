@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
@@ -62,7 +64,7 @@ func (h *Handler) handleListPolicies(w http.ResponseWriter, r *http.Request) {
 	status := strings.TrimSpace(r.URL.Query().Get("status"))
 	items, err := h.svc.ListPolicies(r.Context(), tenantID, status, limit, offset)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "list_failed", "failed to list policies", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items, "request_id": reqID})
@@ -80,7 +82,7 @@ func (h *Handler) handleGetPolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "read_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "read_failed", "failed to read policy", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"policy": p, "request_id": reqID})
@@ -126,7 +128,7 @@ func (h *Handler) handleDeletePolicy(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusNotFound, "not_found", "policy not found", reqID, tenantID)
 			return
 		}
-		writeErr(w, http.StatusInternalServerError, "delete_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "delete_failed", "failed to delete policy", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"status": "deleted", "request_id": reqID})
@@ -140,7 +142,7 @@ func (h *Handler) handleListVersions(w http.ResponseWriter, r *http.Request) {
 	}
 	items, err := h.svc.ListPolicyVersions(r.Context(), tenantID, r.PathValue("id"))
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "versions_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "versions_failed", "failed to list policy versions", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items, "request_id": reqID})
@@ -163,7 +165,7 @@ func (h *Handler) handleGetVersion(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "version_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "version_failed", "failed to read policy version", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"version": v, "request_id": reqID})
@@ -211,6 +213,11 @@ func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
 	}
 	if tenantID == "" {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
+		return ""
+	}
+	// A01 fix: verify the request tenant matches the authenticated JWT tenant
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
 		return ""
 	}
 	return tenantID

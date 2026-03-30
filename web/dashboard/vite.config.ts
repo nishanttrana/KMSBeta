@@ -18,6 +18,8 @@ export default defineConfig({
     target: "es2022",
     // esbuild minifier is 10–20× faster than the default terser.
     minify: "esbuild",
+    // Disable source maps in production to prevent source code exposure (OWASP A05)
+    sourcemap: false,
     // Skip gzip size report (saves ~300 ms on large builds).
     reportCompressedSize: false,
     rollupOptions: {
@@ -166,7 +168,7 @@ export default defineConfig({
       "/svc/discovery": {
         target: serviceURL("discovery", 8100),
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/svc\/discovery/, "")
+        rewrite: (path) => path.replace(/^\/svc\/discovery/, "/discovery")
       },
       "/svc/tfe": {
         target: serviceURL("tfe", 8450),
@@ -177,6 +179,11 @@ export default defineConfig({
         target: serviceURL("dam", 8460),
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/svc\/dam/, "")
+      },
+      "/svc/ai-gateway": {
+        target: serviceURL("ai-gateway", 8320),
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/svc\/ai-gateway/, "")
       },
       "/api": {
         target: runInDocker ? "https://envoy:443" : "https://127.0.0.1:443",

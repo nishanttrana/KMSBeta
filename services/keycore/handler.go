@@ -20,6 +20,7 @@ import (
 
 	pkgauth "vecta-kms/pkg/auth"
 	pkgrestauth "vecta-kms/pkg/restauth"
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type requestSecurityCtxKey string
@@ -450,6 +451,11 @@ func (h *Handler) handleListKeys(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id query parameter is required", reqID, "")
 		return
 	}
+	// A01 fix: verify tenant_id matches JWT claims
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
+		return
+	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 	rawIncludeDeleted := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("include_deleted")))
@@ -466,7 +472,7 @@ func (h *Handler) handleListKeys(w http.ResponseWriter, r *http.Request) {
 		}
 		keys, err := h.svc.ListKeysCursor(r.Context(), tenantID, limit, &t, afterID, includeDeleted)
 		if err != nil {
-			writeErr(w, http.StatusInternalServerError, "list_failed", err.Error(), reqID, tenantID)
+			writeErr(w, http.StatusInternalServerError, "list_failed", "failed to list keys", reqID, tenantID)
 			return
 		}
 		resp := map[string]any{"items": renderKeys(keys), "request_id": reqID}
@@ -484,7 +490,7 @@ func (h *Handler) handleListKeys(w http.ResponseWriter, r *http.Request) {
 
 	keys, err := h.svc.ListKeys(r.Context(), tenantID, limit, offset, includeDeleted)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "list_failed", "failed to list keys", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": renderKeys(keys), "request_id": reqID})
@@ -499,10 +505,12 @@ func (h *Handler) handleGetKey(w http.ResponseWriter, r *http.Request) {
 	k, err := h.svc.GetKey(r.Context(), tenantID, r.PathValue("id"))
 	if err != nil {
 		code := http.StatusInternalServerError
+		msg := "failed to retrieve key"
 		if errors.Is(err, errStoreNotFound) {
 			code = http.StatusNotFound
+			msg = "key not found"
 		}
-		writeErr(w, code, "get_failed", err.Error(), reqID, tenantID)
+		writeErr(w, code, "get_failed", msg, reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"key": renderKey(k), "request_id": reqID})
@@ -520,7 +528,7 @@ func (h *Handler) handleUpdateKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.UpdateKey(r.Context(), tenantID, r.PathValue("id"), req); err != nil {
-		writeErr(w, http.StatusInternalServerError, "update_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusInternalServerError, "update_failed", "failed to update key", reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "request_id": reqID})
@@ -1969,7 +1977,8 @@ func (h *Handler) handleRandom(w http.ResponseWriter, r *http.Request) {
 
 func decodeJSON(r *http.Request, out interface{}) error {
 	defer r.Body.Close() //nolint:errcheck
-	dec := json.NewDecoder(r.Body)
+	// A04: limit request body to 1 MB to prevent resource exhaustion
+	dec := json.NewDecoder(io.LimitReader(r.Body, 1<<20))
 	dec.DisallowUnknownFields()
 	return dec.Decode(out)
 }
@@ -1989,6 +1998,11 @@ func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
 	}
 	if tenantID == "" {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
+		return ""
+	}
+	// A01 fix: verify the request tenant matches the authenticated JWT tenant
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
 		return ""
 	}
 	return tenantID

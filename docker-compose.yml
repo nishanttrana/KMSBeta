@@ -14,10 +14,14 @@ x-kms-common-env: &kms-common-env
   DB_MAX_IDLE: "20"
   RATE_LIMIT_RPS: "100"
   RATE_LIMIT_BURST: "200"
-  WORKLOAD_IDENTITY_SHARED_SECRET: ${WORKLOAD_IDENTITY_SHARED_SECRET:-change-me-workload-secret}
+  WORKLOAD_IDENTITY_SHARED_SECRET: ${WORKLOAD_IDENTITY_SHARED_SECRET:?WORKLOAD_IDENTITY_SHARED_SECRET is required}
 
 x-kms-service: &kms-service
   restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
   networks:
     - kms_net
   deploy:
@@ -281,11 +285,11 @@ services:
   envoy:
     restart: unless-stopped
     image: envoyproxy/envoy:v1.37.1
-    user: root
+    user: "100:101"
     entrypoint: ["/bin/sh"]
     command:
       - -ec
-      - for i in $(seq 1 120); do [ -s /run/vecta/runtime-certs/envoy/tls.crt ] && [ -s /run/vecta/runtime-certs/envoy/tls.key ] && [ -s /run/vecta/runtime-certs/ca/ca.crt ] && break; sleep 1; done; mkdir -p /tmp/envoy-certs; cp /run/vecta/runtime-certs/envoy/tls.crt /tmp/envoy-certs/tls.crt; cp /run/vecta/runtime-certs/envoy/tls.key /tmp/envoy-certs/tls.key; cp /run/vecta/runtime-certs/ca/ca.crt /tmp/envoy-certs/ca.crt; chmod 0644 /tmp/envoy-certs/tls.crt; chmod 0644 /tmp/envoy-certs/tls.key; chmod 0644 /tmp/envoy-certs/ca.crt; exec /usr/local/bin/envoy -c /etc/envoy/envoy.yaml --service-cluster vecta-edge
+      - for i in $(seq 1 120); do [ -s /run/vecta/runtime-certs/envoy/tls.crt ] && [ -s /run/vecta/runtime-certs/envoy/tls.key ] && [ -s /run/vecta/runtime-certs/ca/ca.crt ] && break; sleep 1; done; mkdir -p /tmp/envoy-certs; cp /run/vecta/runtime-certs/envoy/tls.crt /tmp/envoy-certs/tls.crt; cp /run/vecta/runtime-certs/envoy/tls.key /tmp/envoy-certs/tls.key; cp /run/vecta/runtime-certs/ca/ca.crt /tmp/envoy-certs/ca.crt; chmod 0644 /tmp/envoy-certs/tls.crt; chmod 0600 /tmp/envoy-certs/tls.key; chmod 0644 /tmp/envoy-certs/ca.crt; exec /usr/local/bin/envoy -c /etc/envoy/envoy.yaml --service-cluster vecta-edge
     volumes:
       - ./infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
       - runtime-certs:/run/vecta/runtime-certs:ro
@@ -293,7 +297,7 @@ services:
       - "80:80"
       - "443:443"
       - "5696:5696"
-      - "9901:9901"
+      - "127.0.0.1:9901:9901"
     depends_on:
       certs:
         condition: service_healthy
@@ -357,13 +361,13 @@ services:
       AUTH_BOOTSTRAP_TENANT_ID: ${AUTH_BOOTSTRAP_TENANT_ID:-root}
       AUTH_BOOTSTRAP_TENANT_NAME: ${AUTH_BOOTSTRAP_TENANT_NAME:-Root}
       AUTH_BOOTSTRAP_ADMIN_USERNAME: ${AUTH_BOOTSTRAP_ADMIN_USERNAME:-admin}
-      AUTH_BOOTSTRAP_ADMIN_PASSWORD: ${AUTH_BOOTSTRAP_ADMIN_PASSWORD:-VectaAdmin@2026}
+      AUTH_BOOTSTRAP_ADMIN_PASSWORD: ${AUTH_BOOTSTRAP_ADMIN_PASSWORD:?AUTH_BOOTSTRAP_ADMIN_PASSWORD is required}
       AUTH_BOOTSTRAP_ADMIN_EMAIL: ${AUTH_BOOTSTRAP_ADMIN_EMAIL:-admin@vecta.local}
       AUTH_BOOTSTRAP_ADMIN_ROLE: ${AUTH_BOOTSTRAP_ADMIN_ROLE:-tenant-admin}
       AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE: ${AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE:-true}
       AUTH_BOOTSTRAP_CLI_ENABLED: ${AUTH_BOOTSTRAP_CLI_ENABLED:-true}
       AUTH_BOOTSTRAP_CLI_USERNAME: ${AUTH_BOOTSTRAP_CLI_USERNAME:-cli-user}
-      AUTH_BOOTSTRAP_CLI_PASSWORD: ${AUTH_BOOTSTRAP_CLI_PASSWORD:-VectaCLI@2026}
+      AUTH_BOOTSTRAP_CLI_PASSWORD: ${AUTH_BOOTSTRAP_CLI_PASSWORD:?AUTH_BOOTSTRAP_CLI_PASSWORD is required}
       AUTH_BOOTSTRAP_CLI_EMAIL: ${AUTH_BOOTSTRAP_CLI_EMAIL:-cli@vecta.local}
       AUTH_CLI_HOST: ${AUTH_CLI_HOST:-127.0.0.1}
       AUTH_CLI_PORT: ${AUTH_CLI_PORT:-2222}
@@ -371,7 +375,6 @@ services:
       AUTH_CLI_HSM_SERVICE_NAME: ${AUTH_CLI_HSM_SERVICE_NAME:-hsm-integration}
     volumes:
       - auth-data:/var/lib/vecta/auth
-      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "8001:8001"
       - "18001:18001"
@@ -989,6 +992,26 @@ services:
       timeout: 5s
       retries: 10
 
+  ai-gateway:
+    <<: *kms-service
+    profiles: ["ai_gateway"]
+    build:
+      context: .
+      dockerfile: services/ai-gateway/Dockerfile
+    image: vecta/ai-gateway:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8320"
+      GRPC_PORT: "18320"
+    ports:
+      - "8320:8320"
+      - "18320:18320"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18320"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
   pqc:
     <<: *kms-service
     profiles: ["pqc_migration"]
@@ -1162,7 +1185,7 @@ services:
     environment:
       <<: *kms-common-env
       HSM_PROVIDER: ${HSM_PROVIDER:-software}
-      SOFTWARE_VAULT_PASSPHRASE: ${SOFTWARE_VAULT_PASSPHRASE:-vecta-dev-passphrase}
+      SOFTWARE_VAULT_PASSPHRASE: ${SOFTWARE_VAULT_PASSPHRASE:?SOFTWARE_VAULT_PASSPHRASE is required}
       SOFTWARE_VAULT_MLOCK_REQUIRED: ${SOFTWARE_VAULT_MLOCK_REQUIRED:-false}
       THALES_ENDPOINT: ${THALES_ENDPOINT:-}
       THALES_PARTITION: ${THALES_PARTITION:-}

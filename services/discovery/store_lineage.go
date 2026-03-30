@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 )
@@ -83,6 +84,177 @@ LIMIT $3
 	}
 	defer rows.Close() //nolint:errcheck
 	return scanLineageEvents(rows)
+}
+
+// GetLineageEventsByType returns events for a key filtered by specific event types.
+func (s *SQLStore) GetLineageEventsByType(ctx context.Context, tenantID, keyID string, eventTypes []string, limit int) ([]LineageEvent, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 500
+	}
+	if len(eventTypes) == 0 {
+		return []LineageEvent{}, nil
+	}
+
+	// Build parameterized IN clause
+	placeholders := make([]string, len(eventTypes))
+	args := make([]interface{}, 0, len(eventTypes)+3)
+	args = append(args, strings.TrimSpace(tenantID), strings.TrimSpace(keyID))
+	for i, et := range eventTypes {
+		placeholders[i] = fmt.Sprintf("$%d", i+3)
+		args = append(args, et)
+	}
+	args = append(args, limit)
+	limitPlaceholder := fmt.Sprintf("$%d", len(args))
+
+	query := fmt.Sprintf(`
+SELECT id, tenant_id, event_type,
+       source_id, source_type, source_label,
+       dest_id, dest_type, dest_label,
+       actor_id, actor_type, service_name,
+       metadata, occurred_at, created_at
+FROM lineage_events
+WHERE tenant_id = $1
+  AND (source_id = $2 OR dest_id = $2)
+  AND event_type IN (%s)
+ORDER BY occurred_at DESC
+LIMIT %s
+`, strings.Join(placeholders, ","), limitPlaceholder)
+
+	rows, err := s.db.SQL().QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	return scanLineageEvents(rows)
+}
+
+// GetAccessEvents returns wrap, unwrap, encrypt, and decrypt events for a key since a given time.
+func (s *SQLStore) GetAccessEvents(ctx context.Context, tenantID, keyID string, since time.Time) ([]LineageEvent, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, tenant_id, event_type,
+       source_id, source_type, source_label,
+       dest_id, dest_type, dest_label,
+       actor_id, actor_type, service_name,
+       metadata, occurred_at, created_at
+FROM lineage_events
+WHERE tenant_id = $1
+  AND (source_id = $2 OR dest_id = $2)
+  AND event_type IN ('wrap', 'unwrap', 'encrypt', 'decrypt')
+  AND occurred_at >= $3
+ORDER BY occurred_at DESC
+LIMIT 5000
+`, strings.TrimSpace(tenantID), strings.TrimSpace(keyID), since.UTC())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	return scanLineageEvents(rows)
+}
+
+// GetAllKeyProvenanceData returns all lineage events for a tenant, up to limit,
+// ordered by occurred_at DESC. Used for heatmap and bulk provenance analysis.
+func (s *SQLStore) GetAllKeyProvenanceData(ctx context.Context, tenantID string, limit int) ([]LineageEvent, error) {
+	if limit <= 0 || limit > 10000 {
+		limit = 5000
+	}
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT id, tenant_id, event_type,
+       source_id, source_type, source_label,
+       dest_id, dest_type, dest_label,
+       actor_id, actor_type, service_name,
+       metadata, occurred_at, created_at
+FROM lineage_events
+WHERE tenant_id = $1
+ORDER BY occurred_at DESC
+LIMIT $2
+`, strings.TrimSpace(tenantID), limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	return scanLineageEvents(rows)
+}
+
+// CountEventsByHour returns an hourly distribution of events for a key since a given time.
+func (s *SQLStore) CountEventsByHour(ctx context.Context, tenantID, keyID string, since time.Time) (map[int]int, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT EXTRACT(HOUR FROM occurred_at)::int AS hour, COUNT(*) AS cnt
+FROM lineage_events
+WHERE tenant_id = $1
+  AND (source_id = $2 OR dest_id = $2)
+  AND occurred_at >= $3
+GROUP BY hour
+ORDER BY hour
+`, strings.TrimSpace(tenantID), strings.TrimSpace(keyID), since.UTC())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+
+	result := make(map[int]int)
+	for rows.Next() {
+		var hour, cnt int
+		if err := rows.Scan(&hour, &cnt); err != nil {
+			return nil, err
+		}
+		result[hour] = cnt
+	}
+	return result, rows.Err()
+}
+
+// GetDistinctActors returns unique actors who accessed a key since a given time.
+func (s *SQLStore) GetDistinctActors(ctx context.Context, tenantID, keyID string, since time.Time) ([]string, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT DISTINCT actor_id
+FROM lineage_events
+WHERE tenant_id = $1
+  AND (source_id = $2 OR dest_id = $2)
+  AND occurred_at >= $3
+ORDER BY actor_id
+`, strings.TrimSpace(tenantID), strings.TrimSpace(keyID), since.UTC())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+
+	var actors []string
+	for rows.Next() {
+		var actor string
+		if err := rows.Scan(&actor); err != nil {
+			return nil, err
+		}
+		actors = append(actors, actor)
+	}
+	return actors, rows.Err()
+}
+
+// GetNewActors returns actors who first accessed a key after firstSeenSince
+// and have accessed it since accessedSince.
+func (s *SQLStore) GetNewActors(ctx context.Context, tenantID, keyID string, firstSeenSince, accessedSince time.Time) ([]string, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT actor_id
+FROM lineage_events
+WHERE tenant_id = $1
+  AND (source_id = $2 OR dest_id = $2)
+  AND occurred_at >= $4
+GROUP BY actor_id
+HAVING MIN(occurred_at) >= $3
+ORDER BY actor_id
+`, strings.TrimSpace(tenantID), strings.TrimSpace(keyID), firstSeenSince.UTC(), accessedSince.UTC())
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+
+	var actors []string
+	for rows.Next() {
+		var actor string
+		if err := rows.Scan(&actor); err != nil {
+			return nil, err
+		}
+		actors = append(actors, actor)
+	}
+	return actors, rows.Err()
 }
 
 // scanLineageEvents reads all rows from the result set into a slice.

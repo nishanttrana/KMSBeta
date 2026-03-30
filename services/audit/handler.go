@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"vecta-kms/pkg/clustersync"
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
@@ -552,6 +553,11 @@ func mustTenant(r *http.Request, w http.ResponseWriter, requestID string) string
 	}
 	if tenantID == "" {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", requestID, "")
+		return ""
+	}
+	// A01 fix: verify the request tenant matches the authenticated JWT tenant
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", requestID, tenantID)
 		return ""
 	}
 	return tenantID

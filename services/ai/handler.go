@@ -33,6 +33,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("PUT /ai/config", h.handleUpdateConfig)
 	mux.HandleFunc("POST /ai/protect/scan", h.handleAIProtectScan)
 	mux.HandleFunc("POST /ai/protect/redact", h.handleAIProtectRedact)
+	mux.HandleFunc("POST /ai/protect/block", h.handleAIProtectBlock)
 	mux.HandleFunc("GET /ai/protect/policies", h.handleListAIProtectPolicies)
 	mux.HandleFunc("POST /ai/protect/policies", h.handleCreateAIProtectPolicy)
 	mux.HandleFunc("DELETE /ai/protect/policies/{id}", h.handleDeleteAIProtectPolicy)
@@ -145,7 +146,13 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID stri
 		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, reqID, tenantID)
 		return
 	}
-	writeErr(w, httpStatusForErr(err), "internal_error", err.Error(), reqID, tenantID)
+	// A05: avoid leaking internal error details for 5xx responses
+	status := httpStatusForErr(err)
+	msg := err.Error()
+	if status >= 500 {
+		msg = "internal server error"
+	}
+	writeErr(w, status, "internal_error", msg, reqID, tenantID)
 }
 
 func decodeJSONAllowEmpty(r *http.Request, out interface{}) error {

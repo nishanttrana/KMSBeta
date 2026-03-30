@@ -268,6 +268,12 @@ export const KMIPTab=({session,onToast})=>{
     if(!file){
       return;
     }
+    // Validate file size (max 256 KB for PEM/certificate material)
+    const MAX_PEM_SIZE = 256 * 1024;
+    if(file.size > MAX_PEM_SIZE){
+      onToast?.(`File too large (${(file.size / 1024).toFixed(0)} KB). Maximum is 256 KB.`);
+      return;
+    }
     try{
       const text=await file.text();
       setClientForm((prev)=>({...prev,[targetField]:String(text||"")}));

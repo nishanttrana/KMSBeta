@@ -24,6 +24,8 @@ type Service struct {
 	secrets    SecretsClient
 	llm        LLMBackend
 	events     EventPublisher
+	dlpEngine  *DLPEngine
+	dlpProxy   *DLPProxy
 	now        func() time.Time
 }
 
@@ -31,6 +33,8 @@ func NewService(store Store, keycore KeyCoreClient, policy PolicyClient, audit A
 	if llm == nil {
 		llm = NewHTTPLLMBackend(30 * time.Second)
 	}
+	dlpEngine := NewDLPEngine(store, logger)
+	dlpProxy := NewDLPProxy(dlpEngine, store, events, logger)
 	return &Service{
 		store:      store,
 		keycore:    keycore,
@@ -41,6 +45,8 @@ func NewService(store Store, keycore KeyCoreClient, policy PolicyClient, audit A
 		secrets:    secrets,
 		llm:        llm,
 		events:     events,
+		dlpEngine:  dlpEngine,
+		dlpProxy:   dlpProxy,
 		now:        func() time.Time { return time.Now().UTC() },
 	}
 }
@@ -211,7 +217,49 @@ func (s *Service) ExplainPolicy(ctx context.Context, req PolicyExplainRequest) (
 }
 
 func (s *Service) runPrompt(ctx context.Context, tenantID string, action string, userInput string, prompt string, cfg AIConfig, assembled assembledContext, includeContext bool) AIResponse {
+	// DLP: Intercept outbound prompt before sending to LLM
+	var dlpWarnings []string
+	if s.dlpProxy != nil {
+		intercepted, err := s.dlpProxy.InterceptRequest(ctx, tenantID, prompt)
+		if err != nil {
+			dlpWarnings = append(dlpWarnings, "dlp request intercept error: "+err.Error())
+		} else if !intercepted.Allowed {
+			// Policy blocked the request entirely
+			return AIResponse{
+				Action:            action,
+				TenantID:          tenantID,
+				Answer:            fmt.Sprintf("Request blocked by DLP policy %s: sensitive data detected (%d findings)", intercepted.PolicyID, len(intercepted.Findings)),
+				Backend:           "dlp_blocked",
+				Model:             cfg.Model,
+				RedactionsApplied: len(intercepted.Findings),
+				ContextSummary:    cloneMap(assembled.Redacted["summary"].(map[string]interface{})),
+				Warnings:          []string{"DLP policy blocked this request"},
+				GeneratedAt:       s.now(),
+			}
+		} else {
+			prompt = intercepted.ProcessedText
+			if len(intercepted.Findings) > 0 && intercepted.Action == "warn" {
+				dlpWarnings = append(dlpWarnings, fmt.Sprintf("DLP warning: %d sensitive data findings in prompt", len(intercepted.Findings)))
+			}
+		}
+	}
+
 	out, backend, warnings := s.callLLM(ctx, cfg, applyMCPPromptContract(prompt, cfg), action, assembled.Redacted)
+
+	// DLP: Intercept inbound LLM response
+	if s.dlpProxy != nil {
+		intercepted, err := s.dlpProxy.InterceptResponse(ctx, tenantID, out)
+		if err != nil {
+			dlpWarnings = append(dlpWarnings, "dlp response intercept error: "+err.Error())
+		} else {
+			out = intercepted.ProcessedText
+			if len(intercepted.Findings) > 0 {
+				dlpWarnings = append(dlpWarnings, fmt.Sprintf("DLP: %d sensitive items redacted from LLM response", len(intercepted.Findings)))
+			}
+		}
+	}
+	warnings = append(warnings, dlpWarnings...)
+
 	// Enforce response-side redaction so sensitive markers cannot leak back to clients.
 	out, textRedactions := redactText(out)
 	totalRedactions := assembled.RedactionCount + textRedactions

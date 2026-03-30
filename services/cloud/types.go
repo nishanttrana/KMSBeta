@@ -8,6 +8,8 @@ const (
 	ProviderGCP        = "gcp"
 	ProviderOCI        = "oci"
 	ProviderSalesforce = "salesforce"
+	ProviderAlibaba    = "alibaba"
+	ProviderServiceNow = "servicenow"
 )
 
 type CloudAccount struct {

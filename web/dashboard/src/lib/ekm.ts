@@ -247,7 +247,7 @@ export type RegisterEKMAgentInput = {
   agent_id?: string;
   name: string;
   role?: string;
-  db_engine: "mssql" | "oracle";
+  db_engine: "mssql" | "oracle" | "postgresql" | "mysql" | "db2";
   host: string;
   version: string;
   heartbeat_interval_sec?: number;
@@ -664,4 +664,307 @@ export async function downloadEKMSDK(
     `/ekm/sdk/download?${tenantQuery(session, tenantOverride)}&provider=${encodeURIComponent(provider)}&os=${encodeURIComponent(targetOS)}`
   );
   return out.artifact;
+}
+
+/* ═══════════════ Azure EKM ═══════════════ */
+
+export type AzureEKMConfig = {
+  id: string;
+  tenant_id: string;
+  azure_tenant_id: string;
+  subscription_id: string;
+  resource_group: string;
+  vault_name: string;
+  vault_url: string;
+  managed_hsm_name?: string;
+  managed_hsm_url?: string;
+  client_id: string;
+  client_secret: string;
+  auth_mode: string;
+  status: string;
+  key_mappings: number;
+  last_sync_at?: string;
+  created_at?: string;
+};
+
+export type AzureKeyMapping = {
+  id: string;
+  tenant_id: string;
+  config_id: string;
+  vecta_key_id: string;
+  azure_key_name: string;
+  azure_key_version: string;
+  azure_key_id: string;
+  purpose: string;
+  sync_status: string;
+  last_sync_at?: string;
+  created_at?: string;
+};
+
+export type AzureSyncResult = {
+  mapping_id: string;
+  status: string;
+  azure_key_id?: string;
+  error?: string;
+};
+
+export async function listAzureEKMConfigs(session: AuthSession): Promise<AzureEKMConfig[]> {
+  const out = await serviceRequest<{ items: AzureEKMConfig[] }>(session, "ekm", `/ekm/azure/configs?${tenantQuery(session)}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function getAzureEKMConfig(session: AuthSession, configID: string): Promise<AzureEKMConfig> {
+  const out = await serviceRequest<{ config: AzureEKMConfig }>(
+    session, "ekm", `/ekm/azure/configs/${encodeURIComponent(configID)}?${tenantQuery(session)}`
+  );
+  return out.config;
+}
+
+export async function createAzureEKMConfig(session: AuthSession, input: {
+  azure_tenant_id: string;
+  subscription_id?: string;
+  resource_group?: string;
+  vault_name: string;
+  vault_url?: string;
+  managed_hsm_name?: string;
+  managed_hsm_url?: string;
+  client_id: string;
+  client_secret: string;
+  auth_mode?: string;
+}): Promise<AzureEKMConfig> {
+  const out = await serviceRequest<{ config: AzureEKMConfig }>(session, "ekm", `/ekm/azure/configs`, {
+    method: "POST",
+    body: JSON.stringify({ ...input, tenant_id: session.tenantId }),
+  });
+  return out.config;
+}
+
+export async function updateAzureEKMConfig(session: AuthSession, configID: string, input: Partial<{
+  azure_tenant_id: string;
+  subscription_id: string;
+  resource_group: string;
+  vault_name: string;
+  vault_url: string;
+  managed_hsm_name: string;
+  managed_hsm_url: string;
+  client_id: string;
+  client_secret: string;
+  auth_mode: string;
+}>): Promise<AzureEKMConfig> {
+  const out = await serviceRequest<{ config: AzureEKMConfig }>(
+    session, "ekm", `/ekm/azure/configs/${encodeURIComponent(configID)}`, {
+      method: "PUT",
+      body: JSON.stringify({ ...input, tenant_id: session.tenantId }),
+    }
+  );
+  return out.config;
+}
+
+export async function deleteAzureEKMConfig(session: AuthSession, configID: string): Promise<void> {
+  await serviceRequest(session, "ekm", `/ekm/azure/configs/${encodeURIComponent(configID)}?${tenantQuery(session)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function testAzureConnection(session: AuthSession, configID: string): Promise<{ connected: boolean; authenticated?: boolean; error?: string }> {
+  const out = await serviceRequest<{ connected: boolean; authenticated?: boolean; error?: string }>(
+    session, "ekm", `/ekm/azure/configs/${encodeURIComponent(configID)}/test?${tenantQuery(session)}`, { method: "POST" }
+  );
+  return out;
+}
+
+export async function syncAzureKeys(session: AuthSession, configID: string): Promise<{ results: AzureSyncResult[]; total: number; synced: number }> {
+  const out = await serviceRequest<{ results: AzureSyncResult[]; total: number; synced: number }>(
+    session, "ekm", `/ekm/azure/configs/${encodeURIComponent(configID)}/sync?${tenantQuery(session)}`, { method: "POST" }
+  );
+  return out;
+}
+
+export async function listAzureKeyMappings(session: AuthSession, configID?: string): Promise<AzureKeyMapping[]> {
+  const q = configID ? `&config_id=${encodeURIComponent(configID)}` : "";
+  const out = await serviceRequest<{ items: AzureKeyMapping[] }>(session, "ekm", `/ekm/azure/mappings?${tenantQuery(session)}${q}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+export async function createAzureKeyMapping(session: AuthSession, input: {
+  config_id: string;
+  vecta_key_id: string;
+  azure_key_name: string;
+  purpose?: string;
+}): Promise<AzureKeyMapping> {
+  const out = await serviceRequest<{ mapping: AzureKeyMapping }>(session, "ekm", `/ekm/azure/mappings`, {
+    method: "POST",
+    body: JSON.stringify({ ...input, tenant_id: session.tenantId }),
+  });
+  return out.mapping;
+}
+
+export async function deleteAzureKeyMapping(session: AuthSession, mappingID: string): Promise<void> {
+  await serviceRequest(session, "ekm", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}?${tenantQuery(session)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function importKeyToAzure(session: AuthSession, mappingID: string): Promise<{ azure_key_id: string; azure_key_version: string }> {
+  const out = await serviceRequest<{ azure_key_id: string; azure_key_version: string }>(
+    session, "ekm", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/import?${tenantQuery(session)}`, { method: "POST" }
+  );
+  return out;
+}
+
+export async function rotateAzureKey(session: AuthSession, mappingID: string): Promise<{ new_version: string }> {
+  const out = await serviceRequest<{ new_version: string }>(
+    session, "ekm", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/rotate?${tenantQuery(session)}`, { method: "POST" }
+  );
+  return out;
+}
+
+export async function wrapAzureKey(session: AuthSession, mappingID: string, valueB64: string, algorithm?: string): Promise<{ wrapped: string }> {
+  const out = await serviceRequest<{ wrapped: string }>(
+    session, "ekm", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/wrap`, {
+      method: "POST",
+      body: JSON.stringify({ tenant_id: session.tenantId, value: valueB64, algorithm: algorithm || "RSA-OAEP-256" }),
+    }
+  );
+  return out;
+}
+
+export async function unwrapAzureKey(session: AuthSession, mappingID: string, valueB64: string, algorithm?: string): Promise<{ unwrapped: string }> {
+  const out = await serviceRequest<{ unwrapped: string }>(
+    session, "ekm", `/ekm/azure/mappings/${encodeURIComponent(mappingID)}/unwrap`, {
+      method: "POST",
+      body: JSON.stringify({ tenant_id: session.tenantId, value: valueB64, algorithm: algorithm || "RSA-OAEP-256" }),
+    }
+  );
+  return out;
+}
+
+// ═══════════════════════ Google CSE (Client-Side Encryption) ═══════════════════════
+
+export type GoogleCSEConfig = {
+  id: string;
+  tenant_id: string;
+  google_workspace_customer_id: string;
+  service_account_email: string;
+  service_account_key_json: string;
+  allowed_domains: string[];
+  kacls_endpoint: string;
+  status: string;
+  key_count: number;
+  last_activity_at?: string;
+  created_at: string;
+};
+
+export type GoogleCSEKey = {
+  id: string;
+  tenant_id: string;
+  config_id: string;
+  key_name: string;
+  vecta_key_id: string;
+  google_key_uri: string;
+  purpose: string;
+  status: string;
+  wrap_count: number;
+  unwrap_count: number;
+  last_used_at?: string;
+  created_at: string;
+};
+
+export async function listGoogleCSEConfigs(session: AuthSession): Promise<GoogleCSEConfig[]> {
+  const { items } = await serviceRequest<{ items: GoogleCSEConfig[] }>(
+    session, "ekm", `/ekm/google-cse/configs?tenant_id=${encodeURIComponent(session.tenantId)}`
+  );
+  return items || [];
+}
+
+export async function createGoogleCSEConfig(session: AuthSession, input: {
+  google_workspace_customer_id: string;
+  service_account_email?: string;
+  service_account_key_json?: string;
+  allowed_domains: string[];
+  kacls_endpoint?: string;
+}): Promise<GoogleCSEConfig> {
+  const { config } = await serviceRequest<{ config: GoogleCSEConfig }>(
+    session, "ekm", "/ekm/google-cse/configs", {
+      method: "POST",
+      body: JSON.stringify({ tenant_id: session.tenantId, ...input }),
+    }
+  );
+  return config;
+}
+
+export async function deleteGoogleCSEConfig(session: AuthSession, configID: string): Promise<void> {
+  await serviceRequest(
+    session, "ekm", `/ekm/google-cse/configs/${encodeURIComponent(configID)}?tenant_id=${encodeURIComponent(session.tenantId)}`, {
+      method: "DELETE",
+    }
+  );
+}
+
+export async function listGoogleCSEKeys(session: AuthSession, configID?: string): Promise<GoogleCSEKey[]> {
+  let url = `/ekm/google-cse/keys?tenant_id=${encodeURIComponent(session.tenantId)}`;
+  if (configID) url += `&config_id=${encodeURIComponent(configID)}`;
+  const { items } = await serviceRequest<{ items: GoogleCSEKey[] }>(session, "ekm", url);
+  return items || [];
+}
+
+export async function createGoogleCSEKey(session: AuthSession, input: {
+  config_id: string;
+  key_name: string;
+  vecta_key_id: string;
+  purpose?: string;
+}): Promise<GoogleCSEKey> {
+  const { key } = await serviceRequest<{ key: GoogleCSEKey }>(
+    session, "ekm", "/ekm/google-cse/keys", {
+      method: "POST",
+      body: JSON.stringify({ tenant_id: session.tenantId, ...input }),
+    }
+  );
+  return key;
+}
+
+export async function deleteGoogleCSEKey(session: AuthSession, keyID: string): Promise<void> {
+  await serviceRequest(
+    session, "ekm", `/ekm/google-cse/keys/${encodeURIComponent(keyID)}?tenant_id=${encodeURIComponent(session.tenantId)}`, {
+      method: "DELETE",
+    }
+  );
+}
+
+// Key revocation
+export async function revokeEKMTDEKey(session: AuthSession, keyId: string): Promise<any> {
+  const out = await serviceRequest<any>(
+    session,
+    "ekm",
+    `/ekm/tde/keys/${encodeURIComponent(keyId)}/revoke`,
+    {
+      method: "POST",
+      body: JSON.stringify({ tenant_id: session.tenantId })
+    }
+  );
+  return out;
+}
+
+// Database TDE revocation
+export async function revokeDatabaseTDE(session: AuthSession, dbId: string): Promise<any> {
+  const out = await serviceRequest<any>(
+    session,
+    "ekm",
+    `/ekm/databases/${encodeURIComponent(dbId)}/revoke-tde`,
+    {
+      method: "POST",
+      body: JSON.stringify({ tenant_id: session.tenantId })
+    }
+  );
+  return out;
+}
+
+// Validate agent deployment
+export async function validateAgentDeployment(session: AuthSession, agentId: string): Promise<any> {
+  const out = await serviceRequest<any>(
+    session,
+    "ekm",
+    `/ekm/agents/${encodeURIComponent(agentId)}/validate-deploy?${tenantQuery(session)}`
+  );
+  return out;
 }

@@ -9,6 +9,28 @@ import (
 	"strings"
 )
 
+// validateMountPoint rejects mount points containing characters that could
+// escape a single-quoted PowerShell string or enable command injection.
+// Only allows drive letters (e.g. "C:", "D:") and simple paths.
+func validateMountPoint(mountPoint string) error {
+	if mountPoint == "" {
+		return fmt.Errorf("mount point is required")
+	}
+	// Block shell metacharacters and path traversal
+	if strings.ContainsAny(mountPoint, "'`$;|&><(){}[]!\"\n\r") {
+		return fmt.Errorf("invalid mount point %q: contains forbidden characters", mountPoint)
+	}
+	if strings.Contains(mountPoint, "..") {
+		return fmt.Errorf("invalid mount point %q: path traversal not allowed", mountPoint)
+	}
+	// Mount points should match a drive letter pattern (e.g. "C:" or "C:\")
+	trimmed := strings.TrimSpace(mountPoint)
+	if len(trimmed) < 2 || trimmed[1] != ':' || (trimmed[0] < 'A' || trimmed[0] > 'Z') && (trimmed[0] < 'a' || trimmed[0] > 'z') {
+		return fmt.Errorf("invalid mount point %q: must be a drive letter (e.g. C:)", mountPoint)
+	}
+	return nil
+}
+
 // BitLockerStatus represents the state of BitLocker on a volume.
 type BitLockerStatus struct {
 	MountPoint       string `json:"mount_point"`
@@ -26,6 +48,9 @@ func runPS(cmd string) (string, error) {
 
 // GetBitLockerStatus returns the BitLocker state of the given volume.
 func GetBitLockerStatus(mountPoint string) (BitLockerStatus, error) {
+	if err := validateMountPoint(mountPoint); err != nil {
+		return BitLockerStatus{}, err
+	}
 	cmd := fmt.Sprintf(`Get-BitLockerVolume -MountPoint '%s' | ConvertTo-Json -Compress`, mountPoint)
 	out, err := runPS(cmd)
 	if err != nil {
@@ -47,6 +72,9 @@ func GetBitLockerStatus(mountPoint string) (BitLockerStatus, error) {
 
 // EnableBitLocker enables BitLocker on the given mount point.
 func EnableBitLocker(mountPoint string, protectorType string) (string, error) {
+	if err := validateMountPoint(mountPoint); err != nil {
+		return "", err
+	}
 	var cmd string
 	switch strings.ToLower(strings.TrimSpace(protectorType)) {
 	case "tpm":
@@ -67,6 +95,9 @@ func EnableBitLocker(mountPoint string, protectorType string) (string, error) {
 
 // DisableBitLocker disables BitLocker on the given mount point.
 func DisableBitLocker(mountPoint string) error {
+	if err := validateMountPoint(mountPoint); err != nil {
+		return err
+	}
 	cmd := fmt.Sprintf(`Disable-BitLocker -MountPoint '%s' -Confirm:$false`, mountPoint)
 	out, err := runPS(cmd)
 	if err != nil {
@@ -77,6 +108,9 @@ func DisableBitLocker(mountPoint string) error {
 
 // SuspendBitLocker suspends BitLocker protection.
 func SuspendBitLocker(mountPoint string) error {
+	if err := validateMountPoint(mountPoint); err != nil {
+		return err
+	}
 	cmd := fmt.Sprintf(`Suspend-BitLocker -MountPoint '%s' -RebootCount 1`, mountPoint)
 	out, err := runPS(cmd)
 	if err != nil {
@@ -87,6 +121,9 @@ func SuspendBitLocker(mountPoint string) error {
 
 // ResumeBitLocker resumes BitLocker protection.
 func ResumeBitLocker(mountPoint string) error {
+	if err := validateMountPoint(mountPoint); err != nil {
+		return err
+	}
 	cmd := fmt.Sprintf(`Resume-BitLocker -MountPoint '%s'`, mountPoint)
 	out, err := runPS(cmd)
 	if err != nil {
@@ -97,6 +134,9 @@ func ResumeBitLocker(mountPoint string) error {
 
 // RotateRecoveryPassword removes old recovery protectors and creates a new one.
 func RotateRecoveryPassword(mountPoint string) (string, error) {
+	if err := validateMountPoint(mountPoint); err != nil {
+		return "", err
+	}
 	// Remove existing recovery password protectors
 	removeCmd := fmt.Sprintf(`
 $vol = Get-BitLockerVolume -MountPoint '%s'

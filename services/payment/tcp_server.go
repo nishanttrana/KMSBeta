@@ -17,6 +17,7 @@ import (
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/logsanitize"
 )
 
 type paymentTCPRequest struct {
@@ -215,7 +216,7 @@ func servePaymentTCPConn(ctx context.Context, conn net.Conn, svc *Service, parse
 			Result:    result,
 		}
 		_ = writePaymentTCPResponse(writer, resp)
-		logger.Printf("payment tcp op=%s tenant=%s request_id=%s ok=true", req.Operation, req.TenantID, reqID)
+		logger.Printf("payment tcp op=%s tenant=%s request_id=%s ok=true", logsanitize.Input(req.Operation), logsanitize.Input(req.TenantID), reqID)
 	}
 }
 

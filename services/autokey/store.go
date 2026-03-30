@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 
@@ -490,5 +491,68 @@ func scanHandle(scanner interface {
 	item.Spec = parseSpec(specJSON)
 	item.CreatedAt = parseTimeValue(createdRaw)
 	item.UpdatedAt = parseTimeValue(updatedRaw)
+	return item, nil
+}
+
+// --- Template versioning stubs ---
+
+func (s *SQLStore) CreateTemplateVersion(ctx context.Context, item AutokeyTemplateVersion) error {
+	_, err := s.db.SQL().ExecContext(ctx, `
+INSERT INTO autokey_template_versions (
+  template_id, tenant_id, version, snapshot_json, changed_by, changed_at, change_note
+) VALUES (
+  $1,$2,$3,$4,$5,CURRENT_TIMESTAMP,$6
+)
+`, item.TemplateID, item.TenantID, item.Version, mustJSON(item.Snapshot, "{}"), item.ChangedBy, item.ChangeNote)
+	return err
+}
+
+func (s *SQLStore) ListTemplateVersions(ctx context.Context, tenantID string, templateID string) ([]AutokeyTemplateVersion, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+SELECT template_id, tenant_id, version, snapshot_json, COALESCE(changed_by,''), changed_at, COALESCE(change_note,'')
+FROM autokey_template_versions
+WHERE tenant_id = $1 AND template_id = $2
+ORDER BY version DESC
+`, strings.TrimSpace(tenantID), strings.TrimSpace(templateID))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := []AutokeyTemplateVersion{}
+	for rows.Next() {
+		item, scanErr := scanTemplateVersion(rows)
+		if scanErr != nil {
+			return nil, scanErr
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (s *SQLStore) GetTemplateVersion(ctx context.Context, tenantID string, templateID string, version int) (AutokeyTemplateVersion, error) {
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT template_id, tenant_id, version, snapshot_json, COALESCE(changed_by,''), changed_at, COALESCE(change_note,'')
+FROM autokey_template_versions
+WHERE tenant_id = $1 AND template_id = $2 AND version = $3
+`, strings.TrimSpace(tenantID), strings.TrimSpace(templateID), version)
+	item, err := scanTemplateVersion(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return AutokeyTemplateVersion{}, errNotFound
+	}
+	return item, err
+}
+
+func scanTemplateVersion(scanner interface {
+	Scan(dest ...interface{}) error
+}) (AutokeyTemplateVersion, error) {
+	var item AutokeyTemplateVersion
+	var snapshotJSON string
+	var changedRaw interface{}
+	err := scanner.Scan(&item.TemplateID, &item.TenantID, &item.Version, &snapshotJSON, &item.ChangedBy, &changedRaw, &item.ChangeNote)
+	if err != nil {
+		return AutokeyTemplateVersion{}, err
+	}
+	_ = json.Unmarshal([]byte(snapshotJSON), &item.Snapshot)
+	item.ChangedAt = parseTimeValue(changedRaw)
 	return item, nil
 }

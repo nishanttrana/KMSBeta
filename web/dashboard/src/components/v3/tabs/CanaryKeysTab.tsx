@@ -26,22 +26,22 @@ function fmtAgo(iso?: string): string {
 
 const base = "/svc/keycore";
 
-async function apiGet(path: string, tenantId: string) {
-  const r = await fetch(`${base}${path}`, { headers: { "X-Tenant-ID": tenantId } });
+async function apiGet(path: string, tenantId: string, token: string) {
+  const r = await fetch(`${base}${path}`, { headers: { "X-Tenant-ID": tenantId, "Authorization": `Bearer ${token}` } });
   return r.json();
 }
 
-async function apiPost(path: string, tenantId: string, body: any) {
+async function apiPost(path: string, tenantId: string, token: string, body: any) {
   const r = await fetch(`${base}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Tenant-ID": tenantId },
+    headers: { "Content-Type": "application/json", "X-Tenant-ID": tenantId, "Authorization": `Bearer ${token}` },
     body: JSON.stringify(body),
   });
   return r.json();
 }
 
-async function apiDelete(path: string, tenantId: string) {
-  const r = await fetch(`${base}${path}`, { method: "DELETE", headers: { "X-Tenant-ID": tenantId } });
+async function apiDelete(path: string, tenantId: string, token: string) {
+  const r = await fetch(`${base}${path}`, { method: "DELETE", headers: { "X-Tenant-ID": tenantId, "Authorization": `Bearer ${token}` } });
   return r.json();
 }
 
@@ -105,6 +105,7 @@ const purposeLabel: Record<string, string> = {
 
 export function CanaryKeysTab({ session }: { session: any }) {
   const tenantId = session?.tenantId || "";
+  const token = session?.token || "";
   const [view, setView] = useState<"overview" | "canaries" | "create">("overview");
   const [canaries, setCanaries] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
@@ -127,15 +128,15 @@ export function CanaryKeysTab({ session }: { session: any }) {
     setLoading(true);
     try {
       const [keysRes, summaryRes] = await Promise.all([
-        apiGet("/canary", tenantId),
-        apiGet("/canary/summary", tenantId),
+        apiGet("/canary", tenantId, token),
+        apiGet("/canary/summary", tenantId, token),
       ]);
       setCanaries(keysRes.data || []);
       setSummary(summaryRes.data || {});
       // Collect recent trips from the top 3 most recently tripped canaries.
       const tripped = (keysRes.data || []).filter((c: any) => c.trip_count > 0).slice(0, 3);
       const tripResults = await Promise.all(
-        tripped.map((c: any) => apiGet(`/canary/${c.id}/trips?limit=5`, tenantId))
+        tripped.map((c: any) => apiGet(`/canary/${c.id}/trips?limit=5`, tenantId, token))
       );
       const allTrips = tripResults.flatMap((r: any) => r.data || []);
       allTrips.sort((a: any, b: any) => new Date(b.tripped_at).getTime() - new Date(a.tripped_at).getTime());
@@ -145,7 +146,7 @@ export function CanaryKeysTab({ session }: { session: any }) {
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, token]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -156,7 +157,7 @@ export function CanaryKeysTab({ session }: { session: any }) {
     } else {
       next.add(id);
       if (!rowTrips[id]) {
-        const res = await apiGet(`/canary/${id}/trips?limit=10`, tenantId);
+        const res = await apiGet(`/canary/${id}/trips?limit=10`, tenantId, token);
         setRowTrips(prev => ({ ...prev, [id]: res.data || [] }));
       }
     }
@@ -165,13 +166,13 @@ export function CanaryKeysTab({ session }: { session: any }) {
 
   const handleDeactivate = async (id: string) => {
     if (!window.confirm("Deactivate this canary key?")) return;
-    await apiDelete(`/canary/${id}`, tenantId);
+    await apiDelete(`/canary/${id}`, tenantId, token);
     showToast("Canary key deactivated.");
     load();
   };
 
   const handleTestTrip = async (id: string) => {
-    const res = await apiPost(`/canary/${id}/trip`, tenantId, {});
+    const res = await apiPost(`/canary/${id}/trip`, tenantId, token, {});
     if (res.data) showToast("Canary tripped! Alert event recorded.");
     else showToast("Trip failed: " + (res.message || "unknown error"));
     load();
@@ -181,7 +182,7 @@ export function CanaryKeysTab({ session }: { session: any }) {
     if (!form.name) { showToast("Name is required."); return; }
     setCreating(true);
     try {
-      const res = await apiPost("/canary", tenantId, {
+      const res = await apiPost("/canary", tenantId, token, {
         tenant_id: tenantId,
         name: form.name,
         algorithm: form.algorithm,

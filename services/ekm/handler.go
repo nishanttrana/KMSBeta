@@ -68,9 +68,47 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /ekm/tde/keys/{id}/rotate", h.handleRotateTDEKey)
 	mux.HandleFunc("GET /ekm/tde/keys/{id}/public", h.handleGetPublicKey)
 
+	mux.HandleFunc("POST /ekm/tde/keys/{id}/revoke", h.handleRevokeTDEKey)
+
 	mux.HandleFunc("POST /ekm/databases", h.handleRegisterDatabase)
 	mux.HandleFunc("GET /ekm/databases", h.handleListDatabases)
 	mux.HandleFunc("GET /ekm/databases/{id}", h.handleGetDatabase)
+	mux.HandleFunc("POST /ekm/databases/{id}/revoke-tde", h.handleRevokeDatabaseTDE)
+
+	mux.HandleFunc("POST /ekm/agents/{id}/validate-deploy", h.handleValidateDeployment)
+
+	// Azure EKM
+	mux.HandleFunc("POST /ekm/azure/configs", h.handleCreateAzureConfig)
+	mux.HandleFunc("GET /ekm/azure/configs", h.handleListAzureConfigs)
+	mux.HandleFunc("GET /ekm/azure/configs/{id}", h.handleGetAzureConfig)
+	mux.HandleFunc("PUT /ekm/azure/configs/{id}", h.handleUpdateAzureConfig)
+	mux.HandleFunc("DELETE /ekm/azure/configs/{id}", h.handleDeleteAzureConfig)
+	mux.HandleFunc("POST /ekm/azure/configs/{id}/test", h.handleTestAzureConnection)
+	mux.HandleFunc("POST /ekm/azure/configs/{id}/sync", h.handleSyncAzureKeys)
+	mux.HandleFunc("POST /ekm/azure/mappings", h.handleCreateAzureMapping)
+	mux.HandleFunc("GET /ekm/azure/mappings", h.handleListAzureMappings)
+	mux.HandleFunc("DELETE /ekm/azure/mappings/{id}", h.handleDeleteAzureMapping)
+	mux.HandleFunc("POST /ekm/azure/mappings/{id}/import", h.handleImportKeyToAzure)
+	mux.HandleFunc("POST /ekm/azure/mappings/{id}/rotate", h.handleRotateAzureKey)
+	mux.HandleFunc("POST /ekm/azure/mappings/{id}/wrap", h.handleAzureWrapKey)
+	mux.HandleFunc("POST /ekm/azure/mappings/{id}/unwrap", h.handleAzureUnwrapKey)
+
+	// Google CSE — Management routes (called by Vecta admins)
+	mux.HandleFunc("POST /ekm/google-cse/configs", h.handleCreateGoogleCSEConfig)
+	mux.HandleFunc("GET /ekm/google-cse/configs", h.handleListGoogleCSEConfigs)
+	mux.HandleFunc("GET /ekm/google-cse/configs/{id}", h.handleGetGoogleCSEConfig)
+	mux.HandleFunc("PUT /ekm/google-cse/configs/{id}", h.handleUpdateGoogleCSEConfig)
+	mux.HandleFunc("DELETE /ekm/google-cse/configs/{id}", h.handleDeleteGoogleCSEConfig)
+	mux.HandleFunc("POST /ekm/google-cse/keys", h.handleCreateGoogleCSEKey)
+	mux.HandleFunc("GET /ekm/google-cse/keys", h.handleListGoogleCSEKeys)
+	mux.HandleFunc("DELETE /ekm/google-cse/keys/{id}", h.handleDeleteGoogleCSEKey)
+
+	// Google CSE — KACLS API routes (called by Google's CSE infrastructure)
+	mux.HandleFunc("GET /ekm/kacls/status", h.handleKACLSStatus)
+	mux.HandleFunc("POST /ekm/kacls/wrap", h.handleKACLSWrap)
+	mux.HandleFunc("POST /ekm/kacls/unwrap", h.handleKACLSUnwrap)
+	mux.HandleFunc("POST /ekm/kacls/privilegedunwrap", h.handleKACLSPrivilegedUnwrap)
+
 	return mux
 }
 
@@ -697,6 +735,69 @@ func (h *Handler) handleGetDatabase(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"database": dbi, "request_id": reqID})
 }
 
+func (h *Handler) handleRevokeTDEKey(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req RevokeTDEKeyRequest
+	if err := decodeJSONOptional(r, &req); err != nil {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
+		return
+	}
+	tenantID, _, err := tenantFromRequest(r, req.TenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	req.TenantID = tenantID
+	out, err := h.svc.RevokeTDEKey(r.Context(), r.PathValue("id"), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"revocation": out, "request_id": reqID})
+}
+
+func (h *Handler) handleRevokeDatabaseTDE(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req RevokeDatabaseTDERequest
+	if err := decodeJSONOptional(r, &req); err != nil {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
+		return
+	}
+	tenantID, _, err := tenantFromRequest(r, req.TenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	req.TenantID = tenantID
+	out, err := h.svc.RevokeDatabaseTDE(r.Context(), r.PathValue("id"), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"revocation": out, "request_id": reqID})
+}
+
+func (h *Handler) handleValidateDeployment(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req ValidateDeploymentRequest
+	if err := decodeJSONOptional(r, &req); err != nil {
+		h.writeServiceError(w, newServiceError(http.StatusBadRequest, "bad_request", err.Error()), reqID, "")
+		return
+	}
+	tenantID, _, err := tenantFromRequest(r, req.TenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, req.TenantID)
+		return
+	}
+	req.TenantID = tenantID
+	out, err := h.svc.ValidateDeployment(r.Context(), r.PathValue("id"), req)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"validation": out, "request_id": reqID})
+}
+
 func decodeJSON(r *http.Request, out interface{}) error {
 	defer r.Body.Close() //nolint:errcheck
 	dec := json.NewDecoder(r.Body)
@@ -921,7 +1022,13 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID stri
 		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, reqID, tenantID)
 		return
 	}
-	writeErr(w, httpStatusForErr(err), "internal_error", err.Error(), reqID, tenantID)
+	// A05: avoid leaking internal error details for 5xx responses
+	status := httpStatusForErr(err)
+	msg := err.Error()
+	if status >= 500 {
+		msg = "internal server error"
+	}
+	writeErr(w, status, "internal_error", msg, reqID, tenantID)
 }
 
 func writeJSON(w http.ResponseWriter, code int, payload map[string]interface{}) {

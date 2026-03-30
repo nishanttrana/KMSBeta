@@ -36,6 +36,7 @@ import {
   ScanSearch,
   ScrollText,
   Settings,
+  Shield,
   ShieldCheck,
   Siren,
   VenetianMask,
@@ -106,10 +107,9 @@ const OpsMetricsTab = lazy(() => import("./v3/tabs/OpsMetricsTab").then(m => ({ 
 const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
 const DSPMTab = lazy(() => import("./v3/tabs/DSPMTab").then(m => ({ default: m.DSPMTab })));
 const DevSecOpsTab = lazy(() => import("./v3/tabs/DevSecOpsTab").then(m => ({ default: m.DevSecOpsTab })));
-const TDETab = lazy(() => import("./v3/tabs/TDETab").then(m => ({ default: m.TDETab })));
 const TFETab = lazy(() => import("./v3/tabs/TFETab").then(m => ({ default: m.TFETab })));
 const DataActivityTab = lazy(() => import("./v3/tabs/DataActivityTab").then(m => ({ default: m.DataActivityTab })));
-const AIProtectTab = lazy(() => import("./v3/tabs/AIProtectTab").then(m => ({ default: m.AIProtectTab })));
+const AIGatewayTab = lazy(() => import("./v3/tabs/AIGatewayTab").then(m => ({ default: m.AIGatewayTab })));
 const LineageTab = lazy(() => import("./v3/tabs/LineageTab").then(m => ({ default: m.LineageTab })));
 const CanaryKeysTab = lazy(() => import("./v3/tabs/CanaryKeysTab").then(m => ({ default: m.CanaryKeysTab })));
 const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ default: m.PlaybooksTab })));
@@ -218,10 +218,9 @@ const TABS: Record<string, any> = {
   backup: BackupTab,
   dspm: DSPMTab,
   devsecops: DevSecOpsTab,
-  tde: TDETab,
   tfe: TFETab,
   data_activity: DataActivityTab,
-  ai_protect: AIProtectTab,
+  ai_gateway: AIGatewayTab,
   lineage: LineageTab,
   canary: CanaryKeysTab,
   playbooks: PlaybooksTab
@@ -272,13 +271,12 @@ const TITLES: Record<string, string> = {
   backup: "Backup & Restore",
   dspm: "Data Security Posture",
   devsecops: "DevSecOps / IaC",
-  tde: "Database TDE",
   tfe: "File Encryption (TFE)",
   data_activity: "Data Activity Monitor",
-  ai_protect: "AI/GenAI Data Protection",
+  ai_gateway: "AI Security Gateway",
   lineage: "Source Traceability",
   canary: "Canary / Honeypot Keys",
-  playbooks: "Incident Playbooks"
+  playbooks: "Playbooks"
 };
 
 const NAV = [
@@ -301,7 +299,6 @@ const NAV = [
   ]},
   { g: "DATA PROTECTION", items: [
     { id: "envelope_enc", icon: Layers, label: "Envelope Encryption" },
-    { id: "tde", icon: Database, label: "Database TDE" },
     { id: "tfe", icon: Lock, label: "File Encryption (TFE)" },
   ]},
   { g: "INFRASTRUCTURE", items: [
@@ -327,11 +324,11 @@ const NAV = [
     { id: "crypto_agility", icon: Gauge, label: "Crypto Agility" },
     { id: "leak_scanner", icon: ScanSearch, label: "Leak Scanner" },
     { id: "lineage", icon: GitMerge, label: "Source Traceability" },
-    { id: "playbooks", icon: Play, label: "Incident Playbooks" },
+    { id: "playbooks", icon: Play, label: "Playbooks" },
   ]},
   { g: "AI", items: [
     { id: "ai", icon: Sparkles, label: "AI Assistant" },
-    { id: "ai_protect", icon: ShieldCheck, label: "AI/GenAI Data Protection" },
+    { id: "ai_gateway", icon: Shield, label: "AI Security Gateway" },
   ]},
   { g: "ADMIN", items: [
     { id: "admin", icon: Settings, label: "Administration" },
@@ -363,6 +360,8 @@ const SUB_PANES: Record<string, any[]> = {
   ekm: [
     { id: "db", label: "EKM for DBs", hint: "MSSQL / Oracle TDE agents", icon: Database, feature: "ekm_database" },
     { id: "bitlocker", label: "BitLocker", hint: "Windows endpoint key lifecycle", icon: Lock, feature: "ekm_database" },
+    { id: "azure", label: "Azure EKM", hint: "Key Vault & Managed HSM", icon: Cloud, feature: "ekm_database" },
+    { id: "google-cse", label: "Google CSE", hint: "Workspace Client-Side Encryption", icon: Shield, feature: "ekm_database" },
     { id: "kmip", label: "KMIP", hint: "Profiles, clients, mTLS onboarding", icon: Link, feature: "kmip_server" }
   ],
   certs: [

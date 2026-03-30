@@ -6,17 +6,25 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc      *Service
+	mux      *http.ServeMux
+	executor *PlaybookExecutor
 }
 
 func NewHandler(svc *Service) *Handler {
 	h := &Handler{svc: svc}
 	h.mux = h.routes()
 	return h
+}
+
+// SetExecutor attaches the playbook executor to the handler for run endpoints.
+func (h *Handler) SetExecutor(executor *PlaybookExecutor) {
+	h.executor = executor
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -546,7 +554,13 @@ func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID stri
 		writeErr(w, svcErr.HTTPStatus, svcErr.Code, svcErr.Message, reqID, tenantID)
 		return
 	}
-	writeErr(w, httpStatusForErr(err), "internal_error", err.Error(), reqID, tenantID)
+	// A05: avoid leaking internal error details for 5xx responses
+	status := httpStatusForErr(err)
+	msg := err.Error()
+	if status >= 500 {
+		msg = "internal server error"
+	}
+	writeErr(w, status, "internal_error", msg, reqID, tenantID)
 }
 
 func decodeJSON(r *http.Request, out interface{}) error {
@@ -577,6 +591,11 @@ func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
 	)
 	if tenantID == "" {
 		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
+		return ""
+	}
+	// A01 fix: verify the request tenant matches the authenticated JWT tenant
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
 		return ""
 	}
 	return tenantID
