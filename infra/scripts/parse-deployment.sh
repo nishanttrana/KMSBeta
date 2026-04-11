@@ -28,6 +28,7 @@ FEATURE_ORDER=(
   reporting_alerting
   posture_management
   ai_llm
+  ai_gateway
   pqc_migration
   crypto_discovery
   mpc_engine

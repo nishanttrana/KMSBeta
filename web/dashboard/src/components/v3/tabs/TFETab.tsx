@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import {
   CheckCircle2,
+  Download,
   FolderLock,
   HardDrive,
   KeyRound,
@@ -23,6 +24,8 @@ import {
   listTFEAgents,
   listTFEPolicies,
 } from "../../../lib/tfe";
+import { getFileEncryptAgentPackage } from "../../../lib/ekm";
+import type { FileEncryptPackage } from "../../../lib/ekm";
 
 // ─── Shared table styles ──────────────────────────────────────────────────────
 const CELL: React.CSSProperties = {
@@ -100,8 +103,8 @@ function AgentDot({ status }: { status: string }) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export function TFETab({ session }: { session: any }) {
-  const [view, setView] = useState<"overview" | "agents" | "policies" | "register">("overview");
+export function TFETab({ session, onToast }: { session: any; onToast?: (msg: string) => void }) {
+  const [view, setView] = useState<"overview" | "agents" | "policies" | "register" | "download">("overview");
   const [agents, setAgents] = useState<any[]>([]);
   const [policies, setPolicies] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
@@ -120,6 +123,19 @@ export function TFETab({ session }: { session: any }) {
 
   const [deleteBusy, setDeleteBusy] = useState<string | null>(null);
   const [expandedAgent, setExpandedAgent] = useState<string | null>(null);
+
+  // ── Download agent state ──────────────────────────────────────────────────
+  const [dlForm, setDlForm] = useState({
+    os: "linux" as "linux" | "windows",
+    distro: "ubuntu",
+    key_id: "",
+    watch_dirs: "/data/sensitive",
+    file_patterns: "*.docx,*.xlsx,*.pdf,*.csv,*.key,*.pem",
+    rotation_days: 90,
+    api_base_url: "",
+  });
+  const [dlPackage, setDlPackage] = useState<FileEncryptPackage | null>(null);
+  const [dlLoading, setDlLoading] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -192,6 +208,7 @@ export function TFETab({ session }: { session: any }) {
     { id: "agents", label: `Agents (${agents.length})` },
     { id: "policies", label: `Policies (${policies.length})` },
     { id: "register", label: "Register" },
+    { id: "download", label: "Download Agent" },
   ] as const;
 
   return (
@@ -706,6 +723,115 @@ export function TFETab({ session }: { session: any }) {
               <Btn onClick={() => { setPolicyForm({ ...EMPTY_POLICY, agent_id: "" }); setPolicyFormErr(""); }}>Reset</Btn>
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* ── Download Agent view ─────────────────────────────────────────────── */}
+      {view === "download" && (
+        <div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Download TFE Agent Package</div>
+            <div style={{ fontSize: 11, color: C.muted }}>
+              Transparent File Encryption agent — gocryptfs FUSE mount (Linux) / cppcryptfs+WinFsp (Windows). AES-256-GCM FIPS 140-3 Level 1.
+              All processes see plaintext; data encrypted at rest in vault dir. DEK fetched from Vecta KMS TFE service per mount, zeroed after use. Starts at boot via systemd/Task Scheduler.
+            </div>
+          </div>
+
+          {/* Policy form */}
+          <Card style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 12 }}>Configure Agent Policy</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+              <FG label="Target OS">
+                <Sel value={dlForm.os} onChange={e => setDlForm(f => ({ ...f, os: e.target.value as any, distro: e.target.value === "windows" ? "windows" : "ubuntu" }))}>
+                  <option value="linux">Linux</option>
+                  <option value="windows">Windows</option>
+                </Sel>
+              </FG>
+              {dlForm.os === "linux" && (
+                <FG label="Distro">
+                  <Sel value={dlForm.distro} onChange={e => setDlForm(f => ({ ...f, distro: e.target.value }))}>
+                    <option value="ubuntu">Ubuntu / Debian</option>
+                    <option value="rhel">RHEL / CentOS / Rocky / Amazon Linux</option>
+                    <option value="alpine">Alpine</option>
+                    <option value="linux">Generic Linux</option>
+                  </Sel>
+                </FG>
+              )}
+              <FG label="Key ID (leave blank = auto-assign)">
+                <Inp value={dlForm.key_id} onChange={e => setDlForm(f => ({ ...f, key_id: e.target.value }))} placeholder="tfe-key_..." />
+              </FG>
+              <FG label="Watch Directories (comma-separated)">
+                <Inp value={dlForm.watch_dirs} onChange={e => setDlForm(f => ({ ...f, watch_dirs: e.target.value }))} placeholder="/data/sensitive,/var/app" />
+              </FG>
+              <FG label="File Patterns (comma-separated)">
+                <Inp value={dlForm.file_patterns} onChange={e => setDlForm(f => ({ ...f, file_patterns: e.target.value }))} placeholder="*.pdf,*.csv,*.key" />
+              </FG>
+              <FG label="Rotation Cycle (days)">
+                <Inp type="number" value={dlForm.rotation_days} onChange={e => setDlForm(f => ({ ...f, rotation_days: Number(e.target.value) || 90 }))} min={1} max={365} />
+              </FG>
+              <FG label="API Base URL (optional override)">
+                <Inp value={dlForm.api_base_url} onChange={e => setDlForm(f => ({ ...f, api_base_url: e.target.value }))} placeholder="https://kms.example.com" />
+              </FG>
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <Btn primary onClick={async () => {
+                setDlLoading(true); setDlPackage(null);
+                try {
+                  const res = await getFileEncryptAgentPackage(session, {
+                    os: dlForm.os, distro: dlForm.distro,
+                    key_id: dlForm.key_id || undefined,
+                    watch_dirs: dlForm.watch_dirs,
+                    file_patterns: dlForm.file_patterns,
+                    rotation_days: dlForm.rotation_days,
+                    api_base_url: dlForm.api_base_url || undefined,
+                  });
+                  setDlPackage(res.package);
+                } catch (e) { onToast?.(`Failed: ${errMsg(e)}`); } finally { setDlLoading(false); }
+              }} disabled={dlLoading}>
+                <Download size={12} />
+                {dlLoading ? "Generating…" : "Generate Agent Package"}
+              </Btn>
+            </div>
+          </Card>
+
+          {/* Package files */}
+          {dlPackage && (
+            <Card>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>
+                    {dlPackage.target_os}{dlPackage.distro && dlPackage.distro !== dlPackage.target_os ? ` / ${dlPackage.distro}` : ""}
+                  </span>
+                  <span style={{ marginLeft: 10, fontSize: 11, color: C.green, fontWeight: 600 }}>{dlPackage.algorithm}</span>
+                </div>
+                <span style={{ fontSize: 11, color: C.muted }}>
+                  Key: {dlPackage.key_id || "auto-assigned"} · rotation every {dlPackage.rotation_days}d
+                </span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {dlPackage.files.map((f: any) => (
+                  <div key={f.path} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: C.surface, borderRadius: 6, border: `1px solid ${C.border}` }}>
+                    <span style={{ fontSize: 12, fontFamily: "monospace", flex: 1, color: C.text }}>{f.path}</span>
+                    <span style={{ fontSize: 10, color: C.muted }}>{f.mode}</span>
+                    <Btn small onClick={() => {
+                      const blob = new Blob([f.content], { type: "text/plain" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a"); a.href = url; a.download = f.path; a.click();
+                      URL.revokeObjectURL(url);
+                    }}><Download size={10} /> Download</Btn>
+                    <Btn small onClick={() => {
+                      navigator.clipboard?.writeText(f.content).then(() => onToast?.(`Copied ${f.path}`));
+                    }}>Copy</Btn>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 12, padding: "10px 14px", background: C.surface, borderRadius: 6, fontSize: 11, color: C.muted }}>
+                {dlPackage.target_os === "windows"
+                  ? "1. Edit credentials.env — set VECTA_AUTH_TOKEN.  2. Run install.ps1 (auto-installs WinFsp + cppcryptfs).  3. Task VectaTFEMount starts at every logon — transparent FUSE mount.  Manual: encrypt-folder.ps1 / decrypt-folder.ps1."
+                  : "1. Edit credentials — set VECTA_AUTH_TOKEN.  2. Run: bash install.sh (installs gocryptfs + enables systemd service at boot).  3. Run 'loginctl enable-linger $USER' for boot-time start.  Manual: vecta-tfe-encrypt-folder / vecta-tfe-decrypt-folder."}
+              </div>
+            </Card>
+          )}
         </div>
       )}
     </div>

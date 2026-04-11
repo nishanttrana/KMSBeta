@@ -76,14 +76,31 @@ func (h *Handler) NewBatchExecutor() *kmipserver.BatchExecutor {
 	exec.BatchItemUse(h.auditMiddleware, h.authorizationMiddleware)
 
 	exec.Route(kmip.OperationCreate, kmipserver.HandleFunc(h.handleCreate))
+	exec.Route(kmip.OperationCreateKeyPair, kmipserver.HandleFunc(h.handleCreateKeyPair))
 	exec.Route(kmip.OperationRegister, kmipserver.HandleFunc(h.handleRegister))
+	exec.Route(kmip.OperationImport, kmipserver.HandleFunc(h.handleImport))
 	exec.Route(kmip.OperationGet, kmipserver.HandleFunc(h.handleGet))
 	exec.Route(kmip.OperationGetAttributes, kmipserver.HandleFunc(h.handleGetAttributes))
+	exec.Route(kmip.OperationGetAttributeList, kmipserver.HandleFunc(h.handleGetAttributeList))
+	exec.Route(kmip.OperationModifyAttribute, kmipserver.HandleFunc(h.handleModifyAttribute))
+	exec.Route(kmip.OperationDeleteAttribute, kmipserver.HandleFunc(h.handleDeleteAttribute))
 	exec.Route(kmip.OperationLocate, kmipserver.HandleFunc(h.handleLocate))
 	exec.Route(kmip.OperationActivate, kmipserver.HandleFunc(h.handleActivate))
 	exec.Route(kmip.OperationRevoke, kmipserver.HandleFunc(h.handleRevoke))
 	exec.Route(kmip.OperationDestroy, kmipserver.HandleFunc(h.handleDestroy))
+	exec.Route(kmip.OperationArchive, kmipserver.HandleFunc(h.handleArchive))
+	exec.Route(kmip.OperationRecover, kmipserver.HandleFunc(h.handleRecover))
 	exec.Route(kmip.OperationReKey, kmipserver.HandleFunc(h.handleReKey))
+	exec.Route(kmip.OperationDeriveKey, kmipserver.HandleFunc(h.handleDeriveKey))
+	exec.Route(kmip.OperationExport, kmipserver.HandleFunc(h.handleExport))
+	exec.Route(kmip.OperationCertify, kmipserver.HandleFunc(h.handleCertify))
+	exec.Route(kmip.OperationReCertify, kmipserver.HandleFunc(h.handleReCertify))
+	exec.Route(kmip.OperationCheck, kmipserver.HandleFunc(h.handleCheck))
+	exec.Route(kmip.OperationValidate, kmipserver.HandleFunc(h.handleValidate))
+	exec.Route(kmip.OperationMAC, kmipserver.HandleFunc(h.handleMAC))
+	exec.Route(kmip.OperationMACVerify, kmipserver.HandleFunc(h.handleMACVerify))
+	exec.Route(kmip.OperationHash, kmipserver.HandleFunc(h.handleHash))
+	exec.Route(kmip.OperationGetUsageAllocation, kmipserver.HandleFunc(h.handleGetUsageAllocation))
 	exec.Route(kmip.OperationEncrypt, kmipserver.HandleFunc(h.handleEncrypt))
 	exec.Route(kmip.OperationDecrypt, kmipserver.HandleFunc(h.handleDecrypt))
 	exec.Route(kmip.OperationSign, kmipserver.HandleFunc(h.handleSign))
@@ -759,6 +776,7 @@ func (h *Handler) handleQuery(ctx context.Context, req *payloads.QueryRequestPay
 		resp.ProfileInformation = []kmip.ProfileInformation{
 			{ProfileName: kmip.ProfileNameBasicCryptographicServerKMIPV1_4},
 			{ProfileName: kmip.ProfileNameBaselineServerBasicKMIPV1_4},
+			{ProfileName: kmip.ProfileNameCompleteServerKMIPV1_4},
 		}
 	}
 	if has(kmip.QueryFunctionCapabilities) {
@@ -898,14 +916,31 @@ func getConnectionContext(ctx context.Context) (kmipConnectionContext, bool) {
 func supportedKMIPOperations() []kmip.Operation {
 	return []kmip.Operation{
 		kmip.OperationCreate,
+		kmip.OperationCreateKeyPair,
 		kmip.OperationRegister,
+		kmip.OperationImport,
 		kmip.OperationGet,
 		kmip.OperationGetAttributes,
+		kmip.OperationGetAttributeList,
+		kmip.OperationModifyAttribute,
+		kmip.OperationDeleteAttribute,
 		kmip.OperationLocate,
 		kmip.OperationActivate,
 		kmip.OperationRevoke,
 		kmip.OperationDestroy,
+		kmip.OperationArchive,
+		kmip.OperationRecover,
 		kmip.OperationReKey,
+		kmip.OperationDeriveKey,
+		kmip.OperationExport,
+		kmip.OperationCertify,
+		kmip.OperationReCertify,
+		kmip.OperationCheck,
+		kmip.OperationValidate,
+		kmip.OperationMAC,
+		kmip.OperationMACVerify,
+		kmip.OperationHash,
+		kmip.OperationGetUsageAllocation,
 		kmip.OperationEncrypt,
 		kmip.OperationDecrypt,
 		kmip.OperationSign,
@@ -921,6 +956,11 @@ func supportedKMIPObjectTypes() []kmip.ObjectType {
 		kmip.ObjectTypePublicKey,
 		kmip.ObjectTypePrivateKey,
 		kmip.ObjectTypeSecretData,
+		kmip.ObjectTypeCertificate,
+		kmip.ObjectTypeOpaqueObject,
+		kmip.ObjectTypeSplitKey,
+		kmip.ObjectTypePGPKey,
+		kmip.ObjectTypeTemplate,
 	}
 }
 
@@ -1036,6 +1076,21 @@ func buildKMIPObject(objType kmip.ObjectType, meta kmipStoredAttributes) (kmip.O
 				KeyFormatType: kmip.KeyFormatTypeOpaque,
 			},
 		}, nil
+	case kmip.ObjectTypeCertificate:
+		return &kmip.Certificate{
+			CertificateType: kmip.CertificateTypeX_509,
+		}, nil
+	case kmip.ObjectTypeOpaqueObject:
+		return &kmip.OpaqueObject{
+			OpaqueDataType: kmip.OpaqueDataTypeStructure,
+		}, nil
+	case kmip.ObjectTypeSplitKey:
+		return &kmip.SplitKey{}, nil
+	case kmip.ObjectTypePGPKey:
+		return &kmip.PGPKey{}, nil
+	case kmip.ObjectTypeTemplate:
+		// Template is deprecated in KMIP 3.x but supported for backward compat
+		return &kmip.Template{}, nil
 	default:
 		return nil, fmt.Errorf("unsupported object type")
 	}
@@ -1108,6 +1163,16 @@ func objectTypeFromStore(v string) kmip.ObjectType {
 		return kmip.ObjectTypePrivateKey
 	case "secretdata":
 		return kmip.ObjectTypeSecretData
+	case "certificate", "cert":
+		return kmip.ObjectTypeCertificate
+	case "opaqueobject", "opaque", "opaquedata":
+		return kmip.ObjectTypeOpaqueObject
+	case "splitkey":
+		return kmip.ObjectTypeSplitKey
+	case "pgpkey", "pgp":
+		return kmip.ObjectTypePGPKey
+	case "template":
+		return kmip.ObjectTypeTemplate
 	default:
 		return kmip.ObjectTypeSymmetricKey
 	}
@@ -1123,6 +1188,16 @@ func objectTypeToStore(v kmip.ObjectType) string {
 		return "PrivateKey"
 	case kmip.ObjectTypeSecretData:
 		return "SecretData"
+	case kmip.ObjectTypeCertificate:
+		return "Certificate"
+	case kmip.ObjectTypeOpaqueObject:
+		return "OpaqueObject"
+	case kmip.ObjectTypeSplitKey:
+		return "SplitKey"
+	case kmip.ObjectTypePGPKey:
+		return "PGPKey"
+	case kmip.ObjectTypeTemplate:
+		return "Template"
 	default:
 		return "SymmetricKey"
 	}
@@ -1136,6 +1211,10 @@ func keyTypeFromObjectType(v kmip.ObjectType) string {
 		return "public"
 	case kmip.ObjectTypePrivateKey:
 		return "private"
+	case kmip.ObjectTypeCertificate:
+		return "cert"
+	case kmip.ObjectTypeOpaqueObject, kmip.ObjectTypeSplitKey, kmip.ObjectTypePGPKey, kmip.ObjectTypeTemplate:
+		return "symmetric" // stored as opaque symmetric material
 	default:
 		return ""
 	}
@@ -1394,6 +1473,12 @@ func enforceUsage(mask kmip.CryptographicUsageMask, op kmip.Operation) error {
 		required = kmip.CryptographicUsageSign | kmip.CryptographicUsageMACGenerate
 	case kmip.OperationSignatureVerify:
 		required = kmip.CryptographicUsageVerify | kmip.CryptographicUsageMACVerify
+	case kmip.OperationMAC:
+		required = kmip.CryptographicUsageMACGenerate
+	case kmip.OperationMACVerify:
+		required = kmip.CryptographicUsageMACVerify
+	case kmip.OperationDeriveKey:
+		required = kmip.CryptographicUsageDeriveKey
 	default:
 		return nil
 	}
@@ -1550,6 +1635,62 @@ func extractUniqueIdentifierFromPayload(payload kmip.OperationPayload) string {
 		return strings.TrimSpace(p.UniqueIdentifier)
 	case *payloads.SignatureVerifyResponsePayload:
 		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.CreateKeyPairResponsePayload:
+		return strings.TrimSpace(p.PrivateKeyUniqueIdentifier)
+	case *payloads.ImportRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.ImportResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.ExportRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.ExportResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.GetAttributeListRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.GetAttributeListResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.ModifyAttributeRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.ModifyAttributeResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.DeleteAttributeRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.DeleteAttributeResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.ArchiveRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.ArchiveResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.RecoverRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.RecoverResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.MACRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.MACResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.MACVerifyRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.MACVerifyResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.CertifyRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.CertifyResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.ReCertifyRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.ReCertifyResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.CheckRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.CheckResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.GetUsageAllocationRequestPayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.GetUsageAllocationResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
+	case *payloads.DeriveKeyResponsePayload:
+		return strings.TrimSpace(p.UniqueIdentifier)
 	default:
 		return ""
 	}
@@ -1564,7 +1705,9 @@ func roleCanOperate(role string, op kmip.Operation) bool {
 		return true
 	case "kmip-client":
 		switch op {
-		case kmip.OperationDestroy, kmip.OperationRevoke, kmip.OperationReKey:
+		case kmip.OperationDestroy, kmip.OperationRevoke, kmip.OperationReKey,
+			kmip.OperationArchive, kmip.OperationRecover, kmip.OperationDeleteAttribute,
+			kmip.OperationDeriveKey, kmip.OperationExport:
 			return false
 		default:
 			return true

@@ -79,3 +79,45 @@ type UpdateTFEPolicyRequest struct {
 	IncludeGlobs *[]string `json:"include_globs,omitempty"`
 	ExcludeGlobs *[]string `json:"exclude_globs,omitempty"`
 }
+
+// FileEncryptDownloadRequest is the request for generating a TFE agent package.
+type FileEncryptDownloadRequest struct {
+	TenantID     string
+	TargetOS     string
+	Distro       string
+	KeyID        string
+	WatchDirs    string
+	FilePatterns string
+	RotationDays int
+	APIBaseURL   string
+}
+
+// FileEncryptPackageFile is a single file in the agent package.
+type FileEncryptPackageFile struct {
+	Path    string `json:"path"`
+	Content string `json:"content"`
+	Mode    string `json:"mode"`
+}
+
+// FileEncryptPackage is the generated agent package.
+type FileEncryptPackage struct {
+	TargetOS     string                   `json:"target_os"`
+	Distro       string                   `json:"distro"`
+	CreatedAt    string                   `json:"created_at"`
+	Algorithm    string                   `json:"algorithm"`
+	Mode         string                   `json:"mode"`
+	KeyID        string                   `json:"key_id"`
+	RotationDays int                      `json:"rotation_days"`
+	Files        []FileEncryptPackageFile `json:"files"`
+}
+
+// FileEncryptAuditRequest is the body for the agent audit POST.
+type FileEncryptAuditRequest struct {
+	TenantID       string `json:"tenant_id"`
+	KeyID          string `json:"key_id"`
+	Operation      string `json:"operation"`
+	FilesProcessed int    `json:"files_processed"`
+	Timestamp      string `json:"timestamp"`
+	Hostname       string `json:"hostname"`
+	AgentVersion   string `json:"agent_version"`
+}

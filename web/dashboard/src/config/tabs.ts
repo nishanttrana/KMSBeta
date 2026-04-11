@@ -55,7 +55,9 @@ export type FeatureKey =
   | "clustering"
   | "hsm_hardware"
   | "hsm_software"
-  | "qrng_generator";
+  | "qrng_generator"
+  | "posture_management"
+  | "ai_gateway";
 
 export type TabId =
   | "dashboard"

@@ -127,6 +127,10 @@ func (s *Service) classifyAndCorrelate(ctx context.Context, event AuditEvent) (A
 
 	severity := classifySeverity(event.Action, event.Result)
 	category := classifyCategory(event.Action)
+	// Populate FIPS 140-3 aligned category group from service name.
+	if event.CategoryGroup == "" {
+		event.CategoryGroup = categoryGroupForService(event.Service)
+	}
 	risk := baseRisk(severity, event.Action)
 	if event.RiskScore > risk {
 		risk = event.RiskScore

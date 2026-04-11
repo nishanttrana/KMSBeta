@@ -160,7 +160,13 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
   const [tokenInput,setTokenInput]=useState("4111 1111 1111 1111");
   const [tokenBatch,setTokenBatch]=useState(false);
   const [tokenTTL,setTokenTTL]=useState("0");
+  const [tokenOneTime,setTokenOneTime]=useState(false);
+  const [tokenPurpose,setTokenPurpose]=useState("");
+  const [tokenWorkflow,setTokenWorkflow]=useState("");
+  const [tokenMetadataTags,setTokenMetadataTags]=useState("");
   const [detokenizeInput,setDetokenizeInput]=useState("");
+  const [detokenizePurpose,setDetokenizePurpose]=useState("");
+  const [detokenizeWorkflow,setDetokenizeWorkflow]=useState("");
 
   const [fpeKeyId,setFPEKeyId]=useState(defaultVaultKeyId||defaultKeyId);
   const [fpeAlgorithm,setFPEAlgorithm]=useState("FF1");
@@ -310,6 +316,11 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
             throw new Error("Custom token format name is required when vaultless format is custom.");
           }
         }
+        const parsedMetaTags:Record<string,string>={};
+        String(tokenMetadataTags||"").split(/\n|,/).map(s=>s.trim()).filter(Boolean).forEach(pair=>{
+          const idx=pair.indexOf("=");
+          if(idx>0)parsedMetaTags[pair.slice(0,idx).trim()]=pair.slice(idx+1).trim();
+        });
         const items=await tokenizeValues(session,{
           mode:tokenMode,
           vault_id:tokenMode==="vault"?tokenVaultId:"",
@@ -319,7 +330,9 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
           custom_token_format:tokenMode==="vaultless"?String(tokenVaultlessCustomFormat||"").trim()||undefined:undefined,
           custom_regex:tokenMode==="vaultless"?tokenVaultlessRegex:undefined,
           values,
-          ttl_hours:Math.max(0,Math.trunc(Number(tokenTTL||0)))
+          ttl_hours:Math.max(0,Math.trunc(Number(tokenTTL||0))),
+          one_time_token:tokenOneTime,
+          metadata_tags:Object.keys(parsedMetaTags).length?parsedMetaTags:undefined,
         });
         setOutput({operation:"tokenize",items});
         return;
@@ -329,7 +342,11 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
         if(!tokens.length){
           throw new Error("Token input is required.");
         }
-        const items=await detokenizeValues(session,{tokens});
+        const items=await detokenizeValues(session,{
+          tokens,
+          purpose:String(detokenizePurpose||"").trim()||undefined,
+          workflow:String(detokenizeWorkflow||"").trim()||undefined,
+        });
         setOutput({operation:"detokenize",items});
         return;
       }
@@ -507,11 +524,19 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
           </>}
           <FG label="Input Value" required><Txt value={tokenInput} onChange={(e)=>setTokenInput(e.target.value)} rows={3}/></FG>
           <Chk label="Batch mode (multiple values, one per line)" checked={tokenBatch} onChange={()=>setTokenBatch((v)=>!v)}/>
+          <Chk label="One-time token (single-use, auto-invalidated after first detokenize)" checked={tokenOneTime} onChange={()=>setTokenOneTime((v)=>!v)}/>
           {tokenMode==="vault"
-            ?<FG label="TTL"><Sel value={tokenTTL} onChange={(e)=>setTokenTTL(e.target.value)}><option value="0">No expiry</option><option value="24">24 hours</option><option value="720">30 days</option><option value="2160">90 days</option></Sel></FG>
+            ?<FG label="TTL"><Sel value={tokenTTL} onChange={(e)=>setTokenTTL(e.target.value)}><option value="0">No expiry</option><option value="24">24 hours</option><option value="720">30 days</option><option value="2160">90 days</option><option value="8760">1 year</option></Sel></FG>
             :<div style={{fontSize:10,color:C.dim,marginTop:6}}>TTL applies only to vault mode. Vaultless output is immediate and non-stored.</div>}
+          <FG label="Purpose (audit context)" hint="e.g. payment_processing, customer_lookup"><Inp value={tokenPurpose} onChange={(e)=>setTokenPurpose(e.target.value)} placeholder="payment_processing"/></FG>
+          <FG label="Workflow (audit context)" hint="e.g. checkout, onboarding"><Inp value={tokenWorkflow} onChange={(e)=>setTokenWorkflow(e.target.value)} placeholder="checkout"/></FG>
+          <FG label="Metadata Tags" hint="key=value pairs, one per line or comma-separated"><Txt value={tokenMetadataTags} onChange={(e)=>setTokenMetadataTags(e.target.value)} rows={2} placeholder={"region=us-east-1\nenv=prod"}/></FG>
         </>}
-        {op==="Detokenize"&&<><FG label="Tokens" required hint="One token per line"><Txt value={detokenizeInput} onChange={(e)=>setDetokenizeInput(e.target.value)} rows={8} placeholder="tok_..."/></FG></>}
+        {op==="Detokenize"&&<>
+          <FG label="Tokens" required hint="One token per line"><Txt value={detokenizeInput} onChange={(e)=>setDetokenizeInput(e.target.value)} rows={6} placeholder="tok_..."/></FG>
+          <FG label="Purpose" hint="Required by some policies (e.g. payment_processing)"><Inp value={detokenizePurpose} onChange={(e)=>setDetokenizePurpose(e.target.value)} placeholder="payment_processing"/></FG>
+          <FG label="Workflow" hint="Workflow context for audit log"><Inp value={detokenizeWorkflow} onChange={(e)=>setDetokenizeWorkflow(e.target.value)} placeholder="refund_processing"/></FG>
+        </>}
         {(op==="FPE Encrypt"||op==="FPE Decrypt")&&<><FG label="FPE Algorithm"><Sel value={fpeAlgorithm} onChange={(e)=>setFPEAlgorithm(e.target.value)}><option value="FF1">FF1</option><option value="FF3-1">FF3-1</option></Sel></FG>
           <FG label="Key" required><Sel value={fpeKeyId} onChange={(e)=>setFPEKeyId(e.target.value)}>{renderKeyOptions(vaultCapableKeys)}</Sel></FG>
           <Row2><FG label="Radix"><Inp value={fpeRadix} onChange={(e)=>setFPERadix(e.target.value)} mono/></FG><FG label="Tweak"><Inp value={fpeTweak} onChange={(e)=>setFPETweak(e.target.value)} mono/></FG></Row2>

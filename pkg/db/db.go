@@ -198,11 +198,18 @@ func (d *DB) RunMigrations(ctx context.Context, migrationsDir string) error {
 	}
 
 	// Ensure the tracking table exists (idempotent).
-	const createTracking = `
+	createTracking := `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			filename   TEXT PRIMARY KEY,
 			applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 		)`
+	if d.driver == DriverSQLite {
+		createTracking = `
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			filename   TEXT PRIMARY KEY,
+			applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`
+	}
 	if _, err := d.sqlDB.ExecContext(ctx, createTracking); err != nil {
 		return fmt.Errorf("migration: create tracking table: %w", err)
 	}
@@ -233,18 +240,22 @@ func (d *DB) RunMigrations(ctx context.Context, migrationsDir string) error {
 	sort.Strings(sqlFiles)
 	fmt.Fprintf(os.Stderr, "[db] found %d migration files\n", len(sqlFiles))
 
+	scope := migrationScope(migrationsDir)
+	fmt.Fprintf(os.Stderr, "[db] migration scope=%s\n", scope)
+
 	for _, path := range sqlFiles {
 		name := filepath.Base(path)
+		migrationID := scopedMigrationID(scope, name)
 
 		// Skip already-applied migrations.
 		var applied bool
 		if err := d.sqlDB.QueryRowContext(ctx,
-			"SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE filename = $1)", name,
+			"SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE filename = $1)", migrationID,
 		).Scan(&applied); err != nil {
-			return fmt.Errorf("migration: check %s: %w", name, err)
+			return fmt.Errorf("migration: check %s: %w", migrationID, err)
 		}
 		if applied {
-			fmt.Fprintf(os.Stderr, "[db] migration %s already applied, skipping\n", name)
+			fmt.Fprintf(os.Stderr, "[db] migration %s already applied, skipping\n", migrationID)
 			continue
 		}
 
@@ -260,10 +271,57 @@ func (d *DB) RunMigrations(ctx context.Context, migrationsDir string) error {
 
 		// Record the migration as applied.
 		if _, err := d.sqlDB.ExecContext(ctx,
-			"INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING", name,
+			"INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT DO NOTHING", migrationID,
 		); err != nil {
-			return fmt.Errorf("migration: record %s: %w", name, err)
+			return fmt.Errorf("migration: record %s: %w", migrationID, err)
 		}
 	}
 	return nil
+}
+
+func scopedMigrationID(scope string, filename string) string {
+	scope = strings.TrimSpace(filepath.ToSlash(scope))
+	filename = strings.TrimSpace(filepath.ToSlash(filename))
+	if scope == "" {
+		return filename
+	}
+	return scope + "/" + filename
+}
+
+func migrationScope(migrationsDir string) string {
+	cleaned := strings.TrimSpace(filepath.ToSlash(filepath.Clean(migrationsDir)))
+	if cleaned == "" {
+		cleaned = "migrations"
+	}
+
+	parts := strings.Split(cleaned, "/")
+	for i := 0; i+2 < len(parts); i++ {
+		if parts[i] == "services" && parts[i+2] == "migrations" {
+			return filepath.ToSlash(filepath.Join("services", parts[i+1]))
+		}
+	}
+
+	if filepath.Base(cleaned) == "migrations" {
+		if service := executableServiceName(); service != "" {
+			return filepath.ToSlash(filepath.Join("services", service))
+		}
+	}
+
+	return cleaned
+}
+
+func executableServiceName() string {
+	if len(os.Args) == 0 {
+		return ""
+	}
+
+	base := strings.TrimSpace(filepath.Base(os.Args[0]))
+	base = strings.TrimSuffix(base, filepath.Ext(base))
+	base = strings.TrimPrefix(base, "kms-")
+	base = strings.TrimPrefix(base, "kms_")
+	base = strings.Trim(base, "._- ")
+	if base == "" {
+		return ""
+	}
+	return base
 }

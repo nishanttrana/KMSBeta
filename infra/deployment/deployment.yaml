@@ -10,35 +10,38 @@ spec:
         keycore: true
         policy: true
     features:
-        ai_llm: false
+        secrets: true
         certs: true
-        cloud_byok: false
-        clustering: false
-        compliance_dashboard: true
-        crypto_discovery: false
-        data_protection: true
-        ekm_database: false
         governance: true
-        hyok_proxy: false
+        cloud_byok: true
+        hyok_proxy: true
         kmip_server: true
-        mpc_engine: false
-        posture_management: true
+        qkd_interface: true
+        qrng_generator: true
+        ekm_database: true
         payment_crypto: true
         autokey_provisioning: true
+        artifact_signing: true
+        key_access_justifications: true
         workload_identity: true
         confidential_compute: true
-        pqc_migration: true
-        qkd_interface: false
-        qrng_generator: false
-        reporting_alerting: true
+        compliance_dashboard: true
         sbom_cbom: true
-        secrets: true
+        reporting_alerting: true
+        posture_management: true
+        ai_llm: true
+        ai_gateway: true
+        pqc_migration: true
+        crypto_discovery: true
+        mpc_engine: true
+        data_protection: true
+        clustering: false
     hsm_mode: software
     cert_security:
         cert_storage_mode: db_encrypted
         root_key_mode: software
         sealed_key_path: /var/lib/vecta/certs/crwk.sealed
-        passphrase_file_path: /etc/vecta/certs-bootstrap.secret
+        passphrase_file_path: /var/lib/vecta/certs/bootstrap.passphrase
         use_tpm_seal: false
         acme_renewal:
             enable_ari: true

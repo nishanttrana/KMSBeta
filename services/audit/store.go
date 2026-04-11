@@ -62,8 +62,9 @@ type Store interface {
 }
 
 type SQLStore struct {
-	db         *pkgdb.DB
-	isPostgres bool
+	db              *pkgdb.DB
+	isPostgres      bool
+	eventSigningKey []byte // 32-byte HMAC-SHA256 key for per-event signatures
 }
 
 func NewSQLStore(db *pkgdb.DB) *SQLStore {
@@ -71,6 +72,10 @@ func NewSQLStore(db *pkgdb.DB) *SQLStore {
 		db:         db,
 		isPostgres: detectPostgresDriver(db),
 	}
+}
+
+func (s *SQLStore) SetEventSigningKey(key []byte) {
+	s.eventSigningKey = key
 }
 
 type EventQuery struct {
@@ -136,6 +141,12 @@ WHERE tenant_id=$1 ORDER BY sequence DESC LIMIT 1
 	event.Sequence = sequence
 	event.PreviousHash = previousHash
 	event.ChainHash = chainHash(previousHash, eventHashInput(event))
+	// Compute per-event HMAC for authenticity (FIPS 140-3 integrity + authenticity).
+	event.HMACSig = eventHMAC(event.ChainHash, s.eventSigningKey)
+	// Populate FIPS category group if not already set by service layer.
+	if event.CategoryGroup == "" {
+		event.CategoryGroup = categoryGroupForService(event.Service)
+	}
 
 	if err := s.ensureAuditPartition(ctx, tx, event.Timestamp); err != nil {
 		return AuditEvent{}, Alert{}, err
@@ -145,13 +156,16 @@ WHERE tenant_id=$1 ORDER BY sequence DESC LIMIT 1
 	details, _ := json.Marshal(event.Details)
 	_, err = tx.ExecContext(ctx, `
 INSERT INTO audit_events (
-    id, tenant_id, sequence, chain_hash, previous_hash, timestamp, service, action, actor_id, actor_type,
+    id, tenant_id, sequence, chain_hash, previous_hash, hmac_sig, category_group,
+    timestamp, service, action, actor_id, actor_type,
     target_type, target_id, method, endpoint, source_ip, user_agent, request_hash, correlation_id, parent_event_id,
     session_id, result, status_code, error_message, duration_ms, fips_compliant, approval_id, risk_score, tags, node_id, details, created_at
 ) VALUES (
-    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,CURRENT_TIMESTAMP
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,CURRENT_TIMESTAMP
 )
-`, event.ID, event.TenantID, event.Sequence, event.ChainHash, event.PreviousHash, event.Timestamp, event.Service, event.Action, event.ActorID, event.ActorType,
+`, event.ID, event.TenantID, event.Sequence, event.ChainHash, event.PreviousHash,
+		nullable(event.HMACSig), nullable(event.CategoryGroup),
+		event.Timestamp, event.Service, event.Action, event.ActorID, event.ActorType,
 		event.TargetType, event.TargetID, event.Method, event.Endpoint, nullable(event.SourceIP), nullable(event.UserAgent), nullable(event.RequestHash),
 		nullable(event.CorrelationID), nullable(event.ParentEventID), nullable(event.SessionID), event.Result, event.StatusCode, nullable(event.ErrorMessage),
 		event.DurationMS, event.FIPSCompliant, nullable(event.ApprovalID), event.RiskScore, tags, nullable(event.NodeID), details,
@@ -259,7 +273,9 @@ func (s *SQLStore) QueryEvents(ctx context.Context, tenantID string, q EventQuer
 		q.Limit = 200
 	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, sequence, chain_hash, previous_hash, timestamp, service, action, actor_id, actor_type,
+SELECT id, tenant_id, sequence, chain_hash, previous_hash,
+       COALESCE(hmac_sig,''), COALESCE(category_group,''),
+       timestamp, service, action, actor_id, actor_type,
        COALESCE(target_type,''), COALESCE(target_id,''), COALESCE(method,''), COALESCE(endpoint,''), COALESCE(CAST(source_ip AS TEXT),''), COALESCE(user_agent,''),
        COALESCE(request_hash,''), COALESCE(correlation_id,''), COALESCE(parent_event_id,''), COALESCE(session_id,''),
        result, COALESCE(status_code,0), COALESCE(error_message,''), COALESCE(duration_ms,0), COALESCE(fips_compliant,false), COALESCE(approval_id,''),
@@ -295,7 +311,9 @@ LIMIT $11 OFFSET $12
 
 func (s *SQLStore) GetEvent(ctx context.Context, tenantID string, id string) (AuditEvent, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT id, tenant_id, sequence, chain_hash, previous_hash, timestamp, service, action, actor_id, actor_type,
+SELECT id, tenant_id, sequence, chain_hash, previous_hash,
+       COALESCE(hmac_sig,''), COALESCE(category_group,''),
+       timestamp, service, action, actor_id, actor_type,
        COALESCE(target_type,''), COALESCE(target_id,''), COALESCE(method,''), COALESCE(endpoint,''), COALESCE(CAST(source_ip AS TEXT),''), COALESCE(user_agent,''),
        COALESCE(request_hash,''), COALESCE(correlation_id,''), COALESCE(parent_event_id,''), COALESCE(session_id,''),
        result, COALESCE(status_code,0), COALESCE(error_message,''), COALESCE(duration_ms,0), COALESCE(fips_compliant,false), COALESCE(approval_id,''),
@@ -565,7 +583,9 @@ func scanEvent(scanner interface {
 	var timestampRaw interface{}
 	var createdRaw interface{}
 	err := scanner.Scan(
-		&ev.ID, &ev.TenantID, &ev.Sequence, &ev.ChainHash, &ev.PreviousHash, &timestampRaw, &ev.Service, &ev.Action,
+		&ev.ID, &ev.TenantID, &ev.Sequence, &ev.ChainHash, &ev.PreviousHash,
+		&ev.HMACSig, &ev.CategoryGroup,
+		&timestampRaw, &ev.Service, &ev.Action,
 		&ev.ActorID, &ev.ActorType, &ev.TargetType, &ev.TargetID, &ev.Method, &ev.Endpoint, &ev.SourceIP, &ev.UserAgent,
 		&ev.RequestHash, &ev.CorrelationID, &ev.ParentEventID, &ev.SessionID, &ev.Result, &ev.StatusCode, &ev.ErrorMessage,
 		&ev.DurationMS, &ev.FIPSCompliant, &ev.ApprovalID, &ev.RiskScore, &tagsRaw, &ev.NodeID, &detailsRaw, &createdRaw,
@@ -705,11 +725,14 @@ func (s *SQLStore) BuildMerkleEpoch(ctx context.Context, tenantID string, maxLea
 		maxLeaves = 1000
 	}
 
-	// Find the last epoch's seq_to for this tenant
+	// Find the last epoch's seq_to and tree_root for cross-epoch linking.
 	var lastSeqTo int64
+	var lastEpochRoot string
 	err := s.db.SQL().QueryRowContext(ctx, `
-SELECT COALESCE(MAX(seq_to), 0) FROM audit_merkle_epochs WHERE tenant_id=$1
-`, tenantID).Scan(&lastSeqTo)
+SELECT COALESCE(MAX(seq_to), 0), COALESCE((SELECT tree_root FROM audit_merkle_epochs
+ WHERE tenant_id=$1 ORDER BY epoch_number DESC LIMIT 1), '')
+FROM audit_merkle_epochs WHERE tenant_id=$1
+`, tenantID, tenantID).Scan(&lastSeqTo, &lastEpochRoot)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -767,6 +790,10 @@ SELECT COALESCE(MAX(epoch_number), 0) + 1 FROM audit_merkle_epochs WHERE tenant_
 	seqFrom := leaves[0].sequence
 	seqTo := leaves[len(leaves)-1].sequence
 
+	// Compute cross-epoch tamper-evident hash.
+	prevEpochRoot := lastEpochRoot
+	epHash := epochHash(prevEpochRoot, root)
+
 	// Insert epoch + leaves in a transaction
 	tx, err := s.db.SQL().BeginTx(ctx, nil)
 	if err != nil {
@@ -775,9 +802,9 @@ SELECT COALESCE(MAX(epoch_number), 0) + 1 FROM audit_merkle_epochs WHERE tenant_
 	defer tx.Rollback()
 
 	_, err = tx.ExecContext(ctx, `
-INSERT INTO audit_merkle_epochs (id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
-`, epochID, tenantID, epochNum, seqFrom, seqTo, len(leaves), root)
+INSERT INTO audit_merkle_epochs (id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root, previous_epoch_root, epoch_hash, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
+`, epochID, tenantID, epochNum, seqFrom, seqTo, len(leaves), root, nullable(prevEpochRoot), epHash)
 	if err != nil {
 		return nil, err
 	}
@@ -797,15 +824,30 @@ VALUES ($1, $2, $3, $4, $5, $6)
 	}
 
 	epoch := MerkleEpoch{
-		ID:          epochID,
-		TenantID:    tenantID,
-		EpochNumber: epochNum,
-		SeqFrom:     seqFrom,
-		SeqTo:       seqTo,
-		LeafCount:   len(leaves),
-		TreeRoot:    root,
+		ID:                epochID,
+		TenantID:          tenantID,
+		EpochNumber:       epochNum,
+		SeqFrom:           seqFrom,
+		SeqTo:             seqTo,
+		LeafCount:         len(leaves),
+		TreeRoot:          root,
+		PreviousEpochRoot: prevEpochRoot,
+		EpochHash:         epHash,
 	}
 	return &MerkleEpochResult{Epoch: epoch, Leaves: len(leaves)}, nil
+}
+
+func scanMerkleEpoch(rows interface {
+	Scan(dest ...interface{}) error
+}) (MerkleEpoch, error) {
+	var e MerkleEpoch
+	var createdRaw interface{}
+	if err := rows.Scan(&e.ID, &e.TenantID, &e.EpochNumber, &e.SeqFrom, &e.SeqTo, &e.LeafCount,
+		&e.TreeRoot, &e.PreviousEpochRoot, &e.EpochHash, &createdRaw); err != nil {
+		return MerkleEpoch{}, err
+	}
+	e.CreatedAt = parseTimeValue(createdRaw)
+	return e, nil
 }
 
 func (s *SQLStore) ListMerkleEpochs(ctx context.Context, tenantID string, limit int) ([]MerkleEpoch, error) {
@@ -813,7 +855,8 @@ func (s *SQLStore) ListMerkleEpochs(ctx context.Context, tenantID string, limit 
 		limit = 50
 	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root, created_at
+SELECT id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root,
+       COALESCE(previous_epoch_root,''), COALESCE(epoch_hash,''), created_at
 FROM audit_merkle_epochs
 WHERE tenant_id=$1
 ORDER BY epoch_number DESC
@@ -826,33 +869,27 @@ LIMIT $2
 
 	var out []MerkleEpoch
 	for rows.Next() {
-		var e MerkleEpoch
-		var createdRaw interface{}
-		if err := rows.Scan(&e.ID, &e.TenantID, &e.EpochNumber, &e.SeqFrom, &e.SeqTo, &e.LeafCount, &e.TreeRoot, &createdRaw); err != nil {
+		e, err := scanMerkleEpoch(rows)
+		if err != nil {
 			return nil, err
 		}
-		e.CreatedAt = parseTimeValue(createdRaw)
 		out = append(out, e)
 	}
 	return out, rows.Err()
 }
 
 func (s *SQLStore) GetMerkleEpoch(ctx context.Context, tenantID string, epochID string) (MerkleEpoch, error) {
-	var e MerkleEpoch
-	var createdRaw interface{}
-	err := s.db.SQL().QueryRowContext(ctx, `
-SELECT id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root, created_at
+	row := s.db.SQL().QueryRowContext(ctx, `
+SELECT id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root,
+       COALESCE(previous_epoch_root,''), COALESCE(epoch_hash,''), created_at
 FROM audit_merkle_epochs
 WHERE tenant_id=$1 AND id=$2
-`, tenantID, epochID).Scan(&e.ID, &e.TenantID, &e.EpochNumber, &e.SeqFrom, &e.SeqTo, &e.LeafCount, &e.TreeRoot, &createdRaw)
+`, tenantID, epochID)
+	e, err := scanMerkleEpoch(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return MerkleEpoch{}, errNotFound
 	}
-	if err != nil {
-		return MerkleEpoch{}, err
-	}
-	e.CreatedAt = parseTimeValue(createdRaw)
-	return e, nil
+	return e, err
 }
 
 func (s *SQLStore) GetEventMerkleProof(ctx context.Context, tenantID string, eventID string) (*MerkleProofResponse, error) {

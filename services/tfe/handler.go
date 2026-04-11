@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -70,6 +71,10 @@ func (h *Handler) routes() *http.ServeMux {
 
 	// Summary
 	mux.HandleFunc("GET /tfe/summary", h.handleGetSummary)
+
+	// File Encryption TDE agent download and audit
+	mux.HandleFunc("GET /tfe/file-encrypt/download", h.handleFileEncryptDownload)
+	mux.HandleFunc("POST /tfe/file-encrypt/audit", h.handleFileEncryptAudit)
 
 	return mux
 }
@@ -458,4 +463,65 @@ func decodeJSON(r *http.Request, out interface{}) error {
 		return err
 	}
 	return json.NewDecoder(bytes.NewReader(body)).Decode(out)
+}
+
+func intParamTFE(s string, fallback int) int {
+	if s == "" {
+		return fallback
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil || n <= 0 {
+		return fallback
+	}
+	return n
+}
+
+func (h *Handler) handleFileEncryptDownload(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := firstNonEmpty(r.URL.Query().Get("tenant_id"), tenantFromRequest(r))
+	if tenantID == "" {
+		writeErr(w, http.StatusBadRequest, "missing_tenant", "tenant_id is required", reqID, "")
+		return
+	}
+	q := r.URL.Query()
+	req := FileEncryptDownloadRequest{
+		TenantID:     tenantID,
+		TargetOS:     strings.TrimSpace(q.Get("os")),
+		Distro:       strings.TrimSpace(q.Get("distro")),
+		KeyID:        strings.TrimSpace(q.Get("key_id")),
+		WatchDirs:    strings.TrimSpace(q.Get("watch_dirs")),
+		FilePatterns: strings.TrimSpace(q.Get("file_patterns")),
+		RotationDays: intParamTFE(q.Get("rotation_days"), 90),
+		APIBaseURL:   strings.TrimSpace(q.Get("api_base_url")),
+	}
+	pkg, err := buildTFEAgentPackage(req)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "build_package_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	h.publishAudit(r.Context(), "audit.tfe.agent_package_downloaded", tenantID, map[string]interface{}{
+		"target_os": pkg.TargetOS,
+		"distro":    pkg.Distro,
+		"key_id":    pkg.KeyID,
+	})
+	writeJSON(w, http.StatusOK, map[string]interface{}{"package": pkg, "request_id": reqID})
+}
+
+func (h *Handler) handleFileEncryptAudit(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req FileEncryptAuditRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	tenantID := firstNonEmpty(req.TenantID, tenantFromRequest(r))
+	h.publishAudit(r.Context(), "audit.tfe.file_encrypt_agent_run", tenantID, map[string]interface{}{
+		"key_id":          req.KeyID,
+		"operation":       req.Operation,
+		"files_processed": req.FilesProcessed,
+		"hostname":        req.Hostname,
+		"agent_version":   req.AgentVersion,
+		"timestamp":       req.Timestamp,
+	})
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "request_id": reqID})
 }

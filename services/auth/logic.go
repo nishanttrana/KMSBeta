@@ -4,7 +4,6 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base32"
@@ -256,7 +255,7 @@ func hotpCode(secret []byte, counter int64) string {
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, uint64(counter))
 
-	mac := hmac.New(sha1.New, secret)
+	mac := hmac.New(sha256.New, secret)
 	_, _ = mac.Write(buf)
 	sum := mac.Sum(nil)
 	offset := sum[len(sum)-1] & 0x0f

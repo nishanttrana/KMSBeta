@@ -11,11 +11,13 @@
 Certificate lifecycle note:
 
 - `start-kms.*` reads `spec.cert_security.acme_renewal` from `deployment.yaml` and applies the ACME protocol policy after startup.
+- `start-kms.*`, `stop-kms.*`, and recovery helpers honor `COMPOSE_PROJECT_NAME` from the shell or root `.env`, which keeps side-by-side stacks aligned with helper-created volumes and cleanup.
 - `healthcheck-enabled-services.*` verifies that the ACME directory advertises `renewalInfo` and that `/certs/renewal-intelligence` is live when `certs` is enabled.
 
 Feature-to-profile coverage includes:
 
-- core security modules: `secrets`, `certs`, `governance`, `data_protection`
+- core security modules: `secrets`, `certs`, `governance`, `data_protection`, `autokey_provisioning`
+- release and access controls: `artifact_signing`, `key_access_justifications`, `workload_identity`, `confidential_compute`
 - integrations: `cloud_byok`, `hyok_proxy`, `kmip_server`, `ekm_database`
 - advanced crypto: `qkd_interface`, `qrng_generator`, `pqc_migration`, `mpc_engine`
 - monitoring and governance: `compliance_dashboard`, `sbom_cbom`, `reporting_alerting`, `posture_management`, `crypto_discovery`, `ai_llm`

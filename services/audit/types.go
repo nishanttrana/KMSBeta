@@ -2,12 +2,39 @@ package main
 
 import "time"
 
+// CategoryGroup is the FIPS 140-3 aligned functional category for an audit event.
+// Values are one of: authentication, key_management, cryptographic_operations,
+// data_protection, certificate_management, policy_and_governance,
+// system_administration, network_and_access, financial, supply_chain,
+// quantum, cloud_integration.
+type CategoryGroup = string
+
+const (
+	CatAuthentication         CategoryGroup = "authentication"
+	CatKeyManagement          CategoryGroup = "key_management"
+	CatCryptographicOps       CategoryGroup = "cryptographic_operations"
+	CatDataProtection         CategoryGroup = "data_protection"
+	CatCertificateManagement  CategoryGroup = "certificate_management"
+	CatPolicyAndGovernance    CategoryGroup = "policy_and_governance"
+	CatSystemAdministration   CategoryGroup = "system_administration"
+	CatNetworkAndAccess       CategoryGroup = "network_and_access"
+	CatFinancial              CategoryGroup = "financial"
+	CatSupplyChain            CategoryGroup = "supply_chain"
+	CatQuantum                CategoryGroup = "quantum"
+	CatCloudIntegration       CategoryGroup = "cloud_integration"
+)
+
 type AuditEvent struct {
 	ID            string                 `json:"id"`
 	TenantID      string                 `json:"tenant_id"`
 	Sequence      int64                  `json:"sequence"`
 	ChainHash     string                 `json:"chain_hash"`
 	PreviousHash  string                 `json:"previous_hash"`
+	// HMACSig is HMAC-SHA256(chain_hash, service_signing_key).
+	// Provides event authenticity in addition to hash-chain integrity.
+	HMACSig       string                 `json:"hmac_sig,omitempty"`
+	// CategoryGroup is the FIPS 140-3 aligned functional category.
+	CategoryGroup string                 `json:"category_group,omitempty"`
 	Timestamp     time.Time              `json:"timestamp"`
 	Service       string                 `json:"service"`
 	Action        string                 `json:"action"`
@@ -89,6 +116,9 @@ type AuditConfig struct {
 	WALPath             string
 	WALMaxSizeMB        int64
 	WALHMACKey          []byte
+	// EventSigningKey is a 32-byte HMAC-SHA256 key used to sign each audit event.
+	// Loaded from AUDIT_EVENT_SIGNING_KEY_B64 env var; auto-generated if missing.
+	EventSigningKey     []byte
 	DedupWindowSeconds  int
 	EscalationThreshold int
 	EscalationMinutes   int
@@ -104,7 +134,11 @@ type MerkleEpoch struct {
 	SeqTo       int64     `json:"seq_to"`
 	LeafCount   int       `json:"leaf_count"`
 	TreeRoot    string    `json:"tree_root"`
-	CreatedAt   time.Time `json:"created_at"`
+	// PreviousEpochRoot is the tree_root of epoch N-1, enabling linear proof chain.
+	PreviousEpochRoot string `json:"previous_epoch_root,omitempty"`
+	// EpochHash = SHA256(previous_epoch_root || tree_root) — tamper-evident linkage.
+	EpochHash string `json:"epoch_hash,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type MerkleLeaf struct {

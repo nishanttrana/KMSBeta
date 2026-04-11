@@ -16,19 +16,20 @@ export default defineConfig({
   build: {
     // Target modern browsers — smaller output, native async/await, top-level await.
     target: "es2022",
-    // esbuild minifier is 10–20× faster than the default terser.
-    minify: "esbuild",
+    minify: true,
     // Disable source maps in production to prevent source code exposure (OWASP A05)
     sourcemap: false,
     // Skip gzip size report (saves ~300 ms on large builds).
     reportCompressedSize: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // React runtime — almost never changes, long cache TTL.
-          "react-vendor": ["react", "react-dom"],
-          // React Query — stable library, separate chunk.
-          "query-vendor": ["@tanstack/react-query"],
+        manualChunks(id) {
+          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) {
+            return "react-vendor";
+          }
+          if (id.includes("node_modules/@tanstack/react-query")) {
+            return "query-vendor";
+          }
         },
       },
     },

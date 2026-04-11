@@ -159,6 +159,10 @@ static_resources:
                   headers: [{ name: "x-tenant-id", present_match: true }]
                 route: { cluster: reporting_http, timeout: 60s, prefix_rewrite: "/" }
               - match:
+                  prefix: "/api/ai-gateway"
+                  headers: [{ name: "x-tenant-id", present_match: true }]
+                route: { cluster: ai_gateway_http, timeout: 60s, prefix_rewrite: "/" }
+              - match:
                   prefix: "/api/ai"
                   headers: [{ name: "x-tenant-id", present_match: true }]
                 route: { cluster: ai_http, timeout: 60s, prefix_rewrite: "/" }
@@ -371,6 +375,13 @@ static_resources:
     load_assignment:
       cluster_name: ai_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: ai, port_value: 8090 }}}}]}]
+  - name: ai_gateway_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: ai_gateway_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: ai-gateway, port_value: 8320 }}}}]}]
   - name: pqc_http
     connect_timeout: 1s
     type: STRICT_DNS

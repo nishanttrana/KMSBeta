@@ -15,7 +15,7 @@ const VARIANT_STYLES: Record<
 function ToastItem({ toast }: { toast: Toast }) {
   const v = VARIANT_STYLES[toast.variant];
   const [visible, setVisible] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     // Trigger slide-in on mount.

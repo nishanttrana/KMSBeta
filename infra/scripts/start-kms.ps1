@@ -11,7 +11,32 @@ $parser = Join-Path $PSScriptRoot "parse-deployment.ps1"
 $healthScript = Join-Path $PSScriptRoot "healthcheck-enabled-services.ps1"
 $stopScript = Join-Path $PSScriptRoot "stop-kms.ps1"
 $composeHelper = Join-Path $PSScriptRoot "compose-kms.ps1"
-$projectName = "vecta-kms"
+
+function Get-ProjectName {
+    if (-not [string]::IsNullOrWhiteSpace($env:COMPOSE_PROJECT_NAME)) {
+        return $env:COMPOSE_PROJECT_NAME.Trim()
+    }
+
+    $envFile = Join-Path $root ".env"
+    if (Test-Path -LiteralPath $envFile) {
+        foreach ($rawLine in (Get-Content -LiteralPath $envFile)) {
+            $line = ($rawLine -replace '#.*$', '').Trim()
+            if ([string]::IsNullOrWhiteSpace($line)) {
+                continue
+            }
+            if ($line -match '^COMPOSE_PROJECT_NAME\s*=\s*(.+)$') {
+                $value = $matches[1].Trim()
+                if (-not [string]::IsNullOrWhiteSpace($value)) {
+                    return $value
+                }
+            }
+        }
+    }
+
+    return "vecta-kms"
+}
+
+$projectName = Get-ProjectName
 
 function Wait-DockerDaemon {
     param([int]$TimeoutSeconds = 90)
@@ -83,6 +108,23 @@ function Set-ComposeEnvironment {
         }
         if (-not $inCertSecurity) { continue }
 
+        if ($line -match '^\s{8,}cert_storage_mode:\s*(.+)$') {
+            $env:CERTS_STORAGE_MODE = $matches[1].Trim()
+            continue
+        } elseif ($line -match '^\s{8,}root_key_mode:\s*(.+)$') {
+            $env:CERTS_ROOT_KEY_MODE = $matches[1].Trim()
+            continue
+        } elseif ($line -match '^\s{8,}sealed_key_path:\s*(.+)$') {
+            $env:CERTS_CRWK_SEALED_PATH = $matches[1].Trim()
+            continue
+        } elseif ($line -match '^\s{8,}passphrase_file_path:\s*(.+)$') {
+            $env:CERTS_CRWK_PASSPHRASE_FILE = $matches[1].Trim()
+            continue
+        } elseif ($line -match '^\s{8,}use_tpm_seal:\s*(true|false)$') {
+            $env:CERTS_CRWK_USE_TPM_SEAL = $matches[1].ToLowerInvariant()
+            continue
+        }
+
         if ($line -match '^\s{8,}acme_renewal:\s*$') {
             $inAcmeRenewal = $true
             continue
@@ -103,6 +145,10 @@ function Set-ComposeEnvironment {
         } elseif ($line -match '^\s{12,}mass_renewal_risk_threshold:\s*([0-9]+)') {
             $env:CERTS_MASS_RENEWAL_RISK_THRESHOLD = $matches[1]
         }
+    }
+
+    if (-not $env:CERTS_CRWK_PASSPHRASE_FILE -and (Test-Path -LiteralPath "/etc/vecta/certs-bootstrap.secret")) {
+        $env:CERTS_CRWK_PASSPHRASE_FILE = "/etc/vecta/certs-bootstrap.secret"
     }
 }
 

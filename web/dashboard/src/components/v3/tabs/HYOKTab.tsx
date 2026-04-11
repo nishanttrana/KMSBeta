@@ -4,9 +4,7 @@ import { RefreshCcw, Copy, ChevronDown, ChevronRight, Shield, ExternalLink, Aler
 import {
   configureHYOKEndpoint,
   deleteHYOKEndpoint,
-  getHYOKDKEPublicKey,
   getHYOKHealth,
-  hyokCrypto,
   listHYOKEndpoints,
   listHYOKRequests
 } from "../../../lib/hyok";
@@ -185,7 +183,6 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [executing, setExecuting] = useState(false);
   const [endpoints, setEndpoints] = useState<any[]>([]);
   const [requests, setRequests] = useState<any[]>([]);
   const [health, setHealth] = useState<any>(null);
@@ -202,16 +199,6 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
   const [dkeKeyURIHostname, setDkeKeyURIHostname] = useState("");
   const [dkeAllowedAlgorithms, setDkeAllowedAlgorithms] = useState("RSA-OAEP-256");
 
-  const [testProtocol, setTestProtocol] = useState("generic");
-  const [testOperation, setTestOperation] = useState("encrypt");
-  const [testKeyID, setTestKeyID] = useState("");
-  const [testPlaintext, setTestPlaintext] = useState("");
-  const [testCiphertext, setTestCiphertext] = useState("");
-  const [testIV, setTestIV] = useState("");
-  const [testRefID, setTestRefID] = useState("");
-  const [testRequester, setTestRequester] = useState("");
-  const [testRequesterEmail, setTestRequesterEmail] = useState("");
-  const [testOutput, setTestOutput] = useState("// HYOK result will appear here...");
   const [expandedRequest, setExpandedRequest] = useState<string | null>(null);
   const [requestFilter, setRequestFilter] = useState<string>("");
   const [urlsProtocol, setUrlsProtocol] = useState("dke");
@@ -249,17 +236,6 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
     const id = setInterval(() => { void run(true); }, 15000);
     return () => { stop = true; clearInterval(id); };
   }, [session?.token, session?.tenantId]);
-
-  useEffect(() => {
-    if (testKeyID) return;
-    const first = Array.isArray(keyChoices) ? keyChoices[0] : null;
-    if (first?.id) setTestKeyID(String(first.id));
-  }, [keyChoices, testKeyID]);
-
-  useEffect(() => {
-    const allowed = HYOK_OPS_BY_PROTOCOL[testProtocol] || [];
-    if (!allowed.includes(testOperation)) setTestOperation(String(allowed[0] || "encrypt"));
-  }, [testProtocol, testOperation]);
 
   const openConfig = (protocol: string) => {
     const existing = (Array.isArray(endpoints) ? endpoints : []).find((item) => String(item?.protocol || "") === protocol);
@@ -356,42 +332,8 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
     }
   };
 
-  const executeTest = async () => {
-    if (!session?.token) return;
-    const keyID = String(testKeyID || "").trim();
-    if (!keyID) { onToast?.("Select a key."); return; }
-    const protocol = String(testProtocol || "generic");
-    const operation = String(testOperation || "encrypt");
-    setExecuting(true);
-    setTestOutput("// Executing...");
-    try {
-      if (protocol === "dke" && operation === "publickey") {
-        const out = await getHYOKDKEPublicKey(session, keyID);
-        setTestOutput(JSON.stringify(out, null, 2));
-      } else {
-        const out = await hyokCrypto(session, protocol, operation, keyID, {
-          plaintext: testPlaintext,
-          ciphertext: testCiphertext,
-          iv: testIV,
-          reference_id: testRefID,
-          requester_id: testRequester,
-          requester_email: testRequesterEmail
-        });
-        setTestOutput(JSON.stringify(out, null, 2));
-      }
-      onToast?.(`HYOK ${operation} completed.`);
-      await refresh(true);
-    } catch (error) {
-      setTestOutput(`// Error: ${errMsg(error)}`);
-      onToast?.(`HYOK ${operation} failed: ${errMsg(error)}`);
-    } finally {
-      setExecuting(false);
-    }
-  };
-
   const endpointRows = Array.isArray(endpoints) ? endpoints : [];
   const requestRows = Array.isArray(requests) ? requests : [];
-  const allowedOps = HYOK_OPS_BY_PROTOCOL[testProtocol] || [];
   const enabledCount = endpointRows.filter((item) => Boolean(item?.enabled)).length;
   const protocolStatuses = (health && typeof health === "object" && health.protocol_statuses && typeof health.protocol_statuses === "object") ? health.protocol_statuses : {};
   const proxyHealthStatus = String(health?.status || "unknown").toLowerCase();
@@ -502,67 +444,6 @@ export const HYOKTab = ({ session, keyCatalog, onToast }) => {
           </Card>;
         })}
       </div>
-    </Section>
-
-    {/* === Live Test Console === */}
-    <Section title="Live Test Console">
-      <Row2>
-        <Card>
-          <div style={{ fontSize: 10, color: C.muted, marginBottom: 8, padding: "6px 8px", background: C.bg, borderRadius: 4 }}>
-            Test HYOK crypto operations against your configured endpoints. All requests go through the full policy + governance pipeline.
-          </div>
-          <Row2>
-            <FG label="Protocol" required>
-              <Sel value={testProtocol} onChange={(e) => setTestProtocol(e.target.value)}>
-                <option value="dke">Microsoft DKE</option>
-                <option value="salesforce">Salesforce Cache-Only</option>
-                <option value="google">Google Cloud EKM</option>
-                <option value="generic">Generic HYOK</option>
-              </Sel>
-            </FG>
-            <FG label="Operation" required>
-              <Sel value={testOperation} onChange={(e) => setTestOperation(e.target.value)}>
-                {allowedOps.map((op) => <option key={op} value={op}>{op}</option>)}
-              </Sel>
-            </FG>
-          </Row2>
-          <FG label="Vecta Key" required hint={HYOK_PROTOCOL_KEY_HINTS[testProtocol]}>
-            <Sel value={testKeyID} onChange={(e) => setTestKeyID(e.target.value)}>
-              {renderKeyOptions(keyChoices)}
-            </Sel>
-          </FG>
-          {testOperation === "encrypt" || testOperation === "wrap" ? <FG label="Plaintext (base64)" required>
-            <Txt rows={3} value={testPlaintext} onChange={(e) => setTestPlaintext(e.target.value)} placeholder="SGVsbG8gd29ybGQ=" />
-          </FG> : null}
-          {testOperation === "decrypt" || testOperation === "unwrap" ? <FG label="Ciphertext (base64)" required>
-            <Txt rows={3} value={testCiphertext} onChange={(e) => setTestCiphertext(e.target.value)} placeholder="Paste ciphertext base64" />
-          </FG> : null}
-          {testOperation !== "publickey" ? <Row2>
-            <FG label="IV (base64)">
-              <Inp value={testIV} onChange={(e) => setTestIV(e.target.value)} placeholder="Optional" mono />
-            </FG>
-            <FG label="Reference ID">
-              <Inp value={testRefID} onChange={(e) => setTestRefID(e.target.value)} placeholder="txn-..." mono />
-            </FG>
-          </Row2> : null}
-          <Row2>
-            <FG label="Requester ID">
-              <Inp value={testRequester} onChange={(e) => setTestRequester(e.target.value)} placeholder="svc-app-01" mono />
-            </FG>
-            <FG label="Requester Email">
-              <Inp value={testRequesterEmail} onChange={(e) => setTestRequesterEmail(e.target.value)} placeholder="security@example.com" mono />
-            </FG>
-          </Row2>
-          <Btn primary onClick={() => void executeTest()} disabled={executing} style={{ width: "100%" }}>{executing ? "Executing..." : `Execute ${testOperation.toUpperCase()}`}</Btn>
-        </Card>
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>OUTPUT</div>
-            <button onClick={() => copyToClipboard(testOutput)} style={{ background: "transparent", border: "none", color: C.dim, cursor: "pointer" }} title="Copy output"><Copy size={12} /></button>
-          </div>
-          <Txt rows={22} value={testOutput} readOnly />
-        </Card>
-      </Row2>
     </Section>
 
     {/* === Request Audit Trail === */}

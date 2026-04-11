@@ -44,7 +44,32 @@ func (h *Handler) SetClusterSyncPublisher(pub clustersync.Publisher) {
 	h.cluster = pub
 }
 
-func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) { h.mux.ServeHTTP(w, r) }
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// FIPS 140-3 security headers on every response.
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "DENY")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+	w.Header().Set("X-Audit-Immutable", "true")
+
+	// Block any mutation attempt on audit events — they are write-once by design.
+	path := strings.ToLower(r.URL.Path)
+	method := strings.ToUpper(r.Method)
+	if isAuditEventPath(path) && (method == http.MethodPut || method == http.MethodPatch || method == http.MethodDelete) {
+		writeErr(w, http.StatusMethodNotAllowed, "immutable",
+			"audit events are immutable and cannot be modified or deleted", requestID(r), "")
+		return
+	}
+
+	h.mux.ServeHTTP(w, r)
+}
+
+// isAuditEventPath returns true if the path targets the audit events resource.
+func isAuditEventPath(path string) bool {
+	return strings.HasPrefix(path, "/audit/events") ||
+		strings.HasPrefix(path, "/audit/chain") ||
+		strings.HasPrefix(path, "/audit/merkle/epochs")
+}
 
 func (h *Handler) routes() *http.ServeMux {
 	mux := http.NewServeMux()

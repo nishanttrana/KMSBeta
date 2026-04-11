@@ -968,3 +968,50 @@ export async function validateAgentDeployment(session: AuthSession, agentId: str
   );
   return out;
 }
+
+export type FileEncryptDownloadParams = {
+  os: "linux" | "windows";
+  distro?: string;
+  key_id?: string;
+  watch_dirs?: string;
+  file_patterns?: string;
+  rotation_days?: number;
+  api_base_url?: string;
+};
+
+export type FileEncryptPackageFile = {
+  path: string;
+  content: string;
+  mode: string;
+};
+
+export type FileEncryptPackage = {
+  target_os: string;
+  distro: string;
+  created_at: string;
+  algorithm: string;
+  mode: string;
+  key_id: string;
+  rotation_days: number;
+  files: FileEncryptPackageFile[];
+};
+
+// Download file encryption TDE agent package (user-space, no kernel)
+export async function getFileEncryptAgentPackage(
+  session: AuthSession,
+  params: FileEncryptDownloadParams
+): Promise<{ package: FileEncryptPackage }> {
+  const qs = new URLSearchParams({ tenant_id: session.tenantId, os: params.os });
+  if (params.distro) qs.set("distro", params.distro);
+  if (params.key_id) qs.set("key_id", params.key_id);
+  if (params.watch_dirs) qs.set("watch_dirs", params.watch_dirs);
+  if (params.file_patterns) qs.set("file_patterns", params.file_patterns);
+  if (params.rotation_days) qs.set("rotation_days", String(params.rotation_days));
+  if (params.api_base_url) qs.set("api_base_url", params.api_base_url);
+  const out = await serviceRequest<{ package: FileEncryptPackage }>(
+    session,
+    "tfe",
+    `/tfe/file-encrypt/download?${qs.toString()}`
+  );
+  return out;
+}

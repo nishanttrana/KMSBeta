@@ -1,5 +1,5 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Atom, Ban, Package, RefreshCcw, ShieldCheck } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar as RBar, PieChart, Pie, Cell,
@@ -86,6 +86,10 @@ export const SBOMTab = ({ session, onToast }: any) => {
     reference: ""
   });
 
+  // Abort controller ref — cancelled on unmount so in-flight fetches don't
+  // update state after the tab is switched away.
+  const abortRef = useRef<AbortController | null>(null);
+
   // ── Download helpers ──────────────────────────────────────────
   const downloadTextFile = (filename: string, content: string, mime = "application/json") => {
     const blob = new Blob([String(content || "")], { type: mime });
@@ -130,6 +134,11 @@ export const SBOMTab = ({ session, onToast }: any) => {
       setVulnAttempted(false);
       return;
     }
+    // Cancel any in-flight load so switching away doesn't update unmounted state.
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+
     const doRefresh = Boolean(opts?.refresh);
     if (doRefresh) setRefreshing(true);
     else if (!opts?.silent) setLoading(true);
@@ -146,6 +155,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
         listCBOMHistory(session, 8),
         getCBOMPQCReadiness(session).catch(() => null)
       ]);
+      if (ctrl.signal.aborted) return;
       setSBOMLatest(sbomOut || null);
       setSBOMHistory(Array.isArray(sbomHistoryOut) ? sbomHistoryOut : []);
       setManualAdvisories(Array.isArray(advisoryOut) ? advisoryOut : []);
@@ -157,10 +167,12 @@ export const SBOMTab = ({ session, onToast }: any) => {
         onToast?.("SBOM and CBOM refreshed. Vulnerability findings are updating in the background.");
       }
     } catch (error) {
-      onToast?.(`SBOM/CBOM load failed: ${errMsg(error)}`);
+      if (!ctrl.signal.aborted) onToast?.(`SBOM/CBOM load failed: ${errMsg(error)}`);
     } finally {
-      if (doRefresh) setRefreshing(false);
-      else if (!opts?.silent) setLoading(false);
+      if (!ctrl.signal.aborted) {
+        if (doRefresh) setRefreshing(false);
+        else if (!opts?.silent) setLoading(false);
+      }
     }
   };
 
@@ -230,6 +242,9 @@ export const SBOMTab = ({ session, onToast }: any) => {
       setDeletingAdvisory("");
     }
   };
+
+  // Abort in-flight requests when the tab unmounts (user switched away).
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
 
   useEffect(() => {
     setSBOMVulns([]);

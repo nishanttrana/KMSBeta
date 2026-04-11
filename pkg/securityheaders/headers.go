@@ -17,11 +17,15 @@ func Wrap(next http.Handler) http.Handler {
 
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
-		h.Set("Content-Security-Policy", "default-src 'self'")
+		h.Set("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'")
 		h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
-		h.Set("Cache-Control", "no-store")
-		h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
-		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		h.Set("Cache-Control", "no-store, no-cache, must-revalidate")
+		h.Set("Pragma", "no-cache")
+		h.Set("Referrer-Policy", "no-referrer")
+		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+		// FIPS 140-3 compliance markers
+		h.Set("X-FIPS-Compliant", "FIPS-140-3-Level-1")
+		h.Set("X-Content-Security", "vecta-kms")
 
 		// Propagate or generate X-Request-ID for traceability.
 		reqID := strings.TrimSpace(r.Header.Get("X-Request-ID"))

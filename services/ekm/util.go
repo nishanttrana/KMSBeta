@@ -476,6 +476,14 @@ func mapFloatAny(m map[string]interface{}, keys ...string) float64 {
 	return 0
 }
 
+func intParam(v string, fallback int) int {
+	n, err := strconv.Atoi(strings.TrimSpace(v))
+	if err != nil || n <= 0 {
+		return fallback
+	}
+	return n
+}
+
 func mapInt64Any(m map[string]interface{}, keys ...string) int64 {
 	for _, k := range keys {
 		if v, ok := m[strings.TrimSpace(k)]; ok {

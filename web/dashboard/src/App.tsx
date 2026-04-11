@@ -47,11 +47,14 @@ const FEATURE_KEYS: FeatureKey[] = [
   "sbom_cbom",
   "reporting_alerting",
   "ai_llm",
+  "ai_gateway",
   "pqc_migration",
   "crypto_discovery",
   "mpc_engine",
   "data_protection",
   "clustering",
+  "posture_management",
+  "qrng_generator",
   "hsm_hardware",
   "hsm_software"
 ];
@@ -75,7 +78,9 @@ const FEATURE_DEPENDENCIES: Partial<Record<FeatureKey, string[]>> = {
   sbom_cbom: ["kms-sbom"],
   reporting_alerting: ["kms-reporting"],
   ai_llm: ["kms-ai"],
+  ai_gateway: ["kms-ai-gateway"],
   pqc_migration: ["kms-pqc"],
+  posture_management: ["kms-posture"],
   crypto_discovery: ["kms-discovery"],
   mpc_engine: ["kms-mpc"],
   data_protection: ["kms-dataprotect"],
@@ -108,7 +113,12 @@ const FEATURE_ALIAS: Record<string, FeatureKey> = {
   cluster: "clustering",
   hsm: "hsm_software",
   hsm_hw: "hsm_hardware",
-  hsm_sw: "hsm_software"
+  hsm_sw: "hsm_software",
+  ai_security_gateway: "ai_gateway",
+  aigateway: "ai_gateway",
+  posture: "posture_management",
+  risk: "posture_management",
+  qrng: "qrng_generator"
 };
 
 const ENFORCE_RUNTIME_FEATURE_FILTER =

@@ -2,9 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ENV_FILE="${ROOT_DIR}/.env"
 PARSER="${ROOT_DIR}/infra/scripts/parse-deployment.sh"
-PROJECT_NAME="vecta-kms"
-NETWORK_NAME="${PROJECT_NAME}_kms_net"
 COMPOSE_WRAPPER="${ROOT_DIR}/infra/scripts/compose-kms.sh"
 BASH_BIN="${BASH:-bash}"
 
@@ -34,6 +33,38 @@ wait_docker() {
   echo "docker daemon is not reachable after ${timeout_seconds}s" >&2
   return 1
 }
+
+resolve_project_name() {
+  local value=""
+  if [[ -n "${COMPOSE_PROJECT_NAME:-}" ]]; then
+    printf '%s\n' "${COMPOSE_PROJECT_NAME}"
+    return 0
+  fi
+  if [[ -f "${ENV_FILE}" ]]; then
+    value="$(awk -F= '
+      /^[[:space:]]*COMPOSE_PROJECT_NAME[[:space:]]*=/ {
+        value=$0
+        sub(/^[^=]*=/, "", value)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+        if (value != "") {
+          print value
+          exit
+        }
+      }
+    ' "${ENV_FILE}" 2>/dev/null || true)"
+    if [[ -n "${value}" ]]; then
+      printf '%s\n' "${value}"
+      return 0
+    fi
+  fi
+  printf '%s\n' "vecta-kms"
+}
+
+PROJECT_NAME="$(resolve_project_name)"
+if [[ -z "${PROJECT_NAME}" ]]; then
+  PROJECT_NAME="vecta-kms"
+fi
+NETWORK_NAME="${PROJECT_NAME}_kms_net"
 
 purge_project_resources() {
   local ids

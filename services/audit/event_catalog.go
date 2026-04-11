@@ -11,10 +11,11 @@ var auditEventCatalog = buildAuditEventCatalog()
 
 func buildAuditEventCatalog() map[string]EventMeta {
 	services := []string{
-		"auth", "key", "secrets", "certs", "policy", "governance", "pqc", "audit", "byok", "ai",
+		"auth", "key", "keycore", "secrets", "certs", "policy", "governance", "pqc", "audit", "byok", "ai",
 		"discovery", "compliance", "hyok", "ekm", "reporting", "qkd", "cluster", "payment", "sbom",
 		"workload", "confidential", "autokey", "signing", "keyaccess",
 		"mpc", "dataprotect", "kmip",
+		"tfe", "dam", "qrng", "cloud",
 	}
 	verbs := []string{
 		"created", "imported", "rotated", "deactivated", "destroyed", "exported",
@@ -154,6 +155,39 @@ func buildAuditEventCatalog() map[string]EventMeta {
 		"audit.pqc.migration_report_viewed":         {Severity: "LOW", Category: "pqc"},
 		"audit.reporting.evidence_pack_requested":   {Severity: "MEDIUM", Category: "reporting"},
 		"audit.reporting.mttd_stats_viewed":         {Severity: "LOW", Category: "reporting"},
+
+		// tfe (Transparent File Encryption)
+		"audit.tfe.agent_registered":           {Severity: "MEDIUM", Category: "tfe"},
+		"audit.tfe.agent_heartbeat":            {Severity: "LOW", Category: "tfe"},
+		"audit.tfe.policy_created":             {Severity: "MEDIUM", Category: "tfe"},
+		"audit.tfe.policy_updated":             {Severity: "MEDIUM", Category: "tfe"},
+		"audit.tfe.policy_deleted":             {Severity: "MEDIUM", Category: "tfe"},
+		"audit.tfe.agent_package_downloaded":   {Severity: "MEDIUM", Category: "tfe"},
+		"audit.tfe.file_encrypt_agent_run":     {Severity: "LOW", Category: "tfe"},
+
+		// dam (Data Activity Monitoring)
+		"audit.dam.critical_event": {Severity: "CRITICAL", Category: "dam"},
+
+		// qrng (Quantum Random Number Generator)
+		"audit.qrng.source_registered": {Severity: "MEDIUM", Category: "qrng"},
+		"audit.qrng.source_updated":    {Severity: "MEDIUM", Category: "qrng"},
+		"audit.qrng.source_deleted":    {Severity: "MEDIUM", Category: "qrng"},
+		"audit.qrng.entropy_ingested":  {Severity: "LOW", Category: "qrng"},
+		"audit.qrng.entropy_drawn":     {Severity: "LOW", Category: "qrng"},
+
+		// cloud (BYOK/cloud connector sync)
+		"audit.cloud.connector_configured": {Severity: "MEDIUM", Category: "cloud"},
+		"audit.cloud.connector_deleted":    {Severity: "HIGH", Category: "cloud"},
+		"audit.cloud.key_imported":         {Severity: "MEDIUM", Category: "cloud"},
+		"audit.cloud.key_rotated":          {Severity: "MEDIUM", Category: "cloud"},
+		"audit.cloud.key_access_denied":    {Severity: "HIGH", Category: "cloud"},
+		"audit.cloud.approval_required":    {Severity: "MEDIUM", Category: "cloud"},
+		"audit.cloud.sync_started":         {Severity: "LOW", Category: "cloud"},
+		"audit.cloud.sync_completed":       {Severity: "LOW", Category: "cloud"},
+		"audit.cloud.sync_failed":          {Severity: "HIGH", Category: "cloud"},
+
+		// keycore (canary-specific events under keycore subject)
+		"audit.keycore.canary_tripped": {Severity: "CRITICAL", Category: "keycore"},
 	}
 	for action, meta := range overrides {
 		catalog[action] = meta

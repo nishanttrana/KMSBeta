@@ -18,6 +18,8 @@ Current install-aware feature keys:
 - `ekm_database`
 - `payment_crypto`
 - `autokey_provisioning`
+- `artifact_signing`
+- `key_access_justifications`
 - `workload_identity`
 - `confidential_compute`
 - `compliance_dashboard`
@@ -40,6 +42,10 @@ Notes:
 - `autokey_provisioning` enables the dedicated `kms-autokey` microservice for tenant-scoped policy-driven key handle provisioning.
 - It expects `kms-keycore` for actual key creation and `kms-governance` when Autokey approvals are required.
 - The service persists Autokey templates, per-service defaults, request catalogs, and managed handle bindings as shared control-plane data, so the feature is cluster-aware and included in backup coverage metadata.
+- `artifact_signing` enables the dedicated `kms-signing` microservice for tenant-scoped signing key custody, release attestation, and artifact-signing workflows.
+- It expects `kms-keycore` for key material lifecycle and integrates with audit trails so signing actions remain attributable.
+- `key_access_justifications` enables the dedicated `kms-keyaccess` microservice for approval gates, recorded access reasons, and operator justification workflows around sensitive key use.
+- It complements `kms-policy`, `kms-governance`, and `kms-audit` so elevated access decisions remain enforceable and reviewable.
 - `confidential_compute` enables the dedicated `kms-confidential` microservice for tenant-scoped attested key release and confidential-compute policy.
 - It is cluster-aware and intended for verified workload release flows such as Nitro Enclaves, Secure Key Release, GCP Confidential Space, or other TEE-attestation brokers.
 - AWS verification is local once the Nitro root is trusted; Azure and GCP verification require outbound HTTPS so the service can resolve issuer metadata and JWKS during attestation validation.

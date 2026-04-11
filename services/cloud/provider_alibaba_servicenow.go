@@ -272,7 +272,12 @@ func (p *alibabaProvider) resolveCredentials(regionHint string, account CloudAcc
 	return accessKeyID, accessKeySecret, region, nil
 }
 
-// apiRequest performs an Alibaba Cloud KMS API call with HMAC-SHA1 signature v1.
+// apiRequest performs an Alibaba Cloud KMS API call using Alibaba Cloud signature v1.
+// NOTE: Alibaba Cloud API v1 mandates HMAC-SHA1 as the signing algorithm (SignatureMethod=HMAC-SHA1).
+// This is an external protocol constraint imposed by the provider — it cannot be changed
+// without breaking compatibility. This usage is isolated to outbound API authentication only
+// and does not affect internal key material or FIPS 140-3 boundary operations.
+// FIPS exception: external third-party protocol mandate (RFC-equivalent external spec).
 func (p *alibabaProvider) apiRequest(ctx context.Context, accessKeyID, accessKeySecret, region string, actionParams map[string]string) (interface{}, error) {
 	endpoint := fmt.Sprintf("https://kms.%s.aliyuncs.com/", region)
 

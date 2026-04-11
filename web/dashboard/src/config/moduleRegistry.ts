@@ -40,11 +40,13 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   alerts: "reporting_alerting",
   // Risk & Compliance tab visible if any of its three sub-pane features is enabled
   compliance: ["compliance_dashboard", "governance", "sbom_cbom"],
-  // kept for sub-pane routing; access is inherited from compliance gate
-  posture: ["governance", "compliance_dashboard"],
+  // Posture tab: gated on posture_management or compliance_dashboard or governance
+  posture: ["posture_management", "governance", "compliance_dashboard"],
   sbom: "sbom_cbom",
+  // Crypto discovery
+  discovery: "crypto_discovery",
   // ADMIN
-  ai: "ai_llm"
+  ai: ["ai_llm", "ai_gateway"]
 };
 
 function normalizePermissionTokens(session: unknown): Set<string> {

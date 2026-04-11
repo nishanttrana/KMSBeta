@@ -214,8 +214,11 @@ func NewAgentRunner(cfg AgentConfig, logger *log.Logger) *AgentRunner {
 	transport := &http.Transport{}
 	if auth.HasMTLS() {
 		transport.TLSClientConfig = auth.TLSConfig()
-	} else if cfg.TLSSkipVerify {
-		transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12, InsecureSkipVerify: true} //nolint:gosec
+	} else {
+		if cfg.TLSSkipVerify {
+			logger.Printf("WARNING: tls_skip_verify is set but InsecureSkipVerify is disabled for FIPS 140-3 compliance")
+		}
+		transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS13}
 	}
 	client := &http.Client{
 		Timeout:   15 * time.Second,

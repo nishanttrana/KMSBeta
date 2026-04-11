@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -344,7 +344,8 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "restapi", label: "REST API", hint: "Authenticated API explorer and endpoint documentation", icon: FileText },
     { id: "tokenize", label: "Tokenize / Mask / Redact", hint: "Vault and vaultless tokenization with masking/redaction", icon: VenetianMask, feature: "data_protection" },
     { id: "dataenc", label: "Data Encryption", hint: "Field-level, envelope, searchable and FPE crypto", icon: Database, feature: "data_protection" },
-    { id: "payment", label: "Payment Crypto", hint: "TR-31, PIN, CVV, MAC and ISO20022 operations", icon: CreditCard, feature: "payment_crypto" }
+    { id: "payment", label: "Payment Crypto", hint: "TR-31, PIN, CVV, MAC and ISO20022 operations", icon: CreditCard, feature: "payment_crypto" },
+    { id: "hyok-test", label: "HYOK Live Test", hint: "Interactive HYOK crypto test console for all protocols", icon: Zap }
   ],
   dataprotection: [
     { id: "fieldenc", label: "Field Encryption", hint: "Wrapper registration, challenge-response and local crypto lease control", icon: KeyRound, feature: "data_protection" },
@@ -355,13 +356,13 @@ const SUB_PANES: Record<string, any[]> = {
   ],
   cloudctl: [
     { id: "byok", label: "BYOK", hint: "Cloud provider key import and sync", icon: Cloud, feature: "cloud_byok" },
-    { id: "hyok", label: "HYOK", hint: "Hold-your-own-key policy and cryptographic controls", icon: ShieldCheck, feature: "hyok_proxy" }
+    { id: "hyok", label: "HYOK", hint: "Hold-your-own-key policy and cryptographic controls", icon: ShieldCheck, feature: "hyok_proxy" },
+    { id: "google-cse", label: "Google CSE", hint: "Workspace Client-Side Encryption", icon: Shield, feature: "ekm_database" },
+    { id: "azure", label: "Azure EKM", hint: "Key Vault & Managed HSM integration", icon: Cloud, feature: "ekm_database" }
   ],
   ekm: [
     { id: "db", label: "EKM for DBs", hint: "MSSQL / Oracle TDE agents", icon: Database, feature: "ekm_database" },
     { id: "bitlocker", label: "BitLocker", hint: "Windows endpoint key lifecycle", icon: Lock, feature: "ekm_database" },
-    { id: "azure", label: "Azure EKM", hint: "Key Vault & Managed HSM", icon: Cloud, feature: "ekm_database" },
-    { id: "google-cse", label: "Google CSE", hint: "Workspace Client-Side Encryption", icon: Shield, feature: "ekm_database" },
     { id: "kmip", label: "KMIP", hint: "Profiles, clients, mTLS onboarding", icon: Link, feature: "kmip_server" }
   ],
   certs: [
@@ -381,8 +382,7 @@ const SUB_PANES: Record<string, any[]> = {
     { id: "topology", label: "Topology", hint: "Visual cluster map with node connections and health", icon: GitBranch, feature: "clustering" },
     { id: "nodes", label: "Node Management", hint: "Detailed node metrics, role changes, and components", icon: Server, feature: "clustering" },
     { id: "profiles", label: "Deploy Profiles", hint: "Replication profiles with deployment tier presets", icon: Layers, feature: "clustering" },
-    { id: "sync", label: "Sync Monitor", hint: "Real-time sync events, checkpoints, and replication lag", icon: RefreshCw, feature: "clustering" },
-    { id: "logs", label: "Cluster Logs", hint: "Cluster operation audit log with filtering", icon: ScrollText, feature: "clustering" }
+    { id: "sync", label: "Sync Monitor", hint: "Real-time sync events, checkpoints, and replication lag", icon: RefreshCw, feature: "clustering" }
   ],
   admin: [
     { id: "system", label: "System Administration", hint: "Platform health, runtime hardening, FIPS and governance settings", icon: Settings },
@@ -631,15 +631,19 @@ export default function VectaDashboardV3Shell(props: Props) {
   );
 
   const selectTab = (nextTab: string) => {
-    setTab(nextTab);
     try { localStorage.setItem(TAB_STORAGE_KEY, nextTab); } catch {}
     try { window.history.replaceState(null, "", `#${nextTab}`); } catch {}
     const paneItems = (Array.isArray(SUB_PANES[nextTab]) ? SUB_PANES[nextTab] : []).filter((item) =>
       canSeeFeature(item?.feature, enabledFeatures || new Set<FeatureKey>(), session)
     );
-    if (paneItems.length) {
-      setSubPaneSelection((prev: any) => ({ ...prev, [nextTab]: String(prev?.[nextTab] || paneItems[0].id) }));
-    }
+    // Use startTransition so React keeps the current tab visible until the new
+    // lazy module finishes loading — no Suspense fallback flicker on tab switch.
+    startTransition(() => {
+      setTab(nextTab);
+      if (paneItems.length) {
+        setSubPaneSelection((prev: any) => ({ ...prev, [nextTab]: String(prev?.[nextTab] || paneItems[0].id) }));
+      }
+    });
   };
 
   // One-time cleanup: strip query params, set hash to current tab

@@ -10,7 +10,32 @@ $ErrorActionPreference = "Stop"
 $root = Resolve-Path (Join-Path $PSScriptRoot "..\..")
 $composeHelper = Join-Path $PSScriptRoot "compose-kms.ps1"
 $parser = Join-Path $PSScriptRoot "parse-deployment.ps1"
-$projectName = "vecta-kms"
+
+function Get-ProjectName {
+    if (-not [string]::IsNullOrWhiteSpace($env:COMPOSE_PROJECT_NAME)) {
+        return $env:COMPOSE_PROJECT_NAME.Trim()
+    }
+
+    $envFile = Join-Path $root ".env"
+    if (Test-Path -LiteralPath $envFile) {
+        foreach ($rawLine in (Get-Content -LiteralPath $envFile)) {
+            $line = ($rawLine -replace '#.*$', '').Trim()
+            if ([string]::IsNullOrWhiteSpace($line)) {
+                continue
+            }
+            if ($line -match '^COMPOSE_PROJECT_NAME\s*=\s*(.+)$') {
+                $value = $matches[1].Trim()
+                if (-not [string]::IsNullOrWhiteSpace($value)) {
+                    return $value
+                }
+            }
+        }
+    }
+
+    return "vecta-kms"
+}
+
+$projectName = Get-ProjectName
 $networkName = "${projectName}_kms_net"
 
 function Wait-DockerDaemon {

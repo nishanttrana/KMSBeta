@@ -320,7 +320,7 @@ export function LineageTab({ session }: { session: any }) {
     try {
       const data = await serviceRequest(
         session, "discovery",
-        `/lineage/graph?tenant_id=${encodeURIComponent(session.tenantId)}&since=${encodeURIComponent(sinceISO(filterHours))}`
+        `/discovery/lineage/graph?tenant_id=${encodeURIComponent(session.tenantId)}&since=${encodeURIComponent(sinceISO(filterHours))}`
       );
       // Handle both wrapped and unwrapped responses
       const graphData = data?.graph || data;
@@ -341,8 +341,8 @@ export function LineageTab({ session }: { session: any }) {
     setSearchErr(""); setSearchResults(null); setImpact(null); setSearching(true);
     try {
       const [eventsData, impactData] = await Promise.allSettled([
-        serviceRequest(session, "discovery", `/lineage/key/${encodeURIComponent(searchKeyId.trim())}`),
-        serviceRequest(session, "discovery", `/lineage/impact/${encodeURIComponent(searchKeyId.trim())}`),
+        serviceRequest(session, "discovery", `/discovery/lineage/key/${encodeURIComponent(searchKeyId.trim())}`),
+        serviceRequest(session, "discovery", `/discovery/lineage/impact/${encodeURIComponent(searchKeyId.trim())}`),
       ]);
       if (eventsData.status === "fulfilled") {
         setSearchResults(eventsData.value?.events ?? []);
@@ -370,7 +370,7 @@ export function LineageTab({ session }: { session: any }) {
     if (!recordForm.service_name.trim()) { setRecordErr("Service Name is required."); return; }
     setRecording(true);
     try {
-      await serviceRequest(session, "discovery", "/lineage/record", {
+      await serviceRequest(session, "discovery", "/discovery/lineage/record", {
         method: "POST",
         body: JSON.stringify({
           tenant_id: session.tenantId,
@@ -402,7 +402,7 @@ export function LineageTab({ session }: { session: any }) {
     try {
       const data = await serviceRequest(
         session, "discovery",
-        `/lineage/timeline/${encodeURIComponent(timelineKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
+        `/discovery/lineage/timeline/${encodeURIComponent(timelineKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
       );
       setTimeline(data?.timeline ?? []);
     } catch (e) {
@@ -428,7 +428,7 @@ export function LineageTab({ session }: { session: any }) {
     try {
       const data = await serviceRequest(
         session, "discovery",
-        `/lineage/dependencies/${encodeURIComponent(depsKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
+        `/discovery/lineage/dependencies/${encodeURIComponent(depsKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
       );
       setDepsData(data);
     } catch (e) {
@@ -445,7 +445,7 @@ export function LineageTab({ session }: { session: any }) {
     try {
       const data = await serviceRequest(
         session, "discovery",
-        `/lineage/stats?tenant_id=${encodeURIComponent(session.tenantId)}`
+        `/discovery/lineage/stats?tenant_id=${encodeURIComponent(session.tenantId)}`
       );
       setStats(data);
     } catch (e) {
@@ -473,7 +473,7 @@ export function LineageTab({ session }: { session: any }) {
       if (auditFilters.since) body.since = new Date(auditFilters.since).toISOString();
       if (auditFilters.until) body.until = new Date(auditFilters.until).toISOString();
 
-      const data = await serviceRequest(session, "discovery", `/lineage/search?tenant_id=${encodeURIComponent(session.tenantId)}`, {
+      const data = await serviceRequest(session, "discovery", `/discovery/lineage/search?tenant_id=${encodeURIComponent(session.tenantId)}`, {
         method: "POST",
         body: JSON.stringify(body),
       });
@@ -508,9 +508,35 @@ export function LineageTab({ session }: { session: any }) {
     try {
       const data = await serviceRequest(
         session, "discovery",
-        `/lineage/provenance/${encodeURIComponent(provKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
+        `/discovery/lineage/provenance/${encodeURIComponent(provKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
       );
-      setProvData(data);
+      // Backend wraps response in {provenance: {...}}
+      const p = data?.provenance ?? data ?? {};
+      const algStrength = (alg: string) => {
+        const a = (alg ?? "").toLowerCase();
+        if (a.includes("ml-kem") || a.includes("kyber") || a.includes("dilithium") || a.includes("falcon")) return "pqc";
+        if (a.includes("256") || a.includes("rsa-4096") || a.includes("p-384") || a.includes("p-521")) return "strong";
+        if (a.includes("128") || a.includes("rsa-2048") || a.includes("p-256")) return "moderate";
+        return "moderate";
+      };
+      // Build algorithm history: first entry from creation, rest from rotation changes
+      const algHistory: any[] = [];
+      if (p.algorithm && p.created_at) {
+        algHistory.push({ version: 1, algorithm: p.algorithm, timestamp: p.created_at, strength: algStrength(p.algorithm) });
+      }
+      (p.algorithm_history ?? []).forEach((h: any, i: number) => {
+        algHistory.push({ version: h.version ?? i + 2, algorithm: h.to_algorithm, timestamp: h.changed_at, strength: algStrength(h.to_algorithm) });
+      });
+      setProvData({
+        ...p,
+        // Normalize nested structure the template expects
+        origin: { entropy_source: p.entropy_source, generating_module: p.generating_module, fips_certified: p.fips_certified },
+        geography: { creation_region: p.creation_region, storage_regions: p.storage_regions ?? [], usage_regions: p.usage_regions ?? [] },
+        compliance: { frameworks: p.compliance_frameworks ?? [] },
+        hsm_status: { hsm_backed: p.hsm_backed, module_name: p.generating_module },
+        algorithm_history: algHistory,
+        crypto_agility_score: p.crypto_agility_score ?? 0,
+      });
     } catch (e) {
       setProvErr(errMsg(e));
     } finally {
@@ -526,9 +552,22 @@ export function LineageTab({ session }: { session: any }) {
     try {
       const data = await serviceRequest(
         session, "discovery",
-        `/lineage/dataflow/${encodeURIComponent(dfKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
+        `/discovery/lineage/data-flow/${encodeURIComponent(dfKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
       );
-      setDfData(data);
+      // Backend wraps response in {data_flow: {...}}
+      const df = data?.data_flow ?? data ?? {};
+      // Normalize bound_resources field names: resource_name → name, resource_type → type
+      setDfData({
+        ...df,
+        bound_resources: (df.bound_resources ?? []).map((r: any) => ({
+          ...r,
+          name: r.resource_name ?? r.name ?? r.resource_id,
+          type: r.resource_type ?? r.type ?? "unknown",
+        })),
+        applications: (df.applications ?? []),
+        cross_tenant_shares: df.cross_tenant_shares ?? [],
+        cloud_replicas: df.cloud_replicas ?? [],
+      });
     } catch (e) {
       setDfErr(errMsg(e));
     } finally {
@@ -543,9 +582,28 @@ export function LineageTab({ session }: { session: any }) {
     try {
       const data = await serviceRequest(
         session, "discovery",
-        `/lineage/heatmap?tenant_id=${encodeURIComponent(session.tenantId)}`
+        `/discovery/lineage/risk-heatmap?tenant_id=${encodeURIComponent(session.tenantId)}`
       );
-      setHeatmapData(data);
+      // Backend wraps response in {heatmap: {keys, summary}}
+      const hm = data?.heatmap ?? data ?? {};
+      const summary = hm.summary ?? {};
+      const totalKeys = summary.total_keys ?? (hm.keys ?? []).length;
+      setHeatmapData({
+        ...hm,
+        // Normalize key field names for the template
+        keys: (hm.keys ?? []).map((k: any) => ({
+          ...k,
+          label: k.key_label ?? k.label ?? k.key_id,
+          dependents: k.dependent_count ?? k.dependents ?? 0,
+          compliance_gaps: k.compliance_gaps ?? [],
+          crypto_agility: k.crypto_agility ?? 0,
+        })),
+        // Flatten summary into top-level for easy access in template
+        rotation_compliant_pct: totalKeys > 0 && summary.rotation_compliant != null
+          ? Math.round((summary.rotation_compliant / totalKeys) * 100)
+          : undefined,
+        pqc_ready_pct: summary.pqc_ready_pct ?? 0,
+      });
     } catch (e) {
       setHeatmapErr(errMsg(e));
     } finally {
@@ -565,9 +623,39 @@ export function LineageTab({ session }: { session: any }) {
     try {
       const data = await serviceRequest(
         session, "discovery",
-        `/lineage/forensics/${encodeURIComponent(forKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
+        `/discovery/lineage/access-patterns/${encodeURIComponent(forKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
       );
-      setForData(data);
+      // Backend wraps response in {access_patterns: {...}}
+      const ap = data?.access_patterns ?? data ?? {};
+      const total = ap.total_access_30d ?? 0;
+      // Convert access_by_hour map{int->int} to array of {hour, count}
+      const hourlyArr = Object.entries(ap.access_by_hour ?? {})
+        .map(([h, c]) => ({ hour: Number(h), count: Number(c) }))
+        .sort((a: any, b: any) => a.hour - b.hour);
+      // Convert access_by_day map{string->int} to array of {day, count} in weekday order
+      const DAY_ORDER = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+      const dayMap: Record<string,number> = ap.access_by_day ?? {};
+      const dailyArr = DAY_ORDER.map(d => ({ day: d, count: Number(dayMap[d] ?? 0) }));
+      // Combine top_actors + new_actors (deduplicated)
+      const seen = new Set<string>();
+      const actors: any[] = [];
+      for (const a of [...(ap.top_actors ?? []), ...(ap.new_actors ?? []).map((a: any) => ({ ...a, is_new: true }))]) {
+        if (!seen.has(a.actor_id)) { seen.add(a.actor_id); actors.push(a); }
+      }
+      setForData({
+        ...ap,
+        hourly_distribution: hourlyArr,
+        daily_distribution: dailyArr,
+        actors,
+        summary: {
+          total_access: total,
+          unique_actors: ap.unique_actors ?? 0,
+          peak_hour: ap.peak_hour,
+          off_hours_pct: total > 0 ? Math.round(((ap.off_hours_access ?? 0) / total) * 100) : 0,
+          weekend_pct: total > 0 ? Math.round(((ap.weekend_access ?? 0) / total) * 100) : 0,
+          anomaly_count: (ap.anomalies ?? []).length,
+        },
+      });
     } catch (e) {
       setForErr(errMsg(e));
     } finally {
@@ -591,9 +679,15 @@ export function LineageTab({ session }: { session: any }) {
     try {
       const data = await serviceRequest(
         session, "discovery",
-        `/lineage/custody/${encodeURIComponent(custKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
+        `/discovery/lineage/chain-of-custody/${encodeURIComponent(custKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
       );
-      setCustData(data);
+      // Backend wraps response in {chain_of_custody: {...}}
+      const report = data?.chain_of_custody ?? data ?? {};
+      setCustData({
+        ...report,
+        // Template reads custody_chain; backend field is custodians
+        custody_chain: report.custodians ?? report.custody_chain ?? [],
+      });
     } catch (e) {
       setCustErr(errMsg(e));
     } finally {
@@ -607,9 +701,10 @@ export function LineageTab({ session }: { session: any }) {
     try {
       const data = await serviceRequest(
         session, "discovery",
-        `/lineage/tamper-check/${encodeURIComponent(custKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
+        `/discovery/lineage/tamper-check/${encodeURIComponent(custKeyId.trim())}?tenant_id=${encodeURIComponent(session.tenantId)}`
       );
-      setCustVerify(data);
+      // Backend wraps response in {tamper_check: {...}}
+      setCustVerify(data?.tamper_check ?? data);
     } catch (e) {
       setCustVerify({ verified: false, error: errMsg(e) });
     } finally {
@@ -1889,11 +1984,9 @@ export function LineageTab({ session }: { session: any }) {
                       position: "absolute", left: 8, top: 0, bottom: 0, width: 2,
                       background: `linear-gradient(to bottom, ${C.accent}44, ${C.border})`,
                     }} />
-                    {(provData.algorithm_history ?? [
-                      { version: 1, algorithm: "AES-128-GCM", timestamp: "2024-01-15T00:00:00Z", strength: "moderate" },
-                      { version: 2, algorithm: "AES-256-GCM", timestamp: "2025-03-20T00:00:00Z", strength: "strong" },
-                      { version: 3, algorithm: "ML-KEM-768", timestamp: "2026-01-10T00:00:00Z", strength: "pqc" },
-                    ]).map((entry: any, i: number) => {
+                    {(provData.algorithm_history ?? []).length === 0 ? (
+                      <div style={{ color: C.muted, fontSize: 11, padding: "8px 0" }}>No algorithm history recorded for this key.</div>
+                    ) : (provData.algorithm_history ?? []).map((entry: any, i: number) => {
                       const strengthColors: Record<string, string> = { weak: C.red, moderate: C.amber, strong: C.green, pqc: C.blue };
                       const color = strengthColors[entry.strength] ?? C.muted;
                       return (
@@ -1929,18 +2022,22 @@ export function LineageTab({ session }: { session: any }) {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
                     <div>
                       <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, fontWeight: 600 }}>Creation Region</div>
-                      <B c="accent">{provData.geography?.creation_region ?? "us-east-1"}</B>
+                      <B c="accent">{provData.geography?.creation_region ?? <span style={{color:C.muted}}>—</span>}</B>
                     </div>
                     <div>
                       <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, fontWeight: 600 }}>Storage Regions</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                        {(provData.geography?.storage_regions ?? ["us-east-1", "eu-west-1"]).map((r: string) => <B key={r} c="blue">{r}</B>)}
+                        {(provData.geography?.storage_regions ?? []).length > 0
+                          ? (provData.geography.storage_regions as string[]).map((r: string) => <B key={r} c="blue">{r}</B>)
+                          : <span style={{color:C.muted,fontSize:11}}>—</span>}
                       </div>
                     </div>
                     <div>
                       <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6, fontWeight: 600 }}>Usage Regions</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                        {(provData.geography?.usage_regions ?? ["us-east-1", "eu-west-1", "ap-southeast-1"]).map((r: string) => <B key={r} c="purple">{r}</B>)}
+                        {(provData.geography?.usage_regions ?? []).length > 0
+                          ? (provData.geography.usage_regions as string[]).map((r: string) => <B key={r} c="purple">{r}</B>)
+                          : <span style={{color:C.muted,fontSize:11}}>—</span>}
                       </div>
                     </div>
                   </div>
@@ -1952,7 +2049,7 @@ export function LineageTab({ session }: { session: any }) {
                 <Card>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {["FIPS", "PCI-DSS", "SOC2", "ISO27001", "HIPAA"].map(fw => {
-                      const covered = (provData.compliance?.frameworks ?? ["FIPS", "SOC2"]).includes(fw);
+                      const covered = (provData.compliance?.frameworks ?? []).includes(fw);
                       return (
                         <div key={fw} style={{
                           padding: "6px 14px", borderRadius: 6, fontSize: 11, fontWeight: 700,
@@ -1973,7 +2070,7 @@ export function LineageTab({ session }: { session: any }) {
                 <Section title="Crypto Agility Score">
                   <Card style={{ textAlign: "center" }}>
                     {(() => {
-                      const score = provData.crypto_agility_score ?? 72;
+                      const score = provData.crypto_agility_score ?? 0;
                       const scoreColor = score < 30 ? C.red : score < 70 ? C.amber : C.green;
                       const circumference = 2 * Math.PI * 54;
                       const dashOffset = circumference - (score / 100) * circumference;
@@ -2218,10 +2315,7 @@ export function LineageTab({ session }: { session: any }) {
                       flows.push({ target: `${r.type?.toUpperCase()} ${r.name}`, type: r.encryption_type === "derived" ? "derive" : "wrap", detail: r.service });
                     });
                     if (flows.length === 0) {
-                      flows.push(
-                        { target: "AWS us-east-1", type: "BYOK", detail: "AWS" },
-                        { target: "Azure westus2", type: "EKM", detail: "Azure" },
-                      );
+                      return <div style={{ color: C.muted, fontSize: 11, padding: "8px 0" }}>No data flow recorded for this key.</div>;
                     }
                     const maxTargetLen = Math.max(...flows.map(f => f.target.length), 10);
                     return (
@@ -2789,12 +2883,12 @@ export function LineageTab({ session }: { session: any }) {
                   <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
                     <div>
                       <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", marginBottom: 4 }}>Origin</div>
-                      <B c="accent">{custData.provenance?.origin ?? "HSM"}</B>
+                      <B c="accent">{custData.provenance?.entropy_source ?? custData.provenance?.generating_module ?? "—"}</B>
                     </div>
                     <div>
                       <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", marginBottom: 4 }}>Algorithm</div>
                       <span style={{ fontSize: 11, fontWeight: 600, color: C.text, fontFamily: "'JetBrains Mono', monospace" }}>
-                        {custData.provenance?.algorithm ?? "AES-256-GCM"}
+                        {custData.provenance?.algorithm ?? "—"}
                       </span>
                     </div>
                     <div>

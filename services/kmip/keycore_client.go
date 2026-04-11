@@ -12,14 +12,19 @@ import (
 
 type KeyCoreClient interface {
 	CreateKey(ctx context.Context, tenantID string, req CreateRequest) (string, error)
+	CreateKeyPair(ctx context.Context, tenantID string, algorithm string, name string) (privateKeyID string, publicKeyID string, err error)
 	ImportKey(ctx context.Context, tenantID string, req RegisterRequest) (string, error)
 	GetKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error)
+	ExportKeyMaterial(ctx context.Context, tenantID string, keyID string) (string, error)
 	RotateKey(ctx context.Context, tenantID string, keyID string, reason string) (map[string]interface{}, error)
 	SetKeyStatus(ctx context.Context, tenantID string, keyID string, status string) error
 	Encrypt(ctx context.Context, tenantID string, keyID string, plaintextB64 string, ivB64 string, referenceID string) (map[string]interface{}, error)
 	Decrypt(ctx context.Context, tenantID string, keyID string, ciphertextB64 string, ivB64 string) (map[string]interface{}, error)
 	Sign(ctx context.Context, tenantID string, keyID string, dataB64 string, algorithm string) (map[string]interface{}, error)
 	Verify(ctx context.Context, tenantID string, keyID string, dataB64 string, signatureB64 string, algorithm string) (map[string]interface{}, error)
+	HMAC(ctx context.Context, tenantID string, keyID string, dataB64 string, algorithm string) (string, error)
+	HMACVerify(ctx context.Context, tenantID string, keyID string, dataB64 string, macB64 string, algorithm string) (bool, error)
+	DeriveKey(ctx context.Context, tenantID string, sourceKeyID string, method string, algorithm string, name string) (string, error)
 }
 
 type HTTPKeyCoreClient struct {
@@ -140,6 +145,88 @@ func (c *HTTPKeyCoreClient) SetKeyStatus(ctx context.Context, tenantID string, k
 		_, err := c.doJSON(ctx, http.MethodPost, "/keys/"+key+"/deactivate?tenant_id="+tenant, map[string]interface{}{})
 		return err
 	}
+}
+
+func (c *HTTPKeyCoreClient) CreateKeyPair(ctx context.Context, tenantID string, algorithm string, name string) (string, string, error) {
+	payload := map[string]interface{}{
+		"tenant_id":  strings.TrimSpace(tenantID),
+		"name":       defaultString(name, "kmip-keypair"),
+		"algorithm":  defaultString(algorithm, "RSA-3072"),
+		"key_type":   "keypair",
+		"purpose":    "sign-verify",
+		"owner":      "kmip",
+		"created_by": "kmip-server",
+	}
+	raw, err := c.doJSON(ctx, http.MethodPost, "/keys/keypair", payload)
+	if err != nil {
+		return "", "", err
+	}
+	return stringField(raw, "private_key_id"), stringField(raw, "public_key_id"), nil
+}
+
+func (c *HTTPKeyCoreClient) ExportKeyMaterial(ctx context.Context, tenantID string, keyID string) (string, error) {
+	path := "/keys/" + strings.TrimSpace(keyID) + "/export?tenant_id=" + strings.TrimSpace(tenantID)
+	raw, err := c.doJSON(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		// Fallback: GetKey and extract material field
+		keyData, err2 := c.GetKey(ctx, tenantID, keyID)
+		if err2 != nil {
+			return "", err
+		}
+		if m, ok := keyData["material"].(string); ok && strings.TrimSpace(m) != "" {
+			return strings.TrimSpace(m), nil
+		}
+		return "", err
+	}
+	return stringField(raw, "material"), nil
+}
+
+func (c *HTTPKeyCoreClient) HMAC(ctx context.Context, tenantID string, keyID string, dataB64 string, algorithm string) (string, error) {
+	path := "/keys/" + strings.TrimSpace(keyID) + "/hmac"
+	payload := map[string]interface{}{
+		"tenant_id": tenantID,
+		"data":      dataB64,
+		"algorithm": defaultString(algorithm, "HMAC-SHA256"),
+	}
+	raw, err := c.doJSON(ctx, http.MethodPost, path, payload)
+	if err != nil {
+		return "", err
+	}
+	return stringField(raw, "mac"), nil
+}
+
+func (c *HTTPKeyCoreClient) HMACVerify(ctx context.Context, tenantID string, keyID string, dataB64 string, macB64 string, algorithm string) (bool, error) {
+	path := "/keys/" + strings.TrimSpace(keyID) + "/hmac/verify"
+	payload := map[string]interface{}{
+		"tenant_id": tenantID,
+		"data":      dataB64,
+		"mac":       macB64,
+		"algorithm": defaultString(algorithm, "HMAC-SHA256"),
+	}
+	raw, err := c.doJSON(ctx, http.MethodPost, path, payload)
+	if err != nil {
+		return false, err
+	}
+	v, _ := raw["valid"].(bool)
+	return v, nil
+}
+
+func (c *HTTPKeyCoreClient) DeriveKey(ctx context.Context, tenantID string, sourceKeyID string, method string, algorithm string, name string) (string, error) {
+	path := "/keys/" + strings.TrimSpace(sourceKeyID) + "/derive"
+	payload := map[string]interface{}{
+		"tenant_id":         strings.TrimSpace(tenantID),
+		"derivation_method": defaultString(method, "HKDF"),
+		"algorithm":         defaultString(algorithm, "AES-256-GCM"),
+		"name":              defaultString(name, "kmip-derived-key"),
+		"purpose":           "encrypt-decrypt",
+		"key_type":          "symmetric",
+		"owner":             "kmip",
+	}
+	raw, err := c.doJSON(ctx, http.MethodPost, path, payload)
+	if err != nil {
+		return "", err
+	}
+	return stringField(raw, "key_id"), nil
 }
 
 func (c *HTTPKeyCoreClient) Encrypt(ctx context.Context, tenantID string, keyID string, plaintextB64 string, ivB64 string, referenceID string) (map[string]interface{}, error) {

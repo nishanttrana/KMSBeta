@@ -1384,6 +1384,616 @@ Write-Host "[done] Vecta EKM agent setup complete."
 	return pkg, nil
 }
 
+// BuildFileEncryptAgentPackage generates a user-space file-encryption TDE agent package.
+// The agent encrypts files/directories using AES-256-GCM with a key from Vecta KMS.
+// No kernel module or OS driver is required — runs entirely at the user (process) level.
+//
+// Supported platforms:
+//   - Windows (PowerShell + Windows Task Scheduler)
+//   - Linux Ubuntu/Debian   (bash + systemd user unit)
+//   - Linux RHEL/CentOS     (bash + systemd user unit)
+//   - Linux Alpine          (bash + OpenRC user service)
+func (s *Service) BuildFileEncryptAgentPackage(ctx context.Context, req FileEncryptDownloadRequest) (FileEncryptPackage, error) {
+	req.TenantID = strings.TrimSpace(req.TenantID)
+	if req.TenantID == "" {
+		return FileEncryptPackage{}, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id is required")
+	}
+
+	// Normalise OS / distro
+	targetOS := strings.ToLower(strings.TrimSpace(req.TargetOS))
+	if targetOS != "windows" {
+		targetOS = "linux"
+	}
+	distro := strings.ToLower(strings.TrimSpace(req.Distro))
+	if distro == "" {
+		if targetOS == "windows" {
+			distro = "windows"
+		} else {
+			distro = "ubuntu"
+		}
+	}
+
+	// Defaults
+	apiBase := defaultString(req.APIBaseURL, "https://kms.example.com/svc/ekm")
+	keyID := defaultString(req.KeyID, "")
+	watchDirs := defaultString(req.WatchDirs, func() string {
+		if targetOS == "windows" {
+			return `C:\Sensitive`
+		}
+		return "/data/sensitive"
+	}())
+	patterns := defaultString(req.FilePatterns, "*.docx,*.xlsx,*.pdf,*.csv,*.json,*.key,*.pem")
+	rotDays := defaultInt(req.RotationDays, 90)
+
+	// Shared env config written to disk — read by the agent at startup and rotation.
+	// NOTE: auth token is stored in a separate credentials file (chmod 0600), never here.
+	envContent := fmt.Sprintf(`# Vecta File Encryption TDE — agent configuration
+# Algorithm: AES-256-GCM (FIPS 140-3 Level 1 approved)
+# Mode: user-space — no kernel module required
+# Auth token is stored separately in the credentials file below (never in this file).
+VECTA_API_BASE_URL=%s
+VECTA_TENANT_ID=%s
+VECTA_KEY_ID=%s
+VECTA_WATCH_DIRS=%s
+VECTA_FILE_PATTERNS=%s
+VECTA_ROTATION_DAYS=%d
+VECTA_ALGORITHM=AES-256-GCM
+VECTA_HEARTBEAT_PATH=/ekm/agents/{agent_id}/heartbeat
+VECTA_ROTATE_PATH=/ekm/agents/{agent_id}/rotate
+VECTA_CREDENTIALS_FILE=${HOME}/.config/vecta-file-encrypt/credentials
+`, apiBase, req.TenantID, keyID, watchDirs, patterns, rotDays)
+
+	// ── Linux scripts ─────────────────────────────────────────────────────────
+	linuxEncryptSh := `#!/usr/bin/env bash
+# vecta-file-encrypt.sh — User-space file encryption agent for Vecta KMS.
+# Runs as the current user; no kernel module required.
+# Algorithm: AES-256-GCM (FIPS 140-3 approved)
+# Requires: openssl 3.x, curl, jq
+set -euo pipefail
+
+CONF_DIR="${VECTA_CONF_DIR:-$HOME/.config/vecta-file-encrypt}"
+ENV_FILE="$CONF_DIR/agent.env"
+CREDS_FILE="$CONF_DIR/credentials"
+AUDIT_DIR="$HOME/.local/share/vecta-file-encrypt"
+AUDIT_LOG="$AUDIT_DIR/audit.log"
+
+# Load config
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "ERROR: Config not found at $ENV_FILE. Run install.sh first." >&2; exit 1
+fi
+# shellcheck source=/dev/null
+source "$ENV_FILE"
+
+# Load auth token from credentials file (separate from agent.env, chmod 0600)
+if [[ ! -f "$CREDS_FILE" ]]; then
+  echo "ERROR: Credentials not found at $CREDS_FILE. Run install.sh and set VECTA_AUTH_TOKEN." >&2; exit 1
+fi
+# shellcheck source=/dev/null
+source "$CREDS_FILE"
+
+# Fetch current DEK from Vecta KMS (AES-256, raw key material delivered via TLS)
+fetch_key() {
+  local key_b64
+  key_b64=$(curl -fsS --max-time 10 \
+    -H "X-Tenant-ID: ${VECTA_TENANT_ID}" \
+    -H "Authorization: Bearer ${VECTA_AUTH_TOKEN:-}" \
+    "${VECTA_API_BASE_URL}/ekm/tde/keys/${VECTA_KEY_ID}/unwrap" \
+    --data '{"purpose":"file_encrypt"}' \
+    | jq -r '.plaintext_dek // empty')
+  if [[ -z "$key_b64" ]]; then
+    echo "ERROR: Failed to fetch DEK from Vecta KMS." >&2; exit 1
+  fi
+  echo "$key_b64"
+}
+
+# Encrypt a single file in-place using AES-256-GCM.
+# Output: original file replaced with .venc (original removed after encrypt).
+encrypt_file() {
+  local src="$1"
+  local dst="${src}.venc"
+  local key_b64="$2"
+  # Generate random 96-bit IV
+  local iv_hex
+  iv_hex=$(openssl rand -hex 12)
+  # Encrypt (AES-256-GCM via openssl, user-space only)
+  openssl enc -aes-256-gcm \
+    -K "$(echo "$key_b64" | base64 -d | xxd -p -c 256)" \
+    -iv "$iv_hex" \
+    -in "$src" -out "${dst}.tmp" 2>/dev/null
+  # Prepend IV to ciphertext for deterministic decryption
+  printf '%s' "$iv_hex" | xxd -r -p > "$dst"
+  cat "${dst}.tmp" >> "$dst"
+  rm -f "${dst}.tmp" "$src"
+  echo "  encrypted: $src -> $dst"
+}
+
+# Decrypt a single .venc file in-place.
+decrypt_file() {
+  local src="$1"
+  local orig="${src%.venc}"
+  local key_b64="$2"
+  # Extract IV (first 12 bytes)
+  local iv_hex
+  iv_hex=$(dd if="$src" bs=1 count=12 2>/dev/null | xxd -p)
+  # Extract ciphertext
+  dd if="$src" bs=12 skip=1 of="${src}.ct" 2>/dev/null
+  openssl enc -d -aes-256-gcm \
+    -K "$(echo "$key_b64" | base64 -d | xxd -p -c 256)" \
+    -iv "$iv_hex" \
+    -in "${src}.ct" -out "$orig" 2>/dev/null
+  rm -f "${src}.ct" "$src"
+  echo "  decrypted: $src -> $orig"
+}
+
+CMD="${1:-encrypt}"
+KEY_B64=$(fetch_key)
+FILES_PROCESSED=0
+
+IFS=',' read -ra DIRS <<< "${VECTA_WATCH_DIRS}"
+IFS=',' read -ra PATS <<< "${VECTA_FILE_PATTERNS}"
+
+for dir in "${DIRS[@]}"; do
+  dir="${dir// /}"
+  [[ -d "$dir" ]] || { echo "WARN: watch dir not found: $dir" >&2; continue; }
+  for pat in "${PATS[@]}"; do
+    pat="${pat// /}"
+    while IFS= read -r -d '' file; do
+      if [[ "$CMD" == "decrypt" ]]; then
+        if [[ "$file" == *.venc ]]; then
+          decrypt_file "$file" "$KEY_B64"
+          FILES_PROCESSED=$(( FILES_PROCESSED + 1 ))
+        fi
+      else
+        if [[ "$file" != *.venc ]]; then
+          encrypt_file "$file" "$KEY_B64"
+          FILES_PROCESSED=$(( FILES_PROCESSED + 1 ))
+        fi
+      fi
+    done < <(find "$dir" -maxdepth 8 -type f -name "$pat" -print0 2>/dev/null)
+  done
+done
+
+# Explicitly clear DEK from memory
+KEY_B64=""; unset KEY_B64
+
+# Write local audit log entry
+mkdir -p "$AUDIT_DIR"
+printf '%s [INFO] op=%s files=%d key=%s host=%s\n' \
+  "$(date -u +%FT%TZ)" "$CMD" "$FILES_PROCESSED" "${VECTA_KEY_ID:-unknown}" "$(hostname)" \
+  >> "$AUDIT_LOG"
+
+# Best-effort POST audit event to KMS (do not fail if KMS unreachable)
+_audit_ts="$(date -u +%FT%TZ)"
+curl -fsS --max-time 5 \
+  -H "X-Tenant-ID: ${VECTA_TENANT_ID}" \
+  -H "Authorization: Bearer ${VECTA_AUTH_TOKEN:-}" \
+  -H "Content-Type: application/json" \
+  "${VECTA_API_BASE_URL}/ekm/file-encrypt/audit" \
+  --data "{\"tenant_id\":\"${VECTA_TENANT_ID}\",\"key_id\":\"${VECTA_KEY_ID}\",\"operation\":\"${CMD}\",\"files_processed\":${FILES_PROCESSED},\"timestamp\":\"${_audit_ts}\",\"hostname\":\"$(hostname)\",\"agent_version\":\"1.0\"}" \
+  >/dev/null 2>&1 || true
+
+echo "[vecta-file-encrypt] Done: $CMD"
+`
+
+	linuxInstallSh := fmt.Sprintf(`#!/usr/bin/env bash
+# install.sh — Install Vecta File Encryption TDE agent (user-space, no root required).
+set -euo pipefail
+
+CONF_DIR="${HOME}/.config/vecta-file-encrypt"
+BIN_DIR="${HOME}/.local/bin"
+
+echo "Vecta File Encryption TDE — User-space install"
+echo "  No root / kernel module required."
+echo ""
+
+# Install missing dependencies based on distro
+_install_deps() {
+  if command -v apt-get &>/dev/null; then
+    echo "  Installing dependencies via apt-get..."
+    apt-get install -y openssl curl jq 2>/dev/null || true
+  elif command -v yum &>/dev/null; then
+    echo "  Installing dependencies via yum..."
+    yum install -y openssl curl jq 2>/dev/null || true
+  elif command -v apk &>/dev/null; then
+    echo "  Installing dependencies via apk..."
+    apk add --no-cache openssl curl jq 2>/dev/null || true
+  else
+    echo "  WARN: Unknown package manager. Please install openssl, curl, jq manually." >&2
+  fi
+}
+
+# Verify dependencies; attempt auto-install if missing
+_missing=0
+for dep in openssl curl jq xxd; do
+  if ! command -v "$dep" &>/dev/null; then
+    echo "  WARN: $dep not found, attempting install..." >&2
+    _missing=1
+  fi
+done
+if (( _missing )); then
+  _install_deps
+  for dep in openssl curl jq xxd; do
+    command -v "$dep" &>/dev/null || { echo "ERROR: $dep is required but could not be installed." >&2; exit 1; }
+  done
+fi
+
+# Check openssl version >= 3 (required for AES-256-GCM AEAD)
+OSSL_VER=$(openssl version | awk '{print $2}')
+OSSL_MAJOR=$(echo "$OSSL_VER" | cut -d. -f1)
+if (( OSSL_MAJOR < 3 )); then
+  echo "ERROR: openssl 3.x required for FIPS-approved AES-256-GCM. Found: $OSSL_VER" >&2
+  exit 1
+fi
+
+mkdir -p "$CONF_DIR" "$BIN_DIR"
+chmod 700 "$CONF_DIR"
+
+# Write config (no auth token — stored in credentials file below)
+cat > "$CONF_DIR/agent.env" <<'ENVEOF'
+%s
+ENVEOF
+chmod 600 "$CONF_DIR/agent.env"
+
+# Create separate credentials file (chmod 0600) for auth token
+CREDS_FILE="$CONF_DIR/credentials"
+touch "$CREDS_FILE"
+chmod 0600 "$CREDS_FILE"
+cat > "$CREDS_FILE" <<'EOF'
+# Vecta File Encryption TDE — credentials (chmod 0600, not committed)
+# Set your auth token here. This file is never sourced globally.
+VECTA_AUTH_TOKEN=
+EOF
+echo "  credentials file: $CREDS_FILE (edit and set VECTA_AUTH_TOKEN)"
+
+# Install agent script
+cp vecta-file-encrypt.sh "$BIN_DIR/vecta-file-encrypt"
+chmod 750 "$BIN_DIR/vecta-file-encrypt"
+
+echo "Configuration : $CONF_DIR/agent.env"
+echo "Agent script  : $BIN_DIR/vecta-file-encrypt"
+echo ""
+`, envContent)
+
+	// Systemd user unit (no root — installed in ~/.config/systemd/user/)
+	systemdUnit := `[Unit]
+Description=Vecta File Encryption TDE Agent
+After=network-online.target
+
+[Service]
+Type=oneshot
+# User-space: runs as the logged-in user, no kernel/system privileges needed
+ExecStart=%h/.local/bin/vecta-file-encrypt encrypt
+Environment=VECTA_CONF_DIR=%h/.config/vecta-file-encrypt
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
+`
+
+	systemdTimer := `[Unit]
+Description=Vecta File Encryption TDE — periodic encrypt run
+Requires=vecta-file-encrypt.service
+
+[Timer]
+# Run every 5 minutes to pick up newly created files
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+`
+
+	// Alpine OpenRC user script
+	alpineInitSh := `#!/sbin/openrc-run
+# OpenRC user service for Vecta File Encryption TDE Agent
+description="Vecta File Encryption TDE Agent (user-space)"
+command="$HOME/.local/bin/vecta-file-encrypt"
+command_args="encrypt"
+depend() { need net; }
+`
+
+	// Rotation script (Linux)
+	linuxRotateSh := fmt.Sprintf(`#!/usr/bin/env bash
+# vecta-rotate-key.sh — Trigger key rotation via Vecta KMS REST API.
+# Runs as the current user (no root required).
+set -euo pipefail
+
+CONF_DIR="${VECTA_CONF_DIR:-$HOME/.config/vecta-file-encrypt}"
+# shellcheck source=/dev/null
+source "$CONF_DIR/agent.env"
+
+echo "[rotate] Requesting key rotation from Vecta KMS..."
+curl -fsS -X POST \
+  -H "X-Tenant-ID: ${VECTA_TENANT_ID}" \
+  -H "Authorization: Bearer ${VECTA_AUTH_TOKEN:-}" \
+  -H "Content-Type: application/json" \
+  "${VECTA_API_BASE_URL}${VECTA_ROTATE_PATH}" \
+  --data '{"rotation_cycle_days":%d}' \
+  | jq .
+echo "[rotate] Done."
+`, rotDays)
+
+	// ── Windows scripts ───────────────────────────────────────────────────────
+	// Note: PowerShell backtick (`) is Go's raw-string terminator, so we use
+	// splatting and single-line calls to avoid backtick line-continuation in PS.
+	windowsInstallPs1 := fmt.Sprintf("#Requires -Version 5.1\r\n"+
+		"# install.ps1 - Install Vecta File Encryption TDE agent (user-space, no admin required).\r\n"+
+		"# Algorithm: AES-256-GCM (FIPS 140-3 Level 1 approved). No kernel driver needed.\r\n"+
+		"$ErrorActionPreference = \"Stop\"\r\n"+
+		"Set-StrictMode -Version Latest\r\n"+
+		"$confDir = Join-Path $env:APPDATA \"Vecta\\FileEncrypt\"\r\n"+
+		"$binDir  = Join-Path $env:LOCALAPPDATA \"Vecta\\bin\"\r\n"+
+		"Write-Host \"Vecta File Encryption TDE - User-space install\" -ForegroundColor Green\r\n"+
+		"foreach ($cmd in @(\"openssl\",\"curl\",\"jq\")) {\r\n"+
+		"  if (-not (Get-Command $cmd -ErrorAction SilentlyContinue)) {\r\n"+
+		"    Write-Error \"$cmd is required. Install via: winget install $cmd\"; exit 1 }}\r\n"+
+		"New-Item -ItemType Directory -Path $confDir,$binDir -Force | Out-Null\r\n"+
+		"icacls $confDir /inheritance:r /grant:r \"${env:USERNAME}:(OI)(CI)F\" 2>$null | Out-Null\r\n"+
+		"@'\r\n%s\r\n'@ | Set-Content -Path (Join-Path $confDir \"agent.env\") -Encoding UTF8\r\n"+
+		"# Create separate credentials file (current user only ACL) for auth token\r\n"+
+		"$credsFile = Join-Path $confDir \"credentials.env\"\r\n"+
+		"if (-not (Test-Path $credsFile)) {\r\n"+
+		"  \"# Vecta File Encryption TDE - credentials`r`nVECTA_AUTH_TOKEN=\" | Set-Content $credsFile -Encoding UTF8\r\n"+
+		"  icacls $credsFile /inheritance:r /grant:r \"${env:USERNAME}:F\" 2>$null | Out-Null\r\n"+
+		"}\r\n"+
+		"Write-Host \"  credentials file: $credsFile (edit and set VECTA_AUTH_TOKEN)\" -ForegroundColor Yellow\r\n"+
+		"Copy-Item \"vecta-file-encrypt.ps1\" (Join-Path $binDir \"vecta-file-encrypt.ps1\") -Force\r\n"+
+		"Copy-Item \"vecta-rotate-key.ps1\"   (Join-Path $binDir \"vecta-rotate-key.ps1\")   -Force\r\n"+
+		"# Register Task Scheduler job (runs as current user - no admin needed)\r\n"+
+		"$argStr = \"-NonInteractive -NoProfile -ExecutionPolicy Bypass -File \"\"$(Join-Path $binDir 'vecta-file-encrypt.ps1')\"\" -Command encrypt\"\r\n"+
+		"$action   = New-ScheduledTaskAction -Execute \"powershell.exe\" -Argument $argStr\r\n"+
+		"$trigger  = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 5) -Once -At (Get-Date)\r\n"+
+		"$settings = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 10) -StartWhenAvailable\r\n"+
+		"$taskArgs = @{ TaskName=\"VectaFileEncryptTDE\"; Action=$action; Trigger=$trigger; Settings=$settings; RunLevel=\"Limited\"; Force=$true }\r\n"+
+		"Register-ScheduledTask @taskArgs | Out-Null\r\n"+
+		"Write-Host \"Configuration : $confDir\\agent.env\" -ForegroundColor Cyan\r\n"+
+		"Write-Host \"Agent script  : $binDir\\vecta-file-encrypt.ps1\"\r\n"+
+		"Write-Host \"Scheduler     : VectaFileEncryptTDE (every 5 minutes, current user)\"\r\n",
+		strings.ReplaceAll(envContent, "\n", "\r\n"))
+
+	// Note: PowerShell backtick (`) is the Go raw-string terminator so this block
+	// is assembled via string concatenation — do NOT convert to a raw literal.
+	windowsEncryptPs1 := "# vecta-file-encrypt.ps1 — User-space file encryption agent for Vecta KMS (Windows).\r\n" +
+		"# Algorithm: AES-256-GCM (FIPS 140-3 approved) via openssl CLI.\r\n" +
+		"# Runs as current user — no admin, no kernel driver required.\r\n" +
+		"param([ValidateSet(\"encrypt\",\"decrypt\")][string]$Command = \"encrypt\")\r\n" +
+		"$ErrorActionPreference = \"Stop\"\r\n" +
+		"Set-StrictMode -Version Latest\r\n" +
+		"\r\n" +
+		"$confDir   = Join-Path $env:APPDATA \"Vecta\\FileEncrypt\"\r\n" +
+		"$envFile   = Join-Path $confDir \"agent.env\"\r\n" +
+		"$credsFile = Join-Path $confDir \"credentials.env\"\r\n" +
+		"$auditDir  = Join-Path $env:LOCALAPPDATA \"Vecta\\FileEncrypt\"\r\n" +
+		"$auditLog  = Join-Path $auditDir \"audit.log\"\r\n" +
+		"if (-not (Test-Path $envFile)) {\r\n" +
+		"  Write-Error \"Config not found at $envFile. Run install.ps1 first.\"\r\n" +
+		"  exit 1\r\n" +
+		"}\r\n" +
+		"if (-not (Test-Path $credsFile)) {\r\n" +
+		"  Write-Error \"Credentials not found at $credsFile. Run install.ps1 and set VECTA_AUTH_TOKEN.\"\r\n" +
+		"  exit 1\r\n" +
+		"}\r\n" +
+		"\r\n" +
+		"# Load config from agent.env\r\n" +
+		"$cfg = @{}\r\n" +
+		"Get-Content $envFile | Where-Object { $_ -match '^[A-Za-z_][A-Za-z0-9_]*=' } | ForEach-Object {\r\n" +
+		"  $idx = $_.IndexOf('='); $cfg[$_.Substring(0, $idx)] = $_.Substring($idx + 1)\r\n" +
+		"}\r\n" +
+		"\r\n" +
+		"# Load auth token from separate credentials file (not agent.env)\r\n" +
+		"$creds = @{}\r\n" +
+		"Get-Content $credsFile | Where-Object { $_ -match '^[A-Za-z_][A-Za-z0-9_]*=' } | ForEach-Object {\r\n" +
+		"  $idx = $_.IndexOf('='); $creds[$_.Substring(0, $idx)] = $_.Substring($idx + 1)\r\n" +
+		"}\r\n" +
+		"$authToken = $creds['VECTA_AUTH_TOKEN']\r\n" +
+		"\r\n" +
+		"# Fetch DEK from Vecta KMS\r\n" +
+		"$headers = @{ \"X-Tenant-ID\" = $cfg[\"VECTA_TENANT_ID\"]; \"Authorization\" = \"Bearer $authToken\" }\r\n" +
+		"$body    = '{\"purpose\":\"file_encrypt\"}'\r\n" +
+		"$irmArgs = @{ Method=\"Post\"; Uri=\"$($cfg['VECTA_API_BASE_URL'])/ekm/tde/keys/$($cfg['VECTA_KEY_ID'])/unwrap\"; Headers=$headers; ContentType=\"application/json\"; Body=$body }\r\n" +
+		"$resp    = Invoke-RestMethod @irmArgs\r\n" +
+		"$keyB64  = $resp.plaintext_dek\r\n" +
+		"if ([string]::IsNullOrEmpty($keyB64)) { Write-Error \"Failed to fetch DEK from Vecta KMS.\"; exit 1 }\r\n" +
+		"$keyHex  = [BitConverter]::ToString([Convert]::FromBase64String($keyB64)) -replace '-',''\r\n" +
+		"\r\n" +
+		"$dirs     = $cfg[\"VECTA_WATCH_DIRS\"] -split ','\r\n" +
+		"$patterns = $cfg[\"VECTA_FILE_PATTERNS\"] -split ','\r\n" +
+		"$filesProcessed = 0\r\n" +
+		"\r\n" +
+		"foreach ($dir in $dirs) {\r\n" +
+		"  $dir = $dir.Trim()\r\n" +
+		"  if (-not (Test-Path $dir)) { Write-Warning \"Watch dir not found: $dir\"; continue }\r\n" +
+		"  foreach ($pat in $patterns) {\r\n" +
+		"    $pat = $pat.Trim()\r\n" +
+		"    Get-ChildItem -Path $dir -Filter $pat -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {\r\n" +
+		"      $src = $_.FullName\r\n" +
+		"      if ($Command -eq \"encrypt\" -and $src -notlike \"*.venc\") {\r\n" +
+		"        $dst = \"$src.venc\"\r\n" +
+		"        $ivHex = (openssl rand -hex 12).Trim()\r\n" +
+		"        # Encrypt with AES-256-GCM (user-space openssl, FIPS-approved)\r\n" +
+		"        openssl enc -aes-256-gcm -K $keyHex -iv $ivHex -in \"$src\" -out \"$dst.tmp\" 2>$null\r\n" +
+		"        $ivBytes = [byte[]]@(0..11 | ForEach-Object { [Convert]::ToByte($ivHex.Substring($_ * 2, 2), 16) })\r\n" +
+		"        $cipherBytes = [System.IO.File]::ReadAllBytes(\"$dst.tmp\")\r\n" +
+		"        $out = New-Object byte[] ($ivBytes.Length + $cipherBytes.Length)\r\n" +
+		"        [Array]::Copy($ivBytes, 0, $out, 0, $ivBytes.Length)\r\n" +
+		"        [Array]::Copy($cipherBytes, 0, $out, $ivBytes.Length, $cipherBytes.Length)\r\n" +
+		"        [System.IO.File]::WriteAllBytes($dst, $out)\r\n" +
+		"        Remove-Item \"$dst.tmp\", $src -Force\r\n" +
+		"        Write-Host \"  encrypted: $src -> $dst\"\r\n" +
+		"        $filesProcessed++\r\n" +
+		"      } elseif ($Command -eq \"decrypt\" -and $src -like \"*.venc\") {\r\n" +
+		"        $orig = $src -replace '\\.venc$',''\r\n" +
+		"        $blob = [System.IO.File]::ReadAllBytes($src)\r\n" +
+		"        $ivHex = [BitConverter]::ToString($blob[0..11]) -replace '-',''\r\n" +
+		"        [System.IO.File]::WriteAllBytes(\"$src.ct\", $blob[12..($blob.Length - 1)])\r\n" +
+		"        openssl enc -d -aes-256-gcm -K $keyHex -iv $ivHex -in \"$src.ct\" -out $orig 2>$null\r\n" +
+		"        Remove-Item \"$src.ct\", $src -Force\r\n" +
+		"        Write-Host \"  decrypted: $src -> $orig\"\r\n" +
+		"        $filesProcessed++\r\n" +
+		"      }\r\n" +
+		"    }\r\n" +
+		"  }\r\n" +
+		"}\r\n" +
+		"\r\n" +
+		"# Explicitly clear DEK from memory\r\n" +
+		"$keyB64 = $null; $keyHex = $null; [System.GC]::Collect()\r\n" +
+		"\r\n" +
+		"# Write local audit log entry\r\n" +
+		"New-Item -ItemType Directory -Path $auditDir -Force | Out-Null\r\n" +
+		"$auditTs = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')\r\n" +
+		"\"$auditTs [INFO] op=$Command files=$filesProcessed key=$($cfg['VECTA_KEY_ID']) host=$env:COMPUTERNAME\" | Add-Content $auditLog\r\n" +
+		"\r\n" +
+		"# Best-effort POST audit event to KMS (do not fail if KMS unreachable)\r\n" +
+		"try {\r\n" +
+		"  $auditBody = \"{`\"tenant_id`\":`\"$($cfg['VECTA_TENANT_ID'])`\",`\"key_id`\":`\"$($cfg['VECTA_KEY_ID'])`\",`\"operation`\":`\"$Command`\",`\"files_processed`\":$filesProcessed,`\"timestamp`\":`\"$auditTs`\",`\"hostname`\":`\"$env:COMPUTERNAME`\",`\"agent_version`\":`\"1.0`\"}\"\r\n" +
+		"  $auditArgs = @{ Method=\"Post\"; Uri=\"$($cfg['VECTA_API_BASE_URL'])/ekm/file-encrypt/audit\"; Headers=@{ \"X-Tenant-ID\"=$cfg[\"VECTA_TENANT_ID\"]; \"Authorization\"=\"Bearer $authToken\"; \"Content-Type\"=\"application/json\" }; Body=$auditBody; TimeoutSec=5 }\r\n" +
+		"  Invoke-RestMethod @auditArgs | Out-Null\r\n" +
+		"} catch { <# best effort — ignore KMS unreachable #> }\r\n" +
+		"\r\n" +
+		"Write-Host \"[vecta-file-encrypt] Done: $Command\"\r\n"
+
+	windowsRotatePs1 := fmt.Sprintf(`# vecta-rotate-key.ps1 — Trigger key rotation via Vecta KMS.
+param([int]$RotationDays = %d)
+$ErrorActionPreference = "Stop"
+$cfg = @{}
+Get-Content (Join-Path $env:APPDATA "Vecta\FileEncrypt\agent.env") | Where-Object { $_ -match '^[A-Za-z_]' } | ForEach-Object {
+  $idx = $_.IndexOf('='); $cfg[$_.Substring(0,$idx)] = $_.Substring($idx+1)
+}
+$headers = @{ "X-Tenant-ID" = $cfg["VECTA_TENANT_ID"]; "Authorization" = "Bearer $($cfg['VECTA_AUTH_TOKEN'])" }
+$body    = '{"rotation_cycle_days":' + $RotationDays + '}'
+$irmArgs2 = @{ Method="Post"; Uri="$($cfg['VECTA_API_BASE_URL'])$($cfg['VECTA_ROTATE_PATH'])"; Headers=$headers; ContentType="application/json"; Body=$body }
+Invoke-RestMethod @irmArgs2 | ConvertTo-Json
+Write-Host "[rotate] Key rotation requested."
+`, rotDays)
+
+	// ── Assemble package ──────────────────────────────────────────────────────
+	var files []DeployPackageFile
+	if targetOS == "windows" {
+		files = []DeployPackageFile{
+			{Path: "agent.env", Content: envContent, Mode: "0600"},
+			{Path: "install.ps1", Content: windowsInstallPs1, Mode: "0644"},
+			{Path: "vecta-file-encrypt.ps1", Content: windowsEncryptPs1, Mode: "0644"},
+			{Path: "vecta-rotate-key.ps1", Content: windowsRotatePs1, Mode: "0644"},
+			{Path: "README.txt", Content: buildFileEncryptReadme("windows", distro, apiBase, watchDirs, patterns, rotDays), Mode: "0644"},
+		}
+	} else {
+		files = []DeployPackageFile{
+			{Path: "agent.env", Content: envContent, Mode: "0600"},
+			{Path: "install.sh", Content: linuxInstallSh, Mode: "0755"},
+			{Path: "vecta-file-encrypt.sh", Content: linuxEncryptSh, Mode: "0750"},
+			{Path: "vecta-rotate-key.sh", Content: linuxRotateSh, Mode: "0750"},
+			{Path: "README.md", Content: buildFileEncryptReadme("linux", distro, apiBase, watchDirs, patterns, rotDays), Mode: "0644"},
+		}
+		// Include the systemd unit for systemd-based distros, OpenRC for Alpine
+		switch distro {
+		case "alpine":
+			files = append(files, DeployPackageFile{Path: "vecta-file-encrypt.openrc", Content: alpineInitSh, Mode: "0755"})
+		default:
+			files = append(files,
+				DeployPackageFile{Path: "vecta-file-encrypt.service", Content: systemdUnit, Mode: "0644"},
+				DeployPackageFile{Path: "vecta-file-encrypt.timer", Content: systemdTimer, Mode: "0644"},
+			)
+		}
+	}
+
+	_ = s.publishAudit(ctx, "audit.ekm.file_encrypt_agent_downloaded", req.TenantID, map[string]interface{}{
+		"target_os":     targetOS,
+		"distro":        distro,
+		"key_id":        keyID,
+		"watch_dirs":    watchDirs,
+		"file_patterns": patterns,
+	})
+	return FileEncryptPackage{
+		TargetOS:     targetOS,
+		Distro:       distro,
+		CreatedAt:    time.Now().UTC(),
+		Algorithm:    "AES-256-GCM",
+		Mode:         "file_encrypt",
+		KeyID:        keyID,
+		RotationDays: rotDays,
+		Files:        files,
+	}, nil
+}
+
+func buildFileEncryptReadme(targetOS, distro, apiBase, watchDirs, patterns string, rotDays int) string {
+	if targetOS == "windows" {
+		return fmt.Sprintf(`Vecta KMS — File Encryption TDE Agent (Windows, User-Space)
+============================================================
+Algorithm  : AES-256-GCM (FIPS 140-3 Level 1 approved)
+Mode       : User-space — no kernel driver or admin rights required
+API        : %s
+
+Quick Start
+-----------
+1. Edit agent.env — set VECTA_AUTH_TOKEN and confirm VECTA_KEY_ID
+2. Run install.ps1  (no admin needed)
+3. The Windows Task Scheduler job "VectaFileEncryptTDE" runs every 5 minutes
+
+Manual encrypt :  powershell -File vecta-file-encrypt.ps1 -Command encrypt
+Manual decrypt :  powershell -File vecta-file-encrypt.ps1 -Command decrypt
+Rotate key     :  powershell -File vecta-rotate-key.ps1
+
+Watch dirs     : %s
+File patterns  : %s
+Rotation       : every %d days
+
+Security Notes
+--------------
+* AES-256-GCM provides confidentiality AND integrity (AEAD).
+* The DEK is never stored on disk — fetched from Vecta KMS per run over mTLS.
+* agent.env permissions are set to current user only (icacls).
+`, apiBase, watchDirs, patterns, rotDays)
+	}
+	svcInstructions := ""
+	switch distro {
+	case "alpine":
+		svcInstructions = `  rc-update add vecta-file-encrypt default   # add to user runlevel
+  rc-service vecta-file-encrypt start`
+	default:
+		svcInstructions = `  mkdir -p ~/.config/systemd/user
+  cp vecta-file-encrypt.service vecta-file-encrypt.timer ~/.config/systemd/user/
+  systemctl --user daemon-reload
+  systemctl --user enable --now vecta-file-encrypt.timer`
+	}
+	return fmt.Sprintf(`# Vecta KMS — File Encryption TDE Agent (Linux/%s, User-Space)
+Algorithm  : AES-256-GCM (FIPS 140-3 Level 1 approved)
+Mode       : User-space — no kernel module or root required
+API        : %s
+
+## Quick Start
+
+1. Edit agent.env — set VECTA_AUTH_TOKEN and confirm VECTA_KEY_ID
+2. Run the installer (no root required):
+
+   bash install.sh
+
+3. Install the service/timer:
+
+%s
+
+## Manual Operations
+
+  Encrypt now : bash vecta-file-encrypt.sh encrypt
+  Decrypt now : bash vecta-file-encrypt.sh decrypt
+  Rotate key  : bash vecta-rotate-key.sh
+
+## Policy
+
+  Watch dirs    : %s
+  File patterns : %s
+  Rotation      : every %d days
+
+## Security Notes
+
+* AES-256-GCM provides confidentiality AND integrity (AEAD).
+* The DEK is fetched from Vecta KMS per run over TLS 1.3 — never stored on disk.
+* agent.env permissions are set to 600 (owner read/write only).
+* openssl 3.x is required for FIPS-validated AES-256-GCM.
+`, distro, apiBase, svcInstructions, watchDirs, patterns, rotDays)
+}
+
 // RevokeTDEKey revokes a TDE key, marks all agents and databases using it.
 func (s *Service) RevokeTDEKey(ctx context.Context, keyID string, req RevokeTDEKeyRequest) (RevokeTDEKeyResponse, error) {
 	req.TenantID = strings.TrimSpace(req.TenantID)

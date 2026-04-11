@@ -675,6 +675,8 @@ export const BYOKTab = ({ session, keyCatalog, onToast }) => {
           <option value="gcp">Google Cloud KMS</option>
           <option value="oci">Oracle Cloud Vault</option>
           <option value="salesforce">Salesforce BYOK</option>
+          <option value="alibaba">Alibaba Cloud KMS</option>
+          <option value="servicenow">ServiceNow</option>
         </Sel>
       </FG>
       <FG label="Connector Name" required hint="A descriptive name for this connector (e.g., prod-main, staging-eu).">
@@ -708,6 +710,8 @@ export const BYOKTab = ({ session, keyCatalog, onToast }) => {
             <option value="gcp">Google Cloud KMS</option>
             <option value="oci">Oracle Cloud Vault</option>
             <option value="salesforce">Salesforce BYOK</option>
+            <option value="alibaba">Alibaba Cloud KMS</option>
+            <option value="servicenow">ServiceNow</option>
           </Sel>
         </FG>
         <FG label="Target Account" required>
@@ -768,6 +772,8 @@ export const BYOKTab = ({ session, keyCatalog, onToast }) => {
             <option value="gcp">Google Cloud KMS</option>
             <option value="oci">Oracle Cloud Vault</option>
             <option value="salesforce">Salesforce BYOK</option>
+            <option value="alibaba">Alibaba Cloud KMS</option>
+            <option value="servicenow">ServiceNow</option>
           </Sel>
         </FG>
         <FG label="Vecta Region" required hint="Your internal region identifier (e.g., us-primary, eu-west).">

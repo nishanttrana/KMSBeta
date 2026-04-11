@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ENV_FILE="${ROOT_DIR}/.env"
 DEPLOYMENT_FILE="/etc/vecta/deployment.yaml"
 SKIP_HEALTH=0
 REMOVE_ORPHANS="${START_KMS_REMOVE_ORPHANS:-true}"
@@ -37,8 +38,38 @@ wait_docker() {
   return 1
 }
 
+resolve_project_name() {
+  local value=""
+  if [[ -n "${COMPOSE_PROJECT_NAME:-}" ]]; then
+    printf '%s\n' "${COMPOSE_PROJECT_NAME}"
+    return 0
+  fi
+  if [[ -f "${ENV_FILE}" ]]; then
+    value="$(awk -F= '
+      /^[[:space:]]*COMPOSE_PROJECT_NAME[[:space:]]*=/ {
+        value=$0
+        sub(/^[^=]*=/, "", value)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+        if (value != "") {
+          print value
+          exit
+        }
+      }
+    ' "${ENV_FILE}" 2>/dev/null || true)"
+    if [[ -n "${value}" ]]; then
+      printf '%s\n' "${value}"
+      return 0
+    fi
+  fi
+  printf '%s\n' "vecta-kms"
+}
+
 prepare_certs_volumes() {
-  local project_name="${COMPOSE_PROJECT_NAME:-vecta-kms}"
+  local project_name
+  project_name="$(resolve_project_name)"
+  if [[ -z "${project_name}" ]]; then
+    project_name="vecta-kms"
+  fi
   local certs_volume="${project_name}_certs-key-data"
   local runtime_volume="${project_name}_runtime-certs"
   local passphrase_path="${CERTS_CRWK_PASSPHRASE_FILE:-/var/lib/vecta/certs/bootstrap.passphrase}"

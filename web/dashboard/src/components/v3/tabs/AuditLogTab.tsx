@@ -49,15 +49,13 @@ import {
 /* ── constants ── */
 
 const SERVICES = [
-  "kms-keycore", "kms-auth", "kms-policy", "kms-audit", "kms-compliance",
-  "kms-certs", "certs",
-  "kms-posture", "kms-reporting", "kms-cluster", "kms-billing", "kms-payment", "kms-confidential",
-  "kms-connector-aws", "kms-connector-azure", "kms-connector-gcp",
-  "kms-connector-hashicorp", "kms-connector-thales",
-  "kms-sdk-go", "kms-sdk-python", "kms-sdk-java", "kms-sdk-node", "kms-sdk-rest",
-  "kms-pkcs11", "kms-kmip", "kms-jce", "kms-cng", "kms-certauth",
-  "kms-byok", "kms-fips", "kms-hsm", "kms-secret-engine",
-  "kms-governance", "kms-rotation", "kms-data-protection", "kms-workbench"
+  "auth", "key", "keycore", "secrets", "certs", "policy", "governance",
+  "audit", "compliance", "posture", "reporting", "cluster",
+  "payment", "confidential", "hyok", "byok", "ekm",
+  "pqc", "qkd", "qrng", "mpc",
+  "autokey", "keyaccess", "signing",
+  "workload", "dataprotect", "kmip", "sbom",
+  "discovery", "ai", "tfe", "dam", "cloud",
 ];
 
 const PAGE_SIZE = 100;
@@ -1121,8 +1119,9 @@ export const AuditLogTab = ({ session, onToast }: any) => {
         All audit events are cryptographically chained (SHA-256), stored in immutable PostgreSQL partitions
         (UPDATE/DELETE triggers blocked), and protected by HMAC-signed WAL for fail-closed operation.
         Audit data feeds into Compliance (anomaly detection) and Posture (risk scoring) modules automatically.
-        33 services across KMS core, connectors (AWS, Azure, GCP, HashiCorp, Thales), SDKs (Go, Python, Java, Node, REST),
-        and interfaces (PKCS#11, KMIP, JCE, CNG) publish immutable audit events.
+        Every KMS feature — keys, certs, BYOK/HYOK/Cloud EKM, HYOK, TFE, MPC, QRNG, DAM, AI Gateway, cluster,
+        payment, data protection, signing, and all interfaces (PKCS#11, KMIP, JCE, CNG) — publishes immutable
+        audit events to this log. Cluster operation logs are available here (filter by service: cluster).
       </div>
     </div>
   );

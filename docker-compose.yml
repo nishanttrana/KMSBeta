@@ -3,7 +3,7 @@ name: vecta-kms
 x-kms-common-env: &kms-common-env
   POSTGRES_DSN: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vecta}?sslmode=disable&connect_timeout=10
   SQLITE_FALLBACK: "false"
-  NATS_URL: nats://nats:4222
+  NATS_URL: nats://${NATS_AUTH_TOKEN:?NATS_AUTH_TOKEN is required}@nats:4222
   CONSUL_HTTP_ADDR: consul:8500
   CONSUL_SERVICE_ADDRESS: $$HOSTNAME
   CONSUL_HEALTH_CHECK_TYPE: tcp
@@ -211,6 +211,8 @@ services:
     restart: unless-stopped
     profiles: ["event_streaming"]
     image: nats:2.12.4-alpine
+    environment:
+      NATS_AUTH_TOKEN: ${NATS_AUTH_TOKEN:?NATS_AUTH_TOKEN is required}
     volumes:
       - ./infra/nats/nats-server.conf:/etc/nats/nats-server.conf:ro
       - nats-data:/data

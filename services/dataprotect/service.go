@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"golang.org/x/crypto/hkdf"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
@@ -1686,9 +1687,13 @@ func (s *Service) verifyWrapperAuthProfileToken(rawToken string, wrapper FieldEn
 		if len(s.jwtKey) > 0 {
 			return s.jwtKey, nil
 		}
-		sum := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|field-wrapper", wrapper.TenantID, wrapper.WrapperID, wrapper.AppID)))
-		fallbackKey := make([]byte, len(sum))
-		copy(fallbackKey, sum[:])
+		info := fmt.Sprintf("%s|%s|%s|field-wrapper", wrapper.TenantID, wrapper.WrapperID, wrapper.AppID)
+		ikm := sha256.Sum256([]byte(info))
+		r := hkdf.New(sha256.New, ikm[:], nil, []byte("vecta-field-wrapper-jwt-v1"))
+		fallbackKey := make([]byte, 32)
+		if _, err := r.Read(fallbackKey); err != nil {
+			return nil, errors.New("key derivation failed")
+		}
 		return fallbackKey, nil
 	})
 	if err != nil || token == nil || !token.Valid {
@@ -2385,8 +2390,13 @@ func (s *Service) issueWrapperAuthProfile(wrapper FieldEncryptionWrapper) (Field
 	}
 	secret := append([]byte{}, s.jwtKey...)
 	if len(secret) == 0 {
-		sum := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|field-wrapper", wrapper.TenantID, wrapper.WrapperID, wrapper.AppID)))
-		secret = append(secret, sum[:]...)
+		info := fmt.Sprintf("%s|%s|%s|field-wrapper", wrapper.TenantID, wrapper.WrapperID, wrapper.AppID)
+		ikm := sha256.Sum256([]byte(info))
+		r := hkdf.New(sha256.New, ikm[:], nil, []byte("vecta-field-wrapper-jwt-v1"))
+		secret = make([]byte, 32)
+		if _, err := r.Read(secret); err != nil {
+			return FieldEncryptionAuthProfile{}, errors.New("key derivation failed")
+		}
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString(secret)

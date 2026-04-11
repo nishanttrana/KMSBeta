@@ -19,7 +19,7 @@ SUDO=""
 DOCKER_BIN=(docker)
 HOST_OS="linux"
 STEP_INDEX=0
-STEP_TOTAL=19
+STEP_TOTAL=18
 INSTALL_WARNINGS=()
 INSTALL_MODE="interactive"
 BASH_BIN="${BASH:-bash}"
@@ -45,6 +45,7 @@ FEATURE_KEYS=(
   reporting_alerting
   posture_management
   ai_llm
+  ai_gateway
   pqc_migration
   crypto_discovery
   mpc_engine
@@ -996,7 +997,7 @@ suggest_cluster_profile_id() {
     fi
   done
 
-  for key in payment_crypto autokey_provisioning artifact_signing key_access_justifications workload_identity confidential_compute hyok_proxy kmip_server pqc_migration qkd_interface qrng_generator mpc_engine ai_llm; do
+  for key in payment_crypto autokey_provisioning artifact_signing key_access_justifications workload_identity confidential_compute hyok_proxy kmip_server pqc_migration qkd_interface qrng_generator mpc_engine ai_llm ai_gateway; do
     enabled="$(requested_feature_enabled "${key}")"
     if [[ "${enabled}" == "true" ]]; then
       has_specialized="true"
@@ -1212,16 +1213,26 @@ collect_inputs() {
   echo "Feature profile:"
   echo "  1) recommended (current template defaults)"
   echo "  2) all (enable every feature profile)"
+  echo "  3) custom (select features individually)"
   if [[ -z "${FEATURE_PROFILE:-}" ]]; then
-    read -r -p "Choose feature profile [1/2] (default 1): " FEATURE_PROFILE || true
+    read -r -p "Choose feature profile [1/2/3] (default 1): " FEATURE_PROFILE || true
   fi
   FEATURE_PROFILE="$(trim "${FEATURE_PROFILE}")"
   FEATURE_PROFILE="${FEATURE_PROFILE:-1}"
-  if [[ "${FEATURE_PROFILE}" == "2" ]]; then
-    FEATURE_ALL="true"
-  else
-    FEATURE_ALL="false"
-  fi
+  case "${FEATURE_PROFILE}" in
+    2) FEATURE_ALL="true" ;;
+    3)
+      FEATURE_ALL="false"
+      echo
+      echo "Select features to enable (y/N for each):"
+      for _feat in "${FEATURE_KEYS[@]}"; do
+        local _var="FEATURE_${_feat}"
+        local _cur="${!_var:-false}"
+        prompt_yes_no "${_var}" "  Enable ${_feat}" "${_cur}"
+      done
+      ;;
+    *) FEATURE_ALL="false" ;;
+  esac
 
   if [[ "${CLUSTER_ENABLED}" == "true" ]]; then
     local suggested_cluster_profile
@@ -1372,6 +1383,7 @@ spec:
         keycore: true
         policy: true
     features:
+        ai_gateway: ${FEATURE_ai_gateway}
         ai_llm: ${FEATURE_ai_llm}
         certs: ${FEATURE_certs}
         cloud_byok: ${FEATURE_cloud_byok}

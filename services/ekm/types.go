@@ -199,6 +199,31 @@ type DeployPackage struct {
 	Files               []DeployPackageFile `json:"files"`
 }
 
+// FileEncryptDownloadRequest holds parameters for building a file-encryption TDE agent package.
+// The agent runs entirely in user-space — no kernel module or OS-level driver is required.
+type FileEncryptDownloadRequest struct {
+	TenantID     string `json:"tenant_id"`
+	TargetOS     string `json:"target_os"`   // windows | linux
+	Distro       string `json:"distro"`      // ubuntu | debian | rhel | alpine (Linux only)
+	KeyID        string `json:"key_id"`      // Vecta KMS key ID (AES-256)
+	WatchDirs    string `json:"watch_dirs"`  // comma-separated paths to encrypt
+	FilePatterns string `json:"file_patterns"` // comma-separated glob patterns e.g. "*.docx,*.pdf"
+	RotationDays int    `json:"rotation_days"`
+	APIBaseURL   string `json:"api_base_url"`
+}
+
+// FileEncryptPackage is the response returned by the file-encryption agent download endpoint.
+type FileEncryptPackage struct {
+	TargetOS     string              `json:"target_os"`
+	Distro       string              `json:"distro"`
+	CreatedAt    time.Time           `json:"created_at"`
+	Algorithm    string              `json:"algorithm"`    // always AES-256-GCM (FIPS 140-3)
+	Mode         string              `json:"mode"`         // always "file_encrypt"
+	KeyID        string              `json:"key_id"`
+	RotationDays int                 `json:"rotation_days"`
+	Files        []DeployPackageFile `json:"files"`
+}
+
 type RegisterDatabaseRequest struct {
 	TenantID         string `json:"tenant_id"`
 	DatabaseID       string `json:"database_id"`

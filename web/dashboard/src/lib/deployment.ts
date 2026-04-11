@@ -38,23 +38,14 @@ const defaultDeployment: DeploymentConfig = {
       sbom_cbom: true,
       reporting_alerting: true,
       ai_llm: true,
+      ai_gateway: true,
       pqc_migration: true,
       crypto_discovery: true,
       mpc_engine: true,
       data_protection: true,
       clustering: true,
-      key_ceremony: true,
-      rotation_scheduler: true,
-      crypto_agility: true,
-      webhook_siem: true,
-      leak_scanner: true,
-      ct_monitor: true,
-      mtls_mesh: true,
-      key_escrow: true,
-      envelope_enc: true,
-      dr_drill: true,
-      ops_metrics: true,
-      backup: true
+      posture_management: true,
+      qrng_generator: true
     }
   }
 };

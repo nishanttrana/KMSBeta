@@ -74,6 +74,7 @@ func main() {
 	ac := loadAuditConfig()
 	wal := NewWALBuffer(ac.WALPath, ac.WALMaxSizeMB, ac.WALHMACKey)
 	store := NewSQLStore(dbConn)
+	store.SetEventSigningKey(ac.EventSigningKey)
 	svc := NewService(store, ac, wal, pub)
 	handler := NewHandler(svc, store)
 	handler.SetClusterSyncPublisher(pkgclustersync.NewHTTPPublisher(
@@ -202,28 +203,33 @@ func loadAuditConfig() AuditConfig {
 		FailClosed:          envBool("AUDIT_FAIL_CLOSED", true),
 		WALPath:             envOr("AUDIT_WAL_PATH", filepath.Join("var", "audit-wal", "buffer.log")),
 		WALMaxSizeMB:        int64(envInt("AUDIT_WAL_MAX_SIZE_MB", 512)),
-		WALHMACKey:          walHMACKey(),
+		WALHMACKey:          loadKey32("AUDIT_WAL_HMAC_KEY_B64"),
+		EventSigningKey:     loadKey32("AUDIT_EVENT_SIGNING_KEY_B64"),
 		DedupWindowSeconds:  envInt("ALERT_DEDUP_WINDOW_SECONDS", 60),
 		EscalationThreshold: envInt("ALERT_ESCALATION_THRESHOLD", 5),
 		EscalationMinutes:   envInt("ALERT_ESCALATION_WINDOW_MINUTES", 10),
 	}
 }
 
-func walHMACKey() []byte {
-	raw := strings.TrimSpace(os.Getenv("AUDIT_WAL_HMAC_KEY_B64"))
-	if raw == "" {
-		b := make([]byte, 32)
-		_, _ = rand.Read(b)
-		return b
+// loadKey32 decodes a base64-encoded 32-byte key from an env var.
+// If missing or invalid, a random key is generated (ephemeral; log a warning).
+func loadKey32(envVar string) []byte {
+	raw := strings.TrimSpace(os.Getenv(envVar))
+	if raw != "" {
+		key, err := base64.StdEncoding.DecodeString(raw)
+		if err == nil && len(key) >= 16 {
+			// Pad or truncate to exactly 32 bytes
+			out := make([]byte, 32)
+			copy(out, key)
+			return out
+		}
+		logger.Printf("WARNING: %s is set but invalid — generating ephemeral key", envVar)
 	}
-	key, err := base64.StdEncoding.DecodeString(raw)
-	if err != nil || len(key) < 16 {
-		b := make([]byte, 32)
-		_, _ = rand.Read(b)
-		return b
-	}
-	return key
+	b := make([]byte, 32)
+	_, _ = rand.Read(b)
+	return b
 }
+
 
 func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
 	nc, err := pkgevents.Connect(url, "kms-audit", logger.Printf)
