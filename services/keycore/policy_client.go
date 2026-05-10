@@ -39,6 +39,17 @@ func (allowAllPolicyEvaluator) Evaluate(_ context.Context, _ PolicyEvaluateReque
 	return PolicyEvaluateResponse{Decision: "ALLOW", Reason: "policy evaluator disabled"}, nil
 }
 
+// denyAllPolicyEvaluator is the fail-closed fallback used when the policy
+// service is unreachable but the operator has explicitly opted into strict
+// posture (KEYCORE_POLICY_FAIL_CLOSED=true with no policy URL configured).
+// Every key operation is denied so that misconfiguration cannot translate
+// into permissive behaviour.
+type denyAllPolicyEvaluator struct{}
+
+func (denyAllPolicyEvaluator) Evaluate(_ context.Context, _ PolicyEvaluateRequest) (PolicyEvaluateResponse, error) {
+	return PolicyEvaluateResponse{Decision: "DENY", Reason: "policy evaluator unavailable; fail-closed"}, nil
+}
+
 type HTTPPolicyClient struct {
 	baseURL string
 	client  *http.Client
@@ -91,7 +102,13 @@ func (c *HTTPPolicyClient) Evaluate(ctx context.Context, req PolicyEvaluateReque
 		return PolicyEvaluateResponse{}, errors.New(msg)
 	}
 	if strings.TrimSpace(payload.Decision) == "" {
-		payload.Decision = "ALLOW"
+		// Fail-closed: an empty decision from the policy service must not be
+		// silently coerced into ALLOW. Treat it as a denial so misbehaving
+		// upstream services cannot become a bypass.
+		return PolicyEvaluateResponse{
+			Decision: "DENY",
+			Reason:   "policy service returned empty decision; fail-closed",
+		}, nil
 	}
 	return PolicyEvaluateResponse{
 		Decision: strings.ToUpper(strings.TrimSpace(payload.Decision)),

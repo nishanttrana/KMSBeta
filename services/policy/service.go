@@ -341,13 +341,23 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluatePolicyRequest) (Eval
 		if err != nil {
 			continue
 		}
-		d, outcomes := evaluatePolicy(doc, p.ID, p.CurrentVersion, req)
-		if len(outcomes) > 0 {
-			result.Outcomes = append(result.Outcomes, outcomes...)
+		er := evaluatePolicy(doc, p.ID, p.CurrentVersion, req)
+		if len(er.Outcomes) > 0 {
+			result.Outcomes = append(result.Outcomes, er.Outcomes...)
 		}
-		switch d {
+		switch er.Decision {
 		case DecisionDeny:
 			result.Decision = DecisionDeny
+		case DecisionRequireApproval:
+			if result.Decision != DecisionDeny {
+				result.Decision = DecisionRequireApproval
+				if result.ApprovalRequestID == "" {
+					result.ApprovalRequestID = er.ApprovalRequestID
+				}
+				if er.RequiredApprovers > result.RequiredApprovers {
+					result.RequiredApprovers = er.RequiredApprovers
+				}
+			}
 		case DecisionWarn:
 			if result.Decision == DecisionAllow {
 				result.Decision = DecisionWarn
@@ -359,34 +369,47 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluatePolicyRequest) (Eval
 	} else {
 		result.Reason = "allowed by policy"
 	}
+	if result.Decision == DecisionRequireApproval && result.Reason == "allowed by policy" {
+		result.Reason = "operation requires M-of-N approval via governance workflow"
+	}
 
 	_ = s.store.InsertEvaluation(ctx, EvaluationRecord{
-		ID:         newID("peval"),
-		TenantID:   req.TenantID,
-		PolicyID:   firstOutcomePolicyID(result.Outcomes),
-		Operation:  req.Operation,
-		KeyID:      req.KeyID,
-		Decision:   result.Decision,
-		Reason:     result.Reason,
-		Request:    evaluateRequestMap(req),
-		Outcomes:   result.Outcomes,
-		OccurredAt: time.Now().UTC(),
+		ID:                newID("peval"),
+		TenantID:          req.TenantID,
+		PolicyID:          firstOutcomePolicyID(result.Outcomes),
+		Operation:         req.Operation,
+		KeyID:             req.KeyID,
+		Decision:          result.Decision,
+		Reason:            result.Reason,
+		Request:           evaluateRequestMap(req),
+		Outcomes:          result.Outcomes,
+		OccurredAt:        time.Now().UTC(),
+		KDFAlgorithm:      req.KDFAlgorithm,
+		ApprovalRequestID: result.ApprovalRequestID,
 	})
 
 	_ = s.publishAudit(ctx, "audit.policy.evaluated", req.TenantID, map[string]any{
-		"operation": req.Operation,
-		"key_id":    req.KeyID,
-		"decision":  result.Decision,
-		"outcomes":  len(result.Outcomes),
+		"operation":    req.Operation,
+		"key_id":       req.KeyID,
+		"decision":     result.Decision,
+		"outcomes":     len(result.Outcomes),
+		"kdf":          req.KDFAlgorithm,
 	})
-	if result.Decision == DecisionDeny {
+	switch result.Decision {
+	case DecisionDeny:
 		_ = s.publishAudit(ctx, "audit.policy.violated", req.TenantID, map[string]any{
 			"operation": req.Operation,
 			"key_id":    req.KeyID,
 			"reason":    result.Reason,
 		})
-	}
-	if result.Decision == DecisionWarn {
+	case DecisionRequireApproval:
+		_ = s.publishAudit(ctx, "audit.policy.approval_required", req.TenantID, map[string]any{
+			"operation":           req.Operation,
+			"key_id":              req.KeyID,
+			"approval_request_id": result.ApprovalRequestID,
+			"required_approvers":  result.RequiredApprovers,
+		})
+	case DecisionWarn:
 		_ = s.publishAudit(ctx, "audit.policy.warning", req.TenantID, map[string]any{
 			"operation": req.Operation,
 			"key_id":    req.KeyID,

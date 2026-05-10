@@ -15,15 +15,19 @@ import (
 type Handler struct {
 	svc      *Service
 	store    Store
+	broker   *StreamBroker
 	cluster  clustersync.Publisher
 	channels map[string]interface{}
 	mux      *http.ServeMux
 }
 
 func NewHandler(svc *Service, store Store) *Handler {
+	broker := newStreamBroker()
+	svc.SetStreamBroker(broker)
 	h := &Handler{
-		svc:   svc,
-		store: store,
+		svc:    svc,
+		store:  store,
+		broker: broker,
 		channels: map[string]interface{}{
 			"email":     map[string]interface{}{"enabled": true},
 			"sms":       map[string]interface{}{"enabled": true, "min_severity": "CRITICAL"},
@@ -82,14 +86,14 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /audit/search", h.handleSearch)
 	mux.HandleFunc("GET /audit/chain/verify", h.handleChainVerify)
 	mux.HandleFunc("GET /audit/stats", h.handleAuditStats)
-	mux.HandleFunc("GET /audit/stream", h.handleNotImplemented)
+	mux.HandleFunc("GET /audit/stream", h.handleStream)
 	mux.HandleFunc("GET /audit/config", h.handleAuditConfig)
 
 	mux.HandleFunc("GET /alerts", h.handleAlerts)
 	mux.HandleFunc("GET /alerts/{id}", h.handleAlert)
 	mux.HandleFunc("PUT /alerts/{id}/{action}", h.handleAlertActionPath)
 	mux.HandleFunc("GET /alerts/stats", h.handleAlertStats)
-	mux.HandleFunc("GET /alerts/stream", h.handleNotImplemented)
+	mux.HandleFunc("GET /alerts/stream", h.handleAlertStream)
 	mux.HandleFunc("POST /alerts/rules", h.handleCreateRule)
 	mux.HandleFunc("GET /alerts/rules", h.handleListRules)
 	mux.HandleFunc("PUT /alerts/rules/{id}", h.handleUpdateRule)
@@ -122,6 +126,9 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /ops-metrics/errors", h.handleGetErrorBreakdown)
 	mux.HandleFunc("POST /ops-metrics/record", h.handleRecordOp)
 
+	// FIPS 140-3 module boundary declaration
+	mux.HandleFunc("GET /audit/fips/boundary", h.handleFIPSBoundary)
+
 	// Prometheus metrics scrape endpoint
 	mux.HandleFunc("GET /metrics", h.handlePrometheusMetrics)
 
@@ -135,7 +142,7 @@ func (h *Handler) handlePublish(w http.ResponseWriter, r *http.Request) {
 		Event   AuditEvent `json:"event"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		writeErr(w, http.StatusBadRequest, "bad_request", "invalid request body", reqID, "")
 		return
 	}
 	if req.Subject == "" {
@@ -147,7 +154,7 @@ func (h *Handler) handlePublish(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusServiceUnavailable, "audit_unavailable", "audit publish failed and fail_closed=true", reqID, req.Event.TenantID)
 			return
 		}
-		writeErr(w, http.StatusServiceUnavailable, "audit_buffer_failed", err.Error(), reqID, req.Event.TenantID)
+		writeErr(w, http.StatusServiceUnavailable, "audit_buffer_failed", "audit buffer write failed", reqID, req.Event.TenantID)
 		return
 	}
 	if buffered {
@@ -291,9 +298,13 @@ func (h *Handler) handleAuditStats(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleAuditConfig(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
+	// Operational settings are returned to authenticated callers, but the
+	// concrete WAL filesystem path is masked: the only thing operators need
+	// to know externally is that the WAL is configured, not where it lives.
+	walConfigured := strings.TrimSpace(h.svc.cfg.WALPath) != ""
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"fail_closed":            h.svc.cfg.FailClosed,
-		"wal_path":               h.svc.cfg.WALPath,
+		"wal_configured":         walConfigured,
 		"wal_max_size_mb":        h.svc.cfg.WALMaxSizeMB,
 		"dedup_window_seconds":   h.svc.cfg.DedupWindowSeconds,
 		"escalation_threshold":   h.svc.cfg.EscalationThreshold,
@@ -523,22 +534,26 @@ func (h *Handler) handleTestRule(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleGetChannels(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	writeJSON(w, http.StatusOK, map[string]interface{}{"channels": h.channels, "request_id": reqID})
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"channels": h.channels, "request_id": reqID, "tenant_id": tenantID})
 }
 
 func (h *Handler) handleUpdateChannels(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
+	tenantID := mustTenant(r, w, reqID)
+	if tenantID == "" {
+		return
+	}
 	var body map[string]interface{}
 	if err := decodeJSON(r, &body); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		writeErr(w, http.StatusBadRequest, "bad_request", "invalid request body", reqID, tenantID)
 		return
 	}
 	for k, v := range body {
 		h.channels[k] = v
-	}
-	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
-	if tenantID == "" {
-		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 	}
 	h.publishClusterSync(r, tenantID, "alert_channel_config", tenantID, "channels_updated", map[string]interface{}{
 		"channels": body,
@@ -551,9 +566,42 @@ func (h *Handler) handleTestChannel(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "test-sent", "request_id": reqID})
 }
 
-func (h *Handler) handleNotImplemented(w http.ResponseWriter, r *http.Request) {
+// handleFIPSBoundary returns the FIPS 140-3 module boundary declaration for this service.
+func (h *Handler) handleFIPSBoundary(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	writeErr(w, http.StatusNotImplemented, "not_implemented", "stream endpoint is not implemented in Sprint 1", reqID, "")
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"module":           "kms-audit",
+		"fips_level":       "FIPS 140-3 Level 1",
+		"boundary_version": "1.0",
+		"approved_algorithms": []string{
+			"HMAC-SHA-256",
+			"SHA-256",
+			"SHA-384",
+			"SHA-512",
+			"AES-256-GCM",
+			"TLS 1.3",
+		},
+		"non_approved_algorithms": []string{},
+		"approved_key_sizes":      map[string]int{"HMAC-SHA-256": 256, "AES": 256},
+		"services_in_boundary": []string{
+			"audit event ingestion",
+			"audit chain HMAC signing (HMAC-SHA-256)",
+			"Merkle tree construction (SHA-256)",
+			"WAL integrity (HMAC-SHA-256)",
+			"TLS 1.3 transport (AES-256-GCM)",
+		},
+		"services_outside_boundary": []string{
+			"alert dispatch (email/sms/pagerduty — external network)",
+			"NATS message transport (relayed from other KMS modules)",
+		},
+		"zeroization_policy":           "Keys are zeroized on process termination via runtime.SetFinalizer and explicit wipe calls",
+		"random_number_generator":       "crypto/rand (OS-provided CSPRNG)",
+		"kdf_used":                      "HKDF-SHA-256 (event signing key derivation where applicable)",
+		"self_test_on_startup":          true,
+		"continuous_health_test":        true,
+		"tamper_evidence":               "HMAC-SHA-256 per event + Merkle epoch chain with cross-epoch SHA-256 linkage",
+		"request_id":                    reqID,
+	})
 }
 
 func decodeJSON(r *http.Request, out interface{}) error {

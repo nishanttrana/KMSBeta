@@ -23,3 +23,7 @@ governance.exe
 posture.exe
 local-data/
 web/dashboard/dist/
+
+# Local Go module cache and tooling backups
+.gomodcache/
+*.bak

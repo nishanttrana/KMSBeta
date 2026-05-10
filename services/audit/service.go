@@ -16,6 +16,7 @@ type Service struct {
 	cfg       AuditConfig
 	wal       *WALBuffer
 	publisher EventPublisher
+	broker    *StreamBroker
 }
 
 type EventPublisher interface {
@@ -29,6 +30,10 @@ func NewService(store Store, cfg AuditConfig, wal *WALBuffer, publisher EventPub
 		wal:       wal,
 		publisher: publisher,
 	}
+}
+
+func (s *Service) SetStreamBroker(b *StreamBroker) {
+	s.broker = b
 }
 
 func (s *Service) PublishAudit(ctx context.Context, subject string, event AuditEvent) (bool, error) {
@@ -92,7 +97,22 @@ func (s *Service) ProcessEvent(ctx context.Context, event AuditEvent) (AuditEven
 	if err != nil {
 		return AuditEvent{}, Alert{}, err
 	}
+	s.broadcastToStream(evt, al)
 	return evt, al, nil
+}
+
+func (s *Service) broadcastToStream(evt AuditEvent, al Alert) {
+	if s.broker == nil {
+		return
+	}
+	if raw, err := json.Marshal(evt); err == nil {
+		s.broker.BroadcastEvent(evt.TenantID, evt.ID, string(raw))
+	}
+	if al.ID != "" {
+		if raw, err := json.Marshal(al); err == nil {
+			s.broker.BroadcastAlert(al.TenantID, al.ID, string(raw))
+		}
+	}
 }
 
 func (s *Service) classifyAndCorrelate(ctx context.Context, event AuditEvent) (AuditEvent, Alert, error) {
@@ -130,6 +150,19 @@ func (s *Service) classifyAndCorrelate(ctx context.Context, event AuditEvent) (A
 	// Populate FIPS 140-3 aligned category group from service name.
 	if event.CategoryGroup == "" {
 		event.CategoryGroup = categoryGroupForService(event.Service)
+	}
+	// Enrich geo-location from source IP so rule conditions can reference it.
+	if event.CountryCode == "" && event.SourceIP != "" {
+		event.CountryCode = resolveCountry(event.SourceIP)
+	}
+	// Persist country_code in the details JSONB so it survives DB round-trips.
+	if event.CountryCode != "" {
+		if event.Details == nil {
+			event.Details = map[string]interface{}{}
+		}
+		if _, alreadySet := event.Details["country_code"]; !alreadySet {
+			event.Details["country_code"] = event.CountryCode
+		}
 	}
 	risk := baseRisk(severity, event.Action)
 	if event.RiskScore > risk {
@@ -228,7 +261,21 @@ func (s *Service) VerifyChain(ctx context.Context, tenantID string) (bool, []map
 	return ok, breaks, nil
 }
 
+// maxAuditPayloadBytes caps each NATS audit event so a malformed or hostile
+// publisher cannot exhaust the audit pipeline's memory. Genuine events are
+// well below this size; the cap is a safety belt, not a tuning knob.
+const maxAuditPayloadBytes = 256 * 1024
+
 func parseIncomingEvent(subject string, payload []byte) (AuditEvent, error) {
+	if len(payload) == 0 {
+		return AuditEvent{}, errors.New("audit payload is empty")
+	}
+	if len(payload) > maxAuditPayloadBytes {
+		return AuditEvent{}, errors.New("audit payload exceeds maximum allowed size")
+	}
+	if strings.TrimSpace(subject) == "" {
+		return AuditEvent{}, errors.New("audit subject is required")
+	}
 	var in map[string]interface{}
 	if err := json.Unmarshal(payload, &in); err != nil {
 		return AuditEvent{}, err
@@ -245,6 +292,7 @@ func parseIncomingEvent(subject string, payload []byte) (AuditEvent, error) {
 		Method:        str(in["method"]),
 		Endpoint:      str(in["endpoint"]),
 		SourceIP:      str(in["source_ip"]),
+		CountryCode:   str(in["country_code"]),
 		UserAgent:     str(in["user_agent"]),
 		RequestHash:   str(in["request_hash"]),
 		CorrelationID: str(in["correlation_id"]),
@@ -416,8 +464,14 @@ func ruleMatches(rule AlertRule, event AuditEvent) bool {
 		}
 	}
 	if strings.Contains(cond, "event.source_ip.country") {
-		// placeholder: geo context not implemented in this sprint
-		return false
+		q := betweenQuotes(cond)
+		if q == "" {
+			return false
+		}
+		if strings.Contains(cond, "!=") {
+			return !strings.EqualFold(event.CountryCode, q)
+		}
+		return strings.EqualFold(event.CountryCode, q)
 	}
 	return false
 }

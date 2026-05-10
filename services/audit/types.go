@@ -45,6 +45,9 @@ type AuditEvent struct {
 	Method        string                 `json:"method"`
 	Endpoint      string                 `json:"endpoint"`
 	SourceIP      string                 `json:"source_ip"`
+	// CountryCode is the ISO 3166-1 alpha-2 country resolved from SourceIP.
+	// "internal" for RFC-private ranges; "" when resolution is unavailable.
+	CountryCode   string                 `json:"country_code,omitempty"`
 	UserAgent     string                 `json:"user_agent"`
 	RequestHash   string                 `json:"request_hash"`
 	CorrelationID string                 `json:"correlation_id"`

@@ -5,9 +5,12 @@ import "time"
 type Decision string
 
 const (
-	DecisionAllow Decision = "ALLOW"
-	DecisionDeny  Decision = "DENY"
-	DecisionWarn  Decision = "WARN"
+	DecisionAllow           Decision = "ALLOW"
+	DecisionDeny            Decision = "DENY"
+	DecisionWarn            Decision = "WARN"
+	// DecisionRequireApproval signals that the operation must go through the
+	// governance M-of-N approval workflow before it can proceed.
+	DecisionRequireApproval Decision = "REQUIRE_APPROVAL"
 )
 
 type Policy struct {
@@ -61,6 +64,12 @@ type PolicySpec struct {
 	Type    string        `yaml:"type" json:"type"`
 	Targets PolicyTargets `yaml:"targets" json:"targets"`
 	Rules   []PolicyRule  `yaml:"rules" json:"rules"`
+	// DefaultAction controls the per-policy fallback when the targets selector
+	// matches a request but no rule condition fires. Stringent FIPS posture sets
+	// this to "deny" so a misconfigured rule list fails closed instead of
+	// silently allowing the operation. Empty or "allow" preserves prior
+	// behaviour for backwards compatibility.
+	DefaultAction string `yaml:"defaultAction" json:"defaultAction"`
 }
 
 type PolicyTargets struct {
@@ -102,6 +111,9 @@ type EvaluatePolicyRequest struct {
 	DaysSinceRotation int            `json:"days_since_rotation"`
 	KeyStatus         string         `json:"key_status"`
 	Labels            map[string]any `json:"labels"`
+	// KDFAlgorithm is set by callers that perform key derivation so the KDF is
+	// recorded in the FIPS 140-3 audit trail (e.g. "HKDF-SHA-256").
+	KDFAlgorithm string `json:"kdf_algorithm,omitempty"`
 }
 
 type RuleOutcome struct {
@@ -116,6 +128,12 @@ type EvaluatePolicyResponse struct {
 	Decision Decision      `json:"decision"`
 	Reason   string        `json:"reason"`
 	Outcomes []RuleOutcome `json:"outcomes"`
+	// ApprovalRequestID is set when Decision == REQUIRE_APPROVAL.
+	// Callers must submit this ID to the governance service to initiate the
+	// M-of-N quorum workflow.
+	ApprovalRequestID string `json:"approval_request_id,omitempty"`
+	// RequiredApprovers is the minimum approver count from the matching rule.
+	RequiredApprovers int `json:"required_approvers,omitempty"`
 }
 
 type EvaluationRecord struct {
@@ -129,4 +147,10 @@ type EvaluationRecord struct {
 	Request    map[string]any
 	Outcomes   []RuleOutcome
 	OccurredAt time.Time
+	// FIPS 140-3 audit trail fields.
+	// KDFAlgorithm records the KDF used for any key derivation operation in
+	// the evaluated request (e.g. "HKDF-SHA-256").
+	KDFAlgorithm string `json:"kdf_algorithm,omitempty"`
+	// ApprovalRequestID is populated when the decision is REQUIRE_APPROVAL.
+	ApprovalRequestID string `json:"approval_request_id,omitempty"`
 }

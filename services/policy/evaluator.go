@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"strconv"
 	"strings"
@@ -9,17 +11,26 @@ import (
 )
 
 var validPolicyTypes = map[string]struct{}{
-	"algorithm":       {},
-	"rotation":        {},
-	"iv_mode":         {},
-	"operation_limit": {},
-	"purpose":         {},
+	"algorithm":        {},
+	"rotation":         {},
+	"iv_mode":          {},
+	"operation_limit":  {},
+	"purpose":          {},
+	"approval_control": {},
 }
+
+// maxPolicyYAMLBytes caps the size of a single policy document. Large or
+// circular YAML inputs can exhaust memory during unmarshal; the limit
+// protects the policy service from accidental and malicious oversize docs.
+const maxPolicyYAMLBytes = 100 * 1024
 
 func parsePolicyYAML(raw string) (PolicyDoc, map[string]any, error) {
 	doc := PolicyDoc{}
 	if strings.TrimSpace(raw) == "" {
 		return doc, nil, errors.New("policy yaml is required")
+	}
+	if len(raw) > maxPolicyYAMLBytes {
+		return doc, nil, errors.New("policy yaml exceeds maximum allowed size")
 	}
 	if err := yaml.Unmarshal([]byte(raw), &doc); err != nil {
 		return doc, nil, err
@@ -33,6 +44,7 @@ func parsePolicyYAML(raw string) (PolicyDoc, map[string]any, error) {
 	doc.Metadata.Name = strings.TrimSpace(doc.Metadata.Name)
 	doc.Metadata.Tenant = strings.TrimSpace(doc.Metadata.Tenant)
 	doc.Spec.Type = normalizePolicyType(doc.Spec.Type)
+	doc.Spec.DefaultAction = normalizeDefaultAction(doc.Spec.DefaultAction)
 	if doc.Metadata.Name == "" {
 		return doc, nil, errors.New("metadata.name is required")
 	}
@@ -72,17 +84,38 @@ func normalizePolicyType(v string) string {
 	return v
 }
 
-func evaluatePolicy(doc PolicyDoc, policyID string, version int, req EvaluatePolicyRequest) (Decision, []RuleOutcome) {
+func normalizeDefaultAction(v string) string {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "deny":
+		return "deny"
+	default:
+		return "allow"
+	}
+}
+
+// evaluationResult carries the outcome of evaluating a single policy document.
+type evaluationResult struct {
+	Decision          Decision
+	Outcomes          []RuleOutcome
+	ApprovalRequestID string
+	RequiredApprovers int
+}
+
+func evaluatePolicy(doc PolicyDoc, policyID string, version int, req EvaluatePolicyRequest) evaluationResult {
 	if !selectorMatches(doc.Spec.Targets.Selector, req) {
-		return DecisionAllow, nil
+		return evaluationResult{Decision: DecisionAllow}
 	}
 	decision := DecisionAllow
 	outcomes := make([]RuleOutcome, 0)
+	var approvalRequestID string
+	var requiredApprovers int
+	matchedRule := false
 
 	for _, rule := range doc.Spec.Rules {
 		if !conditionMatches(rule.Condition, req) {
 			continue
 		}
+		matchedRule = true
 		out := RuleOutcome{
 			PolicyID:      policyID,
 			PolicyVersion: version,
@@ -104,11 +137,67 @@ func evaluatePolicy(doc PolicyDoc, policyID string, version int, req EvaluatePol
 			if decision == DecisionAllow {
 				decision = DecisionWarn
 			}
+		case "require-approval":
+			// M-of-N governance workflow: generate a stable approval request ID
+			// and record the required approver count from rule params.
+			if decision != DecisionDeny {
+				decision = DecisionRequireApproval
+				if approvalRequestID == "" {
+					approvalRequestID = newApprovalRequestID()
+				}
+				if n := ruleRequiredApprovers(rule); n > requiredApprovers {
+					requiredApprovers = n
+				}
+			}
 		default:
 			decision = DecisionDeny
 		}
 	}
-	return decision, outcomes
+	if !matchedRule && doc.Spec.DefaultAction == "deny" {
+		decision = DecisionDeny
+		outcomes = append(outcomes, RuleOutcome{
+			PolicyID:      policyID,
+			PolicyVersion: version,
+			RuleName:      "default-action",
+			Action:        "deny",
+			Message:       "policy targets matched but no rule fired; default-deny",
+		})
+	}
+	return evaluationResult{
+		Decision:          decision,
+		Outcomes:          outcomes,
+		ApprovalRequestID: approvalRequestID,
+		RequiredApprovers: requiredApprovers,
+	}
+}
+
+func newApprovalRequestID() string {
+	b := make([]byte, 12)
+	_, _ = rand.Read(b)
+	return "apr_" + hex.EncodeToString(b)
+}
+
+// ruleRequiredApprovers reads the optional "required_approvers" param from a
+// rule's inline params map. Defaults to 2 (minimum quorum for M-of-N).
+func ruleRequiredApprovers(rule PolicyRule) int {
+	if rule.Params == nil {
+		return 2
+	}
+	v, ok := rule.Params["required_approvers"]
+	if !ok {
+		return 2
+	}
+	switch n := v.(type) {
+	case int:
+		if n >= 1 {
+			return n
+		}
+	case float64:
+		if int(n) >= 1 {
+			return int(n)
+		}
+	}
+	return 2
 }
 
 func selectorMatches(selector map[string]any, req EvaluatePolicyRequest) bool {

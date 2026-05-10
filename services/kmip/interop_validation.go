@@ -116,6 +116,16 @@ func (h *Handler) runInteropValidation(ctx context.Context, target KMIPInteropTa
 		result.Error = "client_cert_pem and client_key_pem are required for mTLS validation"
 		return result
 	}
+	// Bound the size of caller-supplied PEM material so a malformed or
+	// hostile request cannot stream an unbounded payload into the
+	// validator. 8 KiB comfortably fits modern certificate chains.
+	const maxInteropPEMBytes = 8 * 1024
+	if len(target.CAPEM) > maxInteropPEMBytes ||
+		len(target.ClientCertPEM) > maxInteropPEMBytes ||
+		len(target.ClientKeyPEM) > maxInteropPEMBytes {
+		result.Error = "PEM material exceeds maximum allowed size"
+		return result
+	}
 
 	if _, err := tls.X509KeyPair([]byte(target.ClientCertPEM), []byte(target.ClientKeyPEM)); err != nil {
 		result.Error = "invalid client certificate/key pair: " + err.Error()
@@ -123,18 +133,21 @@ func (h *Handler) runInteropValidation(ctx context.Context, target KMIPInteropTa
 	}
 
 	dialer := &net.Dialer{Timeout: 8 * time.Second}
+	endpoint := strings.TrimSpace(target.Endpoint)
 	opts := []kmipclient.Option{
 		kmipclient.WithRootCAPem([]byte(target.CAPEM)),
 		kmipclient.WithClientCertPEM([]byte(target.ClientCertPEM), []byte(target.ClientKeyPEM)),
 		kmipclient.WithKmipVersions(defaultKMIPInteropVersions()...),
-		kmipclient.WithDialerUnsafe(func(ctx context.Context, addr string) (net.Conn, error) {
-			return dialer.DialContext(ctx, "tcp", addr)
+		// ovh/kmip-go v0.8.1 dropped the `addr` parameter from DialerFunc — the
+		// endpoint is captured from the kmipclient.Dial(...) call below.
+		kmipclient.WithDialerUnsafe(func(ctx context.Context) (net.Conn, error) {
+			return dialer.DialContext(ctx, "tcp", endpoint)
 		}),
 	}
 	if strings.TrimSpace(target.ServerName) != "" {
 		opts = append(opts, kmipclient.WithServerName(strings.TrimSpace(target.ServerName)))
 	}
-	client, err := kmipclient.Dial(strings.TrimSpace(target.Endpoint), opts...)
+	client, err := kmipclient.Dial(endpoint, opts...)
 	if err != nil {
 		result.Error = "mTLS handshake/dial failed: " + err.Error()
 		return result

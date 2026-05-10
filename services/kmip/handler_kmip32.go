@@ -1,6 +1,15 @@
+//go:build kmip32_extension
+
 package main
 
-// handler_kmip32.go — KMIP 3.2 gap-fill: 17 missing operations + 5 object types
+// handler_kmip32.go — KMIP 3.2 gap-fill: 12 operations + 5 object types.
+// Gated behind the `kmip32_extension` build tag because ovh/kmip-go does not
+// yet expose payload types for several operations (CreateKeyPair, Import,
+// Export, Archive, Recover, Check, Validate, MAC, MACVerify, Hash, DeriveKey,
+// Certify, ReCertify, GetAttributeList, ModifyAttribute, DeleteAttribute,
+// GetUsageAllocation). Re-enable per-operation as upstream lands the types,
+// or build with `-tags kmip32_extension` once they're all available.
+//
 // All operations route through the ovh/kmip-go BatchExecutor (SDK routing).
 // Crypto-sensitive ops delegate to keycore; attribute-only ops are local.
 
@@ -120,6 +129,13 @@ func (h *Handler) handleModifyAttribute(ctx context.Context, req *payloads.Modif
 	connCtx, ok := getConnectionContext(ctx)
 	if !ok {
 		return nil, kmipserver.ErrPermissionDenied
+	}
+	if !kmipMutableAttribute(req.Attribute.AttributeName) {
+		_ = h.publishAudit(ctx, "audit.kmip.attribute_mutation_denied", connCtx.Principal.TenantID, map[string]any{
+			"attribute": string(req.Attribute.AttributeName),
+			"reason":    "attribute is immutable",
+		})
+		return nil, kmipserver.Errorf(kmip.ResultReasonPermissionDenied, "attribute %q is immutable after creation", req.Attribute.AttributeName)
 	}
 	objectID, err := kmipserver.GetIdOrPlaceholder(ctx, strings.TrimSpace(req.UniqueIdentifier))
 	if err != nil {
@@ -363,150 +379,9 @@ func (h *Handler) handleRecover(ctx context.Context, req *payloads.RecoverReques
 	return &payloads.RecoverResponsePayload{UniqueIdentifier: objectID}, nil
 }
 
-// ── Check ────────────────────────────────────────────────────────────────────
-
-func (h *Handler) handleCheck(ctx context.Context, req *payloads.CheckRequestPayload) (*payloads.CheckResponsePayload, error) {
-	connCtx, ok := getConnectionContext(ctx)
-	if !ok {
-		return nil, kmipserver.ErrPermissionDenied
-	}
-	objectID, err := kmipserver.GetIdOrPlaceholder(ctx, strings.TrimSpace(req.UniqueIdentifier))
-	if err != nil {
-		return nil, kmipserver.ErrMissingData
-	}
-	obj, err := h.store.GetObject(ctx, connCtx.Principal.TenantID, objectID)
-	if err != nil {
-		if errors.Is(err, errNotFound) {
-			return nil, kmipserver.ErrItemNotFound
-		}
-		return nil, kmipserver.Errorf(kmip.ResultReasonGeneralFailure, "%v", err)
-	}
-	meta := parseStoredAttributes(obj.AttributesJSON)
-
-	// Check: state must be active
-	if meta.State != 0 && meta.State != kmip.StateActive && meta.State != kmip.StatePreActive {
-		return nil, kmipserver.Errorf(kmip.ResultReasonPermissionDenied, "object state is not active: %s", ttlv.EnumStr(meta.State))
-	}
-	// Check: ops limit
-	if meta.OpsLimit > 0 {
-		// If caller requested a specific usage count, validate it fits
-		if req.UsageLimitsCount > 0 && req.UsageLimitsCount > meta.OpsLimit {
-			return nil, kmipserver.Errorf(kmip.ResultReasonPermissionDenied, "requested usage %d exceeds limit %d", req.UsageLimitsCount, meta.OpsLimit)
-		}
-	}
-	kmipserver.SetIdPlaceholder(ctx, objectID)
-	return &payloads.CheckResponsePayload{UniqueIdentifier: objectID}, nil
-}
-
-// ── Validate ─────────────────────────────────────────────────────────────────
-
-func (h *Handler) handleValidate(ctx context.Context, req *payloads.ValidateRequestPayload) (*payloads.ValidateResponsePayload, error) {
-	connCtx, ok := getConnectionContext(ctx)
-	if !ok {
-		return nil, kmipserver.ErrPermissionDenied
-	}
-	if req == nil || len(req.UniqueIdentifier) == 0 {
-		return nil, kmipserver.ErrMissingData
-	}
-	objectID := strings.TrimSpace(req.UniqueIdentifier[0])
-	obj, err := h.store.GetObject(ctx, connCtx.Principal.TenantID, objectID)
-	if err != nil {
-		if errors.Is(err, errNotFound) {
-			return nil, kmipserver.ErrItemNotFound
-		}
-		return nil, kmipserver.Errorf(kmip.ResultReasonGeneralFailure, "%v", err)
-	}
-	meta := parseStoredAttributes(obj.AttributesJSON)
-	indicator := kmip.ValidityIndicatorValid
-	if meta.State != 0 && meta.State != kmip.StateActive {
-		indicator = kmip.ValidityIndicatorInvalid
-	}
-	kmipserver.SetIdPlaceholder(ctx, objectID)
-	return &payloads.ValidateResponsePayload{ValidityIndicator: indicator}, nil
-}
-
-// ── MAC ──────────────────────────────────────────────────────────────────────
-
-func (h *Handler) handleMAC(ctx context.Context, req *payloads.MACRequestPayload) (*payloads.MACResponsePayload, error) {
-	connCtx, obj, meta, objectID, err := h.resolveOperationalObject(ctx, req.UniqueIdentifier, kmip.OperationMAC)
-	if err != nil {
-		return nil, err
-	}
-	if len(req.Data) == 0 {
-		return nil, kmipserver.ErrMissingData
-	}
-	algorithmHint := hashAlgorithmHint(&req.CryptographicParameters)
-	macB64, err := h.keycore.HMAC(ctx, connCtx.Principal.TenantID, obj.KeyID, base64.StdEncoding.EncodeToString(req.Data), algorithmHint)
-	if err != nil {
-		return nil, kmipserver.Errorf(kmip.ResultReasonGeneralFailure, "%v", err)
-	}
-	mac, err := base64.StdEncoding.DecodeString(macB64)
-	if err != nil {
-		return nil, kmipserver.Errorf(kmip.ResultReasonGeneralFailure, "invalid mac response")
-	}
-	_ = meta
-	kmipserver.SetIdPlaceholder(ctx, objectID)
-	return &payloads.MACResponsePayload{
-		UniqueIdentifier: objectID,
-		MACData:          mac,
-	}, nil
-}
-
-// ── MACVerify ────────────────────────────────────────────────────────────────
-
-func (h *Handler) handleMACVerify(ctx context.Context, req *payloads.MACVerifyRequestPayload) (*payloads.MACVerifyResponsePayload, error) {
-	connCtx, obj, meta, objectID, err := h.resolveOperationalObject(ctx, req.UniqueIdentifier, kmip.OperationMACVerify)
-	if err != nil {
-		return nil, err
-	}
-	if len(req.Data) == 0 || len(req.MACData) == 0 {
-		return nil, kmipserver.ErrMissingData
-	}
-	algorithmHint := hashAlgorithmHint(&req.CryptographicParameters)
-	valid, err := h.keycore.HMACVerify(
-		ctx,
-		connCtx.Principal.TenantID,
-		obj.KeyID,
-		base64.StdEncoding.EncodeToString(req.Data),
-		base64.StdEncoding.EncodeToString(req.MACData),
-		algorithmHint,
-	)
-	if err != nil {
-		return nil, kmipserver.Errorf(kmip.ResultReasonGeneralFailure, "%v", err)
-	}
-	indicator := kmip.ValidityIndicatorInvalid
-	if valid {
-		indicator = kmip.ValidityIndicatorValid
-	}
-	_ = meta
-	kmipserver.SetIdPlaceholder(ctx, objectID)
-	return &payloads.MACVerifyResponsePayload{
-		UniqueIdentifier:  objectID,
-		ValidityIndicator: indicator,
-	}, nil
-}
-
-// ── Hash ─────────────────────────────────────────────────────────────────────
-// Hash is keyless — pure digest; no keycore call needed.
-
-func (h *Handler) handleHash(ctx context.Context, req *payloads.HashRequestPayload) (*payloads.HashResponsePayload, error) {
-	if req == nil || len(req.Data) == 0 {
-		return nil, kmipserver.ErrMissingData
-	}
-	var hf hash.Hash
-	switch req.CryptographicParameters.HashingAlgorithm {
-	case kmip.HashingAlgorithmSHA_384:
-		hf = sha512.New384()
-	case kmip.HashingAlgorithmSHA_512:
-		hf = sha512.New()
-	case kmip.HashingAlgorithmSHA3_256:
-		hf = sha512.New512_256() // closest stdlib approximation
-	default:
-		hf = sha256.New() // SHA-256 default (FIPS 140-3 approved)
-	}
-	_, _ = hf.Write(req.Data)
-	return &payloads.HashResponsePayload{Data: hf.Sum(nil)}, nil
-}
+// ── Check / Validate / MAC / MACVerify / Hash ────────────────────────────────
+// Removed: ovh/kmip-go does not yet expose the corresponding payload structs.
+// Restore from git history once upstream publishes them.
 
 // ── DeriveKey ────────────────────────────────────────────────────────────────
 
@@ -705,32 +580,32 @@ func (h *Handler) handleReCertify(ctx context.Context, req *payloads.ReCertifyRe
 
 // ── Helpers for new object types / attributes ─────────────────────────────────
 
+// kmipMutableAttribute reports whether an attribute may be modified after a
+// managed object has been created. Cryptographic-defining attributes
+// (algorithm, length, usage mask, state, extractable) are deliberately
+// immutable: changing them post-creation would let a client weaken or
+// repurpose a key in ways that bypass policy checks performed at
+// registration. Operation policy name, usage limits, and other ancillary
+// metadata remain mutable.
+func kmipMutableAttribute(name kmip.AttributeName) bool {
+	switch name {
+	case kmip.AttributeNameOperationPolicyName,
+		kmip.AttributeNameUsageLimits:
+		return true
+	default:
+		return false
+	}
+}
+
 // applyAttribute sets a specific attribute on the stored meta.
 func applyAttribute(meta *kmipStoredAttributes, attr kmip.Attribute) {
+	if !kmipMutableAttribute(attr.AttributeName) {
+		return
+	}
 	switch attr.AttributeName {
-	case kmip.AttributeNameCryptographicAlgorithm:
-		if v, ok := attr.AttributeValue.(kmip.CryptographicAlgorithm); ok {
-			meta.CryptographicAlg = v
-		}
-	case kmip.AttributeNameCryptographicLength:
-		if v, ok := attr.AttributeValue.(int32); ok {
-			meta.CryptographicLength = v
-		}
-	case kmip.AttributeNameCryptographicUsageMask:
-		if v, ok := attr.AttributeValue.(kmip.CryptographicUsageMask); ok {
-			meta.CryptographicUsage = v
-		}
 	case kmip.AttributeNameOperationPolicyName:
 		if v, ok := attr.AttributeValue.(string); ok {
 			meta.OperationPolicyName = strings.TrimSpace(v)
-		}
-	case kmip.AttributeNameState:
-		if v, ok := attr.AttributeValue.(kmip.State); ok {
-			meta.State = v
-		}
-	case kmip.AttributeNameExtractable:
-		if v, ok := attr.AttributeValue.(bool); ok {
-			meta.ExportAllowed = v
 		}
 	case kmip.AttributeNameUsageLimits:
 		if v, ok := attr.AttributeValue.(kmip.UsageLimits); ok {

@@ -42,12 +42,25 @@ func (h *Handler) handleCreatePolicy(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	var req CreatePolicyRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		writeErr(w, http.StatusBadRequest, "bad_request", "invalid request body", reqID, "")
 		return
 	}
+	tenantID := strings.TrimSpace(req.TenantID)
+	if tenantID == "" {
+		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	}
+	if tenantID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
+		return
+	}
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
+		return
+	}
+	req.TenantID = tenantID
 	p, err := h.svc.CreatePolicy(r.Context(), req)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "create_failed", err.Error(), reqID, req.TenantID)
+		writeErr(w, http.StatusBadRequest, "create_failed", sanitizeMessage(err), reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"policy": p, "request_id": reqID})
@@ -96,7 +109,7 @@ func (h *Handler) handleUpdatePolicy(w http.ResponseWriter, r *http.Request) {
 	}
 	var req UpdatePolicyRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusBadRequest, "bad_request", "invalid request body", reqID, tenantID)
 		return
 	}
 	req.TenantID = tenantID
@@ -106,7 +119,7 @@ func (h *Handler) handleUpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "update_failed", err.Error(), reqID, tenantID)
+		writeErr(w, http.StatusBadRequest, "update_failed", sanitizeMessage(err), reqID, tenantID)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"policy": p, "request_id": reqID})
@@ -122,7 +135,12 @@ func (h *Handler) handleDeletePolicy(w http.ResponseWriter, r *http.Request) {
 		Actor         string `json:"actor"`
 		CommitMessage string `json:"commit_message"`
 	}
-	_ = decodeJSON(r, &req)
+	if r.ContentLength > 0 {
+		if err := decodeJSON(r, &req); err != nil {
+			writeErr(w, http.StatusBadRequest, "bad_request", "invalid request body", reqID, tenantID)
+			return
+		}
+	}
 	if err := h.svc.DeletePolicy(r.Context(), tenantID, r.PathValue("id"), req.Actor, req.CommitMessage); err != nil {
 		if errors.Is(err, errNotFound) {
 			writeErr(w, http.StatusNotFound, "not_found", "policy not found", reqID, tenantID)
@@ -175,20 +193,46 @@ func (h *Handler) handleEvaluate(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	var req EvaluatePolicyRequest
 	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		writeErr(w, http.StatusBadRequest, "bad_request", "invalid request body", reqID, "")
 		return
 	}
+	tenantID := strings.TrimSpace(req.TenantID)
+	if tenantID == "" {
+		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	}
+	if tenantID == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required", reqID, "")
+		return
+	}
+	if err := tenantcheck.Enforce(r, tenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, tenantID)
+		return
+	}
+	req.TenantID = tenantID
 	resp, err := h.svc.Evaluate(r.Context(), req)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "evaluate_failed", err.Error(), reqID, req.TenantID)
+		// Fail closed: surface a deny decision rather than a 4xx so callers
+		// (keycore, KMIP) cannot misinterpret a transient evaluator error
+		// as a permitted operation.
+		writeJSON(w, http.StatusOK, map[string]any{
+			"decision":   DecisionDeny,
+			"reason":     "policy evaluation failed (fail-closed)",
+			"outcomes":   []RuleOutcome{},
+			"request_id": reqID,
+		})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	out := map[string]any{
 		"decision":   resp.Decision,
 		"reason":     resp.Reason,
 		"outcomes":   resp.Outcomes,
 		"request_id": reqID,
-	})
+	}
+	if resp.ApprovalRequestID != "" {
+		out["approval_request_id"] = resp.ApprovalRequestID
+		out["required_approvers"] = resp.RequiredApprovers
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 func decodeJSON(r *http.Request, out any) error {
@@ -243,4 +287,27 @@ func writeErr(w http.ResponseWriter, status int, code string, message string, re
 			"tenant_id":  tenantID,
 		},
 	})
+}
+
+// sanitizeMessage strips potentially sensitive content (file paths, internal
+// identifiers) from validation errors before returning them to API callers.
+// Validation messages we own — tenant mismatch, missing fields, malformed
+// YAML — are returned as-is. Anything else is replaced with a generic
+// message that does not leak implementation detail.
+func sanitizeMessage(err error) string {
+	if err == nil {
+		return ""
+	}
+	msg := err.Error()
+	allowed := []string{
+		"tenant_id", "tenant", "apiVersion", "kind", "metadata.name",
+		"spec.rules", "spec.type", "policy yaml",
+	}
+	low := strings.ToLower(msg)
+	for _, prefix := range allowed {
+		if strings.Contains(low, strings.ToLower(prefix)) {
+			return msg
+		}
+	}
+	return "request rejected"
 }

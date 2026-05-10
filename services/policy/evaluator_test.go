@@ -24,7 +24,7 @@ spec:
 	if err != nil {
 		t.Fatal(err)
 	}
-	decision, outcomes := evaluatePolicy(doc, "p1", 1, EvaluatePolicyRequest{
+	er := evaluatePolicy(doc, "p1", 1, EvaluatePolicyRequest{
 		TenantID:  "tenant-a",
 		Operation: "key.encrypt",
 		Algorithm: "3DES",
@@ -36,11 +36,11 @@ spec:
 		KeyID:     "k1",
 		Labels:    map[string]any{},
 	})
-	if decision != DecisionDeny {
-		t.Fatalf("expected DENY, got %s", decision)
+	if er.Decision != DecisionDeny {
+		t.Fatalf("expected DENY, got %s", er.Decision)
 	}
-	if len(outcomes) != 1 {
-		t.Fatalf("expected 1 outcome, got %d", len(outcomes))
+	if len(er.Outcomes) != 1 {
+		t.Fatalf("expected 1 outcome, got %d", len(er.Outcomes))
 	}
 }
 
@@ -65,15 +65,15 @@ spec:
 	if err != nil {
 		t.Fatal(err)
 	}
-	decision, outcomes := evaluatePolicy(doc, "p1", 1, EvaluatePolicyRequest{
+	er := evaluatePolicy(doc, "p1", 1, EvaluatePolicyRequest{
 		TenantID:          "tenant-a",
 		Operation:         "key.encrypt",
 		DaysSinceRotation: 81,
 	})
-	if decision != DecisionWarn {
-		t.Fatalf("expected WARN, got %s", decision)
+	if er.Decision != DecisionWarn {
+		t.Fatalf("expected WARN, got %s", er.Decision)
 	}
-	if len(outcomes) != 1 || outcomes[0].Message == "" {
-		t.Fatalf("unexpected outcomes %#v", outcomes)
+	if len(er.Outcomes) != 1 || er.Outcomes[0].Message == "" {
+		t.Fatalf("unexpected outcomes %#v", er.Outcomes)
 	}
 }

@@ -600,6 +600,10 @@ func scanEvent(scanner interface {
 	if ev.Details == nil {
 		ev.Details = map[string]interface{}{}
 	}
+	// Restore CountryCode from the stored details JSON when it was enriched on ingest.
+	if cc, ok := ev.Details["country_code"].(string); ok && cc != "" {
+		ev.CountryCode = cc
+	}
 	return ev, nil
 }
 

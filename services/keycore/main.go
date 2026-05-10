@@ -47,6 +47,15 @@ func main() {
 	if err := pkgruntimecfg.ValidateServiceConfig("kms-keycore", cfg); err != nil {
 		log.Fatalf("config validation failed: %v", err)
 	}
+
+	// FIPS 140-3 §4.9.1: run the cryptographic algorithm power-on self-test
+	// battery before serving any traffic. A single failed KAT must prevent
+	// the module from entering operational mode.
+	if results := runFIPSSelfTests(); !allFIPSSelfTestsPassed(results) {
+		log.Fatalf("FIPS self-test failed; refusing to start: %v", results)
+	} else {
+		logger.Printf("FIPS self-test passed: %v", results)
+	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -102,7 +111,12 @@ func main() {
 			if opt.MinIdleConns == 0 {
 				opt.MinIdleConns = 2
 			}
-			if opt.TLSConfig != nil && opt.TLSConfig.MinVersion < tls.VersionTLS13 {
+			// FIPS 140-3 stringency: every Redis connection that uses TLS must
+			// negotiate TLS 1.3. The previous conditional left
+			// caller-supplied TLS configs untouched when MinVersion was
+			// already set; that allowed a stale environment to silently fall
+			// back to TLS 1.2.
+			if opt.TLSConfig != nil {
 				opt.TLSConfig = opt.TLSConfig.Clone()
 				opt.TLSConfig.MinVersion = tls.VersionTLS13
 			}

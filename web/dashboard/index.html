@@ -5,6 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vecta KMS Dashboard</title>
     <meta name="description" content="Vecta KMS Cyber Command Center" />
+    <script>
+      // No-FOUC theme bootstrap — runs before any paint.
+      (function () {
+        try {
+          var saved = localStorage.getItem("vecta.theme");
+          var theme =
+            saved === "dark" || saved === "light"
+              ? saved
+              : window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
+              ? "light"
+              : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

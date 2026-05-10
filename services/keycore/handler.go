@@ -227,6 +227,11 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /canary/{id}/trip", h.handleTripCanaryKey)
 	mux.HandleFunc("GET /canary/{id}/trips", h.handleListCanaryTrips)
 
+	// FIPS 140-3 self-test and zeroization verification
+	mux.HandleFunc("POST /fips/self-test", h.handleFIPSSelfTest)
+	mux.HandleFunc("GET /fips/rng-health", h.handleRNGHealth)
+	mux.HandleFunc("POST /keys/{id}/zeroize-verify", h.handleZeroizeVerify)
+
 	return mux
 }
 

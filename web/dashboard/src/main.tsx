@@ -8,7 +8,11 @@ import { ToastStack } from "./components/ToastStack";
 import { getSession } from "./lib/auth";
 import { queryClient } from "./lib/queryClient";
 import { captureFrontendError } from "./lib/telemetry";
+import { applyTheme, useTheme } from "./store/theme";
 import "./index.css";
+
+// Apply persisted/system theme synchronously before React mounts to prevent FOUC.
+applyTheme(useTheme.getState().theme);
 
 function normalizeDashboardURL(): void {
   const current = new URL(window.location.href);

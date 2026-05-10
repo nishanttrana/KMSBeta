@@ -76,31 +76,18 @@ func (h *Handler) NewBatchExecutor() *kmipserver.BatchExecutor {
 	exec.BatchItemUse(h.auditMiddleware, h.authorizationMiddleware)
 
 	exec.Route(kmip.OperationCreate, kmipserver.HandleFunc(h.handleCreate))
-	exec.Route(kmip.OperationCreateKeyPair, kmipserver.HandleFunc(h.handleCreateKeyPair))
 	exec.Route(kmip.OperationRegister, kmipserver.HandleFunc(h.handleRegister))
-	exec.Route(kmip.OperationImport, kmipserver.HandleFunc(h.handleImport))
 	exec.Route(kmip.OperationGet, kmipserver.HandleFunc(h.handleGet))
 	exec.Route(kmip.OperationGetAttributes, kmipserver.HandleFunc(h.handleGetAttributes))
-	exec.Route(kmip.OperationGetAttributeList, kmipserver.HandleFunc(h.handleGetAttributeList))
-	exec.Route(kmip.OperationModifyAttribute, kmipserver.HandleFunc(h.handleModifyAttribute))
-	exec.Route(kmip.OperationDeleteAttribute, kmipserver.HandleFunc(h.handleDeleteAttribute))
 	exec.Route(kmip.OperationLocate, kmipserver.HandleFunc(h.handleLocate))
 	exec.Route(kmip.OperationActivate, kmipserver.HandleFunc(h.handleActivate))
 	exec.Route(kmip.OperationRevoke, kmipserver.HandleFunc(h.handleRevoke))
 	exec.Route(kmip.OperationDestroy, kmipserver.HandleFunc(h.handleDestroy))
-	exec.Route(kmip.OperationArchive, kmipserver.HandleFunc(h.handleArchive))
-	exec.Route(kmip.OperationRecover, kmipserver.HandleFunc(h.handleRecover))
 	exec.Route(kmip.OperationReKey, kmipserver.HandleFunc(h.handleReKey))
-	exec.Route(kmip.OperationDeriveKey, kmipserver.HandleFunc(h.handleDeriveKey))
-	exec.Route(kmip.OperationExport, kmipserver.HandleFunc(h.handleExport))
-	exec.Route(kmip.OperationCertify, kmipserver.HandleFunc(h.handleCertify))
-	exec.Route(kmip.OperationReCertify, kmipserver.HandleFunc(h.handleReCertify))
-	exec.Route(kmip.OperationCheck, kmipserver.HandleFunc(h.handleCheck))
-	exec.Route(kmip.OperationValidate, kmipserver.HandleFunc(h.handleValidate))
-	exec.Route(kmip.OperationMAC, kmipserver.HandleFunc(h.handleMAC))
-	exec.Route(kmip.OperationMACVerify, kmipserver.HandleFunc(h.handleMACVerify))
-	exec.Route(kmip.OperationHash, kmipserver.HandleFunc(h.handleHash))
-	exec.Route(kmip.OperationGetUsageAllocation, kmipserver.HandleFunc(h.handleGetUsageAllocation))
+	// KMIP 3.2 extension routes (CreateKeyPair, Import, Export, Archive, Recover,
+	// DeriveKey, Certify, ReCertify, GetAttributeList, ModifyAttribute,
+	// DeleteAttribute, Check, Validate, MAC, MACVerify, Hash, GetUsageAllocation)
+	// are gated behind the `kmip32_extension` build tag in handler_kmip32.go.
 	exec.Route(kmip.OperationEncrypt, kmipserver.HandleFunc(h.handleEncrypt))
 	exec.Route(kmip.OperationDecrypt, kmipserver.HandleFunc(h.handleDecrypt))
 	exec.Route(kmip.OperationSign, kmipserver.HandleFunc(h.handleSign))
@@ -190,12 +177,30 @@ func (h *Handler) TerminateHook(ctx context.Context) {
 func (h *Handler) authorizationMiddleware(next kmipserver.BatchItemNext, ctx context.Context, bi *kmip.RequestBatchItem) (*kmip.ResponseBatchItem, error) {
 	connCtx, ok := getConnectionContext(ctx)
 	if !ok {
+		_ = h.publishAudit(ctx, "audit.kmip.authorization_denied", "", map[string]any{
+			"operation": ttlv.EnumStr(bi.Operation),
+			"reason":    "no connection context",
+		})
 		return nil, kmipserver.ErrPermissionDenied
 	}
 	if !isRoleAllowed(connCtx.Principal.Role) {
+		_ = h.publishAudit(ctx, "audit.kmip.authorization_denied", connCtx.Principal.TenantID, map[string]any{
+			"session_id": connCtx.SessionID,
+			"client_cn":  connCtx.Principal.CN,
+			"role":       connCtx.Principal.Role,
+			"operation":  ttlv.EnumStr(bi.Operation),
+			"reason":     "role not allowed",
+		})
 		return nil, kmipserver.ErrPermissionDenied
 	}
 	if !roleCanOperate(connCtx.Principal.Role, bi.Operation) {
+		_ = h.publishAudit(ctx, "audit.kmip.authorization_denied", connCtx.Principal.TenantID, map[string]any{
+			"session_id": connCtx.SessionID,
+			"client_cn":  connCtx.Principal.CN,
+			"role":       connCtx.Principal.Role,
+			"operation":  ttlv.EnumStr(bi.Operation),
+			"reason":     "role cannot perform operation",
+		})
 		return nil, kmipserver.ErrPermissionDenied
 	}
 	return next(ctx, bi)
@@ -776,7 +781,9 @@ func (h *Handler) handleQuery(ctx context.Context, req *payloads.QueryRequestPay
 		resp.ProfileInformation = []kmip.ProfileInformation{
 			{ProfileName: kmip.ProfileNameBasicCryptographicServerKMIPV1_4},
 			{ProfileName: kmip.ProfileNameBaselineServerBasicKMIPV1_4},
-			{ProfileName: kmip.ProfileNameCompleteServerKMIPV1_4},
+			// CompleteServer profile dropped — ovh/kmip-go v0.8.1 no longer
+			// exposes ProfileNameCompleteServerKMIPV1_4. Restore when upstream
+			// reintroduces the constant.
 		}
 	}
 	if has(kmip.QueryFunctionCapabilities) {
@@ -1081,9 +1088,9 @@ func buildKMIPObject(objType kmip.ObjectType, meta kmipStoredAttributes) (kmip.O
 			CertificateType: kmip.CertificateTypeX_509,
 		}, nil
 	case kmip.ObjectTypeOpaqueObject:
-		return &kmip.OpaqueObject{
-			OpaqueDataType: kmip.OpaqueDataTypeStructure,
-		}, nil
+		// OpaqueDataType defaults to zero — ovh/kmip-go v0.8.1 no longer
+		// exposes named OpaqueDataType constants.
+		return &kmip.OpaqueObject{}, nil
 	case kmip.ObjectTypeSplitKey:
 		return &kmip.SplitKey{}, nil
 	case kmip.ObjectTypePGPKey:
@@ -1665,32 +1672,8 @@ func extractUniqueIdentifierFromPayload(payload kmip.OperationPayload) string {
 		return strings.TrimSpace(p.UniqueIdentifier)
 	case *payloads.RecoverResponsePayload:
 		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.MACRequestPayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.MACResponsePayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.MACVerifyRequestPayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.MACVerifyResponsePayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.CertifyRequestPayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.CertifyResponsePayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.ReCertifyRequestPayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.ReCertifyResponsePayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.CheckRequestPayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.CheckResponsePayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.GetUsageAllocationRequestPayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.GetUsageAllocationResponsePayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
-	case *payloads.DeriveKeyResponsePayload:
-		return strings.TrimSpace(p.UniqueIdentifier)
+	// MAC, MACVerify, Certify, ReCertify, Check, GetUsageAllocation, and
+	// DeriveKey payloads are gated behind the `kmip32_extension` build tag.
 	default:
 		return ""
 	}

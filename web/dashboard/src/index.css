@@ -1,42 +1,118 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap");
 
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
 /* ===================================================================
-   THEME: DARK (default)
+   THEME: AURORA DARK (default)
+   Deep midnight base with violet→cyan aurora accents.
    =================================================================== */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  /* Structural */
-  --c-bg:          #0e1726;
-  --c-sidebar:     #121e30;
-  --c-surface:     #162033;
-  --c-card:        #1b2a40;
-  --c-card-hover:  #1f3049;
-  --c-border:      #243654;
-  --c-border-hi:   #2e4468;
-  --c-text:        #eaf0f8;
-  --c-dim:         #a8bcd4;
-  --c-muted:       #7a92ad;
-  --c-glow:        rgba(6, 214, 224, 0.15);
-  --c-glow-strong: rgba(6, 214, 224, 0.32);
-  --c-accent-dim:  rgba(6, 214, 224, 0.10);
-  --c-dim-tint:    rgba(148, 163, 184, 0.06);
-  /* Semantic — bright neons for dark backgrounds */
-  --s-accent: #06d6e0;  --s-accent-dim: rgba(6,214,224,.10);   --s-accent-mid: rgba(6,214,224,.12);
-  --s-teal:   #14b8a6;  --s-teal-dim:   rgba(20,184,166,.08);
-  --s-green:  #2dd4a0;  --s-green-dim:  rgba(45,212,160,.08);
-  --s-red:    #ef4444;  --s-red-dim:    rgba(239,68,68,.08);
-  --s-amber:  #f59e0b;  --s-amber-dim:  rgba(245,158,11,.08);
-  --s-orange: #f97316;  --s-orange-dim: rgba(249,115,22,.08);
-  --s-purple: #a78bfa;  --s-purple-dim: rgba(167,139,250,.08);
-  --s-blue:   #3b82f6;  --s-blue-dim:   rgba(59,130,246,.08);
-  --s-pink:   #ec4899;  --s-pink-dim:   rgba(236,72,153,.08);
-  --s-cyan:   #22d3ee;  --s-cyan-dim:   rgba(34,211,238,.08);
-  --s-yellow: #facc15;  --s-yellow-dim: rgba(250,204,21,.08);
+
+  /* Structural surfaces */
+  --c-bg:          #0a0e1a;
+  --c-sidebar:     #0d1424;
+  --c-surface:     #111a2e;
+  --c-card:        #15203a;
+  --c-card-hover:  #1a2748;
+  --c-elevated:    rgba(255, 255, 255, 0.04);
+  --c-border:      #1f2d4d;
+  --c-border-hi:   #2a3d68;
+  --c-text:        #f1f5f9;
+  --c-dim:         #b4c2d8;
+  --c-muted:       #8497b4;
+
+  /* Aurora gradient (used for accents, hovers, focus) */
+  --c-aurora-from: #818cf8;   /* indigo violet */
+  --c-aurora-mid:  #6366f1;
+  --c-aurora-to:   #22d3ee;   /* cyan */
+  --c-glow:        rgba(99, 102, 241, 0.18);
+  --c-glow-strong: rgba(34, 211, 238, 0.28);
+  --c-accent-dim:  rgba(99, 102, 241, 0.10);
+  --c-dim-tint:    rgba(148, 163, 184, 0.05);
+
+  /* Semantic foreground (bright neon for dark bg) */
+  --s-accent: #22d3ee;  --s-accent-dim: rgba(34,211,238,.10);  --s-accent-mid: rgba(34,211,238,.14);
+  --s-teal:   #2dd4bf;  --s-teal-dim:   rgba(45,212,191,.09);
+  --s-green:  #34d399;  --s-green-dim:  rgba(52,211,153,.09);
+  --s-red:    #f87171;  --s-red-dim:    rgba(248,113,113,.10);
+  --s-amber:  #fbbf24;  --s-amber-dim:  rgba(251,191,36,.10);
+  --s-orange: #fb923c;  --s-orange-dim: rgba(251,146,60,.09);
+  --s-purple: #a78bfa;  --s-purple-dim: rgba(167,139,250,.10);
+  --s-blue:   #60a5fa;  --s-blue-dim:   rgba(96,165,250,.09);
+  --s-pink:   #f472b6;  --s-pink-dim:   rgba(244,114,182,.09);
+  --s-cyan:   #22d3ee;  --s-cyan-dim:   rgba(34,211,238,.09);
+  --s-yellow: #fde047;  --s-yellow-dim: rgba(253,224,71,.09);
+
+  /* Shadows (layered, soft) */
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md:  0 4px 14px rgba(0, 0, 0, 0.30), 0 1px 2px rgba(0, 0, 0, 0.20);
+  --shadow-lg:  0 12px 36px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-glow: 0 0 0 1px rgba(99, 102, 241, 0.20), 0 0 28px rgba(34, 211, 238, 0.16);
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
 }
+
+/* ===================================================================
+   THEME: ENTERPRISE DAYLIGHT
+   Clean white surfaces, indigo accents, hairline borders.
+   =================================================================== */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --c-bg:          #f8fafc;
+  --c-sidebar:     #ffffff;
+  --c-surface:     #ffffff;
+  --c-card:        #ffffff;
+  --c-card-hover:  #f1f5f9;
+  --c-elevated:    #ffffff;
+  --c-border:      #e2e8f0;
+  --c-border-hi:   #cbd5e1;
+  --c-text:        #0f172a;
+  --c-dim:         #475569;
+  --c-muted:       #64748b;
+
+  --c-aurora-from: #6366f1;
+  --c-aurora-mid:  #4f46e5;
+  --c-aurora-to:   #0891b2;
+  --c-glow:        rgba(79, 70, 229, 0.10);
+  --c-glow-strong: rgba(79, 70, 229, 0.20);
+  --c-accent-dim:  rgba(79, 70, 229, 0.06);
+  --c-dim-tint:    rgba(15, 23, 42, 0.04);
+
+  /* Semantic foreground (darker shades for contrast on light bg) */
+  --s-accent: #0e7490;  --s-accent-dim: rgba(14,116,144,.07);  --s-accent-mid: rgba(14,116,144,.10);
+  --s-teal:   #0d9488;  --s-teal-dim:   rgba(13,148,136,.07);
+  --s-green:  #059669;  --s-green-dim:  rgba(5,150,105,.07);
+  --s-red:    #dc2626;  --s-red-dim:    rgba(220,38,38,.07);
+  --s-amber:  #d97706;  --s-amber-dim:  rgba(217,119,6,.07);
+  --s-orange: #ea580c;  --s-orange-dim: rgba(234,88,12,.07);
+  --s-purple: #7c3aed;  --s-purple-dim: rgba(124,58,237,.07);
+  --s-blue:   #2563eb;  --s-blue-dim:   rgba(37,99,235,.07);
+  --s-pink:   #db2777;  --s-pink-dim:   rgba(219,39,105,.07);
+  --s-cyan:   #0891b2;  --s-cyan-dim:   rgba(8,145,178,.07);
+  --s-yellow: #ca8a04;  --s-yellow-dim: rgba(202,138,4,.07);
+
+  --shadow-sm:  0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md:  0 2px 8px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-lg:  0 12px 32px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.05);
+  --shadow-glow: 0 0 0 1px rgba(79, 70, 229, 0.18), 0 4px 16px rgba(79, 70, 229, 0.10);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+/* ===================================================================
+   BASE
+   =================================================================== */
 
 html,
 body,
@@ -51,16 +127,49 @@ body,
 }
 
 body {
-  font-family: "IBM Plex Sans", sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   color: var(--c-text);
   background-image:
-    radial-gradient(circle at 8% -20%, rgba(6, 214, 224, 0.14), transparent 38%),
-    radial-gradient(circle at 95% 0%, rgba(167, 139, 250, 0.08), transparent 34%),
+    radial-gradient(ellipse at 5% -10%, var(--c-glow), transparent 45%),
+    radial-gradient(ellipse at 95% 0%, var(--c-glow-strong), transparent 38%),
+    radial-gradient(ellipse at 50% 100%, var(--c-accent-dim), transparent 55%),
     linear-gradient(180deg, var(--c-bg) 0%, var(--c-sidebar) 100%);
+  background-attachment: fixed;
+}
+
+input, textarea, select, button {
+  font-family: inherit;
+}
+
+a {
+  transition: color 0.15s ease;
+}
+
+/* Scrollbars — branded, theme-reactive */
+*::-webkit-scrollbar         { width: 6px; height: 6px; }
+*::-webkit-scrollbar-track   { background: transparent; }
+*::-webkit-scrollbar-thumb   { background: var(--c-border-hi); border-radius: 4px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--s-accent); }
+
+/* Selection */
+::selection {
+  background: var(--c-glow-strong);
+  color: var(--c-text);
 }
 
 /* ===================================================================
-   IN-FLIGHT REQUEST OVERLAY  (compact branded loader)
+   FOCUS — branded keyboard-focus indicator
+   =================================================================== */
+
+:focus-visible {
+  outline: 2px solid var(--s-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ===================================================================
+   IN-FLIGHT REQUEST OVERLAY
    =================================================================== */
 
 .vecta-loading-overlay {
@@ -71,8 +180,9 @@ body {
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  background: rgba(6, 10, 17, 0.22);
-  backdrop-filter: blur(2px);
+  background: color-mix(in oklab, var(--c-bg) 78%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   animation: vecta-fade-in 200ms ease-out;
 }
 
@@ -80,15 +190,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  min-width: 200px;
-  padding: 20px 24px;
-  border-radius: 16px;
-  border: 1px solid rgba(6, 214, 224, 0.18);
-  background: rgba(8, 16, 30, 0.92);
-  box-shadow:
-    0 0 0 1px rgba(6, 214, 224, 0.06),
-    0 20px 50px rgba(0, 0, 0, 0.4);
+  gap: 12px;
+  min-width: 220px;
+  padding: 22px 26px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--c-border-hi);
+  background: var(--c-card);
+  box-shadow: var(--shadow-lg);
 }
 
 .vecta-loading-card--compact {
@@ -98,14 +206,12 @@ body {
 }
 
 .vecta-loading-text {
-  color: rgba(226, 232, 240, 0.88);
+  color: var(--c-dim);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-
-/* ── Shared logo + spinner ── */
 
 .vecta-loading-logo-wrap {
   position: relative;
@@ -115,34 +221,20 @@ body {
   place-items: center;
 }
 
-.vecta-loading-logo-wrap--lg {
-  width: 72px;
-  height: 72px;
-}
-
-.vecta-loading-logo-wrap--xl {
-  width: 120px;
-  height: 120px;
-}
+.vecta-loading-logo-wrap--lg { width: 72px; height: 72px; }
+.vecta-loading-logo-wrap--xl { width: 120px; height: 120px; }
 
 .vecta-loading-logo {
   width: 30px;
   height: 30px;
-  filter: drop-shadow(0 0 6px rgba(6, 214, 224, 0.3));
+  filter: drop-shadow(0 0 8px var(--c-glow-strong));
 }
 
-.vecta-loading-logo--lg {
-  width: 38px;
-  height: 38px;
-}
-
+.vecta-loading-logo--lg { width: 38px; height: 38px; }
 .vecta-loading-logo--xl {
-  width: 64px;
-  height: 64px;
-  filter: drop-shadow(0 0 12px rgba(6, 214, 224, 0.4));
+  width: 64px; height: 64px;
+  filter: drop-shadow(0 0 14px var(--c-glow-strong));
 }
-
-/* ── Arc spinner ── */
 
 .vecta-loading-spinner {
   position: absolute;
@@ -152,37 +244,26 @@ body {
   animation: vecta-spin 1.1s linear infinite;
 }
 
-.vecta-loading-spinner--lg {
-  animation-duration: 1.4s;
-}
-
-.vecta-loading-spinner--xl {
-  animation-duration: 1.6s;
-}
+.vecta-loading-spinner--lg { animation-duration: 1.4s; }
+.vecta-loading-spinner--xl { animation-duration: 1.6s; }
 
 .vecta-loading-spinner-track {
   fill: none;
-  stroke: rgba(6, 214, 224, 0.08);
+  stroke: var(--c-border);
   stroke-width: 1.5;
 }
 
 .vecta-loading-spinner-arc {
   fill: none;
-  stroke: rgba(6, 214, 224, 0.7);
+  stroke: var(--s-accent);
   stroke-width: 1.5;
   stroke-linecap: round;
   stroke-dasharray: 90 150;
   stroke-dashoffset: 0;
 }
 
-/* Custom scrollbars — thin, accent-colored */
-*::-webkit-scrollbar         { width: 5px; height: 5px }
-*::-webkit-scrollbar-track   { background: transparent }
-*::-webkit-scrollbar-thumb   { background: var(--c-border-hi, #2e4468); border-radius: 3px }
-*::-webkit-scrollbar-thumb:hover { background: var(--s-accent, #06d6e0) }
-
 /* ===================================================================
-   INITIAL FULL-PAGE LOADING  (auth bootstrap)
+   INITIAL FULL-PAGE LOADING
    =================================================================== */
 
 .vecta-initial-loading {
@@ -194,8 +275,8 @@ body {
   justify-content: center;
   background: var(--c-bg);
   background-image:
-    radial-gradient(circle at 8% -20%, rgba(6, 214, 224, 0.12), transparent 38%),
-    radial-gradient(circle at 95% 0%, rgba(167, 139, 250, 0.06), transparent 34%);
+    radial-gradient(ellipse at 8% -20%, var(--c-glow), transparent 40%),
+    radial-gradient(ellipse at 95% 0%, var(--c-glow-strong), transparent 36%);
   animation: vecta-fade-in 300ms ease-out;
 }
 
@@ -212,24 +293,28 @@ body {
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(226, 232, 240, 0.95);
-  text-shadow: 0 0 24px rgba(6, 214, 224, 0.2);
+  background: linear-gradient(90deg, var(--c-aurora-from), var(--c-aurora-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 28px var(--c-glow);
 }
 
 .vecta-initial-loading-subtitle {
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.08em;
-  color: rgba(6, 214, 224, 0.5);
+  color: var(--s-accent);
   text-transform: uppercase;
   margin-top: -12px;
+  opacity: 0.75;
 }
 
 .vecta-initial-loading-bar-track {
   width: 240px;
   height: 3px;
   border-radius: 3px;
-  background: rgba(226, 232, 240, 0.08);
+  background: var(--c-border);
   overflow: hidden;
 }
 
@@ -237,7 +322,7 @@ body {
   width: 40%;
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, rgba(6, 214, 224, 0.8), rgba(167, 139, 250, 0.6));
+  background: linear-gradient(90deg, var(--c-aurora-from), var(--c-aurora-to));
   animation: vecta-indeterminate-bar 1.4s ease-in-out infinite;
 }
 
@@ -245,7 +330,209 @@ body {
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.03em;
-  color: rgba(226, 232, 240, 0.36);
+  color: var(--c-muted);
+}
+
+/* ===================================================================
+   POLISH UTILITIES — used across components
+   =================================================================== */
+
+.vecta-spin              { animation: vecta-spin 1.1s linear infinite; }
+.vecta-transition        { transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+.vecta-accent-glow {
+  box-shadow: 0 0 0 1px var(--c-accent-dim), 0 0 18px var(--c-glow);
+}
+.vecta-accent-glow-strong {
+  box-shadow: 0 0 0 1px var(--c-glow-strong), 0 0 28px var(--c-glow-strong);
+}
+.vecta-card-shadow       { box-shadow: var(--shadow-md); }
+
+.vecta-gradient-card {
+  background:
+    linear-gradient(135deg, var(--c-card) 0%, var(--c-surface) 100%);
+  border: 1px solid var(--c-border);
+}
+
+.vecta-aurora-text {
+  background: linear-gradient(90deg, var(--c-aurora-from), var(--c-aurora-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.vecta-aurora-border {
+  position: relative;
+  background: var(--c-card);
+  border-radius: var(--radius-md);
+}
+.vecta-aurora-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--c-aurora-from), var(--c-aurora-to));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+/* Glass surface — backdrop-blur card */
+.vecta-glass {
+  background: color-mix(in oklab, var(--c-card) 80%, transparent);
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border: 1px solid var(--c-border);
+}
+
+/* Subtle noise overlay for premium depth (dark mode only) */
+[data-theme="dark"] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0.022;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+/* ===================================================================
+   BADGES
+   =================================================================== */
+
+.vecta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+  line-height: 1.6;
+}
+
+.vecta-badge-green  { color: var(--s-green);  background: var(--s-green-dim);  border-color: color-mix(in oklab, var(--s-green) 25%, transparent); }
+.vecta-badge-red    { color: var(--s-red);    background: var(--s-red-dim);    border-color: color-mix(in oklab, var(--s-red) 25%, transparent); }
+.vecta-badge-amber  { color: var(--s-amber);  background: var(--s-amber-dim);  border-color: color-mix(in oklab, var(--s-amber) 25%, transparent); }
+.vecta-badge-blue   { color: var(--s-blue);   background: var(--s-blue-dim);   border-color: color-mix(in oklab, var(--s-blue) 25%, transparent); }
+.vecta-badge-accent { color: var(--s-accent); background: var(--s-accent-dim); border-color: color-mix(in oklab, var(--s-accent) 25%, transparent); }
+.vecta-badge-purple { color: var(--s-purple); background: var(--s-purple-dim); border-color: color-mix(in oklab, var(--s-purple) 25%, transparent); }
+
+/* ===================================================================
+   TABLES
+   =================================================================== */
+
+.vecta-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.vecta-table thead tr {
+  border-bottom: 1px solid var(--c-border);
+}
+
+.vecta-table thead th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+  white-space: nowrap;
+}
+
+.vecta-table tbody tr {
+  border-bottom: 1px solid color-mix(in oklab, var(--c-border) 60%, transparent);
+  transition: background 0.12s ease;
+}
+
+.vecta-table tbody tr:hover {
+  background: var(--c-accent-dim);
+}
+
+.vecta-table tbody td {
+  padding: 11px 12px;
+  color: var(--c-dim);
+  vertical-align: middle;
+}
+
+/* ===================================================================
+   STAT CARD
+   =================================================================== */
+
+.vecta-stat-card {
+  background: var(--c-card);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.vecta-stat-card:hover {
+  border-color: var(--c-border-hi);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+/* ===================================================================
+   SECTION HEADERS
+   =================================================================== */
+
+.vecta-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.vecta-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-text);
+  letter-spacing: -0.1px;
+}
+
+.vecta-section-subtitle {
+  font-size: 11px;
+  color: var(--c-muted);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+
+/* ===================================================================
+   THEME TOGGLE
+   =================================================================== */
+
+.vecta-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--c-border);
+  background: var(--c-card);
+  color: var(--c-dim);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.vecta-theme-toggle:hover {
+  border-color: var(--s-accent);
+  color: var(--s-accent);
+  box-shadow: 0 0 0 3px var(--c-accent-dim);
 }
 
 /* ===================================================================
@@ -284,6 +571,43 @@ body {
   50%      { opacity: 1; }
 }
 
+@keyframes vecta-aurora-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes vecta-node-glow {
+  0%, 100% { transform: scale(1); opacity: 0.2; }
+  50%      { transform: scale(1.4); opacity: 0.5; }
+}
+
+@keyframes vecta-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+@keyframes floatParticle {
+  0%   { opacity: 0; transform: translateY(0) scale(0.8); }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.3; }
+  100% { opacity: 0; transform: translateY(-120px) scale(1.1); }
+}
+
+@keyframes scanline {
+  0%   { top: -2px; opacity: 0.6; }
+  95%  { opacity: 0.3; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { filter: drop-shadow(0 0 8px var(--c-glow-strong)); }
+  50%      { filter: drop-shadow(0 0 22px var(--c-glow-strong)) drop-shadow(0 0 40px var(--c-glow)); }
+}
+
+@keyframes spinRingCW  { from { transform: rotate(0deg);  } to { transform: rotate(360deg);  } }
+@keyframes spinRingCCW { from { transform: rotate(0deg);  } to { transform: rotate(-360deg); } }
+
 /* ===================================================================
    ACCESSIBILITY
    =================================================================== */
@@ -298,219 +622,8 @@ body {
   .vecta-initial-loading {
     animation: none;
   }
-}
-
-/* ===================================================================
-   LOGIN SCREEN ANIMATIONS
-   =================================================================== */
-
-@keyframes vecta-node-glow {
-  0%, 100% { transform: scale(1); opacity: 0.2; }
-  50% { transform: scale(1.4); opacity: 0.5; }
-}
-
-@keyframes vecta-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-
-/* ===================================================================
-   GLOBAL POLISH UTILITIES
-   =================================================================== */
-
-.vecta-spin {
-  animation: vecta-spin 1.1s linear infinite;
-}
-
-.vecta-accent-glow {
-  box-shadow: 0 0 0 1px rgba(6, 214, 224, 0.12),
-              0 0 14px rgba(6, 214, 224, 0.08);
-}
-
-.vecta-accent-glow-strong {
-  box-shadow: 0 0 0 1px rgba(6, 214, 224, 0.22),
-              0 0 24px rgba(6, 214, 224, 0.14);
-}
-
-.vecta-card-shadow {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25),
-              0 4px 14px rgba(0, 0, 0, 0.18),
-              0 0 0 1px rgba(26, 41, 68, 0.5);
-}
-
-.vecta-transition {
-  transition: all 0.15s ease;
-}
-
-.vecta-gradient-card {
-  background: linear-gradient(135deg, #131d2e 0%, #0f1521 100%);
-}
-
-/* ===================================================================
-   FOCUS RING — branded keyboard-focus indicator
-   =================================================================== */
-
-:focus-visible {
-  outline: 2px solid rgba(6, 214, 224, 0.55);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-/* ===================================================================
-   ENTERPRISE BADGE / TAG
-   =================================================================== */
-
-.vecta-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  border: 1px solid transparent;
-  line-height: 1.6;
-}
-
-.vecta-badge-green  { color: #2dd4a0; background: rgba(45,212,160,.08);  border-color: rgba(45,212,160,.2);  }
-.vecta-badge-red    { color: #ef4444; background: rgba(239,68,68,.08);   border-color: rgba(239,68,68,.2);   }
-.vecta-badge-amber  { color: #f59e0b; background: rgba(245,158,11,.08);  border-color: rgba(245,158,11,.2);  }
-.vecta-badge-blue   { color: #3b82f6; background: rgba(59,130,246,.08);  border-color: rgba(59,130,246,.2);  }
-.vecta-badge-accent { color: #06d6e0; background: rgba(6,214,224,.08);   border-color: rgba(6,214,224,.2);   }
-.vecta-badge-purple { color: #a78bfa; background: rgba(167,139,250,.08); border-color: rgba(167,139,250,.2); }
-
-/* ===================================================================
-   TABLES — enterprise data-grid polish
-   Applied to <table className="vecta-table"> across all tabs.
-   =================================================================== */
-
-.vecta-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.vecta-table thead tr {
-  border-bottom: 1px solid #1a2944;
-}
-
-.vecta-table thead th {
-  text-align: left;
-  padding: 8px 12px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #64748b;
-  white-space: nowrap;
-}
-
-.vecta-table tbody tr {
-  border-bottom: 1px solid rgba(26, 41, 68, 0.5);
-  transition: background 0.1s;
-}
-
-.vecta-table tbody tr:hover {
-  background: rgba(6, 214, 224, 0.03);
-}
-
-.vecta-table tbody td {
-  padding: 10px 12px;
-  color: #94a3b8;
-  vertical-align: middle;
-}
-
-/* ===================================================================
-   ENTERPRISE STAT CARD
-   =================================================================== */
-
-.vecta-stat-card {
-  background: #131d2e;
-  border: 1px solid #1a2944;
-  border-radius: 10px;
-  padding: 16px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.vecta-stat-card:hover {
-  border-color: #243656;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-/* ===================================================================
-   SECTION HEADER — standardised across tab content
-   =================================================================== */
-
-.vecta-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-
-.vecta-section-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #e2e8f0;
-  letter-spacing: -0.1px;
-}
-
-.vecta-section-subtitle {
-  font-size: 11px;
-  color: #64748b;
-  margin-top: 2px;
-  line-height: 1.5;
-}
-
-/* ===================================================================
-   INPUT FONT INHERIT — all form controls use IBM Plex Sans
-   =================================================================== */
-
-input, textarea, select, button {
-  font-family: "IBM Plex Sans", -apple-system, sans-serif;
-}
-
-/* ===================================================================
-   SMOOTH TRANSITIONS for interactive elements
-   =================================================================== */
-
-a {
-  transition: color 0.12s;
-}
-
-/* Subtle noise texture for premium depth */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 9998;
-  opacity: 0.018;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* Login screen animations */
-@keyframes floatParticle {
-  0%   { opacity: 0; transform: translateY(0) scale(0.8); }
-  10%  { opacity: 0.6; }
-  90%  { opacity: 0.3; }
-  100% { opacity: 0; transform: translateY(-120px) scale(1.1); }
-}
-@keyframes scanline {
-  0%   { top: -2px; opacity: 0.6; }
-  95%  { opacity: 0.3; }
-  100% { top: 100%; opacity: 0; }
-}
-@keyframes glowPulse {
-  0%, 100% { filter: drop-shadow(0 0 8px rgba(6,214,224,0.5)); }
-  50%       { filter: drop-shadow(0 0 20px rgba(6,214,224,0.9)) drop-shadow(0 0 40px rgba(6,214,224,0.4)); }
-}
-@keyframes spinRingCW {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-@keyframes spinRingCCW {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(-360deg); }
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

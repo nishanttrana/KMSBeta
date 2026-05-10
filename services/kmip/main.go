@@ -168,6 +168,40 @@ func migrationPath() string {
 	return filepath.Join("services", "kmip", "migrations")
 }
 
+// fipsApprovedCipherSuites lists the TLS 1.2 cipher suites permitted by
+// NIST SP 800-52 Rev. 2 / FIPS 140-3 cryptographic boundary. TLS 1.3 cipher
+// selection is fixed by the protocol and does not need to be enumerated.
+var fipsApprovedCipherSuites = []uint16{
+	tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+	tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+}
+
+// allowedKMIPMinVersion resolves the minimum TLS version for the KMIP
+// listener. Stringent posture defaults to TLS 1.3; KMIP_ALLOW_TLS12=true
+// permits a TLS 1.2 floor for legacy enterprise clients that do not yet
+// support 1.3 — and even then, the cipher list is restricted to FIPS-
+// approved AEAD suites.
+func allowedKMIPMinVersion() uint16 {
+	if envBool("KMIP_ALLOW_TLS12", false) {
+		return tls.VersionTLS12
+	}
+	return tls.VersionTLS13
+}
+
+// kmipClientAuthMode selects the X.509 client-cert verification policy.
+// Production deployments with a configured CA chain always use full
+// verification; the env override is provided strictly for interop testing
+// against unconventional client implementations and is logged at startup.
+func kmipClientAuthMode() tls.ClientAuthType {
+	if envBool("KMIP_CLIENT_CERT_VERIFY_DISABLED", false) {
+		logger.Printf("WARNING: KMIP client certificate verification disabled by env override")
+		return tls.RequireAnyClientCert
+	}
+	return tls.RequireAndVerifyClientCert
+}
+
 func loadKMIPTLSConfig() (*tls.Config, error) {
 	certFile := strings.TrimSpace(os.Getenv("KMIP_TLS_CERT_FILE"))
 	keyFile := strings.TrimSpace(os.Getenv("KMIP_TLS_KEY_FILE"))
@@ -185,14 +219,61 @@ func loadKMIPTLSConfig() (*tls.Config, error) {
 		if !cp.AppendCertsFromPEM(caRaw) {
 			return devKMIPTLSConfig()
 		}
-		return &tls.Config{
-			MinVersion:   tls.VersionTLS12,
+		cfg := &tls.Config{
+			MinVersion:   allowedKMIPMinVersion(),
 			Certificates: []tls.Certificate{cert},
-			ClientAuth:   tls.RequireAnyClientCert,
+			ClientAuth:   kmipClientAuthMode(),
 			ClientCAs:    cp,
-		}, nil
+			CipherSuites: fipsApprovedCipherSuites,
+		}
+		if vf, err := loadKMIPClientCertVerifier(cp); err == nil && vf != nil {
+			cfg.VerifyPeerCertificate = vf
+		}
+		return cfg, nil
 	}
 	return devKMIPTLSConfig()
+}
+
+// loadKMIPClientCertVerifier attaches an additional verification step that
+// checks each client certificate against an optional CRL file. The CRL is
+// loaded once at startup from KMIP_CLIENT_CRL_FILE; revoked serials short-
+// circuit the connection. When no CRL is configured the verifier is nil
+// and the standard chain check stands alone.
+func loadKMIPClientCertVerifier(roots *x509.CertPool) (func([][]byte, [][]*x509.Certificate) error, error) {
+	crlPath := strings.TrimSpace(os.Getenv("KMIP_CLIENT_CRL_FILE"))
+	if crlPath == "" {
+		return nil, nil
+	}
+	raw, err := os.ReadFile(crlPath)
+	if err != nil {
+		return nil, err
+	}
+	crl, err := x509.ParseRevocationList(raw)
+	if err != nil {
+		return nil, err
+	}
+	revoked := make(map[string]struct{}, len(crl.RevokedCertificateEntries))
+	for _, e := range crl.RevokedCertificateEntries {
+		if e.SerialNumber != nil {
+			revoked[e.SerialNumber.String()] = struct{}{}
+		}
+	}
+	logger.Printf("loaded %d revoked client certificate serials from %s", len(revoked), crlPath)
+	return func(_ [][]byte, chains [][]*x509.Certificate) error {
+		for _, chain := range chains {
+			if len(chain) == 0 {
+				continue
+			}
+			leaf := chain[0]
+			if leaf.SerialNumber == nil {
+				continue
+			}
+			if _, bad := revoked[leaf.SerialNumber.String()]; bad {
+				return errors.New("client certificate has been revoked")
+			}
+		}
+		return nil
+	}, nil
 }
 
 func devKMIPTLSConfig() (*tls.Config, error) {
@@ -245,10 +326,11 @@ func devKMIPTLSConfig() (*tls.Config, error) {
 	cp := x509.NewCertPool()
 	cp.AddCert(caCert)
 	return &tls.Config{
-		MinVersion:   tls.VersionTLS12,
+		MinVersion:   allowedKMIPMinVersion(),
 		Certificates: []tls.Certificate{srvCert},
 		ClientAuth:   tls.RequireAnyClientCert,
 		ClientCAs:    cp,
+		CipherSuites: fipsApprovedCipherSuites,
 	}, nil
 }
 

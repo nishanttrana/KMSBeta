@@ -61,6 +61,7 @@ import { getUnreadAlertCounts } from "../lib/reporting";
 import { B, Btn, Sel } from "./v3/legacyPrimitives";
 import { isFipsModeEnabled, normalizeFipsModeValue, TabErrorBoundary } from "./v3/runtimeUtils";
 import { C } from "./v3/theme";
+import { ThemeToggle } from "./ThemeToggle";
 
 // Lazy-loaded tab components for code splitting
 const AdminTab = lazy(() => import("./v3/tabs/AdminTab").then(m => ({ default: m.AdminTab })));
@@ -1038,6 +1039,9 @@ export default function VectaDashboardV3Shell(props: Props) {
                 </span>
               )}
             </button>
+
+            {/* Theme toggle (Aurora ↔ Daylight) */}
+            <ThemeToggle />
 
             {/* User pill */}
             <div

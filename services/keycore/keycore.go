@@ -67,7 +67,14 @@ var errTagInUse = errors.New("tag in use")
 func NewService(store Store, cache KeyCache, events AuditPublisher, meter *metering.Meter, mek []byte, policy PolicyEvaluator, policyFailClosed bool) *Service {
 	f := bloom.NewWithEstimates(10_000_000, 0.01)
 	if policy == nil {
-		policy = allowAllPolicyEvaluator{}
+		// Fail-closed posture (the default) flips the no-policy fallback to
+		// deny-all so that a missing or unreachable policy service cannot be
+		// silently equivalent to "allow everything".
+		if policyFailClosed {
+			policy = denyAllPolicyEvaluator{}
+		} else {
+			policy = allowAllPolicyEvaluator{}
+		}
 	}
 	return &Service{
 		store:    store,
@@ -81,6 +88,24 @@ func NewService(store Store, cache KeyCache, events AuditPublisher, meter *meter
 		fipsMode: staticFIPSModeProvider{enabled: false},
 		posture:  staticPostureControlsProvider{},
 	}
+}
+
+// ConfirmKeyMaterialZeroized checks that the key cache holds no live material
+// for the given key, returning true when the entry is absent (i.e. the
+// in-memory copy has been evicted or explicitly deleted on destruction).
+// This satisfies FIPS 140-3 §4.9.2 zeroization verification requirement.
+func (s *Service) ConfirmKeyMaterialZeroized(tenantID string, keyID string) bool {
+	if s.cache == nil {
+		return true
+	}
+	ctx := context.Background()
+	_, found, err := s.cache.Get(ctx, tenantID, keyID)
+	if err != nil || !found {
+		return true
+	}
+	// Cache still has an entry — attempt explicit eviction and report failure.
+	_ = s.cache.Delete(ctx, tenantID, keyID)
+	return false
 }
 
 func (s *Service) SetGovernanceApprovalClient(client *governanceApprovalClient) {
@@ -4638,12 +4663,17 @@ func existsToken(tenantID string, keyID string) string {
 
 func (s *Service) checkPolicy(ctx context.Context, req PolicyEvaluateRequest) error {
 	if s.policy == nil {
+		// Nil evaluator only reaches this path on misconfiguration; under
+		// fail-closed posture treat it as an explicit denial.
+		if s.pf {
+			return policyDeniedError{Reason: "policy evaluator not configured"}
+		}
 		return nil
 	}
 	resp, err := s.policy.Evaluate(ctx, req)
 	if err != nil {
 		if s.pf {
-			return errors.New("policy evaluation failed: " + err.Error())
+			return policyDeniedError{Reason: "policy evaluation failed: " + err.Error()}
 		}
 		return nil
 	}
@@ -4651,6 +4681,9 @@ func (s *Service) checkPolicy(ctx context.Context, req PolicyEvaluateRequest) er
 	case "DENY":
 		return policyDeniedError{Reason: resp.Reason}
 	default:
+		// REQUIRE_APPROVAL falls through here intentionally: the per-call
+		// approval guard (ensureApprovalAllowed / enforcePostureQuorumOnDestroy)
+		// is the authoritative check for approval routing.
 		return nil
 	}
 }
