@@ -188,6 +188,35 @@ func buildAuditEventCatalog() map[string]EventMeta {
 
 		// keycore (canary-specific events under keycore subject)
 		"audit.keycore.canary_tripped": {Severity: "CRITICAL", Category: "keycore"},
+
+		// Automation + ALKM + PQC events. These severities map operator
+		// expectations: detection signals are MEDIUM (need review but
+		// not paging), automatic remediations are HIGH (operator should
+		// see the action took place), exhaustion / breach signals are
+		// CRITICAL.
+		"audit.security.hndl_pattern_detected":    {Severity: "HIGH", Category: "audit"},
+		"audit.security.auto_quarantined":         {Severity: "HIGH", Category: "audit"},
+		"audit.policy.quota_exceeded":             {Severity: "MEDIUM", Category: "policy"},
+		"audit.policy.crypto_floor_violation":     {Severity: "HIGH", Category: "policy"},
+		"audit.key.zeroization_verified":          {Severity: "LOW", Category: "key"},
+		"audit.key.archive_requested":             {Severity: "LOW", Category: "key"},
+		"audit.key.archive_completed":             {Severity: "LOW", Category: "key"},
+		"audit.key.lifecycle_auto_transition":     {Severity: "MEDIUM", Category: "key"},
+		"audit.key.predictive_rotation_scheduled": {Severity: "MEDIUM", Category: "key"},
+		"audit.key.wake_kat_failed":               {Severity: "CRITICAL", Category: "key"},
+		"audit.key.dependency_blocked_destroy":    {Severity: "MEDIUM", Category: "key"},
+		"audit.key.hbs_exhausted":                 {Severity: "CRITICAL", Category: "key"},
+		"audit.tenant.onboarded":                  {Severity: "LOW", Category: "audit"},
+		"audit.tenant.quota_set":                  {Severity: "LOW", Category: "policy"},
+		"audit.kmip.client_dormant":               {Severity: "LOW", Category: "kmip"},
+		"audit.kmip.client_revoked":               {Severity: "HIGH", Category: "kmip"},
+		"audit.kmip.attribute_mutation_denied":    {Severity: "MEDIUM", Category: "kmip"},
+		"audit.kmip.authorization_denied":         {Severity: "HIGH", Category: "kmip"},
+		"audit.health.incident":                   {Severity: "HIGH", Category: "audit"},
+		"audit.pqc.migration_plan_built":          {Severity: "LOW", Category: "pqc"},
+		"audit.pqc.migration_step_executed":       {Severity: "MEDIUM", Category: "pqc"},
+		"audit.pqc.attestation_recorded":          {Severity: "LOW", Category: "pqc"},
+		"audit.cbom.inventory_viewed":             {Severity: "LOW", Category: "audit"},
 	}
 	for action, meta := range overrides {
 		catalog[action] = meta

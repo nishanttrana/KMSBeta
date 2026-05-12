@@ -10,8 +10,9 @@ import (
 	"net/http"
 )
 
-// logger is the minimal interface we accept. *log.Logger fits it.
-type logger interface {
+// logIface is the minimal interface the reconcilers accept for logging.
+// *log.Logger satisfies it via Printf.
+type logIface interface {
 	Printf(format string, args ...any)
 }
 

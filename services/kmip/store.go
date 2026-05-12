@@ -40,6 +40,12 @@ type Store interface {
 	GetInteropTarget(ctx context.Context, tenantID string, targetID string) (KMIPInteropTarget, error)
 	DeleteInteropTarget(ctx context.Context, tenantID string, targetID string) error
 	UpdateInteropTargetValidation(ctx context.Context, tenantID string, targetID string, status string, lastErr string, reportJSON string, checkedAt time.Time) error
+
+	// Cross-tenant scan used by the auto-decommission reconciler.
+	ListAllKMIPClients(ctx context.Context) ([]KMIPClient, error)
+	// Status flip applied by the reconciler. Implementations record the
+	// change on the immutable audit chain in addition to the row update.
+	UpdateKMIPClientStatus(ctx context.Context, tenantID string, clientID string, status string) error
 }
 
 type SQLStore struct {

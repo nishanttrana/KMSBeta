@@ -12,11 +12,22 @@ import (
 )
 
 type Service struct {
-	store     Store
-	cfg       AuditConfig
-	wal       *WALBuffer
-	publisher EventPublisher
-	broker    *StreamBroker
+	store      Store
+	cfg        AuditConfig
+	wal        *WALBuffer
+	publisher  EventPublisher
+	broker     *StreamBroker
+	hndl       *HNDLDetector
+	quarantine *QuarantineEvaluator
+}
+
+// SetDetectors wires the closed-loop detectors. Both are optional; if
+// nil the corresponding signal is simply not produced. The setter is on
+// the service rather than the constructor so dependency wiring stays
+// linear in main.go.
+func (s *Service) SetDetectors(hndl *HNDLDetector, q *QuarantineEvaluator) {
+	s.hndl = hndl
+	s.quarantine = q
 }
 
 type EventPublisher interface {
@@ -82,6 +93,10 @@ func (s *Service) ProcessEvent(ctx context.Context, event AuditEvent) (AuditEven
 	if err != nil {
 		return AuditEvent{}, Alert{}, err
 	}
+	// Side-effecting detectors run before persistence so a sustained-
+	// risk-score signal lands in the chain in the same epoch as the
+	// triggering event.
+	s.runDetectors(ctx, enriched)
 	dispatch := dispatchPlan(alert.Severity)
 	alert.DispatchedChannels = dispatch.Channels
 	alert.DispatchStatus = dispatch.Status
@@ -99,6 +114,22 @@ func (s *Service) ProcessEvent(ctx context.Context, event AuditEvent) (AuditEven
 	}
 	s.broadcastToStream(evt, al)
 	return evt, al, nil
+}
+
+// runDetectors fans an event out to the optional closed-loop detectors.
+// Each detector decides for itself whether the event is relevant; the
+// service does not pre-filter so adding a new detector is one line.
+func (s *Service) runDetectors(ctx context.Context, event AuditEvent) {
+	if s.hndl != nil {
+		bytes := int64(0)
+		if v, ok := event.Details["bytes_in"].(float64); ok {
+			bytes = int64(v)
+		}
+		s.hndl.Observe(ctx, event.TenantID, event.Action, bytes)
+	}
+	if s.quarantine != nil {
+		_ = s.quarantine.Evaluate(ctx, event)
+	}
 }
 
 func (s *Service) broadcastToStream(evt AuditEvent, al Alert) {

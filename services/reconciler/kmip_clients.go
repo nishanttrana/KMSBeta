@@ -13,10 +13,10 @@ import (
 type kmipClientReconciler struct {
 	client  *http.Client
 	kmipURL string
-	logger  logger
+	logger  logIface
 }
 
-func newKMIPClientReconciler(client *http.Client, kmipURL string, l logger) *kmipClientReconciler {
+func newKMIPClientReconciler(client *http.Client, kmipURL string, l logIface) *kmipClientReconciler {
 	return &kmipClientReconciler{
 		client:  client,
 		kmipURL: strings.TrimRight(kmipURL, "/"),

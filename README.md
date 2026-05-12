@@ -28,6 +28,8 @@ This README is the landing page. Detailed operator documentation now lives under
   - Browser-viewable dark graph of UI modules, API calls, services, handlers, stores, and packages.
 - [REST API Additions](docs/REST_API_ADDITIONS.md)
   - Detailed REST notes and expanded API coverage for the newer features.
+- [Automation, ALKM, and PQC](docs/AUTOMATION_ALKM_PQC.md)
+  - Closed-loop controllers (tenant lifecycle, key lifecycle, KMIP decommission), NIST 800-57 lifecycle enforcement, and PQC key-management surfaces (composite keys, Y2Q scoring, CBOM, migration planner).
 - Service-specific references:
   - [KMIP Service](services/kmip/README.md)
   - [Posture Service](services/posture/README.md)

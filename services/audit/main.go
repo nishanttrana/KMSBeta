@@ -30,6 +30,7 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgheartbeat "vecta-kms/pkg/heartbeat"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -71,11 +72,24 @@ func main() {
 
 	pub := pkgevents.NewPublisher(js, 3, "audit.logger.dead_letter")
 
+	hb := pkgheartbeat.New(nc, "audit", envOr("CLUSTER_NODE_ID", "vecta-kms-01"), envOr("AUDIT_VERSION", "dev"))
+	hb.Start(ctx)
+	defer hb.Stop()
+
 	ac := loadAuditConfig()
 	wal := NewWALBuffer(ac.WALPath, ac.WALMaxSizeMB, ac.WALHMACKey)
 	store := NewSQLStore(dbConn)
 	store.SetEventSigningKey(ac.EventSigningKey)
 	svc := NewService(store, ac, wal, pub)
+
+	// Closed-loop detectors. Each runs as a side-effect of normal event
+	// processing; they consume the same publisher that ingestion uses so
+	// their findings join the immutable audit chain rather than being
+	// recorded in a separate, easy-to-bypass store.
+	hndl := NewHNDLDetector(pub)
+	quarantine := NewQuarantineEvaluator(pub)
+	svc.SetDetectors(hndl, quarantine)
+
 	handler := NewHandler(svc, store)
 	handler.SetClusterSyncPublisher(pkgclustersync.NewHTTPPublisher(
 		envOr("CLUSTER_URL", "http://cluster-manager:8210"),

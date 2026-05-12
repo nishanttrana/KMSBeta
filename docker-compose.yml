@@ -512,6 +512,54 @@ services:
       timeout: 5s
       retries: 10
 
+  reconciler:
+    <<: *kms-service
+    build:
+      context: .
+      dockerfile: services/reconciler/Dockerfile
+    image: vecta/reconciler:latest
+    depends_on:
+      keycore:
+        condition: service_started
+      policy:
+        condition: service_started
+      audit:
+        condition: service_started
+    environment:
+      <<: *kms-common-env
+      KEYCORE_URL: http://keycore:8010
+      KMIP_URL: http://kmip:8160
+      POLICY_URL: http://policy:8040
+      AUDIT_URL: http://audit:8060
+      HTTP_PORT: "8240"
+      RECONCILER_MANIFEST_DIR: ${RECONCILER_MANIFEST_DIR:-/etc/vecta/manifests}
+    ports:
+      - "8240:8240"
+    volumes:
+      - ${RECONCILER_MANIFEST_HOST_DIR:-./infra/reconciler/manifests}:/etc/vecta/manifests:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8240/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  watchdog:
+    <<: *kms-service
+    build:
+      context: .
+      dockerfile: services/watchdog/Dockerfile
+    image: vecta/watchdog:latest
+    environment:
+      <<: *kms-common-env
+      HTTP_PORT: "8250"
+    ports:
+      - "8250:8250"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8250/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
   secrets:
     <<: *kms-service
     profiles: ["secrets"]

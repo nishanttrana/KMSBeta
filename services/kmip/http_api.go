@@ -35,6 +35,8 @@ func (h *Handler) HTTPHandler() http.Handler {
 	mux.HandleFunc("POST /kmip/interop/targets", h.handleCreateInteropTarget)
 	mux.HandleFunc("DELETE /kmip/interop/targets/{id}", h.handleDeleteInteropTarget)
 	mux.HandleFunc("POST /kmip/interop/targets/{id}/validate", h.handleValidateInteropTarget)
+	mux.HandleFunc("GET /kmip/clients/decommission-candidates", h.handleDecommissionCandidates)
+	mux.HandleFunc("POST /kmip/clients/{id}/decommission", h.handleDecommission)
 	return mux
 }
 

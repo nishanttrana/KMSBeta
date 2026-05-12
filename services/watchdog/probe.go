@@ -35,6 +35,12 @@ type ServiceState struct {
 	Healthy     bool      `json:"healthy"`
 }
 
+// logIface is the minimal logging interface the watchdog accepts.
+// *log.Logger satisfies it via Printf.
+type logIface interface {
+	Printf(format string, args ...any)
+}
+
 // Probe is the NATS subscriber + in-memory state table. SLO defaults are
 // loose enough to absorb GC pauses but tight enough to catch a real
 // process hang within a minute.
@@ -42,14 +48,14 @@ type Probe struct {
 	nc           *nats.Conn
 	subs         []*nats.Subscription
 	natsURL      string
-	logger       logger
+	logger       logIface
 	slo          time.Duration
 
 	mu     sync.Mutex
 	last   map[string]Heartbeat
 }
 
-func newProbe(natsURL string, l logger) *Probe {
+func newProbe(natsURL string, l logIface) *Probe {
 	return &Probe{
 		natsURL: natsURL,
 		logger:  l,

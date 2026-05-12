@@ -30,7 +30,7 @@ type Incident struct {
 // table-driven so adding a new playbook is a one-line change.
 type playbookEngine struct {
 	probe  *Probe
-	logger logger
+	logger logIface
 
 	mu        sync.Mutex
 	incidents []Incident
@@ -38,7 +38,7 @@ type playbookEngine struct {
 	nc        *nats.Conn
 }
 
-func newPlaybookEngine(probe *Probe, l logger) *playbookEngine {
+func newPlaybookEngine(probe *Probe, l logIface) *playbookEngine {
 	pe := &playbookEngine{
 		probe:    probe,
 		logger:   l,

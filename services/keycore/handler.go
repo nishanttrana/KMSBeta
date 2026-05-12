@@ -232,6 +232,11 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /fips/rng-health", h.handleRNGHealth)
 	mux.HandleFunc("POST /keys/{id}/zeroize-verify", h.handleZeroizeVerify)
 
+	// Reconciler-driven endpoints
+	mux.HandleFunc("GET /keys/due-for-lifecycle", h.handleDueForLifecycle)
+	mux.HandleFunc("POST /tenants/onboard", h.handleTenantOnboard)
+	mux.HandleFunc("POST /keys/{id}/archive", h.handleArchiveKey)
+
 	return mux
 }
 

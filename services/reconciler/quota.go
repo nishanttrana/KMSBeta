@@ -13,10 +13,10 @@ import (
 type quotaReconciler struct {
 	client    *http.Client
 	policyURL string
-	logger    logger
+	logger    logIface
 }
 
-func newQuotaReconciler(client *http.Client, policyURL string, l logger) *quotaReconciler {
+func newQuotaReconciler(client *http.Client, policyURL string, l logIface) *quotaReconciler {
 	return &quotaReconciler{
 		client:    client,
 		policyURL: strings.TrimRight(policyURL, "/"),

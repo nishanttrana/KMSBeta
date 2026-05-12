@@ -30,6 +30,7 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgheartbeat "vecta-kms/pkg/heartbeat"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -64,11 +65,19 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var natsConn *nats.Conn
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
+		natsConn = nc
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.kmip.dead_letter")
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
+	}
+
+	if natsConn != nil {
+		hb := pkgheartbeat.New(natsConn, "kmip", envOr("CLUSTER_NODE_ID", "vecta-kms-01"), envOr("KMIP_VERSION", "dev"))
+		hb.Start(ctx)
+		defer hb.Stop()
 	}
 
 	keycoreURL := envOr("KEYCORE_URL", "http://127.0.0.1:8010")

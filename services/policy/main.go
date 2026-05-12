@@ -29,6 +29,7 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgheartbeat "vecta-kms/pkg/heartbeat"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -63,7 +64,9 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var natsConn *nats.Conn
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
+		natsConn = nc
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.policy.dead_letter")
 	} else {
@@ -72,6 +75,17 @@ func main() {
 
 	store := NewSQLStore(dbConn)
 	svc := NewService(store, publisher)
+	// Auto-throttle: per-tenant op-budget tracker consumed by the
+	// policy evaluator. Budgets are seeded by the reconciler via
+	// PUT /policy/quota/{tenant_id}.
+	svc.SetQuotaPolicy(NewQuotaPolicy())
+
+	// Heartbeat: announce liveness to the watchdog.
+	if natsConn != nil {
+		hb := pkgheartbeat.New(natsConn, "policy", envOr("CLUSTER_NODE_ID", "vecta-kms-01"), envOr("POLICY_VERSION", "dev"))
+		hb.Start(ctx)
+		defer hb.Stop()
+	}
 	if governanceURL := strings.TrimSpace(os.Getenv("GOVERNANCE_URL")); governanceURL != "" {
 		svc.SetGovernancePostureControlsProvider(NewHTTPGovernancePostureControlsProvider(governanceURL, 3*time.Second, 5*time.Second))
 		logger.Printf("governance posture controls integration enabled")

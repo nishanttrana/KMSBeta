@@ -15,10 +15,10 @@ import (
 type keyLifecycleReconciler struct {
 	client     *http.Client
 	keycoreURL string
-	logger     logger
+	logger     logIface
 }
 
-func newKeyLifecycleReconciler(client *http.Client, keycoreURL string, l logger) *keyLifecycleReconciler {
+func newKeyLifecycleReconciler(client *http.Client, keycoreURL string, l logIface) *keyLifecycleReconciler {
 	return &keyLifecycleReconciler{
 		client:     client,
 		keycoreURL: strings.TrimRight(keycoreURL, "/"),

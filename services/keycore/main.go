@@ -34,6 +34,7 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgheartbeat "vecta-kms/pkg/heartbeat"
 	"vecta-kms/pkg/metering"
 	pkgratelimit "vecta-kms/pkg/ratelimit"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
@@ -149,6 +150,27 @@ func main() {
 		envOr("CLUSTER_SYNC_SHARED_SECRET", ""),
 		2*time.Second,
 	))
+
+	// Lifecycle policy: cryptoperiods, version retention, wake-time KAT.
+	// All three are passive holders consumed by the handler/reconciler.
+	svc.SetCryptoperiodPolicy(NewCryptoperiodPolicy())
+	svc.SetVersionPolicy(DefaultVersionPolicy())
+	svc.SetWakeSelfTestRegistry(NewWakeSelfTestRegistry())
+
+	// Cold-tier archiver. Disabled by default; operators turn it on by
+	// setting KEYCORE_ARCHIVE_DIR and KEYCORE_ARCHIVE_KEK_B64. When the
+	// archive KEK is missing or malformed we fail open (no archival)
+	// rather than refuse to start — the archive is an optimisation, not
+	// a safety property.
+	if archiveDir := stringsTrimSpace(os.Getenv("KEYCORE_ARCHIVE_DIR")); archiveDir != "" {
+		if kek, err := base64.StdEncoding.DecodeString(stringsTrimSpace(os.Getenv("KEYCORE_ARCHIVE_KEK_B64"))); err == nil && len(kek) == 32 {
+			fs := &FilesystemArchiveStore{Root: archiveDir}
+			if arch, err := NewArchiver(fs, kek); err == nil {
+				svc.SetArchiver(arch)
+				logger.Printf("cold-tier key archive enabled at %s", archiveDir)
+			}
+		}
+	}
 	qrngURL := stringsTrimSpace(os.Getenv("QRNG_URL"))
 	if qrngURL != "" {
 		svc.SetQRNGClient(NewHTTPQRNGClient(qrngURL, 5*time.Second))
@@ -162,6 +184,27 @@ func main() {
 		logger.Printf("governance fips mode integration enabled")
 	}
 	handler := NewHandler(svc)
+
+	// Zeroization verification scheduler. Runs on the keycore process
+	// because it needs the live key cache; emits per-key audit events
+	// so the immutable chain carries continuous evidence of FIPS 140-3
+	// §4.9.2 zeroisation.
+	if envBool("KEYCORE_ZEROIZATION_SCHEDULER_ENABLED", true) {
+		sched := NewZeroizationScheduler(
+			svc, // implements ZeroizationLister via store_lifecycle.go
+			func(tenantID, keyID string) bool { return svc.ConfirmKeyMaterialZeroized(tenantID, keyID) },
+			publisher,
+		)
+		go sched.Run(ctx)
+		logger.Printf("zeroization verification scheduler started")
+	}
+
+	// Heartbeat publisher so the watchdog observes liveness.
+	if nc, _, err := initNATS(cfg.NATSURL); err == nil {
+		hb := pkgheartbeat.New(nc, "keycore", envOr("CLUSTER_NODE_ID", "vecta-kms-01"), envOr("KEYCORE_VERSION", "dev"))
+		hb.Start(ctx)
+		defer hb.Stop()
+	}
 	if tokenParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience); err != nil {
 		logger.Printf("jwt parser disabled: %v", err)
 	} else if tokenParser != nil {

@@ -47,20 +47,44 @@ import (
 )
 
 type Service struct {
-	store    Store
-	cache    KeyCache
-	exists   *bloom.BloomFilter
-	events   AuditPublisher
-	cluster  clustersync.Publisher
-	meter    *metering.Meter
-	mek      []byte
-	policy   PolicyEvaluator
-	pf       bool
-	fipsMode FIPSModeProvider
-	approval *governanceApprovalClient
-	posture  GovernancePostureControlsProvider
-	qrng     QRNGClient
+	store        Store
+	cache        KeyCache
+	exists       *bloom.BloomFilter
+	events       AuditPublisher
+	cluster      clustersync.Publisher
+	meter        *metering.Meter
+	mek          []byte
+	policy       PolicyEvaluator
+	pf           bool
+	fipsMode     FIPSModeProvider
+	approval     *governanceApprovalClient
+	posture      GovernancePostureControlsProvider
+	qrng         QRNGClient
+	cryptoperiod *CryptoperiodPolicy
+	versions     VersionPolicy
+	wakeRegistry *WakeSelfTestRegistry
+	archiver     *Archiver
 }
+
+// SetCryptoperiodPolicy installs the NIST SP 800-57 cryptoperiod table.
+// Optional — when nil, lifecycle code falls back to the operator-set
+// rotation date and never auto-rotates on age.
+func (s *Service) SetCryptoperiodPolicy(p *CryptoperiodPolicy) { s.cryptoperiod = p }
+
+// SetVersionPolicy installs the per-key version-retention rule. Zero
+// values keep the default "retain current + 3" policy.
+func (s *Service) SetVersionPolicy(p VersionPolicy) {
+	if p.RetainCount > 0 {
+		s.versions = p
+	}
+}
+
+// SetWakeSelfTestRegistry installs the per-key restoration KAT tracker.
+func (s *Service) SetWakeSelfTestRegistry(r *WakeSelfTestRegistry) { s.wakeRegistry = r }
+
+// SetArchiver installs the cold-tier archive writer. Optional — when
+// nil the lifecycle reconciler simply skips the archival step.
+func (s *Service) SetArchiver(a *Archiver) { s.archiver = a }
 
 var errTagInUse = errors.New("tag in use")
 

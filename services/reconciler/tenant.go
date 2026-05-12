@@ -55,13 +55,13 @@ type tenantReconciler struct {
 	kmipURL    string
 	policyURL  string
 	auditURL   string
-	logger     logger
+	logger     logIface
 
 	mu       sync.Mutex
 	manifests []TenantManifest
 }
 
-func newTenantReconciler(client *http.Client, keycoreURL, kmipURL, policyURL, auditURL string, l logger) *tenantReconciler {
+func newTenantReconciler(client *http.Client, keycoreURL, kmipURL, policyURL, auditURL string, l logIface) *tenantReconciler {
 	return &tenantReconciler{
 		client:     client,
 		keycoreURL: strings.TrimRight(keycoreURL, "/"),
