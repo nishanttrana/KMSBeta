@@ -32,6 +32,10 @@ Vecta KMS is an enterprise-grade, multi-tenant key management platform providing
 | [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md) | Step-by-step scenario walkthroughs |
 | [REST_API_ADDITIONS.md](REST_API_ADDITIONS.md) | Supplementary REST surface detail |
 | [ADMIN_GUIDE.md](ADMIN_GUIDE.md) | Operator day-to-day guidance |
+| [generated/PRODUCT_MAP.md](generated/PRODUCT_MAP.md) | Generated UI-to-service map, route inventory, and launch triage |
+| [generated/UI_BUTTON_INVENTORY.md](generated/UI_BUTTON_INVENTORY.md) | Generated clickable-control inventory for dashboard screens |
+| [generated/REQUEST_FLOW.md](generated/REQUEST_FLOW.md) | Generated frontend-to-handler-to-package request flow map |
+| [generated/FLOW_GRAPH.html](generated/FLOW_GRAPH.html) | Interactive visual request graph for tracing UI to backend packages |
 | [openapi/](openapi/) | OpenAPI specifications |
 
 ---
@@ -106,6 +110,7 @@ Vecta KMS is an enterprise-grade, multi-tenant key management platform providing
 | Enable FIPS mode | [ADMINISTRATION.md](ADMINISTRATION.md) |
 | Back up and restore the platform | [GOVERNANCE_AND_COMPLIANCE.md](GOVERNANCE_AND_COMPLIANCE.md) |
 | Look up an API endpoint | [API_REFERENCE.md](API_REFERENCE.md) |
+| Understand which UI tabs/buttons call which services | [generated/FLOW_GRAPH.html](generated/FLOW_GRAPH.html), [generated/PRODUCT_MAP.md](generated/PRODUCT_MAP.md), [generated/UI_BUTTON_INVENTORY.md](generated/UI_BUTTON_INVENTORY.md), [generated/REQUEST_FLOW.md](generated/REQUEST_FLOW.md) |
 
 ---
 

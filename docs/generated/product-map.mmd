@@ -1,0 +1,194 @@
+flowchart LR
+  UI[Dashboard UI]
+  tab_home["Dashboard"]
+  UI --> tab_home
+  tab_home --> svc_audit
+  tab_home --> svc_auth_edge
+  tab_home --> svc_certs
+  tab_home --> svc_cluster_manager
+  tab_home --> svc_compliance
+  tab_home --> svc_governance
+  tab_home --> svc_keycore
+  tab_home --> svc_reporting
+  tab_home --> svc_secrets
+  tab_keys["Key Management"]
+  UI --> tab_keys
+  tab_keys --> svc_auth
+  tab_keys --> svc_keycore
+  tab_ops_metrics["Operations Metrics"]
+  UI --> tab_ops_metrics
+  tab_ops_metrics --> svc_audit
+  tab_certs["Certificates / PKI"]
+  UI --> tab_certs
+  tab_certs --> svc_certs
+  tab_ekm["Enterprise Key Management"]
+  UI --> tab_ekm
+  tab_ekm --> svc_ekm
+  tab_ekm --> svc_tfe
+  tab_vault["Secret Vault"]
+  UI --> tab_vault
+  tab_vault --> svc_auth_edge
+  tab_vault --> svc_secrets
+  tab_rotation["Rotation Scheduler"]
+  UI --> tab_rotation
+  tab_rotation --> svc_keycore
+  tab_ct_monitor["CT Log Monitor"]
+  UI --> tab_ct_monitor
+  tab_ct_monitor --> svc_certs
+  tab_escrow["Key Escrow"]
+  UI --> tab_escrow
+  tab_escrow --> svc_keycore
+  tab_envelope_enc["Envelope Encryption"]
+  UI --> tab_envelope_enc
+  tab_envelope_enc --> svc_keycore
+  tab_tfe["File Encryption (TFE)"]
+  UI --> tab_tfe
+  tab_tfe --> svc_ekm
+  tab_tfe --> svc_tfe
+  tab_hsm["HSM"]
+  UI --> tab_hsm
+  tab_hsm --> svc_auth
+  tab_qkd["QKD Interface"]
+  UI --> tab_qkd
+  tab_qkd --> svc_auth_edge
+  tab_qkd --> svc_qkd
+  tab_qrng["QRNG Entropy"]
+  UI --> tab_qrng
+  tab_qrng --> svc_auth_edge
+  tab_qrng --> svc_qrng
+  tab_mpc["MPC Engine"]
+  UI --> tab_mpc
+  tab_mpc --> svc_auth
+  tab_mpc --> svc_mpc
+  tab_cluster["Cluster"]
+  UI --> tab_cluster
+  tab_cluster --> svc_auth_edge
+  tab_cluster --> svc_cluster_manager
+  tab_ceremony["Key Ceremony"]
+  UI --> tab_ceremony
+  tab_ceremony --> svc_keycore
+  tab_mtls_mesh["mTLS Mesh"]
+  UI --> tab_mtls_mesh
+  tab_mtls_mesh --> svc_certs
+  tab_dr_drill["DR Drill"]
+  UI --> tab_dr_drill
+  tab_dr_drill --> svc_keycore
+  tab_backup["Backup & Restore"]
+  UI --> tab_backup
+  tab_backup --> svc_backup
+  tab_approvals["Approvals"]
+  UI --> tab_approvals
+  tab_approvals --> svc_governance
+  tab_alerts["Alert Center"]
+  UI --> tab_alerts
+  tab_alerts --> svc_auth_edge
+  tab_alerts --> svc_reporting
+  tab_audit["Audit Log"]
+  UI --> tab_audit
+  tab_audit --> svc_audit
+  tab_dspm["Data Security Posture"]
+  UI --> tab_dspm
+  tab_dspm --> svc_compliance
+  tab_dspm --> svc_discovery
+  tab_data_activity["Data Activity Monitor"]
+  UI --> tab_data_activity
+  tab_data_activity --> svc_dam
+  tab_posture["Posture Management"]
+  UI --> tab_posture
+  tab_posture --> svc_auth
+  tab_posture --> svc_autokey
+  tab_posture --> svc_keyaccess
+  tab_posture --> svc_mpc
+  tab_posture --> svc_posture
+  tab_posture --> svc_signing
+  tab_posture --> svc_workload
+  tab_compliance["Compliance"]
+  UI --> tab_compliance
+  tab_compliance --> svc_auth
+  tab_compliance --> svc_autokey
+  tab_compliance --> svc_certs
+  tab_compliance --> svc_compliance
+  tab_compliance --> svc_keyaccess
+  tab_compliance --> svc_keycore
+  tab_compliance --> svc_mpc
+  tab_compliance --> svc_pqc
+  tab_compliance --> svc_reporting
+  tab_compliance --> svc_signing
+  tab_compliance --> svc_workload
+  tab_sbom["SBOM / CBOM"]
+  UI --> tab_sbom
+  tab_sbom --> svc_sbom
+  tab_crypto_agility["Crypto Agility"]
+  UI --> tab_crypto_agility
+  tab_crypto_agility --> svc_keycore
+  tab_leak_scanner["Leak Scanner"]
+  UI --> tab_leak_scanner
+  tab_leak_scanner --> svc_posture
+  tab_lineage["Source Traceability"]
+  UI --> tab_lineage
+  tab_lineage --> svc_discovery
+  tab_ai["AI Assistant"]
+  UI --> tab_ai
+  tab_ai --> svc_ai
+  tab_ai --> svc_audit
+  tab_ai --> svc_auth_edge
+  tab_ai_gateway["AI Security Gateway"]
+  UI --> tab_ai_gateway
+  tab_ai_gateway --> svc_ai
+  tab_ai_gateway --> svc_ai_gateway
+  tab_webhooks["Webhooks & SIEM"]
+  UI --> tab_webhooks
+  tab_webhooks --> svc_audit
+  tab_byok["byok"]
+  UI --> tab_byok
+  tab_byok --> svc_cloud
+  tab_crypto["crypto"]
+  UI --> tab_crypto
+  tab_crypto --> svc_keycore
+  tab_hyok["hyok"]
+  UI --> tab_hyok
+  tab_hyok --> svc_hyok
+  tab_payment["payment"]
+  UI --> tab_payment
+  tab_payment --> svc_payment
+  tab_pkcs11["pkcs11"]
+  UI --> tab_pkcs11
+  tab_pkcs11 --> svc_auth_edge
+  tab_pkcs11 --> svc_ekm
+  tab_pkcs11 --> svc_tfe
+  tab_restapi["restapi"]
+  UI --> tab_restapi
+  tab_restapi --> svc_auth
+  tab_restapi --> svc_auth_edge
+  tab_restapi --> svc_certs
+  tab_restapi --> svc_secrets
+  svc_ai["ai (13 routes)"]
+  svc_ai_gateway["ai-gateway (31 routes)"]
+  svc_audit["audit (43 routes)"]
+  svc_auth["auth (81 routes)"]
+  svc_auth_edge["auth-edge"]
+  svc_autokey["autokey (15 routes)"]
+  svc_backup["backup (11 routes)"]
+  svc_certs["certs (76 routes)"]
+  svc_cloud["cloud (11 routes)"]
+  svc_cluster_manager["cluster-manager (18 routes)"]
+  svc_compliance["compliance (42 routes)"]
+  svc_dam["dam (6 routes)"]
+  svc_discovery["discovery (26 routes)"]
+  svc_ekm["ekm (61 routes)"]
+  svc_governance["governance (36 routes)"]
+  svc_hyok["hyok (21 routes)"]
+  svc_keyaccess["keyaccess (9 routes)"]
+  svc_keycore["keycore (118 routes)"]
+  svc_mpc["mpc (31 routes)"]
+  svc_payment["payment (42 routes)"]
+  svc_posture["posture (19 routes)"]
+  svc_pqc["pqc (16 routes)"]
+  svc_qkd["qkd (22 routes)"]
+  svc_qrng["qrng (10 routes)"]
+  svc_reporting["reporting (33 routes)"]
+  svc_sbom["sbom (18 routes)"]
+  svc_secrets["secrets (22 routes)"]
+  svc_signing["signing (11 routes)"]
+  svc_tfe["tfe (14 routes)"]
+  svc_workload["workload (16 routes)"]

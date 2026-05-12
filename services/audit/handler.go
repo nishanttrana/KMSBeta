@@ -129,6 +129,10 @@ func (h *Handler) routes() *http.ServeMux {
 	// FIPS 140-3 module boundary declaration
 	mux.HandleFunc("GET /audit/fips/boundary", h.handleFIPSBoundary)
 
+	// Cryptographic Bill of Materials (CBOM)
+	mux.HandleFunc("GET /audit/cbom/inventory", h.handleCBOMInventory)
+	mux.HandleFunc("GET /audit/cbom/diff", h.handleCBOMDiff)
+
 	// Prometheus metrics scrape endpoint
 	mux.HandleFunc("GET /metrics", h.handlePrometheusMetrics)
 

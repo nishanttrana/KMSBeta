@@ -35,6 +35,10 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /policies/{id}/versions", h.handleListVersions)
 	mux.HandleFunc("GET /policies/{id}/versions/{version}", h.handleGetVersion)
 	mux.HandleFunc("POST /policy/evaluate", h.handleEvaluate)
+	mux.HandleFunc("POST /policies/lint", h.handleLintPolicy)
+	mux.HandleFunc("POST /policies/dry-run", h.handleDryRunPolicy)
+	mux.HandleFunc("GET /policy/quota/{tenant_id}", h.handleGetQuota)
+	mux.HandleFunc("PUT /policy/quota/{tenant_id}", h.handleSetQuota)
 	return mux
 }
 

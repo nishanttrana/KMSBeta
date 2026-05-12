@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"vecta-kms/pkg/cbom"
 )
 
 var validPolicyTypes = map[string]struct{}{
@@ -93,6 +95,33 @@ func normalizeDefaultAction(v string) string {
 	}
 }
 
+// tierMeetsFloor returns true when actual is at or above the floor. The
+// ordering matches cbom.Tier semantics: classical-128 < classical-192 <
+// classical-256 < pqc-hybrid < pqc-only. Deprecated never meets any floor.
+func tierMeetsFloor(actual, floor cbom.Tier) bool {
+	if actual == cbom.TierDeprecated {
+		return false
+	}
+	return tierRank(actual) >= tierRank(floor)
+}
+
+func tierRank(t cbom.Tier) int {
+	switch t {
+	case cbom.TierClassical128:
+		return 1
+	case cbom.TierClassical192:
+		return 2
+	case cbom.TierClassical256:
+		return 3
+	case cbom.TierPQCHybrid:
+		return 4
+	case cbom.TierPQCOnly:
+		return 5
+	default:
+		return 0
+	}
+}
+
 // evaluationResult carries the outcome of evaluating a single policy document.
 type evaluationResult struct {
 	Decision          Decision
@@ -110,6 +139,29 @@ func evaluatePolicy(doc PolicyDoc, policyID string, version int, req EvaluatePol
 	var approvalRequestID string
 	var requiredApprovers int
 	matchedRule := false
+
+	// Algorithm-tier floor check. When MinAlgorithmTier is set, every
+	// targeted request must use an algorithm at or above the floor; below
+	// is denied with a dedicated outcome that the dashboard can surface as
+	// a crypto-agility violation. The check fires before rule processing
+	// so a permissive rule cannot override the floor.
+	if floor := strings.ToLower(strings.TrimSpace(doc.Spec.MinAlgorithmTier)); floor != "" {
+		if alg := strings.TrimSpace(req.Algorithm); alg != "" {
+			tier := cbom.ClassifyTier(alg, "")
+			if !tierMeetsFloor(tier, cbom.Tier(floor)) {
+				return evaluationResult{
+					Decision: DecisionDeny,
+					Outcomes: []RuleOutcome{{
+						PolicyID:      policyID,
+						PolicyVersion: version,
+						RuleName:      "crypto-floor",
+						Action:        "deny",
+						Message:       "algorithm " + alg + " is below required tier " + floor,
+					}},
+				}
+			}
+		}
+	}
 
 	for _, rule := range doc.Spec.Rules {
 		if !conditionMatches(rule.Condition, req) {

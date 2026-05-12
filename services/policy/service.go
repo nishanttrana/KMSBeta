@@ -22,6 +22,13 @@ type Service struct {
 	events  EventPublisher
 	cluster clustersync.Publisher
 	posture GovernancePostureControlsProvider
+	quota   *QuotaPolicy
+}
+
+// SetQuotaPolicy installs the per-tenant quota tracker. Optional — when
+// nil, evaluator behaviour is unchanged.
+func (s *Service) SetQuotaPolicy(q *QuotaPolicy) {
+	s.quota = q
 }
 
 func NewService(store Store, events EventPublisher) *Service {
@@ -335,6 +342,36 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluatePolicyRequest) (Eval
 	result := EvaluatePolicyResponse{
 		Decision: DecisionAllow,
 		Outcomes: make([]RuleOutcome, 0),
+	}
+
+	// Auto-throttle: quota outcome composes with per-policy outcomes below.
+	// A quota deny short-circuits the per-policy walk entirely; a quota
+	// warn surfaces as an outcome but does not block further evaluation.
+	switch s.quota.AdviseDecision(req.TenantID, req.Operation) {
+	case "deny":
+		result.Decision = DecisionDeny
+		result.Outcomes = append(result.Outcomes, RuleOutcome{
+			PolicyID:      "quota",
+			PolicyVersion: 1,
+			RuleName:      "auto-throttle",
+			Action:        "deny",
+			Message:       "tenant operation budget exhausted",
+		})
+		result.Reason = "tenant operation budget exhausted"
+		_ = s.publishAudit(ctx, "audit.policy.quota_exceeded", req.TenantID, map[string]any{
+			"operation": req.Operation,
+			"key_id":    req.KeyID,
+		})
+		return result, nil
+	case "warn":
+		result.Decision = DecisionWarn
+		result.Outcomes = append(result.Outcomes, RuleOutcome{
+			PolicyID:      "quota",
+			PolicyVersion: 1,
+			RuleName:      "auto-throttle",
+			Action:        "warn",
+			Message:       "tenant operation budget nearing exhaustion",
+		})
 	}
 	for _, p := range policies {
 		doc, _, err := parsePolicyYAML(p.RawYAML)

@@ -59,6 +59,10 @@ type Store interface {
 	GetErrorBreakdown(ctx context.Context, tenantID string, window string) ([]ErrorBreakdown, error)
 	// GetAllServiceStats returns cross-tenant per-service/op-type aggregates for Prometheus.
 	GetAllServiceStats(ctx context.Context) ([]PrometheusMetricRow, error)
+
+	// CBOMSamples returns algorithm/parameter aggregates derived from the
+	// immutable audit chain. Used by the CBOM inventory/diff endpoints.
+	CBOMSamples(ctx context.Context, tenantID string) ([]CBOMSample, error)
 }
 
 type SQLStore struct {

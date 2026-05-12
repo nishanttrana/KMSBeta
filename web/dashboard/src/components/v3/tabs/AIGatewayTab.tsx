@@ -396,7 +396,7 @@ export function AIGatewayTab({ session }: { session: any }) {
     setLoadingDlpPolicies(true); setErr("");
     try {
       const data = await serviceRequest(
-        session, "ai", `/protect/policies?tenant_id=${encodeURIComponent(session.tenantId)}`
+        session, "ai", `/ai/protect/policies?tenant_id=${encodeURIComponent(session.tenantId)}`
       );
       setDlpPolicies(data?.policies ?? []);
     } catch (e) { setErr(errMsg(e)); }
@@ -610,7 +610,7 @@ export function AIGatewayTab({ session }: { session: any }) {
         exemptions: dlpPolicyForm.exemptions ? dlpPolicyForm.exemptions.split(",").map(s => s.trim()).filter(Boolean) : [],
         enabled: dlpPolicyForm.enabled,
       };
-      const created = await serviceRequest(session, "ai", "/protect/policies", {
+      const created = await serviceRequest(session, "ai", "/ai/protect/policies", {
         method: "POST", body: JSON.stringify(payload),
       });
       setDlpPolicies(prev => [created, ...prev]);
@@ -623,7 +623,7 @@ export function AIGatewayTab({ session }: { session: any }) {
     if (!confirm("Delete this DLP policy?")) return;
     setDlpDeleteBusy(id);
     try {
-      await serviceRequest(session, "ai", `/protect/policies/${id}`, { method: "DELETE" });
+      await serviceRequest(session, "ai", `/ai/protect/policies/${id}`, { method: "DELETE" });
       setDlpPolicies(prev => prev.filter(p => p.id !== id));
     } catch (e) { setErr(errMsg(e)); }
     finally { setDlpDeleteBusy(null); }

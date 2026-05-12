@@ -20,6 +20,12 @@ This README is the landing page. Detailed operator documentation now lives under
   - Covers installation, startup, health checks, backups, cluster operations, and troubleshooting.
 - [Workflow Examples](docs/WORKFLOW_EXAMPLES.md)
   - End-to-end examples for onboarding apps, PKI automation, payment policy, workload identity, PQC migration, and more.
+- [Generated Product Map](docs/generated/PRODUCT_MAP.md)
+  - Source-generated UI/service/route map for launch triage and feature ownership.
+- [Generated Request Flow Map](docs/generated/REQUEST_FLOW.md)
+  - Source-generated frontend-to-handler-to-package flow map for tracing dashboard actions.
+- [Interactive Flow Graph](docs/generated/FLOW_GRAPH.html)
+  - Browser-viewable dark graph of UI modules, API calls, services, handlers, stores, and packages.
 - [REST API Additions](docs/REST_API_ADDITIONS.md)
   - Detailed REST notes and expanded API coverage for the newer features.
 - Service-specific references:

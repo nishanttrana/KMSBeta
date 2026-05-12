@@ -330,13 +330,13 @@ export const ComplianceTab = ({ session, onToast }: any) => {
     setInventoryLoading(true);
     try {
       const base = String(session?.baseUrl || "").replace(/\/+$/, "");
-      const headers: any = { Authorization: `Bearer ${session.token}`, "X-Tenant-Id": String(session.tenantId || "root") };
+      const headers: any = { Authorization: `Bearer ${session.token}`, "X-Tenant-ID": String(session.tenantId || "root") };
       const [keysRes, certsRes] = await Promise.all([
-        fetch(`${base}/svc/v1/keys?limit=500`, { headers }).then((r) => r.json()).catch(() => []),
-        fetch(`${base}/svc/certs/certificates?limit=500`, { headers }).then((r) => r.json()).catch(() => [])
+        fetch(`${base}/svc/keycore/keys?limit=500`, { headers }).then((r) => r.json()).catch(() => []),
+        fetch(`${base}/svc/certs/certs?limit=500`, { headers }).then((r) => r.json()).catch(() => [])
       ]);
-      setInventoryKeys(Array.isArray(keysRes) ? keysRes : Array.isArray(keysRes?.keys) ? keysRes.keys : []);
-      setInventoryCerts(Array.isArray(certsRes) ? certsRes : Array.isArray(certsRes?.certificates) ? certsRes.certificates : []);
+      setInventoryKeys(Array.isArray(keysRes) ? keysRes : Array.isArray(keysRes?.items) ? keysRes.items : Array.isArray(keysRes?.keys) ? keysRes.keys : []);
+      setInventoryCerts(Array.isArray(certsRes) ? certsRes : Array.isArray(certsRes?.items) ? certsRes.items : Array.isArray(certsRes?.certificates) ? certsRes.certificates : []);
     } catch (error) { onToast?.(`Inventory load failed: ${errMsg(error)}`); }
     finally { setInventoryLoading(false); }
   };

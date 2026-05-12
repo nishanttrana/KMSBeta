@@ -70,6 +70,12 @@ type PolicySpec struct {
 	// silently allowing the operation. Empty or "allow" preserves prior
 	// behaviour for backwards compatibility.
 	DefaultAction string `yaml:"defaultAction" json:"defaultAction"`
+	// MinAlgorithmTier enforces a minimum crypto-agility floor on every
+	// operation matched by this policy. Values match the cbom.Tier set
+	// (classical-128, classical-192, classical-256, pqc-hybrid, pqc-only).
+	// Requests whose algorithm sits below the floor are denied with a
+	// "crypto-floor" outcome regardless of any rule match.
+	MinAlgorithmTier string `yaml:"minAlgorithmTier" json:"minAlgorithmTier"`
 }
 
 type PolicyTargets struct {
