@@ -114,6 +114,7 @@ const AIGatewayTab = lazy(() => import("./v3/tabs/AIGatewayTab").then(m => ({ de
 const LineageTab = lazy(() => import("./v3/tabs/LineageTab").then(m => ({ default: m.LineageTab })));
 const CanaryKeysTab = lazy(() => import("./v3/tabs/CanaryKeysTab").then(m => ({ default: m.CanaryKeysTab })));
 const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ default: m.PlaybooksTab })));
+const HealthTab = lazy(() => import("./v3/tabs/HealthTab").then(m => ({ default: m.HealthTab })));
 
 type Props = {
   session: AuthSession;
@@ -224,7 +225,8 @@ const TABS: Record<string, any> = {
   ai_gateway: AIGatewayTab,
   lineage: LineageTab,
   canary: CanaryKeysTab,
-  playbooks: PlaybooksTab
+  playbooks: PlaybooksTab,
+  health: HealthTab
 };
 
 const TITLES: Record<string, string> = {
@@ -277,7 +279,8 @@ const TITLES: Record<string, string> = {
   ai_gateway: "AI Security Gateway",
   lineage: "Source Traceability",
   canary: "Canary / Honeypot Keys",
-  playbooks: "Playbooks"
+  playbooks: "Playbooks",
+  health: "Health & Reconciliation"
 };
 
 const NAV = [
@@ -326,6 +329,7 @@ const NAV = [
     { id: "leak_scanner", icon: ScanSearch, label: "Leak Scanner" },
     { id: "lineage", icon: GitMerge, label: "Source Traceability" },
     { id: "playbooks", icon: Play, label: "Playbooks" },
+    { id: "health", icon: Activity, label: "Health & Reconciliation" },
   ]},
   { g: "AI", items: [
     { id: "ai", icon: Sparkles, label: "AI Assistant" },

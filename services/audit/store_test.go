@@ -28,12 +28,19 @@ func newAuditStore(t *testing.T) *SQLStore {
 
 func createAuditSchemaForTest(conn *pkgdb.DB) error {
 	stmts := []string{
+		// hmac_sig + category_group were added by migration 004
+		// (services/audit/migrations/004_tamper_evidence.sql). country_code is
+		// inserted via the geoip enrichment path. The test harness builds the
+		// schema directly so it must include every column the production
+		// INSERT path references; otherwise the SQLite driver returns "no
+		// such column" at runtime.
 		`CREATE TABLE audit_events (
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, sequence INTEGER NOT NULL, chain_hash TEXT NOT NULL, previous_hash TEXT NOT NULL,
 			timestamp TEXT NOT NULL, service TEXT NOT NULL, action TEXT NOT NULL, actor_id TEXT NOT NULL, actor_type TEXT NOT NULL,
 			target_type TEXT, target_id TEXT, method TEXT, endpoint TEXT, source_ip TEXT, user_agent TEXT, request_hash TEXT,
 			correlation_id TEXT, parent_event_id TEXT, session_id TEXT, result TEXT NOT NULL, status_code INTEGER, error_message TEXT,
 			duration_ms REAL, fips_compliant INTEGER, approval_id TEXT, risk_score INTEGER, tags TEXT, node_id TEXT, details TEXT,
+			hmac_sig TEXT, category_group TEXT, country_code TEXT,
 			created_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id)
 		);`,
 		`CREATE TABLE alerts (

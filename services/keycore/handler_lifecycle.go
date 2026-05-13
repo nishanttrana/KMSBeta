@@ -125,12 +125,29 @@ func (s *Service) dueForLifecycle(ctx context.Context, maxN int) ([]dueLifecycle
 	if s.cryptoperiod == nil {
 		return nil, nil
 	}
-	// The keycore SQL store does not yet have a cross-tenant scan
-	// optimised for lifecycle decisions. Until that lands, we return an
-	// empty list — the reconciler treats this as "nothing to do" and
-	// the loop keeps running. The interface is stable so the
-	// implementation drop-in lands later without API churn.
-	_ = ctx
-	_ = maxN
-	return nil, nil
+	scanner, ok := s.store.(interface {
+		ScanLifecycleCandidates(ctx context.Context, limit int) ([]LifecycleCandidate, error)
+	})
+	if !ok {
+		return nil, nil
+	}
+	candidates, err := scanner.ScanLifecycleCandidates(ctx, maxN)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]dueLifecycleItem, 0, len(candidates))
+	now := time.Now().UTC()
+	for _, c := range candidates {
+		action, reason := EvaluateLifecycle(c, s.cryptoperiod, now)
+		if action == "" {
+			continue
+		}
+		out = append(out, dueLifecycleItem{
+			TenantID: c.TenantID,
+			KeyID:    c.ID,
+			Action:   action,
+			Reason:   reason,
+		})
+	}
+	return out, nil
 }

@@ -5,11 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vecta KMS Dashboard</title>
     <meta name="description" content="Vecta KMS Cyber Command Center" />
-    <script type="module" crossorigin src="/assets/index-T95BeiNu.js"></script>
-    <link rel="modulepreload" crossorigin href="/assets/legacyPrimitives-C5eNGjR4.js">
-    <link rel="modulepreload" crossorigin href="/assets/serviceApi-Bj_Z1HYI.js">
-    <link rel="modulepreload" crossorigin href="/assets/keycore-CzPIAJpv.js">
-    <link rel="stylesheet" crossorigin href="/assets/index-QIGXK1YY.css">
+    <script>
+      // No-FOUC theme bootstrap — runs before any paint.
+      (function () {
+        try {
+          var saved = localStorage.getItem("vecta.theme");
+          var theme =
+            saved === "dark" || saved === "light"
+              ? saved
+              : window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches
+              ? "light"
+              : "dark";
+          document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-xFVwFuyo.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-Dw2cE7zH.js">
+    <link rel="modulepreload" crossorigin href="/assets/query-vendor-DwpP5Tf8.js">
+    <link rel="modulepreload" crossorigin href="/assets/theme-CKtG5Xk6.js">
+    <link rel="modulepreload" crossorigin href="/assets/react-vendor-N3Tjueb2.js">
+    <link rel="modulepreload" crossorigin href="/assets/auth-CKMzcEKH.js">
+    <link rel="modulepreload" crossorigin href="/assets/keycore-k8B07Eth.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-UT0Xm-kw.css">
   </head>
   <body>
     <div id="root"></div>

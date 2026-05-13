@@ -59,6 +59,33 @@ func UnmarshalCompositeSignature(raw []byte) (CompositeSignature, error) {
 // classical independently" property in action.
 type Verifier func(messageHash, signature []byte) error
 
+// MLDSAVerifier returns a Verifier callback bound to a public key and
+// context string. The signature-context bytes must match the value used
+// at signing time (FIPS 204 §3.2); we hard-code the application label
+// "vecta-kms-composite/v1" so any leg of the composite is bound to the
+// composite scheme and cannot be lifted into a different signing context.
+func MLDSAVerifier(algorithm string, publicKey []byte) Verifier {
+	ctx := []byte("vecta-kms-composite/v1")
+	return func(messageHash, signature []byte) error {
+		return MLDSAVerify(algorithm, publicKey, messageHash, ctx, signature)
+	}
+}
+
+// MLDSAComposeSign produces a CompositeSignature whose PQC leg is a real
+// ML-DSA signature. The classical leg is supplied as raw bytes by the
+// caller so this helper stays decoupled from the classical signer
+// (ECDSA, RSA, Ed25519 — operators choose). messageHash is what both
+// legs sign over; bundling it into the composite means verifiers can
+// validate either leg against the same canonical input.
+func MLDSAComposeSign(pqcAlgorithm string, pqcPrivateKey []byte, classicalAlgorithm string, classicalSignature, messageHash []byte) (CompositeSignature, error) {
+	ctx := []byte("vecta-kms-composite/v1")
+	pqcSig, err := MLDSASign(pqcAlgorithm, pqcPrivateKey, messageHash, ctx)
+	if err != nil {
+		return CompositeSignature{}, err
+	}
+	return NewCompositeSignature(classicalAlgorithm, pqcAlgorithm, classicalSignature, pqcSig, messageHash), nil
+}
+
 // ComposeVerify validates a composite signature against the supplied
 // per-leg verifiers. Returns nil if either succeeds.
 func ComposeVerify(sig CompositeSignature, classical, pqc Verifier) error {

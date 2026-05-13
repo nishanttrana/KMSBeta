@@ -3,6 +3,34 @@
 
 export const DISCOVERED_REST_API_CATALOG = [
   {
+    "id": "ai-delete-ai-protect-policies-id",
+    "group": "AI Security (ai)",
+    "title": "DELETE /ai/protect/policies/{id}",
+    "service": "ai",
+    "method": "DELETE",
+    "pathTemplate": "/ai/protect/policies/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from AI service.",
+    "requestExample": "DELETE /svc/ai/ai/protect/policies/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "ai-get-ai-config",
     "group": "AI Security (ai)",
     "title": "Get AI Configuration",
@@ -86,6 +114,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "ai-get-ai-protect-audit",
+    "group": "AI Security (ai)",
+    "title": "GET /ai/protect/audit",
+    "service": "ai",
+    "method": "GET",
+    "pathTemplate": "/ai/protect/audit?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from AI service.",
+    "requestExample": "GET /svc/ai/ai/protect/audit?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ai-get-ai-protect-policies",
+    "group": "AI Security (ai)",
+    "title": "GET /ai/protect/policies",
+    "service": "ai",
+    "method": "GET",
+    "pathTemplate": "/ai/protect/policies?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from AI service.",
+    "requestExample": "GET /svc/ai/ai/protect/policies?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "ai-post-ai-analyze-incident",
     "group": "AI Security (ai)",
     "title": "Analyze Incident",
@@ -162,6 +246,118 @@ export const DISCOVERED_REST_API_CATALOG = [
       {
         "code": 404,
         "meaning": "Referenced policy could not be found"
+      }
+    ]
+  },
+  {
+    "id": "ai-post-ai-protect-block",
+    "group": "AI Security (ai)",
+    "title": "POST /ai/protect/block",
+    "service": "ai",
+    "method": "POST",
+    "pathTemplate": "/ai/protect/block?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from AI service.",
+    "requestExample": "POST /svc/ai/ai/protect/block?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ai-post-ai-protect-policies",
+    "group": "AI Security (ai)",
+    "title": "POST /ai/protect/policies",
+    "service": "ai",
+    "method": "POST",
+    "pathTemplate": "/ai/protect/policies?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from AI service.",
+    "requestExample": "POST /svc/ai/ai/protect/policies?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ai-post-ai-protect-redact",
+    "group": "AI Security (ai)",
+    "title": "POST /ai/protect/redact",
+    "service": "ai",
+    "method": "POST",
+    "pathTemplate": "/ai/protect/redact?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from AI service.",
+    "requestExample": "POST /svc/ai/ai/protect/redact?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ai-post-ai-protect-scan",
+    "group": "AI Security (ai)",
+    "title": "POST /ai/protect/scan",
+    "service": "ai",
+    "method": "POST",
+    "pathTemplate": "/ai/protect/scan?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from AI service.",
+    "requestExample": "POST /svc/ai/ai/protect/scan?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
       }
     ]
   },
@@ -629,6 +825,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "audit-delete-webhooks-id",
+    "group": "Audit & Alerts (audit)",
+    "title": "DELETE /webhooks/{id}",
+    "service": "audit",
+    "method": "DELETE",
+    "pathTemplate": "/webhooks/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "DELETE /svc/audit/webhooks/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "audit-get-alerts",
     "group": "Audit & Alerts (audit)",
     "title": "GET /alerts",
@@ -778,6 +1002,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Audit service.",
     "requestExample": "GET /svc/audit/alerts/stream?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-get-audit-cbom-diff",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /audit/cbom/diff",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/audit/cbom/diff?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/audit/cbom/diff?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-get-audit-cbom-inventory",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /audit/cbom/inventory",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/audit/cbom/inventory?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/audit/cbom/inventory?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -965,6 +1245,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "audit-get-audit-fips-boundary",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /audit/fips/boundary",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/audit/fips/boundary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/audit/fips/boundary?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "audit-get-audit-merkle-epochs",
     "group": "Audit & Alerts (audit)",
     "title": "GET /audit/merkle/epochs",
@@ -1114,6 +1422,258 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Audit service.",
     "requestExample": "GET /svc/audit/audit/timeline/{target_id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-get-metrics",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /metrics",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/metrics?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/metrics?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-get-ops-metrics-by-service",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /ops-metrics/by-service",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/ops-metrics/by-service?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/ops-metrics/by-service?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-get-ops-metrics-errors",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /ops-metrics/errors",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/ops-metrics/errors?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/ops-metrics/errors?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-get-ops-metrics-latency",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /ops-metrics/latency",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/ops-metrics/latency?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/ops-metrics/latency?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-get-ops-metrics-overview",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /ops-metrics/overview",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/ops-metrics/overview?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/ops-metrics/overview?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-get-ops-metrics-timeseries",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /ops-metrics/timeseries",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/ops-metrics/timeseries?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/ops-metrics/timeseries?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-get-webhooks",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /webhooks",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/webhooks?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/webhooks?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-get-webhooks-id-deliveries",
+    "group": "Audit & Alerts (audit)",
+    "title": "GET /webhooks/{id}/deliveries",
+    "service": "audit",
+    "method": "GET",
+    "pathTemplate": "/webhooks/{id}/deliveries?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "GET /svc/audit/webhooks/{id}/deliveries?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-patch-webhooks-id",
+    "group": "Audit & Alerts (audit)",
+    "title": "PATCH /webhooks/{id}",
+    "service": "audit",
+    "method": "PATCH",
+    "pathTemplate": "/webhooks/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "PATCH /svc/audit/webhooks/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -1310,6 +1870,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Audit service.",
     "requestExample": "POST /svc/audit/audit/search?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-post-ops-metrics-record",
+    "group": "Audit & Alerts (audit)",
+    "title": "POST /ops-metrics/record",
+    "service": "audit",
+    "method": "POST",
+    "pathTemplate": "/ops-metrics/record?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "POST /svc/audit/ops-metrics/record?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-post-webhooks",
+    "group": "Audit & Alerts (audit)",
+    "title": "POST /webhooks",
+    "service": "audit",
+    "method": "POST",
+    "pathTemplate": "/webhooks?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "POST /svc/audit/webhooks?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-post-webhooks-id-test",
+    "group": "Audit & Alerts (audit)",
+    "title": "POST /webhooks/{id}/test",
+    "service": "audit",
+    "method": "POST",
+    "pathTemplate": "/webhooks/{id}/test?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "POST /svc/audit/webhooks/{id}/test?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -1898,6 +2542,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "DELETE /svc/certs/certs/star/subscriptions/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-delete-ct-monitor-domains-id",
+    "group": "Certificates / PKI (certs)",
+    "title": "DELETE /ct-monitor/domains/{id}",
+    "service": "certs",
+    "method": "DELETE",
+    "pathTemplate": "/ct-monitor/domains/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "DELETE /svc/certs/ct-monitor/domains/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -2645,6 +3317,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "certs-get-ct-monitor-alerts",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /ct-monitor/alerts",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/ct-monitor/alerts?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/ct-monitor/alerts?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-get-ct-monitor-domains",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /ct-monitor/domains",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/ct-monitor/domains?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/ct-monitor/domains?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-get-ct-monitor-entries",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /ct-monitor/entries",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/ct-monitor/entries?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/ct-monitor/entries?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "certs-get-est-well-known-est-cacerts",
     "group": "Certificates / PKI (certs)",
     "title": "GET /est/.well-known/est/cacerts",
@@ -2701,6 +3457,118 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "certs-get-mesh-certificates",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /mesh/certificates",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/mesh/certificates?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/mesh/certificates?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-get-mesh-services",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /mesh/services",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/mesh/services?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/mesh/services?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-get-mesh-topology",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /mesh/topology",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/mesh/topology?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/mesh/topology?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-get-mesh-trust-anchors",
+    "group": "Certificates / PKI (certs)",
+    "title": "GET /mesh/trust-anchors",
+    "service": "certs",
+    "method": "GET",
+    "pathTemplate": "/mesh/trust-anchors?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "GET /svc/certs/mesh/trust-anchors?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "certs-get-scep-pkiclient-exe",
     "group": "Certificates / PKI (certs)",
     "title": "GET /scep/pkiclient.exe",
@@ -2738,6 +3606,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "HEAD /svc/certs/acme/new-nonce?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-patch-ct-monitor-domains-id",
+    "group": "Certificates / PKI (certs)",
+    "title": "PATCH /ct-monitor/domains/{id}",
+    "service": "certs",
+    "method": "PATCH",
+    "pathTemplate": "/ct-monitor/domains/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "PATCH /svc/certs/ct-monitor/domains/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -3401,6 +4297,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "certs-post-ct-monitor-alerts-id-acknowledge",
+    "group": "Certificates / PKI (certs)",
+    "title": "POST /ct-monitor/alerts/{id}/acknowledge",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/ct-monitor/alerts/{id}/acknowledge?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "POST /svc/certs/ct-monitor/alerts/{id}/acknowledge?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-post-ct-monitor-domains",
+    "group": "Certificates / PKI (certs)",
+    "title": "POST /ct-monitor/domains",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/ct-monitor/domains?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "POST /svc/certs/ct-monitor/domains?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "certs-post-est-well-known-est-serverkeygen",
     "group": "Certificates / PKI (certs)",
     "title": "POST /est/.well-known/est/serverkeygen",
@@ -3466,6 +4418,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "POST /svc/certs/est/.well-known/est/simplereenroll?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-post-mesh-services",
+    "group": "Certificates / PKI (certs)",
+    "title": "POST /mesh/services",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/mesh/services?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "POST /svc/certs/mesh/services?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-post-mesh-services-id-renew",
+    "group": "Certificates / PKI (certs)",
+    "title": "POST /mesh/services/{id}/renew",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/mesh/services/{id}/renew?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "POST /svc/certs/mesh/services/{id}/renew?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "certs-post-mesh-trust-anchors",
+    "group": "Certificates / PKI (certs)",
+    "title": "POST /mesh/trust-anchors",
+    "service": "certs",
+    "method": "POST",
+    "pathTemplate": "/mesh/trust-anchors?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Certs service.",
+    "requestExample": "POST /svc/certs/mesh/trust-anchors?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -4381,6 +5417,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "compliance-delete-compliance-playbooks-id",
+    "group": "Compliance (compliance)",
+    "title": "DELETE /compliance/playbooks/{id}",
+    "service": "compliance",
+    "method": "DELETE",
+    "pathTemplate": "/compliance/playbooks/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "DELETE /svc/compliance/compliance/playbooks/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "compliance-delete-compliance-templates-id",
     "group": "Compliance (compliance)",
     "title": "DELETE /compliance/templates/{id}",
@@ -4717,6 +5781,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "compliance-get-compliance-evidence-export",
+    "group": "Compliance (compliance)",
+    "title": "GET /compliance/evidence/export",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/evidence/export?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "GET /svc/compliance/compliance/evidence/export?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "compliance-get-compliance-frameworks",
     "group": "Compliance (compliance)",
     "title": "GET /compliance/frameworks",
@@ -4885,6 +5977,118 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "compliance-get-compliance-playbooks",
+    "group": "Compliance (compliance)",
+    "title": "GET /compliance/playbooks",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/playbooks?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "GET /svc/compliance/compliance/playbooks?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "compliance-get-compliance-playbooks-id",
+    "group": "Compliance (compliance)",
+    "title": "GET /compliance/playbooks/{id}",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/playbooks/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "GET /svc/compliance/compliance/playbooks/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "compliance-get-compliance-playbooks-id-runs",
+    "group": "Compliance (compliance)",
+    "title": "GET /compliance/playbooks/{id}/runs",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/playbooks/{id}/runs?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "GET /svc/compliance/compliance/playbooks/{id}/runs?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "compliance-get-compliance-playbooks-summary",
+    "group": "Compliance (compliance)",
+    "title": "GET /compliance/playbooks/summary",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/playbooks/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "GET /svc/compliance/compliance/playbooks/summary?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "compliance-get-compliance-posture",
     "group": "Compliance (compliance)",
     "title": "GET /compliance/posture",
@@ -4950,6 +6154,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Compliance service.",
     "requestExample": "GET /svc/compliance/compliance/posture/history?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "compliance-get-compliance-risk-keys",
+    "group": "Compliance (compliance)",
+    "title": "GET /compliance/risk/keys",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/risk/keys?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "GET /svc/compliance/compliance/risk/keys?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "compliance-get-compliance-risk-remediation",
+    "group": "Compliance (compliance)",
+    "title": "GET /compliance/risk/remediation",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/risk/remediation?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "GET /svc/compliance/compliance/risk/remediation?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "compliance-get-compliance-risk-summary",
+    "group": "Compliance (compliance)",
+    "title": "GET /compliance/risk/summary",
+    "service": "compliance",
+    "method": "GET",
+    "pathTemplate": "/compliance/risk/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "GET /svc/compliance/compliance/risk/summary?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -5165,6 +6453,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "compliance-post-compliance-playbooks",
+    "group": "Compliance (compliance)",
+    "title": "POST /compliance/playbooks",
+    "service": "compliance",
+    "method": "POST",
+    "pathTemplate": "/compliance/playbooks?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "POST /svc/compliance/compliance/playbooks?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "compliance-post-compliance-playbooks-id-run",
+    "group": "Compliance (compliance)",
+    "title": "POST /compliance/playbooks/{id}/run",
+    "service": "compliance",
+    "method": "POST",
+    "pathTemplate": "/compliance/playbooks/{id}/run?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "POST /svc/compliance/compliance/playbooks/{id}/run?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "compliance-post-compliance-templates",
     "group": "Compliance (compliance)",
     "title": "POST /compliance/templates",
@@ -5202,6 +6546,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Compliance service.",
     "requestExample": "PUT /svc/compliance/compliance/assessment/schedule?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "compliance-put-compliance-playbooks-id",
+    "group": "Compliance (compliance)",
+    "title": "PUT /compliance/playbooks/{id}",
+    "service": "compliance",
+    "method": "PUT",
+    "pathTemplate": "/compliance/playbooks/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Compliance service.",
+    "requestExample": "PUT /svc/compliance/compliance/playbooks/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -6848,6 +8220,370 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "discovery-get-discovery-data-inventory",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/data-inventory",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/data-inventory?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/data-inventory?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-lineage-access-patterns-key-id",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/lineage/access-patterns/{key_id}",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/lineage/access-patterns/{key_id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/lineage/access-patterns/{key_id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-lineage-chain-of-custody-key-id",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/lineage/chain-of-custody/{key_id}",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/lineage/chain-of-custody/{key_id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/lineage/chain-of-custody/{key_id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-lineage-data-flow-key-id",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/lineage/data-flow/{key_id}",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/lineage/data-flow/{key_id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/lineage/data-flow/{key_id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-lineage-dependencies-key-id",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/lineage/dependencies/{key_id}",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/lineage/dependencies/{key_id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/lineage/dependencies/{key_id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-lineage-graph",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/lineage/graph",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/lineage/graph?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/lineage/graph?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-lineage-impact-key-id",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/lineage/impact/{key_id}",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/lineage/impact/{key_id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/lineage/impact/{key_id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-lineage-key-key-id",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/lineage/key/{key_id}",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/lineage/key/{key_id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/lineage/key/{key_id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-lineage-provenance-key-id",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/lineage/provenance/{key_id}",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/lineage/provenance/{key_id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/lineage/provenance/{key_id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-lineage-risk-heatmap",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/lineage/risk-heatmap",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/lineage/risk-heatmap?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/lineage/risk-heatmap?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-lineage-stats",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/lineage/stats",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/lineage/stats?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/lineage/stats?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-lineage-timeline-key-id",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/lineage/timeline/{key_id}",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/lineage/timeline/{key_id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/lineage/timeline/{key_id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-get-discovery-pii-patterns",
+    "group": "Discovery (discovery)",
+    "title": "GET /discovery/pii/patterns",
+    "service": "discovery",
+    "method": "GET",
+    "pathTemplate": "/discovery/pii/patterns?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "GET /svc/discovery/discovery/pii/patterns?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "discovery-get-discovery-posture",
     "group": "Discovery (discovery)",
     "title": "GET /discovery/posture",
@@ -6960,6 +8696,118 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "discovery-post-discovery-lineage-record",
+    "group": "Discovery (discovery)",
+    "title": "POST /discovery/lineage/record",
+    "service": "discovery",
+    "method": "POST",
+    "pathTemplate": "/discovery/lineage/record?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "POST /svc/discovery/discovery/lineage/record?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-post-discovery-lineage-search",
+    "group": "Discovery (discovery)",
+    "title": "POST /discovery/lineage/search",
+    "service": "discovery",
+    "method": "POST",
+    "pathTemplate": "/discovery/lineage/search?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "POST /svc/discovery/discovery/lineage/search?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-post-discovery-lineage-tamper-check-key-id",
+    "group": "Discovery (discovery)",
+    "title": "POST /discovery/lineage/tamper-check/{key_id}",
+    "service": "discovery",
+    "method": "POST",
+    "pathTemplate": "/discovery/lineage/tamper-check/{key_id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "POST /svc/discovery/discovery/lineage/tamper-check/{key_id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "discovery-post-discovery-pii-scan",
+    "group": "Discovery (discovery)",
+    "title": "POST /discovery/pii/scan",
+    "service": "discovery",
+    "method": "POST",
+    "pathTemplate": "/discovery/pii/scan?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Discovery service.",
+    "requestExample": "POST /svc/discovery/discovery/pii/scan?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "discovery-post-discovery-scan",
     "group": "Discovery (discovery)",
     "title": "POST /discovery/scan",
@@ -7044,6 +8892,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "ekm-delete-ekm-azure-configs-id",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "DELETE /ekm/azure/configs/{id}",
+    "service": "ekm",
+    "method": "DELETE",
+    "pathTemplate": "/ekm/azure/configs/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "DELETE /svc/ekm/ekm/azure/configs/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-delete-ekm-azure-mappings-id",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "DELETE /ekm/azure/mappings/{id}",
+    "service": "ekm",
+    "method": "DELETE",
+    "pathTemplate": "/ekm/azure/mappings/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "DELETE /svc/ekm/ekm/azure/mappings/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "ekm-delete-ekm-bitlocker-clients-id",
     "group": "Enterprise Key Management (ekm)",
     "title": "DELETE /ekm/bitlocker/clients/{id}",
@@ -7053,6 +8957,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from EKM service.",
     "requestExample": "DELETE /svc/ekm/ekm/bitlocker/clients/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-delete-ekm-google-cse-configs-id",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "DELETE /ekm/google-cse/configs/{id}",
+    "service": "ekm",
+    "method": "DELETE",
+    "pathTemplate": "/ekm/google-cse/configs/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "DELETE /svc/ekm/ekm/google-cse/configs/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-delete-ekm-google-cse-keys-id",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "DELETE /ekm/google-cse/keys/{id}",
+    "service": "ekm",
+    "method": "DELETE",
+    "pathTemplate": "/ekm/google-cse/keys/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "DELETE /svc/ekm/ekm/google-cse/keys/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -7193,6 +9153,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from EKM service.",
     "requestExample": "GET /svc/ekm/ekm/agents/{id}/status?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-get-ekm-azure-configs",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/azure/configs",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/azure/configs?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/azure/configs?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-get-ekm-azure-configs-id",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/azure/configs/{id}",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/azure/configs/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/azure/configs/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-get-ekm-azure-mappings",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/azure/mappings",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/azure/mappings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/azure/mappings?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -7436,6 +9480,118 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "ekm-get-ekm-google-cse-configs",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/google-cse/configs",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/google-cse/configs?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/google-cse/configs?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-get-ekm-google-cse-configs-id",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/google-cse/configs/{id}",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/google-cse/configs/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/google-cse/configs/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-get-ekm-google-cse-keys",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/google-cse/keys",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/google-cse/keys?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/google-cse/keys?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-get-ekm-kacls-status",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "GET /ekm/kacls/status",
+    "service": "ekm",
+    "method": "GET",
+    "pathTemplate": "/ekm/kacls/status?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "GET /svc/ekm/ekm/kacls/status?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "ekm-get-ekm-sdk-download",
     "group": "Enterprise Key Management (ekm)",
     "title": "GET /ekm/sdk/download",
@@ -7576,6 +9732,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "ekm-post-ekm-agents-id-validate-deploy",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/agents/{id}/validate-deploy",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/agents/{id}/validate-deploy?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/agents/{id}/validate-deploy?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "ekm-post-ekm-agents-register",
     "group": "Enterprise Key Management (ekm)",
     "title": "POST /ekm/agents/register",
@@ -7585,6 +9769,230 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from EKM service.",
     "requestExample": "POST /svc/ekm/ekm/agents/register?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-azure-configs",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/azure/configs",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/azure/configs?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/azure/configs?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-azure-configs-id-sync",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/azure/configs/{id}/sync",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/azure/configs/{id}/sync?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/azure/configs/{id}/sync?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-azure-configs-id-test",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/azure/configs/{id}/test",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/azure/configs/{id}/test?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/azure/configs/{id}/test?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-azure-mappings",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/azure/mappings",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/azure/mappings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/azure/mappings?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-azure-mappings-id-import",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/azure/mappings/{id}/import",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/azure/mappings/{id}/import?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/azure/mappings/{id}/import?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-azure-mappings-id-rotate",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/azure/mappings/{id}/rotate",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/azure/mappings/{id}/rotate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/azure/mappings/{id}/rotate?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-azure-mappings-id-unwrap",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/azure/mappings/{id}/unwrap",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/azure/mappings/{id}/unwrap?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/azure/mappings/{id}/unwrap?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-azure-mappings-id-wrap",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/azure/mappings/{id}/wrap",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/azure/mappings/{id}/wrap?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/azure/mappings/{id}/wrap?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -7800,6 +10208,174 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "ekm-post-ekm-databases-id-revoke-tde",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/databases/{id}/revoke-tde",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/databases/{id}/revoke-tde?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/databases/{id}/revoke-tde?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-google-cse-configs",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/google-cse/configs",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/google-cse/configs?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/google-cse/configs?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-google-cse-keys",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/google-cse/keys",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/google-cse/keys?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/google-cse/keys?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-kacls-privilegedunwrap",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/kacls/privilegedunwrap",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/kacls/privilegedunwrap?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/kacls/privilegedunwrap?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-kacls-unwrap",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/kacls/unwrap",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/kacls/unwrap?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/kacls/unwrap?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-kacls-wrap",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/kacls/wrap",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/kacls/wrap?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/kacls/wrap?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "ekm-post-ekm-tde-keys",
     "group": "Enterprise Key Management (ekm)",
     "title": "POST /ekm/tde/keys",
@@ -7809,6 +10385,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from EKM service.",
     "requestExample": "POST /svc/ekm/ekm/tde/keys?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-post-ekm-tde-keys-id-revoke",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "POST /ekm/tde/keys/{id}/revoke",
+    "service": "ekm",
+    "method": "POST",
+    "pathTemplate": "/ekm/tde/keys/{id}/revoke?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "POST /svc/ekm/ekm/tde/keys/{id}/revoke?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -7893,6 +10497,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from EKM service.",
     "requestExample": "POST /svc/ekm/ekm/tde/keys/{id}/wrap?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-put-ekm-azure-configs-id",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "PUT /ekm/azure/configs/{id}",
+    "service": "ekm",
+    "method": "PUT",
+    "pathTemplate": "/ekm/azure/configs/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "PUT /svc/ekm/ekm/azure/configs/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "ekm-put-ekm-google-cse-configs-id",
+    "group": "Enterprise Key Management (ekm)",
+    "title": "PUT /ekm/google-cse/configs/{id}",
+    "service": "ekm",
+    "method": "PUT",
+    "pathTemplate": "/ekm/google-cse/configs/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from EKM service.",
+    "requestExample": "PUT /svc/ekm/ekm/google-cse/configs/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -9116,6 +11776,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "hyok-post-hyok-alibaba-v1-keys-id-decrypt",
+    "group": "HYOK (hyok)",
+    "title": "POST /hyok/alibaba/v1/keys/{id}/decrypt",
+    "service": "hyok",
+    "method": "POST",
+    "pathTemplate": "/hyok/alibaba/v1/keys/{id}/decrypt?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from HYOK service.",
+    "requestExample": "POST /svc/hyok/hyok/alibaba/v1/keys/{id}/decrypt?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "hyok-post-hyok-alibaba-v1-keys-id-encrypt",
+    "group": "HYOK (hyok)",
+    "title": "POST /hyok/alibaba/v1/keys/{id}/encrypt",
+    "service": "hyok",
+    "method": "POST",
+    "pathTemplate": "/hyok/alibaba/v1/keys/{id}/encrypt?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from HYOK service.",
+    "requestExample": "POST /svc/hyok/hyok/alibaba/v1/keys/{id}/encrypt?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "hyok-post-hyok-dke-v1-keys-id-decrypt",
     "group": "HYOK (hyok)",
     "title": "POST /hyok/dke/v1/keys/{id}/decrypt",
@@ -9349,6 +12065,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from HYOK service.",
     "requestExample": "POST /svc/hyok/hyok/salesforce/v1/keys/{id}/wrap?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "hyok-post-hyok-servicenow-v1-keys-id-unwrap",
+    "group": "HYOK (hyok)",
+    "title": "POST /hyok/servicenow/v1/keys/{id}/unwrap",
+    "service": "hyok",
+    "method": "POST",
+    "pathTemplate": "/hyok/servicenow/v1/keys/{id}/unwrap?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from HYOK service.",
+    "requestExample": "POST /svc/hyok/hyok/servicenow/v1/keys/{id}/unwrap?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "hyok-post-hyok-servicenow-v1-keys-id-wrap",
+    "group": "HYOK (hyok)",
+    "title": "POST /hyok/servicenow/v1/keys/{id}/wrap",
+    "service": "hyok",
+    "method": "POST",
+    "pathTemplate": "/hyok/servicenow/v1/keys/{id}/wrap?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from HYOK service.",
+    "requestExample": "POST /svc/hyok/hyok/servicenow/v1/keys/{id}/wrap?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -12033,6 +14805,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-delete-canary-id",
+    "group": "Key Management (keycore)",
+    "title": "DELETE /canary/{id}",
+    "service": "keycore",
+    "method": "DELETE",
+    "pathTemplate": "/canary/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "DELETE /svc/keycore/canary/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-delete-ceremony-guardians-id",
+    "group": "Key Management (keycore)",
+    "title": "DELETE /ceremony/guardians/{id}",
+    "service": "keycore",
+    "method": "DELETE",
+    "pathTemplate": "/ceremony/guardians/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "DELETE /svc/keycore/ceremony/guardians/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-delete-dr-drill-schedules-id",
+    "group": "Key Management (keycore)",
+    "title": "DELETE /dr-drill/schedules/{id}",
+    "service": "keycore",
+    "method": "DELETE",
+    "pathTemplate": "/dr-drill/schedules/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "DELETE /svc/keycore/dr-drill/schedules/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-delete-keys-id-versions-ver",
     "group": "Key Management (keycore)",
     "title": "DELETE /keys/{id}/versions/{ver}",
@@ -12042,6 +14898,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "DELETE /svc/keycore/keys/{id}/versions/{ver}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-delete-rotation-policies-id",
+    "group": "Key Management (keycore)",
+    "title": "DELETE /rotation/policies/{id}",
+    "service": "keycore",
+    "method": "DELETE",
+    "pathTemplate": "/rotation/policies/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "DELETE /svc/keycore/rotation/policies/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -12210,6 +15094,678 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "GET /svc/keycore/access/settings?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-agility-algorithms",
+    "group": "Key Management (keycore)",
+    "title": "GET /agility/algorithms",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/agility/algorithms?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/agility/algorithms?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-agility-keys-by-algorithm",
+    "group": "Key Management (keycore)",
+    "title": "GET /agility/keys-by-algorithm",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/agility/keys-by-algorithm?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/agility/keys-by-algorithm?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-agility-migration-plans",
+    "group": "Key Management (keycore)",
+    "title": "GET /agility/migration-plans",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/agility/migration-plans?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/agility/migration-plans?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-agility-score",
+    "group": "Key Management (keycore)",
+    "title": "GET /agility/score",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/agility/score?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/agility/score?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-canary",
+    "group": "Key Management (keycore)",
+    "title": "GET /canary",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/canary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/canary?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-canary-id",
+    "group": "Key Management (keycore)",
+    "title": "GET /canary/{id}",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/canary/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/canary/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-canary-id-trips",
+    "group": "Key Management (keycore)",
+    "title": "GET /canary/{id}/trips",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/canary/{id}/trips?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/canary/{id}/trips?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-canary-summary",
+    "group": "Key Management (keycore)",
+    "title": "GET /canary/summary",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/canary/summary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/canary/summary?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-ceremony",
+    "group": "Key Management (keycore)",
+    "title": "GET /ceremony",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/ceremony?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/ceremony?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-ceremony-id",
+    "group": "Key Management (keycore)",
+    "title": "GET /ceremony/{id}",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/ceremony/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/ceremony/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-ceremony-guardians",
+    "group": "Key Management (keycore)",
+    "title": "GET /ceremony/guardians",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/ceremony/guardians?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/ceremony/guardians?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-dr-drill-metrics",
+    "group": "Key Management (keycore)",
+    "title": "GET /dr-drill/metrics",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/dr-drill/metrics?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/dr-drill/metrics?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-dr-drill-runs",
+    "group": "Key Management (keycore)",
+    "title": "GET /dr-drill/runs",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/dr-drill/runs?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/dr-drill/runs?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-dr-drill-runs-id",
+    "group": "Key Management (keycore)",
+    "title": "GET /dr-drill/runs/{id}",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/dr-drill/runs/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/dr-drill/runs/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-dr-drill-schedules",
+    "group": "Key Management (keycore)",
+    "title": "GET /dr-drill/schedules",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/dr-drill/schedules?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/dr-drill/schedules?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-envelope-deks",
+    "group": "Key Management (keycore)",
+    "title": "GET /envelope/deks",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/envelope/deks?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/envelope/deks?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-envelope-hierarchy",
+    "group": "Key Management (keycore)",
+    "title": "GET /envelope/hierarchy",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/envelope/hierarchy?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/envelope/hierarchy?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-envelope-keks",
+    "group": "Key Management (keycore)",
+    "title": "GET /envelope/keks",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/envelope/keks?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/envelope/keks?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-envelope-rewrap-jobs",
+    "group": "Key Management (keycore)",
+    "title": "GET /envelope/rewrap-jobs",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/envelope/rewrap-jobs?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/envelope/rewrap-jobs?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-escrow-guardians",
+    "group": "Key Management (keycore)",
+    "title": "GET /escrow/guardians",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/escrow/guardians?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/escrow/guardians?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-escrow-keys",
+    "group": "Key Management (keycore)",
+    "title": "GET /escrow/keys",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/escrow/keys?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/escrow/keys?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-escrow-policies",
+    "group": "Key Management (keycore)",
+    "title": "GET /escrow/policies",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/escrow/policies?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/escrow/policies?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-escrow-recovery",
+    "group": "Key Management (keycore)",
+    "title": "GET /escrow/recovery",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/escrow/recovery?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/escrow/recovery?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-fips-rng-health",
+    "group": "Key Management (keycore)",
+    "title": "GET /fips/rng-health",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/fips/rng-health?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/fips/rng-health?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -12509,6 +16065,118 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-get-keys-due-for-lifecycle",
+    "group": "Key Management (keycore)",
+    "title": "GET /keys/due-for-lifecycle",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/keys/due-for-lifecycle?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/keys/due-for-lifecycle?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-rotation-policies",
+    "group": "Key Management (keycore)",
+    "title": "GET /rotation/policies",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/rotation/policies?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/rotation/policies?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-rotation-runs",
+    "group": "Key Management (keycore)",
+    "title": "GET /rotation/runs",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/rotation/runs?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/rotation/runs?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-get-rotation-upcoming",
+    "group": "Key Management (keycore)",
+    "title": "GET /rotation/upcoming",
+    "service": "keycore",
+    "method": "GET",
+    "pathTemplate": "/rotation/upcoming?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "GET /svc/keycore/rotation/upcoming?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-get-tags",
     "group": "Key Management (keycore)",
     "title": "GET /tags",
@@ -12518,6 +16186,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "GET /svc/keycore/tags?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-patch-agility-migration-plans-id",
+    "group": "Key Management (keycore)",
+    "title": "PATCH /agility/migration-plans/{id}",
+    "service": "keycore",
+    "method": "PATCH",
+    "pathTemplate": "/agility/migration-plans/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "PATCH /svc/keycore/agility/migration-plans/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-patch-rotation-policies-id",
+    "group": "Key Management (keycore)",
+    "title": "PATCH /rotation/policies/{id}",
+    "service": "keycore",
+    "method": "PATCH",
+    "pathTemplate": "/rotation/policies/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "PATCH /svc/keycore/rotation/policies/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -12621,6 +16345,230 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-post-agility-migration-plans",
+    "group": "Key Management (keycore)",
+    "title": "POST /agility/migration-plans",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/agility/migration-plans?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/agility/migration-plans?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-canary",
+    "group": "Key Management (keycore)",
+    "title": "POST /canary",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/canary?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/canary?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-canary-id-trip",
+    "group": "Key Management (keycore)",
+    "title": "POST /canary/{id}/trip",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/canary/{id}/trip?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/canary/{id}/trip?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-ceremony",
+    "group": "Key Management (keycore)",
+    "title": "POST /ceremony",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/ceremony?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/ceremony?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-ceremony-id-abort",
+    "group": "Key Management (keycore)",
+    "title": "POST /ceremony/{id}/abort",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/ceremony/{id}/abort?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/ceremony/{id}/abort?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-ceremony-id-complete",
+    "group": "Key Management (keycore)",
+    "title": "POST /ceremony/{id}/complete",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/ceremony/{id}/complete?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/ceremony/{id}/complete?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-ceremony-id-shares",
+    "group": "Key Management (keycore)",
+    "title": "POST /ceremony/{id}/shares",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/ceremony/{id}/shares?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/ceremony/{id}/shares?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-ceremony-guardians",
+    "group": "Key Management (keycore)",
+    "title": "POST /ceremony/guardians",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/ceremony/guardians?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/ceremony/guardians?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-post-crypto-hash",
     "group": "Key Management (keycore)",
     "title": "POST /crypto/hash",
@@ -12677,6 +16625,342 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-post-dr-drill-schedules",
+    "group": "Key Management (keycore)",
+    "title": "POST /dr-drill/schedules",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/dr-drill/schedules?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/dr-drill/schedules?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-dr-drill-trigger",
+    "group": "Key Management (keycore)",
+    "title": "POST /dr-drill/trigger",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/dr-drill/trigger?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/dr-drill/trigger?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-envelope-keks",
+    "group": "Key Management (keycore)",
+    "title": "POST /envelope/keks",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/envelope/keks?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/envelope/keks?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-envelope-keks-id-rotate",
+    "group": "Key Management (keycore)",
+    "title": "POST /envelope/keks/{id}/rotate",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/envelope/keks/{id}/rotate?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/envelope/keks/{id}/rotate?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-envelope-rewrap",
+    "group": "Key Management (keycore)",
+    "title": "POST /envelope/rewrap",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/envelope/rewrap?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/envelope/rewrap?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-escrow-guardians",
+    "group": "Key Management (keycore)",
+    "title": "POST /escrow/guardians",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/escrow/guardians?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/escrow/guardians?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-escrow-keys",
+    "group": "Key Management (keycore)",
+    "title": "POST /escrow/keys",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/escrow/keys?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/escrow/keys?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-escrow-policies",
+    "group": "Key Management (keycore)",
+    "title": "POST /escrow/policies",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/escrow/policies?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/escrow/policies?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-escrow-recovery",
+    "group": "Key Management (keycore)",
+    "title": "POST /escrow/recovery",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/escrow/recovery?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/escrow/recovery?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-escrow-recovery-id-approve",
+    "group": "Key Management (keycore)",
+    "title": "POST /escrow/recovery/{id}/approve",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/escrow/recovery/{id}/approve?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/escrow/recovery/{id}/approve?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-escrow-recovery-id-deny",
+    "group": "Key Management (keycore)",
+    "title": "POST /escrow/recovery/{id}/deny",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/escrow/recovery/{id}/deny?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/escrow/recovery/{id}/deny?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-fips-self-test",
+    "group": "Key Management (keycore)",
+    "title": "POST /fips/self-test",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/fips/self-test?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/fips/self-test?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-post-keys",
     "group": "Key Management (keycore)",
     "title": "POST /keys",
@@ -12714,6 +16998,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/keys/{id}/activate?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-keys-id-archive",
+    "group": "Key Management (keycore)",
+    "title": "POST /keys/{id}/archive",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{id}/archive?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/keys/{id}/archive?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -13265,6 +17577,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-post-keys-id-zeroize-verify",
+    "group": "Key Management (keycore)",
+    "title": "POST /keys/{id}/zeroize-verify",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{id}/zeroize-verify?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/keys/{id}/zeroize-verify?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-post-keys-bulk-delete",
     "group": "Key Management (keycore)",
     "title": "POST /keys/bulk-delete",
@@ -13405,6 +17745,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-post-rotation-policies",
+    "group": "Key Management (keycore)",
+    "title": "POST /rotation/policies",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/rotation/policies?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/rotation/policies?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-rotation-policies-id-trigger",
+    "group": "Key Management (keycore)",
+    "title": "POST /rotation/policies/{id}/trigger",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/rotation/policies/{id}/trigger?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/rotation/policies/{id}/trigger?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-post-tags",
     "group": "Key Management (keycore)",
     "title": "POST /tags",
@@ -13414,6 +17810,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/tags?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-tenants-onboard",
+    "group": "Key Management (keycore)",
+    "title": "POST /tenants/onboard",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/tenants/onboard?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/tenants/onboard?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -13853,6 +18277,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "kmip-get-kmip-clients-decommission-candidates",
+    "group": "KMIP (kmip)",
+    "title": "GET /kmip/clients/decommission-candidates",
+    "service": "kmip",
+    "method": "GET",
+    "pathTemplate": "/kmip/clients/decommission-candidates?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from KMIP service.",
+    "requestExample": "GET /svc/kmip/kmip/clients/decommission-candidates?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "kmip-get-kmip-interop-targets",
     "group": "KMIP (kmip)",
     "title": "GET /kmip/interop/targets",
@@ -13918,6 +18370,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KMIP service.",
     "requestExample": "POST /svc/kmip/kmip/clients?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "kmip-post-kmip-clients-id-decommission",
+    "group": "KMIP (kmip)",
+    "title": "POST /kmip/clients/{id}/decommission",
+    "service": "kmip",
+    "method": "POST",
+    "pathTemplate": "/kmip/clients/{id}/decommission?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KMIP service.",
+    "requestExample": "POST /svc/kmip/kmip/clients/{id}/decommission?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -16205,6 +20685,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "policy-get-policy-quota-tenant-id",
+    "group": "Policy (policy)",
+    "title": "GET /policy/quota/{tenant_id}",
+    "service": "policy",
+    "method": "GET",
+    "pathTemplate": "/policy/quota/{tenant_id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Policy service.",
+    "requestExample": "GET /svc/policy/policy/quota/{tenant_id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "policy-post-policies",
     "group": "Policy (policy)",
     "title": "POST /policies",
@@ -16214,6 +20722,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Policy service.",
     "requestExample": "POST /svc/policy/policies?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "policy-post-policies-dry-run",
+    "group": "Policy (policy)",
+    "title": "POST /policies/dry-run",
+    "service": "policy",
+    "method": "POST",
+    "pathTemplate": "/policies/dry-run?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Policy service.",
+    "requestExample": "POST /svc/policy/policies/dry-run?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "policy-post-policies-lint",
+    "group": "Policy (policy)",
+    "title": "POST /policies/lint",
+    "service": "policy",
+    "method": "POST",
+    "pathTemplate": "/policies/lint?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Policy service.",
+    "requestExample": "POST /svc/policy/policies/lint?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -16270,6 +20834,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Policy service.",
     "requestExample": "PUT /svc/policy/policies/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "policy-put-policy-quota-tenant-id",
+    "group": "Policy (policy)",
+    "title": "PUT /policy/quota/{tenant_id}",
+    "service": "policy",
+    "method": "PUT",
+    "pathTemplate": "/policy/quota/{tenant_id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Policy service.",
+    "requestExample": "PUT /svc/policy/policy/quota/{tenant_id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -19738,6 +24330,118 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "posture-delete-leaks-targets-id",
+    "group": "Security Posture (posture)",
+    "title": "DELETE /leaks/targets/{id}",
+    "service": "posture",
+    "method": "DELETE",
+    "pathTemplate": "/leaks/targets/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Posture service.",
+    "requestExample": "DELETE /svc/posture/leaks/targets/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "posture-get-leaks-findings",
+    "group": "Security Posture (posture)",
+    "title": "GET /leaks/findings",
+    "service": "posture",
+    "method": "GET",
+    "pathTemplate": "/leaks/findings?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Posture service.",
+    "requestExample": "GET /svc/posture/leaks/findings?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "posture-get-leaks-jobs",
+    "group": "Security Posture (posture)",
+    "title": "GET /leaks/jobs",
+    "service": "posture",
+    "method": "GET",
+    "pathTemplate": "/leaks/jobs?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Posture service.",
+    "requestExample": "GET /svc/posture/leaks/jobs?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "posture-get-leaks-targets",
+    "group": "Security Posture (posture)",
+    "title": "GET /leaks/targets",
+    "service": "posture",
+    "method": "GET",
+    "pathTemplate": "/leaks/targets?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Posture service.",
+    "requestExample": "GET /svc/posture/leaks/targets?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "posture-get-posture-actions",
     "group": "Security Posture (posture)",
     "title": "GET /posture/actions",
@@ -19887,6 +24591,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Posture service.",
     "requestExample": "GET /svc/posture/posture/risk/history?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "posture-patch-leaks-findings-id",
+    "group": "Security Posture (posture)",
+    "title": "PATCH /leaks/findings/{id}",
+    "service": "posture",
+    "method": "PATCH",
+    "pathTemplate": "/leaks/findings/{id}?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Posture service.",
+    "requestExample": "PATCH /svc/posture/leaks/findings/{id}?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "posture-post-leaks-targets",
+    "group": "Security Posture (posture)",
+    "title": "POST /leaks/targets",
+    "service": "posture",
+    "method": "POST",
+    "pathTemplate": "/leaks/targets?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Posture service.",
+    "requestExample": "POST /svc/posture/leaks/targets?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "posture-post-leaks-targets-id-scan",
+    "group": "Security Posture (posture)",
+    "title": "POST /leaks/targets/{id}/scan",
+    "service": "posture",
+    "method": "POST",
+    "pathTemplate": "/leaks/targets/{id}/scan?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Posture service.",
+    "requestExample": "POST /svc/posture/leaks/targets/{id}/scan?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

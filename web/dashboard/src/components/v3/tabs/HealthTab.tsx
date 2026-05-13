@@ -18,7 +18,7 @@ interface Props {
 // HealthTab surfaces the data the watchdog + reconciler emit. The tab
 // polls every 15 seconds; the underlying endpoints are cheap (in-memory
 // snapshots) so the poll cost is negligible.
-export default function HealthTab(_: Props) {
+export function HealthTab(_: Props) {
   const [heartbeats, setHeartbeats] = useState<ServiceState[]>([]);
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [reconcilers, setReconcilers] = useState<ReconcilerStatus[]>([]);
