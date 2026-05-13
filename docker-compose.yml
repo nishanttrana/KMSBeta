@@ -531,14 +531,14 @@ services:
       KMIP_URL: http://kmip:8160
       POLICY_URL: http://policy:8040
       AUDIT_URL: http://audit:8060
-      HTTP_PORT: "8240"
+      HTTP_PORT: "8470"
       RECONCILER_MANIFEST_DIR: ${RECONCILER_MANIFEST_DIR:-/etc/vecta/manifests}
     ports:
-      - "8240:8240"
+      - "8470:8470"
     volumes:
       - ${RECONCILER_MANIFEST_HOST_DIR:-./infra/reconciler/manifests}:/etc/vecta/manifests:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8240/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8470/healthz || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -551,11 +551,11 @@ services:
     image: vecta/watchdog:latest
     environment:
       <<: *kms-common-env
-      HTTP_PORT: "8250"
+      HTTP_PORT: "8480"
     ports:
-      - "8250:8250"
+      - "8480:8480"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8250/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8480/healthz || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 5

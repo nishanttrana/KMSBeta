@@ -13,5 +13,5 @@ RUN addgroup -S app && adduser -S app -G app
 USER app
 WORKDIR /app
 COPY --from=build /out/kms-reconciler /app/kms-reconciler
-EXPOSE 8240
+EXPOSE 8470
 ENTRYPOINT ["/app/kms-reconciler"]

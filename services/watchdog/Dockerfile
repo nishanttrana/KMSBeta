@@ -13,5 +13,5 @@ RUN addgroup -S app && adduser -S app -G app
 USER app
 WORKDIR /app
 COPY --from=build /out/kms-watchdog /app/kms-watchdog
-EXPOSE 8250
+EXPOSE 8480
 ENTRYPOINT ["/app/kms-watchdog"]

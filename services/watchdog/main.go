@@ -49,7 +49,7 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	port := envOr("HTTP_PORT", "8250")
+	port := envOr("HTTP_PORT", "8480")
 	srv := pkgconfig.NewHTTPServer(port, mux)
 	go func() {
 		logger.Printf("http listening on :%s", port)
