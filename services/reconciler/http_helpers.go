@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"vecta-kms/pkg/internalauth"
 )
 
 // logIface is the minimal interface the reconcilers accept for logging.
@@ -39,6 +41,7 @@ func doJSON(ctx context.Context, client *http.Client, method, url string, body a
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Reconciler-Source", "vecta-reconciler/v1")
+	internalauth.AddTokenHeader(req)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -59,6 +62,7 @@ func getJSON(ctx context.Context, client *http.Client, url string, out any) erro
 		return err
 	}
 	req.Header.Set("X-Reconciler-Source", "vecta-reconciler/v1")
+	internalauth.AddTokenHeader(req)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err

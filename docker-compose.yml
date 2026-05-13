@@ -15,6 +15,13 @@ x-kms-common-env: &kms-common-env
   RATE_LIMIT_RPS: "100"
   RATE_LIMIT_BURST: "200"
   WORKLOAD_IDENTITY_SHARED_SECRET: ${WORKLOAD_IDENTITY_SHARED_SECRET:?WORKLOAD_IDENTITY_SHARED_SECRET is required}
+  # Shared service-to-service bearer used by the reconciler when calling
+  # privileged endpoints on keycore, kmip, policy, and audit. Every
+  # service that exposes such an endpoint validates the secret via
+  # pkg/internalauth.RequireToken; the reconciler attaches it via
+  # pkg/internalauth.AddTokenHeader. Generate with `openssl rand -hex 32`
+  # and rotate per deployment.
+  INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is required}
 
 x-kms-service: &kms-service
   restart: unless-stopped

@@ -19,6 +19,7 @@ import (
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/internalauth"
 	pkgrestauth "vecta-kms/pkg/restauth"
 	"vecta-kms/pkg/tenantcheck"
 )
@@ -232,10 +233,13 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /fips/rng-health", h.handleRNGHealth)
 	mux.HandleFunc("POST /keys/{id}/zeroize-verify", h.handleZeroizeVerify)
 
-	// Reconciler-driven endpoints
-	mux.HandleFunc("GET /keys/due-for-lifecycle", h.handleDueForLifecycle)
-	mux.HandleFunc("POST /tenants/onboard", h.handleTenantOnboard)
-	mux.HandleFunc("POST /keys/{id}/archive", h.handleArchiveKey)
+	// Reconciler-driven endpoints. These are service-to-service only —
+	// internalauth.RequireToken gates each one against the shared
+	// INTERNAL_API_TOKEN secret and fails closed when the secret is
+	// unset, so the routes can never be silently exposed.
+	mux.HandleFunc("GET /keys/due-for-lifecycle", internalauth.RequireToken(h.handleDueForLifecycle))
+	mux.HandleFunc("POST /tenants/onboard", internalauth.RequireToken(h.handleTenantOnboard))
+	mux.HandleFunc("POST /keys/{id}/archive", internalauth.RequireToken(h.handleArchiveKey))
 
 	return mux
 }
