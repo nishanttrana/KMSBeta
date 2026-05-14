@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	pkgauth "vecta-kms/pkg/auth"
 )
 
 type serviceError struct {
@@ -94,14 +96,42 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
+// tenantFromRequest returns the tenant the request will operate
+// under. The JWT claim (populated by pkgauth.HTTPMiddleware in main.go)
+// is authoritative: callers supplying a header or query tenant must
+// match the claim. Root tokens — those with an empty TenantID claim —
+// may supply any tenant via the header or query, matching the wider
+// codebase posture (pkg/tenantcheck/tenantcheck.go:32-34).
+//
+// Returns "" when:
+//   - no JWT claims are in context (the middleware should have caught
+//     this already, but defence in depth);
+//   - a header / query tenant disagrees with the JWT claim (active
+//     spoofing attempt — the handler writes 403).
+//
+// Before this change, the helper returned the header / query value
+// verbatim with no JWT check, permitting trivial cross-tenant key
+// release (security review vuln #2, May 2026).
 func tenantFromRequest(r *http.Request) string {
 	if r == nil {
 		return ""
 	}
-	return firstNonEmpty(
+	claims, ok := pkgauth.ClaimsFromContext(r.Context())
+	if !ok || claims == nil {
+		return ""
+	}
+	claimTenant := strings.TrimSpace(claims.TenantID)
+	supplied := firstNonEmpty(
 		r.URL.Query().Get("tenant_id"),
 		r.Header.Get("X-Tenant-ID"),
 	)
+	if claimTenant == "" {
+		return supplied
+	}
+	if supplied != "" && !strings.EqualFold(supplied, claimTenant) {
+		return ""
+	}
+	return claimTenant
 }
 
 func parseTimeValue(v interface{}) time.Time {

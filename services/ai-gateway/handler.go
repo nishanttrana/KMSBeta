@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	pkgauth "vecta-kms/pkg/auth"
 )
 
 // Handler wires all HTTP routes for the AI Security Gateway.
@@ -78,12 +80,35 @@ func NewHandler(store Store, publisher EventPublisher) http.Handler {
 
 // ── Helpers ────────────────────────────────────────────────────────
 
+// tenantID returns the tenant the request should operate under. The
+// JWT claim is authoritative; the X-Tenant-ID header is honoured only
+// when it matches the claim (legacy callers that send both). A request
+// without claims, with a mismatched header, or with an empty claim
+// tenant returns "" — callers store the result and short-circuit with
+// 401 instead of reaching downstream stores under an unproven tenant.
+//
+// The pre-1562c827 implementation trusted X-Tenant-ID verbatim and
+// fell back to "default" when absent, which permitted trivial cross-
+// tenant access (security review vuln #1, May 2026).
 func (h *Handler) tenantID(r *http.Request) string {
-	tid := r.Header.Get("X-Tenant-ID")
-	if tid == "" {
-		tid = "default"
+	claims, ok := pkgauth.ClaimsFromContext(r.Context())
+	if !ok || claims == nil {
+		return ""
 	}
-	return tid
+	claimTenant := strings.TrimSpace(claims.TenantID)
+	header := strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
+	// Root / super-admin tokens carry an empty tenant claim and may
+	// supply any tenant via the header. This matches the rest of the
+	// codebase's posture (pkg/tenantcheck/tenantcheck.go:32-34).
+	if claimTenant == "" {
+		return header
+	}
+	// Non-root tokens: the JWT tenant is authoritative. If the caller
+	// also sent X-Tenant-ID it must match the claim.
+	if header != "" && !strings.EqualFold(header, claimTenant) {
+		return ""
+	}
+	return claimTenant
 }
 
 func (h *Handler) userID(r *http.Request) string {
@@ -105,6 +130,7 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, ErrorResponse{Error: msg})
 }
+
 
 func decodeBody(r *http.Request, v interface{}) error {
 	defer r.Body.Close()

@@ -23,11 +23,13 @@ import (
 	"google.golang.org/grpc"
 
 	pkgauditmw "vecta-kms/pkg/auditmw"
+	pkgauth "vecta-kms/pkg/auth"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -81,9 +83,29 @@ func main() {
 	store := NewSQLStore(dbConn)
 	handler := NewHandler(store, publisher)
 
+	// ── JWT middleware (fail-closed) ───────────────────────────────
+	// The AI Gateway proxies LLM traffic and manages per-tenant
+	// policies; until 1562c827 it derived the tenant ID from an
+	// unsigned X-Tenant-ID header, allowing trivial cross-tenant
+	// access. The middleware below requires a valid Bearer token on
+	// every request; the tenant helper then verifies that the header
+	// tenant matches the JWT claim via pkg/tenantcheck.Enforce.
+	jwtParser, err := pkgjwtauth.LoadParser(pkgjwtauth.Config{
+		Prefix:   "AI_GATEWAY",
+		Issuer:   cfg.JWTIssuer,
+		Audience: cfg.JWTAudience,
+	})
+	if err != nil {
+		logger.Fatalf("jwt parser init failed: %v", err)
+	}
+	if jwtParser == nil {
+		logger.Fatalf("AI_GATEWAY_JWT_PUBLIC_KEY_PEM (or _B64) is required to start ai-gateway")
+	}
+	authedHandler := pkgauth.HTTPMiddleware(handler, jwtParser)
+
 	// ── HTTP server ────────────────────────────────────────────────
 	httpPort := envOr("HTTP_PORT", "8320")
-	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "ai-gateway"))
+	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "ai-gateway"))
 	go func() {
 		logger.Printf("http listening on :%s", httpPort)
 		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

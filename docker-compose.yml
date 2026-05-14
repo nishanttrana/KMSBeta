@@ -831,6 +831,11 @@ services:
       HTTP_PORT: "8240"
       GRPC_PORT: "18240"
       CLUSTER_NODE_ID: ${CLUSTER_NODE_ID:-vecta-kms-01}
+      # JWT public key for tenant-scoping. Required — the service refuses
+      # to start without it (vuln #2 fix, May 2026). Supply either the
+      # PEM or its base64 form via the matching env var.
+      CONFIDENTIAL_JWT_PUBLIC_KEY_PEM: ${CONFIDENTIAL_JWT_PUBLIC_KEY_PEM:-}
+      CONFIDENTIAL_JWT_PUBLIC_KEY_B64: ${CONFIDENTIAL_JWT_PUBLIC_KEY_B64:?CONFIDENTIAL_JWT_PUBLIC_KEY_B64 (or _PEM) is required}
     ports:
       - "8240:8240"
       - "18240:18240"
@@ -1060,6 +1065,10 @@ services:
       <<: *kms-common-env
       HTTP_PORT: "8320"
       GRPC_PORT: "18320"
+      # JWT public key for tenant-scoping. Required — the service refuses
+      # to start without it (vuln #1 fix, May 2026).
+      AI_GATEWAY_JWT_PUBLIC_KEY_PEM: ${AI_GATEWAY_JWT_PUBLIC_KEY_PEM:-}
+      AI_GATEWAY_JWT_PUBLIC_KEY_B64: ${AI_GATEWAY_JWT_PUBLIC_KEY_B64:?AI_GATEWAY_JWT_PUBLIC_KEY_B64 (or _PEM) is required}
     ports:
       - "8320:8320"
       - "18320:18320"
