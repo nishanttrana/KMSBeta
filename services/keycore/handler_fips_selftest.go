@@ -169,13 +169,15 @@ func testHMACSHA256() bool {
 }
 
 func testSHA256() bool {
-	// NIST FIPS 180-4 known-answer test vector for SHA-256("abc")
+	// NIST FIPS 180-4 Appendix B.1 known-answer test vector for
+	// SHA-256("abc"). Earlier the constant carried a typo and was
+	// only 63 characters; the keycore startup self-test (added in
+	// commit 263893d12) then failed-closed in production.
 	h := sha256.New()
 	h.Write([]byte("abc")) //nolint:errcheck
 	got := hex.EncodeToString(h.Sum(nil))
-	expected := "ba7816bf8f01cfea414140de5dae2ec73b00361bbef0469348423f656b17f67"
-	// The known digest is 64 hex chars.
-	return strings.EqualFold(got[:len(expected)], expected)
+	const expected = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+	return strings.EqualFold(got, expected)
 }
 
 func testCSPRNG() bool {
