@@ -30,6 +30,7 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgheartbeat "vecta-kms/pkg/heartbeat"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -100,7 +101,10 @@ func main() {
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8040")
-	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "policy"))
+	// Require a valid Bearer JWT on every request. Fail-closed at startup
+	// if no public key is configured (security review follow-up, May 2026).
+	authedHandler := pkgjwtauth.MustWrap("POLICY", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
+	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "policy"))
 	go func() {
 		logger.Printf("http listening on :%s", httpPort)
 		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

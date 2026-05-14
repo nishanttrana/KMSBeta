@@ -28,6 +28,7 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 )
 
 // EventPublisher abstracts NATS event publishing.
@@ -70,9 +71,10 @@ func main() {
 	handler := NewHandler(store, publisher)
 
 	httpPort := envOr("HTTP_PORT", "8460")
-	var httpHandlerChain http.Handler = handler
+	authedHandler := pkgjwtauth.MustWrap("DAM", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
+	var httpHandlerChain http.Handler = authedHandler
 	if publisher != nil {
-		httpHandlerChain = pkgauditmw.Wrap(handler, publisher, "dam")
+		httpHandlerChain = pkgauditmw.Wrap(authedHandler, publisher, "dam")
 	}
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, httpHandlerChain)
 	go func() {

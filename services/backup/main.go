@@ -29,6 +29,7 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -81,9 +82,10 @@ func main() {
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8250")
-	var httpHandlerChain http.Handler = handler
+	authedHandler := pkgjwtauth.MustWrap("BACKUP", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
+	var httpHandlerChain http.Handler = authedHandler
 	if publisher != nil {
-		httpHandlerChain = pkgauditmw.Wrap(handler, publisher, "backup")
+		httpHandlerChain = pkgauditmw.Wrap(authedHandler, publisher, "backup")
 	}
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, httpHandlerChain)
 	go func() {

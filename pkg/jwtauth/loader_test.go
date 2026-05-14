@@ -84,3 +84,32 @@ func TestLoadParser_RequiresPrefix(t *testing.T) {
 		t.Fatalf("expected error when prefix is empty")
 	}
 }
+
+func TestLoadParser_FallsBackToSharedEnv(t *testing.T) {
+	// Per-service vars empty; shared JWT_PUBLIC_KEY_B64 carries the key.
+	t.Setenv("TEST_JWT_PUBLIC_KEY_PEM", "")
+	t.Setenv("TEST_JWT_PUBLIC_KEY_B64", "")
+	t.Setenv("JWT_PUBLIC_KEY_B64", base64.StdEncoding.EncodeToString([]byte(makeTestKey(t))))
+	p, err := LoadParser(Config{Prefix: "TEST"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if p == nil {
+		t.Fatalf("expected non-nil parser when shared B64 is set")
+	}
+}
+
+func TestLoadParser_PerServiceOverridesShared(t *testing.T) {
+	// When both per-service and shared are set, the per-service value
+	// wins. Use an obviously invalid shared value so a fallback would
+	// surface as a parse error.
+	t.Setenv("TEST_JWT_PUBLIC_KEY_PEM", makeTestKey(t))
+	t.Setenv("JWT_PUBLIC_KEY_PEM", "not a pem")
+	p, err := LoadParser(Config{Prefix: "TEST"})
+	if err != nil {
+		t.Fatalf("per-service should win and parse cleanly; got %v", err)
+	}
+	if p == nil {
+		t.Fatalf("expected non-nil parser")
+	}
+}

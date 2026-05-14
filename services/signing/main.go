@@ -28,6 +28,7 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -75,7 +76,8 @@ func main() {
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8280")
-	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "signing"))
+	authedHandler := pkgjwtauth.MustWrap("SIGNING", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
+	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "signing"))
 	go func() {
 		logger.Printf("http listening on :%s", httpPort)
 		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

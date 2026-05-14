@@ -22,6 +22,13 @@ x-kms-common-env: &kms-common-env
   # pkg/internalauth.AddTokenHeader. Generate with `openssl rand -hex 32`
   # and rotate per deployment.
   INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is required}
+  # Shared JWT public key used to validate Bearer tokens on every
+  # tenant-scoped service (policy, audit, secrets, certs, backup,
+  # keyaccess, signing, compliance, reporting, dam, ai-gateway,
+  # confidential, …). Each service refuses to start without it; the
+  # per-service <PREFIX>_JWT_PUBLIC_KEY_* env can override for selective
+  # rollout. Base64-encode the auth-service's RSA public-key PEM.
+  JWT_PUBLIC_KEY_B64: ${JWT_PUBLIC_KEY_B64:?JWT_PUBLIC_KEY_B64 is required}
 
 x-kms-service: &kms-service
   restart: unless-stopped
@@ -831,11 +838,11 @@ services:
       HTTP_PORT: "8240"
       GRPC_PORT: "18240"
       CLUSTER_NODE_ID: ${CLUSTER_NODE_ID:-vecta-kms-01}
-      # JWT public key for tenant-scoping. Required — the service refuses
-      # to start without it (vuln #2 fix, May 2026). Supply either the
-      # PEM or its base64 form via the matching env var.
+      # JWT public key falls back to the cluster-wide JWT_PUBLIC_KEY_B64
+      # in *kms-common-env; set the per-service env vars below to
+      # override the shared key for selective rollout.
       CONFIDENTIAL_JWT_PUBLIC_KEY_PEM: ${CONFIDENTIAL_JWT_PUBLIC_KEY_PEM:-}
-      CONFIDENTIAL_JWT_PUBLIC_KEY_B64: ${CONFIDENTIAL_JWT_PUBLIC_KEY_B64:?CONFIDENTIAL_JWT_PUBLIC_KEY_B64 (or _PEM) is required}
+      CONFIDENTIAL_JWT_PUBLIC_KEY_B64: ${CONFIDENTIAL_JWT_PUBLIC_KEY_B64:-}
     ports:
       - "8240:8240"
       - "18240:18240"
@@ -1065,10 +1072,11 @@ services:
       <<: *kms-common-env
       HTTP_PORT: "8320"
       GRPC_PORT: "18320"
-      # JWT public key for tenant-scoping. Required — the service refuses
-      # to start without it (vuln #1 fix, May 2026).
+      # JWT public key falls back to the cluster-wide JWT_PUBLIC_KEY_B64
+      # in *kms-common-env; set the per-service env vars below to
+      # override the shared key for selective rollout.
       AI_GATEWAY_JWT_PUBLIC_KEY_PEM: ${AI_GATEWAY_JWT_PUBLIC_KEY_PEM:-}
-      AI_GATEWAY_JWT_PUBLIC_KEY_B64: ${AI_GATEWAY_JWT_PUBLIC_KEY_B64:?AI_GATEWAY_JWT_PUBLIC_KEY_B64 (or _PEM) is required}
+      AI_GATEWAY_JWT_PUBLIC_KEY_B64: ${AI_GATEWAY_JWT_PUBLIC_KEY_B64:-}
     ports:
       - "8320:8320"
       - "18320:18320"

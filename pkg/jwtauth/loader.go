@@ -48,9 +48,20 @@ func LoadParser(cfg Config) (func(string) (*pkgauth.Claims, error), error) {
 	if strings.TrimSpace(cfg.Prefix) == "" {
 		return nil, errors.New("jwtauth: prefix is required")
 	}
+	// Lookup order per source format: per-service env first (so a single
+	// service can override the cluster value), then a shared
+	// JWT_PUBLIC_KEY_* fallback so the common deployment supplies one
+	// env var across every service.
 	pubPEM := strings.TrimSpace(os.Getenv(cfg.Prefix + "_JWT_PUBLIC_KEY_PEM"))
 	if pubPEM == "" {
-		if b64 := strings.TrimSpace(os.Getenv(cfg.Prefix + "_JWT_PUBLIC_KEY_B64")); b64 != "" {
+		pubPEM = strings.TrimSpace(os.Getenv("JWT_PUBLIC_KEY_PEM"))
+	}
+	if pubPEM == "" {
+		b64 := strings.TrimSpace(os.Getenv(cfg.Prefix + "_JWT_PUBLIC_KEY_B64"))
+		if b64 == "" {
+			b64 = strings.TrimSpace(os.Getenv("JWT_PUBLIC_KEY_B64"))
+		}
+		if b64 != "" {
 			raw, err := base64.StdEncoding.DecodeString(b64)
 			if err != nil {
 				return nil, err
