@@ -218,7 +218,7 @@ function Prepare-CertVolumes {
     docker volume create $certsVolume *> $null
     docker volume create $runtimeVolume *> $null
 
-    foreach ($helperImage in @("postgres:16.13-alpine", "alpine:3.20", "busybox:1.36")) {
+    foreach ($helperImage in @("postgres:16.13-alpine", "alpine:3.23", "busybox:1.36")) {
         docker run --rm `
             --volume "${certsVolume}:/data" `
             --volume "${runtimeVolume}:/runtime" `

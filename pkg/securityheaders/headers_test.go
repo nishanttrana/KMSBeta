@@ -19,11 +19,11 @@ func TestWrapSetsAllSecurityHeaders(t *testing.T) {
 	expected := map[string]string{
 		"X-Content-Type-Options":    "nosniff",
 		"X-Frame-Options":           "DENY",
-		"Content-Security-Policy":   "default-src 'self'",
+		"Content-Security-Policy":   "default-src 'self'; frame-ancestors 'none'",
 		"Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
-		"Cache-Control":             "no-store",
-		"Referrer-Policy":           "strict-origin-when-cross-origin",
-		"Permissions-Policy":        "camera=(), microphone=(), geolocation=()",
+		"Cache-Control":             "no-store, no-cache, must-revalidate",
+		"Referrer-Policy":           "no-referrer",
+		"Permissions-Policy":        "camera=(), microphone=(), geolocation=(), payment=()",
 	}
 	for header, want := range expected {
 		got := rr.Header().Get(header)

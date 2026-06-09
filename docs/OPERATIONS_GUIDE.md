@@ -17,6 +17,25 @@ Read these first if you are changing service enablement:
 - [../infra/deployment/README.md](../infra/deployment/README.md)
 - [../infra/scripts/README.md](../infra/scripts/README.md)
 
+## Runtime And Package Baseline
+
+Current source and container builds target:
+
+- Go `1.26.4` for service builds and tests
+- Node.js `24` LTS with npm `11` for the dashboard
+- Alpine `3.23` for lightweight service runtime images
+- nginx `1.30.1` for the dashboard runtime image
+- Trivy `0.70.0` for SBOM and vulnerability scanning support
+
+Generated dashboard output under `web/dashboard/dist/` and local Go caches are intentionally ignored. Recreate generated assets with `npm run build` from `web/dashboard` when packaging or testing a release.
+
+Security-relevant maintenance in this baseline:
+
+- dashboard npm audit is clean after upgrading Vite, PostCSS, TypeScript, React, Tailwind, Swagger UI, Playwright, and related tooling
+- Go modules are refreshed for current security and compatibility fixes, including `golang.org/x/crypto`, `golang.org/x/net`, `google.golang.org/grpc`, OpenTelemetry, AWS SDK, Redis, and SQLite dependencies
+- outbound webhook and OIDC URL validation blocks loopback, private, link-local, reserved, and cloud metadata addresses while allowing public IPv4 addresses
+- HTTP security header expectations include `frame-ancestors 'none'`, `no-cache`, `no-referrer`, and a payment-denying permissions policy
+
 ## Installation Paths
 
 Use the platform installer for the host OS:

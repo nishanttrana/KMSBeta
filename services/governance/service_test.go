@@ -35,6 +35,12 @@ func (m *mockCallbackExecutor) Execute(_ context.Context, req ApprovalRequest) e
 	return nil
 }
 
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
 func newGovernanceStore(t *testing.T) *SQLStore {
 	t.Helper()
 	conn, err := pkgdb.Open(context.Background(), pkgdb.Config{
@@ -691,13 +697,31 @@ func TestApprovalRequestSendsSlackWebhookNotification(t *testing.T) {
 		_, _ = w.Write([]byte("ok"))
 	}))
 	defer server.Close()
+	serverURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldFactory := newWebhookHTTPClient
+	newWebhookHTTPClient = func(timeout time.Duration) *http.Client {
+		return &http.Client{
+			Timeout: timeout,
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				routed := req.Clone(req.Context())
+				routed.URL.Scheme = serverURL.Scheme
+				routed.URL.Host = serverURL.Host
+				routed.Host = serverURL.Host
+				return http.DefaultTransport.RoundTrip(routed)
+			}),
+		}
+	}
+	t.Cleanup(func() { newWebhookHTTPClient = oldFactory })
 
-	_, err := svc.UpdateSettings(context.Background(), GovernanceSettings{
+	_, err = svc.UpdateSettings(context.Background(), GovernanceSettings{
 		TenantID:                  "tw1",
 		ApprovalDeliveryMode:      "notify",
 		NotifyEmail:               false,
 		NotifySlack:               true,
-		SlackWebhookURL:           server.URL,
+		SlackWebhookURL:           "http://8.8.8.8/slack",
 		DeliveryWebhookTimeoutSec: 2,
 		UpdatedBy:                 "admin",
 	})
@@ -722,6 +746,28 @@ func TestApprovalRequestSendsSlackWebhookNotification(t *testing.T) {
 	}
 	if len(mailer.msgs) != 0 {
 		t.Fatalf("expected email delivery disabled, got %d emails", len(mailer.msgs))
+	}
+}
+
+func TestGovernanceSettingsBlocksLocalWebhookURL(t *testing.T) {
+	store := newGovernanceStore(t)
+	svc := NewService(store, nil, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	_, err := svc.UpdateSettings(context.Background(), GovernanceSettings{
+		TenantID:                  "tw-local",
+		ApprovalDeliveryMode:      "notify",
+		NotifyEmail:               false,
+		NotifySlack:               true,
+		SlackWebhookURL:           server.URL,
+		DeliveryWebhookTimeoutSec: 2,
+		UpdatedBy:                 "admin",
+	})
+	if err == nil || !strings.Contains(err.Error(), "slack_webhook_url blocked") {
+		t.Fatalf("expected local webhook URL to be blocked, got %v", err)
 	}
 }
 

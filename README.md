@@ -93,8 +93,8 @@ Vecta KMS is organized into five working areas:
 - Docker and Docker Compose
 - Bash 4+ on macOS and Linux
 - Optional for development:
-  - Go 1.26+
-  - Node.js 20+ or 22+
+  - Go 1.26.4+
+  - Node.js 24 LTS and npm 11+
 
 ### Install
 
@@ -181,7 +181,7 @@ For configuration details, see:
 go test ./...
 
 # Build dashboard
-docker run --rm -v "$PWD":/src -w /src/web/dashboard node:22-bookworm bash -lc 'npm ci && npm run build'
+docker run --rm -v "$PWD":/src -w /src/web/dashboard node:24-bookworm bash -lc 'npm ci && npm run build'
 
 # Validate compose
 docker compose config -q
@@ -189,6 +189,6 @@ docker compose config -q
 
 ## Notes
 
-- Generated dashboard bundles under `web/dashboard/dist/` are tracked in this repository.
+- Generated dashboard bundles under `web/dashboard/dist/` are ignored; rebuild them with `npm run build` instead of committing them.
 - Newer feature surfaces are documented first in markdown under `docs/`, then reflected in the dashboard docs tab and generated REST catalog.
 - When in doubt, prefer the component guide for behavior and the REST additions file for route-level detail.

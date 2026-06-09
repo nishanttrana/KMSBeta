@@ -1,4 +1,4 @@
-FROM vecta-local/golang:1.26-alpine AS build
+FROM vecta-local/golang:1.26.4-alpine AS build
 WORKDIR /src
 ENV GOPROXY=https://proxy.golang.org,direct \
     GOSUMDB=sum.golang.org \
@@ -8,7 +8,7 @@ RUN sh -ec 'for attempt in 1 2 3 4 5; do go mod download && exit 0; sleep $((att
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /out/kms-software-vault ./services/software-vault
 
-FROM vecta-local/alpine:3.20
+FROM vecta-local/alpine:3.23
 RUN adduser -D -u 10001 app
 WORKDIR /app
 COPY --from=build /out/kms-software-vault /app/kms-software-vault

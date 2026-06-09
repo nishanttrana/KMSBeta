@@ -25,5 +25,6 @@ local-data/
 web/dashboard/dist/
 
 # Local Go module cache and tooling backups
+.gocache/
 .gomodcache/
 *.bak

@@ -42,6 +42,28 @@ func (f *fakeKeyCore) CreateKey(_ context.Context, tenantID string, req CreateRe
 	return id, nil
 }
 
+func (f *fakeKeyCore) CreateKeyPair(ctx context.Context, tenantID string, algorithm string, name string) (string, string, error) {
+	privateID, err := f.CreateKey(ctx, tenantID, CreateRequest{
+		Name:      defaultString(name, "kmip-keypair") + "-private",
+		Algorithm: defaultString(algorithm, "RSA-3072"),
+		KeyType:   "private",
+		Purpose:   "sign",
+	})
+	if err != nil {
+		return "", "", err
+	}
+	publicID, err := f.CreateKey(ctx, tenantID, CreateRequest{
+		Name:      defaultString(name, "kmip-keypair") + "-public",
+		Algorithm: defaultString(algorithm, "RSA-3072"),
+		KeyType:   "public",
+		Purpose:   "verify",
+	})
+	if err != nil {
+		return "", "", err
+	}
+	return privateID, publicID, nil
+}
+
 func (f *fakeKeyCore) ImportKey(ctx context.Context, tenantID string, req RegisterRequest) (string, error) {
 	return f.CreateKey(ctx, tenantID, CreateRequest{
 		Name:      req.Name,
@@ -147,6 +169,37 @@ func (f *fakeKeyCore) Verify(_ context.Context, tenantID string, keyID string, d
 		"key_id":   keyID,
 		"verified": expected == signatureB64,
 	}, nil
+}
+
+func (f *fakeKeyCore) ExportKeyMaterial(_ context.Context, tenantID string, keyID string) (string, error) {
+	if _, err := f.GetKey(context.Background(), tenantID, keyID); err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString([]byte("material:" + keyID)), nil
+}
+
+func (f *fakeKeyCore) HMAC(_ context.Context, tenantID string, keyID string, dataB64 string, _ string) (string, error) {
+	if _, err := f.GetKey(context.Background(), tenantID, keyID); err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString([]byte("mac:" + dataB64)), nil
+}
+
+func (f *fakeKeyCore) HMACVerify(_ context.Context, tenantID string, keyID string, dataB64 string, macB64 string, algorithm string) (bool, error) {
+	expected, err := f.HMAC(context.Background(), tenantID, keyID, dataB64, algorithm)
+	if err != nil {
+		return false, err
+	}
+	return expected == macB64, nil
+}
+
+func (f *fakeKeyCore) DeriveKey(ctx context.Context, tenantID string, _ string, _ string, algorithm string, name string) (string, error) {
+	return f.CreateKey(ctx, tenantID, CreateRequest{
+		Name:      defaultString(name, "kmip-derived-key"),
+		Algorithm: defaultString(algorithm, "AES-256"),
+		KeyType:   "symmetric",
+		Purpose:   "derive",
+	})
 }
 
 func newKMIPHandler(t *testing.T) (*Handler, *SQLStore, *fakeKeyCore) {

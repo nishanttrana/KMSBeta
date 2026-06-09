@@ -25,7 +25,7 @@ func init() {
 		"0.0.0.0/8",
 		"100.64.0.0/10", // CGN
 		"192.0.0.0/24",
-		"192.0.2.0/24",   // TEST-NET-1
+		"192.0.2.0/24",    // TEST-NET-1
 		"198.51.100.0/24", // TEST-NET-2
 		"203.0.113.0/24",  // TEST-NET-3
 		"224.0.0.0/4",     // multicast
@@ -106,7 +106,21 @@ func ValidateWebhookURL(rawURL string) error {
 }
 
 func isBlockedIP(ip net.IP) bool {
+	if v4 := ip.To4(); v4 != nil {
+		for _, cidr := range blockedCIDRs {
+			if _, bits := cidr.Mask.Size(); bits != 32 {
+				continue
+			}
+			if cidr.Contains(v4) {
+				return true
+			}
+		}
+		return false
+	}
 	for _, cidr := range blockedCIDRs {
+		if _, bits := cidr.Mask.Size(); bits != 128 {
+			continue
+		}
 		if cidr.Contains(ip) {
 			return true
 		}

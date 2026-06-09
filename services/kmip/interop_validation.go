@@ -138,9 +138,9 @@ func (h *Handler) runInteropValidation(ctx context.Context, target KMIPInteropTa
 		kmipclient.WithRootCAPem([]byte(target.CAPEM)),
 		kmipclient.WithClientCertPEM([]byte(target.ClientCertPEM), []byte(target.ClientKeyPEM)),
 		kmipclient.WithKmipVersions(defaultKMIPInteropVersions()...),
-		// ovh/kmip-go v0.8.1 dropped the `addr` parameter from DialerFunc — the
-		// endpoint is captured from the kmipclient.Dial(...) call below.
-		kmipclient.WithDialerUnsafe(func(ctx context.Context) (net.Conn, error) {
+		// Keep endpoint capture explicit so validation cannot be redirected by a
+		// caller-controlled address in the upgraded kmip-go dialer callback.
+		kmipclient.WithDialerUnsafe(func(ctx context.Context, _ string) (net.Conn, error) {
 			return dialer.DialContext(ctx, "tcp", endpoint)
 		}),
 	}

@@ -100,7 +100,7 @@ func TestPersistEventCreatesAlert(t *testing.T) {
 func TestDedupAndEscalation(t *testing.T) {
 	s := newAuditStore(t)
 	ctx := context.Background()
-	base := time.Now().UTC()
+	base := time.Unix((time.Now().UTC().Unix()/60)*60+5, 0).UTC()
 	for i := 0; i < 5; i++ {
 		_, _, err := s.PersistEventAndAlert(ctx, AuditEvent{
 			TenantID:  "t1",

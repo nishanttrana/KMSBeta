@@ -79,7 +79,7 @@ prepare_certs_volumes() {
   docker volume create "${certs_volume}" >/dev/null 2>&1 || true
   docker volume create "${runtime_volume}" >/dev/null 2>&1 || true
 
-  for helper_image in postgres:16.13-alpine alpine:3.20 busybox:1.36; do
+  for helper_image in postgres:16.13-alpine alpine:3.23 busybox:1.36; do
     if docker run --rm \
       --volume "${certs_volume}:/data" \
       --volume "${runtime_volume}:/runtime" \

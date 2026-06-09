@@ -23,6 +23,10 @@ const (
 	webhookChannelTeams = "teams"
 )
 
+var newWebhookHTTPClient = func(timeout time.Duration) *http.Client {
+	return &http.Client{Timeout: timeout}
+}
+
 func normalizeApprovalDeliveryMode(raw string) string {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
 	case "", "notify", "notification", "notifications":
@@ -269,7 +273,7 @@ func (s *Service) postWebhookJSON(ctx context.Context, targetURL string, timeout
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{Timeout: timeout}
+	client := newWebhookHTTPClient(timeout)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
