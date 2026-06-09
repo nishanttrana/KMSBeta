@@ -425,11 +425,21 @@ curl -X POST "$BASE/enterprise/anomaly/scan?tenant_id=$TENANT&days=7" -H "$AUTH"
 
 The scan creates DSPM findings for:
 
-- degraded key health
-- open compromise events
-- inventory/dependency gaps
-- heavy key usage hotspots
-- algorithm benchmark degradation
+- degraded key health (`key_health_degradation`)
+- open compromise events (`open_compromise_events`)
+- inventory/dependency gaps (`inventory_dependency_gap`)
+- heavy key usage hotspots (`key_usage_hotspot`)
+- algorithm benchmark degradation (`algorithm_performance_degradation`)
+- quantum-vulnerable algorithms in active use (`quantum_vulnerable_algorithm`)
+
+The `quantum_vulnerable_algorithm` finding maps any in-use classical
+asymmetric primitive (RSA, ECC — ECDSA/ECDH/EdDSA/secp/P-curves, and
+finite-field DH/DSA) to a post-quantum migration recommendation. NIST PQC
+algorithms (ML-KEM, ML-DSA, SLH-DSA, Falcon) and symmetric/hash primitives
+(AES, SHA-2/3) are not flagged. Severity escalates to `high` once three or
+more vulnerable algorithms — or ≥1000 vulnerable operations — are observed in
+the window. The finding evidence lists each algorithm, operation, and count,
+and recommends ML-KEM-768 / ML-DSA-65 / SLH-DSA targets.
 
 List KeyCore DSPM findings:
 

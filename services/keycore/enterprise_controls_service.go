@@ -229,6 +229,49 @@ func (s *Service) RunEnterpriseAnomalyDetection(ctx context.Context, tenantID st
 		})
 	}
 
+	// Post-quantum readiness: flag in-use classical asymmetric algorithms
+	// (RSA/ECC/DH) that are vulnerable to quantum cryptanalysis. Reuses the
+	// algorithm benchmarks already gathered above — no extra query.
+	quantumVulnerable := make([]map[string]any, 0)
+	var quantumVulnerableOps int64
+	for _, bench := range benchmarks {
+		family, vulnerable := classifyQuantumVulnerability(bench.Algorithm)
+		if !vulnerable {
+			continue
+		}
+		quantumVulnerableOps += bench.Count
+		quantumVulnerable = append(quantumVulnerable, map[string]any{
+			"algorithm": bench.Algorithm,
+			"family":    family,
+			"operation": bench.Operation,
+			"count":     bench.Count,
+		})
+	}
+	if len(quantumVulnerable) > 0 {
+		severity := "medium"
+		if quantumVulnerableOps >= 1000 || len(quantumVulnerable) >= 3 {
+			severity = "high"
+		}
+		findings = append(findings, DSPMFinding{
+			FindingID:         stableFindingID(tenantID, "anomaly", "quantum_vulnerable_algorithm", ""),
+			TenantID:          tenantID,
+			Source:            "keycore-anomaly",
+			FindingType:       "quantum_vulnerable_algorithm",
+			Title:             "Quantum-vulnerable algorithms in active use",
+			Description:       "Keys using classical asymmetric algorithms (RSA/ECC/DH) are vulnerable to future quantum cryptanalysis and should be migrated to NIST PQC standards.",
+			Severity:          severity,
+			RiskScore:         clampScore(50 + len(quantumVulnerable)*6 + int(quantumVulnerableOps/200)),
+			Status:            "open",
+			RecommendedAction: "Plan PQC migration: re-key to ML-KEM (FIPS 203) and ML-DSA (FIPS 204), or deploy hybrid suites; prioritize long-lived and externally-exposed keys.",
+			Evidence: map[string]any{
+				"vulnerable_algorithms": quantumVulnerable,
+				"vulnerable_operations": quantumVulnerableOps,
+				"window_days":           days,
+				"recommended_targets":   []string{"ML-KEM-768", "ML-DSA-65", "SLH-DSA"},
+			},
+		})
+	}
+
 	for i := range findings {
 		saved, err := s.UpsertDSPMFinding(ctx, findings[i])
 		if err != nil {
@@ -253,6 +296,35 @@ func (s *Service) RunEnterpriseAnomalyDetection(ctx context.Context, tenantID st
 		"since":         since.Format(time.RFC3339),
 	})
 	return findings, nil
+}
+
+// classifyQuantumVulnerability reports whether an algorithm is a classical
+// asymmetric primitive broken by a cryptographically-relevant quantum computer
+// (Shor's algorithm). Symmetric/hash primitives (AES, SHA-2/3) and NIST PQC
+// algorithms (ML-KEM, ML-DSA, SLH-DSA, Falcon) are not flagged. The PQC set is
+// checked first to avoid substring false positives (e.g. ML-DSA contains DSA).
+func classifyQuantumVulnerability(algorithm string) (family string, vulnerable bool) {
+	a := strings.ToUpper(strings.TrimSpace(algorithm))
+	if a == "" {
+		return "", false
+	}
+	for _, safe := range []string{"ML-KEM", "MLKEM", "KYBER", "ML-DSA", "MLDSA", "DILITHIUM", "SLH-DSA", "SLHDSA", "SPHINCS", "FALCON", "HQC", "BIKE"} {
+		if strings.Contains(a, safe) {
+			return "pqc", false
+		}
+	}
+	switch {
+	case strings.Contains(a, "RSA"):
+		return "rsa", true
+	case strings.Contains(a, "ECDSA"), strings.Contains(a, "ECDH"), strings.Contains(a, "ED25519"),
+		strings.Contains(a, "ED448"), strings.Contains(a, "X25519"), strings.Contains(a, "X448"),
+		strings.Contains(a, "SECP"), strings.Contains(a, "P-256"), strings.Contains(a, "P-384"),
+		strings.Contains(a, "P-521"), strings.Contains(a, "BRAINPOOL"):
+		return "ecc", true
+	case strings.HasPrefix(a, "DH"), strings.Contains(a, "DIFFIE"), strings.Contains(a, "DSA"):
+		return "dh", true
+	}
+	return "symmetric", false
 }
 
 func (s *Service) UpsertDSPMFinding(ctx context.Context, finding DSPMFinding) (DSPMFinding, error) {
