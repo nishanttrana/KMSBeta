@@ -1,6 +1,9 @@
 name: vecta-kms
 
 x-kms-common-env: &kms-common-env
+  # Release version stamped into every service (reporting exposes it via
+  # BUILD_VERSION; see VERSION file / git tag). Defaults to "dev" for ad-hoc runs.
+  BUILD_VERSION: ${VECTA_VERSION:-dev}
   POSTGRES_DSN: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vecta}?sslmode=disable&connect_timeout=10
   SQLITE_FALLBACK: "false"
   NATS_URL: nats://${NATS_AUTH_TOKEN:?NATS_AUTH_TOKEN is required}@nats:4222
@@ -334,7 +337,7 @@ services:
     build:
       context: ./web/dashboard
       dockerfile: Dockerfile
-    image: vecta/dashboard:latest
+    image: vecta/dashboard:${VECTA_VERSION:-latest}
     ports:
       - "5173:5173"
     depends_on:
@@ -359,7 +362,7 @@ services:
     build:
       context: .
       dockerfile: services/auth/Dockerfile
-    image: vecta/auth:latest
+    image: vecta/auth:${VECTA_VERSION:-latest}
     deploy:
       resources:
         limits:
@@ -406,7 +409,7 @@ services:
     build:
       context: .
       dockerfile: services/hsm-integration/Dockerfile
-    image: vecta/hsm-integration:latest
+    image: vecta/hsm-integration:${VECTA_VERSION:-latest}
     environment:
       HSM_INTEGRATION_USER: ${AUTH_BOOTSTRAP_CLI_USERNAME:-cli-user}
       HSM_INTEGRATION_WORKSPACE_ROOT: ${AUTH_CLI_HSM_WORKSPACE_ROOT:-/var/lib/vecta/hsm/providers}
@@ -427,7 +430,7 @@ services:
     build:
       context: .
       dockerfile: services/keycore/Dockerfile
-    image: vecta/keycore:latest
+    image: vecta/keycore:${VECTA_VERSION:-latest}
     deploy:
       resources:
         limits:
@@ -475,7 +478,7 @@ services:
     build:
       context: .
       dockerfile: services/audit/Dockerfile
-    image: vecta/audit:latest
+    image: vecta/audit:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       CLUSTER_URL: ${CLUSTER_URL:-http://cluster-manager:8210}
@@ -503,7 +506,7 @@ services:
     build:
       context: .
       dockerfile: services/policy/Dockerfile
-    image: vecta/policy:latest
+    image: vecta/policy:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       CLUSTER_URL: ${CLUSTER_URL:-http://cluster-manager:8210}
@@ -532,7 +535,7 @@ services:
     build:
       context: .
       dockerfile: services/featureforge/Dockerfile
-    image: vecta/featureforge:latest
+    image: vecta/featureforge:${VECTA_VERSION:-latest}
     depends_on:
       policy:
         condition: service_started
@@ -563,7 +566,7 @@ services:
     build:
       context: .
       dockerfile: services/reconciler/Dockerfile
-    image: vecta/reconciler:latest
+    image: vecta/reconciler:${VECTA_VERSION:-latest}
     depends_on:
       keycore:
         condition: service_started
@@ -594,7 +597,7 @@ services:
     build:
       context: .
       dockerfile: services/watchdog/Dockerfile
-    image: vecta/watchdog:latest
+    image: vecta/watchdog:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       HTTP_PORT: "8480"
@@ -612,7 +615,7 @@ services:
     build:
       context: .
       dockerfile: services/secrets/Dockerfile
-    image: vecta/secrets:latest
+    image: vecta/secrets:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       HTTP_PORT: "8020"
@@ -632,7 +635,7 @@ services:
     build:
       context: .
       dockerfile: services/certs/Dockerfile
-    image: vecta/certs:latest
+    image: vecta/certs:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -677,7 +680,7 @@ services:
     build:
       context: .
       dockerfile: services/governance/Dockerfile
-    image: vecta/governance:latest
+    image: vecta/governance:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       APP_BASE_URL: https://localhost
@@ -699,7 +702,7 @@ services:
     build:
       context: .
       dockerfile: services/cloud/Dockerfile
-    image: vecta/cloud:latest
+    image: vecta/cloud:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -721,7 +724,7 @@ services:
     build:
       context: .
       dockerfile: services/hyok/Dockerfile
-    image: vecta/hyok:latest
+    image: vecta/hyok:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -745,7 +748,7 @@ services:
     build:
       context: .
       dockerfile: services/kmip/Dockerfile
-    image: vecta/kmip:latest
+    image: vecta/kmip:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -776,7 +779,7 @@ services:
     build:
       context: .
       dockerfile: services/qkd/Dockerfile
-    image: vecta/qkd:latest
+    image: vecta/qkd:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -797,7 +800,7 @@ services:
     build:
       context: .
       dockerfile: services/qrng/Dockerfile
-    image: vecta/qrng:latest
+    image: vecta/qrng:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       HTTP_PORT: "8230"
@@ -817,7 +820,7 @@ services:
     build:
       context: .
       dockerfile: services/ekm/Dockerfile
-    image: vecta/ekm:latest
+    image: vecta/ekm:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -839,7 +842,7 @@ services:
     build:
       context: .
       dockerfile: services/payment/Dockerfile
-    image: vecta/payment:latest
+    image: vecta/payment:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -864,7 +867,7 @@ services:
     build:
       context: .
       dockerfile: services/confidential/Dockerfile
-    image: vecta/confidential:latest
+    image: vecta/confidential:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       HTTP_PORT: "8240"
@@ -890,7 +893,7 @@ services:
     build:
       context: .
       dockerfile: services/workload/Dockerfile
-    image: vecta/workload-identity:latest
+    image: vecta/workload-identity:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       AUTH_URL: http://auth:8001
@@ -912,7 +915,7 @@ services:
     build:
       context: .
       dockerfile: services/autokey/Dockerfile
-    image: vecta/autokey:latest
+    image: vecta/autokey:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -934,7 +937,7 @@ services:
     build:
       context: .
       dockerfile: services/signing/Dockerfile
-    image: vecta/signing:latest
+    image: vecta/signing:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -955,7 +958,7 @@ services:
     build:
       context: .
       dockerfile: services/keyaccess/Dockerfile
-    image: vecta/keyaccess:latest
+    image: vecta/keyaccess:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       GOVERNANCE_URL: http://governance:8050
@@ -976,7 +979,7 @@ services:
     build:
       context: .
       dockerfile: services/compliance/Dockerfile
-    image: vecta/compliance:latest
+    image: vecta/compliance:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -1000,7 +1003,7 @@ services:
     build:
       context: .
       dockerfile: services/sbom/Dockerfile
-    image: vecta/sbom:latest
+    image: vecta/sbom:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -1026,7 +1029,7 @@ services:
     build:
       context: .
       dockerfile: services/reporting/Dockerfile
-    image: vecta/reporting:latest
+    image: vecta/reporting:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       AUDIT_URL: http://audit:8070
@@ -1048,7 +1051,7 @@ services:
     build:
       context: .
       dockerfile: services/posture/Dockerfile
-    image: vecta/posture:latest
+    image: vecta/posture:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       AUDIT_URL: http://audit:8070
@@ -1073,7 +1076,7 @@ services:
     build:
       context: .
       dockerfile: services/ai/Dockerfile
-    image: vecta/ai:latest
+    image: vecta/ai:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -1099,7 +1102,7 @@ services:
     build:
       context: .
       dockerfile: services/ai-gateway/Dockerfile
-    image: vecta/ai-gateway:latest
+    image: vecta/ai-gateway:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       HTTP_PORT: "8320"
@@ -1124,7 +1127,7 @@ services:
     build:
       context: .
       dockerfile: services/pqc/Dockerfile
-    image: vecta/pqc:latest
+    image: vecta/pqc:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -1147,7 +1150,7 @@ services:
     build:
       context: .
       dockerfile: services/discovery/Dockerfile
-    image: vecta/discovery:latest
+    image: vecta/discovery:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -1169,7 +1172,7 @@ services:
     build:
       context: .
       dockerfile: services/mpc/Dockerfile
-    image: vecta/mpc:latest
+    image: vecta/mpc:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -1191,7 +1194,7 @@ services:
     build:
       context: .
       dockerfile: services/dataprotect/Dockerfile
-    image: vecta/dataprotect:latest
+    image: vecta/dataprotect:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: http://keycore:8010
@@ -1212,7 +1215,7 @@ services:
     build:
       context: .
       dockerfile: services/cluster-manager/Dockerfile
-    image: vecta/cluster:latest
+    image: vecta/cluster:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       HTTP_PORT: "8210"
@@ -1250,7 +1253,7 @@ services:
     build:
       context: .
       dockerfile: services/backup/Dockerfile
-    image: vecta/backup:latest
+    image: vecta/backup:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       HTTP_PORT: "8290"
@@ -1267,7 +1270,7 @@ services:
   hsm-connector:
     <<: *kms-service
     profiles: ["hsm_hardware"]
-    image: vecta/hsm-connector:latest
+    image: vecta/hsm-connector:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       HTTP_PORT: "8430"
@@ -1287,7 +1290,7 @@ services:
     build:
       context: .
       dockerfile: services/software-vault/Dockerfile
-    image: vecta/software-vault:latest
+    image: vecta/software-vault:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       HSM_PROVIDER: ${HSM_PROVIDER:-software}
@@ -1315,7 +1318,7 @@ services:
     build:
       context: .
       dockerfile: services/tfe/Dockerfile
-    image: vecta/tfe:latest
+    image: vecta/tfe:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       HTTP_PORT: "8450"
@@ -1334,7 +1337,7 @@ services:
     build:
       context: .
       dockerfile: services/dam/Dockerfile
-    image: vecta/dam:latest
+    image: vecta/dam:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
       HTTP_PORT: "8460"
