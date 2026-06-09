@@ -11,15 +11,15 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  /* Structural surfaces */
-  --c-bg:          #0a0e1a;
-  --c-sidebar:     #0d1424;
-  --c-surface:     #111a2e;
-  --c-card:        #15203a;
-  --c-card-hover:  #1a2748;
+  /* Structural surfaces — deepened base with clearer elevation steps */
+  --c-bg:          #070b14;
+  --c-sidebar:     #0b1120;
+  --c-surface:     #0f1828;
+  --c-card:        #141f37;
+  --c-card-hover:  #1b2744;
   --c-elevated:    rgba(255, 255, 255, 0.04);
-  --c-border:      #1f2d4d;
-  --c-border-hi:   #2a3d68;
+  --c-border:      #213254;
+  --c-border-hi:   #2e426e;
   --c-text:        #f1f5f9;
   --c-dim:         #b4c2d8;
   --c-muted:       #8497b4;
@@ -47,10 +47,10 @@
   --s-yellow: #fde047;  --s-yellow-dim: rgba(253,224,71,.09);
 
   /* Shadows (layered, soft) */
-  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-md:  0 4px 14px rgba(0, 0, 0, 0.30), 0 1px 2px rgba(0, 0, 0, 0.20);
-  --shadow-lg:  0 12px 36px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
-  --shadow-glow: 0 0 0 1px rgba(99, 102, 241, 0.20), 0 0 28px rgba(34, 211, 238, 0.16);
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.40);
+  --shadow-md:  0 6px 18px rgba(0, 0, 0, 0.38), 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-lg:  0 18px 48px rgba(0, 0, 0, 0.52), 0 3px 8px rgba(0, 0, 0, 0.30);
+  --shadow-glow: 0 0 0 1px rgba(99, 102, 241, 0.22), 0 0 30px rgba(34, 211, 238, 0.18);
 
   /* Radii */
   --radius-sm: 8px;
