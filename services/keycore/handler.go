@@ -218,6 +218,31 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /rotation/policies/{id}/trigger", h.handleTriggerRotation)
 	mux.HandleFunc("GET /rotation/runs", h.handleListRotationRuns)
 	mux.HandleFunc("GET /rotation/upcoming", h.handleListUpcomingRotations)
+	mux.HandleFunc("GET /rotation/analytics", h.handleGetRotationAnalytics)
+	mux.HandleFunc("GET /rotation/analytics/overdue", h.handleListOverdueRotationMetrics)
+	mux.HandleFunc("GET /keys/{id}/rotation-metrics", h.handleListKeyRotationMetrics)
+	mux.HandleFunc("POST /keys/{id}/rotation-metrics", h.handleRecordKeyRotationMetric)
+
+	// Enterprise key audit, analytics, health, inventory, and compromise response
+	mux.HandleFunc("GET /enterprise/summary", h.handleGetEnterpriseAuditSummary)
+	mux.HandleFunc("GET /keys/{id}/health", h.handleGetKeyHealth)
+	mux.HandleFunc("POST /keys/{id}/health/recalculate", h.handleRecalculateKeyHealth)
+	mux.HandleFunc("GET /health/summary", h.handleGetHealthSummary)
+	mux.HandleFunc("GET /inventory/keys", h.handleListInventory)
+	mux.HandleFunc("POST /inventory/sync", h.handleSyncInventory)
+	mux.HandleFunc("GET /inventory/orphans", h.handleListOrphanedInventory)
+	mux.HandleFunc("GET /inventory/duplicates", h.handleListDuplicateKeys)
+	mux.HandleFunc("GET /inventory/dependencies", h.handleListKeyDependencies)
+	mux.HandleFunc("POST /inventory/dependencies", h.handleUpsertKeyDependencyRecord)
+	mux.HandleFunc("GET /compromise/events", h.handleListCompromiseEvents)
+	mux.HandleFunc("POST /compromise/events", h.handleReportCompromiseEvent)
+	mux.HandleFunc("POST /compromise/events/{id}/status", h.handleUpdateCompromiseEventStatus)
+	mux.HandleFunc("POST /compromise/advisories/ingest", h.handleIngestCompromiseAdvisories)
+	mux.HandleFunc("POST /analytics/metrics", h.handleRecordKeyAnalyticsMetric)
+	mux.HandleFunc("GET /analytics/usage", h.handleGetKeyUsageMetrics)
+	mux.HandleFunc("GET /analytics/hotspots", h.handleListKeyHotspots)
+	mux.HandleFunc("GET /analytics/trends", h.handleGetKeyTrend)
+	mux.HandleFunc("GET /analytics/algorithms", h.handleGetAlgorithmBenchmarks)
 
 	// Canary / Honeypot Keys
 	mux.HandleFunc("GET /canary/summary", h.handleGetCanarySummary)
@@ -2028,7 +2053,14 @@ func isSensitiveKeycoreRoute(method string, path string) bool {
 		return false
 	}
 	p := strings.TrimSpace(path)
-	if strings.HasPrefix(p, "/keys") || strings.HasPrefix(p, "/access") || strings.HasPrefix(p, "/crypto") || strings.HasPrefix(p, "/tags") {
+	if strings.HasPrefix(p, "/keys") ||
+		strings.HasPrefix(p, "/access") ||
+		strings.HasPrefix(p, "/crypto") ||
+		strings.HasPrefix(p, "/tags") ||
+		strings.HasPrefix(p, "/rotation") ||
+		strings.HasPrefix(p, "/inventory") ||
+		strings.HasPrefix(p, "/compromise") ||
+		strings.HasPrefix(p, "/analytics") {
 		return true
 	}
 	return false

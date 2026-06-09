@@ -94,6 +94,45 @@ func TestEncryptOpsLimitReturns429(t *testing.T) {
 	}
 }
 
+func TestCompromiseEventAutoSuspendsKey(t *testing.T) {
+	_, svc := newHandlerForTest(t)
+	key, err := svc.CreateKey(context.Background(), CreateKeyRequest{
+		TenantID: "t1", Name: "compromise-target", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "encrypt",
+		Owner: "ops", CreatedBy: "tester",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	event, err := svc.ReportCompromiseEvent(context.Background(), CompromiseEvent{
+		TenantID:        "t1",
+		KeyID:           key.ID,
+		CVEID:           "CVE-2026-0001",
+		ThreatType:      "cve",
+		Severity:        "critical",
+		DetectionSource: "unit_test",
+	}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if event.Status != "pending" {
+		t.Fatalf("unexpected event status: %+v", event)
+	}
+	got, err := svc.GetKey(context.Background(), "t1", key.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if normalizeLifecycleStatus(got.Status) != StateSuspended {
+		t.Fatalf("expected key to be suspended, got %s", got.Status)
+	}
+	events, err := svc.store.ListCompromiseEvents(context.Background(), "t1", "", "", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || events[0].KeyID != key.ID {
+		t.Fatalf("unexpected compromise events: %+v", events)
+	}
+}
+
 func TestExternalIVValidation(t *testing.T) {
 	h, svc := newHandlerForTest(t)
 	key, err := svc.CreateKey(context.Background(), CreateKeyRequest{

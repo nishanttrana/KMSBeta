@@ -129,6 +129,30 @@ type Store interface {
 	ListRotationRuns(ctx context.Context, tenantID, policyID string) ([]RotationRun, error)
 	CreateRotationRun(ctx context.Context, r RotationRun) (RotationRun, error)
 	ListUpcomingRotations(ctx context.Context, tenantID string) ([]UpcomingRotation, error)
+	RecordRotationMetric(ctx context.Context, metric RotationMetric) error
+	ListRotationMetrics(ctx context.Context, tenantID, keyID, status string, limit int) ([]RotationMetric, error)
+	ListOverdueRotationMetrics(ctx context.Context, tenantID string, limit int) ([]RotationMetric, error)
+	GetRotationAnalyticsSummary(ctx context.Context, tenantID string, days int) (RotationAnalyticsSummary, error)
+	RecordKeyAnalyticsMetric(ctx context.Context, metric KeyAnalyticsMetric) error
+	GetKeyUsageMetricSummary(ctx context.Context, tenantID, keyID string, since time.Time) (KeyUsageMetricSummary, error)
+	ListKeyHotspots(ctx context.Context, tenantID string, since time.Time, limit int) ([]KeyHotspot, error)
+	GetKeyTrend(ctx context.Context, tenantID, metricType string, since time.Time) ([]TrendPoint, error)
+	GetAlgorithmBenchmarks(ctx context.Context, tenantID string, since time.Time) ([]AlgorithmBenchmark, error)
+	UpsertKeyHealthScore(ctx context.Context, score KeyHealthScore) error
+	GetKeyHealthScore(ctx context.Context, tenantID, keyID string) (KeyHealthScore, error)
+	ListKeyHealthScores(ctx context.Context, tenantID string, limit int) ([]KeyHealthScore, error)
+	GetKeyHealthSummary(ctx context.Context, tenantID string) (KeyHealthSummary, error)
+	GetInventoryItem(ctx context.Context, tenantID, keyID string) (KeyInventoryItem, error)
+	UpsertInventoryItem(ctx context.Context, item KeyInventoryItem) error
+	ListInventoryItems(ctx context.Context, tenantID, status, owner string, limit, offset int) ([]KeyInventoryItem, error)
+	ListOrphanedInventoryItems(ctx context.Context, tenantID string, limit int) ([]KeyInventoryItem, error)
+	GetInventorySummary(ctx context.Context, tenantID string, duplicateSets int) (KeyInventorySummary, error)
+	UpsertKeyDependencyRecord(ctx context.Context, dep KeyDependencyRecord) error
+	ListKeyDependencies(ctx context.Context, tenantID, keyID string, limit int) ([]KeyDependencyRecord, error)
+	RecordCompromiseEvent(ctx context.Context, event CompromiseEvent) error
+	ListCompromiseEvents(ctx context.Context, tenantID, status, severity string, limit int) ([]CompromiseEvent, error)
+	UpdateCompromiseEventStatus(ctx context.Context, tenantID, eventID, status, remediationStatus, rootCause string, notifications []string) (CompromiseEvent, error)
+	GetCompromiseSummary(ctx context.Context, tenantID string) (CompromiseSummary, error)
 
 	// Canary / Honeypot Keys
 	ListCanaryKeys(ctx context.Context, tenantID string) ([]CanaryKey, error)
@@ -869,6 +893,7 @@ ORDER BY created_at DESC LIMIT 1
 }
 
 func (s *SQLStore) RunCryptoTx(ctx context.Context, tenantID string, keyID string, op string, fn func(k Key, kv KeyVersion) (CryptoTxResult, error)) (CryptoTxResult, error) {
+	startedAt := time.Now()
 	tx, err := s.db.SQL().BeginTx(ctx, nil)
 	if err != nil {
 		return CryptoTxResult{}, err
@@ -947,6 +972,7 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP)
 		return CryptoTxResult{}, err
 	}
 	result.KeyVersion = ver.Version
+	s.recordCryptoOperationMetric(ctx, tenantID, keyID, op, time.Since(startedAt))
 	return result, nil
 }
 

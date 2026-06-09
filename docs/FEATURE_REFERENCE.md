@@ -12,6 +12,67 @@ Each feature section includes:
 - primary UI and API entry points
 - what audit, posture, and compliance should show
 
+## Enterprise Key Audit, Analytics, and Response
+
+### What It Is
+
+Enterprise Key Audit adds an operating layer for the highest-value KMS gaps:
+
+- rotation analytics and overdue detection
+- compromise event/advisory ingestion with automatic suspension
+- realtime key usage and latency metrics
+- key health scoring with recommendations
+- inventory sync, dependency records, orphan detection, and duplicate KCV detection
+
+### Why Teams Use It
+
+Use this feature when:
+
+- security operations needs fast key compromise triage
+- platform teams need evidence that rotations are succeeding
+- auditors need health, inventory, and dependency visibility
+- key owners need to find orphaned, duplicated, expiring, or highly used keys
+
+### UI
+
+- `Dashboard`
+- `Keys`
+- `Rotation Scheduler`
+- `Health`
+- `Audit Log`
+- `Compliance`
+
+### Primary APIs
+
+- `GET /svc/keycore/enterprise/summary`
+- `GET /svc/keycore/rotation/analytics`
+- `GET /svc/keycore/rotation/analytics/overdue`
+- `GET /svc/keycore/keys/{id}/health`
+- `POST /svc/keycore/inventory/sync`
+- `GET /svc/keycore/inventory/orphans`
+- `GET /svc/keycore/inventory/duplicates`
+- `POST /svc/keycore/compromise/events`
+- `POST /svc/keycore/compromise/advisories/ingest`
+- `GET /svc/keycore/analytics/hotspots`
+
+### Operational Outcome
+
+Operators can answer:
+
+- which rotations are late, failing, or slow
+- which keys are unhealthy and why
+- which keys are orphaned or duplicated
+- which services depend on a key before rotation or suspension
+- which compromise events are open and whether keys were auto-suspended
+
+### Evidence Surfaces
+
+- Audit: health scoring, inventory sync, compromise detection, auto-suspension
+- KeyCore: rotation metrics, analytics metrics, health scores, inventory records
+- Compliance: evidence of rotation hygiene, incident response, ownership, and dependency mapping
+
+Detailed runbooks and payload examples are in [ENTERPRISE_KEY_AUDIT.md](ENTERPRISE_KEY_AUDIT.md).
+
 ## Sender-Constrained REST Client Security
 
 ### What It Is

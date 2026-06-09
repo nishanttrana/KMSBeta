@@ -87,6 +87,116 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			updated_by TEXT,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);`,
+		`CREATE TABLE key_rotation_metrics (
+			rotation_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			key_id TEXT NOT NULL,
+			scheduled_date TIMESTAMP NOT NULL,
+			actual_date TIMESTAMP,
+			status TEXT NOT NULL DEFAULT 'scheduled',
+			duration_ms INTEGER,
+			reason TEXT,
+			initiated_by TEXT,
+			completed_by TEXT,
+			error_details TEXT,
+			old_version INTEGER,
+			new_version INTEGER,
+			rollback_attempted BOOLEAN DEFAULT 0,
+			metadata_json BLOB DEFAULT '{}',
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, rotation_id)
+		);`,
+		`CREATE TABLE key_analytics_metrics (
+			metric_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			key_id TEXT NOT NULL,
+			metric_type TEXT NOT NULL,
+			value REAL NOT NULL,
+			aggregation_period TEXT NOT NULL DEFAULT 'hourly',
+			timestamp TIMESTAMP NOT NULL,
+			metadata_json BLOB DEFAULT '{}',
+			PRIMARY KEY (tenant_id, metric_id)
+		);`,
+		`CREATE TABLE key_health_scores (
+			key_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			health_score INTEGER NOT NULL DEFAULT 100,
+			entropy_score INTEGER NOT NULL DEFAULT 100,
+			age_score INTEGER NOT NULL DEFAULT 100,
+			usage_score INTEGER NOT NULL DEFAULT 100,
+			algorithm_score INTEGER NOT NULL DEFAULT 100,
+			backup_status TEXT NOT NULL DEFAULT 'unknown',
+			rotation_overdue BOOLEAN DEFAULT 0,
+			expiry_imminent BOOLEAN DEFAULT 0,
+			compliance_warnings BLOB DEFAULT '[]',
+			recommended_actions BLOB DEFAULT '[]',
+			last_audit_date TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, key_id)
+		);`,
+		`CREATE TABLE key_inventory (
+			key_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			key_name TEXT NOT NULL,
+			key_type TEXT NOT NULL,
+			algorithm TEXT NOT NULL,
+			owner TEXT NOT NULL,
+			status TEXT NOT NULL,
+			created_date TIMESTAMP NOT NULL,
+			last_used TIMESTAMP,
+			last_rotated TIMESTAMP,
+			rotation_frequency TEXT,
+			next_rotation TIMESTAMP,
+			expiry_date TIMESTAMP,
+			backup_verified_at TIMESTAMP,
+			hsm_stored BOOLEAN DEFAULT 0,
+			cloud_provider TEXT,
+			region TEXT,
+			compliance_tags BLOB DEFAULT '[]',
+			metadata_json BLOB DEFAULT '{}',
+			discovered_via TEXT,
+			discovery_timestamp TIMESTAMP,
+			PRIMARY KEY (tenant_id, key_id)
+		);`,
+		`CREATE TABLE key_dependencies (
+			dependency_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			key_id TEXT NOT NULL,
+			service_id TEXT NOT NULL,
+			app_id TEXT,
+			dependency_type TEXT NOT NULL,
+			criticality TEXT NOT NULL DEFAULT 'medium',
+			last_verified TIMESTAMP,
+			verification_status TEXT DEFAULT 'unknown',
+			usage_frequency TEXT DEFAULT 'unknown',
+			last_access_log_id TEXT,
+			metadata_json BLOB DEFAULT '{}',
+			discovered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, dependency_id)
+		);`,
+		`CREATE TABLE compromise_events (
+			event_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			key_id TEXT NOT NULL,
+			cve_id TEXT,
+			threat_type TEXT NOT NULL,
+			severity TEXT NOT NULL,
+			detection_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			confirmed_date TIMESTAMP,
+			status TEXT NOT NULL DEFAULT 'pending',
+			remediation_plan TEXT,
+			remediation_status TEXT DEFAULT 'not_started',
+			remediation_date TIMESTAMP,
+			affected_systems BLOB DEFAULT '[]',
+			notifications_sent BLOB DEFAULT '[]',
+			root_cause TEXT,
+			detection_source TEXT,
+			metadata_json BLOB DEFAULT '{}',
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, event_id)
+		);`,
 	}
 	for _, s := range stmts {
 		if _, err := conn.SQL().Exec(s); err != nil {
@@ -117,6 +227,130 @@ func TestStoreCreateAndGetKey(t *testing.T) {
 	}
 	if got.Name != "key1" || got.Algorithm != "AES-256" {
 		t.Fatalf("unexpected key: %+v", got)
+	}
+}
+
+func TestEnterpriseAuditStoreOperations(t *testing.T) {
+	s := newStoreForTest(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	k := Key{
+		ID: "audit-k1", TenantID: "t1", Name: "audit-key", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "encrypt",
+		Status: "active", CurrentVersion: 1, KCV: []byte{0xaa, 0xbb, 0xcc}, KCVAlgorithm: "aes-ecb-zero", IVMode: "internal",
+		Owner: "security", CreatedBy: "tester",
+	}
+	v := KeyVersion{
+		ID: "audit-kv1", TenantID: "t1", KeyID: "audit-k1", Version: 1, EncryptedMaterial: []byte("enc"),
+		MaterialIV: []byte("123456789012"), WrappedDEK: []byte("1234567890123456wrapped"), KCV: []byte{0xaa, 0xbb, 0xcc}, Status: "active",
+	}
+	if err := s.CreateKeyWithVersion(ctx, k, v); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := s.RecordRotationMetric(ctx, RotationMetric{
+		RotationID:    "rot-1",
+		TenantID:      "t1",
+		KeyID:         "audit-k1",
+		ScheduledDate: now.Add(-time.Minute),
+		ActualDate:    &now,
+		Status:        "completed",
+		DurationMs:    1200,
+		Reason:        "manual",
+		OldVersion:    1,
+		NewVersion:    2,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	rotation, err := s.GetRotationAnalyticsSummary(ctx, "t1", 30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rotation.Completed != 1 || rotation.SuccessRate != 100 {
+		t.Fatalf("unexpected rotation summary: %+v", rotation)
+	}
+
+	if err := s.RecordKeyAnalyticsMetric(ctx, KeyAnalyticsMetric{
+		MetricID: "met-1", TenantID: "t1", KeyID: "audit-k1", MetricType: "usage_encrypt",
+		Value: 1, AggregationPeriod: "realtime", Timestamp: now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	usage, err := s.GetKeyUsageMetricSummary(ctx, "t1", "audit-k1", now.Add(-time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(usage.Metrics) != 1 || usage.Metrics[0].Count != 1 {
+		t.Fatalf("unexpected usage metrics: %+v", usage)
+	}
+	hotspots, err := s.ListKeyHotspots(ctx, "t1", now.Add(-time.Hour), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hotspots) != 1 || hotspots[0].KeyID != "audit-k1" {
+		t.Fatalf("unexpected hotspots: %+v", hotspots)
+	}
+
+	if err := s.UpsertInventoryItem(ctx, KeyInventoryItem{
+		KeyID: "audit-k1", TenantID: "t1", KeyName: "audit-key", KeyType: "symmetric", Algorithm: "AES-256",
+		Owner: "security", Status: "active", CreatedDate: now, ComplianceTags: []string{"PCI-DSS"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.UpsertKeyDependencyRecord(ctx, KeyDependencyRecord{
+		DependencyID: "dep-1", TenantID: "t1", KeyID: "audit-k1", ServiceID: "payments",
+		DependencyType: "encryption", Criticality: "critical", VerificationStatus: "verified",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	deps, err := s.ListKeyDependencies(ctx, "t1", "audit-k1", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(deps) != 1 || deps[0].ServiceID != "payments" {
+		t.Fatalf("unexpected dependencies: %+v", deps)
+	}
+	inventory, err := s.GetInventorySummary(ctx, "t1", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if inventory.TotalKeys != 1 || inventory.OrphanedKeys != 0 {
+		t.Fatalf("unexpected inventory summary: %+v", inventory)
+	}
+
+	if err := s.UpsertKeyHealthScore(ctx, KeyHealthScore{
+		KeyID: "audit-k1", TenantID: "t1", HealthScore: 88, EntropyScore: 100, AgeScore: 90,
+		UsageScore: 80, AlgorithmScore: 100, BackupStatus: "verified", UpdatedAt: now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	health, err := s.GetKeyHealthSummary(ctx, "t1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if health.TotalKeys != 1 || health.HealthyKeys != 1 {
+		t.Fatalf("unexpected health summary: %+v", health)
+	}
+
+	if err := s.RecordCompromiseEvent(ctx, CompromiseEvent{
+		EventID: "cmp-1", TenantID: "t1", KeyID: "audit-k1", ThreatType: "cve", Severity: "high",
+		Status: "pending", RemediationStatus: "not_started", DetectionDate: now,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	updated, err := s.UpdateCompromiseEventStatus(ctx, "t1", "cmp-1", "confirmed", "in_progress", "vendor advisory confirmed", []string{"security-oncall"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != "confirmed" || updated.RemediationStatus != "in_progress" {
+		t.Fatalf("unexpected compromise update: %+v", updated)
+	}
+	compromise, err := s.GetCompromiseSummary(ctx, "t1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if compromise.OpenEvents != 1 || compromise.HighEvents != 1 {
+		t.Fatalf("unexpected compromise summary: %+v", compromise)
 	}
 }
 

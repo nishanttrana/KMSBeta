@@ -533,6 +533,54 @@ curl -s -X POST http://localhost:5173/svc/keycore/random \
 
 ---
 
+### Enterprise Key Audit and Analytics
+
+These endpoints provide the Tier 1 enterprise audit surface for rotation analytics, compromise response, health scoring, inventory, dependency mapping, hotspots, trends, and algorithm benchmarks. Full examples are in [ENTERPRISE_KEY_AUDIT.md](ENTERPRISE_KEY_AUDIT.md).
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/svc/keycore/enterprise/summary` | Consolidated rotation, health, inventory, compromise, hotspot, benchmark, and roadmap summary. |
+| GET | `/svc/keycore/rotation/analytics` | Rotation success, failure, overdue, duration, and batch metrics. |
+| GET | `/svc/keycore/rotation/analytics/overdue` | Scheduled/in-progress rotations past scheduled time. |
+| GET | `/svc/keycore/keys/{id}/rotation-metrics` | Rotation metric history for one key. |
+| POST | `/svc/keycore/keys/{id}/rotation-metrics` | Record external rotation metric evidence. |
+| GET | `/svc/keycore/keys/{id}/health` | Get or calculate key health score. |
+| POST | `/svc/keycore/keys/{id}/health/recalculate` | Force health score recalculation. |
+| GET | `/svc/keycore/health/summary` | Tenant health summary plus lowest-scoring keys. |
+| POST | `/svc/keycore/inventory/sync` | Sync KeyCore metadata into enterprise inventory and recalculate health. |
+| GET | `/svc/keycore/inventory/keys` | List inventory records. Query: `status`, `owner`, `limit`, `offset`. |
+| GET | `/svc/keycore/inventory/orphans` | List active/pre-active/suspended keys with no dependency records. |
+| GET | `/svc/keycore/inventory/duplicates` | List duplicate key groups by algorithm and KCV. |
+| GET | `/svc/keycore/inventory/dependencies` | List dependency records. Query: `key_id`, `limit`. |
+| POST | `/svc/keycore/inventory/dependencies` | Upsert key-to-service dependency record. |
+| GET | `/svc/keycore/compromise/events` | List compromise events. Query: `status`, `severity`, `limit`. |
+| POST | `/svc/keycore/compromise/events` | Report a compromise event; high/critical events can auto-suspend keys. |
+| POST | `/svc/keycore/compromise/events/{id}/status` | Update incident/remediation workflow status. |
+| POST | `/svc/keycore/compromise/advisories/ingest` | Ingest feed-style advisories by key ID or algorithm. |
+| POST | `/svc/keycore/analytics/metrics` | Record custom key analytics metric. |
+| GET | `/svc/keycore/analytics/usage` | Aggregate metric summary. Query: `key_id`, `days`, `since`. |
+| GET | `/svc/keycore/analytics/hotspots` | Highest-use keys for the window. Query: `days`, `limit`. |
+| GET | `/svc/keycore/analytics/trends` | Time-ordered metric trend. Query: `metric_type`, `days`, `since`. |
+| GET | `/svc/keycore/analytics/algorithms` | Algorithm latency/performance benchmarks. |
+
+Example compromise event:
+
+```bash
+curl -s -X POST "http://localhost:5173/svc/keycore/compromise/events?tenant_id=root" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"key_id":"key-prod-001","cve_id":"CVE-2026-0001","threat_type":"cve","severity":"critical","detection_source":"nvd","auto_suspend":true}'
+```
+
+Example inventory dependency:
+
+```bash
+curl -s -X POST "http://localhost:5173/svc/keycore/inventory/dependencies?tenant_id=root" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"dependency_id":"dep-payments-api","key_id":"key-prod-001","service_id":"payments-api","dependency_type":"encryption","criticality":"critical","verification_status":"verified"}'
+```
+
+---
+
 ## Service 3: Certs (`/svc/certs/`)
 
 PKI, CA management, certificate lifecycle, enrollment protocols (ACME, EST, SCEP), CRL/OCSP, renewal intelligence, STAR subscriptions.

@@ -1761,11 +1761,51 @@ func (s *Service) ExportCurrentVersionWrapped(ctx context.Context, tenantID stri
 	}, nil
 }
 
-func (s *Service) RotateKey(ctx context.Context, tenantID string, keyID string, reason string, oldVersionAction string) (KeyVersion, error) {
+func (s *Service) RotateKey(ctx context.Context, tenantID string, keyID string, reason string, oldVersionAction string) (out KeyVersion, err error) {
+	startedAt := time.Now().UTC()
+	rotationID := newID("rotm")
+	oldVersion := 0
+	defer func() {
+		if strings.TrimSpace(tenantID) == "" || strings.TrimSpace(keyID) == "" {
+			return
+		}
+		completedAt := time.Now().UTC()
+		status := "completed"
+		errorDetails := ""
+		if err != nil {
+			status = "failed"
+			errorDetails = err.Error()
+		}
+		rotationReason := strings.TrimSpace(reason)
+		if rotationReason == "" {
+			rotationReason = "manual"
+		}
+		_ = s.store.RecordRotationMetric(ctx, RotationMetric{
+			RotationID:    rotationID,
+			TenantID:      tenantID,
+			KeyID:         keyID,
+			ScheduledDate: startedAt,
+			ActualDate:    &completedAt,
+			Status:        status,
+			DurationMs:    completedAt.Sub(startedAt).Milliseconds(),
+			Reason:        rotationReason,
+			InitiatedBy:   "keycore",
+			CompletedBy:   "keycore",
+			ErrorDetails:  errorDetails,
+			OldVersion:    oldVersion,
+			NewVersion:    out.Version,
+			Metadata: map[string]any{
+				"old_version_action": normalizeOldVersionAction(oldVersionAction),
+			},
+			CreatedAt: startedAt,
+			UpdatedAt: completedAt,
+		})
+	}()
 	key, err := s.GetKey(ctx, tenantID, keyID)
 	if err != nil {
 		return KeyVersion{}, err
 	}
+	oldVersion = key.CurrentVersion
 	if isDeletedLike(key.Status) {
 		return KeyVersion{}, errors.New("cannot rotate a deleted key")
 	}
@@ -1806,10 +1846,14 @@ func (s *Service) RotateKey(ctx context.Context, tenantID string, keyID string, 
 		ID:                newID("kv"),
 		TenantID:          tenantID,
 		KeyID:             keyID,
+		Version:           key.CurrentVersion + 1,
 		EncryptedMaterial: env.Ciphertext,
 		MaterialIV:        env.DataIV,
 		WrappedDEK:        packWrappedDEK(env.WrappedDEKIV, env.WrappedDEK),
 		KCV:               newKCV,
+		RotatedFrom:       key.CurrentVersion,
+		RotationReason:    reason,
+		Status:            "active",
 	}
 	if reason == "" {
 		reason = "manual"
@@ -1997,7 +2041,7 @@ func (s *Service) ConfigureKeyActivation(ctx context.Context, tenantID string, k
 func (s *Service) SetKeyStatus(ctx context.Context, tenantID string, keyID string, status string) error {
 	nextStatus := normalizeLifecycleStatus(status)
 	switch nextStatus {
-	case "active", "pre-active", "disabled", "deactivated":
+	case "active", "pre-active", "disabled", "deactivated", StateSuspended, StateCompromised:
 	default:
 		return fmt.Errorf("invalid key status transition target: %s", status)
 	}
@@ -2019,6 +2063,10 @@ func (s *Service) SetKeyStatus(ctx context.Context, tenantID string, keyID strin
 		op = "key.disable"
 	case "deactivated":
 		op = "key.deactivate"
+	case StateSuspended:
+		op = "key.suspend"
+	case StateCompromised:
+		op = "key.compromise"
 	}
 	if err := s.checkPolicy(ctx, PolicyEvaluateRequest{
 		TenantID:          tenantID,
