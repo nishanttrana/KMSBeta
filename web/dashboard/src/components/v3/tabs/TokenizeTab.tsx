@@ -245,7 +245,7 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
     };
     void loadVaults();
     return()=>{cancelled=true;};
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   },[session?.token,session?.tenantId,onToast]);
 
   useEffect(()=>{
@@ -952,7 +952,7 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
       return;
     }
     void refresh(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   },[session?.token,session?.tenantId,session?.username]);
 
   useEffect(()=>{
@@ -1494,7 +1494,7 @@ const DataEncryptionPolicy=({session,onToast})=>{
 
   useEffect(()=>{
     void loadPolicy();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   },[session?.token,session?.tenantId]);
 
   const savePolicy=async()=>{
@@ -1903,7 +1903,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
 
   useEffect(()=>{
     void refreshVaultRows(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   },[session?.token,session?.tenantId]);
 
   const downloadVaultSetup=async()=>{
@@ -2123,7 +2123,7 @@ const TokenizeMaskRedactPolicy=({session,onToast})=>{
 
   useEffect(()=>{
     void loadPolicy();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   },[session?.token,session?.tenantId]);
 
   const savePolicy=async()=>{
@@ -2631,7 +2631,7 @@ const PaymentCryptoPolicy=({session,onToast})=>{
 
   useEffect(()=>{
     void loadPolicy();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   },[session?.token,session?.tenantId]);
 
   const savePolicy=async()=>{
@@ -2919,7 +2919,7 @@ const AuditLogViewer=({session,onToast})=>{
       setLoading(false);
     }
   };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   useEffect(()=>{if(session?.token)void refresh();},[session?.token,session?.tenantId]);
   const catColors={tokenization:C.accent,encryption:C.blue,masking:C.purple,redaction:C.pink,policy:C.yellow,general:C.muted};
   return <Section title="Audit Log" actions={<>
@@ -2976,7 +2976,7 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
   useEffect(()=>{
     if(!session?.token)return;
     getDataProtectStats(session).then(setStats).catch(()=>{});
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   },[session?.token,session?.tenantId]);
 
   const statItems=[

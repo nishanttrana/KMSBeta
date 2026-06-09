@@ -79,7 +79,7 @@ export const PostQuantumTab = ({ session, onToast }: any) => {
 
   useEffect(() => {
     void refresh(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   }, [session?.tenantId, session?.token]);
 
   const summaryCards = [

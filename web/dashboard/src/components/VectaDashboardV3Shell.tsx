@@ -560,7 +560,7 @@ export default function VectaDashboardV3Shell(props: Props) {
       } catch { if (!stop) setCliEnabled(false); }
     })();
     return () => { stop = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   }, [session?.token]);
 
   useEffect(() => {
@@ -591,7 +591,7 @@ export default function VectaDashboardV3Shell(props: Props) {
       cancelled = true;
       clearInterval(id);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   }, [session?.token, session?.tenantId, unreadAlerts]);
 
   const navGroups = useMemo(

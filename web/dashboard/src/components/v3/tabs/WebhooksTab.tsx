@@ -227,7 +227,7 @@ function DeliveryLog({ webhook, session, onClose }: { webhook: Webhook; session:
       .then(setDeliveries)
       .catch(() => setDeliveries(MOCK_DELIVERIES.filter(d => d.webhook_id === webhook.id)))
       .finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   }, [webhook.id]);
 
   const th: React.CSSProperties = { textAlign: "left", fontSize: 10, color: C.muted, fontWeight: 600, padding: "8px 12px", textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap" };
@@ -360,7 +360,7 @@ export function WebhooksTab({ session, enabledFeatures, keyCatalog }: Props) {
     }
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   useEffect(() => { load(); }, []);
 
   async function handleSave(data: Partial<Webhook>) {

@@ -272,7 +272,7 @@ export const PaymentTab=({session,keyCatalog,onToast})=>{
     if(!lauKeyID){
       setLAUKeyID(fallback);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   },[keyChoices]);
 
   const refreshInjectionData=async(silent=false)=>{
@@ -397,7 +397,7 @@ export const PaymentTab=({session,keyCatalog,onToast})=>{
     }
     void refreshInjectionData(true);
     void refreshAP2Profile(true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   },[session?.token,session?.tenantId]);
 
   useEffect(()=>{

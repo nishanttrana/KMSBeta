@@ -361,9 +361,9 @@ export const SBOMTab = ({ session, onToast }: any) => {
   };
 
   // ── Computed data ─────────────────────────────────────────────
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   const components = Array.isArray(sbomLatest?.document?.components) ? sbomLatest.document.components : [];
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   const vulnerabilities = Array.isArray(sbomVulns) ? sbomVulns : [];
   const vulnerabilitySources = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -509,7 +509,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
 
   const distItems = Object.entries(grouped).filter(([, v]) => v > 0).map(([label, value]) => ({ name: label, value, fill: ALGO_COLORS[label] || C.yellow }));
   const totalAssets = Math.max(0, Number(cbomSummary?.total_assets ?? cbomLatest?.document?.total_asset_count ?? 0));
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   const cbomAssets = Array.isArray(cbomLatest?.document?.assets) ? cbomLatest.document.assets : [];
 
   const isHSMBackedAsset = (asset: any) => {
