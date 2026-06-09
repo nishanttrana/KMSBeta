@@ -142,8 +142,8 @@ WHERE tenant_id=$1 AND created_at >= $2
 	var (
 		summary       RotationAnalyticsSummary
 		avgDuration   float64
-		nextScheduled sql.NullTime
-		lastCompleted sql.NullTime
+		nextScheduled any
+		lastCompleted any
 		batchOps      int
 		completed     int
 		failed        int
@@ -163,12 +163,10 @@ WHERE tenant_id=$1 AND created_at >= $2
 	summary.Overdue = overdue
 	summary.AverageDurationMs = int64(avgDuration)
 	summary.BatchOperations = batchOps
-	if nextScheduled.Valid {
-		t := nextScheduled.Time.UTC()
+	if t, ok := parseDBTime(nextScheduled); ok {
 		summary.NextScheduledAt = &t
 	}
-	if lastCompleted.Valid {
-		t := lastCompleted.Time.UTC()
+	if t, ok := parseDBTime(lastCompleted); ok {
 		summary.LastCompletedAt = &t
 	}
 	if completed+failed > 0 {
@@ -258,12 +256,11 @@ LIMIT $3
 	var maxCount int64
 	for rows.Next() {
 		var h KeyHotspot
-		var last sql.NullTime
+		var last any
 		if err := rows.Scan(&h.KeyID, &h.AccessCount, &last); err != nil {
 			return nil, err
 		}
-		if last.Valid {
-			t := last.Time.UTC()
+		if t, ok := parseDBTime(last); ok {
 			h.LastAccess = &t
 		}
 		if h.AccessCount > maxCount {
@@ -1060,6 +1057,24 @@ func nullTimePtr(in sql.NullTime) *time.Time {
 	}
 	t := in.Time.UTC()
 	return &t
+}
+
+func parseDBTime(raw any) (time.Time, bool) {
+	switch v := raw.(type) {
+	case nil:
+		return time.Time{}, false
+	case time.Time:
+		return v.UTC(), true
+	case string:
+		for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02 15:04:05.999999999Z07:00", "2006-01-02 15:04:05.999999999-07:00", "2006-01-02 15:04:05"} {
+			if t, err := time.Parse(layout, strings.TrimSpace(v)); err == nil {
+				return t.UTC(), true
+			}
+		}
+	case []byte:
+		return parseDBTime(string(v))
+	}
+	return time.Time{}, false
 }
 
 func parseStrings(raw string) []string {

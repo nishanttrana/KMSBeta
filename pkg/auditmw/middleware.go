@@ -44,7 +44,7 @@ func Wrap(next http.Handler, publisher EventPublisher, serviceName string) http.
 	if publisher == nil {
 		return next
 	}
-	if !envOrBool("AUDIT_CAPTURE_HTTP_REQUESTS", false) {
+	if !envOrBool("AUDIT_CAPTURE_HTTP_REQUESTS", true) {
 		return next
 	}
 	subject := "audit." + serviceName + ".http_request"

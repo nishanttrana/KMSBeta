@@ -235,15 +235,17 @@ type CompromiseIngestResult struct {
 }
 
 type EnterpriseAuditSummary struct {
-	TenantID    string                   `json:"tenant_id"`
-	GeneratedAt time.Time                `json:"generated_at"`
-	Rotation    RotationAnalyticsSummary `json:"rotation"`
-	Health      KeyHealthSummary         `json:"health"`
-	Inventory   KeyInventorySummary      `json:"inventory"`
-	Compromise  CompromiseSummary        `json:"compromise"`
-	Hotspots    []KeyHotspot             `json:"hotspots,omitempty"`
-	Algorithms  []AlgorithmBenchmark     `json:"algorithms,omitempty"`
-	Roadmap     []AuditRoadmapItem       `json:"roadmap"`
+	TenantID     string                    `json:"tenant_id"`
+	GeneratedAt  time.Time                 `json:"generated_at"`
+	Rotation     RotationAnalyticsSummary  `json:"rotation"`
+	Health       KeyHealthSummary          `json:"health"`
+	Inventory    KeyInventorySummary       `json:"inventory"`
+	Compromise   CompromiseSummary         `json:"compromise"`
+	Hotspots     []KeyHotspot              `json:"hotspots,omitempty"`
+	Algorithms   []AlgorithmBenchmark      `json:"algorithms,omitempty"`
+	DSPMFindings []DSPMFinding             `json:"dspm_findings,omitempty"`
+	Controls     []EnterpriseControlRecord `json:"controls,omitempty"`
+	Roadmap      []AuditRoadmapItem        `json:"roadmap"`
 }
 
 type AuditRoadmapItem struct {

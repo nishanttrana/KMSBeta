@@ -364,6 +364,218 @@ curl -X POST "$BASE/inventory/dependencies?tenant_id=$TENANT" \
 curl "$BASE/inventory/dependencies?tenant_id=$TENANT&key_id=$KEY_ID" -H "$AUTH"
 ```
 
+## Tier 2-4 Enterprise Controls and DSPM
+
+The second implementation pass turns the remaining roadmap items into backend capabilities. The design is intentionally secure-by-default:
+
+- no raw key material is persisted in enterprise control records or DSPM findings
+- KDF and Shamir APIs return sensitive material only in the direct response
+- unsupported research cryptography is represented as governed control state instead of fake encryption
+- every state-changing endpoint emits a KeyCore audit event
+- high-risk control records are mirrored into KeyCore DSPM findings and can be exported as posture events
+
+### Enterprise Control Records
+
+Enterprise control records are the common persistence model for orchestration, federation, edge agents, sharing grants, metadata profiles, binding policies, threat signals, and advanced encryption mode governance.
+
+```bash
+curl -X POST "$BASE/enterprise/federation/providers?tenant_id=$TENANT" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{
+    "record_id": "fed-aws-prod",
+    "name": "AWS KMS production",
+    "status": "active",
+    "severity": "info",
+    "metadata": {
+      "provider": "aws-kms",
+      "regions": ["us-east-1", "us-west-2"],
+      "lookup_mode": "external_id_mapping"
+    }
+  }'
+```
+
+List controls:
+
+```bash
+curl "$BASE/enterprise/controls?tenant_id=$TENANT&category=federation_provider" -H "$AUTH"
+```
+
+Supported categories include:
+
+| Category | Capability |
+|---|---|
+| `anomaly` | Statistical anomaly findings generated from health, compromise, inventory, hotspot, and benchmark signals. |
+| `orchestration_workflow` / `orchestration_run` | Cron/workflow metadata and executable batch rotation runs. |
+| `federation_provider`, `federation_mapping`, `federation_failover` | Multi-KMS registry, cross-KMS mappings, and failover evidence. |
+| `escrow_tier`, `escrow_shamir` | Tiered recovery metadata and Shamir split verification. |
+| `advanced_encryption` | Searchable token mode plus governed research-mode controls. |
+| `binding_policy` | Hardware attestation/geolocation binding policy records. |
+| `edge_agent`, `edge_lease`, `edge_receipt` | Edge/IoT agent, offline lease, and receipt records. |
+| `sharing_grant` | Temporary/delegated key sharing records. |
+| `metadata_profile` | Classification, tagging, and enrichment profiles. |
+| `threat_signal` | Side-channel, DPA, canary, or other advanced threat signals. |
+
+### Anomaly Detection and DSPM Feed
+
+Run a statistical anomaly scan:
+
+```bash
+curl -X POST "$BASE/enterprise/anomaly/scan?tenant_id=$TENANT&days=7" -H "$AUTH"
+```
+
+The scan creates DSPM findings for:
+
+- degraded key health
+- open compromise events
+- inventory/dependency gaps
+- heavy key usage hotspots
+- algorithm benchmark degradation
+
+List KeyCore DSPM findings:
+
+```bash
+curl "$BASE/enterprise/dspm/findings?tenant_id=$TENANT&status=open&limit=100" -H "$AUTH"
+```
+
+Export posture-service-compatible events:
+
+```bash
+curl "$BASE/enterprise/dspm/events?tenant_id=$TENANT&status=open" -H "$AUTH"
+```
+
+The export shape matches the existing DSPM/posture `/posture/events/batch` ingestion schema. The audit service also receives `audit.key.dspm_finding_upserted`, so posture can ingest through the existing audit sync path.
+
+### Advanced Scheduling and Orchestration
+
+Create workflow metadata:
+
+```bash
+curl -X POST "$BASE/enterprise/orchestration/workflows?tenant_id=$TENANT" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{
+    "record_id": "wf-quarterly-critical",
+    "name": "Quarterly critical-key rotation",
+    "status": "active",
+    "metadata": {
+      "cron_expr": "0 2 1 */3 *",
+      "steps": ["dependency_check", "rotate", "health_recalculate", "dspm_export"]
+    }
+  }'
+```
+
+Trigger an executable batch rotation run:
+
+```bash
+curl -X POST "$BASE/enterprise/orchestration/runs?tenant_id=$TENANT" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{
+    "workflow_id": "wf-quarterly-critical",
+    "key_ids": ["key-prod-001", "key-prod-002"],
+    "reason": "quarterly-critical-rotation",
+    "execute_rotation": true
+  }'
+```
+
+Failures are retained in the run metadata and become DSPM findings when risk is elevated.
+
+### KDF Support
+
+The enterprise KDF API supports HKDF-SHA256, PBKDF2-SHA256, Scrypt, and Argon2id. Secrets and derived keys are never persisted; audit records include only hashes, algorithm, length, and parameter summary.
+
+```bash
+curl -X POST "$BASE/enterprise/kdf/derive?tenant_id=$TENANT" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{
+    "algorithm": "argon2id",
+    "secret_base64": "'"$(printf 'source-secret-source-secret-32!!' | base64)"'",
+    "salt_base64": "'"$(printf 'tenant-salt-123456' | base64)"'",
+    "length": 32,
+    "iterations": 3,
+    "memory_kib": 65536,
+    "parallelism": 1
+  }'
+```
+
+Minimums:
+
+- PBKDF2 iterations must be at least `100000`.
+- Argon2id memory must be at least `19456` KiB and at most `262144` KiB.
+- Salt must decode to at least 16 bytes.
+
+### Shamir Escrow
+
+Split a secret:
+
+```bash
+curl -X POST "$BASE/enterprise/escrow/shamir/split?tenant_id=$TENANT" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{
+    "secret_base64": "'"$(printf 'recoverable-secret-material-32' | base64)"'",
+    "threshold": 3,
+    "shares": 5,
+    "context": "break-glass-root-key"
+  }'
+```
+
+Verify a recovery quorum:
+
+```bash
+curl -X POST "$BASE/enterprise/escrow/shamir/verify?tenant_id=$TENANT" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{"split_id":"ss_example","shares":[...]}'
+```
+
+Only the split metadata and secret hash are persisted. Shares are returned once and must be stored by approved guardians outside KeyCore.
+
+### Audit Chain Anchoring
+
+Create an internal anchor with an optional external reference:
+
+```bash
+curl -X POST "$BASE/enterprise/audit-chain/anchors?tenant_id=$TENANT" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{"anchor_type":"external_notary","external_reference":"notary://2026-06-09/root"}'
+```
+
+Anchors store a Merkle-style root, previous anchor hash, anchor hash, and external reference. External blockchain/notary publication should be performed by a trusted anchor publisher using the returned anchor data.
+
+### Key Material Verification
+
+Verify a caller-provided KCV/fingerprint without exposing key material:
+
+```bash
+curl -X POST "$BASE/enterprise/verification/fingerprint?tenant_id=$TENANT" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{"key_id":"'"$KEY_ID"'","fingerprint":"AABBCC"}'
+```
+
+The comparison uses constant-time equality and creates a DSPM finding on mismatch.
+
+### Advanced Encryption Modes
+
+Searchable encryption is implemented as a deterministic HMAC token for equality lookup. The secret and plaintext are not persisted; audit stores only the token hash.
+
+```bash
+curl -X POST "$BASE/enterprise/advanced-encryption/search-token?tenant_id=$TENANT" \
+  -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{
+    "secret_base64": "'"$(printf 'search-token-secret-material-32-bytes' | base64)"'",
+    "plaintext_base64": "'"$(printf 'alice@example.com' | base64)"'",
+    "context": "customer-email"
+  }'
+```
+
+Homomorphic and functional encryption should be registered as `advanced_encryption` control records until a reviewed provider is integrated. This avoids presenting research-mode cryptography as production-safe.
+
+### Compliance and Cost Views
+
+```bash
+curl "$BASE/enterprise/compliance/dashboard?tenant_id=$TENANT" -H "$AUTH"
+curl "$BASE/enterprise/cost/optimization?tenant_id=$TENANT&days=30" -H "$AUTH"
+```
+
+The compliance dashboard scores health, compromise response, DSPM findings, and enterprise controls. Cost optimization estimates operation cost from analytics metrics and recommends hotspot remediation.
+
 ## Operating Workflows
 
 ### Weekly KMS Operations Review
@@ -373,7 +585,9 @@ curl "$BASE/inventory/dependencies?tenant_id=$TENANT&key_id=$KEY_ID" -H "$AUTH"
 3. Review overdue rotations from `GET /rotation/analytics/overdue`.
 4. Review low health scores from `GET /health/summary`.
 5. Review orphaned and duplicate keys.
-6. Create remediation tickets for health scores below 60, overdue critical keys, and unresolved high/critical compromise events.
+6. Run `POST /enterprise/anomaly/scan`.
+7. Export `GET /enterprise/dspm/events` to posture/DSPM when using pull ingestion.
+8. Create remediation tickets for health scores below 60, overdue critical keys, unresolved high/critical compromise events, and open DSPM findings.
 
 ### Security Incident Response
 
@@ -404,6 +618,15 @@ The implementation emits these KeyCore audit subjects:
 | `audit.key.inventory_synced` | Inventory sync completed. |
 | `audit.key.compromise_detected` | Compromise event recorded. |
 | `audit.key.compromise_auto_suspended` | Key automatically suspended or promoted due to compromise response. |
+| `audit.key.anomaly_scan_completed` | Enterprise anomaly scan completed. |
+| `audit.key.dspm_finding_upserted` | KeyCore DSPM finding created or updated. |
+| `audit.key.kdf_derived` | Enterprise KDF operation completed without persisting secret material. |
+| `audit.key.escrow_shamir_split` | Shamir split generated and metadata persisted. |
+| `audit.key.escrow_shamir_verified` | Shamir share quorum verified. |
+| `audit.key.audit_chain_anchored` | Audit chain anchor persisted. |
+| `audit.key.material_fingerprint_verified` | KCV/fingerprint verification completed. |
+| `audit.key.searchable_token_generated` | Searchable HMAC token generated. |
+| `audit.key.enterprise.*.upserted` | Enterprise control record created or updated. |
 
 ## Roadmap Status
 
@@ -412,9 +635,10 @@ The `GET /enterprise/summary` response includes a `roadmap` array for all 20 ide
 | Status | Meaning |
 |---|---|
 | `implemented` | API-backed capability is implemented in this audit work. |
-| `foundation` | Existing platform features provide a base, but a dedicated product workflow remains. |
-| `roadmap` | Recommended strategic implementation remains. |
-| `research` | Capability needs deeper design, cryptographic review, or vendor validation. |
+| `implemented_statistical` | Statistical detection is implemented; this is not presented as opaque ML. |
+| `implemented_registry` | Registry/control-plane workflow is implemented for providers, agents, policies, or mappings. |
+| `implemented_anchor` | Internal anchor records and external-reference workflow are implemented. |
+| `implemented_guarded` | Safe subset is implemented and research-only modes are gated by control records. |
 
 ## Security Notes
 
@@ -423,6 +647,9 @@ The `GET /enterprise/summary` response includes a `roadmap` array for all 20 ide
 - Health scores are advisory and should not be the only control for destructive action.
 - Orphaned key detection depends on dependency record completeness.
 - Feed ingestion accepts normalized advisories; external NVD/GitHub polling should be handled by a trusted feeder job that posts to KeyCore.
+- KDF, Shamir, and searchable-token APIs return sensitive outputs directly to the caller. Callers must handle those responses as secret material.
+- Homomorphic and functional encryption are not faked; use governed provider records until a reviewed implementation is integrated.
+- The shared HTTP audit middleware now captures request-level audit events by default. Set `AUDIT_CAPTURE_HTTP_REQUESTS=false` only for controlled test environments.
 
 ## Validation
 
@@ -430,6 +657,6 @@ Focused package validation:
 
 ```bash
 GOCACHE="$PWD/.cache/go-build" go test ./pkg/analytics ./pkg/health
+GOCACHE=/private/tmp/kms-go-build-cache go test ./services/keycore
+GOCACHE=/private/tmp/kms-go-build-cache go test ./pkg/auditmw ./services/audit
 ```
-
-KeyCore tests require the repository's Go module versions to resolve. If `go test ./services/keycore` reports `unknown revision` for module versions in `go.mod`, correct dependency versions or provide a populated module proxy/cache before running the service test suite.

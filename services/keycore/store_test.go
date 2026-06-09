@@ -197,6 +197,52 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, event_id)
 		);`,
+		`CREATE TABLE enterprise_control_records (
+			record_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			category TEXT NOT NULL,
+			key_id TEXT,
+			name TEXT NOT NULL,
+			status TEXT NOT NULL DEFAULT 'active',
+			severity TEXT,
+			risk_score INTEGER NOT NULL DEFAULT 0,
+			expires_at TIMESTAMP,
+			metadata_json BLOB DEFAULT '{}',
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, category, record_id)
+		);`,
+		`CREATE TABLE key_dspm_findings (
+			finding_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			source TEXT NOT NULL DEFAULT 'keycore',
+			finding_type TEXT NOT NULL,
+			title TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			severity TEXT NOT NULL DEFAULT 'info',
+			risk_score INTEGER NOT NULL DEFAULT 0,
+			status TEXT NOT NULL DEFAULT 'open',
+			key_id TEXT,
+			recommended_action TEXT NOT NULL DEFAULT '',
+			evidence_json BLOB DEFAULT '{}',
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, finding_id)
+		);`,
+		`CREATE TABLE key_audit_chain_anchors (
+			anchor_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			anchor_type TEXT NOT NULL,
+			merkle_root TEXT NOT NULL,
+			previous_hash TEXT,
+			anchor_hash TEXT NOT NULL,
+			external_reference TEXT,
+			status TEXT NOT NULL DEFAULT 'anchored',
+			metadata_json BLOB DEFAULT '{}',
+			anchored_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			verified_at TIMESTAMP,
+			PRIMARY KEY (tenant_id, anchor_id)
+		);`,
 	}
 	for _, s := range stmts {
 		if _, err := conn.SQL().Exec(s); err != nil {
@@ -351,6 +397,61 @@ func TestEnterpriseAuditStoreOperations(t *testing.T) {
 	}
 	if compromise.OpenEvents != 1 || compromise.HighEvents != 1 {
 		t.Fatalf("unexpected compromise summary: %+v", compromise)
+	}
+
+	control, err := s.UpsertEnterpriseControlRecord(ctx, EnterpriseControlRecord{
+		RecordID: "ctrl-1", TenantID: "t1", Category: controlCategoryFederationProvider,
+		Name: "aws-kms", Status: "active", Severity: "info", Metadata: map[string]any{"region": "us-east-1"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if control.RecordID != "ctrl-1" || control.Metadata["region"] != "us-east-1" {
+		t.Fatalf("unexpected enterprise control: %+v", control)
+	}
+	controls, err := s.ListEnterpriseControlRecords(ctx, "t1", EnterpriseControlQuery{Category: controlCategoryFederationProvider, Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(controls) != 1 {
+		t.Fatalf("unexpected controls: %+v", controls)
+	}
+
+	finding, err := s.UpsertDSPMFinding(ctx, DSPMFinding{
+		FindingID: "dspm-1", TenantID: "t1", Source: "keycore", FindingType: "inventory_dependency_gap",
+		Title: "dependency gap", Severity: "high", RiskScore: 80, Status: "open", KeyID: "audit-k1",
+		RecommendedAction: "map dependency", Evidence: map[string]any{"key_id": "audit-k1"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if finding.RiskScore != 80 || finding.KeyID != "audit-k1" {
+		t.Fatalf("unexpected dspm finding: %+v", finding)
+	}
+	findings, err := s.ListDSPMFindings(ctx, "t1", DSPMFindingQuery{Status: "open", Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(findings) != 1 || findings[0].FindingID != "dspm-1" {
+		t.Fatalf("unexpected dspm findings: %+v", findings)
+	}
+
+	anchor, err := s.RecordAuditChainAnchor(ctx, AuditChainAnchor{
+		AnchorID: "anch-1", TenantID: "t1", AnchorType: "internal_merkle", MerkleRoot: "sha256:abc",
+		AnchorHash: "sha256:def", ExternalReference: "notary://example/1", Status: "anchored",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if anchor.AnchorHash != "sha256:def" {
+		t.Fatalf("unexpected anchor: %+v", anchor)
+	}
+	anchors, err := s.ListAuditChainAnchors(ctx, "t1", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(anchors) != 1 || anchors[0].AnchorID != "anch-1" {
+		t.Fatalf("unexpected anchors: %+v", anchors)
 	}
 }
 

@@ -562,6 +562,36 @@ These endpoints provide the Tier 1 enterprise audit surface for rotation analyti
 | GET | `/svc/keycore/analytics/hotspots` | Highest-use keys for the window. Query: `days`, `limit`. |
 | GET | `/svc/keycore/analytics/trends` | Time-ordered metric trend. Query: `metric_type`, `days`, `since`. |
 | GET | `/svc/keycore/analytics/algorithms` | Algorithm latency/performance benchmarks. |
+| GET | `/svc/keycore/enterprise/controls` | List enterprise control records. Query: `category`, `key_id`, `status`, `limit`, `offset`. |
+| POST | `/svc/keycore/enterprise/controls` | Upsert a generic enterprise control record. |
+| GET | `/svc/keycore/enterprise/controls/{category}/{id}` | Fetch one enterprise control record. |
+| POST | `/svc/keycore/enterprise/anomaly/scan` | Run statistical anomaly detection and upsert KeyCore DSPM findings. |
+| GET | `/svc/keycore/enterprise/dspm/findings` | List KeyCore DSPM findings. Query: `source`, `finding_type`, `status`, `severity`, `key_id`. |
+| POST | `/svc/keycore/enterprise/dspm/findings` | Upsert a KeyCore DSPM finding. |
+| GET | `/svc/keycore/enterprise/dspm/events` | Export DSPM/posture-compatible normalized events. |
+| POST | `/svc/keycore/enterprise/kdf/derive` | Derive key material with HKDF-SHA256, PBKDF2-SHA256, Scrypt, or Argon2id. |
+| POST | `/svc/keycore/enterprise/escrow/shamir/split` | Split secret material into Shamir shares. Shares are returned once. |
+| POST | `/svc/keycore/enterprise/escrow/shamir/verify` | Verify a Shamir recovery quorum against persisted split metadata. |
+| POST | `/svc/keycore/enterprise/escrow/tiers` | Upsert tiered recovery/escrow control metadata. |
+| GET | `/svc/keycore/enterprise/audit-chain/anchors` | List audit-chain anchors. |
+| POST | `/svc/keycore/enterprise/audit-chain/anchors` | Create a Merkle-style audit-chain anchor with optional external reference. |
+| GET | `/svc/keycore/enterprise/compliance/dashboard` | KeyCore enterprise compliance score and evidence summary. |
+| GET | `/svc/keycore/enterprise/cost/optimization` | Usage-cost estimate and optimization recommendations. |
+| POST | `/svc/keycore/enterprise/verification/fingerprint` | Verify a key KCV/fingerprint using constant-time comparison. |
+| POST | `/svc/keycore/enterprise/advanced-encryption/search-token` | Generate deterministic HMAC token for equality search. |
+| POST | `/svc/keycore/enterprise/advanced-encryption/modes` | Register governed advanced-encryption mode controls. |
+| POST | `/svc/keycore/enterprise/orchestration/workflows` | Register workflow/cron orchestration metadata. |
+| POST | `/svc/keycore/enterprise/orchestration/runs` | Trigger orchestration run; can execute batch key rotations. |
+| POST | `/svc/keycore/enterprise/federation/providers` | Register multi-KMS provider metadata. |
+| POST | `/svc/keycore/enterprise/federation/mappings` | Register cross-KMS key mappings. |
+| POST | `/svc/keycore/enterprise/federation/failovers` | Record cross-region/provider failover state. |
+| POST | `/svc/keycore/enterprise/binding/policies` | Register hardware attestation/geolocation binding policy. |
+| POST | `/svc/keycore/enterprise/edge/agents` | Register Edge/IoT KMS agents. |
+| POST | `/svc/keycore/enterprise/edge/leases` | Register offline key lease state. |
+| POST | `/svc/keycore/enterprise/edge/receipts` | Register edge operation receipts. |
+| POST | `/svc/keycore/enterprise/sharing/grants` | Register temporary/delegated key-sharing grants. |
+| POST | `/svc/keycore/enterprise/metadata/profiles` | Register classification/tagging/enrichment profiles. |
+| POST | `/svc/keycore/enterprise/threat/signals` | Register advanced threat signals such as side-channel/DPA alerts. |
 
 Example compromise event:
 

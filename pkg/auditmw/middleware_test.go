@@ -26,8 +26,30 @@ func (f *fakePublisher) Publish(_ context.Context, subject string, payload []byt
 	return nil
 }
 
-func TestWrapSkipsHTTPRequestAuditByDefault(t *testing.T) {
+func TestWrapPublishesHTTPRequestAuditByDefault(t *testing.T) {
 	t.Setenv("AUDIT_CAPTURE_HTTP_REQUESTS", "")
+
+	pub := &fakePublisher{ch: make(chan publishedEvent, 1)}
+	h := Wrap(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}), pub, "reporting")
+
+	req := httptest.NewRequest(http.MethodGet, "/healthz?tenant_id=root", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+
+	select {
+	case evt := <-pub.ch:
+		if evt.subject != "audit.reporting.http_request" {
+			t.Fatalf("unexpected published event: %s", evt.subject)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected published event")
+	}
+}
+
+func TestWrapSkipsHTTPRequestAuditWhenDisabled(t *testing.T) {
+	t.Setenv("AUDIT_CAPTURE_HTTP_REQUESTS", "false")
 
 	pub := &fakePublisher{ch: make(chan publishedEvent, 1)}
 	h := Wrap(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

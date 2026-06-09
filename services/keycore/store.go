@@ -153,6 +153,14 @@ type Store interface {
 	ListCompromiseEvents(ctx context.Context, tenantID, status, severity string, limit int) ([]CompromiseEvent, error)
 	UpdateCompromiseEventStatus(ctx context.Context, tenantID, eventID, status, remediationStatus, rootCause string, notifications []string) (CompromiseEvent, error)
 	GetCompromiseSummary(ctx context.Context, tenantID string) (CompromiseSummary, error)
+	UpsertEnterpriseControlRecord(ctx context.Context, record EnterpriseControlRecord) (EnterpriseControlRecord, error)
+	GetEnterpriseControlRecord(ctx context.Context, tenantID, category, recordID string) (EnterpriseControlRecord, error)
+	ListEnterpriseControlRecords(ctx context.Context, tenantID string, q EnterpriseControlQuery) ([]EnterpriseControlRecord, error)
+	UpsertDSPMFinding(ctx context.Context, finding DSPMFinding) (DSPMFinding, error)
+	ListDSPMFindings(ctx context.Context, tenantID string, q DSPMFindingQuery) ([]DSPMFinding, error)
+	RecordAuditChainAnchor(ctx context.Context, anchor AuditChainAnchor) (AuditChainAnchor, error)
+	GetAuditChainAnchor(ctx context.Context, tenantID, anchorID string) (AuditChainAnchor, error)
+	ListAuditChainAnchors(ctx context.Context, tenantID string, limit int) ([]AuditChainAnchor, error)
 
 	// Canary / Honeypot Keys
 	ListCanaryKeys(ctx context.Context, tenantID string) ([]CanaryKey, error)

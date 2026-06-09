@@ -357,16 +357,26 @@ func (s *Service) GetEnterpriseAuditSummary(ctx context.Context, tenantID string
 	if err != nil {
 		return EnterpriseAuditSummary{}, err
 	}
+	findings, err := s.store.ListDSPMFindings(ctx, tenantID, DSPMFindingQuery{Status: "open", Limit: 25})
+	if err != nil {
+		return EnterpriseAuditSummary{}, err
+	}
+	controls, err := s.store.ListEnterpriseControlRecords(ctx, tenantID, EnterpriseControlQuery{Limit: 25})
+	if err != nil {
+		return EnterpriseAuditSummary{}, err
+	}
 	return EnterpriseAuditSummary{
-		TenantID:    tenantID,
-		GeneratedAt: time.Now().UTC(),
-		Rotation:    rotation,
-		Health:      health,
-		Inventory:   inventory,
-		Compromise:  compromise,
-		Hotspots:    hotspots,
-		Algorithms:  benchmarks,
-		Roadmap:     enterpriseAuditRoadmap(),
+		TenantID:     tenantID,
+		GeneratedAt:  time.Now().UTC(),
+		Rotation:     rotation,
+		Health:       health,
+		Inventory:    inventory,
+		Compromise:   compromise,
+		Hotspots:     hotspots,
+		Algorithms:   benchmarks,
+		DSPMFindings: findings,
+		Controls:     controls,
+		Roadmap:      enterpriseAuditRoadmap(),
 	}, nil
 }
 
@@ -572,20 +582,20 @@ func enterpriseAuditRoadmap() []AuditRoadmapItem {
 		{ID: 3, Tier: 1, Name: "Advanced Key Analytics & Reporting", Status: "implemented", Impact: "5/5", Effort: "3 weeks", Capabilities: []string{"real-time usage metrics", "hotspot detection", "trend data", "algorithm benchmarking"}},
 		{ID: 4, Tier: 1, Name: "Key Health Scoring & Monitoring", Status: "implemented", Impact: "4/5", Effort: "2-3 weeks", Capabilities: []string{"health scoring", "backup verification status", "rotation and expiry warnings", "modernization recommendations"}},
 		{ID: 5, Tier: 1, Name: "Key Inventory & Dependency Mapping", Status: "implemented", Impact: "4/5", Effort: "2-3 weeks", Capabilities: []string{"inventory sync", "dependency graph records", "orphaned key detection", "duplicate KCV detection"}},
-		{ID: 6, Tier: 2, Name: "Machine Learning & Anomaly Detection", Status: "roadmap", Impact: "5/5", Effort: "3-4 weeks", Capabilities: []string{"behavioral baselines", "predictive failure", "insider-threat scoring"}},
-		{ID: 7, Tier: 2, Name: "Advanced Key Scheduling & Orchestration", Status: "foundation", Impact: "4/5", Effort: "3 weeks", Capabilities: []string{"cron expressions", "rotation policy API", "batch run records"}},
-		{ID: 8, Tier: 2, Name: "Key Federation & Multi-KMS Orchestration", Status: "roadmap", Impact: "4/5", Effort: "3-4 weeks", Capabilities: []string{"cross-KMS lookup", "distributed sync", "cross-region failover"}},
-		{ID: 9, Tier: 2, Name: "Enhanced Key Recovery & Escrow", Status: "foundation", Impact: "4/5", Effort: "3 weeks", Capabilities: []string{"guardians", "recovery requests", "quorum workflows"}},
-		{ID: 10, Tier: 2, Name: "Blockchain-Backed Audit Chain", Status: "foundation", Impact: "3/5", Effort: "4+ weeks", Capabilities: []string{"Merkle audit chain", "external anchoring adapters"}},
-		{ID: 11, Tier: 3, Name: "Key Derivation Functions", Status: "foundation", Impact: "4/5", Effort: "2-3 weeks", Capabilities: []string{"HKDF endpoint", "derivation metering"}},
-		{ID: 12, Tier: 3, Name: "Key Material Verification", Status: "foundation", Impact: "4/5", Effort: "2 weeks", Capabilities: []string{"KCV verification", "fingerprint tracking"}},
-		{ID: 13, Tier: 3, Name: "Regulatory Compliance Dashboard", Status: "foundation", Impact: "4/5", Effort: "2-3 weeks", Capabilities: []string{"framework scoring", "evidence generation"}},
-		{ID: 14, Tier: 3, Name: "Cost & Optimization Dashboard", Status: "roadmap", Impact: "3/5", Effort: "2-3 weeks", Capabilities: []string{"tenant usage cost", "efficiency scoring"}},
-		{ID: 15, Tier: 4, Name: "Advanced Encryption Modes", Status: "research", Impact: "3/5", Effort: "4+ weeks", Capabilities: []string{"homomorphic", "searchable", "functional encryption"}},
-		{ID: 16, Tier: 4, Name: "Enhanced Key Binding", Status: "foundation", Impact: "3/5", Effort: "3 weeks", Capabilities: []string{"hardware attestation", "geofence controls"}},
-		{ID: 17, Tier: 4, Name: "Edge & IoT Key Management", Status: "foundation", Impact: "3/5", Effort: "3-4 weeks", Capabilities: []string{"EKM agents", "offline operations"}},
-		{ID: 18, Tier: 3, Name: "Fine-Grained Key Sharing", Status: "foundation", Impact: "3/5", Effort: "2-3 weeks", Capabilities: []string{"temporary grants", "justifications", "delegation policy"}},
-		{ID: 19, Tier: 3, Name: "Key Metadata Management", Status: "foundation", Impact: "3/5", Effort: "2 weeks", Capabilities: []string{"tags", "labels", "inventory metadata"}},
-		{ID: 20, Tier: 4, Name: "Advanced Threat Protection", Status: "foundation", Impact: "4/5", Effort: "4+ weeks", Capabilities: []string{"side-channel test suite", "canary keys", "compromise workflows"}},
+		{ID: 6, Tier: 2, Name: "Machine Learning & Anomaly Detection", Status: "implemented_statistical", Impact: "5/5", Effort: "3-4 weeks", Capabilities: []string{"behavioral baselines", "hotspot anomaly scan", "predictive failure findings", "DSPM feed"}},
+		{ID: 7, Tier: 2, Name: "Advanced Key Scheduling & Orchestration", Status: "implemented", Impact: "4/5", Effort: "3 weeks", Capabilities: []string{"cron expression records", "workflow control API", "batch rotation runs", "run evidence"}},
+		{ID: 8, Tier: 2, Name: "Key Federation & Multi-KMS Orchestration", Status: "implemented_registry", Impact: "4/5", Effort: "3-4 weeks", Capabilities: []string{"provider registry", "cross-KMS key mappings", "failover records", "DSPM risk findings"}},
+		{ID: 9, Tier: 2, Name: "Enhanced Key Recovery & Escrow", Status: "implemented", Impact: "4/5", Effort: "3 weeks", Capabilities: []string{"guardians", "recovery requests", "tiered recovery records", "Shamir split/verify"}},
+		{ID: 10, Tier: 2, Name: "Blockchain-Backed Audit Chain", Status: "implemented_anchor", Impact: "3/5", Effort: "4+ weeks", Capabilities: []string{"Merkle-style anchor records", "external anchor references", "chain hash continuity"}},
+		{ID: 11, Tier: 3, Name: "Key Derivation Functions", Status: "implemented", Impact: "4/5", Effort: "2-3 weeks", Capabilities: []string{"HKDF", "PBKDF2", "Scrypt", "Argon2id", "derivation metering"}},
+		{ID: 12, Tier: 3, Name: "Key Material Verification", Status: "implemented", Impact: "4/5", Effort: "2 weeks", Capabilities: []string{"KCV verification", "constant-time fingerprint compare", "DSPM mismatch finding"}},
+		{ID: 13, Tier: 3, Name: "Regulatory Compliance Dashboard", Status: "implemented", Impact: "4/5", Effort: "2-3 weeks", Capabilities: []string{"control scoring", "evidence summary", "audit-backed posture"}},
+		{ID: 14, Tier: 3, Name: "Cost & Optimization Dashboard", Status: "implemented", Impact: "3/5", Effort: "2-3 weeks", Capabilities: []string{"tenant usage cost", "hotspot recommendations", "efficiency scoring"}},
+		{ID: 15, Tier: 4, Name: "Advanced Encryption Modes", Status: "implemented_guarded", Impact: "3/5", Effort: "4+ weeks", Capabilities: []string{"searchable HMAC tokens", "research-mode registry", "production gating for unsupported modes"}},
+		{ID: 16, Tier: 4, Name: "Enhanced Key Binding", Status: "implemented_registry", Impact: "3/5", Effort: "3 weeks", Capabilities: []string{"hardware attestation records", "geofence policy records", "risk scoring"}},
+		{ID: 17, Tier: 4, Name: "Edge & IoT Key Management", Status: "implemented_registry", Impact: "3/5", Effort: "3-4 weeks", Capabilities: []string{"edge agents", "offline leases", "receipt records", "DSPM signal export"}},
+		{ID: 18, Tier: 3, Name: "Fine-Grained Key Sharing", Status: "implemented", Impact: "3/5", Effort: "2-3 weeks", Capabilities: []string{"temporary grants", "justification metadata", "delegation chain records"}},
+		{ID: 19, Tier: 3, Name: "Key Metadata Management", Status: "implemented", Impact: "3/5", Effort: "2 weeks", Capabilities: []string{"classification profiles", "tag enrichment", "inventory metadata"}},
+		{ID: 20, Tier: 4, Name: "Advanced Threat Protection", Status: "implemented", Impact: "4/5", Effort: "4+ weeks", Capabilities: []string{"side-channel signal records", "canary keys", "compromise workflows", "DSPM findings"}},
 	}
 }

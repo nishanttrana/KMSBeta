@@ -11,23 +11,23 @@ github.com/aws/aws-sdk-go-v2/credentials v1.24.7
 github.com/aws/aws-sdk-go-v2/service/iam v1.66.4
 github.com/aws/aws-sdk-go-v2/service/kms v1.68.0
 github.com/aws/aws-sdk-go-v2/service/s3 v1.123.0
-github.com/bits-and-blooms/bloom/v3 v3.9.0
-github.com/cloudflare/circl v1.7.0
+github.com/bits-and-blooms/bloom/v3 v3.7.1
+github.com/cloudflare/circl v1.6.3
 github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
 github.com/fxamacker/cbor/v2 v2.13.0
 github.com/go-ldap/ldap/v3 v3.4.13
-github.com/golang-jwt/jwt/v5 v5.3.2
+github.com/golang-jwt/jwt/v5 v5.3.1
 github.com/gosnmp/gosnmp v1.43.2
 github.com/hashicorp/consul/api v1.34.3
-github.com/jackc/pgx/v5 v5.14.0
+github.com/jackc/pgx/v5 v5.10.0
 github.com/kardianos/service v1.2.4
 github.com/microsoft/go-mssqldb v1.12.0
 github.com/moov-io/tr31 v0.0.0-20251023044939-625bfc8dedd5
-github.com/nats-io/nats.go v1.55.0
+github.com/nats-io/nats.go v1.52.0
 github.com/oracle/oci-go-sdk/v65 v65.129.0
 github.com/ovh/kmip-go v0.9.1
 github.com/prometheus/client_golang v1.28.0
-github.com/redis/go-redis/v9 v9.26.0
+github.com/redis/go-redis/v9 v9.20.0
 github.com/shirou/gopsutil/v4 v4.28.0
 github.com/sijms/go-ora/v2 v2.10.0
 github.com/smallstep/scep v0.0.0-20260331191114-261f960a40d1
@@ -41,13 +41,13 @@ go.opentelemetry.io/otel/exporters/prometheus v0.74.0
 go.opentelemetry.io/otel/sdk v1.52.0
 go.opentelemetry.io/otel/sdk/metric v1.52.0
 go.opentelemetry.io/otel/trace v1.52.0
-golang.org/x/crypto v0.59.0
-golang.org/x/sys v0.53.0
+golang.org/x/crypto v0.53.0
+golang.org/x/sys v0.46.0
 google.golang.org/api v0.350.0
 google.golang.org/grpc v1.68.0
-google.golang.org/protobuf v1.38.0
+google.golang.org/protobuf v1.36.11
 gopkg.in/yaml.v3 v3.0.1
-modernc.org/sqlite v1.63.0
+modernc.org/sqlite v1.52.0
 software.sslmate.com/src/go-pkcs12 v0.8.0
 )
 
@@ -138,15 +138,15 @@ go.opentelemetry.io/otel/metric v1.52.0 // indirect
 go.opentelemetry.io/proto/otlp v1.12.0 // indirect
 go.uber.org/atomic v1.11.0 // indirect
 golang.org/x/exp v0.0.0-20260603202125-055de637280b // indirect
-golang.org/x/net v0.59.0 // indirect
+golang.org/x/net v0.55.0 // indirect
 golang.org/x/oauth2 v0.39.0 // indirect
-golang.org/x/sync v0.22.0 // indirect
-golang.org/x/text v0.41.0 // indirect
+golang.org/x/sync v0.21.0 // indirect
+golang.org/x/text v0.38.0 // indirect
 golang.org/x/time v0.15.0 // indirect
 google.golang.org/genproto v0.0.0-20260608224507-4308a22a1bab // indirect
 google.golang.org/genproto/googleapis/api v0.0.0-20260608224507-4308a22a1bab // indirect
 google.golang.org/genproto/googleapis/rpc v0.0.0-20260608224507-4308a22a1bab // indirect
-modernc.org/libc v1.95.0 // indirect
+modernc.org/libc v1.73.0 // indirect
 modernc.org/mathutil v1.7.1 // indirect
-modernc.org/memory v1.18.0 // indirect
+modernc.org/memory v1.11.0 // indirect
 )

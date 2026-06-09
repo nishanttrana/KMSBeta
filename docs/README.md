@@ -12,7 +12,7 @@ Vecta KMS is an enterprise-grade, multi-tenant key management platform providing
 |---|---|---|
 | [GETTING_STARTED.md](GETTING_STARTED.md) | Everyone | Architecture overview, first login, first key, security model, dashboard tour |
 | [KEYS.md](KEYS.md) | All users | Key lifecycle, algorithms, access policy, crypto operations, rotation |
-| [ENTERPRISE_KEY_AUDIT.md](ENTERPRISE_KEY_AUDIT.md) | Security, ops, audit | Rotation analytics, compromise response, key health, inventory, dependency mapping |
+| [ENTERPRISE_KEY_AUDIT.md](ENTERPRISE_KEY_AUDIT.md) | Security, ops, audit | Rotation analytics, compromise response, key health, inventory, DSPM findings, enterprise controls |
 | [CERTIFICATES.md](CERTIFICATES.md) | PKI, platform | PKI hierarchy, certificate lifecycle, ACME/EST/SCEP/CMPv2, STAR, ARI |
 | [DATA_PROTECTION.md](DATA_PROTECTION.md) | App, data teams | Tokenization, FPE, masking, payment crypto, PKCS#11/JCA, Autokey |
 | [CLOUD_INTEGRATION.md](CLOUD_INTEGRATION.md) | Cloud, integration | BYOK, HYOK, EKM/TDE, KMIP, artifact signing |

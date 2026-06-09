@@ -133,6 +133,71 @@ func TestCompromiseEventAutoSuspendsKey(t *testing.T) {
 	}
 }
 
+func TestEnterpriseKDFAndShamir(t *testing.T) {
+	_, svc := newHandlerForTest(t)
+	secret := base64.StdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef"))
+	salt := base64.StdEncoding.EncodeToString([]byte("salt-salt-salt-123"))
+	kdf, err := svc.DeriveEnterpriseKDF(context.Background(), KDFDeriveRequest{
+		TenantID: "t1", Algorithm: "hkdf-sha256", SecretBase64: secret, SaltBase64: salt, Length: 32,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kdf.Length != 32 || strings.TrimSpace(kdf.DerivedKeyBase64) == "" || !kdf.SecretNotPersisted {
+		t.Fatalf("unexpected kdf response: %+v", kdf)
+	}
+
+	split, err := svc.SplitShamirSecret(context.Background(), ShamirSplitRequest{
+		TenantID: "t1", SecretBase64: secret, Threshold: 3, Shares: 5,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(split.Shares) != 5 || split.Threshold != 3 {
+		t.Fatalf("unexpected split: %+v", split)
+	}
+	verify, err := svc.VerifyShamirSecret(context.Background(), ShamirVerifyRequest{
+		TenantID: "t1", SplitID: split.SplitID, Shares: split.Shares[:3],
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !verify.Valid || verify.SecretSHA256 != split.SecretSHA256 {
+		t.Fatalf("unexpected verify response: %+v split=%+v", verify, split)
+	}
+}
+
+func TestEnterpriseAnomalyFeedsDSPM(t *testing.T) {
+	_, svc := newHandlerForTest(t)
+	key, err := svc.CreateKey(context.Background(), CreateKeyRequest{
+		TenantID: "t1", Name: "weak-key", Algorithm: "RSA-2048", KeyType: "symmetric", Purpose: "encrypt",
+		Owner: "ops", CreatedBy: "tester",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.store.UpsertKeyHealthScore(context.Background(), KeyHealthScore{
+		KeyID: key.ID, TenantID: "t1", HealthScore: 30, EntropyScore: 40, AgeScore: 40,
+		UsageScore: 50, AlgorithmScore: 75, BackupStatus: "missing", RotationOverdue: true, UpdatedAt: time.Now().UTC(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	findings, err := svc.RunEnterpriseAnomalyDetection(context.Background(), "t1", 7)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(findings) == 0 {
+		t.Fatalf("expected anomaly findings")
+	}
+	stored, err := svc.store.ListDSPMFindings(context.Background(), "t1", DSPMFindingQuery{Status: "open", Limit: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stored) == 0 {
+		t.Fatalf("expected stored DSPM findings")
+	}
+}
+
 func TestExternalIVValidation(t *testing.T) {
 	h, svc := newHandlerForTest(t)
 	key, err := svc.CreateKey(context.Background(), CreateKeyRequest{

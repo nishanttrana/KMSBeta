@@ -19,6 +19,26 @@ The Tier 1 quick wins from this audit are now implemented as KeyCore APIs, persi
 | Key Health Scoring & Monitoring | Implemented | `key_health_scores`, `/keys/{id}/health`, `/health/summary`, modernization recommendations |
 | Key Inventory & Dependency Mapping | Implemented | `key_inventory`, `key_dependencies`, inventory sync, orphan and duplicate KCV detection |
 
+The remaining feature areas are now represented by backend enterprise-control APIs, DSPM findings/events, audit events, and safe cryptographic utility endpoints where practical.
+
+| Item | Status | Implementation Surface |
+|---|---|---|
+| Machine Learning & Anomaly Detection | Implemented as statistical anomaly detection | `/enterprise/anomaly/scan`, `key_dspm_findings`, audit/DSPM export |
+| Advanced Key Scheduling & Orchestration | Implemented | `/enterprise/orchestration/workflows`, `/enterprise/orchestration/runs`, executable batch rotation |
+| Key Federation & Multi-KMS Orchestration | Implemented as registry/control plane | `/enterprise/federation/providers`, `/mappings`, `/failovers` |
+| Enhanced Key Recovery & Escrow | Implemented | Existing escrow APIs plus `/enterprise/escrow/tiers`, Shamir split/verify |
+| Blockchain-Backed Audit Chain | Implemented as anchor records | `/enterprise/audit-chain/anchors`, external-reference anchoring |
+| Key Derivation Functions | Implemented | `/enterprise/kdf/derive` for HKDF, PBKDF2, Scrypt, Argon2id |
+| Key Material Verification | Implemented | `/enterprise/verification/fingerprint`, constant-time KCV compare |
+| Regulatory Compliance Dashboard | Implemented | `/enterprise/compliance/dashboard` |
+| Cost & Optimization Dashboard | Implemented | `/enterprise/cost/optimization` |
+| Advanced Encryption Modes | Implemented safely/guarded | Searchable HMAC tokens; homomorphic/functional modes registered as governed controls until reviewed providers are integrated |
+| Enhanced Key Binding | Implemented as control records | `/enterprise/binding/policies` |
+| Edge & IoT Key Management | Implemented as control records | `/enterprise/edge/agents`, `/leases`, `/receipts` |
+| Fine-Grained Key Sharing | Implemented as control records | `/enterprise/sharing/grants` |
+| Key Metadata Management | Implemented as control records | `/enterprise/metadata/profiles` |
+| Advanced Threat Protection | Implemented as signals + existing canary/compromise flows | `/enterprise/threat/signals`, canary trips, compromise workflow, DSPM findings |
+
 ---
 
 ## 📊 Current KMS Coverage (Existing Capabilities)

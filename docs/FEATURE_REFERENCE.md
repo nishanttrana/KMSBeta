@@ -23,6 +23,8 @@ Enterprise Key Audit adds an operating layer for the highest-value KMS gaps:
 - realtime key usage and latency metrics
 - key health scoring with recommendations
 - inventory sync, dependency records, orphan detection, and duplicate KCV detection
+- statistical anomaly detection with DSPM findings
+- orchestration, federation, escrow, audit anchoring, KDF, verification, edge, sharing, metadata, binding, and threat-control records
 
 ### Why Teams Use It
 
@@ -32,6 +34,7 @@ Use this feature when:
 - platform teams need evidence that rotations are succeeding
 - auditors need health, inventory, and dependency visibility
 - key owners need to find orphaned, duplicated, expiring, or highly used keys
+- DSPM/posture teams need KeyCore findings and posture-compatible events
 
 ### UI
 
@@ -54,6 +57,13 @@ Use this feature when:
 - `POST /svc/keycore/compromise/events`
 - `POST /svc/keycore/compromise/advisories/ingest`
 - `GET /svc/keycore/analytics/hotspots`
+- `POST /svc/keycore/enterprise/anomaly/scan`
+- `GET /svc/keycore/enterprise/dspm/findings`
+- `GET /svc/keycore/enterprise/dspm/events`
+- `POST /svc/keycore/enterprise/kdf/derive`
+- `POST /svc/keycore/enterprise/escrow/shamir/split`
+- `POST /svc/keycore/enterprise/audit-chain/anchors`
+- `POST /svc/keycore/enterprise/orchestration/runs`
 
 ### Operational Outcome
 
@@ -64,12 +74,15 @@ Operators can answer:
 - which keys are orphaned or duplicated
 - which services depend on a key before rotation or suspension
 - which compromise events are open and whether keys were auto-suspended
+- which enterprise controls are open, risky, expired, or mapped into DSPM
+- which KDF, escrow, federation, edge, sharing, and threat-control actions have audit evidence
 
 ### Evidence Surfaces
 
-- Audit: health scoring, inventory sync, compromise detection, auto-suspension
-- KeyCore: rotation metrics, analytics metrics, health scores, inventory records
-- Compliance: evidence of rotation hygiene, incident response, ownership, and dependency mapping
+- Audit: health scoring, inventory sync, compromise detection, auto-suspension, KDF, Shamir, audit anchors, DSPM findings, enterprise control upserts
+- KeyCore: rotation metrics, analytics metrics, health scores, inventory records, enterprise controls, DSPM findings
+- DSPM/Posture: KeyCore findings exported as normalized posture events and audit-ingested signals
+- Compliance: evidence of rotation hygiene, incident response, ownership, dependency mapping, and enterprise controls
 
 Detailed runbooks and payload examples are in [ENTERPRISE_KEY_AUDIT.md](ENTERPRISE_KEY_AUDIT.md).
 

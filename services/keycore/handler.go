@@ -243,6 +243,36 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /analytics/hotspots", h.handleListKeyHotspots)
 	mux.HandleFunc("GET /analytics/trends", h.handleGetKeyTrend)
 	mux.HandleFunc("GET /analytics/algorithms", h.handleGetAlgorithmBenchmarks)
+	mux.HandleFunc("GET /enterprise/controls", h.handleListEnterpriseControls)
+	mux.HandleFunc("POST /enterprise/controls", h.handleUpsertEnterpriseControl)
+	mux.HandleFunc("GET /enterprise/controls/{category}/{id}", h.handleGetEnterpriseControl)
+	mux.HandleFunc("POST /enterprise/anomaly/scan", h.handleRunEnterpriseAnomalyScan)
+	mux.HandleFunc("GET /enterprise/dspm/findings", h.handleListKeyDSPMFindings)
+	mux.HandleFunc("POST /enterprise/dspm/findings", h.handleUpsertKeyDSPMFinding)
+	mux.HandleFunc("GET /enterprise/dspm/events", h.handleExportKeyDSPMEvents)
+	mux.HandleFunc("POST /enterprise/kdf/derive", h.handleEnterpriseKDFDerive)
+	mux.HandleFunc("POST /enterprise/escrow/shamir/split", h.handleEnterpriseShamirSplit)
+	mux.HandleFunc("POST /enterprise/escrow/shamir/verify", h.handleEnterpriseShamirVerify)
+	mux.HandleFunc("POST /enterprise/escrow/tiers", h.handleUpsertEnterpriseControlCategory(controlCategoryEscrowTier))
+	mux.HandleFunc("GET /enterprise/audit-chain/anchors", h.handleListAuditChainAnchors)
+	mux.HandleFunc("POST /enterprise/audit-chain/anchors", h.handleCreateAuditChainAnchor)
+	mux.HandleFunc("GET /enterprise/compliance/dashboard", h.handleEnterpriseComplianceDashboard)
+	mux.HandleFunc("GET /enterprise/cost/optimization", h.handleEnterpriseCostOptimization)
+	mux.HandleFunc("POST /enterprise/verification/fingerprint", h.handleVerifyKeyFingerprint)
+	mux.HandleFunc("POST /enterprise/advanced-encryption/search-token", h.handleCreateSearchableToken)
+	mux.HandleFunc("POST /enterprise/advanced-encryption/modes", h.handleUpsertEnterpriseControlCategory(controlCategoryAdvancedEncryption))
+	mux.HandleFunc("POST /enterprise/orchestration/workflows", h.handleUpsertEnterpriseControlCategory(controlCategoryOrchestrationWorkflow))
+	mux.HandleFunc("POST /enterprise/orchestration/runs", h.handleTriggerOrchestrationRun)
+	mux.HandleFunc("POST /enterprise/federation/providers", h.handleUpsertEnterpriseControlCategory(controlCategoryFederationProvider))
+	mux.HandleFunc("POST /enterprise/federation/mappings", h.handleUpsertEnterpriseControlCategory(controlCategoryFederationMapping))
+	mux.HandleFunc("POST /enterprise/federation/failovers", h.handleUpsertEnterpriseControlCategory(controlCategoryFederationFailover))
+	mux.HandleFunc("POST /enterprise/binding/policies", h.handleUpsertEnterpriseControlCategory(controlCategoryBindingPolicy))
+	mux.HandleFunc("POST /enterprise/edge/agents", h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeAgent))
+	mux.HandleFunc("POST /enterprise/edge/leases", h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeLease))
+	mux.HandleFunc("POST /enterprise/edge/receipts", h.handleUpsertEnterpriseControlCategory(controlCategoryEdgeReceipt))
+	mux.HandleFunc("POST /enterprise/sharing/grants", h.handleUpsertEnterpriseControlCategory(controlCategorySharingGrant))
+	mux.HandleFunc("POST /enterprise/metadata/profiles", h.handleUpsertEnterpriseControlCategory(controlCategoryMetadataProfile))
+	mux.HandleFunc("POST /enterprise/threat/signals", h.handleUpsertEnterpriseControlCategory(controlCategoryThreatSignal))
 
 	// Canary / Honeypot Keys
 	mux.HandleFunc("GET /canary/summary", h.handleGetCanarySummary)
@@ -2060,7 +2090,8 @@ func isSensitiveKeycoreRoute(method string, path string) bool {
 		strings.HasPrefix(p, "/rotation") ||
 		strings.HasPrefix(p, "/inventory") ||
 		strings.HasPrefix(p, "/compromise") ||
-		strings.HasPrefix(p, "/analytics") {
+		strings.HasPrefix(p, "/analytics") ||
+		strings.HasPrefix(p, "/enterprise") {
 		return true
 	}
 	return false
@@ -2518,11 +2549,53 @@ func renderKey(k Key) map[string]any {
 }
 
 func publishAuditEvent(ctx context.Context, pub AuditPublisher, subject string, tenantID string, data map[string]any) error {
-	raw, err := json.Marshal(map[string]any{
-		"tenant_id": tenantID,
-		"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
-		"data":      data,
-	})
+	if data == nil {
+		data = map[string]any{}
+	}
+	action := subject
+	if v, ok := data["action"].(string); ok && strings.TrimSpace(v) != "" {
+		action = strings.TrimSpace(v)
+	}
+	result := "success"
+	if v, ok := data["result"].(string); ok && strings.TrimSpace(v) != "" {
+		result = strings.TrimSpace(v)
+	}
+	targetID := ""
+	if v, ok := data["key_id"].(string); ok {
+		targetID = strings.TrimSpace(v)
+	}
+	if targetID == "" {
+		if v, ok := data["record_id"].(string); ok {
+			targetID = strings.TrimSpace(v)
+		}
+	}
+	payload := map[string]any{
+		"tenant_id":   tenantID,
+		"service":     "keycore",
+		"action":      action,
+		"target_type": "key",
+		"target_id":   targetID,
+		"result":      result,
+		"timestamp":   time.Now().UTC().Format(time.RFC3339Nano),
+		"details":     data,
+		"data":        data,
+	}
+	if v, ok := data["risk_score"].(int); ok {
+		payload["risk_score"] = v
+	}
+	if v, ok := data["status_code"].(int); ok {
+		payload["status_code"] = v
+	}
+	if v, ok := data["error"].(string); ok && strings.TrimSpace(v) != "" {
+		payload["error_message"] = strings.TrimSpace(v)
+	}
+	if v, ok := data["actor_id"].(string); ok && strings.TrimSpace(v) != "" {
+		payload["actor_id"] = strings.TrimSpace(v)
+	}
+	if strings.HasPrefix(subject, "audit.key.dspm") || strings.Contains(subject, "posture") {
+		payload["target_type"] = "posture_finding"
+	}
+	raw, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
