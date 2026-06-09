@@ -24,7 +24,7 @@ require (
 	github.com/microsoft/go-mssqldb v1.10.0
 	github.com/moov-io/tr31 v0.0.0-20251023044939-625bfc8dedd5
 	github.com/nats-io/nats.go v1.52.0
-	github.com/oracle/oci-go-sdk/v65 v65.117.0
+	github.com/oracle/oci-go-sdk/v65 v65.117.1
 	github.com/ovh/kmip-go v0.9.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.20.0
