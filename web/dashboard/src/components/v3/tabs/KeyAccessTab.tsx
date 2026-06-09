@@ -91,6 +91,7 @@ export const KeyAccessTab = ({ session, onToast }: any) => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   useEffect(() => { void load(true); }, [session?.token, session?.tenantId, decisionService, decisionAction]);
 
   const saveSettings = async () => {

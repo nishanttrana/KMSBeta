@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import { useEffect, useState } from "react";
 import { Activity, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
 import { C } from "../theme";

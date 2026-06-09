@@ -188,6 +188,7 @@ export const AutokeyTab = ({ session, onToast }: any) => {
 
   useEffect(() => {
     void refresh(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   }, [session?.token, session?.tenantId]);
 
   const saveSettings = async () => {

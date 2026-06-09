@@ -6,14 +6,11 @@ import {
   BarChart3,
   CheckCircle2,
   Clock,
-  Cloud,
   CreditCard,
   Download,
   Eye,
   FileSearch,
   Filter,
-  Layers,
-  Monitor,
   Plus,
   Radio,
   RefreshCw,
@@ -40,7 +37,6 @@ import {
   Section,
   Sel,
   Stat,
-  Tabs as TabBar,
   Txt,
 } from "../legacyPrimitives";
 import {
@@ -63,6 +59,7 @@ import {
   listAuditEvents,
   getAuditStats,
 } from "../../../lib/aigateway";
+// eslint-disable-next-line no-restricted-imports -- intentional: legacy direct call, refactor to typed client tracked separately
 import { serviceRequest } from "../../../lib/serviceApi";
 import type {
   LLMProvider,

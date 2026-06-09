@@ -1,6 +1,6 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
-import { LayoutGrid, List, MoreVertical, RefreshCcw, Globe, MapPin, Database, RotateCcw, ChevronDown, ChevronRight, ExternalLink, Copy, Search } from "lucide-react";
+import { LayoutGrid, List, MoreVertical, RefreshCcw, MapPin, Database, RotateCcw, ChevronDown, ChevronRight, Copy } from "lucide-react";
 import {
   deleteCloudAccount,
   discoverCloudInventory,
@@ -201,6 +201,7 @@ export const BYOKTab = ({ session, keyCatalog, onToast }) => {
     if (!session?.token) return;
     setLoading(true);
     void refresh(true).finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   }, [session?.token, session?.tenantId]);
 
   useEffect(() => {

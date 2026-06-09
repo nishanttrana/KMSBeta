@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import { useCallback, useEffect, useState } from "react";
 import {
   Key, Layers, RefreshCcw, Plus, ChevronDown, ChevronRight,
@@ -157,7 +157,7 @@ export function EnvelopeEncTab({ session }: { session: any; enabledFeatures?: an
 
   useEffect(() => { load(); }, [load]);
 
-  const toggleExpand = (id: string) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleExpand = (id: string) => setExpanded(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   const handleCreateKEK = async () => {
     if (!newKEKName.trim()) return;

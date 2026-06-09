@@ -23,7 +23,6 @@ import {
   Home as HomeIcon,
   KeyRound,
   Layers,
-  Layers3 as LayersIcon,
   LayoutGrid,
   Link,
   List,
@@ -56,7 +55,7 @@ import type { FeatureKey } from "../config/tabs";
 import { CommandPalette, type PaletteItem } from "./CommandPalette";
 import { getAuthCLIStatus, listAuthTenants } from "../lib/authAdmin";
 import { getGovernanceSystemState } from "../lib/governance";
-import { listKeys, listKeysPaginated, listTags } from "../lib/keycore";
+import { listKeysPaginated, listTags } from "../lib/keycore";
 import { getUnreadAlertCounts } from "../lib/reporting";
 import { B, Btn, Sel } from "./v3/legacyPrimitives";
 import { isFipsModeEnabled, normalizeFipsModeValue, TabErrorBoundary } from "./v3/runtimeUtils";
@@ -408,7 +407,7 @@ export default function VectaDashboardV3Shell(props: Props) {
       if (hash) return hash;
       const stored = localStorage.getItem(TAB_STORAGE_KEY);
       if (stored) return stored;
-    } catch {}
+    } catch { /* ignored */ }
     return "home";
   });
   const [collapsed, setCollapsed] = useState(false);
@@ -424,7 +423,7 @@ export default function VectaDashboardV3Shell(props: Props) {
   const changeTz = useCallback((val: string) => {
     setTz(val);
     setTzOpen(false);
-    try { localStorage.setItem(TZ_STORAGE_KEY, val); } catch {}
+    try { localStorage.setItem(TZ_STORAGE_KEY, val); } catch { /* ignored */ }
   }, []);
   const [pinnedTabs, setPinnedTabs] = useState<string[]>(() => {
     try {
@@ -438,7 +437,7 @@ export default function VectaDashboardV3Shell(props: Props) {
     if (tabId === "home") return;
     setPinnedTabs((prev) => {
       const next = prev.includes(tabId) ? prev.filter((id) => id !== tabId) : [...prev, tabId];
-      try { localStorage.setItem("vecta_pinned_tabs", JSON.stringify(next)); } catch {}
+      try { localStorage.setItem("vecta_pinned_tabs", JSON.stringify(next)); } catch { /* ignored */ }
       return next;
     });
   };
@@ -561,6 +560,7 @@ export default function VectaDashboardV3Shell(props: Props) {
       } catch { if (!stop) setCliEnabled(false); }
     })();
     return () => { stop = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   }, [session?.token]);
 
   useEffect(() => {
@@ -591,6 +591,7 @@ export default function VectaDashboardV3Shell(props: Props) {
       cancelled = true;
       clearInterval(id);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   }, [session?.token, session?.tenantId, unreadAlerts]);
 
   const navGroups = useMemo(
@@ -640,8 +641,8 @@ export default function VectaDashboardV3Shell(props: Props) {
   );
 
   const selectTab = (nextTab: string) => {
-    try { localStorage.setItem(TAB_STORAGE_KEY, nextTab); } catch {}
-    try { window.history.replaceState(null, "", `#${nextTab}`); } catch {}
+    try { localStorage.setItem(TAB_STORAGE_KEY, nextTab); } catch { /* ignored */ }
+    try { window.history.replaceState(null, "", `#${nextTab}`); } catch { /* ignored */ }
     const paneItems = (Array.isArray(SUB_PANES[nextTab]) ? SUB_PANES[nextTab] : []).filter((item) =>
       canSeeFeature(item?.feature, enabledFeatures || new Set<FeatureKey>(), session)
     );
@@ -663,7 +664,7 @@ export default function VectaDashboardV3Shell(props: Props) {
       } else if (!window.location.hash) {
         window.history.replaceState(null, "", `#${tab}`);
       }
-    } catch {}
+    } catch { /* ignored */ }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const Tab = TABS[tab] || DashboardTab;

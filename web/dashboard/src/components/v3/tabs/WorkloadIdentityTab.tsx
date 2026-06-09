@@ -139,6 +139,7 @@ export const WorkloadIdentityTab = ({ session, onToast }: any) => {
 
   useEffect(() => {
     void load(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   }, [session?.token, session?.tenantId]);
 
   const saveSettings = async () => {

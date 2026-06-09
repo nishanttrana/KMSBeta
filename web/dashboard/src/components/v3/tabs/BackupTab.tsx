@@ -1,9 +1,9 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import { useCallback, useEffect, useState } from "react";
 import {
-  Archive, CalendarClock, CheckCircle2, Clock, Database,
-  HardDrive, Play, Plus, RefreshCw, RotateCcw, Server,
-  ShieldCheck, Trash2, AlertTriangle, Download
+  Archive, CheckCircle2, Clock,
+  HardDrive, Play, Plus, RefreshCw, RotateCcw,
+  ShieldCheck, Trash2
 } from "lucide-react";
 import { C } from "../../v3/theme";
 import {

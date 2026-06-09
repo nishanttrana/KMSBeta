@@ -1,8 +1,6 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import { useEffect, useState } from "react";
-import {
-  Shield, ShieldCheck, ShieldX, RefreshCcw, Plus, Server, Link2, Key,
-  CheckCircle2, AlertTriangle, XCircle, Clock, Edit2, Zap, Network,
+import { ShieldCheck, ShieldX, RefreshCcw, Plus, Server, AlertTriangle, XCircle, Edit2, Zap, Network,
   Fingerprint, ChevronRight, ToggleLeft, ToggleRight, Anchor
 } from "lucide-react";
 import {
@@ -215,6 +213,7 @@ export const MTLSMeshTab = ({ session, enabledFeatures, keyCatalog }: { session:
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   useEffect(() => { load(); }, []);
 
   async function handleRegister(data: any) {

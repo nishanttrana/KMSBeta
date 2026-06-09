@@ -30,7 +30,7 @@ import {
   listGovernanceBackups,
   type GovernanceBackupJob
 } from "../../lib/governance";
-import { B, Bar, Btn, Card, Chk, FG, Inp, Modal, Row2, Row3, Section, Sel, Stat } from "../../components/v3/legacyPrimitives";
+import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Row3, Sel, Stat } from "../../components/v3/legacyPrimitives";
 import { errMsg } from "../../components/v3/runtimeUtils";
 import { C } from "../../components/v3/theme";
 import type { AdminTabProps } from "./types";

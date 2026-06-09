@@ -1,11 +1,10 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import React, { useEffect, useState } from "react";
 import {
   CheckCircle2,
   Download,
   FolderLock,
   HardDrive,
-  KeyRound,
   Monitor,
   Plus,
   RefreshCw,
@@ -14,7 +13,7 @@ import {
   UserPlus,
   XCircle,
 } from "lucide-react";
-import { B, Bar, Btn, Card, FG, Inp, Row2, Section, Sel, Stat } from "../legacyPrimitives";
+import { B, Btn, Card, FG, Inp, Section, Sel, Stat } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
 import {
@@ -156,6 +155,7 @@ export function TFETab({ session, onToast }: { session: any; onToast?: (msg: str
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   useEffect(() => { load(); }, [session?.token, session?.tenantId]);
 
   async function doDeletePolicy(id: string) {

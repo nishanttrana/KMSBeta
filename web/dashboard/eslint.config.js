@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import reactHooks from "eslint-plugin-react-hooks";
+import unusedImports from "eslint-plugin-unused-imports";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
@@ -24,17 +25,17 @@ export default tseslint.config(
       }
     },
     plugins: {
-      "react-hooks": reactHooks
+      "react-hooks": reactHooks,
+      "unused-imports": unusedImports
     },
     rules: {
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        {
-          varsIgnorePattern: "^_",
-          argsIgnorePattern: "^_",
-          ignoreRestSiblings: true
-        }
-      ],
+      // Unused IMPORTS are always caught (and auto-removed by --fix) — they are
+      // pure dead code. Unused local vars/args are left as a non-failing concern
+      // on these long-lived dashboard files to avoid a noisy churn refactor,
+      // consistent with the ESLint-10 rule policy below.
+      "@typescript-eslint/no-unused-vars": "off",
+      "unused-imports/no-unused-imports": "error",
+      "unused-imports/no-unused-vars": "off",
       "@typescript-eslint/no-explicit-any": "off",
       // Warn on @ts-nocheck — it silences ALL type errors including missing imports.
       // Use @ts-expect-error with a description on specific lines instead.

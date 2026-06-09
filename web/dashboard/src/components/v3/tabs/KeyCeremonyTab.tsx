@@ -1,7 +1,7 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import { useEffect, useState } from "react";
 import {
-  Key, Users, CheckCircle2, Clock, Shield, Plus, Trash2, StopCircle, RefreshCw
+  Key, Users, CheckCircle2, Clock, Shield, Plus, StopCircle, RefreshCw
 } from "lucide-react";
 import { B, Btn, Card, FG, Inp, Modal, Row2, Section, Sel, Stat, Tabs, Txt } from "../legacyPrimitives";
 import { C } from "../theme";
@@ -122,6 +122,7 @@ export const KeyCeremonyTab = ({ session, enabledFeatures, keyCatalog }: { sessi
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   useEffect(() => { void refresh(); }, [session?.token]);
 
   // Stats derived

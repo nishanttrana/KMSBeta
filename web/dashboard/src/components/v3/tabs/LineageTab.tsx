@@ -9,7 +9,6 @@ import {
   Clock,
   Database,
   Download,
-  FileText,
   Fingerprint,
   GitMerge,
   Globe,
@@ -40,6 +39,7 @@ import {
   Sel,
   Stat,
 } from "../legacyPrimitives";
+// eslint-disable-next-line no-restricted-imports -- intentional: legacy direct call, refactor to typed client tracked separately
 import { serviceRequest } from "../../../lib/serviceApi";
 
 // ── types ──────────────────────────────────────────────────────────

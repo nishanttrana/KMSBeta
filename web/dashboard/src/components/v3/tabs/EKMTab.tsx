@@ -424,6 +424,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
     void run(false);
     const id=setInterval(()=>{void run(true);},15000);
     return()=>{ stop=true; clearInterval(id); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   },[session?.token,session?.tenantId]);
 
   /* ── Agent actions ── */
@@ -667,7 +668,7 @@ export const EKMTab=({session,onToast,subView,onSubViewChange}:any)=>{
     const clientID=String(client?.id||"").trim();
     if(!clientID) return;
     let selected=client;
-    try{ selected=await getBitLockerClient(session,clientID); }catch{}
+    try{ selected=await getBitLockerClient(session,clientID); }catch { /* ignored */ }
     setSelectedAgent(selected);setModal("bitlocker-activity");setBitLockerJobs([]);setBitLockerRecovery([]);setBitLockerLoadingDetail(true);
     try{
       const [jobs,recovery]=await Promise.all([listBitLockerJobs(session,clientID,80),listBitLockerRecoveryKeys(session,clientID,80)]);

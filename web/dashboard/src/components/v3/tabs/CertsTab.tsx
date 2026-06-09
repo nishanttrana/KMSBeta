@@ -1,6 +1,6 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
-import { MoreVertical, RefreshCcw, Shield, ShieldCheck, ShieldX, ShieldAlert, KeyRound, FileText, Clock, AlertTriangle, Lock, Unlock, Download, Trash2, RotateCcw, Eye, Settings, Zap, Server, Globe, Fingerprint, CheckCircle2, XCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { MoreVertical, RefreshCcw, Shield, ShieldCheck, ShieldX, ShieldAlert, KeyRound, FileText, Clock, AlertTriangle, Lock, Download, Trash2, RotateCcw, Eye, Settings, Zap, Server, Globe, Fingerprint, CheckCircle2, XCircle, ChevronDown, ChevronRight } from "lucide-react";
 import {
   acmeChallengeComplete,
   acmeChallengeInfo,
@@ -15,7 +15,6 @@ import {
   downloadCertificateAsset,
   estCSRAttributes,
   estServerKeygen,
-  estSimpleEnroll,
   getCRL,
   getOCSP,
   issueCertificate,
@@ -28,7 +27,6 @@ import {
   renewCertificate,
   revokeCertificate,
   scepEnroll,
-  scepGetCert,
   signCertificateCSR,
   updateProtocolConfig,
   uploadThirdPartyCertificate,
@@ -292,6 +290,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       return;
     }
     void refresh();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   },[session?.tenantId]);
 
   useEffect(()=>{

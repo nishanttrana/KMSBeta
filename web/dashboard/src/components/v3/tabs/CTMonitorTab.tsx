@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
@@ -19,7 +19,7 @@ import {
   listCTAlerts,
   acknowledgeCTAlert
 } from "../../../lib/ctMonitor";
-import { B, Btn, Card, FG, Inp, Modal, Section, Sel, Stat, Tabs } from "../legacyPrimitives";
+import { B, Btn, Card, FG, Inp, Modal, Section, Stat, Tabs } from "../legacyPrimitives";
 import { C } from "../../v3/theme";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

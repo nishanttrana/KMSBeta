@@ -808,7 +808,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   });
   const setInheritancePolicy=useCallback((next:Record<string,string>)=>{
     setInheritancePolicyRaw(next);
-    try{localStorage.setItem(INHERIT_KEY,JSON.stringify(next));}catch{}
+    try{localStorage.setItem(INHERIT_KEY,JSON.stringify(next));}catch { /* ignored */ }
   },[]);
   const toggleScope=(key:string)=>{
     const cur=inheritancePolicy[key]||"kms_wide";
@@ -1550,7 +1550,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         setPanel("cli");
         localStorage.removeItem(SYSTEM_ADMIN_OPEN_CLI_KEY);
       }
-    }catch{}
+    }catch { /* ignored */ }
   },[]);
 
   useEffect(()=>{
@@ -1844,6 +1844,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     if(ifCertificateID){
       setIfCertificateID("");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   },[
     availableProtocolOptions,
     ifCAID,

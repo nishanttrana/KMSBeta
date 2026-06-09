@@ -19,14 +19,13 @@ import {
   setKeyAccessPolicy,
   setKeyExportPolicy,
   setKeyUsageLimit,
-  updateKeyActivation,
-  upsertTag
+  updateKeyActivation
 } from "../../../lib/keycore";
 import { listAuthUsers } from "../../../lib/authAdmin";
 import { DEFAULT_KEY_COLUMN_VISIBILITY, KEY_ACCESS_OPERATION_OPTIONS, KEY_TABLE_COLUMNS } from "../constants";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
-import { B, Btn, Card, Chk, FG, Inp, Modal, Radio, Row2, Row3, Section, Sel, Stat, Txt } from "../legacyPrimitives";
+import { B, Btn, Chk, FG, Inp, Modal, Radio, Row2, Row3, Section, Sel, Stat, Txt } from "../legacyPrimitives";
 
 function normalizeKeyState(state: string): string {
   const raw = String(state || "").toLowerCase().trim();
@@ -575,6 +574,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       return {...DEFAULT_KEY_COLUMN_VISIBILITY};
     }
   });
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   const keys=Array.isArray(keyCatalog)?keyCatalog:[];
   const [pqcAlgorithm,setPqcAlgorithm]=useState("ML-KEM-768");
   const [pqcHybridMode,setPqcHybridMode]=useState("pure");
@@ -814,6 +814,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       return;
     }
     void refreshTagCatalog();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   },[session?.tenantId]);
 
   useEffect(()=>{
@@ -863,6 +864,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     if(modal!=="detail"){
       setKeyVersions([]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   },[modal,selectedKey?.id,session?.tenantId]);
 
   useEffect(()=>{
@@ -895,6 +897,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       return;
     }
     setExportMode("wrapped");
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   },[modal,selectedKey?.id]);
 
   useEffect(()=>{

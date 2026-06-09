@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,

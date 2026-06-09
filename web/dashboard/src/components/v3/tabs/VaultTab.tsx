@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Clock, Copy, Download, Eye, EyeOff, FileText, Folder, History, KeyRound,
   Lock, Plus, RefreshCcw, RotateCcw, ScrollText, Search, Shield,
-  ShieldAlert, Trash2, Upload
+  ShieldAlert, Trash2
 } from "lucide-react";
 import type { AuthSession } from "../../../lib/auth";
 import {
@@ -15,14 +15,9 @@ import {
   getVaultStats,
   listSecrets,
   listSecretVersions,
-  rotateSecret,
-  updateSecret,
-  type SecretAuditEntry,
-  type SecretItem,
-  type SecretVersionInfo,
-  type VaultStats
+  rotateSecret
 } from "../../../lib/secrets";
-import { B, Bar, Btn, Card, Chk, FG, Inp, Modal, Row2, Row3, Section, Sel, Stat, Tabs, Txt, usePromptDialog } from "../legacyPrimitives";
+import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Section, Sel, Stat, Txt, usePromptDialog } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 
@@ -240,7 +235,7 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
   /* ── filtering & sorting ── */
   const filtered = useMemo(() => {
     const q = String(search || "").trim().toLowerCase();
-    let items = secrets.filter((s) => {
+    const items = secrets.filter((s) => {
       if (!matchesCategory(s, category)) return false;
       if (!q) return true;
       return [s.name, s.id, s.secret_type, s.description, s.created_by].some((v) => String(v || "").toLowerCase().includes(q));

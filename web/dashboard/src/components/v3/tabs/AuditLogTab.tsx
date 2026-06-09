@@ -21,7 +21,6 @@ import { C } from "../theme";
 import { B, Btn, Card, Inp, Modal, Row2, Row3, Section, Sel, Stat, Tabs } from "../legacyPrimitives";
 import {
   listAuditEvents,
-  getAuditEvent,
   getAuditTimeline,
   getAuditSession,
   getAuditCorrelation,
@@ -220,6 +219,7 @@ const MerkleSection = ({ session }: { session: any }) => {
     } catch { /* ignore */ } finally { setLoading(false); }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   useEffect(() => { loadEpochs(); }, []);
 
   const handleBuild = async () => {
@@ -413,6 +413,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   useEffect(() => { void load(true); }, [session?.token, session?.tenantId, resultFilter, timeRange, offset]);
 
   /* ── client-side filters (service + search) ── */

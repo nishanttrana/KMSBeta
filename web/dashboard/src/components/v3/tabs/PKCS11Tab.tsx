@@ -4,7 +4,7 @@ import { downloadEKMSDK, getEKMSDKOverview } from "../../../lib/ekm";
 import { refreshSession } from "../../../lib/auth";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
-import { B, Btn, Card, FG, Inp, Row2, Section, Sel } from "../legacyPrimitives";
+import { B, Btn, Card, Inp, Row2, Section, Sel } from "../legacyPrimitives";
 export const PKCS11Tab=({session,onToast})=>{
   const [loading,setLoading]=useState(false);
   const [downloading,setDownloading]=useState("");
@@ -137,6 +137,7 @@ export const PKCS11Tab=({session,onToast})=>{
 
   useEffect(()=>{
     void loadOverview();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   },[session?.token,sdkTenant]);
 
   const providerByID=useMemo(()=>{

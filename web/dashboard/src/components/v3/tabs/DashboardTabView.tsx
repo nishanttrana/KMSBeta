@@ -5,7 +5,7 @@ import {
   ScrollText, Settings, ShieldCheck, TrendingDown, TrendingUp,
   X, Zap
 } from "lucide-react";
-import { B, Btn, Card, FG, Modal } from "../legacyPrimitives";
+import { B, Btn, Card } from "../legacyPrimitives";
 import { C } from "../theme";
 
 function statusTone(status: string) {

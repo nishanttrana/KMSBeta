@@ -1,6 +1,6 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, RefreshCcw, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Check, X } from "lucide-react";
 import {
   decodeOutputFromBase64,
   decryptData,
@@ -16,7 +16,7 @@ import {
 import { isFipsModeEnabled } from "../runtimeUtils";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
-import { B, Btn, Card, Inp, Sel, Txt } from "../legacyPrimitives";
+import { Btn, Inp, Sel, Txt } from "../legacyPrimitives";
 
 function normalizeKeyState(state: string): string {
   const raw = String(state || "").toLowerCase().trim();

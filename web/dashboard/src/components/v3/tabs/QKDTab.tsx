@@ -24,7 +24,6 @@ import type { AuthSession } from "../../../lib/auth";
 import type {
   Distribution,
   QKDConfig,
-  QKDGenerateTestInput,
   QKDKey,
   QKDLogEntry,
   QKDOverview,

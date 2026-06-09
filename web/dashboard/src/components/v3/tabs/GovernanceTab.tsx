@@ -1,6 +1,6 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useEffect, useMemo, useState } from "react";
-import { Shield, CheckCircle2, XCircle, Clock, AlertTriangle, Settings, Bell, Users, FileText, Eye, ChevronDown, ChevronRight, Send, Slack, MessageSquare } from "lucide-react";
+import { Shield, CheckCircle2, XCircle, Clock, Settings, Bell, Users, ChevronDown, ChevronRight, Send } from "lucide-react";
 import { Btn, Card, Inp, Sel, Stat, Section, Tabs, Modal, FG, Row2, B, Chk, usePromptDialog } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
@@ -131,6 +131,7 @@ export const GovernanceTab = ({ session, onToast }: any) => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   useEffect(() => { void refresh(); }, [session?.token, statusFilter]);
 
   // Stats

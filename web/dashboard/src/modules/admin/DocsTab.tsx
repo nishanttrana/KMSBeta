@@ -1,8 +1,8 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useState, useMemo } from "react";
-import { Card, Inp, B } from "../../components/v3/legacyPrimitives";
+import { Card, Inp } from "../../components/v3/legacyPrimitives";
 import { C } from "../../components/v3/theme";
-import { ChevronRight, ChevronDown, Copy, Search } from "lucide-react";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 const S: Record<string, React.CSSProperties> = {
   wrap: { display: "flex", gap: 0, height: "calc(100vh - 120px)" },

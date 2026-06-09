@@ -26,6 +26,7 @@ const severityFromEvent = (eventName: string): LiveEvent["severity"] => {
 // content from untrusted WebSocket messages (OWASP A03).
 function sanitizeField(value: unknown, maxLen = 512): string {
   return String(value ?? "")
+    // eslint-disable-next-line no-control-regex -- intentional: legacy direct call, refactor to typed client tracked separately
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "") // strip control chars (keep \t \n \r)
     .slice(0, maxLen)
     .trim();

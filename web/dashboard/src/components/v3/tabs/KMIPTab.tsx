@@ -176,6 +176,7 @@ export const KMIPTab=({session,onToast})=>{
       return;
     }
     void refresh();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   },[session?.tenantId]);
 
   const selectedProfile=useMemo(()=>{

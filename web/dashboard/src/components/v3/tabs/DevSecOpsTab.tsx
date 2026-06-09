@@ -1,4 +1,4 @@
-// @ts-nocheck
+// @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import React, { useState } from "react";
 import {
   BookOpen,
@@ -9,7 +9,6 @@ import {
   GitBranch,
   Package,
   Server,
-  Terminal,
   Wrench,
 } from "lucide-react";
 import { B, Btn, Tabs } from "../legacyPrimitives";
@@ -294,13 +293,13 @@ jobs:
       - name: Get signing key for artifact signing
         id: get-key
         run: |
-          KEY_VALUE=\$(curl -s \\
+          KEY_VALUE=$(curl -s \\
             -H "Authorization: Bearer \${{ secrets.KMS_TOKEN }}" \\
             -H "X-Tenant-ID: \${{ vars.TENANT_ID }}" \\
             "https://your-kms.example.com/svc/secrets/secrets/build-signing-key/value" \\
             | jq -r '.value')
-          echo "::add-mask::\$KEY_VALUE"
-          echo "key=\$KEY_VALUE" >> \$GITHUB_OUTPUT
+          echo "::add-mask::$KEY_VALUE"
+          echo "key=$KEY_VALUE" >> $GITHUB_OUTPUT
 
       - name: Sign release artifact
         run: |
@@ -316,14 +315,14 @@ kms-compliance-gate:
   stage: security
   script:
     - |
-      POSTURE=\$(curl -s \\
-        -H "Authorization: Bearer \$KMS_TOKEN" \\
-        -H "X-Tenant-ID: \$TENANT_ID" \\
-        "\$KMS_ENDPOINT/svc/compliance/compliance/posture?tenant_id=\$TENANT_ID" \\
+      POSTURE=$(curl -s \\
+        -H "Authorization: Bearer $KMS_TOKEN" \\
+        -H "X-Tenant-ID: $TENANT_ID" \\
+        "$KMS_ENDPOINT/svc/compliance/compliance/posture?tenant_id=$TENANT_ID" \\
         | jq '.posture.overall_score')
-      echo "Compliance score: \$POSTURE"
-      if [ "\$POSTURE" -lt 60 ]; then
-        echo "Compliance score too low (\$POSTURE/100) — blocking deployment"
+      echo "Compliance score: $POSTURE"
+      if [ "$POSTURE" -lt 60 ]; then
+        echo "Compliance score too low ($POSTURE/100) — blocking deployment"
         exit 1
       fi
   only:
@@ -341,16 +340,16 @@ const JENKINS_PIPELINE = `pipeline {
       steps {
         sh '''
           curl -sf \\
-            -H "Authorization: Bearer \$KMS_TOKEN" \\
-            -H "X-Tenant-ID: \$TENANT_ID" \\
-            "\$KMS_ENDPOINT/svc/compliance/risk/summary" | \\
+            -H "Authorization: Bearer $KMS_TOKEN" \\
+            -H "X-Tenant-ID: $TENANT_ID" \\
+            "$KMS_ENDPOINT/svc/compliance/risk/summary" | \\
             jq -e '.overall_level != "critical"'
         '''
       }
     }
     stage('Rotate Key') {
       steps {
-        sh 'curl -sf -X POST -H "Authorization: Bearer \$KMS_TOKEN" -H "X-Tenant-ID: \$TENANT_ID" \$KMS_ENDPOINT/svc/keycore/keys/\$APP_KEY_ID/rotate'
+        sh 'curl -sf -X POST -H "Authorization: Bearer $KMS_TOKEN" -H "X-Tenant-ID: $TENANT_ID" $KMS_ENDPOINT/svc/keycore/keys/$APP_KEY_ID/rotate'
       }
     }
   }

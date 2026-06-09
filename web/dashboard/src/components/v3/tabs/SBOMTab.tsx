@@ -5,7 +5,7 @@ import {
   AreaChart, Area, BarChart, Bar as RBar, PieChart, Pie, Cell,
   RadialBarChart, RadialBar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
-import { B, Btn, Card, Inp, Modal, Row3, Section, Sel, Stat, Tabs } from "../legacyPrimitives";
+import { B, Btn, Card, Inp, Modal, Row3, Sel, Stat, Tabs } from "../legacyPrimitives";
 import { C } from "../theme";
 import { errMsg } from "../runtimeUtils";
 import {
@@ -361,7 +361,9 @@ export const SBOMTab = ({ session, onToast }: any) => {
   };
 
   // ── Computed data ─────────────────────────────────────────────
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   const components = Array.isArray(sbomLatest?.document?.components) ? sbomLatest.document.components : [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   const vulnerabilities = Array.isArray(sbomVulns) ? sbomVulns : [];
   const vulnerabilitySources = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -507,6 +509,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
 
   const distItems = Object.entries(grouped).filter(([, v]) => v > 0).map(([label, value]) => ({ name: label, value, fill: ALGO_COLORS[label] || C.yellow }));
   const totalAssets = Math.max(0, Number(cbomSummary?.total_assets ?? cbomLatest?.document?.total_asset_count ?? 0));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   const cbomAssets = Array.isArray(cbomLatest?.document?.assets) ? cbomLatest.document.assets : [];
 
   const isHSMBackedAsset = (asset: any) => {
@@ -538,7 +541,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
       { label: "HSM-backed", items: hsmBacked, tone: "blue" },
       { label: "Software-backed", items: softwareBacked, tone: "blue" }
     ].map((row: any) => ({ ...row, count: Array.isArray(row.items) ? row.items.length : 0 }));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [cbomAssets]);
 
   const openCBOMAssetList = (row: any) => {

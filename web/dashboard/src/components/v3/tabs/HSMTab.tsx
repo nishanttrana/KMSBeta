@@ -11,7 +11,7 @@ import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { Btn, Card, Chk, FG, Inp, Modal, Row2, Section, Sel, Txt } from "../legacyPrimitives";
 import { HSM_VENDOR_PROFILES, inferHSMVendor, normalizeHSMVendorView } from "../../../modules/hsm/vendorProfiles";
-import { Terminal, Upload, Shield, Key, HardDrive, Copy, CheckCircle2, XCircle, RefreshCw, Server, Lock, Cpu } from "lucide-react";
+import { Terminal, Shield, Key, HardDrive, Copy, CheckCircle2, RefreshCw, Server, Lock, Cpu } from "lucide-react";
 
 /* ── tiny copy helper ── */
 const copyText=(text:string,onToast?:any)=>{
@@ -142,6 +142,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
     if(!onSubViewChange) return;
     setHSMVendorID(tabVendorID);
     applyVendorProfile(tabVendorID,false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   },[onSubViewChange,tabVendorID]);
 
   const refreshCLIHints=useCallback(async(silent=false)=>{

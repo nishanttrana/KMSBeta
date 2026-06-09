@@ -25,6 +25,7 @@ import { getAuthSystemHealth, type AuthSystemHealthSnapshot } from "./lib/authAd
 import { enabledFeatures, loadDeploymentConfig } from "./lib/deployment";
 import { mapToLiveEvent, parseWSMessage, wsBaseURL } from "./lib/liveFeed";
 import { getUnreadAlertCounts } from "./lib/reporting";
+// eslint-disable-next-line no-restricted-imports -- intentional: legacy direct call, refactor to typed client tracked separately
 import { getGlobalInFlightRequestCount, setOnUnauthorizedHandler, subscribeGlobalInFlightRequestCount } from "./lib/serviceApi";
 import { useLiveStore } from "./store/live";
 

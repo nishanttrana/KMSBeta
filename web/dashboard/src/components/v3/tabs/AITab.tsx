@@ -1,6 +1,6 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bot, Send, Settings, Shield, Sparkles, Loader2, AlertTriangle } from "lucide-react";
+import { Send, Shield, Sparkles, Loader2, AlertTriangle } from "lucide-react";
 import type { AuthSession } from "../../../lib/auth";
 import {
   getAIConfig,
@@ -8,13 +8,12 @@ import {
   queryAI,
   analyzeIncident,
   recommendPosture,
-  explainPolicy,
   checkAIServiceHealth,
   type AIConfig,
   type AIResponse,
 } from "../../../lib/ai";
 import { logUIAuditEvent } from "../../../lib/auditLogger";
-import { B, Btn, Card, Chk, FG, Inp, Row2, Section, Sel, Tabs } from "../legacyPrimitives";
+import { Btn, Card, Chk, FG, Inp, Row2, Section, Sel, Tabs } from "../legacyPrimitives";
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 

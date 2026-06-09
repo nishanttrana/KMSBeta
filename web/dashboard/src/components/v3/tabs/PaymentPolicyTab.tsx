@@ -254,6 +254,7 @@ export const PaymentPolicyTab = ({ session, onToast }) => {
 
   useEffect(() => {
     void loadAll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   }, [session?.token, session?.tenantId]);
 
   const summaryCards = useMemo(() => {

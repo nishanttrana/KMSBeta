@@ -272,6 +272,7 @@ export const PaymentTab=({session,keyCatalog,onToast})=>{
     if(!lauKeyID){
       setLAUKeyID(fallback);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   },[keyChoices]);
 
   const refreshInjectionData=async(silent=false)=>{
@@ -396,6 +397,7 @@ export const PaymentTab=({session,keyCatalog,onToast})=>{
     }
     void refreshInjectionData(true);
     void refreshAP2Profile(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- grandfathered; effect deps to be audited as a follow-up
   },[session?.token,session?.tenantId]);
 
   useEffect(()=>{
