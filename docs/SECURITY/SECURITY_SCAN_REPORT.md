@@ -1,3 +1,13 @@
+> ⚠️ **CORRECTION NOTICE (do not use as compliance evidence).** The version
+> table below marks dependency versions as "SAFE" that **do not exist** on the
+> public registries (e.g. `aws-sdk-go-v2 v1.52.0`, `aws-sdk-go-v2/service/kms
+> v1.68.0`, `go.opentelemetry.io/otel v1.52.0`, `filippo.io/age v1.3.2`,
+> `@tanstack/react-query 5.113.0`, `typescript 6.1.0`, `yaml 2.13.0`). A scan
+> cannot have validated versions that fail to resolve, so this report is not
+> trustworthy. The repository is now pinned to verified latest-stable registry
+> versions. Regenerate with real tooling (`govulncheck ./...`, `npm audit`,
+> `osv-scanner`) before relying on a clean-scan claim.
+
 # KMS System Security Vulnerability Scan Report
 
 **Date**: 2026-06-09  

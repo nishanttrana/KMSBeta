@@ -429,12 +429,18 @@ This is the fastest way to get Vecta KMS running locally for evaluation.
 git clone https://github.com/your-org/vecta-kms
 cd vecta-kms
 
-# Copy and review environment configuration
+# Copy and review environment configuration (.env is git-ignored — never
+# commit real secrets; create it from the template on each host).
 cp .env.example .env
-# Edit .env to set at minimum:
-#   VECTA_ADMIN_PASSWORD=<strong-password>
-#   VECTA_DB_URL=postgres://vecta:vecta@postgres:5432/vecta
-#   VECTA_JWT_SECRET=<random-32-bytes>
+# Edit .env to set at minimum (services refuse to start without the JWT key
+# and internal token):
+#   AUTH_BOOTSTRAP_ADMIN_PASSWORD=<strong-password>
+#   AUTH_BOOTSTRAP_CLI_PASSWORD=<strong-password>
+#   WORKLOAD_IDENTITY_SHARED_SECRET=<random-secret>
+#   SOFTWARE_VAULT_PASSPHRASE=<random-passphrase>
+#   INTERNAL_API_TOKEN=$(openssl rand -hex 32)
+#   JWT_PUBLIC_KEY_B64=<base64-encoded PEM public key>
+#   POSTGRES_PASSWORD=<strong-db-password>
 
 # Start all services
 docker compose up -d

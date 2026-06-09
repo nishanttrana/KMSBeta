@@ -1,3 +1,16 @@
+> ⚠️ **CORRECTION NOTICE (do not use as compliance evidence).** The version
+> data in this report is **inaccurate**. It cites dependency versions that do
+> not exist on the public Go/npm registries (e.g. `aws-sdk-go-v2/service/kms
+> v1.68.0`, `cloud.google.com/go/kms v1.41.0`, `go.opentelemetry.io/otel
+> v1.52.0`, `filippo.io/age v1.3.2`, `typescript 6.1.0`, `vite 8.3.0`,
+> `@tanstack/react-query 5.113.0`) and at least one **downgrade** mislabeled as
+> an upgrade (`google.golang.org/grpc v1.81.1 → v1.68.0`). These were
+> introduced by the `agents/kms-system-update-and-hardening` branch and never
+> resolved/built. The repository is now pinned to **verified latest-stable
+> registry versions** (`go get -u ./...` + `go mod tidy`; npm `ncu`: clean).
+> This narrative report is retained only for history; regenerate from a real
+> scan (`govulncheck`, `npm audit`, `osv-scanner`) before citing it.
+
 # KMS System Security Update & Hardening Report
 
 **Date**: June 9, 2026
