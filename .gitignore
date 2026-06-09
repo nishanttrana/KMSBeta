@@ -9,6 +9,7 @@ infra/deployment/certs-bootstrap.secret
 .env
 .env.local
 .env.*.local
+.env.bak*
 docker-compose.override.yml
 
 # Node dependency caches
