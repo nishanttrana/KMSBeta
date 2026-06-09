@@ -34,14 +34,10 @@ This README is the landing page. Detailed operator documentation now lives under
   - Closed-loop controllers (tenant lifecycle, key lifecycle, KMIP decommission), NIST 800-57 lifecycle enforcement, and PQC key-management surfaces (composite keys, Y2Q scoring, CBOM, migration planner).
 ## Security & Compliance
 
-- [Security Documentation](docs/SECURITY/README.md) ⭐ **Current**
-  - Zero-vulnerability security scan results and hardening verification
-  - CVE remediation details and compliance certifications
-  - Production deployment readiness
+- [Security Documentation](docs/SECURITY/README.md)
+  - How to generate and store dependency vulnerability scans (govulncheck, npm audit, osv-scanner)
 - [Dependency Updates](docs/UPDATES/README.md)
-  - Complete changelog of all package updates (202 packages)
-  - Version migration guide and rollback procedures
-  - Update statistics and deployment guidance
+  - How dependency versions are tracked and updated
 
 - Service-specific references:
   - [KMIP Service](services/kmip/README.md)
