@@ -526,6 +526,38 @@ services:
       timeout: 5s
       retries: 10
 
+  featureforge:
+    <<: *kms-service
+    profiles: ["feature_forge"]
+    build:
+      context: .
+      dockerfile: services/featureforge/Dockerfile
+    image: vecta/featureforge:latest
+    depends_on:
+      policy:
+        condition: service_started
+      governance:
+        condition: service_started
+    environment:
+      <<: *kms-common-env
+      POLICY_URL: http://policy:8040
+      GOVERNANCE_URL: http://governance:8050
+      AUDIT_URL: http://audit:8060
+      # External, separately-deployed MCP build server. Scaffold (code-build)
+      # mode is disabled until this is set. Config mode runs without it.
+      MCP_SERVER_URL: ${MCP_SERVER_URL:-}
+      MCP_SERVER_API_KEY: ${MCP_SERVER_API_KEY:-}
+      HTTP_PORT: "8260"
+      GRPC_PORT: "18260"
+    ports:
+      - "8260:8260"
+      - "18260:18260"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 18260"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
   reconciler:
     <<: *kms-service
     build:

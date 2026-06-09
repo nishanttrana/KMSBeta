@@ -56,7 +56,8 @@ const FEATURE_KEYS: FeatureKey[] = [
   "posture_management",
   "qrng_generator",
   "hsm_hardware",
-  "hsm_software"
+  "hsm_software",
+  "feature_forge"
 ];
 
 const FEATURE_DEPENDENCIES: Partial<Record<FeatureKey, string[]>> = {
@@ -86,7 +87,8 @@ const FEATURE_DEPENDENCIES: Partial<Record<FeatureKey, string[]>> = {
   data_protection: ["kms-dataprotect"],
   clustering: ["cluster-manager", "kms-cluster-manager", "etcd"],
   hsm_hardware: ["hsm-connector", "kms-hsm-connector"],
-  hsm_software: ["kms-software-vault"]
+  hsm_software: ["kms-software-vault"],
+  feature_forge: ["kms-featureforge"]
 };
 
 const FEATURE_ALIAS: Record<string, FeatureKey> = {

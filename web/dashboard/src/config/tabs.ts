@@ -57,7 +57,8 @@ export type FeatureKey =
   | "hsm_software"
   | "qrng_generator"
   | "posture_management"
-  | "ai_gateway";
+  | "ai_gateway"
+  | "feature_forge";
 
 export type TabId =
   | "dashboard"
@@ -90,6 +91,7 @@ export type TabId =
   | "sbom_cbom"
   | "pkcs11_jca"
   | "ai_assistant"
+  | "feature_forge"
   | "administration";
 
 export type GroupId =
@@ -163,6 +165,7 @@ export const tabConfig: TabConfig[] = [
   { id: "sbom_cbom",     label: "SBOM / CBOM",     shortLabel: "SBOM",      group: "governance_compliance", description: "Software and crypto BOM intelligence for PQC readiness and compliance",                                 icon: ScrollText,        emoji: "S"  },
 
   // ── ADMIN ────────────────────────────────────────────────────────────
+  { id: "feature_forge", label: "Feature Forge",   shortLabel: "Forge",     group: "admin",                 description: "Describe a feature in plain language; guardrailed pipeline classifies, validates, stages, and gates it to prod", icon: Sparkles,      emoji: "F"  },
   { id: "ai_assistant",  label: "AI Assistant",    shortLabel: "AI",        group: "admin",                 description: "AI-powered key management guidance and policy recommendations",                                          icon: Sparkles,          emoji: "AI" },
   { id: "administration", label: "Administration", shortLabel: "Admin",     group: "admin",                 description: "Tenant, feature, network, FIPS, and license controls",                                                  icon: Building2,         emoji: "A"  }
 ];

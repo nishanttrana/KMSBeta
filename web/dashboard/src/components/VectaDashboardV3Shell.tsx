@@ -94,6 +94,7 @@ const QKDTab = lazy(() => import("./v3/tabs/QKDTab").then(m => ({ default: m.QKD
 const QRNGTab = lazy(() => import("./v3/tabs/QRNGTab").then(m => ({ default: m.QRNGTab })));
 const DocsViewTab = lazy(() => import("./v3/tabs/DocsViewTab").then(m => ({ default: m.DocsViewTab })));
 const AITab = lazy(() => import("./v3/tabs/AITab").then(m => ({ default: m.AITab })));
+const FeatureForgeTab = lazy(() => import("./v3/tabs/FeatureForgeTab").then(m => ({ default: m.FeatureForgeTab })));
 const KeyCeremonyTab = lazy(() => import("./v3/tabs/KeyCeremonyTab").then(m => ({ default: m.KeyCeremonyTab })));
 const RotationSchedulerTab = lazy(() => import("./v3/tabs/RotationSchedulerTab").then(m => ({ default: m.RotationSchedulerTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
@@ -206,6 +207,7 @@ const TABS: Record<string, any> = {
   admin: AdminTab,
   docs: DocsViewTab,
   ai: AITab,
+  forge: FeatureForgeTab,
   ceremony: KeyCeremonyTab,
   rotation: RotationSchedulerTab,
   crypto_agility: CryptoAgilityTab,
@@ -260,6 +262,7 @@ const TITLES: Record<string, string> = {
   admin: "Administration",
   docs: "Documentation",
   ai: "AI Assistant",
+  forge: "Feature Forge",
   ceremony: "Key Ceremony",
   rotation: "Rotation Scheduler",
   crypto_agility: "Crypto Agility",
@@ -336,6 +339,7 @@ const NAV = [
     { id: "ai_gateway", icon: Shield, label: "AI Security Gateway" },
   ]},
   { g: "ADMIN", items: [
+    { id: "forge", icon: Sparkles, label: "Feature Forge" },
     { id: "admin", icon: Settings, label: "Administration" },
     { id: "webhooks", icon: Webhook, label: "Webhooks & SIEM" },
     { id: "devsecops", icon: GitBranch, label: "DevSecOps / IaC" },

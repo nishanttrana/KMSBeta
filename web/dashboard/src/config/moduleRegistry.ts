@@ -46,7 +46,8 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   // Crypto discovery
   discovery: "crypto_discovery",
   // ADMIN
-  ai: ["ai_llm", "ai_gateway"]
+  ai: ["ai_llm", "ai_gateway"],
+  forge: "feature_forge"
 };
 
 function normalizePermissionTokens(session: unknown): Set<string> {

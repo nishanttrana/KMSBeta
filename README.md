@@ -28,6 +28,8 @@ This README is the landing page. Detailed operator documentation now lives under
   - Browser-viewable dark graph of UI modules, API calls, services, handlers, stores, and packages.
 - [REST API Additions](docs/REST_API_ADDITIONS.md)
   - Detailed REST notes and expanded API coverage for the newer features.
+- [Feature Forge](docs/FEATUREFORGE.md)
+  - Guardrailed intent-to-feature automation: config mode (local) and scaffold mode (external MCP build), with the six-layer pipeline and prod governance gate.
 - [Automation, ALKM, and PQC](docs/AUTOMATION_ALKM_PQC.md)
   - Closed-loop controllers (tenant lifecycle, key lifecycle, KMIP decommission), NIST 800-57 lifecycle enforcement, and PQC key-management surfaces (composite keys, Y2Q scoring, CBOM, migration planner).
 - Service-specific references:
@@ -50,6 +52,8 @@ Vecta KMS is organized into five working areas:
   - `compliance`, `posture`, `reporting`, `discovery`, `sbom`
 - Advanced crypto and identity
   - `autokey`, `keyaccess`, `signing`, `workload`, `confidential`, `pqc`, `qkd`, `qrng`, `mpc`, `ai`
+- Self-service automation
+  - `featureforge`
 
 ## Service Map
 
@@ -80,6 +84,7 @@ Vecta KMS is organized into five working areas:
 | `confidential` | Attested key release | enclave/TEE gated key release |
 | `pqc` | Post-quantum migration and policy | ML-KEM, ML-DSA, SLH-DSA, hybrid rollout |
 | `qkd`, `qrng`, `mpc`, `ai` | Specialist advanced crypto capabilities | quantum integrations, FROST-style threshold ceremonies, AI model protection |
+| `featureforge` | Guardrailed intent-to-feature automation | plain-language config changes (local) and code features (external MCP build), staged and quorum-gated to prod |
 
 ## Quick Start
 

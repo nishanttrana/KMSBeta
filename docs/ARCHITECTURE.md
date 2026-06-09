@@ -27,7 +27,7 @@ The platform is split into four layers:
 3. Integration and protocol surfaces
    - `cloud`, `ekm`, `kmip`, `payment`, `hsm-integration`, `ekm-agent`
 4. Assurance and advanced capability services
-   - `compliance`, `posture`, `reporting`, `discovery`, `sbom`, `autokey`, `keyaccess`, `signing`, `workload`, `confidential`, `pqc`, `qkd`, `qrng`, `mpc`, `ai`
+   - `compliance`, `posture`, `reporting`, `discovery`, `sbom`, `autokey`, `keyaccess`, `signing`, `workload`, `confidential`, `pqc`, `qkd`, `qrng`, `mpc`, `ai`, `featureforge`
 
 ## Core Concepts
 
@@ -122,6 +122,19 @@ Choose Audit when the question is "what happened, who did it, when, and under wh
 - sensitive operational controls
 
 Choose Governance when a change should not happen silently or unilaterally.
+
+### Feature Forge
+
+`featureforge` turns plain-language operator intents into guardrailed changes. It
+orchestrates `policy`, `governance`, and `audit` through a six-layer pipeline
+(classify, validate, policy, dry-run/build, stage, governance gate) and supports
+two modes: config mode (a fixed allow-list of actions applied locally) and
+scaffold mode (code features built and validated by an external MCP server). There
+is no path from intake to production — staging is automatic, production is
+quorum-gated. See [FEATUREFORGE.md](FEATUREFORGE.md).
+
+Choose Feature Forge when operators or engineers want self-service changes without
+bypassing policy, approval, and evidence controls.
 
 ## Request Paths
 

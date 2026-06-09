@@ -36,6 +36,7 @@ spec:
         mpc_engine: true
         data_protection: true
         clustering: false
+        feature_forge: true
     hsm_mode: software
     cert_security:
         cert_storage_mode: db_encrypted

@@ -201,7 +201,8 @@
             "crypto_discovery": { "type": "boolean" },
             "mpc_engine": { "type": "boolean" },
             "data_protection": { "type": "boolean" },
-            "clustering": { "type": "boolean" }
+            "clustering": { "type": "boolean" },
+            "feature_forge": { "type": "boolean" }
           }
         },
         "license": {

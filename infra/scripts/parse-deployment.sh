@@ -34,6 +34,7 @@ FEATURE_ORDER=(
   mpc_engine
   data_protection
   clustering
+  feature_forge
 )
 
 declare -A ENABLED=()
