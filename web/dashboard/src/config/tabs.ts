@@ -58,7 +58,27 @@ export type FeatureKey =
   | "qrng_generator"
   | "posture_management"
   | "ai_gateway"
-  | "feature_forge";
+  | "feature_forge"
+  | "rotation_analytics"
+  | "compromise_detection"
+  | "key_analytics"
+  | "key_health_scoring"
+  | "key_inventory"
+  | "ml_anomaly_detection"
+  | "key_scheduling"
+  | "key_federation"
+  | "key_recovery_escrow"
+  | "audit_chain"
+  | "kdf"
+  | "key_verification"
+  | "regulatory_compliance"
+  | "cost_optimization"
+  | "advanced_encryption"
+  | "key_binding"
+  | "edge_iot"
+  | "key_sharing"
+  | "key_metadata"
+  | "threat_protection";
 
 export type TabId =
   | "dashboard"

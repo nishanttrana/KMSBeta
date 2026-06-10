@@ -47,7 +47,28 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   discovery: "crypto_discovery",
   // ADMIN
   ai: ["ai_llm", "ai_gateway"],
-  forge: "feature_forge"
+  forge: "feature_forge",
+  // Enterprise Advanced Features
+  rotation_analytics: "rotation_analytics",
+  compromise: "compromise_detection",
+  key_analytics: "key_analytics",
+  key_health: "key_health_scoring",
+  key_inventory: "key_inventory",
+  ml_anomaly: "ml_anomaly_detection",
+  key_scheduling: "key_scheduling",
+  key_federation: "key_federation",
+  key_recovery: "key_recovery_escrow",
+  audit_chain: "audit_chain",
+  kdf: "kdf",
+  key_verification: "key_verification",
+  regulatory: "regulatory_compliance",
+  cost_opt: "cost_optimization",
+  adv_encryption: "advanced_encryption",
+  key_binding: "key_binding",
+  edge_iot: "edge_iot",
+  key_sharing: "key_sharing",
+  key_metadata: "key_metadata",
+  threat_protection: "threat_protection",
 };
 
 function normalizePermissionTokens(session: unknown): Set<string> {

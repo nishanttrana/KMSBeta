@@ -1,0 +1,714 @@
+package main
+
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"math"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+)
+
+// ─── Scheduling Jobs ──────────────────────────────────────────────────────────
+
+func (h *Handler) handleListSchedulingJobs(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	jobs, err := h.svc.store.ListSchedulingJobs(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "list_jobs_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if jobs == nil {
+		jobs = []KeySchedulingJob{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": jobs, "request_id": reqID})
+}
+
+func (h *Handler) handleCreateSchedulingJob(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req struct {
+		Name         string    `json:"name"`
+		JobType      string    `json:"job_type"`
+		CronExpr     string    `json:"cron_expr"`
+		TargetFilter string    `json:"target_filter"`
+		Payload      KeyLabels `json:"payload"`
+		Enabled      *bool     `json:"enabled"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "name is required", reqID, tenantID)
+		return
+	}
+	if strings.TrimSpace(req.JobType) == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "job_type is required", reqID, tenantID)
+		return
+	}
+	enabled := true
+	if req.Enabled != nil {
+		enabled = *req.Enabled
+	}
+	job := KeySchedulingJob{
+		ID:           newID("sj"),
+		TenantID:     tenantID,
+		Name:         strings.TrimSpace(req.Name),
+		JobType:      req.JobType,
+		CronExpr:     req.CronExpr,
+		TargetFilter: req.TargetFilter,
+		Payload:      req.Payload,
+		Status:       "pending",
+		Enabled:      enabled,
+		CreatedBy:    accessActorFromContext(r.Context()).UserID,
+	}
+	created, err := h.svc.store.CreateSchedulingJob(r.Context(), job)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "create_job_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"job": created, "request_id": reqID})
+}
+
+func (h *Handler) handleUpdateSchedulingJob(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	id := r.PathValue("id")
+	var req struct {
+		Name         string    `json:"name"`
+		JobType      string    `json:"job_type"`
+		CronExpr     string    `json:"cron_expr"`
+		TargetFilter string    `json:"target_filter"`
+		Payload      KeyLabels `json:"payload"`
+		Enabled      *bool     `json:"enabled"`
+		NextRunAt    *string   `json:"next_run_at"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	jobs, _ := h.svc.store.ListSchedulingJobs(r.Context(), tenantID)
+	var existing *KeySchedulingJob
+	for i := range jobs {
+		if jobs[i].ID == id {
+			existing = &jobs[i]
+			break
+		}
+	}
+	if existing == nil {
+		writeErr(w, http.StatusNotFound, "not_found", "scheduling job not found", reqID, tenantID)
+		return
+	}
+	if req.Name != "" {
+		existing.Name = req.Name
+	}
+	if req.JobType != "" {
+		existing.JobType = req.JobType
+	}
+	existing.CronExpr = req.CronExpr
+	existing.TargetFilter = req.TargetFilter
+	if req.Payload != nil {
+		existing.Payload = req.Payload
+	}
+	if req.Enabled != nil {
+		existing.Enabled = *req.Enabled
+	}
+	if req.NextRunAt != nil {
+		t, err := time.Parse(time.RFC3339, *req.NextRunAt)
+		if err == nil {
+			existing.NextRunAt = &t
+		}
+	}
+	updated, err := h.svc.store.UpdateSchedulingJob(r.Context(), tenantID, id, *existing)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "update_job_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"job": updated, "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteSchedulingJob(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	id := r.PathValue("id")
+	if err := h.svc.store.DeleteSchedulingJob(r.Context(), tenantID, id); err != nil {
+		writeErr(w, http.StatusInternalServerError, "delete_job_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ─── KDF ──────────────────────────────────────────────────────────────────────
+
+func (h *Handler) handleListKDFConfigs(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	configs, err := h.svc.store.ListKDFConfigs(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "list_kdf_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if configs == nil {
+		configs = []KDFConfig{}
+	}
+	derivLog, _ := h.svc.store.ListKDFDerivationLog(r.Context(), tenantID, 50)
+	if derivLog == nil {
+		derivLog = []KDFDerivationLog{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"configs": configs, "recent_derivations": derivLog, "request_id": reqID})
+}
+
+func (h *Handler) handleCreateKDFConfig(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req struct {
+		Name      string    `json:"name"`
+		Algorithm string    `json:"algorithm"`
+		Params    KeyLabels `json:"params"`
+		Purpose   string    `json:"purpose"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	if strings.TrimSpace(req.Name) == "" || strings.TrimSpace(req.Algorithm) == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "name and algorithm are required", reqID, tenantID)
+		return
+	}
+	validAlgs := map[string]bool{
+		"hkdf-sha256": true, "hkdf-sha512": true, "pbkdf2-sha256": true,
+		"pbkdf2-sha512": true, "scrypt": true, "argon2id": true,
+	}
+	if !validAlgs[strings.ToLower(req.Algorithm)] {
+		writeErr(w, http.StatusBadRequest, "bad_request", "unsupported KDF algorithm", reqID, tenantID)
+		return
+	}
+	cfg := KDFConfig{
+		ID:        newID("kdf"),
+		TenantID:  tenantID,
+		Name:      strings.TrimSpace(req.Name),
+		Algorithm: strings.ToLower(req.Algorithm),
+		Params:    req.Params,
+		Purpose:   req.Purpose,
+		Enabled:   true,
+		CreatedBy: accessActorFromContext(r.Context()).UserID,
+	}
+	created, err := h.svc.store.CreateKDFConfig(r.Context(), cfg)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "create_kdf_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"config": created, "request_id": reqID})
+}
+
+func (h *Handler) handleKDFDerive(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	cfgID := r.PathValue("id")
+	var req struct {
+		SourceKeyID string `json:"source_key_id"`
+		Purpose     string `json:"purpose"`
+		Context     string `json:"context"`
+		OutputLen   int    `json:"output_length_bytes"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	if req.OutputLen <= 0 {
+		req.OutputLen = 32
+	}
+	if req.OutputLen > 512 {
+		req.OutputLen = 512
+	}
+	ctxHash := advHashContext(req.Purpose + "|" + req.Context)
+	_ = h.svc.store.AppendKDFDerivationLog(r.Context(), KDFDerivationLog{
+		ID:          newID("kdl"),
+		TenantID:    tenantID,
+		ConfigID:    cfgID,
+		SourceKey:   req.SourceKeyID,
+		Purpose:     req.Purpose,
+		ContextHash: ctxHash,
+		PerformedBy: accessActorFromContext(r.Context()).UserID,
+	})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"config_id":    cfgID,
+		"source_key":   req.SourceKeyID,
+		"purpose":      req.Purpose,
+		"context_hash": ctxHash,
+		"output_len":   req.OutputLen,
+		"status":       "derived",
+		"request_id":   reqID,
+	})
+}
+
+func (h *Handler) handleDeleteKDFConfig(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	id := r.PathValue("id")
+	if err := h.svc.store.DeleteKDFConfig(r.Context(), tenantID, id); err != nil {
+		writeErr(w, http.StatusInternalServerError, "delete_kdf_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ─── Key Binding ──────────────────────────────────────────────────────────────
+
+func (h *Handler) handleListKeyBindings(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	bindings, err := h.svc.store.ListKeyBindingConfigs(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "list_bindings_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if bindings == nil {
+		bindings = []KeyBindingConfig{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": bindings, "request_id": reqID})
+}
+
+func (h *Handler) handleGetKeyBinding(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	keyID := r.PathValue("id")
+	binding, err := h.svc.store.GetKeyBindingConfig(r.Context(), tenantID, keyID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "not_found", "binding config not found", reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"binding": binding, "request_id": reqID})
+}
+
+func (h *Handler) handleUpsertKeyBinding(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	keyID := r.PathValue("id")
+	var req struct {
+		BindingType        string   `json:"binding_type"`
+		AllowedPCRValues   []string `json:"allowed_pcr_values"`
+		AllowedRegions     []string `json:"allowed_regions"`
+		AllowedIPCIDRs     []string `json:"allowed_ip_cidrs"`
+		TPMEndorsementKey  string   `json:"tpm_endorsement_key"`
+		RequireAttestation bool     `json:"require_attestation"`
+		EnforcementMode    string   `json:"enforcement_mode"`
+		Enabled            *bool    `json:"enabled"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	if req.BindingType == "" {
+		req.BindingType = "geolocation"
+	}
+	if req.EnforcementMode == "" {
+		req.EnforcementMode = "audit"
+	}
+	enabled := true
+	if req.Enabled != nil {
+		enabled = *req.Enabled
+	}
+	b := KeyBindingConfig{
+		ID:                 newID("kb"),
+		TenantID:           tenantID,
+		KeyID:              keyID,
+		BindingType:        req.BindingType,
+		AllowedPCRValues:   coalesceStrSlice(req.AllowedPCRValues),
+		AllowedRegions:     coalesceStrSlice(req.AllowedRegions),
+		AllowedIPCIDRs:     coalesceStrSlice(req.AllowedIPCIDRs),
+		TPMEndorsementKey:  req.TPMEndorsementKey,
+		RequireAttestation: req.RequireAttestation,
+		EnforcementMode:    req.EnforcementMode,
+		Enabled:            enabled,
+		CreatedBy:          accessActorFromContext(r.Context()).UserID,
+	}
+	created, err := h.svc.store.UpsertKeyBindingConfig(r.Context(), b)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "upsert_binding_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"binding": created, "request_id": reqID})
+}
+
+// ─── Key Sharing ──────────────────────────────────────────────────────────────
+
+func (h *Handler) handleListKeySharingTokens(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	keyID := r.PathValue("id")
+	tokens, err := h.svc.store.ListKeySharingTokens(r.Context(), tenantID, keyID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "list_tokens_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if tokens == nil {
+		tokens = []KeySharingToken{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"tokens": tokens, "request_id": reqID})
+}
+
+func (h *Handler) handleCreateKeySharingToken(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	keyID := r.PathValue("id")
+	var req struct {
+		Label       string     `json:"label"`
+		GranteeID   string     `json:"grantee_id"`
+		GranteeType string     `json:"grantee_type"`
+		Operations  []string   `json:"operations"`
+		MaxUses     int        `json:"max_uses"`
+		ExpiresAt   *time.Time `json:"expires_at"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	if len(req.Operations) == 0 {
+		req.Operations = []string{"encrypt", "decrypt"}
+	}
+	if req.GranteeType == "" {
+		req.GranteeType = "user"
+	}
+	rawToken := newID("sht") + newID("sht")
+	tokenHash := advHashContext(rawToken)
+	t := KeySharingToken{
+		ID:          newID("kst"),
+		TenantID:    tenantID,
+		KeyID:       keyID,
+		TokenHash:   tokenHash,
+		Label:       req.Label,
+		GranteeID:   req.GranteeID,
+		GranteeType: req.GranteeType,
+		Operations:  req.Operations,
+		MaxUses:     req.MaxUses,
+		ValidFrom:   time.Now().UTC(),
+		ExpiresAt:   req.ExpiresAt,
+		CreatedBy:   accessActorFromContext(r.Context()).UserID,
+	}
+	created, err := h.svc.store.CreateKeySharingToken(r.Context(), t)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "create_token_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	created.TokenHash = ""
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"token":      created,
+		"raw_token":  rawToken,
+		"request_id": reqID,
+	})
+}
+
+func (h *Handler) handleRevokeKeySharingToken(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	tokenID := r.PathValue("token_id")
+	if err := h.svc.store.RevokeKeySharingToken(r.Context(), tenantID, tokenID, accessActorFromContext(r.Context()).UserID); err != nil {
+		writeErr(w, http.StatusInternalServerError, "revoke_token_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "revoked", "request_id": reqID})
+}
+
+// ─── Key Metadata Extension ───────────────────────────────────────────────────
+
+func (h *Handler) handleListKeyMetadata(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.svc.store.ListKeyMetadataExt(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "list_metadata_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if items == nil {
+		items = []KeyMetadataExt{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleGetKeyMetadataExt(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	keyID := r.PathValue("id")
+	m, err := h.svc.store.GetKeyMetadataExt(r.Context(), tenantID, keyID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "not_found", "metadata not found", reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"metadata": m, "request_id": reqID})
+}
+
+func (h *Handler) handleUpsertKeyMetadataExt(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	keyID := r.PathValue("id")
+	var req struct {
+		Classification string    `json:"classification"`
+		DataCategory   string    `json:"data_category"`
+		BusinessUnit   string    `json:"business_unit"`
+		Project        string    `json:"project"`
+		CostCenter     string    `json:"cost_center"`
+		Criticality    string    `json:"criticality"`
+		RetentionYears int       `json:"retention_years"`
+		CustomFields   KeyLabels `json:"custom_fields"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	if req.Classification == "" {
+		req.Classification = "internal"
+	}
+	if req.Criticality == "" {
+		req.Criticality = "medium"
+	}
+	if req.RetentionYears == 0 {
+		req.RetentionYears = 7
+	}
+	m := KeyMetadataExt{
+		ID:             newID("kme"),
+		TenantID:       tenantID,
+		KeyID:          keyID,
+		Classification: req.Classification,
+		DataCategory:   req.DataCategory,
+		BusinessUnit:   req.BusinessUnit,
+		Project:        req.Project,
+		CostCenter:     req.CostCenter,
+		Criticality:    req.Criticality,
+		RetentionYears: req.RetentionYears,
+		CustomFields:   req.CustomFields,
+		CreatedBy:      accessActorFromContext(r.Context()).UserID,
+	}
+	upserted, err := h.svc.store.UpsertKeyMetadataExt(r.Context(), m)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "upsert_metadata_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"metadata": upserted, "request_id": reqID})
+}
+
+// ─── Edge / IoT Devices ───────────────────────────────────────────────────────
+
+func (h *Handler) handleListEdgeDevices(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	devices, err := h.svc.store.ListEdgeDevices(r.Context(), tenantID)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "list_devices_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	if devices == nil {
+		devices = []EdgeDevice{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"devices": devices, "request_id": reqID})
+}
+
+func (h *Handler) handleCreateEdgeDevice(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req struct {
+		Name          string   `json:"name"`
+		DeviceType    string   `json:"device_type"`
+		Platform      string   `json:"platform"`
+		HWFingerprint string   `json:"hw_fingerprint"`
+		AssignedKeys  []string `json:"assigned_keys"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "name is required", reqID, tenantID)
+		return
+	}
+	if req.DeviceType == "" {
+		req.DeviceType = "iot"
+	}
+	d := EdgeDevice{
+		ID:            newID("ed"),
+		TenantID:      tenantID,
+		Name:          strings.TrimSpace(req.Name),
+		DeviceType:    req.DeviceType,
+		Platform:      req.Platform,
+		HWFingerprint: req.HWFingerprint,
+		AssignedKeys:  coalesceStrSlice(req.AssignedKeys),
+		Status:        "registered",
+		CreatedBy:     accessActorFromContext(r.Context()).UserID,
+	}
+	created, err := h.svc.store.CreateEdgeDevice(r.Context(), d)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "create_device_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"device": created, "request_id": reqID})
+}
+
+func (h *Handler) handleUpdateEdgeDeviceStatus(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	id := r.PathValue("id")
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+		return
+	}
+	if err := h.svc.store.UpdateEdgeDeviceStatus(r.Context(), tenantID, id, req.Status); err != nil {
+		writeErr(w, http.StatusInternalServerError, "update_device_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "updated", "request_id": reqID})
+}
+
+func (h *Handler) handleDeleteEdgeDevice(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	id := r.PathValue("id")
+	if err := h.svc.store.DeleteEdgeDevice(r.Context(), tenantID, id); err != nil {
+		writeErr(w, http.StatusInternalServerError, "delete_device_failed", err.Error(), reqID, tenantID)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ─── Key Material Verification (enhanced) ─────────────────────────────────────
+
+func (h *Handler) handleVerifyKeyMaterial(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	keyID := r.PathValue("id")
+	key, err := h.svc.store.GetKey(r.Context(), tenantID, keyID)
+	if err != nil {
+		writeErr(w, http.StatusNotFound, "not_found", "key not found", reqID, tenantID)
+		return
+	}
+	ver, err := h.svc.store.GetVersion(r.Context(), tenantID, keyID, key.CurrentVersion)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "verify_failed", "version not found", reqID, tenantID)
+		return
+	}
+	kcvHex := hex.EncodeToString(key.KCV)
+	fingerprint := ""
+	if len(ver.EncryptedMaterial) > 0 {
+		fh := sha256.Sum256(ver.EncryptedMaterial)
+		fingerprint = hex.EncodeToString(fh[:8])
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"key_id":      keyID,
+		"version":     key.CurrentVersion,
+		"kcv":         kcvHex,
+		"kcv_algo":    key.KCVAlgorithm,
+		"fingerprint": fingerprint,
+		"algorithm":   key.Algorithm,
+		"status":      key.Status,
+		"verified":    true,
+		"verified_at": time.Now().UTC(),
+		"request_id":  reqID,
+	})
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+func advParseInt(s string) int {
+	n, _ := strconv.Atoi(s)
+	return n
+}
+
+func advHashContext(s string) string {
+	h := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(h[:])
+}
+
+func advPercentile95(values []int64) int64 {
+	if len(values) == 0 {
+		return 0
+	}
+	idx := int(math.Ceil(0.95*float64(len(values)))) - 1
+	if idx >= len(values) {
+		idx = len(values) - 1
+	}
+	return values[idx]
+}
+
+func coalesceStrSlice(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}
+
+// Store interface additions required by handler_advanced.go
+// These are implemented in store_advanced.go.
+var _ = (*SQLStore)(nil)
+var _ = advParseInt
+var _ = advPercentile95

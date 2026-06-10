@@ -47,7 +47,12 @@ import {
   Server,
   RefreshCw,
   Sparkles,
-  Archive
+  Archive,
+  ShieldAlert,
+  Share2,
+  Tag,
+  TrendingUp,
+  Wifi,
 } from "lucide-react";
 import type { AuthSession } from "../lib/auth";
 import { canAccessModule, isSystemAdminSession } from "../config/moduleRegistry";
@@ -115,6 +120,27 @@ const LineageTab = lazy(() => import("./v3/tabs/LineageTab").then(m => ({ defaul
 const CanaryKeysTab = lazy(() => import("./v3/tabs/CanaryKeysTab").then(m => ({ default: m.CanaryKeysTab })));
 const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ default: m.PlaybooksTab })));
 const HealthTab = lazy(() => import("./v3/tabs/HealthTab").then(m => ({ default: m.HealthTab })));
+// Enterprise Advanced Features
+const RotationAnalyticsTab = lazy(() => import("./v3/tabs/RotationAnalyticsTab").then(m => ({ default: m.RotationAnalyticsTab })));
+const CompromiseDetectionTab = lazy(() => import("./v3/tabs/CompromiseDetectionTab").then(m => ({ default: m.CompromiseDetectionTab })));
+const KeyAnalyticsTab = lazy(() => import("./v3/tabs/KeyAnalyticsTab").then(m => ({ default: m.KeyAnalyticsTab })));
+const KeyHealthTab = lazy(() => import("./v3/tabs/KeyHealthTab").then(m => ({ default: m.KeyHealthTab })));
+const KeyInventoryTab = lazy(() => import("./v3/tabs/KeyInventoryTab").then(m => ({ default: m.KeyInventoryTab })));
+const MLAnomalyTab = lazy(() => import("./v3/tabs/MLAnomalyTab").then(m => ({ default: m.MLAnomalyTab })));
+const KeySchedulingTab = lazy(() => import("./v3/tabs/KeySchedulingTab").then(m => ({ default: m.KeySchedulingTab })));
+const KeyFederationTab = lazy(() => import("./v3/tabs/KeyFederationTab").then(m => ({ default: m.KeyFederationTab })));
+const KeyRecoveryTab = lazy(() => import("./v3/tabs/KeyRecoveryTab").then(m => ({ default: m.KeyRecoveryTab })));
+const AuditChainTab = lazy(() => import("./v3/tabs/AuditChainTab").then(m => ({ default: m.AuditChainTab })));
+const KDFTab = lazy(() => import("./v3/tabs/KDFTab").then(m => ({ default: m.KDFTab })));
+const KeyVerificationTab = lazy(() => import("./v3/tabs/KeyVerificationTab").then(m => ({ default: m.KeyVerificationTab })));
+const RegulatoryTab = lazy(() => import("./v3/tabs/RegulatoryTab").then(m => ({ default: m.RegulatoryTab })));
+const CostOptimizationTab = lazy(() => import("./v3/tabs/CostOptimizationTab").then(m => ({ default: m.CostOptimizationTab })));
+const AdvancedEncryptionTab = lazy(() => import("./v3/tabs/AdvancedEncryptionTab").then(m => ({ default: m.AdvancedEncryptionTab })));
+const KeyBindingTab = lazy(() => import("./v3/tabs/KeyBindingTab").then(m => ({ default: m.KeyBindingTab })));
+const EdgeIoTTab = lazy(() => import("./v3/tabs/EdgeIoTTab").then(m => ({ default: m.EdgeIoTTab })));
+const KeySharingTab = lazy(() => import("./v3/tabs/KeySharingTab").then(m => ({ default: m.KeySharingTab })));
+const KeyMetadataTab = lazy(() => import("./v3/tabs/KeyMetadataTab").then(m => ({ default: m.KeyMetadataTab })));
+const ThreatProtectionTab = lazy(() => import("./v3/tabs/ThreatProtectionTab").then(m => ({ default: m.ThreatProtectionTab })));
 
 type Props = {
   session: AuthSession;
@@ -227,7 +253,28 @@ const TABS: Record<string, any> = {
   lineage: LineageTab,
   canary: CanaryKeysTab,
   playbooks: PlaybooksTab,
-  health: HealthTab
+  health: HealthTab,
+  // Enterprise Advanced Features
+  rotation_analytics: RotationAnalyticsTab,
+  compromise: CompromiseDetectionTab,
+  key_analytics: KeyAnalyticsTab,
+  key_health: KeyHealthTab,
+  key_inventory: KeyInventoryTab,
+  ml_anomaly: MLAnomalyTab,
+  key_scheduling: KeySchedulingTab,
+  key_federation: KeyFederationTab,
+  key_recovery: KeyRecoveryTab,
+  audit_chain: AuditChainTab,
+  kdf: KDFTab,
+  key_verification: KeyVerificationTab,
+  regulatory: RegulatoryTab,
+  cost_opt: CostOptimizationTab,
+  adv_encryption: AdvancedEncryptionTab,
+  key_binding: KeyBindingTab,
+  edge_iot: EdgeIoTTab,
+  key_sharing: KeySharingTab,
+  key_metadata: KeyMetadataTab,
+  threat_protection: ThreatProtectionTab,
 };
 
 const TITLES: Record<string, string> = {
@@ -282,7 +329,28 @@ const TITLES: Record<string, string> = {
   lineage: "Source Traceability",
   canary: "Canary / Honeypot Keys",
   playbooks: "Playbooks",
-  health: "Health & Reconciliation"
+  health: "Health & Reconciliation",
+  // Enterprise Advanced Features
+  rotation_analytics: "Rotation Analytics",
+  compromise: "Compromise Detection",
+  key_analytics: "Key Analytics",
+  key_health: "Key Health Scoring",
+  key_inventory: "Key Inventory",
+  ml_anomaly: "ML Anomaly Detection",
+  key_scheduling: "Key Scheduling",
+  key_federation: "Key Federation",
+  key_recovery: "Key Recovery & Escrow",
+  audit_chain: "Blockchain Audit Chain",
+  kdf: "Key Derivation (KDF)",
+  key_verification: "Key Verification",
+  regulatory: "Regulatory Compliance",
+  cost_opt: "Cost Optimization",
+  adv_encryption: "Advanced Encryption",
+  key_binding: "Key Binding",
+  edge_iot: "Edge & IoT Keys",
+  key_sharing: "Key Sharing",
+  key_metadata: "Key Metadata",
+  threat_protection: "Threat Protection",
 };
 
 const NAV = [
@@ -343,7 +411,35 @@ const NAV = [
     { id: "webhooks", icon: Webhook, label: "Webhooks & SIEM" },
     { id: "devsecops", icon: GitBranch, label: "DevSecOps / IaC" },
     { id: "docs", icon: FileText, label: "Documentation" },
-  ]}
+  ]},
+  { g: "ANALYTICS & INTELLIGENCE", items: [
+    { id: "rotation_analytics", icon: BarChart2, label: "Rotation Analytics" },
+    { id: "key_analytics", icon: BarChart3, label: "Key Analytics" },
+    { id: "key_health", icon: Activity, label: "Key Health Scoring" },
+    { id: "key_inventory", icon: Database, label: "Key Inventory" },
+    { id: "ml_anomaly", icon: Sparkles, label: "ML Anomaly Detection" },
+    { id: "cost_opt", icon: TrendingUp, label: "Cost Optimization" },
+  ]},
+  { g: "KEY LIFECYCLE", items: [
+    { id: "key_scheduling", icon: CalendarClock, label: "Key Scheduling" },
+    { id: "key_recovery", icon: KeyRound, label: "Key Recovery & Escrow" },
+    { id: "key_binding", icon: Cpu, label: "Key Binding" },
+    { id: "key_sharing", icon: Share2, label: "Key Sharing" },
+    { id: "key_metadata", icon: Tag, label: "Key Metadata" },
+    { id: "key_verification", icon: ShieldCheck, label: "Key Verification" },
+    { id: "kdf", icon: Layers, label: "Key Derivation (KDF)" },
+    { id: "adv_encryption", icon: Lock, label: "Advanced Encryption" },
+  ]},
+  { g: "THREAT & COMPLIANCE", items: [
+    { id: "compromise", icon: ShieldAlert, label: "Compromise Detection" },
+    { id: "threat_protection", icon: Shield, label: "Threat Protection" },
+    { id: "regulatory", icon: ClipboardCheck, label: "Regulatory Compliance" },
+    { id: "audit_chain", icon: Link, label: "Blockchain Audit Chain" },
+  ]},
+  { g: "DISTRIBUTED", items: [
+    { id: "key_federation", icon: Network, label: "Key Federation" },
+    { id: "edge_iot", icon: Wifi, label: "Edge & IoT Keys" },
+  ]},
 ];
 
 const SUB_PANES: Record<string, any[]> = {

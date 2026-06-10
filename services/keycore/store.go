@@ -162,6 +162,40 @@ type Store interface {
 	GetAuditChainAnchor(ctx context.Context, tenantID, anchorID string) (AuditChainAnchor, error)
 	ListAuditChainAnchors(ctx context.Context, tenantID string, limit int) ([]AuditChainAnchor, error)
 
+	// Advanced Scheduling Jobs
+	ListSchedulingJobs(ctx context.Context, tenantID string) ([]KeySchedulingJob, error)
+	CreateSchedulingJob(ctx context.Context, j KeySchedulingJob) (KeySchedulingJob, error)
+	UpdateSchedulingJob(ctx context.Context, tenantID, id string, j KeySchedulingJob) (KeySchedulingJob, error)
+	DeleteSchedulingJob(ctx context.Context, tenantID, id string) error
+
+	// KDF Configurations
+	ListKDFConfigs(ctx context.Context, tenantID string) ([]KDFConfig, error)
+	CreateKDFConfig(ctx context.Context, c KDFConfig) (KDFConfig, error)
+	DeleteKDFConfig(ctx context.Context, tenantID, id string) error
+	ListKDFDerivationLog(ctx context.Context, tenantID string, limit int) ([]KDFDerivationLog, error)
+	AppendKDFDerivationLog(ctx context.Context, l KDFDerivationLog) error
+
+	// Key Binding (hardware attestation + geolocation)
+	ListKeyBindingConfigs(ctx context.Context, tenantID string) ([]KeyBindingConfig, error)
+	GetKeyBindingConfig(ctx context.Context, tenantID, keyID string) (KeyBindingConfig, error)
+	UpsertKeyBindingConfig(ctx context.Context, b KeyBindingConfig) (KeyBindingConfig, error)
+
+	// Key Sharing Tokens
+	ListKeySharingTokens(ctx context.Context, tenantID, keyID string) ([]KeySharingToken, error)
+	CreateKeySharingToken(ctx context.Context, t KeySharingToken) (KeySharingToken, error)
+	RevokeKeySharingToken(ctx context.Context, tenantID, id, revokedBy string) error
+
+	// Key Metadata Extension
+	ListKeyMetadataExt(ctx context.Context, tenantID string) ([]KeyMetadataExt, error)
+	GetKeyMetadataExt(ctx context.Context, tenantID, keyID string) (KeyMetadataExt, error)
+	UpsertKeyMetadataExt(ctx context.Context, m KeyMetadataExt) (KeyMetadataExt, error)
+
+	// Edge / IoT Device Registry
+	ListEdgeDevices(ctx context.Context, tenantID string) ([]EdgeDevice, error)
+	CreateEdgeDevice(ctx context.Context, d EdgeDevice) (EdgeDevice, error)
+	UpdateEdgeDeviceStatus(ctx context.Context, tenantID, id, status string) error
+	DeleteEdgeDevice(ctx context.Context, tenantID, id string) error
+
 	// Canary / Honeypot Keys
 	ListCanaryKeys(ctx context.Context, tenantID string) ([]CanaryKey, error)
 	CreateCanaryKey(ctx context.Context, key CanaryKey) error

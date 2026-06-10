@@ -39,3 +39,23 @@ spec:
     workload_identity: true
     confidential_compute: true
     feature_forge: true
+    rotation_analytics: true
+    compromise_detection: true
+    key_analytics: true
+    key_health_scoring: true
+    key_inventory: true
+    ml_anomaly_detection: true
+    key_scheduling: true
+    key_federation: true
+    key_recovery_escrow: true
+    audit_chain: true
+    kdf: true
+    key_verification: true
+    regulatory_compliance: true
+    cost_optimization: true
+    advanced_encryption: true
+    key_binding: true
+    edge_iot: true
+    key_sharing: true
+    key_metadata: true
+    threat_protection: true

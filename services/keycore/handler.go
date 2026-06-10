@@ -274,6 +274,42 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /enterprise/metadata/profiles", h.handleUpsertEnterpriseControlCategory(controlCategoryMetadataProfile))
 	mux.HandleFunc("POST /enterprise/threat/signals", h.handleUpsertEnterpriseControlCategory(controlCategoryThreatSignal))
 
+	// Advanced Scheduling Jobs
+	mux.HandleFunc("GET /scheduling/jobs", h.handleListSchedulingJobs)
+	mux.HandleFunc("POST /scheduling/jobs", h.handleCreateSchedulingJob)
+	mux.HandleFunc("PATCH /scheduling/jobs/{id}", h.handleUpdateSchedulingJob)
+	mux.HandleFunc("DELETE /scheduling/jobs/{id}", h.handleDeleteSchedulingJob)
+
+	// KDF Configurations
+	mux.HandleFunc("GET /kdf/configs", h.handleListKDFConfigs)
+	mux.HandleFunc("POST /kdf/configs", h.handleCreateKDFConfig)
+	mux.HandleFunc("POST /kdf/configs/{id}/derive", h.handleKDFDerive)
+	mux.HandleFunc("DELETE /kdf/configs/{id}", h.handleDeleteKDFConfig)
+
+	// Key Binding (hardware attestation + geolocation)
+	mux.HandleFunc("GET /binding/configs", h.handleListKeyBindings)
+	mux.HandleFunc("GET /keys/{id}/binding", h.handleGetKeyBinding)
+	mux.HandleFunc("PUT /keys/{id}/binding", h.handleUpsertKeyBinding)
+
+	// Key Sharing Tokens
+	mux.HandleFunc("GET /keys/{id}/sharing-tokens", h.handleListKeySharingTokens)
+	mux.HandleFunc("POST /keys/{id}/sharing-tokens", h.handleCreateKeySharingToken)
+	mux.HandleFunc("POST /keys/{id}/sharing-tokens/{token_id}/revoke", h.handleRevokeKeySharingToken)
+
+	// Key Metadata Extension
+	mux.HandleFunc("GET /metadata/extended", h.handleListKeyMetadata)
+	mux.HandleFunc("GET /keys/{id}/metadata/extended", h.handleGetKeyMetadataExt)
+	mux.HandleFunc("PUT /keys/{id}/metadata/extended", h.handleUpsertKeyMetadataExt)
+
+	// Edge / IoT Device Registry
+	mux.HandleFunc("GET /edge/devices", h.handleListEdgeDevices)
+	mux.HandleFunc("POST /edge/devices", h.handleCreateEdgeDevice)
+	mux.HandleFunc("PATCH /edge/devices/{id}/status", h.handleUpdateEdgeDeviceStatus)
+	mux.HandleFunc("DELETE /edge/devices/{id}", h.handleDeleteEdgeDevice)
+
+	// Key Material Verification (enhanced fingerprint)
+	mux.HandleFunc("POST /keys/{id}/verify-material", h.handleVerifyKeyMaterial)
+
 	// Canary / Honeypot Keys
 	mux.HandleFunc("GET /canary/summary", h.handleGetCanarySummary)
 	mux.HandleFunc("GET /canary", h.handleListCanaryKeys)
