@@ -128,3 +128,33 @@ Set `feature_forge: true` under `features` in
 `feature_forge` Compose profile, which activates the `featureforge` service. To
 enable scaffold mode, additionally set `MCP_SERVER_URL` (and
 `MCP_SERVER_API_KEY`) in the environment.
+
+`install.sh` carries `feature_forge` through end to end: it is part of the
+`FEATURE_KEYS` registry, so the generated `deployment.yaml` features block,
+the `recommended`/`all`/`custom` feature-profile prompts, and the
+`feature_forge` Compose profile all pick it up automatically. Adding a future
+feature is the same one-line registry edit (plus its Compose profile and the
+matching `FEATURE_ORDER` entry in `infra/scripts/parse-deployment.sh`).
+
+## Backup and tenant capability
+
+Feature Forge state is tenant-scoped (`ff_intents`, `ff_events`,
+`ff_guardrail_results`, `ff_prod_approvals`, all carrying `tenant_id`) and is
+captured by the governance backup service through table auto-discovery. The
+backup coverage report surfaces it under the
+`feature_intent_classification_and_promotion_governance` tenant capability,
+with a coverage note recording that feature intents, classification outcomes,
+guardrail results, and production-promotion approvals are preserved while
+transient classifier queues and evaluation caches are excluded. Tenant-scoped
+backups filter `ff_*` rows by `tenant_id`.
+
+## High-availability replication
+
+FeatureForge is a first-class cluster replication component (`featureforge`).
+It is included in the built-in `cluster-profile-full` preset. Operators who
+want to replicate only selected services can choose the **custom** cluster
+profile in `install.sh` and pick `featureforge` (and any other services)
+individually; the selection is written to `CLUSTER_BOOTSTRAP_COMPONENTS` and
+seeded by cluster-manager as a `cluster-profile-custom` profile. Core services
+(auth, keycore, policy, governance) are always replicated and need not be
+selected.

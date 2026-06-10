@@ -58,6 +58,39 @@ FEATURE_KEYS=(
   mpc_engine
   data_protection
   clustering
+  feature_forge
+)
+
+# Replicable services an operator can select for a custom HA cluster profile.
+# auth, keycore, policy, and governance are always replicated (core) and are
+# intentionally omitted here. Names must match cluster-manager's canonical
+# component identifiers (normalizeComponentName).
+CLUSTER_COMPONENT_KEYS=(
+  secrets
+  certs
+  byok
+  hyok
+  payment
+  autokey
+  signing
+  keyaccess
+  workload
+  confidential
+  dataprotect
+  ekm
+  kmip
+  qkd
+  qrng
+  mpc
+  compliance
+  reporting
+  sbom
+  pqc
+  discovery
+  posture
+  ai
+  cloud
+  featureforge
 )
 
 log() { printf "\n[%s] %s\n" "$1" "$2"; }
@@ -1132,6 +1165,7 @@ collect_inputs() {
   prompt_yes_no CLUSTER_ENABLED "Enable cluster network" "false"
   CLUSTER_DEPLOYMENT_MODE="standalone"
   CLUSTER_REPLICATION_PROFILE="cluster-profile-base"
+  CLUSTER_BOOTSTRAP_COMPONENTS=""
   CLUSTER_JOIN_ENDPOINT=""
   CLUSTER_JOIN_TOKEN=""
   CLUSTER_NODE_ROLE="leader"
@@ -1279,9 +1313,28 @@ collect_inputs() {
     echo "  - cluster-profile-base      : auth, keycore, policy, governance"
     echo "  - cluster-profile-standard  : base + secrets, certs, BYOK, EKM, data protection"
     echo "  - cluster-profile-security  : standard + compliance, posture, discovery, SBOM, reporting"
-    echo "  - cluster-profile-full      : all cluster-aware services including AI, KMIP, QKD, QRNG, MPC, PQC"
-    prompt_default CLUSTER_REPLICATION_PROFILE "Cluster replication profile ID" "${suggested_cluster_profile}"
-    if ! is_builtin_cluster_profile_id "${CLUSTER_REPLICATION_PROFILE}"; then
+    echo "  - cluster-profile-full      : all cluster-aware services incl. AI, KMIP, QKD, QRNG, MPC, PQC, FeatureForge"
+    echo "  - custom                    : pick individual services to replicate"
+    prompt_default CLUSTER_REPLICATION_PROFILE "Cluster replication profile ID (or 'custom')" "${suggested_cluster_profile}"
+    if [[ "${CLUSTER_REPLICATION_PROFILE}" == "custom" || "${CLUSTER_REPLICATION_PROFILE}" == "cluster-profile-custom" ]]; then
+      CLUSTER_REPLICATION_PROFILE="cluster-profile-custom"
+      echo
+      echo "Select services to replicate (auth, keycore, policy, governance are always replicated):"
+      local _selected_components=() _comp _comp_choice
+      for _comp in "${CLUSTER_COMPONENT_KEYS[@]}"; do
+        _comp_choice="false"
+        prompt_yes_no _comp_choice "  Replicate ${_comp}" "false"
+        if [[ "${_comp_choice}" == "true" ]]; then
+          _selected_components+=("${_comp}")
+        fi
+      done
+      CLUSTER_BOOTSTRAP_COMPONENTS="$(IFS=,; printf '%s' "${_selected_components[*]}")"
+      if [[ -z "${CLUSTER_BOOTSTRAP_COMPONENTS}" ]]; then
+        add_warning "Custom cluster profile '${CLUSTER_REPLICATION_PROFILE}' selected with no extra services; only core components (auth, keycore, policy, governance) will replicate."
+      else
+        info "Custom cluster profile will replicate: ${CLUSTER_BOOTSTRAP_COMPONENTS}"
+      fi
+    elif ! is_builtin_cluster_profile_id "${CLUSTER_REPLICATION_PROFILE}"; then
       add_warning "Custom cluster replication profile '${CLUSTER_REPLICATION_PROFILE}' must already exist in cluster-manager before follower nodes join."
     fi
   fi
@@ -1406,6 +1459,19 @@ populate_feature_values() {
 
 write_deployment_yaml() {
   mkdir -p "${DEPLOY_DIR}"
+
+  # Generate the features block from FEATURE_KEYS so a new feature only has to
+  # be added to that one array (and to parse-deployment.sh / docker-compose
+  # profiles) to flow through the installer end to end. Keys are emitted sorted
+  # for a stable, diff-friendly file.
+  local features_block="" _feature _var _value
+  while IFS= read -r _feature; do
+    [[ -z "${_feature}" ]] && continue
+    _var="FEATURE_${_feature}"
+    _value="${!_var:-false}"
+    features_block+="        ${_feature}: ${_value}"$'\n'
+  done < <(printf '%s\n' "${FEATURE_KEYS[@]}" | sort)
+
   cat > "${DEPLOYMENT_FILE}" <<EOF
 apiVersion: kms.vecta.io/v1
 kind: DeploymentConfig
@@ -1420,35 +1486,10 @@ spec:
         keycore: true
         policy: true
     features:
-        ai_gateway: ${FEATURE_ai_gateway}
-        ai_llm: ${FEATURE_ai_llm}
-        certs: ${FEATURE_certs}
-        cloud_byok: ${FEATURE_cloud_byok}
-        clustering: ${FEATURE_clustering}
-        compliance_dashboard: ${FEATURE_compliance_dashboard}
-        crypto_discovery: ${FEATURE_crypto_discovery}
-        data_protection: ${FEATURE_data_protection}
-        ekm_database: ${FEATURE_ekm_database}
-        governance: ${FEATURE_governance}
-        hyok_proxy: ${FEATURE_hyok_proxy}
-        kmip_server: ${FEATURE_kmip_server}
-        mpc_engine: ${FEATURE_mpc_engine}
-        posture_management: ${FEATURE_posture_management}
-        payment_crypto: ${FEATURE_payment_crypto}
-        autokey_provisioning: ${FEATURE_autokey_provisioning}
-        artifact_signing: ${FEATURE_artifact_signing}
-        key_access_justifications: ${FEATURE_key_access_justifications}
-        workload_identity: ${FEATURE_workload_identity}
-        confidential_compute: ${FEATURE_confidential_compute}
-        pqc_migration: ${FEATURE_pqc_migration}
-        qkd_interface: ${FEATURE_qkd_interface}
-        qrng_generator: ${FEATURE_qrng_generator}
-        reporting_alerting: ${FEATURE_reporting_alerting}
-        sbom_cbom: ${FEATURE_sbom_cbom}
-        secrets: ${FEATURE_secrets}
-    cluster_bootstrap:
+${features_block}    cluster_bootstrap:
         mode: ${CLUSTER_DEPLOYMENT_MODE}
         replication_profile_id: ${CLUSTER_REPLICATION_PROFILE}
+        replication_components: ${CLUSTER_BOOTSTRAP_COMPONENTS:-}
         join_endpoint: ${CLUSTER_JOIN_ENDPOINT}
         join_token: ${CLUSTER_JOIN_TOKEN}
     hsm_mode: ${HSM_MODE}
@@ -1685,6 +1726,7 @@ CLUSTER_NODE_NAME=${APPLIANCE_ID}
 CLUSTER_NODE_ROLE=${CLUSTER_NODE_ROLE}
 CLUSTER_NODE_ENDPOINT=${CLUSTER_NODE_ENDPOINT}
 CLUSTER_BOOTSTRAP_PROFILE_ID=${CLUSTER_REPLICATION_PROFILE}
+CLUSTER_BOOTSTRAP_COMPONENTS=${CLUSTER_BOOTSTRAP_COMPONENTS}
 CLUSTER_JOIN_ENDPOINT=${CLUSTER_JOIN_ENDPOINT}
 CLUSTER_JOIN_TOKEN=${CLUSTER_JOIN_TOKEN}
 CLUSTER_SYNC_SHARED_SECRET=${CLUSTER_SYNC_SHARED_SECRET:-}
@@ -2187,6 +2229,7 @@ collect_fast_inputs() {
   CLUSTER_ENABLED="false"
   CLUSTER_DEPLOYMENT_MODE="standalone"
   CLUSTER_REPLICATION_PROFILE="cluster-profile-base"
+  CLUSTER_BOOTSTRAP_COMPONENTS=""
   CLUSTER_NODE_ROLE="leader"
   CLUSTER_NODE_NAME="${APPLIANCE_ID}"
   CLUSTER_NODE_ENDPOINT=""

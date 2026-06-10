@@ -57,8 +57,8 @@ var builtinClusterProfilePresets = []clusterProfilePreset{
 	{
 		ID:          "cluster-profile-full",
 		Name:        "full-platform",
-		Description: "Full platform replication including AI, Autokey, artifact signing, key-access governance, workload identity, confidential compute, KMIP, payment, PQC, QKD, QRNG, MPC, and HYOK services.",
-		Components:  []string{"secrets", "certs", "autokey", "signing", "keyaccess", "byok", "ekm", "dataprotect", "compliance", "posture", "discovery", "workload", "confidential", "sbom", "reporting", "payment", "hyok", "kmip", "pqc", "qkd", "qrng", "mpc", "ai"},
+		Description: "Full platform replication including AI, Autokey, artifact signing, key-access governance, workload identity, confidential compute, KMIP, payment, PQC, QKD, QRNG, MPC, HYOK, and FeatureForge services.",
+		Components:  []string{"secrets", "certs", "autokey", "signing", "keyaccess", "byok", "ekm", "dataprotect", "compliance", "posture", "discovery", "workload", "confidential", "sbom", "reporting", "payment", "hyok", "kmip", "pqc", "qkd", "qrng", "mpc", "ai", "featureforge"},
 	},
 }
 
@@ -71,6 +71,7 @@ type Service struct {
 	bootstrapNodeRole      string
 	bootstrapNodeAddress   string
 	bootstrapProfileID     string
+	bootstrapComponents    []string
 	consulAddress          string
 	heartbeatDegradedAfter time.Duration
 	heartbeatDownAfter     time.Duration
@@ -105,6 +106,7 @@ func NewService(store Store, events EventPublisher) *Service {
 		bootstrapNodeRole:      normalizeRole(defaultIfEmpty(os.Getenv("CLUSTER_NODE_ROLE"), "leader")),
 		bootstrapNodeAddress:   defaultIfEmpty(os.Getenv("CLUSTER_NODE_ENDPOINT"), "10.0.1.100"),
 		bootstrapProfileID:     defaultIfEmpty(os.Getenv("CLUSTER_BOOTSTRAP_PROFILE_ID"), "cluster-profile-base"),
+		bootstrapComponents:    parseEnvComponents("CLUSTER_BOOTSTRAP_COMPONENTS"),
 		consulAddress:          defaultIfEmpty(os.Getenv("CONSUL_HTTP_ADDR"), "consul:8500"),
 		heartbeatDegradedAfter: time.Duration(degradedAfterSec) * time.Second,
 		heartbeatDownAfter:     time.Duration(downAfterSec) * time.Second,
@@ -1011,6 +1013,27 @@ func (s *Service) ValidateSignedSyncRequest(ctx context.Context, method string, 
 	return nil
 }
 
+// customBootstrapProfile returns an operator-defined replication profile built
+// from CLUSTER_BOOTSTRAP_COMPONENTS when the configured bootstrap profile ID is
+// not one of the built-in presets. This is how `install.sh` seeds a "custom"
+// HA profile that replicates only the individually selected services.
+func (s *Service) customBootstrapProfile(tenantID string) (ClusterProfile, bool) {
+	id := strings.TrimSpace(s.bootstrapProfileID)
+	if id == "" || len(s.bootstrapComponents) == 0 {
+		return ClusterProfile{}, false
+	}
+	if _, ok := builtinClusterProfileByID(tenantID, id, false); ok {
+		return ClusterProfile{}, false
+	}
+	return ClusterProfile{
+		ID:          id,
+		TenantID:    tenantID,
+		Name:        id,
+		Description: "Operator-defined custom replication profile seeded from CLUSTER_BOOTSTRAP_COMPONENTS.",
+		Components:  ensureProfileComponents(s.bootstrapComponents),
+	}, true
+}
+
 func (s *Service) ensureBootstrap(ctx context.Context, tenantID string) error {
 	profiles, err := s.store.ListProfiles(ctx, tenantID)
 	if err != nil {
@@ -1020,14 +1043,24 @@ func (s *Service) ensureBootstrap(ctx context.Context, tenantID string) error {
 	if bootstrapProfileID == "" {
 		bootstrapProfileID = "cluster-profile-base"
 	}
+	customProfile, hasCustomProfile := s.customBootstrapProfile(tenantID)
 	preferredDefaultProfileID := bootstrapProfileID
 	if _, ok := builtinClusterProfileByID(tenantID, preferredDefaultProfileID, true); !ok {
-		preferredDefaultProfileID = "cluster-profile-base"
+		if hasCustomProfile {
+			preferredDefaultProfileID = customProfile.ID
+		} else {
+			preferredDefaultProfileID = "cluster-profile-base"
+		}
 	}
 	defaultProfileID := ""
 	if len(profiles) == 0 {
 		for _, preset := range builtinClusterProfiles(tenantID, preferredDefaultProfileID) {
 			if err := s.store.UpsertProfile(ctx, preset); err != nil {
+				return err
+			}
+		}
+		if hasCustomProfile {
+			if err := s.store.UpsertProfile(ctx, customProfile); err != nil {
 				return err
 			}
 		}
@@ -1059,6 +1092,20 @@ func (s *Service) ensureBootstrap(ctx context.Context, tenantID string) error {
 				return err
 			}
 			profiles = append(profiles, preset)
+		}
+	} else if hasCustomProfile {
+		found := false
+		for _, profile := range profiles {
+			if strings.TrimSpace(profile.ID) == customProfile.ID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			if err := s.store.UpsertProfile(ctx, customProfile); err != nil {
+				return err
+			}
+			profiles = append(profiles, customProfile)
 		}
 	}
 	if defaultProfileID == "" {
@@ -2044,6 +2091,22 @@ func parseEnvBool(key string, def bool) bool {
 		return def
 	}
 	return parseBoolString(raw, def)
+}
+
+// parseEnvComponents reads a comma/space-separated component list from an env
+// var (e.g. CLUSTER_BOOTSTRAP_COMPONENTS="secrets,certs,featureforge") and
+// normalizes it to canonical component names. Unknown names are dropped by
+// normalizeComponents. Used to seed an operator-defined custom replication
+// profile at bootstrap.
+func parseEnvComponents(key string) []string {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return nil
+	}
+	fields := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == ' ' || r == '\t' || r == '\n'
+	})
+	return normalizeComponents(fields)
 }
 
 func abs64(v int64) int64 {

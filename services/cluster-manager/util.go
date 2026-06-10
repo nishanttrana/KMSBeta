@@ -246,6 +246,8 @@ func normalizeComponentName(v string) string {
 		return "qrng"
 	case "cloud", "cloud_key_control":
 		return "cloud"
+	case "featureforge", "feature_forge", "feature_classification", "feature_intent_governance":
+		return "featureforge"
 	default:
 		return ""
 	}
@@ -329,6 +331,8 @@ func componentDisplayName(component string) string {
 		return "QRNG"
 	case "cloud":
 		return "Cloud"
+	case "featureforge":
+		return "FeatureForge"
 	default:
 		return strings.TrimSpace(component)
 	}

@@ -1,5 +1,19 @@
-**/node_modules
+# Version-control history must never enter the build context. .git here is
+# ~900MB and was being shipped to the daemon on every root-context service
+# build, dominating build time. Nothing in the Dockerfiles needs it.
+.git
+.gitignore
+.github
+
+# Build/install artifacts and local state that bloat the context
+*.log
+*.bak
+*.bak.*
+.env
+.env.*
+backups
 web/dashboard/dist
+**/node_modules
 packer_cache
 postgres-data
 consul-data

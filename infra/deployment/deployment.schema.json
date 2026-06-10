@@ -36,6 +36,10 @@
         "created_at": {
           "type": "string",
           "format": "date-time"
+        },
+        "install_mode": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },
@@ -203,6 +207,29 @@
             "data_protection": { "type": "boolean" },
             "clustering": { "type": "boolean" },
             "feature_forge": { "type": "boolean" }
+          }
+        },
+        "cluster_bootstrap": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "minLength": 1
+            },
+            "replication_profile_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "replication_components": {
+              "type": "string"
+            },
+            "join_endpoint": {
+              "type": "string"
+            },
+            "join_token": {
+              "type": "string"
+            }
           }
         },
         "license": {

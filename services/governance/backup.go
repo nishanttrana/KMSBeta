@@ -1197,6 +1197,8 @@ func buildBackupCoverageSummary(tables []string) backupCoverageSummary {
 			addCapability("threshold_signing_and_quorum_crypto")
 		case strings.HasPrefix(table, "reporting_"):
 			addCapability("reporting_jobs_and_incidents")
+		case strings.HasPrefix(table, "ff_"):
+			addCapability("feature_intent_classification_and_promotion_governance")
 		case strings.HasPrefix(table, "governance_"):
 			addCapability("governance_and_approvals")
 		case strings.HasPrefix(table, "cert") || strings.Contains(table, "_cert"):
@@ -1231,6 +1233,9 @@ func buildBackupCoverageSummary(tables []string) backupCoverageSummary {
 	}
 	if containsString(capabilityList, "threshold_signing_and_quorum_crypto") {
 		notes = append(notes, "Threshold-signing backups preserve MPC participant rosters, quorum policies, distributed key metadata, ceremony history, and share backup metadata. Live share-contribution exchanges and in-flight ceremony payload caches remain excluded.")
+	}
+	if containsString(capabilityList, "feature_intent_classification_and_promotion_governance") {
+		notes = append(notes, "FeatureForge backups preserve feature intents, classification outcomes, guardrail results, and production-promotion approval records. Transient classifier work queues and ephemeral evaluation caches remain excluded from encrypted backup payloads.")
 	}
 	if containsString(capabilityList, "certificate_pki") {
 		notes = append(notes, "Certificate PKI backups include ACME Renewal Information state and ACME STAR subscription catalogs, including delegated subscriber metadata, issuance pointers, and rollout-group scheduling data.")

@@ -22,6 +22,19 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   `INTERNAL_API_TOKEN`, `AUTH_BOOTSTRAP_CLI_PASSWORD` — plus a generated JWT
   signing keypair (public key in `.env`, private key seeded into the auth
   volume) and `VECTA_VERSION`. Image presence checks are version-aware.
+- FeatureForge wired through the full deployment surface: `feature_forge` is
+  now in the installer `FEATURE_KEYS` registry (data-driven features block, so
+  it flows into `recommended`/`all`/`custom` profiles automatically); its
+  tenant-scoped `ff_*` tables are surfaced in governance backup coverage under
+  the `feature_intent_classification_and_promotion_governance` capability; and
+  it is a first-class HA replication component (in `cluster-profile-full`).
+- Custom HA cluster profile: `install.sh` can build a `cluster-profile-custom`
+  by selecting individual services to replicate; the selection is passed via
+  `CLUSTER_BOOTSTRAP_COMPONENTS` and seeded by cluster-manager. Core services
+  (auth, keycore, policy, governance) are always replicated.
+- `deployment.schema.json` updated to accept `metadata.install_mode` and the
+  `spec.cluster_bootstrap` block (mode, replication_profile_id,
+  replication_components, join_endpoint, join_token) that the installer emits.
 
 ### Changed
 - Refreshed dashboard UI: centered minimal login (static brand glyph, reduced
@@ -35,6 +48,9 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   dependency versions that did not resolve on the public registries and left
   the tree un-buildable.
 - Stopped tracking `.env` (it had leaked dev secrets); secrets rotated.
+- Excluded `.git` (~900MB) and local state from the Docker build context via
+  `.dockerignore`; it was being shipped to the daemon on every root-context
+  service build and dominated (and stalled) image builds.
 
 ### Security
 - Removed fabricated "security scan" reports that cited non-existent versions
