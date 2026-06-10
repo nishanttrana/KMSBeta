@@ -16,6 +16,12 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 - Version tracking: `VERSION` file, versioned image tags
   (`vecta/<svc>:${VECTA_VERSION}`), `BUILD_VERSION` stamped into services, and
   this changelog.
+- Installer (`install.sh`) now provisions every secret the compose file
+  requires — `POSTGRES_PASSWORD`, `NATS_AUTH_TOKEN`,
+  `WORKLOAD_IDENTITY_SHARED_SECRET`, `SOFTWARE_VAULT_PASSPHRASE`,
+  `INTERNAL_API_TOKEN`, `AUTH_BOOTSTRAP_CLI_PASSWORD` — plus a generated JWT
+  signing keypair (public key in `.env`, private key seeded into the auth
+  volume) and `VECTA_VERSION`. Image presence checks are version-aware.
 
 ### Changed
 - Refreshed dashboard UI: centered minimal login (static brand glyph, reduced

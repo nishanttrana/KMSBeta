@@ -3,6 +3,13 @@ set -euo pipefail
 
 SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${SOURCE_DIR}"
+# Release version (drives versioned image tags vecta/<svc>:${VECTA_VERSION} and
+# the BUILD_VERSION stamped into services). Canonical source is the VERSION file.
+VECTA_VERSION="$(tr -d ' \t\r\n' < "${ROOT_DIR}/VERSION" 2>/dev/null || true)"
+VECTA_VERSION="${VECTA_VERSION:-latest}"
+# Holds the freshly generated JWT signing private key until it is seeded into the
+# auth-data volume (after the mandatory clean reset).
+JWT_PRIVATE_KEY_TMP=""
 DEPLOY_DIR=""
 COMPOSE_FILE=""
 OVERRIDE_FILE=""
@@ -665,7 +672,7 @@ adjust_unsupported_profiles() {
   fi
 
   if [[ "${FEATURE_clustering:-false}" == "true" ]]; then
-    if [[ "${BUILD_MODE:-build-missing}" == "no-build" ]] && ! docker_image_exists "vecta/cluster:latest"; then
+    if [[ "${BUILD_MODE:-build-missing}" == "no-build" ]] && ! docker_image_exists "vecta/cluster:${VECTA_VERSION}" && ! docker_image_exists "vecta/cluster:latest"; then
       add_warning "clustering requested but image vecta/cluster:latest is unavailable. Disabling clustering and mpc_engine."
       FEATURE_clustering="false"
       FEATURE_mpc_engine="false"
@@ -674,11 +681,42 @@ adjust_unsupported_profiles() {
 
   # hardware connector is also image-only. Fall back to software mode if unavailable.
   if [[ "${HSM_MODE}" == "hardware" || "${HSM_MODE}" == "auto" ]]; then
-    if ! docker_image_exists "vecta/hsm-connector:latest"; then
+    if ! docker_image_exists "vecta/hsm-connector:${VECTA_VERSION}" && ! docker_image_exists "vecta/hsm-connector:latest"; then
       add_warning "hardware HSM connector image (vecta/hsm-connector:latest) unavailable. Falling back to software HSM mode."
       HSM_MODE="software"
     fi
   fi
+}
+
+seed_auth_jwt_key() {
+  # Seed the JWT signing private key (generated in write_env_file) into the
+  # auth-data volume so the auth service's persisted key matches the cluster-wide
+  # JWT_PUBLIC_KEY_B64. Must run AFTER apply_mandatory_clean_reset (which wipes
+  # volumes). Owned by the auth container's system user (app = 100:101).
+  [[ -n "${JWT_PRIVATE_KEY_TMP}" && -f "${JWT_PRIVATE_KEY_TMP}" ]] || return 0
+  local project_name="${COMPOSE_PROJECT_NAME:-vecta-kms}"
+  if [[ -f "${ENV_FILE}" ]]; then
+    local env_project
+    env_project="$(awk -F= '/^COMPOSE_PROJECT_NAME=/ {print $2; exit}' "${ENV_FILE}" | tr -d '\r' || true)"
+    env_project="$(trim "${env_project}")"
+    [[ -n "${env_project}" ]] && project_name="${env_project}"
+  fi
+  local auth_volume="${project_name}_auth-data"
+  info "Seeding auth JWT signing key into ${auth_volume} ..."
+  "${DOCKER_BIN[@]}" volume create "${auth_volume}" >/dev/null
+  local seeded="false" image
+  for image in alpine:3.23 busybox:1.36; do
+    if "${DOCKER_BIN[@]}" run --rm -i \
+      -v "${auth_volume}:/var/lib/vecta/auth" \
+      "${image}" \
+      sh -c 'set -eu; umask 077; mkdir -p /var/lib/vecta/auth; cat > /var/lib/vecta/auth/jwt_private.pem; chown 100:101 /var/lib/vecta/auth/jwt_private.pem; chmod 600 /var/lib/vecta/auth/jwt_private.pem' < "${JWT_PRIVATE_KEY_TMP}" >/dev/null 2>&1; then
+      seeded="true"
+      break
+    fi
+  done
+  rm -f "${JWT_PRIVATE_KEY_TMP}"
+  JWT_PRIVATE_KEY_TMP=""
+  [[ "${seeded}" == "true" ]] || die "Unable to seed auth JWT signing key into ${auth_volume}."
 }
 
 configure_build_runtime() {
@@ -1588,9 +1626,47 @@ write_env_file() {
   local compose_project_name
   profiles="$("${BASH_BIN}" "${PARSER_SCRIPT}" "${DEPLOYMENT_FILE}")"
   compose_project_name="${COMPOSE_PROJECT_NAME:-vecta-kms}"
+
+  # ---- Required runtime secrets ------------------------------------------
+  # docker-compose.yml hard-requires these (via ${VAR:?} guards). The installer
+  # always performs a mandatory clean reset (down -v) before starting, so it is
+  # correct to mint fresh secrets on every install. Hex for values that appear
+  # in DSNs/headers; a policy-compliant string for the CLI bootstrap password.
+  local pg_password nats_token workload_secret vault_passphrase internal_token cli_password
+  pg_password="$(openssl rand -hex 24)"
+  nats_token="$(openssl rand -hex 24)"
+  workload_secret="$(openssl rand -hex 32)"
+  vault_passphrase="$(openssl rand -hex 32)"
+  internal_token="$(openssl rand -hex 32)"
+  cli_password="Vk$(generate_random_secret 24 | tr -dc 'A-Za-z0-9')Aa9!"
+
+  # ---- JWT signing keypair -----------------------------------------------
+  # The auth service signs tokens with the private key (seeded into the
+  # auth-data volume below); every other service verifies with the cluster-wide
+  # JWT_PUBLIC_KEY_B64. Generate a matching pair here.
+  local jwt_pub jwt_pub_b64
+  JWT_PRIVATE_KEY_TMP="$(mktemp)"
+  jwt_pub="$(mktemp)"
+  openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "${JWT_PRIVATE_KEY_TMP}" >/dev/null 2>&1 \
+    || die "Failed to generate JWT signing key (openssl required)."
+  openssl pkey -in "${JWT_PRIVATE_KEY_TMP}" -pubout -out "${jwt_pub}" >/dev/null 2>&1 \
+    || die "Failed to derive JWT public key."
+  jwt_pub_b64="$(base64 < "${jwt_pub}" | tr -d '\r\n')"
+  rm -f "${jwt_pub}"
+
   cat > "${ENV_FILE}" <<EOF
 COMPOSE_PROJECT_NAME=${compose_project_name}
 COMPOSE_PROFILES=${profiles}
+VECTA_VERSION=${VECTA_VERSION}
+POSTGRES_USER=postgres
+POSTGRES_DB=vecta
+POSTGRES_PASSWORD=${pg_password}
+NATS_AUTH_TOKEN=${nats_token}
+WORKLOAD_IDENTITY_SHARED_SECRET=${workload_secret}
+SOFTWARE_VAULT_PASSPHRASE=${vault_passphrase}
+INTERNAL_API_TOKEN=${internal_token}
+JWT_PUBLIC_KEY_B64=${jwt_pub_b64}
+AUTH_BOOTSTRAP_CLI_PASSWORD=${cli_password}
 CBOM_SCHEDULE_TENANTS=${TENANT_ID}
 HSM_MODE=${HSM_MODE}
 CERTS_STORAGE_MODE=${CERT_STORAGE_MODE}
@@ -2246,6 +2322,8 @@ main() {
   apply_mandatory_clean_reset
   step "Prepare certificate bootstrap volumes"
   seed_cert_bootstrap_secret
+  step "Seed auth JWT signing key"
+  seed_auth_jwt_key
   step "Configure build runtime and preload image bundle"
   configure_build_runtime
   load_image_bundle_if_requested
