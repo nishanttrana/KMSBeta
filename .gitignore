@@ -32,6 +32,13 @@ web/dashboard/dist/
 
 # Locally built Go binaries (go build artifacts)
 /secrets
-services/keycore/keycore
-services/*/__debug_bin*
 /certs
+/audit
+/auth
+/cloud
+/dataprotect
+/keycore
+/payment
+services/keycore/keycore
+services/ekm/ekm
+services/*/__debug_bin*
