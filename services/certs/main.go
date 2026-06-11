@@ -2,75 +2,40 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/base64"
-	"errors"
 	"log"
-	"math/big"
-	"net"
-	"net/http"
 	"os"
-	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
-	"github.com/nats-io/nats.go"
-	"google.golang.org/grpc"
-
-	pkgauditmw "vecta-kms/pkg/auditmw"
-	pkgconfig "vecta-kms/pkg/config"
-	pkgconsul "vecta-kms/pkg/consul"
-	pkgdb "vecta-kms/pkg/db"
-	pkgevents "vecta-kms/pkg/events"
-	pkggrpc "vecta-kms/pkg/grpc"
-	pkgjwtauth "vecta-kms/pkg/jwtauth"
-	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	pkgcrypto "vecta-kms/pkg/crypto"
+	pkgplatform "vecta-kms/pkg/platform"
 )
 
 var logger = log.Default()
 
+// main boots the standard platform spine and mounts the certs (internal PKI)
+// service with its background loops: runtime cert materializer, legacy CA
+// signer rewrap, and certificate expiry alert sweep.
 func main() {
-	cfg := pkgconfig.Load()
-
-	if err := pkgruntimecfg.ValidateServiceConfig("kms-certs", cfg); err != nil {
-		log.Fatalf("config validation failed: %v", err)
-	}
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
-	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
-		PostgresDSN:     cfg.PostgresDSN,
-		PostgresRODSN:   cfg.PostgresRODSN,
-		SQLitePath:      cfg.SQLitePath,
-		UseSQLite:       cfg.UseSQLite,
-		MaxOpen:         cfg.DBMaxOpen,
-		MaxIdle:         cfg.DBMaxIdle,
-		ConnMaxIdleTime: time.Duration(cfg.DBConnMaxIdleTimeSec) * time.Second,
-		ConnMaxLifetime: time.Duration(cfg.DBConnMaxLifetimeSec) * time.Second,
+	rt, err := pkgplatform.Boot(pkgplatform.Options{
+		ServiceName:   "certs",
+		JWTScope:      "CERTS",
+		HTTPPort:      "8030",
+		GRPCPort:      "18030",
+		MigrationsDir: "services/certs/migrations",
+		AuditName:     "cert", // preserves the audit.cert.* namespace reporting depends on
 	})
 	if err != nil {
-		logger.Fatalf("db open failed: %v", err)
+		log.Fatalf("[kms-certs] boot failed: %v", err)
 	}
-	defer dbConn.Close() //nolint:errcheck
-
-	if err := dbConn.RunMigrations(ctx, migrationPath()); err != nil {
-		logger.Fatalf("migration failed: %v", err)
-	}
+	defer rt.Close()
+	logger = rt.Logger
 
 	var publisher EventPublisher
-	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
-		defer nc.Close()
-		publisher = pkgevents.NewPublisher(js, 3, "audit.cert.dead_letter")
-	} else {
-		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
+	if rt.Audit != nil {
+		publisher = rt.Audit.Publisher()
 	}
 
 	keycoreURL := envOr("KEYCORE_URL", "http://127.0.0.1:8010")
@@ -84,9 +49,8 @@ func main() {
 	if rootProvider != nil {
 		defer rootProvider.Close() //nolint:errcheck
 	}
-	legacyMEK := loadLegacyMEK()
 	svc := NewServiceWithSecurity(
-		NewSQLStore(dbConn),
+		NewSQLStore(rt.DB),
 		publisher,
 		keycoreClient,
 		ServiceSecurityConfig{
@@ -94,11 +58,12 @@ func main() {
 			RootKeyMode:     rootCfg.RootKeyMode,
 			RootProvider:    rootProvider,
 			SecurityErr:     errString(rootErr),
-			LegacyMEK:       legacyMEK,
+			LegacyMEK:       loadLegacyMEK(),
 		},
 		envBool("FIPS_STRICT", false),
 		envBool("CERTS_KEYCORE_FAIL_CLOSED", true),
 	)
+
 	runtimeCfg := loadRuntimeMaterializerConfig()
 	if runtimeCfg.Enabled {
 		go func() {
@@ -118,7 +83,7 @@ func main() {
 			defer ticker.Stop()
 			for {
 				select {
-				case <-ctx.Done():
+				case <-rt.Ctx.Done():
 					return
 				case <-ticker.C:
 					run()
@@ -144,114 +109,17 @@ func main() {
 		_ = svc.RunExpiryAlertSweep(context.Background())
 		for {
 			select {
-			case <-ctx.Done():
+			case <-rt.Ctx.Done():
 				return
 			case <-ticker.C:
 				_ = svc.RunExpiryAlertSweep(context.Background())
 			}
 		}
 	}()
-	handler := NewHandler(svc)
 
-	httpPort := envOr("HTTP_PORT", "8030")
-	authedHandler := pkgjwtauth.MustWrap("CERTS", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
-	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "cert"))
-	go func() {
-		logger.Printf("http listening on :%s", httpPort)
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Fatalf("http server failed: %v", err)
-		}
-	}()
-
-	grpcPort := envOr("GRPC_PORT", "18030")
-	tlsCfg, err := devMTLSConfig()
-	if err != nil {
-		logger.Fatalf("mtls config failed: %v", err)
+	if err := rt.Serve(NewHandler(svc)); err != nil {
+		rt.Logger.Fatalf("serve failed: %v", err)
 	}
-	grpcSrv := pkggrpc.NewServer(tlsCfg, logger)
-	lis, err := net.Listen("tcp", ":"+grpcPort)
-	if err != nil {
-		logger.Fatalf("grpc listen failed: %v", err)
-	}
-	go func() {
-		logger.Printf("grpc+health listening on :%s", grpcPort)
-		if err := grpcSrv.Serve(lis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
-			logger.Fatalf("grpc server failed: %v", err)
-		}
-	}()
-
-	if reg, err := pkgconsul.NewRegistrar(cfg.ConsulAddress, "kms-certs-"+httpPort, "kms-certs", "127.0.0.1", mustAtoi(grpcPort)); err == nil {
-		if err := reg.Register(ctx); err != nil {
-			logger.Printf("consul register failed: %v", err)
-		} else {
-			defer reg.Deregister(context.Background()) //nolint:errcheck
-		}
-	}
-
-	<-ctx.Done()
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	_ = httpSrv.Shutdown(shutdownCtx)
-	grpcSrv.GracefulStop()
-}
-
-func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
-	nc, err := pkgevents.Connect(url, "kms-certs", logger.Printf)
-	if err != nil {
-		return nil, nil, err
-	}
-	js, err := nc.JetStream()
-	if err != nil {
-		nc.Close()
-		return nil, nil, err
-	}
-	_, _ = js.AddStream(&nats.StreamConfig{Name: "AUDIT_CERTS", Subjects: []string{"audit.cert.*"}})
-	return nc, js, nil
-}
-
-func migrationPath() string {
-	candidates := []string{
-		filepath.Join("services", "certs", "migrations"),
-		filepath.Join(".", "migrations"),
-	}
-	for _, c := range candidates {
-		if st, err := os.Stat(c); err == nil && st.IsDir() {
-			return c
-		}
-	}
-	return filepath.Join("services", "certs", "migrations")
-}
-
-func devMTLSConfig() (*tls.Config, error) {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, err
-	}
-	serial, _ := rand.Int(rand.Reader, big.NewInt(1<<62))
-	tpl := &x509.Certificate{
-		SerialNumber:          serial,
-		Subject:               pkix.Name{CommonName: "kms-certs-local"},
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().Add(24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		IsCA:                  true,
-		BasicConstraintsValid: true,
-	}
-	der, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &key.PublicKey, key)
-	if err != nil {
-		return nil, err
-	}
-	cert := tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}
-	cp := x509.NewCertPool()
-	c, _ := x509.ParseCertificate(der)
-	cp.AddCert(c)
-	return &tls.Config{
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{cert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    cp,
-	}, nil
 }
 
 func loadLegacyMEK() []byte {
@@ -261,8 +129,11 @@ func loadLegacyMEK() []byte {
 			return out[:32]
 		}
 	}
-	sum := sha256.Sum256([]byte("vecta-certs-dev-mek"))
-	return sum[:]
+	sum, err := pkgcrypto.Hash("SHA-256", []byte("vecta-certs-dev-mek"))
+	if err != nil {
+		panic(err)
+	}
+	return sum
 }
 
 func loadCertRootKeyConfig() CertRootKeyConfig {
@@ -356,12 +227,4 @@ func errString(err error) string {
 		return ""
 	}
 	return err.Error()
-}
-
-func mustAtoi(s string) int {
-	n := 0
-	for i := 0; i < len(s); i++ {
-		n = n*10 + int(s[i]-'0')
-	}
-	return n
 }
