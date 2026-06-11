@@ -2,15 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto"
-	"crypto/ecdh"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/hpke"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"golang.org/x/crypto/hkdf"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
@@ -615,8 +606,8 @@ func computeFieldProtectionProfileHash(item FieldProtectionProfile) string {
 		"metadata":      item.Metadata,
 	}
 	raw, _ := json.Marshal(payload)
-	sum := sha256.Sum256(raw)
-	return hex.EncodeToString(sum[:])
+	sum, _ := pkgcrypto.Hash("SHA-256", raw)
+	return hex.EncodeToString(sum)
 }
 
 func (s *Service) validateFieldProtectionProfile(ctx context.Context, in FieldProtectionProfile) (FieldProtectionProfile, error) {
@@ -837,8 +828,8 @@ func computeFieldProtectionBundleETag(req FieldProtectionResolveRequest, profile
 		"rules":      rules,
 	}
 	raw, _ := json.Marshal(payload)
-	sum := sha256.Sum256(raw)
-	return hex.EncodeToString(sum[:])
+	sum, _ := pkgcrypto.Hash("SHA-256", raw)
+	return hex.EncodeToString(sum)
 }
 
 func (s *Service) ResolveFieldProtectionPolicyBundle(ctx context.Context, req FieldProtectionResolveRequest) (FieldProtectionPolicyBundle, error) {
@@ -971,14 +962,14 @@ func (s *Service) InitFieldEncryptionWrapperRegistration(ctx context.Context, re
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "tenant_id, wrapper_id, app_id, signing_public_key_b64 and encryption_public_key_b64 are required")
 	}
 	signPub, err := b64d(req.SigningPublicKeyB64)
-	if err != nil || len(signPub) != ed25519.PublicKeySize {
+	if err != nil || len(signPub) != pkgcrypto.Ed25519PublicKeySize {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "signing_public_key_b64 must be base64 encoded ed25519 public key")
 	}
 	encPubRaw, err := b64d(req.EncryptionPublicKey)
 	if err != nil {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "encryption_public_key_b64 must be base64")
 	}
-	if _, err := ecdh.X25519().NewPublicKey(encPubRaw); err != nil {
+	if !pkgcrypto.X25519PublicKeyValid(encPubRaw) {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "encryption_public_key_b64 must be valid X25519 public key")
 	}
 	challenge := randBytes(32)
@@ -1043,18 +1034,18 @@ func (s *Service) CompleteFieldEncryptionWrapperRegistration(ctx context.Context
 		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusBadRequest, "bad_request", "wrapper_id does not match challenge")
 	}
 	pubRaw, err := b64d(challenge.SigningPublicKeyB64)
-	if err != nil || len(pubRaw) != ed25519.PublicKeySize {
+	if err != nil || len(pubRaw) != pkgcrypto.Ed25519PublicKeySize {
 		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusBadRequest, "bad_request", "challenge signing key is invalid")
 	}
 	signature, err := b64d(req.SignatureB64)
-	if err != nil || len(signature) != ed25519.SignatureSize {
+	if err != nil || len(signature) != pkgcrypto.Ed25519SignatureSize {
 		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusBadRequest, "bad_request", "signature_b64 must be valid ed25519 signature")
 	}
 	challengeBytes, err := b64d(challenge.ChallengeB64)
 	if err != nil || len(challengeBytes) == 0 {
 		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusBadRequest, "bad_request", "challenge payload is invalid")
 	}
-	if !ed25519.Verify(ed25519.PublicKey(pubRaw), challengeBytes, signature) {
+	if !pkgcrypto.Ed25519VerifyRaw(pubRaw, challengeBytes, signature) {
 		return FieldEncryptionWrapperRegistrationResult{}, newServiceError(http.StatusForbidden, "access_denied", "challenge signature verification failed")
 	}
 	approvedBy := defaultString(req.ApprovedBy, "governance")
@@ -1688,10 +1679,12 @@ func (s *Service) verifyWrapperAuthProfileToken(rawToken string, wrapper FieldEn
 			return s.jwtKey, nil
 		}
 		info := fmt.Sprintf("%s|%s|%s|field-wrapper", wrapper.TenantID, wrapper.WrapperID, wrapper.AppID)
-		ikm := sha256.Sum256([]byte(info))
-		r := hkdf.New(sha256.New, ikm[:], nil, []byte("vecta-field-wrapper-jwt-v1"))
-		fallbackKey := make([]byte, 32)
-		if _, err := r.Read(fallbackKey); err != nil {
+		ikm, err := pkgcrypto.Hash("SHA-256", []byte(info))
+		if err != nil {
+			return nil, errors.New("key derivation failed")
+		}
+		fallbackKey, err := pkgcrypto.HKDFSHA256(ikm, nil, []byte("vecta-field-wrapper-jwt-v1"), 32)
+		if err != nil {
 			return nil, errors.New("key derivation failed")
 		}
 		return fallbackKey, nil
@@ -2016,52 +2009,26 @@ func normalizeAttestationPCRValues(in map[string]string) map[string]string {
 }
 
 func parseAttestationPublicKeyPEM(raw string) (interface{}, error) {
-	block, _ := pem.Decode([]byte(strings.TrimSpace(raw)))
-	if block == nil {
+	pub, err := pkgcrypto.ParsePublicKeyPEM(raw)
+	if err != nil {
 		return nil, errors.New("invalid pem")
 	}
-	switch {
-	case strings.Contains(strings.ToUpper(strings.TrimSpace(block.Type)), "CERTIFICATE"):
-		cert, err := x509.ParseCertificate(block.Bytes)
-		if err != nil {
-			return nil, err
-		}
-		return cert.PublicKey, nil
-	case strings.Contains(strings.ToUpper(strings.TrimSpace(block.Type)), "RSA PUBLIC KEY"):
-		return x509.ParsePKCS1PublicKey(block.Bytes)
-	default:
-		return x509.ParsePKIXPublicKey(block.Bytes)
-	}
+	return pub, nil
 }
 
 func verifyAttestationSignature(pub interface{}, message []byte, signature []byte) error {
-	switch k := pub.(type) {
-	case ed25519.PublicKey:
-		if !ed25519.Verify(k, message, signature) {
-			return errors.New("ed25519 signature verify failed")
-		}
-		return nil
-	case *rsa.PublicKey:
-		sum := sha256.Sum256(message)
-		return rsa.VerifyPKCS1v15(k, crypto.SHA256, sum[:], signature)
-	case *ecdsa.PublicKey:
-		sum := sha256.Sum256(message)
-		if !ecdsa.VerifyASN1(k, sum[:], signature) {
-			return errors.New("ecdsa signature verify failed")
-		}
-		return nil
-	default:
-		return errors.New("unsupported attestation public key type")
+	if !pkgcrypto.VerifySignatureAny(pub, message, signature) {
+		return errors.New("attestation signature verify failed")
 	}
+	return nil
 }
 
 func fingerprintFromPublicKey(pub interface{}) (string, error) {
-	der, err := x509.MarshalPKIXPublicKey(pub)
+	fp, err := pkgcrypto.FingerprintPublicKey(pub)
 	if err != nil {
 		return "", err
 	}
-	sum := sha256.Sum256(der)
-	return strings.ToLower(hex.EncodeToString(sum[:])), nil
+	return strings.ToLower(fp), nil
 }
 
 func applyAttestationMetadata(metadata map[string]string, attestation wrapperAttestationVerification) map[string]string {
@@ -2143,25 +2110,12 @@ func (s *Service) wrapLeaseKeyForWrapperHPKE(tenantID string, wrapperID string, 
 	if err != nil {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "wrapper encryption key must be valid base64")
 	}
-	curve := ecdh.X25519()
-	wrapperPub, err := curve.NewPublicKey(pubRaw)
-	if err != nil {
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "wrapper encryption key must be valid X25519 key")
-	}
-	hpkePub, err := hpke.NewDHKEMPublicKey(wrapperPub)
-	if err != nil {
-		return nil, err
-	}
 	op := strings.ToLower(strings.TrimSpace(operation))
 	aad := []byte(tenantID + "|" + wrapperID + "|" + keyID + "|" + op)
 	info := []byte("vecta-field-lease/v1/" + strings.TrimSpace(tenantID) + "/" + strings.TrimSpace(wrapperID))
-	enc, sender, err := hpke.NewSender(hpkePub, hpke.HKDFSHA256(), hpke.AES256GCM(), info)
+	enc, ciphertext, err := pkgcrypto.HPKESealX25519(pubRaw, rawKey, aad, info)
 	if err != nil {
-		return nil, err
-	}
-	ciphertext, err := sender.Seal(aad, rawKey)
-	if err != nil {
-		return nil, err
+		return nil, newServiceError(http.StatusBadRequest, "bad_request", "wrapper encryption key must be valid X25519 key")
 	}
 	return map[string]interface{}{
 		"alg":             fieldLeaseHPKEAlgorithmID,
@@ -2183,18 +2137,9 @@ func (s *Service) wrapLeaseKeyForWrapperLegacy(tenantID string, wrapperID string
 	if err != nil {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "wrapper encryption key must be valid base64")
 	}
-	curve := ecdh.X25519()
-	wrapperPub, err := curve.NewPublicKey(pubRaw)
+	ephemeralPub, shared, err := pkgcrypto.ECDHX25519Ephemeral(pubRaw)
 	if err != nil {
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "wrapper encryption key must be valid X25519 key")
-	}
-	ephemeralKey, err := curve.GenerateKey(rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-	shared, err := ephemeralKey.ECDH(wrapperPub)
-	if err != nil {
-		return nil, err
 	}
 	defer zeroizeAll(shared)
 	kek := keyFromHash(shared, "field-wrapper-lease")
@@ -2208,7 +2153,7 @@ func (s *Service) wrapLeaseKeyForWrapperLegacy(tenantID string, wrapperID string
 	return map[string]interface{}{
 		"alg":               "X25519+AES-256-GCM",
 		"lease_wrap_mode":   "legacy-v1",
-		"ephemeral_pub_b64": b64(ephemeralKey.PublicKey().Bytes()),
+		"ephemeral_pub_b64": b64(ephemeralPub),
 		"ciphertext_b64":    b64(ciphertext),
 		"iv_b64":            b64(iv),
 		"key_id":            keyID,
@@ -2238,11 +2183,11 @@ func (s *Service) verifyWrapperSignedNonce(wrapper FieldEncryptionWrapper, mode 
 		return newServiceError(http.StatusForbidden, "access_denied", "signed nonce is outside anti-replay window")
 	}
 	pubRaw, err := b64d(wrapper.SigningPublicKeyB64)
-	if err != nil || len(pubRaw) != ed25519.PublicKeySize {
+	if err != nil || len(pubRaw) != pkgcrypto.Ed25519PublicKeySize {
 		return newServiceError(http.StatusBadRequest, "bad_request", "wrapper signing key is invalid")
 	}
 	signature, err := b64d(signatureB64)
-	if err != nil || len(signature) != ed25519.SignatureSize {
+	if err != nil || len(signature) != pkgcrypto.Ed25519SignatureSize {
 		return newServiceError(http.StatusBadRequest, "bad_request", "signature must be a valid ed25519 signature")
 	}
 	payload := strings.Join([]string{
@@ -2254,7 +2199,7 @@ func (s *Service) verifyWrapperSignedNonce(wrapper FieldEncryptionWrapper, mode 
 		nonce,
 		ts,
 	}, "|")
-	if !ed25519.Verify(ed25519.PublicKey(pubRaw), []byte(payload), signature) {
+	if !pkgcrypto.Ed25519VerifyRaw(pubRaw, []byte(payload), signature) {
 		return newServiceError(http.StatusForbidden, "access_denied", "wrapper signature verification failed")
 	}
 	return nil
@@ -2359,8 +2304,8 @@ func certFingerprintFromPEM(certPEM string) (string, error) {
 	if err != nil {
 		return "", newServiceError(http.StatusBadRequest, "bad_request", "certificate parse failed")
 	}
-	sum := sha256.Sum256(cert.Raw)
-	return hex.EncodeToString(sum[:]), nil
+	sum, _ := pkgcrypto.Hash("SHA-256", cert.Raw)
+	return hex.EncodeToString(sum), nil
 }
 
 func (s *Service) issueWrapperAuthProfile(wrapper FieldEncryptionWrapper) (FieldEncryptionAuthProfile, error) {
@@ -2391,12 +2336,15 @@ func (s *Service) issueWrapperAuthProfile(wrapper FieldEncryptionWrapper) (Field
 	secret := append([]byte{}, s.jwtKey...)
 	if len(secret) == 0 {
 		info := fmt.Sprintf("%s|%s|%s|field-wrapper", wrapper.TenantID, wrapper.WrapperID, wrapper.AppID)
-		ikm := sha256.Sum256([]byte(info))
-		r := hkdf.New(sha256.New, ikm[:], nil, []byte("vecta-field-wrapper-jwt-v1"))
-		secret = make([]byte, 32)
-		if _, err := r.Read(secret); err != nil {
+		ikm, ikmErr := pkgcrypto.Hash("SHA-256", []byte(info))
+		if ikmErr != nil {
 			return FieldEncryptionAuthProfile{}, errors.New("key derivation failed")
 		}
+		derived, deriveErr := pkgcrypto.HKDFSHA256(ikm, nil, []byte("vecta-field-wrapper-jwt-v1"), 32)
+		if deriveErr != nil {
+			return FieldEncryptionAuthProfile{}, errors.New("key derivation failed")
+		}
+		secret = derived
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString(secret)
