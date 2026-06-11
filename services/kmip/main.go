@@ -2,15 +2,10 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
 	"errors"
 	"log"
-	"math/big"
 	"net"
 	"net/http"
 	"os"
@@ -28,6 +23,7 @@ import (
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
+	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
@@ -287,49 +283,7 @@ func loadKMIPClientCertVerifier(roots *x509.CertPool) (func([][]byte, [][]*x509.
 }
 
 func devKMIPTLSConfig() (*tls.Config, error) {
-	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, err
-	}
-	caTpl := &x509.Certificate{
-		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{CommonName: "kms-kmip-dev-ca"},
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().Add(7 * 24 * time.Hour),
-		IsCA:                  true,
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		BasicConstraintsValid: true,
-	}
-	caDER, err := x509.CreateCertificate(rand.Reader, caTpl, caTpl, &caKey.PublicKey, caKey)
-	if err != nil {
-		return nil, err
-	}
-	caCert, err := x509.ParseCertificate(caDER)
-	if err != nil {
-		return nil, err
-	}
-
-	srvKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, err
-	}
-	srvTpl := &x509.Certificate{
-		SerialNumber:          big.NewInt(2),
-		Subject:               pkix.Name{CommonName: "kms-kmip-local"},
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().Add(24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-		DNSNames:              []string{"localhost"},
-	}
-	srvDER, err := x509.CreateCertificate(rand.Reader, srvTpl, caCert, &srvKey.PublicKey, caKey)
-	if err != nil {
-		return nil, err
-	}
-	srvPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srvDER})
-	srvKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(srvKey)})
-	srvCert, err := tls.X509KeyPair(srvPEM, srvKeyPEM)
+	srvCert, caCert, err := pkgcrypto.DevServerCertWithCA("kms-kmip-dev-ca", "kms-kmip-local", []string{"localhost"})
 	if err != nil {
 		return nil, err
 	}
@@ -345,35 +299,7 @@ func devKMIPTLSConfig() (*tls.Config, error) {
 }
 
 func devHealthTLSConfig() (*tls.Config, error) {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, err
-	}
-	serial, _ := rand.Int(rand.Reader, big.NewInt(1<<62))
-	tpl := &x509.Certificate{
-		SerialNumber:          serial,
-		Subject:               pkix.Name{CommonName: "kms-kmip-health"},
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().Add(24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		IsCA:                  true,
-		BasicConstraintsValid: true,
-	}
-	der, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &key.PublicKey, key)
-	if err != nil {
-		return nil, err
-	}
-	cert := tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}
-	cp := x509.NewCertPool()
-	c, _ := x509.ParseCertificate(der)
-	cp.AddCert(c)
-	return &tls.Config{
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{cert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    cp,
-	}, nil
+	return pkgcrypto.SelfSignedMTLSConfig("kms-kmip-health")
 }
 
 func envOr(k string, d string) string {

@@ -3,21 +3,17 @@ package main
 import (
 	"context"
 	"crypto"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"io"
 	"log"
-	"math/big"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 // GoogleCSEProvider implements the KACLS (Key Access Control List Service) API
@@ -29,7 +25,7 @@ type GoogleCSEProvider struct {
 
 	// Google OIDC public key cache
 	googleKeysMu    sync.RWMutex
-	googleKeysCache map[string]*rsa.PublicKey
+	googleKeysCache map[string]crypto.PublicKey
 	googleKeysTTL   time.Time
 }
 
@@ -76,13 +72,13 @@ func NewGoogleCSEProvider(logger *log.Logger) *GoogleCSEProvider {
 	return &GoogleCSEProvider{
 		httpClient:      &http.Client{Timeout: 30 * time.Second},
 		logger:          logger,
-		googleKeysCache: make(map[string]*rsa.PublicKey),
+		googleKeysCache: make(map[string]crypto.PublicKey),
 	}
 }
 
 // fetchGooglePublicKeys retrieves Google's OIDC public keys from the JWKS endpoint.
 // Keys are cached for 1 hour to reduce API calls.
-func (p *GoogleCSEProvider) fetchGooglePublicKeys() (map[string]*rsa.PublicKey, error) {
+func (p *GoogleCSEProvider) fetchGooglePublicKeys() (map[string]crypto.PublicKey, error) {
 	p.googleKeysMu.RLock()
 	if time.Now().Before(p.googleKeysTTL) && len(p.googleKeysCache) > 0 {
 		keys := p.googleKeysCache
@@ -119,25 +115,16 @@ func (p *GoogleCSEProvider) fetchGooglePublicKeys() (map[string]*rsa.PublicKey, 
 		return nil, fmt.Errorf("google cse: decode JWKS: %w", err)
 	}
 
-	keys := make(map[string]*rsa.PublicKey)
+	keys := make(map[string]crypto.PublicKey)
 	for _, k := range jwks.Keys {
 		if k.Kty != "RSA" {
 			continue
 		}
-		nBytes, decErr := base64.RawURLEncoding.DecodeString(k.N)
-		if decErr != nil {
+		pub, jwkErr := pkgcrypto.RSAPublicKeyFromJWK(k.N, k.E)
+		if jwkErr != nil {
 			continue
 		}
-		eBytes, decErr := base64.RawURLEncoding.DecodeString(k.E)
-		if decErr != nil {
-			continue
-		}
-		n := new(big.Int).SetBytes(nBytes)
-		e := 0
-		for _, b := range eBytes {
-			e = e<<8 + int(b)
-		}
-		keys[k.Kid] = &rsa.PublicKey{N: n, E: e}
+		keys[k.Kid] = pub
 	}
 
 	if len(keys) == 0 {
@@ -198,9 +185,8 @@ func (p *GoogleCSEProvider) ValidateGoogleJWT(tokenString string, allowedDomains
 		return nil, fmt.Errorf("google cse: decode JWT signature: %w", err)
 	}
 
-	hashed := sha256.Sum256([]byte(signedContent))
-	if err := rsa.VerifyPKCS1v15(pubKey, crypto.SHA256, hashed[:], signatureBytes); err != nil {
-		return nil, fmt.Errorf("google cse: JWT signature verification failed: %w", err)
+	if !pkgcrypto.VerifySignatureAny(pubKey, []byte(signedContent), signatureBytes) {
+		return nil, fmt.Errorf("google cse: JWT signature verification failed")
 	}
 
 	// Decode payload
@@ -416,24 +402,5 @@ func (p *GoogleCSEProvider) FetchGoogleWorkspaceDirectory(ctx context.Context, s
 
 // signRS256WithPEM signs data with an RSA private key in PEM format using RS256.
 func signRS256WithPEM(data string, pemKey string) ([]byte, error) {
-	block, _ := pem.Decode([]byte(pemKey))
-	if block == nil {
-		return nil, fmt.Errorf("failed to decode PEM block")
-	}
-	privKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		privKey2, err2 := x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err2 != nil {
-			return nil, fmt.Errorf("parse private key: %w (pkcs8: %w)", err2, err)
-		}
-		privKey = privKey2
-	}
-
-	rsaKey, ok := privKey.(*rsa.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf("private key is not RSA")
-	}
-
-	hashed := sha256.Sum256([]byte(data))
-	return rsa.SignPKCS1v15(rand.Reader, rsaKey, crypto.SHA256, hashed[:])
+	return pkgcrypto.SignPKCS1v15SHA256PEM(pemKey, []byte(data))
 }

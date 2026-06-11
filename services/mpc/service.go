@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -58,7 +57,7 @@ func (s *Service) InitiateDKG(ctx context.Context, req DKGInitiateRequest) (MPCC
 		}
 	}
 
-	secret, err := rand.Int(rand.Reader, pkgmpc.Prime)
+	secret, err := pkgcrypto.RandomInt(pkgmpc.Prime)
 	if err != nil {
 		return MPCCeremony{}, err
 	}
@@ -664,7 +663,7 @@ func (s *Service) RotateMPCKey(ctx context.Context, keyID string, req KeyRotateR
 	if err != nil {
 		return MPCKey{}, err
 	}
-	secret, err := rand.Int(rand.Reader, pkgmpc.Prime)
+	secret, err := pkgcrypto.RandomInt(pkgmpc.Prime)
 	if err != nil {
 		return MPCKey{}, err
 	}
@@ -760,7 +759,7 @@ func generatePolynomial(secret *big.Int, threshold int) ([]*big.Int, error) {
 	coeffs := make([]*big.Int, threshold)
 	coeffs[0] = new(big.Int).Mod(secret, pkgmpc.Prime)
 	for i := 1; i < threshold; i++ {
-		r, err := rand.Int(rand.Reader, pkgmpc.Prime)
+		r, err := pkgcrypto.RandomInt(pkgmpc.Prime)
 		if err != nil {
 			return nil, err
 		}
@@ -1093,9 +1092,9 @@ func (s *Service) GetOverview(ctx context.Context, tenantID string) (map[string]
 	ceremonies, _ := s.store.ListCeremonies(ctx, tenantID, CeremonyFilter{}, 10)
 	participants, _ := s.store.ListParticipants(ctx, tenantID)
 	return map[string]interface{}{
-		"stats":              stats,
-		"recent_ceremonies":  ceremonies,
-		"participants":       participants,
+		"stats":             stats,
+		"recent_ceremonies": ceremonies,
+		"participants":      participants,
 	}, nil
 }
 

@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	pkgaudit "vecta-kms/pkg/audit"
 )
 
 // RunContext carries contextual data passed between actions during a playbook run.
@@ -38,7 +40,7 @@ type PlaybookExecutor struct {
 	policyURL  string
 	auditURL   string
 	authURL    string
-	events     EventPublisher
+	audit      *pkgaudit.Client
 	http       *http.Client
 	logger     *log.Logger
 }
@@ -47,7 +49,7 @@ type PlaybookExecutor struct {
 func NewPlaybookExecutor(
 	store Store,
 	keycoreURL, certsURL, policyURL, auditURL string,
-	events EventPublisher,
+	audit *pkgaudit.Client,
 	logger *log.Logger,
 ) *PlaybookExecutor {
 	authURL := envOr("AUTH_URL", "http://127.0.0.1:8020")
@@ -58,7 +60,7 @@ func NewPlaybookExecutor(
 		policyURL:  strings.TrimRight(policyURL, "/"),
 		auditURL:   strings.TrimRight(auditURL, "/"),
 		authURL:    strings.TrimRight(authURL, "/"),
-		events:     events,
+		audit:      audit,
 		http:       &http.Client{Timeout: 30 * time.Second},
 		logger:     logger,
 	}
@@ -88,10 +90,10 @@ func (e *PlaybookExecutor) ExecutePlaybook(ctx context.Context, playbook Playboo
 	}
 
 	var (
-		results      []ActionResult
-		actionsRun   int
-		hadFailure   bool
-		outputLines  []string
+		results     []ActionResult
+		actionsRun  int
+		hadFailure  bool
+		outputLines []string
 	)
 
 	for i, action := range playbook.Actions {
@@ -171,17 +173,20 @@ func (e *PlaybookExecutor) ExecutePlaybook(ctx context.Context, playbook Playboo
 	_ = e.store.IncrementPlaybookRunCount(ctx, playbook.TenantID, playbook.ID, now)
 
 	// Publish audit event for the completed run
-	if e.events != nil {
-		payload, _ := json.Marshal(map[string]interface{}{
-			"playbook_id":   playbook.ID,
-			"playbook_name": playbook.Name,
-			"run_id":        updated.ID,
-			"status":        updated.Status,
-			"actions_run":   updated.ActionsRun,
-			"trigger_event": triggerEvent,
-			"tenant_id":     playbook.TenantID,
+	if e.audit != nil {
+		_ = e.audit.Emit(ctx, "playbook_executed", pkgaudit.Event{
+			TenantID:   playbook.TenantID,
+			TargetType: "playbook",
+			TargetID:   playbook.ID,
+			Details: map[string]interface{}{
+				"playbook_id":   playbook.ID,
+				"playbook_name": playbook.Name,
+				"run_id":        updated.ID,
+				"status":        updated.Status,
+				"actions_run":   updated.ActionsRun,
+				"trigger_event": triggerEvent,
+			},
 		})
-		_ = e.events.Publish(ctx, "audit.compliance.playbook_executed", payload)
 	}
 
 	return &updated, nil
@@ -253,14 +258,17 @@ func (e *PlaybookExecutor) executeAction(ctx context.Context, action PlaybookAct
 
 	case "send_alert", "create_audit_event", "disable_access", "notify_soc":
 		e.logger.Printf("run=%s legacy action=%s treated as audit log", runCtx.RunID, action.Type)
-		if e.events != nil {
-			payload, _ := json.Marshal(map[string]interface{}{
-				"action":     action.Type,
-				"parameters": action.Parameters,
-				"run_id":     runCtx.RunID,
-				"tenant_id":  runCtx.TenantID,
+		if e.audit != nil {
+			return e.audit.Emit(ctx, "playbook_action", pkgaudit.Event{
+				TenantID:   runCtx.TenantID,
+				TargetType: "playbook_run",
+				TargetID:   runCtx.RunID,
+				Details: map[string]interface{}{
+					"action":     action.Type,
+					"parameters": action.Parameters,
+					"run_id":     runCtx.RunID,
+				},
 			})
-			return e.events.Publish(ctx, "audit.compliance.playbook_action", payload)
 		}
 		return nil
 
@@ -323,7 +331,7 @@ func (e *PlaybookExecutor) actionSendTeams(ctx context.Context, params map[strin
 	}
 	// Microsoft Teams Adaptive Card format
 	payload := map[string]interface{}{
-		"type":    "message",
+		"type": "message",
 		"attachments": []map[string]interface{}{
 			{
 				"contentType": "application/vnd.microsoft.card.adaptive",

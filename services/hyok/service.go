@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"crypto/rsa"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"net"
@@ -14,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
 )
 
@@ -434,13 +432,13 @@ func (s *Service) ProcessCrypto(ctx context.Context, tenantID string, protocol s
 	}
 	_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "success", mustJSON(resp), "", "", policyDecision)
 	_ = s.publishAudit(ctx, protocolEventSubject(protocol, operation), tenantID, map[string]interface{}{
-		"request_id":      logEntry.ID,
-		"protocol":        protocol,
-		"operation":       operation,
-		"key_id":          keyID,
-		"policy_decision": policyDecision,
+		"request_id":         logEntry.ID,
+		"protocol":           protocol,
+		"operation":          operation,
+		"key_id":             keyID,
+		"policy_decision":    policyDecision,
 		"justification_code": req.JustificationCode,
-		"status":          "success",
+		"status":             "success",
 	})
 	return resp, nil
 }
@@ -597,17 +595,18 @@ func (s *Service) GetMicrosoftDKEKey(ctx context.Context, tenantID string, keyID
 		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", "public key is unavailable for key", "", policyDecision)
 		return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "public key is unavailable for this key")
 	}
-	rsaPub, err := parseRSAPublicKey(publicKeyPEM)
+	rsaPub, err := pkgcrypto.ParseRSAPublicKeyAny(publicKeyPEM)
 	if err != nil {
 		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", err.Error(), "", policyDecision)
 		return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "key is not RSA-compatible for DKE")
 	}
+	jwkN, jwkE := pkgcrypto.RSAPublicKeyJWK(rsaPub)
 	alg := inferDKEAlg(keyMeta, meta)
 	out := MicrosoftDKEKeyResponse{
 		KTY:    "RSA",
 		KeyOps: []string{"decrypt"},
-		N:      base64.RawURLEncoding.EncodeToString(rsaPub.N.Bytes()),
-		E:      base64.RawURLEncoding.EncodeToString(bigEndianExponentBytes(rsaPub.E)),
+		N:      jwkN,
+		E:      jwkE,
 		Alg:    alg,
 		KID:    keyID,
 		Use:    "enc",
@@ -940,43 +939,6 @@ func inferDKEAlg(keyMeta map[string]interface{}, meta DKEEndpointMetadata) strin
 	default:
 		return "RSA-OAEP-256"
 	}
-}
-
-func parseRSAPublicKey(publicKey string) (*rsa.PublicKey, error) {
-	publicKey = strings.TrimSpace(publicKey)
-	if publicKey == "" {
-		return nil, errors.New("empty public key")
-	}
-	if block, _ := pem.Decode([]byte(publicKey)); block != nil {
-		if parsed, err := x509.ParsePKIXPublicKey(block.Bytes); err == nil {
-			if rsaPub, ok := parsed.(*rsa.PublicKey); ok {
-				return rsaPub, nil
-			}
-		}
-		if rsaPub, err := x509.ParsePKCS1PublicKey(block.Bytes); err == nil {
-			return rsaPub, nil
-		}
-	}
-	if der, err := base64.StdEncoding.DecodeString(publicKey); err == nil {
-		if parsed, err := x509.ParsePKIXPublicKey(der); err == nil {
-			if rsaPub, ok := parsed.(*rsa.PublicKey); ok {
-				return rsaPub, nil
-			}
-		}
-	}
-	return nil, errors.New("unable to parse RSA public key")
-}
-
-func bigEndianExponentBytes(e int) []byte {
-	if e <= 0 {
-		return []byte{0x01, 0x00, 0x01}
-	}
-	out := []byte{}
-	for e > 0 {
-		out = append([]byte{byte(e & 0xff)}, out...)
-		e >>= 8
-	}
-	return out
 }
 
 func extractStringSlice(v interface{}) []string {

@@ -61,10 +61,12 @@ func main() {
 
 	var publisher EventPublisher
 	var jsCtx nats.JetStreamContext
+	var auditClient *pkgaudit.Client
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		jsCtx = js
-		publisher = pkgevents.NewPublisher(js, 3, "audit.compliance.dead_letter")
+		auditClient, _ = pkgaudit.NewClient(js, "compliance")
+		publisher = pkgevents.NewPublisher(js, 3, pkgaudit.DeadLetterSubject)
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
@@ -85,7 +87,7 @@ func main() {
 	svc.StartScheduler(ctx)
 
 	// Playbook execution engine
-	executor := NewPlaybookExecutor(store, keycoreURL, certsURL, policyURL, auditURL, publisher, logger)
+	executor := NewPlaybookExecutor(store, keycoreURL, certsURL, policyURL, auditURL, auditClient, logger)
 
 	handler := NewHandler(svc)
 	handler.SetExecutor(executor)

@@ -2,9 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -20,6 +17,8 @@ import (
 
 	"vecta-kms/pkg/internalauth"
 	"vecta-kms/pkg/tenantcheck"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 func (h *Handler) HTTPHandler() http.Handler {
@@ -845,30 +844,7 @@ func validatePrivateKeyMatchesCertificate(cert *x509.Certificate, privateKeyPEM 
 	if err != nil {
 		return err
 	}
-	switch pub := cert.PublicKey.(type) {
-	case *rsa.PublicKey:
-		rsaKey, ok := key.(*rsa.PrivateKey)
-		if !ok || rsaKey.PublicKey.N.Cmp(pub.N) != 0 || rsaKey.PublicKey.E != pub.E {
-			return errors.New("private key does not match certificate public key")
-		}
-	case *ecdsa.PublicKey:
-		ecdsaKey, ok := key.(*ecdsa.PrivateKey)
-		if !ok || ecdsaKey.PublicKey.X.Cmp(pub.X) != 0 || ecdsaKey.PublicKey.Y.Cmp(pub.Y) != 0 {
-			return errors.New("private key does not match certificate public key")
-		}
-	case ed25519.PublicKey:
-		edKey, ok := key.(ed25519.PrivateKey)
-		if !ok {
-			return errors.New("private key does not match certificate public key")
-		}
-		pubFromKey := edKey.Public().(ed25519.PublicKey)
-		if !ed25519.PublicKey(pubFromKey).Equal(pub) {
-			return errors.New("private key does not match certificate public key")
-		}
-	default:
-		return errors.New("certificate key type is not supported for private key validation")
-	}
-	return nil
+	return pkgcrypto.PrivateKeyMatchesPublic(cert.PublicKey, key)
 }
 
 func parsePrivateKey(rawPEM string) (interface{}, error) {

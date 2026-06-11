@@ -13,6 +13,7 @@ import (
 	"time"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
+	pkgmpc "vecta-kms/pkg/mpc"
 )
 
 type serviceError struct {
@@ -225,21 +226,7 @@ func encodeBinaryB64(v []byte) string {
 }
 
 func xorDecryptWithSecret(secret *big.Int, ciphertext []byte) []byte {
-	secretBytes := secret.Bytes()
-	if len(secretBytes) == 0 {
-		secretBytes = []byte{0}
-	}
-	defer pkgcrypto.Zeroize(secretBytes)
-
-	key := sha256.Sum256(secretBytes)
-	keyBytes := key[:]
-	defer pkgcrypto.Zeroize(keyBytes)
-
-	out := make([]byte, len(ciphertext))
-	for i := range ciphertext {
-		out[i] = ciphertext[i] ^ keyBytes[i%len(keyBytes)]
-	}
-	return out
+	return pkgmpc.XORDecryptWithSecret(secret, ciphertext)
 }
 
 func normalizeAlgorithm(v string) string {

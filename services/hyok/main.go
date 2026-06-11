@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/pem"
 	"errors"
 	"log"
 	"net"
@@ -205,22 +203,8 @@ func loadJWTParser(issuer string, audience string) (JWTParser, error) {
 	if pubPEM == "" {
 		return nil, nil
 	}
-	block, _ := pem.Decode([]byte(pubPEM))
-	if block == nil {
-		return nil, errors.New("invalid public key PEM")
-	}
-	var pub *rsa.PublicKey
-	if parsed, err := x509.ParsePKIXPublicKey(block.Bytes); err == nil {
-		if p, ok := parsed.(*rsa.PublicKey); ok {
-			pub = p
-		}
-	}
-	if pub == nil {
-		if p, err := x509.ParsePKCS1PublicKey(block.Bytes); err == nil {
-			pub = p
-		}
-	}
-	if pub == nil {
+	pub, err := pkgcrypto.ParseRSAPublicKeyPEM(pubPEM)
+	if err != nil {
 		return nil, errors.New("unable to parse RSA public key")
 	}
 	return func(token string) (*pkgauth.Claims, error) {

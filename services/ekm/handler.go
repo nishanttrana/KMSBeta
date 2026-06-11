@@ -1,10 +1,8 @@
 package main
 
 import (
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"io"
 	"net/http"
@@ -17,6 +15,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	pkgauth "vecta-kms/pkg/auth"
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 type Handler struct {
@@ -992,9 +991,9 @@ type bitLockerJWTClaims struct {
 }
 
 var (
-	bitLockerJWTOnce sync.Once
-	bitLockerJWTErr  error
-	bitLockerJWTPub  *rsa.PublicKey
+	bitLockerJWTOnce   sync.Once
+	bitLockerJWTErr    error
+	bitLockerJWTVerify func(string) (*bitLockerJWTClaims, error)
 )
 
 func parseBitLockerJWT(rawToken string) (*bitLockerJWTClaims, error) {
@@ -1012,34 +1011,26 @@ func parseBitLockerJWT(rawToken string) (*bitLockerJWTClaims, error) {
 			bitLockerJWTErr = err
 			return
 		}
-		block, _ := pem.Decode(pemRaw)
-		if block == nil {
-			bitLockerJWTErr = errors.New("failed to decode jwt public key PEM")
-			return
-		}
-		pubAny, err := x509.ParsePKIXPublicKey(block.Bytes)
+		pub, err := pkgcrypto.ParseRSAPublicKeyPEM(string(pemRaw))
 		if err != nil {
-			bitLockerJWTErr = err
-			return
-		}
-		pub, ok := pubAny.(*rsa.PublicKey)
-		if !ok {
 			bitLockerJWTErr = errors.New("jwt public key is not RSA")
 			return
 		}
-		bitLockerJWTPub = pub
+		bitLockerJWTVerify = func(raw string) (*bitLockerJWTClaims, error) {
+			return pkgauth.ParseRS256WithClaims(raw, &bitLockerJWTClaims{}, pub, pkgauth.ParseOptions{
+				Issuer:   strings.TrimSpace(os.Getenv("JWT_ISSUER")),
+				Audience: strings.TrimSpace(os.Getenv("JWT_AUDIENCE")),
+				Leeway:   30 * time.Second,
+			})
+		}
 	})
 	if bitLockerJWTErr != nil {
 		return nil, bitLockerJWTErr
 	}
-	if bitLockerJWTPub == nil {
+	if bitLockerJWTVerify == nil {
 		return nil, errors.New("jwt public key is not configured")
 	}
-	return pkgauth.ParseRS256WithClaims(rawToken, &bitLockerJWTClaims{}, bitLockerJWTPub, pkgauth.ParseOptions{
-		Issuer:   strings.TrimSpace(os.Getenv("JWT_ISSUER")),
-		Audience: strings.TrimSpace(os.Getenv("JWT_AUDIENCE")),
-		Leeway:   30 * time.Second,
-	})
+	return bitLockerJWTVerify(rawToken)
 }
 
 func (h *Handler) writeServiceError(w http.ResponseWriter, err error, reqID string, tenantID string) {

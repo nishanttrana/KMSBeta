@@ -80,9 +80,11 @@ func main() {
 	}
 
 	var publisher AuditPublisher
+	var auditClient *pkgaudit.Client
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
-		publisher = pkgevents.NewPublisher(js, 3, "audit.key.dead_letter")
+		auditClient, _ = pkgaudit.NewClient(js, "key")
+		publisher = pkgevents.NewPublisher(js, 3, pkgaudit.DeadLetterSubject)
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
@@ -193,7 +195,7 @@ func main() {
 		sched := NewZeroizationScheduler(
 			svc, // implements ZeroizationLister via store_lifecycle.go
 			func(tenantID, keyID string) bool { return svc.ConfirmKeyMaterialZeroized(tenantID, keyID) },
-			publisher,
+			auditClient,
 		)
 		go sched.Run(ctx)
 		logger.Printf("zeroization verification scheduler started")

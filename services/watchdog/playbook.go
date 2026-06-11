@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strings"
 	"sync"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 
+	pkgaudit "vecta-kms/pkg/audit"
 	pkgevents "vecta-kms/pkg/events"
 )
 
@@ -36,6 +36,7 @@ type playbookEngine struct {
 	incidents []Incident
 	suppress  map[string]time.Time
 	nc        *nats.Conn
+	audit     *pkgaudit.Client
 }
 
 func newPlaybookEngine(probe *Probe, l logIface) *playbookEngine {
@@ -49,6 +50,9 @@ func newPlaybookEngine(probe *Probe, l logIface) *playbookEngine {
 	// in memory and surfaced via the REST endpoint.
 	if nc, err := pkgevents.Connect(probe.natsURL, "kms-watchdog-playbook", l.Printf); err == nil {
 		pe.nc = nc
+		if js, jsErr := nc.JetStream(); jsErr == nil {
+			pe.audit, _ = pkgaudit.NewClient(js, "health")
+		}
 	}
 	return pe
 }
@@ -138,25 +142,21 @@ func (p *playbookEngine) Incidents() []Incident {
 }
 
 func (p *playbookEngine) emit(ctx context.Context, inc Incident) {
-	if p.nc == nil {
+	if p.audit == nil {
 		return
 	}
-	payload, err := json.Marshal(map[string]any{
-		"timestamp": inc.Timestamp.Format(time.RFC3339Nano),
-		"service":   "watchdog",
-		"action":    "audit.health.incident",
-		"result":    "warning",
-		"data": map[string]any{
+	_ = p.audit.Emit(ctx, "incident", pkgaudit.Event{
+		Result:     "warning",
+		Timestamp:  inc.Timestamp.Format(time.RFC3339Nano),
+		TargetType: "service",
+		TargetID:   inc.Service,
+		Details: map[string]interface{}{
 			"incident_id":      inc.ID,
 			"affected_service": inc.Service,
 			"reason":           inc.Reason,
 			"playbook_action":  inc.Action,
 		},
 	})
-	if err != nil {
-		return
-	}
-	_ = p.nc.Publish("audit.health.incident", payload)
 }
 
 // randomID is the tiny ID generator the engine uses for incidents. It

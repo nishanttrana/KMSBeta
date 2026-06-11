@@ -4,10 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"crypto/sha256"
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
@@ -19,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 const (
@@ -573,7 +571,7 @@ func (s *Service) resolveRestoreBackupKey(ctx context.Context, store *SQLStore, 
 				continue
 			}
 			seen[keyID] = struct{}{}
-			derived := sha256.Sum256([]byte(candidate))
+			derived, _ := pkgcrypto.Hash("SHA-256", []byte(candidate))
 			backupKey, err := decryptAESGCM(wrapped, derived[:], wrapNonce, wrapAAD)
 			if err != nil {
 				continue
@@ -656,7 +654,7 @@ func buildBackupKeyPackage(backupKey []byte, hsmBound bool, binding backupHSMBin
 		if secret == "" {
 			return nil, nil, errors.New("BACKUP_HSM_WRAP_SECRET environment variable is required but not set")
 		}
-		derived := sha256.Sum256([]byte(secret + "|" + binding.Fingerprint + "|" + requestTenantID + "|" + targetTenantID))
+		derived, _ := pkgcrypto.Hash("SHA-256", []byte(secret+"|"+binding.Fingerprint+"|"+requestTenantID+"|"+targetTenantID))
 		aad := []byte("vecta-kms:backup:hsm-binding:" + binding.FingerprintHash)
 		wrapped, wrapNonce, err := encryptAESGCM(backupKey, derived[:], aad)
 		if err != nil {
@@ -1317,46 +1315,19 @@ func quoteIdentifier(name string) string {
 }
 
 func randomBytes(size int) ([]byte, error) {
-	if size <= 0 {
-		return nil, errors.New("size must be > 0")
-	}
-	out := make([]byte, size)
-	if _, err := io.ReadFull(rand.Reader, out); err != nil {
-		return nil, err
-	}
-	return out, nil
+	return pkgcrypto.RandomBytes(size)
 }
 
 func encryptAESGCM(plaintext []byte, key []byte, aad []byte) ([]byte, []byte, error) {
-	block, err := aes.NewCipher(key)
+	nonce, ciphertext, err := pkgcrypto.SealDetached(key, plaintext, aad)
 	if err != nil {
 		return nil, nil, err
 	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, nil, err
-	}
-	nonce, err := randomBytes(gcm.NonceSize())
-	if err != nil {
-		return nil, nil, err
-	}
-	ciphertext := gcm.Seal(nil, nonce, plaintext, aad)
 	return ciphertext, nonce, nil
 }
 
 func decryptAESGCM(ciphertext []byte, key []byte, nonce []byte, aad []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-	if len(nonce) != gcm.NonceSize() {
-		return nil, errors.New("invalid nonce size")
-	}
-	return gcm.Open(nil, nonce, ciphertext, aad)
+	return pkgcrypto.OpenDetached(key, nonce, ciphertext, aad)
 }
 
 func decodeBase64Payload(raw string) ([]byte, error) {

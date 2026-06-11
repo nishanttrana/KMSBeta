@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -11,6 +9,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 // ---------------------------------------------------------------------------
@@ -42,10 +42,10 @@ func (p *alibabaProvider) ImportKey(ctx context.Context, in ImportInput) (Import
 	}
 
 	params := map[string]string{
-		"Action":              "ImportKeyMaterial",
-		"KeyId":               keyName,
-		"EncryptedKeyMaterial": anyToString(in.Export["wrapped_material"]),
-		"ImportToken":         anyToString(in.Export["import_token"]),
+		"Action":                "ImportKeyMaterial",
+		"KeyId":                 keyName,
+		"EncryptedKeyMaterial":  anyToString(in.Export["wrapped_material"]),
+		"ImportToken":           anyToString(in.Export["import_token"]),
 		"KeyMaterialExpireUnix": "0",
 	}
 
@@ -310,10 +310,8 @@ func (p *alibabaProvider) apiRequest(ctx context.Context, accessKeyID, accessKey
 
 	stringToSign := "GET&" + url.QueryEscape("/") + "&" + url.QueryEscape(canonicalizedQuery)
 
-	// HMAC-SHA1 signing
-	mac := hmac.New(sha1.New, []byte(accessKeySecret+"&"))
-	mac.Write([]byte(stringToSign))
-	signature := base64.StdEncoding.EncodeToString(mac.Sum(nil))
+	// HMAC-SHA1 signing (mandated by the Alibaba Cloud API signature protocol)
+	signature := base64.StdEncoding.EncodeToString(pkgcrypto.HMACSHA1Interop([]byte(accessKeySecret+"&"), []byte(stringToSign)))
 	params.Set("Signature", signature)
 
 	requestURL := endpoint + "?" + params.Encode()
@@ -369,8 +367,8 @@ func (p *serviceNowProvider) ImportKey(ctx context.Context, in ImportInput) (Imp
 	}
 
 	payload := map[string]interface{}{
-		"name":      keyName,
-		"type":      algorithm,
+		"name":         keyName,
+		"type":         algorithm,
 		"key_material": anyToString(in.Export["wrapped_material"]),
 		"encryption_context": map[string]interface{}{
 			"vecta_tenant_id":       in.TenantID,
