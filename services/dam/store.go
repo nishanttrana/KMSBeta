@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -10,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 )
 
@@ -349,7 +349,7 @@ func parseDAMTimeString(s string) time.Time {
 
 func newDAMID(prefix string) string {
 	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return prefix + "_" + hex.EncodeToString(b)
 }
 

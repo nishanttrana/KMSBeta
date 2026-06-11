@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -11,6 +10,8 @@ import (
 	"time"
 
 	"vecta-kms/pkg/clustersync"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 type EventPublisher interface {
@@ -426,11 +427,11 @@ func (s *Service) Evaluate(ctx context.Context, req EvaluatePolicyRequest) (Eval
 	})
 
 	_ = s.publishAudit(ctx, "audit.policy.evaluated", req.TenantID, map[string]any{
-		"operation":    req.Operation,
-		"key_id":       req.KeyID,
-		"decision":     result.Decision,
-		"outcomes":     len(result.Outcomes),
-		"kdf":          req.KDFAlgorithm,
+		"operation": req.Operation,
+		"key_id":    req.KeyID,
+		"decision":  result.Decision,
+		"outcomes":  len(result.Outcomes),
+		"kdf":       req.KDFAlgorithm,
 	})
 	switch result.Decision {
 	case DecisionDeny:
@@ -530,6 +531,6 @@ func newCommit(parent string, tenant string, name string, body string, actor str
 
 func newID(prefix string) string {
 	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return prefix + "_" + hex.EncodeToString(b)
 }

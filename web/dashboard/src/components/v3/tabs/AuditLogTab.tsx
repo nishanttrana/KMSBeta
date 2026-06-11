@@ -96,6 +96,13 @@ function sevTone(s: string) {
   return "blue";
 }
 
+function eventOrigin(e: AuditEvent): { origin: string; agentId: string } {
+  const d = (e.details || {}) as Record<string, unknown>;
+  const origin = typeof d.origin === "string" && d.origin ? d.origin : "service";
+  const agentId = typeof d.agent_id === "string" ? d.agent_id : "";
+  return { origin, agentId };
+}
+
 function riskColor(score: number): string {
   if (score >= 80) return C.red;
   if (score >= 60) return C.orange;
@@ -363,6 +370,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
 
   // filters
   const [serviceFilter, setServiceFilter] = useState("");
+  const [originFilter, setOriginFilter] = useState("");
   const [resultFilter, setResultFilter] = useState("");
   const [timeRange, setTimeRange] = useState("24h");
   const [searchQuery, setSearchQuery] = useState("");
@@ -421,6 +429,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
   const filteredEvents = useMemo(() => {
     let out = events.filter((e) => !isHTTPRequestAction(e.action));
     if (serviceFilter) out = out.filter((e) => e.service === serviceFilter);
+    if (originFilter) out = out.filter((e) => eventOrigin(e).origin === originFilter);
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       out = out.filter((e) =>
@@ -432,7 +441,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
       );
     }
     return out;
-  }, [events, serviceFilter, searchQuery]);
+  }, [events, serviceFilter, originFilter, searchQuery]);
 
   /* ── analytics computed data ── */
 
@@ -615,6 +624,11 @@ export const AuditLogTab = ({ session, onToast }: any) => {
           <option value="">All Services</option>
           {SERVICES.map((s) => <option key={s} value={s}>{s}</option>)}
         </Sel>
+        <Sel w={110} value={originFilter} onChange={(e: any) => { setOriginFilter(e.target.value); setOffset(0); }}>
+          <option value="">All Origins</option>
+          <option value="service">Services</option>
+          <option value="agent">Agents</option>
+        </Sel>
         <Sel w={100} value={resultFilter} onChange={(e: any) => { setResultFilter(e.target.value); setOffset(0); }}>
           <option value="">All Results</option>
           <option value="success">Success</option>
@@ -668,6 +682,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
                 <th style={TH}>Service</th>
                 <th style={TH}>Action</th>
                 <th style={TH}>Actor</th>
+                <th style={TH}>Origin</th>
                 <th style={TH}>Target</th>
                 <th style={TH}>Result</th>
                 <th style={TH}>Risk</th>
@@ -677,7 +692,7 @@ export const AuditLogTab = ({ session, onToast }: any) => {
             </thead>
             <tbody>
               {filteredEvents.length === 0 && (
-                <tr><td colSpan={9} style={{ ...TD, textAlign: "center", color: C.muted, padding: 20 }}>
+                <tr><td colSpan={10} style={{ ...TD, textAlign: "center", color: C.muted, padding: 20 }}>
                   {loading ? "Loading audit events..." : "No audit events found for the selected filters."}
                 </td></tr>
               )}
@@ -692,6 +707,9 @@ export const AuditLogTab = ({ session, onToast }: any) => {
                     {formatAction(ev.action)}
                   </td>
                   <td style={TD}>{ev.actor_id || "-"}</td>
+                  <td style={TD}>{(() => { const o = eventOrigin(ev); return o.origin === "agent"
+                    ? <span title={o.agentId ? `agent: ${o.agentId}` : "agent-originated"}><B c="amber">agent</B></span>
+                    : <span style={{ color: C.muted, fontSize: 9 }}>service</span>; })()}</td>
                   <td style={TD}>{ev.target_id || "-"}</td>
                   <td style={TD}><B c={resultTone(ev.result)}>{ev.result}</B></td>
                   <td style={TD}>

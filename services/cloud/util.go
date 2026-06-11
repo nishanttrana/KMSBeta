@@ -1,16 +1,17 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"strings"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 func newID(prefix string) string {
 	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return prefix + "_" + hex.EncodeToString(b)
 }
 

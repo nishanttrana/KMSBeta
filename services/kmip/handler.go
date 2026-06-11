@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
@@ -21,6 +20,8 @@ import (
 	"github.com/ovh/kmip-go/kmipserver"
 	"github.com/ovh/kmip-go/payloads"
 	"github.com/ovh/kmip-go/ttlv"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 type EventPublisher interface {
@@ -1759,7 +1760,7 @@ func (h *Handler) publishAudit(ctx context.Context, subject string, tenantID str
 
 func newID(prefix string) string {
 	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return prefix + "_" + hex.EncodeToString(b)
 }
 

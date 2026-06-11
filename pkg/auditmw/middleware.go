@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	pkgaudit "vecta-kms/pkg/audit"
 	pkgauth "vecta-kms/pkg/auth"
 )
 
@@ -86,23 +87,26 @@ func Wrap(next http.Handler, publisher EventPublisher, serviceName string) http.
 				sourceIP = strings.SplitN(fwd, ",", 2)[0]
 			}
 
-			evt := map[string]interface{}{
-				"tenant_id":      tenantID,
-				"service":        serviceName,
-				"action":         subject,
-				"method":         r.Method,
-				"endpoint":       r.URL.Path,
-				"query":          sanitizeQuery(r.URL.RawQuery),
-				"source_ip":      strings.TrimSpace(sourceIP),
-				"user_agent":     r.UserAgent(),
-				"actor_id":       actorID,
-				"actor_role":     actorRole,
-				"client_id":      clientID,
-				"status_code":    rc.status,
-				"result":         result,
-				"response_bytes": rc.bytes,
-				"duration_ms":    duration.Milliseconds(),
-				"timestamp":      time.Now().UTC().Format(time.RFC3339Nano),
+			evt := pkgaudit.Event{
+				TenantID:   tenantID,
+				Service:    serviceName,
+				Action:     subject,
+				ActorID:    actorID,
+				ActorRole:  actorRole,
+				Result:     result,
+				StatusCode: rc.status,
+				SourceIP:   strings.TrimSpace(sourceIP),
+				UserAgent:  r.UserAgent(),
+				Method:     r.Method,
+				Endpoint:   r.URL.Path,
+				DurationMS: float64(duration.Milliseconds()),
+				Origin:     "service",
+				Details: map[string]interface{}{
+					"query":          sanitizeQuery(r.URL.RawQuery),
+					"client_id":      clientID,
+					"response_bytes": rc.bytes,
+				},
+				Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
 			}
 
 			payload, err := json.Marshal(evt)

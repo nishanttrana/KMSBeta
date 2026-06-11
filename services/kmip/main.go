@@ -24,6 +24,7 @@ import (
 	"github.com/ovh/kmip-go/kmipserver"
 	"google.golang.org/grpc"
 
+	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
@@ -160,7 +161,7 @@ func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
 		nc.Close()
 		return nil, nil, err
 	}
-	_, _ = js.AddStream(&nats.StreamConfig{Name: "AUDIT_KMIP", Subjects: []string{"audit.kmip.*"}})
+	_, _ = js.AddStream(pkgaudit.StreamConfig())
 	return nc, js, nil
 }
 

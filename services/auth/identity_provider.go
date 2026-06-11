@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
@@ -17,6 +16,8 @@ import (
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 const (
@@ -294,7 +295,7 @@ func fallbackIdentityUsername(email string, displayName string, externalID strin
 
 func generateImportedUserPassword() (string, error) {
 	buf := make([]byte, 24)
-	if _, err := rand.Read(buf); err != nil {
+	if _, err := pkgcrypto.Reader.Read(buf); err != nil {
 		return "", err
 	}
 	return "V!" + base64.RawURLEncoding.EncodeToString(buf) + "a1", nil

@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"net/http"
 	"strings"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 func (h *Handler) handleListLeakTargets(w http.ResponseWriter, r *http.Request) {
@@ -256,6 +257,6 @@ func (h *Handler) handleUpdateLeakFinding(w http.ResponseWriter, r *http.Request
 // cryptoIntn returns a cryptographically secure random int in [0, n).
 func cryptoIntn(n int) int {
 	var b [8]byte
-	_, _ = rand.Read(b[:])
+	_, _ = pkgcrypto.Reader.Read(b[:])
 	return int(binary.LittleEndian.Uint64(b[:]) % uint64(n))
 }

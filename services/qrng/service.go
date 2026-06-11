@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 // EventPublisher publishes audit events to NATS JetStream.
@@ -31,7 +32,7 @@ type entropyPool struct {
 
 func newEntropyPool() *entropyPool {
 	buf := make([]byte, 512)
-	_, _ = rand.Read(buf) // seed with OS randomness
+	_, _ = pkgcrypto.Reader.Read(buf) // seed with OS randomness
 	return &entropyPool{buf: buf}
 }
 
@@ -52,7 +53,7 @@ func (p *entropyPool) draw(n int) ([]byte, error) {
 	defer p.mu.Unlock()
 	out := make([]byte, n)
 	osRand := make([]byte, n)
-	if _, err := rand.Read(osRand); err != nil {
+	if _, err := pkgcrypto.Reader.Read(osRand); err != nil {
 		return nil, err
 	}
 	counter := 0

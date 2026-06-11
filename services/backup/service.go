@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 // BackupService orchestrates backup runs and policy management.
@@ -45,8 +46,8 @@ func (svc *BackupService) RunBackup(ctx context.Context, tenantID, policyID, pol
 	// Simulate backup work.
 	time.Sleep(2 * time.Second)
 
-	totalKeys := 50 + int(randByte()%100)    // 50-149 keys
-	failedKeys := int(randByte() % 3)         // 0-2 failures
+	totalKeys := 50 + int(randByte()%100) // 50-149 keys
+	failedKeys := int(randByte() % 3)     // 0-2 failures
 	backedUp := totalKeys - failedKeys
 	sizeBytes := int64(backedUp) * (4096 + int64(randByte())*16)
 	destPath := fmt.Sprintf("/backups/%s/%s/%s.bak", tenantID, time.Now().UTC().Format("2006/01/02"), saved.ID)
@@ -135,6 +136,6 @@ func (svc *BackupService) computeChecksum(tenantID, runID string, keyCount int, 
 
 func randByte() byte {
 	b := make([]byte, 1)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return b[0]
 }

@@ -16,7 +16,6 @@ package main
 import (
 	"context"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
@@ -31,6 +30,8 @@ import (
 	"github.com/ovh/kmip-go/kmipserver"
 	"github.com/ovh/kmip-go/payloads"
 	"github.com/ovh/kmip-go/ttlv"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 // ── CreateKeyPair ────────────────────────────────────────────────────────────
@@ -839,7 +840,7 @@ func hmacInService(key []byte, data []byte, algorithm string) []byte {
 // generateOpaqueID creates a placeholder key ID for opaque objects that have no keycore backing.
 func generateOpaqueID() string {
 	b := make([]byte, 16)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return fmt.Sprintf("opaque-%x", b)
 }
 

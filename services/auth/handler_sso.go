@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -295,7 +294,7 @@ func (h *Handler) findOrCreateSSOUser(ctx context.Context, tenantID string, attr
 
 	// Generate a random password for SSO-created users (they won't use it)
 	randPwd := make([]byte, 32)
-	if _, err := rand.Read(randPwd); err != nil {
+	if _, err := pkgcrypto.Reader.Read(randPwd); err != nil {
 		return User{}, fmt.Errorf("failed to generate password: %w", err)
 	}
 	pwdHash, err := HashPassword(hex.EncodeToString(randPwd))

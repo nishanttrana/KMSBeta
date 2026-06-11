@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -15,6 +14,8 @@ import (
 	"time"
 
 	"vecta-kms/pkg/ssrfguard"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 // OIDCDiscovery holds discovered OIDC endpoints from .well-known/openid-configuration.
@@ -56,7 +57,7 @@ func init() {
 // generateSSOState creates a random state value and stores the tenant/provider mapping.
 func generateSSOState(tenantID, provider string) (string, error) {
 	buf := make([]byte, 32)
-	if _, err := rand.Read(buf); err != nil {
+	if _, err := pkgcrypto.Reader.Read(buf); err != nil {
 		return "", err
 	}
 	state := base64.RawURLEncoding.EncodeToString(buf)

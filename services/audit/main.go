@@ -2,15 +2,9 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/base64"
 	"errors"
 	"log"
-	"math/big"
 	"net"
 	"net/http"
 	"os"
@@ -23,10 +17,12 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 
+	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgclustersync "vecta-kms/pkg/clustersync"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
+	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
@@ -71,7 +67,14 @@ func main() {
 	}
 	defer nc.Close()
 
-	pub := pkgevents.NewPublisher(js, 3, "audit.logger.dead_letter")
+	// The audit service owns the single unified AUDIT stream (audit.>).
+	// All services publish into it; downstream visibility services attach
+	// their own durable consumers for fan-out.
+	if err := pkgaudit.EnsureStream(js, logger.Printf); err != nil {
+		logger.Fatalf("audit stream init failed: %v", err)
+	}
+
+	pub := pkgevents.NewPublisher(js, 3, pkgaudit.DeadLetterSubject)
 
 	hb := pkgheartbeat.New(nc, "audit", envOr("CLUSTER_NODE_ID", "vecta-kms-01"), envOr("AUDIT_VERSION", "dev"))
 	hb.Start(ctx)
@@ -100,10 +103,18 @@ func main() {
 		2*time.Second,
 	))
 
-	if _, err := nc.Subscribe("audit.>", func(msg *nats.Msg) {
-		if err := svc.HandleNATSMessage(ctx, msg); err != nil && ac.FailClosed {
-			logger.Printf("nats ingest failed: %v", err)
+	// Durable JetStream ingest: events survive audit-service restarts and are
+	// redelivered until acked, unlike the previous lossy core NATS subscribe.
+	if _, err := pkgaudit.SubscribeDurable(js, "audit-ingest", func(_ *pkgaudit.Event, msg *nats.Msg) {
+		if err := svc.HandleNATSMessage(ctx, msg); err != nil {
+			if ac.FailClosed {
+				logger.Printf("nats ingest failed (will redeliver): %v", err)
+				_ = msg.Nak()
+				return
+			}
+			logger.Printf("nats ingest failed (dropped, fail-open): %v", err)
 		}
+		_ = msg.Ack()
 	}); err != nil {
 		logger.Fatalf("subscribe failed: %v", err)
 	}
@@ -227,25 +238,9 @@ func loadAuditConfig() AuditConfig {
 	}
 }
 
-// loadKey32 decodes a base64-encoded 32-byte key from an env var.
-// If missing or invalid, a random key is generated (ephemeral; log a warning).
 func loadKey32(envVar string) []byte {
-	raw := strings.TrimSpace(os.Getenv(envVar))
-	if raw != "" {
-		key, err := base64.StdEncoding.DecodeString(raw)
-		if err == nil && len(key) >= 16 {
-			// Pad or truncate to exactly 32 bytes
-			out := make([]byte, 32)
-			copy(out, key)
-			return out
-		}
-		logger.Printf("WARNING: %s is set but invalid — generating ephemeral key", envVar)
-	}
-	b := make([]byte, 32)
-	_, _ = rand.Read(b)
-	return b
+	return pkgcrypto.LoadKey32(envVar, logger.Printf)
 }
-
 
 func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
 	nc, err := pkgevents.Connect(url, "kms-audit", logger.Printf)
@@ -274,35 +269,7 @@ func migrationPath() string {
 }
 
 func devMTLSConfig() (*tls.Config, error) {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, err
-	}
-	serial, _ := rand.Int(rand.Reader, big.NewInt(1<<62))
-	tpl := &x509.Certificate{
-		SerialNumber:          serial,
-		Subject:               pkix.Name{CommonName: "kms-audit-local"},
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().Add(24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		IsCA:                  true,
-		BasicConstraintsValid: true,
-	}
-	der, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &key.PublicKey, key)
-	if err != nil {
-		return nil, err
-	}
-	cert := tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}
-	cp := x509.NewCertPool()
-	c, _ := x509.ParseCertificate(der)
-	cp.AddCert(c)
-	return &tls.Config{
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{cert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    cp,
-	}, nil
+	return pkgcrypto.SelfSignedMTLSConfig("kms-audit-local")
 }
 
 func envOr(k string, d string) string {

@@ -355,6 +355,19 @@ func parseIncomingEvent(subject string, payload []byte) (AuditEvent, error) {
 	} else if data, ok := in["data"].(map[string]interface{}); ok {
 		event.Details = data
 	}
+	// Wire-schema fields without dedicated columns are preserved in Details
+	// so downstream consumers and the UI can distinguish agent-originated
+	// events without a storage migration.
+	for _, k := range []string{"origin", "agent_id", "actor_role"} {
+		if v := str(in[k]); v != "" {
+			if event.Details == nil {
+				event.Details = map[string]interface{}{}
+			}
+			if _, exists := event.Details[k]; !exists {
+				event.Details[k] = v
+			}
+		}
+	}
 	if tags, ok := in["tags"].([]interface{}); ok {
 		for _, t := range tags {
 			event.Tags = append(event.Tags, str(t))

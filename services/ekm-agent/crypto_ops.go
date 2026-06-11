@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	pkgaudit "vecta-kms/pkg/audit"
 	"vecta-kms/pkg/keycache"
 )
 
@@ -29,13 +30,17 @@ func (r *AgentRunner) TryExportKey(ctx context.Context, keyID string) error {
 	}
 	if !meta.ExportAllowed {
 		r.logger.Printf("key %s is not exportable — crypto operations will proxy to KMS", keyID)
+		r.emitAudit(ctx, "key_export_denied", pkgaudit.Event{
+			TargetType: "key", TargetID: keyID,
+			Details: map[string]interface{}{"reason": "export_not_allowed"},
+		})
 		return nil
 	}
 
 	// Export the key (KMS wraps it; we unwrap locally)
 	exportURL := joinURL(r.cfg.APIBaseURL, fmt.Sprintf("/ekm/tde/keys/%s/export", keyID))
 	var exportResp struct {
-		Material  string `json:"material"`  // base64 raw key material
+		Material  string `json:"material"` // base64 raw key material
 		Algorithm string `json:"algorithm"`
 		Version   int    `json:"version"`
 	}
@@ -44,6 +49,10 @@ func (r *AgentRunner) TryExportKey(ctx context.Context, keyID string) error {
 		"agent_id":  r.cfg.AgentID,
 		"purpose":   "local_tde_cache",
 	}, &exportResp); err != nil {
+		r.emitAudit(ctx, "key_exported", pkgaudit.Event{
+			TargetType: "key", TargetID: keyID,
+			Result: "failure", ErrorMessage: err.Error(),
+		})
 		return fmt.Errorf("export key: %w", err)
 	}
 
@@ -59,6 +68,10 @@ func (r *AgentRunner) TryExportKey(ctx context.Context, keyID string) error {
 	}
 
 	r.logger.Printf("key %s (v%d, %s) exported and cached locally", keyID, exportResp.Version, exportResp.Algorithm)
+	r.emitAudit(ctx, "key_exported", pkgaudit.Event{
+		TargetType: "key", TargetID: keyID, RiskScore: 40,
+		Details: map[string]interface{}{"version": exportResp.Version, "algorithm": exportResp.Algorithm, "purpose": "local_tde_cache"},
+	})
 	return nil
 }
 

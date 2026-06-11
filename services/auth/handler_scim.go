@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -16,6 +15,7 @@ import (
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 const (
@@ -108,7 +108,7 @@ func normalizeSCIMSettings(settings SCIMSettings) SCIMSettings {
 
 func generateSCIMBearerToken() (string, []byte, string, error) {
 	raw := make([]byte, 32)
-	if _, err := rand.Read(raw); err != nil {
+	if _, err := pkgcrypto.Reader.Read(raw); err != nil {
 		return "", nil, "", err
 	}
 	token := "scim_" + base64.RawURLEncoding.EncodeToString(raw)
@@ -121,7 +121,7 @@ func generateSCIMBearerToken() (string, []byte, string, error) {
 
 func generateSCIMShadowPassword() string {
 	buf := make([]byte, 18)
-	if _, err := rand.Read(buf); err != nil {
+	if _, err := pkgcrypto.Reader.Read(buf); err != nil {
 		return "ScimShadow@2026!Aa1"
 	}
 	return "Scim@" + base64.RawURLEncoding.EncodeToString(buf) + "Aa1!"

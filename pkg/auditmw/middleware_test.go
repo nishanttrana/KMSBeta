@@ -105,7 +105,14 @@ func TestWrapPublishesHTTPRequestAuditWhenEnabled(t *testing.T) {
 	if got := payload["endpoint"]; got != "/policies" {
 		t.Fatalf("unexpected endpoint %v", got)
 	}
-	if got := payload["query"]; got != "tenant_id=root&token=***" {
+	details, ok := payload["details"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected details map, got %T", payload["details"])
+	}
+	if got := details["query"]; got != "tenant_id=root&token=***" {
 		t.Fatalf("unexpected query %v", got)
+	}
+	if got := payload["origin"]; got != "service" {
+		t.Fatalf("unexpected origin %v", got)
 	}
 }

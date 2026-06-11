@@ -1,205 +1,48 @@
 package main
 
 import (
-	"context"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/base64"
-	"errors"
 	"log"
-	"math/big"
-	"net"
-	"net/http"
 	"os"
-	"os/signal"
-	"path/filepath"
 	"strings"
-	"syscall"
-	"time"
 
-	"github.com/nats-io/nats.go"
-	"google.golang.org/grpc"
-
-	pkgauditmw "vecta-kms/pkg/auditmw"
-	pkgconfig "vecta-kms/pkg/config"
-	pkgconsul "vecta-kms/pkg/consul"
-	pkgdb "vecta-kms/pkg/db"
-	pkgevents "vecta-kms/pkg/events"
-	pkggrpc "vecta-kms/pkg/grpc"
-	pkgjwtauth "vecta-kms/pkg/jwtauth"
-	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	pkgcrypto "vecta-kms/pkg/crypto"
+	pkgplatform "vecta-kms/pkg/platform"
 )
 
-var logger = log.New(os.Stderr, "[kms-secrets] ", log.LstdFlags|log.Lmsgprefix)
-
+// main boots the standard platform spine (config, DB+migrations, NATS,
+// unified audit, JWT auth, audit safety net, mTLS gRPC, Consul) and mounts
+// the secrets handler. This is the reference layout for new feature services.
 func main() {
-	cfg := pkgconfig.Load()
-
-	if err := pkgruntimecfg.ValidateServiceConfig("kms-secrets", cfg); err != nil {
-		log.Fatalf("config validation failed: %v", err)
-	}
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
-	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
-		PostgresDSN:     cfg.PostgresDSN,
-		PostgresRODSN:   cfg.PostgresRODSN,
-		SQLitePath:      cfg.SQLitePath,
-		UseSQLite:       cfg.UseSQLite,
-		MaxOpen:         cfg.DBMaxOpen,
-		MaxIdle:         cfg.DBMaxIdle,
-		ConnMaxIdleTime: time.Duration(cfg.DBConnMaxIdleTimeSec) * time.Second,
-		ConnMaxLifetime: time.Duration(cfg.DBConnMaxLifetimeSec) * time.Second,
+	rt, err := pkgplatform.Boot(pkgplatform.Options{
+		ServiceName:   "secrets",
+		JWTScope:      "SECRETS",
+		HTTPPort:      "8020",
+		GRPCPort:      "18020",
+		MigrationsDir: "services/secrets/migrations",
 	})
 	if err != nil {
-		logger.Fatalf("db open failed: %v", err)
+		log.Fatalf("[kms-secrets] boot failed: %v", err)
 	}
-	defer dbConn.Close() //nolint:errcheck
+	defer rt.Close()
 
-	if err := dbConn.RunMigrations(ctx, migrationPath()); err != nil {
-		logger.Fatalf("migration failed: %v", err)
+	svc := NewService(NewSQLStore(rt.DB), rt.Audit, loadMEK(rt.Logger))
+	if err := rt.Serve(NewHandler(svc)); err != nil {
+		rt.Logger.Fatalf("serve failed: %v", err)
 	}
-
-	var publisher EventPublisher
-	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
-		defer nc.Close()
-		publisher = pkgevents.NewPublisher(js, 3, "audit.secrets.dead_letter")
-	} else {
-		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
-	}
-
-	store := NewSQLStore(dbConn)
-	svc := NewService(store, publisher, loadMEK())
-	handler := NewHandler(svc)
-
-	httpPort := envOr("HTTP_PORT", "8020")
-	authedHandler := pkgjwtauth.MustWrap("SECRETS", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
-	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "secrets"))
-	go func() {
-		logger.Printf("http listening on :%s", httpPort)
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Fatalf("http server failed: %v", err)
-		}
-	}()
-
-	grpcPort := envOr("GRPC_PORT", "18020")
-	tlsCfg, err := devMTLSConfig()
-	if err != nil {
-		logger.Fatalf("mtls config failed: %v", err)
-	}
-	grpcSrv := pkggrpc.NewServer(tlsCfg, logger)
-	lis, err := net.Listen("tcp", ":"+grpcPort)
-	if err != nil {
-		logger.Fatalf("grpc listen failed: %v", err)
-	}
-	go func() {
-		logger.Printf("grpc+health listening on :%s", grpcPort)
-		if err := grpcSrv.Serve(lis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
-			logger.Fatalf("grpc server failed: %v", err)
-		}
-	}()
-
-	if reg, err := pkgconsul.NewRegistrar(cfg.ConsulAddress, "kms-secrets-"+httpPort, "kms-secrets", "127.0.0.1", mustAtoi(grpcPort)); err == nil {
-		if err := reg.Register(ctx); err != nil {
-			logger.Printf("consul register failed: %v", err)
-		} else {
-			defer reg.Deregister(context.Background()) //nolint:errcheck
-		}
-	}
-
-	<-ctx.Done()
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	_ = httpSrv.Shutdown(shutdownCtx)
-	grpcSrv.GracefulStop()
 }
 
-func migrationPath() string {
-	candidates := []string{
-		filepath.Join("services", "secrets", "migrations"),
-		filepath.Join(".", "migrations"),
-	}
-	for _, c := range candidates {
-		if st, err := os.Stat(c); err == nil && st.IsDir() {
-			return c
-		}
-	}
-	return filepath.Join("services", "secrets", "migrations")
-}
-
-func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
-	nc, err := pkgevents.Connect(url, "kms-secrets", logger.Printf)
-	if err != nil {
-		return nil, nil, err
-	}
-	js, err := nc.JetStream()
-	if err != nil {
-		nc.Close()
-		return nil, nil, err
-	}
-	_, _ = js.AddStream(&nats.StreamConfig{Name: "AUDIT_SECRETS", Subjects: []string{"audit.secrets.*"}})
-	return nc, js, nil
-}
-
-func devMTLSConfig() (*tls.Config, error) {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, err
-	}
-	serial, _ := rand.Int(rand.Reader, big.NewInt(1<<62))
-	tpl := &x509.Certificate{
-		SerialNumber:          serial,
-		Subject:               pkix.Name{CommonName: "kms-secrets-local"},
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().Add(24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		IsCA:                  true,
-		BasicConstraintsValid: true,
-	}
-	der, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &key.PublicKey, key)
-	if err != nil {
-		return nil, err
-	}
-	cert := tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}
-	cp := x509.NewCertPool()
-	c, _ := x509.ParseCertificate(der)
-	cp.AddCert(c)
-	return &tls.Config{
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{cert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    cp,
-	}, nil
-}
-
-func loadMEK() []byte {
+func loadMEK(logger *log.Logger) []byte {
 	b64 := strings.TrimSpace(os.Getenv("SECRETS_MEK_B64"))
 	if b64 != "" {
 		if raw, err := base64.StdEncoding.DecodeString(b64); err == nil && len(raw) >= 32 {
 			return raw[:32]
 		}
 	}
-	sum := sha256.Sum256([]byte("vecta-secrets-dev-mek"))
-	return sum[:]
-}
-
-func envOr(k string, d string) string {
-	v := strings.TrimSpace(os.Getenv(k))
-	if v == "" {
-		return d
+	logger.Printf("WARNING: SECRETS_MEK_B64 not set — using derived dev MEK, not for production")
+	sum, err := pkgcrypto.Hash("SHA-256", []byte("vecta-secrets-dev-mek"))
+	if err != nil {
+		panic(err)
 	}
-	return v
-}
-
-func mustAtoi(s string) int {
-	n := 0
-	for i := 0; i < len(s); i++ {
-		n = n*10 + int(s[i]-'0')
-	}
-	return n
+	return sum
 }

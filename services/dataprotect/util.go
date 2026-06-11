@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -51,7 +50,7 @@ func httpStatusForErr(err error) int {
 
 func newID(prefix string) string {
 	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return prefix + "_" + hex.EncodeToString(b)
 }
 
@@ -285,7 +284,7 @@ func b64d(v string) ([]byte, error) {
 
 func randBytes(n int) []byte {
 	out := make([]byte, n)
-	_, _ = rand.Read(out)
+	_, _ = pkgcrypto.Reader.Read(out)
 	return out
 }
 

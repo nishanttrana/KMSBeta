@@ -4,13 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -28,26 +21,23 @@ import (
 	"golang.org/x/crypto/pkcs12"
 	"golang.org/x/crypto/ssh"
 
+	pkgaudit "vecta-kms/pkg/audit"
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 var errExpired = errors.New("secret lease has expired")
 
-type EventPublisher interface {
-	Publish(ctx context.Context, subject string, payload []byte) error
-}
-
 type Service struct {
-	store  Store
-	events EventPublisher
-	mek    []byte
+	store Store
+	audit *pkgaudit.Client
+	mek   []byte
 }
 
-func NewService(store Store, events EventPublisher, mek []byte) *Service {
+func NewService(store Store, audit *pkgaudit.Client, mek []byte) *Service {
 	return &Service{
-		store:  store,
-		events: events,
-		mek:    append([]byte{}, mek...),
+		store: store,
+		audit: audit,
+		mek:   append([]byte{}, mek...),
 	}
 }
 
@@ -254,16 +244,15 @@ func (s *Service) DeleteSecret(ctx context.Context, tenantID string, secretID st
 }
 
 func (s *Service) GenerateSSHKey(ctx context.Context, req GenerateSSHKeyRequest) (Secret, string, error) {
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	kp, err := pkgcrypto.GenerateKeyPair(pkgcrypto.AlgEd25519)
 	if err != nil {
 		return Secret{}, "", err
 	}
-	privDER, err := x509.MarshalPKCS8PrivateKey(priv)
+	privPEM, err := pkgcrypto.MarshalPrivateKeyPEM(kp)
 	if err != nil {
 		return Secret{}, "", err
 	}
-	privPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privDER})
-	pubKey, err := ssh.NewPublicKey(pub)
+	pubKey, err := ssh.NewPublicKey(kp.Public)
 	if err != nil {
 		return Secret{}, "", err
 	}
@@ -423,9 +412,9 @@ func (s *Service) RotateSecret(ctx context.Context, tenantID string, secretID st
 		return Secret{}, err
 	}
 	_ = s.publishAudit(ctx, "audit.secrets.rotated", tenantID, map[string]interface{}{
-		"secret_id":       secretID,
-		"new_version":     updated.CurrentVersion,
-		"rotated_by":      updatedBy,
+		"secret_id":   secretID,
+		"new_version": updated.CurrentVersion,
+		"rotated_by":  updatedBy,
 	})
 	return updated, nil
 }
@@ -439,46 +428,26 @@ func (s *Service) GetStats(ctx context.Context, tenantID string) (VaultStats, er
 }
 
 func generateSSHKeyPair(keyType string) (string, string, error) {
-	var (
-		privAny interface{}
-		pubAny  interface{}
-		err     error
-	)
+	var alg string
 	switch keyType {
 	case "ed25519":
-		var pub ed25519.PublicKey
-		var priv ed25519.PrivateKey
-		pub, priv, err = ed25519.GenerateKey(rand.Reader)
-		if err != nil {
-			return "", "", err
-		}
-		privAny = priv
-		pubAny = pub
+		alg = pkgcrypto.AlgEd25519
 	case "rsa-4096":
-		var priv *rsa.PrivateKey
-		priv, err = rsa.GenerateKey(rand.Reader, 4096)
-		if err != nil {
-			return "", "", err
-		}
-		privAny = priv
-		pubAny = &priv.PublicKey
+		alg = pkgcrypto.AlgRSA4096
 	case "ecdsa-p384":
-		var priv *ecdsa.PrivateKey
-		priv, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-		if err != nil {
-			return "", "", err
-		}
-		privAny = priv
-		pubAny = &priv.PublicKey
+		alg = pkgcrypto.AlgECDSAP384
 	default:
 		return "", "", errors.New("unsupported ssh key type")
 	}
-	privDER, err := x509.MarshalPKCS8PrivateKey(privAny)
+	kp, err := pkgcrypto.GenerateKeyPair(alg)
 	if err != nil {
 		return "", "", err
 	}
-	privPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privDER})
-	pubKey, err := ssh.NewPublicKey(pubAny)
+	privPEM, err := pkgcrypto.MarshalPrivateKeyPEM(kp)
+	if err != nil {
+		return "", "", err
+	}
+	pubKey, err := ssh.NewPublicKey(kp.Public)
 	if err != nil {
 		return "", "", err
 	}
@@ -528,8 +497,8 @@ func generateOpenPGPKeyPair(name string) (string, string, error) {
 }
 
 func generateWireGuardKeyPair() (string, string, error) {
-	private := make([]byte, 32)
-	if _, err := rand.Read(private); err != nil {
+	private, err := pkgcrypto.RandomBytes(32)
+	if err != nil {
 		return "", "", err
 	}
 	private[0] &= 248
@@ -555,13 +524,16 @@ func (s *Service) encryptValue(plain []byte) (EncryptedSecretValue, error) {
 	if err != nil {
 		return EncryptedSecretValue{}, err
 	}
-	hash := sha256.Sum256(plain)
+	hash, err := pkgcrypto.Hash("SHA-256", plain)
+	if err != nil {
+		return EncryptedSecretValue{}, err
+	}
 	return EncryptedSecretValue{
 		WrappedDEK:   env.WrappedDEK,
 		WrappedDEKIV: env.WrappedDEKIV,
 		Ciphertext:   env.Ciphertext,
 		DataIV:       env.DataIV,
-		ValueHash:    hash[:],
+		ValueHash:    hash,
 	}, nil
 }
 
@@ -575,20 +547,11 @@ func (s *Service) decryptValue(enc EncryptedSecretValue) ([]byte, error) {
 }
 
 func (s *Service) publishAudit(ctx context.Context, subject string, tenantID string, data map[string]interface{}) error {
-	if s.events == nil {
+	if s.audit == nil {
 		return nil
 	}
-	payload, err := json.Marshal(map[string]interface{}{
-		"tenant_id": tenantID,
-		"service":   "secrets",
-		"action":    subject,
-		"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
-		"data":      data,
-	})
-	if err != nil {
-		return err
-	}
-	return s.events.Publish(ctx, subject, payload)
+	action := strings.TrimPrefix(subject, "audit.secrets.")
+	return s.audit.Emit(ctx, action, pkgaudit.Event{TenantID: tenantID, Details: data})
 }
 
 func normalizeSecretType(v string) string {
@@ -625,8 +588,10 @@ func toRFC3339(ts *time.Time) string {
 }
 
 func newID(prefix string) string {
-	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	b, err := pkgcrypto.RandomBytes(8)
+	if err != nil {
+		panic("secrets: system randomness unavailable: " + err.Error())
+	}
 	return prefix + "_" + hex.EncodeToString(b)
 }
 
@@ -686,7 +651,10 @@ func toPPK(raw []byte) ([]byte, string, string, error) {
 	pub := signer.PublicKey()
 	pubLine := base64.StdEncoding.EncodeToString(pub.Marshal())
 	privLine := base64.StdEncoding.EncodeToString(raw)
-	mac := sha256.Sum256([]byte(pubLine + privLine))
+	mac, err := pkgcrypto.Hash("SHA-256", []byte(pubLine+privLine))
+	if err != nil {
+		return nil, "", "", err
+	}
 	out := fmt.Sprintf("PuTTY-User-Key-File-2: %s\nEncryption: none\nComment: vecta\nPublic-Lines: 1\n%s\nPrivate-Lines: 1\n%s\nPrivate-MAC: %x\n", pub.Type(), pubLine, privLine, mac[:16])
 	return []byte(out), "ppk", "application/x-putty-private-key", nil
 }

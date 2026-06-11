@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"strconv"
@@ -10,6 +9,8 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"vecta-kms/pkg/cbom"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 var validPolicyTypes = map[string]struct{}{
@@ -225,7 +226,7 @@ func evaluatePolicy(doc PolicyDoc, policyID string, version int, req EvaluatePol
 
 func newApprovalRequestID() string {
 	b := make([]byte, 12)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return "apr_" + hex.EncodeToString(b)
 }
 

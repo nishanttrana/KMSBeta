@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"net/http"
@@ -150,7 +149,7 @@ func (p *softwareProvider) GenerateRandom(_ context.Context, length int) ([]byte
 		return nil, newServiceError(http.StatusBadRequest, "bad_request", "length must be between 1 and 65536")
 	}
 	out := make([]byte, length)
-	if _, err := rand.Read(out); err != nil {
+	if _, err := pkgcrypto.Reader.Read(out); err != nil {
 		return nil, err
 	}
 	return out, nil

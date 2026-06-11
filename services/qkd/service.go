@@ -2,9 +2,8 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/binary"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"math"
@@ -705,26 +704,26 @@ func (s *Service) Overview(ctx context.Context, tenantID string, slaveSAEID stri
 		utilization = (float64(available) / float64(cfg.PoolCapacity)) * 100
 	}
 	out := map[string]interface{}{
-		"tenant_id": tenantID,
+		"tenant_id":    tenantID,
 		"slave_sae_id": slaveSAEID,
 		"config": map[string]interface{}{
-			"service_enabled":   cfg.ServiceEnabled,
-			"etsi_api_enabled":  cfg.ETSIAPIEnabled,
-			"protocol":          cfg.Protocol,
-			"distance_km":       round3(cfg.DistanceKM),
-			"qber_threshold":    round4(cfg.QBERThreshold),
+			"service_enabled":    cfg.ServiceEnabled,
+			"etsi_api_enabled":   cfg.ETSIAPIEnabled,
+			"protocol":           cfg.Protocol,
+			"distance_km":        round3(cfg.DistanceKM),
+			"qber_threshold":     round4(cfg.QBERThreshold),
 			"pool_low_threshold": cfg.PoolLowThreshold,
-			"pool_capacity":     cfg.PoolCapacity,
-			"auto_inject":       cfg.AutoInject,
-			"updated_at":        cfg.UpdatedAt.UTC(),
+			"pool_capacity":      cfg.PoolCapacity,
+			"auto_inject":        cfg.AutoInject,
+			"updated_at":         cfg.UpdatedAt.UTC(),
 		},
 		"status": map[string]interface{}{
-			"active":            linkStatus == LinkStatusUp,
-			"link_status":       linkStatus,
-			"source":            source,
-			"destination":       destination,
-			"key_rate":          round3(keyRate),
-			"qber_avg":          round4(qberAvg),
+			"active":              linkStatus == LinkStatusUp,
+			"link_status":         linkStatus,
+			"source":              source,
+			"destination":         destination,
+			"key_rate":            round3(keyRate),
+			"qber_avg":            round4(qberAvg),
 			"keys_received_today": createdToday,
 		},
 		"pool": map[string]interface{}{
@@ -850,7 +849,7 @@ func (s *Service) GenerateTestKeys(ctx context.Context, req TestGenerateRequest)
 	keys := make([]ReceivedKey, 0, req.Count)
 	for i := 0; i < req.Count; i++ {
 		raw := make([]byte, keyLen)
-		if _, err := rand.Read(raw); err != nil {
+		if _, err := pkgcrypto.Reader.Read(raw); err != nil {
 			return ReceiveKeysResponse{}, newServiceError(http.StatusInternalServerError, "entropy_failed", err.Error())
 		}
 		qber := req.QBERMin
@@ -888,14 +887,14 @@ func (s *Service) GenerateTestKeys(ctx context.Context, req TestGenerateRequest)
 		"discarded":     resp.DiscardedCount,
 	})
 	s.log(ctx, req.TenantID, "test_generate", "info", "QKD test keys generated and ingested", map[string]interface{}{
-		"slave_sae_id": req.SlaveSAEID,
-		"device_id":    req.DeviceID,
-		"count":        req.Count,
+		"slave_sae_id":  req.SlaveSAEID,
+		"device_id":     req.DeviceID,
+		"count":         req.Count,
 		"key_size_bits": req.KeySizeBits,
-		"qber_min":     req.QBERMin,
-		"qber_max":     req.QBERMax,
-		"accepted":     resp.AcceptedCount,
-		"discarded":    resp.DiscardedCount,
+		"qber_min":      req.QBERMin,
+		"qber_max":      req.QBERMax,
+		"accepted":      resp.AcceptedCount,
+		"discarded":     resp.DiscardedCount,
 	})
 	return resp, nil
 }
@@ -1046,7 +1045,7 @@ func round4(v float64) float64 {
 
 func secureRandUnitFloat64() (float64, error) {
 	var b [8]byte
-	if _, err := rand.Read(b[:]); err != nil {
+	if _, err := pkgcrypto.Reader.Read(b[:]); err != nil {
 		return 0, err
 	}
 	v := binary.BigEndian.Uint64(b[:])

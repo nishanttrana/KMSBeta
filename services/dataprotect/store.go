@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
@@ -12,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 )
 
@@ -1645,7 +1645,7 @@ func scanFLEMetadata(scanner interface {
 
 func newAuditID() string {
 	b := make([]byte, 16)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return fmt.Sprintf("dpaudit_%s", hex.EncodeToString(b))
 }
 

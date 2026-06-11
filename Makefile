@@ -1,4 +1,4 @@
-.PHONY: build test lint proto-gen license-check security-license security-cve security-sidechannel security-sbom security-audit packer-init packer-build packer-build-vbox test-auth test-keycore test-audit test-policy test-governance test-secrets test-certs test-kmip test-cloud test-hyok test-qkd test-ekm test-payment test-compliance test-sbom test-reporting test-posture test-ai test-mpc test-dataprotect test-discovery test-pqc test-software-vault
+.PHONY: build test lint conformance proto-gen license-check security-license security-cve security-sidechannel security-sbom security-audit packer-init packer-build packer-build-vbox test-auth test-keycore test-audit test-policy test-governance test-secrets test-certs test-kmip test-cloud test-hyok test-qkd test-ekm test-payment test-compliance test-sbom test-reporting test-posture test-ai test-mpc test-dataprotect test-discovery test-pqc test-software-vault
 
 build:
 	go build ./...
@@ -8,6 +8,9 @@ test:
 
 lint:
 	go vet ./...
+
+conformance:
+	./scripts/conformance.sh -v
 
 proto-gen:
 	@echo "proto generation placeholders created; run protoc with your org plugin config"

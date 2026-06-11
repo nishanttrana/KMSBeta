@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 // Handler wires all HTTP routes for the AI Security Gateway.
@@ -117,7 +117,7 @@ func (h *Handler) userID(r *http.Request) string {
 
 func (h *Handler) requestID() string {
 	b := make([]byte, 16)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return hex.EncodeToString(b)
 }
 
@@ -130,7 +130,6 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, ErrorResponse{Error: msg})
 }
-
 
 func decodeBody(r *http.Request, v interface{}) error {
 	defer r.Body.Close()
@@ -173,16 +172,16 @@ func (h *Handler) auditLog(r *http.Request, reqID, model, provider, action, stat
 
 // PII/secret detection patterns
 var dlpPatterns = map[string]*regexp.Regexp{
-	"email":            regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`),
-	"ssn":              regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`),
-	"credit_card":      regexp.MustCompile(`\b(?:\d[ -]*?){13,19}\b`),
-	"phone_us":         regexp.MustCompile(`\b(?:\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b`),
-	"aws_access_key":   regexp.MustCompile(`(?:AKIA|ABIA|ACCA|ASIA)[0-9A-Z]{16}`),
-	"aws_secret_key":   regexp.MustCompile(`(?i)aws[_\-]?secret[_\-]?access[_\-]?key\s*[:=]\s*[A-Za-z0-9/+=]{40}`),
-	"api_key_generic":  regexp.MustCompile(`(?i)(?:api[_\-]?key|apikey|secret[_\-]?key)\s*[:=]\s*['"]?[A-Za-z0-9\-_.]{20,}['"]?`),
-	"private_key":      regexp.MustCompile(`-----BEGIN (?:RSA |EC |DSA )?PRIVATE KEY-----`),
-	"ip_address":       regexp.MustCompile(`\b(?:\d{1,3}\.){3}\d{1,3}\b`),
-	"jwt_token":        regexp.MustCompile(`eyJ[A-Za-z0-9\-_]+\.eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_.+/=]+`),
+	"email":           regexp.MustCompile(`[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}`),
+	"ssn":             regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`),
+	"credit_card":     regexp.MustCompile(`\b(?:\d[ -]*?){13,19}\b`),
+	"phone_us":        regexp.MustCompile(`\b(?:\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b`),
+	"aws_access_key":  regexp.MustCompile(`(?:AKIA|ABIA|ACCA|ASIA)[0-9A-Z]{16}`),
+	"aws_secret_key":  regexp.MustCompile(`(?i)aws[_\-]?secret[_\-]?access[_\-]?key\s*[:=]\s*[A-Za-z0-9/+=]{40}`),
+	"api_key_generic": regexp.MustCompile(`(?i)(?:api[_\-]?key|apikey|secret[_\-]?key)\s*[:=]\s*['"]?[A-Za-z0-9\-_.]{20,}['"]?`),
+	"private_key":     regexp.MustCompile(`-----BEGIN (?:RSA |EC |DSA )?PRIVATE KEY-----`),
+	"ip_address":      regexp.MustCompile(`\b(?:\d{1,3}\.){3}\d{1,3}\b`),
+	"jwt_token":       regexp.MustCompile(`eyJ[A-Za-z0-9\-_]+\.eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_.+/=]+`),
 }
 
 func scanDLP(text string) []DLPFinding {
@@ -975,8 +974,8 @@ func (h *Handler) handleAuditStats(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {
 	checks := map[string]string{
-		"database": "ok",
-		"dlp":      "ok",
+		"database":   "ok",
+		"dlp":        "ok",
 		"guardrails": "ok",
 	}
 	writeJSON(w, http.StatusOK, HealthResponse{

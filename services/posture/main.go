@@ -2,14 +2,9 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	"errors"
 	"log"
-	"math/big"
 	"net"
 	"net/http"
 	"os"
@@ -23,9 +18,11 @@ import (
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
 
+	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
+	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
@@ -151,7 +148,7 @@ func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
 		nc.Close()
 		return nil, nil, err
 	}
-	_, _ = js.AddStream(&nats.StreamConfig{Name: "AUDIT_POSTURE", Subjects: []string{"audit.posture.*"}})
+	_, _ = js.AddStream(pkgaudit.StreamConfig())
 	return nc, js, nil
 }
 
@@ -169,35 +166,7 @@ func migrationPath() string {
 }
 
 func devMTLSConfig() (*tls.Config, error) {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return nil, err
-	}
-	serial, _ := rand.Int(rand.Reader, big.NewInt(1<<62))
-	tpl := &x509.Certificate{
-		SerialNumber:          serial,
-		Subject:               pkix.Name{CommonName: "kms-posture-local"},
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().Add(24 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		IsCA:                  true,
-		BasicConstraintsValid: true,
-	}
-	der, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &key.PublicKey, key)
-	if err != nil {
-		return nil, err
-	}
-	cert := tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}
-	cp := x509.NewCertPool()
-	c, _ := x509.ParseCertificate(der)
-	cp.AddCert(c)
-	return &tls.Config{
-		MinVersion:   tls.VersionTLS13,
-		Certificates: []tls.Certificate{cert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    cp,
-	}, nil
+	return pkgcrypto.SelfSignedMTLSConfig("kms-posture-local")
 }
 
 func envOr(k string, d string) string {

@@ -18,6 +18,7 @@ type AgentConfig struct {
 	Host                 string `json:"host"`
 	Version              string `json:"version"`
 	APIBaseURL           string `json:"api_base_url"`
+	AuditBaseURL         string `json:"audit_base_url"`
 	RegisterPath         string `json:"register_path"`
 	HeartbeatPath        string `json:"heartbeat_path"`
 	RotatePath           string `json:"rotate_path"`
@@ -42,11 +43,11 @@ type AgentConfig struct {
 	PKCS11PINEnv     string `json:"pkcs11_pin_env"`
 
 	// Multi-auth: mTLS + JWT + API Key (new)
-	MTLSCertPath   string `json:"mtls_cert_path"`
-	MTLSKeyPath    string `json:"mtls_key_path"`
-	MTLSCAPath     string `json:"mtls_ca_path"`
-	APIKey         string `json:"api_key"`
-	JWTEndpoint    string `json:"jwt_endpoint"`
+	MTLSCertPath string `json:"mtls_cert_path"`
+	MTLSKeyPath  string `json:"mtls_key_path"`
+	MTLSCAPath   string `json:"mtls_ca_path"`
+	APIKey       string `json:"api_key"`
+	JWTEndpoint  string `json:"jwt_endpoint"`
 
 	// Local key cache (new)
 	KeyCacheEnabled bool `json:"key_cache_enabled"`
@@ -87,6 +88,7 @@ func applyEnvOverrides(cfg *AgentConfig) {
 	cfg.Host = envOr("AGENT_HOST", cfg.Host)
 	cfg.Version = envOr("AGENT_VERSION", cfg.Version)
 	cfg.APIBaseURL = envOr("EKM_API_BASE_URL", cfg.APIBaseURL)
+	cfg.AuditBaseURL = envOr("EKM_AUDIT_BASE_URL", cfg.AuditBaseURL)
 	cfg.RegisterPath = envOr("EKM_REGISTER_PATH", cfg.RegisterPath)
 	cfg.HeartbeatPath = envOr("EKM_HEARTBEAT_PATH", cfg.HeartbeatPath)
 	cfg.RotatePath = envOr("EKM_ROTATE_PATH", cfg.RotatePath)
@@ -138,6 +140,11 @@ func applyDefaults(cfg *AgentConfig) {
 	}
 	if strings.TrimSpace(cfg.APIBaseURL) == "" {
 		cfg.APIBaseURL = "https://localhost/svc/ekm"
+	}
+	if strings.TrimSpace(cfg.AuditBaseURL) == "" && strings.Contains(cfg.APIBaseURL, "/svc/ekm") {
+		// Same edge, audit service route — keeps agent events in the
+		// unified audit pipeline without extra configuration.
+		cfg.AuditBaseURL = strings.Replace(cfg.APIBaseURL, "/svc/ekm", "/svc/audit", 1)
 	}
 	if strings.TrimSpace(cfg.RegisterPath) == "" {
 		if cfg.AgentMode == "bitlocker" {

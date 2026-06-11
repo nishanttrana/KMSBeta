@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 var errNotFound = errors.New("not found")
@@ -45,7 +46,7 @@ func httpStatusForErr(err error) int {
 
 func newID(prefix string) string {
 	buf := make([]byte, 8)
-	_, _ = rand.Read(buf)
+	_, _ = pkgcrypto.Reader.Read(buf)
 	return prefix + "_" + hex.EncodeToString(buf)
 }
 
@@ -186,12 +187,12 @@ func containsScope(list []string, value string) bool {
 
 func defaultSettings(tenantID string) KeyAccessSettings {
 	return KeyAccessSettings{
-		TenantID:                  strings.TrimSpace(tenantID),
-		Enabled:                   false,
-		Mode:                      "enforce",
-		DefaultAction:             "deny",
-		RequireJustificationCode:  true,
-		RequireJustificationText:  false,
+		TenantID:                 strings.TrimSpace(tenantID),
+		Enabled:                  false,
+		Mode:                     "enforce",
+		DefaultAction:            "deny",
+		RequireJustificationCode: true,
+		RequireJustificationText: false,
 	}
 }
 

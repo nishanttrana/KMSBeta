@@ -19,6 +19,7 @@ import (
 	"github.com/kardianos/service"
 
 	"vecta-kms/pkg/agentauth"
+	pkgaudit "vecta-kms/pkg/audit"
 	"vecta-kms/pkg/keycache"
 )
 
@@ -190,6 +191,7 @@ type AgentRunner struct {
 	inspector  TDEInspector
 	auth       *agentauth.Provider
 	keyCache   *keycache.Cache
+	audit      *pkgaudit.HTTPEmitter
 }
 
 func NewAgentRunner(cfg AgentConfig, logger *log.Logger) *AgentRunner {
@@ -232,6 +234,16 @@ func NewAgentRunner(cfg AgentConfig, logger *log.Logger) *AgentRunner {
 		logger.Printf("key cache enabled, ttl=%ds", cfg.KeyCacheTTLSec)
 	}
 
+	var auditEmitter *pkgaudit.HTTPEmitter
+	if cfg.AuditBaseURL != "" {
+		auditEmitter, err = pkgaudit.NewHTTPEmitter(cfg.AuditBaseURL, "ekm-agent", cfg.AgentID, client, auth)
+		if err != nil {
+			logger.Printf("WARNING: audit emitter init failed, agent events will not be audited: %v", err)
+		}
+	} else {
+		logger.Printf("WARNING: audit_base_url not set, agent events will not be audited")
+	}
+
 	return &AgentRunner{
 		cfg:        cfg,
 		httpClient: client,
@@ -239,6 +251,20 @@ func NewAgentRunner(cfg AgentConfig, logger *log.Logger) *AgentRunner {
 		inspector:  NewTDEInspector(cfg),
 		auth:       auth,
 		keyCache:   kc,
+		audit:      auditEmitter,
+	}
+}
+
+// emitAudit reports an agent action into the unified KMS audit pipeline.
+// Best-effort: agent operation never fails because auditing is unreachable,
+// but every failure is logged for the operator.
+func (r *AgentRunner) emitAudit(ctx context.Context, action string, evt pkgaudit.Event) {
+	if r.audit == nil {
+		return
+	}
+	evt.TenantID = r.cfg.TenantID
+	if err := r.audit.Emit(ctx, action, evt); err != nil {
+		r.logger.Printf("audit emit failed (%s): %v", action, err)
 	}
 }
 
@@ -256,7 +282,18 @@ func (r *AgentRunner) Register(ctx context.Context) error {
 		"metadata_json":          mustJSON(r.staticMetadata()),
 	}
 	url := joinURL(r.cfg.APIBaseURL, r.cfg.RegisterPath)
-	return r.postJSON(ctx, url, body, nil)
+	err := r.postJSON(ctx, url, body, nil)
+	evt := pkgaudit.Event{
+		TargetType: "agent",
+		TargetID:   r.cfg.AgentID,
+		Details:    map[string]interface{}{"host": r.cfg.Host, "db_engine": r.cfg.DBEngine, "mode": r.cfg.AgentMode},
+	}
+	if err != nil {
+		evt.Result = "failure"
+		evt.ErrorMessage = err.Error()
+	}
+	r.emitAudit(ctx, "registered", evt)
+	return err
 }
 
 func (r *AgentRunner) SendHeartbeat(ctx context.Context) error {

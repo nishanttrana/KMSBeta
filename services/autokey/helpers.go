@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -12,6 +11,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 var errNotFound = errors.New("not found")
@@ -46,7 +47,7 @@ func httpStatusForErr(err error) int {
 
 func newID(prefix string) string {
 	buf := make([]byte, 8)
-	_, _ = rand.Read(buf)
+	_, _ = pkgcrypto.Reader.Read(buf)
 	return prefix + "_" + hex.EncodeToString(buf)
 }
 

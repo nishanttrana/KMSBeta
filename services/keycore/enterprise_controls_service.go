@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/base64"
@@ -1009,7 +1008,7 @@ func shamirSplit(secret []byte, threshold int, shares int) ([][]byte, error) {
 	for i, b := range secret {
 		poly := make([]byte, threshold)
 		poly[0] = b
-		if _, err := rand.Read(poly[1:]); err != nil {
+		if _, err := crypto.Reader.Read(poly[1:]); err != nil {
 			return nil, err
 		}
 		polynomials[i] = poly

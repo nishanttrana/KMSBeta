@@ -14,10 +14,6 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 )
 
-type nopPublisher struct{}
-
-func (nopPublisher) Publish(_ context.Context, _ string, _ []byte) error { return nil }
-
 func newSecretsService(t *testing.T) (*Service, *SQLStore) {
 	t.Helper()
 	conn, err := pkgdb.Open(context.Background(), pkgdb.Config{
@@ -35,7 +31,7 @@ func newSecretsService(t *testing.T) (*Service, *SQLStore) {
 	}
 	store := NewSQLStore(conn)
 	mek := []byte("0123456789ABCDEF0123456789ABCDEF")
-	return NewService(store, nopPublisher{}, mek), store
+	return NewService(store, nil, mek), store
 }
 
 func createSecretsSchemaForTest(conn *pkgdb.DB) error {

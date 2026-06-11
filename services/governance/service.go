@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/fips140"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -20,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 type EventPublisher interface {
@@ -1226,7 +1227,7 @@ func enrichFIPSRuntimeState(in GovernanceSystemState) GovernanceSystemState {
 	const sampleBytes = 4096
 	buf := make([]byte, sampleBytes)
 	start := time.Now()
-	n, err := rand.Read(buf)
+	n, err := pkgcrypto.Reader.Read(buf)
 	elapsed := time.Since(start)
 	in.FIPSEntropyAt = time.Now().UTC()
 	in.FIPSEntropyBytes = n
@@ -1501,7 +1502,7 @@ func containsIgnoreCase(values []string, needle string) bool {
 
 func generateToken() (string, []byte, error) {
 	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
+	if _, err := pkgcrypto.Reader.Read(b); err != nil {
 		return "", nil, err
 	}
 	raw := base64.RawURLEncoding.EncodeToString(b)
@@ -1513,7 +1514,7 @@ func generateToken() (string, []byte, error) {
 
 func generateChallengeCode() (string, []byte, error) {
 	b := make([]byte, 4)
-	if _, err := rand.Read(b); err != nil {
+	if _, err := pkgcrypto.Reader.Read(b); err != nil {
 		return "", nil, err
 	}
 	v := uint32(b[0])<<24 | uint32(b[1])<<16 | uint32(b[2])<<8 | uint32(b[3])
@@ -1566,7 +1567,7 @@ func firstNonEmpty(values ...string) string {
 
 func newID(prefix string) string {
 	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return prefix + "_" + base64.RawURLEncoding.EncodeToString(b)
 }
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -10,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 // handleListWatchedDomains returns all CT-monitored domains for a tenant.
@@ -285,7 +286,7 @@ func (h *Handler) simulateCTFetch(d WatchedDomain) {
 
 func ctNewID(prefix string) string {
 	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return prefix + "_" + hex.EncodeToString(b)
 }
 
@@ -296,12 +297,12 @@ func ctFingerprint(seed string) string {
 
 func ctRandByte() byte {
 	b := make([]byte, 1)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return b[0]
 }
 
 func ctRandSerial() string {
 	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	_, _ = pkgcrypto.Reader.Read(b)
 	return hex.EncodeToString(b)
 }
