@@ -30,9 +30,6 @@ services/kmip/http_api.go
 services/kmip/main.go
 services/mpc/real_crypto.go
 services/mpc/service.go
-services/payment/injection.go
-services/payment/tcp_server.go
-services/payment/util.go
 services/workload/verify.go
 #
 # --- burn-down: migrate to pkg/audit Client.Emit (single-audit-emit rule) ---

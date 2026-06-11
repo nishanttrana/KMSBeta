@@ -3,11 +3,8 @@ package main
 import (
 	"bufio"
 	"context"
-	"crypto/rsa"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"log"
 	"net"
@@ -17,6 +14,7 @@ import (
 	"time"
 
 	pkgauth "vecta-kms/pkg/auth"
+	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/logsanitize"
 )
 
@@ -67,22 +65,8 @@ func loadPaymentJWTParser(issuer string, audience string) (func(string) (*pkgaut
 		pubPEM = string(raw)
 	}
 	pubPEM = strings.ReplaceAll(pubPEM, `\n`, "\n")
-	block, _ := pem.Decode([]byte(pubPEM))
-	if block == nil {
-		return nil, errors.New("invalid JWT public key PEM")
-	}
-	var pub *rsa.PublicKey
-	if parsed, err := x509.ParsePKIXPublicKey(block.Bytes); err == nil {
-		if p, ok := parsed.(*rsa.PublicKey); ok {
-			pub = p
-		}
-	}
-	if pub == nil {
-		if p, err := x509.ParsePKCS1PublicKey(block.Bytes); err == nil {
-			pub = p
-		}
-	}
-	if pub == nil {
+	pub, err := pkgcrypto.ParseRSAPublicKeyPEM(pubPEM)
+	if err != nil {
 		return nil, errors.New("unable to parse RSA JWT public key")
 	}
 	return func(token string) (*pkgauth.Claims, error) {

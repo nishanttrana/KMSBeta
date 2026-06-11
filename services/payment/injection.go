@@ -3,21 +3,12 @@ package main
 import (
 	"context"
 	"crypto"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/ecdsa"
-	"crypto/ed25519"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/subtle"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -64,9 +55,7 @@ func (s *Service) RegisterInjectionTerminal(ctx context.Context, req RegisterInj
 	if err != nil {
 		return PaymentInjectionTerminal{}, err
 	}
-	switch pub.(type) {
-	case *rsa.PublicKey:
-	default:
+	if family, _ := pkgcrypto.DescribePublicKey(pub); family != "RSA" {
 		return PaymentInjectionTerminal{}, newServiceError(http.StatusBadRequest, "bad_request", "public_key_pem must contain an RSA public key for injection wrapping")
 	}
 	item := PaymentInjectionTerminal{
@@ -127,8 +116,8 @@ func (s *Service) IssueInjectionChallenge(ctx context.Context, tenantID string, 
 	if err != nil {
 		return "", time.Time{}, err
 	}
-	nonceRaw := make([]byte, 32)
-	if _, err := rand.Read(nonceRaw); err != nil {
+	nonceRaw, err := pkgcrypto.RandomBytes(32)
+	if err != nil {
 		return "", time.Time{}, newServiceError(http.StatusInternalServerError, "internal_error", "failed to generate registration challenge")
 	}
 	defer pkgcrypto.Zeroize(nonceRaw)
@@ -176,8 +165,8 @@ func (s *Service) VerifyInjectionChallenge(ctx context.Context, terminalRowID st
 	if !verifyChallengeSignature(pub, []byte(terminal.RegistrationNonce), signature) {
 		return VerifyInjectionChallengeResponse{}, newServiceError(http.StatusUnauthorized, "invalid_signature", "challenge signature verification failed")
 	}
-	tokenRaw := make([]byte, 32)
-	if _, err := rand.Read(tokenRaw); err != nil {
+	tokenRaw, err := pkgcrypto.RandomBytes(32)
+	if err != nil {
 		return VerifyInjectionChallengeResponse{}, newServiceError(http.StatusInternalServerError, "internal_error", "failed to generate terminal token")
 	}
 	defer pkgcrypto.Zeroize(tokenRaw)
@@ -265,34 +254,21 @@ func (s *Service) CreateInjectionJob(ctx context.Context, req CreateInjectionJob
 		CreatedAt:     time.Now().UTC().Format(time.RFC3339Nano),
 	}
 	payloadRaw, _ := json.Marshal(payload)
-	dek := make([]byte, 32)
-	if _, err := rand.Read(dek); err != nil {
+	dek, err := pkgcrypto.RandomBytes(32)
+	if err != nil {
 		return PaymentInjectionJob{}, newServiceError(http.StatusInternalServerError, "internal_error", "failed to generate DEK")
 	}
 	defer pkgcrypto.Zeroize(dek)
-	block, err := aes.NewCipher(dek)
+	iv, ciphertext, err := pkgcrypto.SealDetached(dek, payloadRaw, []byte("vecta-payment-injection"))
 	if err != nil {
 		return PaymentInjectionJob{}, newServiceError(http.StatusInternalServerError, "internal_error", err.Error())
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return PaymentInjectionJob{}, newServiceError(http.StatusInternalServerError, "internal_error", err.Error())
-	}
-	iv := make([]byte, gcm.NonceSize())
-	if _, err := rand.Read(iv); err != nil {
-		return PaymentInjectionJob{}, newServiceError(http.StatusInternalServerError, "internal_error", "failed to generate IV")
 	}
 	defer pkgcrypto.Zeroize(iv)
-	ciphertext := gcm.Seal(nil, iv, payloadRaw, []byte("vecta-payment-injection"))
 	pub, _, _, err := parseAndFingerprintPublicKey(terminal.PublicKeyPEM)
 	if err != nil {
 		return PaymentInjectionJob{}, err
 	}
-	rsaPub, ok := pub.(*rsa.PublicKey)
-	if !ok {
-		return PaymentInjectionJob{}, newServiceError(http.StatusBadRequest, "unsupported_key", "terminal public key must be RSA for injection wrapping")
-	}
-	wrappedDEK, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, rsaPub, dek, []byte("vecta-payment-injection-dek"))
+	wrappedDEK, err := pkgcrypto.WrapKeyRSAOAEP(pub, dek, []byte("vecta-payment-injection-dek"))
 	if err != nil {
 		return PaymentInjectionJob{}, newServiceError(http.StatusInternalServerError, "internal_error", "failed to wrap DEK with terminal public key")
 	}
@@ -428,43 +404,32 @@ func (s *Service) verifyInjectionTerminalAuth(ctx context.Context, tenantID stri
 		return PaymentInjectionTerminal{}, newServiceError(http.StatusForbidden, "forbidden", "terminal is not authenticated")
 	}
 	given := tokenHash(authToken)
-	if subtle.ConstantTimeCompare([]byte(given), []byte(strings.TrimSpace(terminal.AuthTokenHash))) != 1 {
+	if !pkgcrypto.ConstantTimeEqual([]byte(given), []byte(strings.TrimSpace(terminal.AuthTokenHash))) {
 		return PaymentInjectionTerminal{}, newServiceError(http.StatusUnauthorized, "unauthorized", "invalid terminal token")
 	}
 	return terminal, nil
 }
 
 func parseAndFingerprintPublicKey(publicPEM string) (crypto.PublicKey, string, string, error) {
-	block, _ := pem.Decode([]byte(strings.TrimSpace(publicPEM)))
-	if block == nil {
-		return nil, "", "", newServiceError(http.StatusBadRequest, "bad_request", "public_key_pem must be valid PEM")
-	}
-	var pub interface{}
-	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	pub, err := pkgcrypto.ParsePublicKeyPEM(publicPEM)
 	if err != nil {
-		if cert, certErr := x509.ParseCertificate(block.Bytes); certErr == nil {
-			pub = cert.PublicKey
-		} else {
-			return nil, "", "", newServiceError(http.StatusBadRequest, "bad_request", "public_key_pem must contain a valid public key")
-		}
+		return nil, "", "", newServiceError(http.StatusBadRequest, "bad_request", "public_key_pem must contain a valid public key")
 	}
-	pubKey := pub.(crypto.PublicKey)
-	der, err := x509.MarshalPKIXPublicKey(pubKey)
+	fingerprint, err := pkgcrypto.FingerprintPublicKey(pub)
 	if err != nil {
 		return nil, "", "", newServiceError(http.StatusBadRequest, "bad_request", "failed to parse public key")
 	}
-	fp := sha256.Sum256(der)
-	fingerprint := strings.ToUpper(hex.EncodeToString(fp[:]))
-	return pubKey, publicKeyAlgorithm(pubKey), fingerprint, nil
+	return pub, publicKeyAlgorithm(pub), fingerprint, nil
 }
 
 func publicKeyAlgorithm(pub crypto.PublicKey) string {
-	switch key := pub.(type) {
-	case *rsa.PublicKey:
-		return "rsa-oaep-sha256-" + strconvItoa(key.Size()*8)
-	case *ecdsa.PublicKey:
+	family, bits := pkgcrypto.DescribePublicKey(pub)
+	switch family {
+	case "RSA":
+		return "rsa-oaep-sha256-" + strconv.Itoa(bits)
+	case "ECDSA":
 		return "ecdsa"
-	case ed25519.PublicKey:
+	case "ED25519":
 		return "ed25519"
 	default:
 		return "unknown"
@@ -472,25 +437,15 @@ func publicKeyAlgorithm(pub crypto.PublicKey) string {
 }
 
 func verifyChallengeSignature(pub crypto.PublicKey, challenge []byte, signature []byte) bool {
-	digest := sha256.Sum256(challenge)
-	switch key := pub.(type) {
-	case *rsa.PublicKey:
-		if rsa.VerifyPSS(key, crypto.SHA256, digest[:], signature, nil) == nil {
-			return true
-		}
-		return rsa.VerifyPKCS1v15(key, crypto.SHA256, digest[:], signature) == nil
-	case *ecdsa.PublicKey:
-		return ecdsa.VerifyASN1(key, digest[:], signature)
-	case ed25519.PublicKey:
-		return ed25519.Verify(key, challenge, signature)
-	default:
-		return false
-	}
+	return pkgcrypto.VerifySignatureAny(pub, challenge, signature)
 }
 
 func tokenHash(token string) string {
-	sum := sha256.Sum256([]byte(strings.TrimSpace(token)))
-	return strings.ToUpper(hex.EncodeToString(sum[:]))
+	sum, err := pkgcrypto.Hash("SHA-256", []byte(strings.TrimSpace(token)))
+	if err != nil {
+		panic(err)
+	}
+	return strings.ToUpper(hex.EncodeToString(sum))
 }
 
 func normalizeInjectionTransport(raw string) string {
@@ -521,23 +476,4 @@ func normalizeInjectionJobAckStatus(raw string) string {
 	default:
 		return ""
 	}
-}
-
-func strconvItoa(v int) string {
-	if v == 0 {
-		return "0"
-	}
-	sign := ""
-	if v < 0 {
-		sign = "-"
-		v = -v
-	}
-	buf := [20]byte{}
-	i := len(buf)
-	for v > 0 {
-		i--
-		buf[i] = byte('0' + (v % 10))
-		v /= 10
-	}
-	return sign + string(buf[i:])
 }

@@ -63,6 +63,11 @@ type Options struct {
 	MigrationsDir string // SQL migrations dir; empty = service has no database
 	SkipNATS      bool   // true only for services that genuinely never emit events
 	AuditName     string // audit subject namespace; defaults to ServiceName (set only when a legacy namespace, e.g. "cert", must be preserved)
+
+	// SkipJWT disables the platform JWT middleware. Burn-down exception only:
+	// it exists for services whose endpoints authenticate by other means
+	// (e.g. payment terminal bearer tokens). New services must not set it.
+	SkipJWT bool
 }
 
 // Runtime exposes the booted spine to the service.
@@ -156,7 +161,12 @@ func (rt *Runtime) Serve(handler http.Handler) error {
 	if auditName == "" {
 		auditName = rt.opts.ServiceName
 	}
-	authed := pkgjwtauth.MustWrap(rt.opts.JWTScope, rt.Cfg.JWTIssuer, rt.Cfg.JWTAudience, handler, rt.Logger)
+	authed := handler
+	if rt.opts.SkipJWT {
+		rt.Logger.Printf("WARNING: platform JWT middleware disabled (SkipJWT) — endpoints must enforce their own authentication")
+	} else {
+		authed = pkgjwtauth.MustWrap(rt.opts.JWTScope, rt.Cfg.JWTIssuer, rt.Cfg.JWTAudience, handler, rt.Logger)
+	}
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authed, mwPublisher, auditName))
 	httpErr := make(chan error, 1)
 	go func() {
