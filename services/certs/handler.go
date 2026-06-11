@@ -61,6 +61,9 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /certs/security/status", h.handleSecurityStatus)
 	mux.HandleFunc("GET /certs/alert-policy", h.handleGetAlertPolicy)
 	mux.HandleFunc("PUT /certs/alert-policy", h.handleUpsertAlertPolicy)
+	mux.HandleFunc("GET /certs/clm/policy", h.handleGetCLMPolicy)
+	mux.HandleFunc("PUT /certs/clm/policy", h.handleUpsertCLMPolicy)
+	mux.HandleFunc("GET /certs/clm/status", h.handleCLMStatus)
 	mux.HandleFunc("GET /certs/renewal-intelligence", h.handleGetRenewalSummary)
 	mux.HandleFunc("GET /certs/renewal-intelligence/{id}", h.handleGetRenewalInfo)
 	mux.HandleFunc("POST /certs/renewal-intelligence/refresh", h.handleRefreshRenewalSummary)
@@ -685,24 +688,24 @@ func (h *Handler) handleACMEDirectory(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"newNonce":   base + "/acme/new-nonce",
-		"newAccount": base + "/acme/new-account",
-		"newOrder":   base + "/acme/new-order",
+		"newNonce":    base + "/acme/new-nonce",
+		"newAccount":  base + "/acme/new-account",
+		"newOrder":    base + "/acme/new-order",
 		"renewalInfo": base + "/acme/renewal-info/{id}",
-		"revokeCert": base + "/certs/{id}/revoke",
-		"keyChange":  base + "/acme/key-change",
+		"revokeCert":  base + "/certs/{id}/revoke",
+		"keyChange":   base + "/acme/key-change",
 		"meta": map[string]interface{}{
-			"termsOfService":          "https://vecta-kms.local/acme/terms",
-			"website":                 "https://vecta-kms.local",
-			"externalAccountRequired": options.RequireEAB,
-			"ariEnabled":              options.EnableARI,
-			"starEnabled":             options.EnableSTAR,
-			"starDelegationAllowed":   options.AllowSTARDelegation,
+			"termsOfService":           "https://vecta-kms.local/acme/terms",
+			"website":                  "https://vecta-kms.local",
+			"externalAccountRequired":  options.RequireEAB,
+			"ariEnabled":               options.EnableARI,
+			"starEnabled":              options.EnableSTAR,
+			"starDelegationAllowed":    options.AllowSTARDelegation,
 			"defaultSTARValidityHours": options.DefaultSTARValidityHours,
-			"wildcardAllowed":         options.AllowWildcard,
-			"ipIdentifiersAllowed":    options.AllowIPIdentifiers,
-			"challengeTypes":          options.ChallengeTypes,
-			"rateLimitPerHour":        options.RateLimitPerHour,
+			"wildcardAllowed":          options.AllowWildcard,
+			"ipIdentifiersAllowed":     options.AllowIPIdentifiers,
+			"challengeTypes":           options.ChallengeTypes,
+			"rateLimitPerHour":         options.RateLimitPerHour,
 		},
 	})
 }

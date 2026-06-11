@@ -32,6 +32,8 @@ import {
   uploadThirdPartyCertificate,
   getCertExpiryAlertPolicy,
   updateCertExpiryAlertPolicy,
+  getCertCLMStatus,
+  updateCertCLMPolicy,
   getCertRenewalSummary,
   getCertSTARSummary,
   createCertSTARSubscription,
@@ -150,6 +152,12 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
   const [alertPolicyDaysBefore,setAlertPolicyDaysBefore]=useState(30);
   const [alertPolicyIncludeExternal,setAlertPolicyIncludeExternal]=useState(true);
   const [alertPolicySaving,setAlertPolicySaving]=useState(false);
+  const [clmStatus,setClmStatus]=useState(null);
+  const [clmMode,setClmMode]=useState("warn");
+  const [clmMaxDays,setClmMaxDays]=useState(47);
+  const [clmScheduleAware,setClmScheduleAware]=useState(true);
+  const [clmRenewBefore,setClmRenewBefore]=useState(15);
+  const [clmSaving,setClmSaving]=useState(false);
   const [renewalSummary,setRenewalSummary]=useState(null);
   const [renewalRefreshing,setRenewalRefreshing]=useState(false);
   const [starSummary,setStarSummary]=useState(null);
@@ -246,7 +254,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     }
     setLoading(true);
     try{
-      const [caItems,certItems,profileItems,inventoryItems,protocolItems,protocolSchemaItems,alertPolicy,renewalSummaryOut,starSummaryOut,ctEpochItems]=await Promise.all([
+      const [caItems,certItems,profileItems,inventoryItems,protocolItems,protocolSchemaItems,alertPolicy,renewalSummaryOut,starSummaryOut,ctEpochItems,clmStatusOut]=await Promise.all([
         listCAs(session),
         loadAllCertificates(),
         listProfiles(session),
@@ -256,7 +264,8 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
         getCertExpiryAlertPolicy(session),
         getCertRenewalSummary(session).catch(()=>null),
         getCertSTARSummary(session).catch(()=>null),
-        listCertMerkleEpochs(session,50).catch(()=>[])
+        listCertMerkleEpochs(session,50).catch(()=>[]),
+        getCertCLMStatus(session).catch(()=>null)
       ]);
       setCAs(Array.isArray(caItems)?caItems:[]);
       setCerts(Array.isArray(certItems)?certItems:[]);
@@ -269,6 +278,13 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       setRenewalSummary(renewalSummaryOut||null);
       setStarSummary(starSummaryOut||null);
       setCTEpochs(Array.isArray(ctEpochItems)?ctEpochItems:[]);
+      if(clmStatusOut){
+        setClmStatus(clmStatusOut);
+        setClmMode(String(clmStatusOut?.policy?.mode||"warn"));
+        setClmMaxDays(Math.max(1,Math.min(398,Number(clmStatusOut?.policy?.max_validity_days||47))));
+        setClmScheduleAware(Boolean(clmStatusOut?.policy?.schedule_aware ?? true));
+        setClmRenewBefore(Math.max(0,Number(clmStatusOut?.policy?.renew_before_days||15)));
+      }
       if(!issueCAID&&Array.isArray(caItems)&&caItems.length){
         setIssueCAID(caItems[0].id);
       }
@@ -1207,6 +1223,30 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
     });
   };
 
+  const saveCLMPolicy=async()=>{
+    if(!session){
+      onToast?.("Missing active session.");
+      return;
+    }
+    setClmSaving(true);
+    try{
+      await updateCertCLMPolicy(session,{
+        mode:clmMode,
+        max_validity_days:clmMaxDays,
+        schedule_aware:clmScheduleAware,
+        renew_before_days:clmRenewBefore,
+        updated_by:session.username||"dashboard"
+      });
+      onToast?.("Certificate lifecycle (CLM) policy updated.");
+      setModal(null);
+      await refresh();
+    }catch(error){
+      onToast?.(`CLM policy update failed: ${errMsg(error)}`);
+    }finally{
+      setClmSaving(false);
+    }
+  };
+
   const saveAlertPolicy=async()=>{
     if(!session){
       onToast?.("Missing active session.");
@@ -1881,6 +1921,7 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
           <Btn small onClick={()=>setModal("issue-pqc")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Shield size={11}/>PQC Issue</span></Btn>
           <Btn small onClick={()=>setModal("upload-3p")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Globe size={11}/>Upload 3rd-Party</span></Btn>
           <Btn small onClick={()=>setModal("cert-alert-policy")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><AlertTriangle size={11}/>Alert Policy</span></Btn>
+          <Btn small onClick={()=>setModal("cert-clm-policy")} style={{height:32,padding:"0 14px"}}><span style={{display:"inline-flex",alignItems:"center",gap:5}}><Clock size={11}/>CLM 47-Day</span></Btn>
         </div>
       </div>
     </Card>}
@@ -2441,6 +2482,45 @@ export const CertsTab=({session,onToast,subView,onSubViewChange})=>{
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
         <Btn onClick={()=>setModal(null)} disabled={alertPolicySaving}>Cancel</Btn>
         <Btn primary onClick={()=>void saveAlertPolicy()} disabled={alertPolicySaving}>{alertPolicySaving?"Saving...":"Save Policy"}</Btn>
+      </div>
+    </Modal>
+
+    <Modal open={modal==="cert-clm-policy"} onClose={()=>setModal(null)} title="Certificate Lifecycle Management (CLM)" wide>
+      {clmStatus?<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:12}}>
+        <Stat l="Effective Max Validity" v={clmStatus.effective_max_days>0?`${clmStatus.effective_max_days}d`:"no cap"} c="accent" i={Clock}/>
+        <Stat l="CA/B Schedule Today" v={`${clmStatus.cab_schedule_days}d`} c="accent" i={Shield}/>
+        <Stat l="Active TLS Certs" v={String(clmStatus.active_tls_certs??0)} c="green" i={ShieldCheck}/>
+        <Stat l="Over-Limit Certs" v={String(clmStatus.over_limit_certs??0)} c={Number(clmStatus.over_limit_certs||0)>0?"amber":"green"} i={AlertTriangle}/>
+      </div>:null}
+      {clmStatus&&Array.isArray(clmStatus.milestones)?<FG label="CA/B Forum SC-081 Schedule" hint="Maximum public TLS certificate lifetime steps down to 47 days by March 2029.">
+        <div style={{display:"grid",gap:4}}>
+          {clmStatus.milestones.map((m,idx)=>(
+            <div key={`clm-ms-${idx}`} style={{fontSize:10,fontFamily:"'JetBrains Mono',monospace",color:m.active?C.text:C.dim}}>
+              {m.active?"> ":"  "}{m.effective_from==="baseline"?"baseline":`from ${m.effective_from}`}: max {m.max_validity_days} days{m.active?"  (in force)":""}
+            </div>
+          ))}
+        </div>
+      </FG>:null}
+      <FG label="Enforcement Mode" required>
+        <Radio label="Off" selected={clmMode==="off"} onSelect={()=>setClmMode("off")}/>
+        <Radio label="Warn (audit only)" selected={clmMode==="warn"} onSelect={()=>setClmMode("warn")}/>
+        <Radio label="Enforce (clamp issuance)" selected={clmMode==="enforce"} onSelect={()=>setClmMode("enforce")}/>
+      </FG>
+      <Row2>
+        <FG label="Max Validity (days)" required>
+          <Inp type="number" min={1} max={398} value={String(clmMaxDays)} onChange={(e)=>setClmMaxDays(Math.max(1,Math.min(398,Number(e.target.value||47))))}/>
+        </FG>
+        <FG label="Renew Before Expiry (days)">
+          <Inp type="number" min={0} max={397} value={String(clmRenewBefore)} onChange={(e)=>setClmRenewBefore(Math.max(0,Number(e.target.value||0)))}/>
+        </FG>
+      </Row2>
+      <Chk label="Schedule-aware: always apply the stricter of this policy and the CA/B Forum schedule" checked={clmScheduleAware} onChange={()=>setClmScheduleAware((v)=>!v)}/>
+      <div style={{fontSize:10,color:C.muted,marginTop:8}}>
+        Applies to TLS leaf certificates at issuance. Enforce mode clamps expiry to the cap; warn mode issues unchanged but emits audit.cert.clm_validity_warning for governance and reporting.
+      </div>
+      <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}>
+        <Btn onClick={()=>setModal(null)} disabled={clmSaving}>Cancel</Btn>
+        <Btn primary onClick={()=>void saveCLMPolicy()} disabled={clmSaving}>{clmSaving?"Saving...":"Save Policy"}</Btn>
       </div>
     </Modal>
 

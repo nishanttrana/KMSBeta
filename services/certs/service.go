@@ -520,6 +520,7 @@ func (s *Service) IssueCertificate(ctx context.Context, req IssueCertificateRequ
 	if !notAfter.After(now.Add(5 * time.Minute)) {
 		return Certificate{}, "", errors.New("not_after must be at least 5 minutes in the future")
 	}
+	notAfter = s.enforceCLM(ctx, req.TenantID, req.CertType, now, notAfter)
 	serial, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 120))
 	tpl := &x509.Certificate{
 		SerialNumber: serial,

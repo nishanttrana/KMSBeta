@@ -29,3 +29,9 @@ web/dashboard/dist/
 .gocache/
 .gomodcache/
 *.bak
+
+# Locally built Go binaries (go build artifacts)
+/secrets
+services/keycore/keycore
+services/*/__debug_bin*
+/certs

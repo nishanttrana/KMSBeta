@@ -49,6 +49,9 @@ type Store interface {
 	UpsertProtocolConfig(ctx context.Context, cfg ProtocolConfig) error
 	GetCertExpiryAlertPolicy(ctx context.Context, tenantID string) (CertExpiryAlertPolicy, error)
 	UpsertCertExpiryAlertPolicy(ctx context.Context, item CertExpiryAlertPolicy) error
+	GetCLMPolicy(ctx context.Context, tenantID string) (CLMPolicy, bool, error)
+	UpsertCLMPolicy(ctx context.Context, p CLMPolicy) error
+	CertValidityStats(ctx context.Context, tenantID string, maxDays int64) (total int64, over int64, longest int64, err error)
 	ListCertExpiryAlertStates(ctx context.Context, tenantID string) ([]CertExpiryAlertState, error)
 	UpsertCertExpiryAlertState(ctx context.Context, item CertExpiryAlertState) error
 	DeleteCertExpiryAlertState(ctx context.Context, tenantID string, certID string) error
