@@ -4,9 +4,9 @@ import { ShieldAlert, RefreshCcw, RotateCw, AlertTriangle, CheckCircle2 } from "
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
-const post = (path: string, tok: string, body?: any) =>
-  fetch(`${base}${path}`, { method: "POST", headers: { ...hdr(tok), "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
+const post = (path: string, tok: string, tid: string, body?: any) =>
+  fetch(`${base}${path}`, { method: "POST", headers: { ...hdr(tok, tid), "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -27,22 +27,24 @@ export function CompromiseDetectionTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
-      const r = await fetch(`${base}/compromise/events`, { headers: hdr(session.token) });
+      const r = await fetch(`${base}/compromise/events`, { headers: hdr(session.token, tid) });
       const d = await r.json().catch(() => ({}));
-      setEvents(d.events ?? d ?? []);
+      setEvents(Array.isArray(d.events) ? d.events : Array.isArray(d) ? d : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleReport = async () => {
     if (!form.key_id || !form.reason) return;
+    const tid = session?.tenantId ?? "";
     setReporting(true);
     try {
-      await post("/compromise/report", session.token, form);
+      await post("/compromise/report", session.token, tid, form);
       setForm({ key_id: "", reason: "", severity: "high" });
       await load();
     } catch (e: any) { setErr(e.message); }
@@ -50,7 +52,8 @@ export function CompromiseDetectionTab({ session }: any) {
   };
 
   const handleRotate = async (keyId: string) => {
-    try { await post(`/compromise/keys/${keyId}/rotate`, session.token); await load(); }
+    const tid = session?.tenantId ?? "";
+    try { await post(`/compromise/keys/${keyId}/rotate`, session.token, tid); await load(); }
     catch (e: any) { setErr(e.message); }
   };
 

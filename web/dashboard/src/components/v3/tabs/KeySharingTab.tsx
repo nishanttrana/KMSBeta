@@ -4,8 +4,8 @@ import { Share2, RefreshCcw, Plus, XCircle } from "lucide-react";
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
-const jsonHdr = (tok: string) => ({ ...hdr(tok), "Content-Type": "application/json" });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
+const jsonHdr = (tok: string, tid: string) => ({ ...hdr(tok, tid), "Content-Type": "application/json" });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -31,31 +31,33 @@ export function KeySharingTab({ session }: any) {
 
   const loadAll = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
       const [tRes, kRes] = await Promise.all([
-        fetch(`${base}/sharing/tokens`, { headers: hdr(session.token) }),
-        fetch(`${base}/keys`, { headers: hdr(session.token) }),
+        fetch(`${base}/sharing/tokens`, { headers: hdr(session.token, tid) }),
+        fetch(`${base}/keys`, { headers: hdr(session.token, tid) }),
       ]);
       const t = await tRes.json().catch(() => ({}));
       const k = await kRes.json().catch(() => ({}));
-      setTokens(t.tokens ?? t ?? []);
-      setKeys((k.keys ?? k ?? []).filter((k: any) => k.status === "active"));
+      setTokens(Array.isArray(t.tokens) ? t.tokens : Array.isArray(t) ? t : []);
+      setKeys((Array.isArray(k.keys) ? k.keys : Array.isArray(k) ? k : []).filter((k: any) => k.status === "active"));
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
   const handleCreate = async () => {
     if (!form.key_id) return;
+    const tid = session?.tenantId ?? "";
     setSaving(true); setNewToken(null);
     try {
       const body: any = { permissions: form.permissions.split(",").map((p: string) => p.trim()).filter(Boolean) };
       if (form.grantee_email) body.grantee_email = form.grantee_email;
       if (form.expires_at) body.expires_at = new Date(form.expires_at).toISOString();
       if (form.max_uses) body.max_uses = form.max_uses;
-      const r = await fetch(`${base}/keys/${form.key_id}/sharing-tokens`, { method: "POST", headers: jsonHdr(session.token), body: JSON.stringify(body) });
+      const r = await fetch(`${base}/keys/${form.key_id}/sharing-tokens`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify(body) });
       const d = await r.json();
       setNewToken(d);
       setShowForm(false); setForm({ ...defForm }); await loadAll();
@@ -64,8 +66,9 @@ export function KeySharingTab({ session }: any) {
   };
 
   const handleRevoke = async (keyId: string, tokenId: string) => {
+    const tid = session?.tenantId ?? "";
     try {
-      await fetch(`${base}/keys/${keyId}/sharing-tokens/${tokenId}/revoke`, { method: "POST", headers: hdr(session.token) });
+      await fetch(`${base}/keys/${keyId}/sharing-tokens/${tokenId}/revoke`, { method: "POST", headers: hdr(session.token, tid) });
       await loadAll();
     } catch (e: any) { setErr(e.message); }
   };

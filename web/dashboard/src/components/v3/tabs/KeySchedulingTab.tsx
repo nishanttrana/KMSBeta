@@ -4,8 +4,8 @@ import { CalendarClock, RefreshCcw, Plus, Trash2, ToggleLeft, ToggleRight } from
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
-const jsonHdr = (tok: string) => ({ ...hdr(tok), "Content-Type": "application/json" });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
+const jsonHdr = (tok: string, tid: string) => ({ ...hdr(tok, tid), "Content-Type": "application/json" });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -30,36 +30,40 @@ export function KeySchedulingTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
-      const r = await fetch(`${base}/scheduling/jobs`, { headers: hdr(session.token) });
+      const r = await fetch(`${base}/scheduling/jobs`, { headers: hdr(session.token, tid) });
       const d = await r.json().catch(() => ({}));
-      setJobs(d.jobs ?? d ?? []);
+      setJobs(Array.isArray(d.jobs) ? d.jobs : Array.isArray(d) ? d : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleCreate = async () => {
+    const tid = session?.tenantId ?? "";
     setSaving(true);
     try {
       const body: any = { key_id: form.key_id, schedule_type: form.schedule_type, action: form.action };
       if (form.schedule_type === "cron") body.cron_expr = form.cron_expr;
       else body.interval_seconds = form.interval_seconds;
-      await fetch(`${base}/scheduling/jobs`, { method: "POST", headers: jsonHdr(session.token), body: JSON.stringify(body) });
+      await fetch(`${base}/scheduling/jobs`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify(body) });
       setShowForm(false); setForm({ ...defForm }); await load();
     } catch (e: any) { setErr(e.message); }
     finally { setSaving(false); }
   };
 
   const handleToggle = async (job: any) => {
-    await fetch(`${base}/scheduling/jobs/${job.id}`, { method: "PATCH", headers: jsonHdr(session.token), body: JSON.stringify({ enabled: !job.enabled }) });
+    const tid = session?.tenantId ?? "";
+    await fetch(`${base}/scheduling/jobs/${job.id}`, { method: "PATCH", headers: jsonHdr(session.token, tid), body: JSON.stringify({ enabled: !job.enabled }) });
     await load();
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`${base}/scheduling/jobs/${id}`, { method: "DELETE", headers: hdr(session.token) });
+    const tid = session?.tenantId ?? "";
+    await fetch(`${base}/scheduling/jobs/${id}`, { method: "DELETE", headers: hdr(session.token, tid) });
     await load();
   };
 

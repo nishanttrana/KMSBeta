@@ -4,8 +4,8 @@ import { Lock, RefreshCcw, Unlock } from "lucide-react";
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
-const jsonHdr = (tok: string) => ({ ...hdr(tok), "Content-Type": "application/json" });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
+const jsonHdr = (tok: string, tid: string) => ({ ...hdr(tok, tid), "Content-Type": "application/json" });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)` }}>{c ?? "—"}</td>;
@@ -32,24 +32,27 @@ export function AdvancedEncryptionTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true);
     try {
-      const r = await fetch(`${base}/keys`, { headers: hdr(session.token) });
+      const r = await fetch(`${base}/keys`, { headers: hdr(session.token, tid) });
       const d = await r.json().catch(() => ({}));
-      setKeys((d.keys ?? d ?? []).filter((k: any) => k.status === "active"));
+      const allKeys = Array.isArray(d.keys) ? d.keys : Array.isArray(d) ? d : [];
+      setKeys(allKeys.filter((k: any) => k.status === "active"));
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleEncrypt = async () => {
+    const tid = session?.tenantId ?? "";
     setWorking(true); setEncResult(null);
     try {
       const plaintext_b64 = btoa(encForm.plaintext);
       const body: any = { key_id: encForm.key_id, plaintext_b64, mode: encForm.mode };
       if (encForm.aad) body.aad = encForm.aad;
-      const r = await fetch(`${base}/encryption/encrypt`, { method: "POST", headers: jsonHdr(session.token), body: JSON.stringify(body) });
+      const r = await fetch(`${base}/encryption/encrypt`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify(body) });
       const d = await r.json();
       setEncResult(d);
     } catch (e: any) { setErr(e.message); }
@@ -57,12 +60,13 @@ export function AdvancedEncryptionTab({ session }: any) {
   };
 
   const handleDecrypt = async () => {
+    const tid = session?.tenantId ?? "";
     setWorking(true); setDecResult(null);
     try {
       const body: any = { key_id: decForm.key_id, ciphertext_b64: decForm.ciphertext_b64, mode: decForm.mode };
       if (decForm.aad) body.aad = decForm.aad;
       if (decForm.iv_b64) body.iv_b64 = decForm.iv_b64;
-      const r = await fetch(`${base}/encryption/decrypt`, { method: "POST", headers: jsonHdr(session.token), body: JSON.stringify(body) });
+      const r = await fetch(`${base}/encryption/decrypt`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify(body) });
       const d = await r.json();
       setDecResult(d);
     } catch (e: any) { setErr(e.message); }

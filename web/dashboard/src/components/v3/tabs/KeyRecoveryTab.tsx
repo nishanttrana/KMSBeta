@@ -4,8 +4,8 @@ import { KeyRound, RefreshCcw, Plus, Play } from "lucide-react";
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
-const jsonHdr = (tok: string) => ({ ...hdr(tok), "Content-Type": "application/json" });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
+const jsonHdr = (tok: string, tid: string) => ({ ...hdr(tok, tid), "Content-Type": "application/json" });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -30,21 +30,23 @@ export function KeyRecoveryTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
-      const r = await fetch(`${base}/recovery/escrow`, { headers: hdr(session.token) });
+      const r = await fetch(`${base}/recovery/escrow`, { headers: hdr(session.token, tid) });
       const d = await r.json().catch(() => ({}));
-      setRecords(d.records ?? d ?? []);
+      setRecords(Array.isArray(d.records) ? d.records : Array.isArray(d) ? d : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleEscrow = async () => {
+    const tid = session?.tenantId ?? "";
     setSaving(true); setResult(null);
     try {
-      const r = await fetch(`${base}/recovery/escrow`, { method: "POST", headers: jsonHdr(session.token), body: JSON.stringify(escrowForm) });
+      const r = await fetch(`${base}/recovery/escrow`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify(escrowForm) });
       const d = await r.json();
       setResult(d);
       setShowEscrow(false); await load();
@@ -53,10 +55,11 @@ export function KeyRecoveryTab({ session }: any) {
   };
 
   const handleRecover = async () => {
+    const tid = session?.tenantId ?? "";
     setSaving(true); setResult(null);
     try {
       const shares = recoverForm.shares_csv.split(",").map(s => s.trim()).filter(Boolean);
-      const r = await fetch(`${base}/recovery/initiate`, { method: "POST", headers: jsonHdr(session.token), body: JSON.stringify({ key_id: recoverForm.key_id, shares }) });
+      const r = await fetch(`${base}/recovery/initiate`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify({ key_id: recoverForm.key_id, shares }) });
       const d = await r.json();
       setResult(d);
     } catch (e: any) { setErr(e.message); }

@@ -4,9 +4,9 @@ import { Brain, RefreshCcw, Play, CheckCircle2 } from "lucide-react";
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
-const post = (path: string, tok: string) =>
-  fetch(`${base}${path}`, { method: "POST", headers: { ...hdr(tok), "Content-Type": "application/json" } });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
+const post = (path: string, tok: string, tid: string) =>
+  fetch(`${base}${path}`, { method: "POST", headers: { ...hdr(tok, tid), "Content-Type": "application/json" } });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -26,21 +26,23 @@ export function MLAnomalyTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
-      const r = await fetch(`${base}/ml/anomalies`, { headers: hdr(session.token) });
+      const r = await fetch(`${base}/ml/anomalies`, { headers: hdr(session.token, tid) });
       const d = await r.json().catch(() => ({}));
-      setAnomalies(d.anomalies ?? d ?? []);
+      setAnomalies(Array.isArray(d.anomalies) ? d.anomalies : Array.isArray(d) ? d : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleDetect = async () => {
+    const tid = session?.tenantId ?? "";
     setDetecting(true);
     try {
-      await post("/ml/detect", session.token);
+      await post("/ml/detect", session.token, tid);
       setLastRun(new Date().toLocaleTimeString());
       await load();
     } catch (e: any) { setErr(e.message); }
@@ -48,8 +50,9 @@ export function MLAnomalyTab({ session }: any) {
   };
 
   const handleDismiss = async (id: string) => {
+    const tid = session?.tenantId ?? "";
     try {
-      await post(`/ml/anomalies/${id}/dismiss`, session.token);
+      await post(`/ml/anomalies/${id}/dismiss`, session.token, tid);
       await load();
     } catch (e: any) { setErr(e.message); }
   };

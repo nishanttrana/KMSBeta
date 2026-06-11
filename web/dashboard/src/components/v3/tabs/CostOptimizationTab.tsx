@@ -4,7 +4,7 @@ import { DollarSign, RefreshCcw, Zap, TrendingDown, CheckCircle2 } from "lucide-
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -24,26 +24,28 @@ export function CostOptimizationTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
       const [mRes, sRes] = await Promise.all([
-        fetch(`${base}/cost/metrics`, { headers: hdr(session.token) }),
-        fetch(`${base}/cost/suggestions`, { headers: hdr(session.token) }),
+        fetch(`${base}/cost/metrics`, { headers: hdr(session.token, tid) }),
+        fetch(`${base}/cost/suggestions`, { headers: hdr(session.token, tid) }),
       ]);
       const m = await mRes.json().catch(() => ({}));
       const s = await sRes.json().catch(() => ({}));
-      setMetrics(m.metrics ?? m);
-      setSuggestions(s.suggestions ?? s ?? []);
+      setMetrics(m.metrics ?? m ?? {});
+      setSuggestions(Array.isArray(s.suggestions) ? s.suggestions : Array.isArray(s) ? s : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleApply = async (id: string) => {
+    const tid = session?.tenantId ?? "";
     setApplying(id);
     try {
-      await fetch(`${base}/cost/suggestions/${id}/apply`, { method: "POST", headers: hdr(session.token) });
+      await fetch(`${base}/cost/suggestions/${id}/apply`, { method: "POST", headers: hdr(session.token, tid) });
       await load();
     } catch (e: any) { setErr(e.message); }
     finally { setApplying(null); }

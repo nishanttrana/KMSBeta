@@ -4,7 +4,7 @@ import { ClipboardCheck, RefreshCcw, Download, CheckCircle2, XCircle, AlertTrian
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -36,24 +36,26 @@ export function RegulatoryTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
       const [dRes, rRes] = await Promise.all([
-        fetch(`${base}/compliance/dashboard`, { headers: hdr(session.token) }),
-        fetch(`${base}/compliance/regulatory`, { headers: hdr(session.token) }),
+        fetch(`${base}/compliance/dashboard`, { headers: hdr(session.token, tid) }),
+        fetch(`${base}/compliance/regulatory`, { headers: hdr(session.token, tid) }),
       ]);
       const d = await dRes.json().catch(() => ({}));
       const r = await rRes.json().catch(() => ({}));
       setDashboard(d);
-      setFrameworks(r.frameworks ?? r ?? []);
+      setFrameworks(Array.isArray(r.frameworks) ? r.frameworks : Array.isArray(r) ? r : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleExport = async () => {
-    const r = await fetch(`${base}/compliance/report?framework=${encodeURIComponent(selectedFramework)}`, { headers: hdr(session.token) });
+    const tid = session?.tenantId ?? "";
+    const r = await fetch(`${base}/compliance/report?framework=${encodeURIComponent(selectedFramework)}`, { headers: hdr(session.token, tid) });
     const d = await r.json();
     const blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);

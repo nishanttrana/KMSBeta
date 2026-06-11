@@ -4,7 +4,7 @@ import { BarChart2, RefreshCcw, Clock, TrendingUp, AlertTriangle, CheckCircle2 }
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -34,19 +34,20 @@ export function RotationAnalyticsTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
       const [aRes, rRes] = await Promise.all([
-        fetch(`${base}/rotation/analytics`, { headers: hdr(session.token) }),
-        fetch(`${base}/rotation/runs?limit=20`, { headers: hdr(session.token) }),
+        fetch(`${base}/rotation/analytics`, { headers: hdr(session.token, tid) }),
+        fetch(`${base}/rotation/runs?limit=20`, { headers: hdr(session.token, tid) }),
       ]);
       const aData = await aRes.json().catch(() => ({}));
       const rData = await rRes.json().catch(() => ({}));
       setAnalytics(aData.analytics ?? aData);
-      setRuns(rData.runs ?? rData ?? []);
+      setRuns(rData.runs ?? (Array.isArray(rData) ? rData : []));
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 

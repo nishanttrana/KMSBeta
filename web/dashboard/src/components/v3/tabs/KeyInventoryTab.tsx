@@ -4,7 +4,7 @@ import { Database, RefreshCcw, Download, GitBranch } from "lucide-react";
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -24,24 +24,26 @@ export function KeyInventoryTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
       const [iRes, dRes] = await Promise.all([
-        fetch(`${base}/inventory/keys`, { headers: hdr(session.token) }),
-        fetch(`${base}/inventory/dependencies`, { headers: hdr(session.token) }),
+        fetch(`${base}/inventory/keys`, { headers: hdr(session.token, tid) }),
+        fetch(`${base}/inventory/dependencies`, { headers: hdr(session.token, tid) }),
       ]);
       const i = await iRes.json().catch(() => ({}));
       const d = await dRes.json().catch(() => ({}));
-      setInventory(i.keys ?? i ?? []);
-      setDeps(d.dependencies ?? d ?? []);
+      setInventory(Array.isArray(i.keys) ? i.keys : Array.isArray(i) ? i : []);
+      setDeps(Array.isArray(d.dependencies) ? d.dependencies : Array.isArray(d) ? d : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleExport = async () => {
-    const r = await fetch(`${base}/inventory/export`, { headers: hdr(session.token) });
+    const tid = session?.tenantId ?? "";
+    const r = await fetch(`${base}/inventory/export`, { headers: hdr(session.token, tid) });
     const d = await r.json();
     const blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);

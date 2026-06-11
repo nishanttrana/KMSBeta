@@ -4,7 +4,7 @@ import { BarChart3, RefreshCcw, Download, TrendingUp } from "lucide-react";
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -23,24 +23,26 @@ export function KeyAnalyticsTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
       const [aRes, sRes] = await Promise.all([
-        fetch(`${base}/analytics/keys`, { headers: hdr(session.token) }),
-        fetch(`${base}/enterprise/summary`, { headers: hdr(session.token) }),
+        fetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) }),
+        fetch(`${base}/rotation/analytics`, { headers: hdr(session.token, tid) }),
       ]);
       const a = await aRes.json().catch(() => ({}));
       const s = await sRes.json().catch(() => ({}));
-      setAnalytics(a.analytics ?? a);
-      setKeyStats(s.by_algorithm ?? []);
+      setAnalytics(a);
+      setKeyStats(Array.isArray(a.by_algorithm) ? a.by_algorithm : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleExport = async () => {
-    const r = await fetch(`${base}/analytics/report?format=json`, { headers: hdr(session.token) });
+    const tid = session?.tenantId ?? "";
+    const r = await fetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) });
     const d = await r.json();
     const blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -69,8 +71,8 @@ export function KeyAnalyticsTab({ session }: any) {
         {[
           { label: "Total Keys", value: analytics.total_keys, icon: TrendingUp },
           { label: "Active Keys", value: analytics.active_keys, icon: BarChart3 },
-          { label: "Total Operations", value: analytics.total_operations?.toLocaleString(), icon: BarChart3 },
-          { label: "Avg Key Age (days)", value: analytics.avg_age_days?.toFixed(1), icon: TrendingUp },
+          { label: "Total Rotations", value: analytics.total_rotations?.toLocaleString?.(), icon: BarChart3 },
+          { label: "Avg Key Age (days)", value: analytics.avg_age_days?.toFixed?.(1), icon: TrendingUp },
         ].map(({ label, value, icon: Icon }: any) => (
           <Card key={label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ background: C.accent + "22", borderRadius: 8, padding: 10 }}><Icon size={16} style={{ color: C.accent }} /></div>
@@ -99,16 +101,16 @@ export function KeyAnalyticsTab({ session }: any) {
           )}
         </Card>
         <Card>
-          <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 12 }}>Operation Breakdown</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 12 }}>Rotation Summary</div>
           {[
-            { label: "Encrypt ops", val: analytics.encrypt_ops },
-            { label: "Decrypt ops", val: analytics.decrypt_ops },
-            { label: "Sign ops", val: analytics.sign_ops },
-            { label: "Verify ops", val: analytics.verify_ops },
+            { label: "Total Rotations", val: analytics.total_rotations },
+            { label: "Successful", val: analytics.successful },
+            { label: "Failed", val: analytics.failed },
+            { label: "Avg Duration (s)", val: analytics.avg_duration_seconds?.toFixed?.(1) },
           ].map(({ label, val }: any) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
               <span style={{ fontSize: 12, color: C.dim }}>{label}</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{val?.toLocaleString() ?? "—"}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{val?.toLocaleString?.() ?? val ?? "—"}</span>
             </div>
           ))}
         </Card>

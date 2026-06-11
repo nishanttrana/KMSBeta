@@ -4,9 +4,9 @@ import { Link, RefreshCcw, ShieldCheck, Anchor, CheckCircle2, XCircle } from "lu
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
-const post = (path: string, tok: string) =>
-  fetch(`${base}${path}`, { method: "POST", headers: { ...hdr(tok), "Content-Type": "application/json" } });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
+const post = (path: string, tok: string, tid: string) =>
+  fetch(`${base}${path}`, { method: "POST", headers: { ...hdr(tok, tid), "Content-Type": "application/json" } });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -29,26 +29,28 @@ export function AuditChainTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
       const [cRes, eRes] = await Promise.all([
-        fetch(`${base}/audit/chain?limit=50`, { headers: hdr(session.token) }),
-        fetch(`${base}/audit/events?limit=100`, { headers: hdr(session.token) }),
+        fetch(`${base}/audit/chain?limit=50`, { headers: hdr(session.token, tid) }),
+        fetch(`${base}/audit/events?limit=100`, { headers: hdr(session.token, tid) }),
       ]);
       const c = await cRes.json().catch(() => ({}));
       const e = await eRes.json().catch(() => ({}));
-      setChain(c.entries ?? c ?? []);
-      setEvents(e.events ?? e ?? []);
+      setChain(Array.isArray(c.entries) ? c.entries : Array.isArray(c) ? c : []);
+      setEvents(Array.isArray(e.events) ? e.events : Array.isArray(e) ? e : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleVerify = async () => {
+    const tid = session?.tenantId ?? "";
     setVerifying(true);
     try {
-      const r = await post("/audit/chain/verify", session.token);
+      const r = await post("/audit/chain/verify", session.token, tid);
       const d = await r.json();
       setVerifyResult(d);
     } catch (e: any) { setErr(e.message); }
@@ -56,9 +58,10 @@ export function AuditChainTab({ session }: any) {
   };
 
   const handleAnchor = async () => {
+    const tid = session?.tenantId ?? "";
     setAnchoring(true);
     try {
-      await post("/audit/chain/anchor", session.token);
+      await post("/audit/chain/anchor", session.token, tid);
       await load();
     } catch (e: any) { setErr(e.message); }
     finally { setAnchoring(false); }

@@ -4,8 +4,8 @@ import { Shield, RefreshCcw, Plus, CheckCircle2, AlertTriangle, XCircle } from "
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
-const jsonHdr = (tok: string) => ({ ...hdr(tok), "Content-Type": "application/json" });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
+const jsonHdr = (tok: string, tid: string) => ({ ...hdr(tok, tid), "Content-Type": "application/json" });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -29,31 +29,34 @@ export function ThreatProtectionTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
       const [sRes, cRes] = await Promise.all([
-        fetch(`${base}/threat/signals`, { headers: hdr(session.token) }),
-        fetch(`${base}/canary/keys`, { headers: hdr(session.token) }),
+        fetch(`${base}/threat/signals`, { headers: hdr(session.token, tid) }),
+        fetch(`${base}/canary/keys`, { headers: hdr(session.token, tid) }),
       ]);
       const s = await sRes.json().catch(() => ({}));
       const c = await cRes.json().catch(() => ({}));
-      setSignals(s.signals ?? s ?? []);
-      setCanaryKeys(c.canary_keys ?? c ?? []);
+      setSignals(Array.isArray(s.signals) ? s.signals : Array.isArray(s) ? s : []);
+      setCanaryKeys(Array.isArray(c.canary_keys) ? c.canary_keys : Array.isArray(c) ? c : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleAck = async (id: string) => {
-    await fetch(`${base}/threat/signals/${id}/ack`, { method: "POST", headers: hdr(session.token) });
+    const tid = session?.tenantId ?? "";
+    await fetch(`${base}/threat/signals/${id}/ack`, { method: "POST", headers: hdr(session.token, tid) });
     await load();
   };
 
   const handleCreateCanary = async () => {
+    const tid = session?.tenantId ?? "";
     setSaving(true);
     try {
-      await fetch(`${base}/canary/keys`, { method: "POST", headers: jsonHdr(session.token), body: JSON.stringify(canaryForm) });
+      await fetch(`${base}/canary/keys`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify(canaryForm) });
       setShowCanaryForm(false); setCanaryForm({ label: "", alert_on_use: true }); await load();
     } catch (e: any) { setErr(e.message); }
     finally { setSaving(false); }

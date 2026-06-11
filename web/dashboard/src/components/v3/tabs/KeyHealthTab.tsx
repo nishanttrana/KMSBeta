@@ -4,13 +4,13 @@ import { Activity, RefreshCcw, RotateCw } from "lucide-react";
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
-const Btn = ({ onClick, children, small, variant = "default" }: any) => {
+const Btn = ({ onClick, children, small, variant = "default", disabled }: any) => {
   const s: any = { default: { background: C.accent, color: C.bg }, ghost: { background: "rgba(255,255,255,.06)", color: C.dim, border: `1px solid ${C.border}` } };
-  return <button onClick={onClick} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none", ...s[variant] }}>{children}</button>;
+  return <button onClick={disabled ? undefined : onClick} disabled={disabled} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: small ? "4px 10px" : "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", border: "none", opacity: disabled ? 0.5 : 1, ...s[variant] }}>{children}</button>;
 };
 const Card = ({ children, style }: any) => <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, ...style }}>{children}</div>;
 
@@ -35,27 +35,34 @@ function ScoreBar({ score }: { score: number }) {
 
 export function KeyHealthTab({ session }: any) {
   const [scores, setScores] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [refreshing, setRefreshing] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
-      const r = await fetch(`${base}/health/scores`, { headers: hdr(session.token) });
-      const d = await r.json().catch(() => ({}));
-      setScores(d.scores ?? d ?? []);
+      const [hRes, sRes] = await Promise.all([
+        fetch(`${base}/health/summary`, { headers: hdr(session.token, tid) }),
+        fetch(`${base}/health/summary`, { headers: hdr(session.token, tid) }),
+      ]);
+      const h = await hRes.json().catch(() => ({}));
+      setSummary(h);
+      setScores(Array.isArray(h.scores) ? h.scores : Array.isArray(h.keys) ? h.keys : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleRefresh = async (keyId: string) => {
+    const tid = session?.tenantId ?? "";
     setRefreshing(keyId);
     try {
-      await fetch(`${base}/health/scores/${keyId}/refresh`, { method: "POST", headers: hdr(session.token) });
+      await fetch(`${base}/keys/${keyId}/health`, { headers: hdr(session.token, tid) });
       await load();
     } catch (e: any) { setErr(e.message); }
     finally { setRefreshing(null); }
@@ -83,6 +90,18 @@ export function KeyHealthTab({ session }: any) {
             <div style={{ fontSize: 10, color: C.muted }}>Grade {g}</div>
           </Card>
         ))}
+        {summary.total_keys != null && (
+          <Card style={{ minWidth: 100, textAlign: "center" }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: C.text }}>{summary.total_keys}</div>
+            <div style={{ fontSize: 10, color: C.muted }}>Total Keys</div>
+          </Card>
+        )}
+        {summary.avg_score != null && (
+          <Card style={{ minWidth: 100, textAlign: "center" }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: C.accent }}>{summary.avg_score?.toFixed?.(0)}</div>
+            <div style={{ fontSize: 10, color: C.muted }}>Avg Score</div>
+          </Card>
+        )}
       </div>
 
       <Card>

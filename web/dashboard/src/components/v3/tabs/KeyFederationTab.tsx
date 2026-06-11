@@ -4,8 +4,8 @@ import { Network, RefreshCcw, Plus, Trash2, RotateCw } from "lucide-react";
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
-const jsonHdr = (tok: string) => ({ ...hdr(tok), "Content-Type": "application/json" });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
+const jsonHdr = (tok: string, tid: string) => ({ ...hdr(tok, tid), "Content-Type": "application/json" });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -30,39 +30,43 @@ export function KeyFederationTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
-      const r = await fetch(`${base}/federation/peers`, { headers: hdr(session.token) });
+      const r = await fetch(`${base}/federation/peers`, { headers: hdr(session.token, tid) });
       const d = await r.json().catch(() => ({}));
-      setPeers(d.peers ?? d ?? []);
+      setPeers(Array.isArray(d.peers) ? d.peers : Array.isArray(d) ? d : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleAdd = async () => {
+    const tid = session?.tenantId ?? "";
     setSaving(true);
     try {
       const body: any = { name: form.name, endpoint: form.endpoint };
       if (form.tls_cert) body.tls_cert = form.tls_cert;
-      await fetch(`${base}/federation/peers`, { method: "POST", headers: jsonHdr(session.token), body: JSON.stringify(body) });
+      await fetch(`${base}/federation/peers`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify(body) });
       setShowForm(false); setForm({ ...defForm }); await load();
     } catch (e: any) { setErr(e.message); }
     finally { setSaving(false); }
   };
 
   const handleSync = async (peerId: string) => {
+    const tid = session?.tenantId ?? "";
     setSyncing(peerId);
     try {
-      await fetch(`${base}/federation/peers/${peerId}/sync`, { method: "POST", headers: hdr(session.token) });
+      await fetch(`${base}/federation/peers/${peerId}/sync`, { method: "POST", headers: hdr(session.token, tid) });
       await load();
     } catch (e: any) { setErr(e.message); }
     finally { setSyncing(null); }
   };
 
   const handleRemove = async (peerId: string) => {
-    await fetch(`${base}/federation/peers/${peerId}`, { method: "DELETE", headers: hdr(session.token) });
+    const tid = session?.tenantId ?? "";
+    await fetch(`${base}/federation/peers/${peerId}`, { method: "DELETE", headers: hdr(session.token, tid) });
     await load();
   };
 

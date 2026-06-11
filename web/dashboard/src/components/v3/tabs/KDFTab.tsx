@@ -4,8 +4,8 @@ import { Layers, RefreshCcw, Plus, Trash2, Play } from "lucide-react";
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
-const jsonHdr = (tok: string) => ({ ...hdr(tok), "Content-Type": "application/json" });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
+const jsonHdr = (tok: string, tid: string) => ({ ...hdr(tok, tid), "Content-Type": "application/json" });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -32,39 +32,43 @@ export function KDFTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
-      const r = await fetch(`${base}/kdf/configs`, { headers: hdr(session.token) });
+      const r = await fetch(`${base}/kdf/configs`, { headers: hdr(session.token, tid) });
       const d = await r.json().catch(() => ({}));
-      setConfigs(d.configs ?? d ?? []);
+      setConfigs(Array.isArray(d.configs) ? d.configs : Array.isArray(d) ? d : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleCreate = async () => {
+    const tid = session?.tenantId ?? "";
     setSaving(true);
     try {
-      await fetch(`${base}/kdf/configs`, { method: "POST", headers: jsonHdr(session.token), body: JSON.stringify({ label: form.label, algorithm: form.algorithm, params: { key_length: form.key_length } }) });
+      await fetch(`${base}/kdf/configs`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify({ label: form.label, algorithm: form.algorithm, params: { key_length: form.key_length } }) });
       setShowForm(false); setForm({ ...defForm }); await load();
     } catch (e: any) { setErr(e.message); }
     finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`${base}/kdf/configs/${id}`, { method: "DELETE", headers: hdr(session.token) });
+    const tid = session?.tenantId ?? "";
+    await fetch(`${base}/kdf/configs/${id}`, { method: "DELETE", headers: hdr(session.token, tid) });
     await load();
   };
 
   const handleDerive = async () => {
     if (!deriveForm.configId) return;
+    const tid = session?.tenantId ?? "";
     setDeriving(true); setDeriveResult(null);
     try {
       const body: any = {};
       if (deriveForm.info) body.info = deriveForm.info;
       if (deriveForm.salt) body.salt = deriveForm.salt;
-      const r = await fetch(`${base}/kdf/configs/${deriveForm.configId}/derive`, { method: "POST", headers: jsonHdr(session.token), body: JSON.stringify(body) });
+      const r = await fetch(`${base}/kdf/configs/${deriveForm.configId}/derive`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify(body) });
       const d = await r.json();
       setDeriveResult(d);
     } catch (e: any) { setErr(e.message); }

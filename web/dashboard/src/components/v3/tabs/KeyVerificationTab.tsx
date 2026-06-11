@@ -4,7 +4,7 @@ import { ShieldCheck, RefreshCcw, Search, CheckCircle2, XCircle } from "lucide-r
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -25,21 +25,23 @@ export function KeyVerificationTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
-      const r = await fetch(`${base}/keys`, { headers: hdr(session.token) });
+      const r = await fetch(`${base}/keys`, { headers: hdr(session.token, tid) });
       const d = await r.json().catch(() => ({}));
-      setKeys(d.keys ?? d ?? []);
+      setKeys(Array.isArray(d.keys) ? d.keys : Array.isArray(d) ? d : []);
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleVerify = async (keyId: string) => {
+    const tid = session?.tenantId ?? "";
     setVerifying(keyId);
     try {
-      const r = await fetch(`${base}/keys/${keyId}/verify-material`, { method: "POST", headers: hdr(session.token) });
+      const r = await fetch(`${base}/keys/${keyId}/verify-material`, { method: "POST", headers: hdr(session.token, tid) });
       const d = await r.json();
       setResults(prev => ({ ...prev, [keyId]: d }));
     } catch (e: any) {

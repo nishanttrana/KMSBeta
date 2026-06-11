@@ -4,8 +4,8 @@ import { Cpu, RefreshCcw, Save } from "lucide-react";
 import { C } from "../../v3/theme";
 
 const base = "/svc/keycore";
-const hdr = (tok: string) => ({ "Authorization": `Bearer ${tok}` });
-const jsonHdr = (tok: string) => ({ ...hdr(tok), "Content-Type": "application/json" });
+const hdr = (tok: string, tid: string) => ({ "Authorization": `Bearer ${tok}`, "X-Tenant-ID": tid });
+const jsonHdr = (tok: string, tid: string) => ({ ...hdr(tok, tid), "Content-Type": "application/json" });
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -30,27 +30,31 @@ export function KeyBindingTab({ session }: any) {
 
   const load = useCallback(async () => {
     if (!session?.token) return;
+    const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
       const [bRes, kRes] = await Promise.all([
-        fetch(`${base}/binding/configs`, { headers: hdr(session.token) }),
-        fetch(`${base}/keys`, { headers: hdr(session.token) }),
+        fetch(`${base}/binding/configs`, { headers: hdr(session.token, tid) }),
+        fetch(`${base}/keys`, { headers: hdr(session.token, tid) }),
       ]);
       const b = await bRes.json().catch(() => ({}));
       const k = await kRes.json().catch(() => ({}));
-      setBindings(b.configs ?? b ?? []);
-      setKeys((k.keys ?? k ?? []).filter((k: any) => k.status === "active"));
+      const allBindings = Array.isArray(b.configs) ? b.configs : Array.isArray(b) ? b : [];
+      const allKeys = Array.isArray(k.keys) ? k.keys : Array.isArray(k) ? k : [];
+      setBindings(allBindings);
+      setKeys(allKeys.filter((k: any) => k.status === "active"));
     } catch (e: any) { setErr(e.message); }
     finally { setLoading(false); }
-  }, [session?.token]);
+  }, [session?.token, session?.tenantId]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleSelectKey = async (keyId: string) => {
+    const tid = session?.tenantId ?? "";
     setSelectedKey(keyId); setSuccess(false);
     if (!keyId) { setBinding({}); return; }
     try {
-      const r = await fetch(`${base}/keys/${keyId}/binding`, { headers: hdr(session.token) });
+      const r = await fetch(`${base}/keys/${keyId}/binding`, { headers: hdr(session.token, tid) });
       const d = await r.json().catch(() => ({}));
       setBinding(d.config ?? d ?? {});
     } catch { setBinding({}); }
@@ -58,9 +62,10 @@ export function KeyBindingTab({ session }: any) {
 
   const handleSave = async () => {
     if (!selectedKey) return;
+    const tid = session?.tenantId ?? "";
     setSaving(true); setSuccess(false);
     try {
-      await fetch(`${base}/keys/${selectedKey}/binding`, { method: "PUT", headers: jsonHdr(session.token), body: JSON.stringify(binding) });
+      await fetch(`${base}/keys/${selectedKey}/binding`, { method: "PUT", headers: jsonHdr(session.token, tid), body: JSON.stringify(binding) });
       setSuccess(true); await load();
     } catch (e: any) { setErr(e.message); }
     finally { setSaving(false); }
