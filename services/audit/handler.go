@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/clustersync"
 	"vecta-kms/pkg/tenantcheck"
 )
@@ -149,6 +150,41 @@ func (h *Handler) handlePublish(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", "invalid request body", reqID, "")
 		return
 	}
+
+	// Attribution is derived from the authenticated principal, never trusted
+	// from the request body. Without this, any holder of a valid token could
+	// forge events for another tenant or impersonate another actor in the
+	// immutable audit chain. (The in-cluster NATS fan-in path is separate and
+	// unaffected; this HTTP ingest is the agent/external-integration path,
+	// which is always behind JWT auth.)
+	if claims, ok := pkgauth.ClaimsFromContext(r.Context()); ok && claims != nil {
+		claimTenant := strings.TrimSpace(claims.TenantID)
+		if claimTenant != "" {
+			bodyTenant := strings.TrimSpace(req.Event.TenantID)
+			if bodyTenant != "" && !strings.EqualFold(bodyTenant, claimTenant) {
+				writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", reqID, claimTenant)
+				return
+			}
+			// Bind the event to the token's tenant; root/super-admin tokens
+			// (empty tenant claim) retain cross-tenant publish capability.
+			req.Event.TenantID = claimTenant
+		}
+		actor := strings.TrimSpace(claims.UserID)
+		if actor == "" {
+			actor = strings.TrimSpace(claims.ClientID)
+		}
+		if actor != "" {
+			req.Event.ActorID = actor
+		}
+		if strings.TrimSpace(req.Event.ActorType) == "" {
+			if strings.TrimSpace(claims.UserID) != "" {
+				req.Event.ActorType = "user"
+			} else if strings.TrimSpace(claims.ClientID) != "" {
+				req.Event.ActorType = "service"
+			}
+		}
+	}
+
 	if req.Subject == "" {
 		req.Subject = req.Event.Action
 	}
@@ -598,13 +634,13 @@ func (h *Handler) handleFIPSBoundary(w http.ResponseWriter, r *http.Request) {
 			"alert dispatch (email/sms/pagerduty — external network)",
 			"NATS message transport (relayed from other KMS modules)",
 		},
-		"zeroization_policy":           "Keys are zeroized on process termination via runtime.SetFinalizer and explicit wipe calls",
-		"random_number_generator":       "crypto/rand (OS-provided CSPRNG)",
-		"kdf_used":                      "HKDF-SHA-256 (event signing key derivation where applicable)",
-		"self_test_on_startup":          true,
-		"continuous_health_test":        true,
-		"tamper_evidence":               "HMAC-SHA-256 per event + Merkle epoch chain with cross-epoch SHA-256 linkage",
-		"request_id":                    reqID,
+		"zeroization_policy":      "Keys are zeroized on process termination via runtime.SetFinalizer and explicit wipe calls",
+		"random_number_generator": "crypto/rand (OS-provided CSPRNG)",
+		"kdf_used":                "HKDF-SHA-256 (event signing key derivation where applicable)",
+		"self_test_on_startup":    true,
+		"continuous_health_test":  true,
+		"tamper_evidence":         "HMAC-SHA-256 per event + Merkle epoch chain with cross-epoch SHA-256 linkage",
+		"request_id":              reqID,
 	})
 }
 
