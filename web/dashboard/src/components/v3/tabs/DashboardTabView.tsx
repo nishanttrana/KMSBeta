@@ -115,8 +115,58 @@ export const DashboardTabView = (props: any) => {
     return (WIDGET_CONF[tabId] || WIDGET_CONF["keys"]).color;
   };
 
+  const Kpi = ({ label, value, icon: KIcon, color, dim, delta, deltaColor, deltaIcon: DIcon, barPct }: any) => (
+    <div className="vecta-stat-card" style={{ position: "relative", overflow: "hidden", background: `linear-gradient(160deg, ${C.card} 0%, ${C.surface} 100%)`, border: `1px solid ${C.border}`, borderRadius: "var(--radius-md)", padding: "16px 18px", boxShadow: "var(--shadow-sm)" }}>
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${color}, transparent 75%)`, opacity: 0.7 }} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 10, fontWeight: 600, color: C.muted, letterSpacing: 1.1, textTransform: "uppercase" }}>{label}</div>
+        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 30, height: 30, borderRadius: 9, background: dim, color }}><KIcon size={15} strokeWidth={2.2} /></span>
+      </div>
+      <div className="vk-num" style={{ fontSize: 34, fontWeight: 800, color, lineHeight: 1.05, marginTop: 8 }}>{value}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, color: deltaColor, marginTop: 7, fontWeight: 500 }}>
+        {DIcon && <DIcon size={11} strokeWidth={2.2} />}
+        {delta}
+      </div>
+      <div style={{ height: 3, borderRadius: 999, background: C.border, overflow: "hidden", marginTop: 10 }}>
+        <div style={{ height: "100%", width: `${barPct}%`, background: `linear-gradient(90deg, ${color}, color-mix(in oklab, ${color} 55%, transparent))`, borderRadius: 999, transition: "width .6s cubic-bezier(.4,0,.2,1)" }} />
+      </div>
+    </div>
+  );
+
   return (
-    <div style={{ display: "grid", gap: 12 }}>
+    <div style={{ display: "grid", gap: 14 }}>
+      {/* ── Hero header ── */}
+      <div style={{
+        position: "relative", overflow: "hidden",
+        borderRadius: "var(--radius-lg)", border: `1px solid ${C.border}`,
+        background: `linear-gradient(120deg, ${C.surface} 0%, ${C.card} 55%, ${C.surface} 100%)`,
+        padding: "20px 24px",
+      }}>
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `radial-gradient(900px 240px at 8% -40%, ${C.glowStrong || "rgba(34,211,238,.18)"}, transparent 60%), radial-gradient(700px 220px at 95% 140%, ${C.glow || "rgba(99,102,241,.14)"}, transparent 60%)` }} />
+        <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C.text, letterSpacing: -0.4, lineHeight: 1.2 }}>
+              Security Operations Overview
+            </div>
+            <div style={{ fontSize: 11.5, color: C.dim, marginTop: 4 }}>
+              {new Date().toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+              {homeLoading ? "  ·  refreshing…" : ""}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, color: globalFipsEnabled ? C.greenFg : C.amberFg, background: globalFipsEnabled ? C.greenDim : C.amberDim, border: `1px solid color-mix(in oklab, ${globalFipsEnabled ? C.green : C.amber} 30%, transparent)` }}>
+              <ShieldCheck size={12} strokeWidth={2.4} /> {globalFipsEnabled ? "FIPS 140-3 MODE" : "STANDARD MODE"}
+            </span>
+            <span title={cryptoLibraryLabel} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, color: cryptoLibraryValidated ? C.accentFg : C.dim, background: C.accentDim, border: `1px solid color-mix(in oklab, ${C.accent} 25%, transparent)`, maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <Cpu size={12} strokeWidth={2.4} /> {cryptoLibraryValidated ? "VALIDATED CRYPTO" : (cryptoLibraryLabel || "CRYPTO LIBRARY")}
+            </span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, color: networkStatus === "ok" ? C.greenFg : C.redFg, background: networkStatus === "ok" ? C.greenDim : C.redDim, border: `1px solid color-mix(in oklab, ${networkStatus === "ok" ? C.green : C.red} 30%, transparent)` }}>
+              <GitBranch size={12} strokeWidth={2.4} /> {`CLUSTER ${fmtInt(clusterSummary.online_nodes)}/${fmtInt(clusterSummary.total_nodes)}`}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Pending Approvals Banner */}
       {Number(homeSummary?.myPendingApprovals || 0) > 0 && (
         <Card style={{ borderColor: C.amber, background: C.amberDim }}>
@@ -137,79 +187,31 @@ export const DashboardTabView = (props: any) => {
         </Card>
       )}
 
-      {/* KPI Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))", gap: 10 }}>
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>Total Keys</div>
-            <KeyRound size={13} color={C.accent} />
-          </div>
-          <div style={{ fontSize: 30, fontWeight: 700, color: C.accent, lineHeight: 1.08, marginTop: 6, fontFamily: "'JetBrains Mono',monospace" }}>{fmtInt(homeSummary.keys)}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.green, marginTop: 6 }}>
-            <TrendingUp size={10} strokeWidth={2} />
-            {`+${fmtInt(homeSummary.keyGrowthWeek)} this week`}
-          </div>
-          <div style={{ height: 3, borderRadius: 999, background: C.border, overflow: "hidden", marginTop: 8 }}>
-            <div style={{ height: "100%", width: `${Math.min(100, Math.max(4, Number(homeSummary?.keys || 0) / 5))}%`, background: C.accent, borderRadius: 999, transition: "width .5s" }} />
-          </div>
-        </Card>
-
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>Ops/Day</div>
-            <Zap size={13} color={C.green} />
-          </div>
-          <div style={{ fontSize: 30, fontWeight: 700, color: C.green, lineHeight: 1.08, marginTop: 6, fontFamily: "'JetBrains Mono',monospace" }}>{fmtCompact(homeSummary.opsPerDay)}</div>
-          {opsHasBaseline ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: opsGrowthPos ? C.green : C.red, marginTop: 6 }}>
-              {opsGrowthPos ? <TrendingUp size={10} strokeWidth={2} /> : <TrendingDown size={10} strokeWidth={2} />}
-              {`${Math.abs(Number(homeSummary.opsGrowthPct || 0)).toFixed(1)}% vs last week`}
-            </div>
-          ) : (
-            <div style={{ fontSize: 10, color: C.dim, marginTop: 6 }}>
-              No prior-week baseline yet
-            </div>
-          )}
-          <div style={{ height: 3, borderRadius: 999, background: C.border, overflow: "hidden", marginTop: 8 }}>
-            <div style={{ height: "100%", width: "62%", background: C.green, borderRadius: 999, transition: "width .5s" }} />
-          </div>
-        </Card>
-
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>Compliance</div>
-            <ShieldCheck size={13} color={C.blue} />
-          </div>
-          <div style={{ fontSize: 30, fontWeight: 700, color: C.blue, lineHeight: 1.08, marginTop: 6, fontFamily: "'JetBrains Mono',monospace" }}>{`${homeSummary.complianceScore}/100`}</div>
-          {complianceHasAssessment ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: complianceTrendPos ? C.green : C.red, marginTop: 6 }}>
-              {complianceTrendPos ? <TrendingUp size={10} strokeWidth={2} /> : <TrendingDown size={10} strokeWidth={2} />}
-              {`+${fmtInt(homeSummary.complianceDeltaWeek)} this week`}
-            </div>
-          ) : (
-            <div style={{ fontSize: 10, color: C.dim, marginTop: 6 }}>
-              No score yet
-            </div>
-          )}
-          <div style={{ height: 3, borderRadius: 999, background: C.border, overflow: "hidden", marginTop: 8 }}>
-            <div style={{ height: "100%", width: `${Math.max(0, Math.min(100, Number(homeSummary?.complianceScore || 0)))}%`, background: C.blue, borderRadius: 999, transition: "width .5s" }} />
-          </div>
-        </Card>
-
-        <Card>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 11, color: C.muted, letterSpacing: 1, textTransform: "uppercase" }}>Alerts</div>
-            <Bell size={13} color={C.red} />
-          </div>
-          <div style={{ fontSize: 30, fontWeight: 700, color: C.red, lineHeight: 1.08, marginTop: 6, fontFamily: "'JetBrains Mono',monospace" }}>{fmtInt(homeSummary.alerts)}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: alertTrendPos ? C.green : C.red, marginTop: 6 }}>
-            {alertTrendPos ? <TrendingDown size={10} strokeWidth={2} /> : <TrendingUp size={10} strokeWidth={2} />}
-            {`${fmtInt(homeSummary.criticalAlerts)} critical`}
-          </div>
-          <div style={{ height: 3, borderRadius: 999, background: C.border, overflow: "hidden", marginTop: 8 }}>
-            <div style={{ height: "100%", width: `${Math.min(100, Math.max(0, Number(homeSummary?.criticalAlerts || 0) * 10))}%`, background: C.red, borderRadius: 999, transition: "width .5s" }} />
-          </div>
-        </Card>
+      {/* KPI hero cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
+        <Kpi label="Total Keys" value={fmtInt(homeSummary.keys)} icon={KeyRound}
+          color={C.accentFg} dim={C.accentDim} deltaIcon={TrendingUp} deltaColor={C.greenFg}
+          delta={`+${fmtInt(homeSummary.keyGrowthWeek)} this week`}
+          barPct={Math.min(100, Math.max(4, Number(homeSummary?.keys || 0) / 5))} />
+        <Kpi label="Ops / Day" value={fmtCompact(homeSummary.opsPerDay)} icon={Zap}
+          color={C.greenFg} dim={C.greenDim}
+          deltaIcon={opsHasBaseline ? (opsGrowthPos ? TrendingUp : TrendingDown) : undefined}
+          deltaColor={opsHasBaseline ? (opsGrowthPos ? C.greenFg : C.redFg) : C.dim}
+          delta={opsHasBaseline ? `${Math.abs(Number(homeSummary.opsGrowthPct || 0)).toFixed(1)}% vs last week` : "No prior-week baseline yet"}
+          barPct={62} />
+        <Kpi label="Compliance" value={`${homeSummary.complianceScore}`} icon={ShieldCheck}
+          color={C.blueFg} dim={C.blueDim}
+          deltaIcon={complianceHasAssessment ? (complianceTrendPos ? TrendingUp : TrendingDown) : undefined}
+          deltaColor={complianceHasAssessment ? (complianceTrendPos ? C.greenFg : C.redFg) : C.dim}
+          delta={complianceHasAssessment ? `${homeSummary.complianceDeltaWeek >= 0 ? "+" : ""}${fmtInt(homeSummary.complianceDeltaWeek)} this week · score /100` : "No assessment yet"}
+          barPct={Math.max(0, Math.min(100, Number(homeSummary?.complianceScore || 0)))} />
+        <Kpi label="Open Alerts" value={fmtInt(homeSummary.alerts)} icon={Bell}
+          color={Number(homeSummary?.criticalAlerts || 0) > 0 ? C.redFg : C.amberFg}
+          dim={Number(homeSummary?.criticalAlerts || 0) > 0 ? C.redDim : C.amberDim}
+          deltaIcon={alertTrendPos ? TrendingDown : TrendingUp}
+          deltaColor={alertTrendPos ? C.greenFg : C.redFg}
+          delta={`${fmtInt(homeSummary.criticalAlerts)} critical`}
+          barPct={Math.min(100, Math.max(0, Number(homeSummary?.criticalAlerts || 0) * 10))} />
       </div>
 
       {/* Expiring Certificates Warning */}

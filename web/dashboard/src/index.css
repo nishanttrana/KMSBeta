@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap");
 
 @import "tailwindcss";
 @config "../tailwind.config.js";
@@ -464,6 +464,19 @@ a {
   color: var(--c-dim);
   vertical-align: middle;
 }
+
+/* Global table polish — applies to every inline-styled tab table too.
+   Inline cell styles still win; this layer adds hover, separators and
+   numeric alignment that the legacy tables never set. */
+#root table { border-collapse: collapse; }
+#root table tbody tr { transition: background .13s ease; }
+#root table tbody tr:not([data-noborder]) { border-bottom: 1px solid color-mix(in oklab, var(--c-border) 55%, transparent); }
+#root table tbody tr:hover { background: color-mix(in oklab, var(--c-accent-dim) 80%, transparent); }
+#root table thead th { font-variant-numeric: tabular-nums; }
+#root table tbody td { font-variant-numeric: tabular-nums; }
+
+/* Numeric KPI styling */
+.vk-num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 
 /* ===================================================================
    STAT CARD

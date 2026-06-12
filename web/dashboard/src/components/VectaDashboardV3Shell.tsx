@@ -693,7 +693,7 @@ export default function VectaDashboardV3Shell(props: Props) {
   const Tab = TABS[tab] || DashboardTab;
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: C.bg, fontFamily: "'IBM Plex Sans',-apple-system,sans-serif", color: C.text, overflow: "hidden" }}>
+    <div style={{ display: "flex", height: "100vh", background: C.bg, fontFamily: "'Inter','IBM Plex Sans',-apple-system,sans-serif", color: C.text, overflow: "hidden" }}>
       {/* ── Global keyframes + scrollbar + transition helpers ── */}
       <style>{`
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}

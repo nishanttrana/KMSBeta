@@ -709,14 +709,16 @@ export const Stat = ({ l, v, s, c = "accent", i }: StatProps) => {
   const palette = C as Record<string, string>;
   // Use *Fg for theme-reactive text/icon colors
   const accentColor = palette[`${c}Fg`] || palette[c] || C.accentFg;
+  const dimColor = palette[`${c}Dim`] || C.accentDim;
   return (
-    <div style={{ flex: 1, background: `linear-gradient(135deg, ${C.card} 0%, ${C.surface} 100%)`, borderRadius: 10, border: `1px solid ${C.border}`, padding: "12px 14px", boxShadow: "0 1px 4px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.12)" }}>
+    <div className="vecta-stat-card" style={{ flex: 1, background: `linear-gradient(160deg, ${C.card} 0%, ${C.surface} 100%)`, borderRadius: "var(--radius-md)", border: `1px solid ${C.border}`, padding: "14px 16px", boxShadow: "var(--shadow-sm)", position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${accentColor}, transparent 70%)`, opacity: 0.6 }} />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.8 }}>{l}</span>
-        <span style={{ display: "inline-flex", color: accentColor, opacity: 0.7 }}><Icon size={14} strokeWidth={2} /></span>
+        <span style={{ fontSize: 9.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>{l}</span>
+        <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, background: dimColor, color: accentColor }}><Icon size={13} strokeWidth={2.2} /></span>
       </div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: accentColor, marginTop: 4, letterSpacing: -0.5 }}>{v}</div>
-      {s && <div style={{ fontSize: 9, color: C.dim, marginTop: 2 }}>{s}</div>}
+      <div className="vk-num" style={{ fontSize: 24, fontWeight: 800, color: accentColor, marginTop: 6 }}>{v}</div>
+      {s && <div style={{ fontSize: 9.5, color: C.dim, marginTop: 3 }}>{s}</div>}
     </div>
   );
 };
@@ -739,9 +741,12 @@ type SectionProps = {
 };
 
 export const Section = ({ title, children, actions }: SectionProps) => (
-  <div style={{ marginBottom: 16 }}>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-      <span style={{ fontSize: 12, fontWeight: 700, color: C.text, letterSpacing: -0.2 }}>{title}</span>
+  <div style={{ marginBottom: 20 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, color: C.text, letterSpacing: -0.2 }}>
+        <span style={{ width: 3, height: 14, borderRadius: 2, background: `linear-gradient(180deg, ${C.accent}, ${C.purple})`, display: "inline-block" }} />
+        {title}
+      </span>
       {actions && <div style={{ display: "flex", gap: 4 }}>{actions}</div>}
     </div>{children}
   </div>
@@ -754,7 +759,7 @@ type CardProps = {
 };
 
 export const Card = ({ children, onClick, style }: CardProps) => (
-  <div onClick={onClick} style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 14, cursor: onClick ? "pointer" : "default", transition: "border-color .15s, box-shadow .15s", boxShadow: "0 1px 3px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.12)", ...(style || {}) }} onMouseEnter={(e) => { if (onClick) { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.boxShadow = `0 2px 16px rgba(6,214,224,0.1), 0 4px 20px rgba(0,0,0,.2)`; } }} onMouseLeave={(e) => { if (onClick) { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.12)"; } }}>{children}</div>
+  <div onClick={onClick} style={{ background: C.card, borderRadius: "var(--radius-md)", border: `1px solid ${C.border}`, padding: 16, cursor: onClick ? "pointer" : "default", transition: "border-color .15s, box-shadow .15s, transform .15s", boxShadow: "var(--shadow-sm)", ...(style || {}) }} onMouseEnter={(e) => { if (onClick) { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.boxShadow = `0 2px 16px rgba(6,214,224,0.1), 0 4px 20px rgba(0,0,0,.2)`; } }} onMouseLeave={(e) => { if (onClick) { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.12)"; } }}>{children}</div>
 );
 
 type RowProps = {
