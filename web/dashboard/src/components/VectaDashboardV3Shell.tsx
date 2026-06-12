@@ -345,6 +345,7 @@ const NAV = [
     { id: "dr_drill", icon: Siren, label: "DR Drill" },
     { id: "devsecops", icon: GitBranch, label: "DevSecOps / IaC" },
     { id: "webhooks", icon: Webhook, label: "Webhooks & SIEM" },
+    { id: "feature_forge", icon: Sparkles, label: "Feature Forge" },
     { id: "admin", icon: Settings, label: "Administration" },
     { id: "docs", icon: FileText, label: "Documentation" },
   ]},
