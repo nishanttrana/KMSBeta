@@ -59,23 +59,18 @@ export type FeatureKey =
   | "posture_management"
   | "ai_gateway"
   | "feature_forge"
-  | "rotation_analytics"
   | "compromise_detection"
   | "key_analytics"
   | "key_health_scoring"
-  | "key_inventory"
   | "ml_anomaly_detection"
   | "key_scheduling"
-  | "key_federation"
   | "key_recovery_escrow"
-  | "audit_chain"
   | "kdf"
   | "key_verification"
   | "regulatory_compliance"
   | "cost_optimization"
   | "advanced_encryption"
   | "key_binding"
-  | "edge_iot"
   | "key_sharing"
   | "key_metadata"
   | "threat_protection";
@@ -100,9 +95,6 @@ export type TabId =
   | "ekm"
   | "kmip"
   | "hsm_primus"
-  | "qkd"
-  | "qrng"
-  | "mpc"
   | "cluster"
   | "approvals"
   | "alert_center"
@@ -172,9 +164,6 @@ export const tabConfig: TabConfig[] = [
 
   // ── INFRASTRUCTURE ──────────────────────────────────────────────────
   { id: "hsm_primus",    label: "HSM",             shortLabel: "HSM",       group: "infrastructure",        description: "Hardware and software vault provider plane",                                                             icon: Cpu,               emoji: "H"  },
-  { id: "qkd",           label: "QKD",             shortLabel: "QKD",       group: "infrastructure",        description: "Quantum key distribution interface status",                                                              icon: Workflow,          emoji: "Q"  },
-  { id: "qrng",          label: "QRNG",            shortLabel: "QRNG",      group: "infrastructure",        description: "Quantum random number generator entropy sources",                                                        icon: Atom,              emoji: "Q"  },
-  { id: "mpc",           label: "MPC / FROST",     shortLabel: "MPC",       group: "infrastructure",        description: "Threshold signing, FROST-style quorum workflows, and ceremony orchestration",                            icon: Blocks,            emoji: "M"  },
   { id: "cluster",       label: "Cluster",         shortLabel: "Cluster",   group: "infrastructure",        description: "Node topology, health, and leader state",                                                                icon: Layers3,           emoji: "C"  },
 
   // ── GOVERNANCE ──────────────────────────────────────────────────────

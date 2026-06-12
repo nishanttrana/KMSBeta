@@ -51,10 +51,10 @@ const SERVICES = [
   "auth", "key", "keycore", "secrets", "certs", "policy", "governance",
   "audit", "compliance", "posture", "reporting", "cluster",
   "payment", "confidential", "hyok", "byok", "ekm",
-  "pqc", "qkd", "qrng", "mpc",
+  "pqc",
   "autokey", "keyaccess", "signing",
   "workload", "dataprotect", "kmip", "sbom",
-  "discovery", "ai", "tfe", "dam", "cloud",
+  "discovery", "cloud",
 ];
 
 const PAGE_SIZE = 100;

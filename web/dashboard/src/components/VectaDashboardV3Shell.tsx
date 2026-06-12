@@ -93,13 +93,7 @@ const ComplianceTab = lazy(() => import("./v3/tabs/ComplianceTab").then(m => ({ 
 const SBOMTab = lazy(() => import("./v3/tabs/SBOMTab").then(m => ({ default: m.SBOMTab })));
 const PostureTab = lazy(() => import("./v3/tabs/PostureTab").then(m => ({ default: m.PostureTab })));
 const AuditLogTab = lazy(() => import("./v3/tabs/AuditLogTab").then(m => ({ default: m.AuditLogTab })));
-const MPCTab = lazy(() => import("./v3/tabs/MPCTab").then(m => ({ default: m.MPCTab })));
-const QKDTab = lazy(() => import("./v3/tabs/QKDTab").then(m => ({ default: m.QKDTab })));
-const QRNGTab = lazy(() => import("./v3/tabs/QRNGTab").then(m => ({ default: m.QRNGTab })));
 const DocsViewTab = lazy(() => import("./v3/tabs/DocsViewTab").then(m => ({ default: m.DocsViewTab })));
-const AITab = lazy(() => import("./v3/tabs/AITab").then(m => ({ default: m.AITab })));
-const FeatureForgeTab = lazy(() => import("./v3/tabs/FeatureForgeTab").then(m => ({ default: m.FeatureForgeTab })));
-const KeyCeremonyTab = lazy(() => import("./v3/tabs/KeyCeremonyTab").then(m => ({ default: m.KeyCeremonyTab })));
 const RotationSchedulerTab = lazy(() => import("./v3/tabs/RotationSchedulerTab").then(m => ({ default: m.RotationSchedulerTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
@@ -111,33 +105,19 @@ const EnvelopeEncTab = lazy(() => import("./v3/tabs/EnvelopeEncTab").then(m => (
 const DRDrillTab = lazy(() => import("./v3/tabs/DRDrillTab").then(m => ({ default: m.DRDrillTab })));
 const OpsMetricsTab = lazy(() => import("./v3/tabs/OpsMetricsTab").then(m => ({ default: m.OpsMetricsTab })));
 const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
-const DSPMTab = lazy(() => import("./v3/tabs/DSPMTab").then(m => ({ default: m.DSPMTab })));
 const DevSecOpsTab = lazy(() => import("./v3/tabs/DevSecOpsTab").then(m => ({ default: m.DevSecOpsTab })));
-const TFETab = lazy(() => import("./v3/tabs/TFETab").then(m => ({ default: m.TFETab })));
-const DataActivityTab = lazy(() => import("./v3/tabs/DataActivityTab").then(m => ({ default: m.DataActivityTab })));
 const AIGatewayTab = lazy(() => import("./v3/tabs/AIGatewayTab").then(m => ({ default: m.AIGatewayTab })));
 const LineageTab = lazy(() => import("./v3/tabs/LineageTab").then(m => ({ default: m.LineageTab })));
-const CanaryKeysTab = lazy(() => import("./v3/tabs/CanaryKeysTab").then(m => ({ default: m.CanaryKeysTab })));
 const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ default: m.PlaybooksTab })));
 const HealthTab = lazy(() => import("./v3/tabs/HealthTab").then(m => ({ default: m.HealthTab })));
 // Enterprise Advanced Features
-const RotationAnalyticsTab = lazy(() => import("./v3/tabs/RotationAnalyticsTab").then(m => ({ default: m.RotationAnalyticsTab })));
-const CompromiseDetectionTab = lazy(() => import("./v3/tabs/CompromiseDetectionTab").then(m => ({ default: m.CompromiseDetectionTab })));
 const KeyAnalyticsTab = lazy(() => import("./v3/tabs/KeyAnalyticsTab").then(m => ({ default: m.KeyAnalyticsTab })));
-const KeyHealthTab = lazy(() => import("./v3/tabs/KeyHealthTab").then(m => ({ default: m.KeyHealthTab })));
-const KeyInventoryTab = lazy(() => import("./v3/tabs/KeyInventoryTab").then(m => ({ default: m.KeyInventoryTab })));
-const MLAnomalyTab = lazy(() => import("./v3/tabs/MLAnomalyTab").then(m => ({ default: m.MLAnomalyTab })));
 const KeySchedulingTab = lazy(() => import("./v3/tabs/KeySchedulingTab").then(m => ({ default: m.KeySchedulingTab })));
-const KeyFederationTab = lazy(() => import("./v3/tabs/KeyFederationTab").then(m => ({ default: m.KeyFederationTab })));
 const KeyRecoveryTab = lazy(() => import("./v3/tabs/KeyRecoveryTab").then(m => ({ default: m.KeyRecoveryTab })));
-const AuditChainTab = lazy(() => import("./v3/tabs/AuditChainTab").then(m => ({ default: m.AuditChainTab })));
 const KDFTab = lazy(() => import("./v3/tabs/KDFTab").then(m => ({ default: m.KDFTab })));
 const KeyVerificationTab = lazy(() => import("./v3/tabs/KeyVerificationTab").then(m => ({ default: m.KeyVerificationTab })));
-const RegulatoryTab = lazy(() => import("./v3/tabs/RegulatoryTab").then(m => ({ default: m.RegulatoryTab })));
-const CostOptimizationTab = lazy(() => import("./v3/tabs/CostOptimizationTab").then(m => ({ default: m.CostOptimizationTab })));
 const AdvancedEncryptionTab = lazy(() => import("./v3/tabs/AdvancedEncryptionTab").then(m => ({ default: m.AdvancedEncryptionTab })));
 const KeyBindingTab = lazy(() => import("./v3/tabs/KeyBindingTab").then(m => ({ default: m.KeyBindingTab })));
-const EdgeIoTTab = lazy(() => import("./v3/tabs/EdgeIoTTab").then(m => ({ default: m.EdgeIoTTab })));
 const KeySharingTab = lazy(() => import("./v3/tabs/KeySharingTab").then(m => ({ default: m.KeySharingTab })));
 const KeyMetadataTab = lazy(() => import("./v3/tabs/KeyMetadataTab").then(m => ({ default: m.KeyMetadataTab })));
 const ThreatProtectionTab = lazy(() => import("./v3/tabs/ThreatProtectionTab").then(m => ({ default: m.ThreatProtectionTab })));
@@ -153,6 +133,7 @@ type Props = {
 };
 
 const TAB_STORAGE_KEY = "vecta_active_tab";
+const NAV_GROUPS_KEY = "vecta_nav_open_groups";
 const TZ_STORAGE_KEY = "vecta_timezone";
 const COMMON_TIMEZONES = [
   { label: "Local", value: "local" },
@@ -218,9 +199,6 @@ const TABS: Record<string, any> = {
   hyok: HYOKTab,
   ekm: EKMTab,
   hsm: HSMTab,
-  qkd: QKDTab,
-  qrng: QRNGTab,
-  mpc: MPCTab,
   cluster: ClusterTab,
   approvals: GovernanceTab,
   alerts: AlertsTab,
@@ -231,9 +209,6 @@ const TABS: Record<string, any> = {
   pkcs11: PKCS11Tab,
   admin: AdminTab,
   docs: DocsViewTab,
-  ai: AITab,
-  forge: FeatureForgeTab,
-  ceremony: KeyCeremonyTab,
   rotation: RotationSchedulerTab,
   crypto_agility: CryptoAgilityTab,
   webhooks: WebhooksTab,
@@ -245,33 +220,19 @@ const TABS: Record<string, any> = {
   dr_drill: DRDrillTab,
   ops_metrics: OpsMetricsTab,
   backup: BackupTab,
-  dspm: DSPMTab,
   devsecops: DevSecOpsTab,
-  tfe: TFETab,
-  data_activity: DataActivityTab,
   ai_gateway: AIGatewayTab,
   lineage: LineageTab,
-  canary: CanaryKeysTab,
   playbooks: PlaybooksTab,
   health: HealthTab,
   // Enterprise Advanced Features
-  rotation_analytics: RotationAnalyticsTab,
-  compromise: CompromiseDetectionTab,
   key_analytics: KeyAnalyticsTab,
-  key_health: KeyHealthTab,
-  key_inventory: KeyInventoryTab,
-  ml_anomaly: MLAnomalyTab,
   key_scheduling: KeySchedulingTab,
-  key_federation: KeyFederationTab,
   key_recovery: KeyRecoveryTab,
-  audit_chain: AuditChainTab,
   kdf: KDFTab,
   key_verification: KeyVerificationTab,
-  regulatory: RegulatoryTab,
-  cost_opt: CostOptimizationTab,
   adv_encryption: AdvancedEncryptionTab,
   key_binding: KeyBindingTab,
-  edge_iot: EdgeIoTTab,
   key_sharing: KeySharingTab,
   key_metadata: KeyMetadataTab,
   threat_protection: ThreatProtectionTab,
@@ -294,9 +255,6 @@ const TITLES: Record<string, string> = {
   hyok: "HYOK",
   ekm: "Enterprise Key Management",
   hsm: "HSM",
-  qkd: "QKD Interface",
-  qrng: "QRNG Entropy",
-  mpc: "MPC Engine",
   cluster: "Cluster",
   approvals: "Approvals",
   alerts: "Alert Center",
@@ -307,9 +265,6 @@ const TITLES: Record<string, string> = {
   pkcs11: "PKCS#11 / JCA",
   admin: "Administration",
   docs: "Documentation",
-  ai: "AI Assistant",
-  forge: "Feature Forge",
-  ceremony: "Key Ceremony",
   rotation: "Rotation Scheduler",
   crypto_agility: "Crypto Agility",
   webhooks: "Webhooks & SIEM",
@@ -321,124 +276,80 @@ const TITLES: Record<string, string> = {
   dr_drill: "DR Drill",
   ops_metrics: "Operations Metrics",
   backup: "Backup & Restore",
-  dspm: "Data Security Posture",
   devsecops: "DevSecOps / IaC",
-  tfe: "File Encryption (TFE)",
-  data_activity: "Data Activity Monitor",
   ai_gateway: "AI Security Gateway",
   lineage: "Source Traceability",
-  canary: "Canary / Honeypot Keys",
   playbooks: "Playbooks",
   health: "Health & Reconciliation",
   // Enterprise Advanced Features
-  rotation_analytics: "Rotation Analytics",
-  compromise: "Compromise Detection",
   key_analytics: "Key Analytics",
-  key_health: "Key Health Scoring",
-  key_inventory: "Key Inventory",
-  ml_anomaly: "ML Anomaly Detection",
   key_scheduling: "Key Scheduling",
-  key_federation: "Key Federation",
   key_recovery: "Key Recovery & Escrow",
-  audit_chain: "Blockchain Audit Chain",
   kdf: "Key Derivation (KDF)",
   key_verification: "Key Verification",
-  regulatory: "Regulatory Compliance",
-  cost_opt: "Cost Optimization",
   adv_encryption: "Advanced Encryption",
   key_binding: "Key Binding",
-  edge_iot: "Edge & IoT Keys",
   key_sharing: "Key Sharing",
   key_metadata: "Key Metadata",
   threat_protection: "Threat Protection",
 };
 
 const NAV = [
-  { g: "CORE", items: [
+  { g: "OVERVIEW", items: [
     { id: "home", icon: HomeIcon, label: "Dashboard" },
-    { id: "keys", icon: KeyRound, label: "Key Management" },
+    { id: "workbench", icon: LayoutGrid, label: "Workbench" },
     { id: "ops_metrics", icon: BarChart2, label: "Operations Metrics" },
+    { id: "key_analytics", icon: BarChart3, label: "Analytics" },
+  ]},
+  { g: "KEYS & LIFECYCLE", items: [
+    { id: "keys", icon: KeyRound, label: "Key Management" },
+    { id: "rotation", icon: CalendarClock, label: "Rotation Scheduler" },
+    { id: "key_scheduling", icon: CalendarClock, label: "Key Scheduling" },
+    { id: "key_recovery", icon: KeyRound, label: "Recovery & Escrow" },
+    { id: "escrow", icon: Vault, label: "Key Escrow" },
+    { id: "key_verification", icon: ShieldCheck, label: "Key Verification" },
+    { id: "key_metadata", icon: Tag, label: "Key Metadata" },
+    { id: "key_sharing", icon: Share2, label: "Key Sharing" },
+    { id: "key_binding", icon: Cpu, label: "Key Binding" },
+    { id: "kdf", icon: Layers, label: "Key Derivation" },
+    { id: "adv_encryption", icon: Lock, label: "Advanced Encryption" },
+    { id: "envelope_enc", icon: Layers, label: "Envelope Encryption" },
+    { id: "crypto_agility", icon: Gauge, label: "Crypto Agility" },
+  ]},
+  { g: "PKI & CERTIFICATES", items: [
     { id: "certs", icon: FileText, label: "Certificates / PKI" },
-    { id: "cloudctl", icon: Cloud, label: "Cloud Key Control" },
-    { id: "ekm", icon: Database, label: "Enterprise Key Management" },
+    { id: "ct_monitor", icon: Globe, label: "CT Log Monitor" },
+    { id: "mtls_mesh", icon: Network, label: "mTLS Mesh" },
+  ]},
+  { g: "DATA & INTEGRATIONS", items: [
     { id: "vault", icon: Lock, label: "Secret Vault" },
     { id: "dataprotection", icon: ShieldCheck, label: "Data Protection" },
-  ]},
-  { g: "WORKBENCH", items: [{ id: "workbench", icon: LayoutGrid, label: "Workbench" }] },
-  { g: "SECRETS & CERTS", items: [
-    { id: "rotation", icon: CalendarClock, label: "Rotation Scheduler" },
-    { id: "ct_monitor", icon: Globe, label: "CT Log Monitor" },
-    { id: "escrow", icon: Vault, label: "Key Escrow" },
-    { id: "canary", icon: AlertTriangle, label: "Canary Keys" },
-  ]},
-  { g: "DATA PROTECTION", items: [
-    { id: "envelope_enc", icon: Layers, label: "Envelope Encryption" },
-    { id: "tfe", icon: Lock, label: "File Encryption (TFE)" },
-  ]},
-  { g: "INFRASTRUCTURE", items: [
+    { id: "cloudctl", icon: Cloud, label: "Cloud Key Control" },
+    { id: "ekm", icon: Database, label: "Enterprise KM" },
     { id: "hsm", icon: Cpu, label: "HSM" },
-    { id: "qkd", icon: GitBranch, label: "QKD Interface" },
-    { id: "qrng", icon: Atom, label: "QRNG Entropy" },
-    { id: "mpc", icon: Cpu, label: "MPC Engine" },
-    { id: "cluster", icon: GitBranch, label: "Cluster" },
-    { id: "ceremony", icon: GitMerge, label: "Key Ceremony" },
-    { id: "mtls_mesh", icon: Network, label: "mTLS Mesh" },
-    { id: "dr_drill", icon: Siren, label: "DR Drill" },
-    { id: "backup", icon: Archive, label: "Backup & Restore" },
-  ]},
-  { g: "GOVERNANCE", items: [
-    { id: "approvals", icon: CheckCircle2, label: "Approvals" },
-    { id: "alerts", icon: Bell, label: "Alert Center" },
-    { id: "audit", icon: ScrollText, label: "Audit Log" },
-    { id: "dspm", icon: ShieldCheck, label: "Data Security Posture" },
-    { id: "data_activity", icon: Activity, label: "Data Activity Monitor" },
-    { id: "posture", icon: Gauge, label: "Posture Management" },
-    { id: "compliance", icon: ClipboardCheck, label: "Compliance" },
-    { id: "sbom", icon: BarChart3, label: "SBOM / CBOM" },
-    { id: "crypto_agility", icon: Gauge, label: "Crypto Agility" },
-    { id: "leak_scanner", icon: ScanSearch, label: "Leak Scanner" },
-    { id: "lineage", icon: GitMerge, label: "Source Traceability" },
-    { id: "playbooks", icon: Play, label: "Playbooks" },
-    { id: "health", icon: Activity, label: "Health & Reconciliation" },
-  ]},
-  { g: "AI", items: [
-    { id: "ai", icon: Sparkles, label: "AI Assistant" },
     { id: "ai_gateway", icon: Shield, label: "AI Security Gateway" },
   ]},
-  { g: "ADMIN", items: [
-    { id: "forge", icon: Sparkles, label: "Feature Forge" },
-    { id: "admin", icon: Settings, label: "Administration" },
-    { id: "webhooks", icon: Webhook, label: "Webhooks & SIEM" },
+  { g: "SECURITY & COMPLIANCE", items: [
+    { id: "audit", icon: ScrollText, label: "Audit Log" },
+    { id: "alerts", icon: Bell, label: "Alert Center" },
+    { id: "approvals", icon: CheckCircle2, label: "Approvals" },
+    { id: "posture", icon: Gauge, label: "Posture" },
+    { id: "compliance", icon: ClipboardCheck, label: "Compliance" },
+    { id: "threat_protection", icon: Shield, label: "Threat Detection" },
+    { id: "leak_scanner", icon: ScanSearch, label: "Leak Scanner" },
+    { id: "sbom", icon: BarChart3, label: "SBOM / CBOM" },
+    { id: "lineage", icon: GitMerge, label: "Source Traceability" },
+    { id: "playbooks", icon: Play, label: "Playbooks" },
+  ]},
+  { g: "PLATFORM & ADMIN", items: [
+    { id: "cluster", icon: GitBranch, label: "Cluster" },
+    { id: "health", icon: Activity, label: "Health" },
+    { id: "backup", icon: Archive, label: "Backup & Restore" },
+    { id: "dr_drill", icon: Siren, label: "DR Drill" },
     { id: "devsecops", icon: GitBranch, label: "DevSecOps / IaC" },
+    { id: "webhooks", icon: Webhook, label: "Webhooks & SIEM" },
+    { id: "admin", icon: Settings, label: "Administration" },
     { id: "docs", icon: FileText, label: "Documentation" },
-  ]},
-  { g: "ANALYTICS & INTELLIGENCE", items: [
-    { id: "rotation_analytics", icon: BarChart2, label: "Rotation Analytics" },
-    { id: "key_analytics", icon: BarChart3, label: "Key Analytics" },
-    { id: "key_health", icon: Activity, label: "Key Health Scoring" },
-    { id: "key_inventory", icon: Database, label: "Key Inventory" },
-    { id: "ml_anomaly", icon: Sparkles, label: "ML Anomaly Detection" },
-    { id: "cost_opt", icon: TrendingUp, label: "Cost Optimization" },
-  ]},
-  { g: "KEY LIFECYCLE", items: [
-    { id: "key_scheduling", icon: CalendarClock, label: "Key Scheduling" },
-    { id: "key_recovery", icon: KeyRound, label: "Key Recovery & Escrow" },
-    { id: "key_binding", icon: Cpu, label: "Key Binding" },
-    { id: "key_sharing", icon: Share2, label: "Key Sharing" },
-    { id: "key_metadata", icon: Tag, label: "Key Metadata" },
-    { id: "key_verification", icon: ShieldCheck, label: "Key Verification" },
-    { id: "kdf", icon: Layers, label: "Key Derivation (KDF)" },
-    { id: "adv_encryption", icon: Lock, label: "Advanced Encryption" },
-  ]},
-  { g: "THREAT & COMPLIANCE", items: [
-    { id: "compromise", icon: ShieldAlert, label: "Compromise Detection" },
-    { id: "threat_protection", icon: Shield, label: "Threat Protection" },
-    { id: "regulatory", icon: ClipboardCheck, label: "Regulatory Compliance" },
-    { id: "audit_chain", icon: Link, label: "Blockchain Audit Chain" },
-  ]},
-  { g: "DISTRIBUTED", items: [
-    { id: "key_federation", icon: Network, label: "Key Federation" },
-    { id: "edge_iot", icon: Wifi, label: "Edge & IoT Keys" },
   ]},
 ];
 
@@ -690,6 +601,22 @@ export default function VectaDashboardV3Shell(props: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
   }, [session?.token, session?.tenantId, unreadAlerts]);
 
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    try {
+      const raw = localStorage.getItem(NAV_GROUPS_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch { /* ignored */ }
+    return {}; // default: all groups open
+  });
+  // Semantics: a group is open unless explicitly set to false.
+  const toggleGroup = (name: string) => {
+    setOpenGroups((prev) => {
+      const next = { ...prev, [name]: prev[name] === false };
+      try { localStorage.setItem(NAV_GROUPS_KEY, JSON.stringify(next)); } catch { /* ignored */ }
+      return next;
+    });
+  };
+
   const navGroups = useMemo(
     () =>
       NAV.map((group) => ({
@@ -778,6 +705,8 @@ export default function VectaDashboardV3Shell(props: Props) {
         *::-webkit-scrollbar-thumb{background:${C.border};border-radius:4px}
         *::-webkit-scrollbar-thumb:hover{background:${C.borderHi}}
         .vk-nav-item{transition:background .12s,border-color .12s,color .12s}
+        .vk-nav-group{transition:color .12s}
+        .vk-nav-group:hover{color:${C.text}!important}
         .vk-nav-item:hover .vk-nav-icon{color:${C.accent}!important}
         .vk-nav-item:hover .vk-nav-label{color:${C.text}!important}
         .vk-subcard{transition:border-color .12s,background .12s,box-shadow .12s}
@@ -853,20 +782,40 @@ export default function VectaDashboardV3Shell(props: Props) {
 
         {/* Nav items */}
         <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 0" }}>
-          {navGroups.map((g: any) => (
+          {navGroups.map((g: any) => {
+            const groupOpen = collapsed || openGroups[g.g] !== false;
+            const groupHasActive = g.items.some((it: any) => it.id === tab);
+            return (
             <div key={g.g} style={{ marginBottom: 6 }}>
               {!collapsed && (
-                <div style={{
-                  padding: "10px 16px 4px",
-                  fontSize: 9, fontWeight: 700,
-                  color: C.muted,
-                  textTransform: "uppercase",
-                  letterSpacing: 1.8,
-                }}>
-                  {g.g}
+                <div
+                  className="vk-nav-group"
+                  onClick={() => toggleGroup(g.g)}
+                  style={{
+                    padding: "10px 16px 4px",
+                    fontSize: 9, fontWeight: 700,
+                    color: groupHasActive ? C.accentFg : C.muted,
+                    textTransform: "uppercase",
+                    letterSpacing: 1.8,
+                    cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    userSelect: "none",
+                  }}
+                >
+                  <span>{g.g}</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                    {!groupOpen && (
+                      <span style={{ fontSize: 8, fontWeight: 600, color: C.muted, letterSpacing: 0, opacity: 0.8 }}>{g.items.length}</span>
+                    )}
+                    <ChevronsRight size={10} strokeWidth={2.5} style={{
+                      transform: groupOpen ? "rotate(90deg)" : "rotate(0deg)",
+                      transition: "transform .15s",
+                      opacity: 0.6,
+                    }} />
+                  </span>
                 </div>
               )}
-              {g.items.map((it: any) => {
+              {groupOpen && g.items.map((it: any) => {
                 const isActive = tab === it.id;
                 return (
                   <div
@@ -928,7 +877,8 @@ export default function VectaDashboardV3Shell(props: Props) {
                 );
               })}
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* User footer */}

@@ -54,7 +54,6 @@ import {
 import { getAuthRESTClientSecuritySummary, getAuthSCIMSummary } from "../../../lib/authAdmin";
 import { getAutokeySummary } from "../../../lib/autokey";
 import { getKeyAccessSummary } from "../../../lib/keyaccess";
-import { getMPCOverview } from "../../../lib/mpc";
 import { getSigningSummary } from "../../../lib/signing";
 import { getWorkloadIdentitySummary } from "../../../lib/workloadIdentity";
 
@@ -218,7 +217,7 @@ export const PostureTab = ({ session, onToast }: any) => {
         getAuthRESTClientSecuritySummary(session).catch(() => null),
         getKeyAccessSummary(session).catch(() => null),
         getSigningSummary(session).catch(() => null),
-        getMPCOverview(session).catch(() => null)
+        Promise.resolve(null)
       ]);
       setDashboard(dash || {});
       setRisk(latestRisk || dash?.risk || {});

@@ -71,7 +71,6 @@ import { getAuthRESTClientSecuritySummary, getAuthSCIMSummary } from "../../../l
 import { getAutokeySummary } from "../../../lib/autokey";
 import { getCertRenewalSummary } from "../../../lib/certs";
 import { getKeyAccessSummary } from "../../../lib/keyaccess";
-import { getMPCOverview } from "../../../lib/mpc";
 import { getPQCInventory } from "../../../lib/pqc";
 import { getSigningSummary } from "../../../lib/signing";
 import { getWorkloadIdentitySummary } from "../../../lib/workloadIdentity";
@@ -229,7 +228,7 @@ export const ComplianceTab = ({ session, onToast }: any) => {
         getCertRenewalSummary(session).catch(() => null),
         getKeyAccessSummary(session).catch(() => null),
         getSigningSummary(session).catch(() => null),
-        getMPCOverview(session).catch(() => null)
+        Promise.resolve(null)
       ]);
 
       const visibleHistory = (Array.isArray(historyOut) ? historyOut : []).filter((item: any) => isRealAssessment(item));
