@@ -180,21 +180,10 @@ type Store interface {
 	GetKeyBindingConfig(ctx context.Context, tenantID, keyID string) (KeyBindingConfig, error)
 	UpsertKeyBindingConfig(ctx context.Context, b KeyBindingConfig) (KeyBindingConfig, error)
 
-	// Key Sharing Tokens
-	ListKeySharingTokens(ctx context.Context, tenantID, keyID string) ([]KeySharingToken, error)
-	CreateKeySharingToken(ctx context.Context, t KeySharingToken) (KeySharingToken, error)
-	RevokeKeySharingToken(ctx context.Context, tenantID, id, revokedBy string) error
-
 	// Key Metadata Extension
 	ListKeyMetadataExt(ctx context.Context, tenantID string) ([]KeyMetadataExt, error)
 	GetKeyMetadataExt(ctx context.Context, tenantID, keyID string) (KeyMetadataExt, error)
 	UpsertKeyMetadataExt(ctx context.Context, m KeyMetadataExt) (KeyMetadataExt, error)
-
-	// Edge / IoT Device Registry
-	ListEdgeDevices(ctx context.Context, tenantID string) ([]EdgeDevice, error)
-	CreateEdgeDevice(ctx context.Context, d EdgeDevice) (EdgeDevice, error)
-	UpdateEdgeDeviceStatus(ctx context.Context, tenantID, id, status string) error
-	DeleteEdgeDevice(ctx context.Context, tenantID, id string) error
 
 	// Canary / Honeypot Keys
 	ListCanaryKeys(ctx context.Context, tenantID string) ([]CanaryKey, error)

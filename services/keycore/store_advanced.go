@@ -69,25 +69,6 @@ type KeyBindingConfig struct {
 	UpdatedAt          time.Time `json:"updated_at"`
 }
 
-type KeySharingToken struct {
-	ID          string     `json:"id"`
-	TenantID    string     `json:"tenant_id"`
-	KeyID       string     `json:"key_id"`
-	TokenHash   string     `json:"token_hash,omitempty"`
-	Label       string     `json:"label"`
-	GranteeID   string     `json:"grantee_id"`
-	GranteeType string     `json:"grantee_type"`
-	Operations  []string   `json:"operations"`
-	MaxUses     int        `json:"max_uses"`
-	UsesCount   int        `json:"uses_count"`
-	ValidFrom   time.Time  `json:"valid_from"`
-	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
-	RevokedAt   *time.Time `json:"revoked_at,omitempty"`
-	RevokedBy   string     `json:"revoked_by,omitempty"`
-	CreatedBy   string     `json:"created_by"`
-	CreatedAt   time.Time  `json:"created_at"`
-}
-
 type KeyMetadataExt struct {
 	ID             string    `json:"id"`
 	TenantID       string    `json:"tenant_id"`
@@ -103,22 +84,6 @@ type KeyMetadataExt struct {
 	CreatedBy      string    `json:"created_by"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
-}
-
-type EdgeDevice struct {
-	ID            string     `json:"id"`
-	TenantID      string     `json:"tenant_id"`
-	Name          string     `json:"name"`
-	DeviceType    string     `json:"device_type"`
-	Platform      string     `json:"platform"`
-	HWFingerprint string     `json:"hw_fingerprint"`
-	AssignedKeys  []string   `json:"assigned_keys"`
-	LastSeenAt    *time.Time `json:"last_seen_at,omitempty"`
-	Status        string     `json:"status"`
-	BundleExpires *time.Time `json:"bundle_expires,omitempty"`
-	CreatedBy     string     `json:"created_by"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 // ─── Key Scheduling Jobs ─────────────────────────────────────────────────────
@@ -348,67 +313,6 @@ func scanKeyBindingConfig(s interface{ Scan(...any) error }) (KeyBindingConfig, 
 	return b, nil
 }
 
-// ─── Key Sharing Tokens ──────────────────────────────────────────────────────
-
-func (s *SQLStore) ListKeySharingTokens(ctx context.Context, tenantID, keyID string) ([]KeySharingToken, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, key_id, '' AS token_hash, label, grantee_id, grantee_type, operations,
-       max_uses, uses_count, valid_from, expires_at, revoked_at, revoked_by,
-       created_by, created_at
-FROM key_sharing_tokens WHERE tenant_id=$1 AND key_id=$2
-ORDER BY created_at DESC`, tenantID, keyID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close() //nolint:errcheck
-	var out []KeySharingToken
-	for rows.Next() {
-		t, err := scanKeySharingToken(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, t)
-	}
-	return out, rows.Err()
-}
-
-func (s *SQLStore) CreateKeySharingToken(ctx context.Context, t KeySharingToken) (KeySharingToken, error) {
-	opsRaw, _ := json.Marshal(t.Operations)
-	row := s.db.SQL().QueryRowContext(ctx, `
-INSERT INTO key_sharing_tokens
-  (id, tenant_id, key_id, token_hash, label, grantee_id, grantee_type, operations,
-   max_uses, valid_from, expires_at, created_by, created_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP)
-RETURNING id, tenant_id, key_id, '' AS token_hash, label, grantee_id, grantee_type, operations,
-          max_uses, uses_count, valid_from, expires_at, revoked_at, revoked_by,
-          created_by, created_at
-`, t.ID, t.TenantID, t.KeyID, t.TokenHash, t.Label, t.GranteeID, t.GranteeType,
-		opsRaw, t.MaxUses, t.ValidFrom, nullableTime(t.ExpiresAt), t.CreatedBy)
-	return scanKeySharingToken(row)
-}
-
-func (s *SQLStore) RevokeKeySharingToken(ctx context.Context, tenantID, id, revokedBy string) error {
-	_, err := s.db.SQL().ExecContext(ctx, `
-UPDATE key_sharing_tokens SET revoked_at=CURRENT_TIMESTAMP, revoked_by=$1
-WHERE tenant_id=$2 AND id=$3 AND revoked_at IS NULL`, revokedBy, tenantID, id)
-	return err
-}
-
-func scanKeySharingToken(s interface{ Scan(...any) error }) (KeySharingToken, error) {
-	var t KeySharingToken
-	var opsRaw []byte
-	if err := s.Scan(&t.ID, &t.TenantID, &t.KeyID, &t.TokenHash, &t.Label, &t.GranteeID,
-		&t.GranteeType, &opsRaw, &t.MaxUses, &t.UsesCount, &t.ValidFrom,
-		&t.ExpiresAt, &t.RevokedAt, &t.RevokedBy, &t.CreatedBy, &t.CreatedAt); err != nil {
-		return t, err
-	}
-	_ = json.Unmarshal(opsRaw, &t.Operations)
-	if t.Operations == nil {
-		t.Operations = []string{}
-	}
-	return t, nil
-}
-
 // ─── Key Metadata Extension ──────────────────────────────────────────────────
 
 func (s *SQLStore) ListKeyMetadataExt(ctx context.Context, tenantID string) ([]KeyMetadataExt, error) {
@@ -469,66 +373,4 @@ func scanKeyMetadataExt(s interface{ Scan(...any) error }) (KeyMetadataExt, erro
 	}
 	_ = json.Unmarshal(cfRaw, &m.CustomFields)
 	return m, nil
-}
-
-// ─── Edge Devices ────────────────────────────────────────────────────────────
-
-func (s *SQLStore) ListEdgeDevices(ctx context.Context, tenantID string) ([]EdgeDevice, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, name, device_type, platform, hw_fingerprint, assigned_keys,
-       last_seen_at, status, bundle_expires, created_by, created_at, updated_at
-FROM edge_devices WHERE tenant_id=$1 ORDER BY name ASC`, tenantID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close() //nolint:errcheck
-	var out []EdgeDevice
-	for rows.Next() {
-		d, err := scanEdgeDevice(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, d)
-	}
-	return out, rows.Err()
-}
-
-func (s *SQLStore) CreateEdgeDevice(ctx context.Context, d EdgeDevice) (EdgeDevice, error) {
-	keysRaw, _ := json.Marshal(d.AssignedKeys)
-	row := s.db.SQL().QueryRowContext(ctx, `
-INSERT INTO edge_devices
-  (id, tenant_id, name, device_type, platform, hw_fingerprint, assigned_keys, status,
-   bundle_expires, created_by, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
-RETURNING id, tenant_id, name, device_type, platform, hw_fingerprint, assigned_keys,
-          last_seen_at, status, bundle_expires, created_by, created_at, updated_at
-`, d.ID, d.TenantID, d.Name, d.DeviceType, d.Platform, d.HWFingerprint,
-		keysRaw, d.Status, nullableTime(d.BundleExpires), d.CreatedBy)
-	return scanEdgeDevice(row)
-}
-
-func (s *SQLStore) UpdateEdgeDeviceStatus(ctx context.Context, tenantID, id, status string) error {
-	_, err := s.db.SQL().ExecContext(ctx, `
-UPDATE edge_devices SET status=$1, last_seen_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP
-WHERE tenant_id=$2 AND id=$3`, status, tenantID, id)
-	return err
-}
-
-func (s *SQLStore) DeleteEdgeDevice(ctx context.Context, tenantID, id string) error {
-	_, err := s.db.SQL().ExecContext(ctx, `DELETE FROM edge_devices WHERE tenant_id=$1 AND id=$2`, tenantID, id)
-	return err
-}
-
-func scanEdgeDevice(s interface{ Scan(...any) error }) (EdgeDevice, error) {
-	var d EdgeDevice
-	var keysRaw []byte
-	if err := s.Scan(&d.ID, &d.TenantID, &d.Name, &d.DeviceType, &d.Platform, &d.HWFingerprint,
-		&keysRaw, &d.LastSeenAt, &d.Status, &d.BundleExpires, &d.CreatedBy, &d.CreatedAt, &d.UpdatedAt); err != nil {
-		return d, err
-	}
-	_ = json.Unmarshal(keysRaw, &d.AssignedKeys)
-	if d.AssignedKeys == nil {
-		d.AssignedKeys = []string{}
-	}
-	return d, nil
 }
