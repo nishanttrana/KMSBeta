@@ -71,7 +71,6 @@ export type FeatureKey =
   | "cost_optimization"
   | "advanced_encryption"
   | "key_binding"
-  | "key_sharing"
   | "key_metadata"
   | "threat_protection";
 

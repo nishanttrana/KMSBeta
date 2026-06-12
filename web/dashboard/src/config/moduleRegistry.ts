@@ -43,6 +43,7 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   // Crypto discovery
   discovery: "crypto_discovery",
   // ADMIN
+  feature_forge: "feature_forge",
   // Enterprise Advanced Features
   key_analytics: "key_analytics",
   key_scheduling: "key_scheduling",
@@ -51,7 +52,6 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   key_verification: "key_verification",
   adv_encryption: "advanced_encryption",
   key_binding: "key_binding",
-  key_sharing: "key_sharing",
   key_metadata: "key_metadata",
   threat_protection: "threat_protection",
 };

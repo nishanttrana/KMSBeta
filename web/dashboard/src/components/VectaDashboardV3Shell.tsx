@@ -49,7 +49,6 @@ import {
   Sparkles,
   Archive,
   ShieldAlert,
-  Share2,
   Tag,
   TrendingUp,
   Wifi,
@@ -94,6 +93,7 @@ const SBOMTab = lazy(() => import("./v3/tabs/SBOMTab").then(m => ({ default: m.S
 const PostureTab = lazy(() => import("./v3/tabs/PostureTab").then(m => ({ default: m.PostureTab })));
 const AuditLogTab = lazy(() => import("./v3/tabs/AuditLogTab").then(m => ({ default: m.AuditLogTab })));
 const DocsViewTab = lazy(() => import("./v3/tabs/DocsViewTab").then(m => ({ default: m.DocsViewTab })));
+const FeatureForgeTab = lazy(() => import("./v3/tabs/FeatureForgeTab").then(m => ({ default: m.FeatureForgeTab })));
 const RotationSchedulerTab = lazy(() => import("./v3/tabs/RotationSchedulerTab").then(m => ({ default: m.RotationSchedulerTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
@@ -118,7 +118,6 @@ const KDFTab = lazy(() => import("./v3/tabs/KDFTab").then(m => ({ default: m.KDF
 const KeyVerificationTab = lazy(() => import("./v3/tabs/KeyVerificationTab").then(m => ({ default: m.KeyVerificationTab })));
 const AdvancedEncryptionTab = lazy(() => import("./v3/tabs/AdvancedEncryptionTab").then(m => ({ default: m.AdvancedEncryptionTab })));
 const KeyBindingTab = lazy(() => import("./v3/tabs/KeyBindingTab").then(m => ({ default: m.KeyBindingTab })));
-const KeySharingTab = lazy(() => import("./v3/tabs/KeySharingTab").then(m => ({ default: m.KeySharingTab })));
 const KeyMetadataTab = lazy(() => import("./v3/tabs/KeyMetadataTab").then(m => ({ default: m.KeyMetadataTab })));
 const ThreatProtectionTab = lazy(() => import("./v3/tabs/ThreatProtectionTab").then(m => ({ default: m.ThreatProtectionTab })));
 
@@ -209,6 +208,7 @@ const TABS: Record<string, any> = {
   pkcs11: PKCS11Tab,
   admin: AdminTab,
   docs: DocsViewTab,
+  feature_forge: FeatureForgeTab,
   rotation: RotationSchedulerTab,
   crypto_agility: CryptoAgilityTab,
   webhooks: WebhooksTab,
@@ -233,7 +233,6 @@ const TABS: Record<string, any> = {
   key_verification: KeyVerificationTab,
   adv_encryption: AdvancedEncryptionTab,
   key_binding: KeyBindingTab,
-  key_sharing: KeySharingTab,
   key_metadata: KeyMetadataTab,
   threat_protection: ThreatProtectionTab,
 };
@@ -289,7 +288,6 @@ const TITLES: Record<string, string> = {
   key_verification: "Key Verification",
   adv_encryption: "Advanced Encryption",
   key_binding: "Key Binding",
-  key_sharing: "Key Sharing",
   key_metadata: "Key Metadata",
   threat_protection: "Threat Protection",
 };
@@ -309,7 +307,6 @@ const NAV = [
     { id: "escrow", icon: Vault, label: "Key Escrow" },
     { id: "key_verification", icon: ShieldCheck, label: "Key Verification" },
     { id: "key_metadata", icon: Tag, label: "Key Metadata" },
-    { id: "key_sharing", icon: Share2, label: "Key Sharing" },
     { id: "key_binding", icon: Cpu, label: "Key Binding" },
     { id: "kdf", icon: Layers, label: "Key Derivation" },
     { id: "adv_encryption", icon: Lock, label: "Advanced Encryption" },

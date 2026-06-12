@@ -55,7 +55,5 @@ spec:
     cost_optimization: true
     advanced_encryption: true
     key_binding: true
-    edge_iot: true
-    key_sharing: true
     key_metadata: true
     threat_protection: true
