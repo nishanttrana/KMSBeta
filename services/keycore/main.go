@@ -173,11 +173,6 @@ func main() {
 			}
 		}
 	}
-	qrngURL := stringsTrimSpace(os.Getenv("QRNG_URL"))
-	if qrngURL != "" {
-		svc.SetQRNGClient(NewHTTPQRNGClient(qrngURL, 5*time.Second))
-		logger.Printf("qrng entropy integration enabled (%s)", qrngURL)
-	}
 	governanceURL := stringsTrimSpace(os.Getenv("GOVERNANCE_URL"))
 	if governanceURL != "" {
 		svc.SetFIPSModeProvider(NewHTTPFIPSModeProvider(governanceURL, 3*time.Second, 5*time.Second))

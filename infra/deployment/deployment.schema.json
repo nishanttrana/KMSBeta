@@ -160,8 +160,6 @@
             "cloud_byok",
             "hyok_proxy",
             "kmip_server",
-            "qkd_interface",
-            "qrng_generator",
             "ekm_database",
             "payment_crypto",
             "autokey_provisioning",
@@ -173,10 +171,8 @@
             "sbom_cbom",
             "reporting_alerting",
             "posture_management",
-            "ai_llm",
             "pqc_migration",
             "crypto_discovery",
-            "mpc_engine",
             "data_protection",
             "clustering"
           ],
@@ -187,8 +183,6 @@
             "cloud_byok": { "type": "boolean" },
             "hyok_proxy": { "type": "boolean" },
             "kmip_server": { "type": "boolean" },
-            "qkd_interface": { "type": "boolean" },
-            "qrng_generator": { "type": "boolean" },
             "ekm_database": { "type": "boolean" },
             "payment_crypto": { "type": "boolean" },
             "autokey_provisioning": { "type": "boolean" },
@@ -200,13 +194,10 @@
             "sbom_cbom": { "type": "boolean" },
             "reporting_alerting": { "type": "boolean" },
             "posture_management": { "type": "boolean" },
-            "ai_llm": { "type": "boolean" },
             "pqc_migration": { "type": "boolean" },
             "crypto_discovery": { "type": "boolean" },
-            "mpc_engine": { "type": "boolean" },
             "data_protection": { "type": "boolean" },
-            "clustering": { "type": "boolean" },
-            "feature_forge": { "type": "boolean" }
+            "clustering": { "type": "boolean" }
           }
         },
         "cluster_bootstrap": {

@@ -131,10 +131,6 @@ static_resources:
                   headers: [{ name: "x-tenant-id", present_match: true }]
                 route: { cluster: kmip_http, timeout: 60s, prefix_rewrite: "/" }
               - match:
-                  prefix: "/api/qkd"
-                  headers: [{ name: "x-tenant-id", present_match: true }]
-                route: { cluster: qkd_http, timeout: 60s, prefix_rewrite: "/" }
-              - match:
                   prefix: "/api/ekm"
                   headers: [{ name: "x-tenant-id", present_match: true }]
                 route: { cluster: ekm_http, timeout: 60s, prefix_rewrite: "/" }
@@ -174,10 +170,6 @@ static_resources:
                   prefix: "/api/discovery"
                   headers: [{ name: "x-tenant-id", present_match: true }]
                 route: { cluster: discovery_http, timeout: 60s, prefix_rewrite: "/" }
-              - match:
-                  prefix: "/api/mpc"
-                  headers: [{ name: "x-tenant-id", present_match: true }]
-                route: { cluster: mpc_http, timeout: 60s, prefix_rewrite: "/" }
               - match:
                   prefix: "/api/dataprotect"
                   headers: [{ name: "x-tenant-id", present_match: true }]
@@ -343,13 +335,6 @@ static_resources:
     load_assignment:
       cluster_name: kmip_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: kmip, port_value: 8160 }}}}]}]
-  - name: qkd_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: qkd_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: qkd, port_value: 8150 }}}}]}]
   - name: ekm_http
     connect_timeout: 1s
     type: STRICT_DNS
@@ -413,13 +398,6 @@ static_resources:
     load_assignment:
       cluster_name: discovery_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: discovery, port_value: 8100 }}}}]}]
-  - name: mpc_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: mpc_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: mpc, port_value: 8190 }}}}]}]
   - name: dataprotect_http
     connect_timeout: 1s
     type: STRICT_DNS

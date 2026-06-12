@@ -1,4 +1,4 @@
-.PHONY: build test lint conformance proto-gen license-check security-license security-cve security-sidechannel security-sbom security-audit packer-init packer-build packer-build-vbox test-auth test-keycore test-audit test-policy test-governance test-secrets test-certs test-kmip test-cloud test-hyok test-qkd test-ekm test-payment test-compliance test-sbom test-reporting test-posture test-ai test-mpc test-dataprotect test-discovery test-pqc test-software-vault
+.PHONY: build test lint conformance proto-gen license-check security-license security-cve security-sidechannel security-sbom security-audit packer-init packer-build packer-build-vbox test-auth test-keycore test-audit test-policy test-governance test-secrets test-certs test-kmip test-cloud test-hyok test-ekm test-payment test-compliance test-sbom test-reporting test-posture test-dataprotect test-discovery test-pqc test-software-vault
 
 build:
 	go build ./...
@@ -72,8 +72,6 @@ test-cloud:
 test-hyok:
 	go test ./services/hyok -v
 
-test-qkd:
-	go test ./services/qkd -v
 
 test-ekm:
 	go test ./services/ekm -v
@@ -93,11 +91,7 @@ test-reporting:
 test-posture:
 	go test ./services/posture -v
 
-test-ai:
-	go test ./services/ai -v
 
-test-mpc:
-	go test ./services/mpc -v
 
 test-dataprotect:
 	go test ./services/dataprotect -v

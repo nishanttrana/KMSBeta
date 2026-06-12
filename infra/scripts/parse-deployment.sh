@@ -14,8 +14,6 @@ FEATURE_ORDER=(
   cloud_byok
   hyok_proxy
   kmip_server
-  qkd_interface
-  qrng_generator
   ekm_database
   payment_crypto
   autokey_provisioning
@@ -27,14 +25,11 @@ FEATURE_ORDER=(
   sbom_cbom
   reporting_alerting
   posture_management
-  ai_llm
   ai_gateway
   pqc_migration
   crypto_discovery
-  mpc_engine
   data_protection
   clustering
-  feature_forge
 )
 
 declare -A ENABLED=()

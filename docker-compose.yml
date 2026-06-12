@@ -534,38 +534,6 @@ services:
       timeout: 5s
       retries: 10
 
-  featureforge:
-    <<: *kms-service
-    profiles: ["feature_forge"]
-    build:
-      context: .
-      dockerfile: services/featureforge/Dockerfile
-    image: vecta/featureforge:${VECTA_VERSION:-latest}
-    depends_on:
-      policy:
-        condition: service_started
-      governance:
-        condition: service_started
-    environment:
-      <<: *kms-common-env
-      POLICY_URL: http://policy:8040
-      GOVERNANCE_URL: http://governance:8050
-      AUDIT_URL: http://audit:8060
-      # External, separately-deployed MCP build server. Scaffold (code-build)
-      # mode is disabled until this is set. Config mode runs without it.
-      MCP_SERVER_URL: ${MCP_SERVER_URL:-}
-      MCP_SERVER_API_KEY: ${MCP_SERVER_API_KEY:-}
-      HTTP_PORT: "8300"
-      GRPC_PORT: "18300"
-    ports:
-      - "8300:8300"
-      - "18300:18300"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18300"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
   reconciler:
     <<: *kms-service
     build:
@@ -774,47 +742,6 @@ services:
       - "5696"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 15696"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
-  qkd:
-    <<: *kms-service
-    profiles: ["qkd_interface"]
-    build:
-      context: .
-      dockerfile: services/qkd/Dockerfile
-    image: vecta/qkd:${VECTA_VERSION:-latest}
-    environment:
-      <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      HTTP_PORT: "8150"
-      GRPC_PORT: "18150"
-    ports:
-      - "8150:8150"
-      - "18150:18150"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18150"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
-  qrng:
-    <<: *kms-service
-    profiles: ["qrng_generator"]
-    build:
-      context: .
-      dockerfile: services/qrng/Dockerfile
-    image: vecta/qrng:${VECTA_VERSION:-latest}
-    environment:
-      <<: *kms-common-env
-      HTTP_PORT: "8230"
-      GRPC_PORT: "18230"
-    ports:
-      - "8230:8230"
-      - "18230:18230"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18230"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -1075,32 +1002,6 @@ services:
       timeout: 5s
       retries: 10
 
-  ai:
-    <<: *kms-service
-    profiles: ["ai_llm"]
-    build:
-      context: .
-      dockerfile: services/ai/Dockerfile
-    image: vecta/ai:${VECTA_VERSION:-latest}
-    environment:
-      <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      POLICY_URL: http://policy:8040
-      AUDIT_URL: http://audit:8070
-      COMPLIANCE_URL: http://compliance:8110
-      REPORTING_URL: http://reporting:8140
-      SECRETS_URL: http://secrets:8020
-      HTTP_PORT: "8090"
-      GRPC_PORT: "18090"
-    ports:
-      - "8090:8090"
-      - "18090:18090"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18090"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
   ai-gateway:
     <<: *kms-service
     profiles: ["ai_gateway"]
@@ -1167,28 +1068,6 @@ services:
       - "18100:18100"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18100"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
-  mpc:
-    <<: *kms-service
-    profiles: ["mpc_engine"]
-    build:
-      context: .
-      dockerfile: services/mpc/Dockerfile
-    image: vecta/mpc:${VECTA_VERSION:-latest}
-    environment:
-      <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      CLUSTER_URL: http://cluster-manager:8210
-      HTTP_PORT: "8190"
-      GRPC_PORT: "18190"
-    ports:
-      - "8190:8190"
-      - "18190:18190"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18190"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -1315,44 +1194,6 @@ services:
       - "18440:18440"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18440"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
-  tfe:
-    <<: *kms-service
-    build:
-      context: .
-      dockerfile: services/tfe/Dockerfile
-    image: vecta/tfe:${VECTA_VERSION:-latest}
-    environment:
-      <<: *kms-common-env
-      HTTP_PORT: "8450"
-      GRPC_PORT: "18450"
-    ports:
-      - "8450:8450"
-      - "18450:18450"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18450"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
-  dam:
-    <<: *kms-service
-    build:
-      context: .
-      dockerfile: services/dam/Dockerfile
-    image: vecta/dam:${VECTA_VERSION:-latest}
-    environment:
-      <<: *kms-common-env
-      HTTP_PORT: "8460"
-      GRPC_PORT: "18460"
-    ports:
-      - "8460:8460"
-      - "18460:18460"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18460"]
       interval: 15s
       timeout: 5s
       retries: 10

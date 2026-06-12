@@ -73,16 +73,13 @@ kms-governance
 kms-cloud
 kms-hyok-proxy
 kms-kmip
-kms-qkd
 kms-ekm
 kms-payment
 kms-compliance
 kms-sbom
 kms-reporting
-kms-ai
 kms-pqc
 kms-discovery
-kms-mpc
 kms-dataprotect
 kms-cluster
 kms-hsm-connector

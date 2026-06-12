@@ -3,14 +3,12 @@ package sidechanneltests
 import (
 	"bytes"
 	"math"
-	"math/big"
 	"runtime"
 	"sort"
 	"testing"
 	"time"
 
 	cryptopkg "vecta-kms/pkg/crypto"
-	mpcpkg "vecta-kms/pkg/mpc"
 	paymentpkg "vecta-kms/pkg/payment"
 )
 
@@ -143,25 +141,3 @@ func TestRetailMACTiming(t *testing.T) {
 	}, 10.0)
 }
 
-func TestFeldmanVerifyTiming(t *testing.T) {
-	secret := big.NewInt(42)
-	shares, err := mpcpkg.Split(secret, 3, 5)
-	if err != nil {
-		t.Fatalf("split failed: %v", err)
-	}
-	coeffs := []*big.Int{big.NewInt(42), big.NewInt(7), big.NewInt(13)}
-	commitments := mpcpkg.FeldmanCommit(coeffs, big.NewInt(5))
-
-	validShare := shares[0]
-	invalidShare := mpcpkg.Share{
-		X: new(big.Int).Set(validShare.X),
-		Y: new(big.Int).Add(validShare.Y, big.NewInt(1)),
-	}
-	invalidShare.Y.Mod(invalidShare.Y, mpcpkg.Prime)
-
-	assertTimingSimilarity(t, "FeldmanVerify", 140, 80, func() {
-		_ = mpcpkg.FeldmanVerify(validShare, commitments, big.NewInt(5))
-	}, func() {
-		_ = mpcpkg.FeldmanVerify(invalidShare, commitments, big.NewInt(5))
-	}, 12.0)
-}
