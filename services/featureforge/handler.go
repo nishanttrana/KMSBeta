@@ -38,6 +38,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /intents", h.handleListIntents)
 	mux.HandleFunc("POST /intents", h.handleSubmit)
 	mux.HandleFunc("GET /intents/{id}", h.handleGetIntent)
+	mux.HandleFunc("POST /intents/{id}/approve", h.handleApprove)
 	mux.HandleFunc("POST /intents/{id}/promote", h.handlePromote)
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "service": "featureforge"})
@@ -91,13 +92,14 @@ func (h *Handler) handleSubmit(w http.ResponseWriter, r *http.Request) {
 	if actor == "" {
 		actor = strings.TrimSpace(r.Header.Get("X-Actor"))
 	}
-	in, err := h.svc.Submit(r.Context(), tenantID, actor, req.Text)
+	ctx := WithRequestID(r.Context(), reqID)
+	in, err := h.svc.Submit(ctx, tenantID, actor, req.Text)
 	status := http.StatusOK
 	if err != nil {
 		// Rejection is an expected outcome; return the intent + trail with 422.
 		status = http.StatusUnprocessableEntity
 	}
-	_, trail, _ := h.svc.Get(r.Context(), in.ID)
+	_, trail, _ := h.svc.Get(ctx, in.ID)
 	writeJSON(w, status, map[string]any{"intent": in, "trail": trail, "request_id": reqID})
 }
 
@@ -112,27 +114,86 @@ func (h *Handler) handleGetIntent(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusForbidden, "forbidden", "tenant mismatch", reqID, in.TenantID)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"intent": in, "trail": trail, "request_id": reqID})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"intent": in, "trail": trail,
+		"approvals": h.svc.Approvals(r.Context(), in.ID), "request_id": reqID,
+	})
 }
 
-func (h *Handler) handlePromote(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	existing, _, ok := h.svc.Get(r.Context(), r.PathValue("id"))
+// actorReq is the body for approve/promote: who is performing the action.
+type actorReq struct {
+	Actor   string `json:"actor"`
+	Comment string `json:"comment,omitempty"`
+}
+
+// requireIntent loads the intent and enforces the tenant boundary; returns
+// nil (after writing the error) when the caller may not act on it.
+func (h *Handler) requireIntent(w http.ResponseWriter, r *http.Request, reqID string) *Intent {
+	in, _, ok := h.svc.Get(r.Context(), r.PathValue("id"))
 	if !ok {
 		writeErr(w, http.StatusNotFound, "not_found", "intent not found", reqID, "")
+		return nil
+	}
+	if err := tenantcheck.Enforce(r, in.TenantID); err != nil {
+		writeErr(w, http.StatusForbidden, "forbidden", "tenant mismatch", reqID, in.TenantID)
+		return nil
+	}
+	return in
+}
+
+func actorFrom(r *http.Request, req actorReq) string {
+	if a := strings.TrimSpace(req.Actor); a != "" {
+		return a
+	}
+	return strings.TrimSpace(r.Header.Get("X-Actor"))
+}
+
+func (h *Handler) handleApprove(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	if h.requireIntent(w, r, reqID) == nil {
 		return
 	}
-	if err := tenantcheck.Enforce(r, existing.TenantID); err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", "tenant mismatch", reqID, existing.TenantID)
+	var req actorReq
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", "invalid request body", reqID, "")
 		return
 	}
-	in, err := h.svc.PromoteToProd(r.Context(), r.PathValue("id"))
+	approver := actorFrom(r, req)
+	if approver == "" {
+		writeErr(w, http.StatusBadRequest, "bad_request", "actor is required", reqID, "")
+		return
+	}
+	ctx := WithRequestID(r.Context(), reqID)
+	in, err := h.svc.Approve(ctx, r.PathValue("id"), approver, req.Comment)
 	status := http.StatusOK
 	if err != nil {
 		status = http.StatusUnprocessableEntity
 	}
-	_, trail, _ := h.svc.Get(r.Context(), in.ID)
-	writeJSON(w, status, map[string]any{"intent": in, "trail": trail, "request_id": reqID})
+	_, trail, _ := h.svc.Get(ctx, in.ID)
+	writeJSON(w, status, map[string]any{
+		"intent": in, "trail": trail,
+		"approvals": h.svc.Approvals(ctx, in.ID), "request_id": reqID,
+	})
+}
+
+func (h *Handler) handlePromote(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	if h.requireIntent(w, r, reqID) == nil {
+		return
+	}
+	var req actorReq
+	_ = decodeJSON(r, &req) // body is optional; actor may come from X-Actor
+	ctx := WithRequestID(r.Context(), reqID)
+	in, err := h.svc.PromoteToProd(ctx, r.PathValue("id"), actorFrom(r, req))
+	status := http.StatusOK
+	if err != nil {
+		status = http.StatusUnprocessableEntity
+	}
+	_, trail, _ := h.svc.Get(ctx, in.ID)
+	writeJSON(w, status, map[string]any{
+		"intent": in, "trail": trail,
+		"approvals": h.svc.Approvals(ctx, in.ID), "request_id": reqID,
+	})
 }
 
 // --- shared helpers (same style as other services) -----------------------

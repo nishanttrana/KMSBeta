@@ -28,6 +28,7 @@ FEATURE_ORDER=(
   ai_gateway
   pqc_migration
   crypto_discovery
+  feature_forge
   data_protection
   clustering
 )

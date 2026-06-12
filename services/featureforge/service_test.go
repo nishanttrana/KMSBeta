@@ -91,6 +91,14 @@ func newSvc(t *testing.T, autoApprove, mcpFail bool) (*Service, *stubGov) {
 	}), gov
 }
 
+// secondApprove records the second-principal approval most promote tests need.
+func secondApprove(t *testing.T, svc *Service, id string) {
+	t.Helper()
+	if _, err := svc.Approve(context.Background(), id, "carol", "lgtm"); err != nil {
+		t.Fatalf("second-principal approve failed: %v", err)
+	}
+}
+
 // --- tests ---------------------------------------------------------------
 
 func TestConfig_BlockRSA1024_Stages_NotProd(t *testing.T) {
@@ -116,12 +124,47 @@ func TestConfig_BlockRSA1024_Stages_NotProd(t *testing.T) {
 func TestConfig_NonQuorum_PromotesToProd(t *testing.T) {
 	svc, _ := newSvc(t, false, false)
 	in, _ := svc.Submit(context.Background(), "t", "a", "block RSA-1024")
-	out, err := svc.PromoteToProd(context.Background(), in.ID)
+	secondApprove(t, svc, in.ID)
+	out, err := svc.PromoteToProd(context.Background(), in.ID, "a")
 	if err != nil {
 		t.Fatalf("promote err: %v", err)
 	}
 	if out.Stage != StageProd {
 		t.Fatalf("want prod, got %s", out.Stage)
+	}
+}
+
+func TestPromote_WithoutSecondPrincipal_Waits(t *testing.T) {
+	svc, _ := newSvc(t, true, false)
+	in, _ := svc.Submit(context.Background(), "t", "alice", "block RSA-1024")
+	out, err := svc.PromoteToProd(context.Background(), in.ID, "alice")
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if out.Stage != StageAwaitProd {
+		t.Fatalf("promotion without second-principal approval must wait, got %s", out.Stage)
+	}
+}
+
+func TestApprove_SelfApproval_Rejected(t *testing.T) {
+	svc, _ := newSvc(t, true, false)
+	in, _ := svc.Submit(context.Background(), "t", "alice", "block RSA-1024")
+	if _, err := svc.Approve(context.Background(), in.ID, "alice", ""); err == nil {
+		t.Fatal("submitter must not be able to approve their own intent")
+	}
+	// still no path to prod
+	out, _ := svc.PromoteToProd(context.Background(), in.ID, "alice")
+	if out.Stage == StageProd {
+		t.Fatal("self-approval led to prod")
+	}
+}
+
+func TestApprove_DuplicateApprover_Rejected(t *testing.T) {
+	svc, _ := newSvc(t, true, false)
+	in, _ := svc.Submit(context.Background(), "t", "alice", "block RSA-1024")
+	secondApprove(t, svc, in.ID)
+	if _, err := svc.Approve(context.Background(), in.ID, "carol", "again"); err == nil {
+		t.Fatal("duplicate approval by the same principal must be rejected")
 	}
 }
 
@@ -131,12 +174,13 @@ func TestConfig_QuorumAction_WaitsThenApproves(t *testing.T) {
 	if in.Stage != StageStaged {
 		t.Fatalf("want staged, got %s (%v)", in.Stage, in.Reasons)
 	}
-	out, _ := svc.PromoteToProd(context.Background(), in.ID)
+	secondApprove(t, svc, in.ID)
+	out, _ := svc.PromoteToProd(context.Background(), in.ID, "a")
 	if out.Stage != StageAwaitProd {
 		t.Fatalf("want awaiting_prod, got %s", out.Stage)
 	}
 	gov.approve()
-	out2, _ := svc.PromoteToProd(context.Background(), in.ID)
+	out2, _ := svc.PromoteToProd(context.Background(), in.ID, "a")
 	if out2.Stage != StageProd {
 		t.Fatalf("want prod after approval, got %s", out2.Stage)
 	}
@@ -154,12 +198,13 @@ func TestScaffold_NeedsMCP_AndQuorum(t *testing.T) {
 	if in.Stage != StageStaged {
 		t.Fatalf("want staged, got %s", in.Stage)
 	}
-	out, _ := svc.PromoteToProd(context.Background(), in.ID)
+	secondApprove(t, svc, in.ID)
+	out, _ := svc.PromoteToProd(context.Background(), in.ID, "bob")
 	if out.Stage != StageAwaitProd {
 		t.Fatalf("scaffold prod must be quorum-gated, got %s", out.Stage)
 	}
 	gov.approve()
-	out2, _ := svc.PromoteToProd(context.Background(), in.ID)
+	out2, _ := svc.PromoteToProd(context.Background(), in.ID, "bob")
 	if out2.Stage != StageProd {
 		t.Fatalf("want prod after approval, got %s", out2.Stage)
 	}
@@ -200,9 +245,11 @@ func TestLowConfidence_Rejected(t *testing.T) {
 
 func TestAuditTrailComplete(t *testing.T) {
 	svc, _ := newSvc(t, true, false)
-	in, _ := svc.Submit(context.Background(), "t", "a", "block RSA-1024")
-	_, _ = svc.PromoteToProd(context.Background(), in.ID)
-	_, trail, _ := svc.Get(context.Background(), in.ID)
+	ctx := WithRequestID(context.Background(), "req-test-1")
+	in, _ := svc.Submit(ctx, "t", "a", "block RSA-1024")
+	secondApprove(t, svc, in.ID)
+	_, _ = svc.PromoteToProd(ctx, in.ID, "a")
+	_, trail, _ := svc.Get(ctx, in.ID)
 	seen := map[Stage]bool{}
 	for _, e := range trail {
 		seen[e.Stage] = true
@@ -210,6 +257,12 @@ func TestAuditTrailComplete(t *testing.T) {
 	for _, want := range []Stage{StageReceived, StageClassified, StageValidated, StagePolicyOK, StageDryRunOK, StageStaged, StageProd} {
 		if !seen[want] {
 			t.Errorf("missing audit event for stage %s", want)
+		}
+	}
+	// every pipeline event carries the request id for correlation
+	for _, e := range trail {
+		if e.Outcome != "approved" && e.RequestID != "req-test-1" {
+			t.Errorf("event %s/%s missing request id (got %q)", e.Stage, e.Outcome, e.RequestID)
 		}
 	}
 }

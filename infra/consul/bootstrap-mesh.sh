@@ -80,6 +80,7 @@ kms-sbom
 kms-reporting
 kms-pqc
 kms-discovery
+kms-featureforge
 kms-dataprotect
 kms-cluster
 kms-hsm-connector

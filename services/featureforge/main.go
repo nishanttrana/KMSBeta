@@ -53,10 +53,16 @@ func main() {
 
 	var publisher pkgauditmw.EventPublisher
 	var natsConn *nats.Conn
+	var auditClient *pkgaudit.Client
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		natsConn = nc
 		defer nc.Close()
-		publisher = pkgevents.NewPublisher(js, 3, "audit.featureforge.dead_letter")
+		if ac, err := pkgaudit.NewClient(js, "featureforge"); err == nil {
+			auditClient = ac
+			publisher = ac.Publisher()
+		} else {
+			logger.Printf("audit client init failed, audit publishing disabled: %v", err)
+		}
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
@@ -66,6 +72,9 @@ func main() {
 		Store:   NewSQLStore(dbConn),
 		Sandbox: NewLocalSandbox(),
 	}
+	if auditClient != nil {
+		svcCfg.Audit = NewSpineAudit(auditClient)
+	}
 	if u := envOr("POLICY_URL", "http://policy:8040"); u != "" {
 		svcCfg.Policy = NewHTTPPolicyClient(u, 3*time.Second)
 		logger.Printf("policy integration enabled: %s", u)
@@ -73,10 +82,6 @@ func main() {
 	if u := envOr("GOVERNANCE_URL", "http://governance:8050"); u != "" {
 		svcCfg.Governance = NewHTTPGovernanceClient(u, 3*time.Second)
 		logger.Printf("governance integration enabled: %s", u)
-	}
-	if u := os.Getenv("AUDIT_URL"); u != "" {
-		svcCfg.Audit = NewHTTPAuditClient(u, 2*time.Second)
-		logger.Printf("audit http integration enabled: %s", u)
 	}
 	// EXTERNAL MCP server (scaffold-mode code build/validate). Separately
 	// deployed; configured via MCP_SERVER_URL. When unset, scaffold-mode
@@ -97,7 +102,8 @@ func main() {
 		defer hb.Stop()
 	}
 
-	httpPort := envOr("HTTP_PORT", "8260")
+	// 8300/18300: 8260/18260 belong to autokey (see commit 4b17cb599).
+	httpPort := envOr("HTTP_PORT", "8300")
 	authedHandler := pkgjwtauth.MustWrap("FEATUREFORGE", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "featureforge"))
 	go func() {
@@ -107,7 +113,7 @@ func main() {
 		}
 	}()
 
-	grpcPort := envOr("GRPC_PORT", "18260")
+	grpcPort := envOr("GRPC_PORT", "18300")
 	tlsCfg, err := devMTLSConfig()
 	if err != nil {
 		logger.Fatalf("mtls config failed: %v", err)
@@ -163,7 +169,6 @@ func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
 		nc.Close()
 		return nil, nil, err
 	}
-	_, _ = js.AddStream(pkgaudit.StreamConfig())
 	return nc, js, nil
 }
 

@@ -171,6 +171,10 @@ static_resources:
                   headers: [{ name: "x-tenant-id", present_match: true }]
                 route: { cluster: discovery_http, timeout: 60s, prefix_rewrite: "/" }
               - match:
+                  prefix: "/api/featureforge"
+                  headers: [{ name: "x-tenant-id", present_match: true }]
+                route: { cluster: featureforge_http, timeout: 60s, prefix_rewrite: "/" }
+              - match:
                   prefix: "/api/dataprotect"
                   headers: [{ name: "x-tenant-id", present_match: true }]
                 route: { cluster: dataprotect_http, timeout: 60s, prefix_rewrite: "/" }
@@ -398,6 +402,13 @@ static_resources:
     load_assignment:
       cluster_name: discovery_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: discovery, port_value: 8100 }}}}]}]
+  - name: featureforge_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: featureforge_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: featureforge, port_value: 8300 }}}}]}]
   - name: dataprotect_http
     connect_timeout: 1s
     type: STRICT_DNS

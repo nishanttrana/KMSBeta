@@ -14,5 +14,5 @@ WORKDIR /app
 COPY --from=build /out/kms-featureforge /usr/local/bin/kms-featureforge
 COPY services/featureforge/migrations /app/migrations
 USER app
-EXPOSE 8260 18260
+EXPOSE 8300 18300
 ENTRYPOINT ["/usr/local/bin/kms-featureforge"]

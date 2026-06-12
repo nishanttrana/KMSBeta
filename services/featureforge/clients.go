@@ -189,54 +189,6 @@ func (g *HTTPGovernanceClient) ApprovalState(approvalID string) (bool, error) {
 	return strings.EqualFold(out.Status, "approved"), nil
 }
 
-// --- HTTP audit client ---------------------------------------------------
-
-// HTTPAuditClient emits events to the audit service. When baseURL is empty,
-// it is a no-op (NATS-based audit middleware still captures request events).
-type HTTPAuditClient struct {
-	baseURL string
-	client  *http.Client
-}
-
-// NewHTTPAuditClient builds an audit client (e.g. http://kms-audit:8030).
-func NewHTTPAuditClient(baseURL string, timeout time.Duration) *HTTPAuditClient {
-	if timeout <= 0 {
-		timeout = 2 * time.Second
-	}
-	return &HTTPAuditClient{
-		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		client:  &http.Client{Timeout: timeout},
-	}
-}
-
-func (a *HTTPAuditClient) Emit(ev AuditEvent) error {
-	if a.baseURL == "" {
-		return nil
-	}
-	buf, _ := json.Marshal(map[string]interface{}{
-		"service":   "featureforge",
-		"tenant_id": ev.TenantID,
-		"actor":     ev.Actor,
-		"action":    ev.Action,
-		"stage":     ev.Stage,
-		"outcome":   ev.Outcome,
-		"detail":    ev.Detail,
-		"timestamp": ev.Timestamp,
-		"resource":  ev.IntentID,
-	})
-	req, err := http.NewRequest(http.MethodPost, a.baseURL+"/events", bytes.NewReader(buf))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	resp, err := a.client.Do(req)
-	if err != nil {
-		return err
-	}
-	_ = resp.Body.Close()
-	return nil
-}
-
 // --- External MCP client (scaffold-mode build/validate) ------------------
 
 // HTTPMCPClient talks to the EXTERNAL, separately-deployed MCP server that

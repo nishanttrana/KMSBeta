@@ -11,10 +11,12 @@ import {
   listFFCatalog,
   listFFIntents,
   submitFFIntent,
+  approveFFIntent,
   promoteFFIntent,
   type FFCatalogAction,
   type FFIntent,
-  type FFEvent
+  type FFEvent,
+  type FFApproval
 } from "../../../lib/featureforge";
 
 const STAGE_TONE: Record<string, string> = {
@@ -47,6 +49,7 @@ export const FeatureForgeTab = ({ session, onToast }: any) => {
   const [catalog, setCatalog] = useState<FFCatalogAction[]>([]);
   const [intents, setIntents] = useState<FFIntent[]>([]);
   const [trailById, setTrailById] = useState<Record<string, FFEvent[]>>({});
+  const [approvalsById, setApprovalsById] = useState<Record<string, FFApproval[]>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -101,14 +104,39 @@ export const FeatureForgeTab = ({ session, onToast }: any) => {
     }
   }, [text, session, tenantId, actor, toast, refresh]);
 
+  const approve = useCallback(
+    async (id: string) => {
+      setBusy(true);
+      try {
+        const r = await approveFFIntent(session, id, actor);
+        setTrailById((prev) => ({ ...prev, [id]: r.trail || [] }));
+        setApprovalsById((prev) => ({ ...prev, [id]: r.approvals || [] }));
+        toast(`Approval by ${actor} recorded for ${id}.`, "ok");
+        await refresh();
+      } catch (e) {
+        toast(errMsg(e), "err");
+      } finally {
+        setBusy(false);
+      }
+    },
+    [session, actor, toast, refresh]
+  );
+
   const promote = useCallback(
     async (id: string) => {
       setBusy(true);
       try {
-        const r = await promoteFFIntent(session, id);
+        const r = await promoteFFIntent(session, id, actor);
         setTrailById((prev) => ({ ...prev, [id]: r.trail || [] }));
+        setApprovalsById((prev) => ({ ...prev, [id]: r.approvals || [] }));
         if (r.intent.stage === "awaiting_prod") {
-          toast("Promotion opened a governance approval — awaiting quorum.", "ok");
+          const hasSecond = (r.approvals || []).length > 0;
+          toast(
+            hasSecond
+              ? "Promotion opened a governance approval — awaiting quorum."
+              : "Promotion is gated: a second principal must approve first.",
+            "ok"
+          );
         } else if (r.intent.stage === "deployed_prod") {
           toast(`Intent ${id} deployed to production.`, "ok");
         }
@@ -119,7 +147,7 @@ export const FeatureForgeTab = ({ session, onToast }: any) => {
         setBusy(false);
       }
     },
-    [session, toast, refresh]
+    [session, actor, toast, refresh]
   );
 
   const toggle = useCallback((id: string) => {
@@ -184,8 +212,11 @@ export const FeatureForgeTab = ({ session, onToast }: any) => {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {intents.map((it) => {
               const trail = trailById[it.id] || [];
+              const approvals = approvalsById[it.id] || [];
               const isOpen = !!expanded[it.id];
               const canPromote = it.stage === "staged" || it.stage === "awaiting_prod";
+              const canApprove = canPromote && actor && actor !== it.actor &&
+                !approvals.some((a) => a.approver === actor);
               return (
                 <Card key={it.id} style={{ borderColor: STAGE_TONE[it.stage] || C.border }}>
                   <div
@@ -230,8 +261,19 @@ export const FeatureForgeTab = ({ session, onToast }: any) => {
                           )
                         )}
                       </div>
-                      {/* promote */}
+                      {/* approvals */}
+                      {approvals.length > 0 && (
+                        <div style={{ marginTop: 8, fontSize: 10, color: C.dim }}>
+                          Approved by {approvals.map((a) => a.approver).join(", ")}
+                        </div>
+                      )}
+                      {/* approve / promote */}
                       <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "center" }}>
+                        {canApprove && (
+                          <Btn small onClick={() => void approve(it.id)} disabled={busy}>
+                            <ShieldCheck size={12} style={{ marginRight: 5 }} /> Approve (2nd principal)
+                          </Btn>
+                        )}
                         {canPromote && (
                           <Btn small primary onClick={() => void promote(it.id)} disabled={busy}>
                             {it.stage === "awaiting_prod" ? (
@@ -247,7 +289,9 @@ export const FeatureForgeTab = ({ session, onToast }: any) => {
                         )}
                         {it.stage === "awaiting_prod" && (
                           <span style={{ fontSize: 10, color: C.amber }}>
-                            Needs governance quorum{it.approval_id ? ` (${it.approval_id})` : ""}.
+                            {it.approval_id
+                              ? `Needs governance quorum (${it.approval_id}).`
+                              : "Needs a second principal's approval."}
                           </span>
                         )}
                         {it.stage === "deployed_prod" && (

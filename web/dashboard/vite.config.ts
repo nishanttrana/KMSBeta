@@ -69,7 +69,7 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/svc\/governance/, "")
       },
       "/svc/featureforge": {
-        target: serviceURL("featureforge", 8260),
+        target: serviceURL("featureforge", 8300),
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/svc\/featureforge/, "")
       },

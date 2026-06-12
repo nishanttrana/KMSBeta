@@ -20,20 +20,23 @@ type Store interface {
 	ListIntents(ctx context.Context, tenantID string) []*Intent
 	AppendEvent(ctx context.Context, ev AuditEvent) error
 	Events(ctx context.Context, intentID string) []AuditEvent
+	AddApproval(ctx context.Context, ap Approval) error
+	Approvals(ctx context.Context, intentID string) []Approval
 }
 
 // --- In-memory store (tests, and a fallback) -----------------------------
 
 type memStore struct {
-	mu      sync.Mutex
-	seq     int
-	intents map[string]*Intent
-	events  map[string][]AuditEvent
+	mu        sync.Mutex
+	seq       int
+	intents   map[string]*Intent
+	events    map[string][]AuditEvent
+	approvals map[string][]Approval
 }
 
 // NewMemStore returns an in-memory Store.
 func NewMemStore() Store {
-	return &memStore{intents: map[string]*Intent{}, events: map[string][]AuditEvent{}}
+	return &memStore{intents: map[string]*Intent{}, events: map[string][]AuditEvent{}, approvals: map[string][]Approval{}}
 }
 
 func (m *memStore) NextID() string {
@@ -88,6 +91,26 @@ func (m *memStore) Events(_ context.Context, intentID string) []AuditEvent {
 	defer m.mu.Unlock()
 	out := make([]AuditEvent, len(m.events[intentID]))
 	copy(out, m.events[intentID])
+	return out
+}
+
+func (m *memStore) AddApproval(_ context.Context, ap Approval) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, ex := range m.approvals[ap.IntentID] {
+		if ex.Approver == ap.Approver {
+			return fmt.Errorf("approval by %s already recorded", ap.Approver)
+		}
+	}
+	m.approvals[ap.IntentID] = append(m.approvals[ap.IntentID], ap)
+	return nil
+}
+
+func (m *memStore) Approvals(_ context.Context, intentID string) []Approval {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := make([]Approval, len(m.approvals[intentID]))
+	copy(out, m.approvals[intentID])
 	return out
 }
 
@@ -176,16 +199,40 @@ func (s *sqlStore) ListIntents(ctx context.Context, tenantID string) []*Intent {
 }
 
 func (s *sqlStore) AppendEvent(ctx context.Context, ev AuditEvent) error {
-	const q = `INSERT INTO ff_events (intent_id, tenant_id, actor, action, stage, outcome, detail, ts)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`
+	const q = `INSERT INTO ff_events (intent_id, tenant_id, actor, action, stage, outcome, detail, request_id, ts)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`
 	_, err := s.db.SQL().ExecContext(ctx, q,
-		ev.IntentID, ev.TenantID, ev.Actor, ev.Action, string(ev.Stage), ev.Outcome, ev.Detail, ev.Timestamp)
+		ev.IntentID, ev.TenantID, ev.Actor, ev.Action, string(ev.Stage), ev.Outcome, ev.Detail, ev.RequestID, ev.Timestamp)
 	return err
+}
+
+func (s *sqlStore) AddApproval(ctx context.Context, ap Approval) error {
+	const q = `INSERT INTO ff_approvals (intent_id, tenant_id, approver, comment, created_at)
+VALUES ($1,$2,$3,$4,$5)`
+	_, err := s.db.SQL().ExecContext(ctx, q, ap.IntentID, ap.TenantID, ap.Approver, ap.Comment, ap.CreatedAt)
+	return err
+}
+
+func (s *sqlStore) Approvals(ctx context.Context, intentID string) []Approval {
+	rows, err := s.db.SQL().QueryContext(ctx,
+		`SELECT intent_id, tenant_id, approver, comment, created_at FROM ff_approvals WHERE intent_id=$1 ORDER BY created_at ASC`, intentID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close() //nolint:errcheck
+	var out []Approval
+	for rows.Next() {
+		var ap Approval
+		if err := rows.Scan(&ap.IntentID, &ap.TenantID, &ap.Approver, &ap.Comment, &ap.CreatedAt); err == nil {
+			out = append(out, ap)
+		}
+	}
+	return out
 }
 
 func (s *sqlStore) Events(ctx context.Context, intentID string) []AuditEvent {
 	rows, err := s.db.SQL().QueryContext(ctx,
-		`SELECT intent_id, tenant_id, actor, action, stage, outcome, detail, ts FROM ff_events WHERE intent_id=$1 ORDER BY id ASC`, intentID)
+		`SELECT intent_id, tenant_id, actor, action, stage, outcome, detail, request_id, ts FROM ff_events WHERE intent_id=$1 ORDER BY id ASC`, intentID)
 	if err != nil {
 		return nil
 	}
@@ -194,7 +241,7 @@ func (s *sqlStore) Events(ctx context.Context, intentID string) []AuditEvent {
 	for rows.Next() {
 		var ev AuditEvent
 		var stage string
-		if err := rows.Scan(&ev.IntentID, &ev.TenantID, &ev.Actor, &ev.Action, &stage, &ev.Outcome, &ev.Detail, &ev.Timestamp); err == nil {
+		if err := rows.Scan(&ev.IntentID, &ev.TenantID, &ev.Actor, &ev.Action, &stage, &ev.Outcome, &ev.Detail, &ev.RequestID, &ev.Timestamp); err == nil {
 			ev.Stage = Stage(stage)
 			out = append(out, ev)
 		}

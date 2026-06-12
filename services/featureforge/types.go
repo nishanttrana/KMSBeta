@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // Mode is the operating mode of an intent. The two modes have different risk
 // profiles and therefore different guardrail paths.
@@ -75,7 +78,9 @@ type GuardrailResult struct {
 	Detail string `json:"detail"`
 }
 
-// AuditEvent mirrors the shape consumed by the existing audit service.
+// AuditEvent is one guardrail-pipeline transition. It is persisted locally
+// (ff_events, the per-intent trail) and mirrored onto the platform audit
+// stream via pkg/audit.
 type AuditEvent struct {
 	IntentID  string    `json:"intent_id"`
 	TenantID  string    `json:"tenant_id"`
@@ -84,7 +89,19 @@ type AuditEvent struct {
 	Stage     Stage     `json:"stage"`
 	Outcome   string    `json:"outcome"`
 	Detail    string    `json:"detail"`
+	RequestID string    `json:"request_id,omitempty"`
 	Timestamp time.Time `json:"timestamp"`
+}
+
+// Approval is a recorded second-principal sign-off. Prod promotion is
+// impossible without at least one approval from a principal other than the
+// intent's submitter (enforced in Service.Approve / PromoteToProd).
+type Approval struct {
+	IntentID  string    `json:"intent_id"`
+	TenantID  string    `json:"tenant_id"`
+	Approver  string    `json:"approver"`
+	Comment   string    `json:"comment,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // --- Collaborator interfaces (real HTTP clients in production) ------------
@@ -106,9 +123,10 @@ type GovernanceClient interface {
 	ApprovalState(approvalID string) (approved bool, err error)
 }
 
-// AuditClient emits events to the audit service.
+// AuditClient mirrors pipeline events onto the central audit spine
+// (pkg/audit over NATS JetStream).
 type AuditClient interface {
-	Emit(ev AuditEvent) error
+	Emit(ctx context.Context, ev AuditEvent) error
 }
 
 // MCPClient drives the EXTERNAL MCP server that scaffolds, builds, and

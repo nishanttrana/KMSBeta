@@ -53,7 +53,20 @@ export type FFEvent = {
   timestamp: string;
 };
 
-export type FFIntentResponse = { intent: FFIntent; trail: FFEvent[]; request_id?: string };
+export type FFApproval = {
+  intent_id: string;
+  tenant_id: string;
+  approver: string;
+  comment?: string;
+  created_at: string;
+};
+
+export type FFIntentResponse = {
+  intent: FFIntent;
+  trail: FFEvent[];
+  approvals?: FFApproval[];
+  request_id?: string;
+};
 
 export async function listFFCatalog(session: AuthSession): Promise<FFCatalogAction[]> {
   const r = await serviceRequest<{ actions: FFCatalogAction[] }>(session, "featureforge", "/catalog");
@@ -85,9 +98,21 @@ export async function getFFIntent(session: AuthSession, id: string): Promise<FFI
   return serviceRequest<FFIntentResponse>(session, "featureforge", `/intents/${encodeURIComponent(id)}`);
 }
 
-export async function promoteFFIntent(session: AuthSession, id: string): Promise<FFIntentResponse> {
+export async function approveFFIntent(
+  session: AuthSession,
+  id: string,
+  actor: string,
+  comment = ""
+): Promise<FFIntentResponse> {
+  return serviceRequest<FFIntentResponse>(session, "featureforge", `/intents/${encodeURIComponent(id)}/approve`, {
+    method: "POST",
+    body: JSON.stringify({ actor, comment })
+  });
+}
+
+export async function promoteFFIntent(session: AuthSession, id: string, actor = ""): Promise<FFIntentResponse> {
   return serviceRequest<FFIntentResponse>(session, "featureforge", `/intents/${encodeURIComponent(id)}/promote`, {
     method: "POST",
-    body: "{}"
+    body: JSON.stringify({ actor })
   });
 }
