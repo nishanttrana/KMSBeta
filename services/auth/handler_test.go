@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"encoding/base32"
 	"encoding/json"
 	"errors"
@@ -14,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/metering"
 )
 
@@ -37,7 +36,7 @@ func newTestHandler(t *testing.T) (*Handler, *AuthLogic, *SQLStore, *mockPublish
 	}); err != nil {
 		t.Fatal(err)
 	}
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	key, err := pkgcrypto.GenerateKeyPair(pkgcrypto.AlgRSA2048)
 	if err != nil {
 		t.Fatal(err)
 	}

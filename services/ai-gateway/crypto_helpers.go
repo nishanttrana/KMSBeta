@@ -2,11 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,16 +10,15 @@ import (
 	"strings"
 	"time"
 
-	"crypto"
-	"crypto/rand"
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 // obtainGoogleAccessToken exchanges a service account JSON key for a short-lived access token.
 func obtainGoogleAccessToken(ctx context.Context, authJSON string, client *http.Client) (string, error) {
 	var sa struct {
-		ClientEmail  string `json:"client_email"`
-		PrivateKey   string `json:"private_key"`
-		TokenURI     string `json:"token_uri"`
+		ClientEmail string `json:"client_email"`
+		PrivateKey  string `json:"private_key"`
+		TokenURI    string `json:"token_uri"`
 	}
 	if err := json.Unmarshal([]byte(authJSON), &sa); err != nil {
 		return "", fmt.Errorf("parse service account json: %w", err)
@@ -40,23 +35,8 @@ func obtainGoogleAccessToken(ctx context.Context, authJSON string, client *http.
 	claimsEnc := base64URLEncode([]byte(claims))
 	unsigned := header + "." + claimsEnc
 
-	// Parse private key
-	block, _ := pem.Decode([]byte(sa.PrivateKey))
-	if block == nil {
-		return "", fmt.Errorf("invalid PEM in service account key")
-	}
-	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return "", fmt.Errorf("parse private key: %w", err)
-	}
-	rsaKey, ok := key.(*rsa.PrivateKey)
-	if !ok {
-		return "", fmt.Errorf("private key is not RSA")
-	}
-
-	// Sign
-	hashed := sha256.Sum256([]byte(unsigned))
-	sig, err := rsa.SignPKCS1v15(rand.Reader, rsaKey, crypto.SHA256, hashed[:])
+	// Sign with the service-account RSA key (RS256)
+	sig, err := pkgcrypto.SignPKCS1v15SHA256PEM(sa.PrivateKey, []byte(unsigned))
 	if err != nil {
 		return "", fmt.Errorf("sign jwt: %w", err)
 	}

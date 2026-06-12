@@ -1,11 +1,6 @@
 package main
 
 import (
-	"crypto/hmac"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/base32"
 	"encoding/base64"
 	"encoding/binary"
@@ -25,27 +20,25 @@ import (
 )
 
 type AuthLogic struct {
-	privateKey *rsa.PrivateKey
-	publicKey  *rsa.PublicKey
-	issuer     string
-	audience   string
-	tokenTTL   time.Duration
-	limiter    *FailedLoginLimiter
+	keyPair  *pkgcrypto.KeyPair
+	issuer   string
+	audience string
+	tokenTTL time.Duration
+	limiter  *FailedLoginLimiter
 }
 
-func NewAuthLogic(privateKey *rsa.PrivateKey, issuer string, audience string) *AuthLogic {
+func NewAuthLogic(keyPair *pkgcrypto.KeyPair, issuer string, audience string) *AuthLogic {
 	return &AuthLogic{
-		privateKey: privateKey,
-		publicKey:  &privateKey.PublicKey,
-		issuer:     issuer,
-		audience:   audience,
-		tokenTTL:   15 * time.Minute,
-		limiter:    NewFailedLoginLimiter(5, 15*time.Minute),
+		keyPair:  keyPair,
+		issuer:   issuer,
+		audience: audience,
+		tokenTTL: 15 * time.Minute,
+		limiter:  NewFailedLoginLimiter(5, 15*time.Minute),
 	}
 }
 
 func (a *AuthLogic) ParseJWT(token string) (*pkgauth.Claims, error) {
-	return pkgauth.ParseRS256WithOptions(token, a.publicKey, pkgauth.ParseOptions{
+	return pkgauth.ParseRS256WithOptions(token, a.keyPair.Public, pkgauth.ParseOptions{
 		Issuer:   a.issuer,
 		Audience: a.audience,
 		Leeway:   30 * time.Second,
@@ -67,7 +60,7 @@ func (a *AuthLogic) IssueJWT(tenantID string, role string, permissions []string,
 			IssuedAt:  jwt.NewNumericDate(time.Now().UTC()),
 		},
 	}
-	signed, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(a.privateKey)
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(a.keyPair.Private)
 	return signed, expiresAt, err
 }
 
@@ -111,7 +104,7 @@ func (a *AuthLogic) IssueClientJWT(
 			ID:        fmt.Sprintf("%s:%s:%d", strings.TrimSpace(clientID), strings.TrimSpace(interfaceName), now.UnixNano()),
 		},
 	}
-	signed, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(a.privateKey)
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(a.keyPair.Private)
 	return signed, expiresAt, err
 }
 
@@ -152,7 +145,7 @@ func (a *AuthLogic) IssueWorkloadJWT(
 			ID:        fmt.Sprintf("wid:%s:%s:%d", strings.TrimSpace(clientID), strings.TrimSpace(interfaceName), now.UnixNano()),
 		},
 	}
-	signed, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(a.privateKey)
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(a.keyPair.Private)
 	return signed, expiresAt, err
 }
 
@@ -160,8 +153,8 @@ func HashPassword(password string) ([]byte, error) {
 	pw := []byte(password)
 	defer pkgcrypto.Zeroize(pw)
 
-	salt := make([]byte, 16)
-	if _, err := rand.Read(salt); err != nil {
+	salt, err := pkgcrypto.RandomBytes(16)
+	if err != nil {
 		return nil, err
 	}
 	hash := argon2.IDKey(pw, salt, 3, 64*1024, 4, 32)
@@ -191,12 +184,12 @@ func VerifyPassword(encodedHash []byte, password string) bool {
 
 	computed := argon2.IDKey(pw, salt, 3, 64*1024, 4, uint32(len(expected)))
 	defer pkgcrypto.Zeroize(computed)
-	return subtle.ConstantTimeCompare(expected, computed) == 1
+	return pkgcrypto.ConstantTimeEqual(expected, computed)
 }
 
 func GenerateTOTPSecret() (string, error) {
-	raw := make([]byte, 20)
-	if _, err := rand.Read(raw); err != nil {
+	raw, err := pkgcrypto.RandomBytes(20)
+	if err != nil {
 		return "", err
 	}
 	defer pkgcrypto.Zeroize(raw)
@@ -221,7 +214,8 @@ func ValidateTOTP(secret string, code string, now time.Time) bool {
 	for drift := int64(-1); drift <= 1; drift++ {
 		if hotpCode(decoded, now.Unix()/30+drift) == code {
 			// Replay protection: reject codes that were already used in this window.
-			replayKey := fmt.Sprintf("%x:%s", sha256.Sum256([]byte(secret)), code)
+			secretSum, _ := pkgcrypto.Hash("SHA-256", []byte(secret))
+			replayKey := fmt.Sprintf("%x:%s", secretSum, code)
 			if expiry, loaded := totpUsedCodes.Load(replayKey); loaded {
 				if now.Before(expiry.(time.Time)) {
 					return false
@@ -255,9 +249,10 @@ func hotpCode(secret []byte, counter int64) string {
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, uint64(counter))
 
-	mac := hmac.New(sha256.New, secret)
-	_, _ = mac.Write(buf)
-	sum := mac.Sum(nil)
+	sum, err := pkgcrypto.HMAC("SHA-256", secret, buf)
+	if err != nil {
+		return ""
+	}
 	offset := sum[len(sum)-1] & 0x0f
 	binCode := (int(sum[offset])&0x7f)<<24 |
 		(int(sum[offset+1])&0xff)<<16 |
@@ -267,16 +262,17 @@ func hotpCode(secret []byte, counter int64) string {
 }
 
 func GenerateAPIKey() (raw string, keyHash []byte, prefix string, err error) {
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
+	key, err := pkgcrypto.RandomBytes(32)
+	if err != nil {
 		return "", nil, "", err
 	}
 	defer pkgcrypto.Zeroize(key)
 
 	raw = "vk_" + base64.RawURLEncoding.EncodeToString(key)
-	sum := sha256.Sum256([]byte(raw))
-	hash := make([]byte, len(sum))
-	copy(hash, sum[:])
+	hash, err := pkgcrypto.Hash("SHA-256", []byte(raw))
+	if err != nil {
+		return "", nil, "", err
+	}
 	return raw, hash, raw[:min(len(raw), 10)], nil
 }
 
@@ -299,8 +295,10 @@ func dedupeStrings(values []string) []string {
 }
 
 func NewID(prefix string) string {
-	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	b, err := pkgcrypto.RandomBytes(8)
+	if err != nil {
+		panic("auth: system randomness unavailable: " + err.Error())
+	}
 	return fmt.Sprintf("%s_%s", prefix, hex.EncodeToString(b))
 }
 
@@ -393,10 +391,11 @@ func (l *FailedLoginLimiter) Reset(key string) {
 }
 
 func tokenHash(token string) []byte {
-	sum := sha256.Sum256([]byte(token))
-	out := make([]byte, len(sum))
-	copy(out, sum[:])
-	return out
+	sum, err := pkgcrypto.Hash("SHA-256", []byte(token))
+	if err != nil {
+		panic(err)
+	}
+	return sum
 }
 
 func DefaultPasswordPolicy(tenantID string) PasswordPolicy {

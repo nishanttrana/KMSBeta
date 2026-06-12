@@ -2,18 +2,12 @@ package main
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rsa"
-	"crypto/sha256"
-	"crypto/sha512"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/big"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,6 +20,8 @@ import (
 
 	cbor "github.com/fxamacker/cbor/v2"
 	"github.com/golang-jwt/jwt/v5"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 const awsNitroRootPEM = `-----BEGIN CERTIFICATE-----
@@ -564,14 +560,11 @@ func verifyCOSESignature(sign1 coseSign1Envelope, publicKey any) error {
 
 	switch alg {
 	case -7:
-		sum := sha256.Sum256(sigStructure)
-		return verifyECDSACOSESignature(sum[:], sign1.Signature, publicKey, 32)
+		return verifyECDSACOSESignature("SHA-256", sigStructure, sign1.Signature, publicKey, 32)
 	case -35:
-		sum := sha512.Sum384(sigStructure)
-		return verifyECDSACOSESignature(sum[:], sign1.Signature, publicKey, 48)
+		return verifyECDSACOSESignature("SHA-384", sigStructure, sign1.Signature, publicKey, 48)
 	case -36:
-		sum := sha512.Sum512(sigStructure)
-		return verifyECDSACOSESignature(sum[:], sign1.Signature, publicKey, 66)
+		return verifyECDSACOSESignature("SHA-512", sigStructure, sign1.Signature, publicKey, 66)
 	default:
 		return fmt.Errorf("unsupported cose algorithm %d", alg)
 	}
@@ -594,25 +587,12 @@ func coseAlgorithm(protected []byte) (int64, error) {
 	}
 }
 
-func verifyECDSACOSESignature(digest []byte, signature []byte, publicKey any, partSize int) error {
-	key, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return errors.New("attestation signing key is not ECDSA")
+func verifyECDSACOSESignature(hashAlg string, sigStructure []byte, signature []byte, publicKey any, partSize int) error {
+	digest, err := pkgcrypto.Hash(hashAlg, sigStructure)
+	if err != nil {
+		return err
 	}
-	if len(signature) != partSize*2 {
-		return errors.New("cose ecdsa signature has an unexpected length")
-	}
-	r := new(big.Int).SetBytes(signature[:partSize])
-	s := new(big.Int).SetBytes(signature[partSize:])
-	if !ecdsa.Verify(key, digest, r, s) {
-		return errors.New("ecdsa signature verification failed")
-	}
-	switch key.Curve {
-	case elliptic.P256(), elliptic.P384(), elliptic.P521():
-		return nil
-	default:
-		return errors.New("unsupported ecdsa curve")
-	}
+	return pkgcrypto.VerifyECDSADigestRS(publicKey, digest, signature, partSize)
 }
 
 type boundEvidence struct {
@@ -749,7 +729,7 @@ func (v *ProviderVerifier) fetchJWKS(ctx context.Context, rawURL string) (jwkSet
 	return set, nil
 }
 
-func (j jwkSet) lookupRSAPublicKey(kid string) (*rsa.PublicKey, error) {
+func (j jwkSet) lookupRSAPublicKey(kid string) (interface{}, error) {
 	if len(j.Keys) == 0 {
 		return nil, errors.New("jwks does not contain any signing keys")
 	}
@@ -769,7 +749,7 @@ func (j jwkSet) lookupRSAPublicKey(kid string) (*rsa.PublicKey, error) {
 	return nil, errors.New("signing key not found in jwks")
 }
 
-func (j jwkKey) rsaPublicKey() (*rsa.PublicKey, error) {
+func (j jwkKey) rsaPublicKey() (interface{}, error) {
 	if strings.TrimSpace(j.Kty) != "RSA" {
 		return nil, errors.New("unsupported jwk key type")
 	}
@@ -778,31 +758,13 @@ func (j jwkKey) rsaPublicKey() (*rsa.PublicKey, error) {
 		if err == nil {
 			cert, certErr := x509.ParseCertificate(der)
 			if certErr == nil {
-				if key, ok := cert.PublicKey.(*rsa.PublicKey); ok {
-					return key, nil
+				if family, _ := pkgcrypto.DescribePublicKey(cert.PublicKey); family == "RSA" {
+					return cert.PublicKey, nil
 				}
 			}
 		}
 	}
-	modulusBytes, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(j.N))
-	if err != nil {
-		return nil, err
-	}
-	exponentBytes, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(j.E))
-	if err != nil {
-		return nil, err
-	}
-	exponent := 0
-	for _, value := range exponentBytes {
-		exponent = exponent<<8 + int(value)
-	}
-	if exponent <= 0 {
-		return nil, errors.New("invalid rsa exponent")
-	}
-	return &rsa.PublicKey{
-		N: new(big.Int).SetBytes(modulusBytes),
-		E: exponent,
-	}, nil
+	return pkgcrypto.RSAPublicKeyFromJWK(strings.TrimSpace(j.N), strings.TrimSpace(j.E))
 }
 
 func (v *ProviderVerifier) isAllowedOIDCIssuer(family string, issuer string) bool {

@@ -600,7 +600,11 @@ func (s *Service) GetMicrosoftDKEKey(ctx context.Context, tenantID string, keyID
 		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", err.Error(), "", policyDecision)
 		return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "key is not RSA-compatible for DKE")
 	}
-	jwkN, jwkE := pkgcrypto.RSAPublicKeyJWK(rsaPub)
+	jwkN, jwkE, err := pkgcrypto.RSAPublicKeyJWK(rsaPub)
+	if err != nil {
+		_ = s.store.CompleteRequestLog(ctx, tenantID, logEntry.ID, "failed", "{}", err.Error(), "", policyDecision)
+		return MicrosoftDKEKeyResponse{}, newServiceError(http.StatusBadRequest, "bad_request", "key is not RSA-compatible for DKE")
+	}
 	alg := inferDKEAlg(keyMeta, meta)
 	out := MicrosoftDKEKeyResponse{
 		KTY:    "RSA",

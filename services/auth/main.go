@@ -2,11 +2,8 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"log"
 	"net"
@@ -151,49 +148,8 @@ func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
 	return nc, js, nil
 }
 
-func loadOrGenerateSigningKey() (*rsa.PrivateKey, error) {
-	path := os.Getenv("JWT_PRIVATE_KEY_PATH")
-	if path == "" {
-		return rsa.GenerateKey(rand.Reader, 2048)
-	}
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return nil, err
-		}
-		key, genErr := rsa.GenerateKey(rand.Reader, 2048)
-		if genErr != nil {
-			return nil, genErr
-		}
-		pkcs8, marshalErr := x509.MarshalPKCS8PrivateKey(key)
-		if marshalErr != nil {
-			return nil, marshalErr
-		}
-		block := &pem.Block{Type: "PRIVATE KEY", Bytes: pkcs8}
-		if mkErr := os.MkdirAll(filepath.Dir(path), 0o700); mkErr != nil {
-			return nil, mkErr
-		}
-		if writeErr := os.WriteFile(path, pem.EncodeToMemory(block), 0o600); writeErr != nil {
-			return nil, writeErr
-		}
-		return key, nil
-	}
-	block, _ := pem.Decode(raw)
-	if block == nil {
-		return nil, errors.New("invalid pem")
-	}
-	if key, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
-		return key, nil
-	}
-	keyAny, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	key, ok := keyAny.(*rsa.PrivateKey)
-	if !ok {
-		return nil, errors.New("not rsa private key")
-	}
-	return key, nil
+func loadOrGenerateSigningKey() (*pkgcrypto.KeyPair, error) {
+	return pkgcrypto.LoadOrCreateRSAKeyPEM(os.Getenv("JWT_PRIVATE_KEY_PATH"), 2048)
 }
 
 func devMTLSConfig() (*tls.Config, error) {

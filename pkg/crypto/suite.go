@@ -288,7 +288,8 @@ func MarshalPublicKeyPEM(pub crypto.PublicKey) ([]byte, error) {
 	return pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der}), nil
 }
 
-// ParsePrivateKeyPEM decodes a PKCS#8 PEM private key back into a KeyPair.
+// ParsePrivateKeyPEM decodes a PKCS#8, PKCS#1 (RSA) or SEC1 (EC) PEM
+// private key back into a KeyPair.
 func ParsePrivateKeyPEM(pemBytes []byte) (*KeyPair, error) {
 	block, _ := pem.Decode(pemBytes)
 	if block == nil {
@@ -296,7 +297,13 @@ func ParsePrivateKeyPEM(pemBytes []byte) (*KeyPair, error) {
 	}
 	keyAny, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	if err != nil {
-		return nil, err
+		if rsaKey, rsaErr := x509.ParsePKCS1PrivateKey(block.Bytes); rsaErr == nil {
+			keyAny = rsaKey
+		} else if ecKey, ecErr := x509.ParseECPrivateKey(block.Bytes); ecErr == nil {
+			keyAny = ecKey
+		} else {
+			return nil, err
+		}
 	}
 	signer, ok := keyAny.(crypto.Signer)
 	if !ok {

@@ -1,10 +1,6 @@
 package main
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
@@ -14,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 // handleListMeshServices returns all services registered in the mTLS mesh.
@@ -109,13 +107,13 @@ func (h *Handler) handleRenewServiceCert(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Generate EC P-256 key pair.
-	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	meshKP, err := pkgcrypto.GenerateKeyPair(pkgcrypto.AlgECDSAP256)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "keygen_failed", err.Error(), reqID, tenantID)
 		return
 	}
 
-	serialNum, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	serialNum, err := pkgcrypto.RandomInt(new(big.Int).Lsh(big.NewInt(1), 128))
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "serial_gen_failed", err.Error(), reqID, tenantID)
 		return
@@ -139,7 +137,7 @@ func (h *Handler) handleRenewServiceCert(w http.ResponseWriter, r *http.Request)
 		BasicConstraintsValid: true,
 	}
 
-	derBytes, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &privKey.PublicKey, privKey)
+	derBytes, err := x509.CreateCertificate(pkgcrypto.Reader, tpl, tpl, meshKP.Public, meshKP.Private)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "cert_create_failed", err.Error(), reqID, tenantID)
 		return
@@ -152,8 +150,8 @@ func (h *Handler) handleRenewServiceCert(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Compute fingerprint from raw DER.
-	fpSum := sha256.Sum256(derBytes)
-	fingerprint := hex.EncodeToString(fpSum[:])
+	fpSum, _ := pkgcrypto.Hash("SHA-256", derBytes)
+	fingerprint := hex.EncodeToString(fpSum)
 	serialHex := fmt.Sprintf("%x", parsedCert.SerialNumber)
 
 	// Encode PEM (stored for reference — not persisted to DB in this minimal store).
@@ -287,8 +285,10 @@ func (h *Handler) handleGetTopology(w http.ResponseWriter, r *http.Request) {
 // --- mesh utility helpers ---
 
 func meshNewID(prefix string) string {
-	b := make([]byte, 8)
-	_, _ = rand.Read(b)
+	b, err := pkgcrypto.RandomBytes(8)
+	if err != nil {
+		panic("certs: system randomness unavailable: " + err.Error())
+	}
 	return prefix + "_" + hex.EncodeToString(b)
 }
 

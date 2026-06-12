@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/elliptic"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
@@ -15,7 +16,10 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"math/big"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -35,17 +39,21 @@ func ParseRSAPublicKeyAny(s string) (*rsa.PublicKey, error) {
 	return nil, errors.New("crypto: unable to parse RSA public key")
 }
 
-// RSAPublicKeyJWK returns the base64url JWK "n" and "e" fields for a key.
-func RSAPublicKeyJWK(pub *rsa.PublicKey) (n string, e string) {
+// RSAPublicKeyJWK returns the base64url JWK "n" and "e" fields for an RSA key.
+func RSAPublicKeyJWK(pub crypto.PublicKey) (n string, e string, err error) {
+	rsaPub, ok := pub.(*rsa.PublicKey)
+	if !ok {
+		return "", "", errors.New("crypto: JWK export requires an RSA public key")
+	}
 	eBytes := []byte{}
-	for v := pub.E; v > 0; v >>= 8 {
+	for v := rsaPub.E; v > 0; v >>= 8 {
 		eBytes = append([]byte{byte(v & 0xff)}, eBytes...)
 	}
 	if len(eBytes) == 0 {
 		eBytes = []byte{0x01, 0x00, 0x01}
 	}
-	return base64.RawURLEncoding.EncodeToString(pub.N.Bytes()),
-		base64.RawURLEncoding.EncodeToString(eBytes)
+	return base64.RawURLEncoding.EncodeToString(rsaPub.N.Bytes()),
+		base64.RawURLEncoding.EncodeToString(eBytes), nil
 }
 
 // RSAPublicKeyFromJWK builds an RSA public key from base64url JWK fields.
@@ -118,6 +126,30 @@ func PrivateKeyMatchesPublic(pub crypto.PublicKey, priv interface{}) error {
 	return nil
 }
 
+// VerifyECDSADigestRS verifies an ECDSA signature supplied as raw r||s
+// halves of partSize bytes each (the COSE / JOSE ES* wire format) over a
+// precomputed digest. Only NIST curves P-256/P-384/P-521 are accepted.
+func VerifyECDSADigestRS(pub crypto.PublicKey, digest []byte, signature []byte, partSize int) error {
+	key, ok := pub.(*ecdsa.PublicKey)
+	if !ok {
+		return errors.New("signing key is not ECDSA")
+	}
+	if partSize <= 0 || len(signature) != partSize*2 {
+		return errors.New("ecdsa signature has an unexpected length")
+	}
+	r := new(big.Int).SetBytes(signature[:partSize])
+	s := new(big.Int).SetBytes(signature[partSize:])
+	if !ecdsa.Verify(key, digest, r, s) {
+		return errors.New("ecdsa signature verification failed")
+	}
+	switch key.Curve {
+	case elliptic.P256(), elliptic.P384(), elliptic.P521():
+		return nil
+	default:
+		return errors.New("unsupported ecdsa curve")
+	}
+}
+
 // RandomInt returns a uniform random integer in [0, max).
 func RandomInt(max *big.Int) (*big.Int, error) {
 	return rand.Int(Reader, max)
@@ -130,6 +162,46 @@ func HMACSHA1Interop(key []byte, data []byte) []byte {
 	mac := hmac.New(sha1.New, key)
 	_, _ = mac.Write(data)
 	return mac.Sum(nil)
+}
+
+// LoadOrCreateRSAKeyPEM returns the RSA signing key persisted at path,
+// creating and persisting a new one (PKCS#8 PEM, mode 0600) if the file does
+// not exist. An empty path yields an ephemeral key. This is the sanctioned
+// pattern for service signing keys (e.g. the auth JWT issuer key).
+func LoadOrCreateRSAKeyPEM(path string, bits int) (*KeyPair, error) {
+	alg := fmt.Sprintf("RSA-%d", bits)
+	if path == "" {
+		return GenerateKeyPair(alg)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+		kp, genErr := GenerateKeyPair(alg)
+		if genErr != nil {
+			return nil, genErr
+		}
+		pemBytes, marshalErr := MarshalPrivateKeyPEM(kp)
+		if marshalErr != nil {
+			return nil, marshalErr
+		}
+		if mkErr := os.MkdirAll(filepath.Dir(path), 0o700); mkErr != nil {
+			return nil, mkErr
+		}
+		if writeErr := os.WriteFile(path, pemBytes, 0o600); writeErr != nil {
+			return nil, writeErr
+		}
+		return kp, nil
+	}
+	kp, err := ParsePrivateKeyPEM(raw)
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := kp.Private.(*rsa.PrivateKey); !ok {
+		return nil, errors.New("crypto: persisted key is not RSA")
+	}
+	return kp, nil
 }
 
 // DevServerCertWithCA generates an ephemeral local CA plus a server

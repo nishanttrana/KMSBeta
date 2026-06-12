@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto"
 	"crypto/rsa"
 	"errors"
 	"net/http"
@@ -46,21 +47,22 @@ type ParseOptions struct {
 	Leeway   time.Duration
 }
 
-func ParseRS256(tokenString string, publicKey *rsa.PublicKey) (*Claims, error) {
+func ParseRS256(tokenString string, publicKey crypto.PublicKey) (*Claims, error) {
 	return ParseRS256WithOptions(tokenString, publicKey, ParseOptions{})
 }
 
-func ParseRS256WithOptions(tokenString string, publicKey *rsa.PublicKey, options ParseOptions) (*Claims, error) {
+func ParseRS256WithOptions(tokenString string, publicKey crypto.PublicKey, options ParseOptions) (*Claims, error) {
 	return ParseRS256WithClaims(tokenString, &Claims{}, publicKey, options)
 }
 
-func ParseRS256WithClaims[T jwt.Claims](tokenString string, claims T, publicKey *rsa.PublicKey, options ParseOptions) (T, error) {
+func ParseRS256WithClaims[T jwt.Claims](tokenString string, claims T, publicKey crypto.PublicKey, options ParseOptions) (T, error) {
 	var zero T
 	tokenString = strings.TrimSpace(tokenString)
 	if tokenString == "" {
 		return zero, errors.New("missing bearer token")
 	}
-	if publicKey == nil {
+	rsaKey, ok := publicKey.(*rsa.PublicKey)
+	if !ok || rsaKey == nil {
 		return zero, errors.New("missing rsa public key")
 	}
 	parserOptions := []jwt.ParserOption{
@@ -82,7 +84,7 @@ func ParseRS256WithClaims[T jwt.Claims](tokenString string, claims T, publicKey 
 		if token.Method.Alg() != jwt.SigningMethodRS256.Alg() {
 			return nil, errors.New("invalid signing method")
 		}
-		return publicKey, nil
+		return rsaKey, nil
 	})
 	if err != nil {
 		return zero, err

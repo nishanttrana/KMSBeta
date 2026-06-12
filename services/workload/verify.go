@@ -1,11 +1,9 @@
 package main
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
+	"crypto"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
@@ -16,6 +14,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 type verificationResult struct {
@@ -29,16 +29,16 @@ type verificationResult struct {
 }
 
 func generateSigningMaterial(trustDomain string) (string, string, string, string, string, string, error) {
-	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	caKP, err := pkgcrypto.GenerateKeyPair(pkgcrypto.AlgRSA2048)
 	if err != nil {
 		return "", "", "", "", "", "", err
 	}
-	jwtKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	jwtKP, err := pkgcrypto.GenerateKeyPair(pkgcrypto.AlgRSA2048)
 	if err != nil {
 		return "", "", "", "", "", "", err
 	}
 	now := time.Now().UTC()
-	serial, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 62))
+	serial, _ := pkgcrypto.RandomInt(new(big.Int).Lsh(big.NewInt(1), 62))
 	tpl := &x509.Certificate{
 		SerialNumber:          serial,
 		Subject:               pkix.Name{CommonName: "SPIFFE Root CA " + trustDomain},
@@ -49,31 +49,40 @@ func generateSigningMaterial(trustDomain string) (string, string, string, string
 		IsCA:                  true,
 		MaxPathLenZero:        false,
 	}
-	der, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &caKey.PublicKey, caKey)
+	der, err := x509.CreateCertificate(pkgcrypto.Reader, tpl, tpl, caKP.Public, caKP.Private)
 	if err != nil {
 		return "", "", "", "", "", "", err
 	}
 	caCertPEM := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
-	caKeyPEM := string(pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(caKey)}))
-
-	jwtPrivDER := x509.MarshalPKCS1PrivateKey(jwtKey)
-	jwtPrivPEM := string(pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: jwtPrivDER}))
-	jwtPubDER, err := x509.MarshalPKIXPublicKey(&jwtKey.PublicKey)
+	caKeyPEMBytes, err := pkgcrypto.MarshalPrivateKeyPEM(caKP)
 	if err != nil {
 		return "", "", "", "", "", "", err
 	}
-	jwtPubPEM := string(pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: jwtPubDER}))
-	kid := sha256Hex(trustDomain, string(jwtPubDER))[:16]
-	jwksJSON, err := buildJWKSJSON(kid, &jwtKey.PublicKey)
+	caKeyPEM := string(caKeyPEMBytes)
+
+	jwtPrivPEMBytes, err := pkgcrypto.MarshalPrivateKeyPEM(jwtKP)
+	if err != nil {
+		return "", "", "", "", "", "", err
+	}
+	jwtPrivPEM := string(jwtPrivPEMBytes)
+	jwtPubPEMBytes, err := pkgcrypto.MarshalPublicKeyPEM(jwtKP.Public)
+	if err != nil {
+		return "", "", "", "", "", "", err
+	}
+	jwtPubPEM := string(jwtPubPEMBytes)
+	kid := sha256Hex(trustDomain, jwtPubPEM)[:16]
+	jwksJSON, err := buildJWKSJSON(kid, jwtKP.Public)
 	if err != nil {
 		return "", "", "", "", "", "", err
 	}
 	return caCertPEM, caKeyPEM, jwtPrivPEM, jwtPubPEM, kid, jwksJSON, nil
 }
 
-func buildJWKSJSON(kid string, pub *rsa.PublicKey) (string, error) {
-	n := base64.RawURLEncoding.EncodeToString(pub.N.Bytes())
-	e := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(pub.E)).Bytes())
+func buildJWKSJSON(kid string, pub crypto.PublicKey) (string, error) {
+	n, e, err := pkgcrypto.RSAPublicKeyJWK(pub)
+	if err != nil {
+		return "", err
+	}
 	raw, err := json.Marshal(map[string]interface{}{
 		"keys": []map[string]interface{}{
 			{
@@ -92,41 +101,20 @@ func buildJWKSJSON(kid string, pub *rsa.PublicKey) (string, error) {
 	return string(raw), nil
 }
 
-func parseRSAPrivateKeyFromPEM(raw string) (*rsa.PrivateKey, error) {
-	block, _ := pem.Decode([]byte(strings.TrimSpace(raw)))
-	if block == nil {
+func parseRSAPrivateKeyFromPEM(raw string) (crypto.Signer, error) {
+	kp, err := pkgcrypto.ParsePrivateKeyPEM([]byte(strings.TrimSpace(raw)))
+	if err != nil {
 		return nil, errors.New("failed to decode private key pem")
 	}
-	if key, err := x509.ParsePKCS1PrivateKey(block.Bytes); err == nil {
-		return key, nil
-	}
-	keyAny, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	key, ok := keyAny.(*rsa.PrivateKey)
-	if !ok {
+	if !strings.HasPrefix(kp.Algorithm, "RSA-") {
 		return nil, errors.New("private key is not RSA")
 	}
-	return key, nil
+	return kp.Private, nil
 }
 
-func parseRSAPublicKeyFromPEM(raw string) (*rsa.PublicKey, error) {
-	block, _ := pem.Decode([]byte(strings.TrimSpace(raw)))
-	if block == nil {
-		return nil, errors.New("failed to decode public key pem")
-	}
-	pubAny, err := x509.ParsePKIXPublicKey(block.Bytes)
+func parseRSAPublicKeyFromPEM(raw string) (crypto.PublicKey, error) {
+	pub, err := pkgcrypto.ParseRSAPublicKeyPEM(strings.TrimSpace(raw))
 	if err != nil {
-		if cert, certErr := x509.ParseCertificate(block.Bytes); certErr == nil {
-			if pub, ok := cert.PublicKey.(*rsa.PublicKey); ok {
-				return pub, nil
-			}
-		}
-		return nil, err
-	}
-	pub, ok := pubAny.(*rsa.PublicKey)
-	if !ok {
 		return nil, errors.New("public key is not RSA")
 	}
 	return pub, nil
@@ -141,11 +129,11 @@ func issueX509SVID(settings WorkloadIdentitySettings, reg WorkloadRegistration, 
 	if err != nil {
 		return IssuedSVID{}, err
 	}
-	workloadKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	workloadKP, err := pkgcrypto.GenerateKeyPair(pkgcrypto.AlgRSA2048)
 	if err != nil {
 		return IssuedSVID{}, err
 	}
-	serial, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 62))
+	serial, _ := pkgcrypto.RandomInt(new(big.Int).Lsh(big.NewInt(1), 62))
 	now := time.Now().UTC()
 	if ttl <= 0 {
 		ttl = time.Duration(settings.DefaultX509TTLSeconds) * time.Second
@@ -165,12 +153,16 @@ func issueX509SVID(settings WorkloadIdentitySettings, reg WorkloadRegistration, 
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		URIs:        []*url.URL{spiffeURL},
 	}
-	der, err := x509.CreateCertificate(rand.Reader, leaf, caCert, &workloadKey.PublicKey, caKey)
+	der, err := x509.CreateCertificate(pkgcrypto.Reader, leaf, caCert, workloadKP.Public, caKey)
 	if err != nil {
 		return IssuedSVID{}, err
 	}
 	certPEM := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
-	keyPEM := string(pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(workloadKey)}))
+	keyPEMBytes, err := pkgcrypto.MarshalPrivateKeyPEM(workloadKP)
+	if err != nil {
+		return IssuedSVID{}, err
+	}
+	keyPEM := string(keyPEMBytes)
 	expiresAt := leaf.NotAfter.UTC()
 	rotationDueAt := expiresAt.Add(-time.Duration(settings.RotationWindowSeconds) * time.Second)
 	return IssuedSVID{
@@ -341,7 +333,7 @@ func verifyX509SVID(chainPEM string, settings WorkloadIdentitySettings, bundles 
 	}, nil
 }
 
-func resolveJWTVerificationKey(settings WorkloadIdentitySettings, bundles []WorkloadFederationBundle, trustDomain string, kid string) (*rsa.PublicKey, error) {
+func resolveJWTVerificationKey(settings WorkloadIdentitySettings, bundles []WorkloadFederationBundle, trustDomain string, kid string) (crypto.PublicKey, error) {
 	if trustDomain == settings.TrustDomain {
 		return parseRSAPublicKeyFromPEM(settings.JWTSignerPublicPEM)
 	}
@@ -356,7 +348,7 @@ func resolveJWTVerificationKey(settings WorkloadIdentitySettings, bundles []Work
 	return nil, fmt.Errorf("no trusted JWT verifier for trust domain %s", trustDomain)
 }
 
-func resolveRSAPublicKeyFromJWKS(jwksJSON string, kid string) (*rsa.PublicKey, error) {
+func resolveRSAPublicKeyFromJWKS(jwksJSON string, kid string) (crypto.PublicKey, error) {
 	var doc struct {
 		Keys []struct {
 			KeyType string `json:"kty"`
@@ -375,20 +367,7 @@ func resolveRSAPublicKeyFromJWKS(jwksJSON string, kid string) (*rsa.PublicKey, e
 		if kid != "" && strings.TrimSpace(key.KeyID) != kid {
 			continue
 		}
-		nBytes, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(key.N))
-		if err != nil {
-			return nil, err
-		}
-		eBytes, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(key.E))
-		if err != nil {
-			return nil, err
-		}
-		n := new(big.Int).SetBytes(nBytes)
-		e := int(new(big.Int).SetBytes(eBytes).Int64())
-		if e <= 0 {
-			return nil, errors.New("invalid jwk exponent")
-		}
-		return &rsa.PublicKey{N: n, E: e}, nil
+		return pkgcrypto.RSAPublicKeyFromJWK(strings.TrimSpace(key.N), strings.TrimSpace(key.E))
 	}
 	return nil, errors.New("rsa jwk not found")
 }
