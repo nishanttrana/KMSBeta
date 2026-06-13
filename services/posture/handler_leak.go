@@ -2,13 +2,9 @@ package main
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"net/http"
 	"strings"
-	"time"
-
-	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 func (h *Handler) handleListLeakTargets(w http.ResponseWriter, r *http.Request) {
@@ -112,6 +108,16 @@ func (h *Handler) handleTriggerScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Optional inline content: scan submitted material directly (e.g. a CI
+	// diff or a config blob) without needing filesystem access.
+	var body struct {
+		Content  string `json:"content"`
+		Filename string `json:"filename"`
+	}
+	if r.Body != nil {
+		_ = decodeJSON(r, &body)
+	}
+
 	job := LeakScanJob{
 		TenantID:    tenantID,
 		TargetID:    target.ID,
@@ -126,8 +132,9 @@ func (h *Handler) handleTriggerScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Launch async simulated scan in a goroutine.
-	go h.runSimulatedScan(context.Background(), tenantID, target, created)
+	// Run the real scan asynchronously. Detach from the request context so it
+	// survives the response, but copy the content in first.
+	go h.runScan(context.Background(), tenantID, target, created, body.Content, body.Filename)
 
 	writeJSON(w, http.StatusAccepted, map[string]interface{}{
 		"job":        created,
@@ -135,44 +142,54 @@ func (h *Handler) handleTriggerScan(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// runSimulatedScan simulates a background scan by sleeping, generating findings,
-// and updating the job status to completed.
-func (h *Handler) runSimulatedScan(ctx context.Context, tenantID string, target LeakScanTarget, job LeakScanJob) {
+// runScan performs a real secret scan: it gathers content from the target
+// (inline submission or files under the configured scan root), runs the
+// detection engine over each item, and persists concrete findings. If no
+// content source is available for the target it fails the job with an honest
+// error rather than inventing results.
+func (h *Handler) runScan(ctx context.Context, tenantID string, target LeakScanTarget, job LeakScanJob, inlineContent, inlineName string) {
 	startedAt := nowUTC()
 	_ = h.svc.store.UpdateLeakScanJob(ctx, tenantID, job.ID, "running", 10, 0, &startedAt, nil, "")
 
-	// Simulate scanning duration: 2–5 seconds.
-	sleepSec := 2 + cryptoIntn(4)
-	time.Sleep(time.Duration(sleepSec) * time.Second)
+	items, err := gatherScanContent(target, inlineContent, inlineName)
+	if err != nil {
+		failedAt := nowUTC()
+		_ = h.svc.store.UpdateLeakScanJob(ctx, tenantID, job.ID, "failed", 100, 0, &startedAt, &failedAt, err.Error())
+		return
+	}
+	if len(items) == 0 {
+		completedAt := nowUTC()
+		_ = h.svc.store.UpdateLeakScanJob(ctx, tenantID, job.ID, "completed", 100, 0, &startedAt, &completedAt, "no content found to scan")
+		_ = h.svc.store.IncrementTargetScanCount(ctx, tenantID, target.ID, 0)
+		return
+	}
 
-	_ = h.svc.store.UpdateLeakScanJob(ctx, tenantID, job.ID, "running", 60, 0, &startedAt, nil, "")
+	_ = h.svc.store.UpdateLeakScanJob(ctx, tenantID, job.ID, "running", 50, 0, &startedAt, nil, "")
 
-	// Generate synthetic findings based on target type.
-	synthetics := syntheticFindingsForTargetType(target.Type)
-	var created []LeakFinding
-	for _, s := range synthetics {
-		f := LeakFinding{
-			TenantID:       tenantID,
-			JobID:          job.ID,
-			TargetID:       target.ID,
-			TargetName:     target.Name,
-			Severity:       s.severity,
-			Type:           s.findingType,
-			Description:    s.description,
-			Location:       s.location,
-			ContextPreview: s.contextPreview,
-			Entropy:        s.entropy,
-			Status:         "open",
-			DetectedAt:     nowUTC(),
-		}
-		stored, err := h.svc.store.CreateLeakFinding(ctx, f)
-		if err == nil {
-			created = append(created, stored)
+	findingsCount := 0
+	for _, item := range items {
+		for _, sec := range scanContent(item.path, item.data) {
+			f := LeakFinding{
+				TenantID:       tenantID,
+				JobID:          job.ID,
+				TargetID:       target.ID,
+				TargetName:     target.Name,
+				Severity:       sec.Severity,
+				Type:           sec.FindingType,
+				Description:    sec.Description,
+				Location:       sec.Location,
+				ContextPreview: sec.ContextPreview,
+				Entropy:        sec.Entropy,
+				Status:         "open",
+				DetectedAt:     nowUTC(),
+			}
+			if _, err := h.svc.store.CreateLeakFinding(ctx, f); err == nil {
+				findingsCount++
+			}
 		}
 	}
 
 	completedAt := nowUTC()
-	findingsCount := len(created)
 	_ = h.svc.store.UpdateLeakScanJob(ctx, tenantID, job.ID, "completed", 100, findingsCount, &startedAt, &completedAt, "")
 	_ = h.svc.store.IncrementTargetScanCount(ctx, tenantID, target.ID, findingsCount)
 }
@@ -252,11 +269,4 @@ func (h *Handler) handleUpdateLeakFinding(w http.ResponseWriter, r *http.Request
 		"ok":         true,
 		"request_id": reqID,
 	})
-}
-
-// cryptoIntn returns a cryptographically secure random int in [0, n).
-func cryptoIntn(n int) int {
-	var b [8]byte
-	_, _ = pkgcrypto.Reader.Read(b[:])
-	return int(binary.LittleEndian.Uint64(b[:]) % uint64(n))
 }
