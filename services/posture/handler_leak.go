@@ -177,11 +177,12 @@ func (h *Handler) runScan(ctx context.Context, tenantID string, target LeakScanT
 				Severity:       sec.Severity,
 				Type:           sec.FindingType,
 				Description:    sec.Description,
-				Location:       sec.Location,
-				ContextPreview: sec.ContextPreview,
-				Entropy:        sec.Entropy,
-				Status:         "open",
-				DetectedAt:     nowUTC(),
+				Location:          sec.Location,
+				ContextPreview:    sec.ContextPreview,
+				Entropy:           sec.Entropy,
+				SecretFingerprint: sec.Fingerprint,
+				Status:            "open",
+				DetectedAt:        nowUTC(),
 			}
 			if _, err := h.svc.store.CreateLeakFinding(ctx, f); err == nil {
 				findingsCount++

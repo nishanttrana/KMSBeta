@@ -160,12 +160,12 @@ func (s *SQLStore) CreateLeakFinding(ctx context.Context, f LeakFinding) (LeakFi
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO leak_findings (id, tenant_id, job_id, target_id, target_name,
                            severity, type, description, location, context_preview,
-                           entropy, status, detected_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+                           entropy, secret_fingerprint, status, detected_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
 ON CONFLICT (tenant_id, id) DO NOTHING
 `, f.ID, f.TenantID, f.JobID, f.TargetID, f.TargetName,
 		f.Severity, f.Type, f.Description, f.Location, f.ContextPreview,
-		f.Entropy, f.Status, f.DetectedAt)
+		f.Entropy, f.SecretFingerprint, f.Status, f.DetectedAt)
 	if err != nil {
 		return LeakFinding{}, err
 	}
@@ -179,7 +179,7 @@ func (s *SQLStore) ListLeakFindings(ctx context.Context, tenantID, status, sever
 	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT id, tenant_id, job_id, target_id, target_name, severity, type,
-       description, location, context_preview, entropy, status,
+       description, location, context_preview, entropy, secret_fingerprint, status,
        detected_at, resolved_at, COALESCE(resolved_by,''), COALESCE(notes,'')
 FROM leak_findings
 WHERE tenant_id=$1
@@ -295,7 +295,7 @@ func scanLeakFinding(scanner interface {
 	err := scanner.Scan(
 		&f.ID, &f.TenantID, &f.JobID, &f.TargetID, &f.TargetName,
 		&f.Severity, &f.Type, &f.Description, &f.Location, &f.ContextPreview,
-		&f.Entropy, &f.Status, &detectedRaw, &resolvedRaw,
+		&f.Entropy, &f.SecretFingerprint, &f.Status, &detectedRaw, &resolvedRaw,
 		&f.ResolvedBy, &f.Notes,
 	)
 	if err != nil {

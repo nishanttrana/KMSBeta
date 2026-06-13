@@ -22,6 +22,7 @@ export interface SecurityFinding {
   description: string;
   subject: string; // affected key id (threat) or file:line (leak)
   keyRef?: string; // KMS key id when known — the cross-sensor join key
+  fingerprint?: string; // SHA-256 of a leaked secret, for binding resolution
   detectedAt: string;
   status: FindingStatus;
   correlated?: CorrelationNote;
@@ -92,10 +93,40 @@ function mapLeakFinding(f: any): SecurityFinding {
     description: f.description ?? "",
     subject: f.location || f.target_name || "—",
     keyRef,
+    fingerprint: typeof f.secret_fingerprint === "string" ? f.secret_fingerprint : undefined,
     detectedAt: f.detected_at ?? new Date().toISOString(),
     status: normLeakStatus(f.status),
     raw: f,
   };
+}
+
+// resolveCredentialBindings asks keycore which leaked-credential fingerprints
+// map to which KMS keys, so a leaked AWS/GCP credential can be correlated
+// against usage of the key that wraps it — not just direct key-id leaks.
+async function applyCredentialBindings(session: AuthSession, findings: SecurityFinding[]): Promise<void> {
+  const fps = Array.from(
+    new Set(findings.filter(f => f.source === "leak" && !f.keyRef && f.fingerprint).map(f => f.fingerprint as string))
+  );
+  if (fps.length === 0) return;
+  try {
+    const res = await serviceRequest<any>(session, "keycore", "/credential-bindings/resolve", {
+      method: "POST",
+      body: JSON.stringify({ fingerprints: fps }),
+    });
+    const bindings = res?.bindings ?? {};
+    for (const f of findings) {
+      if (f.source !== "leak" || f.keyRef || !f.fingerprint) continue;
+      const b = bindings[f.fingerprint];
+      if (b?.key_id) {
+        f.keyRef = b.key_id;
+        const ct = b.credential_type ? `${b.credential_type} ` : "";
+        f.description = `${f.description}${f.description ? " · " : ""}Bound ${ct}credential protected by key ${b.key_id}`;
+      }
+    }
+  } catch {
+    // Binding resolution is best-effort; correlation simply falls back to
+    // direct key-id references if keycore is unreachable.
+  }
 }
 
 function threatTitle(t: string): string {
@@ -137,11 +168,15 @@ function correlate(findings: SecurityFinding[]): SecurityFinding[] {
     if (!leak) continue;
     const dt = Date.parse(f.detectedAt) - Date.parse(leak.detectedAt);
     if (dt >= 0 && dt <= CORRELATION_WINDOW_MS) {
+      const hrs = Math.max(1, Math.round(dt / 3600000));
+      const exposed = leak.category === "kms_key_reference"
+        ? `Key ${f.keyRef} was exposed in ${leak.subject}`
+        : `A ${leak.title} protected by key ${f.keyRef} was exposed in ${leak.subject}`;
       const note: CorrelationNote = {
         kind: "exposure_then_use",
         withId: leak.id,
         withSource: "leak",
-        summary: `Key ${f.keyRef} was exposed in ${leak.subject}, then showed "${f.title}" within ${Math.max(1, Math.round(dt / 3600000))}h`,
+        summary: `${exposed}, then the key showed "${f.title}" within ${hrs}h`,
       };
       f.correlated = note;
       leak.correlated = {
@@ -180,6 +215,8 @@ export async function loadUnifiedFindings(session: AuthSession): Promise<Unified
     for (const f of Array.isArray(arr) ? arr : []) findings.push(mapLeakFinding(f));
   }
 
+  // Resolve leaked credentials to the keys that protect them, then correlate.
+  await applyCredentialBindings(session, findings);
   correlate(findings);
 
   findings.sort((a, b) => {

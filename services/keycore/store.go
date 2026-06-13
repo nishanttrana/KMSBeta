@@ -197,6 +197,12 @@ type Store interface {
 	ListThreatSignals(ctx context.Context, tenantID string, limit int) ([]ThreatSignal, error)
 	AckThreatSignal(ctx context.Context, tenantID, id, ackedBy string) error
 
+	// External credential -> key bindings (correlation join keys)
+	UpsertCredentialBinding(ctx context.Context, b CredentialBinding) (CredentialBinding, error)
+	ListCredentialBindingsByKey(ctx context.Context, tenantID, keyID string) ([]CredentialBinding, error)
+	DeleteCredentialBinding(ctx context.Context, tenantID, id string) error
+	ResolveCredentialBindings(ctx context.Context, tenantID string, fingerprints []string) (map[string]CredentialBinding, error)
+
 	// Canary / Honeypot Keys
 	ListCanaryKeys(ctx context.Context, tenantID string) ([]CanaryKey, error)
 	CreateCanaryKey(ctx context.Context, key CanaryKey) error

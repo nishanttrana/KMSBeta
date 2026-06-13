@@ -1,10 +1,22 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"math"
 	"regexp"
 	"strings"
 )
+
+// credentialFingerprint is the cross-service join key between a leaked secret
+// and the KMS key that protects it. It MUST be computed identically here and
+// in keycore's credential-binding registry: lowercase hex SHA-256 of the raw
+// secret value (no surrounding quotes or whitespace). It is non-reversible, so
+// it is safe to store and pass between services.
+func credentialFingerprint(secret string) string {
+	sum := sha256.Sum256([]byte(secret))
+	return hex.EncodeToString(sum[:])
+}
 
 // Real secret detection engine. scanContent runs a fixed rule set plus a
 // generic high-entropy assignment detector over arbitrary text and returns
@@ -207,6 +219,7 @@ func scanContent(path string, data []byte) []detectedSecret {
 				Location:       path + ":" + itoa(line),
 				ContextPreview: preview,
 				Entropy:        round2(entropy),
+				Fingerprint:    credentialFingerprint(secret),
 			})
 		}
 	}
@@ -220,6 +233,7 @@ type detectedSecret struct {
 	Location       string
 	ContextPreview string
 	Entropy        float64
+	Fingerprint    string
 }
 
 func round2(f float64) float64 { return math.Round(f*100) / 100 }

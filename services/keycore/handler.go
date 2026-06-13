@@ -299,6 +299,12 @@ func (h *Handler) routes() *http.ServeMux {
 	// Key Material Verification (enhanced fingerprint)
 	mux.HandleFunc("POST /keys/{id}/verify-material", h.handleVerifyKeyMaterial)
 
+	// External credential -> key bindings (correlation join keys)
+	mux.HandleFunc("GET /keys/{id}/credential-bindings", h.handleListCredentialBindings)
+	mux.HandleFunc("POST /keys/{id}/credential-bindings", h.handleCreateCredentialBinding)
+	mux.HandleFunc("DELETE /credential-bindings/{binding_id}", h.handleDeleteCredentialBinding)
+	mux.HandleFunc("POST /credential-bindings/resolve", h.handleResolveCredentialBindings)
+
 	// Threat Detection (rule-based signals over the key usage trail)
 	mux.HandleFunc("GET /threat/signals", h.handleListThreatSignals)
 	mux.HandleFunc("POST /threat/signals/{id}/ack", h.handleAckThreatSignal)
@@ -2125,6 +2131,7 @@ func isSensitiveKeycoreRoute(method string, path string) bool {
 		strings.HasPrefix(p, "/analytics") ||
 		strings.HasPrefix(p, "/threat") ||
 		strings.HasPrefix(p, "/canary") ||
+		strings.HasPrefix(p, "/credential-bindings") ||
 		strings.HasPrefix(p, "/enterprise") {
 		return true
 	}

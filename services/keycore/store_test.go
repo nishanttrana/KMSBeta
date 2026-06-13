@@ -292,6 +292,17 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			metadata BLOB DEFAULT '{}',
 			UNIQUE (tenant_id, dedupe_key)
 		);`,
+		`CREATE TABLE external_credential_bindings (
+			id TEXT PRIMARY KEY,
+			tenant_id TEXT NOT NULL,
+			fingerprint TEXT NOT NULL,
+			credential_type TEXT NOT NULL DEFAULT '',
+			key_id TEXT NOT NULL,
+			label TEXT NOT NULL DEFAULT '',
+			created_by TEXT NOT NULL DEFAULT '',
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE (tenant_id, fingerprint)
+		);`,
 	}
 	for _, s := range stmts {
 		if _, err := conn.SQL().Exec(s); err != nil {

@@ -45,6 +45,10 @@ type LeakFinding struct {
 	Location       string     `json:"location"`
 	ContextPreview string     `json:"context_preview"`
 	Entropy        float64    `json:"entropy"`
+	// SecretFingerprint is the SHA-256 of the matched secret; the join key
+	// the unified console uses to correlate a leaked credential with the KMS
+	// key that protects it (via keycore's credential-binding registry).
+	SecretFingerprint string  `json:"secret_fingerprint,omitempty"`
 	Status         string     `json:"status"` // open, resolved, suppressed, false_positive
 	DetectedAt     time.Time  `json:"detected_at"`
 	ResolvedAt     *time.Time `json:"resolved_at,omitempty"`

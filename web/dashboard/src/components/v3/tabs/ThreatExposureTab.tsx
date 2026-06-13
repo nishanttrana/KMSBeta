@@ -1,8 +1,9 @@
 // @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ShieldAlert, RefreshCcw, CheckCircle2, AlertTriangle, XCircle, Link2, Radar, ScanSearch } from "lucide-react";
+import { ShieldAlert, RefreshCcw, CheckCircle2, AlertTriangle, XCircle, Link2, Radar, ScanSearch, X } from "lucide-react";
 import { C } from "../../v3/theme";
 import { loadUnifiedFindings, resolveFinding } from "../../../lib/securityFindings";
+import { bindCredentialToKey } from "../../../lib/credentialBindings";
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -23,6 +24,8 @@ export function ThreatExposureTab({ session }: any) {
   const [sourceFilter, setSourceFilter] = useState<"all" | "threat" | "leak" | "correlated">("all");
   const [sevFilter, setSevFilter] = useState<string>("all");
   const [busyId, setBusyId] = useState<string>("");
+  const [bindFor, setBindFor] = useState<any>(null);
+  const [bindKeyId, setBindKeyId] = useState("");
 
   const load = useCallback(async () => {
     if (!session?.token) return;
@@ -41,6 +44,25 @@ export function ThreatExposureTab({ session }: any) {
     catch (e: any) { setErr(e.message ?? "Action failed"); }
     finally { setBusyId(""); }
   };
+
+  const handleBind = async () => {
+    if (!bindFor || !bindKeyId.trim()) return;
+    setBusyId(bindFor.id);
+    try {
+      await bindCredentialToKey(session, bindKeyId.trim(), {
+        fingerprint: bindFor.fingerprint,
+        credential_type: bindFor.category,
+        label: bindFor.subject,
+      });
+      setBindFor(null); setBindKeyId("");
+      await load(); // correlation now lights up for this credential
+    } catch (e: any) { setErr(e.message ?? "Bind failed"); }
+    finally { setBusyId(""); }
+  };
+
+  // A leak finding that carries a secret fingerprint, isn't already tied to a
+  // key, and isn't a direct key-id reference is a bind candidate.
+  const canBind = (f: any) => f.source === "leak" && f.fingerprint && !f.keyRef && f.category !== "kms_key_reference";
 
   const visible = useMemo(() => {
     return (data.findings ?? []).filter((f: any) => {
@@ -74,6 +96,21 @@ export function ThreatExposureTab({ session }: any) {
       </div>
 
       {err && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.red, fontSize: 12, marginBottom: 16 }}>{err}</div>}
+
+      {bindFor && (
+        <Card style={{ marginBottom: 16, border: `1px solid ${C.accent}55` }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>Bind leaked credential to a KMS key</div>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>
+            Records that this <b>{bindFor.category}</b> found in <span style={{ fontFamily: "monospace" }}>{bindFor.subject}</span> is protected by a key. Future usage of that key will correlate with this exposure. Only the credential fingerprint is stored.
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input value={bindKeyId} onChange={e => setBindKeyId(e.target.value)} placeholder="key_xxxxxxxxxxxxxxxx"
+              style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 10px", color: C.text, fontSize: 12, fontFamily: "monospace", outline: "none" }} />
+            <Btn small disabled={!bindKeyId.trim() || busyId === bindFor.id} onClick={handleBind}>Bind</Btn>
+            <Btn small variant="ghost" onClick={() => setBindFor(null)}><X size={11} /> Cancel</Btn>
+          </div>
+        </Card>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 20 }}>
         {cards.map(({ label, val, color, icon: Icon }: any) => (
@@ -133,9 +170,16 @@ export function ThreatExposureTab({ session }: any) {
                     } />
                     <TD c={
                       f.status === "open"
-                        ? <Btn small variant="ghost" disabled={busyId === f.id} onClick={() => handleResolve(f)}>
-                            <CheckCircle2 size={11} /> {f.source === "threat" ? "Acknowledge" : "Resolve"}
-                          </Btn>
+                        ? <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            <Btn small variant="ghost" disabled={busyId === f.id} onClick={() => handleResolve(f)}>
+                              <CheckCircle2 size={11} /> {f.source === "threat" ? "Acknowledge" : "Resolve"}
+                            </Btn>
+                            {canBind(f) && (
+                              <Btn small variant="ghost" disabled={busyId === f.id} onClick={() => { setBindFor(f); setBindKeyId(""); }}>
+                                <Link2 size={11} /> Bind to key
+                              </Btn>
+                            )}
+                          </div>
                         : "—"
                     } />
                   </tr>
