@@ -39,6 +39,8 @@ web/dashboard/dist/
 /dataprotect
 /keycore
 /payment
+/posture
+/featureforge
 services/keycore/keycore
 services/ekm/ekm
 services/*/__debug_bin*
