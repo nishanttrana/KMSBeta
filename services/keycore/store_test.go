@@ -243,6 +243,55 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			verified_at TIMESTAMP,
 			PRIMARY KEY (tenant_id, anchor_id)
 		);`,
+		`CREATE TABLE canary_keys (
+			id TEXT PRIMARY KEY,
+			tenant_id TEXT NOT NULL,
+			name TEXT NOT NULL,
+			algorithm TEXT NOT NULL DEFAULT 'AES-256-GCM',
+			purpose TEXT NOT NULL DEFAULT 'detect_exfiltration',
+			trip_count INTEGER NOT NULL DEFAULT 0,
+			last_tripped TIMESTAMP,
+			active BOOLEAN NOT NULL DEFAULT 1,
+			notify_email TEXT,
+			metadata TEXT NOT NULL DEFAULT '{}',
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);`,
+		`CREATE TABLE canary_trip_events (
+			id TEXT PRIMARY KEY,
+			canary_id TEXT NOT NULL,
+			tenant_id TEXT NOT NULL,
+			actor_id TEXT NOT NULL DEFAULT '',
+			actor_ip TEXT NOT NULL DEFAULT '',
+			user_agent TEXT NOT NULL DEFAULT '',
+			tripped_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			severity TEXT NOT NULL DEFAULT 'critical',
+			raw_request TEXT NOT NULL DEFAULT ''
+		);`,
+		`CREATE TABLE key_usage_events (
+			id TEXT PRIMARY KEY,
+			tenant_id TEXT NOT NULL,
+			key_id TEXT NOT NULL,
+			operation TEXT NOT NULL,
+			actor_id TEXT NOT NULL DEFAULT '',
+			actor_ip TEXT NOT NULL DEFAULT '',
+			interface TEXT NOT NULL DEFAULT '',
+			occurred_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);`,
+		`CREATE TABLE threat_signals (
+			id TEXT PRIMARY KEY,
+			tenant_id TEXT NOT NULL,
+			signal_type TEXT NOT NULL,
+			key_id TEXT NOT NULL DEFAULT '',
+			actor_id TEXT NOT NULL DEFAULT '',
+			severity TEXT NOT NULL,
+			description TEXT NOT NULL,
+			dedupe_key TEXT NOT NULL,
+			detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			acknowledged_at TIMESTAMP,
+			acknowledged_by TEXT NOT NULL DEFAULT '',
+			metadata BLOB DEFAULT '{}',
+			UNIQUE (tenant_id, dedupe_key)
+		);`,
 	}
 	for _, s := range stmts {
 		if _, err := conn.SQL().Exec(s); err != nil {

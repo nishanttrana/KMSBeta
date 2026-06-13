@@ -299,7 +299,14 @@ func (h *Handler) routes() *http.ServeMux {
 	// Key Material Verification (enhanced fingerprint)
 	mux.HandleFunc("POST /keys/{id}/verify-material", h.handleVerifyKeyMaterial)
 
+	// Threat Detection (rule-based signals over the key usage trail)
+	mux.HandleFunc("GET /threat/signals", h.handleListThreatSignals)
+	mux.HandleFunc("POST /threat/signals/{id}/ack", h.handleAckThreatSignal)
+	mux.HandleFunc("GET /threat/dashboard", h.handleThreatDashboard)
+
 	// Canary / Honeypot Keys
+	mux.HandleFunc("GET /canary/keys", h.handleListCanaryKeys)
+	mux.HandleFunc("POST /canary/keys", h.handleCreateCanaryKey)
 	mux.HandleFunc("GET /canary/summary", h.handleGetCanarySummary)
 	mux.HandleFunc("GET /canary", h.handleListCanaryKeys)
 	mux.HandleFunc("POST /canary", h.handleCreateCanaryKey)
@@ -2116,6 +2123,8 @@ func isSensitiveKeycoreRoute(method string, path string) bool {
 		strings.HasPrefix(p, "/inventory") ||
 		strings.HasPrefix(p, "/compromise") ||
 		strings.HasPrefix(p, "/analytics") ||
+		strings.HasPrefix(p, "/threat") ||
+		strings.HasPrefix(p, "/canary") ||
 		strings.HasPrefix(p, "/enterprise") {
 		return true
 	}
@@ -2457,6 +2466,11 @@ func accessActorFromHTTPRequest(r *http.Request) AccessActor {
 	actor.InterfaceName = normalizeInterfaceName(r.Header.Get("X-KMS-Interface"))
 	if actor.InterfaceName == "" {
 		actor.InterfaceName = "rest"
+	}
+	if fwd := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); fwd != "" {
+		actor.SourceIP = strings.TrimSpace(strings.SplitN(fwd, ",", 2)[0])
+	} else {
+		actor.SourceIP = r.RemoteAddr
 	}
 	if actor.SubjectID == "" {
 		actor.SubjectID = strings.TrimSpace(r.Header.Get("X-KMS-Subject"))

@@ -47,7 +47,7 @@ func (h *Handler) handleListCanaryKeys(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "list_canary_keys_failed", "failed to list canary keys", reqID, tenantID)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"data": keys, "request_id": reqID})
+	writeJSON(w, http.StatusOK, map[string]any{"data": keys, "canary_keys": keys, "request_id": reqID})
 }
 
 // handleCreateCanaryKey creates a new canary key for the tenant.
@@ -56,6 +56,7 @@ func (h *Handler) handleCreateCanaryKey(w http.ResponseWriter, r *http.Request) 
 	var req struct {
 		TenantID    string            `json:"tenant_id"`
 		Name        string            `json:"name"`
+		Label       string            `json:"label"`
 		Algorithm   string            `json:"algorithm"`
 		Purpose     string            `json:"purpose"`
 		NotifyEmail string            `json:"notify_email"`
@@ -71,6 +72,9 @@ func (h *Handler) handleCreateCanaryKey(w http.ResponseWriter, r *http.Request) 
 		if tenantID == "" {
 			return
 		}
+	}
+	if req.Name == "" {
+		req.Name = strings.TrimSpace(req.Label)
 	}
 	if req.Name == "" {
 		writeErr(w, http.StatusBadRequest, "bad_request", "name is required", reqID, tenantID)

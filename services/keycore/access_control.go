@@ -62,6 +62,7 @@ type AccessActor struct {
 	WorkloadIdentity    string
 	WorkloadTrustDomain string
 	AllowedKeyIDs       []string
+	SourceIP            string
 	Authenticated       bool
 }
 

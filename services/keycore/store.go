@@ -185,6 +185,18 @@ type Store interface {
 	GetKeyMetadataExt(ctx context.Context, tenantID, keyID string) (KeyMetadataExt, error)
 	UpsertKeyMetadataExt(ctx context.Context, m KeyMetadataExt) (KeyMetadataExt, error)
 
+	// Threat Detection (usage trail + signals)
+	InsertKeyUsageEvent(ctx context.Context, e KeyUsageEvent) error
+	PruneKeyUsageEvents(ctx context.Context, tenantID string, before time.Time) error
+	ListRecentKeyActorPairs(ctx context.Context, tenantID string, since time.Time, limit int) ([]KeyActorPair, error)
+	KeyActorFirstUse(ctx context.Context, tenantID, keyID, actorID string) (time.Time, error)
+	ListRecentlyUsedKeyIDs(ctx context.Context, tenantID string, since time.Time, limit int) ([]string, error)
+	CountKeyUsageBetween(ctx context.Context, tenantID, keyID string, from, to time.Time) (int, error)
+	LastKeyUsageBefore(ctx context.Context, tenantID, keyID string, before time.Time) (time.Time, error)
+	CreateThreatSignal(ctx context.Context, sig ThreatSignal) (bool, error)
+	ListThreatSignals(ctx context.Context, tenantID string, limit int) ([]ThreatSignal, error)
+	AckThreatSignal(ctx context.Context, tenantID, id, ackedBy string) error
+
 	// Canary / Honeypot Keys
 	ListCanaryKeys(ctx context.Context, tenantID string) ([]CanaryKey, error)
 	CreateCanaryKey(ctx context.Context, key CanaryKey) error

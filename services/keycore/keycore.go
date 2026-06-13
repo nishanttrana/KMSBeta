@@ -1963,6 +1963,12 @@ func (s *Service) GetKey(ctx context.Context, tenantID string, keyID string) (Ke
 	}
 	k, err := s.store.GetKey(ctx, tenantID, keyID)
 	if err != nil {
+		if errors.Is(err, errStoreNotFound) {
+			// Honeypot choke point: a not-found id may be a canary being
+			// probed through the real key API. Record the trip, then return
+			// not-found so the caller learns nothing.
+			s.noteCanaryProbe(ctx, tenantID, keyID)
+		}
 		return Key{}, err
 	}
 	if normalizeLifecycleStatus(k.Status) == "deleted" {
@@ -2594,7 +2600,7 @@ func (s *Service) MeterUsage(ctx context.Context, tenantID string, keyID string,
 	}); err != nil {
 		return Usage{}, err
 	}
-	if _, err := s.store.RunCryptoTx(ctx, tenantID, keyID, op, func(_ Key, _ KeyVersion) (CryptoTxResult, error) {
+	if _, err := s.runCryptoTx(ctx, tenantID, keyID, op, func(_ Key, _ KeyVersion) (CryptoTxResult, error) {
 		return CryptoTxResult{}, nil
 	}); err != nil {
 		return Usage{}, err
@@ -2771,7 +2777,7 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 		}
 	}
 
-	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -2857,7 +2863,7 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 			return CryptoResponse{}, errors.New("aad must be base64")
 		}
 	}
-	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(_ Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(_ Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -2929,7 +2935,7 @@ func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (Cryp
 		return CryptoResponse{}, errors.New("data must be base64")
 	}
 	defer crypto.Zeroize(data)
-	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -3010,7 +3016,7 @@ func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (
 		version  int
 		verified bool
 	)
-	_, err = s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+	_, err = s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -3446,7 +3452,7 @@ func (s *Service) Derive(ctx context.Context, keyID string, req DeriveRequest) (
 	}); err != nil {
 		return DeriveResponse{}, err
 	}
-	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(_ Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(_ Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -3529,7 +3535,7 @@ func (s *Service) KEMEncapsulate(ctx context.Context, keyID string, req KEMEncap
 	}); err != nil {
 		return KEMResponse{}, err
 	}
-	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -3616,7 +3622,7 @@ func (s *Service) KEMDecapsulate(ctx context.Context, keyID string, req KEMDecap
 	}); err != nil {
 		return KEMResponse{}, err
 	}
-	result, err := s.store.RunCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
