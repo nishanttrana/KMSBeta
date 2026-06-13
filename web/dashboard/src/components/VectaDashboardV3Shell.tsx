@@ -120,6 +120,7 @@ const AdvancedEncryptionTab = lazy(() => import("./v3/tabs/AdvancedEncryptionTab
 const KeyBindingTab = lazy(() => import("./v3/tabs/KeyBindingTab").then(m => ({ default: m.KeyBindingTab })));
 const KeyMetadataTab = lazy(() => import("./v3/tabs/KeyMetadataTab").then(m => ({ default: m.KeyMetadataTab })));
 const ThreatProtectionTab = lazy(() => import("./v3/tabs/ThreatProtectionTab").then(m => ({ default: m.ThreatProtectionTab })));
+const ThreatExposureTab = lazy(() => import("./v3/tabs/ThreatExposureTab").then(m => ({ default: m.ThreatExposureTab })));
 
 type Props = {
   session: AuthSession;
@@ -235,6 +236,7 @@ const TABS: Record<string, any> = {
   key_binding: KeyBindingTab,
   key_metadata: KeyMetadataTab,
   threat_protection: ThreatProtectionTab,
+  threat_exposure: ThreatExposureTab,
 };
 
 const TITLES: Record<string, string> = {
@@ -290,6 +292,7 @@ const TITLES: Record<string, string> = {
   key_binding: "Key Binding",
   key_metadata: "Key Metadata",
   threat_protection: "Threat Protection",
+  threat_exposure: "Threat & Exposure",
 };
 
 const NAV = [
@@ -332,6 +335,7 @@ const NAV = [
     { id: "approvals", icon: CheckCircle2, label: "Approvals" },
     { id: "posture", icon: Gauge, label: "Posture" },
     { id: "compliance", icon: ClipboardCheck, label: "Compliance" },
+    { id: "threat_exposure", icon: ShieldAlert, label: "Threat & Exposure" },
     { id: "threat_protection", icon: Shield, label: "Threat Detection" },
     { id: "leak_scanner", icon: ScanSearch, label: "Leak Scanner" },
     { id: "sbom", icon: BarChart3, label: "SBOM / CBOM" },

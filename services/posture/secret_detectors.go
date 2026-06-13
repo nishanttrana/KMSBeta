@@ -89,6 +89,16 @@ var detectorRules = []detectorRule{
 		re:          regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b`),
 	},
 	{
+		// Not a secret in itself, but a Vecta KMS key identifier appearing in
+		// source/config/logs is an exposure indicator — and the join key that
+		// lets the unified console correlate a leaked reference with anomalous
+		// usage of that same key. The id is emitted in clear (see scanContent).
+		findingType: "kms_key_reference",
+		severity:    "low",
+		description: "Vecta KMS key identifier referenced in scanned content",
+		re:          regexp.MustCompile(`\bkey_[0-9a-f]{16}\b`),
+	},
+	{
 		// Generic catch-all: a secret-ish identifier assigned a long value.
 		// Gated on entropy so things like PASSWORD=changeme don't fire.
 		findingType: "generic_secret",
@@ -173,9 +183,14 @@ func scanContent(path string, data []byte) []detectedSecret {
 				continue
 			}
 			line := lineNumberAt(data, secretStart)
-			// Dedupe identical (type, line, masked) hits within a file.
-			masked := maskSecret(secret)
-			dk := rule.findingType + "|" + path + "|" + itoa(line) + "|" + masked
+			// Key references are not secrets: emit the id in clear so the
+			// unified console can correlate on it. Everything else is masked.
+			preview := maskSecret(secret)
+			if rule.findingType == "kms_key_reference" {
+				preview = secret
+			}
+			// Dedupe identical (type, line, preview) hits within a file.
+			dk := rule.findingType + "|" + path + "|" + itoa(line) + "|" + preview
 			if _, ok := seen[dk]; ok {
 				continue
 			}
@@ -190,7 +205,7 @@ func scanContent(path string, data []byte) []detectedSecret {
 				Severity:       sev,
 				Description:    rule.description,
 				Location:       path + ":" + itoa(line),
-				ContextPreview: masked,
+				ContextPreview: preview,
 				Entropy:        round2(entropy),
 			})
 		}

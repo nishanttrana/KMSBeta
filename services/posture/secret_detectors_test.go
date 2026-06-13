@@ -93,6 +93,24 @@ func TestScanGenericSecretRequiresEntropy(t *testing.T) {
 	}
 }
 
+func TestScanDetectsKMSKeyReferenceInClear(t *testing.T) {
+	// A leaked KMS key id is an exposure indicator and must be reported in
+	// clear (not masked) so the unified console can correlate on it.
+	content := `service_config:\n  signing_key: key_a1b2c3d4e5f60718\n`
+	secs := scanContent("deploy/values.yaml", []byte(content))
+	got := findingTypes(secs)
+	ref, ok := got["kms_key_reference"]
+	if !ok {
+		t.Fatalf("expected kms_key_reference finding, got %v", got)
+	}
+	if ref.Severity != "low" {
+		t.Errorf("kms_key_reference severity=%q want low", ref.Severity)
+	}
+	if ref.ContextPreview != "key_a1b2c3d4e5f60718" {
+		t.Errorf("key id must be emitted in clear for correlation, got %q", ref.ContextPreview)
+	}
+}
+
 func TestShannonEntropy(t *testing.T) {
 	if h := shannonEntropy("aaaaaaaa"); h != 0 {
 		t.Errorf("uniform string entropy=%v want 0", h)

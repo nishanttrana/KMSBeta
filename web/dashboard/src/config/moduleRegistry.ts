@@ -54,6 +54,8 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   key_binding: "key_binding",
   key_metadata: "key_metadata",
   threat_protection: "threat_protection",
+  // Unified console: visible if either underlying sensor is enabled.
+  threat_exposure: ["threat_protection", "posture_management"],
 };
 
 function normalizePermissionTokens(session: unknown): Set<string> {
