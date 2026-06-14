@@ -97,7 +97,6 @@ const FeatureForgeTab = lazy(() => import("./v3/tabs/FeatureForgeTab").then(m =>
 const RotationSchedulerTab = lazy(() => import("./v3/tabs/RotationSchedulerTab").then(m => ({ default: m.RotationSchedulerTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
-const LeakScannerTab = lazy(() => import("./v3/tabs/LeakScannerTab").then(m => ({ default: m.LeakScannerTab })));
 const CTMonitorTab = lazy(() => import("./v3/tabs/CTMonitorTab").then(m => ({ default: m.CTMonitorTab })));
 const MTLSMeshTab = lazy(() => import("./v3/tabs/MTLSMeshTab").then(m => ({ default: m.MTLSMeshTab })));
 const EscrowTab = lazy(() => import("./v3/tabs/EscrowTab").then(m => ({ default: m.EscrowTab })));
@@ -119,7 +118,6 @@ const KeyVerificationTab = lazy(() => import("./v3/tabs/KeyVerificationTab").the
 const AdvancedEncryptionTab = lazy(() => import("./v3/tabs/AdvancedEncryptionTab").then(m => ({ default: m.AdvancedEncryptionTab })));
 const KeyBindingTab = lazy(() => import("./v3/tabs/KeyBindingTab").then(m => ({ default: m.KeyBindingTab })));
 const KeyMetadataTab = lazy(() => import("./v3/tabs/KeyMetadataTab").then(m => ({ default: m.KeyMetadataTab })));
-const ThreatProtectionTab = lazy(() => import("./v3/tabs/ThreatProtectionTab").then(m => ({ default: m.ThreatProtectionTab })));
 const ThreatExposureTab = lazy(() => import("./v3/tabs/ThreatExposureTab").then(m => ({ default: m.ThreatExposureTab })));
 
 type Props = {
@@ -213,7 +211,6 @@ const TABS: Record<string, any> = {
   rotation: RotationSchedulerTab,
   crypto_agility: CryptoAgilityTab,
   webhooks: WebhooksTab,
-  leak_scanner: LeakScannerTab,
   ct_monitor: CTMonitorTab,
   mtls_mesh: MTLSMeshTab,
   escrow: EscrowTab,
@@ -235,7 +232,6 @@ const TABS: Record<string, any> = {
   adv_encryption: AdvancedEncryptionTab,
   key_binding: KeyBindingTab,
   key_metadata: KeyMetadataTab,
-  threat_protection: ThreatProtectionTab,
   threat_exposure: ThreatExposureTab,
 };
 
@@ -269,7 +265,6 @@ const TITLES: Record<string, string> = {
   rotation: "Rotation Scheduler",
   crypto_agility: "Crypto Agility",
   webhooks: "Webhooks & SIEM",
-  leak_scanner: "Leak Scanner",
   ct_monitor: "CT Log Monitor",
   mtls_mesh: "mTLS Mesh",
   escrow: "Key Escrow",
@@ -291,7 +286,6 @@ const TITLES: Record<string, string> = {
   adv_encryption: "Advanced Encryption",
   key_binding: "Key Binding",
   key_metadata: "Key Metadata",
-  threat_protection: "Threat Protection",
   threat_exposure: "Threat & Exposure",
 };
 
@@ -336,8 +330,6 @@ const NAV = [
     { id: "posture", icon: Gauge, label: "Posture" },
     { id: "compliance", icon: ClipboardCheck, label: "Compliance" },
     { id: "threat_exposure", icon: ShieldAlert, label: "Threat & Exposure" },
-    { id: "threat_protection", icon: Shield, label: "Threat Detection" },
-    { id: "leak_scanner", icon: ScanSearch, label: "Leak Scanner" },
     { id: "sbom", icon: BarChart3, label: "SBOM / CBOM" },
     { id: "lineage", icon: GitMerge, label: "Source Traceability" },
     { id: "playbooks", icon: Play, label: "Playbooks" },

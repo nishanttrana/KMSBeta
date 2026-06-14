@@ -227,7 +227,10 @@ interface LeakScannerTabProps {
   keyCatalog?: any[];
 }
 
-export const LeakScannerTab = ({ session }: LeakScannerTabProps) => {
+// configOnly drops the Findings section (covered by the unified Threat &
+// Exposure Triage view) so this can embed as the console's scan-target
+// management surface.
+export const LeakScannerTab = ({ session, configOnly }: LeakScannerTabProps) => {
   const [targets, setTargets] = useState<LeakTarget[]>([]);
   const [findings, setFindings] = useState<LeakFinding[]>([]);
   const [jobs, setJobs] = useState<LeakJob[]>([]);
@@ -339,7 +342,7 @@ export const LeakScannerTab = ({ session }: LeakScannerTabProps) => {
 
       {/* Section Tabs */}
       <Tabs
-        tabs={["Targets", "Findings", "Active Jobs"]}
+        tabs={configOnly ? ["Targets", "Active Jobs"] : ["Targets", "Findings", "Active Jobs"]}
         active={activeSection}
         onChange={setActiveSection}
       />

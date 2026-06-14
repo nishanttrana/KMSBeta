@@ -4,6 +4,8 @@ import { ShieldAlert, RefreshCcw, CheckCircle2, AlertTriangle, XCircle, Link2, R
 import { C } from "../../v3/theme";
 import { loadUnifiedFindings, resolveFinding } from "../../../lib/securityFindings";
 import { bindCredentialToKey } from "../../../lib/credentialBindings";
+import { ThreatProtectionTab } from "./ThreatProtectionTab";
+import { LeakScannerTab } from "./LeakScannerTab";
 
 const TH = ({ c }: any) => <th style={{ padding: "7px 10px", textAlign: "left", fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 0.6, borderBottom: `1px solid ${C.border}` }}>{c}</th>;
 const TD = ({ c, mono }: any) => <td style={{ padding: "8px 10px", fontSize: 11, color: C.text, borderBottom: `1px solid rgba(26,41,68,.5)`, ...(mono ? { fontFamily: "'JetBrains Mono', monospace" } : {}) }}>{c ?? "—"}</td>;
@@ -26,6 +28,8 @@ export function ThreatExposureTab({ session }: any) {
   const [busyId, setBusyId] = useState<string>("");
   const [bindFor, setBindFor] = useState<any>(null);
   const [bindKeyId, setBindKeyId] = useState("");
+  // The merged console: one Triage queue plus the folded-in sensor config.
+  const [subView, setSubView] = useState<"triage" | "canary" | "targets">("triage");
 
   const load = useCallback(async () => {
     if (!session?.token) return;
@@ -84,13 +88,28 @@ export function ThreatExposureTab({ session }: any) {
 
   return (
     <div style={{ padding: 24, maxWidth: 1280 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <ShieldAlert size={20} style={{ color: C.accent }} />
           <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Threat &amp; Exposure</span>
         </div>
-        <Btn onClick={load} variant="ghost" small><RefreshCcw size={12} />{loading ? "Loading…" : "Refresh"}</Btn>
+        {subView === "triage" && <Btn onClick={load} variant="ghost" small><RefreshCcw size={12} />{loading ? "Loading…" : "Refresh"}</Btn>}
       </div>
+
+      {/* One console: cross-sensor Triage plus the folded-in sensor config. */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 18, borderBottom: `1px solid ${C.border}`, paddingBottom: 12 }}>
+        {([["triage", "Triage"], ["canary", "Canary Keys"], ["targets", "Scan Targets"]] as const).map(([v, label]) => (
+          <button key={v} onClick={() => setSubView(v)} style={{ padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid ${subView === v ? C.accent : C.border}`, background: subView === v ? C.accent : "transparent", color: subView === v ? C.bg : C.dim }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {subView === "canary" && <ThreatProtectionTab session={session} configOnly />}
+      {subView === "targets" && <LeakScannerTab session={session} configOnly />}
+
+      {subView === "triage" && (
+      <>
       <div style={{ fontSize: 12, color: C.muted, marginBottom: 20 }}>
         Unified triage of key-usage threat signals and secret-leak findings. Correlated items — a key exposed in code and then used anomalously — are surfaced first.
       </div>
@@ -189,6 +208,8 @@ export function ThreatExposureTab({ session }: any) {
           </div>
         )}
       </Card>
+      </>
+      )}
     </div>
   );
 }

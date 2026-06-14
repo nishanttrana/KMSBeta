@@ -17,12 +17,15 @@ const Btn = ({ onClick, children, small, variant = "default", disabled }: any) =
 const Card = ({ children, style }: any) => <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 16, ...style }}>{children}</div>;
 const Inp = ({ label, ...p }: any) => <div style={{ marginBottom: 12 }}><div style={{ fontSize: 11, color: C.dim, marginBottom: 4, fontWeight: 500 }}>{label}</div><input {...p} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 10px", color: C.text, fontSize: 12, outline: "none", boxSizing: "border-box" }} /></div>;
 
-export function ThreatProtectionTab({ session }: any) {
+// configOnly renders just the canary-key management surface (no signals list,
+// summary cards or view toggle) for embedding inside the unified Threat &
+// Exposure console, whose Triage view already covers threat signals.
+export function ThreatProtectionTab({ session, configOnly }: any) {
   const [signals, setSignals] = useState<any[]>([]);
   const [canaryKeys, setCanaryKeys] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
-  const [view, setView] = useState<"signals" | "canary">("signals");
+  const [view, setView] = useState<"signals" | "canary">(configOnly ? "canary" : "signals");
   const [showCanaryForm, setShowCanaryForm] = useState(false);
   const [canaryForm, setCanaryForm] = useState({ label: "", alert_on_use: true });
   const [saving, setSaving] = useState(false);
@@ -81,28 +84,32 @@ export function ThreatProtectionTab({ session }: any) {
 
       {err && <div style={{ padding: 12, borderRadius: 6, background: C.redDim, color: C.red, fontSize: 12, marginBottom: 16 }}>{err}</div>}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12, marginBottom: 20 }}>
-        {[
-          { label: "Critical", val: signals.filter((s: any) => s.severity === "critical" && !s.acknowledged_at).length, color: C.red, icon: XCircle },
-          { label: "High", val: signals.filter((s: any) => s.severity === "high" && !s.acknowledged_at).length, color: "#f97316", icon: AlertTriangle },
-          { label: "Medium", val: signals.filter((s: any) => s.severity === "medium" && !s.acknowledged_at).length, color: C.amber, icon: AlertTriangle },
-          { label: "Acknowledged", val: signals.filter((s: any) => s.acknowledged_at).length, color: C.green, icon: CheckCircle2 },
-          { label: "Canary Keys", val: canaryKeys.length, color: C.accent, icon: Shield },
-        ].map(({ label, val, color, icon: Icon }: any) => (
-          <Card key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ background: color + "18", borderRadius: 8, padding: 8 }}><Icon size={14} style={{ color }} /></div>
-            <div><div style={{ fontSize: 18, fontWeight: 700, color }}>{val}</div><div style={{ fontSize: 10, color: C.muted }}>{label}</div></div>
-          </Card>
-        ))}
-      </div>
+      {!configOnly && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12, marginBottom: 20 }}>
+          {[
+            { label: "Critical", val: signals.filter((s: any) => s.severity === "critical" && !s.acknowledged_at).length, color: C.red, icon: XCircle },
+            { label: "High", val: signals.filter((s: any) => s.severity === "high" && !s.acknowledged_at).length, color: "#f97316", icon: AlertTriangle },
+            { label: "Medium", val: signals.filter((s: any) => s.severity === "medium" && !s.acknowledged_at).length, color: C.amber, icon: AlertTriangle },
+            { label: "Acknowledged", val: signals.filter((s: any) => s.acknowledged_at).length, color: C.green, icon: CheckCircle2 },
+            { label: "Canary Keys", val: canaryKeys.length, color: C.accent, icon: Shield },
+          ].map(({ label, val, color, icon: Icon }: any) => (
+            <Card key={label} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ background: color + "18", borderRadius: 8, padding: 8 }}><Icon size={14} style={{ color }} /></div>
+              <div><div style={{ fontSize: 18, fontWeight: 700, color }}>{val}</div><div style={{ fontSize: 10, color: C.muted }}>{label}</div></div>
+            </Card>
+          ))}
+        </div>
+      )}
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        {(["signals", "canary"] as const).map(v => (
-          <button key={v} onClick={() => setView(v)} style={{ padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid ${C.border}`, background: view === v ? C.accent : "transparent", color: view === v ? C.bg : C.dim }}>
-            {v === "signals" ? `Threat Signals (${active.length} active)` : `Canary Keys (${canaryKeys.length})`}
-          </button>
-        ))}
-      </div>
+      {!configOnly && (
+        <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+          {(["signals", "canary"] as const).map(v => (
+            <button key={v} onClick={() => setView(v)} style={{ padding: "6px 14px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer", border: `1px solid ${C.border}`, background: view === v ? C.accent : "transparent", color: view === v ? C.bg : C.dim }}>
+              {v === "signals" ? `Threat Signals (${active.length} active)` : `Canary Keys (${canaryKeys.length})`}
+            </button>
+          ))}
+        </div>
+      )}
 
       {view === "signals" ? (
         <Card>
