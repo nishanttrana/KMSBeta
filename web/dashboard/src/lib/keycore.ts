@@ -414,6 +414,12 @@ export type EncryptInputOptions = {
   aad?: string;
   aadEncoding?: TextEncoding;
   referenceId?: string;
+  // When set, registers the wrapped plaintext as an external credential
+  // protected by this key (fingerprint only — never the plaintext), so the
+  // Threat & Exposure console can correlate a future leak of that credential
+  // with anomalous usage of this key. Use on wrap operations that protect a
+  // real credential, not on bulk data encryption.
+  registerCredentialBinding?: { credentialType?: string; label?: string };
 };
 
 export type DecryptInputOptions = {
@@ -716,7 +722,16 @@ export async function encryptData(
       iv: ivPayload,
       iv_mode: options?.ivMode || "",
       aad: aadPayload,
-      reference_id: options?.referenceId || ""
+      reference_id: options?.referenceId || "",
+      ...(options?.registerCredentialBinding
+        ? {
+            credential_binding: {
+              register: true,
+              credential_type: options.registerCredentialBinding.credentialType || "",
+              label: options.registerCredentialBinding.label || ""
+            }
+          }
+        : {})
     })
   });
   return {

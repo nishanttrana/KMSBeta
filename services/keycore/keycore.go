@@ -237,7 +237,20 @@ type EncryptRequest struct {
 	IVMode       string `json:"iv_mode"`
 	AADB64       string `json:"aad"`
 	ReferenceID  string `json:"reference_id"`
-	Operation    string `json:"-"`
+	// CredentialBinding, when present with Register=true, auto-registers the
+	// plaintext being wrapped as an external credential protected by this key.
+	// Only its SHA-256 fingerprint is stored — never the plaintext. This lets
+	// vault / EKM / BYOK provisioning flows populate the credential->key
+	// correlation registry by construction, rather than anyone declaring it
+	// after the fact.
+	CredentialBinding *CredentialBindingIntent `json:"credential_binding,omitempty"`
+	Operation         string                   `json:"-"`
+}
+
+type CredentialBindingIntent struct {
+	Register       bool   `json:"register"`
+	CredentialType string `json:"credential_type"`
+	Label          string `json:"label"`
 }
 
 type DecryptRequest struct {
@@ -2799,6 +2812,12 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 		_ = s.meter.IncrementOps()
 	}
 	_ = s.publishAudit(ctx, "audit.key.encrypt", req.TenantID, map[string]any{"key_id": keyID})
+	// Auto-populate the credential->key binding when the caller flags this
+	// wrap as protecting an external credential. plain is still valid here
+	// (its Zeroize is deferred); we fingerprint it and never store it.
+	if req.CredentialBinding != nil && req.CredentialBinding.Register {
+		s.autoRegisterCredentialBinding(ctx, req.TenantID, keyID, plain, req.CredentialBinding)
+	}
 	return CryptoResponse{
 		KeyID:     keyID,
 		Version:   result.KeyVersion,
@@ -2806,6 +2825,31 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 		IVB64:     base64.StdEncoding.EncodeToString(result.IV),
 		KCV:       strings.ToUpper(hex.EncodeToString(key.KCV)),
 	}, nil
+}
+
+// autoRegisterCredentialBinding records that the just-wrapped plaintext is an
+// external credential protected by keyID, keyed by a non-reversible
+// fingerprint. Best-effort: a binding failure must never fail the wrap.
+func (s *Service) autoRegisterCredentialBinding(ctx context.Context, tenantID, keyID string, plaintext []byte, intent *CredentialBindingIntent) {
+	if len(plaintext) == 0 {
+		return
+	}
+	binding := CredentialBinding{
+		TenantID:       tenantID,
+		Fingerprint:    credentialFingerprint(string(plaintext)),
+		CredentialType: strings.TrimSpace(intent.CredentialType),
+		KeyID:          keyID,
+		Label:          strings.TrimSpace(intent.Label),
+		CreatedBy:      firstNonEmpty(accessActorFromContext(ctx).UserID, "wrap-autobind"),
+	}
+	if _, err := s.store.UpsertCredentialBinding(ctx, binding); err != nil {
+		return
+	}
+	_ = s.publishAudit(ctx, "audit.key.credential_binding_auto_registered", tenantID, map[string]any{
+		"key_id":          keyID,
+		"credential_type": binding.CredentialType,
+		"source":          "wrap",
+	})
 }
 
 func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest) (CryptoResponse, error) {

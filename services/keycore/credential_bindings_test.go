@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"testing"
 )
@@ -69,6 +70,72 @@ func TestCredentialBindingTenantIsolation(t *testing.T) {
 	}
 	if len(resolved) != 0 {
 		t.Fatalf("tenant isolation breach: %v", resolved)
+	}
+}
+
+func TestWrapAutoRegistersCredentialBinding(t *testing.T) {
+	_, svc := newHandlerForTest(t)
+	ctx := context.Background()
+	key, err := svc.CreateKey(ctx, CreateKeyRequest{
+		TenantID: "t1", Name: "wrapping-key", Algorithm: "AES-256", KeyType: "symmetric",
+		Purpose: "wrap", Owner: "ops", CreatedBy: "tester",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	credential := "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+
+	// A wrap that flags the plaintext as an external credential must auto-bind.
+	if _, err := svc.Encrypt(ctx, key.ID, EncryptRequest{
+		TenantID:     "t1",
+		PlaintextB64: base64.StdEncoding.EncodeToString([]byte(credential)),
+		Operation:    "wrap",
+		CredentialBinding: &CredentialBindingIntent{
+			Register: true, CredentialType: "aws_secret_access_key", Label: "prod backups",
+		},
+	}); err != nil {
+		t.Fatalf("wrap: %v", err)
+	}
+
+	// The same fingerprint the leak scanner would compute must now resolve to
+	// this key — closing the loop with no manual declaration.
+	fp := credentialFingerprint(credential)
+	resolved, err := svc.store.ResolveCredentialBindings(ctx, "t1", []string{fp})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, ok := resolved[fp]
+	if !ok {
+		t.Fatal("expected wrap to auto-register a resolvable binding")
+	}
+	if b.KeyID != key.ID || b.CredentialType != "aws_secret_access_key" {
+		t.Fatalf("unexpected binding: %+v", b)
+	}
+}
+
+func TestPlainEncryptDoesNotAutoBind(t *testing.T) {
+	_, svc := newHandlerForTest(t)
+	ctx := context.Background()
+	key, err := svc.CreateKey(ctx, CreateKeyRequest{
+		TenantID: "t1", Name: "data-key", Algorithm: "AES-256", KeyType: "symmetric",
+		Purpose: "encrypt", Owner: "ops", CreatedBy: "tester",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	plaintext := "ordinary application data, not a credential"
+	// No CredentialBinding intent -> nothing is fingerprinted or stored.
+	if _, err := svc.Encrypt(ctx, key.ID, EncryptRequest{
+		TenantID: "t1", PlaintextB64: base64.StdEncoding.EncodeToString([]byte(plaintext)),
+	}); err != nil {
+		t.Fatalf("encrypt: %v", err)
+	}
+	resolved, err := svc.store.ResolveCredentialBindings(ctx, "t1", []string{credentialFingerprint(plaintext)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resolved) != 0 {
+		t.Fatal("plain encrypt must not create a credential binding")
 	}
 }
 
