@@ -198,6 +198,10 @@ func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger)
 	adminEmail := envOr("AUTH_BOOTSTRAP_ADMIN_EMAIL", "admin@vecta.local")
 	adminRole := envOr("AUTH_BOOTSTRAP_ADMIN_ROLE", "admin")
 	mustChange := envOrBool("AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE", true)
+	// Opt-in: re-apply the default admin password + force-change on an existing
+	// deployment whose admin account predates the default credential. Off by
+	// default so a rotated admin password is never silently clobbered.
+	resetAdmin := envOrBool("AUTH_BOOTSTRAP_RESET_ADMIN", false)
 	cliUsername := envOr("AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user")
 	cliPassword := envOr("AUTH_BOOTSTRAP_CLI_PASSWORD", "VectaCLI@2026")
 	cliEmail := envOr("AUTH_BOOTSTRAP_CLI_EMAIL", "cli@vecta.local")
@@ -269,7 +273,8 @@ func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger)
 		return
 	}
 
-	if _, err := store.GetUserByUsername(ctx, tenantID, adminUsername); errors.Is(err, errNotFound) {
+	existingAdmin, adminErr := store.GetUserByUsername(ctx, tenantID, adminUsername)
+	if errors.Is(adminErr, errNotFound) {
 		hash, err := HashPassword(adminPassword)
 		if err != nil {
 			logger.Printf("bootstrap: hash password failed: %v", err)
@@ -290,8 +295,26 @@ func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger)
 			return
 		}
 		logger.Printf("bootstrap: default admin created tenant=%s username=%s must_change_password=%t", tenantID, adminUsername, mustChange)
-	} else if err != nil {
-		logger.Printf("bootstrap: read admin failed: %v", err)
+	} else if adminErr != nil {
+		logger.Printf("bootstrap: read admin failed: %v", adminErr)
+	} else if resetAdmin {
+		// Opt-in factory reset of the default admin on an existing deployment:
+		// re-apply the configured default password, force a change at next
+		// login, and re-activate the account. Off by default; an operator sets
+		// AUTH_BOOTSTRAP_RESET_ADMIN=true once, restarts, logs in, then unsets it.
+		hash, err := HashPassword(adminPassword)
+		if err != nil {
+			logger.Printf("bootstrap: hash password failed: %v", err)
+			return
+		}
+		if err := store.UpdateUserPassword(ctx, tenantID, existingAdmin.ID, hash, mustChange); err != nil {
+			logger.Printf("bootstrap: reset admin password failed: %v", err)
+		} else {
+			if err := store.UpdateUserStatus(ctx, tenantID, existingAdmin.ID, "active"); err != nil {
+				logger.Printf("bootstrap: reactivate admin failed: %v", err)
+			}
+			logger.Printf("bootstrap: default admin reset tenant=%s username=%s must_change_password=%t (AUTH_BOOTSTRAP_RESET_ADMIN)", tenantID, adminUsername, mustChange)
+		}
 	}
 
 	if _, err := store.GetUserByUsername(ctx, tenantID, cliUsername); errors.Is(err, errNotFound) {
