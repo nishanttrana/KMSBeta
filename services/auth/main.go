@@ -188,7 +188,13 @@ func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger)
 	tenantID := envOr("AUTH_BOOTSTRAP_TENANT_ID", "root")
 	tenantName := envOr("AUTH_BOOTSTRAP_TENANT_NAME", "Root")
 	adminUsername := envOr("AUTH_BOOTSTRAP_ADMIN_USERNAME", "admin")
-	adminPassword := envOr("AUTH_BOOTSTRAP_ADMIN_PASSWORD", "VectaAdmin@2026")
+	// Default credential is admin/admin. This is safe only because the seeded
+	// admin is created with MustChangePassword=true (AUTH_BOOTSTRAP_FORCE_
+	// PASSWORD_CHANGE, default true): the resulting login is scoped to the
+	// password-change operation alone, and first login forces rotation to a
+	// policy-compliant password. Operators may override with a strong password
+	// via the env var.
+	adminPassword := envOr("AUTH_BOOTSTRAP_ADMIN_PASSWORD", "admin")
 	adminEmail := envOr("AUTH_BOOTSTRAP_ADMIN_EMAIL", "admin@vecta.local")
 	adminRole := envOr("AUTH_BOOTSTRAP_ADMIN_ROLE", "admin")
 	mustChange := envOrBool("AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE", true)

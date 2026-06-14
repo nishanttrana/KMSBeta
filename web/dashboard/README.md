@@ -19,9 +19,11 @@ Default admin credentials are configured in:
 Current defaults:
 
 - Username: `admin`
-- Password: `VectaAdmin@2026`
+- Password: `admin`
 
-`force_password_change: true` requires password rotation right after first login.
+`force_password_change: true` (the default) requires rotating this password to a
+policy-compliant one at first login — the default `admin`/`admin` credential can
+do nothing but change the password until then.
 
 ## Run
 

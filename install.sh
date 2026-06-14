@@ -1273,7 +1273,7 @@ collect_inputs() {
 
   prompt_default ADMIN_USERNAME "Admin username" "admin"
   prompt_default ADMIN_EMAIL "Admin email" "admin@vecta.local"
-  prompt_secret ADMIN_PASSWORD "Admin password"
+  prompt_default ADMIN_PASSWORD "Admin password (changed on first login)" "admin"
   prompt_yes_no FORCE_PASSWORD_CHANGE "Force password change at first login" "true"
 
   prompt_default LICENSE_KEY "License key" "SEC-KMS-ENT-2026-ABCD"
@@ -2192,7 +2192,7 @@ collect_fast_inputs() {
   TENANT_NAME="Root Tenant"
   prompt_default ADMIN_USERNAME "Admin username" "admin"
   prompt_default ADMIN_EMAIL "Admin email" "admin@vecta.local"
-  prompt_secret ADMIN_PASSWORD "Admin password"
+  prompt_default ADMIN_PASSWORD "Admin password (changed on first login)" "admin"
   FORCE_PASSWORD_CHANGE="true"
   local detected_iface detected_gw detected_dns_csv detected_hostname detected_domain
   LICENSE_KEY="SEC-KMS-ENT-2026-ABCD"
