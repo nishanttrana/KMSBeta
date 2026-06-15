@@ -94,7 +94,7 @@ const PostureTab = lazy(() => import("./v3/tabs/PostureTab").then(m => ({ defaul
 const AuditLogTab = lazy(() => import("./v3/tabs/AuditLogTab").then(m => ({ default: m.AuditLogTab })));
 const DocsViewTab = lazy(() => import("./v3/tabs/DocsViewTab").then(m => ({ default: m.DocsViewTab })));
 const FeatureForgeTab = lazy(() => import("./v3/tabs/FeatureForgeTab").then(m => ({ default: m.FeatureForgeTab })));
-const RotationSchedulerTab = lazy(() => import("./v3/tabs/RotationSchedulerTab").then(m => ({ default: m.RotationSchedulerTab })));
+const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab").then(m => ({ default: m.RotationSchedulingTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
 const CTMonitorTab = lazy(() => import("./v3/tabs/CTMonitorTab").then(m => ({ default: m.CTMonitorTab })));
@@ -111,8 +111,6 @@ const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ de
 const HealthTab = lazy(() => import("./v3/tabs/HealthTab").then(m => ({ default: m.HealthTab })));
 // Enterprise Advanced Features
 const KeyAnalyticsTab = lazy(() => import("./v3/tabs/KeyAnalyticsTab").then(m => ({ default: m.KeyAnalyticsTab })));
-const KeySchedulingTab = lazy(() => import("./v3/tabs/KeySchedulingTab").then(m => ({ default: m.KeySchedulingTab })));
-const KeyRecoveryTab = lazy(() => import("./v3/tabs/KeyRecoveryTab").then(m => ({ default: m.KeyRecoveryTab })));
 const KDFTab = lazy(() => import("./v3/tabs/KDFTab").then(m => ({ default: m.KDFTab })));
 const KeyVerificationTab = lazy(() => import("./v3/tabs/KeyVerificationTab").then(m => ({ default: m.KeyVerificationTab })));
 const AdvancedEncryptionTab = lazy(() => import("./v3/tabs/AdvancedEncryptionTab").then(m => ({ default: m.AdvancedEncryptionTab })));
@@ -208,7 +206,7 @@ const TABS: Record<string, any> = {
   admin: AdminTab,
   docs: DocsViewTab,
   feature_forge: FeatureForgeTab,
-  rotation: RotationSchedulerTab,
+  rotation: RotationSchedulingTab,
   crypto_agility: CryptoAgilityTab,
   webhooks: WebhooksTab,
   ct_monitor: CTMonitorTab,
@@ -225,8 +223,6 @@ const TABS: Record<string, any> = {
   health: HealthTab,
   // Enterprise Advanced Features
   key_analytics: KeyAnalyticsTab,
-  key_scheduling: KeySchedulingTab,
-  key_recovery: KeyRecoveryTab,
   kdf: KDFTab,
   key_verification: KeyVerificationTab,
   adv_encryption: AdvancedEncryptionTab,
@@ -262,12 +258,12 @@ const TITLES: Record<string, string> = {
   pkcs11: "PKCS#11 / JCA",
   admin: "Administration",
   docs: "Documentation",
-  rotation: "Rotation Scheduler",
+  rotation: "Rotation & Scheduling",
   crypto_agility: "Crypto Agility",
   webhooks: "Webhooks & SIEM",
   ct_monitor: "CT Log Monitor",
   mtls_mesh: "mTLS Mesh",
-  escrow: "Key Escrow",
+  escrow: "Key Recovery & Escrow",
   envelope_enc: "Envelope Encryption",
   dr_drill: "DR Drill",
   ops_metrics: "Operations Metrics",
@@ -279,8 +275,6 @@ const TITLES: Record<string, string> = {
   health: "Health & Reconciliation",
   // Enterprise Advanced Features
   key_analytics: "Key Analytics",
-  key_scheduling: "Key Scheduling",
-  key_recovery: "Key Recovery & Escrow",
   kdf: "Key Derivation (KDF)",
   key_verification: "Key Verification",
   adv_encryption: "Advanced Encryption",
@@ -298,10 +292,8 @@ const NAV = [
   ]},
   { g: "KEYS & LIFECYCLE", items: [
     { id: "keys", icon: KeyRound, label: "Key Management" },
-    { id: "rotation", icon: CalendarClock, label: "Rotation Scheduler" },
-    { id: "key_scheduling", icon: CalendarClock, label: "Key Scheduling" },
-    { id: "key_recovery", icon: KeyRound, label: "Recovery & Escrow" },
-    { id: "escrow", icon: Vault, label: "Key Escrow" },
+    { id: "rotation", icon: CalendarClock, label: "Rotation & Scheduling" },
+    { id: "escrow", icon: Vault, label: "Key Recovery & Escrow" },
     { id: "key_verification", icon: ShieldCheck, label: "Key Verification" },
     { id: "key_metadata", icon: Tag, label: "Key Metadata" },
     { id: "key_binding", icon: Cpu, label: "Key Binding" },

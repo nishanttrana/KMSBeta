@@ -46,8 +46,6 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   feature_forge: "feature_forge",
   // Enterprise Advanced Features
   key_analytics: "key_analytics",
-  key_scheduling: "key_scheduling",
-  key_recovery: "key_recovery_escrow",
   kdf: "kdf",
   key_verification: "key_verification",
   adv_encryption: "advanced_encryption",

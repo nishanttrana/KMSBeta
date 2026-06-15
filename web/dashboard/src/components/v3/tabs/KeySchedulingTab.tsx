@@ -18,7 +18,9 @@ const Card = ({ children, style }: any) => <div style={{ background: C.card, bor
 const Inp = ({ label, ...p }: any) => <div style={{ marginBottom: 12 }}><div style={{ fontSize: 11, color: C.dim, marginBottom: 4, fontWeight: 500 }}>{label}</div><input {...p} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 10px", color: C.text, fontSize: 12, outline: "none", boxSizing: "border-box" }} /></div>;
 const Sel = ({ label, children, ...p }: any) => <div style={{ marginBottom: 12 }}><div style={{ fontSize: 11, color: C.dim, marginBottom: 4, fontWeight: 500 }}>{label}</div><select {...p} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, padding: "7px 10px", color: C.text, fontSize: 12, outline: "none" }}>{children}</select></div>;
 
-const defForm = { key_id: "", schedule_type: "cron", cron_expr: "0 2 * * *", interval_seconds: 86400, action: "rotate" };
+// Rotation scheduling lives in the Rotation Policies view; these jobs cover the
+// non-rotation maintenance actions only, so the action set excludes "rotate".
+const defForm = { key_id: "", schedule_type: "cron", cron_expr: "0 2 * * *", interval_seconds: 86400, action: "verify" };
 
 export function KeySchedulingTab({ session }: any) {
   const [jobs, setJobs] = useState<any[]>([]);
@@ -74,7 +76,7 @@ export function KeySchedulingTab({ session }: any) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <CalendarClock size={20} style={{ color: C.accent }} />
-          <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Advanced Key Scheduling & Orchestration</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: C.text }}>Scheduled Maintenance Jobs</span>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <Btn onClick={() => setShowForm(!showForm)} small><Plus size={12} /> New Job</Btn>
@@ -90,7 +92,6 @@ export function KeySchedulingTab({ session }: any) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <Inp label="Key ID" value={form.key_id} onChange={(e: any) => setForm({ ...form, key_id: e.target.value })} placeholder="key_xxxxxxxx" />
             <Sel label="Action" value={form.action} onChange={(e: any) => setForm({ ...form, action: e.target.value })}>
-              <option value="rotate">Rotate</option>
               <option value="verify">Verify</option>
               <option value="backup">Backup</option>
               <option value="archive">Archive</option>
