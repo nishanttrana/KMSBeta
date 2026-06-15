@@ -3,6 +3,45 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-06-15
+
+### Auto-generated "advanced feature" tabs were mostly decorative — keep only what's enforced
+The "20 advanced features" batch (migration 012) produced several tabs that
+looked functional but didn't actually do anything on real keys. Audit each
+against "is it enforced / does it solve a real problem?" before trusting it:
+- **Key Binding** (TPM PCR / region / IP-CIDR): config was stored in
+  `key_binding_configs` but **never read at crypto time** — no enforcement
+  anywhere outside its own CRUD. Decorative. Removed.
+- **Key Metadata Extension**: duplicated fields the key already carries
+  (`owner`, `tags`, `labels`, `compliance`) in a parallel `key_metadata_ext`
+  table. Redundant. Removed.
+- **Key Verification**: the handler hard-coded `"verified": true` and
+  fingerprinted the *encrypted* material (meaningless — ciphertext changes on
+  re-wrap). It never proved anything.
+- **Decision:** merge to the one genuinely strong capability — real key
+  integrity verification — and delete the rest (frontend tabs + libs, backend
+  handlers/routes/store methods/types, and a migration dropping the tables).
+
+### Real key-integrity verification
+A meaningful integrity check decrypts the current version's material under the
+MEK (an AES-GCM auth-tag failure = corruption / tampering / wrong-or-rotated
+MEK) and, for keys with a KCV, recomputes the KCV from the live material and
+constant-time compares it to the recorded value. Gotcha: the **authoritative
+KCV lives on the key _version_** (`key_versions.kcv`), not the `keys` row — the
+key row's `kcv` is a denormalised copy only updated on rotation, so it can be
+empty on first create. Compare against `version.KCV` (fall back to `key.KCV`).
+Reuse `decryptMaterial` + `computeKCVStrict` so the check matches creation
+exactly. The old placeholder could never fail; the real one can and does
+(tested by corrupting `key_versions.encrypted_material`).
+
+### Removing a feature is a full-stack sweep
+Per feature: frontend tab + lib + shell wiring (lazy import, component map,
+TITLES, nav) + `moduleRegistry` gate; backend routes + handlers + `Store`
+interface methods + SQLStore impls + types; a migration to drop the table; and
+the **generated REST catalog** (`restApiCatalog.generated.ts`) which the
+`build` script regenerates via `generate:rest-catalog` — so a plain
+`npm run build` drops stale endpoints automatically.
+
 ## 2026-06-14
 
 ### "Create key failed: policy evaluator unavailable; fail-closed"

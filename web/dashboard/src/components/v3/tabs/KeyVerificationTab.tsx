@@ -43,9 +43,9 @@ export function KeyVerificationTab({ session }: any) {
     try {
       const r = await fetch(`${base}/keys/${keyId}/verify-material`, { method: "POST", headers: hdr(session.token, tid) });
       const d = await r.json();
-      setResults(prev => ({ ...prev, [keyId]: d }));
+      setResults(prev => ({ ...prev, [keyId]: d.result ?? d }));
     } catch (e: any) {
-      setResults(prev => ({ ...prev, [keyId]: { valid: false, error: e.message } }));
+      setResults(prev => ({ ...prev, [keyId]: { verified: false, detail: e.message } }));
     } finally { setVerifying(null); }
   };
 
@@ -55,8 +55,8 @@ export function KeyVerificationTab({ session }: any) {
   };
 
   const filtered = keys.filter((k: any) => !search || k.id?.includes(search) || k.label?.toLowerCase().includes(search.toLowerCase()));
-  const verifiedCount = Object.values(results).filter((r: any) => r.valid).length;
-  const failedCount = Object.values(results).filter((r: any) => r.valid === false).length;
+  const verifiedCount = Object.values(results).filter((r: any) => r.verified).length;
+  const failedCount = Object.values(results).filter((r: any) => r.verified === false).length;
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
@@ -91,7 +91,7 @@ export function KeyVerificationTab({ session }: any) {
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr><TH c="Key ID" /><TH c="Label" /><TH c="Algorithm" /><TH c="Status" /><TH c="Verification" /><TH c="Fingerprint" /><TH c="Actions" /></tr></thead>
+              <thead><tr><TH c="Key ID" /><TH c="Label" /><TH c="Algorithm" /><TH c="Status" /><TH c="Integrity" /><TH c="Detail" /><TH c="Actions" /></tr></thead>
               <tbody>
                 {filtered.map((k: any, i: number) => {
                   const res = results[k.id];
@@ -101,10 +101,10 @@ export function KeyVerificationTab({ session }: any) {
                       <TD c={<Badge color={k.status === "active" ? C.green : C.amber}>{k.status}</Badge>} />
                       <TD c={
                         res
-                          ? <Badge color={res.valid ? C.green : C.red}>{res.valid ? "Valid" : "Failed"}</Badge>
+                          ? <Badge color={res.verified ? C.green : C.red}>{res.verified ? (res.kcv_checked ? "KCV verified" : "Verified") : "FAILED"}</Badge>
                           : <Badge color={C.muted}>Unverified</Badge>
                       } />
-                      <TD c={res?.fingerprint?.slice(0, 24) ? res.fingerprint.slice(0, 24) + "…" : "—"} mono />
+                      <TD c={res?.detail ?? "—"} />
                       <TD c={
                         <Btn small variant="ghost" onClick={() => handleVerify(k.id)} disabled={verifying === k.id}>
                           <ShieldCheck size={11} />{verifying === k.id ? "Verifying…" : "Verify"}

@@ -175,16 +175,6 @@ type Store interface {
 	ListKDFDerivationLog(ctx context.Context, tenantID string, limit int) ([]KDFDerivationLog, error)
 	AppendKDFDerivationLog(ctx context.Context, l KDFDerivationLog) error
 
-	// Key Binding (hardware attestation + geolocation)
-	ListKeyBindingConfigs(ctx context.Context, tenantID string) ([]KeyBindingConfig, error)
-	GetKeyBindingConfig(ctx context.Context, tenantID, keyID string) (KeyBindingConfig, error)
-	UpsertKeyBindingConfig(ctx context.Context, b KeyBindingConfig) (KeyBindingConfig, error)
-
-	// Key Metadata Extension
-	ListKeyMetadataExt(ctx context.Context, tenantID string) ([]KeyMetadataExt, error)
-	GetKeyMetadataExt(ctx context.Context, tenantID, keyID string) (KeyMetadataExt, error)
-	UpsertKeyMetadataExt(ctx context.Context, m KeyMetadataExt) (KeyMetadataExt, error)
-
 	// Threat Detection (usage trail + signals)
 	InsertKeyUsageEvent(ctx context.Context, e KeyUsageEvent) error
 	PruneKeyUsageEvents(ctx context.Context, tenantID string, before time.Time) error

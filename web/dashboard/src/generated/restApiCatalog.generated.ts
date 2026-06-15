@@ -15215,34 +15215,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-get-binding-configs",
-    "group": "Key Management (keycore)",
-    "title": "GET /binding/configs",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/binding/configs?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/binding/configs?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "keycore-get-canary",
     "group": "Key Management (keycore)",
     "title": "GET /canary",
@@ -16363,34 +16335,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-get-keys-id-binding",
-    "group": "Key Management (keycore)",
-    "title": "GET /keys/{id}/binding",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/keys/{id}/binding?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/keys/{id}/binding?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "keycore-get-keys-id-credential-bindings",
     "group": "Key Management (keycore)",
     "title": "GET /keys/{id}/credential-bindings",
@@ -16531,34 +16475,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-get-keys-id-metadata-extended",
-    "group": "Key Management (keycore)",
-    "title": "GET /keys/{id}/metadata/extended",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/keys/{id}/metadata/extended?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/keys/{id}/metadata/extended?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "keycore-get-keys-id-rotation-metrics",
     "group": "Key Management (keycore)",
     "title": "GET /keys/{id}/rotation-metrics",
@@ -16680,34 +16596,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "GET /svc/keycore/keys/due-for-lifecycle?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-get-metadata-extended",
-    "group": "Key Management (keycore)",
-    "title": "GET /metadata/extended",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/metadata/extended?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/metadata/extended?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -19919,34 +19807,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-put-keys-id-binding",
-    "group": "Key Management (keycore)",
-    "title": "PUT /keys/{id}/binding",
-    "service": "keycore",
-    "method": "PUT",
-    "pathTemplate": "/keys/{id}/binding?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "PUT /svc/keycore/keys/{id}/binding?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "keycore-put-keys-id-export-policy",
     "group": "Key Management (keycore)",
     "title": "PUT /keys/{id}/export-policy",
@@ -19984,34 +19844,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "PUT /svc/keycore/keys/{id}/iv-mode?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-put-keys-id-metadata-extended",
-    "group": "Key Management (keycore)",
-    "title": "PUT /keys/{id}/metadata/extended",
-    "service": "keycore",
-    "method": "PUT",
-    "pathTemplate": "/keys/{id}/metadata/extended?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "PUT /svc/keycore/keys/{id}/metadata/extended?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

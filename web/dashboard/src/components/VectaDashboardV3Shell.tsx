@@ -114,8 +114,6 @@ const KeyAnalyticsTab = lazy(() => import("./v3/tabs/KeyAnalyticsTab").then(m =>
 const KDFTab = lazy(() => import("./v3/tabs/KDFTab").then(m => ({ default: m.KDFTab })));
 const KeyVerificationTab = lazy(() => import("./v3/tabs/KeyVerificationTab").then(m => ({ default: m.KeyVerificationTab })));
 const AdvancedEncryptionTab = lazy(() => import("./v3/tabs/AdvancedEncryptionTab").then(m => ({ default: m.AdvancedEncryptionTab })));
-const KeyBindingTab = lazy(() => import("./v3/tabs/KeyBindingTab").then(m => ({ default: m.KeyBindingTab })));
-const KeyMetadataTab = lazy(() => import("./v3/tabs/KeyMetadataTab").then(m => ({ default: m.KeyMetadataTab })));
 const ThreatExposureTab = lazy(() => import("./v3/tabs/ThreatExposureTab").then(m => ({ default: m.ThreatExposureTab })));
 
 type Props = {
@@ -226,8 +224,6 @@ const TABS: Record<string, any> = {
   kdf: KDFTab,
   key_verification: KeyVerificationTab,
   adv_encryption: AdvancedEncryptionTab,
-  key_binding: KeyBindingTab,
-  key_metadata: KeyMetadataTab,
   threat_exposure: ThreatExposureTab,
 };
 
@@ -278,8 +274,6 @@ const TITLES: Record<string, string> = {
   kdf: "Key Derivation (KDF)",
   key_verification: "Key Verification",
   adv_encryption: "Advanced Encryption",
-  key_binding: "Key Binding",
-  key_metadata: "Key Metadata",
   threat_exposure: "Threat & Exposure",
 };
 
@@ -295,8 +289,6 @@ const NAV = [
     { id: "rotation", icon: CalendarClock, label: "Rotation & Scheduling" },
     { id: "escrow", icon: Vault, label: "Key Recovery & Escrow" },
     { id: "key_verification", icon: ShieldCheck, label: "Key Verification" },
-    { id: "key_metadata", icon: Tag, label: "Key Metadata" },
-    { id: "key_binding", icon: Cpu, label: "Key Binding" },
     { id: "kdf", icon: Layers, label: "Key Derivation" },
     { id: "adv_encryption", icon: Lock, label: "Advanced Encryption" },
     { id: "envelope_enc", icon: Layers, label: "Envelope Encryption" },

@@ -286,17 +286,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /kdf/configs/{id}/derive", h.handleKDFDerive)
 	mux.HandleFunc("DELETE /kdf/configs/{id}", h.handleDeleteKDFConfig)
 
-	// Key Binding (hardware attestation + geolocation)
-	mux.HandleFunc("GET /binding/configs", h.handleListKeyBindings)
-	mux.HandleFunc("GET /keys/{id}/binding", h.handleGetKeyBinding)
-	mux.HandleFunc("PUT /keys/{id}/binding", h.handleUpsertKeyBinding)
-
-	// Key Metadata Extension
-	mux.HandleFunc("GET /metadata/extended", h.handleListKeyMetadata)
-	mux.HandleFunc("GET /keys/{id}/metadata/extended", h.handleGetKeyMetadataExt)
-	mux.HandleFunc("PUT /keys/{id}/metadata/extended", h.handleUpsertKeyMetadataExt)
-
-	// Key Material Verification (enhanced fingerprint)
+	// Key Material Verification (real integrity check)
 	mux.HandleFunc("POST /keys/{id}/verify-material", h.handleVerifyKeyMaterial)
 
 	// External credential -> key bindings (correlation join keys)
