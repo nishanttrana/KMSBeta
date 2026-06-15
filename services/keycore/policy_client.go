@@ -78,6 +78,16 @@ func (c *HTTPPolicyClient) Evaluate(ctx context.Context, req PolicyEvaluateReque
 		return PolicyEvaluateResponse{}, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	// The policy service requires a valid Bearer JWT on every request. Propagate
+	// the caller's token (all services share the cluster JWT public key) so policy
+	// evaluates under the caller's identity; also forward the tenant header the
+	// policy handler cross-checks against the token.
+	if tok, _ := ctx.Value(rawBearerTokenCtxKey).(string); strings.TrimSpace(tok) != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+tok)
+	}
+	if strings.TrimSpace(req.TenantID) != "" {
+		httpReq.Header.Set("X-Tenant-ID", req.TenantID)
+	}
 	resp, err := c.client.Do(httpReq)
 	if err != nil {
 		return PolicyEvaluateResponse{}, err

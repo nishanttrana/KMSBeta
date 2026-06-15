@@ -450,6 +450,10 @@ services:
       HSM_MODE: ${HSM_MODE:-software}
       HSM_ENDPOINT: ${HSM_ENDPOINT:-hsm-connector:18430}
       GOVERNANCE_URL: http://governance:8050
+      # Without this keycore has no policy evaluator and, being fail-closed by
+      # default (KEYCORE_POLICY_FAIL_CLOSED), denies every key operation with
+      # "policy evaluator unavailable; fail-closed". Points at the policy svc.
+      POLICY_ENGINE_URL: ${POLICY_ENGINE_URL:-http://policy:8040}
       CLUSTER_URL: ${CLUSTER_URL:-http://cluster-manager:8210}
       CLUSTER_BOOTSTRAP_PROFILE_ID: ${CLUSTER_BOOTSTRAP_PROFILE_ID:-cluster-profile-base}
       CLUSTER_NODE_ID: ${CLUSTER_NODE_ID:-vecta-kms-01}
