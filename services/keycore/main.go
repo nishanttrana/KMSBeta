@@ -371,6 +371,21 @@ func loadJWTParser(issuer string, audience string) (func(string) (*pkgauth.Claim
 			pubPEM = string(raw)
 		}
 	}
+	// Fall back to the cluster-wide key the common deployment supplies to every
+	// service, so token parsing (and thus tenant enforcement) works without a
+	// keycore-specific key override.
+	if pubPEM == "" {
+		pubPEM = strings.TrimSpace(os.Getenv("JWT_PUBLIC_KEY_PEM"))
+	}
+	if pubPEM == "" {
+		if b64 := strings.TrimSpace(os.Getenv("JWT_PUBLIC_KEY_B64")); b64 != "" {
+			raw, err := base64.StdEncoding.DecodeString(b64)
+			if err != nil {
+				return nil, err
+			}
+			pubPEM = string(raw)
+		}
+	}
 	pubPEM = strings.ReplaceAll(pubPEM, `\n`, "\n")
 	if pubPEM == "" {
 		return nil, nil
