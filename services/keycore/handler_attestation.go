@@ -4,7 +4,7 @@ import "net/http"
 
 func (h *Handler) handleAttestKey(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
@@ -18,7 +18,7 @@ func (h *Handler) handleAttestKey(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleAttestationPublicKey(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}

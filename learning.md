@@ -5,6 +5,32 @@ Newest entries on top.
 
 ## 2026-06-16
 
+### Tenant enforcement: data-scoping is not the same as access-enforcement
+All these features store data per tenant (RLS + `WHERE tenant_id`), but that
+alone does not stop a caller from *asking* for another tenant's data. The
+enforcement points and their gaps:
+- `mustTenant` → `tenantcheck.Enforce` binds `tenant_id` to the JWT's tenant
+  claim — but **only when a token is present**; with no claims it skips by
+  design (so the outer layer is expected to require auth).
+- **keycore does not require auth globally** (only rate-limit + audit
+  middleware), and ~10 internal services (ekm, kmip, signing, payment, …) call
+  its `/keys` crypto routes with a `tenant_id` and **no token**. So a blanket
+  "require auth" would break platform crypto.
+- **posture never parsed JWTs at all** → `tenantcheck.Enforce` was a no-op
+  there → the leak scanner had *zero* tenant binding (any `tenant_id` returned
+  that tenant's targets/findings).
+- Fix without breaking tokenless internal callers: a `requireAuthedTenant`
+  helper (reject if no claims, then `mustTenant`) applied to the *dashboard-only*
+  feature endpoints (threat, credential-bindings, attest, verify, and posture
+  `/leaks/*`). posture also gained an **optional** JWT-parse middleware
+  (populate claims if present, 401 if invalid, pass through if absent) so
+  `tenantcheck` works for token-bearing dashboard calls while tokenless
+  `/posture/*` calls from reporting keep working.
+- Check before tightening auth: who calls the endpoint? `grep <SVC>_URL`.
+  Shared crypto/report routes have tokenless internal callers; feature routes
+  are dashboard-only and safe to require auth on. Health probes use the gRPC
+  port (18xxx), so requiring auth on the HTTP handler never breaks healthchecks.
+
 ### A tab showing "No keys found" while Key Management has keys = wrong list call
 The Key Verification tab raw-fetched `/svc/keycore/keys`, read `d.keys`, and
 searched/displayed `label`. But the keys endpoint needs `?tenant_id=` and

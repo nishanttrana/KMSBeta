@@ -13,8 +13,38 @@ import (
 
 	"vecta-kms/pkg/tenantcheck"
 
+	pkgauth "vecta-kms/pkg/auth"
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
+
+// optionalJWTMiddleware populates request claims when a valid bearer token is
+// present (rejecting an invalid one) and otherwise passes the request through
+// unauthenticated. Tenant-scoped feature handlers gate on requireAuthedTenant.
+func optionalJWTMiddleware(next http.Handler, parse func(string) (*pkgauth.Claims, error)) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer"))
+		if raw != "" {
+			claims, err := parse(raw)
+			if err != nil {
+				writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid token", requestID(r), "")
+				return
+			}
+			r = r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims))
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// requireAuthedTenant is mustTenant plus a hard requirement that the caller is
+// authenticated — used by tenant-scoped feature endpoints (e.g. the leak
+// scanner) so they cannot be reached unauthenticated or with a spoofed tenant.
+func requireAuthedTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
+	if _, ok := pkgauth.ClaimsFromContext(r.Context()); !ok {
+		writeErr(w, http.StatusUnauthorized, "unauthorized", "authentication required", reqID, "")
+		return ""
+	}
+	return mustTenant(r, reqID, w)
+}
 
 type serviceError struct {
 	Code       string

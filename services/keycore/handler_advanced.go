@@ -284,7 +284,7 @@ func (h *Handler) handleDeleteKDFConfig(w http.ResponseWriter, r *http.Request) 
 
 func (h *Handler) handleVerifyKeyMaterial(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}

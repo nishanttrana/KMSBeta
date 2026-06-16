@@ -26,6 +26,7 @@ import (
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -86,7 +87,19 @@ func main() {
 	svc.Configure(engineInterval, hotRetention, auditSyncLimit, autoRemediate)
 	svc.StartScheduler(ctx)
 
-	handler := NewHandler(svc)
+	var rootHandler http.Handler = NewHandler(svc)
+	// Optional JWT parsing: populate claims when a valid token is present so
+	// tenantcheck.Enforce binds requests to the authenticated tenant. Absent
+	// tokens are allowed through here (tenant-scoped feature handlers that must
+	// be authenticated call requireAuthedTenant themselves) so internal,
+	// tokenless callers of /posture/* (e.g. reporting) keep working.
+	if parser, err := pkgjwtauth.LoadParser(pkgjwtauth.Config{Prefix: "POSTURE", Issuer: cfg.JWTIssuer, Audience: cfg.JWTAudience}); err != nil {
+		logger.Printf("jwt parser disabled: %v", err)
+	} else if parser != nil {
+		rootHandler = optionalJWTMiddleware(rootHandler, parser)
+		logger.Printf("jwt parser enabled for tenant enforcement")
+	}
+	handler := rootHandler
 
 	httpPort := envOr("HTTP_PORT", "8220")
 	if err := pkgruntimecfg.ValidateHTTPPort(httpPort); err != nil {

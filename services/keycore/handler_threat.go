@@ -7,7 +7,7 @@ import (
 
 func (h *Handler) handleListThreatSignals(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
@@ -25,7 +25,7 @@ func (h *Handler) handleListThreatSignals(w http.ResponseWriter, r *http.Request
 
 func (h *Handler) handleAckThreatSignal(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
@@ -49,7 +49,7 @@ func (h *Handler) handleAckThreatSignal(w http.ResponseWriter, r *http.Request) 
 
 func (h *Handler) handleThreatDashboard(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}

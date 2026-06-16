@@ -9,7 +9,7 @@ import (
 
 func (h *Handler) handleListLeakTargets(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
@@ -26,7 +26,7 @@ func (h *Handler) handleListLeakTargets(w http.ResponseWriter, r *http.Request) 
 
 func (h *Handler) handleCreateLeakTarget(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
@@ -71,7 +71,7 @@ func (h *Handler) handleCreateLeakTarget(w http.ResponseWriter, r *http.Request)
 
 func (h *Handler) handleDeleteLeakTarget(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
@@ -93,7 +93,7 @@ func (h *Handler) handleDeleteLeakTarget(w http.ResponseWriter, r *http.Request)
 
 func (h *Handler) handleTriggerScan(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
@@ -197,7 +197,7 @@ func (h *Handler) runScan(ctx context.Context, tenantID string, target LeakScanT
 
 func (h *Handler) handleListLeakJobs(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
@@ -216,7 +216,7 @@ func (h *Handler) handleListLeakJobs(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) handleListLeakFindings(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
@@ -236,7 +236,7 @@ func (h *Handler) handleListLeakFindings(w http.ResponseWriter, r *http.Request)
 
 func (h *Handler) handleUpdateLeakFinding(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}

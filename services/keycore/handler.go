@@ -2109,6 +2109,19 @@ func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
 	return tenantID
 }
 
+// requireAuthedTenant is mustTenant plus a hard requirement that the caller is
+// authenticated. tenantcheck.Enforce only binds a tenant when a token is
+// present (so tokenless internal crypto callers keep working on the shared
+// /keys routes); dashboard-only features call this instead so they cannot be
+// reached unauthenticated and a tenant cannot be spoofed via a header.
+func requireAuthedTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
+	if _, ok := pkgauth.ClaimsFromContext(r.Context()); !ok {
+		writeErr(w, http.StatusUnauthorized, "unauthorized", "authentication required", reqID, "")
+		return ""
+	}
+	return mustTenant(r, reqID, w)
+}
+
 func isSensitiveKeycoreRoute(method string, path string) bool {
 	m := strings.ToUpper(strings.TrimSpace(method))
 	if m != http.MethodPost && m != http.MethodPut && m != http.MethodDelete {

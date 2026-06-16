@@ -11,7 +11,7 @@ import (
 // server-side, never stored) or a precomputed fingerprint.
 func (h *Handler) handleCreateCredentialBinding(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
@@ -60,7 +60,7 @@ func (h *Handler) handleCreateCredentialBinding(w http.ResponseWriter, r *http.R
 
 func (h *Handler) handleListCredentialBindings(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
@@ -77,7 +77,7 @@ func (h *Handler) handleListCredentialBindings(w http.ResponseWriter, r *http.Re
 
 func (h *Handler) handleDeleteCredentialBinding(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
@@ -99,7 +99,7 @@ func (h *Handler) handleDeleteCredentialBinding(w http.ResponseWriter, r *http.R
 // credentials into correlatable key references.
 func (h *Handler) handleResolveCredentialBindings(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
+	tenantID := requireAuthedTenant(r, reqID, w)
 	if tenantID == "" {
 		return
 	}
