@@ -30,6 +30,7 @@ import (
 	"math/bits"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/bits-and-blooms/bloom/v3"
@@ -64,6 +65,8 @@ type Service struct {
 	versions     VersionPolicy
 	wakeRegistry *WakeSelfTestRegistry
 	archiver     *Archiver
+	attestKP     *crypto.KeyPair
+	attestMu     sync.Mutex
 }
 
 // SetCryptoperiodPolicy installs the NIST SP 800-57 cryptoperiod table.

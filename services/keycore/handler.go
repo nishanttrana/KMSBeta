@@ -286,6 +286,10 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /kdf/configs/{id}/derive", h.handleKDFDerive)
 	mux.HandleFunc("DELETE /kdf/configs/{id}", h.handleDeleteKDFConfig)
 
+	// Key Attestation (signed, verifiable statement + integrity check)
+	mux.HandleFunc("POST /keys/{id}/attest", h.handleAttestKey)
+	mux.HandleFunc("GET /attestation/public-key", h.handleAttestationPublicKey)
+
 	// Key Material Verification (real integrity check)
 	mux.HandleFunc("POST /keys/{id}/verify-material", h.handleVerifyKeyMaterial)
 

@@ -272,7 +272,7 @@ const TITLES: Record<string, string> = {
   // Enterprise Advanced Features
   key_analytics: "Key Analytics",
   kdf: "Key Derivation (KDF)",
-  key_verification: "Key Verification",
+  key_verification: "Key Verification & Attestation",
   adv_encryption: "Advanced Encryption",
   threat_exposure: "Threat & Exposure",
 };
@@ -288,7 +288,7 @@ const NAV = [
     { id: "keys", icon: KeyRound, label: "Key Management" },
     { id: "rotation", icon: CalendarClock, label: "Rotation & Scheduling" },
     { id: "escrow", icon: Vault, label: "Key Recovery & Escrow" },
-    { id: "key_verification", icon: ShieldCheck, label: "Key Verification" },
+    { id: "key_verification", icon: ShieldCheck, label: "Verification & Attestation" },
     { id: "kdf", icon: Layers, label: "Key Derivation" },
     { id: "adv_encryption", icon: Lock, label: "Advanced Encryption" },
     { id: "envelope_enc", icon: Layers, label: "Envelope Encryption" },

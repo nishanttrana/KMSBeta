@@ -3,6 +3,33 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-06-16
+
+### A tab showing "No keys found" while Key Management has keys = wrong list call
+The Key Verification tab raw-fetched `/svc/keycore/keys`, read `d.keys`, and
+searched/displayed `label`. But the keys endpoint needs `?tenant_id=` and
+returns `{items: [...]}`, and keys have **`name`**, not `label`. Result: no
+keys (or none matching a name search). Fix: use the same typed `listKeys(session)`
+lib that Key Management uses, and search on `id`+`name`. Lesson: per-tab raw
+fetches drift from the canonical client — reuse `lib/keycore` so every view
+sees the same data.
+
+### Key attestation (signed, offline-verifiable)
+Added `POST /keys/{id}/attest`: builds a canonical statement (key identity,
+properties, exportability, KCV, and a live integrity result) and signs it with
+an ECDSA P-256 attestation key; `GET /attestation/public-key` publishes the
+verifying key. Notes:
+- **Central crypto only:** keycore must not import `crypto/ecdsa` directly
+  (the `make conformance` central-crypto rule). Use `pkg/crypto`'s
+  `GenerateKeyPair`/`Sign`/`MarshalPublicKeyPEM`/`ParsePrivateKeyPEM`.
+- Signing key loads from `KEYCORE_ATTESTATION_PRIVATE_KEY_PEM/_B64` for a
+  stable identity across restarts; falls back to an ephemeral key (logged) so
+  the feature works out of the box. The pubkey endpoint always reflects the
+  active key, so attestations verify for the key's lifetime.
+- Statement is marshalled deterministically and the **exact signed bytes** are
+  returned (`statement_b64`) so a relying party verifies the signature without
+  re-serialising. Tested: signature verifies; a tampered statement does not.
+
 ## 2026-06-15
 
 ### Auto-generated "advanced feature" tabs were mostly decorative — keep only what's enforced
