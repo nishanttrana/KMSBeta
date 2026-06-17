@@ -15,6 +15,8 @@ import {
   listKeyVersions,
   listTags,
   rotateKey,
+  verifyKeyMaterial,
+  attestKey,
   getKeyAccessPolicy,
   setKeyAccessPolicy,
   setKeyExportPolicy,
@@ -489,6 +491,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
   const [keyVersions,setKeyVersions]=useState([]);
   const [statusUpdatingId,setStatusUpdatingId]=useState("");
   const [openActionMenuId,setOpenActionMenuId]=useState("");
+  const [attestResult,setAttestResult]=useState<any>(null);
   const [destroying,setDestroying]=useState(false);
   const [destroyConfirmName,setDestroyConfirmName]=useState("");
   const [destroyMode,setDestroyMode]=useState("scheduled");
@@ -1269,6 +1272,25 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     }
   };
 
+  const verifyKeyAction=async(k:any)=>{
+    setOpenActionMenuId("");
+    if(!session||!k?.id) return;
+    try{
+      const r=await verifyKeyMaterial(session,k.id);
+      onToast?.(r.verified
+        ? `Integrity OK: ${k.name}${r.kcv_checked?" — KCV matches":""}`
+        : `Integrity FAILED: ${k.name} — ${r.detail||"verification failed"}`);
+    }catch(error){ onToast?.(`Verify failed: ${errMsg(error)}`); }
+  };
+
+  const attestKeyAction=async(k:any)=>{
+    setOpenActionMenuId("");
+    if(!session||!k?.id) return;
+    try{
+      setAttestResult(await attestKey(session,k.id));
+    }catch(error){ onToast?.(`Attest failed: ${errMsg(error)}`); }
+  };
+
   const rotateSelectedKey=async()=>{
     if(!session||!selectedKey?.id){
       return;
@@ -1990,6 +2012,18 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
                       style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
                     >
                       Rotate
+                    </button>}
+                    {!isDeletedLike&&<button
+                      onClick={(e)=>{e.stopPropagation(); verifyKeyAction(k);}}
+                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                    >
+                      Verify Integrity
+                    </button>}
+                    {!isDeletedLike&&<button
+                      onClick={(e)=>{e.stopPropagation(); attestKeyAction(k);}}
+                      style={{background:"transparent",border:"none",color:C.text,fontSize:10,textAlign:"left",padding:"6px 8px",cursor:"pointer",borderRadius:6}}
+                    >
+                      Attest
                     </button>}
                     {normState==="active"&&<button
                       onClick={(e)=>{
@@ -2740,6 +2774,22 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       <Chk label="Auto-generate classical fallback key (for migration period)" checked={true}/>
       <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12}}><Btn onClick={()=>setModal(null)}>Cancel</Btn><Btn primary onClick={generatePQCKey} disabled={pqcGenerating}>{pqcGenerating?"Generating...":"Generate PQC Key"}</Btn></div>
     </Modal>
+    {attestResult&&<div onClick={()=>setAttestResult(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:60,padding:24}}>
+      <div onClick={(e)=>e.stopPropagation()} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:20,width:720,maxWidth:"100%",maxHeight:"80vh",overflowY:"auto"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+          <div style={{fontSize:14,fontWeight:700,color:C.text}}>Signed Key Attestation</div>
+          <Btn onClick={()=>setAttestResult(null)}>Close</Btn>
+        </div>
+        <div style={{fontSize:11,color:C.muted,marginBottom:10}}>
+          {attestResult.signing_algorithm} · integrity {attestResult.statement?.integrity_verified?"verified":"FAILED"} · verify offline against GET /attestation/public-key
+        </div>
+        <pre style={{background:C.bg,border:`1px solid ${C.border}`,borderRadius:6,padding:12,fontSize:10,color:C.text,overflowX:"auto",maxHeight:"48vh"}}>{JSON.stringify(attestResult,null,2)}</pre>
+        <div style={{display:"flex",gap:8,marginTop:12}}>
+          <Btn primary onClick={()=>{const b=new Blob([JSON.stringify(attestResult,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`attestation-${attestResult.statement?.key_id||"key"}.json`;a.click();URL.revokeObjectURL(a.href);}}>Download</Btn>
+          <Btn onClick={()=>navigator.clipboard?.writeText(JSON.stringify(attestResult,null,2))}>Copy</Btn>
+        </div>
+      </div>
+    </div>}
   </div>;
 };
 

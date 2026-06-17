@@ -14711,34 +14711,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-delete-kdf-configs-id",
-    "group": "Key Management (keycore)",
-    "title": "DELETE /kdf/configs/{id}",
-    "service": "keycore",
-    "method": "DELETE",
-    "pathTemplate": "/kdf/configs/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "DELETE /svc/keycore/kdf/configs/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "keycore-delete-keys-id-versions-ver",
     "group": "Key Management (keycore)",
     "title": "DELETE /keys/{id}/versions/{ver}",
@@ -16204,34 +16176,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "GET /svc/keycore/inventory/orphans?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-get-kdf-configs",
-    "group": "Key Management (keycore)",
-    "title": "GET /kdf/configs",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/kdf/configs?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/kdf/configs?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -18528,62 +18472,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/inventory/sync?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-kdf-configs",
-    "group": "Key Management (keycore)",
-    "title": "POST /kdf/configs",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/kdf/configs?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/kdf/configs?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-kdf-configs-id-derive",
-    "group": "Key Management (keycore)",
-    "title": "POST /kdf/configs/{id}/derive",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/kdf/configs/{id}/derive?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/kdf/configs/{id}/derive?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

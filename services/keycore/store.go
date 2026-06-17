@@ -169,11 +169,6 @@ type Store interface {
 	DeleteSchedulingJob(ctx context.Context, tenantID, id string) error
 
 	// KDF Configurations
-	ListKDFConfigs(ctx context.Context, tenantID string) ([]KDFConfig, error)
-	CreateKDFConfig(ctx context.Context, c KDFConfig) (KDFConfig, error)
-	DeleteKDFConfig(ctx context.Context, tenantID, id string) error
-	ListKDFDerivationLog(ctx context.Context, tenantID string, limit int) ([]KDFDerivationLog, error)
-	AppendKDFDerivationLog(ctx context.Context, l KDFDerivationLog) error
 
 	// Threat Detection (usage trail + signals)
 	InsertKeyUsageEvent(ctx context.Context, e KeyUsageEvent) error

@@ -28,30 +28,6 @@ type KeySchedulingJob struct {
 	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
-type KDFConfig struct {
-	ID        string    `json:"id"`
-	TenantID  string    `json:"tenant_id"`
-	Name      string    `json:"name"`
-	Algorithm string    `json:"algorithm"`
-	Params    KeyLabels `json:"params"`
-	Purpose   string    `json:"purpose"`
-	Enabled   bool      `json:"enabled"`
-	CreatedBy string    `json:"created_by"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-}
-
-type KDFDerivationLog struct {
-	ID          string    `json:"id"`
-	TenantID    string    `json:"tenant_id"`
-	ConfigID    string    `json:"config_id"`
-	SourceKey   string    `json:"source_key"`
-	Purpose     string    `json:"purpose"`
-	ContextHash string    `json:"context_hash"`
-	PerformedBy string    `json:"performed_by"`
-	CreatedAt   time.Time `json:"created_at"`
-}
-
 // ─── Key Scheduling Jobs ─────────────────────────────────────────────────────
 
 func (s *SQLStore) ListSchedulingJobs(ctx context.Context, tenantID string) ([]KeySchedulingJob, error) {
@@ -119,82 +95,4 @@ func scanSchedulingJob(s interface{ Scan(...any) error }) (KeySchedulingJob, err
 	}
 	_ = json.Unmarshal(payloadRaw, &j.Payload)
 	return j, nil
-}
-
-// ─── KDF ─────────────────────────────────────────────────────────────────────
-
-func (s *SQLStore) ListKDFConfigs(ctx context.Context, tenantID string) ([]KDFConfig, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, name, algorithm, params, purpose, enabled, created_by, created_at, updated_at
-FROM kdf_configs WHERE tenant_id=$1 ORDER BY name ASC`, tenantID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close() //nolint:errcheck
-	var out []KDFConfig
-	for rows.Next() {
-		c, err := scanKDFConfig(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, c)
-	}
-	return out, rows.Err()
-}
-
-func (s *SQLStore) CreateKDFConfig(ctx context.Context, c KDFConfig) (KDFConfig, error) {
-	paramsRaw, _ := json.Marshal(c.Params)
-	row := s.db.SQL().QueryRowContext(ctx, `
-INSERT INTO kdf_configs (id, tenant_id, name, algorithm, params, purpose, enabled, created_by, created_at, updated_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)
-RETURNING id, tenant_id, name, algorithm, params, purpose, enabled, created_by, created_at, updated_at
-`, c.ID, c.TenantID, c.Name, c.Algorithm, paramsRaw, c.Purpose, c.Enabled, c.CreatedBy)
-	return scanKDFConfig(row)
-}
-
-func (s *SQLStore) DeleteKDFConfig(ctx context.Context, tenantID, id string) error {
-	_, err := s.db.SQL().ExecContext(ctx, `DELETE FROM kdf_configs WHERE tenant_id=$1 AND id=$2`, tenantID, id)
-	return err
-}
-
-func (s *SQLStore) ListKDFDerivationLog(ctx context.Context, tenantID string, limit int) ([]KDFDerivationLog, error) {
-	if limit <= 0 || limit > 500 {
-		limit = 100
-	}
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT id, tenant_id, config_id, source_key, purpose, context_hash, performed_by, created_at
-FROM kdf_derivation_log WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT $2`, tenantID, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close() //nolint:errcheck
-	var out []KDFDerivationLog
-	for rows.Next() {
-		var l KDFDerivationLog
-		if err := rows.Scan(&l.ID, &l.TenantID, &l.ConfigID, &l.SourceKey, &l.Purpose,
-			&l.ContextHash, &l.PerformedBy, &l.CreatedAt); err != nil {
-			return nil, err
-		}
-		out = append(out, l)
-	}
-	return out, rows.Err()
-}
-
-func (s *SQLStore) AppendKDFDerivationLog(ctx context.Context, l KDFDerivationLog) error {
-	_, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO kdf_derivation_log (id, tenant_id, config_id, source_key, purpose, context_hash, performed_by, created_at)
-VALUES ($1,$2,$3,$4,$5,$6,$7,CURRENT_TIMESTAMP)`,
-		l.ID, l.TenantID, l.ConfigID, l.SourceKey, l.Purpose, l.ContextHash, l.PerformedBy)
-	return err
-}
-
-func scanKDFConfig(s interface{ Scan(...any) error }) (KDFConfig, error) {
-	var c KDFConfig
-	var paramsRaw []byte
-	if err := s.Scan(&c.ID, &c.TenantID, &c.Name, &c.Algorithm, &paramsRaw, &c.Purpose,
-		&c.Enabled, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt); err != nil {
-		return c, err
-	}
-	_ = json.Unmarshal(paramsRaw, &c.Params)
-	return c, nil
 }

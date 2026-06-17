@@ -46,9 +46,6 @@ const TAB_FEATURES: Record<string, ModuleFeatureNeed> = {
   feature_forge: "feature_forge",
   // Enterprise Advanced Features
   key_analytics: "key_analytics",
-  kdf: "kdf",
-  key_verification: "key_verification",
-  adv_encryption: "advanced_encryption",
   // Unified console (Triage + folded-in canary & scan-target config):
   // visible if either underlying sensor is enabled.
   threat_exposure: ["threat_protection", "posture_management"],

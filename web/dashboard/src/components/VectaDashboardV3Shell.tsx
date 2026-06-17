@@ -111,9 +111,6 @@ const PlaybooksTab = lazy(() => import("./v3/tabs/PlaybooksTab").then(m => ({ de
 const HealthTab = lazy(() => import("./v3/tabs/HealthTab").then(m => ({ default: m.HealthTab })));
 // Enterprise Advanced Features
 const KeyAnalyticsTab = lazy(() => import("./v3/tabs/KeyAnalyticsTab").then(m => ({ default: m.KeyAnalyticsTab })));
-const KDFTab = lazy(() => import("./v3/tabs/KDFTab").then(m => ({ default: m.KDFTab })));
-const KeyVerificationTab = lazy(() => import("./v3/tabs/KeyVerificationTab").then(m => ({ default: m.KeyVerificationTab })));
-const AdvancedEncryptionTab = lazy(() => import("./v3/tabs/AdvancedEncryptionTab").then(m => ({ default: m.AdvancedEncryptionTab })));
 const ThreatExposureTab = lazy(() => import("./v3/tabs/ThreatExposureTab").then(m => ({ default: m.ThreatExposureTab })));
 
 type Props = {
@@ -221,9 +218,6 @@ const TABS: Record<string, any> = {
   health: HealthTab,
   // Enterprise Advanced Features
   key_analytics: KeyAnalyticsTab,
-  kdf: KDFTab,
-  key_verification: KeyVerificationTab,
-  adv_encryption: AdvancedEncryptionTab,
   threat_exposure: ThreatExposureTab,
 };
 
@@ -271,9 +265,6 @@ const TITLES: Record<string, string> = {
   health: "Health & Reconciliation",
   // Enterprise Advanced Features
   key_analytics: "Key Analytics",
-  kdf: "Key Derivation (KDF)",
-  key_verification: "Key Verification & Attestation",
-  adv_encryption: "Advanced Encryption",
   threat_exposure: "Threat & Exposure",
 };
 
@@ -288,9 +279,6 @@ const NAV = [
     { id: "keys", icon: KeyRound, label: "Key Management" },
     { id: "rotation", icon: CalendarClock, label: "Rotation & Scheduling" },
     { id: "escrow", icon: Vault, label: "Key Recovery & Escrow" },
-    { id: "key_verification", icon: ShieldCheck, label: "Verification & Attestation" },
-    { id: "kdf", icon: Layers, label: "Key Derivation" },
-    { id: "adv_encryption", icon: Lock, label: "Advanced Encryption" },
     { id: "envelope_enc", icon: Layers, label: "Envelope Encryption" },
     { id: "crypto_agility", icon: Gauge, label: "Crypto Agility" },
   ]},

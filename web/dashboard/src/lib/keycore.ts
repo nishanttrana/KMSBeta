@@ -683,6 +683,27 @@ export async function rotateKey(
   });
 }
 
+// verifyKeyMaterial runs the real integrity check (decrypt under MEK +
+// recompute/compare KCV) on the key's current version.
+export async function verifyKeyMaterial(session: AuthSession, keyId: string): Promise<any> {
+  const res = await apiRequest<any>(
+    session,
+    `/keys/${encodeURIComponent(keyId)}/verify-material?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    { method: "POST" }
+  );
+  return res.result ?? res;
+}
+
+// attestKey returns a signed, offline-verifiable attestation of the key.
+export async function attestKey(session: AuthSession, keyId: string): Promise<any> {
+  const res = await apiRequest<any>(
+    session,
+    `/keys/${encodeURIComponent(keyId)}/attest?tenant_id=${encodeURIComponent(session.tenantId)}`,
+    { method: "POST" }
+  );
+  return res.attestation ?? res;
+}
+
 export async function listKeyVersions(session: AuthSession, keyId: string): Promise<KeyVersionItem[]> {
   const payload = await apiRequest<APIKeyVersionsResponse>(
     session,

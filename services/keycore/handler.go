@@ -280,11 +280,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("PATCH /scheduling/jobs/{id}", h.handleUpdateSchedulingJob)
 	mux.HandleFunc("DELETE /scheduling/jobs/{id}", h.handleDeleteSchedulingJob)
 
-	// KDF Configurations
-	mux.HandleFunc("GET /kdf/configs", h.handleListKDFConfigs)
-	mux.HandleFunc("POST /kdf/configs", h.handleCreateKDFConfig)
-	mux.HandleFunc("POST /kdf/configs/{id}/derive", h.handleKDFDerive)
-	mux.HandleFunc("DELETE /kdf/configs/{id}", h.handleDeleteKDFConfig)
 
 	// Key Attestation (signed, verifiable statement + integrity check)
 	mux.HandleFunc("POST /keys/{id}/attest", h.handleAttestKey)

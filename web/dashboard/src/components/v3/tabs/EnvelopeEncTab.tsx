@@ -36,32 +36,6 @@ const purposeLabel: Record<string, string> = {
   db_encryption: "DB Encryption",
 };
 
-// ── mock data ──────────────────────────────────────────────────────────────
-
-const MOCK_KEKS: KEK[] = [
-  { id: "kek-1", name: "prod-master-kek", algorithm: "AES-256-GCM", version: 3, status: "active", dek_count: 14, created_at: "2024-09-01T00:00:00Z", last_rotated_at: "2025-02-10T00:00:00Z" },
-  { id: "kek-2", name: "archive-kek", algorithm: "AES-256-GCM", version: 1, status: "active", dek_count: 7, created_at: "2024-06-15T00:00:00Z" },
-  { id: "kek-3", name: "legacy-kek-v1", algorithm: "AES-128-GCM", version: 1, status: "retired", dek_count: 4, created_at: "2023-01-01T00:00:00Z" },
-];
-
-const MOCK_DEKS: DEK[] = [
-  { id: "dek-1", kek_id: "kek-1", kek_name: "prod-master-kek", name: "users-pii-dek", wrapped_key_b64: "", algorithm: "AES-256-GCM", purpose: "field_encryption", owner_service: "user-service", created_at: "2024-09-05T00:00:00Z", last_used_at: "2025-03-20T10:00:00Z", status: "active" },
-  { id: "dek-2", kek_id: "kek-1", kek_name: "prod-master-kek", name: "payments-dek", wrapped_key_b64: "", algorithm: "AES-256-GCM", purpose: "db_encryption", owner_service: "payment-service", created_at: "2024-10-01T00:00:00Z", last_used_at: "2025-03-24T08:00:00Z", status: "active" },
-  { id: "dek-3", kek_id: "kek-2", kek_name: "archive-kek", name: "docs-archive-dek", wrapped_key_b64: "", algorithm: "AES-256-GCM", purpose: "file_encryption", owner_service: "storage-service", created_at: "2024-06-20T00:00:00Z", last_used_at: "2025-01-10T00:00:00Z", status: "needs_rewrap" },
-  { id: "dek-4", kek_id: "kek-3", kek_name: "legacy-kek-v1", name: "old-logs-dek", wrapped_key_b64: "", algorithm: "AES-128-GCM", purpose: "file_encryption", owner_service: "log-service", created_at: "2023-02-01T00:00:00Z", last_used_at: "2024-06-01T00:00:00Z", status: "needs_rewrap" },
-  { id: "dek-5", kek_id: "kek-1", kek_name: "prod-master-kek", name: "session-dek", wrapped_key_b64: "", algorithm: "AES-256-GCM", purpose: "field_encryption", owner_service: "auth-service", created_at: "2024-11-01T00:00:00Z", last_used_at: "2025-03-25T00:00:00Z", status: "active" },
-];
-
-const MOCK_HIERARCHY: EnvelopeHierarchyNode[] = MOCK_KEKS.map(k => ({
-  kek_id: k.id, kek_name: k.name, kek_algorithm: k.algorithm, kek_status: k.status,
-  deks: MOCK_DEKS.filter(d => d.kek_id === k.id).map(d => ({ id: d.id, name: d.name, algorithm: d.algorithm, status: d.status, owner_service: d.owner_service })),
-}));
-
-const MOCK_JOBS: RewrapJob[] = [
-  { id: "job-1", old_kek_id: "kek-3", new_kek_id: "kek-1", total_deks: 4, processed_deks: 4, status: "completed", started_at: "2025-03-10T09:00:00Z", completed_at: "2025-03-10T09:05:00Z" },
-  { id: "job-2", old_kek_id: "kek-2", new_kek_id: "kek-1", total_deks: 7, processed_deks: 3, status: "running", started_at: "2025-03-25T07:00:00Z" },
-];
-
 // ── sub-components ──────────────────────────────────────────────────────────
 
 function StatCard({ label, value, icon, color }: { label: string; value: string | number; icon: React.ReactNode; color: string }) {
@@ -149,9 +123,10 @@ export function EnvelopeEncTab({ session }: { session: any; enabledFeatures?: an
     try {
       const [k, d, h, j] = await Promise.all([listKEKs(session), listDEKs(session), getHierarchy(session), listRewrapJobs(session)]);
       setKeks(k); setDeks(d); setHierarchy(h); setJobs(j);
-    } catch {
-      setKeks(MOCK_KEKS); setDeks(MOCK_DEKS); setHierarchy(MOCK_HIERARCHY); setJobs(MOCK_JOBS);
-      setError("Live data unavailable — showing mock data.");
+    } catch (e: any) {
+      // Honest empty state — never fabricate KEK/DEK data.
+      setKeks([]); setDeks([]); setHierarchy([]); setJobs([]);
+      setError(e?.message ? `Failed to load envelope data: ${e.message}` : "Failed to load envelope data.");
     } finally { setLoading(false); }
   }, [session]);
 

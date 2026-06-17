@@ -3,6 +3,40 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-06-17
+
+### Per-key operations belong in Key Management's row actions, not their own tabs
+Verify-integrity and Attest are operations *on a key*, so they live in the Key
+Management row action menu (alongside Rotate/Export/Destroy), not as a separate
+top-level tab. Pattern: add a typed client fn in `lib/keycore.ts`, a handler in
+KeysTab that calls it and reports via `onToast` (verify) or a small overlay
+(attest, which returns a signed document to view/download). One fewer tab, and
+the action is where the user already is.
+
+### Distinguishing a real feature from a redundant management surface
+When auditing "advanced feature" tabs, the test is whether the tab adds anything
+beyond an operation/interface that already exists:
+- **Key Derivation (KDF) tab** managed named `kdf_configs`, but derivation is
+  the `POST /keys/{id}/derive` crypto op exposed via REST/PKCS#11/JCA — the
+  configs were a redundant surface. Removed the tab + the `/kdf/configs`
+  backend (handlers, routes, store methods, types, migration 017 dropping
+  `kdf_configs`/`kdf_derivation_log`); the derive op stays.
+- **Advanced Encryption tab** POSTed to `/encryption/encrypt|decrypt` which
+  **never existed** in keycore (the real path is the Workbench's
+  `/keys/{id}/encrypt`). Dead tab → removed; no backend to clean.
+- **Envelope Encryption tab**: KEEP. It is a genuinely distinct feature — a KEK
+  wraps many DEKs and rotating the KEK triggers bulk *rewrap* of the small DEKs
+  instead of re-encrypting the underlying data. Backend is real
+  (`/envelope/keks|deks|hierarchy|rewrap|rewrap-jobs`). The only problem was the
+  tab fell back to fabricated KEK/DEK rows on load failure — replaced with an
+  honest empty state + error (never fabricate security data in a KMS UI).
+
+### Quick test for "is this tab backed by anything"
+`grep -n "fetch(\`\${base}" Tab.tsx` then `grep -rn "<that route>" services/<svc>` —
+if the route isn't registered server-side, the tab is dead (Advanced Encryption
+hit non-existent `/encryption/*`). Mock fallbacks (`MOCK_*`, "showing mock
+data") are the other tell.
+
 ## 2026-06-16
 
 ### Tenant enforcement: data-scoping is not the same as access-enforcement
