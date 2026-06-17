@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-06-17
 
+### mTLS mesh topology edges = the configured call graph (honest, not faked)
+"Which service talks to which" has no clean runtime source here: consul Connect
+intentions are wildcard allow-all (no real edges) and envoy per-edge telemetry
+isn't scraped. The honest source is the **configured dependency graph** — each
+service's `*_URL` wiring (`grep -rn 'envOr("[A-Z_]*_URL"' services/*/main.go`),
+which are exactly the mTLS HTTP calls. The discovery reconciler holds that graph
+(`meshDependencyGraph`, display names) and upserts an edge only when BOTH
+endpoints are present in the catalog, so the graph grows with the mesh and never
+shows phantom edges. Edges are `mtls_verified=true` (every mesh hop is mutually
+authenticated) with no `last_handshake_at` (we don't observe handshakes — UI
+shows "No handshake"), which is truthful about provenance. Watch the display-
+name mapping: consul names are `kms-hyok-proxy`/`kms-workload-identity`, not
+`hyok`/`workload`. Full observed topology would need envoy stats scraping.
+
 ### mTLS mesh auto-discovers internal services from consul (live, self-updating)
 The mesh view must reflect the *live* internal mTLS fabric, not a manual
 registry. Source of truth = the **consul catalog** (`GET /v1/catalog/services`,

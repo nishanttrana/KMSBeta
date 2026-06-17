@@ -43,9 +43,40 @@ func meshDiscoveryTenant() string {
 	return "root"
 }
 
+// meshDependencyGraph is the configured service-to-service call graph derived
+// from the platform's *_URL wiring (each entry is an mTLS HTTP dependency over
+// the mesh). consul Connect intentions here are wildcard allow-all and envoy
+// per-edge telemetry isn't scraped, so this configured graph is the honest
+// source of "which service talks to which". Names are display names (no kms-
+// prefix). Edges are only emitted when BOTH endpoints are present in the mesh.
+var meshDependencyGraph = map[string][]string{
+	"keycore":           {"policy", "governance", "cluster-manager"},
+	"certs":             {"keycore"},
+	"cloud":             {"keycore", "key-access"},
+	"compliance":        {"keycore", "audit", "policy", "certs"},
+	"dataprotect":       {"keycore", "certs"},
+	"discovery":         {"keycore", "certs"},
+	"ekm":               {"keycore", "key-access"},
+	"hyok-proxy":        {"keycore", "policy", "governance", "key-access"},
+	"kmip":              {"keycore", "certs"},
+	"payment":           {"keycore"},
+	"pqc":               {"keycore", "certs", "discovery"},
+	"reporting":         {"audit", "compliance", "posture"},
+	"sbom":              {"keycore", "certs", "discovery"},
+	"signing":           {"keycore"},
+	"workload-identity": {"audit", "auth"},
+	"autokey":           {"keycore", "governance"},
+	"key-access":        {"governance"},
+	"governance":        {"certs"},
+	"posture":           {"audit"},
+	"policy":            {"cluster-manager"},
+	"audit":             {"cluster-manager"},
+}
+
 // ReconcileMeshFromConsul lists registered services from the consul catalog and
-// upserts each as a mesh service. Best-effort: a discovery failure never breaks
-// the certs service.
+// upserts each as a mesh service, then upserts the configured mTLS edges
+// between services that are present. Best-effort: a discovery failure never
+// breaks the certs service.
 func (s *Service) ReconcileMeshFromConsul(ctx context.Context) (int, error) {
 	base := consulAddr()
 	if base == "" {
@@ -71,6 +102,7 @@ func (s *Service) ReconcileMeshFromConsul(ctx context.Context) (int, error) {
 	}
 
 	tenant := meshDiscoveryTenant()
+	present := map[string]bool{}
 	count := 0
 	for name := range catalog {
 		// Only the KMS service mesh; skip consul itself and anything else.
@@ -79,6 +111,7 @@ func (s *Service) ReconcileMeshFromConsul(ctx context.Context) (int, error) {
 		}
 		endpoint := consulServiceEndpoint(ctx, client, base, name)
 		display := strings.TrimPrefix(name, "kms-")
+		present[display] = true
 		svc := MeshService{
 			ID:          newID("mesh"),
 			TenantID:    tenant,
@@ -93,6 +126,24 @@ func (s *Service) ReconcileMeshFromConsul(ctx context.Context) (int, error) {
 			continue
 		}
 		count++
+	}
+
+	// Configured mTLS edges between services that are actually present.
+	for src, dests := range meshDependencyGraph {
+		if !present[src] {
+			continue
+		}
+		for _, dst := range dests {
+			if !present[dst] {
+				continue
+			}
+			_ = s.store.UpsertTopologyEdge(ctx, MeshTopologyEdge{
+				TenantID:     tenant,
+				FromService:  src,
+				ToService:    dst,
+				MTLSVerified: true, // every mesh hop is mutually authenticated
+			})
+		}
 	}
 	return count, nil
 }
