@@ -5,6 +5,19 @@ Newest entries on top.
 
 ## 2026-06-17
 
+### "Showing mock data" ≠ no backend — check before judging a feature fake
+The mTLS Mesh tab looked fake, but the `certs` service has a real backend
+(`/mesh/services|certificates|trust-anchors|topology`, `…/renew`) — renew
+actually generates an EC P-256 key and issues an X.509 leaf from the internal
+CA. The tab only *looked* fake because it seeded state with `MOCK_*` and fell
+back to mock on empty/error. Real use-case: SPIFFE-style **workload mTLS
+identity lifecycle** for the consul/envoy service mesh — register a service,
+issue it a short-lived mTLS cert from the KMS CA, track expiry, auto-renew,
+manage trust anchors, view the verified-handshake topology. Verdict: KEEP;
+removed the mock seed/fallback so it shows real registered services or an
+honest empty state. Lesson: a `MOCK_*` fallback masks whether the backend is
+real — always trace the lib → route → server handler before deciding to cut.
+
 ### Per-key operations belong in Key Management's row actions, not their own tabs
 Verify-integrity and Attest are operations *on a key*, so they live in the Key
 Management row action menu (alongside Rotate/Export/Destroy), not as a separate

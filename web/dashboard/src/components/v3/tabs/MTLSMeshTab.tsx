@@ -17,28 +17,6 @@ import {
 } from "../../../lib/mtlsMesh";
 import { C } from "../../v3/theme";
 
-/* ─── Mock Data ─── */
-const MOCK_SERVICES: MeshService[] = [
-  { id: "svc-1", name: "auth-service", namespace: "platform", endpoint: "https://auth.platform.svc.cluster.local:8443", cert_id: "cert-1", cert_cn: "auth-service.platform.svc", cert_expiry: "2026-08-14T00:00:00Z", cert_status: "valid", last_renewed_at: "2026-02-14T10:00:00Z", auto_renew: true, renew_days_before: 30, trust_anchors: ["ta-1"], created_at: "2025-10-01T00:00:00Z", mtls_enabled: true },
-  { id: "svc-2", name: "payments-api", namespace: "finance", endpoint: "https://payments.finance.svc.cluster.local:9443", cert_id: "cert-2", cert_cn: "payments-api.finance.svc", cert_expiry: "2026-04-10T00:00:00Z", cert_status: "expiring", last_renewed_at: "2026-01-10T08:00:00Z", auto_renew: false, renew_days_before: 14, trust_anchors: ["ta-1", "ta-2"], created_at: "2025-10-15T00:00:00Z", mtls_enabled: true },
-  { id: "svc-3", name: "audit-logger", namespace: "infra", endpoint: "https://audit.infra.svc.cluster.local:7443", cert_id: "cert-3", cert_cn: "audit-logger.infra.svc", cert_expiry: "2025-12-01T00:00:00Z", cert_status: "expired", last_renewed_at: "2025-06-01T00:00:00Z", auto_renew: true, renew_days_before: 30, trust_anchors: ["ta-2"], created_at: "2025-09-01T00:00:00Z", mtls_enabled: false },
-  { id: "svc-4", name: "user-profile", namespace: "core", endpoint: "https://profile.core.svc.cluster.local:6443", cert_id: undefined, cert_cn: undefined, cert_expiry: undefined, cert_status: "missing", last_renewed_at: undefined, auto_renew: false, renew_days_before: 30, trust_anchors: [], created_at: "2026-01-20T00:00:00Z", mtls_enabled: false },
-];
-const MOCK_CERTS: MeshCertificate[] = [
-  { id: "cert-1", service_id: "svc-1", service_name: "auth-service", cn: "auth-service.platform.svc", san: ["auth-service", "auth-service.platform", "auth-service.platform.svc.cluster.local"], issuer: "Vecta Internal CA", not_before: "2026-02-14T00:00:00Z", not_after: "2026-08-14T00:00:00Z", serial: "0a:1b:2c:3d:4e:5f", fingerprint: "SHA256:Ab3xYz9Qr7Lm2Pk1Nt8Vw4Uj6Sd0Fc5He", key_algorithm: "ECDSA P-256", revoked: false, created_at: "2026-02-14T10:00:00Z" },
-  { id: "cert-2", service_id: "svc-2", service_name: "payments-api", cn: "payments-api.finance.svc", san: ["payments-api", "payments-api.finance"], issuer: "Vecta Internal CA", not_before: "2026-01-10T00:00:00Z", not_after: "2026-04-10T00:00:00Z", serial: "1f:2e:3d:4c:5b:6a", fingerprint: "SHA256:Bc4yZa0Rs8Mn3Ql2Ou9Wx5Vk7Te1Gd6If", key_algorithm: "RSA 2048", revoked: false, created_at: "2026-01-10T08:00:00Z" },
-  { id: "cert-3", service_id: "svc-3", service_name: "audit-logger", cn: "audit-logger.infra.svc", san: ["audit-logger", "audit-logger.infra"], issuer: "Vecta Internal CA", not_before: "2025-06-01T00:00:00Z", not_after: "2025-12-01T00:00:00Z", serial: "2g:3f:4e:5d:6c:7b", fingerprint: "SHA256:Cd5zA1St9No4Rm3Pv0Xy6Wl8Uf2He7Jg", key_algorithm: "ECDSA P-384", revoked: true, created_at: "2025-06-01T00:00:00Z" },
-];
-const MOCK_ANCHORS: TrustAnchor[] = [
-  { id: "ta-1", name: "Vecta Root CA", fingerprint: "SHA256:De6aB2Tu0Op5Sn4Qw1Yz7Xm9Vg3If8Kh", subject: "CN=Vecta Root CA, O=Vecta Security, C=US", not_before: "2024-01-01T00:00:00Z", not_after: "2034-01-01T00:00:00Z", services_count: 3, created_at: "2024-01-01T00:00:00Z" },
-  { id: "ta-2", name: "Finance Intermediate CA", fingerprint: "SHA256:Ef7bC3Uv1Pq6To5Rx2Za8Yn0Wh4Jg9Li", subject: "CN=Finance Int CA, O=Vecta Security, OU=Finance, C=US", not_before: "2025-01-01T00:00:00Z", not_after: "2030-01-01T00:00:00Z", services_count: 2, created_at: "2025-01-01T00:00:00Z" },
-];
-const MOCK_TOPOLOGY: MeshTopologyEdge[] = [
-  { from_service: "auth-service", to_service: "payments-api", mtls_verified: true, last_handshake_at: "2026-03-25T09:12:00Z" },
-  { from_service: "payments-api", to_service: "audit-logger", mtls_verified: false, last_handshake_at: "2026-03-25T08:55:00Z" },
-  { from_service: "auth-service", to_service: "user-profile", mtls_verified: true, last_handshake_at: "2026-03-25T09:10:00Z" },
-];
-
 /* ─── Helpers ─── */
 function fmt(iso?: string) {
   if (!iso) return "—";
@@ -180,10 +158,10 @@ export const MTLSMeshTab = ({ session, enabledFeatures, keyCatalog }: { session:
   const [section, setSection] = useState<"services" | "certificates" | "trust_anchors" | "topology">("services");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [services, setServices] = useState<MeshService[]>(MOCK_SERVICES);
-  const [certs, setCerts] = useState<MeshCertificate[]>(MOCK_CERTS);
-  const [anchors, setAnchors] = useState<TrustAnchor[]>(MOCK_ANCHORS);
-  const [topology, setTopology] = useState<MeshTopologyEdge[]>(MOCK_TOPOLOGY);
+  const [services, setServices] = useState<MeshService[]>([]);
+  const [certs, setCerts] = useState<MeshCertificate[]>([]);
+  const [anchors, setAnchors] = useState<TrustAnchor[]>([]);
+  const [topology, setTopology] = useState<MeshTopologyEdge[]>([]);
   const [regModal, setRegModal] = useState(false);
   const [anchorModal, setAnchorModal] = useState(false);
   const [regBusy, setRegBusy] = useState(false);
@@ -199,15 +177,14 @@ export const MTLSMeshTab = ({ session, enabledFeatures, keyCatalog }: { session:
         listTrustAnchors(session),
         getTopology(session),
       ]);
-      setServices(svcs?.length ? svcs : MOCK_SERVICES);
-      setCerts(cs?.length ? cs : MOCK_CERTS);
-      setAnchors(as?.length ? as : MOCK_ANCHORS);
-      setTopology(topo?.length ? topo : MOCK_TOPOLOGY);
-    } catch {
-      setServices(MOCK_SERVICES);
-      setCerts(MOCK_CERTS);
-      setAnchors(MOCK_ANCHORS);
-      setTopology(MOCK_TOPOLOGY);
+      setServices(svcs ?? []);
+      setCerts(cs ?? []);
+      setAnchors(as ?? []);
+      setTopology(topo ?? []);
+    } catch (e: any) {
+      // Honest empty state — never fabricate mesh identities or certs.
+      setServices([]); setCerts([]); setAnchors([]); setTopology([]);
+      setError(e?.message ? `Failed to load mesh data: ${e.message}` : "Failed to load mesh data.");
     } finally {
       setLoading(false);
     }
