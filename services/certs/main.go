@@ -117,6 +117,10 @@ func main() {
 		}
 	}()
 
+	// Discover the live mTLS mesh from the consul catalog so the dashboard
+	// shows every internal service and stays current as services register.
+	svc.StartMeshDiscovery(rt.Ctx, logger)
+
 	if err := rt.Serve(NewHandler(svc)); err != nil {
 		rt.Logger.Fatalf("serve failed: %v", err)
 	}

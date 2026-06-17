@@ -93,6 +93,7 @@ type Store interface {
 	ListMeshServices(ctx context.Context, tenantID string) ([]MeshService, error)
 	GetMeshService(ctx context.Context, tenantID, id string) (MeshService, error)
 	CreateMeshService(ctx context.Context, svc MeshService) (MeshService, error)
+	UpsertDiscoveredMeshService(ctx context.Context, svc MeshService) error
 	UpdateMeshServiceCert(ctx context.Context, tenantID, id, certID, certCN string, certExpiry time.Time) error
 	CreateMeshCertificate(ctx context.Context, cert MeshCertificate) (MeshCertificate, error)
 	ListMeshCertificates(ctx context.Context, tenantID string) ([]MeshCertificate, error)

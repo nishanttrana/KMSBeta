@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-06-17
 
+### mTLS mesh auto-discovers internal services from consul (live, self-updating)
+The mesh view must reflect the *live* internal mTLS fabric, not a manual
+registry. Source of truth = the **consul catalog** (`GET /v1/catalog/services`,
+`/v1/catalog/service/{name}`): every KMS service self-registers there
+(`pkgconsul.NewRegistrar`), so it lists all `kms-*` services and updates as they
+come and go. The `certs` service runs a 60s discovery reconciler
+(`ReconcileMeshFromConsul` → `UpsertDiscoveredMeshService`, keyed on
+(tenant,name)) that records each as a mesh service under the root/platform
+tenant (`MESH_DISCOVERY_TENANT`, default `root`; gate `MESH_DISCOVERY_ENABLED`).
+New services appear automatically; no manual entry. consul runs at
+`CONSUL_HTTP_ADDR` (consul:8500). Discovery is best-effort — a consul outage
+never breaks certs. Note: the platform mesh is global infrastructure, so it's
+recorded under the root tenant (customer/workload mesh entries stay per-tenant).
+
 ### "Showing mock data" ≠ no backend — check before judging a feature fake
 The mTLS Mesh tab looked fake, but the `certs` service has a real backend
 (`/mesh/services|certificates|trust-anchors|topology`, `…/renew`) — renew

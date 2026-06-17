@@ -79,6 +79,34 @@ INSERT INTO mesh_services (
 	return s.GetMeshService(ctx, svc.TenantID, svc.ID)
 }
 
+// UpsertDiscoveredMeshService records a service discovered in the live mesh
+// (consul catalog), keyed by (tenant, name): it refreshes the endpoint of an
+// existing entry or inserts a new one. Used by the discovery reconciler so the
+// mesh view tracks internal services automatically as they register.
+func (s *SQLStore) UpsertDiscoveredMeshService(ctx context.Context, svc MeshService) error {
+	res, err := s.db.SQL().ExecContext(ctx, `
+UPDATE mesh_services SET endpoint=$1, namespace=$2, mtls_enabled=$3
+WHERE tenant_id=$4 AND name=$5`,
+		strings.TrimSpace(svc.Endpoint), strings.TrimSpace(svc.Namespace), svc.MTLSEnabled,
+		strings.TrimSpace(svc.TenantID), strings.TrimSpace(svc.Name))
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		return nil
+	}
+	_, err = s.db.SQL().ExecContext(ctx, `
+INSERT INTO mesh_services (
+    id, tenant_id, name, namespace, endpoint,
+    cert_status, auto_renew, renew_days_before,
+    trust_anchors_json, mtls_enabled, created_at
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+		strings.TrimSpace(svc.ID), strings.TrimSpace(svc.TenantID), strings.TrimSpace(svc.Name),
+		strings.TrimSpace(svc.Namespace), strings.TrimSpace(svc.Endpoint), strings.TrimSpace(svc.CertStatus),
+		svc.AutoRenew, svc.RenewDaysBefore, mustJSON(svc.TrustAnchors), svc.MTLSEnabled, svc.CreatedAt.UTC())
+	return err
+}
+
 // UpdateMeshServiceCert updates a service's cert fields after a renewal.
 func (s *SQLStore) UpdateMeshServiceCert(ctx context.Context, tenantID, id, certID, certCN string, certExpiry time.Time) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
