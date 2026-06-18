@@ -76,5 +76,6 @@ export async function listTrustAnchors(session: AuthSession): Promise<TrustAncho
 }
 
 export async function getTopology(session: AuthSession): Promise<MeshTopologyEdge[]> {
-  return serviceRequest<MeshTopologyEdge[]>(session, "certs", "/mesh/topology");
+  const res = await serviceRequest<any>(session, "certs", "/mesh/topology");
+  return res.edges ?? res.items ?? [];
 }
