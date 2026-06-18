@@ -32,6 +32,13 @@ x-kms-common-env: &kms-common-env
   # per-service <PREFIX>_JWT_PUBLIC_KEY_* env can override for selective
   # rollout. Base64-encode the auth-service's RSA public-key PEM.
   JWT_PUBLIC_KEY_B64: ${JWT_PUBLIC_KEY_B64:?JWT_PUBLIC_KEY_B64 is required}
+  # Per-service JWT identities for service-to-service auth: each service derives
+  # its own API key from this shared secret + its name (pkg/servicetoken) and
+  # exchanges it for a signed JWT at /auth/client-token. auth pre-registers a
+  # client + key hash per service from the same secret. Override per deployment
+  # (openssl rand -hex 32). Empty disables (callers stay tokenless).
+  INTERNAL_SERVICE_BOOTSTRAP_SECRET: ${INTERNAL_SERVICE_BOOTSTRAP_SECRET:-vecta-internal-svc-dev-secret-change-me}
+  AUTH_URL: ${AUTH_URL:-http://auth:8001}
 
 x-kms-service: &kms-service
   restart: unless-stopped

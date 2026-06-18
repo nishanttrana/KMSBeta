@@ -858,7 +858,7 @@ func (s *SQLStore) GetClientRegistration(ctx context.Context, tenantID string, r
 	var lastUnsignedRejectAt sql.NullTime
 	err := s.db.SQL().QueryRowContext(ctx, `
 SELECT id, tenant_id, client_name, client_type, interface_name, subject_id, description, contact_email, requested_role,
-       status, approval_id, ip_whitelist, rate_limit, api_key_prefix, auth_mode, replay_protection_enabled,
+       status, approval_id, ip_whitelist, rate_limit, COALESCE(api_key_prefix,''), auth_mode, replay_protection_enabled,
        COALESCE(mtls_cert_fingerprint,''), COALESCE(mtls_subject_dn,''), COALESCE(mtls_uri_san,''),
        COALESCE(http_signature_key_id,''), COALESCE(http_signature_public_key_pem,''), COALESCE(http_signature_algorithm,''),
        COALESCE(verified_request_count,0), COALESCE(replay_violation_count,0), COALESCE(signature_failure_count,0), COALESCE(unsigned_reject_count,0),
@@ -905,7 +905,7 @@ WHERE tenant_id=$1 AND id=$2
 func (s *SQLStore) ListClientRegistrations(ctx context.Context, tenantID string) ([]ClientRegistration, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT id, tenant_id, client_name, client_type, interface_name, subject_id, description, contact_email, requested_role,
-       status, approval_id, ip_whitelist, rate_limit, api_key_prefix, auth_mode, replay_protection_enabled,
+       status, approval_id, ip_whitelist, rate_limit, COALESCE(api_key_prefix,''), auth_mode, replay_protection_enabled,
        COALESCE(mtls_cert_fingerprint,''), COALESCE(mtls_subject_dn,''), COALESCE(mtls_uri_san,''),
        COALESCE(http_signature_key_id,''), COALESCE(http_signature_algorithm,''),
        COALESCE(verified_request_count,0), COALESCE(replay_violation_count,0), COALESCE(signature_failure_count,0), COALESCE(unsigned_reject_count,0),

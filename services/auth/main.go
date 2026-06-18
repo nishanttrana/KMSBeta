@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -28,6 +29,7 @@ import (
 	pkggrpc "vecta-kms/pkg/grpc"
 	"vecta-kms/pkg/metering"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	"vecta-kms/pkg/servicetoken"
 )
 
 var logger = log.New(os.Stdout, "[auth] ", log.LstdFlags|log.Lmicroseconds)
@@ -76,6 +78,7 @@ func main() {
 	logic := NewAuthLogic(signingKey, cfg.JWTIssuer, cfg.JWTAudience)
 	store := NewSQLStore(dbConn)
 	bootstrapDefaultAdmin(ctx, store, logger)
+	bootstrapInternalServiceClients(ctx, store, logger)
 	meter := metering.NewMeter(cfg.OpsLimit, cfg.MeteringWindow)
 	healthChecker := NewSystemHealthChecker(cfg.ConsulAddress, logger)
 	handler := NewHandler(store, logic, auditPublisher, meter, logger, healthChecker)
@@ -182,6 +185,53 @@ func envOrBool(k string, d bool) bool {
 	default:
 		return d
 	}
+}
+
+// bootstrapInternalServiceClients provisions a per-service client identity +
+// API key for each internal service, so each can mint its own JWT for
+// service-to-service auth. Keys are derived from INTERNAL_SERVICE_BOOTSTRAP_SECRET
+// + service name (matching pkg/servicetoken), so no per-service secret is
+// distributed. No-op when the secret is unset. Idempotent.
+func bootstrapInternalServiceClients(ctx context.Context, store Store, logger *log.Logger) {
+	secret := strings.TrimSpace(os.Getenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET"))
+	if secret == "" {
+		return
+	}
+	tenantID := envOr("INTERNAL_SERVICE_TENANT", "root")
+	services := []string{
+		"kms-keycore", "kms-certs", "kms-ekm", "kms-kmip", "kms-signing", "kms-sbom",
+		"kms-payment", "kms-discovery", "kms-compliance", "kms-pqc", "kms-cloud",
+		"kms-hyok-proxy", "kms-dataprotect", "kms-autokey", "kms-key-access",
+		"kms-governance", "kms-posture", "kms-reporting", "kms-policy", "kms-audit",
+	}
+	provisioned := 0
+	for _, name := range services {
+		if _, err := store.GetClientRegistration(ctx, tenantID, name); errors.Is(err, errNotFound) {
+			if err := store.CreateClientRegistration(ctx, ClientRegistration{
+				ID: name, TenantID: tenantID, ClientName: name, ClientType: "service",
+				InterfaceName: "rest", SubjectID: name, RequestedRole: "service",
+				Status: "approved", AuthMode: "api_key",
+			}); err != nil {
+				logger.Printf("bootstrap: internal client %s registration failed: %v", name, err)
+				continue
+			}
+		} else if err != nil {
+			logger.Printf("bootstrap: read internal client %s failed: %v", name, err)
+			continue
+		}
+		sum := sha256.Sum256([]byte(servicetoken.DeriveAPIKey(secret, name)))
+		if _, err := store.GetAPIKeyByHash(ctx, tenantID, sum[:]); errors.Is(err, errNotFound) {
+			if err := store.CreateAPIKey(ctx, APIKey{
+				ID: NewID("akey"), TenantID: tenantID, ClientID: name, KeyHash: sum[:],
+				Name: name + " service identity", Permissions: []string{"service.internal"},
+			}); err != nil {
+				logger.Printf("bootstrap: internal client %s api key failed: %v", name, err)
+				continue
+			}
+		}
+		provisioned++
+	}
+	logger.Printf("bootstrap: internal service identities ready tenant=%s count=%d", tenantID, provisioned)
 }
 
 func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger) {

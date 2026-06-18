@@ -3,6 +3,41 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-06-18
+
+### JWT service-to-service auth — per-service identities (phased rollout)
+Moving internal auth from "mTLS / shared static INTERNAL_API_TOKEN" to per-
+service JWTs. Landscape found: validation is universal (every service has the
+cluster `JWT_PUBLIC_KEY_B64` + `pkgjwtauth`); minting exists (`POST
+/auth/client-token`: API-key-authenticated client-credentials → JWT); the only
+prior s2s auth was a narrow shared static token (`pkg/internalauth`, reconciler
+→ keycore/kmip privileged endpoints).
+- **Provisioning without secret sprawl:** one shared `INTERNAL_SERVICE_BOOTSTRAP_SECRET`;
+  each service derives its own API key = HMAC-SHA256(secret, "kms-service-api-key:"+name)
+  (`pkg/servicetoken.DeriveAPIKey`). auth bootstrap pre-registers a client +
+  key-hash per service from the same derivation, so no per-service secret is
+  distributed. `pkg/servicetoken.Source` mints/caches/refreshes the JWT and
+  attaches it Bearer (best-effort: errors leave the call unauthenticated so a
+  rollout-in-progress never hard-fails).
+- **The crux (not yet done):** internal services are multi-tenant but a client-
+  token is tenant-bound, and `tenantcheck.Enforce` 403s a root-tenant token
+  acting for tenant X (only bypasses an *empty* tenant claim). So a `service`
+  principal must be treated as tenant-unrestricted (acts for the request's
+  tenant) AND authorized in keycore's `enforceKeyAccess` — else attaching a
+  token would *deny* crypto that currently works tokenless. This is why it's
+  phased: attach (non-enforcing) first, flip enforcement last.
+- **Gotcha:** a directly-inserted *approved* client registration left
+  `api_key_prefix` NULL (the normal flow sets it during approval), and
+  `GetClientRegistration` scanned it into a plain string → 500. Fixed with
+  `COALESCE(api_key_prefix,'')` in the read queries.
+- **Phase 1 (done, non-breaking, verified):** pkg/servicetoken + auth
+  provisions 20 per-service identities; verified kms-ekm mints a JWT
+  (client_id=kms-ekm, role=client-service). Nothing attaches/enforces yet.
+- **Remaining:** (2) tenantcheck + keycore access-control trust the service
+  principal across tenants; (3) wire `servicetoken.FromEnv(name)` into the ~14
+  per-service internal HTTP clients (attach-only); (4) flip enforcement,
+  retiring the static INTERNAL_API_TOKEN path.
+
 ## 2026-06-17
 
 ### mTLS mesh topology edges = the configured call graph (honest, not faked)
