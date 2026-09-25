@@ -24,6 +24,13 @@ Raw output: [`govulncheck-2026-09-25.txt`](govulncheck-2026-09-25.txt).
 `govulncheck` is run per module path (`./pkg/...`, `./services/<svc>/...`)
 because a single `./...` run needs more than 7 GB of RAM on this codebase.
 
+Every path reports **"Your code is affected by 0 vulnerabilities."** The one
+remaining *module-level* note is GO-2026-5932 (`golang.org/x/crypto/openpgp`
+is unmaintained). It is listed because the package ships inside the
+`golang.org/x/crypto` module; no code here imports it any more (the secrets
+service moved to `github.com/ProtonMail/go-crypto/openpgp`), and the advisory
+has no fixed version.
+
 When gRPC publishes a tagged release that contains the GO-2026-6443 fix
 (v1.85.0+), replace the pseudo-version in `go.mod` with that tag.
 
