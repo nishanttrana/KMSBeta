@@ -42,7 +42,13 @@ checked mechanically. Reviewers enforce the rest.
    run by `config.Load` and `config.NewHTTPServer`, so every service built on
    `pkg/platform` gets it by construction). `deploy-local.sh` refuses too, and
    `.env.example` ships every secret empty.
-7. **Config knobs are not secrets.** Paths (`*_FILE`, `*_PATH`), modes, flags
+7. **Credentials inside connection strings count.** A URL like
+   `postgres://postgres:postgres@...` is a hardcoded secret even though the
+   variable is named `*_DSN`. There is no built-in DSN; `pkg/db` fails without
+   `POSTGRES_DSN`. At startup, `*_DSN` / `*DATABASE_URL` values whose password
+   is empty, equals the username, is a vendor default (`postgres`,
+   `password`, `admin`, `root`, `secret`) or is a placeholder are rejected.
+8. **Config knobs are not secrets.** Paths (`*_FILE`, `*_PATH`), modes, flags
    and URLs may have defaults. The secret they point at may not.
 
 ## How it's enforced
@@ -51,8 +57,9 @@ checked mechanically. Reviewers enforce the rest.
 |---|---|---|
 | `no-secret-fallback-compose` | `scripts/conformance.sh` | `${NAME:-value}` in `docker-compose*.yml`, where NAME contains SECRET, TOKEN, PASSWORD, PASSPHRASE, API_KEY, PRIVATE_KEY, `_KEY_B64`, `_KEY_PEM`, MEK or KEK |
 | `no-secret-fallback-go` | `scripts/conformance.sh` | `("NAME", "literal")` env fallbacks in `services/` and `pkg/` for the same names |
+| `no-credential-in-url-go` / `-compose` | `scripts/conformance.sh` | `scheme://user:pass@` literals; URLs must be built from `${VAR}` or `%s` |
 | `env-example-no-secret-values` | `scripts/conformance.sh` | any non-empty secret value in `.env.example` |
-| Placeholder rejection | `pkg/config/secrets.go`, run from `Load` and `NewHTTPServer` | a service starting with `your-...` / `change-me` secrets |
+| Placeholder rejection | `pkg/config/secrets.go`, run from `Load` and `NewHTTPServer` | a service starting with `your-...` / `change-me` secrets, or a DSN with a default password |
 | `deploy-local.sh` preflight | the deploy script | placeholders in `.env`; generates every missing secret, including the JWT signing key |
 | Startup validation | per service (for example `bootstrapInternalServiceClients`) | weak values at runtime |
 | Unit tests | `pkg/servicetoken/servicetoken_test.go`, `services/auth/bootstrap_admin_test.go`, `pkg/config/secrets_test.go` | validation rules, default-key revocation, rotated-key retirement, placeholder detection |
@@ -92,6 +99,12 @@ another exemption without the same forced-change guarantee.
   real secrets, and `deploy-local.sh` copied them into `.env` on fresh
   installs. The example now ships empty, services and `deploy-local.sh` reject
   placeholders, and `POSTGRES_PASSWORD` became required in compose.
+- **2026-09-25 (follow-up 2):** `pkg/config` fell back to
+  `postgres://postgres:postgres@localhost…` when `POSTGRES_DSN` was unset, and
+  `run-local.sh` exported the same string. The naming-based rules missed it
+  because the variable is `*_DSN`. Removed: no built-in DSN, weak DSN
+  passwords are rejected at startup, `run-local.sh` builds the DSN from `.env`,
+  and conformance bans credentials in URL literals.
 
 ## Rotation must invalidate the old value
 

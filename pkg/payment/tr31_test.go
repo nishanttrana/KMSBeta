@@ -3,6 +3,8 @@ package payment
 import (
 	"encoding/hex"
 	"testing"
+
+	"vecta-kms/pkg/fips/fipstest"
 )
 
 func TestTR31RoundTrip(t *testing.T) {
@@ -27,6 +29,7 @@ func TestTR31RoundTrip(t *testing.T) {
 }
 
 func TestRetailMAC(t *testing.T) {
+	fipstest.SkipIfStrict(t, "DES retail MAC (ISO 9797-1 alg 3)")
 	key := []byte("12345678ABCDEFGH")
 	mac, err := RetailMACANSI919(key, []byte("hello-payment"))
 	if err != nil {
@@ -37,5 +40,12 @@ func TestRetailMAC(t *testing.T) {
 	}
 	if hex.EncodeToString(mac) == "0000000000000000" {
 		t.Fatal("retail mac should be non-zero")
+	}
+}
+
+func TestStrictModeRefusesDESMAC(t *testing.T) {
+	fipstest.StrictOnly(t)
+	if _, err := RetailMACANSI919([]byte("12345678ABCDEFGH"), []byte("hello-payment")); err == nil {
+		t.Fatal("strict mode must refuse the DES retail MAC with an error")
 	}
 }

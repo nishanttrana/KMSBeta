@@ -13,11 +13,23 @@ DATA_DIR="$ROOT_DIR/local-data"
 mkdir -p "$PID_DIR" "$LOG_DIR"
 
 # ── Common environment ──────────────────────────────────────────────
-export POSTGRES_DSN="postgres://postgres:postgres@localhost:5432/vecta?sslmode=disable"
+# No built-in database credentials: use POSTGRES_DSN if set, else build it from
+# POSTGRES_USER/POSTGRES_PASSWORD in .env (docs/SECURITY/SECURE_DEFAULTS.md).
+if [ -z "${POSTGRES_DSN:-}" ]; then
+    env_val() { if [ -f "$ROOT_DIR/.env" ]; then sed -n "s/^$1=//p" "$ROOT_DIR/.env" | tail -1; fi; }
+    pg_user="$(env_val POSTGRES_USER)"; pg_pass="$(env_val POSTGRES_PASSWORD)"; pg_db="$(env_val POSTGRES_DB)"
+    [ -n "$pg_pass" ] || { echo "error: set POSTGRES_DSN, or POSTGRES_PASSWORD in .env, for your local Postgres" >&2; exit 1; }
+    export POSTGRES_DSN="postgres://${pg_user:-postgres}:${pg_pass}@localhost:5432/${pg_db:-vecta}?sslmode=disable"
+fi
 export NATS_URL="nats://localhost:4222"
 export CONSUL_HTTP_ADDR="127.0.0.1:8500"
 export REDIS_URL="redis://localhost:6379"
 export VECTA_ENV="dev"
+# FIPS 140-3: link the certified Go Cryptographic Module; the runtime mode is
+# the operator's choice (on | only | off). docs/SECURITY/FIPS.md
+export GOFIPS140="${GOFIPS140:-v1.0.0}"
+export VECTA_FIPS_MODE="${VECTA_FIPS_MODE:-on}"
+export GODEBUG="${GODEBUG:+$GODEBUG,}fips140=${VECTA_FIPS_MODE}"
 export SQLITE_FALLBACK="false"
 
 # Auth bootstrap defaults

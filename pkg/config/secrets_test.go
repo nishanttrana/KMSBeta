@@ -15,8 +15,13 @@ func TestPlaceholderSecrets(t *testing.T) {
 		"CERTS_CRWK_PASSPHRASE_FILE=/your-path",  // config knob, not a secret
 		"PATH=/usr/bin",
 		"MALFORMED",
+		"POSTGRES_DSN=postgres://postgres:postgres@localhost:5432/vecta?sslmode=disable", // user == password
+		"POSTGRES_RO_DSN=postgres://reader:Password@replica:5432/vecta",                  // vendor default
+		"DATABASE_URL=postgres://app:your-db-password@db/vecta",                          // placeholder
+		"AUDIT_DSN=postgres://app:3f9c1a7e5b2d4c6e8f0a1b2c@db/vecta",                     // strong: ok
+		"REPORTING_DSN=postgres://app@db/vecta",                                          // no password: ok
 	}
-	want := []string{"INTERNAL_SERVICE_BOOTSTRAP_SECRET", "NATS_AUTH_TOKEN", "WORKLOAD_IDENTITY_SHARED_SECRET"}
+	want := []string{"DATABASE_URL", "INTERNAL_SERVICE_BOOTSTRAP_SECRET", "NATS_AUTH_TOKEN", "POSTGRES_DSN", "POSTGRES_RO_DSN", "WORKLOAD_IDENTITY_SHARED_SECRET"}
 	if got := PlaceholderSecrets(env); !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v, want %v", got, want)
 	}

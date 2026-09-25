@@ -7,6 +7,68 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 ## [1.2.0-beta] — 2026-09-25
 
 ### Security
+- **FIPS mode is now changed in the KMS UI**, not at deployment.
+  - **Where:** System Administration → Runtime Crypto → Platform FIPS 140-3
+    mode (root admins).
+  - **Before confirming:** the dialog lists the features that stop and start
+    working in the target mode and the services that will restart, then asks
+    for a typed confirmation and a reason. The change is audited as
+    `audit.governance.fips_mode_changed`, with severity critical for a
+    downgrade.
+  - **Applying it:** services restart themselves gracefully in tiers (edge
+    first, core services, then governance) and come back in the new mode by
+    re-executing with the matching `GODEBUG`.
+  - **Progress:** the dialog shows each service's actual mode until all match
+    (about 1–2 minutes).
+  - **Deployment variable:** `VECTA_FIPS_MODE` now only seeds the initial
+    mode, and the installer no longer asks.
+  - New API: `GET/PUT /governance/system/fips-mode` and
+    `GET /governance/system/fips-mode/impact`. Governance migration 010.
+- **Fixed predictable data protection keys.** dataprotect derived tokenization,
+  FPE, masking, field, envelope and searchable-encryption working keys from
+  the key's public KCV, because keycore never returns key material to it.
+  - **keycore:** new `POST /keys/{id}/service-derive` (service identities only;
+    HKDF over key material, bound to service, tenant, key, pinned version and
+    purpose; audited as `audit.key.service_derive`). Generic `/derive` can't
+    reproduce these subkeys.
+  - **dataprotect:** derives every working key through service-derive (v2).
+    Keys created after this release are v2 from birth. Existing keys stay
+    readable in state `legacy`, with every legacy use audited, until an
+    operator migrates them: `/kdf/keys/{key_id}/start-migration` → re-protect
+    (`X-Vecta-KDF-Version` dual-read, `reprotect-vault` for stored tokens) →
+    `/complete`.
+  - **After migration:** identifier-derived keys are refused in every FIPS
+    mode, and strict mode refuses them outright.
+  - **Stored tokens:** vault tokens record their derivation version (migration
+    011); token strings don't change.
+  - **Dashboard:** a new Working-Key Derivation panel under Data Protection.
+  - See `docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md`.
+- `pkg/crypto.HKDFSHA256` now uses the FIPS-module `crypto/hkdf` (identical
+  output, covered by a compatibility test).
+- **FIPS 140-3 on the certified Go Cryptographic Module; mode is the
+  customer's choice.**
+  - **Build:** every binary builds with `GOFIPS140=v1.0.0` (CMVP-certified
+    snapshot).
+  - **Runtime choice:** `VECTA_FIPS_MODE` = `on` (default) | `only` (strict) |
+    `off`, set in the installer or `.env` and passed to Go as
+    `GODEBUG=fips140`. Services refuse to start if the runtime doesn't match
+    or the module isn't certified.
+  - **Honest reporting:** governance and the dashboard report the real mode
+    and claim "validated" only for the certified module in FIPS mode. The
+    dashboard no longer shows made-up library versions.
+  - **Crypto changes:** AES-GCM now uses module-generated IVs everywhere
+    (`pkg/crypto`, keycore, keycache, archival, certs, software-vault), with
+    stored formats unchanged and legacy data still decrypting.
+  - **Strict mode:** it refuses X25519, ChaCha20, SHA-1, DES/TDES,
+    caller-supplied GCM IVs, OpenPGP v4 and non-module ML-DSA/SLH-DSA with
+    clear errors instead of panics.
+  - **Testing:** CI runs the suite in all three modes.
+  - See `docs/SECURITY/FIPS.md`.
+- Fixed: the certs OCSP responder answered every request with a SHA-1 CertID
+  regardless of the request's hash (RFC 6960). It now echoes the request's
+  hash algorithm.
+- Conformance allowlist burn-down: 7 → 4 files. keycore archival and
+  self-test, and software-vault, now use `pkg/crypto`.
 - **Closed a service-impersonation loophole.** `INTERNAL_SERVICE_BOOTSTRAP_SECRET`
   defaulted to a public placeholder (and `install.sh` never generated it), so
   anyone could derive every internal service's API key. Compose now requires
@@ -24,6 +86,11 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   `change-me` secret (`pkg/config`). `deploy-local.sh` refuses placeholders and
   generates every missing secret, including the auth JWT signing key.
   `POSTGRES_PASSWORD` is now required by compose.
+- No built-in database credentials. `pkg/config` no longer falls back to
+  `postgres://postgres:postgres@localhost…`, and `pkg/db` requires
+  `POSTGRES_DSN`. Services refuse a DSN whose password is empty, equals the
+  username, is a vendor default or is a placeholder. `run-local.sh` builds the
+  DSN from `.env`. Conformance bans `user:pass@` URL literals in Go and compose.
 - Bootstrap admin default password is now `changeit` (forced change on first
   login, unchanged). The CLI user no longer falls back to the hardcoded
   `VectaCLI@2026`; unset means a random password.

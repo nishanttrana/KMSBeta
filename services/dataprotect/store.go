@@ -120,17 +120,17 @@ WHERE tenant_id = $1 AND vault_id = $2
 func (s *SQLStore) CreateToken(ctx context.Context, item TokenRecord) error {
 	_, err := s.db.SQL().ExecContext(ctx, `
 INSERT INTO tokens (
-	tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at
+	tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at, kdf_version, kdf_key_version
 ) VALUES (
-	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP,$12
+	$1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,CURRENT_TIMESTAMP,$12,$13,$14
 )
-`, item.TenantID, item.ID, item.VaultID, item.Token, item.OriginalEnc, item.OriginalHash, mustJSON(item.FormatMetadata, "{}"), item.UseCount, item.UseLimit, item.RenewCount, mustJSON(item.MetadataTags, "{}"), nullableTime(item.ExpiresAt))
+`, item.TenantID, item.ID, item.VaultID, item.Token, item.OriginalEnc, item.OriginalHash, mustJSON(item.FormatMetadata, "{}"), item.UseCount, item.UseLimit, item.RenewCount, mustJSON(item.MetadataTags, "{}"), nullableTime(item.ExpiresAt), kdfVersionOrLegacy(item.KDFVersion), item.KDFKeyVersion)
 	return err
 }
 
 func (s *SQLStore) GetTokenByValue(ctx context.Context, tenantID string, token string) (TokenRecord, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at
+SELECT tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at, kdf_version, kdf_key_version
 FROM tokens
 WHERE tenant_id = $1 AND token = $2
 ORDER BY created_at DESC
@@ -145,7 +145,7 @@ LIMIT 1
 
 func (s *SQLStore) GetTokenByHash(ctx context.Context, tenantID string, vaultID string, hash string) (TokenRecord, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at
+SELECT tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at, kdf_version, kdf_key_version
 FROM tokens
 WHERE tenant_id = $1 AND vault_id = $2 AND original_hash = $3
 ORDER BY created_at DESC
@@ -165,7 +165,7 @@ SET use_count = use_count + 1
 WHERE tenant_id = $1
   AND id = $2
   AND (use_limit = 0 OR use_count < use_limit)
-RETURNING tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at
+RETURNING tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at, kdf_version, kdf_key_version
 `, strings.TrimSpace(tenantID), strings.TrimSpace(id))
 	item, err := scanTokenRecord(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -182,7 +182,7 @@ SET expires_at = $3,
 WHERE tenant_id = $1
   AND id = $2
   AND ($4 <= 0 OR renew_count < $4)
-RETURNING tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at
+RETURNING tenant_id, id, vault_id, token, original_enc, original_hash, format_metadata_json, use_count, use_limit, renew_count, metadata_tags_json, created_at, expires_at, kdf_version, kdf_key_version
 `, strings.TrimSpace(tenantID), strings.TrimSpace(id), nullableTime(expiresAt), maxRenewals)
 	item, err := scanTokenRecord(row)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -1578,7 +1578,7 @@ func scanTokenRecord(scanner interface {
 		createdRaw   interface{}
 		expiresAtRaw interface{}
 	)
-	if err := scanner.Scan(&item.TenantID, &item.ID, &item.VaultID, &item.Token, &item.OriginalEnc, &item.OriginalHash, &metaJS, &item.UseCount, &item.UseLimit, &item.RenewCount, &metadataTags, &createdRaw, &expiresAtRaw); err != nil {
+	if err := scanner.Scan(&item.TenantID, &item.ID, &item.VaultID, &item.Token, &item.OriginalEnc, &item.OriginalHash, &metaJS, &item.UseCount, &item.UseLimit, &item.RenewCount, &metadataTags, &createdRaw, &expiresAtRaw, &item.KDFVersion, &item.KDFKeyVersion); err != nil {
 		return TokenRecord{}, err
 	}
 	item.FormatMetadata = parseJSONObject(metaJS)

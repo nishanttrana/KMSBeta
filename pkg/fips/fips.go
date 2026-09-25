@@ -1,26 +1,92 @@
-// Package fips implements FIPS 140-3 Level 1 cryptographic module controls
-// including approved algorithm enforcement, key length validation, and
-// runtime mode toggling via environment variable.
+// Package fips implements the platform's FIPS 140-3 controls: the
+// customer-selected runtime mode, verification that the running binary really
+// uses the validated Go Cryptographic Module, approved-algorithm enforcement
+// and key-length validation. See docs/SECURITY/FIPS.md.
 package fips
 
 import (
+	"crypto/fips140"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"strings"
 )
 
-// FIPSMode indicates whether the module is operating in FIPS 140-3 mode.
-// Set at init from the VECTA_FIPS_MODE environment variable.
+// Runtime modes. The customer chooses one with VECTA_FIPS_MODE; the value is
+// passed unchanged to Go as GODEBUG=fips140=<mode>.
+const (
+	ModeOff  = "off"  // Go Cryptographic Module not in FIPS mode
+	ModeOn   = "on"   // FIPS mode: self-tests, approved DRBG, FIPS TLS; platform policy blocks non-approved algorithms
+	ModeOnly = "only" // strict: the Go runtime itself refuses every non-approved algorithm
+)
+
+// CertifiedModuleVersion is the CMVP-certified Go Cryptographic Module every
+// binary is built against (GOFIPS140 in each Dockerfile; see
+// $(go env GOROOT)/lib/fips140/certified.txt). scripts/conformance.sh checks
+// the Dockerfiles use this exact value.
+const CertifiedModuleVersion = "v1.0.0"
+
+// FIPSMode reports whether FIPS policy is active (mode on or only).
 var FIPSMode bool
 
 func init() {
-	v := strings.ToLower(strings.TrimSpace(os.Getenv("VECTA_FIPS_MODE")))
-	switch v {
-	case "1", "true", "enabled", "on", "strict":
-		FIPSMode = true
+	FIPSMode = Mode() != ModeOff
+}
+
+// Mode returns the effective runtime mode as reported by the Go runtime, which
+// is what actually governs the cryptography.
+func Mode() string {
+	switch {
+	case fips140.Enforced():
+		return ModeOnly
+	case fips140.Enabled():
+		return ModeOn
 	default:
-		FIPSMode = false
+		return ModeOff
 	}
+}
+
+// ModuleValidated reports whether the process runs the certified module in
+// FIPS mode: an approved-mode claim is only true when both hold.
+func ModuleValidated() bool {
+	return fips140.Enabled() && fips140.Version() == CertifiedModuleVersion
+}
+
+// builtModule returns the GOFIPS140 value recorded at build time ("" if none).
+func builtModule() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return ""
+	}
+	for _, s := range info.Settings {
+		if s.Key == "GOFIPS140" {
+			return s.Value
+		}
+	}
+	return ""
+}
+
+// VerifyRuntime checks that the customer's VECTA_FIPS_MODE choice is what the
+// process is actually running. When the variable is unset (tests, go run) it
+// accepts whatever the runtime reports. Called at service startup by
+// pkg/config; any error must stop the process.
+func VerifyRuntime() error {
+	want := strings.ToLower(strings.TrimSpace(os.Getenv("VECTA_FIPS_MODE")))
+	if want == "" {
+		return nil
+	}
+	switch want {
+	case ModeOff, ModeOn, ModeOnly:
+	default:
+		return fmt.Errorf("VECTA_FIPS_MODE=%q is invalid; use on, only or off", want)
+	}
+	if got := Mode(); got != want {
+		return fmt.Errorf("VECTA_FIPS_MODE=%s but the Go runtime is in FIPS mode %q; set GODEBUG=fips140=%s (docker-compose does this)", want, got, want)
+	}
+	if want != ModeOff && fips140.Version() != CertifiedModuleVersion {
+		return fmt.Errorf("VECTA_FIPS_MODE=%s requires a binary built with GOFIPS140=%s (certified Go Cryptographic Module); this binary reports module %q (built with GOFIPS140=%q)", want, CertifiedModuleVersion, fips140.Version(), builtModule())
+	}
+	return nil
 }
 
 // ApprovedAlgorithms contains the set of FIPS 140-3 approved algorithms.
@@ -31,9 +97,9 @@ var ApprovedAlgorithms = map[string]string{
 	"AES-256-GCM": "Authenticated Encryption",
 
 	// Asymmetric signing / encryption
-	"RSA-2048":  "Asymmetric",
-	"RSA-3072":  "Asymmetric",
-	"RSA-4096":  "Asymmetric",
+	"RSA-2048":   "Asymmetric",
+	"RSA-3072":   "Asymmetric",
+	"RSA-4096":   "Asymmetric",
 	"ECDSA-P256": "Elliptic Curve Digital Signature",
 	"ECDSA-P384": "Elliptic Curve Digital Signature",
 
@@ -79,15 +145,15 @@ func EnforceApproved(algorithm string) error {
 
 // Minimum key lengths required by FIPS 140-3 for each algorithm family.
 var minKeyLengths = map[string]int{
-	"AES":       128,
-	"RSA":       2048,
-	"ECDSA":     256, // P-256 curve order bit size
-	"ECDH":      256,
-	"ED25519":   256,
-	"HMAC":      128,
-	"ML-KEM":    768,
-	"ML-DSA":    65,
-	"SLH-DSA":   128,
+	"AES":     128,
+	"RSA":     2048,
+	"ECDSA":   256, // P-256 curve order bit size
+	"ECDH":    256,
+	"ED25519": 256,
+	"HMAC":    128,
+	"ML-KEM":  768,
+	"ML-DSA":  65,
+	"SLH-DSA": 128,
 }
 
 // ValidateKeyLength enforces FIPS 140-3 minimum key length requirements.

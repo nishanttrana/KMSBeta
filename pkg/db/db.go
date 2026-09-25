@@ -41,7 +41,10 @@ type DB struct {
 
 func Open(ctx context.Context, cfg Config) (*DB, error) {
 	driver := DriverPostgres
-	dsn := cfg.PostgresDSN
+	dsn := strings.TrimSpace(cfg.PostgresDSN)
+	if dsn == "" && !cfg.UseSQLite {
+		return nil, errors.New("db open: POSTGRES_DSN is required (postgres://<user>:<password>@<host>:5432/<db>)")
+	}
 	if cfg.UseSQLite {
 		driver = DriverSQLite
 		if cfg.SQLitePath == "" {

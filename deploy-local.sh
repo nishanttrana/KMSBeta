@@ -71,6 +71,12 @@ placeholders="$(awk -F= '
   }' "${ENV_FILE}")"
 [[ -z "${placeholders}" ]] || die "placeholder values in .env for: $(echo ${placeholders}). Run ./scripts/rotate-secrets.sh (see docs/SECURITY/SECRET_ROTATION.md) or set real values."
 
+fips_mode="$(env_get VECTA_FIPS_MODE)"
+case "${fips_mode:-on}" in
+  on|only|off) ;;
+  *) die "VECTA_FIPS_MODE=${fips_mode} is invalid; use on, only or off (docs/SECURITY/FIPS.md)" ;;
+esac
+
 cp "${ENV_FILE}" "${ENV_FILE}.bak.deploy.$(date +%s)"
 ensure_secret POSTGRES_PASSWORD "$(openssl rand -hex 24)"
 ensure_secret NATS_AUTH_TOKEN "$(openssl rand -hex 24)"
@@ -78,6 +84,10 @@ ensure_secret WORKLOAD_IDENTITY_SHARED_SECRET
 ensure_secret SOFTWARE_VAULT_PASSPHRASE
 ensure_secret INTERNAL_SERVICE_BOOTSTRAP_SECRET
 ensure_secret INTERNAL_API_TOKEN
+if [[ -z "${fips_mode}" ]]; then
+  env_set VECTA_FIPS_MODE on
+  say "FIPS 140-3 starts on; change it in the KMS UI (System Administration > Runtime Crypto)"
+fi
 ensure_secret AUTH_BOOTSTRAP_CLI_PASSWORD "Vk$(openssl rand -base64 18 | tr -dc 'A-Za-z0-9')Aa9!"
 
 # Tag images with the release in VERSION so upgrades are traceable.

@@ -36,9 +36,20 @@ x-kms-common-env: &kms-common-env
   # its own API key from this shared secret + its name (pkg/servicetoken) and
   # exchanges it for a signed JWT at /auth/client-token. auth pre-registers a
   # client + key hash per service from the same secret. Override per deployment
-  # (openssl rand -hex 32). Empty disables (callers stay tokenless).
+  # (openssl rand -hex 32). Required; weak or placeholder values stop auth.
   INTERNAL_SERVICE_BOOTSTRAP_SECRET: ${INTERNAL_SERVICE_BOOTSTRAP_SECRET:?INTERNAL_SERVICE_BOOTSTRAP_SECRET is required (openssl rand -hex 32)}
   AUTH_URL: ${AUTH_URL:-http://auth:8001}
+  # FIPS 140-3 runtime mode: the INITIAL value only. Customers change it in the
+  # KMS UI (System Administration > Runtime Crypto); that setting wins and
+  # services restart themselves to apply it (docs/SECURITY/FIPS.md):
+  #   on   (default) certified Go Cryptographic Module in FIPS mode;
+  #        integrations needing non-approved algorithms stay available
+  #   only strict: the Go runtime itself refuses every non-approved algorithm
+  #   off  FIPS mode disabled
+  # Every binary links the certified module (GOFIPS140 in the Dockerfiles);
+  # services refuse to start if the runtime does not match this choice.
+  VECTA_FIPS_MODE: ${VECTA_FIPS_MODE:-on}
+  GODEBUG: fips140=${VECTA_FIPS_MODE:-on}
 
 x-kms-service: &kms-service
   restart: unless-stopped

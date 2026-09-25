@@ -335,28 +335,20 @@ curl https://localhost/svc/audit/chain/verify?tenant_id=acme-corp \
 
 ### 3.4 FIPS 140-3 Mode
 
-When `VECTA_FIPS_MODE=true` is set, Vecta KMS restricts all cryptographic operations to FIPS 140-3 validated algorithms:
+Every binary links the CMVP-certified **Go Cryptographic Module v1.0.0**.
+Running it in FIPS mode is your choice, set with `VECTA_FIPS_MODE`:
 
-**Allowed in FIPS mode:**
-- AES-128, AES-192, AES-256 (ECB, CBC, CTR, GCM, CCM, XTS modes)
-- HMAC-SHA-1 (legacy only), HMAC-SHA-224, HMAC-SHA-256, HMAC-SHA-384, HMAC-SHA-512
-- RSA-2048+ (PKCS#1v1.5, PSS, OAEP)
-- ECDSA with P-256, P-384, P-521
-- ECDH with P-256, P-384, P-521
-- SHA-1 (legacy verification only), SHA-224, SHA-256, SHA-384, SHA-512
-- SP800-90A DRBG (AES-CTR-DRBG, HMAC-DRBG, Hash-DRBG)
-- ML-KEM (NIST FIPS 203)
-- ML-DSA (NIST FIPS 204)
-- SLH-DSA (NIST FIPS 205)
+| Value | Behaviour |
+|---|---|
+| `on` (default) | Certified module in FIPS mode (self-tests, approved DRBG, FIPS TLS). Integrations that need non-approved algorithms (payment TDES, X25519/age secrets, ChaCha20 field encryption) stay available; the per-tenant FIPS Policy can block them for keys. |
+| `only` | Strict. The Go runtime refuses every non-approved algorithm: X25519, ChaCha20, SHA-1, DES/TDES, caller-supplied GCM IVs, OpenPGP v4, and ML-DSA/SLH-DSA (implemented outside the validated module). |
+| `off` | FIPS mode disabled. |
 
-**Rejected in FIPS mode:**
-- ChaCha20, ChaCha20-Poly1305
-- Ed25519, Ed448, X25519, X448
-- BLAKE2b
-- MD5, SHA-1 for new MACs or signatures
-- Any custom or non-standard algorithm
-
-Attempting to create a key with a non-FIPS algorithm in FIPS mode returns `422 Unprocessable Entity` with error code `FIPS_VIOLATION`.
+Change it in the KMS UI: System Administration → Runtime Crypto → Platform
+FIPS 140-3 mode. The dialog shows what stops and starts working, and which
+services restart, before you confirm. Services then restart themselves in
+tiers and come back in the new mode (about 1–2 minutes). `VECTA_FIPS_MODE` in
+`.env` only sets the initial mode. See [SECURITY/FIPS.md](SECURITY/FIPS.md).
 
 ### 3.5 Governance: N-of-M Approval Workflows
 
@@ -656,7 +648,7 @@ export VECTA_HSM_PARTITION=vecta-partition
 | `VECTA_DB_URL` | Yes | — | PostgreSQL connection string |
 | `VECTA_JWT_SECRET` | Yes | — | JWT signing secret (HS256) or path to key file |
 | `VECTA_ADMIN_PASSWORD` | Yes (first run) | — | Initial admin password |
-| `VECTA_FIPS_MODE` | No | `false` | Enable FIPS 140-3 algorithm restrictions |
+| `VECTA_FIPS_MODE` | No | `on` | Initial FIPS 140-3 mode (`on`, `only`, `off`); afterwards set in the UI |
 | `VECTA_HSM_PROVIDER` | No | — | HSM provider: `thales-luna`, `aws-cloudhsm`, `securosys`, `entrust`, `utimaco` |
 | `VECTA_HSM_PIN` | No | — | HSM partition PIN (prefer `VECTA_HSM_PIN_FILE`) |
 | `VECTA_HSM_PIN_FILE` | No | — | Path to file containing HSM PIN |
@@ -1200,7 +1192,7 @@ Now that you have Vecta KMS running and have created your first key, here are th
 
 3. **Set up audit log export:** Configure your SIEM integration via Admin → Settings → Audit → Export. Ensure audit events flow to your central log management system.
 
-4. **Enable FIPS mode** if in a regulated environment: `VECTA_FIPS_MODE=true` in environment configuration.
+4. **Choose the FIPS mode** in System Administration → Runtime Crypto: `on` (default), or `only` for strict regulated workloads.
 
 5. **Create service accounts** for your applications rather than using the admin account: Admin → Users → Create Service Account.
 

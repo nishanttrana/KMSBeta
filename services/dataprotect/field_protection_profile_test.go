@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"vecta-kms/pkg/fips/fipstest"
 )
 
 func TestFieldProtectionProfileServiceResolveFlow(t *testing.T) {
@@ -96,6 +98,7 @@ func TestFieldProtectionProfileServiceResolveFlow(t *testing.T) {
 }
 
 func TestFieldProtectionResolveWrapperAuthRequired(t *testing.T) {
+	fipstest.SkipIfStrict(t, "X25519 wrapper keys")
 	svc, _, _ := newDataProtectService(t)
 	ctx := context.Background()
 	tenantID := "tenant-field-profile-auth"

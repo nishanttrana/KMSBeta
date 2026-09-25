@@ -17,6 +17,7 @@ import {
   usePromptDialog
 } from "../legacyPrimitives";
 import { C } from "../theme";
+import { KeyDerivationPanel } from "./KeyDerivationPanel";
 import { errMsg } from "../runtimeUtils";
 import {
   appDecryptFields,
@@ -587,6 +588,7 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
         <Btn small onClick={()=>setOp("Redact")}>Open Redact Operation</Btn>
       </Card>
     </div>
+    <KeyDerivationPanel session={session} onToast={onToast}/>
   </div>;
 };
 

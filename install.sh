@@ -1238,9 +1238,9 @@ collect_inputs() {
   HSM_MODE="${HSM_MODE,,}"
   [[ "${HSM_MODE}" == "software" || "${HSM_MODE}" == "hardware" || "${HSM_MODE}" == "auto" ]] || die "HSM mode must be software, hardware, or auto."
 
-  prompt_default FIPS_MODE "FIPS mode (standard/strict)" "standard"
-  FIPS_MODE="${FIPS_MODE,,}"
-  [[ "${FIPS_MODE}" == "standard" || "${FIPS_MODE}" == "strict" ]] || die "FIPS mode must be standard or strict."
+  # FIPS 140-3 starts "on"; the customer changes it (on / only / off) in the
+  # KMS UI: System Administration > Runtime Crypto (docs/SECURITY/FIPS.md).
+  FIPS_MODE="on"
 
   CERT_STORAGE_MODE="db_encrypted"
   local root_key_mode_default="software"
@@ -1591,8 +1591,12 @@ EOF
 }
 
 write_fips_yaml() {
+  local fips_profile="standard"
+  [[ "${FIPS_MODE}" == "only" ]] && fips_profile="strict"
+  [[ "${FIPS_MODE}" == "off" ]] && fips_profile="disabled"
   cat > "${FIPS_FILE}" <<EOF
-mode: ${FIPS_MODE}
+# Policy profile derived from VECTA_FIPS_MODE=${FIPS_MODE} (on=standard, only=strict).
+mode: ${fips_profile}
 standard:
     allow_legacy_algorithms: true
     default_tls_version: "1.2"
@@ -1714,6 +1718,7 @@ WORKLOAD_IDENTITY_SHARED_SECRET=${workload_secret}
 SOFTWARE_VAULT_PASSPHRASE=${vault_passphrase}
 INTERNAL_API_TOKEN=${internal_token}
 INTERNAL_SERVICE_BOOTSTRAP_SECRET=${service_bootstrap_secret}
+VECTA_FIPS_MODE=${FIPS_MODE}
 JWT_PUBLIC_KEY_B64=${jwt_pub_b64}
 AUTH_BOOTSTRAP_CLI_PASSWORD=${cli_password}
 CBOM_SCHEDULE_TENANTS=${TENANT_ID}
@@ -2223,7 +2228,7 @@ collect_fast_inputs() {
   CERTS_PASSPHRASE_FILE_PATH="/var/lib/vecta/certs/bootstrap.passphrase"
   CERTS_USE_TPM_SEAL="false"
   CERTS_BOOTSTRAP_PASSPHRASE="$(generate_random_secret 48)"
-  FIPS_MODE="standard"
+  FIPS_MODE="on"
   detected_iface="$(detect_default_route_interface)"
   if [[ -z "${detected_iface}" ]]; then
     case "${HOST_OS}" in

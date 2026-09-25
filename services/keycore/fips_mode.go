@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/fips140"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -217,10 +218,24 @@ func (s *Service) SetFIPSModeProvider(provider FIPSModeProvider) {
 }
 
 func (s *Service) isFIPSEnabled(ctx context.Context, tenantID string) (bool, error) {
+	// Strict runtime mode (VECTA_FIPS_MODE=only) applies FIPS policy to every
+	// tenant, whatever the per-tenant governance setting says.
+	if fips140.Enforced() {
+		return true, nil
+	}
 	if s.fipsMode == nil {
 		return false, nil
 	}
 	return s.fipsMode.IsEnabled(ctx, tenantID)
+}
+
+// implementedOutsideValidatedModule reports algorithms that are FIPS-approved
+// but that keycore implements with a library outside the validated Go
+// Cryptographic Module (ML-DSA and SLH-DSA via cloudflare/circl). The runtime
+// cannot see those calls, so strict mode refuses them here.
+func implementedOutsideValidatedModule(algorithm string) bool {
+	v := strings.ToUpper(strings.TrimSpace(algorithm))
+	return strings.Contains(v, "ML-DSA") || strings.Contains(v, "MLDSA") || strings.Contains(v, "SLH-DSA") || strings.Contains(v, "SLHDSA")
 }
 
 func (s *Service) enforceFIPSKeyAlgorithm(ctx context.Context, tenantID string, algorithm string, operation string) error {
@@ -231,7 +246,7 @@ func (s *Service) enforceFIPSKeyAlgorithm(ctx context.Context, tenantID string, 
 	if !enabled {
 		return nil
 	}
-	if isFIPSApprovedKeyAlgorithm(algorithm) {
+	if isFIPSApprovedKeyAlgorithm(algorithm) && !(fips140.Enforced() && implementedOutsideValidatedModule(algorithm)) {
 		return nil
 	}
 	return fipsModeViolationError{

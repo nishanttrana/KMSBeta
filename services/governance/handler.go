@@ -62,6 +62,9 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /governance/backups/{id}/key", h.handleDownloadBackupKey)
 	mux.HandleFunc("GET /governance/system/state", h.handleGetSystemState)
 	mux.HandleFunc("PUT /governance/system/state", h.handleUpdateSystemState)
+	mux.HandleFunc("GET /governance/system/fips-mode", h.handleGetFIPSMode)
+	mux.HandleFunc("GET /governance/system/fips-mode/impact", h.handleFIPSModeImpact)
+	mux.HandleFunc("PUT /governance/system/fips-mode", h.handleSetFIPSMode)
 	mux.HandleFunc("PUT /governance/system/posture-controls", h.handleUpdatePostureControls)
 	mux.HandleFunc("POST /governance/system/snmp/test", h.handleTestSystemSNMP)
 	mux.HandleFunc("POST /governance/system/network/apply", h.handleApplyNetworkConfig)
@@ -370,6 +373,67 @@ func (h *Handler) handleUpdateSystemState(w http.ResponseWriter, r *http.Request
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"state": updated, "request_id": reqID})
+}
+
+func (h *Handler) handleGetFIPSMode(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	if _, ok := h.requireSystemAdminTenant(w, r, reqID, false); !ok {
+		return
+	}
+	status, err := h.svc.FIPSModeStatus(r.Context())
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "fips_mode_unavailable", err.Error(), reqID, "root")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": status, "request_id": reqID})
+}
+
+func (h *Handler) handleFIPSModeImpact(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	if _, ok := h.requireSystemAdminTenant(w, r, reqID, false); !ok {
+		return
+	}
+	impact, err := h.svc.FIPSModeImpact(r.Context(), r.URL.Query().Get("target"))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "root")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"impact": impact, "request_id": reqID})
+}
+
+func (h *Handler) handleSetFIPSMode(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	if _, ok := h.requireSystemAdminTenant(w, r, reqID, true); !ok {
+		return
+	}
+	var req struct {
+		Mode    string `json:"mode"`
+		Confirm string `json:"confirm"`
+		Reason  string `json:"reason"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "root")
+		return
+	}
+	actor := "admin"
+	if claims, ok := pkgauth.ClaimsFromContext(r.Context()); ok && claims != nil {
+		actor = firstNonEmptyString(claims.UserID, claims.ClientID, actor)
+	}
+	impact, err := h.svc.SetFIPSMode(r.Context(), req.Mode, req.Confirm, req.Reason, actor)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "fips_mode_change_failed", err.Error(), reqID, "root")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"impact": impact, "request_id": reqID})
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
 }
 
 func (h *Handler) handleUpdatePostureControls(w http.ResponseWriter, r *http.Request) {

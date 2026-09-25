@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"testing"
+
+	"vecta-kms/pkg/fips/fipstest"
 )
 
 func TestPaymentPolicyStrictModeDoesNotAutoOverrideControls(t *testing.T) {
@@ -176,6 +178,7 @@ func TestPaymentPolicyRejectsInvalidDecimalizationTable(t *testing.T) {
 }
 
 func TestPaymentPolicyDecimalizationTableAffectsPVV(t *testing.T) {
+	fipstest.SkipIfStrict(t, "TDES PVV")
 	svc, _, _, _ := newPaymentService(t)
 	ctx := context.Background()
 

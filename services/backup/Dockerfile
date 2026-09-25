@@ -1,4 +1,7 @@
 FROM golang:1.27.1-alpine AS build
+# Link the CMVP-certified Go Cryptographic Module (docs/SECURITY/FIPS.md).
+# The customer picks the runtime mode with VECTA_FIPS_MODE (on | only | off).
+ENV GOFIPS140=v1.0.0
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download

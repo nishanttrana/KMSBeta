@@ -45,9 +45,10 @@ type Config struct {
 
 func Load() Config {
 	RejectPlaceholderSecrets()
+	RequireFIPSRuntime()
 	return Config{
 		Env:              get("VECTA_ENV", "dev"),
-		PostgresDSN:      get("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5432/vecta?sslmode=disable"),
+		PostgresDSN:      get("POSTGRES_DSN", ""), // required unless SQLITE_FALLBACK; no built-in credentials
 		PostgresRODSN:    get("POSTGRES_RO_DSN", ""),
 		SQLitePath:       get("SQLITE_PATH", "vecta.db"),
 		UseSQLite:        getBool("SQLITE_FALLBACK", false),

@@ -84,6 +84,7 @@ import {
 import { errMsg } from "../../components/v3/runtimeUtils";
 import { C } from "../../components/v3/theme";
 import type { AdminTabProps } from "./types";
+import { FipsModePanel } from "./FipsModePanel";
 import {
   getFDEStatus,
   runFDEIntegrityCheck,
@@ -2096,7 +2097,9 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const entropySampleBytes=Math.max(0,Number(systemState?.fips_entropy_sample_bytes||4096));
   const entropySampleMicros=Math.max(0,Number(systemState?.fips_entropy_read_micros||0));
   const runtimeAllOk = Number(health.summary?.degraded||0)===0 && Number(health.summary?.down||0)===0;
-  const runtimeLibraryLine = `Library: ${String(systemState?.fips_crypto_library||"Go std crypto")} (${String(systemState?.go_runtime_version||"go1.26.0")}, GOEXPERIMENT=${String(systemState?.goexperiment||"none")}, CGO=${String(systemState?.cgo_enabled||"0")}, x/crypto=${String(systemState?.xcrypto_version||"v0.47.0")}, ${String(systemState?.fips_module_version||"fips140-latest")} enabled=${String(systemState?.fips_runtime_enabled===true)} enforced=${String(systemState?.fips_runtime_enforced===true)}) ${Boolean(systemState?.fips_validated)?"":"(not validated)"} | Sample: ${entropySampleBytes} bytes in ${entropySampleMicros} us`;
+  // Runtime mode comes from the Go runtime (VECTA_FIPS_MODE at deploy time); never guess it.
+  const fipsRuntimeMode = systemState?.fips_runtime_enforced===true ? "only (strict)" : systemState?.fips_runtime_enabled===true ? "on" : "off";
+  const runtimeLibraryLine = `Module: ${String(systemState?.fips_crypto_library||"not reported")} | ${systemState?.fips_library_validated===true ? `certified Go Cryptographic Module ${String(systemState?.fips_module_version||"")} in FIPS mode` : "not running a validated module in FIPS mode"}`;
   const certSecuritySummary = certSecurityLoading
     ? "loading..."
     : `${String(certSecurity?.storage||"db_encrypted")} / ${String(certSecurity?.hsm_mode||"software")} / ${String(certSecurity?.status||"ready")}`;
@@ -2313,9 +2316,11 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       }}>
         <div>{`Entropy health: ${String(systemState?.fips_entropy_health||"unknown")} | ${entropyBits.toFixed(3)} bits/byte`}</div>
         <div>{`Sample: ${entropySampleBytes} bytes in ${entropySampleMicros} us`}</div>
-        <div>{`Runtime: enabled=${Boolean(systemState?.fips_runtime_enabled)} enforced=${Boolean(systemState?.fips_runtime_enforced)}`}</div>
+        <div>{`This service runs FIPS mode: ${fipsRuntimeMode}`}</div>
         <div>{runtimeLibraryLine}</div>
+        <div>FIPS Policy above adds per-tenant algorithm rules on top of the platform mode below.</div>
       </div>
+      <div style={{marginTop:8}}><FipsModePanel session={session} onToast={onToast}/></div>
       <div style={{fontSize:10,color:C.dim,marginTop:8}}>
         Runtime Crypto stays on this tab. Network addresses live under Network, and certificate issuance for exposed TLS interfaces is governed from Configure TLS.
       </div>
@@ -2765,7 +2770,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
           <div style={{fontSize:10,color:C.dim,display:"grid",gap:2}}>
             <div>{`Entropy health: ${String(systemState?.fips_entropy_health||"unknown")} | ${Number(systemState?.fips_entropy_bits_per_byte||0).toFixed(3)} bits/byte`}</div>
             <div>{`Sample: ${Number(systemState?.fips_entropy_sample_bytes||0)} bytes in ${Number(systemState?.fips_entropy_read_micros||0)} us`}</div>
-            <div>{`Runtime: enabled=${Boolean(systemState?.fips_runtime_enabled)} enforced=${Boolean(systemState?.fips_runtime_enforced)}`}</div>
+            <div>{`Runtime mode: ${fipsRuntimeMode} (change it in Runtime Crypto)`}</div>
+            <div>{runtimeLibraryLine}</div>
           </div>
         </Card>
 

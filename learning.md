@@ -5,6 +5,98 @@ Newest entries on top.
 
 ## 2026-09-25
 
+### A process-start setting can still be a runtime choice: re-exec plus supervised restart
+Go reads `GODEBUG=fips140` only at process start, and container env vars are
+fixed at container creation. Two moves give a UI toggle anyway:
+1. **Change the mode:** the service SIGTERMs itself (so its normal graceful
+   shutdown runs) and lets the restart policy bring it back.
+2. **Pick up the new mode:** at startup it `syscall.Exec`s itself with the new
+   `GODEBUG` before touching any crypto.
+
+Guards that matter:
+- A re-exec marker, so a mismatch is fatal instead of an exec loop.
+- Re-reading the setting after the tier delay, so a quickly reverted change
+  doesn't restart anything.
+- Conformance that every Go service has a restart policy.
+
+Proven in real containers: 55 s from the UI change to keycore running and
+reporting `only`.
+
+### Test goroutines that loop forever make other tests slow and racy
+The first watcher tests left a zero-interval polling goroutine spinning for
+the rest of the test binary, and read its results while it was still running.
+Give long-running loops a quit channel and wait for exit before asserting.
+`go test -race` confirms.
+
+### A fallback chain can end in a public value, and production takes that path
+dataprotect's key resolution tried `material_b64 → material → wrapped_material
+→ kcv → id`. keycore never returns the first three, so **every production
+working key was HMAC(KCV)**, and the KCV is shown in the UI and API. No test
+caught it, because the test fake returned the same metadata shape and the
+round trips worked. Lessons:
+- Trace a fallback to what the real upstream returns before trusting it.
+- "It encrypts and decrypts" proves nothing about where the key came from.
+  Assert that the working key differs from anything computable from public
+  data (`legacyKeyForCompare` in the tests).
+- Unauthenticated formats (FPE, format-preserving tokens) can't detect a key
+  change: decrypting with the wrong key returns a plausible wrong value. So a
+  migration needs explicit per-key state, not trial decryption.
+
+### `go build ./services/<name>` bit twice in one day
+Recording the trap wasn't enough; the same mistake happened again hours later.
+For compile checks use `go build -o /dev/null ./services/<name>` or
+`go vet`, never a bare single-package `go build` from the repo root.
+
+### "FIPS mode" means nothing without the module, and it must reach the process
+`VECTA_FIPS_MODE` toggled an in-app allowlist, compose never passed it, and no
+binary was built with `GOFIPS140`. So the product had no validated module, and
+governance still reported `fips_library_validated=true` whenever
+`fips140.Enabled()` was true, which is also true for the unvalidated `latest`
+module. Validated means the certified snapshot is linked **and** FIPS mode is
+on (`fips.ModuleValidated()`). Mismatches now stop the service at startup.
+
+### Strict mode (`fips140=only`) found real bugs, not just policy
+- **GCM IVs:** `cipher.NewGCM` with any caller-supplied nonce is refused
+  (IG C.H: the module must generate the IV). The fix is
+  `cipher.NewGCMWithRandomNonce`. Its output (`nonce||ct||tag`) is
+  wire-identical to our `Seal`, so no data migration was needed.
+- **Stored formats:** keycore persists envelope IVs as a fixed 16-byte prefix,
+  of which the old code used only the first 12 bytes. A stricter 12-byte check
+  broke every stored key in *all* modes; the test suite caught it. Keep 16 on
+  disk (nonce + zero padding) and decrypt with the first 12.
+- **OCSP:** the responder always used a SHA-1 CertID whatever the client
+  asked for. That was a real protocol bug, and a panic in strict mode.
+- **Panics, not errors:** Go *panics* on SHA-1 and on HMAC keys under 112 bits
+  in strict mode. Guard with `fips140.Enforced()` before the call.
+- **Third-party crypto bypasses the runtime:** `age` generated X25519 keys
+  happily under `fips140=only`, and `circl` does ML-DSA/SLH-DSA. The runtime
+  can't see crypto that isn't in the module, so it needs explicit guards.
+- **Identifier-derived keys:** dataprotect derives keys from key IDs when no
+  material is available. Strict mode now refuses; the general fix is tracked
+  with a migration.
+
+### Run the matrix, not one mode
+The suite passed in `on` from the start; only `only` exposed the issues above,
+and only the full run caught the envelope regression. `make test-fips-modes`
+and the CI matrix run all three. A test that needs a non-approved algorithm
+skips in strict mode *and* has a paired strict test proving the clean refusal.
+
+### Small traps
+- In YAML, bare `on` / `off` can parse as booleans; quote matrix values.
+- macOS has no `timeout` command, so a `timeout 8 docker run …` silently runs
+  nothing. Use `docker run -d` + `docker logs`.
+- `go build ./services/<name>` (a single main package) writes an executable
+  named `<name>` into the current directory, which is the repo root. To check
+  that something compiles, use `go build ./...`, `go vet`, or `-o /dev/null`.
+
+### Secret rules keyed on variable names miss connection strings
+The secure-defaults rules matched `*SECRET*`, `*PASSWORD*` and similar names, so
+`POSTGRES_DSN` falling back to `postgres://postgres:postgres@…` slipped through
+both the conformance scan and the runtime placeholder check. Credentials hide
+inside values too: URLs with `user:pass@`. Rules now also inspect the
+**shape** of values (URL userinfo in Go and compose literals) and parse
+`*_DSN` / `*DATABASE_URL` values at startup.
+
 ### Example files are deployment inputs, not documentation
 `.env.example` held values like `your-workload-identity-secret`, and
 `deploy-local.sh` copies it to `.env` on a fresh install, so those public

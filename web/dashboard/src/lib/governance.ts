@@ -445,3 +445,62 @@ export async function voteGovernanceRequest(
   return out.request;
 }
 
+
+// ── Platform FIPS 140-3 mode (docs/SECURITY/FIPS.md, "Changing the mode") ──
+
+export type FipsMode = "on" | "only" | "off";
+
+export type FipsImpactItem = { service: string; feature: string; detail: string };
+
+export type FipsModeImpact = {
+  from: FipsMode;
+  to: FipsMode;
+  downgrade: boolean;
+  stops: FipsImpactItem[];
+  starts: FipsImpactItem[];
+  notes: string[];
+  restarts: string[];
+  estimated_seconds: number;
+};
+
+export type FipsObservedService = {
+  service: string;
+  instance: string;
+  mode: string;
+  module_version: string;
+  validated: boolean;
+  started_at: string;
+  updated_at: string;
+};
+
+export type FipsModeStatus = {
+  desired: { mode: FipsMode; previous: string; reason: string; requested_by: string; requested_at: string } | null;
+  effective: FipsMode;
+  services: FipsObservedService[];
+  converged: boolean;
+  pending: number;
+};
+
+const rootQuery = (session: AuthSession) => `tenant_id=${encodeURIComponent(session.tenantId)}`;
+
+export async function getFipsModeStatus(session: AuthSession): Promise<FipsModeStatus> {
+  const out = await serviceRequest<{ status: FipsModeStatus }>(session, "governance", `/governance/system/fips-mode?${rootQuery(session)}`);
+  return out.status;
+}
+
+export async function getFipsModeImpact(session: AuthSession, target: FipsMode): Promise<FipsModeImpact> {
+  const out = await serviceRequest<{ impact: FipsModeImpact }>(
+    session,
+    "governance",
+    `/governance/system/fips-mode/impact?${rootQuery(session)}&target=${encodeURIComponent(target)}`
+  );
+  return out.impact;
+}
+
+export async function setFipsMode(session: AuthSession, mode: FipsMode, confirm: string, reason: string): Promise<FipsModeImpact> {
+  const out = await serviceRequest<{ impact: FipsModeImpact }>(session, "governance", `/governance/system/fips-mode?${rootQuery(session)}`, {
+    method: "PUT",
+    body: JSON.stringify({ mode, confirm, reason })
+  });
+  return out.impact;
+}

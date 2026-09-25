@@ -16,6 +16,10 @@ import (
 var errNotFound = errors.New("not found")
 
 type Store interface {
+	GetPlatformFIPSMode(ctx context.Context) (*PlatformFIPSMode, error)
+	SetPlatformFIPSMode(ctx context.Context, m PlatformFIPSMode) error
+	ListPlatformFIPSObserved(ctx context.Context) ([]FIPSObservedService, error)
+
 	CreatePolicy(ctx context.Context, p ApprovalPolicy) error
 	UpdatePolicy(ctx context.Context, p ApprovalPolicy) error
 	DeletePolicy(ctx context.Context, tenantID string, policyID string) error

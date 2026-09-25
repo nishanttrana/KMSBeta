@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -33,7 +35,30 @@ func (p *nopDataProtectPublisher) Count(subject string) int {
 }
 
 type fakeDataProtectKeyCore struct {
-	items map[string]map[string]interface{}
+	mu            sync.Mutex
+	items         map[string]map[string]interface{}
+	deriveCalls   int
+	deriveHistory []string
+}
+
+// ServiceDerive stands in for keycore's HKDF over secret material: a
+// deterministic 32-byte key per (key, version, purpose) that no identifier
+// alone reproduces.
+func (f *fakeDataProtectKeyCore) ServiceDerive(_ context.Context, _ string, keyID string, purpose string, version int) ([]byte, int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if version <= 0 {
+		version = 1
+		if item, ok := f.items[keyID]; ok {
+			if v := metaInt(item["current_version"]); v > 0 {
+				version = v
+			}
+		}
+	}
+	f.deriveCalls++
+	f.deriveHistory = append(f.deriveHistory, fmt.Sprintf("%s|v%d|%s", keyID, version, purpose))
+	sum := sha256.Sum256([]byte(fmt.Sprintf("fake-keycore-secret|%s|v%d|%s", keyID, version, purpose)))
+	return sum[:], version, nil
 }
 
 func (f *fakeDataProtectKeyCore) GetKey(_ context.Context, _ string, keyID string) (map[string]interface{}, error) {
@@ -112,8 +137,24 @@ func createDataProtectSchemaForTest(conn *pkgdb.DB) error {
 			metadata_tags_json TEXT NOT NULL DEFAULT '{}',
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			expires_at TIMESTAMP,
+			kdf_version TEXT NOT NULL DEFAULT 'v1',
+			kdf_key_version INTEGER NOT NULL DEFAULT 0,
 			PRIMARY KEY (tenant_id, id)
 		);`,
+		`CREATE TABLE dataprotect_key_kdf (
+			tenant_id TEXT NOT NULL,
+			key_id TEXT NOT NULL,
+			state TEXT NOT NULL,
+			key_version INTEGER NOT NULL DEFAULT 0,
+			legacy_uses BIGINT NOT NULL DEFAULT 0,
+			last_legacy_use_at TIMESTAMP,
+			updated_by TEXT NOT NULL DEFAULT 'system',
+			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (tenant_id, key_id)
+		);`,
+		`CREATE TABLE dataprotect_kdf_meta (id INTEGER PRIMARY KEY, v2_cutoff TIMESTAMP NOT NULL);`,
+		`INSERT INTO dataprotect_kdf_meta (id, v2_cutoff) VALUES (1, CURRENT_TIMESTAMP);`,
 		`CREATE TABLE masking_policies (
 			tenant_id TEXT NOT NULL,
 			id TEXT NOT NULL,

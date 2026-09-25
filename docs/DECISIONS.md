@@ -16,6 +16,91 @@ need a written trail of why each security control exists.
 **Enforced by:** `scripts/check-docs.sh` in CI on pull requests, plus the
 "Documentation is part of done" table in `CLAUDE.md`.
 
+## 2026-09-25 — FIPS mode is changed in the UI and applied by staggered self-restart
+**Decision:**
+- The platform FIPS mode is a governance setting, changed by a root admin in
+  System Administration. The deployment variable only seeds it.
+- Every service applies a change itself: it polls the setting, waits its
+  restart tier, sends itself SIGTERM (graceful shutdown), and is restarted by
+  its supervisor.
+- At startup the service re-executes itself with the matching `GODEBUG`
+  before any cryptography runs.
+- Before confirming, the UI shows the features that stop and start and the
+  services that restart. The change is audited, with severity critical for a
+  downgrade.
+
+**Why:** the customer asked for the choice to live in the product, not in the
+deployment. Go fixes the FIPS mode at process start, so a restart is
+unavoidable; making each service apply the change itself needs no Docker
+socket or orchestrator access.
+
+**Rejected:**
+- **Governance restarting containers through the Docker socket:** that hands
+  root on the host to a web-facing service.
+- **Restarting only the "affected" services:** the mode covers every Go
+  process's cryptography, so a partial restart leaves a mixed posture.
+- **Restarting everything at once:** a full outage. Tiers keep the platform
+  up.
+- **Switching modes without a restart:** Go doesn't support it.
+
+**Enforced by:** `pkg/config.RequireFIPSRuntime` (by construction), the
+conformance `fips-module` rule (common env and a restart policy on every Go
+service), governance tests, and a real-container end-to-end check
+(docs/SECURITY/FIPS.md).
+
+## 2026-09-25 — dataprotect working keys come from keycore (service-derive), with a per-key migration
+**Decision:**
+- keycore gets `POST /keys/{id}/service-derive`: HKDF over the key's secret
+  material, bound to the verified calling service, tenant, key, pinned
+  version and purpose.
+- dataprotect derives every working key through it (v2).
+- Identifier-derived keys (v1) survive only per key, in state
+  `legacy`/`migrating`, until an operator completes that key's migration.
+- New keys are v2 from birth. Strict FIPS mode refuses v1 everywhere.
+
+**Why:** the working key was HMAC over the public KCV, so it was predictable.
+
+**Rejected:**
+- **Running tokenize/FPE inside keycore:** a large move of format-preserving
+  code into the crypto boundary, with a keycore round trip per value.
+  Service-derive keeps the algorithms in dataprotect while the secret stays
+  in keycore.
+- **Exporting raw key material to dataprotect:** it would spread the root
+  secret. A purpose-bound HKDF subkey can't be turned back into the key.
+- **Switching every key to v2 at upgrade:** FPE and vaultless outputs carry no
+  version marker and aren't authenticated, so old ciphertexts would decrypt to
+  wrong values with no error.
+- **A version marker inside outputs:** impossible for format-preserving
+  tokens and FPE.
+- **Trial decryption with v2, falling back to v1:** it gives wrong plaintext
+  without any error for unauthenticated formats.
+
+**Enforced by:** the state machine in `services/dataprotect/kdf.go`, the
+generic-derive reserved-prefix check, tests in all three FIPS modes, and
+`audit.dataprotect.kdf_legacy_used` on every legacy use.
+
+## 2026-09-25 — FIPS 140-3: certified Go module always, runtime mode is the customer's choice
+**Decision:** every binary links the CMVP-certified Go Cryptographic Module
+(`GOFIPS140=v1.0.0`). The customer chooses `VECTA_FIPS_MODE` = `on` (default),
+`only` or `off`, passed to Go as `GODEBUG=fips140`. Services refuse to start
+when the runtime doesn't match. Every mode is tested in CI.
+**Why:** `pkg/fips` was an in-app allowlist with no validated module behind
+it, and the "FIPS mode" variable never reached the containers. A lab asks
+which validated module does the cryptography; the answer must be true in the
+build and visible at runtime.
+**Rejected:**
+- BoringCrypto (cgo, a different module, and the Go team now points to the
+  native module).
+- Hard-wiring strict mode (it would break customers' legacy payment TDES and
+  X25519 integrations; the customer decides).
+- A per-tenant runtime toggle (Go fixes the mode at process start; per-tenant
+  rules stay in the governance FIPS Policy).
+- Wrapping everything in `fips140.WithoutEnforcement` to make strict mode pass
+  (that would be strict in name only). `WithoutEnforcement` is used only for
+  known-answer self-tests with published vectors.
+**Enforced by:** conformance `fips-module`, `config.RequireFIPSRuntime`, the
+CI `fips-modes` matrix, and `TestBuiltWithCertifiedModule`.
+
 ## 2026-09-25 — Placeholder secrets are rejected in the shared config loader
 **Decision:** `pkg/config` rejects placeholder secret values (`your-...`,
 `change-me`, `replace-me`) at startup, from `Load` and `NewHTTPServer`, rather
@@ -29,6 +114,10 @@ auto-replacing placeholders on a live stack (a baked-in Postgres password
 would break the database).
 **Exception:** customer-side `ekm-agent` reads a config file, not the
 environment.
+**Extended (same day):** connection-string env vars (`*_DSN`,
+`*DATABASE_URL`) are parsed, and a default, username-equal, empty or
+placeholder password is rejected. A missing `POSTGRES_DSN` is an error rather
+than a built-in localhost default.
 
 ## 2026-09-25 — Secrets: fail fast or generate, never a public fallback
 **Decision:** no secret may default to a value in the repo. Weak values stop

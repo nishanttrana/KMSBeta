@@ -6,9 +6,12 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"vecta-kms/pkg/fips/fipstest"
 )
 
 func TestHandlerTokenAndFPEFlows(t *testing.T) {
+	fipstest.SkipIfStrict(t, "identifier-derived working keys (test keycore has no material)")
 	h, _, _ := newDataProtectHandler(t)
 	tenantID := "tenant-h1"
 
@@ -151,6 +154,7 @@ func TestHandlerTokenAndFPEFlows(t *testing.T) {
 }
 
 func TestHandlerMaskRedactAndAppFlows(t *testing.T) {
+	fipstest.SkipIfStrict(t, "identifier-derived working keys (test keycore has no material)")
 	h, _, _ := newDataProtectHandler(t)
 	tenantID := "tenant-h2"
 

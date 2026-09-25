@@ -8,6 +8,8 @@
 #   3. Secure defaults — no secret falls back to a value shipped in the repo,
 #      and .env.example ships no secret values.
 #   4. Shell scripts parse (bash 3.2 on macOS included).
+#   5. FIPS 140-3: every Go binary links the certified Go Cryptographic Module
+#      and every Go service receives the customer's VECTA_FIPS_MODE.
 #
 # Files listed in scripts/conformance-allowlist.txt are exempted (one path
 # per line, # comments allowed). The allowlist is a burn-down list: it only
@@ -79,6 +81,10 @@ check_secret_defaults() {
 }
 check_secret_defaults "no-secret-fallback-compose" "\\\$\\{${SECRET_NAME}:-[^}]" docker-compose*.yml
 # (A second ALL_CAPS argument is another env var name, e.g. firstNonEmptyEnv, not a default.)
+# Credentials hardcoded inside a URL literal (postgres://user:pass@...) are a
+# secret fallback too; only ${VAR}/%s-built URLs are allowed.
+check_secret_defaults "no-credential-in-url-go" '"[a-z][a-z0-9+]*://[^:"/@ %$]+:[^@"$ %]+@' services pkg --include="*.go"
+check_secret_defaults "no-credential-in-url-compose" '://[^:$/ ]+:[^$@ ]+@' docker-compose*.yml
 check_secret_defaults "no-secret-fallback-go" "\\(\"${SECRET_NAME}\", *\"[^\"]*[^A-Z0-9_\"][^\"]*\"\\)" services pkg --include="*.go"
 
 # Rule 3c: .env.example ships no secret values. A filled-in example value
@@ -90,6 +96,44 @@ if [ -n "$env_example_hits" ]; then
   printf '  %s\n' "$env_example_hits"
 else
   echo "PASS [env-example-no-secret-values]"
+fi
+
+# Rule 5: FIPS 140-3 (docs/SECURITY/FIPS.md). Every Go binary links the
+# certified Go Cryptographic Module (GOFIPS140 = pkg/fips.CertifiedModuleVersion)
+# and every Go service receives the customer's VECTA_FIPS_MODE as
+# GODEBUG=fips140, so the runtime mode is always the customer's choice.
+FIPS_MODULE=$(sed -n 's/^const CertifiedModuleVersion = "\(.*\)"$/\1/p' pkg/fips/fips.go)
+fips_fail=""
+[ -n "$FIPS_MODULE" ] || fips_fail="$fips_fail pkg/fips.CertifiedModuleVersion-missing"
+for f in $(grep -l 'go build' services/*/Dockerfile 2>/dev/null); do
+  grep -qx "ENV GOFIPS140=$FIPS_MODULE" "$f" || fips_fail="$fips_fail $f"
+done
+grep -q 'GODEBUG: fips140=${VECTA_FIPS_MODE:-on}' docker-compose.yml || fips_fail="$fips_fail docker-compose.yml:GODEBUG"
+grep -q 'VECTA_FIPS_MODE: ${VECTA_FIPS_MODE:-on}' docker-compose.yml || fips_fail="$fips_fail docker-compose.yml:VECTA_FIPS_MODE"
+# Each compose service built from a Go Dockerfile must merge the common env.
+fips_fail="$fips_fail$(python3 - <<'PY'
+import re, os
+text = open("docker-compose.yml").read()
+body = text.split("\nservices:\n", 1)[1].split("\nvolumes:\n", 1)[0]
+for m in re.finditer(r"^  ([a-z0-9-]+):\n((?:    .*\n|\n)*)", body, re.M):
+    name, block = m.group(1), m.group(2)
+    df = re.search(r"dockerfile:\s*(\S+)", block)
+    if not df or not os.path.exists(df.group(1)):
+        continue
+    if "go build" in open(df.group(1)).read():
+        if "*kms-common-env" not in block:
+            print(" docker-compose.yml:" + name, end="")
+        # FIPS mode changes restart services by self-SIGTERM; a supervisor
+        # restart policy is what brings them back in the new mode.
+        if "*kms-service" not in block and not re.search(r"restart:\s*(always|unless-stopped|on-failure)", block):
+            print(" docker-compose.yml:" + name + ":no-restart-policy", end="")
+PY
+)"
+if [ -n "$fips_fail" ]; then
+  FAIL=1
+  echo "FAIL [fips-module]: not wired to the certified module / customer FIPS mode:$fips_fail"
+else
+  echo "PASS [fips-module]"
 fi
 
 # Rule 4: every shell script parses. Checked with /bin/bash when present,

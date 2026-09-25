@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -68,6 +69,48 @@ func (c *HTTPKeyCoreClient) GetKey(ctx context.Context, tenantID string, keyID s
 		return map[string]interface{}{}, nil
 	}
 	return item, nil
+}
+
+// ServiceDerive calls keycore POST /keys/{id}/service-derive with this
+// service's JWT. keycore binds the result to kms-dataprotect, so the working
+// key is derived from secret key material and never from identifiers.
+func (c *HTTPKeyCoreClient) ServiceDerive(ctx context.Context, tenantID string, keyID string, purpose string, version int) ([]byte, int, error) {
+	if strings.TrimSpace(c.baseURL) == "" {
+		return nil, 0, errors.New("keycore base url is not configured")
+	}
+	payload, err := json.Marshal(map[string]interface{}{
+		"tenant_id": strings.TrimSpace(tenantID),
+		"purpose":   strings.TrimSpace(purpose),
+		"version":   version,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	q := url.Values{}
+	q.Set("tenant_id", strings.TrimSpace(tenantID))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/keys/"+url.PathEscape(strings.TrimSpace(keyID))+"/service-derive?"+q.Encode(), bytes.NewReader(payload))
+	if err != nil {
+		return nil, 0, err
+	}
+	servicetoken.Authorize(ctx, req)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer resp.Body.Close() //nolint:errcheck
+	out := map[string]interface{}{}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, 0, err
+	}
+	if resp.StatusCode >= http.StatusBadRequest {
+		return nil, 0, parseKeycoreError(resp.StatusCode, out)
+	}
+	raw, err := base64.StdEncoding.DecodeString(firstString(out["derived_key"]))
+	if err != nil || len(raw) == 0 {
+		return nil, 0, errors.New("keycore service-derive returned no key")
+	}
+	return raw, metaInt(out["version"]), nil
 }
 
 func (c *HTTPKeyCoreClient) MeterUsage(ctx context.Context, tenantID string, keyID string, operation string) error {

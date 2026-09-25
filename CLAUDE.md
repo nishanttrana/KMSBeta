@@ -29,7 +29,27 @@ an approach, record it here or in the matching doc below.
    is keyed on something only the platform can mint (see
    `tenantcheck.IsServicePrincipal`), never on a role name or an `X-Actor-*`
    header.
-5. **Never fabricate security evidence.** No invented versions, scan results,
+5. **FIPS 140-3 is the customer's choice (made in the KMS UI), on the certified module**
+   ([docs/SECURITY/FIPS.md](docs/SECURITY/FIPS.md)):
+   - Every binary builds with `GOFIPS140` = `pkg/fips.CertifiedModuleVersion`.
+   - A root admin picks `on` | `only` | `off` in System Administration.
+     Services apply it by a staggered self-restart and re-exec;
+     `VECTA_FIPS_MODE` only seeds it. Every feature must work, or refuse
+     cleanly, in each mode.
+   - A feature that behaves differently in strict mode must appear in the
+     impact catalogue (`pkg/fips/impact.go`) that the UI shows before a
+     change.
+   - AES-GCM uses module-generated IVs.
+   - Non-approved or third-party crypto gets a `fips140.Enforced()` guard that
+     returns an error, never a panic.
+   - Claim "validated" only when `fips.ModuleValidated()` is true.
+6. **Keys are derived from secret material, never from identifiers.** A
+   service that needs a working key gets it from keycore
+   (`POST /keys/{id}/service-derive`, bound to the verified service identity).
+   A KCV, key ID or other metadata is never key material. Changing how
+   existing data is keyed needs a per-key migration, never a silent switch
+   ([docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md](docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md)).
+7. **Never fabricate security evidence.** No invented versions, scan results,
    certifications or "5/5 production-ready" claims. The UI shows "not assessed"
    rather than guessing. Evidence lives in `docs/SECURITY/` and comes from real
    tool output.
@@ -82,8 +102,11 @@ changes code without touching CHANGELOG.md or learning.md.
 
 ## Before calling a change done
 
-- `make conformance` passes. It enforces rules 1–3 and that every shell
-  script parses under macOS bash 3.2. Its allowlist only
+- `make conformance` passes. It enforces rules 1–3 and 5, and that every
+  shell script parses under macOS bash 3.2.
+- `make test-fips-modes` passes: the suite runs in FIPS modes `off`, `on` and
+  `only`. A test of a non-approved feature calls `fipstest.SkipIfStrict` and
+  is paired with a `fipstest.StrictOnly` test proving the clean refusal. Its allowlist only
   shrinks, and a new entry needs a crypto-boundary justification.
 - `go vet` and `go test` pass for the touched packages. New security behaviour
   gets a test that proves the bad case is rejected.

@@ -1,10 +1,7 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
@@ -12,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/crypto"
 )
 
 // handleFIPSSelfTest runs an on-demand FIPS 140-3 power-on self-test battery
@@ -110,7 +109,7 @@ func runFIPSSelfTests() map[string]bool {
 		"AES-256-GCM":  testAES256GCM(),
 		"HMAC-SHA-256": testHMACSHA256(),
 		"SHA-256":      testSHA256(),
-		"crypto/rand":  testCSPRNG(),
+		"CSPRNG":       testCSPRNG(),
 	}
 }
 
@@ -128,24 +127,15 @@ func allFIPSSelfTestsPassed(results map[string]bool) bool {
 
 func testAES256GCM() bool {
 	key := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, key); err != nil {
-		return false
-	}
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return false
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return false
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
+	if _, err := io.ReadFull(crypto.Reader, key); err != nil {
 		return false
 	}
 	plaintext := []byte("fips-self-test-vector")
-	ct := gcm.Seal(nil, nonce, plaintext, nil)
-	pt, err := gcm.Open(nil, nonce, ct, nil)
+	ct, err := crypto.Seal(key, plaintext, nil) // module-generated IV
+	if err != nil {
+		return false
+	}
+	pt, err := crypto.Open(key, ct, nil)
 	if err != nil {
 		return false
 	}
@@ -182,7 +172,7 @@ func testSHA256() bool {
 
 func testCSPRNG() bool {
 	buf := make([]byte, 32)
-	_, err := io.ReadFull(rand.Reader, buf)
+	_, err := io.ReadFull(crypto.Reader, buf)
 	if err != nil {
 		return false
 	}
@@ -211,7 +201,7 @@ type rngHealthResult struct {
 func runRNGHealthTest() rngHealthResult {
 	const sampleSize = 512
 	buf := make([]byte, sampleSize)
-	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
+	if _, err := io.ReadFull(crypto.Reader, buf); err != nil {
 		return rngHealthResult{Passed: false}
 	}
 

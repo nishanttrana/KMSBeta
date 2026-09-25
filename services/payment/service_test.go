@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"strings"
 	"testing"
+
+	"vecta-kms/pkg/fips/fipstest"
 )
 
 func TestServicePaymentKeyLifecycle(t *testing.T) {
@@ -65,6 +67,7 @@ func TestServicePaymentKeyLifecycle(t *testing.T) {
 }
 
 func TestServiceTR31PINAndMACFlows(t *testing.T) {
+	fipstest.SkipIfStrict(t, "TDES (TR-31 / PIN / MAC)")
 	svc, _, keycore, _ := newPaymentService(t)
 	ctx := context.Background()
 
