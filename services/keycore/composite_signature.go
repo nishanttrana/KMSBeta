@@ -13,12 +13,12 @@ import (
 // for future variants (e.g., the IETF composite-signatures draft) so
 // today's "concat" format isn't a permanent commitment.
 type CompositeSignature struct {
-	Encoding         string `json:"encoding"`            // "vecta-composite-v1"
-	ClassicalAlg     string `json:"classical_algorithm"`
-	PQCAlg           string `json:"pqc_algorithm"`
-	ClassicalSigB64  string `json:"classical_signature"`
-	PQCSigB64        string `json:"pqc_signature"`
-	MessageHashB64   string `json:"message_hash"`
+	Encoding        string `json:"encoding"` // "vecta-composite-v1"
+	ClassicalAlg    string `json:"classical_algorithm"`
+	PQCAlg          string `json:"pqc_algorithm"`
+	ClassicalSigB64 string `json:"classical_signature"`
+	PQCSigB64       string `json:"pqc_signature"`
+	MessageHashB64  string `json:"message_hash"`
 }
 
 // NewCompositeSignature wraps two raw signatures and the canonicalised

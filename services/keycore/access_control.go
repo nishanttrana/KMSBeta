@@ -64,6 +64,9 @@ type AccessActor struct {
 	AllowedKeyIDs       []string
 	SourceIP            string
 	Authenticated       bool
+	// ServicePrincipal is true only for a verified internal service JWT
+	// (see tenantcheck.IsServicePrincipal); never derived from headers.
+	ServicePrincipal bool
 }
 
 func contextWithAccessActor(ctx context.Context, actor AccessActor) context.Context {
@@ -80,6 +83,14 @@ func accessActorFromContext(ctx context.Context) AccessActor {
 		return AccessActor{}
 	}
 	return actor
+}
+
+// actorIsServicePrincipal reports whether the caller is an internal
+// service-to-service identity (a per-service JWT minted via pkg/servicetoken
+// and validated by tenantcheck.IsServicePrincipal). Such callers act on behalf
+// of the request's tenant, so they are authorized without a per-key grant.
+func actorIsServicePrincipal(actor AccessActor) bool {
+	return actor.Authenticated && actor.ServicePrincipal
 }
 
 func actorIsAdmin(actor AccessActor) bool {
@@ -255,6 +266,12 @@ func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation strin
 		return err
 	}
 	actor := accessActorFromContext(ctx)
+	// Internal service identities are trusted to act on behalf of the request's
+	// tenant (tenant scoping is enforced upstream by tenantcheck), so they are
+	// authorized for the operation without a per-key grant.
+	if actorIsServicePrincipal(actor) {
+		return nil
+	}
 	settings, err := s.store.GetKeyAccessSettings(ctx, key.TenantID)
 	if err != nil {
 		return err

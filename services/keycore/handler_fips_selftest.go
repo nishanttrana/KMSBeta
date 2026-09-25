@@ -93,13 +93,13 @@ func (h *Handler) handleZeroizeVerify(w http.ResponseWriter, r *http.Request) {
 	runtime.GC()
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"key_id":              keyID,
-		"status":              key.Status,
-		"cache_cleared":       cacheClean,
-		"gc_forced":           true,
+		"key_id":               keyID,
+		"status":               key.Status,
+		"cache_cleared":        cacheClean,
+		"gc_forced":            true,
 		"zeroization_verified": cacheClean,
-		"timestamp":           time.Now().UTC().Format(time.RFC3339),
-		"request_id":          reqID,
+		"timestamp":            time.Now().UTC().Format(time.RFC3339),
+		"request_id":           reqID,
 	})
 }
 
@@ -107,10 +107,10 @@ func (h *Handler) handleZeroizeVerify(w http.ResponseWriter, r *http.Request) {
 
 func runFIPSSelfTests() map[string]bool {
 	return map[string]bool{
-		"AES-256-GCM":    testAES256GCM(),
-		"HMAC-SHA-256":   testHMACSHA256(),
-		"SHA-256":        testSHA256(),
-		"crypto/rand":    testCSPRNG(),
+		"AES-256-GCM":  testAES256GCM(),
+		"HMAC-SHA-256": testHMACSHA256(),
+		"SHA-256":      testSHA256(),
+		"crypto/rand":  testCSPRNG(),
 	}
 }
 

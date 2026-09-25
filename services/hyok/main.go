@@ -15,6 +15,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
@@ -35,6 +36,9 @@ import (
 var logger = log.New(os.Stdout, "[hyok] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
+	// Attach this service's per-service JWT to internal keycore calls (no-op
+	// when INTERNAL_SERVICE_BOOTSTRAP_SECRET is unset).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-hyok-proxy"))
 	cfg := pkgconfig.Load()
 
 	if err := pkgruntimecfg.ValidateServiceConfig("kms-hyok", cfg); err != nil {

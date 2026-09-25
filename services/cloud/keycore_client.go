@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 )
 
 type KeyCoreClient interface {
@@ -76,6 +77,7 @@ func (c *HTTPKeyCoreClient) doJSON(ctx context.Context, method string, path stri
 	if err != nil {
 		return nil, err
 	}
+	servicetoken.Authorize(ctx, req)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.client.Do(req)
 	if err != nil {

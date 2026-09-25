@@ -10,8 +10,8 @@ import (
 // the API endpoint and KMIP layer both normalise to this struct so the
 // rest of the keycore code doesn't care about the syntax.
 type KeyVersionRef struct {
-	KeyID   string
-	Version int  // 0 = current
+	KeyID    string
+	Version  int  // 0 = current
 	Explicit bool // true when caller named a specific version
 }
 

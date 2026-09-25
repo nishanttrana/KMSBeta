@@ -4,31 +4,31 @@ import "time"
 
 // EscrowGuardian is a trusted party who holds a share of an escrowed key.
 type EscrowGuardian struct {
-	ID                   string    `json:"id"`
-	TenantID             string    `json:"tenant_id"`
-	Name                 string    `json:"name"`
-	Email                string    `json:"email"`
-	Organization         string    `json:"organization"`
-	NotaryCertFingerprint string   `json:"notary_cert_fingerprint"`
-	Status               string    `json:"status"`
-	AddedAt              time.Time `json:"added_at"`
+	ID                    string    `json:"id"`
+	TenantID              string    `json:"tenant_id"`
+	Name                  string    `json:"name"`
+	Email                 string    `json:"email"`
+	Organization          string    `json:"organization"`
+	NotaryCertFingerprint string    `json:"notary_cert_fingerprint"`
+	Status                string    `json:"status"`
+	AddedAt               time.Time `json:"added_at"`
 }
 
 // EscrowPolicy defines which keys are escrowed and how many guardians must
 // approve a recovery request.
 type EscrowPolicy struct {
-	ID             string    `json:"id"`
-	TenantID       string    `json:"tenant_id"`
-	Name           string    `json:"name"`
-	Description    string    `json:"description"`
-	KeyFilter      string    `json:"key_filter"`
-	Threshold      int       `json:"threshold"`
-	GuardianIDs    []string  `json:"guardian_ids"`
-	LegalHold      bool      `json:"legal_hold"`
-	Jurisdiction   string    `json:"jurisdiction"`
-	Enabled        bool      `json:"enabled"`
-	CreatedAt      time.Time `json:"created_at"`
-	EscrowCount    int       `json:"escrow_count"`
+	ID           string    `json:"id"`
+	TenantID     string    `json:"tenant_id"`
+	Name         string    `json:"name"`
+	Description  string    `json:"description"`
+	KeyFilter    string    `json:"key_filter"`
+	Threshold    int       `json:"threshold"`
+	GuardianIDs  []string  `json:"guardian_ids"`
+	LegalHold    bool      `json:"legal_hold"`
+	Jurisdiction string    `json:"jurisdiction"`
+	Enabled      bool      `json:"enabled"`
+	CreatedAt    time.Time `json:"created_at"`
+	EscrowCount  int       `json:"escrow_count"`
 }
 
 // EscrowedKey represents a key that has been placed into escrow under a policy.
@@ -57,17 +57,17 @@ type RecoveryApproval struct {
 
 // RecoveryRequest is a request to recover an escrowed key.
 type RecoveryRequest struct {
-	ID               string             `json:"id"`
-	TenantID         string             `json:"tenant_id"`
-	EscrowID         string             `json:"escrow_id"`
-	KeyID            string             `json:"key_id"`
-	KeyName          string             `json:"key_name"`
-	Requestor        string             `json:"requestor"`
-	Reason           string             `json:"reason"`
-	LegalReference   string             `json:"legal_reference"`
-	Status           string             `json:"status"`
-	RequiredApprovals int               `json:"required_approvals"`
-	Approvals        []RecoveryApproval `json:"approvals"`
-	CreatedAt        time.Time          `json:"created_at"`
-	CompletedAt      *time.Time         `json:"completed_at,omitempty"`
+	ID                string             `json:"id"`
+	TenantID          string             `json:"tenant_id"`
+	EscrowID          string             `json:"escrow_id"`
+	KeyID             string             `json:"key_id"`
+	KeyName           string             `json:"key_name"`
+	Requestor         string             `json:"requestor"`
+	Reason            string             `json:"reason"`
+	LegalReference    string             `json:"legal_reference"`
+	Status            string             `json:"status"`
+	RequiredApprovals int                `json:"required_approvals"`
+	Approvals         []RecoveryApproval `json:"approvals"`
+	CreatedAt         time.Time          `json:"created_at"`
+	CompletedAt       *time.Time         `json:"completed_at,omitempty"`
 }

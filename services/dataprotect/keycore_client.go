@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 )
 
 type keycoreHTTPError struct {
@@ -49,6 +50,7 @@ func (c *HTTPKeyCoreClient) GetKey(ctx context.Context, tenantID string, keyID s
 	if err != nil {
 		return nil, err
 	}
+	servicetoken.Authorize(ctx, req)
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -89,6 +91,7 @@ func (c *HTTPKeyCoreClient) MeterUsage(ctx context.Context, tenantID string, key
 	if err != nil {
 		return err
 	}
+	servicetoken.Authorize(ctx, req)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.client.Do(req)
 	if err != nil {

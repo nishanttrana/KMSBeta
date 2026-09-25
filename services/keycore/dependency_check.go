@@ -11,7 +11,7 @@ import (
 // consumers; the destroy handler rejects with the list so the operator
 // can revoke or migrate them first.
 type KeyDependency struct {
-	Kind        string `json:"kind"`         // "kmip_client", "ekm_connector", "escrow_holder", "audit_webhook"
+	Kind        string `json:"kind"` // "kmip_client", "ekm_connector", "escrow_holder", "audit_webhook"
 	ID          string `json:"id"`
 	Description string `json:"description,omitempty"`
 }

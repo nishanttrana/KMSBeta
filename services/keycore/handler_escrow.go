@@ -23,10 +23,10 @@ func (h *Handler) handleListEscrowGuardians(w http.ResponseWriter, r *http.Reque
 func (h *Handler) handleAddEscrowGuardian(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	var req struct {
-		TenantID             string `json:"tenant_id"`
-		Name                 string `json:"name"`
-		Email                string `json:"email"`
-		Organization         string `json:"organization"`
+		TenantID              string `json:"tenant_id"`
+		Name                  string `json:"name"`
+		Email                 string `json:"email"`
+		Organization          string `json:"organization"`
 		NotaryCertFingerprint string `json:"notary_cert_fingerprint"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
@@ -78,15 +78,15 @@ func (h *Handler) handleListEscrowPolicies(w http.ResponseWriter, r *http.Reques
 func (h *Handler) handleCreateEscrowPolicy(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	var req struct {
-		TenantID    string   `json:"tenant_id"`
-		Name        string   `json:"name"`
-		Description string   `json:"description"`
-		KeyFilter   string   `json:"key_filter"`
-		Threshold   int      `json:"threshold"`
-		GuardianIDs []string `json:"guardian_ids"`
-		LegalHold   bool     `json:"legal_hold"`
-		Jurisdiction string  `json:"jurisdiction"`
-		Enabled     bool     `json:"enabled"`
+		TenantID     string   `json:"tenant_id"`
+		Name         string   `json:"name"`
+		Description  string   `json:"description"`
+		KeyFilter    string   `json:"key_filter"`
+		Threshold    int      `json:"threshold"`
+		GuardianIDs  []string `json:"guardian_ids"`
+		LegalHold    bool     `json:"legal_hold"`
+		Jurisdiction string   `json:"jurisdiction"`
+		Enabled      bool     `json:"enabled"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
@@ -216,14 +216,14 @@ func (h *Handler) handleListRecoveryRequests(w http.ResponseWriter, r *http.Requ
 func (h *Handler) handleCreateRecoveryRequest(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	var req struct {
-		TenantID         string `json:"tenant_id"`
-		EscrowID         string `json:"escrow_id"`
-		KeyID            string `json:"key_id"`
-		KeyName          string `json:"key_name"`
-		Requestor        string `json:"requestor"`
-		Reason           string `json:"reason"`
-		LegalReference   string `json:"legal_reference"`
-		RequiredApprovals int   `json:"required_approvals"`
+		TenantID          string `json:"tenant_id"`
+		EscrowID          string `json:"escrow_id"`
+		KeyID             string `json:"key_id"`
+		KeyName           string `json:"key_name"`
+		Requestor         string `json:"requestor"`
+		Reason            string `json:"reason"`
+		LegalReference    string `json:"legal_reference"`
+		RequiredApprovals int    `json:"required_approvals"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)

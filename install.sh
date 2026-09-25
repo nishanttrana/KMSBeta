@@ -676,11 +676,11 @@ ensure_local_build_base_images() {
   esac
 
 	local -a base_images=(
-	  "vecta-local/golang:1.26.4-alpine|golang:1.26.4-alpine"
-	  "vecta-local/alpine:3.23|alpine:3.23"
-	  "vecta-local/node:24.16.0-alpine|node:24.16.0-alpine"
-	  "vecta-local/nginx:1.30.1-alpine|nginx:1.30.1-alpine"
-	  "vecta-local/trivy:0.70.0|aquasec/trivy:0.70.0"
+	  "vecta-local/golang:1.27.1-alpine|golang:1.27.1-alpine"
+	  "vecta-local/alpine:3.24|alpine:3.24"
+	  "vecta-local/node:24.21.0-alpine|node:24.21.0-alpine"
+	  "vecta-local/nginx:1.30.5-alpine|nginx:1.30.5-alpine"
+	  "vecta-local/trivy:0.74.0|aquasec/trivy:0.74.0"
 	)
 
   local spec alias_ref source_ref
@@ -738,7 +738,7 @@ seed_auth_jwt_key() {
   info "Seeding auth JWT signing key into ${auth_volume} ..."
   "${DOCKER_BIN[@]}" volume create "${auth_volume}" >/dev/null
   local seeded="false" image
-  for image in alpine:3.23 busybox:1.36; do
+  for image in alpine:3.24 busybox:1.36; do
     if "${DOCKER_BIN[@]}" run --rm -i \
       -v "${auth_volume}:/var/lib/vecta/auth" \
       "${image}" \
@@ -1888,7 +1888,7 @@ seed_cert_bootstrap_secret() {
 
   local prepared="false"
   local image
-  for image in postgres:16.13-alpine alpine:3.23 busybox:1.36; do
+  for image in postgres:16.13-alpine alpine:3.24 busybox:1.36; do
     if "${DOCKER_BIN[@]}" run --rm \
       -v "${certs_volume}:/var/lib/vecta/certs" \
       -v "${runtime_volume}:/run/vecta/certs" \

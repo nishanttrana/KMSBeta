@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"filippo.io/age"
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"golang.org/x/crypto/curve25519"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
-	"golang.org/x/crypto/openpgp/packet"
 	"golang.org/x/crypto/pkcs12"
 	"golang.org/x/crypto/ssh"
 

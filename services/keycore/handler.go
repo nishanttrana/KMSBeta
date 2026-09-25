@@ -280,7 +280,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("PATCH /scheduling/jobs/{id}", h.handleUpdateSchedulingJob)
 	mux.HandleFunc("DELETE /scheduling/jobs/{id}", h.handleDeleteSchedulingJob)
 
-
 	// Key Attestation (signed, verifiable statement + integrity check)
 	mux.HandleFunc("POST /keys/{id}/attest", h.handleAttestKey)
 	mux.HandleFunc("GET /attestation/public-key", h.handleAttestationPublicKey)
@@ -2458,6 +2457,9 @@ func accessActorFromHTTPRequest(r *http.Request) AccessActor {
 		actor.WorkloadTrustDomain = strings.TrimSpace(claims.WorkloadTrustDomain)
 		actor.AllowedKeyIDs = append([]string{}, claims.AllowedKeyIDs...)
 		actor.Authenticated = actor.UserID != "" || actor.Username != ""
+		// Service-principal status is decided from verified JWT claims only,
+		// never from the spoofable X-Actor-* headers below.
+		actor.ServicePrincipal = tenantcheck.IsServicePrincipal(claims)
 	}
 	if actor.UserID == "" {
 		actor.UserID = strings.TrimSpace(r.Header.Get("X-Actor-User-ID"))

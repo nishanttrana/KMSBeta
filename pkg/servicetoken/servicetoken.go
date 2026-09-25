@@ -137,3 +137,18 @@ func (s *Source) Authorize(ctx context.Context, req *http.Request) {
 		req.Header.Set("Authorization", "Bearer "+tok)
 	}
 }
+
+// defaultSource is the process-wide source set once at startup via SetDefault,
+// so internal HTTP clients can attach the service token with a single
+// package-level Authorize call rather than threading a Source through every
+// constructor.
+var defaultSource *Source
+
+// SetDefault installs the process default Source. Call once in main with
+// FromEnv(serviceName). A nil source disables attachment (no-op Authorize).
+func SetDefault(s *Source) { defaultSource = s }
+
+// Authorize attaches the default service token to req, if a default is set.
+// Safe to call when no default/secret is configured (no-op), so it can be
+// dropped into every internal client unconditionally.
+func Authorize(ctx context.Context, req *http.Request) { defaultSource.Authorize(ctx, req) }
