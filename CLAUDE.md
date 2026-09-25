@@ -17,6 +17,18 @@ an approach, record it here or in the matching doc below.
    single `AUDIT` JetStream stream. No private streams, no raw publishes.
    Events carry actor, resource, severity and correlation, detailed enough for
    governance, reporting and DAM to run on them alone.
+   **Every activity is audited with its own event, and new activity must keep
+   adding them** (owner directive, 2026-09-25):
+   - Every create, update or delete, and every security-relevant operation,
+     emits a specific `audit.<service>.<action>` event. The generic HTTP
+     request log alone is not enough.
+   - **Every refusal is audited too**, with its `reason` and `result:
+     "refused"`: denied permission, tamper or integrity failures, preview
+     refusals, and FIPS refusals.
+   - A test asserts that each new event is emitted, including for the refused
+     case.
+   - New subjects are listed in `docs/API_REFERENCE.md` (Audit Action Subject
+     Reference).
 3. **Secure defaults** ([docs/SECURITY/SECURE_DEFAULTS.md](docs/SECURITY/SECURE_DEFAULTS.md)):
    - No secret falls back to a value in the repo. Require it (`${VAR:?}`) or
      generate it at random.
@@ -52,7 +64,11 @@ an approach, record it here or in the matching doc below.
 7. **Never fabricate security evidence.** No invented versions, scan results,
    certifications or "5/5 production-ready" claims. The UI shows "not assessed"
    rather than guessing. Evidence lives in `docs/SECURITY/` and comes from real
-   tool output.
+   tool output. No simulated results: a feature that only stores
+   configuration is a **preview**, listed in `pkg/features.Preview` (mirrored in
+   the dashboard, [docs/PREVIEW_FEATURES.md](docs/PREVIEW_FEATURES.md)). Its
+   responses are labelled, and operations it can't perform return
+   `409 feature_preview`.
 
 ## Crypto and transport standards
 
@@ -110,4 +126,9 @@ changes code without touching CHANGELOG.md or learning.md.
   shrinks, and a new entry needs a crypto-boundary justification.
 - `go vet` and `go test` pass for the touched packages. New security behaviour
   gets a test that proves the bad case is rejected.
+- A security-critical path is tested end to end with its real dependencies:
+  Postgres for storage behaviour (`VECTA_TEST_POSTGRES_DSN`, CI
+  `integration-postgres`) and the real protocol client for wire protocols (for
+  example the KMIP TLS tests). SQLite alone is not evidence for
+  JSONB/information_schema behaviour.
 - The documentation above is updated in the same change.

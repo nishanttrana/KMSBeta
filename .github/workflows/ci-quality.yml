@@ -46,6 +46,37 @@ jobs:
       - name: go test (fips140=${{ matrix.mode }})
         run: go test ./pkg/... ./services/...
 
+  integration-postgres:
+    # Backup/restore, signing and the backup service against real Postgres:
+    # they rely on information_schema, JSONB and TRUNCATE ... CASCADE, which
+    # SQLite cannot exercise. The database is disposable.
+    name: Integration tests (Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.11-alpine
+        env:
+          POSTGRES_PASSWORD: ci-disposable-6f1d2c9a7b4e
+          POSTGRES_DB: vecta_it
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d vecta_it"
+          --health-interval 2s --health-timeout 5s --health-retries 20
+    env:
+      GOFIPS140: v1.0.0
+      VECTA_TEST_POSTGRES_DSN: postgres://postgres:ci-disposable-6f1d2c9a7b4e@localhost:5432/vecta_it?sslmode=disable
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Integration tests (run serially; they share the database)
+        run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/governance ./services/signing ./services/backup
+
   dashboard-quality:
     name: Dashboard Lint/Type/Unit/Build/Smoke
     runs-on: ubuntu-latest

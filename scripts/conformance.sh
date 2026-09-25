@@ -10,6 +10,7 @@
 #   4. Shell scripts parse (bash 3.2 on macOS included).
 #   5. FIPS 140-3: every Go binary links the certified Go Cryptographic Module
 #      and every Go service receives the customer's VECTA_FIPS_MODE.
+#   6. Preview features: one catalogue (pkg/features), mirrored by the dashboard.
 #
 # Files listed in scripts/conformance-allowlist.txt are exempted (one path
 # per line, # comments allowed). The allowlist is a burn-down list: it only
@@ -134,6 +135,18 @@ if [ -n "$fips_fail" ]; then
   echo "FAIL [fips-module]: not wired to the certified module / customer FIPS mode:$fips_fail"
 else
   echo "PASS [fips-module]"
+fi
+
+# Rule 6: preview features are declared in one catalogue (pkg/features) and the
+# dashboard mirrors it exactly, so nothing record-only is shown as finished.
+go_preview=$(sed -n 's/^[[:space:]]*{"\([a-z0-9._]*\)", "[a-z-]*", ".*/\1/p' pkg/features/features.go | sort)
+ts_preview=$(sed -n 's/^[[:space:]]*{ id: "\([a-z0-9._]*\)".*/\1/p' web/dashboard/src/lib/featureStatus.ts | sort)
+if [ -z "$go_preview" ] || [ "$go_preview" != "$ts_preview" ]; then
+  FAIL=1
+  echo "FAIL [preview-catalogue]: pkg/features.Preview and web/dashboard/src/lib/featureStatus.ts differ"
+  diff <(echo "$go_preview") <(echo "$ts_preview") | sed 's/^/  /'
+else
+  echo "PASS [preview-catalogue] ($(echo "$go_preview" | wc -l | tr -d ' ') preview features)"
 fi
 
 # Rule 4: every shell script parses. Checked with /bin/bash when present,

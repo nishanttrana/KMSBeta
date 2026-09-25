@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"vecta-kms/pkg/features"
 
 	"vecta-kms/pkg/tenantcheck"
 )
@@ -27,7 +28,19 @@ func NewHandler(svc *BackupService) *Handler {
 
 // ServeHTTP implements http.Handler.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, "/backup/") {
+		features.MarkPreview(w, backupFeatureID)
+	}
 	h.mux.ServeHTTP(w, r)
+}
+
+const backupFeatureID = "backup.scheduler"
+
+// writePreviewRefusal answers an operation this preview service cannot perform.
+func writePreviewRefusal(w http.ResponseWriter, reqID, tenantID, action string) {
+	writeErr(w, http.StatusConflict, "feature_preview",
+		action+" is not available: the backup scheduler is a preview feature and does not run backups or restores. Use System Administration > Backups for encrypted backup and restore.",
+		reqID, tenantID)
 }
 
 func (h *Handler) routes() *http.ServeMux {
@@ -118,6 +131,10 @@ func (h *Handler) handleCreatePolicy(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "create_policy_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
+	h.svc.audit(r, "audit.backup.policy_created", saved.TenantID, map[string]interface{}{
+		"policy_id": saved.ID, "name": saved.Name, "scope": saved.Scope, "destination": saved.Destination,
+		"encrypt_backup": saved.EncryptBackup, "feature_status": features.StatusPreview, "severity": "info",
+	})
 	writeJSON(w, http.StatusCreated, map[string]interface{}{"policy": saved, "request_id": reqID})
 }
 
@@ -146,6 +163,10 @@ func (h *Handler) handleUpdatePolicy(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, status, "update_policy_failed", err.Error(), reqID, tenantID)
 		return
 	}
+	h.svc.audit(r, "audit.backup.policy_updated", tenantID, map[string]interface{}{
+		"policy_id": updated.ID, "enabled": updated.Enabled, "encrypt_backup": updated.EncryptBackup,
+		"feature_status": features.StatusPreview, "severity": "info",
+	})
 	writeJSON(w, http.StatusOK, map[string]interface{}{"policy": updated, "request_id": reqID})
 }
 
@@ -168,6 +189,9 @@ func (h *Handler) handleDeletePolicy(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, status, "delete_policy_failed", err.Error(), reqID, tenantID)
 		return
 	}
+	h.svc.audit(r, "audit.backup.policy_deleted", tenantID, map[string]interface{}{
+		"policy_id": id, "feature_status": features.StatusPreview, "severity": "warning",
+	})
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "deleted", "request_id": reqID})
 }
 
@@ -182,13 +206,6 @@ func (h *Handler) handleTriggerBackup(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", "id is required", reqID, tenantID)
 		return
 	}
-	var req TriggerBackupRequest
-	_ = decodeJSON(r, &req)
-	triggeredBy := strings.TrimSpace(req.TriggeredBy)
-	if triggeredBy == "" {
-		triggeredBy = "manual"
-	}
-
 	policy, err := h.svc.store.GetPolicy(r.Context(), tenantID, id)
 	if err != nil {
 		status := http.StatusInternalServerError
@@ -203,17 +220,11 @@ func (h *Handler) handleTriggerBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go h.svc.RunBackup(
-		r.Context(),
-		tenantID, policy.ID, policy.Name,
-		policy.Scope, policy.Destination, triggeredBy,
-	)
-
-	writeJSON(w, http.StatusAccepted, map[string]interface{}{
-		"status":     "triggered",
-		"policy_id":  policy.ID,
-		"request_id": reqID,
+	h.svc.audit(r, "audit.backup.run_refused_preview", tenantID, map[string]interface{}{
+		"policy_id": policy.ID, "feature_id": backupFeatureID, "result": "refused", "severity": "warning",
+		"reason": "backup scheduler is a preview; no backup was run",
 	})
+	writePreviewRefusal(w, reqID, tenantID, "Running a backup")
 }
 
 func (h *Handler) handleListRuns(w http.ResponseWriter, r *http.Request) {
@@ -278,19 +289,11 @@ func (h *Handler) handleRestore(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "bad_request", "id is required", reqID, tenantID)
 		return
 	}
-	if err := h.svc.RestoreFromPoint(r.Context(), tenantID, id); err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, errNotFound) {
-			status = http.StatusNotFound
-		}
-		writeErr(w, status, "restore_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusAccepted, map[string]interface{}{
-		"status":     "restoring",
-		"point_id":   id,
-		"request_id": reqID,
+	h.svc.audit(r, "audit.backup.restore_refused_preview", tenantID, map[string]interface{}{
+		"restore_point_id": id, "feature_id": backupFeatureID, "result": "refused", "severity": "warning",
+		"reason": "backup scheduler is a preview; nothing was restored",
 	})
+	writePreviewRefusal(w, reqID, tenantID, "Restoring a restore point")
 }
 
 func (h *Handler) handleGetMetrics(w http.ResponseWriter, r *http.Request) {

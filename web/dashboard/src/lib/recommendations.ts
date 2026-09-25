@@ -69,8 +69,8 @@ export type PlatformSnapshot = {
   keys?: SnapshotKey[] | undefined;
   certs?: SnapshotCert[] | undefined;
   rotationPolicies?: Array<{ enabled: boolean; target_type: string; auto_rotate: boolean; interval_days: number }> | undefined;
-  backupPolicies?: Array<{ enabled: boolean; encrypt_backup: boolean }> | undefined;
-  backupRuns?: Array<{ status: string; started_at: string }> | undefined;
+  /** Real encrypted backups (governance). The Backup tab's scheduler is a preview and never counts. */
+  backups?: Array<{ status: string; completed_at?: string; created_at?: string }> | undefined;
   keyAccess?: {
     deny_by_default: boolean;
     require_approval_for_policy_change: boolean;
@@ -439,44 +439,24 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
   } else check("cert-expiry", "No certificates expire within 30 days", "Certificates", false, false);
 
   // ── Resilience ──
-  if (s.backupPolicies) {
-    const enabled = s.backupPolicies.filter((p) => p.enabled);
-    const runs = s.backupRuns || [];
-    const lastOk = runs.filter((r) => r.status === "completed").map((r) => ts(r.started_at) || 0).sort((a, b) => b - a)[0];
-    const recentFail = runs.slice().sort((a, b) => (ts(b.started_at) || 0) - (ts(a.started_at) || 0))[0];
-    const failed = !enabled.length || !lastOk || now - lastOk > 7 * DAY;
-    check("backup", "A successful key backup exists from the last 7 days", "Resilience", true, failed);
-    if (!enabled.length) {
+  if (s.backups) {
+    const completed = s.backups.filter((b) => b.status === "completed");
+    const lastOk = completed.map((b) => ts(b.completed_at || b.created_at || "") || 0).sort((a, b) => b - a)[0];
+    const failed = !lastOk || now - lastOk > 7 * DAY;
+    check("backup", "An encrypted backup was completed in the last 7 days", "Resilience", true, failed);
+    if (failed) {
       recs.push({
-        id: "no-backup", severity: "critical", category: "Resilience",
-        title: "No key backup policy is enabled",
+        id: lastOk ? "backup-stale" : "no-backup",
+        severity: lastOk ? "high" : "critical",
+        category: "Resilience",
+        title: lastOk ? `Last encrypted backup was ${Math.floor((now - lastOk) / DAY)} days ago` : "No encrypted backup has been taken",
         why: "Losing the key store means losing every piece of data it protects — crypto-shredding by accident.",
-        fix: "Create an encrypted, scheduled backup policy to an off-host destination and test a restore.",
+        fix: "System Administration > Backups: create a backup, keep the artifact and the key package in separate places, and test a restore.",
         frameworks: ["DORA Art. 12", "NIST SP 800-57 Pt2", "ISO 27001 A.8.13"], affected: 0, evidence: [],
-        action: { tab: "backup", label: "Create backup policy" },
-      });
-    } else if (failed) {
-      recs.push({
-        id: "backup-stale", severity: "high", category: "Resilience",
-        title: lastOk ? `Last successful backup was ${Math.floor((now - lastOk) / DAY)} days ago` : "No successful backup has completed",
-        why: recentFail && recentFail.status !== "completed" ? `Most recent run status: ${recentFail.status}.` : "Scheduled backups are not producing restore points.",
-        fix: "Investigate the failing run, trigger a manual backup, and alert on backup failure.",
-        frameworks: ["DORA Art. 12", "ISO 27001 A.8.13"], affected: 0, evidence: [],
-        action: { tab: "backup", label: "Open Backup & Restore" },
+        action: { tab: "admin", label: "Open System Administration" },
       });
     }
-    const plain = enabled.filter((p) => !p.encrypt_backup);
-    if (plain.length) {
-      recs.push({
-        id: "backup-plain", severity: "critical", category: "Resilience",
-        title: `${plain.length} backup polic${plain.length > 1 ? "ies store" : "y stores"} key material unencrypted`,
-        why: "An unencrypted key backup is a full copy of your key material outside the security boundary.",
-        fix: "Enable backup encryption (wrapped under a KEK held in the HSM) on every policy.",
-        frameworks: ["PCI DSS 4.0 §3.5", "FIPS 140-3"], affected: plain.length, evidence: [],
-        action: { tab: "backup", label: "Encrypt backups" },
-      });
-    }
-  } else check("backup", "A successful key backup exists from the last 7 days", "Resilience", false, false);
+  } else check("backup", "An encrypted backup was completed in the last 7 days", "Resilience", false, false);
 
   if (s.cluster && (s.cluster.total_nodes ?? 0) > 0) {
     const total = s.cluster.total_nodes || 0;
