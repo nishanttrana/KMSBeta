@@ -1,4 +1,5 @@
 // @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
+import { apiFetch } from "../../../lib/apiFetch";
 import { useCallback, useEffect, useState } from "react";
 import { Shield, RefreshCcw, Plus, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
 import { C } from "../../v3/theme";
@@ -36,8 +37,8 @@ export function ThreatProtectionTab({ session, configOnly }: any) {
     setLoading(true); setErr("");
     try {
       const [sRes, cRes] = await Promise.all([
-        fetch(`${base}/threat/signals`, { headers: hdr(session.token, tid) }),
-        fetch(`${base}/canary/keys`, { headers: hdr(session.token, tid) }),
+        apiFetch(`${base}/threat/signals`, { headers: hdr(session.token, tid) }),
+        apiFetch(`${base}/canary/keys`, { headers: hdr(session.token, tid) }),
       ]);
       const s = await sRes.json().catch(() => ({}));
       const c = await cRes.json().catch(() => ({}));
@@ -51,7 +52,7 @@ export function ThreatProtectionTab({ session, configOnly }: any) {
 
   const handleAck = async (id: string) => {
     const tid = session?.tenantId ?? "";
-    await fetch(`${base}/threat/signals/${id}/ack`, { method: "POST", headers: hdr(session.token, tid) });
+    await apiFetch(`${base}/threat/signals/${id}/ack`, { method: "POST", headers: hdr(session.token, tid) });
     await load();
   };
 
@@ -59,7 +60,7 @@ export function ThreatProtectionTab({ session, configOnly }: any) {
     const tid = session?.tenantId ?? "";
     setSaving(true);
     try {
-      await fetch(`${base}/canary/keys`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify(canaryForm) });
+      await apiFetch(`${base}/canary/keys`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify(canaryForm) });
       setShowCanaryForm(false); setCanaryForm({ label: "", alert_on_use: true }); await load();
     } catch (e: any) { setErr(e.message); }
     finally { setSaving(false); }

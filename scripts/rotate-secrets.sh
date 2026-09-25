@@ -42,6 +42,7 @@ set_secret NATS_AUTH_TOKEN                  "$(hex 24)"
 set_secret WORKLOAD_IDENTITY_SHARED_SECRET "$(hex 32)"
 set_secret SOFTWARE_VAULT_PASSPHRASE       "$(hex 32)"
 set_secret INTERNAL_API_TOKEN              "$(hex 32)"
+set_secret INTERNAL_SERVICE_BOOTSTRAP_SECRET "$(hex 32)"
 set_secret AUTH_BOOTSTRAP_ADMIN_PASSWORD   "$(strong_pw)"
 set_secret AUTH_BOOTSTRAP_CLI_PASSWORD     "$(strong_pw)"
 
@@ -54,9 +55,13 @@ where possible) — see docs/SECURITY/SECRET_ROTATION.md:
      just restart:
        docker compose exec postgres \
          psql -U "$POSTGRES_USER" -c "ALTER USER \"$POSTGRES_USER\" PASSWORD '<new POSTGRES_PASSWORD>';"
-  2) Shared service tokens (NATS / internal / workload identity): recreate all
-     containers together so every service shares the new value:
+  2) Shared service tokens (NATS / internal / workload identity / service
+     bootstrap secret): recreate all containers together so every service
+     shares the new value:
        docker compose up -d --force-recreate
+     On start, auth retires every service API key derived from the previous
+     INTERNAL_SERVICE_BOOTSTRAP_SECRET. Service JWTs already minted stay valid
+     until they expire (at most 1 hour).
   3) Admin/CLI bootstrap passwords only seed a FRESH auth volume. For an existing
      deployment, rotate the live admin password via the dashboard / auth API.
   4) Software vault passphrase: if the vault already sealed data with the old

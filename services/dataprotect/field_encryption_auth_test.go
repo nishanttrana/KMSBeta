@@ -15,9 +15,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"vecta-kms/pkg/fips/fipstest"
 )
 
 func TestFieldEncryptionLeaseAndReceiptWrapperAuthEnforced(t *testing.T) {
+	fipstest.SkipIfStrict(t, "X25519 wrapper keys")
 	svc, store, _ := newDataProtectService(t)
 	ctx := context.Background()
 	tenantID := "tenant-field-auth"
@@ -246,6 +249,7 @@ func expectServiceErrCode(t *testing.T, err error, want string) {
 }
 
 func TestFieldEncryptionTPMAttestationEnforcement(t *testing.T) {
+	fipstest.SkipIfStrict(t, "X25519 wrapper keys")
 	svc, _, _ := newDataProtectService(t)
 	ctx := context.Background()
 	tenantID := "tenant-field-attest"
@@ -378,6 +382,7 @@ func TestFieldEncryptionTPMAttestationEnforcement(t *testing.T) {
 }
 
 func TestFieldEncryptionMissingReceiptReconciliation(t *testing.T) {
+	fipstest.SkipIfStrict(t, "X25519 wrapper keys")
 	svc, store, _ := newDataProtectService(t)
 	ctx := context.Background()
 	tenantID := "tenant-field-reconcile"
@@ -443,6 +448,7 @@ func TestFieldEncryptionMissingReceiptReconciliation(t *testing.T) {
 }
 
 func TestFieldEncryptionLeaseRequiresExportableKey(t *testing.T) {
+	fipstest.SkipIfStrict(t, "X25519 wrapper keys")
 	svc, _, _ := newDataProtectService(t)
 	ctx := context.Background()
 	tenantID := "tenant-field-exportable"
@@ -510,6 +516,7 @@ func TestFieldEncryptionLeaseRequiresExportableKey(t *testing.T) {
 }
 
 func TestFieldEncryptionLeaseDualWrapCompatibility(t *testing.T) {
+	fipstest.SkipIfStrict(t, "X25519 wrapper keys")
 	t.Setenv(fieldLeaseWrapModeEnv, fieldLeaseWrapModeDual)
 	svc, _, _ := newDataProtectService(t)
 	ctx := context.Background()

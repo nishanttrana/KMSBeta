@@ -31,9 +31,10 @@ func createSQLiteSchema(conn *pkgdb.DB) error {
 	sql := []string{
 		`CREATE TABLE auth_tenants (id TEXT PRIMARY KEY, name TEXT NOT NULL, status TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE auth_tenant_roles (tenant_id TEXT NOT NULL, role_name TEXT NOT NULL, permissions BLOB NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, role_name));`,
-		`CREATE TABLE auth_users (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, username TEXT NOT NULL, email TEXT NOT NULL, pwd_hash BLOB NOT NULL, totp_secret TEXT, role TEXT NOT NULL, status TEXT NOT NULL, must_change_password INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(tenant_id, username));`,
+		`CREATE TABLE auth_users (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, username TEXT NOT NULL, email TEXT NOT NULL, pwd_hash BLOB NOT NULL, totp_secret TEXT, role TEXT NOT NULL, status TEXT NOT NULL, must_change_password INTEGER NOT NULL DEFAULT 0, node_local INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(tenant_id, username));`,
 		`CREATE TABLE auth_client_registrations (
 			id TEXT PRIMARY KEY,
+			node_local INTEGER NOT NULL DEFAULT 0,
 			tenant_id TEXT NOT NULL,
 			client_name TEXT NOT NULL,
 			client_type TEXT NOT NULL,
@@ -78,7 +79,7 @@ func createSQLiteSchema(conn *pkgdb.DB) error {
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (tenant_id, nonce)
 		);`,
-		`CREATE TABLE auth_api_keys (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, user_id TEXT, client_id TEXT, key_hash BLOB NOT NULL, name TEXT NOT NULL, permissions BLOB NOT NULL, expires_at TIMESTAMP, last_used TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
+		`CREATE TABLE auth_api_keys (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, user_id TEXT, client_id TEXT, key_hash BLOB NOT NULL, name TEXT NOT NULL, permissions BLOB NOT NULL, expires_at TIMESTAMP, last_used TIMESTAMP, node_local INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE auth_sessions (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, user_id TEXT NOT NULL, token_hash BLOB NOT NULL, ip_address TEXT, user_agent TEXT, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE auth_password_policies (tenant_id TEXT PRIMARY KEY, min_length INTEGER NOT NULL DEFAULT 12, max_length INTEGER NOT NULL DEFAULT 128, require_upper INTEGER NOT NULL DEFAULT 1, require_lower INTEGER NOT NULL DEFAULT 1, require_digit INTEGER NOT NULL DEFAULT 1, require_special INTEGER NOT NULL DEFAULT 1, require_no_whitespace INTEGER NOT NULL DEFAULT 1, deny_username INTEGER NOT NULL DEFAULT 1, deny_email_local_part INTEGER NOT NULL DEFAULT 1, min_unique_chars INTEGER NOT NULL DEFAULT 6, updated_by TEXT NOT NULL DEFAULT 'system', updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE auth_security_policies (tenant_id TEXT PRIMARY KEY, max_failed_attempts INTEGER NOT NULL DEFAULT 5, lockout_minutes INTEGER NOT NULL DEFAULT 15, idle_timeout_minutes INTEGER NOT NULL DEFAULT 15, updated_by TEXT NOT NULL DEFAULT 'system', updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,

@@ -56,7 +56,9 @@ type Store interface {
 	ReserveRequestNonce(ctx context.Context, tenantID string, nonce string, expiresAt time.Time) error
 
 	CreateAPIKey(ctx context.Context, k APIKey) error
+	MarkNodeLocal(ctx context.Context, tenantID string, usernames []string, clientIDs []string) error
 	DeleteAPIKey(ctx context.Context, tenantID string, keyID string) error
+	DeleteClientAPIKeysExcept(ctx context.Context, tenantID string, clientID string, keepHash []byte) (int64, error)
 
 	CreateSession(ctx context.Context, s Session) error
 	DeleteSession(ctx context.Context, tenantID string, sessionID string) error
@@ -1163,6 +1165,43 @@ DELETE FROM auth_api_keys WHERE tenant_id=$1 AND id=$2
 		return errNotFound
 	}
 	return nil
+}
+
+// DeleteClientAPIKeysExcept removes every API key of clientID except the one
+// with keepHash. Used to retire service keys derived from a rotated secret.
+// MarkNodeLocal flags identities that belong to this KMS node so cluster
+// replication never copies them (docs/CLUSTERING.md). Idempotent.
+func (s *SQLStore) MarkNodeLocal(ctx context.Context, tenantID string, usernames []string, clientIDs []string) error {
+	for _, u := range usernames {
+		if strings.TrimSpace(u) == "" {
+			continue
+		}
+		if _, err := s.db.SQL().ExecContext(ctx, `UPDATE auth_users SET node_local = TRUE WHERE tenant_id = $1 AND username = $2 AND node_local = FALSE`, tenantID, u); err != nil {
+			return err
+		}
+	}
+	for _, c := range clientIDs {
+		if strings.TrimSpace(c) == "" {
+			continue
+		}
+		if _, err := s.db.SQL().ExecContext(ctx, `UPDATE auth_client_registrations SET node_local = TRUE WHERE tenant_id = $1 AND id = $2 AND node_local = FALSE`, tenantID, c); err != nil {
+			return err
+		}
+		if _, err := s.db.SQL().ExecContext(ctx, `UPDATE auth_api_keys SET node_local = TRUE WHERE tenant_id = $1 AND client_id = $2 AND node_local = FALSE`, tenantID, c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *SQLStore) DeleteClientAPIKeysExcept(ctx context.Context, tenantID string, clientID string, keepHash []byte) (int64, error) {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM auth_api_keys WHERE tenant_id=$1 AND client_id=$2 AND key_hash<>$3
+`, tenantID, clientID, keepHash)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
 }
 
 func (s *SQLStore) CreateSession(ctx context.Context, session Session) error {

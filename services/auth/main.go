@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"log"
 	"net"
@@ -78,7 +80,7 @@ func main() {
 	logic := NewAuthLogic(signingKey, cfg.JWTIssuer, cfg.JWTAudience)
 	store := NewSQLStore(dbConn)
 	bootstrapDefaultAdmin(ctx, store, logger)
-	bootstrapInternalServiceClients(ctx, store, logger)
+	bootstrapInternalServiceClients(ctx, store, logger, auditPublisher)
 	meter := metering.NewMeter(cfg.OpsLimit, cfg.MeteringWindow)
 	healthChecker := NewSystemHealthChecker(cfg.ConsulAddress, logger)
 	handler := NewHandler(store, logic, auditPublisher, meter, logger, healthChecker)
@@ -191,21 +193,23 @@ func envOrBool(k string, d bool) bool {
 // API key for each internal service, so each can mint its own JWT for
 // service-to-service auth. Keys are derived from INTERNAL_SERVICE_BOOTSTRAP_SECRET
 // + service name (matching pkg/servicetoken), so no per-service secret is
-// distributed. No-op when the secret is unset. Idempotent.
-func bootstrapInternalServiceClients(ctx context.Context, store Store, logger *log.Logger) {
-	secret := strings.TrimSpace(os.Getenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET"))
-	if secret == "" {
-		return
-	}
+// distributed. Always revokes keys derived from the old public default secret,
+// and retires keys derived from any previous secret, so rotation takes effect
+// on the next auth start. Disabled when the secret is unset; refuses to start
+// when it is set but weak. Idempotent.
+func bootstrapInternalServiceClients(ctx context.Context, store Store, logger *log.Logger, audit AuditPublisher) {
 	tenantID := envOr("INTERNAL_SERVICE_TENANT", "root")
-	services := []string{
-		"kms-keycore", "kms-certs", "kms-ekm", "kms-kmip", "kms-signing", "kms-sbom",
-		"kms-payment", "kms-discovery", "kms-compliance", "kms-pqc", "kms-cloud",
-		"kms-hyok-proxy", "kms-dataprotect", "kms-autokey", "kms-key-access",
-		"kms-governance", "kms-posture", "kms-reporting", "kms-policy", "kms-audit",
+	revokeInsecureServiceKeys(ctx, store, tenantID, logger, audit)
+
+	secret := strings.TrimSpace(os.Getenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET"))
+	if err := servicetoken.ValidateBootstrapSecret(secret); errors.Is(err, servicetoken.ErrBootstrapSecretUnset) {
+		logger.Printf("bootstrap: WARNING %v; internal service identities are disabled", err)
+		return
+	} else if err != nil {
+		logger.Fatalf("bootstrap: refusing to start: %v", err)
 	}
 	provisioned := 0
-	for _, name := range services {
+	for _, name := range internalServiceClients {
 		if _, err := store.GetClientRegistration(ctx, tenantID, name); errors.Is(err, errNotFound) {
 			if err := store.CreateClientRegistration(ctx, ClientRegistration{
 				ID: name, TenantID: tenantID, ClientName: name, ClientType: "service",
@@ -228,23 +232,91 @@ func bootstrapInternalServiceClients(ctx context.Context, store Store, logger *l
 				logger.Printf("bootstrap: internal client %s api key failed: %v", name, err)
 				continue
 			}
+		} else if err != nil {
+			logger.Printf("bootstrap: read internal client %s api key failed: %v", name, err)
+			continue
+		}
+		// The current key exists, so retire every other key of this service:
+		// keys derived from a previous (rotated) bootstrap secret.
+		if n, err := store.DeleteClientAPIKeysExcept(ctx, tenantID, name, sum[:]); err != nil {
+			logger.Fatalf("bootstrap: retire stale %s service keys failed: %v", name, err)
+		} else if n > 0 {
+			logger.Printf("bootstrap: SECURITY retired %d stale %s service key(s) from a previous bootstrap secret", n, name)
+			bootstrapAudit(ctx, audit, "audit.auth.service_key_retired", tenantID, map[string]any{
+				"service": name, "keys_retired": n, "reason": "bootstrap secret rotated",
+				"severity": "warning", "result": "success",
+				"description": "service API keys derived from a previous INTERNAL_SERVICE_BOOTSTRAP_SECRET were deleted",
+			})
 		}
 		provisioned++
 	}
+	if err := store.MarkNodeLocal(ctx, tenantID, nil, internalServiceClients); err != nil {
+		logger.Printf("bootstrap: mark service identities node-local: %v", err)
+	}
 	logger.Printf("bootstrap: internal service identities ready tenant=%s count=%d", tenantID, provisioned)
+}
+
+var internalServiceClients = []string{
+	"kms-keycore", "kms-certs", "kms-ekm", "kms-kmip", "kms-signing", "kms-sbom",
+	"kms-payment", "kms-discovery", "kms-compliance", "kms-pqc", "kms-cloud",
+	"kms-hyok-proxy", "kms-dataprotect", "kms-autokey", "kms-key-access",
+	"kms-governance", "kms-posture", "kms-reporting", "kms-policy", "kms-audit",
+	"kms-cluster-manager",
+}
+
+// revokeInsecureServiceKeys deletes service API keys that earlier deployments
+// seeded from the public default bootstrap secret. Anyone could derive those
+// keys, so they must not survive an upgrade.
+func revokeInsecureServiceKeys(ctx context.Context, store Store, tenantID string, logger *log.Logger, audit AuditPublisher) {
+	for _, name := range internalServiceClients {
+		sum := sha256.Sum256([]byte(servicetoken.InsecureDefaultAPIKey(name)))
+		key, err := store.GetAPIKeyByHash(ctx, tenantID, sum[:])
+		if errors.Is(err, errNotFound) {
+			continue
+		} else if err != nil {
+			logger.Fatalf("bootstrap: check for insecure %s service key failed: %v", name, err)
+		}
+		if err := store.DeleteAPIKey(ctx, tenantID, key.ID); err != nil && !errors.Is(err, errNotFound) {
+			logger.Fatalf("bootstrap: revoke insecure %s service key failed: %v", name, err)
+		}
+		logger.Printf("bootstrap: SECURITY revoked %s service key derived from the public default secret", name)
+		bootstrapAudit(ctx, audit, "audit.auth.service_key_revoked", tenantID, map[string]any{
+			"service": name, "key_id": key.ID, "reason": "derived from the public default bootstrap secret",
+			"severity": "critical", "result": "success",
+			"description": "a forgeable internal service API key was revoked at startup",
+		})
+	}
+}
+
+// bootstrapAudit emits a startup security event on the unified audit stream.
+func bootstrapAudit(ctx context.Context, audit AuditPublisher, subject, tenantID string, data map[string]any) {
+	if audit == nil {
+		return
+	}
+	raw, err := json.Marshal(map[string]any{
+		"tenant_id": tenantID,
+		"service":   "auth",
+		"action":    subject,
+		"actor":     "system:bootstrap",
+		"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
+		"data":      data,
+	})
+	if err == nil {
+		_ = audit.Publish(ctx, subject, raw)
+	}
 }
 
 func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger) {
 	tenantID := envOr("AUTH_BOOTSTRAP_TENANT_ID", "root")
 	tenantName := envOr("AUTH_BOOTSTRAP_TENANT_NAME", "Root")
 	adminUsername := envOr("AUTH_BOOTSTRAP_ADMIN_USERNAME", "admin")
-	// Default credential is admin/admin. This is safe only because the seeded
+	// Default credential is admin/changeit. This is safe only because the seeded
 	// admin is created with MustChangePassword=true (AUTH_BOOTSTRAP_FORCE_
 	// PASSWORD_CHANGE, default true): the resulting login is scoped to the
 	// password-change operation alone, and first login forces rotation to a
 	// policy-compliant password. Operators may override with a strong password
 	// via the env var.
-	adminPassword := envOr("AUTH_BOOTSTRAP_ADMIN_PASSWORD", "admin")
+	adminPassword := envOr("AUTH_BOOTSTRAP_ADMIN_PASSWORD", "changeit")
 	adminEmail := envOr("AUTH_BOOTSTRAP_ADMIN_EMAIL", "admin@vecta.local")
 	adminRole := envOr("AUTH_BOOTSTRAP_ADMIN_ROLE", "admin")
 	mustChange := envOrBool("AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE", true)
@@ -253,7 +325,17 @@ func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger)
 	// default so a rotated admin password is never silently clobbered.
 	resetAdmin := envOrBool("AUTH_BOOTSTRAP_RESET_ADMIN", false)
 	cliUsername := envOr("AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user")
-	cliPassword := envOr("AUTH_BOOTSTRAP_CLI_PASSWORD", "VectaCLI@2026")
+	// No hardcoded fallback: when unset, the CLI user gets a random password no
+	// one knows, and an operator must set one before enabling the account.
+	cliPassword := strings.TrimSpace(os.Getenv("AUTH_BOOTSTRAP_CLI_PASSWORD"))
+	if cliPassword == "" {
+		raw, err := pkgcrypto.RandomBytes(32)
+		if err != nil {
+			logger.Printf("bootstrap: generate cli password failed: %v", err)
+			return
+		}
+		cliPassword = base64.RawURLEncoding.EncodeToString(raw)
+	}
 	cliEmail := envOr("AUTH_BOOTSTRAP_CLI_EMAIL", "cli@vecta.local")
 	cliEnabled := envOrBool("AUTH_BOOTSTRAP_CLI_ENABLED", false)
 
@@ -394,6 +476,11 @@ func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger)
 		logger.Printf("bootstrap: default cli user created tenant=%s username=%s status=%s", tenantID, cliUsername, status)
 	} else if err != nil {
 		logger.Printf("bootstrap: read cli user failed: %v", err)
+	}
+	// The bootstrap admin and CLI accounts belong to this node; cluster
+	// replication never copies them.
+	if err := store.MarkNodeLocal(ctx, tenantID, []string{adminUsername, cliUsername}, nil); err != nil {
+		logger.Printf("bootstrap: mark local accounts node-local: %v", err)
 	}
 }
 

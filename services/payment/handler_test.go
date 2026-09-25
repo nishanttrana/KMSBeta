@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"vecta-kms/pkg/fips/fipstest"
 )
 
 func TestHandlerPaymentKeyEndpoints(t *testing.T) {
@@ -77,6 +79,7 @@ func TestHandlerPaymentKeyEndpoints(t *testing.T) {
 }
 
 func TestHandlerTR31AndPinEndpoints(t *testing.T) {
+	fipstest.SkipIfStrict(t, "TDES (TR-31 / PIN)")
 	h, _, keycore, _ := newPaymentHandler(t)
 
 	tr31CreateReq := httptest.NewRequest(http.MethodPost, "/payment/tr31/create", bytes.NewReader([]byte(`{
@@ -148,6 +151,7 @@ func TestHandlerTR31AndPinEndpoints(t *testing.T) {
 }
 
 func TestHandlerMACISOAndLAUEndpoints(t *testing.T) {
+	fipstest.SkipIfStrict(t, "DES/TDES MACs")
 	h, _, _, _ := newPaymentHandler(t)
 
 	macReq := httptest.NewRequest(http.MethodPost, "/payment/mac/retail", bytes.NewReader([]byte(`{

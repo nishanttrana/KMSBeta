@@ -48,6 +48,8 @@ import (
 )
 
 type Service struct {
+	clusterMEK   clusterMEKState
+	restartSelf  func()
 	store        Store
 	cache        KeyCache
 	exists       *bloom.BloomFilter
@@ -104,16 +106,17 @@ func NewService(store Store, cache KeyCache, events AuditPublisher, meter *meter
 		}
 	}
 	return &Service{
-		store:    store,
-		cache:    cache,
-		exists:   f,
-		events:   events,
-		meter:    meter,
-		mek:      mek,
-		policy:   policy,
-		pf:       policyFailClosed,
-		fipsMode: staticFIPSModeProvider{enabled: false},
-		posture:  staticPostureControlsProvider{},
+		store:       store,
+		cache:       cache,
+		exists:      f,
+		events:      events,
+		meter:       meter,
+		mek:         mek,
+		policy:      policy,
+		pf:          policyFailClosed,
+		fipsMode:    staticFIPSModeProvider{enabled: false},
+		posture:     staticPostureControlsProvider{},
+		restartSelf: defaultRestartSelf,
 	}
 }
 
@@ -1755,11 +1758,7 @@ func (s *Service) ExportCurrentVersionWrapped(ctx context.Context, tenantID stri
 	}
 	defer crypto.Zeroize(wrappingRaw)
 
-	iv := make([]byte, 12)
-	if _, err := rand.Read(iv); err != nil {
-		return WrappedExportResult{}, err
-	}
-	wrapped, err := encryptAESGCM(wrappingRaw, iv, targetRaw, nil)
+	wrapped, iv, err := sealAESGCMInternal(wrappingRaw, targetRaw, nil)
 	if err != nil {
 		return WrappedExportResult{}, err
 	}
@@ -3469,6 +3468,19 @@ func (s *Service) Derive(ctx context.Context, keyID string, req DeriveRequest) (
 			return DeriveResponse{}, errors.New("info must be base64")
 		}
 	}
+	if err := rejectReservedDeriveInfo(info); err != nil {
+		actor := accessActorFromContext(ctx)
+		_ = s.publishAudit(ctx, "audit.key.derive_refused", req.TenantID, map[string]any{
+			"key_id":      keyID,
+			"reason":      "reserved service-derive info prefix",
+			"actor":       firstNonEmpty(actor.UserID, actor.Username, actor.ClientID, "unknown"),
+			"source_ip":   actor.SourceIP,
+			"severity":    "critical",
+			"result":      "denied",
+			"description": "a derive request tried to reproduce an internal service's working key",
+		})
+		return DeriveResponse{}, err
+	}
 	var salt []byte
 	if strings.TrimSpace(req.SaltB64) != "" {
 		salt, err = base64.StdEncoding.DecodeString(req.SaltB64)
@@ -4323,6 +4335,13 @@ func encryptWithKeyAlgorithm(algorithm string, keyType string, keyMaterial []byt
 		}
 		switch mode {
 		case "gcm":
+			if defaultIV(ivMode) == "internal" {
+				ciphertext, iv, err := sealAESGCMInternal(key, plain, aad)
+				if err != nil {
+					return nil, nil, false, err
+				}
+				return ciphertext, iv, true, nil
+			}
 			iv, storeIV, err := selectIVWithSize(ivMode, key, externalIVB64, plain, 12)
 			if err != nil {
 				return nil, nil, false, err
@@ -4530,23 +4549,25 @@ func computeKCVStrict(algorithm string, keyMaterial []byte) ([]byte, string, err
 	}
 }
 
+// sealAESGCMInternal encrypts with an IV generated inside the FIPS module.
+// This is the default (iv_mode=internal) path and works in every FIPS mode.
+func sealAESGCMInternal(key []byte, plain []byte, aad []byte) (ciphertext []byte, iv []byte, err error) {
+	k, err := normalizeAESKey(key)
+	if err != nil {
+		return nil, nil, err
+	}
+	iv, ciphertext, err = crypto.SealDetached(k, plain, aad)
+	return ciphertext, iv, err
+}
+
+// encryptAESGCM encrypts with a caller-chosen IV (iv_mode external or
+// deterministic). pkg/crypto refuses it in FIPS strict mode.
 func encryptAESGCM(key []byte, iv []byte, plain []byte, aad []byte) ([]byte, error) {
 	k, err := normalizeAESKey(key)
 	if err != nil {
 		return nil, err
 	}
-	blk, err := aes.NewCipher(k)
-	if err != nil {
-		return nil, err
-	}
-	gcm, err := cipher.NewGCM(blk)
-	if err != nil {
-		return nil, err
-	}
-	if len(iv) != gcm.NonceSize() {
-		return nil, fmt.Errorf("invalid iv length: got=%d want=%d", len(iv), gcm.NonceSize())
-	}
-	return gcm.Seal(nil, iv, plain, aad), nil
+	return crypto.SealGCMWithNonce(k, iv, plain, aad)
 }
 
 func decryptAESGCM(key []byte, iv []byte, ciphertext []byte, aad []byte) ([]byte, error) {
@@ -4554,18 +4575,7 @@ func decryptAESGCM(key []byte, iv []byte, ciphertext []byte, aad []byte) ([]byte
 	if err != nil {
 		return nil, err
 	}
-	blk, err := aes.NewCipher(k)
-	if err != nil {
-		return nil, err
-	}
-	gcm, err := cipher.NewGCM(blk)
-	if err != nil {
-		return nil, err
-	}
-	if len(iv) != gcm.NonceSize() {
-		return nil, fmt.Errorf("invalid iv length: got=%d want=%d", len(iv), gcm.NonceSize())
-	}
-	return gcm.Open(nil, iv, ciphertext, aad)
+	return crypto.OpenDetached(k, iv, ciphertext, aad)
 }
 
 func defaultIV(v string) string {

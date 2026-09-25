@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 )
 
 type HTTPKeyCoreClient struct {
@@ -104,6 +105,7 @@ func (c *HTTPKeyCoreClient) doJSON(ctx context.Context, method string, path stri
 	if err != nil {
 		return nil, err
 	}
+	servicetoken.Authorize(ctx, req)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

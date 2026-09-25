@@ -23,3 +23,17 @@ lost+found
 */lost+found
 .Trash-*
 System Volume Information
+
+# Local Go caches and stray binaries (multi-GB on dev machines)
+.gomodcache
+.gocache
+/audit
+/workload
+/secrets
+/certs
+/auth
+/cloud
+/keycore
+/payment
+/posture
+/featureforge

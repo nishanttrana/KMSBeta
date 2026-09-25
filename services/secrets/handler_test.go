@@ -8,6 +8,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"vecta-kms/pkg/fips/fipstest"
 )
 
 func newSecretsHandler(t *testing.T) (*Handler, *Service, *SQLStore) {
@@ -86,6 +88,7 @@ func TestHandlerGenerateSSHKeyEndpoint(t *testing.T) {
 }
 
 func TestHandlerGenerateKeyPairEndpoint(t *testing.T) {
+	fipstest.SkipIfStrict(t, "X25519 / OpenPGP (SHA-1) key types")
 	h, _, _ := newSecretsHandler(t)
 	body := map[string]interface{}{
 		"tenant_id":  "t4",

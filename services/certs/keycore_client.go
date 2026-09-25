@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 )
 
 type KeyCoreSigner interface {
@@ -63,6 +64,7 @@ func (h *HTTPKeyCoreSigner) EnsureKey(ctx context.Context, tenantID string, requ
 	if err != nil {
 		return "", err
 	}
+	servicetoken.Authorize(ctx, req)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := h.client.Do(req)
 	if err != nil {
@@ -109,6 +111,7 @@ func (h *HTTPKeyCoreSigner) Sign(ctx context.Context, tenantID string, keyRef st
 	if err != nil {
 		return nil, err
 	}
+	servicetoken.Authorize(ctx, req)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := h.client.Do(req)
 	if err != nil {

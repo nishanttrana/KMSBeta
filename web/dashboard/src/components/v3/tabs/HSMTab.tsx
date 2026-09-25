@@ -261,7 +261,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
   return <div>
     {/* ── Vendor Header ── */}
     <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
-      <div style={{width:40,height:40,borderRadius:8,background:"rgba(6,214,224,.08)",display:"flex",alignItems:"center",justifyContent:"center"}}><Cpu size={20} style={{color:C.accent}}/></div>
+      <div style={{width:40,height:40,borderRadius:8,background:"rgba(123,140,255,.08)",display:"flex",alignItems:"center",justifyContent:"center"}}><Cpu size={20} style={{color:C.accent}}/></div>
       <div>
         <div style={{fontSize:14,fontWeight:700,color:C.text}}>{activeVendor?.label||"Generic PKCS#11 HSM"}</div>
         <div style={{fontSize:10,color:C.muted}}>Hardware Security Module integration via PKCS#11 — {activeVendor?.slotTerm} / {activeVendor?.partitionTerm} / {activeVendor?.tokenTerm}</div>
@@ -271,7 +271,7 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
       </div>
     </div>
 
-    {activeVendorID==="securosys"&&<Card style={{padding:12,marginBottom:12,background:"rgba(6,214,224,.06)",border:`1px solid ${C.accent}33`}}>
+    {activeVendorID==="securosys"&&<Card style={{padding:12,marginBottom:12,background:"rgba(123,140,255,.06)",border:`1px solid ${C.accent}33`}}>
       <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:6}}>Securosys Primus Setup</div>
       <div style={{fontSize:10,color:C.muted,lineHeight:1.6}}>
         Upload the Primus PKCS#11 library, discover the published PKCS#11 slot IDs, then bind the selected slot to the target Primus partition user. The default provider profile is <code style={{color:C.accent}}>securosys-primus</code> and the default PIN environment variable is <code style={{color:C.accent}}>SECUROSYS_HSM_PIN</code>.

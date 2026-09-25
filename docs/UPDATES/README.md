@@ -19,3 +19,21 @@ and become inaccurate).
 - **Java provider:** `services/jca-provider/pom.xml`.
 - **Changelog:** `git log` (commit messages document each dependency change and
   its verification).
+
+## 2026-09 refresh (v1.2.0-beta)
+
+Toolchain, modules, npm packages, container base images and CI actions were all
+moved to current stable releases; see the `1.2.0-beta` entry in
+[`CHANGELOG.md`](../../CHANGELOG.md) for the exact versions and why. Container
+images are pinned in the Dockerfiles, `docker-compose.yml`, `install.sh` and
+`deploy-local.sh` — update all four together.
+
+Deliberately **not** upgraded:
+- **PostgreSQL major version** (stays 17.x): a major upgrade needs a
+  `pg_upgrade`/dump-restore of the existing data volume; do it as a planned
+  migration.
+- **TypeScript 7** (native compiler): typescript-eslint does not support it
+  yet; stays on 6.0.x.
+- **Debian bookworm** runtime for the HSM integration images (CGO/PKCS#11
+  vendor libraries are validated against bookworm).
+

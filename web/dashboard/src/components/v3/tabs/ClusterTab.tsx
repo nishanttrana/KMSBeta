@@ -8,7 +8,6 @@ import {
   getClusterSyncCheckpoint,
   removeClusterNode,
   updateClusterNodeRole,
-  upsertClusterNode,
   upsertClusterProfile,
   type ClusterSyncEvent,
   type ClusterLogEntry,
@@ -243,7 +242,8 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
   const nodes = Array.isArray(overview?.nodes) ? overview.nodes : [];
   const profiles = Array.isArray(overview?.profiles) ? overview.profiles : [];
   const summary = overview?.summary || {};
-  const selectiveNote = String(overview?.selective_component_sync?.note || "Nodes sync only the state for their enabled components. Auth replication includes REST client sender-constraint profiles and per-client security counters, certs replication includes coordinated renewal windows and ARI hotspot state, while short-lived anti-replay nonce caches stay node-local.");
+  // Only what the node reports; never a built-in claim.
+  const selectiveNote = String(overview?.selective_component_sync?.note || "Replication status not assessed.");
 
   const profileComponentScope = (profileID: string) => {
     const profile = profiles.find((item: any) => String(item?.id || "").trim() === String(profileID || "").trim());
@@ -301,40 +301,6 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
       onToast?.(`Remove node failed: ${errMsg(error)}`);
     } finally {
       setRemoveBusyNode("");
-    }
-  };
-
-  const addExistingNode = async () => {
-    if (!session?.token) return;
-    const nodeID = String(directNodeForm?.node_id || "").trim();
-    const profileID = String(directNodeForm?.profile_id || "").trim();
-    if (!nodeID || !profileID) { onToast?.("Node ID and replication profile are required."); return; }
-    const allowed = profileComponentScope(profileID);
-    const selected = (Array.isArray(directNodeForm?.components) ? directNodeForm.components : [])
-      .map((v: any) => String(v || "").trim().toLowerCase()).filter((v: string) => allowed.includes(v));
-    setDirectNodeBusy(true);
-    try {
-      await upsertClusterNode(session, {
-        node_id: nodeID,
-        node_name: String(directNodeForm?.node_name || nodeID).trim(),
-        endpoint: String(directNodeForm?.endpoint || "").trim(),
-        role: String(directNodeForm?.role || "follower").trim().toLowerCase() === "leader" ? "leader" : "follower",
-        profile_id: profileID,
-        components: selected.length ? selected : allowed,
-        status: "unknown", join_state: "active",
-        seed_sync: Boolean(directNodeForm?.seed_sync)
-      });
-      setDirectNodeForm((prev: any) => ({
-        ...prev, node_id: "", node_name: "", endpoint: "", role: "follower",
-        components: selected.length ? selected : allowed
-      }));
-      setAddNodeModalOpen(false);
-      await refresh(true);
-      onToast?.("KMS instance added to cluster.");
-    } catch (error) {
-      onToast?.(`Add node failed: ${errMsg(error)}`);
-    } finally {
-      setDirectNodeBusy(false);
     }
   };
 
@@ -412,6 +378,7 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
       profiles={profiles}
       summary={summary}
       selectiveNote={selectiveNote}
+      replication={overview?.replication}
       statusMeta={statusMeta}
       clusterComponentLabel={clusterComponentLabel}
       componentCategoryColor={componentCategoryColor}
@@ -423,6 +390,8 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
       removeBusyNode={removeBusyNode}
       removeNodeAction={removeNodeAction}
       // Add node
+      session={session}
+      onToast={onToast}
       addNodeModalOpen={addNodeModalOpen}
       setAddNodeModalOpen={setAddNodeModalOpen}
       directNodeForm={directNodeForm}
@@ -430,7 +399,6 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
       profileComponentScope={profileComponentScope}
       toggleDirectComponent={toggleDirectComponent}
       directNodeBusy={directNodeBusy}
-      addExistingNode={addExistingNode}
       // Profiles
       profileName={profileName}
       setProfileName={setProfileName}

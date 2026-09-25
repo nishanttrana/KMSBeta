@@ -16,11 +16,11 @@ type RotationForecaster struct{}
 // predicted exhaustion: the reconciler pre-creates a successor key at
 // PrepareAt and hot-swaps at SwapAt.
 type Forecast struct {
-	HasSignal bool
+	HasSignal  bool
 	OpsPerHour float64
-	ExhaustAt time.Time
-	PrepareAt time.Time
-	SwapAt    time.Time
+	ExhaustAt  time.Time
+	PrepareAt  time.Time
+	SwapAt     time.Time
 }
 
 // Forecast computes the upcoming exhaustion. The inputs are:

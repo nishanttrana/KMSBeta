@@ -3,6 +3,227 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-09-25
+
+### Four things the first real two-node join taught
+- **Postgres defaults can't run a multi-component member.** The default is 4
+  logical replication workers in total. With 4 component subscriptions, every
+  worker was an apply worker and none could copy tables: 3 of 4 components
+  sat in "initializing" forever while auth, which started first, finished. A
+  member needs about one apply worker per component plus copy workers, so
+  `max_logical_replication_workers=64`, `max_worker_processes=96`.
+- **Row-level security hides rows from a replication role.** The auth tables
+  use RLS, so a non-superuser replication role copies nothing. It needs
+  `BYPASSRLS`. The first engine test connected as a superuser and could never
+  have seen this.
+- **Resetting a member without cascades.** Deleting the member's root tenant
+  would cascade into its own local admin. Run the reset with
+  `session_replication_role = replica`, as the apply worker does, and delete
+  only the rows the row filters say replicate.
+- **cluster-manager had no authentication at all**, while it was about to
+  authorize master-key transfers. Tenant enforcement quietly passes when a
+  request carries no token. Check who can call a service before adding power
+  to it.
+
+### Recording sync events is not replication
+cluster-manager had join tokens, profiles, a sync-event log and per-node
+checkpoints, and the overview told users "Nodes sync only the state for their
+enabled components…". But nothing ever applied an event on another node, and a
+join moved no data. Check that both ends of a data path exist, the writer and
+the applier, before believing a feature, and derive status text from the
+system's real state rather than writing it by hand. The dashboard carried its
+own copy of the claim as a fallback string, so grep the UI too.
+
+### "Documented and audited" needs a check, not a memory
+Asked whether every change was documented and audited, the honest answer was
+no. The design docs were complete, but `API_REFERENCE.md` lacked every new
+endpoint, and several security actions (revoking leaked service keys,
+services applying a FIPS mode, reserved-prefix derive attempts) only logged a
+line. Verify with a grep over the docs and a count of audit emissions in the
+changed files before claiming either. Also, marking audit rows by re-matching
+a scanned timestamp failed on SQLite (the types differ); an atomic
+`UPDATE … RETURNING` claim is portable and can't double-emit.
+
+### A process-start setting can still be a runtime choice: re-exec plus supervised restart
+Go reads `GODEBUG=fips140` only at process start, and container env vars are
+fixed at container creation. Two moves give a UI toggle anyway:
+1. **Change the mode:** the service SIGTERMs itself (so its normal graceful
+   shutdown runs) and lets the restart policy bring it back.
+2. **Pick up the new mode:** at startup it `syscall.Exec`s itself with the new
+   `GODEBUG` before touching any crypto.
+
+Guards that matter:
+- A re-exec marker, so a mismatch is fatal instead of an exec loop.
+- Re-reading the setting after the tier delay, so a quickly reverted change
+  doesn't restart anything.
+- Conformance that every Go service has a restart policy.
+
+Proven in real containers: 55 s from the UI change to keycore running and
+reporting `only`.
+
+### Test goroutines that loop forever make other tests slow and racy
+The first watcher tests left a zero-interval polling goroutine spinning for
+the rest of the test binary, and read its results while it was still running.
+Give long-running loops a quit channel and wait for exit before asserting.
+`go test -race` confirms.
+
+### A fallback chain can end in a public value, and production takes that path
+dataprotect's key resolution tried `material_b64 → material → wrapped_material
+→ kcv → id`. keycore never returns the first three, so **every production
+working key was HMAC(KCV)**, and the KCV is shown in the UI and API. No test
+caught it, because the test fake returned the same metadata shape and the
+round trips worked. Lessons:
+- Trace a fallback to what the real upstream returns before trusting it.
+- "It encrypts and decrypts" proves nothing about where the key came from.
+  Assert that the working key differs from anything computable from public
+  data (`legacyKeyForCompare` in the tests).
+- Unauthenticated formats (FPE, format-preserving tokens) can't detect a key
+  change: decrypting with the wrong key returns a plausible wrong value. So a
+  migration needs explicit per-key state, not trial decryption.
+
+### `go build ./services/<name>` bit twice in one day
+Recording the trap wasn't enough; the same mistake happened again hours later.
+For compile checks use `go build -o /dev/null ./services/<name>` or
+`go vet`, never a bare single-package `go build` from the repo root.
+
+### "FIPS mode" means nothing without the module, and it must reach the process
+`VECTA_FIPS_MODE` toggled an in-app allowlist, compose never passed it, and no
+binary was built with `GOFIPS140`. So the product had no validated module, and
+governance still reported `fips_library_validated=true` whenever
+`fips140.Enabled()` was true, which is also true for the unvalidated `latest`
+module. Validated means the certified snapshot is linked **and** FIPS mode is
+on (`fips.ModuleValidated()`). Mismatches now stop the service at startup.
+
+### Strict mode (`fips140=only`) found real bugs, not just policy
+- **GCM IVs:** `cipher.NewGCM` with any caller-supplied nonce is refused
+  (IG C.H: the module must generate the IV). The fix is
+  `cipher.NewGCMWithRandomNonce`. Its output (`nonce||ct||tag`) is
+  wire-identical to our `Seal`, so no data migration was needed.
+- **Stored formats:** keycore persists envelope IVs as a fixed 16-byte prefix,
+  of which the old code used only the first 12 bytes. A stricter 12-byte check
+  broke every stored key in *all* modes; the test suite caught it. Keep 16 on
+  disk (nonce + zero padding) and decrypt with the first 12.
+- **OCSP:** the responder always used a SHA-1 CertID whatever the client
+  asked for. That was a real protocol bug, and a panic in strict mode.
+- **Panics, not errors:** Go *panics* on SHA-1 and on HMAC keys under 112 bits
+  in strict mode. Guard with `fips140.Enforced()` before the call.
+- **Third-party crypto bypasses the runtime:** `age` generated X25519 keys
+  happily under `fips140=only`, and `circl` does ML-DSA/SLH-DSA. The runtime
+  can't see crypto that isn't in the module, so it needs explicit guards.
+- **Identifier-derived keys:** dataprotect derives keys from key IDs when no
+  material is available. Strict mode now refuses; the general fix is tracked
+  with a migration.
+
+### Run the matrix, not one mode
+The suite passed in `on` from the start; only `only` exposed the issues above,
+and only the full run caught the envelope regression. `make test-fips-modes`
+and the CI matrix run all three. A test that needs a non-approved algorithm
+skips in strict mode *and* has a paired strict test proving the clean refusal.
+
+### Small traps
+- In YAML, bare `on` / `off` can parse as booleans; quote matrix values.
+- macOS has no `timeout` command, so a `timeout 8 docker run …` silently runs
+  nothing. Use `docker run -d` + `docker logs`.
+- `go build ./services/<name>` (a single main package) writes an executable
+  named `<name>` into the current directory, which is the repo root. To check
+  that something compiles, use `go build ./...`, `go vet`, or `-o /dev/null`.
+
+### Secret rules keyed on variable names miss connection strings
+The secure-defaults rules matched `*SECRET*`, `*PASSWORD*` and similar names, so
+`POSTGRES_DSN` falling back to `postgres://postgres:postgres@…` slipped through
+both the conformance scan and the runtime placeholder check. Credentials hide
+inside values too: URLs with `user:pass@`. Rules now also inspect the
+**shape** of values (URL userinfo in Go and compose literals) and parse
+`*_DSN` / `*DATABASE_URL` values at startup.
+
+### Example files are deployment inputs, not documentation
+`.env.example` held values like `your-workload-identity-secret`, and
+`deploy-local.sh` copies it to `.env` on a fresh install, so those public
+strings became live secrets that passed every "is it set?" check. An example
+file must ship secrets **empty** (compose `:?` then stops), and services must
+reject placeholder-looking values themselves. Now enforced by conformance
+`env-example-no-secret-values` and `pkg/config.RejectPlaceholderSecrets`.
+
+### Rotation that only adds is not rotation
+Auth bootstrap only created service keys, so rotating the bootstrap secret left
+every old service identity valid. Rotating a derived-credential secret must
+retire what the old value produced. Auth now deletes a service's keys that
+don't match the current derivation (`DeleteClientAPIKeysExcept`).
+
+### bash 3.2: quotes inside `${var//\'/''}` within `$(...)` break the whole file
+macOS `/bin/bash` 3.2 misparses single quotes in a pattern substitution inside
+command substitution. The error surfaces hundreds of lines later
+(`install.sh: line 775: syntax error near unexpected token ';;'`), far from the
+cause (line 419). To find it, bisect by truncating the file at function ends
+and running `/bin/bash -n` on each prefix. Escape with `sed` instead. CI runs
+bash 5, which doesn't catch this; conformance runs `/bin/bash -n` locally.
+
+### Never use `git stash` as a scratch tool in a dirty tree
+`git stash push <path> --` with bad syntax stashed nothing, and the `pop` that
+followed applied an old, unrelated stash, causing conflicts. To try something
+out, use a throwaway `git worktree add` instead.
+
+### A public default secret is a credential every attacker already has
+`INTERNAL_SERVICE_BOOTSTRAP_SECRET` fell back to
+`vecta-internal-svc-dev-secret-change-me` in compose, and `install.sh` never
+wrote it to `.env`, so **every installer-based deployment** derived all 20
+internal service API keys from a string in the public repo. Anyone could
+compute `HMAC(default, "kms-keycore")` and mint a service JWT. Three lessons:
+(1) A "-change-me" fallback is never changed; require the secret
+(`${VAR:?}`) or generate it. (2) Check every installer writes every secret
+compose needs; `deploy-local.sh` did, `install.sh` didn't, and nobody noticed
+because the fallback hid it. (3) Removing a bad default isn't enough: auth now
+**revokes** keys derived from the placeholder on every start, or upgraded
+deployments would stay open. Now enforced by conformance rule 3
+(`no-secret-fallback-*`), documented in `docs/SECURITY/SECURE_DEFAULTS.md`.
+The same sweep found the CLI user seeded with a hardcoded `VectaCLI@2026`
+fallback; unset now means a random, unknowable password.
+
+### "role == client-service" is NOT a service identity
+Phase 2 of the s2s-JWT rollout trusted any token with role `client-service` as
+an internal service (tenant-unrestricted + key-grant bypass). But
+`IssueClientJWT` stamps that role on **every** client-credentials token —
+customer apps included — so it would have been a cross-tenant bypass the moment
+tokens were attached. The durable rule: a privilege that bypasses tenancy must
+be keyed on something **only the platform can mint**. Now:
+`tenantcheck.IsServicePrincipal` = role `client-service` AND reserved perm
+`service.internal` AND `kms-*` client id AND internal tenant; the reserved
+permission is stripped at every API write path (API keys, tenant roles, user
+perms, client-token scope) so only the auth bootstrap can grant it. keycore
+derives it from verified claims only — `X-Actor-*` headers are spoofable.
+Verified live: an admin-created API key requesting `service.internal` is
+stored with it removed; kms-certs mints a token and keycore accepts it for
+create+sign.
+
+### Fresh volume ⇒ JWT_PUBLIC_KEY_B64 mismatch ⇒ "invalid token" everywhere
+auth generates `jwt_private.pem` on first boot if the volume is empty; every
+verifier uses `JWT_PUBLIC_KEY_B64` from `.env`. If the two came from different
+installs, login works but every service call returns 401 `invalid token`.
+Fix: derive the public key from the auth volume and write it to `.env`
+(`deploy-local.sh` does this automatically and restarts verifiers).
+
+### Apple Silicon was running every service under emulation
+Dockerfiles hard-coded `GOARCH=amd64`, and `compose-kms.sh` pins each service
+to the platform of its existing image — so once built amd64, images stayed
+amd64 forever. Dockerfiles now use BuildKit's `TARGETARCH`; `deploy-local.sh`
+removes `.tmp_compose.platform.override.yml` before building so arm64 images
+replace the emulated ones.
+
+### Published ports were LAN-reachable
+Compose published every service port as `"8010:8010"` (0.0.0.0), including
+Valkey and NATS. All non-edge ports now bind `${KMS_INTERNAL_BIND:-127.0.0.1}`;
+Envoy is the only public listener.
+
+### govulncheck ./... OOMs on this repo
+A single `govulncheck ./...` needs > 7 GB. Run it per path
+(`./pkg/...` then each `./services/<svc>/...`) and aggregate.
+
+### Recommendation engine: "unknown" is a first-class state
+The Command Center never infers a pass or fail from missing data: each source
+loads independently and a failure marks its checks "not assessed" and excludes
+them from the score. Same principle as "never fabricate security data in a KMS
+UI" (2026-06-17).
+
 ## 2026-06-18
 
 ### JWT service-to-service auth — per-service identities (phased rollout)

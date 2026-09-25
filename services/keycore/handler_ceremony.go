@@ -122,10 +122,10 @@ func (h *Handler) handleGetCeremony(w http.ResponseWriter, r *http.Request) {
 	quorumReached := submitted >= c.Threshold
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"ceremony":       c,
-		"quorum_reached": quorumReached,
+		"ceremony":         c,
+		"quorum_reached":   quorumReached,
 		"shares_submitted": submitted,
-		"request_id":     reqID,
+		"request_id":       reqID,
 	})
 }
 

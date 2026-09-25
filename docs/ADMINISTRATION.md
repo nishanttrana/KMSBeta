@@ -50,8 +50,8 @@ Vecta KMS is a control plane — not a single key store. Administration is the p
 Every action in this guide can be performed either through the dashboard or through the REST API. The dashboard proxies all calls through `/svc/<service>/...` routes. The API examples in this guide use the same proxied paths, so they work directly from a browser developer console or automation scripts pointing at the dashboard host.
 
 ```
-Dashboard URL:  http://<host>:5173/
-API base:       http://<host>:5173/svc/
+Dashboard URL:  https://<host>/
+API base:       https://<host>/svc/
 ```
 
 > **Note:** In production environments the dashboard should be served over HTTPS. The HTTP default is appropriate only for local or airgapped lab deployments.
@@ -115,7 +115,7 @@ The `tenant_id` field is optional when the user exists in only one tenant. When 
 **cURL example:**
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/auth/auth/login \
+curl -sk -X POST https://localhost/svc/auth/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin@example.com",
@@ -152,7 +152,7 @@ Content-Type: application/json
 ```bash
 REFRESH_TOKEN="dGhpcyBpcyBhIHJlZnJlc2g..."
 
-curl -s -X POST http://localhost:5173/svc/auth/auth/refresh \
+curl -sk -X POST https://localhost/svc/auth/auth/refresh \
   -H "Content-Type: application/json" \
   -d "{\"refresh_token\": \"${REFRESH_TOKEN}\"}" | jq .
 ```
@@ -181,7 +181,7 @@ Logout invalidates the refresh token server-side. The access token remains crypt
 TOKEN="eyJhbGci..."
 REFRESH_TOKEN="dGhpcyBpcyBhIHJlZnJlc2g..."
 
-curl -s -X POST http://localhost:5173/svc/auth/auth/logout \
+curl -sk -X POST https://localhost/svc/auth/auth/logout \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d "{\"refresh_token\": \"${REFRESH_TOKEN}\"}"
@@ -267,14 +267,14 @@ The password policy governs what constitutes an acceptable password when users s
 ```bash
 TOKEN="eyJhbGci..."
 
-curl -s http://localhost:5173/svc/auth/auth/policy/password?tenant_id=root \
+curl -sk https://localhost/svc/auth/auth/policy/password?tenant_id=root \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
 **Example: Update the password policy**
 
 ```bash
-curl -s -X PUT http://localhost:5173/svc/auth/auth/policy/password \
+curl -sk -X PUT https://localhost/svc/auth/auth/policy/password \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -307,7 +307,7 @@ The security policy controls account lockout behavior and idle session terminati
 **Example: Configure security policy**
 
 ```bash
-curl -s -X PUT http://localhost:5173/svc/auth/auth/policy/security \
+curl -sk -X PUT https://localhost/svc/auth/auth/policy/security \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -368,7 +368,7 @@ Authorization: Bearer <access_token>
 **cURL example:**
 
 ```bash
-curl -s "http://localhost:5173/svc/auth/auth/users?tenant_id=root" \
+curl -sk "https://localhost/svc/auth/auth/users?tenant_id=root" \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -420,7 +420,7 @@ Content-Type: application/json
 **cURL example:**
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/auth/auth/users \
+curl -sk -X POST https://localhost/svc/auth/auth/users \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -460,7 +460,7 @@ Content-Type: application/json
 ```bash
 USER_ID="usr_02HABC"
 
-curl -s -X PUT "http://localhost:5173/svc/auth/auth/users/${USER_ID}/role" \
+curl -sk -X PUT "https://localhost/svc/auth/auth/users/${USER_ID}/role" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"role": "viewer"}' | jq .
@@ -491,7 +491,7 @@ Content-Type: application/json
 **Lock a user immediately:**
 
 ```bash
-curl -s -X PUT "http://localhost:5173/svc/auth/auth/users/${USER_ID}/status" \
+curl -sk -X PUT "https://localhost/svc/auth/auth/users/${USER_ID}/status" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"status": "locked"}'
@@ -500,7 +500,7 @@ curl -s -X PUT "http://localhost:5173/svc/auth/auth/users/${USER_ID}/status" \
 **Unlock a user:**
 
 ```bash
-curl -s -X PUT "http://localhost:5173/svc/auth/auth/users/${USER_ID}/status" \
+curl -sk -X PUT "https://localhost/svc/auth/auth/users/${USER_ID}/status" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"status": "active"}'
@@ -526,7 +526,7 @@ Content-Type: application/json
 **cURL example:**
 
 ```bash
-curl -s -X POST "http://localhost:5173/svc/auth/auth/users/${USER_ID}/reset-password" \
+curl -sk -X POST "https://localhost/svc/auth/auth/users/${USER_ID}/reset-password" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -609,7 +609,7 @@ Authorization: Bearer <access_token>
 **cURL example:**
 
 ```bash
-curl -s http://localhost:5173/svc/auth/tenants \
+curl -sk https://localhost/svc/auth/tenants \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -649,7 +649,7 @@ Content-Type: application/json
 **cURL example:**
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/auth/tenants \
+curl -sk -X POST https://localhost/svc/auth/tenants \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"name": "Engineering Platform"}' | jq .
@@ -682,7 +682,7 @@ Content-Type: application/json
 ```bash
 TENANT_ID="tenant_engineering"
 
-curl -s -X PUT "http://localhost:5173/svc/auth/tenants/${TENANT_ID}" \
+curl -sk -X PUT "https://localhost/svc/auth/tenants/${TENANT_ID}" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"name": "Engineering Platform - Production"}' | jq .
@@ -720,7 +720,7 @@ Authorization: Bearer <access_token>
 **cURL example:**
 
 ```bash
-curl -s "http://localhost:5173/svc/auth/tenants/${TENANT_ID}/delete-readiness" \
+curl -sk "https://localhost/svc/auth/tenants/${TENANT_ID}/delete-readiness" \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -811,7 +811,7 @@ Authorization: Bearer <access_token>
 **cURL example:**
 
 ```bash
-curl -s "http://localhost:5173/svc/auth/auth/identity/providers?tenant_id=root" \
+curl -sk "https://localhost/svc/auth/auth/identity/providers?tenant_id=root" \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -850,7 +850,7 @@ The configuration body varies by provider type. Common fields appear across all 
 **cURL example for AD:**
 
 ```bash
-curl -s -X PUT http://localhost:5173/svc/auth/auth/identity/providers/ad \
+curl -sk -X PUT https://localhost/svc/auth/auth/identity/providers/ad \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -937,7 +937,7 @@ Content-Type: application/json
 **cURL example:**
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/auth/auth/identity/providers/ad/test \
+curl -sk -X POST https://localhost/svc/auth/auth/identity/providers/ad/test \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -975,7 +975,7 @@ Content-Type: application/json
 **cURL example:**
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/auth/auth/identity/import/users \
+curl -sk -X POST https://localhost/svc/auth/auth/identity/import/users \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1008,7 +1008,7 @@ Content-Type: application/json
 ```bash
 GROUP_ID="CN=KMS-Operators,OU=Groups,DC=corp,DC=example,DC=com"
 
-curl -s -X PUT "http://localhost:5173/svc/auth/auth/groups/${GROUP_ID}/role" \
+curl -sk -X PUT "https://localhost/svc/auth/auth/groups/${GROUP_ID}/role" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"role_name": "operator"}' | jq .
@@ -1052,7 +1052,7 @@ Authorization: Bearer <access_token>
 **cURL example:**
 
 ```bash
-curl -s "http://localhost:5173/svc/auth/auth/scim/settings?tenant_id=root" \
+curl -sk "https://localhost/svc/auth/auth/scim/settings?tenant_id=root" \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -1076,7 +1076,7 @@ Content-Type: application/json
 **cURL example:**
 
 ```bash
-curl -s -X PUT http://localhost:5173/svc/auth/auth/scim/settings \
+curl -sk -X PUT https://localhost/svc/auth/auth/scim/settings \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1108,7 +1108,7 @@ Content-Type: application/json
 **cURL example:**
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/auth/auth/scim/settings/rotate-token \
+curl -sk -X POST https://localhost/svc/auth/auth/scim/settings/rotate-token \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"tenant_id": "root"}' | jq .
@@ -1164,7 +1164,7 @@ Authorization: Bearer <access_token>
 **cURL example:**
 
 ```bash
-curl -s "http://localhost:5173/svc/auth/auth/scim/summary?tenant_id=root" \
+curl -sk "https://localhost/svc/auth/auth/scim/summary?tenant_id=root" \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -1272,7 +1272,7 @@ Authorization: Bearer <access_token>
 **cURL example:**
 
 ```bash
-curl -s "http://localhost:5173/svc/auth/auth/clients?tenant_id=root" \
+curl -sk "https://localhost/svc/auth/auth/clients?tenant_id=root" \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -1288,7 +1288,7 @@ Authorization: Bearer <access_token>
 ```bash
 CLIENT_ID="client_01HXYZ"
 
-curl -s "http://localhost:5173/svc/auth/auth/clients/${CLIENT_ID}" \
+curl -sk "https://localhost/svc/auth/auth/clients/${CLIENT_ID}" \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -1311,7 +1311,7 @@ Content-Type: application/json
 **cURL example:**
 
 ```bash
-curl -s -X PUT "http://localhost:5173/svc/auth/auth/clients/${CLIENT_ID}" \
+curl -sk -X PUT "https://localhost/svc/auth/auth/clients/${CLIENT_ID}" \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1335,7 +1335,7 @@ Authorization: Bearer <access_token>
 **cURL example:**
 
 ```bash
-curl -s -X POST "http://localhost:5173/svc/auth/auth/clients/${CLIENT_ID}/rotate-key" \
+curl -sk -X POST "https://localhost/svc/auth/auth/clients/${CLIENT_ID}/rotate-key" \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -1363,7 +1363,7 @@ Revocation permanently prevents the client from authenticating. All active sessi
 **cURL example:**
 
 ```bash
-curl -s -X POST "http://localhost:5173/svc/auth/auth/clients/${CLIENT_ID}/revoke" \
+curl -sk -X POST "https://localhost/svc/auth/auth/clients/${CLIENT_ID}/revoke" \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -1434,7 +1434,7 @@ Authorization: Bearer <access_token>
 **cURL example:**
 
 ```bash
-curl -s http://localhost:5173/svc/auth/auth/system-health \
+curl -sk https://localhost/svc/auth/auth/system-health \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -1499,7 +1499,7 @@ Authorization: Bearer <access_token>
 **cURL example:**
 
 ```bash
-curl -s -X POST "http://localhost:5173/svc/auth/auth/system-health/restart?service=certs" \
+curl -sk -X POST "https://localhost/svc/auth/auth/system-health/restart?service=certs" \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -1570,7 +1570,7 @@ Authorization: Bearer <access_token>
 **cURL example:**
 
 ```bash
-curl -s http://localhost:5173/svc/governance/governance/system/state \
+curl -sk https://localhost/svc/governance/governance/system/state \
   -H "Authorization: Bearer ${TOKEN}" | jq .
 ```
 
@@ -1613,7 +1613,7 @@ This creates a governance approval request. A second administrator must approve 
 **cURL example:**
 
 ```bash
-curl -s -X PUT http://localhost:5173/svc/governance/governance/system/state \
+curl -sk -X PUT https://localhost/svc/governance/governance/system/state \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{"fips_mode": true}' | jq .
@@ -1725,7 +1725,7 @@ Content-Type: application/json
 **cURL example:**
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/governance/governance/system/network/apply \
+curl -sk -X POST https://localhost/svc/governance/governance/system/network/apply \
   -H "Authorization: Bearer ${TOKEN}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1904,7 +1904,7 @@ Use this checklist immediately after installation before onboarding any users or
 
 ### Platform Integrity
 
-- [ ] Dashboard loads at `http://<host>:5173/` (or HTTPS equivalent)
+- [ ] Dashboard loads at `https://<host>/` (or HTTPS equivalent)
 - [ ] All services show `healthy` in System Health
 - [ ] Default admin account is accessible
 - [ ] Login succeeds and access token is issued

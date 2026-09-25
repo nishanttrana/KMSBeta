@@ -38,7 +38,7 @@ Complete endpoint reference for all 27 Vecta KMS services.
 
 ## Conventions
 
-**Base URL**: `http://{host}` — use `http://localhost:5173` for local dev
+**Base URL**: `http://{host}` — use `https://localhost` for local dev
 
 **All API paths**: `http://{host}/svc/{service}/{path}`
 
@@ -113,7 +113,7 @@ Authentication, session management, users, tenants, API clients, IdP integration
 **Response 200**: `token`, `refreshToken`, `expiresAt`, `userId`, `tenantId`, `roles[]`, `mfaRequired`
 
 ```bash
-export TOKEN=$(curl -s -X POST http://localhost:5173/svc/auth/auth/login \
+export TOKEN=$(curl -sk -X POST https://localhost/svc/auth/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"admin","password":"changeme","tenantId":"root"}' | jq -r '.token')
 ```
@@ -194,7 +194,7 @@ UserSummary fields: id, username, email, displayName, roles[], tenantId, lastLog
 Bearer, admin. Body: `username`, `email`, `displayName`, `password`, `roles[]`, `tenantId`, `sendWelcomeEmail`. Response 201: User.
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/auth/users \
+curl -sk -X POST https://localhost/svc/auth/users \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"username":"bob","email":"bob@example.com","password":"SecurePass123!","roles":["operator"],"tenantId":"root"}'
 ```
@@ -230,7 +230,7 @@ Response: `Role[]` — name, description, permissions[].
 Create body: `id` (slug), `name`, `plan`, `config` (maxKeys, maxUsers, enforceMfa, sessionTimeoutMinutes, allowedIpRanges[]).
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/auth/tenants \
+curl -sk -X POST https://localhost/svc/auth/tenants \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"id":"acme-corp","name":"Acme Corporation","plan":"enterprise","config":{"maxKeys":10000,"enforceMfa":true}}'
 ```
@@ -326,7 +326,7 @@ Bearer, roles: operator or admin.
 | accessPolicy | object | No | Access grants |
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/keycore/keys \
+curl -sk -X POST https://localhost/svc/keycore/keys \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"customer-data-key","algorithm":"AES-256","purpose":"encrypt","tags":{"env":"prod","dataClass":"pii"},"rotationPolicy":{"intervalDays":90,"notifyDaysBefore":14,"autoRotate":true},"exportPolicy":{"mode":"disabled"}}'
 ```
@@ -395,7 +395,7 @@ ACTIVE → DEACTIVATED. Existing ciphertext can still be decrypted.
 New version created, previous retired but still available for decryption.
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/keycore/keys/3fa85f64-5717-4562-b3fc-2c963f66afa6/rotate \
+curl -sk -X POST https://localhost/svc/keycore/keys/3fa85f64-5717-4562-b3fc-2c963f66afa6/rotate \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -414,7 +414,7 @@ Body: `plaintext` (base64), `aad` (base64, optional), `iv` (optional), `keyVersi
 Response: `ciphertext`, `iv`, `tag`, `keyId`, `keyVersion`, `algorithm`
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/keycore/keys/3fa85f64-5717-4562-b3fc-2c963f66afa6/encrypt \
+curl -sk -X POST https://localhost/svc/keycore/keys/3fa85f64-5717-4562-b3fc-2c963f66afa6/encrypt \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"plaintext":"SGVsbG8sIFdvcmxkIQ==","aad":"dXNlcklkPTEyMw=="}'
 ```
@@ -471,6 +471,25 @@ Body: `algorithm` (HKDF-SHA256/384/512, PBKDF2-SHA256, SP800-108-CTR), `salt`, `
 
 Response: Key object or `derivedKeyMaterial` (base64)
 
+`info` must not start with the reserved prefix `vecta/service-derive/`. Such a
+request is refused and audited as `audit.key.derive_refused` (critical).
+
+---
+
+### POST /svc/keycore/keys/{id}/service-derive
+
+**Internal services only.** The caller needs a verified service JWT
+(`kms-*` client). Any other caller gets 403 `service_identity_required`.
+Returns a 32-byte working key:
+`HKDF-SHA256(key material, "vecta-service-derive", "vecta/service-derive/v1|<client>|<tenant>|<key>|<purpose>|v<version>")`.
+The result is bound to the calling service, and the pinned version keeps it
+stable across rotation. The key must be symmetric and active or deactivated.
+
+Body: `tenant_id`, `purpose` (`[a-z0-9-]`, 1–64 chars), `version` (0 = current).
+Response: `key_id`, `version`, `purpose`, `kdf` (`HKDF-SHA256`), `derived_key` (base64).
+Audit: `audit.key.service_derive`. See
+[SECURITY/DATAPROTECT_KEY_DERIVATION.md](SECURITY/DATAPROTECT_KEY_DERIVATION.md).
+
 ---
 
 ### POST /svc/keycore/keys/{id}/encapsulate (KEM)
@@ -526,7 +545,7 @@ Policy: `grants[]` — subject, subjectType (user/client/role), operations[], co
 Body: `size` (1–65536), `encoding` (base64/hex), `source` (csprng/qrng/hsm). Response: `random`, `source`, `size`, `generatedAt`
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/keycore/random \
+curl -sk -X POST https://localhost/svc/keycore/random \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"size":32,"encoding":"hex","source":"csprng"}'
 ```
@@ -596,7 +615,7 @@ These endpoints provide the Tier 1 enterprise audit surface for rotation analyti
 Example compromise event:
 
 ```bash
-curl -s -X POST "http://localhost:5173/svc/keycore/compromise/events?tenant_id=root" \
+curl -sk -X POST "https://localhost/svc/keycore/compromise/events?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"key_id":"key-prod-001","cve_id":"CVE-2026-0001","threat_type":"cve","severity":"critical","detection_source":"nvd","auto_suspend":true}'
 ```
@@ -604,7 +623,7 @@ curl -s -X POST "http://localhost:5173/svc/keycore/compromise/events?tenant_id=r
 Example inventory dependency:
 
 ```bash
-curl -s -X POST "http://localhost:5173/svc/keycore/inventory/dependencies?tenant_id=root" \
+curl -sk -X POST "https://localhost/svc/keycore/inventory/dependencies?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"dependency_id":"dep-payments-api","key_id":"key-prod-001","service_id":"payments-api","dependency_type":"encryption","criticality":"critical","verification_status":"verified"}'
 ```
@@ -628,7 +647,7 @@ id, name, type (root/intermediate/issuing), keyId, subject (cn, o, ou, c, st, l)
 Create: `name`, `type`, `keyId`, `subject`, `validityDays`, `pathLen`, `permittedDNS[]`, `permittedIP[]`, `crlUrls[]`, `ocspUrls[]`, `issuingCaId` (required for non-root)
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/certs/cas \
+curl -sk -X POST https://localhost/svc/certs/cas \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"Acme Issuing CA","type":"issuing","keyId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","subject":{"cn":"Acme Issuing CA","o":"Acme Corp","c":"US"},"validityDays":1825,"issuingCaId":"root-ca-id"}'
 ```
@@ -664,7 +683,7 @@ List (query: caId, state, expiresBeforeDays, search) or import external cert.
 Body: `reason` (unspecified/keyCompromise/caCompromise/affiliationChanged/superseded/cessationOfOperation/certificateHold), `comment`
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/certs/certificates/cert-abc123/revoke \
+curl -sk -X POST https://localhost/svc/certs/certificates/cert-abc123/revoke \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"reason":"keyCompromise","comment":"Key compromised in INC-2025-042"}'
 ```
@@ -741,7 +760,7 @@ Bearer, roles: auditor or admin.
 Query: `action`, `actorId`, `resourceId`, `resourceType`, `outcome`, `startTime`, `endTime`, `pageSize`, `pageToken`
 
 ```bash
-curl -s "http://localhost:5173/svc/audit/events?action=audit.key&outcome=failure&startTime=2025-03-01T00:00:00Z" \
+curl -sk "https://localhost/svc/audit/events?action=audit.key&outcome=failure&startTime=2025-03-01T00:00:00Z" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -802,7 +821,7 @@ Response: `leader`, `lastEventId`, `lastEventAt`, `chainHash`, `totalEvents`, `h
 List or create SIEM export targets. Fields: name, type (siem_syslog/siem_http/splunk/elasticsearch/s3/azure_sentinel), endpoint, format (cef/leef/json/raw), credentials, filters, batchSize, flushIntervalSeconds
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/audit/export/targets \
+curl -sk -X POST https://localhost/svc/audit/export/targets \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"Splunk Cloud","type":"splunk","endpoint":"https://splunk.acme.example:8088/services/collector","format":"json","credentials":{"token":"splunk-hec-token"},"batchSize":200}'
 ```
@@ -832,7 +851,7 @@ Multi-party approvals, encrypted backup/restore, emergency bypass, system state.
 GovernancePolicy: name, triggerActions[], minApprovers, approverGroups[], timeoutHours, notificationChannels[], emergencyBypassAllowed
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/governance/policies \
+curl -sk -X POST https://localhost/svc/governance/policies \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"Key Destruction Approval","triggerActions":["audit.key.destroy","audit.key.export"],"minApprovers":2,"approverGroups":["admin","security-team"],"timeoutHours":24,"emergencyBypassAllowed":false}'
 ```
@@ -873,7 +892,7 @@ ApprovalRequest: id, status, requestedBy, requestedAt, operation (type, resource
 Body: `comment` (optional). Proceeds automatically if minApprovers threshold met.
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/governance/approvals/req-01ARZ3/approve \
+curl -sk -X POST https://localhost/svc/governance/approvals/req-01ARZ3/approve \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"comment":"Approved — matches INC-2025-042 remediation plan"}'
 ```
@@ -932,6 +951,38 @@ Response: `status`, `services` (map of service → up/down), `pendingApprovals`,
 
 ---
 
+### GET /svc/governance/system/fips-mode
+
+Root-tenant administrators only (`tenant_id=root`). Response `status`:
+- `desired`: `{mode, previous, reason, requested_by, requested_at}`, or `null` if never set
+- `effective`: `on` | `only` | `off`
+- `services`: `[{service, instance, mode, module_version, validated, started_at, updated_at}]`
+- `converged`, `pending`
+
+### GET /svc/governance/system/fips-mode/impact?target=on|only|off
+
+Root admin. Response `impact`:
+- `from`, `to`, `downgrade`
+- `stops` / `starts`: `[{service, feature, detail}]`
+- `notes`
+- `restarts`, `estimated_seconds`
+
+### PUT /svc/governance/system/fips-mode
+
+Root admin with write rights. Body: `mode`, `confirm` (must repeat `mode`),
+`reason`. Response: `impact`.
+
+Services apply the change by a staggered graceful restart.
+
+Audit:
+- `audit.governance.fips_mode_changed` (critical for a downgrade)
+- then `audit.governance.fips_mode_applied` for each service start
+- and `audit.governance.fips_mode_rollout_completed` when all match
+
+See [SECURITY/FIPS.md](SECURITY/FIPS.md).
+
+---
+
 ## Service 6: Compliance (`/svc/compliance/`)
 
 Framework-oriented compliance scoring, control assessments, delta tracking.
@@ -943,7 +994,7 @@ Framework-oriented compliance scoring, control assessments, delta tracking.
 Response: Framework[] — id, name, description, controlCount, lastAssessedAt, score, passCount, failCount
 
 ```bash
-curl -s http://localhost:5173/svc/compliance/frameworks \
+curl -sk https://localhost/svc/compliance/frameworks \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -1032,7 +1083,7 @@ Query: `severity`, `findingType`, `status`, `resourceType`, `resourceId`, `pageS
 Finding: id, severity, findingType, title, description, affectedResourceType, affectedResourceId, remediationSteps[], status, riskDrivers, blastRadius, owner, dueDate, createdAt
 
 ```bash
-curl -s "http://localhost:5173/svc/posture/findings?severity=critical&status=open" \
+curl -sk "https://localhost/svc/posture/findings?severity=critical&status=open" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -1109,7 +1160,7 @@ Triggers full posture scan. Response 202: `scanId`, `status: running`
 PostureRule: name, severity, findingType, condition (CEL expression), remediationTemplate, enabled
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/posture/rules \
+curl -sk -X POST https://localhost/svc/posture/rules \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"Key Without Rotation Policy","severity":"high","findingType":"key_no_rotation","condition":"key.rotationPolicy == null && key.state == \"ACTIVE\"","remediationTemplate":"Add a rotation policy with intervalDays <= 365"}'
 ```
@@ -1127,7 +1178,7 @@ Alert rules, alert history, report generation, scheduled delivery.
 AlertRule: name, conditionType (threshold/pattern/anomaly/absence), conditionConfig, severity, actions[] (email/webhook/pagerduty/opsgenie/slack), throttleMinutes, enabled
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/reporting/alert-rules \
+curl -sk -X POST https://localhost/svc/reporting/alert-rules \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"Mass Decrypt Alert","conditionType":"threshold","conditionConfig":{"metric":"decrypt_operations","window":"5m","threshold":1000},"severity":"high","actions":[{"type":"slack","config":{"webhookUrl":"https://hooks.slack.com/services/..."}}]}'
 ```
@@ -1177,7 +1228,7 @@ Top actors, IPs, and services driving alerts. Response: `{"topActors": [...], "t
 Report: name, type (key-inventory/access-summary/compliance-trend/audit-volume/evidence_pack), params, format (pdf/csv/json), status, downloadUrl
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/reporting/reports \
+curl -sk -X POST https://localhost/svc/reporting/reports \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"Q1 Key Inventory","type":"key-inventory","params":{"startDate":"2025-01-01","endDate":"2025-03-31"},"format":"pdf"}'
 ```
@@ -1205,7 +1256,7 @@ Body: `templateId` (use `evidence_pack` for full audit package), `params`, `form
 ScheduledReport: reportConfig, schedule (cron), delivery (type: email/s3/webhook, config), enabled, lastRunAt, nextRunAt
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/reporting/scheduled \
+curl -sk -X POST https://localhost/svc/reporting/scheduled \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"reportConfig":{"name":"Weekly Audit Summary","type":"audit-volume","format":"pdf"},"schedule":"0 8 * * MON","delivery":{"type":"email","config":{"recipients":["security@acme.example"]}},"enabled":true}'
 ```
@@ -1232,7 +1283,7 @@ Returns tenant workload identity configuration.
 | attestationMode | string | required / optional |
 
 ```bash
-curl -s "http://localhost:5173/svc/workload/workload-identity/settings?tenant_id=root" \
+curl -sk "https://localhost/svc/workload/workload-identity/settings?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -1279,7 +1330,7 @@ Exchanges an SVID or OIDC token for a KMS bearer token.
 **Response 200**: `accessToken`, `tokenType`, `expiresIn`, `scope`
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/workload/workload-identity/token/exchange \
+curl -sk -X POST https://localhost/svc/workload/workload-identity/token/exchange \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"subjectToken":"eyJhbGc...","subjectTokenType":"urn:ietf:params:oauth:token-type:jwt","requestedScopes":["encrypt","decrypt"]}'
 ```
@@ -1347,7 +1398,7 @@ Returns the tenant confidential compute policy.
 | auditAll | boolean | Whether to audit all evaluation results |
 
 ```bash
-curl -s "http://localhost:5173/svc/confidential/confidential/policy?tenant_id=root" \
+curl -sk "https://localhost/svc/confidential/confidential/policy?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -1376,7 +1427,7 @@ Evaluates attestation evidence and, if valid, releases the requested key.
 **Response 200**: If allowed, includes `token` (short-lived token bound to attested context) or direct operation result.
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/confidential/confidential/attest/key-release \
+curl -sk -X POST https://localhost/svc/confidential/confidential/attest/key-release \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"keyId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","operation":"decrypt","attestationProvider":"aws-nitro","attestationDocument":"base64_document","nonce":"random-nonce-123"}'
 ```
@@ -1444,7 +1495,7 @@ Returns the tenant PQC policy profile.
 | warnOnClassical | boolean | Raise posture findings for classical usage |
 
 ```bash
-curl -s "http://localhost:5173/svc/pqc/pqc/policy?tenant_id=root" \
+curl -sk "https://localhost/svc/pqc/pqc/policy?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -1557,7 +1608,7 @@ Returns tenant justification enforcement settings.
 | auditUnjustified | boolean | Audit requests without justification |
 
 ```bash
-curl -s "http://localhost:5173/svc/keyaccess/key-access/settings?tenant_id=root" \
+curl -sk "https://localhost/svc/keyaccess/key-access/settings?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -1582,7 +1633,7 @@ Dashboard/posture/compliance counters.
 Reason-code rules. Fields: name, code (string), allowedServices[], allowedOperations[], action (allow/deny/require_approval), enabled
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/keyaccess/key-access/codes \
+curl -sk -X POST https://localhost/svc/keyaccess/key-access/codes \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"Customer Support Access","code":"customer-support","allowedServices":["crm","ticketing"],"allowedOperations":["decrypt"],"action":"allow"}'
 ```
@@ -1607,6 +1658,44 @@ Lists evaluated justification decisions.
 
 Tokenization, masking, field-level encryption, and secure vault search.
 
+**Working keys** come from keycore `service-derive` (v2). Keys that predate
+2026-09-25 start in state `legacy` (identifier-derived, v1) until migrated.
+While a key is `migrating`, any operation accepts the header
+`X-Vecta-KDF-Version: v1|v2` to read old data and write new data. Refusals
+return 409:
+- `kdf_migration_not_started`
+- `legacy_kdf_retired` (audited as `audit.dataprotect.kdf_refused`)
+- `key_material_unavailable` (FIPS strict mode)
+
+See [SECURITY/DATAPROTECT_KEY_DERIVATION.md](SECURITY/DATAPROTECT_KEY_DERIVATION.md).
+
+### GET /svc/dataprotect/kdf/keys
+
+Each key's derivation state: `key_id`, `state` (`legacy`|`migrating`|`v2`),
+`key_version` (pinned), `legacy_uses`, `last_legacy_use_at`,
+`legacy_vault_tokens`.
+
+### POST /svc/dataprotect/kdf/keys/{key_id}/start-migration
+
+`legacy` → `migrating`; pins the current keycore version.
+Audit: `audit.dataprotect.kdf_migration_started`.
+
+### POST /svc/dataprotect/kdf/keys/{key_id}/reprotect-vault
+
+Body: `limit` (default 500, max 5000). Re-protects stored vault tokens from v1
+to v2; token strings don't change. Response: `converted`,
+`irreversible_hashes_dropped`, `failed`, `failed_token_ids`, `remaining`.
+Audit: `audit.dataprotect.kdf_vault_reprotected`.
+
+### POST /svc/dataprotect/kdf/keys/{key_id}/complete
+
+`migrating` → `v2`. Returns 409 `legacy_tokens_remaining` unless
+`{"force": true}`. Audit: `audit.dataprotect.kdf_migration_completed`.
+
+### POST /svc/dataprotect/kdf/keys/{key_id}/abort
+
+`migrating` → `legacy`. Audit: `audit.dataprotect.kdf_migration_aborted`.
+
 ---
 
 ### GET /svc/dataprotect/schemes / POST /svc/dataprotect/schemes
@@ -1628,7 +1717,7 @@ Tokenizes a single value.
 **Response 200**: `token` (string), `schemeId`, `tokenId` (for vault lookup)
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/dataprotect/tokenize \
+curl -sk -X POST https://localhost/svc/dataprotect/tokenize \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"value":"4111111111111111","schemeId":"pci-pan-scheme"}'
 ```
@@ -1756,7 +1845,7 @@ Wraps a payment key in a TR-31 key block.
 **Response 200**: `keyBlock` (TR-31 formatted string), `headerVersion`, `keyUsage`, `algorithm`, `modeOfUse`
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/payment/tr31/wrap \
+curl -sk -X POST https://localhost/svc/payment/tr31/wrap \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"keyId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","kbpkId":"kbpk-key-id","keyUsage":"P0","algorithm":"A","modeOfUse":"E"}'
 ```
@@ -1873,7 +1962,7 @@ Returns tenant Autokey control settings.
 | templateOverrideRules | object | Rules for template selection |
 
 ```bash
-curl -s "http://localhost:5173/svc/autokey/autokey/settings?tenant_id=root" \
+curl -sk "https://localhost/svc/autokey/autokey/settings?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -1898,7 +1987,7 @@ Dashboard/posture/compliance summary.
 Template: name, resourceType, keyNameTemplate, algorithm, purpose, labels (object), rotationPolicyTemplate, exportPolicyTemplate, approvalRequired
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/autokey/autokey/templates \
+curl -sk -X POST https://localhost/svc/autokey/autokey/templates \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"s3-encryption","resourceType":"s3-bucket","keyNameTemplate":"s3-{resource}-dek","algorithm":"AES-256","purpose":"encrypt","labels":{"managed-by":"autokey"},"approvalRequired":false}'
 ```
@@ -1964,7 +2053,7 @@ BYOK (Bring Your Own Key) for AWS KMS, Azure Key Vault, GCP KMS. Sync, rotation,
 BYOK provider: name, type (aws/azure/gcp), credentials (type-specific), region, endpoint, enabled
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/cloud/byok/providers \
+curl -sk -X POST https://localhost/svc/cloud/byok/providers \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"AWS Primary","type":"aws","credentials":{"accessKeyId":"AKIA...","secretAccessKey":"secret","region":"us-east-1"},"enabled":true}'
 ```
@@ -2100,7 +2189,7 @@ EKM provider: name, type (mysql/mssql/oracle/postgresql/bitlocker), config, enab
 EKM key binding: name, providerId, vectaKeyId, externalKeyId, algorithm, purpose, state
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/ekm/keys \
+curl -sk -X POST https://localhost/svc/ekm/keys \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"sql-tde-key","providerId":"prov-mssql-01","vectaKeyId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","algorithm":"AES-256","purpose":"encrypt"}'
 ```
@@ -2164,7 +2253,7 @@ Destroys a KMIP object.
 KMIP client: name, profileId, certificate (PEM), allowedIps[], enabled
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/kmip/clients \
+curl -sk -X POST https://localhost/svc/kmip/clients \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"NetApp StorageGrid","profileId":"kmip-profile-01","certificate":"-----BEGIN CERTIFICATE-----\n...","allowedIps":["10.0.10.0/24"]}'
 ```
@@ -2206,7 +2295,7 @@ Dashboard summary: `profileCount`, `signedLast24h`, `transparencyLoggedCount`, `
 Profile: name, keyId, identityMode (key/workload/oidc), allowedSpiffeIds[], allowedOidcIssuers[], requireTransparency, format (cosign/sigstore/pkcs7/raw)
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/signing/signing/profiles \
+curl -sk -X POST https://localhost/svc/signing/signing/profiles \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"Release Pipeline","keyId":"3fa85f64-5717-4562-b3fc-2c963f66afa6","identityMode":"workload","allowedSpiffeIds":["spiffe://acme.example/pipeline"],"requireTransparency":true}'
 ```
@@ -2294,7 +2383,7 @@ Lists MPC-backed keys: id, name, groupId, threshold, algorithm, state, createdAt
 MPC group: name, participants[] (ids), threshold, algorithm, policy
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/mpc/mpc/groups \
+curl -sk -X POST https://localhost/svc/mpc/mpc/groups \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"root-ca-signers","participants":["part-alice","part-bob","part-carol"],"threshold":2,"algorithm":"Ed25519"}'
 ```
@@ -2426,7 +2515,7 @@ Cluster state snapshots for backup and disaster recovery. Create triggers an imm
 HSM registration: name, type (thales/entrust/aws-cloudhsm/pkcs11/softhsm), config, partitionCount, enabled
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/cluster/hsm \
+curl -sk -X POST https://localhost/svc/cluster/hsm \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"Thales Luna Network HSM","type":"thales","config":{"host":"hsm.acme.example","partition":"kms-partition","pin":"hsm-partition-pin"},"enabled":true}'
 ```
@@ -2443,6 +2532,70 @@ Tests HSM connectivity. Response: `{"connected": true, "latencyMs": 12, "firmwar
 
 ---
 
+### Cluster authentication
+
+Every cluster route requires a root administrator or an internal service JWT,
+except:
+- `GET /healthz`;
+- `POST /cluster/join/exchange` (authenticated by the one-time join token);
+- `POST /cluster/sync/events` (HMAC signature).
+
+### POST /svc/cluster/cluster/join/request (on the primary)
+
+Body: `target_node_id`, `target_node_name`, `profile_id`, `expires_minutes`.
+Response:
+- `join`: the token record with `issued_secret`;
+- `bundle`: `vecta-join-v1:…`, what you paste on the new node. It's present
+  only when `CLUSTER_ADVERTISE_URL` is set.
+
+### POST /svc/cluster/cluster/join/connect (on the joining node)
+
+Body: `join_bundle`, optional `node_name` and `endpoint`, and
+`confirm_replace: true` (required).
+
+This exchanges the bundle with the primary, installs the cluster master key
+(keycore restarts on it) and subscribes to the assigned components. Response
+`result`: `{primary_node_id, components, subscribed, status}`.
+
+Audit: `audit.cluster.joined_cluster` here, and
+`audit.cluster.member_joined` on the primary.
+
+### POST /cluster/join/exchange (node-to-node, primary)
+
+Called by a joining node's cluster-manager over pinned TLS.
+
+Body: `token_id`, `join_secret`, `node_id`, `node_name`, `endpoint`,
+`keycore_join_key` and `cluster_manager_join_key` (ML-KEM-768 encapsulation
+keys). Response `result`: `{primary_node_id, components, context, sealed_mek,
+mek_fingerprint, sealed_replication}`.
+
+### POST /svc/keycore/cluster/mek/join-key, /export, /import
+
+The cluster-manager service identity only (anything else gets 403
+`service_identity_required`). These are the keycore side of the master-key
+transfer:
+- `join-key`: creates a one-time ML-KEM join key, valid 10 minutes;
+- `export`: seals this node's master key to a join key, bound to `context`;
+- `import`: opens it, checks `mek_fingerprint`, requires `confirm_replace`
+  if the node already holds keys, stores it and restarts keycore.
+
+Audit events are `audit.key.cluster_join_key_created`,
+`cluster_mek_exported` and `cluster_mek_imported`; the last two are critical.
+
+### GET /svc/cluster/cluster/replication/status
+
+This node's real Postgres logical replication state:
+- `wal_level`
+- `publications`: `[{component, publication, tables}]`
+- `subscriptions`: `[{subscription, component, enabled, worker_running, lag_seconds, ready, tables: [{table, state}]}]`
+- `error`
+
+`GET /cluster/overview` includes the same object under `replication`. Its
+`selective_component_sync.note` is computed from it. See
+[CLUSTERING.md](CLUSTERING.md).
+
+---
+
 ## Service 23: QKD (`/svc/qkd/`)
 
 Quantum Key Distribution: ETSI GS QKD 014 compatible links for quantum-secure key exchange.
@@ -2454,7 +2607,7 @@ Quantum Key Distribution: ETSI GS QKD 014 compatible links for quantum-secure ke
 QKD link: name, remoteKmsEndpoint, etsiApiUrl, credentials, keyRate (keys/sec), keyLength (bits), enabled, state
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/qkd/links \
+curl -sk -X POST https://localhost/svc/qkd/links \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"QKD-Link-DataCenter-A","remoteKmsEndpoint":"https://kms-b.acme.example","etsiApiUrl":"https://qkd-a.acme.example:9090","keyLength":256,"enabled":true}'
 ```
@@ -2518,7 +2671,7 @@ Generates quantum random bytes.
 **Response 200**: `random` (string), `sourceId`, `size`, `sourceType`, `generatedAt`
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/qrng/generate \
+curl -sk -X POST https://localhost/svc/qrng/generate \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"size":64,"encoding":"hex"}'
 ```
@@ -2575,7 +2728,7 @@ Retrieves the current version of a secret.
 **Response 200**: `{"path": "...", "value": {...}, "version": 3, "metadata": {...}, "createdAt": "...", "updatedAt": "..."}`
 
 ```bash
-curl -s "http://localhost:5173/svc/secrets/secrets/services/database/credentials" \
+curl -sk "https://localhost/svc/secrets/secrets/services/database/credentials" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -2654,7 +2807,7 @@ Returns the access policy for a path (and all sub-paths).
 Sets the access policy for a path.
 
 ```bash
-curl -s -X PUT http://localhost:5173/svc/secrets/policy/services/database \
+curl -sk -X PUT https://localhost/svc/secrets/policy/services/database \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"grants":[{"subject":"service-account-api","subjectType":"client","operations":["read"],"pathPattern":"services/database/*"}]}'
 ```
@@ -2684,7 +2837,7 @@ Generates a fresh software BOM snapshot.
 **Response 202**: `{"status": "accepted", "snapshot": {"id": "sbom_20260311_001", "createdAt": "2026-03-11T09:45:00Z"}}`
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/sbom/sbom/generate \
+curl -sk -X POST https://localhost/svc/sbom/sbom/generate \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"trigger":"manual"}'
 ```
@@ -2741,7 +2894,7 @@ Creates or updates a manual offline advisory.
 **Request Body**: `id` (CVE ID), `component`, `ecosystem`, `introducedVersion`, `fixedVersion`, `severity`, `summary`, `reference`
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/sbom/sbom/advisories \
+curl -sk -X POST https://localhost/svc/sbom/sbom/advisories \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"id":"CVE-2026-5000","component":"example/module","ecosystem":"go","introducedVersion":"v1.0.0","fixedVersion":"v1.3.0","severity":"critical","summary":"Offline advisory for air-gapped deployment","reference":"https://example.test/CVE-2026-5000"}'
 ```
@@ -2767,7 +2920,7 @@ Response:
 Removes a manual advisory.
 
 ```bash
-curl -s -X DELETE "http://localhost:5173/svc/sbom/sbom/advisories/CVE-2026-5000?tenant_id=root" \
+curl -sk -X DELETE "https://localhost/svc/sbom/sbom/advisories/CVE-2026-5000?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -2842,7 +2995,7 @@ Returns the saved AI configuration for the tenant.
 ```
 
 ```bash
-curl -s "http://localhost:5173/svc/ai/ai/config?tenant_id=root" \
+curl -sk "https://localhost/svc/ai/ai/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 ```
 
@@ -2857,7 +3010,7 @@ Updates the tenant AI configuration.
 Validation: `backend` must be supported; managed providers require `providerAuth.required: true`; if `mcp.enabled: true`, `mcp.endpoint` must be set.
 
 ```bash
-curl -s -X PUT "http://localhost:5173/svc/ai/ai/config?tenant_id=root" \
+curl -sk -X PUT "https://localhost/svc/ai/ai/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"backend":"claude","endpoint":"https://api.anthropic.com/v1/messages","model":"claude-sonnet-4-6","apiKeySecret":"my-api-key-secret","providerAuth":{"required":true,"type":"bearer"},"maxContextTokens":8000,"temperature":0.3}'
 ```
@@ -2898,7 +3051,7 @@ Submits a natural-language assistant request. Context is assembled from enabled 
 ```
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/ai/ai/query \
+curl -sk -X POST https://localhost/svc/ai/ai/query \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"tenantId":"root","query":"Analyze recent unresolved alerts and recommend actions","includeContext":true}'
 ```
@@ -2921,7 +3074,7 @@ Produces an AI explanation for a security or governance event.
 **Response 200**: `result.answer` (AI analysis and recommendations), `result.backend`, `result.redactionsApplied`
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/ai/ai/analyze/incident \
+curl -sk -X POST https://localhost/svc/ai/ai/analyze/incident \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"tenantId":"root","incidentId":"inc-001","title":"Unauthorized key export attempt","description":"A privileged user attempted an export against a production key.","details":{"keyId":"key_123","actor":"ops-admin","approvalStatus":"missing"}}'
 ```
@@ -2941,7 +3094,7 @@ Builds posture guidance for the requested focus area.
 **Response 200**: `result.answer` (prioritized recommendations), `result.warnings` (if provider unavailable, falls back to deterministic guidance)
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/ai/ai/recommend/posture \
+curl -sk -X POST https://localhost/svc/ai/ai/recommend/posture \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"tenantId":"root","focus":"key-rotation"}'
 ```
@@ -2970,7 +3123,7 @@ Explains a KMS policy in plain language.
 | policy | object | Conditional | Inline policy object to explain |
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/ai/ai/explain/policy \
+curl -sk -X POST https://localhost/svc/ai/ai/explain/policy \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"tenantId":"root","policyId":"policy-rotate-90d"}'
 ```
@@ -3039,17 +3192,17 @@ Selected events with dedicated audit classification:
 
 ```bash
 # 1. Login
-export TOKEN=$(curl -s -X POST http://localhost:5173/svc/auth/auth/login \
+export TOKEN=$(curl -sk -X POST https://localhost/svc/auth/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"app-service","password":"pass","tenantId":"root"}' | jq -r '.token')
 
 # 2. Create key (once)
-KEY_ID=$(curl -s -X POST http://localhost:5173/svc/keycore/keys \
+KEY_ID=$(curl -sk -X POST https://localhost/svc/keycore/keys \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"name":"app-data-key","algorithm":"AES-256","purpose":"encrypt"}' | jq -r '.id')
 
 # 3. Encrypt
-curl -s -X POST "http://localhost:5173/svc/keycore/keys/$KEY_ID/encrypt" \
+curl -sk -X POST "https://localhost/svc/keycore/keys/$KEY_ID/encrypt" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"plaintext":"c2Vuc2l0aXZlIGRhdGE="}'
 ```
@@ -3062,7 +3215,7 @@ openssl req -new -newkey rsa:2048 -nodes -keyout server.key \
   -subj "/CN=api.acme.example/O=Acme Corp" -out server.csr
 
 # 2. Issue from KMS CA
-curl -s -X POST http://localhost:5173/svc/certs/cas/issuing-ca-id/issue \
+curl -sk -X POST https://localhost/svc/certs/cas/issuing-ca-id/issue \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d "{\"csr\":\"$(base64 -w0 server.csr)\",\"profileId\":\"tls-server\",\"san\":{\"dnsNames\":[\"api.acme.example\"]}}"
 ```
@@ -3071,16 +3224,16 @@ curl -s -X POST http://localhost:5173/svc/certs/cas/issuing-ca-id/issue \
 
 ```bash
 # 1. Trigger assessment
-ASMT_ID=$(curl -s -X POST http://localhost:5173/svc/compliance/assessments \
+ASMT_ID=$(curl -sk -X POST https://localhost/svc/compliance/assessments \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"frameworkId":"pci-dss-v4","scope":"tenant"}' | jq -r '.assessmentId')
 
 # 2. Poll until complete
-curl -s "http://localhost:5173/svc/compliance/assessments/$ASMT_ID" \
+curl -sk "https://localhost/svc/compliance/assessments/$ASMT_ID" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root"
 
 # 3. Export report
-curl -s -X POST "http://localhost:5173/svc/compliance/assessments/$ASMT_ID/export" \
+curl -sk -X POST "https://localhost/svc/compliance/assessments/$ASMT_ID/export" \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"format":"pdf"}'
 ```
@@ -3089,7 +3242,7 @@ curl -s -X POST "http://localhost:5173/svc/compliance/assessments/$ASMT_ID/expor
 
 ```bash
 # 1. Create a provisioning request
-curl -s -X POST http://localhost:5173/svc/autokey/autokey/requests \
+curl -sk -X POST https://localhost/svc/autokey/autokey/requests \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
   -d '{"resourceType":"s3-bucket","resourceId":"my-app-data-bucket","service":"data-pipeline","justification":"production encryption for GDPR scope data"}'
 ```

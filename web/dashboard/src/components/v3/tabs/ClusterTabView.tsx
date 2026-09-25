@@ -1,6 +1,7 @@
 import { B, Bar, Btn, Card, Chk, FG, Inp, Modal, Section, Sel, Stat } from "../legacyPrimitives";
 import { C } from "../theme";
-import type { ClusterSyncEvent, ClusterLogEntry, ClusterSyncCheckpoint } from "../../../lib/cluster";
+import { ClusterJoinPanel } from "./ClusterJoinPanel";
+import type { ClusterSyncEvent, ClusterLogEntry, ClusterSyncCheckpoint, ClusterReplicationStatus } from "../../../lib/cluster";
 
 type ClusterTabViewProps = {
   clusterView: string;
@@ -10,6 +11,7 @@ type ClusterTabViewProps = {
   profiles: any[];
   summary: any;
   selectiveNote: string;
+  replication?: ClusterReplicationStatus;
   statusMeta: (status: string) => { label: string; color: string; bg: string; dotClass: string };
   clusterComponentLabel: (value: string) => string;
   componentCategoryColor: (componentId: string) => string;
@@ -19,6 +21,8 @@ type ClusterTabViewProps = {
   updateNodeRoleAction: (node: any) => Promise<void>;
   removeBusyNode: string;
   removeNodeAction: (node: any) => Promise<void>;
+  session: any;
+  onToast?: ((msg: string) => void) | undefined;
   addNodeModalOpen: boolean;
   setAddNodeModalOpen: (open: boolean) => void;
   directNodeForm: any;
@@ -26,7 +30,6 @@ type ClusterTabViewProps = {
   profileComponentScope: (profileID: string) => string[];
   toggleDirectComponent: (componentID: string) => void;
   directNodeBusy: boolean;
-  addExistingNode: () => Promise<void>;
   profileName: string;
   setProfileName: (value: string) => void;
   profileDescription: string;
@@ -91,13 +94,13 @@ function componentPill(component: string, label: string, color: string) {
 
 export const ClusterTabView = (props: ClusterTabViewProps) => {
   const {
-    clusterView, loading, refresh, nodes, profiles, summary, selectiveNote,
+    clusterView, loading, refresh, nodes, profiles, summary, selectiveNote, replication,
     statusMeta, clusterComponentLabel, componentCategoryColor,
     roleDrafts, setRoleDrafts, roleUpdatingNode, updateNodeRoleAction,
     removeBusyNode, removeNodeAction,
-    addNodeModalOpen, setAddNodeModalOpen,
+    session, onToast, addNodeModalOpen, setAddNodeModalOpen,
     directNodeForm, setDirectNodeForm, profileComponentScope, toggleDirectComponent,
-    directNodeBusy, addExistingNode,
+    directNodeBusy,
     profileName, setProfileName, profileDescription, setProfileDescription,
     profileComponents, toggleProfileComponent, profileDefault, setProfileDefault,
     savingProfile, saveProfile, removeProfile, selectedTier, applyTier,
@@ -239,9 +242,19 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
           marginTop: 14, border: `1px solid ${C.borderHi}`, borderRadius: 10,
           background: C.card, padding: "12px 16px", display: "flex", alignItems: "center", gap: 8
         }}>
-          <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>Selective Sync</span>
+          <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>Replication</span>
           <span style={{ fontSize: 11, color: C.dim }}>{selectiveNote}</span>
         </div>
+        {replication && replication.subscriptions.length > 0 && (
+          <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
+            {replication.subscriptions.map((s) => (
+              <div key={s.subscription} style={{ fontSize: 11, color: s.ready ? C.dim : C.amber }}>
+                {s.component}: {s.ready ? "synchronized" : s.worker_running ? "copying" : "stopped"}
+                {` · ${s.tables.filter((t) => t.state === "ready").length}/${s.tables.length} tables · lag ${Math.round(s.lag_seconds)}s`}
+              </div>
+            ))}
+          </div>
+        )}
       </Section>
     </div>;
   }
@@ -335,41 +348,8 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
       </Section>
 
       {/* Add Node Modal */}
-      <Modal open={addNodeModalOpen} onClose={() => setAddNodeModalOpen(false)} title="Add KMS Instance to Cluster" wide>
-        <FG label="Node ID" required><Inp value={directNodeForm.node_id} onChange={(e) => setDirectNodeForm((p: any) => ({ ...p, node_id: e.target.value }))} placeholder="vecta-kms-03" /></FG>
-        <FG label="Node Name"><Inp value={directNodeForm.node_name} onChange={(e) => setDirectNodeForm((p: any) => ({ ...p, node_name: e.target.value }))} placeholder="vecta-kms-03" /></FG>
-        <FG label="Node Endpoint"><Inp value={directNodeForm.endpoint} onChange={(e) => setDirectNodeForm((p: any) => ({ ...p, endpoint: e.target.value }))} placeholder="10.0.2.100:8210" /></FG>
-        <FG label="Role">
-          <Sel value={String(directNodeForm.role || "follower")} onChange={(e) => setDirectNodeForm((p: any) => ({ ...p, role: e.target.value }))}>
-            <option value="follower">Follower</option>
-            <option value="leader">Leader</option>
-          </Sel>
-        </FG>
-        <FG label="Replication Profile" required>
-          <Sel value={String(directNodeForm.profile_id || "")} onChange={(e) => {
-            const nextProfileID = String(e.target.value || "");
-            const allowed = profileComponentScope(nextProfileID);
-            setDirectNodeForm((p: any) => ({ ...p, profile_id: nextProfileID, components: allowed }));
-          }}>
-            <option value="">Select profile</option>
-            {profiles.map((p: any) => <option key={String(p?.id)} value={String(p?.id || "")}>{String(p?.name || p?.id || "-")}</option>)}
-          </Sel>
-        </FG>
-        <FG label="Sync Components">
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,minmax(0,1fr))", gap: 6 }}>
-            {profileComponentScope(String(directNodeForm?.profile_id || "")).map((cid: string) =>
-              <Chk key={cid} label={clusterComponentLabel(cid)}
-                checked={(Array.isArray(directNodeForm?.components) ? directNodeForm.components : []).includes(cid)}
-                onChange={() => toggleDirectComponent(cid)} />
-            )}
-          </div>
-        </FG>
-        <Chk label="Seed realtime sync events immediately after add" checked={Boolean(directNodeForm?.seed_sync)}
-          onChange={() => setDirectNodeForm((p: any) => ({ ...p, seed_sync: !p.seed_sync }))} />
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 14 }}>
-          <Btn onClick={() => setAddNodeModalOpen(false)}>Cancel</Btn>
-          <Btn primary disabled={directNodeBusy} onClick={() => void addExistingNode()}>{directNodeBusy ? "Adding..." : "Add Instance"}</Btn>
-        </div>
+      <Modal open={addNodeModalOpen} onClose={() => setAddNodeModalOpen(false)} title="Add a KMS Instance to the Cluster" wide>
+        <ClusterJoinPanel session={session} profiles={profiles} onToast={onToast} onDone={() => { setAddNodeModalOpen(false); void refresh(true); }} />
       </Modal>
     </div>;
   }

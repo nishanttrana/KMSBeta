@@ -777,7 +777,7 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
           <div><span style={{ color: C.muted }}>Created: </span>{fmtDate(selectedSecret.created_at)}</div>
           <div><span style={{ color: C.muted }}>Updated: </span>{fmtDate(selectedSecret.updated_at)}</div>
           <div><span style={{ color: C.muted }}>Created by: </span>{selectedSecret.created_by || "—"}</div>
-          <div><span style={{ color: C.muted }}>ID: </span><span style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }}>{selectedSecret.id}</span></div>
+          <div><span style={{ color: C.muted }}>ID: </span><span style={{ fontFamily: "'JetBrains Mono',ui-monospace,monospace", fontSize: 9 }}>{selectedSecret.id}</span></div>
           {selectedSecret.expires_at && <div><span style={{ color: C.muted }}>Expires: </span><span style={{ color: expiryStatus(selectedSecret)?.color || C.text }}>{fmtDate(selectedSecret.expires_at)}</span></div>}
           {selectedSecret.description && <div style={{ gridColumn: "1/3" }}><span style={{ color: C.muted }}>Description: </span>{selectedSecret.description}</div>}
         </div>
@@ -827,7 +827,7 @@ export const VaultTab = ({ session, onToast }: { session: AuthSession | null; on
               <span style={{ fontWeight: 600, color: v.version === selectedSecret.current_version ? C.accent : C.text }}>
                 v{v.version} {v.version === selectedSecret.current_version && <B c="accent">current</B>}
               </span>
-              <span style={{ color: C.muted, fontFamily: "'IBM Plex Mono',monospace", fontSize: 9 }}>
+              <span style={{ color: C.muted, fontFamily: "'JetBrains Mono',ui-monospace,monospace", fontSize: 9 }}>
                 SHA256: {String(v.value_hash || "").substring(0, 16)}...
               </span>
               <span style={{ color: C.muted }}>{fmtDate(v.created_at)}</span>

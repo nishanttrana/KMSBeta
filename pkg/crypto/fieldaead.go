@@ -62,42 +62,27 @@ func fieldHMAC(key []byte, values ...string) []byte {
 }
 
 func fieldEncryptAESGCM(key []byte, plaintext []byte, aad []byte, deterministic bool) ([]byte, []byte, error) {
-	block, err := aes.NewCipher(key)
+	if !deterministic {
+		return SealDetached(key, plaintext, aad)
+	}
+	// Deterministic (searchable) mode derives the nonce from the inputs, so it
+	// is a caller-chosen nonce and is unavailable in FIPS strict mode.
+	tag := fieldHMAC(key, string(aad), string(plaintext))
+	nonce := make([]byte, GCMNonceSize)
+	copy(nonce, tag[:GCMNonceSize])
+	Zeroize(tag)
+	ct, err := SealGCMWithNonce(key, nonce, plaintext, aad)
 	if err != nil {
 		return nil, nil, err
 	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, nil, err
-	}
-	var nonce []byte
-	if deterministic {
-		tag := fieldHMAC(key, string(aad), string(plaintext))
-		nonce = make([]byte, gcm.NonceSize())
-		copy(nonce, tag[:gcm.NonceSize()])
-		Zeroize(tag)
-	} else {
-		nonce, err = RandomBytes(gcm.NonceSize())
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	return nonce, gcm.Seal(nil, nonce, plaintext, aad), nil
+	return nonce, ct, nil
 }
 
 func fieldDecryptAESGCM(key []byte, nonce []byte, ciphertext []byte, aad []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-	if len(nonce) != gcm.NonceSize() {
+	if len(nonce) != GCMNonceSize {
 		return nil, errors.New("invalid nonce")
 	}
-	return gcm.Open(nil, nonce, ciphertext, aad)
+	return OpenDetached(key, nonce, ciphertext, aad)
 }
 
 func fieldEncryptChaCha(key []byte, plaintext []byte, aad []byte, deterministic bool) ([]byte, []byte, error) {

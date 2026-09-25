@@ -873,3 +873,57 @@ export async function getDataProtectAuditLog(
   return out.items || [];
 }
 
+
+// ── Working-key derivation migration (docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md) ──
+
+export type KeyKDFState = {
+  tenant_id: string;
+  key_id: string;
+  state: "legacy" | "migrating" | "v2" | string;
+  key_version: number;
+  legacy_uses: number;
+  last_legacy_use_at?: string;
+  legacy_vault_tokens: number;
+  updated_by: string;
+  updated_at: string;
+};
+
+export type KDFReprotectResult = {
+  key_id: string;
+  converted: number;
+  irreversible_hashes_dropped: number;
+  failed: number;
+  failed_token_ids: string[];
+  remaining: number;
+};
+
+export async function listKeyKDF(session: AuthSession): Promise<KeyKDFState[]> {
+  const q = new URLSearchParams({ tenant_id: session.tenantId });
+  const out = await serviceRequest<{ items?: KeyKDFState[] }>(session, "dataprotect", `/kdf/keys?${q.toString()}`);
+  return Array.isArray(out?.items) ? out.items : [];
+}
+
+function kdfKeyPath(session: AuthSession, keyId: string, action: string): string {
+  const q = new URLSearchParams({ tenant_id: session.tenantId });
+  return `/kdf/keys/${encodeURIComponent(String(keyId || "").trim())}/${action}?${q.toString()}`;
+}
+
+export async function kdfTransition(
+  session: AuthSession,
+  keyId: string,
+  action: "start-migration" | "complete" | "abort",
+  force = false
+): Promise<KeyKDFState> {
+  const out = await serviceRequest<{ item: KeyKDFState }>(session, "dataprotect", kdfKeyPath(session, keyId, action), {
+    method: "POST",
+    body: JSON.stringify({ force })
+  });
+  return out.item;
+}
+
+export async function kdfReprotectVault(session: AuthSession, keyId: string, limit = 1000): Promise<KDFReprotectResult> {
+  return serviceRequest<KDFReprotectResult>(session, "dataprotect", kdfKeyPath(session, keyId, "reprotect-vault"), {
+    method: "POST",
+    body: JSON.stringify({ limit })
+  });
+}

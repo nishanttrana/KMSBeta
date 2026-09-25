@@ -79,7 +79,7 @@ prepare_certs_volumes() {
   docker volume create "${certs_volume}" >/dev/null 2>&1 || true
   docker volume create "${runtime_volume}" >/dev/null 2>&1 || true
 
-  for helper_image in postgres:16.13-alpine alpine:3.23 busybox:1.36; do
+  for helper_image in postgres:16.13-alpine alpine:3.24 busybox:1.36; do
     if docker run --rm \
       --volume "${certs_volume}:/data" \
       --volume "${runtime_volume}:/runtime" \
@@ -184,6 +184,15 @@ apply_acme_renewal_policy() {
   local mass_threshold="${CERTS_MASS_RENEWAL_RISK_THRESHOLD:-8}"
   local config_json body attempt http_code response_file
 
+  # These are also the certs service's built-in defaults (services/certs/
+  # service_renewal.go). When the deployment doesn't override them there is
+  # nothing to apply — and the PUT needs an authenticated admin, which a
+  # startup script doesn't have.
+  if [[ "${ari_enabled}" == "true" && "${poll_hours}" == "24" && "${window_bias}" == "35" \
+        && "${emergency_hours}" == "48" && "${mass_threshold}" == "8" ]]; then
+    return 0
+  fi
+
   if ! command -v curl >/dev/null 2>&1; then
     echo "warning: curl not available; skipping ACME renewal policy bootstrap" >&2
     return 0
@@ -207,7 +216,13 @@ apply_acme_renewal_policy() {
     sleep 2
   done
 
-  echo "warning: unable to apply ACME renewal policy from deployment config" >&2
+  if [[ "${http_code}" == "401" || "${http_code}" == "403" ]]; then
+    echo "note: custom ACME renewal settings in deployment.yaml need an admin session;" >&2
+    echo "      set them in the dashboard: Certificates / PKI -> Enrollment Protocols -> ACME." >&2
+    rm -f "${response_file}"
+    return 0
+  fi
+  echo "warning: unable to apply ACME renewal policy from deployment config (HTTP ${http_code})" >&2
   cat "${response_file}" >&2 || true
   rm -f "${response_file}"
   return 0

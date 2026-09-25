@@ -1,10 +1,7 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -15,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 func envOr(key string, fallback string) string {
@@ -177,33 +176,15 @@ func hmacSign(key []byte, data []byte) []byte {
 	return h.Sum(nil)
 }
 
+// AES-GCM goes through pkg/crypto so the IV is generated inside the FIPS
+// module and the provider works in every FIPS runtime mode.
 func aesGCMEncrypt(key []byte, plaintext []byte) ([]byte, []byte, error) {
-	blk, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, nil, err
-	}
-	gcm, err := cipher.NewGCM(blk)
-	if err != nil {
-		return nil, nil, err
-	}
-	iv := make([]byte, gcm.NonceSize())
-	if _, err := rand.Read(iv); err != nil {
-		return nil, nil, err
-	}
-	ciphertext := gcm.Seal(nil, iv, plaintext, nil)
-	return ciphertext, iv, nil
+	iv, ciphertext, err := pkgcrypto.SealDetached(key, plaintext, nil)
+	return ciphertext, iv, err
 }
 
 func aesGCMDecrypt(key []byte, ciphertext []byte, iv []byte) ([]byte, error) {
-	blk, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	gcm, err := cipher.NewGCM(blk)
-	if err != nil {
-		return nil, err
-	}
-	return gcm.Open(nil, iv, ciphertext, nil)
+	return pkgcrypto.OpenDetached(key, iv, ciphertext, nil)
 }
 
 func trimMap(in map[string]string) map[string]string {

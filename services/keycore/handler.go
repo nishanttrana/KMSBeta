@@ -156,6 +156,11 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /keys/{id}/unwrap", h.handleUnwrap)
 	mux.HandleFunc("POST /keys/{id}/mac", h.handleMAC)
 	mux.HandleFunc("POST /keys/{id}/derive", h.handleDerive)
+	mux.HandleFunc("POST /keys/{id}/service-derive", h.handleServiceDerive)
+	// Cluster master-key transfer: cluster-manager service identity only.
+	mux.HandleFunc("POST /cluster/mek/join-key", h.handleClusterJoinKey)
+	mux.HandleFunc("POST /cluster/mek/export", h.handleClusterMEKExport)
+	mux.HandleFunc("POST /cluster/mek/import", h.handleClusterMEKImport)
 	mux.HandleFunc("POST /keys/{id}/kem/encapsulate", h.handleKEMEncapsulate)
 	mux.HandleFunc("POST /keys/{id}/kem/decapsulate", h.handleKEMDecapsulate)
 	mux.HandleFunc("POST /crypto/hash", h.handleHash)
@@ -279,7 +284,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /scheduling/jobs", h.handleCreateSchedulingJob)
 	mux.HandleFunc("PATCH /scheduling/jobs/{id}", h.handleUpdateSchedulingJob)
 	mux.HandleFunc("DELETE /scheduling/jobs/{id}", h.handleDeleteSchedulingJob)
-
 
 	// Key Attestation (signed, verifiable statement + integrity check)
 	mux.HandleFunc("POST /keys/{id}/attest", h.handleAttestKey)
@@ -1947,6 +1951,41 @@ func (h *Handler) handleDerive(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) handleServiceDerive(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req ServiceDeriveRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
+		return
+	}
+	resp, err := h.svc.ServiceDerive(r.Context(), r.PathValue("id"), req)
+	if err != nil {
+		var denied policyDeniedError
+		var fipsDenied fipsModeViolationError
+		switch {
+		case errors.Is(err, errServiceIdentityRequired):
+			writeErr(w, http.StatusForbidden, "service_identity_required", err.Error(), reqID, req.TenantID)
+		case errors.Is(err, errStoreNotFound):
+			writeErr(w, http.StatusNotFound, "not_found", "key not found", reqID, req.TenantID)
+		case errors.As(err, &denied):
+			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, req.TenantID)
+		case errors.As(err, &fipsDenied):
+			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
+		default:
+			writeErr(w, http.StatusBadRequest, "service_derive_failed", err.Error(), reqID, req.TenantID)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"key_id":      resp.KeyID,
+		"version":     resp.Version,
+		"purpose":     resp.Purpose,
+		"kdf":         resp.KDF,
+		"derived_key": resp.DerivedB64,
+		"request_id":  reqID,
+	})
+}
+
 func (h *Handler) handleKEMEncapsulate(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	var req KEMEncapsulateRequest
@@ -2458,6 +2497,9 @@ func accessActorFromHTTPRequest(r *http.Request) AccessActor {
 		actor.WorkloadTrustDomain = strings.TrimSpace(claims.WorkloadTrustDomain)
 		actor.AllowedKeyIDs = append([]string{}, claims.AllowedKeyIDs...)
 		actor.Authenticated = actor.UserID != "" || actor.Username != ""
+		// Service-principal status is decided from verified JWT claims only,
+		// never from the spoofable X-Actor-* headers below.
+		actor.ServicePrincipal = tenantcheck.IsServicePrincipal(claims)
 	}
 	if actor.UserID == "" {
 		actor.UserID = strings.TrimSpace(r.Header.Get("X-Actor-User-ID"))
@@ -2648,4 +2690,64 @@ func publishAuditEvent(ctx context.Context, pub AuditPublisher, subject string, 
 		return err
 	}
 	return pub.Publish(ctx, subject, raw)
+}
+
+func (h *Handler) writeClusterMEKErr(w http.ResponseWriter, err error, reqID string) {
+	switch {
+	case errors.Is(err, errClusterCaller):
+		writeErr(w, http.StatusForbidden, "service_identity_required", err.Error(), reqID, "root")
+	case errors.Is(err, errClusterHasKeys):
+		writeErr(w, http.StatusConflict, "node_has_keys", err.Error(), reqID, "root")
+	default:
+		writeErr(w, http.StatusBadRequest, "cluster_mek_failed", err.Error(), reqID, "root")
+	}
+}
+
+func (h *Handler) handleClusterJoinKey(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	id, ek, err := h.svc.CreateClusterJoinKey(r.Context())
+	if err != nil {
+		h.writeClusterMEKErr(w, err, reqID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"join_key_id": id, "encapsulation_key": ek, "request_id": reqID})
+}
+
+func (h *Handler) handleClusterMEKExport(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req struct {
+		EncapsulationKey string `json:"encapsulation_key"`
+		Context          string `json:"context"`
+		MemberNodeID     string `json:"member_node_id"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "root")
+		return
+	}
+	sealed, fp, err := h.svc.ExportClusterMEK(r.Context(), req.EncapsulationKey, req.Context, req.MemberNodeID)
+	if err != nil {
+		h.writeClusterMEKErr(w, err, reqID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"sealed_mek": sealed, "mek_fingerprint": fp, "request_id": reqID})
+}
+
+func (h *Handler) handleClusterMEKImport(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req struct {
+		JoinKeyID      string `json:"join_key_id"`
+		SealedMEK      string `json:"sealed_mek"`
+		Context        string `json:"context"`
+		MEKFingerprint string `json:"mek_fingerprint"`
+		ConfirmReplace bool   `json:"confirm_replace"`
+	}
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "root")
+		return
+	}
+	if err := h.svc.ImportClusterMEK(r.Context(), req.JoinKeyID, req.SealedMEK, req.Context, req.MEKFingerprint, req.ConfirmReplace); err != nil {
+		h.writeClusterMEKErr(w, err, reqID)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"status": "imported; keycore restarting on the cluster master key", "request_id": reqID})
 }

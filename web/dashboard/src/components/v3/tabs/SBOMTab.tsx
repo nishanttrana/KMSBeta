@@ -855,7 +855,7 @@ export const SBOMTab = ({ session, onToast }: any) => {
             <BarChart data={strengthBars} layout="vertical">
               <XAxis type="number" tick={{ fill: C.muted, fontSize: 9 }} axisLine={false} tickLine={false} />
               <YAxis type="category" dataKey="name" tick={{ fill: C.dim, fontSize: 10 }} axisLine={false} tickLine={false} width={60} />
-              <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accent }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} assets</ChartTip> : null} cursor={{ fill: "rgba(6,214,224,.04)" }} />
+              <Tooltip content={({ active, payload }) => active && payload?.length ? <ChartTip><span style={{ fontWeight: 700, color: C.accent }}>{payload[0]?.payload?.name}</span>: {payload[0]?.value} assets</ChartTip> : null} cursor={{ fill: "rgba(123,140,255,.04)" }} />
               <RBar dataKey="value" radius={[0, 4, 4, 0]} fill={C.accent} />
             </BarChart>
           </ResponsiveContainer> : <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: C.muted }}>No strength data available.</div>}

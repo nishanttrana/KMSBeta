@@ -5,9 +5,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"vecta-kms/pkg/fips/fipstest"
 )
 
 func TestServiceTokenizationFlow(t *testing.T) {
+	fipstest.SkipIfStrict(t, "identifier-derived working keys (test keycore has no material)")
 	svc, _, pub := newDataProtectService(t)
 	ctx := context.Background()
 	tenantID := "tenant-svc-1"
@@ -51,6 +54,7 @@ func TestServiceTokenizationFlow(t *testing.T) {
 }
 
 func TestServiceFPEMaskRedactAndAppCrypto(t *testing.T) {
+	fipstest.SkipIfStrict(t, "identifier-derived working keys (test keycore has no material)")
 	svc, _, _ := newDataProtectService(t)
 	ctx := context.Background()
 	tenantID := "tenant-svc-2"
@@ -219,6 +223,7 @@ func TestServiceFPEMaskRedactAndAppCrypto(t *testing.T) {
 }
 
 func TestServiceVaultlessTokenizationDeterministic(t *testing.T) {
+	fipstest.SkipIfStrict(t, "identifier-derived working keys (test keycore has no material)")
 	svc, _, _ := newDataProtectService(t)
 	ctx := context.Background()
 	tenantID := "tenant-svc-vaultless"
@@ -310,6 +315,7 @@ func TestServiceTokenizationPolicyEnforcement(t *testing.T) {
 }
 
 func TestServiceDetokenizePolicyEnforcement(t *testing.T) {
+	fipstest.SkipIfStrict(t, "identifier-derived working keys (test keycore has no material)")
 	svc, _, _ := newDataProtectService(t)
 	ctx := context.Background()
 	tenantID := "tenant-svc-policy-detok"
@@ -367,6 +373,7 @@ func TestServiceDetokenizePolicyEnforcement(t *testing.T) {
 }
 
 func TestServiceDataEncryptionPolicyStrictEnforcement(t *testing.T) {
+	fipstest.SkipIfStrict(t, "identifier-derived working keys (test keycore has no material)")
 	svc, _, _ := newDataProtectService(t)
 	ctx := context.Background()
 	tenantID := "tenant-svc-policy-data-encryption"
@@ -534,5 +541,21 @@ func TestServiceDataEncryptionPolicyStrictEnforcement(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatalf("expected searchable policy rejection when deterministic encryption is disabled")
+	}
+}
+
+func TestStrictModeRefusesIdentifierDerivedKeys(t *testing.T) {
+	fipstest.StrictOnly(t)
+	svc, _, _ := newDataProtectService(t)
+	ctx := context.Background()
+	vault, err := svc.CreateTokenVault(ctx, "tenant-strict", TokenVault{
+		Name: "card-vault", TokenType: "credit_card", Format: "deterministic", KeyID: "key-1",
+	})
+	if err != nil {
+		t.Fatalf("create vault: %v", err)
+	}
+	_, err = svc.Tokenize(ctx, TokenizeRequest{TenantID: "tenant-strict", VaultID: vault.ID, Values: []string{"4111111111111111"}})
+	if err == nil || !strings.Contains(err.Error(), "FIPS strict mode") {
+		t.Fatalf("strict mode must refuse a working key derived from identifiers, got %v", err)
 	}
 }

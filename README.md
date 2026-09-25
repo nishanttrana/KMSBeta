@@ -7,6 +7,8 @@ This README is the landing page. Detailed operator documentation now lives under
 ## Documentation Map
 
 - [Documentation Index](docs/README.md)
+- [Command Center & Recommendations](docs/RECOMMENDATIONS.md)
+  - The home screen: live posture score, prioritised recommendations and the rule catalogue with its NIST / PCI DSS 4.0 / DORA / CNSA 2.0 mapping.
   - Start here for role-based and task-based reading paths.
 - [Component Guide](docs/COMPONENT_GUIDE.md)
   - Explains what each major service does, who uses it, when to use it, and the main UI/API entry points.
@@ -97,13 +99,27 @@ Vecta KMS is organized into five working areas:
 
 ### Prerequisites
 
-- Docker and Docker Compose
-- Bash 4+ on macOS and Linux
+- Docker Desktop (macOS/Windows) or Docker Engine + Compose v2 (Linux), 8 GB+ memory for Docker
+- Bash 4+ on macOS (`brew install bash`) and Linux
 - Optional for development:
-  - Go 1.26.4+
+  - Go 1.27.1+
   - Node.js 24 LTS and npm 11+
 
-### Install
+### One-command local deployment (recommended)
+
+```bash
+./deploy-local.sh            # build what changed, (re)start, wait until healthy
+./deploy-local.sh --no-build # restart with the images already built
+```
+
+`deploy-local.sh` is safe to re-run on an existing install: it keeps every
+volume (keys, certificates, database), never overwrites secrets in `.env`
+(it only adds new required ones such as `INTERNAL_SERVICE_BOOTSTRAP_SECRET`),
+builds images natively for the host CPU (arm64 on Apple Silicon), keeps
+`JWT_PUBLIC_KEY_B64` in sync with the auth signing key, and prints the URL
+when the stack is healthy.
+
+### Guided install
 
 ```bash
 # Linux
@@ -126,10 +142,11 @@ Vecta KMS is organized into five working areas:
 
 ### Common Local URLs
 
-- Dashboard: `http://127.0.0.1:5173/`
-- HTTPS edge: `https://127.0.0.1/`
-- KMIP mTLS: `127.0.0.1:5696`
-- Direct service ports are listed in [`docker-compose.yml`](docker-compose.yml)
+- Dashboard (via the Envoy edge): `https://localhost/` — self-signed certificate from the internal CA
+- KMIP mTLS: `localhost:5696`
+- Direct service ports (`8xxx` HTTP, `18xxx` gRPC/health) are published on
+  `127.0.0.1` only. Set `KMS_INTERNAL_BIND=0.0.0.0` in `.env` only if another
+  host genuinely needs them; all client traffic should go through Envoy.
 
 ## Configuration Model
 

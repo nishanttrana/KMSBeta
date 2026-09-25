@@ -299,7 +299,7 @@ const SectionCredentials = () => (
       ["Password", "postgres", "Database password"],
       ["Database", "vecta", "Application database name"],
       ["Port", "5432", "PostgreSQL port"],
-      ["DSN", "postgres://postgres:postgres@postgres:5432/vecta?sslmode=disable", "Full connection string"],
+      ["DSN", "postgres://postgres:<POSTGRES_PASSWORD>@postgres:5432/vecta?sslmode=disable", "Full connection string (required; no built-in default)"],
     ]} />
 
     <H2>User Roles</H2>
@@ -2789,7 +2789,7 @@ const SectionConfigEnv = () => (
     <div style={S.h1}>Configuration: Environment Variables</div>
     <H2>Database</H2>
     <EnvTable rows={[
-      ["POSTGRES_DSN", "postgres://postgres:postgres@postgres:5432/vecta?sslmode=disable", "Primary database connection string"],
+      ["POSTGRES_DSN", "postgres://postgres:<POSTGRES_PASSWORD>@postgres:5432/vecta?sslmode=disable", "Primary database connection string (required; default passwords such as postgres:postgres are refused)"],
       ["POSTGRES_RO_DSN", "(empty)", "Read replica DSN (optional)"],
       ["DB_MAX_OPEN", "25", "Maximum open database connections"],
       ["DB_MAX_IDLE", "10", "Maximum idle database connections"],
@@ -2819,13 +2819,15 @@ const SectionConfigEnv = () => (
     <EnvTable rows={[
       ["AUTH_BOOTSTRAP_TENANT_ID", "root", "Default tenant ID"],
       ["AUTH_BOOTSTRAP_ADMIN_USERNAME", "admin", "Bootstrap admin username"],
-      ["AUTH_BOOTSTRAP_ADMIN_PASSWORD", "<your-password>", "Bootstrap admin password"],
+      ["AUTH_BOOTSTRAP_ADMIN_PASSWORD", "changeit", "Bootstrap admin password (password change forced on first login)"],
       ["AUTH_BOOTSTRAP_ADMIN_ROLE", "tenant-admin", "Bootstrap admin role"],
       ["AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE", "true", "Force password change on first login"],
       ["AUTH_BOOTSTRAP_CLI_ENABLED", "true", "Enable CLI user"],
       ["AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user", "CLI user name"],
-      ["AUTH_BOOTSTRAP_CLI_PASSWORD", "<your-cli-password>", "CLI user password"],
+      ["AUTH_BOOTSTRAP_CLI_PASSWORD", "(required)", "CLI user password; unset = random, unknowable password"],
+      ["INTERNAL_SERVICE_BOOTSTRAP_SECRET", "<openssl rand -hex 32>", "Required, >= 32 chars. Every internal service derives its API key from it; rotating it retires the old service keys on the next auth start"],
     ]} />
+    <P>Secrets have no built-in fallback values. Compose refuses to start when a required secret is missing, and every service refuses to start when a secret still holds a placeholder such as "your-..." or "change-me". See docs/SECURITY/SECURE_DEFAULTS.md.</P>
     <H2>PostgreSQL Tuning</H2>
     <EnvTable rows={[
       ["PG_SHARED_BUFFERS", "256MB", "Shared buffer pool size"],
@@ -2842,23 +2844,15 @@ const SectionConfigEnv = () => (
 const SectionConfigFips = () => (
   <div>
     <div style={S.h1}>Configuration: FIPS Mode</div>
-    <P>FIPS mode controls the cryptographic boundary of the platform. Two modes are available:</P>
-    <H2>Strict Mode (FIPS 140-3)</H2>
-    <P>Blocks non-FIPS algorithms, enforces Go BoringCrypto, requires FIPS-approved TLS ciphers, rejects non-FIPS key imports, enforces minimum key sizes (RSA 2048, EC 224).</P>
-    <H3>Allowed Algorithms in Strict Mode</H3>
+    <P>Every Vecta KMS binary links the CMVP-certified Go Cryptographic Module (v1.0.0). Whether it runs in FIPS mode is the customer's choice, set once per deployment with VECTA_FIPS_MODE. Services refuse to start if the running mode does not match that choice.</P>
     <EnvTable rows={[
-      ["Hashes", "SHA-256, SHA-384, SHA-512, SHA3-256, SHA3-384, SHA3-512, SHAKE128, SHAKE256", "FIPS-approved hash functions"],
-      ["Symmetric", "AES-128, AES-192, AES-256, 3DES", "FIPS-approved symmetric ciphers"],
-      ["TLS Ciphers", "TLS_AES_128_GCM_SHA256, TLS_AES_256_GCM_SHA384", "TLS 1.3 cipher suites"],
-      ["Min RSA", "2048 bits", "Minimum RSA key size"],
-      ["Min EC", "224 bits", "Minimum EC key size"],
+      ["on (default)", "VECTA_FIPS_MODE=on", "Certified module in FIPS mode: power-on self-tests, approved DRBG, FIPS TLS. Integrations that need non-approved algorithms (payment TDES, X25519/age secrets, ChaCha20 field encryption) stay available; the per-tenant FIPS Policy can block them for keys."],
+      ["only (strict)", "VECTA_FIPS_MODE=only", "The Go runtime refuses every non-approved algorithm: X25519, ChaCha20, SHA-1, DES/TDES, caller-supplied GCM IVs, OpenPGP v4, and ML-DSA/SLH-DSA (implemented outside the validated module). These features return a clear error."],
+      ["off", "VECTA_FIPS_MODE=off", "FIPS mode disabled. All algorithms available."],
     ]} />
-
-    <H2>Standard Mode</H2>
-    <P>Allows legacy algorithms with warnings. Tags non-FIPS keys. Default TLS version 1.2. Useful for development, testing, and gradual migration to FIPS compliance.</P>
-
-    <H2>Enabling FIPS Mode</H2>
-    <P>FIPS mode is toggled in System Administration. The Runtime Crypto dialog shows the effective runtime library, entropy health, entropy rate in bits per byte, sample size, read latency, RNG mode, and whether runtime enforcement is enabled. When switching from Standard to Strict, the system validates all existing keys and blocks the transition if non-compliant keys are active.</P>
+    <H2>Changing the mode</H2>
+    <P>A root administrator changes the mode in System Administration, in the Runtime Crypto dialog under Platform FIPS 140-3 mode. Before confirming, the dialog lists what stops working, what starts working, and which services restart. You confirm by typing the target mode and giving a reason, and the change is audited (critical for a downgrade). Services then restart themselves in tiers (edge services first, core services last, governance at the end) and come back in the new mode, usually within 1-2 minutes. The dialog shows each service's actual mode until all match. VECTA_FIPS_MODE in .env only sets the initial mode. The FIPS Policy selector adds per-tenant algorithm rules on top of the platform mode.</P>
+    <P>Full details: docs/SECURITY/FIPS.md.</P>
   </div>
 );
 
@@ -2876,7 +2870,7 @@ const SectionConfigHsm = () => (
     ]} />
     <H2>Software Vault</H2>
     <EnvTable rows={[
-      ["SOFTWARE_VAULT_PASSPHRASE", "vecta-dev-passphrase", "Software vault encryption passphrase"],
+      ["SOFTWARE_VAULT_PASSPHRASE", "<openssl rand -hex 32>", "Software vault encryption passphrase"],
       ["SOFTWARE_VAULT_MLOCK_REQUIRED", "false", "Lock vault memory (prevents swapping)"],
     ]} />
     <H2>Hardware HSM Providers</H2>
@@ -2981,7 +2975,7 @@ curl -O http://localhost:8050/governance/backups/{id}/key \\
     <H2>HSM-Bound Backups</H2>
     <P>Optional HSM binding wraps the backup encryption key using HSM metadata (provider, slot, partition, fingerprint). Requires matching HSM binding on restore for additional security.</P>
     <EnvTable rows={[
-      ["BACKUP_HSM_WRAP_SECRET", "vecta-backup-wrap-secret-change-me", "HSM backup wrap secret"],
+      ["BACKUP_HSM_WRAP_SECRET", "<openssl rand -hex 32>", "HSM backup wrap secret"],
       ["BACKUP_HSM_PARTITION_LABEL", "(empty)", "HSM partition for backup key"],
     ]} />
     <H2>Excluded Tables</H2>

@@ -7,6 +7,7 @@ import (
 	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/fips140"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
@@ -102,7 +103,12 @@ func testAESGCMKAT() error {
 	if err != nil {
 		return fmt.Errorf("aes.NewCipher: %w", err)
 	}
-	gcm, err := cipher.NewGCM(block)
+	// A known-answer test needs the published fixed IV, which FIPS 140-only
+	// mode forbids for data encryption. This vector protects no data, so the
+	// KAT runs outside enforcement; production GCM always uses a
+	// module-generated IV (pkg/crypto).
+	var gcm cipher.AEAD
+	fips140.WithoutEnforcement(func() { gcm, err = cipher.NewGCM(block) })
 	if err != nil {
 		return fmt.Errorf("cipher.NewGCM: %w", err)
 	}
@@ -152,9 +158,15 @@ func testHMACSHA256KAT() error {
 	expectedHex := "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
 	expected, _ := hex.DecodeString(expectedHex)
 
-	mac := hmac.New(sha256.New, key)
-	mac.Write(data)
-	actual := mac.Sum(nil)
+	// RFC 4231 case 2 uses a 32-bit key, below the 112-bit floor that FIPS
+	// 140-only mode enforces. It is a published vector protecting no data, so
+	// the KAT runs outside enforcement.
+	var actual []byte
+	fips140.WithoutEnforcement(func() {
+		mac := hmac.New(sha256.New, key)
+		mac.Write(data)
+		actual = mac.Sum(nil)
+	})
 
 	if !hmac.Equal(actual, expected) {
 		return fmt.Errorf("hmac-sha256 mismatch: got %x", actual)

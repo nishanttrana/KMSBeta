@@ -17,6 +17,7 @@ import (
 	"time"
 
 	pkgcache "vecta-kms/pkg/cache"
+	"vecta-kms/pkg/fips/fipstest"
 	"vecta-kms/pkg/metering"
 	"vecta-kms/pkg/payment"
 )
@@ -199,6 +200,7 @@ func TestEnterpriseAnomalyFeedsDSPM(t *testing.T) {
 }
 
 func TestExternalIVValidation(t *testing.T) {
+	fipstest.SkipIfStrict(t, "caller-supplied AES-GCM IV (iv_mode=external)")
 	h, svc := newHandlerForTest(t)
 	key, err := svc.CreateKey(context.Background(), CreateKeyRequest{
 		TenantID: "t1", Name: "k3", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "encrypt",
@@ -328,6 +330,7 @@ func TestImportKeyPEMAutodetect(t *testing.T) {
 }
 
 func TestImportKeyWrappedEnvelope(t *testing.T) {
+	fipstest.SkipIfStrict(t, "caller-supplied AES-GCM IV (iv_mode=external)")
 	h, svc := newHandlerForTest(t)
 	wrappingKey, err := svc.CreateKey(context.Background(), CreateKeyRequest{
 		TenantID:  "t1",
@@ -491,5 +494,58 @@ func TestInterfaceTLSConfigAPIOverridesTLSInterfaceWrites(t *testing.T) {
 	}
 	if got := stringValue(cfg, "ca_id"); got != "ca_root_ops" {
 		t.Fatalf("expected ca_root_ops config, got %q body=%s", got, getRR.Body.String())
+	}
+}
+
+func TestStrictModeRefusesExternalIV(t *testing.T) {
+	fipstest.StrictOnly(t)
+	h, svc := newHandlerForTest(t)
+	key, err := svc.CreateKey(context.Background(), CreateKeyRequest{
+		TenantID: "t1", Name: "k-strict", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "encrypt",
+		Owner: "ops", CreatedBy: "tester", IVMode: "external",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(map[string]any{
+		"tenant_id": "t1",
+		"plaintext": base64.StdEncoding.EncodeToString([]byte("hello")),
+		"iv":        base64.StdEncoding.EncodeToString([]byte("123456789012")),
+	})
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/encrypt", bytes.NewReader(raw)))
+	if rr.Code != http.StatusBadRequest || !strings.Contains(rr.Body.String(), "strict mode") {
+		t.Fatalf("strict mode must refuse a caller-supplied IV cleanly, got %d %s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestInternalIVEncryptWorksInEveryMode(t *testing.T) {
+	h, svc := newHandlerForTest(t)
+	key, err := svc.CreateKey(context.Background(), CreateKeyRequest{
+		TenantID: "t1", Name: "k-internal", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "encrypt",
+		Owner: "ops", CreatedBy: "tester",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(map[string]any{"tenant_id": "t1", "plaintext": base64.StdEncoding.EncodeToString([]byte("hello"))})
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/encrypt", bytes.NewReader(raw)))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("internal-IV encrypt must work in every FIPS mode, got %d %s", rr.Code, rr.Body.String())
+	}
+}
+
+// ML-DSA/SLH-DSA come from cloudflare/circl, outside the validated module, so
+// strict mode refuses them even though the algorithms are FIPS-approved.
+func TestStrictModeRefusesNonModulePQC(t *testing.T) {
+	fipstest.StrictOnly(t)
+	_, svc := newHandlerForTest(t)
+	_, err := svc.CreateKey(context.Background(), CreateKeyRequest{
+		TenantID: "t1", Name: "pq-sign", Algorithm: "ML-DSA-65", KeyType: "asymmetric", Purpose: "sign",
+		Owner: "ops", CreatedBy: "tester",
+	})
+	if err == nil || !strings.Contains(err.Error(), "FIPS mode") {
+		t.Fatalf("strict mode must refuse ML-DSA from a non-validated implementation, got %v", err)
 	}
 }

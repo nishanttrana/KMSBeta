@@ -98,9 +98,9 @@ func (h *Handler) handleArchiveKey(w http.ResponseWriter, r *http.Request) {
 	// implementation lands when the keycore SQL store gains the
 	// versioned-material lookup needed to feed the archiver.
 	_ = h.svc.publishAudit(r.Context(), "audit.key.archive_requested", tenantID, map[string]any{
-		"key_id":     keyID,
-		"actor":      "reconciler",
-		"requested":  time.Now().UTC().Format(time.RFC3339),
+		"key_id":    keyID,
+		"actor":     "reconciler",
+		"requested": time.Now().UTC().Format(time.RFC3339),
 	})
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"status":     "archive_queued",

@@ -23,27 +23,27 @@ import (
 // AttestationStatement is the canonical, signed payload. Field order is fixed
 // (it is marshalled deterministically) so the signature is reproducible.
 type AttestationStatement struct {
-	Issuer           string    `json:"issuer"`
-	TenantID         string    `json:"tenant_id"`
-	KeyID            string    `json:"key_id"`
-	Name             string    `json:"name"`
-	Algorithm        string    `json:"algorithm"`
-	KeyType          string    `json:"key_type"`
-	Purpose          string    `json:"purpose"`
-	Status           string    `json:"status"`
-	Version          int       `json:"version"`
-	Exportable       bool      `json:"exportable"`
-	KCV              string    `json:"kcv,omitempty"`
-	KCVAlgorithm     string    `json:"kcv_algorithm,omitempty"`
-	IntegrityVerified bool     `json:"integrity_verified"`
-	IntegrityDetail  string    `json:"integrity_detail"`
-	AttestedAt       time.Time `json:"attested_at"`
-	Nonce            string    `json:"nonce"`
+	Issuer            string    `json:"issuer"`
+	TenantID          string    `json:"tenant_id"`
+	KeyID             string    `json:"key_id"`
+	Name              string    `json:"name"`
+	Algorithm         string    `json:"algorithm"`
+	KeyType           string    `json:"key_type"`
+	Purpose           string    `json:"purpose"`
+	Status            string    `json:"status"`
+	Version           int       `json:"version"`
+	Exportable        bool      `json:"exportable"`
+	KCV               string    `json:"kcv,omitempty"`
+	KCVAlgorithm      string    `json:"kcv_algorithm,omitempty"`
+	IntegrityVerified bool      `json:"integrity_verified"`
+	IntegrityDetail   string    `json:"integrity_detail"`
+	AttestedAt        time.Time `json:"attested_at"`
+	Nonce             string    `json:"nonce"`
 }
 
 type KeyAttestation struct {
 	Statement            AttestationStatement `json:"statement"`
-	StatementB64         string               `json:"statement_b64"`         // canonical bytes that were signed
+	StatementB64         string               `json:"statement_b64"` // canonical bytes that were signed
 	Signature            string               `json:"signature_b64"`
 	SigningAlgorithm     string               `json:"signing_algorithm"`
 	PublicKeyFingerprint string               `json:"public_key_fingerprint"`

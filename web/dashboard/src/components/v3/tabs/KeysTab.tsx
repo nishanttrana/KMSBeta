@@ -577,8 +577,8 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       return {...DEFAULT_KEY_COLUMN_VISIBILITY};
     }
   });
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- reviewed: intentional refetch on listed keys / run-once-on-mount; the only omitted dep is a per-render load/refresh closure (wrap in useCallback to drop this suppression). behaviour verified correct.
-  const keys=Array.isArray(keyCatalog)?keyCatalog:[];
+   
+  const keys=useMemo(()=>(Array.isArray(keyCatalog)?keyCatalog:[]).map((k)=>(k&&k.algoFamily===undefined&&k.__raw)?toViewKey(k.__raw):k),[keyCatalog]);
   const [pqcAlgorithm,setPqcAlgorithm]=useState("ML-KEM-768");
   const [pqcHybridMode,setPqcHybridMode]=useState("pure");
   const [pqcName,setPqcName]=useState("");

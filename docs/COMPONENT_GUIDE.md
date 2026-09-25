@@ -78,7 +78,7 @@ Common APIs:
 Sample:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/keycore/keys?tenant_id=root \
+curl -k -X POST https://127.0.0.1/svc/keycore/keys?tenant_id=root \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -122,9 +122,9 @@ Common APIs:
 Sample:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/auth/auth/login \
+curl -k -X POST https://127.0.0.1/svc/auth/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"VectaAdmin@2026"}'
+  -d '{"username":"admin","password":"changeit"}'
 ```
 
 ### Audit
@@ -236,7 +236,7 @@ Common APIs:
 Sample:
 
 ```bash
-curl -X GET http://127.0.0.1:5173/svc/certs/certs/renewal-intelligence?tenant_id=root \
+curl -k -X GET https://127.0.0.1/svc/certs/certs/renewal-intelligence?tenant_id=root \
   -H "Authorization: Bearer $TOKEN"
 ```
 

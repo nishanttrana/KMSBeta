@@ -11,7 +11,6 @@ import (
 
 func sha256New() hash.Hash { return sha256.New() }
 
-
 // WakeSelfTestRegistry tracks which restored keys have already passed
 // their post-wake KAT so the test only runs once per restoration. The
 // registry is intentionally in-memory; a restart re-runs the test on

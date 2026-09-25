@@ -1,113 +1,110 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
 /* ===================================================================
-   THEME: AURORA DARK (default)
-   Deep midnight base with violet→cyan aurora accents.
+   THEME: GRAPHITE (dark, default)
+   Calm neutral surfaces, one restrained accent, colour reserved for
+   status. Designed for long operator sessions and dense data.
+   Token names are kept stable so every module re-skins automatically.
    =================================================================== */
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
 
-  /* Structural surfaces — deepened base with clearer elevation steps */
-  --c-bg:          #070b14;
-  --c-sidebar:     #0b1120;
-  --c-surface:     #0f1828;
-  --c-card:        #141f37;
-  --c-card-hover:  #1b2744;
-  --c-elevated:    rgba(255, 255, 255, 0.04);
-  --c-border:      #213254;
-  --c-border-hi:   #2e426e;
-  --c-text:        #f1f5f9;
-  --c-dim:         #b4c2d8;
-  --c-muted:       #8497b4;
+  --c-bg:          #0b0c0f;
+  --c-sidebar:     #0f1014;
+  --c-surface:     #121318;
+  --c-card:        #16171d;
+  --c-card-hover:  #1c1d24;
+  --c-elevated:    rgba(255, 255, 255, 0.03);
+  --c-border:      #25262f;
+  --c-border-hi:   #353744;
+  --c-text:        #ecedf1;
+  --c-dim:         #a9acb8;
+  --c-muted:       #7d808e;
 
-  /* Aurora gradient (used for accents, hovers, focus) */
-  --c-aurora-from: #818cf8;   /* indigo violet */
-  --c-aurora-mid:  #6366f1;
-  --c-aurora-to:   #22d3ee;   /* cyan */
-  --c-glow:        rgba(99, 102, 241, 0.18);
-  --c-glow-strong: rgba(34, 211, 238, 0.28);
-  --c-accent-dim:  rgba(99, 102, 241, 0.10);
-  --c-dim-tint:    rgba(148, 163, 184, 0.05);
+  /* Accent (legacy "aurora" names kept for compatibility — now a single hue) */
+  --c-aurora-from: #7b8cff;
+  --c-aurora-mid:  #6b7cff;
+  --c-aurora-to:   #7b8cff;
+  --c-glow:        rgba(123, 140, 255, 0.10);
+  --c-glow-strong: rgba(123, 140, 255, 0.18);
+  --c-accent-dim:  rgba(123, 140, 255, 0.10);
+  --c-dim-tint:    rgba(148, 152, 170, 0.05);
 
-  /* Semantic foreground (bright neon for dark bg) */
-  --s-accent: #22d3ee;  --s-accent-dim: rgba(34,211,238,.10);  --s-accent-mid: rgba(34,211,238,.14);
-  --s-teal:   #2dd4bf;  --s-teal-dim:   rgba(45,212,191,.09);
-  --s-green:  #34d399;  --s-green-dim:  rgba(52,211,153,.09);
-  --s-red:    #f87171;  --s-red-dim:    rgba(248,113,113,.10);
-  --s-amber:  #fbbf24;  --s-amber-dim:  rgba(251,191,36,.10);
-  --s-orange: #fb923c;  --s-orange-dim: rgba(251,146,60,.09);
-  --s-purple: #a78bfa;  --s-purple-dim: rgba(167,139,250,.10);
-  --s-blue:   #60a5fa;  --s-blue-dim:   rgba(96,165,250,.09);
-  --s-pink:   #f472b6;  --s-pink-dim:   rgba(244,114,182,.09);
-  --s-cyan:   #22d3ee;  --s-cyan-dim:   rgba(34,211,238,.09);
-  --s-yellow: #fde047;  --s-yellow-dim: rgba(253,224,71,.09);
+  --s-accent: #8f9dff;  --s-accent-dim: rgba(123,140,255,.12);  --s-accent-mid: rgba(123,140,255,.18);
+  --s-teal:   #3cc9b4;  --s-teal-dim:   rgba(60,201,180,.10);
+  --s-green:  #45c987;  --s-green-dim:  rgba(69,201,135,.10);
+  --s-red:    #f07474;  --s-red-dim:    rgba(240,116,116,.11);
+  --s-amber:  #e9b44c;  --s-amber-dim:  rgba(233,180,76,.11);
+  --s-orange: #ef9458;  --s-orange-dim: rgba(239,148,88,.10);
+  --s-purple: #b39cf5;  --s-purple-dim: rgba(179,156,245,.10);
+  --s-blue:   #6ea8f5;  --s-blue-dim:   rgba(110,168,245,.10);
+  --s-pink:   #ea86b8;  --s-pink-dim:   rgba(234,134,184,.10);
+  --s-cyan:   #5cc6de;  --s-cyan-dim:   rgba(92,198,222,.10);
+  --s-yellow: #e8d25c;  --s-yellow-dim: rgba(232,210,92,.10);
 
-  /* Shadows (layered, soft) */
-  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.40);
-  --shadow-md:  0 6px 18px rgba(0, 0, 0, 0.38), 0 1px 2px rgba(0, 0, 0, 0.24);
-  --shadow-lg:  0 18px 48px rgba(0, 0, 0, 0.52), 0 3px 8px rgba(0, 0, 0, 0.30);
-  --shadow-glow: 0 0 0 1px rgba(99, 102, 241, 0.22), 0 0 30px rgba(34, 211, 238, 0.18);
+  --shadow-sm:  0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md:  0 4px 14px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.20);
+  --shadow-lg:  0 16px 40px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-glow: 0 0 0 1px rgba(123, 140, 255, 0.35);
 
-  /* Radii */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
 }
 
 /* ===================================================================
-   THEME: ENTERPRISE DAYLIGHT
-   Clean white surfaces, indigo accents, hairline borders.
+   THEME: PAPER (light)
+   Warm off-white canvas, white cards, hairline borders, AA contrast.
    =================================================================== */
 [data-theme="light"] {
   color-scheme: light;
 
-  --c-bg:          #f8fafc;
-  --c-sidebar:     #ffffff;
+  --c-bg:          #f6f6f3;
+  --c-sidebar:     #fbfbf9;
   --c-surface:     #ffffff;
   --c-card:        #ffffff;
-  --c-card-hover:  #f1f5f9;
+  --c-card-hover:  #f3f3ef;
   --c-elevated:    #ffffff;
-  --c-border:      #e2e8f0;
-  --c-border-hi:   #cbd5e1;
-  --c-text:        #0f172a;
-  --c-dim:         #475569;
-  --c-muted:       #64748b;
+  --c-border:      #e4e4de;
+  --c-border-hi:   #cfcfc7;
+  --c-text:        #16171b;
+  --c-dim:         #4a4d57;
+  --c-muted:       #6c6f7a;
 
-  --c-aurora-from: #6366f1;
-  --c-aurora-mid:  #4f46e5;
-  --c-aurora-to:   #0891b2;
-  --c-glow:        rgba(79, 70, 229, 0.10);
-  --c-glow-strong: rgba(79, 70, 229, 0.20);
-  --c-accent-dim:  rgba(79, 70, 229, 0.06);
-  --c-dim-tint:    rgba(15, 23, 42, 0.04);
+  --c-aurora-from: #3d55d6;
+  --c-aurora-mid:  #3348c4;
+  --c-aurora-to:   #3d55d6;
+  --c-glow:        rgba(61, 85, 214, 0.06);
+  --c-glow-strong: rgba(61, 85, 214, 0.14);
+  --c-accent-dim:  rgba(61, 85, 214, 0.07);
+  --c-dim-tint:    rgba(22, 23, 27, 0.035);
 
-  /* Semantic foreground (darker shades for contrast on light bg) */
-  --s-accent: #0e7490;  --s-accent-dim: rgba(14,116,144,.07);  --s-accent-mid: rgba(14,116,144,.10);
-  --s-teal:   #0d9488;  --s-teal-dim:   rgba(13,148,136,.07);
-  --s-green:  #059669;  --s-green-dim:  rgba(5,150,105,.07);
-  --s-red:    #dc2626;  --s-red-dim:    rgba(220,38,38,.07);
-  --s-amber:  #d97706;  --s-amber-dim:  rgba(217,119,6,.07);
-  --s-orange: #ea580c;  --s-orange-dim: rgba(234,88,12,.07);
-  --s-purple: #7c3aed;  --s-purple-dim: rgba(124,58,237,.07);
-  --s-blue:   #2563eb;  --s-blue-dim:   rgba(37,99,235,.07);
-  --s-pink:   #db2777;  --s-pink-dim:   rgba(219,39,105,.07);
-  --s-cyan:   #0891b2;  --s-cyan-dim:   rgba(8,145,178,.07);
-  --s-yellow: #ca8a04;  --s-yellow-dim: rgba(202,138,4,.07);
+  --s-accent: #3348c4;  --s-accent-dim: rgba(61,85,214,.08);  --s-accent-mid: rgba(61,85,214,.12);
+  --s-teal:   #0f7f72;  --s-teal-dim:   rgba(15,127,114,.08);
+  --s-green:  #1a7f4b;  --s-green-dim:  rgba(26,127,75,.08);
+  --s-red:    #c53030;  --s-red-dim:    rgba(197,48,48,.08);
+  --s-amber:  #a86400;  --s-amber-dim:  rgba(168,100,0,.09);
+  --s-orange: #b8500f;  --s-orange-dim: rgba(184,80,15,.08);
+  --s-purple: #6b46c1;  --s-purple-dim: rgba(107,70,193,.08);
+  --s-blue:   #2455b8;  --s-blue-dim:   rgba(36,85,184,.08);
+  --s-pink:   #b8327a;  --s-pink-dim:   rgba(184,50,122,.08);
+  --s-cyan:   #0e6f86;  --s-cyan-dim:   rgba(14,111,134,.08);
+  --s-yellow: #8a6d00;  --s-yellow-dim: rgba(138,109,0,.09);
 
-  --shadow-sm:  0 1px 2px rgba(15, 23, 42, 0.06);
-  --shadow-md:  0 2px 8px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-lg:  0 12px 32px rgba(15, 23, 42, 0.10), 0 2px 6px rgba(15, 23, 42, 0.05);
-  --shadow-glow: 0 0 0 1px rgba(79, 70, 229, 0.18), 0 4px 16px rgba(79, 70, 229, 0.10);
+  --shadow-sm:  0 1px 2px rgba(22, 23, 27, 0.05);
+  --shadow-md:  0 2px 8px rgba(22, 23, 27, 0.05), 0 1px 2px rgba(22, 23, 27, 0.04);
+  --shadow-lg:  0 12px 32px rgba(22, 23, 27, 0.09), 0 2px 6px rgba(22, 23, 27, 0.04);
+  --shadow-glow: 0 0 0 1px rgba(61, 85, 214, 0.30);
 
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
 }
 
 /* ===================================================================
@@ -128,14 +125,10 @@ body,
 
 body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
   color: var(--c-text);
-  background-image:
-    radial-gradient(ellipse at 5% -10%, var(--c-glow), transparent 45%),
-    radial-gradient(ellipse at 95% 0%, var(--c-glow-strong), transparent 38%),
-    radial-gradient(ellipse at 50% 100%, var(--c-accent-dim), transparent 55%),
-    linear-gradient(180deg, var(--c-bg) 0%, var(--c-sidebar) 100%);
-  background-attachment: fixed;
+  background: var(--c-bg);
+  -webkit-font-smoothing: antialiased;
 }
 
 input, textarea, select, button {
@@ -288,7 +281,7 @@ a {
 }
 
 .vecta-initial-loading-label {
-  font-family: "Rajdhani", sans-serif;
+  font-family: "Inter", sans-serif;
   font-size: 28px;
   font-weight: 700;
   letter-spacing: 0.14em;

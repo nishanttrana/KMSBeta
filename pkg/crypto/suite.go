@@ -7,8 +7,6 @@ package crypto
 
 import (
 	"crypto"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
@@ -225,46 +223,6 @@ func newHash(algorithm string) (hash.Hash, error) {
 	default:
 		return nil, fmt.Errorf("crypto: unsupported hash algorithm %q", algorithm)
 	}
-}
-
-// Seal encrypts plaintext with AES-GCM (key of 16 or 32 bytes) and returns
-// nonce||ciphertext. aad is optional additional authenticated data.
-func Seal(key []byte, plaintext []byte, aad []byte) ([]byte, error) {
-	gcm, err := newGCM(key)
-	if err != nil {
-		return nil, err
-	}
-	nonce, err := RandomBytes(gcm.NonceSize())
-	if err != nil {
-		return nil, err
-	}
-	return gcm.Seal(nonce, nonce, plaintext, aad), nil
-}
-
-// Open decrypts a blob produced by Seal.
-func Open(key []byte, blob []byte, aad []byte) ([]byte, error) {
-	gcm, err := newGCM(key)
-	if err != nil {
-		return nil, err
-	}
-	if len(blob) < gcm.NonceSize() {
-		return nil, errors.New("crypto: ciphertext shorter than nonce")
-	}
-	return gcm.Open(nil, blob[:gcm.NonceSize()], blob[gcm.NonceSize():], aad)
-}
-
-func newGCM(key []byte) (cipher.AEAD, error) {
-	if len(key) != 16 && len(key) != 32 {
-		return nil, fmt.Errorf("crypto: AES key must be 16 or 32 bytes, got %d", len(key))
-	}
-	if err := fips.ValidateKeyLength("AES", len(key)*8); err != nil {
-		return nil, err
-	}
-	blk, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	return cipher.NewGCM(blk)
 }
 
 // MarshalPrivateKeyPEM encodes a private key as PKCS#8 PEM.

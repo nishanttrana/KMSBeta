@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clusterrepl"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -63,6 +64,9 @@ var builtinClusterProfilePresets = []clusterProfilePreset{
 }
 
 type Service struct {
+	replication            *clusterrepl.Engine
+	keycore                KeycoreMEKClient
+	joinCfg                joinConfig
 	store                  Store
 	events                 EventPublisher
 	now                    func() time.Time
@@ -151,8 +155,11 @@ func (s *Service) GetOverview(ctx context.Context, tenantID string) (ClusterOver
 		}
 	}
 	out := ClusterOverview{Nodes: nodes, Profiles: profiles}
-	out.SelectiveComponentSync.Enabled = true
-	out.SelectiveComponentSync.Note = "Nodes sync only the state for their enabled components. Auth replication includes REST client sender-constraint profiles, per-client security counters, SCIM tenant settings, SCIM-managed users and groups, and role-mapped memberships; certs replication includes ACME Renewal Information windows, ACME STAR subscriptions and delegated subscriber metadata, and coordinated renewal hotspot state; Autokey replication includes tenant templates, service defaults, request catalogs, and managed handles; artifact-signing replication includes signing profiles, trust constraints, and transparency-linked signature records; key-access replication includes tenant justification rules, approval policy bindings, and decision history, while short-lived anti-replay nonce caches stay node-local."
+	// Report only what the database actually does (never a design claim).
+	rs := s.ReplicationStatus(ctx)
+	out.Replication = &rs
+	out.SelectiveComponentSync.Enabled = len(rs.Subscriptions) > 0
+	out.SelectiveComponentSync.Note = replicationNote(rs)
 	for _, node := range nodes {
 		if node.Role == "leader" && out.Summary.LeaderNodeID == "" {
 			out.Summary.LeaderNodeID = node.ID
@@ -2148,4 +2155,77 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 		return err
 	}
 	return s.events.Publish(ctx, subject, raw)
+}
+
+// WithReplication attaches the Postgres logical replication engine.
+func (s *Service) WithReplication(e *clusterrepl.Engine) *Service {
+	s.replication = e
+	return s
+}
+
+// ReplicationStatus reports this node's publications and subscriptions as the
+// database sees them.
+func (s *Service) ReplicationStatus(ctx context.Context) ReplicationStatus {
+	out := ReplicationStatus{Publications: []clusterrepl.PublicationStatus{}, Subscriptions: []clusterrepl.SubscriptionStatus{}}
+	if s.replication == nil {
+		out.Error = "replication engine not configured"
+		return out
+	}
+	var err error
+	if out.WALLevel, err = s.replication.WALLevel(ctx); err != nil {
+		out.Error = err.Error()
+		return out
+	}
+	if out.Publications, err = s.replication.Publications(ctx); err != nil {
+		out.Error = err.Error()
+		return out
+	}
+	if out.Subscriptions, err = s.replication.SubscriptionStatuses(ctx, s.bootstrapNodeID); err != nil {
+		out.Error = err.Error()
+	}
+	return out
+}
+
+func replicationNote(rs ReplicationStatus) string {
+	switch {
+	case rs.Error != "":
+		return "Replication status unavailable: " + rs.Error
+	case rs.WALLevel != "logical":
+		return "Replication is not possible yet: Postgres wal_level is " + rs.WALLevel + " (needs logical)."
+	case len(rs.Subscriptions) == 0:
+		return fmt.Sprintf("This node publishes %d components for members to subscribe to; it receives none. Members replicate only the components assigned to them; node-local data (sessions, logs, node settings) never replicates.", len(rs.Publications))
+	}
+	ready := 0
+	for _, sub := range rs.Subscriptions {
+		if sub.Ready {
+			ready++
+		}
+	}
+	return fmt.Sprintf("This node receives %d components from the primary (%d fully synchronized). Node-local data never replicates.", len(rs.Subscriptions), ready)
+}
+
+// AuditPublicationChanges records every created or changed publication: a
+// publication decides which data this node offers to cluster members.
+func (s *Service) AuditPublicationChanges(ctx context.Context, pubs []clusterrepl.PublicationStatus) {
+	for _, p := range pubs {
+		if !p.Changed {
+			continue
+		}
+		_ = s.publishAudit(ctx, "audit.cluster.publication_changed", "root", map[string]interface{}{
+			"component":   p.Component,
+			"publication": p.Publication,
+			"tables":      p.Tables,
+			"node_id":     s.bootstrapNodeID,
+			"severity":    "info",
+			"actor":       "system:cluster-manager",
+			"description": "replication publication created or its table set changed",
+		})
+	}
+}
+
+// WithJoin attaches the keycore master-key client and the join configuration.
+func (s *Service) WithJoin(keycore KeycoreMEKClient, cfg joinConfig) *Service {
+	s.keycore = keycore
+	s.joinCfg = cfg
+	return s
 }

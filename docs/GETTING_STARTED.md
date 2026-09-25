@@ -1,6 +1,6 @@
 # Vecta KMS — Getting Started
 
-> **Version:** Beta — Last updated 2026-03-22
+> **Version:** 1.2.0-beta — Last updated 2026-09-25
 > **Audience:** Operators, Platform Engineers, Security Engineers, Application Developers
 
 ---
@@ -320,7 +320,7 @@ Event N+1: {data: "...", hash_of_N: "ghi789", self_hash: "jkl012"}
 
 Chain verification:
 ```bash
-curl http://localhost:5173/svc/audit/chain/verify?tenant_id=acme-corp \
+curl https://localhost/svc/audit/chain/verify?tenant_id=acme-corp \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 
 # Returns:
@@ -335,28 +335,20 @@ curl http://localhost:5173/svc/audit/chain/verify?tenant_id=acme-corp \
 
 ### 3.4 FIPS 140-3 Mode
 
-When `VECTA_FIPS_MODE=true` is set, Vecta KMS restricts all cryptographic operations to FIPS 140-3 validated algorithms:
+Every binary links the CMVP-certified **Go Cryptographic Module v1.0.0**.
+Running it in FIPS mode is your choice, set with `VECTA_FIPS_MODE`:
 
-**Allowed in FIPS mode:**
-- AES-128, AES-192, AES-256 (ECB, CBC, CTR, GCM, CCM, XTS modes)
-- HMAC-SHA-1 (legacy only), HMAC-SHA-224, HMAC-SHA-256, HMAC-SHA-384, HMAC-SHA-512
-- RSA-2048+ (PKCS#1v1.5, PSS, OAEP)
-- ECDSA with P-256, P-384, P-521
-- ECDH with P-256, P-384, P-521
-- SHA-1 (legacy verification only), SHA-224, SHA-256, SHA-384, SHA-512
-- SP800-90A DRBG (AES-CTR-DRBG, HMAC-DRBG, Hash-DRBG)
-- ML-KEM (NIST FIPS 203)
-- ML-DSA (NIST FIPS 204)
-- SLH-DSA (NIST FIPS 205)
+| Value | Behaviour |
+|---|---|
+| `on` (default) | Certified module in FIPS mode (self-tests, approved DRBG, FIPS TLS). Integrations that need non-approved algorithms (payment TDES, X25519/age secrets, ChaCha20 field encryption) stay available; the per-tenant FIPS Policy can block them for keys. |
+| `only` | Strict. The Go runtime refuses every non-approved algorithm: X25519, ChaCha20, SHA-1, DES/TDES, caller-supplied GCM IVs, OpenPGP v4, and ML-DSA/SLH-DSA (implemented outside the validated module). |
+| `off` | FIPS mode disabled. |
 
-**Rejected in FIPS mode:**
-- ChaCha20, ChaCha20-Poly1305
-- Ed25519, Ed448, X25519, X448
-- BLAKE2b
-- MD5, SHA-1 for new MACs or signatures
-- Any custom or non-standard algorithm
-
-Attempting to create a key with a non-FIPS algorithm in FIPS mode returns `422 Unprocessable Entity` with error code `FIPS_VIOLATION`.
+Change it in the KMS UI: System Administration → Runtime Crypto → Platform
+FIPS 140-3 mode. The dialog shows what stops and starts working, and which
+services restart, before you confirm. Services then restart themselves in
+tiers and come back in the new mode (about 1–2 minutes). `VECTA_FIPS_MODE` in
+`.env` only sets the initial mode. See [SECURITY/FIPS.md](SECURITY/FIPS.md).
 
 ### 3.5 Governance: N-of-M Approval Workflows
 
@@ -416,13 +408,19 @@ SPIFFE attestation flow:
 | Docker | 24.0+ | Latest stable |
 | Docker Compose | v2.20+ | Latest stable |
 | Kubernetes (prod) | 1.28+ | 1.30+ |
-| PostgreSQL | 15+ | 16 |
-| Go (source build) | 1.26.4+ | 1.26.4 or newer patch release |
-| Node.js dashboard build | 24 LTS | 24.16.0+ with npm 11+ |
+| PostgreSQL | 15+ | 17 |
+| Go (source build) | 1.27.1+ | 1.27.x latest patch |
+| Node.js dashboard build | 24 LTS | 24.21.0+ with npm 11+ |
 
 ### 4.2 Docker Compose — Quickstart
 
-This is the fastest way to get Vecta KMS running locally for evaluation.
+**Fastest path (macOS / Linux):**
+
+```bash
+./deploy-local.sh      # builds, starts, waits for health, prints https://localhost
+```
+
+The manual steps below are what `deploy-local.sh` automates.
 
 ```bash
 # Clone the repository
@@ -449,17 +447,17 @@ docker compose up -d
 docker compose ps
 
 # Check service health
-curl http://localhost:5173/svc/keycore/health
+curl https://localhost/svc/keycore/health
 # Expected: {"status":"ok","version":"1.0.0-beta"}
 
 # Dashboard available at:
-open http://localhost:5173
+open https://localhost
 ```
 
 The default Docker Compose configuration starts:
 - All microservices on internal Docker network
 - PostgreSQL 16 for persistence
-- Dashboard on `localhost:5173`
+- Dashboard on `localhost`
 - KMIP listener on `localhost:5696`
 
 ### 4.3 Development Compose Override
@@ -650,7 +648,8 @@ export VECTA_HSM_PARTITION=vecta-partition
 | `VECTA_DB_URL` | Yes | — | PostgreSQL connection string |
 | `VECTA_JWT_SECRET` | Yes | — | JWT signing secret (HS256) or path to key file |
 | `VECTA_ADMIN_PASSWORD` | Yes (first run) | — | Initial admin password |
-| `VECTA_FIPS_MODE` | No | `false` | Enable FIPS 140-3 algorithm restrictions |
+| `VECTA_FIPS_MODE` | No | `on` | Initial FIPS 140-3 mode (`on`, `only`, `off`); afterwards set in the UI |
+| `INTERNAL_SERVICE_BOOTSTRAP_SECRET` | Yes | — | ≥ 32 chars (`openssl rand -hex 32`); every internal service derives its API key from it. Placeholders are refused, and rotating it retires the old service keys (see SECURITY/SECURE_DEFAULTS.md) |
 | `VECTA_HSM_PROVIDER` | No | — | HSM provider: `thales-luna`, `aws-cloudhsm`, `securosys`, `entrust`, `utimaco` |
 | `VECTA_HSM_PIN` | No | — | HSM partition PIN (prefer `VECTA_HSM_PIN_FILE`) |
 | `VECTA_HSM_PIN_FILE` | No | — | Path to file containing HSM PIN |
@@ -683,7 +682,7 @@ After first startup, a default `root` tenant and `admin` user are created.
 ### 5.2 Changing the Initial Password
 
 **Via Dashboard:**
-1. Navigate to `http://localhost:5173`
+1. Navigate to `https://localhost`
 2. Enter credentials on the login screen
 3. The system redirects to the **Change Password** screen automatically
 4. Enter a new password (minimum 16 characters, must include uppercase, lowercase, digit, symbol)
@@ -692,7 +691,7 @@ After first startup, a default `root` tenant and `admin` user are created.
 **Via API:**
 ```bash
 # First, get a token with the initial password
-TOKEN=$(curl -s -X POST http://localhost:5173/svc/auth/tokens \
+TOKEN=$(curl -sk -X POST https://localhost/svc/auth/tokens \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
@@ -701,7 +700,7 @@ TOKEN=$(curl -s -X POST http://localhost:5173/svc/auth/tokens \
   }' | jq -r '.token')
 
 # Change password
-curl -X POST http://localhost:5173/svc/auth/users/admin/change-password \
+curl -X POST https://localhost/svc/auth/users/admin/change-password \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -807,7 +806,7 @@ Typical tenant organization patterns:
 
 ```bash
 # Requires root admin token
-curl -X POST http://localhost:5173/svc/auth/tenants \
+curl -X POST https://localhost/svc/auth/tenants \
   -H "Authorization: Bearer $ROOT_ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -841,7 +840,7 @@ curl -X POST http://localhost:5173/svc/auth/tenants \
 export ACME_TOKEN="vkms_t1_..."
 
 # All subsequent calls use acme-corp context
-curl http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp \
+curl https://localhost/svc/keycore/keys?tenant_id=acme-corp \
   -H "Authorization: Bearer $ACME_TOKEN"
 ```
 
@@ -875,7 +874,7 @@ curl http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp \
 export TOKEN="your-token-here"
 
 # Create an AES-256 encryption key
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -930,7 +929,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp" \
 
 ```bash
 # Retrieve the key you just created
-curl "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D?tenant_id=acme-corp" \
+curl "https://localhost/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -945,7 +944,7 @@ curl "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D?tenant_
 # "Hello Vecta KMS" → base64 = "SGVsbG8gVmVjdGEgS01T"
 
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/encrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/encrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -972,7 +971,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/decrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/decrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1002,7 +1001,7 @@ AAD binds ciphertext to a specific context — decryption fails if the AAD doesn
 # AAD context: "user:alice:field:ssn" → base64 = "dXNlcjphbGljZTpmaWVsZDpzc24="
 
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/encrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/encrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1012,7 +1011,7 @@ curl -X POST \
 
 # Decrypt — must provide the SAME AAD
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/decrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/decrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1102,6 +1101,15 @@ What are you trying to accomplish?
 
 ## 10. Dashboard Tour
 
+### 10.0 Overview — Command Center
+
+The home page is the **Security Command Center**: a live key-management posture
+score, KPIs (active keys and how many are quantum-vulnerable, certificates
+expiring within 30 days, PQC readiness, last good backup), the top recommended
+actions and a control-coverage checklist. **Recommendations** lists every
+finding with filters; **Operations** keeps the previous health/ops dashboard.
+Rules and control mappings: [RECOMMENDATIONS.md](RECOMMENDATIONS.md).
+
 ### 10.1 CORE — Keys
 
 **List View:** Displays all keys for the current tenant in a paginated table. Columns: Key ID, Name, Algorithm, Purpose, Status, Version, Key Backend, Created At, Expires At, Labels. Filterable by status, algorithm, purpose, labels, tags. Sortable by name, created date, expiry. Bulk operations: Rotate selected, Deactivate selected, Add tags.
@@ -1185,7 +1193,7 @@ Now that you have Vecta KMS running and have created your first key, here are th
 
 3. **Set up audit log export:** Configure your SIEM integration via Admin → Settings → Audit → Export. Ensure audit events flow to your central log management system.
 
-4. **Enable FIPS mode** if in a regulated environment: `VECTA_FIPS_MODE=true` in environment configuration.
+4. **Choose the FIPS mode** in System Administration → Runtime Crypto: `on` (default), or `only` for strict regulated workloads.
 
 5. **Create service accounts** for your applications rather than using the admin account: Admin → Users → Create Service Account.
 

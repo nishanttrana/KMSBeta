@@ -311,8 +311,11 @@ func (p *alibabaProvider) apiRequest(ctx context.Context, accessKeyID, accessKey
 	stringToSign := "GET&" + url.QueryEscape("/") + "&" + url.QueryEscape(canonicalizedQuery)
 
 	// HMAC-SHA1 signing (mandated by the Alibaba Cloud API signature protocol)
-	signature := base64.StdEncoding.EncodeToString(pkgcrypto.HMACSHA1Interop([]byte(accessKeySecret+"&"), []byte(stringToSign)))
-	params.Set("Signature", signature)
+	mac, err := pkgcrypto.HMACSHA1Interop([]byte(accessKeySecret+"&"), []byte(stringToSign))
+	if err != nil {
+		return nil, err
+	}
+	params.Set("Signature", base64.StdEncoding.EncodeToString(mac))
 
 	requestURL := endpoint + "?" + params.Encode()
 

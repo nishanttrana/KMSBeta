@@ -7,6 +7,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/fips140"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -1119,6 +1120,17 @@ func (s *Service) CheckOCSPDER(ctx context.Context, tenantID string, reqDER []by
 	if err != nil {
 		return nil, "", "", time.Time{}, fmt.Errorf("invalid ocsp request: %w", err)
 	}
+	// The response CertID must use the request's hash (RFC 6960 4.1.1). SHA-1
+	// is not FIPS-approved, so strict mode refuses it rather than panicking.
+	if ocspReq.HashAlgorithm == crypto.SHA1 && fips140.Enforced() {
+		_ = s.publishAudit(ctx, "audit.cert.ocsp_refused", tenantID, map[string]interface{}{
+			"serial":   strings.ToLower(ocspReq.SerialNumber.Text(16)),
+			"reason":   "SHA-1 CertID in FIPS strict mode",
+			"severity": "warning",
+			"result":   "denied",
+		})
+		return nil, "", "", time.Time{}, errors.New("ocsp request uses a SHA-1 CertID, which FIPS strict mode does not allow; resend with SHA-256")
+	}
 
 	serial := strings.ToLower(strings.TrimSpace(ocspReq.SerialNumber.Text(16)))
 	if serial == "" {
@@ -1184,6 +1196,7 @@ func (s *Service) CheckOCSPDER(ctx context.Context, tenantID string, reqDER []by
 		ProducedAt:       producedAt,
 		RevokedAt:        c.RevokedAt.UTC(),
 		RevocationReason: ocspReason,
+		IssuerHash:       ocspReq.HashAlgorithm,
 	}
 	der, err := ocsp.CreateResponse(issuerCert, issuerCert, resp, issuerSigner)
 	if err != nil {

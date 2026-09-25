@@ -282,6 +282,18 @@ func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
 }
 
 func loadMEK() ([]byte, error) {
+	// A cluster member runs on the master key it received when it joined
+	// (cluster_mek.go); it takes precedence over this node's own.
+	if raw, err := os.ReadFile(clusterMEKFile()); err == nil {
+		mek, err := base64.StdEncoding.DecodeString(stringsTrimSpace(string(raw)))
+		if err != nil || len(mek) != 32 {
+			return nil, errors.New("cluster master key file is corrupt")
+		}
+		logger.Printf("keycore: using the cluster master key (fingerprint %s)", MEKFingerprint(mek))
+		return mek, nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
 	raw := stringsTrimSpace(os.Getenv("KEYCORE_MEK_B64"))
 	if raw == "" {
 		return loadOrCreateMEKFile(envOr("KEYCORE_MEK_FILE", "/app/data/mek.b64"))

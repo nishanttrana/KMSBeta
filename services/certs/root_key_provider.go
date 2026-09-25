@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -440,36 +438,15 @@ func unsealCRWKBlob(raw []byte, passphrase []byte, fallbackMemKB uint32, fallbac
 	return crwk, keyVersion, nil
 }
 
+// AES-GCM via pkg/crypto: the nonce is generated inside the FIPS module, so
+// root-key sealing works in every FIPS runtime mode.
 func aesGCMEncryptRaw(key []byte, plaintext []byte) ([]byte, []byte, error) {
-	blk, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, nil, err
-	}
-	gcm, err := cipher.NewGCM(blk)
-	if err != nil {
-		return nil, nil, err
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := rand.Read(nonce); err != nil {
-		return nil, nil, err
-	}
-	ciphertext := gcm.Seal(nil, nonce, plaintext, nil)
-	return ciphertext, nonce, nil
+	nonce, ciphertext, err := pkgcrypto.SealDetached(key, plaintext, nil)
+	return ciphertext, nonce, err
 }
 
 func aesGCMDecryptRaw(key []byte, ciphertext []byte, nonce []byte) ([]byte, error) {
-	blk, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	gcm, err := cipher.NewGCM(blk)
-	if err != nil {
-		return nil, err
-	}
-	if len(nonce) != gcm.NonceSize() {
-		return nil, fmt.Errorf("invalid nonce length: want %d got %d", gcm.NonceSize(), len(nonce))
-	}
-	return gcm.Open(nil, nonce, ciphertext, nil)
+	return pkgcrypto.OpenDetached(key, nonce, ciphertext, nil)
 }
 
 func normalizeStorageMode(v string) string {

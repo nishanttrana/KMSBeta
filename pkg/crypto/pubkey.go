@@ -101,27 +101,3 @@ func WrapKeyRSAOAEP(pub crypto.PublicKey, key []byte, label []byte) ([]byte, err
 	}
 	return rsa.EncryptOAEP(sha256.New(), Reader, rsaPub, key, label)
 }
-
-// SealDetached encrypts with AES-GCM returning nonce and ciphertext
-// separately, for wire formats that transport them as distinct fields.
-// Prefer Seal (embedded nonce) for new formats.
-func SealDetached(key []byte, plaintext []byte, aad []byte) (nonce []byte, ciphertext []byte, err error) {
-	gcm, err := newGCM(key)
-	if err != nil {
-		return nil, nil, err
-	}
-	nonce, err = RandomBytes(gcm.NonceSize())
-	if err != nil {
-		return nil, nil, err
-	}
-	return nonce, gcm.Seal(nil, nonce, plaintext, aad), nil
-}
-
-// OpenDetached decrypts AES-GCM output produced by SealDetached.
-func OpenDetached(key []byte, nonce []byte, ciphertext []byte, aad []byte) ([]byte, error) {
-	gcm, err := newGCM(key)
-	if err != nil {
-		return nil, err
-	}
-	return gcm.Open(nil, nonce, ciphertext, aad)
-}

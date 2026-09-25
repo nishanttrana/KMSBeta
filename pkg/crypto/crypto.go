@@ -2,13 +2,13 @@ package crypto
 
 import (
 	"crypto/aes"
-	"crypto/cipher"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"runtime"
 )
 
@@ -50,6 +50,10 @@ func GenerateIV(mode IVMode, keyMaterial []byte, externalIV []byte, payload []by
 		copy(out, externalIV)
 		return out, nil
 	case IVDeterministic:
+		// HMAC keys under 112 bits panic in FIPS strict mode; fail cleanly.
+		if len(keyMaterial) < minHMACKeyBytes {
+			return nil, fmt.Errorf("deterministic IV requires key material of at least %d bytes", minHMACKeyBytes)
+		}
 		mac := hmac.New(sha256.New, keyMaterial)
 		_, _ = mac.Write(payload)
 		sum := mac.Sum(nil)
@@ -66,38 +70,51 @@ func EncryptEnvelope(mek []byte, plaintext []byte) (*EnvelopeCiphertext, error) 
 	}
 	defer Zeroize(dek)
 
-	dataIV, err := GenerateIV(IVInternal, nil, nil, nil)
+	dataIV, ciphertext, err := SealDetached(dek, plaintext, nil)
 	if err != nil {
 		return nil, err
 	}
-	ciphertext, err := aesGCMEncrypt(dek, dataIV, plaintext)
-	if err != nil {
-		return nil, err
-	}
-
-	wrappedIV, err := GenerateIV(IVInternal, nil, nil, nil)
-	if err != nil {
-		return nil, err
-	}
-	wrappedDEK, err := aesGCMEncrypt(mek, wrappedIV, dek)
+	wrappedIV, wrappedDEK, err := SealDetached(mek, dek, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &EnvelopeCiphertext{
 		WrappedDEK:   wrappedDEK,
-		WrappedDEKIV: wrappedIV,
+		WrappedDEKIV: storedEnvelopeIV(wrappedIV),
 		Ciphertext:   ciphertext,
-		DataIV:       dataIV,
+		DataIV:       storedEnvelopeIV(dataIV),
 	}, nil
 }
 
 func DecryptEnvelope(mek []byte, env *EnvelopeCiphertext) ([]byte, error) {
-	dek, err := aesGCMDecrypt(mek, env.WrappedDEKIV, env.WrappedDEK)
+	dek, err := OpenDetached(mek, envelopeNonce(env.WrappedDEKIV), env.WrappedDEK, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer Zeroize(dek)
-	return aesGCMDecrypt(dek, env.DataIV, env.Ciphertext)
+	return OpenDetached(dek, envelopeNonce(env.DataIV), env.Ciphertext, nil)
+}
+
+// minHMACKeyBytes is the 112-bit HMAC key floor of SP 800-131A.
+const minHMACKeyBytes = 14
+
+// Envelope IVs are persisted as 16 bytes (keycore packs WrappedDEKIV as a
+// fixed 16-byte prefix). AES-GCM uses only the first 12 bytes, the nonce the
+// FIPS module generated; bytes 12-15 are zero padding kept for the format.
+const storedEnvelopeIVSize = 16
+
+func storedEnvelopeIV(nonce []byte) []byte {
+	out := make([]byte, storedEnvelopeIVSize)
+	copy(out, nonce)
+	return out
+}
+
+// envelopeNonce returns the GCM nonce (first 12 bytes) of a stored envelope IV.
+func envelopeNonce(iv []byte) []byte {
+	if len(iv) > GCMNonceSize {
+		return iv[:GCMNonceSize]
+	}
+	return iv
 }
 
 func ConstantTimeEqual(a []byte, b []byte) bool {
@@ -113,28 +130,4 @@ func Zeroize(b []byte) {
 		b[i] = 0
 	}
 	runtime.KeepAlive(b)
-}
-
-func aesGCMEncrypt(key []byte, iv []byte, plaintext []byte) ([]byte, error) {
-	blk, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	gcm, err := cipher.NewGCM(blk)
-	if err != nil {
-		return nil, err
-	}
-	return gcm.Seal(nil, iv[:gcm.NonceSize()], plaintext, nil), nil
-}
-
-func aesGCMDecrypt(key []byte, iv []byte, ciphertext []byte) ([]byte, error) {
-	blk, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	gcm, err := cipher.NewGCM(blk)
-	if err != nil {
-		return nil, err
-	}
-	return gcm.Open(nil, iv[:gcm.NonceSize()], ciphertext, nil)
 }

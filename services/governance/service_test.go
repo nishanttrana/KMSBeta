@@ -61,6 +61,26 @@ func newGovernanceStore(t *testing.T) *SQLStore {
 
 func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 	stmts := []string{
+		`CREATE TABLE platform_fips_mode (
+			id INTEGER PRIMARY KEY CHECK (id = 1),
+			mode TEXT NOT NULL,
+			previous TEXT NOT NULL DEFAULT '',
+			reason TEXT NOT NULL DEFAULT '',
+			requested_by TEXT NOT NULL,
+			requested_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			completed_at TIMESTAMP
+		);`,
+		`CREATE TABLE platform_fips_observed (
+			service TEXT NOT NULL,
+			instance TEXT NOT NULL,
+			mode TEXT NOT NULL,
+			module_version TEXT NOT NULL DEFAULT '',
+			validated BOOLEAN NOT NULL DEFAULT FALSE,
+			started_at TIMESTAMP NOT NULL,
+			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			audited_started_at TIMESTAMP,
+			PRIMARY KEY (service, instance)
+		);`,
 		`CREATE TABLE approval_policies (
 			id TEXT PRIMARY KEY,
 			tenant_id TEXT NOT NULL,

@@ -21,6 +21,7 @@ import (
 	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/metering"
 	pkgrestauth "vecta-kms/pkg/restauth"
+	"vecta-kms/pkg/tenantcheck"
 )
 
 type AuditPublisher interface {
@@ -511,9 +512,14 @@ func (h *Handler) handleClientToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	allowedSet := map[string]struct{}{}
+	internalService := strings.HasPrefix(clientID, "kms-") && tenantID == tenantcheck.InternalServiceTenant() &&
+		strings.EqualFold(strings.TrimSpace(reg.ClientType), "service")
 	for _, p := range apiKey.Permissions {
 		perm := strings.TrimSpace(p)
 		if perm == "" {
+			continue
+		}
+		if tenantcheck.ServicePermissionReserved(perm) && !internalService {
 			continue
 		}
 		allowedSet[perm] = struct{}{}
@@ -616,8 +622,8 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		}
 		// A09: audit-log account lockout events
 		_ = h.publishAudit(r.Context(), "audit.auth.account_locked", reqID, req.TenantID, map[string]any{
-			"username":   req.Username,
-			"source_ip":  clientIP(r),
+			"username":     req.Username,
+			"source_ip":    clientIP(r),
 			"locked_until": lockUntil.UTC().Format(time.RFC3339),
 		})
 		w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
@@ -1290,7 +1296,7 @@ func (h *Handler) roleWrite(w http.ResponseWriter, r *http.Request, mode string)
 	if roleName == "" {
 		roleName = req.RoleName
 	}
-	role := TenantRole{TenantID: r.PathValue("id"), RoleName: roleName, Permissions: req.Permissions}
+	role := TenantRole{TenantID: r.PathValue("id"), RoleName: roleName, Permissions: tenantcheck.StripReserved(req.Permissions)}
 	var err error
 	if mode == "create" {
 		err = h.store.CreateTenantRole(r.Context(), role)
@@ -2184,7 +2190,7 @@ func (h *Handler) handleCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 		KeyHash:     hash,
 		KeyPrefix:   prefix,
 		Name:        req.Name,
-		Permissions: req.Permissions,
+		Permissions: tenantcheck.StripReserved(req.Permissions),
 	}
 	if err := h.store.CreateAPIKey(r.Context(), key); err != nil {
 		writeErr(w, http.StatusInternalServerError, "store_error", "failed to create api key", reqID, claims.TenantID)
@@ -2486,6 +2492,9 @@ func (h *Handler) resolveEffectivePermissions(ctx context.Context, tenantID stri
 	}
 	out := make([]string, 0, len(permSet))
 	for perm := range permSet {
+		if tenantcheck.ServicePermissionReserved(perm) {
+			continue // reserved for internal service identities; never on user tokens
+		}
 		out = append(out, perm)
 	}
 	sort.Strings(out)

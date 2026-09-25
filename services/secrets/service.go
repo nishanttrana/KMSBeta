@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto"
+	"crypto/fips140"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -14,10 +15,10 @@ import (
 	"time"
 
 	"filippo.io/age"
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 	"golang.org/x/crypto/curve25519"
-	"golang.org/x/crypto/openpgp"
-	"golang.org/x/crypto/openpgp/armor"
-	"golang.org/x/crypto/openpgp/packet"
 	"golang.org/x/crypto/pkcs12"
 	"golang.org/x/crypto/ssh"
 
@@ -456,6 +457,11 @@ func generateSSHKeyPair(keyType string) (string, string, error) {
 }
 
 func generateOpenPGPKeyPair(name string) (string, string, error) {
+	// OpenPGP v4 key fingerprints are SHA-1 by specification (RFC 4880), and
+	// SHA-1 panics under FIPS strict mode, so refuse up front.
+	if fips140.Enforced() {
+		return "", "", errors.New("pgp-rsa-4096 is unavailable in FIPS strict mode: OpenPGP v4 fingerprints require SHA-1")
+	}
 	cfg := &packet.Config{
 		RSABits:     4096,
 		DefaultHash: crypto.SHA256,
@@ -512,6 +518,11 @@ func generateWireGuardKeyPair() (string, string, error) {
 }
 
 func generateAgeX25519KeyPair() (string, string, error) {
+	// age implements X25519 itself, outside the Go FIPS module, so the runtime
+	// cannot enforce strict mode here; refuse explicitly.
+	if fips140.Enforced() {
+		return "", "", errors.New("age-x25519 is unavailable in FIPS strict mode: X25519 is not FIPS-approved")
+	}
 	id, err := age.GenerateX25519Identity()
 	if err != nil {
 		return "", "", err

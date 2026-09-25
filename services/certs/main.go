@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgplatform "vecta-kms/pkg/platform"
@@ -19,6 +20,9 @@ var logger = log.Default()
 // service with its background loops: runtime cert materializer, legacy CA
 // signer rewrap, and certificate expiry alert sweep.
 func main() {
+	// Attach this service's per-service JWT to internal keycore calls (no-op
+	// when INTERNAL_SERVICE_BOOTSTRAP_SECRET is unset).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-certs"))
 	rt, err := pkgplatform.Boot(pkgplatform.Options{
 		ServiceName:   "certs",
 		JWTScope:      "CERTS",

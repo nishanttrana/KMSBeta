@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
@@ -31,6 +32,9 @@ import (
 var logger = log.New(os.Stdout, "[discovery] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
+	// Attach this service's per-service JWT to internal keycore calls (no-op
+	// when INTERNAL_SERVICE_BOOTSTRAP_SECRET is unset).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-discovery"))
 	cfg := pkgconfig.Load()
 
 	if err := pkgruntimecfg.ValidateServiceConfig("kms-discovery", cfg); err != nil {

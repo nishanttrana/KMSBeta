@@ -3,7 +3,6 @@ import {
   Activity,
   Atom,
   BellRing,
-  Blocks,
   Building2,
   Cloud,
   Cpu,
@@ -25,7 +24,6 @@ import {
   Users,
   Wallet,
   Waypoints,
-  Workflow,
   Gauge
 } from "lucide-react";
 

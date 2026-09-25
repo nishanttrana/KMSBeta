@@ -140,7 +140,7 @@ The root CA is the trust anchor. Once it has signed the intermediate CA certific
 #### Step 1 — Create Root CA
 
 ```bash
-curl -X POST "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/ca?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -193,7 +193,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
 #### Step 2 — Create Intermediate CA
 
 ```bash
-curl -X POST "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/ca?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -227,7 +227,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
 #### Step 3 — Create Issuing CA
 
 ```bash
-curl -X POST "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/ca?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -263,19 +263,19 @@ curl -X POST "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
 
 ```bash
 # List all CAs
-curl "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
+curl "https://localhost/svc/certs/certs/ca?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get specific CA
-curl "http://localhost:5173/svc/certs/certs/ca/{CA_ID}?tenant_id=root" \
+curl "https://localhost/svc/certs/certs/ca/{CA_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get CA certificate chain (PEM bundle)
-curl "http://localhost:5173/svc/certs/certs/ca/{CA_ID}/chain?tenant_id=root" \
+curl "https://localhost/svc/certs/certs/ca/{CA_ID}/chain?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get CA certificate in DER format
-curl "http://localhost:5173/svc/certs/certs/ca/{CA_ID}/certificate?format=der&tenant_id=root" \
+curl "https://localhost/svc/certs/certs/ca/{CA_ID}/certificate?format=der&tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -o ca-cert.der
 ```
@@ -286,7 +286,7 @@ When an issuing CA approaches expiry, create a new issuing CA from the same inte
 
 ```bash
 # Rotate issuing CA (creates new CA, retires old one)
-curl -X POST "http://localhost:5173/svc/certs/certs/ca/{OLD_CA_ID}/rotate?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/ca/{OLD_CA_ID}/rotate?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -347,7 +347,7 @@ Profiles codify a set of defaults (validity, key usage, SAN types, policy OIDs) 
 #### Create a profile
 
 ```bash
-curl -X POST "http://localhost:5173/svc/certs/certs/profiles?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/profiles?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -369,7 +369,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs/profiles?tenant_id=root" \
 ```
 
 ```bash
-curl -X POST "http://localhost:5173/svc/certs/certs/profiles?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/profiles?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -387,7 +387,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs/profiles?tenant_id=root" \
 ```
 
 ```bash
-curl -X POST "http://localhost:5173/svc/certs/certs/profiles?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/profiles?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -407,21 +407,21 @@ curl -X POST "http://localhost:5173/svc/certs/certs/profiles?tenant_id=root" \
 
 ```bash
 # List profiles
-curl "http://localhost:5173/svc/certs/certs/profiles?tenant_id=root" \
+curl "https://localhost/svc/certs/certs/profiles?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get profile
-curl "http://localhost:5173/svc/certs/certs/profiles/{PROFILE_ID}?tenant_id=root" \
+curl "https://localhost/svc/certs/certs/profiles/{PROFILE_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Update profile
-curl -X PUT "http://localhost:5173/svc/certs/certs/profiles/{PROFILE_ID}?tenant_id=root" \
+curl -X PUT "https://localhost/svc/certs/certs/profiles/{PROFILE_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"default_validity_days": 60}'
 
 # Delete profile
-curl -X DELETE "http://localhost:5173/svc/certs/certs/profiles/{PROFILE_ID}?tenant_id=root" \
+curl -X DELETE "https://localhost/svc/certs/certs/profiles/{PROFILE_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -485,7 +485,7 @@ Policy OIDs signal the issuance policy under which a certificate was issued. Org
 
 ```bash
 # Issue a server TLS certificate (server-side key generation)
-curl -X POST "http://localhost:5173/svc/certs/certs?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -532,7 +532,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs?tenant_id=root" \
 
 ```bash
 # Issue a client certificate for mTLS (specific algorithm)
-curl -X POST "http://localhost:5173/svc/certs/certs?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -550,7 +550,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs?tenant_id=root" \
 
 ```bash
 # Issue a code signing certificate
-curl -X POST "http://localhost:5173/svc/certs/certs?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -573,20 +573,20 @@ curl -X POST "http://localhost:5173/svc/certs/certs?tenant_id=root" \
 
 ```bash
 # List all certificates with filters
-curl "http://localhost:5173/svc/certs/certs?tenant_id=root&status=active&cert_type=server&page=1&per_page=50" \
+curl "https://localhost/svc/certs/certs?tenant_id=root&status=active&cert_type=server&page=1&per_page=50" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get specific certificate
-curl "http://localhost:5173/svc/certs/certs/{CERT_ID}?tenant_id=root" \
+curl "https://localhost/svc/certs/certs/{CERT_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Download certificate in DER format
-curl "http://localhost:5173/svc/certs/certs/{CERT_ID}/download?format=der&tenant_id=root" \
+curl "https://localhost/svc/certs/certs/{CERT_ID}/download?format=der&tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -o certificate.der
 
 # Download PKCS#12 bundle (cert + key + chain)
-curl -X POST "http://localhost:5173/svc/certs/certs/{CERT_ID}/pkcs12?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/{CERT_ID}/pkcs12?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"password": "your-p12-password"}' \
@@ -599,13 +599,13 @@ Renewal issues a new certificate with the same subject and SANs. The old certifi
 
 ```bash
 # Renew certificate (same validity as original)
-curl -X POST "http://localhost:5173/svc/certs/certs/{CERT_ID}/renew?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/{CERT_ID}/renew?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{}'
 
 # Renew with custom validity
-curl -X POST "http://localhost:5173/svc/certs/certs/{CERT_ID}/renew?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/{CERT_ID}/renew?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -615,7 +615,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs/{CERT_ID}/renew?tenant_id=ro
   }'
 
 # Renew with updated SANs
-curl -X POST "http://localhost:5173/svc/certs/certs/{CERT_ID}/renew?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/{CERT_ID}/renew?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -631,7 +631,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs/{CERT_ID}/renew?tenant_id=ro
 
 ```bash
 # Revoke certificate with reason
-curl -X POST "http://localhost:5173/svc/certs/certs/{CERT_ID}/revoke?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/{CERT_ID}/revoke?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -664,7 +664,7 @@ Vecta runs an expiry scanner on a configurable schedule. When a certificate cros
 
 ```bash
 # Configure expiry alert policy
-curl -X PUT "http://localhost:5173/svc/certs/certs/expiry-policy?tenant_id=root" \
+curl -X PUT "https://localhost/svc/certs/certs/expiry-policy?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -705,7 +705,7 @@ Before signing a CSR, Vecta validates:
 
 ```bash
 # Sign a CSR with a specific profile
-curl -X POST "http://localhost:5173/svc/certs/certs/sign-csr?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/sign-csr?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -722,7 +722,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs/sign-csr?tenant_id=root" \
 
 ```bash
 # Sign a CSR with explicit override (override profile defaults)
-curl -X POST "http://localhost:5173/svc/certs/certs/sign-csr?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/sign-csr?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -756,7 +756,7 @@ openssl req -new -key server.key \
 CSR_PEM=$(cat server.csr)
 
 # Submit to Vecta
-curl -X POST "http://localhost:5173/svc/certs/certs/sign-csr?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/sign-csr?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   --data-binary "{\"ca_id\": \"ISSUING_CA_ID\", \"csr_pem\": $(jq -Rs . <<< "$CSR_PEM"), \"profile_id\": \"server-90d\", \"validity_days\": 90}"
@@ -796,7 +796,7 @@ ACME is the protocol behind Let's Encrypt. Vecta's ACME server is fully RFC 8555
 
 ```bash
 # Step 1 — Create account
-curl -X POST "http://localhost:5173/svc/certs/acme/new-account" \
+curl -X POST "https://localhost/svc/certs/acme/new-account" \
   -H "Content-Type: application/jose+json" \
   -d '{
     "email": "admin@acme.com",
@@ -805,10 +805,10 @@ curl -X POST "http://localhost:5173/svc/certs/acme/new-account" \
 # Response: account URL in Location header, account object in body
 
 # Step 2 — Get nonce
-NONCE=$(curl -I "http://localhost:5173/svc/certs/acme/new-nonce" | grep -i replay-nonce | awk '{print $2}' | tr -d '\r')
+NONCE=$(curl -I "https://localhost/svc/certs/acme/new-nonce" | grep -i replay-nonce | awk '{print $2}' | tr -d '\r')
 
 # Step 3 — Create order
-curl -X POST "http://localhost:5173/svc/certs/acme/new-order" \
+curl -X POST "https://localhost/svc/certs/acme/new-order" \
   -H "Content-Type: application/jose+json" \
   -d '{
     "identifiers": [
@@ -819,13 +819,13 @@ curl -X POST "http://localhost:5173/svc/certs/acme/new-order" \
 # Response: order object with authorizations[] URLs and finalize URL
 
 # Step 4 — Get authorization and challenge
-curl "http://localhost:5173/svc/certs/acme/authz/{authzId}"
+curl "https://localhost/svc/certs/acme/authz/{authzId}"
 # Response: challenges[] — pick http-01 or dns-01
 
 # Step 5a — Complete HTTP-01 challenge
 # Provision: GET http://app.acme.com/.well-known/acme-challenge/{token}
 # Returns: {token}.{account_key_thumbprint}
-curl -X POST "http://localhost:5173/svc/certs/acme/challenge/{challengeId}" \
+curl -X POST "https://localhost/svc/certs/acme/challenge/{challengeId}" \
   -H "Content-Type: application/jose+json" \
   -d '{
     "order_id": "{orderId}",
@@ -834,7 +834,7 @@ curl -X POST "http://localhost:5173/svc/certs/acme/challenge/{challengeId}" \
 
 # Step 5b — Complete DNS-01 challenge
 # Provision: TXT record _acme-challenge.app.acme.com = base64url(SHA-256(key_authorization))
-curl -X POST "http://localhost:5173/svc/certs/acme/challenge/{challengeId}" \
+curl -X POST "https://localhost/svc/certs/acme/challenge/{challengeId}" \
   -H "Content-Type: application/jose+json" \
   -d '{
     "order_id": "{orderId}",
@@ -842,16 +842,16 @@ curl -X POST "http://localhost:5173/svc/certs/acme/challenge/{challengeId}" \
   }'
 
 # Step 6 — Poll authorization until valid
-curl "http://localhost:5173/svc/certs/acme/authz/{authzId}"
+curl "https://localhost/svc/certs/acme/authz/{authzId}"
 # Wait until status = "valid"
 
 # Step 7 — Finalize with CSR
-curl -X POST "http://localhost:5173/svc/certs/acme/finalize/{orderId}" \
+curl -X POST "https://localhost/svc/certs/acme/finalize/{orderId}" \
   -H "Content-Type: application/jose+json" \
   -d '{"csr": "BASE64URL_ENCODED_DER_CSR"}'
 
 # Step 8 — Download certificate
-curl "http://localhost:5173/svc/certs/acme/cert/{certId}"
+curl "https://localhost/svc/certs/acme/cert/{certId}"
 ```
 
 #### certbot Configuration
@@ -1071,7 +1071,7 @@ GetNextCACert
 
 ```bash
 # Step 1 — Get CA certificate
-curl "http://localhost:5173/svc/certs/scep?operation=GetCACert&message=CAIdentifier" \
+curl "https://localhost/svc/certs/scep?operation=GetCACert&message=CAIdentifier" \
   -o ca.der
 
 # Step 2 — Generate key and CSR
@@ -1098,7 +1098,7 @@ In Intune, configure a SCEP Certificate Profile:
 
 ```bash
 # Create SCEP challenge password in Vecta
-curl -X POST "http://localhost:5173/svc/certs/scep/challenges?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/scep/challenges?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1186,7 +1186,7 @@ Vecta issues client certificates automatically for internal service-to-service m
 **Configure runtime mTLS:**
 
 ```bash
-curl -X PUT "http://localhost:5173/svc/certs/certs/protocols/runtime-mtls?tenant_id=root" \
+curl -X PUT "https://localhost/svc/certs/certs/protocols/runtime-mtls?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1241,7 +1241,7 @@ With a 90-day certificate, a stolen private key gives an attacker up to 90 days 
 
 ```bash
 # Create a STAR subscription for a microservice
-curl -X POST "http://localhost:5173/svc/certs/certs/star/subscriptions?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/star/subscriptions?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1276,19 +1276,19 @@ curl -X POST "http://localhost:5173/svc/certs/certs/star/subscriptions?tenant_id
 
 ```bash
 # Fetch current certificate (always the latest valid cert)
-curl "http://localhost:5173/svc/certs/certs/star/subscriptions/{STAR_ID}/current?tenant_id=root" \
+curl "https://localhost/svc/certs/certs/star/subscriptions/{STAR_ID}/current?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # List all STAR subscriptions
-curl "http://localhost:5173/svc/certs/certs/star/subscriptions?tenant_id=root" \
+curl "https://localhost/svc/certs/certs/star/subscriptions?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get subscription details (including renewal history)
-curl "http://localhost:5173/svc/certs/certs/star/subscriptions/{STAR_ID}?tenant_id=root" \
+curl "https://localhost/svc/certs/certs/star/subscriptions/{STAR_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Cancel subscription (stop auto-renewing)
-curl -X DELETE "http://localhost:5173/svc/certs/certs/star/subscriptions/{STAR_ID}?tenant_id=root" \
+curl -X DELETE "https://localhost/svc/certs/certs/star/subscriptions/{STAR_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1298,7 +1298,7 @@ In CDN scenarios, a content origin server delegates a STAR subscription to a CDN
 
 ```bash
 # Create delegated STAR (CDN scenario)
-curl -X POST "http://localhost:5173/svc/certs/certs/star/subscriptions?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/star/subscriptions?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1398,7 +1398,7 @@ For each certificate, Vecta calculates a renewal window considering:
 
 ```bash
 # Get renewal information for a specific certificate
-curl "http://localhost:5173/svc/certs/acme/renewal-info/{CERT_ID}?tenant_id=root" \
+curl "https://localhost/svc/certs/acme/renewal-info/{CERT_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1420,11 +1420,11 @@ curl "http://localhost:5173/svc/certs/acme/renewal-info/{CERT_ID}?tenant_id=root
 
 ```bash
 # Get ARI for all certs approaching expiry
-curl "http://localhost:5173/svc/certs/certs/renewal-info?tenant_id=root&risk_level=high,critical" \
+curl "https://localhost/svc/certs/certs/renewal-info?tenant_id=root&risk_level=high,critical" \
   -H "Authorization: Bearer $TOKEN"
 
 # Update ARI config
-curl -X PUT "http://localhost:5173/svc/certs/certs/ari/config?tenant_id=root" \
+curl -X PUT "https://localhost/svc/certs/certs/ari/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1487,7 +1487,7 @@ Each leaf = SHA-256(cert_id | serial | subject | not_before | not_after | finger
 
 ```bash
 # Build a Merkle epoch (seal pending certs into an immutable batch)
-curl -X POST "http://localhost:5173/svc/certs/certs/merkle/build?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/merkle/build?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1510,11 +1510,11 @@ curl -X POST "http://localhost:5173/svc/certs/certs/merkle/build?tenant_id=root"
 
 ```bash
 # List epochs
-curl "http://localhost:5173/svc/certs/certs/merkle/epochs?tenant_id=root" \
+curl "https://localhost/svc/certs/certs/merkle/epochs?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get inclusion proof for a certificate
-curl "http://localhost:5173/svc/certs/certs/merkle/proof/{CERT_ID}?tenant_id=root" \
+curl "https://localhost/svc/certs/certs/merkle/proof/{CERT_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1542,7 +1542,7 @@ curl "http://localhost:5173/svc/certs/certs/merkle/proof/{CERT_ID}?tenant_id=roo
 
 ```bash
 # Verify proof
-curl -X POST "http://localhost:5173/svc/certs/certs/merkle/verify" \
+curl -X POST "https://localhost/svc/certs/certs/merkle/verify" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1605,17 +1605,17 @@ A CRL is a signed list of revoked certificate serial numbers. Relying parties do
 
 ```bash
 # Download CRL for a specific CA
-curl "http://localhost:5173/svc/certs/certs/crl?ca_id={CA_ID}&tenant_id=root" \
+curl "https://localhost/svc/certs/certs/crl?ca_id={CA_ID}&tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -o ca.crl
 
 # Download CRL in DER format
-curl "http://localhost:5173/svc/certs/certs/crl?ca_id={CA_ID}&format=der&tenant_id=root" \
+curl "https://localhost/svc/certs/certs/crl?ca_id={CA_ID}&format=der&tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -o ca.der.crl
 
 # Force CRL refresh (re-sign with updated timestamp)
-curl -X POST "http://localhost:5173/svc/certs/certs/crl/refresh?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/crl/refresh?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"ca_id": "{CA_ID}"}'
@@ -1624,7 +1624,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs/crl/refresh?tenant_id=root" 
 **CRL Configuration per CA:**
 
 ```bash
-curl -X PUT "http://localhost:5173/svc/certs/certs/ca/{CA_ID}/crl-config?tenant_id=root" \
+curl -X PUT "https://localhost/svc/certs/certs/ca/{CA_ID}/crl-config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1661,13 +1661,13 @@ OCSP provides real-time certificate status. Instead of downloading an entire CRL
 # GET-based OCSP request (base64url-encoded)
 # In practice, clients do this automatically; this shows the mechanics:
 OCSP_REQUEST=$(openssl ocsp -issuer issuing-ca.pem -cert server.pem -reqout - 2>/dev/null | base64 | tr -d '\n' | tr '+/' '-_' | tr -d '=')
-curl "http://localhost:5173/svc/certs/certs/ocsp/${OCSP_REQUEST}" -o ocsp-response.der
+curl "https://localhost/svc/certs/certs/ocsp/${OCSP_REQUEST}" -o ocsp-response.der
 
 # POST-based OCSP request
 openssl ocsp \
   -issuer issuing-ca.pem \
   -cert server.pem \
-  -url "http://localhost:5173/svc/certs/certs/ocsp" \
+  -url "https://localhost/svc/certs/certs/ocsp" \
   -resp_text
 ```
 
@@ -1703,7 +1703,7 @@ Vecta pre-computes OCSP responses for all active certificates and caches them. R
 
 ```bash
 # Configure OCSP cache settings
-curl -X PUT "http://localhost:5173/svc/certs/certs/ocsp/config?tenant_id=root" \
+curl -X PUT "https://localhost/svc/certs/certs/ocsp/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1725,7 +1725,7 @@ The security status endpoint runs a scan of all certificates and returns finding
 
 ```bash
 # Get security status
-curl "http://localhost:5173/svc/certs/certs/security/status?tenant_id=root" \
+curl "https://localhost/svc/certs/certs/security/status?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1797,7 +1797,7 @@ curl "http://localhost:5173/svc/certs/certs/security/status?tenant_id=root" \
 
 ```bash
 # Configure expiry alert thresholds
-curl -X PUT "http://localhost:5173/svc/certs/certs/security/alert-policy?tenant_id=root" \
+curl -X PUT "https://localhost/svc/certs/certs/security/alert-policy?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1857,7 +1857,7 @@ Vecta flags the following as security findings:
 
 ```bash
 # Create service issuing CA
-curl -X POST "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/ca?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "K8s Service Identity CA",
@@ -1870,7 +1870,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
 
 # Create STAR subscription per service (in CI/CD)
 for SERVICE in payments inventory notifications auth; do
-  curl -X POST "http://localhost:5173/svc/certs/certs/star/subscriptions?tenant_id=root" \
+  curl -X POST "https://localhost/svc/certs/certs/star/subscriptions?tenant_id=root" \
     -H "Authorization: Bearer $TOKEN" \
     -d "{
       \"name\": \"${SERVICE}-star\",
@@ -2027,7 +2027,7 @@ fi
 
 ```bash
 # Issue S/MIME certificate for user
-curl -X POST "http://localhost:5173/svc/certs/certs?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -2047,7 +2047,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs?tenant_id=root" \
   }'
 
 # Export as PKCS#12 for import into email client
-curl -X POST "http://localhost:5173/svc/certs/certs/{CERT_ID}/pkcs12?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/{CERT_ID}/pkcs12?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"password": "alice-temp-password"}' \
   -o alice-smime.p12
@@ -2085,7 +2085,7 @@ crypto pki enroll VECTA-INTERNAL
 
 ```bash
 # Create PQC Root CA
-curl -X POST "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/ca?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -2102,7 +2102,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
   }'
 
 # Create PQC Issuing CA
-curl -X POST "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs/ca?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -2115,7 +2115,7 @@ curl -X POST "http://localhost:5173/svc/certs/certs/ca?tenant_id=root" \
   }'
 
 # Issue PQC server certificate
-curl -X POST "http://localhost:5173/svc/certs/certs?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "ca_id": "PQC_ISSUING_CA_ID",
