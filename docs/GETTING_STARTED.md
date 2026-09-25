@@ -1,6 +1,6 @@
 # Vecta KMS — Getting Started
 
-> **Version:** Beta — Last updated 2026-03-22
+> **Version:** 1.2.0-beta — Last updated 2026-09-25
 > **Audience:** Operators, Platform Engineers, Security Engineers, Application Developers
 
 ---
@@ -320,7 +320,7 @@ Event N+1: {data: "...", hash_of_N: "ghi789", self_hash: "jkl012"}
 
 Chain verification:
 ```bash
-curl http://localhost:5173/svc/audit/chain/verify?tenant_id=acme-corp \
+curl https://localhost/svc/audit/chain/verify?tenant_id=acme-corp \
   -H "Authorization: Bearer $ADMIN_TOKEN"
 
 # Returns:
@@ -416,13 +416,19 @@ SPIFFE attestation flow:
 | Docker | 24.0+ | Latest stable |
 | Docker Compose | v2.20+ | Latest stable |
 | Kubernetes (prod) | 1.28+ | 1.30+ |
-| PostgreSQL | 15+ | 16 |
-| Go (source build) | 1.26.4+ | 1.26.4 or newer patch release |
-| Node.js dashboard build | 24 LTS | 24.16.0+ with npm 11+ |
+| PostgreSQL | 15+ | 17 |
+| Go (source build) | 1.27.1+ | 1.27.x latest patch |
+| Node.js dashboard build | 24 LTS | 24.21.0+ with npm 11+ |
 
 ### 4.2 Docker Compose — Quickstart
 
-This is the fastest way to get Vecta KMS running locally for evaluation.
+**Fastest path (macOS / Linux):**
+
+```bash
+./deploy-local.sh      # builds, starts, waits for health, prints https://localhost
+```
+
+The manual steps below are what `deploy-local.sh` automates.
 
 ```bash
 # Clone the repository
@@ -449,17 +455,17 @@ docker compose up -d
 docker compose ps
 
 # Check service health
-curl http://localhost:5173/svc/keycore/health
+curl https://localhost/svc/keycore/health
 # Expected: {"status":"ok","version":"1.0.0-beta"}
 
 # Dashboard available at:
-open http://localhost:5173
+open https://localhost
 ```
 
 The default Docker Compose configuration starts:
 - All microservices on internal Docker network
 - PostgreSQL 16 for persistence
-- Dashboard on `localhost:5173`
+- Dashboard on `localhost`
 - KMIP listener on `localhost:5696`
 
 ### 4.3 Development Compose Override
@@ -683,7 +689,7 @@ After first startup, a default `root` tenant and `admin` user are created.
 ### 5.2 Changing the Initial Password
 
 **Via Dashboard:**
-1. Navigate to `http://localhost:5173`
+1. Navigate to `https://localhost`
 2. Enter credentials on the login screen
 3. The system redirects to the **Change Password** screen automatically
 4. Enter a new password (minimum 16 characters, must include uppercase, lowercase, digit, symbol)
@@ -692,7 +698,7 @@ After first startup, a default `root` tenant and `admin` user are created.
 **Via API:**
 ```bash
 # First, get a token with the initial password
-TOKEN=$(curl -s -X POST http://localhost:5173/svc/auth/tokens \
+TOKEN=$(curl -sk -X POST https://localhost/svc/auth/tokens \
   -H "Content-Type: application/json" \
   -d '{
     "username": "admin",
@@ -701,7 +707,7 @@ TOKEN=$(curl -s -X POST http://localhost:5173/svc/auth/tokens \
   }' | jq -r '.token')
 
 # Change password
-curl -X POST http://localhost:5173/svc/auth/users/admin/change-password \
+curl -X POST https://localhost/svc/auth/users/admin/change-password \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -807,7 +813,7 @@ Typical tenant organization patterns:
 
 ```bash
 # Requires root admin token
-curl -X POST http://localhost:5173/svc/auth/tenants \
+curl -X POST https://localhost/svc/auth/tenants \
   -H "Authorization: Bearer $ROOT_ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -841,7 +847,7 @@ curl -X POST http://localhost:5173/svc/auth/tenants \
 export ACME_TOKEN="vkms_t1_..."
 
 # All subsequent calls use acme-corp context
-curl http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp \
+curl https://localhost/svc/keycore/keys?tenant_id=acme-corp \
   -H "Authorization: Bearer $ACME_TOKEN"
 ```
 
@@ -875,7 +881,7 @@ curl http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp \
 export TOKEN="your-token-here"
 
 # Create an AES-256 encryption key
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -930,7 +936,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp" \
 
 ```bash
 # Retrieve the key you just created
-curl "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D?tenant_id=acme-corp" \
+curl "https://localhost/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -945,7 +951,7 @@ curl "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D?tenant_
 # "Hello Vecta KMS" → base64 = "SGVsbG8gVmVjdGEgS01T"
 
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/encrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/encrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -972,7 +978,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/decrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/decrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1002,7 +1008,7 @@ AAD binds ciphertext to a specific context — decryption fails if the AAD doesn
 # AAD context: "user:alice:field:ssn" → base64 = "dXNlcjphbGljZTpmaWVsZDpzc24="
 
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/encrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/encrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1012,7 +1018,7 @@ curl -X POST \
 
 # Decrypt — must provide the SAME AAD
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/decrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D/decrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1101,6 +1107,15 @@ What are you trying to accomplish?
 ---
 
 ## 10. Dashboard Tour
+
+### 10.0 Overview — Command Center
+
+The home page is the **Security Command Center**: a live key-management posture
+score, KPIs (active keys and how many are quantum-vulnerable, certificates
+expiring within 30 days, PQC readiness, last good backup), the top recommended
+actions and a control-coverage checklist. **Recommendations** lists every
+finding with filters; **Operations** keeps the previous health/ops dashboard.
+Rules and control mappings: [RECOMMENDATIONS.md](RECOMMENDATIONS.md).
 
 ### 10.1 CORE — Keys
 

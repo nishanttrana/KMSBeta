@@ -11,7 +11,7 @@ Use it together with:
 
 ## Conventions
 
-- All examples use the dashboard proxy path: `http://127.0.0.1:5173/svc/...`
+- All examples use the dashboard proxy path: `https://127.0.0.1/svc/...`
 - Replace `root` with your tenant ID when needed
 - Replace `$TOKEN` with an authenticated Bearer token
 
@@ -40,11 +40,11 @@ Steps:
 Sample:
 
 ```bash
-TOKEN="$(curl -s -X POST http://127.0.0.1:5173/svc/auth/auth/login \
+TOKEN="$(curl -k -s -X POST https://127.0.0.1/svc/auth/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"username":"admin","password":"VectaAdmin@2026"}' | jq -r '.token')"
 
-curl -X POST http://127.0.0.1:5173/svc/keycore/keys?tenant_id=root \
+curl -k -X POST https://127.0.0.1/svc/keycore/keys?tenant_id=root \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -88,7 +88,7 @@ Steps:
 Sample registration:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/workload/workload-identity/registrations?tenant_id=root \
+curl -k -X POST https://127.0.0.1/svc/workload/workload-identity/registrations?tenant_id=root \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -133,7 +133,7 @@ Steps:
 Template sample:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/autokey/autokey/templates?tenant_id=root \
+curl -k -X POST https://127.0.0.1/svc/autokey/autokey/templates?tenant_id=root \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -181,7 +181,7 @@ Steps:
 Renewal intelligence sample:
 
 ```bash
-curl -X GET http://127.0.0.1:5173/svc/certs/certs/renewal-intelligence?tenant_id=root \
+curl -k -X GET https://127.0.0.1/svc/certs/certs/renewal-intelligence?tenant_id=root \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -217,14 +217,14 @@ Steps:
 STAR summary sample:
 
 ```bash
-curl -X GET http://127.0.0.1:5173/svc/certs/certs/star/summary?tenant_id=root \
+curl -k -X GET https://127.0.0.1/svc/certs/certs/star/summary?tenant_id=root \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 STAR create sample:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/certs/certs/star/subscriptions \
+curl -k -X POST https://127.0.0.1/svc/certs/certs/star/subscriptions \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -268,7 +268,7 @@ Steps:
 DPoP example:
 
 ```bash
-curl -X PUT http://127.0.0.1:5173/svc/auth/auth/clients/reg_orders_sdk?tenant_id=root \
+curl -k -X PUT https://127.0.0.1/svc/auth/auth/clients/reg_orders_sdk?tenant_id=root \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -310,7 +310,7 @@ Steps:
 Settings sample:
 
 ```bash
-curl -X PUT http://127.0.0.1:5173/svc/keyaccess/key-access/settings \
+curl -k -X PUT https://127.0.0.1/svc/keyaccess/key-access/settings \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -326,7 +326,7 @@ curl -X PUT http://127.0.0.1:5173/svc/keyaccess/key-access/settings \
 Reason-code sample:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/keyaccess/key-access/codes \
+curl -k -X POST https://127.0.0.1/svc/keyaccess/key-access/codes \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -371,7 +371,7 @@ Steps:
 Profile sample:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/signing/signing/profiles \
+curl -k -X POST https://127.0.0.1/svc/signing/signing/profiles \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -390,7 +390,7 @@ curl -X POST http://127.0.0.1:5173/svc/signing/signing/profiles \
 Sign sample:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/signing/signing/git \
+curl -k -X POST https://127.0.0.1/svc/signing/signing/git \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -435,7 +435,7 @@ Steps:
 Database registration sample:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/ekm/ekm/databases?tenant_id=root \
+curl -k -X POST https://127.0.0.1/svc/ekm/ekm/databases?tenant_id=root \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -503,7 +503,7 @@ Steps:
 AP2 profile sample:
 
 ```bash
-curl -X PUT http://127.0.0.1:5173/svc/payment/payment/ap2/profile?tenant_id=root \
+curl -k -X PUT https://127.0.0.1/svc/payment/payment/ap2/profile?tenant_id=root \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -544,7 +544,7 @@ Steps:
 Evaluation sample:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/confidential/confidential/evaluate \
+curl -k -X POST https://127.0.0.1/svc/confidential/confidential/evaluate \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -591,7 +591,7 @@ Steps:
 Readiness sample:
 
 ```bash
-curl -X GET http://127.0.0.1:5173/svc/pqc/pqc/readiness?tenant_id=root \
+curl -k -X GET https://127.0.0.1/svc/pqc/pqc/readiness?tenant_id=root \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -625,14 +625,14 @@ Steps:
 Overview sample:
 
 ```bash
-curl -X GET http://127.0.0.1:5173/svc/mpc/mpc/overview?tenant_id=root \
+curl -k -X GET https://127.0.0.1/svc/mpc/mpc/overview?tenant_id=root \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 Sign-initiate sample:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/mpc/mpc/sign/initiate \
+curl -k -X POST https://127.0.0.1/svc/mpc/mpc/sign/initiate \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -674,7 +674,7 @@ Steps:
 Assessment sample:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/compliance/compliance/assessment/run?tenant_id=root \
+curl -k -X POST https://127.0.0.1/svc/compliance/compliance/assessment/run?tenant_id=root \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -707,7 +707,7 @@ Steps:
 Sample:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/cloud/cloud/sync?tenant_id=root \
+curl -k -X POST https://127.0.0.1/svc/cloud/cloud/sync?tenant_id=root \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -744,7 +744,7 @@ Steps:
 Sample admin setup:
 
 ```bash
-curl -X PUT http://127.0.0.1:5173/svc/auth/auth/scim/settings \
+curl -k -X PUT https://127.0.0.1/svc/auth/auth/scim/settings \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -756,7 +756,7 @@ curl -X PUT http://127.0.0.1:5173/svc/auth/auth/scim/settings \
     "group_role_mappings_enabled": true
   }'
 
-curl -X POST http://127.0.0.1:5173/svc/auth/auth/scim/settings/rotate-token \
+curl -k -X POST https://127.0.0.1/svc/auth/auth/scim/settings/rotate-token \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"tenant_id":"root"}'
@@ -765,7 +765,7 @@ curl -X POST http://127.0.0.1:5173/svc/auth/auth/scim/settings/rotate-token \
 Sample IdP push:
 
 ```bash
-curl -X POST http://127.0.0.1:5173/svc/auth/scim/v2/Users \
+curl -k -X POST https://127.0.0.1/svc/auth/scim/v2/Users \
   -H "Authorization: Bearer scim_xxxxx" \
   -H "Content-Type: application/scim+json" \
   -d '{

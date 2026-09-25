@@ -267,7 +267,7 @@ All endpoints require `Authorization: Bearer $TOKEN` and `X-Tenant-ID: root` hea
 `POST /svc/dataprotect/schemes`
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/schemes \
+curl -X POST https://localhost/svc/dataprotect/schemes \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -329,7 +329,7 @@ curl -X POST http://localhost:5173/svc/dataprotect/schemes \
 Query parameters: `pageSize` (int, default 20), `pageToken` (string, for pagination), `mode` (filter by mode: `fpe`, `vault`).
 
 ```bash
-curl "http://localhost:5173/svc/dataprotect/schemes?pageSize=10&mode=fpe" \
+curl "https://localhost/svc/dataprotect/schemes?pageSize=10&mode=fpe" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -369,7 +369,7 @@ curl "http://localhost:5173/svc/dataprotect/schemes?pageSize=10&mode=fpe" \
 `GET /svc/dataprotect/schemes/{id}`
 
 ```bash
-curl "http://localhost:5173/svc/dataprotect/schemes/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+curl "https://localhost/svc/dataprotect/schemes/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -386,7 +386,7 @@ Only `name`, `description`, and `nullHandling` are mutable after creation. Algor
 
 ```bash
 curl -X PATCH \
-  "http://localhost:5173/svc/dataprotect/schemes/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  "https://localhost/svc/dataprotect/schemes/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -408,7 +408,7 @@ Fails with `409 Conflict` if any active tokenized records reference this scheme.
 
 ```bash
 curl -X DELETE \
-  "http://localhost:5173/svc/dataprotect/schemes/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  "https://localhost/svc/dataprotect/schemes/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -422,7 +422,7 @@ curl -X DELETE \
 `POST /svc/dataprotect/tokenize`
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/tokenize \
+curl -X POST https://localhost/svc/dataprotect/tokenize \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -454,7 +454,7 @@ curl -X POST http://localhost:5173/svc/dataprotect/tokenize \
 Up to 1000 values per request.
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/tokenize/batch \
+curl -X POST https://localhost/svc/dataprotect/tokenize/batch \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -490,7 +490,7 @@ curl -X POST http://localhost:5173/svc/dataprotect/tokenize/batch \
 `POST /svc/dataprotect/detokenize`
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/detokenize \
+curl -X POST https://localhost/svc/dataprotect/detokenize \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -519,7 +519,7 @@ curl -X POST http://localhost:5173/svc/dataprotect/detokenize \
 `POST /svc/dataprotect/detokenize/batch`
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/detokenize/batch \
+curl -X POST https://localhost/svc/dataprotect/detokenize/batch \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -552,7 +552,7 @@ curl -X POST http://localhost:5173/svc/dataprotect/detokenize/batch \
 For vault-mode schemes only. Query parameters: `schemeId` (required), `token` (optional), `original` (optional).
 
 ```bash
-curl "http://localhost:5173/svc/dataprotect/vault/search?schemeId=b2c3d4e5-f6a7-8901-bcde-f12345678901&token=TKN-a8f2c9d1e4b3" \
+curl "https://localhost/svc/dataprotect/vault/search?schemeId=b2c3d4e5-f6a7-8901-bcde-f12345678901&token=TKN-a8f2c9d1e4b3" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -695,7 +695,7 @@ Output:  7819302847561243   (random numeric, 16 chars, Luhn invalid)
 `POST /svc/dataprotect/masking/policies`
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/masking/policies \
+curl -X POST https://localhost/svc/dataprotect/masking/policies \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -748,7 +748,7 @@ curl -X POST http://localhost:5173/svc/dataprotect/masking/policies \
 `POST /svc/dataprotect/mask`
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/mask \
+curl -X POST https://localhost/svc/dataprotect/mask \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -790,7 +790,7 @@ curl -X POST http://localhost:5173/svc/dataprotect/mask \
 Up to 1000 records per request.
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/mask/batch \
+curl -X POST https://localhost/svc/dataprotect/mask/batch \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -848,7 +848,7 @@ The re-encrypt endpoint accepts old ciphertext, decrypts with the current key ve
 `POST /svc/dataprotect/encrypt/field`
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/encrypt/field \
+curl -X POST https://localhost/svc/dataprotect/encrypt/field \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -885,7 +885,7 @@ The `ciphertext` is base64-encoded: key version prefix (4 bytes) + IV (12 bytes)
 `POST /svc/dataprotect/decrypt/field`
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/decrypt/field \
+curl -X POST https://localhost/svc/dataprotect/decrypt/field \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -915,7 +915,7 @@ curl -X POST http://localhost:5173/svc/dataprotect/decrypt/field \
 `POST /svc/dataprotect/reencrypt/field`
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/reencrypt/field \
+curl -X POST https://localhost/svc/dataprotect/reencrypt/field \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1063,7 +1063,7 @@ Total: 16 characters
 `POST /svc/payment/tr31/wrap`
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/tr31/wrap \
+curl -X POST https://localhost/svc/payment/tr31/wrap \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1107,7 +1107,7 @@ curl -X POST http://localhost:5173/svc/payment/tr31/wrap \
 `POST /svc/payment/tr31/unwrap`
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/tr31/unwrap \
+curl -X POST https://localhost/svc/payment/tr31/unwrap \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1142,7 +1142,7 @@ curl -X POST http://localhost:5173/svc/payment/tr31/unwrap \
 Re-wraps a key block from one KBPK to another without exposing the working key in plaintext.
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/tr31/translate \
+curl -X POST https://localhost/svc/payment/tr31/translate \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1214,7 +1214,7 @@ Encrypted PIN block transmitted = DES/AES-encrypt(04 12 67 DF EA EE D7 CF, ZPK)
 `POST /svc/payment/pin/generate-block`
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/pin/generate-block \
+curl -X POST https://localhost/svc/payment/pin/generate-block \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1246,7 +1246,7 @@ curl -X POST http://localhost:5173/svc/payment/pin/generate-block \
 Translates a PIN block from one ZPK to another without exposing the PIN in plaintext.
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/pin/translate \
+curl -X POST https://localhost/svc/payment/pin/translate \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1285,7 +1285,7 @@ curl -X POST http://localhost:5173/svc/payment/pin/translate \
 4. Stored on card Track 2. At verification: re-derive and compare.
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/pin/verify/pvv \
+curl -X POST https://localhost/svc/payment/pin/verify/pvv \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1324,7 +1324,7 @@ curl -X POST http://localhost:5173/svc/payment/pin/verify/pvv \
 4. Stored on card. At verification: re-derive Natural PIN, apply offset, compare to entered PIN.
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/pin/verify/offset \
+curl -X POST https://localhost/svc/payment/pin/verify/offset \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1357,7 +1357,7 @@ curl -X POST http://localhost:5173/svc/payment/pin/verify/offset \
 Generates a cryptographically random PIN and returns it encrypted in a PIN block. The cleartext PIN is never returned.
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/pin/generate \
+curl -X POST https://localhost/svc/payment/pin/generate \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1394,7 +1394,7 @@ ISO 20022 is the international standard for electronic data interchange between 
 `POST /svc/payment/iso20022/sign`
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/iso20022/sign \
+curl -X POST https://localhost/svc/payment/iso20022/sign \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1429,7 +1429,7 @@ curl -X POST http://localhost:5173/svc/payment/iso20022/sign \
 `POST /svc/payment/iso20022/verify`
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/iso20022/verify \
+curl -X POST https://localhost/svc/payment/iso20022/verify \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2218,7 +2218,7 @@ A template defines the properties that all keys provisioned under it must have.
 `POST /svc/autokey/autokey/templates`
 
 ```bash
-curl -X POST http://localhost:5173/svc/autokey/autokey/templates \
+curl -X POST https://localhost/svc/autokey/autokey/templates \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2269,7 +2269,7 @@ curl -X POST http://localhost:5173/svc/autokey/autokey/templates \
 `GET /svc/autokey/autokey/templates`
 
 ```bash
-curl "http://localhost:5173/svc/autokey/autokey/templates?tenant_id=root" \
+curl "https://localhost/svc/autokey/autokey/templates?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2308,7 +2308,7 @@ The complete lifecycle of a handle request from developer to provisioned key:
 **Step 1 — Developer requests a handle**
 
 ```bash
-curl -X POST http://localhost:5173/svc/autokey/autokey/handles \
+curl -X POST https://localhost/svc/autokey/autokey/handles \
   -H "Authorization: Bearer $DEV_TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2342,7 +2342,7 @@ curl -X POST http://localhost:5173/svc/autokey/autokey/handles \
 **Step 2 — Poll handle status** (for async provisioning)
 
 ```bash
-curl "http://localhost:5173/svc/autokey/autokey/handles/g7b8c9d0-e1f2-3456-gabc-789012345678" \
+curl "https://localhost/svc/autokey/autokey/handles/g7b8c9d0-e1f2-3456-gabc-789012345678" \
   -H "Authorization: Bearer $DEV_TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2382,7 +2382,7 @@ The application resolves the handle name to a KMS key ID at startup, then uses t
 
 ```bash
 # Resolve handle name to key ID
-curl "http://localhost:5173/svc/autokey/autokey/handles?handleName=payments-service-dek-prod" \
+curl "https://localhost/svc/autokey/autokey/handles?handleName=payments-service-dek-prod" \
   -H "Authorization: Bearer $SVC_TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2391,7 +2391,7 @@ curl "http://localhost:5173/svc/autokey/autokey/handles?handleName=payments-serv
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/autokey/autokey/handles/h8c9d0e1-f2a3-4567-habc-890123456789/approve" \
+  "https://localhost/svc/autokey/autokey/handles/h8c9d0e1-f2a3-4567-habc-890123456789/approve" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2419,7 +2419,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/autokey/autokey/handles/h8c9d0e1-f2a3-4567-habc-890123456789/reject" \
+  "https://localhost/svc/autokey/autokey/handles/h8c9d0e1-f2a3-4567-habc-890123456789/reject" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2523,7 +2523,7 @@ API prefix (dashboard proxy): `/svc/secrets/`
 Query parameters: `prefix` (string, path prefix filter), `pageSize` (int), `pageToken` (string), `includeExpired` (boolean, default false), `includeDeleted` (boolean, default false).
 
 ```bash
-curl "http://localhost:5173/svc/secrets/secrets?prefix=/apps/payments/prod/" \
+curl "https://localhost/svc/secrets/secrets?prefix=/apps/payments/prod/" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2563,7 +2563,7 @@ curl "http://localhost:5173/svc/secrets/secrets?prefix=/apps/payments/prod/" \
 `POST /svc/secrets/secrets`
 
 ```bash
-curl -X POST http://localhost:5173/svc/secrets/secrets \
+curl -X POST https://localhost/svc/secrets/secrets \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2609,7 +2609,7 @@ curl -X POST http://localhost:5173/svc/secrets/secrets \
 The `{path}` parameter is URL-encoded. Use `%2F` for `/`.
 
 ```bash
-curl "http://localhost:5173/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password" \
+curl "https://localhost/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2640,7 +2640,7 @@ curl "http://localhost:5173/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-p
 
 ```bash
 curl -X PUT \
-  "http://localhost:5173/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password" \
+  "https://localhost/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2680,7 +2680,7 @@ Marks the secret inactive. All versions are retained and recoverable. The secret
 
 ```bash
 curl -X DELETE \
-  "http://localhost:5173/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password" \
+  "https://localhost/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2697,7 +2697,7 @@ Permanently and irreversibly removes a specific version's value. Use when a secr
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password/destroy/2" \
+  "https://localhost/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password/destroy/2" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2724,7 +2724,7 @@ curl -X POST \
 `GET /svc/secrets/secrets/{path}/versions`
 
 ```bash
-curl "http://localhost:5173/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password/versions" \
+curl "https://localhost/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password/versions" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2751,7 +2751,7 @@ curl "http://localhost:5173/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-p
 `GET /svc/secrets/secrets/{path}/versions/{version}`
 
 ```bash
-curl "http://localhost:5173/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password/versions/3" \
+curl "https://localhost/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password/versions/3" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2768,7 +2768,7 @@ Creates a new version whose value is copied from the specified historical versio
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password/rollback/3" \
+  "https://localhost/svc/secrets/secrets/%2Fapps%2Fpayments%2Fprod%2Fdb-password/rollback/3" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2823,7 +2823,7 @@ curl -X POST \
 
 ```bash
 # Checkout service tokenizes PAN at the point of receipt
-curl -X POST http://localhost:5173/svc/dataprotect/tokenize \
+curl -X POST https://localhost/svc/dataprotect/tokenize \
   -H "Authorization: Bearer $CHECKOUT_TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2846,7 +2846,7 @@ Because FF1 FPE is deterministic (same key + tweak + input → same output), the
 **Step 4 — Settlement service detokenizes for network submission:**
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/detokenize \
+curl -X POST https://localhost/svc/dataprotect/detokenize \
   -H "Authorization: Bearer $SETTLEMENT_TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2876,7 +2876,7 @@ curl -X POST http://localhost:5173/svc/dataprotect/detokenize \
 **Step 1 — Encrypt SSN on record creation:**
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/encrypt/field \
+curl -X POST https://localhost/svc/dataprotect/encrypt/field \
   -H "Authorization: Bearer $APP_TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2895,7 +2895,7 @@ curl -X POST http://localhost:5173/svc/dataprotect/encrypt/field \
 If the application needs `SELECT * FROM patients WHERE ssn = ?`:
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/encrypt/field \
+curl -X POST https://localhost/svc/dataprotect/encrypt/field \
   -H "Authorization: Bearer $APP_TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2915,7 +2915,7 @@ curl -X POST http://localhost:5173/svc/dataprotect/encrypt/field \
 ```bash
 # Re-encrypt all SSN ciphertexts to new key version
 # Call this for every patient record during the maintenance window:
-curl -X POST http://localhost:5173/svc/dataprotect/reencrypt/field \
+curl -X POST https://localhost/svc/dataprotect/reencrypt/field \
   -H "Authorization: Bearer $ROTATION_TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2944,7 +2944,7 @@ curl -X POST http://localhost:5173/svc/dataprotect/reencrypt/field \
 **Step 1 — Wrap ZPK for transport to the POS terminal's key injection device:**
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/tr31/wrap \
+curl -X POST https://localhost/svc/payment/tr31/wrap \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2965,7 +2965,7 @@ curl -X POST http://localhost:5173/svc/payment/tr31/wrap \
 The KIF's own KBPK may differ from the KMS KBPK. Use `translate` to re-wrap for the KIF's KBPK without exposing the ZPK:
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/tr31/translate \
+curl -X POST https://localhost/svc/payment/tr31/translate \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2993,7 +2993,7 @@ curl -X POST http://localhost:5173/svc/payment/tr31/translate \
 **Step 1 — Verify old PIN (PVV method):**
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/pin/verify/pvv \
+curl -X POST https://localhost/svc/payment/pin/verify/pvv \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3012,7 +3012,7 @@ curl -X POST http://localhost:5173/svc/payment/pin/verify/pvv \
 **Step 2 — Translate new PIN block from ATM ZPK to host ZPK:**
 
 ```bash
-curl -X POST http://localhost:5173/svc/payment/pin/translate \
+curl -X POST https://localhost/svc/payment/pin/translate \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3048,7 +3048,7 @@ The new PVV is derived during the `translate` or a separate `generate` call, the
 The API gateway extracts the caller's roles from the JWT and passes them to the masking service:
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/mask/batch \
+curl -X POST https://localhost/svc/dataprotect/mask/batch \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3235,7 +3235,7 @@ SELECT patient_id, full_name, ssn_enc FROM patients;
 
 ```bash
 # Run by the CI/CD pipeline during `make provision-keys`
-curl -X POST http://localhost:5173/svc/autokey/autokey/handles \
+curl -X POST https://localhost/svc/autokey/autokey/handles \
   -H "Authorization: Bearer $CI_TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3255,7 +3255,7 @@ curl -X POST http://localhost:5173/svc/autokey/autokey/handles \
 ```bash
 # Startup script resolves handle → key ID
 KEY_ID=$(curl -s \
-  "http://localhost:5173/svc/autokey/autokey/handles?handleName=inventory-service-dek-prod" \
+  "https://localhost/svc/autokey/autokey/handles?handleName=inventory-service-dek-prod" \
   -H "Authorization: Bearer $SVC_TOKEN" \
   -H "X-Tenant-ID: root" \
   | jq -r '.items[0].keyId')
@@ -3266,7 +3266,7 @@ export VECTA_DEK_KEY_ID=$KEY_ID
 **Step 3 — Service uses the key ID for field encryption at runtime:**
 
 ```bash
-curl -X POST http://localhost:5173/svc/dataprotect/encrypt/field \
+curl -X POST https://localhost/svc/dataprotect/encrypt/field \
   -H "Authorization: Bearer $SVC_TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3286,7 +3286,7 @@ The template specifies `rotationPeriodDays: 90`. Vecta KMS automatically rotates
 
 ```bash
 # Summary of all handle requests across the fleet
-curl "http://localhost:5173/svc/autokey/autokey/summary?tenant_id=root" \
+curl "https://localhost/svc/autokey/autokey/summary?tenant_id=root" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "X-Tenant-ID: root"
 ```

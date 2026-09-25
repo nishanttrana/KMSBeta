@@ -33,6 +33,7 @@ Vecta KMS is an enterprise-grade, multi-tenant key management platform providing
 | [WORKFLOW_EXAMPLES.md](WORKFLOW_EXAMPLES.md) | Step-by-step scenario walkthroughs |
 | [REST_API_ADDITIONS.md](REST_API_ADDITIONS.md) | Supplementary REST surface detail |
 | [ADMIN_GUIDE.md](ADMIN_GUIDE.md) | Operator day-to-day guidance |
+| [RECOMMENDATIONS.md](RECOMMENDATIONS.md) | Command Center posture score and recommendation rule catalogue |
 | [generated/PRODUCT_MAP.md](generated/PRODUCT_MAP.md) | Generated UI-to-service map, route inventory, and launch triage |
 | [generated/UI_BUTTON_INVENTORY.md](generated/UI_BUTTON_INVENTORY.md) | Generated clickable-control inventory for dashboard screens |
 | [generated/REQUEST_FLOW.md](generated/REQUEST_FLOW.md) | Generated frontend-to-handler-to-package request flow map |
@@ -156,7 +157,7 @@ All API calls use the proxy path `http://{host}/svc/{service}/...`.
 
 ## Conventions Used In This Documentation
 
-- API examples use `http://localhost:5173` as the base URL (dashboard dev proxy). Replace with your deployed host.
+- API examples use `https://localhost` as the base URL (dashboard dev proxy). Replace with your deployed host.
 - `tenant_id=root` is used as the sample tenant ID unless noted otherwise.
 - `$TOKEN` refers to the Bearer token from `POST /svc/auth/auth/login`.
 - Request body examples use realistic but fictional data.

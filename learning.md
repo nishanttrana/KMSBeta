@@ -3,6 +3,53 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-09-25
+
+### "role == client-service" is NOT a service identity
+Phase 2 of the s2s-JWT rollout trusted any token with role `client-service` as
+an internal service (tenant-unrestricted + key-grant bypass). But
+`IssueClientJWT` stamps that role on **every** client-credentials token —
+customer apps included — so it would have been a cross-tenant bypass the moment
+tokens were attached. The durable rule: a privilege that bypasses tenancy must
+be keyed on something **only the platform can mint**. Now:
+`tenantcheck.IsServicePrincipal` = role `client-service` AND reserved perm
+`service.internal` AND `kms-*` client id AND internal tenant; the reserved
+permission is stripped at every API write path (API keys, tenant roles, user
+perms, client-token scope) so only the auth bootstrap can grant it. keycore
+derives it from verified claims only — `X-Actor-*` headers are spoofable.
+Verified live: an admin-created API key requesting `service.internal` is
+stored with it removed; kms-certs mints a token and keycore accepts it for
+create+sign.
+
+### Fresh volume ⇒ JWT_PUBLIC_KEY_B64 mismatch ⇒ "invalid token" everywhere
+auth generates `jwt_private.pem` on first boot if the volume is empty; every
+verifier uses `JWT_PUBLIC_KEY_B64` from `.env`. If the two came from different
+installs, login works but every service call returns 401 `invalid token`.
+Fix: derive the public key from the auth volume and write it to `.env`
+(`deploy-local.sh` does this automatically and restarts verifiers).
+
+### Apple Silicon was running every service under emulation
+Dockerfiles hard-coded `GOARCH=amd64`, and `compose-kms.sh` pins each service
+to the platform of its existing image — so once built amd64, images stayed
+amd64 forever. Dockerfiles now use BuildKit's `TARGETARCH`; `deploy-local.sh`
+removes `.tmp_compose.platform.override.yml` before building so arm64 images
+replace the emulated ones.
+
+### Published ports were LAN-reachable
+Compose published every service port as `"8010:8010"` (0.0.0.0), including
+Valkey and NATS. All non-edge ports now bind `${KMS_INTERNAL_BIND:-127.0.0.1}`;
+Envoy is the only public listener.
+
+### govulncheck ./... OOMs on this repo
+A single `govulncheck ./...` needs > 7 GB. Run it per path
+(`./pkg/...` then each `./services/<svc>/...`) and aggregate.
+
+### Recommendation engine: "unknown" is a first-class state
+The Command Center never infers a pass or fail from missing data: each source
+loads independently and a failure marks its checks "not assessed" and excludes
+them from the score. Same principle as "never fabricate security data in a KMS
+UI" (2026-06-17).
+
 ## 2026-06-18
 
 ### JWT service-to-service auth — per-service identities (phased rollout)

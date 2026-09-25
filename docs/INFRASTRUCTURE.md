@@ -231,7 +231,7 @@ HSM configuration is set per-tenant via the CLI API. All sensitive values (PINs,
 
 ```bash
 # --- Thales Luna Network HSM ---
-curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" \
+curl -X PUT "https://localhost/svc/auth/auth/cli/hsm/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -251,7 +251,7 @@ curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" 
   }'
 
 # --- Entrust nShield ---
-curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" \
+curl -X PUT "https://localhost/svc/auth/auth/cli/hsm/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -270,7 +270,7 @@ curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" 
   }'
 
 # --- Utimaco SecurityServer ---
-curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" \
+curl -X PUT "https://localhost/svc/auth/auth/cli/hsm/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -287,7 +287,7 @@ curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" 
   }'
 
 # --- Securosys Primus ---
-curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" \
+curl -X PUT "https://localhost/svc/auth/auth/cli/hsm/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -306,7 +306,7 @@ curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" 
   }'
 
 # --- AWS CloudHSM ---
-curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" \
+curl -X PUT "https://localhost/svc/auth/auth/cli/hsm/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -323,7 +323,7 @@ curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" 
   }'
 
 # --- Azure Managed HSM ---
-curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" \
+curl -X PUT "https://localhost/svc/auth/auth/cli/hsm/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -342,7 +342,7 @@ curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" 
   }'
 
 # --- Generic PKCS#11 (any compliant HSM) ---
-curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" \
+curl -X PUT "https://localhost/svc/auth/auth/cli/hsm/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -359,14 +359,14 @@ curl -X PUT "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" 
 **Retrieve current HSM configuration:**
 
 ```bash
-curl "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" \
+curl "https://localhost/svc/auth/auth/cli/hsm/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 **Disable an HSM without removing config:**
 
 ```bash
-curl -X PATCH "http://localhost:5173/svc/auth/auth/cli/hsm/config?tenant_id=root" \
+curl -X PATCH "https://localhost/svc/auth/auth/cli/hsm/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"enabled": false}'
 ```
@@ -379,7 +379,7 @@ When `key_backend: hsm` is specified, the key is generated inside the HSM using 
 
 ```bash
 # AES-256 wrapping key (Key Encryption Key) — never exportable
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -396,7 +396,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
   }'
 
 # EC-P384 signing key — for TLS certificates, JWT signing
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -409,7 +409,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
   }'
 
 # RSA-4096 signing key — for root CA or high-assurance signing
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -422,7 +422,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
   }'
 
 # AES-256 encryption key for data at rest — HSM-backed
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -435,7 +435,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
   }'
 
 # List all HSM-backed keys for a tenant
-curl "http://localhost:5173/svc/keycore/keys?tenant_id=root&key_backend=hsm" \
+curl "https://localhost/svc/keycore/keys?tenant_id=root&key_backend=hsm" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -443,7 +443,7 @@ curl "http://localhost:5173/svc/keycore/keys?tenant_id=root&key_backend=hsm" \
 
 ```bash
 # Sign a message (operation stays in HSM — only the signature leaves)
-curl -X POST "http://localhost:5173/svc/keycore/keys/KEY_ID/sign?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys/KEY_ID/sign?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -452,7 +452,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys/KEY_ID/sign?tenant_id=root"
   }'
 
 # Encrypt data using HSM-backed AES-256-GCM key
-curl -X POST "http://localhost:5173/svc/keycore/keys/KEY_ID/encrypt?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys/KEY_ID/encrypt?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -461,7 +461,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys/KEY_ID/encrypt?tenant_id=ro
   }'
 
 # Wrap a software key using the HSM root KEK
-curl -X POST "http://localhost:5173/svc/keycore/keys/HSM_KEK_ID/wrap?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys/HSM_KEK_ID/wrap?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -509,7 +509,7 @@ Thales Luna HA Groups provide transparent load balancing and automatic failover 
 
 5. **Verify HA group in Vecta:**
    ```bash
-   curl "http://localhost:5173/svc/auth/auth/cli/hsm/partitions?tenant_id=root" \
+   curl "https://localhost/svc/auth/auth/cli/hsm/partitions?tenant_id=root" \
      -H "Authorization: Bearer $TOKEN"
    ```
 
@@ -580,12 +580,12 @@ When Vecta's FIPS 140-3 mode is enabled AND the HSM backend is active, the follo
 
 ```bash
 # Enable FIPS mode on Vecta tenant
-curl -X PUT "http://localhost:5173/svc/auth/auth/cli/fips?tenant_id=root" \
+curl -X PUT "https://localhost/svc/auth/auth/cli/fips?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"enabled": true, "level": "fips_140_3_l3", "hsm_required": true}'
 
 # Verify FIPS status
-curl "http://localhost:5173/svc/auth/auth/cli/fips?tenant_id=root" \
+curl "https://localhost/svc/auth/auth/cli/fips?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 # Response: {fips_enabled: true, level: "fips_140_3_l3", hsm_active: true, hsm_provider: "luna", fips_mode_since: "2025-01-15T09:00:00Z"}
 ```
@@ -598,7 +598,7 @@ Use this endpoint to discover available PKCS#11 slots and tokens before configur
 
 ```bash
 # List all slots/tokens on a PKCS#11 library
-curl "http://localhost:5173/svc/auth/auth/cli/hsm/partitions?tenant_id=root&library_path=/usr/safenet/lunaclient/lib/libCryptoki2_64.so" \
+curl "https://localhost/svc/auth/auth/cli/hsm/partitions?tenant_id=root&library_path=/usr/safenet/lunaclient/lib/libCryptoki2_64.so" \
   -H "Authorization: Bearer $TOKEN"
 
 # Example response:
@@ -634,7 +634,7 @@ Wrapping allows a software-resident key to be encrypted by an HSM KEK and stored
 
 ```bash
 # Wrap a software DEK using the HSM KEK (AES-256-KW)
-curl -X POST "http://localhost:5173/svc/keycore/keys/HSM_KEK_ID/wrap?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys/HSM_KEK_ID/wrap?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -644,7 +644,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys/HSM_KEK_ID/wrap?tenant_id=r
 # Response: {wrapped_key_b64: "...", kek_id: "HSM_KEK_ID", wrap_algorithm: "AES-256-KW"}
 
 # Unwrap — decrypt a previously wrapped key back into the HSM
-curl -X POST "http://localhost:5173/svc/keycore/keys/HSM_KEK_ID/unwrap?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys/HSM_KEK_ID/unwrap?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -675,7 +675,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys/HSM_KEK_ID/unwrap?tenant_id
 
 ```bash
 # Check HSM health status
-curl "http://localhost:5173/svc/auth/auth/cli/hsm/health?tenant_id=root" \
+curl "https://localhost/svc/auth/auth/cli/hsm/health?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 # Response: {
 #   "status": "healthy",
@@ -688,7 +688,7 @@ curl "http://localhost:5173/svc/auth/auth/cli/hsm/health?tenant_id=root" \
 # }
 
 # Run HSM diagnostics
-curl -X POST "http://localhost:5173/svc/auth/auth/cli/hsm/diagnostics?tenant_id=root" \
+curl -X POST "https://localhost/svc/auth/auth/cli/hsm/diagnostics?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -808,7 +808,7 @@ Vecta's clustering layer uses the Raft distributed consensus algorithm. Key Raft
 ```bash
 # Step 1: Generate a join bundle on the current leader
 # The bundle contains a short-lived token, leader endpoint, and cluster CA certificate
-curl -X POST "http://localhost:5173/svc/cluster/join-bundle?tenant_id=root" \
+curl -X POST "https://localhost/svc/cluster/join-bundle?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "role": "follower",
@@ -839,7 +839,7 @@ curl -X POST "http://new-node.internal:5173/svc/cluster/join" \
   }'
 
 # Step 4: Verify the node appears in the cluster
-curl "http://localhost:5173/svc/cluster/nodes" \
+curl "https://localhost/svc/cluster/nodes" \
   -H "Authorization: Bearer $TOKEN"
 # Response:
 # {
@@ -854,7 +854,7 @@ curl "http://localhost:5173/svc/cluster/nodes" \
 # }
 
 # Step 5: Add a witness node (votes but stores no data — cheaper)
-curl -X POST "http://localhost:5173/svc/cluster/join-bundle?tenant_id=root" \
+curl -X POST "https://localhost/svc/cluster/join-bundle?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"role": "witness", "ttl_minutes": 15}'
 
@@ -883,7 +883,7 @@ Replication profiles define how reads are served from the cluster. They allow tr
 
 ```bash
 # Create a geo-routing profile for EU reads
-curl -X POST "http://localhost:5173/svc/cluster/profiles" \
+curl -X POST "https://localhost/svc/cluster/profiles" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -896,7 +896,7 @@ curl -X POST "http://localhost:5173/svc/cluster/profiles" \
   }'
 
 # Create a strong-consistency profile for payment operations
-curl -X POST "http://localhost:5173/svc/cluster/profiles" \
+curl -X POST "https://localhost/svc/cluster/profiles" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "payment-strong",
@@ -905,11 +905,11 @@ curl -X POST "http://localhost:5173/svc/cluster/profiles" \
   }'
 
 # List all profiles
-curl "http://localhost:5173/svc/cluster/profiles" \
+curl "https://localhost/svc/cluster/profiles" \
   -H "Authorization: Bearer $TOKEN"
 
 # Delete a profile
-curl -X DELETE "http://localhost:5173/svc/cluster/profiles/PROFILE_ID" \
+curl -X DELETE "https://localhost/svc/cluster/profiles/PROFILE_ID" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -921,7 +921,7 @@ Replication lag monitoring is critical for detecting network partitions or overl
 
 ```bash
 # Check replication lag for every node
-curl "http://localhost:5173/svc/cluster/sync/lag" \
+curl "https://localhost/svc/cluster/sync/lag" \
   -H "Authorization: Bearer $TOKEN"
 # Response:
 # {
@@ -935,17 +935,17 @@ curl "http://localhost:5173/svc/cluster/sync/lag" \
 # }
 
 # List sync events (filter by type)
-curl "http://localhost:5173/svc/cluster/sync/events?event_type=error&limit=50" \
+curl "https://localhost/svc/cluster/sync/events?event_type=error&limit=50" \
   -H "Authorization: Bearer $TOKEN"
 
-curl "http://localhost:5173/svc/cluster/sync/events?event_type=election&limit=10" \
+curl "https://localhost/svc/cluster/sync/events?event_type=election&limit=10" \
   -H "Authorization: Bearer $TOKEN"
 
-curl "http://localhost:5173/svc/cluster/sync/events?node_id=node-eu-2&limit=100" \
+curl "https://localhost/svc/cluster/sync/events?node_id=node-eu-2&limit=100" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get cluster-wide health summary
-curl "http://localhost:5173/svc/cluster/health" \
+curl "https://localhost/svc/cluster/health" \
   -H "Authorization: Bearer $TOKEN"
 # Response: {overall: "degraded", quorum_met: true, leader: "node-abc", unhealthy_nodes: ["node-eu-2"], max_lag_ms: 2700}
 ```
@@ -967,7 +967,7 @@ curl "http://localhost:5173/svc/cluster/health" \
 
 ```bash
 # Gracefully transfer leadership to a specific follower
-curl -X POST "http://localhost:5173/svc/cluster/nodes/LEADER_NODE_ID/role" \
+curl -X POST "https://localhost/svc/cluster/nodes/LEADER_NODE_ID/role" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -977,7 +977,7 @@ curl -X POST "http://localhost:5173/svc/cluster/nodes/LEADER_NODE_ID/role" \
   }'
 
 # Promote a follower to leader (emergency — forces election)
-curl -X POST "http://localhost:5173/svc/cluster/nodes/NODE_ID/role" \
+curl -X POST "https://localhost/svc/cluster/nodes/NODE_ID/role" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"new_role": "leader", "reason": "emergency-failover"}'
 ```
@@ -986,11 +986,11 @@ curl -X POST "http://localhost:5173/svc/cluster/nodes/NODE_ID/role" \
 
 ```bash
 # Mark node as permanently removed (quorum recalculated)
-curl -X DELETE "http://localhost:5173/svc/cluster/nodes/FAILED_NODE_ID" \
+curl -X DELETE "https://localhost/svc/cluster/nodes/FAILED_NODE_ID" \
   -H "Authorization: Bearer $TOKEN"
 
 # After removing node, verify quorum is still met
-curl "http://localhost:5173/svc/cluster/health" \
+curl "https://localhost/svc/cluster/health" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -998,12 +998,12 @@ curl "http://localhost:5173/svc/cluster/health" \
 
 ```bash
 # Promote witness to follower (begins data replication)
-curl -X POST "http://localhost:5173/svc/cluster/nodes/WITNESS_NODE_ID/role" \
+curl -X POST "https://localhost/svc/cluster/nodes/WITNESS_NODE_ID/role" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"new_role": "follower"}'
 
 # Demote follower to witness (stops data replication — frees storage)
-curl -X POST "http://localhost:5173/svc/cluster/nodes/FOLLOWER_NODE_ID/role" \
+curl -X POST "https://localhost/svc/cluster/nodes/FOLLOWER_NODE_ID/role" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"new_role": "witness"}'
 ```
@@ -1016,16 +1016,16 @@ curl -X POST "http://localhost:5173/svc/cluster/nodes/FOLLOWER_NODE_ID/role" \
 
 ```bash
 # Create a backup
-curl -X POST "http://localhost:5173/svc/governance/governance/backups?tenant_id=root" \
+curl -X POST "https://localhost/svc/governance/governance/backups?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"label": "pre-maintenance-2025-03-22", "include_keys": true}'
 
 # List backups
-curl "http://localhost:5173/svc/governance/governance/backups?tenant_id=root" \
+curl "https://localhost/svc/governance/governance/backups?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Restore from backup
-curl -X POST "http://localhost:5173/svc/governance/governance/backups/BACKUP_ID/restore?tenant_id=root" \
+curl -X POST "https://localhost/svc/governance/governance/backups/BACKUP_ID/restore?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"target_node_ids": ["node-abc"], "verify_before_restore": true}'
 ```
@@ -1105,14 +1105,14 @@ High inter-node latency increases election timeouts and may cause false leader e
    systemctl start vecta
 
    # Verify it rejoined the cluster as follower
-   curl "http://localhost:5173/svc/cluster/nodes" -H "Authorization: Bearer $TOKEN"
+   curl "https://localhost/svc/cluster/nodes" -H "Authorization: Bearer $TOKEN"
    ```
 
 2. Repeat for each follower.
 
 3. Step down the leader (triggers election to a now-upgraded follower):
    ```bash
-   curl -X POST "http://localhost:5173/svc/cluster/nodes/LEADER_ID/role" \
+   curl -X POST "https://localhost/svc/cluster/nodes/LEADER_ID/role" \
      -H "Authorization: Bearer $TOKEN" \
      -d '{"new_role": "follower"}'
    ```
@@ -1133,7 +1133,7 @@ Vecta uses strict quorum enforcement to prevent split-brain:
 
 ```bash
 # Check if current node believes it is in a quorum partition
-curl "http://localhost:5173/svc/cluster/quorum" \
+curl "https://localhost/svc/cluster/quorum" \
   -H "Authorization: Bearer $TOKEN"
 # Response: {quorum_met: true|false, node_count: 3, quorum_size: 2, leader_reachable: true}
 ```
@@ -1246,7 +1246,7 @@ QKD keys arrive at Vecta as raw symmetric key material. The QKD subsystem:
 
 ```bash
 # Register a QKD link — ID Quantique Cerberis3 over dark fiber
-curl -X POST "http://localhost:5173/svc/qkd/links?tenant_id=root" \
+curl -X POST "https://localhost/svc/qkd/links?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1268,7 +1268,7 @@ curl -X POST "http://localhost:5173/svc/qkd/links?tenant_id=root" \
   }'
 
 # Register a Toshiba QKD system (CV-QKD)
-curl -X POST "http://localhost:5173/svc/qkd/links?tenant_id=root" \
+curl -X POST "https://localhost/svc/qkd/links?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "metro-ring-cvqkd",
@@ -1286,11 +1286,11 @@ curl -X POST "http://localhost:5173/svc/qkd/links?tenant_id=root" \
   }'
 
 # List all QKD links
-curl "http://localhost:5173/svc/qkd/links?tenant_id=root" \
+curl "https://localhost/svc/qkd/links?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Check link health (QBER, key rate, SKS availability)
-curl "http://localhost:5173/svc/qkd/links/LINK_ID/health" \
+curl "https://localhost/svc/qkd/links/LINK_ID/health" \
   -H "Authorization: Bearer $TOKEN"
 # Response:
 # {
@@ -1306,23 +1306,23 @@ curl "http://localhost:5173/svc/qkd/links/LINK_ID/health" \
 # }
 
 # Consume a QKD key from the SKS
-curl -X POST "http://localhost:5173/svc/qkd/links/LINK_ID/key?tenant_id=root" \
+curl -X POST "https://localhost/svc/qkd/links/LINK_ID/key?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"length_bytes": 32, "consume": true}'
 # Response: {key_id: "uuid", key_b64: "...", consumed_at: "...", sks_remaining_bytes: 524256}
 
 # Retrieve QKD key by ID (for decrypting party to retrieve matching key)
-curl "http://localhost:5173/svc/qkd/links/LINK_ID/key/KEY_ID?tenant_id=root" \
+curl "https://localhost/svc/qkd/links/LINK_ID/key/KEY_ID?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Update link config (e.g. adjust QBER threshold)
-curl -X PATCH "http://localhost:5173/svc/qkd/links/LINK_ID?tenant_id=root" \
+curl -X PATCH "https://localhost/svc/qkd/links/LINK_ID?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"config": {"qber_threshold_percent": 7.5}}'
 
 # Delete link
-curl -X DELETE "http://localhost:5173/svc/qkd/links/LINK_ID?tenant_id=root" \
+curl -X DELETE "https://localhost/svc/qkd/links/LINK_ID?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1353,7 +1353,7 @@ GET /svc/qkd/api/v1/keys/{SAE_ID}/status
 
 ```bash
 # Register a Secure Application Entity
-curl -X POST "http://localhost:5173/svc/qkd/sae?tenant_id=root" \
+curl -X POST "https://localhost/svc/qkd/sae?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "sae_id": "payment-service-dc-a",
@@ -1381,12 +1381,12 @@ QBER (Quantum Bit Error Rate) is the fraction of sifted key bits that differ bet
 
 ```bash
 # Get QBER time series for a link (last 24 hours)
-curl "http://localhost:5173/svc/qkd/links/LINK_ID/qber/history?hours=24" \
+curl "https://localhost/svc/qkd/links/LINK_ID/qber/history?hours=24" \
   -H "Authorization: Bearer $TOKEN"
 # Response: {data_points: [{timestamp, qber_percent, key_rate_kbps, sks_bytes}], ...}
 
 # Get QBER alerts
-curl "http://localhost:5173/svc/qkd/links/LINK_ID/alerts" \
+curl "https://localhost/svc/qkd/links/LINK_ID/alerts" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1409,7 +1409,7 @@ Two datacenters connected by a dark fiber QKD link. All inter-DC traffic is encr
 
 ```bash
 # Application requests hybrid key (QKD + ML-KEM)
-curl -X POST "http://localhost:5173/svc/qkd/hybrid-key?tenant_id=root" \
+curl -X POST "https://localhost/svc/qkd/hybrid-key?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "link_id": "LINK_ID",
@@ -1489,7 +1489,7 @@ Two banks share a QKD link. Settlement messages are authenticated using HMAC-SHA
 
 ```bash
 # Register a PCIe QRNG (IDQ Quantis PCIe-75)
-curl -X POST "http://localhost:5173/svc/qrng/sources?tenant_id=root" \
+curl -X POST "https://localhost/svc/qrng/sources?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1507,7 +1507,7 @@ curl -X POST "http://localhost:5173/svc/qrng/sources?tenant_id=root" \
   }'
 
 # Register a cloud QRNG (Cambridge Quantum IronBridge)
-curl -X POST "http://localhost:5173/svc/qrng/sources?tenant_id=root" \
+curl -X POST "https://localhost/svc/qrng/sources?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "ironbridge-cloud-qrng",
@@ -1524,7 +1524,7 @@ curl -X POST "http://localhost:5173/svc/qrng/sources?tenant_id=root" \
   }'
 
 # Register a USB QRNG (IDQ Quantis USB)
-curl -X POST "http://localhost:5173/svc/qrng/sources?tenant_id=root" \
+curl -X POST "https://localhost/svc/qrng/sources?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "usb-qrng-backup",
@@ -1539,22 +1539,22 @@ curl -X POST "http://localhost:5173/svc/qrng/sources?tenant_id=root" \
   }'
 
 # List all QRNG sources with current status
-curl "http://localhost:5173/svc/qrng/sources?tenant_id=root" \
+curl "https://localhost/svc/qrng/sources?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 # Response: [{source_id, name, vendor, interface, status, entropy_rate_mbps, buffer_fill_percent, priority}]
 
 # Generate 32 bytes from the highest-priority healthy QRNG
-curl -X POST "http://localhost:5173/svc/qrng/generate?tenant_id=root" \
+curl -X POST "https://localhost/svc/qrng/generate?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"length": 32, "format": "base64"}'
 
 # Generate from a specific source
-curl -X POST "http://localhost:5173/svc/qrng/generate?tenant_id=root" \
+curl -X POST "https://localhost/svc/qrng/generate?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"length": 32, "source_id": "SOURCE_UUID", "format": "hex"}'
 
 # Check health of a specific source (includes NIST SP 800-22 test results)
-curl "http://localhost:5173/svc/qrng/sources/SOURCE_ID/health" \
+curl "https://localhost/svc/qrng/sources/SOURCE_ID/health" \
   -H "Authorization: Bearer $TOKEN"
 # Response:
 # {
@@ -1578,12 +1578,12 @@ curl "http://localhost:5173/svc/qrng/sources/SOURCE_ID/health" \
 # }
 
 # Disable a QRNG source (falls back to next priority)
-curl -X PATCH "http://localhost:5173/svc/qrng/sources/SOURCE_ID?tenant_id=root" \
+curl -X PATCH "https://localhost/svc/qrng/sources/SOURCE_ID?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"enabled": false}'
 
 # Delete a QRNG source
-curl -X DELETE "http://localhost:5173/svc/qrng/sources/SOURCE_ID?tenant_id=root" \
+curl -X DELETE "https://localhost/svc/qrng/sources/SOURCE_ID?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1644,12 +1644,12 @@ Generate audit event: QRNG_RESTORED
 
 ```bash
 # Manually quarantine a source
-curl -X POST "http://localhost:5173/svc/qrng/sources/SOURCE_ID/quarantine?tenant_id=root" \
+curl -X POST "https://localhost/svc/qrng/sources/SOURCE_ID/quarantine?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"reason": "vendor-reported-firmware-bug"}'
 
 # Release from quarantine
-curl -X POST "http://localhost:5173/svc/qrng/sources/SOURCE_ID/release?tenant_id=root" \
+curl -X POST "https://localhost/svc/qrng/sources/SOURCE_ID/release?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1672,7 +1672,7 @@ Multiple sources are XOR-combined after whitening. This means:
 
 ```bash
 # Check current entropy pool status
-curl "http://localhost:5173/svc/qrng/pool?tenant_id=root" \
+curl "https://localhost/svc/qrng/pool?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 # Response:
 # {
@@ -1693,12 +1693,12 @@ When QRNG is configured, all key generation operations use QRNG-sourced entropy:
 
 ```bash
 # Generate a cryptographically random value using QRNG
-curl -X POST "http://localhost:5173/svc/keycore/crypto/random?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/crypto/random?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"length": 32, "source": "qrng", "format": "base64"}'
 
 # Generate an AES-256 key seeded from QRNG (key material derived inside HSM using QRNG entropy)
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "qrng-seeded-aes-key",
@@ -1709,7 +1709,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
   }'
 
 # Generate an EC key pair using QRNG entropy (key gen in HSM using QRNG as seed input)
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "qrng-ec-signing-key",
@@ -1835,7 +1835,7 @@ For applications requiring ECDSA (Bitcoin secp256k1, Ethereum, NIST P-256), Vect
 
 ```bash
 # Create a BLS threshold group (3-of-5)
-curl -X POST "http://localhost:5173/svc/mpc/groups?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/groups?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "eth-validator-committee",
@@ -1845,7 +1845,7 @@ curl -X POST "http://localhost:5173/svc/mpc/groups?tenant_id=root" \
   }'
 
 # BLS partial signature
-curl -X POST "http://localhost:5173/svc/mpc/sign?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/sign?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "group_id": "GROUP_ID",
@@ -1860,7 +1860,7 @@ curl -X POST "http://localhost:5173/svc/mpc/sign?tenant_id=root" \
 
 ```bash
 # Create a FROST-Ed25519 group (3-of-5)
-curl -X POST "http://localhost:5173/svc/mpc/groups?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/groups?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1884,7 +1884,7 @@ curl -X POST "http://localhost:5173/svc/mpc/groups?tenant_id=root" \
 # Response: {group_id: "GROUP_UUID", status: "pending_keygen", created_at: "..."}
 
 # Create a CGGMP21 ECDSA group (2-of-3, secp256k1 for Ethereum)
-curl -X POST "http://localhost:5173/svc/mpc/groups?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/groups?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "eth-custody-multisig",
@@ -1899,16 +1899,16 @@ curl -X POST "http://localhost:5173/svc/mpc/groups?tenant_id=root" \
   }'
 
 # List all MPC groups
-curl "http://localhost:5173/svc/mpc/groups?tenant_id=root" \
+curl "https://localhost/svc/mpc/groups?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get group details
-curl "http://localhost:5173/svc/mpc/groups/GROUP_ID?tenant_id=root" \
+curl "https://localhost/svc/mpc/groups/GROUP_ID?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 # Response: {group_id, name, algorithm, threshold, total_parties, status, public_key_b64, parties: [...]}
 
 # Delete MPC group (destroys all shares — irreversible)
-curl -X DELETE "http://localhost:5173/svc/mpc/groups/GROUP_ID?tenant_id=root" \
+curl -X DELETE "https://localhost/svc/mpc/groups/GROUP_ID?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1920,7 +1920,7 @@ The DKG ceremony is the most security-critical step — all party representative
 
 ```bash
 # Initiate DKG ceremony for the group
-curl -X POST "http://localhost:5173/svc/mpc/groups/GROUP_ID/keygen?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/groups/GROUP_ID/keygen?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1931,7 +1931,7 @@ curl -X POST "http://localhost:5173/svc/mpc/groups/GROUP_ID/keygen?tenant_id=roo
 # Response: {ceremony_id: "CEREMONY_UUID", round: 1, awaiting_parties: ["party1", "party2", ...]}
 
 # Party 1 submits Round 1 commitment (nonce commitments + VSS commitments)
-curl -X POST "http://localhost:5173/svc/mpc/ceremonies/CEREMONY_ID/round?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/ceremonies/CEREMONY_ID/round?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "party_id": "party1",
@@ -1943,7 +1943,7 @@ curl -X POST "http://localhost:5173/svc/mpc/ceremonies/CEREMONY_ID/round?tenant_
 
 # Once all parties submit Round 1, proceed to Round 2 (share distribution)
 # Party 1 submits Round 2 data (encrypted shares for each other party)
-curl -X POST "http://localhost:5173/svc/mpc/ceremonies/CEREMONY_ID/round?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/ceremonies/CEREMONY_ID/round?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "party_id": "party1",
@@ -1952,7 +1952,7 @@ curl -X POST "http://localhost:5173/svc/mpc/ceremonies/CEREMONY_ID/round?tenant_
   }'
 
 # Check ceremony status
-curl "http://localhost:5173/svc/mpc/ceremonies/CEREMONY_ID?tenant_id=root" \
+curl "https://localhost/svc/mpc/ceremonies/CEREMONY_ID?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 # Response:
 # {
@@ -1967,12 +1967,12 @@ curl "http://localhost:5173/svc/mpc/ceremonies/CEREMONY_ID?tenant_id=root" \
 # }
 
 # After all rounds complete, ceremony finishes and group public key is available
-curl "http://localhost:5173/svc/mpc/ceremonies/CEREMONY_ID?tenant_id=root" \
+curl "https://localhost/svc/mpc/ceremonies/CEREMONY_ID?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 # Response: {status: "complete", group_public_key_b64: "...", completed_at: "..."}
 
 # List all ceremonies (for audit)
-curl "http://localhost:5173/svc/mpc/ceremonies?tenant_id=root&group_id=GROUP_ID" \
+curl "https://localhost/svc/mpc/ceremonies?tenant_id=root&group_id=GROUP_ID" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1990,7 +1990,7 @@ curl "http://localhost:5173/svc/mpc/ceremonies?tenant_id=root&group_id=GROUP_ID"
 
 ```bash
 # Initiate a signing request (requires 3-of-5 approvals)
-curl -X POST "http://localhost:5173/svc/mpc/sign?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/sign?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -2007,7 +2007,7 @@ curl -X POST "http://localhost:5173/svc/mpc/sign?tenant_id=root" \
 # Response: {sign_request_id: "SIGN_UUID", status: "awaiting_approval", approvals_needed: 3, approvals_received: 0}
 
 # Party 2 approves and contributes partial signature (Round 1)
-curl -X POST "http://localhost:5173/svc/mpc/sign/SIGN_UUID/approve?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/sign/SIGN_UUID/approve?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "party_id": "party2",
@@ -2017,7 +2017,7 @@ curl -X POST "http://localhost:5173/svc/mpc/sign/SIGN_UUID/approve?tenant_id=roo
   }'
 
 # Parties submit Round 2 data after receiving all Round 1 commitments
-curl -X POST "http://localhost:5173/svc/mpc/sign/SIGN_UUID/approve?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/sign/SIGN_UUID/approve?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "party_id": "party2",
@@ -2026,7 +2026,7 @@ curl -X POST "http://localhost:5173/svc/mpc/sign/SIGN_UUID/approve?tenant_id=roo
   }'
 
 # Check signing request status
-curl "http://localhost:5173/svc/mpc/sign/SIGN_UUID?tenant_id=root" \
+curl "https://localhost/svc/mpc/sign/SIGN_UUID?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 # Response:
 # {
@@ -2040,16 +2040,16 @@ curl "http://localhost:5173/svc/mpc/sign/SIGN_UUID?tenant_id=root" \
 # }
 
 # Reject a signing request (any party can veto)
-curl -X POST "http://localhost:5173/svc/mpc/sign/SIGN_UUID/reject?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/sign/SIGN_UUID/reject?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"party_id": "party4", "reason": "amount-exceeds-daily-limit"}'
 
 # List all pending signing requests
-curl "http://localhost:5173/svc/mpc/sign?tenant_id=root&status=awaiting_approval" \
+curl "https://localhost/svc/mpc/sign?tenant_id=root&status=awaiting_approval" \
   -H "Authorization: Bearer $TOKEN"
 
 # Verify a produced signature
-curl -X POST "http://localhost:5173/svc/mpc/verify?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/verify?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "group_id": "GROUP_UUID",
@@ -2069,7 +2069,7 @@ curl -X POST "http://localhost:5173/svc/mpc/verify?tenant_id=root" \
 ```bash
 # Initiate a share refresh ceremony
 # All N parties must participate; at the end, old shares are invalid
-curl -X POST "http://localhost:5173/svc/mpc/groups/GROUP_ID/refresh?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/groups/GROUP_ID/refresh?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "ceremony_label": "quarterly-share-refresh-Q1-2025",
@@ -2078,7 +2078,7 @@ curl -X POST "http://localhost:5173/svc/mpc/groups/GROUP_ID/refresh?tenant_id=ro
 # Response: {ceremony_id: "REFRESH_CEREMONY_UUID", type: "share_refresh"}
 
 # Parties participate identically to DKG — submit round data for each round
-curl -X POST "http://localhost:5173/svc/mpc/ceremonies/REFRESH_CEREMONY_UUID/round?tenant_id=root" \
+curl -X POST "https://localhost/svc/mpc/ceremonies/REFRESH_CEREMONY_UUID/round?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"party_id": "party1", "round": 1, "round_data": "..."}'
 

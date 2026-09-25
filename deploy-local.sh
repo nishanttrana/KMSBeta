@@ -66,6 +66,13 @@ cp "${ENV_FILE}" "${ENV_FILE}.bak.deploy.$(date +%s)"
 ensure_secret INTERNAL_SERVICE_BOOTSTRAP_SECRET
 ensure_secret INTERNAL_API_TOKEN
 
+# Tag images with the release in VERSION so upgrades are traceable.
+VERSION_FILE_VALUE="$(tr -d '[:space:]' < VERSION 2>/dev/null || true)"
+if [[ -n "${VERSION_FILE_VALUE}" && "$(env_get VECTA_VERSION)" != "${VERSION_FILE_VALUE}" ]]; then
+  env_set VECTA_VERSION "${VERSION_FILE_VALUE}"
+  say "VECTA_VERSION set to ${VERSION_FILE_VALUE}"
+fi
+
 PROJECT="$(env_get COMPOSE_PROJECT_NAME)"; PROJECT="${PROJECT:-vecta-kms}"
 
 # ── 3. Base images (pinned; tagged under vecta-local/ for the Dockerfiles) ─

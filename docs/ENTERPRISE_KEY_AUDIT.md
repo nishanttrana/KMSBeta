@@ -39,7 +39,7 @@ All tables are tenant-scoped and have row-level security policies using `app.ten
 All examples use the dashboard proxy form:
 
 ```bash
-BASE="http://localhost:5173/svc/keycore"
+BASE="https://localhost/svc/keycore"
 TENANT="root"
 AUTH="Authorization: Bearer $TOKEN"
 ```
