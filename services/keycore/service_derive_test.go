@@ -5,6 +5,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"testing"
+	"time"
+
+	pkgcache "vecta-kms/pkg/cache"
+	"vecta-kms/pkg/metering"
 )
 
 func serviceCtx(clientID string) context.Context {
@@ -82,8 +86,16 @@ func TestServiceDeriveRequiresServiceIdentity(t *testing.T) {
 	}
 }
 
+type captureKeycorePublisher struct{ subjects []string }
+
+func (c *captureKeycorePublisher) Publish(_ context.Context, subject string, _ []byte) error {
+	c.subjects = append(c.subjects, subject)
+	return nil
+}
+
 func TestGenericDeriveCannotReproduceServiceSubkey(t *testing.T) {
-	_, svc := newHandlerForTest(t)
+	pub := &captureKeycorePublisher{}
+	svc := NewService(newStoreForTest(t), NewKeyCache(pkgcache.NewMemory(5*time.Minute), 5*time.Minute), pub, metering.NewMeter(0, time.Hour), []byte("0123456789ABCDEF0123456789ABCDEF"), nil, false)
 	key, err := svc.CreateKey(context.Background(), CreateKeyRequest{
 		TenantID: "t1", Name: "dp-key-3", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "derive",
 		Owner: "ops", CreatedBy: "tester",
@@ -99,5 +111,12 @@ func TestGenericDeriveCannotReproduceServiceSubkey(t *testing.T) {
 	})
 	if !errors.Is(err, errReservedDeriveInfo) {
 		t.Fatalf("generic derive must refuse the reserved service-derive info, got %v", err)
+	}
+	found := false
+	for _, s := range pub.subjects {
+		found = found || s == "audit.key.derive_refused"
+	}
+	if !found {
+		t.Fatalf("the refused attempt must be audited, got %v", pub.subjects)
 	}
 }

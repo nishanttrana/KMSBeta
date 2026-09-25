@@ -114,6 +114,23 @@ func main() {
 		}
 	}()
 
+	// Audit FIPS mode rollouts: services report the mode they start in;
+	// governance turns that into audit events (see fips_mode.go).
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := svc.AuditFIPSRollout(ctx); err != nil {
+					logger.Printf("fips rollout audit: %v", err)
+				}
+			}
+		}
+	}()
+
 	httpPort := envOr("HTTP_PORT", "8050")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "governance"))
 	go func() {

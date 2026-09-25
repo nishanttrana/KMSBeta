@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"log"
 	"net"
@@ -79,7 +80,7 @@ func main() {
 	logic := NewAuthLogic(signingKey, cfg.JWTIssuer, cfg.JWTAudience)
 	store := NewSQLStore(dbConn)
 	bootstrapDefaultAdmin(ctx, store, logger)
-	bootstrapInternalServiceClients(ctx, store, logger)
+	bootstrapInternalServiceClients(ctx, store, logger, auditPublisher)
 	meter := metering.NewMeter(cfg.OpsLimit, cfg.MeteringWindow)
 	healthChecker := NewSystemHealthChecker(cfg.ConsulAddress, logger)
 	handler := NewHandler(store, logic, auditPublisher, meter, logger, healthChecker)
@@ -196,9 +197,9 @@ func envOrBool(k string, d bool) bool {
 // and retires keys derived from any previous secret, so rotation takes effect
 // on the next auth start. Disabled when the secret is unset; refuses to start
 // when it is set but weak. Idempotent.
-func bootstrapInternalServiceClients(ctx context.Context, store Store, logger *log.Logger) {
+func bootstrapInternalServiceClients(ctx context.Context, store Store, logger *log.Logger, audit AuditPublisher) {
 	tenantID := envOr("INTERNAL_SERVICE_TENANT", "root")
-	revokeInsecureServiceKeys(ctx, store, tenantID, logger)
+	revokeInsecureServiceKeys(ctx, store, tenantID, logger, audit)
 
 	secret := strings.TrimSpace(os.Getenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET"))
 	if err := servicetoken.ValidateBootstrapSecret(secret); errors.Is(err, servicetoken.ErrBootstrapSecretUnset) {
@@ -241,6 +242,11 @@ func bootstrapInternalServiceClients(ctx context.Context, store Store, logger *l
 			logger.Fatalf("bootstrap: retire stale %s service keys failed: %v", name, err)
 		} else if n > 0 {
 			logger.Printf("bootstrap: SECURITY retired %d stale %s service key(s) from a previous bootstrap secret", n, name)
+			bootstrapAudit(ctx, audit, "audit.auth.service_key_retired", tenantID, map[string]any{
+				"service": name, "keys_retired": n, "reason": "bootstrap secret rotated",
+				"severity": "warning", "result": "success",
+				"description": "service API keys derived from a previous INTERNAL_SERVICE_BOOTSTRAP_SECRET were deleted",
+			})
 		}
 		provisioned++
 	}
@@ -257,7 +263,7 @@ var internalServiceClients = []string{
 // revokeInsecureServiceKeys deletes service API keys that earlier deployments
 // seeded from the public default bootstrap secret. Anyone could derive those
 // keys, so they must not survive an upgrade.
-func revokeInsecureServiceKeys(ctx context.Context, store Store, tenantID string, logger *log.Logger) {
+func revokeInsecureServiceKeys(ctx context.Context, store Store, tenantID string, logger *log.Logger, audit AuditPublisher) {
 	for _, name := range internalServiceClients {
 		sum := sha256.Sum256([]byte(servicetoken.InsecureDefaultAPIKey(name)))
 		key, err := store.GetAPIKeyByHash(ctx, tenantID, sum[:])
@@ -270,6 +276,29 @@ func revokeInsecureServiceKeys(ctx context.Context, store Store, tenantID string
 			logger.Fatalf("bootstrap: revoke insecure %s service key failed: %v", name, err)
 		}
 		logger.Printf("bootstrap: SECURITY revoked %s service key derived from the public default secret", name)
+		bootstrapAudit(ctx, audit, "audit.auth.service_key_revoked", tenantID, map[string]any{
+			"service": name, "key_id": key.ID, "reason": "derived from the public default bootstrap secret",
+			"severity": "critical", "result": "success",
+			"description": "a forgeable internal service API key was revoked at startup",
+		})
+	}
+}
+
+// bootstrapAudit emits a startup security event on the unified audit stream.
+func bootstrapAudit(ctx context.Context, audit AuditPublisher, subject, tenantID string, data map[string]any) {
+	if audit == nil {
+		return
+	}
+	raw, err := json.Marshal(map[string]any{
+		"tenant_id": tenantID,
+		"service":   "auth",
+		"action":    subject,
+		"actor":     "system:bootstrap",
+		"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
+		"data":      data,
+	})
+	if err == nil {
+		_ = audit.Publish(ctx, subject, raw)
 	}
 }
 

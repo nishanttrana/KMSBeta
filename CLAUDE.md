@@ -110,4 +110,10 @@ changes code without touching CHANGELOG.md or learning.md.
   shrinks, and a new entry needs a crypto-boundary justification.
 - `go vet` and `go test` pass for the touched packages. New security behaviour
   gets a test that proves the bad case is rejected.
-- The documentation above is updated in the same change.
+- The documentation above is updated in the same change. New or changed
+  endpoints, headers and env vars also go in `docs/API_REFERENCE.md`.
+- Every security-relevant action and refusal emits a specific audit event
+  (the HTTP middleware's generic request record isn't enough). New events are
+  listed in `docs/SECURITY/` and proven by a test. Something that can't be
+  audited (for example a service refusing to start) must say how it shows
+  instead.

@@ -67,7 +67,8 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 			previous TEXT NOT NULL DEFAULT '',
 			reason TEXT NOT NULL DEFAULT '',
 			requested_by TEXT NOT NULL,
-			requested_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+			requested_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			completed_at TIMESTAMP
 		);`,
 		`CREATE TABLE platform_fips_observed (
 			service TEXT NOT NULL,
@@ -77,6 +78,7 @@ func createGovernanceSchemaForTest(conn *pkgdb.DB) error {
 			validated BOOLEAN NOT NULL DEFAULT FALSE,
 			started_at TIMESTAMP NOT NULL,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			audited_started_at TIMESTAMP,
 			PRIMARY KEY (service, instance)
 		);`,
 		`CREATE TABLE approval_policies (

@@ -1123,6 +1123,12 @@ func (s *Service) CheckOCSPDER(ctx context.Context, tenantID string, reqDER []by
 	// The response CertID must use the request's hash (RFC 6960 4.1.1). SHA-1
 	// is not FIPS-approved, so strict mode refuses it rather than panicking.
 	if ocspReq.HashAlgorithm == crypto.SHA1 && fips140.Enforced() {
+		_ = s.publishAudit(ctx, "audit.cert.ocsp_refused", tenantID, map[string]interface{}{
+			"serial":   strings.ToLower(ocspReq.SerialNumber.Text(16)),
+			"reason":   "SHA-1 CertID in FIPS strict mode",
+			"severity": "warning",
+			"result":   "denied",
+		})
 		return nil, "", "", time.Time{}, errors.New("ocsp request uses a SHA-1 CertID, which FIPS strict mode does not allow; resend with SHA-256")
 	}
 

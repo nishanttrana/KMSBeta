@@ -155,6 +155,9 @@ func TestKDFMigrationDualReadThenCutover(t *testing.T) {
 	if _, err := fpeDecrypt(t, withRequestedKDF(ctx, kdfV1), svc, "t-mig", "key-1", oldCT); svcErrCode(err) != "legacy_kdf_retired" {
 		t.Fatalf("v1 after migration must be refused, got %v", err)
 	}
+	if pub.Count("audit.dataprotect.kdf_refused") != 1 {
+		t.Fatal("a v1 request after migration must be audited")
+	}
 	for _, ev := range []string{"audit.dataprotect.kdf_migration_started", "audit.dataprotect.kdf_migration_completed"} {
 		if pub.Count(ev) != 1 {
 			t.Fatalf("missing audit event %s", ev)

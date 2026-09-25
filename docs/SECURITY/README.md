@@ -23,6 +23,9 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
   working keys come from keycore key material (service-derive), never from
   identifiers; includes the per-key migration runbook for legacy data.
 - [SECRET_ROTATION.md](SECRET_ROTATION.md): rotating secrets on a live stack.
+- [AUDIT_EVENTS_2026-09.md](AUDIT_EVENTS_2026-09.md): every audit event the
+  2026-09 refresh added, and what can't be audited (startup refusals) and how
+  it shows instead.
 
 ## Latest scan — 2026-09-25 (v1.2.0-beta)
 

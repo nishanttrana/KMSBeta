@@ -7,6 +7,18 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 ## [1.2.0-beta] — 2026-09-25
 
 ### Security
+- **Audit coverage for this refresh.** New events:
+  - service-key revocation and retirement in auth;
+  - per-service FIPS mode application and rollout completion (restart-safe);
+  - reserved-prefix derive attempts (critical);
+  - SHA-1 OCSP refusals in strict mode;
+  - dataprotect key-derivation refusals.
+
+  The full catalogue, including what can't be audited (startup refusals), is
+  in `docs/SECURITY/AUDIT_EVENTS_2026-09.md`. `docs/API_REFERENCE.md` now
+  documents `service-derive`, the `/kdf/keys` migration API, the
+  `X-Vecta-KDF-Version` header and the governance `fips-mode` API. Governance
+  migration 011.
 - **FIPS mode is now changed in the KMS UI**, not at deployment.
   - **Where:** System Administration → Runtime Crypto → Platform FIPS 140-3
     mode (root admins).

@@ -471,6 +471,25 @@ Body: `algorithm` (HKDF-SHA256/384/512, PBKDF2-SHA256, SP800-108-CTR), `salt`, `
 
 Response: Key object or `derivedKeyMaterial` (base64)
 
+`info` must not start with the reserved prefix `vecta/service-derive/`. Such a
+request is refused and audited as `audit.key.derive_refused` (critical).
+
+---
+
+### POST /svc/keycore/keys/{id}/service-derive
+
+**Internal services only.** The caller needs a verified service JWT
+(`kms-*` client). Any other caller gets 403 `service_identity_required`.
+Returns a 32-byte working key:
+`HKDF-SHA256(key material, "vecta-service-derive", "vecta/service-derive/v1|<client>|<tenant>|<key>|<purpose>|v<version>")`.
+The result is bound to the calling service, and the pinned version keeps it
+stable across rotation. The key must be symmetric and active or deactivated.
+
+Body: `tenant_id`, `purpose` (`[a-z0-9-]`, 1–64 chars), `version` (0 = current).
+Response: `key_id`, `version`, `purpose`, `kdf` (`HKDF-SHA256`), `derived_key` (base64).
+Audit: `audit.key.service_derive`. See
+[SECURITY/DATAPROTECT_KEY_DERIVATION.md](SECURITY/DATAPROTECT_KEY_DERIVATION.md).
+
 ---
 
 ### POST /svc/keycore/keys/{id}/encapsulate (KEM)
@@ -929,6 +948,38 @@ Response: `restoreId`, `status`, `restoredObjects`, `errors[]`, `completedAt`
 ### GET /svc/governance/system/state
 
 Response: `status`, `services` (map of service → up/down), `pendingApprovals`, `lastBackupAt`, `clusterNodes`, `healthyNodes`, `checkedAt`
+
+---
+
+### GET /svc/governance/system/fips-mode
+
+Root-tenant administrators only (`tenant_id=root`). Response `status`:
+- `desired`: `{mode, previous, reason, requested_by, requested_at}`, or `null` if never set
+- `effective`: `on` | `only` | `off`
+- `services`: `[{service, instance, mode, module_version, validated, started_at, updated_at}]`
+- `converged`, `pending`
+
+### GET /svc/governance/system/fips-mode/impact?target=on|only|off
+
+Root admin. Response `impact`:
+- `from`, `to`, `downgrade`
+- `stops` / `starts`: `[{service, feature, detail}]`
+- `notes`
+- `restarts`, `estimated_seconds`
+
+### PUT /svc/governance/system/fips-mode
+
+Root admin with write rights. Body: `mode`, `confirm` (must repeat `mode`),
+`reason`. Response: `impact`.
+
+Services apply the change by a staggered graceful restart.
+
+Audit:
+- `audit.governance.fips_mode_changed` (critical for a downgrade)
+- then `audit.governance.fips_mode_applied` for each service start
+- and `audit.governance.fips_mode_rollout_completed` when all match
+
+See [SECURITY/FIPS.md](SECURITY/FIPS.md).
 
 ---
 
@@ -1606,6 +1657,44 @@ Lists evaluated justification decisions.
 ## Service 13: Dataprotect (`/svc/dataprotect/`)
 
 Tokenization, masking, field-level encryption, and secure vault search.
+
+**Working keys** come from keycore `service-derive` (v2). Keys that predate
+2026-09-25 start in state `legacy` (identifier-derived, v1) until migrated.
+While a key is `migrating`, any operation accepts the header
+`X-Vecta-KDF-Version: v1|v2` to read old data and write new data. Refusals
+return 409:
+- `kdf_migration_not_started`
+- `legacy_kdf_retired` (audited as `audit.dataprotect.kdf_refused`)
+- `key_material_unavailable` (FIPS strict mode)
+
+See [SECURITY/DATAPROTECT_KEY_DERIVATION.md](SECURITY/DATAPROTECT_KEY_DERIVATION.md).
+
+### GET /svc/dataprotect/kdf/keys
+
+Each key's derivation state: `key_id`, `state` (`legacy`|`migrating`|`v2`),
+`key_version` (pinned), `legacy_uses`, `last_legacy_use_at`,
+`legacy_vault_tokens`.
+
+### POST /svc/dataprotect/kdf/keys/{key_id}/start-migration
+
+`legacy` → `migrating`; pins the current keycore version.
+Audit: `audit.dataprotect.kdf_migration_started`.
+
+### POST /svc/dataprotect/kdf/keys/{key_id}/reprotect-vault
+
+Body: `limit` (default 500, max 5000). Re-protects stored vault tokens from v1
+to v2; token strings don't change. Response: `converted`,
+`irreversible_hashes_dropped`, `failed`, `failed_token_ids`, `remaining`.
+Audit: `audit.dataprotect.kdf_vault_reprotected`.
+
+### POST /svc/dataprotect/kdf/keys/{key_id}/complete
+
+`migrating` → `v2`. Returns 409 `legacy_tokens_remaining` unless
+`{"force": true}`. Audit: `audit.dataprotect.kdf_migration_completed`.
+
+### POST /svc/dataprotect/kdf/keys/{key_id}/abort
+
+`migrating` → `legacy`. Audit: `audit.dataprotect.kdf_migration_aborted`.
 
 ---
 

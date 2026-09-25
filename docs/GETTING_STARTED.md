@@ -649,6 +649,7 @@ export VECTA_HSM_PARTITION=vecta-partition
 | `VECTA_JWT_SECRET` | Yes | — | JWT signing secret (HS256) or path to key file |
 | `VECTA_ADMIN_PASSWORD` | Yes (first run) | — | Initial admin password |
 | `VECTA_FIPS_MODE` | No | `on` | Initial FIPS 140-3 mode (`on`, `only`, `off`); afterwards set in the UI |
+| `INTERNAL_SERVICE_BOOTSTRAP_SECRET` | Yes | — | ≥ 32 chars (`openssl rand -hex 32`); every internal service derives its API key from it. Placeholders are refused, and rotating it retires the old service keys (see SECURITY/SECURE_DEFAULTS.md) |
 | `VECTA_HSM_PROVIDER` | No | — | HSM provider: `thales-luna`, `aws-cloudhsm`, `securosys`, `entrust`, `utimaco` |
 | `VECTA_HSM_PIN` | No | — | HSM partition PIN (prefer `VECTA_HSM_PIN_FILE`) |
 | `VECTA_HSM_PIN_FILE` | No | — | Path to file containing HSM PIN |

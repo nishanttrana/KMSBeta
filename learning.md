@@ -5,6 +5,16 @@ Newest entries on top.
 
 ## 2026-09-25
 
+### "Documented and audited" needs a check, not a memory
+Asked whether every change was documented and audited, the honest answer was
+no. The design docs were complete, but `API_REFERENCE.md` lacked every new
+endpoint, and several security actions (revoking leaked service keys,
+services applying a FIPS mode, reserved-prefix derive attempts) only logged a
+line. Verify with a grep over the docs and a count of audit emissions in the
+changed files before claiming either. Also, marking audit rows by re-matching
+a scanned timestamp failed on SQLite (the types differ); an atomic
+`UPDATE … RETURNING` claim is portable and can't double-emit.
+
 ### A process-start setting can still be a runtime choice: re-exec plus supervised restart
 Go reads `GODEBUG=fips140` only at process start, and container env vars are
 fixed at container creation. Two moves give a UI toggle anyway:

@@ -4382,6 +4382,7 @@ func (s *Service) resolveWorkingKeyWithKDF(ctx context.Context, tenantID string,
 	}
 	use, err := effectiveKDF(st, requested)
 	if err != nil {
+		s.noteKDFRefusal(ctx, tenantID, keyID, purpose, st.State, err)
 		return nil, kdfUse{}, err
 	}
 	use.State = st.State

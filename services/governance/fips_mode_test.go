@@ -100,3 +100,42 @@ func TestFIPSModeAPIIsRootAdminOnly(t *testing.T) {
 		t.Fatalf("an invalid target must be rejected, got %d", rr.Code)
 	}
 }
+
+func TestFIPSRolloutIsAuditedOncePerStartAndOnCompletion(t *testing.T) {
+	store := newGovernanceStore(t)
+	pub := &capturePublisher{}
+	svc := NewService(store, pub, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050")
+	ctx := context.Background()
+	if err := store.SetPlatformFIPSMode(ctx, PlatformFIPSMode{Mode: "only", Previous: "on", RequestedBy: "admin1"}); err != nil {
+		t.Fatal(err)
+	}
+	observe(t, store, "kms-keycore", "only")
+	observe(t, store, "kms-auth", "on")
+
+	for i := 0; i < 2; i++ { // re-running must not duplicate events
+		if err := svc.AuditFIPSRollout(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n := len(pub.events["audit.governance.fips_mode_applied"]); n != 2 {
+		t.Fatalf("one applied event per service start, got %d", n)
+	}
+	if n := len(pub.events["audit.governance.fips_mode_rollout_completed"]); n != 0 {
+		t.Fatal("rollout is not complete while kms-auth still runs on")
+	}
+	// kms-auth restarts into the platform mode.
+	if _, err := store.db.SQL().Exec(`UPDATE platform_fips_observed SET mode = 'only', started_at = CURRENT_TIMESTAMP + 1 WHERE service = 'kms-auth'`); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := svc.AuditFIPSRollout(ctx); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n := len(pub.events["audit.governance.fips_mode_applied"]); n != 3 {
+		t.Fatalf("the restart must add one applied event, got %d", n)
+	}
+	if n := len(pub.events["audit.governance.fips_mode_rollout_completed"]); n != 1 {
+		t.Fatalf("completion must be audited exactly once, got %d", n)
+	}
+}

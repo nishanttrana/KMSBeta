@@ -235,6 +235,42 @@ func (s *Service) noteLegacyUse(ctx context.Context, tenantID, keyID, purpose st
 	})
 }
 
+// noteKDFRefusal audits a refused derivation (v1 after migration, v2 before
+// it, v1 in strict mode) at most once per minute per key and reason.
+func (s *Service) noteKDFRefusal(ctx context.Context, tenantID, keyID, purpose, state string, err error) {
+	var se serviceError
+	if !errors.As(err, &se) {
+		return
+	}
+	k := "refusal\x00" + tenantID + "\x00" + keyID + "\x00" + se.Code
+	now := s.now()
+	s.legacyUses.mu.Lock()
+	if s.legacyUses.pending == nil {
+		s.legacyUses.pending = map[string]*legacyUseEntry{}
+	}
+	e := s.legacyUses.pending[k]
+	if e == nil {
+		e = &legacyUseEntry{}
+		s.legacyUses.pending[k] = e
+	}
+	e.count++
+	if !e.flushed.IsZero() && now.Sub(e.flushed) < time.Minute {
+		s.legacyUses.mu.Unlock()
+		return
+	}
+	n := e.count
+	e.count, e.flushed = 0, now
+	s.legacyUses.mu.Unlock()
+	severity := "warning"
+	if se.Code == "legacy_kdf_retired" {
+		severity = "critical" // someone still asks for identifier-derived keys after migration
+	}
+	_ = s.publishAudit(ctx, "audit.dataprotect.kdf_refused", tenantID, map[string]interface{}{
+		"key_id": keyID, "purpose": purpose, "state": state, "code": se.Code, "refusals": n,
+		"requested_kdf": requestedKDF(ctx), "severity": severity, "result": "denied",
+	})
+}
+
 // ---- Admin: migration workflow ----
 
 func (s *Service) ListKeyKDF(ctx context.Context, tenantID string) ([]KeyKDFState, error) {

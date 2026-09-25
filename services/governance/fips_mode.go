@@ -75,7 +75,7 @@ func (s *SQLStore) SetPlatformFIPSMode(ctx context.Context, m PlatformFIPSMode) 
 INSERT INTO platform_fips_mode (id, mode, previous, reason, requested_by, requested_at)
 VALUES (1,$1,$2,$3,$4,CURRENT_TIMESTAMP)
 ON CONFLICT (id) DO UPDATE SET mode = EXCLUDED.mode, previous = EXCLUDED.previous, reason = EXCLUDED.reason,
-	requested_by = EXCLUDED.requested_by, requested_at = CURRENT_TIMESTAMP
+	requested_by = EXCLUDED.requested_by, requested_at = CURRENT_TIMESTAMP, completed_at = NULL
 `, m.Mode, m.Previous, m.Reason, m.RequestedBy)
 	return err
 }
@@ -195,4 +195,101 @@ func (s *Service) SetFIPSMode(ctx context.Context, target, confirm, reason, acto
 		"description":       fmt.Sprintf("platform FIPS 140-3 mode changed %s -> %s; services restart in tiers to apply it", impact.From, target),
 	})
 	return impact, nil
+}
+
+// ---- Rollout audit ----
+//
+// Services apply a mode change by restarting (pkg/config); they have no audit
+// pipeline that early, so governance audits what they report: one event per
+// service instance started in a mode, and one when every service reached the
+// desired mode. Markers in the tables make this restart-safe.
+
+// ClaimUnauditedFIPSObserved atomically marks every service start not yet
+// audited and returns those rows, so concurrent or repeated runs never emit the
+// same start twice.
+func (s *SQLStore) ClaimUnauditedFIPSObserved(ctx context.Context) ([]FIPSObservedService, error) {
+	rows, err := s.db.SQL().QueryContext(ctx, `
+UPDATE platform_fips_observed SET audited_started_at = started_at
+WHERE audited_started_at IS NULL OR audited_started_at <> started_at
+RETURNING service, instance, mode, module_version, validated, started_at`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close() //nolint:errcheck
+	out := []FIPSObservedService{}
+	for rows.Next() {
+		var (
+			item    FIPSObservedService
+			started interface{}
+		)
+		if err := rows.Scan(&item.Service, &item.Instance, &item.Mode, &item.ModuleVersion, &item.Validated, &started); err != nil {
+			return nil, err
+		}
+		item.StartedAt = parseTimeValue(started)
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+// MarkFIPSRolloutCompleted sets completed_at once per requested change; it
+// reports whether this call did it.
+func (s *SQLStore) MarkFIPSRolloutCompleted(ctx context.Context) (bool, error) {
+	res, err := s.db.SQL().ExecContext(ctx, `UPDATE platform_fips_mode SET completed_at = CURRENT_TIMESTAMP WHERE id = 1 AND completed_at IS NULL`)
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	return n == 1, nil
+}
+
+// AuditFIPSRollout emits pending rollout audit events. Called periodically.
+func (s *Service) AuditFIPSRollout(ctx context.Context) error {
+	pending, err := s.store.ClaimUnauditedFIPSObserved(ctx)
+	if err != nil {
+		return err
+	}
+	desired, err := s.store.GetPlatformFIPSMode(ctx)
+	if err != nil {
+		return err
+	}
+	effective := effectiveFIPSMode(desired)
+	for _, p := range pending {
+		severity := "info"
+		if p.Mode != effective {
+			severity = "warning" // started in a mode other than the platform setting
+		}
+		_ = s.publishAudit(ctx, "audit.governance.fips_mode_applied", "root", map[string]interface{}{
+			"service":        p.Service,
+			"instance":       p.Instance,
+			"mode":           p.Mode,
+			"platform_mode":  effective,
+			"module_version": p.ModuleVersion,
+			"validated":      p.Validated,
+			"started_at":     p.StartedAt,
+			"severity":       severity,
+			"actor":          "system:" + p.Service,
+			"description":    fmt.Sprintf("%s started in FIPS mode %s (platform mode %s)", p.Service, p.Mode, effective),
+		})
+	}
+	if desired == nil {
+		return nil
+	}
+	status, err := s.FIPSModeStatus(ctx)
+	if err != nil || !status.Converged || len(status.Services) == 0 {
+		return err
+	}
+	done, err := s.store.MarkFIPSRolloutCompleted(ctx)
+	if err != nil || !done {
+		return err
+	}
+	_ = s.publishAudit(ctx, "audit.governance.fips_mode_rollout_completed", "root", map[string]interface{}{
+		"mode":         desired.Mode,
+		"previous":     desired.Previous,
+		"requested_by": desired.RequestedBy,
+		"requested_at": desired.RequestedAt,
+		"services":     len(status.Services),
+		"severity":     "info",
+		"description":  fmt.Sprintf("every service now runs FIPS mode %s", desired.Mode),
+	})
+	return nil
 }

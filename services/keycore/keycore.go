@@ -3466,6 +3466,16 @@ func (s *Service) Derive(ctx context.Context, keyID string, req DeriveRequest) (
 		}
 	}
 	if err := rejectReservedDeriveInfo(info); err != nil {
+		actor := accessActorFromContext(ctx)
+		_ = s.publishAudit(ctx, "audit.key.derive_refused", req.TenantID, map[string]any{
+			"key_id":      keyID,
+			"reason":      "reserved service-derive info prefix",
+			"actor":       firstNonEmpty(actor.UserID, actor.Username, actor.ClientID, "unknown"),
+			"source_ip":   actor.SourceIP,
+			"severity":    "critical",
+			"result":      "denied",
+			"description": "a derive request tried to reproduce an internal service's working key",
+		})
 		return DeriveResponse{}, err
 	}
 	var salt []byte

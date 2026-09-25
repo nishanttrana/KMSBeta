@@ -104,7 +104,11 @@ func TestBootstrapRevokesKeysDerivedFromPublicDefaultSecret(t *testing.T) {
 	}
 
 	t.Setenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET", strings.Repeat("ef", 32))
-	bootstrapInternalServiceClients(ctx, store, quietLogger())
+	audit := &captureAuthAudit{}
+	bootstrapInternalServiceClients(ctx, store, quietLogger(), audit)
+	if audit.count("audit.auth.service_key_revoked") != 1 {
+		t.Fatalf("revoking a forgeable key must be audited, got %v", audit.subjects)
+	}
 
 	if _, err := store.GetAPIKeyByHash(ctx, "root", sum[:]); !errors.Is(err, errNotFound) {
 		t.Fatalf("legacy default-derived key must be revoked, got err=%v", err)
@@ -122,14 +126,18 @@ func TestBootstrapRetiresServiceKeysFromRotatedSecret(t *testing.T) {
 
 	oldSecret, newSecret := strings.Repeat("01", 32), strings.Repeat("23", 32)
 	t.Setenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET", oldSecret)
-	bootstrapInternalServiceClients(ctx, store, quietLogger())
+	bootstrapInternalServiceClients(ctx, store, quietLogger(), nil)
 	oldSum := sha256.Sum256([]byte(servicetoken.DeriveAPIKey(oldSecret, "kms-keycore")))
 	if _, err := store.GetAPIKeyByHash(ctx, "root", oldSum[:]); err != nil {
 		t.Fatalf("old key must exist before rotation: %v", err)
 	}
 
 	t.Setenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET", newSecret)
-	bootstrapInternalServiceClients(ctx, store, quietLogger())
+	audit := &captureAuthAudit{}
+	bootstrapInternalServiceClients(ctx, store, quietLogger(), audit)
+	if audit.count("audit.auth.service_key_retired") != len(internalServiceClients) {
+		t.Fatalf("each retired service key must be audited, got %v", audit.subjects)
+	}
 
 	if _, err := store.GetAPIKeyByHash(ctx, "root", oldSum[:]); !errors.Is(err, errNotFound) {
 		t.Fatalf("key from the rotated-out secret must be retired, got err=%v", err)
@@ -140,8 +148,25 @@ func TestBootstrapRetiresServiceKeysFromRotatedSecret(t *testing.T) {
 	}
 
 	// Idempotent: a restart with the same secret keeps the current key.
-	bootstrapInternalServiceClients(ctx, store, quietLogger())
+	bootstrapInternalServiceClients(ctx, store, quietLogger(), nil)
 	if _, err := store.GetAPIKeyByHash(ctx, "root", newSum[:]); err != nil {
 		t.Fatalf("restart must keep the current key: %v", err)
 	}
+}
+
+type captureAuthAudit struct{ subjects []string }
+
+func (c *captureAuthAudit) Publish(_ context.Context, subject string, _ []byte) error {
+	c.subjects = append(c.subjects, subject)
+	return nil
+}
+
+func (c *captureAuthAudit) count(subject string) int {
+	n := 0
+	for _, s := range c.subjects {
+		if s == subject {
+			n++
+		}
+	}
+	return n
 }
