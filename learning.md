@@ -5,6 +5,49 @@ Newest entries on top.
 
 ## 2026-09-25
 
+### Example files are deployment inputs, not documentation
+`.env.example` held values like `your-workload-identity-secret`, and
+`deploy-local.sh` copies it to `.env` on a fresh install, so those public
+strings became live secrets that passed every "is it set?" check. An example
+file must ship secrets **empty** (compose `:?` then stops), and services must
+reject placeholder-looking values themselves. Now enforced by conformance
+`env-example-no-secret-values` and `pkg/config.RejectPlaceholderSecrets`.
+
+### Rotation that only adds is not rotation
+Auth bootstrap only created service keys, so rotating the bootstrap secret left
+every old service identity valid. Rotating a derived-credential secret must
+retire what the old value produced. Auth now deletes a service's keys that
+don't match the current derivation (`DeleteClientAPIKeysExcept`).
+
+### bash 3.2: quotes inside `${var//\'/''}` within `$(...)` break the whole file
+macOS `/bin/bash` 3.2 misparses single quotes in a pattern substitution inside
+command substitution. The error surfaces hundreds of lines later
+(`install.sh: line 775: syntax error near unexpected token ';;'`), far from the
+cause (line 419). To find it, bisect by truncating the file at function ends
+and running `/bin/bash -n` on each prefix. Escape with `sed` instead. CI runs
+bash 5, which doesn't catch this; conformance runs `/bin/bash -n` locally.
+
+### Never use `git stash` as a scratch tool in a dirty tree
+`git stash push <path> --` with bad syntax stashed nothing, and the `pop` that
+followed applied an old, unrelated stash, causing conflicts. To try something
+out, use a throwaway `git worktree add` instead.
+
+### A public default secret is a credential every attacker already has
+`INTERNAL_SERVICE_BOOTSTRAP_SECRET` fell back to
+`vecta-internal-svc-dev-secret-change-me` in compose, and `install.sh` never
+wrote it to `.env`, so **every installer-based deployment** derived all 20
+internal service API keys from a string in the public repo. Anyone could
+compute `HMAC(default, "kms-keycore")` and mint a service JWT. Three lessons:
+(1) A "-change-me" fallback is never changed; require the secret
+(`${VAR:?}`) or generate it. (2) Check every installer writes every secret
+compose needs; `deploy-local.sh` did, `install.sh` didn't, and nobody noticed
+because the fallback hid it. (3) Removing a bad default isn't enough: auth now
+**revokes** keys derived from the placeholder on every start, or upgraded
+deployments would stay open. Now enforced by conformance rule 3
+(`no-secret-fallback-*`), documented in `docs/SECURITY/SECURE_DEFAULTS.md`.
+The same sweep found the CLI user seeded with a hardcoded `VectaCLI@2026`
+fallback; unset now means a random, unknowable password.
+
 ### "role == client-service" is NOT a service identity
 Phase 2 of the s2s-JWT rollout trusted any token with role `client-service` as
 an internal service (tenant-unrestricted + key-grant bypass). But

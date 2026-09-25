@@ -54,17 +54,31 @@ env_set() {
   cat "${tmp}" > "${ENV_FILE}"; rm -f "${tmp}"
 }
 ensure_secret() {
-  local key="$1"
+  local key="$1" value="${2:-}"
   if [[ -z "$(env_get "${key}")" ]]; then
-    env_set "${key}" "$(openssl rand -hex 32)"
+    env_set "${key}" "${value:-$(openssl rand -hex 32)}"
     say "generated ${key} in .env"
   fi
 }
 
-# ── 2. Secrets that newer versions require ──────────────────────────────
+# ── 2. Secrets: refuse placeholders, generate anything missing ──────────
+# A placeholder copied from an old .env.example ("your-...", "change-me") is a
+# public value — never run with one (docs/SECURITY/SECURE_DEFAULTS.md).
+placeholders="$(awk -F= '
+  $1 ~ /^[A-Z0-9_]*(SECRET|TOKEN|PASSWORD|PASSPHRASE|API_KEY|_KEY_B64)[A-Z0-9_]*$/ && $1 != "AUTH_BOOTSTRAP_ADMIN_PASSWORD" {
+    v = tolower(substr($0, index($0, "=") + 1))
+    if (v ~ /^your-|change-?me|change_me|replace-?me/) print $1
+  }' "${ENV_FILE}")"
+[[ -z "${placeholders}" ]] || die "placeholder values in .env for: $(echo ${placeholders}). Run ./scripts/rotate-secrets.sh (see docs/SECURITY/SECRET_ROTATION.md) or set real values."
+
 cp "${ENV_FILE}" "${ENV_FILE}.bak.deploy.$(date +%s)"
+ensure_secret POSTGRES_PASSWORD "$(openssl rand -hex 24)"
+ensure_secret NATS_AUTH_TOKEN "$(openssl rand -hex 24)"
+ensure_secret WORKLOAD_IDENTITY_SHARED_SECRET
+ensure_secret SOFTWARE_VAULT_PASSPHRASE
 ensure_secret INTERNAL_SERVICE_BOOTSTRAP_SECRET
 ensure_secret INTERNAL_API_TOKEN
+ensure_secret AUTH_BOOTSTRAP_CLI_PASSWORD "Vk$(openssl rand -base64 18 | tr -dc 'A-Za-z0-9')Aa9!"
 
 # Tag images with the release in VERSION so upgrades are traceable.
 VERSION_FILE_VALUE="$(tr -d '[:space:]' < VERSION 2>/dev/null || true)"
@@ -128,6 +142,18 @@ sync_jwt_key() {
 }
 if docker volume inspect "${AUTH_VOL}" >/dev/null 2>&1; then
   sync_jwt_key || true
+fi
+# Fresh install: no signing key anywhere yet. Mint one into the auth volume so
+# JWT_PUBLIC_KEY_B64 (required by compose) is real from the first start.
+if [[ -z "$(env_get JWT_PUBLIC_KEY_B64)" ]]; then
+  say "generating the auth JWT signing key"
+  docker volume create "${AUTH_VOL}" >/dev/null
+  openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 2>/dev/null \
+    | docker run --rm -i -v "${AUTH_VOL}:/a" vecta-local/alpine:3.24 \
+        sh -c 'set -eu; umask 077; [ -s /a/jwt_private.pem ] || cat > /a/jwt_private.pem; chown 100:101 /a/jwt_private.pem' \
+    || die "could not seed the auth JWT signing key"
+  sync_jwt_key || true
+  [[ -n "$(env_get JWT_PUBLIC_KEY_B64)" ]] || die "could not derive JWT_PUBLIC_KEY_B64 from the auth signing key"
 fi
 
 # ── 5. Start (volume prep, profiles, mesh bootstrap live in start-kms.sh) ─

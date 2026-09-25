@@ -7,6 +7,43 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 ## [1.2.0-beta] — 2026-09-25
 
 ### Security
+- **Closed a service-impersonation loophole.** `INTERNAL_SERVICE_BOOTSTRAP_SECRET`
+  defaulted to a public placeholder (and `install.sh` never generated it), so
+  anyone could derive every internal service's API key. Compose now requires
+  the secret. `servicetoken.ValidateBootstrapSecret` rejects the placeholder and
+  secrets shorter than 32 characters. Auth refuses to start on a weak value and
+  revokes service keys derived from the placeholder on startup. `install.sh` and
+  `run-local.sh` generate the secret.
+- Rotating `INTERNAL_SERVICE_BOOTSTRAP_SECRET` now works: on start, auth
+  retires every service API key derived from a previous secret, and
+  `scripts/rotate-secrets.sh` rotates it.
+- Placeholder secrets are rejected. `.env.example` values such as
+  `your-workload-identity-secret` had been accepted as real secrets (and
+  `deploy-local.sh` copied them into new `.env` files). `.env.example` now
+  ships every secret empty. Every service refuses to start with a `your-...` /
+  `change-me` secret (`pkg/config`). `deploy-local.sh` refuses placeholders and
+  generates every missing secret, including the auth JWT signing key.
+  `POSTGRES_PASSWORD` is now required by compose.
+- Bootstrap admin default password is now `changeit` (forced change on first
+  login, unchanged). The CLI user no longer falls back to the hardcoded
+  `VectaCLI@2026`; unset means a random password.
+- `make conformance` rule 3 (secure defaults) fails the build on any secret
+  with a hardcoded fallback in compose or Go. See
+  `docs/SECURITY/SECURE_DEFAULTS.md`.
+
+### Process
+- Documentation now ships with every change. `CLAUDE.md` holds the standing
+  engineering rules and a table of where each kind of change is documented.
+  `docs/DECISIONS.md` records design decisions and rejected alternatives. The
+  CI job `docs-with-change` (`scripts/check-docs.sh`) fails a pull request
+  that changes code without a CHANGELOG, learning, decisions, security or
+  CLAUDE.md update. `make conformance` now also runs in CI.
+
+### Fixed
+- `install.sh` failed to parse on macOS's bash 3.2 (`syntax error near
+  unexpected token ';;'`). The cause was PowerShell quote-escaping
+  (`${var//\'/''}`) inside `$(...)`. It's replaced with a `ps_quote` helper,
+  and conformance now runs `bash -n` over every shell script.
 - **Fixed a cross-tenant authorization flaw in the (unreleased) service-to-service
   JWT work.** Service principals were recognised by role `client-service`
   alone, but *every* external client-credentials token carries that role, so

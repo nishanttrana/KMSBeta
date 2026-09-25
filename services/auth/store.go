@@ -57,6 +57,7 @@ type Store interface {
 
 	CreateAPIKey(ctx context.Context, k APIKey) error
 	DeleteAPIKey(ctx context.Context, tenantID string, keyID string) error
+	DeleteClientAPIKeysExcept(ctx context.Context, tenantID string, clientID string, keepHash []byte) (int64, error)
 
 	CreateSession(ctx context.Context, s Session) error
 	DeleteSession(ctx context.Context, tenantID string, sessionID string) error
@@ -1163,6 +1164,18 @@ DELETE FROM auth_api_keys WHERE tenant_id=$1 AND id=$2
 		return errNotFound
 	}
 	return nil
+}
+
+// DeleteClientAPIKeysExcept removes every API key of clientID except the one
+// with keepHash. Used to retire service keys derived from a rotated secret.
+func (s *SQLStore) DeleteClientAPIKeysExcept(ctx context.Context, tenantID string, clientID string, keepHash []byte) (int64, error) {
+	res, err := s.db.SQL().ExecContext(ctx, `
+DELETE FROM auth_api_keys WHERE tenant_id=$1 AND client_id=$2 AND key_hash<>$3
+`, tenantID, clientID, keepHash)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
 }
 
 func (s *SQLStore) CreateSession(ctx context.Context, session Session) error {

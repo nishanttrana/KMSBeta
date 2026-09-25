@@ -364,7 +364,7 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
       recs.push({
         id: "default-admin", severity: "critical", category: "Access control",
         title: "Bootstrap admin account still has its initial password",
-        why: "The seeded admin/admin credential is publicly documented.",
+        why: "The seeded admin/changeit credential is publicly documented.",
         fix: "Sign in as admin to force the password change, or disable the account after creating named administrators with MFA.",
         frameworks: ["PCI DSS 4.0 §2.2.2", "CIS Controls 5.2"], affected: 1, evidence: ["admin"],
         action: { tab: "admin", label: "Open user management" },

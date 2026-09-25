@@ -8,6 +8,19 @@ on:
       - master
 
 jobs:
+  docs-with-change:
+    name: Documentation ships with the change
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check docs updated
+        run: ./scripts/check-docs.sh "origin/${{ github.base_ref }}"
+
   dashboard-quality:
     name: Dashboard Lint/Type/Unit/Build/Smoke
     runs-on: ubuntu-latest
@@ -77,6 +90,9 @@ jobs:
         run: |
           chmod +x infra/scripts/check-runtimecfg.sh
           infra/scripts/check-runtimecfg.sh
+
+      - name: Platform conformance (central crypto, single audit, secure defaults)
+        run: ./scripts/conformance.sh -v
 
       - name: go vet
         run: go vet ./...

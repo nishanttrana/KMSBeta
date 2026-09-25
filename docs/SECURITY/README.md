@@ -11,6 +11,13 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 > resolved or built, and have been **removed** because they could be mistaken
 > for compliance evidence. Regenerate from the commands below instead.
 
+## Standing rules
+
+- [SECURE_DEFAULTS.md](SECURE_DEFAULTS.md): no secret may fall back to a value
+  in the repo. Enforced by `make conformance`. Read it before adding any
+  secret, installer step or seeded account.
+- [SECRET_ROTATION.md](SECRET_ROTATION.md): rotating secrets on a live stack.
+
 ## Latest scan — 2026-09-25 (v1.2.0-beta)
 
 Raw output: [`govulncheck-2026-09-25.txt`](govulncheck-2026-09-25.txt).

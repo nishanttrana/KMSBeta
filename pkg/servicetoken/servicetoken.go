@@ -24,14 +24,56 @@ import (
 
 const apiKeyDerivationLabel = "kms-service-api-key:"
 
+// insecureDefaultBootstrapSecret is the placeholder older docker-compose files
+// shipped as the fallback value. It is public, so any key derived from it is
+// forgeable: it is never accepted, and auth revokes keys derived from it.
+const insecureDefaultBootstrapSecret = "vecta-internal-svc-dev-secret-change-me"
+
+// MinBootstrapSecretLen is the minimum accepted secret length (32 chars; the
+// installers generate 64 hex chars = 256 bits).
+const MinBootstrapSecretLen = 32
+
+var (
+	ErrBootstrapSecretUnset   = errors.New("INTERNAL_SERVICE_BOOTSTRAP_SECRET is unset")
+	ErrBootstrapSecretDefault = errors.New("INTERNAL_SERVICE_BOOTSTRAP_SECRET is the public default placeholder; generate one with: openssl rand -hex 32")
+	ErrBootstrapSecretShort   = errors.New("INTERNAL_SERVICE_BOOTSTRAP_SECRET must be at least 32 characters; generate one with: openssl rand -hex 32")
+)
+
+// ValidateBootstrapSecret rejects an unset, publicly known, or short secret.
+func ValidateBootstrapSecret(secret string) error {
+	secret = strings.TrimSpace(secret)
+	switch {
+	case secret == "":
+		return ErrBootstrapSecretUnset
+	case secret == insecureDefaultBootstrapSecret:
+		return ErrBootstrapSecretDefault
+	case len(secret) < MinBootstrapSecretLen:
+		return ErrBootstrapSecretShort
+	}
+	return nil
+}
+
 // DeriveAPIKey deterministically derives a service's raw API key from the shared
 // bootstrap secret and the service name. Both the auth bootstrap (to seed the
 // key hash) and the service (to present the key) call this. Returns "" when the
-// secret is unset, which disables service tokens (callers stay tokenless).
+// secret fails ValidateBootstrapSecret, which disables service tokens, so a
+// weak secret can never yield a usable identity.
 func DeriveAPIKey(bootstrapSecret, serviceName string) string {
-	bootstrapSecret = strings.TrimSpace(bootstrapSecret)
+	if ValidateBootstrapSecret(bootstrapSecret) != nil {
+		return ""
+	}
+	return deriveAPIKey(strings.TrimSpace(bootstrapSecret), serviceName)
+}
+
+// InsecureDefaultAPIKey returns the key a service would have derived from the
+// old public default secret. Auth uses it only to find and revoke such keys.
+func InsecureDefaultAPIKey(serviceName string) string {
+	return deriveAPIKey(insecureDefaultBootstrapSecret, serviceName)
+}
+
+func deriveAPIKey(bootstrapSecret, serviceName string) string {
 	serviceName = strings.TrimSpace(serviceName)
-	if bootstrapSecret == "" || serviceName == "" {
+	if serviceName == "" {
 		return ""
 	}
 	mac := hmac.New(sha256.New, []byte(bootstrapSecret))
@@ -61,7 +103,7 @@ func envOr(key, def string) string {
 
 // FromEnv builds a Source for serviceName using INTERNAL_SERVICE_BOOTSTRAP_SECRET
 // (shared), AUTH_URL and INTERNAL_SERVICE_TENANT. Returns nil (disabled) when the
-// bootstrap secret is unset, so deployments without it keep working tokenless.
+// bootstrap secret is unset or fails ValidateBootstrapSecret.
 func FromEnv(serviceName string) *Source {
 	key := DeriveAPIKey(os.Getenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET"), serviceName)
 	if key == "" {

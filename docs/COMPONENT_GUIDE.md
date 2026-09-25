@@ -124,7 +124,7 @@ Sample:
 ```bash
 curl -k -X POST https://127.0.0.1/svc/auth/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"VectaAdmin@2026"}'
+  -d '{"username":"admin","password":"changeit"}'
 ```
 
 ### Audit

@@ -42,7 +42,7 @@ Sample:
 ```bash
 TOKEN="$(curl -k -s -X POST https://127.0.0.1/svc/auth/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"VectaAdmin@2026"}' | jq -r '.token')"
+  -d '{"username":"admin","password":"changeit"}' | jq -r '.token')"
 
 curl -k -X POST https://127.0.0.1/svc/keycore/keys?tenant_id=root \
   -H "Authorization: Bearer $TOKEN" \

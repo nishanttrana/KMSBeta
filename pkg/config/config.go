@@ -44,6 +44,7 @@ type Config struct {
 }
 
 func Load() Config {
+	RejectPlaceholderSecrets()
 	return Config{
 		Env:              get("VECTA_ENV", "dev"),
 		PostgresDSN:      get("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5432/vecta?sslmode=disable"),

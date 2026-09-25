@@ -2819,13 +2819,15 @@ const SectionConfigEnv = () => (
     <EnvTable rows={[
       ["AUTH_BOOTSTRAP_TENANT_ID", "root", "Default tenant ID"],
       ["AUTH_BOOTSTRAP_ADMIN_USERNAME", "admin", "Bootstrap admin username"],
-      ["AUTH_BOOTSTRAP_ADMIN_PASSWORD", "<your-password>", "Bootstrap admin password"],
+      ["AUTH_BOOTSTRAP_ADMIN_PASSWORD", "changeit", "Bootstrap admin password (password change forced on first login)"],
       ["AUTH_BOOTSTRAP_ADMIN_ROLE", "tenant-admin", "Bootstrap admin role"],
       ["AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE", "true", "Force password change on first login"],
       ["AUTH_BOOTSTRAP_CLI_ENABLED", "true", "Enable CLI user"],
       ["AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user", "CLI user name"],
-      ["AUTH_BOOTSTRAP_CLI_PASSWORD", "<your-cli-password>", "CLI user password"],
+      ["AUTH_BOOTSTRAP_CLI_PASSWORD", "(required)", "CLI user password; unset = random, unknowable password"],
+      ["INTERNAL_SERVICE_BOOTSTRAP_SECRET", "<openssl rand -hex 32>", "Required, >= 32 chars. Every internal service derives its API key from it; rotating it retires the old service keys on the next auth start"],
     ]} />
+    <P>Secrets have no built-in fallback values. Compose refuses to start when a required secret is missing, and every service refuses to start when a secret still holds a placeholder such as "your-..." or "change-me". See docs/SECURITY/SECURE_DEFAULTS.md.</P>
     <H2>PostgreSQL Tuning</H2>
     <EnvTable rows={[
       ["PG_SHARED_BUFFERS", "256MB", "Shared buffer pool size"],
@@ -2876,7 +2878,7 @@ const SectionConfigHsm = () => (
     ]} />
     <H2>Software Vault</H2>
     <EnvTable rows={[
-      ["SOFTWARE_VAULT_PASSPHRASE", "vecta-dev-passphrase", "Software vault encryption passphrase"],
+      ["SOFTWARE_VAULT_PASSPHRASE", "<openssl rand -hex 32>", "Software vault encryption passphrase"],
       ["SOFTWARE_VAULT_MLOCK_REQUIRED", "false", "Lock vault memory (prevents swapping)"],
     ]} />
     <H2>Hardware HSM Providers</H2>
@@ -2981,7 +2983,7 @@ curl -O http://localhost:8050/governance/backups/{id}/key \\
     <H2>HSM-Bound Backups</H2>
     <P>Optional HSM binding wraps the backup encryption key using HSM metadata (provider, slot, partition, fingerprint). Requires matching HSM binding on restore for additional security.</P>
     <EnvTable rows={[
-      ["BACKUP_HSM_WRAP_SECRET", "vecta-backup-wrap-secret-change-me", "HSM backup wrap secret"],
+      ["BACKUP_HSM_WRAP_SECRET", "<openssl rand -hex 32>", "HSM backup wrap secret"],
       ["BACKUP_HSM_PARTITION_LABEL", "(empty)", "HSM partition for backup key"],
     ]} />
     <H2>Excluded Tables</H2>

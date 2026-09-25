@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"log"
 	"net"
@@ -191,21 +192,23 @@ func envOrBool(k string, d bool) bool {
 // API key for each internal service, so each can mint its own JWT for
 // service-to-service auth. Keys are derived from INTERNAL_SERVICE_BOOTSTRAP_SECRET
 // + service name (matching pkg/servicetoken), so no per-service secret is
-// distributed. No-op when the secret is unset. Idempotent.
+// distributed. Always revokes keys derived from the old public default secret,
+// and retires keys derived from any previous secret, so rotation takes effect
+// on the next auth start. Disabled when the secret is unset; refuses to start
+// when it is set but weak. Idempotent.
 func bootstrapInternalServiceClients(ctx context.Context, store Store, logger *log.Logger) {
-	secret := strings.TrimSpace(os.Getenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET"))
-	if secret == "" {
-		return
-	}
 	tenantID := envOr("INTERNAL_SERVICE_TENANT", "root")
-	services := []string{
-		"kms-keycore", "kms-certs", "kms-ekm", "kms-kmip", "kms-signing", "kms-sbom",
-		"kms-payment", "kms-discovery", "kms-compliance", "kms-pqc", "kms-cloud",
-		"kms-hyok-proxy", "kms-dataprotect", "kms-autokey", "kms-key-access",
-		"kms-governance", "kms-posture", "kms-reporting", "kms-policy", "kms-audit",
+	revokeInsecureServiceKeys(ctx, store, tenantID, logger)
+
+	secret := strings.TrimSpace(os.Getenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET"))
+	if err := servicetoken.ValidateBootstrapSecret(secret); errors.Is(err, servicetoken.ErrBootstrapSecretUnset) {
+		logger.Printf("bootstrap: WARNING %v; internal service identities are disabled", err)
+		return
+	} else if err != nil {
+		logger.Fatalf("bootstrap: refusing to start: %v", err)
 	}
 	provisioned := 0
-	for _, name := range services {
+	for _, name := range internalServiceClients {
 		if _, err := store.GetClientRegistration(ctx, tenantID, name); errors.Is(err, errNotFound) {
 			if err := store.CreateClientRegistration(ctx, ClientRegistration{
 				ID: name, TenantID: tenantID, ClientName: name, ClientType: "service",
@@ -228,23 +231,59 @@ func bootstrapInternalServiceClients(ctx context.Context, store Store, logger *l
 				logger.Printf("bootstrap: internal client %s api key failed: %v", name, err)
 				continue
 			}
+		} else if err != nil {
+			logger.Printf("bootstrap: read internal client %s api key failed: %v", name, err)
+			continue
+		}
+		// The current key exists, so retire every other key of this service:
+		// keys derived from a previous (rotated) bootstrap secret.
+		if n, err := store.DeleteClientAPIKeysExcept(ctx, tenantID, name, sum[:]); err != nil {
+			logger.Fatalf("bootstrap: retire stale %s service keys failed: %v", name, err)
+		} else if n > 0 {
+			logger.Printf("bootstrap: SECURITY retired %d stale %s service key(s) from a previous bootstrap secret", n, name)
 		}
 		provisioned++
 	}
 	logger.Printf("bootstrap: internal service identities ready tenant=%s count=%d", tenantID, provisioned)
 }
 
+var internalServiceClients = []string{
+	"kms-keycore", "kms-certs", "kms-ekm", "kms-kmip", "kms-signing", "kms-sbom",
+	"kms-payment", "kms-discovery", "kms-compliance", "kms-pqc", "kms-cloud",
+	"kms-hyok-proxy", "kms-dataprotect", "kms-autokey", "kms-key-access",
+	"kms-governance", "kms-posture", "kms-reporting", "kms-policy", "kms-audit",
+}
+
+// revokeInsecureServiceKeys deletes service API keys that earlier deployments
+// seeded from the public default bootstrap secret. Anyone could derive those
+// keys, so they must not survive an upgrade.
+func revokeInsecureServiceKeys(ctx context.Context, store Store, tenantID string, logger *log.Logger) {
+	for _, name := range internalServiceClients {
+		sum := sha256.Sum256([]byte(servicetoken.InsecureDefaultAPIKey(name)))
+		key, err := store.GetAPIKeyByHash(ctx, tenantID, sum[:])
+		if errors.Is(err, errNotFound) {
+			continue
+		} else if err != nil {
+			logger.Fatalf("bootstrap: check for insecure %s service key failed: %v", name, err)
+		}
+		if err := store.DeleteAPIKey(ctx, tenantID, key.ID); err != nil && !errors.Is(err, errNotFound) {
+			logger.Fatalf("bootstrap: revoke insecure %s service key failed: %v", name, err)
+		}
+		logger.Printf("bootstrap: SECURITY revoked %s service key derived from the public default secret", name)
+	}
+}
+
 func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger) {
 	tenantID := envOr("AUTH_BOOTSTRAP_TENANT_ID", "root")
 	tenantName := envOr("AUTH_BOOTSTRAP_TENANT_NAME", "Root")
 	adminUsername := envOr("AUTH_BOOTSTRAP_ADMIN_USERNAME", "admin")
-	// Default credential is admin/admin. This is safe only because the seeded
+	// Default credential is admin/changeit. This is safe only because the seeded
 	// admin is created with MustChangePassword=true (AUTH_BOOTSTRAP_FORCE_
 	// PASSWORD_CHANGE, default true): the resulting login is scoped to the
 	// password-change operation alone, and first login forces rotation to a
 	// policy-compliant password. Operators may override with a strong password
 	// via the env var.
-	adminPassword := envOr("AUTH_BOOTSTRAP_ADMIN_PASSWORD", "admin")
+	adminPassword := envOr("AUTH_BOOTSTRAP_ADMIN_PASSWORD", "changeit")
 	adminEmail := envOr("AUTH_BOOTSTRAP_ADMIN_EMAIL", "admin@vecta.local")
 	adminRole := envOr("AUTH_BOOTSTRAP_ADMIN_ROLE", "admin")
 	mustChange := envOrBool("AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE", true)
@@ -253,7 +292,17 @@ func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger)
 	// default so a rotated admin password is never silently clobbered.
 	resetAdmin := envOrBool("AUTH_BOOTSTRAP_RESET_ADMIN", false)
 	cliUsername := envOr("AUTH_BOOTSTRAP_CLI_USERNAME", "cli-user")
-	cliPassword := envOr("AUTH_BOOTSTRAP_CLI_PASSWORD", "VectaCLI@2026")
+	// No hardcoded fallback: when unset, the CLI user gets a random password no
+	// one knows, and an operator must set one before enabling the account.
+	cliPassword := strings.TrimSpace(os.Getenv("AUTH_BOOTSTRAP_CLI_PASSWORD"))
+	if cliPassword == "" {
+		raw, err := pkgcrypto.RandomBytes(32)
+		if err != nil {
+			logger.Printf("bootstrap: generate cli password failed: %v", err)
+			return
+		}
+		cliPassword = base64.RawURLEncoding.EncodeToString(raw)
+	}
 	cliEmail := envOr("AUTH_BOOTSTRAP_CLI_EMAIL", "cli@vecta.local")
 	cliEnabled := envOrBool("AUTH_BOOTSTRAP_CLI_ENABLED", false)
 

@@ -4,7 +4,7 @@ x-kms-common-env: &kms-common-env
   # Release version stamped into every service (reporting exposes it via
   # BUILD_VERSION; see VERSION file / git tag). Defaults to "dev" for ad-hoc runs.
   BUILD_VERSION: ${VECTA_VERSION:-dev}
-  POSTGRES_DSN: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vecta}?sslmode=disable&connect_timeout=10
+  POSTGRES_DSN: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (openssl rand -hex 24)}@postgres:5432/${POSTGRES_DB:-vecta}?sslmode=disable&connect_timeout=10
   SQLITE_FALLBACK: "false"
   NATS_URL: nats://${NATS_AUTH_TOKEN:?NATS_AUTH_TOKEN is required}@nats:4222
   CONSUL_HTTP_ADDR: consul:8500
@@ -37,7 +37,7 @@ x-kms-common-env: &kms-common-env
   # exchanges it for a signed JWT at /auth/client-token. auth pre-registers a
   # client + key hash per service from the same secret. Override per deployment
   # (openssl rand -hex 32). Empty disables (callers stay tokenless).
-  INTERNAL_SERVICE_BOOTSTRAP_SECRET: ${INTERNAL_SERVICE_BOOTSTRAP_SECRET:-vecta-internal-svc-dev-secret-change-me}
+  INTERNAL_SERVICE_BOOTSTRAP_SECRET: ${INTERNAL_SERVICE_BOOTSTRAP_SECRET:?INTERNAL_SERVICE_BOOTSTRAP_SECRET is required (openssl rand -hex 32)}
   AUTH_URL: ${AUTH_URL:-http://auth:8001}
 
 x-kms-service: &kms-service
@@ -173,7 +173,7 @@ services:
       - auto_explain.log_format=json
     shm_size: '256m'
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (openssl rand -hex 24)}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-vecta}
       # Mount a hardened pg_hba.conf (see infra/postgres/pg_hba.conf)
@@ -206,7 +206,7 @@ services:
     profiles: ["connection_pooling"]
     image: edoburu/pgbouncer:v1.25.2-p0
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vecta}
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (openssl rand -hex 24)}@postgres:5432/${POSTGRES_DB:-vecta}
       POOL_MODE: transaction
       MAX_CLIENT_CONN: 2000
       DEFAULT_POOL_SIZE: 50
@@ -392,7 +392,7 @@ services:
       AUTH_BOOTSTRAP_TENANT_ID: ${AUTH_BOOTSTRAP_TENANT_ID:-root}
       AUTH_BOOTSTRAP_TENANT_NAME: ${AUTH_BOOTSTRAP_TENANT_NAME:-Root}
       AUTH_BOOTSTRAP_ADMIN_USERNAME: ${AUTH_BOOTSTRAP_ADMIN_USERNAME:-admin}
-      AUTH_BOOTSTRAP_ADMIN_PASSWORD: ${AUTH_BOOTSTRAP_ADMIN_PASSWORD:-admin}
+      AUTH_BOOTSTRAP_ADMIN_PASSWORD: ${AUTH_BOOTSTRAP_ADMIN_PASSWORD:-changeit}
       AUTH_BOOTSTRAP_ADMIN_EMAIL: ${AUTH_BOOTSTRAP_ADMIN_EMAIL:-admin@vecta.local}
       AUTH_BOOTSTRAP_ADMIN_ROLE: ${AUTH_BOOTSTRAP_ADMIN_ROLE:-tenant-admin}
       AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE: ${AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE:-true}

@@ -406,6 +406,11 @@ ensure_dockerignore_safety() {
   done < <(find "${ROOT_DIR}" -mindepth 1 -maxdepth 1 ! -readable -print 2>/dev/null || true)
 }
 
+# Escape a value for a PowerShell single-quoted string (' -> '').
+# Done with sed, not ${var//\'/''}: bash 3.2 (macOS) misparses quotes in that
+# expansion inside $(...), which breaks parsing of the rest of this file.
+ps_quote() { printf '%s' "$1" | sed "s/'/''/g"; }
+
 port_conflicts_for_bind() {
   local bind_ip="$1"
   local port="$2"
@@ -413,10 +418,11 @@ port_conflicts_for_bind() {
 
   if [[ "${HOST_OS}" == "windows" ]]; then
     command -v powershell.exe >/dev/null 2>&1 || return 1
-    local ps_script out
+    local ps_script out ps_bind
+    ps_bind="$(ps_quote "${bind_ip}")"
     ps_script=$(cat <<EOF
 \$port = ${port}
-\$bind = '${bind_ip//\'/''}'
+\$bind = '${ps_bind}'
 \$hits = @()
 if ('${proto}' -eq 'udp') {
   \$hits = @(Get-NetUDPEndpoint -LocalPort \$port -ErrorAction SilentlyContinue | Select-Object -ExpandProperty LocalAddress)
@@ -848,7 +854,7 @@ detect_default_gateway() {
       ;;
     windows)
       if [[ -n "${iface}" ]]; then
-        powershell.exe -NoProfile -NonInteractive -Command "\$cfg = Get-NetIPConfiguration -InterfaceAlias '${iface//\'/''}' -ErrorAction SilentlyContinue; if (\$cfg -and \$cfg.IPv4DefaultGateway) { \$cfg.IPv4DefaultGateway.NextHop }" 2>/dev/null | tr -d '\r'
+        powershell.exe -NoProfile -NonInteractive -Command "\$cfg = Get-NetIPConfiguration -InterfaceAlias '$(ps_quote "${iface}")' -ErrorAction SilentlyContinue; if (\$cfg -and \$cfg.IPv4DefaultGateway) { \$cfg.IPv4DefaultGateway.NextHop }" 2>/dev/null | tr -d '\r'
       else
         powershell.exe -NoProfile -NonInteractive -Command "(Get-NetIPConfiguration | Where-Object { \$_.IPv4DefaultGateway -ne \$null -and \$_.IPv4Address -ne \$null } | Sort-Object InterfaceMetric | Select-Object -First 1).IPv4DefaultGateway.NextHop" 2>/dev/null | tr -d '\r'
       fi
@@ -906,7 +912,7 @@ detect_interface_ipv4_cidr() {
       ;;
     windows)
       [[ -n "${iface}" ]] || return 0
-      powershell.exe -NoProfile -NonInteractive -Command "\$cfg = Get-NetIPConfiguration -InterfaceAlias '${iface//\'/''}' -ErrorAction SilentlyContinue; if (\$cfg -and \$cfg.IPv4Address) { \$addr = \$cfg.IPv4Address | Select-Object -First 1; '\{0}/\{1}' -f \$addr.IPAddress, \$addr.PrefixLength }" 2>/dev/null | tr -d '\r'
+      powershell.exe -NoProfile -NonInteractive -Command "\$cfg = Get-NetIPConfiguration -InterfaceAlias '$(ps_quote "${iface}")' -ErrorAction SilentlyContinue; if (\$cfg -and \$cfg.IPv4Address) { \$addr = \$cfg.IPv4Address | Select-Object -First 1; '\{0}/\{1}' -f \$addr.IPAddress, \$addr.PrefixLength }" 2>/dev/null | tr -d '\r'
       ;;
   esac
 }
@@ -1273,7 +1279,7 @@ collect_inputs() {
 
   prompt_default ADMIN_USERNAME "Admin username" "admin"
   prompt_default ADMIN_EMAIL "Admin email" "admin@vecta.local"
-  prompt_default ADMIN_PASSWORD "Admin password (changed on first login)" "admin"
+  prompt_default ADMIN_PASSWORD "Admin password (changed on first login)" "changeit"
   prompt_yes_no FORCE_PASSWORD_CHANGE "Force password change at first login" "true"
 
   prompt_default LICENSE_KEY "License key" "SEC-KMS-ENT-2026-ABCD"
@@ -1673,12 +1679,13 @@ write_env_file() {
   # always performs a mandatory clean reset (down -v) before starting, so it is
   # correct to mint fresh secrets on every install. Hex for values that appear
   # in DSNs/headers; a policy-compliant string for the CLI bootstrap password.
-  local pg_password nats_token workload_secret vault_passphrase internal_token cli_password
+  local pg_password nats_token workload_secret vault_passphrase internal_token service_bootstrap_secret cli_password
   pg_password="$(openssl rand -hex 24)"
   nats_token="$(openssl rand -hex 24)"
   workload_secret="$(openssl rand -hex 32)"
   vault_passphrase="$(openssl rand -hex 32)"
   internal_token="$(openssl rand -hex 32)"
+  service_bootstrap_secret="$(openssl rand -hex 32)"
   cli_password="Vk$(generate_random_secret 24 | tr -dc 'A-Za-z0-9')Aa9!"
 
   # ---- JWT signing keypair -----------------------------------------------
@@ -1706,6 +1713,7 @@ NATS_AUTH_TOKEN=${nats_token}
 WORKLOAD_IDENTITY_SHARED_SECRET=${workload_secret}
 SOFTWARE_VAULT_PASSPHRASE=${vault_passphrase}
 INTERNAL_API_TOKEN=${internal_token}
+INTERNAL_SERVICE_BOOTSTRAP_SECRET=${service_bootstrap_secret}
 JWT_PUBLIC_KEY_B64=${jwt_pub_b64}
 AUTH_BOOTSTRAP_CLI_PASSWORD=${cli_password}
 CBOM_SCHEDULE_TENANTS=${TENANT_ID}
@@ -2192,7 +2200,7 @@ collect_fast_inputs() {
   TENANT_NAME="Root Tenant"
   prompt_default ADMIN_USERNAME "Admin username" "admin"
   prompt_default ADMIN_EMAIL "Admin email" "admin@vecta.local"
-  prompt_default ADMIN_PASSWORD "Admin password (changed on first login)" "admin"
+  prompt_default ADMIN_PASSWORD "Admin password (changed on first login)" "changeit"
   FORCE_PASSWORD_CHANGE="true"
   local detected_iface detected_gw detected_dns_csv detected_hostname detected_domain
   LICENSE_KEY="SEC-KMS-ENT-2026-ABCD"
