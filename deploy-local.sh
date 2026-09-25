@@ -93,9 +93,22 @@ if [[ "${BUILD}" -eq 1 ]]; then
   # generated platform pin so images rebuild natively for this machine.
   rm -f .tmp_compose.platform.override.yml
 
-  say "building images (first run takes several minutes; later runs use the build cache)"
-  COMPOSE_PROFILES="$("${BASH4}" infra/scripts/parse-deployment.sh infra/deployment/deployment.yaml)" \
-    docker compose build --parallel
+  # Building all ~30 Go services at once runs ~30 compilers in parallel inside
+  # the Docker VM and gets OOM-killed ("cannot allocate memory",
+  # "compile: signal: killed"). Build one service first to warm the shared Go
+  # build cache, then the rest a few at a time (BUILD_JOBS, default 2) — later
+  # builds mostly reuse compiled packages and only link.
+  export COMPOSE_PROFILES
+  COMPOSE_PROFILES="$("${BASH4}" infra/scripts/parse-deployment.sh infra/deployment/deployment.yaml)"
+  export COMPOSE_BAKE=false
+  BUILD_JOBS="${BUILD_JOBS:-2}"
+  services="$(docker compose config --services | sort)"
+  warm="sbom"; echo "${services}" | grep -qx "${warm}" || warm="keycore"
+  say "building ${warm} first to warm the build cache (first run takes a while)"
+  docker compose build "${warm}"
+  say "building remaining images, ${BUILD_JOBS} at a time"
+  echo "${services}" | grep -vx "${warm}" | xargs -n1 -P "${BUILD_JOBS}" docker compose build --quiet \
+    || die "image build failed — re-run with BUILD_JOBS=1 ./deploy-local.sh, and give Docker Desktop 8 GB+ memory"
 fi
 
 # ── 4. Keep JWT verification key in sync with the auth signing key ──────
