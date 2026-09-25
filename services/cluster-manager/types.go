@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"time"
+	"vecta-kms/pkg/clusterrepl"
 )
 
 type EventPublisher interface {
@@ -129,6 +130,15 @@ type ClusterOverview struct {
 		Enabled bool   `json:"enabled"`
 		Note    string `json:"note"`
 	} `json:"selective_component_sync"`
+	// Replication is this node's real Postgres logical replication state.
+	Replication *ReplicationStatus `json:"replication,omitempty"`
+}
+
+type ReplicationStatus struct {
+	WALLevel      string                           `json:"wal_level"`
+	Publications  []clusterrepl.PublicationStatus  `json:"publications"`
+	Subscriptions []clusterrepl.SubscriptionStatus `json:"subscriptions"`
+	Error         string                           `json:"error,omitempty"`
 }
 
 type UpsertProfileInput struct {

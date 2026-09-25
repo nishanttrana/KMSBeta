@@ -140,7 +140,7 @@ Key additions:
 
 Operational notes:
 
-- SCIM is tenant-scoped state that lives with the Auth service and replicates with the normal auth control-plane state.
+- SCIM is tenant-scoped state that lives with the Auth service. Its tables belong to the `auth` cluster component (see docs/CLUSTERING.md for replication status).
 - Group-to-role enforcement is not stored inside the SCIM payload itself; directory groups are provisioned first, then mapped to existing KMS roles through the group-role binding path.
 - Deprovision can either disable users for evidence retention or remove them entirely.
 - SCIM lifecycle operations emit dedicated audit subjects, including:

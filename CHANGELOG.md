@@ -6,6 +6,22 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
+### Clustering (slice 1 of 5)
+- **Removed a false claim.** The Cluster overview and dashboard said nodes
+  synchronized component state, but no node ever applied another node's data.
+  Status now comes only from the database (`GET /cluster/replication/status`,
+  and the Cluster tab shows per-component sync state and lag).
+- **Replication engine:** Postgres logical replication with one publication
+  per component; members subscribe only to their assigned components
+  (`pkg/clusterrepl`). Proven between two real Postgres servers: assigned
+  components copy and stream; node-local tables and unassigned components
+  don't (`scripts/test-cluster-replication.sh`).
+- **Every table classified:** replicated per component, node-local (50, each
+  with a reason) or shared-append (`pkg/clustercatalog`), enforced by test.
+- Postgres runs with `wal_level=logical`.
+- Joining a node, write forwarding, failover and the Helm chart follow in
+  slices 2–5 (`docs/CLUSTERING.md`).
+
 ### Security
 - **Audit coverage for this refresh.** New events:
   - service-key revocation and retirement in auth;

@@ -93,6 +93,15 @@ services:
       - work_mem=${PG_WORK_MEM:-8MB}
       - -c
       - maintenance_work_mem=${PG_MAINT_MEM:-128MB}
+      # ---------- Cluster replication (docs/CLUSTERING.md) ----------------
+      # Logical replication carries each component's tables from the primary
+      # to members. Changing wal_level needs a Postgres restart.
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=${PG_MAX_REPLICATION_SLOTS:-64}
+      - -c
+      - max_wal_senders=${PG_MAX_WAL_SENDERS:-64}
       # ---------- Connections ---------------------------------------------
       - -c
       - max_connections=${PG_MAX_CONN:-200}

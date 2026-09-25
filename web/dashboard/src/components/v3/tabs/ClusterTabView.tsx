@@ -1,6 +1,6 @@
 import { B, Bar, Btn, Card, Chk, FG, Inp, Modal, Section, Sel, Stat } from "../legacyPrimitives";
 import { C } from "../theme";
-import type { ClusterSyncEvent, ClusterLogEntry, ClusterSyncCheckpoint } from "../../../lib/cluster";
+import type { ClusterSyncEvent, ClusterLogEntry, ClusterSyncCheckpoint, ClusterReplicationStatus } from "../../../lib/cluster";
 
 type ClusterTabViewProps = {
   clusterView: string;
@@ -10,6 +10,7 @@ type ClusterTabViewProps = {
   profiles: any[];
   summary: any;
   selectiveNote: string;
+  replication?: ClusterReplicationStatus;
   statusMeta: (status: string) => { label: string; color: string; bg: string; dotClass: string };
   clusterComponentLabel: (value: string) => string;
   componentCategoryColor: (componentId: string) => string;
@@ -91,7 +92,7 @@ function componentPill(component: string, label: string, color: string) {
 
 export const ClusterTabView = (props: ClusterTabViewProps) => {
   const {
-    clusterView, loading, refresh, nodes, profiles, summary, selectiveNote,
+    clusterView, loading, refresh, nodes, profiles, summary, selectiveNote, replication,
     statusMeta, clusterComponentLabel, componentCategoryColor,
     roleDrafts, setRoleDrafts, roleUpdatingNode, updateNodeRoleAction,
     removeBusyNode, removeNodeAction,
@@ -239,9 +240,19 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
           marginTop: 14, border: `1px solid ${C.borderHi}`, borderRadius: 10,
           background: C.card, padding: "12px 16px", display: "flex", alignItems: "center", gap: 8
         }}>
-          <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>Selective Sync</span>
+          <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>Replication</span>
           <span style={{ fontSize: 11, color: C.dim }}>{selectiveNote}</span>
         </div>
+        {replication && replication.subscriptions.length > 0 && (
+          <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
+            {replication.subscriptions.map((s) => (
+              <div key={s.subscription} style={{ fontSize: 11, color: s.ready ? C.dim : C.amber }}>
+                {s.component}: {s.ready ? "synchronized" : s.worker_running ? "copying" : "stopped"}
+                {` · ${s.tables.filter((t) => t.state === "ready").length}/${s.tables.length} tables · lag ${Math.round(s.lag_seconds)}s`}
+              </div>
+            ))}
+          </div>
+        )}
       </Section>
     </div>;
   }

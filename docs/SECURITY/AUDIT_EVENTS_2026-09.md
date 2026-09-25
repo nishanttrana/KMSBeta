@@ -12,6 +12,7 @@ security meaning where a generic request record isn't enough.
 | `audit.governance.fips_mode_changed` | governance | an admin changes the platform FIPS mode (from, to, actor, reason, stopped features, restarts) | critical for a downgrade, else warning |
 | `audit.governance.fips_mode_applied` | governance | a service instance starts and reports its FIPS mode (once per start) | info; warning if it differs from the platform mode |
 | `audit.governance.fips_mode_rollout_completed` | governance | every service runs the requested mode (once per change) | info |
+| `audit.cluster.publication_changed` | cluster-manager | a replication publication is created or its table set changes (which data this node offers members) | info |
 | `audit.key.service_derive` | keycore | an internal service derives a purpose-bound working key | info |
 | `audit.key.derive_refused` | keycore | a generic derive tries to use the reserved service-derive context | critical |
 | `audit.cert.ocsp_refused` | certs | an OCSP request with a SHA-1 CertID in FIPS strict mode | warning |

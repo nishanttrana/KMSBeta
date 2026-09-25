@@ -243,7 +243,8 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
   const nodes = Array.isArray(overview?.nodes) ? overview.nodes : [];
   const profiles = Array.isArray(overview?.profiles) ? overview.profiles : [];
   const summary = overview?.summary || {};
-  const selectiveNote = String(overview?.selective_component_sync?.note || "Nodes sync only the state for their enabled components. Auth replication includes REST client sender-constraint profiles and per-client security counters, certs replication includes coordinated renewal windows and ARI hotspot state, while short-lived anti-replay nonce caches stay node-local.");
+  // Only what the node reports; never a built-in claim.
+  const selectiveNote = String(overview?.selective_component_sync?.note || "Replication status not assessed.");
 
   const profileComponentScope = (profileID: string) => {
     const profile = profiles.find((item: any) => String(item?.id || "").trim() === String(profileID || "").trim());
@@ -412,6 +413,7 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
       profiles={profiles}
       summary={summary}
       selectiveNote={selectiveNote}
+      replication={overview?.replication}
       statusMeta={statusMeta}
       clusterComponentLabel={clusterComponentLabel}
       componentCategoryColor={componentCategoryColor}

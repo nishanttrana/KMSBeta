@@ -52,6 +52,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /cluster/sync/ack", h.handleSyncAck)
 	mux.HandleFunc("GET /cluster/sync/checkpoint", h.handleSyncCheckpoint)
 	mux.HandleFunc("GET /cluster/logs", h.handleClusterLogs)
+	mux.HandleFunc("GET /cluster/replication/status", h.handleReplicationStatus)
 
 	return mux
 }
@@ -521,4 +522,9 @@ func writeErr(w http.ResponseWriter, status int, code string, message string, re
 			"tenant_id":  tenantID,
 		},
 	})
+}
+
+func (h *Handler) handleReplicationStatus(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	writeJSON(w, http.StatusOK, map[string]interface{}{"replication": h.svc.ReplicationStatus(r.Context()), "request_id": reqID})
 }

@@ -16,6 +16,34 @@ need a written trail of why each security control exists.
 **Enforced by:** `scripts/check-docs.sh` in CI on pull requests, plus the
 "Documentation is part of done" table in `CLAUDE.md`.
 
+## 2026-09-25 — Clustering: one lifecycle writer, per-component Postgres logical replication
+**Decision (customer's choice):**
+- The primary is the only lifecycle writer; members forward lifecycle writes
+  and run crypto operations locally.
+- Failover is manual, plus a majority vote at 3+ nodes, with fencing.
+- Replication is Postgres 17 logical replication with one publication per
+  component; members subscribe only to their assigned components.
+- Every table is classified replicated / node-local / shared-append in
+  `pkg/clustercatalog`, and a test enforces it.
+
+**Why:**
+- The existing framework recorded sync events that nothing ever applied.
+  Writing apply logic for about 250 tables in 30 services would be large and
+  fragile.
+- Logical replication gives a transactional initial copy and streaming for
+  free, and each service already owns its tables, so the per-component split
+  is natural.
+
+**Rejected:**
+- **Active-active multi-writer:** concurrent rotate/destroy on two nodes can
+  diverge key state, and unique-name collisions stall replication.
+- **Physical streaming replication / Patroni for the whole database:** it
+  can't replicate selectively per feature, and it would clone node-local data.
+- **Per-entity event apply handlers:** see Why.
+
+**Enforced by:** `TestEveryTableIsClassified`, the two-node integration test,
+and status that comes only from the database.
+
 ## 2026-09-25 — FIPS mode is changed in the UI and applied by staggered self-restart
 **Decision:**
 - The platform FIPS mode is a governance setting, changed by a root admin in

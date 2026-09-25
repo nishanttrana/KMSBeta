@@ -51,7 +51,7 @@ Notes:
 - AWS verification is local once the Nitro root is trusted; Azure and GCP verification require outbound HTTPS so the service can resolve issuer metadata and JWKS during attestation validation.
 - `cert_security.acme_renewal` configures coordinated certificate renewal for the built-in PKI stack.
 - `start-kms.sh` and `start-kms.ps1` now read `cert_security.acme_renewal` and seed the ACME protocol policy on boot so ARI settings remain deployment-file driven.
-- The `certs` component in cluster replication includes the derived renewal-intelligence state used for coordinated windows, missed-window tracking, emergency rotation, and mass-renewal hotspot detection.
+- The `certs` component's tables (including renewal-intelligence state) are listed in `pkg/clustercatalog`. Clustering status and roadmap: [docs/CLUSTERING.md](../../docs/CLUSTERING.md). Joining a second node isn't available yet.
 
 Built-in clustering replication profile IDs available immediately after install:
 

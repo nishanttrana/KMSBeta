@@ -2532,6 +2532,20 @@ Tests HSM connectivity. Response: `{"connected": true, "latencyMs": 12, "firmwar
 
 ---
 
+### GET /svc/cluster/cluster/replication/status
+
+This node's real Postgres logical replication state:
+- `wal_level`
+- `publications`: `[{component, publication, tables}]`
+- `subscriptions`: `[{subscription, component, enabled, worker_running, lag_seconds, ready, tables: [{table, state}]}]`
+- `error`
+
+`GET /cluster/overview` includes the same object under `replication`. Its
+`selective_component_sync.note` is computed from it. See
+[CLUSTERING.md](CLUSTERING.md).
+
+---
+
 ## Service 23: QKD (`/svc/qkd/`)
 
 Quantum Key Distribution: ETSI GS QKD 014 compatible links for quantum-secure key exchange.

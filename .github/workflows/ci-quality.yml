@@ -46,6 +46,23 @@ jobs:
       - name: go test (fips140=${{ matrix.mode }})
         run: go test ./pkg/... ./services/...
 
+  cluster-replication:
+    # Two real Postgres 17 servers: selective per-component logical replication
+    # (docs/CLUSTERING.md).
+    name: Cluster replication (two-node Postgres)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Two-node replication test
+        run: ./scripts/test-cluster-replication.sh
+
   dashboard-quality:
     name: Dashboard Lint/Type/Unit/Build/Smoke
     runs-on: ubuntu-latest

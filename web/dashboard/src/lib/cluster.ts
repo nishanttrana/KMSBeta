@@ -45,6 +45,23 @@ export type ClusterOverview = {
     enabled?: boolean;
     note?: string;
   };
+  // This node's real Postgres logical replication state (docs/CLUSTERING.md).
+  replication?: ClusterReplicationStatus;
+};
+
+export type ClusterReplicationStatus = {
+  wal_level: string;
+  publications: { component: string; publication: string; tables: string[] }[];
+  subscriptions: {
+    subscription: string;
+    component: string;
+    enabled: boolean;
+    worker_running: boolean;
+    lag_seconds: number;
+    ready: boolean;
+    tables: { table: string; state: string }[];
+  }[];
+  error?: string;
 };
 
 export type ClusterJoinBundle = {

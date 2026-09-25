@@ -5,6 +5,15 @@ Newest entries on top.
 
 ## 2026-09-25
 
+### Recording sync events is not replication
+cluster-manager had join tokens, profiles, a sync-event log and per-node
+checkpoints, and the overview told users "Nodes sync only the state for their
+enabled components…". But nothing ever applied an event on another node, and a
+join moved no data. Check that both ends of a data path exist, the writer and
+the applier, before believing a feature, and derive status text from the
+system's real state rather than writing it by hand. The dashboard carried its
+own copy of the claim as a fallback string, so grep the UI too.
+
 ### "Documented and audited" needs a check, not a memory
 Asked whether every change was documented and audited, the honest answer was
 no. The design docs were complete, but `API_REFERENCE.md` lacked every new

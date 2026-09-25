@@ -15,6 +15,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"vecta-kms/pkg/clustercatalog"
+	"vecta-kms/pkg/clusterrepl"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
@@ -68,7 +70,24 @@ func main() {
 		logger.Printf("nats unavailable, cluster event publishing disabled: %v", err)
 	}
 
-	svc := NewService(NewSQLStore(dbConn), publisher)
+	replEngine := clusterrepl.New(dbConn.SQL())
+	svc := NewService(NewSQLStore(dbConn), publisher).WithReplication(replEngine)
+	// Keep one publication per component current on every node, so any node
+	// can serve as primary (services create their tables at their own start).
+	go func() {
+		for {
+			pubs, err := replEngine.EnsurePublications(ctx, clustercatalog.Components())
+			if err != nil {
+				logger.Printf("cluster replication: publications: %v", err)
+			}
+			svc.AuditPublicationChanges(ctx, pubs)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Minute):
+			}
+		}
+	}()
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8210")

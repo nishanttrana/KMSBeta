@@ -78,6 +78,11 @@ an approach, record it here or in the matching doc below.
   macOS's bash 3.2 unless they explicitly re-exec under bash 4+.
 - Don't use `git stash` as a scratch tool in a dirty working tree. Use a
   throwaway `git worktree` instead.
+- Every new database table is classified for clustering in
+  `pkg/clustercatalog/tables.go`: replicated under its component, node-local
+  with a reason, or shared-append. Tables written during crypto operations
+  are node-local. `TestEveryTableIsClassified` enforces this
+  (docs/CLUSTERING.md).
 - Features cut from the core move to the sibling `KMSExtension` repo (REST
   integration via `pkg/kmsclient`, no key material there). Don't delete them.
 
