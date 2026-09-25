@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"vecta-kms/pkg/features"
 
 	"vecta-kms/pkg/crypto"
 )
@@ -26,6 +27,9 @@ func (h *Handler) handleListEnterpriseControls(w http.ResponseWriter, r *http.Re
 		writeErr(w, http.StatusInternalServerError, "enterprise_controls_failed", err.Error(), reqID, tenantID)
 		return
 	}
+	for i := range items {
+		items[i] = withFeatureStatus(items[i])
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items, "request_id": reqID})
 }
 
@@ -39,6 +43,10 @@ func (h *Handler) handleGetEnterpriseControl(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		writeErr(w, http.StatusNotFound, "enterprise_control_not_found", err.Error(), reqID, tenantID)
 		return
+	}
+	item = withFeatureStatus(item)
+	if item.FeatureStatus == features.StatusPreview {
+		features.MarkPreview(w, item.FeatureID)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"control": item, "request_id": reqID})
 }
@@ -76,6 +84,10 @@ func (h *Handler) upsertEnterpriseControl(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "enterprise_control_upsert_failed", err.Error(), reqID, tenantID)
 		return
+	}
+	saved = withFeatureStatus(saved)
+	if saved.FeatureStatus == features.StatusPreview {
+		features.MarkPreview(w, saved.FeatureID)
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"control": saved, "request_id": reqID})
 }
@@ -222,6 +234,7 @@ func (h *Handler) handleCreateAuditChainAnchor(w http.ResponseWriter, r *http.Re
 		writeErr(w, http.StatusInternalServerError, "audit_anchor_failed", err.Error(), reqID, tenantID)
 		return
 	}
+	features.MarkPreview(w, "keycore.audit_chain_anchor")
 	writeJSON(w, http.StatusCreated, map[string]any{"anchor": anchor, "request_id": reqID})
 }
 
@@ -231,6 +244,7 @@ func (h *Handler) handleListAuditChainAnchors(w http.ResponseWriter, r *http.Req
 	if tenantID == "" {
 		return
 	}
+	features.MarkPreview(w, "keycore.audit_chain_anchor")
 	items, err := h.svc.store.ListAuditChainAnchors(r.Context(), tenantID, limitQuery(r, 100))
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "audit_anchor_list_failed", err.Error(), reqID, tenantID)

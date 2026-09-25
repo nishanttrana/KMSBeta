@@ -1,4 +1,5 @@
 // @ts-nocheck -- legacy tab: strict typing deferred, do not add new suppressions
+import { PREVIEW_FEATURES } from "../../lib/featureStatus";
 import { useState, useMemo } from "react";
 import { Card, Inp } from "../../components/v3/legacyPrimitives";
 import { C } from "../../components/v3/theme";
@@ -137,6 +138,7 @@ const NAV = [
   { id: "ui-admin", label: "UI Guide: Admin" },
   { id: "config-env", label: "Config: Environment" },
   { id: "config-fips", label: "Config: FIPS Mode" },
+  { id: "preview-features", label: "Preview Features" },
   { id: "config-hsm", label: "Config: HSM" },
   { id: "config-network", label: "Config: Networking" },
   { id: "config-cluster", label: "Config: Clustering" },
@@ -2841,6 +2843,14 @@ const SectionConfigEnv = () => (
   </div>
 );
 
+const SectionPreviewFeatures = () => (
+  <div>
+    <div style={S.h1}>Preview Features</div>
+    <P>These features store configuration but do not enforce or execute it yet. Their API responses carry the header X-Vecta-Feature-Status: preview and a feature_status field. Do not rely on them for security or recovery. Details: docs/PREVIEW_FEATURES.md.</P>
+    <EnvTable rows={PREVIEW_FEATURES.map((f) => [f.name, f.id, f.limitation])} />
+  </div>
+);
+
 const SectionConfigFips = () => (
   <div>
     <div style={S.h1}>Configuration: FIPS Mode</div>
@@ -3546,6 +3556,7 @@ const SECTIONS: Record<string, () => JSX.Element> = {
   "ui-admin": SectionUIAdmin,
   "config-env": SectionConfigEnv,
   "config-fips": SectionConfigFips,
+  "preview-features": SectionPreviewFeatures,
   "config-hsm": SectionConfigHsm,
   "config-network": SectionConfigNetwork,
   "config-cluster": SectionConfigCluster,

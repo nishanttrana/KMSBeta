@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"vecta-kms/pkg/features"
 
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/hkdf"
@@ -43,13 +44,16 @@ func (s *Service) UpsertEnterpriseControl(ctx context.Context, record Enterprise
 	if err != nil {
 		return EnterpriseControlRecord{}, err
 	}
+	featureStatus, featureID := features.ControlCategoryStatus(saved.Category)
 	_ = s.publishAudit(ctx, auditSubjectForEnterpriseCategory(saved.Category, "upserted"), saved.TenantID, map[string]any{
-		"record_id":  saved.RecordID,
-		"category":   saved.Category,
-		"key_id":     saved.KeyID,
-		"status":     saved.Status,
-		"severity":   saved.Severity,
-		"risk_score": saved.RiskScore,
+		"record_id":      saved.RecordID,
+		"category":       saved.Category,
+		"feature_status": featureStatus,
+		"feature_id":     featureID,
+		"key_id":         saved.KeyID,
+		"status":         saved.Status,
+		"severity":       saved.Severity,
+		"risk_score":     saved.RiskScore,
 	})
 	if saved.RiskScore >= 50 || saved.Severity == "high" || saved.Severity == "critical" {
 		_, _ = s.UpsertDSPMFinding(ctx, DSPMFinding{
@@ -611,34 +615,36 @@ func (s *Service) AnchorEnterpriseAuditChain(ctx context.Context, tenantID, anch
 	if strings.TrimSpace(anchorType) == "" {
 		anchorType = "internal_merkle"
 	}
+	// Preview (pkg/features "keycore.audit_chain_anchor"): this records an
+	// external reference in a local hash chain of anchor records. It used to
+	// report a "merkle_root" computed from tenant/type/reference/time and the
+	// status "anchored"; neither was true, so neither is claimed any more.
 	now := time.Now().UTC()
-	seed := fmt.Sprintf("%s|%s|%s|%d", tenantID, anchorType, externalRef, now.UnixNano())
-	root := sha256Hex([]byte(seed))
 	anchors, _ := s.store.ListAuditChainAnchors(ctx, tenantID, 1)
 	previous := ""
 	if len(anchors) > 0 {
 		previous = anchors[0].AnchorHash
 	}
-	anchorHash := sha256Hex([]byte(previous + "|" + root + "|" + externalRef))
+	anchorHash := sha256Hex([]byte(fmt.Sprintf("%s|%s|%s|%s|%d", previous, tenantID, anchorType, externalRef, now.UnixNano())))
 	anchor, err := s.store.RecordAuditChainAnchor(ctx, AuditChainAnchor{
 		TenantID:          tenantID,
 		AnchorType:        anchorType,
-		MerkleRoot:        "sha256:" + root,
 		PreviousHash:      previous,
 		AnchorHash:        "sha256:" + anchorHash,
 		ExternalReference: externalRef,
-		Status:            "anchored",
+		Status:            "recorded",
 		Metadata:          metadata,
 		AnchoredAt:        now,
 	})
 	if err != nil {
 		return AuditChainAnchor{}, err
 	}
+	anchor.FeatureStatus = features.StatusPreview
 	_ = s.publishAudit(ctx, "audit.key.audit_chain_anchored", tenantID, map[string]any{
 		"anchor_id":          anchor.AnchorID,
 		"anchor_type":        anchor.AnchorType,
-		"merkle_root":        anchor.MerkleRoot,
 		"anchor_hash":        anchor.AnchorHash,
+		"feature_status":     "preview",
 		"external_reference": anchor.ExternalReference,
 	})
 	return anchor, nil

@@ -74,7 +74,7 @@ func NewHandler(store Store, keycore KeyCoreClient, certs CertsClient, events Ev
 func (h *Handler) NewBatchExecutor() *kmipserver.BatchExecutor {
 	exec := kmipserver.NewBatchExecutor()
 	exec.SetSupportedProtocolVersions(parseSupportedProtocolVersions()...)
-	exec.BatchItemUse(h.auditMiddleware, h.authorizationMiddleware)
+	exec.BatchItemUse(h.recoverMiddleware, h.auditMiddleware, h.authorizationMiddleware)
 
 	exec.Route(kmip.OperationCreate, kmipserver.HandleFunc(h.handleCreate))
 	exec.Route(kmip.OperationRegister, kmipserver.HandleFunc(h.handleRegister))
@@ -182,7 +182,7 @@ func (h *Handler) authorizationMiddleware(next kmipserver.BatchItemNext, ctx con
 			"operation": ttlv.EnumStr(bi.Operation),
 			"reason":    "no connection context",
 		})
-		return nil, kmipserver.ErrPermissionDenied
+		return failedItem(bi), kmipserver.ErrPermissionDenied
 	}
 	if !isRoleAllowed(connCtx.Principal.Role) {
 		_ = h.publishAudit(ctx, "audit.kmip.authorization_denied", connCtx.Principal.TenantID, map[string]any{
@@ -192,7 +192,7 @@ func (h *Handler) authorizationMiddleware(next kmipserver.BatchItemNext, ctx con
 			"operation":  ttlv.EnumStr(bi.Operation),
 			"reason":     "role not allowed",
 		})
-		return nil, kmipserver.ErrPermissionDenied
+		return failedItem(bi), kmipserver.ErrPermissionDenied
 	}
 	if !roleCanOperate(connCtx.Principal.Role, bi.Operation) {
 		_ = h.publishAudit(ctx, "audit.kmip.authorization_denied", connCtx.Principal.TenantID, map[string]any{
@@ -202,14 +202,46 @@ func (h *Handler) authorizationMiddleware(next kmipserver.BatchItemNext, ctx con
 			"operation":  ttlv.EnumStr(bi.Operation),
 			"reason":     "role cannot perform operation",
 		})
-		return nil, kmipserver.ErrPermissionDenied
+		return failedItem(bi), kmipserver.ErrPermissionDenied
 	}
+	return next(ctx, bi)
+}
+
+// failedItem is the response a middleware returns with an error. kmip-go
+// fills in the failure status but dereferences the item, so a middleware must
+// never return a nil item: that crashed the whole KMIP service (any client
+// sending an operation its role may not perform, e.g. kmip-client Revoke).
+func failedItem(bi *kmip.RequestBatchItem) *kmip.ResponseBatchItem {
+	return &kmip.ResponseBatchItem{Operation: bi.Operation, UniqueBatchItemID: bi.UniqueBatchItemID}
+}
+
+// recoverMiddleware turns a panic in any KMIP operation into a failed batch
+// item, so one bad request cannot take the service down (kmip-go does not
+// recover panics).
+func (h *Handler) recoverMiddleware(next kmipserver.BatchItemNext, ctx context.Context, bi *kmip.RequestBatchItem) (resp *kmip.ResponseBatchItem, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			tenant := ""
+			if connCtx, ok := getConnectionContext(ctx); ok {
+				tenant = connCtx.Principal.TenantID
+			}
+			_ = h.publishAudit(ctx, "audit.kmip.operation_panic", tenant, map[string]any{
+				"operation": ttlv.EnumStr(bi.Operation),
+				"severity":  "critical",
+				"reason":    fmt.Sprint(r),
+			})
+			resp, err = failedItem(bi), kmipserver.Errorf(kmip.ResultReasonGeneralFailure, "internal error")
+		}
+	}()
 	return next(ctx, bi)
 }
 
 func (h *Handler) auditMiddleware(next kmipserver.BatchItemNext, ctx context.Context, bi *kmip.RequestBatchItem) (*kmip.ResponseBatchItem, error) {
 	start := time.Now()
 	resp, err := next(ctx, bi)
+	if resp == nil && err != nil {
+		resp = failedItem(bi)
+	}
 
 	connCtx, ok := getConnectionContext(ctx)
 	if !ok {
@@ -433,6 +465,11 @@ func (h *Handler) handleGet(ctx context.Context, req *payloads.GetRequestPayload
 	meta := parseStoredAttributes(obj.AttributesJSON)
 	if err := h.enforceObjectPolicy(connCtx.Principal, ttlv.EnumStr(kmip.OperationGet), meta); err != nil {
 		return nil, err
+	}
+	// A destroyed object has no key material to return (KMIP 1.4 §4.21);
+	// its attributes stay available through GetAttributes.
+	if st := stateFromStore(obj.State, meta.State); st == kmip.StateDestroyed || st == kmip.StateDestroyedCompromised {
+		return nil, kmipserver.Errorf(kmip.ResultReasonIllegalOperation, "object %s is destroyed", objectID)
 	}
 	objType := objectTypeFromStore(obj.ObjectType)
 	managedObj, err := buildKMIPObject(objType, meta)
@@ -851,7 +888,26 @@ func (h *Handler) resolveOperationalObject(ctx context.Context, uniqueID string,
 	if err := h.enforceObjectPolicy(connCtx.Principal, strings.ToLower(ttlv.EnumStr(operation)), meta); err != nil {
 		return kmipConnectionContext{}, ObjectMapping{}, kmipStoredAttributes{}, "", err
 	}
+	if st := stateFromStore(obj.State, meta.State); !operationAllowedInState(operation, st) {
+		return kmipConnectionContext{}, ObjectMapping{}, kmipStoredAttributes{}, "", kmipserver.Errorf(kmip.ResultReasonIllegalOperation,
+			"%s is not allowed on an object in state %s", ttlv.EnumStr(operation), ttlv.EnumStr(st))
+	}
 	return connCtx, obj, meta, objectID, nil
+}
+
+// operationAllowedInState applies the KMIP object lifecycle (KMIP 1.4 §3.22):
+// protecting operations need an Active object; processing operations also
+// run on Deactivated or Compromised objects so existing data stays readable;
+// nothing runs on Pre-Active or Destroyed objects. keycore enforces key status
+// too; this keeps the KMIP layer correct on its own.
+func operationAllowedInState(op kmip.Operation, st kmip.State) bool {
+	switch op {
+	case kmip.OperationEncrypt, kmip.OperationSign:
+		return st == kmip.StateActive
+	case kmip.OperationDecrypt, kmip.OperationSignatureVerify:
+		return st == kmip.StateActive || st == kmip.StateDeactivated || st == kmip.StateCompromised
+	}
+	return true
 }
 
 func (h *Handler) changeState(ctx context.Context, uniqueID string, target kmip.State, reason string) (*payloads.ActivateResponsePayload, error) {

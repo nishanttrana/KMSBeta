@@ -1,6 +1,10 @@
 package main
 
-import "time"
+import (
+	"time"
+
+	"vecta-kms/pkg/features"
+)
 
 const (
 	controlCategoryAnomaly               = "anomaly"
@@ -36,6 +40,16 @@ type EnterpriseControlRecord struct {
 	Metadata  map[string]any `json:"metadata,omitempty"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
+	// FeatureStatus is "preview" for categories that store configuration but
+	// enforce nothing (pkg/features); FeatureID names the preview feature.
+	FeatureStatus string `json:"feature_status"`
+	FeatureID     string `json:"feature_id,omitempty"`
+}
+
+// withFeatureStatus labels a control record from the pkg/features catalogue.
+func withFeatureStatus(r EnterpriseControlRecord) EnterpriseControlRecord {
+	r.FeatureStatus, r.FeatureID = features.ControlCategoryStatus(r.Category)
+	return r
 }
 
 type EnterpriseControlQuery struct {
@@ -84,7 +98,9 @@ type AuditChainAnchor struct {
 	Status            string         `json:"status"`
 	Metadata          map[string]any `json:"metadata,omitempty"`
 	AnchoredAt        time.Time      `json:"anchored_at"`
-	VerifiedAt        *time.Time     `json:"verified_at,omitempty"`
+	// Preview: anchors are local records, not external anchoring.
+	FeatureStatus string     `json:"feature_status"`
+	VerifiedAt    *time.Time `json:"verified_at,omitempty"`
 }
 
 type KDFDeriveRequest struct {

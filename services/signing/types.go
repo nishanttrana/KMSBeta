@@ -150,6 +150,10 @@ type VerifyArtifactInput struct {
 	TenantID  string `json:"tenant_id"`
 	RecordID  string `json:"record_id,omitempty"`
 	ProfileID string `json:"profile_id,omitempty"`
+	// The artifact being checked: its bytes (PayloadB64) or SHA-256 digest.
+	// When given, it must match the signed digest for Valid to be true.
+	PayloadB64   string `json:"payload,omitempty"`
+	DigestSHA256 string `json:"digest_sha256,omitempty"`
 }
 
 type VerifyArtifactResult struct {
@@ -158,6 +162,12 @@ type VerifyArtifactResult struct {
 	TransparencyHash  string    `json:"transparency_hash,omitempty"`
 	TransparencyEntryID string  `json:"transparency_entry_id,omitempty"`
 	VerifiedAt        time.Time `json:"verified_at"`
+	// SignatureValid: keycore verified the signature over the signed envelope.
+	// DigestMatch: the presented artifact's digest equals the signed digest
+	// (false when no artifact was presented).
+	SignatureValid bool `json:"signature_valid"`
+	DigestChecked  bool `json:"digest_checked"`
+	DigestMatch    bool `json:"digest_match"`
 }
 
 type KeyCoreSignRequest struct {

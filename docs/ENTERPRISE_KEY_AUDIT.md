@@ -378,6 +378,8 @@ The second implementation pass turns the remaining roadmap items into backend ca
 
 Enterprise control records are the common persistence model for orchestration, federation, edge agents, sharing grants, metadata profiles, binding policies, threat signals, and advanced encryption mode governance.
 
+> **Preview:** federation, binding policies, sharing grants, metadata profiles, escrow tiers, edge agents/leases/receipts and advanced-encryption modes only **store** records. Nothing enforces or executes them. Their records carry `feature_status: "preview"`, and responses carry `X-Vecta-Feature-Status: preview`. See [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md).
+
 ```bash
 curl -X POST "$BASE/enterprise/federation/providers?tenant_id=$TENANT" \
   -H "$AUTH" -H "Content-Type: application/json" \
@@ -547,7 +549,7 @@ curl -X POST "$BASE/enterprise/audit-chain/anchors?tenant_id=$TENANT" \
   -d '{"anchor_type":"external_notary","external_reference":"notary://2026-06-09/root"}'
 ```
 
-Anchors store a Merkle-style root, previous anchor hash, anchor hash, and external reference. External blockchain/notary publication should be performed by a trusted anchor publisher using the returned anchor data.
+> **Preview:** an anchor is a local record with status `recorded`: the previous anchor hash, the anchor hash (a hash chain over anchor records), and your external reference. It has **no Merkle root** and nothing is published externally. Until 2026-09-25 anchors reported a "merkle_root" that was not computed from audit events; those rows were relabelled (keycore migration 018). The audit service's hash chain, per-event HMAC and Merkle epochs are the tamper evidence.
 
 ### Key Material Verification
 

@@ -4,8 +4,10 @@
 
 The Vecta KMS is a **highly comprehensive key management platform** with 40+ services covering core key management, advanced crypto, compliance, and integration. This document identifies 20 recommended new feature areas that would enhance capabilities for enterprise deployments, edge computing, advanced analytics, and emerging security scenarios.
 
-**Current State**: ⭐⭐⭐⭐⭐ (5/5) - Enterprise-grade foundation
-**Maturity Level**: Production-ready with advanced features
+**Status (2026-09-25):** beta (see `VERSION`). No maturity rating is claimed
+here (CLAUDE.md rule 7). Features that only store configuration are listed as
+**Preview** below and in [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md); their API
+responses carry `X-Vecta-Feature-Status: preview`.
 
 ## Implementation Status - 2026-06-09
 
@@ -19,25 +21,25 @@ The Tier 1 quick wins from this audit are now implemented as KeyCore APIs, persi
 | Key Health Scoring & Monitoring | Implemented | `key_health_scores`, `/keys/{id}/health`, `/health/summary`, modernization recommendations |
 | Key Inventory & Dependency Mapping | Implemented | `key_inventory`, `key_dependencies`, inventory sync, orphan and duplicate KCV detection |
 
-The remaining feature areas are now represented by backend enterprise-control APIs, DSPM findings/events, audit events, and safe cryptographic utility endpoints where practical.
+The remaining feature areas were started as backend enterprise-control APIs. Several only store records: they are **Preview** until they enforce or execute what they describe (re-checked against the code on 2026-09-25).
 
 | Item | Status | Implementation Surface |
 |---|---|---|
 | Machine Learning & Anomaly Detection | Implemented as statistical anomaly detection | `/enterprise/anomaly/scan`, `key_dspm_findings`, audit/DSPM export |
 | Advanced Key Scheduling & Orchestration | Implemented | `/enterprise/orchestration/workflows`, `/enterprise/orchestration/runs`, executable batch rotation |
-| Key Federation & Multi-KMS Orchestration | Implemented as registry/control plane | `/enterprise/federation/providers`, `/mappings`, `/failovers` |
-| Enhanced Key Recovery & Escrow | Implemented | Existing escrow APIs plus `/enterprise/escrow/tiers`, Shamir split/verify |
-| Blockchain-Backed Audit Chain | Implemented as anchor records | `/enterprise/audit-chain/anchors`, external-reference anchoring |
+| Key Federation & Multi-KMS Orchestration | **Preview**: records only; no replication or failover | `/enterprise/federation/providers`, `/mappings`, `/failovers` |
+| Enhanced Key Recovery & Escrow | Implemented (escrow APIs, Shamir split/verify); escrow tiers are **Preview** (records only) | Existing escrow APIs, Shamir split/verify, `/enterprise/escrow/tiers` |
+| Blockchain-Backed Audit Chain | **Preview**: local anchor records; nothing is anchored externally (tamper evidence is the audit service's hash chain + Merkle epochs) | `/enterprise/audit-chain/anchors`, external-reference anchoring |
 | Key Derivation Functions | Implemented | `/enterprise/kdf/derive` for HKDF, PBKDF2, Scrypt, Argon2id |
 | Key Material Verification | Implemented | `/enterprise/verification/fingerprint`, constant-time KCV compare |
 | Regulatory Compliance Dashboard | Implemented | `/enterprise/compliance/dashboard` |
 | Cost & Optimization Dashboard | Implemented | `/enterprise/cost/optimization` |
-| Advanced Encryption Modes | Implemented safely/guarded | Searchable HMAC tokens; homomorphic/functional modes registered as governed controls until reviewed providers are integrated |
-| Enhanced Key Binding | Implemented as control records | `/enterprise/binding/policies` |
-| Edge & IoT Key Management | Implemented as control records | `/enterprise/edge/agents`, `/leases`, `/receipts` |
-| Fine-Grained Key Sharing | Implemented as control records | `/enterprise/sharing/grants` |
-| Key Metadata Management | Implemented as control records | `/enterprise/metadata/profiles` |
-| Advanced Threat Protection | Implemented as signals + existing canary/compromise flows | `/enterprise/threat/signals`, canary trips, compromise workflow, DSPM findings |
+| Advanced Encryption Modes | Searchable HMAC tokens implemented; homomorphic/functional modes **Preview** (registered, not performed) | Searchable HMAC tokens; homomorphic/functional modes registered as governed controls until reviewed providers are integrated |
+| Enhanced Key Binding | **Preview**: records only; not evaluated on key operations | `/enterprise/binding/policies` |
+| Edge & IoT Key Management | **Preview**: records only; edge runtime is in KMSExtension | `/enterprise/edge/agents`, `/leases`, `/receipts` |
+| Fine-Grained Key Sharing | **Preview**: records only; use key access grants for enforced sharing | `/enterprise/sharing/grants` |
+| Key Metadata Management | **Preview**: records only; not applied at key creation | `/enterprise/metadata/profiles` |
+| Advanced Threat Protection | Implemented: signal intake, canary trips, compromise workflow, DSPM findings | `/enterprise/threat/signals`, canary trips, compromise workflow, DSPM findings |
 
 ---
 
@@ -54,18 +56,16 @@ The remaining feature areas are now represented by backend enterprise-control AP
 
 ### ✅ Advanced Cryptography (State-of-the-Art)
 - Post-quantum crypto (ML-KEM, ML-DSA, SLH-DSA)
-- Quantum Key Distribution (QKD)
-- Quantum Random Number Generation (QRNG)
-- Multi-party computation (MPC) for thresholds
+- QKD, QRNG and MPC moved to the separate KMSExtension product (not in this repo)
 - Composite signatures (hybrid encryption)
 - Key migration planning for PQC transition
 
 ### ✅ Key Protection & Storage (Comprehensive)
 - Software vault with encryption at rest
 - Cloud BYOK/HYOK orchestration
-- HSM integration with attestation
+- HSM provider configuration (the keycore master key is not yet HSM-protected)
 - PKCS#11 and JCA provider interfaces
-- Key escrow and recovery capabilities
+- Key escrow and recovery capabilities (the Backup tab scheduler is Preview; encrypted backup/restore is in System Administration)
 - Secrets and payment key management
 
 ### ✅ Governance & Compliance (Advanced)

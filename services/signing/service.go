@@ -341,6 +341,10 @@ func (s *Service) SignArtifact(ctx context.Context, in SignArtifactInput) (SignA
 		TransparencyIndex:  transparencyIndex,
 		VerificationStatus: "logged",
 		Metadata: map[string]interface{}{
+			// envelope_b64 keeps the exact signed bytes: the JSONB column
+			// re-orders keys, so the parsed envelope cannot be re-marshalled
+			// into what was signed.
+			"envelope_b64":  base64.StdEncoding.EncodeToString(payload),
 			"envelope":      parseJSONObjectString(string(payload)),
 			"requested_by":  strings.TrimSpace(input.RequestedBy),
 			"profile_name":  profile.Name,
@@ -382,37 +386,97 @@ func (s *Service) VerifyArtifact(ctx context.Context, in VerifyArtifactInput) (V
 		}
 		return VerifyArtifactResult{}, err
 	}
-	envelope := record.Metadata["envelope"]
-	envelopeRaw, err := json.Marshal(envelope)
+	signed, envelope, err := signedEnvelopeBytes(record)
 	if err != nil {
 		return VerifyArtifactResult{}, err
 	}
 	verifyResp, err := s.keycore.Verify(ctx, record.KeyID, KeyCoreVerifyRequest{
 		TenantID:     tenantID,
-		DataB64:      base64.StdEncoding.EncodeToString(envelopeRaw),
+		DataB64:      base64.StdEncoding.EncodeToString(signed),
 		SignatureB64: record.SignatureB64,
 		Algorithm:    record.SigningAlgorithm,
 	})
 	if err != nil {
 		return VerifyArtifactResult{}, err
 	}
+	out := VerifyArtifactResult{
+		RecordID:            record.ID,
+		TransparencyHash:    record.TransparencyHash,
+		TransparencyEntryID: record.TransparencyEntryID,
+		VerifiedAt:          s.now(),
+		// The signature covers the envelope; the record's digest column must
+		// agree with it or the record was altered after signing.
+		SignatureValid: verifyResp.Valid && strings.EqualFold(envelope.DigestSHA256, record.DigestSHA256),
+	}
+	if presented, ok, err := presentedDigest(in); err != nil {
+		return VerifyArtifactResult{}, err
+	} else if ok {
+		out.DigestChecked = true
+		out.DigestMatch = strings.EqualFold(presented, envelope.DigestSHA256)
+	}
+	out.Valid = out.SignatureValid && (!out.DigestChecked || out.DigestMatch)
 	status := "verified"
-	if !verifyResp.Valid {
-		status = "failed"
+	switch {
+	case !out.SignatureValid:
+		status = "signature_invalid"
+	case out.DigestChecked && !out.DigestMatch:
+		status = "artifact_mismatch"
 	}
 	_ = publishAudit(ctx, s.events, "audit.signing.artifact_verified", tenantID, map[string]interface{}{
 		"record_id":           record.ID,
 		"artifact_type":       record.ArtifactType,
 		"verification_status": status,
+		"signature_valid":     out.SignatureValid,
+		"digest_checked":      out.DigestChecked,
+		"digest_match":        out.DigestMatch,
 		"transparency_hash":   record.TransparencyHash,
+		"severity":            map[bool]string{true: "info", false: "warning"}[out.Valid],
 	})
-	return VerifyArtifactResult{
-		Valid:               verifyResp.Valid,
-		RecordID:            record.ID,
-		TransparencyHash:    record.TransparencyHash,
-		TransparencyEntryID: record.TransparencyEntryID,
-		VerifiedAt:          s.now(),
-	}, nil
+	return out, nil
+}
+
+// signedEnvelopeBytes returns the exact bytes that were signed. Records from
+// before envelope_b64 was stored are rebuilt by decoding the stored envelope
+// into signingEnvelope and marshalling it again, which reproduces the original
+// field order and encoding.
+func signedEnvelopeBytes(record SigningRecord) ([]byte, signingEnvelope, error) {
+	var env signingEnvelope
+	if b64, _ := record.Metadata["envelope_b64"].(string); strings.TrimSpace(b64) != "" {
+		raw, err := base64.StdEncoding.DecodeString(b64)
+		if err != nil {
+			return nil, env, newServiceError(http.StatusUnprocessableEntity, "corrupt_record", "stored signed envelope is not valid base64")
+		}
+		if err := json.Unmarshal(raw, &env); err != nil {
+			return nil, env, newServiceError(http.StatusUnprocessableEntity, "corrupt_record", "stored signed envelope is not valid JSON")
+		}
+		return raw, env, nil
+	}
+	parsed, err := json.Marshal(record.Metadata["envelope"])
+	if err != nil {
+		return nil, env, err
+	}
+	if err := json.Unmarshal(parsed, &env); err != nil {
+		return nil, env, newServiceError(http.StatusUnprocessableEntity, "corrupt_record", "stored envelope is not valid JSON")
+	}
+	raw, err := json.Marshal(env)
+	return raw, env, err
+}
+
+// presentedDigest returns the SHA-256 of the artifact the caller presented,
+// if any (payload bytes take precedence over a digest).
+func presentedDigest(in VerifyArtifactInput) (string, bool, error) {
+	if p := strings.TrimSpace(in.PayloadB64); p != "" {
+		raw, err := base64.StdEncoding.DecodeString(p)
+		if err != nil {
+			return "", false, newServiceError(http.StatusBadRequest, "bad_request", "payload must be valid base64")
+		}
+		sum := sha256.Sum256(raw)
+		return hex.EncodeToString(sum[:]), true, nil
+	}
+	if d := strings.ToLower(strings.TrimSpace(in.DigestSHA256)); d != "" {
+		return d, true, nil
+	}
+	return "", false, nil
 }
 
 func (s *Service) ListRecords(ctx context.Context, tenantID string, profileID string, artifactType string, limit int) ([]SigningRecord, error) {
