@@ -463,7 +463,7 @@ export const PaymentPolicyTab = ({ session, onToast }) => {
             <Card key={item.label} style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 10 }}>
               <Icon size={18} style={{ color: item.color, flexShrink: 0 }} />
               <div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: C.text, fontFamily: "'Rajdhani','IBM Plex Sans',sans-serif", lineHeight: 1 }}>{item.value ?? "-"}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: C.text, fontFamily: "'Inter',sans-serif", lineHeight: 1 }}>{item.value ?? "-"}</div>
                 <div style={{ fontSize: 9, color: C.muted, letterSpacing: 0.5, textTransform: "uppercase" }}>{item.label}</div>
                 <div style={{ fontSize: 9, color: C.dim, marginTop: 2 }}>{item.sub}</div>
               </div>

@@ -31,18 +31,18 @@ export const C = {
 
   // ── Semantic hex (Aurora palette — safe for `${C.color}NN` alpha) ────
   white:     "#ffffff",
-  accent:    "#22d3ee",  // Aurora cyan
-  accentMid: "rgba(34,211,238,0.14)",
-  teal:      "#2dd4bf",
-  green:     "#34d399",
-  red:       "#f87171",
-  amber:     "#fbbf24",
-  orange:    "#fb923c",
-  purple:    "#a78bfa",
-  blue:      "#60a5fa",
-  pink:      "#f472b6",
-  cyan:      "#22d3ee",
-  yellow:    "#fde047",
+  accent:    "#7b8cff",  // Graphite indigo (single accent)
+  accentMid: "rgba(123,140,255,0.16)",
+  teal:      "#3cc9b4",
+  green:     "#45c987",
+  red:       "#f07474",
+  amber:     "#e9b44c",
+  orange:    "#ef9458",
+  purple:    "#b39cf5",
+  blue:      "#6ea8f5",
+  pink:      "#ea86b8",
+  cyan:      "#5cc6de",
+  yellow:    "#e8d25c",
 
   // ── Fg variants = CSS vars (theme-reactive text/icon colors) ─────────
   // Dark: bright neon. Light: darker shade with WCAG contrast.
@@ -78,14 +78,14 @@ export const C = {
   orangeTint:  "rgba(251,146,60,.04)",
   purpleTint:  "rgba(167,139,250,.04)",
   blueTint:    "rgba(96,165,250,.04)",
-  accentTint:  "rgba(34,211,238,.04)",
+  accentTint:  "rgba(123,140,255,.05)",
   pinkTint:    "rgba(244,114,182,.04)",
   cyanTint:    "rgba(34,211,238,.04)",
   tealTint:    "rgba(45,212,191,.04)",
   yellowTint:  "rgba(253,224,71,.04)",
   greenTint3:  "rgba(52,211,153,.03)",
   redTint3:    "rgba(248,113,113,.03)",
-  accentTint3: "rgba(34,211,238,.03)",
+  accentTint3: "rgba(123,140,255,.04)",
 };
 
 // Status -> theme-reactive foreground color

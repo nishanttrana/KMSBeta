@@ -647,7 +647,7 @@ type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export const Btn = ({ children, primary = false, danger = false, small = false, onClick, disabled = false, full = false, style, ...p }: BtnProps) => (
-  <button onClick={onClick} disabled={disabled} {...p} style={{ background: danger ? `linear-gradient(135deg,${C.red},#c0392b)` : primary ? `linear-gradient(135deg,${C.accent} 0%,${C.teal} 100%)` : "transparent", color: danger ? "#ffffff" : primary ? "#0a1826" : C.accentFg, border: `1px solid ${danger ? C.red : primary ? C.accent : C.border}`, borderRadius: 7, padding: small ? "5px 10px" : "8px 16px", fontSize: small ? 10 : 11, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, width: full ? "100%" : "auto", letterSpacing: 0.2, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: primary ? `0 2px 10px rgba(6,214,224,0.22)` : danger ? `0 2px 8px rgba(239,68,68,0.2)` : "none", transition: "opacity 0.15s, box-shadow 0.15s", ...(style || {}) }}>{children}</button>
+  <button onClick={onClick} disabled={disabled} {...p} style={{ background: danger ? C.redFg : primary ? C.accentFg : "transparent", color: danger || primary ? "var(--c-bg)" : C.text, border: `1px solid ${danger ? C.redFg : primary ? C.accentFg : C.borderHi}`, borderRadius: 7, padding: small ? "5px 10px" : "8px 14px", fontSize: small ? 11 : 12, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", opacity: disabled ? 0.5 : 1, width: full ? "100%" : "auto", letterSpacing: 0.2, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, boxShadow: "none", transition: "opacity 0.15s, background 0.15s, border-color 0.15s", ...(style || {}) }}>{children}</button>
 );
 
 type BadgeProps = {
@@ -662,7 +662,7 @@ export const B = ({ children, c = "accent", pulse = false }: BadgeProps) => {
   const textColor = palette[`${c}Fg`] || palette[c] || C.accentFg;
   const bgColor = palette[`${c}Dim`] || C.accentDim;
   return (
-    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 5, fontSize: 9, fontWeight: 700, color: textColor, background: bgColor, letterSpacing: 0.4, border: `1px solid ${bgColor}`, animation: pulse ? "pulse 2s infinite" : "none" }}>{children}</span>
+    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 5, fontSize: 10, fontWeight: 600, color: textColor, background: bgColor, letterSpacing: 0.3, border: `1px solid ${bgColor}`, animation: pulse ? "pulse 2s infinite" : "none" }}>{children}</span>
   );
 };
 
@@ -674,7 +674,7 @@ type TabsProps = {
 
 export const Tabs = ({ tabs, active, onChange }: TabsProps) => (
   <div style={{ display: "flex", gap: 3, marginBottom: 14, flexWrap: "wrap", padding: "3px", background: C.card, borderRadius: 9, border: `1px solid ${C.border}`, width: "fit-content" }}>
-    {tabs.map((t) => <button key={t} onClick={() => onChange(t)} style={{ background: active === t ? C.accentDim : "transparent", color: active === t ? C.accentFg : C.muted, border: `1px solid ${active === t ? C.accentFg : "transparent"}`, borderRadius: 6, padding: "5px 12px", fontSize: 10, fontWeight: active === t ? 700 : 400, cursor: "pointer", letterSpacing: 0.2, transition: "all .15s", boxShadow: active === t ? `0 1px 6px rgba(6,214,224,.12)` : "none" }}>{t}</button>)}
+    {tabs.map((t) => <button key={t} onClick={() => onChange(t)} style={{ background: active === t ? C.accentDim : "transparent", color: active === t ? C.accentFg : C.muted, border: `1px solid ${active === t ? C.accentFg : "transparent"}`, borderRadius: 6, padding: "5px 12px", fontSize: 11.5, fontWeight: active === t ? 600 : 500, cursor: "pointer", letterSpacing: 0, transition: "all .15s", boxShadow: "none" }}>{t}</button>)}
   </div>
 );
 
@@ -711,14 +711,13 @@ export const Stat = ({ l, v, s, c = "accent", i }: StatProps) => {
   const accentColor = palette[`${c}Fg`] || palette[c] || C.accentFg;
   const dimColor = palette[`${c}Dim`] || C.accentDim;
   return (
-    <div className="vecta-stat-card" style={{ flex: 1, background: `linear-gradient(160deg, ${C.card} 0%, ${C.surface} 100%)`, borderRadius: "var(--radius-md)", border: `1px solid ${C.border}`, padding: "14px 16px", boxShadow: "var(--shadow-sm)", position: "relative", overflow: "hidden" }}>
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${accentColor}, transparent 70%)`, opacity: 0.6 }} />
+    <div className="vecta-stat-card" style={{ flex: 1, background: C.card, borderRadius: "var(--radius-md)", border: `1px solid ${C.border}`, padding: "14px 16px", boxShadow: "var(--shadow-sm)", position: "relative", overflow: "hidden" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 9.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: 1 }}>{l}</span>
+        <span style={{ fontSize: 11, fontWeight: 500, color: C.muted, letterSpacing: 0 }}>{l}</span>
         <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: 8, background: dimColor, color: accentColor }}><Icon size={13} strokeWidth={2.2} /></span>
       </div>
-      <div className="vk-num" style={{ fontSize: 24, fontWeight: 800, color: accentColor, marginTop: 6 }}>{v}</div>
-      {s && <div style={{ fontSize: 9.5, color: C.dim, marginTop: 3 }}>{s}</div>}
+      <div className="vk-num" style={{ fontSize: 24, fontWeight: 650, color: C.text, marginTop: 6, letterSpacing: -0.5 }}>{v}</div>
+      {s && <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{s}</div>}
     </div>
   );
 };
@@ -743,9 +742,8 @@ type SectionProps = {
 export const Section = ({ title, children, actions }: SectionProps) => (
   <div style={{ marginBottom: 20 }}>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 700, color: C.text, letterSpacing: -0.2 }}>
-        <span style={{ width: 3, height: 14, borderRadius: 2, background: `linear-gradient(180deg, ${C.accent}, ${C.purple})`, display: "inline-block" }} />
-        {title}
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: -0.2 }}>
+                {title}
       </span>
       {actions && <div style={{ display: "flex", gap: 4 }}>{actions}</div>}
     </div>{children}
@@ -759,7 +757,7 @@ type CardProps = {
 };
 
 export const Card = ({ children, onClick, style }: CardProps) => (
-  <div onClick={onClick} style={{ background: C.card, borderRadius: "var(--radius-md)", border: `1px solid ${C.border}`, padding: 16, cursor: onClick ? "pointer" : "default", transition: "border-color .15s, box-shadow .15s, transform .15s", boxShadow: "var(--shadow-sm)", ...(style || {}) }} onMouseEnter={(e) => { if (onClick) { e.currentTarget.style.borderColor = C.accent; e.currentTarget.style.boxShadow = `0 2px 16px rgba(6,214,224,0.1), 0 4px 20px rgba(0,0,0,.2)`; } }} onMouseLeave={(e) => { if (onClick) { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,.2), 0 4px 12px rgba(0,0,0,.12)"; } }}>{children}</div>
+  <div onClick={onClick} style={{ background: C.card, borderRadius: "var(--radius-md)", border: `1px solid ${C.border}`, padding: 16, cursor: onClick ? "pointer" : "default", transition: "border-color .15s, box-shadow .15s, transform .15s", boxShadow: "var(--shadow-sm)", ...(style || {}) }} onMouseEnter={(e) => { if (onClick) { e.currentTarget.style.borderColor = C.borderHi; e.currentTarget.style.boxShadow = "var(--shadow-md)"; } }} onMouseLeave={(e) => { if (onClick) { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.boxShadow = "var(--shadow-sm)"; } }}>{children}</div>
 );
 
 type RowProps = {

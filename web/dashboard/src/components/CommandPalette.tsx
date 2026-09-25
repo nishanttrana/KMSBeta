@@ -24,7 +24,7 @@ function highlight(text: string, query: string): React.ReactNode {
       {text.slice(0, idx)}
       <mark
         style={{
-          background: "rgba(6,214,224,0.25)",
+          background: "rgba(123,140,255,0.25)",
           color: "#06d6e0",
           borderRadius: 2,
           fontWeight: 700,
@@ -190,7 +190,7 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
               border: "1px solid #1a2944",
               borderRadius: 4,
               padding: "2px 6px",
-              fontFamily: "'IBM Plex Mono', monospace",
+              fontFamily: "'JetBrains Mono', monospace",
             }}
           >
             ESC
@@ -242,8 +242,8 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
                       width: 28,
                       height: 28,
                       borderRadius: 6,
-                      background: active ? "rgba(6,214,224,0.12)" : "#131d2e",
-                      border: `1px solid ${active ? "rgba(6,214,224,0.3)" : "#1a2944"}`,
+                      background: active ? "rgba(123,140,255,0.12)" : "#131d2e",
+                      border: `1px solid ${active ? "rgba(123,140,255,0.3)" : "#1a2944"}`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -294,7 +294,7 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
                         borderRadius: 3,
                         padding: "1px 5px",
                         flexShrink: 0,
-                        fontFamily: "'IBM Plex Mono', monospace",
+                        fontFamily: "'JetBrains Mono', monospace",
                       }}
                     >
                       ↵
@@ -316,7 +316,7 @@ export function CommandPalette({ open, onClose, items, onSelect }: Props) {
             borderTop: "1px solid #1a2944",
             fontSize: 10,
             color: "#334155",
-            fontFamily: "'IBM Plex Mono', monospace",
+            fontFamily: "'JetBrains Mono', monospace",
           }}
         >
           <span>↑↓ navigate</span>

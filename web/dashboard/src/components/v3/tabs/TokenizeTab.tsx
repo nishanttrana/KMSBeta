@@ -466,7 +466,7 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
     </div>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,alignItems:"start"}}>
       <Card style={{padding:18}}>
-        <div style={{fontSize:30,fontWeight:700,color:C.text,marginBottom:8,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif",lineHeight:1}}>{panelTitle}</div>
+        <div style={{fontSize:30,fontWeight:700,color:C.text,marginBottom:8,fontFamily:"'Inter',sans-serif",lineHeight:1}}>{panelTitle}</div>
         <div style={{fontSize:11,color:C.muted,marginBottom:12}}>All operations execute against the <span style={{color:C.accent}}>dataprotect</span> backend with real cryptography.</div>
         {op==="Tokenize"&&<>
           <FG label="Tokenization Mode" required>
@@ -563,14 +563,14 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
         <Btn primary full style={{marginTop:12,padding:"10px 14px",fontSize:12}} onClick={()=>void submitCurrent()} disabled={submitting||loading}>{submitting?"Working...":op}</Btn>
       </Card>
       <Card style={{padding:18}}>
-        <div style={{fontSize:30,fontWeight:700,color:C.text,marginBottom:8,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif",lineHeight:1}}>Result</div>
+        <div style={{fontSize:30,fontWeight:700,color:C.text,marginBottom:8,fontFamily:"'Inter',sans-serif",lineHeight:1}}>Result</div>
         <Txt value={resultText} rows={24} readOnly style={{minHeight:420}}/>
       </Card>
     </div>
 
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
       <Card style={{padding:16}}>
-        <div style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:6,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif"}}>Data Masking</div>
+        <div style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:6,fontFamily:"'Inter',sans-serif"}}>Data Masking</div>
         <div style={{fontSize:11,color:C.dim,marginBottom:8}}>Pattern: <span style={{color:C.accent}}>{maskPattern}</span> - Role: <span style={{color:C.accent}}>{maskRole}</span></div>
         <div style={{fontSize:12,color:C.text,background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:10,marginBottom:10}}>
           <div style={{color:C.dim,marginBottom:4}}>Input:</div>
@@ -579,7 +579,7 @@ export const TokenizeTab=({session,keyCatalog,onToast})=>{
         <Btn small onClick={()=>setOp("Mask")}>Open Mask Operation</Btn>
       </Card>
       <Card style={{padding:16}}>
-        <div style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:6,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif"}}>PII Redaction</div>
+        <div style={{fontSize:22,fontWeight:700,color:C.text,marginBottom:6,fontFamily:"'Inter',sans-serif"}}>PII Redaction</div>
         <div style={{fontSize:11,color:C.dim,marginBottom:8}}>Action: <span style={{color:C.accent}}>{redactAction}</span> {redactDetectOnly?"(detect-only)":"(apply)"}</div>
         <div style={{fontSize:12,color:C.text,background:C.surface,border:`1px solid ${C.border}`,borderRadius:8,padding:10,marginBottom:10,maxHeight:90,overflow:"hidden"}}>
           <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,wordBreak:"break-word"}}>{redactInput||"-"}</div>
@@ -756,7 +756,7 @@ export const DataEncryptionTab=({session,keyCatalog,onToast})=>{
   const tabs=["Field-Level (FLE)","Envelope","Searchable (AES-SIV)","FPE (FF1/FF3-1)"];
   return <div style={{display:"grid",gap:12}}>
     <Card style={{padding:16}}>
-      <div style={{fontSize:28,fontWeight:700,color:C.text,marginBottom:10,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif",lineHeight:1}}>Data Encryption</div>
+      <div style={{fontSize:28,fontWeight:700,color:C.text,marginBottom:10,fontFamily:"'Inter',sans-serif",lineHeight:1}}>Data Encryption</div>
       <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:10}}>
         {tabs.map((name)=>(
           <button
@@ -2997,7 +2997,7 @@ export const DataProtectionTab=({session,keyCatalog,onToast,subView,onSubViewCha
         return <Card key={i} style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10}}>
           <Icon size={18} style={{color:s.color,flexShrink:0}}/>
           <div>
-            <div style={{fontSize:20,fontWeight:800,color:C.text,fontFamily:"'Rajdhani','IBM Plex Sans',sans-serif",lineHeight:1}}>{s.v??"-"}</div>
+            <div style={{fontSize:20,fontWeight:800,color:C.text,fontFamily:"'Inter',sans-serif",lineHeight:1}}>{s.v??"-"}</div>
             <div style={{fontSize:9,color:C.muted,letterSpacing:0.5,textTransform:"uppercase"}}>{s.l}</div>
           </div>
         </Card>;
