@@ -38,7 +38,7 @@ describe("evaluate", () => {
         { id: "2", name: "tls-signer", algorithm: "ECDSA-P256", status: "active", expires_at: "2032-01-01T00:00:00Z", labels: { owner: "web" } },
         { id: "3", name: "dek", algorithm: "AES-256-GCM", status: "active", expires_at: "2027-01-01T00:00:00Z", labels: { owner: "db" } },
       ],
-      backupPolicies: [],
+      backups: [],
       keyAccess: { deny_by_default: true, require_approval_for_policy_change: true, grant_max_ttl_minutes: 60, enforce_signed_requests: true },
       certs: [{ id: "c", subject_cn: "api.example.com", algorithm: "ECDSA-P256", status: "active", not_after: "2026-09-28T00:00:00Z" }],
     });

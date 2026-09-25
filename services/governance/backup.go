@@ -341,7 +341,26 @@ func (s *Service) GetBackupKeyDownload(ctx context.Context, tenantID string, bac
 	}, nil
 }
 
+// RestoreBackup restores a backup and audits the outcome. A refused restore
+// (tampered artifact, wrong key, changed scope, wrong file type) is a
+// security-relevant event in its own right, so it is audited too.
 func (s *Service) RestoreBackup(ctx context.Context, in RestoreBackupInput) (RestoreBackupResult, error) {
+	res, err := s.restoreBackup(ctx, in)
+	if err != nil {
+		_ = s.publishAudit(ctx, "audit.governance.backup_restore_refused", strings.TrimSpace(in.TenantID), map[string]interface{}{
+			"artifact_file_name": strings.TrimSpace(in.ArtifactFileName),
+			"key_file_name":      strings.TrimSpace(in.KeyFileName),
+			"requested_by":       strings.TrimSpace(in.CreatedBy),
+			"reason":             err.Error(),
+			"result":             "refused",
+			"severity":           "warning",
+			"description":        "backup restore refused; the database was not modified",
+		})
+	}
+	return res, err
+}
+
+func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (RestoreBackupResult, error) {
 	store, ok := s.store.(*SQLStore)
 	if !ok || store == nil || store.db == nil || store.db.SQL() == nil {
 		return RestoreBackupResult{}, errors.New("backup store is unavailable")

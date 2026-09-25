@@ -6,8 +6,7 @@ import type { AuthSession } from "./auth";
 import { listKeys, getKeyAccessSettings } from "./keycore";
 import { listCertificates } from "./certs";
 import { listPolicies as listRotationPolicies } from "./rotationScheduler";
-import { listPolicies as listBackupPolicies, listRuns as listBackupRuns } from "./backup";
-import { listGovernancePolicies } from "./governance";
+import { listGovernancePolicies, listGovernanceBackups } from "./governance";
 import { getPQCReadiness } from "./pqc";
 import { listPostureFindings } from "./posture";
 import { getClusterOverview } from "./cluster";
@@ -23,13 +22,12 @@ async function opt<T>(p: Promise<T>): Promise<T | undefined> {
 }
 
 export async function loadPlatformSnapshot(session: AuthSession, fipsEnabled?: boolean): Promise<PlatformSnapshot> {
-  const [keys, certs, rotationPolicies, backupPolicies, backupRuns, keyAccess, governancePolicies, pqc, postureFindings, cluster, users] =
+  const [keys, certs, rotationPolicies, backups, keyAccess, governancePolicies, pqc, postureFindings, cluster, users] =
     await Promise.all([
       opt(listKeys(session, { limit: 5000 })),
       opt(listCertificates(session, { limit: 500 })),
       opt(listRotationPolicies(session)),
-      opt(listBackupPolicies(session)),
-      opt(listBackupRuns(session)),
+      opt(listGovernanceBackups(session, { limit: 200 })),
       opt(getKeyAccessSettings(session)),
       opt(listGovernancePolicies(session)),
       opt(getPQCReadiness(session).then((r) => r ?? null)),
@@ -42,8 +40,7 @@ export async function loadPlatformSnapshot(session: AuthSession, fipsEnabled?: b
     keys,
     certs,
     rotationPolicies,
-    backupPolicies: backupPolicies && backupPolicies.map((p) => ({ enabled: p.enabled, encrypt_backup: p.encrypt_backup })),
-    backupRuns,
+    backups: backups && backups.map((b) => ({ status: b.status, ...(b.completed_at ? { completed_at: b.completed_at } : {}), ...(b.created_at ? { created_at: b.created_at } : {}) })),
     keyAccess,
     governancePolicies: governancePolicies as Array<{ status?: string }> | undefined,
     pqc,

@@ -24,16 +24,11 @@ type Store interface {
 	DeletePolicy(ctx context.Context, tenantID, id string) error
 
 	// Runs
-	CreateRun(ctx context.Context, run BackupRun) (BackupRun, error)
-	UpdateRun(ctx context.Context, tenantID, id string, status string, backedUp, failed int, sizeBytes int64, destPath string, completedAt time.Time, runErr string) error
 	GetRun(ctx context.Context, tenantID, id string) (BackupRun, error)
 	ListRuns(ctx context.Context, tenantID string) ([]BackupRun, error)
 
 	// Restore points
-	CreateRestorePoint(ctx context.Context, rp RestorePoint) (RestorePoint, error)
 	ListRestorePoints(ctx context.Context, tenantID string) ([]RestorePoint, error)
-	GetRestorePoint(ctx context.Context, tenantID, id string) (RestorePoint, error)
-	UpdateRestorePointStatus(ctx context.Context, tenantID, id, status string) error
 
 	// Metrics
 	GetMetrics(ctx context.Context, tenantID string) (BackupMetrics, error)
@@ -151,55 +146,6 @@ DELETE FROM backup_policies WHERE tenant_id = $1 AND id = $2
 	return nil
 }
 
-// markPolicyRun updates last_run_at on a policy.
-func (s *SQLStore) markPolicyRun(ctx context.Context, tenantID, policyID string, at time.Time) {
-	_, _ = s.db.SQL().ExecContext(ctx, `
-UPDATE backup_policies SET last_run_at = $1 WHERE tenant_id = $2 AND id = $3
-`, at.UTC(), strings.TrimSpace(tenantID), strings.TrimSpace(policyID))
-}
-
-// --- Runs ---
-
-func (s *SQLStore) CreateRun(ctx context.Context, run BackupRun) (BackupRun, error) {
-	_, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO backup_runs (
-    id, tenant_id, policy_id, policy_name, status, scope,
-    total_keys, backed_up_keys, failed_keys, backup_size_bytes,
-    destination, destination_path, triggered_by, started_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-`,
-		run.ID, run.TenantID,
-		nullableStr(run.PolicyID), nullableStr(run.PolicyName),
-		run.Status, run.Scope,
-		run.TotalKeys, run.BackedUpKeys, run.FailedKeys, run.BackupSizeBytes,
-		run.Destination, run.DestinationPath, run.TriggeredBy,
-		run.StartedAt.UTC(),
-	)
-	if err != nil {
-		return BackupRun{}, err
-	}
-	return s.GetRun(ctx, run.TenantID, run.ID)
-}
-
-func (s *SQLStore) UpdateRun(ctx context.Context, tenantID, id, status string, backedUp, failed int, sizeBytes int64, destPath string, completedAt time.Time, runErr string) error {
-	var completedAtVal interface{}
-	if !completedAt.IsZero() {
-		completedAtVal = completedAt.UTC()
-	}
-	var errVal interface{}
-	if strings.TrimSpace(runErr) != "" {
-		errVal = strings.TrimSpace(runErr)
-	}
-	_, err := s.db.SQL().ExecContext(ctx, `
-UPDATE backup_runs
-SET status = $1, backed_up_keys = $2, failed_keys = $3,
-    backup_size_bytes = $4, destination_path = $5, completed_at = $6, error = $7
-WHERE tenant_id = $8 AND id = $9
-`, status, backedUp, failed, sizeBytes, destPath, completedAtVal, errVal,
-		strings.TrimSpace(tenantID), strings.TrimSpace(id))
-	return err
-}
-
 func (s *SQLStore) GetRun(ctx context.Context, tenantID, id string) (BackupRun, error) {
 	row := s.db.SQL().QueryRowContext(ctx, `
 SELECT id, tenant_id, COALESCE(policy_id,''), COALESCE(policy_name,''),
@@ -241,27 +187,6 @@ ORDER BY started_at DESC
 
 // --- Restore Points ---
 
-func (s *SQLStore) CreateRestorePoint(ctx context.Context, rp RestorePoint) (RestorePoint, error) {
-	var expiresAt interface{}
-	if rp.ExpiresAt != nil && !rp.ExpiresAt.IsZero() {
-		expiresAt = rp.ExpiresAt.UTC()
-	}
-	_, err := s.db.SQL().ExecContext(ctx, `
-INSERT INTO backup_restore_points (
-    id, tenant_id, run_id, name, key_count, backup_size_bytes,
-    created_at, expires_at, checksum, status
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-`,
-		rp.ID, rp.TenantID, rp.RunID, rp.Name,
-		rp.KeyCount, rp.BackupSizeBytes, rp.CreatedAt.UTC(),
-		expiresAt, rp.Checksum, rp.Status,
-	)
-	if err != nil {
-		return RestorePoint{}, err
-	}
-	return rp, nil
-}
-
 func (s *SQLStore) ListRestorePoints(ctx context.Context, tenantID string) ([]RestorePoint, error) {
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT id, tenant_id, run_id, name, key_count, backup_size_bytes,
@@ -284,37 +209,6 @@ ORDER BY created_at DESC
 	}
 	return out, rows.Err()
 }
-
-func (s *SQLStore) GetRestorePoint(ctx context.Context, tenantID, id string) (RestorePoint, error) {
-	row := s.db.SQL().QueryRowContext(ctx, `
-SELECT id, tenant_id, run_id, name, key_count, backup_size_bytes,
-       created_at, expires_at, checksum, status
-FROM backup_restore_points
-WHERE tenant_id = $1 AND id = $2
-`, strings.TrimSpace(tenantID), strings.TrimSpace(id))
-	rp, err := scanRestorePoint(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		return RestorePoint{}, errNotFound
-	}
-	return rp, err
-}
-
-func (s *SQLStore) UpdateRestorePointStatus(ctx context.Context, tenantID, id, status string) error {
-	res, err := s.db.SQL().ExecContext(ctx, `
-UPDATE backup_restore_points SET status = $1
-WHERE tenant_id = $2 AND id = $3
-`, strings.TrimSpace(status), strings.TrimSpace(tenantID), strings.TrimSpace(id))
-	if err != nil {
-		return err
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		return errNotFound
-	}
-	return nil
-}
-
-// --- Metrics ---
 
 func (s *SQLStore) GetMetrics(ctx context.Context, tenantID string) (BackupMetrics, error) {
 	m := BackupMetrics{

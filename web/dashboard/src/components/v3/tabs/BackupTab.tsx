@@ -11,6 +11,9 @@ import {
   listRuns, listRestorePoints, restoreFromPoint, getMetrics,
   type BackupPolicy, type BackupRun, type RestorePoint, type BackupMetrics
 } from "../../../lib/backup";
+import { previewFeature } from "../../../lib/featureStatus";
+
+const PREVIEW = previewFeature("backup.scheduler");
 
 
 function fmtBytes(b: number): string {
@@ -106,6 +109,11 @@ export function BackupTab({ session }: { session: any }) {
 
   return (
     <div style={{ padding: 24, fontFamily: '"IBM Plex Sans", sans-serif', color: C.text, minHeight: "100%" }}>
+      {PREVIEW && (
+        <div role="note" style={{ border: `1px solid ${C.amber}`, borderRadius: 8, padding: "10px 12px", marginBottom: 16, fontSize: 12, color: C.text }}>
+          <b style={{ color: C.amber }}>Preview.</b> {PREVIEW.limitation} Runs recorded before 2026-09-25 were simulated and are marked "simulated".
+        </div>
+      )}
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
@@ -113,7 +121,7 @@ export function BackupTab({ session }: { session: any }) {
             <Archive size={18} color={C.accent} />
             <span style={{ fontSize: 16, fontWeight: 700 }}>Backup & Restore</span>
           </div>
-          <div style={{ fontSize: 12, color: C.muted }}>Automated key backup policies, run history, and restore points</div>
+          <div style={{ fontSize: 12, color: C.muted }}>Backup policies, run history, and restore points</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={load} style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 12px", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 12 }}>
@@ -186,7 +194,7 @@ export function BackupTab({ session }: { session: any }) {
                     <td style={{ ...CELL, fontSize: 11 }}>{p.last_run_at ? fmtDate(p.last_run_at) : "Never"}</td>
                     <td style={CELL}>
                       <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => handleTrigger(p.id)} disabled={triggering === p.id} style={{ padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.accent, cursor: "pointer", display: "flex", alignItems: "center", gap: 3, fontSize: 11 }}>
+                        <button onClick={() => handleTrigger(p.id)} disabled title={PREVIEW?.limitation} style={{ padding: "4px 8px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "not-allowed", display: "flex", alignItems: "center", gap: 3, fontSize: 11 }}>
                           <Play size={10} />{triggering === p.id ? "Running..." : "Run"}
                         </button>
                         <button onClick={() => deletePolicy(session, p.id).then(load)} style={{ padding: "4px 6px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.red, cursor: "pointer" }}>
@@ -268,7 +276,7 @@ export function BackupTab({ session }: { session: any }) {
                       </span>
                     </td>
                     <td style={CELL}>
-                      <button onClick={() => handleRestore(p.id)} disabled={p.status !== "available"} style={{ padding: "4px 10px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: p.status === "available" ? C.accent : C.muted, cursor: p.status === "available" ? "pointer" : "not-allowed", display: "flex", alignItems: "center", gap: 3, fontSize: 11 }}>
+                      <button onClick={() => handleRestore(p.id)} disabled title={PREVIEW?.limitation} style={{ padding: "4px 10px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "not-allowed", display: "flex", alignItems: "center", gap: 3, fontSize: 11 }}>
                         <RotateCcw size={10} /> Restore
                       </button>
                     </td>

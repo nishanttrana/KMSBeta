@@ -290,7 +290,8 @@ export const CommandCenterTab = ({ session, fipsMode, onNavigate }: Props) => {
     return !/revoked|deleted/i.test(c.status) && Number.isFinite(e) && e - now < 30 * 86_400_000;
   }).length;
   const bySev = SEVERITY_ORDER.map((s) => visible.filter((r) => r.severity === s).length);
-  const lastBackup = (snapshot?.backupRuns || []).filter((r) => r.status === "completed").map((r) => Date.parse(r.started_at)).sort((a, b) => b - a)[0];
+  // Real encrypted backups (governance); the Backup tab scheduler is a preview.
+  const lastBackup = (snapshot?.backups || []).filter((b) => b.status === "completed").map((b) => Date.parse(b.completed_at || b.created_at || "")).sort((a, b) => b - a)[0];
 
   return (
     <div style={{ maxWidth: 1360, margin: "0 auto", display: "grid", gap: 16 }}>
@@ -332,7 +333,7 @@ export const CommandCenterTab = ({ session, fipsMode, onNavigate }: Props) => {
         <Kpi icon={KeyRound} label="Active keys" value={snapshot?.keys ? activeKeys.length.toLocaleString() : "—"} sub={snapshot?.keys ? `${pqcExposed} quantum-vulnerable` : "keycore unreachable"} />
         <Kpi icon={FileCheck2} label="Certs expiring ≤30d" value={snapshot?.certs ? String(certsSoon) : "—"} sub={snapshot?.certs ? `${snapshot.certs.length} certificates tracked` : "PKI not reachable"} tone={certsSoon ? C.amberFg : undefined} />
         <Kpi icon={Atom} label="PQC readiness" value={snapshot?.pqc ? `${Math.round(snapshot.pqc.readiness_score)}%` : "—"} sub={snapshot?.pqc ? `${snapshot.pqc.classical_assets} classical assets` : "no scan on record"} />
-        <Kpi icon={LifeBuoy} label="Last good backup" value={lastBackup ? `${Math.max(0, Math.floor((now - lastBackup) / 86_400_000))}d` : "—"} sub={lastBackup ? new Date(lastBackup).toLocaleDateString() : snapshot?.backupPolicies ? "none completed" : "backup service unreachable"} tone={!lastBackup && snapshot?.backupPolicies ? C.redFg : undefined} />
+        <Kpi icon={LifeBuoy} label="Last good backup" value={lastBackup ? `${Math.max(0, Math.floor((now - lastBackup) / 86_400_000))}d` : "—"} sub={lastBackup ? new Date(lastBackup).toLocaleDateString() : snapshot?.backups ? "none completed" : "not assessed"} tone={!lastBackup && snapshot?.backups ? C.redFg : undefined} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2fr) minmax(280px, 1fr)", gap: 16, alignItems: "start" }} className="vk-cc-main">

@@ -93,8 +93,3 @@ type UpdatePolicyRequest struct {
 	RetentionDays  *int    `json:"retention_days,omitempty"`
 	DestinationURI *string `json:"destination_uri,omitempty"`
 }
-
-// TriggerBackupRequest is the optional request body for a manual backup trigger.
-type TriggerBackupRequest struct {
-	TriggeredBy string `json:"triggered_by"`
-}

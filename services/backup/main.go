@@ -75,7 +75,7 @@ func main() {
 	}
 
 	store := NewSQLStore(dbConn)
-	svc := NewBackupService(store)
+	svc := NewBackupService(store, publisher)
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8250")

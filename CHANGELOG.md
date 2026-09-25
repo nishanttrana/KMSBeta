@@ -56,7 +56,57 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   documents `service-derive`, the `/kdf/keys` migration API, the
   `X-Vecta-KDF-Version` header and the governance `fips-mode` API. Governance
   migration 011.
-- **FIPS mode is now changed in the KMS UI**, not at deployment.
+- **Audit coverage completed for this work.**
+  - **Governance:** refused backup restores are now audited
+    (`audit.governance.backup_restore_refused`, with the reason).
+  - **Backup scheduler:** emits `audit.backup.policy_created`, `_updated` and
+    `_deleted`, plus `run_refused_preview` and `restore_refused_preview`.
+  - **keycore:** enterprise control events carry `feature_status`.
+  - **Docs:** the audit subject reference in `docs/API_REFERENCE.md` is
+    corrected to the subjects the code actually emits.
+- **Fixed: signing verification always failed.** `VerifyArtifact`
+  re-marshalled the envelope from JSONB, whose key order differs from the
+  signed bytes, so no artifact ever verified. The exact signed bytes are now
+  stored (`envelope_b64`), and older records are rebuilt in their original
+  field order. Verify also takes the artifact (`payload` or `digest_sha256`) and
+  reports `signature_valid`, `digest_checked` and `digest_match`, where before
+  it only re-checked the stored record.
+- **Fixed: one KMIP request could crash the KMIP service.** A role-denied
+  operation (for example `kmip-client` Revoke) made a middleware return a nil
+  response, which kmip-go dereferenced. Denials now return a failed batch item,
+  and a recovery middleware turns any operation panic into a KMIP error.
+- **Fixed: KMIP ignored object lifecycle state.** Revoked (deactivated) keys
+  still encrypted and destroyed keys were still returned by Get. Protecting
+  operations now require Active, processing operations allow Active,
+  Deactivated or Compromised, and Get refuses destroyed objects (KMIP 1.4).
+- **Preview features are labelled everywhere** (`pkg/features`,
+  `docs/PREVIEW_FEATURES.md`).
+  - **Which:** federation, binding policies, sharing grants, metadata profiles,
+    escrow tiers, edge, advanced-encryption modes, audit-chain anchors and the
+    backup scheduler store configuration without enforcing it.
+  - **How they are labelled:** responses carry `X-Vecta-Feature-Status:
+    preview`, records carry `feature_status`, and the dashboard shows Preview
+    (Docs page, Backup tab banner).
+  - **Enforcement:** conformance keeps the Go and dashboard lists identical.
+- **Removed fabricated data.**
+  - **Backup scheduler:** it simulated backups (random key counts, a fake
+    checksum, a no-op restore). Run and Restore now return `409
+    feature_preview`, and past runs and restore points are relabelled
+    `simulated`.
+  - **Audit-chain anchors:** they no longer claim a Merkle root or "anchored"
+    status (keycore migration 018).
+  - **Command Center:** the backup check uses governance's real encrypted
+    backups.
+  - **`RECOMMENDED_FEATURES.md`:** no longer claims "5/5 production-ready", or
+    QKD/QRNG/MPC (which moved to KMSExtension).
+- **New tests:**
+  - **Postgres integration** (CI job `integration-postgres`): governance backup
+    create/restore round trip and tamper refusal (ciphertext, key, scope/AAD,
+    file type); signing sign/verify, tampering and policy gates; backup
+    scheduler preview behaviour.
+  - **KMIP over real TLS:** certificate authentication, tenant isolation, key
+    lifecycle, role denial.
+  - **FIPS mode is now changed in the KMS UI**, not at deployment.
   - **Where:** System Administration → Runtime Crypto → Platform FIPS 140-3
     mode (root admins).
   - **Before confirming:** the dialog lists the features that stop and start

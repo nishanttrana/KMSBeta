@@ -74,6 +74,41 @@ refusal) and `TestClusterRoutesRequireRootAdmin`.
 
 **Enforced by:** `TestEveryTableIsClassified`, the two-node integration test,
 and status that comes only from the database.
+## 2026-09-25 — Record-only features are labelled "preview" from one catalogue, not deleted
+**Decision:**
+- Features that store configuration without enforcing it are listed in
+  `pkg/features.Preview`.
+- Every response of such a feature is labelled, and the dashboard mirrors the
+  list (checked by conformance).
+- Operations they cannot perform refuse with `409 feature_preview`.
+- Fabricated data they had produced is relabelled, not deleted: simulated
+  backup runs, fake Merkle roots.
+- The simulated backup scheduler stays a preview; real backup is governance.
+
+**Why:** the owner's options were "finish or mark preview". Marking is honest
+today and keeps the APIs stable for the teams that will finish them. Finishing
+federation or edge (KMSExtension) is product work, not a fix.
+
+**Rejected:**
+- **Deleting the features:** they break API clients and lose work.
+- **A "preview" note in the docs only:** API consumers never see it.
+- **Keeping the backup simulation:** it produced evidence of backups that never
+  happened.
+- **Rewiring the scheduler to governance backups now:** it needs
+  service-to-service backup authorisation and restore of HSM-bound key
+  packages. That's tracked as the way to finish it.
+
+**Enforced by:** conformance `preview-catalogue`, keycore and backup tests.
+
+## 2026-09-25 — Security-critical paths get integration tests against real dependencies
+**Decision:** backup/restore, signing and the KMIP wire protocol are tested
+against real Postgres and a real TLS KMIP client. The Postgres tests run in CI
+job `integration-postgres` (disposable database, serial run).
+**Why:** each of these paths hid a defect that only real dependencies expose:
+JSONB key order, information_schema, TRUNCATE CASCADE, and TLS client-cert
+authentication.
+**Rejected:** SQLite-only tests for these paths (they would have passed with
+the signing bug in place).
 
 ## 2026-09-25 — FIPS mode is changed in the UI and applied by staggered self-restart
 **Decision:**

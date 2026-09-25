@@ -43,6 +43,52 @@ line. Verify with a grep over the docs and a count of audit emissions in the
 changed files before claiming either. Also, marking audit rows by re-matching
 a scanned timestamp failed on SQLite (the types differ); an atomic
 `UPDATE … RETURNING` claim is portable and can't double-emit.
+### "Is it audited?" must be checked, not assumed
+Asked whether the new work reached the audit log, a check found two gaps:
+- **The backup service** emitted only the generic HTTP request log, with no
+  event saying which policy changed or that a run or restore was refused.
+- **Governance restore** audited successful restores but **not refused ones**
+  (tampered artifact, wrong key, changed scope). Those are exactly the events
+  an investigator needs.
+
+Both now emit specific events, and the integration tests assert them. The
+Audit Action Subject Reference had also drifted from the code (it listed
+`backup_completed`, which no code emits) and was corrected. Rule: every
+activity *and every refusal* gets its own event plus a test (CLAUDE.md rule 2).
+
+### The first real test of a path found a bug each time
+Backup, signing and KMIP had no tests of their main path, and each hid a
+serious defect:
+- **Backup:** it was entirely simulated. Random key counts, a "checksum" over
+  its own invented metadata, and a restore that did nothing. The real backup
+  engine was elsewhere (governance).
+- **Signing:** verification could never succeed. `JSONB` reorders object keys,
+  so re-marshalling a stored envelope never reproduces the signed bytes. Store
+  the exact signed bytes. And test against Postgres, not SQLite: SQLite keeps
+  JSON text verbatim and hides this.
+- **KMIP:** one role-denied request crashed the service (a middleware returned
+  `(nil, err)` and kmip-go dereferenced it). Revoked keys still encrypted, and
+  destroyed keys were still returned.
+
+Lessons:
+- A feature isn't done until a test drives its main path end to end, with real
+  dependencies where the behaviour depends on them (Postgres, TLS, the real
+  protocol client).
+- "Implemented as control records" means "stores a row". Say preview, or build
+  it.
+
+### Two sessions in one checkout: use a worktree
+Another session was editing the same working tree (CHANGELOG, CLAUDE.md,
+services) while this work started. Concurrent edits to shared files silently
+overwrite each other. Do parallel work in its own `git worktree` and branch,
+and merge.
+
+### A symlinked node_modules is not matched by `node_modules/`
+Linking the main checkout's `node_modules` into a worktree created a symlink,
+which a directory pattern (`node_modules/`) does not ignore. Remove it before
+committing, or stage paths explicitly. And never let `npx <tool>` run without
+`--no-install`: with no local install it fetched an unrelated npm package
+called `tsc`.
 
 ### A process-start setting can still be a runtime choice: re-exec plus supervised restart
 Go reads `GODEBUG=fips140` only at process start, and container env vars are

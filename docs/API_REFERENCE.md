@@ -65,6 +65,12 @@ Content-Type: application/json
 }
 ```
 
+**Preview features** ([PREVIEW_FEATURES.md](PREVIEW_FEATURES.md)): responses
+from features that store configuration without enforcing it carry
+`X-Vecta-Feature-Status: preview` and `X-Vecta-Feature-Status-Id: <id>`
+(keycore control records also include `feature_status` / `feature_id`).
+Operations such a feature cannot perform return `409 feature_preview`.
+
 **Common Error Codes**:
 | HTTP | Code | Meaning |
 |------|------|---------|
@@ -2328,11 +2334,17 @@ Signs Git-oriented artifact metadata.
 
 ### POST /svc/signing/signing/verify
 
-Re-verifies a stored signing record.
+Verifies a signing record and, optionally, that a presented artifact is the one that was signed.
 
-**Request Body**: `recordId` (string) OR `artifact` (base64) + `signature` + `profileId`
+**Request Body**: `tenant_id`, `record_id` (required); `payload` (base64 artifact bytes) or `digest_sha256` (hex), both optional.
 
-**Response 200**: `valid`, `recordId`, `signerIdentity`, `profileId`, `transparencyVerified`, `verifiedAt`
+**Response 200**:
+- `valid`: `signature_valid`, and when an artifact was presented, `digest_match`.
+- `signature_valid`: keycore verified the signature over the exact signed envelope, and the envelope agrees with the record's digest column.
+- `digest_checked`, `digest_match`: whether an artifact was presented and whether it matches.
+- `record_id`, `transparency_hash`, `transparency_entry_id`, `verified_at`.
+
+The audit event `audit.signing.artifact_verified` carries `verification_status`: `verified`, `signature_invalid` or `artifact_mismatch`.
 
 ---
 
@@ -3155,7 +3167,10 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.auth.* | Authentication and identity |
 | audit.key.* | Key lifecycle and crypto operations |
 | audit.cert.* | Certificate and CA operations |
-| audit.governance.* | Approvals and backup |
+| audit.governance.* | Approvals, encrypted backup/restore, platform FIPS mode |
+| audit.backup.* | Backup scheduler (preview): policy changes and refused runs/restores |
+| audit.kmip.* | KMIP sessions, operations and denials |
+| audit.dataprotect.* | Data protection operations and key-derivation migration |
 | audit.compliance.* | Compliance assessments |
 | audit.posture.* | Posture scan and findings |
 | audit.scim.* | SCIM provisioning |
@@ -3178,9 +3193,14 @@ Selected events with dedicated audit classification:
 - `audit.cert.renewal_window_missed`, `audit.cert.emergency_rotation_started`
 - `audit.cert.star_subscription_created`, `audit.cert.star_subscription_renewed`
 - `audit.governance.approval_requested`, `audit.governance.approved`, `audit.governance.rejected`, `audit.governance.bypassed`
-- `audit.governance.backup_completed`, `audit.governance.restore_completed`
+- `audit.governance.backup_created`, `audit.governance.backup_deleted`, `audit.governance.backup_restored`, `audit.governance.backup_restore_refused` (tampered artifact, wrong key, changed scope, wrong file type; carries `reason`)
+- `audit.governance.fips_mode_changed` (critical for a downgrade)
+- `audit.backup.policy_created`, `audit.backup.policy_updated`, `audit.backup.policy_deleted`, `audit.backup.run_refused_preview`, `audit.backup.restore_refused_preview`
+- `audit.key.service_derive`, `audit.key.audit_chain_anchored` (preview), enterprise control upserts carry `feature_status` / `feature_id`
+- `audit.kmip.client_connected`, `audit.kmip.authorization_denied`, `audit.kmip.operation_panic` (critical), `audit.kmip.<operation>` with `status` / `reason` (lifecycle-state refusals included)
+- `audit.dataprotect.kdf_legacy_used`, `audit.dataprotect.kdf_migration_started`, `audit.dataprotect.kdf_vault_reprotected`, `audit.dataprotect.kdf_migration_completed`, `audit.dataprotect.kdf_migration_aborted`
 - `audit.mpc.dkg_initiated`, `audit.mpc.sign_initiated`, `audit.mpc.sign_completed`
-- `audit.signing.blob_signed`, `audit.signing.verify_failed`
+- `audit.signing.artifact_signed`, `audit.signing.artifact_verified` (`verification_status`: verified / signature_invalid / artifact_mismatch), `audit.signing.records_viewed`
 - `audit.confidential.key_released`, `audit.confidential.attestation_denied`
 - `audit.payment.pin_verified`, `audit.payment.tr31_wrapped`
 
