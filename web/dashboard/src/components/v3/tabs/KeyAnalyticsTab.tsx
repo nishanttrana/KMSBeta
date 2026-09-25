@@ -1,4 +1,5 @@
 // @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
+import { apiFetch } from "../../../lib/apiFetch";
 import { useCallback, useEffect, useState } from "react";
 import { BarChart3, RefreshCcw, Download, TrendingUp } from "lucide-react";
 import { C } from "../../v3/theme";
@@ -27,8 +28,8 @@ export function KeyAnalyticsTab({ session }: any) {
     setLoading(true); setErr("");
     try {
       const [aRes, sRes] = await Promise.all([
-        fetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) }),
-        fetch(`${base}/rotation/analytics`, { headers: hdr(session.token, tid) }),
+        apiFetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) }),
+        apiFetch(`${base}/rotation/analytics`, { headers: hdr(session.token, tid) }),
       ]);
       const a = await aRes.json().catch(() => ({}));
       const s = await sRes.json().catch(() => ({}));
@@ -42,7 +43,7 @@ export function KeyAnalyticsTab({ session }: any) {
 
   const handleExport = async () => {
     const tid = session?.tenantId ?? "";
-    const r = await fetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) });
+    const r = await apiFetch(`${base}/enterprise/summary`, { headers: hdr(session.token, tid) });
     const d = await r.json();
     const blob = new Blob([JSON.stringify(d, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);

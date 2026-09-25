@@ -11,6 +11,42 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 > resolved or built, and have been **removed** because they could be mistaken
 > for compliance evidence. Regenerate from the commands below instead.
 
+## Standing rules
+
+- [SECURE_DEFAULTS.md](SECURE_DEFAULTS.md): no secret may fall back to a value
+  in the repo. Enforced by `make conformance`. Read it before adding any
+  secret, installer step or seeded account.
+- [FIPS.md](FIPS.md): every binary links the certified Go Cryptographic
+  Module; the runtime mode (`on` / `only` / `off`) is the customer's choice
+  and is tested in all three modes.
+- [DATAPROTECT_KEY_DERIVATION.md](DATAPROTECT_KEY_DERIVATION.md): dataprotect
+  working keys come from keycore key material (service-derive), never from
+  identifiers; includes the per-key migration runbook for legacy data.
+- [SECRET_ROTATION.md](SECRET_ROTATION.md): rotating secrets on a live stack.
+
+## Latest scan — 2026-09-25 (v1.2.0-beta)
+
+Raw output: [`govulncheck-2026-09-25.txt`](govulncheck-2026-09-25.txt).
+
+| Scope | Before | After | How |
+|---|---|---|---|
+| Go stdlib (toolchain) | 25 advisories on go1.26.0 | 0 | go1.27.1 |
+| Go modules | 4 (x/text, gRPC ×3) + unmaintained x/crypto/openpgp | 0 | module updates; gRPC pinned to the upstream fix commit (no tagged release yet); openpgp → ProtonMail/go-crypto |
+| Dashboard npm | 8 advisories (incl. high) | 0 | dependency updates + `npm audit fix` |
+
+`govulncheck` is run per module path (`./pkg/...`, `./services/<svc>/...`)
+because a single `./...` run needs more than 7 GB of RAM on this codebase.
+
+Every path reports **"Your code is affected by 0 vulnerabilities."** The one
+remaining *module-level* note is GO-2026-5932 (`golang.org/x/crypto/openpgp`
+is unmaintained). It is listed because the package ships inside the
+`golang.org/x/crypto` module; no code here imports it any more (the secrets
+service moved to `github.com/ProtonMail/go-crypto/openpgp`), and the advisory
+has no fixed version.
+
+When gRPC publishes a tagged release that contains the GO-2026-6443 fix
+(v1.85.0+), replace the pseudo-version in `go.mod` with that tag.
+
 ## Generating a real scan
 
 ```bash

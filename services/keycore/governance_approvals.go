@@ -101,9 +101,9 @@ func (c *governanceApprovalClient) ensureApproval(ctx context.Context, in govern
 		"callback_service": "",
 		"callback_action":  "",
 		"callback_payload": map[string]interface{}{
-			"service":    "keycore",
-			"key_id":     keyID,
-			"operation":  strings.TrimSpace(in.Operation),
+			"service":      "keycore",
+			"key_id":       keyID,
+			"operation":    strings.TrimSpace(in.Operation),
 			"payload_hash": in.PayloadHash,
 		},
 	}

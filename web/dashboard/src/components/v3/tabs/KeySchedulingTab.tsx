@@ -1,4 +1,5 @@
 // @ts-nocheck -- legacy v3 tab; types relaxed pending typed-client refactor
+import { apiFetch } from "../../../lib/apiFetch";
 import { useCallback, useEffect, useState } from "react";
 import { CalendarClock, RefreshCcw, Plus, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
 import { C } from "../../v3/theme";
@@ -35,7 +36,7 @@ export function KeySchedulingTab({ session }: any) {
     const tid = session?.tenantId ?? "";
     setLoading(true); setErr("");
     try {
-      const r = await fetch(`${base}/scheduling/jobs`, { headers: hdr(session.token, tid) });
+      const r = await apiFetch(`${base}/scheduling/jobs`, { headers: hdr(session.token, tid) });
       const d = await r.json().catch(() => ({}));
       setJobs(Array.isArray(d.jobs) ? d.jobs : Array.isArray(d) ? d : []);
     } catch (e: any) { setErr(e.message); }
@@ -51,7 +52,7 @@ export function KeySchedulingTab({ session }: any) {
       const body: any = { key_id: form.key_id, schedule_type: form.schedule_type, action: form.action };
       if (form.schedule_type === "cron") body.cron_expr = form.cron_expr;
       else body.interval_seconds = form.interval_seconds;
-      await fetch(`${base}/scheduling/jobs`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify(body) });
+      await apiFetch(`${base}/scheduling/jobs`, { method: "POST", headers: jsonHdr(session.token, tid), body: JSON.stringify(body) });
       setShowForm(false); setForm({ ...defForm }); await load();
     } catch (e: any) { setErr(e.message); }
     finally { setSaving(false); }
@@ -59,13 +60,13 @@ export function KeySchedulingTab({ session }: any) {
 
   const handleToggle = async (job: any) => {
     const tid = session?.tenantId ?? "";
-    await fetch(`${base}/scheduling/jobs/${job.id}`, { method: "PATCH", headers: jsonHdr(session.token, tid), body: JSON.stringify({ enabled: !job.enabled }) });
+    await apiFetch(`${base}/scheduling/jobs/${job.id}`, { method: "PATCH", headers: jsonHdr(session.token, tid), body: JSON.stringify({ enabled: !job.enabled }) });
     await load();
   };
 
   const handleDelete = async (id: string) => {
     const tid = session?.tenantId ?? "";
-    await fetch(`${base}/scheduling/jobs/${id}`, { method: "DELETE", headers: hdr(session.token, tid) });
+    await apiFetch(`${base}/scheduling/jobs/${id}`, { method: "DELETE", headers: hdr(session.token, tid) });
     await load();
   };
 

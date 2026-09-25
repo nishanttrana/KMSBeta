@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 
 	pkgplatform "vecta-kms/pkg/platform"
 )
@@ -17,6 +18,9 @@ var logger = log.New(os.Stderr, "[kms-dataprotect] ", log.LstdFlags|log.Lmsgpref
 // authenticates per-route: operator APIs validate platform JWTs in handlers
 // and field-encryption wrappers use their own wrapper JWTs (WithWrapperJWT).
 func main() {
+	// Attach this service's per-service JWT to internal keycore calls (no-op
+	// when INTERNAL_SERVICE_BOOTSTRAP_SECRET is unset).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-dataprotect"))
 	rt, err := pkgplatform.Boot(pkgplatform.Options{
 		ServiceName:   "dataprotect",
 		JWTScope:      "DATAPROTECT",

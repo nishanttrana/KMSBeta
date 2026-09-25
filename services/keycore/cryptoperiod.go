@@ -17,11 +17,11 @@ type CryptoperiodPolicy struct {
 // Operators can override individual entries via SetCryptoperiod but the
 // shipped defaults follow:
 //
-//   symmetric encrypt     2 years
-//   symmetric MAC/key-wrap 2 years
-//   signing (private)     1 year
-//   ephemeral / DEK       30 days
-//   master / KEK          5 years
+//	symmetric encrypt     2 years
+//	symmetric MAC/key-wrap 2 years
+//	signing (private)     1 year
+//	ephemeral / DEK       30 days
+//	master / KEK          5 years
 //
 // Reasoning: shorter cryptoperiods limit blast radius if material leaks,
 // at the cost of more frequent rotations. The values match the upper

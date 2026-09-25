@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"crypto/fips140"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -15,6 +17,8 @@ import (
 	"testing"
 
 	"golang.org/x/crypto/ocsp"
+
+	"vecta-kms/pkg/fips/fipstest"
 )
 
 func newCertsHandler(t *testing.T) (*Handler, *Service) {
@@ -483,27 +487,73 @@ func TestHandlerOCSPWireResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reqDER, err := ocsp.CreateRequest(leaf, issuer, nil)
+	// The response CertID must echo the request's hash (RFC 6960). SHA-1
+	// requests are refused in FIPS strict mode, so they are covered only in
+	// the non-strict modes; TestOCSPStrictModeRefusesSHA1CertID covers strict.
+	hashes := []crypto.Hash{crypto.SHA256}
+	if !fips140.Enforced() {
+		hashes = append(hashes, crypto.SHA1)
+	}
+	for _, hash := range hashes {
+		reqDER, err := ocsp.CreateRequest(leaf, issuer, &ocsp.RequestOptions{Hash: hash})
+		if err != nil {
+			t.Fatal(err)
+		}
+		req := httptest.NewRequest(http.MethodPost, "/certs/ocsp?tenant_id=t-ocsp", bytes.NewReader(reqDER))
+		req.Header.Set("Content-Type", "application/ocsp-request")
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("%v: ocsp wire status=%d body=%s", hash, rr.Code, rr.Body.String())
+		}
+		if ct := strings.ToLower(rr.Header().Get("Content-Type")); !strings.Contains(ct, "application/ocsp-response") {
+			t.Fatalf("%v: unexpected ocsp wire content-type=%s", hash, ct)
+		}
+		resp, err := ocsp.ParseResponseForCert(rr.Body.Bytes(), leaf, issuer)
+		if err != nil {
+			t.Fatalf("%v: invalid ocsp response: %v", hash, err)
+		}
+		if resp.Status != ocsp.Good {
+			t.Fatalf("%v: unexpected ocsp status=%d", hash, resp.Status)
+		}
+		if resp.IssuerHash != hash {
+			t.Fatalf("response CertID hash=%v, want the request's %v", resp.IssuerHash, hash)
+		}
+	}
+}
+
+func TestOCSPStrictModeRefusesSHA1CertID(t *testing.T) {
+	fipstest.StrictOnly(t)
+	h, svc := newCertsHandler(t)
+	ca, err := svc.CreateCA(context.Background(), CreateCARequest{
+		TenantID: "t-ocsp-strict", Name: "root-strict", CALevel: "root", Algorithm: "RSA-3072",
+		KeyBackend: "software", Subject: "CN=Root Strict",
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	req := httptest.NewRequest(http.MethodPost, "/certs/ocsp?tenant_id=t-ocsp", bytes.NewReader(reqDER))
+	issued, _, err := svc.IssueCertificate(context.Background(), IssueCertificateRequest{
+		TenantID: "t-ocsp-strict", CAID: ca.ID, SubjectCN: "svc.strict.local", CertType: "tls-server", Algorithm: "RSA-2048",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaf, _ := parseCertificatePEM(issued.CertPEM)
+	issuer, _ := parseCertificatePEM(ca.CertPEM)
+	// Build the SHA-1 request outside enforcement, as an external client would.
+	var reqDER []byte
+	fips140.WithoutEnforcement(func() {
+		reqDER, err = ocsp.CreateRequest(leaf, issuer, &ocsp.RequestOptions{Hash: crypto.SHA1})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/certs/ocsp?tenant_id=t-ocsp-strict", bytes.NewReader(reqDER))
 	req.Header.Set("Content-Type", "application/ocsp-request")
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("ocsp wire status=%d body=%s", rr.Code, rr.Body.String())
-	}
-	if ct := strings.ToLower(rr.Header().Get("Content-Type")); !strings.Contains(ct, "application/ocsp-response") {
-		t.Fatalf("unexpected ocsp wire content-type=%s", ct)
-	}
-	resp, err := ocsp.ParseResponseForCert(rr.Body.Bytes(), leaf, issuer)
-	if err != nil {
-		t.Fatalf("invalid ocsp response: %v", err)
-	}
-	if resp.Status != ocsp.Good {
-		t.Fatalf("unexpected ocsp status=%d", resp.Status)
+	if rr.Code == http.StatusOK || !strings.Contains(rr.Body.String(), "SHA-1") {
+		t.Fatalf("strict mode must refuse a SHA-1 CertID cleanly, got status=%d body=%s", rr.Code, rr.Body.String())
 	}
 }
 

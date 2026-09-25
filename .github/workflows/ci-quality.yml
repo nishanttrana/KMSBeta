@@ -8,6 +8,44 @@ on:
       - master
 
 jobs:
+  docs-with-change:
+    name: Documentation ships with the change
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Check docs updated
+        run: ./scripts/check-docs.sh "origin/${{ github.base_ref }}"
+
+  fips-modes:
+    # Every customer-selectable FIPS 140-3 mode must pass the full suite on the
+    # certified Go Cryptographic Module (docs/SECURITY/FIPS.md).
+    name: Go tests — FIPS mode ${{ matrix.mode }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: ["off", "on", "only"]
+    env:
+      GOFIPS140: v1.0.0
+      GODEBUG: fips140=${{ matrix.mode }}
+      VECTA_REQUIRE_CERTIFIED_MODULE: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: go test (fips140=${{ matrix.mode }})
+        run: go test ./pkg/... ./services/...
+
   dashboard-quality:
     name: Dashboard Lint/Type/Unit/Build/Smoke
     runs-on: ubuntu-latest
@@ -16,12 +54,12 @@ jobs:
         working-directory: web/dashboard
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "npm"
           cache-dependency-path: web/dashboard/package-lock.json
 
@@ -63,10 +101,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
 
@@ -77,6 +115,9 @@ jobs:
         run: |
           chmod +x infra/scripts/check-runtimecfg.sh
           infra/scripts/check-runtimecfg.sh
+
+      - name: Platform conformance (central crypto, single audit, secure defaults)
+        run: ./scripts/conformance.sh -v
 
       - name: go vet
         run: go vet ./...

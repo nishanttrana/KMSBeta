@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 
 	"vecta-kms/pkg/metering"
 	pkgplatform "vecta-kms/pkg/platform"
@@ -17,6 +18,9 @@ var logger = log.New(os.Stdout, "[payment] ", log.LstdFlags|log.Lmicroseconds)
 // endpoints authenticate per-route: operator APIs validate JWTs in handlers
 // and terminal injection endpoints use terminal bearer tokens.
 func main() {
+	// Attach this service's per-service JWT to internal keycore calls (no-op
+	// when INTERNAL_SERVICE_BOOTSTRAP_SECRET is unset).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-payment"))
 	rt, err := pkgplatform.Boot(pkgplatform.Options{
 		ServiceName:   "payment",
 		JWTScope:      "PAYMENT",

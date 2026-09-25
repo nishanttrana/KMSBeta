@@ -17,15 +17,18 @@ func TestGenerateIVAllModes(t *testing.T) {
 		t.Fatal("external iv mismatch")
 	}
 
-	d1, err := GenerateIV(IVDeterministic, []byte("key"), nil, []byte("payload"))
+	d1, err := GenerateIV(IVDeterministic, []byte("key-material-16b"), nil, []byte("payload"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	d2, err := GenerateIV(IVDeterministic, []byte("key"), nil, []byte("payload"))
+	d2, err := GenerateIV(IVDeterministic, []byte("key-material-16b"), nil, []byte("payload"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !ConstantTimeEqual(d1, d2) {
 		t.Fatal("deterministic iv should match")
+	}
+	if _, err := GenerateIV(IVDeterministic, []byte("key"), nil, []byte("payload")); err == nil {
+		t.Fatal("deterministic IV must reject key material under 112 bits")
 	}
 }

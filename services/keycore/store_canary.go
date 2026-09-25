@@ -182,11 +182,11 @@ LIMIT 1
 	}
 
 	out := map[string]interface{}{
-		"total_canaries":    totalCanaries,
-		"active_canaries":   activeCanaries,
-		"total_trips":       totalTrips,
-		"trips_24h":         trips24h,
-		"most_recent_trip":  mostRecentTrip,
+		"total_canaries":        totalCanaries,
+		"active_canaries":       activeCanaries,
+		"total_trips":           totalTrips,
+		"trips_24h":             trips24h,
+		"most_recent_trip":      mostRecentTrip,
 		"most_recent_canary_id": canaryID.String,
 		"most_recent_actor_id":  actorID.String,
 	}

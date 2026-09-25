@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/fips140"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
@@ -155,13 +156,21 @@ func RandomInt(max *big.Int) (*big.Int, error) {
 	return rand.Int(Reader, max)
 }
 
+// ErrSHA1Strict is returned by SHA-1 interop helpers in FIPS strict mode.
+var ErrSHA1Strict = errors.New("crypto: SHA-1 is not permitted in FIPS strict mode (VECTA_FIPS_MODE=only); this integration requires it")
+
 // HMACSHA1Interop computes HMAC-SHA1. SHA-1 is NOT part of the approved
 // suite; this exists solely for external provider protocols that mandate it
 // (e.g. Alibaba Cloud API request signing). Do not use for new designs.
-func HMACSHA1Interop(key []byte, data []byte) []byte {
+// FIPS exception: external protocol mandate. Refused in FIPS strict mode
+// (where SHA-1 would otherwise panic).
+func HMACSHA1Interop(key []byte, data []byte) ([]byte, error) {
+	if fips140.Enforced() {
+		return nil, ErrSHA1Strict
+	}
 	mac := hmac.New(sha1.New, key)
 	_, _ = mac.Write(data)
-	return mac.Sum(nil)
+	return mac.Sum(nil), nil
 }
 
 // LoadOrCreateRSAKeyPEM returns the RSA signing key persisted at path,

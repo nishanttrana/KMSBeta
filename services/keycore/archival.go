@@ -2,13 +2,11 @@ package main
 
 import (
 	"context"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"io"
 	"time"
+
+	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 // ArchiveStore is the cold-tier persistence interface used by the
@@ -50,22 +48,11 @@ func NewArchiver(store ArchiveStore, archiveKEK []byte) (*Archiver, error) {
 // ciphertext by AES-GCM. The current time is bound into the additional
 // data so a replay of an old archive cannot pass forgery checks.
 func (a *Archiver) Archive(ctx context.Context, tenantID, keyID string, version int, mekWrappedMaterial []byte) error {
-	block, err := aes.NewCipher(a.archiveKEK)
-	if err != nil {
-		return err
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return err
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return err
-	}
 	aad := []byte(tenantID + "|" + keyID + "|" + time.Now().UTC().Format(time.RFC3339))
-	ct := gcm.Seal(nil, nonce, mekWrappedMaterial, aad)
-	blob := append([]byte{}, nonce...)
-	blob = append(blob, ct...)
+	blob, err := pkgcrypto.Seal(a.archiveKEK, mekWrappedMaterial, aad) // nonce || ciphertext
+	if err != nil {
+		return err
+	}
 	// We persist the additional-data tag at the end so unwrap can verify
 	// the binding. The tag is base64-url to keep the blob safe for object
 	// storage with strict key validation.
@@ -107,20 +94,7 @@ func (a *Archiver) Restore(ctx context.Context, tenantID, keyID string, version 
 	if err != nil {
 		return nil, err
 	}
-	block, err := aes.NewCipher(a.archiveKEK)
-	if err != nil {
-		return nil, err
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return nil, err
-	}
-	if len(body) < gcm.NonceSize() {
-		return nil, errors.New("archive blob too short")
-	}
-	nonce := body[:gcm.NonceSize()]
-	ct := body[gcm.NonceSize():]
-	return gcm.Open(nil, nonce, ct, aad)
+	return pkgcrypto.Open(a.archiveKEK, body, aad)
 }
 
 // FilesystemArchiveStore is a development-friendly archive backend. It

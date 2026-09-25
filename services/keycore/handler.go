@@ -156,6 +156,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /keys/{id}/unwrap", h.handleUnwrap)
 	mux.HandleFunc("POST /keys/{id}/mac", h.handleMAC)
 	mux.HandleFunc("POST /keys/{id}/derive", h.handleDerive)
+	mux.HandleFunc("POST /keys/{id}/service-derive", h.handleServiceDerive)
 	mux.HandleFunc("POST /keys/{id}/kem/encapsulate", h.handleKEMEncapsulate)
 	mux.HandleFunc("POST /keys/{id}/kem/decapsulate", h.handleKEMDecapsulate)
 	mux.HandleFunc("POST /crypto/hash", h.handleHash)
@@ -279,7 +280,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /scheduling/jobs", h.handleCreateSchedulingJob)
 	mux.HandleFunc("PATCH /scheduling/jobs/{id}", h.handleUpdateSchedulingJob)
 	mux.HandleFunc("DELETE /scheduling/jobs/{id}", h.handleDeleteSchedulingJob)
-
 
 	// Key Attestation (signed, verifiable statement + integrity check)
 	mux.HandleFunc("POST /keys/{id}/attest", h.handleAttestKey)
@@ -1947,6 +1947,41 @@ func (h *Handler) handleDerive(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (h *Handler) handleServiceDerive(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var req ServiceDeriveRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, req.TenantID)
+		return
+	}
+	resp, err := h.svc.ServiceDerive(r.Context(), r.PathValue("id"), req)
+	if err != nil {
+		var denied policyDeniedError
+		var fipsDenied fipsModeViolationError
+		switch {
+		case errors.Is(err, errServiceIdentityRequired):
+			writeErr(w, http.StatusForbidden, "service_identity_required", err.Error(), reqID, req.TenantID)
+		case errors.Is(err, errStoreNotFound):
+			writeErr(w, http.StatusNotFound, "not_found", "key not found", reqID, req.TenantID)
+		case errors.As(err, &denied):
+			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, req.TenantID)
+		case errors.As(err, &fipsDenied):
+			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
+		default:
+			writeErr(w, http.StatusBadRequest, "service_derive_failed", err.Error(), reqID, req.TenantID)
+		}
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"key_id":      resp.KeyID,
+		"version":     resp.Version,
+		"purpose":     resp.Purpose,
+		"kdf":         resp.KDF,
+		"derived_key": resp.DerivedB64,
+		"request_id":  reqID,
+	})
+}
+
 func (h *Handler) handleKEMEncapsulate(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	var req KEMEncapsulateRequest
@@ -2458,6 +2493,9 @@ func accessActorFromHTTPRequest(r *http.Request) AccessActor {
 		actor.WorkloadTrustDomain = strings.TrimSpace(claims.WorkloadTrustDomain)
 		actor.AllowedKeyIDs = append([]string{}, claims.AllowedKeyIDs...)
 		actor.Authenticated = actor.UserID != "" || actor.Username != ""
+		// Service-principal status is decided from verified JWT claims only,
+		// never from the spoofable X-Actor-* headers below.
+		actor.ServicePrincipal = tenantcheck.IsServicePrincipal(claims)
 	}
 	if actor.UserID == "" {
 		actor.UserID = strings.TrimSpace(r.Header.Get("X-Actor-User-ID"))

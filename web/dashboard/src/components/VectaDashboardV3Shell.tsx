@@ -1,8 +1,6 @@
 import { lazy, startTransition, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
-  AlertTriangle,
-  Atom,
   BarChart3,
   BarChart2,
   Bell,
@@ -21,6 +19,9 @@ import {
   GitMerge,
   Globe,
   Home as HomeIcon,
+  LayoutDashboard,
+  Lightbulb,
+  Search,
   KeyRound,
   Layers,
   LayoutGrid,
@@ -32,7 +33,6 @@ import {
   PinOff,
   Play,
   Plug,
-  ScanSearch,
   ScrollText,
   Settings,
   Shield,
@@ -49,9 +49,6 @@ import {
   Sparkles,
   Archive,
   ShieldAlert,
-  Tag,
-  TrendingUp,
-  Wifi,
 } from "lucide-react";
 import type { AuthSession } from "../lib/auth";
 import { canAccessModule, isSystemAdminSession } from "../config/moduleRegistry";
@@ -71,6 +68,8 @@ const AdminTab = lazy(() => import("./v3/tabs/AdminTab").then(m => ({ default: m
 const AlertsTab = lazy(() => import("./v3/tabs/AlertsTab").then(m => ({ default: m.AlertsTab })));
 const ClusterTab = lazy(() => import("./v3/tabs/ClusterTab").then(m => ({ default: m.ClusterTab })));
 const DashboardTab = lazy(() => import("./v3/tabs/DashboardTab").then(m => ({ default: m.DashboardTab })));
+const CommandCenterTab = lazy(() => import("./v3/tabs/CommandCenterTab").then(m => ({ default: m.CommandCenterTab })));
+const RecommendationsTab = lazy(() => import("./v3/tabs/CommandCenterTab").then(m => ({ default: m.RecommendationsTab })));
 const GovernanceTab = lazy(() => import("./v3/tabs/GovernanceTab").then(m => ({ default: m.GovernanceTab })));
 const RestAPITab = lazy(() => import("./v3/tabs/RestAPITab").then(m => ({ default: m.RestAPITab })));
 const VaultTab = lazy(() => import("./v3/tabs/VaultTab").then(m => ({ default: m.VaultTab })));
@@ -169,12 +168,17 @@ function toViewKey(k: any): any {
     state: String(k?.status || "unknown").toLowerCase(),
     ver: `v${Number(k?.current_version || 1)}`,
     tags: Array.isArray(k?.tags) ? k.tags.map((t: any) => String(t)) : [],
-    componentRole: String(k?.labels?.component_role || k?.labels?.component || "")
+    componentRole: String(k?.labels?.component_role || k?.labels?.component || ""),
+    // Keep the API object so feature tabs can derive their richer view model
+    // (Key Management needs KCV, algorithm family, size/curve, ops limits).
+    __raw: k
   };
 }
 
 const TABS: Record<string, any> = {
-  home: DashboardTab,
+  home: CommandCenterTab,
+  recommendations: RecommendationsTab,
+  ops: DashboardTab,
   keys: KeysTab,
   workbench: WorkbenchTab,
   crypto: CryptoTab,
@@ -222,7 +226,9 @@ const TABS: Record<string, any> = {
 };
 
 const TITLES: Record<string, string> = {
-  home: "Dashboard",
+  home: "Command Center",
+  recommendations: "Recommendations",
+  ops: "Operations Dashboard",
   keys: "Key Management",
   workbench: "Workbench",
   crypto: "Crypto Console",
@@ -269,25 +275,27 @@ const TITLES: Record<string, string> = {
 };
 
 const NAV = [
-  { g: "OVERVIEW", items: [
-    { id: "home", icon: HomeIcon, label: "Dashboard" },
+  { g: "Overview", items: [
+    { id: "home", icon: HomeIcon, label: "Command Center" },
+    { id: "recommendations", icon: Lightbulb, label: "Recommendations" },
+    { id: "ops", icon: LayoutDashboard, label: "Operations" },
     { id: "workbench", icon: LayoutGrid, label: "Workbench" },
     { id: "ops_metrics", icon: BarChart2, label: "Operations Metrics" },
     { id: "key_analytics", icon: BarChart3, label: "Analytics" },
   ]},
-  { g: "KEYS & LIFECYCLE", items: [
+  { g: "Keys & lifecycle", items: [
     { id: "keys", icon: KeyRound, label: "Key Management" },
     { id: "rotation", icon: CalendarClock, label: "Rotation & Scheduling" },
     { id: "escrow", icon: Vault, label: "Key Recovery & Escrow" },
     { id: "envelope_enc", icon: Layers, label: "Envelope Encryption" },
     { id: "crypto_agility", icon: Gauge, label: "Crypto Agility" },
   ]},
-  { g: "PKI & CERTIFICATES", items: [
+  { g: "PKI & certificates", items: [
     { id: "certs", icon: FileText, label: "Certificates / PKI" },
     { id: "ct_monitor", icon: Globe, label: "CT Log Monitor" },
     { id: "mtls_mesh", icon: Network, label: "mTLS Mesh" },
   ]},
-  { g: "DATA & INTEGRATIONS", items: [
+  { g: "Data & integrations", items: [
     { id: "vault", icon: Lock, label: "Secret Vault" },
     { id: "dataprotection", icon: ShieldCheck, label: "Data Protection" },
     { id: "cloudctl", icon: Cloud, label: "Cloud Key Control" },
@@ -295,7 +303,7 @@ const NAV = [
     { id: "hsm", icon: Cpu, label: "HSM" },
     { id: "ai_gateway", icon: Shield, label: "AI Security Gateway" },
   ]},
-  { g: "SECURITY & COMPLIANCE", items: [
+  { g: "Security & compliance", items: [
     { id: "audit", icon: ScrollText, label: "Audit Log" },
     { id: "alerts", icon: Bell, label: "Alert Center" },
     { id: "approvals", icon: CheckCircle2, label: "Approvals" },
@@ -306,7 +314,7 @@ const NAV = [
     { id: "lineage", icon: GitMerge, label: "Source Traceability" },
     { id: "playbooks", icon: Play, label: "Playbooks" },
   ]},
-  { g: "PLATFORM & ADMIN", items: [
+  { g: "Platform", items: [
     { id: "cluster", icon: GitBranch, label: "Cluster" },
     { id: "health", icon: Activity, label: "Health" },
     { id: "backup", icon: Archive, label: "Backup & Restore" },
@@ -583,6 +591,7 @@ export default function VectaDashboardV3Shell(props: Props) {
     });
   };
 
+  const [navFilter, setNavFilter] = useState("");
   const navGroups = useMemo(
     () =>
       NAV.map((group) => ({
@@ -591,6 +600,14 @@ export default function VectaDashboardV3Shell(props: Props) {
       })).filter((group) => group.items.length > 0),
     [enabledFeatures, session]
   );
+  const shownNavGroups = useMemo(() => {
+    const q = navFilter.trim().toLowerCase();
+    if (!q) return navGroups;
+    return navGroups
+      .map((g: any) => ({ ...g, items: g.items.filter((it: any) => `${it.label} ${TITLES[it.id] || ""} ${g.g}`.toLowerCase().includes(q)) }))
+      .filter((g: any) => g.items.length > 0);
+  }, [navGroups, navFilter]);
+  const activeGroupLabel = useMemo(() => navGroups.find((g: any) => g.items.some((it: any) => it.id === tab))?.g || "", [navGroups, tab]);
 
   const visibleTabIDs = useMemo(
     () =>
@@ -686,14 +703,12 @@ export default function VectaDashboardV3Shell(props: Props) {
         .vk-search-btn:hover{border-color:${C.borderHi}!important;color:${C.text}!important}
       `}</style>
 
-      {/* ── Rainbow accent bar (fixed, topmost) ── */}
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 2, zIndex: 9999, background: `linear-gradient(90deg,${C.accent},${C.purple},${C.blue})` }} />
 
       {/* ══════════════════════════════════════════════
           SIDEBAR
       ══════════════════════════════════════════════ */}
       <div style={{
-        width: collapsed ? 60 : 240,
+        width: collapsed ? 60 : 248,
         background: C.sidebar,
         borderRight: `1px solid ${C.border}`,
         display: "flex",
@@ -718,16 +733,15 @@ export default function VectaDashboardV3Shell(props: Props) {
             <div style={{
               width: 32, height: 32,
               borderRadius: 9,
-              background: `linear-gradient(135deg,${C.accent},${C.purple})`,
+              background: C.accentFg,
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 15, fontWeight: 800, color: C.bg,
+              fontSize: 15, fontWeight: 700, color: "var(--c-bg)",
               flexShrink: 0,
-              boxShadow: `0 2px 10px rgba(6,214,224,.25)`,
             }}>V</div>
             {!collapsed && (
               <div style={{ overflow: "hidden", flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: 1.4, color: C.text, lineHeight: 1.25, whiteSpace: "nowrap" }}>VECTA KMS</div>
-                <div style={{ fontSize: 9, color: C.accent, letterSpacing: 1.2, textTransform: "uppercase", opacity: 0.65, lineHeight: 1 }}>Key Management</div>
+                <div style={{ fontSize: 14, fontWeight: 650, letterSpacing: -0.2, color: C.text, lineHeight: 1.25, whiteSpace: "nowrap" }}>Vecta KMS</div>
+                <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.2 }}>Enterprise key management</div>
               </div>
             )}
           </div>
@@ -746,10 +760,27 @@ export default function VectaDashboardV3Shell(props: Props) {
           </button>
         </div>
 
+        {/* Nav filter */}
+        {!collapsed && (
+          <div style={{ padding: "10px 12px 2px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 7, height: 32, padding: "0 9px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.muted }}>
+              <Search size={13} strokeWidth={2} />
+              <input
+                value={navFilter}
+                onChange={(e) => setNavFilter(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { const first = shownNavGroups[0]?.items?.[0]; if (first) { selectTab(first.id); setNavFilter(""); } } if (e.key === "Escape") setNavFilter(""); }}
+                placeholder="Filter modules"
+                aria-label="Filter modules"
+                style={{ flex: 1, minWidth: 0, border: 0, outline: "none", background: "transparent", color: C.text, fontSize: 12.5 }}
+              />
+            </label>
+          </div>
+        )}
+
         {/* Nav items */}
-        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "8px 0" }}>
-          {navGroups.map((g: any) => {
-            const groupOpen = collapsed || openGroups[g.g] !== false;
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: "6px 0 8px" }}>
+          {shownNavGroups.map((g: any) => {
+            const groupOpen = collapsed || Boolean(navFilter) || openGroups[g.g] !== false;
             const groupHasActive = g.items.some((it: any) => it.id === tab);
             return (
             <div key={g.g} style={{ marginBottom: 6 }}>
@@ -758,11 +789,10 @@ export default function VectaDashboardV3Shell(props: Props) {
                   className="vk-nav-group"
                   onClick={() => toggleGroup(g.g)}
                   style={{
-                    padding: "10px 16px 4px",
-                    fontSize: 9, fontWeight: 700,
-                    color: groupHasActive ? C.accentFg : C.muted,
-                    textTransform: "uppercase",
-                    letterSpacing: 1.8,
+                    padding: "12px 16px 4px",
+                    fontSize: 11.5, fontWeight: 600,
+                    color: groupHasActive ? C.text : C.muted,
+                    letterSpacing: 0,
                     cursor: "pointer",
                     display: "flex", alignItems: "center", justifyContent: "space-between",
                     userSelect: "none",
@@ -793,14 +823,12 @@ export default function VectaDashboardV3Shell(props: Props) {
                       display: "flex",
                       alignItems: "center",
                       gap: 10,
-                      padding: collapsed ? "9px 0" : "7px 16px",
+                      padding: collapsed ? "9px 0" : "6px 10px",
                       justifyContent: collapsed ? "center" : "flex-start",
                       cursor: "pointer",
-                      background: isActive ? `linear-gradient(90deg,rgba(6,214,224,.1),rgba(6,214,224,.02))` : "transparent",
-                      borderLeft: isActive ? `2px solid ${C.accent}` : "2px solid transparent",
-                      marginLeft: collapsed ? 8 : 0,
-                      marginRight: collapsed ? 8 : 0,
-                      borderRadius: collapsed ? 8 : "0 6px 6px 0",
+                      background: isActive ? C.accentDim : "transparent",
+                      margin: "1px 8px",
+                      borderRadius: 7,
                     }}
                   >
                     <span
@@ -809,20 +837,20 @@ export default function VectaDashboardV3Shell(props: Props) {
                         display: "inline-flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        color: isActive ? C.accent : C.muted,
+                        color: isActive ? C.accentFg : C.muted,
                         flexShrink: 0,
                         width: collapsed ? "100%" : "auto",
                       }}
                     >
-                      <it.icon size={16} strokeWidth={isActive ? 2.5 : 2} />
+                      <it.icon size={16} strokeWidth={isActive ? 2.2 : 1.8} />
                     </span>
                     {!collapsed && (
                       <span
                         className="vk-nav-label"
                         style={{
-                          fontSize: 12,
+                          fontSize: 13,
                           color: isActive ? C.text : C.dim,
-                          fontWeight: isActive ? 600 : 400,
+                          fontWeight: isActive ? 600 : 450,
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -835,8 +863,7 @@ export default function VectaDashboardV3Shell(props: Props) {
                     {!collapsed && pinnedTabs.includes(it.id) && (
                       <span title="Pinned" style={{
                         width: 5, height: 5, borderRadius: "50%",
-                        background: C.accent, flexShrink: 0,
-                        boxShadow: `0 0 5px ${C.accent}`,
+                        background: C.accentFg, flexShrink: 0,
                       }} />
                     )}
                   </div>
@@ -860,10 +887,10 @@ export default function VectaDashboardV3Shell(props: Props) {
           <div style={{
             width: 30, height: 30,
             borderRadius: 8,
-            background: `linear-gradient(135deg,rgba(6,214,224,.15),rgba(167,139,250,.1))`,
-            border: `1px solid rgba(6,214,224,.2)`,
+            background: C.accentDim,
+            border: `1px solid ${C.border}`,
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 11, fontWeight: 700, color: C.accent,
+            fontSize: 11, fontWeight: 700, color: C.accentFg,
             flexShrink: 0,
           }}>
             {(session?.username || "NA").slice(0, 2).toUpperCase()}
@@ -871,10 +898,10 @@ export default function VectaDashboardV3Shell(props: Props) {
           {!collapsed && (
             <>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: C.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {session?.username || "admin"}
                 </div>
-                <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: 0.5, lineHeight: 1.4 }}>
+                <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.4 }}>
                   {isSystemAdminSession(session) ? "System Admin" : "Admin"}
                 </div>
               </div>
@@ -919,12 +946,15 @@ export default function VectaDashboardV3Shell(props: Props) {
           borderBottom: `1px solid ${C.border}`,
           flexShrink: 0,
           background: C.surface,
-          boxShadow: `0 1px 0 ${C.border}, 0 2px 16px rgba(0,0,0,.18)`,
-          paddingTop: 2,
+          boxShadow: "none",
         }}>
           {/* Left: page title + pin */}
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: C.text, letterSpacing: -0.2 }}>{TITLES[tab]}</span>
+            <nav aria-label="Breadcrumb" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+              {activeGroupLabel && <span style={{ color: C.muted }}>{activeGroupLabel}</span>}
+              {activeGroupLabel && <span style={{ color: C.borderHi }}>/</span>}
+              <span style={{ fontWeight: 600, color: C.text, letterSpacing: -0.1 }}>{TITLES[tab]}</span>
+            </nav>
             {tab !== "home" && (
               <button
                 onClick={() => togglePin(tab)}
@@ -961,17 +991,19 @@ export default function VectaDashboardV3Shell(props: Props) {
                 background: "transparent",
                 color: C.muted,
                 cursor: "pointer",
-                fontSize: 11,
+                fontSize: 12.5,
+                minWidth: 220,
               }}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
+              <span style={{ flex: 1, textAlign: "left" }}>Search or jump to…</span>
               <span style={{
-                fontSize: 9, background: C.card,
+                fontSize: 10, background: C.card,
                 border: `1px solid ${C.border}`,
                 borderRadius: 4, padding: "1px 5px",
-                fontFamily: "'IBM Plex Mono',monospace",
+                fontFamily: "'JetBrains Mono',ui-monospace,monospace",
                 color: C.muted,
               }}>⌘K</span>
             </button>
@@ -1008,11 +1040,11 @@ export default function VectaDashboardV3Shell(props: Props) {
                 onClick={() => setTzOpen((v) => !v)}
                 style={{ display: "flex", alignItems: "center", gap: 4, cursor: "pointer", padding: "3px 8px", borderRadius: 6, border: `1px solid transparent`, transition: "border-color .12s" }}
               >
-                <span style={{ fontSize: 11, color: C.accent, fontFamily: "'IBM Plex Mono',monospace" }} title={`Timezone: ${tz === "local" ? "Local" : tz}`}>
+                <span style={{ fontSize: 11, color: C.accent, fontFamily: "'JetBrains Mono',ui-monospace,monospace" }} title={`Timezone: ${tz === "local" ? "Local" : tz}`}>
                   {formattedTime}
                 </span>
                 {tz !== "local" && (
-                  <span style={{ fontSize: 8, color: C.muted, fontFamily: "'IBM Plex Mono',monospace" }}>{tz.split("/").pop()}</span>
+                  <span style={{ fontSize: 8, color: C.muted, fontFamily: "'JetBrains Mono',ui-monospace,monospace" }}>{tz.split("/").pop()}</span>
                 )}
               </div>
               {tzOpen && (
@@ -1064,31 +1096,6 @@ export default function VectaDashboardV3Shell(props: Props) {
             {/* Theme toggle (Aurora ↔ Daylight) */}
             <ThemeToggle />
 
-            {/* User pill */}
-            <div
-              className="vk-topbar-cluster"
-              style={{
-                display: "flex", alignItems: "center", gap: 8,
-                padding: "4px 6px 4px 8px",
-                borderRadius: 8,
-                border: `1px solid ${C.border}`,
-                background: C.card,
-              }}
-            >
-              <div style={{
-                width: 22, height: 22, borderRadius: 5,
-                background: `linear-gradient(135deg,rgba(6,214,224,.2),rgba(167,139,250,.15))`,
-                border: `1px solid rgba(6,214,224,.25)`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 9, fontWeight: 700, color: C.accent,
-              }}>
-                {(session?.username || "NA").slice(0, 2).toUpperCase()}
-              </div>
-              <span style={{ fontSize: 11, color: C.dim, maxWidth: 80, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {session?.username || "admin"}
-              </span>
-              <Btn small onClick={onLogout}>Logout</Btn>
-            </div>
           </div>
         </div>
 

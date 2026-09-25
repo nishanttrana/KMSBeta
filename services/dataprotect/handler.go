@@ -27,6 +27,9 @@ func NewHandler(svc *Service) *Handler {
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if v := strings.TrimSpace(r.Header.Get(KDFVersionHeader)); v != "" {
+		r = r.WithContext(withRequestedKDF(r.Context(), v))
+	}
 	h.mux.ServeHTTP(w, r)
 }
 
@@ -34,6 +37,12 @@ func (h *Handler) routes() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /tokenize", h.handleTokenize)
+	// Working-key derivation migration (docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md).
+	mux.HandleFunc("GET /kdf/keys", h.handleListKeyKDF)
+	mux.HandleFunc("POST /kdf/keys/{key_id}/start-migration", h.handleKDFTransition)
+	mux.HandleFunc("POST /kdf/keys/{key_id}/reprotect-vault", h.handleKDFReprotectVault)
+	mux.HandleFunc("POST /kdf/keys/{key_id}/complete", h.handleKDFTransition)
+	mux.HandleFunc("POST /kdf/keys/{key_id}/abort", h.handleKDFTransition)
 	mux.HandleFunc("POST /detokenize", h.handleDetokenize)
 	mux.HandleFunc("POST /tokenize/batch", h.handleTokenize)
 	mux.HandleFunc("POST /detokenize/batch", h.handleDetokenize)
@@ -481,6 +490,79 @@ func (h *Handler) handleAppSearchableDecrypt(w http.ResponseWriter, r *http.Requ
 	}
 	go h.svc.writeAudit(context.Background(), req.TenantID, "searchable_decrypt", "encryption", actorFromRequest(r), "searchable decrypt AES-SIV")
 	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
+}
+
+func (h *Handler) handleListKeyKDF(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	items, err := h.svc.ListKeyKDF(r.Context(), tenantID)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+}
+
+func (h *Handler) handleKDFTransition(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req struct {
+		Force bool `json:"force"`
+	}
+	if r.ContentLength != 0 {
+		if err := decodeJSON(r, &req); err != nil {
+			writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+			return
+		}
+	}
+	keyID, actor := r.PathValue("key_id"), actorFromRequest(r)
+	var (
+		item KeyKDFState
+		err  error
+	)
+	switch {
+	case strings.HasSuffix(r.URL.Path, "/start-migration"):
+		item, err = h.svc.StartKDFMigration(r.Context(), tenantID, keyID, actor)
+	case strings.HasSuffix(r.URL.Path, "/complete"):
+		item, err = h.svc.CompleteKDFMigration(r.Context(), tenantID, keyID, actor, req.Force)
+	default:
+		item, err = h.svc.AbortKDFMigration(r.Context(), tenantID, keyID, actor)
+	}
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"item": item, "request_id": reqID})
+}
+
+func (h *Handler) handleKDFReprotectVault(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID := mustTenant(r, reqID, w)
+	if tenantID == "" {
+		return
+	}
+	var req struct {
+		Limit int `json:"limit"`
+	}
+	if r.ContentLength != 0 {
+		if err := decodeJSON(r, &req); err != nil {
+			writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+			return
+		}
+	}
+	out, err := h.svc.ReprotectVaultTokens(r.Context(), tenantID, r.PathValue("key_id"), req.Limit, actorFromRequest(r))
+	if err != nil {
+		h.writeServiceError(w, err, reqID, tenantID)
+		return
+	}
+	out["request_id"] = reqID
+	writeJSON(w, http.StatusOK, out)
 }
 
 func (h *Handler) handleGetDataProtectionPolicy(w http.ResponseWriter, r *http.Request) {

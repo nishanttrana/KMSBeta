@@ -20,16 +20,26 @@ This guide follows that operational flow.
 
 The dashboard is organized around long-lived platform state rather than individual microservices.
 
-### Home And Dashboard
+### Overview: Command Center, Recommendations, Operations
 
-Use the home dashboard for:
+The sidebar is grouped by task (Overview, Keys & lifecycle, PKI & certificates,
+Data & integrations, Security & compliance, Platform). Type in **Filter modules**
+at the top of the sidebar (Enter opens the first match) or press **⌘K / Ctrl+K**
+to jump anywhere. The top bar shows where you are (group / page), FIPS mode,
+the tenant switcher, alerts and the light/dark toggle.
 
-- system health
-- operational summaries
-- compliance posture summary
-- trending operational signals
-
-Use it when you need a quick answer to "is the platform healthy and what needs attention?"
+- **Command Center** (home) — live key-management posture score, KPIs (active
+  keys and how many are quantum-vulnerable, certificates expiring in 30 days,
+  PQC readiness, last good backup), the top recommended actions, control
+  coverage and the crypto inventory split by quantum exposure. Start every
+  session here: it answers "what should I fix next, and why?"
+- **Recommendations** — the full, filterable list (severity, category, free-text
+  search such as `PCI` or `DORA`). Each item explains the risk, the fix, the
+  affected objects and the control it maps to, with a button that opens the
+  right module. See [RECOMMENDATIONS.md](RECOMMENDATIONS.md) for the rule
+  catalogue.
+- **Operations** — the previous dashboard: system health, operational
+  summaries, approvals waiting on you, cluster state and trending signals.
 
 ### Keys
 

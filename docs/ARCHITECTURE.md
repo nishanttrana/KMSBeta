@@ -144,7 +144,7 @@ Most operators interact through one of four paths:
 
 Human administrators typically use:
 
-- [http://127.0.0.1:5173/](http://127.0.0.1:5173/)
+- [https://127.0.0.1/](https://127.0.0.1/)
 
 The dashboard speaks to service endpoints through proxied `/svc/<service>/...` routes.
 

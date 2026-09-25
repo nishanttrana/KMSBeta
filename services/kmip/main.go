@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"vecta-kms/pkg/servicetoken"
 
 	"github.com/nats-io/nats.go"
 	"github.com/ovh/kmip-go/kmipserver"
@@ -34,6 +35,9 @@ import (
 var logger = log.Default()
 
 func main() {
+	// Attach this service's per-service JWT to internal keycore calls (no-op
+	// when INTERNAL_SERVICE_BOOTSTRAP_SECRET is unset).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-kmip"))
 	cfg := pkgconfig.Load()
 
 	if err := pkgruntimecfg.ValidateServiceConfig("kms-kmip", cfg); err != nil {

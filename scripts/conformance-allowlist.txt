@@ -6,20 +6,14 @@
 # or the CA issuance engine. Nothing may be added to this list without the
 # same justification — new code uses pkg/crypto and pkg/audit, full stop.
 #
-# keycore: the FIPS 140-3 cryptographic module (key generation, wrap/unwrap,
-# archival, self-tests). It is the implementation the rest of the platform
+# keycore: the key lifecycle engine (key generation, wrap/unwrap across
+# algorithms). It is the implementation the rest of the platform
 # delegates to.
 services/keycore/keycore.go
 services/keycore/main.go
-services/keycore/archival.go
-services/keycore/handler_fips_selftest.go
 #
 # certs: root-of-trust key sealing (Argon2id/TPM-sealed CA root wrapping key)
 # and the CA issuance engine (leaf/CA key generation, X.509 signing across
 # RSA/ECDSA/Ed25519/PQC) — the PKI equivalent of keycore.
 services/certs/root_key_provider.go
 services/certs/service.go
-#
-# software-vault: the software crypto-provider runtime (HSM stand-in) at the
-# hardware-provider boundary.
-services/software-vault/util.go

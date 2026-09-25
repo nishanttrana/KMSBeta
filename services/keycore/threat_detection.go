@@ -61,14 +61,14 @@ type ThreatDashboard struct {
 }
 
 const (
-	threatSweepMinInterval  = time.Minute
-	usageRetention          = 30 * 24 * time.Hour
-	newActorHistoryMin      = 5
-	newActorAlertWindow     = time.Hour
-	volumeSpikeMinOps       = 20
-	volumeSpikeFactor       = 4.0
-	dormantThreshold        = 14 * 24 * time.Hour
-	threatSweepWindow       = 24 * time.Hour
+	threatSweepMinInterval   = time.Minute
+	usageRetention           = 30 * 24 * time.Hour
+	newActorHistoryMin       = 5
+	newActorAlertWindow      = time.Hour
+	volumeSpikeMinOps        = 20
+	volumeSpikeFactor        = 4.0
+	dormantThreshold         = 14 * 24 * time.Hour
+	threatSweepWindow        = 24 * time.Hour
 	threatSweepMaxCandidates = 200
 )
 

@@ -142,7 +142,7 @@ export const DashboardTabView = (props: any) => {
         background: `linear-gradient(120deg, ${C.surface} 0%, ${C.card} 55%, ${C.surface} 100%)`,
         padding: "20px 24px",
       }}>
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `radial-gradient(900px 240px at 8% -40%, ${C.glowStrong || "rgba(34,211,238,.18)"}, transparent 60%), radial-gradient(700px 220px at 95% 140%, ${C.glow || "rgba(99,102,241,.14)"}, transparent 60%)` }} />
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: `radial-gradient(900px 240px at 8% -40%, ${C.glowStrong || "rgba(123,140,255,.18)"}, transparent 60%), radial-gradient(700px 220px at 95% 140%, ${C.glow || "rgba(99,102,241,.14)"}, transparent 60%)` }} />
         <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: 20, fontWeight: 800, color: C.text, letterSpacing: -0.4, lineHeight: 1.2 }}>

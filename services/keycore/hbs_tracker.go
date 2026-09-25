@@ -11,12 +11,12 @@ import (
 // the tracker is the single source of truth for which index to use next,
 // and is the only path through which an HBS sign can run.
 type HBSState struct {
-	TenantID    string
-	KeyID       string
-	Algorithm   string // "XMSS-SHA2_10_256", "LMS-SHA256-M32-H10", etc.
-	NextIndex   uint64
-	MaxIndex    uint64
-	Exhausted   bool
+	TenantID  string
+	KeyID     string
+	Algorithm string // "XMSS-SHA2_10_256", "LMS-SHA256-M32-H10", etc.
+	NextIndex uint64
+	MaxIndex  uint64
+	Exhausted bool
 }
 
 // HBSStore is the persistence backend. The interface is narrow so the

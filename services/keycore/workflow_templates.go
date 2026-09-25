@@ -15,22 +15,22 @@ import (
 // the union of "everything someone might want." Operators who need
 // off-template behaviour create a key manually.
 type WorkflowTemplate struct {
-	ID                  string
-	Description         string
-	Algorithm           string
-	KeyType             string
-	Purpose             string
-	IVMode              string
-	OpsLimit            int64
-	Cryptoperiod        time.Duration
-	ExportAllowed       bool
-	ApprovalRequired    bool
-	ApprovalQuorum      int
-	MinAlgorithmTier    string
-	RequiredLabels      []string
-	GraceWindow         time.Duration
-	AutoArchive         bool
-	AutoRotateOnExpire  bool
+	ID                 string
+	Description        string
+	Algorithm          string
+	KeyType            string
+	Purpose            string
+	IVMode             string
+	OpsLimit           int64
+	Cryptoperiod       time.Duration
+	ExportAllowed      bool
+	ApprovalRequired   bool
+	ApprovalQuorum     int
+	MinAlgorithmTier   string
+	RequiredLabels     []string
+	GraceWindow        time.Duration
+	AutoArchive        bool
+	AutoRotateOnExpire bool
 }
 
 // builtinTemplates is the curated registry. Operators reference templates

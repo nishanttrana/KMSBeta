@@ -76,7 +76,7 @@ AWS KMS external key import (BYOK) uses a two-step process: you get an RSA wrapp
 **Step 1 — Create the key in Vecta**
 
 ```bash
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -120,7 +120,7 @@ This returns a base64-encoded RSA-2048 public key and an import token (valid for
 **Step 4 — Wrap key material in Vecta**
 
 ```bash
-curl -X POST "http://localhost:5173/svc/keycore/keys/{VECTA_KEY_ID}/export?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys/{VECTA_KEY_ID}/export?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -150,7 +150,7 @@ aws kms import-key-material \
 **Step 6 — Register BYOK sync config in Vecta**
 
 ```bash
-curl -X POST "http://localhost:5173/svc/cloud/byok/configs?tenant_id=root" \
+curl -X POST "https://localhost/svc/cloud/byok/configs?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -235,7 +235,7 @@ When the BYOK key approaches its expiry date (or you rotate per policy):
 
 ```bash
 # Trigger rotation sync (Vecta rotates the Vecta key and re-imports to AWS)
-curl -X POST "http://localhost:5173/svc/cloud/byok/sync?tenant_id=root" \
+curl -X POST "https://localhost/svc/cloud/byok/sync?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -298,7 +298,7 @@ az keyvault key download \
 **Step 3 — Register Azure BYOK config in Vecta**
 
 ```bash
-curl -X POST "http://localhost:5173/svc/cloud/byok/configs?tenant_id=root" \
+curl -X POST "https://localhost/svc/cloud/byok/configs?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -321,7 +321,7 @@ curl -X POST "http://localhost:5173/svc/cloud/byok/configs?tenant_id=root" \
 **Step 4 — Generate wrapped key material in Vecta**
 
 ```bash
-curl -X POST "http://localhost:5173/svc/cloud/byok/configs/{CONFIG_ID}/wrap?tenant_id=root" \
+curl -X POST "https://localhost/svc/cloud/byok/configs/{CONFIG_ID}/wrap?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -417,7 +417,7 @@ gcloud kms import-jobs describe vecta-byok-job-001 \
 
 ```bash
 # Register GCP BYOK config
-curl -X POST "http://localhost:5173/svc/cloud/byok/configs?tenant_id=root" \
+curl -X POST "https://localhost/svc/cloud/byok/configs?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -438,7 +438,7 @@ curl -X POST "http://localhost:5173/svc/cloud/byok/configs?tenant_id=root" \
   }'
 
 # Trigger Vecta to wrap and import
-curl -X POST "http://localhost:5173/svc/cloud/byok/sync?tenant_id=root" \
+curl -X POST "https://localhost/svc/cloud/byok/sync?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"config_id": "GCP_BYOK_CONFIG_ID"}'
 ```
@@ -496,7 +496,7 @@ Key rotation in BYOK contexts has two distinct meanings:
 
 ```bash
 # Trigger BYOK rotation (Vecta generates new key material, imports to cloud)
-curl -X POST "http://localhost:5173/svc/cloud/byok/configs/{CONFIG_ID}/rotate?tenant_id=root" \
+curl -X POST "https://localhost/svc/cloud/byok/configs/{CONFIG_ID}/rotate?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -517,7 +517,7 @@ Destroying the Vecta key does not automatically destroy the cloud CMK. Both must
 
 ```bash
 # Step 1: Schedule Vecta key deletion
-curl -X DELETE "http://localhost:5173/svc/keycore/keys/{VECTA_KEY_ID}?tenant_id=root" \
+curl -X DELETE "https://localhost/svc/keycore/keys/{VECTA_KEY_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Step 2: Delete cloud CMK (varies by provider)
@@ -543,11 +543,11 @@ gcloud kms keys versions destroy 1 \
 
 ```bash
 # List all BYOK configs
-curl "http://localhost:5173/svc/cloud/byok/configs?tenant_id=root" \
+curl "https://localhost/svc/cloud/byok/configs?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get sync status for a config
-curl "http://localhost:5173/svc/cloud/byok/configs/{CONFIG_ID}/status?tenant_id=root" \
+curl "https://localhost/svc/cloud/byok/configs/{CONFIG_ID}/status?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -658,7 +658,7 @@ Decryption (when a user opens the document):
 
 ```bash
 # Microsoft calls this at encryption time to get your DKE public key
-curl "http://localhost:5173/svc/hyok/proxy/keys/{KEY_ID}/publickey"
+curl "https://localhost/svc/hyok/proxy/keys/{KEY_ID}/publickey"
 ```
 
 **Response (Microsoft-compatible format):**
@@ -679,7 +679,7 @@ curl "http://localhost:5173/svc/hyok/proxy/keys/{KEY_ID}/publickey"
 
 ```bash
 # Microsoft calls this when a user opens a DKE-protected document
-curl -X POST "http://localhost:5173/svc/hyok/proxy/decrypt" \
+curl -X POST "https://localhost/svc/hyok/proxy/decrypt" \
   -H "Authorization: Bearer {USER_JWT_FROM_MICROSOFT}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -725,7 +725,7 @@ In **Microsoft Purview** (formerly Azure Information Protection):
 
 ```bash
 # Create DKE key (RSA-4096 for DKE, per Microsoft requirements)
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "m365-dke-key",
@@ -736,7 +736,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=root" \
   }'
 
 # Create HYOK policy for DKE
-curl -X POST "http://localhost:5173/svc/hyok/policies?tenant_id=root" \
+curl -X POST "https://localhost/svc/hyok/policies?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -798,7 +798,7 @@ Download (Decryption):
 
 ```bash
 # Google CSE wrap (called at encryption time)
-curl -X POST "http://localhost:5173/svc/hyok/proxy/google-cse/wrap" \
+curl -X POST "https://localhost/svc/hyok/proxy/google-cse/wrap" \
   -H "Authorization: Bearer {GOOGLE_USER_JWT}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -810,7 +810,7 @@ curl -X POST "http://localhost:5173/svc/hyok/proxy/google-cse/wrap" \
 # Returns: {"wrappedKey": "base64-encoded-wrapped-DEKS"}
 
 # Google CSE unwrap (called at decryption time)
-curl -X POST "http://localhost:5173/svc/hyok/proxy/google-cse/unwrap" \
+curl -X POST "https://localhost/svc/hyok/proxy/google-cse/unwrap" \
   -H "Authorization: Bearer {GOOGLE_USER_JWT}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -859,7 +859,7 @@ HYOK policies define who can request key operations, when, and under what condit
 
 ```bash
 # Standard business-hours DKE policy
-curl -X POST "http://localhost:5173/svc/hyok/policies?tenant_id=root" \
+curl -X POST "https://localhost/svc/hyok/policies?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -884,7 +884,7 @@ curl -X POST "http://localhost:5173/svc/hyok/policies?tenant_id=root" \
   }'
 
 # Sensitive data policy with justification and ticket requirement
-curl -X POST "http://localhost:5173/svc/hyok/policies?tenant_id=root" \
+curl -X POST "https://localhost/svc/hyok/policies?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -944,7 +944,7 @@ Every HYOK operation generates a structured audit log entry:
 
 ```bash
 # Configure HYOK proxy settings
-curl -X PUT "http://localhost:5173/svc/hyok/config?tenant_id=root" \
+curl -X PUT "https://localhost/svc/hyok/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1055,7 +1055,7 @@ sudo systemctl status vecta-ekm-agent
 #### Register Agent Integration
 
 ```bash
-curl -X POST "http://localhost:5173/svc/ekm/integrations?tenant_id=root" \
+curl -X POST "https://localhost/svc/ekm/integrations?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1209,7 +1209,7 @@ WHERE DB_NAME(database_id) = 'tempdb';
 
 ```bash
 # Rotate the master key in Vecta
-curl -X POST "http://localhost:5173/svc/keycore/keys/{MASTER_KEY_ID}/rotate?tenant_id=root" \
+curl -X POST "https://localhost/svc/keycore/keys/{MASTER_KEY_ID}/rotate?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1338,11 +1338,11 @@ if ($BLStatus.ProtectionStatus -ne "On") {
 
 ```bash
 # List endpoints and their BitLocker status
-curl "http://localhost:5173/svc/ekm/bitlocker/endpoints?tenant_id=root" \
+curl "https://localhost/svc/ekm/bitlocker/endpoints?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get endpoint details
-curl "http://localhost:5173/svc/ekm/bitlocker/endpoints/{ENDPOINT_ID}?tenant_id=root" \
+curl "https://localhost/svc/ekm/bitlocker/endpoints/{ENDPOINT_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1368,7 +1368,7 @@ curl "http://localhost:5173/svc/ekm/bitlocker/endpoints/{ENDPOINT_ID}?tenant_id=
 
 ```bash
 # Retrieve recovery key (requires elevated RBAC role: ekm:bitlocker:recover)
-curl -X POST "http://localhost:5173/svc/ekm/bitlocker/endpoints/{ENDPOINT_ID}/recovery-key?tenant_id=root" \
+curl -X POST "https://localhost/svc/ekm/bitlocker/endpoints/{ENDPOINT_ID}/recovery-key?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1395,7 +1395,7 @@ curl -X POST "http://localhost:5173/svc/ekm/bitlocker/endpoints/{ENDPOINT_ID}/re
 
 ```bash
 # Get encryption compliance summary
-curl "http://localhost:5173/svc/ekm/bitlocker/compliance?tenant_id=root" \
+curl "https://localhost/svc/ekm/bitlocker/compliance?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1489,7 +1489,7 @@ Pre-Active → Active → Deactivated → Compromised → Destroyed
 
 ```bash
 # Configure KMIP server settings
-curl -X PUT "http://localhost:5173/svc/kmip/config?tenant_id=root" \
+curl -X PUT "https://localhost/svc/kmip/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1509,7 +1509,7 @@ curl -X PUT "http://localhost:5173/svc/kmip/config?tenant_id=root" \
 A client profile defines which operations a specific KMIP client is authorized to perform and which key groups it can access.
 
 ```bash
-curl -X POST "http://localhost:5173/svc/kmip/profiles?tenant_id=root" \
+curl -X POST "https://localhost/svc/kmip/profiles?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1532,7 +1532,7 @@ curl -X POST "http://localhost:5173/svc/kmip/profiles?tenant_id=root" \
 
 ```bash
 # Issue client certificate for the KMIP client
-curl -X POST "http://localhost:5173/svc/certs/certs?tenant_id=root" \
+curl -X POST "https://localhost/svc/certs/certs?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "ca_id": "CLIENT_ISSUING_CA_ID",
@@ -1668,19 +1668,19 @@ While KMIP clients communicate over the KMIP binary protocol, Vecta also exposes
 
 ```bash
 # List KMIP-managed objects
-curl "http://localhost:5173/svc/kmip/objects?tenant_id=root&group=storage-keys" \
+curl "https://localhost/svc/kmip/objects?tenant_id=root&group=storage-keys" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get KMIP object
-curl "http://localhost:5173/svc/kmip/objects/{KMIP_OBJECT_ID}?tenant_id=root" \
+curl "https://localhost/svc/kmip/objects/{KMIP_OBJECT_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Activate a Pre-Active key (transitions to Active state)
-curl -X POST "http://localhost:5173/svc/kmip/objects/{KMIP_OBJECT_ID}/activate?tenant_id=root" \
+curl -X POST "https://localhost/svc/kmip/objects/{KMIP_OBJECT_ID}/activate?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Revoke (deactivate or mark compromised)
-curl -X POST "http://localhost:5173/svc/kmip/objects/{KMIP_OBJECT_ID}/revoke?tenant_id=root" \
+curl -X POST "https://localhost/svc/kmip/objects/{KMIP_OBJECT_ID}/revoke?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "revocation_reason": "KeyCompromise",
@@ -1688,15 +1688,15 @@ curl -X POST "http://localhost:5173/svc/kmip/objects/{KMIP_OBJECT_ID}/revoke?ten
   }'
 
 # Destroy
-curl -X POST "http://localhost:5173/svc/kmip/objects/{KMIP_OBJECT_ID}/destroy?tenant_id=root" \
+curl -X POST "https://localhost/svc/kmip/objects/{KMIP_OBJECT_ID}/destroy?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # List KMIP client profiles
-curl "http://localhost:5173/svc/kmip/profiles?tenant_id=root" \
+curl "https://localhost/svc/kmip/profiles?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get KMIP server status
-curl "http://localhost:5173/svc/kmip/status?tenant_id=root" \
+curl "https://localhost/svc/kmip/status?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1715,7 +1715,7 @@ CLIENT_NAME="new-storage-array"
 TENANT="root"
 
 # Step 1: Issue client cert
-CERT_RESPONSE=$(curl -s -X POST "http://localhost:5173/svc/certs/certs?tenant_id=${TENANT}" \
+CERT_RESPONSE=$(curl -sk -X POST "https://localhost/svc/certs/certs?tenant_id=${TENANT}" \
   -H "Authorization: Bearer $TOKEN" \
   -d "{
     \"ca_id\": \"CLIENT_ISSUING_CA_ID\",
@@ -1734,7 +1734,7 @@ echo "$CERT_PEM" > "${CLIENT_NAME}-client.pem"
 echo "$KEY_PEM"  > "${CLIENT_NAME}-client.key"
 
 # Step 2: Create KMIP profile
-curl -X POST "http://localhost:5173/svc/kmip/profiles?tenant_id=${TENANT}" \
+curl -X POST "https://localhost/svc/kmip/profiles?tenant_id=${TENANT}" \
   -H "Authorization: Bearer $TOKEN" \
   -d "{
     \"name\": \"${CLIENT_NAME}\",
@@ -1744,7 +1744,7 @@ curl -X POST "http://localhost:5173/svc/kmip/profiles?tenant_id=${TENANT}" \
   }"
 
 # Step 3: Download CA chain
-curl "http://localhost:5173/svc/certs/certs/ca/{CA_ID}/chain?tenant_id=${TENANT}" \
+curl "https://localhost/svc/certs/certs/ca/{CA_ID}/chain?tenant_id=${TENANT}" \
   -H "Authorization: Bearer $TOKEN" \
   -o vecta-ca-chain.pem
 
@@ -1788,7 +1788,7 @@ A signing policy governs which keys, subjects, and artifact types are permitted.
 
 ```bash
 # Create a signing policy for container images
-curl -X POST "http://localhost:5173/svc/signing/policies?tenant_id=root" \
+curl -X POST "https://localhost/svc/signing/policies?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1818,7 +1818,7 @@ curl -X POST "http://localhost:5173/svc/signing/policies?tenant_id=root" \
 
 ```bash
 # Signing policy for release binaries (code signing)
-curl -X POST "http://localhost:5173/svc/signing/policies?tenant_id=root" \
+curl -X POST "https://localhost/svc/signing/policies?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "release-binary-signing",
@@ -1986,7 +1986,7 @@ spec:
 
 ```bash
 # Get the Ed25519 public key from Vecta
-curl "http://localhost:5173/svc/keycore/keys/{KEY_ID}/public?tenant_id=root" \
+curl "https://localhost/svc/keycore/keys/{KEY_ID}/public?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -o vecta-signing.pub
 
@@ -2014,7 +2014,7 @@ git log --show-signature --oneline main..HEAD
 ```bash
 # Create GPG-compatible signing certificate from Vecta
 # (Ed25519 key exported in OpenPGP format)
-curl -X POST "http://localhost:5173/svc/signing/git-signing-key?tenant_id=root" \
+curl -X POST "https://localhost/svc/signing/git-signing-key?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "key_id": "ED25519_KEY_ID",
@@ -2059,7 +2059,7 @@ curl -X POST "https://api.github.com/user/ssh_signing_keys" \
 BINARY="myapp-v2.1.0-linux-amd64"
 SHA256=$(sha256sum "${BINARY}" | awk '{print $1}')
 
-curl -X POST "http://localhost:5173/svc/signing/sign?tenant_id=root" \
+curl -X POST "https://localhost/svc/signing/sign?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d "{
     \"artifact_hash\": \"sha256:${SHA256}\",
@@ -2077,7 +2077,7 @@ curl -X POST "http://localhost:5173/svc/signing/sign?tenant_id=root" \
 SBOM="myapp-v2.1.0.sbom.json"
 SBOM_SHA256=$(sha256sum "${SBOM}" | awk '{print $1}')
 
-curl -X POST "http://localhost:5173/svc/signing/sign?tenant_id=root" \
+curl -X POST "https://localhost/svc/signing/sign?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d "{
     \"artifact_hash\": \"sha256:${SBOM_SHA256}\",
@@ -2095,7 +2095,7 @@ curl -X POST "http://localhost:5173/svc/signing/sign?tenant_id=root" \
 VERIFY_SHA256=$(sha256sum "${BINARY}" | awk '{print $1}')
 SIGNATURE=$(cat "${BINARY}.sig.json" | jq -r '.signature')
 
-curl -X POST "http://localhost:5173/svc/signing/verify?tenant_id=root" \
+curl -X POST "https://localhost/svc/signing/verify?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -d "{
     \"artifact_hash\": \"sha256:${VERIFY_SHA256}\",
@@ -2112,19 +2112,19 @@ Every signing event is appended to an append-only transparency log. Each entry i
 
 ```bash
 # Browse transparency log
-curl "http://localhost:5173/svc/signing/transparency?tenant_id=root&page=1&per_page=50" \
+curl "https://localhost/svc/signing/transparency?tenant_id=root&page=1&per_page=50" \
   -H "Authorization: Bearer $TOKEN"
 
 # Get a specific log entry
-curl "http://localhost:5173/svc/signing/transparency/{LOG_ENTRY_ID}?tenant_id=root" \
+curl "https://localhost/svc/signing/transparency/{LOG_ENTRY_ID}?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN"
 
 # Search by artifact hash
-curl "http://localhost:5173/svc/signing/transparency?tenant_id=root&artifact_hash=sha256:abc123..." \
+curl "https://localhost/svc/signing/transparency?tenant_id=root&artifact_hash=sha256:abc123..." \
   -H "Authorization: Bearer $TOKEN"
 
 # Search by signer identity
-curl "http://localhost:5173/svc/signing/transparency?tenant_id=root&signer=ci-pipeline@acme.com" \
+curl "https://localhost/svc/signing/transparency?tenant_id=root&signer=ci-pipeline@acme.com" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -2384,7 +2384,7 @@ Authorization: Bearer eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9...
 Tokens are obtained via:
 
 ```bash
-curl -X POST "http://localhost:5173/svc/auth/token" \
+curl -X POST "https://localhost/svc/auth/token" \
   -H "Content-Type: application/json" \
   -d '{
     "client_id": "your-client-id",

@@ -1,5 +1,5 @@
 ﻿admin_email: admin@vecta.local
-admin_password: VectaAdmin@2026
+admin_password: changeit
 admin_username: admin
 force_password_change: true
 tenant_id: root

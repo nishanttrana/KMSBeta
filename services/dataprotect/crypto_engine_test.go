@@ -3,9 +3,12 @@ package main
 import (
 	"encoding/base64"
 	"testing"
+
+	"vecta-kms/pkg/fips/fipstest"
 )
 
 func TestAlgorithmCiphertextBehavior(t *testing.T) {
+	fipstest.SkipIfStrict(t, "ChaCha20-Poly1305")
 	key := []byte("0123456789abcdef0123456789abcdef")
 	plaintext := []byte("alice@example.com")
 	aad := []byte("ctx")

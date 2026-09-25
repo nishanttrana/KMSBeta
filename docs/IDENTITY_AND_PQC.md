@@ -166,7 +166,7 @@ Default SVID TTL is 3600 seconds (1 hour). The vecta-agent renews SVIDs automati
 Create the trust domain in Vecta:
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/workload/workload-identity/settings \
+curl -sk -X POST https://localhost/svc/workload/workload-identity/settings \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -638,7 +638,7 @@ Vecta implements OAuth 2.0 Token Exchange (RFC 8693) to bridge workload identity
 ```bash
 K8S_TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 
-curl -s -X POST http://localhost:5173/svc/workload/workload-identity/token/exchange \
+curl -sk -X POST https://localhost/svc/workload/workload-identity/token/exchange \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -670,7 +670,7 @@ Response:
 #### Pattern 2: Vecta JWT SVID → AWS STS AssumeRoleWithWebIdentity
 
 ```bash
-VECTA_JWT=$(curl -s -X POST http://localhost:5173/svc/workload/workload-identity/issue \
+VECTA_JWT=$(curl -sk -X POST https://localhost/svc/workload/workload-identity/issue \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -724,7 +724,7 @@ All workload endpoints use the service prefix `/svc/workload`. All requests requ
 #### GET /svc/workload/workload-identity/settings
 
 ```bash
-curl -s "http://localhost:5173/svc/workload/workload-identity/settings?tenant_id=root" \
+curl -sk "https://localhost/svc/workload/workload-identity/settings?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -754,7 +754,7 @@ Response:
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/workload/workload-identity/registrations?tenant_id=root" \
+  "https://localhost/svc/workload/workload-identity/registrations?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -793,7 +793,7 @@ Issues an SVID after attestation.
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/workload/workload-identity/issue?tenant_id=root" \
+  "https://localhost/svc/workload/workload-identity/issue?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -829,7 +829,7 @@ Response:
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/workload/workload-identity/token/exchange?tenant_id=root" \
+  "https://localhost/svc/workload/workload-identity/token/exchange?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -846,7 +846,7 @@ curl -s -X POST \
 #### GET /svc/workload/workload-identity/graph
 
 ```bash
-curl -s "http://localhost:5173/svc/workload/workload-identity/graph?tenant_id=root" \
+curl -sk "https://localhost/svc/workload/workload-identity/graph?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -1227,7 +1227,7 @@ ephemeral_public_key_der = ephemeral_private_key.public_key().public_bytes(
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/confidential/confidential/evaluate" \
+  "https://localhost/svc/confidential/confidential/evaluate" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1276,7 +1276,7 @@ attestation_doc_b64 = base64.b64encode(attestation_doc_bytes).decode()
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/confidential/confidential/evaluate" \
+  "https://localhost/svc/confidential/confidential/evaluate" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1369,7 +1369,7 @@ Service prefix: `/svc/confidential/confidential`. All requests require `Authoriz
 Returns the tenant's global confidential compute policy settings.
 
 ```bash
-curl -s "http://localhost:5173/svc/confidential/confidential/policy?tenant_id=root" \
+curl -sk "https://localhost/svc/confidential/confidential/policy?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -1396,7 +1396,7 @@ Response:
 
 ```bash
 curl -s -X PUT \
-  "http://localhost:5173/svc/confidential/confidential/policy?tenant_id=root" \
+  "https://localhost/svc/confidential/confidential/policy?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1419,7 +1419,7 @@ The core attested key release endpoint. Handles both nonce issuance and key rele
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/confidential/confidential/evaluate" \
+  "https://localhost/svc/confidential/confidential/evaluate" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1434,7 +1434,7 @@ curl -s -X POST \
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/confidential/confidential/evaluate" \
+  "https://localhost/svc/confidential/confidential/evaluate" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1457,7 +1457,7 @@ curl -s -X POST \
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/confidential/confidential/evaluate" \
+  "https://localhost/svc/confidential/confidential/evaluate" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1485,7 +1485,7 @@ curl -s -X POST \
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/confidential/confidential/evaluate" \
+  "https://localhost/svc/confidential/confidential/evaluate" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1513,7 +1513,7 @@ curl -s -X POST \
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/confidential/confidential/evaluate" \
+  "https://localhost/svc/confidential/confidential/evaluate" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1537,7 +1537,7 @@ curl -s -X POST \
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/confidential/confidential/evaluate" \
+  "https://localhost/svc/confidential/confidential/evaluate" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1581,7 +1581,7 @@ Response (verify):
 Lists all attested key release events.
 
 ```bash
-curl -s "http://localhost:5173/svc/confidential/confidential/releases?tenant_id=root&limit=50&offset=0" \
+curl -sk "https://localhost/svc/confidential/confidential/releases?tenant_id=root&limit=50&offset=0" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -1733,7 +1733,7 @@ A justification rule defines which keys and operations require justification, wh
 For simple cases where only the code is needed:
 
 ```bash
-curl -s -X POST http://localhost:5173/api/keys/key-financial-records-enc/decrypt \
+curl -sk -X POST https://localhost/api/keys/key-financial-records-enc/decrypt \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1746,7 +1746,7 @@ curl -s -X POST http://localhost:5173/api/keys/key-financial-records-enc/decrypt
 For richer justifications including detail text and ticket references:
 
 ```bash
-curl -s -X POST http://localhost:5173/api/keys/key-financial-records-enc/decrypt \
+curl -sk -X POST https://localhost/api/keys/key-financial-records-enc/decrypt \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1774,7 +1774,7 @@ Service prefix: `/svc/keyaccess`. All requests require `Authorization: Bearer $T
 #### GET /svc/keyaccess/key-access/settings
 
 ```bash
-curl -s "http://localhost:5173/svc/keyaccess/key-access/settings?tenant_id=root" \
+curl -sk "https://localhost/svc/keyaccess/key-access/settings?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -1799,7 +1799,7 @@ Response:
 
 ```bash
 curl -s -X PUT \
-  "http://localhost:5173/svc/keyaccess/key-access/settings" \
+  "https://localhost/svc/keyaccess/key-access/settings" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1833,7 +1833,7 @@ Response:
 Lists all justification rules (referred to as "codes" in the API).
 
 ```bash
-curl -s "http://localhost:5173/svc/keyaccess/key-access/codes?tenant_id=root" \
+curl -sk "https://localhost/svc/keyaccess/key-access/codes?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -1866,7 +1866,7 @@ Create a new justification rule.
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/keyaccess/key-access/codes" \
+  "https://localhost/svc/keyaccess/key-access/codes" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1914,7 +1914,7 @@ Update a justification rule.
 
 ```bash
 curl -s -X PUT \
-  "http://localhost:5173/svc/keyaccess/key-access/codes/rule_pii_decrypt_002" \
+  "https://localhost/svc/keyaccess/key-access/codes/rule_pii_decrypt_002" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -1929,7 +1929,7 @@ curl -s -X PUT \
 
 ```bash
 curl -s -X DELETE \
-  "http://localhost:5173/svc/keyaccess/key-access/codes/rule_pii_decrypt_002?tenant_id=root" \
+  "https://localhost/svc/keyaccess/key-access/codes/rule_pii_decrypt_002?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -1939,7 +1939,7 @@ curl -s -X DELETE \
 Lists evaluated justification decisions. Each decision record captures the full context of a governed operation: who called, which key, which operation, which code was provided, what decision was made, and why.
 
 ```bash
-curl -s "http://localhost:5173/svc/keyaccess/key-access/decisions?tenant_id=root&key_id=key-financial-records-enc&limit=20" \
+curl -sk "https://localhost/svc/keyaccess/key-access/decisions?tenant_id=root&key_id=key-financial-records-enc&limit=20" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -1986,7 +1986,7 @@ Response:
 Returns aggregate justification statistics for dashboard and compliance use.
 
 ```bash
-curl -s "http://localhost:5173/svc/keyaccess/key-access/summary?tenant_id=root" \
+curl -sk "https://localhost/svc/keyaccess/key-access/summary?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2108,7 +2108,7 @@ Hybrid key exchange and hybrid signatures combine a classical algorithm with a P
 #### Creating Hybrid Keys in Vecta
 
 ```bash
-curl -s -X POST http://localhost:5173/api/keys \
+curl -sk -X POST https://localhost/api/keys \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2149,7 +2149,7 @@ Response:
 #### Create ML-KEM-768 Key
 
 ```bash
-curl -s -X POST http://localhost:5173/api/keys \
+curl -sk -X POST https://localhost/api/keys \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2182,7 +2182,7 @@ Response:
 #### Create ML-DSA-65 Signing Key
 
 ```bash
-curl -s -X POST http://localhost:5173/api/keys \
+curl -sk -X POST https://localhost/api/keys \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2215,7 +2215,7 @@ Response:
 #### Create SLH-DSA-SHA2-128f Key
 
 ```bash
-curl -s -X POST http://localhost:5173/api/keys \
+curl -sk -X POST https://localhost/api/keys \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2254,7 +2254,7 @@ A PQC migration is an operational program, not a one-time flag flip. Vecta struc
 #### Phase 1: Inventory
 
 ```bash
-curl -s "http://localhost:5173/svc/pqc/pqc/inventory?tenant_id=root" \
+curl -sk "https://localhost/svc/pqc/pqc/inventory?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2303,7 +2303,7 @@ Response:
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/pqc/pqc/assess" \
+  "https://localhost/svc/pqc/pqc/assess" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2339,7 +2339,7 @@ Generate a prioritized migration plan:
 
 ```bash
 curl -s -X POST \
-  "http://localhost:5173/svc/pqc/pqc/migration/plan" \
+  "https://localhost/svc/pqc/pqc/migration/plan" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2388,7 +2388,7 @@ Enforce PQC policy after migration is complete:
 
 ```bash
 curl -s -X PUT \
-  "http://localhost:5173/svc/pqc/pqc/policy?tenant_id=root" \
+  "https://localhost/svc/pqc/pqc/policy?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2427,7 +2427,7 @@ Returns full PQC asset inventory. Query params: `?asset_type=key|certificate|tls
 Returns the PQC classification for a single asset.
 
 ```bash
-curl -s "http://localhost:5173/svc/pqc/pqc/inventory/key-root-ca-rsa4096?tenant_id=root" \
+curl -sk "https://localhost/svc/pqc/pqc/inventory/key-root-ca-rsa4096?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2464,7 +2464,7 @@ Generates a prioritized migration plan. See Phase 3–5 example above.
 Lists all previously generated migration plans for the tenant.
 
 ```bash
-curl -s "http://localhost:5173/svc/pqc/pqc/migration/plans?tenant_id=root" \
+curl -sk "https://localhost/svc/pqc/pqc/migration/plans?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2482,7 +2482,7 @@ Runs a PQC risk assessment. See Phase 2 example above.
 Lists all open PQC findings for the tenant.
 
 ```bash
-curl -s "http://localhost:5173/svc/pqc/pqc/findings?tenant_id=root&risk=CRITICAL" \
+curl -sk "https://localhost/svc/pqc/pqc/findings?tenant_id=root&risk=CRITICAL" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2512,7 +2512,7 @@ Response:
 Returns the tenant's PQC readiness score and framework alignment.
 
 ```bash
-curl -s "http://localhost:5173/svc/pqc/pqc/readiness?tenant_id=root" \
+curl -sk "https://localhost/svc/pqc/pqc/readiness?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2546,7 +2546,7 @@ Response:
 Returns a migration status report showing completed, pending, and blocked migrations.
 
 ```bash
-curl -s "http://localhost:5173/svc/pqc/pqc/migration/report?tenant_id=root" \
+curl -sk "https://localhost/svc/pqc/pqc/migration/report?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2606,7 +2606,7 @@ Service prefix: `/svc/ai/ai`. All requests require `Authorization: Bearer $TOKEN
 Returns the current AI configuration for the tenant.
 
 ```bash
-curl -s "http://localhost:5173/svc/ai/ai/config?tenant_id=root" \
+curl -sk "https://localhost/svc/ai/ai/config?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -2653,7 +2653,7 @@ Submits a natural language query. Vecta assembles context from the configured so
 #### Example: Audit log query
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/ai/ai/query \
+curl -sk -X POST https://localhost/svc/ai/ai/query \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2689,7 +2689,7 @@ Response:
 #### Example: Policy recommendation
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/ai/ai/query \
+curl -sk -X POST https://localhost/svc/ai/ai/query \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2721,7 +2721,7 @@ Response:
 Builds posture guidance for a specific focus area.
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/ai/ai/recommend/posture \
+curl -sk -X POST https://localhost/svc/ai/ai/recommend/posture \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2751,7 +2751,7 @@ Response:
 Produces an AI explanation for a security or governance event.
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/ai/ai/analyze/incident \
+curl -sk -X POST https://localhost/svc/ai/ai/analyze/incident \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2789,7 +2789,7 @@ Response:
 Explains an existing policy in plain English.
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/ai/ai/explain/policy \
+curl -sk -X POST https://localhost/svc/ai/ai/explain/policy \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2832,7 +2832,7 @@ Response:
 1. Configure trust domain and enable JWT SVIDs:
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/workload/workload-identity/settings \
+curl -sk -X POST https://localhost/svc/workload/workload-identity/settings \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2842,7 +2842,7 @@ curl -s -X POST http://localhost:5173/svc/workload/workload-identity/settings \
 2. Create Kubernetes attestation policy for the prod namespace:
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/workload/workload-identity/registrations \
+curl -sk -X POST https://localhost/svc/workload/workload-identity/registrations \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2859,7 +2859,7 @@ curl -s -X POST http://localhost:5173/svc/workload/workload-identity/registratio
 3. Apply a key access policy granting decrypt only to the payments SPIFFE ID:
 
 ```bash
-curl -s -X POST http://localhost:5173/api/policies \
+curl -sk -X POST https://localhost/api/policies \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2898,7 +2898,7 @@ headers = {"Authorization": f"Bearer {jwt}"}
 6. Verify in the workload identity graph that payments-service is active with no expired SVIDs:
 
 ```bash
-curl -s "http://localhost:5173/svc/workload/workload-identity/graph?tenant_id=root" \
+curl -sk "https://localhost/svc/workload/workload-identity/graph?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" | jq '.graph.nodes[] | select(.name == "payments-service")'
 ```
@@ -2923,7 +2923,7 @@ curl -s "http://localhost:5173/svc/workload/workload-identity/graph?tenant_id=ro
 1. Register the attested key release policy pinned to the enclave image PCR:
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/confidential/confidential/policy \
+curl -sk -X POST https://localhost/svc/confidential/confidential/policy \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -2988,7 +2988,7 @@ model_key = ephemeral_key.decrypt(wrapped, OAEP(MGF1(SHA256()), SHA256(), None))
 3. Verify the release appears in the release audit log:
 
 ```bash
-curl -s "http://localhost:5173/svc/confidential/confidential/releases?tenant_id=root&policy_id=nitro-inference-policy" \
+curl -sk "https://localhost/svc/confidential/confidential/releases?tenant_id=root&policy_id=nitro-inference-policy" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -3012,7 +3012,7 @@ curl -s "http://localhost:5173/svc/confidential/confidential/releases?tenant_id=
 1. Enable Key Access Justifications in enforce mode:
 
 ```bash
-curl -s -X PUT http://localhost:5173/svc/keyaccess/key-access/settings \
+curl -sk -X PUT https://localhost/svc/keyaccess/key-access/settings \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3022,7 +3022,7 @@ curl -s -X PUT http://localhost:5173/svc/keyaccess/key-access/settings \
 2. Create the justification rule for financial key decryption:
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/keyaccess/key-access/codes \
+curl -sk -X POST https://localhost/svc/keyaccess/key-access/codes \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3046,7 +3046,7 @@ curl -s -X POST http://localhost:5173/svc/keyaccess/key-access/codes \
 3. All callers now pass a justification header:
 
 ```bash
-curl -s -X POST http://localhost:5173/api/keys/key-financial-records-enc/decrypt \
+curl -sk -X POST https://localhost/api/keys/key-financial-records-enc/decrypt \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3064,7 +3064,7 @@ curl -s -X POST http://localhost:5173/api/keys/key-financial-records-enc/decrypt
 4. Pull the justification audit trail for the auditor:
 
 ```bash
-curl -s "http://localhost:5173/svc/keyaccess/key-access/decisions?tenant_id=root&key_id=key-financial-records-enc&start=2026-01-01T00:00:00Z&end=2026-03-31T23:59:59Z" \
+curl -sk "https://localhost/svc/keyaccess/key-access/decisions?tenant_id=root&key_id=key-financial-records-enc&start=2026-01-01T00:00:00Z&end=2026-03-31T23:59:59Z" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -3072,7 +3072,7 @@ curl -s "http://localhost:5173/svc/keyaccess/key-access/decisions?tenant_id=root
 5. Generate an evidence pack report for the auditor:
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/reporting/reports/generate \
+curl -sk -X POST https://localhost/svc/reporting/reports/generate \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3098,7 +3098,7 @@ curl -s -X POST http://localhost:5173/svc/reporting/reports/generate \
 1. Run PQC assessment to confirm the Root CA is the top priority:
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/pqc/pqc/assess \
+curl -sk -X POST https://localhost/svc/pqc/pqc/assess \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3108,7 +3108,7 @@ curl -s -X POST http://localhost:5173/svc/pqc/pqc/assess \
 2. Create the ML-DSA-87 key for the new hybrid Root CA:
 
 ```bash
-curl -s -X POST http://localhost:5173/api/keys \
+curl -sk -X POST https://localhost/api/keys \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3123,7 +3123,7 @@ curl -s -X POST http://localhost:5173/api/keys \
 3. Create the hybrid key handle linking RSA-4096 + ML-DSA-87:
 
 ```bash
-curl -s -X POST http://localhost:5173/api/keys \
+curl -sk -X POST https://localhost/api/keys \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3142,7 +3142,7 @@ curl -s -X POST http://localhost:5173/api/keys \
 4. Generate the new Root CA self-signed certificate using the hybrid key (quorum ceremony if MPC is configured):
 
 ```bash
-curl -s -X POST http://localhost:5173/api/certificates/self-signed \
+curl -sk -X POST https://localhost/api/certificates/self-signed \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3160,7 +3160,7 @@ curl -s -X POST http://localhost:5173/api/certificates/self-signed \
 6. Update the PQC migration record:
 
 ```bash
-curl -s "http://localhost:5173/svc/pqc/pqc/migration/report?tenant_id=root" \
+curl -sk "https://localhost/svc/pqc/pqc/migration/report?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -3178,7 +3178,7 @@ curl -s "http://localhost:5173/svc/pqc/pqc/migration/report?tenant_id=root" \
 1. Create an ML-KEM-768 + X25519 hybrid KEK:
 
 ```bash
-curl -s -X POST http://localhost:5173/api/keys \
+curl -sk -X POST https://localhost/api/keys \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3194,7 +3194,7 @@ curl -s -X POST http://localhost:5173/api/keys \
 2. Create a justification rule requiring a backup justification code for all wrap/unwrap operations:
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/keyaccess/key-access/codes \
+curl -sk -X POST https://localhost/svc/keyaccess/key-access/codes \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3212,7 +3212,7 @@ curl -s -X POST http://localhost:5173/svc/keyaccess/key-access/codes \
 3. Update the backup pipeline to use the hybrid KEK with a justification header:
 
 ```bash
-curl -s -X POST http://localhost:5173/api/keys/key-backup-kek-hybrid-kem/wrap \
+curl -sk -X POST https://localhost/api/keys/key-backup-kek-hybrid-kem/wrap \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3233,7 +3233,7 @@ curl -s -X POST http://localhost:5173/api/keys/key-backup-kek-hybrid-kem/wrap \
 1. Create AWS IID attestation policy:
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/workload/workload-identity/registrations \
+curl -sk -X POST https://localhost/svc/workload/workload-identity/registrations \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3249,7 +3249,7 @@ curl -s -X POST http://localhost:5173/svc/workload/workload-identity/registratio
 2. Create GCP IIT attestation policy:
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/workload/workload-identity/registrations \
+curl -sk -X POST https://localhost/svc/workload/workload-identity/registrations \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3265,7 +3265,7 @@ curl -s -X POST http://localhost:5173/svc/workload/workload-identity/registratio
 3. Create a single key access policy granting decrypt to both SPIFFE IDs:
 
 ```bash
-curl -s -X POST http://localhost:5173/api/policies \
+curl -sk -X POST https://localhost/api/policies \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3302,7 +3302,7 @@ curl -s -X POST http://localhost:5173/api/policies \
 2. Create the attested key release policy:
 
 ```bash
-curl -s -X PUT http://localhost:5173/svc/confidential/confidential/policy \
+curl -sk -X PUT https://localhost/svc/confidential/confidential/policy \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3315,7 +3315,7 @@ curl -s -X PUT http://localhost:5173/svc/confidential/confidential/policy \
 ```
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/confidential/confidential/policy \
+curl -sk -X POST https://localhost/svc/confidential/confidential/policy \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3340,7 +3340,7 @@ curl -s -X POST http://localhost:5173/svc/confidential/confidential/policy \
 4. Verify releases are being logged:
 
 ```bash
-curl -s "http://localhost:5173/svc/confidential/confidential/releases?tenant_id=root&policy_id=azure-cvm-db-policy" \
+curl -sk "https://localhost/svc/confidential/confidential/releases?tenant_id=root&policy_id=azure-cvm-db-policy" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root"
 ```
@@ -3359,12 +3359,12 @@ curl -s "http://localhost:5173/svc/confidential/confidential/releases?tenant_id=
 
 ```bash
 # Get inventory snapshot
-curl -s "http://localhost:5173/svc/pqc/pqc/inventory?tenant_id=root" \
+curl -sk "https://localhost/svc/pqc/pqc/inventory?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" > pqc_inventory_q1_2026.json
 
 # Run fresh assessment
-curl -s -X POST http://localhost:5173/svc/pqc/pqc/assess \
+curl -sk -X POST https://localhost/svc/pqc/pqc/assess \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3374,7 +3374,7 @@ curl -s -X POST http://localhost:5173/svc/pqc/pqc/assess \
 2. Get the migration report:
 
 ```bash
-curl -s "http://localhost:5173/svc/pqc/pqc/migration/report?tenant_id=root" \
+curl -sk "https://localhost/svc/pqc/pqc/migration/report?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" > pqc_migration_q1_2026.json
 ```
@@ -3382,7 +3382,7 @@ curl -s "http://localhost:5173/svc/pqc/pqc/migration/report?tenant_id=root" \
 3. Get the readiness score:
 
 ```bash
-curl -s "http://localhost:5173/svc/pqc/pqc/readiness?tenant_id=root" \
+curl -sk "https://localhost/svc/pqc/pqc/readiness?tenant_id=root" \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" > pqc_readiness_q1_2026.json
 ```
@@ -3390,7 +3390,7 @@ curl -s "http://localhost:5173/svc/pqc/pqc/readiness?tenant_id=root" \
 4. Use AI to generate the executive summary:
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/ai/ai/query \
+curl -sk -X POST https://localhost/svc/ai/ai/query \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \
@@ -3404,7 +3404,7 @@ curl -s -X POST http://localhost:5173/svc/ai/ai/query \
 5. Generate the evidence pack for auditors:
 
 ```bash
-curl -s -X POST http://localhost:5173/svc/reporting/reports/generate \
+curl -sk -X POST https://localhost/svc/reporting/reports/generate \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Tenant-ID: root" \
   -H "Content-Type: application/json" \

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
+	pkgfips "vecta-kms/pkg/fips"
 )
 
 type EventPublisher interface {
@@ -101,9 +102,11 @@ func detectRuntimeCryptoLibrary() (string, bool) {
 		return fmt.Sprintf("Go BoringCrypto (%s, GOEXPERIMENT=%s, fips140=%s enabled=%t enforced=%t)", goVersion, goExperiment, moduleVersion, runtimeEnabled, runtimeEnforced), true
 	}
 	if xcryptoVersion != "" {
-		return fmt.Sprintf("Go std crypto (%s, GOEXPERIMENT=%s, CGO=%s, x/crypto=%s, fips140=%s enabled=%t enforced=%t)", goVersion, goExperiment, cgoEnabled, xcryptoVersion, moduleVersion, runtimeEnabled, runtimeEnforced), runtimeEnabled
+		return fmt.Sprintf("Go Cryptographic Module (%s, GOEXPERIMENT=%s, CGO=%s, x/crypto=%s, fips140=%s enabled=%t enforced=%t)", goVersion, goExperiment, cgoEnabled, xcryptoVersion, moduleVersion, runtimeEnabled, runtimeEnforced), pkgfips.ModuleValidated()
 	}
-	return fmt.Sprintf("Go std crypto (%s, GOEXPERIMENT=%s, CGO=%s, fips140=%s enabled=%t enforced=%t)", goVersion, goExperiment, cgoEnabled, moduleVersion, runtimeEnabled, runtimeEnforced), runtimeEnabled
+	// Validated only when the certified module is linked AND running in FIPS
+	// mode; fips140.Enabled() alone can be the unvalidated "latest" module.
+	return fmt.Sprintf("Go Cryptographic Module (%s, GOEXPERIMENT=%s, CGO=%s, fips140=%s enabled=%t enforced=%t)", goVersion, goExperiment, cgoEnabled, moduleVersion, runtimeEnabled, runtimeEnforced), pkgfips.ModuleValidated()
 }
 
 type ServiceOption func(*Service)
@@ -1117,7 +1120,7 @@ func normalizeSystemState(in GovernanceSystemState) GovernanceSystemState {
 	if in.FIPSCryptoLibrary == "" {
 		in.FIPSCryptoLibrary = runtimeCryptoLibraryLabel
 	}
-	in.FIPSLibraryValidated = in.FIPSLibraryValidated || runtimeCryptoLibraryValidated || fips140.Enabled()
+	in.FIPSLibraryValidated = runtimeCryptoLibraryValidated
 	in.FIPSRuntimeEnabled = fips140.Enabled()
 	in.FIPSRuntimeEnforced = fips140.Enforced()
 	in.FIPSModuleVersion = runtimeFIPSModuleVersion()
@@ -1203,7 +1206,7 @@ func enrichFIPSRuntimeState(in GovernanceSystemState) GovernanceSystemState {
 	in.FIPSRuntimeEnabled = fips140.Enabled()
 	in.FIPSRuntimeEnforced = fips140.Enforced()
 	in.FIPSModuleVersion = runtimeFIPSModuleVersion()
-	in.FIPSLibraryValidated = runtimeCryptoLibraryValidated || in.FIPSRuntimeEnabled
+	in.FIPSLibraryValidated = runtimeCryptoLibraryValidated
 	in.GoRuntimeVersion = strings.TrimSpace(runtime.Version())
 	if in.GoRuntimeVersion == "" {
 		in.GoRuntimeVersion = "unknown"

@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const RENDER_ERROR_TEXT = "This tab failed to render.";
 
 const TAB_LABELS = [
-  "Dashboard",
+  "Command Center",
   "Key Management",
   "Cloud Key Control",
   "Secret Vault",

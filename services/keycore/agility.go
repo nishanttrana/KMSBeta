@@ -4,17 +4,17 @@ import "time"
 
 // AlgorithmUsage holds usage statistics for a single cryptographic algorithm.
 type AlgorithmUsage struct {
-	Algorithm  string  `json:"algorithm"`
-	KeyCount   int     `json:"key_count"`
-	Percentage float64 `json:"percentage"`
-	IsLegacy   bool    `json:"is_legacy"`
-	IsQuantumSafe bool `json:"is_quantum_safe"`
+	Algorithm     string  `json:"algorithm"`
+	KeyCount      int     `json:"key_count"`
+	Percentage    float64 `json:"percentage"`
+	IsLegacy      bool    `json:"is_legacy"`
+	IsQuantumSafe bool    `json:"is_quantum_safe"`
 }
 
 // AgilityScore summarises the overall cryptographic agility posture for a tenant.
 type AgilityScore struct {
-	Score            int              `json:"score"`           // 0–100
-	Grade            string           `json:"grade"`           // A–F
+	Score            int              `json:"score"`             // 0–100
+	Grade            string           `json:"grade"`             // A–F
 	QuantumReadiness int              `json:"quantum_readiness"` // percentage
 	LegacyKeyCount   int              `json:"legacy_key_count"`
 	TotalKeys        int              `json:"total_keys"`
@@ -45,13 +45,13 @@ type MigrationPlan struct {
 // legacyAlgorithms is the set of algorithms considered cryptographically weak
 // or deprecated.
 var legacyAlgorithms = map[string]bool{
-	"DES":        true,
-	"3DES":       true,
-	"RC4":        true,
-	"MD5":        true,
-	"SHA-1":      true,
-	"RSA-1024":   true,
-	"RSA-2048":   true,
+	"DES":         true,
+	"3DES":        true,
+	"RC4":         true,
+	"MD5":         true,
+	"SHA-1":       true,
+	"RSA-1024":    true,
+	"RSA-2048":    true,
 	"AES-128-CBC": true,
 	"AES-128-ECB": true,
 	"AES-256-ECB": true,
@@ -59,16 +59,16 @@ var legacyAlgorithms = map[string]bool{
 
 // quantumSafeAlgorithms is the set of algorithms considered quantum-resistant.
 var quantumSafeAlgorithms = map[string]bool{
-	"ML-KEM-768":   true,
-	"ML-KEM-1024":  true,
-	"ML-DSA-44":    true,
-	"ML-DSA-65":    true,
-	"ML-DSA-87":    true,
-	"CRYSTALS-Kyber": true,
+	"ML-KEM-768":         true,
+	"ML-KEM-1024":        true,
+	"ML-DSA-44":          true,
+	"ML-DSA-65":          true,
+	"ML-DSA-87":          true,
+	"CRYSTALS-Kyber":     true,
 	"CRYSTALS-Dilithium": true,
-	"SPHINCS+":     true,
-	"FALCON-512":   true,
-	"FALCON-1024":  true,
+	"SPHINCS+":           true,
+	"FALCON-512":         true,
+	"FALCON-1024":        true,
 }
 
 // computeAgilityScore calculates a real cryptographic agility score from the

@@ -209,17 +209,17 @@ Long-term archive encryption (20+ years)?
 ```bash
 # Activate a PreActive key
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/activate?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/activate?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN"
 
 # Deactivate an Active key
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/deactivate?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/deactivate?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN"
 
 # Mark key as Compromised (triggers governance alert)
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/compromise?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/compromise?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -229,7 +229,7 @@ curl -X POST \
 
 # Destroy a key
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/destroy?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/destroy?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -289,7 +289,7 @@ Recommended policy: use `deactivate` during normal rotation to allow data re-enc
 ```bash
 # Decrypt with a specific key version
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/decrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/decrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -300,7 +300,7 @@ curl -X POST \
   }'
 
 # List all versions of a key
-curl "http://localhost:5173/svc/keycore/keys/{KEY_ID}/versions?tenant_id=acme-corp" \
+curl "https://localhost/svc/keycore/keys/{KEY_ID}/versions?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN"
 
 # Response:
@@ -400,7 +400,7 @@ KCVs are returned in key creation, import, and rotation responses. They are safe
 ### 5.2 Via API — Full Field Reference
 
 ```bash
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -528,7 +528,7 @@ Import wrapping process:
 
 ```bash
 # Step 1: Get the import wrapping public key from Vecta KMS
-curl "http://localhost:5173/svc/keycore/keys/import-wrapping-key?tenant_id=acme-corp" \
+curl "https://localhost/svc/keycore/keys/import-wrapping-key?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN"
 
 # Response:
@@ -549,7 +549,7 @@ openssl rsautl -encrypt -oaep \
 WRAPPED_KEY_B64=$(base64 -w0 /tmp/wrapped_key.bin)
 
 # Step 3: Submit the import request
-curl -X POST "http://localhost:5173/svc/keycore/keys/import?tenant_id=acme-corp" \
+curl -X POST "https://localhost/svc/keycore/keys/import?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -575,7 +575,7 @@ Always verify the import immediately with a known test vector:
 # After import, decrypt with Vecta KMS
 # If plaintext matches → import successful
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{NEW_KEY_ID}/decrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{NEW_KEY_ID}/decrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -605,7 +605,7 @@ AES-GCM (Galois/Counter Mode) is an **authenticated encryption with associated d
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/encrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/encrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -632,7 +632,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/decrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/decrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -668,7 +668,7 @@ AES-CBC provides confidentiality only — no integrity check. Use only when inte
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/encrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/encrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -689,7 +689,7 @@ Use RSA-OAEP to encrypt small amounts of data (typically a DEK) for transport to
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{RSA_KEY_ID}/encrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{RSA_KEY_ID}/encrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -708,7 +708,7 @@ Fast AEAD on platforms without AES hardware acceleration (e.g., some ARM IoT dev
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/encrypt?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/encrypt?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -747,7 +747,7 @@ Digital signatures provide **non-repudiation** and **integrity** — proving tha
 ```bash
 # Sign
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{EC_KEY_ID}/sign?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{EC_KEY_ID}/sign?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -768,7 +768,7 @@ curl -X POST \
 ```bash
 # Verify
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{EC_KEY_ID}/verify?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{EC_KEY_ID}/verify?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -799,7 +799,7 @@ curl -X POST \
 ```bash
 # Sign with Ed25519
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{ED25519_KEY_ID}/sign?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{ED25519_KEY_ID}/sign?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -820,7 +820,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{RSA_KEY_ID}/sign?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{RSA_KEY_ID}/sign?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -839,7 +839,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{RSA_KEY_ID}/sign?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{RSA_KEY_ID}/sign?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -854,7 +854,7 @@ Use only for compatibility with systems that cannot support RSA-PSS.
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{MLDSA_KEY_ID}/sign?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{MLDSA_KEY_ID}/sign?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -886,7 +886,7 @@ FIPS-approved key wrapping algorithm. Specifically designed for wrapping symmetr
 ```bash
 # Wrap a DEK under a KEK
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEK_ID}/wrap?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEK_ID}/wrap?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -906,7 +906,7 @@ curl -X POST \
 ```bash
 # Unwrap
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEK_ID}/unwrap?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEK_ID}/unwrap?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -929,7 +929,7 @@ Provides AEAD properties during wrapping (integrity check on the wrapped key).
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEK_ID}/wrap?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEK_ID}/wrap?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -945,7 +945,7 @@ Use for transporting a DEK to a party who has the RSA private key (e.g., cloud K
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{RSA_KEK_ID}/wrap?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{RSA_KEK_ID}/wrap?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -964,7 +964,7 @@ Key derivation produces child keys from a parent key using a Key Derivation Func
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{PARENT_KEY_ID}/derive?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{PARENT_KEY_ID}/derive?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -996,7 +996,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{PARENT_KEY_ID}/derive?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{PARENT_KEY_ID}/derive?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1020,7 +1020,7 @@ KEM is a post-quantum-safe mechanism for establishing a shared secret between tw
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{MLKEM_PUBLIC_KEY_ID}/kem/encapsulate?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{MLKEM_PUBLIC_KEY_ID}/kem/encapsulate?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1042,7 +1042,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{MLKEM_PRIVATE_KEY_ID}/kem/decapsulate?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{MLKEM_PRIVATE_KEY_ID}/kem/decapsulate?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1077,7 +1077,7 @@ Vecta KMS provides a hash computation API backed by its HSM or software crypto l
 ```bash
 # SHA-256
 curl -X POST \
-  "http://localhost:5173/svc/keycore/hash?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/hash?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1115,7 +1115,7 @@ Vecta KMS provides cryptographically strong random byte generation from multiple
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/random?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/random?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1168,7 +1168,7 @@ Key rotation limits the **cryptoperiod** — the time span during which a key is
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/rotate?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/rotate?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1218,7 +1218,7 @@ Set `expires_at` on key creation to schedule automatic deactivation (which can t
 
 ```bash
 # Create key that expires in 1 year
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1273,7 +1273,7 @@ Grant:
 ```bash
 # Add a grant
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/access-policy/grants?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/access-policy/grants?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1298,12 +1298,12 @@ curl -X POST \
 ```bash
 # List grants on a key
 curl \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/access-policy/grants?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/access-policy/grants?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN"
 
 # Delete a grant
 curl -X DELETE \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/access-policy/grants/{GRANT_ID}?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/access-policy/grants/{GRANT_ID}?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1313,7 +1313,7 @@ Enable `deny_by_default` to ensure all access is explicitly granted:
 
 ```bash
 curl -X PATCH \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/access-policy?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/access-policy?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1327,7 +1327,7 @@ Once enabled: any principal without an explicit matching grant receives `403 For
 
 ```bash
 curl -X PATCH \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/access-policy?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/access-policy?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1361,7 +1361,7 @@ Interface policies restrict which **network interface or protocol** a principal 
 
 ```bash
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/access-policy/interface-policies?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/access-policy/interface-policies?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1392,18 +1392,18 @@ Tags are **simple string labels** for grouping and filtering keys. Max 50 per ke
 ```bash
 # Add tags to a key
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/tags?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/tags?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"tags": ["pci-scope", "critical", "hsm-backed", "quarterly-rotation"]}'
 
 # Remove a tag
 curl -X DELETE \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/tags/pci-scope?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/tags/pci-scope?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN"
 
 # Filter keys by tag
-curl "http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp&tag=pci-scope" \
+curl "https://localhost/svc/keycore/keys?tenant_id=acme-corp&tag=pci-scope" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1414,7 +1414,7 @@ Labels are **key-value metadata** for rich filtering, automation, and policy int
 ```bash
 # Update labels (merge, not replace)
 curl -X PATCH \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/labels?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/labels?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1429,7 +1429,7 @@ curl -X PATCH \
   }'
 
 # Filter keys by label
-curl "http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp&label=env%3Dproduction&label=team%3Dplatform" \
+curl "https://localhost/svc/keycore/keys?tenant_id=acme-corp&label=env%3Dproduction&label=team%3Dplatform" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -1453,7 +1453,7 @@ Rate limiting prevents runaway applications from exhausting key usage quotas and
 
 ```bash
 curl -X PATCH \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1495,7 +1495,7 @@ Retry-After: 3600
 
 ```bash
 # Get current operation count
-curl "http://localhost:5173/svc/keycore/keys/{KEY_ID}?tenant_id=acme-corp" \
+curl "https://localhost/svc/keycore/keys/{KEY_ID}?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   | jq '{ops_count, ops_limit, ops_limit_window, ops_total}'
 ```
@@ -1515,7 +1515,7 @@ This is the recommended setting for all production keys. The key material stays 
 ```bash
 # Warning: this is an elevated privilege operation and may require governance approval
 curl -X PATCH \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"export_allowed": true}'
@@ -1530,7 +1530,7 @@ Once export is allowed and the caller has the `export` grant:
 ```bash
 # Export raw symmetric key
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/export?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/export?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1577,7 +1577,7 @@ When `key_backend: "hsm"` is set:
 ### 13.2 Creating an HSM-Backed Key
 
 ```bash
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1676,17 +1676,17 @@ If you suspect a key has been compromised:
 ```bash
 # Step 1: Immediately mark as Compromised (blocks new encrypt/sign operations)
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/compromise?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/compromise?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"reason": "Key material found in leaked repo", "incident_id": "INC-2026-0042"}'
 
 # Step 2: Identify all data encrypted under this key
-curl "http://localhost:5173/svc/audit/events?tenant_id=acme-corp&key_id={KEY_ID}&event_type=key.encrypt" \
+curl "https://localhost/svc/audit/events?tenant_id=acme-corp&key_id={KEY_ID}&event_type=key.encrypt" \
   -H "Authorization: Bearer $TOKEN"
 
 # Step 3: Generate a new replacement key
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"name": "payments-prod-dek-v2", "algorithm": "AES-256", "purpose": "encrypt"}'
 
@@ -1695,7 +1695,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp" \
 
 # Step 5: Destroy the compromised key once re-encryption is confirmed
 curl -X POST \
-  "http://localhost:5173/svc/keycore/keys/{KEY_ID}/destroy?tenant_id=acme-corp" \
+  "https://localhost/svc/keycore/keys/{KEY_ID}/destroy?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"confirm_name": "payments-prod-dek", "reason": "Key compromised — data re-encrypted"}'
 
@@ -1720,7 +1720,7 @@ curl -X POST \
 
 ```bash
 # Step 1: Create a KEK (Key Encrypting Key) in Vecta KMS HSM
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=payments-tenant" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=payments-tenant" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1734,13 +1734,13 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=payments-tenant" 
 
 # Step 2: Application creates a random DEK for each payment record (or per customer)
 # DEK generated by application (or via Vecta random bytes)
-curl -X POST "http://localhost:5173/svc/keycore/random?tenant_id=payments-tenant" \
+curl -X POST "https://localhost/svc/keycore/random?tenant_id=payments-tenant" \
   -H "Authorization: Bearer $APP_TOKEN" \
   -d '{"length": 32}' | jq -r '.random_b64'
 # → DEK_MATERIAL_B64 (32 bytes AES-256 key)
 
 # Step 3: Wrap the DEK under the KEK
-curl -X POST "http://localhost:5173/svc/keycore/keys/key_KEK_01J.../wrap?tenant_id=payments-tenant" \
+curl -X POST "https://localhost/svc/keycore/keys/key_KEK_01J.../wrap?tenant_id=payments-tenant" \
   -H "Authorization: Bearer $APP_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"key_to_wrap_b64\": \"$DEK_MATERIAL_B64\", \"wrap_algorithm\": \"AES-KW\"}"
@@ -1750,7 +1750,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys/key_KEK_01J.../wrap?tenant_
 # Store: wrapped_dek_b64, ciphertext, iv, tag alongside the record in database
 
 # Step 5: To decrypt — retrieve wrapped_dek, unwrap it, decrypt record
-curl -X POST "http://localhost:5173/svc/keycore/keys/key_KEK_01J.../unwrap?tenant_id=payments-tenant" \
+curl -X POST "https://localhost/svc/keycore/keys/key_KEK_01J.../unwrap?tenant_id=payments-tenant" \
   -H "Authorization: Bearer $APP_TOKEN" \
   -d "{\"wrapped_key_b64\": \"$WRAPPED_DEK_B64\", \"wrap_algorithm\": \"AES-KW\"}"
 # → dek_material_b64 (use to decrypt record, then immediately discard from memory)
@@ -1764,7 +1764,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys/key_KEK_01J.../unwrap?tenan
 
 ```bash
 # Step 1: Create signing key for the service
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=platform" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=platform" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -d '{
     "name": "svc-order-manager-signing-key",
@@ -1781,7 +1781,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=platform" \
 # Step 3: Sign each request payload (hash of request body)
 PAYLOAD_HASH_B64=$(echo -n '{"order_id": "ORD-123", "amount": 9900}' | sha256sum | cut -d' ' -f1 | xxd -r -p | base64)
 
-curl -X POST "http://localhost:5173/svc/keycore/keys/key_SIGN_01J.../sign?tenant_id=platform" \
+curl -X POST "https://localhost/svc/keycore/keys/key_SIGN_01J.../sign?tenant_id=platform" \
   -H "Authorization: Bearer $SVC_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{\"data_b64\": \"$PAYLOAD_HASH_B64\", \"algorithm\": \"Ed25519\", \"prehashed\": true}"
@@ -1789,7 +1789,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys/key_SIGN_01J.../sign?tenant
 # Add to request as header: X-Signature: <signature_b64>
 
 # Step 4: Receiving service verifies
-curl -X POST "http://localhost:5173/svc/keycore/keys/key_SIGN_01J.../verify?tenant_id=platform" \
+curl -X POST "https://localhost/svc/keycore/keys/key_SIGN_01J.../verify?tenant_id=platform" \
   -H "Authorization: Bearer $SVC_TOKEN" \
   -H "Content-Type: application/json" \
   -d "{
@@ -1809,7 +1809,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys/key_SIGN_01J.../verify?tena
 
 ```bash
 # Step 1: Create an LMK (Local Master Key) — HSM-backed, never exported
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=payment-prod" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=payment-prod" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -d '{
     "name": "payment-lmk",
@@ -1821,7 +1821,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=payment-prod" \
   }'
 
 # Step 2: Import PEK from HSM ceremony (wrapped under LMK)
-curl -X POST "http://localhost:5173/svc/payment/key-blocks?tenant_id=payment-prod" \
+curl -X POST "https://localhost/svc/payment/key-blocks?tenant_id=payment-prod" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1844,7 +1844,7 @@ curl -X POST "http://localhost:5173/svc/payment/key-blocks?tenant_id=payment-pro
 
 ```bash
 # Step 1: Generate CA key inside HSM
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=pki" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=pki" \
   -H "Authorization: Bearer $PKI_ADMIN_TOKEN" \
   -d '{
     "name": "intermediate-ca-key-2026",
@@ -1867,7 +1867,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=pki" \
 # Returns: public_key_pem for use in CSR
 
 # Step 2: Pass public_key_pem to certs service to create CSR
-curl -X POST "http://localhost:5173/svc/certs/signing-requests?tenant_id=pki" \
+curl -X POST "https://localhost/svc/certs/signing-requests?tenant_id=pki" \
   -H "Authorization: Bearer $PKI_ADMIN_TOKEN" \
   -d '{
     "key_id": "key_CA_01J...",
@@ -1884,7 +1884,7 @@ curl -X POST "http://localhost:5173/svc/certs/signing-requests?tenant_id=pki" \
 
 ```bash
 # Recipient: create ML-KEM-768 keypair
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=platform" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=platform" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "svc-data-processor-kem-key",
@@ -1894,13 +1894,13 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=platform" \
 # Returns: key_id, public_key_pem (publish this)
 
 # Sender: encapsulate against recipient public key
-curl -X POST "http://localhost:5173/svc/keycore/keys/{KEM_KEY_ID}/kem/encapsulate?tenant_id=platform" \
+curl -X POST "https://localhost/svc/keycore/keys/{KEM_KEY_ID}/kem/encapsulate?tenant_id=platform" \
   -H "Authorization: Bearer $SENDER_TOKEN" \
   -d '{"algorithm": "ML-KEM-768"}'
 # Returns: encapsulated_key_b64 (send to recipient), shared_secret_b64 (use locally)
 
 # Recipient: decapsulate to recover shared secret
-curl -X POST "http://localhost:5173/svc/keycore/keys/{KEM_KEY_ID}/kem/decapsulate?tenant_id=platform" \
+curl -X POST "https://localhost/svc/keycore/keys/{KEM_KEY_ID}/kem/decapsulate?tenant_id=platform" \
   -H "Authorization: Bearer $RECIPIENT_TOKEN" \
   -d '{"encapsulated_key_b64": "...", "algorithm": "ML-KEM-768"}'
 # Returns: shared_secret_b64 (matches sender's shared_secret_b64)
@@ -1917,7 +1917,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys/{KEM_KEY_ID}/kem/decapsulat
 
 ```bash
 # Create a long-lived master key shared between the two services
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=platform" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=platform" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -d '{"name": "svc-a-to-svc-b-master-key", "algorithm": "AES-256", "purpose": "derive"}'
 
@@ -1925,7 +1925,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=platform" \
 REQUEST_ID="req-2026-03-22-abc123"
 INFO_B64=$(echo -n "svc-a-to-svc-b:$REQUEST_ID:encrypt" | base64)
 
-curl -X POST "http://localhost:5173/svc/keycore/keys/{MASTER_KEY_ID}/derive?tenant_id=platform" \
+curl -X POST "https://localhost/svc/keycore/keys/{MASTER_KEY_ID}/derive?tenant_id=platform" \
   -H "Authorization: Bearer $SVC_A_TOKEN" \
   -d "{
     \"kdf\": \"HKDF-SHA256\",
@@ -1948,7 +1948,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys/{MASTER_KEY_ID}/derive?tena
 
 ```bash
 # One key per table (or per data classification)
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=data-platform" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=data-platform" \
   -H "Authorization: Bearer $TOKEN" \
   -d '{
     "name": "patients-pii-field-dek",
@@ -1962,7 +1962,7 @@ RECORD_ID="patient-uuid-12345"
 FIELD_NAME="ssn"
 AAD_B64=$(echo -n "table=patients&record=${RECORD_ID}&field=${FIELD_NAME}" | base64)
 
-curl -X POST "http://localhost:5173/svc/keycore/keys/{KEY_ID}/encrypt?tenant_id=data-platform" \
+curl -X POST "https://localhost/svc/keycore/keys/{KEY_ID}/encrypt?tenant_id=data-platform" \
   -H "Authorization: Bearer $TOKEN" \
   -d "{
     \"plaintext_b64\": \"$(echo -n '123-45-6789' | base64)\",
@@ -1971,7 +1971,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys/{KEY_ID}/encrypt?tenant_id=
 # Store: ciphertext_b64, iv_b64, tag_b64, aad_b64 in database (or reconstruct AAD from known fields)
 
 # Decrypt — must provide exact same AAD
-curl -X POST "http://localhost:5173/svc/keycore/keys/{KEY_ID}/decrypt?tenant_id=data-platform" \
+curl -X POST "https://localhost/svc/keycore/keys/{KEY_ID}/decrypt?tenant_id=data-platform" \
   -H "Authorization: Bearer $TOKEN" \
   -d "{
     \"ciphertext_b64\": \"...\",
@@ -1989,7 +1989,7 @@ curl -X POST "http://localhost:5173/svc/keycore/keys/{KEY_ID}/decrypt?tenant_id=
 
 ```bash
 # Step 1: Create code signing key (restricted to CI/CD service account)
-curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=platform" \
+curl -X POST "https://localhost/svc/keycore/keys?tenant_id=platform" \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -d '{
     "name": "container-image-signing-key-2026",
@@ -2007,13 +2007,13 @@ curl -X POST "http://localhost:5173/svc/keycore/keys?tenant_id=platform" \
 # Step 2: CI/CD signs image digest
 IMAGE_DIGEST_B64=$(docker inspect myimage:latest --format='{{index .RepoDigests 0}}' | sha256sum | cut -d' ' -f1 | xxd -r -p | base64)
 
-curl -X POST "http://localhost:5173/svc/keycore/keys/{SIGN_KEY_ID}/sign?tenant_id=platform" \
+curl -X POST "https://localhost/svc/keycore/keys/{SIGN_KEY_ID}/sign?tenant_id=platform" \
   -H "Authorization: Bearer $CICD_TOKEN" \
   -d "{\"data_b64\": \"$IMAGE_DIGEST_B64\", \"algorithm\": \"Ed25519\", \"prehashed\": true}"
 # → signature_b64
 
 # Step 3: Submit to signing service / transparency log
-curl -X POST "http://localhost:5173/svc/signing/entries?tenant_id=platform" \
+curl -X POST "https://localhost/svc/signing/entries?tenant_id=platform" \
   -H "Authorization: Bearer $CICD_TOKEN" \
   -d "{
     \"artifact_digest_b64\": \"$IMAGE_DIGEST_B64\",
@@ -2025,7 +2025,7 @@ curl -X POST "http://localhost:5173/svc/signing/entries?tenant_id=platform" \
 # → transparency_log_entry_id (include in image attestation)
 
 # Step 4: Deployment verifies before running
-curl -X POST "http://localhost:5173/svc/keycore/keys/{SIGN_KEY_ID}/verify?tenant_id=platform" \
+curl -X POST "https://localhost/svc/keycore/keys/{SIGN_KEY_ID}/verify?tenant_id=platform" \
   -H "Authorization: Bearer $DEPLOY_TOKEN" \
   -d "{
     \"data_b64\": \"$IMAGE_DIGEST_B64\",
@@ -2066,7 +2066,7 @@ Query parameters:
 | `order` | string | Sort order: `asc`, `desc`. |
 
 ```bash
-curl "http://localhost:5173/svc/keycore/keys?tenant_id=acme-corp&status=active&algorithm=AES-256&label=env%3Dproduction&page=1&page_size=50" \
+curl "https://localhost/svc/keycore/keys?tenant_id=acme-corp&status=active&algorithm=AES-256&label=env%3Dproduction&page=1&page_size=50" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -2089,7 +2089,7 @@ GET /svc/keycore/keys/{key_id}?tenant_id={tenant_id}
 ```
 
 ```bash
-curl "http://localhost:5173/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D?tenant_id=acme-corp" \
+curl "https://localhost/svc/keycore/keys/key_01J3XVQB5M9N4KPFGHWCZ8D?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -2110,7 +2110,7 @@ PATCH /svc/keycore/keys/{key_id}?tenant_id={tenant_id}
 Updatable fields: `name`, `labels`, `tags`, `ops_limit`, `ops_limit_window`, `ops_total`, `export_allowed`, `expires_at`, `destroy_date`.
 
 ```bash
-curl -X PATCH "http://localhost:5173/svc/keycore/keys/key_01J...?tenant_id=acme-corp" \
+curl -X PATCH "https://localhost/svc/keycore/keys/key_01J...?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -2126,7 +2126,7 @@ DELETE /svc/keycore/keys/{key_id}?tenant_id={tenant_id}
 ```
 
 ```bash
-curl -X DELETE "http://localhost:5173/svc/keycore/keys/key_01J...?tenant_id=acme-corp" \
+curl -X DELETE "https://localhost/svc/keycore/keys/key_01J...?tenant_id=acme-corp" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"confirm_name": "my-key-name"}'

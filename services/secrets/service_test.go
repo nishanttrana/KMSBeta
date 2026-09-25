@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ed25519"
+	"crypto/fips140"
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/json"
@@ -259,19 +260,22 @@ func TestGenerateSSHKey(t *testing.T) {
 func TestGenerateKeyPairTypes(t *testing.T) {
 	svc, _ := newSecretsService(t)
 	ctx := context.Background()
+	// strictRefused: the type needs a non-approved primitive (X25519, or SHA-1
+	// for OpenPGP v4 fingerprints), so FIPS strict mode must refuse it cleanly.
 	cases := []struct {
-		keyType    string
-		tenant     string
-		name       string
-		secretType string
-		pubPrefix  string
+		keyType       string
+		tenant        string
+		name          string
+		secretType    string
+		pubPrefix     string
+		strictRefused bool
 	}{
 		{keyType: "ed25519", tenant: "t6", name: "ssh-ed", secretType: "ssh_private_key", pubPrefix: "ssh-ed25519"},
 		{keyType: "rsa-4096", tenant: "t7", name: "ssh-rsa", secretType: "ssh_private_key", pubPrefix: "ssh-rsa"},
 		{keyType: "ecdsa-p384", tenant: "t8", name: "ssh-ecdsa", secretType: "ssh_private_key", pubPrefix: "ecdsa-sha2-nistp384"},
-		{keyType: "pgp-rsa-4096", tenant: "t9", name: "pgp", secretType: "pgp_private_key", pubPrefix: "-----BEGIN PGP PUBLIC KEY BLOCK-----"},
-		{keyType: "wireguard-curve25519", tenant: "t10", name: "wg", secretType: "wireguard_private_key", pubPrefix: ""},
-		{keyType: "age-x25519", tenant: "t11", name: "age", secretType: "age_key", pubPrefix: "age1"},
+		{keyType: "pgp-rsa-4096", tenant: "t9", name: "pgp", secretType: "pgp_private_key", pubPrefix: "-----BEGIN PGP PUBLIC KEY BLOCK-----", strictRefused: true},
+		{keyType: "wireguard-curve25519", tenant: "t10", name: "wg", secretType: "wireguard_private_key", pubPrefix: "", strictRefused: true},
+		{keyType: "age-x25519", tenant: "t11", name: "age", secretType: "age_key", pubPrefix: "age1", strictRefused: true},
 	}
 	for _, tc := range cases {
 		secret, pub, gotType, err := svc.GenerateKeyPair(ctx, GenerateKeyPairRequest{
@@ -280,6 +284,12 @@ func TestGenerateKeyPairTypes(t *testing.T) {
 			KeyType:   tc.keyType,
 			CreatedBy: "tester",
 		})
+		if tc.strictRefused && fips140.Enforced() {
+			if err == nil {
+				t.Fatalf("%s: strict mode must refuse this key type", tc.keyType)
+			}
+			continue
+		}
 		if err != nil {
 			t.Fatalf("generate %s: %v", tc.keyType, err)
 		}

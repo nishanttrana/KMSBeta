@@ -4,7 +4,7 @@ x-kms-common-env: &kms-common-env
   # Release version stamped into every service (reporting exposes it via
   # BUILD_VERSION; see VERSION file / git tag). Defaults to "dev" for ad-hoc runs.
   BUILD_VERSION: ${VECTA_VERSION:-dev}
-  POSTGRES_DSN: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vecta}?sslmode=disable&connect_timeout=10
+  POSTGRES_DSN: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (openssl rand -hex 24)}@postgres:5432/${POSTGRES_DB:-vecta}?sslmode=disable&connect_timeout=10
   SQLITE_FALLBACK: "false"
   NATS_URL: nats://${NATS_AUTH_TOKEN:?NATS_AUTH_TOKEN is required}@nats:4222
   CONSUL_HTTP_ADDR: consul:8500
@@ -36,9 +36,20 @@ x-kms-common-env: &kms-common-env
   # its own API key from this shared secret + its name (pkg/servicetoken) and
   # exchanges it for a signed JWT at /auth/client-token. auth pre-registers a
   # client + key hash per service from the same secret. Override per deployment
-  # (openssl rand -hex 32). Empty disables (callers stay tokenless).
-  INTERNAL_SERVICE_BOOTSTRAP_SECRET: ${INTERNAL_SERVICE_BOOTSTRAP_SECRET:-vecta-internal-svc-dev-secret-change-me}
+  # (openssl rand -hex 32). Required; weak or placeholder values stop auth.
+  INTERNAL_SERVICE_BOOTSTRAP_SECRET: ${INTERNAL_SERVICE_BOOTSTRAP_SECRET:?INTERNAL_SERVICE_BOOTSTRAP_SECRET is required (openssl rand -hex 32)}
   AUTH_URL: ${AUTH_URL:-http://auth:8001}
+  # FIPS 140-3 runtime mode: the INITIAL value only. Customers change it in the
+  # KMS UI (System Administration > Runtime Crypto); that setting wins and
+  # services restart themselves to apply it (docs/SECURITY/FIPS.md):
+  #   on   (default) certified Go Cryptographic Module in FIPS mode;
+  #        integrations needing non-approved algorithms stay available
+  #   only strict: the Go runtime itself refuses every non-approved algorithm
+  #   off  FIPS mode disabled
+  # Every binary links the certified module (GOFIPS140 in the Dockerfiles);
+  # services refuse to start if the runtime does not match this choice.
+  VECTA_FIPS_MODE: ${VECTA_FIPS_MODE:-on}
+  GODEBUG: fips140=${VECTA_FIPS_MODE:-on}
 
 x-kms-service: &kms-service
   restart: unless-stopped
@@ -69,7 +80,7 @@ services:
     #   docker volume rm vecta-kms_postgres-data   # ← destroys existing data
     #   docker compose up -d                        # re-runs all SQL migrations
     restart: unless-stopped
-    image: postgres:17-alpine
+    image: postgres:17.11-alpine
     command:
       - postgres
       # ---------- Memory --------------------------------------------------
@@ -173,7 +184,7 @@ services:
       - auto_explain.log_format=json
     shm_size: '256m'
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (openssl rand -hex 24)}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-vecta}
       # Mount a hardened pg_hba.conf (see infra/postgres/pg_hba.conf)
@@ -204,9 +215,9 @@ services:
   pgbouncer:
     restart: unless-stopped
     profiles: ["connection_pooling"]
-    image: edoburu/pgbouncer:1.23.0
+    image: edoburu/pgbouncer:v1.25.2-p0
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vecta}
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (openssl rand -hex 24)}@postgres:5432/${POSTGRES_DB:-vecta}
       POOL_MODE: transaction
       MAX_CLIENT_CONN: 2000
       DEFAULT_POOL_SIZE: 50
@@ -234,15 +245,15 @@ services:
   nats:
     restart: unless-stopped
     profiles: ["event_streaming"]
-    image: nats:2.12.4-alpine
+    image: nats:2.14.7-alpine
     environment:
       NATS_AUTH_TOKEN: ${NATS_AUTH_TOKEN:?NATS_AUTH_TOKEN is required}
     volumes:
       - ./infra/nats/nats-server.conf:/etc/nats/nats-server.conf:ro
       - nats-data:/data
     ports:
-      - "4222:4222"
-      - "8222:8222"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:4222:4222"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8222:8222"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 4222"]
       interval: 10s
@@ -254,13 +265,13 @@ services:
   valkey:
     restart: unless-stopped
     profiles: ["distributed_cache"]
-    image: valkey/valkey:9.0.3-alpine
+    image: valkey/valkey:9.0.6-alpine
     command: ["valkey-server", "/etc/valkey/valkey.conf"]
     volumes:
       - ./infra/valkey/valkey.conf:/etc/valkey/valkey.conf:ro
       - valkey-data:/data
     ports:
-      - "6379:6379"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:6379:6379"
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 10s
@@ -272,12 +283,12 @@ services:
   consul:
     restart: unless-stopped
     profiles: ["service_discovery"]
-    image: hashicorp/consul:1.21.5
+    image: hashicorp/consul:1.22.7
     command: ["agent", "-server", "-bootstrap-expect=1", "-client=0.0.0.0", "-ui", "-config-file=/consul/config/consul.hcl"]
     ports:
-      - "8500:8500"
-      - "8502:8502"
-      - "8600:8600/udp"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8500:8500"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8502:8502"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8600:8600/udp"
     volumes:
       - ./infra/consul:/consul/config
       - consul-data:/consul/data
@@ -291,7 +302,7 @@ services:
 
   etcd:
     restart: unless-stopped
-    image: quay.io/coreos/etcd:v3.6.8
+    image: quay.io/coreos/etcd:v3.6.15
     command:
       - etcd
       - --data-dir=/etcd-data
@@ -301,7 +312,7 @@ services:
       - --auto-compaction-retention=1h
       - --log-format=json
     ports:
-      - "2379:2379"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:2379:2379"
     volumes:
       - etcd-data:/etcd-data
     profiles: ["clustering"]
@@ -310,7 +321,7 @@ services:
 
   envoy:
     restart: unless-stopped
-    image: envoyproxy/envoy:v1.37.1
+    image: envoyproxy/envoy:v1.39.1
     user: "100:101"
     entrypoint: ["/bin/sh"]
     command:
@@ -392,7 +403,7 @@ services:
       AUTH_BOOTSTRAP_TENANT_ID: ${AUTH_BOOTSTRAP_TENANT_ID:-root}
       AUTH_BOOTSTRAP_TENANT_NAME: ${AUTH_BOOTSTRAP_TENANT_NAME:-Root}
       AUTH_BOOTSTRAP_ADMIN_USERNAME: ${AUTH_BOOTSTRAP_ADMIN_USERNAME:-admin}
-      AUTH_BOOTSTRAP_ADMIN_PASSWORD: ${AUTH_BOOTSTRAP_ADMIN_PASSWORD:-admin}
+      AUTH_BOOTSTRAP_ADMIN_PASSWORD: ${AUTH_BOOTSTRAP_ADMIN_PASSWORD:-changeit}
       AUTH_BOOTSTRAP_ADMIN_EMAIL: ${AUTH_BOOTSTRAP_ADMIN_EMAIL:-admin@vecta.local}
       AUTH_BOOTSTRAP_ADMIN_ROLE: ${AUTH_BOOTSTRAP_ADMIN_ROLE:-tenant-admin}
       AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE: ${AUTH_BOOTSTRAP_FORCE_PASSWORD_CHANGE:-true}
@@ -408,8 +419,8 @@ services:
     volumes:
       - auth-data:/var/lib/vecta/auth
     ports:
-      - "8001:8001"
-      - "18001:18001"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8001:8001"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18001:18001"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18001"]
       interval: 15s
@@ -480,8 +491,8 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8010:8010"
-      - "18010:18010"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8010:8010"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18010:18010"
     volumes:
       - keycore-data:/app/data
     healthcheck:
@@ -510,8 +521,8 @@ services:
       HTTP_PORT: "8070"
       GRPC_PORT: "18070"
     ports:
-      - "8070:8070"
-      - "18070:18070"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8070:8070"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18070:18070"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18070"]
       interval: 15s
@@ -538,8 +549,8 @@ services:
       HTTP_PORT: "8040"
       GRPC_PORT: "18040"
     ports:
-      - "8040:8040"
-      - "18040:18040"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8040:8040"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18040:18040"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18040"]
       interval: 15s
@@ -570,8 +581,8 @@ services:
       HTTP_PORT: "8300"
       GRPC_PORT: "18300"
     ports:
-      - "8300:8300"
-      - "18300:18300"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8300:8300"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18300:18300"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18300"]
       interval: 15s
@@ -600,7 +611,7 @@ services:
       HTTP_PORT: "8470"
       RECONCILER_MANIFEST_DIR: ${RECONCILER_MANIFEST_DIR:-/etc/vecta/manifests}
     ports:
-      - "8470:8470"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8470:8470"
     volumes:
       - ${RECONCILER_MANIFEST_HOST_DIR:-./infra/reconciler/manifests}:/etc/vecta/manifests:ro
     healthcheck:
@@ -619,7 +630,7 @@ services:
       <<: *kms-common-env
       HTTP_PORT: "8480"
     ports:
-      - "8480:8480"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8480:8480"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8480/healthz || exit 1"]
       interval: 30s
@@ -638,8 +649,8 @@ services:
       HTTP_PORT: "8020"
       GRPC_PORT: "18020"
     ports:
-      - "8020:8020"
-      - "18020:18020"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8020:8020"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18020:18020"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18020"]
       interval: 15s
@@ -683,8 +694,8 @@ services:
       - certs-key-data:/var/lib/vecta/certs
       - runtime-certs:/run/vecta/certs
     ports:
-      - "8030:8030"
-      - "18030:18030"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8030:8030"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18030:18030"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18030 && test -s /run/vecta/certs/envoy/tls.crt && test -s /run/vecta/certs/envoy/tls.key && test -s /run/vecta/certs/kmip/tls.crt && test -s /run/vecta/certs/kmip/tls.key && test -s /run/vecta/certs/ca/ca.crt"]
       interval: 15s
@@ -705,8 +716,8 @@ services:
       HTTP_PORT: "8050"
       GRPC_PORT: "18050"
     ports:
-      - "8050:8050"
-      - "18050:18050"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8050:8050"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18050:18050"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18050"]
       interval: 15s
@@ -727,8 +738,8 @@ services:
       HTTP_PORT: "8080"
       GRPC_PORT: "18080"
     ports:
-      - "8080:8080"
-      - "18080:18080"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8080:8080"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18080:18080"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18080"]
       interval: 15s
@@ -751,8 +762,8 @@ services:
       HTTP_PORT: "8120"
       GRPC_PORT: "18120"
     ports:
-      - "8120:8120"
-      - "18120:18120"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8120:8120"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18120:18120"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18120"]
       interval: 15s
@@ -780,8 +791,8 @@ services:
     volumes:
       - runtime-certs:/etc/vecta-certs:ro
     ports:
-      - "8160:8160"
-      - "15696:15696"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8160:8160"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:15696:15696"
     expose:
       - "5696"
     healthcheck:
@@ -804,8 +815,8 @@ services:
       HTTP_PORT: "8130"
       GRPC_PORT: "18130"
     ports:
-      - "8130:8130"
-      - "18130:18130"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8130:8130"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18130:18130"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18130"]
       interval: 15s
@@ -828,8 +839,8 @@ services:
       PAYMENT_TCP_BIND: "0.0.0.0"
       PAYMENT_TCP_PORT: "${PAYMENT_TCP_PORT:-9170}"
     ports:
-      - "8170:8170"
-      - "18170:18170"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8170:8170"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18170:18170"
       - "${PAYMENT_TCP_PORT:-9170}:${PAYMENT_TCP_PORT:-9170}"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18170"]
@@ -855,8 +866,8 @@ services:
       CONFIDENTIAL_JWT_PUBLIC_KEY_PEM: ${CONFIDENTIAL_JWT_PUBLIC_KEY_PEM:-}
       CONFIDENTIAL_JWT_PUBLIC_KEY_B64: ${CONFIDENTIAL_JWT_PUBLIC_KEY_B64:-}
     ports:
-      - "8240:8240"
-      - "18240:18240"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8240:8240"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18240:18240"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18240"]
       interval: 15s
@@ -877,8 +888,8 @@ services:
       HTTP_PORT: "8250"
       GRPC_PORT: "18250"
     ports:
-      - "8250:8250"
-      - "18250:18250"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8250:8250"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18250:18250"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18250"]
       interval: 15s
@@ -899,8 +910,8 @@ services:
       HTTP_PORT: "8260"
       GRPC_PORT: "18260"
     ports:
-      - "8260:8260"
-      - "18260:18260"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8260:8260"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18260:18260"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18260"]
       interval: 15s
@@ -920,8 +931,8 @@ services:
       HTTP_PORT: "8280"
       GRPC_PORT: "18280"
     ports:
-      - "8280:8280"
-      - "18280:18280"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8280:8280"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18280:18280"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18280"]
       interval: 15s
@@ -941,8 +952,8 @@ services:
       HTTP_PORT: "8270"
       GRPC_PORT: "18270"
     ports:
-      - "8270:8270"
-      - "18270:18270"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8270:8270"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18270:18270"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18270"]
       interval: 15s
@@ -965,8 +976,8 @@ services:
       HTTP_PORT: "8110"
       GRPC_PORT: "18110"
     ports:
-      - "8110:8110"
-      - "18110:18110"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8110:8110"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18110:18110"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18110"]
       interval: 15s
@@ -991,8 +1002,8 @@ services:
       HTTP_PORT: "8180"
       GRPC_PORT: "18180"
     ports:
-      - "8180:8180"
-      - "18180:18180"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8180:8180"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18180:18180"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18180"]
       interval: 15s
@@ -1013,8 +1024,8 @@ services:
       HTTP_PORT: "8140"
       GRPC_PORT: "18140"
     ports:
-      - "8140:8140"
-      - "18140:18140"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8140:8140"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18140:18140"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18140"]
       interval: 15s
@@ -1038,8 +1049,8 @@ services:
       POSTURE_AUDIT_SYNC_LIMIT: ${POSTURE_AUDIT_SYNC_LIMIT:-500}
       POSTURE_AUTO_REMEDIATE: ${POSTURE_AUTO_REMEDIATE:-false}
     ports:
-      - "8220:8220"
-      - "18220:18220"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8220:8220"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18220:18220"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18220"]
       interval: 15s
@@ -1063,8 +1074,8 @@ services:
       AI_GATEWAY_JWT_PUBLIC_KEY_PEM: ${AI_GATEWAY_JWT_PUBLIC_KEY_PEM:-}
       AI_GATEWAY_JWT_PUBLIC_KEY_B64: ${AI_GATEWAY_JWT_PUBLIC_KEY_B64:-}
     ports:
-      - "8320:8320"
-      - "18320:18320"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8320:8320"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18320:18320"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18320"]
       interval: 15s
@@ -1086,8 +1097,8 @@ services:
       HTTP_PORT: "8060"
       GRPC_PORT: "18060"
     ports:
-      - "8060:8060"
-      - "18060:18060"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8060:8060"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18060:18060"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18060"]
       interval: 15s
@@ -1108,8 +1119,8 @@ services:
       HTTP_PORT: "8100"
       GRPC_PORT: "18100"
     ports:
-      - "8100:8100"
-      - "18100:18100"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8100:8100"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18100:18100"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18100"]
       interval: 15s
@@ -1129,8 +1140,8 @@ services:
       HTTP_PORT: "8200"
       GRPC_PORT: "18200"
     ports:
-      - "8200:8200"
-      - "18200:18200"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8200:8200"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18200:18200"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18200"]
       interval: 15s
@@ -1167,8 +1178,8 @@ services:
       CLUSTER_HTTP_TLS_CLIENT_CA_FILE: ${CLUSTER_HTTP_TLS_CLIENT_CA_FILE:-}
       CLUSTER_HTTP_REQUIRE_CLIENT_CERT: ${CLUSTER_HTTP_REQUIRE_CLIENT_CERT:-true}
     ports:
-      - "8210:8210"
-      - "18210:18210"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8210:8210"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18210:18210"
     volumes:
       - runtime-certs:/run/vecta/runtime-certs:ro
     healthcheck:
@@ -1188,8 +1199,8 @@ services:
       HTTP_PORT: "8290"
       GRPC_PORT: "18290"
     ports:
-      - "8290:8290"
-      - "18290:18290"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8290:8290"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18290:18290"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18290"]
       interval: 15s
@@ -1205,8 +1216,8 @@ services:
       HTTP_PORT: "8430"
       GRPC_PORT: "18430"
     ports:
-      - "8430:8430"
-      - "18430:18430"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8430:8430"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18430:18430"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18430"]
       interval: 15s
@@ -1234,8 +1245,8 @@ services:
       HTTP_PORT: "8440"
       GRPC_PORT: "18440"
     ports:
-      - "8440:8440"
-      - "18440:18440"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8440:8440"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18440:18440"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18440"]
       interval: 15s

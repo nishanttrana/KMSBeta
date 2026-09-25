@@ -3,12 +3,10 @@ package crypto
 import (
 	"crypto/ecdh"
 	"crypto/ed25519"
+	"crypto/hkdf"
 	"crypto/hpke"
 	"crypto/sha256"
 	"errors"
-	"io"
-
-	"golang.org/x/crypto/hkdf"
 )
 
 // Raw Ed25519 key/signature sizes for callers validating base64-decoded
@@ -81,9 +79,7 @@ func HKDFSHA256(secret []byte, salt []byte, info []byte, n int) ([]byte, error) 
 	if n <= 0 {
 		return nil, errors.New("crypto: derived length must be positive")
 	}
-	out := make([]byte, n)
-	if _, err := io.ReadFull(hkdf.New(sha256.New, secret, salt, info), out); err != nil {
-		return nil, err
-	}
-	return out, nil
+	// crypto/hkdf is inside the FIPS 140-3 Go Cryptographic Module; output is
+	// identical to the previous golang.org/x/crypto/hkdf implementation.
+	return hkdf.Key(sha256.New, secret, salt, string(info), n)
 }

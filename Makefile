@@ -1,10 +1,21 @@
-.PHONY: build test lint conformance proto-gen license-check security-license security-cve security-sidechannel security-sbom security-audit packer-init packer-build packer-build-vbox test-auth test-keycore test-audit test-policy test-governance test-secrets test-certs test-kmip test-cloud test-hyok test-ekm test-payment test-compliance test-sbom test-reporting test-posture test-featureforge test-dataprotect test-discovery test-pqc test-software-vault
+.PHONY: build test test-fips-modes lint conformance proto-gen license-check security-license security-cve security-sidechannel security-sbom security-audit packer-init packer-build packer-build-vbox test-auth test-keycore test-audit test-policy test-governance test-secrets test-certs test-kmip test-cloud test-hyok test-ekm test-payment test-compliance test-sbom test-reporting test-posture test-featureforge test-dataprotect test-discovery test-pqc test-software-vault
+
+# Every binary links the CMVP-certified Go Cryptographic Module; the runtime
+# mode is the customer's choice (VECTA_FIPS_MODE). docs/SECURITY/FIPS.md
+export GOFIPS140 := v1.0.0
 
 build:
 	go build ./...
 
 test:
 	go test ./...
+
+# The suite must pass in every customer-selectable FIPS mode.
+test-fips-modes:
+	@for m in off on only; do \
+		echo "== GODEBUG=fips140=$$m"; \
+		VECTA_REQUIRE_CERTIFIED_MODULE=1 GODEBUG=fips140=$$m go test ./pkg/... ./services/... || exit 1; \
+	done
 
 lint:
 	go vet ./...

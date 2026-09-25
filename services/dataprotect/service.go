@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/x509"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -31,6 +30,8 @@ type Service struct {
 	jwtAud  string
 	jwtTTL  time.Duration
 	now     func() time.Time
+
+	legacyUses legacyUseTracker
 }
 
 type ServiceOption func(*Service)
@@ -3197,11 +3198,37 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 		return nil, err
 	}
 
-	key, err := s.resolveWorkingKey(ctx, req.TenantID, vault.KeyID, "tokenize")
+	kdfMode := kdfForStorage
+	if req.Mode == "vaultless" {
+		kdfMode = "" // customer-held tokens follow the per-request choice
+	}
+	key, kdf, err := s.resolveWorkingKeyWithKDF(ctx, req.TenantID, vault.KeyID, "tokenize", nil, kdfMode)
 	if err != nil {
 		return nil, err
 	}
 	defer pkgcrypto.Zeroize(key)
+	// While a key migrates, stored tokens not yet re-protected still carry a
+	// v1 lookup hash; find them too so the same input keeps its token.
+	var legacyKey []byte
+	defer func() { pkgcrypto.Zeroize(legacyKey) }()
+	legacyHash := func(value string) (string, bool) {
+		if kdf.Version != kdfV2 || kdf.State != kdfStateMigrating {
+			return "", false
+		}
+		if legacyKey == nil {
+			meta, err := s.keycore.GetKey(ctx, req.TenantID, vault.KeyID)
+			if err != nil {
+				return "", false
+			}
+			if legacyKey, err = s.deriveWorkingKey(ctx, req.TenantID, vault.KeyID, "tokenize", meta, kdfUse{Version: kdfV1}); err != nil {
+				legacyKey = nil
+				return "", false
+			}
+		}
+		h := hmacSHA256(legacyKey, "token-hash", value)
+		defer zeroizeAll(h)
+		return hex.EncodeToString(h), true
+	}
 
 	results := make([]map[string]interface{}, 0, len(req.Values))
 	created := 0
@@ -3238,7 +3265,13 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			continue
 		}
 		if !req.OneTimeToken && policy.ReuseExistingTokenForSameInput {
-			if existing, err := s.store.GetTokenByHash(ctx, req.TenantID, req.VaultID, originalHash); err == nil {
+			existing, err := s.store.GetTokenByHash(ctx, req.TenantID, req.VaultID, originalHash)
+			if errors.Is(err, errNotFound) {
+				if h, ok := legacyHash(value); ok {
+					existing, err = s.store.GetTokenByHash(ctx, req.TenantID, req.VaultID, h)
+				}
+			}
+			if err == nil {
 				if !existing.ExpiresAt.IsZero() && s.now().After(existing.ExpiresAt) {
 					// expired mapping must not be reused.
 				} else {
@@ -3262,6 +3295,8 @@ func (s *Service) Tokenize(ctx context.Context, req TokenizeRequest) ([]map[stri
 			OriginalHash:   originalHash,
 			FormatMetadata: metadata,
 			MetadataTags:   req.MetadataTags,
+			KDFVersion:     kdf.Version,
+			KDFKeyVersion:  kdf.KeyVersion,
 		}
 		if req.OneTimeToken {
 			rec.UseLimit = 1
@@ -3414,16 +3449,26 @@ func (s *Service) Detokenize(ctx context.Context, req DetokenizeRequest) ([]map[
 			}
 			record = updated
 		}
-		key, ok := keyCache[vault.KeyID]
+		// Each stored token is read with the derivation that protected it, so
+		// rows stay readable before, during and after a key's migration.
+		cacheKey := fmt.Sprintf("%s|%s|%d", vault.KeyID, kdfVersionOrLegacy(record.KDFVersion), record.KDFKeyVersion)
+		key, ok := keyCache[cacheKey]
 		if !ok {
 			if err := s.enforceKeycoreMetering(ctx, req.TenantID, vault.KeyID, "decrypt"); err != nil {
 				return nil, err
 			}
-			key, err = s.resolveWorkingKey(ctx, req.TenantID, vault.KeyID, "tokenize")
+			meta, err := s.keycore.GetKey(ctx, req.TenantID, vault.KeyID)
 			if err != nil {
 				return nil, err
 			}
-			keyCache[vault.KeyID] = key
+			if err := validateDataProtectionKeyMetadata(meta, "tokenize"); err != nil {
+				return nil, err
+			}
+			key, err = s.workingKeyForStoredToken(ctx, req.TenantID, vault.KeyID, meta, record)
+			if err != nil {
+				return nil, err
+			}
+			keyCache[cacheKey] = key
 		}
 		value, err := decryptTokenValue(key, record.OriginalEnc)
 		if err != nil {
@@ -4295,43 +4340,70 @@ func (s *Service) resolveWorkingKeyForDataPolicy(ctx context.Context, tenantID s
 }
 
 func (s *Service) resolveWorkingKeyInternal(ctx context.Context, tenantID string, keyID string, purpose string, policy *DataProtectionPolicy) ([]byte, error) {
+	key, _, err := s.resolveWorkingKeyWithKDF(ctx, tenantID, keyID, purpose, policy, "")
+	return key, err
+}
+
+// resolveWorkingKeyWithKDF validates the key, applies its derivation state
+// (kdf.go) and returns the working key plus the derivation used, which callers
+// that persist data record. force, when set, overrides the per-request choice.
+func (s *Service) resolveWorkingKeyWithKDF(ctx context.Context, tenantID string, keyID string, purpose string, policy *DataProtectionPolicy, force string) ([]byte, kdfUse, error) {
 	keyID = strings.TrimSpace(keyID)
 	if keyID == "" {
-		return nil, newServiceError(http.StatusBadRequest, "bad_request", "key_id is required")
+		return nil, kdfUse{}, newServiceError(http.StatusBadRequest, "bad_request", "key_id is required")
 	}
-	material := []byte{}
-	if s.keycore != nil {
-		item, err := s.keycore.GetKey(ctx, tenantID, keyID)
-		if err != nil {
-			return nil, err
-		}
-		if err := validateDataProtectionKeyMetadata(item, purpose); err != nil {
-			return nil, err
-		}
-		if policy != nil {
-			if err := enforceDataEncryptionKeyClassPolicy(*policy, item); err != nil {
-				return nil, err
-			}
-		}
-		if m := firstString(item["material_b64"]); m != "" {
-			if raw, err := base64.StdEncoding.DecodeString(strings.TrimSpace(m)); err == nil && len(raw) > 0 {
-				material = raw
-			}
-		}
-		if len(material) == 0 {
-			seed := firstString(item["material"], item["wrapped_material"], item["kcv"], item["id"])
-			if seed != "" {
-				material = []byte(seed)
-			}
+	if s.keycore == nil {
+		return nil, kdfUse{}, newServiceError(http.StatusServiceUnavailable, "keycore_unavailable", "keycore is required to derive working keys")
+	}
+	item, err := s.keycore.GetKey(ctx, tenantID, keyID)
+	if err != nil {
+		return nil, kdfUse{}, err
+	}
+	if err := validateDataProtectionKeyMetadata(item, purpose); err != nil {
+		return nil, kdfUse{}, err
+	}
+	if policy != nil {
+		if err := enforceDataEncryptionKeyClassPolicy(*policy, item); err != nil {
+			return nil, kdfUse{}, err
 		}
 	}
-	if len(material) == 0 {
-		// No key bytes are persisted in this service; derive an ephemeral working key per request.
-		material = []byte(tenantID + "|" + keyID + "|" + purpose)
+	st, err := s.keyKDFState(ctx, tenantID, keyID, item)
+	if err != nil {
+		return nil, kdfUse{}, err
 	}
-	out := keyFromHash(material, "dataprotect-"+purpose)
-	pkgcrypto.Zeroize(material)
-	return out, nil
+	requested := requestedKDF(ctx)
+	if force == kdfForStorage {
+		requested = ""
+		if st.State == kdfStateMigrating {
+			requested = kdfV2
+		}
+	} else if force != "" {
+		requested = force
+	}
+	use, err := effectiveKDF(st, requested)
+	if err != nil {
+		return nil, kdfUse{}, err
+	}
+	use.State = st.State
+	key, err := s.deriveWorkingKey(ctx, tenantID, keyID, purpose, item, use)
+	return key, use, err
+}
+
+// workingKeyForStoredToken returns the key that protected a stored vault
+// token, so rows stay readable while a key migrates. Once the key has
+// completed migration, v1 rows are refused like any other v1 use.
+func (s *Service) workingKeyForStoredToken(ctx context.Context, tenantID, keyID string, meta map[string]interface{}, rec TokenRecord) ([]byte, error) {
+	if kdfVersionOrLegacy(rec.KDFVersion) == kdfV2 {
+		return s.deriveWorkingKey(ctx, tenantID, keyID, "tokenize", meta, kdfUse{Version: kdfV2, KeyVersion: rec.KDFKeyVersion})
+	}
+	st, err := s.keyKDFState(ctx, tenantID, keyID, meta)
+	if err != nil {
+		return nil, err
+	}
+	if st.State == kdfStateV2 {
+		return nil, newServiceError(http.StatusConflict, "legacy_kdf_retired", "token was protected with an identifier-derived (v1) key and key "+keyID+" has completed migration")
+	}
+	return s.deriveWorkingKey(ctx, tenantID, keyID, "tokenize", meta, kdfUse{Version: kdfV1})
 }
 
 func enforceDataEncryptionKeyClassPolicy(policy DataProtectionPolicy, item map[string]interface{}) error {

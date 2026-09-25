@@ -44,3 +44,8 @@ web/dashboard/dist/
 services/keycore/keycore
 services/ekm/ekm
 services/*/__debug_bin*
+/workload
+/audit
+
+# Local build harness output
+.cloudbuild/

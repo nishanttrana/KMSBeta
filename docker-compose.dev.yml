@@ -9,7 +9,7 @@ services:
       - "127.0.0.1:5432:5432"
 
   nats:
-    image: nats:2.12.4-alpine
+    image: nats:2.14.7-alpine
     volumes:
       - ./infra/nats/nats-server.conf:/etc/nats/nats-server.conf:ro
       - nats-data:/data
@@ -18,7 +18,7 @@ services:
       - "127.0.0.1:8222:8222"
 
   valkey:
-    image: valkey/valkey:9.0.3-alpine
+    image: valkey/valkey:9.0.6-alpine
     command: ["valkey-server", "/etc/valkey/valkey.conf"]
     volumes:
       - ./infra/valkey/valkey.conf:/etc/valkey/valkey.conf:ro
@@ -27,13 +27,13 @@ services:
       - "127.0.0.1:6379:6379"
 
   consul:
-    image: hashicorp/consul:1.21.5
+    image: hashicorp/consul:1.22.7
     command: ["agent", "-dev", "-client=0.0.0.0"]
     ports:
       - "127.0.0.1:8500:8500"
 
   etcd:
-    image: quay.io/coreos/etcd:v3.6.8
+    image: quay.io/coreos/etcd:v3.6.15
     command:
       - etcd
       - --data-dir=/etcd-data

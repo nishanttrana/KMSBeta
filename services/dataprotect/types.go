@@ -12,6 +12,9 @@ type EventPublisher interface {
 type KeyCoreClient interface {
 	GetKey(ctx context.Context, tenantID string, keyID string) (map[string]interface{}, error)
 	MeterUsage(ctx context.Context, tenantID string, keyID string, operation string) error
+	// ServiceDerive returns a 32-byte working key derived by keycore from the
+	// key's secret material for this service and purpose (version 0 = current).
+	ServiceDerive(ctx context.Context, tenantID string, keyID string, purpose string, version int) ([]byte, int, error)
 }
 
 type CertsClient interface {
@@ -20,6 +23,16 @@ type CertsClient interface {
 }
 
 type Store interface {
+	GetKDFCutoff(ctx context.Context) (time.Time, error)
+	GetKeyKDF(ctx context.Context, tenantID string, keyID string) (KeyKDFState, error)
+	InsertKeyKDFIfAbsent(ctx context.Context, item KeyKDFState) error
+	TransitionKeyKDF(ctx context.Context, tenantID, keyID, fromState, toState string, keyVersion int, actor string) error
+	AddKeyKDFLegacyUses(ctx context.Context, tenantID, keyID string, n int64, at time.Time) error
+	ListKeyKDF(ctx context.Context, tenantID string) ([]KeyKDFState, error)
+	ListLegacyTokensForKey(ctx context.Context, tenantID, keyID string, limit int) ([]TokenRecord, error)
+	CountLegacyTokensForKey(ctx context.Context, tenantID, keyID string) (int, error)
+	ReprotectToken(ctx context.Context, tenantID, id string, enc []byte, hash, expectVersion, newVersion string, keyVersion int) error
+
 	CreateTokenVault(ctx context.Context, item TokenVault) error
 	ListTokenVaults(ctx context.Context, tenantID string, limit int, offset int) ([]TokenVault, error)
 	GetTokenVault(ctx context.Context, tenantID string, id string) (TokenVault, error)
@@ -333,6 +346,10 @@ type TokenRecord struct {
 	MetadataTags   map[string]string      `json:"metadata_tags,omitempty"`
 	CreatedAt      time.Time              `json:"created_at"`
 	ExpiresAt      time.Time              `json:"expires_at,omitempty"`
+	// KDFVersion / KDFKeyVersion record how OriginalEnc and OriginalHash were
+	// protected ("v1" legacy or "v2" keycore service-derive at KDFKeyVersion).
+	KDFVersion    string `json:"kdf_version"`
+	KDFKeyVersion int    `json:"kdf_key_version"`
 }
 
 type MaskingPolicy struct {

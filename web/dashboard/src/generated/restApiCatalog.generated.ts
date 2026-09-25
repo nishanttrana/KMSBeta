@@ -6726,6 +6726,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "dataprotect-get-kdf-keys",
+    "group": "Data Protection (dataprotect)",
+    "title": "GET /kdf/keys",
+    "service": "dataprotect",
+    "method": "GET",
+    "pathTemplate": "/kdf/keys?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Data Protect service.",
+    "requestExample": "GET /svc/dataprotect/kdf/keys?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "dataprotect-get-masking-policies",
     "group": "Data Protection (dataprotect)",
     "title": "GET /masking-policies",
@@ -7379,6 +7407,118 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Data Protect service.",
     "requestExample": "POST /svc/dataprotect/fpe/encrypt?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "dataprotect-post-kdf-keys-key-id-abort",
+    "group": "Data Protection (dataprotect)",
+    "title": "POST /kdf/keys/{key_id}/abort",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/kdf/keys/{key_id}/abort?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Data Protect service.",
+    "requestExample": "POST /svc/dataprotect/kdf/keys/{key_id}/abort?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "dataprotect-post-kdf-keys-key-id-complete",
+    "group": "Data Protection (dataprotect)",
+    "title": "POST /kdf/keys/{key_id}/complete",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/kdf/keys/{key_id}/complete?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Data Protect service.",
+    "requestExample": "POST /svc/dataprotect/kdf/keys/{key_id}/complete?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "dataprotect-post-kdf-keys-key-id-reprotect-vault",
+    "group": "Data Protection (dataprotect)",
+    "title": "POST /kdf/keys/{key_id}/reprotect-vault",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/kdf/keys/{key_id}/reprotect-vault?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Data Protect service.",
+    "requestExample": "POST /svc/dataprotect/kdf/keys/{key_id}/reprotect-vault?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "dataprotect-post-kdf-keys-key-id-start-migration",
+    "group": "Data Protection (dataprotect)",
+    "title": "POST /kdf/keys/{key_id}/start-migration",
+    "service": "dataprotect",
+    "method": "POST",
+    "pathTemplate": "/kdf/keys/{key_id}/start-migration?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Data Protect service.",
+    "requestExample": "POST /svc/dataprotect/kdf/keys/{key_id}/start-migration?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -10814,6 +10954,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "governance-get-governance-system-fips-mode",
+    "group": "Governance (governance)",
+    "title": "GET /governance/system/fips-mode",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/system/fips-mode?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "GET /svc/governance/governance/system/fips-mode?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-get-governance-system-fips-mode-impact",
+    "group": "Governance (governance)",
+    "title": "GET /governance/system/fips-mode/impact",
+    "service": "governance",
+    "method": "GET",
+    "pathTemplate": "/governance/system/fips-mode/impact?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "GET /svc/governance/governance/system/fips-mode/impact?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "governance-get-governance-system-integrity",
     "group": "Governance (governance)",
     "title": "GET /governance/system/integrity",
@@ -11299,6 +11495,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Governance service.",
     "requestExample": "PUT /svc/governance/governance/settings?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "governance-put-governance-system-fips-mode",
+    "group": "Governance (governance)",
+    "title": "PUT /governance/system/fips-mode",
+    "service": "governance",
+    "method": "PUT",
+    "pathTemplate": "/governance/system/fips-mode?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "PUT /svc/governance/governance/system/fips-mode?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -18976,6 +19200,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/keys/{id}/rotation-metrics?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-keys-id-service-derive",
+    "group": "Key Management (keycore)",
+    "title": "POST /keys/{id}/service-derive",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/keys/{id}/service-derive?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/keys/{id}/service-derive?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
