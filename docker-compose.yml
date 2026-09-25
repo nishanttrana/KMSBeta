@@ -102,6 +102,15 @@ services:
       - max_replication_slots=${PG_MAX_REPLICATION_SLOTS:-64}
       - -c
       - max_wal_senders=${PG_MAX_WAL_SENDERS:-64}
+      # A member runs one apply worker per component subscription (up to 26)
+      # plus table-copy workers; the defaults (4 logical workers in total)
+      # would leave every component but one stuck in its initial copy.
+      - -c
+      - max_worker_processes=${PG_MAX_WORKER_PROCESSES:-96}
+      - -c
+      - max_logical_replication_workers=${PG_MAX_LOGICAL_WORKERS:-64}
+      - -c
+      - max_sync_workers_per_subscription=${PG_MAX_SYNC_WORKERS:-4}
       # ---------- Connections ---------------------------------------------
       - -c
       - max_connections=${PG_MAX_CONN:-200}
@@ -1186,6 +1195,14 @@ services:
       CLUSTER_HTTP_TLS_KEY_FILE: ${CLUSTER_HTTP_TLS_KEY_FILE:-}
       CLUSTER_HTTP_TLS_CLIENT_CA_FILE: ${CLUSTER_HTTP_TLS_CLIENT_CA_FILE:-}
       CLUSTER_HTTP_REQUIRE_CLIENT_CERT: ${CLUSTER_HTTP_REQUIRE_CLIENT_CERT:-true}
+      # Secure join (docs/CLUSTERING.md). A node is a primary that can admit
+      # members only when these are set; empty means it can only join others.
+      CLUSTER_ADVERTISE_URL: ${CLUSTER_ADVERTISE_URL:-}
+      CLUSTER_PG_ADVERTISE_HOST: ${CLUSTER_PG_ADVERTISE_HOST:-}
+      CLUSTER_PG_ADVERTISE_PORT: ${CLUSTER_PG_ADVERTISE_PORT:-5432}
+      CLUSTER_PG_SSLMODE: ${CLUSTER_PG_SSLMODE:-verify-full}
+      CLUSTER_JOIN_ALLOW_HTTP: ${CLUSTER_JOIN_ALLOW_HTTP:-false}
+      KEYCORE_URL: ${KEYCORE_URL:-http://keycore:8010}
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8210:8210"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18210:18210"

@@ -286,3 +286,32 @@ export async function listClusterLogs(
   const out = await serviceRequest<LogsResponse>(session, "cluster", `/cluster/logs?${params}`);
   return Array.isArray(out?.items) ? out.items : [];
 }
+
+// ── Secure join (docs/CLUSTERING.md, slice 2) ──
+
+export type ClusterJoinRequestResult = { join: ClusterJoinBundle; bundle?: string };
+
+// On the primary: issue a one-time join bundle for a new node.
+export async function createClusterJoinRequest(
+  session: AuthSession,
+  input: { target_node_id: string; target_node_name?: string; profile_id: string; expires_minutes?: number }
+): Promise<ClusterJoinRequestResult> {
+  return serviceRequest<ClusterJoinRequestResult>(session, "cluster", "/cluster/join/request", {
+    method: "POST",
+    body: JSON.stringify({ tenant_id: session.tenantId, ...input, requested_by: session.username || "admin" })
+  });
+}
+
+export type ClusterConnectResult = { primary_node_id: string; components: string[]; subscribed: string[]; status: string };
+
+// On the joining node: exchange the bundle with the primary and start replicating.
+export async function connectToCluster(
+  session: AuthSession,
+  input: { join_bundle: string; node_name?: string; endpoint?: string; confirm_replace: boolean }
+): Promise<ClusterConnectResult> {
+  const out = await serviceRequest<{ result: ClusterConnectResult }>(session, "cluster", `/cluster/join/connect?tenant_id=${encodeURIComponent(session.tenantId)}`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+  return out.result;
+}

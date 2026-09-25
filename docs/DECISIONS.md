@@ -16,6 +16,37 @@ need a written trail of why each security control exists.
 **Enforced by:** `scripts/check-docs.sh` in CI on pull requests, plus the
 "Documentation is part of done" table in `CLAUDE.md`.
 
+## 2026-09-25 — Cluster join: master key moves keycore-to-keycore under ML-KEM; join pinned by bundle
+**Decision:**
+- **Master key:** the member's keycore creates a one-time ML-KEM-768 key,
+  and the primary's keycore seals its master key to it, bound to the join
+  context. Only the cluster-manager service identity may drive this. The
+  member stores the key on its own volume and restarts on it.
+- **Replication access:** it gets a dedicated role with SELECT only on the
+  member's component tables, plus `BYPASSRLS`. Its credentials are sealed to
+  the member's cluster-manager.
+- **Trusting the primary:** the member pins the primary's TLS certificate from
+  the join bundle and authenticates with a one-time token.
+- **cluster-manager:** now requires a root admin or a service identity on
+  every admin route.
+
+**Why:**
+- A member can't use replicated key material without the master key, and the
+  plaintext key must never exist outside a keycore process.
+- Pinning plus a one-time token needs no pre-shared CA, like
+  `kubeadm join`.
+
+**Rejected:**
+- **Moving the master key through cluster-manager in plaintext:** it widens
+  exposure.
+- **The existing `CLUSTER_SYNC_SHARED_SECRET` as the join credential:** a
+  long-lived shared secret on every node.
+- **A superuser replication connection:** far more than the member needs.
+
+**Enforced by:** `TestClusterMEKTransfer*` (keycore),
+`TestSecureJoinEndToEnd` (two real Postgres servers, real TLS, wrong-pin
+refusal) and `TestClusterRoutesRequireRootAdmin`.
+
 ## 2026-09-25 — Clustering: one lifecycle writer, per-component Postgres logical replication
 **Decision (customer's choice):**
 - The primary is the only lifecycle writer; members forward lifecycle writes

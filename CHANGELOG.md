@@ -6,6 +6,27 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
+### Clustering (slice 2 of 5): secure join
+- **Join a second KMS from the UI.** Platform → Cluster → Add Instance issues a
+  one-time join bundle on the primary; pasting it on the new node joins it.
+  - The master key moves keycore-to-keycore under ML-KEM-768 and never exists
+    in plaintext outside keycore.
+  - The member gets a replication role limited to its components.
+  - Replication credentials are sealed to the member.
+  - The primary's TLS certificate is pinned from the bundle.
+  - Every step is audited.
+- **Node-local identities never replicate:** the node's own admin/CLI accounts
+  and internal service identities (auth migration 011: `node_local` plus
+  publication row filters).
+- **Security fix: cluster-manager had no authentication.** It now requires a
+  root administrator or an internal service identity on every admin route.
+  The node-to-node routes authenticate themselves.
+- **Postgres worker limits:** raised so a member can replicate every
+  component. The defaults left all but one component stuck in the initial
+  copy.
+- **Removed the old "Add Instance" dialog**, which recorded a node without
+  joining it and reported "added to cluster".
+
 ### Clustering (slice 1 of 5)
 - **Removed a false claim.** The Cluster overview and dashboard said nodes
   synchronized component state, but no node ever applied another node's data.

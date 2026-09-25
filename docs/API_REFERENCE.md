@@ -2532,6 +2532,56 @@ Tests HSM connectivity. Response: `{"connected": true, "latencyMs": 12, "firmwar
 
 ---
 
+### Cluster authentication
+
+Every cluster route requires a root administrator or an internal service JWT,
+except:
+- `GET /healthz`;
+- `POST /cluster/join/exchange` (authenticated by the one-time join token);
+- `POST /cluster/sync/events` (HMAC signature).
+
+### POST /svc/cluster/cluster/join/request (on the primary)
+
+Body: `target_node_id`, `target_node_name`, `profile_id`, `expires_minutes`.
+Response:
+- `join`: the token record with `issued_secret`;
+- `bundle`: `vecta-join-v1:…`, what you paste on the new node. It's present
+  only when `CLUSTER_ADVERTISE_URL` is set.
+
+### POST /svc/cluster/cluster/join/connect (on the joining node)
+
+Body: `join_bundle`, optional `node_name` and `endpoint`, and
+`confirm_replace: true` (required).
+
+This exchanges the bundle with the primary, installs the cluster master key
+(keycore restarts on it) and subscribes to the assigned components. Response
+`result`: `{primary_node_id, components, subscribed, status}`.
+
+Audit: `audit.cluster.joined_cluster` here, and
+`audit.cluster.member_joined` on the primary.
+
+### POST /cluster/join/exchange (node-to-node, primary)
+
+Called by a joining node's cluster-manager over pinned TLS.
+
+Body: `token_id`, `join_secret`, `node_id`, `node_name`, `endpoint`,
+`keycore_join_key` and `cluster_manager_join_key` (ML-KEM-768 encapsulation
+keys). Response `result`: `{primary_node_id, components, context, sealed_mek,
+mek_fingerprint, sealed_replication}`.
+
+### POST /svc/keycore/cluster/mek/join-key, /export, /import
+
+The cluster-manager service identity only (anything else gets 403
+`service_identity_required`). These are the keycore side of the master-key
+transfer:
+- `join-key`: creates a one-time ML-KEM join key, valid 10 minutes;
+- `export`: seals this node's master key to a join key, bound to `context`;
+- `import`: opens it, checks `mek_fingerprint`, requires `confirm_replace`
+  if the node already holds keys, stores it and restarts keycore.
+
+Audit events are `audit.key.cluster_join_key_created`,
+`cluster_mek_exported` and `cluster_mek_imported`; the last two are critical.
+
 ### GET /svc/cluster/cluster/replication/status
 
 This node's real Postgres logical replication state:

@@ -13,6 +13,11 @@ security meaning where a generic request record isn't enough.
 | `audit.governance.fips_mode_applied` | governance | a service instance starts and reports its FIPS mode (once per start) | info; warning if it differs from the platform mode |
 | `audit.governance.fips_mode_rollout_completed` | governance | every service runs the requested mode (once per change) | info |
 | `audit.cluster.publication_changed` | cluster-manager | a replication publication is created or its table set changes (which data this node offers members) | info |
+| `audit.cluster.member_joined` | cluster-manager (primary) | a node consumed a join token and received the master key and a replication role for its components | warning |
+| `audit.cluster.joined_cluster` | cluster-manager (member) | this node joined a cluster: master key replaced, components subscribed | warning |
+| `audit.key.cluster_join_key_created` | keycore (member) | a one-time ML-KEM join key was created for a master-key transfer | info |
+| `audit.key.cluster_mek_exported` | keycore (primary) | the master key was sealed to a joining member (member, context, fingerprint) | critical |
+| `audit.key.cluster_mek_imported` | keycore (member) | a cluster master key was installed; keycore restarts on it | critical |
 | `audit.key.service_derive` | keycore | an internal service derives a purpose-bound working key | info |
 | `audit.key.derive_refused` | keycore | a generic derive tries to use the reserved service-derive context | critical |
 | `audit.cert.ocsp_refused` | certs | an OCSP request with a SHA-1 CertID in FIPS strict mode | warning |

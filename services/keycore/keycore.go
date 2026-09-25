@@ -48,6 +48,8 @@ import (
 )
 
 type Service struct {
+	clusterMEK   clusterMEKState
+	restartSelf  func()
 	store        Store
 	cache        KeyCache
 	exists       *bloom.BloomFilter
@@ -104,16 +106,17 @@ func NewService(store Store, cache KeyCache, events AuditPublisher, meter *meter
 		}
 	}
 	return &Service{
-		store:    store,
-		cache:    cache,
-		exists:   f,
-		events:   events,
-		meter:    meter,
-		mek:      mek,
-		policy:   policy,
-		pf:       policyFailClosed,
-		fipsMode: staticFIPSModeProvider{enabled: false},
-		posture:  staticPostureControlsProvider{},
+		store:       store,
+		cache:       cache,
+		exists:      f,
+		events:      events,
+		meter:       meter,
+		mek:         mek,
+		policy:      policy,
+		pf:          policyFailClosed,
+		fipsMode:    staticFIPSModeProvider{enabled: false},
+		posture:     staticPostureControlsProvider{},
+		restartSelf: defaultRestartSelf,
 	}
 }
 

@@ -65,6 +65,8 @@ var builtinClusterProfilePresets = []clusterProfilePreset{
 
 type Service struct {
 	replication            *clusterrepl.Engine
+	keycore                KeycoreMEKClient
+	joinCfg                joinConfig
 	store                  Store
 	events                 EventPublisher
 	now                    func() time.Time
@@ -2219,4 +2221,11 @@ func (s *Service) AuditPublicationChanges(ctx context.Context, pubs []clusterrep
 			"description": "replication publication created or its table set changed",
 		})
 	}
+}
+
+// WithJoin attaches the keycore master-key client and the join configuration.
+func (s *Service) WithJoin(keycore KeycoreMEKClient, cfg joinConfig) *Service {
+	s.keycore = keycore
+	s.joinCfg = cfg
+	return s
 }

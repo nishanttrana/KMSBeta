@@ -62,8 +62,20 @@ func (e *Engine) existingTables(ctx context.Context, tables []string) ([]string,
 	return out, rows.Err()
 }
 
+// tablesWithFilters renders tables as publicationTables reports them.
+func tablesWithFilters(tables []string) []string {
+	out := make([]string, len(tables))
+	for i, t := range tables {
+		out[i] = t
+		if _, ok := clustercatalog.RowFilters[t]; ok {
+			out[i] = t + "|filtered"
+		}
+	}
+	return out
+}
+
 func (e *Engine) publicationTables(ctx context.Context, pub string) ([]string, error) {
-	rows, err := e.db.QueryContext(ctx, `SELECT tablename FROM pg_publication_tables WHERE pubname = $1 ORDER BY tablename`, pub)
+	rows, err := e.db.QueryContext(ctx, `SELECT tablename || CASE WHEN rowfilter IS NULL THEN '' ELSE '|filtered' END FROM pg_publication_tables WHERE pubname = $1 ORDER BY tablename`, pub)
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +147,9 @@ func (e *Engine) EnsurePublications(ctx context.Context, components []string) ([
 		quoted := make([]string, len(tables))
 		for i, t := range tables {
 			quoted[i] = quoteIdent(t)
+			if f, ok := clustercatalog.RowFilters[t]; ok {
+				quoted[i] += " WHERE (" + f + ")"
+			}
 		}
 		var exists bool
 		if err := e.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM pg_publication WHERE pubname = $1)`, pub).Scan(&exists); err != nil {
@@ -144,7 +159,7 @@ func (e *Engine) EnsurePublications(ctx context.Context, components []string) ([
 		if err != nil {
 			return nil, err
 		}
-		changed := !exists || strings.Join(current, ",") != strings.Join(tables, ",")
+		changed := !exists || strings.Join(current, ",") != strings.Join(tablesWithFilters(tables), ",")
 		if changed {
 			stmt := fmt.Sprintf("CREATE PUBLICATION %s FOR TABLE %s WITH (publish_via_partition_root = true)", quoteIdent(pub), strings.Join(quoted, ", "))
 			if exists {
@@ -183,11 +198,7 @@ func (e *Engine) Subscribe(ctx context.Context, nodeID, component, conninfo stri
 		return fmt.Errorf("component %s: none of its tables exist on this node; start its service first", component)
 	}
 	if opts.ResetLocalData {
-		quoted := make([]string, len(tables))
-		for i, t := range tables {
-			quoted[i] = quoteIdent(t)
-		}
-		if _, err := e.db.ExecContext(ctx, "TRUNCATE "+strings.Join(quoted, ", ")+" CASCADE"); err != nil {
+		if err := e.resetReplicatedRows(ctx, tables); err != nil {
 			return fmt.Errorf("reset %s: %w", component, err)
 		}
 	}
@@ -196,6 +207,112 @@ func (e *Engine) Subscribe(ctx context.Context, nodeID, component, conninfo stri
 		quoteIdent(sub), quoteLiteral(conninfo), quoteIdent(clustercatalog.PublicationName(component)), quoteLiteral(sub))
 	if _, err := e.db.ExecContext(ctx, stmt); err != nil {
 		return fmt.Errorf("subscription %s: %w", sub, err)
+	}
+	return nil
+}
+
+// resetReplicatedRows deletes the rows the primary will send, keeping this
+// node's node-local rows (row-filtered tables). Foreign-key triggers are
+// suspended for the transaction (session_replication_role = replica, as the
+// apply worker itself runs), so deleting e.g. the root tenant does not cascade
+// into the node's own local accounts; the primary's copy replaces it.
+func (e *Engine) resetReplicatedRows(ctx context.Context, tables []string) error {
+	tx, err := e.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck
+	if _, err := tx.ExecContext(ctx, `SET LOCAL session_replication_role = replica`); err != nil {
+		return err
+	}
+	for _, t := range tables {
+		stmt := "DELETE FROM " + quoteIdent(t)
+		if f, ok := clustercatalog.RowFilters[t]; ok {
+			stmt += " WHERE (" + f + ")"
+		}
+		if _, err := tx.ExecContext(ctx, stmt); err != nil {
+			return fmt.Errorf("%s: %w", t, err)
+		}
+	}
+	return tx.Commit()
+}
+
+// ReplicationRoleName is the Postgres role a member uses to read from this
+// primary.
+func ReplicationRoleName(nodeID string) string {
+	return "vecta_repl_" + clustercatalog.Ident(nodeID)
+}
+
+// EnsureReplicationRole creates or updates the member's replication role on
+// this primary: login + REPLICATION + BYPASSRLS (the auth tables use row-level
+// security, which would otherwise hide every row from the initial copy), and
+// SELECT on exactly the tables of the member's components, nothing else.
+func (e *Engine) EnsureReplicationRole(ctx context.Context, nodeID, password string, components []string) (string, error) {
+	role := ReplicationRoleName(nodeID)
+	var exists bool
+	if err := e.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = $1)`, role).Scan(&exists); err != nil {
+		return "", err
+	}
+	verb := "CREATE"
+	if exists {
+		verb = "ALTER"
+	}
+	if _, err := e.db.ExecContext(ctx, fmt.Sprintf("%s ROLE %s WITH LOGIN REPLICATION BYPASSRLS PASSWORD %s", verb, quoteIdent(role), quoteLiteral(password))); err != nil {
+		return "", err
+	}
+	if _, err := e.db.ExecContext(ctx, fmt.Sprintf("REVOKE ALL ON ALL TABLES IN SCHEMA public FROM %s", quoteIdent(role))); err != nil {
+		return "", err
+	}
+	if _, err := e.db.ExecContext(ctx, fmt.Sprintf("GRANT USAGE ON SCHEMA public TO %s", quoteIdent(role))); err != nil {
+		return "", err
+	}
+	for _, c := range components {
+		tables, err := e.existingTables(ctx, clustercatalog.Tables(c))
+		if err != nil {
+			return "", err
+		}
+		for _, t := range tables {
+			if _, err := e.db.ExecContext(ctx, fmt.Sprintf("GRANT SELECT ON %s TO %s", quoteIdent(t), quoteIdent(role))); err != nil {
+				return "", err
+			}
+		}
+	}
+	return role, nil
+}
+
+// RemoveMember drops a departed member's replication slots and role on this
+// primary. Leftover slots make the primary retain WAL indefinitely.
+func (e *Engine) RemoveMember(ctx context.Context, nodeID string) error {
+	prefix := "vecta_sub_" + clustercatalog.Ident(nodeID) + "_"
+	rows, err := e.db.QueryContext(ctx, `SELECT slot_name FROM pg_replication_slots WHERE starts_with(slot_name, $1)`, prefix)
+	if err != nil {
+		return err
+	}
+	slots := []string{}
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			rows.Close() //nolint:errcheck
+			return err
+		}
+		slots = append(slots, s)
+	}
+	rows.Close() //nolint:errcheck
+	for _, s := range slots {
+		// Terminate a still-connected walsender, then drop the slot.
+		_, _ = e.db.ExecContext(ctx, `SELECT pg_terminate_backend(active_pid) FROM pg_replication_slots WHERE slot_name = $1 AND active_pid IS NOT NULL`, s)
+		if _, err := e.db.ExecContext(ctx, `SELECT pg_drop_replication_slot($1)`, s); err != nil {
+			return fmt.Errorf("drop slot %s: %w", s, err)
+		}
+	}
+	role := ReplicationRoleName(nodeID)
+	if _, err := e.db.ExecContext(ctx, fmt.Sprintf("DROP ROLE IF EXISTS %s", quoteIdent(role))); err != nil {
+		// Grants must go first; revoke then retry.
+		_, _ = e.db.ExecContext(ctx, fmt.Sprintf("REVOKE ALL ON ALL TABLES IN SCHEMA public FROM %s", quoteIdent(role)))
+		_, _ = e.db.ExecContext(ctx, fmt.Sprintf("REVOKE USAGE ON SCHEMA public FROM %s", quoteIdent(role)))
+		if _, err := e.db.ExecContext(ctx, fmt.Sprintf("DROP ROLE IF EXISTS %s", quoteIdent(role))); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -242,14 +359,14 @@ func syncStateName(code string) string {
 // SubscriptionStatuses reports the real state of this node's subscriptions:
 // whether the apply worker runs, per-table copy state and apply lag.
 func (e *Engine) SubscriptionStatuses(ctx context.Context, nodeID string) ([]SubscriptionStatus, error) {
-	prefix := strings.TrimSuffix(clustercatalog.SubscriptionName(nodeID, "x"), "x")
+	prefix := "vecta_sub_" + clustercatalog.Ident(nodeID) + "_"
 	rows, err := e.db.QueryContext(ctx, `
 SELECT s.subname, s.subenabled, st.pid IS NOT NULL, st.last_msg_receipt_time,
        COALESCE(EXTRACT(EPOCH FROM (now() - st.latest_end_time)), 0)
 FROM pg_subscription s
 LEFT JOIN pg_stat_subscription st ON st.subid = s.oid AND st.relid IS NULL
-WHERE s.subname LIKE $1
-ORDER BY s.subname`, prefix+"%")
+WHERE starts_with(s.subname, $1)
+ORDER BY s.subname`, prefix)
 	if err != nil {
 		return nil, err
 	}

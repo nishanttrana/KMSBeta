@@ -83,6 +83,10 @@ an approach, record it here or in the matching doc below.
   with a reason, or shared-append. Tables written during crypto operations
   are node-local. `TestEveryTableIsClassified` enforces this
   (docs/CLUSTERING.md).
+- An internal endpoint that moves secrets or grants cluster access must
+  restrict its caller: a specific service identity or a root administrator,
+  never "any authenticated caller". Node-to-node endpoints authenticate
+  themselves (one-time token, HMAC, pinned TLS).
 - Features cut from the core move to the sibling `KMSExtension` repo (REST
   integration via `pkg/kmsclient`, no key material there). Don't delete them.
 

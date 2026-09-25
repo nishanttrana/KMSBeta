@@ -250,6 +250,9 @@ func bootstrapInternalServiceClients(ctx context.Context, store Store, logger *l
 		}
 		provisioned++
 	}
+	if err := store.MarkNodeLocal(ctx, tenantID, nil, internalServiceClients); err != nil {
+		logger.Printf("bootstrap: mark service identities node-local: %v", err)
+	}
 	logger.Printf("bootstrap: internal service identities ready tenant=%s count=%d", tenantID, provisioned)
 }
 
@@ -258,6 +261,7 @@ var internalServiceClients = []string{
 	"kms-payment", "kms-discovery", "kms-compliance", "kms-pqc", "kms-cloud",
 	"kms-hyok-proxy", "kms-dataprotect", "kms-autokey", "kms-key-access",
 	"kms-governance", "kms-posture", "kms-reporting", "kms-policy", "kms-audit",
+	"kms-cluster-manager",
 }
 
 // revokeInsecureServiceKeys deletes service API keys that earlier deployments
@@ -472,6 +476,11 @@ func bootstrapDefaultAdmin(ctx context.Context, store Store, logger *log.Logger)
 		logger.Printf("bootstrap: default cli user created tenant=%s username=%s status=%s", tenantID, cliUsername, status)
 	} else if err != nil {
 		logger.Printf("bootstrap: read cli user failed: %v", err)
+	}
+	// The bootstrap admin and CLI accounts belong to this node; cluster
+	// replication never copies them.
+	if err := store.MarkNodeLocal(ctx, tenantID, []string{adminUsername, cliUsername}, nil); err != nil {
+		logger.Printf("bootstrap: mark local accounts node-local: %v", err)
 	}
 }
 

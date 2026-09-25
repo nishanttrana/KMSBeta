@@ -23,6 +23,16 @@ const (
 	ClassUnknown      Class = "unknown"
 )
 
+// RowFilters restrict a replicated table to its shared rows: rows flagged
+// node_local (the node's own admin and CLI accounts, internal service
+// identities) never leave the node. Each filter column is in the table's
+// replica identity (auth migration 011).
+var RowFilters = map[string]string{
+	"auth_users":                "NOT node_local",
+	"auth_client_registrations": "NOT node_local",
+	"auth_api_keys":             "NOT node_local",
+}
+
 // Components returns every component that owns replicated tables, sorted.
 func Components() []string {
 	out := make([]string, 0, len(Replicated))
@@ -61,20 +71,22 @@ func PublicationName(component string) string {
 	return "vecta_pub_" + strings.ReplaceAll(strings.TrimSpace(component), "-", "_")
 }
 
+// Ident turns a node id or component into a safe lower-case identifier part.
+func Ident(s string) string {
+	var b strings.Builder
+	for _, r := range strings.ToLower(s) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		} else {
+			b.WriteRune('_')
+		}
+	}
+	return b.String()
+}
+
 // SubscriptionName is the subscription a member uses for a component.
 func SubscriptionName(nodeID, component string) string {
-	clean := func(s string) string {
-		var b strings.Builder
-		for _, r := range strings.ToLower(s) {
-			if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
-				b.WriteRune(r)
-			} else {
-				b.WriteRune('_')
-			}
-		}
-		return b.String()
-	}
-	return fmt.Sprintf("vecta_sub_%s_%s", clean(nodeID), clean(component))
+	return fmt.Sprintf("vecta_sub_%s_%s", Ident(nodeID), Ident(component))
 }
 
 // Classify returns a table's class and, for replicated tables, its component.

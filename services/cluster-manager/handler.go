@@ -41,6 +41,8 @@ func (h *Handler) routes() *http.ServeMux {
 
 	mux.HandleFunc("POST /cluster/join/request", h.handleJoinRequest)
 	mux.HandleFunc("POST /cluster/join/complete", h.handleJoinComplete)
+	mux.HandleFunc("POST /cluster/join/exchange", h.handleJoinExchange)
+	mux.HandleFunc("POST /cluster/join/connect", h.handleJoinConnect)
 
 	mux.HandleFunc("POST /cluster/nodes", h.handleUpsertNode)
 	mux.HandleFunc("POST /cluster/nodes/{id}/heartbeat", h.handleNodeHeartbeat)
@@ -167,7 +169,12 @@ func (h *Handler) handleJoinRequest(w http.ResponseWriter, r *http.Request) {
 		h.writeServiceError(w, err, reqID, in.TenantID)
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]interface{}{"join": token, "request_id": reqID})
+	out := map[string]interface{}{"join": token, "request_id": reqID}
+	// The bundle is what an admin pastes on the joining node (join.go).
+	if cfg := h.svc.joinCfg; cfg.advertiseURL != "" && token.IssuedSecret != "" {
+		out["bundle"] = EncodeJoinBundle(JoinBundle{PrimaryURL: cfg.advertiseURL, TLSFingerprint: cfg.tlsFingerprint, TokenID: token.ID, JoinSecret: token.IssuedSecret})
+	}
+	writeJSON(w, http.StatusCreated, out)
 }
 
 func (h *Handler) handleJoinComplete(w http.ResponseWriter, r *http.Request) {
@@ -527,4 +534,38 @@ func writeErr(w http.ResponseWriter, status int, code string, message string, re
 func (h *Handler) handleReplicationStatus(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	writeJSON(w, http.StatusOK, map[string]interface{}{"replication": h.svc.ReplicationStatus(r.Context()), "request_id": reqID})
+}
+
+// handleJoinExchange is called by a joining node; the one-time join token
+// authenticates it (see auth.go).
+func (h *Handler) handleJoinExchange(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var in ExchangeJoinInput
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "root")
+		return
+	}
+	res, err := h.svc.ExchangeJoin(r.Context(), in)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, "root")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"result": res, "request_id": reqID})
+}
+
+// handleJoinConnect joins this node to a cluster (root admin).
+func (h *Handler) handleJoinConnect(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	var in ConnectInput
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "root")
+		return
+	}
+	in.Actor = firstActor(r)
+	res, err := h.svc.ConnectToCluster(r.Context(), in)
+	if err != nil {
+		h.writeServiceError(w, err, reqID, "root")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"result": res, "request_id": reqID})
 }

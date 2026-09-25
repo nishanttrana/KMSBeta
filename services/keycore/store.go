@@ -18,6 +18,8 @@ var (
 )
 
 type Store interface {
+	// CountKeys counts keys across all tenants (cluster join safety check).
+	CountKeys(ctx context.Context) (int, error)
 	CreateKeyWithVersion(ctx context.Context, key Key, ver KeyVersion) error
 	ListKeys(ctx context.Context, tenantID string, limit int, offset int) ([]Key, error)
 	ListKeysCursor(ctx context.Context, tenantID string, limit int, afterCreatedAt *time.Time, afterID string) ([]Key, error)
@@ -1321,4 +1323,10 @@ func nullableTime(v *time.Time) interface{} {
 		return nil
 	}
 	return v.UTC()
+}
+
+func (s *SQLStore) CountKeys(ctx context.Context) (int, error) {
+	var n int
+	err := s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(1) FROM keys`).Scan(&n)
+	return n, err
 }

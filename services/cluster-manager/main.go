@@ -17,6 +17,8 @@ import (
 	"time"
 	"vecta-kms/pkg/clustercatalog"
 	"vecta-kms/pkg/clusterrepl"
+	pkgjwtauth "vecta-kms/pkg/jwtauth"
+	"vecta-kms/pkg/servicetoken"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
@@ -71,7 +73,11 @@ func main() {
 	}
 
 	replEngine := clusterrepl.New(dbConn.SQL())
-	svc := NewService(NewSQLStore(dbConn), publisher).WithReplication(replEngine)
+	// Internal service identity for calls to this node's keycore (master-key
+	// transfer during joins).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-cluster-manager"))
+	joinCfg := loadJoinConfig()
+	svc := NewService(NewSQLStore(dbConn), publisher).WithReplication(replEngine).WithJoin(newHTTPKeycoreMEKClient(joinCfg.keycoreURL), joinCfg)
 	// Keep one publication per component current on every node, so any node
 	// can serve as primary (services create their tables at their own start).
 	go func() {
@@ -91,7 +97,11 @@ func main() {
 	handler := NewHandler(svc)
 
 	httpPort := envOr("HTTP_PORT", "8210")
-	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "cluster"))
+	jwtParser, err := pkgjwtauth.LoadParser(pkgjwtauth.Config{Prefix: "CLUSTER", Issuer: cfg.JWTIssuer, Audience: cfg.JWTAudience})
+	if err != nil || jwtParser == nil {
+		logger.Fatalf("cluster-manager requires a JWT verification key (JWT_PUBLIC_KEY_B64): %v", err)
+	}
+	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(buildClusterHTTPHandler(handler, jwtParser), publisher, "cluster"))
 	httpTLSEnabled := envBool("CLUSTER_HTTP_TLS_ENABLE", false)
 	httpTLSCertFile := strings.TrimSpace(os.Getenv("CLUSTER_HTTP_TLS_CERT_FILE"))
 	httpTLSKeyFile := strings.TrimSpace(os.Getenv("CLUSTER_HTTP_TLS_KEY_FILE"))

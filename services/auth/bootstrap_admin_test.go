@@ -170,3 +170,20 @@ func (c *captureAuthAudit) count(subject string) int {
 	}
 	return n
 }
+
+// Identities that belong to this node are flagged node_local so cluster
+// replication never copies them (docs/CLUSTERING.md).
+func TestBootstrapMarksNodeLocalIdentities(t *testing.T) {
+	store := newTestStore(t)
+	ctx := context.Background()
+	bootstrapDefaultAdmin(ctx, store, quietLogger())
+	t.Setenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET", strings.Repeat("ab", 32))
+	bootstrapInternalServiceClients(ctx, store, quietLogger(), nil)
+	var admins, services, keys int
+	_ = store.db.SQL().QueryRow(`SELECT COUNT(1) FROM auth_users WHERE username = 'admin' AND node_local = 1`).Scan(&admins)
+	_ = store.db.SQL().QueryRow(`SELECT COUNT(1) FROM auth_client_registrations WHERE id LIKE 'kms-%' AND node_local = 1`).Scan(&services)
+	_ = store.db.SQL().QueryRow(`SELECT COUNT(1) FROM auth_api_keys WHERE client_id LIKE 'kms-%' AND node_local = 1`).Scan(&keys)
+	if admins != 1 || services != len(internalServiceClients) || keys != len(internalServiceClients) {
+		t.Fatalf("node-local flags: admin=%d services=%d keys=%d", admins, services, keys)
+	}
+}

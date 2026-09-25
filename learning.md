@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-09-25
 
+### Four things the first real two-node join taught
+- **Postgres defaults can't run a multi-component member.** The default is 4
+  logical replication workers in total. With 4 component subscriptions, every
+  worker was an apply worker and none could copy tables: 3 of 4 components
+  sat in "initializing" forever while auth, which started first, finished. A
+  member needs about one apply worker per component plus copy workers, so
+  `max_logical_replication_workers=64`, `max_worker_processes=96`.
+- **Row-level security hides rows from a replication role.** The auth tables
+  use RLS, so a non-superuser replication role copies nothing. It needs
+  `BYPASSRLS`. The first engine test connected as a superuser and could never
+  have seen this.
+- **Resetting a member without cascades.** Deleting the member's root tenant
+  would cascade into its own local admin. Run the reset with
+  `session_replication_role = replica`, as the apply worker does, and delete
+  only the rows the row filters say replicate.
+- **cluster-manager had no authentication at all**, while it was about to
+  authorize master-key transfers. Tenant enforcement quietly passes when a
+  request carries no token. Check who can call a service before adding power
+  to it.
+
 ### Recording sync events is not replication
 cluster-manager had join tokens, profiles, a sync-event log and per-node
 checkpoints, and the overview told users "Nodes sync only the state for their

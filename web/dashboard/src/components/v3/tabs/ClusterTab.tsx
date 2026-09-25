@@ -8,7 +8,6 @@ import {
   getClusterSyncCheckpoint,
   removeClusterNode,
   updateClusterNodeRole,
-  upsertClusterNode,
   upsertClusterProfile,
   type ClusterSyncEvent,
   type ClusterLogEntry,
@@ -305,40 +304,6 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
     }
   };
 
-  const addExistingNode = async () => {
-    if (!session?.token) return;
-    const nodeID = String(directNodeForm?.node_id || "").trim();
-    const profileID = String(directNodeForm?.profile_id || "").trim();
-    if (!nodeID || !profileID) { onToast?.("Node ID and replication profile are required."); return; }
-    const allowed = profileComponentScope(profileID);
-    const selected = (Array.isArray(directNodeForm?.components) ? directNodeForm.components : [])
-      .map((v: any) => String(v || "").trim().toLowerCase()).filter((v: string) => allowed.includes(v));
-    setDirectNodeBusy(true);
-    try {
-      await upsertClusterNode(session, {
-        node_id: nodeID,
-        node_name: String(directNodeForm?.node_name || nodeID).trim(),
-        endpoint: String(directNodeForm?.endpoint || "").trim(),
-        role: String(directNodeForm?.role || "follower").trim().toLowerCase() === "leader" ? "leader" : "follower",
-        profile_id: profileID,
-        components: selected.length ? selected : allowed,
-        status: "unknown", join_state: "active",
-        seed_sync: Boolean(directNodeForm?.seed_sync)
-      });
-      setDirectNodeForm((prev: any) => ({
-        ...prev, node_id: "", node_name: "", endpoint: "", role: "follower",
-        components: selected.length ? selected : allowed
-      }));
-      setAddNodeModalOpen(false);
-      await refresh(true);
-      onToast?.("KMS instance added to cluster.");
-    } catch (error) {
-      onToast?.(`Add node failed: ${errMsg(error)}`);
-    } finally {
-      setDirectNodeBusy(false);
-    }
-  };
-
   const toggleProfileComponent = (componentID: string) => {
     if (CORE_COMPONENTS.has(componentID)) return; // core components can't be toggled off
     setProfileComponents((prev) =>
@@ -425,6 +390,8 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
       removeBusyNode={removeBusyNode}
       removeNodeAction={removeNodeAction}
       // Add node
+      session={session}
+      onToast={onToast}
       addNodeModalOpen={addNodeModalOpen}
       setAddNodeModalOpen={setAddNodeModalOpen}
       directNodeForm={directNodeForm}
@@ -432,7 +399,6 @@ export const ClusterTab = ({ session, onToast, subView }: ClusterTabProps) => {
       profileComponentScope={profileComponentScope}
       toggleDirectComponent={toggleDirectComponent}
       directNodeBusy={directNodeBusy}
-      addExistingNode={addExistingNode}
       // Profiles
       profileName={profileName}
       setProfileName={setProfileName}
