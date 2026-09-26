@@ -20,7 +20,6 @@ done
 
 PARSER="${ROOT_DIR}/infra/scripts/parse-deployment.sh"
 STOP_SCRIPT="${ROOT_DIR}/infra/scripts/stop-kms.sh"
-MESH_BOOTSTRAP="${ROOT_DIR}/infra/consul/bootstrap-mesh.sh"
 HEALTH_SCRIPT="${ROOT_DIR}/infra/scripts/healthcheck-enabled-services.sh"
 COMPOSE_WRAPPER="${ROOT_DIR}/infra/scripts/compose-kms.sh"
 BASH_BIN="${BASH:-bash}"
@@ -64,6 +63,35 @@ resolve_project_name() {
   printf '%s\n' "vecta-kms"
 }
 
+# The certs service loads the internal root and Sub CA from a cache on its key
+# volume before it can reach Postgres (docs/SECURITY/INTERNAL_TLS.md). On the
+# first start of that version on an existing install, copy the two CA rows out
+# of the running database over its Unix socket (no network; the signing keys
+# stay wrapped by the certs root wrapping key). A fresh install has nothing
+# to export: certs creates the CAs itself.
+export_internal_pki_cache() {
+  local certs_volume="$1" pg_user pg_db pg_password cache
+  if docker run --rm --volume "${certs_volume}:/data:ro" alpine:3.24 test -s /data/internal-pki.json >/dev/null 2>&1; then
+    return 0
+  fi
+  if ! "${BASH_BIN}" "${COMPOSE_WRAPPER}" ps --status running --services 2>/dev/null | grep -qx postgres; then
+    return 0
+  fi
+  pg_user="$(sed -n 's/^POSTGRES_USER=//p' "${ROOT_DIR}/.env" 2>/dev/null | tail -n 1)"
+  pg_db="$(sed -n 's/^POSTGRES_DB=//p' "${ROOT_DIR}/.env" 2>/dev/null | tail -n 1)"
+  pg_password="$(sed -n 's/^POSTGRES_PASSWORD=//p' "${ROOT_DIR}/.env" 2>/dev/null | tail -n 1)"
+  cache="$(PGPASSWORD="${pg_password}" "${BASH_BIN}" "${COMPOSE_WRAPPER}" exec -T -e PGPASSWORD postgres \
+    psql -U "${pg_user:-postgres}" -d "${pg_db:-vecta}" -tA -v ON_ERROR_STOP=1 -c \
+    "select json_build_object('root', (select row_to_json(c) from cert_cas c where c.tenant_id = 'root' and c.name = '${CERTS_RUNTIME_ROOT_CA_NAME:-vecta-runtime-root}' and c.status = 'active' limit 1), 'sub', (select row_to_json(c) from cert_cas c where c.tenant_id = 'root' and c.name = '${CERTS_INTERNAL_SUBCA_NAME:-vecta-internal-services}' and c.status = 'active' limit 1))" 2>/dev/null || true)"
+  pg_password=""
+  if [[ -z "${cache}" || "${cache}" == *'"root" : null'* || "${cache}" == *'"root":null'* ]]; then
+    return 0
+  fi
+  printf '%s' "${cache}" | docker run --rm -i --volume "${certs_volume}:/data" alpine:3.24 \
+    sh -c 'cat > /data/internal-pki.json && chown 100:101 /data/internal-pki.json && chmod 600 /data/internal-pki.json' \
+    && echo "exported the internal PKI (runtime root and Sub CA) for the certs bootstrap"
+}
+
 prepare_certs_volumes() {
   local project_name
   project_name="$(resolve_project_name)"
@@ -76,23 +104,36 @@ prepare_certs_volumes() {
   # every service reads, and the dashboard's TLS files (certs writes both).
   local trust_volume="${project_name}_internal-trust"
   local dashboard_tls_volume="${project_name}_dashboard-tls"
+  # Server certificates for Postgres, NATS, Valkey and Consul; each daemon
+  # mounts only its own subdirectory, which must exist before it starts.
+  local infra_tls_volume="${project_name}_infra-tls"
+  # Platform FIPS mode, written by governance (uid 10001), read by every
+  # service before any cryptography (pkg/config).
+  local platform_state_volume="${project_name}_platform-state"
   local passphrase_path="${CERTS_CRWK_PASSPHRASE_FILE:-/var/lib/vecta/certs/bootstrap.passphrase}"
-  local bootstrap_secret="${CERTS_CRWK_BOOTSTRAP_PASSPHRASE:-vecta-dev-passphrase}"
-  local prepared=0 helper_image=""
+  local prepared=0 helper_image="" helper_out=""
 
   docker volume create "${certs_volume}" >/dev/null 2>&1 || true
   docker volume create "${runtime_volume}" >/dev/null 2>&1 || true
   docker volume create "${trust_volume}" >/dev/null 2>&1 || true
   docker volume create "${dashboard_tls_volume}" >/dev/null 2>&1 || true
+  docker volume create "${infra_tls_volume}" >/dev/null 2>&1 || true
+  docker volume create "${platform_state_volume}" >/dev/null 2>&1 || true
 
+  # The CRWK passphrase is generated inside the volume and never crosses the
+  # host (infra/scripts/crwk-passphrase.sh). An operator-supplied one is
+  # passed by variable name only (CLAUDE.md rule 9).
   for helper_image in postgres:16.13-alpine alpine:3.24 busybox:1.36; do
-    if docker run --rm \
+    if helper_out="$(docker run --rm \
+      --volume "${ROOT_DIR}/infra/scripts/crwk-passphrase.sh:/crwk-passphrase.sh:ro" \
       --volume "${certs_volume}:/data" \
       --volume "${runtime_volume}:/runtime" \
       --volume "${trust_volume}:/trust" \
       --volume "${dashboard_tls_volume}:/dashboard-tls" \
+      --volume "${infra_tls_volume}:/infra-tls" \
+      --volume "${platform_state_volume}:/platform-state" \
       --env "CERTS_CRWK_PASSPHRASE_FILE=${passphrase_path}" \
-      --env "BOOTSTRAP_SECRET=${bootstrap_secret}" \
+      --env CERTS_CRWK_BOOTSTRAP_PASSPHRASE \
       "${helper_image}" \
       sh -lc '
         set -eu
@@ -103,27 +144,30 @@ prepare_certs_volumes() {
         chown 100:101 /trust /dashboard-tls
         chmod 755 /trust
         chmod 750 /dashboard-tls
-        case "${CERTS_CRWK_PASSPHRASE_FILE:-/var/lib/vecta/certs/bootstrap.passphrase}" in
-          /var/lib/vecta/certs/*)
-            target="/data/${CERTS_CRWK_PASSPHRASE_FILE#/var/lib/vecta/certs/}"
-            mkdir -p "$(dirname "$target")"
-            if [ ! -s "$target" ]; then
-              printf %s "${BOOTSTRAP_SECRET:-vecta-dev-passphrase}" > "$target"
-            fi
-            chown 100:101 "$target"
-            chmod 600 "$target"
-            ;;
-        esac
-      ' >/dev/null 2>&1; then
+        mkdir -p /infra-tls/postgres /infra-tls/nats /infra-tls/valkey /infra-tls/consul
+        chown -R 100:101 /infra-tls
+        chmod 700 /infra-tls /infra-tls/postgres /infra-tls/nats /infra-tls/valkey /infra-tls/consul
+        mkdir -p /platform-state
+        chown 10001 /platform-state
+        chmod 755 /platform-state
+        sh /crwk-passphrase.sh
+      ' 2>/dev/null)"; then
       prepared=1
       break
     fi
   done
+  case "${helper_out}" in
+    *crwk-public-default-retired*)
+      echo "the certs CRWK passphrase was the retired public default: a new one was generated; certs re-keys the CRWK and rewraps every CA signer on start (audit.certs.crwk_rotated, docs/SECURITY/SECRET_ROTATION.md)" ;;
+    *crwk-passphrase-written*)
+      echo "certs CRWK passphrase generated in the certs key volume" ;;
+  esac
 
   if [[ "${prepared}" -ne 1 ]]; then
     echo "unable to prepare certificate bootstrap volumes" >&2
     return 1
   fi
+  export_internal_pki_cache "${certs_volume}"
 }
 
 if [[ ! -f "${DEPLOYMENT_FILE}" ]]; then
@@ -331,10 +375,6 @@ if ! "${BASH_BIN}" "${COMPOSE_WRAPPER}" up "${up_args[@]}"; then
   "${BASH_BIN}" "${STOP_SCRIPT}" "${DEPLOYMENT_FILE}" --force || true
   sleep 2
   "${BASH_BIN}" "${COMPOSE_WRAPPER}" up "${up_args[@]}"
-fi
-
-if [[ -f "${MESH_BOOTSTRAP}" ]]; then
-  CONSUL_HTTP_ADDR="${CONSUL_HTTP_ADDR:-http://127.0.0.1:8500}" sh "${MESH_BOOTSTRAP}" || true
 fi
 
 apply_acme_renewal_policy

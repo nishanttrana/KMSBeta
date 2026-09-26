@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -67,5 +68,24 @@ func TestWatcherReevaluatesWhenModeFlipsBack(t *testing.T) {
 	// only -> (after the tier delay) back to on: no restart.
 	if stopped, _ := runWatcher(t, "on", "only", "on"); stopped {
 		t.Fatal("a change reverted during the restart delay must not restart the service")
+	}
+}
+
+// The mode comes from the platform-state file governance writes, read before
+// any cryptography; a missing file means "not set" (VECTA_FIPS_MODE applies).
+func TestPlatformFIPSModeFromFile(t *testing.T) {
+	dir := t.TempDir()
+	store := &platformFIPSStore{file: dir + "/fips-mode"}
+	if m, err := store.Desired(context.Background()); err != nil || m != "" {
+		t.Fatalf("missing file: %q %v", m, err)
+	}
+	if err := os.WriteFile(store.file, []byte("only\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if m, _ := store.Desired(context.Background()); m != "only" {
+		t.Fatalf("got %q", m)
+	}
+	if err := store.ReportObserved(context.Background(), "s", "h", "on", "v1", true, time.Now()); err == nil {
+		t.Fatal("reporting before the database is attached must fail, not write anywhere")
 	}
 }

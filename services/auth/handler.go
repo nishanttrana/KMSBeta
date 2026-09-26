@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -2063,7 +2062,15 @@ func (h *Handler) handleCLISession(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !VerifyPassword(cliUser.Password, req.Password) {
+		h.auditCLISessionRefused(r, reqID, claims, cliUsername, "invalid_credentials")
 		writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid CLI credentials", reqID, claims.TenantID)
+		return
+	}
+	// The public default must never become the SSH password of the
+	// hsm-integration container (docs/SECURITY/SECURE_DEFAULTS.md).
+	if isRetiredCLIPassword(req.Password) {
+		h.auditCLISessionRefused(r, reqID, claims, cliUsername, "public_default_password")
+		writeErr(w, http.StatusForbidden, "forbidden", "the CLI user's password is a public default; set a new one in user management", reqID, claims.TenantID)
 		return
 	}
 	host := strings.TrimSpace(envOr("AUTH_CLI_HOST", "127.0.0.1"))
@@ -2085,21 +2092,9 @@ func (h *Handler) handleCLISession(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Sync the verified password to the hsm-integration container so SSH works.
-	// Uses chpasswd via stdin-style exec — the password is passed as an env var
-	// to avoid shell injection risks from special characters.
-	go func() {
-		hsmService := strings.TrimSpace(envOr("AUTH_CLI_HSM_SERVICE_NAME", "hsm-integration"))
-		syncCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		// Use printf piped to chpasswd; the password is base64-encoded to avoid any shell metacharacter issues
-		encoded := base64.StdEncoding.EncodeToString([]byte(req.Password))
-		script := fmt.Sprintf("printf '%%s:%%s' '%s' \"$(echo '%s' | base64 -d)\" | chpasswd", cliUsername, encoded)
-		if _, syncErr := h.execComposeServiceCommand(syncCtx, hsmService, []string{"bash", "-c", script}); syncErr != nil {
-			logger.Printf("cli-session: failed to sync password to %s container: %v", hsmService, syncErr)
-		} else {
-			logger.Printf("cli-session: password synced to %s container for user %s", hsmService, cliUsername)
-		}
-	}()
+	// The user and password reach chpasswd through the exec's environment and
+	// a shell builtin, never its command line (CLAUDE.md rule 9).
+	go h.syncCLISSHPassword(claims.TenantID, claims.UserID, cliUsername, req.Password)
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":                "ok",
@@ -2995,6 +2990,13 @@ func anyString(v any) string {
 }
 
 func (h *Handler) execComposeServiceCommand(ctx context.Context, composeService string, cmd []string) (string, error) {
+	return h.execComposeServiceCommandEnv(ctx, composeService, cmd, nil)
+}
+
+// execComposeServiceCommandEnv runs cmd with extra environment entries. Pass
+// secrets this way (read by a shell builtin), never inside cmd: an exec's
+// command line is visible to docker inspect and the host's process list.
+func (h *Handler) execComposeServiceCommandEnv(ctx context.Context, composeService string, cmd []string, env []string) (string, error) {
 	if h.healthChecker == nil {
 		return "", errors.New("system health checker not configured")
 	}
@@ -3005,7 +3007,7 @@ func (h *Handler) execComposeServiceCommand(ctx context.Context, composeService 
 	if err != nil {
 		return "", err
 	}
-	output, exitCode, err := h.execDockerContainerCommand(ctx, containerID, cmd)
+	output, exitCode, err := h.execDockerContainerCommand(ctx, containerID, cmd, env)
 	if err != nil {
 		return strings.TrimSpace(output), err
 	}
@@ -3015,13 +3017,16 @@ func (h *Handler) execComposeServiceCommand(ctx context.Context, composeService 
 	return strings.TrimSpace(output), nil
 }
 
-func (h *Handler) execDockerContainerCommand(ctx context.Context, containerID string, cmd []string) (string, int, error) {
+func (h *Handler) execDockerContainerCommand(ctx context.Context, containerID string, cmd []string, env []string) (string, int, error) {
 	payload := map[string]any{
 		"AttachStdout": true,
 		"AttachStderr": true,
 		"Tty":          true,
 		"Cmd":          cmd,
 		"User":         "root",
+	}
+	if len(env) > 0 {
+		payload["Env"] = env
 	}
 	rawPayload, err := json.Marshal(payload)
 	if err != nil {

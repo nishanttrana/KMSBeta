@@ -49,15 +49,38 @@ func (s State) ChainNode() string {
 }
 
 type Reader struct {
-	static *State
-	db     *sql.DB
-	ttl    time.Duration
-	mu     sync.Mutex
-	cur    State
-	loaded time.Time
+	static  *State
+	db      *sql.DB
+	ttl     time.Duration
+	mu      sync.Mutex
+	cur     State
+	loaded  time.Time
+	pending bool
 }
 
 func NewReader(db *sql.DB) *Reader { return &Reader{db: db, ttl: 10 * time.Second} }
+
+// NewPendingReader is a reader whose database arrives later (Attach): the
+// platform database is reachable only over internal mTLS, once the process
+// has enrolled. Until then RunsPrimaryJobs is false, so a cluster member
+// never runs primary-only jobs while its role is still unknown.
+func NewPendingReader() *Reader { return &Reader{ttl: 10 * time.Second, pending: true} }
+
+// Attach supplies the database of a pending reader.
+func (r *Reader) Attach(db *sql.DB) {
+	r.mu.Lock()
+	r.db, r.pending = db, false
+	r.mu.Unlock()
+}
+
+func (r *Reader) isPending() bool {
+	if r == nil {
+		return false
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.pending
+}
 
 // Static returns a reader that always reports s (tests, tools).
 func Static(s State) *Reader { return &Reader{static: &s} }
@@ -71,11 +94,11 @@ func (r *Reader) Get(ctx context.Context) State {
 	if r.static != nil {
 		return *r.static
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.db == nil {
 		return State{}
 	}
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	if time.Since(r.loaded) < r.ttl {
 		return r.cur
 	}
@@ -94,7 +117,13 @@ FROM cluster_local_state WHERE id = 1`).Scan(&s.NodeID, &s.Role, &s.PrimaryNodeI
 // replicated state (schedulers, sweeps, reconcilers): true on a standalone
 // node or the primary. A member receives the results through replication;
 // running them there too would diverge its copy or halt replication.
-func RunsPrimaryJobs(ctx context.Context) bool { return !Default().Get(ctx).IsMember() }
+func RunsPrimaryJobs(ctx context.Context) bool {
+	r := Default()
+	if r.isPending() {
+		return false
+	}
+	return !r.Get(ctx).IsMember()
+}
 
 var (
 	defMu sync.Mutex

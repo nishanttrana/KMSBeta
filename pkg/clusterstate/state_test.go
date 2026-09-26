@@ -40,3 +40,18 @@ func TestChainNode(t *testing.T) {
 		}
 	}
 }
+
+// Until the database is attached (the process has no mTLS identity yet), a
+// node must not run primary-only jobs: it may be a member.
+func TestPendingReaderHoldsPrimaryJobs(t *testing.T) {
+	r := NewPendingReader()
+	SetDefault(r)
+	defer SetDefault(nil)
+	if RunsPrimaryJobs(context.Background()) {
+		t.Fatal("primary jobs must wait while the role is unknown")
+	}
+	r.Attach(nil)
+	if !RunsPrimaryJobs(context.Background()) {
+		t.Fatal("once attached, a node without cluster state runs primary jobs")
+	}
+}

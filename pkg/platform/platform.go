@@ -70,7 +70,7 @@ type Options struct {
 	SkipJWT bool
 
 	// DeferTLS skips internal mTLS enrolment in Boot. Only the certs service
-	// sets it: it is the CA and enrols itself locally before Serve.
+	// sets it: it is the CA and enrols itself locally before calling Boot.
 	DeferTLS bool
 }
 
@@ -103,6 +103,17 @@ func Boot(opts Options) (*Runtime, error) {
 
 	rt := &Runtime{Ctx: ctx, Cfg: cfg, Logger: logger, opts: opts, stop: stop}
 
+	if !opts.DeferTLS {
+		// Internal mTLS identity from the internal-services Sub CA, before
+		// the database, NATS or any listener: all of them need it
+		// (docs/SECURITY/INTERNAL_TLS.md). DeferTLS services (certs) enrol
+		// themselves before Boot.
+		if _, err := pkgsvctls.Init(ctx, "kms-"+opts.ServiceName, pkgsvctls.Options{Logger: logger}); err != nil {
+			stop()
+			return nil, err
+		}
+	}
+
 	if opts.MigrationsDir != "" {
 		db, err := pkgdb.Open(ctx, pkgdb.Config{
 			PostgresDSN:     cfg.PostgresDSN,
@@ -124,18 +135,6 @@ func Boot(opts Options) (*Runtime, error) {
 			return nil, err
 		}
 		rt.DB = db
-	}
-
-	if !opts.DeferTLS {
-		// Internal mTLS identity from the internal-services Sub CA
-		// (docs/SECURITY/INTERNAL_TLS.md). Nothing is served before it.
-		if _, err := pkgsvctls.Init(ctx, "kms-"+opts.ServiceName, pkgsvctls.Options{Logger: logger}); err != nil {
-			if rt.DB != nil {
-				_ = rt.DB.Close()
-			}
-			stop()
-			return nil, err
-		}
 	}
 
 	if !opts.SkipNATS {

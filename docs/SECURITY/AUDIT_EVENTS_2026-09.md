@@ -112,12 +112,40 @@ the service log has a `MEK scan: …` line. A refused start shows as a
 | Event | When | Severity |
 |---|---|---|
 | `audit.cert.internal_subca_created` | the internal-services Sub CA is created under the runtime root (first start) | info |
-| `audit.cert.internal_enroll` | every enrolment request on `POST /v1/enroll` (route kernel); refusals carry `result: refused` and `reason`: `invalid_request`, `invalid_csr`, `proof_rejected` (wrong identity, wrong secret, expired, unknown identity), `issuance_refused` | warning |
+| `audit.certs.internal_enroll` | every enrolment request on `POST /v1/enroll` (route kernel); refusals carry `result: refused` and `reason`: `invalid_request`, `invalid_csr`, `proof_rejected` (wrong identity, wrong secret, expired, unknown identity), `issuance_refused` | warning |
+| `audit.cert.internal_pki_bootstrapped` | the certs service loaded its internal PKI before the database and recorded the CAs and the certificates it issued before connecting (`created`, `issued_before_database`) | info |
 | `audit.cert.internal_enrolled` | a certificate was issued from a CSR: identity, serial, key algorithm, expiry, how many previous certificates were superseded | info |
 
 Proven by `TestEnrollmentIssuesRegistrySANsFromTheSubCA` and
 `TestEnrollmentRefusals` (services/certs), and `TestEnrollmentProof`
 (pkg/svctls).
+
+## HSM library uploads and CLI/SSH access (hsm-connector, auth)
+
+| Event | When | Severity |
+|---|---|---|
+| `audit.hsm.provider_library_inventory` | connector start: each tenant's provider files with SHA-256 | info |
+| `audit.hsm.provider_library_added` / `_changed` / `_removed` | a file uploaded, replaced or deleted over SSH/SFTP | warning |
+| `audit.auth.cli_session_refused` | CLI session refused, `result: refused`, `reason` `invalid_credentials` or `public_default_password` | warning |
+| `audit.auth.cli_ssh_password_synced` | auth set the SSH password on hsm-integration (`result` success/failure) | info |
+| `audit.auth.cli_password_revoked` | a CLI user on the retired public password got a random one; SSH copy locked | critical |
+
+Proven by `TestLibraryWatcherAuditsUploads` (pkg/hsmconnector),
+`TestCLISessionRefusesThePublicPasswordAndAuditsRefusals`,
+`TestRevokeRetiredCLIPasswords` and
+`TestCLISSHPasswordSyncKeepsThePasswordOffTheCommandLine` (services/auth).
+SSH logins themselves are in the hsm-integration container log (sshd,
+`LogLevel VERBOSE`, with key fingerprints), not the audit trail.
+
+## Certs root wrapping key (certs, docs/SECURITY/SECRET_ROTATION.md)
+
+| Event | When | Severity |
+|---|---|---|
+| `audit.certs.crwk_rotated` | the CRWK was re-keyed after a passphrase rotation. Details: `from_version`, `to_version`, `ca_signers_rewrapped`, and `reason`: `passphrase_rotation`, or `public_default_passphrase` (migration off the retired public passphrase; carries an `exposure` note). A failed rewrap has `result: failure`, `reason: rewrap_failed`, `rotation_reason`, and the error; it is retried on the next start | warning |
+
+Proven by `TestCRWKMigratesOffThePublicDefault` (SQLite and
+`...Postgres`) and `TestCRWKRotationResumesAndAuditsFailure`
+(services/certs).
 
 ## Kernel-emitted events (pkg/route)
 
@@ -142,7 +170,9 @@ Proven by `routetest.RefusalsAudited` for every route, and by the
 
 A service that **refuses to start** has no audit pipeline yet, because it exits
 before connecting. That covers placeholder secrets, weak database passwords,
-an invalid or mismatched FIPS mode, a missing certified module, and a missing
+an invalid or mismatched FIPS mode, a missing certified module, a public or
+weak certs CRWK passphrase (`TestCRWKPassphraseRefusesPublicAndWeakValues`), a
+retired public `AUTH_BOOTSTRAP_CLI_PASSWORD` (`TestCLIBootstrapPasswordRefusesThePublicDefault`), and a missing
 or malformed token-verification key (keycore; governance, which looks for
 `GOVERNANCE_JWT_PUBLIC_KEY_PEM`/`_B64`, then the shared
 `JWT_PUBLIC_KEY_PEM`/`_B64`, then `KEYCORE_JWT_PUBLIC_KEY_*`, then
@@ -155,7 +185,7 @@ or malformed token-verification key (keycore; governance, which looks for
 A service that can't **enrol for its internal mTLS certificate** doesn't serve
 at all: it logs `internal mTLS enrolment for kms-<name> failed (attempt N)`
 and retries until the certs service answers. The certs side audits each
-refusal (`audit.cert.internal_enroll`, `result: refused`). A TLS handshake a
+refusal (`audit.certs.internal_enroll`, `result: refused`). A TLS handshake a
 server refuses (no client certificate, wrong CA, plain HTTP) is logged by the
 server as `http: TLS handshake error`; nothing reaches the application, so
 there is no request to audit.

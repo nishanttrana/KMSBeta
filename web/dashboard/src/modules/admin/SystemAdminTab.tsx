@@ -2143,9 +2143,13 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   // Runtime mode comes from the Go runtime (VECTA_FIPS_MODE at deploy time); never guess it.
   const fipsRuntimeMode = systemState?.fips_runtime_enforced===true ? "only (strict)" : systemState?.fips_runtime_enabled===true ? "on" : "off";
   const runtimeLibraryLine = `Module: ${String(systemState?.fips_crypto_library||"not reported")} | ${systemState?.fips_library_validated===true ? `certified Go Cryptographic Module ${String(systemState?.fips_module_version||"")} in FIPS mode` : "not running a validated module in FIPS mode"}`;
+  // The certs root wrapping key as the certs service reports it; nothing is
+  // assumed when it doesn't answer (rotation: docs/SECURITY/SECRET_ROTATION.md).
   const certSecuritySummary = certSecurityLoading
     ? "loading..."
-    : `${String(certSecurity?.storage||"db_encrypted")} / ${String(certSecurity?.hsm_mode||"software")} / ${String(certSecurity?.status||"ready")}`;
+    : !certSecurity
+      ? "not reported"
+      : `${String(certSecurity.storage_mode||"unknown")} / ${String(certSecurity.root_key_mode||"unknown")} / ${String(certSecurity.state||"unknown")}${certSecurity.key_version?` (${String(certSecurity.key_version)})`:""}${certSecurity.rotation_pending?" · passphrase rotation pending: CA signers being rewrapped":""}${certSecurity.last_error?` · ${String(certSecurity.last_error)}`:""}`;
   // The enforced policy, not a setting: every service link is TLS 1.3 mTLS
   // from the internal-services Sub CA and negotiates hybrid ML-KEM key
   // exchange (pkg/svctls, proven by TestMutualTLSBetweenServices).
@@ -2359,6 +2363,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         <div>{`Sample: ${entropySampleBytes} bytes in ${entropySampleMicros} us`}</div>
         <div>{`This service runs FIPS mode: ${fipsRuntimeMode}`}</div>
         <div>{runtimeLibraryLine}</div>
+        <div>{`Certs root wrapping key: ${certSecuritySummary}`}</div>
         <div>FIPS Policy above adds per-tenant algorithm rules on top of the platform mode below.</div>
       </div>
       <div style={{marginTop:8}}><FipsModePanel session={session} onToast={onToast}/></div>

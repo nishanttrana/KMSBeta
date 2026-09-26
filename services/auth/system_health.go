@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	pkgconsul "vecta-kms/pkg/consul"
 
 	consulapi "github.com/hashicorp/consul/api"
 )
@@ -90,11 +91,8 @@ var (
 )
 
 func NewSystemHealthChecker(consulAddr string, logger *log.Logger) *SystemHealthChecker {
-	cfg := consulapi.DefaultConfig()
-	cfg.Address = strings.TrimSpace(consulAddr)
-
 	var client *consulapi.Client
-	if c, err := consulapi.NewClient(cfg); err == nil {
+	if c, err := pkgconsul.NewClient(consulAddr, 10*time.Second); err == nil {
 		client = c
 	} else if logger != nil {
 		logger.Printf("system health: consul client init failed: %v", err)
@@ -146,7 +144,6 @@ func blockedRestartServices() map[string]string {
 		"consul":          "service discovery backend",
 		"dashboard":       "dashboard UI service",
 		"envoy":           "edge proxy service",
-		"etcd":            "distributed coordination backend",
 		"hsm-connector":   "hardware HSM connector",
 		"signing":         "artifact signing and transparency metadata service",
 		"keyaccess":       "external key access justification policy service",
@@ -180,8 +177,7 @@ func defaultInfraTargets(consulAddr string) []serviceTarget {
 		{name: "PostgreSQL", address: postgresTarget()},
 		{name: "Valkey", address: normalizeTargetAddress(firstNonEmpty(os.Getenv("REDIS_URL"), "valkey:6379"), "valkey:6379")},
 		{name: "NATS JetStream", address: normalizeTargetAddress(firstNonEmpty(os.Getenv("NATS_URL"), "nats://nats:4222"), "nats:4222")},
-		{name: "Consul", address: normalizeTargetAddress(firstNonEmpty(consulAddr, "consul:8500"), "consul:8500")},
-		{name: "etcd", address: normalizeTargetAddress(firstNonEmpty(os.Getenv("ETCD_ENDPOINT"), "etcd:2379"), "etcd:2379")},
+		{name: "Consul", address: normalizeTargetAddress(firstNonEmpty(consulAddr, "consul:8501"), "consul:8501")},
 	}
 	targets = append(targets, knownBackendTargets()...)
 	return targets
@@ -831,8 +827,6 @@ func composeServiceToHealthName(serviceName string) (string, bool) {
 		return "Valkey", true
 	case "consul":
 		return "consul", true
-	case "etcd":
-		return "etcd", true
 	default:
 		return "", false
 	}
@@ -1008,8 +1002,6 @@ func serviceNameToComposeService(name string) string {
 		return "valkey"
 	case "consul":
 		return "consul"
-	case "etcd":
-		return "etcd"
 	case "dashboard":
 		return "dashboard"
 	case "envoy":

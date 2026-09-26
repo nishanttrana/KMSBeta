@@ -207,24 +207,29 @@ function Prepare-CertVolumes {
     } else {
         "/var/lib/vecta/certs/bootstrap.passphrase"
     }
-    $bootstrapSecret = if ($env:CERTS_CRWK_BOOTSTRAP_PASSPHRASE) {
-        $env:CERTS_CRWK_BOOTSTRAP_PASSPHRASE
-    } else {
-        "vecta-dev-passphrase"
-    }
+    # The CRWK passphrase is generated inside the volume and never crosses the
+    # host (crwk-passphrase.sh); an operator-supplied one is passed by
+    # variable name only (CLAUDE.md rule 9).
+    $passphraseScript = Join-Path $PSScriptRoot "crwk-passphrase.sh"
 
     docker volume create $certsVolume *> $null
     docker volume create $runtimeVolume *> $null
 
     foreach ($helperImage in @("postgres:16.13-alpine", "alpine:3.24", "busybox:1.36")) {
-        docker run --rm `
+        $helperOut = docker run --rm `
+            --volume "${passphraseScript}:/crwk-passphrase.sh:ro" `
             --volume "${certsVolume}:/data" `
             --volume "${runtimeVolume}:/runtime" `
             --env "CERTS_CRWK_PASSPHRASE_FILE=$passphrasePath" `
-            --env "BOOTSTRAP_SECRET=$bootstrapSecret" `
+            --env CERTS_CRWK_BOOTSTRAP_PASSPHRASE `
             $helperImage `
-            sh -lc 'set -eu; mkdir -p /data /runtime; chown -R 100:101 /data /runtime; chmod 700 /data /runtime; case "${CERTS_CRWK_PASSPHRASE_FILE:-/var/lib/vecta/certs/bootstrap.passphrase}" in /var/lib/vecta/certs/*) target="/data/${CERTS_CRWK_PASSPHRASE_FILE#/var/lib/vecta/certs/}"; mkdir -p "$(dirname "$target")"; if [ ! -s "$target" ]; then printf %s "${BOOTSTRAP_SECRET:-vecta-dev-passphrase}" > "$target"; fi; chown 100:101 "$target"; chmod 600 "$target";; esac' *> $null
+            sh -lc 'set -eu; mkdir -p /data /runtime; chown -R 100:101 /data /runtime; chmod 700 /data /runtime; sh /crwk-passphrase.sh' 2> $null
         if ($LASTEXITCODE -eq 0) {
+            if ("$helperOut" -match "crwk-public-default-retired") {
+                Write-Host "the certs CRWK passphrase was the retired public default: a new one was generated; certs re-keys the CRWK and rewraps every CA signer on start (audit.certs.crwk_rotated, docs/SECURITY/SECRET_ROTATION.md)"
+            } elseif ("$helperOut" -match "crwk-passphrase-written") {
+                Write-Host "certs CRWK passphrase generated in the certs key volume"
+            }
             return
         }
     }

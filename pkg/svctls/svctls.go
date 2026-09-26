@@ -87,6 +87,15 @@ var Materialized = map[string]string{
 	"vecta-dashboard": "dashboard",
 }
 
+// Infrastructure servers get a Sub CA server certificate written by the
+// certs service; clients reach them over mTLS.
+var Infrastructure = map[string]string{
+	"vecta-postgres": "postgres",
+	"vecta-nats":     "nats",
+	"vecta-valkey":   "valkey",
+	"vecta-consul":   "consul",
+}
+
 const (
 	// EnrollPath is served by the certs enrolment listener.
 	EnrollPath       = "/v1/enroll"
@@ -109,6 +118,9 @@ var (
 		for _, h := range Materialized {
 			m[h] = true
 		}
+		for _, h := range Infrastructure {
+			m[h] = true
+		}
 		return m
 	}()
 )
@@ -123,7 +135,10 @@ func HostFor(identity string) (string, bool) {
 	if h, ok := Services[identity]; ok {
 		return h, true
 	}
-	h, ok := Materialized[identity]
+	if h, ok := Materialized[identity]; ok {
+		return h, true
+	}
+	h, ok := Infrastructure[identity]
 	return h, ok
 }
 
@@ -293,6 +308,20 @@ func (id *Identity) ClientConfig() *tls.Config {
 		RootCAs:              id.roots,
 		GetClientCertificate: func(*tls.CertificateRequestInfo) (*tls.Certificate, error) { return id.Certificate() },
 	})
+}
+
+// ClientTLSConfigFor presents this identity to serverName, trusting only
+// the internal Sub CA (Postgres, NATS, Valkey and other non-HTTP clients).
+func (id *Identity) ClientTLSConfigFor(serverName string) *tls.Config {
+	cfg := id.ClientConfig()
+	cfg.ServerName = serverName
+	return cfg
+}
+
+// HTTPClient is an HTTP client over the process router (internal hosts
+// over mTLS), for libraries that build their own transport.
+func (id *Identity) HTTPClient(timeout time.Duration) *http.Client {
+	return &http.Client{Timeout: timeout, Transport: id.Router(http.DefaultTransport)}
 }
 
 // Router sends internal hosts over mTLS and everything else to external.

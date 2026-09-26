@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/consul/api"
+
+	pkgsvctls "vecta-kms/pkg/svctls"
 )
 
 type Registrar struct {
@@ -17,10 +20,22 @@ type Registrar struct {
 	port      int
 }
 
-func NewRegistrar(address string, serviceID string, name string, host string, port int) (*Registrar, error) {
+// NewClient returns a Consul API client. With an internal mTLS identity
+// (pkg/svctls) it speaks HTTPS with the service's client certificate
+// (docs/SECURITY/INTERNAL_TLS.md); the address may carry an https:// scheme.
+func NewClient(address string, timeout time.Duration) (*api.Client, error) {
 	cfg := api.DefaultConfig()
-	cfg.Address = address
-	client, err := api.NewClient(cfg)
+	cfg.Address = strings.TrimSpace(address)
+	if id := pkgsvctls.Current(); id != nil {
+		cfg.Scheme = "https"
+		cfg.Address = strings.TrimPrefix(strings.TrimPrefix(cfg.Address, "https://"), "http://")
+		cfg.HttpClient = id.HTTPClient(timeout)
+	}
+	return api.NewClient(cfg)
+}
+
+func NewRegistrar(address string, serviceID string, name string, host string, port int) (*Registrar, error) {
+	client, err := NewClient(address, 10*time.Second)
 	if err != nil {
 		return nil, err
 	}

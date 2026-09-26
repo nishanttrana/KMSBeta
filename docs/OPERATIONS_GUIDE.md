@@ -121,7 +121,6 @@ Usually verify:
 - `nats`
 - `consul`
 - `valkey`
-- `etcd`
 
 ### Optional Feature Services
 
@@ -143,6 +142,25 @@ Verify only if enabled:
 - `workload`
 - `confidential`
 - `pqc`
+
+## Reaching Postgres, NATS, Valkey And Consul Directly
+
+**Everything is internal mTLS** (docs/SECURITY/INTERNAL_TLS.md). A client on
+the host without a certificate from the internal-services Sub CA is refused
+at the TLS handshake. For administration, use the container's own socket
+and pass secrets through the environment, never on the command line:
+
+```bash
+export PGPASSWORD="$(sed -n 's/^POSTGRES_PASSWORD=//p' .env)"
+docker compose exec -e PGPASSWORD postgres psql -U postgres -d vecta
+```
+
+**Checks:**
+- **Every database connection is TLS 1.3 with a service certificate:**
+  `select * from pg_stat_ssl join pg_stat_activity using (pid)`.
+- **Audit ingestion is live:** `select max(timestamp) from audit_events`
+  should be seconds old. If not, read `docker compose logs audit` for
+  ingest errors.
 
 ## Daily Operational Tasks
 

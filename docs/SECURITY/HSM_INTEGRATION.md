@@ -33,6 +33,17 @@ dashboard ──► governance┘   (cgo, glibc)     │     Entrust nShield, Ut
   the provider workspace `/var/lib/vecta/hsm/providers`, which the
   `hsm-integration` container writes and the connector mounts read-only.
   Paths are resolved through symlinks before the check.
+- **Uploads (hsm-integration).** An SSH/SCP/SFTP endpoint on loopback port
+  2222 (`HSM_INTEGRATION_SSH_BIND` exposes it).
+  - **Login:** public keys (`HSM_INTEGRATION_SSH_AUTHORIZED_KEYS`), which
+    turn password login off. Otherwise the KMS CLI user's password, which
+    auth sets when an admin opens a CLI session. The account is locked at
+    every start.
+  - **Nothing else:** no sudo, no root login, no forwarding.
+  - **Access to uploads:** the workspace is setgid, group `hsm-providers`
+    (gid 10430), and the connector joins that group (`group_add`) to read
+    what was uploaded. Before 1.11.0-beta the files were readable only by
+    the SSH user, so the connector couldn't load them.
 - **PIN.** The PIN is in the connector's environment under the profile's
   `pin_env_var` (upper case, containing `PIN`, e.g. `SECUROSYS_HSM_PIN`), or
   in the file named by `<var>_FILE`. Operators put it in
@@ -193,6 +204,11 @@ gone.
 | `audit.key.hsm_device_changed` | A rotated version was generated on a different HSM serial than the key's first |
 | `audit.cert.crl_generation_failed` | A CRL couldn't be signed (for example, the HSM was unreachable). No CRL is published: this used to emit a JSON note wrapped in `X509 CRL` PEM |
 | `audit.key.create` | Carries `hsm: true`, `hsm_label` and `algorithm` for an HSM key |
+| `audit.hsm.provider_library_inventory` | Connector start: every file in each tenant's provider workspace, with path, size and SHA-256 (a change made while the connector was down shows between two inventories) |
+| `audit.hsm.provider_library_added` / `_changed` / `_removed` | A file was uploaded, replaced or deleted in the workspace over SSH/SFTP (checked every 30 s): path, tenant, SHA-256 (and `previous_sha256`) |
+| `audit.auth.cli_session_refused` | A dashboard CLI session was refused: `reason` `invalid_credentials` or `public_default_password` |
+| `audit.auth.cli_ssh_password_synced` | Auth set the SSH password on hsm-integration (`result` success or failure) |
+| `audit.auth.cli_password_revoked` | At auth start, a CLI user still holding the retired public password got a random one, and its SSH copy was locked |
 
 ## FIPS 140-3
 
@@ -265,6 +281,11 @@ normal setup. A node-local HSM would not see objects made on the primary.
   bind the object to one tenant, because its label doesn't carry the
   tenant, and that step doesn't exist yet.
 - **HSM CA keys are ECDSA only** (see above).
+- **SSH logins are in the container log, not the audit trail.** sshd can't
+  reach the audit pipeline. What an upload changes is audited by the
+  connector (file hashes), but only while the `hsm_hardware` profile runs
+  it. With `hsm_cli` alone nothing loads the libraries, and the next
+  connector start inventories them.
 - **Traffic between services.** With the tenant key on, the data key crosses
   the internal network from connector to keycore on each use, like every
   internal call today. The HSM PIN sits in the connector's environment or

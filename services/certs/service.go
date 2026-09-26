@@ -27,6 +27,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"vecta-kms/pkg/svctls"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 
@@ -62,6 +63,7 @@ type Service struct {
 	keycore           KeyCoreSigner
 	mek               atomic.Pointer[[]byte] // master key from keycore; nil until loaded
 	exposure          *mek.Keyring           // exposure register; nil in tests
+	internalPKI       *bootstrapPKI          // set once the internal PKI is recorded in the database
 	securityProvider  certRootKeyProvider
 	certStorageMode   string
 	rootKeyMode       string
@@ -91,6 +93,7 @@ type RuntimeCertMaterializerConfig struct {
 	KMIPCN          string
 	KMIPSANs        []string
 	DashboardTLSDir string
+	InfraTLSDir     string
 }
 
 func NewService(store Store, events EventPublisher, keycore KeyCoreSigner, mek []byte, fipsStrict bool, keycoreFailClosed bool) *Service {
@@ -138,6 +141,11 @@ func NewServiceWithSecurity(store Store, events EventPublisher, keycore KeyCoreS
 	}
 	return svc
 }
+
+// AttachStore and SetPublisher complete a service built before the database
+// and NATS were reachable (internal PKI bootstrap, internal_bootstrap.go).
+func (s *Service) AttachStore(store Store)            { s.store = store }
+func (s *Service) SetPublisher(events EventPublisher) { s.events = events }
 
 // SetLegacyMEK installs the 32-byte master key from keycore.
 func (s *Service) SetLegacyMEK(key []byte) error {
@@ -224,6 +232,42 @@ func (s *Service) CreateCA(ctx context.Context, req CreateCARequest) (CA, error)
 		}
 	}
 
+	var parent *CA
+	if req.CALevel == "intermediate" {
+		p, err := s.store.GetCA(ctx, req.TenantID, req.ParentCAID)
+		if err != nil {
+			return CA{}, err
+		}
+		parent = &p
+	}
+	if _, err := s.signWithKeyCoreIfConfigured(ctx, req.TenantID, req.KeyBackend, req.KeyRef, buildCASigningIntent(req)); err != nil {
+		return CA{}, err
+	}
+	ca, err := s.mintCA(req, caID, signer, encSigner, parent)
+	if err != nil {
+		return CA{}, err
+	}
+	if err := s.store.CreateCA(ctx, ca); err != nil {
+		return CA{}, err
+	}
+	out, err := s.store.GetCA(ctx, req.TenantID, caID)
+	if err != nil {
+		return CA{}, err
+	}
+	_ = s.publishAudit(ctx, "audit.cert.ca_created", req.TenantID, map[string]interface{}{
+		"ca_id":       out.ID,
+		"ca_level":    out.CALevel,
+		"algorithm":   out.Algorithm,
+		"ca_type":     out.CAType,
+		"key_backend": out.KeyBackend,
+	})
+	return out, nil
+}
+
+// mintCA signs a CA certificate for req under parent (nil: self-signed root)
+// and returns its record, without storing it. CreateCA stores it; the
+// internal PKI bootstrap uses it before the database is reachable.
+func (s *Service) mintCA(req CreateCARequest, caID string, signer crypto.Signer, encSigner EncryptedSigner, parent *CA) (CA, error) {
 	subject := parseSubject(req.Subject, req.Name)
 	now := time.Now().UTC()
 	serial, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 120))
@@ -242,11 +286,7 @@ func (s *Service) CreateCA(ctx context.Context, req CreateCARequest) (CA, error)
 
 	parentTpl := tpl
 	parentSigner := signer
-	if req.CALevel == "intermediate" {
-		parent, err := s.store.GetCA(ctx, req.TenantID, req.ParentCAID)
-		if err != nil {
-			return CA{}, err
-		}
+	if parent != nil {
 		if parent.Status != CAStatusActive {
 			return CA{}, errors.New("parent ca is not active")
 		}
@@ -254,7 +294,7 @@ func (s *Service) CreateCA(ctx context.Context, req CreateCARequest) (CA, error)
 		if err != nil {
 			return CA{}, err
 		}
-		parentKey, err := s.loadCASigner(parent)
+		parentKey, err := s.loadCASigner(*parent)
 		if err != nil {
 			return CA{}, err
 		}
@@ -263,17 +303,13 @@ func (s *Service) CreateCA(ctx context.Context, req CreateCARequest) (CA, error)
 		tpl.MaxPathLen = 1
 	}
 
-	if _, err := s.signWithKeyCoreIfConfigured(ctx, req.TenantID, req.KeyBackend, req.KeyRef, buildCASigningIntent(req)); err != nil {
-		return CA{}, err
-	}
-
 	der, err := x509.CreateCertificate(rand.Reader, tpl, parentTpl, signer.Public(), parentSigner)
 	if err != nil {
 		return CA{}, err
 	}
 	certPEM := string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
 
-	ca := CA{
+	return CA{
 		ID:                 caID,
 		TenantID:           req.TenantID,
 		Name:               req.Name,
@@ -295,22 +331,7 @@ func (s *Service) CreateCA(ctx context.Context, req CreateCARequest) (CA, error)
 		SignerDataIV:       encSigner.DataIV,
 		SignerKeyVersion:   encSigner.KeyVersion,
 		SignerFingerprint:  encSigner.Fingerprint,
-	}
-	if err := s.store.CreateCA(ctx, ca); err != nil {
-		return CA{}, err
-	}
-	out, err := s.store.GetCA(ctx, req.TenantID, caID)
-	if err != nil {
-		return CA{}, err
-	}
-	_ = s.publishAudit(ctx, "audit.cert.ca_created", req.TenantID, map[string]interface{}{
-		"ca_id":       out.ID,
-		"ca_level":    out.CALevel,
-		"algorithm":   out.Algorithm,
-		"ca_type":     out.CAType,
-		"key_backend": out.KeyBackend,
-	})
-	return out, nil
+	}, nil
 }
 
 func (s *Service) ListCAs(ctx context.Context, tenantID string) ([]CA, error) {
@@ -2749,6 +2770,15 @@ func (s *Service) MaterializeRuntimeCerts(ctx context.Context, cfg RuntimeCertMa
 			return fmt.Errorf("dashboard TLS permissions: %w", err)
 		}
 	}
+	// Infrastructure servers (Postgres, NATS, Valkey, Consul): renewed here
+	// once the database is up; first issued before it (internal_bootstrap.go).
+	if dir := strings.TrimSpace(cfg.InfraTLSDir); dir != "" {
+		for identity, host := range svctls.Infrastructure {
+			if err := s.ensureRuntimeEndpointCert(ctx, tenantID, sub, filepath.Join(dir, host), "ECDSA-P256", infraCertType(host), identity, []string{host, identity}, internalDays, internalRenew, sub.CertPEM); err != nil {
+				return fmt.Errorf("%s TLS: %w", host, err)
+			}
+		}
+	}
 	_ = s.publishAudit(ctx, "audit.cert.runtime_materialized", tenantID, map[string]interface{}{
 		"materialize_dir": materializeDir,
 		"root_ca_name":    rootName,
@@ -3147,6 +3177,8 @@ func selectExtKeyUsage(certType string) []x509.ExtKeyUsage {
 	switch strings.ToLower(strings.TrimSpace(certType)) {
 	case "tls-client", "mtls":
 		return []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
+	case "tls-server-only":
+		return []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
 	case "email", "smime":
 		return []x509.ExtKeyUsage{x509.ExtKeyUsageEmailProtection}
 	case "code-signing":

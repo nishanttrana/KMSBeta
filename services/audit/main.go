@@ -121,6 +121,12 @@ func main() {
 	// redelivered until acked, unlike the previous lossy core NATS subscribe.
 	if _, err := pkgaudit.SubscribeDurable(js, "audit-ingest", func(_ *pkgaudit.Event, msg *nats.Msg) {
 		if err := svc.HandleNATSMessage(ctx, msg); err != nil {
+			if errors.Is(err, errUnparseableEvent) {
+				// Never ingestible: terminate it rather than stall the stream.
+				logger.Printf("nats ingest rejected (terminated, not redelivered): %v", err)
+				_ = msg.Term()
+				return
+			}
 			if ac.FailClosed {
 				logger.Printf("nats ingest failed (will redeliver): %v", err)
 				_ = msg.Nak()

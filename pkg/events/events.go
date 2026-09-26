@@ -3,9 +3,12 @@ package events
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/nats-io/nats.go"
+
+	pkgsvctls "vecta-kms/pkg/svctls"
 )
 
 type Publisher struct {
@@ -46,7 +49,27 @@ func Connect(url string, clientName string, logf func(string, ...interface{})) (
 			}),
 		)
 	}
+	// Internal mTLS to NATS (docs/SECURITY/INTERNAL_TLS.md), and keep
+	// retrying if NATS isn't up yet rather than running without audit.
+	opts = append(opts, nats.RetryOnFailedConnect(true))
+	if id := pkgsvctls.Current(); id != nil {
+		opts = append(opts, nats.Secure(id.ClientTLSConfigFor(natsHost(url))))
+	}
 	return nats.Connect(url, opts...)
+}
+
+func natsHost(url string) string {
+	u := url
+	if i := strings.Index(u, "://"); i >= 0 {
+		u = u[i+3:]
+	}
+	if i := strings.LastIndex(u, "@"); i >= 0 {
+		u = u[i+1:]
+	}
+	if i := strings.IndexAny(u, ":/,"); i >= 0 {
+		u = u[:i]
+	}
+	return u
 }
 
 func NewPublisher(js nats.JetStreamContext, retries int, deadLetter string) *Publisher {

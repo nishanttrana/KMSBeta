@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -72,10 +73,17 @@ func (s *Service) PublishAudit(ctx context.Context, subject string, event AuditE
 	return false, nil
 }
 
+// errUnparseableEvent marks a message that can never be ingested (not an
+// event at all). Redelivering it would block the stream, so the consumer
+// terminates it instead of retrying.
+var errUnparseableEvent = errors.New("unparseable audit event")
+
+const platformTenantID = "root"
+
 func (s *Service) HandleNATSMessage(ctx context.Context, msg *nats.Msg) error {
 	event, err := parseIncomingEvent(msg.Subject, msg.Data)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %s: %v", errUnparseableEvent, msg.Subject, err)
 	}
 	if s.isRelayedDuplicate(ctx, event) {
 		return nil // another node's event, already here by replication
@@ -379,7 +387,15 @@ func parseIncomingEvent(subject string, payload []byte) (AuditEvent, error) {
 		}
 	}
 	if event.TenantID == "" {
-		return AuditEvent{}, errors.New("tenant_id is required")
+		// A platform-scoped event (no tenant: health, enrolment, platform
+		// settings) belongs to the platform operator's root tenant, as
+		// platform events already do. Rejecting it would redeliver it forever
+		// and stall ingestion of everything behind it.
+		event.TenantID = platformTenantID
+		if event.Details == nil {
+			event.Details = map[string]interface{}{}
+		}
+		event.Details["tenant_scope"] = "platform"
 	}
 	return event, nil
 }

@@ -10,19 +10,22 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" driver (as pkg/db)
-
 	"vecta-kms/pkg/clusterstate"
+	pkgdb "vecta-kms/pkg/db"
 	"vecta-kms/pkg/fips"
+	pkgsvctls "vecta-kms/pkg/svctls"
 )
 
 // FIPS runtime mode, platform-controlled (docs/SECURITY/FIPS.md).
 //
 // At startup every service reads the administrator's platform FIPS mode
-// (governance table platform_fips_mode), re-executes itself with the matching
+// (written by governance from its table platform_fips_mode to the shared
+// platform-state volume, so it is known before any cryptography),
+// re-executes itself with the matching
 // GODEBUG=fips140 if needed, verifies the result, and reports the mode it runs
 // in (platform_fips_observed). A watcher then polls the setting; when an
 // administrator changes it, the service waits its restart tier and sends
@@ -38,33 +41,43 @@ type fipsModeStore interface {
 	ReportObserved(ctx context.Context, service, instance, mode, module string, validated bool, started time.Time) error
 }
 
-type sqlFIPSModeStore struct{ db *sql.DB }
+// platformFIPSStore reads the administrator's mode from the file governance
+// writes to the shared platform-state volume (/run/vecta/platform/fips-mode).
+// It is read before the process does any cryptography: the database is only
+// reachable over internal mTLS, after enrolment, so it can't decide the mode.
+// The database connection arrives later (attachPlatformDB) and is used to
+// report the observed mode and for the cluster-role reader.
+type platformFIPSStore struct {
+	file string
+	db   atomic.Pointer[sql.DB]
+}
 
-func openFIPSModeStore() fipsModeStore {
-	dsn := strings.TrimSpace(os.Getenv("POSTGRES_DSN"))
-	if dsn == "" || getBool("SQLITE_FALLBACK", false) {
-		return nil
+func platformFIPSModeFile() string {
+	dir := strings.TrimSpace(os.Getenv("VECTA_PLATFORM_STATE_DIR"))
+	if dir == "" {
+		dir = "/run/vecta/platform"
 	}
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		return nil
-	}
-	db.SetMaxOpenConns(1)
-	return sqlFIPSModeStore{db: db}
+	return filepath.Join(dir, "fips-mode")
 }
 
 // Desired returns the administrator's platform mode, "" if never set.
-func (s sqlFIPSModeStore) Desired(ctx context.Context) (string, error) {
-	var mode string
-	err := s.db.QueryRowContext(ctx, `SELECT mode FROM platform_fips_mode WHERE id = 1`).Scan(&mode)
-	if errors.Is(err, sql.ErrNoRows) {
+func (s *platformFIPSStore) Desired(context.Context) (string, error) {
+	raw, err := os.ReadFile(s.file)
+	if errors.Is(err, os.ErrNotExist) {
 		return "", nil
 	}
-	return strings.TrimSpace(mode), err
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(raw)), nil
 }
 
-func (s sqlFIPSModeStore) ReportObserved(ctx context.Context, service, instance, mode, module string, validated bool, started time.Time) error {
-	_, err := s.db.ExecContext(ctx, `
+func (s *platformFIPSStore) ReportObserved(ctx context.Context, service, instance, mode, module string, validated bool, started time.Time) error {
+	db := s.db.Load()
+	if db == nil {
+		return errors.New("platform database not connected yet")
+	}
+	_, err := db.ExecContext(ctx, `
 INSERT INTO platform_fips_observed (service, instance, mode, module_version, validated, started_at, updated_at)
 VALUES ($1,$2,$3,$4,$5,$6,CURRENT_TIMESTAMP)
 ON CONFLICT (service, instance) DO UPDATE SET mode = EXCLUDED.mode, module_version = EXCLUDED.module_version,
@@ -75,26 +88,37 @@ ON CONFLICT (service, instance) DO UPDATE SET mode = EXCLUDED.mode, module_versi
 
 func fipsServiceName() string { return filepath.Base(os.Args[0]) }
 
+// attachPlatformDB waits for the internal mTLS identity (pkg/svctls), opens
+// the platform database with it, and reports the mode this process runs in.
+func attachPlatformDB(store *platformFIPSStore, reader *clusterstate.Reader, dsn, mode string) {
+	for pkgsvctls.Current() == nil {
+		time.Sleep(time.Second)
+	}
+	db, err := pkgdb.OpenPostgres(dsn)
+	if err != nil {
+		log.Printf("fips: platform database unavailable: %v", err)
+		return
+	}
+	db.SetMaxOpenConns(1)
+	store.db.Store(db)
+	reader.Attach(db)
+	host, _ := os.Hostname()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := store.ReportObserved(ctx, fipsServiceName(), host, mode, fips140.Version(), fips.ModuleValidated(), time.Now()); err != nil {
+		log.Printf("fips: observed mode not reported: %v", err)
+	}
+}
+
 // RequireFIPSRuntime puts the process in the platform FIPS mode and stops it
 // if that fails. Called from Load and NewHTTPServer so every service gets it
 // by construction.
 func RequireFIPSRuntime() {
 	fipsOnce.Do(func() {
-		store := openFIPSModeStore()
-		if sq, ok := store.(sqlFIPSModeStore); ok {
-			// The same small connection serves the cluster-role reader
-			// (write forwarding, clusterforward.go).
-			clusterstate.SetDefault(clusterstate.NewReader(sq.db))
-		}
-		desired := ""
-		if store != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			d, err := store.Desired(ctx)
-			cancel()
-			if err != nil {
-				log.Printf("fips: platform mode not readable (%v); using VECTA_FIPS_MODE", err)
-			}
-			desired = d
+		store := &platformFIPSStore{file: platformFIPSModeFile()}
+		desired, err := store.Desired(context.Background())
+		if err != nil {
+			log.Printf("fips: platform mode not readable (%v); using VECTA_FIPS_MODE", err)
 		}
 		target, reexec, err := fips.Decide(desired, os.Getenv("VECTA_FIPS_MODE"), fips.Mode(), os.Getenv(fips.ReexecMarker) == "1")
 		if err != nil {
@@ -116,13 +140,14 @@ func RequireFIPSRuntime() {
 		}
 		mode := fips.Mode()
 		log.Printf("fips: mode=%s module=%s validated=%t", mode, fips140.Version(), fips.ModuleValidated())
-		if store == nil {
-			return
+		if dsn := strings.TrimSpace(os.Getenv("POSTGRES_DSN")); dsn != "" && !getBool("SQLITE_FALLBACK", false) {
+			// The cluster-role reader (write forwarding, clusterforward.go) and
+			// the observed-mode report share one small connection, opened over
+			// internal mTLS once the process has enrolled.
+			reader := clusterstate.NewPendingReader()
+			clusterstate.SetDefault(reader)
+			go attachPlatformDB(store, reader, dsn, mode)
 		}
-		host, _ := os.Hostname()
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		_ = store.ReportObserved(ctx, fipsServiceName(), host, mode, fips140.Version(), fips.ModuleValidated(), time.Now())
-		cancel()
 		w := fipsWatcher{
 			store: store, service: fipsServiceName(), running: mode, interval: fipsWatchInterval,
 			delay: fips.RestartDelay, sleep: time.Sleep,

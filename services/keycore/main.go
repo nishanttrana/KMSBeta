@@ -133,6 +133,12 @@ func main() {
 				opt.TLSConfig = opt.TLSConfig.Clone()
 				opt.TLSConfig.MinVersion = tls.VersionTLS13
 			}
+			// Valkey is reached over internal mTLS only
+			// (docs/SECURITY/INTERNAL_TLS.md), whatever the URL scheme says.
+			if id := pkgsvctls.Current(); id != nil {
+				host, _, _ := strings.Cut(opt.Addr, ":")
+				opt.TLSConfig = id.ClientTLSConfigFor(host)
+			}
 			cli := redis.NewClient(opt)
 			if pingErr := cli.Ping(ctx).Err(); pingErr == nil {
 				cache = NewKeyCache(pkgcache.NewRedis(cli), 5*time.Minute)

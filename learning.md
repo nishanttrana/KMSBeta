@@ -5,6 +5,89 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### A README can hold a live credential, and the path to it can be indirect
+- **What happened:** the hsm-integration README listed `VectaCLI@2026` as
+  SSH "default credentials" long after the code stopped using it, so the
+  secret checks, which scan code, never saw it.
+- **It was still reachable, indirectly:**
+  - the SSH password is copied from the KMS CLI user;
+  - CLI users seeded before the earlier fix still had that password;
+  - nothing revoked it.
+
+  Removing a default has to include finding what it already produced, not
+  just where it is read.
+- **The same path leaked every password it copied.** Base64 inside a
+  `docker exec` command line is still the password, in `docker inspect` and
+  `ps`. Pass secrets to an exec through its environment, and read them with
+  a shell builtin.
+- **"Hardened" images must be run.** Adding `USER hsm` to the Dockerfile
+  made the root-only entrypoint fail, so the container had not started since.
+  Separately, uploaded libraries were readable only by the SSH user, so the
+  connector couldn't load them. Neither showed up without running the
+  container. Run the image and exercise the flow: log in, upload, read it
+  from the consumer.
+
+### A secret default in a start script escaped every secret check
+- **What happened:** `start-kms.sh` and `start-kms.ps1` fell back to a
+  literal CRWK passphrase, `${CERTS_CRWK_BOOTSTRAP_PASSPHRASE:-vecta-dev-passphrase}`,
+  in two places each: the variable, and the in-container `printf`. Rule 3's
+  checks scanned compose files and Go, not the scripts that seed volumes, so
+  the key protecting every CA key shipped public on every script-based
+  install. The same scripts also put the passphrase on the `docker run`
+  command line, where `ps` shows it.
+- **Rule:** secrets seeded into volumes are secrets too.
+  - Generate them inside the container (`/dev/urandom`), so they never cross
+    the host.
+  - Pass an operator's value by variable name (`-e NAME`), never
+    `-e NAME=value`.
+  - Scan every script that seeds state, not just compose and Go
+    (`no-secret-fallback-scripts`).
+- **Rule:** once a secret has shipped, ban its value everywhere
+  (`no-retired-public-secret`). Code that must recognise it, to migrate off
+  it, compares a SHA-256 digest.
+- **Changing the passphrase isn't enough:** re-sealing the same CRWK under
+  a new passphrase leaves every old copy of `crwk.sealed` able to open
+  current and future signers. Re-key to a new CRWK and rewrap, then delete
+  the old key only after the last row moves.
+
+### An audit consumer that NAKs a permanent error stalls the whole stream
+- Platform events without a tenant were rejected with "tenant_id is
+  required" and NAK'd to be redelivered, forever. Once enough were in
+  flight, JetStream stopped delivering anything else. For about 3.5 hours
+  no audit event was stored, and nothing alerted.
+- **Rule:** separate transient errors (NAK: database down) from permanent
+  ones (terminate: can never be ingested). Don't reject a valid event for a
+  missing field you can default: platform events belong to the platform
+  tenant.
+- **Check:** `select max(timestamp) from audit_events` should be seconds
+  old on a live stack.
+
+### Turning on TLS for the database exposes everything that read it before identity
+- The FIPS mode read in `pkg/config` ran at configuration load, before
+  enrolment. With Postgres on mTLS it would have failed quietly and fallen
+  back to the seed mode, ignoring the administrator. Anything read before
+  enrolment must come from a local, trusted source (here, a file governance
+  writes).
+- The CA lived only in the database it now protects. A sealed cache on the
+  CA's own key volume breaks that cycle; existing installs are exported
+  once over the Unix socket.
+
+### Infrastructure daemons and TLS files
+- Postgres, Valkey and Consul check key ownership or run as their own user.
+  Files written by the certs user need copying by a root wrapper
+  (`tls-entry.sh`) before the image's entrypoint, and a reload signal on
+  renewal:
+  - Postgres, NATS and Consul reload on SIGHUP;
+  - Valkey reloads on `CONFIG SET tls-cert-file`.
+- Compose volume `subpath` mounts fail if the subdirectory doesn't exist,
+  so create them in volume preparation.
+- In compose, `depends_on: !reset {}` did **not** override a dependency
+  merged in from a `<<:` anchor; `depends_on: {}` did.
+- OpenSSL (Postgres, Valkey) needs the client chain up to a self-signed
+  root, so they verify against the root too. Go servers (NATS, Consul)
+  can pin the Sub CA.
+
+
 ### Five traps turning on internal mTLS
 - **Start-up deadlock.** Certs fetched its master key from keycore before
   serving, but keycore now needs a certs-issued certificate first. Fix: the

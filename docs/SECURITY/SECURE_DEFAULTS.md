@@ -68,6 +68,11 @@ checked mechanically. Reviewers enforce the rest.
 | `no-secret-fallback-go` | `scripts/conformance.sh` | `("NAME", "literal")` env fallbacks in `services/` and `pkg/` for the same names |
 | `no-credential-in-url-go` / `-compose` | `scripts/conformance.sh` | `scheme://user:pass@` literals; URLs must be built from `${VAR}` or `%s` |
 | `env-example-no-secret-values` | `scripts/conformance.sh` | any non-empty secret value in `.env.example` |
+| `no-secret-fallback-scripts` | `scripts/conformance.sh` | `${NAME:-literal}` for a secret name in `install.sh`, `deploy-local.sh`, `run-local.sh`, `infra/scripts/` and `scripts/` (a generated `$(openssl rand ...)` fallback is allowed) |
+| `no-retired-public-secret` | `scripts/conformance.sh` | a secret value that once shipped in the repo (the list is `RETIRED_PUBLIC_SECRETS`) anywhere outside `CHANGELOG.md`, `learning.md`, `docs/` and tests, READMEs included. The only exception is the marked line in `services/auth/cli_password.go` |
+| `no-sudo-in-images` | `scripts/conformance.sh` | the `sudo` package, `NOPASSWD` or `usermod -aG sudo` in a service Dockerfile or script |
+| Retired CLI password | `services/auth/cli_password.go` | auth refuses to start with it as `AUTH_BOOTSTRAP_CLI_PASSWORD`, replaces it on existing CLI users at start, and refuses CLI sessions using it |
+| CRWK passphrase validation | `services/certs/root_key_provider.go` (`validateCRWKPassphrase`) | certs refuses to start on the retired public passphrase (by SHA-256), or one shorter than 32 characters or with fewer than 8 distinct characters |
 | `no-literal-key-material` | `scripts/conformance.sh` | in `services/` and `pkg/mek`, a hash of a string literal, an HMAC/KDF keyed by a literal, or a MEK/KEK/master key assigned from a literal. The only exception is a marked line in `pkg/mek/catalog.go` |
 | Placeholder rejection | `pkg/config/secrets.go`, run from `Load` and `NewHTTPServer` | a service starting with `your-...` / `change-me` secrets, or a DSN with a default password |
 | `deploy-local.sh` preflight | the deploy script | placeholders in `.env`; generates every missing secret, including the JWT signing key |
@@ -93,6 +98,73 @@ another exemption without the same forced-change guarantee.
 
 ## History
 
+- **2026-09-26 (hsm-integration SSH):** the hsm-integration README
+  published `VectaCLI@2026` as the SSH password.
+  - **Where it was live:** the code had stopped using it. But the SSH
+    password is the KMS CLI user's password, and CLI users seeded before the
+    2026-09-25 fix kept that value. Nothing revoked it, and port 2222 was
+    published on every interface.
+  - **Rule 9:** auth also copied each CLI password into the container on a
+    base64 `docker exec` command line.
+  - **Fixed, validated and revoked:**
+    - auth refuses the value as `AUTH_BOOTSTRAP_CLI_PASSWORD`;
+    - it replaces it on every CLI user at start and locks the SSH copy
+      (`audit.auth.cli_password_revoked`);
+    - it refuses CLI sessions using it;
+    - the password copy now goes through the exec environment;
+    - installers already generate `AUTH_BOOTSTRAP_CLI_PASSWORD`.
+  - **Least privilege:**
+    - key-based SSH turns password login off;
+    - no sudo (it was `NOPASSWD:ALL`);
+    - no forwarding;
+    - loopback bind by default.
+  - **New checks:** `no-sudo-in-images`, and `no-retired-public-secret`
+    extended to this value and to READMEs. The one line that must hold the
+    value (to verify stored hashes against it) is marked
+    `conformance:retired-public-secret` in `services/auth/cli_password.go`.
+- **2026-09-26 (CRWK passphrase):** `infra/scripts/start-kms.sh` and
+  `start-kms.ps1` wrote the certs CRWK passphrase file with the public
+  literal `vecta-dev-passphrase` whenever `CERTS_CRWK_BOOTSTRAP_PASSPHRASE`
+  was unset, which was every `deploy-local.sh` and `start-kms` install.
+  - **Why it matters:** that passphrase derives (Argon2id) the key sealing
+    the certs root wrapping key, which wraps every CA signing key. Anyone
+    with a copy of the certs volume and the database could open every CA
+    key.
+  - **Rule 3's checks missed it:** they covered compose and Go fallbacks,
+    not shell `${VAR:-literal}` in start scripts.
+  - `start-kms.sh` also put the passphrase on the `docker run` command line.
+    `install.sh` did the same with its generated one (rule 9).
+  - **Required or generated:** `infra/scripts/crwk-passphrase.sh`, shared
+    by `start-kms.sh`, `start-kms.ps1` and `install.sh`, generates 32 random
+    bytes inside the certs volume. An operator-supplied value is passed by
+    variable name only. `install.sh` and `deploy-local.sh` refuse one
+    shorter than 32 characters.
+  - **Validated, fail closed:** certs refuses to start on the public value
+    (matched by SHA-256, so the literal isn't in the code), or on a
+    passphrase shorter than 32 characters or with fewer than 8 distinct
+    characters.
+  - **Revoked:** `start-kms` moves the public passphrase aside as
+    `.previous` and generates a new one. Certs re-keys the CRWK to a new
+    random key, rewraps every CA signer and the internal PKI cache, then
+    deletes the old key and passphrase. It emits
+    `audit.certs.crwk_rotated` (`reason: public_default_passphrase`).
+  - **What that can't reach:** copies of the old sealed file plus database
+    dumps from before the rotation. Rotate the CAs if such copies may exist
+    ([SECRET_ROTATION.md](SECRET_ROTATION.md#certs-root-wrapping-key-crwk-passphrase)).
+  - **New checks:**
+    - `no-secret-fallback-scripts` fails on a literal `${SECRET:-...}` in
+      the installers and start scripts.
+    - `no-retired-public-secret` fails if a value that once shipped
+      reappears outside the docs and tests.
+- **2026-09-26:** `infra/valkey/valkey.conf` shipped `requirepass
+  vecta-valkey-secret`, a password in the repo.
+  - It had no effect in practice: `REDIS_URL` carried no password, so
+    keycore's ping failed and it silently used an in-memory cache.
+  - Fixed: Valkey now requires a client certificate from the internal CA
+    over TLS 1.3 **and** `VALKEY_PASSWORD`, which every installer generates
+    and compose requires (`--requirepass` from the environment).
+  - `make conformance` rule `no-password-in-infra-config` fails on a literal
+    `requirepass` or `masterauth` in any infrastructure config.
 - **2026-09-25:** `INTERNAL_SERVICE_BOOTSTRAP_SECRET` fell back to the public
   string `vecta-internal-svc-dev-secret-change-me`, and `install.sh` never
   generated it, so every installer-based deployment used it. Anyone could

@@ -38,6 +38,9 @@ func internalCertValidityDays() int64 {
 // EnsureInternalPKI returns the runtime root and the internal-services Sub CA,
 // creating the Sub CA under the root on first start.
 func (s *Service) EnsureInternalPKI(ctx context.Context, tenantID string) (CA, CA, error) {
+	if b := s.internalPKI; b != nil && b.tenant == tenantID {
+		return b.root, b.sub, nil
+	}
 	root, err := s.ensureRuntimeRootCA(ctx, tenantID, s.runtimeRootCAName(ctx, tenantID))
 	if err != nil {
 		return CA{}, CA{}, fmt.Errorf("runtime root CA: %w", err)

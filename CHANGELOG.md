@@ -4,6 +4,176 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.11.0-beta] — 2026-09-26
+
+### Security fix: hsm-integration SSH access
+- **Published password.** The README published `VectaCLI@2026` as the SSH
+  "default credentials". No code used it any more. But the SSH password is
+  the KMS CLI user's password, and a CLI user seeded before the 2026-09-25 fix could still
+  hold it, with port 2222 published on every interface.
+  - Auth now refuses to start with it as `AUTH_BOOTSTRAP_CLI_PASSWORD`.
+  - On every start it replaces it on any CLI user still holding it
+    (`audit.auth.cli_password_revoked`) and locks the SSH copy.
+  - It refuses a CLI session using it
+    (`audit.auth.cli_session_refused`).
+  - The README lists no password.
+- **Password on a command line (rule 9).** Opening a CLI session copied
+  the password into the container through a `docker exec` command line,
+  base64-encoded, where `docker inspect` and the host's process list show
+  it. Now it goes through the exec's environment to `chpasswd` via a shell
+  builtin, and the copy is audited (`audit.auth.cli_ssh_password_synced`).
+- **Key-based SSH.** `HSM_INTEGRATION_SSH_AUTHORIZED_KEYS` holds SSH public
+  keys, and setting it turns password login off. The keys file is
+  root-owned, so a session can't add its own. Without keys, the account is
+  locked at every start until auth sets the password.
+- **No sudo.** The SSH user had `NOPASSWD:ALL` sudo. It's removed with the
+  package: uploading a library and running the helper scripts need no
+  privilege.
+- **Hardened sshd:**
+  - no root login, TCP/agent/X11 forwarding, tunnels or user environment;
+  - `MaxAuthTries 3`;
+  - `LogLevel VERBOSE`, which logs key fingerprints.
+- **Port 2222 binds to loopback** (`HSM_INTEGRATION_SSH_BIND` to open it
+  deliberately).
+- **Fix: the container could not start.** The Dockerfile's `USER hsm` made
+  the root-only entrypoint fail at `useradd`.
+- **Fix: the connector couldn't read uploads.** Uploaded libraries were
+  readable only by the SSH user, so `hsm-connector` (another uid) couldn't
+  load them. The workspace is now setgid, group `hsm-providers` (gid
+  10430), and the connector joins it.
+- **Uploads are audited.** `hsm-connector` records an inventory at start,
+  then every file added, changed or removed in the provider workspace, with
+  its SHA-256 (`audit.hsm.provider_library_*`).
+- **New `make conformance` checks:**
+  - `no-retired-public-secret` now covers this password and READMEs;
+  - `no-sudo-in-images` fails on sudo or `NOPASSWD` in a service image or
+    entrypoint.
+- **Tests:**
+  - refusal, revocation and audit of the public password;
+  - the password copy carries the password only in the environment (against
+    a fake Docker API);
+  - the library watcher.
+
+  Checked on the real container:
+  - key login works;
+  - password login is off when keys are set;
+  - root login, forwarding, sudo and self-added keys are refused;
+  - SFTP uploads get the shared group;
+  - the account starts locked, the environment-only copy sets it, and a
+    restart locks it again.
+
+## [1.10.0-beta] — 2026-09-26
+
+### Security fix: the certs CRWK passphrase was a public default
+- **The problem.** `start-kms.sh` and `start-kms.ps1` wrote the passphrase
+  sealing the certs root wrapping key (CRWK) as the literal
+  `vecta-dev-passphrase` whenever none was set. That covered every
+  `deploy-local.sh` and `start-kms` install. The CRWK wraps every CA
+  signing key, so a copy of the certs volume plus the database opened all
+  of them.
+- **Now generated.** The passphrase is 32 random bytes, generated inside the
+  certs key volume by `infra/scripts/crwk-passphrase.sh`. `start-kms.sh`,
+  `start-kms.ps1` and `install.sh` share that script. An operator-supplied
+  value (`CERTS_CRWK_BOOTSTRAP_PASSPHRASE`) is passed to the container by
+  variable name. Before, `start-kms.sh` and `install.sh` put the passphrase
+  on the `docker run` command line.
+- **Validated.** Certs refuses to start on the retired public value, or on a
+  passphrase shorter than 32 characters or with fewer than 8 distinct
+  characters. `install.sh` and `deploy-local.sh` refuse a short one first.
+- **Existing installs migrate automatically.**
+  1. The next `start-kms` moves the public passphrase aside and generates a
+     new one.
+  2. Certs re-keys the CRWK to a new random key, rewraps every CA signer
+     (all tenants) and the internal PKI cache, then deletes the old key and
+     passphrase.
+  3. It emits `audit.certs.crwk_rotated` with
+     `reason: public_default_passphrase`.
+
+  If a copy of the old certs volume may exist elsewhere, rotate the CAs too
+  (docs/SECURITY/SECRET_ROTATION.md).
+- **New: `scripts/rotate-crwk-passphrase.sh`.** It rotates the passphrase at
+  any time through the same re-key. The rewrap resumes after a crash, a
+  failure is audited (`result: failure`), and nothing is deleted until
+  every signer is rewrapped. `GET /certs/security/status` shows
+  `rotation_pending` meanwhile.
+- **New `make conformance` checks:**
+  - `no-secret-fallback-scripts`: a literal `${SECRET:-...}` in the
+    installers and start scripts;
+  - `no-retired-public-secret`: a value that once shipped, such as this
+    passphrase or `vecta-valkey-secret`, appearing again in code.
+- **Dashboard fix:** System Administration → Runtime Crypto now shows the
+  certs root wrapping key's real state (storage, mode, state, key version,
+  a pending rotation, last error). The summary used to read fields the API
+  doesn't return, fell back to "ready", and was never shown.
+- **Tests:** refusal of public and weak passphrases; the full migration on
+  SQLite and on real Postgres; crash-resume and failure audit; the script
+  run in the busybox, alpine and postgres images.
+
+## [1.9.0-beta] — 2026-09-26
+
+### Internal mTLS, slice 2: Postgres, NATS, Valkey and Consul
+- **Postgres** accepts only TLS 1.3 with a client certificate chaining to
+  the internal CA **and** the SCRAM password. Plaintext is rejected by
+  `pg_hba`, which is now actually used (`hba_file`); the mounted file was
+  previously ignored.
+  - Verified: all 61 service connections are TLS 1.3, each with its own
+    `kms-<service>` client certificate.
+- **NATS** requires TLS 1.3 and a Sub CA client certificate, plus the
+  token. Its plain-HTTP monitoring port (8222) is gone.
+  - Services keep retrying a NATS connection that isn't up yet, instead of
+    silently running without audit publishing.
+- **Valkey** is TLS 1.3 only, with a client certificate and a password
+  (`VALKEY_PASSWORD`, generated by every installer).
+  - Security fix: `valkey.conf` shipped `requirepass vecta-valkey-secret`, a
+    password in the repo.
+  - The metadata cache was never actually in use: keycore connected without
+    the password and fell back to memory. It is in use now.
+- **Consul** serves its API only over HTTPS on 8501, with mTLS. Plain HTTP
+  (8500), gRPC (8502), DNS (8600) and Connect are off.
+  - `bootstrap-mesh.sh` is removed. It wrote allow-all Connect intentions
+    that no service used, over plain HTTP, and failed with 405.
+- **How the daemons get certificates.**
+  - The certs service issues each daemon a Sub CA server certificate into
+    its own subdirectory of the `infra-tls` volume.
+  - `infra/tls/tls-entry.sh` installs it for the daemon's user and reloads
+    the daemon when the certificate is renewed.
+- **Certs starts before the database.**
+  - It loads the internal root and Sub CA from a sealed cache on its key
+    volume (keys still wrapped by the certs root wrapping key). On a fresh
+    install it creates them.
+  - It issues its own and the daemons' certificates, then connects to
+    Postgres over mTLS and records the CAs and those certificates.
+  - Existing installs get the cache from a one-time export of the two CA
+    rows over Postgres' Unix socket.
+- **The FIPS mode is known before any cryptography.**
+  - Governance writes the platform mode to
+    `/run/vecta/platform/fips-mode`, and services read it at start.
+  - Before, the mode was read from Postgres, which now needs mTLS: a TLS
+    handshake in the seed mode.
+  - Until a service's database connection is attached, it doesn't run
+    primary-only cluster jobs.
+- **Removed:**
+  - **etcd**, which nothing used; it served plain HTTP.
+  - **pgbouncer**, an opt-in profile no DSN pointed at.
+
+### Fixed: audit ingestion had stalled
+- **Since 12:10 UTC every audit event was stuck in NATS.**
+  - Platform events without a tenant were rejected and redelivered
+    forever, until the consumer's in-flight limit blocked everything
+    behind them.
+  - Now they are recorded under the platform tenant
+    (`details.tenant_scope = platform`), and a message that can never be
+    ingested is terminated instead of redelivered.
+  - The backlog, about 9,100 events, was ingested after the fix.
+- **Corrected a documented subject:** the kernel's enrolment event is
+  `audit.certs.internal_enroll`, not `audit.cert.internal_enroll`.
+
+### Enforcement
+- **`make conformance` `no-password-in-infra-config`** fails on a literal
+  `requirepass` or `masterauth` in any `infra/*.conf`.
+- **The `tls-only` rule now also covers the infrastructure hosts:**
+  postgres, nats, valkey and consul.
+
 ## [1.8.0-beta] — 2026-09-26
 
 ### Internal mTLS, slice 1: every service link is TLS 1.3 mTLS from the internal Sub CA

@@ -91,7 +91,34 @@ check_secret_defaults "no-secret-fallback-compose" "\\\$\\{${SECRET_NAME}:-[^}]"
 # secret fallback too; only ${VAR}/%s-built URLs are allowed.
 check_secret_defaults "no-credential-in-url-go" '"[a-z][a-z0-9+]*://[^:"/@ %$]+:[^@"$ %]+@' services pkg --include="*.go"
 check_secret_defaults "no-credential-in-url-compose" '://[^:$/ ]+:[^$@ ]+@' docker-compose*.yml
+# A password written into an infrastructure config file is a repo-visible
+# secret too (Valkey's requirepass comes from VALKEY_PASSWORD on the command line).
+check_secret_defaults "no-password-in-infra-config" '^[[:space:]]*(requirepass|masterauth)[[:space:]]+[^[:space:]$]' infra --include=*.conf
 check_secret_defaults "no-secret-fallback-go" "\\(\"${SECRET_NAME}\", *\"[^\"]*[^A-Z0-9_\"][^\"]*\"\\)" services pkg --include="*.go"
+# Installers and start scripts: a secret falls back to a generated value
+# ($(openssl rand ...)), never a literal. (The CRWK passphrase fell back to a
+# literal in start-kms.sh until 1.10.0-beta.)
+check_secret_defaults "no-secret-fallback-scripts" "\\\$\\{${SECRET_NAME}:-[^}\$]" install.sh deploy-local.sh run-local.sh infra/scripts scripts --include="*.sh"
+
+# Rule 3e: a secret that once shipped in the repo is public forever. None of
+# these may reappear outside the history that records their removal
+# (CHANGELOG.md, learning.md, docs/) and tests that prove they're refused;
+# READMEs are checked too. Code recognising one compares a SHA-256 digest; a
+# value needed in plaintext (to verify stored password hashes against it) sits
+# on one line marked conformance:retired-public-secret in
+# services/auth/cli_password.go (docs/SECURITY/SECURE_DEFAULTS.md).
+RETIRED_PUBLIC_SECRETS='vecta-dev-passphrase|vecta-valkey-secret|VectaCLI@2026'
+retired_hits=$(git ls-files -co --exclude-standard 2>/dev/null \
+  | grep -vE '^CHANGELOG\.md$|^learning\.md$|_test\.go$|^scripts/conformance\.sh$|^docs/|node_modules/' \
+  | while IFS= read -r f; do [ -f "$f" ] && grep -nHE "$RETIRED_PUBLIC_SECRETS" "$f" 2>/dev/null; done \
+  | grep -vE '^services/auth/cli_password\.go:[0-9]+:.*// conformance:retired-public-secret$' || true)
+if [ -n "$retired_hits" ]; then
+  FAIL=1
+  echo "FAIL [no-retired-public-secret]: a secret value that shipped in the repo is back:"
+  printf '%s\n' "$retired_hits" | sed 's/^/  /'
+else
+  echo "PASS [no-retired-public-secret]"
+fi
 
 # Rule 3d: no key material from a string in the repo. Hashing a literal, an
 # HMAC or KDF keyed by a literal, or a key assigned from a literal all yield a
@@ -108,6 +135,18 @@ if [ -n "$key_bad" ]; then
   printf '%s\n' "$key_bad" | sed 's/^/  /'
 else
   echo "PASS [no-literal-key-material]"
+fi
+
+# Rule 3f: no passwordless sudo or sudo package in a service image or
+# entrypoint. hsm-integration granted its SSH user NOPASSWD:ALL until
+# 1.11.0-beta; nothing in the platform needs root after start.
+sudo_hits=$(grep -rnE 'NOPASSWD|apt-get install[^#]*[[:space:]]sudo([[:space:]]|$)|^[[:space:]]+sudo[[:space:]]*\\?$|usermod[^#]*-aG[[:space:]]*sudo' services infra --include=Dockerfile --include='*.sh' 2>/dev/null || true)
+if [ -n "$sudo_hits" ]; then
+  FAIL=1
+  echo "FAIL [no-sudo-in-images]: sudo in a service image or entrypoint:"
+  printf '%s\n' "$sudo_hits" | sed 's/^/  /'
+else
+  echo "PASS [no-sudo-in-images]"
 fi
 
 # Rule 3c: .env.example ships no secret values. A filled-in example value

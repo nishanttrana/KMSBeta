@@ -71,6 +71,15 @@ placeholders="$(awk -F= '
   }' "${ENV_FILE}")"
 [[ -z "${placeholders}" ]] || die "placeholder values in .env for: $(echo ${placeholders}). Run ./scripts/rotate-secrets.sh (see docs/SECURITY/SECRET_ROTATION.md) or set real values."
 
+# The certs CRWK passphrase is normally generated inside the certs volume
+# (infra/scripts/crwk-passphrase.sh). One set in .env must be strong: certs
+# refuses a short or public one at start, so refuse it here first.
+crwk_inline="$(env_get CERTS_CRWK_BOOTSTRAP_PASSPHRASE)"
+if [[ -n "${crwk_inline}" && "${#crwk_inline}" -lt 32 ]]; then
+  die "CERTS_CRWK_BOOTSTRAP_PASSPHRASE in .env is shorter than 32 characters; remove it to have one generated (docs/SECURITY/SECRET_ROTATION.md)"
+fi
+crwk_inline=""
+
 fips_mode="$(env_get VECTA_FIPS_MODE)"
 case "${fips_mode:-on}" in
   on|only|off) ;;
@@ -80,6 +89,7 @@ esac
 cp "${ENV_FILE}" "${ENV_FILE}.bak.deploy.$(date +%s)"
 ensure_secret POSTGRES_PASSWORD "$(openssl rand -hex 24)"
 ensure_secret NATS_AUTH_TOKEN "$(openssl rand -hex 24)"
+ensure_secret VALKEY_PASSWORD "$(openssl rand -hex 24)"
 ensure_secret WORKLOAD_IDENTITY_SHARED_SECRET
 ensure_secret INTERNAL_SERVICE_BOOTSTRAP_SECRET
 ensure_secret INTERNAL_API_TOKEN

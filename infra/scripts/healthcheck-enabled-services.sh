@@ -69,7 +69,7 @@ declare -A PROFILE_TO_SERVICE=(
   [crypto_discovery]="discovery"
   [mpc_engine]="mpc"
   [data_protection]="dataprotect"
-  [clustering]="cluster-manager etcd"
+  [clustering]="cluster-manager"
   [hsm_hardware]="hsm-connector hsm-integration"
 )
 

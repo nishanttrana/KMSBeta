@@ -92,13 +92,31 @@ running stack:
   3. the enrolment listener;
   4. only then its master key from keycore.
 
-### Still open
+### Done in slice 2 (1.9.0-beta)
 
-- **Postgres** runs `sslmode=disable`. **NATS, Valkey and Consul** are
-  plaintext. That's slice 2.
-- **`infra/consul/bootstrap-mesh.sh`** writes Consul Connect allow-all
-  intentions that no service uses, and its PUT fails with 405. It's handled
-  in slice 2.
+**Postgres, NATS, Valkey and Consul require TLS 1.3 and a client
+certificate from the internal CA**, plus their password or token. Verified
+from the host:
+- plaintext, and TLS without a client certificate, are refused on all four;
+- a Sub CA client certificate works;
+- `pg_stat_ssl` shows every service connection on TLS 1.3 with its own
+  certificate.
+
+**How the daemons are wired:**
+- They get Sub CA server certificates from the certs service, installed by
+  `infra/tls/tls-entry.sh`, which also reloads them on renewal.
+- The certs service issues them before it connects to the database, from
+  its sealed internal-PKI cache (`internal_bootstrap.go`).
+- **Residual:** Postgres and Valkey verify clients with OpenSSL, which needs
+  the chain up to the root. A certificate issued directly by
+  `vecta-runtime-root` with client auth would also pass their TLS check;
+  the password is still required. NATS and Consul (Go) trust only the Sub
+  CA.
+
+### Still open
+- **Cluster replication** between nodes (clustering profile) still builds
+  its subscription connection strings without client certificates. That is
+  next when clustering is enabled.
 - **Internal verifiers don't check revocation.** Short lifetimes (7 days)
   are the control, and a rotation in slice 3 revokes the old certificate
   and swaps the new one immediately.

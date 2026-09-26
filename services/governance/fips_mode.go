@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -292,4 +294,53 @@ func (s *Service) AuditFIPSRollout(ctx context.Context) error {
 		"description":  fmt.Sprintf("every service now runs FIPS mode %s", desired.Mode),
 	})
 	return nil
+}
+
+// SyncPlatformFIPSModeFile keeps the platform-state file every service reads
+// before any cryptography (pkg/config, docs/SECURITY/FIPS.md) equal to the
+// mode in platform_fips_mode. It covers an administrator's change, a restart,
+// and a cluster member whose row arrives by replication.
+func (s *Service) SyncPlatformFIPSModeFile(ctx context.Context, path string, every time.Duration) {
+	store, ok := s.store.(*SQLStore)
+	if !ok || strings.TrimSpace(path) == "" {
+		return
+	}
+	last := ""
+	for {
+		if m, err := store.GetPlatformFIPSMode(ctx); err == nil && m != nil && pkgfips.ValidMode(m.Mode) && m.Mode != last {
+			if err := writePlatformStateFile(path, m.Mode); err != nil {
+				logger.Printf("fips: platform mode file not written: %v", err)
+			} else {
+				last = m.Mode
+			}
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(every):
+		}
+	}
+}
+
+func writePlatformStateFile(path, value string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".tmp-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name()) //nolint:errcheck
+	if _, err := tmp.WriteString(value + "\n"); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(0o644); err != nil {
+		_ = tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), path)
 }

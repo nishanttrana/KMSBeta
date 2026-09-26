@@ -1271,6 +1271,11 @@ collect_inputs() {
       info "Generated certificate bootstrap passphrase and will seed it into Docker certs volume."
     else
       prompt_secret CERTS_BOOTSTRAP_PASSPHRASE "Certificate bootstrap passphrase"
+      # The certs service refuses a short or public passphrase at start
+      # (docs/SECURITY/SECURE_DEFAULTS.md); refuse it here first.
+      if [[ "${#CERTS_BOOTSTRAP_PASSPHRASE}" -lt 32 ]]; then
+        die "The certificate bootstrap passphrase must be at least 32 characters (or let the installer generate one)."
+      fi
     fi
     if [[ "${CERTS_PASSPHRASE_FILE_PATH}" != /var/lib/vecta/certs/* ]]; then
       die "For software root key mode, CRWK passphrase file path must be under /var/lib/vecta/certs/ to persist safely in Docker volume."
@@ -1683,9 +1688,10 @@ write_env_file() {
   # always performs a mandatory clean reset (down -v) before starting, so it is
   # correct to mint fresh secrets on every install. Hex for values that appear
   # in DSNs/headers; a policy-compliant string for the CLI bootstrap password.
-  local pg_password nats_token workload_secret internal_token service_bootstrap_secret cli_password
+  local pg_password nats_token valkey_password workload_secret internal_token service_bootstrap_secret cli_password
   pg_password="$(openssl rand -hex 24)"
   nats_token="$(openssl rand -hex 24)"
+  valkey_password="$(openssl rand -hex 24)"
   workload_secret="$(openssl rand -hex 32)"
   internal_token="$(openssl rand -hex 32)"
   service_bootstrap_secret="$(openssl rand -hex 32)"
@@ -1713,6 +1719,7 @@ POSTGRES_USER=postgres
 POSTGRES_DB=vecta
 POSTGRES_PASSWORD=${pg_password}
 NATS_AUTH_TOKEN=${nats_token}
+VALKEY_PASSWORD=${valkey_password}
 WORKLOAD_IDENTITY_SHARED_SECRET=${workload_secret}
 INTERNAL_API_TOKEN=${internal_token}
 INTERNAL_SERVICE_BOOTSTRAP_SECRET=${service_bootstrap_secret}
@@ -1899,20 +1906,27 @@ seed_cert_bootstrap_secret() {
 
   local prepared="false"
   local image
+  # The passphrase reaches the container by variable name, never on the
+  # command line (CLAUDE.md rule 9); crwk-passphrase.sh writes it 0600.
+  export CERTS_CRWK_BOOTSTRAP_PASSPHRASE="${bootstrap_secret}"
   for image in postgres:16.13-alpine alpine:3.24 busybox:1.36; do
     if "${DOCKER_BIN[@]}" run --rm \
       -v "${certs_volume}:/var/lib/vecta/certs" \
       -v "${runtime_volume}:/run/vecta/certs" \
-      -e BOOTSTRAP_SECRET="${bootstrap_secret}" \
+      -v "${certs_volume}:/data" \
+      -v "${ROOT_DIR}/infra/scripts/crwk-passphrase.sh:/crwk-passphrase.sh:ro" \
+      -e CERTS_CRWK_BOOTSTRAP_PASSPHRASE \
       -e SEED_BOOTSTRAP_SECRET="${seed_bootstrap_secret}" \
-      -e TARGET_PATH="${target_path}" \
+      -e CERTS_CRWK_PASSPHRASE_FILE="${target_path}" \
       "${image}" \
-      sh -c 'set -eu; umask 077; mkdir -p /var/lib/vecta/certs /run/vecta/certs; chown -R 100:101 /var/lib/vecta/certs /run/vecta/certs; chmod 700 /var/lib/vecta/certs /run/vecta/certs; if [ "${SEED_BOOTSTRAP_SECRET}" = "true" ]; then mkdir -p "$(dirname "$TARGET_PATH")"; printf "%s\n" "$BOOTSTRAP_SECRET" > "$TARGET_PATH"; chown 100:101 "$TARGET_PATH"; chmod 640 "$TARGET_PATH"; fi' >/dev/null 2>&1; then
+      sh -c 'set -eu; umask 077; mkdir -p /var/lib/vecta/certs /run/vecta/certs; chown -R 100:101 /var/lib/vecta/certs /run/vecta/certs; chmod 700 /var/lib/vecta/certs /run/vecta/certs; if [ "${SEED_BOOTSTRAP_SECRET}" = "true" ]; then sh /crwk-passphrase.sh >/dev/null; fi' >/dev/null 2>&1; then
       prepared="true"
       break
     fi
   done
 
+  unset CERTS_CRWK_BOOTSTRAP_PASSPHRASE
+  bootstrap_secret=""
   if [[ "${prepared}" != "true" ]]; then
     die "Unable to prepare certificate bootstrap volumes (${certs_volume}, ${runtime_volume})."
   fi

@@ -1,20 +1,14 @@
-# Consul Service Mesh Bootstrap
+# Consul
 
-`consul.hcl` enables Connect service mesh, DNS, and gRPC APIs.
+Consul is the platform's service catalogue: services register themselves
+(`pkg/consul`) and auth and cluster-manager read it.
 
-The edge proxy now runs Envoy 1.37.1 via the static config in
-`infra/envoy/envoy.yaml`. That works independently of Consul Connect, but
-Consul 1.21.x does not list Envoy 1.37.x as a supported Connect sidecar
-version. Keep using the static edge proxy unless Consul is moved to a release
-line that supports Envoy 1.37.x for mesh use.
+It speaks only HTTPS with mutual TLS (`consul.hcl`, port 8501). Clients must
+present a certificate from the internal-services Sub CA. Its own certificate
+is written by the certs service and installed by `infra/tls/tls-entry.sh`
+(docs/SECURITY/INTERNAL_TLS.md).
 
-Apply default mesh config entries for all KMS services:
-
-```bash
-CONSUL_HTTP_ADDR=http://127.0.0.1:8500 ./infra/consul/bootstrap-mesh.sh
-```
-
-The script writes:
-
-- `service-defaults` for each service (`Protocol=grpc`, `MutualTLSMode=strict`)
-- `service-intentions` with baseline allow rules (`* -> service`)
+- Plain HTTP (8500), gRPC (8502) and DNS (8600) are off.
+- Connect is disabled. The service-to-service mTLS is the platform's own, not
+  a Consul mesh. The former `bootstrap-mesh.sh` wrote allow-all Connect
+  intentions that no service used; it was removed in 1.9.0-beta.

@@ -7,6 +7,92 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — Re-key the CRWK on a passphrase change, don't just re-seal it
+**Decision:** when the certs CRWK passphrase changes, including the
+migration off the retired public default, certs:
+1. generates a **new random CRWK**;
+2. rewraps every CA signer's DEK and the internal PKI cache under it;
+3. only then replaces `crwk.sealed` and deletes the retired key and the
+   previous passphrase.
+
+**Why:**
+- Re-sealing the same CRWK under the new passphrase would be one file
+  write. But any copy of the old `crwk.sealed` (a volume backup or
+  snapshot) would still open, with the public passphrase, every CA signer
+  in the current and future database.
+- With a new CRWK, an old sealed file only opens database rows from before
+  the rotation. Those are covered by rotating the CAs, which the docs say
+  to do if such copies may exist.
+
+**Also decided:**
+- **Resumable in place.** Both keys are held, selected by
+  `signer_kek_version`, while the rewrap runs. `crwk.sealed.next` survives
+  a crash. Nothing is deleted until every row is rewrapped, so a failure
+  loses nothing and is retried on the next start.
+- **The passphrase is generated inside the volume** by a script the start
+  scripts and installer share (`infra/scripts/crwk-passphrase.sh`). It
+  never crosses the host, and there's no `.env` copy to leak.
+- **The retired value is recognised by its SHA-256.** The literal can then
+  be banned from code by `no-retired-public-secret`.
+
+**Rejected:**
+- A startup flag to "accept" the public passphrase for a grace period: that
+  is a fallback, which rule 3 forbids.
+- Rewrapping in the helper container: it has no Argon2id, and the rewrap
+  needs the database.
+
+**Open:**
+- The passphrase file sits on the same volume as `crwk.sealed`, so the
+  volume alone opens the CRWK. A host-held or TPM-sealed passphrase would
+  separate them.
+- **`CERTS_CRWK_USE_TPM_SEAL` isn't real:** it only records a flag in the
+  sealed file, while the installer offers it as "Use TPM sealing". This
+  breaks rule 8 and needs removing or implementing.
+- Cluster members don't rewrap; the primary's rows replicate.
+
+---
+
+## 2026-09-26 — Internal PKI before the database; FIPS mode from a file (slice 2)
+**Decision:**
+- **Internal PKI:** the certs service keeps the runtime root and Sub CA in a
+  sealed cache on its key volume (signing keys wrapped by the certs root
+  wrapping key, as in the database). It issues its own and the daemons'
+  certificates before connecting to Postgres, then records them.
+- **Existing installs:** the start script exports the two CA rows once, over
+  Postgres' Unix socket.
+- **FIPS mode:** services read the platform mode from a file governance
+  writes, not from the database.
+
+**Why:** Postgres now requires internal mTLS, which creates two cycles.
+- *CA ↔ database:* the CA lived only in the database the CA now secures.
+- *FIPS mode ↔ TLS:* reading the mode needed a TLS handshake, which is
+  cryptography done before the mode is decided.
+
+**Rejected:**
+- *A bootstrap self-signed Postgres certificate pinned by certs*: certs
+  would still have no client certificate, so it couldn't do mTLS.
+- *Retiring the existing root and starting a new one*: every client trusting
+  it (payment terminals, KMIP) would break.
+- *Keeping the database read with a TLS fallback*: that is plaintext by
+  another name.
+
+**Also removed:**
+- etcd (no consumer).
+- pgbouncer (no DSN pointed at it).
+- The Consul Connect bootstrap (no service used Connect).
+
+A daemon nothing uses is still an open port.
+
+**Enforced by:**
+- `TestBootstrapCreatesThenReusesTheInternalPKI`,
+  `TestPKICacheReadsPsqlRowToJSON`,
+  `TestBootstrapEnrolmentAndInfraCertsBeforeTheDatabase`,
+  `TestReconcileRecordsBootstrapStateAndSwitchesToTheDatabase`,
+  `TestReconcileRefusesADifferentCAWithTheSameName`;
+- `TestPlatformFIPSModeFromFile`, `TestSyncPlatformFIPSModeFile`,
+  `TestPendingReaderHoldsPrimaryJobs`;
+- the live wire checks recorded in `docs/SECURITY/INTERNAL_TLS.md`.
+
 ## 2026-09-26 — How internal mTLS is wired (slice 1)
 **Decision:**
 - **Enrolment proof:** an HMAC over the CSR under the identity's

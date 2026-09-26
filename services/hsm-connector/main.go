@@ -44,6 +44,8 @@ func main() {
 	if rt.Audit != nil {
 		audit = rt.Audit
 	}
+	// Audit what lands in the provider workspace over SSH/SFTP.
+	go hsmconnector.WatchLibraries(rt.Ctx, audit, 30*time.Second, rt.Logger)
 	h := hsmconnector.NewHandler(&hsmconnector.DBConfigs{DB: db.ROSQL()}, hsmconnector.NewProvider(), audit, rt.Logger)
 	if err := rt.Serve(h); err != nil {
 		rt.Logger.Fatalf("serve failed: %v", err)

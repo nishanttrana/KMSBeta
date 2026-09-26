@@ -15,6 +15,7 @@ import (
 	"time"
 	"vecta-kms/pkg/clusterrepl"
 	"vecta-kms/pkg/clusterstate"
+	pkgconsul "vecta-kms/pkg/consul"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -1241,10 +1242,7 @@ func (s *Service) discoverLocalComponents() ([]string, bool) {
 	if consulAddr == "" {
 		return []string{}, false
 	}
-	cfg := api.DefaultConfig()
-	cfg.Address = consulAddr
-	cfg.HttpClient = &http.Client{Timeout: 800 * time.Millisecond}
-	client, err := api.NewClient(cfg)
+	client, err := pkgconsul.NewClient(consulAddr, 800*time.Millisecond)
 	if err != nil {
 		return []string{}, false
 	}

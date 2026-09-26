@@ -97,6 +97,9 @@ func main() {
 		WithSNMPPublisher(snmpPublisher),
 	)
 	handler := NewHandler(svc)
+	// Every service reads the platform FIPS mode from this file before any
+	// cryptography (pkg/config): the database needs internal mTLS first.
+	go svc.SyncPlatformFIPSModeFile(ctx, envOr("VECTA_PLATFORM_FIPS_MODE_FILE", "/run/vecta/platform/fips-mode"), 5*time.Second)
 
 	// System administration (backups, restore, FIPS mode) is decided from the
 	// verified token, so governance can't run without the key that verifies

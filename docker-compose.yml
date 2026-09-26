@@ -4,13 +4,13 @@ x-kms-common-env: &kms-common-env
   # Release version stamped into every service (reporting exposes it via
   # BUILD_VERSION; see VERSION file / git tag). Defaults to "dev" for ad-hoc runs.
   BUILD_VERSION: ${VECTA_VERSION:-dev}
-  POSTGRES_DSN: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (openssl rand -hex 24)}@postgres:5432/${POSTGRES_DB:-vecta}?sslmode=disable&connect_timeout=10
+  POSTGRES_DSN: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (openssl rand -hex 24)}@postgres:5432/${POSTGRES_DB:-vecta}?sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt&connect_timeout=10
   SQLITE_FALLBACK: "false"
   NATS_URL: nats://${NATS_AUTH_TOKEN:?NATS_AUTH_TOKEN is required}@nats:4222
-  CONSUL_HTTP_ADDR: consul:8500
+  CONSUL_HTTP_ADDR: https://consul:8501
   CONSUL_SERVICE_ADDRESS: $$HOSTNAME
   CONSUL_HEALTH_CHECK_TYPE: tcp
-  REDIS_URL: redis://valkey:6379
+  REDIS_URL: rediss://:${VALKEY_PASSWORD:?VALKEY_PASSWORD is required (openssl rand -hex 24)}@valkey:6379
   # Increased from 25/10 — each service gets up to 50 live connections;
   # idle connections are recycled after 5 min so the pool self-heals.
   DB_MAX_OPEN: "50"
@@ -81,8 +81,21 @@ services:
     #   docker compose up -d                        # re-runs all SQL migrations
     restart: unless-stopped
     image: postgres:17.11-alpine
+    entrypoint: ["/usr/local/bin/tls-entry.sh", "postgres:postgres", "kill -HUP 1", "docker-entrypoint.sh"]
     command:
       - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/etc/vecta-tls/tls.crt
+      - -c
+      - ssl_key_file=/etc/vecta-tls/tls.key
+      - -c
+      - ssl_ca_file=/etc/vecta-tls/internal-chain.crt
+      - -c
+      - ssl_min_protocol_version=TLSv1.3
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
       # ---------- Memory --------------------------------------------------
       - -c
       - shared_buffers=${PG_SHARED_BUFFERS:-256MB}
@@ -213,6 +226,17 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./infra/postgres/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      # Internal mTLS (docs/SECURITY/INTERNAL_TLS.md): this daemon's Sub CA
+      # certificate (written by certs), the trust bundle, and the wrapper that
+      # installs them for the daemon's user and reloads on renewal.
+      - type: volume
+        source: infra-tls
+        target: /run/vecta/infra-tls
+        read_only: true
+        volume:
+          subpath: postgres
+      - internal-trust:/run/vecta/trust:ro
+      - ./infra/tls/tls-entry.sh:/usr/local/bin/tls-entry.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-vecta}"]
       interval: 10s
@@ -230,48 +254,30 @@ services:
     networks:
       - kms_net
 
-  pgbouncer:
-    restart: unless-stopped
-    profiles: ["connection_pooling"]
-    image: edoburu/pgbouncer:v1.25.2-p0
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required (openssl rand -hex 24)}@postgres:5432/${POSTGRES_DB:-vecta}
-      POOL_MODE: transaction
-      MAX_CLIENT_CONN: 2000
-      DEFAULT_POOL_SIZE: 50
-      MIN_POOL_SIZE: 10
-      RESERVE_POOL_SIZE: 5
-      LISTEN_PORT: 6432
-    ports:
-      - "127.0.0.1:6432:6432"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 -U ${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
-    deploy:
-      resources:
-        limits:
-          cpus: '0.25'
-          memory: 64M
-    networks:
-      - kms_net
-
   nats:
     restart: unless-stopped
     profiles: ["event_streaming"]
     image: nats:2.14.7-alpine
+    entrypoint: ["/usr/local/bin/tls-entry.sh", "root:root", "kill -HUP 1", "docker-entrypoint.sh"]
+    command: ["nats-server", "--config", "/etc/nats/nats-server.conf"]
     environment:
       NATS_AUTH_TOKEN: ${NATS_AUTH_TOKEN:?NATS_AUTH_TOKEN is required}
     volumes:
       - ./infra/nats/nats-server.conf:/etc/nats/nats-server.conf:ro
       - nats-data:/data
+      # Internal mTLS (docs/SECURITY/INTERNAL_TLS.md): this daemon's Sub CA
+      # certificate (written by certs), the trust bundle, and the wrapper that
+      # installs them for the daemon's user and reloads on renewal.
+      - type: volume
+        source: infra-tls
+        target: /run/vecta/infra-tls
+        read_only: true
+        volume:
+          subpath: nats
+      - internal-trust:/run/vecta/trust:ro
+      - ./infra/tls/tls-entry.sh:/usr/local/bin/tls-entry.sh:ro
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:4222:4222"
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8222:8222"
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 4222"]
       interval: 10s
@@ -284,14 +290,28 @@ services:
     restart: unless-stopped
     profiles: ["distributed_cache"]
     image: valkey/valkey:9.0.6-alpine
-    command: ["valkey-server", "/etc/valkey/valkey.conf"]
+    entrypoint: ["/usr/local/bin/tls-entry.sh", "valkey:valkey", "valkey-cli --no-auth-warning -s /tmp/valkey.sock -a \"$$VALKEY_PASSWORD\" VECTA_CONFIG SET tls-cert-file /etc/vecta-tls/tls.crt", "tini", "--", "docker-entrypoint.sh"]
+    command: ["valkey-server", "/etc/valkey/valkey.conf", "--requirepass", "${VALKEY_PASSWORD:?VALKEY_PASSWORD is required (openssl rand -hex 24)}"]
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD:?VALKEY_PASSWORD is required (openssl rand -hex 24)}
     volumes:
       - ./infra/valkey/valkey.conf:/etc/valkey/valkey.conf:ro
       - valkey-data:/data
+      # Internal mTLS (docs/SECURITY/INTERNAL_TLS.md): this daemon's Sub CA
+      # certificate (written by certs), the trust bundle, and the wrapper that
+      # installs them for the daemon's user and reloads on renewal.
+      - type: volume
+        source: infra-tls
+        target: /run/vecta/infra-tls
+        read_only: true
+        volume:
+          subpath: valkey
+      - internal-trust:/run/vecta/trust:ro
+      - ./infra/tls/tls-entry.sh:/usr/local/bin/tls-entry.sh:ro
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:6379:6379"
     healthcheck:
-      test: ["CMD", "valkey-cli", "ping"]
+      test: ["CMD-SHELL", "valkey-cli --no-auth-warning -s /tmp/valkey.sock -a \"$$VALKEY_PASSWORD\" ping | grep -q PONG"]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -302,38 +322,29 @@ services:
     restart: unless-stopped
     profiles: ["service_discovery"]
     image: hashicorp/consul:1.22.7
+    entrypoint: ["/usr/local/bin/tls-entry.sh", "consul:consul", "kill -HUP 1", "docker-entrypoint.sh"]
     command: ["agent", "-server", "-bootstrap-expect=1", "-client=0.0.0.0", "-ui", "-config-file=/consul/config/consul.hcl"]
     ports:
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8500:8500"
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8502:8502"
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8600:8600/udp"
+      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8501:8501"
     volumes:
-      - ./infra/consul:/consul/config
+      - ./infra/consul/consul.hcl:/consul/config/consul.hcl:ro
       - consul-data:/consul/data
+      # Internal mTLS (docs/SECURITY/INTERNAL_TLS.md): this daemon's Sub CA
+      # certificate (written by certs), the trust bundle, and the wrapper that
+      # installs them for the daemon's user and reloads on renewal.
+      - type: volume
+        source: infra-tls
+        target: /run/vecta/infra-tls
+        read_only: true
+        volume:
+          subpath: consul
+      - internal-trust:/run/vecta/trust:ro
+      - ./infra/tls/tls-entry.sh:/usr/local/bin/tls-entry.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8500/v1/status/leader | grep -q ':'"]
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8501"]
       interval: 10s
       timeout: 5s
       retries: 20
-    networks:
-      - kms_net
-
-  etcd:
-    restart: unless-stopped
-    image: quay.io/coreos/etcd:v3.6.15
-    command:
-      - etcd
-      - --data-dir=/etcd-data
-      - --listen-client-urls=http://0.0.0.0:2379
-      - --advertise-client-urls=http://0.0.0.0:2379
-      - --auto-compaction-mode=periodic
-      - --auto-compaction-retention=1h
-      - --log-format=json
-    ports:
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:2379:2379"
-    volumes:
-      - etcd-data:/etcd-data
-    profiles: ["clustering"]
     networks:
       - kms_net
 
@@ -447,6 +458,7 @@ services:
     volumes:
       - auth-data:/var/lib/vecta/auth
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8001:8001"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18001:18001"
@@ -466,8 +478,12 @@ services:
     environment:
       HSM_INTEGRATION_USER: ${AUTH_BOOTSTRAP_CLI_USERNAME:-cli-user}
       HSM_INTEGRATION_WORKSPACE_ROOT: ${AUTH_CLI_HSM_WORKSPACE_ROOT:-/var/lib/vecta/hsm/providers}
+      # SSH public keys (";"-separated). When set, password login is off.
+      HSM_INTEGRATION_SSH_AUTHORIZED_KEYS: ${HSM_INTEGRATION_SSH_AUTHORIZED_KEYS:-}
+      HSM_PROVIDERS_GID: "10430"
     ports:
-      - "2222:22"
+      # Loopback unless an operator opens it deliberately.
+      - "${HSM_INTEGRATION_SSH_BIND:-127.0.0.1}:2222:22"
     volumes:
       - hsm-integration-data:/var/lib/vecta/hsm
       - internal-trust:/run/vecta/trust:ro
@@ -526,6 +542,7 @@ services:
     volumes:
       - keycore-data:/app/data
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18010"]
       interval: 15s
@@ -558,6 +575,7 @@ services:
       # The cluster audit signing key received at join (docs/CLUSTERING.md).
       - audit-data:/app/data
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18070"]
       interval: 15s
@@ -588,6 +606,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18040:18040"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18040"]
       interval: 15s
@@ -622,6 +641,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18300:18300"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18300"]
       interval: 15s
@@ -654,6 +674,7 @@ services:
     volumes:
       - ${RECONCILER_MANIFEST_HOST_DIR:-./infra/reconciler/manifests}:/etc/vecta/manifests:ro
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 8470"]
       interval: 30s
@@ -673,6 +694,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8480:8480"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 8480"]
       interval: 30s
@@ -697,6 +719,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18020:18020"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18020"]
       interval: 15s
@@ -713,9 +736,13 @@ services:
     # nginx's group in the dashboard image, so certs can hand the dashboard its
     # TLS key group-readable (never world-readable).
     group_add: ["101"]
+    # Postgres, NATS, Valkey and Consul wait for the certificates certs writes,
+    # so certs can't wait for Postgres (docs/SECURITY/INTERNAL_TLS.md).
+    depends_on: {}
     environment:
       <<: *kms-common-env
       KEYCORE_URL: https://keycore:8010
+      CERTS_INFRA_TLS_DIR: /run/vecta/infra-tls
       CERTS_TRUST_DIR: /run/vecta/trust
       CERTS_DASHBOARD_TLS_DIR: /run/vecta/dashboard-tls
       CERTS_DASHBOARD_TLS_GID: "101"
@@ -746,7 +773,9 @@ services:
       - certs-key-data:/var/lib/vecta/certs
       - runtime-certs:/run/vecta/certs
       - internal-trust:/run/vecta/trust
+      - platform-state:/run/vecta/platform:ro
       - dashboard-tls:/run/vecta/dashboard-tls
+      - infra-tls:/run/vecta/infra-tls
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8030:8030"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18030:18030"
@@ -774,6 +803,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18050:18050"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18050"]
       interval: 15s
@@ -798,6 +828,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18080:18080"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18080"]
       interval: 15s
@@ -824,6 +855,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18120:18120"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18120"]
       interval: 15s
@@ -851,6 +883,7 @@ services:
     volumes:
       - runtime-certs:/etc/vecta-certs:ro
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8160:8160"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:15696:15696"
@@ -880,6 +913,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18130:18130"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18130"]
       interval: 15s
@@ -907,6 +941,7 @@ services:
       - "${PAYMENT_TCP_PORT:-9170}:${PAYMENT_TCP_PORT:-9170}"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18170"]
       interval: 15s
@@ -935,6 +970,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18240:18240"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18240"]
       interval: 15s
@@ -959,6 +995,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18250:18250"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18250"]
       interval: 15s
@@ -983,6 +1020,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18260:18260"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18260"]
       interval: 15s
@@ -1006,6 +1044,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18280:18280"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18280"]
       interval: 15s
@@ -1029,6 +1068,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18270:18270"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18270"]
       interval: 15s
@@ -1055,6 +1095,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18110:18110"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18110"]
       interval: 15s
@@ -1083,6 +1124,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18180:18180"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18180"]
       interval: 15s
@@ -1107,6 +1149,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18140:18140"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18140"]
       interval: 15s
@@ -1134,6 +1177,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18220:18220"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18220"]
       interval: 15s
@@ -1161,6 +1205,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18320:18320"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18320"]
       interval: 15s
@@ -1186,6 +1231,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18060:18060"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18060"]
       interval: 15s
@@ -1210,6 +1256,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18100:18100"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18100"]
       interval: 15s
@@ -1233,6 +1280,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18200:18200"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18200"]
       interval: 15s
@@ -1282,6 +1330,7 @@ services:
     volumes:
       - runtime-certs:/run/vecta/runtime-certs:ro
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18210"]
       interval: 15s
@@ -1303,6 +1352,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18290:18290"
     volumes:
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18290"]
       interval: 15s
@@ -1316,6 +1366,9 @@ services:
       context: .
       dockerfile: services/hsm-connector/Dockerfile
     image: vecta/hsm-connector:${VECTA_VERSION:-latest}
+    # Reads the libraries uploaded through hsm-integration (group
+    # hsm-providers, gid 10430, owns that workspace).
+    group_add: ["10430"]
     # The only process that loads a tenant's PKCS#11 library and holds its HSM
     # PIN (docs/SECURITY/HSM_INTEGRATION.md). Put each profile's PIN variable
     # (pin_env_var: HSM_PIN, SECUROSYS_HSM_PIN, LUNA_PIN, ...) and any vendor
@@ -1332,6 +1385,7 @@ services:
       # Libraries and vendor client files uploaded through hsm-integration.
       - hsm-integration-data:/var/lib/vecta/hsm:ro
       - internal-trust:/run/vecta/trust:ro
+      - platform-state:/run/vecta/platform:ro
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8430:8430"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18430:18430"
@@ -1352,10 +1406,11 @@ networks:
 
 volumes:
   internal-trust:
+  platform-state:
+  infra-tls:
   dashboard-tls:
   postgres-data:
   consul-data:
-  etcd-data:
   nats-data:
   auth-data:
   hsm-integration-data:

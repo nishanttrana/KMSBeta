@@ -768,6 +768,33 @@ Environment:
   `CERTS_ENROLL_PORT` (8035), `CERTS_INTERNAL_SUBCA_NAME`
   (`vecta-internal-services`), `CERTS_INTERNAL_MTLS_VALIDITY_DAYS` (7),
   `CERTS_DASHBOARD_TLS_DIR`, `CERTS_DASHBOARD_TLS_GID`.
+- **certs (1.9.0):** `CERTS_INFRA_TLS_DIR` (default `/run/vecta/infra-tls`,
+  one subdirectory per daemon), `CERTS_INTERNAL_PKI_CACHE` (default
+  `/var/lib/vecta/certs/internal-pki.json`).
+- **hsm-integration (1.11.0):** `HSM_INTEGRATION_SSH_AUTHORIZED_KEYS` (SSH
+  public keys, `;`-separated; set means password login off),
+  `HSM_INTEGRATION_SSH_BIND` (bind address of port 2222, default
+  `127.0.0.1`). `HSM_INTEGRATION_PASSWORD` never existed in code and is
+  gone from the README. auth refuses to start when
+  `AUTH_BOOTSTRAP_CLI_PASSWORD` is a retired public value.
+- **certs (1.10.0):**
+  - `CERTS_CRWK_PREVIOUS_PASSPHRASE_FILE` (default
+    `$CERTS_CRWK_PASSPHRASE_FILE.previous`): the passphrase the CRWK was
+    sealed under before a rotation. It is read only to re-key off it, then
+    deleted.
+  - `CERTS_CRWK_BOOTSTRAP_PASSPHRASE` and the passphrase file must be at
+    least 32 characters, with at least 8 distinct characters, and not a
+    retired public value. Otherwise certs refuses to start.
+  - `GET /certs/security/status` reports `state: rotation_pending` and
+    `rotation_pending: true` until the rewrap completes.
+- **Infrastructure (1.9.0):**
+  - `POSTGRES_DSN` uses
+    `sslmode=verify-full&sslrootcert=/run/vecta/trust/internal-ca.crt`.
+  - `REDIS_URL` is `rediss://:${VALKEY_PASSWORD}@valkey:6379`, and
+    `VALKEY_PASSWORD` is required.
+  - `CONSUL_HTTP_ADDR` is `https://consul:8501`.
+  - `VECTA_PLATFORM_STATE_DIR` (default `/run/vecta/platform`, the FIPS mode
+    file) and `VECTA_PLATFORM_FIPS_MODE_FILE` (governance).
 - **Every service:** `CERTS_ENROLL_URL` (default
   `https://certs:8035/v1/enroll`), `VECTA_INTERNAL_CA_FILE` (default
   `/run/vecta/trust/internal-ca.crt`), `VECTA_MTLS_KEY_ALGORITHM` (default
@@ -3459,7 +3486,10 @@ Selected events with dedicated audit classification:
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`
 - `audit.auth.scim_user_provisioned`, `audit.auth.scim_user_deprovisioned`
 - `audit.auth.scim_settings_updated`, `audit.auth.scim_token_rotated`
-- `audit.cert.internal_subca_created`, `audit.cert.internal_enroll` (refusals: `reason` = `invalid_request`, `invalid_csr`, `proof_rejected`, `issuance_refused`), `audit.cert.internal_enrolled`: internal mTLS (docs/SECURITY/INTERNAL_TLS.md)
+- `audit.cert.internal_subca_created`, `audit.certs.internal_enroll` (refusals: `reason` = `invalid_request`, `invalid_csr`, `proof_rejected`, `issuance_refused`), `audit.cert.internal_enrolled`: internal mTLS (docs/SECURITY/INTERNAL_TLS.md)
+- `audit.auth.cli_session_refused` (`reason`: `invalid_credentials`, `public_default_password`), `audit.auth.cli_ssh_password_synced`, `audit.auth.cli_password_revoked`: CLI/SSH access to hsm-integration (docs/SECURITY/HSM_INTEGRATION.md)
+- `audit.hsm.provider_library_inventory`, `audit.hsm.provider_library_added`, `audit.hsm.provider_library_changed`, `audit.hsm.provider_library_removed`: files in the PKCS#11 provider workspace, with SHA-256
+- `audit.certs.crwk_rotated` (`reason`: `passphrase_rotation`, `public_default_passphrase`; failures `result: failure`, `reason: rewrap_failed`): certs root wrapping key re-keyed and every CA signer rewrapped (docs/SECURITY/SECRET_ROTATION.md)
 - `audit.cert.issued`, `audit.cert.revoked`, `audit.cert.renewed`
 - `audit.cert.renewal_window_missed`, `audit.cert.emergency_rotation_started`
 - `audit.cert.star_subscription_created`, `audit.cert.star_subscription_renewed`

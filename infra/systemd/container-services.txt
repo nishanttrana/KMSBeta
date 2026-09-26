@@ -2,7 +2,6 @@ postgres
 nats
 valkey
 consul
-etcd
 envoy
 auth
 keycore

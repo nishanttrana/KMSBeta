@@ -98,11 +98,15 @@ func main() {
 			}
 		}
 	}()
+	if err := validateCLIBootstrapPassword(os.Getenv("AUTH_BOOTSTRAP_CLI_PASSWORD")); err != nil {
+		logger.Fatalf("refusing to start: %v", err)
+	}
 	bootstrapDefaultAdmin(ctx, store, logger)
 	bootstrapInternalServiceClients(ctx, store, logger, auditPublisher)
 	meter := metering.NewMeter(cfg.OpsLimit, cfg.MeteringWindow)
 	healthChecker := NewSystemHealthChecker(cfg.ConsulAddress, logger)
 	handler := NewHandler(store, logic, auditPublisher, meter, logger, healthChecker)
+	revokeRetiredCLIPasswords(ctx, store, logger, auditPublisher, handler.lockCLISSHPassword)
 
 	httpPort := envOr("HTTP_PORT", "8001")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, auditPublisher, "auth"))

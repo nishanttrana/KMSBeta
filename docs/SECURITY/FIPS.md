@@ -43,6 +43,18 @@ and be tested, in every mode the customer can choose.
    - At startup it reads the setting and **re-executes itself** with the
      matching `GODEBUG=fips140` before any cryptography runs, then verifies
      the module.
+   - **Where the setting is read (1.9.0-beta):** services read the mode from
+     `/run/vecta/platform/fips-mode`, not from the database.
+     - Governance writes that file from `platform_fips_mode` within 5 s of
+       any change, on its shared `platform-state` volume. Every other
+       service mounts it read-only.
+     - The database is only reachable over internal mTLS, and that needs a
+       TLS handshake and enrolment, which is cryptography. So it can't be
+       what decides the mode.
+     - The observed-mode report (`platform_fips_observed`) is written once
+       the service has enrolled.
+     - Until the file exists (first start of a fresh install), the seed
+       `VECTA_FIPS_MODE` applies.
 5. **Watch the rollout.** Each instance records the mode it actually runs in
    `platform_fips_observed`. The UI shows each service's observed mode and
    stays "applying" until every service matches, polling every 5 s. A full

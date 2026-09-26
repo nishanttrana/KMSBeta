@@ -218,6 +218,7 @@ export type CertSecurityStatus = {
   sealed_path?: string;
   use_tpm_seal?: boolean;
   mlock_status?: string;
+  rotation_pending?: boolean;
   last_error?: string;
 };
 

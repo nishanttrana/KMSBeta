@@ -11,7 +11,10 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
+	pkgsvctls "vecta-kms/pkg/svctls"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 	_ "modernc.org/sqlite"
 )
 
@@ -64,7 +67,7 @@ func Open(ctx context.Context, cfg Config) (*DB, error) {
 	}
 	fmt.Fprintf(os.Stderr, "[db] opening driver=%s dsn=%s\n", driver, logDSN)
 
-	conn, err := sql.Open(string(driver), dsn)
+	conn, err := openSQL(driver, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("db open (driver=%s): %w", driver, err)
 	}
@@ -91,7 +94,7 @@ func Open(ctx context.Context, cfg Config) (*DB, error) {
 
 	// Open read-only replica if configured
 	if cfg.PostgresRODSN != "" && !cfg.UseSQLite {
-		roConn, err := sql.Open(string(DriverPostgres), cfg.PostgresRODSN)
+		roConn, err := openSQL(DriverPostgres, cfg.PostgresRODSN)
 		if err == nil {
 			applyPoolSettings(roConn, cfg)
 			if pingErr := roConn.PingContext(ctx); pingErr == nil {
@@ -327,4 +330,30 @@ func executableServiceName() string {
 		return ""
 	}
 	return base
+}
+
+// OpenPostgres opens a Postgres pool the way Open does (internal mTLS when
+// the process has an identity), without migrations or pool settings.
+func OpenPostgres(dsn string) (*sql.DB, error) { return openSQL(DriverPostgres, dsn) }
+
+// openSQL opens the pool. With an internal mTLS identity (pkg/svctls),
+// Postgres is always reached over TLS 1.3: the server is verified against
+// the internal Sub CA under its hostname, the service presents its own
+// certificate, and there is no plaintext fallback
+// (docs/SECURITY/INTERNAL_TLS.md).
+func openSQL(driver Driver, dsn string) (*sql.DB, error) {
+	if driver != DriverPostgres {
+		return sql.Open(string(driver), dsn)
+	}
+	id := pkgsvctls.Current()
+	if id == nil {
+		return sql.Open(string(driver), dsn)
+	}
+	cfg, err := pgx.ParseConfig(dsn)
+	if err != nil {
+		return nil, err
+	}
+	cfg.TLSConfig = id.ClientTLSConfigFor(cfg.Host)
+	cfg.Fallbacks = nil
+	return stdlib.OpenDB(*cfg), nil
 }
