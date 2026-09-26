@@ -45,10 +45,11 @@ var Services = map[string]string{
 }
 
 // NeverForward services act only on their own node: cluster membership, the
-// node's software HSM, and node supervisors.
+// node's HSM connector (it writes nothing replicated; keycore and governance
+// decide on the primary what to create), and node supervisors.
 var NeverForward = map[string]string{
 	"kms-cluster-manager": "cluster membership is per node",
-	"kms-software-vault":  "the node's software HSM",
+	"kms-hsm-connector":   "talks to the HSM from this node; writes nothing replicated",
 	"kms-reconciler":      "reconciles this node",
 	"kms-watchdog":        "supervises this node",
 }

@@ -35,6 +35,5 @@ services/reconciler/main.go
 services/reporting/handler.go
 services/sbom/handler.go
 services/signing/handler.go
-services/software-vault/handler.go
 services/watchdog/main.go
 services/workload/handler.go

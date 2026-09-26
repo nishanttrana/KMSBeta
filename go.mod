@@ -24,6 +24,7 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/kardianos/service v1.3.0
 	github.com/microsoft/go-mssqldb v1.11.2
+	github.com/miekg/pkcs11 v1.1.2
 	github.com/moov-io/tr31 v0.0.0-20260924224748-4b67da66a25e
 	github.com/nats-io/nats.go v1.54.0
 	github.com/oracle/oci-go-sdk/v65 v65.126.0

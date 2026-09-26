@@ -57,6 +57,21 @@ without its token-verification key (see below). Proven by
 `TestSystemAdminRoutesRequireVerifiedToken`, `TestSystemAdminRefusalReasons`,
 `TestSystemAdminServiceCallersAreRouteBound` and `TestMissingJWTKeyRefusesStart`.
 
+## HSM integration (hsm-connector, keycore)
+
+| Event | When | Severity |
+|---|---|---|
+| `audit.hsm.<action>` | every hsm-connector request (kernel): `key_generated`, `tenant_key_ensured`, `encrypt`, `decrypt`, `sign`, `verify`, `key_destroyed`, `status_read`; refusals carry `result: refused` and `reason` (`caller_not_allowed`, `foreign_label`, `hsm_not_configured`, `library_not_allowed`, `pin_not_provided`, `integrity_check_failed`, `tenant_key_protected`, `algorithm_not_supported`, and the kernel's own) | info; warning for destroy and refusals |
+| `audit.key.hsm_settings_updated` | a tenant's "tenant key in HSM" / "HSM keys" switches changed (before and after) | warning |
+| `audit.key.hsm_refused` | keycore refused an HSM operation (`reason`: `hsm_keys_disabled`, `hsm_not_configured`, `hsm_not_connected`, `hsm_unavailable`, `algorithm_not_supported`, `hsm_import_not_supported`, `iv_mode_not_supported`, `material_in_hsm`) | warning |
+| `audit.key.hsm_objects_destroyed` / `audit.key.hsm_destroy_failed` | a destroyed HSM key's objects were removed from the HSM, or some couldn't be (`labels`, `result: failure`) | info / critical |
+| `audit.key.hsm_status_read`, `audit.key.hsm_settings_update` | kernel events for keycore `GET`/`PUT /hsm/settings` | info / warning |
+
+The connector refusing to start (no database, no JWT key) shows as a
+`refusing to start` / `boot failed` log line. A missing PIN or a library
+outside the allowed roots is a per-request refusal and is audited. Proven by
+the tests listed in [HSM_INTEGRATION.md](HSM_INTEGRATION.md).
+
 ## Service master keys (pkg/mek)
 
 The secrets, certs, cloud and ekm services emit these under their own

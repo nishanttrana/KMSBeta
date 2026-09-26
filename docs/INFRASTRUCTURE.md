@@ -130,7 +130,7 @@ Vecta supports seven HSM backends. The following table documents all relevant ch
 
 ### 1.3 PKCS#11 Primer
 
-All Vecta HSM integrations communicate over the PKCS#11 (Cryptoki) interface, defined in RSA Security's PKCS#11 standard v2.40 and OASIS PKCS #11 v3.0.
+The KMS talks to every HSM over the PKCS#11 (Cryptoki) interface, through the hsm-connector service (docs/SECURITY/HSM_INTEGRATION.md), defined in RSA Security's PKCS#11 standard v2.40 and OASIS PKCS #11 v3.0.
 
 **Key PKCS#11 concepts:**
 
@@ -502,7 +502,7 @@ Thales Luna HA Groups provide transparent load balancing and automatic failover 
    vtl haAdmin show
    ```
 
-4. **Set `ha_group_label`** in Vecta HSM config metadata to the HA group name:
+4. **Set `ha_group_label`** in the tenant's HSM profile metadata to the HA group name:
    ```json
    {"ha_group_label": "vecta-ha-group"}
    ```

@@ -18,6 +18,7 @@ import {
   verifyKeyMaterial,
   attestKey,
   getKeyAccessPolicy,
+  getHSMOverview,
   setKeyAccessPolicy,
   setKeyExportPolicy,
   setKeyUsageLimit,
@@ -229,6 +230,7 @@ function toViewKey(k: any) {
     tenant: String(k.tenant_id || ""),
     purpose: String(k.purpose || "encrypt-decrypt"),
     labels,
+    inHSM: String(labels.hsm || "") === "resident",
     pairId: String(labels.pair_id || ""),
     componentRole: componentRole === "public" ? "public" : componentRole === "private" ? "private" : "",
     ivMode: String(k.iv_mode || "-"),
@@ -480,6 +482,9 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
   const [approvalReq,setApprovalReq]=useState(false);
   const [rotationEnabled,setRotationEnabled]=useState(true);
   const [exportable,setExportable]=useState(false);
+  // "Create in HSM" is offered only when the tenant turned HSM keys on (HSM tab).
+  const [inHSM,setInHSM]=useState(false);
+  const [hsmKeysEnabled,setHsmKeysEnabled]=useState(false);
   const [createName,setCreateName]=useState("");
   const [creating,setCreating]=useState(false);
   const [rotating,setRotating]=useState(false);
@@ -813,6 +818,11 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
   },[columnVisibility]);
 
   useEffect(()=>{
+    if(!session) return;
+    getHSMOverview(session).then((o)=>setHsmKeysEnabled(Boolean(o?.settings?.hsm_keys_enabled))).catch(()=>setHsmKeysEnabled(false));
+  },[session]);
+
+  useEffect(()=>{
     if(!session){
       return;
     }
@@ -1014,7 +1024,26 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     try{
       const keyType=algoType==="symmetric"||algoType==="hmac"?"symmetric":"asymmetric";
       let focusKeyId="";
-      if(algoType==="asymmetric"){
+      if(inHSM){
+        // One key in the HSM holds both halves of a pair; it never leaves the HSM.
+        const createdKey=await createKey(session,{
+          name,
+          algorithm:algo,
+          key_type:keyType==="asymmetric"?"asymmetric-private":keyType,
+          purpose,
+          tags:createTags,
+          export_allowed:false,
+          activation_mode:createActivationMode==="pre-active"?"pre-active":createActivationMode==="scheduled"?"scheduled":"immediate",
+          activation_date:activationISO,
+          iv_mode:"internal",
+          created_by:session.username||"dashboard-user",
+          ops_limit:opsLimit,
+          ops_limit_window:opsLimitWindow,
+          approval_required:approvalReq,
+          hsm:true
+        });
+        focusKeyId=createdKey.key_id;
+      }else if(algoType==="asymmetric"){
         const pairId=`pair_${Date.now().toString(36)}_${Math.random().toString(36).slice(2,8)}`;
         const common={
           name,
@@ -1083,6 +1112,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       setShowCreateTagPicker(false);
       setApprovalReq(false);
       setExportable(false);
+      setInHSM(false);
       setModal(null);
       onToast?.(algoType==="asymmetric"?`Asymmetric key pair created: ${name}`:`Key created: ${name}`);
     }catch(error){
@@ -1902,7 +1932,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
             return <tr key={k.id} style={{borderBottom:`1px solid ${rowBorder}`,cursor:"pointer",background:rowBg,opacity:isDeletedState?0.86:1}} onClick={()=>{setSelectedKey(k);setModal("detail");}}>
               {columnVisibility.name&&<td style={{padding:"8px 10px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{fontSize:11,color:rowText,fontWeight:700}}>{k.name}</div>
+                  <div style={{fontSize:11,color:rowText,fontWeight:700}}>{k.name}{k.inHSM&&<span title="Generated in and used only inside the tenant's HSM" style={{marginLeft:6,fontSize:8,fontWeight:700,color:C.accent,border:`1px solid ${C.accent}`,borderRadius:3,padding:"0 4px"}}>HSM</span>}</div>
                   {k.componentRole&&<span style={{padding:"1px 6px",borderRadius:999,border:`1px solid ${k.componentRole==="private"?C.pink:C.blue}`,background:`${k.componentRole==="private"?C.pink:C.blue}22`,fontSize:9,color:k.componentRole==="private"?C.pink:C.blue,textTransform:"capitalize"}}>{k.componentRole}</span>}
                 </div>
                 <div style={{fontSize:9,color:isDeletedState?C.muted:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{k.id}</div>
@@ -2171,8 +2201,8 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
       <Row2>
         <FG label="Security Options">
           <Chk label="Require governance approval for all operations" checked={approvalReq} onChange={()=>setApprovalReq(!approvalReq)}/>
-          <Chk label="Allow key export (wrapped)" checked={exportable} onChange={()=>setExportable(!exportable)}/>
-          <Chk label="HSM-backed (store in external HSM)" checked={false}/>
+          {!inHSM&&<Chk label="Allow key export (wrapped)" checked={exportable} onChange={()=>setExportable(!exportable)}/>}
+          {hsmKeysEnabled&&<Chk label="Create in HSM (generated and used only inside the tenant's HSM; AES-GCM, RSA-PSS or ECDSA P-256/P-384)" checked={inHSM} onChange={()=>{setInHSM(!inHSM);setExportable(false);}}/>}
           <Chk label="FIPS-only algorithms enforced" checked={true}/>
         </FG>
         <FG label="Activation">

@@ -27,4 +27,3 @@ mpc
 dataprotect
 cluster-manager
 hsm-connector
-software-vault

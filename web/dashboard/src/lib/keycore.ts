@@ -297,6 +297,8 @@ export type CreateKeyInput = {
   ops_limit?: number;
   ops_limit_window?: string;
   approval_required?: boolean;
+  // Generate the key in the tenant's HSM; it never leaves it (docs/SECURITY/HSM_INTEGRATION.md).
+  hsm?: boolean;
 };
 
 export type FormKeyInput = CreateKeyInput & {
@@ -605,9 +607,52 @@ export async function createKey(session: AuthSession, input: CreateKeyInput): Pr
       created_by: input.created_by,
       ops_limit: Number(input.ops_limit || 0),
       ops_limit_window: input.ops_limit_window || "total",
-      approval_required: Boolean(input.approval_required)
+      approval_required: Boolean(input.approval_required),
+      hsm: Boolean(input.hsm)
     })
   });
+}
+
+// A tenant's HSM switches and the connector's view of its HSM.
+export type HSMSettings = {
+  tenant_id: string;
+  tenant_key_enabled: boolean;
+  hsm_keys_enabled: boolean;
+  tenant_key_label?: string;
+  updated_by?: string;
+  updated_at?: string;
+};
+
+export type HSMConnectionStatus = {
+  configured: boolean;
+  connected: boolean;
+  provider_name?: string;
+  library?: string;
+  manufacturer?: string;
+  model?: string;
+  token_label?: string;
+  serial_number?: string;
+  firmware?: string;
+  cryptoki_version?: string;
+  tenant_key_ready: boolean;
+  error?: string;
+};
+
+export type HSMOverview = { settings: HSMSettings; connector: boolean; hsm?: HSMConnectionStatus };
+
+export async function getHSMOverview(session: AuthSession): Promise<HSMOverview> {
+  return apiRequest<HSMOverview>(session, `/hsm/settings?tenant_id=${encodeURIComponent(session.tenantId)}`);
+}
+
+export async function updateHSMSettings(
+  session: AuthSession,
+  input: { tenant_key_enabled: boolean; hsm_keys_enabled: boolean }
+): Promise<HSMSettings> {
+  const out = await apiRequest<{ settings: HSMSettings }>(session, "/hsm/settings", {
+    method: "PUT",
+    body: JSON.stringify({ tenant_id: session.tenantId, ...input })
+  });
+  return out.settings;
 }
 
 export async function formKey(session: AuthSession, input: FormKeyInput): Promise<APIFormKeyResponse> {

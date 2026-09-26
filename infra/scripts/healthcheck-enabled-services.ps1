@@ -42,8 +42,7 @@ $profileToService = @{
     "mpc_engine" = @("mpc")
     "data_protection" = @("dataprotect")
     "clustering" = @("cluster-manager", "etcd")
-    "hsm_hardware" = @("hsm-connector")
-    "hsm_software" = @("software-vault")
+    "hsm_hardware" = @("hsm-connector", "hsm-integration")
 }
 
 $enabledServices = New-Object System.Collections.Generic.List[string]

@@ -11,6 +11,7 @@ import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { Btn, Card, Chk, FG, Inp, Modal, Row2, Section, Sel, Txt } from "../legacyPrimitives";
 import { HSM_VENDOR_PROFILES, inferHSMVendor, normalizeHSMVendorView } from "../../../modules/hsm/vendorProfiles";
+import { HSMIntegrationCard } from "../../../modules/hsm/HSMIntegrationCard";
 import { Terminal, Shield, Key, HardDrive, Copy, CheckCircle2, RefreshCw, Server, Lock, Cpu } from "lucide-react";
 
 /* ── tiny copy helper ── */
@@ -270,6 +271,8 @@ export const HSMTab=({session,onToast,subView,onSubViewChange})=>{
         <Btn small onClick={()=>void refreshCLIHints()} disabled={statusLoading}><RefreshCw size={11} style={{marginRight:4}}/>{statusLoading?"Loading...":"Refresh"}</Btn>
       </div>
     </div>
+
+    <HSMIntegrationCard session={session} onToast={onToast}/>
 
     {activeVendorID==="securosys"&&<Card style={{padding:12,marginBottom:12,background:"rgba(123,140,255,.06)",border:`1px solid ${C.accent}33`}}>
       <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:6}}>Securosys Primus Setup</div>

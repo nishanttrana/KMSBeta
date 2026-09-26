@@ -28,8 +28,11 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
   the public dev keys, the exposure register, backup re-wrapping, and
   rotation.
 - [BACKUP_KEYS.md](BACKUP_KEYS.md): governance backup keys. A software-mode
-  key is returned once and never stored; an HSM-bound key is wrapped under an
-  HKDF-SHA256 key from `BACKUP_HSM_WRAP_SECRET`.
+  key is returned once and never stored; an HSM-bound key is wrapped inside
+  the tenant's HSM under its tenant key.
+- [HSM_INTEGRATION.md](HSM_INTEGRATION.md): customer HSMs through their own
+  PKCS#11 library (hsm-connector); a per-tenant key in the HSM for new keys,
+  and per-key HSM-resident keys. There is no Vecta HSM.
 - [AUDIT_EVENTS_2026-09.md](AUDIT_EVENTS_2026-09.md): every audit event the
   2026-09 refresh added, and what can't be audited (startup refusals) and how
   it shows instead.

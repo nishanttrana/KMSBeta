@@ -7,6 +7,46 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — Customer HSMs through their own PKCS#11 library, in a separate connector
+**Decision:** HSMs are integrated through the vendor's PKCS#11 library (owner's
+choice over a vendor REST API). The library loads in a dedicated
+`hsm-connector` service (cgo, Debian), which keycore and governance call with
+their service identities. Per tenant, two switches: a tenant key in the HSM
+that protects new key versions (owner: "new keys only"), and HSM-resident
+keys created per key. There is no Vecta or software HSM (owner), and
+`software-vault` moved to KMSExtension. HSM-bound backups are wrapped by
+the tenant key in the HSM.
+
+**Why:**
+- One integration serves every vendor that ships a PKCS#11 library, and the
+  owner requires real integrations, no fakes.
+- Vendor libraries are glibc builds and can't load into keycore's static
+  Alpine binary. A separate process also keeps a crashing vendor library and
+  the HSM PIN away from keycore.
+- A per-tenant key gives each tenant its own root of trust in the HSM
+  without moving every operation into the HSM. HSM-resident keys cover the
+  keys that must never leave it.
+
+**Rejected:**
+- cgo in keycore: glibc libraries, a larger FIPS build surface, and a
+  vendor crash would take down the KMS.
+- Securosys REST (TSB) API: it covers one vendor, and the owner chose
+  PKCS#11.
+- Re-wrapping existing keys under the tenant key on enable: the owner chose
+  new keys only. Turning it off doesn't touch existing keys either.
+- Refusing HSM operations in FIPS `only` mode as "third-party crypto": they
+  run in the HSM's own module with approved mechanisms. The KMS doesn't
+  claim that module's validation; the customer checks it.
+- A software HSM for demos: nothing may pose as an HSM. Tests use SoftHSM2,
+  a real PKCS#11 library, only in tests.
+
+**Enforced by:** `pkg/hsmconnector` tests on SoftHSM2 (isolation, callers,
+confinement, `routetest.RefusalsAudited`), the keycore and governance HSM
+tests through the real connector, `TestHSMStoragePostgres`, and
+`TestHSMBoundBackupPostgres` (docs/SECURITY/HSM_INTEGRATION.md).
+
+---
+
 ## 2026-09-26 — Governance fails closed; services are admitted per route
 **Decision:** governance refuses to start without a token-verification key
 (read through `pkg/jwtauth`, so the shared `JWT_PUBLIC_KEY_*` works). System

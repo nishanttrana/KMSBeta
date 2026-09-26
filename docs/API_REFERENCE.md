@@ -297,6 +297,38 @@ service principal); refusals emit `audit.auth.cluster_mint_refused`.
 
 Key lifecycle management and all cryptographic operations.
 
+
+### HSM integration: `GET/PUT /svc/keycore/hsm/settings`
+
+A tenant's two HSM switches ([SECURITY/HSM_INTEGRATION.md](SECURITY/HSM_INTEGRATION.md)).
+`GET` (`key.hsm.read`) returns `settings` (`tenant_key_enabled`,
+`hsm_keys_enabled`, `tenant_key_label`), `connector` (whether this platform
+runs the hsm-connector) and `hsm`: what the connector reports after loading
+the tenant's PKCS#11 library (`configured`, `connected`, `manufacturer`,
+`model`, `token_label`, `firmware`, `tenant_key_ready`, `error`). `PUT`
+(`key.hsm.write`, body `tenant_key_enabled`, `hsm_keys_enabled`) is refused
+unless the HSM is configured and connected (`409 hsm_not_configured` /
+`hsm_not_connected`, `503 hsm_unavailable`). Turning the tenant key on
+generates it in the HSM.
+
+`POST /svc/keycore/keys` takes `"hsm": true` to generate the key in the
+tenant's HSM (AES-128/192/256-GCM, RSA-2048/3072/4096 PSS, ECDSA
+P-256/P-384). The key is never exportable. Encrypt, decrypt, sign and verify
+run in the HSM, and operations that need the material answer
+`409 hsm_operation_unsupported`. Key versions report `protection` (`mek`,
+`tenant_hsm`, `hsm_resident`) and `hsm_label`.
+
+### hsm-connector (internal, port 8430)
+
+Only `kms-keycore` and `kms-governance` may call the key routes (others get
+`403 caller_not_allowed`). Labels must start with `vecta:<tenant_id>:`.
+Routes: `POST /hsm/keys`, `/hsm/tenant-key`, `/hsm/encrypt`,
+`/hsm/decrypt`, `/hsm/sign`, `/hsm/verify`, `/hsm/keys/destroy`, and
+`GET /hsm/status` (also open to tenant administrators). Env:
+`HSM_LIBRARY_ROOTS` (default `/var/lib/vecta/hsm/providers`), plus the PIN
+variable each profile names (or `<name>_FILE`). Keycore and governance use
+`HSM_CONNECTOR_URL` (default `http://hsm-connector:8430`).
+
 ---
 
 ### Key Object Schema
@@ -992,13 +1024,14 @@ described in [SECURITY/BACKUP_KEYS.md](SECURITY/BACKUP_KEYS.md).
 | `GET /governance/backups` | List jobs. `job.key_package` holds only `mode`, `key_retained`, coverage and the HSM binding summary, never key material. |
 | `GET /governance/backups/{id}` | One job. |
 | `GET /governance/backups/{id}/artifact` | The encrypted `.vbk` artifact (`artifact.content_base64`). |
-| `GET /governance/backups/{id}/key` | The key file again, **HSM-bound backups only** (the key is wrapped under `BACKUP_HSM_WRAP_SECRET`). A software-mode backup, or one whose stored key was removed, answers `410 backup_key_not_retained`. |
-| `POST /governance/backups/restore` | Body: `artifact_file_name` (`.vbk`), `artifact_content_base64`, `key_file_name` (`.key.json`), `key_content_base64`. HSM-bound key files restore only with `key_derivation: "v2"` (HKDF-SHA256). |
+| `GET /governance/backups/{id}/key` | The key file again, **HSM-bound backups only** (the key is wrapped by the tenant's key inside the HSM). A software-mode backup, or one whose stored key was removed, answers `410 backup_key_not_retained`. |
+| `POST /governance/backups/restore` | Body: `artifact_file_name` (`.vbk`), `artifact_content_base64`, `key_file_name` (`.key.json`), `key_content_base64`. HSM-bound key files restore only when wrapped by the HSM (`key_wrap: "hsm_tenant_key"`), through the hsm-connector. |
 | `DELETE /governance/backups/{id}` | Delete a job and its artifact. |
 
-Env: `BACKUP_HSM_WRAP_SECRET` (governance) is required for HSM-bound backups
-and must be at least 32 characters (`openssl rand -hex 32`); a missing or
-short secret refuses the backup or restore.
+HSM-bound backups need the tenant's HSM profile (HSM tab) and the
+hsm-connector: the backup key is wrapped inside that HSM under the tenant's
+key (`key_wrap: "hsm_tenant_key"`). `BACKUP_HSM_WRAP_SECRET` is no longer
+used; packages from it (`key_derivation` v1/v2) are refused.
 
 ---
 
@@ -3359,6 +3392,7 @@ Selected events with dedicated audit classification:
 - `audit.governance.approval_requested`, `audit.governance.approved`, `audit.governance.rejected`, `audit.governance.bypassed`
 - `audit.governance.backup_created` (`key_mode`, `key_retained`), `audit.governance.backup_deleted`, `audit.governance.backup_restored`, `audit.governance.backup_restore_refused` (tampered artifact, wrong key, changed scope, wrong file type, retired v1 key package; carries `reason`)
 - `audit.governance.backup_create_refused` (`reason`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`)
+- `audit.hsm.*` (connector: `key_generated`, `tenant_key_ensured`, `encrypt`, `decrypt`, `sign`, `verify`, `key_destroyed`, `status_read`), `audit.key.hsm_settings_updated`, `audit.key.hsm_refused` (`reason`), `audit.key.hsm_objects_destroyed`, `audit.key.hsm_destroy_failed`, `audit.key.hsm_status_read`, `audit.key.hsm_settings_update`: HSM integration (docs/SECURITY/HSM_INTEGRATION.md)
 - `audit.governance.system_admin_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `not_root_tenant`, `token_tenant_not_root`, `insufficient_privileges`), `audit.governance.authentication_refused` (`reason: invalid_token`)
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
 - `audit.backup.policy_created`, `audit.backup.policy_updated`, `audit.backup.policy_deleted`, `audit.backup.run_refused_preview`, `audit.backup.restore_refused_preview`

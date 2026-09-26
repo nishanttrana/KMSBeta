@@ -606,39 +606,25 @@ sudo systemctl status vecta-keycore
 
 ### 4.6 HSM-Backed Deployment
 
-#### Thales Luna HSM
+The KMS works with any HSM that ships a PKCS#11 library: Securosys Primus,
+Thales Luna, Entrust nShield, Utimaco, AWS CloudHSM and others. There is no
+"Vecta HSM". Full design: [SECURITY/HSM_INTEGRATION.md](SECURITY/HSM_INTEGRATION.md).
 
-```bash
-# Prerequisites: Luna client software installed, partition created
-# Environment variables:
-export VECTA_HSM_PROVIDER=thales-luna
-export VECTA_HSM_SLOT=0
-export VECTA_HSM_PIN_FILE=/etc/vecta-kms/hsm.pin     # file, not env var, for security
-export VECTA_HSM_LIBRARY=/usr/safenet/lunaclient/lib/libCryptoki2_64.so
-
-# Verify HSM connectivity before starting
-vecta-kms hsm verify --provider thales-luna --slot 0
-# Expected: HSM connectivity OK, FIPS mode: enabled, firmware: 7.7.1
-```
-
-#### AWS CloudHSM
-
-```bash
-export VECTA_HSM_PROVIDER=aws-cloudhsm
-export VECTA_HSM_CLUSTER_ID=cluster-xxxxxxxxx
-export VECTA_HSM_USERNAME=vecta-crypto-user
-export VECTA_HSM_PASSWORD_SECRET_ARN=arn:aws:secretsmanager:us-east-1:123456789:secret:vecta-hsm-pw
-# AWS IAM role must have CloudHSM permissions
-```
-
-#### Securosys Primus X
-
-```bash
-export VECTA_HSM_PROVIDER=securosys
-export VECTA_HSM_ENDPOINT=https://primusdev.cloudshsm.com
-export VECTA_HSM_API_KEY=<securosys-api-key>
-export VECTA_HSM_PARTITION=vecta-partition
-```
+1. Install with HSM mode `hardware` (or set `hsm_mode: hardware` in
+   `infra/deployment/deployment.yaml`). This starts `hsm-connector` (loads the
+   library, holds the PIN) and `hsm-integration` (SSH/SFTP upload of the
+   library into `/var/lib/vecta/hsm/providers/<tenant>/`).
+2. Put the vendor's client files and library on the `hsm-integration`
+   container (the HSM tab shows the `scp`/`ssh` commands).
+3. In the dashboard, open **HSM → <your vendor>**, set the library path, the
+   slot ID or token label, and the PIN variable name (for example
+   `SECUROSYS_HSM_PIN`), and enable the profile.
+4. Put the PIN in `hsm-connector.env` next to `docker-compose.yml`
+   (`SECUROSYS_HSM_PIN=...`, or `SECUROSYS_HSM_PIN_FILE=/run/secrets/...`),
+   plus any vendor client variables, and restart `hsm-connector`.
+5. In **HSM → KMS integration**, press **Test connection**: it reports the
+   manufacturer, model and token the connector actually logged in to. Then
+   turn on **Tenant key in HSM** and/or **HSM keys**.
 
 ### 4.7 Environment Variables Reference
 
@@ -650,9 +636,8 @@ export VECTA_HSM_PARTITION=vecta-partition
 | `VECTA_ADMIN_PASSWORD` | Yes (first run) | — | Initial admin password |
 | `VECTA_FIPS_MODE` | No | `on` | Initial FIPS 140-3 mode (`on`, `only`, `off`); afterwards set in the UI |
 | `INTERNAL_SERVICE_BOOTSTRAP_SECRET` | Yes | — | ≥ 32 chars (`openssl rand -hex 32`); every internal service derives its API key from it. Placeholders are refused, and rotating it retires the old service keys (see SECURITY/SECURE_DEFAULTS.md) |
-| `VECTA_HSM_PROVIDER` | No | — | HSM provider: `thales-luna`, `aws-cloudhsm`, `securosys`, `entrust`, `utimaco` |
-| `VECTA_HSM_PIN` | No | — | HSM partition PIN (prefer `VECTA_HSM_PIN_FILE`) |
-| `VECTA_HSM_PIN_FILE` | No | — | Path to file containing HSM PIN |
+| `<PIN variable>` (hsm-connector, e.g. `SECUROSYS_HSM_PIN`, `LUNA_PIN`, default `HSM_PIN`) | With an HSM | — | The PIN of the tenant's HSM profile, named by its `pin_env_var`; or `<name>_FILE` pointing to a file. Put it in `hsm-connector.env` |
+| `HSM_CONNECTOR_URL` (keycore, governance) | No | `http://hsm-connector:8430` | Where the HSM connector listens |
 | `VECTA_LOG_LEVEL` | No | `info` | Log level: `debug`, `info`, `warn`, `error` |
 | `VECTA_LISTEN_ADDR` | No | `:8080` | Internal service listen address |
 | `VECTA_DASHBOARD_ADDR` | No | `:5173` | Dashboard listen address |

@@ -10,13 +10,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
+	"vecta-kms/pkg/hsm"
 )
 
 const (
@@ -172,7 +172,7 @@ func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (Backu
 	}
 	binding := store.loadHSMBinding(ctx, hsmTenantID)
 	hsmBound := bindToHSM && binding.Enabled
-	keyFilePackage, keyPackage, err := buildBackupKeyPackage(backupKey, hsmBound, binding, in.TenantID, targetTenantID, coverage)
+	keyFilePackage, keyPackage, err := s.buildBackupKeyPackage(ctx, backupKey, hsmBound, binding, hsmTenantID, in.TenantID, targetTenantID, coverage)
 	if err != nil {
 		return BackupJob{}, BackupKeyFile{}, err
 	}
@@ -374,8 +374,8 @@ func (s *Service) GetBackupArtifactDownload(ctx context.Context, tenantID string
 }
 
 // GetBackupKeyDownload returns the key file of an HSM-bound backup again
-// (its key is wrapped under BACKUP_HSM_WRAP_SECRET, which isn't in the
-// database). A software-mode backup's key was never stored:
+// (its key is wrapped by the tenant's key inside the HSM, so the database
+// alone can't open it). A software-mode backup's key was never stored:
 // errBackupKeyNotRetained. Both outcomes are audited.
 func (s *Service) GetBackupKeyDownload(ctx context.Context, tenantID string, backupID string, requestedBy string) (BackupKeyFile, error) {
 	store, ok := s.store.(*SQLStore)
@@ -409,7 +409,7 @@ func (s *Service) GetBackupKeyDownload(ctx context.Context, tenantID string, bac
 // backup: an HSM-bound package wrapped with the current derivation.
 func backupKeyRetained(pkg map[string]interface{}) bool {
 	return fmt.Sprint(pkg["mode"]) == "hsm_bound" &&
-		fmt.Sprint(pkg["key_derivation"]) == backupKeyDerivationHKDF &&
+		fmt.Sprint(pkg["key_wrap"]) == backupKeyWrapHSM &&
 		strings.TrimSpace(fmt.Sprint(pkg["wrapped_key_b64"])) != "" &&
 		pkg["key_retained"] != false
 }
@@ -626,60 +626,43 @@ func (s *Service) resolveRestoreBackupKey(ctx context.Context, store *SQLStore, 
 		}
 		return key, nil
 	case "hsm_bound":
-		// The binding of the tenant the backup was bound to at creation.
-		hsmTenantID := tenantID
-		if target := strings.TrimSpace(fmt.Sprint(keyPackage["target_tenant_id"])); target != "" && target != "<nil>" {
-			hsmTenantID = target
-		}
-		binding := store.loadHSMBinding(ctx, hsmTenantID)
-		if !binding.Enabled {
-			return nil, errors.New("restore requires enabled HSM configuration for hsm_bound backup")
-		}
-		return unwrapHSMBoundKey(keyPackage, binding)
+		return s.unwrapHSMBoundKey(ctx, keyPackage)
 	default:
 		return nil, errors.New("unsupported backup key package mode")
 	}
 }
 
-// unwrapHSMBoundKey opens an hsm_bound key package with the binding and
-// BACKUP_HSM_WRAP_SECRET. Only HKDF ("v2") packages are accepted.
-func unwrapHSMBoundKey(keyPackage map[string]interface{}, binding backupHSMBinding) ([]byte, error) {
-	if kd := strings.TrimSpace(fmt.Sprint(keyPackage["key_derivation"])); kd != backupKeyDerivationHKDF {
-		return nil, fmt.Errorf("hsm_bound key package uses key derivation %q, which is retired (raw SHA-256); only %q packages restore", kd, backupKeyDerivationHKDF)
+// unwrapHSMBoundKey has the tenant's HSM key decrypt the backup key. Only
+// packages wrapped in the HSM (key_wrap hsm_tenant_key) restore; the older
+// secret-derived wraps (key_derivation v1, v2) are refused.
+func (s *Service) unwrapHSMBoundKey(ctx context.Context, keyPackage map[string]interface{}) ([]byte, error) {
+	if w := strings.TrimSpace(fmt.Sprint(keyPackage["key_wrap"])); w != backupKeyWrapHSM {
+		return nil, fmt.Errorf("hsm_bound key package from a retired format (key_derivation %v): only packages wrapped by the HSM restore", keyPackage["key_derivation"])
 	}
-	wrappedRaw := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["wrapped_key_b64"]))
-	nonceRaw := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["wrap_nonce_b64"]))
-	aadRaw := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["wrap_aad_b64"]))
-	if wrappedRaw == "" || nonceRaw == "" {
+	field := func(k string) string {
+		v := strings.TrimSpace(fmt.Sprint(keyPackage[k]))
+		if v == "<nil>" {
+			return ""
+		}
+		return v
+	}
+	hsmTenant := field("hsm_tenant_id")
+	label := field("hsm_key_label")
+	if hsmTenant == "" || label != hsm.TenantKeyLabel(hsmTenant) {
+		return nil, errors.New("backup key package doesn't name its tenant's HSM key")
+	}
+	wrapped, err1 := base64.StdEncoding.DecodeString(field("wrapped_key_b64"))
+	iv, err2 := base64.StdEncoding.DecodeString(field("wrap_nonce_b64"))
+	if err1 != nil || err2 != nil || len(wrapped) == 0 || len(iv) == 0 {
 		return nil, errors.New("backup key package is missing wrapped key fields")
 	}
-	wrapped, err := base64.StdEncoding.DecodeString(wrappedRaw)
+	aad := backupKeyAAD(hsmTenant, field("request_tenant_id"), field("target_tenant_id"))
+	backupKey, err := s.backupHSM().Decrypt(ctx, hsmTenant, label, iv, wrapped, aad)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("the tenant's HSM key did not open the backup key: %w", err)
 	}
-	wrapNonce, err := base64.StdEncoding.DecodeString(nonceRaw)
-	if err != nil {
-		return nil, err
-	}
-	var wrapAAD []byte
-	if aadRaw != "" {
-		if wrapAAD, err = base64.StdEncoding.DecodeString(aadRaw); err != nil {
-			return nil, err
-		}
-	}
-	secret, err := backupWrapSecret()
-	if err != nil {
-		return nil, err
-	}
-	requestTenantID := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["request_tenant_id"]))
-	targetTenantID := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["target_tenant_id"]))
-	wrapKey, err := backupWrapKey(secret, binding, requestTenantID, targetTenantID)
-	if err != nil {
-		return nil, err
-	}
-	backupKey, err := decryptAESGCM(wrapped, wrapKey, wrapNonce, wrapAAD)
-	if err != nil || len(backupKey) != 32 {
-		return nil, errors.New("unable to unwrap hsm_bound backup key with current HSM binding and BACKUP_HSM_WRAP_SECRET")
+	if len(backupKey) != 32 {
+		return nil, errors.New("backup key size is invalid")
 	}
 	return backupKey, nil
 }
@@ -751,43 +734,41 @@ func (s *Service) captureBackupPayload(ctx context.Context, store *SQLStore, req
 	return compressed.Bytes(), rowCountTotal, len(payload.Tables), payload.Coverage, nil
 }
 
-const (
-	// backupKeyDerivationHKDF: the HSM-bound wrap key is
-	// HKDF-SHA256(BACKUP_HSM_WRAP_SECRET, info = label|binding|tenants).
-	// "v1" packages used a raw SHA-256 of the same string and are refused.
-	backupKeyDerivationHKDF = "v2"
-	backupWrapInfoLabel     = "vecta-kms/backup-key-wrap/v2"
-	minBackupWrapSecretLen  = 32
-)
+// backupKeyWrapHSM marks a backup key wrapped with AES-256-GCM inside the
+// tenant's HSM, under the tenant key (pkg/hsm).
+const backupKeyWrapHSM = "hsm_tenant_key"
 
-// backupWrapSecret returns BACKUP_HSM_WRAP_SECRET, refusing a missing or
-// short one (docs/SECURITY/BACKUP_KEYS.md).
-func backupWrapSecret() (string, error) {
-	secret := strings.TrimSpace(os.Getenv("BACKUP_HSM_WRAP_SECRET"))
-	switch {
-	case secret == "":
-		return "", errors.New("BACKUP_HSM_WRAP_SECRET is required for hsm_bound backups but not set; generate one with: openssl rand -hex 32")
-	case len(secret) < minBackupWrapSecretLen:
-		return "", fmt.Errorf("BACKUP_HSM_WRAP_SECRET must be at least %d characters; generate one with: openssl rand -hex 32", minBackupWrapSecretLen)
-	}
-	return secret, nil
+// backupHSMBackend is the connector client (pkg/hsm.Client).
+type backupHSMBackend interface {
+	EnsureTenantKey(ctx context.Context, tenant string) (string, error)
+	Encrypt(ctx context.Context, tenant, label string, plaintext, aad []byte) ([]byte, []byte, error)
+	Decrypt(ctx context.Context, tenant, label string, iv, ciphertext, aad []byte) ([]byte, error)
 }
 
-// backupWrapKey derives the key that wraps an HSM-bound backup key, bound
-// to the HSM binding and both tenants.
-func backupWrapKey(secret string, binding backupHSMBinding, requestTenantID, targetTenantID string) ([]byte, error) {
-	info := backupWrapInfoLabel + "|" + binding.Fingerprint + "|" + requestTenantID + "|" + targetTenantID
-	return pkgcrypto.HKDFSHA256([]byte(secret), nil, []byte(info), 32)
+// WithBackupHSM replaces the connector client (tests).
+func WithBackupHSM(b backupHSMBackend) ServiceOption {
+	return func(s *Service) { s.hsm = b }
+}
+
+func (s *Service) backupHSM() backupHSMBackend {
+	if s.hsm != nil {
+		return s.hsm
+	}
+	return hsm.FromEnv()
+}
+
+func backupKeyAAD(hsmTenant, requestTenantID, targetTenantID string) []byte {
+	return []byte("vecta-kms/backup-key|" + hsmTenant + "|" + requestTenantID + "|" + targetTenantID)
 }
 
 // buildBackupKeyPackage returns the key file handed to the operator and the
-// package stored with the job. HSM-bound: both hold the wrapped key (the
-// wrap secret isn't in the database). Software: only the file holds the key;
-// the platform keeps its fingerprint.
-func buildBackupKeyPackage(backupKey []byte, hsmBound bool, binding backupHSMBinding, requestTenantID string, targetTenantID string, coverage backupCoverageSummary) (file map[string]interface{}, stored map[string]interface{}, err error) {
+// package stored with the job. HSM-bound: the tenant's HSM key wraps the
+// backup key, and both hold the wrapped key (only that HSM opens it).
+// Software: only the file holds the key; the platform keeps its fingerprint.
+func (s *Service) buildBackupKeyPackage(ctx context.Context, backupKey []byte, hsmBound bool, binding backupHSMBinding, hsmTenant, requestTenantID, targetTenantID string, coverage backupCoverageSummary) (file map[string]interface{}, stored map[string]interface{}, err error) {
 	base := func(mode string) map[string]interface{} {
 		return map[string]interface{}{
-			"version":           2,
+			"version":           3,
 			"mode":              mode,
 			"algorithm":         "AES-256-GCM",
 			"request_tenant_id": requestTenantID,
@@ -797,34 +778,30 @@ func buildBackupKeyPackage(backupKey []byte, hsmBound bool, binding backupHSMBin
 		}
 	}
 	if hsmBound {
-		secret, err := backupWrapSecret()
+		b := s.backupHSM()
+		label, err := b.EnsureTenantKey(ctx, hsmTenant)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("HSM-bound backup: %w", err)
 		}
-		wrapKey, err := backupWrapKey(secret, binding, requestTenantID, targetTenantID)
+		aad := backupKeyAAD(hsmTenant, requestTenantID, targetTenantID)
+		iv, wrapped, err := b.Encrypt(ctx, hsmTenant, label, backupKey, aad)
 		if err != nil {
-			return nil, nil, err
-		}
-		aad := []byte("vecta-kms:backup:hsm-binding:" + binding.FingerprintHash)
-		wrapped, wrapNonce, err := encryptAESGCM(backupKey, wrapKey, aad)
-		if err != nil {
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("HSM-bound backup: %w", err)
 		}
 		pkg := base("hsm_bound")
-		pkg["key_derivation"] = backupKeyDerivationHKDF
+		pkg["key_wrap"] = backupKeyWrapHSM
 		pkg["key_retained"] = true
+		pkg["hsm_tenant_id"] = hsmTenant
+		pkg["hsm_key_label"] = label
 		pkg["wrapped_key_b64"] = base64.StdEncoding.EncodeToString(wrapped)
-		pkg["wrap_nonce_b64"] = base64.StdEncoding.EncodeToString(wrapNonce)
-		pkg["wrap_aad_b64"] = base64.StdEncoding.EncodeToString(aad)
-		pkg["hsm_binding_hash"] = binding.FingerprintHash
+		pkg["wrap_nonce_b64"] = base64.StdEncoding.EncodeToString(iv)
 		pkg["hsm_binding"] = map[string]interface{}{
-			"provider_name":    binding.ProviderName,
-			"slot_id":          binding.SlotID,
-			"partition_label":  binding.PartitionLabel,
-			"token_label":      binding.TokenLabel,
-			"library_path_sha": sha256Hex(binding.LibraryPath),
+			"provider_name":   binding.ProviderName,
+			"slot_id":         binding.SlotID,
+			"partition_label": binding.PartitionLabel,
+			"token_label":     binding.TokenLabel,
 		}
-		pkg["note"] = "The backup key is wrapped under BACKUP_HSM_WRAP_SECRET and the HSM binding. Restore needs both on the restoring platform."
+		pkg["note"] = "The backup key is wrapped inside the tenant's HSM under its tenant key. Restore needs that HSM, through this platform's HSM connector."
 		return pkg, pkg, nil
 	}
 	stored = base("software")

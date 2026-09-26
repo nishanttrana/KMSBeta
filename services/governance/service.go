@@ -40,6 +40,8 @@ type Service struct {
 	// rewrapper re-protects backup contents through the owning services
 	// (backup_mek.go); nil means HTTP to each service.
 	rewrapper backupRewrapper
+	// hsm wraps HSM-bound backup keys under the tenant key (backup.go).
+	hsm backupHSMBackend
 }
 
 var runtimeCryptoLibraryLabel, runtimeCryptoLibraryValidated = detectRuntimeCryptoLibrary()

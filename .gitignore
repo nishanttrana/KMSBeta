@@ -68,7 +68,7 @@ services/*/__debug_bin*
 /reporting
 /sbom
 /signing
-/software-vault
+/hsm-connector
 /watchdog
 
 # Local build harness output

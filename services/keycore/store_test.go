@@ -48,8 +48,10 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, key_id TEXT NOT NULL, version INTEGER NOT NULL,
 			encrypted_material BLOB NOT NULL, material_iv BLOB NOT NULL, wrapped_dek BLOB NOT NULL, public_key BLOB, kcv BLOB,
 			rotated_from INTEGER, rotation_reason TEXT, status TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			protection TEXT NOT NULL DEFAULT 'mek', hsm_label TEXT NOT NULL DEFAULT '',
 			PRIMARY KEY (tenant_id, id)
 		);`,
+		`CREATE TABLE keycore_hsm_settings (tenant_id TEXT PRIMARY KEY, tenant_key_enabled BOOLEAN NOT NULL DEFAULT FALSE, hsm_keys_enabled BOOLEAN NOT NULL DEFAULT FALSE, tenant_key_label TEXT NOT NULL DEFAULT '', updated_by TEXT NOT NULL DEFAULT '', updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE key_iv_log (
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, key_id TEXT NOT NULL, key_version INTEGER NOT NULL,
 			iv BLOB NOT NULL, operation TEXT NOT NULL, reference_id TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

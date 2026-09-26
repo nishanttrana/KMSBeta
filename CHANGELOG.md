@@ -6,6 +6,49 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
+### HSM integration: real PKCS#11, per-tenant key and HSM-resident keys
+- **New `hsm-connector` service.** It loads the customer's own PKCS#11
+  library: Securosys Primus, Thales Luna, Entrust nShield, Utimaco, AWS
+  CloudHSM, or any PKCS#11 v2.40+ HSM. It is the only process that holds
+  the HSM PIN. Before this, the HSM tab only stored a profile and nothing
+  ever used the HSM. The compose entry pointed at an image that was never
+  built.
+- **HSM tab → KMS integration (per tenant):**
+  - **Test connection** shows what the connector really logged in to
+    (manufacturer, model, token, firmware).
+  - **Tenant key in HSM:** the tenant gets its own AES-256 key inside the
+    HSM, and every new key's material is encrypted by it. Existing keys keep
+    the KMS master key.
+  - **HSM keys:** the create-key form offers **Create in HSM**. The key is
+    generated in the HSM (AES-GCM, RSA-PSS, ECDSA P-256/P-384), never leaves
+    it, and its encrypt, decrypt, sign and verify run there. Export, wrap
+    and derive are refused (`409 hsm_operation_unsupported`). Rotation
+    creates a new HSM key, and destroy removes the objects from the HSM.
+- **Tenant isolation:** every HSM object is labelled `vecta:<tenant>:...`,
+  and the connector refuses other tenants' labels, even on a shared
+  partition. Only keycore and governance may use HSM keys. Libraries load
+  only from the provider workspace, and PIN variables must be named `*PIN*`.
+- **HSM-bound governance backups are now wrapped by the HSM**, under the
+  tenant key. `BACKUP_HSM_WRAP_SECRET` is gone (it was never passed to
+  governance in compose, so HSM-bound backups failed there). Migration 014
+  retires the secret-derived v2 packages.
+- **Removed "Vecta KMS HSM":** the menu entry is now "Securosys Primus HSM".
+  The unused `software-vault` "software HSM" service moved to the
+  KMSExtension repo (seeds), along with `SOFTWARE_VAULT_PASSPHRASE`.
+  `hsm_mode: software` now means no HSM. `hardware` starts `hsm-connector`
+  and `hsm-integration` (the library upload, which no deployment profile
+  used to start).
+- **Removed a dead "HSM-backed" checkbox** from the create-key form (it was
+  hard-wired to unchecked).
+- **Docs:** `docs/GETTING_STARTED.md` §4.6 listed environment variables and a
+  `vecta-kms hsm verify` command that don't exist, and it's rewritten. The
+  cloud examples no longer describe a "Vecta HSM".
+- **Tests** run against SoftHSM2, a real PKCS#11 library installed in CI.
+  Vendor hardware hasn't been tested from this repository; see
+  docs/SECURITY/HSM_INTEGRATION.md, "Not yet validated".
+- **New audit events:** `audit.hsm.*`, `audit.key.hsm_settings_updated`,
+  `hsm_refused`, `hsm_objects_destroyed`, `hsm_destroy_failed`.
+
 ### Security: governance system administration without a token
 - **Governance ran without verifying tokens.** It read its verification key
   only from `GOVERNANCE_*` / `KEYCORE_*` variables or a key file, never from

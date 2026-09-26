@@ -84,7 +84,6 @@ kms-featureforge
 kms-dataprotect
 kms-cluster
 kms-hsm-connector
-kms-software-vault
 "
 
 wait_for_consul

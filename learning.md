@@ -5,6 +5,25 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### A settings page is not an integration
+The HSM tab let a tenant upload a PKCS#11 library, pick a slot and save a
+profile. That looked like HSM support, but no code ever opened the library.
+The compose entry for `hsm-connector` pointed at an image with no build.
+"HSM-bound" backups derived a key from an environment secret and only mixed
+the HSM's slot name into it. The menu even offered a "Vecta KMS HSM" that
+doesn't exist. The test for a security integration is whether one call goes
+through the vendor's library. Running the real protocol in tests (SoftHSM2
+is a real PKCS#11 implementation) is what makes that visible. A few traps
+from building it:
+- Vendor libraries are glibc builds, so they can't load into an Alpine or
+  static binary. That's why the connector is a separate cgo service.
+- A PKCS#11 token logs out when its last session closes, so keep one anchor
+  session per slot.
+- Vendors report a GCM tag failure differently: SoftHSM2 says
+  `CKR_GENERAL_ERROR`.
+- A distro's library path can be a symlink that leaves the allowed
+  directory, so resolve before you confine.
+
 ### An optional verifier is an open door, and a missing env var is enough to open it
 Governance treated a missing JWT key as "auth disabled" and let every
 system-administration call through. It also read the key from variable
