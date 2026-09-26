@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/fips/fipstest"
 )
 
@@ -266,5 +267,32 @@ func TestKDFHandlerRoutesAndHeader(t *testing.T) {
 	h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/kdf/keys?tenant_id=t-h", nil))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("GET /kdf/keys: %d %s", rr.Code, rr.Body.String())
+	}
+}
+
+// On a cluster member dataprotect_key_kdf is replicated from the primary: a
+// legacy derivation must neither insert the state row (it would clash with the
+// primary's and halt replication) nor bump its counter, yet stays audited.
+func TestMemberLegacyUseWritesNoReplicatedRow(t *testing.T) {
+	fipstest.SkipIfStrict(t, "identifier-derived (v1) working keys")
+	clusterstate.SetDefault(clusterstate.Static(clusterstate.State{
+		NodeID: "node-2", Role: clusterstate.RoleFollower, PrimaryNodeID: "node-1",
+		PrimaryURL: "https://primary:8210", ForwardCredential: "cred",
+	}))
+	t.Cleanup(func() { clusterstate.SetDefault(nil) })
+	svc, store, pub := newDataProtectService(t)
+	ctx := context.Background()
+	ct, err := fpeEncrypt(t, ctx, svc, "t-mem", "key-1", "1234567890")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pt, err := fpeDecrypt(t, ctx, svc, "t-mem", "key-1", ct); err != nil || pt != "1234567890" {
+		t.Fatalf("legacy round trip on a member: %q %v", pt, err)
+	}
+	if _, err := store.GetKeyKDF(ctx, "t-mem", "key-1"); !errors.Is(err, errNotFound) {
+		t.Fatalf("a member must not record the replicated kdf state row: %v", err)
+	}
+	if n := pub.Count("audit.dataprotect.kdf_legacy_used"); n != 1 {
+		t.Fatalf("legacy use on a member must still be audited, got %d events", n)
 	}
 }

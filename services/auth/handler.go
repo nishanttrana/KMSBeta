@@ -63,6 +63,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /auth/register/{id}/status", h.handleRegistrationStatus)
 	mux.HandleFunc("POST /auth/login", h.handleLogin)
 	mux.HandleFunc("POST /auth/client-token", h.handleClientToken)
+	mux.HandleFunc("POST /auth/cluster/mint", h.handleClusterMint)
 	mux.HandleFunc("POST /auth/workload-token", h.handleIssueWorkloadToken)
 	mux.HandleFunc("GET /auth/system-health", h.withAuth(h.handleSystemHealth, "auth.self.read"))
 	mux.HandleFunc("POST /auth/system-health/restart", h.withAuth(h.handleRestartSystemService, "auth.service.restart"))

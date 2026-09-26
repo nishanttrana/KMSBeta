@@ -1066,7 +1066,9 @@ func inferAlgorithmFromPrivateKey(priv any) string {
 }
 
 func parseDERImportMaterial(der []byte) ([]byte, string, string, error) {
-	raw := bytes.TrimSpace(der)
+	// DER is binary: never trim it. A key whose encoding starts or ends with a
+	// whitespace byte (about 2% of generated keys) would otherwise be cut.
+	raw := der
 	if len(raw) == 0 {
 		return nil, "", "", errors.New("empty DER payload")
 	}
@@ -1104,7 +1106,7 @@ func parseDERImportMaterial(der []byte) ([]byte, string, string, error) {
 }
 
 func parsePEMImportMaterial(raw []byte, importPassword string) ([]byte, string, string, error) {
-	payload := bytes.TrimSpace(raw)
+	payload := bytes.TrimSpace(raw) // PEM detection only; DER is parsed untrimmed below
 	if len(payload) == 0 {
 		return nil, "", "", errors.New("material is empty")
 	}
@@ -1140,7 +1142,7 @@ func parsePEMImportMaterial(raw []byte, importPassword string) ([]byte, string, 
 	if seenPEM {
 		return nil, "", "", errors.New("PEM payload does not contain a supported key block")
 	}
-	return parseDERImportMaterial(payload)
+	return parseDERImportMaterial(raw)
 }
 
 func decodeJWKBase64URL(value string) ([]byte, error) {

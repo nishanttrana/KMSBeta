@@ -279,6 +279,20 @@ Auth: SCIM bearer token. Discovery: ServiceProviderConfig, Schemas, ResourceType
 
 ---
 
+### POST /svc/auth/auth/cluster/mint (internal)
+
+Only the `kms-cluster-manager` service identity may call it (`403
+service_identity_required` otherwise). Body: `{"claims": {…}, "forwarded_by":
+"<member node id>"}`.
+
+Returns a 5-minute access token signed by this node. It carries the source
+identity fields only (tenant, user, role, permissions, client) plus
+`fwd_node`. `403 password_change_required` if the user must change their
+password first.
+
+Audit: `audit.auth.cluster_token_minted` (warning when the source is itself a
+service principal); refusals emit `audit.auth.cluster_mint_refused`.
+
 ## Service 2: Keycore (`/svc/keycore/`)
 
 Key lifecycle management and all cryptographic operations.
@@ -2600,11 +2614,69 @@ This node's real Postgres logical replication state:
 - `wal_level`
 - `publications`: `[{component, publication, tables}]`
 - `subscriptions`: `[{subscription, component, enabled, worker_running, lag_seconds, ready, tables: [{table, state}]}]`
+- `forwards_to`: on a member, the primary it forwards lifecycle writes to
+  (absent on a standalone node or the primary)
 - `error`
 
 `GET /cluster/overview` includes the same object under `replication`. Its
 `selective_component_sync.note` is computed from it. See
 [CLUSTERING.md](CLUSTERING.md).
+
+---
+
+### Write forwarding on a member (every service)
+
+On a cluster member, every service's HTTP server (`pkg/config.NewHTTPServer`)
+routes each request with `pkg/clusterroute.Decide`:
+
+- **Runs locally:** reads (GET, HEAD, OPTIONS); crypto operations (keycore
+  encrypt, decrypt, sign, verify, mac, wrap, derive, service-derive, attest,
+  hash, random; dataprotect fpe, mask, redact, `/app/*`); logins and token
+  issuance (auth); this node's system settings (governance); audit publish,
+  search and Merkle operations; the cluster services themselves.
+- **Forwarded to the primary:** every other write. The response comes back
+  unchanged, with the header `X-Vecta-Forwarded-To: <primary node id>`.
+- **Refused** with `409 primary_write_required`: a write to a service the
+  primary can't be reached for (no internal route).
+
+Other member-side errors:
+
+| Status | Code | Meaning |
+|---|---|---|
+| 401 | `unauthorized` | the caller's token didn't verify on the member; nothing was sent |
+| 502 | `primary_unreachable` | the primary is down or its TLS certificate doesn't match the pinned fingerprint. The write was not made anywhere |
+
+Clients can't set the cluster headers: the member strips any
+`X-Vecta-Cluster-*`, `X-Vecta-Forward-Claims` and `Authorization` header before
+forwarding.
+
+Audit (member): `audit.<service>.cluster_write_forwarded` and
+`audit.<service>.cluster_write_refused`.
+
+### POST /cluster/forward/{service}/{path...} (node-to-node, primary)
+
+A member's forwarded write. It's public in the JWT sense and authenticated by
+the member's forwarding credential, over TLS that the member pins.
+
+Headers:
+- `X-Vecta-Cluster-Node`: member node id;
+- `X-Vecta-Cluster-Credential`: the 32-byte credential issued at join (the
+  primary stores only its SHA-256, compared in constant time; revoked when the
+  node is removed);
+- `X-Vecta-Forward-Claims`: base64url JSON of the caller's claims, verified
+  on the member.
+
+The primary refuses a write the member should have run locally, or an
+unknown service, with `403 not_forwardable`. It asks auth to mint a 5-minute
+token for the caller (`POST /auth/cluster/mint`) and proxies to the service,
+adding `X-Vecta-Forwarded-By: <member>`. The service applies its own
+authorization and audit as for any request.
+
+Errors: `401 member_unauthorized`, `400 bad_claims`, `403 identity_refused`
+(for example, the user must change their password), `503 minter_unavailable`,
+`502 service_unreachable`.
+
+Audit: `audit.cluster.write_forwarded`, `audit.cluster.forward_refused`.
 
 ---
 
@@ -3169,6 +3241,7 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.cert.* | Certificate and CA operations |
 | audit.governance.* | Approvals, encrypted backup/restore, platform FIPS mode |
 | audit.backup.* | Backup scheduler (preview): policy changes and refused runs/restores |
+| audit.cluster.* | Cluster join, replication publications, write forwarding |
 | audit.kmip.* | KMIP sessions, operations and denials |
 | audit.dataprotect.* | Data protection operations and key-derivation migration |
 | audit.compliance.* | Compliance assessments |
@@ -3196,6 +3269,7 @@ Selected events with dedicated audit classification:
 - `audit.governance.backup_created`, `audit.governance.backup_deleted`, `audit.governance.backup_restored`, `audit.governance.backup_restore_refused` (tampered artifact, wrong key, changed scope, wrong file type; carries `reason`)
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
 - `audit.backup.policy_created`, `audit.backup.policy_updated`, `audit.backup.policy_deleted`, `audit.backup.run_refused_preview`, `audit.backup.restore_refused_preview`
+- `audit.auth.cluster_token_minted`, `audit.auth.cluster_mint_refused`; `audit.cluster.write_forwarded`, `audit.cluster.forward_refused` (primary); `audit.<service>.cluster_write_forwarded`, `audit.<service>.cluster_write_refused` (member; `reason`: invalid_token / primary_unreachable / primary_write_required); refusals carry `result: refused`
 - `audit.key.service_derive`, `audit.key.audit_chain_anchored` (preview), enterprise control upserts carry `feature_status` / `feature_id`
 - `audit.kmip.client_connected`, `audit.kmip.authorization_denied`, `audit.kmip.operation_panic` (critical), `audit.kmip.<operation>` with `status` / `reason` (lifecycle-state refusals included)
 - `audit.dataprotect.kdf_legacy_used`, `audit.dataprotect.kdf_migration_started`, `audit.dataprotect.kdf_vault_reprotected`, `audit.dataprotect.kdf_migration_completed`, `audit.dataprotect.kdf_migration_aborted`

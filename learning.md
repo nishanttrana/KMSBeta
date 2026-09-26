@@ -3,6 +3,38 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-09-26
+
+### "Flaky" test was a 2% product bug: never trim binary data
+`TestImportKeyPEMAutodetect` failed about once in 40 runs, and it was written
+off as flaky. The cause was `bytes.TrimSpace` on DER. Random key bytes end in
+one of the six ASCII whitespace values about 2.3% of the time, and that
+trailing byte was cut. Trim text (a PEM envelope, a pasted string), never the
+bytes it decodes to. An intermittent crypto-test failure with random keys
+points at data-dependent handling, so find the input that triggers it instead
+of re-running.
+
+### A member's write to a replicated table can stop replication, not just diverge
+With logical replication, a subscriber's local row isn't protected. A member
+that inserts a row the primary later inserts too (for example dataprotect's
+lazy "first sight" `dataprotect_key_kdf` row) hits a unique-key conflict in the
+apply worker. That component's replication then stops until someone fixes it
+by hand. A member that updates a row (a counter) makes the row differ, and
+with `REPLICA IDENTITY FULL` the primary's next update to it is skipped.
+
+So the rule is broader than "crypto-path tables are node-local". Anything a
+member does without a user request counts too: schedulers, sweeps,
+reconcilers, and lazy "record on first use" inserts. The fix pattern is
+`clusterstate.RunsPrimaryJobs(ctx)` or `IsMember()`, plus a test that runs the
+path as a member (`clusterstate.Static`) and proves no replicated row was
+written.
+
+### Forward by default, not by allowlist
+The first draft listed the writes to forward, and every endpoint added later
+would have written locally on members. Inverting it, so every write is
+forwarded except a short `Local` list checked against real routes, makes the
+safe behaviour the default.
+
 ## 2026-09-25
 
 ### Four things the first real two-node join taught

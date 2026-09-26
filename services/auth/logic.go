@@ -64,6 +64,38 @@ func (a *AuthLogic) IssueJWT(tenantID string, role string, permissions []string,
 	return signed, expiresAt, err
 }
 
+// IssueForwardedJWT mints a short-lived token on this primary for an identity a
+// cluster member already verified (cluster write forwarding). Only identity
+// fields are copied; sender-constraint and replay bindings are dropped because
+// they cannot be satisfied on this node.
+func (a *AuthLogic) IssueForwardedJWT(src *pkgauth.Claims, forwardedBy string) (string, time.Time, error) {
+	now := time.Now().UTC()
+	expiresAt := now.Add(5 * time.Minute)
+	claims := &pkgauth.Claims{
+		TenantID:            src.TenantID,
+		Role:                src.Role,
+		Permissions:         src.Permissions,
+		UserID:              src.UserID,
+		ClientID:            src.ClientID,
+		AuthMode:            src.AuthMode,
+		WorkloadIdentity:    src.WorkloadIdentity,
+		WorkloadTrustDomain: src.WorkloadTrustDomain,
+		AllowedKeyIDs:       src.AllowedKeyIDs,
+		ForwardedBy:         forwardedBy,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   src.Subject,
+			Issuer:    a.issuer,
+			Audience:  jwt.ClaimStrings{a.audience},
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now.Add(-5 * time.Second)),
+			ID:        fmt.Sprintf("fwd:%s:%d", forwardedBy, now.UnixNano()),
+		},
+	}
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(a.keyPair.Private)
+	return signed, expiresAt, err
+}
+
 func (a *AuthLogic) IssueClientJWT(
 	tenantID string,
 	clientID string,

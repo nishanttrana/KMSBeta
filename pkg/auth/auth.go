@@ -38,6 +38,9 @@ type Claims struct {
 	ReplayProtection          bool                `json:"replay_protection,omitempty"`
 	Confirmation              *ConfirmationClaims `json:"cnf,omitempty"`
 	MustChangePassword        bool                `json:"must_change_password,omitempty"`
+	// ForwardedBy names the cluster member that verified the original token
+	// and forwarded the request to this primary (docs/CLUSTERING.md).
+	ForwardedBy string `json:"fwd_node,omitempty"`
 	jwt.RegisteredClaims
 }
 

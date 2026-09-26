@@ -43,6 +43,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /cluster/join/complete", h.handleJoinComplete)
 	mux.HandleFunc("POST /cluster/join/exchange", h.handleJoinExchange)
 	mux.HandleFunc("POST /cluster/join/connect", h.handleJoinConnect)
+	mux.HandleFunc("/cluster/forward/{svc}/{rest...}", h.handleForward)
 
 	mux.HandleFunc("POST /cluster/nodes", h.handleUpsertNode)
 	mux.HandleFunc("POST /cluster/nodes/{id}/heartbeat", h.handleNodeHeartbeat)

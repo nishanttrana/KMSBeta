@@ -29,6 +29,7 @@ func newStoreForTest(t *testing.T) *SQLStore {
 
 func createSchemaForTest(conn *pkgdb.DB) error {
 	stmts := []string{
+		`CREATE TABLE key_op_counters (tenant_id TEXT NOT NULL, key_id TEXT NOT NULL, ops_total INTEGER NOT NULL DEFAULT 0, ops_encrypt INTEGER NOT NULL DEFAULT 0, ops_decrypt INTEGER NOT NULL DEFAULT 0, ops_sign INTEGER NOT NULL DEFAULT 0, ops_last_reset TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, key_id));`,
 		`CREATE TABLE keys (
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, name TEXT NOT NULL, algorithm TEXT NOT NULL, key_type TEXT NOT NULL,
 			purpose TEXT NOT NULL, status TEXT NOT NULL, current_version INTEGER NOT NULL, kcv BLOB, kcv_algorithm TEXT,

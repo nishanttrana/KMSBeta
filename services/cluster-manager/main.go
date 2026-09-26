@@ -77,7 +77,8 @@ func main() {
 	// transfer during joins).
 	servicetoken.SetDefault(servicetoken.FromEnv("kms-cluster-manager"))
 	joinCfg := loadJoinConfig()
-	svc := NewService(NewSQLStore(dbConn), publisher).WithReplication(replEngine).WithJoin(newHTTPKeycoreMEKClient(joinCfg.keycoreURL), joinCfg)
+	svc := NewService(NewSQLStore(dbConn), publisher).WithReplication(replEngine).WithJoin(newHTTPKeycoreMEKClient(joinCfg.keycoreURL), joinCfg).
+		WithForwarding(httpMinter{authURL: strings.TrimRight(envOr("AUTH_URL", "http://auth:8001"), "/"), client: &http.Client{Timeout: 10 * time.Second}})
 	// Keep one publication per component current on every node, so any node
 	// can serve as primary (services create their tables at their own start).
 	go func() {

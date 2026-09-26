@@ -33,7 +33,7 @@ func NewHTTPServer(port string, handler http.Handler) *http.Server {
 	RequireFIPSRuntime()
 	return &http.Server{
 		Addr:              ":" + port,
-		Handler:           pkgsecurityheaders.Wrap(handler),
+		Handler:           pkgsecurityheaders.Wrap(withClusterForwarding(handler)),
 		TLSConfig:         fips140TLSConfig(),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,

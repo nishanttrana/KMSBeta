@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clusterstate"
 
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -930,6 +931,9 @@ ORDER BY created_at DESC LIMIT 1
 
 func (s *SQLStore) RunCryptoTx(ctx context.Context, tenantID string, keyID string, op string, fn func(k Key, kv KeyVersion) (CryptoTxResult, error)) (CryptoTxResult, error) {
 	startedAt := time.Now()
+	// On a cluster member the keys row is replicated from the primary: count
+	// this node's operations in the node-local key_op_counters instead.
+	member := clusterstate.Default().Get(ctx).IsMember()
 	tx, err := s.db.SQL().BeginTx(ctx, nil)
 	if err != nil {
 		return CryptoTxResult{}, err
@@ -954,11 +958,21 @@ FROM keys WHERE tenant_id=$1 AND id=$2
 	if err != nil {
 		return CryptoTxResult{}, err
 	}
-	if err := maybeResetWindow(ctx, tx, key); err != nil {
-		return CryptoTxResult{}, err
-	}
-	if key.OpsLimit > 0 && key.OpsTotal >= key.OpsLimit {
-		return CryptoTxResult{}, errOpsLimit
+	if member {
+		local, err := memberLocalOps(ctx, tx, key)
+		if err != nil {
+			return CryptoTxResult{}, err
+		}
+		if key.OpsLimit > 0 && key.OpsTotal+local >= key.OpsLimit {
+			return CryptoTxResult{}, errOpsLimit
+		}
+	} else {
+		if err := maybeResetWindow(ctx, tx, key); err != nil {
+			return CryptoTxResult{}, err
+		}
+		if key.OpsLimit > 0 && key.OpsTotal >= key.OpsLimit {
+			return CryptoTxResult{}, errOpsLimit
+		}
 	}
 	keyStatus := normalizeLifecycleStatus(key.Status)
 	switch keyStatus {
@@ -993,7 +1007,11 @@ WHERE tenant_id=$1 AND key_id=$2 AND version=$3
 	if err != nil {
 		return CryptoTxResult{}, err
 	}
-	if err := updateCounters(ctx, tx, tenantID, keyID, op); err != nil {
+	count := updateCounters
+	if member {
+		count = updateMemberCounters
+	}
+	if err := count(ctx, tx, tenantID, keyID, op); err != nil {
 		return CryptoTxResult{}, err
 	}
 	if result.StoreIV && len(result.IV) > 0 {
@@ -1033,6 +1051,65 @@ WHERE tenant_id=$4 AND id=$5
 	}
 	_, err := tx.ExecContext(ctx, query, incE, incD, incS, tenantID, keyID)
 	return err
+}
+
+func opIncrements(op string) (int, int, int) {
+	switch op {
+	case "encrypt":
+		return 1, 0, 0
+	case "decrypt":
+		return 0, 1, 0
+	case "sign":
+		return 0, 0, 1
+	}
+	return 0, 0, 0
+}
+
+// updateMemberCounters counts a cluster member's operation node-locally.
+func updateMemberCounters(ctx context.Context, tx *sql.Tx, tenantID string, keyID string, op string) error {
+	e, d, sg := opIncrements(op)
+	_, err := tx.ExecContext(ctx, `
+INSERT INTO key_op_counters (tenant_id, key_id, ops_total, ops_encrypt, ops_decrypt, ops_sign, ops_last_reset)
+VALUES ($1,$2,1,$3,$4,$5,CURRENT_TIMESTAMP)
+ON CONFLICT (tenant_id, key_id) DO UPDATE SET ops_total = key_op_counters.ops_total + 1,
+	ops_encrypt = key_op_counters.ops_encrypt + $3, ops_decrypt = key_op_counters.ops_decrypt + $4,
+	ops_sign = key_op_counters.ops_sign + $5`, tenantID, keyID, e, d, sg)
+	return err
+}
+
+// memberLocalOps returns this member's operation count for the key within the
+// key's limit window, resetting the node-local window when it has passed.
+func memberLocalOps(ctx context.Context, tx *sql.Tx, key Key) (int64, error) {
+	var total int64
+	var last sql.NullTime
+	err := tx.QueryRowContext(ctx, `SELECT ops_total, ops_last_reset FROM key_op_counters WHERE tenant_id=$1 AND key_id=$2`, key.TenantID, key.ID).Scan(&total, &last)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	if windowElapsed(key.OpsLimitWindow, last.Time, time.Now().UTC()) {
+		if _, err := tx.ExecContext(ctx, `UPDATE key_op_counters SET ops_total=0, ops_encrypt=0, ops_decrypt=0, ops_sign=0, ops_last_reset=CURRENT_TIMESTAMP WHERE tenant_id=$1 AND key_id=$2`, key.TenantID, key.ID); err != nil {
+			return 0, err
+		}
+		return 0, nil
+	}
+	return total, nil
+}
+
+func windowElapsed(window string, last, now time.Time) bool {
+	switch window {
+	case "daily":
+		y1, m1, d1 := last.UTC().Date()
+		y2, m2, d2 := now.Date()
+		return y1 != y2 || m1 != m2 || d1 != d2
+	case "monthly":
+		y1, m1, _ := last.UTC().Date()
+		y2, m2, _ := now.Date()
+		return y1 != y2 || m1 != m2
+	}
+	return false
 }
 
 func maybeResetWindow(ctx context.Context, tx *sql.Tx, key Key) error {

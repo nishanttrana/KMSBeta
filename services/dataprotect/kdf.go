@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"vecta-kms/pkg/clusterstate"
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
@@ -95,6 +96,13 @@ func (s *Service) keyKDFState(ctx context.Context, tenantID, keyID string, meta 
 		}
 	} else if cerr != nil && !errors.Is(cerr, errNotFound) {
 		return KeyKDFState{}, cerr
+	}
+	// On a cluster member the table is replicated: inserting here would clash
+	// with the primary's row and halt replication. The initial state is a pure
+	// function of replicated inputs (cutoff, key metadata), so the member uses
+	// it unrecorded; the primary records it on its own first sight.
+	if clusterstate.Default().Get(ctx).IsMember() {
+		return initial, nil
 	}
 	if err := s.store.InsertKeyKDFIfAbsent(ctx, initial); err != nil {
 		return KeyKDFState{}, err
@@ -222,7 +230,12 @@ func (s *Service) noteLegacyUse(ctx context.Context, tenantID, keyID, purpose st
 	e.count, e.flushed, e.purposes = 0, now, map[string]struct{}{}
 	s.legacyUses.mu.Unlock()
 
-	_ = s.store.AddKeyKDFLegacyUses(ctx, tenantID, keyID, n, now)
+	// dataprotect_key_kdf replicates from the primary; a member must not write
+	// it (the row would diverge and later primary updates to it be skipped).
+	// A member's legacy use shows in the audit event below.
+	if !clusterstate.Default().Get(ctx).IsMember() {
+		_ = s.store.AddKeyKDFLegacyUses(ctx, tenantID, keyID, n, now)
+	}
 	_ = s.publishAudit(ctx, "audit.dataprotect.kdf_legacy_used", tenantID, map[string]interface{}{
 		"key_id":         keyID,
 		"purposes":       purposes,

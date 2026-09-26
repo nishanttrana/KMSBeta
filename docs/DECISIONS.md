@@ -7,6 +7,33 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — Cluster write forwarding: member verifies, primary re-mints
+**Decision:** on a member, every service's HTTP wrapper forwards lifecycle
+writes to the primary's cluster-manager.
+- The member verifies the caller's token and sends the claims, authenticated
+  by a per-member credential issued at join.
+- The primary has its own auth mint a 5-minute token (`fwd_node` set) and
+  proxies to the service.
+- Writes are forwarded by default; `pkg/clusterroute.Local` lists the
+  exceptions.
+
+**Why:**
+- Verification keys differ per node, so the user's token can't be replayed on
+  the primary.
+- Re-minting keeps every service's own authorization and audit untouched.
+- Default-forward means a new endpoint can't diverge a member.
+
+**Rejected:**
+- Sharing one JWT key cluster-wide: a member compromise would forge tokens
+  for every node.
+- Proxying the raw user token.
+- An allowlist of forwarded writes: a new write would silently diverge.
+- Letting members write and reconcile later (split-brain on key state).
+
+**Enforced by:** `TestClusterForwarding`, `TestLocalRoutesExist`,
+`TestSecureJoinEndToEnd`, and the rule in CLUSTERING.md that background jobs
+check `RunsPrimaryJobs`.
+
 ## 2026-09-25 — Documentation ships with the change
 **Decision:** every change updates CHANGELOG.md, learning.md, this file and/or
 `docs/SECURITY/` in the same commit. Standing instructions live in `CLAUDE.md`.

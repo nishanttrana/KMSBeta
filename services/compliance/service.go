@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clusterstate"
 )
 
 type Service struct {
@@ -203,7 +204,9 @@ func (s *Service) StartScheduler(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				_ = s.RunDueSchedules(context.Background())
+				if clusterstate.RunsPrimaryJobs(ctx) {
+					_ = s.RunDueSchedules(context.Background())
+				}
 			}
 		}
 	}()

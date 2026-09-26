@@ -245,6 +245,11 @@ export const ClusterTabView = (props: ClusterTabViewProps) => {
           <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>Replication</span>
           <span style={{ fontSize: 11, color: C.dim }}>{selectiveNote}</span>
         </div>
+        {replication?.forwards_to && (
+          <div style={{ marginTop: 8, fontSize: 11, color: C.amber }}>
+            Member node: key, policy and configuration changes are forwarded to primary {replication.forwards_to}. Crypto operations, logins and audit run on this node.
+          </div>
+        )}
         {replication && replication.subscriptions.length > 0 && (
           <div style={{ marginTop: 8, display: "grid", gap: 4 }}>
             {replication.subscriptions.map((s) => (

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"vecta-kms/pkg/clusterstate"
 )
 
 type Service struct {
@@ -62,6 +63,9 @@ func (s *Service) StartScheduler(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
+				if !clusterstate.RunsPrimaryJobs(ctx) {
+					continue
+				}
 				if err := s.RunScanAllTenants(context.Background(), true); err != nil {
 					logger.Printf("scheduled posture scan failed: %v", err)
 				}

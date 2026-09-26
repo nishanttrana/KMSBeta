@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/pdfutil"
 )
 
@@ -54,7 +55,9 @@ func (s *Service) StartScheduler(ctx context.Context, cfg SchedulerConfig) {
 				case <-ctx.Done():
 					return
 				case <-t.C:
-					_, _ = s.GenerateSBOM(context.Background(), "scheduled")
+					if clusterstate.RunsPrimaryJobs(ctx) {
+						_, _ = s.GenerateSBOM(context.Background(), "scheduled")
+					}
 				}
 			}
 		}()
@@ -68,6 +71,9 @@ func (s *Service) StartScheduler(ctx context.Context, cfg SchedulerConfig) {
 				case <-ctx.Done():
 					return
 				case <-t.C:
+					if !clusterstate.RunsPrimaryJobs(ctx) {
+						continue
+					}
 					for _, tenantID := range s.scheduledTenants(context.Background(), cfg.Tenants) {
 						_, _ = s.GenerateCBOM(context.Background(), tenantID, "scheduled")
 					}
