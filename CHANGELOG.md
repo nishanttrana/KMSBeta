@@ -4,6 +4,19 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.3.0-beta] — 2026-09-26
+
+### Versioning
+- **Build info in the dashboard.** An ⓘ button next to the header clock shows
+  the running version, git commit (`-dirty` if built from uncommitted code)
+  and build time, so you can tell at a glance which build is deployed.
+  - `deploy-local.sh` and `install.sh` pass `VECTA_COMMIT` and
+    `VECTA_BUILD_TIME` as dashboard build args; `VECTA_VERSION` comes from
+    `VERSION`.
+- **Every KMS change bumps the minor version.** `scripts/check-docs.sh` fails a
+  change to code or deployment unless `VERSION` has a higher MINOR (or MAJOR)
+  than the base branch and `CHANGELOG.md` has a section for it.
+
 ## [1.2.0-beta] — 2026-09-25
 
 ### Clustering (slice 2 of 5): secure join

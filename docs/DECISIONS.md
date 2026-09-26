@@ -7,6 +7,21 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — Every KMS change bumps the minor version
+**Decision:** any change to code or deployment raises MINOR in `VERSION` (MAJOR
+for breaking changes) and adds a matching `## [x.y.z]` CHANGELOG section. The
+dashboard shows the version, commit and build time behind the ⓘ button by the
+clock.
+**Why:** a deployment tagged with an unchanged version can't be told apart from
+the previous one. The owner took a current build for a stale one.
+**Rejected:** patch bumps (the owner asked for minor); bumping per commit
+(granularity is the change being merged, compared with the base branch);
+version derived from git only (the `VERSION` file stays the source of truth
+for image tags and `BUILD_VERSION`).
+**Enforced by:** `scripts/check-docs.sh` (`version-bump`), which fails if
+VERSION's MAJOR.MINOR didn't increase over the merge base or the CHANGELOG has
+no section for it. Test-only changes are exempt, as for the docs gate.
+
 ## 2026-09-25 — Documentation ships with the change
 **Decision:** every change updates CHANGELOG.md, learning.md, this file and/or
 `docs/SECURITY/` in the same commit. Standing instructions live in `CLAUDE.md`.

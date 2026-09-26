@@ -125,6 +125,11 @@ if [[ "${BUILD}" -eq 1 ]]; then
   export COMPOSE_PROFILES
   COMPOSE_PROFILES="$("${BASH4}" infra/scripts/parse-deployment.sh infra/deployment/deployment.yaml)"
   export COMPOSE_BAKE=false
+  export VECTA_VERSION VECTA_COMMIT VECTA_BUILD_TIME
+  VECTA_VERSION="$(env_get VECTA_VERSION)"
+  VECTA_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  git diff --quiet HEAD -- 2>/dev/null || VECTA_COMMIT="${VECTA_COMMIT}-dirty"
+  VECTA_BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   BUILD_JOBS="${BUILD_JOBS:-2}"
   services="$(docker compose config --services | sort)"
   warm="sbom"; echo "${services}" | grep -qx "${warm}" || warm="keycore"

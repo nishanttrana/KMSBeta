@@ -793,6 +793,10 @@ build_services_sequentially() {
     return 0
   fi
 
+  export VECTA_COMMIT VECTA_BUILD_TIME
+  VECTA_COMMIT="$(git -C "${ROOT_DIR}" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  VECTA_BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
   local svc
   for svc in "${build_targets[@]}"; do
     info "Building service image: ${svc}"

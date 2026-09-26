@@ -49,7 +49,15 @@ import {
   Sparkles,
   Archive,
   ShieldAlert,
+  Info,
 } from "lucide-react";
+
+const BUILD_VERSION = String(import.meta.env.VITE_VERSION || "dev");
+const BUILD_INFO: Array<[string, string]> = [
+  ["Version", BUILD_VERSION],
+  ["Commit", String(import.meta.env.VITE_COMMIT || "unknown")],
+  ["Built", String(import.meta.env.VITE_BUILD_TIME || "unknown")],
+];
 import type { AuthSession } from "../lib/auth";
 import { canAccessModule, isSystemAdminSession } from "../config/moduleRegistry";
 import type { FeatureKey } from "../config/tabs";
@@ -397,6 +405,7 @@ export default function VectaDashboardV3Shell(props: Props) {
     try { return localStorage.getItem(TZ_STORAGE_KEY) || "local"; } catch { return "local"; }
   });
   const [tzOpen, setTzOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const formattedTime = useMemo(() => {
     if (tz === "local") return t.toLocaleTimeString();
     try { return t.toLocaleTimeString(undefined, { timeZone: tz }); } catch { return t.toLocaleTimeString(); }
@@ -1058,6 +1067,42 @@ export default function VectaDashboardV3Shell(props: Props) {
                   {COMMON_TIMEZONES.map((item) => (
                     <div key={item.value} onClick={() => changeTz(item.value)} style={{ padding: "6px 10px", fontSize: 11, color: tz === item.value ? C.accent : C.text, cursor: "pointer", borderRadius: 6, background: tz === item.value ? C.accentDim : "transparent", fontWeight: tz === item.value ? 700 : 400 }}>
                       {item.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Build info */}
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => { setInfoOpen((v) => !v); setTzOpen(false); }}
+                className="vk-icon-btn"
+                aria-label="About this KMS build"
+                aria-expanded={infoOpen}
+                title={`Vecta KMS ${BUILD_VERSION}`}
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  cursor: "pointer", color: C.dim,
+                  width: 32, height: 32, borderRadius: 8,
+                  border: `1px solid ${C.border}`, background: "transparent",
+                }}
+              >
+                <Info size={14} strokeWidth={2} />
+              </button>
+              {infoOpen && (
+                <div role="dialog" aria-label="Build information" style={{
+                  position: "absolute", top: 38, right: 0, zIndex: 1000,
+                  background: C.card, border: `1px solid ${C.border}`,
+                  borderRadius: 10, padding: "10px 12px", minWidth: 240,
+                  boxShadow: "0 12px 36px rgba(0,0,0,.5)",
+                  animation: "fadeDown .15s ease-out",
+                }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: C.text, marginBottom: 8 }}>Vecta KMS</div>
+                  {BUILD_INFO.map(([label, value]) => (
+                    <div key={label} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 11, padding: "3px 0" }}>
+                      <span style={{ color: C.muted }}>{label}</span>
+                      <span style={{ color: label === "Version" ? C.accent : C.text, fontFamily: "'JetBrains Mono',ui-monospace,monospace" }}>{value}</span>
                     </div>
                   ))}
                 </div>

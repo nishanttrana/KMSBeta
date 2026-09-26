@@ -375,6 +375,10 @@ services:
     build:
       context: ./web/dashboard
       dockerfile: Dockerfile
+      args:
+        VECTA_VERSION: ${VECTA_VERSION:-dev}
+        VECTA_COMMIT: ${VECTA_COMMIT:-unknown}
+        VECTA_BUILD_TIME: ${VECTA_BUILD_TIME:-unknown}
     image: vecta/dashboard:${VECTA_VERSION:-latest}
     # No host port: the dashboard is served only behind the envoy TLS edge
     # (HTTPS on :443, HTTP :80 -> :443 redirect). Reachable internally on the

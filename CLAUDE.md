@@ -103,6 +103,11 @@ an approach, record it here or in the matching doc below.
   restrict its caller: a specific service identity or a root administrator,
   never "any authenticated caller". Node-to-node endpoints authenticate
   themselves (one-time token, HMAC, pinned TLS).
+- **Every KMS change bumps the minor version** (owner directive, 2026-09-26):
+  raise MINOR in `VERSION` (MAJOR if breaking) and add a `## [x.y.z]` section
+  to CHANGELOG.md in the same change. The dashboard's ⓘ button (next to the
+  header clock) shows the version, commit and build time.
+  `scripts/check-docs.sh` enforces this.
 - Features cut from the core move to the sibling `KMSExtension` repo (REST
   integration via `pkg/kmsclient`, no key material there). Don't delete them.
 

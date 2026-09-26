@@ -11,6 +11,12 @@ COPY package*.json ./
 RUN sh -ec 'for attempt in 1 2 3 4 5; do npm ci --prefer-offline && exit 0; sleep $((attempt * 2)); done; exit 1'
 
 COPY . .
+ARG VECTA_VERSION=dev
+ARG VECTA_COMMIT=unknown
+ARG VECTA_BUILD_TIME=unknown
+ENV VITE_VERSION=${VECTA_VERSION} \
+    VITE_COMMIT=${VECTA_COMMIT} \
+    VITE_BUILD_TIME=${VECTA_BUILD_TIME}
 RUN npm run build:docker
 
 FROM vecta-local/nginx:1.30.5-alpine AS runtime

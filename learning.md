@@ -3,6 +3,24 @@
 Running log of non-obvious operational and architectural learnings for Vecta KMS.
 Newest entries on top.
 
+## 2026-09-26
+
+### Version every build, or you can't tell what's running
+- **What happened:** the owner deployed, saw no visible change, and reported
+  the running KMS as old. It wasn't: the code was merged at 00:46 and the
+  images were built at 00:51 (compare `git reflog --date=iso` with
+  `docker inspect <image> --format '{{.Created}}'`). But every build was tagged
+  `1.2.0-beta` and the UI showed no version, so nothing told the two apart.
+- **A wrong turn to avoid:** grepping the minified bundle for a component name
+  (`ClusterJoinPanel`) is not proof a build is stale. Minification drops
+  component names, and new chunk hashes after a `--no-cache` rebuild don't
+  prove the old build lacked the code either. Compare timestamps first.
+- **Fix:** every KMS change bumps MINOR in `VERSION` (enforced by
+  `scripts/check-docs.sh`), and the dashboard ⓘ button shows version, commit
+  and build time. The build time is a build arg placed after `npm ci`, so it
+  only re-runs the Vite build and never serves an old bundle under a new
+  version.
+
 ## 2026-09-25
 
 ### Four things the first real two-node join taught
