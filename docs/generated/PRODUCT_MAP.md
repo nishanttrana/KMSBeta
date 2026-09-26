@@ -1,20 +1,20 @@
 # Generated Product Map
 
-Generated at `2026-09-26T11:49:47Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-26T11:56:59Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `36`
-- Tab/component mappings: `44`
+- Dashboard navigation items: `35`
+- Tab/component mappings: `43`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `919` across `29` services
-- Frontend API call sites discovered: `633`
-- Frontend call sites with exact backend route match: `566`
+- Backend HTTP routes discovered: `913` across `29` services
+- Frontend API call sites discovered: `627`
+- Frontend call sites with exact backend route match: `560`
 - Frontend call sites needing review or dynamic/runtime confirmation: `67`
-- Clickable controls with static `onClick` handlers: `847`
-- Backend request flows with handler/service/package summaries: `919`
+- Clickable controls with static `onClick` handlers: `839`
+- Backend request flows with handler/service/package summaries: `913`
 
 ## How To Use This For Launch
 
@@ -128,9 +128,6 @@ flowchart LR
   tab_backup["Backup & Restore"]
   UI --> tab_backup
   tab_backup --> svc_backup
-  tab_dr_drill["DR Drill"]
-  UI --> tab_dr_drill
-  tab_dr_drill --> svc_keycore
   tab_webhooks["Webhooks & SIEM"]
   UI --> tab_webhooks
   tab_webhooks --> svc_audit
@@ -174,10 +171,10 @@ flowchart LR
   svc_discovery["discovery (26 routes)"]
   svc_ekm["ekm (61 routes)"]
   svc_featureforge["featureforge (7 routes)"]
-  svc_governance["governance (39 routes)"]
+  svc_governance["governance (40 routes)"]
   svc_hyok["hyok (21 routes)"]
   svc_keyaccess["keyaccess (9 routes)"]
-  svc_keycore["keycore (181 routes)"]
+  svc_keycore["keycore (174 routes)"]
   svc_payment["payment (42 routes)"]
   svc_posture["posture (19 routes)"]
   svc_pqc["pqc (16 routes)"]
@@ -197,7 +194,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | --- | --- | --- | --- | --- | --- |
 | Overview | Command Center | home | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
 | Overview | Recommendations | recommendations | web/dashboard/src/components/v3/tabs/CommandCenterTab.tsx | auth-edge | 4 |
-| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 195 |
+| Overview | Operations | ops | web/dashboard/src/components/v3/tabs/DashboardTab.tsx | audit, auth-edge, certs, cluster-manager, compliance, governance, keycore, reporting, secrets | 196 |
 | Overview | Workbench | workbench | web/dashboard/src/components/v3/tabs/WorkbenchTab.tsx | - | 0 |
 | Overview | Operations Metrics | ops_metrics | web/dashboard/src/components/v3/tabs/OpsMetricsTab.tsx | audit | 5 |
 | Overview | Analytics | key_analytics | web/dashboard/src/components/v3/tabs/KeyAnalyticsTab.tsx | - | 0 |
@@ -215,7 +212,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Data & integrations | AI Security Gateway | ai_gateway | web/dashboard/src/components/v3/tabs/AIGatewayTab.tsx | ai, ai-gateway | 26 |
 | Security & compliance | Audit Log | audit | web/dashboard/src/components/v3/tabs/AuditLogTab.tsx | audit | 15 |
 | Security & compliance | Alert Center | alerts | web/dashboard/src/components/v3/tabs/AlertsTab.tsx | auth-edge, reporting | 26 |
-| Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | governance | 23 |
+| Security & compliance | Approvals | approvals | web/dashboard/src/components/v3/tabs/GovernanceTab.tsx | governance | 24 |
 | Security & compliance | Posture | posture | web/dashboard/src/components/v3/tabs/PostureTab.tsx | auth, autokey, keyaccess, posture, signing, workload | 91 |
 | Security & compliance | Compliance | compliance | web/dashboard/src/components/v3/tabs/ComplianceTab.tsx | auth, autokey, certs, compliance, keyaccess, keycore, pqc, reporting, signing, workload | 175 |
 | Security & compliance | Threat & Exposure | threat_exposure | web/dashboard/src/components/v3/tabs/ThreatExposureTab.tsx | keycore, posture | 8 |
@@ -225,7 +222,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Platform | Cluster | cluster | web/dashboard/src/components/v3/tabs/ClusterTab.tsx | auth-edge, cluster-manager | 15 |
 | Platform | Health | health | web/dashboard/src/components/v3/tabs/HealthTab.tsx | - | 0 |
 | Platform | Backup & Restore | backup | web/dashboard/src/components/v3/tabs/BackupTab.tsx | backup | 10 |
-| Platform | DR Drill | dr_drill | web/dashboard/src/components/v3/tabs/DRDrillTab.tsx | keycore | 7 |
 | Platform | DevSecOps / IaC | devsecops | web/dashboard/src/components/v3/tabs/DevSecOpsTab.tsx | - | 0 |
 | Platform | Webhooks & SIEM | webhooks | web/dashboard/src/components/v3/tabs/WebhooksTab.tsx | audit | 6 |
 | Platform | Feature Forge | feature_forge | web/dashboard/src/components/v3/tabs/FeatureForgeTab.tsx | featureforge | 6 |
@@ -258,10 +254,10 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | discovery | 26 | 20 |
 | ekm | 61 | 44 |
 | featureforge | 7 | 6 |
-| governance | 39 | 28 |
+| governance | 40 | 29 |
 | hyok | 21 | 7 |
 | keyaccess | 9 | 6 |
-| keycore | 181 | 137 |
+| keycore | 174 | 130 |
 | kmip | 14 | 11 |
 | payment | 42 | 27 |
 | policy | 12 | 0 |
