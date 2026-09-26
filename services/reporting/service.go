@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/pdfutil"
 )
 
@@ -59,6 +60,9 @@ func (s *Service) StartScheduler(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
+				if !clusterstate.RunsPrimaryJobs(ctx) {
+					continue
+				}
 				_ = s.RunDueSchedules(context.Background())
 				telemetryPurgeTick++
 				if telemetryPurgeTick >= 60 {

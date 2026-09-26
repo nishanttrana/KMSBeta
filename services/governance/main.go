@@ -21,6 +21,7 @@ import (
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/clusterstate"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -109,7 +110,9 @@ func main() {
 				timer.Stop()
 				return
 			case <-timer.C:
-				_ = svc.ExpireWorkerTick(ctx)
+				if clusterstate.RunsPrimaryJobs(ctx) {
+					_ = svc.ExpireWorkerTick(ctx)
+				}
 			}
 		}
 	}()

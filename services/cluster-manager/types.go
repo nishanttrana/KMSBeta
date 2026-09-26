@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 	"vecta-kms/pkg/clusterrepl"
+	"vecta-kms/pkg/clusterstate"
 )
 
 type EventPublisher interface {
@@ -11,6 +12,10 @@ type EventPublisher interface {
 }
 
 type Store interface {
+	SetMemberCredential(ctx context.Context, nodeID, hash string) error
+	MemberCredentialHash(ctx context.Context, nodeID string) (string, error)
+	RevokeMemberCredential(ctx context.Context, nodeID string) error
+	SetLocalState(ctx context.Context, st clusterstate.State) error
 	ListProfiles(ctx context.Context, tenantID string) ([]ClusterProfile, error)
 	GetProfile(ctx context.Context, tenantID string, profileID string) (ClusterProfile, error)
 	UpsertProfile(ctx context.Context, item ClusterProfile) error
@@ -138,7 +143,10 @@ type ReplicationStatus struct {
 	WALLevel      string                           `json:"wal_level"`
 	Publications  []clusterrepl.PublicationStatus  `json:"publications"`
 	Subscriptions []clusterrepl.SubscriptionStatus `json:"subscriptions"`
-	Error         string                           `json:"error,omitempty"`
+	// ForwardsTo is the primary this member sends lifecycle writes to ("" on a
+	// standalone node or the primary).
+	ForwardsTo string `json:"forwards_to,omitempty"`
+	Error      string `json:"error,omitempty"`
 }
 
 type UpsertProfileInput struct {

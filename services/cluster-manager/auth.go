@@ -68,7 +68,8 @@ func requireClusterAdmin(next http.Handler) http.Handler {
 func buildClusterHTTPHandler(handler http.Handler, parser func(string) (*pkgauth.Claims, error)) http.Handler {
 	protected := pkgauth.HTTPMiddleware(requireClusterAdmin(handler), parser)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if publicClusterRoutes[clusterRouteKey(r)] {
+		// /cluster/forward/... authenticates the member by its credential.
+		if publicClusterRoutes[clusterRouteKey(r)] || strings.HasPrefix(r.URL.Path, "/cluster/forward/") {
 			handler.ServeHTTP(w, r)
 			return
 		}

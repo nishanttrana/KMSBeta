@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/servicetoken"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -98,6 +99,9 @@ func main() {
 	go func() {
 		migrateCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
+		if !clusterstate.RunsPrimaryJobs(migrateCtx) {
+			return // the primary rewraps; the result replicates
+		}
 		n, err := svc.RewrapLegacyCASigners(migrateCtx)
 		if err != nil {
 			logger.Printf("legacy signer rewrap warning: %v", err)
@@ -110,13 +114,18 @@ func main() {
 	go func() {
 		ticker := time.NewTicker(2 * time.Minute)
 		defer ticker.Stop()
-		_ = svc.RunExpiryAlertSweep(context.Background())
+		sweep := func() {
+			if clusterstate.RunsPrimaryJobs(rt.Ctx) {
+				_ = svc.RunExpiryAlertSweep(context.Background())
+			}
+		}
+		sweep()
 		for {
 			select {
 			case <-rt.Ctx.Done():
 				return
 			case <-ticker.C:
-				_ = svc.RunExpiryAlertSweep(context.Background())
+				sweep()
 			}
 		}
 	}()

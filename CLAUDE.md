@@ -99,6 +99,12 @@ an approach, record it here or in the matching doc below.
   with a reason, or shared-append. Tables written during crypto operations
   are node-local. `TestEveryTableIsClassified` enforces this
   (docs/CLUSTERING.md).
+- Cluster members never write replicated tables. A new write endpoint is
+  forwarded to the primary by default; add it to `pkg/clusterroute.Local`
+  only if it writes nothing replicated. A background job (scheduler, sweep,
+  reconciler, lazy first-use insert) that writes replicated state checks
+  `clusterstate.RunsPrimaryJobs(ctx)` / `IsMember()`, with a member-mode test
+  (docs/CLUSTERING.md).
 - An internal endpoint that moves secrets or grants cluster access must
   restrict its caller: a specific service identity or a root administrator,
   never "any authenticated caller". Node-to-node endpoints authenticate

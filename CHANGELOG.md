@@ -6,6 +6,41 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
+### Clustering (slice 3a of 5): write forwarding
+- **Any node takes any request.** On a member:
+  - crypto operations, reads, logins and audit run locally;
+  - key, policy and configuration changes are forwarded to the primary and
+    answered as if made there (`X-Vecta-Forwarded-To`);
+  - if the primary is unreachable or its certificate doesn't match the pin,
+    the write fails with `502 primary_unreachable` and nothing changes.
+
+  Every service gets this through `pkg/config`.
+- **Forwarding security:**
+  - the member verifies the caller;
+  - the primary authenticates the member by a credential issued at join
+    (hash stored, revoked when the node is removed);
+  - the primary's auth mints a 5-minute token (`POST /auth/cluster/mint`,
+    cluster-manager only);
+  - every forward and refusal is audited on both sides (five new events).
+- **Members no longer write replicated data.** Such writes would have diverged
+  the member or stopped replication:
+  - keycore operation counts go to the node-local `key_op_counters` (limits
+    still enforced);
+  - scheduled jobs run on the primary only (compliance, reporting, posture,
+    SBOM, certs sweeps and mesh discovery, approval expiry, the dataprotect
+    receipt reconciler);
+  - dataprotect working-key state isn't recorded on members;
+  - `fle_metadata` is node-local.
+- **Cluster tab** shows when the node is a member and which primary it
+  forwards to (`forwards_to` in replication status).
+
+### Fixes
+- **Key import rejected about 2% of valid keys.** Keycore trimmed
+  "whitespace" from binary DER. A key whose encoding started or ended with
+  byte 0x09–0x0d or 0x20 lost that byte and failed with "unsupported DER" or
+  "PEM payload does not contain a supported key block". DER is now parsed
+  untrimmed (`TestImportDERWithWhitespaceBoundaryBytes`).
+
 ### Clustering (slice 2 of 5): secure join
 - **Join a second KMS from the UI.** Platform → Cluster → Add Instance issues a
   one-time join bundle on the primary; pasting it on the new node joins it.

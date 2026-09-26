@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/servicetoken"
 
 	pkgplatform "vecta-kms/pkg/platform"
@@ -72,6 +73,9 @@ func startMissingReceiptReconciler(ctx context.Context, logger *log.Logger, svc 
 		return
 	}
 	run := func() {
+		if !clusterstate.RunsPrimaryJobs(ctx) {
+			return
+		}
 		reconcileCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 		scanned, revoked, err := svc.ReconcileMissingFieldEncryptionReceipts(reconcileCtx, batch)

@@ -61,6 +61,8 @@ export type ClusterReplicationStatus = {
     ready: boolean;
     tables: { table: string; state: string }[];
   }[];
+  // Primary this member forwards key and policy changes to.
+  forwards_to?: string;
   error?: string;
 };
 

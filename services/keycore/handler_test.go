@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -547,5 +549,36 @@ func TestStrictModeRefusesNonModulePQC(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "FIPS mode") {
 		t.Fatalf("strict mode must refuse ML-DSA from a non-validated implementation, got %v", err)
+	}
+}
+
+// DER is binary: an encoding that ends in a whitespace byte must import intact
+// (it was trimmed and refused, which made TestImportKeyPEMAutodetect flaky).
+func TestImportDERWithWhitespaceBoundaryBytes(t *testing.T) {
+	for i := 0; ; i++ {
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		der, err := x509.MarshalECPrivateKey(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if last := der[len(der)-1]; last != ' ' && last != '\t' && last != '\n' && last != '\v' && last != '\f' && last != '\r' {
+			if i > 5000 {
+				t.Fatal("no key with a whitespace final byte generated")
+			}
+			continue
+		}
+		for name, in := range map[string][]byte{
+			"der": der,
+			"pem": pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}),
+		} {
+			material, _, keyType, err := parsePEMImportMaterial(in, "")
+			if err != nil || keyType != "asymmetric-private" || !bytes.Equal(material, der) {
+				t.Fatalf("%s: key ending in %#x must import intact: %v", name, der[len(der)-1], err)
+			}
+		}
+		return
 	}
 }

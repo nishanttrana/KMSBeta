@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"vecta-kms/pkg/clusterstate"
 )
 
 // Mesh discovery reconciles the live service mesh (the consul catalog) into the
@@ -189,6 +190,9 @@ func (s *Service) StartMeshDiscovery(ctx context.Context, logger interface{ Prin
 	interval := 60 * time.Second
 	go func() {
 		run := func() {
+			if !clusterstate.RunsPrimaryJobs(ctx) {
+				return
+			}
 			rctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			if n, err := s.ReconcileMeshFromConsul(rctx); err != nil {

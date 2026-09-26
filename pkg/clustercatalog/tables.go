@@ -89,7 +89,6 @@ var Replicated = map[string][]string{
 		"field_encryption_leases",
 		"field_encryption_wrappers",
 		"field_protection_profiles",
-		"fle_metadata",
 		"masking_policies",
 		"redaction_policies",
 		"token_vaults",
@@ -238,6 +237,9 @@ var Replicated = map[string][]string{
 // node (its sessions, logs written during crypto operations, hardware and
 // network settings, backups, cluster control plane).
 var NodeLocal = map[string]string{
+	"key_op_counters":                     "per-key operation counters of a cluster member (written during crypto operations)",
+	"cluster_local_state":                 "this node's cluster role and its primary; the forwarding credential authenticates this node only",
+	"cluster_member_credentials":          "credentials a primary issued to its members",
 	"ai_gateway_audit":                    "per-node AI gateway log",
 	"ai_gateway_token_budgets":            "per-node usage counters",
 	"alerts":                              "alerts raised on this node",
@@ -257,6 +259,7 @@ var NodeLocal = map[string]string{
 	"cluster_sync_nonces":                 "cluster control plane; exchanged through the join and heartbeat API, not table replication",
 	"confidential_release_history":        "per-node release log",
 	"ct_log_entries":                      "CT log polling cursor data of this node",
+	"fle_metadata":                        "where fields were encrypted; written during crypto operations on the node that served them",
 	"dataprotect_audit_log":               "per-node data protection log",
 	"dr_drill_runs":                       "DR drill executions of this node",
 	"ekm_key_access_log":                  "per-node access log",
