@@ -22,7 +22,6 @@ import (
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/clusterstate"
-	"vecta-kms/pkg/servicetoken"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -30,6 +29,7 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	"vecta-kms/pkg/servicetoken"
 )
 
 var logger = log.New(os.Stdout, "[governance] ", log.LstdFlags|log.Lmicroseconds)
