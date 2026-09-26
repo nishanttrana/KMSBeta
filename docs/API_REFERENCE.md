@@ -316,7 +316,26 @@ tenant's HSM (AES-128/192/256-GCM, RSA-2048/3072/4096 PSS, ECDSA
 P-256/P-384). The key is never exportable. Encrypt, decrypt, sign and verify
 run in the HSM, and operations that need the material answer
 `409 hsm_operation_unsupported`. Key versions report `protection` (`mek`,
-`tenant_hsm`, `hsm_resident`) and `hsm_label`.
+`tenant_hsm`, `hsm_resident`) and `hsm_label`. An HSM key's labels record
+the device that generated it (`hsm_serial`, `hsm_token`, `hsm_model`,
+`hsm_manufacturer`). If its object is missing from the HSM the tenant's
+profile now points at, operations answer `409 hsm_key_not_found` naming the
+recorded serial.
+
+`GET /svc/keycore/keys/{id}/hsm` (`key.hsm.read`, "Verify in HSM") reads the
+key's objects back from the HSM: `recorded_hsm`, `current_hsm`,
+`same_device`, and per version `label`, `protection` and `objects` (class,
+key type, size or curve, and the HSM's own `local`, `sensitive`,
+`extractable`, `never_extractable`, `always_sensitive` and usage flags; key
+values are never read). A key with no HSM versions answers `409 not_hsm_key`.
+
+`GET /svc/keycore/hsm/objects` (`key.hsm.read`) lists the tenant's HSM
+partition: `hsm` (identity) and `objects`, each with the attributes above,
+`managed` (created by the KMS for this tenant, with `key_id`, `version` and
+`kms_role` `key`/`tenant_key`) or not (already in the partition), and for
+certificates `certificate` (`subject`, `issuer`, `serial`, `not_before`,
+`not_after`, `sha256`). Other tenants' KMS objects are never listed.
+Read-only: partition objects can't yet be adopted as KMS keys.
 
 ### hsm-connector (internal, port 8430)
 
@@ -324,7 +343,11 @@ Only `kms-keycore` and `kms-governance` may call the key routes (others get
 `403 caller_not_allowed`). Labels must start with `vecta:<tenant_id>:`.
 Routes: `POST /hsm/keys`, `/hsm/tenant-key`, `/hsm/encrypt`,
 `/hsm/decrypt`, `/hsm/sign`, `/hsm/verify`, `/hsm/keys/destroy`, and
-`GET /hsm/status` (also open to tenant administrators). Env:
+`GET /hsm/status` (also open to tenant administrators). Keycore only:
+`POST /hsm/keys/inspect` (body `tenant_id`, `label`) and
+`GET /hsm/objects?tenant_id=` return object attributes and the token's
+identity (`manufacturer`, `model`, `serial_number`, `token_label`), which
+`POST /hsm/keys` also returns as `hsm`. Env:
 `HSM_LIBRARY_ROOTS` (default `/var/lib/vecta/hsm/providers`), plus the PIN
 variable each profile names (or `<name>_FILE`). Keycore and governance use
 `HSM_CONNECTOR_URL` (default `http://hsm-connector:8430`).
@@ -496,6 +519,11 @@ Body: `ciphertext`, `iv`, `tag`, `aad` (optional), `keyVersion` (optional). Resp
 Body: `message` (base64), `messageType` (raw/digest), `algorithm` (ECDSA-SHA256, ECDSA-SHA384, EdDSA, RSA-PSS-SHA256, ML-DSA, SLH-DSA), `keyVersion`
 
 Response: `signature` (base64), `algorithm`, `keyId`, `keyVersion`, `publicKeyPem`
+
+`prehashed: true` signs `data` as an already computed digest (the HSM CA
+path). HSM keys only; the hash (`algorithm` SHA-256/384/512) must match the
+digest length, else `400`. A software key answers `400` ("prehashed signing
+is supported for HSM keys only").
 
 ---
 
@@ -725,6 +753,13 @@ id, name, type (root/intermediate/issuing), keyId, subject (cn, o, ou, c, st, l)
 
 Create: `name`, `type`, `keyId`, `subject`, `validityDays`, `pathLen`, `permittedDNS[]`, `permittedIP[]`, `crlUrls[]`, `ocspUrls[]`, `issuingCaId` (required for non-root)
 
+`key_backend`: `software` (default), `keycore` (software key, keycore
+co-signs) or `hsm`: the CA key is generated in the tenant's HSM through
+keycore and certificates, CRLs and OCSP responses are signed there. `hsm`
+takes ECDSA P-256/P-384 only (`400` otherwise) and needs HSM keys enabled for
+the tenant. A CRL that can't be signed is an error
+(`audit.cert.crl_generation_failed`), never an unsigned placeholder.
+
 ```bash
 curl -sk -X POST https://localhost/svc/certs/cas \
   -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
@@ -836,7 +871,7 @@ id, tenantId, timestamp, action, actorType (user/client/system), actorId, actorN
 
 Bearer, roles: auditor or admin.
 
-Query: `action`, `actorId`, `resourceId`, `resourceType`, `outcome`, `startTime`, `endTime`, `pageSize`, `pageToken`
+Query: `action`, `actorId`, `resourceId`, `resourceType`, `outcome`, `startTime`, `endTime`, `pageSize`, `pageToken`, `action_prefix` (repeatable, up to 5, OR-ed; matched literally, so `_` and `%` are not wildcards; the HSM tab uses `action_prefix=audit.hsm.&action_prefix=audit.key.hsm_`)
 
 ```bash
 curl -sk "https://localhost/svc/audit/events?action=audit.key&outcome=failure&startTime=2025-03-01T00:00:00Z" \
@@ -3392,7 +3427,7 @@ Selected events with dedicated audit classification:
 - `audit.governance.approval_requested`, `audit.governance.approved`, `audit.governance.rejected`, `audit.governance.bypassed`
 - `audit.governance.backup_created` (`key_mode`, `key_retained`), `audit.governance.backup_deleted`, `audit.governance.backup_restored`, `audit.governance.backup_restore_refused` (tampered artifact, wrong key, changed scope, wrong file type, retired v1 key package; carries `reason`)
 - `audit.governance.backup_create_refused` (`reason`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`)
-- `audit.hsm.*` (connector: `key_generated`, `tenant_key_ensured`, `encrypt`, `decrypt`, `sign`, `verify`, `key_destroyed`, `status_read`), `audit.key.hsm_settings_updated`, `audit.key.hsm_refused` (`reason`), `audit.key.hsm_objects_destroyed`, `audit.key.hsm_destroy_failed`, `audit.key.hsm_status_read`, `audit.key.hsm_settings_update`: HSM integration (docs/SECURITY/HSM_INTEGRATION.md)
+- `audit.hsm.*` (connector: `key_generated`, `tenant_key_ensured`, `encrypt`, `decrypt`, `sign`, `verify`, `key_destroyed`, `status_read`), `audit.key.hsm_settings_updated`, `audit.key.hsm_refused` (`reason`), `audit.key.hsm_objects_destroyed`, `audit.key.hsm_destroy_failed`, `audit.key.hsm_status_read`, `audit.key.hsm_settings_update`, `audit.hsm.key_inspected`, `audit.hsm.objects_listed`, `audit.key.hsm_objects_listed`, `audit.key.hsm_key_inspected`, `audit.key.hsm_device_changed`, `audit.cert.crl_generation_failed`: HSM integration (docs/SECURITY/HSM_INTEGRATION.md)
 - `audit.governance.system_admin_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `not_root_tenant`, `token_tenant_not_root`, `insufficient_privileges`), `audit.governance.authentication_refused` (`reason: invalid_token`)
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
 - `audit.backup.policy_created`, `audit.backup.policy_updated`, `audit.backup.policy_deleted`, `audit.backup.run_refused_preview`, `audit.backup.restore_refused_preview`

@@ -95,6 +95,84 @@ takes `"hsm": true` on `POST /keys`.
   (`hsm_import_not_supported`), and other algorithms
   (`algorithm_not_supported`).
 
+### Creating a key or CA when an HSM is available
+
+With **HSM keys** on, the create-key dialog opens with an alert naming the
+HSM (manufacturer, model, token, serial). **Create in HSM** is already
+checked when the algorithm can live in the HSM. If the operator unchecks it,
+or picks an algorithm the HSM can't hold, the alert says the key will be
+created in the KMS instead. With only the tenant key on, the dialog says the
+material will be encrypted by the tenant's HSM key.
+
+The CA dialog in the Certificates tab does the same. The key storage option
+**In the tenant's HSM** makes the CA key an HSM-resident keycore key
+(ECDSA P-256/P-384). Every certificate, CRL and OCSP response is signed in
+the HSM, certs → keycore (prehashed sign) → HSM, and certs stores no private
+key for it. RSA can't be an HSM CA key: the HSM signs RSA only with PSS, and
+OCSP responses (`x/crypto/ocsp`) can't be PSS-signed.
+
+The old key storage option labelled "HSM-backed (external HSM - FIPS
+boundary)" (`key_backend: keycore`) actually signed certificates with a
+software key in certs and only added a keycore side signature. It has been
+removed from the dialog. CAs created with it are labelled "Software key,
+keycore co-signed", and `key_backend: "hsm"` is no longer folded into it.
+
+## One HSM per tenant
+
+A tenant (domain) has **one** HSM profile: one library and one slot or
+token. That is where its tenant key and all its HSM keys are generated, so
+there is never a choice to make at key creation. For availability, use the
+vendor's own HA behind that one profile (Luna HA group, a Primus cluster,
+CloudHSM cluster). The library presents it as one slot, and the objects are
+replicated by the HSM. Different tenants can use different HSMs, even from
+different vendors.
+
+- **Recorded device.** Each HSM key records the device it was generated on
+  (manufacturer, model, serial, token label) in its labels. `audit.key.create`
+  carries them too.
+- **Profile changes.** If the tenant's profile is later pointed at another
+  device, operations on keys whose objects aren't there are refused with
+  `409 hsm_key_not_found`, naming the device the key was created on. They
+  are never silently re-created.
+- **Rotation onto another device.** A rotation that lands on a different
+  serial emits `audit.key.hsm_device_changed`.
+
+## Proving a key is in the HSM
+
+**Verify in HSM** (key details) calls `GET /keys/{id}/hsm`. Keycore reads
+every version's objects back from the HSM (`C_GetAttributeValue`; never
+`CKA_VALUE` of a key) and shows:
+
+- the label and ID;
+- `CKA_LOCAL`: generated on the token;
+- `CKA_SENSITIVE`, `CKA_EXTRACTABLE=false`, `CKA_ALWAYS_SENSITIVE`,
+  `CKA_NEVER_EXTRACTABLE`;
+- the usages, key type and size;
+- whether the HSM configured now is the device the key was created on.
+
+For a key under the tenant key, it shows the tenant key's object.
+`TestGeneratedKeysHaveHSMAttributes` asserts all of this for AES, RSA and EC
+keys, as SoftHSM2 reports it.
+
+## Keys and certificates already in the partition
+
+The Keys and Certificates tabs have **Show HSM partition**.
+`GET /hsm/objects` lists every key and certificate the tenant's HSM login
+can see: type, size or curve, generated-on-token, sensitive and
+extractable, and for certificates the subject, issuer, serial and expiry.
+Objects the KMS created for the tenant are linked to their KMS key; the rest
+are marked "found in HSM". Other tenants' KMS objects on a shared partition
+are left out. The listing is read-only: objects found in the HSM can't yet
+be used through the KMS (see "Not yet validated or not covered").
+
+## HSM activity
+
+Every connector call and every keycore HSM decision is audited (table
+below). The HSM tab's **HSM activity** panel lists them from the audit log.
+It queries `GET /audit/events` with `action_prefix=audit.hsm.` and
+`action_prefix=audit.key.hsm_`, and the Audit Log tab can filter on service
+`hsm`.
+
 ## Governance backups
 
 An HSM-bound backup has its backup key wrapped with AES-256-GCM inside the
@@ -106,11 +184,14 @@ gone.
 
 | Event | When |
 |---|---|
-| `audit.hsm.<action>` (connector kernel): `key_generated`, `tenant_key_ensured`, `encrypt`, `decrypt`, `sign`, `verify`, `key_destroyed`, `status_read` | Every connector request. Refusals carry `result: refused` and a `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `caller_not_allowed`, `foreign_label`, `hsm_not_configured`, `library_not_allowed`, `pin_not_provided`, `integrity_check_failed`, `tenant_key_protected`, `algorithm_not_supported` |
+| `audit.hsm.<action>` (connector kernel): `key_generated` (with the HSM serial and token), `tenant_key_ensured`, `encrypt`, `decrypt`, `sign`, `verify`, `key_destroyed`, `key_inspected`, `objects_listed`, `status_read` | Every connector request. Refusals carry `result: refused` and a `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `caller_not_allowed`, `foreign_label`, `hsm_not_configured`, `library_not_allowed`, `pin_not_provided`, `integrity_check_failed`, `tenant_key_protected`, `algorithm_not_supported` |
 | `audit.key.hsm_settings_updated` | A tenant's switches changed (before and after values) |
-| `audit.key.hsm_refused` | Keycore refused an HSM operation (`reason`: `hsm_keys_disabled`, `hsm_not_configured`, `hsm_not_connected`, `hsm_unavailable`, `algorithm_not_supported`, `hsm_import_not_supported`, `iv_mode_not_supported`, `material_in_hsm`) |
+| `audit.key.hsm_refused` | Keycore refused an HSM operation (`reason`: `hsm_key_not_found`, `hsm_keys_disabled`, `hsm_not_configured`, `hsm_not_connected`, `hsm_unavailable`, `algorithm_not_supported`, `hsm_import_not_supported`, `iv_mode_not_supported`, `material_in_hsm`) |
 | `audit.key.hsm_objects_destroyed` / `audit.key.hsm_destroy_failed` | A destroyed key's HSM objects were removed, or some couldn't be |
-| `audit.key.hsm_status_read`, `audit.key.hsm_settings_update` | Kernel events for keycore's `GET` and `PUT /hsm/settings` |
+| `audit.key.hsm_status_read`, `audit.key.hsm_settings_update`, `audit.key.hsm_objects_listed`, `audit.key.hsm_key_inspected` | Kernel events for keycore's HSM routes |
+| `audit.hsm.key_inspected`, `audit.hsm.objects_listed` | The connector read a key's attributes, or listed the partition |
+| `audit.key.hsm_device_changed` | A rotated version was generated on a different HSM serial than the key's first |
+| `audit.cert.crl_generation_failed` | A CRL couldn't be signed (for example, the HSM was unreachable). No CRL is published: this used to emit a JSON note wrapped in `X509 CRL` PEM |
 | `audit.key.create` | Carries `hsm: true`, `hsm_label` and `algorithm` for an HSM key |
 
 ## FIPS 140-3
@@ -143,11 +224,20 @@ normal setup. A node-local HSM would not see objects made on the primary.
     own implementation against the exported public key.
   - `TestTenantIsolationAndCallers` and `TestTenantKey`.
   - `TestLibraryAndPINAreConfined` and `routetest.RefusalsAudited`.
+  - `TestGeneratedKeysHaveHSMAttributes`: label, ID, `CKA_LOCAL`,
+    sensitive, never extractable and usages, read back from the HSM.
+  - `TestPartitionListing`: a key and a certificate created outside the KMS
+    are listed; another tenant's KMS key is not.
 - **Keycore** against a real connector (`pkg/hsmconnector/softhsmtest`):
   `TestHSMResidentKeyLifecycle`, `TestHSMResidentSigningKeys`,
   `TestTenantHSMKeyProtectsNewKeys`, `TestHSMSettingsNeedAConfiguredHSM`,
-  `TestHSMRoutesRefusalsAudited`, and `TestHSMStoragePostgres` (real
-  Postgres).
+  `TestHSMRoutesRefusalsAudited`, `TestHSMKeyProvenance` (recorded device,
+  verify, partition links, prehashed signing, the missing-object refusal),
+  and `TestHSMStoragePostgres` (real Postgres).
+- **Certs:** `TestHSMCAKeysSignInTheHSM`: an HSM root (P-384) and
+  intermediate (P-256); a leaf verified through the chain; the CRL and OCSP
+  response signed in the HSM; RSA and no-keycore refused.
+- **Audit:** `TestQueryEventsByActionPrefix` (`_` is literal).
 - **Governance:** `TestHSMBoundBackupKeyWrappedByHSM`,
   `TestRetiredHSMBoundFormatsAreRefused`, `TestHSMBoundBackupPostgres`.
 - All of it runs in FIPS modes off, on and only.
@@ -168,7 +258,13 @@ normal setup. A node-local HSM would not see objects made on the primary.
 - **Algorithms not in the HSM:** RSA encryption, Ed25519, ML-DSA/ML-KEM,
   HMAC and non-GCM AES modes can't be HSM-resident.
 - **No existing-key migration** into the tenant key (new keys only), and no
-  import of outside material into the HSM.
+  import of outside material into the HSM (the owner accepts this, FIPS mode
+  included).
+- **Objects already in the partition are listed, not used.** Using a key the
+  KMS didn't create would need an explicit "adopt" step. It would have to
+  bind the object to one tenant, because its label doesn't carry the
+  tenant, and that step doesn't exist yet.
+- **HSM CA keys are ECDSA only** (see above).
 - **Traffic between services.** With the tenant key on, the data key crosses
   the internal network from connector to keycore on each use, like every
   internal call today. The HSM PIN sits in the connector's environment or

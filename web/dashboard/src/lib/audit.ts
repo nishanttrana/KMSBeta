@@ -80,6 +80,8 @@ export type AuditAlertRule = {
 
 export type AuditEventQuery = {
   action?: string;
+  // Actions starting with any of these, e.g. ["audit.hsm.", "audit.key.hsm_"] (at most 5).
+  action_prefix?: string[];
   actor_id?: string;
   result?: string;
   target_id?: string;
@@ -118,6 +120,7 @@ export async function listAuditEvents(
   const q = new URLSearchParams();
   q.set("tenant_id", session.tenantId);
   if (String(query?.action || "").trim()) q.set("action", String(query!.action).trim());
+  (query?.action_prefix || []).slice(0, 5).forEach((p) => { if (String(p).trim()) q.append("action_prefix", String(p).trim()); });
   if (String(query?.actor_id || "").trim()) q.set("actor_id", String(query!.actor_id).trim());
   if (String(query?.result || "").trim()) q.set("result", String(query!.result).trim());
   if (String(query?.target_id || "").trim()) q.set("target_id", String(query!.target_id).trim());

@@ -7,6 +7,38 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — One HSM per tenant; partition objects listed, not adopted; HSM CAs are ECDSA
+**Decision:**
+- A tenant has one HSM profile (one PKCS#11 slot). Redundancy comes from the
+  vendor's HA/cluster behind that slot (Securosys, Luna HA groups, nShield
+  Security World), not from the KMS choosing among HSMs.
+- Each HSM key records the device (serial, token, model) that generated it.
+  A key whose object is missing on the configured device is refused with
+  `hsm_key_not_found` naming that serial; rotation onto another device is
+  audited (`audit.key.hsm_device_changed`).
+- Objects already in the partition are listed read-only in Keys and
+  Certificates. Adopting them as KMS keys is not built yet.
+- HSM CA keys are ECDSA P-256/P-384 only.
+
+**Why:** choosing an HSM per key needs placement rules, per-key routing and
+a story for keys that exist on only one device; vendor HA already
+replicates keys across devices under one slot. Recording the device makes a
+misconfigured profile obvious instead of a generic PKCS#11 error. Adoption
+needs decisions about labels, usage flags and extractable keys (an
+extractable key isn't HSM-protected in the sense the KMS promises), so it
+is listed, not guessed. The HSM signs RSA only with PSS, and OCSP responses
+(x/crypto/ocsp) can't carry RSA-PSS.
+
+**Rejected:** several HSM profiles per tenant with a per-key picker
+(placement and failover complexity for what vendor HA already does);
+silently adopting every partition key (would put keys the KMS didn't create
+and can't vouch for under its audit claims); RSA PKCS#1 v1.5 signing in the
+HSM for CAs (the connector implements RSA signing with PSS only; adding v1.5 is a separate, reviewable change).
+
+**Enforced by:** `TestHSMKeyProvenance`, `TestPartitionListing`,
+`TestGeneratedKeysHaveHSMAttributes`, `TestHSMCAKeysSignInTheHSM` (RSA
+refused).
+
 ## 2026-09-26 — Customer HSMs through their own PKCS#11 library, in a separate connector
 **Decision:** HSMs are integrated through the vendor's PKCS#11 library (owner's
 choice over a vendor REST API). The library loads in a dedicated

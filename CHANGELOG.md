@@ -6,6 +6,45 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
+### HSM: activity log, create alerts, provenance, partition view, HSM CAs
+- **HSM activity in the HSM tab.** Every HSM operation and refusal was
+  already audited (`audit.hsm.*` from the connector, `audit.key.hsm_*` from
+  keycore). The HSM tab now lists them, and the Audit Log's service filter
+  has "hsm". `GET /svc/audit/events` takes `action_prefix` (repeatable,
+  matched literally).
+- **Alerts when creating keys and CAs.** If the tenant has HSM keys on, the
+  create-key form says so, and **Create in HSM** starts checked for
+  algorithms the HSM supports (unsupported ones hide the box). The create-CA
+  form offers **Key storage: in the tenant's HSM** for ECDSA CAs. Importing
+  into the HSM stays refused.
+- **One HSM per tenant.** A tenant's HSM profile names one PKCS#11 slot; use
+  the vendor's HA or cluster behind that slot for redundancy. Each HSM key
+  now records the device that generated it (`hsm_serial`, `hsm_token`,
+  `hsm_model`, `hsm_manufacturer` labels and in `audit.key.create`). If the
+  profile later points at a device without the key, operations answer
+  `409 hsm_key_not_found` naming the recorded serial, not a generic error.
+  Rotating onto a different device emits `audit.key.hsm_device_changed`.
+- **Verify in HSM** (key details, `GET /svc/keycore/keys/{id}/hsm`) reads
+  the key back from the HSM: its label, and the HSM's own flags that it was
+  generated on the token (`CKA_LOCAL`), is sensitive and was never
+  extractable. Tests assert those attributes for AES, RSA and ECDSA keys.
+- **Show HSM partition** (Keys and Certificates tabs,
+  `GET /svc/keycore/hsm/objects`) lists what is in the tenant's partition,
+  including keys and certificates that were there before the KMS. Other
+  tenants' KMS objects are hidden. Read-only for now: existing objects can't
+  yet be adopted as KMS keys.
+- **CA keys in the HSM are real now.** The certs "HSM-backed" key backend
+  stored a software key like the default one. `key_backend: "hsm"` now
+  generates the CA key in the tenant's HSM through keycore (ECDSA
+  P-256/P-384), and certificates, CRLs and OCSP responses are signed there.
+  Keycore sign takes `prehashed: true` for HSM keys. CAs created as
+  "HSM-backed" before were stored as `keycore` and keep working as the
+  software keys they always were; the CA list now labels them "Software key,
+  keycore co-signed".
+- **No fake CRLs.** When CRL signing failed, certs published a JSON note
+  wrapped in `X509 CRL` PEM headers. It now fails and emits
+  `audit.cert.crl_generation_failed`.
+
 ### HSM integration: real PKCS#11, per-tenant key and HSM-resident keys
 - **New `hsm-connector` service.** It loads the customer's own PKCS#11
   library: Securosys Primus, Thales Luna, Entrust nShield, Utimaco, AWS

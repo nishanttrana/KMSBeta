@@ -19,6 +19,7 @@ import {
   attestKey,
   getKeyAccessPolicy,
   getHSMOverview,
+  hsmSupportsAlgorithm,
   setKeyAccessPolicy,
   setKeyExportPolicy,
   setKeyUsageLimit,
@@ -29,6 +30,8 @@ import { DEFAULT_KEY_COLUMN_VISIBILITY, KEY_ACCESS_OPERATION_OPTIONS, KEY_TABLE_
 import { errMsg } from "../runtimeUtils";
 import { C } from "../theme";
 import { B, Btn, Chk, FG, Inp, Modal, Radio, Row2, Row3, Section, Sel, Stat, Txt } from "../legacyPrimitives";
+import { HSMPartitionTable } from "../../../modules/hsm/HSMPartitionTable";
+import { HSMKeyCheckPanel } from "../../../modules/hsm/HSMKeyCheckPanel";
 
 function normalizeKeyState(state: string): string {
   const raw = String(state || "").toLowerCase().trim();
@@ -485,6 +488,10 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
   // "Create in HSM" is offered only when the tenant turned HSM keys on (HSM tab).
   const [inHSM,setInHSM]=useState(false);
   const [hsmKeysEnabled,setHsmKeysEnabled]=useState(false);
+  const [hsmTenantKey,setHsmTenantKey]=useState(false);
+  const [hsmConfigured,setHsmConfigured]=useState(false);
+  const [hsmName,setHsmName]=useState("");
+  const [showHSMPartition,setShowHSMPartition]=useState(false);
   const [createName,setCreateName]=useState("");
   const [creating,setCreating]=useState(false);
   const [rotating,setRotating]=useState(false);
@@ -819,8 +826,19 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
 
   useEffect(()=>{
     if(!session) return;
-    getHSMOverview(session).then((o)=>setHsmKeysEnabled(Boolean(o?.settings?.hsm_keys_enabled))).catch(()=>setHsmKeysEnabled(false));
+    getHSMOverview(session).then((o)=>{
+      setHsmKeysEnabled(Boolean(o?.settings?.hsm_keys_enabled));
+      setHsmTenantKey(Boolean(o?.settings?.tenant_key_enabled));
+      setHsmConfigured(Boolean(o?.hsm?.configured));
+      const h=o?.hsm;
+      setHsmName(h?.connected?`${[h.manufacturer,h.model].filter(Boolean).join(" ")}${h.token_label?`, token "${h.token_label}"`:""}${h.serial_number?`, serial ${h.serial_number}`:""}`:"");
+    }).catch(()=>{setHsmKeysEnabled(false);setHsmTenantKey(false);setHsmConfigured(false);});
   },[session]);
+
+  // An algorithm the HSM can't generate turns "Create in HSM" off.
+  useEffect(()=>{
+    if(inHSM&&!hsmSupportsAlgorithm(algo)) setInHSM(false);
+  },[algo,inHSM]);
 
   useEffect(()=>{
     if(!session){
@@ -1829,7 +1847,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
             <span style={{display:"inline-flex",alignItems:"center",gap:7}}><RefreshCcw size={13} strokeWidth={2.1}/>{refreshingKeys?"Refreshing...":"Refresh"}</span>
           </Btn>
           <Btn
-            onClick={()=>setModal("create")}
+            onClick={()=>{setInHSM(hsmKeysEnabled&&hsmSupportsAlgorithm(algo));setModal("create");}}
             primary
             style={{height:40,padding:"0 20px",borderRadius:10,fontSize:12,fontWeight:700,minWidth:130}}
           >
@@ -2139,7 +2157,23 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
     </Section>
 
     {/*  CREATE KEY MODAL  */}
+    {hsmConfigured&&<div style={{display:"flex",justifyContent:"flex-end",margin:"8px 0"}}>
+      <Chk label="Show HSM partition (keys already in the HSM, including ones the KMS didn't create)" checked={showHSMPartition} onChange={()=>setShowHSMPartition(!showHSMPartition)}/>
+    </div>}
+    {showHSMPartition&&<HSMPartitionTable session={session} kind="keys" onToast={onToast}/>}
     <Modal open={modal==="create"} onClose={()=>setModal(null)} title="Create New Key" width={920}>
+      {hsmKeysEnabled&&<div style={{padding:"8px 10px",marginBottom:10,borderRadius:6,border:`1px solid ${inHSM?C.accent:C.amber}`,background:`${inHSM?C.accent:C.amber}14`,fontSize:11,color:C.text}}>
+        <b>HSM available for key generation</b>{hsmName?`: ${hsmName}`:""}.{" "}
+        {inHSM
+          ? "This key will be generated inside the HSM and will never leave it; encrypt, decrypt, sign and verify run in the HSM."
+          : hsmSupportsAlgorithm(algo)
+            ? "\"Create in HSM\" is off: this key will be generated in the KMS, not the HSM."
+            : "This algorithm can't be generated in the HSM (AES-GCM, RSA or ECDSA P-256/P-384 can): the key will be created in the KMS."}
+        {!inHSM&&hsmTenantKey&&" Its material will be encrypted by this tenant's key in the HSM."}
+      </div>}
+      {!hsmKeysEnabled&&hsmTenantKey&&<div style={{padding:"8px 10px",marginBottom:10,borderRadius:6,border:`1px solid ${C.accent}`,fontSize:11,color:C.text}}>
+        The key's material will be encrypted by this tenant's key in the HSM{hsmName?` (${hsmName})`:""}.
+      </div>}
       <Row2>
         <FG label="Key Name" required><Inp placeholder="Enter key name" value={createName} onChange={e=>setCreateName(e.target.value)}/></FG>
         <FG label="Tenant" required><Sel><option>{session?.tenantId||"tenant"}</option></Sel></FG>
@@ -2202,7 +2236,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         <FG label="Security Options">
           <Chk label="Require governance approval for all operations" checked={approvalReq} onChange={()=>setApprovalReq(!approvalReq)}/>
           {!inHSM&&<Chk label="Allow key export (wrapped)" checked={exportable} onChange={()=>setExportable(!exportable)}/>}
-          {hsmKeysEnabled&&<Chk label="Create in HSM (generated and used only inside the tenant's HSM; AES-GCM, RSA-PSS or ECDSA P-256/P-384)" checked={inHSM} onChange={()=>{setInHSM(!inHSM);setExportable(false);}}/>}
+          {hsmKeysEnabled&&hsmSupportsAlgorithm(algo)&&<Chk label="Create in HSM (generated and used only inside the tenant's HSM; AES-GCM, RSA-PSS or ECDSA P-256/P-384)" checked={inHSM} onChange={()=>{setInHSM(!inHSM);setExportable(false);}}/>}
           <Chk label="FIPS-only algorithms enforced" checked={true}/>
         </FG>
         <FG label="Activation">
@@ -2530,6 +2564,7 @@ export const KeysTab=({session,keyCatalog,setKeyCatalog,tagCatalog,setTagCatalog
         <FG label="Expires"><div style={{fontSize:11,color:selectedKey.expires==="-"?C.dim:C.amber}}>{selectedKey.expires}</div></FG>
       </Row3>
       <FG label="Total Operations"><div style={{fontSize:18,fontWeight:700,color:C.accent}}>{selectedKey.ops}</div></FG>
+      {(selectedKey.inHSM||hsmTenantKey)&&<HSMKeyCheckPanel session={session} keyID={selectedKey.id}/>}
       <FG label="Tags">
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {(Array.isArray(selectedKey.tags)?selectedKey.tags:[]).map((tag)=>(

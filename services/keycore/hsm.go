@@ -36,6 +36,12 @@ const (
 	// labelHSM marks an HSM-resident key (its versions are hsm.KeyLabel(...)).
 	labelHSM         = "hsm"
 	labelHSMResident = "resident"
+	// The HSM token a key was generated on (one HSM profile per tenant; the
+	// record makes a later profile change visible instead of silent).
+	labelHSMSerial       = "hsm_serial"
+	labelHSMToken        = "hsm_token"
+	labelHSMModel        = "hsm_model"
+	labelHSMManufacturer = "hsm_manufacturer"
 )
 
 // HSMBackend is the connector client (pkg/hsm.Client).
@@ -48,6 +54,8 @@ type HSMBackend interface {
 	Verify(ctx context.Context, tenant, label, hash string, digest, signature []byte) (bool, error)
 	Destroy(ctx context.Context, tenant, label string) error
 	Status(ctx context.Context, tenant string) (hsm.Status, error)
+	Inspect(ctx context.Context, tenant, label string) ([]hsm.ObjectInfo, hsm.Identity, error)
+	Objects(ctx context.Context, tenant string) ([]hsm.ObjectInfo, hsm.Identity, error)
 }
 
 // SetHSMBackend wires the connector client.
@@ -78,6 +86,23 @@ func (s *Service) refuseHSM(ctx context.Context, tenantID, keyID, operation stri
 		"key_id": keyID, "operation": operation, "reason": reason, "result": "refused", "severity": "warning", "description": msg,
 	})
 	return &hsmRefusal{Status: status, Reason: reason, msg: msg}
+}
+
+// hsmKeyFailure is hsmFailure for an operation on key k: an object missing
+// from the HSM is reported against the device the key was generated on. It
+// uses k as given; it runs inside the crypto transaction, so it must not
+// query the store.
+func (s *Service) hsmKeyFailure(ctx context.Context, k Key, operation string, err error) error {
+	if !errors.Is(err, hsm.ErrNotFound) {
+		return s.hsmFailure(ctx, k.TenantID, k.ID, operation, err)
+	}
+	where := "the HSM it was created on"
+	if k.Labels[labelHSMSerial] != "" {
+		where = fmt.Sprintf("HSM %s %s, serial %s, token %q", k.Labels[labelHSMManufacturer], k.Labels[labelHSMModel],
+			k.Labels[labelHSMSerial], k.Labels[labelHSMToken])
+	}
+	return s.refuseHSM(ctx, k.TenantID, k.ID, operation, http.StatusConflict, "hsm_key_not_found",
+		"the key's object is not on the tenant's current HSM; it was created on "+where+". Check that the HSM profile still points at that HSM")
 }
 
 // hsmFailure turns a connector error into a refusal where it's one.
@@ -295,6 +320,8 @@ func (s *Service) createHSMKey(ctx context.Context, req CreateKeyRequest) (Key, 
 		labels[k] = v
 	}
 	labels[labelHSM] = labelHSMResident
+	labels[labelHSMSerial], labels[labelHSMToken] = gen.HSM.SerialNumber, gen.HSM.TokenLabel
+	labels[labelHSMModel], labels[labelHSMManufacturer] = gen.HSM.Model, gen.HSM.Manufacturer
 	key := Key{
 		ID: keyID, TenantID: req.TenantID, Name: req.Name, Algorithm: req.Algorithm, KeyType: req.KeyType,
 		Purpose: req.Purpose, Status: initialStatus, ActivationDate: activationAt, CurrentVersion: 1,
@@ -318,6 +345,7 @@ func (s *Service) createHSMKey(ctx context.Context, req CreateKeyRequest) (Key, 
 	_ = s.cache.Set(ctx, key)
 	_ = s.publishAudit(ctx, "audit.key.create", req.TenantID, map[string]any{
 		"key_id": keyID, "kcv": strings.ToUpper(fmt.Sprintf("%X", kcv)), "hsm": true, "hsm_label": label, "algorithm": alg,
+		"hsm_serial": gen.HSM.SerialNumber, "hsm_token": gen.HSM.TokenLabel, "hsm_model": gen.HSM.Model,
 	})
 	return key, nil
 }
@@ -347,6 +375,12 @@ func (s *Service) rotateHSMKey(ctx context.Context, key Key) (KeyVersion, error)
 		return KeyVersion{}, s.hsmFailure(ctx, key.TenantID, key.ID, "key.rotate", err)
 	}
 	kcv, _ := hsmKCV(gen)
+	if rec := key.Labels[labelHSMSerial]; rec != "" && gen.HSM.SerialNumber != rec {
+		_ = s.publishAudit(ctx, "audit.key.hsm_device_changed", key.TenantID, map[string]any{
+			"key_id": key.ID, "version": next, "previous_serial": rec, "serial": gen.HSM.SerialNumber, "severity": "warning",
+			"description": "the rotated version was generated on a different HSM than the key's first version",
+		})
+	}
 	return KeyVersion{
 		ID: newID("kv"), TenantID: key.TenantID, KeyID: key.ID, Version: next,
 		EncryptedMaterial: []byte{}, MaterialIV: []byte{}, WrappedDEK: []byte{},
@@ -378,6 +412,22 @@ func (s *Service) destroyHSMObjects(ctx context.Context, tenantID string, delete
 	_ = s.publishAudit(ctx, subject, tenantID, details)
 }
 
+// prehashedDigest checks a caller-supplied digest against its hash.
+func prehashedDigest(hint string, digest []byte) ([]byte, string, error) {
+	sizes := map[string]int{"SHA-256": 32, "SHA-384": 48, "SHA-512": 64}
+	name := strings.ToUpper(strings.ReplaceAll(strings.TrimSpace(hint), "_", "-"))
+	if !strings.Contains(name, "-") && strings.HasPrefix(name, "SHA") {
+		name = "SHA-" + strings.TrimPrefix(name, "SHA")
+	}
+	if sizes[name] == 0 {
+		return nil, "", errors.New("prehashed signing needs algorithm SHA-256, SHA-384 or SHA-512")
+	}
+	if len(digest) != sizes[name] {
+		return nil, "", fmt.Errorf("a %s digest is %d bytes, got %d", name, sizes[name], len(digest))
+	}
+	return digest, name, nil
+}
+
 // hsmDigest hashes data for an HSM signature the way software keys do:
 // the requested hash, else SHA-384 for P-384 and SHA-256 otherwise.
 func hsmDigest(key Key, hint string, data []byte) ([]byte, string, error) {
@@ -394,6 +444,106 @@ func hsmDigest(key Key, hint string, data []byte) ([]byte, string, error) {
 	return digest, name, err
 }
 
+// HSMVersionCheck is what the HSM reports for one key version's objects.
+type HSMVersionCheck struct {
+	Version    int              `json:"version"`
+	Protection string           `json:"protection"`
+	Label      string           `json:"label"`
+	Objects    []hsm.ObjectInfo `json:"objects,omitempty"`
+	Error      string           `json:"error,omitempty"`
+}
+
+// HSMKeyCheck proves where a key lives: each version's objects as read back
+// from the HSM, and whether the HSM now configured is the one the key was
+// generated on.
+type HSMKeyCheck struct {
+	KeyID      string            `json:"key_id"`
+	Recorded   hsm.Identity      `json:"recorded_hsm"`
+	Current    hsm.Identity      `json:"current_hsm"`
+	SameDevice bool              `json:"same_device"`
+	Versions   []HSMVersionCheck `json:"versions"`
+}
+
+var errNotHSMKey = errors.New("this key has no material in the HSM (neither HSM-resident nor under the tenant's HSM key)")
+
+// InspectHSMKey reads a key's HSM objects back from the HSM.
+func (s *Service) InspectHSMKey(ctx context.Context, tenantID, keyID string) (HSMKeyCheck, error) {
+	key, err := s.GetKey(ctx, tenantID, keyID)
+	if err != nil {
+		return HSMKeyCheck{}, err
+	}
+	versions, err := s.store.ListVersions(ctx, tenantID, keyID)
+	if err != nil {
+		return HSMKeyCheck{}, err
+	}
+	out := HSMKeyCheck{KeyID: keyID, Recorded: hsm.Identity{
+		Manufacturer: key.Labels[labelHSMManufacturer], Model: key.Labels[labelHSMModel],
+		SerialNumber: key.Labels[labelHSMSerial], TokenLabel: key.Labels[labelHSMToken],
+	}}
+	if s.hsm == nil {
+		return HSMKeyCheck{}, s.refuseHSM(ctx, tenantID, keyID, "key.hsm_inspect", http.StatusServiceUnavailable, "hsm_unavailable", "the HSM connector is not enabled on this platform")
+	}
+	for _, v := range versions {
+		if v.Protection != protectionHSMResident && v.Protection != protectionTenantHSM {
+			continue
+		}
+		check := HSMVersionCheck{Version: v.Version, Protection: v.Protection, Label: v.HSMLabel}
+		objs, id, err := s.hsm.Inspect(ctx, tenantID, v.HSMLabel)
+		if err != nil {
+			check.Error = err.Error()
+		} else {
+			check.Objects, out.Current = objs, id
+		}
+		out.Versions = append(out.Versions, check)
+	}
+	if len(out.Versions) == 0 {
+		return HSMKeyCheck{}, errNotHSMKey
+	}
+	out.SameDevice = out.Recorded.SerialNumber == "" || out.Recorded.SerialNumber == out.Current.SerialNumber
+	return out, nil
+}
+
+// HSMObject is one object in the tenant's HSM partition, linked to its KMS
+// key when the KMS created it.
+type HSMObject struct {
+	hsm.ObjectInfo
+	KeyID   string `json:"key_id,omitempty"`
+	Version int    `json:"version,omitempty"`
+	Role    string `json:"kms_role,omitempty"` // "key", "tenant_key"; empty when the KMS didn't create it
+}
+
+// ListHSMObjects lists the keys and certificates in the tenant's partition,
+// including ones created outside the KMS.
+func (s *Service) ListHSMObjects(ctx context.Context, tenantID string) ([]HSMObject, hsm.Identity, error) {
+	if s.hsm == nil {
+		return nil, hsm.Identity{}, s.refuseHSM(ctx, tenantID, "", "hsm.objects", http.StatusServiceUnavailable, "hsm_unavailable", "the HSM connector is not enabled on this platform")
+	}
+	objs, id, err := s.hsm.Objects(ctx, tenantID)
+	if err != nil {
+		return nil, id, s.hsmFailure(ctx, tenantID, "", "hsm.objects", err)
+	}
+	out := make([]HSMObject, 0, len(objs))
+	prefix := hsm.TenantPrefix(tenantID)
+	for _, o := range objs {
+		item := HSMObject{ObjectInfo: o}
+		if o.Managed {
+			rest := strings.TrimPrefix(o.Label, prefix)
+			switch {
+			case o.Label == hsm.TenantKeyLabel(tenantID):
+				item.Role = "tenant_key"
+			case strings.HasPrefix(rest, "key:"):
+				parts := strings.Split(strings.TrimPrefix(rest, "key:"), ":v")
+				if len(parts) == 2 {
+					item.Role, item.KeyID = "key", parts[0]
+					_, _ = fmt.Sscanf(parts[1], "%d", &item.Version)
+				}
+			}
+		}
+		out = append(out, item)
+	}
+	return out, id, nil
+}
+
 // HTTP ---------------------------------------------------------------------
 
 // hsmRouter serves the tenant's HSM switches and status through the kernel;
@@ -402,6 +552,8 @@ func (h *Handler) hsmRouter(audit route.Emitter) *route.Router {
 	r := route.New("key", audit, nil)
 	r.Handle("GET /hsm/settings", route.Spec{Action: "hsm_status_read", Permission: "key.hsm.read", Resource: "hsm"}, h.getHSM)
 	r.Handle("PUT /hsm/settings", route.Spec{Action: "hsm_settings_update", Permission: "key.hsm.write", Resource: "hsm", Severity: "warning"}, h.putHSM)
+	r.Handle("GET /hsm/objects", route.Spec{Action: "hsm_objects_listed", Permission: "key.hsm.read", Resource: "hsm"}, h.listHSMObjects)
+	r.Handle("GET /keys/{id}/hsm", route.Spec{Action: "hsm_key_inspected", Permission: "key.hsm.read", Resource: "key", TargetParam: "id"}, h.inspectHSMKey)
 	return r
 }
 
@@ -438,6 +590,42 @@ func (h *Handler) putHSM(c *route.Call) {
 		return
 	}
 	c.JSON(http.StatusOK, map[string]any{"settings": out})
+}
+
+func (h *Handler) listHSMObjects(c *route.Call) {
+	objs, id, err := h.svc.ListHSMObjects(c.R.Context(), c.Tenant)
+	var refused *hsmRefusal
+	switch {
+	case errors.As(err, &refused):
+		c.Refuse(refused.Status, refused.Reason, refused.Error())
+		return
+	case err != nil:
+		c.Error(http.StatusBadGateway, "hsm_objects_failed", err.Error())
+		return
+	}
+	c.Detail("objects", len(objs))
+	c.JSON(http.StatusOK, map[string]any{"objects": objs, "hsm": id})
+}
+
+func (h *Handler) inspectHSMKey(c *route.Call) {
+	out, err := h.svc.InspectHSMKey(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	var refused *hsmRefusal
+	switch {
+	case errors.As(err, &refused):
+		c.Refuse(refused.Status, refused.Reason, refused.Error())
+		return
+	case errors.Is(err, errNotHSMKey):
+		c.Error(http.StatusConflict, "not_hsm_key", err.Error())
+		return
+	case errors.Is(err, errStoreNotFound):
+		c.Error(http.StatusNotFound, "not_found", err.Error())
+		return
+	case err != nil:
+		c.Error(http.StatusBadRequest, "hsm_inspect_failed", err.Error())
+		return
+	}
+	c.Detail("same_device", out.SameDevice)
+	c.JSON(http.StatusOK, map[string]any{"check": out})
 }
 
 // writeHSMError answers an HSM refusal with its own status and reason.

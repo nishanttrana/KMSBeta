@@ -109,9 +109,56 @@ var (
 
 // GenerateResult is a key generated in the HSM.
 type GenerateResult struct {
-	Label     string `json:"label"`
-	PublicKey []byte `json:"public_key,omitempty"` // PKIX DER, asymmetric only
-	KCV       []byte `json:"kcv,omitempty"`        // AES: first 3 bytes of E(K, 0^128), computed in the HSM
+	Label     string   `json:"label"`
+	PublicKey []byte   `json:"public_key,omitempty"` // PKIX DER, asymmetric only
+	KCV       []byte   `json:"kcv,omitempty"`        // AES: first 3 bytes of E(K, 0^128), computed in the HSM
+	HSM       Identity `json:"hsm"`                  // the token the key was generated on
+}
+
+// Identity names the HSM token as its library reports it. A tenant has one
+// HSM profile; keycore records this on each HSM key so a key can always be
+// traced to the device that holds it.
+type Identity struct {
+	Manufacturer string `json:"manufacturer,omitempty"`
+	Model        string `json:"model,omitempty"`
+	SerialNumber string `json:"serial_number,omitempty"`
+	TokenLabel   string `json:"token_label,omitempty"`
+}
+
+// ObjectInfo is what the HSM reports about one object. Boolean attributes
+// the library doesn't report are nil.
+type ObjectInfo struct {
+	Label            string    `json:"label"`
+	IDHex            string    `json:"id_hex,omitempty"`
+	Class            string    `json:"class"` // secret_key, private_key, public_key, certificate, data, other
+	KeyType          string    `json:"key_type,omitempty"`
+	SizeBits         int       `json:"size_bits,omitempty"`
+	Curve            string    `json:"curve,omitempty"`
+	Token            *bool     `json:"token,omitempty"`
+	Private          *bool     `json:"private,omitempty"`
+	Sensitive        *bool     `json:"sensitive,omitempty"`
+	Extractable      *bool     `json:"extractable,omitempty"`
+	AlwaysSensitive  *bool     `json:"always_sensitive,omitempty"`
+	NeverExtractable *bool     `json:"never_extractable,omitempty"`
+	Local            *bool     `json:"local,omitempty"` // generated on the token
+	Encrypt          *bool     `json:"encrypt,omitempty"`
+	Decrypt          *bool     `json:"decrypt,omitempty"`
+	Sign             *bool     `json:"sign,omitempty"`
+	Verify           *bool     `json:"verify,omitempty"`
+	Wrap             *bool     `json:"wrap,omitempty"`
+	Unwrap           *bool     `json:"unwrap,omitempty"`
+	Managed          bool      `json:"managed"` // created for this tenant through the KMS
+	Certificate      *CertInfo `json:"certificate,omitempty"`
+}
+
+// CertInfo describes a certificate object stored in the HSM.
+type CertInfo struct {
+	Subject   string `json:"subject"`
+	Issuer    string `json:"issuer"`
+	Serial    string `json:"serial"`
+	NotBefore string `json:"not_before"`
+	NotAfter  string `json:"not_after"`
+	SHA256    string `json:"sha256"`
 }
 
 // Status is what the connector reports about a tenant's HSM.
@@ -209,15 +256,16 @@ func (c *Client) call(ctx context.Context, method, path string, in, out interfac
 // Generate creates a non-extractable key in tenant's HSM.
 func (c *Client) Generate(ctx context.Context, tenant, label, algorithm string) (GenerateResult, error) {
 	var out struct {
-		Label     string `json:"label"`
-		PublicKey string `json:"public_key_b64"`
-		KCV       string `json:"kcv_b64"`
+		Label     string   `json:"label"`
+		PublicKey string   `json:"public_key_b64"`
+		KCV       string   `json:"kcv_b64"`
+		HSM       Identity `json:"hsm"`
 	}
 	err := c.call(ctx, http.MethodPost, "/hsm/keys", map[string]string{"tenant_id": tenant, "label": label, "algorithm": algorithm}, &out)
 	if err != nil {
 		return GenerateResult{}, err
 	}
-	res := GenerateResult{Label: out.Label}
+	res := GenerateResult{Label: out.Label, HSM: out.HSM}
 	if res.PublicKey, err = unb64(out.PublicKey); err != nil {
 		return GenerateResult{}, err
 	}
@@ -298,6 +346,29 @@ func (c *Client) Verify(ctx context.Context, tenant, label, hash string, digest,
 // Destroy deletes every object with label from tenant's HSM.
 func (c *Client) Destroy(ctx context.Context, tenant, label string) error {
 	return c.call(ctx, http.MethodPost, "/hsm/keys/destroy", map[string]string{"tenant_id": tenant, "label": label}, nil)
+}
+
+// Inspect reads the attributes of every object labelled label (a key pair
+// is two objects) back from the HSM.
+func (c *Client) Inspect(ctx context.Context, tenant, label string) ([]ObjectInfo, Identity, error) {
+	var out struct {
+		Objects []ObjectInfo `json:"objects"`
+		HSM     Identity     `json:"hsm"`
+	}
+	err := c.call(ctx, http.MethodPost, "/hsm/keys/inspect", map[string]string{"tenant_id": tenant, "label": label}, &out)
+	return out.Objects, out.HSM, err
+}
+
+// Objects lists the keys and certificates the tenant's HSM login can see:
+// the tenant's own KMS objects and objects the KMS didn't create. Other
+// tenants' KMS objects are left out.
+func (c *Client) Objects(ctx context.Context, tenant string) ([]ObjectInfo, Identity, error) {
+	var out struct {
+		Objects []ObjectInfo `json:"objects"`
+		HSM     Identity     `json:"hsm"`
+	}
+	err := c.call(ctx, http.MethodGet, "/hsm/objects?tenant_id="+tenant, nil, &out)
+	return out.Objects, out.HSM, err
 }
 
 // Status reports tenant's HSM connection.

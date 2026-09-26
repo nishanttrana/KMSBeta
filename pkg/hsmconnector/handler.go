@@ -46,6 +46,8 @@ func NewHandler(configs ConfigSource, p11 *Provider, audit route.Emitter, logger
 	r.Handle("POST /hsm/sign", route.Spec{Action: "sign", Permission: "hsm.key.use", Resource: "hsm_key"}, h.sign)
 	r.Handle("POST /hsm/verify", route.Spec{Action: "verify", Permission: "hsm.key.use", Resource: "hsm_key"}, h.verify)
 	r.Handle("POST /hsm/keys/destroy", route.Spec{Action: "key_destroyed", Permission: "hsm.key.delete", Resource: "hsm_key", Severity: "warning"}, h.destroy)
+	r.Handle("POST /hsm/keys/inspect", route.Spec{Action: "key_inspected", Permission: "hsm.key.read", Resource: "hsm_key"}, h.inspect)
+	r.Handle("GET /hsm/objects", route.Spec{Action: "objects_listed", Permission: "hsm.read", Resource: "hsm"}, h.objects)
 	r.Handle("GET /hsm/status", route.Spec{Action: "status_read", Permission: "hsm.read", Resource: "hsm"}, h.status)
 	r.Handle("GET /healthz", route.Spec{Action: "health", Public: true, Tenancy: route.PlatformScoped}, func(c *route.Call) {
 		c.JSON(http.StatusOK, map[string]interface{}{"status": "ok"})
@@ -167,9 +169,12 @@ func (h *Handler) generate(c *route.Call) {
 		h.fail(c, err)
 		return
 	}
+	id := h.identity(c)
+	c.Detail("hsm_serial", id.SerialNumber)
+	c.Detail("hsm_token", id.TokenLabel)
 	c.JSON(http.StatusCreated, map[string]interface{}{
 		"label": res.Label, "public_key_b64": base64.StdEncoding.EncodeToString(res.PublicKey),
-		"kcv_b64": base64.StdEncoding.EncodeToString(res.KCV),
+		"kcv_b64": base64.StdEncoding.EncodeToString(res.KCV), "hsm": id,
 	})
 }
 
@@ -297,6 +302,58 @@ func (h *Handler) destroy(c *route.Call) {
 	}
 	c.Detail("objects_destroyed", n)
 	c.JSON(http.StatusOK, map[string]interface{}{"destroyed": n})
+}
+
+// identity names the token the tenant's profile points at.
+func (h *Handler) identity(c *route.Call) hsm.Identity {
+	cfg, err := h.configs.Load(c.R.Context(), c.Tenant)
+	if err != nil {
+		return hsm.Identity{}
+	}
+	return h.p11.identity(cfg)
+}
+
+// inspect reads a key's attributes back from the HSM: proof it was
+// generated there (CKA_LOCAL), is sensitive and was never extractable.
+func (h *Handler) inspect(c *route.Call) {
+	in, ctx, sh, release, ok := h.begin(c, keyManager, true)
+	if !ok {
+		return
+	}
+	defer release()
+	objs, err := inspect(ctx, sh, in.Label)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	c.Detail("objects", len(objs))
+	c.JSON(http.StatusOK, map[string]interface{}{"objects": objs, "hsm": h.identity(c)})
+}
+
+// objects lists the keys and certificates in the tenant's partition.
+func (h *Handler) objects(c *route.Call) {
+	if !callerIs(c, keyManager) {
+		return
+	}
+	ctx, sh, release, ok := h.open(c)
+	if !ok {
+		return
+	}
+	defer release()
+	objs, truncated, err := listObjects(ctx, sh, c.Tenant)
+	if err != nil {
+		h.fail(c, err)
+		return
+	}
+	managed := 0
+	for _, o := range objs {
+		if o.Managed {
+			managed++
+		}
+	}
+	c.Detail("objects", len(objs))
+	c.Detail("managed", managed)
+	c.JSON(http.StatusOK, map[string]interface{}{"objects": objs, "truncated": truncated, "hsm": h.identity(c)})
 }
 
 func (h *Handler) status(c *route.Call) {

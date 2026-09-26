@@ -291,3 +291,93 @@ func TestHSMRoutesRefusalsAudited(t *testing.T) {
 	rec := &routetest.Recorder{}
 	routetest.RefusalsAudited(t, h.hsmRouter(rec), rec)
 }
+
+// Each HSM key records the device it was generated on; the HSM confirms its
+// objects (label, generated on the token, never extractable); the partition
+// listing links them back to the key; a missing object is reported against
+// the recorded device.
+func TestHSMKeyProvenance(t *testing.T) {
+	svc, rec, client := newHSMService(t, "t3")
+	ctx := adminCtx()
+	if _, err := svc.UpdateHSMSettings(ctx, HSMSettings{TenantID: "t3", HSMKeysEnabled: true, TenantKeyEnabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	key, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t3", Name: "prov", Algorithm: "ECDSA-P256", Purpose: "sign", Owner: "ops", HSM: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if key.Labels[labelHSMToken] != "vecta-test" || key.Labels[labelHSMSerial] == "" || key.Labels[labelHSMManufacturer] == "" {
+		t.Fatalf("HSM not recorded on the key: %v", key.Labels)
+	}
+	check, err := svc.InspectHSMKey(ctx, "t3", key.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !check.SameDevice || len(check.Versions) != 1 || len(check.Versions[0].Objects) != 2 || check.Versions[0].Label != hsm.KeyLabel("t3", key.ID, 1) {
+		t.Fatalf("inspection: %+v", check)
+	}
+	for _, o := range check.Versions[0].Objects {
+		if o.Label != check.Versions[0].Label || o.Local == nil || !*o.Local {
+			t.Fatalf("object not generated on the token: %+v", o)
+		}
+		if o.Class == "private_key" && (o.NeverExtractable == nil || !*o.NeverExtractable || o.Extractable == nil || *o.Extractable) {
+			t.Fatalf("private key extractable: %+v", o)
+		}
+	}
+	// A key under the tenant key reports the tenant key's object.
+	soft, err := svc.CreateKey(ctx, CreateKeyRequest{TenantID: "t3", Name: "wrapped", Algorithm: "AES-256", Purpose: "encrypt", Owner: "ops"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c, err := svc.InspectHSMKey(ctx, "t3", soft.ID); err != nil || c.Versions[0].Label != hsm.TenantKeyLabel("t3") || c.Versions[0].Protection != protectionTenantHSM {
+		t.Fatalf("tenant-key inspection: %v %+v", err, c)
+	}
+
+	objs, id, err := svc.ListHSMObjects(ctx, "t3")
+	if err != nil || id.TokenLabel != "vecta-test" {
+		t.Fatalf("list: %v %+v", err, id)
+	}
+	roles := map[string]int{}
+	for _, o := range objs {
+		if o.KeyID == key.ID && o.Version == 1 {
+			roles["key"]++
+		}
+		if o.Role == "tenant_key" {
+			roles["tenant_key"]++
+		}
+	}
+	if roles["key"] != 2 || roles["tenant_key"] != 1 {
+		t.Fatalf("listing didn't link objects to the KMS: %v", roles)
+	}
+
+	// X.509-style signing of a digest the caller computed.
+	digest := sha256.Sum256([]byte("tbs certificate"))
+	sig, err := svc.Sign(ctx, key.ID, SignRequest{TenantID: "t3", DataB64: b64(digest[:]), Algorithm: "SHA-256", Prehashed: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ver, _ := svc.store.GetVersion(context.Background(), "t3", key.ID, 1)
+	pub, _ := x509.ParsePKIXPublicKey(ver.PublicKey)
+	raw, _ := base64.StdEncoding.DecodeString(sig.SignatureB64)
+	if !ecdsa.VerifyASN1(pub.(*ecdsa.PublicKey), digest[:], raw) {
+		t.Fatal("prehashed HSM signature doesn't verify")
+	}
+	if _, err := svc.Sign(ctx, key.ID, SignRequest{TenantID: "t3", DataB64: b64(digest[:16]), Algorithm: "SHA-256", Prehashed: true}); err == nil {
+		t.Fatal("a short digest was signed")
+	}
+	if _, err := svc.Sign(ctx, soft.ID, SignRequest{TenantID: "t3", DataB64: b64(digest[:]), Algorithm: "SHA-256", Prehashed: true}); err == nil {
+		t.Fatal("prehashed signing on a software key")
+	}
+
+	// The object disappears from the HSM: the refusal names the device.
+	if err := client.Destroy(context.Background(), "t3", hsm.KeyLabel("t3", key.ID, 1)); err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.Sign(ctx, key.ID, SignRequest{TenantID: "t3", DataB64: b64([]byte("x"))})
+	if hsmRefusalReason(err) != "hsm_key_not_found" || !strings.Contains(err.Error(), key.Labels[labelHSMSerial]) {
+		t.Fatalf("missing object: %v", err)
+	}
+	if d := refusalDetails(t, rec, "audit.key.hsm_refused"); d["reason"] != "hsm_key_not_found" {
+		t.Fatalf("refusal: %+v", d)
+	}
+}

@@ -286,6 +286,9 @@ type SignRequest struct {
 	TenantID  string `json:"tenant_id"`
 	DataB64   string `json:"data"`
 	Algorithm string `json:"algorithm"`
+	// Prehashed: data is already the digest, hashed with Algorithm
+	// (SHA-256/384/512), as X.509 and other signers hand it over. HSM keys only.
+	Prehashed bool   `json:"prehashed"`
 	Operation string `json:"-"`
 }
 
@@ -2833,7 +2836,7 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 			}
 			iv, ciphertext, err := s.hsm.Encrypt(ctx, req.TenantID, kv.HSMLabel, plain, aad)
 			if err != nil {
-				return CryptoTxResult{}, s.hsmFailure(ctx, req.TenantID, keyID, operation, err)
+				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
 			}
 			return CryptoTxResult{Payload: ciphertext, IV: iv, StoreIV: true, ReferenceID: req.ReferenceID}, nil
 		}
@@ -2953,11 +2956,11 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 			return CryptoResponse{}, errors.New("aad must be base64")
 		}
 	}
-	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(_ Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		if kv.Protection == protectionHSMResident {
 			plain, err := s.hsm.Decrypt(ctx, req.TenantID, kv.HSMLabel, iv, cipherRaw, aad)
 			if err != nil {
-				return CryptoTxResult{}, s.hsmFailure(ctx, req.TenantID, keyID, operation, err)
+				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
 			}
 			return CryptoTxResult{Payload: plain, IV: iv}, nil
 		}
@@ -3035,14 +3038,20 @@ func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (Cryp
 	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
 		if kv.Protection == protectionHSMResident {
 			digest, hash, err := hsmDigest(k, req.Algorithm, data)
+			if req.Prehashed {
+				digest, hash, err = prehashedDigest(req.Algorithm, data)
+			}
 			if err != nil {
 				return CryptoTxResult{}, err
 			}
 			signature, err := s.hsm.Sign(ctx, req.TenantID, kv.HSMLabel, hash, digest)
 			if err != nil {
-				return CryptoTxResult{}, s.hsmFailure(ctx, req.TenantID, keyID, operation, err)
+				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
 			}
 			return CryptoTxResult{Payload: signature}, nil
+		}
+		if req.Prehashed {
+			return CryptoTxResult{}, errors.New("prehashed signing is supported for HSM keys only")
 		}
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
@@ -3132,7 +3141,7 @@ func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (
 			}
 			ok, err := s.hsm.Verify(ctx, req.TenantID, kv.HSMLabel, hash, digest, sig)
 			if err != nil {
-				return CryptoTxResult{}, s.hsmFailure(ctx, req.TenantID, keyID, operation, err)
+				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
 			}
 			verified, version = ok, kv.Version
 			return CryptoTxResult{}, nil

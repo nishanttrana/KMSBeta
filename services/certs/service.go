@@ -172,14 +172,33 @@ func (s *Service) CreateCA(ctx context.Context, req CreateCARequest) (CA, error)
 		req.KeyRef = ref
 	}
 
-	signer, signerPEM, err := generateSigningKey(req.Algorithm)
-	if err != nil {
-		return CA{}, err
-	}
-	defer zeroizeString(&signerPEM)
-	encSigner, err := s.encryptSigner([]byte(signerPEM))
-	if err != nil {
-		return CA{}, err
+	var (
+		signer    crypto.Signer
+		encSigner EncryptedSigner
+	)
+	if req.KeyBackend == "hsm" {
+		// The CA key is generated in the tenant's HSM and never leaves it
+		// (hsm_ca.go); certs keeps no private key for it.
+		hsmKey, err := s.newHSMCAKey(ctx, req.TenantID, req.Algorithm, req.Name+"-ca")
+		if err != nil {
+			return CA{}, err
+		}
+		signer, req.KeyRef = hsmKey, hsmKey.keyID
+		// No private key is stored: empty (not NULL) signer columns.
+		encSigner = EncryptedSigner{KeyVersion: signerVersionHSM, WrappedDEK: []byte{}, WrappedDEKIV: []byte{},
+			Ciphertext: []byte{}, DataIV: []byte{}}
+	} else {
+		var signerPEM string
+		var err error
+		signer, signerPEM, err = generateSigningKey(req.Algorithm)
+		if err != nil {
+			return CA{}, err
+		}
+		defer zeroizeString(&signerPEM)
+		encSigner, err = s.encryptSigner([]byte(signerPEM))
+		if err != nil {
+			return CA{}, err
+		}
 	}
 
 	subject := parseSubject(req.Subject, req.Name)
@@ -1060,12 +1079,12 @@ func (s *Service) GenerateCRL(ctx context.Context, tenantID string, caID string)
 		NextUpdate:          now.Add(24 * time.Hour),
 	}, issuerCert, issuerSigner)
 	if err != nil {
-		blob, _ := json.Marshal(map[string]interface{}{
-			"ca_id":       caID,
-			"generated":   now.Format(time.RFC3339Nano),
-			"revocations": len(entries),
+		// Never publish something that isn't a signed CRL (this used to wrap
+		// a JSON note in "X509 CRL" PEM headers).
+		_ = s.publishAudit(ctx, "audit.cert.crl_generation_failed", tenantID, map[string]interface{}{
+			"ca_id": caID, "reason": err.Error(), "result": "failure", "severity": "critical",
 		})
-		crlDER = blob
+		return "", time.Time{}, fmt.Errorf("CRL signing failed: %w", err)
 	}
 	crlPEM := string(pem.EncodeToMemory(&pem.Block{Type: "X509 CRL", Bytes: crlDER}))
 	_ = s.publishAudit(ctx, "audit.cert.crl_generated", tenantID, map[string]interface{}{
@@ -2491,6 +2510,9 @@ func (s *Service) ensureDefaultProfiles(ctx context.Context, tenantID string) er
 }
 
 func (s *Service) loadCASigner(ca CA) (crypto.Signer, error) {
+	if ca.KeyBackend == "hsm" && ca.SignerKeyVersion == signerVersionHSM {
+		return s.hsmCASigner(ca)
+	}
 	raw, err := s.decryptSigner(ca)
 	if err != nil {
 		return nil, err
@@ -2870,7 +2892,8 @@ func writeFileAtomically(path string, data []byte, mode os.FileMode) error {
 
 func (s *Service) signWithKeyCoreIfConfigured(ctx context.Context, tenantID string, keyBackend string, keyRef string, payload []byte) ([]byte, error) {
 	backend := normalizeKeyBackend(keyBackend)
-	if backend != "keycore" && backend != "hsm" {
+	if backend != "keycore" {
+		// An HSM CA's signature is the certificate itself (hsm_ca.go).
 		return nil, nil
 	}
 	if strings.TrimSpace(keyRef) == "" {
@@ -3252,8 +3275,12 @@ func normalizeAlgorithm(v string) string {
 
 func normalizeKeyBackend(v string) string {
 	switch strings.ToLower(strings.TrimSpace(v)) {
-	case "keycore", "hsm":
+	case "keycore":
 		return "keycore"
+	case "hsm":
+		// The CA key is an HSM-resident keycore key (hsm_ca.go). This used
+		// to be folded into "keycore", which signed with a software key.
+		return "hsm"
 	default:
 		return "software"
 	}

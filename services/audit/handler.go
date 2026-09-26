@@ -211,15 +211,16 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := EventQuery{
-		Action:        strings.TrimSpace(r.URL.Query().Get("action")),
-		ActorID:       strings.TrimSpace(r.URL.Query().Get("actor_id")),
-		Result:        strings.TrimSpace(r.URL.Query().Get("result")),
-		TargetID:      strings.TrimSpace(r.URL.Query().Get("target_id")),
-		SessionID:     strings.TrimSpace(r.URL.Query().Get("session_id")),
-		CorrelationID: strings.TrimSpace(r.URL.Query().Get("correlation_id")),
-		RiskMin:       atoi(r.URL.Query().Get("risk_min")),
-		Limit:         atoi(r.URL.Query().Get("limit")),
-		Offset:        atoi(r.URL.Query().Get("offset")),
+		Action:         strings.TrimSpace(r.URL.Query().Get("action")),
+		ActionPrefixes: r.URL.Query()["action_prefix"],
+		ActorID:        strings.TrimSpace(r.URL.Query().Get("actor_id")),
+		Result:         strings.TrimSpace(r.URL.Query().Get("result")),
+		TargetID:       strings.TrimSpace(r.URL.Query().Get("target_id")),
+		SessionID:      strings.TrimSpace(r.URL.Query().Get("session_id")),
+		CorrelationID:  strings.TrimSpace(r.URL.Query().Get("correlation_id")),
+		RiskMin:        atoi(r.URL.Query().Get("risk_min")),
+		Limit:          atoi(r.URL.Query().Get("limit")),
+		Offset:         atoi(r.URL.Query().Get("offset")),
 	}
 	q.From = parseTS(r.URL.Query().Get("from"))
 	q.To = parseTS(r.URL.Query().Get("to"))

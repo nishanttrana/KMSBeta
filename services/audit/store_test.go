@@ -211,3 +211,30 @@ func TestNormalizeSourceIPInvalidReturnsEmpty(t *testing.T) {
 		t.Fatalf("expected empty source ip, got %q", got)
 	}
 }
+
+// HSM activity: events are selected by action prefix, with "_" taken
+// literally (audit.key.hsm_ must not match audit.key.hsmx...).
+func TestQueryEventsByActionPrefix(t *testing.T) {
+	s := newAuditStore(t)
+	ctx := context.Background()
+	for _, a := range []string{"audit.hsm.encrypt", "audit.hsm.key_generated", "audit.key.hsm_refused", "audit.key.hsmx_other", "audit.key.create"} {
+		if _, _, err := s.PersistEventAndAlert(ctx, AuditEvent{TenantID: "t-hsm", Timestamp: time.Now().UTC(), Service: "hsm",
+			Action: a, ActorID: "kms-keycore", ActorType: "service", Result: "success"}, Alert{}, 60, 5, 10*time.Minute); err != nil {
+			t.Fatal(err)
+		}
+	}
+	events, err := s.QueryEvents(ctx, "t-hsm", EventQuery{Limit: 50, ActionPrefixes: []string{"audit.hsm.", "audit.key.hsm_"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, e := range events {
+		got[e.Action] = true
+	}
+	if len(events) != 3 || !got["audit.hsm.encrypt"] || !got["audit.hsm.key_generated"] || !got["audit.key.hsm_refused"] {
+		t.Fatalf("prefix query returned %v", got)
+	}
+	if all, _ := s.QueryEvents(ctx, "t-hsm", EventQuery{Limit: 50}); len(all) != 5 {
+		t.Fatalf("no prefix: %d events", len(all))
+	}
+}
