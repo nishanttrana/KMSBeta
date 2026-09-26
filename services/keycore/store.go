@@ -19,6 +19,8 @@ var (
 )
 
 type Store interface {
+	GetHSMSettings(ctx context.Context, tenantID string) (HSMSettings, error)
+	UpsertHSMSettings(ctx context.Context, in HSMSettings) error
 	// CountKeys counts keys across all tenants (cluster join safety check).
 	CountKeys(ctx context.Context) (int, error)
 	CreateKeyWithVersion(ctx context.Context, key Key, ver KeyVersion) error
@@ -300,6 +302,11 @@ type KeyVersion struct {
 	RotationReason    string    `json:"rotation_reason,omitempty"`
 	Status            string    `json:"status"`
 	CreatedAt         time.Time `json:"created_at"`
+	// Protection is how the material is protected: "mek" (keycore's master
+	// key), "tenant_hsm" (data key encrypted by the tenant's HSM key
+	// HSMLabel) or "hsm_resident" (the key is the HSM object HSMLabel).
+	Protection string `json:"protection,omitempty"`
+	HSMLabel   string `json:"hsm_label,omitempty"`
 }
 
 type IVLogRecord struct {
@@ -354,9 +361,9 @@ INSERT INTO keys (
 		_, err = tx.ExecContext(ctx, `
 INSERT INTO key_versions (
     id, tenant_id, key_id, version, encrypted_material, material_iv, wrapped_dek, public_key, kcv,
-    rotated_from, rotation_reason, status, created_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP)
-`, ver.ID, ver.TenantID, ver.KeyID, ver.Version, ver.EncryptedMaterial, ver.MaterialIV, ver.WrappedDEK, nullableBytes(ver.PublicKey), ver.KCV, nullableInt(ver.RotatedFrom), nullable(ver.RotationReason), ver.Status)
+    rotated_from, rotation_reason, status, created_at, protection, hsm_label
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP,$13,$14)
+`, ver.ID, ver.TenantID, ver.KeyID, ver.Version, ver.EncryptedMaterial, ver.MaterialIV, ver.WrappedDEK, nullableBytes(ver.PublicKey), ver.KCV, nullableInt(ver.RotatedFrom), nullable(ver.RotationReason), ver.Status, protectionOf(ver), ver.HSMLabel)
 		return err
 	})
 }
@@ -806,7 +813,8 @@ FROM keys WHERE tenant_id=$1 AND id=$2
 func (s *SQLStore) ListVersions(ctx context.Context, tenantID string, keyID string) ([]KeyVersion, error) {
 	rows, err := s.db.ROSQL().QueryContext(ctx, `
 SELECT id, tenant_id, key_id, version, encrypted_material, material_iv, wrapped_dek, public_key, kcv,
-       COALESCE(rotated_from,0), COALESCE(rotation_reason,''), status, created_at
+       COALESCE(rotated_from,0), COALESCE(rotation_reason,''), status, created_at,
+       COALESCE(protection,'mek'), COALESCE(hsm_label,'')
 FROM key_versions
 WHERE tenant_id=$1 AND key_id=$2
 ORDER BY version DESC
@@ -819,7 +827,7 @@ ORDER BY version DESC
 	for rows.Next() {
 		var v KeyVersion
 		if err := rows.Scan(&v.ID, &v.TenantID, &v.KeyID, &v.Version, &v.EncryptedMaterial, &v.MaterialIV, &v.WrappedDEK, &v.PublicKey, &v.KCV,
-			&v.RotatedFrom, &v.RotationReason, &v.Status, &v.CreatedAt); err != nil {
+			&v.RotatedFrom, &v.RotationReason, &v.Status, &v.CreatedAt, &v.Protection, &v.HSMLabel); err != nil {
 			return nil, err
 		}
 		out = append(out, v)
@@ -831,11 +839,12 @@ func (s *SQLStore) GetVersion(ctx context.Context, tenantID string, keyID string
 	var v KeyVersion
 	err := s.db.ROSQL().QueryRowContext(ctx, `
 SELECT id, tenant_id, key_id, version, encrypted_material, material_iv, wrapped_dek, public_key, kcv,
-       COALESCE(rotated_from,0), COALESCE(rotation_reason,''), status, created_at
+       COALESCE(rotated_from,0), COALESCE(rotation_reason,''), status, created_at,
+       COALESCE(protection,'mek'), COALESCE(hsm_label,'')
 FROM key_versions
 WHERE tenant_id=$1 AND key_id=$2 AND version=$3
 `, tenantID, keyID, version).Scan(&v.ID, &v.TenantID, &v.KeyID, &v.Version, &v.EncryptedMaterial, &v.MaterialIV, &v.WrappedDEK, &v.PublicKey, &v.KCV,
-		&v.RotatedFrom, &v.RotationReason, &v.Status, &v.CreatedAt)
+		&v.RotatedFrom, &v.RotationReason, &v.Status, &v.CreatedAt, &v.Protection, &v.HSMLabel)
 	if errors.Is(err, sql.ErrNoRows) {
 		return KeyVersion{}, errStoreNotFound
 	}
@@ -876,9 +885,9 @@ WHERE tenant_id=$1 AND key_id=$2 AND version=$3
 		_, err := tx.ExecContext(ctx, `
 INSERT INTO key_versions (
     id, tenant_id, key_id, version, encrypted_material, material_iv, wrapped_dek, public_key, kcv,
-    rotated_from, rotation_reason, status, created_at
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP)
-`, newVer.ID, tenantID, keyID, current+1, newVer.EncryptedMaterial, newVer.MaterialIV, newVer.WrappedDEK, nullableBytes(newVer.PublicKey), newVer.KCV, current, reason, "active")
+    rotated_from, rotation_reason, status, created_at, protection, hsm_label
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,CURRENT_TIMESTAMP,$13,$14)
+`, newVer.ID, tenantID, keyID, current+1, newVer.EncryptedMaterial, newVer.MaterialIV, newVer.WrappedDEK, nullableBytes(newVer.PublicKey), newVer.KCV, current, reason, "active", protectionOf(newVer), newVer.HSMLabel)
 		if err != nil {
 			return err
 		}
@@ -1013,11 +1022,12 @@ FROM keys WHERE tenant_id=$1 AND id=$2
 	var ver KeyVersion
 	err = tx.QueryRowContext(ctx, `
 SELECT id, tenant_id, key_id, version, encrypted_material, material_iv, wrapped_dek, public_key, kcv,
-       COALESCE(rotated_from,0), COALESCE(rotation_reason,''), status, created_at
+       COALESCE(rotated_from,0), COALESCE(rotation_reason,''), status, created_at,
+       COALESCE(protection,'mek'), COALESCE(hsm_label,'')
 FROM key_versions
 WHERE tenant_id=$1 AND key_id=$2 AND version=$3
 `, tenantID, keyID, key.CurrentVersion).Scan(&ver.ID, &ver.TenantID, &ver.KeyID, &ver.Version, &ver.EncryptedMaterial, &ver.MaterialIV, &ver.WrappedDEK, &ver.PublicKey, &ver.KCV,
-		&ver.RotatedFrom, &ver.RotationReason, &ver.Status, &ver.CreatedAt)
+		&ver.RotatedFrom, &ver.RotationReason, &ver.Status, &ver.CreatedAt, &ver.Protection, &ver.HSMLabel)
 	if errors.Is(err, sql.ErrNoRows) {
 		return CryptoTxResult{}, errStoreNotFound
 	}
@@ -1437,4 +1447,11 @@ func (s *SQLStore) CountKeys(ctx context.Context) (int, error) {
 	var n int
 	err := s.db.SQL().QueryRowContext(ctx, `SELECT COUNT(1) FROM keys`).Scan(&n)
 	return n, err
+}
+
+func protectionOf(v KeyVersion) string {
+	if v.Protection == "" {
+		return protectionMEK
+	}
+	return v.Protection
 }

@@ -6,6 +6,88 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
+### HSM: activity log, create alerts, provenance, partition view, HSM CAs
+- **HSM activity in the HSM tab.** Every HSM operation and refusal was
+  already audited (`audit.hsm.*` from the connector, `audit.key.hsm_*` from
+  keycore). The HSM tab now lists them, and the Audit Log's service filter
+  has "hsm". `GET /svc/audit/events` takes `action_prefix` (repeatable,
+  matched literally).
+- **Alerts when creating keys and CAs.** If the tenant has HSM keys on, the
+  create-key form says so, and **Create in HSM** starts checked for
+  algorithms the HSM supports (unsupported ones hide the box). The create-CA
+  form offers **Key storage: in the tenant's HSM** for ECDSA CAs. Importing
+  into the HSM stays refused.
+- **One HSM per tenant.** A tenant's HSM profile names one PKCS#11 slot; use
+  the vendor's HA or cluster behind that slot for redundancy. Each HSM key
+  now records the device that generated it (`hsm_serial`, `hsm_token`,
+  `hsm_model`, `hsm_manufacturer` labels and in `audit.key.create`). If the
+  profile later points at a device without the key, operations answer
+  `409 hsm_key_not_found` naming the recorded serial, not a generic error.
+  Rotating onto a different device emits `audit.key.hsm_device_changed`.
+- **Verify in HSM** (key details, `GET /svc/keycore/keys/{id}/hsm`) reads
+  the key back from the HSM: its label, and the HSM's own flags that it was
+  generated on the token (`CKA_LOCAL`), is sensitive and was never
+  extractable. Tests assert those attributes for AES, RSA and ECDSA keys.
+- **Show HSM partition** (Keys and Certificates tabs,
+  `GET /svc/keycore/hsm/objects`) lists what is in the tenant's partition,
+  including keys and certificates that were there before the KMS. Other
+  tenants' KMS objects are hidden. Read-only for now: existing objects can't
+  yet be adopted as KMS keys.
+- **CA keys in the HSM are real now.** The certs "HSM-backed" key backend
+  stored a software key like the default one. `key_backend: "hsm"` now
+  generates the CA key in the tenant's HSM through keycore (ECDSA
+  P-256/P-384), and certificates, CRLs and OCSP responses are signed there.
+  Keycore sign takes `prehashed: true` for HSM keys. CAs created as
+  "HSM-backed" before were stored as `keycore` and keep working as the
+  software keys they always were; the CA list now labels them "Software key,
+  keycore co-signed".
+- **No fake CRLs.** When CRL signing failed, certs published a JSON note
+  wrapped in `X509 CRL` PEM headers. It now fails and emits
+  `audit.cert.crl_generation_failed`.
+
+### HSM integration: real PKCS#11, per-tenant key and HSM-resident keys
+- **New `hsm-connector` service.** It loads the customer's own PKCS#11
+  library: Securosys Primus, Thales Luna, Entrust nShield, Utimaco, AWS
+  CloudHSM, or any PKCS#11 v2.40+ HSM. It is the only process that holds
+  the HSM PIN. Before this, the HSM tab only stored a profile and nothing
+  ever used the HSM. The compose entry pointed at an image that was never
+  built.
+- **HSM tab → KMS integration (per tenant):**
+  - **Test connection** shows what the connector really logged in to
+    (manufacturer, model, token, firmware).
+  - **Tenant key in HSM:** the tenant gets its own AES-256 key inside the
+    HSM, and every new key's material is encrypted by it. Existing keys keep
+    the KMS master key.
+  - **HSM keys:** the create-key form offers **Create in HSM**. The key is
+    generated in the HSM (AES-GCM, RSA-PSS, ECDSA P-256/P-384), never leaves
+    it, and its encrypt, decrypt, sign and verify run there. Export, wrap
+    and derive are refused (`409 hsm_operation_unsupported`). Rotation
+    creates a new HSM key, and destroy removes the objects from the HSM.
+- **Tenant isolation:** every HSM object is labelled `vecta:<tenant>:...`,
+  and the connector refuses other tenants' labels, even on a shared
+  partition. Only keycore and governance may use HSM keys. Libraries load
+  only from the provider workspace, and PIN variables must be named `*PIN*`.
+- **HSM-bound governance backups are now wrapped by the HSM**, under the
+  tenant key. `BACKUP_HSM_WRAP_SECRET` is gone (it was never passed to
+  governance in compose, so HSM-bound backups failed there). Migration 014
+  retires the secret-derived v2 packages.
+- **Removed "Vecta KMS HSM":** the menu entry is now "Securosys Primus HSM".
+  The unused `software-vault` "software HSM" service moved to the
+  KMSExtension repo (seeds), along with `SOFTWARE_VAULT_PASSPHRASE`.
+  `hsm_mode: software` now means no HSM. `hardware` starts `hsm-connector`
+  and `hsm-integration` (the library upload, which no deployment profile
+  used to start).
+- **Removed a dead "HSM-backed" checkbox** from the create-key form (it was
+  hard-wired to unchecked).
+- **Docs:** `docs/GETTING_STARTED.md` §4.6 listed environment variables and a
+  `vecta-kms hsm verify` command that don't exist, and it's rewritten. The
+  cloud examples no longer describe a "Vecta HSM".
+- **Tests** run against SoftHSM2, a real PKCS#11 library installed in CI.
+  Vendor hardware hasn't been tested from this repository; see
+  docs/SECURITY/HSM_INTEGRATION.md, "Not yet validated".
+- **New audit events:** `audit.hsm.*`, `audit.key.hsm_settings_updated`,
+  `hsm_refused`, `hsm_objects_destroyed`, `hsm_destroy_failed`.
+
 ### Security: governance system administration without a token
 - **Governance ran without verifying tokens.** It read its verification key
   only from `GOVERNANCE_*` / `KEYCORE_*` variables or a key file, never from

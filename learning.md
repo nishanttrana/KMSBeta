@@ -5,6 +5,54 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### A backend name is not a backend
+certs accepted `key_backend: "hsm"` and the dashboard showed "HSM-backed",
+but `normalizeKeyBackend` folded "hsm" into "keycore", which generated a
+software key like every other CA. When a CRL failed to sign, certs wrapped a
+JSON note in `X509 CRL` PEM headers and published it. Both looked like
+working features. Grep a feature's name down to the call that does the work
+before trusting a label, and a failure path must fail, not produce something
+shaped like success.
+
+### Don't query the store inside a crypto transaction
+Keycore's HSM failure handler looked the key up again (`GetKey`) to name
+its device in the error. It ran inside `runCryptoTx`, which holds the
+connection; with SQLite's single connection the test hung forever (on
+Postgres it would take a second connection per failing request). Use the
+`Key` the callback already has.
+
+### `_` is a wildcard in LIKE
+The audit `action_prefix` filter matches `audit.key.hsm_`. Unescaped,
+`_` matches any character, so `audit.key.hsmX...` would match too. Escape
+`\`, `%` and `_` and say `ESCAPE '\'` (Postgres and SQLite both honour it).
+
+### Proving a key was generated in the HSM
+The HSM itself says so: `CKA_LOCAL` is true only for keys generated on the
+token, and `CKA_NEVER_EXTRACTABLE`/`CKA_ALWAYS_SENSITIVE` show it never left
+in the clear. Read attributes one at a time: `C_GetAttributeValue` returns
+an error for the whole call when one attribute is invalid for the object or
+sensitive, and miekg/pkcs11 then returns none of them. Never ask for
+`CKA_VALUE`.
+
+### A settings page is not an integration
+The HSM tab let a tenant upload a PKCS#11 library, pick a slot and save a
+profile. That looked like HSM support, but no code ever opened the library.
+The compose entry for `hsm-connector` pointed at an image with no build.
+"HSM-bound" backups derived a key from an environment secret and only mixed
+the HSM's slot name into it. The menu even offered a "Vecta KMS HSM" that
+doesn't exist. The test for a security integration is whether one call goes
+through the vendor's library. Running the real protocol in tests (SoftHSM2
+is a real PKCS#11 implementation) is what makes that visible. A few traps
+from building it:
+- Vendor libraries are glibc builds, so they can't load into an Alpine or
+  static binary. That's why the connector is a separate cgo service.
+- A PKCS#11 token logs out when its last session closes, so keep one anchor
+  session per slot.
+- Vendors report a GCM tag failure differently: SoftHSM2 says
+  `CKR_GENERAL_ERROR`.
+- A distro's library path can be a symlink that leaves the allowed
+  directory, so resolve before you confine.
+
 ### An optional verifier is an open door, and a missing env var is enough to open it
 Governance treated a missing JWT key as "auth disabled" and let every
 system-administration call through. It also read the key from variable

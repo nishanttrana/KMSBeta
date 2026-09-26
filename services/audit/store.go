@@ -92,17 +92,20 @@ func (s *SQLStore) SetEventSigningKey(key []byte) {
 func (s *SQLStore) SetChainNode(f func(context.Context) string) { s.chainNode = f }
 
 type EventQuery struct {
-	Action        string
-	ActorID       string
-	Result        string
-	TargetID      string
-	SessionID     string
-	CorrelationID string
-	RiskMin       int
-	From          time.Time
-	To            time.Time
-	Limit         int
-	Offset        int
+	Action string
+	// ActionPrefixes match events whose action starts with any of them
+	// (for example "audit.hsm." and "audit.key.hsm_"); at most 5.
+	ActionPrefixes []string
+	ActorID        string
+	Result         string
+	TargetID       string
+	SessionID      string
+	CorrelationID  string
+	RiskMin        int
+	From           time.Time
+	To             time.Time
+	Limit          int
+	Offset         int
 }
 
 type AlertQuery struct {
@@ -291,6 +294,20 @@ func (s *SQLStore) QueryEvents(ctx context.Context, tenantID string, q EventQuer
 	if q.Limit <= 0 || q.Limit > 1000 {
 		q.Limit = 200
 	}
+	args := []interface{}{tenantID, q.Action, q.ActorID, q.Result, q.TargetID, q.SessionID, q.CorrelationID, q.RiskMin, nullableTime(q.From), nullableTime(q.To), q.Limit, q.Offset}
+	prefixClause := ""
+	var likes []string
+	for _, p := range q.ActionPrefixes {
+		p = strings.TrimSpace(p)
+		if p == "" || len(likes) == 5 {
+			continue
+		}
+		args = append(args, likePrefix(p))
+		likes = append(likes, fmt.Sprintf(`action LIKE $%d ESCAPE '\'`, len(args)))
+	}
+	if len(likes) > 0 {
+		prefixClause = "  AND (" + strings.Join(likes, " OR ") + ")"
+	}
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT id, tenant_id, sequence, chain_hash, previous_hash,
        COALESCE(hmac_sig,''), COALESCE(category_group,''),
@@ -310,9 +327,10 @@ WHERE tenant_id=$1
   AND ($8=0 OR risk_score >= $8)
   AND timestamp >= COALESCE($9, timestamp)
   AND timestamp <= COALESCE($10, timestamp)
+`+prefixClause+`
 ORDER BY timestamp DESC
 LIMIT $11 OFFSET $12
-`, tenantID, q.Action, q.ActorID, q.Result, q.TargetID, q.SessionID, q.CorrelationID, q.RiskMin, nullableTime(q.From), nullableTime(q.To), q.Limit, q.Offset)
+`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1028,4 +1046,11 @@ func parseTimeString(v string) time.Time {
 		}
 	}
 	return time.Time{}
+}
+
+// likePrefix escapes a prefix for LIKE ... ESCAPE '\' ("_" and "%" are
+// wildcards: audit.key.hsm_ must not match audit.key.hsmX).
+func likePrefix(p string) string {
+	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	return r.Replace(p) + "%"
 }

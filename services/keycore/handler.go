@@ -177,6 +177,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /keys/{id}/service-derive", h.handleServiceDerive)
 	// Kernel-routed (pkg/route): platform services' master-key system keys.
 	h.systemKeyRouter().MountOn(mux)
+	h.hsmRouter(kernelEmitter{h}).MountOn(mux)
 	// Cluster master-key transfer: cluster-manager service identity only.
 	mux.HandleFunc("POST /cluster/mek/join-key", h.handleClusterJoinKey)
 	mux.HandleFunc("POST /cluster/mek/export", h.handleClusterMEKExport)
@@ -359,6 +360,9 @@ func (h *Handler) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 	}
 	key, err := h.svc.CreateKey(r.Context(), req)
 	if err != nil {
+		if writeHSMError(w, err, reqID, req.TenantID) {
+			return
+		}
 		var denied policyDeniedError
 		if errors.As(err, &denied) {
 			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, req.TenantID)
@@ -679,6 +683,9 @@ func (h *Handler) handleRotateKey(w http.ResponseWriter, r *http.Request) {
 	_ = decodeJSON(r, &req)
 	ver, err := h.svc.RotateKey(r.Context(), tenantID, r.PathValue("id"), req.Reason, req.OldVersionAction)
 	if err != nil {
+		if writeHSMError(w, err, reqID, tenantID) {
+			return
+		}
 		var denied policyDeniedError
 		if errors.As(err, &denied) {
 			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, tenantID)
@@ -946,6 +953,9 @@ func (h *Handler) handleExportKey(w http.ResponseWriter, r *http.Request) {
 	}
 	result, err := h.svc.ExportCurrentVersionWrapped(r.Context(), tenantID, r.PathValue("id"), req.WrappingKeyID)
 	if err != nil {
+		if writeHSMError(w, err, reqID, tenantID) {
+			return
+		}
 		var denied policyDeniedError
 		if errors.As(err, &denied) {
 			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, tenantID)
@@ -1850,6 +1860,9 @@ func (h *Handler) handleEncryptWithOperation(w http.ResponseWriter, r *http.Requ
 	}
 	resp, err := h.svc.Encrypt(r.Context(), r.PathValue("id"), req)
 	if err != nil {
+		if writeHSMError(w, err, reqID, req.TenantID) {
+			return
+		}
 		var denied policyDeniedError
 		var fipsDenied fipsModeViolationError
 		switch {
@@ -1890,6 +1903,9 @@ func (h *Handler) handleDecryptWithOperation(w http.ResponseWriter, r *http.Requ
 	}
 	resp, err := h.svc.Decrypt(r.Context(), r.PathValue("id"), req)
 	if err != nil {
+		if writeHSMError(w, err, reqID, req.TenantID) {
+			return
+		}
 		var denied policyDeniedError
 		var fipsDenied fipsModeViolationError
 		if errors.As(err, &denied) {
@@ -1926,6 +1942,9 @@ func (h *Handler) handleSignWithOperation(w http.ResponseWriter, r *http.Request
 	}
 	resp, err := h.svc.Sign(r.Context(), r.PathValue("id"), req)
 	if err != nil {
+		if writeHSMError(w, err, reqID, req.TenantID) {
+			return
+		}
 		var denied policyDeniedError
 		var fipsDenied fipsModeViolationError
 		if errors.As(err, &denied) {
@@ -1959,6 +1978,9 @@ func (h *Handler) handleVerify(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, err := h.svc.Verify(r.Context(), r.PathValue("id"), req)
 	if err != nil {
+		if writeHSMError(w, err, reqID, req.TenantID) {
+			return
+		}
 		var denied policyDeniedError
 		var fipsDenied fipsModeViolationError
 		if errors.As(err, &denied) {
@@ -2000,6 +2022,9 @@ func (h *Handler) handleDerive(w http.ResponseWriter, r *http.Request) {
 	}
 	resp, err := h.svc.Derive(r.Context(), r.PathValue("id"), req)
 	if err != nil {
+		if writeHSMError(w, err, reqID, req.TenantID) {
+			return
+		}
 		var denied policyDeniedError
 		var fipsDenied fipsModeViolationError
 		switch {

@@ -1,4 +1,4 @@
-.PHONY: build test test-fips-modes lint conformance proto-gen license-check security-license security-cve security-sidechannel security-sbom security-audit packer-init packer-build packer-build-vbox test-auth test-keycore test-audit test-policy test-governance test-secrets test-certs test-kmip test-cloud test-hyok test-ekm test-payment test-compliance test-sbom test-reporting test-posture test-featureforge test-dataprotect test-discovery test-pqc test-software-vault
+.PHONY: build test test-fips-modes lint conformance proto-gen license-check security-license security-cve security-sidechannel security-sbom security-audit packer-init packer-build packer-build-vbox test-auth test-keycore test-audit test-policy test-governance test-secrets test-certs test-kmip test-cloud test-hyok test-ekm test-payment test-compliance test-sbom test-reporting test-posture test-featureforge test-dataprotect test-discovery test-pqc test-hsm-connector
 
 # Every binary links the CMVP-certified Go Cryptographic Module; the runtime
 # mode is the customer's choice (VECTA_FIPS_MODE). docs/SECURITY/FIPS.md
@@ -116,5 +116,6 @@ test-discovery:
 test-pqc:
 	go test ./services/pqc -v
 
-test-software-vault:
-	go test ./services/software-vault -v
+# Runs against a real PKCS#11 library: apt install softhsm2 (CI does).
+test-hsm-connector:
+	go test ./services/hsm-connector -v

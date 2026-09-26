@@ -718,13 +718,6 @@ adjust_unsupported_profiles() {
     fi
   fi
 
-  # hardware connector is also image-only. Fall back to software mode if unavailable.
-  if [[ "${HSM_MODE}" == "hardware" || "${HSM_MODE}" == "auto" ]]; then
-    if ! docker_image_exists "vecta/hsm-connector:${VECTA_VERSION}" && ! docker_image_exists "vecta/hsm-connector:latest"; then
-      add_warning "hardware HSM connector image (vecta/hsm-connector:latest) unavailable. Falling back to software HSM mode."
-      HSM_MODE="software"
-    fi
-  fi
 }
 
 seed_auth_jwt_key() {
@@ -1234,7 +1227,10 @@ collect_inputs() {
     SYSLOG_PROTOCOL="tcp+tls"
   fi
 
-  prompt_default HSM_MODE "HSM mode (software/hardware/auto)" "software"
+  # software: no HSM, keys under keycore's master key. hardware/auto: start the
+  # hsm-connector, which loads each tenant's PKCS#11 library (Securosys,
+  # Thales Luna, Entrust nShield, Utimaco, AWS CloudHSM, ...).
+  prompt_default HSM_MODE "HSM mode (software = no HSM / hardware = PKCS#11 HSM / auto)" "software"
   HSM_MODE="${HSM_MODE,,}"
   [[ "${HSM_MODE}" == "software" || "${HSM_MODE}" == "hardware" || "${HSM_MODE}" == "auto" ]] || die "HSM mode must be software, hardware, or auto."
 
@@ -1683,11 +1679,10 @@ write_env_file() {
   # always performs a mandatory clean reset (down -v) before starting, so it is
   # correct to mint fresh secrets on every install. Hex for values that appear
   # in DSNs/headers; a policy-compliant string for the CLI bootstrap password.
-  local pg_password nats_token workload_secret vault_passphrase internal_token service_bootstrap_secret cli_password
+  local pg_password nats_token workload_secret internal_token service_bootstrap_secret cli_password
   pg_password="$(openssl rand -hex 24)"
   nats_token="$(openssl rand -hex 24)"
   workload_secret="$(openssl rand -hex 32)"
-  vault_passphrase="$(openssl rand -hex 32)"
   internal_token="$(openssl rand -hex 32)"
   service_bootstrap_secret="$(openssl rand -hex 32)"
   cli_password="Vk$(generate_random_secret 24 | tr -dc 'A-Za-z0-9')Aa9!"
@@ -1715,7 +1710,6 @@ POSTGRES_DB=vecta
 POSTGRES_PASSWORD=${pg_password}
 NATS_AUTH_TOKEN=${nats_token}
 WORKLOAD_IDENTITY_SHARED_SECRET=${workload_secret}
-SOFTWARE_VAULT_PASSPHRASE=${vault_passphrase}
 INTERNAL_API_TOKEN=${internal_token}
 INTERNAL_SERVICE_BOOTSTRAP_SECRET=${service_bootstrap_secret}
 VECTA_FIPS_MODE=${FIPS_MODE}

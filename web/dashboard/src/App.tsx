@@ -88,7 +88,8 @@ const FEATURE_DEPENDENCIES: Partial<Record<FeatureKey, string[]>> = {
   data_protection: ["kms-dataprotect"],
   clustering: ["cluster-manager", "kms-cluster-manager", "etcd"],
   hsm_hardware: ["hsm-connector", "kms-hsm-connector"],
-  hsm_software: ["kms-software-vault"],
+  // No HSM: keys stay under keycore's master key; no extra service runs.
+  hsm_software: [],
   feature_forge: ["kms-featureforge"]
 };
 

@@ -1,23 +1,22 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"testing"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
+	"vecta-kms/pkg/hsm"
+	"vecta-kms/pkg/hsmconnector/softhsmtest"
 )
-
-const testWrapSecret = "3f1c9a7be2d04c6f8a1b5e9d2c7f4a0b6e8d1c3f5a7b9e0d2c4f6a8b0e1d3c5f"
-
-var testBinding = backupHSMBinding{Enabled: true, ProviderName: "hsm", SlotID: "0", Fingerprint: "hsm|0|||abc", FingerprintHash: "fp"}
 
 // A software-mode key is only in the file handed to the operator. The
 // stored package carries its fingerprint and says it isn't retained.
 func TestSoftwareBackupKeyIsNotStored(t *testing.T) {
 	key, _ := pkgcrypto.RandomBytes(32)
-	file, stored, err := buildBackupKeyPackage(key, false, backupHSMBinding{}, "root", "", backupCoverageSummary{})
+	file, stored, err := (&Service{}).buildBackupKeyPackage(context.Background(), key, false, backupHSMBinding{}, "root", "root", "", backupCoverageSummary{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,96 +30,72 @@ func TestSoftwareBackupKeyIsNotStored(t *testing.T) {
 	if stored["key_retained"] != false || stored["backup_key_sha256"] != sha256Hex(string(key)) {
 		t.Fatalf("stored package: %s", raw)
 	}
-	var reparsed map[string]interface{}
-	_ = json.Unmarshal(raw, &reparsed)
-	if backupKeyRetained(reparsed) {
+	if backupKeyRetained(roundTripJSON(t, stored)) {
 		t.Fatal("a software package counts as retained")
 	}
 }
 
-// HSM-bound keys are wrapped under HKDF-SHA256(secret, binding, tenants),
-// round-trip, and are bound to the binding and the tenants.
-func TestHSMBoundBackupKeyUsesHKDF(t *testing.T) {
-	t.Setenv("BACKUP_HSM_WRAP_SECRET", testWrapSecret)
+// An HSM-bound backup key is wrapped inside the tenant's HSM under its
+// tenant key (a real PKCS#11 library, SoftHSM2), and only that key opens it.
+func TestHSMBoundBackupKeyWrappedByHSM(t *testing.T) {
+	srv := softhsmtest.Start(t, "kms-governance", "root", "t1")
+	svc := &Service{hsm: hsm.New(srv.URL)}
+	ctx := context.Background()
 	key, _ := pkgcrypto.RandomBytes(32)
-	file, stored, err := buildBackupKeyPackage(key, true, testBinding, "root", "t1", backupCoverageSummary{})
+	file, stored, err := svc.buildBackupKeyPackage(ctx, key, true, backupHSMBinding{ProviderName: "softhsm2"}, "t1", "root", "t1", backupCoverageSummary{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if file["key_derivation"] != backupKeyDerivationHKDF || stored["key_derivation"] != backupKeyDerivationHKDF {
-		t.Fatalf("key_derivation = %v", file["key_derivation"])
-	}
-	if _, ok := file["backup_key_b64"]; ok {
+	raw, _ := json.Marshal(stored)
+	if _, ok := file["backup_key_b64"]; ok || strings.Contains(string(raw), base64.StdEncoding.EncodeToString(key)) {
 		t.Fatal("hsm_bound package carries the plaintext key")
 	}
 	pkg := roundTripJSON(t, stored)
-	if !backupKeyRetained(pkg) {
-		t.Fatal("v2 hsm_bound package not retained")
+	if pkg["key_wrap"] != backupKeyWrapHSM || pkg["hsm_key_label"] != hsm.TenantKeyLabel("t1") || !backupKeyRetained(pkg) {
+		t.Fatalf("package: %s", raw)
 	}
-	got, err := unwrapHSMBoundKey(pkg, testBinding)
+	got, err := svc.unwrapHSMBoundKey(ctx, pkg)
 	if err != nil || string(got) != string(key) {
 		t.Fatalf("unwrap: %v", err)
 	}
 
-	// The wrap key is the HKDF output, not a raw hash of the same input.
-	wrapKey, _ := backupWrapKey(testWrapSecret, testBinding, "root", "t1")
-	want, _ := pkgcrypto.HKDFSHA256([]byte(testWrapSecret), nil, []byte(backupWrapInfoLabel+"|"+testBinding.Fingerprint+"|root|t1"), 32)
-	raw, _ := pkgcrypto.Hash("SHA-256", []byte(testWrapSecret+"|"+testBinding.Fingerprint+"|root|t1"))
-	if string(wrapKey) != string(want) || string(wrapKey) == string(raw) {
-		t.Fatal("wrap key is not HKDF-SHA256")
+	// Pointed at another tenant's HSM key, moved to another tenant pair, or
+	// tampered with, it doesn't open.
+	cases := map[string]func(map[string]interface{}){
+		"other tenant key": func(p map[string]interface{}) {
+			p["hsm_tenant_id"], p["hsm_key_label"] = "root", hsm.TenantKeyLabel("root")
+		},
+		"label outside tenant": func(p map[string]interface{}) { p["hsm_key_label"] = hsm.TenantKeyLabel("root") },
+		"rebound target":       func(p map[string]interface{}) { p["target_tenant_id"] = "t2" },
+		"tampered": func(p map[string]interface{}) {
+			w, _ := base64.StdEncoding.DecodeString(p["wrapped_key_b64"].(string))
+			w[0] ^= 1
+			p["wrapped_key_b64"] = base64.StdEncoding.EncodeToString(w)
+		},
 	}
-
-	other := testBinding
-	other.Fingerprint = "hsm|1|||abc"
-	if _, err := unwrapHSMBoundKey(pkg, other); err == nil {
-		t.Fatal("another HSM binding opened the key")
-	}
-	moved := roundTripJSON(t, stored)
-	moved["target_tenant_id"] = "t2"
-	if _, err := unwrapHSMBoundKey(moved, testBinding); err == nil {
-		t.Fatal("a package rebound to another tenant opened")
-	}
-	t.Setenv("BACKUP_HSM_WRAP_SECRET", strings.Repeat("9", 64))
-	if _, err := unwrapHSMBoundKey(pkg, testBinding); err == nil {
-		t.Fatal("another wrap secret opened the key")
-	}
-}
-
-// Packages from the raw SHA-256 derivation ("v1") are refused, even with the
-// right secret and binding.
-func TestHSMBoundV1PackageIsRefused(t *testing.T) {
-	t.Setenv("BACKUP_HSM_WRAP_SECRET", testWrapSecret)
-	key, _ := pkgcrypto.RandomBytes(32)
-	derived, _ := pkgcrypto.Hash("SHA-256", []byte(testWrapSecret+"|"+testBinding.Fingerprint+"|root|"))
-	aad := []byte("vecta-kms:backup:hsm-binding:" + testBinding.FingerprintHash)
-	wrapped, nonce, err := encryptAESGCM(key, derived[:], aad)
-	if err != nil {
+	if _, err := svc.backupHSM().EnsureTenantKey(ctx, "root"); err != nil {
 		t.Fatal(err)
 	}
-	v1 := map[string]interface{}{
-		"mode": "hsm_bound", "key_derivation": "v1", "request_tenant_id": "root", "target_tenant_id": "",
-		"wrapped_key_b64": base64.StdEncoding.EncodeToString(wrapped),
-		"wrap_nonce_b64":  base64.StdEncoding.EncodeToString(nonce),
-		"wrap_aad_b64":    base64.StdEncoding.EncodeToString(aad),
-	}
-	if _, err := unwrapHSMBoundKey(v1, testBinding); err == nil || !strings.Contains(err.Error(), "retired") {
-		t.Fatalf("v1 package: %v, want refusal", err)
-	}
-	if backupKeyRetained(v1) {
-		t.Fatal("a v1 package counts as retained")
+	for name, mutate := range cases {
+		p := roundTripJSON(t, stored)
+		mutate(p)
+		if _, err := svc.unwrapHSMBoundKey(ctx, p); err == nil {
+			t.Fatalf("%s: opened", name)
+		}
 	}
 }
 
-// A missing or short wrap secret refuses both creating and opening.
-func TestBackupWrapSecretStrength(t *testing.T) {
-	key, _ := pkgcrypto.RandomBytes(32)
-	for name, secret := range map[string]string{"missing": "", "short": "changeit-backup-secret"} {
-		t.Setenv("BACKUP_HSM_WRAP_SECRET", secret)
-		if _, _, err := buildBackupKeyPackage(key, true, testBinding, "root", "", backupCoverageSummary{}); err == nil {
-			t.Fatalf("%s secret: backup created", name)
+// Packages from the secret-derived wraps (raw SHA-256 "v1", HKDF "v2") are
+// refused: the HSM never held their key.
+func TestRetiredHSMBoundFormatsAreRefused(t *testing.T) {
+	svc := &Service{}
+	for _, kd := range []string{"v1", "v2"} {
+		pkg := map[string]interface{}{"mode": "hsm_bound", "key_derivation": kd, "wrapped_key_b64": "AAAA", "wrap_nonce_b64": "AAAA"}
+		if _, err := svc.unwrapHSMBoundKey(context.Background(), pkg); err == nil || !strings.Contains(err.Error(), "retired") {
+			t.Fatalf("%s package: %v", kd, err)
 		}
-		if _, err := backupWrapSecret(); err == nil {
-			t.Fatalf("%s secret accepted", name)
+		if backupKeyRetained(pkg) {
+			t.Fatalf("a %s package counts as retained", kd)
 		}
 	}
 }

@@ -65,8 +65,7 @@ declare -A PROFILE_TO_SERVICE=(
   [mpc_engine]="mpc"
   [data_protection]="dataprotect"
   [clustering]="cluster-manager etcd"
-  [hsm_hardware]="hsm-connector"
-  [hsm_software]="software-vault"
+  [hsm_hardware]="hsm-connector hsm-integration"
 )
 
 enabled_services=(auth keycore audit policy)

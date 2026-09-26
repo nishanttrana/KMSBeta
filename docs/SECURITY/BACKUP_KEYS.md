@@ -26,28 +26,26 @@ downloaded at any time. What happens to the backup key depends on the mode.
 ## HSM-bound mode
 
 Used when `bind_to_hsm` is true (the default) and the tenant has an enabled
-HSM configuration (`auth_hsm_provider_configs`).
+HSM profile (HSM tab; for a system backup, the root tenant's).
 
-- Wrap key = `HKDF-SHA256(secret = BACKUP_HSM_WRAP_SECRET, salt = none,
-  info = "vecta-kms/backup-key-wrap/v2|<binding fingerprint>|<request tenant>|<target tenant>")`.
-  The binding fingerprint covers the provider, slot, partition, token label
-  and library path.
-- The backup key is sealed under it with AES-256-GCM (module-generated
-  nonce; AAD binds the binding hash). The package records
-  `key_derivation: "v2"`.
-- The wrapped package is stored, so it can be downloaded again
+- The hsm-connector ensures the tenant's key in its HSM,
+  `vecta:<tenant>:tenant-key` (AES-256, sensitive, not extractable). The HSM
+  then encrypts the backup key with it: `CKM_AES_GCM`, the IV from the HSM's
+  own generator, and AAD = `vecta-kms/backup-key|<hsm tenant>|<request
+  tenant>|<target tenant>` ([HSM_INTEGRATION.md](HSM_INTEGRATION.md)).
+- The package records `key_wrap: "hsm_tenant_key"`, `hsm_tenant_id` and
+  `hsm_key_label`. It is stored, so it can be downloaded again
   (`audit.governance.backup_key_downloaded`). The database alone can't open
-  it: that needs `BACKUP_HSM_WRAP_SECRET` from governance's environment and
-  the same HSM binding.
-- `BACKUP_HSM_WRAP_SECRET` must be at least 32 characters
-  (`openssl rand -hex 32`). A missing or short secret refuses the backup
-  (`audit.governance.backup_create_refused`) and the restore
+  it: only that HSM can, through the connector, as the `kms-governance`
+  identity.
+- A restore sends the wrapped key to the HSM. A package pointed at another
+  tenant's key, moved to another tenant pair, or tampered with doesn't
+  open. With the HSM unreachable, the restore is refused
   (`backup_restore_refused`).
-- Restore uses the binding of the tenant the backup was bound to (the target
-  tenant for a tenant-scope backup).
-
-Despite the name, the HSM isn't used to wrap the key. The binding metadata
-only scopes the derivation. Real HSM wrapping is still open.
+- If the HSM can't be reached, the backup is refused
+  (`backup_create_refused`). It never silently becomes a software-mode
+  backup.
+- `BACKUP_HSM_WRAP_SECRET` is no longer used.
 
 ## What was wrong before (fixed 2026-09-26)
 
@@ -57,10 +55,16 @@ only scopes the derivation. Real HSM wrapping is still open.
 2. **HSM-bound wrap keys were a raw SHA-256** of
    `secret|fingerprint|tenants` (`key_derivation: "v1"`), not a KDF. Restore
    also tried three candidate inputs, including one without the tenants.
+   The first fix used HKDF-SHA256 of the same environment secret
+   (`key_derivation: "v2"`). The HSM still did nothing in either version:
+   the "binding" only fed the derivation. Since then the HSM wraps the key
+   itself, and both v1 and v2 are retired.
 
-Migration `013_backup_keys_not_retained.sql` removes both from existing rows
-(`backup_key_b64`, and the wrapped fields of every non-v2 `hsm_bound`
-package) and marks them `key_retained: false`. Restore refuses v1 packages.
+Migrations `013_backup_keys_not_retained.sql` and
+`014_backup_keys_hsm_wrapped.sql` remove the stored keys from existing rows
+(`backup_key_b64`, and the wrapped fields of every `hsm_bound` package the
+HSM didn't wrap) and mark them `key_retained: false`. Restore refuses v1 and
+v2 packages.
 So a backup taken before the upgrade restores only with a software key file
 saved earlier. The owner confirmed that no backups were taken on the old
 version (2026-09-26).
@@ -74,12 +78,16 @@ If the service can't re-wrap them, the backup or restore is refused.
 
 ## Tests
 
-- `TestSoftwareBackupKeyIsNotStored`, `TestHSMBoundBackupKeyUsesHKDF` (round
-  trip; another binding, tenant or secret doesn't open it; the wrap key is
-  the HKDF output and not the raw hash), `TestHSMBoundV1PackageIsRefused`,
-  `TestBackupWrapSecretStrength`.
+- `TestSoftwareBackupKeyIsNotStored`.
+- `TestHSMBoundBackupKeyWrappedByHSM`: a real PKCS#11 HSM (SoftHSM2). The
+  key round-trips; another tenant's key, a rebound tenant pair or a tampered
+  wrap doesn't open.
+- `TestRetiredHSMBoundFormatsAreRefused` (v1 and v2).
 - Postgres (`VECTA_TEST_POSTGRES_DSN`, CI `integration-postgres`):
-  `TestSoftwareBackupKeyNotRetainedPostgres` (the row doesn't hold the key;
-  the download is refused and audited; the key file from creation restores),
-  `TestMigrationScrubsStoredBackupKeysPostgres`, `TestBackupReprotectPostgres`,
-  `TestBackupRestoreRoundTripPostgres`, `TestBackupRestoreRefusesTamperingPostgres`.
+  - `TestSoftwareBackupKeyNotRetainedPostgres`;
+  - `TestHSMBoundBackupPostgres`: the backup is wrapped by the HSM, the key
+    file is downloaded again and restores, and there is no restore without
+    the HSM;
+  - `TestMigrationScrubsStoredBackupKeysPostgres` (013 and 014);
+  - `TestBackupReprotectPostgres`, `TestBackupRestoreRoundTripPostgres`,
+    `TestBackupRestoreRefusesTamperingPostgres`.

@@ -128,6 +128,14 @@ an approach, record it here or in the matching doc below.
   themselves (one-time token, HMAC, pinned TLS).
 - Features cut from the core move to the sibling `KMSExtension` repo (REST
   integration via `pkg/kmsclient`, no key material there). Don't delete them.
+- **HSMs are real integrations only** (owner directive, 2026-09-26: "there is
+  no vecta HSM", "it has to be actual integration no fake"). Every HSM
+  goes through the customer's own PKCS#11 library in `hsm-connector`
+  ([docs/SECURITY/HSM_INTEGRATION.md](docs/SECURITY/HSM_INTEGRATION.md)).
+  Nothing may present itself as an HSM, whether a "Vecta HSM" or a software
+  vault. A vendor listed in the UI must work through that same path. HSM
+  tests run against a real PKCS#11 library (SoftHSM2), never a mock of the
+  HSM API.
 
 ## Documentation is part of done
 

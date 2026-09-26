@@ -43,6 +43,9 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install SoftHSM2 (a real PKCS#11 library for the HSM connector tests)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends softhsm2
+
       - name: go test (fips140=${{ matrix.mode }})
         run: go test ./pkg/... ./services/...
 
@@ -64,8 +67,8 @@ jobs:
         run: ./scripts/test-cluster-replication.sh
 
   integration-postgres:
-    # Backup/restore, signing, the backup service and the secrets MEK
-    # migration against real Postgres: they rely on information_schema, JSONB,
+    # Backup/restore, signing, the backup service, the secrets MEK migration
+    # and HSM key storage (with SoftHSM2) against real Postgres: they rely on information_schema, JSONB,
     # TRUNCATE ... CASCADE and BYTEA/row-value comparisons, which SQLite cannot
     # prove. The database is disposable.
     name: Integration tests (Postgres)
@@ -92,8 +95,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - name: Install SoftHSM2 (real PKCS#11 library for the HSM tests)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends softhsm2
+
       - name: Integration tests (run serially; they share the database)
-        run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/governance ./services/signing ./services/backup ./services/secrets ./pkg/mek
+        run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/governance ./services/signing ./services/backup ./services/secrets ./services/keycore ./pkg/mek
 
   dashboard-quality:
     name: Dashboard Lint/Type/Unit/Build/Smoke

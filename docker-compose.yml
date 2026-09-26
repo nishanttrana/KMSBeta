@@ -447,7 +447,7 @@ services:
 
   hsm-integration:
     restart: unless-stopped
-    profiles: ["hsm_cli"]
+    profiles: ["hsm_cli", "hsm_hardware"]
     build:
       context: .
       dockerfile: services/hsm-integration/Dockerfile
@@ -1241,45 +1241,35 @@ services:
   hsm-connector:
     <<: *kms-service
     profiles: ["hsm_hardware"]
+    build:
+      context: .
+      dockerfile: services/hsm-connector/Dockerfile
     image: vecta/hsm-connector:${VECTA_VERSION:-latest}
+    # The only process that loads a tenant's PKCS#11 library and holds its HSM
+    # PIN (docs/SECURITY/HSM_INTEGRATION.md). Put each profile's PIN variable
+    # (pin_env_var: HSM_PIN, SECUROSYS_HSM_PIN, LUNA_PIN, ...) and any vendor
+    # client settings in hsm-connector.env next to this file.
+    env_file:
+      - path: ./hsm-connector.env
+        required: false
     environment:
       <<: *kms-common-env
       HTTP_PORT: "8430"
       GRPC_PORT: "18430"
+      HSM_LIBRARY_ROOTS: /var/lib/vecta/hsm/providers
+    volumes:
+      # Libraries and vendor client files uploaded through hsm-integration.
+      - hsm-integration-data:/var/lib/vecta/hsm:ro
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8430:8430"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18430:18430"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
     healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18430"]
-      interval: 15s
-      timeout: 5s
-      retries: 10
-
-  software-vault:
-    <<: *kms-service
-    profiles: ["hsm_software"]
-    build:
-      context: .
-      dockerfile: services/software-vault/Dockerfile
-    image: vecta/software-vault:${VECTA_VERSION:-latest}
-    environment:
-      <<: *kms-common-env
-      HSM_PROVIDER: ${HSM_PROVIDER:-software}
-      SOFTWARE_VAULT_PASSPHRASE: ${SOFTWARE_VAULT_PASSPHRASE:?SOFTWARE_VAULT_PASSPHRASE is required}
-      SOFTWARE_VAULT_MLOCK_REQUIRED: ${SOFTWARE_VAULT_MLOCK_REQUIRED:-false}
-      THALES_ENDPOINT: ${THALES_ENDPOINT:-}
-      THALES_PARTITION: ${THALES_PARTITION:-}
-      THALES_SLOT_LABEL: ${THALES_SLOT_LABEL:-}
-      VECTA_ENDPOINT: ${VECTA_ENDPOINT:-}
-      VECTA_PROJECT_ID: ${VECTA_PROJECT_ID:-}
-      VECTA_KEY_DOMAIN: ${VECTA_KEY_DOMAIN:-}
-      HTTP_PORT: "8440"
-      GRPC_PORT: "18440"
-    ports:
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:8440:8440"
-      - "${KMS_INTERNAL_BIND:-127.0.0.1}:18440:18440"
-    healthcheck:
-      test: ["CMD-SHELL", "nc -z 127.0.0.1 18440"]
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8430"]
       interval: 15s
       timeout: 5s
       retries: 10

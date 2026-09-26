@@ -297,6 +297,8 @@ export type CreateKeyInput = {
   ops_limit?: number;
   ops_limit_window?: string;
   approval_required?: boolean;
+  // Generate the key in the tenant's HSM; it never leaves it (docs/SECURITY/HSM_INTEGRATION.md).
+  hsm?: boolean;
 };
 
 export type FormKeyInput = CreateKeyInput & {
@@ -605,9 +607,110 @@ export async function createKey(session: AuthSession, input: CreateKeyInput): Pr
       created_by: input.created_by,
       ops_limit: Number(input.ops_limit || 0),
       ops_limit_window: input.ops_limit_window || "total",
-      approval_required: Boolean(input.approval_required)
+      approval_required: Boolean(input.approval_required),
+      hsm: Boolean(input.hsm)
     })
   });
+}
+
+// A tenant's HSM switches and the connector's view of its HSM.
+export type HSMSettings = {
+  tenant_id: string;
+  tenant_key_enabled: boolean;
+  hsm_keys_enabled: boolean;
+  tenant_key_label?: string;
+  updated_by?: string;
+  updated_at?: string;
+};
+
+export type HSMConnectionStatus = {
+  configured: boolean;
+  connected: boolean;
+  provider_name?: string;
+  library?: string;
+  manufacturer?: string;
+  model?: string;
+  token_label?: string;
+  serial_number?: string;
+  firmware?: string;
+  cryptoki_version?: string;
+  tenant_key_ready: boolean;
+  error?: string;
+};
+
+export type HSMOverview = { settings: HSMSettings; connector: boolean; hsm?: HSMConnectionStatus };
+
+// What the HSM reports about one object (never the key value).
+export type HSMObjectInfo = {
+  label: string;
+  id_hex?: string;
+  class: "secret_key" | "private_key" | "public_key" | "certificate" | "data" | "other";
+  key_type?: string;
+  size_bits?: number;
+  curve?: string;
+  token?: boolean;
+  private?: boolean;
+  sensitive?: boolean;
+  extractable?: boolean;
+  always_sensitive?: boolean;
+  never_extractable?: boolean;
+  local?: boolean;
+  encrypt?: boolean;
+  decrypt?: boolean;
+  sign?: boolean;
+  verify?: boolean;
+  wrap?: boolean;
+  unwrap?: boolean;
+  managed: boolean;
+  certificate?: { subject: string; issuer: string; serial: string; not_before: string; not_after: string; sha256: string };
+  key_id?: string;
+  version?: number;
+  kms_role?: "key" | "tenant_key";
+};
+
+export type HSMIdentity = { manufacturer?: string; model?: string; serial_number?: string; token_label?: string };
+
+export type HSMKeyCheck = {
+  key_id: string;
+  recorded_hsm: HSMIdentity;
+  current_hsm: HSMIdentity;
+  same_device: boolean;
+  versions: Array<{ version: number; protection: string; label: string; objects?: HSMObjectInfo[]; error?: string }>;
+};
+
+// Keys and certificates in the tenant's HSM partition, including ones the KMS didn't create.
+export async function listHSMObjects(session: AuthSession): Promise<{ objects: HSMObjectInfo[]; hsm: HSMIdentity }> {
+  const out = await apiRequest<{ objects?: HSMObjectInfo[]; hsm?: HSMIdentity }>(session, `/hsm/objects?tenant_id=${encodeURIComponent(session.tenantId)}`);
+  return { objects: Array.isArray(out?.objects) ? out.objects : [], hsm: out?.hsm || {} };
+}
+
+// Reads a key's objects back from the HSM: label, attributes, and whether it is on the recorded device.
+export async function inspectHSMKey(session: AuthSession, keyID: string): Promise<HSMKeyCheck> {
+  const out = await apiRequest<{ check: HSMKeyCheck }>(session, `/keys/${encodeURIComponent(keyID)}/hsm?tenant_id=${encodeURIComponent(session.tenantId)}`);
+  return out.check;
+}
+
+// Mirrors keycore's hsm.NormalizeAlgorithm: which algorithms can be generated in the HSM.
+export function hsmSupportsAlgorithm(algorithm: string): boolean {
+  const a = String(algorithm || "").toUpperCase();
+  if (/BRAINPOOL|ECDH|OAEP|521|8192/.test(a)) return false;
+  if (a.startsWith("AES")) return !/CBC|CTR|ECB|CCM|CFB|OFB|XTS|SIV|KW/.test(a);
+  return a.includes("RSA") || a.includes("ECDSA");
+}
+
+export async function getHSMOverview(session: AuthSession): Promise<HSMOverview> {
+  return apiRequest<HSMOverview>(session, `/hsm/settings?tenant_id=${encodeURIComponent(session.tenantId)}`);
+}
+
+export async function updateHSMSettings(
+  session: AuthSession,
+  input: { tenant_key_enabled: boolean; hsm_keys_enabled: boolean }
+): Promise<HSMSettings> {
+  const out = await apiRequest<{ settings: HSMSettings }>(session, "/hsm/settings", {
+    method: "PUT",
+    body: JSON.stringify({ tenant_id: session.tenantId, ...input })
+  });
+  return out.settings;
 }
 
 export async function formKey(session: AuthSession, input: FormKeyInput): Promise<APIFormKeyResponse> {

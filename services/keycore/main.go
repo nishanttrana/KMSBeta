@@ -35,6 +35,7 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgheartbeat "vecta-kms/pkg/heartbeat"
+	"vecta-kms/pkg/hsm"
 	"vecta-kms/pkg/metering"
 	pkgratelimit "vecta-kms/pkg/ratelimit"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
@@ -162,6 +163,9 @@ func main() {
 	svc.SetCryptoperiodPolicy(NewCryptoperiodPolicy())
 	svc.SetVersionPolicy(DefaultVersionPolicy())
 	svc.SetWakeSelfTestRegistry(NewWakeSelfTestRegistry())
+	// The customer's HSM, through the hsm-connector (HSM_CONNECTOR_URL).
+	// Unused until a tenant turns on its tenant key or HSM keys.
+	svc.SetHSMBackend(hsm.FromEnv())
 
 	// Cold-tier archiver. Disabled by default; operators turn it on by
 	// setting KEYCORE_ARCHIVE_DIR and KEYCORE_ARCHIVE_KEK_B64. When the

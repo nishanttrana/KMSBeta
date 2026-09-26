@@ -138,6 +138,7 @@ var Replicated = map[string][]string{
 	},
 	"keycore": {
 		"keycore_system_keys",
+		"keycore_hsm_settings",
 		"agility_migration_plans",
 		"canary_keys",
 		"ceremonies",

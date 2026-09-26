@@ -2985,11 +2985,7 @@ curl -O http://localhost:8050/governance/backups/{id}/key \\
   -H "Content-Type: application/json" \\
   -d '{"backup_id": "...", "scope": "system"}'`}</Code>
     <H2>HSM-Bound Backups</H2>
-    <P>A software-mode backup key is returned once, when the backup is created, and the platform keeps only its fingerprint: lose the key file and the backup can't be restored. Optional HSM binding instead wraps the backup key under a key derived with HKDF-SHA256 from <IC>BACKUP_HSM_WRAP_SECRET</IC> (at least 32 characters), the HSM binding (provider, slot, partition, fingerprint) and the tenants; restore needs the same secret and binding. Packages from the retired raw SHA-256 derivation (key_derivation v1) are refused.</P>
-    <EnvTable rows={[
-      ["BACKUP_HSM_WRAP_SECRET", "<openssl rand -hex 32>", "HSM backup wrap secret"],
-      ["BACKUP_HSM_PARTITION_LABEL", "(empty)", "HSM partition for backup key"],
-    ]} />
+    <P>A software-mode backup key is returned once, when the backup is created, and the platform keeps only its fingerprint: lose the key file and the backup can't be restored. When the tenant has an HSM configured (HSM tab), an HSM-bound backup has its key wrapped with AES-256-GCM inside that HSM, under the tenant's own HSM key; restore needs the same HSM through the hsm-connector, and the wrapped key file can be downloaded again. Packages wrapped with a secret-derived key (key_derivation v1 or v2, <IC>BACKUP_HSM_WRAP_SECRET</IC>) are refused; that variable is no longer used.</P>
     <H2>Excluded Tables</H2>
     <P>Backup excludes: governance_backup_jobs, audit logs, alert runtime tables, and operational log tables. These are regenerated or are point-in-time data. Reporting incidents and report jobs remain included; live alert feeds and audit partitions do not.</P>
   </div>
@@ -3035,8 +3031,7 @@ docker compose ps`}</Code>
       ["mpc_engine", "kms-mpc", "Multi-party computation"],
       ["data_protection", "kms-dataprotect", "Data protection"],
       ["hsm_cli", "hsm-integration", "HSM CLI SSH access"],
-      ["hsm_hardware", "hsm-connector", "Hardware HSM connector"],
-      ["hsm_software", "software-vault", "Software HSM vault"],
+      ["hsm_hardware", "hsm-connector, hsm-integration", "PKCS#11 HSM connector and library upload"],
     ]} />
     <H2>Resource Limits</H2>
     <P>Default service limits: 0.5 CPU / 256M memory. Auth and Keycore override: 1.0 CPU / 512M memory. PostgreSQL: 2.0 CPU / 2G memory. PgBouncer: 0.25 CPU / 64M memory.</P>

@@ -5,11 +5,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 
 	pkgdb "vecta-kms/pkg/db"
+	"vecta-kms/pkg/hsm"
+	"vecta-kms/pkg/hsmconnector/softhsmtest"
 	"vecta-kms/pkg/mek"
 )
 
@@ -250,33 +254,45 @@ func TestSoftwareBackupKeyNotRetainedPostgres(t *testing.T) {
 	}
 }
 
-// Migration 013 removes keys stored before: plaintext software keys and
-// hsm_bound packages wrapped with the retired raw SHA-256 derivation.
+// Migrations 013 and 014 remove keys stored before: plaintext software keys
+// and hsm_bound packages wrapped with a secret-derived key (v1 raw SHA-256,
+// v2 HKDF). Packages wrapped by the HSM stay.
 func TestMigrationScrubsStoredBackupKeysPostgres(t *testing.T) {
 	svc, _ := newIntegrationGovernance(t)
 	db := svc.store.(*SQLStore).db.SQL()
 	legacy := map[string]string{
 		"bkp_legacy_sw":  `{"version":1,"mode":"software","backup_key_b64":"c2VjcmV0","backup_key_sha256":"x"}`,
 		"bkp_legacy_hsm": `{"version":1,"mode":"hsm_bound","key_derivation":"v1","wrapped_key_b64":"d3JhcHBlZA==","wrap_nonce_b64":"bg==","wrap_aad_b64":"YQ=="}`,
-		"bkp_current":    `{"version":2,"mode":"hsm_bound","key_derivation":"v2","key_retained":true,"wrapped_key_b64":"d3JhcHBlZA=="}`,
+		"bkp_legacy_v2":  `{"version":2,"mode":"hsm_bound","key_derivation":"v2","key_retained":true,"wrapped_key_b64":"d3JhcHBlZA=="}`,
+		"bkp_current":    `{"version":3,"mode":"hsm_bound","key_wrap":"hsm_tenant_key","key_retained":true,"wrapped_key_b64":"d3JhcHBlZA=="}`,
 	}
-	if _, err := db.Exec(`DELETE FROM governance_backup_jobs WHERE id IN ('bkp_legacy_sw','bkp_legacy_hsm','bkp_current')`); err != nil {
+	if _, err := db.Exec(`DELETE FROM governance_backup_jobs WHERE id IN ('bkp_legacy_sw','bkp_legacy_hsm','bkp_legacy_v2','bkp_current')`); err != nil {
 		t.Fatal(err)
 	}
-	for id, pkg := range legacy {
+	insert := func(id string) {
 		if _, err := db.Exec(`INSERT INTO governance_backup_jobs (id, tenant_id, scope, status, backup_format, encryption_algorithm,
 			ciphertext_sha256, artifact_ciphertext, artifact_nonce, artifact_size_bytes, row_count_total, table_count, hsm_bound, key_package_json)
-			VALUES ($1,'root','system','completed','json.gz+aes256gcm','AES-256-GCM','x','\x00','\x00',1,1,1,false,$2::jsonb)`, id, pkg); err != nil {
+			VALUES ($1,'root','system','completed','json.gz+aes256gcm','AES-256-GCM','x','\x00','\x00',1,1,1,false,$2::jsonb)`, id, legacy[id]); err != nil {
 			t.Fatal(err)
 		}
 	}
-	migration, err := os.ReadFile("migrations/013_backup_keys_not_retained.sql")
-	if err != nil {
-		t.Fatal(err)
+	migrate := func(f string) {
+		migration, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(string(migration)); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if _, err := db.Exec(string(migration)); err != nil {
-		t.Fatal(err)
-	}
+	// In the order they can exist: v1 and v2 packages before 013 ran, and
+	// HSM-wrapped ones only after 013 (the release that adds them adds 014).
+	insert("bkp_legacy_sw")
+	insert("bkp_legacy_hsm")
+	insert("bkp_legacy_v2")
+	migrate("migrations/013_backup_keys_not_retained.sql")
+	insert("bkp_current")
+	migrate("migrations/014_backup_keys_hsm_wrapped.sql")
 	for id := range legacy {
 		var row string
 		if err := db.QueryRow(`SELECT key_package_json::text FROM governance_backup_jobs WHERE id=$1`, id).Scan(&row); err != nil {
@@ -286,7 +302,7 @@ func TestMigrationScrubsStoredBackupKeysPostgres(t *testing.T) {
 		_ = json.Unmarshal([]byte(row), &pkg)
 		if id == "bkp_current" {
 			if !backupKeyRetained(pkg) {
-				t.Fatalf("migration touched a v2 package: %s", row)
+				t.Fatalf("migration touched an HSM-wrapped package: %s", row)
 			}
 			continue
 		}
@@ -298,5 +314,60 @@ func TestMigrationScrubsStoredBackupKeysPostgres(t *testing.T) {
 	_ = db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_name='governance_backup_jobs' AND column_name='mek_reprotected_at'`).Scan(&n)
 	if n != 0 {
 		t.Fatal("mek_reprotected_at not dropped")
+	}
+}
+
+// An HSM-bound backup end to end on Postgres: the backup key is wrapped by
+// the tenant's key in a real PKCS#11 HSM (SoftHSM2), the wrapped key file can
+// be downloaded again (audited), and the backup restores only while that
+// HSM is reachable.
+func TestHSMBoundBackupPostgres(t *testing.T) {
+	svc, pub := newIntegrationGovernance(t)
+	db := svc.store.(*SQLStore).db.SQL()
+	for _, stmt := range []string{
+		`CREATE TABLE IF NOT EXISTS auth_hsm_provider_configs (
+			tenant_id TEXT PRIMARY KEY, provider_name TEXT NOT NULL DEFAULT '', library_path TEXT NOT NULL DEFAULT '',
+			slot_id TEXT NOT NULL DEFAULT '', partition_label TEXT NOT NULL DEFAULT '', token_label TEXT NOT NULL DEFAULT '',
+			enabled BOOLEAN NOT NULL DEFAULT FALSE)`,
+		`DELETE FROM auth_hsm_provider_configs WHERE tenant_id='root'`,
+		`INSERT INTO auth_hsm_provider_configs (tenant_id, provider_name, token_label, enabled) VALUES ('root','softhsm2','vecta-test',TRUE)`,
+	} {
+		if _, err := db.Exec(stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	srv := softhsmtest.Start(t, "kms-governance", "root")
+	svc.hsm = hsm.New(srv.URL)
+	createNamedPolicy(t, svc, "t-hsm-bk", "kept")
+	bind := true
+	job, files := takeBackup(t, svc, CreateBackupInput{TenantID: "root", Scope: "system", CreatedBy: "it", BindToHSM: &bind})
+	if !job.HSMBound {
+		t.Fatalf("backup not HSM-bound: %+v", job)
+	}
+	var row string
+	if err := db.QueryRow(`SELECT key_package_json::text FROM governance_backup_jobs WHERE id=$1`, job.ID).Scan(&row); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(row, `"key_wrap": "hsm_tenant_key"`) || strings.Contains(row, "backup_key_b64") {
+		t.Fatalf("stored package: %s", row)
+	}
+	again, err := svc.GetBackupKeyDownload(context.Background(), "root", job.ID, "admin")
+	if err != nil || again.ContentBase64 == "" {
+		t.Fatalf("key download: %v", err)
+	}
+	if len(pub.events["audit.governance.backup_key_downloaded"]) != 1 {
+		t.Fatal("key download not audited")
+	}
+	redownloaded := files
+	redownloaded.keyB64 = again.ContentBase64
+	if _, err := redownloaded.restore(svc, "root"); err != nil {
+		t.Fatalf("restore with the re-downloaded key file: %v", err)
+	}
+	// Without the HSM the backup can't be opened.
+	down := httptest.NewServer(http.NotFoundHandler())
+	down.Close()
+	svc.hsm = hsm.New(down.URL)
+	if _, err := files.restore(svc, "root"); err == nil {
+		t.Fatal("an HSM-bound backup restored without the HSM")
 	}
 }
