@@ -2521,76 +2521,6 @@
       "service": "certs"
     },
     {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleListMeshServices",
-      "line": 114,
-      "match_key": "certs|GET|/mesh/services",
-      "method": "GET",
-      "normalized_path": "/mesh/services",
-      "path": "/mesh/services",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleRegisterMeshService",
-      "line": 115,
-      "match_key": "certs|POST|/mesh/services",
-      "method": "POST",
-      "normalized_path": "/mesh/services",
-      "path": "/mesh/services",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleRenewServiceCert",
-      "line": 116,
-      "match_key": "certs|POST|/mesh/services/{param}/renew",
-      "method": "POST",
-      "normalized_path": "/mesh/services/{param}/renew",
-      "path": "/mesh/services/{id}/renew",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleListMeshCertificates",
-      "line": 117,
-      "match_key": "certs|GET|/mesh/certificates",
-      "method": "GET",
-      "normalized_path": "/mesh/certificates",
-      "path": "/mesh/certificates",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleListTrustAnchors",
-      "line": 118,
-      "match_key": "certs|GET|/mesh/trust-anchors",
-      "method": "GET",
-      "normalized_path": "/mesh/trust-anchors",
-      "path": "/mesh/trust-anchors",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleAddTrustAnchor",
-      "line": 119,
-      "match_key": "certs|POST|/mesh/trust-anchors",
-      "method": "POST",
-      "normalized_path": "/mesh/trust-anchors",
-      "path": "/mesh/trust-anchors",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleGetTopology",
-      "line": 120,
-      "match_key": "certs|GET|/mesh/topology",
-      "method": "GET",
-      "normalized_path": "/mesh/topology",
-      "path": "/mesh/topology",
-      "service": "certs"
-    },
-    {
       "file": "services/cloud/handler.go",
       "handler": "h.handleRegisterAccount",
       "line": 30,
@@ -10083,16 +10013,6 @@
       "service": "certs"
     },
     {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleAddTrustAnchor",
-      "line": 119,
-      "match_key": "certs|POST|/mesh/trust-anchors",
-      "method": "POST",
-      "normalized_path": "/mesh/trust-anchors",
-      "path": "/mesh/trust-anchors",
-      "service": "certs"
-    },
-    {
       "file": "services/cloud/handler.go",
       "handler": "h.handleListAccounts",
       "line": 31,
@@ -12856,7 +12776,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setCollapsed((v) => !v)} title= className=\"vk-icon-btn\" style={{ width: 22, h...",
-      "line": 742,
+      "line": 737,
       "tabs": [],
       "tag": "button"
     },
@@ -12864,7 +12784,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "onLogout",
       "label": "Sign out",
-      "line": 902,
+      "line": 897,
       "tabs": [],
       "tag": "button"
     },
@@ -12872,7 +12792,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "togglePin(tab)} title= style={{ display: \"inline-flex\", alignItems: \"center\",...",
-      "line": 953,
+      "line": 948,
       "tabs": [],
       "tag": "button"
     },
@@ -12880,7 +12800,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setPaletteOpen(true)} title=\"Command palette (\u2318K)\" className=\"vk-search-btn\"...",
-      "line": 976,
+      "line": 971,
       "tabs": [],
       "tag": "button"
     },
@@ -12888,7 +12808,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "selectTab(\"admin\")} style={cliEnabled ? : }>",
-      "line": 1026,
+      "line": 1021,
       "tabs": [],
       "tag": "Btn"
     },
@@ -12896,7 +12816,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" aria-label=\"About this KMS build\" aria-expanded= ti...",
-      "line": 1063,
+      "line": 1058,
       "tabs": [],
       "tag": "button"
     },
@@ -12904,7 +12824,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 1098,
+      "line": 1093,
       "tabs": [],
       "tag": "button"
     },
@@ -17822,126 +17742,6 @@
       "tag": "Btn"
     },
     {
-      "file": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "handler": "disabled ? undefined : onClick} style={{ ...base, ...styles[variant]",
-      "label": "(icon or dynamic label)",
-      "line": 58,
-      "tabs": [
-        "mtls_mesh"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "handler": "onClick} style={{ padding: \"6px 14px\", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: \"pointer\", border: \"no...",
-      "label": "(icon or dynamic label)",
-      "line": 76,
-      "tabs": [
-        "mtls_mesh"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "handler": "handleClose} style={{ background: \"none\", border: \"none\", color: C.muted, cursor: \"pointer\", fontSize: 18, lineHeight: 1",
-      "label": "\u2715",
-      "line": 102,
-      "tabs": [
-        "mtls_mesh"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "handler": "",
-      "label": "setAutoRenew(v => !v)} style={ }> {autoRenew ? : }",
-      "line": 110,
-      "tabs": [
-        "mtls_mesh"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "handler": "handleClose",
-      "label": "Cancel",
-      "line": 116,
-      "tabs": [
-        "mtls_mesh"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "handler": "handleSubmit} disabled={busy || !name.trim() || !namespace.trim() || !endpoint.trim()",
-      "label": "(icon or dynamic label)",
-      "line": 117,
-      "tabs": [
-        "mtls_mesh"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "handler": "handleClose} style={{ background: \"none\", border: \"none\", color: C.muted, cursor: \"pointer\", fontSize: 18, lineHeight: 1",
-      "label": "\u2715",
-      "line": 138,
-      "tabs": [
-        "mtls_mesh"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "handler": "handleClose",
-      "label": "Cancel",
-      "line": 147,
-      "tabs": [
-        "mtls_mesh"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "handler": "load",
-      "label": "Refresh",
-      "line": 238,
-      "tabs": [
-        "mtls_mesh"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "handler": "",
-      "label": "setRegModal(true)} small> Register Service",
-      "line": 271,
-      "tabs": [
-        "mtls_mesh"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "handler": "",
-      "label": "handleRenew(svc.id)} disabled= >",
-      "line": 310,
-      "tabs": [
-        "mtls_mesh"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "handler": "",
-      "label": "setAnchorModal(true)}> Add Trust Anchor",
-      "line": 372,
-      "tabs": [
-        "mtls_mesh"
-      ],
-      "tag": "Btn"
-    },
-    {
       "file": "web/dashboard/src/components/v3/tabs/OpsMetricsTab.tsx",
       "handler": "",
       "label": "setTimeWindow(w)} style={ }>",
@@ -18871,7 +18671,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void downloadSDK()} disabled= >Download SDK",
-      "line": 1191,
+      "line": 1183,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18879,7 +18679,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void refresh(false)} disabled= >",
-      "line": 1192,
+      "line": 1184,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18887,7 +18687,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void submitInit()} disabled= >",
-      "line": 1222,
+      "line": 1214,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18895,7 +18695,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void submitComplete()} disabled= >",
-      "line": 1245,
+      "line": 1237,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18903,7 +18703,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void submitLease()} disabled= >",
-      "line": 1268,
+      "line": 1260,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18911,7 +18711,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void submitReceipt()} disabled= >",
-      "line": 1284,
+      "line": 1276,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18919,7 +18719,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void revokeLease(item)} disabled= >Revoke",
-      "line": 1324,
+      "line": 1316,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18927,7 +18727,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void loadPolicy(false)} disabled= >",
-      "line": 1614,
+      "line": 1606,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18935,7 +18735,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "savePolicy} disabled={saving||loading",
       "label": "(icon or dynamic label)",
-      "line": 1615,
+      "line": 1607,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18943,7 +18743,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void loadPolicy(false)} disabled= >",
-      "line": 2192,
+      "line": 2184,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18951,7 +18751,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "savePolicy} disabled={saving||loading",
       "label": "(icon or dynamic label)",
-      "line": 2193,
+      "line": 2185,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18959,7 +18759,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void refreshVaultRows(false)} disabled= >",
-      "line": 2388,
+      "line": 2380,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18967,7 +18767,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void downloadVaultSetup()} disabled= >Download Setup Query",
-      "line": 2389,
+      "line": 2381,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18975,7 +18775,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void createVaultFromPolicy()} disabled= >",
-      "line": 2390,
+      "line": 2382,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18983,7 +18783,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void deleteVaultFromPolicy(row)} disabled= >",
-      "line": 2447,
+      "line": 2439,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18991,7 +18791,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void loadPolicy(false)} disabled= >",
-      "line": 2722,
+      "line": 2714,
       "tabs": [],
       "tag": "Btn"
     },
@@ -18999,7 +18799,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "savePolicy} disabled={saving||loading",
       "label": "(icon or dynamic label)",
-      "line": 2723,
+      "line": 2715,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19007,7 +18807,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "void refresh()} disabled= >",
-      "line": 2936,
+      "line": 2928,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19015,7 +18815,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "selectSubtab(\"fieldenc\")}>Field Encryption",
-      "line": 3009,
+      "line": 3001,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19023,7 +18823,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "selectSubtab(\"dataenc-policy\")}>Data Encryption Policy",
-      "line": 3010,
+      "line": 3002,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19031,7 +18831,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "selectSubtab(\"token-policy\")}>Token / Mask / Redact Policy",
-      "line": 3011,
+      "line": 3003,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19039,7 +18839,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "selectSubtab(\"payment-policy\")}>Payment Policy",
-      "line": 3012,
+      "line": 3004,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19047,7 +18847,7 @@
       "file": "web/dashboard/src/components/v3/tabs/TokenizeTab.tsx",
       "handler": "",
       "label": "selectSubtab(\"pkcs11\")}>PKCS#11 / JCA",
-      "line": 3013,
+      "line": 3005,
       "tabs": [],
       "tag": "Btn"
     },
@@ -26730,84 +26530,6 @@
     },
     {
       "dynamic": false,
-      "expression": "serviceRequest(\"certs\", \"/mesh/services\")",
-      "file": "web/dashboard/src/lib/mtlsMesh.ts",
-      "line": 56,
-      "match_key": "certs|GET|/mesh/services",
-      "method": "GET",
-      "normalized_path": "/mesh/services",
-      "path": "/mesh/services",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
-      "expression": "serviceRequest(\"certs\", \"/mesh/services\")",
-      "file": "web/dashboard/src/lib/mtlsMesh.ts",
-      "line": 61,
-      "match_key": "certs|POST|/mesh/services",
-      "method": "POST",
-      "normalized_path": "/mesh/services",
-      "path": "/mesh/services",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"certs\", `/mesh/services/${serviceId}/renew`)",
-      "file": "web/dashboard/src/lib/mtlsMesh.ts",
-      "line": 65,
-      "match_key": "certs|POST|/mesh/services/{param}/renew",
-      "method": "POST",
-      "normalized_path": "/mesh/services/{param}/renew",
-      "path": "/mesh/services/{param}/renew",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
-      "expression": "serviceRequest(\"certs\", \"/mesh/certificates\")",
-      "file": "web/dashboard/src/lib/mtlsMesh.ts",
-      "line": 69,
-      "match_key": "certs|GET|/mesh/certificates",
-      "method": "GET",
-      "normalized_path": "/mesh/certificates",
-      "path": "/mesh/certificates",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
-      "expression": "serviceRequest(\"certs\", \"/mesh/trust-anchors\")",
-      "file": "web/dashboard/src/lib/mtlsMesh.ts",
-      "line": 74,
-      "match_key": "certs|GET|/mesh/trust-anchors",
-      "method": "GET",
-      "normalized_path": "/mesh/trust-anchors",
-      "path": "/mesh/trust-anchors",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
-      "expression": "serviceRequest(\"certs\", \"/mesh/topology\")",
-      "file": "web/dashboard/src/lib/mtlsMesh.ts",
-      "line": 79,
-      "match_key": "certs|GET|/mesh/topology",
-      "method": "GET",
-      "normalized_path": "/mesh/topology",
-      "path": "/mesh/topology",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
       "expression": "serviceRequest(\"audit\", \"/ops-metrics/overview\")",
       "file": "web/dashboard/src/lib/opsMetrics.ts",
       "line": 57,
@@ -28705,7 +28427,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-26T11:56:59Z",
+  "generated_at": "2026-09-26T12:22:37Z",
   "navigation": [
     {
       "group": "Overview",
@@ -28761,11 +28483,6 @@
       "group": "PKI & certificates",
       "id": "certs",
       "label": "Certificates / PKI"
-    },
-    {
-      "group": "PKI & certificates",
-      "id": "mtls_mesh",
-      "label": "mTLS Mesh"
     },
     {
       "group": "Data & integrations",
@@ -37140,7 +36857,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 125,
+      "handler_line": 117,
       "handler_name": "handleCreateCA",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37364,7 +37081,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 140,
+      "handler_line": 132,
       "handler_name": "handleListCAs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37435,7 +37152,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 154,
+      "handler_line": 146,
       "handler_name": "handleDeleteCA",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37538,7 +37255,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 172,
+      "handler_line": 164,
       "handler_name": "handleIssueCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37682,7 +37399,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 191,
+      "handler_line": 183,
       "handler_name": "handleSignCSR",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37832,7 +37549,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 216,
+      "handler_line": 208,
       "handler_name": "handleListCerts",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37892,7 +37609,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 234,
+      "handler_line": 226,
       "handler_name": "handleGetCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37955,7 +37672,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 325,
+      "handler_line": 317,
       "handler_name": "handleDeleteCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38034,7 +37751,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 252,
+      "handler_line": 244,
       "handler_name": "handleDownloadCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38124,7 +37841,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 282,
+      "handler_line": 274,
       "handler_name": "handleRenewCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38196,7 +37913,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 304,
+      "handler_line": 296,
       "handler_name": "handleRevokeCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38262,7 +37979,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 342,
+      "handler_line": 334,
       "handler_name": "handleCreateProfile",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38341,7 +38058,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 357,
+      "handler_line": 349,
       "handler_name": "handleListProfiles",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38401,7 +38118,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 371,
+      "handler_line": 363,
       "handler_name": "handleGetProfile",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38459,7 +38176,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 389,
+      "handler_line": 381,
       "handler_name": "handleValidatePQC",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38525,7 +38242,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 404,
+      "handler_line": 396,
       "handler_name": "handleOTSStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38584,7 +38301,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 418,
+      "handler_line": 410,
       "handler_name": "handleMigratePQC",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38650,7 +38367,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 445,
+      "handler_line": 437,
       "handler_name": "handlePQCReadiness",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38713,7 +38430,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 459,
+      "handler_line": 451,
       "handler_name": "handleCRL",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39046,7 +38763,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 482,
+      "handler_line": 474,
       "handler_name": "handleOCSP",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39373,7 +39090,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 482,
+      "handler_line": 474,
       "handler_name": "handleOCSP",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39702,7 +39419,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 524,
+      "handler_line": 516,
       "handler_name": "handleInventory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39767,7 +39484,7 @@
         "SecurityStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 538,
+      "handler_line": 530,
       "handler_name": "handleSecurityStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39830,7 +39547,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 546,
+      "handler_line": 538,
       "handler_name": "handleGetAlertPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39895,7 +39612,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 560,
+      "handler_line": 552,
       "handler_name": "handleUpsertAlertPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -40846,7 +40563,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 589,
+      "handler_line": 581,
       "handler_name": "handleListProtocolConfigs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -40911,7 +40628,7 @@
         "ListProtocolSchemas"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 632,
+      "handler_line": 624,
       "handler_name": "handleListProtocolSchemas",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -40967,7 +40684,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 603,
+      "handler_line": 595,
       "handler_name": "handleUpsertProtocolConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41042,7 +40759,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 640,
+      "handler_line": 632,
       "handler_name": "handleUploadThirdPartyCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41134,7 +40851,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 655,
+      "handler_line": 647,
       "handler_name": "handleIssueInternalMTLS",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41209,7 +40926,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1444,
+      "handler_line": 1436,
       "handler_name": "handleMerkleBuild",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41251,7 +40968,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1468,
+      "handler_line": 1460,
       "handler_name": "handleMerkleEpochs",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41286,7 +41003,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1491,
+      "handler_line": 1483,
       "handler_name": "handleMerkleEpoch",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41328,7 +41045,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1510,
+      "handler_line": 1502,
       "handler_name": "handleCertProof",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41368,7 +41085,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1529,
+      "handler_line": 1521,
       "handler_name": "handleMerkleVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41400,7 +41117,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 674,
+      "handler_line": 666,
       "handler_name": "handleACMEDirectory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41446,7 +41163,7 @@
         "ACMEIssueNonce"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 706,
+      "handler_line": 698,
       "handler_name": "handleACMENonce",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41500,7 +41217,7 @@
         "ACMEIssueNonce"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 706,
+      "handler_line": 698,
       "handler_name": "handleACMENonce",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41569,7 +41286,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 713,
+      "handler_line": 705,
       "handler_name": "handleACMENewAccount",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41687,7 +41404,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 741,
+      "handler_line": 733,
       "handler_name": "handleACMENewOrder",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41878,7 +41595,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 781,
+      "handler_line": 773,
       "handler_name": "handleACMEChallengeInfo",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41951,7 +41668,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 803,
+      "handler_line": 795,
       "handler_name": "handleACMEChallenge",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42028,7 +41745,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 821,
+      "handler_line": 813,
       "handler_name": "handleACMEFinalize",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42141,7 +41858,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 845,
+      "handler_line": 837,
       "handler_name": "handleACMECertDownload",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42223,7 +41940,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 864,
+      "handler_line": 856,
       "handler_name": "handleESTCACerts",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42288,7 +42005,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 878,
+      "handler_line": 870,
       "handler_name": "handleESTCSRAttrs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42364,7 +42081,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 892,
+      "handler_line": 884,
       "handler_name": "handleESTSimpleEnroll",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42435,7 +42152,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 947,
+      "handler_line": 939,
       "handler_name": "handleESTSimpleReenroll",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42510,7 +42227,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1001,
+      "handler_line": 993,
       "handler_name": "handleESTServerKeygen",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42584,7 +42301,7 @@
         "CACertBundle"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1016,
+      "handler_line": 1008,
       "handler_name": "handleSCEPGet",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42713,7 +42430,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1061,
+      "handler_line": 1053,
       "handler_name": "handleSCEPPKIOperation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42816,7 +42533,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1193,
+      "handler_line": 1185,
       "handler_name": "handleCMPv2",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42904,7 +42621,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1254,
+      "handler_line": 1246,
       "handler_name": "handleCMPv2Confirm",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42971,307 +42688,6 @@
       "service_store_calls": [
         "GetCertificate"
       ]
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", \"/mesh/services\")",
-          "file": "web/dashboard/src/lib/mtlsMesh.ts",
-          "line": 56,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleListMeshServices",
-      "handler_external_package_calls": [],
-      "handler_file": "services/certs/handler_mtls_mesh.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "ListMeshServices",
-        "writeErr",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 18,
-      "handler_name": "handleListMeshServices",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "ListMeshServices"
-      ],
-      "method": "GET",
-      "normalized_path": "/mesh/services",
-      "path": "/mesh/services",
-      "route_file": "services/certs/handler.go",
-      "route_line": 114,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", \"/mesh/services\")",
-          "file": "web/dashboard/src/lib/mtlsMesh.ts",
-          "line": 61,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleRegisterMeshService",
-      "handler_external_package_calls": [
-        "strings.TrimSpace",
-        "time.Now"
-      ],
-      "handler_file": "services/certs/handler_mtls_mesh.go",
-      "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeErr",
-        "meshNewID",
-        "CreateMeshService",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 33,
-      "handler_name": "handleRegisterMeshService",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "CreateMeshService"
-      ],
-      "method": "POST",
-      "normalized_path": "/mesh/services",
-      "path": "/mesh/services",
-      "route_file": "services/certs/handler.go",
-      "route_line": 115,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", `/mesh/services/${serviceId}/renew`)",
-          "file": "web/dashboard/src/lib/mtlsMesh.ts",
-          "line": 65,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleRenewServiceCert",
-      "handler_external_package_calls": [
-        "crypto/x509.CreateCertificate",
-        "crypto/x509.ParseCertificate",
-        "encoding/hex.EncodeToString",
-        "encoding/pem.EncodeToMemory",
-        "fmt.Sprintf",
-        "math/big.NewInt",
-        "strings.TrimSpace",
-        "time.Now"
-      ],
-      "handler_file": "services/certs/handler_mtls_mesh.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "writeErr",
-        "GetMeshService",
-        "CreateCertificate",
-        "meshNewID",
-        "CreateMeshCertificate",
-        "UpdateMeshServiceCert",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [
-        "pkg/crypto.GenerateKeyPair",
-        "pkg/crypto.RandomInt",
-        "pkg/crypto.Hash"
-      ],
-      "handler_line": 87,
-      "handler_name": "handleRenewServiceCert",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "GetMeshService",
-        "CreateMeshCertificate",
-        "UpdateMeshServiceCert"
-      ],
-      "method": "POST",
-      "normalized_path": "/mesh/services/{param}/renew",
-      "path": "/mesh/services/{id}/renew",
-      "route_file": "services/certs/handler.go",
-      "route_line": 116,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", \"/mesh/certificates\")",
-          "file": "web/dashboard/src/lib/mtlsMesh.ts",
-          "line": 69,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleListMeshCertificates",
-      "handler_external_package_calls": [],
-      "handler_file": "services/certs/handler_mtls_mesh.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "ListMeshCertificates",
-        "writeErr",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 196,
-      "handler_name": "handleListMeshCertificates",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "ListMeshCertificates"
-      ],
-      "method": "GET",
-      "normalized_path": "/mesh/certificates",
-      "path": "/mesh/certificates",
-      "route_file": "services/certs/handler.go",
-      "route_line": 117,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", \"/mesh/trust-anchors\")",
-          "file": "web/dashboard/src/lib/mtlsMesh.ts",
-          "line": 74,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleListTrustAnchors",
-      "handler_external_package_calls": [],
-      "handler_file": "services/certs/handler_mtls_mesh.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "ListTrustAnchors",
-        "writeErr",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 211,
-      "handler_name": "handleListTrustAnchors",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "ListTrustAnchors"
-      ],
-      "method": "GET",
-      "normalized_path": "/mesh/trust-anchors",
-      "path": "/mesh/trust-anchors",
-      "route_file": "services/certs/handler.go",
-      "route_line": 118,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleAddTrustAnchor",
-      "handler_external_package_calls": [
-        "strings.TrimSpace",
-        "time.Now"
-      ],
-      "handler_file": "services/certs/handler_mtls_mesh.go",
-      "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeErr",
-        "meshParseTime",
-        "meshNewID",
-        "CreateTrustAnchor",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 226,
-      "handler_name": "handleAddTrustAnchor",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "CreateTrustAnchor"
-      ],
-      "method": "POST",
-      "normalized_path": "/mesh/trust-anchors",
-      "path": "/mesh/trust-anchors",
-      "route_file": "services/certs/handler.go",
-      "route_line": 119,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", \"/mesh/topology\")",
-          "file": "web/dashboard/src/lib/mtlsMesh.ts",
-          "line": 79,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleGetTopology",
-      "handler_external_package_calls": [],
-      "handler_file": "services/certs/handler_mtls_mesh.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "GetMeshTopology",
-        "writeErr",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 271,
-      "handler_name": "handleGetTopology",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "GetMeshTopology"
-      ],
-      "method": "GET",
-      "normalized_path": "/mesh/topology",
-      "path": "/mesh/topology",
-      "route_file": "services/certs/handler.go",
-      "route_line": 120,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
     },
     {
       "frontend_call_sites": [
@@ -85642,7 +85058,7 @@
       "auth": 82,
       "autokey": 15,
       "backup": 11,
-      "certs": 72,
+      "certs": 65,
       "cloud": 11,
       "cluster-manager": 21,
       "compliance": 42,
@@ -85676,7 +85092,7 @@
       "auth-edge": 4,
       "autokey": 11,
       "backup": 10,
-      "certs": 54,
+      "certs": 48,
       "cloud": 10,
       "cluster-manager": 11,
       "compliance": 18,
@@ -85708,7 +85124,7 @@
       "auth-edge": 8,
       "autokey": 2,
       "backup": 1,
-      "certs": 5,
+      "certs": 4,
       "cloud": 1,
       "cluster-manager": 2,
       "compliance": 2,
@@ -85885,19 +85301,19 @@
     ]
   },
   "summary": {
-    "backend_routes": 913,
+    "backend_routes": 906,
     "backend_services": 29,
-    "button_inventory": 839,
-    "frontend_call_sites": 627,
-    "matched_frontend_call_sites": 560,
-    "nav_items": 35,
-    "request_flows": 913,
-    "request_flows_with_frontend": 550,
-    "request_flows_with_internal_package_calls": 131,
+    "button_inventory": 827,
+    "frontend_call_sites": 621,
+    "matched_frontend_call_sites": 554,
+    "nav_items": 34,
+    "request_flows": 906,
+    "request_flows_with_frontend": 544,
+    "request_flows_with_internal_package_calls": 130,
     "request_flows_with_service_calls": 536,
-    "request_flows_with_store_calls": 684,
+    "request_flows_with_store_calls": 677,
     "subpane_groups": 8,
-    "tab_components": 43,
+    "tab_components": 42,
     "unmatched_frontend_call_sites": 67
   },
   "tabs": [
@@ -86059,19 +85475,6 @@
         "web/dashboard/src/lib/certs.ts",
         "web/dashboard/src/lib/keycore.ts",
         "web/dashboard/src/modules/hsm/HSMPartitionTable.tsx"
-      ]
-    },
-    {
-      "call_count": 6,
-      "component": "web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx",
-      "group": "PKI & certificates",
-      "id": "mtls_mesh",
-      "label": "mTLS Mesh",
-      "services": [
-        "certs"
-      ],
-      "support_files": [
-        "web/dashboard/src/lib/mtlsMesh.ts"
       ]
     },
     {
@@ -93502,7 +92905,7 @@
         ],
         "handler": "handleCreateCA",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 125,
+        "handlerLine": 117,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -93561,7 +92964,7 @@
         ],
         "handler": "handleListCAs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 140,
+        "handlerLine": 132,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93607,7 +93010,7 @@
         ],
         "handler": "handleDeleteCA",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 154,
+        "handlerLine": 146,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -93662,7 +93065,7 @@
         ],
         "handler": "handleIssueCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 172,
+        "handlerLine": 164,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -93713,7 +93116,7 @@
         ],
         "handler": "handleSignCSR",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 191,
+        "handlerLine": 183,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -93764,7 +93167,7 @@
         ],
         "handler": "handleListCerts",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 216,
+        "handlerLine": 208,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93798,7 +93201,7 @@
         "frontendSites": [],
         "handler": "handleGetCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 234,
+        "handlerLine": 226,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -93839,7 +93242,7 @@
         ],
         "handler": "handleDeleteCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 325,
+        "handlerLine": 317,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -93889,7 +93292,7 @@
         ],
         "handler": "handleDownloadCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 252,
+        "handlerLine": 244,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93930,7 +93333,7 @@
         ],
         "handler": "handleRenewCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 282,
+        "handlerLine": 274,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -93971,7 +93374,7 @@
         ],
         "handler": "handleRevokeCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 304,
+        "handlerLine": 296,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -94005,7 +93408,7 @@
         "frontendSites": [],
         "handler": "handleCreateProfile",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 342,
+        "handlerLine": 334,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -94043,7 +93446,7 @@
         ],
         "handler": "handleListProfiles",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 357,
+        "handlerLine": 349,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94077,7 +93480,7 @@
         "frontendSites": [],
         "handler": "handleGetProfile",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 371,
+        "handlerLine": 363,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -94108,7 +93511,7 @@
         "frontendSites": [],
         "handler": "handleValidatePQC",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 389,
+        "handlerLine": 381,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -94139,7 +93542,7 @@
         "frontendSites": [],
         "handler": "handleOTSStatus",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 404,
+        "handlerLine": 396,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -94169,7 +93572,7 @@
         "frontendSites": [],
         "handler": "handleMigratePQC",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 418,
+        "handlerLine": 410,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -94199,7 +93602,7 @@
         "frontendSites": [],
         "handler": "handlePQCReadiness",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 445,
+        "handlerLine": 437,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -94251,7 +93654,7 @@
         ],
         "handler": "handleCRL",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 459,
+        "handlerLine": 451,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -94345,7 +93748,7 @@
         ],
         "handler": "handleOCSP",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 482,
+        "handlerLine": 474,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -94432,7 +93835,7 @@
         "frontendSites": [],
         "handler": "handleOCSP",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 482,
+        "handlerLine": 474,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -94506,7 +93909,7 @@
         ],
         "handler": "handleInventory",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 524,
+        "handlerLine": 516,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94545,7 +93948,7 @@
         ],
         "handler": "handleSecurityStatus",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 538,
+        "handlerLine": 530,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94586,7 +93989,7 @@
         ],
         "handler": "handleGetAlertPolicy",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 546,
+        "handlerLine": 538,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94630,7 +94033,7 @@
         ],
         "handler": "handleUpsertAlertPolicy",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 560,
+        "handlerLine": 552,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -95121,7 +94524,7 @@
         ],
         "handler": "handleListProtocolConfigs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 589,
+        "handlerLine": 581,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95158,7 +94561,7 @@
         ],
         "handler": "handleListProtocolSchemas",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 632,
+        "handlerLine": 624,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95196,7 +94599,7 @@
         ],
         "handler": "handleUpsertProtocolConfig",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 603,
+        "handlerLine": 595,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -95239,7 +94642,7 @@
         ],
         "handler": "handleUploadThirdPartyCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 640,
+        "handlerLine": 632,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95275,7 +94678,7 @@
         "frontendSites": [],
         "handler": "handleIssueInternalMTLS",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 655,
+        "handlerLine": 647,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -95309,7 +94712,7 @@
         ],
         "handler": "handleMerkleBuild",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1444,
+        "handlerLine": 1436,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95346,7 +94749,7 @@
         ],
         "handler": "handleMerkleEpochs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1468,
+        "handlerLine": 1460,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95376,7 +94779,7 @@
         "frontendSites": [],
         "handler": "handleMerkleEpoch",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1491,
+        "handlerLine": 1483,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -95410,7 +94813,7 @@
         ],
         "handler": "handleCertProof",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1510,
+        "handlerLine": 1502,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95445,7 +94848,7 @@
         ],
         "handler": "handleMerkleVerify",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1529,
+        "handlerLine": 1521,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95473,7 +94876,7 @@
         "frontendSites": [],
         "handler": "handleACMEDirectory",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 674,
+        "handlerLine": 666,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -95500,7 +94903,7 @@
         "frontendSites": [],
         "handler": "handleACMENonce",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 706,
+        "handlerLine": 698,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "HEAD",
@@ -95530,7 +94933,7 @@
         "frontendSites": [],
         "handler": "handleACMENonce",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 706,
+        "handlerLine": 698,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -95571,7 +94974,7 @@
         ],
         "handler": "handleACMENewAccount",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 713,
+        "handlerLine": 705,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95623,7 +95026,7 @@
         ],
         "handler": "handleACMENewOrder",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 741,
+        "handlerLine": 733,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95702,7 +95105,7 @@
         ],
         "handler": "handleACMEChallengeInfo",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 781,
+        "handlerLine": 773,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95742,7 +95145,7 @@
         ],
         "handler": "handleACMEChallenge",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 803,
+        "handlerLine": 795,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95786,7 +95189,7 @@
         ],
         "handler": "handleACMEFinalize",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 821,
+        "handlerLine": 813,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95832,7 +95235,7 @@
         "frontendSites": [],
         "handler": "handleACMECertDownload",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 845,
+        "handlerLine": 837,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -95862,7 +95265,7 @@
         "frontendSites": [],
         "handler": "handleESTCACerts",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 864,
+        "handlerLine": 856,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -95899,7 +95302,7 @@
         ],
         "handler": "handleESTCSRAttrs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 878,
+        "handlerLine": 870,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95940,7 +95343,7 @@
         ],
         "handler": "handleESTSimpleEnroll",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 892,
+        "handlerLine": 884,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95972,7 +95375,7 @@
         "frontendSites": [],
         "handler": "handleESTSimpleReenroll",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 947,
+        "handlerLine": 939,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -96008,7 +95411,7 @@
         ],
         "handler": "handleESTServerKeygen",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1001,
+        "handlerLine": 993,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -96048,7 +95451,7 @@
         ],
         "handler": "handleSCEPGet",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1016,
+        "handlerLine": 1008,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -96096,7 +95499,7 @@
         ],
         "handler": "handleSCEPPKIOperation",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1061,
+        "handlerLine": 1053,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -96145,7 +95548,7 @@
         ],
         "handler": "handleCMPv2",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1193,
+        "handlerLine": 1185,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -96187,7 +95590,7 @@
         ],
         "handler": "handleCMPv2Confirm",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1254,
+        "handlerLine": 1246,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -96210,244 +95613,6 @@
           "Certificates / PKI",
           "Compliance",
           "restapi"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", \"/mesh/services\")",
-            "file": "web/dashboard/src/lib/mtlsMesh.ts",
-            "line": 56,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleListMeshServices",
-        "handlerFile": "services/certs/handler_mtls_mesh.go",
-        "handlerLine": 18,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/mesh/services",
-        "path": "/mesh/services",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "certs|GET|/mesh/services",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "ListMeshServices"
-        ],
-        "uiLabels": [
-          "mTLS Mesh"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "strings.TrimSpace",
-          "time.Now"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", \"/mesh/services\")",
-            "file": "web/dashboard/src/lib/mtlsMesh.ts",
-            "line": 61,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleRegisterMeshService",
-        "handlerFile": "services/certs/handler_mtls_mesh.go",
-        "handlerLine": 33,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/mesh/services",
-        "path": "/mesh/services",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "certs|POST|/mesh/services",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "CreateMeshService"
-        ],
-        "uiLabels": [
-          "mTLS Mesh"
-        ]
-      },
-      {
-        "complexity": 6,
-        "externalPackages": [
-          "crypto/x509.CreateCertificate",
-          "crypto/x509.ParseCertificate",
-          "encoding/hex.EncodeToString",
-          "encoding/pem.EncodeToMemory",
-          "fmt.Sprintf",
-          "math/big.NewInt",
-          "strings.TrimSpace",
-          "time.Now"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", `/mesh/services/${serviceId}/renew`)",
-            "file": "web/dashboard/src/lib/mtlsMesh.ts",
-            "line": 65,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleRenewServiceCert",
-        "handlerFile": "services/certs/handler_mtls_mesh.go",
-        "handlerLine": 87,
-        "hasFrontend": true,
-        "internalPackages": [
-          "pkg/crypto.GenerateKeyPair",
-          "pkg/crypto.RandomInt",
-          "pkg/crypto.Hash"
-        ],
-        "method": "POST",
-        "normalizedPath": "/mesh/services/{param}/renew",
-        "path": "/mesh/services/{id}/renew",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "certs|POST|/mesh/services/{param}/renew",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "GetMeshService",
-          "CreateMeshCertificate",
-          "UpdateMeshServiceCert"
-        ],
-        "uiLabels": [
-          "mTLS Mesh"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", \"/mesh/certificates\")",
-            "file": "web/dashboard/src/lib/mtlsMesh.ts",
-            "line": 69,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleListMeshCertificates",
-        "handlerFile": "services/certs/handler_mtls_mesh.go",
-        "handlerLine": 196,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/mesh/certificates",
-        "path": "/mesh/certificates",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "certs|GET|/mesh/certificates",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "ListMeshCertificates"
-        ],
-        "uiLabels": [
-          "mTLS Mesh"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", \"/mesh/trust-anchors\")",
-            "file": "web/dashboard/src/lib/mtlsMesh.ts",
-            "line": 74,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleListTrustAnchors",
-        "handlerFile": "services/certs/handler_mtls_mesh.go",
-        "handlerLine": 211,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/mesh/trust-anchors",
-        "path": "/mesh/trust-anchors",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "certs|GET|/mesh/trust-anchors",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "ListTrustAnchors"
-        ],
-        "uiLabels": [
-          "mTLS Mesh"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "strings.TrimSpace",
-          "time.Now"
-        ],
-        "frontendSites": [],
-        "handler": "handleAddTrustAnchor",
-        "handlerFile": "services/certs/handler_mtls_mesh.go",
-        "handlerLine": 226,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/mesh/trust-anchors",
-        "path": "/mesh/trust-anchors",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "certs|POST|/mesh/trust-anchors",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "CreateTrustAnchor"
-        ],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", \"/mesh/topology\")",
-            "file": "web/dashboard/src/lib/mtlsMesh.ts",
-            "line": 79,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleGetTopology",
-        "handlerFile": "services/certs/handler_mtls_mesh.go",
-        "handlerLine": 271,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/mesh/topology",
-        "path": "/mesh/topology",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "certs|GET|/mesh/topology",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "GetMeshTopology"
-        ],
-        "uiLabels": [
-          "mTLS Mesh"
         ]
       },
       {
@@ -118644,7 +117809,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-26T11:56:59Z",
+    "generatedAt": "2026-09-26T12:22:37Z",
     "methods": [
       "DELETE",
       "GET",
@@ -118685,8 +117850,8 @@
       "workload"
     ],
     "summary": {
-      "flows": 913,
-      "frontendBacked": 550,
+      "flows": 906,
+      "frontendBacked": 544,
       "highRisk": 377,
       "services": 29
     }

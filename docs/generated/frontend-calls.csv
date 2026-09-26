@@ -474,12 +474,6 @@ keycore,keycore,GET,/ml/anomalies,/ml/anomalies,False,trackedFetch,web/dashboard
 keycore,keycore,POST,/ml/detect,/ml/detect,False,trackedFetch,web/dashboard/src/lib/mlAnomaly.ts,12,keycore|POST|/ml/detect
 keycore,keycore,GET,/ml/access-heatmap,/ml/access-heatmap,False,trackedFetch,web/dashboard/src/lib/mlAnomaly.ts,21,keycore|GET|/ml/access-heatmap
 keycore,keycore,POST,/ml/anomalies/{param}/dismiss,/ml/anomalies/{param}/dismiss,True,trackedFetch,web/dashboard/src/lib/mlAnomaly.ts,27,keycore|POST|/ml/anomalies/{param}/dismiss
-certs,certs,GET,/mesh/services,/mesh/services,False,serviceRequest,web/dashboard/src/lib/mtlsMesh.ts,56,certs|GET|/mesh/services
-certs,certs,POST,/mesh/services,/mesh/services,False,serviceRequest,web/dashboard/src/lib/mtlsMesh.ts,61,certs|POST|/mesh/services
-certs,certs,POST,/mesh/services/{param}/renew,/mesh/services/{param}/renew,True,serviceRequest,web/dashboard/src/lib/mtlsMesh.ts,65,certs|POST|/mesh/services/{param}/renew
-certs,certs,GET,/mesh/certificates,/mesh/certificates,False,serviceRequest,web/dashboard/src/lib/mtlsMesh.ts,69,certs|GET|/mesh/certificates
-certs,certs,GET,/mesh/trust-anchors,/mesh/trust-anchors,False,serviceRequest,web/dashboard/src/lib/mtlsMesh.ts,74,certs|GET|/mesh/trust-anchors
-certs,certs,GET,/mesh/topology,/mesh/topology,False,serviceRequest,web/dashboard/src/lib/mtlsMesh.ts,79,certs|GET|/mesh/topology
 audit,audit,GET,/ops-metrics/overview,/ops-metrics/overview,False,serviceRequest,web/dashboard/src/lib/opsMetrics.ts,57,audit|GET|/ops-metrics/overview
 audit,audit,GET,/ops-metrics/timeseries?window={param},/ops-metrics/timeseries,True,serviceRequest,web/dashboard/src/lib/opsMetrics.ts,62,audit|GET|/ops-metrics/timeseries
 audit,audit,GET,/ops-metrics/latency,/ops-metrics/latency,False,serviceRequest,web/dashboard/src/lib/opsMetrics.ts,67,audit|GET|/ops-metrics/latency

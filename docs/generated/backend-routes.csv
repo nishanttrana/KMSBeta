@@ -251,13 +251,6 @@ certs,GET,/scep/pkiclient.exe,/scep/pkiclient.exe,h.handleSCEPGet,services/certs
 certs,POST,/scep/pkiclient.exe,/scep/pkiclient.exe,h.handleSCEPPKIOperation,services/certs/handler.go,106,certs|POST|/scep/pkiclient.exe
 certs,POST,/cmpv2,/cmpv2,h.handleCMPv2,services/certs/handler.go,108,certs|POST|/cmpv2
 certs,POST,/cmpv2/confirm,/cmpv2/confirm,h.handleCMPv2Confirm,services/certs/handler.go,109,certs|POST|/cmpv2/confirm
-certs,GET,/mesh/services,/mesh/services,h.handleListMeshServices,services/certs/handler.go,114,certs|GET|/mesh/services
-certs,POST,/mesh/services,/mesh/services,h.handleRegisterMeshService,services/certs/handler.go,115,certs|POST|/mesh/services
-certs,POST,/mesh/services/{id}/renew,/mesh/services/{param}/renew,h.handleRenewServiceCert,services/certs/handler.go,116,certs|POST|/mesh/services/{param}/renew
-certs,GET,/mesh/certificates,/mesh/certificates,h.handleListMeshCertificates,services/certs/handler.go,117,certs|GET|/mesh/certificates
-certs,GET,/mesh/trust-anchors,/mesh/trust-anchors,h.handleListTrustAnchors,services/certs/handler.go,118,certs|GET|/mesh/trust-anchors
-certs,POST,/mesh/trust-anchors,/mesh/trust-anchors,h.handleAddTrustAnchor,services/certs/handler.go,119,certs|POST|/mesh/trust-anchors
-certs,GET,/mesh/topology,/mesh/topology,h.handleGetTopology,services/certs/handler.go,120,certs|GET|/mesh/topology
 cloud,POST,/cloud/accounts,/cloud/accounts,h.handleRegisterAccount,services/cloud/handler.go,30,cloud|POST|/cloud/accounts
 cloud,GET,/cloud/accounts,/cloud/accounts,h.handleListAccounts,services/cloud/handler.go,31,cloud|GET|/cloud/accounts
 cloud,DELETE,/cloud/accounts/{id},/cloud/accounts/{param},h.handleDeleteAccount,services/cloud/handler.go,32,cloud|DELETE|/cloud/accounts/{param}

@@ -1,20 +1,20 @@
 # Generated Product Map
 
-Generated at `2026-09-26T11:56:59Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-26T12:22:37Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `35`
-- Tab/component mappings: `43`
+- Dashboard navigation items: `34`
+- Tab/component mappings: `42`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `913` across `29` services
-- Frontend API call sites discovered: `627`
-- Frontend call sites with exact backend route match: `560`
+- Backend HTTP routes discovered: `906` across `29` services
+- Frontend API call sites discovered: `621`
+- Frontend call sites with exact backend route match: `554`
 - Frontend call sites needing review or dynamic/runtime confirmation: `67`
-- Clickable controls with static `onClick` handlers: `839`
-- Backend request flows with handler/service/package summaries: `913`
+- Clickable controls with static `onClick` handlers: `827`
+- Backend request flows with handler/service/package summaries: `906`
 
 ## How To Use This For Launch
 
@@ -63,9 +63,6 @@ flowchart LR
   UI --> tab_certs
   tab_certs --> svc_certs
   tab_certs --> svc_keycore
-  tab_mtls_mesh["mTLS Mesh"]
-  UI --> tab_mtls_mesh
-  tab_mtls_mesh --> svc_certs
   tab_vault["Secret Vault"]
   UI --> tab_vault
   tab_vault --> svc_auth_edge
@@ -164,7 +161,7 @@ flowchart LR
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
   svc_backup["backup (11 routes)"]
-  svc_certs["certs (72 routes)"]
+  svc_certs["certs (65 routes)"]
   svc_cloud["cloud (11 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (42 routes)"]
@@ -203,7 +200,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Keys & lifecycle | Envelope Encryption | envelope_enc | web/dashboard/src/components/v3/tabs/EnvelopeEncTab.tsx | keycore | 7 |
 | Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 6 |
 | PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 95 |
-| PKI & certificates | mTLS Mesh | mtls_mesh | web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx | certs | 6 |
 | Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, secrets | 14 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
 | Data & integrations | Cloud Key Control | cloudctl | web/dashboard/src/components/v3/tabs/CloudKeyControlTab.tsx | - | 0 |
@@ -245,7 +241,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | auth | 82 | 45 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
-| certs | 72 | 54 |
+| certs | 65 | 48 |
 | cloud | 11 | 10 |
 | cluster-manager | 21 | 11 |
 | compliance | 42 | 18 |
@@ -447,7 +443,6 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | certs | GET | /acme/cert/{id} | h.handleACMECertDownload | services/certs/handler.go | 97 |
 | certs | GET | /est/.well-known/est/cacerts | h.handleESTCACerts | services/certs/handler.go | 99 |
 | certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll | services/certs/handler.go | 102 |
-| certs | POST | /mesh/trust-anchors | h.handleAddTrustAnchor | services/certs/handler.go | 119 |
 | cloud | GET | /cloud/accounts | h.handleListAccounts | services/cloud/handler.go | 31 |
 | cloud | GET | /cloud/region-mappings | h.handleListRegionMappings | services/cloud/handler.go | 34 |
 | cloud | GET | /cloud/inventory | h.handleInventory | services/cloud/handler.go | 38 |
@@ -472,8 +467,9 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations | services/compliance/handler.go | 58 |
 | compliance | GET | /compliance/sbom | h.handleSBOM | services/compliance/handler.go | 61 |
 | compliance | GET | /compliance/sbom/services | h.handleSBOMServices | services/compliance/handler.go | 62 |
+| compliance | GET | /compliance/sbom/services/{name} | h.handleSBOMService | services/compliance/handler.go | 63 |
 
-Showing `120` of `363`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `362`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 
