@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"vecta-kms/pkg/servicetoken"
 )
 
 type PostureControlPatch struct {
@@ -64,6 +66,9 @@ func (c *HTTPGovernanceControlClient) ApplyPostureControls(ctx context.Context, 
 	req.Header.Set("X-Tenant-ID", "root")
 	if c.bearerToken != "" {
 		req.Header.Set("Authorization", "Bearer "+c.bearerToken)
+	} else {
+		// Posture's own service identity; governance admits it on this route.
+		servicetoken.Authorize(ctx, req)
 	}
 	resp, err := c.client.Do(req)
 	if err != nil {

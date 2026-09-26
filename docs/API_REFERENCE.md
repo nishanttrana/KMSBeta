@@ -891,6 +891,29 @@ No body. Returns updated ExportTarget.
 
 Multi-party approvals, encrypted backup/restore, emergency bypass, system state.
 
+**System administration** (`/governance/settings*`, `/governance/backups*`, `/governance/system/*`)
+needs a verified root administrator: `tenant_id=root`, a token for the root
+tenant, and role `admin`/`super-admin` or permission `*` (writes) /
+`auth.tenant.*`, `auth.policy.*`. There is no unauthenticated access:
+governance refuses to start without its token-verification key
+(`GOVERNANCE_JWT_PUBLIC_KEY_PEM`/`_B64`, else the shared
+`JWT_PUBLIC_KEY_PEM`/`_B64`). Platform services are admitted only on the
+routes named for them: `kms-keycore` and `kms-policy` on
+`GET /governance/system/state`, `kms-posture` on
+`PUT /governance/system/posture-controls`.
+
+| Refusal | Status | `error.code` | Audit `reason` |
+|---|---|---|---|
+| no token | 401 | `unauthorized` | `authentication_required` |
+| token doesn't verify (any governance route) | 401 | `unauthorized` | `invalid_token` (`audit.governance.authentication_refused`) |
+| no `tenant_id` | 400 | `bad_request` | `tenant_required` |
+| `tenant_id` isn't the token's tenant | 403 | `forbidden` | `tenant_mismatch` |
+| `tenant_id` isn't `root` | 403 | `forbidden` | `not_root_tenant` |
+| token tenant isn't `root` | 403 | `forbidden` | `token_tenant_not_root` |
+| not a root administrator or an allowed service | 403 | `forbidden` | `insufficient_privileges` |
+
+System-admin refusals are audited as `audit.governance.system_admin_refused`.
+
 ---
 
 ### GET /svc/governance/policies / POST /svc/governance/policies
@@ -3336,6 +3359,7 @@ Selected events with dedicated audit classification:
 - `audit.governance.approval_requested`, `audit.governance.approved`, `audit.governance.rejected`, `audit.governance.bypassed`
 - `audit.governance.backup_created` (`key_mode`, `key_retained`), `audit.governance.backup_deleted`, `audit.governance.backup_restored`, `audit.governance.backup_restore_refused` (tampered artifact, wrong key, changed scope, wrong file type, retired v1 key package; carries `reason`)
 - `audit.governance.backup_create_refused` (`reason`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`)
+- `audit.governance.system_admin_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `not_root_tenant`, `token_tenant_not_root`, `insufficient_privileges`), `audit.governance.authentication_refused` (`reason: invalid_token`)
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
 - `audit.backup.policy_created`, `audit.backup.policy_updated`, `audit.backup.policy_deleted`, `audit.backup.run_refused_preview`, `audit.backup.restore_refused_preview`
 - `audit.auth.cluster_token_minted`, `audit.auth.cluster_mint_refused`; `audit.cluster.write_forwarded`, `audit.cluster.forward_refused` (primary); `audit.<service>.cluster_write_forwarded`, `audit.<service>.cluster_write_refused` (member; `reason`: invalid_token / primary_unreachable / primary_write_required); refusals carry `result: refused`

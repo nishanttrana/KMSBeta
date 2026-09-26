@@ -38,11 +38,15 @@ import (
 	"vecta-kms/pkg/metering"
 	pkgratelimit "vecta-kms/pkg/ratelimit"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	"vecta-kms/pkg/servicetoken"
 )
 
 var logger = log.New(os.Stdout, "[keycore] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
+	// Calls to other platform services (governance system state) carry this
+	// service's own identity.
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-keycore"))
 	cfg := pkgconfig.Load()
 
 	if err := pkgruntimecfg.ValidateServiceConfig("kms-keycore", cfg); err != nil {

@@ -42,6 +42,21 @@ Identity comes only from the verified token (CLAUDE.md rule 4). Proven by
 `TestActorHeadersCannotGrantAccess`, `TestActorHeadersWithoutTokenAreNotAnIdentity`,
 `TestActorGroupsHeaderDoesNotMatchGrants` and `TestActorBuiltFromVerifiedClaimsOnly`.
 
+## System administration (governance)
+
+| Event | When | Severity |
+|---|---|---|
+| `audit.governance.system_admin_refused` | a system-administration route (settings, backups, restore, backup key, system state, FIPS mode, posture controls, network, FDE, SNMP, integrity) was refused (`result: refused`; `reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `not_root_tenant`, `token_tenant_not_root` or `insufficient_privileges`; with `route`, `status`, `actor`, `authenticated`) | warning |
+| `audit.governance.authentication_refused` | a governance request carried a token that doesn't verify (`result: refused`, `reason: invalid_token`, `route`) | warning |
+
+Only a verified root administrator passes, plus the platform services listed
+per route in `systemAdminServiceCallers` (keycore and policy read
+`GET /governance/system/state`; posture writes
+`PUT /governance/system/posture-controls`). Governance refuses to start
+without its token-verification key (see below). Proven by
+`TestSystemAdminRoutesRequireVerifiedToken`, `TestSystemAdminRefusalReasons`,
+`TestSystemAdminServiceCallersAreRouteBound` and `TestMissingJWTKeyRefusesStart`.
+
 ## Service master keys (pkg/mek)
 
 The secrets, certs, cloud and ekm services emit these under their own
@@ -96,8 +111,11 @@ Proven by `routetest.RefusalsAudited` for every route, and by the
 
 A service that **refuses to start** has no audit pipeline yet, because it exits
 before connecting. That covers placeholder secrets, weak database passwords,
-an invalid or mismatched FIPS mode, and a missing certified module. These
-refusals appear as:
+an invalid or mismatched FIPS mode, a missing certified module, and a missing
+or malformed token-verification key (keycore; governance, which looks for
+`GOVERNANCE_JWT_PUBLIC_KEY_PEM`/`_B64`, then the shared
+`JWT_PUBLIC_KEY_PEM`/`_B64`, then `KEYCORE_JWT_PUBLIC_KEY_*`, then
+`JWT_PUBLIC_KEY_PATH`). These refusals appear as:
 - a `refusing to start: …` line on the container's stderr;
 - the service missing or restarting in health checks;
 - during a FIPS rollout, the service never reaching the target mode in System
