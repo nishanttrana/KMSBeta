@@ -541,6 +541,9 @@ services:
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8070:8070"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18070:18070"
+    volumes:
+      # The cluster audit signing key received at join (docs/CLUSTERING.md).
+      - audit-data:/app/data
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18070"]
       interval: 15s
@@ -1293,6 +1296,7 @@ volumes:
   auth-data:
   hsm-integration-data:
   keycore-data:
+  audit-data:
   certs-key-data:
   valkey-data:
   runtime-certs:

@@ -29,6 +29,7 @@ func newTestStore(t *testing.T) *SQLStore {
 
 func createSQLiteSchema(conn *pkgdb.DB) error {
 	sql := []string{
+		`CREATE TABLE auth_login_attempts (id TEXT PRIMARY KEY, chain_node TEXT NOT NULL DEFAULT '', tenant_id TEXT NOT NULL, key_hash TEXT NOT NULL, succeeded BOOLEAN NOT NULL, occurred_at TIMESTAMP NOT NULL);`,
 		`CREATE TABLE auth_tenants (id TEXT PRIMARY KEY, name TEXT NOT NULL, status TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE auth_tenant_roles (tenant_id TEXT NOT NULL, role_name TEXT NOT NULL, permissions BLOB NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY(tenant_id, role_name));`,
 		`CREATE TABLE auth_users (id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, username TEXT NOT NULL, email TEXT NOT NULL, pwd_hash BLOB NOT NULL, totp_secret TEXT, role TEXT NOT NULL, status TEXT NOT NULL, must_change_password INTEGER NOT NULL DEFAULT 0, node_local INTEGER NOT NULL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(tenant_id, username));`,

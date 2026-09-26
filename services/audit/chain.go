@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -63,19 +62,6 @@ func chainHash(previous string, input []byte) string {
 	_, _ = h.Write([]byte(previous))
 	_, _ = h.Write(input)
 	return hex.EncodeToString(h.Sum(nil))
-}
-
-// eventHMAC computes HMAC-SHA256(chain_hash, signingKey).
-// This provides event authenticity: the HMAC can only be produced by a party
-// holding the service signing key, separate from chain integrity.
-// signingKey must be 32 bytes (256-bit). If empty, returns empty string.
-func eventHMAC(chainHashHex string, signingKey []byte) string {
-	if len(signingKey) == 0 {
-		return ""
-	}
-	mac := hmac.New(sha256.New, signingKey)
-	_, _ = mac.Write([]byte(chainHashHex))
-	return hex.EncodeToString(mac.Sum(nil))
 }
 
 // epochHash computes SHA256(previousEpochRoot || treeRoot) for cross-epoch linking.

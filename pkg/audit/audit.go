@@ -38,6 +38,9 @@ const DeadLetterSubject = "auditdlq.events"
 // and RiskScore wherever possible — downstream services (dam, governance,
 // reporting, metrics) run their logic on these fields alone.
 type Event struct {
+	// ID is set only on a cluster relay (Relay): the id the event already has
+	// in the audit chain. Emitters leave it empty; the audit service assigns it.
+	ID            string                 `json:"id,omitempty"`
 	TenantID      string                 `json:"tenant_id"`
 	Service       string                 `json:"service"`
 	Action        string                 `json:"action"`
@@ -116,6 +119,31 @@ func (c *Client) Emit(ctx context.Context, action string, evt Event) error {
 		return err
 	}
 	return c.pub.Publish(ctx, evt.Action, payload)
+}
+
+// OriginClusterRelay marks an event that another cluster node wrote to its
+// audit chain and that reached this node by replication. The primary relays
+// such events onto its own stream so its consumers (compliance playbook
+// triggers) see every node's activity (docs/CLUSTERING.md). The audit ingest
+// skips a relayed event only when that event id is already in the database,
+// so the marker cannot be used to keep an event out of the audit trail.
+const OriginClusterRelay = "cluster_relay"
+
+// Relay republishes an already-persisted event under its original subject
+// (evt.Action, "audit.<service>.<action>") with Origin OriginClusterRelay.
+func Relay(ctx context.Context, pub *pkgevents.Publisher, evt Event) error {
+	if pub == nil {
+		return errors.New("audit: relay publisher is required")
+	}
+	if strings.TrimSpace(evt.ID) == "" || !strings.HasPrefix(evt.Action, "audit.") {
+		return errors.New("audit: a relayed event needs its id and an audit.* action")
+	}
+	evt.Origin = OriginClusterRelay
+	payload, err := json.Marshal(evt)
+	if err != nil {
+		return err
+	}
+	return pub.Publish(ctx, evt.Action, payload)
 }
 
 // EnsureStream creates (or converges) the single AUDIT stream. Only the audit

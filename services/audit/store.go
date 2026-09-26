@@ -66,21 +66,30 @@ type Store interface {
 }
 
 type SQLStore struct {
-	db              *pkgdb.DB
-	isPostgres      bool
-	eventSigningKey []byte // 32-byte HMAC-SHA256 key for per-event signatures
+	db         *pkgdb.DB
+	isPostgres bool
+	keys       *signingKeys // HMAC-SHA256 keys for per-event signatures
+	// chainNode returns the chain this node appends to (clusterstate
+	// ChainNode): "" while standalone.
+	chainNode func(context.Context) string
 }
 
 func NewSQLStore(db *pkgdb.DB) *SQLStore {
 	return &SQLStore{
 		db:         db,
 		isPostgres: detectPostgresDriver(db),
+		keys:       &signingKeys{},
+		chainNode:  func(context.Context) string { return "" },
 	}
 }
 
+// SetEventSigningKey installs the node's configured signing key.
 func (s *SQLStore) SetEventSigningKey(key []byte) {
-	s.eventSigningKey = key
+	s.keys.install(key)
 }
+
+// SetChainNode sets how the store learns its chain id.
+func (s *SQLStore) SetChainNode(f func(context.Context) string) { s.chainNode = f }
 
 type EventQuery struct {
 	Action        string
@@ -116,13 +125,17 @@ func (s *SQLStore) PersistEventAndAlert(ctx context.Context, event AuditEvent, a
 	tenantID := event.TenantID
 	previousHash := "GENESIS"
 	sequence := int64(1)
+	// This node's chain: its pre-cluster rows ('') continue into its
+	// clustered rows; other nodes' replicated chains are never extended here.
+	self := s.chainNode(ctx)
+	event.ChainNode = self
 
 	var prevSeq int64
 	var prevHash string
 	err = tx.QueryRowContext(ctx, `
 SELECT sequence, chain_hash FROM audit_events
-WHERE tenant_id=$1 ORDER BY sequence DESC LIMIT 1
-`, tenantID).Scan(&prevSeq, &prevHash)
+WHERE tenant_id=$1 AND chain_node IN ('', $2) ORDER BY sequence DESC LIMIT 1
+`, tenantID, self).Scan(&prevSeq, &prevHash)
 	if err == nil {
 		sequence = prevSeq + 1
 		previousHash = prevHash
@@ -146,7 +159,7 @@ WHERE tenant_id=$1 ORDER BY sequence DESC LIMIT 1
 	event.PreviousHash = previousHash
 	event.ChainHash = chainHash(previousHash, eventHashInput(event))
 	// Compute per-event HMAC for authenticity (FIPS 140-3 integrity + authenticity).
-	event.HMACSig = eventHMAC(event.ChainHash, s.eventSigningKey)
+	event.HMACSig, event.HMACKeyID = s.keys.sign(event.ChainHash)
 	// Populate FIPS category group if not already set by service layer.
 	if event.CategoryGroup == "" {
 		event.CategoryGroup = categoryGroupForService(event.Service)
@@ -163,9 +176,10 @@ INSERT INTO audit_events (
     id, tenant_id, sequence, chain_hash, previous_hash, hmac_sig, category_group,
     timestamp, service, action, actor_id, actor_type,
     target_type, target_id, method, endpoint, source_ip, user_agent, request_hash, correlation_id, parent_event_id,
-    session_id, result, status_code, error_message, duration_ms, fips_compliant, approval_id, risk_score, tags, node_id, details, created_at
+    session_id, result, status_code, error_message, duration_ms, fips_compliant, approval_id, risk_score, tags, node_id, details,
+    chain_node, hmac_key_id, created_at
 ) VALUES (
-    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,CURRENT_TIMESTAMP
+    $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,CURRENT_TIMESTAMP
 )
 `, event.ID, event.TenantID, event.Sequence, event.ChainHash, event.PreviousHash,
 		nullable(event.HMACSig), nullable(event.CategoryGroup),
@@ -173,6 +187,7 @@ INSERT INTO audit_events (
 		event.TargetType, event.TargetID, event.Method, event.Endpoint, nullable(event.SourceIP), nullable(event.UserAgent), nullable(event.RequestHash),
 		nullable(event.CorrelationID), nullable(event.ParentEventID), nullable(event.SessionID), event.Result, event.StatusCode, nullable(event.ErrorMessage),
 		event.DurationMS, event.FIPSCompliant, nullable(event.ApprovalID), event.RiskScore, tags, nullable(event.NodeID), details,
+		event.ChainNode, nullable(event.HMACKeyID),
 	)
 	if err != nil {
 		return AuditEvent{}, Alert{}, err
@@ -337,7 +352,8 @@ SELECT id, sequence, previous_hash, chain_hash, timestamp, service, action, acto
        COALESCE(target_type,''), COALESCE(target_id,''), COALESCE(method,''), COALESCE(endpoint,''), COALESCE(CAST(source_ip AS TEXT),''), COALESCE(user_agent,''),
        COALESCE(request_hash,''), COALESCE(correlation_id,''), COALESCE(parent_event_id,''), COALESCE(session_id,''),
        result, COALESCE(status_code,0), COALESCE(error_message,''), COALESCE(duration_ms,0), COALESCE(fips_compliant,false), COALESCE(approval_id,''),
-       COALESCE(risk_score,0), tags, COALESCE(node_id,''), details
+       COALESCE(risk_score,0), tags, COALESCE(node_id,''), details,
+       chain_node, COALESCE(hmac_sig,''), COALESCE(hmac_key_id,'')
 FROM audit_events
 WHERE tenant_id=$1
 ORDER BY sequence ASC
@@ -347,7 +363,12 @@ ORDER BY sequence ASC
 	}
 	defer rows.Close() //nolint:errcheck
 
-	prevHash := "GENESIS"
+	// Each node's chain is verified on its own. This node's chain starts at
+	// GENESIS ('' rows continue into its clustered rows). Another node's
+	// chain arrives from the point that node was clustered, so its first row
+	// here anchors it; from there every link and hash is checked.
+	self := s.chainNode(ctx)
+	prevByChain := map[string]string{}
 	var breaks []map[string]interface{}
 	for rows.Next() {
 		var (
@@ -364,7 +385,8 @@ ORDER BY sequence ASC
 		)
 		if err := rows.Scan(&ev.ID, &ev.Sequence, &ev.PreviousHash, &ev.ChainHash, &timestampRaw, &ev.Service, &ev.Action, &ev.ActorID, &ev.ActorType,
 			&targetType, &targetID, &method, &endpoint, &sourceIP, &userAgent, &requestHash, &corrID, &parentID, &sessionID,
-			&ev.Result, &ev.StatusCode, &errorMessage, &ev.DurationMS, &ev.FIPSCompliant, &approvalID, &ev.RiskScore, &tagsRaw, &nodeID, &detailsRaw); err != nil {
+			&ev.Result, &ev.StatusCode, &errorMessage, &ev.DurationMS, &ev.FIPSCompliant, &approvalID, &ev.RiskScore, &tagsRaw, &nodeID, &detailsRaw,
+			&ev.ChainNode, &ev.HMACSig, &ev.HMACKeyID); err != nil {
 			return false, nil, err
 		}
 		ev.TenantID = tenantID
@@ -385,14 +407,36 @@ ORDER BY sequence ASC
 		_ = json.Unmarshal(tagsRaw, &ev.Tags)
 		_ = json.Unmarshal(detailsRaw, &ev.Details)
 
+		chain := ev.ChainNode
+		if chain == "" {
+			chain = self
+		}
+		prevHash, seen := prevByChain[chain]
+		if !seen {
+			prevHash = "GENESIS"
+			if chain != self && ev.Sequence > 1 {
+				prevHash = ev.PreviousHash // anchor of a replicated chain
+			}
+		}
+		brk := func(reason string) {
+			breaks = append(breaks, map[string]interface{}{"sequence": ev.Sequence, "event_id": ev.ID, "chain_node": ev.ChainNode, "reason": reason})
+		}
 		if ev.PreviousHash != prevHash {
-			breaks = append(breaks, map[string]interface{}{"sequence": ev.Sequence, "event_id": ev.ID, "reason": "previous_hash_mismatch"})
+			brk("previous_hash_mismatch")
 		}
 		expected := chainHash(prevHash, eventHashInput(ev))
 		if ev.ChainHash != expected {
-			breaks = append(breaks, map[string]interface{}{"sequence": ev.Sequence, "event_id": ev.ID, "reason": "chain_hash_mismatch"})
+			brk("chain_hash_mismatch")
 		}
-		prevHash = ev.ChainHash
+		if ev.HMACSig != "" && s.keys.configured() {
+			switch ok, known := s.keys.verify(ev.ChainHash, ev.HMACSig, ev.HMACKeyID); {
+			case !known:
+				brk("hmac_key_unknown")
+			case !ok:
+				brk("hmac_mismatch")
+			}
+		}
+		prevByChain[chain] = ev.ChainHash
 	}
 	return len(breaks) == 0, breaks, rows.Err()
 }
@@ -733,14 +777,17 @@ func (s *SQLStore) BuildMerkleEpoch(ctx context.Context, tenantID string, maxLea
 		maxLeaves = 1000
 	}
 
+	// Epochs cover this node's own chain; other nodes' epochs replicate in.
+	self := s.chainNode(ctx)
+
 	// Find the last epoch's seq_to and tree_root for cross-epoch linking.
 	var lastSeqTo int64
 	var lastEpochRoot string
 	err := s.db.SQL().QueryRowContext(ctx, `
 SELECT COALESCE(MAX(seq_to), 0), COALESCE((SELECT tree_root FROM audit_merkle_epochs
- WHERE tenant_id=$1 ORDER BY epoch_number DESC LIMIT 1), '')
-FROM audit_merkle_epochs WHERE tenant_id=$1
-`, tenantID, tenantID).Scan(&lastSeqTo, &lastEpochRoot)
+ WHERE tenant_id=$1 AND chain_node IN ('', $2) ORDER BY epoch_number DESC LIMIT 1), '')
+FROM audit_merkle_epochs WHERE tenant_id=$1 AND chain_node IN ('', $2)
+`, tenantID, self).Scan(&lastSeqTo, &lastEpochRoot)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -748,10 +795,10 @@ FROM audit_merkle_epochs WHERE tenant_id=$1
 	// Fetch next batch of events after the last epoch
 	rows, err := s.db.SQL().QueryContext(ctx, `
 SELECT id, sequence, chain_hash FROM audit_events
-WHERE tenant_id=$1 AND sequence > $2
+WHERE tenant_id=$1 AND chain_node IN ('', $4) AND sequence > $2
 ORDER BY sequence ASC
 LIMIT $3
-`, tenantID, lastSeqTo, maxLeaves)
+`, tenantID, lastSeqTo, maxLeaves, self)
 	if err != nil {
 		return nil, err
 	}
@@ -788,8 +835,8 @@ LIMIT $3
 	// Get next epoch number
 	var epochNum int
 	err = s.db.SQL().QueryRowContext(ctx, `
-SELECT COALESCE(MAX(epoch_number), 0) + 1 FROM audit_merkle_epochs WHERE tenant_id=$1
-`, tenantID).Scan(&epochNum)
+SELECT COALESCE(MAX(epoch_number), 0) + 1 FROM audit_merkle_epochs WHERE tenant_id=$1 AND chain_node IN ('', $2)
+`, tenantID, self).Scan(&epochNum)
 	if err != nil {
 		return nil, err
 	}
@@ -810,18 +857,18 @@ SELECT COALESCE(MAX(epoch_number), 0) + 1 FROM audit_merkle_epochs WHERE tenant_
 	defer tx.Rollback()
 
 	_, err = tx.ExecContext(ctx, `
-INSERT INTO audit_merkle_epochs (id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root, previous_epoch_root, epoch_hash, created_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
-`, epochID, tenantID, epochNum, seqFrom, seqTo, len(leaves), root, nullable(prevEpochRoot), epHash)
+INSERT INTO audit_merkle_epochs (id, tenant_id, epoch_number, seq_from, seq_to, leaf_count, tree_root, previous_epoch_root, epoch_hash, chain_node, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)
+`, epochID, tenantID, epochNum, seqFrom, seqTo, len(leaves), root, nullable(prevEpochRoot), epHash, self)
 	if err != nil {
 		return nil, err
 	}
 
 	for i, l := range leaves {
 		_, err = tx.ExecContext(ctx, `
-INSERT INTO audit_merkle_leaves (epoch_id, tenant_id, leaf_index, event_id, sequence, leaf_hash)
-VALUES ($1, $2, $3, $4, $5, $6)
-`, epochID, tenantID, i, l.eventID, l.sequence, hashes[i])
+INSERT INTO audit_merkle_leaves (epoch_id, tenant_id, leaf_index, event_id, sequence, leaf_hash, chain_node)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+`, epochID, tenantID, i, l.eventID, l.sequence, hashes[i], self)
 		if err != nil {
 			return nil, err
 		}
@@ -841,6 +888,7 @@ VALUES ($1, $2, $3, $4, $5, $6)
 		TreeRoot:          root,
 		PreviousEpochRoot: prevEpochRoot,
 		EpochHash:         epHash,
+		ChainNode:         self,
 	}
 	return &MerkleEpochResult{Epoch: epoch, Leaves: len(leaves)}, nil
 }

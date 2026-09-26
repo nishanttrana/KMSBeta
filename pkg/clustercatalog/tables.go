@@ -269,6 +269,7 @@ var NodeLocal = map[string]string{
 	"confidential_release_history":        "per-node release log",
 	"ct_log_entries":                      "CT log polling cursor data of this node",
 	"fle_metadata":                        "where fields were encrypted; written during crypto operations on the node that served them",
+	"audit_relay_cursor":                  "how far this primary has relayed each member's audit chain to its own consumers",
 	"dataprotect_audit_log":               "per-node data protection log",
 	"dr_drill_runs":                       "DR drill executions of this node",
 	"ekm_key_access_log":                  "per-node access log",
@@ -309,4 +310,5 @@ var SharedAppend = map[string]string{
 	"audit_events":        "append-only; every node writes its own chain",
 	"audit_merkle_epochs": "per-node Merkle epochs of the audit chain",
 	"audit_merkle_leaves": "per-node Merkle leaves of the audit chain",
+	"auth_login_attempts": "login failures and successes from every node, so lockout counts cluster-wide",
 }
