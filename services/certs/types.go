@@ -327,14 +327,6 @@ type CMPv2RequestMessage struct {
 	ProtectionAlg string `json:"protection_alg"`
 }
 
-type InternalMTLSRequest struct {
-	TenantID     string `json:"tenant_id"`
-	CAID         string `json:"ca_id"`
-	Algorithm    string `json:"algorithm"`
-	CertClass    string `json:"cert_class"`
-	Protocol     string `json:"protocol"`
-	ValidityDays int64  `json:"validity_days"`
-}
 
 // ── Certificate Transparency (Merkle) types ──────────────────
 

@@ -640,33 +640,3 @@ func TestRuntimeMTLSTenantCustomRootAutoCreated(t *testing.T) {
 	}
 }
 
-func TestIssueInternalMTLSUsesTenantRuntimeRootWhenCAIDMissing(t *testing.T) {
-	svc, store := newCertsService(t)
-	ctx := context.Background()
-
-	_, err := svc.UpsertProtocolConfig(ctx, UpsertProtocolConfigRequest{
-		TenantID:   "trt-issue",
-		Protocol:   "runtime-mtls",
-		Enabled:    true,
-		ConfigJSON: `{"mode":"custom","runtime_root_ca_name":"issuer-runtime-root"}`,
-		UpdatedBy:  "test",
-	})
-	if err != nil {
-		t.Fatalf("upsert runtime-mtls config: %v", err)
-	}
-
-	issued, _, err := svc.IssueInternalMTLS(ctx, "auth", InternalMTLSRequest{
-		TenantID: "trt-issue",
-		CAID:     "",
-	})
-	if err != nil {
-		t.Fatalf("issue internal mtls: %v", err)
-	}
-	ca, err := store.GetCA(ctx, "trt-issue", issued.CAID)
-	if err != nil {
-		t.Fatalf("get issuing ca: %v", err)
-	}
-	if !strings.EqualFold(strings.TrimSpace(ca.Name), "issuer-runtime-root") {
-		t.Fatalf("expected issuer-runtime-root, got %s", ca.Name)
-	}
-}

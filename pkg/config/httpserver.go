@@ -6,6 +6,7 @@ import (
 	"time"
 
 	pkgsecurityheaders "vecta-kms/pkg/securityheaders"
+	pkgsvctls "vecta-kms/pkg/svctls"
 )
 
 // fips140TLSConfig returns a TLS configuration compliant with FIPS 140-3 Level 1.
@@ -22,6 +23,15 @@ func fips140TLSConfig() *tls.Config {
 	}
 }
 
+// serverTLSConfig is the internal mTLS configuration when the process has
+// enrolled (pkg/svctls), otherwise the plain FIPS TLS profile.
+func serverTLSConfig() *tls.Config {
+	if id := pkgsvctls.Current(); id != nil {
+		return id.ServerConfig()
+	}
+	return fips140TLSConfig()
+}
+
 // NewHTTPServer creates a hardened HTTP server with proper timeouts.
 // Security headers (OWASP A05) are applied automatically to every response
 // via the securityheaders middleware, including X-Content-Type-Options,
@@ -34,7 +44,7 @@ func NewHTTPServer(port string, handler http.Handler) *http.Server {
 	return &http.Server{
 		Addr:              ":" + port,
 		Handler:           pkgsecurityheaders.Wrap(withClusterForwarding(handler)),
-		TLSConfig:         fips140TLSConfig(),
+		TLSConfig:         serverTLSConfig(),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,

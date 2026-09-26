@@ -161,6 +161,8 @@ const restartAllowedFor=(service:{name?:string;restart_allowed?:boolean}):boolea
   return !RESTART_BLOCKED_TARGETS.has(target);
 };
 
+const INTERNAL_TLS_POLICY="TLS 1.3 · internal mTLS · hybrid ML-KEM key exchange";
+
 const dl=(name:string,b64:string,type:string)=>{
   const raw=atob(String(b64||""));
   const bytes=new Uint8Array(raw.length);
@@ -2144,12 +2146,10 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const certSecuritySummary = certSecurityLoading
     ? "loading..."
     : `${String(certSecurity?.storage||"db_encrypted")} / ${String(certSecurity?.hsm_mode||"software")} / ${String(certSecurity?.status||"ready")}`;
-  const tlsPolicyLabel = String(systemState?.tls_mode||"internal_ca")
-    .replace("internal_ca","TLS defaults")
-    .replace("custom","Custom TLS")
-    .replace("tls13_only","TLS 1.3 only")
-    .replace("tls13_hybrid_ui","TLS 1.3 + Hybrid PQC (WebUI)")
-    .replace("tls13_hybrid_kms","TLS 1.3 + Hybrid PQC (KMS internal)");
+  // The enforced policy, not a setting: every service link is TLS 1.3 mTLS
+  // from the internal-services Sub CA and negotiates hybrid ML-KEM key
+  // exchange (pkg/svctls, proven by TestMutualTLSBetweenServices).
+  const tlsPolicyLabel = INTERNAL_TLS_POLICY;
   const tlsDefaultCertSummary = systemTLSCertSource==="internal_ca"
     ? "Internal CA auto-issue"
     : systemTLSCertSource==="pki_ca"
@@ -2372,14 +2372,12 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     </Modal>
 
     <Modal open={tlsConfigModalOpen} onClose={()=>{setTlsConfigModalOpen(false);void loadAccessHardening();}} title="Configure TLS Defaults">
-      <FG label="TLS Runtime Policy">
-        <Sel value={String(systemState?.tls_mode||"internal_ca")} onChange={(e)=>setSystemState((p)=>({...p,tls_mode:String(e.target.value||"internal_ca")}))}>
-          <option value="internal_ca">Standard TLS defaults</option>
-          <option value="custom">Custom TLS</option>
-          <option value="tls13_only">TLS 1.3 only</option>
-          <option value="tls13_hybrid_ui">TLS 1.3 + Hybrid PQC (WebUI)</option>
-          <option value="tls13_hybrid_kms">TLS 1.3 + Hybrid PQC (KMS internal)</option>
-        </Sel>
+      <FG label="Internal TLS (enforced)">
+        <div style={{fontSize:11,color:C.text,lineHeight:1.5}}>
+          {INTERNAL_TLS_POLICY}. Every service, Envoy and the dashboard use certificates from the
+          internal-services Sub CA; there is no plain HTTP between components. Certificate signatures are
+          classical (ECDSA): Go's TLS stack does not support ML-DSA certificates yet.
+        </div>
       </FG>
       <FG label="Default Certificate Source">
         <Sel value={systemTLSCertSource} onChange={(e)=>setInterfaceTLSConfig((p)=>({

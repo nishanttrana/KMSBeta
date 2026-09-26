@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+	pkgsvctls "vecta-kms/pkg/svctls"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
@@ -21,7 +22,6 @@ import (
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
-	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
@@ -36,6 +36,11 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	// Internal mTLS identity from the internal-services Sub CA; nothing is
+	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	if _, err := pkgsvctls.Init(ctx, "kms-featureforge", pkgsvctls.Options{Logger: logger}); err != nil {
+		logger.Fatalf("internal mTLS enrolment failed: %v", err)
+	}
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
 		PostgresDSN: cfg.PostgresDSN,
@@ -75,11 +80,11 @@ func main() {
 	if auditClient != nil {
 		svcCfg.Audit = NewSpineAudit(auditClient)
 	}
-	if u := envOr("POLICY_URL", "http://policy:8040"); u != "" {
+	if u := envOr("POLICY_URL", "https://policy:8040"); u != "" {
 		svcCfg.Policy = NewHTTPPolicyClient(u, 3*time.Second)
 		logger.Printf("policy integration enabled: %s", u)
 	}
-	if u := envOr("GOVERNANCE_URL", "http://governance:8050"); u != "" {
+	if u := envOr("GOVERNANCE_URL", "https://governance:8050"); u != "" {
 		svcCfg.Governance = NewHTTPGovernanceClient(u, 3*time.Second)
 		logger.Printf("governance integration enabled: %s", u)
 	}
@@ -107,8 +112,8 @@ func main() {
 	authedHandler := pkgjwtauth.MustWrap("FEATUREFORGE", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "featureforge"))
 	go func() {
-		logger.Printf("http listening on :%s", httpPort)
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("https (mTLS) listening on :%s", httpPort)
+		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server failed: %v", err)
 		}
 	}()
@@ -173,7 +178,7 @@ func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
 }
 
 func devMTLSConfig() (*tls.Config, error) {
-	return pkgcrypto.SelfSignedMTLSConfig("kms-featureforge-local")
+	return pkgsvctls.Current().ServerConfig(), nil
 }
 
 func envOr(key, def string) string {

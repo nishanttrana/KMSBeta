@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	pkgsvctls "vecta-kms/pkg/svctls"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
@@ -22,7 +23,6 @@ import (
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
-	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
@@ -40,6 +40,11 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	// Internal mTLS identity from the internal-services Sub CA; nothing is
+	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	if _, err := pkgsvctls.Init(ctx, "kms-reporting", pkgsvctls.Options{Logger: logger}); err != nil {
+		logger.Fatalf("internal mTLS enrolment failed: %v", err)
+	}
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
 		PostgresDSN:     cfg.PostgresDSN,
@@ -70,9 +75,9 @@ func main() {
 
 	svc := NewService(
 		NewSQLStore(dbConn),
-		NewHTTPAuditClient(envOr("AUDIT_URL", "http://127.0.0.1:8070"), 5*time.Second),
-		NewHTTPComplianceClient(envOr("COMPLIANCE_URL", "http://127.0.0.1:8110"), 5*time.Second),
-		NewHTTPPostureClient(envOr("POSTURE_URL", "http://127.0.0.1:8220"), 5*time.Second),
+		NewHTTPAuditClient(envOr("AUDIT_URL", "https://audit:8070"), 5*time.Second),
+		NewHTTPComplianceClient(envOr("COMPLIANCE_URL", "https://compliance:8110"), 5*time.Second),
+		NewHTTPPostureClient(envOr("POSTURE_URL", "https://posture:8220"), 5*time.Second),
 		publisher,
 	)
 	svc.ConfigureTelemetryRetention(
@@ -87,8 +92,8 @@ func main() {
 	authedHandler := pkgjwtauth.MustWrap("REPORTING", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "reporting"))
 	go func() {
-		logger.Printf("http listening on :%s", httpPort)
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("https (mTLS) listening on :%s", httpPort)
+		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server failed: %v", err)
 		}
 	}()
@@ -153,7 +158,7 @@ func migrationPath() string {
 }
 
 func devMTLSConfig() (*tls.Config, error) {
-	return pkgcrypto.SelfSignedMTLSConfig("kms-reporting-local")
+	return pkgsvctls.Current().ServerConfig(), nil
 }
 
 func envOr(k string, d string) string {

@@ -43,9 +43,9 @@ func main() {
 
 	svc := NewService(
 		NewSQLStore(rt.DB),
-		NewHTTPKeyCoreClient(envOr("KEYCORE_URL", "http://127.0.0.1:8010"), 5*time.Second),
+		NewHTTPKeyCoreClient(envOr("KEYCORE_URL", "https://keycore:8010"), 5*time.Second),
 		publisher,
-		WithCertsClient(NewHTTPCertsClient(envOr("CERTS_URL", "http://127.0.0.1:8030"), 5*time.Second)),
+		WithCertsClient(NewHTTPCertsClient(envOr("CERTS_URL", "https://certs:8030"), 5*time.Second)),
 		WithWrapperJWT(
 			firstNonEmptyEnv("DATAPROTECT_WRAPPER_JWT_SECRET", "JWT_SECRET"),
 			envOr("DATAPROTECT_WRAPPER_JWT_ISSUER", "vecta-dataprotect"),

@@ -4,13 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"net"
 	"strings"
 	"time"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/structpb"
+
+	pkgsvctls "vecta-kms/pkg/svctls"
 )
 
 type CallbackExecutor interface {
@@ -36,7 +40,19 @@ func (e *GRPCCallbackExecutor) Execute(ctx context.Context, req ApprovalRequest)
 	}
 	cctx, cancel := context.WithTimeout(ctx, e.timeout)
 	defer cancel()
-	conn, err := grpc.DialContext(cctx, service, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
+	// Callbacks go only to platform services, over internal mTLS
+	// (docs/SECURITY/INTERNAL_TLS.md); the address comes from the request.
+	host, _, err := net.SplitHostPort(service)
+	if err != nil || !pkgsvctls.IsInternalHost(host) {
+		return fmt.Errorf("callback service %q is not a platform service", service)
+	}
+	id := pkgsvctls.Current()
+	if id == nil {
+		return errors.New("callback: no internal mTLS identity")
+	}
+	tlsCfg := id.ClientConfig()
+	tlsCfg.ServerName = host
+	conn, err := grpc.DialContext(cctx, service, grpc.WithTransportCredentials(credentials.NewTLS(tlsCfg)), grpc.WithBlock())
 	if err != nil {
 		return err
 	}

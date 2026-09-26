@@ -1,3 +1,6 @@
+node:
+  id: vecta-edge
+  cluster: vecta-edge
 static_resources:
   listeners:
   - name: http_redirect
@@ -39,14 +42,13 @@ static_resources:
           common_tls_context:
             tls_params:
               tls_minimum_protocol_version: TLSv1_3
-            tls_certificates:
-            - certificate_chain:
-                filename: /tmp/envoy-certs/tls.crt
-              private_key:
-                filename: /tmp/envoy-certs/tls.key
-            validation_context:
-              trusted_ca:
-                filename: /tmp/envoy-certs/ca.crt
+            tls_certificate_sds_secret_configs:
+            - name: edge_server
+              sds_config:
+                path_config_source:
+                  path: /etc/envoy/sds/edge_server.yaml
+                  watched_directory: { path: /run/vecta/runtime-certs/envoy }
+                resource_api_version: V3
       filters:
       - name: envoy.filters.network.http_connection_manager
         typed_config:
@@ -159,10 +161,6 @@ static_resources:
                   headers: [{ name: "x-tenant-id", present_match: true }]
                 route: { cluster: ai_gateway_http, timeout: 60s, prefix_rewrite: "/" }
               - match:
-                  prefix: "/api/ai"
-                  headers: [{ name: "x-tenant-id", present_match: true }]
-                route: { cluster: ai_http, timeout: 60s, prefix_rewrite: "/" }
-              - match:
                   prefix: "/api/pqc"
                   headers: [{ name: "x-tenant-id", present_match: true }]
                 route: { cluster: pqc_http, timeout: 60s, prefix_rewrite: "/" }
@@ -182,10 +180,6 @@ static_resources:
                   prefix: "/api/cluster"
                   headers: [{ name: "x-tenant-id", present_match: true }]
                 route: { cluster: cluster_http, timeout: 60s, prefix_rewrite: "/" }
-              - match:
-                  prefix: "/api/software-vault"
-                  headers: [{ name: "x-tenant-id", present_match: true }]
-                route: { cluster: software_vault_http, timeout: 60s, prefix_rewrite: "/" }
               - match: { prefix: "/healthz" }
                 route: { cluster: auth_http, timeout: 10s, prefix_rewrite: "/healthz" }
               - match: { prefix: "/api" }
@@ -193,10 +187,73 @@ static_resources:
                   status: 400
                   body:
                     inline_string: '{"error":{"code":"MISSING_TENANT","message":"x-tenant-id header is required"}}'
-              # Everything else (SPA, /auth, /svc, /assets) is served by the
-              # dashboard origin behind this TLS edge. The dashboard nginx
-              # performs the /auth and /svc proxying; envoy terminates TLS with
-              # the runtime serving cert selected in the dashboard CA/Cert tab.
+              # Everything else (the SPA and its assets) is served by the
+              # dashboard over mTLS.
+              # Dashboard API calls (/svc/<service>/...) go straight to the
+              # service over mTLS (docs/SECURITY/INTERNAL_TLS.md).
+              - match: { prefix: "/svc/confidential/" }
+                route: { cluster: confidential_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/featureforge/" }
+                route: { cluster: featureforge_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/dataprotect/" }
+                route: { cluster: dataprotect_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/governance/" }
+                route: { cluster: governance_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/compliance/" }
+                route: { cluster: compliance_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/ai-gateway/" }
+                route: { cluster: ai_gateway_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/discovery/" }
+                route: { cluster: discovery_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/reporting/" }
+                route: { cluster: reporting_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/keyaccess/" }
+                route: { cluster: keyaccess_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/workload/" }
+                route: { cluster: workload_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/keycore/" }
+                route: { cluster: keycore_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/secrets/" }
+                route: { cluster: secrets_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/payment/" }
+                route: { cluster: payment_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/cluster/" }
+                route: { cluster: cluster_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/posture/" }
+                route: { cluster: posture_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/autokey/" }
+                route: { cluster: autokey_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/signing/" }
+                route: { cluster: signing_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/policy/" }
+                route: { cluster: policy_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/backup/" }
+                route: { cluster: backup_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/certs/" }
+                route: { cluster: certs_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/audit/" }
+                route: { cluster: audit_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/cloud/" }
+                route: { cluster: cloud_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/hyok/" }
+                route: { cluster: hyok_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/kmip/" }
+                route: { cluster: kmip_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/sbom/" }
+                route: { cluster: sbom_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/auth/" }
+                route: { cluster: auth_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/pqc/" }
+                route: { cluster: pqc_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/svc/ekm/" }
+                route: { cluster: ekm_http, timeout: 60s, prefix_rewrite: "/", upgrade_configs: [{ upgrade_type: websocket }] }
+              - match: { prefix: "/auth" }
+                route: { cluster: auth_http, timeout: 30s }
+                typed_per_filter_config:
+                  envoy.filters.http.local_ratelimit:
+                    "@type": type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+                    stat_prefix: login_local_rate_limit
+                    token_bucket: { max_tokens: 20, tokens_per_fill: 10, fill_interval: 1s }
               - match: { prefix: "/healthz-edge" }
                 direct_response:
                   status: 200
@@ -269,6 +326,28 @@ static_resources:
     load_assignment:
       cluster_name: dashboard_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: dashboard, port_value: 5173 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: dashboard
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: dashboard }
   - name: auth_http
     connect_timeout: 1s
     type: STRICT_DNS
@@ -276,6 +355,28 @@ static_resources:
     load_assignment:
       cluster_name: auth_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: auth, port_value: 8001 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: auth
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: auth }
   - name: keycore_http
     connect_timeout: 1s
     type: STRICT_DNS
@@ -283,20 +384,28 @@ static_resources:
     load_assignment:
       cluster_name: keycore_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: keycore, port_value: 8010 }}}}]}]
-  - name: audit_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: audit_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: audit, port_value: 8070 }}}}]}]
-  - name: policy_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: policy_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: policy, port_value: 8040 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: keycore
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: keycore }
   - name: secrets_http
     connect_timeout: 1s
     type: STRICT_DNS
@@ -304,6 +413,28 @@ static_resources:
     load_assignment:
       cluster_name: secrets_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: secrets, port_value: 8020 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: secrets
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: secrets }
   - name: certs_http
     connect_timeout: 1s
     type: STRICT_DNS
@@ -311,6 +442,57 @@ static_resources:
     load_assignment:
       cluster_name: certs_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: certs, port_value: 8030 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: certs
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: certs }
+  - name: policy_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: policy_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: policy, port_value: 8040 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: policy
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: policy }
   - name: governance_http
     connect_timeout: 1s
     type: STRICT_DNS
@@ -318,76 +500,28 @@ static_resources:
     load_assignment:
       cluster_name: governance_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: governance, port_value: 8050 }}}}]}]
-  - name: cloud_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: cloud_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: cloud, port_value: 8080 }}}}]}]
-  - name: hyok_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: hyok_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: hyok, port_value: 8120 }}}}]}]
-  - name: kmip_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: kmip_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: kmip, port_value: 8160 }}}}]}]
-  - name: ekm_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: ekm_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: ekm, port_value: 8130 }}}}]}]
-  - name: payment_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: payment_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: payment, port_value: 8170 }}}}]}]
-  - name: compliance_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: compliance_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: compliance, port_value: 8110 }}}}]}]
-  - name: sbom_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: sbom_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: sbom, port_value: 8180 }}}}]}]
-  - name: reporting_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: reporting_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: reporting, port_value: 8140 }}}}]}]
-  - name: ai_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: ai_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: ai, port_value: 8090 }}}}]}]
-  - name: ai_gateway_http
-    connect_timeout: 1s
-    type: STRICT_DNS
-    lb_policy: ROUND_ROBIN
-    load_assignment:
-      cluster_name: ai_gateway_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: ai-gateway, port_value: 8320 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: governance
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: governance }
   - name: pqc_http
     connect_timeout: 1s
     type: STRICT_DNS
@@ -395,6 +529,86 @@ static_resources:
     load_assignment:
       cluster_name: pqc_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: pqc, port_value: 8060 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: pqc
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: pqc }
+  - name: audit_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: audit_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: audit, port_value: 8070 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: audit
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: audit }
+  - name: cloud_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: cloud_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: cloud, port_value: 8080 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: cloud
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: cloud }
   - name: discovery_http
     connect_timeout: 1s
     type: STRICT_DNS
@@ -402,13 +616,231 @@ static_resources:
     load_assignment:
       cluster_name: discovery_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: discovery, port_value: 8100 }}}}]}]
-  - name: featureforge_http
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: discovery
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: discovery }
+  - name: compliance_http
     connect_timeout: 1s
     type: STRICT_DNS
     lb_policy: ROUND_ROBIN
     load_assignment:
-      cluster_name: featureforge_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: featureforge, port_value: 8300 }}}}]}]
+      cluster_name: compliance_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: compliance, port_value: 8110 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: compliance
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: compliance }
+  - name: hyok_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: hyok_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: hyok, port_value: 8120 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: hyok
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: hyok }
+  - name: ekm_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: ekm_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: ekm, port_value: 8130 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: ekm
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: ekm }
+  - name: reporting_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: reporting_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: reporting, port_value: 8140 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: reporting
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: reporting }
+  - name: kmip_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: kmip_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: kmip, port_value: 8160 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: kmip
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: kmip }
+  - name: payment_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: payment_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: payment, port_value: 8170 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: payment
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: payment }
+  - name: sbom_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: sbom_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: sbom, port_value: 8180 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: sbom
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: sbom }
   - name: dataprotect_http
     connect_timeout: 1s
     type: STRICT_DNS
@@ -416,6 +848,28 @@ static_resources:
     load_assignment:
       cluster_name: dataprotect_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: dataprotect, port_value: 8200 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: dataprotect
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: dataprotect }
   - name: cluster_http
     connect_timeout: 1s
     type: STRICT_DNS
@@ -423,13 +877,289 @@ static_resources:
     load_assignment:
       cluster_name: cluster_http
       endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: cluster-manager, port_value: 8210 }}}}]}]
-  - name: software_vault_http
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: cluster-manager
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: cluster-manager }
+  - name: posture_http
     connect_timeout: 1s
     type: STRICT_DNS
     lb_policy: ROUND_ROBIN
     load_assignment:
-      cluster_name: software_vault_http
-      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: software-vault, port_value: 8440 }}}}]}]
+      cluster_name: posture_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: posture, port_value: 8220 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: posture
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: posture }
+  - name: confidential_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: confidential_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: confidential, port_value: 8240 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: confidential
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: confidential }
+  - name: workload_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: workload_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: workload, port_value: 8250 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: workload
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: workload }
+  - name: autokey_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: autokey_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: autokey, port_value: 8260 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: autokey
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: autokey }
+  - name: keyaccess_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: keyaccess_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: keyaccess, port_value: 8270 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: keyaccess
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: keyaccess }
+  - name: signing_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: signing_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: signing, port_value: 8280 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: signing
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: signing }
+  - name: backup_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: backup_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: backup, port_value: 8290 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: backup
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: backup }
+  - name: featureforge_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: featureforge_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: featureforge, port_value: 8300 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: featureforge
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: featureforge }
+  - name: ai_gateway_http
+    connect_timeout: 1s
+    type: STRICT_DNS
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: ai_gateway_http
+      endpoints: [{ lb_endpoints: [{ endpoint: { address: { socket_address: { address: ai-gateway, port_value: 8320 }}}}]}]
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: ai-gateway
+        common_tls_context:
+          tls_params:
+            tls_minimum_protocol_version: TLSv1_3
+            tls_maximum_protocol_version: TLSv1_3
+            ecdh_curves: ["X25519MLKEM768", "X25519", "P-256", "P-384"]
+          tls_certificate_sds_secret_configs:
+          - name: internal_client
+            sds_config:
+              path_config_source:
+                path: /etc/envoy/sds/internal_client.yaml
+                watched_directory: { path: /run/vecta/runtime-certs/envoy-client }
+              resource_api_version: V3
+          validation_context:
+            trusted_ca: { filename: /run/vecta/trust/internal-ca.crt }
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: ai-gateway }
   - name: kmip_tcp
     connect_timeout: 1s
     type: STRICT_DNS

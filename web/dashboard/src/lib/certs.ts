@@ -393,14 +393,6 @@ export type ESTServerKeygenInput = {
 	auth_token?: string;
 };
 
-export type IssueInternalMTLSInput = {
-	ca_id?: string;
-	algorithm?: string;
-	cert_class?: string;
-	protocol?: string;
-	validity_days?: number;
-};
-
 export type SCEPEnrollInput = {
   ca_id: string;
   csr_pem?: string;

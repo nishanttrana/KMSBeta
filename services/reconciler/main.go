@@ -19,6 +19,7 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+	pkgsvctls "vecta-kms/pkg/svctls"
 
 	pkgconfig "vecta-kms/pkg/config"
 	pkgreconciler "vecta-kms/pkg/reconciler"
@@ -36,6 +37,11 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	// Internal mTLS identity from the internal-services Sub CA; nothing is
+	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	if _, err := pkgsvctls.Init(ctx, "kms-reconciler", pkgsvctls.Options{Logger: logger}); err != nil {
+		logger.Fatalf("internal mTLS enrolment failed: %v", err)
+	}
 
 	keycoreURL := envOr("KEYCORE_URL", "http://kms-keycore:8010")
 	kmipURL := envOr("KMIP_URL", "http://kms-kmip:8160")
@@ -64,8 +70,8 @@ func main() {
 	port := envOr("HTTP_PORT", "8470")
 	srv := pkgconfig.NewHTTPServer(port, mux)
 	go func() {
-		logger.Printf("http listening on :%s", port)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("https (mTLS) listening on :%s", port)
+		if err := srv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server failed: %v", err)
 		}
 	}()

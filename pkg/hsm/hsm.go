@@ -189,11 +189,11 @@ func New(base string) *Client {
 }
 
 // FromEnv returns a client for HSM_CONNECTOR_URL (default
-// http://hsm-connector:8430).
+// https://hsm-connector:8430, internal mTLS).
 func FromEnv() *Client {
 	base := strings.TrimSpace(os.Getenv("HSM_CONNECTOR_URL"))
 	if base == "" {
-		base = "http://hsm-connector:8430"
+		base = "https://hsm-connector:8430"
 	}
 	return New(base)
 }

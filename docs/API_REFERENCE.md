@@ -738,6 +738,46 @@ and deactivate are allowed. See docs/SECURITY/SERVICE_MASTER_KEYS.md.
 
 PKI, CA management, certificate lifecycle, enrollment protocols (ACME, EST, SCEP), CRL/OCSP, renewal intelligence, STAR subscriptions.
 
+### Internal mTLS enrolment (`https://certs:8035/v1/enroll`, service network only)
+
+Every platform service gets its internal mTLS certificate here at start-up
+and renews it at two thirds of its lifetime (docs/SECURITY/INTERNAL_TLS.md).
+It isn't routed through the edge.
+
+- **Transport:** TLS 1.3 with the certs service's own internal certificate. No
+  client certificate is required, since the caller doesn't have one yet.
+- **Body:** `{"identity": "kms-<service>", "csr_pem": "...", "timestamp": <unix>}`.
+- **Header:** `X-Vecta-Enroll-Proof: hex(HMAC-SHA256(DeriveAPIKey(INTERNAL_SERVICE_BOOTSTRAP_SECRET, identity), "vecta-enroll-v1\n" + identity + "\n" + timestamp + "\n" + hex(SHA256(csr_der))))`.
+  The timestamp must be within 5 minutes.
+- **Response 200:** `certificate_pem`, `chain_pem` (the Sub CA), `serial`,
+  `not_after`.
+  - The certificate comes from the `vecta-internal-services` Sub CA, valid
+    for `CERTS_INTERNAL_MTLS_VALIDITY_DAYS` days (default 7).
+  - CN is the identity; the DNS SANs come from the platform registry
+    (`pkg/svctls.Services`), never from the CSR.
+  - The key must be ECDSA P-256/P-384 or RSA ≥ 3072.
+  - The identity's previous certificate is revoked as `superseded`.
+- **Refusals:** 400 (bad request or CSR) and 403 (proof rejected). Each is
+  audited.
+
+`POST /certs/internal/mtls/{service}` is **removed**. It let any authenticated
+caller obtain a certificate *and private key* for any service name.
+
+Environment:
+- **certs:** `CERTS_TRUST_DIR` (default `/run/vecta/trust`),
+  `CERTS_ENROLL_PORT` (8035), `CERTS_INTERNAL_SUBCA_NAME`
+  (`vecta-internal-services`), `CERTS_INTERNAL_MTLS_VALIDITY_DAYS` (7),
+  `CERTS_DASHBOARD_TLS_DIR`, `CERTS_DASHBOARD_TLS_GID`.
+- **Every service:** `CERTS_ENROLL_URL` (default
+  `https://certs:8035/v1/enroll`), `VECTA_INTERNAL_CA_FILE` (default
+  `/run/vecta/trust/internal-ca.crt`), `VECTA_MTLS_KEY_ALGORITHM` (default
+  `ECDSA-P256`).
+- **All `*_URL` service addresses are now `https://`.** Plain `http://` to a
+  platform host is refused by the client.
+
+Dashboard API calls under `/svc/<service>/` and `/auth` are routed by Envoy
+directly to each service over mTLS.
+
 ---
 
 ### CA Object Schema
@@ -3419,6 +3459,7 @@ Selected events with dedicated audit classification:
 - `audit.auth.login`, `audit.auth.logout`, `audit.auth.mfa_verified`
 - `audit.auth.scim_user_provisioned`, `audit.auth.scim_user_deprovisioned`
 - `audit.auth.scim_settings_updated`, `audit.auth.scim_token_rotated`
+- `audit.cert.internal_subca_created`, `audit.cert.internal_enroll` (refusals: `reason` = `invalid_request`, `invalid_csr`, `proof_rejected`, `issuance_refused`), `audit.cert.internal_enrolled`: internal mTLS (docs/SECURITY/INTERNAL_TLS.md)
 - `audit.cert.issued`, `audit.cert.revoked`, `audit.cert.renewed`
 - `audit.cert.renewal_window_missed`, `audit.cert.emergency_rotation_started`
 - `audit.cert.star_subscription_created`, `audit.cert.star_subscription_renewed`

@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 	pkgauth "vecta-kms/pkg/auth"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/logsanitize"
+	pkgsvctls "vecta-kms/pkg/svctls"
 )
 
 type paymentTCPRequest struct {
@@ -79,11 +81,23 @@ func loadPaymentJWTParser(issuer string, audience string) (func(string) (*pkgaut
 }
 
 func startPaymentTCPServer(ctx context.Context, svc *Service, addr string, parseJWT func(string) (*pkgauth.Claims, error), logger *log.Logger) error {
-	lis, err := net.Listen("tcp", addr)
+	id := pkgsvctls.Current()
+	if id == nil {
+		return errors.New("payment tcp: no TLS certificate (svctls not initialised); refusing plaintext")
+	}
+	raw, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
-	logger.Printf("payment tcp listening on %s", addr)
+	// External terminals: TLS 1.3, server-authenticated with the service's
+	// internal-CA certificate; terminals authenticate in-protocol (JWT).
+	// Never plaintext (CLAUDE.md rule 10).
+	lis := tls.NewListener(raw, &tls.Config{
+		MinVersion:     tls.VersionTLS13,
+		ClientAuth:     tls.NoClientCert,
+		GetCertificate: func(*tls.ClientHelloInfo) (*tls.Certificate, error) { return id.Certificate() },
+	})
+	logger.Printf("payment tcp (TLS 1.3) listening on %s", addr)
 	go func() {
 		<-ctx.Done()
 		_ = lis.Close()

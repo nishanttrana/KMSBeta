@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	pkgsvctls "vecta-kms/pkg/svctls"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
@@ -22,7 +23,6 @@ import (
 	pkgclustersync "vecta-kms/pkg/clustersync"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
-	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
@@ -45,6 +45,11 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	// Internal mTLS identity from the internal-services Sub CA; nothing is
+	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	if _, err := pkgsvctls.Init(ctx, "kms-policy", pkgsvctls.Options{Logger: logger}); err != nil {
+		logger.Fatalf("internal mTLS enrolment failed: %v", err)
+	}
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
 		PostgresDSN:     cfg.PostgresDSN,
@@ -93,7 +98,7 @@ func main() {
 		logger.Printf("governance posture controls integration enabled")
 	}
 	svc.SetClusterSyncPublisher(pkgclustersync.NewHTTPPublisher(
-		envOr("CLUSTER_URL", "http://cluster-manager:8210"),
+		envOr("CLUSTER_URL", "https://cluster-manager:8210"),
 		envOr("CLUSTER_BOOTSTRAP_PROFILE_ID", "cluster-profile-base"),
 		envOr("CLUSTER_NODE_ID", "vecta-kms-01"),
 		envOr("CLUSTER_SYNC_SHARED_SECRET", ""),
@@ -107,8 +112,8 @@ func main() {
 	authedHandler := pkgjwtauth.MustWrap("POLICY", cfg.JWTIssuer, cfg.JWTAudience, handler, logger)
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authedHandler, publisher, "policy"))
 	go func() {
-		logger.Printf("http listening on :%s", httpPort)
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("https (mTLS) listening on :%s", httpPort)
+		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server failed: %v", err)
 		}
 	}()
@@ -174,7 +179,7 @@ func initNATS(url string) (*nats.Conn, nats.JetStreamContext, error) {
 }
 
 func devMTLSConfig() (*tls.Config, error) {
-	return pkgcrypto.SelfSignedMTLSConfig("kms-policy-local")
+	return pkgsvctls.Current().ServerConfig(), nil
 }
 
 func envOr(k string, d string) string {

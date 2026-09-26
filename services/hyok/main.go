@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 	"vecta-kms/pkg/servicetoken"
+	pkgsvctls "vecta-kms/pkg/svctls"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
@@ -46,6 +47,11 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	// Internal mTLS identity from the internal-services Sub CA; nothing is
+	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	if _, err := pkgsvctls.Init(ctx, "kms-hyok-proxy", pkgsvctls.Options{Logger: logger}); err != nil {
+		logger.Fatalf("internal mTLS enrolment failed: %v", err)
+	}
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
 		PostgresDSN:     cfg.PostgresDSN,
@@ -74,9 +80,9 @@ func main() {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
 
-	keycoreURL := envOr("KEYCORE_URL", "http://127.0.0.1:8010")
-	policyURL := envOr("POLICY_URL", "http://127.0.0.1:8040")
-	governanceURL := envOr("GOVERNANCE_URL", "http://127.0.0.1:8050")
+	keycoreURL := envOr("KEYCORE_URL", "https://keycore:8010")
+	policyURL := envOr("POLICY_URL", "https://policy:8040")
+	governanceURL := envOr("GOVERNANCE_URL", "https://governance:8050")
 	policyFailClosed := envBool("HYOK_POLICY_FAIL_CLOSED", true)
 
 	jwtParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience)
@@ -108,8 +114,8 @@ func main() {
 			}
 			return
 		}
-		logger.Printf("http listening on :%s", httpPort)
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("https (mTLS) listening on :%s", httpPort)
+		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server failed: %v", err)
 		}
 	}()
@@ -221,7 +227,7 @@ func loadJWTParser(issuer string, audience string) (JWTParser, error) {
 }
 
 func devMTLSConfig() (*tls.Config, error) {
-	return pkgcrypto.SelfSignedMTLSConfig("kms-hyok-local")
+	return pkgsvctls.Current().ServerConfig(), nil
 }
 
 func envOr(k string, d string) string {

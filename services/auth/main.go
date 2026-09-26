@@ -17,6 +17,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	pkgsvctls "vecta-kms/pkg/svctls"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
@@ -44,6 +45,11 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	// Internal mTLS identity from the internal-services Sub CA; nothing is
+	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	if _, err := pkgsvctls.Init(ctx, "kms-auth", pkgsvctls.Options{Logger: logger}); err != nil {
+		logger.Fatalf("internal mTLS enrolment failed: %v", err)
+	}
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
 		PostgresDSN:     cfg.PostgresDSN,
@@ -101,8 +107,8 @@ func main() {
 	httpPort := envOr("HTTP_PORT", "8001")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, auditPublisher, "auth"))
 	go func() {
-		logger.Printf("http listening on :%s", httpPort)
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("https (mTLS) listening on :%s", httpPort)
+		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server failed: %v", err)
 		}
 	}()
@@ -171,7 +177,7 @@ func loadOrGenerateSigningKey() (*pkgcrypto.KeyPair, error) {
 }
 
 func devMTLSConfig() (*tls.Config, error) {
-	return pkgcrypto.SelfSignedMTLSConfig("kms-auth-local")
+	return pkgsvctls.Current().ServerConfig(), nil
 }
 
 func mustParseCert(der []byte) *x509.Certificate {

@@ -34,9 +34,14 @@ validate_certs_renewal_endpoints() {
   if ! command -v curl >/dev/null 2>&1; then
     return 0
   fi
-  local directory summary
-  directory="$(curl -fsS 'http://127.0.0.1:8030/acme/directory?tenant_id=root' 2>/dev/null || true)"
-  summary="$(curl -fsS 'http://127.0.0.1:8030/certs/renewal-intelligence?tenant_id=root' 2>/dev/null || true)"
+  local directory summary edge_ca
+  # Services only speak mTLS; check through the HTTPS edge, verified against
+  # the internal root CA (docs/SECURITY/INTERNAL_TLS.md).
+  edge_ca="$(mktemp)"
+  "${BASH_BIN}" "${COMPOSE_WRAPPER}" exec -T certs cat /run/vecta/trust/root-ca.crt >"${edge_ca}" 2>/dev/null || true
+  directory="$(curl -fsS --cacert "${edge_ca}" 'https://localhost/svc/certs/acme/directory?tenant_id=root' 2>/dev/null || true)"
+  summary="$(curl -fsS --cacert "${edge_ca}" 'https://localhost/svc/certs/certs/renewal-intelligence?tenant_id=root' 2>/dev/null || true)"
+  rm -f "${edge_ca}"
   [[ "${directory}" == *'"renewalInfo"'* ]] && [[ "${summary}" == *'"summary"'* ]]
 }
 

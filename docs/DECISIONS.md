@@ -7,6 +7,40 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — How internal mTLS is wired (slice 1)
+**Decision:**
+- **Enrolment proof:** an HMAC over the CSR under the identity's
+  platform-derived API key (`servicetoken.DeriveAPIKey`). The certs service
+  checks it itself, so enrolment doesn't depend on auth, which needs a
+  certificate too.
+- **Clients:** one routing transport installed as `http.DefaultTransport`
+  instead of editing about 60 client call sites. Platform hosts go over mTLS
+  and plain `http://` to them is refused; other hosts keep public-CA trust.
+- **Envoy:** it routes `/svc/*` and `/auth` straight to the services, so it
+  is the only component holding an internal client identity for UI traffic.
+  The dashboard's nginx serves static files only.
+- **Certificate reload:** Envoy's certificates reload through file-based SDS
+  with a watched directory, and nginx through a certificate-watch reload.
+
+**Why:**
+- The shared transport changes every client at once, and the refusal
+  enforces the rule at runtime.
+- One owner of the internal client identity for UI traffic means one place
+  to rotate it.
+- Certificates renew every few days, so every consumer has to reload them.
+
+**Rejected:**
+- *Trusting both public roots and the internal CA in one pool*: an internal
+  certificate could then pass as a public host. Trust is split by host
+  instead.
+- *Making nginx an mTLS proxy to every service*: it would be a second client
+  identity, and duplicate Envoy's routing.
+- *Enrolling through auth-issued JWTs*: a cyclic dependency at start-up.
+
+**Enforced by:** `pkg/svctls` tests (real handshakes: missing, foreign or
+plain; the hybrid group asserted), the certs enrolment tests, and the
+`make conformance` `tls-only` rule.
+
 ## 2026-09-26 — Internal mTLS from an internal-services Sub CA, keys enrolled by CSR
 **Decision:** every internal connection moves to mTLS.
 - **CAs:** a new Sub CA, `vecta-internal-services`, is created under the

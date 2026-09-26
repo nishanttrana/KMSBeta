@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"vecta-kms/pkg/mek"
 	pkgplatform "vecta-kms/pkg/platform"
 	"vecta-kms/pkg/route"
+	"vecta-kms/pkg/svctls"
 )
 
 var logger = log.Default()
@@ -31,6 +33,9 @@ func main() {
 		GRPCPort:      "18030",
 		MigrationsDir: "services/certs/migrations",
 		AuditName:     "cert", // preserves the audit.cert.* namespace reporting depends on
+		// certs is the internal CA: it enrols itself locally below, before any
+		// other service can reach it.
+		DeferTLS: true,
 	})
 	if err != nil {
 		log.Fatalf("[kms-certs] boot failed: %v", err)
@@ -43,8 +48,63 @@ func main() {
 		publisher = rt.Audit.Publisher()
 	}
 
-	keycoreURL := envOr("KEYCORE_URL", "http://127.0.0.1:8010")
+	keycoreURL := envOr("KEYCORE_URL", "https://keycore:8010")
 	keycoreClient := NewHTTPKeyCoreSigner(keycoreURL, 3*time.Second)
+
+	rootCfg := loadCertRootKeyConfig()
+	rootProvider, rootErr := newCertRootKeyProvider(rootCfg)
+	if rootErr != nil {
+		logger.Printf("cert root key provider init warning: %v", rootErr)
+	}
+	if rootProvider != nil {
+		defer rootProvider.Close() //nolint:errcheck
+	}
+	// The master key arrives from keycore below (SetLegacyMEK): keycore can
+	// only be reached over mTLS once the internal PKI is up.
+	svc := NewServiceWithSecurity(
+		NewSQLStore(rt.DB),
+		publisher,
+		keycoreClient,
+		ServiceSecurityConfig{
+			CertStorageMode: rootCfg.StorageMode,
+			RootKeyMode:     rootCfg.RootKeyMode,
+			RootProvider:    rootProvider,
+			SecurityErr:     errString(rootErr),
+		},
+		envBool("FIPS_STRICT", false),
+		envBool("CERTS_KEYCORE_FAIL_CLOSED", true),
+	)
+
+	// Internal PKI first: runtime root -> internal-services Sub CA, the public
+	// trust bundle, certs' own certificate, then the enrolment listener every
+	// other service enrols through (docs/SECURITY/INTERNAL_TLS.md).
+	internalTenant := envOr("CERTS_RUNTIME_TENANT_ID", "root")
+	root, sub, err := svc.EnsureInternalPKI(rt.Ctx, internalTenant)
+	if err != nil {
+		logger.Fatalf("refusing to start: internal PKI: %v", err)
+	}
+	if err := WriteTrustBundle(envOr("CERTS_TRUST_DIR", "/run/vecta/trust"), root, sub); err != nil {
+		logger.Fatalf("refusing to start: trust bundle: %v", err)
+	}
+	identity, err := svctls.Init(rt.Ctx, "kms-certs", svctls.Options{
+		Enroller:  localEnroller{svc: svc, tenant: internalTenant},
+		TrustFile: filepath.Join(envOr("CERTS_TRUST_DIR", "/run/vecta/trust"), "internal-ca.crt"),
+		Logger:    logger,
+	})
+	if err != nil {
+		logger.Fatalf("refusing to start: own internal certificate: %v", err)
+	}
+	bootstrapSecret := os.Getenv("INTERNAL_SERVICE_BOOTSTRAP_SECRET")
+	if err := servicetoken.ValidateBootstrapSecret(bootstrapSecret); err != nil {
+		logger.Fatalf("refusing to start: enrolment needs %v", err)
+	}
+	var enrollAudit route.Emitter
+	if rt.Audit != nil {
+		enrollAudit = rt.Audit
+	}
+	if err := svc.StartEnrollmentListener(rt.Ctx, identity, envOr("CERTS_ENROLL_PORT", "8035"), internalTenant, bootstrapSecret, enrollAudit); err != nil {
+		logger.Fatalf("refusing to start: enrolment listener: %v", err)
+	}
 
 	// CA signing keys in the "legacy" format are wrapped under a master key
 	// from keycore (pkg/mek). Rows under an earlier release's public key are
@@ -66,29 +126,9 @@ func main() {
 		logger.Fatalf("refusing to start: %v", err)
 	}
 	go keyring.Watch(rt.Ctx, 15*time.Minute)
-
-	rootCfg := loadCertRootKeyConfig()
-	rootProvider, rootErr := newCertRootKeyProvider(rootCfg)
-	if rootErr != nil {
-		logger.Printf("cert root key provider init warning: %v", rootErr)
+	if err := svc.SetLegacyMEK(keyring.Current()); err != nil {
+		logger.Fatalf("refusing to start: %v", err)
 	}
-	if rootProvider != nil {
-		defer rootProvider.Close() //nolint:errcheck
-	}
-	svc := NewServiceWithSecurity(
-		NewSQLStore(rt.DB),
-		publisher,
-		keycoreClient,
-		ServiceSecurityConfig{
-			CertStorageMode: rootCfg.StorageMode,
-			RootKeyMode:     rootCfg.RootKeyMode,
-			RootProvider:    rootProvider,
-			SecurityErr:     errString(rootErr),
-			LegacyMEK:       keyring.Current(),
-		},
-		envBool("FIPS_STRICT", false),
-		envBool("CERTS_KEYCORE_FAIL_CLOSED", true),
-	)
 
 	runtimeCfg := loadRuntimeMaterializerConfig()
 	if runtimeCfg.Enabled {
@@ -189,6 +229,8 @@ func loadRuntimeMaterializerConfig() RuntimeCertMaterializerConfig {
 		EnvoySANs:      splitCSV(envOr("CERTS_RUNTIME_ENVOY_SANS", "localhost,envoy,127.0.0.1")),
 		KMIPCN:         envOr("CERTS_RUNTIME_KMIP_CN", "vecta-kmip"),
 		KMIPSANs:       splitCSV(envOr("CERTS_RUNTIME_KMIP_SANS", "localhost,kmip,127.0.0.1")),
+		// Dedicated volume mounted only by certs and the dashboard.
+		DashboardTLSDir: envOr("CERTS_DASHBOARD_TLS_DIR", "/run/vecta/dashboard-tls"),
 	}
 }
 

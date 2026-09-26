@@ -38,7 +38,7 @@ x-kms-common-env: &kms-common-env
   # client + key hash per service from the same secret. Override per deployment
   # (openssl rand -hex 32). Required; weak or placeholder values stop auth.
   INTERNAL_SERVICE_BOOTSTRAP_SECRET: ${INTERNAL_SERVICE_BOOTSTRAP_SECRET:?INTERNAL_SERVICE_BOOTSTRAP_SECRET is required (openssl rand -hex 32)}
-  AUTH_URL: ${AUTH_URL:-http://auth:8001}
+  AUTH_URL: ${AUTH_URL:-https://auth:8001}
   # FIPS 140-3 runtime mode: the INITIAL value only. Customers change it in the
   # KMS UI (System Administration > Runtime Crypto); that setting wins and
   # services restart themselves to apply it (docs/SECURITY/FIPS.md):
@@ -344,10 +344,13 @@ services:
     entrypoint: ["/bin/sh"]
     command:
       - -ec
-      - for i in $(seq 1 120); do [ -s /run/vecta/runtime-certs/envoy/tls.crt ] && [ -s /run/vecta/runtime-certs/envoy/tls.key ] && [ -s /run/vecta/runtime-certs/ca/ca.crt ] && break; sleep 1; done; mkdir -p /tmp/envoy-certs; cp /run/vecta/runtime-certs/envoy/tls.crt /tmp/envoy-certs/tls.crt; cp /run/vecta/runtime-certs/envoy/tls.key /tmp/envoy-certs/tls.key; cp /run/vecta/runtime-certs/ca/ca.crt /tmp/envoy-certs/ca.crt; chmod 0644 /tmp/envoy-certs/tls.crt; chmod 0600 /tmp/envoy-certs/tls.key; chmod 0644 /tmp/envoy-certs/ca.crt; exec /usr/local/bin/envoy -c /etc/envoy/envoy.yaml --service-cluster vecta-edge
+      - for i in $(seq 1 180); do [ -s /run/vecta/runtime-certs/envoy/tls.crt ] && [ -s /run/vecta/runtime-certs/envoy/tls.key ] && [ -s /run/vecta/runtime-certs/envoy-client/tls.crt ] && [ -s /run/vecta/runtime-certs/envoy-client/tls.key ] && [ -s /run/vecta/trust/internal-ca.crt ] && break; sleep 1; done; exec /usr/local/bin/envoy -c /etc/envoy/envoy.yaml --service-cluster vecta-edge --service-node vecta-edge
     volumes:
       - ./infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+      # File-based SDS: certificates reload when certs renews them.
+      - ./infra/envoy/sds:/etc/envoy/sds:ro
       - runtime-certs:/run/vecta/runtime-certs:ro
+      - internal-trust:/run/vecta/trust:ro
     ports:
       - "80:80"
       - "443:443"
@@ -394,8 +397,11 @@ services:
         condition: service_healthy
       policy:
         condition: service_healthy
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
+      - dashboard-tls:/run/vecta/dashboard-tls:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:5173 >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 5173"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -440,6 +446,7 @@ services:
       AUTH_CLI_HSM_SERVICE_NAME: ${AUTH_CLI_HSM_SERVICE_NAME:-hsm-integration}
     volumes:
       - auth-data:/var/lib/vecta/auth
+      - internal-trust:/run/vecta/trust:ro
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8001:8001"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18001:18001"
@@ -463,6 +470,7 @@ services:
       - "2222:22"
     volumes:
       - hsm-integration-data:/var/lib/vecta/hsm
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "netstat -ltn | grep -q ':22[[:space:]]'"]
       interval: 15s
@@ -489,12 +497,12 @@ services:
       <<: *kms-common-env
       HSM_MODE: ${HSM_MODE:-software}
       HSM_ENDPOINT: ${HSM_ENDPOINT:-hsm-connector:18430}
-      GOVERNANCE_URL: http://governance:8050
+      GOVERNANCE_URL: https://governance:8050
       # Without this keycore has no policy evaluator and, being fail-closed by
       # default (KEYCORE_POLICY_FAIL_CLOSED), denies every key operation with
       # "policy evaluator unavailable; fail-closed". Points at the policy svc.
-      POLICY_ENGINE_URL: ${POLICY_ENGINE_URL:-http://policy:8040}
-      CLUSTER_URL: ${CLUSTER_URL:-http://cluster-manager:8210}
+      POLICY_ENGINE_URL: ${POLICY_ENGINE_URL:-https://policy:8040}
+      CLUSTER_URL: ${CLUSTER_URL:-https://cluster-manager:8210}
       CLUSTER_BOOTSTRAP_PROFILE_ID: ${CLUSTER_BOOTSTRAP_PROFILE_ID:-cluster-profile-base}
       CLUSTER_NODE_ID: ${CLUSTER_NODE_ID:-vecta-kms-01}
       CLUSTER_SYNC_SHARED_SECRET: ${CLUSTER_SYNC_SHARED_SECRET:-}
@@ -517,6 +525,7 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18010:18010"
     volumes:
       - keycore-data:/app/data
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18010"]
       interval: 15s
@@ -531,7 +540,7 @@ services:
     image: vecta/audit:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      CLUSTER_URL: ${CLUSTER_URL:-http://cluster-manager:8210}
+      CLUSTER_URL: ${CLUSTER_URL:-https://cluster-manager:8210}
       CLUSTER_BOOTSTRAP_PROFILE_ID: ${CLUSTER_BOOTSTRAP_PROFILE_ID:-cluster-profile-base}
       CLUSTER_NODE_ID: ${CLUSTER_NODE_ID:-vecta-kms-01}
       CLUSTER_SYNC_SHARED_SECRET: ${CLUSTER_SYNC_SHARED_SECRET:-}
@@ -548,6 +557,7 @@ services:
     volumes:
       # The cluster audit signing key received at join (docs/CLUSTERING.md).
       - audit-data:/app/data
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18070"]
       interval: 15s
@@ -562,7 +572,7 @@ services:
     image: vecta/policy:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      CLUSTER_URL: ${CLUSTER_URL:-http://cluster-manager:8210}
+      CLUSTER_URL: ${CLUSTER_URL:-https://cluster-manager:8210}
       CLUSTER_BOOTSTRAP_PROFILE_ID: ${CLUSTER_BOOTSTRAP_PROFILE_ID:-cluster-profile-base}
       CLUSTER_NODE_ID: ${CLUSTER_NODE_ID:-vecta-kms-01}
       CLUSTER_SYNC_SHARED_SECRET: ${CLUSTER_SYNC_SHARED_SECRET:-}
@@ -576,6 +586,8 @@ services:
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8040:8040"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18040:18040"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18040"]
       interval: 15s
@@ -596,8 +608,8 @@ services:
         condition: service_started
     environment:
       <<: *kms-common-env
-      POLICY_URL: http://policy:8040
-      GOVERNANCE_URL: http://governance:8050
+      POLICY_URL: https://policy:8040
+      GOVERNANCE_URL: https://governance:8050
       # External, separately-deployed MCP build server. Scaffold (code-build)
       # mode is disabled until this is set. Config mode runs without it.
       MCP_SERVER_URL: ${MCP_SERVER_URL:-}
@@ -608,6 +620,8 @@ services:
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8300:8300"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18300:18300"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18300"]
       interval: 15s
@@ -629,18 +643,19 @@ services:
         condition: service_started
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      KMIP_URL: http://kmip:8160
-      POLICY_URL: http://policy:8040
-      AUDIT_URL: http://audit:8060
+      KEYCORE_URL: https://keycore:8010
+      KMIP_URL: https://kmip:8160
+      POLICY_URL: https://policy:8040
+      AUDIT_URL: https://audit:8060
       HTTP_PORT: "8470"
       RECONCILER_MANIFEST_DIR: ${RECONCILER_MANIFEST_DIR:-/etc/vecta/manifests}
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8470:8470"
     volumes:
       - ${RECONCILER_MANIFEST_HOST_DIR:-./infra/reconciler/manifests}:/etc/vecta/manifests:ro
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8470/healthz || exit 1"]
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8470"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -656,8 +671,10 @@ services:
       HTTP_PORT: "8480"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8480:8480"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8480/healthz || exit 1"]
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 8480"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -674,10 +691,12 @@ services:
       HTTP_PORT: "8020"
       GRPC_PORT: "18020"
       # The master key comes from keycore (pkg/mek); nothing to configure.
-      KEYCORE_URL: http://keycore:8010
+      KEYCORE_URL: https://keycore:8010
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8020:8020"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18020:18020"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18020"]
       interval: 15s
@@ -691,9 +710,15 @@ services:
       context: .
       dockerfile: services/certs/Dockerfile
     image: vecta/certs:${VECTA_VERSION:-latest}
+    # nginx's group in the dashboard image, so certs can hand the dashboard its
+    # TLS key group-readable (never world-readable).
+    group_add: ["101"]
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
+      KEYCORE_URL: https://keycore:8010
+      CERTS_TRUST_DIR: /run/vecta/trust
+      CERTS_DASHBOARD_TLS_DIR: /run/vecta/dashboard-tls
+      CERTS_DASHBOARD_TLS_GID: "101"
       CERTS_STORAGE_MODE: ${CERTS_STORAGE_MODE:-db_encrypted}
       CERTS_ROOT_KEY_MODE: ${CERTS_ROOT_KEY_MODE:-software}
       CERTS_CRWK_SEALED_PATH: ${CERTS_CRWK_SEALED_PATH:-/var/lib/vecta/certs/crwk.sealed}
@@ -720,6 +745,8 @@ services:
     volumes:
       - certs-key-data:/var/lib/vecta/certs
       - runtime-certs:/run/vecta/certs
+      - internal-trust:/run/vecta/trust
+      - dashboard-tls:/run/vecta/dashboard-tls
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8030:8030"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18030:18030"
@@ -739,12 +766,14 @@ services:
     environment:
       <<: *kms-common-env
       APP_BASE_URL: https://localhost
-      CERTS_URL: http://certs:8030
+      CERTS_URL: https://certs:8030
       HTTP_PORT: "8050"
       GRPC_PORT: "18050"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8050:8050"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18050:18050"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18050"]
       interval: 15s
@@ -760,13 +789,15 @@ services:
     image: vecta/cloud:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      KEY_ACCESS_URL: http://keyaccess:8270
+      KEYCORE_URL: https://keycore:8010
+      KEY_ACCESS_URL: https://keyaccess:8270
       HTTP_PORT: "8080"
       GRPC_PORT: "18080"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8080:8080"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18080:18080"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18080"]
       interval: 15s
@@ -782,15 +813,17 @@ services:
     image: vecta/hyok:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      POLICY_URL: http://policy:8040
-      GOVERNANCE_URL: http://governance:8050
-      KEY_ACCESS_URL: http://keyaccess:8270
+      KEYCORE_URL: https://keycore:8010
+      POLICY_URL: https://policy:8040
+      GOVERNANCE_URL: https://governance:8050
+      KEY_ACCESS_URL: https://keyaccess:8270
       HTTP_PORT: "8120"
       GRPC_PORT: "18120"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8120:8120"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18120:18120"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18120"]
       interval: 15s
@@ -806,8 +839,8 @@ services:
     image: vecta/kmip:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      CERTS_URL: http://certs:8030
+      KEYCORE_URL: https://keycore:8010
+      CERTS_URL: https://certs:8030
       HTTP_PORT: "8160"
       KMIP_PORT: "5696"
       GRPC_PORT: "15696"
@@ -817,6 +850,7 @@ services:
       KMIP_TLS_CLIENT_CA_FILE: /etc/vecta-certs/ca/ca.crt
     volumes:
       - runtime-certs:/etc/vecta-certs:ro
+      - internal-trust:/run/vecta/trust:ro
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8160:8160"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:15696:15696"
@@ -837,13 +871,15 @@ services:
     image: vecta/ekm:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      KEY_ACCESS_URL: http://keyaccess:8270
+      KEYCORE_URL: https://keycore:8010
+      KEY_ACCESS_URL: https://keyaccess:8270
       HTTP_PORT: "8130"
       GRPC_PORT: "18130"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8130:8130"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18130:18130"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18130"]
       interval: 15s
@@ -859,7 +895,7 @@ services:
     image: vecta/payment:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
+      KEYCORE_URL: https://keycore:8010
       HTTP_PORT: "8170"
       GRPC_PORT: "18170"
       PAYMENT_TCP_ENABLED: "${PAYMENT_TCP_ENABLED:-true}"
@@ -869,6 +905,8 @@ services:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8170:8170"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18170:18170"
       - "${PAYMENT_TCP_PORT:-9170}:${PAYMENT_TCP_PORT:-9170}"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18170"]
       interval: 15s
@@ -895,6 +933,8 @@ services:
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8240:8240"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18240:18240"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18240"]
       interval: 15s
@@ -910,13 +950,15 @@ services:
     image: vecta/workload-identity:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      AUTH_URL: http://auth:8001
-      AUDIT_URL: http://audit:8070
+      AUTH_URL: https://auth:8001
+      AUDIT_URL: https://audit:8070
       HTTP_PORT: "8250"
       GRPC_PORT: "18250"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8250:8250"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18250:18250"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18250"]
       interval: 15s
@@ -932,13 +974,15 @@ services:
     image: vecta/autokey:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      GOVERNANCE_URL: http://governance:8050
+      KEYCORE_URL: https://keycore:8010
+      GOVERNANCE_URL: https://governance:8050
       HTTP_PORT: "8260"
       GRPC_PORT: "18260"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8260:8260"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18260:18260"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18260"]
       interval: 15s
@@ -954,12 +998,14 @@ services:
     image: vecta/signing:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
+      KEYCORE_URL: https://keycore:8010
       HTTP_PORT: "8280"
       GRPC_PORT: "18280"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8280:8280"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18280:18280"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18280"]
       interval: 15s
@@ -975,12 +1021,14 @@ services:
     image: vecta/keyaccess:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      GOVERNANCE_URL: http://governance:8050
+      GOVERNANCE_URL: https://governance:8050
       HTTP_PORT: "8270"
       GRPC_PORT: "18270"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8270:8270"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18270:18270"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18270"]
       interval: 15s
@@ -996,15 +1044,17 @@ services:
     image: vecta/compliance:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      AUDIT_URL: http://audit:8070
-      POLICY_URL: http://policy:8040
-      CERTS_URL: http://certs:8030
+      KEYCORE_URL: https://keycore:8010
+      AUDIT_URL: https://audit:8070
+      POLICY_URL: https://policy:8040
+      CERTS_URL: https://certs:8030
       HTTP_PORT: "8110"
       GRPC_PORT: "18110"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8110:8110"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18110:18110"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18110"]
       interval: 15s
@@ -1020,9 +1070,9 @@ services:
     image: vecta/sbom:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      CERTS_URL: http://certs:8030
-      DISCOVERY_URL: http://discovery:8100
+      KEYCORE_URL: https://keycore:8010
+      CERTS_URL: https://certs:8030
+      DISCOVERY_URL: https://discovery:8100
       SBOM_SCHEDULE: "daily"
       CBOM_SCHEDULE: "daily"
       CBOM_SCHEDULE_TENANTS: "${CBOM_SCHEDULE_TENANTS:-root}"
@@ -1031,6 +1081,8 @@ services:
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8180:8180"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18180:18180"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18180"]
       interval: 15s
@@ -1046,13 +1098,15 @@ services:
     image: vecta/reporting:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      AUDIT_URL: http://audit:8070
-      COMPLIANCE_URL: http://compliance:8110
+      AUDIT_URL: https://audit:8070
+      COMPLIANCE_URL: https://compliance:8110
       HTTP_PORT: "8140"
       GRPC_PORT: "18140"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8140:8140"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18140:18140"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18140"]
       interval: 15s
@@ -1068,7 +1122,7 @@ services:
     image: vecta/posture:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      AUDIT_URL: http://audit:8070
+      AUDIT_URL: https://audit:8070
       HTTP_PORT: "8220"
       GRPC_PORT: "18220"
       POSTURE_ENGINE_INTERVAL_SEC: ${POSTURE_ENGINE_INTERVAL_SEC:-60}
@@ -1078,6 +1132,8 @@ services:
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8220:8220"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18220:18220"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18220"]
       interval: 15s
@@ -1103,6 +1159,8 @@ services:
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8320:8320"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18320:18320"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18320"]
       interval: 15s
@@ -1118,14 +1176,16 @@ services:
     image: vecta/pqc:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      CERTS_URL: http://certs:8030
-      DISCOVERY_URL: http://discovery:8100
+      KEYCORE_URL: https://keycore:8010
+      CERTS_URL: https://certs:8030
+      DISCOVERY_URL: https://discovery:8100
       HTTP_PORT: "8060"
       GRPC_PORT: "18060"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8060:8060"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18060:18060"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18060"]
       interval: 15s
@@ -1141,13 +1201,15 @@ services:
     image: vecta/discovery:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
-      CERTS_URL: http://certs:8030
+      KEYCORE_URL: https://keycore:8010
+      CERTS_URL: https://certs:8030
       HTTP_PORT: "8100"
       GRPC_PORT: "18100"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8100:8100"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18100:18100"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18100"]
       interval: 15s
@@ -1163,12 +1225,14 @@ services:
     image: vecta/dataprotect:${VECTA_VERSION:-latest}
     environment:
       <<: *kms-common-env
-      KEYCORE_URL: http://keycore:8010
+      KEYCORE_URL: https://keycore:8010
       HTTP_PORT: "8200"
       GRPC_PORT: "18200"
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8200:8200"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18200:18200"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18200"]
       interval: 15s
@@ -1211,12 +1275,13 @@ services:
       CLUSTER_PG_ADVERTISE_PORT: ${CLUSTER_PG_ADVERTISE_PORT:-5432}
       CLUSTER_PG_SSLMODE: ${CLUSTER_PG_SSLMODE:-verify-full}
       CLUSTER_JOIN_ALLOW_HTTP: ${CLUSTER_JOIN_ALLOW_HTTP:-false}
-      KEYCORE_URL: ${KEYCORE_URL:-http://keycore:8010}
+      KEYCORE_URL: ${KEYCORE_URL:-https://keycore:8010}
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8210:8210"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18210:18210"
     volumes:
       - runtime-certs:/run/vecta/runtime-certs:ro
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18210"]
       interval: 15s
@@ -1236,6 +1301,8 @@ services:
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8290:8290"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18290:18290"
+    volumes:
+      - internal-trust:/run/vecta/trust:ro
     healthcheck:
       test: ["CMD-SHELL", "nc -z 127.0.0.1 18290"]
       interval: 15s
@@ -1264,6 +1331,7 @@ services:
     volumes:
       # Libraries and vendor client files uploaded through hsm-integration.
       - hsm-integration-data:/var/lib/vecta/hsm:ro
+      - internal-trust:/run/vecta/trust:ro
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8430:8430"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18430:18430"
@@ -1283,6 +1351,8 @@ networks:
     driver: bridge
 
 volumes:
+  internal-trust:
+  dashboard-tls:
   postgres-data:
   consul-data:
   etcd-data:

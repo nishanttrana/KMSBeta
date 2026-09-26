@@ -72,17 +72,25 @@ prepare_certs_volumes() {
   fi
   local certs_volume="${project_name}_certs-key-data"
   local runtime_volume="${project_name}_runtime-certs"
+  # Internal mTLS (docs/SECURITY/INTERNAL_TLS.md): the public trust bundle
+  # every service reads, and the dashboard's TLS files (certs writes both).
+  local trust_volume="${project_name}_internal-trust"
+  local dashboard_tls_volume="${project_name}_dashboard-tls"
   local passphrase_path="${CERTS_CRWK_PASSPHRASE_FILE:-/var/lib/vecta/certs/bootstrap.passphrase}"
   local bootstrap_secret="${CERTS_CRWK_BOOTSTRAP_PASSPHRASE:-vecta-dev-passphrase}"
   local prepared=0 helper_image=""
 
   docker volume create "${certs_volume}" >/dev/null 2>&1 || true
   docker volume create "${runtime_volume}" >/dev/null 2>&1 || true
+  docker volume create "${trust_volume}" >/dev/null 2>&1 || true
+  docker volume create "${dashboard_tls_volume}" >/dev/null 2>&1 || true
 
   for helper_image in postgres:16.13-alpine alpine:3.24 busybox:1.36; do
     if docker run --rm \
       --volume "${certs_volume}:/data" \
       --volume "${runtime_volume}:/runtime" \
+      --volume "${trust_volume}:/trust" \
+      --volume "${dashboard_tls_volume}:/dashboard-tls" \
       --env "CERTS_CRWK_PASSPHRASE_FILE=${passphrase_path}" \
       --env "BOOTSTRAP_SECRET=${bootstrap_secret}" \
       "${helper_image}" \
@@ -91,6 +99,10 @@ prepare_certs_volumes() {
         mkdir -p /data /runtime
         chown -R 100:101 /data /runtime
         chmod 700 /data /runtime
+        mkdir -p /trust /dashboard-tls
+        chown 100:101 /trust /dashboard-tls
+        chmod 755 /trust
+        chmod 750 /dashboard-tls
         case "${CERTS_CRWK_PASSPHRASE_FILE:-/var/lib/vecta/certs/bootstrap.passphrase}" in
           /var/lib/vecta/certs/*)
             target="/data/${CERTS_CRWK_PASSPHRASE_FILE#/var/lib/vecta/certs/}"
@@ -202,19 +214,25 @@ apply_acme_renewal_policy() {
     "${ari_enabled}" "${poll_hours}" "${window_bias}" "${emergency_hours}" "${mass_threshold}")
   body=$(printf '{"enabled":true,"updated_by":"start-kms","config_json":%s}' "$(json_escape "${config_json}")")
   response_file="$(mktemp)"
+  # Services only speak mTLS; go through the HTTPS edge and verify it against
+  # the internal root CA (docs/SECURITY/INTERNAL_TLS.md).
+  edge_ca="$(mktemp)"
+  "${BASH_BIN}" "${COMPOSE_WRAPPER}" exec -T certs cat /run/vecta/trust/root-ca.crt >"${edge_ca}" 2>/dev/null || true
 
   for attempt in $(seq 1 20); do
     http_code="$(curl -sS -o "${response_file}" -w "%{http_code}" \
+      --cacert "${edge_ca}" \
       -H 'Content-Type: application/json' \
       -X PUT \
       --data "${body}" \
-      'http://127.0.0.1:8030/certs/protocols/acme?tenant_id=root' || true)"
+      'https://localhost/svc/certs/certs/protocols/acme?tenant_id=root' || true)"
     if [[ "${http_code}" == "200" ]]; then
-      rm -f "${response_file}"
+      rm -f "${response_file}" "${edge_ca}"
       return 0
     fi
     sleep 2
   done
+  rm -f "${edge_ca}"
 
   if [[ "${http_code}" == "401" || "${http_code}" == "403" ]]; then
     echo "note: custom ACME renewal settings in deployment.yaml need an admin session;" >&2

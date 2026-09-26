@@ -67,21 +67,43 @@ dashboard with one click:
   serial, issuer, key algorithm, negotiated group, expiry, and the last
   successful mTLS handshake.
 
-## Status (2026-09-26): not yet compliant
+## Status
 
-This is honest status, per rule 7.
+### Done in slice 1 (1.8.0-beta)
 
-- **Service to service:** plain HTTP inside the Docker network (for example
-  `KEYCORE_URL: http://keycore:8010`), authenticated by service tokens. Some
-  of it carries key material (keycore service-derive).
-- **gRPC ports** (18xxx) use a per-service self-signed certificate that
-  trusts only itself; no service calls another through them.
+**Services, Envoy and the dashboard use mTLS end to end.** Verified on the
+running stack:
+- plain HTTP to a service gets Go's TLS error and no data;
+- TLS without a client certificate is refused with `certificate required`;
+- a Sub CA client certificate negotiates TLS 1.3 with `X25519MLKEM768`,
+  against a server certificate `kms-<service>` issued by
+  `vecta-internal-services`;
+- Envoy's upstream stats show TLS 1.3 and `X25519MLKEM768` to every
+  service.
+
+**How it is built:**
+- `pkg/svctls` handles enrolment, renewal, the server and client
+  configuration, and the client router.
+- `platform.Boot` enrols automatically. Services with their own `main.go`
+  call `svctls.Init` before serving.
+- Certs starts in this order, because keycore can only be reached over mTLS:
+  1. the internal PKI;
+  2. its own certificate, signed locally;
+  3. the enrolment listener;
+  4. only then its master key from keycore.
+
+### Still open
+
 - **Postgres** runs `sslmode=disable`. **NATS, Valkey and Consul** are
-  plaintext.
-- **The edge** (Envoy) is HTTPS, with a certificate from
-  `vecta-runtime-root`. Port 80 still answers, with a redirect only.
-- The "mTLS Mesh" tab that claimed verified mTLS between services was
-  removed in 1.7.0-beta.
+  plaintext. That's slice 2.
+- **`infra/consul/bootstrap-mesh.sh`** writes Consul Connect allow-all
+  intentions that no service uses, and its PUT fails with 405. It's handled
+  in slice 2.
+- **Internal verifiers don't check revocation.** Short lifetimes (7 days)
+  are the control, and a rotation in slice 3 revokes the old certificate
+  and swaps the new one immediately.
+- **The edge certificate** still comes from `vecta-runtime-root`, chosen in
+  code, and port 80 still answers with a redirect. That's slice 4.
 
 ## Delivery plan
 

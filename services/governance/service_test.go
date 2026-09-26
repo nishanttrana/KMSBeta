@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -570,99 +568,21 @@ func TestSystemStatePersistenceAndIntegrity(t *testing.T) {
 	}
 }
 
-func TestUpdateSystemStateHybridToggleTriggersInternalRollout(t *testing.T) {
+// The old "hybrid PQC (KMS internal)" TLS mode minted ML-DSA certificates
+// that no service used. It is gone: internal mTLS and its hybrid ML-KEM key
+// exchange come from pkg/svctls, so a TLS mode change issues nothing.
+func TestSystemStateTLSModeIssuesNoCertificates(t *testing.T) {
 	store := newGovernanceStore(t)
-	hits := map[string]int{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/certs/ca":
-			hits["list_ca"]++
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"items": []map[string]interface{}{
-					{"id": "ca_hybrid_1", "name": "vecta-hybrid-runtime-root", "status": "active", "cert_pem": "PEM"},
-				},
-			})
-		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/certs/internal/mtls/"):
-			hits["issue_internal"]++
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"certificate": map[string]interface{}{"id": "crt_x"},
-			})
-		case r.Method == http.MethodGet && r.URL.Path == "/certs/protocols":
-			hits["list_protocols"]++
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"items": []map[string]interface{}{
-					{"protocol": "runtime-mtls", "enabled": true, "config_json": `{"mode":"default"}`},
-				},
-			})
-		case r.Method == http.MethodPut && r.URL.Path == "/certs/protocols/runtime-mtls":
-			hits["put_protocol"]++
-			var body map[string]interface{}
-			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-				t.Fatalf("decode protocol body: %v", err)
-			}
-			cfg := strings.TrimSpace(fmt.Sprintf("%v", body["config_json"]))
-			if !strings.Contains(cfg, `"hybrid_pqc":true`) && !strings.Contains(cfg, `"hybrid_pqc": true`) {
-				t.Fatalf("expected hybrid_pqc enabled in config_json, got %s", cfg)
-			}
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"config": map[string]interface{}{"protocol": "runtime-mtls"},
-			})
-		default:
-			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
-		}
+		t.Errorf("a TLS mode change must not call the certs service: %s %s", r.Method, r.URL.Path)
 	}))
 	defer server.Close()
-
-	svc := NewService(
-		store,
-		nil,
-		&mockEmailSender{},
-		&mockCallbackExecutor{},
-		"http://localhost:8050",
-		WithCertsURL(server.URL),
-		WithHTTPClient(server.Client()),
-	)
-
-	// Baseline non-hybrid mode should not trigger rollout.
-	if _, err := svc.UpdateSystemState(context.Background(), GovernanceSystemState{
-		TenantID:  "thybrid",
-		TLSMode:   "tls13_only",
-		UpdatedBy: "admin",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if got := hits["issue_internal"]; got != 0 {
-		t.Fatalf("expected no internal mTLS issuance on non-hybrid baseline, got %d", got)
-	}
-
-	// Transition to hybrid KMS mode must trigger internal rollout.
-	if _, err := svc.UpdateSystemState(context.Background(), GovernanceSystemState{
-		TenantID:  "thybrid",
-		TLSMode:   "tls13_hybrid_kms",
-		UpdatedBy: "admin",
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if got := hits["issue_internal"]; got != len(internalHybridMTLSServices) {
-		t.Fatalf("expected %d internal cert issues, got %d", len(internalHybridMTLSServices), got)
-	}
-	if got := hits["put_protocol"]; got != 1 {
-		t.Fatalf("expected runtime-mtls protocol update once, got %d", got)
-	}
-}
-
-func TestShouldApplyInternalHybridTLS(t *testing.T) {
-	if !shouldApplyInternalHybridTLS(
-		GovernanceSystemState{TLSMode: "tls13_only"},
-		GovernanceSystemState{TLSMode: "tls13_hybrid_kms"},
-	) {
-		t.Fatal("expected hybrid rollout on tls13_only -> tls13_hybrid_kms transition")
-	}
-	if shouldApplyInternalHybridTLS(
-		GovernanceSystemState{TLSMode: "tls13_hybrid_kms"},
-		GovernanceSystemState{TLSMode: "tls13_hybrid_kms"},
-	) {
-		t.Fatal("did not expect hybrid rollout for same-mode update")
+	svc := NewService(store, nil, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050",
+		WithCertsURL(server.URL), WithHTTPClient(server.Client()))
+	for _, mode := range []string{"tls13_only", "tls13_hybrid_kms"} {
+		if _, err := svc.UpdateSystemState(context.Background(), GovernanceSystemState{TenantID: "thybrid", TLSMode: mode, UpdatedBy: "admin"}); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 

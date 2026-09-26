@@ -110,7 +110,7 @@ func FromEnv(serviceName string) *Source {
 		return nil
 	}
 	return &Source{
-		authURL:  strings.TrimRight(envOr("AUTH_URL", "http://auth:8001"), "/"),
+		authURL:  strings.TrimRight(envOr("AUTH_URL", "https://auth:8001"), "/"),
 		tenantID: envOr("INTERNAL_SERVICE_TENANT", "root"),
 		clientID: serviceName,
 		apiKey:   key,

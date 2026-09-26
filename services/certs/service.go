@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -59,8 +60,8 @@ type Service struct {
 	store             Store
 	events            EventPublisher
 	keycore           KeyCoreSigner
-	mek               []byte
-	exposure          *mek.Keyring // exposure register; nil in tests
+	mek               atomic.Pointer[[]byte] // master key from keycore; nil until loaded
+	exposure          *mek.Keyring           // exposure register; nil in tests
 	securityProvider  certRootKeyProvider
 	certStorageMode   string
 	rootKeyMode       string
@@ -78,17 +79,18 @@ type Service struct {
 }
 
 type RuntimeCertMaterializerConfig struct {
-	Enabled        bool
-	MaterializeDir string
-	TenantID       string
-	RootCAName     string
-	ValidityDays   int64
-	Interval       time.Duration
-	RenewBefore    time.Duration
-	EnvoyCN        string
-	EnvoySANs      []string
-	KMIPCN         string
-	KMIPSANs       []string
+	Enabled         bool
+	MaterializeDir  string
+	TenantID        string
+	RootCAName      string
+	ValidityDays    int64
+	Interval        time.Duration
+	RenewBefore     time.Duration
+	EnvoyCN         string
+	EnvoySANs       []string
+	KMIPCN          string
+	KMIPSANs        []string
+	DashboardTLSDir string
 }
 
 func NewService(store Store, events EventPublisher, keycore KeyCoreSigner, mek []byte, fipsStrict bool, keycoreFailClosed bool) *Service {
@@ -112,16 +114,10 @@ func NewServiceWithSecurity(store Store, events EventPublisher, keycore KeyCoreS
 	if keycore == nil {
 		keycore = NoopKeyCoreSigner{}
 	}
-	// The master key comes from keycore (pkg/mek); there is no fallback.
-	legacyMEK := sec.LegacyMEK
-	if len(legacyMEK) != 32 {
-		panic("certs: a 32-byte master key from pkg/mek is required")
-	}
-	return &Service{
+	svc := &Service{
 		store:             store,
 		events:            events,
 		keycore:           keycore,
-		mek:               append([]byte{}, legacyMEK[:32]...),
 		securityProvider:  sec.RootProvider,
 		certStorageMode:   normalizeStorageMode(sec.CertStorageMode),
 		rootKeyMode:       normalizeRootKeyMode(sec.RootKeyMode),
@@ -131,6 +127,33 @@ func NewServiceWithSecurity(store Store, events EventPublisher, keycore KeyCoreS
 		acmeNonces:        make(map[string]time.Time, 256),
 		acmeRateWindow:    make(map[string][]time.Time, 16),
 	}
+	// The master key comes from keycore (pkg/mek); there is no fallback. It may
+	// arrive after start: the internal PKI must issue certificates before
+	// keycore is reachable over mTLS, and legacy-format signers fail closed
+	// until SetLegacyMEK.
+	if len(sec.LegacyMEK) > 0 {
+		if err := svc.SetLegacyMEK(sec.LegacyMEK); err != nil {
+			panic("certs: " + err.Error())
+		}
+	}
+	return svc
+}
+
+// SetLegacyMEK installs the 32-byte master key from keycore.
+func (s *Service) SetLegacyMEK(key []byte) error {
+	if len(key) != 32 {
+		return errors.New("a 32-byte master key from pkg/mek is required")
+	}
+	k := append([]byte{}, key...)
+	s.mek.Store(&k)
+	return nil
+}
+
+func (s *Service) legacyMEK() ([]byte, error) {
+	if p := s.mek.Load(); p != nil {
+		return *p, nil
+	}
+	return nil, errors.New("the master key from keycore is not loaded yet")
 }
 
 func (s *Service) CreateCA(ctx context.Context, req CreateCARequest) (CA, error) {
@@ -1883,63 +1906,6 @@ func (s *Service) CMPv2Request(ctx context.Context, req CMPv2RequestMessage) (Ce
 	}
 }
 
-func (s *Service) IssueInternalMTLS(ctx context.Context, serviceName string, req InternalMTLSRequest) (Certificate, string, error) {
-	serviceName = strings.TrimSpace(strings.ToLower(serviceName))
-	if serviceName == "" {
-		return Certificate{}, "", errors.New("service name is required")
-	}
-	req.TenantID = strings.TrimSpace(req.TenantID)
-	if req.TenantID == "" {
-		return Certificate{}, "", errors.New("tenant_id is required")
-	}
-	req.CAID = strings.TrimSpace(req.CAID)
-	if req.CAID == "" {
-		rootName := s.runtimeRootCAName(ctx, req.TenantID)
-		ca, err := s.ensureRuntimeRootCA(ctx, req.TenantID, rootName)
-		if err != nil {
-			return Certificate{}, "", err
-		}
-		req.CAID = ca.ID
-	}
-	req.Algorithm = normalizeAlgorithm(req.Algorithm)
-	if req.Algorithm == "" {
-		req.Algorithm = "ECDSA-P384"
-	}
-	req.CertClass = normalizeCertClass(req.CertClass, req.Algorithm)
-	if req.CertClass == "" {
-		req.CertClass = "internal-mtls"
-	}
-	req.Protocol = strings.TrimSpace(req.Protocol)
-	if req.Protocol == "" {
-		req.Protocol = "internal-mtls"
-	}
-	cn := "kms-" + serviceName
-	sans := []string{cn, cn + ".svc", cn + ".svc.cluster.local"}
-	out, keyPEM, err := s.IssueCertificate(ctx, IssueCertificateRequest{
-		TenantID:     req.TenantID,
-		CAID:         req.CAID,
-		CertType:     "tls-client",
-		CertClass:    req.CertClass,
-		Algorithm:    req.Algorithm,
-		SubjectCN:    cn,
-		SANs:         sans,
-		ServerKeygen: true,
-		ValidityDays: req.ValidityDays,
-		Protocol:     req.Protocol,
-	})
-	if err != nil {
-		return Certificate{}, "", err
-	}
-	_ = s.publishAudit(ctx, "audit.cert.internal_mtls_issued", req.TenantID, map[string]interface{}{
-		"service":   serviceName,
-		"cert_id":   out.ID,
-		"algorithm": req.Algorithm,
-		"class":     req.CertClass,
-		"protocol":  req.Protocol,
-	})
-	return out, keyPEM, nil
-}
-
 func (s *Service) UploadThirdPartyCertificate(ctx context.Context, req UploadThirdPartyCertificateRequest) (Certificate, error) {
 	req.TenantID = strings.TrimSpace(req.TenantID)
 	req.Purpose = strings.TrimSpace(req.Purpose)
@@ -2528,7 +2494,11 @@ func (s *Service) loadCASigner(ca CA) (crypto.Signer, error) {
 func (s *Service) encryptSigner(raw []byte) (EncryptedSigner, error) {
 	fingerprint := signerFingerprint(raw)
 	if s.securityProvider == nil || s.certStorageMode != "db_encrypted" {
-		env, err := pkgcrypto.EncryptEnvelope(s.mek, raw)
+		key, err := s.legacyMEK()
+		if err != nil {
+			return EncryptedSigner{}, err
+		}
+		env, err := pkgcrypto.EncryptEnvelope(key, raw)
 		if err != nil {
 			return EncryptedSigner{}, err
 		}
@@ -2575,11 +2545,15 @@ func (s *Service) decryptSigner(ca CA) ([]byte, error) {
 			defer pkgcrypto.Zeroize(dek)
 			return aesGCMDecryptRaw(dek, ca.SignerCiphertext, ca.SignerDataIV)
 		}
-		if len(s.mek) == 0 {
+		if s.mek.Load() == nil {
 			return nil, err
 		}
 	}
-	return pkgcrypto.DecryptEnvelope(s.mek, &pkgcrypto.EnvelopeCiphertext{
+	key, err := s.legacyMEK()
+	if err != nil {
+		return nil, err
+	}
+	return pkgcrypto.DecryptEnvelope(key, &pkgcrypto.EnvelopeCiphertext{
 		WrappedDEK:   ca.SignerWrappedDEK,
 		WrappedDEKIV: ca.SignerWrappedDEKIV,
 		Ciphertext:   ca.SignerCiphertext,
@@ -2746,11 +2720,34 @@ func (s *Service) MaterializeRuntimeCerts(ctx context.Context, cfg RuntimeCertMa
 	if err := writeFileAtomically(filepath.Join(materializeDir, "ca", "ca.crt"), []byte(strings.TrimSpace(ca.CertPEM)+"\n"), 0o600); err != nil {
 		return err
 	}
-	if err := s.ensureRuntimeEndpointCert(ctx, tenantID, ca, filepath.Join(materializeDir, "envoy"), "RSA-3072", envoyCN, envoySANs, cfg.ValidityDays, cfg.RenewBefore); err != nil {
+	if err := s.ensureRuntimeEndpointCert(ctx, tenantID, ca, filepath.Join(materializeDir, "envoy"), "RSA-3072", "tls-server", envoyCN, envoySANs, cfg.ValidityDays, cfg.RenewBefore, ""); err != nil {
 		return err
 	}
-	if err := s.ensureRuntimeEndpointCert(ctx, tenantID, ca, filepath.Join(materializeDir, "kmip"), "RSA-3072", kmipCN, kmipSANs, cfg.ValidityDays, cfg.RenewBefore); err != nil {
+	if err := s.ensureRuntimeEndpointCert(ctx, tenantID, ca, filepath.Join(materializeDir, "kmip"), "RSA-3072", "tls-server", kmipCN, kmipSANs, cfg.ValidityDays, cfg.RenewBefore, ""); err != nil {
 		return err
+	}
+	// Internal identities that can't enrol themselves, from the internal
+	// services Sub CA: Envoy's client certificate to the services, and the
+	// dashboard's server certificate (docs/SECURITY/INTERNAL_TLS.md).
+	_, sub, err := s.EnsureInternalPKI(ctx, tenantID)
+	if err != nil {
+		return err
+	}
+	internalDays := internalCertValidityDays()
+	internalRenew := time.Duration(internalDays) * 24 * time.Hour / 3
+	if err := s.ensureRuntimeEndpointCert(ctx, tenantID, sub, filepath.Join(materializeDir, "envoy-client"), "ECDSA-P256", "tls-client", "vecta-envoy", []string{"envoy", "vecta-envoy"}, internalDays, internalRenew, sub.CertPEM); err != nil {
+		return err
+	}
+	if dir := strings.TrimSpace(cfg.DashboardTLSDir); dir != "" {
+		if err := s.ensureRuntimeEndpointCert(ctx, tenantID, sub, dir, "ECDSA-P256", "tls-server", "vecta-dashboard", []string{"dashboard", "vecta-dashboard"}, internalDays, internalRenew, sub.CertPEM); err != nil {
+			return err
+		}
+		// nginx in the dashboard runs as another user: hand the key over by
+		// group (CERTS_DASHBOARD_TLS_GID, certs is a member via group_add),
+		// never by making it world-readable.
+		if err := shareWithGroup(dir, envInt("CERTS_DASHBOARD_TLS_GID", -1)); err != nil {
+			return fmt.Errorf("dashboard TLS permissions: %w", err)
+		}
 	}
 	_ = s.publishAudit(ctx, "audit.cert.runtime_materialized", tenantID, map[string]interface{}{
 		"materialize_dir": materializeDir,
@@ -2797,7 +2794,7 @@ func (s *Service) ensureRuntimeRootCA(ctx context.Context, tenantID string, name
 	return CA{}, err
 }
 
-func (s *Service) ensureRuntimeEndpointCert(ctx context.Context, tenantID string, ca CA, outDir string, algorithm string, cn string, sans []string, validityDays int64, renewBefore time.Duration) error {
+func (s *Service) ensureRuntimeEndpointCert(ctx context.Context, tenantID string, ca CA, outDir string, algorithm string, certType string, cn string, sans []string, validityDays int64, renewBefore time.Duration, chainPEM string) error {
 	if err := os.MkdirAll(outDir, 0o700); err != nil {
 		return err
 	}
@@ -2809,7 +2806,7 @@ func (s *Service) ensureRuntimeEndpointCert(ctx context.Context, tenantID string
 	issued, keyPEM, err := s.IssueCertificate(ctx, IssueCertificateRequest{
 		TenantID:     tenantID,
 		CAID:         ca.ID,
-		CertType:     "tls-server",
+		CertType:     certType,
 		Algorithm:    algorithm,
 		CertClass:    "internal-mtls",
 		SubjectCN:    cn,
@@ -2827,11 +2824,31 @@ func (s *Service) ensureRuntimeEndpointCert(ctx context.Context, tenantID string
 	}
 	keyBytes := []byte(keyPEM)
 	defer pkgcrypto.Zeroize(keyBytes)
-	if err := writeFileAtomically(certPath, []byte(strings.TrimSpace(issued.CertPEM)+"\n"), 0o600); err != nil {
+	certOut := strings.TrimSpace(issued.CertPEM) + "\n"
+	if strings.TrimSpace(chainPEM) != "" {
+		certOut += strings.TrimSpace(chainPEM) + "\n"
+	}
+	if err := writeFileAtomically(certPath, []byte(certOut), 0o600); err != nil {
 		return err
 	}
 	if err := writeFileAtomically(keyPath, keyBytes, 0o600); err != nil {
 		return err
+	}
+	return nil
+}
+
+func shareWithGroup(dir string, gid int) error {
+	if gid < 0 {
+		return nil
+	}
+	for name, mode := range map[string]os.FileMode{"tls.crt": 0o640, "tls.key": 0o640} {
+		p := filepath.Join(dir, name)
+		if err := os.Chown(p, -1, gid); err != nil {
+			return err
+		}
+		if err := os.Chmod(p, mode); err != nil {
+			return err
+		}
 	}
 	return nil
 }

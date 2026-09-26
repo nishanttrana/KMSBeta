@@ -589,16 +589,6 @@ func (s *Service) UpdateSystemState(ctx context.Context, state GovernanceSystemS
 	if state.FIPSRNGMode == "hsm_trng" && !isHSMReadyForTRNG(state.HSMMode) {
 		return GovernanceSystemState{}, errors.New("hsm_trng requires a connected HSM; configure/connect HSM first")
 	}
-	prev, prevErr := s.store.GetSystemState(ctx, state.TenantID)
-	if prevErr != nil && !errors.Is(prevErr, errNotFound) {
-		return GovernanceSystemState{}, prevErr
-	}
-	shouldApplyHybrid := shouldApplyInternalHybridTLS(prev, state)
-	if shouldApplyHybrid {
-		if err := s.applyInternalHybridTLSOnToggle(ctx, state.TenantID, state.UpdatedBy); err != nil {
-			return GovernanceSystemState{}, err
-		}
-	}
 	if err := s.store.UpsertSystemState(ctx, state); err != nil {
 		return GovernanceSystemState{}, err
 	}
@@ -616,7 +606,6 @@ func (s *Service) UpdateSystemState(ctx context.Context, state GovernanceSystemS
 		"runtime_enforced":                     state.FIPSRuntimeEnforced,
 		"module_version":                       state.FIPSModuleVersion,
 		"tls_mode":                             state.TLSMode,
-		"hybrid_rollout":                       shouldApplyHybrid,
 		"posture_force_quorum_destructive_ops": state.PostureForceQuorumDestructiveOps,
 		"posture_require_step_up_auth":         state.PostureRequireStepUpAuth,
 		"posture_pause_connector_sync":         state.PosturePauseConnectorSync,
@@ -684,149 +673,6 @@ func (s *Service) ApplyPostureControls(ctx context.Context, patch PostureControl
 		"posture_guardrail_policy_required":    out.PostureGuardrailPolicyRequired,
 	})
 	return out, nil
-}
-
-var internalHybridMTLSServices = []string{
-	"auth", "keycore", "policy", "governance", "audit", "certs", "secrets", "cloud", "ekm", "hyok", "kmip", "payment", "workload", "pqc", "dataprotect", "cluster-manager", "compliance", "reporting", "sbom",
-}
-
-type certsCAItem struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Status  string `json:"status"`
-	CertPEM string `json:"cert_pem"`
-}
-
-func shouldApplyInternalHybridTLS(prev GovernanceSystemState, next GovernanceSystemState) bool {
-	prevMode := normalizeTLSModeForHybridTransition(prev.TLSMode)
-	nextMode := normalizeTLSModeForHybridTransition(next.TLSMode)
-	return nextMode == "tls13_hybrid_kms" && prevMode != "tls13_hybrid_kms"
-}
-
-func normalizeTLSModeForHybridTransition(v string) string {
-	switch strings.ToLower(strings.TrimSpace(v)) {
-	case "tls13_hybrid_kms", "tls13-hybrid-kms":
-		return "tls13_hybrid_kms"
-	default:
-		return strings.ToLower(strings.TrimSpace(v))
-	}
-}
-
-func (s *Service) applyInternalHybridTLSOnToggle(ctx context.Context, tenantID string, updatedBy string) error {
-	if strings.TrimSpace(tenantID) == "" {
-		return errors.New("tenant_id is required")
-	}
-	if strings.TrimSpace(s.certsURL) == "" {
-		return errors.New("certs_url is not configured for hybrid TLS rollout")
-	}
-	ca, err := s.ensureHybridRuntimeCA(ctx, tenantID)
-	if err != nil {
-		return err
-	}
-	for _, serviceName := range internalHybridMTLSServices {
-		reqBody := map[string]interface{}{
-			"tenant_id":     tenantID,
-			"ca_id":         ca.ID,
-			"algorithm":     "ECDSA-P384+ML-DSA-65",
-			"cert_class":    "hybrid",
-			"protocol":      "internal-mtls-hybrid",
-			"validity_days": 365,
-		}
-		if err := s.certsJSONRequest(ctx, http.MethodPost, "/certs/internal/mtls/"+url.PathEscape(serviceName), tenantID, reqBody, nil); err != nil {
-			return fmt.Errorf("hybrid internal mTLS issue failed for %s: %w", serviceName, err)
-		}
-	}
-	if err := s.enableRuntimeHybridMTLSProtocol(ctx, tenantID, updatedBy); err != nil {
-		return err
-	}
-	_ = s.publishAudit(ctx, "audit.governance.internal_hybrid_tls_applied", tenantID, map[string]interface{}{
-		"services": len(internalHybridMTLSServices),
-		"ca_id":    ca.ID,
-		"ca_name":  ca.Name,
-	})
-	return nil
-}
-
-func (s *Service) ensureHybridRuntimeCA(ctx context.Context, tenantID string) (certsCAItem, error) {
-	var listResp struct {
-		Items []certsCAItem `json:"items"`
-	}
-	if err := s.certsJSONRequest(ctx, http.MethodGet, "/certs/ca", tenantID, nil, &listResp); err != nil {
-		return certsCAItem{}, fmt.Errorf("list cert CAs failed: %w", err)
-	}
-	for _, item := range listResp.Items {
-		if strings.EqualFold(strings.TrimSpace(item.Name), "vecta-hybrid-runtime-root") &&
-			strings.EqualFold(strings.TrimSpace(item.Status), "active") {
-			return item, nil
-		}
-	}
-	createBody := map[string]interface{}{
-		"tenant_id":     tenantID,
-		"name":          "vecta-hybrid-runtime-root",
-		"ca_level":      "root",
-		"algorithm":     "ECDSA-P384+ML-DSA-65",
-		"ca_type":       "hybrid",
-		"key_backend":   "software",
-		"subject":       "CN=vecta-hybrid-runtime-root,O=Vecta KMS",
-		"validity_days": 3650,
-	}
-	var createResp struct {
-		CA certsCAItem `json:"ca"`
-	}
-	if err := s.certsJSONRequest(ctx, http.MethodPost, "/certs/ca", tenantID, createBody, &createResp); err != nil {
-		// If another request created it concurrently, fetch again.
-		if err2 := s.certsJSONRequest(ctx, http.MethodGet, "/certs/ca", tenantID, nil, &listResp); err2 == nil {
-			for _, item := range listResp.Items {
-				if strings.EqualFold(strings.TrimSpace(item.Name), "vecta-hybrid-runtime-root") &&
-					strings.EqualFold(strings.TrimSpace(item.Status), "active") {
-					return item, nil
-				}
-			}
-		}
-		return certsCAItem{}, fmt.Errorf("create hybrid runtime root CA failed: %w", err)
-	}
-	if strings.TrimSpace(createResp.CA.ID) == "" {
-		return certsCAItem{}, errors.New("hybrid runtime root CA was not returned by certs service")
-	}
-	return createResp.CA, nil
-}
-
-func (s *Service) enableRuntimeHybridMTLSProtocol(ctx context.Context, tenantID string, updatedBy string) error {
-	var listResp struct {
-		Items []struct {
-			Protocol   string `json:"protocol"`
-			Enabled    bool   `json:"enabled"`
-			ConfigJSON string `json:"config_json"`
-		} `json:"items"`
-	}
-	if err := s.certsJSONRequest(ctx, http.MethodGet, "/certs/protocols", tenantID, nil, &listResp); err != nil {
-		return fmt.Errorf("list cert protocols failed: %w", err)
-	}
-	cfg := map[string]interface{}{}
-	for _, item := range listResp.Items {
-		if strings.EqualFold(strings.TrimSpace(item.Protocol), "runtime-mtls") && strings.TrimSpace(item.ConfigJSON) != "" {
-			_ = json.Unmarshal([]byte(item.ConfigJSON), &cfg)
-			break
-		}
-	}
-	mode := strings.ToLower(strings.TrimSpace(fmt.Sprintf("%v", cfg["mode"])))
-	if mode != "custom" {
-		mode = "default"
-	}
-	cfg["mode"] = mode
-	cfg["tls_min_version"] = "1.3"
-	cfg["hybrid_pqc"] = true
-	cfg["cert_algorithm"] = "ECDSA-P384+ML-DSA-65"
-	rawCfg, _ := json.Marshal(cfg)
-	body := map[string]interface{}{
-		"enabled":     true,
-		"config_json": string(rawCfg),
-		"updated_by":  firstNonEmpty(updatedBy, "governance"),
-	}
-	if err := s.certsJSONRequest(ctx, http.MethodPut, "/certs/protocols/runtime-mtls", tenantID, body, nil); err != nil {
-		return fmt.Errorf("update runtime-mtls protocol failed: %w", err)
-	}
-	return nil
 }
 
 func (s *Service) certsJSONRequest(ctx context.Context, method string, path string, tenantID string, body interface{}, out interface{}) error {

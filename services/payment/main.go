@@ -40,7 +40,7 @@ func main() {
 		publisher = rt.Audit.Publisher()
 	}
 
-	keycoreURL := envOr("KEYCORE_URL", "http://127.0.0.1:8010")
+	keycoreURL := envOr("KEYCORE_URL", "https://keycore:8010")
 	svc := NewService(
 		NewSQLStore(rt.DB),
 		NewHTTPKeyCoreClient(keycoreURL, 5*time.Second),

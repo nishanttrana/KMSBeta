@@ -19,6 +19,7 @@ import (
 	"vecta-kms/pkg/clusterrepl"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	"vecta-kms/pkg/servicetoken"
+	pkgsvctls "vecta-kms/pkg/svctls"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
@@ -27,7 +28,6 @@ import (
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
-	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
@@ -44,6 +44,11 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	// Internal mTLS identity from the internal-services Sub CA; nothing is
+	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	if _, err := pkgsvctls.Init(ctx, "kms-cluster-manager", pkgsvctls.Options{Logger: logger}); err != nil {
+		logger.Fatalf("internal mTLS enrolment failed: %v", err)
+	}
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
 		PostgresDSN:     cfg.PostgresDSN,
@@ -78,7 +83,7 @@ func main() {
 	servicetoken.SetDefault(servicetoken.FromEnv("kms-cluster-manager"))
 	joinCfg := loadJoinConfig()
 	svc := NewService(NewSQLStore(dbConn), publisher).WithReplication(replEngine).WithJoin(newHTTPKeycoreMEKClient(joinCfg.keycoreURL), joinCfg).
-		WithForwarding(httpMinter{authURL: strings.TrimRight(envOr("AUTH_URL", "http://auth:8001"), "/"), client: &http.Client{Timeout: 10 * time.Second}})
+		WithForwarding(httpMinter{authURL: strings.TrimRight(envOr("AUTH_URL", "https://auth:8001"), "/"), client: &http.Client{Timeout: 10 * time.Second}})
 	// Keep one publication per component current on every node, so any node
 	// can serve as primary (services create their tables at their own start).
 	go func() {
@@ -124,8 +129,8 @@ func main() {
 			}
 			return
 		}
-		logger.Printf("http listening on :%s", httpPort)
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("https (mTLS) listening on :%s", httpPort)
+		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server failed: %v", err)
 		}
 	}()
@@ -191,7 +196,7 @@ func migrationPath() string {
 }
 
 func devMTLSConfig() (*tls.Config, error) {
-	return pkgcrypto.SelfSignedMTLSConfig("kms-cluster-manager-local")
+	return pkgsvctls.Current().ServerConfig(), nil
 }
 
 func envOr(key string, defaultValue string) string {

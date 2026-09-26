@@ -5,6 +5,38 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### Five traps turning on internal mTLS
+- **Start-up deadlock.** Certs fetched its master key from keycore before
+  serving, but keycore now needs a certs-issued certificate first. Fix: the
+  internal CAs sign with certs' own root wrapping key, so certs runs its PKI
+  and enrolment before loading keycore's key. Legacy signers fail closed
+  until the key arrives.
+- **New named volumes are root-owned.** Services that don't run as root
+  can't write them. The existing volumes worked only because
+  `start-kms.sh` chowns them, so every new volume needs a line there.
+- **Envoy's upstream TLS maximum defaults to 1.2.** Setting only
+  `tls_minimum_protocol_version: TLSv1_3` fails every handshake with
+  `NO_SUPPORTED_VERSIONS_ENABLED`, and Envoy's own stats show only
+  `ssl.connection_error`. Set the maximum too. `--mode validate` doesn't
+  catch this.
+- **OpenSSL (nginx) won't accept an intermediate as a trust anchor.** Go and
+  BoringSSL (Envoy) accept the Sub CA alone. nginx needs the chain up to the
+  self-signed root, and then a check on `$ssl_client_i_dn` so root-issued
+  certificates are still refused.
+- **The Mac's system Python (LibreSSL) can't speak TLS 1.3**, so it can't
+  reach the edge. Use Go or `curl` to test.
+
+### The internal calls that were quietly wrong
+- Several `*_URL` defaults were `http://127.0.0.1:<port>`. Inside a
+  container that is the container itself, and three pointed at the wrong
+  service port: compliance's `AUTH_URL` at 8020, `BACKUP_URL` at 8090,
+  posture's `GOVERNANCE_URL` at 8030. They only worked because compose set
+  the real value.
+- Governance dialed approval callbacks with `insecure.NewCredentials()` to
+  any address in the request.
+- Payment served terminals on plaintext TCP on `0.0.0.0:9170`.
+
+
 ### "mTLS verified" means a handshake was observed, never that it was configured
 - The mTLS Mesh page showed every service pair as mutually authenticated.
   The value was hardcoded `MTLSVerified: true` over a static dependency

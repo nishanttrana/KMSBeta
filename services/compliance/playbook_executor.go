@@ -54,7 +54,7 @@ func NewPlaybookExecutor(
 	audit *pkgaudit.Client,
 	logger *log.Logger,
 ) *PlaybookExecutor {
-	authURL := envOr("AUTH_URL", "http://127.0.0.1:8020")
+	authURL := envOr("AUTH_URL", "https://auth:8001")
 	return &PlaybookExecutor{
 		store:      store,
 		keycoreURL: strings.TrimRight(keycoreURL, "/"),
@@ -288,7 +288,7 @@ func (e *PlaybookExecutor) actionSendEmail(ctx context.Context, params map[strin
 		}
 	}
 	// POST to governance SMTP endpoint
-	governanceURL := envOr("GOVERNANCE_URL", "http://127.0.0.1:8050")
+	governanceURL := envOr("GOVERNANCE_URL", "https://governance:8050")
 	payload := map[string]string{
 		"to":        params["to"],
 		"subject":   params["subject"],
@@ -570,7 +570,7 @@ func (e *PlaybookExecutor) actionRevokeAPIKey(ctx context.Context, params map[st
 
 func (e *PlaybookExecutor) actionTriggerAssessment(ctx context.Context, params map[string]string, runCtx RunContext) error {
 	// POST to self (compliance service) to trigger an assessment
-	complianceURL := envOr("COMPLIANCE_URL", "http://127.0.0.1:8110")
+	complianceURL := envOr("COMPLIANCE_URL", "https://compliance:8110")
 	body := map[string]string{
 		"tenant_id":   runCtx.TenantID,
 		"template_id": params["template_id"],
@@ -579,7 +579,7 @@ func (e *PlaybookExecutor) actionTriggerAssessment(ctx context.Context, params m
 }
 
 func (e *PlaybookExecutor) actionGenerateEvidenceReport(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	complianceURL := envOr("COMPLIANCE_URL", "http://127.0.0.1:8110")
+	complianceURL := envOr("COMPLIANCE_URL", "https://compliance:8110")
 	body := map[string]string{
 		"tenant_id":    runCtx.TenantID,
 		"framework_id": params["framework_id"],
@@ -588,7 +588,7 @@ func (e *PlaybookExecutor) actionGenerateEvidenceReport(ctx context.Context, par
 }
 
 func (e *PlaybookExecutor) actionSnapshotPosture(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	complianceURL := envOr("COMPLIANCE_URL", "http://127.0.0.1:8110")
+	complianceURL := envOr("COMPLIANCE_URL", "https://compliance:8110")
 	body := map[string]string{
 		"tenant_id": runCtx.TenantID,
 		"refresh":   "true",
@@ -599,7 +599,7 @@ func (e *PlaybookExecutor) actionSnapshotPosture(ctx context.Context, params map
 // ── Infrastructure Action Implementations ───────────────────────────────────
 
 func (e *PlaybookExecutor) actionCreateBackup(ctx context.Context, params map[string]string, runCtx RunContext) error {
-	backupURL := envOr("BACKUP_URL", "http://127.0.0.1:8090")
+	backupURL := envOr("BACKUP_URL", "https://backup:8290")
 	body := map[string]string{
 		"tenant_id": runCtx.TenantID,
 		"label":     params["label"],

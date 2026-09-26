@@ -45,12 +45,12 @@ import (
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
-	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	pkgsvctls "vecta-kms/pkg/svctls"
 )
 
 // Options selects which parts of the spine a service needs. ServiceName,
@@ -68,6 +68,10 @@ type Options struct {
 	// it exists for services whose endpoints authenticate by other means
 	// (e.g. payment terminal bearer tokens). New services must not set it.
 	SkipJWT bool
+
+	// DeferTLS skips internal mTLS enrolment in Boot. Only the certs service
+	// sets it: it is the CA and enrols itself locally before Serve.
+	DeferTLS bool
 }
 
 // Runtime exposes the booted spine to the service.
@@ -122,6 +126,18 @@ func Boot(opts Options) (*Runtime, error) {
 		rt.DB = db
 	}
 
+	if !opts.DeferTLS {
+		// Internal mTLS identity from the internal-services Sub CA
+		// (docs/SECURITY/INTERNAL_TLS.md). Nothing is served before it.
+		if _, err := pkgsvctls.Init(ctx, "kms-"+opts.ServiceName, pkgsvctls.Options{Logger: logger}); err != nil {
+			if rt.DB != nil {
+				_ = rt.DB.Close()
+			}
+			stop()
+			return nil, err
+		}
+	}
+
 	if !opts.SkipNATS {
 		nc, err := pkgevents.Connect(cfg.NATSURL, "kms-"+opts.ServiceName, logger.Printf)
 		if err != nil {
@@ -167,20 +183,20 @@ func (rt *Runtime) Serve(handler http.Handler) error {
 	} else {
 		authed = pkgjwtauth.MustWrap(rt.opts.JWTScope, rt.Cfg.JWTIssuer, rt.Cfg.JWTAudience, handler, rt.Logger)
 	}
+	id := pkgsvctls.Current()
+	if id == nil {
+		return errors.New("platform: no internal mTLS identity; Boot must enrol (or the service must call svctls.Init) before Serve")
+	}
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(authed, mwPublisher, auditName))
 	httpErr := make(chan error, 1)
 	go func() {
-		rt.Logger.Printf("http listening on :%s", httpPort)
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		rt.Logger.Printf("https (mTLS) listening on :%s", httpPort)
+		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			httpErr <- err
 		}
 	}()
 
-	tlsCfg, err := pkgcrypto.SelfSignedMTLSConfig("kms-" + rt.opts.ServiceName + "-local")
-	if err != nil {
-		return err
-	}
-	grpcSrv := pkggrpc.NewServer(tlsCfg, rt.Logger)
+	grpcSrv := pkggrpc.NewServer(id.ServerConfig(), rt.Logger)
 	lis, err := net.Listen("tcp", ":"+grpcPort)
 	if err != nil {
 		return err

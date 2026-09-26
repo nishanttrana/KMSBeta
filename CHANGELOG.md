@@ -4,6 +4,70 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.8.0-beta] — 2026-09-26
+
+### Internal mTLS, slice 1: every service link is TLS 1.3 mTLS from the internal Sub CA
+- **Internal PKI.** At first start the certs service creates the
+  `vecta-internal-services` Sub CA under `vecta-runtime-root`. Both appear in
+  the CA hierarchy.
+- **Enrolment.** Every service (all 31 Go services) generates its own key
+  and enrols with a CSR at `https://certs:8035/v1/enroll`.
+  - An HMAC proof of its platform identity authenticates the request.
+  - It gets a 7-day certificate, renewed with a fresh key at two thirds of
+    its lifetime without a restart.
+  - The key never leaves the service. SANs come from the platform registry,
+    never from the CSR.
+- **Servers.** Every service listener (HTTP and gRPC) now requires a client
+  certificate from the Sub CA. Plain HTTP, no certificate, or a certificate
+  from any other CA is refused at the handshake.
+- **Clients.** Each service routes calls to platform hosts over mTLS, and
+  refuses plain `http://` to them. External calls keep public-CA trust.
+  - All `*_URL` defaults are now `https://<service>:<port>`.
+  - Several old `127.0.0.1` defaults pointed at the wrong port or at the
+    container itself.
+- **Envoy and the dashboard.**
+  - Envoy reaches every service and the dashboard over mTLS with its own
+    Sub CA client certificate.
+  - Envoy's certificates, edge and internal, reload through file-based SDS
+    when certs renews them.
+  - `/svc/<service>/` and `/auth` now route straight to each service. The
+    dashboard's nginx serves static files only, over TLS, accepting only
+    Envoy.
+- **Post-quantum key exchange, proven.** Every internal handshake negotiates
+  `X25519MLKEM768` (hybrid ML-KEM) in FIPS modes `off`, `on` and `only`.
+  `TestMutualTLSBetweenServices` asserts it, and Envoy's upstream stats show
+  it on the running stack. Certificate signatures stay ECDSA: Go's TLS
+  doesn't support ML-DSA certificates.
+- **Payment's terminal port (9170) is TLS 1.3**, not plaintext TCP.
+  - **Breaking:** terminals must now trust the Vecta internal root, which
+    can be downloaded from the PKI tab.
+  - Choosing a different external certificate comes in slice 4.
+- **Governance approval callbacks** use mTLS, and dial only registered
+  platform services. The target address comes from the request, so this also
+  closes an SSRF.
+
+### Removed
+- **`POST /certs/internal/mtls/{service}`:** any authenticated caller could
+  get a certificate and private key for any service name.
+- **The "TLS 1.3 + Hybrid PQC (KMS internal)" TLS mode.** It minted ML-DSA
+  "hybrid" certificates that no service used, then audited
+  `internal_hybrid_tls_applied`. The System Administration TLS policy now
+  shows the enforced policy instead of a selector.
+
+### Enforcement
+- **`make conformance` rule `tls-only`** fails on:
+  - plain `ListenAndServe()` or `insecure.NewCredentials()`;
+  - any `http://` to a platform host, in Go, compose, Envoy, nginx or the
+    scripts.
+
+### Fixes from the first deploy
+- **New volumes needed `app` ownership.** `start-kms.sh` now prepares
+  `internal-trust` (755) and `dashboard-tls` (750).
+- **Envoy upstream TLS needed an explicit TLS 1.3 maximum.** Its upstream
+  default maximum is 1.2, which with a 1.3 minimum leaves no version.
+- **nginx needs the chain up to the root to verify a client.** It gets
+  `internal-chain.crt`, and still requires the Sub CA as issuer.
+
 ## [1.7.0-beta] — 2026-09-26
 
 ### Removed: "mTLS Mesh" (it never issued a usable certificate)

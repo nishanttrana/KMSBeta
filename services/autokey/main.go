@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 	"vecta-kms/pkg/servicetoken"
+	pkgsvctls "vecta-kms/pkg/svctls"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
@@ -22,7 +23,6 @@ import (
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
-	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
@@ -42,6 +42,11 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	// Internal mTLS identity from the internal-services Sub CA; nothing is
+	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	if _, err := pkgsvctls.Init(ctx, "kms-autokey", pkgsvctls.Options{Logger: logger}); err != nil {
+		logger.Fatalf("internal mTLS enrolment failed: %v", err)
+	}
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
 		PostgresDSN:     cfg.PostgresDSN,
@@ -71,8 +76,8 @@ func main() {
 
 	svc := NewService(
 		NewSQLStore(dbConn),
-		NewHTTPKeyCoreClient(envOr("KEYCORE_URL", "http://keycore:8010"), 5*time.Second),
-		NewHTTPGovernanceClient(envOr("GOVERNANCE_URL", "http://governance:8050"), 5*time.Second),
+		NewHTTPKeyCoreClient(envOr("KEYCORE_URL", "https://keycore:8010"), 5*time.Second),
+		NewHTTPGovernanceClient(envOr("GOVERNANCE_URL", "https://governance:8050"), 5*time.Second),
 		publisher,
 	)
 	handler := NewHandler(svc)
@@ -80,8 +85,8 @@ func main() {
 	httpPort := envOr("HTTP_PORT", "8260")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "autokey"))
 	go func() {
-		logger.Printf("http listening on :%s", httpPort)
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("https (mTLS) listening on :%s", httpPort)
+		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server failed: %v", err)
 		}
 	}()
@@ -146,7 +151,7 @@ func migrationPath() string {
 }
 
 func devMTLSConfig() (*tls.Config, error) {
-	return pkgcrypto.SelfSignedMTLSConfig("kms-autokey-local")
+	return pkgsvctls.Current().ServerConfig(), nil
 }
 
 func envOr(key string, fallback string) string {

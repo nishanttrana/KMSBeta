@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 	"vecta-kms/pkg/servicetoken"
+	pkgsvctls "vecta-kms/pkg/svctls"
 
 	"github.com/nats-io/nats.go"
 	"github.com/ovh/kmip-go/kmipserver"
@@ -45,6 +46,11 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	// Internal mTLS identity from the internal-services Sub CA; nothing is
+	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	if _, err := pkgsvctls.Init(ctx, "kms-kmip", pkgsvctls.Options{Logger: logger}); err != nil {
+		logger.Fatalf("internal mTLS enrolment failed: %v", err)
+	}
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
 		PostgresDSN:     cfg.PostgresDSN,
@@ -81,9 +87,9 @@ func main() {
 		defer hb.Stop()
 	}
 
-	keycoreURL := envOr("KEYCORE_URL", "http://127.0.0.1:8010")
+	keycoreURL := envOr("KEYCORE_URL", "https://keycore:8010")
 	keycore := NewHTTPKeyCoreClient(keycoreURL, 3*time.Second)
-	certsURL := envOr("CERTS_URL", "http://127.0.0.1:8030")
+	certsURL := envOr("CERTS_URL", "https://certs:8030")
 	certsClient := NewHTTPCertsClient(certsURL, 5*time.Second)
 	requireRegistered := envBool("KMIP_REQUIRE_REGISTERED_CLIENT", true)
 	handler := NewHandler(NewSQLStore(dbConn), keycore, certsClient, publisher, requireRegistered)
@@ -92,8 +98,8 @@ func main() {
 	httpPort := envOr("HTTP_PORT", "8160")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler.HTTPHandler(), publisher, "kmip"))
 	go func() {
-		logger.Printf("http listening on :%s", httpPort)
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("https (mTLS) listening on :%s", httpPort)
+		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server failed: %v", err)
 		}
 	}()
@@ -303,7 +309,7 @@ func devKMIPTLSConfig() (*tls.Config, error) {
 }
 
 func devHealthTLSConfig() (*tls.Config, error) {
-	return pkgcrypto.SelfSignedMTLSConfig("kms-kmip-health")
+	return pkgsvctls.Current().ServerConfig(), nil
 }
 
 func envOr(k string, d string) string {

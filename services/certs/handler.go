@@ -76,7 +76,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /certs/protocols/schema", h.handleListProtocolSchemas)
 	mux.HandleFunc("PUT /certs/protocols/{protocol}", h.handleUpsertProtocolConfig)
 	mux.HandleFunc("POST /certs/upload-3p", h.handleUploadThirdPartyCert)
-	mux.HandleFunc("POST /certs/internal/mtls/{service}", h.handleIssueInternalMTLS)
 
 	// Certificate Transparency (Merkle)
 	mux.HandleFunc("POST /certs/merkle/build", h.handleMerkleBuild)
@@ -642,25 +641,6 @@ func (h *Handler) handleUploadThirdPartyCert(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]interface{}{"certificate": out, "request_id": reqID})
-}
-
-func (h *Handler) handleIssueInternalMTLS(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	var body InternalMTLSRequest
-	if err := decodeJSON(r, &body); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
-		return
-	}
-	out, keyPEM, err := h.svc.IssueInternalMTLS(r.Context(), r.PathValue("service"), body)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "internal_mtls_failed", err.Error(), reqID, body.TenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"certificate":     out,
-		"private_key_pem": keyPEM,
-		"request_id":      reqID,
-	})
 }
 
 func (h *Handler) handleACMEDirectory(w http.ResponseWriter, r *http.Request) {

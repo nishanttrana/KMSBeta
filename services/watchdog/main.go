@@ -15,6 +15,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	pkgsvctls "vecta-kms/pkg/svctls"
 
 	pkgconfig "vecta-kms/pkg/config"
 	pkgevents "vecta-kms/pkg/events"
@@ -27,6 +28,11 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	// Internal mTLS identity from the internal-services Sub CA; nothing is
+	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	if _, err := pkgsvctls.Init(ctx, "kms-watchdog", pkgsvctls.Options{Logger: logger}); err != nil {
+		logger.Fatalf("internal mTLS enrolment failed: %v", err)
+	}
 
 	natsURL := envOr("NATS_URL", cfg.NATSURL)
 	probe := newProbe(natsURL, logger)
@@ -52,8 +58,8 @@ func main() {
 	port := envOr("HTTP_PORT", "8480")
 	srv := pkgconfig.NewHTTPServer(port, mux)
 	go func() {
-		logger.Printf("http listening on :%s", port)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("https (mTLS) listening on :%s", port)
+		if err := srv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server failed: %v", err)
 		}
 	}()

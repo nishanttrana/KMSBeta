@@ -126,6 +126,10 @@ an approach, record it here or in the matching doc below.
       forced restart to swap it) and one-click per-service mechanism choice,
       including PQC hybrid key exchange. Everything is real and audited.
     - A new service or feature is TLS/mTLS from its first commit.
+      `platform.Boot` enrols it automatically; a service with its own
+      `main` calls `svctls.Init` before serving. Every identity is listed
+      in `pkg/svctls.Services`, and `make conformance` (`tls-only`) fails
+      on a plain listener or on `http://` to a platform host.
 
 ## Crypto and transport standards
 

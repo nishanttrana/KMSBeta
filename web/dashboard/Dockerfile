@@ -22,6 +22,7 @@ RUN npm run build:docker
 FROM vecta-local/nginx:1.30.5-alpine AS runtime
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --chmod=0755 tls-watch.sh /docker-entrypoint.d/40-tls-watch.sh
 COPY --from=build /app/dist /usr/share/nginx/html
 
 # Drop root: grant the built-in nginx user ownership of runtime write paths,

@@ -40,7 +40,7 @@ func main() {
 	// before serving; a start that would leave them there is refused.
 	keyring, err := mek.Open(rt.Ctx, mek.Options{
 		Tables: mek.Catalog["secrets"],
-		Source: mek.NewKeycoreSource(envOr("KEYCORE_URL", "http://127.0.0.1:8010"), mek.Catalog["secrets"]),
+		Source: mek.NewKeycoreSource(envOr("KEYCORE_URL", "https://keycore:8010"), mek.Catalog["secrets"]),
 		DB:     rt.DB.SQL(),
 		Audit:  audit,
 		Member: func(ctx context.Context) bool { return !clusterstate.RunsPrimaryJobs(ctx) },

@@ -13,6 +13,7 @@
 #      and every Go service receives the customer's VECTA_FIPS_MODE.
 #   6. Preview features: one catalogue (pkg/features), mirrored by the dashboard.
 #   6b. Real capability: no simulated/synthetic result generators outside tests.
+#   6c. TLS only: no plain listeners or http:// to platform hosts.
 #   7. Route kernel: every HTTP route registers through pkg/route (auth,
 #      tenant, permission and a specific audit event by construction).
 #
@@ -184,6 +185,23 @@ if [ -n "$fake_hits$rand_hits" ]; then
   printf '%s\n' "$fake_hits" "$rand_hits" | grep -v '^$' | sed 's/^/  /'
 else
   echo "PASS [real-capability]"
+fi
+
+# Rule 6c: every connection is TLS, every internal one mTLS (CLAUDE.md rule
+# 10, docs/SECURITY/INTERNAL_TLS.md). No plain listener, no insecure gRPC
+# credentials, and no http:// to a platform host in code or deployment files.
+internal_hosts=$(sed -n 's/^[[:space:]]*"[a-z-]*":[[:space:]]*"\([a-z-]*\)",.*/\1/p' pkg/svctls/svctls.go | sort -u | paste -sd'|' -)
+tls_hits=$( {
+  grep -rnE '\.ListenAndServe\(\)|insecure\.NewCredentials\(' services pkg --include='*.go' 2>/dev/null | grep -v '_test\.go:'
+  grep -rnE "http://(${internal_hosts})[:/\"]" services pkg --include='*.go' 2>/dev/null | grep -v '_test\.go:'
+  grep -nE "http://(${internal_hosts})[:/}\"[:space:]]" docker-compose*.yml infra/envoy/envoy.yaml web/dashboard/nginx.conf infra/scripts/*.sh deploy-local.sh install.sh 2>/dev/null
+} || true)
+if [ -n "$tls_hits" ]; then
+  FAIL=1
+  echo "FAIL [tls-only]: plain HTTP or insecure transport to a platform component (CLAUDE.md rule 10)"
+  printf '%s\n' "$tls_hits" | sed 's/^/  /'
+else
+  echo "PASS [tls-only]"
 fi
 
 # Rule 7: route kernel (docs/PLATFORM_CONTRACT.md). Services register HTTP

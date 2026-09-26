@@ -14,6 +14,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	pkgsvctls "vecta-kms/pkg/svctls"
 
 	"github.com/nats-io/nats.go"
 	"google.golang.org/grpc"
@@ -46,6 +47,11 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+	// Internal mTLS identity from the internal-services Sub CA; nothing is
+	// served or called before it (docs/SECURITY/INTERNAL_TLS.md).
+	if _, err := pkgsvctls.Init(ctx, "kms-governance", pkgsvctls.Options{Logger: logger}); err != nil {
+		logger.Fatalf("internal mTLS enrolment failed: %v", err)
+	}
 
 	dbConn, err := pkgdb.Open(ctx, pkgdb.Config{
 		PostgresDSN:     cfg.PostgresDSN,
@@ -74,8 +80,8 @@ func main() {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
 
-	baseURL := envOr("APP_BASE_URL", "http://localhost:8050")
-	certsURL := envOr("CERTS_URL", "http://certs:8030")
+	baseURL := envOr("APP_BASE_URL", "https://localhost")
+	certsURL := envOr("CERTS_URL", "https://certs:8030")
 	store := NewSQLStore(dbConn)
 	var snmpPublisher SNMPPublisher = noopSNMPPublisher{}
 	if strings.EqualFold(strings.TrimSpace(envOr("GOVERNANCE_SNMP_ENABLED", "true")), "true") {
@@ -145,8 +151,8 @@ func main() {
 	httpPort := envOr("HTTP_PORT", "8050")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "governance"))
 	go func() {
-		logger.Printf("http listening on :%s", httpPort)
-		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Printf("https (mTLS) listening on :%s", httpPort)
+		if err := httpSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Fatalf("http server failed: %v", err)
 		}
 	}()
@@ -212,7 +218,7 @@ func migrationPath() string {
 }
 
 func devMTLSConfig() (*tls.Config, error) {
-	return pkgcrypto.SelfSignedMTLSConfig("kms-governance-local")
+	return pkgsvctls.Current().ServerConfig(), nil
 }
 
 // loadJWTParser returns the token parser, or an error when no verification

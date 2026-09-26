@@ -107,6 +107,18 @@ counts stay in `<svc>_mek_state` and the items in `<svc>_mek_exposure`, and
 the service log has a `MEK scan: …` line. A refused start shows as a
 `refusing to start:` line.
 
+## Internal mTLS (certs, docs/SECURITY/INTERNAL_TLS.md)
+
+| Event | When | Severity |
+|---|---|---|
+| `audit.cert.internal_subca_created` | the internal-services Sub CA is created under the runtime root (first start) | info |
+| `audit.cert.internal_enroll` | every enrolment request on `POST /v1/enroll` (route kernel); refusals carry `result: refused` and `reason`: `invalid_request`, `invalid_csr`, `proof_rejected` (wrong identity, wrong secret, expired, unknown identity), `issuance_refused` | warning |
+| `audit.cert.internal_enrolled` | a certificate was issued from a CSR: identity, serial, key algorithm, expiry, how many previous certificates were superseded | info |
+
+Proven by `TestEnrollmentIssuesRegistrySANsFromTheSubCA` and
+`TestEnrollmentRefusals` (services/certs), and `TestEnrollmentProof`
+(pkg/svctls).
+
 ## Kernel-emitted events (pkg/route)
 
 Services migrated to the `pkg/route` kernel emit one specific event per
@@ -139,6 +151,14 @@ or malformed token-verification key (keycore; governance, which looks for
 - the service missing or restarting in health checks;
 - during a FIPS rollout, the service never reaching the target mode in System
   Administration → Runtime Crypto (and no `fips_mode_applied` event for it).
+
+A service that can't **enrol for its internal mTLS certificate** doesn't serve
+at all: it logs `internal mTLS enrolment for kms-<name> failed (attempt N)`
+and retries until the certs service answers. The certs side audits each
+refusal (`audit.cert.internal_enroll`, `result: refused`). A TLS handshake a
+server refuses (no client certificate, wrong CA, plain HTTP) is logged by the
+server as `http: TLS handshake error`; nothing reaches the application, so
+there is no request to audit.
 
 Tests that prove emission: `TestBootstrapRevokesKeysDerivedFromPublicDefaultSecret`,
 `TestBootstrapRetiresServiceKeysFromRotatedSecret` (auth);

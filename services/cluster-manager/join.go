@@ -99,7 +99,7 @@ func loadJoinConfig() joinConfig {
 		pgPort:       envOr("CLUSTER_PG_ADVERTISE_PORT", "5432"),
 		pgDB:         envOr("POSTGRES_DB", "vecta"),
 		pgSSLMode:    envOr("CLUSTER_PG_SSLMODE", "verify-full"),
-		keycoreURL:   strings.TrimRight(envOr("KEYCORE_URL", "http://keycore:8010"), "/"),
+		keycoreURL:   strings.TrimRight(envOr("KEYCORE_URL", "https://keycore:8010"), "/"),
 		allowHTTP:    envBool("CLUSTER_JOIN_ALLOW_HTTP", false),
 	}
 	if certFile := strings.TrimSpace(os.Getenv("CLUSTER_HTTP_TLS_CERT_FILE")); certFile != "" {
