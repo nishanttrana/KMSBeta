@@ -34,6 +34,7 @@ import { B, Btn, Card, Chk, FG, Inp, Modal, Row2, Row3, Sel, Stat } from "../../
 import { errMsg } from "../../components/v3/runtimeUtils";
 import { C } from "../../components/v3/theme";
 import type { AdminTabProps } from "./types";
+import { ExposurePanel } from "./ExposurePanel";
 import type { AuthSession } from "../../lib/auth";
 
 const INTERNAL_TABS = ["Overview", "Security", "HSM", "Backup", "Lifecycle"] as const;
@@ -550,6 +551,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
   // ── VIEW: Security ──
   const securityView = (
     <div>
+      {tenantSession && <div style={{ marginBottom: 12 }}><ExposurePanel session={tenantSession} onToast={onToast}/></div>}
       <InheritBanner section="passwordPolicy" label="Password Policy &amp; Login Security"/>
       {policyLoading && <div style={{ fontSize: 10, color: C.muted, marginBottom: 10 }}>Loading policies...</div>}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, opacity:securityLocked?0.6:1, pointerEvents:securityLocked?"none":"auto" }}>

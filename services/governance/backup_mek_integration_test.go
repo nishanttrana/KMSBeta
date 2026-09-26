@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"testing"
 
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -134,6 +135,31 @@ func TestBackupReprotectPostgres(t *testing.T) {
 	if !sawRestoring {
 		t.Fatal("restore did not ask the service to record exposure")
 	}
+
+	// A clean backup never needs the services: with every service down, it
+	// still restores.
+	svc.rewrapper = downRewrapper{}
+	if _, err := after.restore(svc, "root"); err != nil {
+		t.Fatalf("clean backup restore depended on the services: %v", err)
+	}
+	// An affected backup with a service down is refused, and nothing lands.
+	if _, err := db.Exec(`DELETE FROM secret_values`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := before.restore(svc, "root"); err == nil {
+		t.Fatal("restore of rows under a public key went ahead without the service")
+	}
+	var n int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM secret_values`).Scan(&n)
+	if n != 0 {
+		t.Fatal("a refused restore wrote rows")
+	}
+}
+
+type downRewrapper struct{}
+
+func (downRewrapper) Rewrap(context.Context, string, mek.RewrapRequest) ([]mek.RewrapResult, error) {
+	return nil, errors.New("connection refused")
 }
 
 func unb64(s string) ([]byte, error) { return base64.StdEncoding.DecodeString(s) }

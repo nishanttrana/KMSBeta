@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"vecta-kms/pkg/clusterroute"
+	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/mek"
 	"vecta-kms/pkg/servicetoken"
 )
@@ -29,8 +30,10 @@ import (
 // backup kept in the platform, which could still be restored or decrypted.
 // So governance:
 //
-//   - re-protects every stored backup: it decrypts the artifact, sends the
-//     wrapped data keys of catalogued tables to the owning service
+//   - re-protects every stored backup: it decrypts the artifact, finds the
+//     rows of catalogued tables under a public key (the keys are public, so
+//     no service is needed for that), sends their wrapped data keys to the
+//     owning service
 //     (POST /mek/rewrap-legacy, governance identity only; the service
 //     re-wraps only what a legacy key opens), and re-seals the artifact
 //     under a fresh backup key. The old key package no longer opens it.
@@ -96,8 +99,9 @@ func (h httpBackupRewrapper) Rewrap(ctx context.Context, service string, req mek
 const rewrapBatch = 1000
 
 // reprotectTables re-wraps, in place, the data keys of every catalogued
-// table in tables that a legacy key opens. It returns rows re-wrapped per
-// service. Any service it can't reach is an error: the payload is left as is.
+// table in tables that a public legacy key opens. It returns rows re-wrapped
+// per service. It calls a service only when such rows exist; if that service
+// can't be reached, it's an error and the payload is left as is.
 func reprotectTables(ctx context.Context, rw backupRewrapper, tables map[string]json.RawMessage, restoring bool) (map[string]int, error) {
 	counts := map[string]int{}
 	services := make([]string, 0, len(mek.Catalog))
@@ -117,12 +121,17 @@ func reprotectTables(ctx context.Context, rw backupRewrapper, tables map[string]
 			if err := dec.Decode(&rows); err != nil {
 				return nil, fmt.Errorf("backup table %s: %w", t.Name, err)
 			}
+			// Only rows under a public key need the service: they're found
+			// here with the public keys, so a clean backup never depends on
+			// the service being up. (Rows under an operator's old env key are
+			// re-wrapped by the service's own rescan after a restore.)
+			public := mek.Catalog[name].PublicLegacyKeys()
 			var entries []mek.RewrapEntry
 			var index []int
 			for i, row := range rows {
 				iv, ok1 := decodeWrapped(row[t.WrappedIV], t.Base64)
 				dek, ok2 := decodeWrapped(row[t.WrappedDEK], t.Base64)
-				if !ok1 || !ok2 {
+				if !ok1 || !ok2 || !underAny(public, iv, dek) {
 					continue
 				}
 				entries = append(entries, mek.RewrapEntry{
@@ -354,4 +363,14 @@ SET artifact_ciphertext = $1, artifact_nonce = $2, ciphertext_sha256 = $3, artif
     key_package_json = $5::jsonb, mek_reprotected_at = NOW()
 WHERE id = $6`, a.ciphertext, a.nonce, a.sha, int64(len(a.ciphertext)), string(a.keyPackageRaw), id)
 	return err
+}
+
+func underAny(keys [][]byte, iv, dek []byte) bool {
+	env := &pkgcrypto.EnvelopeCiphertext{WrappedDEKIV: iv, WrappedDEK: dek}
+	for _, k := range keys {
+		if pkgcrypto.EnvelopeWrappedUnder(k, env) {
+			return true
+		}
+	}
+	return false
 }

@@ -215,11 +215,11 @@ configured attempts before lockout. Per-node rate limits still apply.
   Postgres restart.
 - To run the two-node test: `./scripts/test-cluster-replication.sh` (Docker
   required). CI runs it too (`cluster-replication` job).
-- **The secrets service key doesn't travel with the join.** Stored secrets
-  replicate wrapped under the primary's `SECRETS_MEK_B64`, but the join
-  transfers only keycore's master key. Before joining, copy the primary's
-  `SECRETS_MEK_B64` into the member's `.env`. `secrets_mek_state` (replicated)
-  holds the key's fingerprint, and a member's secrets service with a
-  different key refuses to start (`audit.secrets.mek_check_refused`). Members
-  never run the MEK migration; the primary re-wraps and replication delivers
-  the rows (docs/SECURITY/SECRET_ROTATION.md).
+- **Service master keys need nothing per node.** secrets, certs, cloud and
+  ekm derive their master key from a keycore system key. The join ships
+  keycore's master key and the system key replicates, so a member derives the
+  same key. `<svc>_mek_state` (replicated) holds its fingerprint; a member
+  whose keycore derives a different one refuses to start
+  (`audit.<svc>.mek_check_refused`). Members never run the migration: the
+  primary re-wraps and replication delivers the rows
+  (docs/SECURITY/SERVICE_MASTER_KEYS.md).

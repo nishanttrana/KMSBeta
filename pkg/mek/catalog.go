@@ -120,5 +120,18 @@ func (st ServiceTables) legacyKeys(getenv func(string) string) []LegacyKey {
 	return out
 }
 
+// PublicLegacyKeys are the legacy keys anyone can compute. Governance uses
+// them to find backup rows that need re-wrapping without calling a service
+// for rows that don't.
+func (st ServiceTables) PublicLegacyKeys() [][]byte {
+	var out [][]byte
+	for _, k := range st.legacyKeys(nil) {
+		if k.Public {
+			out = append(out, k.Key)
+		}
+	}
+	return out
+}
+
 // LegacyKeysFromEnv is legacyKeys over the process environment.
 func (st ServiceTables) LegacyKeysFromEnv() []LegacyKey { return st.legacyKeys(os.Getenv) }

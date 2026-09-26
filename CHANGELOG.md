@@ -6,38 +6,51 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
-### Security: secrets were stored under a public key
-- **Every deployment's secrets service wrapped stored secrets under a key
-  derived from a string in the source code.** It fell back to
-  `SHA-256("vecta-secrets-dev-mek")` when `SECRETS_MEK_B64` was unset, and no
-  installer or compose file ever set it. Anyone with the repo and a copy of
-  the database or a backup could decrypt every stored secret.
-- **`SECRETS_MEK_B64` is now required** (base64 of 32 random bytes). The
-  service refuses to start if it's missing, isn't exactly 32 bytes, is
-  patterned, or is the old public key. Compose requires it, and `install.sh`,
-  `deploy-local.sh` and `run-local.sh` generate it. **Upgrading with plain
-  `docker compose up`** now stops with `SECRETS_MEK_B64 is required`: run
-  `./deploy-local.sh`, or add `SECRETS_MEK_B64=$(openssl rand -base64 32)` to
-  `.env`.
-- **Automatic migration on the first start with a real key:** every value
-  under the public key has its data key re-wrapped under `SECRETS_MEK_B64`.
-  Values stay readable and their ciphertext is unchanged. Each tenant gets
-  `audit.secrets.dev_mek_rewrapped`, listing the affected secrets. A value
-  that can't be rewritten blocks the start (`dev_mek_rewrap_refused`) and is
-  retried on the next start. **Action for operators:** database copies and
-  backups made before this upgrade can still be decrypted with the public
-  key. Treat the listed secrets as exposed to anyone who had such a copy, and
-  rotate them at their source.
-- **MEK rotation is now supported:** `rotate-secrets.sh` moves the old key to
-  `SECRETS_MEK_PREVIOUS_B64`, and the service re-wraps on start
-  (`audit.secrets.mek_rewrapped`). A wrong key stops the start
-  (`mek_check_refused`) instead of failing every read. **Cluster members must
-  use the primary's `SECRETS_MEK_B64`**, since the join doesn't transfer it.
-- **New conformance rule `no-literal-key-material`:** no key derived from, or
-  set to, a string literal in `services/`. It found the same defect in certs,
-  cloud and ekm (dev MEK fallbacks, and in cloud a hardcoded
-  `0123456789ABCDEF…` key). Those are listed in the shrink-only
-  `scripts/literal-key-burndown.txt` and are **not fixed yet**.
+### Security: stored secrets, CA keys, cloud credentials and BitLocker keys were under public keys
+- **Every deployment was affected.** secrets, certs, cloud and ekm wrapped
+  their stored data under keys derived from strings in the source code
+  (`SHA-256("vecta-<service>-dev-mek")`; cloud could also use
+  `0123456789ABCDEF…`), because their `<SERVICE>_MEK_B64` was never set. A
+  copy of the database or a backup was enough to decrypt stored secret
+  values, legacy-format CA signing keys, cloud provider credentials and
+  BitLocker recovery keys.
+- **Master keys now come from keycore; there is nothing to configure.** Each
+  service derives its key from a keycore system key bound to its own
+  identity. Plain `docker compose up` works. Cluster members derive the same
+  key with nothing to copy. Keycore refuses to destroy, disable, delete a
+  version of, or export a system key (`409 system_key_protected`); rotate it
+  and restart the service to re-key. These four services now need keycore
+  (and policy) up to start; they retry for 10 minutes.
+- **Automatic migration:** on the primary, every row under a public or old
+  key is re-wrapped before the service serves, and again every 15 minutes, so
+  restored rows are caught. A row that can't be rewritten blocks the start.
+  Values and ciphertext are unchanged.
+- **Backups kept in the platform are re-protected:** governance re-wraps
+  their contents through the owning service and re-seals each under a new
+  backup key (the old key package stops working). Restores are re-wrapped
+  before any row is written. A clean backup never needs the services; an
+  affected one is refused, with nothing written, if its service can't re-wrap.
+- **Exposure register (action needed):** re-wrapping can't change copies
+  made before the upgrade (database dumps, snapshots, downloaded backup
+  files). Every item that was under a public key is listed under
+  **Administration → Tenant → Security → Key exposure register**
+  (`GET /svc/<service>/mek/exposure`), with how to fix it. An entry closes
+  itself when the material is replaced:
+  - a secret is rotated or deleted;
+  - a CA is replaced;
+  - a cloud account is re-registered;
+  - a BitLocker volume is rotated.
+
+  An administrator can also acknowledge an entry with a reason. **Rotate the
+  listed material if anyone may have had an older copy.**
+- New audit events: `audit.<svc>.dev_mek_rewrapped`, `mek_rewrapped`,
+  `*_rewrap_refused`, `mek_unreadable`, `mek_check_refused`,
+  `mek_exposure_remediated`, `audit.key.system_key_*`, and
+  `audit.governance.backup_reprotected`.
+- **Dashboard:** a 403 no longer signs the user out; only 401 does (a
+  missing permission, such as `secrets.read`, is not an expired session).
+- The new conformance rule `no-literal-key-material` fails any key derived
+  from, or set to, a string literal.
 
 ### Platform kernel: audit, tenancy and permissions for every route
 - **New `pkg/route` kernel.** A route is registered with its audit action and

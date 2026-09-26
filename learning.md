@@ -6,22 +6,27 @@ Newest entries on top.
 ## 2026-09-26
 
 ### A default that nobody overrides is the only value in production
-The secrets service's dev-MEK fallback logged "not for production", and was
-presumably meant as a local convenience. But nothing ever set
-`SECRETS_MEK_B64`: not compose, not any installer. So every production
-deployment ran on the public key. Two things hid it:
-- The secure-defaults check looked for `("VAR", "default")` pairs, and the
-  fallback was `Hash([]byte("…-dev-mek"))`. It's a public key either way.
-  Check what a value is derived from, not how it's spelled.
-- Clusters worked by accident, because every node had the same "dev" key.
-  Replacing it with a random key per installer would have broken members
-  quietly, with decrypt errors on replicated rows. That's why the fix records
-  a key fingerprint and refuses a mismatched start.
-
-Removing such a default isn't enough on its own. The data it protected needs
-an idempotent startup migration (re-wrap, audited per tenant), and the
-changelog has to say plainly that backups made before the fix remain
-decryptable.
+Four services had a "dev" master-key fallback that logged "not for
+production". Nothing ever set the real variable (compose never even passed
+it into the containers), so every production deployment ran on public keys.
+What we learned fixing it:
+- **Check what a value is derived from, not how it's spelled.** The
+  secure-defaults check looked for `("VAR", "default")` pairs; the fallback
+  was `Hash([]byte("…-dev-mek"))`.
+- **An environment-variable key is the wrong fix for data at rest.** The
+  first attempt (a required env key) broke plain `compose up`, needed manual
+  copying to cluster members, and turned every backup and rotation step into
+  a way to lose data. Deriving from keycore needs no configuration, and
+  members get it through the join.
+- **Re-wrapping doesn't reach copies made before.** Dumps, snapshots and
+  downloaded backups still open with the public key. Only replacing the
+  material helps there, so the fix has to track which items were exposed
+  (the exposure register) and close each entry when it's rotated.
+- **Look where else the old data lives.** Governance stores backups, and for
+  software-mode backups their keys, in the same database, so the live
+  database kept exposing old values until those were re-protected too.
+- **A 403 isn't a 401.** Once routes enforce permissions, a dashboard that
+  signs users out on 403 logs out anyone who opens a page they can't use.
 
 ### A rule every handler must remember is a rule some handler forgets
 `services/secrets` had a `mustTenant` helper that checked the request tenant
