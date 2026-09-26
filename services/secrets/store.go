@@ -422,4 +422,3 @@ func nullableTime(ts *time.Time) interface{} {
 	}
 	return ts.UTC()
 }
-

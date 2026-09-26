@@ -18,7 +18,9 @@ import (
 // keycoreStandIn is keycore's system key for kms-secrets: one version.
 type keycoreStandIn struct{ key []byte }
 
-func (k keycoreStandIn) EnsureKey(context.Context) (string, int, error) { return "key_sys_secrets", 1, nil }
+func (k keycoreStandIn) EnsureKey(context.Context) (string, int, error) {
+	return "key_sys_secrets", 1, nil
+}
 func (k keycoreStandIn) Derive(context.Context, string, int) ([]byte, int, error) {
 	return k.key, 1, nil
 }

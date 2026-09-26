@@ -379,12 +379,12 @@ func (s *Service) RotateCloudKey(ctx context.Context, req RotateCloudKeyRequest)
 	if strings.EqualFold(keyAccessResult.Action, "deny") {
 		reason := firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy")
 		_ = s.publishAudit(ctx, "audit.cloud.key_access_denied", req.TenantID, map[string]interface{}{
-			"binding_id":          binding.ID,
-			"provider":            binding.Provider,
-			"key_id":              binding.KeyID,
-			"operation":           "rotate",
-			"justification_code":  req.JustificationCode,
-			"reason":              reason,
+			"binding_id":         binding.ID,
+			"provider":           binding.Provider,
+			"key_id":             binding.KeyID,
+			"operation":          "rotate",
+			"justification_code": req.JustificationCode,
+			"reason":             reason,
 		})
 		return CloudKeyBinding{}, "", newServiceError(http.StatusForbidden, "key_access_denied", reason)
 	}
