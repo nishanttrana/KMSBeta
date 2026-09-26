@@ -13,6 +13,10 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 
 ## Standing rules
 
+- [INTERNAL_TLS.md](INTERNAL_TLS.md): every connection is TLS and every
+  internal one is mTLS, from the internal-services Sub CA. Covers the PKI
+  layout, PQC key exchange, rotation, current (non-compliant) status and the
+  delivery plan.
 - [REAL_CAPABILITY.md](REAL_CAPABILITY.md): every feature is 100% real
   capability, never mimicked or faked; what counts as fake, how
   `make conformance` catches it, and the features removed for faking.

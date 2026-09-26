@@ -44,4 +44,5 @@ working backend behind it doesn't count as a feature.
 | Key escrow workflow (keycore) | Stored key names only; approvals released nothing; votes forgeable | M-of-N guardian shares for the backup key ([BACKUP_KEYS.md](BACKUP_KEYS.md)) |
 | CT log monitor (certs) | `simulateCTFetch` invented certificates and "unknown CA" alerts | Nothing yet; certificate discovery and scanning may come later |
 | DR drill (keycore) | Every step "passed", synthetic RTO/RPO | Verify Backup (`POST /governance/backups/verify`) |
+| mTLS Mesh (certs) | "Renew" discarded the cert and key; topology claimed mTLS on plain-HTTP links | Internal mTLS from the internal-services Sub CA ([INTERNAL_TLS.md](INTERNAL_TLS.md)) |
 | Tokenize nonce fallback (dashboard) | `Math.random` / timestamp nonces | The browser CSPRNG only; fails closed |

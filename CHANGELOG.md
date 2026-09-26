@@ -4,6 +4,36 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.7.0-beta] — 2026-09-26
+
+### Removed: "mTLS Mesh" (it never issued a usable certificate)
+- **Removed the mTLS Mesh tab, the certs service's `/mesh/*` endpoints and
+  its Consul reconciler.**
+- **Why:**
+  - "Renew certificate" generated a self-signed certificate and key, then
+    discarded both. It stored only metadata, so no service ever received a
+    certificate.
+  - The topology marked every service-to-service edge "mTLS verified" from
+    a hardcoded list, while the services actually talk plain HTTP.
+  - Trust anchors and registered services were records only. `tenant_id`
+    came from the request body, and nothing was audited.
+- Certs migration 012 drops the four `mesh_*` tables.
+
+### Standing rule: every connection is TLS, every internal one is mTLS
+- **CLAUDE.md rule 10** ([docs/SECURITY/INTERNAL_TLS.md](docs/SECURITY/INTERNAL_TLS.md)):
+  - no plain HTTP anywhere;
+  - internal mTLS with certificates from an internal-services Sub CA under
+    `vecta-runtime-root`, both created at deployment and shown in the CA
+    hierarchy;
+  - external certificates from the internal CA or an external CA (PKI tab);
+  - per-service one-click rotation and mechanism choice, including PQC
+    hybrid key exchange.
+- **Honest status: not yet compliant.**
+  - Service-to-service calls are plain HTTP inside the Docker network.
+  - Postgres runs with `sslmode=disable`; NATS, Valkey and Consul are
+    plaintext.
+  - Delivery is planned in four slices (see the doc).
+
 ## [1.6.0-beta] — 2026-09-26
 
 ### Backups: Verify Backup (real recovery evidence)

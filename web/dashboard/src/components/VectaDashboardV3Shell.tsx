@@ -27,7 +27,6 @@ import {
   Link,
   List,
   Lock,
-  Network,
   Pin,
   PinOff,
   Play,
@@ -101,7 +100,6 @@ const FeatureForgeTab = lazy(() => import("./v3/tabs/FeatureForgeTab").then(m =>
 const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab").then(m => ({ default: m.RotationSchedulingTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
-const MTLSMeshTab = lazy(() => import("./v3/tabs/MTLSMeshTab").then(m => ({ default: m.MTLSMeshTab })));
 const EnvelopeEncTab = lazy(() => import("./v3/tabs/EnvelopeEncTab").then(m => ({ default: m.EnvelopeEncTab })));
 const OpsMetricsTab = lazy(() => import("./v3/tabs/OpsMetricsTab").then(m => ({ default: m.OpsMetricsTab })));
 const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
@@ -210,7 +208,6 @@ const TABS: Record<string, any> = {
   rotation: RotationSchedulingTab,
   crypto_agility: CryptoAgilityTab,
   webhooks: WebhooksTab,
-  mtls_mesh: MTLSMeshTab,
   envelope_enc: EnvelopeEncTab,
   ops_metrics: OpsMetricsTab,
   backup: BackupTab,
@@ -256,7 +253,6 @@ const TITLES: Record<string, string> = {
   rotation: "Rotation & Scheduling",
   crypto_agility: "Crypto Agility",
   webhooks: "Webhooks & SIEM",
-  mtls_mesh: "mTLS Mesh",
   envelope_enc: "Envelope Encryption",
   ops_metrics: "Operations Metrics",
   backup: "Backup & Restore",
@@ -287,7 +283,6 @@ const NAV = [
   ]},
   { g: "PKI & certificates", items: [
     { id: "certs", icon: FileText, label: "Certificates / PKI" },
-    { id: "mtls_mesh", icon: Network, label: "mTLS Mesh" },
   ]},
   { g: "Data & integrations", items: [
     { id: "vault", icon: Lock, label: "Secret Vault" },

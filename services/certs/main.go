@@ -151,10 +151,6 @@ func main() {
 		}
 	}()
 
-	// Discover the live mTLS mesh from the consul catalog so the dashboard
-	// shows every internal service and stays current as services register.
-	svc.StartMeshDiscovery(rt.Ctx, logger)
-
 	svc.SetKeyring(keyring)
 	handler := NewHandler(svc)
 	kernel := route.New("cert", audit, logger)

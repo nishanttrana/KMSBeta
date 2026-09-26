@@ -110,6 +110,22 @@ an approach, record it here or in the matching doc below.
    - Redact them in logs and errors.
    - If one is exposed anyway: say so at once, name the secret (not its
      value), recommend rotation, and record the cause in learning.md.
+10. **Every connection is TLS; every internal one is mTLS** (owner directive,
+    2026-09-26; [docs/SECURITY/INTERNAL_TLS.md](docs/SECURITY/INTERNAL_TLS.md)).
+    Nothing speaks plain HTTP or another unencrypted protocol.
+    - **Internal** traffic (service to service, Envoy to service,
+      Postgres/NATS/Valkey/Consul, health checks) uses mTLS with certificates
+      from the internal Vecta CA. The root and an internal-services Sub CA are
+      created at deployment and shown in the PKI tab's CA hierarchy.
+      Internal certificates, including those for future features, come from
+      that Sub CA.
+    - **External** endpoints use TLS, with a certificate from the internal CA
+      or an external CA, chosen in the PKI tab.
+    - Service mTLS certificates are shown in the dashboard, with one-click
+      rotation (old certificate revoked and removed, then a graceful or
+      forced restart to swap it) and one-click per-service mechanism choice,
+      including PQC hybrid key exchange. Everything is real and audited.
+    - A new service or feature is TLS/mTLS from its first commit.
 
 ## Crypto and transport standards
 

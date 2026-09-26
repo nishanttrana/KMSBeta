@@ -76,18 +76,6 @@ type Store interface {
 	GetCertMerkleEpoch(ctx context.Context, tenantID string, epochID string) (CertMerkleEpoch, error)
 	GetCertMerkleProof(ctx context.Context, tenantID string, certID string) (*CertMerkleProofResponse, error)
 
-	// mTLS Mesh
-	ListMeshServices(ctx context.Context, tenantID string) ([]MeshService, error)
-	GetMeshService(ctx context.Context, tenantID, id string) (MeshService, error)
-	CreateMeshService(ctx context.Context, svc MeshService) (MeshService, error)
-	UpsertDiscoveredMeshService(ctx context.Context, svc MeshService) error
-	UpdateMeshServiceCert(ctx context.Context, tenantID, id, certID, certCN string, certExpiry time.Time) error
-	CreateMeshCertificate(ctx context.Context, cert MeshCertificate) (MeshCertificate, error)
-	ListMeshCertificates(ctx context.Context, tenantID string) ([]MeshCertificate, error)
-	ListTrustAnchors(ctx context.Context, tenantID string) ([]TrustAnchor, error)
-	CreateTrustAnchor(ctx context.Context, ta TrustAnchor) (TrustAnchor, error)
-	GetMeshTopology(ctx context.Context, tenantID string) ([]MeshTopologyEdge, error)
-	UpsertTopologyEdge(ctx context.Context, edge MeshTopologyEdge) error
 }
 
 type SQLStore struct {

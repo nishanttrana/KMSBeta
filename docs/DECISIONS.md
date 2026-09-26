@@ -7,6 +7,39 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — Internal mTLS from an internal-services Sub CA, keys enrolled by CSR
+**Decision:** every internal connection moves to mTLS.
+- **CAs:** a new Sub CA, `vecta-internal-services`, is created under the
+  existing `vecta-runtime-root` at deployment, and every internal
+  certificate comes from it.
+- **Enrolment:** each service generates its key and enrols with a CSR,
+  authenticated by its platform service identity.
+- **Controls:** rotation and mechanism choice (including the PQC hybrid
+  groups `X25519MLKEM768`, `SecP256r1MLKEM768` and `SecP384r1MLKEM1024`) are
+  per service in the dashboard. The swap is a graceful drain and re-exec,
+  or a forced restart.
+
+**Why:**
+- The owner's directive: nothing is HTTP, and internal traffic uses
+  internal-CA mTLS.
+- Service calls carry key material today over plain HTTP. The fake "mTLS
+  Mesh" hid that gap.
+- A Sub CA keeps the root out of daily issuance, and lets the internal
+  certificate estate be rotated or revoked on its own.
+
+**Rejected:**
+- *Issuing from the root directly*: it puts the root in the hot path.
+- *Writing every service's key into the shared `runtime-certs` volume*: one
+  compromised service could read every key.
+- *A sidecar mesh (Istio or Consul Connect)*: it adds a second, unmanaged
+  PKI and control plane. Go's TLS in the certified module already covers
+  the need.
+- *ML-DSA certificates*: Go's TLS doesn't support them. PQC is offered for
+  key exchange only, and labelled that way.
+
+**Plan:** four slices (docs/SECURITY/INTERNAL_TLS.md), each tested against
+real TLS handshakes and real dependencies.
+
 ## 2026-09-26 — Replace the fabricated DR drill with backup verification
 **Decision:** delete keycore's DR drill, which marked every step passed with
 synthetic RTO/RPO. Add `POST /governance/backups/verify`, which opens a real

@@ -5,6 +5,40 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### "mTLS verified" means a handshake was observed, never that it was configured
+- The mTLS Mesh page showed every service pair as mutually authenticated.
+  The value was hardcoded `MTLSVerified: true` over a static dependency
+  list, and its "renew" discarded the certificate and key it generated.
+  Meanwhile every service called the others over `http://`.
+- **Check the wire, not the diagram.** Look for the `*_URL` scheme in
+  compose, for `ClientAuth: tls.RequireAndVerifyClientCert` on the
+  listeners that actually carry traffic, and for who dials which port. A
+  per-service self-signed "mTLS" config that trusts only itself
+  authenticates nothing.
+
+### Every connection is TLS; internal ones are mTLS from the internal Sub CA
+- **Owner directive (CLAUDE.md rule 10, docs/SECURITY/INTERNAL_TLS.md):**
+  nothing is HTTP.
+  - Internal traffic (services, Envoy, Postgres, NATS, Valkey, Consul,
+    health checks) uses mTLS with certificates from a
+    `vecta-internal-services` Sub CA under `vecta-runtime-root`. Both CAs
+    are created at deployment and are visible in the PKI tab's CA hierarchy.
+    Every new internal feature takes its certificates from that Sub CA.
+  - External endpoints use TLS, with a certificate from the internal or an
+    external CA, chosen in the PKI tab.
+- **Operating model:**
+  - Service mTLS certificates are listed in the dashboard.
+  - Each can be rotated with one click: the old certificate is revoked and
+    removed, and the service swaps to the new one by a graceful drain and
+    re-exec, or by a forced restart.
+  - The mechanism is chosen per service with one click. PQC is available as
+    hybrid ML-KEM key exchange; ML-DSA certificates aren't supported by
+    Go's TLS, and the UI says so.
+- **Why a Sub CA:** internal certificates are issued daily and must be easy
+  to rotate or revoke as a set. Keeping that off the root limits the blast
+  radius, and gives future internal features one issuer.
+
+
 ### Never mimic or fake a feature: it must be 100% real capability
 - **Owner directive:** every KMS feature does what its UI and API say, end
   to end. A UI with no real backend behind it, or a backend that invents

@@ -110,14 +110,6 @@ func (h *Handler) routes() *http.ServeMux {
 
 	// CT Log Monitor
 
-	// mTLS Mesh
-	mux.HandleFunc("GET /mesh/services", h.handleListMeshServices)
-	mux.HandleFunc("POST /mesh/services", h.handleRegisterMeshService)
-	mux.HandleFunc("POST /mesh/services/{id}/renew", h.handleRenewServiceCert)
-	mux.HandleFunc("GET /mesh/certificates", h.handleListMeshCertificates)
-	mux.HandleFunc("GET /mesh/trust-anchors", h.handleListTrustAnchors)
-	mux.HandleFunc("POST /mesh/trust-anchors", h.handleAddTrustAnchor)
-	mux.HandleFunc("GET /mesh/topology", h.handleGetTopology)
 
 	return mux
 }
