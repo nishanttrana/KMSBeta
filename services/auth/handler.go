@@ -616,7 +616,15 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	lockoutWindow := time.Duration(securityPolicy.LockoutMinutes) * time.Minute
 	loginUser := strings.ToLower(strings.TrimSpace(req.Username))
 	rlKey := req.TenantID + "|" + loginUser + "|" + clientIP(r)
-	if lockUntil, locked := h.logic.limiter.IsLocked(rlKey, time.Now().UTC()); locked {
+	lockUntil, locked := h.logic.limiter.IsLocked(rlKey, time.Now().UTC())
+	lockScope := "node"
+	if !locked {
+		// Failures recorded by every cluster node (cluster_lockout.go).
+		if lockUntil, locked = h.clusterLocked(r.Context(), rlKey, securityPolicy.MaxFailedAttempts, lockoutWindow, time.Now().UTC()); locked {
+			lockScope = "cluster"
+		}
+	}
+	if locked {
 		retryAfter := int(time.Until(lockUntil).Seconds())
 		if retryAfter < 1 {
 			retryAfter = 1
@@ -626,6 +634,9 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 			"username":     req.Username,
 			"source_ip":    clientIP(r),
 			"locked_until": lockUntil.UTC().Format(time.RFC3339),
+			"scope":        lockScope,
+			"result":       "refused",
+			"reason":       "too_many_failed_attempts",
 		})
 		w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
 		writeJSON(w, http.StatusTooManyRequests, map[string]any{
@@ -649,6 +660,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 			err = nil
 		} else {
 			_, _ = h.logic.limiter.FailWithPolicy(rlKey, time.Now().UTC(), securityPolicy.MaxFailedAttempts, lockoutWindow)
+			h.recordLoginAttempt(r.Context(), req.TenantID, rlKey, false)
 			// A09: audit-log login failure for invalid credentials
 			_ = h.publishAudit(r.Context(), "audit.auth.login_failed", reqID, req.TenantID, map[string]any{
 				"username":  req.Username,
@@ -661,6 +673,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	if normalizeUserStatus(u.Status) != "active" {
 		_, _ = h.logic.limiter.FailWithPolicy(rlKey, time.Now().UTC(), securityPolicy.MaxFailedAttempts, lockoutWindow)
+		h.recordLoginAttempt(r.Context(), req.TenantID, rlKey, false)
 		// A09: audit-log login attempt on disabled account
 		_ = h.publishAudit(r.Context(), "audit.auth.login_failed", reqID, req.TenantID, map[string]any{
 			"username":  req.Username,
@@ -673,6 +686,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(u.TOTPSecret) > 0 && !ValidateTOTP(string(u.TOTPSecret), req.TOTPCode, time.Now().UTC()) {
 		_, _ = h.logic.limiter.FailWithPolicy(rlKey, time.Now().UTC(), securityPolicy.MaxFailedAttempts, lockoutWindow)
+		h.recordLoginAttempt(r.Context(), req.TenantID, rlKey, false)
 		// A09: audit-log MFA failure
 		_ = h.publishAudit(r.Context(), "audit.auth.login_failed", reqID, req.TenantID, map[string]any{
 			"username":  req.Username,
@@ -703,6 +717,7 @@ func (h *Handler) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.logic.limiter.Reset(rlKey)
+	h.recordLoginAttempt(r.Context(), req.TenantID, rlKey, true)
 	if h.meter != nil {
 		_ = h.meter.IncrementOps()
 	}

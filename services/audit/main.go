@@ -19,6 +19,7 @@ import (
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
+	"vecta-kms/pkg/clusterstate"
 	pkgclustersync "vecta-kms/pkg/clustersync"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
@@ -84,6 +85,13 @@ func main() {
 	wal := NewWALBuffer(ac.WALPath, ac.WALMaxSizeMB, ac.WALHMACKey)
 	store := NewSQLStore(dbConn)
 	store.SetEventSigningKey(ac.EventSigningKey)
+	if err := loadClusterSigningKey(store, clusterAuditKeyFile()); err != nil {
+		logger.Fatalf("cluster audit signing key: %v", err)
+	}
+	store.SetChainNode(func(ctx context.Context) string { return clusterstate.Default().Get(ctx).ChainNode() })
+	if err := store.EnsureUpcomingPartitions(ctx, time.Now().UTC()); err != nil {
+		logger.Printf("audit partitions: %v", err)
+	}
 	svc := NewService(store, ac, wal, pub)
 
 	// Closed-loop detectors. Each runs as a side-effect of normal event
@@ -118,6 +126,30 @@ func main() {
 	}); err != nil {
 		logger.Fatalf("subscribe failed: %v", err)
 	}
+
+	// Cluster: relay members' replicated events to this primary's consumers,
+	// and keep audit_events partitions ahead of replicated rows.
+	go func() {
+		t := time.NewTicker(5 * time.Second)
+		defer t.Stop()
+		lastPartitionCheck := time.Now()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				if _, err := store.RelayMemberEvents(ctx, pub, 500); err != nil {
+					logger.Printf("cluster audit relay: %v", err)
+				}
+				if time.Since(lastPartitionCheck) > time.Hour {
+					lastPartitionCheck = time.Now()
+					if err := store.EnsureUpcomingPartitions(ctx, time.Now().UTC()); err != nil {
+						logger.Printf("audit partitions: %v", err)
+					}
+				}
+			}
+		}
+	}()
 
 	go func() {
 		t := time.NewTicker(30 * time.Second)

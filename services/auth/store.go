@@ -16,6 +16,11 @@ import (
 var errNotFound = errors.New("not found")
 
 type Store interface {
+	// Cluster-wide lockout (cluster_lockout.go).
+	RecordLoginAttempt(ctx context.Context, a LoginAttempt) error
+	RecentLoginAttempts(ctx context.Context, keyHash string, since time.Time, limit int) ([]LoginAttempt, error)
+	PruneLoginAttempts(ctx context.Context, before time.Time) error
+
 	CreateTenant(ctx context.Context, t Tenant) error
 	ListTenants(ctx context.Context) ([]Tenant, error)
 	GetTenant(ctx context.Context, tenantID string) (Tenant, error)

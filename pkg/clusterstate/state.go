@@ -18,7 +18,11 @@ import (
 	"time"
 )
 
-const RoleFollower = "follower"
+const (
+	RoleFollower = "follower"
+	// RolePrimary is recorded when the first member joins this node.
+	RolePrimary = "primary"
+)
 
 type State struct {
 	NodeID             string
@@ -32,6 +36,16 @@ type State struct {
 // IsMember reports whether lifecycle writes must go to a primary.
 func (s State) IsMember() bool {
 	return s.Role == RoleFollower && s.PrimaryURL != "" && s.ForwardCredential != ""
+}
+
+// ChainNode is the id under which this node writes shared-append rows (its
+// audit chain, login attempts): its cluster node id once it is a primary or a
+// member, "" while standalone. "" rows never replicate.
+func (s State) ChainNode() string {
+	if s.Role == RoleFollower || s.Role == RolePrimary {
+		return s.NodeID
+	}
+	return ""
 }
 
 type Reader struct {

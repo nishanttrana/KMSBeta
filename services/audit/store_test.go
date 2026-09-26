@@ -41,8 +41,10 @@ func createAuditSchemaForTest(conn *pkgdb.DB) error {
 			correlation_id TEXT, parent_event_id TEXT, session_id TEXT, result TEXT NOT NULL, status_code INTEGER, error_message TEXT,
 			duration_ms REAL, fips_compliant INTEGER, approval_id TEXT, risk_score INTEGER, tags TEXT, node_id TEXT, details TEXT,
 			hmac_sig TEXT, category_group TEXT, country_code TEXT,
+			chain_node TEXT NOT NULL DEFAULT '', hmac_key_id TEXT,
 			created_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id)
 		);`,
+		`CREATE TABLE audit_relay_cursor (tenant_id TEXT NOT NULL, chain_node TEXT NOT NULL, last_sequence INTEGER NOT NULL, PRIMARY KEY (tenant_id, chain_node));`,
 		`CREATE TABLE alerts (
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, audit_event_id TEXT NOT NULL, severity TEXT NOT NULL, category TEXT NOT NULL,
 			title TEXT NOT NULL, description TEXT, source_service TEXT NOT NULL, actor_id TEXT, target_id TEXT, risk_score INTEGER DEFAULT 0,

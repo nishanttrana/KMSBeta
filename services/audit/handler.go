@@ -111,6 +111,11 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /audit/events/{id}/proof", h.handleEventProof)
 	mux.HandleFunc("POST /audit/merkle/verify", h.handleMerkleVerify)
 
+	// Cluster audit signing key transfer (cluster-manager only; cluster.go).
+	mux.HandleFunc("POST /audit/cluster/signing-key/join-key", h.handleClusterKeyJoinKey)
+	mux.HandleFunc("POST /audit/cluster/signing-key/export", h.handleClusterKeyExport)
+	mux.HandleFunc("POST /audit/cluster/signing-key/import", h.handleClusterKeyImport)
+
 	// Webhook routes
 	mux.HandleFunc("GET /webhooks", h.handleListWebhooks)
 	mux.HandleFunc("POST /webhooks", h.handleCreateWebhook)
