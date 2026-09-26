@@ -28,11 +28,15 @@ import (
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	"vecta-kms/pkg/servicetoken"
 )
 
 var logger = log.New(os.Stdout, "[posture] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
+	// Calls to other platform services (governance system state) carry this
+	// service's own identity.
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-posture"))
 	cfg := pkgconfig.Load()
 	if err := pkgruntimecfg.ValidateServiceConfig("kms-posture", cfg); err != nil {
 		log.Fatalf("config validation failed: %v", err)

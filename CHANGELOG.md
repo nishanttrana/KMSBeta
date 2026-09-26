@@ -6,6 +6,36 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
+### Security: governance system administration without a token
+- **Governance ran without verifying tokens.** It read its verification key
+  only from `GOVERNANCE_*` / `KEYCORE_*` variables or a key file, never from
+  the shared `JWT_PUBLIC_KEY_B64` that compose sets. When the key was
+  missing, it logged "jwt parser disabled" and admitted every
+  system-administration request that sent `tenant_id=root`. In a standard
+  compose deployment, anyone who could reach governance could list, download
+  or restore backups, change the FIPS mode, and change settings, network and
+  FDE state.
+- **Fixed:** governance reads the shared key and **refuses to start** without
+  one (`refusing to start: no JWT verification key`). System administration
+  needs a verified root administrator.
+- **Service callers:** keycore and policy (reading `GET /governance/system/state`)
+  and posture (writing `PUT /governance/system/posture-controls`) had called
+  without a token. They now use their own service identities
+  (`kms-keycore`, `kms-policy`, `kms-posture`). Governance admits each only on
+  that route. keycore and policy now read the platform state as
+  `tenant_id=root`: governance only serves root, so per-tenant reads had
+  always been refused with 403.
+- **New audit events:** `audit.governance.system_admin_refused` for every
+  refusal (`reason`: `authentication_required`, `tenant_required`,
+  `tenant_mismatch`, `not_root_tenant`, `token_tenant_not_root`,
+  `insufficient_privileges`), and `audit.governance.authentication_refused`
+  (`invalid_token`). Governance events now carry `result: refused` at the top
+  level too, not only in `data`.
+- **Operators:** make sure governance gets `JWT_PUBLIC_KEY_B64` (compose
+  already requires it) and `INTERNAL_SERVICE_BOOTSTRAP_SECRET` for keycore,
+  policy and posture. `POSTURE_GOVERNANCE_BEARER_TOKEN` still overrides
+  posture's identity.
+
 ### Security: governance backup keys
 - **Software-mode backup keys were stored in plaintext** next to the
   encrypted artifact, so anyone who could read the database (or a dump of

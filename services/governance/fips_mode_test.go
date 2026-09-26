@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	pkgauth "vecta-kms/pkg/auth"
 )
 
 type capturePublisher struct {
@@ -88,14 +90,18 @@ func TestFIPSModeChangeImpactAndRollout(t *testing.T) {
 func TestFIPSModeAPIIsRootAdminOnly(t *testing.T) {
 	store := newGovernanceStore(t)
 	h := NewHandler(NewService(store, nil, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050"))
+	tenantAdmin := &pkgauth.Claims{TenantID: "tenant-a", Role: "admin", UserID: "a1"}
 	req := httptest.NewRequest(http.MethodPut, "/governance/system/fips-mode?tenant_id=tenant-a", strings.NewReader(`{"mode":"off","confirm":"off"}`))
+	req = req.WithContext(pkgauth.ContextWithClaims(req.Context(), tenantAdmin))
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusForbidden {
 		t.Fatalf("a non-root tenant must not change the platform FIPS mode, got %d %s", rr.Code, rr.Body.String())
 	}
+	rootAdmin := &pkgauth.Claims{TenantID: "root", Role: "admin", UserID: "root-admin"}
+	req = httptest.NewRequest(http.MethodGet, "/governance/system/fips-mode/impact?tenant_id=root&target=bogus", nil)
 	rr = httptest.NewRecorder()
-	h.ServeHTTP(rr, httptest.NewRequest(http.MethodGet, "/governance/system/fips-mode/impact?tenant_id=root&target=bogus", nil))
+	h.ServeHTTP(rr, req.WithContext(pkgauth.ContextWithClaims(req.Context(), rootAdmin)))
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("an invalid target must be rejected, got %d", rr.Code)
 	}

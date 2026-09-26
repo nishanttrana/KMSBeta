@@ -5,6 +5,25 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### An optional verifier is an open door, and a missing env var is enough to open it
+Governance treated a missing JWT key as "auth disabled" and let every
+system-administration call through. It also read the key from variable
+names no deployment set: compose provides `JWT_PUBLIC_KEY_B64`, and
+governance looked for `GOVERNANCE_*`, `KEYCORE_*` or a file. So the fallback
+wasn't an edge case. It was how every compose deployment ran, and backups,
+restore and the FIPS switch were open to anyone who could reach the port.
+Two lessons:
+- Load keys through the shared loader (`pkg/jwtauth`), so every service
+  reads the same variable names.
+- Fail closed at startup, as `jwtauth.MustWrap` does.
+
+Closing the door then showed who had been walking through it. keycore and
+policy read the system state, and posture wrote posture controls, all
+without tokens. keycore and policy had also asked for per-tenant state,
+which governance only serves for root, so for every non-root tenant they
+had silently got 403s. So before closing an unauthenticated path, list its
+callers (same lesson as keycore's anonymous key use).
+
 ### A key stored next to what it protects is not protection
 Governance "encrypted" software-mode backups and kept the key in the same
 row. The key package even said "store this separately from the artifact",

@@ -7,6 +7,34 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — Governance fails closed; services are admitted per route
+**Decision:** governance refuses to start without a token-verification key
+(read through `pkg/jwtauth`, so the shared `JWT_PUBLIC_KEY_*` works). System
+administration needs a verified root administrator. A platform service is
+admitted only on a route named for its identity in
+`systemAdminServiceCallers`, and every refusal is audited.
+
+**Why:** a missing key disabled authentication, and in compose the key was
+always missing. Service callers need exactly one read (state) and one write
+(posture controls), so a per-route identity list grants that and nothing
+more. Backups, restore and the FIPS mode stay administrator-only.
+
+**Rejected:**
+- Admitting any service principal on system-admin routes: that would let
+  any compromised internal service restore backups or change the FIPS mode.
+- Migrating governance to the `pkg/route` kernel in the same change: that's
+  the right end state (phase 2), but the auth hole needed closing now. The
+  refusal reasons match the kernel's so the migration keeps them.
+- Keeping `POSTURE_GOVERNANCE_BEARER_TOKEN` as the only posture credential:
+  nothing ever set it.
+
+**Enforced by:** `TestMissingJWTKeyRefusesStart`,
+`TestSystemAdminRoutesRequireVerifiedToken`, `TestSystemAdminRefusalReasons`,
+`TestSystemAdminServiceCallersAreRouteBound`, and
+`TestGovernanceCallsCarryServiceIdentity` in keycore, policy and posture.
+
+---
+
 ## 2026-09-26 — Governance never stores a key that opens its backups
 **Decision:** a software-mode backup key is returned once, in the create
 response, and never stored. The platform keeps only its fingerprint. An
