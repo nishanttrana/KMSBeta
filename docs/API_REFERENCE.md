@@ -2783,6 +2783,13 @@ Aggregate QRNG statistics: `totalGenerated` (bytes), `sourcesOnline`, `averageEn
 
 Hierarchical secret vault with versioning, rollback, and path-based policy.
 
+### Configuration
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `SECRETS_MEK_B64` | yes | Base64 of 32 random bytes (`openssl rand -base64 32`). Wraps every stored value's DEK. The service refuses to start if it's missing, isn't exactly 32 bytes, is patterned, or is the old public development key. Cluster members use the primary's. |
+| `SECRETS_MEK_PREVIOUS_B64` | only while rotating | The key being replaced. On start, values under it are re-wrapped under `SECRETS_MEK_B64`; remove it afterwards (docs/SECURITY/SECRET_ROTATION.md). |
+
 ### Authorization and audit (pkg/route kernel)
 
 Every route requires a verified token. The tenant comes from `tenant_id`
@@ -2806,7 +2813,8 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `GET /secrets/{id}/audit` | `secrets.read` | `audit_log_read` |
 | `POST /secrets/{id}/rotate` | `secrets.write` | `rotated` |
 | `GET /secrets/stats` | `secrets.read` | `stats_read` |
-| `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read` |
+| `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read`
+- `audit.secrets.dev_mek_rewrapped`, `audit.secrets.dev_mek_rewrap_refused`, `audit.secrets.mek_rewrapped`, `audit.secrets.mek_rewrap_refused`, `audit.secrets.mek_unreadable`, `audit.secrets.mek_check_refused`: secrets master-key migration at startup (per tenant; see `docs/SECURITY/AUDIT_EVENTS_2026-09.md`) |
 | `POST /v1/auth/token/lookup-self` | any identity | `vault_token_lookup` |
 | `GET /v1/{mount}/data/{path}`, `GET /v1/{mount}/{path}` | `secrets.value.read` | `vault_kv_read` |
 | `POST /v1/{mount}/data/{path}`, `POST /v1/{mount}/{path}` | `secrets.write` | `vault_kv_written` (`created` in details) |

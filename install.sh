@@ -1683,11 +1683,12 @@ write_env_file() {
   # always performs a mandatory clean reset (down -v) before starting, so it is
   # correct to mint fresh secrets on every install. Hex for values that appear
   # in DSNs/headers; a policy-compliant string for the CLI bootstrap password.
-  local pg_password nats_token workload_secret vault_passphrase internal_token service_bootstrap_secret cli_password
+  local pg_password nats_token workload_secret vault_passphrase secrets_mek internal_token service_bootstrap_secret cli_password
   pg_password="$(openssl rand -hex 24)"
   nats_token="$(openssl rand -hex 24)"
   workload_secret="$(openssl rand -hex 32)"
   vault_passphrase="$(openssl rand -hex 32)"
+  secrets_mek="$(openssl rand -base64 32)"
   internal_token="$(openssl rand -hex 32)"
   service_bootstrap_secret="$(openssl rand -hex 32)"
   cli_password="Vk$(generate_random_secret 24 | tr -dc 'A-Za-z0-9')Aa9!"
@@ -1716,6 +1717,7 @@ POSTGRES_PASSWORD=${pg_password}
 NATS_AUTH_TOKEN=${nats_token}
 WORKLOAD_IDENTITY_SHARED_SECRET=${workload_secret}
 SOFTWARE_VAULT_PASSPHRASE=${vault_passphrase}
+SECRETS_MEK_B64=${secrets_mek}
 INTERNAL_API_TOKEN=${internal_token}
 INTERNAL_SERVICE_BOOTSTRAP_SECRET=${service_bootstrap_secret}
 VECTA_FIPS_MODE=${FIPS_MODE}

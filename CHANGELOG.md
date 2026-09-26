@@ -6,6 +6,39 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
+### Security: secrets were stored under a public key
+- **Every deployment's secrets service wrapped stored secrets under a key
+  derived from a string in the source code.** It fell back to
+  `SHA-256("vecta-secrets-dev-mek")` when `SECRETS_MEK_B64` was unset, and no
+  installer or compose file ever set it. Anyone with the repo and a copy of
+  the database or a backup could decrypt every stored secret.
+- **`SECRETS_MEK_B64` is now required** (base64 of 32 random bytes). The
+  service refuses to start if it's missing, isn't exactly 32 bytes, is
+  patterned, or is the old public key. Compose requires it, and `install.sh`,
+  `deploy-local.sh` and `run-local.sh` generate it. **Upgrading with plain
+  `docker compose up`** now stops with `SECRETS_MEK_B64 is required`: run
+  `./deploy-local.sh`, or add `SECRETS_MEK_B64=$(openssl rand -base64 32)` to
+  `.env`.
+- **Automatic migration on the first start with a real key:** every value
+  under the public key has its data key re-wrapped under `SECRETS_MEK_B64`.
+  Values stay readable and their ciphertext is unchanged. Each tenant gets
+  `audit.secrets.dev_mek_rewrapped`, listing the affected secrets. A value
+  that can't be rewritten blocks the start (`dev_mek_rewrap_refused`) and is
+  retried on the next start. **Action for operators:** database copies and
+  backups made before this upgrade can still be decrypted with the public
+  key. Treat the listed secrets as exposed to anyone who had such a copy, and
+  rotate them at their source.
+- **MEK rotation is now supported:** `rotate-secrets.sh` moves the old key to
+  `SECRETS_MEK_PREVIOUS_B64`, and the service re-wraps on start
+  (`audit.secrets.mek_rewrapped`). A wrong key stops the start
+  (`mek_check_refused`) instead of failing every read. **Cluster members must
+  use the primary's `SECRETS_MEK_B64`**, since the join doesn't transfer it.
+- **New conformance rule `no-literal-key-material`:** no key derived from, or
+  set to, a string literal in `services/`. It found the same defect in certs,
+  cloud and ekm (dev MEK fallbacks, and in cloud a hardcoded
+  `0123456789ABCDEF…` key). Those are listed in the shrink-only
+  `scripts/literal-key-burndown.txt` and are **not fixed yet**.
+
 ### Platform kernel: audit, tenancy and permissions for every route
 - **New `pkg/route` kernel.** A route is registered with its audit action and
   required permission. The kernel then authenticates the caller, enforces

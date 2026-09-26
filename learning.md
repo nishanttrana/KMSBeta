@@ -5,6 +5,24 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### A default that nobody overrides is the only value in production
+The secrets service's dev-MEK fallback logged "not for production", and was
+presumably meant as a local convenience. But nothing ever set
+`SECRETS_MEK_B64`: not compose, not any installer. So every production
+deployment ran on the public key. Two things hid it:
+- The secure-defaults check looked for `("VAR", "default")` pairs, and the
+  fallback was `Hash([]byte("…-dev-mek"))`. It's a public key either way.
+  Check what a value is derived from, not how it's spelled.
+- Clusters worked by accident, because every node had the same "dev" key.
+  Replacing it with a random key per installer would have broken members
+  quietly, with decrypt errors on replicated rows. That's why the fix records
+  a key fingerprint and refuses a mismatched start.
+
+Removing such a default isn't enough on its own. The data it protected needs
+an idempotent startup migration (re-wrap, audited per tenant), and the
+changelog has to say plainly that backups made before the fix remain
+decryptable.
+
 ### A rule every handler must remember is a rule some handler forgets
 `services/secrets` had a `mustTenant` helper that checked the request tenant
 against the token, and most routes called it. `POST /secrets` didn't: it read
