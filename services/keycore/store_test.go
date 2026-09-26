@@ -29,6 +29,7 @@ func newStoreForTest(t *testing.T) *SQLStore {
 
 func createSchemaForTest(conn *pkgdb.DB) error {
 	stmts := []string{
+		`CREATE TABLE key_access_policy_settings (tenant_id TEXT PRIMARY KEY, deny_by_default BOOLEAN NOT NULL DEFAULT FALSE, require_approval_for_policy_change BOOLEAN NOT NULL DEFAULT FALSE, grant_default_ttl_minutes INTEGER NOT NULL DEFAULT 0, grant_max_ttl_minutes INTEGER NOT NULL DEFAULT 0, enforce_signed_requests BOOLEAN NOT NULL DEFAULT FALSE, replay_window_seconds INTEGER NOT NULL DEFAULT 300, nonce_ttl_seconds INTEGER NOT NULL DEFAULT 900, require_interface_policies BOOLEAN NOT NULL DEFAULT FALSE, updated_by TEXT, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE keycore_system_keys (client_id TEXT NOT NULL, purpose TEXT NOT NULL, tenant_id TEXT NOT NULL, key_id TEXT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (client_id, purpose));`,
 		`CREATE TABLE key_op_counters (tenant_id TEXT NOT NULL, key_id TEXT NOT NULL, ops_total INTEGER NOT NULL DEFAULT 0, ops_encrypt INTEGER NOT NULL DEFAULT 0, ops_decrypt INTEGER NOT NULL DEFAULT 0, ops_sign INTEGER NOT NULL DEFAULT 0, ops_last_reset TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, key_id));`,
 		`CREATE TABLE keys (

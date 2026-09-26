@@ -67,6 +67,29 @@ type AccessActor struct {
 	// ServicePrincipal is true only for a verified internal service JWT
 	// (see tenantcheck.IsServicePrincipal); never derived from headers.
 	ServicePrincipal bool
+	// Unverified holds identity a caller asserted in request headers. It is
+	// audit context only: no access decision reads it (CLAUDE.md rule 4).
+	Unverified UnverifiedActorHeaders
+}
+
+// UnverifiedActorHeaders are the X-Actor-* / X-KMS-* identity headers a
+// request carried. Keycore used to fall back to them when the token lacked a
+// field, which let a caller grant itself a role, permissions or groups. They
+// are now recorded, never trusted.
+type UnverifiedActorHeaders struct {
+	UserID      string   `json:"user_id,omitempty"`
+	Username    string   `json:"username,omitempty"`
+	Role        string   `json:"role,omitempty"`
+	Permissions []string `json:"permissions,omitempty"`
+	Groups      []string `json:"groups,omitempty"`
+	Subject     string   `json:"subject,omitempty"`
+	Interface   string   `json:"interface,omitempty"`
+}
+
+// Present reports whether any identity header was sent.
+func (u UnverifiedActorHeaders) Present() bool {
+	return u.UserID != "" || u.Username != "" || u.Role != "" || len(u.Permissions) > 0 ||
+		len(u.Groups) > 0 || u.Subject != "" || u.Interface != ""
 }
 
 func contextWithAccessActor(ctx context.Context, actor AccessActor) context.Context {
@@ -260,7 +283,45 @@ func workloadKeyAllowed(actor AccessActor, keyID string) bool {
 	return false
 }
 
+// accessRefusal is a key-access denial with a machine-readable reason.
+type accessRefusal struct{ reason, msg string }
+
+func (e *accessRefusal) Error() string { return e.msg }
+
+func refuse(reason, msg string) error { return &accessRefusal{reason: reason, msg: msg} }
+
+// enforceKeyAccess applies evaluateKeyAccess and audits every refusal as
+// audit.key.access_refused (result "refused", with its reason). Identity
+// asserted in request headers is included as unverified context.
 func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation string) error {
+	err := s.evaluateKeyAccess(ctx, key, operation)
+	var refusal *accessRefusal
+	if !errors.As(err, &refusal) {
+		return err
+	}
+	actor := accessActorFromContext(ctx)
+	details := map[string]any{
+		"key_id":        key.ID,
+		"operation":     operation,
+		"reason":        refusal.reason,
+		"result":        "refused",
+		"severity":      "warning",
+		"actor":         firstNonEmpty(actor.UserID, actor.Username, actor.ClientID, "unauthenticated"),
+		"authenticated": actor.Authenticated,
+		"interface":     actor.InterfaceName,
+		"source_ip":     actor.SourceIP,
+		"description":   refusal.msg,
+	}
+	if actor.Unverified.Present() {
+		details["unverified_actor_headers"] = actor.Unverified
+	}
+	_ = s.publishAudit(ctx, "audit.key.access_refused", key.TenantID, details)
+	return err
+}
+
+// evaluateKeyAccess decides whether the verified caller may perform
+// operation on key. A denial is an *accessRefusal carrying a reason code.
+func (s *Service) evaluateKeyAccess(ctx context.Context, key Key, operation string) error {
 	normOperation, err := normalizeAccessOperation(operation)
 	if err != nil {
 		return err
@@ -283,17 +344,17 @@ func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation strin
 
 	if strings.TrimSpace(actor.WorkloadIdentity) != "" {
 		if !actor.Authenticated {
-			return errors.New("access denied: authenticated workload token required")
+			return refuse("workload_not_authenticated", "access denied: authenticated workload token required")
 		}
 		if !actorPermissionAllowsOperation(actor.Permissions, normOperation) {
-			return errors.New("access denied: workload token does not permit this operation")
+			return refuse("workload_operation_not_permitted", "access denied: workload token does not permit this operation")
 		}
 		if !workloadKeyAllowed(actor, key.ID) {
-			return errors.New("access denied: key is not bound to workload identity")
+			return refuse("workload_key_not_bound", "access denied: key is not bound to workload identity")
 		}
 		if settings.RequireInterfacePolicies {
 			if err := s.enforceInterfaceSubjectPolicy(ctx, key.TenantID, actor, normOperation, normalizeActorGroups(actor.Groups)); err != nil {
-				return err
+				return refuse("interface_policy", err.Error())
 			}
 		}
 		return nil
@@ -314,7 +375,7 @@ func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation strin
 			if actor.Authenticated && actorIsAdmin(actor) {
 				return nil
 			}
-			return errors.New("access denied: no active grants and deny-by-default is enabled")
+			return refuse("deny_by_default", "access denied: no active grants and deny-by-default is enabled")
 		}
 		if !actor.Authenticated {
 			return nil
@@ -322,11 +383,11 @@ func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation strin
 		if actorIsAdmin(actor) || actorMatchesCreator(actor, key.CreatedBy) {
 			return nil
 		}
-		return errors.New("access denied: key is not assigned to caller")
+		return refuse("not_assigned_to_caller", "access denied: key is not assigned to caller")
 	}
 
 	if !actor.Authenticated {
-		return errors.New("access denied: authenticated caller required for key with access policy")
+		return refuse("authentication_required", "access denied: authenticated caller required for key with access policy")
 	}
 
 	groupIDs := normalizeActorGroups(actor.Groups)
@@ -356,11 +417,11 @@ func (s *Service) enforceKeyAccess(ctx context.Context, key Key, operation strin
 	}
 	if settings.RequireInterfacePolicies {
 		if err := s.enforceInterfaceSubjectPolicy(ctx, key.TenantID, actor, normOperation, groupIDs); err != nil {
-			return err
+			return refuse("interface_policy", err.Error())
 		}
 		return nil
 	}
-	return errors.New("access denied: operation not permitted for caller on this key")
+	return refuse("no_matching_grant", "access denied: operation not permitted for caller on this key")
 }
 
 func (s *Service) GetKeyAccessPolicy(ctx context.Context, tenantID string, keyID string) (KeyAccessPolicy, error) {

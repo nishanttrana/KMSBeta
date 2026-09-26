@@ -6,6 +6,31 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
+### Security: keycore trusted identity headers for key access
+- **A caller could grant itself access to keys.** When the token lacked a
+  field, or there was no token, keycore filled the caller's user, role,
+  permissions and groups from `X-Actor-*` / `X-KMS-Subject` headers. A token
+  with no permissions plus `X-Actor-Permissions: *` or `X-Actor-Role: admin`
+  was treated as an admin for encrypt, decrypt, sign, export and other key
+  operations. `X-Actor-Groups` matched group grants, a header user ID alone
+  counted as authenticated, and `X-KMS-Interface` moved a request under
+  another interface's subject policies.
+- **Fixed:** key access is decided from the verified token only. Group
+  membership comes from the store, keyed by the verified user. Every HTTP
+  caller is evaluated as the `rest` interface. The headers are kept only as
+  unverified audit context.
+- **New audit events:**
+  - `audit.key.access_refused` for every key-access denial (`result:
+    refused`, with `reason`, the verified actor and any headers it sent);
+  - `audit.key.actor_headers_ignored` whenever a request carries identity
+    headers.
+
+  Key-operation endpoints now answer a denial with `403 access_denied`
+  instead of `400 <op>_failed`.
+- **Operators:** check for `audit.key.actor_headers_ignored`. No platform
+  service sends these headers, so any hit is a stale integration or an
+  attempt to spoof.
+
 ### Security: stored secrets, CA keys, cloud credentials and BitLocker keys were under public keys
 - **Every deployment was affected.** secrets, certs, cloud and ekm wrapped
   their stored data under keys derived from strings in the source code

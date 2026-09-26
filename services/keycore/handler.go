@@ -77,7 +77,23 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, code, "request_security_violation", err.Error(), requestID(r), "")
 		return
 	}
-	ctx = contextWithAccessActor(ctx, accessActorFromHTTPRequest(r.WithContext(ctx)))
+	actor := accessActorFromHTTPRequest(r.WithContext(ctx))
+	if actor.Unverified.Present() {
+		// Asserting identity in headers is either a stale client or a spoof
+		// attempt; either way it's recorded, and it grants nothing.
+		_ = h.svc.publishAudit(ctx, "audit.key.actor_headers_ignored", tenantFromRequest(r), map[string]any{
+			"verified_actor": firstNonEmpty(actor.UserID, actor.Username, actor.ClientID, "unauthenticated"),
+			"claimed":        actor.Unverified,
+			"path":           r.URL.Path,
+			"method":         r.Method,
+			"source_ip":      actor.SourceIP,
+			"result":         "refused",
+			"reason":         "unverified_identity_headers",
+			"severity":       "warning",
+			"description":    "identity asserted in X-Actor-*/X-KMS-* headers was ignored; access is decided from the verified token only",
+		})
+	}
+	ctx = contextWithAccessActor(ctx, actor)
 	h.mux.ServeHTTP(w, r.WithContext(ctx))
 }
 
@@ -353,6 +369,10 @@ func (h *Handler) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
 			return
 		}
+		if errors.As(err, new(*accessRefusal)) {
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "create_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
@@ -383,6 +403,10 @@ func (h *Handler) handleImportKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
 			return
 		}
+		if errors.As(err, new(*accessRefusal)) {
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "import_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
@@ -411,6 +435,10 @@ func (h *Handler) handleFormKey(w http.ResponseWriter, r *http.Request) {
 		var fipsDenied fipsModeViolationError
 		if errors.As(err, &fipsDenied) {
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
+			return
+		}
+		if errors.As(err, new(*accessRefusal)) {
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "form_failed", err.Error(), reqID, req.TenantID)
@@ -656,6 +684,10 @@ func (h *Handler) handleRotateKey(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, tenantID)
 			return
 		}
+		if errors.As(err, new(*accessRefusal)) {
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, tenantID)
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "rotate_failed", err.Error(), reqID, tenantID)
 		return
 	}
@@ -890,6 +922,10 @@ func (h *Handler) handleExportKey(w http.ResponseWriter, r *http.Request) {
 				writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, tenantID)
 				return
 			}
+			if errors.As(err, new(*accessRefusal)) {
+				writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, tenantID)
+				return
+			}
 			writeErr(w, http.StatusBadRequest, "export_failed", err.Error(), reqID, tenantID)
 			return
 		}
@@ -913,6 +949,10 @@ func (h *Handler) handleExportKey(w http.ResponseWriter, r *http.Request) {
 		var denied policyDeniedError
 		if errors.As(err, &denied) {
 			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, tenantID)
+			return
+		}
+		if errors.As(err, new(*accessRefusal)) {
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, tenantID)
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "export_failed", err.Error(), reqID, tenantID)
@@ -1819,6 +1859,8 @@ func (h *Handler) handleEncryptWithOperation(w http.ResponseWriter, r *http.Requ
 			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, req.TenantID)
 		case errors.As(err, &fipsDenied):
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
+		case errors.As(err, new(*accessRefusal)):
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
 		default:
 			var approval approvalRequiredError
 			if errors.As(err, &approval) {
@@ -1858,6 +1900,10 @@ func (h *Handler) handleDecryptWithOperation(w http.ResponseWriter, r *http.Requ
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
 			return
 		}
+		if errors.As(err, new(*accessRefusal)) {
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "decrypt_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
@@ -1890,6 +1936,10 @@ func (h *Handler) handleSignWithOperation(w http.ResponseWriter, r *http.Request
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
 			return
 		}
+		if errors.As(err, new(*accessRefusal)) {
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "sign_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
@@ -1917,6 +1967,10 @@ func (h *Handler) handleVerify(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.As(err, &fipsDenied) {
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
+			return
+		}
+		if errors.As(err, new(*accessRefusal)) {
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "verify_failed", err.Error(), reqID, req.TenantID)
@@ -1955,6 +2009,8 @@ func (h *Handler) handleDerive(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, req.TenantID)
 		case errors.As(err, &fipsDenied):
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
+		case errors.As(err, new(*accessRefusal)):
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
 		default:
 			var approval approvalRequiredError
 			if errors.As(err, &approval) {
@@ -1995,6 +2051,8 @@ func (h *Handler) handleServiceDerive(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, req.TenantID)
 		case errors.As(err, &fipsDenied):
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
+		case errors.As(err, new(*accessRefusal)):
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
 		default:
 			writeErr(w, http.StatusBadRequest, "service_derive_failed", err.Error(), reqID, req.TenantID)
 		}
@@ -2028,6 +2086,8 @@ func (h *Handler) handleKEMEncapsulate(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, req.TenantID)
 		case errors.As(err, &fipsDenied):
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
+		case errors.As(err, new(*accessRefusal)):
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
 		default:
 			var approval approvalRequiredError
 			if errors.As(err, &approval) {
@@ -2066,6 +2126,8 @@ func (h *Handler) handleKEMDecapsulate(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, "policy_denied", denied.Error(), reqID, req.TenantID)
 		case errors.As(err, &fipsDenied):
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
+		case errors.As(err, new(*accessRefusal)):
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
 		default:
 			var approval approvalRequiredError
 			if errors.As(err, &approval) {
@@ -2099,6 +2161,10 @@ func (h *Handler) handleHash(w http.ResponseWriter, r *http.Request) {
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
 			return
 		}
+		if errors.As(err, new(*accessRefusal)) {
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
+			return
+		}
 		writeErr(w, http.StatusBadRequest, "hash_failed", err.Error(), reqID, req.TenantID)
 		return
 	}
@@ -2121,6 +2187,10 @@ func (h *Handler) handleRandom(w http.ResponseWriter, r *http.Request) {
 		var fipsDenied fipsModeViolationError
 		if errors.As(err, &fipsDenied) {
 			writeErr(w, http.StatusForbidden, "fips_mode_violation", fipsDenied.Error(), reqID, req.TenantID)
+			return
+		}
+		if errors.As(err, new(*accessRefusal)) {
+			writeErr(w, http.StatusForbidden, "access_denied", err.Error(), reqID, req.TenantID)
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "random_failed", err.Error(), reqID, req.TenantID)
@@ -2525,35 +2595,39 @@ func accessActorFromHTTPRequest(r *http.Request) AccessActor {
 		// never from the spoofable X-Actor-* headers below.
 		actor.ServicePrincipal = tenantcheck.IsServicePrincipal(claims)
 	}
-	if actor.UserID == "" {
-		actor.UserID = strings.TrimSpace(r.Header.Get("X-Actor-User-ID"))
+	// Identity comes from the verified token only. Identity headers are kept
+	// as unverified audit context and never fill a field a policy reads: a
+	// token without permissions (or no token) must not be able to supply its
+	// own role, permissions or groups (CLAUDE.md rule 4). Group membership
+	// comes from the store, keyed by the verified user ID.
+	actor.Unverified = UnverifiedActorHeaders{
+		UserID:      strings.TrimSpace(r.Header.Get("X-Actor-User-ID")),
+		Username:    strings.TrimSpace(r.Header.Get("X-Actor-Username")),
+		Role:        strings.TrimSpace(r.Header.Get("X-Actor-Role")),
+		Permissions: splitCSVHeader(r.Header.Get("X-Actor-Permissions")),
+		Groups:      splitCSVHeader(r.Header.Get("X-Actor-Groups")),
+		Subject:     strings.TrimSpace(r.Header.Get("X-KMS-Subject")),
+		Interface:   strings.TrimSpace(r.Header.Get("X-KMS-Interface")),
 	}
-	if actor.Username == "" {
-		actor.Username = strings.TrimSpace(r.Header.Get("X-Actor-Username"))
-	}
-	if actor.Role == "" {
-		actor.Role = strings.TrimSpace(r.Header.Get("X-Actor-Role"))
-	}
-	if len(actor.Permissions) == 0 {
-		actor.Permissions = splitCSVHeader(r.Header.Get("X-Actor-Permissions"))
-	}
-	actor.Groups = splitCSVHeader(r.Header.Get("X-Actor-Groups"))
-	actor.InterfaceName = normalizeInterfaceName(r.Header.Get("X-KMS-Interface"))
-	if actor.InterfaceName == "" {
-		actor.InterfaceName = "rest"
-	}
+	// Interface subject policies are evaluated for the interface the request
+	// actually came in on. Every HTTP caller reaches keycore over REST
+	// (protocol services such as KMIP call as verified service principals),
+	// so a header can't move a request under another interface's policies.
+	actor.InterfaceName = "rest"
 	if fwd := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); fwd != "" {
 		actor.SourceIP = strings.TrimSpace(strings.SplitN(fwd, ",", 2)[0])
 	} else {
 		actor.SourceIP = r.RemoteAddr
 	}
-	if actor.SubjectID == "" {
-		actor.SubjectID = strings.TrimSpace(r.Header.Get("X-KMS-Subject"))
-	}
-	if actor.UserID != "" || actor.Username != "" {
-		actor.Authenticated = true
-	}
 	return actor
+}
+
+// tenantFromRequest is the tenant a request names, for audit context only.
+func tenantFromRequest(r *http.Request) string {
+	if t := strings.TrimSpace(r.URL.Query().Get("tenant_id")); t != "" {
+		return t
+	}
+	return strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 }
 
 func splitCSVHeader(raw string) []string {

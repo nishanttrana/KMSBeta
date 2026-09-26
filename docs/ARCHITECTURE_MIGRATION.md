@@ -100,7 +100,11 @@ and the largest last:
 2. `hyok`, `autokey`, `pqc`, `policy`, `sbom`, `discovery`
 3. `reporting`, `posture`, `compliance`, `governance`, `cloud`, `ai-gateway`, `featureforge`
 4. `cluster-manager`, `audit`, `dataprotect`, `certs`, `ekm`, `payment`, `kmip` (HTTP API)
-5. `auth`, then `keycore` (122 write routes; split by handler file)
+5. `auth`, then `keycore` (122 write routes; split by handler file). Keycore
+   authorizes per key (grants), not per route, so it needs the phase 1
+   permission vocabulary for key operations first. Until then its identity
+   rule matches the kernel's: the actor is built from verified claims only
+   (the `X-Actor-*` fallback was removed 2026-09-26).
 
 **Definition of done for each service:**
 - [ ] Every route is registered through `route.Router`; the handler file is
