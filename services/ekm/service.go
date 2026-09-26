@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -13,6 +12,7 @@ import (
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
+	"vecta-kms/pkg/mek"
 )
 
 type EventPublisher interface {
@@ -20,17 +20,22 @@ type EventPublisher interface {
 }
 
 type Service struct {
-	store   Store
-	keycore KeyCoreClient
-	events  EventPublisher
-	mek     []byte
+	store     Store
+	keycore   KeyCoreClient
+	events    EventPublisher
+	mek       []byte
 	keyAccess pkgkeyaccess.Client
+	exposure  *mek.Keyring // exposure register; nil in tests
 }
 
+// SetKeyring wires the exposure register: recovery keys stored under a public
+// key before 1.2.0-beta stay listed until rotated or their client is deleted.
+func (s *Service) SetKeyring(k *mek.Keyring) { s.exposure = k }
+
 func NewService(store Store, keycore KeyCoreClient, events EventPublisher, mek []byte) *Service {
-	if len(mek) < 32 {
-		sum := sha256.Sum256([]byte("vecta-ekm-dev-mek"))
-		mek = sum[:]
+	// The master key comes from keycore (pkg/mek); there is no fallback.
+	if len(mek) != 32 {
+		panic("ekm: a 32-byte master key from pkg/mek is required")
 	}
 	outMEK := make([]byte, 32)
 	copy(outMEK, mek[:32])
@@ -2056,10 +2061,10 @@ func (s *Service) RevokeTDEKey(ctx context.Context, keyID string, req RevokeTDEK
 	}
 
 	_ = s.publishAudit(ctx, "audit.ekm.tde_key_revoked", req.TenantID, map[string]interface{}{
-		"key_id":              keyID,
-		"reason":              reason,
-		"affected_agent_ids":  affected,
-		"affected_databases":  len(dbs),
+		"key_id":             keyID,
+		"reason":             reason,
+		"affected_agent_ids": affected,
+		"affected_databases": len(dbs),
 	})
 
 	return RevokeTDEKeyResponse{

@@ -42,6 +42,8 @@ var Replicated = map[string][]string{
 	"byok": {
 		"cloud_accounts",
 		"cloud_key_bindings",
+		"cloud_mek_exposure",
+		"cloud_mek_state",
 		"cloud_region_mappings",
 		"cloud_sync_jobs",
 	},
@@ -55,6 +57,8 @@ var Replicated = map[string][]string{
 		"cert_deleted_refs",
 		"cert_expiry_alert_policies",
 		"cert_expiry_alert_state",
+		"cert_mek_exposure",
+		"cert_mek_state",
 		"cert_merkle_epochs",
 		"cert_merkle_leaves",
 		"cert_profiles",
@@ -109,6 +113,8 @@ var Replicated = map[string][]string{
 		"ekm_databases",
 		"ekm_google_cse_configs",
 		"ekm_google_cse_keys",
+		"ekm_mek_exposure",
+		"ekm_mek_state",
 		"ekm_tde_keys",
 	},
 	"featureforge": {
@@ -131,6 +137,7 @@ var Replicated = map[string][]string{
 		"key_access_settings",
 	},
 	"keycore": {
+		"keycore_system_keys",
 		"agility_migration_plans",
 		"canary_keys",
 		"ceremonies",
@@ -221,6 +228,7 @@ var Replicated = map[string][]string{
 	"secrets": {
 		"secret_values",
 		"secrets",
+		"secrets_mek_exposure",
 		"secrets_mek_state",
 	},
 	"signing": {

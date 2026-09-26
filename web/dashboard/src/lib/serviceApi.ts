@@ -9,7 +9,9 @@ type APIErrorShape = {
 
 const REQUEST_TIMEOUT_MS = 20_000;
 
-// Global handler for 401/403: clear session and redirect to login
+// Global handler for 401: the session is no longer valid, so clear it and
+// return to login. A 403 means the user is signed in but lacks a permission
+// for that call (for example secrets.read); it must not end the session.
 type UnauthorizedListener = () => void;
 let _onUnauthorized: UnauthorizedListener | null = null;
 export function setOnUnauthorizedHandler(handler: UnauthorizedListener): void {
@@ -17,7 +19,7 @@ export function setOnUnauthorizedHandler(handler: UnauthorizedListener): void {
 }
 
 function handleUnauthorizedResponse(status: number): void {
-  if (status === 401 || status === 403) {
+  if (status === 401) {
     clearSession();
     if (_onUnauthorized) {
       _onUnauthorized();

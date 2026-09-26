@@ -28,6 +28,8 @@ type Store interface {
 	UpdateKeyMetadata(ctx context.Context, tenantID string, keyID string, req UpdateKeyRequest) error
 	UpdateIVMode(ctx context.Context, tenantID string, keyID string, ivMode string) error
 	SetKeyStatus(ctx context.Context, tenantID string, keyID string, status string) error
+	GetSystemKey(ctx context.Context, clientID, purpose string) (string, bool, error)
+	InsertSystemKey(ctx context.Context, clientID, purpose, tenantID, keyID string) error
 	SetKeyActivation(ctx context.Context, tenantID string, keyID string, status string, activationAt *time.Time) error
 	ActivateDueKeys(ctx context.Context, tenantID string, now time.Time) ([]string, error)
 	ScheduleDestroy(ctx context.Context, tenantID string, keyID string, destroyAt time.Time) error
@@ -203,6 +205,9 @@ type Store interface {
 
 type SQLStore struct {
 	db *pkgdb.DB
+	// onSystemKeyRefused audits a refused change to a system key (set by
+	// NewService; the store can't publish on its own).
+	onSystemKeyRefused func(ctx context.Context, tenantID, keyID, op string)
 }
 
 func NewSQLStore(db *pkgdb.DB) *SQLStore {
@@ -469,6 +474,9 @@ UPDATE keys SET iv_mode=$1, updated_at=CURRENT_TIMESTAMP WHERE tenant_id=$2 AND 
 }
 
 func (s *SQLStore) SetKeyStatus(ctx context.Context, tenantID string, keyID string, status string) error {
+	if err := s.guardSystemKeyStatus(ctx, tenantID, keyID, status); err != nil {
+		return err
+	}
 	res, err := s.db.SQL().ExecContext(ctx, `
 UPDATE keys
 SET status=$1,
@@ -487,6 +495,9 @@ WHERE tenant_id=$2 AND id=$3
 }
 
 func (s *SQLStore) SetKeyActivation(ctx context.Context, tenantID string, keyID string, status string, activationAt *time.Time) error {
+	if err := s.guardSystemKeyStatus(ctx, tenantID, keyID, status); err != nil {
+		return err
+	}
 	res, err := s.db.SQL().ExecContext(ctx, `
 UPDATE keys
 SET status=$1,
@@ -542,6 +553,9 @@ WHERE tenant_id=$1 AND id=$2
 }
 
 func (s *SQLStore) ScheduleDestroy(ctx context.Context, tenantID string, keyID string, destroyAt time.Time) error {
+	if err := s.guardSystemKey(ctx, s.db.SQL(), tenantID, keyID, "schedule_destroy"); err != nil {
+		return err
+	}
 	res, err := s.db.SQL().ExecContext(ctx, `
 UPDATE keys
 SET status='destroy-pending', destroy_date=$1, updated_at=CURRENT_TIMESTAMP
@@ -605,6 +619,9 @@ WHERE tenant_id=$1
 
 		for _, keyID := range ids {
 			record, err := s.markDestroyedTx(ctx, tx, tenantID, keyID, now.UTC())
+			if errors.Is(err, errSystemKeyProtected) {
+				continue // refused and audited; the sweep goes on
+			}
 			if err != nil {
 				return err
 			}
@@ -634,6 +651,11 @@ WHERE tenant_id=$3 AND id=$4
 }
 
 func (s *SQLStore) SetExportAllowed(ctx context.Context, tenantID string, keyID string, allowed bool) error {
+	if allowed {
+		if err := s.guardSystemKey(ctx, s.db.SQL(), tenantID, keyID, "allow_export"); err != nil {
+			return err
+		}
+	}
 	res, err := s.db.SQL().ExecContext(ctx, `
 UPDATE keys
 SET export_allowed=$1, updated_at=CURRENT_TIMESTAMP
@@ -881,6 +903,9 @@ UPDATE key_versions SET status=$1 WHERE tenant_id=$2 AND key_id=$3 AND version=$
 }
 
 func (s *SQLStore) DeleteVersion(ctx context.Context, tenantID string, keyID string, version int) error {
+	if err := s.guardSystemKey(ctx, s.db.SQL(), tenantID, keyID, "delete_version"); err != nil {
+		return err
+	}
 	res, err := s.db.SQL().ExecContext(ctx, `
 DELETE FROM key_versions WHERE tenant_id=$1 AND key_id=$2 AND version=$3
 `, tenantID, keyID, version)
@@ -1140,6 +1165,9 @@ WHERE tenant_id=$1 AND id=$2
 }
 
 func (s *SQLStore) deleteKeyTx(ctx context.Context, tx *sql.Tx, tenantID string, keyID string) error {
+	if err := s.guardSystemKey(ctx, tx, tenantID, keyID, "delete"); err != nil {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, `
 DELETE FROM key_access_grants WHERE tenant_id=$1 AND key_id=$2
 `, tenantID, keyID); err != nil {
@@ -1168,6 +1196,9 @@ DELETE FROM keys WHERE tenant_id=$1 AND id=$2
 }
 
 func (s *SQLStore) markDestroyedTx(ctx context.Context, tx *sql.Tx, tenantID string, keyID string, destroyedAt time.Time) (KeyDeletionRecord, error) {
+	if err := s.guardSystemKey(ctx, tx, tenantID, keyID, "destroy"); err != nil {
+		return KeyDeletionRecord{}, err
+	}
 	record, err := s.collectKeyDeletionRecordTx(ctx, tx, tenantID, keyID)
 	if err != nil {
 		return KeyDeletionRecord{}, err

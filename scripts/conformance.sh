@@ -93,33 +93,19 @@ check_secret_defaults "no-secret-fallback-go" "\\(\"${SECRET_NAME}\", *\"[^\"]*[
 
 # Rule 3d: no key material from a string in the repo. Hashing a literal, an
 # HMAC or KDF keyed by a literal, or a key assigned from a literal all yield a
-# value anyone with the source can compute; a key must come from the
-# environment (validated, fail-closed) or keycore. The one exception is code
-# that must recognise a retired public key to migrate data off it: that line
-# carries "conformance:legacy-public-key" and its file is named below.
-# Existing violations are on a shrink-only burn-down list.
-LITERAL_KEY='(Hash\("[^"]*", *|Sum(224|256|384|512)\()\[\]byte\("[^"]*"\)\)|(HMAC\("[^"]*", *|hmac\.New\([^,]+, *)\[\]byte\("|(pbkdf2\.Key|argon2\.I?D?Key|HKDF[A-Za-z]*)\(\[\]byte\("|([Mm][Ee][Kk]|[Kk][Ee][Kk]|[Mm]aster_?[Kk]ey)[A-Za-z_]*[[:space:]]*:?=[[:space:]]*\[\]byte\("'
-LEGACY_KEY_FILES="services/secrets/mek_migration.go"
-KEY_BURNDOWN="scripts/literal-key-burndown.txt"
-key_fail=""
-key_hits=$(grep -rnE "$LITERAL_KEY" services --include="*.go" 2>/dev/null | grep -v '_test\.go:' || true)
-key_files=$(printf '%s\n' "$key_hits" | grep -v 'conformance:legacy-public-key' | cut -d: -f1 | grep . | sort -u || true)
-key_listed=$(grep -v '^\s*#' "$KEY_BURNDOWN" | grep -v '^\s*$' | sort)
-for f in $key_files; do
-  printf '%s\n' "$key_listed" | grep -qxF "$f" || key_fail="$key_fail $f"
-done
-for f in $key_listed; do
-  printf '%s\n' "$key_files" | grep -qxF "$f" || key_fail="$key_fail $f(stale-entry)"
-done
-for f in $(printf '%s\n' "$key_hits" | grep 'conformance:legacy-public-key' | cut -d: -f1 | sort -u); do
-  printf '%s\n' $LEGACY_KEY_FILES | grep -qxF "$f" || key_fail="$key_fail $f(unlisted-legacy-marker)"
-done
-if [ -n "$key_fail" ]; then
+# value anyone with the source can compute. Service master keys come from
+# keycore (pkg/mek). The one exception is recognising a retired public key to
+# migrate data off it: that line carries "conformance:legacy-public-key" and
+# must be in pkg/mek/catalog.go (docs/SECURITY/SERVICE_MASTER_KEYS.md).
+LITERAL_KEY='(Hash\("[^"]*", *|Sum(224|256|384|512)\()\[\]byte\("[^"]*"\)\)|(HMAC\("[^"]*", *|hmac\.New\([^,]+, *)\[\]byte\("|(pbkdf2\.Key|argon2\.I?D?Key|HKDF[A-Za-z]*)\(\[\]byte\("|([Mm][Ee][Kk]|[Kk][Ee][Kk]|[Mm]aster_?[Kk]ey)[A-Za-z_]*[[:space:]]*:?=[[:space:]]*\[\]byte\("|\[\]byte\("[^"]*"\)[^/]*// conformance:legacy-public-key'
+key_hits=$(grep -rnE "$LITERAL_KEY" services pkg/mek --include="*.go" 2>/dev/null | grep -v '_test\.go:' || true)
+key_bad=$(printf '%s\n' "$key_hits" | grep . | grep -v '^pkg/mek/catalog\.go:[0-9]*:.*conformance:legacy-public-key' || true)
+if [ -n "$key_bad" ]; then
   FAIL=1
-  echo "FAIL [no-literal-key-material]: key material derived from a repo literal in:$key_fail"
-  printf '%s\n' "$key_hits" | grep -v 'conformance:legacy-public-key' | sed 's/^/  /'
+  echo "FAIL [no-literal-key-material]: key material derived from a repo literal (get keys from keycore via pkg/mek):"
+  printf '%s\n' "$key_bad" | sed 's/^/  /'
 else
-  echo "PASS [no-literal-key-material] ($(printf '%s\n' "$key_listed" | grep -c . | tr -d ' ') legacy file(s) left to fix)"
+  echo "PASS [no-literal-key-material]"
 fi
 
 # Rule 3c: .env.example ships no secret values. A filled-in example value

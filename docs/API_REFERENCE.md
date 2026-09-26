@@ -650,6 +650,22 @@ curl -sk -X POST "https://localhost/svc/keycore/inventory/dependencies?tenant_id
 
 ---
 
+### POST /svc/keycore/system-keys/ensure
+
+Internal, service identities only (a `kms-*` service JWT), each for itself.
+Returns the calling service's system key for a purpose, creating it on first
+use: `{"purpose":"secrets-mek"}` returns `{"key_id","tenant_id","version","created"}`.
+Services derive their master key from it with `POST /keys/{id}/service-derive`
+(`pkg/mek`). Any other caller gets `403 service_identity_required`. Every call
+emits `audit.key.system_key_ensure`.
+
+A system key can't be destroyed (immediate, scheduled or bulk), disabled,
+marked compromised, have a version deleted, or be made exportable:
+`409 system_key_protected` and `audit.key.system_key_change_refused`. Rotate
+and deactivate are allowed. See docs/SECURITY/SERVICE_MASTER_KEYS.md.
+
+---
+
 ## Service 3: Certs (`/svc/certs/`)
 
 PKI, CA management, certificate lifecycle, enrollment protocols (ACME, EST, SCEP), CRL/OCSP, renewal intelligence, STAR subscriptions.
@@ -2783,12 +2799,19 @@ Aggregate QRNG statistics: `totalGenerated` (bytes), `sourcesOnline`, `averageEn
 
 Hierarchical secret vault with versioning, rollback, and path-based policy.
 
-### Configuration
+### Master key and exposure register
 
-| Variable | Required | Meaning |
+The service's master key comes from keycore (`pkg/mek`); there's nothing to
+configure. See docs/SECURITY/SERVICE_MASTER_KEYS.md.
+
+| Route | Permission | Meaning |
 |---|---|---|
-| `SECRETS_MEK_B64` | yes | Base64 of 32 random bytes (`openssl rand -base64 32`). Wraps every stored value's DEK. The service refuses to start if it's missing, isn't exactly 32 bytes, is patterned, or is the old public development key. Cluster members use the primary's. |
-| `SECRETS_MEK_PREVIOUS_B64` | only while rotating | The key being replaced. On start, values under it are re-wrapped under `SECRETS_MEK_B64`; remove it afterwards (docs/SECURITY/SECRET_ROTATION.md). |
+| `GET /mek/exposure?open=false` | `secrets.read` | the tenant's exposure register: secrets stored under a public key before 1.2.0-beta, open until rotated or deleted |
+| `POST /mek/exposure/{item_type}/{item_id}/acknowledge` | `secrets.exposure.acknowledge` | close an entry with `{"reason": "..."}` (at least 10 characters) |
+| `POST /mek/rewrap-legacy` | `kms-governance` identity only | re-wrap wrapped DEKs from backup contents (`{"entries":[{"iv","dek","table","tenant_id","item_id"}],"restoring":bool}`) |
+
+The same three routes exist on certs (`cert.*`), cloud (`cloud.*`) and ekm
+(`ekm.*`).
 
 ### Authorization and audit (pkg/route kernel)
 
@@ -2814,7 +2837,9 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `POST /secrets/{id}/rotate` | `secrets.write` | `rotated` |
 | `GET /secrets/stats` | `secrets.read` | `stats_read` |
 | `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read`
-- `audit.secrets.dev_mek_rewrapped`, `audit.secrets.dev_mek_rewrap_refused`, `audit.secrets.mek_rewrapped`, `audit.secrets.mek_rewrap_refused`, `audit.secrets.mek_unreadable`, `audit.secrets.mek_check_refused`: secrets master-key migration at startup (per tenant; see `docs/SECURITY/AUDIT_EVENTS_2026-09.md`) |
+- `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
+- `audit.key.system_key_ensure`, `audit.key.system_key_created`, `audit.key.system_key_change_refused`: keycore system keys
+- `audit.governance.backup_reprotected`, `audit.governance.backup_reprotect_refused`: stored backups re-protected off public keys |
 | `POST /v1/auth/token/lookup-self` | any identity | `vault_token_lookup` |
 | `GET /v1/{mount}/data/{path}`, `GET /v1/{mount}/{path}` | `secrets.value.read` | `vault_kv_read` |
 | `POST /v1/{mount}/data/{path}`, `POST /v1/{mount}/{path}` | `secrets.write` | `vault_kv_written` (`created` in details) |

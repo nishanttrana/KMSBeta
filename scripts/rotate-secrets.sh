@@ -46,19 +46,6 @@ set_secret INTERNAL_SERVICE_BOOTSTRAP_SECRET "$(hex 32)"
 set_secret AUTH_BOOTSTRAP_ADMIN_PASSWORD   "$(strong_pw)"
 set_secret AUTH_BOOTSTRAP_CLI_PASSWORD     "$(strong_pw)"
 
-# The secrets MEK wraps stored data, so it can't simply be replaced: the old
-# key moves to SECRETS_MEK_PREVIOUS_B64 and the secrets service re-wraps every
-# value on its next start. A second rotation before that has happened would
-# lose the key the data is under, so it's refused while one is pending.
-env_get() { sed -n "s/^$1=//p" "$ENV_FILE" | tail -1; }
-cur_mek="$(env_get SECRETS_MEK_B64)"
-if [ -n "$(env_get SECRETS_MEK_PREVIOUS_B64)" ]; then
-  echo "skipped SECRETS_MEK_B64: a rotation is still pending (SECRETS_MEK_PREVIOUS_B64 is set). Finish it first (step 5 below)."
-else
-  [ -z "$cur_mek" ] || set_secret SECRETS_MEK_PREVIOUS_B64 "$cur_mek"
-  set_secret SECRETS_MEK_B64 "$(openssl rand -base64 32)"
-fi
-
 cat <<'NEXT'
 
 Configured secrets rotated in .env. To APPLY to a running stack (non-destructive
@@ -79,11 +66,6 @@ where possible) — see docs/SECURITY/SECRET_ROTATION.md:
      deployment, rotate the live admin password via the dashboard / auth API.
   4) Software vault passphrase: if the vault already sealed data with the old
      passphrase, run the vault rekey/re-seal flow before restarting that service.
-  5) Secrets MEK: recreate the secrets service (it re-wraps every stored value
-     under the new key and emits audit.secrets.mek_rewrapped), then clear
-     SECRETS_MEK_PREVIOUS_B64 in .env and recreate it once more:
-       docker compose up -d --force-recreate secrets
-     On a cluster, copy the new SECRETS_MEK_B64 to every member.
 
 Old values are preserved in the backup printed above.
 NEXT

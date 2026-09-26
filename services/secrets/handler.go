@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"vecta-kms/pkg/mek"
 	"vecta-kms/pkg/route"
 )
 
@@ -17,8 +18,9 @@ import (
 // the route's permission, and emits one audit.secrets.<action> event per
 // request, refusals included. Handlers only add domain details.
 type Handler struct {
-	svc    *Service
-	router *route.Router
+	svc     *Service
+	router  *route.Router
+	keyring *mek.Keyring // nil in tests without a master key
 }
 
 // Permissions for the secrets domain. kms.read grants the *.read ones and
@@ -32,10 +34,24 @@ const (
 
 var vaultTenantHeaders = []string{"X-Vault-Namespace", "X-Namespace"}
 
-func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler {
-	h := &Handler{svc: svc, router: route.New("secrets", audit, logger)}
+func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger, keyring *mek.Keyring) *Handler {
+	h := &Handler{svc: svc, router: route.New("secrets", audit, logger), keyring: keyring}
 	h.routes()
+	if keyring != nil {
+		keyring.Routes(h.router, "secrets") // exposure register, backup re-wrap
+	}
 	return h
+}
+
+// remediate closes the secret's exposure-register entry (it was stored under
+// a public key before 1.2.0-beta) once its value is replaced or deleted.
+func (h *Handler) remediate(c *route.Call, secretID, how string) {
+	if h.keyring == nil {
+		return
+	}
+	if closed, err := h.keyring.Remediate(c.R.Context(), c.Tenant, "secret", secretID, how, c.Actor()); err == nil && closed {
+		c.Detail("exposure_remediated", true)
+	}
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -177,6 +193,9 @@ func (h *Handler) updateSecret(c *route.Call) {
 	}
 	c.Detail("value_changed", req.Value != nil)
 	c.Detail("current_version", out.CurrentVersion)
+	if req.Value != nil {
+		h.remediate(c, out.ID, "rotated")
+	}
 	c.JSON(http.StatusOK, map[string]interface{}{"secret": out})
 }
 
@@ -185,6 +204,7 @@ func (h *Handler) deleteSecret(c *route.Call) {
 		c.Error(statusOf(err, http.StatusInternalServerError), "delete_failed", err.Error())
 		return
 	}
+	h.remediate(c, c.R.PathValue("id"), "deleted")
 	c.JSON(http.StatusOK, map[string]interface{}{"status": "deleted"})
 }
 
@@ -267,6 +287,7 @@ func (h *Handler) rotateSecret(c *route.Call) {
 		return
 	}
 	c.Detail("new_version", out.CurrentVersion)
+	h.remediate(c, out.ID, "rotated")
 	c.JSON(http.StatusOK, map[string]interface{}{"secret": out})
 }
 
@@ -418,6 +439,7 @@ func (h *Handler) vaultKVWrite(kv2 bool) func(*route.Call) {
 				c.Error(http.StatusBadRequest, "update_failed", err.Error())
 				return
 			}
+			h.remediate(c, secret.ID, "rotated")
 		}
 		c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]interface{}{"created": true}})
 	}
@@ -438,6 +460,7 @@ func (h *Handler) vaultKVDelete(c *route.Call) {
 		c.Error(statusOf(err, http.StatusInternalServerError), "delete_failed", err.Error())
 		return
 	}
+	h.remediate(c, secret.ID, "deleted")
 	c.W.WriteHeader(http.StatusNoContent)
 }
 

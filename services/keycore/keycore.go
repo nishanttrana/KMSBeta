@@ -105,7 +105,7 @@ func NewService(store Store, cache KeyCache, events AuditPublisher, meter *meter
 			policy = allowAllPolicyEvaluator{}
 		}
 	}
-	return &Service{
+	svc := &Service{
 		store:       store,
 		cache:       cache,
 		exists:      f,
@@ -118,6 +118,15 @@ func NewService(store Store, cache KeyCache, events AuditPublisher, meter *meter
 		posture:     staticPostureControlsProvider{},
 		restartSelf: defaultRestartSelf,
 	}
+	if st, ok := store.(*SQLStore); ok {
+		st.onSystemKeyRefused = func(ctx context.Context, tenantID, keyID, op string) {
+			_ = svc.publishAudit(ctx, "audit.key.system_key_change_refused", tenantID, map[string]any{
+				"key_id": keyID, "operation": op, "result": "refused", "reason": "system_key_protected", "severity": "critical",
+				"description": "refused a change that would make a platform service's master key unusable",
+			})
+		}
+	}
+	return svc
 }
 
 // ConfirmKeyMaterialZeroized checks that the key cache holds no live material

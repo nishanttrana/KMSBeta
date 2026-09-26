@@ -37,6 +37,9 @@ type Service struct {
 	baseURL  string
 	certsURL string
 	http     *http.Client
+	// rewrapper re-protects backup contents through the owning services
+	// (backup_mek.go); nil means HTTP to each service.
+	rewrapper backupRewrapper
 }
 
 var runtimeCryptoLibraryLabel, runtimeCryptoLibraryValidated = detectRuntimeCryptoLibrary()

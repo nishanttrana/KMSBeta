@@ -40,7 +40,8 @@ an approach, record it here or in the matching doc below.
      layer doesn't emit request audit. `routetest.RefusalsAudited` is the
      per-service test. A raw `http.ServeMux` fails `make conformance`
      (`scripts/route-kernel-burndown.txt` only shrinks). To add a route to a
-     service still on the list, migrate that handler file first
+     service still on the list, register it on a `route.Router` and mount it
+     on the legacy mux with `Router.MountOn`, or migrate the handler file
      ([docs/ARCHITECTURE_MIGRATION.md](docs/ARCHITECTURE_MIGRATION.md)).
 3. **Secure defaults** ([docs/SECURITY/SECURE_DEFAULTS.md](docs/SECURITY/SECURE_DEFAULTS.md)):
    - No secret falls back to a value in the repo. Require it (`${VAR:?}`) or
@@ -71,6 +72,9 @@ an approach, record it here or in the matching doc below.
 6. **Keys are derived from secret material, never from identifiers.** A
    service that needs a working key gets it from keycore
    (`POST /keys/{id}/service-derive`, bound to the verified service identity).
+   A service's master key for data at rest comes from `pkg/mek` (a protected
+   keycore system key), never from an environment variable or a fallback
+   ([docs/SECURITY/SERVICE_MASTER_KEYS.md](docs/SECURITY/SERVICE_MASTER_KEYS.md)).
    A KCV, key ID or other metadata is never key material. Changing how
    existing data is keyed needs a per-key migration, never a silent switch
    ([docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md](docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md)).

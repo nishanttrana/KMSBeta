@@ -350,6 +350,9 @@ func (s *Service) SubmitBitLockerJobResult(ctx context.Context, clientID string,
 				return BitLockerJob{}, saveErr
 			}
 			recoveryRef = rec.ID
+			if job.Operation == "rotate" {
+				s.retireSupersededRecoveryKeys(ctx, rec)
+			}
 		}
 	}
 
@@ -511,12 +514,16 @@ func (s *Service) DeleteBitLockerClient(ctx context.Context, clientID string, re
 	if req.Reason == "" {
 		req.Reason = "manual-dashboard-delete"
 	}
+	existing, _ := s.store.ListBitLockerRecoveryKeys(ctx, req.TenantID, clientID, 100000)
 	deletedClients, deletedJobs, deletedRecovery, err := s.store.PurgeBitLockerClient(ctx, req.TenantID, clientID)
 	if err != nil {
 		if errors.Is(err, errNotFound) {
 			return DeleteBitLockerClientResponse{}, newServiceError(http.StatusNotFound, "client_not_found", "bitlocker client is not registered")
 		}
 		return DeleteBitLockerClientResponse{}, err
+	}
+	for _, r := range existing {
+		s.exposure.Retire(ctx, req.TenantID, "bitlocker_recovery_key", r.ID, "deleted")
 	}
 	resp := DeleteBitLockerClientResponse{
 		ClientID:                clientID,
@@ -931,4 +938,21 @@ func minInt(a int, b int) int {
 		return a
 	}
 	return b
+}
+
+// retireSupersededRecoveryKeys closes the exposure entries of a volume's
+// earlier recovery keys once a rotation has escrowed a new one.
+func (s *Service) retireSupersededRecoveryKeys(ctx context.Context, latest BitLockerRecoveryKeyRecord) {
+	if s.exposure == nil {
+		return
+	}
+	prior, err := s.store.ListBitLockerRecoveryKeys(ctx, latest.TenantID, latest.ClientID, 100000)
+	if err != nil {
+		return
+	}
+	for _, r := range prior {
+		if r.ID != latest.ID && strings.EqualFold(r.VolumeMountPoint, latest.VolumeMountPoint) {
+			s.exposure.Retire(ctx, latest.TenantID, "bitlocker_recovery_key", r.ID, "rotated")
+		}
+	}
 }

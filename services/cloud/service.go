@@ -10,6 +10,7 @@ import (
 
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
+	"vecta-kms/pkg/mek"
 )
 
 type EventPublisher interface {
@@ -23,14 +24,16 @@ type Service struct {
 	events    EventPublisher
 	mek       []byte
 	keyAccess pkgkeyaccess.Client
+	exposure  *mek.Keyring // exposure register; nil in tests
 }
 
 func NewService(store Store, keycore KeyCoreClient, providers *ProviderRegistry, events EventPublisher, mek []byte) *Service {
 	if providers == nil {
 		providers = defaultProviderRegistry()
 	}
-	if len(mek) < 32 {
-		mek = []byte("0123456789ABCDEF0123456789ABCDEF")
+	// The master key comes from keycore (pkg/mek); there is no fallback.
+	if len(mek) != 32 {
+		panic("cloud: a 32-byte master key from pkg/mek is required")
 	}
 	return &Service{
 		store:     store,
@@ -40,6 +43,10 @@ func NewService(store Store, keycore KeyCoreClient, providers *ProviderRegistry,
 		mek:       append([]byte{}, mek[:32]...),
 	}
 }
+
+// SetKeyring wires the exposure register: credentials stored under a public
+// key before 1.2.0-beta stay listed until the account is deleted.
+func (s *Service) SetKeyring(k *mek.Keyring) { s.exposure = k }
 
 func (s *Service) SetKeyAccessClient(client pkgkeyaccess.Client) {
 	s.keyAccess = client
@@ -116,6 +123,7 @@ func (s *Service) DeleteAccount(ctx context.Context, tenantID string, accountID 
 	if err != nil {
 		return DeleteCloudAccountResult{}, err
 	}
+	s.exposure.Retire(ctx, tenantID, "cloud_account_credentials", accountID, "deleted")
 	_ = s.publishAudit(ctx, "audit.cloud.connector_deleted", tenantID, map[string]interface{}{
 		"account_id":              out.AccountID,
 		"provider":                out.Provider,
@@ -371,12 +379,12 @@ func (s *Service) RotateCloudKey(ctx context.Context, req RotateCloudKeyRequest)
 	if strings.EqualFold(keyAccessResult.Action, "deny") {
 		reason := firstNonEmpty(keyAccessResult.Reason, "blocked by key access justification policy")
 		_ = s.publishAudit(ctx, "audit.cloud.key_access_denied", req.TenantID, map[string]interface{}{
-			"binding_id":          binding.ID,
-			"provider":            binding.Provider,
-			"key_id":              binding.KeyID,
-			"operation":           "rotate",
-			"justification_code":  req.JustificationCode,
-			"reason":              reason,
+			"binding_id":         binding.ID,
+			"provider":           binding.Provider,
+			"key_id":             binding.KeyID,
+			"operation":          "rotate",
+			"justification_code": req.JustificationCode,
+			"reason":             reason,
 		})
 		return CloudKeyBinding{}, "", newServiceError(http.StatusForbidden, "key_access_denied", reason)
 	}

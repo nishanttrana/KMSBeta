@@ -31,6 +31,7 @@ import (
 
 	"golang.org/x/crypto/ocsp"
 	pkcs12 "software.sslmate.com/src/go-pkcs12"
+	"vecta-kms/pkg/mek"
 )
 
 var (
@@ -59,6 +60,7 @@ type Service struct {
 	events            EventPublisher
 	keycore           KeyCoreSigner
 	mek               []byte
+	exposure          *mek.Keyring // exposure register; nil in tests
 	securityProvider  certRootKeyProvider
 	certStorageMode   string
 	rootKeyMode       string
@@ -110,10 +112,10 @@ func NewServiceWithSecurity(store Store, events EventPublisher, keycore KeyCoreS
 	if keycore == nil {
 		keycore = NoopKeyCoreSigner{}
 	}
+	// The master key comes from keycore (pkg/mek); there is no fallback.
 	legacyMEK := sec.LegacyMEK
-	if len(legacyMEK) < 32 {
-		sum := sha256.Sum256([]byte("vecta-certs-dev-mek"))
-		legacyMEK = sum[:]
+	if len(legacyMEK) != 32 {
+		panic("certs: a 32-byte master key from pkg/mek is required")
 	}
 	return &Service{
 		store:             store,
@@ -281,6 +283,10 @@ func (s *Service) ListCAs(ctx context.Context, tenantID string) ([]CA, error) {
 	return s.store.ListCAs(ctx, tenantID)
 }
 
+// SetKeyring wires the exposure register: a CA signing key stored under a
+// public key before 1.2.0-beta stays listed until the CA is deleted.
+func (s *Service) SetKeyring(k *mek.Keyring) { s.exposure = k }
+
 func (s *Service) DeleteCA(ctx context.Context, tenantID string, caID string, force bool) error {
 	tenantID = strings.TrimSpace(tenantID)
 	caID = strings.TrimSpace(caID)
@@ -339,6 +345,7 @@ func (s *Service) DeleteCA(ctx context.Context, tenantID string, caID string, fo
 	if err := s.store.DeleteCA(ctx, tenantID, caID); err != nil {
 		return err
 	}
+	s.exposure.Retire(ctx, tenantID, "ca_signing_key", caID, "deleted")
 	_ = s.publishAudit(ctx, "audit.cert.ca_deleted", tenantID, map[string]interface{}{
 		"ca_id":        caID,
 		"name":         ca.Name,

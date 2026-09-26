@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"log"
 	"os"
 	"strconv"
@@ -11,8 +10,9 @@ import (
 	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/servicetoken"
 
-	pkgcrypto "vecta-kms/pkg/crypto"
+	"vecta-kms/pkg/mek"
 	pkgplatform "vecta-kms/pkg/platform"
+	"vecta-kms/pkg/route"
 )
 
 var logger = log.Default()
@@ -46,6 +46,27 @@ func main() {
 	keycoreURL := envOr("KEYCORE_URL", "http://127.0.0.1:8010")
 	keycoreClient := NewHTTPKeyCoreSigner(keycoreURL, 3*time.Second)
 
+	// CA signing keys in the "legacy" format are wrapped under a master key
+	// from keycore (pkg/mek). Rows under an earlier release's public key are
+	// re-wrapped before serving, and recorded as exposed.
+	var audit mek.Emitter
+	if rt.Audit != nil {
+		audit = rt.Audit
+	}
+	keyring, err := mek.Open(rt.Ctx, mek.Options{
+		Tables: mek.Catalog["certs"],
+		Source: mek.NewKeycoreSource(keycoreURL, mek.Catalog["certs"]),
+		DB:     rt.DB.SQL(),
+		Audit:  audit,
+		Member: func(ctx context.Context) bool { return !clusterstate.RunsPrimaryJobs(ctx) },
+		Logf:   logger.Printf,
+		Wait:   10 * time.Minute,
+	})
+	if err != nil {
+		logger.Fatalf("refusing to start: %v", err)
+	}
+	go keyring.Watch(rt.Ctx, 15*time.Minute)
+
 	rootCfg := loadCertRootKeyConfig()
 	rootProvider, rootErr := newCertRootKeyProvider(rootCfg)
 	if rootErr != nil {
@@ -63,7 +84,7 @@ func main() {
 			RootKeyMode:     rootCfg.RootKeyMode,
 			RootProvider:    rootProvider,
 			SecurityErr:     errString(rootErr),
-			LegacyMEK:       loadLegacyMEK(),
+			LegacyMEK:       keyring.Current(),
 		},
 		envBool("FIPS_STRICT", false),
 		envBool("CERTS_KEYCORE_FAIL_CLOSED", true),
@@ -134,23 +155,14 @@ func main() {
 	// shows every internal service and stays current as services register.
 	svc.StartMeshDiscovery(rt.Ctx, logger)
 
-	if err := rt.Serve(NewHandler(svc)); err != nil {
+	svc.SetKeyring(keyring)
+	handler := NewHandler(svc)
+	kernel := route.New("cert", audit, logger)
+	keyring.Routes(kernel, "cert")
+	kernel.MountOn(handler.mux)
+	if err := rt.Serve(handler); err != nil {
 		rt.Logger.Fatalf("serve failed: %v", err)
 	}
-}
-
-func loadLegacyMEK() []byte {
-	raw := strings.TrimSpace(os.Getenv("CERTS_MEK_B64"))
-	if raw != "" {
-		if out, err := base64.StdEncoding.DecodeString(raw); err == nil && len(out) >= 32 {
-			return out[:32]
-		}
-	}
-	sum, err := pkgcrypto.Hash("SHA-256", []byte("vecta-certs-dev-mek"))
-	if err != nil {
-		panic(err)
-	}
-	return sum
 }
 
 func loadCertRootKeyConfig() CertRootKeyConfig {

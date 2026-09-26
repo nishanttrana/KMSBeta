@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
 	"crypto/tls"
-	"encoding/base64"
 	"errors"
 	"log"
 	"net"
@@ -22,6 +20,7 @@ import (
 
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
+	"vecta-kms/pkg/clusterstate"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgcrypto "vecta-kms/pkg/crypto"
@@ -29,6 +28,8 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgkeyaccess "vecta-kms/pkg/keyaccess"
+	"vecta-kms/pkg/mek"
+	"vecta-kms/pkg/route"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
 )
 
@@ -66,22 +67,46 @@ func main() {
 	}
 
 	var publisher EventPublisher
+	var audit mek.Emitter
 	if nc, js, err := initNATS(cfg.NATSURL); err == nil {
 		defer nc.Close()
 		publisher = pkgevents.NewPublisher(js, 3, "audit.ekm.dead_letter")
+		if c, err := pkgaudit.NewClient(js, "ekm"); err == nil {
+			audit = c
+		}
 	} else {
 		logger.Printf("nats unavailable, audit publishing disabled: %v", err)
 	}
 
 	keycoreURL := envOr("KEYCORE_URL", "http://127.0.0.1:8010")
+	// BitLocker recovery keys are wrapped under a master key from keycore
+	// (pkg/mek); rows under an earlier release's public key are re-wrapped
+	// before serving, and a start that would leave them there is refused.
+	keyring, err := mek.Open(ctx, mek.Options{
+		Tables: mek.Catalog["ekm"],
+		Source: mek.NewKeycoreSource(keycoreURL, mek.Catalog["ekm"]),
+		DB:     dbConn.SQL(),
+		Audit:  audit,
+		Member: func(ctx context.Context) bool { return !clusterstate.RunsPrimaryJobs(ctx) },
+		Logf:   logger.Printf,
+		Wait:   10 * time.Minute,
+	})
+	if err != nil {
+		logger.Fatalf("refusing to start: %v", err)
+	}
+	go keyring.Watch(ctx, 15*time.Minute)
 	svc := NewService(
 		NewSQLStore(dbConn),
 		NewHTTPKeyCoreClient(keycoreURL, 3*time.Second),
 		publisher,
-		loadMEK(),
+		keyring.Current(),
 	)
+	svc.SetKeyring(keyring)
 	svc.SetKeyAccessClient(pkgkeyaccess.NewHTTPClient(envOr("KEY_ACCESS_URL", ""), 3*time.Second))
 	handler := NewHandler(svc)
+	kernel := route.New("ekm", audit, logger)
+	keyring.Routes(kernel, "ekm")
+	kernel.MountOn(handler.mux)
 
 	httpPort := envOr("HTTP_PORT", "8130")
 	httpSrv := pkgconfig.NewHTTPServer(httpPort, pkgauditmw.Wrap(handler, publisher, "ekm"))
@@ -170,16 +195,4 @@ func mustAtoi(s string) int {
 		n = n*10 + int(s[i]-'0')
 	}
 	return n
-}
-
-func loadMEK() []byte {
-	b64 := strings.TrimSpace(os.Getenv("EKM_MEK_B64"))
-	if b64 != "" {
-		if raw, err := base64.StdEncoding.DecodeString(b64); err == nil && len(raw) >= 32 {
-			return raw[:32]
-		}
-	}
-	// Security: deterministic fallback is for local/dev only; production should provide EKM_MEK_B64.
-	sum := sha256.Sum256([]byte("vecta-ekm-dev-mek"))
-	return sum[:]
 }

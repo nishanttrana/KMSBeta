@@ -21,6 +21,7 @@ import (
 	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/internalauth"
 	pkgrestauth "vecta-kms/pkg/restauth"
+	"vecta-kms/pkg/route"
 	"vecta-kms/pkg/tenantcheck"
 )
 
@@ -35,9 +36,10 @@ type AuditPublisher interface {
 }
 
 type Handler struct {
-	svc        *Service
-	mux        *http.ServeMux
-	parseToken func(string) (*pkgauth.Claims, error)
+	svc         *Service
+	mux         *http.ServeMux
+	parseToken  func(string) (*pkgauth.Claims, error)
+	kernelAudit route.Emitter
 }
 
 func NewHandler(svc *Service) *Handler {
@@ -157,6 +159,8 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /keys/{id}/mac", h.handleMAC)
 	mux.HandleFunc("POST /keys/{id}/derive", h.handleDerive)
 	mux.HandleFunc("POST /keys/{id}/service-derive", h.handleServiceDerive)
+	// Kernel-routed (pkg/route): platform services' master-key system keys.
+	h.systemKeyRouter().MountOn(mux)
 	// Cluster master-key transfer: cluster-manager service identity only.
 	mux.HandleFunc("POST /cluster/mek/join-key", h.handleClusterJoinKey)
 	mux.HandleFunc("POST /cluster/mek/export", h.handleClusterMEKExport)
@@ -784,6 +788,10 @@ func (h *Handler) handleDestroyKey(w http.ResponseWriter, r *http.Request) {
 				writeErr(w, http.StatusPreconditionRequired, "step_up_required", stepUp.Error(), reqID, tenantID)
 				return
 			}
+			if errors.Is(err, errSystemKeyProtected) {
+				writeErr(w, http.StatusConflict, "system_key_protected", err.Error(), reqID, tenantID)
+				return
+			}
 			writeErr(w, http.StatusBadRequest, "destroy_schedule_failed", err.Error(), reqID, tenantID)
 			return
 		}
@@ -815,6 +823,10 @@ func (h *Handler) handleDestroyKey(w http.ResponseWriter, r *http.Request) {
 				writeErr(w, http.StatusPreconditionRequired, "step_up_required", stepUp.Error(), reqID, tenantID)
 				return
 			}
+			if errors.Is(err, errSystemKeyProtected) {
+				writeErr(w, http.StatusConflict, "system_key_protected", err.Error(), reqID, tenantID)
+				return
+			}
 			writeErr(w, http.StatusBadRequest, "destroy_failed", err.Error(), reqID, tenantID)
 			return
 		}
@@ -840,6 +852,10 @@ func (h *Handler) keyStatus(w http.ResponseWriter, r *http.Request, status strin
 		}
 		if errors.Is(err, errStoreNotFound) {
 			writeErr(w, http.StatusNotFound, "not_found", err.Error(), reqID, tenantID)
+			return
+		}
+		if errors.Is(err, errSystemKeyProtected) {
+			writeErr(w, http.StatusConflict, "system_key_protected", err.Error(), reqID, tenantID)
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "status_failed", err.Error(), reqID, tenantID)
@@ -979,6 +995,10 @@ func (h *Handler) handleDeleteVersion(w http.ResponseWriter, r *http.Request) {
 	}
 	ver, _ := strconv.Atoi(r.PathValue("ver"))
 	if err := h.svc.store.DeleteVersion(r.Context(), tenantID, r.PathValue("id"), ver); err != nil {
+		if errors.Is(err, errSystemKeyProtected) {
+			writeErr(w, http.StatusConflict, "system_key_protected", err.Error(), reqID, tenantID)
+			return
+		}
 		writeErr(w, http.StatusInternalServerError, "delete_failed", err.Error(), reqID, tenantID)
 		return
 	}
@@ -1115,6 +1135,10 @@ func (h *Handler) handleSetExportPolicy(w http.ResponseWriter, r *http.Request) 
 		var stepUp stepUpRequiredError
 		if errors.As(err, &stepUp) {
 			writeErr(w, http.StatusPreconditionRequired, "step_up_required", stepUp.Error(), reqID, tenantID)
+			return
+		}
+		if errors.Is(err, errSystemKeyProtected) {
+			writeErr(w, http.StatusConflict, "system_key_protected", err.Error(), reqID, tenantID)
 			return
 		}
 		writeErr(w, http.StatusBadRequest, "export_policy_failed", err.Error(), reqID, tenantID)

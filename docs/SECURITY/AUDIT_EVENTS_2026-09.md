@@ -31,31 +31,35 @@ security meaning where a generic request record isn't enough.
 | `audit.dataprotect.kdf_refused` | dataprotect | a derivation is refused: v1 after migration, v2 before it, or v1 in strict mode (at most once a minute per key and reason, with a count) | critical for v1 after migration, else warning |
 | `audit.dataprotect.kdf_migration_started` / `_vault_reprotected` / `_migration_completed` / `_migration_aborted` | dataprotect | per-key migration steps (actor, pinned version, counts; forced completion noted) | info; warning when forced or rows failed |
 
-## Secrets master key (MEK) migration
+## Service master keys (pkg/mek)
 
-Emitted by the secrets service at startup, before it serves requests. The
-actor is `kms-secrets` (service), and there is one event per tenant (the
-mismatch refusal is platform-wide, with an empty tenant). Details carry
-`count` (value versions), `secret_count` and `secret_ids` (sorted, the first
-500).
+The secrets, certs, cloud and ekm services emit these under their own
+namespace (`audit.secrets.*`, `audit.cert.*`, `audit.cloud.*`,
+`audit.ekm.*`); below, `<svc>` stands for that namespace. Migration events
+are per tenant, with actor type `service`, and carry `item_type`, `count`
+(rows), `item_count` and `item_ids` (sorted, the first 500).
+[SERVICE_MASTER_KEYS.md](SERVICE_MASTER_KEYS.md) explains the flow.
 
 | Event | When | Severity |
 |---|---|---|
-| `audit.secrets.dev_mek_rewrapped` | values stored under the public development key were re-wrapped under `SECRETS_MEK_B64`; `exposure` says to treat them as exposed to anyone with an older database copy | warning |
-| `audit.secrets.dev_mek_rewrap_refused` | such a value couldn't be rewritten (`result: refused`, `reason: rewrap_failed`); the service refuses to start and retries on the next start | critical |
-| `audit.secrets.mek_rewrapped` | a rotation: values under `SECRETS_MEK_PREVIOUS_B64` were re-wrapped under the new key | info |
-| `audit.secrets.mek_rewrap_refused` | a rotation couldn't rewrite a value (`result: refused`, `reason: rewrap_failed`); start refused | critical |
-| `audit.secrets.mek_unreadable` | stored values that no configured key opens (`result: failure`, `reason: no_configured_key_opens`); they were unreadable before too | warning |
-| `audit.secrets.mek_check_refused` | the configured MEK isn't the one the data is under, and this isn't a rotation from it, or a cluster member has a different key than the primary (`result: refused`, `reason: mek_mismatch`); start refused | critical |
+| `audit.<svc>.dev_mek_rewrapped` | rows under a public development key were re-wrapped onto the keycore-held key; the items entered the exposure register | warning |
+| `audit.<svc>.mek_rewrapped` | rows under an old environment key (`from: env_mek`) or the previous keycore version (`from: previous_version`) were re-wrapped | info |
+| `audit.<svc>.dev_mek_rewrap_refused` / `mek_rewrap_refused` | a row a legacy key opens couldn't be rewritten (`result: refused`, `reason: rewrap_failed`); start refused, retried next start | critical |
+| `audit.<svc>.mek_unreadable` | rows no known key opens (`result: failure`); emitted when the count changes | warning |
+| `audit.<svc>.mek_check_refused` | keycore derives a different key than the stored data is recorded under (`result: refused`, `reason: mek_mismatch`); start refused | critical |
+| `audit.<svc>.mek_exposure_remediated` | an exposure entry closed: material rotated, deleted or re-keyed, or acknowledged with a reason | info; warning when acknowledged |
+| `audit.<svc>.mek_exposure_listed` / `mek_exposure_acknowledged` | kernel events for `GET /mek/exposure` and the acknowledge route (refusals included) | info / warning |
+| `audit.<svc>.mek_backup_rewrap` | governance re-wrapped backup contents through the service (counts; `result: refused` for any other caller) | warning |
+| `audit.key.system_key_ensure` | a service asked for its system key (kernel event; `refused` for a non-service caller) | info |
+| `audit.key.system_key_created` | keycore created a service's system key | info |
+| `audit.key.system_key_change_refused` | destroy, disable, version delete or export of a system key was refused (`operation`, `reason: system_key_protected`) | critical |
+| `audit.governance.backup_reprotected` | a stored backup's rows under public keys were re-wrapped and it was re-sealed under a new key (`rows_rewrapped` per service; the old key package is invalid) | warning |
+| `audit.governance.backup_reprotect_refused` | a stored backup couldn't be re-protected yet (`key_unavailable`, `artifact_unreadable`, `service_unreachable`); retried hourly | warning |
 
-If NATS is unavailable at startup, the events can't be published. The same
-counts are then recorded in `secrets_mek_state`
-(`dev_mek_rewrapped`, `previous_rewrapped`, `unreadable`, `migrated_at`) and
-in the service log (`MEK migration: …`), and a refused start shows as a
-`refusing to start:` line. A start refused because `SECRETS_MEK_B64` is
-missing or weak happens before anything connects, so it shows only as that
-line. Proven by `services/secrets/mek_test.go` (SQLite, and Postgres via
-`VECTA_TEST_POSTGRES_DSN`).
+**If NATS is down at startup,** migration events can't be published. The
+counts stay in `<svc>_mek_state` and the items in `<svc>_mek_exposure`, and
+the service log has a `MEK scan: …` line. A refused start shows as a
+`refusing to start:` line.
 
 ## Kernel-emitted events (pkg/route)
 

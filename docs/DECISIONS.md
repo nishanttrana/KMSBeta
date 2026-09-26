@@ -7,43 +7,61 @@ rejected, and how it's enforced.
 
 ---
 
-## 2026-09-26 — Secrets MEK: required env key, re-wrap on startup, fingerprint-pinned
+## 2026-09-26 — Service master keys come from keycore; exposure is tracked until material is replaced
 **Decision:**
-- `SECRETS_MEK_B64` is required and validated, with no fallback.
-- Values under the retired public dev key, or under
-  `SECRETS_MEK_PREVIOUS_B64` during a rotation, are moved by re-wrapping their
-  DEKs at startup, before the service serves requests. This runs on the
-  primary only; members check the key.
-- `secrets_mek_state` records a keyed fingerprint of the key the data is
-  under.
+- secrets, certs, cloud and ekm get their master key from keycore through
+  `pkg/mek`: a protected system key per service (`POST /system-keys/ensure`),
+  service-derive bound to the service identity, and the version pinned in
+  `<svc>_mek_state`. There is no environment variable and no fallback.
+- Rows under any key an earlier release used are re-wrapped at startup and
+  by a periodic rescan.
+- Items that were under a public key go into an exposure register until the
+  material is replaced.
+- Governance re-protects its stored backups, and re-wraps restores before
+  writing.
 
 **Why:**
-- **Re-wrap, not re-encrypt:** it's cheap, atomic per row, and idempotent,
-  and it leaves every version's ciphertext untouched. Re-encrypting with new
-  DEKs wouldn't protect anything re-wrapping doesn't: a pre-upgrade backup
-  already holds the old ciphertext and the public-key-wrapped DEK.
-- **At startup, not via an API with a state machine** (unlike the dataprotect
-  KDF migration): the old key is public, so there's no reason to keep it in
-  use for a transition period. Unchanged clients see no difference, since
-  values and IDs are the same.
-- **Fingerprint:** each installer now generates its own key, so a cluster
-  member or a restored `.env` could silently hold a different key. A refused
-  start with a clear message beats per-read decrypt failures.
+- All four services fell back to public keys, and nothing ever configured
+  the real ones. A required env var (tried first, in the same unreleased
+  branch) would still:
+  - break a plain `docker compose up` on upgrade;
+  - need copying to every cluster member by hand;
+  - make every installer, backup runbook and rotation step carry a
+    data-destroying secret.
+- Keycore already holds key material under its master key, which the cluster
+  join ships. Deriving from it satisfies rule 6 and makes members work with
+  nothing to copy.
+- **Protection at keycore's storage layer:** destroying a system key would
+  crypto-shred a service's whole store, and every destroy path (API, bulk,
+  scheduled sweep) funnels through a few store methods.
+- **Exposure register:** re-wrapping can't touch copies made before (dumps,
+  snapshots, downloaded backups). The only real remedy is to replace the
+  material. A register that closes itself when the material is rotated or
+  deleted turns "treat these as exposed" into tracked work.
+- **Backups:** governance keeps backup artifacts, and for software-mode
+  backups their keys, in the database. So the live database kept exposing
+  the old values until its backups were re-protected too.
 
 **Rejected:**
-- Deriving the MEK from keycore (`service-derive`, CLAUDE.md rule 6). It's
-  the better end state, but it makes secrets depend on keycore at startup, and
-  it needs its own per-key migration. The `SECRETS_MEK_PREVIOUS_B64` re-wrap
-  built here is the mechanism that move will reuse.
-- Refusing to start while any value is under the dev key, with no migration.
-  Every existing deployment would break with no path forward.
-- Starting with rows still under the public key when a rewrite fails.
+- Required `<SERVICE>_MEK_B64` (for the reasons above).
+- Generating a key file per node: backup/DR and cluster members would need
+  it copied, and losing it loses the data.
+- Re-encrypting values with new DEKs instead of re-wrapping: a pre-upgrade
+  copy already holds the old ciphertext and a public-key-wrapped DEK, so it
+  adds nothing.
+- Rotating exposed material automatically: CA keys, cloud credentials and
+  BitLocker recovery keys are in use outside the platform, and replacing them
+  blind would break their users.
+- Deleting pre-upgrade backups: destructive, and a downloaded copy survives
+  anyway.
 
 **Enforced by:**
-- `TestStartWithoutMEKIsRefused` (a real child process),
-  `TestMEKMigrationLifecycle`, `TestMEKMigrationPostgres`,
-  `TestMEKRewrapFailureRefusesStart` and `TestMEKMigrationMemberWritesNothing`.
-- The `no-literal-key-material` conformance rule.
+- `no-literal-key-material` (the only public keys are marked lines in
+  `pkg/mek/catalog.go`).
+- `TestCatalogIsValidAndMigrated`, `TestMEKLifecycle*`,
+  `TestSystemKeyIsProtectedFromDestruction`, the per-service
+  `TestUpgradeMoves*` tests and `TestBackupReprotectPostgres`.
+- docs/SECURITY/SERVICE_MASTER_KEYS.md.
 
 ## 2026-09-26 — Feature kernel (pkg/route): rules are declared per route, applied in one place
 **Decision:** every HTTP route is registered through `pkg/route` with a

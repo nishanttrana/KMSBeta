@@ -141,6 +141,12 @@ already use the HTTP audit ingest.
 
 ## Adding a feature after this
 
+To add a route to a service that is still on the burn-down list, register it
+on a `route.Router` and mount that router on the legacy mux with
+`Router.MountOn(mux)`. The new route gets every kernel guarantee now, and the
+rest of the file migrates later. Keycore's `POST /system-keys/ensure` and the
+`/mek/*` routes on certs, cloud and ekm are added this way.
+
 1. Add routes with a `route.Spec` for each. Choose the action name and
    permission; the kernel does the rest.
 2. Add a one-line test: `routetest.RefusalsAudited(t, h.router, rec)`.
