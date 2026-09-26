@@ -1,6 +1,6 @@
 # Generated Product Map
 
-Generated at `2026-09-26T12:22:37Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-26T15:02:41Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
@@ -9,12 +9,12 @@ This file is generated from source. Re-run the script after UI or API changes.
 - Dashboard navigation items: `34`
 - Tab/component mappings: `42`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `906` across `29` services
+- Backend HTTP routes discovered: `905` across `29` services
 - Frontend API call sites discovered: `621`
 - Frontend call sites with exact backend route match: `554`
 - Frontend call sites needing review or dynamic/runtime confirmation: `67`
 - Clickable controls with static `onClick` handlers: `827`
-- Backend request flows with handler/service/package summaries: `906`
+- Backend request flows with handler/service/package summaries: `905`
 
 ## How To Use This For Launch
 
@@ -161,7 +161,7 @@ flowchart LR
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
   svc_backup["backup (11 routes)"]
-  svc_certs["certs (65 routes)"]
+  svc_certs["certs (64 routes)"]
   svc_cloud["cloud (11 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (42 routes)"]
@@ -241,7 +241,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | auth | 82 | 45 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
-| certs | 65 | 48 |
+| certs | 64 | 48 |
 | cloud | 11 | 10 |
 | cluster-manager | 21 | 11 |
 | compliance | 42 | 18 |
@@ -434,15 +434,14 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | certs | GET | /certs/pqc-readiness | h.handlePQCReadiness | services/certs/handler.go | 56 |
 | certs | POST | /certs/ocsp | h.handleOCSP | services/certs/handler.go | 59 |
 | certs | GET | /certs/clm/policy | h.handleGetCLMPolicy | services/certs/handler.go | 64 |
-| certs | POST | /certs/internal/mtls/{service} | h.handleIssueInternalMTLS | services/certs/handler.go | 79 |
-| certs | GET | /certs/merkle/epochs/{id} | h.handleMerkleEpoch | services/certs/handler.go | 84 |
-| certs | GET | /acme/directory | h.handleACMEDirectory | services/certs/handler.go | 88 |
-| certs | HEAD | /acme/new-nonce | h.handleACMENonce | services/certs/handler.go | 89 |
-| certs | POST | /acme/new-nonce | h.handleACMENonce | services/certs/handler.go | 90 |
-| certs | GET | /acme/renewal-info/{id} | h.handleACMERenewalInfo | services/certs/handler.go | 93 |
-| certs | GET | /acme/cert/{id} | h.handleACMECertDownload | services/certs/handler.go | 97 |
-| certs | GET | /est/.well-known/est/cacerts | h.handleESTCACerts | services/certs/handler.go | 99 |
-| certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll | services/certs/handler.go | 102 |
+| certs | GET | /certs/merkle/epochs/{id} | h.handleMerkleEpoch | services/certs/handler.go | 83 |
+| certs | GET | /acme/directory | h.handleACMEDirectory | services/certs/handler.go | 87 |
+| certs | HEAD | /acme/new-nonce | h.handleACMENonce | services/certs/handler.go | 88 |
+| certs | POST | /acme/new-nonce | h.handleACMENonce | services/certs/handler.go | 89 |
+| certs | GET | /acme/renewal-info/{id} | h.handleACMERenewalInfo | services/certs/handler.go | 92 |
+| certs | GET | /acme/cert/{id} | h.handleACMECertDownload | services/certs/handler.go | 96 |
+| certs | GET | /est/.well-known/est/cacerts | h.handleESTCACerts | services/certs/handler.go | 98 |
+| certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll | services/certs/handler.go | 101 |
 | cloud | GET | /cloud/accounts | h.handleListAccounts | services/cloud/handler.go | 31 |
 | cloud | GET | /cloud/region-mappings | h.handleListRegionMappings | services/cloud/handler.go | 34 |
 | cloud | GET | /cloud/inventory | h.handleInventory | services/cloud/handler.go | 38 |
@@ -468,8 +467,9 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/sbom | h.handleSBOM | services/compliance/handler.go | 61 |
 | compliance | GET | /compliance/sbom/services | h.handleSBOMServices | services/compliance/handler.go | 62 |
 | compliance | GET | /compliance/sbom/services/{name} | h.handleSBOMService | services/compliance/handler.go | 63 |
+| compliance | GET | /compliance/sbom/vulnerabilities | h.handleSBOMVulnerabilities | services/compliance/handler.go | 64 |
 
-Showing `120` of `362`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `361`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 

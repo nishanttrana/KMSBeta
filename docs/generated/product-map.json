@@ -2272,18 +2272,8 @@
     },
     {
       "file": "services/certs/handler.go",
-      "handler": "h.handleIssueInternalMTLS",
-      "line": 79,
-      "match_key": "certs|POST|/certs/internal/mtls/{param}",
-      "method": "POST",
-      "normalized_path": "/certs/internal/mtls/{param}",
-      "path": "/certs/internal/mtls/{service}",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
       "handler": "h.handleMerkleBuild",
-      "line": 82,
+      "line": 81,
       "match_key": "certs|POST|/certs/merkle/build",
       "method": "POST",
       "normalized_path": "/certs/merkle/build",
@@ -2293,7 +2283,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleMerkleEpochs",
-      "line": 83,
+      "line": 82,
       "match_key": "certs|GET|/certs/merkle/epochs",
       "method": "GET",
       "normalized_path": "/certs/merkle/epochs",
@@ -2303,7 +2293,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleMerkleEpoch",
-      "line": 84,
+      "line": 83,
       "match_key": "certs|GET|/certs/merkle/epochs/{param}",
       "method": "GET",
       "normalized_path": "/certs/merkle/epochs/{param}",
@@ -2313,7 +2303,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleCertProof",
-      "line": 85,
+      "line": 84,
       "match_key": "certs|GET|/certs/merkle/proof/{param}",
       "method": "GET",
       "normalized_path": "/certs/merkle/proof/{param}",
@@ -2323,7 +2313,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleMerkleVerify",
-      "line": 86,
+      "line": 85,
       "match_key": "certs|POST|/certs/merkle/verify",
       "method": "POST",
       "normalized_path": "/certs/merkle/verify",
@@ -2333,7 +2323,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMEDirectory",
-      "line": 88,
+      "line": 87,
       "match_key": "certs|GET|/acme/directory",
       "method": "GET",
       "normalized_path": "/acme/directory",
@@ -2343,7 +2333,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMENonce",
-      "line": 89,
+      "line": 88,
       "match_key": "certs|HEAD|/acme/new-nonce",
       "method": "HEAD",
       "normalized_path": "/acme/new-nonce",
@@ -2353,7 +2343,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMENonce",
-      "line": 90,
+      "line": 89,
       "match_key": "certs|POST|/acme/new-nonce",
       "method": "POST",
       "normalized_path": "/acme/new-nonce",
@@ -2363,7 +2353,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMENewAccount",
-      "line": 91,
+      "line": 90,
       "match_key": "certs|POST|/acme/new-account",
       "method": "POST",
       "normalized_path": "/acme/new-account",
@@ -2373,7 +2363,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMENewOrder",
-      "line": 92,
+      "line": 91,
       "match_key": "certs|POST|/acme/new-order",
       "method": "POST",
       "normalized_path": "/acme/new-order",
@@ -2383,7 +2373,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMERenewalInfo",
-      "line": 93,
+      "line": 92,
       "match_key": "certs|GET|/acme/renewal-info/{param}",
       "method": "GET",
       "normalized_path": "/acme/renewal-info/{param}",
@@ -2393,7 +2383,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMEChallengeInfo",
-      "line": 94,
+      "line": 93,
       "match_key": "certs|GET|/acme/challenge/{param}",
       "method": "GET",
       "normalized_path": "/acme/challenge/{param}",
@@ -2403,7 +2393,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMEChallenge",
-      "line": 95,
+      "line": 94,
       "match_key": "certs|POST|/acme/challenge/{param}",
       "method": "POST",
       "normalized_path": "/acme/challenge/{param}",
@@ -2413,7 +2403,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMEFinalize",
-      "line": 96,
+      "line": 95,
       "match_key": "certs|POST|/acme/finalize/{param}",
       "method": "POST",
       "normalized_path": "/acme/finalize/{param}",
@@ -2423,7 +2413,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMECertDownload",
-      "line": 97,
+      "line": 96,
       "match_key": "certs|GET|/acme/cert/{param}",
       "method": "GET",
       "normalized_path": "/acme/cert/{param}",
@@ -2433,7 +2423,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleESTCACerts",
-      "line": 99,
+      "line": 98,
       "match_key": "certs|GET|/est/.well-known/est/cacerts",
       "method": "GET",
       "normalized_path": "/est/.well-known/est/cacerts",
@@ -2443,7 +2433,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleESTCSRAttrs",
-      "line": 100,
+      "line": 99,
       "match_key": "certs|GET|/est/.well-known/est/csrattrs",
       "method": "GET",
       "normalized_path": "/est/.well-known/est/csrattrs",
@@ -2453,7 +2443,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleESTSimpleEnroll",
-      "line": 101,
+      "line": 100,
       "match_key": "certs|POST|/est/.well-known/est/simpleenroll",
       "method": "POST",
       "normalized_path": "/est/.well-known/est/simpleenroll",
@@ -2463,7 +2453,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleESTSimpleReenroll",
-      "line": 102,
+      "line": 101,
       "match_key": "certs|POST|/est/.well-known/est/simplereenroll",
       "method": "POST",
       "normalized_path": "/est/.well-known/est/simplereenroll",
@@ -2473,7 +2463,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleESTServerKeygen",
-      "line": 103,
+      "line": 102,
       "match_key": "certs|POST|/est/.well-known/est/serverkeygen",
       "method": "POST",
       "normalized_path": "/est/.well-known/est/serverkeygen",
@@ -2483,7 +2473,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleSCEPGet",
-      "line": 105,
+      "line": 104,
       "match_key": "certs|GET|/scep/pkiclient.exe",
       "method": "GET",
       "normalized_path": "/scep/pkiclient.exe",
@@ -2493,7 +2483,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleSCEPPKIOperation",
-      "line": 106,
+      "line": 105,
       "match_key": "certs|POST|/scep/pkiclient.exe",
       "method": "POST",
       "normalized_path": "/scep/pkiclient.exe",
@@ -2503,7 +2493,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleCMPv2",
-      "line": 108,
+      "line": 107,
       "match_key": "certs|POST|/cmpv2",
       "method": "POST",
       "normalized_path": "/cmpv2",
@@ -2513,7 +2503,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleCMPv2Confirm",
-      "line": 109,
+      "line": 108,
       "match_key": "certs|POST|/cmpv2/confirm",
       "method": "POST",
       "normalized_path": "/cmpv2/confirm",
@@ -8233,7 +8223,7 @@
     {
       "file": "services/reconciler/main.go",
       "handler": "func(w http.ResponseWriter, r *http.Request) {\n\t\twriteJSON(w, http.StatusOK, runner.Status())\n\t}",
-      "line": 57,
+      "line": 63,
       "match_key": "reconciler|GET|/reconciler/status",
       "method": "GET",
       "normalized_path": "/reconciler/status",
@@ -8243,7 +8233,7 @@
     {
       "file": "services/reconciler/main.go",
       "handler": "func(w http.ResponseWriter, r *http.Request) {\n\t\tw.WriteHeader(http.StatusOK)\n\t}",
-      "line": 60,
+      "line": 66,
       "match_key": "reconciler|GET|/healthz",
       "method": "GET",
       "normalized_path": "/healthz",
@@ -8873,7 +8863,7 @@
     {
       "file": "services/watchdog/main.go",
       "handler": "func(w http.ResponseWriter, r *http.Request) {\n\t\twriteJSON(w, http.StatusOK, probe.Snapshot())\n\t}",
-      "line": 42,
+      "line": 48,
       "match_key": "watchdog|GET|/watchdog/heartbeats",
       "method": "GET",
       "normalized_path": "/watchdog/heartbeats",
@@ -8883,7 +8873,7 @@
     {
       "file": "services/watchdog/main.go",
       "handler": "func(w http.ResponseWriter, r *http.Request) {\n\t\twriteJSON(w, http.StatusOK, pb.Incidents())\n\t}",
-      "line": 45,
+      "line": 51,
       "match_key": "watchdog|GET|/watchdog/incidents",
       "method": "GET",
       "normalized_path": "/watchdog/incidents",
@@ -8893,7 +8883,7 @@
     {
       "file": "services/watchdog/main.go",
       "handler": "func(w http.ResponseWriter, r *http.Request) {\n\t\tw.WriteHeader(http.StatusOK)\n\t}",
-      "line": 48,
+      "line": 54,
       "match_key": "watchdog|GET|/healthz",
       "method": "GET",
       "normalized_path": "/healthz",
@@ -9924,18 +9914,8 @@
     },
     {
       "file": "services/certs/handler.go",
-      "handler": "h.handleIssueInternalMTLS",
-      "line": 79,
-      "match_key": "certs|POST|/certs/internal/mtls/{param}",
-      "method": "POST",
-      "normalized_path": "/certs/internal/mtls/{param}",
-      "path": "/certs/internal/mtls/{service}",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
       "handler": "h.handleMerkleEpoch",
-      "line": 84,
+      "line": 83,
       "match_key": "certs|GET|/certs/merkle/epochs/{param}",
       "method": "GET",
       "normalized_path": "/certs/merkle/epochs/{param}",
@@ -9945,7 +9925,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMEDirectory",
-      "line": 88,
+      "line": 87,
       "match_key": "certs|GET|/acme/directory",
       "method": "GET",
       "normalized_path": "/acme/directory",
@@ -9955,7 +9935,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMENonce",
-      "line": 89,
+      "line": 88,
       "match_key": "certs|HEAD|/acme/new-nonce",
       "method": "HEAD",
       "normalized_path": "/acme/new-nonce",
@@ -9965,7 +9945,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMENonce",
-      "line": 90,
+      "line": 89,
       "match_key": "certs|POST|/acme/new-nonce",
       "method": "POST",
       "normalized_path": "/acme/new-nonce",
@@ -9975,7 +9955,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMERenewalInfo",
-      "line": 93,
+      "line": 92,
       "match_key": "certs|GET|/acme/renewal-info/{param}",
       "method": "GET",
       "normalized_path": "/acme/renewal-info/{param}",
@@ -9985,7 +9965,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleACMECertDownload",
-      "line": 97,
+      "line": 96,
       "match_key": "certs|GET|/acme/cert/{param}",
       "method": "GET",
       "normalized_path": "/acme/cert/{param}",
@@ -9995,7 +9975,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleESTCACerts",
-      "line": 99,
+      "line": 98,
       "match_key": "certs|GET|/est/.well-known/est/cacerts",
       "method": "GET",
       "normalized_path": "/est/.well-known/est/cacerts",
@@ -10005,7 +9985,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleESTSimpleReenroll",
-      "line": 102,
+      "line": 101,
       "match_key": "certs|POST|/est/.well-known/est/simplereenroll",
       "method": "POST",
       "normalized_path": "/est/.well-known/est/simplereenroll",
@@ -12435,7 +12415,7 @@
     {
       "file": "services/reconciler/main.go",
       "handler": "func(w http.ResponseWriter, r *http.Request) {\n\t\twriteJSON(w, http.StatusOK, runner.Status())\n\t}",
-      "line": 57,
+      "line": 63,
       "match_key": "reconciler|GET|/reconciler/status",
       "method": "GET",
       "normalized_path": "/reconciler/status",
@@ -12445,7 +12425,7 @@
     {
       "file": "services/reconciler/main.go",
       "handler": "func(w http.ResponseWriter, r *http.Request) {\n\t\tw.WriteHeader(http.StatusOK)\n\t}",
-      "line": 60,
+      "line": 66,
       "match_key": "reconciler|GET|/healthz",
       "method": "GET",
       "normalized_path": "/healthz",
@@ -12615,7 +12595,7 @@
     {
       "file": "services/watchdog/main.go",
       "handler": "func(w http.ResponseWriter, r *http.Request) {\n\t\twriteJSON(w, http.StatusOK, probe.Snapshot())\n\t}",
-      "line": 42,
+      "line": 48,
       "match_key": "watchdog|GET|/watchdog/heartbeats",
       "method": "GET",
       "normalized_path": "/watchdog/heartbeats",
@@ -12625,7 +12605,7 @@
     {
       "file": "services/watchdog/main.go",
       "handler": "func(w http.ResponseWriter, r *http.Request) {\n\t\twriteJSON(w, http.StatusOK, pb.Incidents())\n\t}",
-      "line": 45,
+      "line": 51,
       "match_key": "watchdog|GET|/watchdog/incidents",
       "method": "GET",
       "normalized_path": "/watchdog/incidents",
@@ -12635,7 +12615,7 @@
     {
       "file": "services/watchdog/main.go",
       "handler": "func(w http.ResponseWriter, r *http.Request) {\n\t\tw.WriteHeader(http.StatusOK)\n\t}",
-      "line": 48,
+      "line": 54,
       "match_key": "watchdog|GET|/healthz",
       "method": "GET",
       "normalized_path": "/healthz",
@@ -19363,7 +19343,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "inputRef.current?.click()} style={{ padding: \"8px 14px\", borderRadius: 10, bo...",
-      "line": 278,
+      "line": 280,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19371,7 +19351,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ onFileChange(null); if (inputRef.current) }} style={ } > Clear",
-      "line": 292,
+      "line": 294,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19379,7 +19359,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "toggleScope(section)} style={{fontSize:11,padding:\"4px 10px\",borderRadius:6,b...",
-      "line": 837,
+      "line": 839,
       "tabs": [],
       "tag": "button"
     },
@@ -19467,6 +19447,14 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Open Interfaces",
+      "line": 2415,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
+      "handler": "",
+      "label": "}>Cancel",
       "line": 2417,
       "tabs": [],
       "tag": "Btn"
@@ -19474,16 +19462,8 @@
     {
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
-      "label": "}>Cancel",
-      "line": 2419,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
       "label": "void saveTLSConfig()} disabled= >",
-      "line": 2420,
+      "line": 2418,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19491,7 +19471,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 2427,
+      "line": 2425,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19499,7 +19479,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSystemState()} disabled= >",
-      "line": 2428,
+      "line": 2426,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19507,7 +19487,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{try catch(e){onToast(`Apply failed: $ `);}}} disabled= >Apply Network Config",
-      "line": 2429,
+      "line": 2427,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19515,7 +19495,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 2454,
+      "line": 2452,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19523,7 +19503,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void testSnmpSettings()} disabled= >",
-      "line": 2455,
+      "line": 2453,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19531,7 +19511,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSnmpSettings()} disabled= >",
-      "line": 2456,
+      "line": 2454,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19539,7 +19519,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSystemState()} disabled= >",
-      "line": 2538,
+      "line": 2536,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19547,7 +19527,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadTags()}>Refresh",
-      "line": 2551,
+      "line": 2549,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19555,7 +19535,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void addTag()} disabled= >",
-      "line": 2556,
+      "line": 2554,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19563,7 +19543,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void removeTag(name,usageCount)} disabled= >Delete",
-      "line": 2571,
+      "line": 2569,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19571,7 +19551,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadPasswordPolicy()} disabled= >",
-      "line": 2581,
+      "line": 2579,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19579,7 +19559,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void savePasswordPolicy()} disabled= >",
-      "line": 2581,
+      "line": 2579,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19587,7 +19567,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSecurityPolicy()} disabled= >",
-      "line": 2606,
+      "line": 2604,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19595,7 +19575,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadAccessHardening()} disabled= >",
-      "line": 2625,
+      "line": 2623,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19603,7 +19583,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveAccessHardening()} disabled= >",
-      "line": 2626,
+      "line": 2624,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19611,7 +19591,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void Promise.all([loadAccessHardening(),loadHealth()])} disabled= >",
-      "line": 2657,
+      "line": 2655,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19619,7 +19599,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openNetIfModal()} disabled= >+ Add Interface",
-      "line": 2658,
+      "line": 2656,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19627,7 +19607,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void toggleNetIfEnabled(iface)}>",
-      "line": 2689,
+      "line": 2687,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19635,7 +19615,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openNetIfModal(iface)}>Edit",
-      "line": 2690,
+      "line": 2688,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19643,7 +19623,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void deleteNetIf(iface.interface_name)}>Delete",
-      "line": 2691,
+      "line": 2689,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19651,7 +19631,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Cancel",
-      "line": 2768,
+      "line": 2766,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19659,7 +19639,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveNetIf()}>",
-      "line": 2769,
+      "line": 2767,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19667,7 +19647,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadSystemState()} disabled= >",
-      "line": 2775,
+      "line": 2773,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19675,7 +19655,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSystemState()} disabled= >",
-      "line": 2775,
+      "line": 2773,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19683,7 +19663,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setPanel(\"network\")}>Open Network",
-      "line": 2871,
+      "line": 2869,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19691,7 +19671,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setPanel(\"interfaces\")}>Open Interfaces",
-      "line": 2872,
+      "line": 2870,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19699,7 +19679,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>",
-      "line": 2882,
+      "line": 2880,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19707,7 +19687,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void openCli()} disabled= >",
-      "line": 2889,
+      "line": 2887,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19715,7 +19695,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ if(!session?.token) return; setHsmSaving(true); try{ const payload= ; const...",
-      "line": 2902,
+      "line": 2900,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19723,7 +19703,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; const lib=String(hsm.library_path||\"\").trim(); i...",
-      "line": 2933,
+      "line": 2931,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19731,7 +19711,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setHsm((p)=>( ))}>Use",
-      "line": 2936,
+      "line": 2934,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19739,7 +19719,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; setGovSaving(true); try{await updateGovernanceSe...",
-      "line": 2943,
+      "line": 2941,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19747,6 +19727,22 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!String(smtpTo||\"\").trim()) setSmtpTesting(true); try ca...",
+      "line": 2947,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
+      "handler": "",
+      "label": "{if(!session?.token) return; setWebhookTesting((p)=>( )); try catch(error){if...",
+      "line": 2948,
+      "tabs": [],
+      "tag": "Btn"
+    },
+    {
+      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
+      "handler": "",
+      "label": "{if(!session?.token) return; setWebhookTesting((p)=>( )); try catch(error){if...",
       "line": 2949,
       "tabs": [],
       "tag": "Btn"
@@ -19754,24 +19750,8 @@
     {
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
-      "label": "{if(!session?.token) return; setWebhookTesting((p)=>( )); try catch(error){if...",
-      "line": 2950,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
-      "label": "{if(!session?.token) return; setWebhookTesting((p)=>( )); try catch(error){if...",
-      "line": 2951,
-      "tabs": [],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
-      "handler": "",
       "label": "void loadJobs()}>",
-      "line": 2956,
+      "line": 2954,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19779,7 +19759,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveSystemState()} disabled= >",
-      "line": 2956,
+      "line": 2954,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19787,7 +19767,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{ if(!session?.token) return; if(backupScope===\"tenant\"&&!String(backupTenant...",
-      "line": 2981,
+      "line": 2979,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19795,7 +19775,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "dl(sh.file_name,sh.content_base64,sh.content_type)}>Download",
-      "line": 3005,
+      "line": 3003,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19803,7 +19783,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setBackupCreatedShares([])}>All shares handed out: close",
-      "line": 3008,
+      "line": 3006,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19811,7 +19791,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "backupShareInputRef.current?.click()}>",
-      "line": 3036,
+      "line": 3034,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19819,7 +19799,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Clear",
-      "line": 3037,
+      "line": 3035,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19827,7 +19807,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void verifyBackup()} disabled= >",
-      "line": 3042,
+      "line": 3040,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19835,7 +19815,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void restoreBackup()} disabled= >",
-      "line": 3043,
+      "line": 3041,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19843,7 +19823,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDownloading(`$ :artifact`); try ca...",
-      "line": 3057,
+      "line": 3055,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19851,7 +19831,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDownloading(`$ :key`); try catch(e...",
-      "line": 3057,
+      "line": 3055,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19859,7 +19839,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; setBackupDeleting(id); try catch(error){if(...",
-      "line": 3057,
+      "line": 3055,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19867,7 +19847,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void refreshAlertRules()} disabled= >",
-      "line": 3063,
+      "line": 3061,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19875,7 +19855,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openRuleModal()}>Create Rule",
-      "line": 3063,
+      "line": 3061,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19883,7 +19863,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; try{await updateReportingRule(session,id, )...",
-      "line": 3080,
+      "line": 3078,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19891,7 +19871,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openRuleModal(rule)}>Edit",
-      "line": 3083,
+      "line": 3081,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19899,7 +19879,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token||!id) return; try catch(error){if(!sessionGuard(error)) o...",
-      "line": 3084,
+      "line": 3082,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19907,7 +19887,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setRuleModalOpen(false)}>Cancel",
-      "line": 3134,
+      "line": 3132,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19915,7 +19895,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void handleSaveRule()} disabled= >",
-      "line": 3135,
+      "line": 3133,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19923,7 +19903,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadGovPolicies()} disabled= >",
-      "line": 3142,
+      "line": 3140,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19931,7 +19911,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openGovPolicyModal()}>+ Create Policy",
-      "line": 3143,
+      "line": 3141,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19939,7 +19919,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "openGovPolicyModal(policy)} style={{fontSize:10,padding:\"3px 8px\",borderRadiu...",
-      "line": 3179,
+      "line": 3177,
       "tabs": [],
       "tag": "button"
     },
@@ -19947,7 +19927,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "{if(!session?.token) return; try{await updateGovernancePolicy(session,policy....",
-      "line": 3180,
+      "line": 3178,
       "tabs": [],
       "tag": "button"
     },
@@ -19955,7 +19935,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "}>Select All",
-      "line": 3253,
+      "line": 3251,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19963,7 +19943,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setGpTriggers([])}>Clear All",
-      "line": 3254,
+      "line": 3252,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19971,7 +19951,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "setGovPolicyModal(false)}>Cancel",
-      "line": 3297,
+      "line": 3295,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19979,7 +19959,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void saveGovPolicy()} disabled= >",
-      "line": 3298,
+      "line": 3296,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19987,7 +19967,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void loadFDEStatus()} disabled= >",
-      "line": 3306,
+      "line": 3304,
       "tabs": [],
       "tag": "Btn"
     },
@@ -19995,7 +19975,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void doFDEIntegrityCheck()} disabled= >",
-      "line": 3342,
+      "line": 3340,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20003,7 +19983,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void doFDERotateKey()} disabled= >",
-      "line": 3347,
+      "line": 3345,
       "tabs": [],
       "tag": "Btn"
     },
@@ -20011,7 +19991,7 @@
       "file": "web/dashboard/src/modules/admin/SystemAdminTab.tsx",
       "handler": "",
       "label": "void doFDETestRecovery()} disabled= style={ }>",
-      "line": 3368,
+      "line": 3366,
       "tabs": [],
       "tag": "Btn"
     },
@@ -22190,7 +22170,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/ca?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 429,
+      "line": 421,
       "match_key": "certs|GET|/certs/ca",
       "method": "GET",
       "normalized_path": "/certs/ca",
@@ -22203,7 +22183,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/certs/ca\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 434,
+      "line": 426,
       "match_key": "certs|POST|/certs/ca",
       "method": "POST",
       "normalized_path": "/certs/ca",
@@ -22216,7 +22196,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/ca/${encodeURIComponent(String(caId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 450,
+      "line": 442,
       "match_key": "certs|DELETE|/certs/ca/{param}",
       "method": "DELETE",
       "normalized_path": "/certs/ca/{param}",
@@ -22229,7 +22209,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs?${q.toString()}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 474,
+      "line": 466,
       "match_key": "certs|GET|/certs",
       "method": "GET",
       "normalized_path": "/certs",
@@ -22242,7 +22222,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/certs\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 482,
+      "line": 474,
       "match_key": "certs|POST|/certs",
       "method": "POST",
       "normalized_path": "/certs",
@@ -22255,7 +22235,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/certs/sign-csr\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 499,
+      "line": 491,
       "match_key": "certs|POST|/certs/sign-csr",
       "method": "POST",
       "normalized_path": "/certs/sign-csr",
@@ -22268,7 +22248,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/${encodeURIComponent(String(certId || \"\").trim())}/renew?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 515,
+      "line": 507,
       "match_key": "certs|POST|/certs/{param}/renew",
       "method": "POST",
       "normalized_path": "/certs/{param}/renew",
@@ -22281,7 +22261,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/${encodeURIComponent(String(certId || \"\").trim())}/revoke?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 534,
+      "line": 526,
       "match_key": "certs|POST|/certs/{param}/revoke",
       "method": "POST",
       "normalized_path": "/certs/{param}/revoke",
@@ -22294,7 +22274,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/${encodeURIComponent(String(certId || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 548,
+      "line": 540,
       "match_key": "certs|DELETE|/certs/{param}",
       "method": "DELETE",
       "normalized_path": "/certs/{param}",
@@ -22307,7 +22287,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/download/${encodeURIComponent(String(certId || \"\").trim())}?${q.toString()}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 577,
+      "line": 569,
       "match_key": "certs|GET|/certs/download/{param}",
       "method": "GET",
       "normalized_path": "/certs/download/{param}",
@@ -22320,7 +22300,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/crl?${tenantQuery(session)}&ca_id=${encodeURIComponent(String(caId || \"\").trim())}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 589,
+      "line": 581,
       "match_key": "certs|GET|/certs/crl",
       "method": "GET",
       "normalized_path": "/certs/crl",
@@ -22333,7 +22313,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/ocsp?${q.toString()}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 608,
+      "line": 600,
       "match_key": "certs|GET|/certs/ocsp",
       "method": "GET",
       "normalized_path": "/certs/ocsp",
@@ -22346,7 +22326,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/profiles?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 612,
+      "line": 604,
       "match_key": "certs|GET|/certs/profiles",
       "method": "GET",
       "normalized_path": "/certs/profiles",
@@ -22359,7 +22339,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/inventory?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 617,
+      "line": 609,
       "match_key": "certs|GET|/certs/inventory",
       "method": "GET",
       "normalized_path": "/certs/inventory",
@@ -22372,7 +22352,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/security/status?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 622,
+      "line": 614,
       "match_key": "certs|GET|/certs/security/status",
       "method": "GET",
       "normalized_path": "/certs/security/status",
@@ -22385,7 +22365,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/alert-policy?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 636,
+      "line": 628,
       "match_key": "certs|GET|/certs/alert-policy",
       "method": "GET",
       "normalized_path": "/certs/alert-policy",
@@ -22398,7 +22378,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/alert-policy?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 644,
+      "line": 636,
       "match_key": "certs|PUT|/certs/alert-policy",
       "method": "PUT",
       "normalized_path": "/certs/alert-policy",
@@ -22411,7 +22391,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/clm/status?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 685,
+      "line": 677,
       "match_key": "certs|GET|/certs/clm/status",
       "method": "GET",
       "normalized_path": "/certs/clm/status",
@@ -22424,7 +22404,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/clm/policy?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 693,
+      "line": 685,
       "match_key": "certs|PUT|/certs/clm/policy",
       "method": "PUT",
       "normalized_path": "/certs/clm/policy",
@@ -22437,7 +22417,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 707,
+      "line": 699,
       "match_key": "certs|GET|/certs/renewal-intelligence",
       "method": "GET",
       "normalized_path": "/certs/renewal-intelligence",
@@ -22450,7 +22430,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence/refresh?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 716,
+      "line": 708,
       "match_key": "certs|POST|/certs/renewal-intelligence/refresh",
       "method": "POST",
       "normalized_path": "/certs/renewal-intelligence/refresh",
@@ -22463,7 +22443,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence/${encodeURIComponent(String(certId || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 728,
+      "line": 720,
       "match_key": "certs|GET|/certs/renewal-intelligence/{param}",
       "method": "GET",
       "normalized_path": "/certs/renewal-intelligence/{param}",
@@ -22476,7 +22456,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/star/summary?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 737,
+      "line": 729,
       "match_key": "certs|GET|/certs/star/summary",
       "method": "GET",
       "normalized_path": "/certs/star/summary",
@@ -22489,7 +22469,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions?${q.toString()}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 749,
+      "line": 741,
       "match_key": "certs|GET|/certs/star/subscriptions",
       "method": "GET",
       "normalized_path": "/certs/star/subscriptions",
@@ -22502,7 +22482,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/certs/star/subscriptions\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 761,
+      "line": 753,
       "match_key": "certs|POST|/certs/star/subscriptions",
       "method": "POST",
       "normalized_path": "/certs/star/subscriptions",
@@ -22515,7 +22495,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || \"\").trim())}/refresh`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 777,
+      "line": 769,
       "match_key": "certs|POST|/certs/star/subscriptions/{param}/refresh",
       "method": "POST",
       "normalized_path": "/certs/star/subscriptions/{param}/refresh",
@@ -22528,7 +22508,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || \"\").trim())}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 794,
+      "line": 786,
       "match_key": "certs|DELETE|/certs/star/subscriptions/{param}",
       "method": "DELETE",
       "normalized_path": "/certs/star/subscriptions/{param}",
@@ -22541,7 +22521,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/certs/upload-3p\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 808,
+      "line": 800,
       "match_key": "certs|POST|/certs/upload-3p",
       "method": "POST",
       "normalized_path": "/certs/upload-3p",
@@ -22554,7 +22534,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/protocols?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 826,
+      "line": 818,
       "match_key": "certs|GET|/certs/protocols",
       "method": "GET",
       "normalized_path": "/certs/protocols",
@@ -22567,7 +22547,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/protocols/schema?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 831,
+      "line": 823,
       "match_key": "certs|GET|/certs/protocols/schema",
       "method": "GET",
       "normalized_path": "/certs/protocols/schema",
@@ -22580,7 +22560,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/protocols/${encodeURIComponent(protocol)}?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 844,
+      "line": 836,
       "match_key": "certs|PUT|/certs/protocols/{param}",
       "method": "PUT",
       "normalized_path": "/certs/protocols/{param}",
@@ -22593,7 +22573,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/acme/new-account\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 861,
+      "line": 853,
       "match_key": "certs|POST|/acme/new-account",
       "method": "POST",
       "normalized_path": "/acme/new-account",
@@ -22606,7 +22586,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/acme/new-order\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 871,
+      "line": 863,
       "match_key": "certs|POST|/acme/new-order",
       "method": "POST",
       "normalized_path": "/acme/new-order",
@@ -22619,7 +22599,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/acme/challenge/${encodeURIComponent(challengeId)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 891,
+      "line": 883,
       "match_key": "certs|POST|/acme/challenge/{param}",
       "method": "POST",
       "normalized_path": "/acme/challenge/{param}",
@@ -22632,7 +22612,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/acme/finalize/${encodeURIComponent(orderId)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 902,
+      "line": 894,
       "match_key": "certs|POST|/acme/finalize/{param}",
       "method": "POST",
       "normalized_path": "/acme/finalize/{param}",
@@ -22645,7 +22625,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/est/.well-known/est/serverkeygen\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 918,
+      "line": 910,
       "match_key": "certs|POST|/est/.well-known/est/serverkeygen",
       "method": "POST",
       "normalized_path": "/est/.well-known/est/serverkeygen",
@@ -22658,7 +22638,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/scep/pkiclient.exe?operation=pkioperation\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 934,
+      "line": 926,
       "match_key": "certs|POST|/scep/pkiclient.exe",
       "method": "POST",
       "normalized_path": "/scep/pkiclient.exe",
@@ -22671,7 +22651,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/cmpv2\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 955,
+      "line": 947,
       "match_key": "certs|POST|/cmpv2",
       "method": "POST",
       "normalized_path": "/cmpv2",
@@ -22684,7 +22664,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/acme/challenge/${encodeURIComponent(challengeId)}?${tenantQuery(session)}&order_id=${encodeURIComponent(orderId...",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 979,
+      "line": 971,
       "match_key": "certs|GET|/acme/challenge/{param}",
       "method": "GET",
       "normalized_path": "/acme/challenge/{param}",
@@ -22697,7 +22677,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/est/.well-known/est/csrattrs?${tenantQuery(session)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 990,
+      "line": 982,
       "match_key": "certs|GET|/est/.well-known/est/csrattrs",
       "method": "GET",
       "normalized_path": "/est/.well-known/est/csrattrs",
@@ -22710,7 +22690,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/est/.well-known/est/simpleenroll\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1003,
+      "line": 995,
       "match_key": "certs|POST|/est/.well-known/est/simpleenroll",
       "method": "POST",
       "normalized_path": "/est/.well-known/est/simpleenroll",
@@ -22723,7 +22703,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/scep/pkiclient.exe?${q.toString()}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1033,
+      "line": 1025,
       "match_key": "certs|GET|/scep/pkiclient.exe",
       "method": "GET",
       "normalized_path": "/scep/pkiclient.exe",
@@ -22736,7 +22716,7 @@
       "dynamic": false,
       "expression": "serviceRequest(\"certs\", \"/cmpv2/confirm\")",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1049,
+      "line": 1041,
       "match_key": "certs|POST|/cmpv2/confirm",
       "method": "POST",
       "normalized_path": "/cmpv2/confirm",
@@ -22749,7 +22729,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/merkle/epochs?${qs.toString()}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1105,
+      "line": 1097,
       "match_key": "certs|GET|/certs/merkle/epochs",
       "method": "GET",
       "normalized_path": "/certs/merkle/epochs",
@@ -22762,7 +22742,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/merkle/build?tenant_id=${encodeURIComponent(session.tenantId)}&max_leaves=${maxLeaves}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1116,
+      "line": 1108,
       "match_key": "certs|POST|/certs/merkle/build",
       "method": "POST",
       "normalized_path": "/certs/merkle/build",
@@ -22775,7 +22755,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/merkle/proof/${encodeURIComponent(certId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1127,
+      "line": 1119,
       "match_key": "certs|GET|/certs/merkle/proof/{param}",
       "method": "GET",
       "normalized_path": "/certs/merkle/proof/{param}",
@@ -22788,7 +22768,7 @@
       "dynamic": true,
       "expression": "serviceRequest(\"certs\", `/certs/merkle/verify?tenant_id=${encodeURIComponent(session.tenantId)}`)",
       "file": "web/dashboard/src/lib/certs.ts",
-      "line": 1137,
+      "line": 1129,
       "match_key": "certs|POST|/certs/merkle/verify",
       "method": "POST",
       "normalized_path": "/certs/merkle/verify",
@@ -28427,7 +28407,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-26T12:22:37Z",
+  "generated_at": "2026-09-26T15:02:41Z",
   "navigation": [
     {
       "group": "Overview",
@@ -36842,7 +36822,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/certs/ca\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 434,
+          "line": 426,
           "source": "serviceRequest"
         }
       ],
@@ -36857,7 +36837,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 117,
+      "handler_line": 116,
       "handler_name": "handleCreateCA",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37010,7 +36990,7 @@
             "ListRevokedByCA"
           ],
           "internal_package_calls": [],
-          "line": 136,
+          "line": 159,
           "name": "CreateCA",
           "receiver_calls": [
             "s.keycore.EnsureKey",
@@ -37066,7 +37046,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/ca?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 429,
+          "line": 421,
           "source": "serviceRequest"
         }
       ],
@@ -37081,7 +37061,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 132,
+      "handler_line": 131,
       "handler_name": "handleListCAs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37115,7 +37095,7 @@
             "ensureRuntimeRootCA"
           ],
           "internal_package_calls": [],
-          "line": 293,
+          "line": 316,
           "name": "ListCAs",
           "receiver_calls": [],
           "store_calls": [
@@ -37133,7 +37113,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/ca/${encodeURIComponent(String(caId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 450,
+          "line": 442,
           "source": "serviceRequest"
         }
       ],
@@ -37152,7 +37132,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 146,
+      "handler_line": 145,
       "handler_name": "handleDeleteCA",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37206,7 +37186,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 309,
+          "line": 332,
           "name": "DeleteCA",
           "receiver_calls": [
             "s.exposure.Retire"
@@ -37240,7 +37220,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/certs\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 482,
+          "line": 474,
           "source": "serviceRequest"
         }
       ],
@@ -37255,7 +37235,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 164,
+      "handler_line": 163,
       "handler_name": "handleIssueCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37355,7 +37335,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 441,
+          "line": 464,
           "name": "IssueCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -37381,7 +37361,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/certs/sign-csr\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 499,
+          "line": 491,
           "source": "serviceRequest"
         }
       ],
@@ -37399,7 +37379,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 183,
+      "handler_line": 182,
       "handler_name": "handleSignCSR",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37499,7 +37479,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 441,
+          "line": 464,
           "name": "IssueCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -37531,7 +37511,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs?${q.toString()}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 474,
+          "line": 466,
           "source": "serviceRequest"
         }
       ],
@@ -37549,7 +37529,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 208,
+      "handler_line": 207,
       "handler_name": "handleListCerts",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37581,7 +37561,7 @@
             "RunTenantExpiryAlertSweep"
           ],
           "internal_package_calls": [],
-          "line": 623,
+          "line": 646,
           "name": "ListCertificates",
           "receiver_calls": [],
           "store_calls": [
@@ -37609,7 +37589,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 226,
+      "handler_line": 225,
       "handler_name": "handleGetCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37637,7 +37617,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 632,
+          "line": 655,
           "name": "GetCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -37655,7 +37635,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/${encodeURIComponent(String(certId || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 548,
+          "line": 540,
           "source": "serviceRequest"
         }
       ],
@@ -37672,7 +37652,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 317,
+      "handler_line": 316,
       "handler_name": "handleDeleteCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37712,7 +37692,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 903,
+          "line": 926,
           "name": "DeleteCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -37732,7 +37712,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/download/${encodeURIComponent(String(certId || \"\").trim())}?${q.toString()}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 577,
+          "line": 569,
           "source": "serviceRequest"
         }
       ],
@@ -37751,7 +37731,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 244,
+      "handler_line": 243,
       "handler_name": "handleDownloadCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37807,7 +37787,7 @@
             "caChain"
           ],
           "internal_package_calls": [],
-          "line": 641,
+          "line": 664,
           "name": "DownloadCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -37825,7 +37805,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/${encodeURIComponent(String(certId || \"\").trim())}/renew?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 515,
+          "line": 507,
           "source": "serviceRequest"
         }
       ],
@@ -37841,7 +37821,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 274,
+      "handler_line": 273,
       "handler_name": "handleRenewCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37879,7 +37859,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 840,
+          "line": 863,
           "name": "RenewCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -37897,7 +37877,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/${encodeURIComponent(String(certId || \"\").trim())}/revoke?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 534,
+          "line": 526,
           "source": "serviceRequest"
         }
       ],
@@ -37913,7 +37893,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 296,
+      "handler_line": 295,
       "handler_name": "handleRevokeCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37951,7 +37931,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 879,
+          "line": 902,
           "name": "RevokeCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -37979,7 +37959,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 334,
+      "handler_line": 333,
       "handler_name": "handleCreateProfile",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38023,7 +38003,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 380,
+          "line": 403,
           "name": "CreateProfile",
           "receiver_calls": [],
           "store_calls": [
@@ -38043,7 +38023,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/profiles?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 612,
+          "line": 604,
           "source": "serviceRequest"
         }
       ],
@@ -38058,7 +38038,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 349,
+      "handler_line": 348,
       "handler_name": "handleListProfiles",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38090,7 +38070,7 @@
             "ensureDefaultProfiles"
           ],
           "internal_package_calls": [],
-          "line": 418,
+          "line": 441,
           "name": "ListProfiles",
           "receiver_calls": [],
           "store_calls": [
@@ -38118,7 +38098,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 363,
+      "handler_line": 362,
       "handler_name": "handleGetProfile",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38150,7 +38130,7 @@
             "ensureDefaultProfiles"
           ],
           "internal_package_calls": [],
-          "line": 429,
+          "line": 452,
           "name": "GetProfile",
           "receiver_calls": [],
           "store_calls": [
@@ -38176,7 +38156,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 381,
+      "handler_line": 380,
       "handler_name": "handleValidatePQC",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38214,7 +38194,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 936,
+          "line": 959,
           "name": "ValidatePQCChain",
           "receiver_calls": [],
           "store_calls": [
@@ -38242,7 +38222,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 396,
+      "handler_line": 395,
       "handler_name": "handleOTSStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38274,7 +38254,7 @@
             "GetCA"
           ],
           "internal_package_calls": [],
-          "line": 1004,
+          "line": 1027,
           "name": "GetOTSStatus",
           "receiver_calls": [],
           "store_calls": [
@@ -38301,7 +38281,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 410,
+      "handler_line": 409,
       "handler_name": "handleMigratePQC",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38341,7 +38321,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 970,
+          "line": 993,
           "name": "MigrateToPQC",
           "receiver_calls": [],
           "store_calls": [
@@ -38367,7 +38347,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 437,
+      "handler_line": 436,
       "handler_name": "handlePQCReadiness",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38395,7 +38375,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1030,
+          "line": 1053,
           "name": "GetPQCReadiness",
           "receiver_calls": [],
           "store_calls": [
@@ -38413,7 +38393,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/crl?${tenantQuery(session)}&ca_id=${encodeURIComponent(String(caId || \"\").trim())}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 589,
+          "line": 581,
           "source": "serviceRequest"
         }
       ],
@@ -38430,7 +38410,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 451,
+      "handler_line": 450,
       "handler_name": "handleCRL",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38445,21 +38425,21 @@
       "service": "certs",
       "service_external_package_calls": [
         "bytes.TrimSpace",
-        "bytes.Equal",
         "context.Background",
-        "crypto/ecdsa.GenerateKey",
-        "crypto/ed25519.GenerateKey",
-        "crypto/elliptic.P384",
-        "crypto/elliptic.P256",
         "crypto/fips140.Enforced",
         "crypto/rand.Int",
         "crypto/rand.Read",
-        "crypto/rsa.GenerateKey",
         "crypto/sha256.Sum256",
         "crypto/x509.CreateRevocationList",
-        "crypto/x509.ParseCertificateRequest",
-        "crypto/x509.ParseCertificate",
-        "crypto/x509.ParsePKCS8PrivateKey"
+        "encoding/json.Unmarshal",
+        "encoding/json.Marshal",
+        "encoding/pem.EncodeToMemory",
+        "errors.New",
+        "errors.Is",
+        "fmt.Errorf",
+        "fmt.Sprintf",
+        "math/big.NewInt",
+        "net.ParseIP"
       ],
       "service_helper_calls": [
         "GetCA",
@@ -38498,27 +38478,28 @@
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize",
         "pkg/crypto.EncryptEnvelope",
-        "pkg/crypto.DecryptEnvelope"
+        "pkg/crypto.DecryptEnvelope",
+        "pkg/mek.Load"
       ],
       "service_method_details": [
         {
           "external_package_calls": [
             "bytes.TrimSpace",
-            "bytes.Equal",
             "context.Background",
-            "crypto/ecdsa.GenerateKey",
-            "crypto/ed25519.GenerateKey",
-            "crypto/elliptic.P384",
-            "crypto/elliptic.P256",
             "crypto/fips140.Enforced",
             "crypto/rand.Int",
             "crypto/rand.Read",
-            "crypto/rsa.GenerateKey",
             "crypto/sha256.Sum256",
             "crypto/x509.CreateRevocationList",
-            "crypto/x509.ParseCertificateRequest",
-            "crypto/x509.ParseCertificate",
-            "crypto/x509.ParsePKCS8PrivateKey"
+            "encoding/json.Unmarshal",
+            "encoding/json.Marshal",
+            "encoding/pem.EncodeToMemory",
+            "errors.New",
+            "errors.Is",
+            "fmt.Errorf",
+            "fmt.Sprintf",
+            "math/big.NewInt",
+            "net.ParseIP"
           ],
           "file": "services/certs/service.go",
           "helper_calls": [
@@ -38577,17 +38558,13 @@
             "cmpv2Options",
             "RenewCertificate",
             "RevokeCertificate",
-            "IssueInternalMTLS",
-            "runtimeRootCAName",
-            "ensureRuntimeRootCA",
-            "normalizeAlgorithm",
-            "normalizeCertClass",
             "UploadThirdPartyCertificate",
             "parseAnyPrivateKeyPEM",
             "publicKeysEqual",
             "Public",
             "algorithmFromPublicKey",
             "certTypeFromUploadPurpose",
+            "normalizeCertClass",
             "CreateCertificate",
             "CACertBundle",
             "ListCAs",
@@ -38602,6 +38579,7 @@
             "defaultRuntimeMTLSProtocolOptions",
             "parseRuntimeMTLSProtocolOptions",
             "defaultRuntimeRootCANameFromEnv",
+            "runtimeRootCAName",
             "ACMEIssueNonce",
             "ACMEConsumeNonce",
             "ACMEChallengeInfo",
@@ -38618,6 +38596,7 @@
             "parseSignerPEM",
             "encryptSigner",
             "signerFingerprint",
+            "legacyMEK",
             "aesGCMEncryptRaw",
             "WrapDEK",
             "UnwrapDEK",
@@ -38627,39 +38606,27 @@
             "RewrapLegacyCASigners",
             "UpdateCASignerEncryption",
             "MaterializeRuntimeCerts",
+            "ensureRuntimeRootCA",
             "writeFileAtomically",
             "ensureRuntimeEndpointCert",
+            "EnsureInternalPKI",
+            "internalCertValidityDays",
+            "shareWithGroup",
+            "envInt",
             "CreateCA",
             "runtimeCertNeedsRenew",
             "Close",
             "signWithKeyCoreIfConfigured",
             "normalizeKeyBackend",
-            "Sign",
-            "enforceFIPS",
-            "addCertMetaExtensions",
-            "parseCSRPEM",
-            "normalizePrivateKeyToPKCS8PEM",
-            "generateSigningKey",
-            "generateLeafKey",
-            "selectExtKeyUsage",
-            "parseSubject",
-            "csrSANs",
-            "splitSANs",
-            "buildCASigningIntent",
-            "buildLeafSigningIntent",
-            "normalizeCALevel",
-            "normalizeCAType",
-            "isHybridAlgorithm",
-            "isPQCAlgorithm",
-            "isStatefulAlgorithm",
-            "zeroizeString"
+            "Sign"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize",
             "pkg/crypto.EncryptEnvelope",
-            "pkg/crypto.DecryptEnvelope"
+            "pkg/crypto.DecryptEnvelope",
+            "pkg/mek.Load"
           ],
-          "line": 1038,
+          "line": 1061,
           "name": "GenerateCRL",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -38668,6 +38635,7 @@
             "s.acmeRateMu.Unlock",
             "s.securityProvider.WrapDEK",
             "s.securityProvider.UnwrapDEK",
+            "s.mek.Load",
             "s.events.Publish",
             "s.securityProvider.Status",
             "s.keycore.Sign"
@@ -38707,6 +38675,7 @@
         "s.acmeRateMu.Unlock",
         "s.securityProvider.WrapDEK",
         "s.securityProvider.UnwrapDEK",
+        "s.mek.Load",
         "s.events.Publish",
         "s.securityProvider.Status",
         "s.keycore.Sign"
@@ -38743,7 +38712,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/ocsp?${q.toString()}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 608,
+          "line": 600,
           "source": "serviceRequest"
         }
       ],
@@ -38763,7 +38732,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 474,
+      "handler_line": 473,
       "handler_name": "handleOCSP",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38792,8 +38761,7 @@
         "net.ParseIP",
         "os.Getenv",
         "os.MkdirAll",
-        "os.Stat",
-        "os.ReadFile",
+        "path/filepath.Join",
         "strings.TrimSpace",
         "time.Now"
       ],
@@ -38834,7 +38802,8 @@
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize",
         "pkg/crypto.EncryptEnvelope",
-        "pkg/crypto.DecryptEnvelope"
+        "pkg/crypto.DecryptEnvelope",
+        "pkg/mek.Load"
       ],
       "service_method_details": [
         {
@@ -38853,8 +38822,8 @@
             "net.ParseIP",
             "os.Getenv",
             "os.MkdirAll",
-            "os.Stat",
-            "os.ReadFile"
+            "path/filepath.Join",
+            "strings.TrimSpace"
           ],
           "file": "services/certs/service.go",
           "helper_calls": [
@@ -38910,17 +38879,13 @@
             "cmpv2Options",
             "RenewCertificate",
             "RevokeCertificate",
-            "IssueInternalMTLS",
-            "runtimeRootCAName",
-            "ensureRuntimeRootCA",
-            "normalizeAlgorithm",
-            "normalizeCertClass",
             "UploadThirdPartyCertificate",
             "parseAnyPrivateKeyPEM",
             "publicKeysEqual",
             "Public",
             "algorithmFromPublicKey",
             "certTypeFromUploadPurpose",
+            "normalizeCertClass",
             "CreateCertificate",
             "CACertBundle",
             "ListCAs",
@@ -38935,6 +38900,7 @@
             "defaultRuntimeMTLSProtocolOptions",
             "parseRuntimeMTLSProtocolOptions",
             "defaultRuntimeRootCANameFromEnv",
+            "runtimeRootCAName",
             "ACMEIssueNonce",
             "ACMEConsumeNonce",
             "ACMEChallengeInfo",
@@ -38951,6 +38917,7 @@
             "parseSignerPEM",
             "encryptSigner",
             "signerFingerprint",
+            "legacyMEK",
             "aesGCMEncryptRaw",
             "WrapDEK",
             "UnwrapDEK",
@@ -38960,20 +38927,21 @@
             "RewrapLegacyCASigners",
             "UpdateCASignerEncryption",
             "MaterializeRuntimeCerts",
+            "ensureRuntimeRootCA",
             "writeFileAtomically",
             "ensureRuntimeEndpointCert",
-            "CreateCA",
-            "runtimeCertNeedsRenew",
-            "Close",
-            "signWithKeyCoreIfConfigured",
-            "normalizeKeyBackend"
+            "EnsureInternalPKI",
+            "internalCertValidityDays",
+            "shareWithGroup",
+            "envInt"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize",
             "pkg/crypto.EncryptEnvelope",
-            "pkg/crypto.DecryptEnvelope"
+            "pkg/crypto.DecryptEnvelope",
+            "pkg/mek.Load"
           ],
-          "line": 1136,
+          "line": 1159,
           "name": "CheckOCSPDER",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -38982,6 +38950,7 @@
             "s.acmeRateMu.Unlock",
             "s.securityProvider.WrapDEK",
             "s.securityProvider.UnwrapDEK",
+            "s.mek.Load",
             "s.events.Publish",
             "s.securityProvider.Status"
           ],
@@ -39026,7 +38995,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1097,
+          "line": 1120,
           "name": "CheckOCSP",
           "receiver_calls": [],
           "store_calls": [
@@ -39042,6 +39011,7 @@
         "s.acmeRateMu.Unlock",
         "s.securityProvider.WrapDEK",
         "s.securityProvider.UnwrapDEK",
+        "s.mek.Load",
         "s.events.Publish",
         "s.securityProvider.Status"
       ],
@@ -39090,7 +39060,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 474,
+      "handler_line": 473,
       "handler_name": "handleOCSP",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39119,8 +39089,7 @@
         "net.ParseIP",
         "os.Getenv",
         "os.MkdirAll",
-        "os.Stat",
-        "os.ReadFile",
+        "path/filepath.Join",
         "strings.TrimSpace",
         "time.Now"
       ],
@@ -39161,7 +39130,8 @@
       "service_internal_package_calls": [
         "pkg/crypto.Zeroize",
         "pkg/crypto.EncryptEnvelope",
-        "pkg/crypto.DecryptEnvelope"
+        "pkg/crypto.DecryptEnvelope",
+        "pkg/mek.Load"
       ],
       "service_method_details": [
         {
@@ -39180,8 +39150,8 @@
             "net.ParseIP",
             "os.Getenv",
             "os.MkdirAll",
-            "os.Stat",
-            "os.ReadFile"
+            "path/filepath.Join",
+            "strings.TrimSpace"
           ],
           "file": "services/certs/service.go",
           "helper_calls": [
@@ -39237,17 +39207,13 @@
             "cmpv2Options",
             "RenewCertificate",
             "RevokeCertificate",
-            "IssueInternalMTLS",
-            "runtimeRootCAName",
-            "ensureRuntimeRootCA",
-            "normalizeAlgorithm",
-            "normalizeCertClass",
             "UploadThirdPartyCertificate",
             "parseAnyPrivateKeyPEM",
             "publicKeysEqual",
             "Public",
             "algorithmFromPublicKey",
             "certTypeFromUploadPurpose",
+            "normalizeCertClass",
             "CreateCertificate",
             "CACertBundle",
             "ListCAs",
@@ -39262,6 +39228,7 @@
             "defaultRuntimeMTLSProtocolOptions",
             "parseRuntimeMTLSProtocolOptions",
             "defaultRuntimeRootCANameFromEnv",
+            "runtimeRootCAName",
             "ACMEIssueNonce",
             "ACMEConsumeNonce",
             "ACMEChallengeInfo",
@@ -39278,6 +39245,7 @@
             "parseSignerPEM",
             "encryptSigner",
             "signerFingerprint",
+            "legacyMEK",
             "aesGCMEncryptRaw",
             "WrapDEK",
             "UnwrapDEK",
@@ -39287,20 +39255,21 @@
             "RewrapLegacyCASigners",
             "UpdateCASignerEncryption",
             "MaterializeRuntimeCerts",
+            "ensureRuntimeRootCA",
             "writeFileAtomically",
             "ensureRuntimeEndpointCert",
-            "CreateCA",
-            "runtimeCertNeedsRenew",
-            "Close",
-            "signWithKeyCoreIfConfigured",
-            "normalizeKeyBackend"
+            "EnsureInternalPKI",
+            "internalCertValidityDays",
+            "shareWithGroup",
+            "envInt"
           ],
           "internal_package_calls": [
             "pkg/crypto.Zeroize",
             "pkg/crypto.EncryptEnvelope",
-            "pkg/crypto.DecryptEnvelope"
+            "pkg/crypto.DecryptEnvelope",
+            "pkg/mek.Load"
           ],
-          "line": 1136,
+          "line": 1159,
           "name": "CheckOCSPDER",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -39309,6 +39278,7 @@
             "s.acmeRateMu.Unlock",
             "s.securityProvider.WrapDEK",
             "s.securityProvider.UnwrapDEK",
+            "s.mek.Load",
             "s.events.Publish",
             "s.securityProvider.Status"
           ],
@@ -39353,7 +39323,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1097,
+          "line": 1120,
           "name": "CheckOCSP",
           "receiver_calls": [],
           "store_calls": [
@@ -39369,6 +39339,7 @@
         "s.acmeRateMu.Unlock",
         "s.securityProvider.WrapDEK",
         "s.securityProvider.UnwrapDEK",
+        "s.mek.Load",
         "s.events.Publish",
         "s.securityProvider.Status"
       ],
@@ -39404,7 +39375,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/inventory?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 617,
+          "line": 609,
           "source": "serviceRequest"
         }
       ],
@@ -39419,7 +39390,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 516,
+      "handler_line": 515,
       "handler_name": "handleInventory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39453,7 +39424,7 @@
             "GetInventory"
           ],
           "internal_package_calls": [],
-          "line": 1241,
+          "line": 1264,
           "name": "Inventory",
           "receiver_calls": [],
           "store_calls": [
@@ -39471,7 +39442,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/security/status?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 622,
+          "line": 614,
           "source": "serviceRequest"
         }
       ],
@@ -39484,7 +39455,7 @@
         "SecurityStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 530,
+      "handler_line": 529,
       "handler_name": "handleSecurityStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39514,7 +39485,7 @@
             "Status"
           ],
           "internal_package_calls": [],
-          "line": 2616,
+          "line": 2590,
           "name": "SecurityStatus",
           "receiver_calls": [
             "s.securityProvider.Status"
@@ -39532,7 +39503,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/alert-policy?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 636,
+          "line": 628,
           "source": "serviceRequest"
         }
       ],
@@ -39547,7 +39518,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 538,
+      "handler_line": 537,
       "handler_name": "handleGetAlertPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39577,7 +39548,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1313,
+          "line": 1336,
           "name": "GetCertExpiryAlertPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -39595,7 +39566,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/alert-policy?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 644,
+          "line": 636,
           "source": "serviceRequest"
         }
       ],
@@ -39612,7 +39583,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 552,
+      "handler_line": 551,
       "handler_name": "handleUpsertAlertPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39658,7 +39629,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1336,
+          "line": 1359,
           "name": "UpsertCertExpiryAlertPolicy",
           "receiver_calls": [],
           "store_calls": [
@@ -39688,7 +39659,7 @@
             "UpsertCertExpiryAlertState"
           ],
           "internal_package_calls": [],
-          "line": 1379,
+          "line": 1402,
           "name": "RunTenantExpiryAlertSweep",
           "receiver_calls": [],
           "store_calls": [
@@ -39774,7 +39745,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/clm/policy?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 693,
+          "line": 685,
           "source": "serviceRequest"
         }
       ],
@@ -39844,7 +39815,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/clm/status?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 685,
+          "line": 677,
           "source": "serviceRequest"
         }
       ],
@@ -39913,7 +39884,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 707,
+          "line": 699,
           "source": "serviceRequest"
         }
       ],
@@ -39982,7 +39953,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2590,
+          "line": 2564,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -39998,7 +39969,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence/${encodeURIComponent(String(certId || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 728,
+          "line": 720,
           "source": "serviceRequest"
         }
       ],
@@ -40069,7 +40040,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence/refresh?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 716,
+          "line": 708,
           "source": "serviceRequest"
         }
       ],
@@ -40192,7 +40163,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/star/summary?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 737,
+          "line": 729,
           "source": "serviceRequest"
         }
       ],
@@ -40277,7 +40248,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions?${q.toString()}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 749,
+          "line": 741,
           "source": "serviceRequest"
         }
       ],
@@ -40318,7 +40289,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/certs/star/subscriptions\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 761,
+          "line": 753,
           "source": "serviceRequest"
         }
       ],
@@ -40405,7 +40376,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || \"\").trim())}/refresh`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 777,
+          "line": 769,
           "source": "serviceRequest"
         }
       ],
@@ -40492,7 +40463,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || \"\").trim())}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 794,
+          "line": 786,
           "source": "serviceRequest"
         }
       ],
@@ -40534,7 +40505,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2590,
+          "line": 2564,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -40548,7 +40519,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/protocols?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 826,
+          "line": 818,
           "source": "serviceRequest"
         }
       ],
@@ -40563,7 +40534,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 581,
+      "handler_line": 580,
       "handler_name": "handleListProtocolConfigs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -40597,7 +40568,7 @@
             "defaultProtocolConfig"
           ],
           "internal_package_calls": [],
-          "line": 1250,
+          "line": 1273,
           "name": "ListProtocolConfigs",
           "receiver_calls": [],
           "store_calls": [
@@ -40615,7 +40586,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/protocols/schema?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 831,
+          "line": 823,
           "source": "serviceRequest"
         }
       ],
@@ -40628,7 +40599,7 @@
         "ListProtocolSchemas"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 624,
+      "handler_line": 623,
       "handler_name": "handleListProtocolSchemas",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -40668,7 +40639,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/protocols/${encodeURIComponent(protocol)}?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 844,
+          "line": 836,
           "source": "serviceRequest"
         }
       ],
@@ -40684,7 +40655,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 595,
+      "handler_line": 594,
       "handler_name": "handleUpsertProtocolConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -40724,7 +40695,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1277,
+          "line": 1300,
           "name": "UpsertProtocolConfig",
           "receiver_calls": [],
           "store_calls": [
@@ -40744,7 +40715,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/certs/upload-3p\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 808,
+          "line": 800,
           "source": "serviceRequest"
         }
       ],
@@ -40759,7 +40730,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 632,
+      "handler_line": 631,
       "handler_name": "handleUploadThirdPartyCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -40821,7 +40792,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1943,
+          "line": 1909,
           "name": "UploadThirdPartyCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -40839,77 +40810,11 @@
       ]
     },
     {
-      "frontend_call_sites": [],
-      "handler": "h.handleIssueInternalMTLS",
-      "handler_external_package_calls": [],
-      "handler_file": "services/certs/handler.go",
-      "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeErr",
-        "IssueInternalMTLS",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 647,
-      "handler_name": "handleIssueInternalMTLS",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "IssueInternalMTLS"
-      ],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/certs/internal/mtls/{param}",
-      "path": "/certs/internal/mtls/{service}",
-      "route_file": "services/certs/handler.go",
-      "route_line": 79,
-      "service": "certs",
-      "service_external_package_calls": [
-        "errors.New",
-        "strings.TrimSpace",
-        "strings.ToLower"
-      ],
-      "service_helper_calls": [
-        "runtimeRootCAName",
-        "ensureRuntimeRootCA",
-        "normalizeAlgorithm",
-        "normalizeCertClass",
-        "IssueCertificate",
-        "publishAudit"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "errors.New",
-            "strings.TrimSpace",
-            "strings.ToLower"
-          ],
-          "file": "services/certs/service.go",
-          "helper_calls": [
-            "runtimeRootCAName",
-            "ensureRuntimeRootCA",
-            "normalizeAlgorithm",
-            "normalizeCertClass",
-            "IssueCertificate",
-            "publishAudit"
-          ],
-          "internal_package_calls": [],
-          "line": 1886,
-          "name": "IssueInternalMTLS",
-          "receiver_calls": [],
-          "store_calls": []
-        }
-      ],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
       "frontend_call_sites": [
         {
           "expression": "serviceRequest(\"certs\", `/certs/merkle/build?tenant_id=${encodeURIComponent(session.tenantId)}&max_leaves=${maxLeaves}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1116,
+          "line": 1108,
           "source": "serviceRequest"
         }
       ],
@@ -40926,7 +40831,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1436,
+      "handler_line": 1416,
       "handler_name": "handleMerkleBuild",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -40937,7 +40842,7 @@
       "normalized_path": "/certs/merkle/build",
       "path": "/certs/merkle/build",
       "route_file": "services/certs/handler.go",
-      "route_line": 82,
+      "route_line": 81,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -40951,7 +40856,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/merkle/epochs?${qs.toString()}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1105,
+          "line": 1097,
           "source": "serviceRequest"
         }
       ],
@@ -40968,7 +40873,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1460,
+      "handler_line": 1440,
       "handler_name": "handleMerkleEpochs",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -40979,7 +40884,7 @@
       "normalized_path": "/certs/merkle/epochs",
       "path": "/certs/merkle/epochs",
       "route_file": "services/certs/handler.go",
-      "route_line": 83,
+      "route_line": 82,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -41003,7 +40908,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1483,
+      "handler_line": 1463,
       "handler_name": "handleMerkleEpoch",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41014,7 +40919,7 @@
       "normalized_path": "/certs/merkle/epochs/{param}",
       "path": "/certs/merkle/epochs/{id}",
       "route_file": "services/certs/handler.go",
-      "route_line": 84,
+      "route_line": 83,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -41028,7 +40933,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/merkle/proof/${encodeURIComponent(certId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1127,
+          "line": 1119,
           "source": "serviceRequest"
         }
       ],
@@ -41045,7 +40950,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1502,
+      "handler_line": 1482,
       "handler_name": "handleCertProof",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41056,7 +40961,7 @@
       "normalized_path": "/certs/merkle/proof/{param}",
       "path": "/certs/merkle/proof/{id}",
       "route_file": "services/certs/handler.go",
-      "route_line": 85,
+      "route_line": 84,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -41070,7 +40975,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/certs/merkle/verify?tenant_id=${encodeURIComponent(session.tenantId)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1137,
+          "line": 1129,
           "source": "serviceRequest"
         }
       ],
@@ -41085,7 +40990,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1521,
+      "handler_line": 1501,
       "handler_name": "handleMerkleVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41094,7 +40999,7 @@
       "normalized_path": "/certs/merkle/verify",
       "path": "/certs/merkle/verify",
       "route_file": "services/certs/handler.go",
-      "route_line": 86,
+      "route_line": 85,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -41117,7 +41022,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 666,
+      "handler_line": 646,
       "handler_name": "handleACMEDirectory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41128,7 +41033,7 @@
       "normalized_path": "/acme/directory",
       "path": "/acme/directory",
       "route_file": "services/certs/handler.go",
-      "route_line": 88,
+      "route_line": 87,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [
@@ -41145,7 +41050,7 @@
             "parseACMEProtocolOptions"
           ],
           "internal_package_calls": [],
-          "line": 2116,
+          "line": 2082,
           "name": "acmeOptions",
           "receiver_calls": [],
           "store_calls": []
@@ -41163,7 +41068,7 @@
         "ACMEIssueNonce"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 698,
+      "handler_line": 678,
       "handler_name": "handleACMENonce",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41171,6 +41076,60 @@
       ],
       "handler_store_calls": [],
       "method": "HEAD",
+      "normalized_path": "/acme/new-nonce",
+      "path": "/acme/new-nonce",
+      "route_file": "services/certs/handler.go",
+      "route_line": 88,
+      "service": "certs",
+      "service_external_package_calls": [
+        "time.Now"
+      ],
+      "service_helper_calls": [
+        "newID"
+      ],
+      "service_internal_package_calls": [],
+      "service_method_details": [
+        {
+          "external_package_calls": [
+            "time.Now"
+          ],
+          "file": "services/certs/service.go",
+          "helper_calls": [
+            "newID"
+          ],
+          "internal_package_calls": [],
+          "line": 2185,
+          "name": "ACMEIssueNonce",
+          "receiver_calls": [
+            "s.acmeNonceMu.Lock",
+            "s.acmeNonceMu.Unlock"
+          ],
+          "store_calls": []
+        }
+      ],
+      "service_receiver_calls": [
+        "s.acmeNonceMu.Lock",
+        "s.acmeNonceMu.Unlock"
+      ],
+      "service_store_calls": []
+    },
+    {
+      "frontend_call_sites": [],
+      "handler": "h.handleACMENonce",
+      "handler_external_package_calls": [],
+      "handler_file": "services/certs/handler.go",
+      "handler_helper_calls": [
+        "ACMEIssueNonce"
+      ],
+      "handler_internal_package_calls": [],
+      "handler_line": 678,
+      "handler_name": "handleACMENonce",
+      "handler_receiver_calls": [],
+      "handler_service_calls": [
+        "ACMEIssueNonce"
+      ],
+      "handler_store_calls": [],
+      "method": "POST",
       "normalized_path": "/acme/new-nonce",
       "path": "/acme/new-nonce",
       "route_file": "services/certs/handler.go",
@@ -41193,61 +41152,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2219,
-          "name": "ACMEIssueNonce",
-          "receiver_calls": [
-            "s.acmeNonceMu.Lock",
-            "s.acmeNonceMu.Unlock"
-          ],
-          "store_calls": []
-        }
-      ],
-      "service_receiver_calls": [
-        "s.acmeNonceMu.Lock",
-        "s.acmeNonceMu.Unlock"
-      ],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleACMENonce",
-      "handler_external_package_calls": [],
-      "handler_file": "services/certs/handler.go",
-      "handler_helper_calls": [
-        "ACMEIssueNonce"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 698,
-      "handler_name": "handleACMENonce",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [
-        "ACMEIssueNonce"
-      ],
-      "handler_store_calls": [],
-      "method": "POST",
-      "normalized_path": "/acme/new-nonce",
-      "path": "/acme/new-nonce",
-      "route_file": "services/certs/handler.go",
-      "route_line": 90,
-      "service": "certs",
-      "service_external_package_calls": [
-        "time.Now"
-      ],
-      "service_helper_calls": [
-        "newID"
-      ],
-      "service_internal_package_calls": [],
-      "service_method_details": [
-        {
-          "external_package_calls": [
-            "time.Now"
-          ],
-          "file": "services/certs/service.go",
-          "helper_calls": [
-            "newID"
-          ],
-          "internal_package_calls": [],
-          "line": 2219,
+          "line": 2185,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -41267,7 +41172,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/acme/new-account\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 861,
+          "line": 853,
           "source": "serviceRequest"
         }
       ],
@@ -41286,7 +41191,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 705,
+      "handler_line": 685,
       "handler_name": "handleACMENewAccount",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41299,7 +41204,7 @@
       "normalized_path": "/acme/new-account",
       "path": "/acme/new-account",
       "route_file": "services/certs/handler.go",
-      "route_line": 91,
+      "route_line": 90,
       "service": "certs",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -41324,7 +41229,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2236,
+          "line": 2202,
           "name": "ACMEConsumeNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -41341,7 +41246,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2219,
+          "line": 2185,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -41363,7 +41268,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1469,
+          "line": 1492,
           "name": "AcmeNewAccount",
           "receiver_calls": [],
           "store_calls": [
@@ -41384,7 +41289,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/acme/new-order\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 871,
+          "line": 863,
           "source": "serviceRequest"
         }
       ],
@@ -41404,7 +41309,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 733,
+      "handler_line": 713,
       "handler_name": "handleACMENewOrder",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41417,7 +41322,7 @@
       "normalized_path": "/acme/new-order",
       "path": "/acme/new-order",
       "route_file": "services/certs/handler.go",
-      "route_line": 92,
+      "route_line": 91,
       "service": "certs",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -41450,7 +41355,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2236,
+          "line": 2202,
           "name": "ACMEConsumeNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -41467,7 +41372,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2219,
+          "line": 2185,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -41497,7 +41402,7 @@
             "GetACMEOrder"
           ],
           "internal_package_calls": [],
-          "line": 1494,
+          "line": 1517,
           "name": "AcmeNewOrder",
           "receiver_calls": [],
           "store_calls": [
@@ -41543,7 +41448,7 @@
       "normalized_path": "/acme/renewal-info/{param}",
       "path": "/acme/renewal-info/{id}",
       "route_file": "services/certs/handler.go",
-      "route_line": 93,
+      "route_line": 92,
       "service": "certs",
       "service_external_package_calls": [
         "errors.Is"
@@ -41578,7 +41483,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/acme/challenge/${encodeURIComponent(challengeId)}?${tenantQuery(session)}&order_id=${encodeURIComponent(orderId...",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 979,
+          "line": 971,
           "source": "serviceRequest"
         }
       ],
@@ -41595,7 +41500,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 773,
+      "handler_line": 753,
       "handler_name": "handleACMEChallengeInfo",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41606,7 +41511,7 @@
       "normalized_path": "/acme/challenge/{param}",
       "path": "/acme/challenge/{id}",
       "route_file": "services/certs/handler.go",
-      "route_line": 94,
+      "route_line": 93,
       "service": "certs",
       "service_external_package_calls": [
         "crypto/sha256.Sum256",
@@ -41635,7 +41540,7 @@
             "GetACMEOrder"
           ],
           "internal_package_calls": [],
-          "line": 2293,
+          "line": 2259,
           "name": "ACMEChallengeInfo",
           "receiver_calls": [],
           "store_calls": [
@@ -41653,7 +41558,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/acme/challenge/${encodeURIComponent(challengeId)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 891,
+          "line": 883,
           "source": "serviceRequest"
         }
       ],
@@ -41668,7 +41573,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 795,
+      "handler_line": 775,
       "handler_name": "handleACMEChallenge",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41679,7 +41584,7 @@
       "normalized_path": "/acme/challenge/{param}",
       "path": "/acme/challenge/{id}",
       "route_file": "services/certs/handler.go",
-      "route_line": 95,
+      "route_line": 94,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New",
@@ -41706,7 +41611,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1566,
+          "line": 1589,
           "name": "AcmeRespondChallenge",
           "receiver_calls": [],
           "store_calls": [
@@ -41726,7 +41631,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/acme/finalize/${encodeURIComponent(orderId)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 902,
+          "line": 894,
           "source": "serviceRequest"
         }
       ],
@@ -41745,7 +41650,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 813,
+      "handler_line": 793,
       "handler_name": "handleACMEFinalize",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41758,7 +41663,7 @@
       "normalized_path": "/acme/finalize/{param}",
       "path": "/acme/finalize/{id}",
       "route_file": "services/certs/handler.go",
-      "route_line": 96,
+      "route_line": 95,
       "service": "certs",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -41786,7 +41691,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2236,
+          "line": 2202,
           "name": "ACMEConsumeNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -41803,7 +41708,7 @@
             "newID"
           ],
           "internal_package_calls": [],
-          "line": 2219,
+          "line": 2185,
           "name": "ACMEIssueNonce",
           "receiver_calls": [
             "s.acmeNonceMu.Lock",
@@ -41827,7 +41732,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1599,
+          "line": 1622,
           "name": "AcmeFinalize",
           "receiver_calls": [],
           "store_calls": [
@@ -41858,7 +41763,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 837,
+      "handler_line": 817,
       "handler_name": "handleACMECertDownload",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41869,7 +41774,7 @@
       "normalized_path": "/acme/cert/{param}",
       "path": "/acme/cert/{id}",
       "route_file": "services/certs/handler.go",
-      "route_line": 97,
+      "route_line": 96,
       "service": "certs",
       "service_external_package_calls": [
         "crypto/x509.MarshalPKIXPublicKey",
@@ -41914,7 +41819,7 @@
             "caChain"
           ],
           "internal_package_calls": [],
-          "line": 641,
+          "line": 664,
           "name": "DownloadCertificate",
           "receiver_calls": [],
           "store_calls": [
@@ -41940,7 +41845,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 856,
+      "handler_line": 836,
       "handler_name": "handleESTCACerts",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41951,7 +41856,7 @@
       "normalized_path": "/est/.well-known/est/cacerts",
       "path": "/est/.well-known/est/cacerts",
       "route_file": "services/certs/handler.go",
-      "route_line": 99,
+      "route_line": 98,
       "service": "certs",
       "service_external_package_calls": [
         "strings.TrimSpace",
@@ -41972,7 +41877,7 @@
             "ListCAs"
           ],
           "internal_package_calls": [],
-          "line": 2031,
+          "line": 1997,
           "name": "CACertBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -41990,7 +41895,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/est/.well-known/est/csrattrs?${tenantQuery(session)}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 990,
+          "line": 982,
           "source": "serviceRequest"
         }
       ],
@@ -42005,7 +41910,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 870,
+      "handler_line": 850,
       "handler_name": "handleESTCSRAttrs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42016,7 +41921,7 @@
       "normalized_path": "/est/.well-known/est/csrattrs",
       "path": "/est/.well-known/est/csrattrs",
       "route_file": "services/certs/handler.go",
-      "route_line": 100,
+      "route_line": 99,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New",
@@ -42039,7 +41944,7 @@
             "ListProfiles"
           ],
           "internal_package_calls": [],
-          "line": 2352,
+          "line": 2318,
           "name": "ESTCSRAttributes",
           "receiver_calls": [],
           "store_calls": [
@@ -42057,7 +41962,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/est/.well-known/est/simpleenroll\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1003,
+          "line": 995,
           "source": "serviceRequest"
         }
       ],
@@ -42081,7 +41986,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 884,
+      "handler_line": 864,
       "handler_name": "handleESTSimpleEnroll",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42092,7 +41997,7 @@
       "normalized_path": "/est/.well-known/est/simpleenroll",
       "path": "/est/.well-known/est/simpleenroll",
       "route_file": "services/certs/handler.go",
-      "route_line": 101,
+      "route_line": 100,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New",
@@ -42121,7 +42026,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1642,
+          "line": 1665,
           "name": "ESTSimpleEnroll",
           "receiver_calls": [],
           "store_calls": []
@@ -42152,7 +42057,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 939,
+      "handler_line": 919,
       "handler_name": "handleESTSimpleReenroll",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42163,7 +42068,7 @@
       "normalized_path": "/est/.well-known/est/simplereenroll",
       "path": "/est/.well-known/est/simplereenroll",
       "route_file": "services/certs/handler.go",
-      "route_line": 102,
+      "route_line": 101,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New",
@@ -42194,7 +42099,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1675,
+          "line": 1698,
           "name": "ESTSimpleReenroll",
           "receiver_calls": [],
           "store_calls": [
@@ -42212,7 +42117,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/est/.well-known/est/serverkeygen\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 918,
+          "line": 910,
           "source": "serviceRequest"
         }
       ],
@@ -42227,7 +42132,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 993,
+      "handler_line": 973,
       "handler_name": "handleESTServerKeygen",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42238,7 +42143,7 @@
       "normalized_path": "/est/.well-known/est/serverkeygen",
       "path": "/est/.well-known/est/serverkeygen",
       "route_file": "services/certs/handler.go",
-      "route_line": 103,
+      "route_line": 102,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New"
@@ -42265,7 +42170,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1717,
+          "line": 1740,
           "name": "ESTServerKeygen",
           "receiver_calls": [],
           "store_calls": []
@@ -42279,7 +42184,7 @@
         {
           "expression": "serviceRequest(\"certs\", `/scep/pkiclient.exe?${q.toString()}`)",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1033,
+          "line": 1025,
           "source": "serviceRequest"
         }
       ],
@@ -42301,7 +42206,7 @@
         "CACertBundle"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1008,
+      "handler_line": 988,
       "handler_name": "handleSCEPGet",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42314,7 +42219,7 @@
       "normalized_path": "/scep/pkiclient.exe",
       "path": "/scep/pkiclient.exe",
       "route_file": "services/certs/handler.go",
-      "route_line": 105,
+      "route_line": 104,
       "service": "certs",
       "service_external_package_calls": [
         "strings.ToLower",
@@ -42344,7 +42249,7 @@
             "dedupStrings"
           ],
           "internal_package_calls": [],
-          "line": 2045,
+          "line": 2011,
           "name": "SCEPCapabilities",
           "receiver_calls": [],
           "store_calls": []
@@ -42361,7 +42266,7 @@
             "GetCertificateBySerial"
           ],
           "internal_package_calls": [],
-          "line": 2380,
+          "line": 2346,
           "name": "SCEPGetCert",
           "receiver_calls": [],
           "store_calls": [
@@ -42379,7 +42284,7 @@
             "ListCAs"
           ],
           "internal_package_calls": [],
-          "line": 2031,
+          "line": 1997,
           "name": "CACertBundle",
           "receiver_calls": [],
           "store_calls": [
@@ -42399,7 +42304,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/scep/pkiclient.exe?operation=pkioperation\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 934,
+          "line": 926,
           "source": "serviceRequest"
         }
       ],
@@ -42430,7 +42335,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1053,
+      "handler_line": 1033,
       "handler_name": "handleSCEPPKIOperation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42444,7 +42349,7 @@
       "normalized_path": "/scep/pkiclient.exe",
       "path": "/scep/pkiclient.exe",
       "route_file": "services/certs/handler.go",
-      "route_line": 106,
+      "route_line": 105,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New",
@@ -42475,7 +42380,7 @@
           "internal_package_calls": [
             "pkg/crypto.Zeroize"
           ],
-          "line": 2512,
+          "line": 2478,
           "name": "loadCASigner",
           "receiver_calls": [],
           "store_calls": []
@@ -42494,7 +42399,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 1749,
+          "line": 1772,
           "name": "SCEPPKIOperation",
           "receiver_calls": [],
           "store_calls": []
@@ -42508,7 +42413,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/cmpv2\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 955,
+          "line": 947,
           "source": "serviceRequest"
         }
       ],
@@ -42533,7 +42438,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1185,
+      "handler_line": 1165,
       "handler_name": "handleCMPv2",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42544,7 +42449,7 @@
       "normalized_path": "/cmpv2",
       "path": "/cmpv2",
       "route_file": "services/certs/handler.go",
-      "route_line": 108,
+      "route_line": 107,
       "service": "certs",
       "service_external_package_calls": [
         "encoding/json.Unmarshal",
@@ -42587,7 +42492,7 @@
             "GetCertificate"
           ],
           "internal_package_calls": [],
-          "line": 1801,
+          "line": 1824,
           "name": "CMPv2Request",
           "receiver_calls": [],
           "store_calls": [
@@ -42605,7 +42510,7 @@
         {
           "expression": "serviceRequest(\"certs\", \"/cmpv2/confirm\")",
           "file": "web/dashboard/src/lib/certs.ts",
-          "line": 1049,
+          "line": 1041,
           "source": "serviceRequest"
         }
       ],
@@ -42621,7 +42526,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1246,
+      "handler_line": 1226,
       "handler_name": "handleCMPv2Confirm",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42633,7 +42538,7 @@
       "normalized_path": "/cmpv2/confirm",
       "path": "/cmpv2/confirm",
       "route_file": "services/certs/handler.go",
-      "route_line": 109,
+      "route_line": 108,
       "service": "certs",
       "service_external_package_calls": [
         "errors.New",
@@ -42664,7 +42569,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 2410,
+          "line": 2376,
           "name": "CMPv2Confirm",
           "receiver_calls": [],
           "store_calls": [
@@ -42678,7 +42583,7 @@
           "file": "services/certs/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 2456,
+          "line": 2422,
           "name": "CMPv2Error",
           "receiver_calls": [],
           "store_calls": []
@@ -58457,7 +58362,6 @@
         "errors.New",
         "strings.ToLower",
         "crypto/fips140.Enforced",
-        "errors.Is",
         "fmt.Errorf",
         "fmt.Sprintf",
         "time.Duration"
@@ -58476,11 +58380,9 @@
         "backupKeyFileFor",
         "normalizeSystemState",
         "isHSMReadyForTRNG",
-        "GetSystemState",
-        "shouldApplyInternalHybridTLS",
-        "applyInternalHybridTLSOnToggle",
         "UpsertSystemState",
         "publishSNMPSnapshot",
+        "GetSystemState",
         "GetPlatformFIPSMode",
         "ListPlatformFIPSObserved",
         "effectiveFIPSMode",
@@ -58494,7 +58396,9 @@
         "ProbeTarget",
         "normalizePolicy",
         "validatePolicy",
-        "newID"
+        "newID",
+        "GetPolicy",
+        "ListApprovalVotes"
       ],
       "service_internal_package_calls": [
         "pkg/fips.ValidMode",
@@ -58633,26 +58537,22 @@
           "external_package_calls": [
             "crypto/fips140.Enforced",
             "errors.New",
-            "errors.Is",
             "strings.TrimSpace"
           ],
           "file": "services/governance/service.go",
           "helper_calls": [
             "normalizeSystemState",
             "isHSMReadyForTRNG",
-            "GetSystemState",
-            "shouldApplyInternalHybridTLS",
-            "applyInternalHybridTLSOnToggle",
             "UpsertSystemState",
             "publishAudit",
-            "publishSNMPSnapshot"
+            "publishSNMPSnapshot",
+            "GetSystemState"
           ],
           "internal_package_calls": [],
           "line": 574,
           "name": "UpdateSystemState",
           "receiver_calls": [],
           "store_calls": [
-            "GetSystemState",
             "UpsertSystemState"
           ]
         },
@@ -58727,7 +58627,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 642,
+          "line": 631,
           "name": "ApplyPostureControls",
           "receiver_calls": [],
           "store_calls": []
@@ -58745,7 +58645,7 @@
             "ProbeTarget"
           ],
           "internal_package_calls": [],
-          "line": 886,
+          "line": 732,
           "name": "SystemIntegrity",
           "receiver_calls": [
             "s.snmp.ProbeTarget"
@@ -58764,7 +58664,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 957,
+          "line": 803,
           "name": "TestSNMP",
           "receiver_calls": [],
           "store_calls": []
@@ -58929,7 +58829,6 @@
         "s.snmp.ProbeTarget"
       ],
       "service_store_calls": [
-        "GetSystemState",
         "UpsertSystemState",
         "GetPlatformFIPSMode",
         "ListPlatformFIPSObserved",
@@ -59429,18 +59328,15 @@
       "service_external_package_calls": [
         "crypto/fips140.Enforced",
         "errors.New",
-        "errors.Is",
         "strings.TrimSpace"
       ],
       "service_helper_calls": [
         "normalizeSystemState",
         "isHSMReadyForTRNG",
-        "GetSystemState",
-        "shouldApplyInternalHybridTLS",
-        "applyInternalHybridTLSOnToggle",
         "UpsertSystemState",
         "publishAudit",
-        "publishSNMPSnapshot"
+        "publishSNMPSnapshot",
+        "GetSystemState"
       ],
       "service_internal_package_calls": [],
       "service_method_details": [
@@ -59448,33 +59344,28 @@
           "external_package_calls": [
             "crypto/fips140.Enforced",
             "errors.New",
-            "errors.Is",
             "strings.TrimSpace"
           ],
           "file": "services/governance/service.go",
           "helper_calls": [
             "normalizeSystemState",
             "isHSMReadyForTRNG",
-            "GetSystemState",
-            "shouldApplyInternalHybridTLS",
-            "applyInternalHybridTLSOnToggle",
             "UpsertSystemState",
             "publishAudit",
-            "publishSNMPSnapshot"
+            "publishSNMPSnapshot",
+            "GetSystemState"
           ],
           "internal_package_calls": [],
           "line": 574,
           "name": "UpdateSystemState",
           "receiver_calls": [],
           "store_calls": [
-            "GetSystemState",
             "UpsertSystemState"
           ]
         }
       ],
       "service_receiver_calls": [],
       "service_store_calls": [
-        "GetSystemState",
         "UpsertSystemState"
       ]
     },
@@ -59743,7 +59634,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 642,
+          "line": 631,
           "name": "ApplyPostureControls",
           "receiver_calls": [],
           "store_calls": []
@@ -59809,7 +59700,7 @@
             "publishAudit"
           ],
           "internal_package_calls": [],
-          "line": 957,
+          "line": 803,
           "name": "TestSNMP",
           "receiver_calls": [],
           "store_calls": []
@@ -59880,7 +59771,7 @@
           "file": "services/governance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1313,
+          "line": 1159,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -59970,7 +59861,7 @@
           "file": "services/governance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1313,
+          "line": 1159,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -60022,7 +59913,7 @@
           "file": "services/governance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1313,
+          "line": 1159,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -60076,7 +59967,7 @@
           "file": "services/governance/service.go",
           "helper_calls": [],
           "internal_package_calls": [],
-          "line": 1313,
+          "line": 1159,
           "name": "publishAudit",
           "receiver_calls": [],
           "store_calls": []
@@ -60172,7 +60063,7 @@
             "ProbeTarget"
           ],
           "internal_package_calls": [],
-          "line": 886,
+          "line": 732,
           "name": "SystemIntegrity",
           "receiver_calls": [
             "s.snmp.ProbeTarget"
@@ -60858,7 +60749,7 @@
             "buildApprovalPage"
           ],
           "internal_package_calls": [],
-          "line": 1301,
+          "line": 1147,
           "name": "ApprovalPageHTML",
           "receiver_calls": [],
           "store_calls": [
@@ -80159,7 +80050,7 @@
       "normalized_path": "/reconciler/status",
       "path": "/reconciler/status",
       "route_file": "services/reconciler/main.go",
-      "route_line": 57,
+      "route_line": 63,
       "service": "reconciler",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -80184,7 +80075,7 @@
       "normalized_path": "/healthz",
       "path": "/healthz",
       "route_file": "services/reconciler/main.go",
-      "route_line": 60,
+      "route_line": 66,
       "service": "reconciler",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83887,7 +83778,7 @@
       "normalized_path": "/watchdog/heartbeats",
       "path": "/watchdog/heartbeats",
       "route_file": "services/watchdog/main.go",
-      "route_line": 42,
+      "route_line": 48,
       "service": "watchdog",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83912,7 +83803,7 @@
       "normalized_path": "/watchdog/incidents",
       "path": "/watchdog/incidents",
       "route_file": "services/watchdog/main.go",
-      "route_line": 45,
+      "route_line": 51,
       "service": "watchdog",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -83937,7 +83828,7 @@
       "normalized_path": "/healthz",
       "path": "/healthz",
       "route_file": "services/watchdog/main.go",
-      "route_line": 48,
+      "route_line": 54,
       "service": "watchdog",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -85058,7 +84949,7 @@
       "auth": 82,
       "autokey": 15,
       "backup": 11,
-      "certs": 65,
+      "certs": 64,
       "cloud": 11,
       "cluster-manager": 21,
       "compliance": 42,
@@ -85301,16 +85192,16 @@
     ]
   },
   "summary": {
-    "backend_routes": 906,
+    "backend_routes": 905,
     "backend_services": 29,
     "button_inventory": 827,
     "frontend_call_sites": 621,
     "matched_frontend_call_sites": 554,
     "nav_items": 34,
-    "request_flows": 906,
+    "request_flows": 905,
     "request_flows_with_frontend": 544,
     "request_flows_with_internal_package_calls": 130,
-    "request_flows_with_service_calls": 536,
+    "request_flows_with_service_calls": 535,
     "request_flows_with_store_calls": 677,
     "subpane_groups": 8,
     "tab_components": 42,
@@ -92899,13 +92790,13 @@
           {
             "expression": "serviceRequest(\"certs\", \"/certs/ca\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 434,
+            "line": 426,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleCreateCA",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 117,
+        "handlerLine": 116,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -92958,13 +92849,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/ca?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 429,
+            "line": 421,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleListCAs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 132,
+        "handlerLine": 131,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93004,13 +92895,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/ca/${encodeURIComponent(String(caId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 450,
+            "line": 442,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleDeleteCA",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 146,
+        "handlerLine": 145,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -93059,13 +92950,13 @@
           {
             "expression": "serviceRequest(\"certs\", \"/certs\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 482,
+            "line": 474,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleIssueCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 164,
+        "handlerLine": 163,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -93110,13 +93001,13 @@
           {
             "expression": "serviceRequest(\"certs\", \"/certs/sign-csr\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 499,
+            "line": 491,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleSignCSR",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 183,
+        "handlerLine": 182,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -93161,13 +93052,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs?${q.toString()}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 474,
+            "line": 466,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleListCerts",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 208,
+        "handlerLine": 207,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93201,7 +93092,7 @@
         "frontendSites": [],
         "handler": "handleGetCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 226,
+        "handlerLine": 225,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -93236,13 +93127,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/${encodeURIComponent(String(certId || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 548,
+            "line": 540,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleDeleteCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 317,
+        "handlerLine": 316,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -93286,13 +93177,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/download/${encodeURIComponent(String(certId || \"\").trim())}?${q.toString()}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 577,
+            "line": 569,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleDownloadCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 244,
+        "handlerLine": 243,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93327,13 +93218,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/${encodeURIComponent(String(certId || \"\").trim())}/renew?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 515,
+            "line": 507,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleRenewCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 274,
+        "handlerLine": 273,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -93368,13 +93259,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/${encodeURIComponent(String(certId || \"\").trim())}/revoke?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 534,
+            "line": 526,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleRevokeCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 296,
+        "handlerLine": 295,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -93408,7 +93299,7 @@
         "frontendSites": [],
         "handler": "handleCreateProfile",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 334,
+        "handlerLine": 333,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -93440,13 +93331,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/profiles?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 612,
+            "line": 604,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleListProfiles",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 349,
+        "handlerLine": 348,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93480,7 +93371,7 @@
         "frontendSites": [],
         "handler": "handleGetProfile",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 363,
+        "handlerLine": 362,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -93511,7 +93402,7 @@
         "frontendSites": [],
         "handler": "handleValidatePQC",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 381,
+        "handlerLine": 380,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -93542,7 +93433,7 @@
         "frontendSites": [],
         "handler": "handleOTSStatus",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 396,
+        "handlerLine": 395,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -93572,7 +93463,7 @@
         "frontendSites": [],
         "handler": "handleMigratePQC",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 410,
+        "handlerLine": 409,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -93602,7 +93493,7 @@
         "frontendSites": [],
         "handler": "handlePQCReadiness",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 437,
+        "handlerLine": 436,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -93624,42 +93515,43 @@
         ]
       },
       {
-        "complexity": 36,
+        "complexity": 38,
         "externalPackages": [
           "strings.TrimSpace",
           "bytes.TrimSpace",
-          "bytes.Equal",
           "context.Background",
-          "crypto/ecdsa.GenerateKey",
-          "crypto/ed25519.GenerateKey",
-          "crypto/elliptic.P384",
-          "crypto/elliptic.P256",
           "crypto/fips140.Enforced",
           "crypto/rand.Int",
           "crypto/rand.Read",
-          "crypto/rsa.GenerateKey",
           "crypto/sha256.Sum256",
           "crypto/x509.CreateRevocationList",
-          "crypto/x509.ParseCertificateRequest",
-          "crypto/x509.ParseCertificate",
-          "crypto/x509.ParsePKCS8PrivateKey"
+          "encoding/json.Unmarshal",
+          "encoding/json.Marshal",
+          "encoding/pem.EncodeToMemory",
+          "errors.New",
+          "errors.Is",
+          "fmt.Errorf",
+          "fmt.Sprintf",
+          "math/big.NewInt",
+          "net.ParseIP"
         ],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"certs\", `/certs/crl?${tenantQuery(session)}&ca_id=${encodeURIComponent(String(caId || \"\").trim())}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 589,
+            "line": 581,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleCRL",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 451,
+        "handlerLine": 450,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
           "pkg/crypto.EncryptEnvelope",
-          "pkg/crypto.DecryptEnvelope"
+          "pkg/crypto.DecryptEnvelope",
+          "pkg/mek.Load"
         ],
         "method": "GET",
         "normalizedPath": "/certs/crl",
@@ -93671,6 +93563,7 @@
           "s.acmeRateMu.Unlock",
           "s.securityProvider.WrapDEK",
           "s.securityProvider.UnwrapDEK",
+          "s.mek.Load",
           "s.events.Publish",
           "s.securityProvider.Status",
           "s.keycore.Sign"
@@ -93716,7 +93609,7 @@
         ]
       },
       {
-        "complexity": 35,
+        "complexity": 37,
         "externalPackages": [
           "io.ReadAll",
           "strings.TrimSpace",
@@ -93734,26 +93627,26 @@
           "net.ParseIP",
           "os.Getenv",
           "os.MkdirAll",
-          "os.Stat",
-          "os.ReadFile",
+          "path/filepath.Join",
           "time.Now"
         ],
         "frontendSites": [
           {
             "expression": "serviceRequest(\"certs\", `/certs/ocsp?${q.toString()}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 608,
+            "line": 600,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleOCSP",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 474,
+        "handlerLine": 473,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
           "pkg/crypto.EncryptEnvelope",
-          "pkg/crypto.DecryptEnvelope"
+          "pkg/crypto.DecryptEnvelope",
+          "pkg/mek.Load"
         ],
         "method": "GET",
         "normalizedPath": "/certs/ocsp",
@@ -93765,6 +93658,7 @@
           "s.acmeRateMu.Unlock",
           "s.securityProvider.WrapDEK",
           "s.securityProvider.UnwrapDEK",
+          "s.mek.Load",
           "s.events.Publish",
           "s.securityProvider.Status"
         ],
@@ -93810,7 +93704,7 @@
         ]
       },
       {
-        "complexity": 35,
+        "complexity": 37,
         "externalPackages": [
           "io.ReadAll",
           "strings.TrimSpace",
@@ -93828,19 +93722,19 @@
           "net.ParseIP",
           "os.Getenv",
           "os.MkdirAll",
-          "os.Stat",
-          "os.ReadFile",
+          "path/filepath.Join",
           "time.Now"
         ],
         "frontendSites": [],
         "handler": "handleOCSP",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 474,
+        "handlerLine": 473,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize",
           "pkg/crypto.EncryptEnvelope",
-          "pkg/crypto.DecryptEnvelope"
+          "pkg/crypto.DecryptEnvelope",
+          "pkg/mek.Load"
         ],
         "method": "POST",
         "normalizedPath": "/certs/ocsp",
@@ -93852,6 +93746,7 @@
           "s.acmeRateMu.Unlock",
           "s.securityProvider.WrapDEK",
           "s.securityProvider.UnwrapDEK",
+          "s.mek.Load",
           "s.events.Publish",
           "s.securityProvider.Status"
         ],
@@ -93903,13 +93798,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/inventory?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 617,
+            "line": 609,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleInventory",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 516,
+        "handlerLine": 515,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93942,13 +93837,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/security/status?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 622,
+            "line": 614,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleSecurityStatus",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 530,
+        "handlerLine": 529,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -93983,13 +93878,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/alert-policy?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 636,
+            "line": 628,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleGetAlertPolicy",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 538,
+        "handlerLine": 537,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94027,13 +93922,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/alert-policy?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 644,
+            "line": 636,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleUpsertAlertPolicy",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 552,
+        "handlerLine": 551,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -94106,7 +94001,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/clm/policy?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 693,
+            "line": 685,
             "source": "serviceRequest"
           }
         ],
@@ -94145,7 +94040,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/clm/status?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 685,
+            "line": 677,
             "source": "serviceRequest"
           }
         ],
@@ -94185,7 +94080,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 707,
+            "line": 699,
             "source": "serviceRequest"
           }
         ],
@@ -94227,7 +94122,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence/${encodeURIComponent(String(certId || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 728,
+            "line": 720,
             "source": "serviceRequest"
           }
         ],
@@ -94270,7 +94165,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/renewal-intelligence/refresh?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 716,
+            "line": 708,
             "source": "serviceRequest"
           }
         ],
@@ -94319,7 +94214,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/star/summary?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 737,
+            "line": 729,
             "source": "serviceRequest"
           }
         ],
@@ -94356,7 +94251,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions?${q.toString()}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 749,
+            "line": 741,
             "source": "serviceRequest"
           }
         ],
@@ -94395,7 +94290,7 @@
           {
             "expression": "serviceRequest(\"certs\", \"/certs/star/subscriptions\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 761,
+            "line": 753,
             "source": "serviceRequest"
           }
         ],
@@ -94438,7 +94333,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || \"\").trim())}/refresh`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 777,
+            "line": 769,
             "source": "serviceRequest"
           }
         ],
@@ -94478,7 +94373,7 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/star/subscriptions/${encodeURIComponent(String(subscriptionId || \"\").trim())}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 794,
+            "line": 786,
             "source": "serviceRequest"
           }
         ],
@@ -94518,13 +94413,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/protocols?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 826,
+            "line": 818,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleListProtocolConfigs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 581,
+        "handlerLine": 580,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94555,13 +94450,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/protocols/schema?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 831,
+            "line": 823,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleListProtocolSchemas",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 624,
+        "handlerLine": 623,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94593,13 +94488,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/protocols/${encodeURIComponent(protocol)}?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 844,
+            "line": 836,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleUpsertProtocolConfig",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 595,
+        "handlerLine": 594,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -94636,13 +94531,13 @@
           {
             "expression": "serviceRequest(\"certs\", \"/certs/upload-3p\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 808,
+            "line": 800,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleUploadThirdPartyCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 632,
+        "handlerLine": 631,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -94669,35 +94564,6 @@
         ]
       },
       {
-        "complexity": 0,
-        "externalPackages": [
-          "errors.New",
-          "strings.TrimSpace",
-          "strings.ToLower"
-        ],
-        "frontendSites": [],
-        "handler": "handleIssueInternalMTLS",
-        "handlerFile": "services/certs/handler.go",
-        "handlerLine": 647,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/certs/internal/mtls/{param}",
-        "path": "/certs/internal/mtls/{service}",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "certs|POST|/certs/internal/mtls/{param}",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [
-          "IssueInternalMTLS"
-        ],
-        "storeCalls": [],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
         "complexity": 1,
         "externalPackages": [
           "strconv.Atoi"
@@ -94706,13 +94572,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/merkle/build?tenant_id=${encodeURIComponent(session.tenantId)}&max_leaves=${maxLeaves}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1116,
+            "line": 1108,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleMerkleBuild",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1436,
+        "handlerLine": 1416,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -94743,13 +94609,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/merkle/epochs?${qs.toString()}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1105,
+            "line": 1097,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleMerkleEpochs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1460,
+        "handlerLine": 1440,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94779,7 +94645,7 @@
         "frontendSites": [],
         "handler": "handleMerkleEpoch",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1483,
+        "handlerLine": 1463,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -94807,13 +94673,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/merkle/proof/${encodeURIComponent(certId)}?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1127,
+            "line": 1119,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleCertProof",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1502,
+        "handlerLine": 1482,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94842,13 +94708,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/certs/merkle/verify?tenant_id=${encodeURIComponent(session.tenantId)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1137,
+            "line": 1129,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleMerkleVerify",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1521,
+        "handlerLine": 1501,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -94876,7 +94742,7 @@
         "frontendSites": [],
         "handler": "handleACMEDirectory",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 666,
+        "handlerLine": 646,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -94903,7 +94769,7 @@
         "frontendSites": [],
         "handler": "handleACMENonce",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 698,
+        "handlerLine": 678,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "HEAD",
@@ -94933,7 +94799,7 @@
         "frontendSites": [],
         "handler": "handleACMENonce",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 698,
+        "handlerLine": 678,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -94968,13 +94834,13 @@
           {
             "expression": "serviceRequest(\"certs\", \"/acme/new-account\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 861,
+            "line": 853,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleACMENewAccount",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 705,
+        "handlerLine": 685,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95020,13 +94886,13 @@
           {
             "expression": "serviceRequest(\"certs\", \"/acme/new-order\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 871,
+            "line": 863,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleACMENewOrder",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 733,
+        "handlerLine": 713,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95099,13 +94965,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/acme/challenge/${encodeURIComponent(challengeId)}?${tenantQuery(session)}&order_id=${encodeURIComponent(orderId...",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 979,
+            "line": 971,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleACMEChallengeInfo",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 773,
+        "handlerLine": 753,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95139,13 +95005,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/acme/challenge/${encodeURIComponent(challengeId)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 891,
+            "line": 883,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleACMEChallenge",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 795,
+        "handlerLine": 775,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95183,13 +95049,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/acme/finalize/${encodeURIComponent(orderId)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 902,
+            "line": 894,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleACMEFinalize",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 813,
+        "handlerLine": 793,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95235,7 +95101,7 @@
         "frontendSites": [],
         "handler": "handleACMECertDownload",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 837,
+        "handlerLine": 817,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -95265,7 +95131,7 @@
         "frontendSites": [],
         "handler": "handleESTCACerts",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 856,
+        "handlerLine": 836,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -95296,13 +95162,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/est/.well-known/est/csrattrs?${tenantQuery(session)}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 990,
+            "line": 982,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleESTCSRAttrs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 870,
+        "handlerLine": 850,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95337,13 +95203,13 @@
           {
             "expression": "serviceRequest(\"certs\", \"/est/.well-known/est/simpleenroll\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1003,
+            "line": 995,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleESTSimpleEnroll",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 884,
+        "handlerLine": 864,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95375,7 +95241,7 @@
         "frontendSites": [],
         "handler": "handleESTSimpleReenroll",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 939,
+        "handlerLine": 919,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -95405,13 +95271,13 @@
           {
             "expression": "serviceRequest(\"certs\", \"/est/.well-known/est/serverkeygen\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 918,
+            "line": 910,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleESTServerKeygen",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 993,
+        "handlerLine": 973,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95445,13 +95311,13 @@
           {
             "expression": "serviceRequest(\"certs\", `/scep/pkiclient.exe?${q.toString()}`)",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1033,
+            "line": 1025,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleSCEPGet",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1008,
+        "handlerLine": 988,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95493,13 +95359,13 @@
           {
             "expression": "serviceRequest(\"certs\", \"/scep/pkiclient.exe?operation=pkioperation\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 934,
+            "line": 926,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleSCEPPKIOperation",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1053,
+        "handlerLine": 1033,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -95542,13 +95408,13 @@
           {
             "expression": "serviceRequest(\"certs\", \"/cmpv2\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 955,
+            "line": 947,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleCMPv2",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1185,
+        "handlerLine": 1165,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95584,13 +95450,13 @@
           {
             "expression": "serviceRequest(\"certs\", \"/cmpv2/confirm\")",
             "file": "web/dashboard/src/lib/certs.ts",
-            "line": 1049,
+            "line": 1041,
             "source": "serviceRequest"
           }
         ],
         "handler": "handleCMPv2Confirm",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1246,
+        "handlerLine": 1226,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -103540,7 +103406,7 @@
         ]
       },
       {
-        "complexity": 25,
+        "complexity": 24,
         "externalPackages": [
           "encoding/json.NewDecoder",
           "encoding/json.NewEncoder",
@@ -103617,7 +103483,6 @@
           "ListPendingByApprover"
         ],
         "storeCalls": [
-          "GetSystemState",
           "UpsertSystemState",
           "GetPlatformFIPSMode",
           "ListPlatformFIPSObserved",
@@ -103888,11 +103753,10 @@
         ]
       },
       {
-        "complexity": 2,
+        "complexity": 1,
         "externalPackages": [
           "crypto/fips140.Enforced",
           "errors.New",
-          "errors.Is",
           "strings.TrimSpace"
         ],
         "frontendSites": [
@@ -103920,7 +103784,6 @@
           "UpdateSystemState"
         ],
         "storeCalls": [
-          "GetSystemState",
           "UpsertSystemState"
         ],
         "uiLabels": [
@@ -117809,7 +117672,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-26T12:22:37Z",
+    "generatedAt": "2026-09-26T15:02:41Z",
     "methods": [
       "DELETE",
       "GET",
@@ -117850,7 +117713,7 @@
       "workload"
     ],
     "summary": {
-      "flows": 906,
+      "flows": 905,
       "frontendBacked": 544,
       "highRisk": 377,
       "services": 29

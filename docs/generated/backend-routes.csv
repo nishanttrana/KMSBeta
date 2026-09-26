@@ -226,31 +226,30 @@ certs,GET,/certs/protocols,/certs/protocols,h.handleListProtocolConfigs,services
 certs,GET,/certs/protocols/schema,/certs/protocols/schema,h.handleListProtocolSchemas,services/certs/handler.go,76,certs|GET|/certs/protocols/schema
 certs,PUT,/certs/protocols/{protocol},/certs/protocols/{param},h.handleUpsertProtocolConfig,services/certs/handler.go,77,certs|PUT|/certs/protocols/{param}
 certs,POST,/certs/upload-3p,/certs/upload-3p,h.handleUploadThirdPartyCert,services/certs/handler.go,78,certs|POST|/certs/upload-3p
-certs,POST,/certs/internal/mtls/{service},/certs/internal/mtls/{param},h.handleIssueInternalMTLS,services/certs/handler.go,79,certs|POST|/certs/internal/mtls/{param}
-certs,POST,/certs/merkle/build,/certs/merkle/build,h.handleMerkleBuild,services/certs/handler.go,82,certs|POST|/certs/merkle/build
-certs,GET,/certs/merkle/epochs,/certs/merkle/epochs,h.handleMerkleEpochs,services/certs/handler.go,83,certs|GET|/certs/merkle/epochs
-certs,GET,/certs/merkle/epochs/{id},/certs/merkle/epochs/{param},h.handleMerkleEpoch,services/certs/handler.go,84,certs|GET|/certs/merkle/epochs/{param}
-certs,GET,/certs/merkle/proof/{id},/certs/merkle/proof/{param},h.handleCertProof,services/certs/handler.go,85,certs|GET|/certs/merkle/proof/{param}
-certs,POST,/certs/merkle/verify,/certs/merkle/verify,h.handleMerkleVerify,services/certs/handler.go,86,certs|POST|/certs/merkle/verify
-certs,GET,/acme/directory,/acme/directory,h.handleACMEDirectory,services/certs/handler.go,88,certs|GET|/acme/directory
-certs,HEAD,/acme/new-nonce,/acme/new-nonce,h.handleACMENonce,services/certs/handler.go,89,certs|HEAD|/acme/new-nonce
-certs,POST,/acme/new-nonce,/acme/new-nonce,h.handleACMENonce,services/certs/handler.go,90,certs|POST|/acme/new-nonce
-certs,POST,/acme/new-account,/acme/new-account,h.handleACMENewAccount,services/certs/handler.go,91,certs|POST|/acme/new-account
-certs,POST,/acme/new-order,/acme/new-order,h.handleACMENewOrder,services/certs/handler.go,92,certs|POST|/acme/new-order
-certs,GET,/acme/renewal-info/{id},/acme/renewal-info/{param},h.handleACMERenewalInfo,services/certs/handler.go,93,certs|GET|/acme/renewal-info/{param}
-certs,GET,/acme/challenge/{id},/acme/challenge/{param},h.handleACMEChallengeInfo,services/certs/handler.go,94,certs|GET|/acme/challenge/{param}
-certs,POST,/acme/challenge/{id},/acme/challenge/{param},h.handleACMEChallenge,services/certs/handler.go,95,certs|POST|/acme/challenge/{param}
-certs,POST,/acme/finalize/{id},/acme/finalize/{param},h.handleACMEFinalize,services/certs/handler.go,96,certs|POST|/acme/finalize/{param}
-certs,GET,/acme/cert/{id},/acme/cert/{param},h.handleACMECertDownload,services/certs/handler.go,97,certs|GET|/acme/cert/{param}
-certs,GET,/est/.well-known/est/cacerts,/est/.well-known/est/cacerts,h.handleESTCACerts,services/certs/handler.go,99,certs|GET|/est/.well-known/est/cacerts
-certs,GET,/est/.well-known/est/csrattrs,/est/.well-known/est/csrattrs,h.handleESTCSRAttrs,services/certs/handler.go,100,certs|GET|/est/.well-known/est/csrattrs
-certs,POST,/est/.well-known/est/simpleenroll,/est/.well-known/est/simpleenroll,h.handleESTSimpleEnroll,services/certs/handler.go,101,certs|POST|/est/.well-known/est/simpleenroll
-certs,POST,/est/.well-known/est/simplereenroll,/est/.well-known/est/simplereenroll,h.handleESTSimpleReenroll,services/certs/handler.go,102,certs|POST|/est/.well-known/est/simplereenroll
-certs,POST,/est/.well-known/est/serverkeygen,/est/.well-known/est/serverkeygen,h.handleESTServerKeygen,services/certs/handler.go,103,certs|POST|/est/.well-known/est/serverkeygen
-certs,GET,/scep/pkiclient.exe,/scep/pkiclient.exe,h.handleSCEPGet,services/certs/handler.go,105,certs|GET|/scep/pkiclient.exe
-certs,POST,/scep/pkiclient.exe,/scep/pkiclient.exe,h.handleSCEPPKIOperation,services/certs/handler.go,106,certs|POST|/scep/pkiclient.exe
-certs,POST,/cmpv2,/cmpv2,h.handleCMPv2,services/certs/handler.go,108,certs|POST|/cmpv2
-certs,POST,/cmpv2/confirm,/cmpv2/confirm,h.handleCMPv2Confirm,services/certs/handler.go,109,certs|POST|/cmpv2/confirm
+certs,POST,/certs/merkle/build,/certs/merkle/build,h.handleMerkleBuild,services/certs/handler.go,81,certs|POST|/certs/merkle/build
+certs,GET,/certs/merkle/epochs,/certs/merkle/epochs,h.handleMerkleEpochs,services/certs/handler.go,82,certs|GET|/certs/merkle/epochs
+certs,GET,/certs/merkle/epochs/{id},/certs/merkle/epochs/{param},h.handleMerkleEpoch,services/certs/handler.go,83,certs|GET|/certs/merkle/epochs/{param}
+certs,GET,/certs/merkle/proof/{id},/certs/merkle/proof/{param},h.handleCertProof,services/certs/handler.go,84,certs|GET|/certs/merkle/proof/{param}
+certs,POST,/certs/merkle/verify,/certs/merkle/verify,h.handleMerkleVerify,services/certs/handler.go,85,certs|POST|/certs/merkle/verify
+certs,GET,/acme/directory,/acme/directory,h.handleACMEDirectory,services/certs/handler.go,87,certs|GET|/acme/directory
+certs,HEAD,/acme/new-nonce,/acme/new-nonce,h.handleACMENonce,services/certs/handler.go,88,certs|HEAD|/acme/new-nonce
+certs,POST,/acme/new-nonce,/acme/new-nonce,h.handleACMENonce,services/certs/handler.go,89,certs|POST|/acme/new-nonce
+certs,POST,/acme/new-account,/acme/new-account,h.handleACMENewAccount,services/certs/handler.go,90,certs|POST|/acme/new-account
+certs,POST,/acme/new-order,/acme/new-order,h.handleACMENewOrder,services/certs/handler.go,91,certs|POST|/acme/new-order
+certs,GET,/acme/renewal-info/{id},/acme/renewal-info/{param},h.handleACMERenewalInfo,services/certs/handler.go,92,certs|GET|/acme/renewal-info/{param}
+certs,GET,/acme/challenge/{id},/acme/challenge/{param},h.handleACMEChallengeInfo,services/certs/handler.go,93,certs|GET|/acme/challenge/{param}
+certs,POST,/acme/challenge/{id},/acme/challenge/{param},h.handleACMEChallenge,services/certs/handler.go,94,certs|POST|/acme/challenge/{param}
+certs,POST,/acme/finalize/{id},/acme/finalize/{param},h.handleACMEFinalize,services/certs/handler.go,95,certs|POST|/acme/finalize/{param}
+certs,GET,/acme/cert/{id},/acme/cert/{param},h.handleACMECertDownload,services/certs/handler.go,96,certs|GET|/acme/cert/{param}
+certs,GET,/est/.well-known/est/cacerts,/est/.well-known/est/cacerts,h.handleESTCACerts,services/certs/handler.go,98,certs|GET|/est/.well-known/est/cacerts
+certs,GET,/est/.well-known/est/csrattrs,/est/.well-known/est/csrattrs,h.handleESTCSRAttrs,services/certs/handler.go,99,certs|GET|/est/.well-known/est/csrattrs
+certs,POST,/est/.well-known/est/simpleenroll,/est/.well-known/est/simpleenroll,h.handleESTSimpleEnroll,services/certs/handler.go,100,certs|POST|/est/.well-known/est/simpleenroll
+certs,POST,/est/.well-known/est/simplereenroll,/est/.well-known/est/simplereenroll,h.handleESTSimpleReenroll,services/certs/handler.go,101,certs|POST|/est/.well-known/est/simplereenroll
+certs,POST,/est/.well-known/est/serverkeygen,/est/.well-known/est/serverkeygen,h.handleESTServerKeygen,services/certs/handler.go,102,certs|POST|/est/.well-known/est/serverkeygen
+certs,GET,/scep/pkiclient.exe,/scep/pkiclient.exe,h.handleSCEPGet,services/certs/handler.go,104,certs|GET|/scep/pkiclient.exe
+certs,POST,/scep/pkiclient.exe,/scep/pkiclient.exe,h.handleSCEPPKIOperation,services/certs/handler.go,105,certs|POST|/scep/pkiclient.exe
+certs,POST,/cmpv2,/cmpv2,h.handleCMPv2,services/certs/handler.go,107,certs|POST|/cmpv2
+certs,POST,/cmpv2/confirm,/cmpv2/confirm,h.handleCMPv2Confirm,services/certs/handler.go,108,certs|POST|/cmpv2/confirm
 cloud,POST,/cloud/accounts,/cloud/accounts,h.handleRegisterAccount,services/cloud/handler.go,30,cloud|POST|/cloud/accounts
 cloud,GET,/cloud/accounts,/cloud/accounts,h.handleListAccounts,services/cloud/handler.go,31,cloud|GET|/cloud/accounts
 cloud,DELETE,/cloud/accounts/{id},/cloud/accounts/{param},h.handleDeleteAccount,services/cloud/handler.go,32,cloud|DELETE|/cloud/accounts/{param}
@@ -826,10 +825,10 @@ pqc,GET,/pqc/timeline,/pqc/timeline,h.handleTimeline,services/pqc/handler.go,46,
 pqc,GET,/pqc/cbom/export,/pqc/cbom/export,h.handleExportCBOM,services/pqc/handler.go,47,pqc|GET|/pqc/cbom/export
 reconciler,GET,/reconciler/status,/reconciler/status,"func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, runner.Status())
-	}",services/reconciler/main.go,57,reconciler|GET|/reconciler/status
+	}",services/reconciler/main.go,63,reconciler|GET|/reconciler/status
 reconciler,GET,/healthz,/healthz,"func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}",services/reconciler/main.go,60,reconciler|GET|/healthz
+	}",services/reconciler/main.go,66,reconciler|GET|/healthz
 reporting,GET,/alerts,/alerts,h.handleAlerts,services/reporting/handler.go,67,reporting|GET|/alerts
 reporting,GET,/alerts/feed,/alerts/feed,h.handleAlertsFeed,services/reporting/handler.go,68,reporting|GET|/alerts/feed
 reporting,GET,/alerts/unread,/alerts/unread,h.handleAlertsUnread,services/reporting/handler.go,69,reporting|GET|/alerts/unread
@@ -894,13 +893,13 @@ signing,POST,/signing/git,/signing/git,h.handleSignGit,services/signing/handler.
 signing,POST,/signing/verify,/signing/verify,h.handleVerify,services/signing/handler.go,40,signing|POST|/signing/verify
 watchdog,GET,/watchdog/heartbeats,/watchdog/heartbeats,"func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, probe.Snapshot())
-	}",services/watchdog/main.go,42,watchdog|GET|/watchdog/heartbeats
+	}",services/watchdog/main.go,48,watchdog|GET|/watchdog/heartbeats
 watchdog,GET,/watchdog/incidents,/watchdog/incidents,"func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, pb.Incidents())
-	}",services/watchdog/main.go,45,watchdog|GET|/watchdog/incidents
+	}",services/watchdog/main.go,51,watchdog|GET|/watchdog/incidents
 watchdog,GET,/healthz,/healthz,"func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-	}",services/watchdog/main.go,48,watchdog|GET|/healthz
+	}",services/watchdog/main.go,54,watchdog|GET|/healthz
 workload,GET,/workload-identity/settings,/workload-identity/settings,h.handleGetSettings,services/workload/handler.go,26,workload|GET|/workload-identity/settings
 workload,PUT,/workload-identity/settings,/workload-identity/settings,h.handlePutSettings,services/workload/handler.go,27,workload|PUT|/workload-identity/settings
 workload,GET,/workload-identity/summary,/workload-identity/summary,h.handleGetSummary,services/workload/handler.go,28,workload|GET|/workload-identity/summary
