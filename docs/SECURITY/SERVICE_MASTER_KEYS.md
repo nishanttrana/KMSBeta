@@ -115,27 +115,28 @@ The dashboard shows the register per tenant under **Administration → Tenant
 
 ## Backups kept in the platform
 
-Governance backups store the encrypted artifact in the database. For
-software-mode backups the key package is stored there too (see
-[Known limitations](#known-limitations)). A backup taken before the upgrade
-held rows under the public keys, so the live database kept exposing them
-through its own backups. So:
+Governance backups store the encrypted artifact in the database. A backup
+of rows under the public keys would keep exposing them through the
+platform's own backups. So, on the owning service's
+`POST /mek/rewrap-legacy` (only the `kms-governance` identity may call it;
+the service re-wraps only what a legacy key opens):
 
-- **Stored backups are re-protected.** On the primary, 2 minutes after start
-  and then hourly, governance opens each backup not yet processed. It sends
-  the wrapped DEKs it finds under a public key, in the tables above, to the
-  owning service's
-  `POST /mek/rewrap-legacy` (only the `kms-governance` identity may call it;
-  the service re-wraps only what a legacy key opens) and re-seals the
-  artifact under a **new** backup key. The old key package no longer opens it
-  (`audit.governance.backup_reprotected`). If a key or service is unavailable,
-  the backup is retried on the next run (`backup_reprotect_refused`).
+- **Captures are re-wrapped.** Before a backup is sealed, rows of the tables
+  above that a public key opens are re-wrapped onto the service key. If the
+  service can't re-wrap them, no backup is taken
+  (`audit.governance.backup_create_refused`).
 - **Restores are re-wrapped before any row is written.** Governance finds
   rows under a public key itself (those keys are public), so a clean backup
   never needs the services. For affected rows it calls the owning service,
   and the item (re)opens in the exposure register, because the old value is
   live again. If that service can't re-wrap, nothing is restored
   (`backup_restore_refused`).
+
+Backups already stored are not re-sealed in place: governance no longer keeps
+software-mode backup keys, and migration 013 removed the stored keys of
+backups taken before the upgrade ([BACKUP_KEYS.md](BACKUP_KEYS.md)). An
+earlier design re-sealed stored backups hourly. It was dropped with the
+stored keys (no backups had been taken on the old version).
 
 ## Known limitations
 
@@ -145,10 +146,6 @@ through its own backups. So:
 - **CA signing keys** re-wrapped onto the sealed root key (certs'
   `RewrapLegacyCASigners`) are still the same private keys, so their entries
   stay open until the CA is replaced.
-- **Governance software-mode backups** keep the backup key in the same row as
-  the artifact, so anyone who can read the database can open them. HSM-bound
-  backups wrap the key, but with a raw SHA-256 derivation rather than HKDF.
-  Both predate this change and are tracked separately.
 - **Keycore is a startup dependency** of these four services.
 
 ## Tests
@@ -166,6 +163,6 @@ through its own backups. So:
   `TestUpgradeMovesCloudCredentialsOffPublicKey`,
   `TestUpgradeMovesRecoveryKeysOffPublicKey`,
   `TestUpgradeMovesCASignerOffPublicKey`.
-- **governance:** `TestBackupReprotectPostgres`.
+- **governance:** `TestBackupReprotectPostgres` (capture and restore re-wrap).
 - **Mode coverage:** everything runs in FIPS modes off / on / only. The
   Postgres tests run in CI `integration-postgres`.

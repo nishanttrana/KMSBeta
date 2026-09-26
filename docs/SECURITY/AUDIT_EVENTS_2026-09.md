@@ -64,8 +64,9 @@ are per tenant, with actor type `service`, and carry `item_type`, `count`
 | `audit.key.system_key_ensure` | a service asked for its system key (kernel event; `refused` for a non-service caller) | info |
 | `audit.key.system_key_created` | keycore created a service's system key | info |
 | `audit.key.system_key_change_refused` | destroy, disable, version delete or export of a system key was refused (`operation`, `reason: system_key_protected`) | critical |
-| `audit.governance.backup_reprotected` | a stored backup's rows under public keys were re-wrapped and it was re-sealed under a new key (`rows_rewrapped` per service; the old key package is invalid) | warning |
-| `audit.governance.backup_reprotect_refused` | a stored backup couldn't be re-protected yet (`key_unavailable`, `artifact_unreadable`, `service_unreachable`); retried hourly | warning |
+| `audit.governance.backup_create_refused` | a backup wasn't taken (`reason`, for example a service couldn't re-wrap a row under a public key, or `BACKUP_HSM_WRAP_SECRET` is missing or short) | warning |
+| `audit.governance.backup_key_downloaded` | an HSM-bound backup's wrapped key file was downloaded again | warning |
+| `audit.governance.backup_key_download_refused` | a key download was refused (`reason: key_not_retained`: software mode, or a key removed by migration 013) | warning |
 
 **If NATS is down at startup,** migration events can't be published. The
 counts stay in `<svc>_mek_state` and the items in `<svc>_mek_exposure`, and

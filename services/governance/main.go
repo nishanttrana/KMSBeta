@@ -36,7 +36,7 @@ var logger = log.New(os.Stdout, "[governance] ", log.LstdFlags|log.Lmicroseconds
 
 func main() {
 	// Governance calls the secrets, certs, cloud and ekm services as itself
-	// to re-protect backup contents (backup_mek.go).
+	// to re-wrap backup contents under retired public keys (backup_mek.go).
 	servicetoken.SetDefault(servicetoken.FromEnv("kms-governance"))
 	cfg := pkgconfig.Load()
 
@@ -91,37 +91,6 @@ func main() {
 	)
 	handler := NewHandler(svc)
 
-	// Re-protect stored backups that still hold rows under a retired public
-	// key: two minutes after start (the services migrate their live rows
-	// first), then hourly. Primary only: backups are replicated.
-	go func() {
-		reprotect := func() {
-			if !clusterstate.RunsPrimaryJobs(ctx) {
-				return
-			}
-			if n, err := svc.ReprotectStoredBackups(ctx); err != nil {
-				logger.Printf("backup re-protect: %v", err)
-			} else if n > 0 {
-				logger.Printf("backup re-protect: %d stored backup(s) checked", n)
-			}
-		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(2 * time.Minute):
-		}
-		reprotect()
-		t := time.NewTicker(time.Hour)
-		defer t.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-t.C:
-				reprotect()
-			}
-		}
-	}()
 	if tokenParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience); err != nil {
 		logger.Printf("jwt parser disabled: %v", err)
 	} else if tokenParser != nil {

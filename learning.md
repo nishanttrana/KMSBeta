@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### A key stored next to what it protects is not protection
+Governance "encrypted" software-mode backups and kept the key in the same
+row. The key package even said "store this separately from the artifact",
+and then the platform didn't. Encryption at rest only counts when the key
+lives somewhere the ciphertext's reader can't reach. Here that means the
+operator's saved key file, or a wrap secret outside the database. It
+compounded the master-key issue: the "re-protect stored backups" job only
+worked because the keys were there to read. Once the keys stopped being
+stored, that job had nothing to open, and the simpler fix was to re-wrap at
+capture. Separately, "key_derivation: v1" was a raw SHA-256 of
+`secret|fingerprint|tenants`, and restore tried three input variants.
+Candidate-guessing across derivations is a sign the format was never pinned.
+Version the package and accept exactly one derivation.
+
 ### "Backward compatible" anonymous access hides the callers that depend on it
 Keycore let a request with no token use any key that had no grants. The
 branch was labelled backward-compatible, and nobody knew what depended on it.

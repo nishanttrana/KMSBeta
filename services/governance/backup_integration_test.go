@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -56,26 +57,27 @@ type backupFiles struct {
 	artifactName, artifactB64, keyName, keyB64 string
 }
 
-// downloadBackup fetches the two files a customer downloads for a backup.
-func downloadBackup(t *testing.T, svc *Service, tenantID, backupID string) backupFiles {
+// takeBackup creates a backup and returns the two files a customer keeps:
+// the key file, returned once at creation, and the artifact download.
+func takeBackup(t *testing.T, svc *Service, in CreateBackupInput) (BackupJob, backupFiles) {
 	t.Helper()
-	ctx := context.Background()
-	art, err := svc.GetBackupArtifactDownload(ctx, tenantID, backupID)
-	if err != nil {
-		t.Fatalf("artifact download: %v", err)
-	}
-	key, err := svc.GetBackupKeyDownload(ctx, tenantID, backupID)
-	if err != nil {
-		t.Fatalf("key download: %v", err)
-	}
-	keyRaw, err := json.Marshal(key["key_package"])
+	job, keyFile, err := svc.CreateBackup(context.Background(), in)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return backupFiles{
-		artifactName: art["file_name"].(string), artifactB64: art["content_base64"].(string),
-		keyName: key["file_name"].(string), keyB64: base64.StdEncoding.EncodeToString(keyRaw),
+	art, err := svc.GetBackupArtifactDownload(context.Background(), in.TenantID, job.ID)
+	if err != nil {
+		t.Fatalf("artifact download: %v", err)
 	}
+	return job, backupFiles{
+		artifactName: art["file_name"].(string), artifactB64: art["content_base64"].(string),
+		keyName: keyFile.FileName, keyB64: keyFile.ContentBase64,
+	}
+}
+
+func systemBackup() CreateBackupInput {
+	noHSM := false
+	return CreateBackupInput{TenantID: "root", Scope: "system", CreatedBy: "it", BindToHSM: &noHSM}
 }
 
 func (f backupFiles) restore(svc *Service, tenantID string) (RestoreBackupResult, error) {
@@ -134,15 +136,10 @@ func TestBackupRestoreRoundTripPostgres(t *testing.T) {
 	ctx := context.Background()
 	kept := createNamedPolicy(t, svc, "t-bk", "before-backup")
 
-	noHSM := false
-	job, err := svc.CreateBackup(ctx, CreateBackupInput{TenantID: "root", Scope: "system", CreatedBy: "it", BindToHSM: &noHSM})
-	if err != nil {
-		t.Fatal(err)
-	}
+	job, files := takeBackup(t, svc, systemBackup())
 	if job.Status != "completed" || job.RowCountTotal == 0 || job.TableCount == 0 || job.EncryptionAlgorithm != "AES-256-GCM" {
 		t.Fatalf("backup job must reflect real captured data: %+v", job)
 	}
-	files := downloadBackup(t, svc, "root", job.ID)
 
 	if err := svc.DeletePolicy(ctx, "t-bk", kept.ID); err != nil {
 		t.Fatal(err)
@@ -171,14 +168,8 @@ func TestBackupRestoreRoundTripPostgres(t *testing.T) {
 // was changed (AAD binding) must all be refused without touching data.
 func TestBackupRestoreRefusesTamperingPostgres(t *testing.T) {
 	svc, pub := newIntegrationGovernance(t)
-	ctx := context.Background()
 	createNamedPolicy(t, svc, "t-tamper", "original")
-	noHSM := false
-	job, err := svc.CreateBackup(ctx, CreateBackupInput{TenantID: "root", Scope: "system", CreatedBy: "it", BindToHSM: &noHSM})
-	if err != nil {
-		t.Fatal(err)
-	}
-	files := downloadBackup(t, svc, "root", job.ID)
+	_, files := takeBackup(t, svc, systemBackup())
 	createNamedPolicy(t, svc, "t-tamper", "sentinel-after-backup")
 
 	flipped := files.mutateEnvelope(t, func(env map[string]interface{}) {
@@ -213,5 +204,99 @@ func TestBackupRestoreRefusesTamperingPostgres(t *testing.T) {
 	}
 	if data, _ := refused[0]["data"].(map[string]interface{}); data["reason"] == "" || data["result"] != "refused" {
 		t.Fatalf("refusal audit must carry the reason: %+v", refused[0])
+	}
+}
+
+// The platform never stores a software-mode backup key: the row holds only
+// its fingerprint, and a key download is refused (410) and audited. The key
+// file returned at creation is what restores it.
+func TestSoftwareBackupKeyNotRetainedPostgres(t *testing.T) {
+	svc, pub := newIntegrationGovernance(t)
+	ctx := context.Background()
+	createNamedPolicy(t, svc, "t-key", "kept")
+	job, files := takeBackup(t, svc, systemBackup())
+
+	keyRaw, _ := base64.StdEncoding.DecodeString(files.keyB64)
+	var keyFile map[string]interface{}
+	if err := json.Unmarshal(keyRaw, &keyFile); err != nil {
+		t.Fatal(err)
+	}
+	keyB64, _ := keyFile["backup_key_b64"].(string)
+	if keyB64 == "" || keyFile["backup_id"] != job.ID {
+		t.Fatalf("key file: %s", keyRaw)
+	}
+	var row string
+	db := svc.store.(*SQLStore).db.SQL()
+	if err := db.QueryRow(`SELECT key_package_json::text FROM governance_backup_jobs WHERE id=$1`, job.ID).Scan(&row); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(row, keyB64) || strings.Contains(row, "backup_key_b64") || !strings.Contains(row, `"key_retained": false`) {
+		t.Fatalf("stored package: %s", row)
+	}
+
+	if _, err := svc.GetBackupKeyDownload(ctx, "root", job.ID, "admin"); !errors.Is(err, errBackupKeyNotRetained) {
+		t.Fatalf("key download: %v, want errBackupKeyNotRetained", err)
+	}
+	refused := pub.events["audit.governance.backup_key_download_refused"]
+	if len(refused) != 1 {
+		t.Fatalf("key download refusal not audited: %d", len(refused))
+	}
+	if data, _ := refused[0]["data"].(map[string]interface{}); data["reason"] != "key_not_retained" || data["result"] != "refused" {
+		t.Fatalf("refusal audit: %+v", refused[0])
+	}
+
+	if _, err := files.restore(svc, "root"); err != nil {
+		t.Fatalf("restore with the key file from creation: %v", err)
+	}
+}
+
+// Migration 013 removes keys stored before: plaintext software keys and
+// hsm_bound packages wrapped with the retired raw SHA-256 derivation.
+func TestMigrationScrubsStoredBackupKeysPostgres(t *testing.T) {
+	svc, _ := newIntegrationGovernance(t)
+	db := svc.store.(*SQLStore).db.SQL()
+	legacy := map[string]string{
+		"bkp_legacy_sw":  `{"version":1,"mode":"software","backup_key_b64":"c2VjcmV0","backup_key_sha256":"x"}`,
+		"bkp_legacy_hsm": `{"version":1,"mode":"hsm_bound","key_derivation":"v1","wrapped_key_b64":"d3JhcHBlZA==","wrap_nonce_b64":"bg==","wrap_aad_b64":"YQ=="}`,
+		"bkp_current":    `{"version":2,"mode":"hsm_bound","key_derivation":"v2","key_retained":true,"wrapped_key_b64":"d3JhcHBlZA=="}`,
+	}
+	if _, err := db.Exec(`DELETE FROM governance_backup_jobs WHERE id IN ('bkp_legacy_sw','bkp_legacy_hsm','bkp_current')`); err != nil {
+		t.Fatal(err)
+	}
+	for id, pkg := range legacy {
+		if _, err := db.Exec(`INSERT INTO governance_backup_jobs (id, tenant_id, scope, status, backup_format, encryption_algorithm,
+			ciphertext_sha256, artifact_ciphertext, artifact_nonce, artifact_size_bytes, row_count_total, table_count, hsm_bound, key_package_json)
+			VALUES ($1,'root','system','completed','json.gz+aes256gcm','AES-256-GCM','x','\x00','\x00',1,1,1,false,$2::jsonb)`, id, pkg); err != nil {
+			t.Fatal(err)
+		}
+	}
+	migration, err := os.ReadFile("migrations/013_backup_keys_not_retained.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(string(migration)); err != nil {
+		t.Fatal(err)
+	}
+	for id := range legacy {
+		var row string
+		if err := db.QueryRow(`SELECT key_package_json::text FROM governance_backup_jobs WHERE id=$1`, id).Scan(&row); err != nil {
+			t.Fatal(err)
+		}
+		var pkg map[string]interface{}
+		_ = json.Unmarshal([]byte(row), &pkg)
+		if id == "bkp_current" {
+			if !backupKeyRetained(pkg) {
+				t.Fatalf("migration touched a v2 package: %s", row)
+			}
+			continue
+		}
+		if _, ok := pkg["backup_key_b64"]; ok || pkg["wrapped_key_b64"] != nil || pkg["key_retained"] != false {
+			t.Fatalf("%s not scrubbed: %s", id, row)
+		}
+	}
+	var n int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM information_schema.columns WHERE table_name='governance_backup_jobs' AND column_name='mek_reprotected_at'`).Scan(&n)
+	if n != 0 {
+		t.Fatal("mek_reprotected_at not dropped")
 	}
 }

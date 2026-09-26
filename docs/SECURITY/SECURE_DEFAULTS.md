@@ -127,9 +127,9 @@ another exemption without the same forced-change guarantee.
     service, plus service-bound derivation). There is no variable and no
     fallback, and keycore refuses to destroy, disable or export a system key.
   - **Revoking what the default produced (rule 4):** every row under a public
-    key is re-wrapped at startup and by a periodic rescan. Backups stored in
-    governance are re-protected and re-sealed under a new backup key, and
-    restores are re-wrapped before any row lands.
+    key is re-wrapped at startup and by a periodic rescan. New backups are
+    re-wrapped at capture, and restores before any row lands. Governance no
+    longer stores keys that open its backups ([BACKUP_KEYS.md](BACKUP_KEYS.md)).
   - What re-wrapping can't reach (copies made before: dumps, snapshots,
     downloaded backups) is tracked in each service's **exposure register**
     until the material is replaced, which is the only thing that makes such a

@@ -49,12 +49,11 @@ func secretRowUnder(t *testing.T, db *sql.DB, key []byte) bool {
 	return pkgcrypto.EnvelopeWrappedUnder(key, &env)
 }
 
-// A backup holding a secret under the public dev key is re-protected in
-// place (re-wrapped by the service, re-sealed under a new backup key), and a
-// copy downloaded before that is re-wrapped on restore before any row lands.
+// A secret row under the public dev key is re-wrapped by its service before
+// it goes into a new backup. A backup that still holds such a row (a copy
+// made before the upgrade) is re-wrapped on restore before any row lands.
 func TestBackupReprotectPostgres(t *testing.T) {
 	svc, pub := newIntegrationGovernance(t)
-	ctx := context.Background()
 	db := svc.store.(*SQLStore).db.SQL()
 	for _, stmt := range []string{
 		`CREATE TABLE IF NOT EXISTS secret_values (
@@ -78,51 +77,59 @@ func TestBackupReprotectPostgres(t *testing.T) {
 		VALUES ('root','sec_backup',1,$1,$2,$3,$4,'\x00')`, env.WrappedDEK, env.WrappedDEKIV, env.Ciphertext, env.DataIV); err != nil {
 		t.Fatal(err)
 	}
+
+	// A copy taken as before the upgrade: the row went in as it was.
+	_, old := takeBackup(t, svc, systemBackup())
+
+	// With the service down, no backup is taken of a row under a public key,
+	// and the refusal is audited.
+	svc.rewrapper = downRewrapper{}
+	if _, _, err := svc.CreateBackup(context.Background(), systemBackup()); err == nil {
+		t.Fatal("backup of a row under a public key went ahead without the service")
+	}
+	if len(pub.events["audit.governance.backup_create_refused"]) != 1 {
+		t.Fatal("backup_create_refused not audited")
+	}
+
+	// A new backup: the service re-wraps the row before it is captured.
 	rw := &keyRewrapper{dev: dev, cur: cur}
 	svc.rewrapper = rw
-
-	noHSM := false
-	job, err := svc.CreateBackup(ctx, CreateBackupInput{TenantID: "root", Scope: "system", CreatedBy: "it", BindToHSM: &noHSM})
-	if err != nil {
-		t.Fatal(err)
-	}
-	before := downloadBackup(t, svc, "root", job.ID)
-
-	if n, err := svc.ReprotectStoredBackups(ctx); err != nil || n < 1 {
-		t.Fatalf("re-protect: %d %v", n, err)
-	}
-	if len(pub.events["audit.governance.backup_reprotected"]) == 0 {
-		t.Fatal("backup_reprotected not audited")
-	}
-	after := downloadBackup(t, svc, "root", job.ID)
-	if after.artifactB64 == before.artifactB64 || after.keyB64 == before.keyB64 {
-		t.Fatal("the stored backup was not re-sealed")
-	}
-	// The key package downloaded before no longer opens the stored artifact.
-	stale := backupFiles{artifactName: after.artifactName, artifactB64: after.artifactB64, keyName: before.keyName, keyB64: before.keyB64}
-	if _, err := stale.restore(svc, "root"); err == nil {
-		t.Fatal("the old key package still opens the re-protected backup")
-	}
-	// Nothing left to do on the next run.
-	if pending, _ := svc.store.(*SQLStore).listUnreprotectedBackups(ctx); len(pending) != 0 {
-		t.Fatalf("still pending: %v", pending)
+	_, fresh := takeBackup(t, svc, systemBackup())
+	if len(rw.restoring) == 0 || rw.restoring[0] {
+		t.Fatalf("capture did not ask the service to re-wrap (as a non-restore): %v", rw.restoring)
 	}
 
-	// Restoring the re-protected backup brings the row back under the service key.
+	// Restoring the new backup brings the row back under the service key,
+	// even with every service down: it holds nothing under a public key.
+	svc.rewrapper = downRewrapper{}
 	if _, err := db.Exec(`DELETE FROM secret_values`); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := after.restore(svc, "root"); err != nil {
-		t.Fatalf("restore re-protected backup: %v", err)
+	if _, err := fresh.restore(svc, "root"); err != nil {
+		t.Fatalf("restore new backup: %v", err)
 	}
 	if !secretRowUnder(t, db, cur) {
-		t.Fatal("restored row is not under the service key")
+		t.Fatal("new backup held the row under the public dev key")
 	}
 
-	// A copy downloaded before re-protection: re-wrapped before it lands,
-	// and sent as a restore so the service records the exposure.
+	// The old copy with a service down is refused, and nothing lands.
+	if _, err := db.Exec(`DELETE FROM secret_values`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := old.restore(svc, "root"); err == nil {
+		t.Fatal("restore of rows under a public key went ahead without the service")
+	}
+	var n int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM secret_values`).Scan(&n)
+	if n != 0 {
+		t.Fatal("a refused restore wrote rows")
+	}
+
+	// The old copy with the service up: re-wrapped before it lands, and sent
+	// as a restore so the service records the exposure.
 	rw.restoring = nil
-	if _, err := before.restore(svc, "root"); err != nil {
+	svc.rewrapper = rw
+	if _, err := old.restore(svc, "root"); err != nil {
 		t.Fatalf("restore old copy: %v", err)
 	}
 	if !secretRowUnder(t, db, cur) || secretRowUnder(t, db, dev) {
@@ -134,25 +141,6 @@ func TestBackupReprotectPostgres(t *testing.T) {
 	}
 	if !sawRestoring {
 		t.Fatal("restore did not ask the service to record exposure")
-	}
-
-	// A clean backup never needs the services: with every service down, it
-	// still restores.
-	svc.rewrapper = downRewrapper{}
-	if _, err := after.restore(svc, "root"); err != nil {
-		t.Fatalf("clean backup restore depended on the services: %v", err)
-	}
-	// An affected backup with a service down is refused, and nothing lands.
-	if _, err := db.Exec(`DELETE FROM secret_values`); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := before.restore(svc, "root"); err == nil {
-		t.Fatal("restore of rows under a public key went ahead without the service")
-	}
-	var n int
-	_ = db.QueryRow(`SELECT COUNT(*) FROM secret_values`).Scan(&n)
-	if n != 0 {
-		t.Fatal("a refused restore wrote rows")
 	}
 }
 
