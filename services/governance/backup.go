@@ -502,6 +502,12 @@ func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (Res
 	if snapshotScope == backupScopeSystem {
 		snapshotTargetTenantID = ""
 	}
+	// Rows under a retired public key go live under the service key, and
+	// their items are recorded as exposed (backup_mek.go). If a service
+	// can't re-wrap, nothing is restored.
+	if _, err := reprotectTables(ctx, s.backupRewrapper(), snapshot.Tables, true); err != nil {
+		return RestoreBackupResult{}, fmt.Errorf("master-key re-wrap unavailable, restore not started: %w", err)
+	}
 	rowsRestored, tablesProcessed, tablesSkipped, excludedTables, err := store.restoreSnapshot(ctx, snapshotScope, snapshotTargetTenantID, snapshot.Tables)
 	if err != nil {
 		return RestoreBackupResult{}, err

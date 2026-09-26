@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	pkgdb "vecta-kms/pkg/db"
+	"vecta-kms/pkg/mek"
 )
 
 // Backup/restore against real Postgres: the engine reads information_schema
@@ -35,7 +36,20 @@ func newIntegrationGovernance(t *testing.T) (*Service, *capturePublisher) {
 		t.Fatalf("reset: %v", err)
 	}
 	pub := &capturePublisher{}
-	return NewService(NewSQLStore(conn), pub, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050"), pub
+	// Other packages' integration tests share this database, so catalogued
+	// master-key tables may exist; a pass-through stands in for the services.
+	return NewService(NewSQLStore(conn), pub, &mockEmailSender{}, &mockCallbackExecutor{}, "http://localhost:8050",
+		WithBackupRewrapper(passThroughRewrapper{})), pub
+}
+
+type passThroughRewrapper struct{}
+
+func (passThroughRewrapper) Rewrap(_ context.Context, _ string, req mek.RewrapRequest) ([]mek.RewrapResult, error) {
+	out := make([]mek.RewrapResult, len(req.Entries))
+	for i, e := range req.Entries {
+		out[i] = mek.RewrapResult{IV: e.IV, DEK: e.DEK, Status: "current"}
+	}
+	return out, nil
 }
 
 type backupFiles struct {

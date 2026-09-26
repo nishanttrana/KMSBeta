@@ -15,10 +15,23 @@ const GovernanceClient = "kms-governance"
 // maxRewrapEntries bounds one re-wrap call.
 const maxRewrapEntries = 1000
 
-// RewrapEntry is one wrapped DEK from a backup, base64 of the raw bytes.
+// RewrapEntry is one wrapped DEK from a backup, base64 of the raw bytes,
+// with the row it belongs to (used to record exposure during a restore).
 type RewrapEntry struct {
-	IV  string `json:"iv"`
-	DEK string `json:"dek"`
+	IV     string `json:"iv"`
+	DEK    string `json:"dek"`
+	Table  string `json:"table,omitempty"`
+	Tenant string `json:"tenant_id,omitempty"`
+	Item   string `json:"item_id,omitempty"`
+}
+
+// RewrapRequest is the body of POST /mek/rewrap-legacy. Restoring is set
+// when the rows are about to go live again: an entry that was under a public
+// key then (re)opens its item in the exposure register, because the old
+// value is back in use.
+type RewrapRequest struct {
+	Entries   []RewrapEntry `json:"entries"`
+	Restoring bool          `json:"restoring"`
 }
 
 // RewrapResult is the entry after re-wrap. Status: "rewrapped" (it was under
@@ -95,11 +108,13 @@ func (k *Keyring) rewrapLegacy(c *route.Call) {
 		c.Refuse(http.StatusForbidden, "governance_identity_required", "only the governance service may re-wrap backup contents")
 		return
 	}
-	var req struct {
-		Entries []RewrapEntry `json:"entries"`
-	}
+	var req RewrapRequest
 	if !c.Decode(&req) {
 		return
+	}
+	itemTypes := map[string]string{}
+	for _, t := range k.opts.Tables.Tables {
+		itemTypes[t.Name] = t.ItemType
 	}
 	if len(req.Entries) > maxRewrapEntries {
 		c.Error(http.StatusBadRequest, "too_many_entries", "at most 1000 entries per call")
@@ -128,6 +143,13 @@ func (k *Keyring) rewrapLegacy(c *route.Call) {
 			moved, err := pkgcrypto.RewrapEnvelope(l.Key, k.current, env)
 			if err != nil {
 				break
+			}
+			if l.Public && req.Restoring && e.Tenant != "" && e.Item != "" && itemTypes[e.Table] != "" {
+				if err := recordExposure(c.R.Context(), k.opts.DB, k.opts.Tables.ExposureTable, e.Tenant, itemTypes[e.Table], e.Item, l.Name); err != nil {
+					c.Error(http.StatusInternalServerError, "exposure_failed", err.Error())
+					return
+				}
+				counts["exposure_recorded"]++
 			}
 			out[i] = RewrapResult{IV: b64(moved.WrappedDEKIV), DEK: b64(moved.WrappedDEK), Status: "rewrapped", Source: l.Name}
 			counts["rewrapped"]++

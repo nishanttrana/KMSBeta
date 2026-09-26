@@ -93,7 +93,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Integration tests (run serially; they share the database)
-        run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/governance ./services/signing ./services/backup ./services/secrets
+        run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/governance ./services/signing ./services/backup ./services/secrets ./pkg/mek
 
   dashboard-quality:
     name: Dashboard Lint/Type/Unit/Build/Smoke
