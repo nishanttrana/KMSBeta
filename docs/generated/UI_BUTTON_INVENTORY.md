@@ -1,6 +1,6 @@
 # Generated UI Button Inventory
 
-Generated at `2026-09-26T11:36:12Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-26T11:49:47Z` by `scripts/generate_product_map.py`.
 
 This is a static inventory of controls with `onClick` handlers. For exact runtime behavior, combine it with Playwright traces and network logs.
 
@@ -17,13 +17,13 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/ThemeToggle.tsx | 17 | - | button | {isDark ? : } | toggle |
 | web/dashboard/src/components/ThemeToggle.tsx | 31 | - | button | } onMouseLeave={(e) => } > {isDark ? : } | toggle |
 | web/dashboard/src/components/ToastStack.tsx | 84 | - | button | dismiss(toast.id)} aria-label="Dismiss notification" style={ } > × |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 752 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 912 | - | button | Sign out | onLogout |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 963 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 986 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1036 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1073 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
-| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1108 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 747 | - | button | setCollapsed((v) => !v)} title= className="vk-icon-btn" style={{ width: 22, h... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 907 | - | button | Sign out | onLogout |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 958 | - | button | togglePin(tab)} title= style={{ display: "inline-flex", alignItems: "center",... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 981 | - | button | setPaletteOpen(true)} title="Command palette (⌘K)" className="vk-search-btn"... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1031 | - | Btn | selectTab("admin")} style={cliEnabled ? : }> |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1068 | - | button | } className="vk-icon-btn" aria-label="About this KMS build" aria-expanded= ti... |  |
+| web/dashboard/src/components/VectaDashboardV3Shell.tsx | 1103 | - | button | } className="vk-icon-btn" style={{ display: "inline-flex", alignItems: "cente... |  |
 | web/dashboard/src/components/primitives.tsx | 23 | - | button | (icon or dynamic label) | onClick |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 56 | - | button | Close | onClose} aria-label="Close" style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", pa... |
 | web/dashboard/src/components/v3/legacyPrimitives.tsx | 164 | - | Btn | (icon or dynamic label) | cancel |
@@ -143,15 +143,6 @@ This is a static inventory of controls with `onClick` handlers. For exact runtim
 | web/dashboard/src/components/v3/tabs/BackupTab.tsx | 279 | backup | button | handleRestore(p.id)} disabled title= style={{ padding: "4px 10px", borderRadi... |  |
 | web/dashboard/src/components/v3/tabs/BackupTab.tsx | 337 | backup | button | setShowCreate(false)} style={{ padding: "7px 16px", borderRadius: 6, border:... |  |
 | web/dashboard/src/components/v3/tabs/BackupTab.tsx | 338 | backup | button | (icon or dynamic label) | handleCreate} disabled={creating \|\| !form.name |
-| web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx | 206 | ct_monitor | Btn | Cancel | onClose |
-| web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx | 207 | ct_monitor | Btn | (icon or dynamic label) | submit} disabled={busy |
-| web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx | 315 | ct_monitor | button | setErrorMsg("")} style={ }> |  |
-| web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx | 332 | ct_monitor | Btn | void load(false)}> |  |
-| web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx | 333 | ct_monitor | Btn | setAddOpen(true)}>+ Add Domain |  |
-| web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx | 382 | ct_monitor | Btn | void handleToggle(d.id, d.enabled)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx | 385 | ct_monitor | Btn | void handleDelete(d.id)} disabled= > |  |
-| web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx | 467 | ct_monitor | Btn | void load(false)}> Refresh |  |
-| web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx | 498 | ct_monitor | Btn | void handleAck(a.id)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1484 | certs | button | toggleCA(caID)} style={ }> {open? : } : |  |
 | web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1498 | certs | Btn | void actCRL(ca)} disabled= > |  |
 | web/dashboard/src/components/v3/tabs/CertsTab.tsx | 1499 | certs | Btn | void actDeleteCA(ca)} disabled= > |  |

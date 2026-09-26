@@ -2522,78 +2522,8 @@
     },
     {
       "file": "services/certs/handler.go",
-      "handler": "h.handleListWatchedDomains",
-      "line": 112,
-      "match_key": "certs|GET|/ct-monitor/domains",
-      "method": "GET",
-      "normalized_path": "/ct-monitor/domains",
-      "path": "/ct-monitor/domains",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleAddWatchedDomain",
-      "line": 113,
-      "match_key": "certs|POST|/ct-monitor/domains",
-      "method": "POST",
-      "normalized_path": "/ct-monitor/domains",
-      "path": "/ct-monitor/domains",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleToggleWatchedDomain",
-      "line": 114,
-      "match_key": "certs|PATCH|/ct-monitor/domains/{param}",
-      "method": "PATCH",
-      "normalized_path": "/ct-monitor/domains/{param}",
-      "path": "/ct-monitor/domains/{id}",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleDeleteWatchedDomain",
-      "line": 115,
-      "match_key": "certs|DELETE|/ct-monitor/domains/{param}",
-      "method": "DELETE",
-      "normalized_path": "/ct-monitor/domains/{param}",
-      "path": "/ct-monitor/domains/{id}",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleListCTLogEntries",
-      "line": 116,
-      "match_key": "certs|GET|/ct-monitor/entries",
-      "method": "GET",
-      "normalized_path": "/ct-monitor/entries",
-      "path": "/ct-monitor/entries",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleListCTAlerts",
-      "line": 117,
-      "match_key": "certs|GET|/ct-monitor/alerts",
-      "method": "GET",
-      "normalized_path": "/ct-monitor/alerts",
-      "path": "/ct-monitor/alerts",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
-      "handler": "h.handleAcknowledgeCTAlert",
-      "line": 118,
-      "match_key": "certs|POST|/ct-monitor/alerts/{param}/acknowledge",
-      "method": "POST",
-      "normalized_path": "/ct-monitor/alerts/{param}/acknowledge",
-      "path": "/ct-monitor/alerts/{id}/acknowledge",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
       "handler": "h.handleListMeshServices",
-      "line": 121,
+      "line": 114,
       "match_key": "certs|GET|/mesh/services",
       "method": "GET",
       "normalized_path": "/mesh/services",
@@ -2603,7 +2533,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleRegisterMeshService",
-      "line": 122,
+      "line": 115,
       "match_key": "certs|POST|/mesh/services",
       "method": "POST",
       "normalized_path": "/mesh/services",
@@ -2613,7 +2543,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleRenewServiceCert",
-      "line": 123,
+      "line": 116,
       "match_key": "certs|POST|/mesh/services/{param}/renew",
       "method": "POST",
       "normalized_path": "/mesh/services/{param}/renew",
@@ -2623,7 +2553,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleListMeshCertificates",
-      "line": 124,
+      "line": 117,
       "match_key": "certs|GET|/mesh/certificates",
       "method": "GET",
       "normalized_path": "/mesh/certificates",
@@ -2633,7 +2563,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleListTrustAnchors",
-      "line": 125,
+      "line": 118,
       "match_key": "certs|GET|/mesh/trust-anchors",
       "method": "GET",
       "normalized_path": "/mesh/trust-anchors",
@@ -2643,7 +2573,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleAddTrustAnchor",
-      "line": 126,
+      "line": 119,
       "match_key": "certs|POST|/mesh/trust-anchors",
       "method": "POST",
       "normalized_path": "/mesh/trust-anchors",
@@ -2653,7 +2583,7 @@
     {
       "file": "services/certs/handler.go",
       "handler": "h.handleGetTopology",
-      "line": 127,
+      "line": 120,
       "match_key": "certs|GET|/mesh/topology",
       "method": "GET",
       "normalized_path": "/mesh/topology",
@@ -10214,18 +10144,8 @@
     },
     {
       "file": "services/certs/handler.go",
-      "handler": "h.handleListCTLogEntries",
-      "line": 116,
-      "match_key": "certs|GET|/ct-monitor/entries",
-      "method": "GET",
-      "normalized_path": "/ct-monitor/entries",
-      "path": "/ct-monitor/entries",
-      "service": "certs"
-    },
-    {
-      "file": "services/certs/handler.go",
       "handler": "h.handleAddTrustAnchor",
-      "line": 126,
+      "line": 119,
       "match_key": "certs|POST|/mesh/trust-anchors",
       "method": "POST",
       "normalized_path": "/mesh/trust-anchors",
@@ -12996,7 +12916,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setCollapsed((v) => !v)} title= className=\"vk-icon-btn\" style={{ width: 22, h...",
-      "line": 752,
+      "line": 747,
       "tabs": [],
       "tag": "button"
     },
@@ -13004,7 +12924,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "onLogout",
       "label": "Sign out",
-      "line": 912,
+      "line": 907,
       "tabs": [],
       "tag": "button"
     },
@@ -13012,7 +12932,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "togglePin(tab)} title= style={{ display: \"inline-flex\", alignItems: \"center\",...",
-      "line": 963,
+      "line": 958,
       "tabs": [],
       "tag": "button"
     },
@@ -13020,7 +12940,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "setPaletteOpen(true)} title=\"Command palette (\u2318K)\" className=\"vk-search-btn\"...",
-      "line": 986,
+      "line": 981,
       "tabs": [],
       "tag": "button"
     },
@@ -13028,7 +12948,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "selectTab(\"admin\")} style={cliEnabled ? : }>",
-      "line": 1036,
+      "line": 1031,
       "tabs": [],
       "tag": "Btn"
     },
@@ -13036,7 +12956,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" aria-label=\"About this KMS build\" aria-expanded= ti...",
-      "line": 1073,
+      "line": 1068,
       "tabs": [],
       "tag": "button"
     },
@@ -13044,7 +12964,7 @@
       "file": "web/dashboard/src/components/VectaDashboardV3Shell.tsx",
       "handler": "",
       "label": "} className=\"vk-icon-btn\" style={{ display: \"inline-flex\", alignItems: \"cente...",
-      "line": 1108,
+      "line": 1103,
       "tabs": [],
       "tag": "button"
     },
@@ -14183,96 +14103,6 @@
         "backup"
       ],
       "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx",
-      "handler": "onClose",
-      "label": "Cancel",
-      "line": 206,
-      "tabs": [
-        "ct_monitor"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx",
-      "handler": "submit} disabled={busy",
-      "label": "(icon or dynamic label)",
-      "line": 207,
-      "tabs": [
-        "ct_monitor"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx",
-      "handler": "",
-      "label": "setErrorMsg(\"\")} style={ }>",
-      "line": 315,
-      "tabs": [
-        "ct_monitor"
-      ],
-      "tag": "button"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx",
-      "handler": "",
-      "label": "void load(false)}>",
-      "line": 332,
-      "tabs": [
-        "ct_monitor"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx",
-      "handler": "",
-      "label": "setAddOpen(true)}>+ Add Domain",
-      "line": 333,
-      "tabs": [
-        "ct_monitor"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx",
-      "handler": "",
-      "label": "void handleToggle(d.id, d.enabled)} disabled= >",
-      "line": 382,
-      "tabs": [
-        "ct_monitor"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx",
-      "handler": "",
-      "label": "void handleDelete(d.id)} disabled= >",
-      "line": 385,
-      "tabs": [
-        "ct_monitor"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx",
-      "handler": "",
-      "label": "void load(false)}> Refresh",
-      "line": 467,
-      "tabs": [
-        "ct_monitor"
-      ],
-      "tag": "Btn"
-    },
-    {
-      "file": "web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx",
-      "handler": "",
-      "label": "void handleAck(a.id)} disabled= >",
-      "line": 498,
-      "tabs": [
-        "ct_monitor"
-      ],
-      "tag": "Btn"
     },
     {
       "file": "web/dashboard/src/components/v3/tabs/CertsTab.tsx",
@@ -24064,97 +23894,6 @@
       "source": "serviceRequest"
     },
     {
-      "dynamic": false,
-      "expression": "serviceRequest(\"certs\", \"/ct-monitor/domains\")",
-      "file": "web/dashboard/src/lib/ctMonitor.ts",
-      "line": 47,
-      "match_key": "certs|GET|/ct-monitor/domains",
-      "method": "GET",
-      "normalized_path": "/ct-monitor/domains",
-      "path": "/ct-monitor/domains",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
-      "expression": "serviceRequest(\"certs\", \"/ct-monitor/domains\")",
-      "file": "web/dashboard/src/lib/ctMonitor.ts",
-      "line": 52,
-      "match_key": "certs|POST|/ct-monitor/domains",
-      "method": "POST",
-      "normalized_path": "/ct-monitor/domains",
-      "path": "/ct-monitor/domains",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"certs\", `/ct-monitor/domains/${id}`)",
-      "file": "web/dashboard/src/lib/ctMonitor.ts",
-      "line": 56,
-      "match_key": "certs|DELETE|/ct-monitor/domains/{param}",
-      "method": "DELETE",
-      "normalized_path": "/ct-monitor/domains/{param}",
-      "path": "/ct-monitor/domains/{param}",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"certs\", `/ct-monitor/entries${q}`)",
-      "file": "web/dashboard/src/lib/ctMonitor.ts",
-      "line": 61,
-      "match_key": "certs|GET|/ct-monitor/entries{param}",
-      "method": "GET",
-      "normalized_path": "/ct-monitor/entries{param}",
-      "path": "/ct-monitor/entries{param}",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": false,
-      "expression": "serviceRequest(\"certs\", \"/ct-monitor/alerts\")",
-      "file": "web/dashboard/src/lib/ctMonitor.ts",
-      "line": 66,
-      "match_key": "certs|GET|/ct-monitor/alerts",
-      "method": "GET",
-      "normalized_path": "/ct-monitor/alerts",
-      "path": "/ct-monitor/alerts",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"certs\", `/ct-monitor/alerts/${id}/acknowledge`)",
-      "file": "web/dashboard/src/lib/ctMonitor.ts",
-      "line": 71,
-      "match_key": "certs|POST|/ct-monitor/alerts/{param}/acknowledge",
-      "method": "POST",
-      "normalized_path": "/ct-monitor/alerts/{param}/acknowledge",
-      "path": "/ct-monitor/alerts/{param}/acknowledge",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"certs\", `/ct-monitor/domains/${id}`)",
-      "file": "web/dashboard/src/lib/ctMonitor.ts",
-      "line": 84,
-      "match_key": "certs|PATCH|/ct-monitor/domains/{param}",
-      "method": "PATCH",
-      "normalized_path": "/ct-monitor/domains/{param}",
-      "path": "/ct-monitor/domains/{param}",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
-    },
-    {
       "dynamic": true,
       "expression": "serviceRequest(\"dataprotect\", `/token-vaults?${q.toString()}`)",
       "file": "web/dashboard/src/lib/dataprotect.ts",
@@ -29186,7 +28925,7 @@
       "source": "serviceRequest"
     }
   ],
-  "generated_at": "2026-09-26T11:36:12Z",
+  "generated_at": "2026-09-26T11:49:47Z",
   "navigation": [
     {
       "group": "Overview",
@@ -29242,11 +28981,6 @@
       "group": "PKI & certificates",
       "id": "certs",
       "label": "Certificates / PKI"
-    },
-    {
-      "group": "PKI & certificates",
-      "id": "ct_monitor",
-      "label": "CT Log Monitor"
     },
     {
       "group": "PKI & certificates",
@@ -37631,7 +37365,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 132,
+      "handler_line": 125,
       "handler_name": "handleCreateCA",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37855,7 +37589,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 147,
+      "handler_line": 140,
       "handler_name": "handleListCAs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -37926,7 +37660,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 161,
+      "handler_line": 154,
       "handler_name": "handleDeleteCA",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38029,7 +37763,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 179,
+      "handler_line": 172,
       "handler_name": "handleIssueCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38173,7 +37907,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 198,
+      "handler_line": 191,
       "handler_name": "handleSignCSR",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38323,7 +38057,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 223,
+      "handler_line": 216,
       "handler_name": "handleListCerts",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38383,7 +38117,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 241,
+      "handler_line": 234,
       "handler_name": "handleGetCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38446,7 +38180,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 332,
+      "handler_line": 325,
       "handler_name": "handleDeleteCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38525,7 +38259,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 259,
+      "handler_line": 252,
       "handler_name": "handleDownloadCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38615,7 +38349,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 289,
+      "handler_line": 282,
       "handler_name": "handleRenewCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38687,7 +38421,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 311,
+      "handler_line": 304,
       "handler_name": "handleRevokeCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38753,7 +38487,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 349,
+      "handler_line": 342,
       "handler_name": "handleCreateProfile",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38832,7 +38566,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 364,
+      "handler_line": 357,
       "handler_name": "handleListProfiles",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38892,7 +38626,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 378,
+      "handler_line": 371,
       "handler_name": "handleGetProfile",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -38950,7 +38684,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 396,
+      "handler_line": 389,
       "handler_name": "handleValidatePQC",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39016,7 +38750,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 411,
+      "handler_line": 404,
       "handler_name": "handleOTSStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39075,7 +38809,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 425,
+      "handler_line": 418,
       "handler_name": "handleMigratePQC",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39141,7 +38875,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 452,
+      "handler_line": 445,
       "handler_name": "handlePQCReadiness",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39204,7 +38938,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 466,
+      "handler_line": 459,
       "handler_name": "handleCRL",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39537,7 +39271,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 489,
+      "handler_line": 482,
       "handler_name": "handleOCSP",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -39864,7 +39598,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 489,
+      "handler_line": 482,
       "handler_name": "handleOCSP",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -40193,7 +39927,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 531,
+      "handler_line": 524,
       "handler_name": "handleInventory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -40258,7 +39992,7 @@
         "SecurityStatus"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 545,
+      "handler_line": 538,
       "handler_name": "handleSecurityStatus",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -40321,7 +40055,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 553,
+      "handler_line": 546,
       "handler_name": "handleGetAlertPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -40386,7 +40120,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 567,
+      "handler_line": 560,
       "handler_name": "handleUpsertAlertPolicy",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41337,7 +41071,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 596,
+      "handler_line": 589,
       "handler_name": "handleListProtocolConfigs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41402,7 +41136,7 @@
         "ListProtocolSchemas"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 639,
+      "handler_line": 632,
       "handler_name": "handleListProtocolSchemas",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41458,7 +41192,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 610,
+      "handler_line": 603,
       "handler_name": "handleUpsertProtocolConfig",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41533,7 +41267,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 647,
+      "handler_line": 640,
       "handler_name": "handleUploadThirdPartyCert",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41625,7 +41359,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 662,
+      "handler_line": 655,
       "handler_name": "handleIssueInternalMTLS",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41700,7 +41434,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1451,
+      "handler_line": 1444,
       "handler_name": "handleMerkleBuild",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41742,7 +41476,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1475,
+      "handler_line": 1468,
       "handler_name": "handleMerkleEpochs",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41777,7 +41511,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1498,
+      "handler_line": 1491,
       "handler_name": "handleMerkleEpoch",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41819,7 +41553,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1517,
+      "handler_line": 1510,
       "handler_name": "handleCertProof",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41859,7 +41593,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1536,
+      "handler_line": 1529,
       "handler_name": "handleMerkleVerify",
       "handler_receiver_calls": [],
       "handler_service_calls": [],
@@ -41891,7 +41625,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 681,
+      "handler_line": 674,
       "handler_name": "handleACMEDirectory",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41937,7 +41671,7 @@
         "ACMEIssueNonce"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 713,
+      "handler_line": 706,
       "handler_name": "handleACMENonce",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -41991,7 +41725,7 @@
         "ACMEIssueNonce"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 713,
+      "handler_line": 706,
       "handler_name": "handleACMENonce",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42060,7 +41794,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 720,
+      "handler_line": 713,
       "handler_name": "handleACMENewAccount",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42178,7 +41912,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 748,
+      "handler_line": 741,
       "handler_name": "handleACMENewOrder",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42369,7 +42103,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 788,
+      "handler_line": 781,
       "handler_name": "handleACMEChallengeInfo",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42442,7 +42176,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 810,
+      "handler_line": 803,
       "handler_name": "handleACMEChallenge",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42519,7 +42253,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 828,
+      "handler_line": 821,
       "handler_name": "handleACMEFinalize",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42632,7 +42366,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 852,
+      "handler_line": 845,
       "handler_name": "handleACMECertDownload",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42714,7 +42448,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 871,
+      "handler_line": 864,
       "handler_name": "handleESTCACerts",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42779,7 +42513,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 885,
+      "handler_line": 878,
       "handler_name": "handleESTCSRAttrs",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42855,7 +42589,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 899,
+      "handler_line": 892,
       "handler_name": "handleESTSimpleEnroll",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -42926,7 +42660,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 954,
+      "handler_line": 947,
       "handler_name": "handleESTSimpleReenroll",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -43001,7 +42735,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1008,
+      "handler_line": 1001,
       "handler_name": "handleESTServerKeygen",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -43075,7 +42809,7 @@
         "CACertBundle"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1023,
+      "handler_line": 1016,
       "handler_name": "handleSCEPGet",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -43204,7 +42938,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1068,
+      "handler_line": 1061,
       "handler_name": "handleSCEPPKIOperation",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -43307,7 +43041,7 @@
         "decodeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1200,
+      "handler_line": 1193,
       "handler_name": "handleCMPv2",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -43395,7 +43129,7 @@
         "writeJSON"
       ],
       "handler_internal_package_calls": [],
-      "handler_line": 1261,
+      "handler_line": 1254,
       "handler_name": "handleCMPv2Confirm",
       "handler_receiver_calls": [],
       "handler_service_calls": [
@@ -43466,294 +43200,6 @@
     {
       "frontend_call_sites": [
         {
-          "expression": "serviceRequest(\"certs\", \"/ct-monitor/domains\")",
-          "file": "web/dashboard/src/lib/ctMonitor.ts",
-          "line": 47,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleListWatchedDomains",
-      "handler_external_package_calls": [],
-      "handler_file": "services/certs/handler_ct_monitor.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "ListWatchedDomains",
-        "writeErr",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 17,
-      "handler_name": "handleListWatchedDomains",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "ListWatchedDomains"
-      ],
-      "method": "GET",
-      "normalized_path": "/ct-monitor/domains",
-      "path": "/ct-monitor/domains",
-      "route_file": "services/certs/handler.go",
-      "route_line": 112,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", \"/ct-monitor/domains\")",
-          "file": "web/dashboard/src/lib/ctMonitor.ts",
-          "line": 52,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleAddWatchedDomain",
-      "handler_external_package_calls": [
-        "strings.TrimSpace",
-        "time.Now"
-      ],
-      "handler_file": "services/certs/handler_ct_monitor.go",
-      "handler_helper_calls": [
-        "requestID",
-        "decodeJSON",
-        "writeErr",
-        "ctNewID",
-        "AddWatchedDomain",
-        "simulateCTFetch",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 32,
-      "handler_name": "handleAddWatchedDomain",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "AddWatchedDomain"
-      ],
-      "method": "POST",
-      "normalized_path": "/ct-monitor/domains",
-      "path": "/ct-monitor/domains",
-      "route_file": "services/certs/handler.go",
-      "route_line": 113,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", `/ct-monitor/domains/${id}`)",
-          "file": "web/dashboard/src/lib/ctMonitor.ts",
-          "line": 84,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleToggleWatchedDomain",
-      "handler_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "handler_file": "services/certs/handler_ct_monitor.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "writeErr",
-        "decodeJSON",
-        "UpdateWatchedDomain",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 75,
-      "handler_name": "handleToggleWatchedDomain",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "UpdateWatchedDomain"
-      ],
-      "method": "PATCH",
-      "normalized_path": "/ct-monitor/domains/{param}",
-      "path": "/ct-monitor/domains/{id}",
-      "route_file": "services/certs/handler.go",
-      "route_line": 114,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", `/ct-monitor/domains/${id}`)",
-          "file": "web/dashboard/src/lib/ctMonitor.ts",
-          "line": 56,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleDeleteWatchedDomain",
-      "handler_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "handler_file": "services/certs/handler_ct_monitor.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "writeErr",
-        "DeleteWatchedDomain",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 104,
-      "handler_name": "handleDeleteWatchedDomain",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "DeleteWatchedDomain"
-      ],
-      "method": "DELETE",
-      "normalized_path": "/ct-monitor/domains/{param}",
-      "path": "/ct-monitor/domains/{id}",
-      "route_file": "services/certs/handler.go",
-      "route_line": 115,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [],
-      "handler": "h.handleListCTLogEntries",
-      "handler_external_package_calls": [
-        "strconv.Atoi",
-        "strings.TrimSpace"
-      ],
-      "handler_file": "services/certs/handler_ct_monitor.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "ListCTLogEntries",
-        "writeErr",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 127,
-      "handler_name": "handleListCTLogEntries",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "ListCTLogEntries"
-      ],
-      "method": "GET",
-      "normalized_path": "/ct-monitor/entries",
-      "path": "/ct-monitor/entries",
-      "route_file": "services/certs/handler.go",
-      "route_line": 116,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", \"/ct-monitor/alerts\")",
-          "file": "web/dashboard/src/lib/ctMonitor.ts",
-          "line": 66,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleListCTAlerts",
-      "handler_external_package_calls": [],
-      "handler_file": "services/certs/handler_ct_monitor.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "ListCTAlerts",
-        "writeErr",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 147,
-      "handler_name": "handleListCTAlerts",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "ListCTAlerts"
-      ],
-      "method": "GET",
-      "normalized_path": "/ct-monitor/alerts",
-      "path": "/ct-monitor/alerts",
-      "route_file": "services/certs/handler.go",
-      "route_line": 117,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
-          "expression": "serviceRequest(\"certs\", `/ct-monitor/alerts/${id}/acknowledge`)",
-          "file": "web/dashboard/src/lib/ctMonitor.ts",
-          "line": 71,
-          "source": "serviceRequest"
-        }
-      ],
-      "handler": "h.handleAcknowledgeCTAlert",
-      "handler_external_package_calls": [
-        "strings.TrimSpace"
-      ],
-      "handler_file": "services/certs/handler_ct_monitor.go",
-      "handler_helper_calls": [
-        "requestID",
-        "mustTenant",
-        "writeErr",
-        "AcknowledgeCTAlert",
-        "writeJSON"
-      ],
-      "handler_internal_package_calls": [],
-      "handler_line": 162,
-      "handler_name": "handleAcknowledgeCTAlert",
-      "handler_receiver_calls": [],
-      "handler_service_calls": [],
-      "handler_store_calls": [
-        "AcknowledgeCTAlert"
-      ],
-      "method": "POST",
-      "normalized_path": "/ct-monitor/alerts/{param}/acknowledge",
-      "path": "/ct-monitor/alerts/{id}/acknowledge",
-      "route_file": "services/certs/handler.go",
-      "route_line": 118,
-      "service": "certs",
-      "service_external_package_calls": [],
-      "service_helper_calls": [],
-      "service_internal_package_calls": [],
-      "service_method_details": [],
-      "service_receiver_calls": [],
-      "service_store_calls": []
-    },
-    {
-      "frontend_call_sites": [
-        {
           "expression": "serviceRequest(\"certs\", \"/mesh/services\")",
           "file": "web/dashboard/src/lib/mtlsMesh.ts",
           "line": 56,
@@ -43782,7 +43228,7 @@
       "normalized_path": "/mesh/services",
       "path": "/mesh/services",
       "route_file": "services/certs/handler.go",
-      "route_line": 121,
+      "route_line": 114,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -43826,7 +43272,7 @@
       "normalized_path": "/mesh/services",
       "path": "/mesh/services",
       "route_file": "services/certs/handler.go",
-      "route_line": 122,
+      "route_line": 115,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -43885,7 +43331,7 @@
       "normalized_path": "/mesh/services/{param}/renew",
       "path": "/mesh/services/{id}/renew",
       "route_file": "services/certs/handler.go",
-      "route_line": 123,
+      "route_line": 116,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -43925,7 +43371,7 @@
       "normalized_path": "/mesh/certificates",
       "path": "/mesh/certificates",
       "route_file": "services/certs/handler.go",
-      "route_line": 124,
+      "route_line": 117,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -43965,7 +43411,7 @@
       "normalized_path": "/mesh/trust-anchors",
       "path": "/mesh/trust-anchors",
       "route_file": "services/certs/handler.go",
-      "route_line": 125,
+      "route_line": 118,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -44003,7 +43449,7 @@
       "normalized_path": "/mesh/trust-anchors",
       "path": "/mesh/trust-anchors",
       "route_file": "services/certs/handler.go",
-      "route_line": 126,
+      "route_line": 119,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -44043,7 +43489,7 @@
       "normalized_path": "/mesh/topology",
       "path": "/mesh/topology",
       "route_file": "services/certs/handler.go",
-      "route_line": 127,
+      "route_line": 120,
       "service": "certs",
       "service_external_package_calls": [],
       "service_helper_calls": [],
@@ -86644,7 +86090,7 @@
       "auth": 82,
       "autokey": 15,
       "backup": 11,
-      "certs": 79,
+      "certs": 72,
       "cloud": 11,
       "cluster-manager": 21,
       "compliance": 42,
@@ -86678,7 +86124,7 @@
       "auth-edge": 4,
       "autokey": 11,
       "backup": 10,
-      "certs": 61,
+      "certs": 54,
       "cloud": 10,
       "cluster-manager": 11,
       "compliance": 18,
@@ -86710,7 +86156,7 @@
       "auth-edge": 8,
       "autokey": 2,
       "backup": 1,
-      "certs": 6,
+      "certs": 5,
       "cloud": 1,
       "cluster-manager": 2,
       "compliance": 2,
@@ -86887,20 +86333,20 @@
     ]
   },
   "summary": {
-    "backend_routes": 926,
+    "backend_routes": 919,
     "backend_services": 29,
-    "button_inventory": 856,
-    "frontend_call_sites": 640,
-    "matched_frontend_call_sites": 572,
-    "nav_items": 37,
-    "request_flows": 926,
-    "request_flows_with_frontend": 562,
+    "button_inventory": 847,
+    "frontend_call_sites": 633,
+    "matched_frontend_call_sites": 566,
+    "nav_items": 36,
+    "request_flows": 919,
+    "request_flows_with_frontend": 556,
     "request_flows_with_internal_package_calls": 131,
     "request_flows_with_service_calls": 535,
-    "request_flows_with_store_calls": 698,
+    "request_flows_with_store_calls": 691,
     "subpane_groups": 8,
-    "tab_components": 45,
-    "unmatched_frontend_call_sites": 68
+    "tab_components": 44,
+    "unmatched_frontend_call_sites": 67
   },
   "tabs": [
     {
@@ -87061,19 +86507,6 @@
         "web/dashboard/src/lib/certs.ts",
         "web/dashboard/src/lib/keycore.ts",
         "web/dashboard/src/modules/hsm/HSMPartitionTable.tsx"
-      ]
-    },
-    {
-      "call_count": 7,
-      "component": "web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx",
-      "group": "PKI & certificates",
-      "id": "ct_monitor",
-      "label": "CT Log Monitor",
-      "services": [
-        "certs"
-      ],
-      "support_files": [
-        "web/dashboard/src/lib/ctMonitor.ts"
       ]
     },
     {
@@ -87881,19 +87314,6 @@
       "service": "keycore",
       "service_key": "keycore",
       "source": "trackedFetch"
-    },
-    {
-      "dynamic": true,
-      "expression": "serviceRequest(\"certs\", `/ct-monitor/entries${q}`)",
-      "file": "web/dashboard/src/lib/ctMonitor.ts",
-      "line": 61,
-      "match_key": "certs|GET|/ct-monitor/entries{param}",
-      "method": "GET",
-      "normalized_path": "/ct-monitor/entries{param}",
-      "path": "/ct-monitor/entries{param}",
-      "service": "certs",
-      "service_key": "certs",
-      "source": "serviceRequest"
     },
     {
       "dynamic": true,
@@ -94543,7 +93963,7 @@
         ],
         "handler": "handleCreateCA",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 132,
+        "handlerLine": 125,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -94602,7 +94022,7 @@
         ],
         "handler": "handleListCAs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 147,
+        "handlerLine": 140,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94648,7 +94068,7 @@
         ],
         "handler": "handleDeleteCA",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 161,
+        "handlerLine": 154,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -94703,7 +94123,7 @@
         ],
         "handler": "handleIssueCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 179,
+        "handlerLine": 172,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -94754,7 +94174,7 @@
         ],
         "handler": "handleSignCSR",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 198,
+        "handlerLine": 191,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -94805,7 +94225,7 @@
         ],
         "handler": "handleListCerts",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 223,
+        "handlerLine": 216,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94839,7 +94259,7 @@
         "frontendSites": [],
         "handler": "handleGetCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 241,
+        "handlerLine": 234,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -94880,7 +94300,7 @@
         ],
         "handler": "handleDeleteCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 332,
+        "handlerLine": 325,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "DELETE",
@@ -94930,7 +94350,7 @@
         ],
         "handler": "handleDownloadCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 259,
+        "handlerLine": 252,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -94971,7 +94391,7 @@
         ],
         "handler": "handleRenewCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 289,
+        "handlerLine": 282,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95012,7 +94432,7 @@
         ],
         "handler": "handleRevokeCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 311,
+        "handlerLine": 304,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -95046,7 +94466,7 @@
         "frontendSites": [],
         "handler": "handleCreateProfile",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 349,
+        "handlerLine": 342,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -95084,7 +94504,7 @@
         ],
         "handler": "handleListProfiles",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 364,
+        "handlerLine": 357,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95118,7 +94538,7 @@
         "frontendSites": [],
         "handler": "handleGetProfile",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 378,
+        "handlerLine": 371,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -95149,7 +94569,7 @@
         "frontendSites": [],
         "handler": "handleValidatePQC",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 396,
+        "handlerLine": 389,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -95180,7 +94600,7 @@
         "frontendSites": [],
         "handler": "handleOTSStatus",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 411,
+        "handlerLine": 404,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -95210,7 +94630,7 @@
         "frontendSites": [],
         "handler": "handleMigratePQC",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 425,
+        "handlerLine": 418,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -95240,7 +94660,7 @@
         "frontendSites": [],
         "handler": "handlePQCReadiness",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 452,
+        "handlerLine": 445,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -95292,7 +94712,7 @@
         ],
         "handler": "handleCRL",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 466,
+        "handlerLine": 459,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -95386,7 +94806,7 @@
         ],
         "handler": "handleOCSP",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 489,
+        "handlerLine": 482,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -95473,7 +94893,7 @@
         "frontendSites": [],
         "handler": "handleOCSP",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 489,
+        "handlerLine": 482,
         "hasFrontend": false,
         "internalPackages": [
           "pkg/crypto.Zeroize",
@@ -95547,7 +94967,7 @@
         ],
         "handler": "handleInventory",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 531,
+        "handlerLine": 524,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95586,7 +95006,7 @@
         ],
         "handler": "handleSecurityStatus",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 545,
+        "handlerLine": 538,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95627,7 +95047,7 @@
         ],
         "handler": "handleGetAlertPolicy",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 553,
+        "handlerLine": 546,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -95671,7 +95091,7 @@
         ],
         "handler": "handleUpsertAlertPolicy",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 567,
+        "handlerLine": 560,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -96162,7 +95582,7 @@
         ],
         "handler": "handleListProtocolConfigs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 596,
+        "handlerLine": 589,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -96199,7 +95619,7 @@
         ],
         "handler": "handleListProtocolSchemas",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 639,
+        "handlerLine": 632,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -96237,7 +95657,7 @@
         ],
         "handler": "handleUpsertProtocolConfig",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 610,
+        "handlerLine": 603,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "PUT",
@@ -96280,7 +95700,7 @@
         ],
         "handler": "handleUploadThirdPartyCert",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 647,
+        "handlerLine": 640,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -96316,7 +95736,7 @@
         "frontendSites": [],
         "handler": "handleIssueInternalMTLS",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 662,
+        "handlerLine": 655,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -96350,7 +95770,7 @@
         ],
         "handler": "handleMerkleBuild",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1451,
+        "handlerLine": 1444,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -96387,7 +95807,7 @@
         ],
         "handler": "handleMerkleEpochs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1475,
+        "handlerLine": 1468,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -96417,7 +95837,7 @@
         "frontendSites": [],
         "handler": "handleMerkleEpoch",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1498,
+        "handlerLine": 1491,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -96451,7 +95871,7 @@
         ],
         "handler": "handleCertProof",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1517,
+        "handlerLine": 1510,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -96486,7 +95906,7 @@
         ],
         "handler": "handleMerkleVerify",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1536,
+        "handlerLine": 1529,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -96514,7 +95934,7 @@
         "frontendSites": [],
         "handler": "handleACMEDirectory",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 681,
+        "handlerLine": 674,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -96541,7 +95961,7 @@
         "frontendSites": [],
         "handler": "handleACMENonce",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 713,
+        "handlerLine": 706,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "HEAD",
@@ -96571,7 +95991,7 @@
         "frontendSites": [],
         "handler": "handleACMENonce",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 713,
+        "handlerLine": 706,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -96612,7 +96032,7 @@
         ],
         "handler": "handleACMENewAccount",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 720,
+        "handlerLine": 713,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -96664,7 +96084,7 @@
         ],
         "handler": "handleACMENewOrder",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 748,
+        "handlerLine": 741,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -96743,7 +96163,7 @@
         ],
         "handler": "handleACMEChallengeInfo",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 788,
+        "handlerLine": 781,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -96783,7 +96203,7 @@
         ],
         "handler": "handleACMEChallenge",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 810,
+        "handlerLine": 803,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -96827,7 +96247,7 @@
         ],
         "handler": "handleACMEFinalize",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 828,
+        "handlerLine": 821,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -96873,7 +96293,7 @@
         "frontendSites": [],
         "handler": "handleACMECertDownload",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 852,
+        "handlerLine": 845,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -96903,7 +96323,7 @@
         "frontendSites": [],
         "handler": "handleESTCACerts",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 871,
+        "handlerLine": 864,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "GET",
@@ -96940,7 +96360,7 @@
         ],
         "handler": "handleESTCSRAttrs",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 885,
+        "handlerLine": 878,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -96981,7 +96401,7 @@
         ],
         "handler": "handleESTSimpleEnroll",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 899,
+        "handlerLine": 892,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -97013,7 +96433,7 @@
         "frontendSites": [],
         "handler": "handleESTSimpleReenroll",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 954,
+        "handlerLine": 947,
         "hasFrontend": false,
         "internalPackages": [],
         "method": "POST",
@@ -97049,7 +96469,7 @@
         ],
         "handler": "handleESTServerKeygen",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1008,
+        "handlerLine": 1001,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -97089,7 +96509,7 @@
         ],
         "handler": "handleSCEPGet",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1023,
+        "handlerLine": 1016,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "GET",
@@ -97137,7 +96557,7 @@
         ],
         "handler": "handleSCEPPKIOperation",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1068,
+        "handlerLine": 1061,
         "hasFrontend": true,
         "internalPackages": [
           "pkg/crypto.Zeroize"
@@ -97186,7 +96606,7 @@
         ],
         "handler": "handleCMPv2",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1200,
+        "handlerLine": 1193,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -97228,7 +96648,7 @@
         ],
         "handler": "handleCMPv2Confirm",
         "handlerFile": "services/certs/handler.go",
-        "handlerLine": 1261,
+        "handlerLine": 1254,
         "hasFrontend": true,
         "internalPackages": [],
         "method": "POST",
@@ -97251,235 +96671,6 @@
           "Certificates / PKI",
           "Compliance",
           "restapi"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", \"/ct-monitor/domains\")",
-            "file": "web/dashboard/src/lib/ctMonitor.ts",
-            "line": 47,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleListWatchedDomains",
-        "handlerFile": "services/certs/handler_ct_monitor.go",
-        "handlerLine": 17,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/ct-monitor/domains",
-        "path": "/ct-monitor/domains",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "certs|GET|/ct-monitor/domains",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "ListWatchedDomains"
-        ],
-        "uiLabels": [
-          "CT Log Monitor"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "strings.TrimSpace",
-          "time.Now"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", \"/ct-monitor/domains\")",
-            "file": "web/dashboard/src/lib/ctMonitor.ts",
-            "line": 52,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleAddWatchedDomain",
-        "handlerFile": "services/certs/handler_ct_monitor.go",
-        "handlerLine": 32,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/ct-monitor/domains",
-        "path": "/ct-monitor/domains",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "certs|POST|/ct-monitor/domains",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "AddWatchedDomain"
-        ],
-        "uiLabels": [
-          "CT Log Monitor"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", `/ct-monitor/domains/${id}`)",
-            "file": "web/dashboard/src/lib/ctMonitor.ts",
-            "line": 84,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleToggleWatchedDomain",
-        "handlerFile": "services/certs/handler_ct_monitor.go",
-        "handlerLine": 75,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "PATCH",
-        "normalizedPath": "/ct-monitor/domains/{param}",
-        "path": "/ct-monitor/domains/{id}",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "certs|PATCH|/ct-monitor/domains/{param}",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "UpdateWatchedDomain"
-        ],
-        "uiLabels": [
-          "CT Log Monitor"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", `/ct-monitor/domains/${id}`)",
-            "file": "web/dashboard/src/lib/ctMonitor.ts",
-            "line": 56,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleDeleteWatchedDomain",
-        "handlerFile": "services/certs/handler_ct_monitor.go",
-        "handlerLine": 104,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "DELETE",
-        "normalizedPath": "/ct-monitor/domains/{param}",
-        "path": "/ct-monitor/domains/{id}",
-        "receiverCalls": [],
-        "risk": "high",
-        "routeKey": "certs|DELETE|/ct-monitor/domains/{param}",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "DeleteWatchedDomain"
-        ],
-        "uiLabels": [
-          "CT Log Monitor"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "strconv.Atoi",
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [],
-        "handler": "handleListCTLogEntries",
-        "handlerFile": "services/certs/handler_ct_monitor.go",
-        "handlerLine": 127,
-        "hasFrontend": false,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/ct-monitor/entries",
-        "path": "/ct-monitor/entries",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "certs|GET|/ct-monitor/entries",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "ListCTLogEntries"
-        ],
-        "uiLabels": [
-          "API only"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", \"/ct-monitor/alerts\")",
-            "file": "web/dashboard/src/lib/ctMonitor.ts",
-            "line": 66,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleListCTAlerts",
-        "handlerFile": "services/certs/handler_ct_monitor.go",
-        "handlerLine": 147,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "GET",
-        "normalizedPath": "/ct-monitor/alerts",
-        "path": "/ct-monitor/alerts",
-        "receiverCalls": [],
-        "risk": "low",
-        "routeKey": "certs|GET|/ct-monitor/alerts",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "ListCTAlerts"
-        ],
-        "uiLabels": [
-          "CT Log Monitor"
-        ]
-      },
-      {
-        "complexity": 1,
-        "externalPackages": [
-          "strings.TrimSpace"
-        ],
-        "frontendSites": [
-          {
-            "expression": "serviceRequest(\"certs\", `/ct-monitor/alerts/${id}/acknowledge`)",
-            "file": "web/dashboard/src/lib/ctMonitor.ts",
-            "line": 71,
-            "source": "serviceRequest"
-          }
-        ],
-        "handler": "handleAcknowledgeCTAlert",
-        "handlerFile": "services/certs/handler_ct_monitor.go",
-        "handlerLine": 162,
-        "hasFrontend": true,
-        "internalPackages": [],
-        "method": "POST",
-        "normalizedPath": "/ct-monitor/alerts/{param}/acknowledge",
-        "path": "/ct-monitor/alerts/{id}/acknowledge",
-        "receiverCalls": [],
-        "risk": "medium",
-        "routeKey": "certs|POST|/ct-monitor/alerts/{param}/acknowledge",
-        "sensitive": true,
-        "service": "certs",
-        "serviceCalls": [],
-        "storeCalls": [
-          "AcknowledgeCTAlert"
-        ],
-        "uiLabels": [
-          "CT Log Monitor"
         ]
       },
       {
@@ -120108,7 +119299,7 @@
         ]
       }
     ],
-    "generatedAt": "2026-09-26T11:36:12Z",
+    "generatedAt": "2026-09-26T11:49:47Z",
     "methods": [
       "DELETE",
       "GET",
@@ -120149,9 +119340,9 @@
       "workload"
     ],
     "summary": {
-      "flows": 926,
-      "frontendBacked": 562,
-      "highRisk": 384,
+      "flows": 919,
+      "frontendBacked": 556,
+      "highRisk": 383,
       "services": 29
     }
   }

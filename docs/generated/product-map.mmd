@@ -34,9 +34,6 @@ flowchart LR
   UI --> tab_certs
   tab_certs --> svc_certs
   tab_certs --> svc_keycore
-  tab_ct_monitor["CT Log Monitor"]
-  UI --> tab_ct_monitor
-  tab_ct_monitor --> svc_certs
   tab_mtls_mesh["mTLS Mesh"]
   UI --> tab_mtls_mesh
   tab_mtls_mesh --> svc_certs
@@ -141,7 +138,7 @@ flowchart LR
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
   svc_backup["backup (11 routes)"]
-  svc_certs["certs (79 routes)"]
+  svc_certs["certs (72 routes)"]
   svc_cloud["cloud (11 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (42 routes)"]

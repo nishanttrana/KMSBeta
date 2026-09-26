@@ -245,13 +245,6 @@ keycore,keycore,GET,/agility/keys-by-algorithm,/agility/keys-by-algorithm,False,
 keycore,keycore,GET,/agility/migration-plans,/agility/migration-plans,False,serviceRequest,web/dashboard/src/lib/cryptoAgility.ts,60,keycore|GET|/agility/migration-plans
 keycore,keycore,POST,/agility/migration-plans,/agility/migration-plans,False,serviceRequest,web/dashboard/src/lib/cryptoAgility.ts,65,keycore|POST|/agility/migration-plans
 keycore,keycore,PATCH,/agility/migration-plans/{param},/agility/migration-plans/{param},True,serviceRequest,web/dashboard/src/lib/cryptoAgility.ts,69,keycore|PATCH|/agility/migration-plans/{param}
-certs,certs,GET,/ct-monitor/domains,/ct-monitor/domains,False,serviceRequest,web/dashboard/src/lib/ctMonitor.ts,47,certs|GET|/ct-monitor/domains
-certs,certs,POST,/ct-monitor/domains,/ct-monitor/domains,False,serviceRequest,web/dashboard/src/lib/ctMonitor.ts,52,certs|POST|/ct-monitor/domains
-certs,certs,DELETE,/ct-monitor/domains/{param},/ct-monitor/domains/{param},True,serviceRequest,web/dashboard/src/lib/ctMonitor.ts,56,certs|DELETE|/ct-monitor/domains/{param}
-certs,certs,GET,/ct-monitor/entries{param},/ct-monitor/entries{param},True,serviceRequest,web/dashboard/src/lib/ctMonitor.ts,61,certs|GET|/ct-monitor/entries{param}
-certs,certs,GET,/ct-monitor/alerts,/ct-monitor/alerts,False,serviceRequest,web/dashboard/src/lib/ctMonitor.ts,66,certs|GET|/ct-monitor/alerts
-certs,certs,POST,/ct-monitor/alerts/{param}/acknowledge,/ct-monitor/alerts/{param}/acknowledge,True,serviceRequest,web/dashboard/src/lib/ctMonitor.ts,71,certs|POST|/ct-monitor/alerts/{param}/acknowledge
-certs,certs,PATCH,/ct-monitor/domains/{param},/ct-monitor/domains/{param},True,serviceRequest,web/dashboard/src/lib/ctMonitor.ts,84,certs|PATCH|/ct-monitor/domains/{param}
 dataprotect,dataprotect,GET,/token-vaults?{param},/token-vaults,True,serviceRequest,web/dashboard/src/lib/dataprotect.ts,425,dataprotect|GET|/token-vaults
 dataprotect,dataprotect,POST,/token-vaults,/token-vaults,False,serviceRequest,web/dashboard/src/lib/dataprotect.ts,430,dataprotect|POST|/token-vaults
 dataprotect,dataprotect,DELETE,/token-vaults/{param}?{param},/token-vaults/{param},True,serviceRequest,web/dashboard/src/lib/dataprotect.ts,450,dataprotect|DELETE|/token-vaults/{param}

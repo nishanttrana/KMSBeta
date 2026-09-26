@@ -1,20 +1,20 @@
 # Generated Product Map
 
-Generated at `2026-09-26T11:36:12Z` by `scripts/generate_product_map.py`.
+Generated at `2026-09-26T11:49:47Z` by `scripts/generate_product_map.py`.
 
 This file is generated from source. Re-run the script after UI or API changes.
 
 ## Summary
 
-- Dashboard navigation items: `37`
-- Tab/component mappings: `45`
+- Dashboard navigation items: `36`
+- Tab/component mappings: `44`
 - Sub-pane groups: `8`
-- Backend HTTP routes discovered: `926` across `29` services
-- Frontend API call sites discovered: `640`
-- Frontend call sites with exact backend route match: `572`
-- Frontend call sites needing review or dynamic/runtime confirmation: `68`
-- Clickable controls with static `onClick` handlers: `856`
-- Backend request flows with handler/service/package summaries: `926`
+- Backend HTTP routes discovered: `919` across `29` services
+- Frontend API call sites discovered: `633`
+- Frontend call sites with exact backend route match: `566`
+- Frontend call sites needing review or dynamic/runtime confirmation: `67`
+- Clickable controls with static `onClick` handlers: `847`
+- Backend request flows with handler/service/package summaries: `919`
 
 ## How To Use This For Launch
 
@@ -63,9 +63,6 @@ flowchart LR
   UI --> tab_certs
   tab_certs --> svc_certs
   tab_certs --> svc_keycore
-  tab_ct_monitor["CT Log Monitor"]
-  UI --> tab_ct_monitor
-  tab_ct_monitor --> svc_certs
   tab_mtls_mesh["mTLS Mesh"]
   UI --> tab_mtls_mesh
   tab_mtls_mesh --> svc_certs
@@ -170,7 +167,7 @@ flowchart LR
   svc_auth_edge["auth-edge"]
   svc_autokey["autokey (15 routes)"]
   svc_backup["backup (11 routes)"]
-  svc_certs["certs (79 routes)"]
+  svc_certs["certs (72 routes)"]
   svc_cloud["cloud (11 routes)"]
   svc_cluster_manager["cluster-manager (21 routes)"]
   svc_compliance["compliance (42 routes)"]
@@ -209,7 +206,6 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | Keys & lifecycle | Envelope Encryption | envelope_enc | web/dashboard/src/components/v3/tabs/EnvelopeEncTab.tsx | keycore | 7 |
 | Keys & lifecycle | Crypto Agility | crypto_agility | web/dashboard/src/components/v3/tabs/CryptoAgilityTab.tsx | keycore | 6 |
 | PKI & certificates | Certificates / PKI | certs | web/dashboard/src/components/v3/tabs/CertsTab.tsx | certs, keycore | 95 |
-| PKI & certificates | CT Log Monitor | ct_monitor | web/dashboard/src/components/v3/tabs/CTMonitorTab.tsx | certs | 7 |
 | PKI & certificates | mTLS Mesh | mtls_mesh | web/dashboard/src/components/v3/tabs/MTLSMeshTab.tsx | certs | 6 |
 | Data & integrations | Secret Vault | vault | web/dashboard/src/components/v3/tabs/VaultTab.tsx | auth-edge, secrets | 14 |
 | Data & integrations | Data Protection | dataprotection | web/dashboard/src/components/v3/tabs/DataProtectionTabs.tsx | - | 0 |
@@ -253,7 +249,7 @@ A standalone Mermaid file is also written to `docs/generated/product-map.mmd`.
 | auth | 82 | 45 |
 | autokey | 15 | 11 |
 | backup | 11 | 10 |
-| certs | 79 | 61 |
+| certs | 72 | 54 |
 | cloud | 11 | 10 |
 | cluster-manager | 21 | 11 |
 | compliance | 42 | 18 |
@@ -311,7 +307,6 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | keycore | GET | /cost/metrics | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 6 |
 | keycore | GET | /cost/suggestions | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 12 |
 | keycore | POST | /cost/suggestions/{param}/apply | trackedFetch | web/dashboard/src/lib/costOptimization.ts | 18 |
-| certs | GET | /ct-monitor/entries{param} | serviceRequest | web/dashboard/src/lib/ctMonitor.ts | 61 |
 | ekm | GET | /ekm/agents/{param}/validate-deploy | serviceRequest | web/dashboard/src/lib/ekm.ts | 964 |
 | tfe | GET | /tfe/file-encrypt/download | serviceRequest | web/dashboard/src/lib/ekm.ts | 1011 |
 | keycore | GET | /envelope/deks{param} | serviceRequest | web/dashboard/src/lib/envelopeEnc.ts | 64 |
@@ -353,7 +348,7 @@ These are not necessarily broken. Common reasons include dynamic wrapper paths, 
 | secrets | POST | /secrets/{param}/rotate | serviceRequest | web/dashboard/src/lib/secrets.ts | 198 |
 | secrets | POST | /secrets/generate/keypair | serviceRequest | web/dashboard/src/lib/secrets.ts | 218 |
 
-Showing `68` of `68`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
+Showing `67` of `67`. Full data is in `docs/generated/product-map.json` and `docs/generated/frontend-calls.csv`.
 
 ## Backend Routes Not Directly Called From Dashboard
 
@@ -456,8 +451,7 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | certs | GET | /acme/cert/{id} | h.handleACMECertDownload | services/certs/handler.go | 97 |
 | certs | GET | /est/.well-known/est/cacerts | h.handleESTCACerts | services/certs/handler.go | 99 |
 | certs | POST | /est/.well-known/est/simplereenroll | h.handleESTSimpleReenroll | services/certs/handler.go | 102 |
-| certs | GET | /ct-monitor/entries | h.handleListCTLogEntries | services/certs/handler.go | 116 |
-| certs | POST | /mesh/trust-anchors | h.handleAddTrustAnchor | services/certs/handler.go | 126 |
+| certs | POST | /mesh/trust-anchors | h.handleAddTrustAnchor | services/certs/handler.go | 119 |
 | cloud | GET | /cloud/accounts | h.handleListAccounts | services/cloud/handler.go | 31 |
 | cloud | GET | /cloud/region-mappings | h.handleListRegionMappings | services/cloud/handler.go | 34 |
 | cloud | GET | /cloud/inventory | h.handleInventory | services/cloud/handler.go | 38 |
@@ -481,8 +475,9 @@ These may be public API routes, protocol integrations, routes used through SDKs,
 | compliance | GET | /compliance/keys/expired | h.handleExpired | services/compliance/handler.go | 56 |
 | compliance | GET | /compliance/audit/correlations | h.handleAuditCorrelations | services/compliance/handler.go | 58 |
 | compliance | GET | /compliance/sbom | h.handleSBOM | services/compliance/handler.go | 61 |
+| compliance | GET | /compliance/sbom/services | h.handleSBOMServices | services/compliance/handler.go | 62 |
 
-Showing `120` of `364`. Full data is in `docs/generated/product-map.json`.
+Showing `120` of `363`. Full data is in `docs/generated/product-map.json`.
 
 ## Output Files
 
