@@ -5,6 +5,20 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### Grep for "simulate", "synthetic", "fake" and "mock" outside tests
+- **What we found:** the CT log monitor's only data source was a function
+  literally named `simulateCTFetch`. It invented certificates and
+  high-severity alerts on every new domain. Code review of the handlers
+  missed it because the store, API and UI were all real.
+- **Check:** `grep -rn -i 'simulat\|synthetic\|fake' services pkg | grep -v _test.go`
+  before calling a feature real. Any hit that produces user-visible
+  results breaks rule 7.
+- **zsh doesn't word-split variables:** `X="docker exec ..."; $X` runs a
+  command named after the whole string, and the "command not found" error
+  prints it, secrets included. Use a shell function, and pass secrets
+  through the environment (`-e PGPASSWORD`), never inline.
+
+
 ### An escrow feature that stores records is not escrow
 - **What we found:** keycore's escrow workflow looked complete (guardians,
   policies, recovery requests, M-of-N approvals), but "escrowing" a key

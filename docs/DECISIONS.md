@@ -7,6 +7,30 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — Remove the CT log monitor rather than label it a preview
+**Decision:** delete the CT log monitor (backend, tables, dashboard tab). It
+generated synthetic certificates and mis-issuance alerts. Certs migration
+011 drops its tables, and with them every fabricated entry.
+
+**Why:**
+- CLAUDE.md rule 7: a feature must never invent security evidence.
+- A preview may store settings, but it may not produce results.
+- Removing the simulator would have left only a domain list that does
+  nothing.
+
+**Rejected:**
+- *Keep it as a preview*: without the simulator nothing is left to show.
+- *Build real RFC 6962 / crt.sh polling now*: it only matters for public
+  domains, while Vecta mostly manages internal and private PKI.
+
+**Later:** the owner may add certificate discovery and scanning (network
+TLS scan, CT for public domains, inventory reconciliation). If CT returns,
+it must:
+- read real logs over TLS 1.3 and verify signed tree heads;
+- take the tenant from the verified caller;
+- audit every action and alert;
+- test against a real log client.
+
 ## 2026-09-26 — Guardian shares for the backup key instead of a general escrow workflow
 **Decision:** remove keycore's escrow workflow entirely. Instead, a
 software-mode backup key can be split M-of-N with Shamir secret sharing, one

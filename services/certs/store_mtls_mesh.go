@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -304,7 +305,7 @@ func scanMeshService(row interface{ Scan(...interface{}) error }) (MeshService, 
 			svc.LastRenewedAt = &t
 		}
 	}
-	svc.TrustAnchors = parseJSONArrayStringCT(anchorsJSON)
+	svc.TrustAnchors = parseJSONArrayString(anchorsJSON)
 	return svc, nil
 }
 
@@ -324,7 +325,7 @@ func scanMeshCertificate(row interface{ Scan(...interface{}) error }) (MeshCerti
 	c.NotBefore = parseTimeValue(notBeforeRaw)
 	c.NotAfter = parseTimeValue(notAfterRaw)
 	c.CreatedAt = parseTimeValue(createdAtRaw)
-	c.SANs = parseJSONArrayStringCT(sanJSON)
+	c.SANs = parseJSONArrayString(sanJSON)
 	return c, nil
 }
 
@@ -342,4 +343,20 @@ func scanTrustAnchor(row interface{ Scan(...interface{}) error }) (TrustAnchor, 
 	ta.NotAfter = parseTimeValue(notAfterRaw)
 	ta.CreatedAt = parseTimeValue(createdAtRaw)
 	return ta, nil
+}
+
+func parseJSONArrayString(v string) []string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return []string{}
+	}
+	var raw []interface{}
+	_ = json.Unmarshal([]byte(v), &raw)
+	out := make([]string, 0, len(raw))
+	for _, item := range raw {
+		if s, ok := item.(string); ok && strings.TrimSpace(s) != "" {
+			out = append(out, strings.TrimSpace(s))
+		}
+	}
+	return out
 }

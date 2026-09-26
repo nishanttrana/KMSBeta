@@ -2159,34 +2159,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "certs-delete-ct-monitor-domains-id",
-    "group": "Certificates / PKI (certs)",
-    "title": "DELETE /ct-monitor/domains/{id}",
-    "service": "certs",
-    "method": "DELETE",
-    "pathTemplate": "/ct-monitor/domains/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Certs service.",
-    "requestExample": "DELETE /svc/certs/ct-monitor/domains/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "certs-get-acme-cert-id",
     "group": "Certificates / PKI (certs)",
     "title": "GET /acme/cert/{id}",
@@ -2971,90 +2943,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "certs-get-ct-monitor-alerts",
-    "group": "Certificates / PKI (certs)",
-    "title": "GET /ct-monitor/alerts",
-    "service": "certs",
-    "method": "GET",
-    "pathTemplate": "/ct-monitor/alerts?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Certs service.",
-    "requestExample": "GET /svc/certs/ct-monitor/alerts?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "certs-get-ct-monitor-domains",
-    "group": "Certificates / PKI (certs)",
-    "title": "GET /ct-monitor/domains",
-    "service": "certs",
-    "method": "GET",
-    "pathTemplate": "/ct-monitor/domains?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Certs service.",
-    "requestExample": "GET /svc/certs/ct-monitor/domains?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "certs-get-ct-monitor-entries",
-    "group": "Certificates / PKI (certs)",
-    "title": "GET /ct-monitor/entries",
-    "service": "certs",
-    "method": "GET",
-    "pathTemplate": "/ct-monitor/entries?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Certs service.",
-    "requestExample": "GET /svc/certs/ct-monitor/entries?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "certs-get-est-well-known-est-cacerts",
     "group": "Certificates / PKI (certs)",
     "title": "GET /est/.well-known/est/cacerts",
@@ -3260,34 +3148,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "HEAD /svc/certs/acme/new-nonce?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "certs-patch-ct-monitor-domains-id",
-    "group": "Certificates / PKI (certs)",
-    "title": "PATCH /ct-monitor/domains/{id}",
-    "service": "certs",
-    "method": "PATCH",
-    "pathTemplate": "/ct-monitor/domains/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Certs service.",
-    "requestExample": "PATCH /svc/certs/ct-monitor/domains/{id}?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -3932,62 +3792,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Certs service.",
     "requestExample": "POST /svc/certs/cmpv2/confirm?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "certs-post-ct-monitor-alerts-id-acknowledge",
-    "group": "Certificates / PKI (certs)",
-    "title": "POST /ct-monitor/alerts/{id}/acknowledge",
-    "service": "certs",
-    "method": "POST",
-    "pathTemplate": "/ct-monitor/alerts/{id}/acknowledge?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Certs service.",
-    "requestExample": "POST /svc/certs/ct-monitor/alerts/{id}/acknowledge?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "certs-post-ct-monitor-domains",
-    "group": "Certificates / PKI (certs)",
-    "title": "POST /ct-monitor/domains",
-    "service": "certs",
-    "method": "POST",
-    "pathTemplate": "/ct-monitor/domains?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Certs service.",
-    "requestExample": "POST /svc/certs/ct-monitor/domains?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

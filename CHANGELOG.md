@@ -4,6 +4,27 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.5.0-beta] — 2026-09-26
+
+### Removed: CT log monitor (it fabricated findings)
+- **Removed the "CT Log Monitor" tab and the certs service's
+  `/ct-monitor/*` endpoints.**
+- **Why:** it never read a Certificate Transparency log. Adding a watched
+  domain started `simulateCTFetch`, which invented 2–3 certificates for the
+  domain, including one from a made-up issuer "UnknownCA-ShadowNet" in a log
+  called `argon2024`. It then raised **high-severity "certificate issued by
+  unknown CA" alerts** from them, shown like real findings.
+  - The routes also took `tenant_id` from the request body and emitted no
+    audit events.
+- **Certs migration 011 drops `ct_watched_domains`, `ct_log_entries` and
+  `ct_alerts`**, which also purges every synthetic entry and alert already
+  stored.
+- **Unchanged:** the internal certificate Merkle log (`/certs/merkle/*`,
+  "Certificate Transparency" on the Certificates overview). It is real and
+  stays.
+- Certificate discovery and scanning may come later as a new feature
+  (docs/DECISIONS.md).
+
 ## [1.4.0-beta] — 2026-09-26
 
 ### Backups: split the key among guardians (M-of-N)

@@ -17,7 +17,6 @@ import {
   Gauge,
   GitBranch,
   GitMerge,
-  Globe,
   Home as HomeIcon,
   LayoutDashboard,
   Lightbulb,
@@ -103,7 +102,6 @@ const FeatureForgeTab = lazy(() => import("./v3/tabs/FeatureForgeTab").then(m =>
 const RotationSchedulingTab = lazy(() => import("./v3/tabs/RotationSchedulingTab").then(m => ({ default: m.RotationSchedulingTab })));
 const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m => ({ default: m.CryptoAgilityTab })));
 const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
-const CTMonitorTab = lazy(() => import("./v3/tabs/CTMonitorTab").then(m => ({ default: m.CTMonitorTab })));
 const MTLSMeshTab = lazy(() => import("./v3/tabs/MTLSMeshTab").then(m => ({ default: m.MTLSMeshTab })));
 const EnvelopeEncTab = lazy(() => import("./v3/tabs/EnvelopeEncTab").then(m => ({ default: m.EnvelopeEncTab })));
 const DRDrillTab = lazy(() => import("./v3/tabs/DRDrillTab").then(m => ({ default: m.DRDrillTab })));
@@ -214,7 +212,6 @@ const TABS: Record<string, any> = {
   rotation: RotationSchedulingTab,
   crypto_agility: CryptoAgilityTab,
   webhooks: WebhooksTab,
-  ct_monitor: CTMonitorTab,
   mtls_mesh: MTLSMeshTab,
   envelope_enc: EnvelopeEncTab,
   dr_drill: DRDrillTab,
@@ -262,7 +259,6 @@ const TITLES: Record<string, string> = {
   rotation: "Rotation & Scheduling",
   crypto_agility: "Crypto Agility",
   webhooks: "Webhooks & SIEM",
-  ct_monitor: "CT Log Monitor",
   mtls_mesh: "mTLS Mesh",
   envelope_enc: "Envelope Encryption",
   dr_drill: "DR Drill",
@@ -295,7 +291,6 @@ const NAV = [
   ]},
   { g: "PKI & certificates", items: [
     { id: "certs", icon: FileText, label: "Certificates / PKI" },
-    { id: "ct_monitor", icon: Globe, label: "CT Log Monitor" },
     { id: "mtls_mesh", icon: Network, label: "mTLS Mesh" },
   ]},
   { g: "Data & integrations", items: [
