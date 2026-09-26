@@ -45,7 +45,31 @@ services/keycore/keycore
 services/ekm/ekm
 services/*/__debug_bin*
 /workload
-/audit
+# every other service binary `go build ./services/<name>` drops at the root
+/ai-gateway
+/autokey
+/backup
+/cluster-manager
+/compliance
+/confidential
+/discovery
+/ekm-agent
+/ekm
+/governance
+/hsm-integration
+/hyok
+/jca-provider
+/keyaccess
+/kmip
+/pkcs11-provider
+/policy
+/pqc
+/reconciler
+/reporting
+/sbom
+/signing
+/software-vault
+/watchdog
 
 # Local build harness output
 .cloudbuild/
