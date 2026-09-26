@@ -25,8 +25,11 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 - [SECRET_ROTATION.md](SECRET_ROTATION.md): rotating secrets on a live stack.
 - [SERVICE_MASTER_KEYS.md](SERVICE_MASTER_KEYS.md): the secrets, certs, cloud
   and ekm master keys come from keycore (`pkg/mek`); how data was moved off
-  the public dev keys, the exposure register, backup re-protection, and
+  the public dev keys, the exposure register, backup re-wrapping, and
   rotation.
+- [BACKUP_KEYS.md](BACKUP_KEYS.md): governance backup keys. A software-mode
+  key is returned once and never stored; an HSM-bound key is wrapped under an
+  HKDF-SHA256 key from `BACKUP_HSM_WRAP_SECRET`.
 - [AUDIT_EVENTS_2026-09.md](AUDIT_EVENTS_2026-09.md): every audit event the
   2026-09 refresh added, and what can't be audited (startup refusals) and how
   it shows instead.

@@ -926,10 +926,10 @@ const SectionApiGovernance = () => (
     <Collapse title="Backup & Restore">
       <EndpointTable rows={[
         ["GET", "/governance/backups", "List available backups with scope and timestamp"],
-        ["POST", "/governance/backups", "Create an encrypted backup (AES-256-GCM, .vbk format)"],
+        ["POST", "/governance/backups", "Create an encrypted backup (AES-256-GCM, .vbk format); returns the key file once (key_file)"],
         ["POST", "/governance/backups/restore", "Restore from a backup (may require approval policy)"],
         ["GET", "/governance/backups/{id}/artifact", "Download the encrypted backup file"],
-        ["GET", "/governance/backups/{id}/key", "Download the backup encryption key (separate from artifact)"],
+        ["GET", "/governance/backups/{id}/key", "Download the wrapped key file again (HSM-bound backups only; software mode: 410 backup_key_not_retained)"],
       ]} />
     </Collapse>
     <Collapse title="Notification Settings">
@@ -2964,17 +2964,19 @@ const SectionConfigBackup = () => (
     <P>Scope: system-wide or tenant-specific. Format: JSON GZip compressed with AES-256-GCM encryption. Artifacts use .vbk extension with separate .key.json key package.</P>
     <P>Backups now carry explicit <IC>backup_coverage</IC> metadata in the artifact/key package so operators can see which capability classes were preserved. When the related service tables exist, posture findings, compliance assessments, reporting jobs, incidents, evidence-pack source data, and tenant payment policy state across traditional payment, ISO 20022, and AP2 are included in the encrypted snapshot.</P>
     <H2>Creating a Backup</H2>
-    <Code>{`# Via API
+    <Code>{`# Via API. The response's key_file is the only copy of a software-mode
+# backup key: save it now (base64-decode content_base64 to <file_name>).
 curl -X POST http://localhost:8050/governance/backups \\
   -H "Authorization: Bearer $TOKEN" \\
   -H "Content-Type: application/json" \\
-  -d '{"scope": "system", "description": "Daily backup"}'
+  -d '{"scope": "system", "bind_to_hsm": false}' > backup.json
+jq -r .key_file.content_base64 backup.json | base64 -d > "$(jq -r .key_file.file_name backup.json)"
 
 # Download artifact
 curl -O http://localhost:8050/governance/backups/{id}/artifact \\
   -H "Authorization: Bearer $TOKEN"
 
-# Download encryption key
+# HSM-bound backups only: download the wrapped key file again
 curl -O http://localhost:8050/governance/backups/{id}/key \\
   -H "Authorization: Bearer $TOKEN"`}</Code>
     <H2>Restoring</H2>
@@ -2983,7 +2985,7 @@ curl -O http://localhost:8050/governance/backups/{id}/key \\
   -H "Content-Type: application/json" \\
   -d '{"backup_id": "...", "scope": "system"}'`}</Code>
     <H2>HSM-Bound Backups</H2>
-    <P>Optional HSM binding wraps the backup encryption key using HSM metadata (provider, slot, partition, fingerprint). Requires matching HSM binding on restore for additional security.</P>
+    <P>A software-mode backup key is returned once, when the backup is created, and the platform keeps only its fingerprint: lose the key file and the backup can't be restored. Optional HSM binding instead wraps the backup key under a key derived with HKDF-SHA256 from <IC>BACKUP_HSM_WRAP_SECRET</IC> (at least 32 characters), the HSM binding (provider, slot, partition, fingerprint) and the tenants; restore needs the same secret and binding. Packages from the retired raw SHA-256 derivation (key_derivation v1) are refused.</P>
     <EnvTable rows={[
       ["BACKUP_HSM_WRAP_SECRET", "<openssl rand -hex 32>", "HSM backup wrap secret"],
       ["BACKUP_HSM_PARTITION_LABEL", "(empty)", "HSM partition for backup key"],

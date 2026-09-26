@@ -958,37 +958,24 @@ Requires breakglass permission. Body: `justification` (required). Emits high-sev
 
 ---
 
-### GET /svc/governance/backup/targets / POST /svc/governance/backup/targets
+### Backups: `/svc/governance/governance/backups`
 
-BackupTarget: name, type (s3/azure-blob/gcs/sftp/local), config, encryptionKeyId, scheduleExpression
+Root administrators only (`tenant_id=root`, an admin token). Keys are
+described in [SECURITY/BACKUP_KEYS.md](SECURITY/BACKUP_KEYS.md).
 
----
+| Route | Purpose |
+|---|---|
+| `POST /governance/backups` | Capture and encrypt a backup. Body: `scope` (`system`/`tenant`), `target_tenant_id`, `bind_to_hsm` (default `true`; used when the tenant has an enabled HSM configuration). Response 201: `job` and **`key_file`** (`file_name`, `content_type`, `content_base64`). `key_file` is returned only here: for a software-mode backup it is the only copy of the key. |
+| `GET /governance/backups` | List jobs. `job.key_package` holds only `mode`, `key_retained`, coverage and the HSM binding summary, never key material. |
+| `GET /governance/backups/{id}` | One job. |
+| `GET /governance/backups/{id}/artifact` | The encrypted `.vbk` artifact (`artifact.content_base64`). |
+| `GET /governance/backups/{id}/key` | The key file again, **HSM-bound backups only** (the key is wrapped under `BACKUP_HSM_WRAP_SECRET`). A software-mode backup, or one whose stored key was removed, answers `410 backup_key_not_retained`. |
+| `POST /governance/backups/restore` | Body: `artifact_file_name` (`.vbk`), `artifact_content_base64`, `key_file_name` (`.key.json`), `key_content_base64`. HSM-bound key files restore only with `key_derivation: "v2"` (HKDF-SHA256). |
+| `DELETE /governance/backups/{id}` | Delete a job and its artifact. |
 
-### PATCH/DELETE /svc/governance/backup/targets/{id}
-
----
-
-### POST /svc/governance/backup/run
-
-Body: `targetId`, `scope` (full/incremental). Response 202: `archiveId`, `jobId`, `status`
-
----
-
-### GET /svc/governance/backup/archives / GET /svc/governance/backup/archives/{id}
-
-Archive includes `backupCoverage` metadata listing preserved capability classes.
-
----
-
-### POST /svc/governance/restore
-
-Body: `archiveId`, `shamirShares[]` (M-of-N), `dryRun` (boolean). Response 202: `restoreId`, `status`
-
----
-
-### GET /svc/governance/restore/{id}/status
-
-Response: `restoreId`, `status`, `restoredObjects`, `errors[]`, `completedAt`
+Env: `BACKUP_HSM_WRAP_SECRET` (governance) is required for HSM-bound backups
+and must be at least 32 characters (`openssl rand -hex 32`); a missing or
+short secret refuses the backup or restore.
 
 ---
 
@@ -2851,7 +2838,7 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 - `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
 - `audit.key.system_key_ensure`, `audit.key.system_key_created`, `audit.key.system_key_change_refused`: keycore system keys
 - `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored): keycore key access
-- `audit.governance.backup_reprotected`, `audit.governance.backup_reprotect_refused`: stored backups re-protected off public keys |
+- `audit.governance.backup_create_refused` (`reason`, `result: refused`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`): governance backup keys (docs/SECURITY/BACKUP_KEYS.md) |
 | `POST /v1/auth/token/lookup-self` | any identity | `vault_token_lookup` |
 | `GET /v1/{mount}/data/{path}`, `GET /v1/{mount}/{path}` | `secrets.value.read` | `vault_kv_read` |
 | `POST /v1/{mount}/data/{path}`, `POST /v1/{mount}/{path}` | `secrets.write` | `vault_kv_written` (`created` in details) |
@@ -3347,7 +3334,8 @@ Selected events with dedicated audit classification:
 - `audit.cert.renewal_window_missed`, `audit.cert.emergency_rotation_started`
 - `audit.cert.star_subscription_created`, `audit.cert.star_subscription_renewed`
 - `audit.governance.approval_requested`, `audit.governance.approved`, `audit.governance.rejected`, `audit.governance.bypassed`
-- `audit.governance.backup_created`, `audit.governance.backup_deleted`, `audit.governance.backup_restored`, `audit.governance.backup_restore_refused` (tampered artifact, wrong key, changed scope, wrong file type; carries `reason`)
+- `audit.governance.backup_created` (`key_mode`, `key_retained`), `audit.governance.backup_deleted`, `audit.governance.backup_restored`, `audit.governance.backup_restore_refused` (tampered artifact, wrong key, changed scope, wrong file type, retired v1 key package; carries `reason`)
+- `audit.governance.backup_create_refused` (`reason`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`)
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
 - `audit.backup.policy_created`, `audit.backup.policy_updated`, `audit.backup.policy_deleted`, `audit.backup.run_refused_preview`, `audit.backup.restore_refused_preview`
 - `audit.auth.cluster_token_minted`, `audit.auth.cluster_mint_refused`; `audit.cluster.write_forwarded`, `audit.cluster.forward_refused` (primary); `audit.<service>.cluster_write_forwarded`, `audit.<service>.cluster_write_refused` (member; `reason`: invalid_token / primary_unreachable / primary_write_required); refusals carry `result: refused`

@@ -27,6 +27,7 @@ import {
   deleteGovernanceBackup,
   downloadGovernanceBackupArtifact,
   downloadGovernanceBackupKey,
+  governanceBackupKeyRetained,
   listGovernanceBackups,
   type GovernanceBackupJob
 } from "../../lib/governance";
@@ -101,6 +102,14 @@ function formatBytes(bytes: number): string {
   const units = ["B", "KB", "MB", "GB"];
   const i = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
+}
+
+function saveBackupFile(file: { file_name?: string; content_type?: string; content_base64?: string }, fallbackName: string, fallbackType: string): void {
+  const blob = new Blob([atob(String(file?.content_base64 || ""))], { type: file?.content_type || fallbackType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = file?.file_name || fallbackName; a.click();
+  URL.revokeObjectURL(url);
 }
 
 const INHERIT_KEY="vecta_sys_inheritance_policy";
@@ -330,12 +339,15 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
     if (!tenantSession || !selectedTenantId) return;
     setBackupCreating(true);
     try {
-      await createGovernanceBackup(tenantSession, {
+      const { job, key_file } = await createGovernanceBackup(tenantSession, {
         scope: "tenant",
         target_tenant_id: selectedTenantId,
         created_by: session?.username || "admin"
       });
-      onToast("Backup created.");
+      saveBackupFile(key_file, `backup-${job.id}.key.json`, "application/json");
+      onToast(governanceBackupKeyRetained(job)
+        ? "Backup created. Its key file was saved."
+        : "Backup created. Its key file was saved: keep it safe, the platform does not keep a copy.");
       await loadBackups();
     } catch (e) { onToast(`Backup failed: ${errMsg(e)}`); }
     finally { setBackupCreating(false); }
@@ -345,11 +357,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
     if (!tenantSession) return;
     try {
       const art = await downloadGovernanceBackupArtifact(tenantSession, backupId);
-      const blob = new Blob([atob(art.content_base64)], { type: art.content_type || "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = art.file_name || `backup-${backupId}.vbk`; a.click();
-      URL.revokeObjectURL(url);
+      saveBackupFile(art, `backup-${backupId}.vbk`, "application/octet-stream");
     } catch (e) { onToast(`Download failed: ${errMsg(e)}`); }
   }, [tenantSession, onToast]);
 
@@ -357,11 +365,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
     if (!tenantSession) return;
     try {
       const key = await downloadGovernanceBackupKey(tenantSession, backupId);
-      const blob = new Blob([atob(key.content_base64)], { type: key.content_type || "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = key.file_name || `backup-${backupId}.key.json`; a.click();
-      URL.revokeObjectURL(url);
+      saveBackupFile(key, `backup-${backupId}.key.json`, "application/json");
     } catch (e) { onToast(`Key download failed: ${errMsg(e)}`); }
   }, [tenantSession, onToast]);
 
@@ -753,7 +757,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
                 {b.status === "completed" && (
                   <>
                     <Btn small onClick={() => void handleDownloadArtifact(b.id)}>Artifact</Btn>
-                    <Btn small onClick={() => void handleDownloadKey(b.id)}>Key</Btn>
+                    {governanceBackupKeyRetained(b) && <Btn small onClick={() => void handleDownloadKey(b.id)}>Key</Btn>}
                   </>
                 )}
                 <Btn small danger onClick={() => void handleDeleteBackup(b.id)}>Delete</Btn>

@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -206,13 +204,19 @@ func (h *Handler) handleCreateBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.TenantID = tenantID
-	job, err := h.svc.CreateBackup(r.Context(), in)
+	if claims, ok := pkgauth.ClaimsFromContext(r.Context()); ok && claims != nil {
+		in.CreatedBy = firstNonEmptyString(claims.UserID, claims.ClientID, in.CreatedBy)
+	}
+	job, keyFile, err := h.svc.CreateBackup(r.Context(), in)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "backup_create_failed", err.Error(), reqID, in.TenantID)
 		return
 	}
+	// key_file is returned only here. For a software-mode backup it is the
+	// only copy of the key: the platform doesn't keep it.
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"job":        job,
+		"key_file":   keyFile,
 		"request_id": reqID,
 	})
 }
@@ -333,22 +337,22 @@ func (h *Handler) handleDownloadBackupKey(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	content, err := h.svc.GetBackupKeyDownload(r.Context(), tenantID, r.PathValue("id"))
+	actor := ""
+	if claims, ok := pkgauth.ClaimsFromContext(r.Context()); ok && claims != nil {
+		actor = firstNonEmptyString(claims.UserID, claims.ClientID)
+	}
+	content, err := h.svc.GetBackupKeyDownload(r.Context(), tenantID, r.PathValue("id"), actor)
 	if err != nil {
-		code := http.StatusBadRequest
-		if errors.Is(err, errNotFound) {
+		code, errCode := http.StatusBadRequest, "backup_key_failed"
+		switch {
+		case errors.Is(err, errNotFound):
 			code = http.StatusNotFound
+		case errors.Is(err, errBackupKeyNotRetained):
+			code, errCode = http.StatusGone, "backup_key_not_retained"
 		}
-		writeErr(w, code, "backup_key_failed", err.Error(), reqID, tenantID)
+		writeErr(w, code, errCode, err.Error(), reqID, tenantID)
 		return
 	}
-	fileName := strings.TrimSpace(fmt.Sprintf("%v", content["file_name"]))
-	if fileName == "" {
-		fileName = fmt.Sprintf("vecta-backup-%s%s", strings.TrimSpace(r.PathValue("id")), backupKeyExtension)
-	}
-	raw, _ := json.Marshal(content["key_package"])
-	content["content_base64"] = base64.StdEncoding.EncodeToString(raw)
-	content["file_name"] = fileName
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"artifact":   content,
 		"request_id": reqID,

@@ -2,12 +2,10 @@ package main
 
 import (
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,26 +20,24 @@ import (
 	"vecta-kms/pkg/servicetoken"
 )
 
-// Re-protecting backups (docs/SECURITY/SERVICE_MASTER_KEYS.md).
+// Backup contents and retired master keys
+// (docs/SECURITY/SERVICE_MASTER_KEYS.md).
 //
-// Backups taken before 1.2.0-beta hold rows whose data keys are wrapped under
-// public development keys: stored secrets, CA signing keys, cloud credentials
-// and BitLocker recovery keys. Re-wrapping the live rows doesn't help a
-// backup kept in the platform, which could still be restored or decrypted.
-// So governance:
+// Rows of catalogued tables (stored secrets, CA signing keys, cloud
+// credentials, BitLocker recovery keys) found under a public development key
+// are re-wrapped by their owning service (POST /mek/rewrap-legacy,
+// governance identity only; the service re-wraps only what a legacy key
+// opens):
 //
-//   - re-protects every stored backup: it decrypts the artifact, finds the
-//     rows of catalogued tables under a public key (the keys are public, so
-//     no service is needed for that), sends their wrapped data keys to the
-//     owning service
-//     (POST /mek/rewrap-legacy, governance identity only; the service
-//     re-wraps only what a legacy key opens), and re-seals the artifact
-//     under a fresh backup key. The old key package no longer opens it.
-//     Copies downloaded before then can't be changed; the exposure register
-//     is what tracks them.
-//   - re-wraps a restore's payload the same way before any row is written,
-//     so restored rows go live under the service key. Items that were under
-//     a public key are (re)opened in the owning service's exposure register.
+//   - when a backup is captured, so no new artifact holds a row under a
+//     public key;
+//   - when a backup is restored, before any row is written, so restored rows
+//     go live under the service key. Items that were under a public key are
+//     (re)opened in the owning service's exposure register.
+//
+// The keys are public, so governance finds such rows itself: a clean backup
+// never needs the services. Governance can't re-seal backups it already
+// stores, because it doesn't keep their keys (docs/SECURITY/BACKUP_KEYS.md).
 
 // backupRewrapper re-wraps wrapped DEKs through the owning service.
 type backupRewrapper interface {
@@ -197,172 +193,11 @@ func encodeWrapped(b []byte, isBase64 bool) string {
 	return `\x` + hex.EncodeToString(b)
 }
 
-// ReprotectStoredBackups re-protects every stored backup not yet processed.
-// It runs on the primary (backups are replicated). It returns how many were
-// processed; a backup it can't open or a service it can't reach is audited
-// and retried on the next run.
-func (s *Service) ReprotectStoredBackups(ctx context.Context) (int, error) {
-	store, ok := s.store.(*SQLStore)
-	if !ok || store == nil {
-		return 0, errors.New("backup store is unavailable")
-	}
-	pending, err := store.listUnreprotectedBackups(ctx)
-	if err != nil {
-		return 0, err
-	}
-	done := 0
-	for _, ref := range pending {
-		if err := s.reprotectBackup(ctx, store, ref[0], ref[1]); err != nil {
-			_ = s.publishAudit(ctx, "audit.governance.backup_reprotect_refused", ref[0], map[string]interface{}{
-				"backup_id": ref[1], "reason": err.Error(), "result": "refused", "severity": "warning",
-				"description": "a stored backup could not be re-protected yet; it is retried on the next run",
-			})
-			continue
-		}
-		done++
-	}
-	return done, nil
-}
-
-func (s *Service) reprotectBackup(ctx context.Context, store *SQLStore, tenantID, backupID string) error {
-	job, err := store.getBackupJob(ctx, tenantID, backupID, true)
-	if err != nil {
-		return err
-	}
-	key, err := s.resolveRestoreBackupKey(ctx, store, job.TenantID, job.KeyPackage)
-	if err != nil {
-		return fmt.Errorf("key_unavailable: %w", err)
-	}
-	aad, err := backupAAD(job.Scope, job.TenantID, job.TargetTenantID, job.BackupFormat)
-	if err != nil {
-		return err
-	}
-	plaintext, err := decryptAESGCM(job.ArtifactCiphertext, key, job.ArtifactNonce, aad)
-	if err != nil {
-		if plaintext, err = decryptAESGCM(job.ArtifactCiphertext, key, job.ArtifactNonce, nil); err != nil {
-			return errors.New("artifact_unreadable: the stored key package does not open the artifact")
-		}
-	}
-	zr, err := gzip.NewReader(bytes.NewReader(plaintext))
-	if err != nil {
-		return err
-	}
-	raw, err := io.ReadAll(zr)
-	if err != nil {
-		return err
-	}
-	var snapshot backupSnapshotPayload
-	if err := json.Unmarshal(raw, &snapshot); err != nil {
-		return errors.New("backup payload JSON is invalid")
-	}
-	counts, err := reprotectTables(ctx, s.backupRewrapper(), snapshot.Tables, false)
-	if err != nil {
-		return fmt.Errorf("service_unreachable: %w", err)
-	}
-	total := 0
-	for _, n := range counts {
-		total += n
-	}
-	if total == 0 {
-		return store.markBackupReprotected(ctx, job.ID, nil)
-	}
-	payload, err := json.Marshal(snapshot)
-	if err != nil {
-		return err
-	}
-	var buf bytes.Buffer
-	zw := gzip.NewWriter(&buf)
-	if _, err := zw.Write(payload); err != nil {
-		return err
-	}
-	if err := zw.Close(); err != nil {
-		return err
-	}
-	newKey, err := randomBytes(32)
-	if err != nil {
-		return err
-	}
-	ciphertext, nonce, err := encryptAESGCM(buf.Bytes(), newKey, aad)
-	if err != nil {
-		return err
-	}
-	hsmTenant := job.TenantID
-	if job.Scope == backupScopeTenant {
-		hsmTenant = job.TargetTenantID
-	}
-	_, keyPackageRaw, err := buildBackupKeyPackage(newKey, job.HSMBound, store.loadHSMBinding(ctx, hsmTenant), job.TenantID, job.TargetTenantID, snapshot.Coverage)
-	if err != nil {
-		return err
-	}
-	if err := store.markBackupReprotected(ctx, job.ID, &reprotectedArtifact{
-		ciphertext: ciphertext, nonce: nonce, sha: sha256Hex(string(ciphertext)), keyPackageRaw: keyPackageRaw,
-	}); err != nil {
-		return err
-	}
-	_ = s.publishAudit(ctx, "audit.governance.backup_reprotected", job.TenantID, map[string]interface{}{
-		"backup_id": job.ID, "rows_rewrapped": counts, "severity": "warning",
-		"previous_key_package_invalidated": true,
-		"description": "rows under a public development key were re-wrapped by their services and the backup re-sealed under a new key; " +
-			"copies downloaded earlier are unchanged, see the services' exposure registers",
-	})
-	return nil
-}
-
-func backupAAD(scope, tenantID, targetTenantID, format string) ([]byte, error) {
-	if format == "" {
-		format = backupFormatJSONGzAESGCM
-	}
-	return json.Marshal(map[string]interface{}{
-		"service": "governance", "scope": scope, "tenant_id": tenantID, "target_tenant_id": targetTenantID, "format": format,
-	})
-}
-
 func (s *Service) backupRewrapper() backupRewrapper {
 	if s.rewrapper != nil {
 		return s.rewrapper
 	}
 	return httpBackupRewrapper{client: &http.Client{Timeout: 30 * time.Second}}
-}
-
-type reprotectedArtifact struct {
-	ciphertext, nonce []byte
-	sha               string
-	keyPackageRaw     []byte
-}
-
-func (s *SQLStore) listUnreprotectedBackups(ctx context.Context) ([][2]string, error) {
-	rows, err := s.db.SQL().QueryContext(ctx, `
-SELECT tenant_id, id FROM governance_backup_jobs
-WHERE mek_reprotected_at IS NULL AND status = 'completed'
-ORDER BY created_at`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close() //nolint:errcheck
-	var out [][2]string
-	for rows.Next() {
-		var r [2]string
-		if err := rows.Scan(&r[0], &r[1]); err != nil {
-			return nil, err
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
-}
-
-// markBackupReprotected records the run, replacing the artifact and key
-// package when rows were re-wrapped.
-func (s *SQLStore) markBackupReprotected(ctx context.Context, id string, a *reprotectedArtifact) error {
-	if a == nil {
-		_, err := s.db.SQL().ExecContext(ctx, `UPDATE governance_backup_jobs SET mek_reprotected_at = NOW() WHERE id = $1`, id)
-		return err
-	}
-	_, err := s.db.SQL().ExecContext(ctx, `
-UPDATE governance_backup_jobs
-SET artifact_ciphertext = $1, artifact_nonce = $2, ciphertext_sha256 = $3, artifact_size_bytes = $4,
-    key_package_json = $5::jsonb, mek_reprotected_at = NOW()
-WHERE id = $6`, a.ciphertext, a.nonce, a.sha, int64(len(a.ciphertext)), string(a.keyPackageRaw), id)
-	return err
 }
 
 func underAny(keys [][]byte, iv, dek []byte) bool {

@@ -7,6 +7,38 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — Governance never stores a key that opens its backups
+**Decision:** a software-mode backup key is returned once, in the create
+response, and never stored. The platform keeps only its fingerprint. An
+HSM-bound key is stored wrapped under
+`HKDF-SHA256(BACKUP_HSM_WRAP_SECRET, binding, tenants)`, with the secret at
+least 32 characters. Migration 013 removes existing stored keys, and v1
+(raw SHA-256) packages are refused. Master-key re-wrapping of backup
+contents moves from an hourly job over stored backups to capture time.
+
+**Why:** a key in the same row as the artifact makes the encryption
+decorative for anyone with the database. The owner accepted that backups
+from the old version won't restore (none were taken).
+
+**Rejected:**
+- Wrapping software keys under a governance master key from `pkg/mek`: a
+  database copy plus a running keycore would still open them. A backup has
+  to survive the loss of the platform, so the operator must hold its key.
+- Keeping v1 unwrap as a fallback: it keeps the raw-hash derivation
+  reachable, and there were no v1 backups to keep.
+- Keeping the stored-backup re-seal job: without stored keys it has
+  nothing to open. Re-wrapping at capture covers every new backup.
+- Deleting old backup rows: scrubbing the key keeps the artifact usable
+  with a key file saved earlier.
+
+**Enforced by:** `TestSoftwareBackupKeyIsNotStored`,
+`TestSoftwareBackupKeyNotRetainedPostgres`,
+`TestMigrationScrubsStoredBackupKeysPostgres`, `TestHSMBoundBackupKeyUsesHKDF`,
+`TestHSMBoundV1PackageIsRefused`, `TestBackupWrapSecretStrength`
+([SECURITY/BACKUP_KEYS.md](SECURITY/BACKUP_KEYS.md)).
+
+---
+
 ## 2026-09-26 — No anonymous key use in keycore
 **Decision:** every key operation needs a verified identity. The
 "backward-compatible" branch that let a caller with no token use any key

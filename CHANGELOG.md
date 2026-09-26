@@ -6,6 +6,30 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
+### Security: governance backup keys
+- **Software-mode backup keys were stored in plaintext** next to the
+  encrypted artifact, so anyone who could read the database (or a dump of
+  it) could open every such backup. **Fixed:** the key file is returned once,
+  in the `POST /governance/backups` response (`key_file`), and the dashboard
+  saves it the moment the backup is created. The platform keeps only its
+  fingerprint. `GET /governance/backups/{id}/key` answers
+  `410 backup_key_not_retained` for these backups.
+- **HSM-bound backups wrapped their key under a raw SHA-256** of the wrap
+  secret and binding. **Fixed:** the wrap key is HKDF-SHA256
+  (`key_derivation: "v2"`), and `BACKUP_HSM_WRAP_SECRET` must be at least 32
+  characters. v1 key packages are refused on restore.
+- **Breaking:** migration 013 removes the stored keys of existing backups
+  (plaintext software keys and v1 wrapped keys). Those backups restore only
+  with a software key file saved before the upgrade. No backups had been
+  taken on the old version. The hourly job that re-sealed stored backups
+  (unreleased) is removed; contents are re-wrapped at capture instead.
+- New audit events: `audit.governance.backup_create_refused`,
+  `backup_key_downloaded`, `backup_key_download_refused`
+  (`reason: key_not_retained`). The backup's creator is now taken from the
+  verified token. Tenant-scope HSM-bound restores use the target tenant's
+  binding, as the backup did.
+- Details: [docs/SECURITY/BACKUP_KEYS.md](docs/SECURITY/BACKUP_KEYS.md).
+
 ### Security: keycore trusted identity headers for key access
 - **A caller could grant itself access to keys.** When the token lacked a
   field, or there was no token, keycore filled the caller's user, role,
@@ -69,11 +93,10 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   key is re-wrapped before the service serves, and again every 15 minutes, so
   restored rows are caught. A row that can't be rewritten blocks the start.
   Values and ciphertext are unchanged.
-- **Backups kept in the platform are re-protected:** governance re-wraps
-  their contents through the owning service and re-seals each under a new
-  backup key (the old key package stops working). Restores are re-wrapped
-  before any row is written. A clean backup never needs the services; an
-  affected one is refused, with nothing written, if its service can't re-wrap.
+- **Backups:** a new backup's contents are re-wrapped through the owning
+  service at capture, and a restore's before any row is written. A clean
+  backup never needs the services; an affected one is refused, with nothing
+  written, if its service can't re-wrap. (Backup keys: see the next section.)
 - **Exposure register (action needed):** re-wrapping can't change copies
   made before the upgrade (database dumps, snapshots, downloaded backup
   files). Every item that was under a public key is listed under
@@ -89,8 +112,7 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   listed material if anyone may have had an older copy.**
 - New audit events: `audit.<svc>.dev_mek_rewrapped`, `mek_rewrapped`,
   `*_rewrap_refused`, `mek_unreadable`, `mek_check_refused`,
-  `mek_exposure_remediated`, `audit.key.system_key_*`, and
-  `audit.governance.backup_reprotected`.
+  `mek_exposure_remediated`, and `audit.key.system_key_*`.
 - **Dashboard:** a 403 no longer signs the user out; only 401 does (a
   missing permission, such as `secrets.read`, is not an expired session).
 - The new conformance rule `no-literal-key-material` fails any key derived
