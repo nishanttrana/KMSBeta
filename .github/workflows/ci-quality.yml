@@ -64,9 +64,10 @@ jobs:
         run: ./scripts/test-cluster-replication.sh
 
   integration-postgres:
-    # Backup/restore, signing and the backup service against real Postgres:
-    # they rely on information_schema, JSONB and TRUNCATE ... CASCADE, which
-    # SQLite cannot exercise. The database is disposable.
+    # Backup/restore, signing, the backup service and the secrets MEK
+    # migration against real Postgres: they rely on information_schema, JSONB,
+    # TRUNCATE ... CASCADE and BYTEA/row-value comparisons, which SQLite cannot
+    # prove. The database is disposable.
     name: Integration tests (Postgres)
     runs-on: ubuntu-latest
     services:
@@ -92,7 +93,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Integration tests (run serially; they share the database)
-        run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/governance ./services/signing ./services/backup
+        run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/governance ./services/signing ./services/backup ./services/secrets
 
   dashboard-quality:
     name: Dashboard Lint/Type/Unit/Build/Smoke

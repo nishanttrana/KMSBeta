@@ -22,22 +22,22 @@ import (
 	"golang.org/x/crypto/pkcs12"
 	"golang.org/x/crypto/ssh"
 
-	pkgaudit "vecta-kms/pkg/audit"
 	pkgcrypto "vecta-kms/pkg/crypto"
 )
 
 var errExpired = errors.New("secret lease has expired")
 
+// Service holds the secrets domain logic. It emits no audit events itself:
+// every call arrives through a pkg/route handler, and the kernel emits the
+// one audit.secrets.<action> event for the request.
 type Service struct {
 	store Store
-	audit *pkgaudit.Client
 	mek   []byte
 }
 
-func NewService(store Store, audit *pkgaudit.Client, mek []byte) *Service {
+func NewService(store Store, mek []byte) *Service {
 	return &Service{
 		store: store,
-		audit: audit,
 		mek:   append([]byte{}, mek...),
 	}
 }
@@ -90,14 +90,6 @@ func (s *Service) CreateSecret(ctx context.Context, req CreateSecretRequest) (Se
 	if err != nil {
 		return Secret{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.secrets.created", req.TenantID, map[string]interface{}{
-		"secret_id":    out.ID,
-		"secret_type":  out.SecretType,
-		"expires_at":   toRFC3339(out.ExpiresAt),
-		"current_ver":  out.CurrentVersion,
-		"created_by":   out.CreatedBy,
-		"value_stored": "envelope_encrypted",
-	})
 	return out, nil
 }
 
@@ -111,10 +103,6 @@ func (s *Service) ListSecrets(ctx context.Context, tenantID string, secretType s
 	if err != nil {
 		return nil, err
 	}
-	_ = s.publishAudit(ctx, "audit.secrets.listed", tenantID, map[string]interface{}{
-		"count":       len(items),
-		"secret_type": secretType,
-	})
 	return items, nil
 }
 
@@ -128,9 +116,6 @@ func (s *Service) GetSecret(ctx context.Context, tenantID string, secretID strin
 	if err != nil {
 		return Secret{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.secrets.read", tenantID, map[string]interface{}{
-		"secret_id": secretID,
-	})
 	return secret, nil
 }
 
@@ -144,10 +129,6 @@ func (s *Service) GetSecretByName(ctx context.Context, tenantID string, name str
 	if err != nil {
 		return Secret{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.secrets.read", tenantID, map[string]interface{}{
-		"secret_name": name,
-		"secret_id":   secret.ID,
-	})
 	return secret, nil
 }
 
@@ -175,10 +156,6 @@ func (s *Service) GetSecretValue(ctx context.Context, tenantID string, secretID 
 	if err != nil {
 		return SecretValueResponse{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.secrets.value_read", tenantID, map[string]interface{}{
-		"secret_id": secretID,
-		"format":    usedFormat,
-	})
 	return SecretValueResponse{
 		Value:       string(converted),
 		Format:      usedFormat,
@@ -220,12 +197,6 @@ func (s *Service) UpdateSecret(ctx context.Context, tenantID string, secretID st
 	if err != nil {
 		return Secret{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.secrets.updated", tenantID, map[string]interface{}{
-		"secret_id":       updated.ID,
-		"rotated_value":   req.Value != nil,
-		"lease_ttl_secs":  updated.LeaseTTLSeconds,
-		"current_version": updated.CurrentVersion,
-	})
 	return updated, nil
 }
 
@@ -238,9 +209,6 @@ func (s *Service) DeleteSecret(ctx context.Context, tenantID string, secretID st
 	if err := s.store.DeleteSecret(ctx, tenantID, secretID); err != nil {
 		return err
 	}
-	_ = s.publishAudit(ctx, "audit.secrets.deleted", tenantID, map[string]interface{}{
-		"secret_id": secretID,
-	})
 	return nil
 }
 
@@ -277,10 +245,6 @@ func (s *Service) GenerateSSHKey(ctx context.Context, req GenerateSSHKeyRequest)
 	if err != nil {
 		return Secret{}, "", err
 	}
-	_ = s.publishAudit(ctx, "audit.secrets.generated", req.TenantID, map[string]interface{}{
-		"secret_id": secret.ID,
-		"type":      "ssh_private_key",
-	})
 	return secret, pubSSH, nil
 }
 
@@ -358,11 +322,6 @@ func (s *Service) GenerateKeyPair(ctx context.Context, req GenerateKeyPairReques
 	if err != nil {
 		return Secret{}, "", "", err
 	}
-	_ = s.publishAudit(ctx, "audit.secrets.generated", req.TenantID, map[string]interface{}{
-		"secret_id": secret.ID,
-		"type":      secretType,
-		"key_type":  req.KeyType,
-	})
 	return secret, publicVal, req.KeyType, nil
 }
 
@@ -376,10 +335,6 @@ func (s *Service) ListVersions(ctx context.Context, tenantID string, secretID st
 	if err != nil {
 		return nil, err
 	}
-	_ = s.publishAudit(ctx, "audit.secrets.versions_listed", tenantID, map[string]interface{}{
-		"secret_id": secretID,
-		"count":     len(versions),
-	})
 	return versions, nil
 }
 
@@ -412,11 +367,6 @@ func (s *Service) RotateSecret(ctx context.Context, tenantID string, secretID st
 	if err != nil {
 		return Secret{}, err
 	}
-	_ = s.publishAudit(ctx, "audit.secrets.rotated", tenantID, map[string]interface{}{
-		"secret_id":   secretID,
-		"new_version": updated.CurrentVersion,
-		"rotated_by":  updatedBy,
-	})
 	return updated, nil
 }
 
@@ -555,14 +505,6 @@ func (s *Service) decryptValue(enc EncryptedSecretValue) ([]byte, error) {
 		Ciphertext:   enc.Ciphertext,
 		DataIV:       enc.DataIV,
 	})
-}
-
-func (s *Service) publishAudit(ctx context.Context, subject string, tenantID string, data map[string]interface{}) error {
-	if s.audit == nil {
-		return nil
-	}
-	action := strings.TrimPrefix(subject, "audit.secrets.")
-	return s.audit.Emit(ctx, action, pkgaudit.Event{TenantID: tenantID, Details: data})
 }
 
 func normalizeSecretType(v string) string {

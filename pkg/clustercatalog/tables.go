@@ -221,6 +221,7 @@ var Replicated = map[string][]string{
 	"secrets": {
 		"secret_values",
 		"secrets",
+		"secrets_mek_state",
 	},
 	"signing": {
 		"signing_profiles",

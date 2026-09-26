@@ -31,6 +31,51 @@ security meaning where a generic request record isn't enough.
 | `audit.dataprotect.kdf_refused` | dataprotect | a derivation is refused: v1 after migration, v2 before it, or v1 in strict mode (at most once a minute per key and reason, with a count) | critical for v1 after migration, else warning |
 | `audit.dataprotect.kdf_migration_started` / `_vault_reprotected` / `_migration_completed` / `_migration_aborted` | dataprotect | per-key migration steps (actor, pinned version, counts; forced completion noted) | info; warning when forced or rows failed |
 
+## Secrets master key (MEK) migration
+
+Emitted by the secrets service at startup, before it serves requests. The
+actor is `kms-secrets` (service), and there is one event per tenant (the
+mismatch refusal is platform-wide, with an empty tenant). Details carry
+`count` (value versions), `secret_count` and `secret_ids` (sorted, the first
+500).
+
+| Event | When | Severity |
+|---|---|---|
+| `audit.secrets.dev_mek_rewrapped` | values stored under the public development key were re-wrapped under `SECRETS_MEK_B64`; `exposure` says to treat them as exposed to anyone with an older database copy | warning |
+| `audit.secrets.dev_mek_rewrap_refused` | such a value couldn't be rewritten (`result: refused`, `reason: rewrap_failed`); the service refuses to start and retries on the next start | critical |
+| `audit.secrets.mek_rewrapped` | a rotation: values under `SECRETS_MEK_PREVIOUS_B64` were re-wrapped under the new key | info |
+| `audit.secrets.mek_rewrap_refused` | a rotation couldn't rewrite a value (`result: refused`, `reason: rewrap_failed`); start refused | critical |
+| `audit.secrets.mek_unreadable` | stored values that no configured key opens (`result: failure`, `reason: no_configured_key_opens`); they were unreadable before too | warning |
+| `audit.secrets.mek_check_refused` | the configured MEK isn't the one the data is under, and this isn't a rotation from it, or a cluster member has a different key than the primary (`result: refused`, `reason: mek_mismatch`); start refused | critical |
+
+If NATS is unavailable at startup, the events can't be published. The same
+counts are then recorded in `secrets_mek_state`
+(`dev_mek_rewrapped`, `previous_rewrapped`, `unreadable`, `migrated_at`) and
+in the service log (`MEK migration: …`), and a refused start shows as a
+`refusing to start:` line. A start refused because `SECRETS_MEK_B64` is
+missing or weak happens before anything connects, so it shows only as that
+line. Proven by `services/secrets/mek_test.go` (SQLite, and Postgres via
+`VECTA_TEST_POSTGRES_DSN`).
+
+## Kernel-emitted events (pkg/route)
+
+Services migrated to the `pkg/route` kernel emit one specific event per
+request, and the kernel guarantees it for refusals too. The kernel's own
+refusals are listed below. Handlers add their own (for example
+`feature_preview` or a FIPS refusal) with `c.Refuse`.
+
+| Event | When | Severity |
+|---|---|---|
+| `audit.<service>.<action>`, `result: refused`, `reason: unauthenticated` | no verified token on a non-public route (401) | warning |
+| `audit.<service>.<action>`, `result: refused`, `reason: permission_denied` | the token lacks the route's permission (403) | warning |
+| `audit.<service>.<action>`, `result: refused`, `reason: tenant_mismatch` | the request names a tenant other than the token's (403), including in the JSON body | warning |
+| `audit.<service>.<action>`, `result: refused`, `reason: tenant_conflict` | query, header and body name different tenants (403) | warning |
+| `audit.<service>.<action>`, `result: failure` | the handler returned an error (`error_code` in details) | the route's severity |
+| `audit.secrets.*` | every secrets route; see the table in `docs/API_REFERENCE.md` (Service 25) | info; `value_read` and `deleted` are warning |
+
+Proven by `routetest.RefusalsAudited` for every route, and by the
+`pkg/route` and `services/secrets` tests.
+
 ## What can't be audited, and how it shows instead
 
 A service that **refuses to start** has no audit pipeline yet, because it exits

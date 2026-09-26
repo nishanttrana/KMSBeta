@@ -6,11 +6,14 @@
 #   2. Single audit pipeline — services must not create their own audit
 #      streams or publish audit events outside vecta-kms/pkg/audit.
 #   3. Secure defaults — no secret falls back to a value shipped in the repo,
-#      and .env.example ships no secret values.
+#      no key material is derived from a repo literal, and .env.example ships
+#      no secret values.
 #   4. Shell scripts parse (bash 3.2 on macOS included).
 #   5. FIPS 140-3: every Go binary links the certified Go Cryptographic Module
 #      and every Go service receives the customer's VECTA_FIPS_MODE.
 #   6. Preview features: one catalogue (pkg/features), mirrored by the dashboard.
+#   7. Route kernel: every HTTP route registers through pkg/route (auth,
+#      tenant, permission and a specific audit event by construction).
 #
 # Files listed in scripts/conformance-allowlist.txt are exempted (one path
 # per line, # comments allowed). The allowlist is a burn-down list: it only
@@ -88,6 +91,37 @@ check_secret_defaults "no-credential-in-url-go" '"[a-z][a-z0-9+]*://[^:"/@ %$]+:
 check_secret_defaults "no-credential-in-url-compose" '://[^:$/ ]+:[^$@ ]+@' docker-compose*.yml
 check_secret_defaults "no-secret-fallback-go" "\\(\"${SECRET_NAME}\", *\"[^\"]*[^A-Z0-9_\"][^\"]*\"\\)" services pkg --include="*.go"
 
+# Rule 3d: no key material from a string in the repo. Hashing a literal, an
+# HMAC or KDF keyed by a literal, or a key assigned from a literal all yield a
+# value anyone with the source can compute; a key must come from the
+# environment (validated, fail-closed) or keycore. The one exception is code
+# that must recognise a retired public key to migrate data off it: that line
+# carries "conformance:legacy-public-key" and its file is named below.
+# Existing violations are on a shrink-only burn-down list.
+LITERAL_KEY='(Hash\("[^"]*", *|Sum(224|256|384|512)\()\[\]byte\("[^"]*"\)\)|(HMAC\("[^"]*", *|hmac\.New\([^,]+, *)\[\]byte\("|(pbkdf2\.Key|argon2\.I?D?Key|HKDF[A-Za-z]*)\(\[\]byte\("|([Mm][Ee][Kk]|[Kk][Ee][Kk]|[Mm]aster_?[Kk]ey)[A-Za-z_]*[[:space:]]*:?=[[:space:]]*\[\]byte\("'
+LEGACY_KEY_FILES="services/secrets/mek_migration.go"
+KEY_BURNDOWN="scripts/literal-key-burndown.txt"
+key_fail=""
+key_hits=$(grep -rnE "$LITERAL_KEY" services --include="*.go" 2>/dev/null | grep -v '_test\.go:' || true)
+key_files=$(printf '%s\n' "$key_hits" | grep -v 'conformance:legacy-public-key' | cut -d: -f1 | grep . | sort -u || true)
+key_listed=$(grep -v '^\s*#' "$KEY_BURNDOWN" | grep -v '^\s*$' | sort)
+for f in $key_files; do
+  printf '%s\n' "$key_listed" | grep -qxF "$f" || key_fail="$key_fail $f"
+done
+for f in $key_listed; do
+  printf '%s\n' "$key_files" | grep -qxF "$f" || key_fail="$key_fail $f(stale-entry)"
+done
+for f in $(printf '%s\n' "$key_hits" | grep 'conformance:legacy-public-key' | cut -d: -f1 | sort -u); do
+  printf '%s\n' $LEGACY_KEY_FILES | grep -qxF "$f" || key_fail="$key_fail $f(unlisted-legacy-marker)"
+done
+if [ -n "$key_fail" ]; then
+  FAIL=1
+  echo "FAIL [no-literal-key-material]: key material derived from a repo literal in:$key_fail"
+  printf '%s\n' "$key_hits" | grep -v 'conformance:legacy-public-key' | sed 's/^/  /'
+else
+  echo "PASS [no-literal-key-material] ($(printf '%s\n' "$key_listed" | grep -c . | tr -d ' ') legacy file(s) left to fix)"
+fi
+
 # Rule 3c: .env.example ships no secret values. A filled-in example value
 # ("your-...") gets copied into real deployments and runs as a public secret.
 env_example_hits=$(grep -nE "^${SECRET_NAME}=.+" .env.example 2>/dev/null | sed 's/=.*/=<value>/' || true)
@@ -147,6 +181,29 @@ if [ -z "$go_preview" ] || [ "$go_preview" != "$ts_preview" ]; then
   diff <(echo "$go_preview") <(echo "$ts_preview") | sed 's/^/  /'
 else
   echo "PASS [preview-catalogue] ($(echo "$go_preview" | wc -l | tr -d ' ') preview features)"
+fi
+
+# Rule 7: route kernel (docs/PLATFORM_CONTRACT.md). Services register HTTP
+# routes through pkg/route, which applies authentication, tenancy, permission
+# and a specific audit event (refusals included) to every route. A raw
+# http.ServeMux is allowed only in files on the burn-down list, which only
+# shrinks: an unlisted raw mux fails, and so does a listed file that no
+# longer has one (remove it from the list when you migrate it).
+BURNDOWN="scripts/route-kernel-burndown.txt"
+route_fail=""
+raw_mux=$(grep -rlE 'http\.NewServeMux\(\)|\.HandleFunc\(' services --include="*.go" 2>/dev/null | grep -v '_test\.go$' | sort || true)
+listed=$(grep -v '^\s*#' "$BURNDOWN" | grep -v '^\s*$' | sort)
+for f in $raw_mux; do
+  printf '%s\n' "$listed" | grep -qxF "$f" || route_fail="$route_fail $f(raw-mux)"
+done
+for f in $listed; do
+  printf '%s\n' "$raw_mux" | grep -qxF "$f" || route_fail="$route_fail $f(stale-entry)"
+done
+if [ -n "$route_fail" ]; then
+  FAIL=1
+  echo "FAIL [route-kernel]: register routes with pkg/route, and keep $BURNDOWN exact:$route_fail"
+else
+  echo "PASS [route-kernel] ($(printf '%s\n' "$listed" | grep -c . | tr -d ' ') legacy file(s) left to migrate)"
 fi
 
 # Rule 4: every shell script parses. Checked with /bin/bash when present,

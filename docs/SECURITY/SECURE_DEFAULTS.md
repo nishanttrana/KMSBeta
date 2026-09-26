@@ -50,6 +50,15 @@ checked mechanically. Reviewers enforce the rest.
    `password`, `admin`, `root`, `secret`) or is a placeholder are rejected.
 8. **Config knobs are not secrets.** Paths (`*_FILE`, `*_PATH`), modes, flags
    and URLs may have defaults. The secret they point at may not.
+9. **Key material never comes from a string in the repo.** Hashing a literal
+   (`Hash("SHA-256", []byte("…-dev-mek"))`), keying an HMAC or KDF with a
+   literal, or assigning a key from a literal all produce a key anyone with
+   the source can compute. That's a public key, however it's spelled. A key
+   comes from the environment (validated: exact length, not patterned, not a
+   known public value) or from keycore (CLAUDE.md rule 6). Code that has to
+   recognise a retired public key, only to migrate data off it, marks that one
+   line `conformance:legacy-public-key`, and its file is named in
+   `scripts/conformance.sh`.
 
 ## How it's enforced
 
@@ -59,10 +68,11 @@ checked mechanically. Reviewers enforce the rest.
 | `no-secret-fallback-go` | `scripts/conformance.sh` | `("NAME", "literal")` env fallbacks in `services/` and `pkg/` for the same names |
 | `no-credential-in-url-go` / `-compose` | `scripts/conformance.sh` | `scheme://user:pass@` literals; URLs must be built from `${VAR}` or `%s` |
 | `env-example-no-secret-values` | `scripts/conformance.sh` | any non-empty secret value in `.env.example` |
+| `no-literal-key-material` | `scripts/conformance.sh` | in `services/`, a hash of a string literal, an HMAC/KDF keyed by a literal, or a MEK/KEK/master key assigned from a literal. Existing cases are on the shrink-only `scripts/literal-key-burndown.txt` |
 | Placeholder rejection | `pkg/config/secrets.go`, run from `Load` and `NewHTTPServer` | a service starting with `your-...` / `change-me` secrets, or a DSN with a default password |
 | `deploy-local.sh` preflight | the deploy script | placeholders in `.env`; generates every missing secret, including the JWT signing key |
 | Startup validation | per service (for example `bootstrapInternalServiceClients`) | weak values at runtime |
-| Unit tests | `pkg/servicetoken/servicetoken_test.go`, `services/auth/bootstrap_admin_test.go`, `pkg/config/secrets_test.go` | validation rules, default-key revocation, rotated-key retirement, placeholder detection |
+| Unit tests | `pkg/servicetoken/servicetoken_test.go`, `services/auth/bootstrap_admin_test.go`, `pkg/config/secrets_test.go`, `services/secrets/mek_test.go` | validation rules, default-key revocation, rotated-key retirement, placeholder detection, MEK refusal and dev-MEK re-wrap (SQLite and Postgres) |
 
 The only exemption is `AUTH_BOOTSTRAP_ADMIN_PASSWORD` (rule 5). Don't add
 another exemption without the same forced-change guarantee.
@@ -105,6 +115,30 @@ another exemption without the same forced-change guarantee.
   because the variable is `*_DSN`. Removed: no built-in DSN, weak DSN
   passwords are rejected at startup, `run-local.sh` builds the DSN from `.env`,
   and conformance bans credentials in URL literals.
+- **2026-09-26:** the secrets service wrapped every stored secret's DEK under
+  `SHA-256("vecta-secrets-dev-mek")` whenever `SECRETS_MEK_B64` was unset. No
+  installer set it and compose never passed it, so this covered **every
+  deployment**: anyone with the repo and a copy of the database (or a backup)
+  could decrypt every stored secret. Rule 3's checks missed it because the
+  fallback was a hash of a literal, not a `("VAR", "default")` pair. Fixed:
+  - The service refuses to start without a valid 32-byte `SECRETS_MEK_B64`
+    (not the dev key, not patterned). Compose requires it, and `install.sh`,
+    `deploy-local.sh` and `run-local.sh` generate it (`openssl rand -base64 32`).
+  - **Revoking what the default produced (rule 4):** on the first start with a
+    real key, the service re-wraps every DEK still under the dev key and emits
+    `audit.secrets.dev_mek_rewrapped` per tenant, listing the affected secrets.
+    A row it can't rewrite blocks the start and emits
+    `audit.secrets.dev_mek_rewrap_refused`.
+  - Rule 9 and the `no-literal-key-material` check were added. They found the
+    same defect in certs, cloud (including a hardcoded
+    `0123456789ABCDEF…` key) and ekm. Those are on the burn-down list and
+    still open.
+
+  **Still open for affected data:** re-wrapping protects the database from now
+  on, but a database copy or backup taken before the upgrade can still be
+  decrypted with the public key. Treat the values listed in
+  `dev_mek_rewrapped` as exposed to anyone who had such a copy, and rotate
+  them at their source.
 
 ## Rotation must invalidate the old value
 

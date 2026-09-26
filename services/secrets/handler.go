@@ -3,298 +3,284 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"vecta-kms/pkg/tenantcheck"
+	"vecta-kms/pkg/route"
 )
 
+// Handler serves the secrets API. Every route is registered through the
+// pkg/route kernel, which authenticates the caller, enforces the tenant and
+// the route's permission, and emits one audit.secrets.<action> event per
+// request, refusals included. Handlers only add domain details.
 type Handler struct {
-	svc *Service
-	mux *http.ServeMux
+	svc    *Service
+	router *route.Router
 }
 
-func NewHandler(svc *Service) *Handler {
-	h := &Handler{svc: svc}
-	h.mux = h.routes()
+// Permissions for the secrets domain. kms.read grants the *.read ones and
+// kms.write the rest (see route.Allowed).
+const (
+	permRead      = "secrets.read"       // metadata, versions, stats
+	permValueRead = "secrets.value.read" // reveals a secret value
+	permWrite     = "secrets.write"      // create, update, rotate, generate
+	permDelete    = "secrets.delete"
+)
+
+var vaultTenantHeaders = []string{"X-Vault-Namespace", "X-Namespace"}
+
+func NewHandler(svc *Service, audit route.Emitter, logger *log.Logger) *Handler {
+	h := &Handler{svc: svc, router: route.New("secrets", audit, logger)}
+	h.routes()
 	return h
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	h.mux.ServeHTTP(w, r)
+	h.router.ServeHTTP(w, r)
 }
 
-func (h *Handler) routes() *http.ServeMux {
-	mux := http.NewServeMux()
-	mux.HandleFunc("POST /secrets", h.handleCreateSecret)
-	mux.HandleFunc("GET /secrets", h.handleListSecrets)
-	mux.HandleFunc("GET /secrets/{id}", h.handleGetSecret)
-	mux.HandleFunc("GET /secrets/{id}/value", h.handleGetSecretValue)
-	mux.HandleFunc("PUT /secrets/{id}", h.handleUpdateSecret)
-	mux.HandleFunc("DELETE /secrets/{id}", h.handleDeleteSecret)
-	mux.HandleFunc("POST /secrets/generate/ssh_key", h.handleGenerateSSHKey)
-	mux.HandleFunc("POST /secrets/generate/keypair", h.handleGenerateKeyPair)
-	mux.HandleFunc("GET /secrets/{id}/versions", h.handleListVersions)
-	mux.HandleFunc("GET /secrets/{id}/audit", h.handleSecretAuditLog)
-	mux.HandleFunc("POST /secrets/{id}/rotate", h.handleRotateSecret)
-	mux.HandleFunc("GET /secrets/stats", h.handleStats)
+func (h *Handler) routes() {
+	r := h.router
+	secret := func(action, perm string) route.Spec {
+		return route.Spec{Action: action, Permission: perm, Resource: "secret", TargetParam: "id"}
+	}
+	r.Handle("POST /secrets", route.Spec{Action: "created", Permission: permWrite, Resource: "secret"}, h.createSecret)
+	r.Handle("GET /secrets", route.Spec{Action: "listed", Permission: permRead, Resource: "secret"}, h.listSecrets)
+	r.Handle("GET /secrets/{id}", secret("read", permRead), h.getSecret)
+	r.Handle("GET /secrets/{id}/value", route.Spec{Action: "value_read", Permission: permValueRead, Resource: "secret", TargetParam: "id", Severity: "warning"}, h.getSecretValue)
+	r.Handle("PUT /secrets/{id}", secret("updated", permWrite), h.updateSecret)
+	r.Handle("DELETE /secrets/{id}", route.Spec{Action: "deleted", Permission: permDelete, Resource: "secret", TargetParam: "id", Severity: "warning"}, h.deleteSecret)
+	r.Handle("POST /secrets/generate/ssh_key", route.Spec{Action: "generated", Permission: permWrite, Resource: "secret"}, h.generateSSHKey)
+	r.Handle("POST /secrets/generate/keypair", route.Spec{Action: "generated", Permission: permWrite, Resource: "secret"}, h.generateKeyPair)
+	r.Handle("GET /secrets/{id}/versions", secret("versions_listed", permRead), h.listVersions)
+	r.Handle("GET /secrets/{id}/audit", secret("audit_log_read", permRead), h.secretAuditLog)
+	r.Handle("POST /secrets/{id}/rotate", secret("rotated", permWrite), h.rotateSecret)
+	r.Handle("GET /secrets/stats", route.Spec{Action: "stats_read", Permission: permRead}, h.stats)
 
-	// HashiCorp Vault / OpenBao compatibility (KV v1 + KV v2 subset)
-	mux.HandleFunc("GET /v1/sys/health", h.handleVaultSysHealth)
-	mux.HandleFunc("GET /v1/sys/seal-status", h.handleVaultSealStatus)
-	mux.HandleFunc("POST /v1/auth/token/lookup-self", h.handleVaultTokenLookupSelf)
-	mux.HandleFunc("GET /v1/{mount}/data/{path...}", h.handleVaultKV2Read)
-	mux.HandleFunc("POST /v1/{mount}/data/{path...}", h.handleVaultKV2Write)
-	mux.HandleFunc("DELETE /v1/{mount}/data/{path...}", h.handleVaultKV2Delete)
-	mux.HandleFunc("GET /v1/{mount}/metadata/{path...}", h.handleVaultKV2Metadata)
-	mux.HandleFunc("GET /v1/{mount}/{path...}", h.handleVaultKV1Read)
-	mux.HandleFunc("POST /v1/{mount}/{path...}", h.handleVaultKV1Write)
-	mux.HandleFunc("DELETE /v1/{mount}/{path...}", h.handleVaultKV1Delete)
-	return mux
+	// HashiCorp Vault / OpenBao compatibility (KV v1 + KV v2 subset). The
+	// namespace headers carry the tenant; the kernel enforces it like any other.
+	platform := route.Spec{Permission: route.Authenticated, Tenancy: route.PlatformScoped}
+	vault := func(action, perm string) route.Spec {
+		return route.Spec{Action: action, Permission: perm, Resource: "secret", TenantHeaders: vaultTenantHeaders}
+	}
+	kv1Write := vault("vault_kv_written", permWrite)
+	kv1Write.OpaqueBody = true // a KV v1 body is the secret's own data
+	platform.Action = "vault_health_read"
+	r.Handle("GET /v1/sys/health", platform, h.vaultSysHealth)
+	platform.Action = "vault_seal_status_read"
+	r.Handle("GET /v1/sys/seal-status", platform, h.vaultSealStatus)
+	r.Handle("POST /v1/auth/token/lookup-self", vault("vault_token_lookup", route.Authenticated), h.vaultTokenLookupSelf)
+	r.Handle("GET /v1/{mount}/data/{path...}", vault("vault_kv_read", permValueRead), h.vaultKVRead(true))
+	r.Handle("POST /v1/{mount}/data/{path...}", vault("vault_kv_written", permWrite), h.vaultKVWrite(true))
+	r.Handle("DELETE /v1/{mount}/data/{path...}", vault("vault_kv_deleted", permDelete), h.vaultKVDelete)
+	r.Handle("GET /v1/{mount}/metadata/{path...}", vault("vault_metadata_read", permRead), h.vaultKV2Metadata)
+	r.Handle("GET /v1/{mount}/{path...}", vault("vault_kv_read", permValueRead), h.vaultKVRead(false))
+	r.Handle("POST /v1/{mount}/{path...}", kv1Write, h.vaultKVWrite(false))
+	r.Handle("DELETE /v1/{mount}/{path...}", vault("vault_kv_deleted", permDelete), h.vaultKVDelete)
 }
 
-func (h *Handler) handleCreateSecret(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
+// statusOf maps service errors to HTTP status, def for anything unclassified.
+func statusOf(err error, def int) int {
+	switch {
+	case errors.Is(err, errNotFound):
+		return http.StatusNotFound
+	case errors.Is(err, errExpired):
+		return http.StatusGone
+	}
+	return def
+}
+
+// actorOr records the verified caller as the author; the body's claim is
+// only used when there is no verified identity.
+func actorOr(c *route.Call, claimed string) string {
+	if a := c.Actor(); a != "" {
+		return a
+	}
+	return claimed
+}
+
+func (h *Handler) createSecret(c *route.Call) {
 	var req CreateSecretRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+	if !c.Decode(&req) {
 		return
 	}
-	out, err := h.svc.CreateSecret(r.Context(), req)
+	req.TenantID, req.CreatedBy = c.Tenant, actorOr(c, req.CreatedBy)
+	c.Detail("secret_type", req.SecretType)
+	out, err := h.svc.CreateSecret(c.R.Context(), req)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "create_failed", err.Error(), reqID, req.TenantID)
+		c.Error(http.StatusBadRequest, "create_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]interface{}{"secret": out, "request_id": reqID})
+	c.Target(out.ID)
+	c.Detail("current_version", out.CurrentVersion)
+	c.Detail("expires_at", toRFC3339(out.ExpiresAt))
+	c.JSON(http.StatusCreated, map[string]interface{}{"secret": out})
 }
 
-func (h *Handler) handleListSecrets(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	limit := atoi(r.URL.Query().Get("limit"))
-	offset := atoi(r.URL.Query().Get("offset"))
-	secretType := strings.TrimSpace(r.URL.Query().Get("secret_type"))
-	items, err := h.svc.ListSecrets(r.Context(), tenantID, secretType, limit, offset)
+func (h *Handler) listSecrets(c *route.Call) {
+	q := c.R.URL.Query()
+	secretType := strings.TrimSpace(q.Get("secret_type"))
+	items, err := h.svc.ListSecrets(c.R.Context(), c.Tenant, secretType, atoi(q.Get("limit")), atoi(q.Get("offset")))
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "list_failed", err.Error(), reqID, tenantID)
+		c.Error(http.StatusInternalServerError, "list_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"items": items, "request_id": reqID})
+	c.Detail("count", len(items))
+	c.Detail("secret_type", secretType)
+	c.JSON(http.StatusOK, map[string]interface{}{"items": items})
 }
 
-func (h *Handler) handleGetSecret(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) getSecret(c *route.Call) {
+	secret, err := h.svc.GetSecret(c.R.Context(), c.Tenant, c.R.PathValue("id"))
+	if err != nil {
+		c.Error(statusOf(err, http.StatusInternalServerError), "read_failed", err.Error())
 		return
 	}
-	secret, err := h.svc.GetSecret(r.Context(), tenantID, r.PathValue("id"))
+	c.JSON(http.StatusOK, map[string]interface{}{"secret": secret})
+}
+
+func (h *Handler) getSecretValue(c *route.Call) {
+	format := strings.TrimSpace(strings.ToLower(c.R.URL.Query().Get("format")))
+	out, err := h.svc.GetSecretValue(c.R.Context(), c.Tenant, c.R.PathValue("id"), format)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, errNotFound) {
-			status = http.StatusNotFound
+		status, code := statusOf(err, http.StatusBadRequest), "value_read_failed"
+		switch status {
+		case http.StatusGone:
+			code = "secret_expired"
+		case http.StatusNotFound:
+			code = "not_found"
 		}
-		writeErr(w, status, "read_failed", err.Error(), reqID, tenantID)
+		c.Error(status, code, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"secret": secret, "request_id": reqID})
-}
-
-func (h *Handler) handleGetSecretValue(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	format := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("format")))
-	out, err := h.svc.GetSecretValue(r.Context(), tenantID, r.PathValue("id"), format)
-	if err != nil {
-		switch {
-		case errors.Is(err, errExpired):
-			writeErr(w, http.StatusGone, "secret_expired", err.Error(), reqID, tenantID)
-		case errors.Is(err, errNotFound):
-			writeErr(w, http.StatusNotFound, "not_found", err.Error(), reqID, tenantID)
-		default:
-			writeErr(w, http.StatusBadRequest, "value_read_failed", err.Error(), reqID, tenantID)
-		}
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	c.Detail("format", out.Format)
+	c.JSON(http.StatusOK, map[string]interface{}{
 		"value":        out.Value,
 		"format":       out.Format,
 		"content_type": out.ContentType,
-		"request_id":   reqID,
 	})
 }
 
-func (h *Handler) handleUpdateSecret(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
+func (h *Handler) updateSecret(c *route.Call) {
 	var req UpdateSecretRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+	if !c.Decode(&req) {
 		return
 	}
-	out, err := h.svc.UpdateSecret(r.Context(), tenantID, r.PathValue("id"), req)
+	req.UpdatedBy = actorOr(c, req.UpdatedBy)
+	out, err := h.svc.UpdateSecret(c.R.Context(), c.Tenant, c.R.PathValue("id"), req)
 	if err != nil {
-		status := http.StatusBadRequest
-		if errors.Is(err, errNotFound) {
-			status = http.StatusNotFound
-		}
-		writeErr(w, status, "update_failed", err.Error(), reqID, tenantID)
+		c.Error(statusOf(err, http.StatusBadRequest), "update_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"secret": out, "request_id": reqID})
+	c.Detail("value_changed", req.Value != nil)
+	c.Detail("current_version", out.CurrentVersion)
+	c.JSON(http.StatusOK, map[string]interface{}{"secret": out})
 }
 
-func (h *Handler) handleDeleteSecret(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
+func (h *Handler) deleteSecret(c *route.Call) {
+	if err := h.svc.DeleteSecret(c.R.Context(), c.Tenant, c.R.PathValue("id")); err != nil {
+		c.Error(statusOf(err, http.StatusInternalServerError), "delete_failed", err.Error())
 		return
 	}
-	if err := h.svc.DeleteSecret(r.Context(), tenantID, r.PathValue("id")); err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, errNotFound) {
-			status = http.StatusNotFound
-		}
-		writeErr(w, status, "delete_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "deleted", "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"status": "deleted"})
 }
 
-func (h *Handler) handleGenerateSSHKey(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
+func (h *Handler) generateSSHKey(c *route.Call) {
 	var req GenerateSSHKeyRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+	if !c.Decode(&req) {
 		return
 	}
-	secret, pub, err := h.svc.GenerateSSHKey(r.Context(), req)
+	req.TenantID, req.CreatedBy = c.Tenant, actorOr(c, req.CreatedBy)
+	c.Detail("secret_type", "ssh_private_key")
+	secret, pub, err := h.svc.GenerateSSHKey(c.R.Context(), req)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "generate_failed", err.Error(), reqID, req.TenantID)
+		c.Error(http.StatusBadRequest, "generate_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
-		"secret":     secret,
-		"public_key": pub,
-		"request_id": reqID,
-	})
+	c.Target(secret.ID)
+	c.JSON(http.StatusCreated, map[string]interface{}{"secret": secret, "public_key": pub})
 }
 
-func (h *Handler) handleGenerateKeyPair(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
+func (h *Handler) generateKeyPair(c *route.Call) {
 	var req GenerateKeyPairRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+	if !c.Decode(&req) {
 		return
 	}
-	secret, pub, keyType, err := h.svc.GenerateKeyPair(r.Context(), req)
+	req.TenantID, req.CreatedBy = c.Tenant, actorOr(c, req.CreatedBy)
+	c.Detail("key_type", req.KeyType)
+	secret, pub, keyType, err := h.svc.GenerateKeyPair(c.R.Context(), req)
 	if err != nil {
-		writeErr(w, http.StatusBadRequest, "generate_failed", err.Error(), reqID, req.TenantID)
+		c.Error(http.StatusBadRequest, "generate_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
+	c.Target(secret.ID)
+	c.Detail("secret_type", secret.SecretType)
+	c.JSON(http.StatusCreated, map[string]interface{}{
 		"secret":      secret,
 		"public_key":  pub,
 		"key_type":    keyType,
-		"request_id":  reqID,
 		"contentType": "text/plain",
 	})
 }
 
-func (h *Handler) handleListVersions(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	versions, err := h.svc.ListVersions(r.Context(), tenantID, r.PathValue("id"))
+func (h *Handler) listVersions(c *route.Call) {
+	versions, err := h.svc.ListVersions(c.R.Context(), c.Tenant, c.R.PathValue("id"))
 	if err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, errNotFound) {
-			status = http.StatusNotFound
-		}
-		writeErr(w, status, "versions_failed", err.Error(), reqID, tenantID)
+		c.Error(statusOf(err, http.StatusInternalServerError), "versions_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"versions": versions, "request_id": reqID})
+	c.Detail("count", len(versions))
+	c.JSON(http.StatusOK, map[string]interface{}{"versions": versions})
 }
 
-func (h *Handler) handleSecretAuditLog(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	limit := atoi(r.URL.Query().Get("limit"))
+func (h *Handler) secretAuditLog(c *route.Call) {
+	limit := atoi(c.R.URL.Query().Get("limit"))
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	entries, err := h.svc.GetSecretAuditLog(r.Context(), tenantID, r.PathValue("id"), limit)
+	entries, err := h.svc.GetSecretAuditLog(c.R.Context(), c.Tenant, c.R.PathValue("id"), limit)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "audit_failed", err.Error(), reqID, tenantID)
+		c.Error(http.StatusInternalServerError, "audit_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"entries": entries, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"entries": entries})
 }
 
-func (h *Handler) handleRotateSecret(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
+func (h *Handler) rotateSecret(c *route.Call) {
 	var req struct {
 		Value     string `json:"value"`
 		UpdatedBy string `json:"updated_by"`
 	}
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
+	if !c.Decode(&req) {
 		return
 	}
 	if req.Value == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "value is required for rotation", reqID, tenantID)
+		c.Error(http.StatusBadRequest, "bad_request", "value is required for rotation")
 		return
 	}
-	out, err := h.svc.RotateSecret(r.Context(), tenantID, r.PathValue("id"), req.Value, req.UpdatedBy)
+	out, err := h.svc.RotateSecret(c.R.Context(), c.Tenant, c.R.PathValue("id"), req.Value, actorOr(c, req.UpdatedBy))
 	if err != nil {
-		status := http.StatusBadRequest
-		if errors.Is(err, errNotFound) {
-			status = http.StatusNotFound
-		}
-		writeErr(w, status, "rotate_failed", err.Error(), reqID, tenantID)
+		c.Error(statusOf(err, http.StatusBadRequest), "rotate_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"secret": out, "request_id": reqID})
+	c.Detail("new_version", out.CurrentVersion)
+	c.JSON(http.StatusOK, map[string]interface{}{"secret": out})
 }
 
-func (h *Handler) handleStats(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	stats, err := h.svc.GetStats(r.Context(), tenantID)
+func (h *Handler) stats(c *route.Call) {
+	stats, err := h.svc.GetStats(c.R.Context(), c.Tenant)
 	if err != nil {
-		writeErr(w, http.StatusInternalServerError, "stats_failed", err.Error(), reqID, tenantID)
+		c.Error(http.StatusInternalServerError, "stats_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"stats": stats, "request_id": reqID})
+	c.JSON(http.StatusOK, map[string]interface{}{"stats": stats})
 }
 
-func (h *Handler) handleVaultSysHealth(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+func (h *Handler) vaultSysHealth(c *route.Call) {
+	c.JSON(http.StatusOK, map[string]interface{}{
 		"initialized":                  true,
 		"sealed":                       false,
 		"standby":                      false,
@@ -305,13 +291,11 @@ func (h *Handler) handleVaultSysHealth(w http.ResponseWriter, r *http.Request) {
 		"version":                      "openbao-compatible-v1",
 		"cluster_name":                 "vecta-kms",
 		"cluster_id":                   "vecta-kms-local",
-		"request_id":                   reqID,
 	})
 }
 
-func (h *Handler) handleVaultSealStatus(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+func (h *Handler) vaultSealStatus(c *route.Call) {
+	c.JSON(http.StatusOK, map[string]interface{}{
 		"type":          "shamir",
 		"initialized":   true,
 		"sealed":        false,
@@ -321,31 +305,17 @@ func (h *Handler) handleVaultSealStatus(w http.ResponseWriter, r *http.Request) 
 		"nonce":         "",
 		"version":       "openbao-compatible-v1",
 		"build_date":    time.Now().UTC().Format(time.RFC3339),
-		"request_id":    reqID,
 		"recovery_seal": false,
 	})
 }
 
-func (h *Handler) handleVaultTokenLookupSelf(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustVaultTenant(r)
-	token := strings.TrimSpace(r.Header.Get("X-Vault-Token"))
-	if token == "" {
-		authz := strings.TrimSpace(r.Header.Get("Authorization"))
-		if strings.HasPrefix(strings.ToLower(authz), "bearer ") {
-			token = strings.TrimSpace(authz[7:])
-		}
-	}
-	if token == "" {
-		token = "anonymous"
-	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"request_id": reqID,
+func (h *Handler) vaultTokenLookupSelf(c *route.Call) {
+	c.JSON(http.StatusOK, map[string]interface{}{
 		"data": map[string]interface{}{
-			"id":            token,
+			"id":            c.Actor(),
 			"display_name":  "token",
 			"policies":      []string{"default"},
-			"meta":          map[string]interface{}{"tenant_id": tenantID},
+			"meta":          map[string]interface{}{"tenant_id": c.Tenant},
 			"path":          "auth/token/create",
 			"orphan":        true,
 			"renewable":     false,
@@ -356,48 +326,43 @@ func (h *Handler) handleVaultTokenLookupSelf(w http.ResponseWriter, r *http.Requ
 	})
 }
 
-func (h *Handler) handleVaultKV2Read(w http.ResponseWriter, r *http.Request) {
-	h.vaultKVRead(w, r, true)
+// vaultPath returns the KV path, recording it as the audit target.
+func vaultPath(c *route.Call) (string, bool) {
+	path := strings.TrimSpace(c.R.PathValue("path"))
+	if path == "" {
+		c.Error(http.StatusBadRequest, "bad_request", "path is required")
+		return "", false
+	}
+	c.Detail("mount", c.R.PathValue("mount"))
+	c.Detail("path", path)
+	return path, true
 }
 
-func (h *Handler) handleVaultKV1Read(w http.ResponseWriter, r *http.Request) {
-	h.vaultKVRead(w, r, false)
-}
-
-func (h *Handler) vaultKVRead(w http.ResponseWriter, r *http.Request, kv2 bool) {
-	reqID := requestID(r)
-	tenantID := mustVaultTenant(r)
-	path := strings.TrimSpace(r.PathValue("path"))
-	if tenantID == "" || path == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant and path are required", reqID, tenantID)
-		return
-	}
-	secret, err := h.svc.GetSecretByName(r.Context(), tenantID, path)
-	if err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, errNotFound) {
-			status = http.StatusNotFound
-		}
-		writeErr(w, status, "read_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	valueOut, err := h.svc.GetSecretValue(r.Context(), tenantID, secret.ID, "raw")
-	if err != nil {
-		if errors.Is(err, errExpired) {
-			writeErr(w, http.StatusGone, "secret_expired", err.Error(), reqID, tenantID)
+func (h *Handler) vaultKVRead(kv2 bool) func(*route.Call) {
+	return func(c *route.Call) {
+		path, ok := vaultPath(c)
+		if !ok {
 			return
 		}
-		writeErr(w, http.StatusBadRequest, "value_read_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	dataMap := parseVaultDataMap(valueOut.Value)
-	if kv2 {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"request_id":     reqID,
-			"lease_id":       "",
-			"renewable":      false,
-			"lease_duration": 0,
-			"data": map[string]interface{}{
+		secret, err := h.svc.GetSecretByName(c.R.Context(), c.Tenant, path)
+		if err != nil {
+			c.Error(statusOf(err, http.StatusInternalServerError), "read_failed", err.Error())
+			return
+		}
+		c.Target(secret.ID)
+		valueOut, err := h.svc.GetSecretValue(c.R.Context(), c.Tenant, secret.ID, "raw")
+		if err != nil {
+			if errors.Is(err, errExpired) {
+				c.Error(http.StatusGone, "secret_expired", err.Error())
+				return
+			}
+			c.Error(http.StatusBadRequest, "value_read_failed", err.Error())
+			return
+		}
+		dataMap := parseVaultDataMap(valueOut.Value)
+		payload := map[string]interface{}{"lease_id": "", "renewable": false, "lease_duration": 0, "data": dataMap}
+		if kv2 {
+			payload["data"] = map[string]interface{}{
 				"data": dataMap,
 				"metadata": map[string]interface{}{
 					"created_time":  secret.CreatedAt.UTC().Format(time.RFC3339),
@@ -406,134 +371,88 @@ func (h *Handler) vaultKVRead(w http.ResponseWriter, r *http.Request, kv2 bool) 
 					"destroyed":     false,
 					"version":       secret.CurrentVersion,
 				},
-			},
-		})
-		return
+			}
+		}
+		c.JSON(http.StatusOK, payload)
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"request_id":     reqID,
-		"lease_id":       "",
-		"renewable":      false,
-		"lease_duration": 0,
-		"data":           dataMap,
-	})
 }
 
-func (h *Handler) handleVaultKV2Write(w http.ResponseWriter, r *http.Request) {
-	h.vaultKVWrite(w, r, true)
-}
-
-func (h *Handler) handleVaultKV1Write(w http.ResponseWriter, r *http.Request) {
-	h.vaultKVWrite(w, r, false)
-}
-
-func (h *Handler) vaultKVWrite(w http.ResponseWriter, r *http.Request, kv2 bool) {
-	reqID := requestID(r)
-	tenantID := mustVaultTenant(r)
-	path := strings.TrimSpace(r.PathValue("path"))
-	if tenantID == "" || path == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant and path are required", reqID, tenantID)
-		return
-	}
-	data, err := decodeVaultWriteData(r, kv2)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	value := encodeVaultDataValue(data)
-	secret, err := h.svc.GetSecretByName(r.Context(), tenantID, path)
-	if err != nil && !errors.Is(err, errNotFound) {
-		writeErr(w, http.StatusInternalServerError, "write_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	if errors.Is(err, errNotFound) {
-		_, createErr := h.svc.CreateSecret(r.Context(), CreateSecretRequest{
-			TenantID:        tenantID,
-			Name:            path,
-			SecretType:      "api_key",
-			Value:           value,
-			Description:     "vault-compatible secret",
-			CreatedBy:       vaultCreatedBy(r),
-			Metadata:        map[string]interface{}{"vault_compat": true, "mount": strings.TrimSpace(r.PathValue("mount"))},
-			LeaseTTLSeconds: 0,
-		})
-		if createErr != nil {
-			writeErr(w, http.StatusBadRequest, "create_failed", createErr.Error(), reqID, tenantID)
+func (h *Handler) vaultKVWrite(kv2 bool) func(*route.Call) {
+	return func(c *route.Call) {
+		path, ok := vaultPath(c)
+		if !ok {
 			return
 		}
-	} else {
-		_, updateErr := h.svc.UpdateSecret(r.Context(), tenantID, secret.ID, UpdateSecretRequest{
-			Value:     ptrString(value),
-			UpdatedBy: vaultCreatedBy(r),
-		})
-		if updateErr != nil {
-			writeErr(w, http.StatusBadRequest, "update_failed", updateErr.Error(), reqID, tenantID)
+		data, err := decodeVaultWriteData(c, kv2)
+		if err != nil {
+			c.Error(http.StatusBadRequest, "bad_request", err.Error())
 			return
 		}
+		value := encodeVaultDataValue(data)
+		author := actorOr(c, "vault-client")
+		secret, err := h.svc.GetSecretByName(c.R.Context(), c.Tenant, path)
+		switch {
+		case errors.Is(err, errNotFound):
+			created, createErr := h.svc.CreateSecret(c.R.Context(), CreateSecretRequest{
+				TenantID:    c.Tenant,
+				Name:        path,
+				SecretType:  "api_key",
+				Value:       value,
+				Description: "vault-compatible secret",
+				CreatedBy:   author,
+				Metadata:    map[string]interface{}{"vault_compat": true, "mount": strings.TrimSpace(c.R.PathValue("mount"))},
+			})
+			if createErr != nil {
+				c.Error(http.StatusBadRequest, "create_failed", createErr.Error())
+				return
+			}
+			c.Target(created.ID)
+			c.Detail("created", true)
+		case err != nil:
+			c.Error(http.StatusInternalServerError, "write_failed", err.Error())
+			return
+		default:
+			c.Target(secret.ID)
+			c.Detail("created", false)
+			if _, err := h.svc.UpdateSecret(c.R.Context(), c.Tenant, secret.ID, UpdateSecretRequest{Value: ptrString(value), UpdatedBy: author}); err != nil {
+				c.Error(http.StatusBadRequest, "update_failed", err.Error())
+				return
+			}
+		}
+		c.JSON(http.StatusOK, map[string]interface{}{"data": map[string]interface{}{"created": true}})
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"request_id": reqID,
-		"data": map[string]interface{}{
-			"created": true,
-		},
-	})
 }
 
-func (h *Handler) handleVaultKV2Delete(w http.ResponseWriter, r *http.Request) {
-	h.vaultKVDelete(w, r)
-}
-
-func (h *Handler) handleVaultKV1Delete(w http.ResponseWriter, r *http.Request) {
-	h.vaultKVDelete(w, r)
-}
-
-func (h *Handler) vaultKVDelete(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustVaultTenant(r)
-	path := strings.TrimSpace(r.PathValue("path"))
-	if tenantID == "" || path == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant and path are required", reqID, tenantID)
+func (h *Handler) vaultKVDelete(c *route.Call) {
+	path, ok := vaultPath(c)
+	if !ok {
 		return
 	}
-	secret, err := h.svc.GetSecretByName(r.Context(), tenantID, path)
+	secret, err := h.svc.GetSecretByName(c.R.Context(), c.Tenant, path)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, errNotFound) {
-			status = http.StatusNotFound
-		}
-		writeErr(w, status, "delete_failed", err.Error(), reqID, tenantID)
+		c.Error(statusOf(err, http.StatusInternalServerError), "delete_failed", err.Error())
 		return
 	}
-	if err := h.svc.DeleteSecret(r.Context(), tenantID, secret.ID); err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, errNotFound) {
-			status = http.StatusNotFound
-		}
-		writeErr(w, status, "delete_failed", err.Error(), reqID, tenantID)
+	c.Target(secret.ID)
+	if err := h.svc.DeleteSecret(c.R.Context(), c.Tenant, secret.ID); err != nil {
+		c.Error(statusOf(err, http.StatusInternalServerError), "delete_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusNoContent, map[string]interface{}{})
+	c.W.WriteHeader(http.StatusNoContent)
 }
 
-func (h *Handler) handleVaultKV2Metadata(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustVaultTenant(r)
-	path := strings.TrimSpace(r.PathValue("path"))
-	if tenantID == "" || path == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant and path are required", reqID, tenantID)
+func (h *Handler) vaultKV2Metadata(c *route.Call) {
+	path, ok := vaultPath(c)
+	if !ok {
 		return
 	}
-	secret, err := h.svc.GetSecretByName(r.Context(), tenantID, path)
+	secret, err := h.svc.GetSecretByName(c.R.Context(), c.Tenant, path)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, errNotFound) {
-			status = http.StatusNotFound
-		}
-		writeErr(w, status, "read_failed", err.Error(), reqID, tenantID)
+		c.Error(statusOf(err, http.StatusInternalServerError), "read_failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"request_id": reqID,
+	c.Target(secret.ID)
+	c.JSON(http.StatusOK, map[string]interface{}{
 		"data": map[string]interface{}{
 			"created_time":         secret.CreatedAt.UTC().Format(time.RFC3339),
 			"updated_time":         secret.UpdatedAt.UTC().Format(time.RFC3339),
@@ -546,45 +465,12 @@ func (h *Handler) handleVaultKV2Metadata(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-func mustVaultTenant(r *http.Request) string {
-	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
-	if tenantID == "" {
-		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	}
-	if tenantID == "" {
-		tenantID = strings.TrimSpace(r.Header.Get("X-Vault-Namespace"))
-	}
-	if tenantID == "" {
-		tenantID = strings.TrimSpace(r.Header.Get("X-Namespace"))
-	}
-	if tenantID == "" {
-		tenantID = "default"
-	}
-	// A01 fix: verify vault tenant matches JWT claims (if authenticated)
-	if err := tenantcheck.Enforce(r, tenantID); err != nil {
-		return "" // caller must check for empty return
-	}
-	return tenantID
-}
-
-func vaultCreatedBy(r *http.Request) string {
-	token := strings.TrimSpace(r.Header.Get("X-Vault-Token"))
-	if token == "" {
-		return "vault-client"
-	}
-	if len(token) > 12 {
-		token = token[:12]
-	}
-	return "vault-token:" + token
-}
-
-func decodeVaultWriteData(r *http.Request, kv2 bool) (map[string]interface{}, error) {
-	type kv2Body struct {
-		Data map[string]interface{} `json:"data"`
-	}
+func decodeVaultWriteData(c *route.Call, kv2 bool) (map[string]interface{}, error) {
 	if kv2 {
-		var body kv2Body
-		if err := decodeJSON(r, &body); err != nil {
+		var body struct {
+			Data map[string]interface{} `json:"data"`
+		}
+		if err := json.NewDecoder(c.R.Body).Decode(&body); err != nil {
 			return nil, err
 		}
 		if len(body.Data) == 0 {
@@ -593,13 +479,18 @@ func decodeVaultWriteData(r *http.Request, kv2 bool) (map[string]interface{}, er
 		return body.Data, nil
 	}
 	var body map[string]interface{}
-	if err := decodeJSON(r, &body); err != nil {
+	if err := json.NewDecoder(c.R.Body).Decode(&body); err != nil {
 		return nil, err
 	}
 	if len(body) == 0 {
 		return nil, errors.New("request body is required")
 	}
 	return body, nil
+}
+
+func atoi(v string) int {
+	n, _ := strconv.Atoi(strings.TrimSpace(v))
+	return n
 }
 
 func parseVaultDataMap(raw string) map[string]interface{} {
@@ -644,58 +535,4 @@ func stringifyVaultValue(v interface{}) string {
 
 func ptrString(v string) *string {
 	return &v
-}
-
-func mustTenant(r *http.Request, reqID string, w http.ResponseWriter) string {
-	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
-	if tenantID == "" {
-		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
-	}
-	if tenantID == "" {
-		writeErr(w, http.StatusBadRequest, "bad_request", "tenant_id is required (query or X-Tenant-ID)", reqID, "")
-		return ""
-	}
-	// A01 fix: verify the request tenant matches the authenticated JWT tenant
-	if err := tenantcheck.Enforce(r, tenantID); err != nil {
-		writeErr(w, http.StatusForbidden, "forbidden", "tenant_id does not match authenticated token", requestID(r), tenantID)
-		return ""
-	}
-	return tenantID
-}
-
-func decodeJSON(r *http.Request, out interface{}) error {
-	defer r.Body.Close() //nolint:errcheck
-	d := json.NewDecoder(r.Body)
-	d.DisallowUnknownFields()
-	return d.Decode(out)
-}
-
-func requestID(r *http.Request) string {
-	v := strings.TrimSpace(r.Header.Get("X-Request-ID"))
-	if v != "" {
-		return v
-	}
-	return newID("req")
-}
-
-func atoi(v string) int {
-	n, _ := strconv.Atoi(strings.TrimSpace(v))
-	return n
-}
-
-func writeJSON(w http.ResponseWriter, code int, payload map[string]interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(payload)
-}
-
-func writeErr(w http.ResponseWriter, code int, errCode string, msg string, requestID string, tenantID string) {
-	writeJSON(w, code, map[string]interface{}{
-		"error": map[string]interface{}{
-			"code":       errCode,
-			"message":    msg,
-			"request_id": requestID,
-			"tenant_id":  tenantID,
-		},
-	})
 }

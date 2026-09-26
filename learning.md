@@ -5,6 +5,37 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### A default that nobody overrides is the only value in production
+The secrets service's dev-MEK fallback logged "not for production", and was
+presumably meant as a local convenience. But nothing ever set
+`SECRETS_MEK_B64`: not compose, not any installer. So every production
+deployment ran on the public key. Two things hid it:
+- The secure-defaults check looked for `("VAR", "default")` pairs, and the
+  fallback was `Hash([]byte("…-dev-mek"))`. It's a public key either way.
+  Check what a value is derived from, not how it's spelled.
+- Clusters worked by accident, because every node had the same "dev" key.
+  Replacing it with a random key per installer would have broken members
+  quietly, with decrypt errors on replicated rows. That's why the fix records
+  a key fingerprint and refuses a mismatched start.
+
+Removing such a default isn't enough on its own. The data it protected needs
+an idempotent startup migration (re-wrap, audited per tenant), and the
+changelog has to say plainly that backups made before the fix remain
+decryptable.
+
+### A rule every handler must remember is a rule some handler forgets
+`services/secrets` had a `mustTenant` helper that checked the request tenant
+against the token, and most routes called it. `POST /secrets` didn't: it read
+`tenant_id` from the body, which `mustTenant` never looks at, so any tenant
+could create secrets in another. The same pattern was copied 22 times across
+services, with about 960 routes each choosing whether to check the tenant,
+the permission and the audit. Code review can't hold that many conventions.
+The fix is structural: `pkg/route` makes the rule part of registering a
+route, and a conformance rule stops new code from registering routes any
+other way. The same applies to any cross-cutting rule. If it has to be
+remembered, put it in the kernel. Also check the body, because that's where
+the dashboard puts the tenant on writes.
+
 ### "Flaky" test was a 2% product bug: never trim binary data
 `TestImportKeyPEMAutodetect` failed about once in 40 runs, and it was written
 off as flaky. The cause was `bytes.TrimSpace` on DER. Random key bytes end in

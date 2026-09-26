@@ -7,6 +7,90 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — Secrets MEK: required env key, re-wrap on startup, fingerprint-pinned
+**Decision:**
+- `SECRETS_MEK_B64` is required and validated, with no fallback.
+- Values under the retired public dev key, or under
+  `SECRETS_MEK_PREVIOUS_B64` during a rotation, are moved by re-wrapping their
+  DEKs at startup, before the service serves requests. This runs on the
+  primary only; members check the key.
+- `secrets_mek_state` records a keyed fingerprint of the key the data is
+  under.
+
+**Why:**
+- **Re-wrap, not re-encrypt:** it's cheap, atomic per row, and idempotent,
+  and it leaves every version's ciphertext untouched. Re-encrypting with new
+  DEKs wouldn't protect anything re-wrapping doesn't: a pre-upgrade backup
+  already holds the old ciphertext and the public-key-wrapped DEK.
+- **At startup, not via an API with a state machine** (unlike the dataprotect
+  KDF migration): the old key is public, so there's no reason to keep it in
+  use for a transition period. Unchanged clients see no difference, since
+  values and IDs are the same.
+- **Fingerprint:** each installer now generates its own key, so a cluster
+  member or a restored `.env` could silently hold a different key. A refused
+  start with a clear message beats per-read decrypt failures.
+
+**Rejected:**
+- Deriving the MEK from keycore (`service-derive`, CLAUDE.md rule 6). It's
+  the better end state, but it makes secrets depend on keycore at startup, and
+  it needs its own per-key migration. The `SECRETS_MEK_PREVIOUS_B64` re-wrap
+  built here is the mechanism that move will reuse.
+- Refusing to start while any value is under the dev key, with no migration.
+  Every existing deployment would break with no path forward.
+- Starting with rows still under the public key when a rewrite fails.
+
+**Enforced by:**
+- `TestStartWithoutMEKIsRefused` (a real child process),
+  `TestMEKMigrationLifecycle`, `TestMEKMigrationPostgres`,
+  `TestMEKRewrapFailureRefusesStart` and `TestMEKMigrationMemberWritesNothing`.
+- The `no-literal-key-material` conformance rule.
+
+## 2026-09-26 — Feature kernel (pkg/route): rules are declared per route, applied in one place
+**Decision:** every HTTP route is registered through `pkg/route` with a
+`route.Spec` (audit action, permission, resource, tenancy). The kernel
+authenticates, resolves and enforces one tenant, checks the permission, and
+emits exactly one `audit.<service>.<action>` event per request, including
+failures and refusals (with `reason`). Services move onto it one at a time
+([ARCHITECTURE_MIGRATION.md](ARCHITECTURE_MIGRATION.md)); `services/secrets`
+is the reference.
+
+**Why:**
+- Cross-cutting rules lived in about 960 hand-written handlers, with 22
+  private `mustTenant` copies. Each new feature had to be reminded of audit,
+  tenancy and permissions, and some missed them: `POST /secrets` accepted a
+  body `tenant_id` without checking it (a cross-tenant write).
+- A rule in the kernel reaches every migrated route. A rule in a handler
+  reaches one.
+- Specific events for refusals were owner policy (2026-09-25), but nothing
+  guaranteed them.
+
+**Rejected:**
+- Rewriting the product from scratch: it would lose the FIPS, clustering and
+  audit-chain work and the security fixes, and ship months of unreviewable
+  change at once.
+- Relying on the generic `auditmw` `http_request` record: it has no action
+  semantics, target or refusal reason, so governance and DAM can't run on it.
+- Per-service middleware: the same duplication at a different layer.
+- Emitting from the service layer: it can't see refusals that happen before
+  the service is called, and it duplicates events when one service method
+  calls another (generate → create).
+- Letting `kms.read` / `kms.write` match any domain by verb: once auth
+  migrates, API clients would gain `auth.*.write`. The coarse grants apply
+  only to domains listed in `route.CoarseDomains` (today, `secrets`).
+- Resolving the tenant only from query/header (as `mustTenant` did): body
+  tenants are how the dashboard sends writes, so the body must be checked,
+  not ignored.
+
+**Enforced by:**
+- Registration panics without an action or permission.
+- `make conformance` rule `route-kernel`: a raw `http.ServeMux` in a service
+  file fails unless the file is on `scripts/route-kernel-burndown.txt`, which
+  only shrinks.
+- `routetest.RefusalsAudited` proves each route refuses and audits the three
+  refusal cases.
+- `pkg/route` tests: cross-tenant body, conflicting sources, service
+  principals, and failure/refusal events.
+
 ## 2026-09-26 — Cluster write forwarding: member verifies, primary re-mints
 **Decision:** on a member, every service's HTTP wrapper forwards lifecycle
 writes to the primary's cluster-manager.

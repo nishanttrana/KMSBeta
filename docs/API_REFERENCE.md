@@ -2783,6 +2783,50 @@ Aggregate QRNG statistics: `totalGenerated` (bytes), `sourcesOnline`, `averageEn
 
 Hierarchical secret vault with versioning, rollback, and path-based policy.
 
+### Configuration
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `SECRETS_MEK_B64` | yes | Base64 of 32 random bytes (`openssl rand -base64 32`). Wraps every stored value's DEK. The service refuses to start if it's missing, isn't exactly 32 bytes, is patterned, or is the old public development key. Cluster members use the primary's. |
+| `SECRETS_MEK_PREVIOUS_B64` | only while rotating | The key being replaced. On start, values under it are re-wrapped under `SECRETS_MEK_B64`; remove it afterwards (docs/SECURITY/SECRET_ROTATION.md). |
+
+### Authorization and audit (pkg/route kernel)
+
+Every route requires a verified token. The tenant comes from `tenant_id`
+(query or JSON body) or `X-Tenant-ID`, and for Vault routes also from
+`X-Vault-Namespace` / `X-Namespace`. When none is given, the token's tenant is
+used. A tenant other than the token's is refused with `403 tenant_mismatch`,
+and disagreeing sources with `403 tenant_conflict`. Each request emits one
+`audit.secrets.<action>` event with `result` `success`, `failure` or
+`refused` (with `reason`).
+
+| Route | Permission | Audit action |
+|---|---|---|
+| `POST /secrets` | `secrets.write` | `created` |
+| `GET /secrets` | `secrets.read` | `listed` |
+| `GET /secrets/{id}` | `secrets.read` | `read` |
+| `GET /secrets/{id}/value` | `secrets.value.read` | `value_read` (warning) |
+| `PUT /secrets/{id}` | `secrets.write` | `updated` |
+| `DELETE /secrets/{id}` | `secrets.delete` | `deleted` (warning) |
+| `POST /secrets/generate/ssh_key`, `/generate/keypair` | `secrets.write` | `generated` |
+| `GET /secrets/{id}/versions` | `secrets.read` | `versions_listed` |
+| `GET /secrets/{id}/audit` | `secrets.read` | `audit_log_read` |
+| `POST /secrets/{id}/rotate` | `secrets.write` | `rotated` |
+| `GET /secrets/stats` | `secrets.read` | `stats_read` |
+| `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read`
+- `audit.secrets.dev_mek_rewrapped`, `audit.secrets.dev_mek_rewrap_refused`, `audit.secrets.mek_rewrapped`, `audit.secrets.mek_rewrap_refused`, `audit.secrets.mek_unreadable`, `audit.secrets.mek_check_refused`: secrets master-key migration at startup (per tenant; see `docs/SECURITY/AUDIT_EVENTS_2026-09.md`) |
+| `POST /v1/auth/token/lookup-self` | any identity | `vault_token_lookup` |
+| `GET /v1/{mount}/data/{path}`, `GET /v1/{mount}/{path}` | `secrets.value.read` | `vault_kv_read` |
+| `POST /v1/{mount}/data/{path}`, `POST /v1/{mount}/{path}` | `secrets.write` | `vault_kv_written` (`created` in details) |
+| `DELETE /v1/{mount}/data/{path}`, `DELETE /v1/{mount}/{path}` | `secrets.delete` | `vault_kv_deleted` |
+| `GET /v1/{mount}/metadata/{path}` | `secrets.read` | `vault_metadata_read` |
+
+`*` grants all of these. `secrets` is in `route.CoarseDomains`, so `kms.read`
+grants the `.read` permissions and `kms.write` grants `.write` and `.delete`.
+A Vault KV v1 write body is the secret's data, so a `tenant_id` key inside it
+is stored, not treated as a tenant. `created_by` / `updated_by` are
+set to the verified caller.
+
 ---
 
 ### GET /svc/secrets/secrets
@@ -3271,6 +3315,7 @@ Selected events with dedicated audit classification:
 - `audit.backup.policy_created`, `audit.backup.policy_updated`, `audit.backup.policy_deleted`, `audit.backup.run_refused_preview`, `audit.backup.restore_refused_preview`
 - `audit.auth.cluster_token_minted`, `audit.auth.cluster_mint_refused`; `audit.cluster.write_forwarded`, `audit.cluster.forward_refused` (primary); `audit.<service>.cluster_write_forwarded`, `audit.<service>.cluster_write_refused` (member; `reason`: invalid_token / primary_unreachable / primary_write_required); refusals carry `result: refused`
 - `audit.key.service_derive`, `audit.key.audit_chain_anchored` (preview), enterprise control upserts carry `feature_status` / `feature_id`
+- Services on the `pkg/route` kernel emit one `audit.<service>.<action>` per request, including `result: failure` (with `error_code`) and `result: refused` (with `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, or a handler reason such as `feature_preview`). `audit.secrets.*`: `created`, `listed`, `read`, `value_read`, `updated`, `deleted`, `generated`, `versions_listed`, `audit_log_read`, `rotated`, `stats_read`, `vault_kv_read`, `vault_kv_written`, `vault_kv_deleted`, `vault_metadata_read`, `vault_token_lookup`, `vault_health_read`, `vault_seal_status_read`
 - `audit.kmip.client_connected`, `audit.kmip.authorization_denied`, `audit.kmip.operation_panic` (critical), `audit.kmip.<operation>` with `status` / `reason` (lifecycle-state refusals included)
 - `audit.dataprotect.kdf_legacy_used`, `audit.dataprotect.kdf_migration_started`, `audit.dataprotect.kdf_vault_reprotected`, `audit.dataprotect.kdf_migration_completed`, `audit.dataprotect.kdf_migration_aborted`
 - `audit.mpc.dkg_initiated`, `audit.mpc.sign_initiated`, `audit.mpc.sign_completed`
