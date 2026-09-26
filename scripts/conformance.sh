@@ -11,6 +11,8 @@
 #   5. FIPS 140-3: every Go binary links the certified Go Cryptographic Module
 #      and every Go service receives the customer's VECTA_FIPS_MODE.
 #   6. Preview features: one catalogue (pkg/features), mirrored by the dashboard.
+#   7. Route kernel: every HTTP route registers through pkg/route (auth,
+#      tenant, permission and a specific audit event by construction).
 #
 # Files listed in scripts/conformance-allowlist.txt are exempted (one path
 # per line, # comments allowed). The allowlist is a burn-down list: it only
@@ -147,6 +149,29 @@ if [ -z "$go_preview" ] || [ "$go_preview" != "$ts_preview" ]; then
   diff <(echo "$go_preview") <(echo "$ts_preview") | sed 's/^/  /'
 else
   echo "PASS [preview-catalogue] ($(echo "$go_preview" | wc -l | tr -d ' ') preview features)"
+fi
+
+# Rule 7: route kernel (docs/PLATFORM_CONTRACT.md). Services register HTTP
+# routes through pkg/route, which applies authentication, tenancy, permission
+# and a specific audit event (refusals included) to every route. A raw
+# http.ServeMux is allowed only in files on the burn-down list, which only
+# shrinks: an unlisted raw mux fails, and so does a listed file that no
+# longer has one (remove it from the list when you migrate it).
+BURNDOWN="scripts/route-kernel-burndown.txt"
+route_fail=""
+raw_mux=$(grep -rlE 'http\.NewServeMux\(\)|\.HandleFunc\(' services --include="*.go" 2>/dev/null | grep -v '_test\.go$' | sort || true)
+listed=$(grep -v '^\s*#' "$BURNDOWN" | grep -v '^\s*$' | sort)
+for f in $raw_mux; do
+  printf '%s\n' "$listed" | grep -qxF "$f" || route_fail="$route_fail $f(raw-mux)"
+done
+for f in $listed; do
+  printf '%s\n' "$raw_mux" | grep -qxF "$f" || route_fail="$route_fail $f(stale-entry)"
+done
+if [ -n "$route_fail" ]; then
+  FAIL=1
+  echo "FAIL [route-kernel]: register routes with pkg/route, and keep $BURNDOWN exact:$route_fail"
+else
+  echo "PASS [route-kernel] ($(printf '%s\n' "$listed" | grep -c . | tr -d ' ') legacy file(s) left to migrate)"
 fi
 
 # Rule 4: every shell script parses. Checked with /bin/bash when present,

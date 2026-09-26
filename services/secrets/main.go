@@ -26,8 +26,8 @@ func main() {
 	}
 	defer rt.Close()
 
-	svc := NewService(NewSQLStore(rt.DB), rt.Audit, loadMEK(rt.Logger))
-	if err := rt.Serve(NewHandler(svc)); err != nil {
+	svc := NewService(NewSQLStore(rt.DB), loadMEK(rt.Logger))
+	if err := rt.Serve(NewHandler(svc, rt.Audit, rt.Logger)); err != nil {
 		rt.Logger.Fatalf("serve failed: %v", err)
 	}
 }

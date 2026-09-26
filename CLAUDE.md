@@ -29,6 +29,19 @@ an approach, record it here or in the matching doc below.
      case.
    - New subjects are listed in `docs/API_REFERENCE.md` (Audit Action Subject
      Reference).
+   - **Routes get this by construction** (owner directive, 2026-09-26:
+     "anything that's added to platform should have audit activity as per
+     the rules we have created", without being prompted each time). Every
+     HTTP route is registered through `pkg/route` with a `route.Spec`
+     (action, permission, resource). The kernel authenticates, enforces the
+     tenant and permission, and emits the specific event, refusals included.
+     Handlers add details with `c.Detail` / `c.Target` and use `c.Refuse` for
+     their own refusals. They never read a tenant themselves, and the service
+     layer doesn't emit request audit. `routetest.RefusalsAudited` is the
+     per-service test. A raw `http.ServeMux` fails `make conformance`
+     (`scripts/route-kernel-burndown.txt` only shrinks). To add a route to a
+     service still on the list, migrate that handler file first
+     ([docs/ARCHITECTURE_MIGRATION.md](docs/ARCHITECTURE_MIGRATION.md)).
 3. **Secure defaults** ([docs/SECURITY/SECURE_DEFAULTS.md](docs/SECURITY/SECURE_DEFAULTS.md)):
    - No secret falls back to a value in the repo. Require it (`${VAR:?}`) or
      generate it at random.
@@ -133,8 +146,9 @@ changes code without touching CHANGELOG.md or learning.md.
 
 ## Before calling a change done
 
-- `make conformance` passes. It enforces rules 1–3 and 5, and that every
-  shell script parses under macOS bash 3.2.
+- `make conformance` passes. It enforces rules 1–3 and 5, that routes use
+  the `pkg/route` kernel, and that every shell script parses under macOS
+  bash 3.2.
 - `make test-fips-modes` passes: the suite runs in FIPS modes `off`, `on` and
   `only`. A test of a non-approved feature calls `fipstest.SkipIfStrict` and
   is paired with a `fipstest.StrictOnly` test proving the clean refusal. Its allowlist only

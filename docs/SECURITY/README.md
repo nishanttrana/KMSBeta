@@ -26,6 +26,10 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 - [AUDIT_EVENTS_2026-09.md](AUDIT_EVENTS_2026-09.md): every audit event the
   2026-09 refresh added, and what can't be audited (startup refusals) and how
   it shows instead.
+- [../PLATFORM_CONTRACT.md](../PLATFORM_CONTRACT.md) (Routes): every HTTP
+  route goes through the `pkg/route` kernel, which enforces authentication,
+  tenant and permission, and audits each request and refusal. Enforced by
+  `make conformance` (`route-kernel`).
 
 ## Latest scan — 2026-09-25 (v1.2.0-beta)
 

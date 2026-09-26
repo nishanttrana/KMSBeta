@@ -6,6 +6,43 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
+### Platform kernel: audit, tenancy and permissions for every route
+- **New `pkg/route` kernel.** A route is registered with its audit action and
+  required permission. The kernel then authenticates the caller, enforces
+  one tenant, checks the permission, and emits a specific
+  `audit.<service>.<action>` event for every request, including failures and
+  refusals (`result: refused`, with `reason`). A route without an action or
+  permission stops the service at startup. See
+  [docs/PLATFORM_CONTRACT.md](docs/PLATFORM_CONTRACT.md).
+- **`make conformance` fails on new raw `http.ServeMux` routes.** 31 legacy
+  handler files are on a shrink-only burn-down list
+  (`scripts/route-kernel-burndown.txt`); the plan is in
+  [docs/ARCHITECTURE_MIGRATION.md](docs/ARCHITECTURE_MIGRATION.md).
+- **Secrets service migrated (reference service).**
+  - **Security fix:** `POST /secrets`, `/secrets/generate/*` and the Vault
+    KV write took `tenant_id` from the request body without checking it
+    against the token, so a caller could create secrets in another tenant.
+    This is now refused (`403 tenant_mismatch`) and audited.
+  - **Breaking: permissions are now required.** `secrets.read` (metadata,
+    versions, stats, audit trail), `secrets.value.read` (value and Vault KV
+    reads), `secrets.write` (create, update, rotate, generate, Vault writes)
+    and `secrets.delete`. `admin` / `tenant-admin` (`*`) and activated API
+    clients (`kms.read` / `kms.write`) are unaffected. Other roles need these
+    permissions granted.
+  - **Tenant resolution:** when no tenant is named, the token's tenant is
+    used. Vault clients without a namespace no longer fall into a tenant
+    called `default`. Conflicting tenants in query, header and body are
+    refused (`403 tenant_conflict`).
+  - `created_by` / `updated_by` record the verified caller, not the value in
+    the request body.
+  - **Audit events:** each request emits exactly one event, carrying actor,
+    target, correlation ID and outcome, including failures and refusals.
+    New actions: `audit_log_read`, `stats_read`, `vault_kv_read`,
+    `vault_kv_written`, `vault_kv_deleted`, `vault_metadata_read`,
+    `vault_token_lookup`, `vault_health_read` and `vault_seal_status_read`.
+    Key generation now emits one `generated` event instead of `created`
+    plus `generated`.
+
 ### Clustering (slice 3a of 5): write forwarding
 - **Any node takes any request.** On a member:
   - crypto operations, reads, logins and audit run locally;

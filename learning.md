@@ -5,6 +5,19 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### A rule every handler must remember is a rule some handler forgets
+`services/secrets` had a `mustTenant` helper that checked the request tenant
+against the token, and most routes called it. `POST /secrets` didn't: it read
+`tenant_id` from the body, which `mustTenant` never looks at, so any tenant
+could create secrets in another. The same pattern was copied 22 times across
+services, with about 960 routes each choosing whether to check the tenant,
+the permission and the audit. Code review can't hold that many conventions.
+The fix is structural: `pkg/route` makes the rule part of registering a
+route, and a conformance rule stops new code from registering routes any
+other way. The same applies to any cross-cutting rule. If it has to be
+remembered, put it in the kernel. Also check the body, because that's where
+the dashboard puts the tenant on writes.
+
 ### "Flaky" test was a 2% product bug: never trim binary data
 `TestImportKeyPEMAutodetect` failed about once in 40 runs, and it was written
 off as flaky. The cause was `bytes.TrimSpace` on DER. Random key bytes end in

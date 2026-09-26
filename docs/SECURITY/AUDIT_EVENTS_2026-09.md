@@ -31,6 +31,25 @@ security meaning where a generic request record isn't enough.
 | `audit.dataprotect.kdf_refused` | dataprotect | a derivation is refused: v1 after migration, v2 before it, or v1 in strict mode (at most once a minute per key and reason, with a count) | critical for v1 after migration, else warning |
 | `audit.dataprotect.kdf_migration_started` / `_vault_reprotected` / `_migration_completed` / `_migration_aborted` | dataprotect | per-key migration steps (actor, pinned version, counts; forced completion noted) | info; warning when forced or rows failed |
 
+## Kernel-emitted events (pkg/route)
+
+Services migrated to the `pkg/route` kernel emit one specific event per
+request, and the kernel guarantees it for refusals too. The kernel's own
+refusals are listed below. Handlers add their own (for example
+`feature_preview` or a FIPS refusal) with `c.Refuse`.
+
+| Event | When | Severity |
+|---|---|---|
+| `audit.<service>.<action>`, `result: refused`, `reason: unauthenticated` | no verified token on a non-public route (401) | warning |
+| `audit.<service>.<action>`, `result: refused`, `reason: permission_denied` | the token lacks the route's permission (403) | warning |
+| `audit.<service>.<action>`, `result: refused`, `reason: tenant_mismatch` | the request names a tenant other than the token's (403), including in the JSON body | warning |
+| `audit.<service>.<action>`, `result: refused`, `reason: tenant_conflict` | query, header and body name different tenants (403) | warning |
+| `audit.<service>.<action>`, `result: failure` | the handler returned an error (`error_code` in details) | the route's severity |
+| `audit.secrets.*` | every secrets route; see the table in `docs/API_REFERENCE.md` (Service 25) | info; `value_read` and `deleted` are warning |
+
+Proven by `routetest.RefusalsAudited` for every route, and by the
+`pkg/route` and `services/secrets` tests.
+
 ## What can't be audited, and how it shows instead
 
 A service that **refuses to start** has no audit pipeline yet, because it exits
