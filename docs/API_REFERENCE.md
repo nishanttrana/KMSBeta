@@ -669,9 +669,6 @@ These endpoints provide the Tier 1 enterprise audit surface for rotation analyti
 | POST | `/svc/keycore/enterprise/dspm/findings` | Upsert a KeyCore DSPM finding. |
 | GET | `/svc/keycore/enterprise/dspm/events` | Export DSPM/posture-compatible normalized events. |
 | POST | `/svc/keycore/enterprise/kdf/derive` | Derive key material with HKDF-SHA256, PBKDF2-SHA256, Scrypt, or Argon2id. |
-| POST | `/svc/keycore/enterprise/escrow/shamir/split` | Split secret material into Shamir shares. Shares are returned once. |
-| POST | `/svc/keycore/enterprise/escrow/shamir/verify` | Verify a Shamir recovery quorum against persisted split metadata. |
-| POST | `/svc/keycore/enterprise/escrow/tiers` | Upsert tiered recovery/escrow control metadata. |
 | GET | `/svc/keycore/enterprise/audit-chain/anchors` | List audit-chain anchors. |
 | POST | `/svc/keycore/enterprise/audit-chain/anchors` | Create a Merkle-style audit-chain anchor with optional external reference. |
 | GET | `/svc/keycore/enterprise/compliance/dashboard` | KeyCore enterprise compliance score and evidence summary. |
@@ -1055,12 +1052,12 @@ described in [SECURITY/BACKUP_KEYS.md](SECURITY/BACKUP_KEYS.md).
 
 | Route | Purpose |
 |---|---|
-| `POST /governance/backups` | Capture and encrypt a backup. Body: `scope` (`system`/`tenant`), `target_tenant_id`, `bind_to_hsm` (default `true`; used when the tenant has an enabled HSM configuration). Response 201: `job` and **`key_file`** (`file_name`, `content_type`, `content_base64`). `key_file` is returned only here: for a software-mode backup it is the only copy of the key. |
+| `POST /governance/backups` | Capture and encrypt a backup. Body: `scope` (`system`/`tenant`), `target_tenant_id`, `bind_to_hsm` (default `true`; used when the tenant has an enabled HSM configuration). Optional `key_split`: `{"threshold": M, "guardians": ["name", ...]}` (2–16 unique guardians, 2 ≤ M ≤ N) splits a software-mode key into one Shamir share per guardian; refused with `bind_to_hsm` on an HSM-enabled tenant. Response 201: `job` and **`key_file`** (`file_name`, `content_type`, `content_base64`), or with `key_split` **`key_shares`** (one file per guardian, adding `guardian` and `share_index`). Returned only here: for a software-mode backup they are the only copies of the key. |
 | `GET /governance/backups` | List jobs. `job.key_package` holds only `mode`, `key_retained`, coverage and the HSM binding summary, never key material. |
 | `GET /governance/backups/{id}` | One job. |
 | `GET /governance/backups/{id}/artifact` | The encrypted `.vbk` artifact (`artifact.content_base64`). |
 | `GET /governance/backups/{id}/key` | The key file again, **HSM-bound backups only** (the key is wrapped by the tenant's key inside the HSM). A software-mode backup, or one whose stored key was removed, answers `410 backup_key_not_retained`. |
-| `POST /governance/backups/restore` | Body: `artifact_file_name` (`.vbk`), `artifact_content_base64`, `key_file_name` (`.key.json`), `key_content_base64`. HSM-bound key files restore only when wrapped by the HSM (`key_wrap: "hsm_tenant_key"`), through the hsm-connector. |
+| `POST /governance/backups/restore` | Body: `artifact_file_name` (`.vbk`), `artifact_content_base64`, and either `key_file_name` (`.key.json`) with `key_content_base64`, or `key_shares` (`[{file_name, content_base64}]`, at least the split's threshold, all from the same backup; the rebuilt key must match the backup's key fingerprint). A single share given as `key_file_name` is refused. HSM-bound key files restore only when wrapped by the HSM (`key_wrap: "hsm_tenant_key"`), through the hsm-connector. |
 | `DELETE /governance/backups/{id}` | Delete a job and its artifact. |
 
 HSM-bound backups need the tenant's HSM profile (HSM tab) and the
@@ -3426,6 +3423,7 @@ Selected events with dedicated audit classification:
 - `audit.cert.star_subscription_created`, `audit.cert.star_subscription_renewed`
 - `audit.governance.approval_requested`, `audit.governance.approved`, `audit.governance.rejected`, `audit.governance.bypassed`
 - `audit.governance.backup_created` (`key_mode`, `key_retained`), `audit.governance.backup_deleted`, `audit.governance.backup_restored`, `audit.governance.backup_restore_refused` (tampered artifact, wrong key, changed scope, wrong file type, retired v1 key package; carries `reason`)
+- `audit.governance.backup_key_split` (`threshold`, `shares_total`, `guardians`; high), `audit.governance.backup_restored` carries `key_source` (`key_file`/`guardian_shares`) and `share_guardians`; `backup_restore_refused` carries `key_shares_given`
 - `audit.governance.backup_create_refused` (`reason`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`)
 - `audit.hsm.*` (connector: `key_generated`, `tenant_key_ensured`, `encrypt`, `decrypt`, `sign`, `verify`, `key_destroyed`, `status_read`), `audit.key.hsm_settings_updated`, `audit.key.hsm_refused` (`reason`), `audit.key.hsm_objects_destroyed`, `audit.key.hsm_destroy_failed`, `audit.key.hsm_status_read`, `audit.key.hsm_settings_update`, `audit.hsm.key_inspected`, `audit.hsm.objects_listed`, `audit.key.hsm_objects_listed`, `audit.key.hsm_key_inspected`, `audit.key.hsm_device_changed`, `audit.cert.crl_generation_failed`: HSM integration (docs/SECURITY/HSM_INTEGRATION.md)
 - `audit.governance.system_admin_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `not_root_tenant`, `token_tenant_not_root`, `insufficient_privileges`), `audit.governance.authentication_refused` (`reason: invalid_token`)

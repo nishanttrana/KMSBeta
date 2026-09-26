@@ -28,8 +28,9 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
   the public dev keys, the exposure register, backup re-wrapping, and
   rotation.
 - [BACKUP_KEYS.md](BACKUP_KEYS.md): governance backup keys. A software-mode
-  key is returned once and never stored; an HSM-bound key is wrapped inside
-  the tenant's HSM under its tenant key.
+  key is returned once and never stored, optionally split M-of-N among
+  guardians; an HSM-bound key is wrapped inside the tenant's HSM under its
+  tenant key.
 - [HSM_INTEGRATION.md](HSM_INTEGRATION.md): customer HSMs through their own
   PKCS#11 library (hsm-connector); a per-tenant key in the HSM for new keys,
   and per-key HSM-resident keys. There is no Vecta HSM.

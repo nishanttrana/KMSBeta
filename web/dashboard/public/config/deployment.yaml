@@ -47,7 +47,6 @@ spec:
     ml_anomaly_detection: true
     key_scheduling: true
     key_federation: true
-    key_recovery_escrow: true
     audit_chain: true
     kdf: true
     key_verification: true

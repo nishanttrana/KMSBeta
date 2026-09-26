@@ -4,6 +4,40 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.4.0-beta] — 2026-09-26
+
+### Backups: split the key among guardians (M-of-N)
+- **Optional guardian split when creating a backup.** In System
+  Administration > Backups, tick "Split the key among guardians", name 2–16
+  guardians and set how many shares restore it (for example 3 of 5).
+  - Each guardian gets one share file, listed once with its own download.
+    No one holds the whole key.
+  - Any M shares restore the backup. Fewer can't, and losing up to N−M
+    shares doesn't lose it.
+  - The platform stores neither the key nor the shares: only fingerprints.
+  - API: `key_split` on `POST /governance/backups`; `key_shares` on
+    `POST /governance/backups/restore`.
+  - Audited: `audit.governance.backup_key_split`, plus `key_source` on
+    `backup_restored`. Every refused split restore is audited too.
+- **Shamir secret sharing moved into `pkg/crypto`** (`SplitSecret`,
+  `CombineShares`), with branch-free GF(2^8) arithmetic. The old keycore
+  copy branched on share bytes during recovery.
+
+### Removed: general key escrow workflow
+- **Removed the "Key Recovery & Escrow" tab and keycore's `/escrow/*` and
+  `/enterprise/escrow/*` endpoints** (guardians, policies, escrowed keys,
+  recovery requests, Shamir split/verify, escrow tiers).
+- **Why:** it kept records only. Escrowing a key stored its name, not its
+  material, and an approved recovery released nothing.
+  - Guardian votes took `guardian_id` from the request body, so any caller
+    could approve as any guardian.
+  - `tenant_id` also came from the body.
+  - None of the actions was audited.
+- Keycore migration 022 drops the four escrow tables and the `escrow_tier` /
+  `escrow_shamir` control records.
+- The `keycore.escrow_tier` preview entry is gone.
+- BitLocker recovery-key escrow (EKM) is a separate feature and stays.
+
 ## [1.3.0-beta] — 2026-09-26
 
 ### Versioning

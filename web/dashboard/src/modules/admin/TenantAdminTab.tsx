@@ -344,7 +344,7 @@ export const TenantAdminTab = ({ session, onToast }: AdminTabProps) => {
         target_tenant_id: selectedTenantId,
         created_by: session?.username || "admin"
       });
-      saveBackupFile(key_file, `backup-${job.id}.key.json`, "application/json");
+      if (key_file) saveBackupFile(key_file, `backup-${job.id}.key.json`, "application/json");
       onToast(governanceBackupKeyRetained(job)
         ? "Backup created. Its key file was saved."
         : "Backup created. Its key file was saved: keep it safe, the platform does not keep a copy.");

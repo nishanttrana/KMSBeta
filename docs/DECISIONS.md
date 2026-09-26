@@ -7,6 +7,38 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — Guardian shares for the backup key instead of a general escrow workflow
+**Decision:** remove keycore's escrow workflow entirely. Instead, a
+software-mode backup key can be split M-of-N with Shamir secret sharing, one
+share per named guardian, at backup creation. Restore needs M shares, and the
+rebuilt key must match the stored fingerprint.
+
+**Why:**
+- The escrow workflow only kept records, and its votes were forgeable.
+- The real recovery risk is the backup key: one operator holds the only
+  copy, so it can be lost, or that one person can restore everything.
+- A split covers both risks with no new stored secret.
+
+**Rejected:**
+- *Fixing the escrow workflow* (binding votes, sealing per-key shares to
+  guardians with ML-KEM): per-key and legal-hold recovery is worth that cost
+  only when customers need it.
+- *Splitting in keycore over REST*: the backup key would travel to another
+  service. Shamir moved into `pkg/crypto`, so governance splits locally.
+- *Splitting an HSM-bound key*: it never leaves the HSM, so the request is
+  refused.
+- *Storing shares for later redistribution*: that would put the key back in
+  the database.
+- *Guarding the split behind `fips140.Enforced()`*: secret sharing isn't an
+  encryption algorithm. It uses the module DRBG and splits a key that
+  software mode already hands out whole, so it stays available in `only`
+  mode (docs/SECURITY/FIPS.md). A reviewer may classify it differently.
+
+**Enforced by:** `TestSplitBackupKeyRestorePostgres`,
+`TestSplitBackupKeyNeedsThresholdShares`,
+`TestValidateBackupKeySplitRejectsBadSplits` and the `pkg/crypto` Shamir
+tests ([SECURITY/BACKUP_KEYS.md](SECURITY/BACKUP_KEYS.md)).
+
 ## 2026-09-26 — Every KMS change bumps the minor version
 **Decision:** any change to code or deployment raises MINOR in `VERSION` (MAJOR
 for breaking changes) and adds a matching `## [x.y.z]` CHANGELOG section. The

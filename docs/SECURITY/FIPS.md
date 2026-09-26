@@ -89,6 +89,13 @@ that stops for a mode change stays stopped. Restart it by hand.
 | | **OpenPGP** (`ProtonMail/go-crypto`, SHA-1 fingerprints): refused in `only` mode |
 | | **DES/TDES** payment crypto (`pkg/payment`, `moov-io/tr31`), **ChaCha20** (`x/crypto`): refused by the runtime in `only` mode |
 
+**Shamir secret sharing** (`pkg/crypto/shamir.go`, backup key split): a
+split-knowledge procedure over GF(2^8), not an encryption algorithm, and not
+covered by a FIPS standard. It draws its randomness from the module DRBG
+and only splits a key that software-mode backups already hand out whole, so
+it runs in every mode without a guard. It is not claimed as validated
+([BACKUP_KEYS.md](BACKUP_KEYS.md)).
+
 **Customer HSMs** ([HSM_INTEGRATION.md](HSM_INTEGRATION.md)): operations on
 HSM-resident keys and the tenant key run in the HSM's own module, with
 approved mechanisms only (AES-GCM, RSA-PSS, ECDSA P-256/P-384), the same in

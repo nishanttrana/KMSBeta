@@ -61,8 +61,8 @@ func (a *Archiver) Archive(ctx context.Context, tenantID, keyID string, version 
 }
 
 // Restore is the inverse of Archive. It is intentionally not exported as a
-// REST endpoint — restoration must go through escrow + ceremony tooling
-// so that re-introducing material is gated by the same controls as
+// REST endpoint — restoration must go through ceremony tooling so
+// that re-introducing material is gated by the same controls as
 // initial creation.
 func (a *Archiver) Restore(ctx context.Context, tenantID, keyID string, version int) ([]byte, error) {
 	blob, err := a.store.Get(ctx, tenantID, keyID, version)

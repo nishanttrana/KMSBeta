@@ -28,7 +28,7 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 | Machine Learning & Anomaly Detection | Implemented as statistical anomaly detection | `/enterprise/anomaly/scan`, `key_dspm_findings`, audit/DSPM export |
 | Advanced Key Scheduling & Orchestration | Implemented | `/enterprise/orchestration/workflows`, `/enterprise/orchestration/runs`, executable batch rotation |
 | Key Federation & Multi-KMS Orchestration | **Preview**: records only; no replication or failover | `/enterprise/federation/providers`, `/mappings`, `/failovers` |
-| Enhanced Key Recovery & Escrow | Implemented (escrow APIs, Shamir split/verify); escrow tiers are **Preview** (records only) | Existing escrow APIs, Shamir split/verify, `/enterprise/escrow/tiers` |
+| Enhanced Key Recovery & Escrow | **Removed** (1.4.0-beta): the general escrow workflow only kept records. Backup keys can be split M-of-N among guardians instead | System Administration > Backups, `key_split` on `POST /svc/governance/backups` |
 | Blockchain-Backed Audit Chain | **Preview**: local anchor records; nothing is anchored externally (tamper evidence is the audit service's hash chain + Merkle epochs) | `/enterprise/audit-chain/anchors`, external-reference anchoring |
 | Key Derivation Functions | Implemented | `/enterprise/kdf/derive` for HKDF, PBKDF2, Scrypt, Argon2id |
 | Key Material Verification | Implemented | `/enterprise/verification/fingerprint`, constant-time KCV compare |
@@ -65,7 +65,7 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 - Cloud BYOK/HYOK orchestration
 - HSM provider configuration (the keycore master key is not yet HSM-protected)
 - PKCS#11 and JCA provider interfaces
-- Key escrow and recovery capabilities (the Backup tab scheduler is Preview; encrypted backup/restore is in System Administration)
+- Backup key recovery: encrypted backup/restore in System Administration, with the backup key optionally split M-of-N among guardians (the Backup tab scheduler is Preview)
 - Secrets and payment key management
 
 ### ✅ Governance & Compliance (Advanced)
@@ -183,6 +183,7 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 - **Effort**: 3-4 weeks
 
 #### 9. **Enhanced Key Recovery & Escrow** ⭐⭐⭐⭐
+**Status**: general escrow workflow removed in 1.4.0-beta; M-of-N guardian shares cover the backup key (see docs/DECISIONS.md, 2026-09-26).
 **Gap**: Limited recovery options
 **Recommendation**:
 - Tiered recovery (dual-control, quorum)

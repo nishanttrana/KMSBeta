@@ -223,24 +223,31 @@ export async function createGovernanceBackup(
     target_tenant_id?: string;
     bind_to_hsm?: boolean;
     created_by?: string;
+    key_split?: GovernanceBackupKeySplit;
   }
-): Promise<{ job: GovernanceBackupJob; key_file: GovernanceBackupKeyFile }> {
-  const out = await serviceRequest<{ job: GovernanceBackupJob; key_file: GovernanceBackupKeyFile }>(session, "governance", "/governance/backups", {
+): Promise<{ job: GovernanceBackupJob; key_file?: GovernanceBackupKeyFile; key_shares?: GovernanceBackupKeyFile[] }> {
+  const out = await serviceRequest<{ job: GovernanceBackupJob; key_file?: GovernanceBackupKeyFile; key_shares?: GovernanceBackupKeyFile[] }>(session, "governance", "/governance/backups", {
     method: "POST",
     body: JSON.stringify({
       tenant_id: session.tenantId,
       scope: input.scope,
       target_tenant_id: String(input.target_tenant_id || "").trim(),
-      bind_to_hsm: typeof input.bind_to_hsm === "boolean" ? input.bind_to_hsm : true,
-      created_by: String(input.created_by || "").trim()
+      bind_to_hsm: input.key_split ? false : typeof input.bind_to_hsm === "boolean" ? input.bind_to_hsm : true,
+      created_by: String(input.created_by || "").trim(),
+      ...(input.key_split ? { key_split: input.key_split } : {})
     })
   });
-  return { job: out.job, key_file: out.key_file };
+  return out;
 }
 
-// The key file of a backup. It is returned once, when the backup is created:
-// for a software-mode backup it is the only copy of the key.
-export type GovernanceBackupKeyFile = { file_name: string; content_type: string; content_base64: string };
+// The key file of a backup, or one guardian's share of a split key. Returned
+// once, when the backup is created: for a software-mode backup these are the
+// only copies of the key.
+export type GovernanceBackupKeyFile = { file_name: string; content_type: string; content_base64: string; guardian?: string; share_index?: number };
+
+// M-of-N split of a software-mode backup key: one share per guardian, any
+// `threshold` of them restore the backup.
+export type GovernanceBackupKeySplit = { threshold: number; guardians: string[] };
 
 // Whether the platform can hand out this backup's key file again (an
 // HSM-bound backup). A software-mode key is never stored.
@@ -290,8 +297,9 @@ export async function restoreGovernanceBackup(
   input: {
     artifact_file_name: string;
     artifact_content_base64: string;
-    key_file_name: string;
-    key_content_base64: string;
+    key_file_name?: string;
+    key_content_base64?: string;
+    key_shares?: Array<{ file_name: string; content_base64: string }>;
     created_by?: string;
   }
 ): Promise<GovernanceRestoreBackupResult> {
@@ -303,6 +311,7 @@ export async function restoreGovernanceBackup(
       artifact_content_base64: String(input.artifact_content_base64 || "").trim(),
       key_file_name: String(input.key_file_name || "").trim(),
       key_content_base64: String(input.key_content_base64 || "").trim(),
+      ...(input.key_shares?.length ? { key_shares: input.key_shares } : {}),
       created_by: String(input.created_by || "").trim()
     })
   });

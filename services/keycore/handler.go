@@ -196,18 +196,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /envelope/rewrap", h.handleStartRewrap)
 	mux.HandleFunc("GET /envelope/rewrap-jobs", h.handleListRewrapJobs)
 
-	// Key Escrow
-	mux.HandleFunc("GET /escrow/guardians", h.handleListEscrowGuardians)
-	mux.HandleFunc("POST /escrow/guardians", h.handleAddEscrowGuardian)
-	mux.HandleFunc("GET /escrow/policies", h.handleListEscrowPolicies)
-	mux.HandleFunc("POST /escrow/policies", h.handleCreateEscrowPolicy)
-	mux.HandleFunc("GET /escrow/keys", h.handleListEscrowedKeys)
-	mux.HandleFunc("POST /escrow/keys", h.handleAddEscrowedKey)
-	mux.HandleFunc("GET /escrow/recovery", h.handleListRecoveryRequests)
-	mux.HandleFunc("POST /escrow/recovery", h.handleCreateRecoveryRequest)
-	mux.HandleFunc("POST /escrow/recovery/{id}/approve", h.handleApproveRecovery)
-	mux.HandleFunc("POST /escrow/recovery/{id}/deny", h.handleDenyRecovery)
-
 	// Crypto Agility
 	mux.HandleFunc("GET /agility/score", h.handleGetAgilityScore)
 	mux.HandleFunc("GET /agility/algorithms", h.handleGetAlgorithmInventory)
@@ -277,9 +265,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /enterprise/dspm/findings", h.handleUpsertKeyDSPMFinding)
 	mux.HandleFunc("GET /enterprise/dspm/events", h.handleExportKeyDSPMEvents)
 	mux.HandleFunc("POST /enterprise/kdf/derive", h.handleEnterpriseKDFDerive)
-	mux.HandleFunc("POST /enterprise/escrow/shamir/split", h.handleEnterpriseShamirSplit)
-	mux.HandleFunc("POST /enterprise/escrow/shamir/verify", h.handleEnterpriseShamirVerify)
-	mux.HandleFunc("POST /enterprise/escrow/tiers", h.handleUpsertEnterpriseControlCategory(controlCategoryEscrowTier))
 	mux.HandleFunc("GET /enterprise/audit-chain/anchors", h.handleListAuditChainAnchors)
 	mux.HandleFunc("POST /enterprise/audit-chain/anchors", h.handleCreateAuditChainAnchor)
 	mux.HandleFunc("GET /enterprise/compliance/dashboard", h.handleEnterpriseComplianceDashboard)

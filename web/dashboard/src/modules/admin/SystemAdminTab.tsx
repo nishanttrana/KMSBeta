@@ -43,6 +43,7 @@ import {
   updateGovernancePolicy,
   applyNetworkConfig,
   type GovernanceBackupJob,
+  type GovernanceBackupKeyFile,
   type GovernanceSettings
 } from "../../lib/governance";
 import {
@@ -67,6 +68,7 @@ import {
   Sel,
   Stat,
   Tabs,
+  Txt,
   usePromptDialog
 } from "../../components/v3/legacyPrimitives";
 import {
@@ -777,6 +779,12 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [backupBindToHsm,setBackupBindToHsm]=useState(true);
   const [backupRestoreArtifactFile,setBackupRestoreArtifactFile]=useState<File|null>(null);
   const [backupRestoreKeyFile,setBackupRestoreKeyFile]=useState<File|null>(null);
+  const [backupRestoreShareFiles,setBackupRestoreShareFiles]=useState<File[]>([]);
+  const backupShareInputRef=useRef<HTMLInputElement|null>(null);
+  const [backupSplit,setBackupSplit]=useState(false);
+  const [backupGuardians,setBackupGuardians]=useState("");
+  const [backupThreshold,setBackupThreshold]=useState(3);
+  const [backupCreatedShares,setBackupCreatedShares]=useState<GovernanceBackupKeyFile[]>([]);
   const [backupRestoring,setBackupRestoring]=useState(false);
 
   const [cliStatus,setCliStatus]=useState<CLIStatus|null>(null);
@@ -1397,32 +1405,35 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
 
   const restoreBackup=useCallback(async()=>{
     if(!session?.token){return;}
-    if(!backupRestoreArtifactFile||!backupRestoreKeyFile){
-      onToast("Select backup artifact and backup key package.");
+    const useShares=backupRestoreShareFiles.length>0;
+    if(!backupRestoreArtifactFile||(!useShares&&!backupRestoreKeyFile)){
+      onToast("Select the backup artifact and its key package, or the guardian share files.");
       return;
     }
     const artifactName=String(backupRestoreArtifactFile.name||"").trim();
-    const keyName=String(backupRestoreKeyFile.name||"").trim();
+    const keyFiles=useShares?backupRestoreShareFiles:[backupRestoreKeyFile as File];
     if(!artifactName.toLowerCase().endsWith(BACKUP_ARTIFACT_EXTENSION)){
       onToast(`Artifact must use ${BACKUP_ARTIFACT_EXTENSION} extension.`);
       return;
     }
-    if(!keyName.toLowerCase().endsWith(BACKUP_KEY_EXTENSION)){
-      onToast(`Key package must use ${BACKUP_KEY_EXTENSION} extension.`);
+    if(keyFiles.some((f)=>!String(f.name||"").toLowerCase().endsWith(BACKUP_KEY_EXTENSION))){
+      onToast(`Key files must use ${BACKUP_KEY_EXTENSION} extension.`);
       return;
     }
     setBackupRestoring(true);
     try{
-      const [artifactB64,keyB64]=await Promise.all([fileToBase64(backupRestoreArtifactFile),fileToBase64(backupRestoreKeyFile)]);
+      const [artifactB64,...keyB64s]=await Promise.all([fileToBase64(backupRestoreArtifactFile),...keyFiles.map(fileToBase64)]);
       const out=await restoreGovernanceBackup(session,{
         artifact_file_name:artifactName,
         artifact_content_base64:artifactB64,
-        key_file_name:keyName,
-        key_content_base64:keyB64,
+        ...(useShares
+          ?{key_shares:keyFiles.map((f,i)=>({file_name:String(f.name||"").trim(),content_base64:String(keyB64s[i]||"")}))}
+          :{key_file_name:String(keyFiles[0]?.name||"").trim(),key_content_base64:String(keyB64s[0]||"")}),
         created_by:session.username
       });
       setBackupRestoreArtifactFile(null);
       setBackupRestoreKeyFile(null);
+      setBackupRestoreShareFiles([]);
       onToast(`Backup restored. Rows: ${Number(out.rows_restored||0)} | Tables: ${Number(out.tables_processed||0)}.`);
       await Promise.all([loadJobs(),loadSystemState()]);
     }catch(error){
@@ -1430,7 +1441,7 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     }finally{
       setBackupRestoring(false);
     }
-  },[backupRestoreArtifactFile,backupRestoreKeyFile,loadJobs,loadSystemState,onToast,session,sessionGuard]);
+  },[backupRestoreArtifactFile,backupRestoreKeyFile,backupRestoreShareFiles,loadJobs,loadSystemState,onToast,session,sessionGuard]);
 
   const saveSnmpSettings = useCallback(async()=>{
     if(!session?.token){return;}
@@ -2929,9 +2940,44 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
       <Card style={{padding:10,borderRadius:8,marginBottom:8}}>
         <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Create Backup</div>
         <Row2><FG label="Scope"><Sel value={backupScope} onChange={(e)=>setBackupScope(String(e.target.value||"system") as "system"|"tenant")}><option value="system">System</option><option value="tenant">Tenant</option></Sel></FG><FG label="Target Tenant ID (tenant scope)"><Inp value={backupTenant} onChange={(e)=>setBackupTenant(e.target.value)} placeholder="tenant-id"/></FG></Row2>
-        <Chk label="Bind backup key package to HSM (when configured)" checked={backupBindToHsm} onChange={()=>setBackupBindToHsm((v)=>!v)}/>
-        <div style={{fontSize:10,color:C.dim,marginTop:4}}>The key file downloads when the backup is created. Without an HSM binding the platform keeps no copy of the key: store the file safely, apart from the artifact.</div>
-        <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",marginTop:10}}><Btn small primary onClick={async()=>{if(!session?.token) return; if(backupScope==="tenant"&&!String(backupTenant||"").trim()){onToast("Provide target tenant ID for tenant scope backup."); return;} setBackupCreating(true); try{const created=await createGovernanceBackup(session,{scope:backupScope,target_tenant_id:backupScope==="tenant"?String(backupTenant||"").trim():"",bind_to_hsm:backupBindToHsm,created_by:session.username}); dl(created.key_file.file_name,created.key_file.content_base64,created.key_file.content_type); onToast(governanceBackupKeyRetained(created.job)?"Backup job created. Its key file was saved.":"Backup job created. Its key file was saved: keep it safe, the platform does not keep a copy."); await loadJobs();}catch(error){if(!sessionGuard(error)) onToast(`Backup create failed: ${errMsg(error)}`);} finally{setBackupCreating(false);}}} disabled={backupCreating}>{backupCreating?"Creating...":"Create Backup"}</Btn></div>
+        <Chk label="Bind backup key package to HSM (when configured)" checked={backupBindToHsm&&!backupSplit} onChange={()=>setBackupBindToHsm((v)=>!v)} disabled={backupSplit}/>
+        <Chk label="Split the key among guardians (M-of-N shares)" checked={backupSplit} onChange={()=>setBackupSplit((v)=>!v)}/>
+        {backupSplit&&<Row2>
+          <FG label="Guardians (one per line)"><Txt rows={4} value={backupGuardians} onChange={(e)=>setBackupGuardians(e.target.value)} placeholder={"CISO\nHead of Legal\nCTO\nOps lead\nExternal notary"}/></FG>
+          <FG label="Shares needed to restore"><Inp type="number" min={2} value={String(backupThreshold)} onChange={(e)=>setBackupThreshold(Math.max(2,Math.trunc(Number(e.target.value||2))))}/></FG>
+        </Row2>}
+        <div style={{fontSize:10,color:C.dim,marginTop:4}}>{backupSplit
+          ?"Each guardian gets one share file. Any of them up to the number above restore the backup; fewer can't, and no one holds the whole key. The platform keeps no copy of the key or the shares. A split key is never HSM-bound."
+          :"The key file downloads when the backup is created. Without an HSM binding the platform keeps no copy of the key: store the file safely, apart from the artifact."}</div>
+        <div style={{display:"flex",justifyContent:"flex-end",alignItems:"center",marginTop:10}}><Btn small primary onClick={async()=>{
+          if(!session?.token) return;
+          if(backupScope==="tenant"&&!String(backupTenant||"").trim()){onToast("Provide target tenant ID for tenant scope backup."); return;}
+          const guardians=backupGuardians.split(/\n|,/).map((g)=>g.trim()).filter(Boolean);
+          if(backupSplit&&(guardians.length<2||backupThreshold<2||backupThreshold>guardians.length)){onToast("Name at least 2 guardians, and set shares needed between 2 and the number of guardians."); return;}
+          setBackupCreating(true);
+          try{
+            const created=await createGovernanceBackup(session,{scope:backupScope,target_tenant_id:backupScope==="tenant"?String(backupTenant||"").trim():"",bind_to_hsm:backupBindToHsm,created_by:session.username,...(backupSplit?{key_split:{threshold:backupThreshold,guardians}}:{})});
+            if(created.key_shares?.length){
+              setBackupCreatedShares(created.key_shares);
+              onToast(`Backup job created. Hand each guardian their share now: they are shown once, and any ${backupThreshold} of ${created.key_shares.length} restore the backup.`);
+            }else if(created.key_file){
+              dl(created.key_file.file_name,created.key_file.content_base64,created.key_file.content_type);
+              onToast(governanceBackupKeyRetained(created.job)?"Backup job created. Its key file was saved.":"Backup job created. Its key file was saved: keep it safe, the platform does not keep a copy.");
+            }
+            await loadJobs();
+          }catch(error){if(!sessionGuard(error)) onToast(`Backup create failed: ${errMsg(error)}`);} finally{setBackupCreating(false);}
+        }} disabled={backupCreating}>{backupCreating?"Creating...":"Create Backup"}</Btn></div>
+        {backupCreatedShares.length>0&&<div role="region" aria-label="Guardian key shares" style={{marginTop:10,padding:10,borderRadius:8,border:`1px solid ${C.amber}`,background:C.amberDim}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.text,marginBottom:4}}>Guardian key shares: shown once</div>
+          <div style={{fontSize:10,color:C.dim,marginBottom:8}}>Give each file to its guardian only. Close this panel once every share is handed out; the platform can't produce them again.</div>
+          {backupCreatedShares.map((sh)=>(
+            <div key={sh.file_name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,padding:"4px 0",borderTop:`1px solid ${C.border}`}}>
+              <span style={{fontSize:11,color:C.text}}>{`Share ${sh.share_index} · ${sh.guardian}`}</span>
+              <Btn small onClick={()=>dl(sh.file_name,sh.content_base64,sh.content_type)}>Download</Btn>
+            </div>
+          ))}
+          <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}><Btn small onClick={()=>setBackupCreatedShares([])}>All shares handed out: close</Btn></div>
+        </div>}
       </Card>
       <Card style={{padding:10,borderRadius:8,marginBottom:8}}>
         <div style={{fontSize:10,color:C.muted,marginBottom:8}}>Restore Backup</div>
@@ -2955,8 +3001,14 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
             />
           </FG>
         </Row2>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,fontSize:10,color:C.dim}}>
+          <input ref={backupShareInputRef} type="file" accept=".json,.key.json" multiple style={{display:"none"}} onChange={(e)=>setBackupRestoreShareFiles(Array.from(e.target.files||[]))}/>
+          <span>Split key? Upload the guardians' share files instead of a key package.</span>
+          <Btn small type="button" onClick={()=>backupShareInputRef.current?.click()}>{backupRestoreShareFiles.length?"Replace share files":"Upload share files"}</Btn>
+          {backupRestoreShareFiles.length>0&&<Btn small type="button" onClick={()=>{setBackupRestoreShareFiles([]); if(backupShareInputRef.current) backupShareInputRef.current.value="";}}>Clear</Btn>}
+        </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:10}}>
-          <div style={{fontSize:10,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{`${backupRestoreArtifactFile?.name||"artifact not selected"} | ${backupRestoreKeyFile?.name||"key package not selected"}`}</div>
+          <div style={{fontSize:10,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{`${backupRestoreArtifactFile?.name||"artifact not selected"} | ${backupRestoreShareFiles.length?`${backupRestoreShareFiles.length} guardian share file(s)`:backupRestoreKeyFile?.name||"key package not selected"}`}</div>
           <Btn small primary onClick={()=>void restoreBackup()} disabled={backupRestoring}>{backupRestoring?"Restoring...":"Restore Backup"}</Btn>
         </div>
       </Card>

@@ -211,18 +211,21 @@ func (h *Handler) handleCreateBackup(w http.ResponseWriter, r *http.Request) {
 	if claims, ok := pkgauth.ClaimsFromContext(r.Context()); ok && claims != nil {
 		in.CreatedBy = firstNonEmptyString(claims.UserID, claims.ClientID, in.CreatedBy)
 	}
-	job, keyFile, err := h.svc.CreateBackup(r.Context(), in)
+	job, keyFiles, err := h.svc.CreateBackup(r.Context(), in)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "backup_create_failed", err.Error(), reqID, in.TenantID)
 		return
 	}
-	// key_file is returned only here. For a software-mode backup it is the
-	// only copy of the key: the platform doesn't keep it.
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
-		"job":        job,
-		"key_file":   keyFile,
-		"request_id": reqID,
-	})
+	// The key is returned only here: key_file, or key_shares (one per
+	// guardian) for a split key. For a software-mode backup these are the
+	// only copies: the platform doesn't keep them.
+	out := map[string]interface{}{"job": job, "request_id": reqID}
+	if in.KeySplit != nil {
+		out["key_shares"] = keyFiles
+	} else {
+		out["key_file"] = keyFiles[0]
+	}
+	writeJSON(w, http.StatusCreated, out)
 }
 
 func (h *Handler) handleRestoreBackup(w http.ResponseWriter, r *http.Request) {

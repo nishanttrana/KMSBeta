@@ -223,6 +223,14 @@ type CreateBackupInput struct {
 	TargetTenantID string `json:"target_tenant_id"`
 	BindToHSM      *bool  `json:"bind_to_hsm,omitempty"`
 	CreatedBy      string `json:"created_by"`
+	// KeySplit, when set, splits a software-mode backup key into one Shamir
+	// share per guardian; any Threshold of them restore the backup.
+	KeySplit *BackupKeySplit `json:"key_split,omitempty"`
+}
+
+type BackupKeySplit struct {
+	Threshold int      `json:"threshold"`
+	Guardians []string `json:"guardians"`
 }
 
 type BackupJob struct {
@@ -259,7 +267,10 @@ type RestoreBackupInput struct {
 	ArtifactContentBase string `json:"artifact_content_base64"`
 	KeyFileName         string `json:"key_file_name"`
 	KeyContentBase      string `json:"key_content_base64"`
-	CreatedBy           string `json:"created_by"`
+	// KeyShares restores a split backup from guardian share files instead
+	// of a key file.
+	KeyShares []BackupKeyFile `json:"key_shares,omitempty"`
+	CreatedBy string          `json:"created_by"`
 }
 
 type RestoreBackupResult struct {

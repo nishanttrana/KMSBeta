@@ -514,7 +514,7 @@ func healthRecommendations(score KeyHealthScore, key Key) []string {
 		actions = append(actions, "rotate the key and validate dependent services")
 	}
 	if score.BackupStatus == "missing" {
-		actions = append(actions, "verify backup coverage or escrow policy")
+		actions = append(actions, "verify backup coverage")
 	}
 	if score.BackupStatus == "stale" {
 		actions = append(actions, "refresh backup verification")
@@ -585,7 +585,6 @@ func enterpriseAuditRoadmap() []AuditRoadmapItem {
 		{ID: 6, Tier: 2, Name: "Machine Learning & Anomaly Detection", Status: "implemented_statistical", Impact: "5/5", Effort: "3-4 weeks", Capabilities: []string{"behavioral baselines", "hotspot anomaly scan", "predictive failure findings", "DSPM feed"}},
 		{ID: 7, Tier: 2, Name: "Advanced Key Scheduling & Orchestration", Status: "implemented", Impact: "4/5", Effort: "3 weeks", Capabilities: []string{"cron expression records", "workflow control API", "batch rotation runs", "run evidence"}},
 		{ID: 8, Tier: 2, Name: "Key Federation & Multi-KMS Orchestration", Status: "implemented_registry", Impact: "4/5", Effort: "3-4 weeks", Capabilities: []string{"provider registry", "cross-KMS key mappings", "failover records", "DSPM risk findings"}},
-		{ID: 9, Tier: 2, Name: "Enhanced Key Recovery & Escrow", Status: "implemented", Impact: "4/5", Effort: "3 weeks", Capabilities: []string{"guardians", "recovery requests", "tiered recovery records", "Shamir split/verify"}},
 		{ID: 10, Tier: 2, Name: "Blockchain-Backed Audit Chain", Status: "implemented_anchor", Impact: "3/5", Effort: "4+ weeks", Capabilities: []string{"Merkle-style anchor records", "external anchor references", "chain hash continuity"}},
 		{ID: 11, Tier: 3, Name: "Key Derivation Functions", Status: "implemented", Impact: "4/5", Effort: "2-3 weeks", Capabilities: []string{"HKDF", "PBKDF2", "Scrypt", "Argon2id", "derivation metering"}},
 		{ID: 12, Tier: 3, Name: "Key Material Verification", Status: "implemented", Impact: "4/5", Effort: "2 weeks", Capabilities: []string{"KCV verification", "constant-time fingerprint compare", "DSPM mismatch finding"}},

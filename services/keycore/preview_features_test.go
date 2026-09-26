@@ -21,7 +21,7 @@ func TestEnterpriseControlsCarryFeatureStatus(t *testing.T) {
 		return rr
 	}
 	for _, path := range []string{"/enterprise/federation/providers", "/enterprise/binding/policies", "/enterprise/sharing/grants",
-		"/enterprise/edge/agents", "/enterprise/metadata/profiles", "/enterprise/escrow/tiers", "/enterprise/advanced-encryption/modes"} {
+		"/enterprise/edge/agents", "/enterprise/metadata/profiles", "/enterprise/advanced-encryption/modes"} {
 		rr := post(path, map[string]any{"name": "x", "status": "active"})
 		if rr.Code != http.StatusCreated {
 			t.Fatalf("%s: %d %s", path, rr.Code, rr.Body.String())

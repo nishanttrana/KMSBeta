@@ -1291,6 +1291,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "audit-post-audit-cluster-signing-key-export",
+    "group": "Audit & Alerts (audit)",
+    "title": "POST /audit/cluster/signing-key/export",
+    "service": "audit",
+    "method": "POST",
+    "pathTemplate": "/audit/cluster/signing-key/export?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "POST /svc/audit/audit/cluster/signing-key/export?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-post-audit-cluster-signing-key-import",
+    "group": "Audit & Alerts (audit)",
+    "title": "POST /audit/cluster/signing-key/import",
+    "service": "audit",
+    "method": "POST",
+    "pathTemplate": "/audit/cluster/signing-key/import?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "POST /svc/audit/audit/cluster/signing-key/import?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "audit-post-audit-cluster-signing-key-join-key",
+    "group": "Audit & Alerts (audit)",
+    "title": "POST /audit/cluster/signing-key/join-key",
+    "service": "audit",
+    "method": "POST",
+    "pathTemplate": "/audit/cluster/signing-key/join-key?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Audit service.",
+    "requestExample": "POST /svc/audit/audit/cluster/signing-key/join-key?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "audit-post-audit-merkle-build",
     "group": "Audit & Alerts (audit)",
     "title": "POST /audit/merkle/build",
@@ -4707,6 +4791,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "cluster-manager-get-cluster-replication-status",
+    "group": "Cluster Management (cluster-manager)",
+    "title": "GET /cluster/replication/status",
+    "service": "cluster-manager",
+    "method": "GET",
+    "pathTemplate": "/cluster/replication/status?tenant_id={{tenant_id}}",
+    "bodyTemplate": "",
+    "description": "Auto-discovered route from Cluster service.",
+    "requestExample": "GET /svc/cluster-manager/cluster/replication/status?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "cluster-manager-get-cluster-sync-checkpoint",
     "group": "Cluster Management (cluster-manager)",
     "title": "GET /cluster/sync/checkpoint",
@@ -4800,6 +4912,62 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from Cluster service.",
     "requestExample": "POST /svc/cluster-manager/cluster/join/complete?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cluster-manager-post-cluster-join-connect",
+    "group": "Cluster Management (cluster-manager)",
+    "title": "POST /cluster/join/connect",
+    "service": "cluster-manager",
+    "method": "POST",
+    "pathTemplate": "/cluster/join/connect?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cluster service.",
+    "requestExample": "POST /svc/cluster-manager/cluster/join/connect?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "cluster-manager-post-cluster-join-exchange",
+    "group": "Cluster Management (cluster-manager)",
+    "title": "POST /cluster/join/exchange",
+    "service": "cluster-manager",
+    "method": "POST",
+    "pathTemplate": "/cluster/join/exchange?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Cluster service.",
+    "requestExample": "POST /svc/cluster-manager/cluster/join/exchange?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -13618,6 +13786,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "auth-post-auth-cluster-mint",
+    "group": "Identity & Access (auth)",
+    "title": "POST /auth/cluster/mint",
+    "service": "auth",
+    "method": "POST",
+    "pathTemplate": "/auth/cluster/mint?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Auth service.",
+    "requestExample": "POST /svc/auth/auth/cluster/mint?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "auth-post-auth-identity-import-users",
     "group": "Identity & Access (auth)",
     "title": "POST /auth/identity/import/users",
@@ -16139,118 +16335,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-get-escrow-guardians",
-    "group": "Key Management (keycore)",
-    "title": "GET /escrow/guardians",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/escrow/guardians?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/escrow/guardians?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-get-escrow-keys",
-    "group": "Key Management (keycore)",
-    "title": "GET /escrow/keys",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/escrow/keys?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/escrow/keys?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-get-escrow-policies",
-    "group": "Key Management (keycore)",
-    "title": "GET /escrow/policies",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/escrow/policies?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/escrow/policies?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-get-escrow-recovery",
-    "group": "Key Management (keycore)",
-    "title": "GET /escrow/recovery",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/escrow/recovery?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/escrow/recovery?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "keycore-get-fips-rng-health",
     "group": "Key Management (keycore)",
     "title": "GET /fips/rng-health",
@@ -17511,6 +17595,90 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "keycore-post-cluster-mek-export",
+    "group": "Key Management (keycore)",
+    "title": "POST /cluster/mek/export",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/cluster/mek/export?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/cluster/mek/export?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-cluster-mek-import",
+    "group": "Key Management (keycore)",
+    "title": "POST /cluster/mek/import",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/cluster/mek/import?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/cluster/mek/import?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
+    "id": "keycore-post-cluster-mek-join-key",
+    "group": "Key Management (keycore)",
+    "title": "POST /cluster/mek/join-key",
+    "service": "keycore",
+    "method": "POST",
+    "pathTemplate": "/cluster/mek/join-key?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from KeyCore service.",
+    "requestExample": "POST /svc/keycore/cluster/mek/join-key?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "keycore-post-compromise-advisories-ingest",
     "group": "Key Management (keycore)",
     "title": "POST /compromise/advisories/ingest",
@@ -18015,90 +18183,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-post-enterprise-escrow-shamir-split",
-    "group": "Key Management (keycore)",
-    "title": "POST /enterprise/escrow/shamir/split",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/enterprise/escrow/shamir/split?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/enterprise/escrow/shamir/split?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-enterprise-escrow-shamir-verify",
-    "group": "Key Management (keycore)",
-    "title": "POST /enterprise/escrow/shamir/verify",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/enterprise/escrow/shamir/verify?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/enterprise/escrow/shamir/verify?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-enterprise-escrow-tiers",
-    "group": "Key Management (keycore)",
-    "title": "POST /enterprise/escrow/tiers",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/enterprise/escrow/tiers?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/enterprise/escrow/tiers?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "keycore-post-enterprise-federation-failovers",
     "group": "Key Management (keycore)",
     "title": "POST /enterprise/federation/failovers",
@@ -18444,174 +18528,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/envelope/rewrap?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-escrow-guardians",
-    "group": "Key Management (keycore)",
-    "title": "POST /escrow/guardians",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/escrow/guardians?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/escrow/guardians?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-escrow-keys",
-    "group": "Key Management (keycore)",
-    "title": "POST /escrow/keys",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/escrow/keys?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/escrow/keys?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-escrow-policies",
-    "group": "Key Management (keycore)",
-    "title": "POST /escrow/policies",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/escrow/policies?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/escrow/policies?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-escrow-recovery",
-    "group": "Key Management (keycore)",
-    "title": "POST /escrow/recovery",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/escrow/recovery?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/escrow/recovery?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-escrow-recovery-id-approve",
-    "group": "Key Management (keycore)",
-    "title": "POST /escrow/recovery/{id}/approve",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/escrow/recovery/{id}/approve?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/escrow/recovery/{id}/approve?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-escrow-recovery-id-deny",
-    "group": "Key Management (keycore)",
-    "title": "POST /escrow/recovery/{id}/deny",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/escrow/recovery/{id}/deny?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/escrow/recovery/{id}/deny?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -23911,622 +23827,6 @@ export const DISCOVERED_REST_API_CATALOG = [
         "id": "sbom_20260311_001",
         "created_at": "2026-03-11T09:45:00Z"
       }
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-delete-secrets-id",
-    "group": "Secret Vault (secrets)",
-    "title": "DELETE /secrets/{id}",
-    "service": "secrets",
-    "method": "DELETE",
-    "pathTemplate": "/secrets/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "DELETE /svc/secrets/secrets/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-delete-v1-mount-path",
-    "group": "Secret Vault (secrets)",
-    "title": "DELETE /v1/{mount}/{path...}",
-    "service": "secrets",
-    "method": "DELETE",
-    "pathTemplate": "/v1/{mount}/{path...}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "DELETE /svc/secrets/v1/{mount}/{path...}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-delete-v1-mount-data-path",
-    "group": "Secret Vault (secrets)",
-    "title": "DELETE /v1/{mount}/data/{path...}",
-    "service": "secrets",
-    "method": "DELETE",
-    "pathTemplate": "/v1/{mount}/data/{path...}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "DELETE /svc/secrets/v1/{mount}/data/{path...}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-get-secrets",
-    "group": "Secret Vault (secrets)",
-    "title": "GET /secrets",
-    "service": "secrets",
-    "method": "GET",
-    "pathTemplate": "/secrets?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "GET /svc/secrets/secrets?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-get-secrets-id",
-    "group": "Secret Vault (secrets)",
-    "title": "GET /secrets/{id}",
-    "service": "secrets",
-    "method": "GET",
-    "pathTemplate": "/secrets/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "GET /svc/secrets/secrets/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-get-secrets-id-audit",
-    "group": "Secret Vault (secrets)",
-    "title": "GET /secrets/{id}/audit",
-    "service": "secrets",
-    "method": "GET",
-    "pathTemplate": "/secrets/{id}/audit?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "GET /svc/secrets/secrets/{id}/audit?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-get-secrets-id-value",
-    "group": "Secret Vault (secrets)",
-    "title": "GET /secrets/{id}/value",
-    "service": "secrets",
-    "method": "GET",
-    "pathTemplate": "/secrets/{id}/value?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "GET /svc/secrets/secrets/{id}/value?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-get-secrets-id-versions",
-    "group": "Secret Vault (secrets)",
-    "title": "GET /secrets/{id}/versions",
-    "service": "secrets",
-    "method": "GET",
-    "pathTemplate": "/secrets/{id}/versions?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "GET /svc/secrets/secrets/{id}/versions?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-get-secrets-stats",
-    "group": "Secret Vault (secrets)",
-    "title": "GET /secrets/stats",
-    "service": "secrets",
-    "method": "GET",
-    "pathTemplate": "/secrets/stats?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "GET /svc/secrets/secrets/stats?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-get-v1-mount-path",
-    "group": "Secret Vault (secrets)",
-    "title": "GET /v1/{mount}/{path...}",
-    "service": "secrets",
-    "method": "GET",
-    "pathTemplate": "/v1/{mount}/{path...}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "GET /svc/secrets/v1/{mount}/{path...}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-get-v1-mount-data-path",
-    "group": "Secret Vault (secrets)",
-    "title": "GET /v1/{mount}/data/{path...}",
-    "service": "secrets",
-    "method": "GET",
-    "pathTemplate": "/v1/{mount}/data/{path...}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "GET /svc/secrets/v1/{mount}/data/{path...}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-get-v1-mount-metadata-path",
-    "group": "Secret Vault (secrets)",
-    "title": "GET /v1/{mount}/metadata/{path...}",
-    "service": "secrets",
-    "method": "GET",
-    "pathTemplate": "/v1/{mount}/metadata/{path...}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "GET /svc/secrets/v1/{mount}/metadata/{path...}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-get-v1-sys-health",
-    "group": "Secret Vault (secrets)",
-    "title": "GET /v1/sys/health",
-    "service": "secrets",
-    "method": "GET",
-    "pathTemplate": "/v1/sys/health?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "GET /svc/secrets/v1/sys/health?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-get-v1-sys-seal-status",
-    "group": "Secret Vault (secrets)",
-    "title": "GET /v1/sys/seal-status",
-    "service": "secrets",
-    "method": "GET",
-    "pathTemplate": "/v1/sys/seal-status?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "GET /svc/secrets/v1/sys/seal-status?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-post-secrets",
-    "group": "Secret Vault (secrets)",
-    "title": "POST /secrets",
-    "service": "secrets",
-    "method": "POST",
-    "pathTemplate": "/secrets?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "POST /svc/secrets/secrets?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-post-secrets-id-rotate",
-    "group": "Secret Vault (secrets)",
-    "title": "POST /secrets/{id}/rotate",
-    "service": "secrets",
-    "method": "POST",
-    "pathTemplate": "/secrets/{id}/rotate?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "POST /svc/secrets/secrets/{id}/rotate?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-post-secrets-generate-keypair",
-    "group": "Secret Vault (secrets)",
-    "title": "POST /secrets/generate/keypair",
-    "service": "secrets",
-    "method": "POST",
-    "pathTemplate": "/secrets/generate/keypair?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "POST /svc/secrets/secrets/generate/keypair?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-post-secrets-generate-ssh-key",
-    "group": "Secret Vault (secrets)",
-    "title": "POST /secrets/generate/ssh_key",
-    "service": "secrets",
-    "method": "POST",
-    "pathTemplate": "/secrets/generate/ssh_key?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "POST /svc/secrets/secrets/generate/ssh_key?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-post-v1-mount-path",
-    "group": "Secret Vault (secrets)",
-    "title": "POST /v1/{mount}/{path...}",
-    "service": "secrets",
-    "method": "POST",
-    "pathTemplate": "/v1/{mount}/{path...}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "POST /svc/secrets/v1/{mount}/{path...}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-post-v1-mount-data-path",
-    "group": "Secret Vault (secrets)",
-    "title": "POST /v1/{mount}/data/{path...}",
-    "service": "secrets",
-    "method": "POST",
-    "pathTemplate": "/v1/{mount}/data/{path...}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "POST /svc/secrets/v1/{mount}/data/{path...}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-post-v1-auth-token-lookup-self",
-    "group": "Secret Vault (secrets)",
-    "title": "POST /v1/auth/token/lookup-self",
-    "service": "secrets",
-    "method": "POST",
-    "pathTemplate": "/v1/auth/token/lookup-self?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "POST /svc/secrets/v1/auth/token/lookup-self?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "secrets-put-secrets-id",
-    "group": "Secret Vault (secrets)",
-    "title": "PUT /secrets/{id}",
-    "service": "secrets",
-    "method": "PUT",
-    "pathTemplate": "/secrets/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from Secrets service.",
-    "requestExample": "PUT /svc/secrets/secrets/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
     },
     "errorCodes": [
       {

@@ -174,46 +174,6 @@ func (h *Handler) handleEnterpriseKDFDerive(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, map[string]any{"result": resp, "request_id": reqID})
 }
 
-func (h *Handler) handleEnterpriseShamirSplit(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	var req ShamirSplitRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	req.TenantID = tenantID
-	resp, err := h.svc.SplitShamirSecret(r.Context(), req)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "shamir_split_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusCreated, map[string]any{"result": resp, "request_id": reqID})
-}
-
-func (h *Handler) handleEnterpriseShamirVerify(w http.ResponseWriter, r *http.Request) {
-	reqID := requestID(r)
-	tenantID := mustTenant(r, reqID, w)
-	if tenantID == "" {
-		return
-	}
-	var req ShamirVerifyRequest
-	if err := decodeJSON(r, &req); err != nil {
-		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, tenantID)
-		return
-	}
-	req.TenantID = tenantID
-	resp, err := h.svc.VerifyShamirSecret(r.Context(), req)
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, "shamir_verify_failed", err.Error(), reqID, tenantID)
-		return
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"result": resp, "request_id": reqID})
-}
-
 func (h *Handler) handleCreateAuditChainAnchor(w http.ResponseWriter, r *http.Request) {
 	reqID := requestID(r)
 	tenantID := mustTenant(r, reqID, w)

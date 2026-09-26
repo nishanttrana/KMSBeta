@@ -20,7 +20,6 @@ reflects it:
 | `keycore.binding_policy` | Key binding policies | Stored only; key operations do not evaluate them. |
 | `keycore.sharing_grant` | Fine-grained key sharing grants | Stored only; use key access grants for enforced sharing. |
 | `keycore.metadata_profile` | Key metadata profiles | Stored only; key creation does not apply or validate them. |
-| `keycore.escrow_tier` | Escrow tiers | Stored only; Shamir split/verify and escrow recovery do not use them. |
 | `keycore.edge` | Edge & IoT agents, leases and receipts | Stored only; there is no edge runtime. |
 | `keycore.advanced_encryption_modes` | Homomorphic / functional encryption modes | Registered as controls; no homomorphic or functional encryption is performed. Searchable HMAC tokens are available. |
 | `keycore.audit_chain_anchor` | External audit-chain anchors | Records an external reference in a local hash chain; nothing is anchored externally. |

@@ -24,8 +24,8 @@ Enterprise Key Audit adds an operating layer for the highest-value KMS gaps:
 - key health scoring with recommendations
 - inventory sync, dependency records, orphan detection, and duplicate KCV detection
 - statistical anomaly detection with DSPM findings
-- orchestration runs, KDF, Shamir escrow split/verify, fingerprint verification, and threat signals
-- **Preview** (records only, not enforced; see [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md)): federation, escrow tiers, audit-chain anchors, edge, sharing, metadata, binding, advanced-encryption modes
+- orchestration runs, KDF, fingerprint verification, and threat signals
+- **Preview** (records only, not enforced; see [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md)): federation, audit-chain anchors, edge, sharing, metadata, binding, advanced-encryption modes
 
 ### Why Teams Use It
 
@@ -62,7 +62,6 @@ Use this feature when:
 - `GET /svc/keycore/enterprise/dspm/findings`
 - `GET /svc/keycore/enterprise/dspm/events`
 - `POST /svc/keycore/enterprise/kdf/derive`
-- `POST /svc/keycore/enterprise/escrow/shamir/split`
 - `POST /svc/keycore/enterprise/audit-chain/anchors`
 - `POST /svc/keycore/enterprise/orchestration/runs`
 
@@ -76,7 +75,7 @@ Operators can answer:
 - which services depend on a key before rotation or suspension
 - which compromise events are open and whether keys were auto-suspended
 - which enterprise controls are open, risky, expired, or mapped into DSPM
-- which KDF, escrow, federation, edge, sharing, and threat-control actions have audit evidence
+- which KDF, federation, edge, sharing, and threat-control actions have audit evidence
 
 ### Evidence Surfaces
 

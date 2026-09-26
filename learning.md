@@ -5,6 +5,26 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### An escrow feature that stores records is not escrow
+- **What we found:** keycore's escrow workflow looked complete (guardians,
+  policies, recovery requests, M-of-N approvals), but "escrowing" a key
+  stored its ID and name, and an approved recovery released nothing.
+  Guardian votes also took `guardian_id` from the request body.
+- **How to spot it:** follow the key material, not the workflow. If no code
+  path touches the secret, the feature is a record-keeper, whatever the UI
+  says.
+- **Shamir recovery never fails loudly.** Combining fewer shares than the
+  threshold returns a wrong secret, not an error. Always check the result
+  against a stored fingerprint before use.
+- **A dropped table stays in the cluster catalogue.**
+  `TestEveryTableIsClassified` scans every `CREATE TABLE` in the
+  migrations, including ones a later migration drops (as with
+  `kdf_configs`). Replication publishes only tables that still exist.
+- **`generate:openapi` copies Swagger UI from `node_modules`.** A stale
+  local install (5.32.6 against the pinned 5.33.0) rewrites the committed
+  assets. Run `npm ci` or revert them; it isn't a spec change.
+
+
 ### Version every build, or you can't tell what's running
 - **What happened:** the owner deployed, saw no visible change, and reported
   the running KMS as old. It wasn't: the code was merged at 00:46 and the

@@ -88,17 +88,19 @@ type BackupKeyFile struct {
 	FileName      string `json:"file_name"`
 	ContentType   string `json:"content_type"`
 	ContentBase64 string `json:"content_base64"`
+	Guardian      string `json:"guardian,omitempty"`
+	ShareIndex    int    `json:"share_index,omitempty"`
 }
 
 // errBackupKeyNotRetained: the platform never kept this backup's key, so it
 // can't hand it out again (software mode; docs/SECURITY/BACKUP_KEYS.md).
 var errBackupKeyNotRetained = errors.New("the platform does not keep the key of this backup; it was returned once, when the backup was created")
 
-// CreateBackup captures and encrypts a backup. It returns the key file
-// once: for a software-mode backup this is the only copy of the key. A
-// refused backup is audited.
-func (s *Service) CreateBackup(ctx context.Context, in CreateBackupInput) (BackupJob, BackupKeyFile, error) {
-	job, keyFile, err := s.createBackup(ctx, in)
+// CreateBackup captures and encrypts a backup. It returns the key once: one
+// key file, or one share file per guardian for a split key. For a
+// software-mode backup these are the only copies. A refused backup is audited.
+func (s *Service) CreateBackup(ctx context.Context, in CreateBackupInput) (BackupJob, []BackupKeyFile, error) {
+	job, keyFiles, err := s.createBackup(ctx, in)
 	if err != nil {
 		_ = s.publishAudit(ctx, "audit.governance.backup_create_refused", strings.TrimSpace(in.TenantID), map[string]interface{}{
 			"scope":        strings.TrimSpace(in.Scope),
@@ -109,21 +111,21 @@ func (s *Service) CreateBackup(ctx context.Context, in CreateBackupInput) (Backu
 			"description":  "backup not created",
 		})
 	}
-	return job, keyFile, err
+	return job, keyFiles, err
 }
 
-func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (BackupJob, BackupKeyFile, error) {
+func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (BackupJob, []BackupKeyFile, error) {
 	store, ok := s.store.(*SQLStore)
 	if !ok || store == nil || store.db == nil || store.db.SQL() == nil {
-		return BackupJob{}, BackupKeyFile{}, errors.New("backup store is unavailable")
+		return BackupJob{}, nil, errors.New("backup store is unavailable")
 	}
 	in.TenantID = strings.TrimSpace(in.TenantID)
 	if in.TenantID == "" {
-		return BackupJob{}, BackupKeyFile{}, errors.New("tenant_id is required")
+		return BackupJob{}, nil, errors.New("tenant_id is required")
 	}
 	scope := normalizeBackupScope(in.Scope)
 	if scope == "" {
-		return BackupJob{}, BackupKeyFile{}, errors.New("scope must be system or tenant")
+		return BackupJob{}, nil, errors.New("scope must be system or tenant")
 	}
 	targetTenantID := strings.TrimSpace(in.TargetTenantID)
 	if scope == backupScopeTenant && targetTenantID == "" {
@@ -131,6 +133,10 @@ func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (Backu
 	}
 	if scope == backupScopeSystem {
 		targetTenantID = ""
+	}
+	guardians, err := validateBackupKeySplit(in.KeySplit)
+	if err != nil {
+		return BackupJob{}, nil, err
 	}
 	createdBy := strings.TrimSpace(in.CreatedBy)
 	if createdBy == "" {
@@ -143,14 +149,14 @@ func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (Backu
 
 	payload, rowCountTotal, tableCount, coverage, err := s.captureBackupPayload(ctx, store, in.TenantID, scope, targetTenantID)
 	if err != nil {
-		return BackupJob{}, BackupKeyFile{}, err
+		return BackupJob{}, nil, err
 	}
 	if len(payload) == 0 {
-		return BackupJob{}, BackupKeyFile{}, errors.New("backup payload is empty")
+		return BackupJob{}, nil, errors.New("backup payload is empty")
 	}
 	backupKey, err := randomBytes(32)
 	if err != nil {
-		return BackupJob{}, BackupKeyFile{}, err
+		return BackupJob{}, nil, err
 	}
 	aad, err := json.Marshal(map[string]interface{}{
 		"service":          "governance",
@@ -160,11 +166,11 @@ func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (Backu
 		"format":           backupFormatJSONGzAESGCM,
 	})
 	if err != nil {
-		return BackupJob{}, BackupKeyFile{}, err
+		return BackupJob{}, nil, err
 	}
 	ciphertext, nonce, err := encryptAESGCM(payload, backupKey, aad)
 	if err != nil {
-		return BackupJob{}, BackupKeyFile{}, err
+		return BackupJob{}, nil, err
 	}
 	hsmTenantID := in.TenantID
 	if scope == backupScopeTenant {
@@ -172,13 +178,27 @@ func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (Backu
 	}
 	binding := store.loadHSMBinding(ctx, hsmTenantID)
 	hsmBound := bindToHSM && binding.Enabled
+	if guardians != nil && hsmBound {
+		return BackupJob{}, nil, errors.New("key_split applies to software-mode backups; an HSM-bound backup key never leaves the HSM (set bind_to_hsm false to split)")
+	}
 	keyFilePackage, keyPackage, err := s.buildBackupKeyPackage(ctx, backupKey, hsmBound, binding, hsmTenantID, in.TenantID, targetTenantID, coverage)
 	if err != nil {
-		return BackupJob{}, BackupKeyFile{}, err
+		return BackupJob{}, nil, err
+	}
+	var shares [][]byte
+	if guardians != nil {
+		if shares, err = splitBackupKey(backupKey, in.KeySplit.Threshold, guardians, keyFilePackage, keyPackage); err != nil {
+			return BackupJob{}, nil, err
+		}
+		defer func() {
+			for _, sh := range shares {
+				pkgcrypto.Zeroize(sh)
+			}
+		}()
 	}
 	keyPackageRaw, err := json.Marshal(keyPackage)
 	if err != nil {
-		return BackupJob{}, BackupKeyFile{}, err
+		return BackupJob{}, nil, err
 	}
 	job := BackupJob{
 		ID:                    newID("bkp"),
@@ -205,12 +225,19 @@ func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (Backu
 		CreatedBy:             createdBy,
 		CompletedAt:           time.Now().UTC(),
 	}
-	keyFile, err := backupKeyFileFor(job, keyFilePackage)
+	var keyFiles []BackupKeyFile
+	if guardians != nil {
+		keyFiles, err = backupShareFiles(job, keyFilePackage, in.KeySplit.Threshold, guardians, shares)
+	} else {
+		var f BackupKeyFile
+		f, err = backupKeyFileFor(job, keyFilePackage)
+		keyFiles = []BackupKeyFile{f}
+	}
 	if err != nil {
-		return BackupJob{}, BackupKeyFile{}, err
+		return BackupJob{}, nil, err
 	}
 	if err := store.insertBackupJob(ctx, job); err != nil {
-		return BackupJob{}, BackupKeyFile{}, err
+		return BackupJob{}, nil, err
 	}
 	_ = s.publishAudit(ctx, "audit.governance.backup_created", in.TenantID, map[string]interface{}{
 		"backup_id":           job.ID,
@@ -223,8 +250,19 @@ func (s *Service) createBackup(ctx context.Context, in CreateBackupInput) (Backu
 		"row_count_total":     job.RowCountTotal,
 		"table_count":         job.TableCount,
 	})
+	if guardians != nil {
+		_ = s.publishAudit(ctx, "audit.governance.backup_key_split", in.TenantID, map[string]interface{}{
+			"backup_id":    job.ID,
+			"threshold":    in.KeySplit.Threshold,
+			"shares_total": len(guardians),
+			"guardians":    guardians,
+			"created_by":   createdBy,
+			"severity":     "high",
+			"description":  fmt.Sprintf("backup key split into %d guardian shares; any %d restore it", len(guardians), in.KeySplit.Threshold),
+		})
+	}
 	sanitizeBackupJobSummary(&job)
-	return job, keyFile, nil
+	return job, keyFiles, nil
 }
 
 // backupKeyFileFor renders a key package as the .key.json file restore
@@ -423,6 +461,7 @@ func (s *Service) RestoreBackup(ctx context.Context, in RestoreBackupInput) (Res
 		_ = s.publishAudit(ctx, "audit.governance.backup_restore_refused", strings.TrimSpace(in.TenantID), map[string]interface{}{
 			"artifact_file_name": strings.TrimSpace(in.ArtifactFileName),
 			"key_file_name":      strings.TrimSpace(in.KeyFileName),
+			"key_shares_given":   len(in.KeyShares),
 			"requested_by":       strings.TrimSpace(in.CreatedBy),
 			"reason":             err.Error(),
 			"result":             "refused",
@@ -447,20 +486,29 @@ func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (Res
 	if !hasApprovedBackupArtifactName(in.ArtifactFileName) {
 		return RestoreBackupResult{}, fmt.Errorf("artifact file must use %s extension", backupArtifactExtension)
 	}
-	if !hasApprovedBackupKeyName(in.KeyFileName) {
-		return RestoreBackupResult{}, fmt.Errorf("key file must use %s extension", backupKeyExtension)
-	}
 	artifactRaw, err := decodeBase64Payload(in.ArtifactContentBase)
 	if err != nil {
 		return RestoreBackupResult{}, fmt.Errorf("invalid backup artifact: %w", err)
 	}
-	keyRaw, err := decodeBase64Payload(in.KeyContentBase)
-	if err != nil {
-		return RestoreBackupResult{}, fmt.Errorf("invalid backup key package: %w", err)
-	}
 	var keyPackage map[string]interface{}
-	if err := json.Unmarshal(keyRaw, &keyPackage); err != nil {
-		return RestoreBackupResult{}, errors.New("backup key package is not valid JSON")
+	var backupKey []byte
+	var shareGuardians []string
+	if len(in.KeyShares) > 0 {
+		if backupKey, keyPackage, shareGuardians, err = combineBackupKeyShares(in.KeyShares); err != nil {
+			return RestoreBackupResult{}, err
+		}
+		defer pkgcrypto.Zeroize(backupKey)
+	} else {
+		if !hasApprovedBackupKeyName(in.KeyFileName) {
+			return RestoreBackupResult{}, fmt.Errorf("key file must use %s extension", backupKeyExtension)
+		}
+		keyRaw, err := decodeBase64Payload(in.KeyContentBase)
+		if err != nil {
+			return RestoreBackupResult{}, fmt.Errorf("invalid backup key package: %w", err)
+		}
+		if err := json.Unmarshal(keyRaw, &keyPackage); err != nil {
+			return RestoreBackupResult{}, errors.New("backup key package is not valid JSON")
+		}
 	}
 	var envelope backupArtifactEnvelope
 	var ciphertext []byte
@@ -496,9 +544,10 @@ func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (Res
 			TargetTenantID:  strings.TrimSpace(fmt.Sprintf("%v", keyPackage["target_tenant_id"])),
 		}
 	}
-	backupKey, err := s.resolveRestoreBackupKey(ctx, store, in.TenantID, keyPackage)
-	if err != nil {
-		return RestoreBackupResult{}, err
+	if backupKey == nil {
+		if backupKey, err = s.resolveRestoreBackupKey(ctx, store, in.TenantID, keyPackage); err != nil {
+			return RestoreBackupResult{}, err
+		}
 	}
 	scope := normalizeBackupScope(envelope.Scope)
 	if scope == "" {
@@ -597,6 +646,8 @@ func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (Res
 		"tables_skipped":   tablesSkipped,
 		"excluded_tables":  excludedTables,
 		"restored_by":      createdBy,
+		"key_source":       restoreKeySource(shareGuardians),
+		"share_guardians":  shareGuardians,
 	})
 	return RestoreBackupResult{
 		Scope:            snapshotScope,
@@ -625,6 +676,8 @@ func (s *Service) resolveRestoreBackupKey(ctx context.Context, store *SQLStore, 
 			return nil, errors.New("backup key size is invalid")
 		}
 		return key, nil
+	case backupKeyModeSplit:
+		return nil, errors.New("this key file is one guardian's share of a split backup key: restore with the threshold number of share files (key_shares)")
 	case "hsm_bound":
 		return s.unwrapHSMBoundKey(ctx, keyPackage)
 	default:
@@ -834,6 +887,9 @@ func sanitizeBackupJobSummary(job *BackupJob) {
 		}
 		if hsmBinding, ok := job.KeyPackage["hsm_binding"].(map[string]interface{}); ok {
 			summary["hsm_binding"] = hsmBinding
+		}
+		if split, ok := job.KeyPackage["key_split"]; ok {
+			summary["key_split"] = split
 		}
 		summary["key_retained"] = backupKeyRetained(job.KeyPackage)
 		job.KeyPackage = summary
@@ -1473,4 +1529,11 @@ func parseBackupLimit(raw string, fallback int) int {
 		return 200
 	}
 	return n
+}
+
+func restoreKeySource(shareGuardians []string) string {
+	if len(shareGuardians) > 0 {
+		return "guardian_shares"
+	}
+	return "key_file"
 }

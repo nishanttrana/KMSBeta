@@ -17,7 +17,7 @@ Implemented Tier 1 capabilities:
 | Key Health Scoring and Monitoring | Implemented | 0-100 health score, backup status, expiry/rotation warnings, recommendations |
 | Key Inventory and Dependency Mapping | Implemented | Key inventory sync, dependency records, orphaned key and duplicate KCV detection |
 
-Tier 2-4 items remain documented roadmap/foundation items. Existing platform foundations already cover parts of scheduling, escrow, Merkle audit, KDF, key verification, compliance, binding, edge agents, sharing, metadata, and threat protection.
+Tier 2-4 items remain documented roadmap/foundation items. Existing platform foundations already cover parts of scheduling, Merkle audit, KDF, key verification, compliance, binding, edge agents, sharing, metadata, and threat protection.
 
 ## Data Model
 
@@ -378,7 +378,7 @@ The second implementation pass turns the remaining roadmap items into backend ca
 
 Enterprise control records are the common persistence model for orchestration, federation, edge agents, sharing grants, metadata profiles, binding policies, threat signals, and advanced encryption mode governance.
 
-> **Preview:** federation, binding policies, sharing grants, metadata profiles, escrow tiers, edge agents/leases/receipts and advanced-encryption modes only **store** records. Nothing enforces or executes them. Their records carry `feature_status: "preview"`, and responses carry `X-Vecta-Feature-Status: preview`. See [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md).
+> **Preview:** federation, binding policies, sharing grants, metadata profiles, edge agents/leases/receipts and advanced-encryption modes only **store** records. Nothing enforces or executes them. Their records carry `feature_status: "preview"`, and responses carry `X-Vecta-Feature-Status: preview`. See [PREVIEW_FEATURES.md](PREVIEW_FEATURES.md).
 
 ```bash
 curl -X POST "$BASE/enterprise/federation/providers?tenant_id=$TENANT" \
@@ -409,7 +409,6 @@ Supported categories include:
 | `anomaly` | Statistical anomaly findings generated from health, compromise, inventory, hotspot, and benchmark signals. |
 | `orchestration_workflow` / `orchestration_run` | Cron/workflow metadata and executable batch rotation runs. |
 | `federation_provider`, `federation_mapping`, `federation_failover` | Multi-KMS registry, cross-KMS mappings, and failover evidence. |
-| `escrow_tier`, `escrow_shamir` | Tiered recovery metadata and Shamir split verification. |
 | `advanced_encryption` | Searchable token mode plus governed research-mode controls. |
 | `binding_policy` | Hardware attestation/geolocation binding policy records. |
 | `edge_agent`, `edge_lease`, `edge_receipt` | Edge/IoT agent, offline lease, and receipt records. |
@@ -514,30 +513,9 @@ Minimums:
 - Argon2id memory must be at least `19456` KiB and at most `262144` KiB.
 - Salt must decode to at least 16 bytes.
 
-### Shamir Escrow
+### Shamir Escrow (removed)
 
-Split a secret:
-
-```bash
-curl -X POST "$BASE/enterprise/escrow/shamir/split?tenant_id=$TENANT" \
-  -H "$AUTH" -H "Content-Type: application/json" \
-  -d '{
-    "secret_base64": "'"$(printf 'recoverable-secret-material-32' | base64)"'",
-    "threshold": 3,
-    "shares": 5,
-    "context": "break-glass-root-key"
-  }'
-```
-
-Verify a recovery quorum:
-
-```bash
-curl -X POST "$BASE/enterprise/escrow/shamir/verify?tenant_id=$TENANT" \
-  -H "$AUTH" -H "Content-Type: application/json" \
-  -d '{"split_id":"ss_example","shares":[...]}'
-```
-
-Only the split metadata and secret hash are persisted. Shares are returned once and must be stored by approved guardians outside KeyCore.
+The standalone Shamir split/verify endpoints and the escrow workflow were removed in 1.4.0-beta. To split recovery material among guardians, split a backup's key when creating the backup: [SECURITY/BACKUP_KEYS.md](SECURITY/BACKUP_KEYS.md).
 
 ### Audit Chain Anchoring
 
@@ -633,8 +611,6 @@ The implementation emits these KeyCore audit subjects:
 | `audit.key.anomaly_scan_completed` | Enterprise anomaly scan completed. |
 | `audit.key.dspm_finding_upserted` | KeyCore DSPM finding created or updated. |
 | `audit.key.kdf_derived` | Enterprise KDF operation completed without persisting secret material. |
-| `audit.key.escrow_shamir_split` | Shamir split generated and metadata persisted. |
-| `audit.key.escrow_shamir_verified` | Shamir share quorum verified. |
 | `audit.key.audit_chain_anchored` | Audit chain anchor persisted. |
 | `audit.key.material_fingerprint_verified` | KCV/fingerprint verification completed. |
 | `audit.key.searchable_token_generated` | Searchable HMAC token generated. |

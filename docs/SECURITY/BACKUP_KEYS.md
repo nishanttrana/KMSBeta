@@ -23,6 +23,38 @@ downloaded at any time. What happens to the backup key depends on the mode.
   copy of the database (dump, snapshot, replica) no longer opens its own
   backups.
 
+## Split key: M-of-N guardian shares (optional, software mode)
+
+A single key file makes whoever holds it a single point of failure: lose it
+and the backup is gone, keep it and that one person can restore every key.
+`key_split: {"threshold": M, "guardians": [...]}` on create removes both.
+
+- The backup key is split with Shamir secret sharing over GF(2^8)
+  (`pkg/crypto.SplitSecret`) into one share per named guardian (2–16
+  guardians, 2 ≤ M ≤ N). Polynomial coefficients come from the module DRBG;
+  field arithmetic doesn't branch on share bytes.
+- The create response returns `key_shares` (one `.key.json` per guardian,
+  with `guardian`, `share_index`, `share_b64`) **instead of** a key file.
+  No one receives the whole key, and the dashboard lists the shares once,
+  with a download per guardian.
+- The stored package holds `mode: "software_split"`, the key fingerprint,
+  the threshold and, per guardian, the share index and share fingerprint.
+  It never holds the key or a share.
+- Restore takes `key_shares`. It needs at least M share files from the same
+  backup, rebuilds the key (`pkg/crypto.CombineShares`) and refuses unless
+  it matches `backup_key_sha256`. Fewer than M shares, an altered share,
+  shares from different backups, or one share given as a key file are all
+  refused and audited (`backup_restore_refused`) before any data changes.
+- Audit: `audit.governance.backup_key_split` (threshold, guardians) at
+  create; `backup_restored` records `key_source: guardian_shares` and the
+  guardians whose shares were used.
+- A split key is never HSM-bound: asking for both on a tenant with an
+  enabled HSM is refused. An HSM-bound key never leaves the HSM, so it has
+  nothing to split.
+- FIPS: secret sharing is a split-knowledge procedure, not an encryption
+  algorithm, and no FIPS standard covers it. It is available in every mode
+  (see [FIPS.md](FIPS.md#whats-inside-the-validated-boundary-and-what-isnt)).
+
 ## HSM-bound mode
 
 Used when `bind_to_hsm` is true (the default) and the tenant has an enabled
@@ -90,4 +122,12 @@ If the service can't re-wrap them, the backup or restore is refused.
     the HSM;
   - `TestMigrationScrubsStoredBackupKeysPostgres` (013 and 014);
   - `TestBackupReprotectPostgres`, `TestBackupRestoreRoundTripPostgres`,
-    `TestBackupRestoreRefusesTamperingPostgres`.
+    `TestBackupRestoreRefusesTamperingPostgres`;
+  - `TestSplitBackupKeyRestorePostgres`: five guardian shares, nothing
+    stored, two shares or one share refused and audited with data
+    untouched, any three restore.
+- `TestSplitBackupKeyNeedsThresholdShares`,
+  `TestValidateBackupKeySplitRejectsBadSplits`; `pkg/crypto`:
+  `TestGFArithmetic`, `TestShamirAnyThresholdSubsetRecovers`,
+  `TestShamirBelowThresholdDoesNotRecover`, `TestShamirRejectsBadInput`
+  (all FIPS modes).

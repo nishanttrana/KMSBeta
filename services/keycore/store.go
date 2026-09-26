@@ -89,18 +89,6 @@ type Store interface {
 	CreateRewrapJob(ctx context.Context, job RewrapJob) (RewrapJob, error)
 	ListRewrapJobs(ctx context.Context, tenantID string) ([]RewrapJob, error)
 
-	// Key Escrow
-	ListEscrowGuardians(ctx context.Context, tenantID string) ([]EscrowGuardian, error)
-	AddEscrowGuardian(ctx context.Context, g EscrowGuardian) (EscrowGuardian, error)
-	ListEscrowPolicies(ctx context.Context, tenantID string) ([]EscrowPolicy, error)
-	CreateEscrowPolicy(ctx context.Context, p EscrowPolicy) (EscrowPolicy, error)
-	ListEscrowedKeys(ctx context.Context, tenantID string) ([]EscrowedKey, error)
-	AddEscrowedKey(ctx context.Context, ek EscrowedKey) (EscrowedKey, error)
-	ListRecoveryRequests(ctx context.Context, tenantID string) ([]RecoveryRequest, error)
-	CreateRecoveryRequest(ctx context.Context, rr RecoveryRequest) (RecoveryRequest, error)
-	GetRecoveryRequest(ctx context.Context, tenantID, id string) (RecoveryRequest, error)
-	UpdateRecoveryRequestStatus(ctx context.Context, tenantID, id, status string, approvals []RecoveryApproval) (RecoveryRequest, error)
-
 	// Crypto Agility
 	GetAlgorithmDistribution(ctx context.Context, tenantID string) ([]AlgorithmUsage, error)
 	ListKeysByAlgorithm(ctx context.Context, tenantID, algorithm string) ([]Key, error)

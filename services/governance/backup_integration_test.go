@@ -65,10 +65,11 @@ type backupFiles struct {
 // the key file, returned once at creation, and the artifact download.
 func takeBackup(t *testing.T, svc *Service, in CreateBackupInput) (BackupJob, backupFiles) {
 	t.Helper()
-	job, keyFile, err := svc.CreateBackup(context.Background(), in)
+	job, keyFiles, err := svc.CreateBackup(context.Background(), in)
 	if err != nil {
 		t.Fatal(err)
 	}
+	keyFile := keyFiles[0]
 	art, err := svc.GetBackupArtifactDownload(context.Background(), in.TenantID, job.ID)
 	if err != nil {
 		t.Fatalf("artifact download: %v", err)

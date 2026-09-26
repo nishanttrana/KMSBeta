@@ -39,7 +39,6 @@ import {
   ShieldCheck,
   Siren,
   VenetianMask,
-  Vault,
   Webhook,
   Zap,
   CreditCard,
@@ -106,7 +105,6 @@ const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m 
 const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
 const CTMonitorTab = lazy(() => import("./v3/tabs/CTMonitorTab").then(m => ({ default: m.CTMonitorTab })));
 const MTLSMeshTab = lazy(() => import("./v3/tabs/MTLSMeshTab").then(m => ({ default: m.MTLSMeshTab })));
-const EscrowTab = lazy(() => import("./v3/tabs/EscrowTab").then(m => ({ default: m.EscrowTab })));
 const EnvelopeEncTab = lazy(() => import("./v3/tabs/EnvelopeEncTab").then(m => ({ default: m.EnvelopeEncTab })));
 const DRDrillTab = lazy(() => import("./v3/tabs/DRDrillTab").then(m => ({ default: m.DRDrillTab })));
 const OpsMetricsTab = lazy(() => import("./v3/tabs/OpsMetricsTab").then(m => ({ default: m.OpsMetricsTab })));
@@ -218,7 +216,6 @@ const TABS: Record<string, any> = {
   webhooks: WebhooksTab,
   ct_monitor: CTMonitorTab,
   mtls_mesh: MTLSMeshTab,
-  escrow: EscrowTab,
   envelope_enc: EnvelopeEncTab,
   dr_drill: DRDrillTab,
   ops_metrics: OpsMetricsTab,
@@ -267,7 +264,6 @@ const TITLES: Record<string, string> = {
   webhooks: "Webhooks & SIEM",
   ct_monitor: "CT Log Monitor",
   mtls_mesh: "mTLS Mesh",
-  escrow: "Key Recovery & Escrow",
   envelope_enc: "Envelope Encryption",
   dr_drill: "DR Drill",
   ops_metrics: "Operations Metrics",
@@ -294,7 +290,6 @@ const NAV = [
   { g: "Keys & lifecycle", items: [
     { id: "keys", icon: KeyRound, label: "Key Management" },
     { id: "rotation", icon: CalendarClock, label: "Rotation & Scheduling" },
-    { id: "escrow", icon: Vault, label: "Key Recovery & Escrow" },
     { id: "envelope_enc", icon: Layers, label: "Envelope Encryption" },
     { id: "crypto_agility", icon: Gauge, label: "Crypto Agility" },
   ]},

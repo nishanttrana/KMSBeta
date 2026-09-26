@@ -62,7 +62,6 @@ export type FeatureKey =
   | "key_health_scoring"
   | "ml_anomaly_detection"
   | "key_scheduling"
-  | "key_recovery_escrow"
   | "kdf"
   | "key_verification"
   | "regulatory_compliance"

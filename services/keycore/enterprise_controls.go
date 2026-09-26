@@ -13,8 +13,6 @@ const (
 	controlCategoryFederationProvider    = "federation_provider"
 	controlCategoryFederationMapping     = "federation_mapping"
 	controlCategoryFederationFailover    = "federation_failover"
-	controlCategoryEscrowTier            = "escrow_tier"
-	controlCategoryEscrowShamir          = "escrow_shamir"
 	controlCategoryKDFDerivation         = "kdf_derivation"
 	controlCategoryVerification          = "verification"
 	controlCategoryAdvancedEncryption    = "advanced_encryption"
@@ -124,40 +122,6 @@ type KDFDeriveResponse struct {
 	ParameterSummary   string `json:"parameter_summary"`
 	SaltSHA256         string `json:"salt_sha256"`
 	SecretNotPersisted bool   `json:"secret_not_persisted"`
-}
-
-type ShamirSplitRequest struct {
-	TenantID     string `json:"tenant_id"`
-	SecretBase64 string `json:"secret_base64"`
-	Threshold    int    `json:"threshold"`
-	Shares       int    `json:"shares"`
-	Context      string `json:"context,omitempty"`
-}
-
-type ShamirShare struct {
-	Index       int    `json:"index"`
-	ShareBase64 string `json:"share_base64"`
-	ShareSHA256 string `json:"share_sha256"`
-}
-
-type ShamirSplitResponse struct {
-	SplitID            string        `json:"split_id"`
-	Threshold          int           `json:"threshold"`
-	Shares             []ShamirShare `json:"shares"`
-	SecretSHA256       string        `json:"secret_sha256"`
-	SharesReturnedOnce bool          `json:"shares_returned_once"`
-}
-
-type ShamirVerifyRequest struct {
-	TenantID string        `json:"tenant_id"`
-	SplitID  string        `json:"split_id"`
-	Shares   []ShamirShare `json:"shares"`
-}
-
-type ShamirVerifyResponse struct {
-	Valid        bool   `json:"valid"`
-	SecretSHA256 string `json:"secret_sha256,omitempty"`
-	Message      string `json:"message"`
 }
 
 type EnterpriseComplianceDashboard struct {

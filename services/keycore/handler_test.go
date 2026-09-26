@@ -151,7 +151,7 @@ func TestCompromiseEventAutoSuspendsKey(t *testing.T) {
 	}
 }
 
-func TestEnterpriseKDFAndShamir(t *testing.T) {
+func TestEnterpriseKDF(t *testing.T) {
 	_, svc := newHandlerForTest(t)
 	secret := base64.StdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef"))
 	salt := base64.StdEncoding.EncodeToString([]byte("salt-salt-salt-123"))
@@ -163,25 +163,6 @@ func TestEnterpriseKDFAndShamir(t *testing.T) {
 	}
 	if kdf.Length != 32 || strings.TrimSpace(kdf.DerivedKeyBase64) == "" || !kdf.SecretNotPersisted {
 		t.Fatalf("unexpected kdf response: %+v", kdf)
-	}
-
-	split, err := svc.SplitShamirSecret(context.Background(), ShamirSplitRequest{
-		TenantID: "t1", SecretBase64: secret, Threshold: 3, Shares: 5,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(split.Shares) != 5 || split.Threshold != 3 {
-		t.Fatalf("unexpected split: %+v", split)
-	}
-	verify, err := svc.VerifyShamirSecret(context.Background(), ShamirVerifyRequest{
-		TenantID: "t1", SplitID: split.SplitID, Shares: split.Shares[:3],
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !verify.Valid || verify.SecretSHA256 != split.SecretSHA256 {
-		t.Fatalf("unexpected verify response: %+v split=%+v", verify, split)
 	}
 }
 

@@ -108,7 +108,7 @@ A well-designed PKI follows a trust chain where each level signs the level below
 The root CA is the trust anchor. Once it has signed the intermediate CA certificates, it has no ongoing operational role. The following practices apply:
 
 - **Generate and use on an air-gapped workstation.** Many organizations use a dedicated laptop that has never been connected to a network, or a hardware token (YubiKey HSM, Thales Luna Network HSM).
-- **Key escrow.** Split the root CA private key using Shamir's Secret Sharing (e.g., 3-of-5 shares held by different executives). Vecta's HSM integration supports this natively.
+- **Key escrow.** Keep the root CA private key recoverable under split control: use your HSM vendor's M-of-N key backup (for example Luna backup HSMs with M-of-N PEDs, or an nShield Security World with a K-of-N card set). Vecta's own backups can split their key among guardians (System Administration > Backups).
 - **Ceremony logging.** Every time the root CA is brought online, record: who was present, what operations were performed, what certificates were signed, and when it was taken offline. Store this log offline alongside the key.
 - **Revoke path.** Even though the root CA is offline, it must have a CRL distribution point that can be served statically (a simple HTTP server or S3 bucket is sufficient). The root CA CRL changes very rarely — only if an intermediate CA is compromised.
 
