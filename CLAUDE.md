@@ -111,6 +111,11 @@ an approach, record it here or in the matching doc below.
   macOS's bash 3.2 unless they explicitly re-exec under bash 4+.
 - Don't use `git stash` as a scratch tool in a dirty working tree. Use a
   throwaway `git worktree` instead.
+- **Work on `main` only** (owner directive, 2026-09-26: "just have main and
+  no branch"). Commit and push straight to `main` after the checks in
+  "Before calling a change done" pass. Don't create feature branches or
+  pull requests unless the owner asks. Before pushing, fetch and
+  integrate `origin/main`, then re-run the checks on the combined tree.
 - Every new database table is classified for clustering in
   `pkg/clustercatalog/tables.go`: replicated under its component, node-local
   with a reason, or shared-append. Tables written during crypto operations

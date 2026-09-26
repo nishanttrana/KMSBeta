@@ -41,6 +41,8 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   "HSM-backed" before were stored as `keycore` and keep working as the
   software keys they always were; the CA list now labels them "Software key,
   keycore co-signed".
+- **Tests:** the audit `action_prefix` filter is also proven on Postgres
+  (`TestQueryEventsByActionPrefixPostgres`, now in CI `integration-postgres`).
 - **No fake CRLs.** When CRL signing failed, certs published a JSON note
   wrapped in `X509 CRL` PEM headers. It now fails and emits
   `audit.cert.crl_generation_failed`.

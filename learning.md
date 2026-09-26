@@ -5,6 +5,14 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### Check compose with the profiles installers actually use
+`docker compose config` with no profiles fails ("envoy depends on undefined
+service certs"). This isn't a bug: `certs` sits behind a profile, and
+`install.sh` always enables it through `infra/scripts/parse-deployment.sh`.
+Validate with `COMPOSE_PROFILES=$(bash infra/scripts/parse-deployment.sh
+infra/deployment/deployment.yaml)`, once with `hsm_mode: software` and once
+with `hsm_mode: hardware`.
+
 ### A backend name is not a backend
 certs accepted `key_backend: "hsm"` and the dashboard showed "HSM-backed",
 but `normalizeKeyBackend` folded "hsm" into "keycore", which generated a

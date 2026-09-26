@@ -99,7 +99,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends softhsm2
 
       - name: Integration tests (run serially; they share the database)
-        run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/governance ./services/signing ./services/backup ./services/secrets ./services/keycore ./pkg/mek
+        run: go test -count=1 -p 1 -run 'Postgres|Preview|Simulated' ./services/governance ./services/signing ./services/backup ./services/secrets ./services/keycore ./services/audit ./pkg/mek
 
   dashboard-quality:
     name: Dashboard Lint/Type/Unit/Build/Smoke
