@@ -21,6 +21,185 @@ Newest entries on top.
   only re-runs the Vite build and never serves an old bundle under a new
   version.
 
+### Check compose with the profiles installers actually use
+`docker compose config` with no profiles fails ("envoy depends on undefined
+service certs"). This isn't a bug: `certs` sits behind a profile, and
+`install.sh` always enables it through `infra/scripts/parse-deployment.sh`.
+Validate with `COMPOSE_PROFILES=$(bash infra/scripts/parse-deployment.sh
+infra/deployment/deployment.yaml)`, once with `hsm_mode: software` and once
+with `hsm_mode: hardware`.
+
+### A backend name is not a backend
+certs accepted `key_backend: "hsm"` and the dashboard showed "HSM-backed",
+but `normalizeKeyBackend` folded "hsm" into "keycore", which generated a
+software key like every other CA. When a CRL failed to sign, certs wrapped a
+JSON note in `X509 CRL` PEM headers and published it. Both looked like
+working features. Grep a feature's name down to the call that does the work
+before trusting a label, and a failure path must fail, not produce something
+shaped like success.
+
+### Don't query the store inside a crypto transaction
+Keycore's HSM failure handler looked the key up again (`GetKey`) to name
+its device in the error. It ran inside `runCryptoTx`, which holds the
+connection; with SQLite's single connection the test hung forever (on
+Postgres it would take a second connection per failing request). Use the
+`Key` the callback already has.
+
+### `_` is a wildcard in LIKE
+The audit `action_prefix` filter matches `audit.key.hsm_`. Unescaped,
+`_` matches any character, so `audit.key.hsmX...` would match too. Escape
+`\`, `%` and `_` and say `ESCAPE '\'` (Postgres and SQLite both honour it).
+
+### Proving a key was generated in the HSM
+The HSM itself says so: `CKA_LOCAL` is true only for keys generated on the
+token, and `CKA_NEVER_EXTRACTABLE`/`CKA_ALWAYS_SENSITIVE` show it never left
+in the clear. Read attributes one at a time: `C_GetAttributeValue` returns
+an error for the whole call when one attribute is invalid for the object or
+sensitive, and miekg/pkcs11 then returns none of them. Never ask for
+`CKA_VALUE`.
+
+### A settings page is not an integration
+The HSM tab let a tenant upload a PKCS#11 library, pick a slot and save a
+profile. That looked like HSM support, but no code ever opened the library.
+The compose entry for `hsm-connector` pointed at an image with no build.
+"HSM-bound" backups derived a key from an environment secret and only mixed
+the HSM's slot name into it. The menu even offered a "Vecta KMS HSM" that
+doesn't exist. The test for a security integration is whether one call goes
+through the vendor's library. Running the real protocol in tests (SoftHSM2
+is a real PKCS#11 implementation) is what makes that visible. A few traps
+from building it:
+- Vendor libraries are glibc builds, so they can't load into an Alpine or
+  static binary. That's why the connector is a separate cgo service.
+- A PKCS#11 token logs out when its last session closes, so keep one anchor
+  session per slot.
+- Vendors report a GCM tag failure differently: SoftHSM2 says
+  `CKR_GENERAL_ERROR`.
+- A distro's library path can be a symlink that leaves the allowed
+  directory, so resolve before you confine.
+
+### An optional verifier is an open door, and a missing env var is enough to open it
+Governance treated a missing JWT key as "auth disabled" and let every
+system-administration call through. It also read the key from variable
+names no deployment set: compose provides `JWT_PUBLIC_KEY_B64`, and
+governance looked for `GOVERNANCE_*`, `KEYCORE_*` or a file. So the fallback
+wasn't an edge case. It was how every compose deployment ran, and backups,
+restore and the FIPS switch were open to anyone who could reach the port.
+Two lessons:
+- Load keys through the shared loader (`pkg/jwtauth`), so every service
+  reads the same variable names.
+- Fail closed at startup, as `jwtauth.MustWrap` does.
+
+Closing the door then showed who had been walking through it. keycore and
+policy read the system state, and posture wrote posture controls, all
+without tokens. keycore and policy had also asked for per-tenant state,
+which governance only serves for root, so for every non-root tenant they
+had silently got 403s. So before closing an unauthenticated path, list its
+callers (same lesson as keycore's anonymous key use).
+
+### A key stored next to what it protects is not protection
+Governance "encrypted" software-mode backups and kept the key in the same
+row. The key package even said "store this separately from the artifact",
+and then the platform didn't. Encryption at rest only counts when the key
+lives somewhere the ciphertext's reader can't reach. Here that means the
+operator's saved key file, or a wrap secret outside the database. It
+compounded the master-key issue: the "re-protect stored backups" job only
+worked because the keys were there to read. Once the keys stopped being
+stored, that job had nothing to open, and the simpler fix was to re-wrap at
+capture. Separately, "key_derivation: v1" was a raw SHA-256 of
+`secret|fingerprint|tenants`, and restore tried three input variants.
+Candidate-guessing across derivations is a sign the format was never pinned.
+Version the package and accept exactly one derivation.
+
+### "Backward compatible" anonymous access hides the callers that depend on it
+Keycore let a request with no token use any key that had no grants. The
+branch was labelled backward-compatible, and nobody knew what depended on it.
+Auditing every keycore caller found two: compliance playbooks (no token on
+internal calls) and the reconciler (only the shared internal token, and no
+tenant, so keycore was already rejecting its lifecycle calls, and scheduled
+rotation had silently never worked). So before closing an anonymous path,
+list its callers and give each a real identity. The audit also shows which
+features were quietly broken. And fail closed at startup when the verifier
+is missing: keycore used to start without its JWT key and then treat
+everyone as anonymous.
+
+### "Fall back to the header" is "let the caller choose"
+keycore built its actor from the verified token, then filled any empty field
+from `X-Actor-*` headers, presumably so a trusted proxy could pass a user on.
+No proxy ever did. The service-principal flag had already been fixed to
+ignore the headers, but role, permissions, groups and user ID hadn't. So a
+token with no permissions could send `X-Actor-Permissions: *` and be an
+admin. The lesson generalises: a fallback for a *security* field is an
+override for whoever controls the fallback's source. Identity fields have
+one source, the verified token; everything else is audit context, kept in a
+separate struct no policy reads, so a future edit can't quietly start
+trusting it again.
+
+### A default that nobody overrides is the only value in production
+Four services had a "dev" master-key fallback that logged "not for
+production". Nothing ever set the real variable (compose never even passed
+it into the containers), so every production deployment ran on public keys.
+What we learned fixing it:
+- **Check what a value is derived from, not how it's spelled.** The
+  secure-defaults check looked for `("VAR", "default")` pairs; the fallback
+  was `Hash([]byte("…-dev-mek"))`.
+- **An environment-variable key is the wrong fix for data at rest.** The
+  first attempt (a required env key) broke plain `compose up`, needed manual
+  copying to cluster members, and turned every backup and rotation step into
+  a way to lose data. Deriving from keycore needs no configuration, and
+  members get it through the join.
+- **Re-wrapping doesn't reach copies made before.** Dumps, snapshots and
+  downloaded backups still open with the public key. Only replacing the
+  material helps there, so the fix has to track which items were exposed
+  (the exposure register) and close each entry when it's rotated.
+- **Look where else the old data lives.** Governance stores backups, and for
+  software-mode backups their keys, in the same database, so the live
+  database kept exposing old values until those were re-protected too.
+- **A 403 isn't a 401.** Once routes enforce permissions, a dashboard that
+  signs users out on 403 logs out anyone who opens a page they can't use.
+
+### A rule every handler must remember is a rule some handler forgets
+`services/secrets` had a `mustTenant` helper that checked the request tenant
+against the token, and most routes called it. `POST /secrets` didn't: it read
+`tenant_id` from the body, which `mustTenant` never looks at, so any tenant
+could create secrets in another. The same pattern was copied 22 times across
+services, with about 960 routes each choosing whether to check the tenant,
+the permission and the audit. Code review can't hold that many conventions.
+The fix is structural: `pkg/route` makes the rule part of registering a
+route, and a conformance rule stops new code from registering routes any
+other way. The same applies to any cross-cutting rule. If it has to be
+remembered, put it in the kernel. Also check the body, because that's where
+the dashboard puts the tenant on writes.
+
+### "Flaky" test was a 2% product bug: never trim binary data
+`TestImportKeyPEMAutodetect` failed about once in 40 runs, and it was written
+off as flaky. The cause was `bytes.TrimSpace` on DER. Random key bytes end in
+one of the six ASCII whitespace values about 2.3% of the time, and that
+trailing byte was cut. Trim text (a PEM envelope, a pasted string), never the
+bytes it decodes to. An intermittent crypto-test failure with random keys
+points at data-dependent handling, so find the input that triggers it instead
+of re-running.
+
+### A member's write to a replicated table can stop replication, not just diverge
+With logical replication, a subscriber's local row isn't protected. A member
+that inserts a row the primary later inserts too (for example dataprotect's
+lazy "first sight" `dataprotect_key_kdf` row) hits a unique-key conflict in the
+apply worker. That component's replication then stops until someone fixes it
+by hand. A member that updates a row (a counter) makes the row differ, and
+with `REPLICA IDENTITY FULL` the primary's next update to it is skipped.
+
+So the rule is broader than "crypto-path tables are node-local". Anything a
+member does without a user request counts too: schedulers, sweeps,
+reconcilers, and lazy "record on first use" inserts. The fix pattern is
+`clusterstate.RunsPrimaryJobs(ctx)` or `IsMember()`, plus a test that runs the
+path as a member (`clusterstate.Static`) and proves no replicated row was
+written.
+
+### Forward by default, not by allowlist
+The first draft listed the writes to forward, and every endpoint added later
+would have written locally on members. Inverting it, so every write is
+forwarded except a short `Local` list checked against real routes, makes the
+safe behaviour the default.
+
 ## 2026-09-25
 
 ### Four things the first real two-node join taught

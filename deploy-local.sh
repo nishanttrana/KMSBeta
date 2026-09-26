@@ -81,7 +81,6 @@ cp "${ENV_FILE}" "${ENV_FILE}.bak.deploy.$(date +%s)"
 ensure_secret POSTGRES_PASSWORD "$(openssl rand -hex 24)"
 ensure_secret NATS_AUTH_TOKEN "$(openssl rand -hex 24)"
 ensure_secret WORKLOAD_IDENTITY_SHARED_SECRET
-ensure_secret SOFTWARE_VAULT_PASSPHRASE
 ensure_secret INTERNAL_SERVICE_BOOTSTRAP_SECRET
 ensure_secret INTERNAL_API_TOKEN
 if [[ -z "${fips_mode}" ]]; then

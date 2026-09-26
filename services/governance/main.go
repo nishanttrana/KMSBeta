@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"encoding/base64"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -21,18 +21,24 @@ import (
 	pkgaudit "vecta-kms/pkg/audit"
 	pkgauditmw "vecta-kms/pkg/auditmw"
 	pkgauth "vecta-kms/pkg/auth"
+	"vecta-kms/pkg/clusterstate"
 	pkgconfig "vecta-kms/pkg/config"
 	pkgconsul "vecta-kms/pkg/consul"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
+	"vecta-kms/pkg/jwtauth"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	"vecta-kms/pkg/servicetoken"
 )
 
 var logger = log.New(os.Stdout, "[governance] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
+	// Governance calls the secrets, certs, cloud and ekm services as itself
+	// to re-wrap backup contents under retired public keys (backup_mek.go).
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-governance"))
 	cfg := pkgconfig.Load()
 
 	if err := pkgruntimecfg.ValidateServiceConfig("kms-governance", cfg); err != nil {
@@ -85,12 +91,15 @@ func main() {
 		WithSNMPPublisher(snmpPublisher),
 	)
 	handler := NewHandler(svc)
-	if tokenParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience); err != nil {
-		logger.Printf("jwt parser disabled: %v", err)
-	} else if tokenParser != nil {
-		handler.SetTokenParser(tokenParser)
-		logger.Printf("jwt parser enabled for system-admin governance endpoints")
+
+	// System administration (backups, restore, FIPS mode) is decided from the
+	// verified token, so governance can't run without the key that verifies
+	// tokens (fail closed, like keycore and jwtauth.MustWrap).
+	tokenParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience)
+	if err != nil {
+		logger.Fatalf("refusing to start: %v", err)
 	}
+	handler.SetTokenParser(tokenParser)
 
 	go func() {
 		for {
@@ -109,7 +118,9 @@ func main() {
 				timer.Stop()
 				return
 			case <-timer.C:
-				_ = svc.ExpireWorkerTick(ctx)
+				if clusterstate.RunsPrimaryJobs(ctx) {
+					_ = svc.ExpireWorkerTick(ctx)
+				}
 			}
 		}
 	}()
@@ -204,45 +215,30 @@ func devMTLSConfig() (*tls.Config, error) {
 	return pkgcrypto.SelfSignedMTLSConfig("kms-governance-local")
 }
 
+// loadJWTParser returns the token parser, or an error when no verification
+// key is configured. Sources, in order: GOVERNANCE_JWT_PUBLIC_KEY_PEM/_B64,
+// the shared JWT_PUBLIC_KEY_PEM/_B64 (what compose sets), the
+// KEYCORE_JWT_PUBLIC_KEY_* variables governance read before, then the file
+// at JWT_PUBLIC_KEY_PATH (default certs/jwt_public.pem).
 func loadJWTParser(issuer string, audience string) (func(string) (*pkgauth.Claims, error), error) {
-	pubPEM := strings.TrimSpace(os.Getenv("GOVERNANCE_JWT_PUBLIC_KEY_PEM"))
-	if pubPEM == "" {
-		if b64 := strings.TrimSpace(os.Getenv("GOVERNANCE_JWT_PUBLIC_KEY_B64")); b64 != "" {
-			raw, err := base64.StdEncoding.DecodeString(b64)
-			if err != nil {
-				return nil, err
-			}
-			pubPEM = string(raw)
-		}
-	}
-	if pubPEM == "" {
-		pubPEM = strings.TrimSpace(os.Getenv("KEYCORE_JWT_PUBLIC_KEY_PEM"))
-	}
-	if pubPEM == "" {
-		if b64 := strings.TrimSpace(os.Getenv("KEYCORE_JWT_PUBLIC_KEY_B64")); b64 != "" {
-			raw, err := base64.StdEncoding.DecodeString(b64)
-			if err != nil {
-				return nil, err
-			}
-			pubPEM = string(raw)
-		}
-	}
-	if pubPEM == "" {
-		path := strings.TrimSpace(os.Getenv("JWT_PUBLIC_KEY_PATH"))
-		if path == "" {
-			path = "certs/jwt_public.pem"
-		}
-		raw, err := os.ReadFile(path)
+	for _, prefix := range []string{"GOVERNANCE", "KEYCORE"} {
+		parser, err := jwtauth.LoadParser(jwtauth.Config{Prefix: prefix, Issuer: issuer, Audience: audience})
 		if err != nil {
-			if os.IsNotExist(err) {
-				return nil, nil
-			}
-			return nil, err
+			return nil, fmt.Errorf("jwt public key: %w", err)
 		}
-		pubPEM = string(raw)
+		if parser != nil {
+			return parser, nil
+		}
 	}
-	pubPEM = strings.ReplaceAll(pubPEM, `\n`, "\n")
-	pub, err := pkgcrypto.ParseRSAPublicKeyPEM(pubPEM)
+	path := envOr("JWT_PUBLIC_KEY_PATH", "certs/jwt_public.pem")
+	raw, err := os.ReadFile(path)
+	if os.IsNotExist(err) {
+		return nil, errors.New("no JWT verification key: set JWT_PUBLIC_KEY_B64 (or GOVERNANCE_JWT_PUBLIC_KEY_PEM/_B64); system administration is decided from verified tokens")
+	}
+	if err != nil {
+		return nil, err
+	}
+	pub, err := pkgcrypto.ParseRSAPublicKeyPEM(strings.ReplaceAll(string(raw), `\n`, "\n"))
 	if err != nil {
 		return nil, errors.New("unable to parse RSA JWT public key")
 	}

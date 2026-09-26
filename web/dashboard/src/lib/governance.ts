@@ -224,8 +224,8 @@ export async function createGovernanceBackup(
     bind_to_hsm?: boolean;
     created_by?: string;
   }
-): Promise<GovernanceBackupJob> {
-  const out = await serviceRequest<{ job: GovernanceBackupJob }>(session, "governance", "/governance/backups", {
+): Promise<{ job: GovernanceBackupJob; key_file: GovernanceBackupKeyFile }> {
+  const out = await serviceRequest<{ job: GovernanceBackupJob; key_file: GovernanceBackupKeyFile }>(session, "governance", "/governance/backups", {
     method: "POST",
     body: JSON.stringify({
       tenant_id: session.tenantId,
@@ -235,7 +235,17 @@ export async function createGovernanceBackup(
       created_by: String(input.created_by || "").trim()
     })
   });
-  return out.job;
+  return { job: out.job, key_file: out.key_file };
+}
+
+// The key file of a backup. It is returned once, when the backup is created:
+// for a software-mode backup it is the only copy of the key.
+export type GovernanceBackupKeyFile = { file_name: string; content_type: string; content_base64: string };
+
+// Whether the platform can hand out this backup's key file again (an
+// HSM-bound backup). A software-mode key is never stored.
+export function governanceBackupKeyRetained(job: GovernanceBackupJob): boolean {
+  return job?.key_package?.key_retained === true;
 }
 
 export async function listGovernanceBackups(
@@ -266,8 +276,8 @@ export async function downloadGovernanceBackupArtifact(
 export async function downloadGovernanceBackupKey(
   session: AuthSession,
   backupID: string
-): Promise<{ file_name: string; content_type: string; content_base64: string; key_package?: Record<string, unknown> }> {
-  const out = await serviceRequest<{ artifact: { file_name: string; content_type: string; content_base64: string; key_package?: Record<string, unknown> } }>(
+): Promise<GovernanceBackupKeyFile> {
+  const out = await serviceRequest<{ artifact: GovernanceBackupKeyFile }>(
     session,
     "governance",
     `/governance/backups/${encodeURIComponent(String(backupID || "").trim())}/key?tenant_id=${encodeURIComponent(session.tenantId)}`

@@ -95,6 +95,34 @@ func DecryptEnvelope(mek []byte, env *EnvelopeCiphertext) ([]byte, error) {
 	return OpenDetached(dek, envelopeNonce(env.DataIV), env.Ciphertext, nil)
 }
 
+// EnvelopeWrappedUnder reports whether env's DEK is wrapped under mek. The
+// wrap is AES-GCM, so only the right key authenticates it.
+func EnvelopeWrappedUnder(mek []byte, env *EnvelopeCiphertext) bool {
+	dek, err := OpenDetached(mek, envelopeNonce(env.WrappedDEKIV), env.WrappedDEK, nil)
+	Zeroize(dek)
+	return err == nil
+}
+
+// RewrapEnvelope moves env's DEK from oldMEK to newMEK under a fresh
+// module-generated IV. The data ciphertext and its IV are unchanged.
+func RewrapEnvelope(oldMEK, newMEK []byte, env *EnvelopeCiphertext) (*EnvelopeCiphertext, error) {
+	dek, err := OpenDetached(oldMEK, envelopeNonce(env.WrappedDEKIV), env.WrappedDEK, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer Zeroize(dek)
+	wrappedIV, wrappedDEK, err := SealDetached(newMEK, dek, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &EnvelopeCiphertext{
+		WrappedDEK:   wrappedDEK,
+		WrappedDEKIV: storedEnvelopeIV(wrappedIV),
+		Ciphertext:   env.Ciphertext,
+		DataIV:       env.DataIV,
+	}, nil
+}
+
 // minHMACKeyBytes is the 112-bit HMAC key floor of SP 800-131A.
 const minHMACKeyBytes = 14
 

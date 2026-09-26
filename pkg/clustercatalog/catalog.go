@@ -33,6 +33,37 @@ var RowFilters = map[string]string{
 	"auth_api_keys":             "NOT node_local",
 }
 
+// SharedChainColumn is the column of every shared-append table naming the
+// node that wrote the row ("" for rows from before the node was clustered,
+// which never replicate). Shared-append rows are insert-only and replicate
+// between all nodes through the primary (docs/CLUSTERING.md, slice 3b).
+const SharedChainColumn = "chain_node"
+
+// SharedTables returns the shared-append tables, sorted.
+func SharedTables() []string {
+	out := make([]string, 0, len(SharedAppend))
+	for t := range SharedAppend {
+		out = append(out, t)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// SharedOutPublication carries this node's own shared-append rows.
+const SharedOutPublication = "vecta_pub_shared_out"
+
+// SharedRelayPublication is the primary's publication for one member: every
+// node's shared-append rows except that member's own.
+func SharedRelayPublication(member string) string {
+	return "vecta_pub_shared_for_" + Ident(member)
+}
+
+// SharedFromMemberSubscription is the primary's subscription to a member's
+// own shared-append rows.
+func SharedFromMemberSubscription(member string) string {
+	return "vecta_shared_from_" + Ident(member)
+}
+
 // Components returns every component that owns replicated tables, sorted.
 func Components() []string {
 	out := make([]string, 0, len(Replicated))
@@ -44,8 +75,8 @@ func Components() []string {
 }
 
 // WithCore returns components plus the core components, de-duplicated and
-// sorted. Profiles may name components that own no tables (features that moved
-// to the KMS Extension); they are kept and simply replicate nothing.
+// sorted. Profiles may name components that own no tables (features that were
+// removed from the core); they are kept and simply replicate nothing.
 func WithCore(components []string) []string {
 	set := map[string]bool{}
 	for _, c := range append(append([]string{}, Core...), components...) {

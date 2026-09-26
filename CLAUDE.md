@@ -29,6 +29,20 @@ an approach, record it here or in the matching doc below.
      case.
    - New subjects are listed in `docs/API_REFERENCE.md` (Audit Action Subject
      Reference).
+   - **Routes get this by construction** (owner directive, 2026-09-26:
+     "anything that's added to platform should have audit activity as per
+     the rules we have created", without being prompted each time). Every
+     HTTP route is registered through `pkg/route` with a `route.Spec`
+     (action, permission, resource). The kernel authenticates, enforces the
+     tenant and permission, and emits the specific event, refusals included.
+     Handlers add details with `c.Detail` / `c.Target` and use `c.Refuse` for
+     their own refusals. They never read a tenant themselves, and the service
+     layer doesn't emit request audit. `routetest.RefusalsAudited` is the
+     per-service test. A raw `http.ServeMux` fails `make conformance`
+     (`scripts/route-kernel-burndown.txt` only shrinks). To add a route to a
+     service still on the list, register it on a `route.Router` and mount it
+     on the legacy mux with `Router.MountOn`, or migrate the handler file
+     ([docs/ARCHITECTURE_MIGRATION.md](docs/ARCHITECTURE_MIGRATION.md)).
 3. **Secure defaults** ([docs/SECURITY/SECURE_DEFAULTS.md](docs/SECURITY/SECURE_DEFAULTS.md)):
    - No secret falls back to a value in the repo. Require it (`${VAR:?}`) or
      generate it at random.
@@ -58,6 +72,9 @@ an approach, record it here or in the matching doc below.
 6. **Keys are derived from secret material, never from identifiers.** A
    service that needs a working key gets it from keycore
    (`POST /keys/{id}/service-derive`, bound to the verified service identity).
+   A service's master key for data at rest comes from `pkg/mek` (a protected
+   keycore system key), never from an environment variable or a fallback
+   ([docs/SECURITY/SERVICE_MASTER_KEYS.md](docs/SECURITY/SERVICE_MASTER_KEYS.md)).
    A KCV, key ID or other metadata is never key material. Changing how
    existing data is keyed needs a per-key migration, never a silent switch
    ([docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md](docs/SECURITY/DATAPROTECT_KEY_DERIVATION.md)).
@@ -94,10 +111,21 @@ an approach, record it here or in the matching doc below.
   macOS's bash 3.2 unless they explicitly re-exec under bash 4+.
 - Don't use `git stash` as a scratch tool in a dirty working tree. Use a
   throwaway `git worktree` instead.
+- **Work on `main` only** (owner directive, 2026-09-26: "just have main and
+  no branch"). Commit and push straight to `main` after the checks in
+  "Before calling a change done" pass. Don't create feature branches or
+  pull requests unless the owner asks. Before pushing, fetch and
+  integrate `origin/main`, then re-run the checks on the combined tree.
 - Every new database table is classified for clustering in
   `pkg/clustercatalog/tables.go`: replicated under its component, node-local
   with a reason, or shared-append. Tables written during crypto operations
   are node-local. `TestEveryTableIsClassified` enforces this
+  (docs/CLUSTERING.md).
+- Cluster members never write replicated tables. A new write endpoint is
+  forwarded to the primary by default; add it to `pkg/clusterroute.Local`
+  only if it writes nothing replicated. A background job (scheduler, sweep,
+  reconciler, lazy first-use insert) that writes replicated state checks
+  `clusterstate.RunsPrimaryJobs(ctx)` / `IsMember()`, with a member-mode test
   (docs/CLUSTERING.md).
 - An internal endpoint that moves secrets or grants cluster access must
   restrict its caller: a specific service identity or a root administrator,
@@ -108,8 +136,19 @@ an approach, record it here or in the matching doc below.
   to CHANGELOG.md in the same change. The dashboard's ⓘ button (next to the
   header clock) shows the version, commit and build time.
   `scripts/check-docs.sh` enforces this.
-- Features cut from the core move to the sibling `KMSExtension` repo (REST
-  integration via `pkg/kmsclient`, no key material there). Don't delete them.
+- **All work happens in KMSBeta** (owner directive, 2026-09-26: "all the
+  work have to be done on KMS beta only"; "stop touching KMSExtension").
+  Never commit to the `KMSExtension` repo. A feature cut from the core is
+  simply removed; it stays recoverable from KMSBeta's git history. Name the
+  removing commit in CHANGELOG.md so it can be found.
+- **HSMs are real integrations only** (owner directive, 2026-09-26: "there is
+  no vecta HSM", "it has to be actual integration no fake"). Every HSM
+  goes through the customer's own PKCS#11 library in `hsm-connector`
+  ([docs/SECURITY/HSM_INTEGRATION.md](docs/SECURITY/HSM_INTEGRATION.md)).
+  Nothing may present itself as an HSM, whether a "Vecta HSM" or a software
+  vault. A vendor listed in the UI must work through that same path. HSM
+  tests run against a real PKCS#11 library (SoftHSM2), never a mock of the
+  HSM API.
 
 ## Documentation is part of done
 
@@ -132,8 +171,9 @@ changes code without touching CHANGELOG.md or learning.md.
 
 ## Before calling a change done
 
-- `make conformance` passes. It enforces rules 1–3 and 5, and that every
-  shell script parses under macOS bash 3.2.
+- `make conformance` passes. It enforces rules 1–3 and 5, that routes use
+  the `pkg/route` kernel, and that every shell script parses under macOS
+  bash 3.2.
 - `make test-fips-modes` passes: the suite runs in FIPS modes `off`, `on` and
   `only`. A test of a non-approved feature calls `fipstest.SkipIfStrict` and
   is paired with a `fipstest.StrictOnly` test proving the clean refusal. Its allowlist only

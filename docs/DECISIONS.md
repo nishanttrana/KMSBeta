@@ -22,6 +22,294 @@ for image tags and `BUILD_VERSION`).
 VERSION's MAJOR.MINOR didn't increase over the merge base or the CHANGELOG has
 no section for it. Test-only changes are exempt, as for the docs gate.
 
+## 2026-09-26 — One HSM per tenant; partition objects listed, not adopted; HSM CAs are ECDSA
+**Decision:**
+- A tenant has one HSM profile (one PKCS#11 slot). Redundancy comes from the
+  vendor's HA/cluster behind that slot (Securosys, Luna HA groups, nShield
+  Security World), not from the KMS choosing among HSMs.
+- Each HSM key records the device (serial, token, model) that generated it.
+  A key whose object is missing on the configured device is refused with
+  `hsm_key_not_found` naming that serial; rotation onto another device is
+  audited (`audit.key.hsm_device_changed`).
+- Objects already in the partition are listed read-only in Keys and
+  Certificates. Adopting them as KMS keys is not built yet.
+- HSM CA keys are ECDSA P-256/P-384 only.
+
+**Why:** choosing an HSM per key needs placement rules, per-key routing and
+a story for keys that exist on only one device; vendor HA already
+replicates keys across devices under one slot. Recording the device makes a
+misconfigured profile obvious instead of a generic PKCS#11 error. Adoption
+needs decisions about labels, usage flags and extractable keys (an
+extractable key isn't HSM-protected in the sense the KMS promises), so it
+is listed, not guessed. The HSM signs RSA only with PSS, and OCSP responses
+(x/crypto/ocsp) can't carry RSA-PSS.
+
+**Rejected:** several HSM profiles per tenant with a per-key picker
+(placement and failover complexity for what vendor HA already does);
+silently adopting every partition key (would put keys the KMS didn't create
+and can't vouch for under its audit claims); RSA PKCS#1 v1.5 signing in the
+HSM for CAs (the connector implements RSA signing with PSS only; adding v1.5 is a separate, reviewable change).
+
+**Enforced by:** `TestHSMKeyProvenance`, `TestPartitionListing`,
+`TestGeneratedKeysHaveHSMAttributes`, `TestHSMCAKeysSignInTheHSM` (RSA
+refused).
+
+## 2026-09-26 — Customer HSMs through their own PKCS#11 library, in a separate connector
+**Decision:** HSMs are integrated through the vendor's PKCS#11 library (owner's
+choice over a vendor REST API). The library loads in a dedicated
+`hsm-connector` service (cgo, Debian), which keycore and governance call with
+their service identities. Per tenant, two switches: a tenant key in the HSM
+that protects new key versions (owner: "new keys only"), and HSM-resident
+keys created per key. There is no Vecta or software HSM (owner), and
+`software-vault` was removed. HSM-bound backups are wrapped by
+the tenant key in the HSM.
+
+**Why:**
+- One integration serves every vendor that ships a PKCS#11 library, and the
+  owner requires real integrations, no fakes.
+- Vendor libraries are glibc builds and can't load into keycore's static
+  Alpine binary. A separate process also keeps a crashing vendor library and
+  the HSM PIN away from keycore.
+- A per-tenant key gives each tenant its own root of trust in the HSM
+  without moving every operation into the HSM. HSM-resident keys cover the
+  keys that must never leave it.
+
+**Rejected:**
+- cgo in keycore: glibc libraries, a larger FIPS build surface, and a
+  vendor crash would take down the KMS.
+- Securosys REST (TSB) API: it covers one vendor, and the owner chose
+  PKCS#11.
+- Re-wrapping existing keys under the tenant key on enable: the owner chose
+  new keys only. Turning it off doesn't touch existing keys either.
+- Refusing HSM operations in FIPS `only` mode as "third-party crypto": they
+  run in the HSM's own module with approved mechanisms. The KMS doesn't
+  claim that module's validation; the customer checks it.
+- A software HSM for demos: nothing may pose as an HSM. Tests use SoftHSM2,
+  a real PKCS#11 library, only in tests.
+
+**Enforced by:** `pkg/hsmconnector` tests on SoftHSM2 (isolation, callers,
+confinement, `routetest.RefusalsAudited`), the keycore and governance HSM
+tests through the real connector, `TestHSMStoragePostgres`, and
+`TestHSMBoundBackupPostgres` (docs/SECURITY/HSM_INTEGRATION.md).
+
+---
+
+## 2026-09-26 — Governance fails closed; services are admitted per route
+**Decision:** governance refuses to start without a token-verification key
+(read through `pkg/jwtauth`, so the shared `JWT_PUBLIC_KEY_*` works). System
+administration needs a verified root administrator. A platform service is
+admitted only on a route named for its identity in
+`systemAdminServiceCallers`, and every refusal is audited.
+
+**Why:** a missing key disabled authentication, and in compose the key was
+always missing. Service callers need exactly one read (state) and one write
+(posture controls), so a per-route identity list grants that and nothing
+more. Backups, restore and the FIPS mode stay administrator-only.
+
+**Rejected:**
+- Admitting any service principal on system-admin routes: that would let
+  any compromised internal service restore backups or change the FIPS mode.
+- Migrating governance to the `pkg/route` kernel in the same change: that's
+  the right end state (phase 2), but the auth hole needed closing now. The
+  refusal reasons match the kernel's so the migration keeps them.
+- Keeping `POSTURE_GOVERNANCE_BEARER_TOKEN` as the only posture credential:
+  nothing ever set it.
+
+**Enforced by:** `TestMissingJWTKeyRefusesStart`,
+`TestSystemAdminRoutesRequireVerifiedToken`, `TestSystemAdminRefusalReasons`,
+`TestSystemAdminServiceCallersAreRouteBound`, and
+`TestGovernanceCallsCarryServiceIdentity` in keycore, policy and posture.
+
+---
+
+## 2026-09-26 — Governance never stores a key that opens its backups
+**Decision:** a software-mode backup key is returned once, in the create
+response, and never stored. The platform keeps only its fingerprint. An
+HSM-bound key is stored wrapped under
+`HKDF-SHA256(BACKUP_HSM_WRAP_SECRET, binding, tenants)`, with the secret at
+least 32 characters. Migration 013 removes existing stored keys, and v1
+(raw SHA-256) packages are refused. Master-key re-wrapping of backup
+contents moves from an hourly job over stored backups to capture time.
+
+**Why:** a key in the same row as the artifact makes the encryption
+decorative for anyone with the database. The owner accepted that backups
+from the old version won't restore (none were taken).
+
+**Rejected:**
+- Wrapping software keys under a governance master key from `pkg/mek`: a
+  database copy plus a running keycore would still open them. A backup has
+  to survive the loss of the platform, so the operator must hold its key.
+- Keeping v1 unwrap as a fallback: it keeps the raw-hash derivation
+  reachable, and there were no v1 backups to keep.
+- Keeping the stored-backup re-seal job: without stored keys it has
+  nothing to open. Re-wrapping at capture covers every new backup.
+- Deleting old backup rows: scrubbing the key keeps the artifact usable
+  with a key file saved earlier.
+
+**Enforced by:** `TestSoftwareBackupKeyIsNotStored`,
+`TestSoftwareBackupKeyNotRetainedPostgres`,
+`TestMigrationScrubsStoredBackupKeysPostgres`, `TestHSMBoundBackupKeyUsesHKDF`,
+`TestHSMBoundV1PackageIsRefused`, `TestBackupWrapSecretStrength`
+([SECURITY/BACKUP_KEYS.md](SECURITY/BACKUP_KEYS.md)).
+
+---
+
+## 2026-09-26 — No anonymous key use in keycore
+**Decision:** every key operation needs a verified identity. The
+"backward-compatible" branch that let a caller with no token use any key
+without grants (when deny-by-default was off) is removed. Keycore refuses to
+start without its token-verification key. Platform callers that relied on
+anonymous access get service identities: compliance playbooks call as
+`kms-compliance` (token confined to platform service hosts), and reconciler
+calls as the new `kms-reconciler`.
+
+**Why:** an unauthenticated request is not a tenant's caller. Deny-by-default
+being off should mean "creator and admins may use ungranted keys", not
+"anyone who can reach the port may". Rule 4 already forbids unverified
+identity, and anonymity is the extreme case.
+
+**Rejected:**
+- Keeping anonymous access behind a flag: its only users were the two
+  internal callers above, and they're fixed.
+- Accepting the shared internal API token as an identity: every internal
+  caller holds it, so it can't say who acted.
+- Requiring a token at the handler for every route: the internalauth routes
+  (reconciler's due-for-lifecycle and archive) and health checks don't carry
+  a JWT, and key access is where identity matters.
+
+**Enforced by:** `TestAnonymousKeyUseIsRefused`,
+`TestPlaybookSendsServiceTokenOnlyToPlatformServices`,
+`TestLifecycleCallsCarryServiceIdentityAndTenant`.
+
+## 2026-09-26 — Service master keys come from keycore; exposure is tracked until material is replaced
+**Decision:**
+- secrets, certs, cloud and ekm get their master key from keycore through
+  `pkg/mek`: a protected system key per service (`POST /system-keys/ensure`),
+  service-derive bound to the service identity, and the version pinned in
+  `<svc>_mek_state`. There is no environment variable and no fallback.
+- Rows under any key an earlier release used are re-wrapped at startup and
+  by a periodic rescan.
+- Items that were under a public key go into an exposure register until the
+  material is replaced.
+- Governance re-protects its stored backups, and re-wraps restores before
+  writing.
+
+**Why:**
+- All four services fell back to public keys, and nothing ever configured
+  the real ones. A required env var (tried first, in the same unreleased
+  branch) would still:
+  - break a plain `docker compose up` on upgrade;
+  - need copying to every cluster member by hand;
+  - make every installer, backup runbook and rotation step carry a
+    data-destroying secret.
+- Keycore already holds key material under its master key, which the cluster
+  join ships. Deriving from it satisfies rule 6 and makes members work with
+  nothing to copy.
+- **Protection at keycore's storage layer:** destroying a system key would
+  crypto-shred a service's whole store, and every destroy path (API, bulk,
+  scheduled sweep) funnels through a few store methods.
+- **Exposure register:** re-wrapping can't touch copies made before (dumps,
+  snapshots, downloaded backups). The only real remedy is to replace the
+  material. A register that closes itself when the material is rotated or
+  deleted turns "treat these as exposed" into tracked work.
+- **Backups:** governance keeps backup artifacts, and for software-mode
+  backups their keys, in the database. So the live database kept exposing
+  the old values until its backups were re-protected too.
+
+**Rejected:**
+- Required `<SERVICE>_MEK_B64` (for the reasons above).
+- Generating a key file per node: backup/DR and cluster members would need
+  it copied, and losing it loses the data.
+- Re-encrypting values with new DEKs instead of re-wrapping: a pre-upgrade
+  copy already holds the old ciphertext and a public-key-wrapped DEK, so it
+  adds nothing.
+- Rotating exposed material automatically: CA keys, cloud credentials and
+  BitLocker recovery keys are in use outside the platform, and replacing them
+  blind would break their users.
+- Deleting pre-upgrade backups: destructive, and a downloaded copy survives
+  anyway.
+
+**Enforced by:**
+- `no-literal-key-material` (the only public keys are marked lines in
+  `pkg/mek/catalog.go`).
+- `TestCatalogIsValidAndMigrated`, `TestMEKLifecycle*`,
+  `TestSystemKeyIsProtectedFromDestruction`, the per-service
+  `TestUpgradeMoves*` tests and `TestBackupReprotectPostgres`.
+- docs/SECURITY/SERVICE_MASTER_KEYS.md.
+
+## 2026-09-26 — Feature kernel (pkg/route): rules are declared per route, applied in one place
+**Decision:** every HTTP route is registered through `pkg/route` with a
+`route.Spec` (audit action, permission, resource, tenancy). The kernel
+authenticates, resolves and enforces one tenant, checks the permission, and
+emits exactly one `audit.<service>.<action>` event per request, including
+failures and refusals (with `reason`). Services move onto it one at a time
+([ARCHITECTURE_MIGRATION.md](ARCHITECTURE_MIGRATION.md)); `services/secrets`
+is the reference.
+
+**Why:**
+- Cross-cutting rules lived in about 960 hand-written handlers, with 22
+  private `mustTenant` copies. Each new feature had to be reminded of audit,
+  tenancy and permissions, and some missed them: `POST /secrets` accepted a
+  body `tenant_id` without checking it (a cross-tenant write).
+- A rule in the kernel reaches every migrated route. A rule in a handler
+  reaches one.
+- Specific events for refusals were owner policy (2026-09-25), but nothing
+  guaranteed them.
+
+**Rejected:**
+- Rewriting the product from scratch: it would lose the FIPS, clustering and
+  audit-chain work and the security fixes, and ship months of unreviewable
+  change at once.
+- Relying on the generic `auditmw` `http_request` record: it has no action
+  semantics, target or refusal reason, so governance and DAM can't run on it.
+- Per-service middleware: the same duplication at a different layer.
+- Emitting from the service layer: it can't see refusals that happen before
+  the service is called, and it duplicates events when one service method
+  calls another (generate → create).
+- Letting `kms.read` / `kms.write` match any domain by verb: once auth
+  migrates, API clients would gain `auth.*.write`. The coarse grants apply
+  only to domains listed in `route.CoarseDomains` (today, `secrets`).
+- Resolving the tenant only from query/header (as `mustTenant` did): body
+  tenants are how the dashboard sends writes, so the body must be checked,
+  not ignored.
+
+**Enforced by:**
+- Registration panics without an action or permission.
+- `make conformance` rule `route-kernel`: a raw `http.ServeMux` in a service
+  file fails unless the file is on `scripts/route-kernel-burndown.txt`, which
+  only shrinks.
+- `routetest.RefusalsAudited` proves each route refuses and audits the three
+  refusal cases.
+- `pkg/route` tests: cross-tenant body, conflicting sources, service
+  principals, and failure/refusal events.
+
+## 2026-09-26 — Cluster write forwarding: member verifies, primary re-mints
+**Decision:** on a member, every service's HTTP wrapper forwards lifecycle
+writes to the primary's cluster-manager.
+- The member verifies the caller's token and sends the claims, authenticated
+  by a per-member credential issued at join.
+- The primary has its own auth mint a 5-minute token (`fwd_node` set) and
+  proxies to the service.
+- Writes are forwarded by default; `pkg/clusterroute.Local` lists the
+  exceptions.
+
+**Why:**
+- Verification keys differ per node, so the user's token can't be replayed on
+  the primary.
+- Re-minting keeps every service's own authorization and audit untouched.
+- Default-forward means a new endpoint can't diverge a member.
+
+**Rejected:**
+- Sharing one JWT key cluster-wide: a member compromise would forge tokens
+  for every node.
+- Proxying the raw user token.
+- An allowlist of forwarded writes: a new write would silently diverge.
+- Letting members write and reconcile later (split-brain on key state).
+
+**Enforced by:** `TestClusterForwarding`, `TestLocalRoutesExist`,
+`TestSecureJoinEndToEnd`, and the rule in CLUSTERING.md that background jobs
+check `RunsPrimaryJobs`.
+
 ## 2026-09-25 — Documentation ships with the change
 **Decision:** every change updates CHANGELOG.md, learning.md, this file and/or
 `docs/SECURITY/` in the same commit. Standing instructions live in `CLAUDE.md`.
@@ -102,7 +390,7 @@ and status that comes only from the database.
 
 **Why:** the owner's options were "finish or mark preview". Marking is honest
 today and keeps the APIs stable for the teams that will finish them. Finishing
-federation or edge (KMSExtension) is product work, not a fix.
+federation or edge is product work, not a fix.
 
 **Rejected:**
 - **Deleting the features:** they break API clients and lose work.
@@ -262,7 +550,19 @@ attribution); per-service secrets in `.env` (secret sprawl).
 the current secret, so rotation locks out the old value on the next auth start
 (added 2026-09-25). Service JWTs already minted live out their TTL (≤ 1 h).
 
-## 2026-06-12 — Cut features move to KMSExtension, not the bin
+## 2026-09-26 — Cut features are removed; all work happens in KMSBeta
+**Decision:** a feature cut from the core is deleted from KMSBeta and
+recovered from its git history if it's ever wanted again. Nothing is
+committed to `KMSExtension` any more (owner: "all the work have to be done on
+KMS beta only", "stop touching KMSExtension"). Supersedes the 2026-06-12
+entry below.
+**Why:** one repository to develop, review and certify. A second repo of
+parked code that nobody builds only looks like a product. Git history
+already keeps every removed line.
+**Rejected:** keeping KMSExtension as a read-only archive of cut code.
+**Enforced by:** CLAUDE.md ("All work happens in KMSBeta").
+
+## 2026-06-12 — Cut features move to KMSExtension, not the bin (superseded 2026-09-26)
 **Decision:** features removed from the core move to the sibling
 `KMSExtension` repo and integrate over REST (`pkg/kmsclient`), holding no key
 material.

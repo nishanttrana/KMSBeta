@@ -75,14 +75,13 @@ for feature in "${FEATURE_ORDER[@]}"; do
 done
 
 case "${hsm_mode}" in
-  hardware)
+  hardware|auto)
+    # The hsm-connector loads the tenants' PKCS#11 libraries.
     profiles+=("hsm_hardware")
     ;;
-  software)
-    profiles+=("hsm_software")
-    ;;
-  auto)
-    profiles+=("hsm_hardware" "hsm_software")
+  software|none)
+    # No HSM: keys are protected by keycore's master key. (The unused
+    # software-vault service was removed.)
     ;;
   *)
     echo "invalid hsm_mode in ${FILE}: ${hsm_mode}" >&2

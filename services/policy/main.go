@@ -29,11 +29,15 @@ import (
 	pkgheartbeat "vecta-kms/pkg/heartbeat"
 	pkgjwtauth "vecta-kms/pkg/jwtauth"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	"vecta-kms/pkg/servicetoken"
 )
 
 var logger = log.New(os.Stdout, "[policy] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
+	// Calls to other platform services (governance system state) carry this
+	// service's own identity.
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-policy"))
 	cfg := pkgconfig.Load()
 
 	if err := pkgruntimecfg.ValidateServiceConfig("kms-policy", cfg); err != nil {

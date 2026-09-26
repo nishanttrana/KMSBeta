@@ -85,9 +85,7 @@ function Set-ComposeEnvironment {
     if (-not $env:HSM_ENDPOINT) {
         switch ($env:HSM_MODE) {
             "hardware" { $env:HSM_ENDPOINT = "hsm-connector:18430" }
-            "software" { $env:HSM_ENDPOINT = "software-vault:18440" }
             "auto" { $env:HSM_ENDPOINT = "hsm-connector:18430" }
-            default { $env:HSM_ENDPOINT = "software-vault:18440" }
         }
     }
 

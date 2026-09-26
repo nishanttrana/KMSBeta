@@ -7,6 +7,8 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -16,7 +18,10 @@ import (
 	"testing"
 	"time"
 
+	pkgauth "vecta-kms/pkg/auth"
 	"vecta-kms/pkg/clusterrepl"
+	"vecta-kms/pkg/clusterstate"
+	pkgconfig "vecta-kms/pkg/config"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	pkgdb "vecta-kms/pkg/db"
 )
@@ -110,7 +115,8 @@ func TestSecureJoinEndToEnd(t *testing.T) {
 	memberKC := &fakeKeycore{mek: []byte("MEMBER--MEK-0123456789abcdef0123")}
 
 	t.Setenv("CLUSTER_NODE_ID", "node-1")
-	primary := NewService(NewSQLStore(primaryDB), nil).WithReplication(clusterrepl.New(primarySQL))
+	audit := &captureAudit{}
+	primary := NewService(NewSQLStore(primaryDB), audit).WithReplication(clusterrepl.New(primarySQL))
 	t.Setenv("CLUSTER_NODE_ID", "node-2")
 	member := NewService(NewSQLStore(memberDB), nil).WithReplication(clusterrepl.New(memberSQL))
 
@@ -187,6 +193,63 @@ func TestSecureJoinEndToEnd(t *testing.T) {
 		t.Fatalf("the primary must register the member: %+v %v", node, err)
 	}
 
+	// The member now forwards lifecycle writes: it knows its primary and holds
+	// a credential; the primary stores only the credential's hash.
+	st := clusterstate.NewReader(memberSQL).Get(ctx)
+	if !st.IsMember() || st.PrimaryNodeID != "node-1" || st.PrimaryURL != srv.URL {
+		t.Fatalf("the member must record its primary: %+v", st)
+	}
+	var storedHash string
+	if err := primarySQL.QueryRow(`SELECT credential_hash FROM cluster_member_credentials WHERE node_id='node-2'`).Scan(&storedHash); err != nil || storedHash != credentialHash(st.ForwardCredential) || storedHash == st.ForwardCredential {
+		t.Fatalf("the primary must store only the credential hash: %v", err)
+	}
+
+	// A forwarded write reaches the primary's service with a freshly minted token.
+	var gotAuth, gotPath, gotFwd string
+	keycore := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth, gotPath, gotFwd = r.Header.Get("Authorization"), r.URL.RequestURI(), r.Header.Get("X-Vecta-Forwarded-By")
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer keycore.Close()
+	primary.WithForwarding(fakeMinter{})
+	primary.forwardTargets = func(svc string) (string, bool) { return keycore.URL, svc == "kms-keycore" }
+	claims, _ := json.Marshal(pkgauth.Claims{TenantID: "t1", Role: "tenant-admin", UserID: "alice"})
+	forward := func(method, path, cred string) int {
+		req, _ := http.NewRequest(method, srv.URL+"/cluster/forward/kms-keycore"+path, strings.NewReader("{}"))
+		req.Header.Set(pkgconfig.HeaderClusterNode, "node-2")
+		req.Header.Set(pkgconfig.HeaderClusterCredential, cred)
+		req.Header.Set(pkgconfig.HeaderForwardClaims, base64.RawURLEncoding.EncodeToString(claims))
+		resp, err := clusterstate.PinnedHTTPClient(st.PrimaryFingerprint, 10*time.Second).Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = resp.Body.Close()
+		return resp.StatusCode
+	}
+	if code := forward("POST", "/keys?tenant_id=t1", st.ForwardCredential); code != http.StatusCreated {
+		t.Fatalf("forwarded write: status %d", code)
+	}
+	if gotAuth != "Bearer minted:alice:node-2" || gotPath != "/keys?tenant_id=t1" || gotFwd != "node-2" {
+		t.Fatalf("the service must receive the minted token and the original path: auth=%q path=%q fwd=%q", gotAuth, gotPath, gotFwd)
+	}
+	gotPath = ""
+	if code := forward("POST", "/keys", "wrong-credential"); code != http.StatusUnauthorized || gotPath != "" {
+		t.Fatalf("a wrong member credential must be refused: %d", code)
+	}
+	if code := forward("POST", "/keys/k1/encrypt", st.ForwardCredential); code != http.StatusForbidden || gotPath != "" {
+		t.Fatalf("crypto operations must not be run through the forward endpoint: %d", code)
+	}
+	if audit.count("audit.cluster.write_forwarded") != 1 || audit.count("audit.cluster.forward_refused") != 2 {
+		t.Fatalf("forwards and refusals must be audited: %v", audit.subjects)
+	}
+	// Removing the member revokes its credential: it can no longer forward.
+	if _, err := primary.RemoveNode(ctx, "node-2", RemoveNodeInput{TenantID: "root", Reason: "test"}); err != nil {
+		t.Fatalf("remove member: %v", err)
+	}
+	if code := forward("POST", "/keys?tenant_id=t1", st.ForwardCredential); code != http.StatusUnauthorized || gotPath != "" {
+		t.Fatalf("a removed member must not forward writes: %d", code)
+	}
+
 	// The token is single-use.
 	b, _ := DecodeJoinBundle(bundle)
 	if _, err := primary.ExchangeJoin(ctx, ExchangeJoinInput{TokenID: b.TokenID, JoinSecret: b.JoinSecret, NodeID: "node-2", KeycoreJoinKey: "x", ClusterManagerJoinKey: "x"}); err == nil {
@@ -199,4 +262,34 @@ func mustExecJ(t *testing.T, db *sql.DB, q string) {
 	if _, err := db.Exec(q); err != nil {
 		t.Fatalf("%s: %v", q, err)
 	}
+}
+
+type fakeMinter struct{}
+
+func (fakeMinter) Mint(_ context.Context, c *pkgauth.Claims, node string) (string, error) {
+	return "minted:" + c.UserID + ":" + node, nil
+}
+
+type captureAudit struct {
+	mu       sync.Mutex
+	subjects []string
+}
+
+func (c *captureAudit) Publish(_ context.Context, subject string, _ []byte) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.subjects = append(c.subjects, subject)
+	return nil
+}
+
+func (c *captureAudit) count(subject string) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	n := 0
+	for _, s := range c.subjects {
+		if s == subject {
+			n++
+		}
+	}
+	return n
 }

@@ -279,9 +279,78 @@ Auth: SCIM bearer token. Discovery: ServiceProviderConfig, Schemas, ResourceType
 
 ---
 
+### POST /svc/auth/auth/cluster/mint (internal)
+
+Only the `kms-cluster-manager` service identity may call it (`403
+service_identity_required` otherwise). Body: `{"claims": {…}, "forwarded_by":
+"<member node id>"}`.
+
+Returns a 5-minute access token signed by this node. It carries the source
+identity fields only (tenant, user, role, permissions, client) plus
+`fwd_node`. `403 password_change_required` if the user must change their
+password first.
+
+Audit: `audit.auth.cluster_token_minted` (warning when the source is itself a
+service principal); refusals emit `audit.auth.cluster_mint_refused`.
+
 ## Service 2: Keycore (`/svc/keycore/`)
 
 Key lifecycle management and all cryptographic operations.
+
+
+### HSM integration: `GET/PUT /svc/keycore/hsm/settings`
+
+A tenant's two HSM switches ([SECURITY/HSM_INTEGRATION.md](SECURITY/HSM_INTEGRATION.md)).
+`GET` (`key.hsm.read`) returns `settings` (`tenant_key_enabled`,
+`hsm_keys_enabled`, `tenant_key_label`), `connector` (whether this platform
+runs the hsm-connector) and `hsm`: what the connector reports after loading
+the tenant's PKCS#11 library (`configured`, `connected`, `manufacturer`,
+`model`, `token_label`, `firmware`, `tenant_key_ready`, `error`). `PUT`
+(`key.hsm.write`, body `tenant_key_enabled`, `hsm_keys_enabled`) is refused
+unless the HSM is configured and connected (`409 hsm_not_configured` /
+`hsm_not_connected`, `503 hsm_unavailable`). Turning the tenant key on
+generates it in the HSM.
+
+`POST /svc/keycore/keys` takes `"hsm": true` to generate the key in the
+tenant's HSM (AES-128/192/256-GCM, RSA-2048/3072/4096 PSS, ECDSA
+P-256/P-384). The key is never exportable. Encrypt, decrypt, sign and verify
+run in the HSM, and operations that need the material answer
+`409 hsm_operation_unsupported`. Key versions report `protection` (`mek`,
+`tenant_hsm`, `hsm_resident`) and `hsm_label`. An HSM key's labels record
+the device that generated it (`hsm_serial`, `hsm_token`, `hsm_model`,
+`hsm_manufacturer`). If its object is missing from the HSM the tenant's
+profile now points at, operations answer `409 hsm_key_not_found` naming the
+recorded serial.
+
+`GET /svc/keycore/keys/{id}/hsm` (`key.hsm.read`, "Verify in HSM") reads the
+key's objects back from the HSM: `recorded_hsm`, `current_hsm`,
+`same_device`, and per version `label`, `protection` and `objects` (class,
+key type, size or curve, and the HSM's own `local`, `sensitive`,
+`extractable`, `never_extractable`, `always_sensitive` and usage flags; key
+values are never read). A key with no HSM versions answers `409 not_hsm_key`.
+
+`GET /svc/keycore/hsm/objects` (`key.hsm.read`) lists the tenant's HSM
+partition: `hsm` (identity) and `objects`, each with the attributes above,
+`managed` (created by the KMS for this tenant, with `key_id`, `version` and
+`kms_role` `key`/`tenant_key`) or not (already in the partition), and for
+certificates `certificate` (`subject`, `issuer`, `serial`, `not_before`,
+`not_after`, `sha256`). Other tenants' KMS objects are never listed.
+Read-only: partition objects can't yet be adopted as KMS keys.
+
+### hsm-connector (internal, port 8430)
+
+Only `kms-keycore` and `kms-governance` may call the key routes (others get
+`403 caller_not_allowed`). Labels must start with `vecta:<tenant_id>:`.
+Routes: `POST /hsm/keys`, `/hsm/tenant-key`, `/hsm/encrypt`,
+`/hsm/decrypt`, `/hsm/sign`, `/hsm/verify`, `/hsm/keys/destroy`, and
+`GET /hsm/status` (also open to tenant administrators). Keycore only:
+`POST /hsm/keys/inspect` (body `tenant_id`, `label`) and
+`GET /hsm/objects?tenant_id=` return object attributes and the token's
+identity (`manufacturer`, `model`, `serial_number`, `token_label`), which
+`POST /hsm/keys` also returns as `hsm`. Env:
+`HSM_LIBRARY_ROOTS` (default `/var/lib/vecta/hsm/providers`), plus the PIN
+variable each profile names (or `<name>_FILE`). Keycore and governance use
+`HSM_CONNECTOR_URL` (default `http://hsm-connector:8430`).
 
 ---
 
@@ -450,6 +519,11 @@ Body: `ciphertext`, `iv`, `tag`, `aad` (optional), `keyVersion` (optional). Resp
 Body: `message` (base64), `messageType` (raw/digest), `algorithm` (ECDSA-SHA256, ECDSA-SHA384, EdDSA, RSA-PSS-SHA256, ML-DSA, SLH-DSA), `keyVersion`
 
 Response: `signature` (base64), `algorithm`, `keyId`, `keyVersion`, `publicKeyPem`
+
+`prehashed: true` signs `data` as an already computed digest (the HSM CA
+path). HSM keys only; the hash (`algorithm` SHA-256/384/512) must match the
+digest length, else `400`. A software key answers `400` ("prehashed signing
+is supported for HSM keys only").
 
 ---
 
@@ -636,6 +710,33 @@ curl -sk -X POST "https://localhost/svc/keycore/inventory/dependencies?tenant_id
 
 ---
 
+### Caller identity and access denials
+
+Every key operation needs a verified token (a user token through the
+gateway, or a service JWT); a request without one gets `403 access_denied`
+with `reason: authentication_required`. Keycore refuses to start without the
+key that verifies tokens. Keycore decides key access from the verified token only. `X-Actor-*`,
+`X-KMS-Subject` and `X-KMS-Interface` headers are ignored for authorization
+and recorded in `audit.key.actor_headers_ignored`. A key operation the caller
+may not perform returns `403 access_denied` and emits
+`audit.key.access_refused` with a `reason`.
+
+### POST /svc/keycore/system-keys/ensure
+
+Internal, service identities only (a `kms-*` service JWT), each for itself.
+Returns the calling service's system key for a purpose, creating it on first
+use: `{"purpose":"secrets-mek"}` returns `{"key_id","tenant_id","version","created"}`.
+Services derive their master key from it with `POST /keys/{id}/service-derive`
+(`pkg/mek`). Any other caller gets `403 service_identity_required`. Every call
+emits `audit.key.system_key_ensure`.
+
+A system key can't be destroyed (immediate, scheduled or bulk), disabled,
+marked compromised, have a version deleted, or be made exportable:
+`409 system_key_protected` and `audit.key.system_key_change_refused`. Rotate
+and deactivate are allowed. See docs/SECURITY/SERVICE_MASTER_KEYS.md.
+
+---
+
 ## Service 3: Certs (`/svc/certs/`)
 
 PKI, CA management, certificate lifecycle, enrollment protocols (ACME, EST, SCEP), CRL/OCSP, renewal intelligence, STAR subscriptions.
@@ -651,6 +752,13 @@ id, name, type (root/intermediate/issuing), keyId, subject (cn, o, ou, c, st, l)
 ### GET /svc/certs/cas / POST /svc/certs/cas
 
 Create: `name`, `type`, `keyId`, `subject`, `validityDays`, `pathLen`, `permittedDNS[]`, `permittedIP[]`, `crlUrls[]`, `ocspUrls[]`, `issuingCaId` (required for non-root)
+
+`key_backend`: `software` (default), `keycore` (software key, keycore
+co-signs) or `hsm`: the CA key is generated in the tenant's HSM through
+keycore and certificates, CRLs and OCSP responses are signed there. `hsm`
+takes ECDSA P-256/P-384 only (`400` otherwise) and needs HSM keys enabled for
+the tenant. A CRL that can't be signed is an error
+(`audit.cert.crl_generation_failed`), never an unsigned placeholder.
 
 ```bash
 curl -sk -X POST https://localhost/svc/certs/cas \
@@ -763,7 +871,7 @@ id, tenantId, timestamp, action, actorType (user/client/system), actorId, actorN
 
 Bearer, roles: auditor or admin.
 
-Query: `action`, `actorId`, `resourceId`, `resourceType`, `outcome`, `startTime`, `endTime`, `pageSize`, `pageToken`
+Query: `action`, `actorId`, `resourceId`, `resourceType`, `outcome`, `startTime`, `endTime`, `pageSize`, `pageToken`, `action_prefix` (repeatable, up to 5, OR-ed; matched literally, so `_` and `%` are not wildcards; the HSM tab uses `action_prefix=audit.hsm.&action_prefix=audit.key.hsm_`)
 
 ```bash
 curl -sk "https://localhost/svc/audit/events?action=audit.key&outcome=failure&startTime=2025-03-01T00:00:00Z" \
@@ -850,6 +958,29 @@ No body. Returns updated ExportTarget.
 
 Multi-party approvals, encrypted backup/restore, emergency bypass, system state.
 
+**System administration** (`/governance/settings*`, `/governance/backups*`, `/governance/system/*`)
+needs a verified root administrator: `tenant_id=root`, a token for the root
+tenant, and role `admin`/`super-admin` or permission `*` (writes) /
+`auth.tenant.*`, `auth.policy.*`. There is no unauthenticated access:
+governance refuses to start without its token-verification key
+(`GOVERNANCE_JWT_PUBLIC_KEY_PEM`/`_B64`, else the shared
+`JWT_PUBLIC_KEY_PEM`/`_B64`). Platform services are admitted only on the
+routes named for them: `kms-keycore` and `kms-policy` on
+`GET /governance/system/state`, `kms-posture` on
+`PUT /governance/system/posture-controls`.
+
+| Refusal | Status | `error.code` | Audit `reason` |
+|---|---|---|---|
+| no token | 401 | `unauthorized` | `authentication_required` |
+| token doesn't verify (any governance route) | 401 | `unauthorized` | `invalid_token` (`audit.governance.authentication_refused`) |
+| no `tenant_id` | 400 | `bad_request` | `tenant_required` |
+| `tenant_id` isn't the token's tenant | 403 | `forbidden` | `tenant_mismatch` |
+| `tenant_id` isn't `root` | 403 | `forbidden` | `not_root_tenant` |
+| token tenant isn't `root` | 403 | `forbidden` | `token_tenant_not_root` |
+| not a root administrator or an allowed service | 403 | `forbidden` | `insufficient_privileges` |
+
+System-admin refusals are audited as `audit.governance.system_admin_refused`.
+
 ---
 
 ### GET /svc/governance/policies / POST /svc/governance/policies
@@ -917,37 +1048,25 @@ Requires breakglass permission. Body: `justification` (required). Emits high-sev
 
 ---
 
-### GET /svc/governance/backup/targets / POST /svc/governance/backup/targets
+### Backups: `/svc/governance/governance/backups`
 
-BackupTarget: name, type (s3/azure-blob/gcs/sftp/local), config, encryptionKeyId, scheduleExpression
+Root administrators only (`tenant_id=root`, an admin token). Keys are
+described in [SECURITY/BACKUP_KEYS.md](SECURITY/BACKUP_KEYS.md).
 
----
+| Route | Purpose |
+|---|---|
+| `POST /governance/backups` | Capture and encrypt a backup. Body: `scope` (`system`/`tenant`), `target_tenant_id`, `bind_to_hsm` (default `true`; used when the tenant has an enabled HSM configuration). Response 201: `job` and **`key_file`** (`file_name`, `content_type`, `content_base64`). `key_file` is returned only here: for a software-mode backup it is the only copy of the key. |
+| `GET /governance/backups` | List jobs. `job.key_package` holds only `mode`, `key_retained`, coverage and the HSM binding summary, never key material. |
+| `GET /governance/backups/{id}` | One job. |
+| `GET /governance/backups/{id}/artifact` | The encrypted `.vbk` artifact (`artifact.content_base64`). |
+| `GET /governance/backups/{id}/key` | The key file again, **HSM-bound backups only** (the key is wrapped by the tenant's key inside the HSM). A software-mode backup, or one whose stored key was removed, answers `410 backup_key_not_retained`. |
+| `POST /governance/backups/restore` | Body: `artifact_file_name` (`.vbk`), `artifact_content_base64`, `key_file_name` (`.key.json`), `key_content_base64`. HSM-bound key files restore only when wrapped by the HSM (`key_wrap: "hsm_tenant_key"`), through the hsm-connector. |
+| `DELETE /governance/backups/{id}` | Delete a job and its artifact. |
 
-### PATCH/DELETE /svc/governance/backup/targets/{id}
-
----
-
-### POST /svc/governance/backup/run
-
-Body: `targetId`, `scope` (full/incremental). Response 202: `archiveId`, `jobId`, `status`
-
----
-
-### GET /svc/governance/backup/archives / GET /svc/governance/backup/archives/{id}
-
-Archive includes `backupCoverage` metadata listing preserved capability classes.
-
----
-
-### POST /svc/governance/restore
-
-Body: `archiveId`, `shamirShares[]` (M-of-N), `dryRun` (boolean). Response 202: `restoreId`, `status`
-
----
-
-### GET /svc/governance/restore/{id}/status
-
-Response: `restoreId`, `status`, `restoredObjects`, `errors[]`, `completedAt`
+HSM-bound backups need the tenant's HSM profile (HSM tab) and the
+hsm-connector: the backup key is wrapped inside that HSM under the tenant's
+key (`key_wrap: "hsm_tenant_key"`). `BACKUP_HSM_WRAP_SECRET` is no longer
+used; packages from it (`key_derivation` v1/v2) are refused.
 
 ---
 
@@ -2600,11 +2719,69 @@ This node's real Postgres logical replication state:
 - `wal_level`
 - `publications`: `[{component, publication, tables}]`
 - `subscriptions`: `[{subscription, component, enabled, worker_running, lag_seconds, ready, tables: [{table, state}]}]`
+- `forwards_to`: on a member, the primary it forwards lifecycle writes to
+  (absent on a standalone node or the primary)
 - `error`
 
 `GET /cluster/overview` includes the same object under `replication`. Its
 `selective_component_sync.note` is computed from it. See
 [CLUSTERING.md](CLUSTERING.md).
+
+---
+
+### Write forwarding on a member (every service)
+
+On a cluster member, every service's HTTP server (`pkg/config.NewHTTPServer`)
+routes each request with `pkg/clusterroute.Decide`:
+
+- **Runs locally:** reads (GET, HEAD, OPTIONS); crypto operations (keycore
+  encrypt, decrypt, sign, verify, mac, wrap, derive, service-derive, attest,
+  hash, random; dataprotect fpe, mask, redact, `/app/*`); logins and token
+  issuance (auth); this node's system settings (governance); audit publish,
+  search and Merkle operations; the cluster services themselves.
+- **Forwarded to the primary:** every other write. The response comes back
+  unchanged, with the header `X-Vecta-Forwarded-To: <primary node id>`.
+- **Refused** with `409 primary_write_required`: a write to a service the
+  primary can't be reached for (no internal route).
+
+Other member-side errors:
+
+| Status | Code | Meaning |
+|---|---|---|
+| 401 | `unauthorized` | the caller's token didn't verify on the member; nothing was sent |
+| 502 | `primary_unreachable` | the primary is down or its TLS certificate doesn't match the pinned fingerprint. The write was not made anywhere |
+
+Clients can't set the cluster headers: the member strips any
+`X-Vecta-Cluster-*`, `X-Vecta-Forward-Claims` and `Authorization` header before
+forwarding.
+
+Audit (member): `audit.<service>.cluster_write_forwarded` and
+`audit.<service>.cluster_write_refused`.
+
+### POST /cluster/forward/{service}/{path...} (node-to-node, primary)
+
+A member's forwarded write. It's public in the JWT sense and authenticated by
+the member's forwarding credential, over TLS that the member pins.
+
+Headers:
+- `X-Vecta-Cluster-Node`: member node id;
+- `X-Vecta-Cluster-Credential`: the 32-byte credential issued at join (the
+  primary stores only its SHA-256, compared in constant time; revoked when the
+  node is removed);
+- `X-Vecta-Forward-Claims`: base64url JSON of the caller's claims, verified
+  on the member.
+
+The primary refuses a write the member should have run locally, or an
+unknown service, with `403 not_forwardable`. It asks auth to mint a 5-minute
+token for the caller (`POST /auth/cluster/mint`) and proxies to the service,
+adding `X-Vecta-Forwarded-By: <member>`. The service applies its own
+authorization and audit as for any request.
+
+Errors: `401 member_unauthorized`, `400 bad_claims`, `403 identity_refused`
+(for example, the user must change their password), `503 minter_unavailable`,
+`502 service_unreachable`.
+
+Audit: `audit.cluster.write_forwarded`, `audit.cluster.forward_refused`.
 
 ---
 
@@ -2710,6 +2887,60 @@ Aggregate QRNG statistics: `totalGenerated` (bytes), `sourcesOnline`, `averageEn
 ## Service 25: Secrets (`/svc/secrets/`)
 
 Hierarchical secret vault with versioning, rollback, and path-based policy.
+
+### Master key and exposure register
+
+The service's master key comes from keycore (`pkg/mek`); there's nothing to
+configure. See docs/SECURITY/SERVICE_MASTER_KEYS.md.
+
+| Route | Permission | Meaning |
+|---|---|---|
+| `GET /mek/exposure?open=false` | `secrets.read` | the tenant's exposure register: secrets stored under a public key before 1.2.0-beta, open until rotated or deleted |
+| `POST /mek/exposure/{item_type}/{item_id}/acknowledge` | `secrets.exposure.acknowledge` | close an entry with `{"reason": "..."}` (at least 10 characters) |
+| `POST /mek/rewrap-legacy` | `kms-governance` identity only | re-wrap wrapped DEKs from backup contents (`{"entries":[{"iv","dek","table","tenant_id","item_id"}],"restoring":bool}`) |
+
+The same three routes exist on certs (`cert.*`), cloud (`cloud.*`) and ekm
+(`ekm.*`).
+
+### Authorization and audit (pkg/route kernel)
+
+Every route requires a verified token. The tenant comes from `tenant_id`
+(query or JSON body) or `X-Tenant-ID`, and for Vault routes also from
+`X-Vault-Namespace` / `X-Namespace`. When none is given, the token's tenant is
+used. A tenant other than the token's is refused with `403 tenant_mismatch`,
+and disagreeing sources with `403 tenant_conflict`. Each request emits one
+`audit.secrets.<action>` event with `result` `success`, `failure` or
+`refused` (with `reason`).
+
+| Route | Permission | Audit action |
+|---|---|---|
+| `POST /secrets` | `secrets.write` | `created` |
+| `GET /secrets` | `secrets.read` | `listed` |
+| `GET /secrets/{id}` | `secrets.read` | `read` |
+| `GET /secrets/{id}/value` | `secrets.value.read` | `value_read` (warning) |
+| `PUT /secrets/{id}` | `secrets.write` | `updated` |
+| `DELETE /secrets/{id}` | `secrets.delete` | `deleted` (warning) |
+| `POST /secrets/generate/ssh_key`, `/generate/keypair` | `secrets.write` | `generated` |
+| `GET /secrets/{id}/versions` | `secrets.read` | `versions_listed` |
+| `GET /secrets/{id}/audit` | `secrets.read` | `audit_log_read` |
+| `POST /secrets/{id}/rotate` | `secrets.write` | `rotated` |
+| `GET /secrets/stats` | `secrets.read` | `stats_read` |
+| `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read`
+- `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
+- `audit.key.system_key_ensure`, `audit.key.system_key_created`, `audit.key.system_key_change_refused`: keycore system keys
+- `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored): keycore key access
+- `audit.governance.backup_create_refused` (`reason`, `result: refused`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`): governance backup keys (docs/SECURITY/BACKUP_KEYS.md) |
+| `POST /v1/auth/token/lookup-self` | any identity | `vault_token_lookup` |
+| `GET /v1/{mount}/data/{path}`, `GET /v1/{mount}/{path}` | `secrets.value.read` | `vault_kv_read` |
+| `POST /v1/{mount}/data/{path}`, `POST /v1/{mount}/{path}` | `secrets.write` | `vault_kv_written` (`created` in details) |
+| `DELETE /v1/{mount}/data/{path}`, `DELETE /v1/{mount}/{path}` | `secrets.delete` | `vault_kv_deleted` |
+| `GET /v1/{mount}/metadata/{path}` | `secrets.read` | `vault_metadata_read` |
+
+`*` grants all of these. `secrets` is in `route.CoarseDomains`, so `kms.read`
+grants the `.read` permissions and `kms.write` grants `.write` and `.delete`.
+A Vault KV v1 write body is the secret's data, so a `tenant_id` key inside it
+is stored, not treated as a tenant. `created_by` / `updated_by` are
+set to the verified caller.
 
 ---
 
@@ -3169,6 +3400,7 @@ Audit events use dot-separated action subjects. Common prefixes:
 | audit.cert.* | Certificate and CA operations |
 | audit.governance.* | Approvals, encrypted backup/restore, platform FIPS mode |
 | audit.backup.* | Backup scheduler (preview): policy changes and refused runs/restores |
+| audit.cluster.* | Cluster join, replication publications, write forwarding |
 | audit.kmip.* | KMIP sessions, operations and denials |
 | audit.dataprotect.* | Data protection operations and key-derivation migration |
 | audit.compliance.* | Compliance assessments |
@@ -3193,10 +3425,15 @@ Selected events with dedicated audit classification:
 - `audit.cert.renewal_window_missed`, `audit.cert.emergency_rotation_started`
 - `audit.cert.star_subscription_created`, `audit.cert.star_subscription_renewed`
 - `audit.governance.approval_requested`, `audit.governance.approved`, `audit.governance.rejected`, `audit.governance.bypassed`
-- `audit.governance.backup_created`, `audit.governance.backup_deleted`, `audit.governance.backup_restored`, `audit.governance.backup_restore_refused` (tampered artifact, wrong key, changed scope, wrong file type; carries `reason`)
+- `audit.governance.backup_created` (`key_mode`, `key_retained`), `audit.governance.backup_deleted`, `audit.governance.backup_restored`, `audit.governance.backup_restore_refused` (tampered artifact, wrong key, changed scope, wrong file type, retired v1 key package; carries `reason`)
+- `audit.governance.backup_create_refused` (`reason`), `audit.governance.backup_key_downloaded`, `audit.governance.backup_key_download_refused` (`reason: key_not_retained`)
+- `audit.hsm.*` (connector: `key_generated`, `tenant_key_ensured`, `encrypt`, `decrypt`, `sign`, `verify`, `key_destroyed`, `status_read`), `audit.key.hsm_settings_updated`, `audit.key.hsm_refused` (`reason`), `audit.key.hsm_objects_destroyed`, `audit.key.hsm_destroy_failed`, `audit.key.hsm_status_read`, `audit.key.hsm_settings_update`, `audit.hsm.key_inspected`, `audit.hsm.objects_listed`, `audit.key.hsm_objects_listed`, `audit.key.hsm_key_inspected`, `audit.key.hsm_device_changed`, `audit.cert.crl_generation_failed`: HSM integration (docs/SECURITY/HSM_INTEGRATION.md)
+- `audit.governance.system_admin_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `not_root_tenant`, `token_tenant_not_root`, `insufficient_privileges`), `audit.governance.authentication_refused` (`reason: invalid_token`)
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
 - `audit.backup.policy_created`, `audit.backup.policy_updated`, `audit.backup.policy_deleted`, `audit.backup.run_refused_preview`, `audit.backup.restore_refused_preview`
+- `audit.auth.cluster_token_minted`, `audit.auth.cluster_mint_refused`; `audit.cluster.write_forwarded`, `audit.cluster.forward_refused` (primary); `audit.<service>.cluster_write_forwarded`, `audit.<service>.cluster_write_refused` (member; `reason`: invalid_token / primary_unreachable / primary_write_required); refusals carry `result: refused`
 - `audit.key.service_derive`, `audit.key.audit_chain_anchored` (preview), enterprise control upserts carry `feature_status` / `feature_id`
+- Services on the `pkg/route` kernel emit one `audit.<service>.<action>` per request, including `result: failure` (with `error_code`) and `result: refused` (with `reason`: `unauthenticated`, `permission_denied`, `tenant_mismatch`, `tenant_conflict`, or a handler reason such as `feature_preview`). `audit.secrets.*`: `created`, `listed`, `read`, `value_read`, `updated`, `deleted`, `generated`, `versions_listed`, `audit_log_read`, `rotated`, `stats_read`, `vault_kv_read`, `vault_kv_written`, `vault_kv_deleted`, `vault_metadata_read`, `vault_token_lookup`, `vault_health_read`, `vault_seal_status_read`
 - `audit.kmip.client_connected`, `audit.kmip.authorization_denied`, `audit.kmip.operation_panic` (critical), `audit.kmip.<operation>` with `status` / `reason` (lifecycle-state refusals included)
 - `audit.dataprotect.kdf_legacy_used`, `audit.dataprotect.kdf_migration_started`, `audit.dataprotect.kdf_vault_reprotected`, `audit.dataprotect.kdf_migration_completed`, `audit.dataprotect.kdf_migration_aborted`
 - `audit.mpc.dkg_initiated`, `audit.mpc.sign_initiated`, `audit.mpc.sign_completed`

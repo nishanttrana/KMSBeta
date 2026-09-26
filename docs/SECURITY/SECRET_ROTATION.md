@@ -28,6 +28,17 @@ policy-compliant strings (≥12 chars, mixed classes) for the bootstrap password
 | `INTERNAL_SERVICE_BOOTSTRAP_SECRET` | Every service derives its API key from it; auth holds the key hashes. | `docker compose up -d --force-recreate`. On start, auth provisions keys for the new secret and **retires every service key derived from the previous one** (logged as `SECURITY retired … stale … service key(s)`). Service JWTs already minted stay valid until they expire (≤ 1 h). |
 | `AUTH_BOOTSTRAP_ADMIN_PASSWORD`, `AUTH_BOOTSTRAP_CLI_PASSWORD` | Only seed a **fresh** auth volume; the existing admin keeps its current password. | Rotate the live admin/CLI password via the dashboard or auth API. |
 | `SOFTWARE_VAULT_PASSPHRASE` | Vault data already sealed under the old passphrase won't unseal under the new one. | Run the vault rekey/re-seal flow **before** restarting the vault service. |
+| Service master keys (secrets, certs, cloud, ekm) | Not in `.env`: they come from keycore. | See [Service master keys](#service-master-keys). |
+
+## Service master keys
+
+The master keys of the secrets, certs, cloud and ekm services aren't
+configured anywhere, so `rotate-secrets.sh` doesn't touch them. Each is
+derived from a protected keycore system key (`vecta.system` label). To
+rotate one, rotate that key in keycore, then restart the service. It re-wraps
+every stored value onto the new version and emits `mek_rewrapped`
+(`from: previous_version`). Keycore refuses to destroy, disable or export a
+system key. See [SERVICE_MASTER_KEYS.md](SERVICE_MASTER_KEYS.md).
 
 ## Full clean reset (destructive — local/dev only)
 

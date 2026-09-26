@@ -32,7 +32,7 @@ func newSecretsService(t *testing.T) (*Service, *SQLStore) {
 	}
 	store := NewSQLStore(conn)
 	mek := []byte("0123456789ABCDEF0123456789ABCDEF")
-	return NewService(store, nil, mek), store
+	return NewService(store, mek), store
 }
 
 func createSecretsSchemaForTest(conn *pkgdb.DB) error {

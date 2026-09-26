@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -19,7 +18,7 @@ func TestCredentialFingerprintMatchesSHA256(t *testing.T) {
 
 func TestCredentialBindingUpsertAndResolve(t *testing.T) {
 	_, svc := newHandlerForTest(t)
-	ctx := context.Background()
+	ctx := adminCtx()
 	fp := credentialFingerprint("AKIAIOSFODNN7EXAMPLE")
 
 	if _, err := svc.store.UpsertCredentialBinding(ctx, CredentialBinding{
@@ -55,7 +54,7 @@ func TestCredentialBindingUpsertAndResolve(t *testing.T) {
 
 func TestCredentialBindingTenantIsolation(t *testing.T) {
 	_, svc := newHandlerForTest(t)
-	ctx := context.Background()
+	ctx := adminCtx()
 	fp := credentialFingerprint("shared-secret-value-123456")
 
 	if _, err := svc.store.UpsertCredentialBinding(ctx, CredentialBinding{
@@ -75,7 +74,7 @@ func TestCredentialBindingTenantIsolation(t *testing.T) {
 
 func TestWrapAutoRegistersCredentialBinding(t *testing.T) {
 	_, svc := newHandlerForTest(t)
-	ctx := context.Background()
+	ctx := adminCtx()
 	key, err := svc.CreateKey(ctx, CreateKeyRequest{
 		TenantID: "t1", Name: "wrapping-key", Algorithm: "AES-256", KeyType: "symmetric",
 		Purpose: "wrap", Owner: "ops", CreatedBy: "tester",
@@ -115,7 +114,7 @@ func TestWrapAutoRegistersCredentialBinding(t *testing.T) {
 
 func TestPlainEncryptDoesNotAutoBind(t *testing.T) {
 	_, svc := newHandlerForTest(t)
-	ctx := context.Background()
+	ctx := adminCtx()
 	key, err := svc.CreateKey(ctx, CreateKeyRequest{
 		TenantID: "t1", Name: "data-key", Algorithm: "AES-256", KeyType: "symmetric",
 		Purpose: "encrypt", Owner: "ops", CreatedBy: "tester",
@@ -141,7 +140,7 @@ func TestPlainEncryptDoesNotAutoBind(t *testing.T) {
 
 func TestCredentialBindingListAndDelete(t *testing.T) {
 	_, svc := newHandlerForTest(t)
-	ctx := context.Background()
+	ctx := adminCtx()
 	b, err := svc.store.UpsertCredentialBinding(ctx, CredentialBinding{
 		TenantID: "t1", Fingerprint: credentialFingerprint("x"), KeyID: "key_cccccccccccccccc",
 	})

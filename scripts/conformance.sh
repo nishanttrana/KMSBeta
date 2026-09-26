@@ -6,11 +6,14 @@
 #   2. Single audit pipeline — services must not create their own audit
 #      streams or publish audit events outside vecta-kms/pkg/audit.
 #   3. Secure defaults — no secret falls back to a value shipped in the repo,
-#      and .env.example ships no secret values.
+#      no key material is derived from a repo literal, and .env.example ships
+#      no secret values.
 #   4. Shell scripts parse (bash 3.2 on macOS included).
 #   5. FIPS 140-3: every Go binary links the certified Go Cryptographic Module
 #      and every Go service receives the customer's VECTA_FIPS_MODE.
 #   6. Preview features: one catalogue (pkg/features), mirrored by the dashboard.
+#   7. Route kernel: every HTTP route registers through pkg/route (auth,
+#      tenant, permission and a specific audit event by construction).
 #
 # Files listed in scripts/conformance-allowlist.txt are exempted (one path
 # per line, # comments allowed). The allowlist is a burn-down list: it only
@@ -88,6 +91,23 @@ check_secret_defaults "no-credential-in-url-go" '"[a-z][a-z0-9+]*://[^:"/@ %$]+:
 check_secret_defaults "no-credential-in-url-compose" '://[^:$/ ]+:[^$@ ]+@' docker-compose*.yml
 check_secret_defaults "no-secret-fallback-go" "\\(\"${SECRET_NAME}\", *\"[^\"]*[^A-Z0-9_\"][^\"]*\"\\)" services pkg --include="*.go"
 
+# Rule 3d: no key material from a string in the repo. Hashing a literal, an
+# HMAC or KDF keyed by a literal, or a key assigned from a literal all yield a
+# value anyone with the source can compute. Service master keys come from
+# keycore (pkg/mek). The one exception is recognising a retired public key to
+# migrate data off it: that line carries "conformance:legacy-public-key" and
+# must be in pkg/mek/catalog.go (docs/SECURITY/SERVICE_MASTER_KEYS.md).
+LITERAL_KEY='(Hash\("[^"]*", *|Sum(224|256|384|512)\()\[\]byte\("[^"]*"\)\)|(HMAC\("[^"]*", *|hmac\.New\([^,]+, *)\[\]byte\("|(pbkdf2\.Key|argon2\.I?D?Key|HKDF[A-Za-z]*)\(\[\]byte\("|([Mm][Ee][Kk]|[Kk][Ee][Kk]|[Mm]aster_?[Kk]ey)[A-Za-z_]*[[:space:]]*:?=[[:space:]]*\[\]byte\("|\[\]byte\("[^"]*"\)[^/]*// conformance:legacy-public-key'
+key_hits=$(grep -rnE "$LITERAL_KEY" services pkg/mek --include="*.go" 2>/dev/null | grep -v '_test\.go:' || true)
+key_bad=$(printf '%s\n' "$key_hits" | grep . | grep -v '^pkg/mek/catalog\.go:[0-9]*:.*conformance:legacy-public-key' || true)
+if [ -n "$key_bad" ]; then
+  FAIL=1
+  echo "FAIL [no-literal-key-material]: key material derived from a repo literal (get keys from keycore via pkg/mek):"
+  printf '%s\n' "$key_bad" | sed 's/^/  /'
+else
+  echo "PASS [no-literal-key-material]"
+fi
+
 # Rule 3c: .env.example ships no secret values. A filled-in example value
 # ("your-...") gets copied into real deployments and runs as a public secret.
 env_example_hits=$(grep -nE "^${SECRET_NAME}=.+" .env.example 2>/dev/null | sed 's/=.*/=<value>/' || true)
@@ -147,6 +167,29 @@ if [ -z "$go_preview" ] || [ "$go_preview" != "$ts_preview" ]; then
   diff <(echo "$go_preview") <(echo "$ts_preview") | sed 's/^/  /'
 else
   echo "PASS [preview-catalogue] ($(echo "$go_preview" | wc -l | tr -d ' ') preview features)"
+fi
+
+# Rule 7: route kernel (docs/PLATFORM_CONTRACT.md). Services register HTTP
+# routes through pkg/route, which applies authentication, tenancy, permission
+# and a specific audit event (refusals included) to every route. A raw
+# http.ServeMux is allowed only in files on the burn-down list, which only
+# shrinks: an unlisted raw mux fails, and so does a listed file that no
+# longer has one (remove it from the list when you migrate it).
+BURNDOWN="scripts/route-kernel-burndown.txt"
+route_fail=""
+raw_mux=$(grep -rlE 'http\.NewServeMux\(\)|\.HandleFunc\(' services --include="*.go" 2>/dev/null | grep -v '_test\.go$' | sort || true)
+listed=$(grep -v '^\s*#' "$BURNDOWN" | grep -v '^\s*$' | sort)
+for f in $raw_mux; do
+  printf '%s\n' "$listed" | grep -qxF "$f" || route_fail="$route_fail $f(raw-mux)"
+done
+for f in $listed; do
+  printf '%s\n' "$raw_mux" | grep -qxF "$f" || route_fail="$route_fail $f(stale-entry)"
+done
+if [ -n "$route_fail" ]; then
+  FAIL=1
+  echo "FAIL [route-kernel]: register routes with pkg/route, and keep $BURNDOWN exact:$route_fail"
+else
+  echo "PASS [route-kernel] ($(printf '%s\n' "$listed" | grep -c . | tr -d ' ') legacy file(s) left to migrate)"
 fi
 
 # Rule 4: every shell script parses. Checked with /bin/bash when present,

@@ -15,6 +15,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" driver (as pkg/db)
 
+	"vecta-kms/pkg/clusterstate"
 	"vecta-kms/pkg/fips"
 )
 
@@ -80,6 +81,11 @@ func fipsServiceName() string { return filepath.Base(os.Args[0]) }
 func RequireFIPSRuntime() {
 	fipsOnce.Do(func() {
 		store := openFIPSModeStore()
+		if sq, ok := store.(sqlFIPSModeStore); ok {
+			// The same small connection serves the cluster-role reader
+			// (write forwarding, clusterforward.go).
+			clusterstate.SetDefault(clusterstate.NewReader(sq.db))
+		}
 		desired := ""
 		if store != nil {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -54,7 +54,7 @@ const SERVICES = [
   "pqc",
   "autokey", "keyaccess", "signing",
   "workload", "dataprotect", "kmip", "sbom",
-  "discovery", "cloud",
+  "discovery", "cloud", "hsm",
 ];
 
 const PAGE_SIZE = 100;

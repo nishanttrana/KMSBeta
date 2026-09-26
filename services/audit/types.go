@@ -33,6 +33,11 @@ type AuditEvent struct {
 	// HMACSig is HMAC-SHA256(chain_hash, service_signing_key).
 	// Provides event authenticity in addition to hash-chain integrity.
 	HMACSig       string                 `json:"hmac_sig,omitempty"`
+	// HMACKeyID names the signing key behind HMACSig (see signingKeys).
+	HMACKeyID string `json:"hmac_key_id,omitempty"`
+	// ChainNode is the cluster node whose chain holds the event ("" before
+	// the node was clustered). Set by the store, not by publishers.
+	ChainNode string `json:"chain_node,omitempty"`
 	// CategoryGroup is the FIPS 140-3 aligned functional category.
 	CategoryGroup string                 `json:"category_group,omitempty"`
 	Timestamp     time.Time              `json:"timestamp"`
@@ -140,7 +145,8 @@ type MerkleEpoch struct {
 	// PreviousEpochRoot is the tree_root of epoch N-1, enabling linear proof chain.
 	PreviousEpochRoot string `json:"previous_epoch_root,omitempty"`
 	// EpochHash = SHA256(previous_epoch_root || tree_root) — tamper-evident linkage.
-	EpochHash string `json:"epoch_hash,omitempty"`
+	EpochHash string    `json:"epoch_hash,omitempty"`
+	ChainNode string    `json:"chain_node,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

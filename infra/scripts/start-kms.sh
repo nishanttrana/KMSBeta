@@ -250,9 +250,6 @@ if [[ -z "${HSM_ENDPOINT:-}" ]]; then
     hardware)
       export HSM_ENDPOINT="hsm-connector:18430"
       ;;
-    software)
-      export HSM_ENDPOINT="software-vault:18440"
-      ;;
     auto)
       export HSM_ENDPOINT="hsm-connector:18430"
       ;;

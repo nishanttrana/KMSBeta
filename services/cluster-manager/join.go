@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
@@ -21,6 +20,7 @@ import (
 
 	"vecta-kms/pkg/clustercatalog"
 	"vecta-kms/pkg/clusterrepl"
+	"vecta-kms/pkg/clusterstate"
 	pkgcrypto "vecta-kms/pkg/crypto"
 	"vecta-kms/pkg/servicetoken"
 )
@@ -154,6 +154,9 @@ type replicationCreds struct {
 	User     string `json:"user"`
 	Password string `json:"password"`
 	SSLMode  string `json:"sslmode"`
+	// ForwardCredential authenticates this member's forwarded writes to the
+	// primary's cluster-manager (forward.go).
+	ForwardCredential string `json:"forward_credential"`
 }
 
 func (c replicationCreds) conninfo() string {
@@ -202,7 +205,15 @@ func (s *Service) ExchangeJoin(ctx context.Context, in ExchangeJoinInput) (Excha
 	if err != nil {
 		return ExchangeJoinResult{}, fmt.Errorf("keycore master-key export: %w", err)
 	}
-	credsJSON, _ := json.Marshal(replicationCreds{Host: cfg.pgHost, Port: cfg.pgPort, DB: cfg.pgDB, User: role, Password: password, SSLMode: cfg.pgSSLMode})
+	fwdRaw, err := pkgcrypto.RandomBytes(32)
+	if err != nil {
+		return ExchangeJoinResult{}, err
+	}
+	forwardCredential := hex.EncodeToString(fwdRaw)
+	if err := s.store.SetMemberCredential(ctx, node.ID, credentialHash(forwardCredential)); err != nil {
+		return ExchangeJoinResult{}, err
+	}
+	credsJSON, _ := json.Marshal(replicationCreds{Host: cfg.pgHost, Port: cfg.pgPort, DB: cfg.pgDB, User: role, Password: password, SSLMode: cfg.pgSSLMode, ForwardCredential: forwardCredential})
 	cmKey, err := base64.StdEncoding.DecodeString(in.ClusterManagerJoinKey)
 	if err != nil {
 		return ExchangeJoinResult{}, newServiceError(400, "bad_request", "cluster_manager_join_key must be base64")
@@ -242,28 +253,9 @@ type ConnectResult struct {
 	Status        string   `json:"status"`
 }
 
-// joinHTTPClient pins the primary's TLS certificate: the chain check is
-// replaced by an exact SHA-256 match of the leaf certificate delivered in the
-// join bundle (nodes typically use self-signed cluster certificates).
+// joinHTTPClient pins the primary's TLS certificate (pkg/clusterstate).
 func joinHTTPClient(fingerprint string) *http.Client {
-	pin := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(fingerprint), ":", ""))
-	return &http.Client{
-		Timeout: 60 * time.Second,
-		Transport: &http.Transport{TLSClientConfig: &tls.Config{
-			MinVersion:         tls.VersionTLS13,
-			InsecureSkipVerify: true, //nolint:gosec // certificate pinning below replaces chain verification
-			VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
-				if len(rawCerts) == 0 {
-					return errors.New("primary presented no certificate")
-				}
-				sum := sha256.Sum256(rawCerts[0])
-				if hex.EncodeToString(sum[:]) != pin {
-					return errors.New("primary TLS certificate does not match the join bundle fingerprint")
-				}
-				return nil
-			},
-		}},
-	}
+	return clusterstate.PinnedHTTPClient(fingerprint, 60*time.Second)
 }
 
 // ConnectToCluster runs on the joining node.
@@ -351,7 +343,14 @@ func (s *Service) ConnectToCluster(ctx context.Context, in ConnectInput) (Connec
 		}
 		out.Subscribed = append(out.Subscribed, c)
 	}
-	out.Status = "joined; initial copy in progress (see /cluster/replication/status)"
+	// From here this node's services forward lifecycle writes to the primary.
+	if err := s.store.SetLocalState(ctx, clusterstate.State{
+		NodeID: s.bootstrapNodeID, Role: clusterstate.RoleFollower, PrimaryNodeID: res.PrimaryNodeID,
+		PrimaryURL: b.PrimaryURL, PrimaryFingerprint: b.TLSFingerprint, ForwardCredential: creds.ForwardCredential,
+	}); err != nil {
+		return out, fmt.Errorf("record cluster role: %w", err)
+	}
+	out.Status = "joined; initial copy in progress (see /cluster/replication/status); lifecycle writes now go to the primary"
 	_ = s.publishAudit(ctx, "audit.cluster.joined_cluster", "root", map[string]interface{}{
 		"primary_node_id": res.PrimaryNodeID, "primary_url": b.PrimaryURL, "components": res.Components,
 		"subscribed": out.Subscribed, "mek_fingerprint": res.MEKFingerprint, "actor": in.Actor,

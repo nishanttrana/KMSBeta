@@ -1,0 +1,39 @@
+# Burn-down list for the route-kernel conformance rule (scripts/conformance.sh).
+#
+# Every HTTP route must be registered through pkg/route, which authenticates,
+# enforces tenant and permission, and emits a specific audit event per
+# request, refusals included (docs/PLATFORM_CONTRACT.md). The files below
+# predate the kernel and still build a raw http.ServeMux. They are migrated
+# one service at a time (docs/ARCHITECTURE_MIGRATION.md); remove a file here
+# in the same change that migrates it. This list only shrinks: a new file
+# can't be added, and a migrated file left here fails the check.
+services/ai-gateway/handler.go
+services/audit/handler.go
+services/auth/handler.go
+services/autokey/handler.go
+services/backup/handler.go
+services/certs/handler.go
+services/cloud/handler.go
+services/cluster-manager/handler.go
+services/compliance/handler.go
+services/confidential/handler.go
+services/dataprotect/handler.go
+services/discovery/handler.go
+services/ekm/handler.go
+services/featureforge/handler.go
+services/governance/handler.go
+services/hyok/handler.go
+services/keyaccess/handler.go
+services/keycore/handler.go
+services/kmip/handler.go
+services/kmip/http_api.go
+services/payment/handler.go
+services/policy/handler.go
+services/posture/handler.go
+services/pqc/handler.go
+services/reconciler/main.go
+services/reporting/handler.go
+services/sbom/handler.go
+services/signing/handler.go
+services/watchdog/main.go
+services/workload/handler.go

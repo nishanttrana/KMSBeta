@@ -22,11 +22,15 @@ import (
 
 	pkgconfig "vecta-kms/pkg/config"
 	pkgreconciler "vecta-kms/pkg/reconciler"
+	"vecta-kms/pkg/servicetoken"
 )
 
 var logger = log.New(os.Stdout, "[reconciler] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
+	// Calls to platform services carry the kms-reconciler service JWT
+	// (http_helpers.go authorize); keycore refuses anonymous key use.
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-reconciler"))
 	cfg := pkgconfig.Load()
 	_ = cfg
 

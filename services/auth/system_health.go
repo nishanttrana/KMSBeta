@@ -217,7 +217,6 @@ func knownBackendTargets() []serviceTarget {
 		{name: "kms-cluster-manager", address: "cluster-manager:18210"},
 		{name: "kms-hsm-connector", address: "hsm-connector:18430"},
 		{name: "kms-kmip", address: "kmip:15696"},
-		{name: "kms-software-vault", address: "software-vault:18440"},
 	}
 }
 
@@ -824,8 +823,6 @@ func composeServiceToHealthName(serviceName string) (string, bool) {
 		return "kms-hsm-connector", true
 	case "kmip":
 		return "kms-kmip", true
-	case "software-vault":
-		return "kms-software-vault", true
 	case "postgres":
 		return "PostgreSQL", true
 	case "nats":

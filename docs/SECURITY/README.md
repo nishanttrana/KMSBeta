@@ -23,9 +23,23 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
   working keys come from keycore key material (service-derive), never from
   identifiers; includes the per-key migration runbook for legacy data.
 - [SECRET_ROTATION.md](SECRET_ROTATION.md): rotating secrets on a live stack.
+- [SERVICE_MASTER_KEYS.md](SERVICE_MASTER_KEYS.md): the secrets, certs, cloud
+  and ekm master keys come from keycore (`pkg/mek`); how data was moved off
+  the public dev keys, the exposure register, backup re-wrapping, and
+  rotation.
+- [BACKUP_KEYS.md](BACKUP_KEYS.md): governance backup keys. A software-mode
+  key is returned once and never stored; an HSM-bound key is wrapped inside
+  the tenant's HSM under its tenant key.
+- [HSM_INTEGRATION.md](HSM_INTEGRATION.md): customer HSMs through their own
+  PKCS#11 library (hsm-connector); a per-tenant key in the HSM for new keys,
+  and per-key HSM-resident keys. There is no Vecta HSM.
 - [AUDIT_EVENTS_2026-09.md](AUDIT_EVENTS_2026-09.md): every audit event the
   2026-09 refresh added, and what can't be audited (startup refusals) and how
   it shows instead.
+- [../PLATFORM_CONTRACT.md](../PLATFORM_CONTRACT.md) (Routes): every HTTP
+  route goes through the `pkg/route` kernel, which enforces authentication,
+  tenant and permission, and audits each request and refusal. Enforced by
+  `make conformance` (`route-kernel`).
 
 ## Latest scan — 2026-09-25 (v1.2.0-beta)
 

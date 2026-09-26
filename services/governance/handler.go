@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -38,7 +36,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if rawToken != "" {
 			claims, err := h.parseToken(rawToken)
 			if err != nil {
-				writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid token", requestID(r), "")
+				reqID := requestID(r)
+				writeErr(w, http.StatusUnauthorized, "unauthorized", "invalid token", reqID, "")
+				_ = h.svc.publishAudit(ctx, "audit.governance.authentication_refused", strings.TrimSpace(r.URL.Query().Get("tenant_id")), map[string]interface{}{
+					"route": r.Method + " " + r.URL.Path, "reason": "invalid_token", "result": "refused", "severity": "warning", "request_id": reqID,
+				})
 				return
 			}
 			ctx = pkgauth.ContextWithClaims(ctx, claims)
@@ -206,13 +208,19 @@ func (h *Handler) handleCreateBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.TenantID = tenantID
-	job, err := h.svc.CreateBackup(r.Context(), in)
+	if claims, ok := pkgauth.ClaimsFromContext(r.Context()); ok && claims != nil {
+		in.CreatedBy = firstNonEmptyString(claims.UserID, claims.ClientID, in.CreatedBy)
+	}
+	job, keyFile, err := h.svc.CreateBackup(r.Context(), in)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "backup_create_failed", err.Error(), reqID, in.TenantID)
 		return
 	}
+	// key_file is returned only here. For a software-mode backup it is the
+	// only copy of the key: the platform doesn't keep it.
 	writeJSON(w, http.StatusCreated, map[string]interface{}{
 		"job":        job,
+		"key_file":   keyFile,
 		"request_id": reqID,
 	})
 }
@@ -333,22 +341,22 @@ func (h *Handler) handleDownloadBackupKey(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	content, err := h.svc.GetBackupKeyDownload(r.Context(), tenantID, r.PathValue("id"))
+	actor := ""
+	if claims, ok := pkgauth.ClaimsFromContext(r.Context()); ok && claims != nil {
+		actor = firstNonEmptyString(claims.UserID, claims.ClientID)
+	}
+	content, err := h.svc.GetBackupKeyDownload(r.Context(), tenantID, r.PathValue("id"), actor)
 	if err != nil {
-		code := http.StatusBadRequest
-		if errors.Is(err, errNotFound) {
+		code, errCode := http.StatusBadRequest, "backup_key_failed"
+		switch {
+		case errors.Is(err, errNotFound):
 			code = http.StatusNotFound
+		case errors.Is(err, errBackupKeyNotRetained):
+			code, errCode = http.StatusGone, "backup_key_not_retained"
 		}
-		writeErr(w, code, "backup_key_failed", err.Error(), reqID, tenantID)
+		writeErr(w, code, errCode, err.Error(), reqID, tenantID)
 		return
 	}
-	fileName := strings.TrimSpace(fmt.Sprintf("%v", content["file_name"]))
-	if fileName == "" {
-		fileName = fmt.Sprintf("vecta-backup-%s%s", strings.TrimSpace(r.PathValue("id")), backupKeyExtension)
-	}
-	raw, _ := json.Marshal(content["key_package"])
-	content["content_base64"] = base64.StdEncoding.EncodeToString(raw)
-	content["file_name"] = fileName
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"artifact":   content,
 		"request_id": reqID,
@@ -781,33 +789,72 @@ func mustTenant(r *http.Request, w http.ResponseWriter, reqID string) string {
 	return tenantID
 }
 
+// requireSystemAdminTenant admits only a verified root administrator
+// (a token is always required: main refuses to start without the key that
+// verifies it). Every refusal is audited as
+// audit.governance.system_admin_refused with its reason.
 func (h *Handler) requireSystemAdminTenant(w http.ResponseWriter, r *http.Request, reqID string, write bool) (string, bool) {
-	tenantID := mustTenant(r, w, reqID)
+	tenantID := strings.TrimSpace(r.URL.Query().Get("tenant_id"))
 	if tenantID == "" {
-		return "", false
-	}
-	if !strings.EqualFold(tenantID, "root") {
-		writeErr(w, http.StatusForbidden, "forbidden", "system administration is root-only", reqID, tenantID)
-		return "", false
-	}
-	if h.parseToken == nil {
-		return "root", true
+		tenantID = strings.TrimSpace(r.Header.Get("X-Tenant-ID"))
 	}
 	claims, ok := pkgauth.ClaimsFromContext(r.Context())
-	if !ok || claims == nil {
-		writeErr(w, http.StatusUnauthorized, "unauthorized", "admin token is required", reqID, tenantID)
-		return "", false
+	switch {
+	case !ok || claims == nil:
+		h.refuseSystemAdmin(w, r, reqID, tenantID, http.StatusUnauthorized, "unauthorized", "authentication_required", "admin token is required")
+	case tenantID == "":
+		h.refuseSystemAdmin(w, r, reqID, tenantID, http.StatusBadRequest, "bad_request", "tenant_required", "tenant_id is required (query or X-Tenant-ID)")
+	case tenantcheck.Enforce(r, tenantID) != nil:
+		h.refuseSystemAdmin(w, r, reqID, tenantID, http.StatusForbidden, "forbidden", "tenant_mismatch", "tenant_id does not match authenticated token")
+	case !strings.EqualFold(tenantID, "root"):
+		h.refuseSystemAdmin(w, r, reqID, tenantID, http.StatusForbidden, "forbidden", "not_root_tenant", "system administration is root-only")
+	case strings.TrimSpace(claims.TenantID) != "" && !strings.EqualFold(strings.TrimSpace(claims.TenantID), "root"):
+		h.refuseSystemAdmin(w, r, reqID, tenantID, http.StatusForbidden, "forbidden", "token_tenant_not_root", "token tenant is not allowed for system administration")
+	case !claimsAllowSystemAdmin(claims, write) && !systemAdminServiceCaller(r, claims):
+		h.refuseSystemAdmin(w, r, reqID, tenantID, http.StatusForbidden, "forbidden", "insufficient_privileges", "system administration requires root admin privileges")
+	default:
+		return "root", true
 	}
-	claimsTenantID := strings.TrimSpace(claims.TenantID)
-	if claimsTenantID != "" && !strings.EqualFold(claimsTenantID, "root") {
-		writeErr(w, http.StatusForbidden, "forbidden", "token tenant is not allowed for system administration", reqID, claimsTenantID)
-		return "", false
+	return "", false
+}
+
+// systemAdminServiceCallers lists the platform services that may call a
+// system-administration route with their own verified identity, by route.
+// Nothing else is open to a service: backups, restore and the FIPS mode
+// need a root administrator.
+var systemAdminServiceCallers = map[string][]string{
+	"GET /governance/system/state":            {"kms-keycore", "kms-policy"},
+	"PUT /governance/system/posture-controls": {"kms-posture"},
+}
+
+func systemAdminServiceCaller(r *http.Request, claims *pkgauth.Claims) bool {
+	if !tenantcheck.IsServicePrincipal(claims) {
+		return false
 	}
-	if !claimsAllowSystemAdmin(claims, write) {
-		writeErr(w, http.StatusForbidden, "forbidden", "system administration requires root admin privileges", reqID, tenantID)
-		return "", false
+	for _, id := range systemAdminServiceCallers[r.Pattern] {
+		if strings.TrimSpace(claims.ClientID) == id {
+			return true
+		}
 	}
-	return "root", true
+	return false
+}
+
+func (h *Handler) refuseSystemAdmin(w http.ResponseWriter, r *http.Request, reqID, tenantID string, status int, code, reason, message string) {
+	writeErr(w, status, code, message, reqID, tenantID)
+	actor, authenticated := "unauthenticated", false
+	if claims, ok := pkgauth.ClaimsFromContext(r.Context()); ok && claims != nil {
+		actor, authenticated = firstNonEmptyString(claims.UserID, claims.ClientID, claims.Subject), true
+	}
+	_ = h.svc.publishAudit(r.Context(), "audit.governance.system_admin_refused", tenantID, map[string]interface{}{
+		"route":         r.Method + " " + r.URL.Path,
+		"reason":        reason,
+		"result":        "refused",
+		"severity":      "warning",
+		"status":        status,
+		"actor":         actor,
+		"authenticated": authenticated,
+		"request_id":    reqID,
+	})
 }
 
 func claimsAllowSystemAdmin(claims *pkgauth.Claims, write bool) bool {

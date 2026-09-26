@@ -8,7 +8,7 @@ const ALLOWED_SERVICES = new Set([
   "audit", "cloud", "compliance", "hyok", "ekm", "kmip", "reporting",
   "posture", "ai", "qkd", "qrng", "payment", "confidential", "workload",
   "autokey", "signing", "keyaccess", "sbom", "dataprotect", "mpc",
-  "cluster", "software-vault", "auth"
+  "cluster", "auth"
 ]);
 
 // Allowlist of HTTP methods

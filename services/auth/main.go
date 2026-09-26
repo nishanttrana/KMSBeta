@@ -79,6 +79,19 @@ func main() {
 
 	logic := NewAuthLogic(signingKey, cfg.JWTIssuer, cfg.JWTAudience)
 	store := NewSQLStore(dbConn)
+	// Each node keeps a day of login attempts for the cluster-wide lockout.
+	go func() {
+		t := time.NewTicker(time.Hour)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				_ = store.PruneLoginAttempts(ctx, time.Now().UTC().Add(-24*time.Hour))
+			}
+		}
+	}()
 	bootstrapDefaultAdmin(ctx, store, logger)
 	bootstrapInternalServiceClients(ctx, store, logger, auditPublisher)
 	meter := metering.NewMeter(cfg.OpsLimit, cfg.MeteringWindow)
@@ -261,7 +274,7 @@ var internalServiceClients = []string{
 	"kms-payment", "kms-discovery", "kms-compliance", "kms-pqc", "kms-cloud",
 	"kms-hyok-proxy", "kms-dataprotect", "kms-autokey", "kms-key-access",
 	"kms-governance", "kms-posture", "kms-reporting", "kms-policy", "kms-audit",
-	"kms-cluster-manager",
+	"kms-cluster-manager", "kms-secrets", "kms-reconciler",
 }
 
 // revokeInsecureServiceKeys deletes service API keys that earlier deployments

@@ -42,6 +42,8 @@ var Replicated = map[string][]string{
 	"byok": {
 		"cloud_accounts",
 		"cloud_key_bindings",
+		"cloud_mek_exposure",
+		"cloud_mek_state",
 		"cloud_region_mappings",
 		"cloud_sync_jobs",
 	},
@@ -55,6 +57,8 @@ var Replicated = map[string][]string{
 		"cert_deleted_refs",
 		"cert_expiry_alert_policies",
 		"cert_expiry_alert_state",
+		"cert_mek_exposure",
+		"cert_mek_state",
 		"cert_merkle_epochs",
 		"cert_merkle_leaves",
 		"cert_profiles",
@@ -89,7 +93,6 @@ var Replicated = map[string][]string{
 		"field_encryption_leases",
 		"field_encryption_wrappers",
 		"field_protection_profiles",
-		"fle_metadata",
 		"masking_policies",
 		"redaction_policies",
 		"token_vaults",
@@ -110,6 +113,8 @@ var Replicated = map[string][]string{
 		"ekm_databases",
 		"ekm_google_cse_configs",
 		"ekm_google_cse_keys",
+		"ekm_mek_exposure",
+		"ekm_mek_state",
 		"ekm_tde_keys",
 	},
 	"featureforge": {
@@ -132,6 +137,8 @@ var Replicated = map[string][]string{
 		"key_access_settings",
 	},
 	"keycore": {
+		"keycore_system_keys",
+		"keycore_hsm_settings",
 		"agility_migration_plans",
 		"canary_keys",
 		"ceremonies",
@@ -222,6 +229,8 @@ var Replicated = map[string][]string{
 	"secrets": {
 		"secret_values",
 		"secrets",
+		"secrets_mek_exposure",
+		"secrets_mek_state",
 	},
 	"signing": {
 		"signing_profiles",
@@ -238,6 +247,9 @@ var Replicated = map[string][]string{
 // node (its sessions, logs written during crypto operations, hardware and
 // network settings, backups, cluster control plane).
 var NodeLocal = map[string]string{
+	"key_op_counters":                     "per-key operation counters of a cluster member (written during crypto operations)",
+	"cluster_local_state":                 "this node's cluster role and its primary; the forwarding credential authenticates this node only",
+	"cluster_member_credentials":          "credentials a primary issued to its members",
 	"ai_gateway_audit":                    "per-node AI gateway log",
 	"ai_gateway_token_budgets":            "per-node usage counters",
 	"alerts":                              "alerts raised on this node",
@@ -257,6 +269,8 @@ var NodeLocal = map[string]string{
 	"cluster_sync_nonces":                 "cluster control plane; exchanged through the join and heartbeat API, not table replication",
 	"confidential_release_history":        "per-node release log",
 	"ct_log_entries":                      "CT log polling cursor data of this node",
+	"fle_metadata":                        "where fields were encrypted; written during crypto operations on the node that served them",
+	"audit_relay_cursor":                  "how far this primary has relayed each member's audit chain to its own consumers",
 	"dataprotect_audit_log":               "per-node data protection log",
 	"dr_drill_runs":                       "DR drill executions of this node",
 	"ekm_key_access_log":                  "per-node access log",
@@ -297,4 +311,5 @@ var SharedAppend = map[string]string{
 	"audit_events":        "append-only; every node writes its own chain",
 	"audit_merkle_epochs": "per-node Merkle epochs of the audit chain",
 	"audit_merkle_leaves": "per-node Merkle leaves of the audit chain",
+	"auth_login_attempts": "login failures and successes from every node, so lockout counts cluster-wide",
 }

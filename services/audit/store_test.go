@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"os"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -41,8 +44,10 @@ func createAuditSchemaForTest(conn *pkgdb.DB) error {
 			correlation_id TEXT, parent_event_id TEXT, session_id TEXT, result TEXT NOT NULL, status_code INTEGER, error_message TEXT,
 			duration_ms REAL, fips_compliant INTEGER, approval_id TEXT, risk_score INTEGER, tags TEXT, node_id TEXT, details TEXT,
 			hmac_sig TEXT, category_group TEXT, country_code TEXT,
+			chain_node TEXT NOT NULL DEFAULT '', hmac_key_id TEXT,
 			created_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, id)
 		);`,
+		`CREATE TABLE audit_relay_cursor (tenant_id TEXT NOT NULL, chain_node TEXT NOT NULL, last_sequence INTEGER NOT NULL, PRIMARY KEY (tenant_id, chain_node));`,
 		`CREATE TABLE alerts (
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, audit_event_id TEXT NOT NULL, severity TEXT NOT NULL, category TEXT NOT NULL,
 			title TEXT NOT NULL, description TEXT, source_service TEXT NOT NULL, actor_id TEXT, target_id TEXT, risk_score INTEGER DEFAULT 0,
@@ -209,5 +214,54 @@ func TestNormalizeSourceIPInvalidReturnsEmpty(t *testing.T) {
 	got := normalizeSourceIP("not-an-ip:443")
 	if got != "" {
 		t.Fatalf("expected empty source ip, got %q", got)
+	}
+}
+
+// HSM activity: events are selected by action prefix, with "_" taken
+// literally (audit.key.hsm_ must not match audit.key.hsmx...).
+func TestQueryEventsByActionPrefix(t *testing.T) {
+	checkActionPrefix(t, newAuditStore(t), "t-hsm")
+}
+
+// The same on real Postgres (CI integration-postgres): LIKE ... ESCAPE.
+func TestQueryEventsByActionPrefixPostgres(t *testing.T) {
+	dsn := strings.TrimSpace(os.Getenv("VECTA_TEST_POSTGRES_DSN"))
+	if dsn == "" {
+		t.Skip("set VECTA_TEST_POSTGRES_DSN to a disposable Postgres database")
+	}
+	ctx := context.Background()
+	conn, err := pkgdb.Open(ctx, pkgdb.Config{PostgresDSN: dsn, MaxOpen: 4, MaxIdle: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close() })
+	if err := conn.RunMigrations(ctx, "migrations"); err != nil {
+		t.Fatalf("migrations: %v", err)
+	}
+	checkActionPrefix(t, NewSQLStore(conn), "t-hsm-pg-"+strconv.FormatInt(time.Now().UnixNano(), 36))
+}
+
+func checkActionPrefix(t *testing.T, s *SQLStore, tenant string) {
+	t.Helper()
+	ctx := context.Background()
+	for _, a := range []string{"audit.hsm.encrypt", "audit.hsm.key_generated", "audit.key.hsm_refused", "audit.key.hsmx_other", "audit.key.create"} {
+		if _, _, err := s.PersistEventAndAlert(ctx, AuditEvent{TenantID: tenant, Timestamp: time.Now().UTC(), Service: "hsm",
+			Action: a, ActorID: "kms-keycore", ActorType: "service", Result: "success"}, Alert{}, 60, 5, 10*time.Minute); err != nil {
+			t.Fatal(err)
+		}
+	}
+	events, err := s.QueryEvents(ctx, tenant, EventQuery{Limit: 50, ActionPrefixes: []string{"audit.hsm.", "audit.key.hsm_"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, e := range events {
+		got[e.Action] = true
+	}
+	if len(events) != 3 || !got["audit.hsm.encrypt"] || !got["audit.hsm.key_generated"] || !got["audit.key.hsm_refused"] {
+		t.Fatalf("prefix query returned %v", got)
+	}
+	if all, _ := s.QueryEvents(ctx, tenant, EventQuery{Limit: 50}); len(all) != 5 {
+		t.Fatalf("no prefix: %d events", len(all))
 	}
 }

@@ -19,6 +19,7 @@ type Service struct {
 	broker     *StreamBroker
 	hndl       *HNDLDetector
 	quarantine *QuarantineEvaluator
+	cluster    clusterKeyState
 }
 
 // SetDetectors wires the closed-loop detectors. Both are optional; if
@@ -40,6 +41,7 @@ func NewService(store Store, cfg AuditConfig, wal *WALBuffer, publisher EventPub
 		cfg:       cfg,
 		wal:       wal,
 		publisher: publisher,
+		cluster:   clusterKeyState{keyFile: clusterAuditKeyFile()},
 	}
 }
 
@@ -74,6 +76,9 @@ func (s *Service) HandleNATSMessage(ctx context.Context, msg *nats.Msg) error {
 	event, err := parseIncomingEvent(msg.Subject, msg.Data)
 	if err != nil {
 		return err
+	}
+	if s.isRelayedDuplicate(ctx, event) {
+		return nil // another node's event, already here by replication
 	}
 	_, _, err = s.ProcessEvent(ctx, event)
 	if err == nil {

@@ -35,14 +35,19 @@ import (
 	pkgevents "vecta-kms/pkg/events"
 	pkggrpc "vecta-kms/pkg/grpc"
 	pkgheartbeat "vecta-kms/pkg/heartbeat"
+	"vecta-kms/pkg/hsm"
 	"vecta-kms/pkg/metering"
 	pkgratelimit "vecta-kms/pkg/ratelimit"
 	pkgruntimecfg "vecta-kms/pkg/runtimecfg"
+	"vecta-kms/pkg/servicetoken"
 )
 
 var logger = log.New(os.Stdout, "[keycore] ", log.LstdFlags|log.Lmicroseconds)
 
 func main() {
+	// Calls to other platform services (governance system state) carry this
+	// service's own identity.
+	servicetoken.SetDefault(servicetoken.FromEnv("kms-keycore"))
 	cfg := pkgconfig.Load()
 
 	if err := pkgruntimecfg.ValidateServiceConfig("kms-keycore", cfg); err != nil {
@@ -158,6 +163,9 @@ func main() {
 	svc.SetCryptoperiodPolicy(NewCryptoperiodPolicy())
 	svc.SetVersionPolicy(DefaultVersionPolicy())
 	svc.SetWakeSelfTestRegistry(NewWakeSelfTestRegistry())
+	// The customer's HSM, through the hsm-connector (HSM_CONNECTOR_URL).
+	// Unused until a tenant turns on its tenant key or HSM keys.
+	svc.SetHSMBackend(hsm.FromEnv())
 
 	// Cold-tier archiver. Disabled by default; operators turn it on by
 	// setting KEYCORE_ARCHIVE_DIR and KEYCORE_ARCHIVE_KEK_B64. When the
@@ -181,6 +189,7 @@ func main() {
 		logger.Printf("governance fips mode integration enabled")
 	}
 	handler := NewHandler(svc)
+	handler.SetAuditClient(auditClient)
 
 	// Zeroization verification scheduler. Runs on the keycore process
 	// because it needs the live key cache; emits per-key audit events
@@ -202,12 +211,16 @@ func main() {
 		hb.Start(ctx)
 		defer hb.Stop()
 	}
-	if tokenParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience); err != nil {
-		logger.Printf("jwt parser disabled: %v", err)
-	} else if tokenParser != nil {
-		handler.SetTokenParser(tokenParser)
-		logger.Printf("jwt parser enabled for key access control")
+	// Key access is decided from the verified token, so keycore can't run
+	// without the key that verifies tokens (fail closed, like jwtauth.MustWrap).
+	tokenParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience)
+	if err != nil {
+		logger.Fatalf("refusing to start: jwt parser: %v", err)
 	}
+	if tokenParser == nil {
+		logger.Fatalf("refusing to start: JWT_PUBLIC_KEY_B64 (or KEYCORE_JWT_PUBLIC_KEY_*) is required; key access is decided from verified tokens")
+	}
+	handler.SetTokenParser(tokenParser)
 
 	rl := pkgratelimit.New(pkgratelimit.Config{
 		RequestsPerSecond: cfg.RateLimitRPS,

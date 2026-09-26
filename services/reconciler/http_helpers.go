@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"vecta-kms/pkg/internalauth"
+	"vecta-kms/pkg/servicetoken"
 )
 
 // logIface is the minimal interface the reconcilers accept for logging.
@@ -41,12 +42,12 @@ func doJSON(ctx context.Context, client *http.Client, method, url string, body a
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Reconciler-Source", "vecta-reconciler/v1")
-	internalauth.AddTokenHeader(req)
+	authorize(ctx, req)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close() //nolint:errcheck
+	defer resp.Body.Close()        //nolint:errcheck
 	io.Copy(io.Discard, resp.Body) //nolint:errcheck
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return nil
@@ -62,7 +63,7 @@ func getJSON(ctx context.Context, client *http.Client, url string, out any) erro
 		return err
 	}
 	req.Header.Set("X-Reconciler-Source", "vecta-reconciler/v1")
-	internalauth.AddTokenHeader(req)
+	authorize(ctx, req)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -73,4 +74,14 @@ func getJSON(ctx context.Context, client *http.Client, url string, out any) erro
 		return errors.New(resp.Status)
 	}
 	return json.NewDecoder(resp.Body).Decode(out)
+}
+
+// authorize identifies the reconciler to the platform service it calls: the
+// kms-reconciler service JWT (keycore decides key access from a verified
+// token and refuses anonymous callers) plus the internal API token for the
+// routes guarded by pkg/internalauth. Every target is a platform service URL
+// from the reconciler's own configuration.
+func authorize(ctx context.Context, req *http.Request) {
+	servicetoken.Authorize(ctx, req)
+	internalauth.AddTokenHeader(req)
 }

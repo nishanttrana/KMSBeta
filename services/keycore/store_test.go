@@ -29,6 +29,9 @@ func newStoreForTest(t *testing.T) *SQLStore {
 
 func createSchemaForTest(conn *pkgdb.DB) error {
 	stmts := []string{
+		`CREATE TABLE key_access_policy_settings (tenant_id TEXT PRIMARY KEY, deny_by_default BOOLEAN NOT NULL DEFAULT FALSE, require_approval_for_policy_change BOOLEAN NOT NULL DEFAULT FALSE, grant_default_ttl_minutes INTEGER NOT NULL DEFAULT 0, grant_max_ttl_minutes INTEGER NOT NULL DEFAULT 0, enforce_signed_requests BOOLEAN NOT NULL DEFAULT FALSE, replay_window_seconds INTEGER NOT NULL DEFAULT 300, nonce_ttl_seconds INTEGER NOT NULL DEFAULT 900, require_interface_policies BOOLEAN NOT NULL DEFAULT FALSE, updated_by TEXT, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);`,
+		`CREATE TABLE keycore_system_keys (client_id TEXT NOT NULL, purpose TEXT NOT NULL, tenant_id TEXT NOT NULL, key_id TEXT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (client_id, purpose));`,
+		`CREATE TABLE key_op_counters (tenant_id TEXT NOT NULL, key_id TEXT NOT NULL, ops_total INTEGER NOT NULL DEFAULT 0, ops_encrypt INTEGER NOT NULL DEFAULT 0, ops_decrypt INTEGER NOT NULL DEFAULT 0, ops_sign INTEGER NOT NULL DEFAULT 0, ops_last_reset TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (tenant_id, key_id));`,
 		`CREATE TABLE keys (
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, name TEXT NOT NULL, algorithm TEXT NOT NULL, key_type TEXT NOT NULL,
 			purpose TEXT NOT NULL, status TEXT NOT NULL, current_version INTEGER NOT NULL, kcv BLOB, kcv_algorithm TEXT,
@@ -45,8 +48,10 @@ func createSchemaForTest(conn *pkgdb.DB) error {
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, key_id TEXT NOT NULL, version INTEGER NOT NULL,
 			encrypted_material BLOB NOT NULL, material_iv BLOB NOT NULL, wrapped_dek BLOB NOT NULL, public_key BLOB, kcv BLOB,
 			rotated_from INTEGER, rotation_reason TEXT, status TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			protection TEXT NOT NULL DEFAULT 'mek', hsm_label TEXT NOT NULL DEFAULT '',
 			PRIMARY KEY (tenant_id, id)
 		);`,
+		`CREATE TABLE keycore_hsm_settings (tenant_id TEXT PRIMARY KEY, tenant_key_enabled BOOLEAN NOT NULL DEFAULT FALSE, hsm_keys_enabled BOOLEAN NOT NULL DEFAULT FALSE, tenant_key_label TEXT NOT NULL DEFAULT '', updated_by TEXT NOT NULL DEFAULT '', updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP);`,
 		`CREATE TABLE key_iv_log (
 			id TEXT NOT NULL, tenant_id TEXT NOT NULL, key_id TEXT NOT NULL, key_version INTEGER NOT NULL,
 			iv BLOB NOT NULL, operation TEXT NOT NULL, reference_id TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

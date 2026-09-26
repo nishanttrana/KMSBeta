@@ -8,10 +8,12 @@ import (
 	"io"
 	"log"
 	"net/http"
+	neturl "net/url"
 	"strings"
 	"time"
 
 	pkgaudit "vecta-kms/pkg/audit"
+	"vecta-kms/pkg/servicetoken"
 )
 
 // RunContext carries contextual data passed between actions during a playbook run.
@@ -637,6 +639,12 @@ func (e *PlaybookExecutor) doRequest(ctx context.Context, method string, url str
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
+	// Platform services (keycore, certs, policy, audit, auth) decide access
+	// from a verified token: act as the compliance service identity. Only
+	// there: the service token must never reach a webhook or third party.
+	if req.Header.Get("Authorization") == "" && e.platformTarget(req.URL) {
+		servicetoken.Authorize(ctx, req)
+	}
 
 	resp, err := e.http.Do(req)
 	if err != nil {
@@ -649,4 +657,20 @@ func (e *PlaybookExecutor) doRequest(ctx context.Context, method string, url str
 		return fmt.Errorf("HTTP %d from %s: %s", resp.StatusCode, url, string(body))
 	}
 	return nil
+}
+
+// platformTarget reports whether u is one of the platform services the
+// executor was wired to: same scheme and host exactly, so a look-alike host
+// ("keycore:8010.example") or any other URL never receives the service token.
+func (e *PlaybookExecutor) platformTarget(u *neturl.URL) bool {
+	for _, base := range []string{e.keycoreURL, e.certsURL, e.policyURL, e.auditURL, e.authURL} {
+		b, err := neturl.Parse(base)
+		if err != nil || b.Host == "" {
+			continue
+		}
+		if strings.EqualFold(u.Scheme, b.Scheme) && strings.EqualFold(u.Host, b.Host) {
+			return true
+		}
+	}
+	return false
 }

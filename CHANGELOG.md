@@ -17,6 +17,312 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   change to code or deployment unless `VERSION` has a higher MINOR (or MAJOR)
   than the base branch and `CHANGELOG.md` has a section for it.
 
+### Development moves entirely to KMSBeta
+- Nothing is developed in the KMSExtension repo any more. Features cut from
+  the core are removed and stay recoverable from git history.
+- The Edge & IoT preview now says "there is no edge runtime" instead of
+  pointing at KMSExtension.
+
+### HSM: activity log, create alerts, provenance, partition view, HSM CAs
+- **HSM activity in the HSM tab.** Every HSM operation and refusal was
+  already audited (`audit.hsm.*` from the connector, `audit.key.hsm_*` from
+  keycore). The HSM tab now lists them, and the Audit Log's service filter
+  has "hsm". `GET /svc/audit/events` takes `action_prefix` (repeatable,
+  matched literally).
+- **Alerts when creating keys and CAs.** If the tenant has HSM keys on, the
+  create-key form says so, and **Create in HSM** starts checked for
+  algorithms the HSM supports (unsupported ones hide the box). The create-CA
+  form offers **Key storage: in the tenant's HSM** for ECDSA CAs. Importing
+  into the HSM stays refused.
+- **One HSM per tenant.** A tenant's HSM profile names one PKCS#11 slot; use
+  the vendor's HA or cluster behind that slot for redundancy. Each HSM key
+  now records the device that generated it (`hsm_serial`, `hsm_token`,
+  `hsm_model`, `hsm_manufacturer` labels and in `audit.key.create`). If the
+  profile later points at a device without the key, operations answer
+  `409 hsm_key_not_found` naming the recorded serial, not a generic error.
+  Rotating onto a different device emits `audit.key.hsm_device_changed`.
+- **Verify in HSM** (key details, `GET /svc/keycore/keys/{id}/hsm`) reads
+  the key back from the HSM: its label, and the HSM's own flags that it was
+  generated on the token (`CKA_LOCAL`), is sensitive and was never
+  extractable. Tests assert those attributes for AES, RSA and ECDSA keys.
+- **Show HSM partition** (Keys and Certificates tabs,
+  `GET /svc/keycore/hsm/objects`) lists what is in the tenant's partition,
+  including keys and certificates that were there before the KMS. Other
+  tenants' KMS objects are hidden. Read-only for now: existing objects can't
+  yet be adopted as KMS keys.
+- **CA keys in the HSM are real now.** The certs "HSM-backed" key backend
+  stored a software key like the default one. `key_backend: "hsm"` now
+  generates the CA key in the tenant's HSM through keycore (ECDSA
+  P-256/P-384), and certificates, CRLs and OCSP responses are signed there.
+  Keycore sign takes `prehashed: true` for HSM keys. CAs created as
+  "HSM-backed" before were stored as `keycore` and keep working as the
+  software keys they always were; the CA list now labels them "Software key,
+  keycore co-signed".
+- **Tests:** the audit `action_prefix` filter is also proven on Postgres
+  (`TestQueryEventsByActionPrefixPostgres`, now in CI `integration-postgres`).
+- **No fake CRLs.** When CRL signing failed, certs published a JSON note
+  wrapped in `X509 CRL` PEM headers. It now fails and emits
+  `audit.cert.crl_generation_failed`.
+
+### HSM integration: real PKCS#11, per-tenant key and HSM-resident keys
+- **New `hsm-connector` service.** It loads the customer's own PKCS#11
+  library: Securosys Primus, Thales Luna, Entrust nShield, Utimaco, AWS
+  CloudHSM, or any PKCS#11 v2.40+ HSM. It is the only process that holds
+  the HSM PIN. Before this, the HSM tab only stored a profile and nothing
+  ever used the HSM. The compose entry pointed at an image that was never
+  built.
+- **HSM tab → KMS integration (per tenant):**
+  - **Test connection** shows what the connector really logged in to
+    (manufacturer, model, token, firmware).
+  - **Tenant key in HSM:** the tenant gets its own AES-256 key inside the
+    HSM, and every new key's material is encrypted by it. Existing keys keep
+    the KMS master key.
+  - **HSM keys:** the create-key form offers **Create in HSM**. The key is
+    generated in the HSM (AES-GCM, RSA-PSS, ECDSA P-256/P-384), never leaves
+    it, and its encrypt, decrypt, sign and verify run there. Export, wrap
+    and derive are refused (`409 hsm_operation_unsupported`). Rotation
+    creates a new HSM key, and destroy removes the objects from the HSM.
+- **Tenant isolation:** every HSM object is labelled `vecta:<tenant>:...`,
+  and the connector refuses other tenants' labels, even on a shared
+  partition. Only keycore and governance may use HSM keys. Libraries load
+  only from the provider workspace, and PIN variables must be named `*PIN*`.
+- **HSM-bound governance backups are now wrapped by the HSM**, under the
+  tenant key. `BACKUP_HSM_WRAP_SECRET` is gone (it was never passed to
+  governance in compose, so HSM-bound backups failed there). Migration 014
+  retires the secret-derived v2 packages.
+- **Removed "Vecta KMS HSM":** the menu entry is now "Securosys Primus HSM".
+  The unused `software-vault` "software HSM" service is removed, along with
+  `SOFTWARE_VAULT_PASSPHRASE` (recoverable from git history before commit
+  `091109c`).
+  `hsm_mode: software` now means no HSM. `hardware` starts `hsm-connector`
+  and `hsm-integration` (the library upload, which no deployment profile
+  used to start).
+- **Removed a dead "HSM-backed" checkbox** from the create-key form (it was
+  hard-wired to unchecked).
+- **Docs:** `docs/GETTING_STARTED.md` §4.6 listed environment variables and a
+  `vecta-kms hsm verify` command that don't exist, and it's rewritten. The
+  cloud examples no longer describe a "Vecta HSM".
+- **Tests** run against SoftHSM2, a real PKCS#11 library installed in CI.
+  Vendor hardware hasn't been tested from this repository; see
+  docs/SECURITY/HSM_INTEGRATION.md, "Not yet validated".
+- **New audit events:** `audit.hsm.*`, `audit.key.hsm_settings_updated`,
+  `hsm_refused`, `hsm_objects_destroyed`, `hsm_destroy_failed`.
+
+### Security: governance system administration without a token
+- **Governance ran without verifying tokens.** It read its verification key
+  only from `GOVERNANCE_*` / `KEYCORE_*` variables or a key file, never from
+  the shared `JWT_PUBLIC_KEY_B64` that compose sets. When the key was
+  missing, it logged "jwt parser disabled" and admitted every
+  system-administration request that sent `tenant_id=root`. In a standard
+  compose deployment, anyone who could reach governance could list, download
+  or restore backups, change the FIPS mode, and change settings, network and
+  FDE state.
+- **Fixed:** governance reads the shared key and **refuses to start** without
+  one (`refusing to start: no JWT verification key`). System administration
+  needs a verified root administrator.
+- **Service callers:** keycore and policy (reading `GET /governance/system/state`)
+  and posture (writing `PUT /governance/system/posture-controls`) had called
+  without a token. They now use their own service identities
+  (`kms-keycore`, `kms-policy`, `kms-posture`). Governance admits each only on
+  that route. keycore and policy now read the platform state as
+  `tenant_id=root`: governance only serves root, so per-tenant reads had
+  always been refused with 403.
+- **New audit events:** `audit.governance.system_admin_refused` for every
+  refusal (`reason`: `authentication_required`, `tenant_required`,
+  `tenant_mismatch`, `not_root_tenant`, `token_tenant_not_root`,
+  `insufficient_privileges`), and `audit.governance.authentication_refused`
+  (`invalid_token`). Governance events now carry `result: refused` at the top
+  level too, not only in `data`.
+- **Operators:** make sure governance gets `JWT_PUBLIC_KEY_B64` (compose
+  already requires it) and `INTERNAL_SERVICE_BOOTSTRAP_SECRET` for keycore,
+  policy and posture. `POSTURE_GOVERNANCE_BEARER_TOKEN` still overrides
+  posture's identity.
+
+### Security: governance backup keys
+- **Software-mode backup keys were stored in plaintext** next to the
+  encrypted artifact, so anyone who could read the database (or a dump of
+  it) could open every such backup. **Fixed:** the key file is returned once,
+  in the `POST /governance/backups` response (`key_file`), and the dashboard
+  saves it the moment the backup is created. The platform keeps only its
+  fingerprint. `GET /governance/backups/{id}/key` answers
+  `410 backup_key_not_retained` for these backups.
+- **HSM-bound backups wrapped their key under a raw SHA-256** of the wrap
+  secret and binding. **Fixed:** the wrap key is HKDF-SHA256
+  (`key_derivation: "v2"`), and `BACKUP_HSM_WRAP_SECRET` must be at least 32
+  characters. v1 key packages are refused on restore.
+- **Breaking:** migration 013 removes the stored keys of existing backups
+  (plaintext software keys and v1 wrapped keys). Those backups restore only
+  with a software key file saved before the upgrade. No backups had been
+  taken on the old version. The hourly job that re-sealed stored backups
+  (unreleased) is removed; contents are re-wrapped at capture instead.
+- New audit events: `audit.governance.backup_create_refused`,
+  `backup_key_downloaded`, `backup_key_download_refused`
+  (`reason: key_not_retained`). The backup's creator is now taken from the
+  verified token. Tenant-scope HSM-bound restores use the target tenant's
+  binding, as the backup did.
+- Details: [docs/SECURITY/BACKUP_KEYS.md](docs/SECURITY/BACKUP_KEYS.md).
+
+### Security: keycore trusted identity headers for key access
+- **A caller could grant itself access to keys.** When the token lacked a
+  field, or there was no token, keycore filled the caller's user, role,
+  permissions and groups from `X-Actor-*` / `X-KMS-Subject` headers. A token
+  with no permissions plus `X-Actor-Permissions: *` or `X-Actor-Role: admin`
+  was treated as an admin for encrypt, decrypt, sign, export and other key
+  operations. `X-Actor-Groups` matched group grants, a header user ID alone
+  counted as authenticated, and `X-KMS-Interface` moved a request under
+  another interface's subject policies.
+- **Fixed:** key access is decided from the verified token only. Group
+  membership comes from the store, keyed by the verified user. Every HTTP
+  caller is evaluated as the `rest` interface. The headers are kept only as
+  unverified audit context.
+- **New audit events:**
+  - `audit.key.access_refused` for every key-access denial (`result:
+    refused`, with `reason`, the verified actor and any headers it sent);
+  - `audit.key.actor_headers_ignored` whenever a request carries identity
+    headers.
+
+  Key-operation endpoints now answer a denial with `403 access_denied`
+  instead of `400 <op>_failed`.
+- **Operators:** check for `audit.key.actor_headers_ignored`. No platform
+  service sends these headers, so any hit is a stale integration or an
+  attempt to spoof.
+- **No anonymous key use (breaking for token-less integrations).** A request
+  with no token could use any key that had no grants, unless the tenant had
+  enabled deny-by-default. Every key operation now needs a verified token:
+  otherwise `403 access_denied`, audited as `audit.key.access_refused` with
+  `reason: authentication_required`. The creator, admins and service
+  identities are unaffected.
+  - Keycore now refuses to start without the key that verifies tokens
+    (`JWT_PUBLIC_KEY_B64`, which compose already requires); before, it
+    started without it and couldn't identify anyone.
+  - Two platform callers relied on anonymous access and now use service
+    identities:
+    - compliance playbooks (rotate, status and destroy key actions, and the
+      certs, policy, audit and auth actions) call as `kms-compliance`. The
+      token is sent only to those service hosts, never to webhooks or
+      external URLs.
+    - reconciler's key-lifecycle calls carry the new `kms-reconciler`
+      identity and, for the first time, the key's `tenant_id`. Keycore
+      rejected those calls before for the missing tenant, so scheduled
+      rotation and deactivation now actually run.
+
+### Security: stored secrets, CA keys, cloud credentials and BitLocker keys were under public keys
+- **Every deployment was affected.** secrets, certs, cloud and ekm wrapped
+  their stored data under keys derived from strings in the source code
+  (`SHA-256("vecta-<service>-dev-mek")`; cloud could also use
+  `0123456789ABCDEF…`), because their `<SERVICE>_MEK_B64` was never set. A
+  copy of the database or a backup was enough to decrypt stored secret
+  values, legacy-format CA signing keys, cloud provider credentials and
+  BitLocker recovery keys.
+- **Master keys now come from keycore; there is nothing to configure.** Each
+  service derives its key from a keycore system key bound to its own
+  identity. Plain `docker compose up` works. Cluster members derive the same
+  key with nothing to copy. Keycore refuses to destroy, disable, delete a
+  version of, or export a system key (`409 system_key_protected`); rotate it
+  and restart the service to re-key. These four services now need keycore
+  (and policy) up to start; they retry for 10 minutes.
+- **Automatic migration:** on the primary, every row under a public or old
+  key is re-wrapped before the service serves, and again every 15 minutes, so
+  restored rows are caught. A row that can't be rewritten blocks the start.
+  Values and ciphertext are unchanged.
+- **Backups:** a new backup's contents are re-wrapped through the owning
+  service at capture, and a restore's before any row is written. A clean
+  backup never needs the services; an affected one is refused, with nothing
+  written, if its service can't re-wrap. (Backup keys: see the next section.)
+- **Exposure register (action needed):** re-wrapping can't change copies
+  made before the upgrade (database dumps, snapshots, downloaded backup
+  files). Every item that was under a public key is listed under
+  **Administration → Tenant → Security → Key exposure register**
+  (`GET /svc/<service>/mek/exposure`), with how to fix it. An entry closes
+  itself when the material is replaced:
+  - a secret is rotated or deleted;
+  - a CA is replaced;
+  - a cloud account is re-registered;
+  - a BitLocker volume is rotated.
+
+  An administrator can also acknowledge an entry with a reason. **Rotate the
+  listed material if anyone may have had an older copy.**
+- New audit events: `audit.<svc>.dev_mek_rewrapped`, `mek_rewrapped`,
+  `*_rewrap_refused`, `mek_unreadable`, `mek_check_refused`,
+  `mek_exposure_remediated`, and `audit.key.system_key_*`.
+- **Dashboard:** a 403 no longer signs the user out; only 401 does (a
+  missing permission, such as `secrets.read`, is not an expired session).
+- The new conformance rule `no-literal-key-material` fails any key derived
+  from, or set to, a string literal.
+
+### Platform kernel: audit, tenancy and permissions for every route
+- **New `pkg/route` kernel.** A route is registered with its audit action and
+  required permission. The kernel then authenticates the caller, enforces
+  one tenant, checks the permission, and emits a specific
+  `audit.<service>.<action>` event for every request, including failures and
+  refusals (`result: refused`, with `reason`). A route without an action or
+  permission stops the service at startup. See
+  [docs/PLATFORM_CONTRACT.md](docs/PLATFORM_CONTRACT.md).
+- **`make conformance` fails on new raw `http.ServeMux` routes.** 31 legacy
+  handler files are on a shrink-only burn-down list
+  (`scripts/route-kernel-burndown.txt`); the plan is in
+  [docs/ARCHITECTURE_MIGRATION.md](docs/ARCHITECTURE_MIGRATION.md).
+- **Secrets service migrated (reference service).**
+  - **Security fix:** `POST /secrets`, `/secrets/generate/*` and the Vault
+    KV write took `tenant_id` from the request body without checking it
+    against the token, so a caller could create secrets in another tenant.
+    This is now refused (`403 tenant_mismatch`) and audited.
+  - **Breaking: permissions are now required.** `secrets.read` (metadata,
+    versions, stats, audit trail), `secrets.value.read` (value and Vault KV
+    reads), `secrets.write` (create, update, rotate, generate, Vault writes)
+    and `secrets.delete`. `admin` / `tenant-admin` (`*`) and activated API
+    clients (`kms.read` / `kms.write`) are unaffected. Other roles need these
+    permissions granted.
+  - **Tenant resolution:** when no tenant is named, the token's tenant is
+    used. Vault clients without a namespace no longer fall into a tenant
+    called `default`. Conflicting tenants in query, header and body are
+    refused (`403 tenant_conflict`).
+  - `created_by` / `updated_by` record the verified caller, not the value in
+    the request body.
+  - **Audit events:** each request emits exactly one event, carrying actor,
+    target, correlation ID and outcome, including failures and refusals.
+    New actions: `audit_log_read`, `stats_read`, `vault_kv_read`,
+    `vault_kv_written`, `vault_kv_deleted`, `vault_metadata_read`,
+    `vault_token_lookup`, `vault_health_read` and `vault_seal_status_read`.
+    Key generation now emits one `generated` event instead of `created`
+    plus `generated`.
+
+### Clustering (slice 3a of 5): write forwarding
+- **Any node takes any request.** On a member:
+  - crypto operations, reads, logins and audit run locally;
+  - key, policy and configuration changes are forwarded to the primary and
+    answered as if made there (`X-Vecta-Forwarded-To`);
+  - if the primary is unreachable or its certificate doesn't match the pin,
+    the write fails with `502 primary_unreachable` and nothing changes.
+
+  Every service gets this through `pkg/config`.
+- **Forwarding security:**
+  - the member verifies the caller;
+  - the primary authenticates the member by a credential issued at join
+    (hash stored, revoked when the node is removed);
+  - the primary's auth mints a 5-minute token (`POST /auth/cluster/mint`,
+    cluster-manager only);
+  - every forward and refusal is audited on both sides (five new events).
+- **Members no longer write replicated data.** Such writes would have diverged
+  the member or stopped replication:
+  - keycore operation counts go to the node-local `key_op_counters` (limits
+    still enforced);
+  - scheduled jobs run on the primary only (compliance, reporting, posture,
+    SBOM, certs sweeps and mesh discovery, approval expiry, the dataprotect
+    receipt reconciler);
+  - dataprotect working-key state isn't recorded on members;
+  - `fle_metadata` is node-local.
+- **Cluster tab** shows when the node is a member and which primary it
+  forwards to (`forwards_to` in replication status).
+
+### Fixes
+- **Key import rejected about 2% of valid keys.** Keycore trimmed
+  "whitespace" from binary DER. A key whose encoding started or ended with
+  byte 0x09–0x0d or 0x20 lost that byte and failed with "unsupported DER" or
+  "PEM payload does not contain a supported key block". DER is now parsed
+  untrimmed (`TestImportDERWithWhitespaceBoundaryBytes`).
+
+
 ## [1.2.0-beta] — 2026-09-25
 
 ### Clustering (slice 2 of 5): secure join

@@ -20,15 +20,18 @@ only what the database actually does.
 | Secure join: join bundle, TLS pinning, one-time token, master key sealed keycore-to-keycore (ML-KEM-768), per-member replication role, sealed replication credentials, subscriptions | **Done** (slice 2). Proven end to end with two real Postgres servers (`TestSecureJoinEndToEnd`) |
 | Node-local logins and service identities never replicate (row filters on `auth_users`, `auth_client_registrations`, `auth_api_keys`) | **Done** (slice 2) |
 | cluster-manager authentication: root administrator or service identity on every admin route | **Done** (slice 2; it previously had none) |
-| Certs root wrapping key and audit signing key transfer | Not yet: until then, OCSP and CA signing run on the primary, via forwarding (slice 3) |
-| Write forwarding from members to the primary | Slice 3, not yet |
+| Certs root wrapping key and audit signing key transfer | Not yet: until then, CA signing and OCSP run on the primary, via forwarding |
+| Write forwarding from members to the primary | **Done** (slice 3a). Every service forwards by construction. Proven end to end on real Postgres and TLS (`TestSecureJoinEndToEnd`, `TestClusterForwarding`) |
+| Members never write replicated tables: node-local operation counters, primary-only background jobs, dataprotect working-key state | **Done** (slice 3a) |
 | Failover: manual promotion, and a majority vote at 3+ nodes, with fencing | Slice 4, not yet |
 | Audit chains replicated from every node (shared-append) | Slice 3/4, not yet |
 | Helm chart | Slice 5, not yet |
 
-A second node can now join through the UI (Platform → Cluster → Add
-Instance). Until slice 3, **don't send lifecycle writes (key or policy
-changes) to a member**: they would change only the member's copy. The
+A second node can join through the UI (Platform → Cluster → Add Instance).
+Any node serves crypto operations, reads and logins, and a lifecycle write
+sent to a member is forwarded to the primary. Still open: if the primary is
+down, lifecycle writes fail with `502 primary_unreachable` until failover
+(slice 4). Crypto operations keep working. The
 earlier overview text ("Nodes sync only the state for their enabled
 components…") described a design that was never implemented: sync events were
 recorded but never applied on another node. It was removed on 2026-09-25.
@@ -124,6 +127,63 @@ The transfer is audited on both nodes.
 Plaintext secrets never cross the network, and every step is audited (see
 `docs/SECURITY/AUDIT_EVENTS_2026-09.md`).
 
+## Write forwarding (slice 3a)
+
+```
+client ──▶ member service (pkg/config wrapper)
+             │ verify token locally; strip client cluster headers
+             │ Decide(service, method, path): local | forward | refuse
+             ▼
+           primary cluster-manager  POST /cluster/forward/{svc}/{path}
+             │ member credential (hash, constant time), pinned TLS
+             │ auth /auth/cluster/mint → 5-minute primary-signed token
+             ▼
+           primary service (its own authz, validation and audit)
+```
+
+- **Forward by default.** `pkg/clusterroute.Local` lists the few writes that
+  run on a member. Each one writes only node-local tables.
+  `TestLocalRoutesExist` checks that every entry is a real route. A new write
+  endpoint is forwarded unless someone adds it there, so it can't silently
+  diverge a member.
+- **Why mint on the primary:** JWT verification keys differ per node and
+  per service. The member proves who the caller is, the primary re-issues an
+  equivalent token its own services trust, and the member credential proves
+  which member is asking. Tokens carry `fwd_node` for the audit trail.
+- **Node state:** cluster-manager writes the node-local `cluster_local_state`
+  on join. Services read it through `pkg/clusterstate` (10-second cache).
+- **Removal revokes forwarding:** `RemoveNode` revokes the member's
+  credential before deleting it. Proven by `TestSecureJoinEndToEnd`.
+
+### What a member must never write
+
+A member's write to a replicated table either diverges from the primary, or
+clashes with the primary's row. With `REPLICA IDENTITY FULL` a later update is
+then skipped, and a duplicate insert stops the component's replication
+entirely. So:
+
+- **Crypto counters:** keycore counts a member's operations in the node-local
+  `key_op_counters`, and the key's ops limit still applies against the sum.
+- **Background jobs** that write replicated state run only where
+  `clusterstate.RunsPrimaryJobs(ctx)` is true: compliance, reporting,
+  posture and SBOM schedules, certs expiry sweep, CA signer rewrap and mesh
+  discovery, governance approval expiry, and the dataprotect receipt
+  reconciler. Keycore's zeroization check still runs everywhere, because it
+  verifies each node's own copy and only emits audit.
+- **dataprotect working-key state:** a member computes a key's initial
+  derivation state from replicated inputs without recording it, and records
+  legacy (v1) use only in the audit event.
+- `fle_metadata` is node-local (written during `/app/encrypt-fields`).
+
+Still open (slice 3b): the event-driven consumers that write replicated
+tables from a node's own audit stream (reporting alerts, compliance
+triggers). They need member audit to reach the primary, which is the
+shared-append audit replication.
+
+Also open: the login lockout counter is per node (in memory), so an
+attacker spreading password guesses across N nodes gets N times the
+configured attempts before lockout. Per-node rate limits still apply.
+
 ## Rules for development
 
 - **Every new table is classified.** Add it to `Replicated[<component>]`,
@@ -132,6 +192,10 @@ Plaintext secrets never cross the network, and every step is audited (see
   otherwise.
 - **A table written during crypto operations is node-local.** Otherwise a
   member's write would diverge from the primary's copy.
+- **A background job that writes replicated state checks
+  `clusterstate.RunsPrimaryJobs(ctx)`** each time it runs.
+- **Add a write to `clusterroute.Local` only if it writes nothing
+  replicated** on a member. Otherwise leave it forwarded.
 - **Don't claim replication in docs or UI text** unless the status comes from
   `clusterrepl`.
 - **cluster-manager routes require a root administrator or a service
@@ -151,3 +215,11 @@ Plaintext secrets never cross the network, and every step is audited (see
   Postgres restart.
 - To run the two-node test: `./scripts/test-cluster-replication.sh` (Docker
   required). CI runs it too (`cluster-replication` job).
+- **Service master keys need nothing per node.** secrets, certs, cloud and
+  ekm derive their master key from a keycore system key. The join ships
+  keycore's master key and the system key replicates, so a member derives the
+  same key. `<svc>_mek_state` (replicated) holds its fingerprint; a member
+  whose keycore derives a different one refuses to start
+  (`audit.<svc>.mek_check_refused`). Members never run the migration: the
+  primary re-wraps and replication delivers the rows
+  (docs/SECURITY/SERVICE_MASTER_KEYS.md).

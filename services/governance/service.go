@@ -37,6 +37,11 @@ type Service struct {
 	baseURL  string
 	certsURL string
 	http     *http.Client
+	// rewrapper re-protects backup contents through the owning services
+	// (backup_mek.go); nil means HTTP to each service.
+	rewrapper backupRewrapper
+	// hsm wraps HSM-bound backup keys under the tenant key (backup.go).
+	hsm backupHSMBackend
 }
 
 var runtimeCryptoLibraryLabel, runtimeCryptoLibraryValidated = detectRuntimeCryptoLibrary()
@@ -1309,12 +1314,17 @@ func (s *Service) publishAudit(ctx context.Context, subject string, tenantID str
 	if s.events == nil {
 		return nil
 	}
+	// A refusal or failure says so at the top level too, not only in data.
+	result := "success"
+	if r, ok := data["result"].(string); ok && r != "" {
+		result = r
+	}
 	raw, err := json.Marshal(map[string]interface{}{
 		"tenant_id": tenantID,
 		"timestamp": time.Now().UTC().Format(time.RFC3339Nano),
 		"service":   "governance",
 		"action":    subject,
-		"result":    "success",
+		"result":    result,
 		"data":      data,
 	})
 	if err != nil {

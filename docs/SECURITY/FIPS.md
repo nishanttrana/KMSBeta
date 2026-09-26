@@ -89,6 +89,12 @@ that stops for a mode change stays stopped. Restart it by hand.
 | | **OpenPGP** (`ProtonMail/go-crypto`, SHA-1 fingerprints): refused in `only` mode |
 | | **DES/TDES** payment crypto (`pkg/payment`, `moov-io/tr31`), **ChaCha20** (`x/crypto`): refused by the runtime in `only` mode |
 
+**Customer HSMs** ([HSM_INTEGRATION.md](HSM_INTEGRATION.md)): operations on
+HSM-resident keys and the tenant key run in the HSM's own module, with
+approved mechanisms only (AES-GCM, RSA-PSS, ECDSA P-256/P-384), the same in
+every mode. The KMS never claims that module is validated; the customer
+checks its certificate.
+
 Third-party crypto doesn't go through the module, so `GODEBUG=fips140=only`
 **can't block it**. Every such call needs an explicit `fips140.Enforced()`
 guard (see `generateAgeX25519KeyPair`, `generateOpenPGPKeyPair`,

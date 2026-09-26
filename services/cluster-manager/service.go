@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 	"vecta-kms/pkg/clusterrepl"
+	"vecta-kms/pkg/clusterstate"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/shirou/gopsutil/v4/cpu"
@@ -64,6 +65,9 @@ var builtinClusterProfilePresets = []clusterProfilePreset{
 }
 
 type Service struct {
+	minter                 TokenMinter
+	forwardClient          *http.Client
+	forwardTargets         func(string) (string, bool)
 	replication            *clusterrepl.Engine
 	keycore                KeycoreMEKClient
 	joinCfg                joinConfig
@@ -692,6 +696,10 @@ func (s *Service) RemoveNode(ctx context.Context, nodeID string, in RemoveNodeIn
 		}
 		promotedLeaderNode = candidateID
 	}
+	// Fail closed: a removed node must not keep forwarding writes here.
+	if err := s.store.RevokeMemberCredential(ctx, node.ID); err != nil {
+		return RemoveNodeResult{}, err
+	}
 	if err := s.store.DeleteNode(ctx, in.TenantID, node.ID); err != nil {
 		return RemoveNodeResult{}, err
 	}
@@ -725,6 +733,7 @@ func (s *Service) RemoveNode(ctx context.Context, nodeID string, in RemoveNodeIn
 		"promoted_leader_id": promotedLeaderNode,
 		"requested_by":       defaultIfEmpty(strings.TrimSpace(in.RequestedBy), "system"),
 		"reason":             reason,
+		"forward_credential": "revoked",
 	})
 	return result, nil
 }
@@ -1584,8 +1593,6 @@ func componentFromServiceName(serviceName string) string {
 		return "discovery"
 	case "kms-ai":
 		return "ai"
-	case "kms-software-vault":
-		return "software-vault"
 	case "kms-posture":
 		return "posture"
 	case "kms-qrng":
@@ -2183,6 +2190,9 @@ func (s *Service) ReplicationStatus(ctx context.Context) ReplicationStatus {
 	if out.Subscriptions, err = s.replication.SubscriptionStatuses(ctx, s.bootstrapNodeID); err != nil {
 		out.Error = err.Error()
 	}
+	if st := s.localState(ctx); st.IsMember() {
+		out.ForwardsTo = st.PrimaryNodeID
+	}
 	return out
 }
 
@@ -2201,7 +2211,11 @@ func replicationNote(rs ReplicationStatus) string {
 			ready++
 		}
 	}
-	return fmt.Sprintf("This node receives %d components from the primary (%d fully synchronized). Node-local data never replicates.", len(rs.Subscriptions), ready)
+	msg := fmt.Sprintf("This node receives %d components from the primary (%d fully synchronized). Node-local data never replicates.", len(rs.Subscriptions), ready)
+	if rs.ForwardsTo != "" {
+		msg += " Key and policy changes made here are forwarded to the primary (" + rs.ForwardsTo + "); crypto operations run on this node."
+	}
+	return msg
 }
 
 // AuditPublicationChanges records every created or changed publication: a
@@ -2228,4 +2242,11 @@ func (s *Service) WithJoin(keycore KeycoreMEKClient, cfg joinConfig) *Service {
 	s.keycore = keycore
 	s.joinCfg = cfg
 	return s
+}
+
+func (s *Service) localState(ctx context.Context) clusterstate.State {
+	if sq, ok := s.store.(*SQLStore); ok {
+		return clusterstate.NewReader(sq.db.SQL()).Get(ctx)
+	}
+	return clusterstate.State{}
 }

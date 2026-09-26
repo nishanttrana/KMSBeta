@@ -28,6 +28,7 @@ import (
 	"io"
 	"math/big"
 	"math/bits"
+	"net/http"
 	"sort"
 	"strings"
 	"sync"
@@ -69,6 +70,7 @@ type Service struct {
 	archiver     *Archiver
 	attestKP     *crypto.KeyPair
 	attestMu     sync.Mutex
+	hsm          HSMBackend // nil when the platform runs no hsm-connector
 }
 
 // SetCryptoperiodPolicy installs the NIST SP 800-57 cryptoperiod table.
@@ -105,7 +107,7 @@ func NewService(store Store, cache KeyCache, events AuditPublisher, meter *meter
 			policy = allowAllPolicyEvaluator{}
 		}
 	}
-	return &Service{
+	svc := &Service{
 		store:       store,
 		cache:       cache,
 		exists:      f,
@@ -118,6 +120,15 @@ func NewService(store Store, cache KeyCache, events AuditPublisher, meter *meter
 		posture:     staticPostureControlsProvider{},
 		restartSelf: defaultRestartSelf,
 	}
+	if st, ok := store.(*SQLStore); ok {
+		st.onSystemKeyRefused = func(ctx context.Context, tenantID, keyID, op string) {
+			_ = svc.publishAudit(ctx, "audit.key.system_key_change_refused", tenantID, map[string]any{
+				"key_id": keyID, "operation": op, "result": "refused", "reason": "system_key_protected", "severity": "critical",
+				"description": "refused a change that would make a platform service's master key unusable",
+			})
+		}
+	}
+	return svc
 }
 
 // ConfirmKeyMaterialZeroized checks that the key cache holds no live material
@@ -180,6 +191,9 @@ type CreateKeyRequest struct {
 	ExportAllowed    bool              `json:"export_allowed"`
 	ApprovalRequired bool              `json:"approval_required"`
 	ApprovalPolicyID string            `json:"approval_policy_id"`
+	// HSM creates the key in the tenant's HSM: generated there, never
+	// exported, and every operation runs there (hsm.go).
+	HSM bool `json:"hsm"`
 }
 
 type ImportKeyRequest struct {
@@ -272,6 +286,9 @@ type SignRequest struct {
 	TenantID  string `json:"tenant_id"`
 	DataB64   string `json:"data"`
 	Algorithm string `json:"algorithm"`
+	// Prehashed: data is already the digest, hashed with Algorithm
+	// (SHA-256/384/512), as X.509 and other signers hand it over. HSM keys only.
+	Prehashed bool   `json:"prehashed"`
 	Operation string `json:"-"`
 }
 
@@ -625,6 +642,10 @@ func (s *Service) createKeyFromMaterial(
 	if req.TenantID == "" || req.Name == "" || req.Algorithm == "" {
 		return Key{}, errors.New("tenant_id, name, algorithm are required")
 	}
+	if req.HSM {
+		return Key{}, s.refuseHSM(ctx, req.TenantID, "", policyOperation, http.StatusBadRequest, "hsm_import_not_supported",
+			"key material from outside can't be placed in the HSM: create the key in the HSM instead")
+	}
 	if err := s.enforceFIPSKeyAlgorithm(ctx, req.TenantID, req.Algorithm, policyOperation); err != nil {
 		return Key{}, err
 	}
@@ -667,10 +688,6 @@ func (s *Service) createKeyFromMaterial(
 	if expectedKCV != "" && !strings.EqualFold(strings.TrimSpace(expectedKCV), hex.EncodeToString(kcv)) {
 		return Key{}, errors.New("kcv mismatch")
 	}
-	env, err := crypto.EncryptEnvelope(s.mek, raw)
-	if err != nil {
-		return Key{}, err
-	}
 	keyID := newID("key")
 	key := Key{
 		ID:               keyID,
@@ -699,15 +716,16 @@ func (s *Service) createKeyFromMaterial(
 		CreatedBy:        req.CreatedBy,
 	}
 	ver := KeyVersion{
-		ID:                newID("kv"),
-		TenantID:          req.TenantID,
-		KeyID:             keyID,
-		Version:           1,
-		EncryptedMaterial: env.Ciphertext,
-		MaterialIV:        env.DataIV,
-		WrappedDEK:        packWrappedDEK(env.WrappedDEKIV, env.WrappedDEK),
-		KCV:               kcv,
-		Status:            initialStatus,
+		ID:       newID("kv"),
+		TenantID: req.TenantID,
+		KeyID:    keyID,
+		Version:  1,
+		KCV:      kcv,
+		Status:   initialStatus,
+	}
+	// Under the tenant's HSM key when the tenant turned it on (hsm.go).
+	if err := s.protectMaterial(ctx, &ver, raw); err != nil {
+		return Key{}, err
 	}
 	if err := s.store.CreateKeyWithVersion(ctx, key, ver); err != nil {
 		return Key{}, err
@@ -834,6 +852,9 @@ func (s *Service) resolvePublicMaterialFromPair(ctx context.Context, req CreateK
 }
 
 func (s *Service) CreateKey(ctx context.Context, req CreateKeyRequest) (Key, error) {
+	if req.HSM {
+		return s.createHSMKey(ctx, req)
+	}
 	var (
 		raw []byte
 		err error
@@ -1066,7 +1087,9 @@ func inferAlgorithmFromPrivateKey(priv any) string {
 }
 
 func parseDERImportMaterial(der []byte) ([]byte, string, string, error) {
-	raw := bytes.TrimSpace(der)
+	// DER is binary: never trim it. A key whose encoding starts or ends with a
+	// whitespace byte (about 2% of generated keys) would otherwise be cut.
+	raw := der
 	if len(raw) == 0 {
 		return nil, "", "", errors.New("empty DER payload")
 	}
@@ -1104,7 +1127,7 @@ func parseDERImportMaterial(der []byte) ([]byte, string, string, error) {
 }
 
 func parsePEMImportMaterial(raw []byte, importPassword string) ([]byte, string, string, error) {
-	payload := bytes.TrimSpace(raw)
+	payload := bytes.TrimSpace(raw) // PEM detection only; DER is parsed untrimmed below
 	if len(payload) == 0 {
 		return nil, "", "", errors.New("material is empty")
 	}
@@ -1140,7 +1163,7 @@ func parsePEMImportMaterial(raw []byte, importPassword string) ([]byte, string, 
 	if seenPEM {
 		return nil, "", "", errors.New("PEM payload does not contain a supported key block")
 	}
-	return parseDERImportMaterial(payload)
+	return parseDERImportMaterial(raw)
 }
 
 func decodeJWKBase64URL(value string) ([]byte, error) {
@@ -1657,7 +1680,10 @@ func (s *Service) ExportPublicComponentPlaintext(ctx context.Context, tenantID s
 	if err := s.enforceKeyAccess(ctx, key, "export"); err != nil {
 		return PlaintextExportResult{}, err
 	}
-	if !isPublicComponentKey(key) {
+	// An HSM key pair's public half is held by keycore and may be exported;
+	// its private half never leaves the HSM.
+	hsmPair := key.Labels[labelHSM] == labelHSMResident
+	if !isPublicComponentKey(key) && !hsmPair {
 		return PlaintextExportResult{}, errors.New("plaintext export is allowed only for public key components")
 	}
 	if err := s.checkPolicy(ctx, PolicyEvaluateRequest{
@@ -1680,6 +1706,9 @@ func (s *Service) ExportPublicComponentPlaintext(ctx context.Context, tenantID s
 	}
 	var plain []byte
 	encoding := "base64"
+	if hsmPair && len(ver.PublicKey) == 0 {
+		return PlaintextExportResult{}, errors.New("this HSM key has no public component (symmetric keys never leave the HSM)")
+	}
 	if len(ver.PublicKey) > 0 {
 		plain = append([]byte{}, ver.PublicKey...)
 		encoding = "raw"
@@ -1841,34 +1870,39 @@ func (s *Service) RotateKey(ctx context.Context, tenantID string, keyID string, 
 	}); err != nil {
 		return KeyVersion{}, err
 	}
-	raw, err := generateMaterialForCreate(key.Algorithm, key.KeyType)
-	if err != nil {
-		return KeyVersion{}, err
-	}
-	defer crypto.Zeroize(raw)
-	newKCV, _, err := computeKCVStrict(key.Algorithm, raw)
-	if err != nil {
-		return KeyVersion{}, err
-	}
-	if crypto.ConstantTimeEqual(newKCV, key.KCV) {
-		return KeyVersion{}, errors.New("rotation generated same KCV")
-	}
-	env, err := crypto.EncryptEnvelope(s.mek, raw)
-	if err != nil {
-		return KeyVersion{}, err
-	}
-	newVer := KeyVersion{
-		ID:                newID("kv"),
-		TenantID:          tenantID,
-		KeyID:             keyID,
-		Version:           key.CurrentVersion + 1,
-		EncryptedMaterial: env.Ciphertext,
-		MaterialIV:        env.DataIV,
-		WrappedDEK:        packWrappedDEK(env.WrappedDEKIV, env.WrappedDEK),
-		KCV:               newKCV,
-		RotatedFrom:       key.CurrentVersion,
-		RotationReason:    reason,
-		Status:            "active",
+	var newVer KeyVersion
+	if key.Labels[labelHSM] == labelHSMResident {
+		// The next version is a new key generated in the HSM (hsm.go).
+		if newVer, err = s.rotateHSMKey(ctx, key); err != nil {
+			return KeyVersion{}, err
+		}
+		newVer.RotationReason = reason
+	} else {
+		raw, err := generateMaterialForCreate(key.Algorithm, key.KeyType)
+		if err != nil {
+			return KeyVersion{}, err
+		}
+		defer crypto.Zeroize(raw)
+		newKCV, _, err := computeKCVStrict(key.Algorithm, raw)
+		if err != nil {
+			return KeyVersion{}, err
+		}
+		if crypto.ConstantTimeEqual(newKCV, key.KCV) {
+			return KeyVersion{}, errors.New("rotation generated same KCV")
+		}
+		newVer = KeyVersion{
+			ID:             newID("kv"),
+			TenantID:       tenantID,
+			KeyID:          keyID,
+			Version:        key.CurrentVersion + 1,
+			KCV:            newKCV,
+			RotatedFrom:    key.CurrentVersion,
+			RotationReason: reason,
+			Status:         "active",
+		}
+		if err := s.protectMaterial(ctx, &newVer, raw); err != nil {
+			return KeyVersion{}, err
+		}
 	}
 	if reason == "" {
 		reason = "manual"
@@ -1893,6 +1927,7 @@ func (s *Service) reconcileLifecycle(ctx context.Context, tenantID string) error
 	}
 	for _, deleted := range dueDestroyed {
 		_ = s.cache.Delete(ctx, tenantID, deleted.KeyID)
+		s.destroyHSMObjects(ctx, tenantID, deleted)
 		_ = s.publishAudit(ctx, "audit.key.destroyed", tenantID, map[string]any{
 			"key_id":        deleted.KeyID,
 			"mode":          "scheduled",
@@ -2233,6 +2268,7 @@ func (s *Service) DestroyKeyImmediately(ctx context.Context, tenantID string, ke
 		return err
 	}
 	_ = s.cache.Delete(ctx, tenantID, keyID)
+	s.destroyHSMObjects(ctx, tenantID, deleted)
 	_ = s.publishAudit(ctx, "audit.key.destroyed", tenantID, map[string]any{
 		"key_id":        deleted.KeyID,
 		"mode":          "immediate",
@@ -2793,6 +2829,17 @@ func (s *Service) Encrypt(ctx context.Context, keyID string, req EncryptRequest)
 	}
 
 	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+		if kv.Protection == protectionHSMResident {
+			if effectiveIVMode != "internal" {
+				return CryptoTxResult{}, s.refuseHSM(ctx, req.TenantID, keyID, operation, http.StatusBadRequest, "iv_mode_not_supported",
+					"an HSM key generates every IV inside the HSM (iv_mode internal)")
+			}
+			iv, ciphertext, err := s.hsm.Encrypt(ctx, req.TenantID, kv.HSMLabel, plain, aad)
+			if err != nil {
+				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
+			}
+			return CryptoTxResult{Payload: ciphertext, IV: iv, StoreIV: true, ReferenceID: req.ReferenceID}, nil
+		}
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -2909,7 +2956,14 @@ func (s *Service) Decrypt(ctx context.Context, keyID string, req DecryptRequest)
 			return CryptoResponse{}, errors.New("aad must be base64")
 		}
 	}
-	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(_ Key, kv KeyVersion) (CryptoTxResult, error) {
+	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+		if kv.Protection == protectionHSMResident {
+			plain, err := s.hsm.Decrypt(ctx, req.TenantID, kv.HSMLabel, iv, cipherRaw, aad)
+			if err != nil {
+				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
+			}
+			return CryptoTxResult{Payload: plain, IV: iv}, nil
+		}
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -2982,6 +3036,23 @@ func (s *Service) Sign(ctx context.Context, keyID string, req SignRequest) (Cryp
 	}
 	defer crypto.Zeroize(data)
 	result, err := s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+		if kv.Protection == protectionHSMResident {
+			digest, hash, err := hsmDigest(k, req.Algorithm, data)
+			if req.Prehashed {
+				digest, hash, err = prehashedDigest(req.Algorithm, data)
+			}
+			if err != nil {
+				return CryptoTxResult{}, err
+			}
+			signature, err := s.hsm.Sign(ctx, req.TenantID, kv.HSMLabel, hash, digest)
+			if err != nil {
+				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
+			}
+			return CryptoTxResult{Payload: signature}, nil
+		}
+		if req.Prehashed {
+			return CryptoTxResult{}, errors.New("prehashed signing is supported for HSM keys only")
+		}
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -3063,6 +3134,18 @@ func (s *Service) Verify(ctx context.Context, keyID string, req VerifyRequest) (
 		verified bool
 	)
 	_, err = s.runCryptoTx(ctx, req.TenantID, keyID, operation, func(k Key, kv KeyVersion) (CryptoTxResult, error) {
+		if kv.Protection == protectionHSMResident {
+			digest, hash, err := hsmDigest(k, req.Algorithm, data)
+			if err != nil {
+				return CryptoTxResult{}, err
+			}
+			ok, err := s.hsm.Verify(ctx, req.TenantID, kv.HSMLabel, hash, digest, sig)
+			if err != nil {
+				return CryptoTxResult{}, s.hsmKeyFailure(ctx, k, operation, err)
+			}
+			verified, version = ok, kv.Version
+			return CryptoTxResult{}, nil
+		}
 		raw, err := s.decryptMaterial(kv)
 		if err != nil {
 			return CryptoTxResult{}, err
@@ -3800,6 +3883,17 @@ func mlkemDecapsulate(algorithm string, keyType string, raw []byte, ciphertext [
 }
 
 func (s *Service) decryptMaterial(ver KeyVersion) ([]byte, error) {
+	switch ver.Protection {
+	case protectionHSMResident:
+		// Export, wrap, derive, MAC, KEM and the like need the material.
+		_ = s.publishAudit(context.Background(), "audit.key.hsm_refused", ver.TenantID, map[string]any{
+			"key_id": ver.KeyID, "version": ver.Version, "reason": "material_in_hsm", "result": "refused",
+			"severity": "warning", "description": errMaterialInHSM.Error(),
+		})
+		return nil, &hsmRefusal{Status: http.StatusConflict, Reason: "hsm_operation_unsupported", msg: errMaterialInHSM.Error()}
+	case protectionTenantHSM:
+		return s.openTenantHSMMaterial(ver)
+	}
 	wiv, wrapped, err := unpackWrappedDEK(ver.WrappedDEK)
 	if err != nil {
 		return nil, err

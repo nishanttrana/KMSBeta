@@ -6,10 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	"vecta-kms/pkg/servicetoken"
 )
 
 type GovernancePostureControls struct {
@@ -87,16 +88,19 @@ func (p *HTTPGovernancePostureControlsProvider) Controls(ctx context.Context, te
 	return controls, nil
 }
 
-func (p *HTTPGovernancePostureControlsProvider) fetch(ctx context.Context, tenantID string) (GovernancePostureControls, error) {
+func (p *HTTPGovernancePostureControlsProvider) fetch(ctx context.Context, _ string) (GovernancePostureControls, error) {
 	if strings.TrimSpace(p.baseURL) == "" {
 		return GovernancePostureControls{}, errors.New("governance base url is empty")
 	}
-	endpoint := fmt.Sprintf("%s/governance/system/state?tenant_id=%s", p.baseURL, url.QueryEscape(tenantID))
+	// The system state is platform-wide (root); governance admits this
+	// service's own identity on this route only.
+	endpoint := fmt.Sprintf("%s/governance/system/state?tenant_id=root", p.baseURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return GovernancePostureControls{}, err
 	}
-	req.Header.Set("X-Tenant-ID", tenantID)
+	req.Header.Set("X-Tenant-ID", "root")
+	servicetoken.Authorize(ctx, req)
 	resp, err := p.client.Do(req)
 	if err != nil {
 		return GovernancePostureControls{}, err

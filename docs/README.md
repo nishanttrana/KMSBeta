@@ -27,6 +27,8 @@ Vecta KMS is an enterprise-grade, multi-tenant key management platform providing
 | Document | What It Covers |
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Service architecture, trust boundaries |
+| [PLATFORM_CONTRACT.md](PLATFORM_CONTRACT.md) | How every feature wires into the spine: boot, `pkg/route` kernel, audit, crypto |
+| [ARCHITECTURE_MIGRATION.md](ARCHITECTURE_MIGRATION.md) | Plan for moving every service onto the feature kernel, with a per-service definition of done |
 | [COMPONENT_GUIDE.md](COMPONENT_GUIDE.md) | Per-component quick reference |
 | [FEATURE_REFERENCE.md](FEATURE_REFERENCE.md) | Feature overview (concise) |
 | [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) | Install, startup, health, backup, cluster |

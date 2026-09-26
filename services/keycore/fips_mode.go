@@ -7,10 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	"vecta-kms/pkg/servicetoken"
 )
 
 type FIPSModeProvider interface {
@@ -86,16 +87,19 @@ func (p *HTTPFIPSModeProvider) IsEnabled(ctx context.Context, tenantID string) (
 	return enabled, nil
 }
 
-func (p *HTTPFIPSModeProvider) fetch(ctx context.Context, tenantID string) (bool, error) {
+func (p *HTTPFIPSModeProvider) fetch(ctx context.Context, _ string) (bool, error) {
 	if strings.TrimSpace(p.baseURL) == "" {
 		return false, errors.New("governance base url is empty")
 	}
-	endpoint := fmt.Sprintf("%s/governance/system/state?tenant_id=%s", p.baseURL, url.QueryEscape(tenantID))
+	// The system state is platform-wide (root); governance admits this
+	// service's own identity on this route only.
+	endpoint := fmt.Sprintf("%s/governance/system/state?tenant_id=root", p.baseURL)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return false, err
 	}
-	req.Header.Set("X-Tenant-ID", tenantID)
+	req.Header.Set("X-Tenant-ID", "root")
+	servicetoken.Authorize(ctx, req)
 
 	resp, err := p.client.Do(req)
 	if err != nil {

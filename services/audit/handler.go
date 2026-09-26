@@ -111,6 +111,11 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /audit/events/{id}/proof", h.handleEventProof)
 	mux.HandleFunc("POST /audit/merkle/verify", h.handleMerkleVerify)
 
+	// Cluster audit signing key transfer (cluster-manager only; cluster.go).
+	mux.HandleFunc("POST /audit/cluster/signing-key/join-key", h.handleClusterKeyJoinKey)
+	mux.HandleFunc("POST /audit/cluster/signing-key/export", h.handleClusterKeyExport)
+	mux.HandleFunc("POST /audit/cluster/signing-key/import", h.handleClusterKeyImport)
+
 	// Webhook routes
 	mux.HandleFunc("GET /webhooks", h.handleListWebhooks)
 	mux.HandleFunc("POST /webhooks", h.handleCreateWebhook)
@@ -211,15 +216,16 @@ func (h *Handler) handleEvents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := EventQuery{
-		Action:        strings.TrimSpace(r.URL.Query().Get("action")),
-		ActorID:       strings.TrimSpace(r.URL.Query().Get("actor_id")),
-		Result:        strings.TrimSpace(r.URL.Query().Get("result")),
-		TargetID:      strings.TrimSpace(r.URL.Query().Get("target_id")),
-		SessionID:     strings.TrimSpace(r.URL.Query().Get("session_id")),
-		CorrelationID: strings.TrimSpace(r.URL.Query().Get("correlation_id")),
-		RiskMin:       atoi(r.URL.Query().Get("risk_min")),
-		Limit:         atoi(r.URL.Query().Get("limit")),
-		Offset:        atoi(r.URL.Query().Get("offset")),
+		Action:         strings.TrimSpace(r.URL.Query().Get("action")),
+		ActionPrefixes: r.URL.Query()["action_prefix"],
+		ActorID:        strings.TrimSpace(r.URL.Query().Get("actor_id")),
+		Result:         strings.TrimSpace(r.URL.Query().Get("result")),
+		TargetID:       strings.TrimSpace(r.URL.Query().Get("target_id")),
+		SessionID:      strings.TrimSpace(r.URL.Query().Get("session_id")),
+		CorrelationID:  strings.TrimSpace(r.URL.Query().Get("correlation_id")),
+		RiskMin:        atoi(r.URL.Query().Get("risk_min")),
+		Limit:          atoi(r.URL.Query().Get("limit")),
+		Offset:         atoi(r.URL.Query().Get("offset")),
 	}
 	q.From = parseTS(r.URL.Query().Get("from"))
 	q.To = parseTS(r.URL.Query().Get("to"))

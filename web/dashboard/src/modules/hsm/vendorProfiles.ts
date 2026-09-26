@@ -89,7 +89,7 @@ export const HSM_VENDOR_PROFILES: Record<HSMVendorID, HSMVendorProfile> = {
   },
   securosys: {
     id: "securosys",
-    label: "Securosys HSM",
+    label: "Securosys Primus HSM",
     shortName: "Primus",
     abbreviations: ["Securosys", "Primus", "PKCS#11"],
     defaultProviderName: "securosys-primus",
