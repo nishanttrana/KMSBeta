@@ -131,8 +131,11 @@ an approach, record it here or in the matching doc below.
   restrict its caller: a specific service identity or a root administrator,
   never "any authenticated caller". Node-to-node endpoints authenticate
   themselves (one-time token, HMAC, pinned TLS).
-- Features cut from the core move to the sibling `KMSExtension` repo (REST
-  integration via `pkg/kmsclient`, no key material there). Don't delete them.
+- **All work happens in KMSBeta** (owner directive, 2026-09-26: "all the
+  work have to be done on KMS beta only"; "stop touching KMSExtension").
+  Never commit to the `KMSExtension` repo. A feature cut from the core is
+  simply removed; it stays recoverable from KMSBeta's git history. Name the
+  removing commit in CHANGELOG.md so it can be found.
 - **HSMs are real integrations only** (owner directive, 2026-09-26: "there is
   no vecta HSM", "it has to be actual integration no fake"). Every HSM
   goes through the customer's own PKCS#11 library in `hsm-connector`

@@ -75,8 +75,8 @@ func Components() []string {
 }
 
 // WithCore returns components plus the core components, de-duplicated and
-// sorted. Profiles may name components that own no tables (features that moved
-// to the KMS Extension); they are kept and simply replicate nothing.
+// sorted. Profiles may name components that own no tables (features that were
+// removed from the core); they are kept and simply replicate nothing.
 func WithCore(components []string) []string {
 	set := map[string]bool{}
 	for _, c := range append(append([]string{}, Core...), components...) {

@@ -46,7 +46,7 @@ choice over a vendor REST API). The library loads in a dedicated
 their service identities. Per tenant, two switches: a tenant key in the HSM
 that protects new key versions (owner: "new keys only"), and HSM-resident
 keys created per key. There is no Vecta or software HSM (owner), and
-`software-vault` moved to KMSExtension. HSM-bound backups are wrapped by
+`software-vault` was removed. HSM-bound backups are wrapped by
 the tenant key in the HSM.
 
 **Why:**
@@ -375,7 +375,7 @@ and status that comes only from the database.
 
 **Why:** the owner's options were "finish or mark preview". Marking is honest
 today and keeps the APIs stable for the teams that will finish them. Finishing
-federation or edge (KMSExtension) is product work, not a fix.
+federation or edge is product work, not a fix.
 
 **Rejected:**
 - **Deleting the features:** they break API clients and lose work.
@@ -535,7 +535,19 @@ attribution); per-service secrets in `.env` (secret sprawl).
 the current secret, so rotation locks out the old value on the next auth start
 (added 2026-09-25). Service JWTs already minted live out their TTL (≤ 1 h).
 
-## 2026-06-12 — Cut features move to KMSExtension, not the bin
+## 2026-09-26 — Cut features are removed; all work happens in KMSBeta
+**Decision:** a feature cut from the core is deleted from KMSBeta and
+recovered from its git history if it's ever wanted again. Nothing is
+committed to `KMSExtension` any more (owner: "all the work have to be done on
+KMS beta only", "stop touching KMSExtension"). Supersedes the 2026-06-12
+entry below.
+**Why:** one repository to develop, review and certify. A second repo of
+parked code that nobody builds only looks like a product. Git history
+already keeps every removed line.
+**Rejected:** keeping KMSExtension as a read-only archive of cut code.
+**Enforced by:** CLAUDE.md ("All work happens in KMSBeta").
+
+## 2026-06-12 — Cut features move to KMSExtension, not the bin (superseded 2026-09-26)
 **Decision:** features removed from the core move to the sibling
 `KMSExtension` repo and integrate over REST (`pkg/kmsclient`), holding no key
 material.

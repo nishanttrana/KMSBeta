@@ -4,7 +4,7 @@
 - The KMS talks to a customer HSM only through the vendor's own PKCS#11
   library, loaded by one service, `hsm-connector`. Nothing is simulated:
   there is no "Vecta HSM" and no software stand-in. (The unused
-  `software-vault` service moved to the KMSExtension repo as a seed.)
+  `software-vault` service was removed.)
 - Every HSM object the KMS creates is labelled `vecta:<tenant>:...`, and the
   connector refuses a label outside the caller's tenant.
 - Only the `kms-keycore` and `kms-governance` identities may use HSM keys.

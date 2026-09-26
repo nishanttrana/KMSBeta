@@ -36,7 +36,7 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 | Cost & Optimization Dashboard | Implemented | `/enterprise/cost/optimization` |
 | Advanced Encryption Modes | Searchable HMAC tokens implemented; homomorphic/functional modes **Preview** (registered, not performed) | Searchable HMAC tokens; homomorphic/functional modes registered as governed controls until reviewed providers are integrated |
 | Enhanced Key Binding | **Preview**: records only; not evaluated on key operations | `/enterprise/binding/policies` |
-| Edge & IoT Key Management | **Preview**: records only; edge runtime is in KMSExtension | `/enterprise/edge/agents`, `/leases`, `/receipts` |
+| Edge & IoT Key Management | **Preview**: records only; there is no edge runtime | `/enterprise/edge/agents`, `/leases`, `/receipts` |
 | Fine-Grained Key Sharing | **Preview**: records only; use key access grants for enforced sharing | `/enterprise/sharing/grants` |
 | Key Metadata Management | **Preview**: records only; not applied at key creation | `/enterprise/metadata/profiles` |
 | Advanced Threat Protection | Implemented: signal intake, canary trips, compromise workflow, DSPM findings | `/enterprise/threat/signals`, canary trips, compromise workflow, DSPM findings |
@@ -56,7 +56,7 @@ The remaining feature areas were started as backend enterprise-control APIs. Sev
 
 ### ✅ Advanced Cryptography (State-of-the-Art)
 - Post-quantum crypto (ML-KEM, ML-DSA, SLH-DSA)
-- QKD, QRNG and MPC moved to the separate KMSExtension product (not in this repo)
+- QKD, QRNG and MPC were removed (recoverable from git history, commit `7f8aea7`)
 - Composite signatures (hybrid encryption)
 - Key migration planning for PQC transition
 

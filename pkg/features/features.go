@@ -33,7 +33,7 @@ var Preview = []Feature{
 	{"keycore.sharing_grant", "keycore", "Fine-grained key sharing grants", "Stored only; use key access grants for enforced sharing."},
 	{"keycore.metadata_profile", "keycore", "Key metadata profiles", "Stored only; key creation does not apply or validate them."},
 	{"keycore.escrow_tier", "keycore", "Escrow tiers", "Stored only; Shamir split/verify and escrow recovery do not use them."},
-	{"keycore.edge", "keycore", "Edge & IoT agents, leases and receipts", "Stored only; the edge runtime lives in the KMSExtension product."},
+	{"keycore.edge", "keycore", "Edge & IoT agents, leases and receipts", "Stored only; there is no edge runtime."},
 	{"keycore.advanced_encryption_modes", "keycore", "Homomorphic / functional encryption modes", "Registered as controls; no homomorphic or functional encryption is performed. Searchable HMAC tokens are available."},
 	{"keycore.audit_chain_anchor", "keycore", "External audit-chain anchors", "Records an external reference in a local hash chain; nothing is anchored externally. Audit tamper evidence comes from the audit service (hash chain, per-event HMAC, Merkle epochs)."},
 	{"backup.scheduler", "backup", "Backup policies, runs and restore points (Backup tab)", "Policies are stored but no backup is executed or restored. Real encrypted backups: System Administration > Backups."},

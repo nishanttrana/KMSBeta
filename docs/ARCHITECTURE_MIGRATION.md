@@ -42,7 +42,7 @@ See [DECISIONS.md](DECISIONS.md) (2026-09-26) for the alternatives we rejected.
 ## Target layering
 
 ```
-L3  Edges        dashboard, agents, KMSExtension, SDKs   → call the REST API only
+L3  Edges        dashboard, agents, SDKs                 → call the REST API only
 L2  Features     services/<name>: handler (routes + details), service (logic), store
 L1  Kernel       pkg/platform (boot), pkg/route (per-request contract),
                  pkg/audit, pkg/config (cluster forwarding, security headers)

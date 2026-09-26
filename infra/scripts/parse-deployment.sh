@@ -81,7 +81,7 @@ case "${hsm_mode}" in
     ;;
   software|none)
     # No HSM: keys are protected by keycore's master key. (The unused
-    # software-vault service moved to KMSExtension.)
+    # software-vault service was removed.)
     ;;
   *)
     echo "invalid hsm_mode in ${FILE}: ${hsm_mode}" >&2

@@ -6,6 +6,12 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 
 ## [1.2.0-beta] — 2026-09-25
 
+### Development moves entirely to KMSBeta
+- Nothing is developed in the KMSExtension repo any more. Features cut from
+  the core are removed and stay recoverable from git history.
+- The Edge & IoT preview now says "there is no edge runtime" instead of
+  pointing at KMSExtension.
+
 ### HSM: activity log, create alerts, provenance, partition view, HSM CAs
 - **HSM activity in the HSM tab.** Every HSM operation and refusal was
   already audited (`audit.hsm.*` from the connector, `audit.key.hsm_*` from
@@ -74,8 +80,9 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
   governance in compose, so HSM-bound backups failed there). Migration 014
   retires the secret-derived v2 packages.
 - **Removed "Vecta KMS HSM":** the menu entry is now "Securosys Primus HSM".
-  The unused `software-vault` "software HSM" service moved to the
-  KMSExtension repo (seeds), along with `SOFTWARE_VAULT_PASSPHRASE`.
+  The unused `software-vault` "software HSM" service is removed, along with
+  `SOFTWARE_VAULT_PASSPHRASE` (recoverable from git history before commit
+  `091109c`).
   `hsm_mode: software` now means no HSM. `hardware` starts `hsm-connector`
   and `hsm-integration` (the library upload, which no deployment profile
   used to start).
