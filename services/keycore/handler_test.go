@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	pkgauth "vecta-kms/pkg/auth"
 	pkgcache "vecta-kms/pkg/cache"
 	"vecta-kms/pkg/fips/fipstest"
 	"vecta-kms/pkg/metering"
@@ -32,6 +33,20 @@ type denyPolicyEvaluator struct{}
 
 func (denyPolicyEvaluator) Evaluate(_ context.Context, _ PolicyEvaluateRequest) (PolicyEvaluateResponse, error) {
 	return PolicyEvaluateResponse{Decision: "DENY", Reason: "blocked by test policy"}, nil
+}
+
+// Key operations need a verified caller: keycore refuses anonymous key use.
+// These stand in for a tenant admin who created the test keys ("tester").
+func adminCtx() context.Context {
+	return contextWithAccessActor(context.Background(), AccessActor{
+		UserID: "tester", Username: "tester", Role: "admin", Permissions: []string{"*"}, Authenticated: true,
+	})
+}
+
+func serveAsAdmin(h *Handler, w http.ResponseWriter, r *http.Request) {
+	claims := &pkgauth.Claims{UserID: "tester", TenantID: "t1", Role: "admin", Permissions: []string{"*"}}
+	claims.Subject = "tester"
+	h.ServeHTTP(w, r.WithContext(pkgauth.ContextWithClaims(r.Context(), claims)))
 }
 
 func newHandlerForTest(t *testing.T) (*Handler, *Service) {
@@ -58,7 +73,7 @@ func TestEncryptApprovalRequiredFailsClosedWithoutGovernanceClient(t *testing.T)
 	raw, _ := json.Marshal(body)
 	req := httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/encrypt", bytes.NewReader(raw))
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
+	serveAsAdmin(h, rr, req)
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status=%d body=%s", rr.Code, rr.Body.String())
 	}
@@ -84,14 +99,14 @@ func TestEncryptOpsLimitReturns429(t *testing.T) {
 
 	req1 := httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/encrypt", bytes.NewReader(raw))
 	rr1 := httptest.NewRecorder()
-	h.ServeHTTP(rr1, req1)
+	serveAsAdmin(h, rr1, req1)
 	if rr1.Code != http.StatusOK {
 		t.Fatalf("first status=%d body=%s", rr1.Code, rr1.Body.String())
 	}
 
 	req2 := httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/encrypt", bytes.NewReader(raw))
 	rr2 := httptest.NewRecorder()
-	h.ServeHTTP(rr2, req2)
+	serveAsAdmin(h, rr2, req2)
 	if rr2.Code != http.StatusTooManyRequests {
 		t.Fatalf("second status=%d body=%s", rr2.Code, rr2.Body.String())
 	}
@@ -218,7 +233,7 @@ func TestExternalIVValidation(t *testing.T) {
 	raw, _ := json.Marshal(noIV)
 	req1 := httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/encrypt", bytes.NewReader(raw))
 	rr1 := httptest.NewRecorder()
-	h.ServeHTTP(rr1, req1)
+	serveAsAdmin(h, rr1, req1)
 	if rr1.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400 got %d body=%s", rr1.Code, rr1.Body.String())
 	}
@@ -231,7 +246,7 @@ func TestExternalIVValidation(t *testing.T) {
 	raw2, _ := json.Marshal(withIV)
 	req2 := httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/encrypt", bytes.NewReader(raw2))
 	rr2 := httptest.NewRecorder()
-	h.ServeHTTP(rr2, req2)
+	serveAsAdmin(h, rr2, req2)
 	if rr2.Code != http.StatusOK {
 		t.Fatalf("expected 200 got %d body=%s", rr2.Code, rr2.Body.String())
 	}
@@ -515,7 +530,7 @@ func TestStrictModeRefusesExternalIV(t *testing.T) {
 		"iv":        base64.StdEncoding.EncodeToString([]byte("123456789012")),
 	})
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/encrypt", bytes.NewReader(raw)))
+	serveAsAdmin(h, rr, httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/encrypt", bytes.NewReader(raw)))
 	if rr.Code != http.StatusBadRequest || !strings.Contains(rr.Body.String(), "strict mode") {
 		t.Fatalf("strict mode must refuse a caller-supplied IV cleanly, got %d %s", rr.Code, rr.Body.String())
 	}
@@ -532,7 +547,7 @@ func TestInternalIVEncryptWorksInEveryMode(t *testing.T) {
 	}
 	raw, _ := json.Marshal(map[string]any{"tenant_id": "t1", "plaintext": base64.StdEncoding.EncodeToString([]byte("hello"))})
 	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/encrypt", bytes.NewReader(raw)))
+	serveAsAdmin(h, rr, httptest.NewRequest(http.MethodPost, "/keys/"+key.ID+"/encrypt", bytes.NewReader(raw)))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("internal-IV encrypt must work in every FIPS mode, got %d %s", rr.Code, rr.Body.String())
 	}

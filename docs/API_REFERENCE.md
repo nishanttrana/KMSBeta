@@ -650,6 +650,17 @@ curl -sk -X POST "https://localhost/svc/keycore/inventory/dependencies?tenant_id
 
 ---
 
+### Caller identity and access denials
+
+Every key operation needs a verified token (a user token through the
+gateway, or a service JWT); a request without one gets `403 access_denied`
+with `reason: authentication_required`. Keycore refuses to start without the
+key that verifies tokens. Keycore decides key access from the verified token only. `X-Actor-*`,
+`X-KMS-Subject` and `X-KMS-Interface` headers are ignored for authorization
+and recorded in `audit.key.actor_headers_ignored`. A key operation the caller
+may not perform returns `403 access_denied` and emits
+`audit.key.access_refused` with a `reason`.
+
 ### POST /svc/keycore/system-keys/ensure
 
 Internal, service identities only (a `kms-*` service JWT), each for itself.
@@ -2839,6 +2850,7 @@ and disagreeing sources with `403 tenant_conflict`. Each request emits one
 | `GET /v1/sys/health`, `/v1/sys/seal-status` | any identity | `vault_health_read`, `vault_seal_status_read`
 - `audit.<svc>.dev_mek_rewrapped`, `dev_mek_rewrap_refused`, `mek_rewrapped`, `mek_rewrap_refused`, `mek_unreadable`, `mek_check_refused`, `mek_exposure_remediated`, `mek_exposure_listed`, `mek_exposure_acknowledged`, `mek_backup_rewrap` for `<svc>` in secrets, cert, cloud, ekm: service master keys (docs/SECURITY/SERVICE_MASTER_KEYS.md)
 - `audit.key.system_key_ensure`, `audit.key.system_key_created`, `audit.key.system_key_change_refused`: keycore system keys
+- `audit.key.access_refused` (every key-access denial, `result: refused` with `reason`), `audit.key.actor_headers_ignored` (identity headers were sent and ignored): keycore key access
 - `audit.governance.backup_reprotected`, `audit.governance.backup_reprotect_refused`: stored backups re-protected off public keys |
 | `POST /v1/auth/token/lookup-self` | any identity | `vault_token_lookup` |
 | `GET /v1/{mount}/data/{path}`, `GET /v1/{mount}/{path}` | `secrets.value.read` | `vault_kv_read` |

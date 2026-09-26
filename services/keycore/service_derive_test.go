@@ -48,7 +48,7 @@ func TestServiceDeriveBindsCallerPurposeAndVersion(t *testing.T) {
 	}
 
 	// Rotation must not change a subkey pinned to version 1.
-	if _, err := svc.RotateKey(context.Background(), "t1", key.ID, "test", ""); err != nil {
+	if _, err := svc.RotateKey(adminCtx(), "t1", key.ID, "test", ""); err != nil {
 		t.Fatal(err)
 	}
 	pinned, err := derive(serviceCtx("kms-dataprotect"), "tokenize", 1)
@@ -104,7 +104,7 @@ func TestGenericDeriveCannotReproduceServiceSubkey(t *testing.T) {
 		t.Fatal(err)
 	}
 	info := serviceDeriveInfo("kms-dataprotect", "t1", key.ID, "tokenize", 1)
-	_, err = svc.Derive(context.Background(), key.ID, DeriveRequest{
+	_, err = svc.Derive(adminCtx(), key.ID, DeriveRequest{
 		TenantID: "t1", Algorithm: "HKDF-SHA256", LengthBits: 256,
 		InfoB64: base64.StdEncoding.EncodeToString(info),
 		SaltB64: base64.StdEncoding.EncodeToString([]byte(serviceDeriveSalt)),

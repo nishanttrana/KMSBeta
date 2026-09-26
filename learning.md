@@ -5,6 +5,30 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### "Backward compatible" anonymous access hides the callers that depend on it
+Keycore let a request with no token use any key that had no grants. The
+branch was labelled backward-compatible, and nobody knew what depended on it.
+Auditing every keycore caller found two: compliance playbooks (no token on
+internal calls) and the reconciler (only the shared internal token, and no
+tenant, so keycore was already rejecting its lifecycle calls, and scheduled
+rotation had silently never worked). So before closing an anonymous path,
+list its callers and give each a real identity. The audit also shows which
+features were quietly broken. And fail closed at startup when the verifier
+is missing: keycore used to start without its JWT key and then treat
+everyone as anonymous.
+
+### "Fall back to the header" is "let the caller choose"
+keycore built its actor from the verified token, then filled any empty field
+from `X-Actor-*` headers, presumably so a trusted proxy could pass a user on.
+No proxy ever did. The service-principal flag had already been fixed to
+ignore the headers, but role, permissions, groups and user ID hadn't. So a
+token with no permissions could send `X-Actor-Permissions: *` and be an
+admin. The lesson generalises: a fallback for a *security* field is an
+override for whoever controls the fallback's source. Identity fields have
+one source, the verified token; everything else is audit context, kept in a
+separate struct no policy reads, so a future edit can't quietly start
+trusting it again.
+
 ### A default that nobody overrides is the only value in production
 Four services had a "dev" master-key fallback that logged "not for
 production". Nothing ever set the real variable (compose never even passed

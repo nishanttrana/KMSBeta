@@ -117,7 +117,7 @@ func TestSystemKeyIsProtectedFromDestruction(t *testing.T) {
 		t.Fatalf("version 1 gone after refusals: %v", err)
 	}
 	// Rotation and deactivation keep derivation working, so they're allowed.
-	if _, err := svc.RotateKey(ctx, tenant, id, "scheduled", ""); err != nil {
+	if _, err := svc.RotateKey(adminCtx(), tenant, id, "scheduled", ""); err != nil {
 		t.Fatalf("rotate: %v", err)
 	}
 	if err := svc.SetKeyStatus(ctx, tenant, id, "deactivated"); err != nil {
