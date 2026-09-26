@@ -203,12 +203,16 @@ func main() {
 		hb.Start(ctx)
 		defer hb.Stop()
 	}
-	if tokenParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience); err != nil {
-		logger.Printf("jwt parser disabled: %v", err)
-	} else if tokenParser != nil {
-		handler.SetTokenParser(tokenParser)
-		logger.Printf("jwt parser enabled for key access control")
+	// Key access is decided from the verified token, so keycore can't run
+	// without the key that verifies tokens (fail closed, like jwtauth.MustWrap).
+	tokenParser, err := loadJWTParser(cfg.JWTIssuer, cfg.JWTAudience)
+	if err != nil {
+		logger.Fatalf("refusing to start: jwt parser: %v", err)
 	}
+	if tokenParser == nil {
+		logger.Fatalf("refusing to start: JWT_PUBLIC_KEY_B64 (or KEYCORE_JWT_PUBLIC_KEY_*) is required; key access is decided from verified tokens")
+	}
+	handler.SetTokenParser(tokenParser)
 
 	rl := pkgratelimit.New(pkgratelimit.Config{
 		RequestsPerSecond: cfg.RateLimitRPS,

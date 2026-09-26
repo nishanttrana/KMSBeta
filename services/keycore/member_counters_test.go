@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/base64"
 	"errors"
 	"testing"
@@ -23,7 +22,7 @@ func asMember(t *testing.T) {
 // count node-locally, and the key's limit still applies.
 func TestMemberCountsOperationsNodeLocally(t *testing.T) {
 	_, svc := newHandlerForTest(t)
-	ctx := context.Background()
+	ctx := adminCtx()
 	key, err := svc.CreateKey(ctx, CreateKeyRequest{
 		TenantID: "t1", Name: "limited", Algorithm: "AES-256", KeyType: "symmetric", Purpose: "encrypt",
 		Owner: "ops", CreatedBy: "tester", OpsLimit: 3,

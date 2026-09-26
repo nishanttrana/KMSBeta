@@ -5,6 +5,18 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### "Backward compatible" anonymous access hides the callers that depend on it
+Keycore let a request with no token use any key that had no grants. The
+branch was labelled backward-compatible, and nobody knew what depended on it.
+Auditing every keycore caller found two: compliance playbooks (no token on
+internal calls) and the reconciler (only the shared internal token, and no
+tenant, so keycore was already rejecting its lifecycle calls, and scheduled
+rotation had silently never worked). So before closing an anonymous path,
+list its callers and give each a real identity. The audit also shows which
+features were quietly broken. And fail closed at startup when the verifier
+is missing: keycore used to start without its JWT key and then treat
+everyone as anonymous.
+
 ### "Fall back to the header" is "let the caller choose"
 keycore built its actor from the verified token, then filled any empty field
 from `X-Actor-*` headers, presumably so a trusted proxy could pass a user on.

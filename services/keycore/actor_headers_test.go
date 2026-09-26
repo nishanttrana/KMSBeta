@@ -143,7 +143,7 @@ func TestActorHeadersWithoutTokenAreNotAnIdentity(t *testing.T) {
 	if w := encryptAs(h, key.ID, nil, headers); w.Code != http.StatusForbidden {
 		t.Fatalf("headers without a token: status %d, want 403 (%s)", w.Code, w.Body)
 	}
-	if d := refusalDetails(t, rec, "audit.key.access_refused"); d["reason"] != "deny_by_default" || d["authenticated"] != false {
+	if d := refusalDetails(t, rec, "audit.key.access_refused"); d["reason"] != "authentication_required" || d["authenticated"] != false {
 		t.Fatalf("details: %+v", d)
 	}
 }
@@ -186,5 +186,30 @@ func TestActorBuiltFromVerifiedClaimsOnly(t *testing.T) {
 	}
 	if actorIsAdmin(a) {
 		t.Fatal("header role made the caller an admin")
+	}
+}
+
+// A key with no grants, in a tenant without deny-by-default, used to be
+// open to any caller without a token. Now every key use needs a verified
+// identity; the creator, an admin and a service principal still work.
+func TestAnonymousKeyUseIsRefused(t *testing.T) {
+	h, svc, rec := newActorTestHandler(t)
+	key := ownedKey(t, svc) // created by owner-1, no grants
+
+	if w := encryptAs(h, key.ID, nil, nil); w.Code != http.StatusForbidden {
+		t.Fatalf("no token: status %d, want 403 (%s)", w.Code, w.Body)
+	}
+	d := refusalDetails(t, rec, "audit.key.access_refused")
+	if d["reason"] != "authentication_required" || d["authenticated"] != false || d["actor"] != "unauthenticated" {
+		t.Fatalf("refusal details: %+v", d)
+	}
+
+	creator := &pkgauth.Claims{UserID: "owner-1", TenantID: "t1", Role: "operator"}
+	service := &pkgauth.Claims{ClientID: "kms-compliance", TenantID: "root", Role: "client-service", Permissions: []string{"service.internal"}}
+	service.Subject = "kms-compliance"
+	for name, c := range map[string]*pkgauth.Claims{"creator": creator, "service principal": service} {
+		if w := encryptAs(h, key.ID, c, nil); w.Code != http.StatusOK {
+			t.Fatalf("%s refused: %d %s", name, w.Code, w.Body)
+		}
 	}
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -38,7 +39,7 @@ func (r *keyLifecycleReconciler) Reconcile(ctx context.Context) error {
 		Items []struct {
 			TenantID string `json:"tenant_id"`
 			KeyID    string `json:"key_id"`
-			Action   string `json:"action"`   // "rotate", "deactivate", "destroy", "archive"
+			Action   string `json:"action"` // "rotate", "deactivate", "destroy", "archive"
 			Reason   string `json:"reason"`
 		} `json:"items"`
 	}
@@ -54,7 +55,8 @@ func (r *keyLifecycleReconciler) Reconcile(ctx context.Context) error {
 			continue
 		}
 		ctxOp, cancel := context.WithTimeout(ctx, 5*time.Second)
-		err := doJSON(ctxOp, r.client, http.MethodPost, r.keycoreURL+path, map[string]any{
+		// keycore resolves the key within the tenant the item belongs to.
+		err := doJSON(ctxOp, r.client, http.MethodPost, r.keycoreURL+path+"?tenant_id="+url.QueryEscape(item.TenantID), map[string]any{
 			"actor":  "reconciler",
 			"reason": item.Reason,
 		})

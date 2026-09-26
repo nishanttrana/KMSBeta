@@ -26,12 +26,12 @@ type TenantManifest struct {
 
 // TenantSpec is the per-tenant config block.
 type TenantSpec struct {
-	ID                string            `yaml:"id" json:"id"`
-	Name              string            `yaml:"name" json:"name"`
-	Status            string            `yaml:"status" json:"status"`
-	MinAlgorithmTier  string            `yaml:"min_algorithm_tier,omitempty" json:"min_algorithm_tier,omitempty"`
-	OpsBudgetPerDay   int64             `yaml:"ops_budget_per_day,omitempty" json:"ops_budget_per_day,omitempty"`
-	Labels            map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
+	ID               string            `yaml:"id" json:"id"`
+	Name             string            `yaml:"name" json:"name"`
+	Status           string            `yaml:"status" json:"status"`
+	MinAlgorithmTier string            `yaml:"min_algorithm_tier,omitempty" json:"min_algorithm_tier,omitempty"`
+	OpsBudgetPerDay  int64             `yaml:"ops_budget_per_day,omitempty" json:"ops_budget_per_day,omitempty"`
+	Labels           map[string]string `yaml:"labels,omitempty" json:"labels,omitempty"`
 }
 
 // PolicyManifest is the YAML body for one policy plus its identifier so
@@ -57,7 +57,7 @@ type tenantReconciler struct {
 	auditURL   string
 	logger     logIface
 
-	mu       sync.Mutex
+	mu        sync.Mutex
 	manifests []TenantManifest
 }
 

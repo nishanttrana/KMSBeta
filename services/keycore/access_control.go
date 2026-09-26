@@ -368,26 +368,24 @@ func (s *Service) evaluateKeyAccess(ctx context.Context, key Key, operation stri
 		}
 	}
 
-	// Backward-compatible default remains creator/admin unless deny-by-default is explicitly enabled.
+	// Without grants a key is usable by an admin or its creator (unless the
+	// tenant enabled deny-by-default). There is no anonymous access: a caller
+	// without a verified token is refused, whatever the key's grants.
 	grants = activeGrants
+	if !actor.Authenticated {
+		return refuse("authentication_required", "access denied: a verified token is required to use a key")
+	}
 	if len(grants) == 0 {
 		if settings.DenyByDefault {
-			if actor.Authenticated && actorIsAdmin(actor) {
+			if actorIsAdmin(actor) {
 				return nil
 			}
 			return refuse("deny_by_default", "access denied: no active grants and deny-by-default is enabled")
-		}
-		if !actor.Authenticated {
-			return nil
 		}
 		if actorIsAdmin(actor) || actorMatchesCreator(actor, key.CreatedBy) {
 			return nil
 		}
 		return refuse("not_assigned_to_caller", "access denied: key is not assigned to caller")
-	}
-
-	if !actor.Authenticated {
-		return refuse("authentication_required", "access denied: authenticated caller required for key with access policy")
 	}
 
 	groupIDs := normalizeActorGroups(actor.Groups)

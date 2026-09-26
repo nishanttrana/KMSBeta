@@ -30,6 +30,25 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 - **Operators:** check for `audit.key.actor_headers_ignored`. No platform
   service sends these headers, so any hit is a stale integration or an
   attempt to spoof.
+- **No anonymous key use (breaking for token-less integrations).** A request
+  with no token could use any key that had no grants, unless the tenant had
+  enabled deny-by-default. Every key operation now needs a verified token:
+  otherwise `403 access_denied`, audited as `audit.key.access_refused` with
+  `reason: authentication_required`. The creator, admins and service
+  identities are unaffected.
+  - Keycore now refuses to start without the key that verifies tokens
+    (`JWT_PUBLIC_KEY_B64`, which compose already requires); before, it
+    started without it and couldn't identify anyone.
+  - Two platform callers relied on anonymous access and now use service
+    identities:
+    - compliance playbooks (rotate, status and destroy key actions, and the
+      certs, policy, audit and auth actions) call as `kms-compliance`. The
+      token is sent only to those service hosts, never to webhooks or
+      external URLs.
+    - reconciler's key-lifecycle calls carry the new `kms-reconciler`
+      identity and, for the first time, the key's `tenant_id`. Keycore
+      rejected those calls before for the missing tenant, so scheduled
+      rotation and deactivation now actually run.
 
 ### Security: stored secrets, CA keys, cloud credentials and BitLocker keys were under public keys
 - **Every deployment was affected.** secrets, certs, cloud and ekm wrapped

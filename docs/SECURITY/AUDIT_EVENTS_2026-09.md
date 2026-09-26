@@ -35,7 +35,7 @@ security meaning where a generic request record isn't enough.
 
 | Event | When | Severity |
 |---|---|---|
-| `audit.key.access_refused` | a key operation was denied by key access control (`result: refused`, `reason`: `not_assigned_to_caller`, `deny_by_default`, `no_matching_grant`, `authentication_required`, `interface_policy`, `workload_not_authenticated`, `workload_operation_not_permitted` or `workload_key_not_bound`; with `key_id`, `operation`, the verified `actor`, `authenticated`, and `unverified_actor_headers` if any were sent) | warning |
+| `audit.key.access_refused` | a key operation was denied by key access control (`result: refused`, `reason`: `authentication_required` (no verified token; there is no anonymous key use), `not_assigned_to_caller`, `deny_by_default`, `no_matching_grant`, `authentication_required`, `interface_policy`, `workload_not_authenticated`, `workload_operation_not_permitted` or `workload_key_not_bound`; with `key_id`, `operation`, the verified `actor`, `authenticated`, and `unverified_actor_headers` if any were sent) | warning |
 | `audit.key.actor_headers_ignored` | a request carried `X-Actor-*` / `X-KMS-Subject` / `X-KMS-Interface` identity headers; they were ignored (`result: refused`, `reason: unverified_identity_headers`, `claimed` values, `verified_actor`) | warning |
 
 Identity comes only from the verified token (CLAUDE.md rule 4). Proven by

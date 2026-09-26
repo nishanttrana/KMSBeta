@@ -652,7 +652,10 @@ curl -sk -X POST "https://localhost/svc/keycore/inventory/dependencies?tenant_id
 
 ### Caller identity and access denials
 
-Keycore decides key access from the verified token only. `X-Actor-*`,
+Every key operation needs a verified token (a user token through the
+gateway, or a service JWT); a request without one gets `403 access_denied`
+with `reason: authentication_required`. Keycore refuses to start without the
+key that verifies tokens. Keycore decides key access from the verified token only. `X-Actor-*`,
 `X-KMS-Subject` and `X-KMS-Interface` headers are ignored for authorization
 and recorded in `audit.key.actor_headers_ignored`. A key operation the caller
 may not perform returns `403 access_denied` and emits

@@ -7,6 +7,33 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — No anonymous key use in keycore
+**Decision:** every key operation needs a verified identity. The
+"backward-compatible" branch that let a caller with no token use any key
+without grants (when deny-by-default was off) is removed. Keycore refuses to
+start without its token-verification key. Platform callers that relied on
+anonymous access get service identities: compliance playbooks call as
+`kms-compliance` (token confined to platform service hosts), and reconciler
+calls as the new `kms-reconciler`.
+
+**Why:** an unauthenticated request is not a tenant's caller. Deny-by-default
+being off should mean "creator and admins may use ungranted keys", not
+"anyone who can reach the port may". Rule 4 already forbids unverified
+identity, and anonymity is the extreme case.
+
+**Rejected:**
+- Keeping anonymous access behind a flag: its only users were the two
+  internal callers above, and they're fixed.
+- Accepting the shared internal API token as an identity: every internal
+  caller holds it, so it can't say who acted.
+- Requiring a token at the handler for every route: the internalauth routes
+  (reconciler's due-for-lifecycle and archive) and health checks don't carry
+  a JWT, and key access is where identity matters.
+
+**Enforced by:** `TestAnonymousKeyUseIsRefused`,
+`TestPlaybookSendsServiceTokenOnlyToPlatformServices`,
+`TestLifecycleCallsCarryServiceIdentityAndTenant`.
+
 ## 2026-09-26 — Service master keys come from keycore; exposure is tracked until material is replaced
 **Decision:**
 - secrets, certs, cloud and ekm get their master key from keycore through
