@@ -15,8 +15,8 @@ mkdir -p "$PID_DIR" "$LOG_DIR"
 # ── Common environment ──────────────────────────────────────────────
 # No built-in database credentials: use POSTGRES_DSN if set, else build it from
 # POSTGRES_USER/POSTGRES_PASSWORD in .env (docs/SECURITY/SECURE_DEFAULTS.md).
-env_val() { if [ -f "$ROOT_DIR/.env" ]; then sed -n "s/^$1=//p" "$ROOT_DIR/.env" | tail -1; fi; }
 if [ -z "${POSTGRES_DSN:-}" ]; then
+    env_val() { if [ -f "$ROOT_DIR/.env" ]; then sed -n "s/^$1=//p" "$ROOT_DIR/.env" | tail -1; fi; }
     pg_user="$(env_val POSTGRES_USER)"; pg_pass="$(env_val POSTGRES_PASSWORD)"; pg_db="$(env_val POSTGRES_DB)"
     [ -n "$pg_pass" ] || { echo "error: set POSTGRES_DSN, or POSTGRES_PASSWORD in .env, for your local Postgres" >&2; exit 1; }
     export POSTGRES_DSN="postgres://${pg_user:-postgres}:${pg_pass}@localhost:5432/${pg_db:-vecta}?sslmode=disable"
@@ -31,21 +31,6 @@ export GOFIPS140="${GOFIPS140:-v1.0.0}"
 export VECTA_FIPS_MODE="${VECTA_FIPS_MODE:-on}"
 export GODEBUG="${GODEBUG:+$GODEBUG,}fips140=${VECTA_FIPS_MODE}"
 export SQLITE_FALLBACK="false"
-
-# Secrets-service master key: must stay the same across runs (a new key would
-# leave stored secrets unreadable, and the service refuses to start on one),
-# so it lives in .env. docs/SECURITY/SECRET_ROTATION.md
-if [ -z "${SECRETS_MEK_B64:-}" ]; then
-    SECRETS_MEK_B64="$(env_val SECRETS_MEK_B64)"
-    if [ -z "$SECRETS_MEK_B64" ]; then
-        SECRETS_MEK_B64="$(openssl rand -base64 32)"
-        printf 'SECRETS_MEK_B64=%s\n' "$SECRETS_MEK_B64" >> "$ROOT_DIR/.env"
-        echo "generated SECRETS_MEK_B64 in .env"
-    fi
-fi
-export SECRETS_MEK_B64
-[ -n "${SECRETS_MEK_PREVIOUS_B64:-}" ] || SECRETS_MEK_PREVIOUS_B64="$(env_val SECRETS_MEK_PREVIOUS_B64)"
-export SECRETS_MEK_PREVIOUS_B64
 
 # Auth bootstrap defaults
 export AUTH_BOOTSTRAP_TENANT_ID="root"

@@ -153,6 +153,15 @@ func (rt *Router) Routes() []Route {
 
 func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) { rt.mux.ServeHTTP(w, r) }
 
+// MountOn registers every route on a legacy mux, delegating to the kernel.
+// A service still on the route-kernel burn-down list uses it to add routes
+// that get the kernel's guarantees before its handler is migrated.
+func (rt *Router) MountOn(mux *http.ServeMux) {
+	for _, r := range rt.routes {
+		mux.Handle(r.Pattern, rt)
+	}
+}
+
 func (s Spec) validate(pattern string) error {
 	method, _, ok := strings.Cut(pattern, " ")
 	if !ok || method == "" || strings.ToUpper(method) != method {

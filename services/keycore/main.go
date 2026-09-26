@@ -181,6 +181,7 @@ func main() {
 		logger.Printf("governance fips mode integration enabled")
 	}
 	handler := NewHandler(svc)
+	handler.SetAuditClient(auditClient)
 
 	// Zeroization verification scheduler. Runs on the keycore process
 	// because it needs the live key cache; emits per-key audit events

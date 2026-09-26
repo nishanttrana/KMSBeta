@@ -666,11 +666,8 @@ services:
       <<: *kms-common-env
       HTTP_PORT: "8020"
       GRPC_PORT: "18020"
-      # Wraps every stored secret's DEK. No fallback: the service refuses to
-      # start without it. Set PREVIOUS only while rotating
-      # (docs/SECURITY/SECRET_ROTATION.md). Cluster members use the primary's.
-      SECRETS_MEK_B64: ${SECRETS_MEK_B64:?SECRETS_MEK_B64 is required (openssl rand -base64 32)}
-      SECRETS_MEK_PREVIOUS_B64: ${SECRETS_MEK_PREVIOUS_B64:-}
+      # The master key comes from keycore (pkg/mek); nothing to configure.
+      KEYCORE_URL: http://keycore:8010
     ports:
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:8020:8020"
       - "${KMS_INTERNAL_BIND:-127.0.0.1}:18020:18020"

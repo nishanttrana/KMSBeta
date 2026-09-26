@@ -82,9 +82,6 @@ ensure_secret POSTGRES_PASSWORD "$(openssl rand -hex 24)"
 ensure_secret NATS_AUTH_TOKEN "$(openssl rand -hex 24)"
 ensure_secret WORKLOAD_IDENTITY_SHARED_SECRET
 ensure_secret SOFTWARE_VAULT_PASSPHRASE
-# Existing values stored under the old built-in key are re-wrapped under this
-# one when the secrets service starts (audit.secrets.dev_mek_rewrapped).
-ensure_secret SECRETS_MEK_B64 "$(openssl rand -base64 32)"
 ensure_secret INTERNAL_SERVICE_BOOTSTRAP_SECRET
 ensure_secret INTERNAL_API_TOKEN
 if [[ -z "${fips_mode}" ]]; then

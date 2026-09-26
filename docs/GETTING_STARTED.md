@@ -436,7 +436,6 @@ cp .env.example .env
 #   AUTH_BOOTSTRAP_CLI_PASSWORD=<strong-password>
 #   WORKLOAD_IDENTITY_SHARED_SECRET=<random-secret>
 #   SOFTWARE_VAULT_PASSPHRASE=<random-passphrase>
-#   SECRETS_MEK_B64=$(openssl rand -base64 32)   # never change it by hand; see docs/SECURITY/SECRET_ROTATION.md
 #   INTERNAL_API_TOKEN=$(openssl rand -hex 32)
 #   JWT_PUBLIC_KEY_B64=<base64-encoded PEM public key>
 #   POSTGRES_PASSWORD=<strong-db-password>
