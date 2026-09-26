@@ -34,6 +34,7 @@ import {
   listGovernanceBackups,
   patchGovernanceSystemState,
   restoreGovernanceBackup,
+  verifyGovernanceBackup,
   testGovernanceSystemSNMP,
   testGovernanceSMTP,
   testGovernanceWebhook,
@@ -44,6 +45,7 @@ import {
   applyNetworkConfig,
   type GovernanceBackupJob,
   type GovernanceBackupKeyFile,
+  type GovernanceVerifyBackupResult,
   type GovernanceSettings
 } from "../../lib/governance";
 import {
@@ -786,6 +788,8 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
   const [backupThreshold,setBackupThreshold]=useState(3);
   const [backupCreatedShares,setBackupCreatedShares]=useState<GovernanceBackupKeyFile[]>([]);
   const [backupRestoring,setBackupRestoring]=useState(false);
+  const [backupVerifying,setBackupVerifying]=useState(false);
+  const [backupVerifyResult,setBackupVerifyResult]=useState<GovernanceVerifyBackupResult|null>(null);
 
   const [cliStatus,setCliStatus]=useState<CLIStatus|null>(null);
   const [cliLoading,setCliLoading]=useState(false);
@@ -1403,37 +1407,45 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     finally{setJobsLoading(false);} 
   },[onToast,session,sessionGuard]);
 
-  const restoreBackup=useCallback(async()=>{
-    if(!session?.token){return;}
+  // Reads the selected artifact and key file (or guardian shares) into the
+  // body restore and verify share; toasts and returns null if incomplete.
+  const readBackupFiles=useCallback(async()=>{
     const useShares=backupRestoreShareFiles.length>0;
     if(!backupRestoreArtifactFile||(!useShares&&!backupRestoreKeyFile)){
       onToast("Select the backup artifact and its key package, or the guardian share files.");
-      return;
+      return null;
     }
     const artifactName=String(backupRestoreArtifactFile.name||"").trim();
     const keyFiles=useShares?backupRestoreShareFiles:[backupRestoreKeyFile as File];
     if(!artifactName.toLowerCase().endsWith(BACKUP_ARTIFACT_EXTENSION)){
       onToast(`Artifact must use ${BACKUP_ARTIFACT_EXTENSION} extension.`);
-      return;
+      return null;
     }
     if(keyFiles.some((f)=>!String(f.name||"").toLowerCase().endsWith(BACKUP_KEY_EXTENSION))){
       onToast(`Key files must use ${BACKUP_KEY_EXTENSION} extension.`);
-      return;
+      return null;
     }
+    const [artifactB64,...keyB64s]=await Promise.all([fileToBase64(backupRestoreArtifactFile),...keyFiles.map(fileToBase64)]);
+    return {
+      artifact_file_name:artifactName,
+      artifact_content_base64:artifactB64,
+      ...(useShares
+        ?{key_shares:keyFiles.map((f,i)=>({file_name:String(f.name||"").trim(),content_base64:String(keyB64s[i]||"")}))}
+        :{key_file_name:String(keyFiles[0]?.name||"").trim(),key_content_base64:String(keyB64s[0]||"")})
+    };
+  },[backupRestoreArtifactFile,backupRestoreKeyFile,backupRestoreShareFiles,onToast]);
+
+  const restoreBackup=useCallback(async()=>{
+    if(!session?.token){return;}
     setBackupRestoring(true);
     try{
-      const [artifactB64,...keyB64s]=await Promise.all([fileToBase64(backupRestoreArtifactFile),...keyFiles.map(fileToBase64)]);
-      const out=await restoreGovernanceBackup(session,{
-        artifact_file_name:artifactName,
-        artifact_content_base64:artifactB64,
-        ...(useShares
-          ?{key_shares:keyFiles.map((f,i)=>({file_name:String(f.name||"").trim(),content_base64:String(keyB64s[i]||"")}))}
-          :{key_file_name:String(keyFiles[0]?.name||"").trim(),key_content_base64:String(keyB64s[0]||"")}),
-        created_by:session.username
-      });
+      const files=await readBackupFiles();
+      if(!files) return;
+      const out=await restoreGovernanceBackup(session,files);
       setBackupRestoreArtifactFile(null);
       setBackupRestoreKeyFile(null);
       setBackupRestoreShareFiles([]);
+      setBackupVerifyResult(null);
       onToast(`Backup restored. Rows: ${Number(out.rows_restored||0)} | Tables: ${Number(out.tables_processed||0)}.`);
       await Promise.all([loadJobs(),loadSystemState()]);
     }catch(error){
@@ -1441,7 +1453,24 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
     }finally{
       setBackupRestoring(false);
     }
-  },[backupRestoreArtifactFile,backupRestoreKeyFile,backupRestoreShareFiles,loadJobs,loadSystemState,onToast,session,sessionGuard]);
+  },[loadJobs,loadSystemState,onToast,readBackupFiles,session,sessionGuard]);
+
+  const verifyBackup=useCallback(async()=>{
+    if(!session?.token){return;}
+    setBackupVerifying(true);
+    setBackupVerifyResult(null);
+    try{
+      const files=await readBackupFiles();
+      if(!files) return;
+      const out=await verifyGovernanceBackup(session,files);
+      setBackupVerifyResult(out);
+      onToast("Backup verified: it opens with the key given. Nothing was restored.");
+    }catch(error){
+      if(!sessionGuard(error)) onToast(`Backup verification failed: ${errMsg(error)}`);
+    }finally{
+      setBackupVerifying(false);
+    }
+  },[onToast,readBackupFiles,session,sessionGuard]);
 
   const saveSnmpSettings = useCallback(async()=>{
     if(!session?.token){return;}
@@ -3009,8 +3038,19 @@ export const SystemAdminTab=({session,onToast,onLogout,fipsMode,onFipsModeChange
         </div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,gap:10}}>
           <div style={{fontSize:10,color:C.dim,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{`${backupRestoreArtifactFile?.name||"artifact not selected"} | ${backupRestoreShareFiles.length?`${backupRestoreShareFiles.length} guardian share file(s)`:backupRestoreKeyFile?.name||"key package not selected"}`}</div>
-          <Btn small primary onClick={()=>void restoreBackup()} disabled={backupRestoring}>{backupRestoring?"Restoring...":"Restore Backup"}</Btn>
+          <div style={{display:"flex",gap:6,flexShrink:0}}>
+            <Btn small onClick={()=>void verifyBackup()} disabled={backupVerifying||backupRestoring}>{backupVerifying?"Verifying...":"Verify Backup"}</Btn>
+            <Btn small primary onClick={()=>void restoreBackup()} disabled={backupRestoring||backupVerifying}>{backupRestoring?"Restoring...":"Restore Backup"}</Btn>
+          </div>
         </div>
+        <div style={{fontSize:10,color:C.dim,marginTop:6}}>Verify opens the backup with the key file or guardian shares and reports what it holds, without changing any data. Use it to prove your backups and keys still work.</div>
+        {backupVerifyResult&&<div role="status" style={{marginTop:8,padding:10,borderRadius:8,border:`1px solid ${C.green}`,background:C.greenDim,fontSize:11,color:C.text}}>
+          <div style={{fontWeight:700,marginBottom:4}}>Backup opens: verified</div>
+          <div>{`Scope ${backupVerifyResult.scope}${backupVerifyResult.target_tenant_id?` (${backupVerifyResult.target_tenant_id})`:""} · captured ${backupVerifyResult.backup_captured_at||"unknown"}`}</div>
+          <div>{`${backupVerifyResult.table_count} tables · ${backupVerifyResult.row_count_total} rows · opened in ${backupVerifyResult.elapsed_ms} ms`}</div>
+          <div>{backupVerifyResult.key_source==="guardian_shares"?`Key rebuilt from shares of: ${(backupVerifyResult.share_guardians||[]).join(", ")}`:"Key: key file"}</div>
+          <div style={{color:C.dim,marginTop:4}}>No data was changed. A restore also needs each service to re-wrap rows under retired master keys; it checks that before applying anything.</div>
+        </div>}
       </Card>
       <Card style={{marginTop:8,padding:10,borderRadius:8}}>
         <div style={{display:"grid",gridTemplateColumns:"1.2fr 0.8fr 0.8fr 0.8fr 1fr",gap:8,paddingBottom:8,borderBottom:`1px solid ${C.border}`}}>{["Backup","Scope","Status","Rows","Actions"].map((h)=><div key={h} style={{fontSize:9,color:C.muted,textTransform:"uppercase",letterSpacing:1}}>{h}</div>)}</div>

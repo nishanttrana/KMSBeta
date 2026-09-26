@@ -4,6 +4,48 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.6.0-beta] — 2026-09-26
+
+### Backups: Verify Backup (real recovery evidence)
+- **New "Verify Backup" button** in System Administration > Backups, next to
+  Restore Backup, and `POST /governance/backups/verify`.
+  - It opens a backup with its key file or guardian shares exactly as a
+    restore would, and reports real table and row counts, the capture time,
+    the key source and how long it took.
+  - It changes no data.
+  - Audited: `audit.governance.backup_verified` and
+    `audit.governance.backup_verify_refused`.
+- **Restore and verify now take the acting user from the verified token.**
+  `created_by` in the request body was trusted before.
+
+### Process: real capability only, and never expose a secret
+- **New standing rules** (CLAUDE.md 8 and 9):
+  - Every feature must be 100% real capability, never mimicked or faked
+    ([docs/SECURITY/REAL_CAPABILITY.md](docs/SECURITY/REAL_CAPABILITY.md)).
+  - Passwords, tokens, keys and other secrets are never exposed in commands,
+    logs, output, chat, commits or URLs
+    ([docs/SECURITY/SECRET_HANDLING.md](docs/SECURITY/SECRET_HANDLING.md)).
+- **`make conformance` has a new `real-capability` rule.** It fails on
+  `simulate*` / `synthetic*` / `fabricate*` / `fake*` / `mock*` functions
+  outside tests, and on `Math.random` byte generation in the dashboard.
+- **Fix: the Tokenize nonce no longer falls back to `Math.random`** or a
+  timestamp. It uses the browser CSPRNG only, and fails if that is missing.
+- **Fix: compiled service binaries were committed by mistake.**
+  `services/governance/governance` (35 MB) came in with 1.4.0-beta and
+  `services/certs/certs` with 1.5.0-beta. Both are now untracked, and
+  `.gitignore` covers every `services/<name>/<name>` build output.
+
+### Removed: DR drill (it fabricated results)
+- **Removed the "DR Drill" tab and keycore's `/dr-drill/*` endpoints.**
+- **Why:** triggering a drill ran nothing. Every step was marked "passed",
+  with 10/10 keys restored, RPO 0 and a made-up RTO, and nothing executed
+  the schedules.
+  - The routes also took `tenant_id` from the request body and emitted no
+    audit events.
+- Keycore migration 023 drops `dr_drill_schedules` and `dr_drill_runs`,
+  which also purges the fabricated runs.
+- The Command Center's single-node advice now points at Verify Backup.
+
 ## [1.5.0-beta] — 2026-09-26
 
 ### Removed: CT log monitor (it fabricated findings)

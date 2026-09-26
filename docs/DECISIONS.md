@@ -7,6 +7,34 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-26 — Replace the fabricated DR drill with backup verification
+**Decision:** delete keycore's DR drill, which marked every step passed with
+synthetic RTO/RPO. Add `POST /governance/backups/verify`, which opens a real
+backup through restore's own code path (`openBackup`) and reports what it
+holds, without applying it.
+
+**Why:**
+- Rule 7: no fabricated evidence.
+- "Can we recover?" is answered by "does our backup open with the keys we
+  hold?", and the platform can prove that for real.
+
+**Rejected:**
+- *A full restore drill into a throwaway environment*: restore overwrites
+  the live database, so isolating it needs new work across governance and
+  keycore (several days).
+- *Scheduled automatic drills*: software-mode backup keys aren't stored and
+  may be split across guardians, so an unattended job can't open them.
+- *Keeping the drill as a preview*: its schedules never ran, so nothing of
+  value would remain.
+
+**Open:**
+- Verify doesn't prove services can re-wrap retired-key rows; restore
+  checks that before applying.
+- A timed, isolated restore (real RTO) is still future work.
+
+**Enforced by:** `TestVerifyBackupPostgres`,
+`TestVerifyBackupRouteAuthAndActor`.
+
 ## 2026-09-26 — Remove the CT log monitor rather than label it a preview
 **Decision:** delete the CT log monitor (backend, tables, dashboard tab). It
 generated synthetic certificates and mis-issuance alerts. Certs migration

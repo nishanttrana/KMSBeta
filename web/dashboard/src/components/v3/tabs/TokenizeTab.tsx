@@ -888,20 +888,12 @@ const FieldEncryptionRuntime=({session,keyCatalog,onToast})=>{
     return parsed;
   };
 
+  // Nonces come only from the browser CSPRNG; without it, fail rather than
+  // send a predictable one.
   const makeNonce=()=>{
-    try{
-      const bytes=new Uint8Array(24);
-      if(typeof window!=="undefined"&&window.crypto&&window.crypto.getRandomValues){
-        window.crypto.getRandomValues(bytes);
-      }else{
-        for(let i=0;i<bytes.length;i+=1){
-          bytes[i]=Math.floor(Math.random()*256);
-        }
-      }
-      return btoa(String.fromCharCode(...Array.from(bytes))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
-    }catch{
-      return `nonce-${Date.now()}`;
-    }
+    const bytes=new Uint8Array(24);
+    window.crypto.getRandomValues(bytes);
+    return btoa(String.fromCharCode(...Array.from(bytes))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
   };
 
   const refresh=async(silent=false)=>{

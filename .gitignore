@@ -73,3 +73,38 @@ services/*/__debug_bin*
 
 # Local build harness output
 .cloudbuild/
+
+# Binaries `go build` drops inside a service directory
+services/ai-gateway/ai-gateway
+services/audit/audit
+services/auth/auth
+services/autokey/autokey
+services/backup/backup
+services/certs/certs
+services/cloud/cloud
+services/cluster-manager/cluster-manager
+services/compliance/compliance
+services/confidential/confidential
+services/dataprotect/dataprotect
+services/discovery/discovery
+services/ekm-agent/ekm-agent
+services/featureforge/featureforge
+services/governance/governance
+services/hsm-connector/hsm-connector
+services/hsm-integration/hsm-integration
+services/hyok/hyok
+services/jca-provider/jca-provider
+services/keyaccess/keyaccess
+services/kmip/kmip
+services/payment/payment
+services/pkcs11-provider/pkcs11-provider
+services/policy/policy
+services/posture/posture
+services/pqc/pqc
+services/reconciler/reconciler
+services/reporting/reporting
+services/sbom/sbom
+services/secrets/secrets
+services/signing/signing
+services/watchdog/watchdog
+services/workload/workload

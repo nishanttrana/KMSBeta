@@ -58,6 +58,7 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("GET /governance/backups", h.handleListBackups)
 	mux.HandleFunc("POST /governance/backups", h.handleCreateBackup)
 	mux.HandleFunc("POST /governance/backups/restore", h.handleRestoreBackup)
+	mux.HandleFunc("POST /governance/backups/verify", h.handleVerifyBackup)
 	mux.HandleFunc("DELETE /governance/backups/{id}", h.handleDeleteBackup)
 	mux.HandleFunc("GET /governance/backups/{id}", h.handleGetBackup)
 	mux.HandleFunc("GET /governance/backups/{id}/artifact", h.handleDownloadBackupArtifact)
@@ -240,6 +241,7 @@ func (h *Handler) handleRestoreBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	in.TenantID = tenantID
+	in.CreatedBy = verifiedActor(r)
 	out, err := h.svc.RestoreBackup(r.Context(), in)
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "backup_restore_failed", err.Error(), reqID, in.TenantID)
@@ -249,6 +251,37 @@ func (h *Handler) handleRestoreBackup(w http.ResponseWriter, r *http.Request) {
 		"result":     out,
 		"request_id": reqID,
 	})
+}
+
+// handleVerifyBackup opens a backup with its key file or guardian shares and
+// reports its contents without restoring anything.
+func (h *Handler) handleVerifyBackup(w http.ResponseWriter, r *http.Request) {
+	reqID := requestID(r)
+	tenantID, ok := h.requireSystemAdminTenant(w, r, reqID, true)
+	if !ok {
+		return
+	}
+	var in RestoreBackupInput
+	if err := decodeJSON(r, &in); err != nil {
+		writeErr(w, http.StatusBadRequest, "bad_request", err.Error(), reqID, "")
+		return
+	}
+	in.TenantID = tenantID
+	in.CreatedBy = verifiedActor(r)
+	out, err := h.svc.VerifyBackup(r.Context(), in)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "backup_verify_failed", err.Error(), reqID, in.TenantID)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]interface{}{"result": out, "request_id": reqID})
+}
+
+// verifiedActor names the caller from its verified token, never the body.
+func verifiedActor(r *http.Request) string {
+	if claims, ok := pkgauth.ClaimsFromContext(r.Context()); ok && claims != nil {
+		return firstNonEmptyString(claims.UserID, claims.ClientID)
+	}
+	return ""
 }
 
 func (h *Handler) handleListBackups(w http.ResponseWriter, r *http.Request) {

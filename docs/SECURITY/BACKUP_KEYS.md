@@ -55,6 +55,22 @@ and the backup is gone, keep it and that one person can restore every key.
   algorithm, and no FIPS standard covers it. It is available in every mode
   (see [FIPS.md](FIPS.md#whats-inside-the-validated-boundary-and-what-isnt)).
 
+## Verifying a backup (recovery evidence)
+
+`POST /governance/backups/verify` (System Administration > Backups > Verify
+Backup) proves a backup can still be recovered, without touching data.
+- It runs the same code as restore up to the point of applying
+  (`openBackup`): key file, guardian shares or HSM unwrap, then AES-GCM
+  under the backup's AAD, then the snapshot parse.
+- It reports the real table and row counts, the capture time, the key
+  source and the elapsed time.
+- It doesn't check that the owning services can re-wrap rows under retired
+  master keys. Restore checks that before it applies anything.
+- Audit: `audit.governance.backup_verified`; a backup that doesn't open
+  emits `audit.governance.backup_verify_refused` with the reason.
+- This replaces the old keycore "DR drill", which reported fabricated
+  results.
+
 ## HSM-bound mode
 
 Used when `bind_to_hsm` is true (the default) and the tenant has an enabled
@@ -123,9 +139,14 @@ If the service can't re-wrap them, the backup or restore is refused.
   - `TestMigrationScrubsStoredBackupKeysPostgres` (013 and 014);
   - `TestBackupReprotectPostgres`, `TestBackupRestoreRoundTripPostgres`,
     `TestBackupRestoreRefusesTamperingPostgres`;
+  - `TestVerifyBackupPostgres`: a key file and three guardian shares
+    verify with real counts and no data change; a wrong key or two shares
+    are refused and audited;
   - `TestSplitBackupKeyRestorePostgres`: five guardian shares, nothing
     stored, two shares or one share refused and audited with data
     untouched, any three restore.
+- `TestVerifyBackupRouteAuthAndActor`: the verify route is root-admin only,
+  and the audited caller comes from the token, not the body.
 - `TestSplitBackupKeyNeedsThresholdShares`,
   `TestValidateBackupKeySplitRejectsBadSplits`; `pkg/crypto`:
   `TestGFArithmetic`, `TestShamirAnyThresholdSubsetRecovers`,

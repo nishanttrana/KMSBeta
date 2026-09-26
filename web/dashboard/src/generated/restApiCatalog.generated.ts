@@ -11122,6 +11122,34 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
+    "id": "governance-post-governance-backups-verify",
+    "group": "Governance (governance)",
+    "title": "POST /governance/backups/verify",
+    "service": "governance",
+    "method": "POST",
+    "pathTemplate": "/governance/backups/verify?tenant_id={{tenant_id}}",
+    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
+    "description": "Auto-discovered route from Governance service.",
+    "requestExample": "POST /svc/governance/governance/backups/verify?tenant_id={{tenant_id}}",
+    "responseExample": {
+      "note": "Execute endpoint to inspect the live response payload."
+    },
+    "errorCodes": [
+      {
+        "code": 401,
+        "meaning": "Authentication required or token invalid"
+      },
+      {
+        "code": 403,
+        "meaning": "Caller lacks permission for this operation"
+      },
+      {
+        "code": 400,
+        "meaning": "Request payload, path, or query parameters invalid"
+      }
+    ]
+  },
+  {
     "id": "governance-post-governance-key-approval",
     "group": "Governance (governance)",
     "title": "POST /governance/key-approval",
@@ -14907,34 +14935,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     ]
   },
   {
-    "id": "keycore-delete-dr-drill-schedules-id",
-    "group": "Key Management (keycore)",
-    "title": "DELETE /dr-drill/schedules/{id}",
-    "service": "keycore",
-    "method": "DELETE",
-    "pathTemplate": "/dr-drill/schedules/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "DELETE /svc/keycore/dr-drill/schedules/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
     "id": "keycore-delete-keys-id-versions-ver",
     "group": "Key Management (keycore)",
     "title": "DELETE /keys/{id}/versions/{ver}",
@@ -15672,118 +15672,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "GET /svc/keycore/compromise/events?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-get-dr-drill-metrics",
-    "group": "Key Management (keycore)",
-    "title": "GET /dr-drill/metrics",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/dr-drill/metrics?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/dr-drill/metrics?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-get-dr-drill-runs",
-    "group": "Key Management (keycore)",
-    "title": "GET /dr-drill/runs",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/dr-drill/runs?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/dr-drill/runs?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-get-dr-drill-runs-id",
-    "group": "Key Management (keycore)",
-    "title": "GET /dr-drill/runs/{id}",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/dr-drill/runs/{id}?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/dr-drill/runs/{id}?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-get-dr-drill-schedules",
-    "group": "Key Management (keycore)",
-    "title": "GET /dr-drill/schedules",
-    "service": "keycore",
-    "method": "GET",
-    "pathTemplate": "/dr-drill/schedules?tenant_id={{tenant_id}}",
-    "bodyTemplate": "",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "GET /svc/keycore/dr-drill/schedules?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },
@@ -17632,62 +17520,6 @@ export const DISCOVERED_REST_API_CATALOG = [
     "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
     "description": "Auto-discovered route from KeyCore service.",
     "requestExample": "POST /svc/keycore/crypto/random?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-dr-drill-schedules",
-    "group": "Key Management (keycore)",
-    "title": "POST /dr-drill/schedules",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/dr-drill/schedules?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/dr-drill/schedules?tenant_id={{tenant_id}}",
-    "responseExample": {
-      "note": "Execute endpoint to inspect the live response payload."
-    },
-    "errorCodes": [
-      {
-        "code": 401,
-        "meaning": "Authentication required or token invalid"
-      },
-      {
-        "code": 403,
-        "meaning": "Caller lacks permission for this operation"
-      },
-      {
-        "code": 400,
-        "meaning": "Request payload, path, or query parameters invalid"
-      }
-    ]
-  },
-  {
-    "id": "keycore-post-dr-drill-trigger",
-    "group": "Key Management (keycore)",
-    "title": "POST /dr-drill/trigger",
-    "service": "keycore",
-    "method": "POST",
-    "pathTemplate": "/dr-drill/trigger?tenant_id={{tenant_id}}",
-    "bodyTemplate": "{\n  \"tenant_id\": \"{{tenant_id}}\"\n}",
-    "description": "Auto-discovered route from KeyCore service.",
-    "requestExample": "POST /svc/keycore/dr-drill/trigger?tenant_id={{tenant_id}}",
     "responseExample": {
       "note": "Execute endpoint to inspect the live response payload."
     },

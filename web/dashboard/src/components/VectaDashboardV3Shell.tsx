@@ -36,7 +36,6 @@ import {
   Settings,
   Shield,
   ShieldCheck,
-  Siren,
   VenetianMask,
   Webhook,
   Zap,
@@ -104,7 +103,6 @@ const CryptoAgilityTab = lazy(() => import("./v3/tabs/CryptoAgilityTab").then(m 
 const WebhooksTab = lazy(() => import("./v3/tabs/WebhooksTab").then(m => ({ default: m.WebhooksTab })));
 const MTLSMeshTab = lazy(() => import("./v3/tabs/MTLSMeshTab").then(m => ({ default: m.MTLSMeshTab })));
 const EnvelopeEncTab = lazy(() => import("./v3/tabs/EnvelopeEncTab").then(m => ({ default: m.EnvelopeEncTab })));
-const DRDrillTab = lazy(() => import("./v3/tabs/DRDrillTab").then(m => ({ default: m.DRDrillTab })));
 const OpsMetricsTab = lazy(() => import("./v3/tabs/OpsMetricsTab").then(m => ({ default: m.OpsMetricsTab })));
 const BackupTab = lazy(() => import("./v3/tabs/BackupTab").then(m => ({ default: m.BackupTab })));
 const DevSecOpsTab = lazy(() => import("./v3/tabs/DevSecOpsTab").then(m => ({ default: m.DevSecOpsTab })));
@@ -214,7 +212,6 @@ const TABS: Record<string, any> = {
   webhooks: WebhooksTab,
   mtls_mesh: MTLSMeshTab,
   envelope_enc: EnvelopeEncTab,
-  dr_drill: DRDrillTab,
   ops_metrics: OpsMetricsTab,
   backup: BackupTab,
   devsecops: DevSecOpsTab,
@@ -261,7 +258,6 @@ const TITLES: Record<string, string> = {
   webhooks: "Webhooks & SIEM",
   mtls_mesh: "mTLS Mesh",
   envelope_enc: "Envelope Encryption",
-  dr_drill: "DR Drill",
   ops_metrics: "Operations Metrics",
   backup: "Backup & Restore",
   devsecops: "DevSecOps / IaC",
@@ -316,7 +312,6 @@ const NAV = [
     { id: "cluster", icon: GitBranch, label: "Cluster" },
     { id: "health", icon: Activity, label: "Health" },
     { id: "backup", icon: Archive, label: "Backup & Restore" },
-    { id: "dr_drill", icon: Siren, label: "DR Drill" },
     { id: "devsecops", icon: GitBranch, label: "DevSecOps / IaC" },
     { id: "webhooks", icon: Webhook, label: "Webhooks & SIEM" },
     { id: "feature_forge", icon: Sparkles, label: "Feature Forge" },

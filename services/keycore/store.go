@@ -96,16 +96,6 @@ type Store interface {
 	CreateMigrationPlan(ctx context.Context, mp MigrationPlan) (MigrationPlan, error)
 	UpdateMigrationPlan(ctx context.Context, tenantID, id, status string, completedKeys int) (MigrationPlan, error)
 
-	// DR Drill
-	ListDrillSchedules(ctx context.Context, tenantID string) ([]DrillSchedule, error)
-	CreateDrillSchedule(ctx context.Context, ds DrillSchedule) (DrillSchedule, error)
-	DeleteDrillSchedule(ctx context.Context, tenantID, id string) error
-	CreateDrillRun(ctx context.Context, run DrillRun) (DrillRun, error)
-	UpdateDrillRun(ctx context.Context, run DrillRun) (DrillRun, error)
-	ListDrillRuns(ctx context.Context, tenantID string, limit int) ([]DrillRun, error)
-	GetDrillRun(ctx context.Context, tenantID, id string) (DrillRun, error)
-	GetDrillMetrics(ctx context.Context, tenantID string) (DrillMetrics, error)
-
 	// Ceremony
 	ListCeremonyGuardians(ctx context.Context, tenantID string) ([]CeremonyGuardian, error)
 	CreateCeremonyGuardian(ctx context.Context, g CeremonyGuardian) (CeremonyGuardian, error)

@@ -204,15 +204,6 @@ func (h *Handler) routes() *http.ServeMux {
 	mux.HandleFunc("POST /agility/migration-plans", h.handleCreateMigrationPlan)
 	mux.HandleFunc("PATCH /agility/migration-plans/{id}", h.handleUpdateMigrationPlan)
 
-	// DR Drill
-	mux.HandleFunc("GET /dr-drill/schedules", h.handleListDrillSchedules)
-	mux.HandleFunc("POST /dr-drill/schedules", h.handleCreateDrillSchedule)
-	mux.HandleFunc("DELETE /dr-drill/schedules/{id}", h.handleDeleteDrillSchedule)
-	mux.HandleFunc("POST /dr-drill/trigger", h.handleTriggerDrill)
-	mux.HandleFunc("GET /dr-drill/runs", h.handleListDrillRuns)
-	mux.HandleFunc("GET /dr-drill/runs/{id}", h.handleGetDrillRun)
-	mux.HandleFunc("GET /dr-drill/metrics", h.handleGetDrillMetrics)
-
 	// Ceremony routes
 	mux.HandleFunc("GET /ceremony/guardians", h.handleListGuardians)
 	mux.HandleFunc("POST /ceremony/guardians", h.handleCreateGuardian)

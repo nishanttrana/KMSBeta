@@ -13,6 +13,13 @@ tooling**. It does not contain pre-written "zero vulnerabilities" claims.
 
 ## Standing rules
 
+- [REAL_CAPABILITY.md](REAL_CAPABILITY.md): every feature is 100% real
+  capability, never mimicked or faked; what counts as fake, how
+  `make conformance` catches it, and the features removed for faking.
+- [SECRET_HANDLING.md](SECRET_HANDLING.md): never expose a password, token,
+  key or other secret, in commands, logs, output, chat, commits or URLs; how
+  to pass secrets safely; what to do after an exposure (with the incident
+  log).
 - [SECURE_DEFAULTS.md](SECURE_DEFAULTS.md): no secret may fall back to a value
   in the repo. Enforced by `make conformance`. Read it before adding any
   secret, installer step or seeded account.

@@ -5,6 +5,76 @@ Newest entries on top.
 
 ## 2026-09-26
 
+### Never mimic or fake a feature: it must be 100% real capability
+- **Owner directive:** every KMS feature does what its UI and API say, end
+  to end. A UI with no real backend behind it, or a backend that invents
+  results, is not a feature. (CLAUDE.md rule 8,
+  docs/SECURITY/REAL_CAPABILITY.md.)
+- **Why it became a rule:** in one day three features turned out to be
+  fake, and a fourth was a weak security fallback:
+  - key escrow stored records and released nothing;
+  - the CT log monitor invented certificates and "unknown CA" alerts;
+  - the DR drill marked every step passed with made-up RTO/RPO;
+  - the tokenize nonce fell back to `Math.random`.
+  Each looked complete in the UI and in a skim of its handlers.
+- **How to tell:** follow the data. Is the real key or secret touched? Is
+  the real network call made? Does the check actually run? If not, remove
+  it, or label it a preview returning `409 feature_preview`. It is never
+  "almost done".
+- **Enforced:** `make conformance` rule `real-capability`. It flags
+  `simulate*` / `synthetic*` / `fabricate*` / `fake*` / `mock*` functions
+  outside tests, and `Math.random` byte generation. It flagged every fake
+  function in the removed code.
+
+### The local Postgres password was exposed in an assistant session
+- **What happened:** our local Postgres password was exposed in an AI
+  assistant session.
+  - One of the assistant's commands failed and printed the
+    `POSTGRES_PASSWORD` value from `.env` in its error output.
+  - Nothing ran against the database, and the password was only visible in
+    that session's output.
+  - It's a local development password, but rotating it is still worth
+    doing (docs/SECURITY/SECRET_ROTATION.md).
+- **Cause:** the command was stored in a zsh variable,
+  `X="docker exec -e PGPASSWORD=$P ... psql"`, and run as `$X`. zsh doesn't
+  word-split variables, so it looked for a command named after the whole
+  string, and "command not found" printed that string, password included.
+  The password was also inline (`-e PGPASSWORD=<value>`), so any echo of the
+  command line would have leaked it.
+- **Rule (owner directive):** NEVER expose a password, JWT, token, API key,
+  private key or any other sensitive value, in commands, logs, errors,
+  output, chat, commits or URLs (CLAUDE.md rule 9,
+  docs/SECURITY/SECRET_HANDLING.md).
+  - Pass secrets by environment variable name (`-e PGPASSWORD`), file or
+    stdin.
+  - Wrap commands in shell functions.
+  - If a secret leaks anyway, say so immediately and rotate it.
+
+
+### `go build ./...` inside a service writes a binary that `git add <dir>` commits
+- Running `go build ./...` inside a single-package service directory writes
+  a binary named after the directory (`services/governance/governance`).
+  The root `.gitignore` only covered the root-level outputs and two service
+  paths, so `git add services/governance/` committed a 35 MB binary (in
+  1.4.0-beta), and later `services/certs/certs` (1.5.0-beta).
+- Fixed in 1.6.0-beta: both are untracked, and `.gitignore` lists
+  `services/<name>/<name>` for every service. They stay in history; purging
+  them means rewriting the published `main`.
+- Stage named files, or check `git status` for `Bin` entries, before
+  committing a directory.
+
+### Split "open" from "apply" to get honest verification cheaply
+- Restore already did every hard check: key resolution, guardian shares,
+  the HSM unwrap, AES-GCM under the AAD, and the snapshot parse. Splitting
+  it into `openBackup` plus apply let "Verify Backup" reuse the exact same
+  path instead of copying it. Verify can't drift from restore, and restore
+  has one fewer place to get wrong.
+- The fabricated DR drill had also let restore trust `created_by` from the
+  body. Look for actor and tenant fields in request bodies whenever a
+  handler is touched: `verifiedActor(r)` in governance takes them from
+  claims.
+
+
 ### Grep for "simulate", "synthetic", "fake" and "mock" outside tests
 - **What we found:** the CT log monitor's only data source was a function
   literally named `simulateCTFetch`. It invented certificates and

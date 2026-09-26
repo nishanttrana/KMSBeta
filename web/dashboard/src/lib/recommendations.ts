@@ -467,7 +467,7 @@ export function evaluate(s: PlatformSnapshot): { recommendations: Recommendation
         id: "single-node", severity: "medium", category: "Resilience",
         title: "KMS runs as a single node",
         why: "Every application that decrypts through the KMS stops when this node stops.",
-        fix: "Add at least one replica node (ideally in a second site) and verify failover with a DR drill.",
+        fix: "Add at least one replica node (ideally in a second site), and prove recovery by verifying a backup (System Administration > Backups > Verify Backup).",
         frameworks: ["DORA Art. 11", "ISO 22301"], affected: 1, evidence: [],
         action: { tab: "cluster", label: "Open Cluster" },
       });

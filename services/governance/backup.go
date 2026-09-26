@@ -472,42 +472,52 @@ func (s *Service) RestoreBackup(ctx context.Context, in RestoreBackupInput) (Res
 	return res, err
 }
 
-func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (RestoreBackupResult, error) {
+// openedBackup is a backup decrypted and parsed, not yet applied.
+type openedBackup struct {
+	Snapshot       backupSnapshotPayload
+	Scope          string
+	TargetTenantID string
+	ShareGuardians []string
+}
+
+// openBackup resolves the key (key file, guardian shares or HSM), decrypts
+// the artifact under its AAD and parses the snapshot. It changes nothing.
+func (s *Service) openBackup(ctx context.Context, in RestoreBackupInput) (openedBackup, error) {
 	store, ok := s.store.(*SQLStore)
 	if !ok || store == nil || store.db == nil || store.db.SQL() == nil {
-		return RestoreBackupResult{}, errors.New("backup store is unavailable")
+		return openedBackup{}, errors.New("backup store is unavailable")
 	}
 	in.TenantID = strings.TrimSpace(in.TenantID)
 	in.ArtifactFileName = strings.TrimSpace(in.ArtifactFileName)
 	in.KeyFileName = strings.TrimSpace(in.KeyFileName)
 	if in.TenantID == "" {
-		return RestoreBackupResult{}, errors.New("tenant_id is required")
+		return openedBackup{}, errors.New("tenant_id is required")
 	}
 	if !hasApprovedBackupArtifactName(in.ArtifactFileName) {
-		return RestoreBackupResult{}, fmt.Errorf("artifact file must use %s extension", backupArtifactExtension)
+		return openedBackup{}, fmt.Errorf("artifact file must use %s extension", backupArtifactExtension)
 	}
 	artifactRaw, err := decodeBase64Payload(in.ArtifactContentBase)
 	if err != nil {
-		return RestoreBackupResult{}, fmt.Errorf("invalid backup artifact: %w", err)
+		return openedBackup{}, fmt.Errorf("invalid backup artifact: %w", err)
 	}
 	var keyPackage map[string]interface{}
 	var backupKey []byte
 	var shareGuardians []string
 	if len(in.KeyShares) > 0 {
 		if backupKey, keyPackage, shareGuardians, err = combineBackupKeyShares(in.KeyShares); err != nil {
-			return RestoreBackupResult{}, err
+			return openedBackup{}, err
 		}
 		defer pkgcrypto.Zeroize(backupKey)
 	} else {
 		if !hasApprovedBackupKeyName(in.KeyFileName) {
-			return RestoreBackupResult{}, fmt.Errorf("key file must use %s extension", backupKeyExtension)
+			return openedBackup{}, fmt.Errorf("key file must use %s extension", backupKeyExtension)
 		}
 		keyRaw, err := decodeBase64Payload(in.KeyContentBase)
 		if err != nil {
-			return RestoreBackupResult{}, fmt.Errorf("invalid backup key package: %w", err)
+			return openedBackup{}, fmt.Errorf("invalid backup key package: %w", err)
 		}
 		if err := json.Unmarshal(keyRaw, &keyPackage); err != nil {
-			return RestoreBackupResult{}, errors.New("backup key package is not valid JSON")
+			return openedBackup{}, errors.New("backup key package is not valid JSON")
 		}
 	}
 	var envelope backupArtifactEnvelope
@@ -515,26 +525,26 @@ func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (Res
 	var nonce []byte
 	if err := json.Unmarshal(artifactRaw, &envelope); err == nil {
 		if strings.TrimSpace(envelope.CiphertextB64) == "" || strings.TrimSpace(envelope.NonceB64) == "" {
-			return RestoreBackupResult{}, errors.New("backup artifact is missing required encryption fields")
+			return openedBackup{}, errors.New("backup artifact is missing required encryption fields")
 		}
 		ciphertext, err = base64.StdEncoding.DecodeString(strings.TrimSpace(envelope.CiphertextB64))
 		if err != nil {
-			return RestoreBackupResult{}, fmt.Errorf("invalid backup ciphertext: %w", err)
+			return openedBackup{}, fmt.Errorf("invalid backup ciphertext: %w", err)
 		}
 		nonce, err = base64.StdEncoding.DecodeString(strings.TrimSpace(envelope.NonceB64))
 		if err != nil {
-			return RestoreBackupResult{}, fmt.Errorf("invalid backup nonce: %w", err)
+			return openedBackup{}, fmt.Errorf("invalid backup nonce: %w", err)
 		}
 	} else {
 		// Compatibility mode: previous .vbk files stored raw ciphertext only.
 		ciphertext = artifactRaw
 		nonceRaw := strings.TrimSpace(fmt.Sprintf("%v", keyPackage["backup_artifact_nonce_b64"]))
 		if nonceRaw == "" {
-			return RestoreBackupResult{}, errors.New("backup artifact format is invalid (missing nonce for legacy artifact)")
+			return openedBackup{}, errors.New("backup artifact format is invalid (missing nonce for legacy artifact)")
 		}
 		nonce, err = base64.StdEncoding.DecodeString(nonceRaw)
 		if err != nil {
-			return RestoreBackupResult{}, fmt.Errorf("invalid backup nonce in key package: %w", err)
+			return openedBackup{}, fmt.Errorf("invalid backup nonce in key package: %w", err)
 		}
 		envelope = backupArtifactEnvelope{
 			Version:         backupArtifactVersion,
@@ -546,7 +556,7 @@ func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (Res
 	}
 	if backupKey == nil {
 		if backupKey, err = s.resolveRestoreBackupKey(ctx, store, in.TenantID, keyPackage); err != nil {
-			return RestoreBackupResult{}, err
+			return openedBackup{}, err
 		}
 	}
 	scope := normalizeBackupScope(envelope.Scope)
@@ -569,7 +579,7 @@ func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (Res
 		backupFormat = backupFormatJSONGzAESGCM
 	}
 	if backupFormat != backupFormatJSONGzAESGCM {
-		return RestoreBackupResult{}, fmt.Errorf("unsupported backup format: %s", backupFormat)
+		return openedBackup{}, fmt.Errorf("unsupported backup format: %s", backupFormat)
 	}
 	aad, err := json.Marshal(map[string]interface{}{
 		"service":          "governance",
@@ -579,7 +589,7 @@ func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (Res
 		"format":           backupFormat,
 	})
 	if err != nil {
-		return RestoreBackupResult{}, err
+		return openedBackup{}, err
 	}
 	plaintext, err := decryptAESGCM(ciphertext, backupKey, nonce, aad)
 	if err != nil {
@@ -596,22 +606,22 @@ func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (Res
 		if err != nil {
 			plaintext, err = decryptAESGCM(ciphertext, backupKey, nonce, nil)
 			if err != nil {
-				return RestoreBackupResult{}, errors.New("backup decryption failed: invalid key package or artifact")
+				return openedBackup{}, errors.New("backup decryption failed: invalid key package or artifact")
 			}
 		}
 	}
 	gzReader, err := gzip.NewReader(bytes.NewReader(plaintext))
 	if err != nil {
-		return RestoreBackupResult{}, fmt.Errorf("backup payload is not gzip content: %w", err)
+		return openedBackup{}, fmt.Errorf("backup payload is not gzip content: %w", err)
 	}
 	defer gzReader.Close() //nolint:errcheck
 	uncompressed, err := io.ReadAll(gzReader)
 	if err != nil {
-		return RestoreBackupResult{}, err
+		return openedBackup{}, err
 	}
 	var snapshot backupSnapshotPayload
 	if err := json.Unmarshal(uncompressed, &snapshot); err != nil {
-		return RestoreBackupResult{}, errors.New("backup payload JSON is invalid")
+		return openedBackup{}, errors.New("backup payload JSON is invalid")
 	}
 	snapshotScope := normalizeBackupScope(snapshot.Scope)
 	if snapshotScope == "" {
@@ -624,6 +634,17 @@ func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (Res
 	if snapshotScope == backupScopeSystem {
 		snapshotTargetTenantID = ""
 	}
+	return openedBackup{Snapshot: snapshot, Scope: snapshotScope, TargetTenantID: snapshotTargetTenantID, ShareGuardians: shareGuardians}, nil
+}
+
+func (s *Service) restoreBackup(ctx context.Context, in RestoreBackupInput) (RestoreBackupResult, error) {
+	opened, err := s.openBackup(ctx, in)
+	if err != nil {
+		return RestoreBackupResult{}, err
+	}
+	store := s.store.(*SQLStore)
+	in.TenantID = strings.TrimSpace(in.TenantID)
+	snapshot, snapshotScope, snapshotTargetTenantID, shareGuardians := opened.Snapshot, opened.Scope, opened.TargetTenantID, opened.ShareGuardians
 	// Rows under a retired public key go live under the service key, and
 	// their items are recorded as exposed (backup_mek.go). If a service
 	// can't re-wrap, nothing is restored.

@@ -12,6 +12,7 @@
 #   5. FIPS 140-3: every Go binary links the certified Go Cryptographic Module
 #      and every Go service receives the customer's VECTA_FIPS_MODE.
 #   6. Preview features: one catalogue (pkg/features), mirrored by the dashboard.
+#   6b. Real capability: no simulated/synthetic result generators outside tests.
 #   7. Route kernel: every HTTP route registers through pkg/route (auth,
 #      tenant, permission and a specific audit event by construction).
 #
@@ -167,6 +168,22 @@ if [ -z "$go_preview" ] || [ "$go_preview" != "$ts_preview" ]; then
   diff <(echo "$go_preview") <(echo "$ts_preview") | sed 's/^/  /'
 else
   echo "PASS [preview-catalogue] ($(echo "$go_preview" | wc -l | tr -d ' ') preview features)"
+fi
+
+# Rule 6b: real capability only (CLAUDE.md rule 8). Features that returned
+# invented results were named for it (simulateCTFetch, syntheticDrillSteps,
+# simulateDrillCompletion). Such a function outside tests fails; security
+# nonces and keys never use Math.random.
+fake_hits=$(grep -rnE '\b(simulate|synthetic|fabricate|fake|mock)[A-Z][A-Za-z0-9]*[[:space:]]*\(' services pkg web/dashboard/src \
+  --include='*.go' --include='*.ts' --include='*.tsx' 2>/dev/null \
+  | grep -vE '_test\.go:|\.test\.tsx?:|/tests?/|/generated/' || true)
+rand_hits=$(grep -rnE 'Math\.random\(\)[[:space:]]*\*[[:space:]]*256|nonce-\$\{Date\.now' web/dashboard/src --include='*.ts' --include='*.tsx' 2>/dev/null || true)
+if [ -n "$fake_hits$rand_hits" ]; then
+  FAIL=1
+  echo "FAIL [real-capability]: simulated results or Math.random security values (CLAUDE.md rule 8)"
+  printf '%s\n' "$fake_hits" "$rand_hits" | grep -v '^$' | sed 's/^/  /'
+else
+  echo "PASS [real-capability]"
 fi
 
 # Rule 7: route kernel (docs/PLATFORM_CONTRACT.md). Services register HTTP

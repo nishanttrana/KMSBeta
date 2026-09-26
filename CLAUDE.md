@@ -86,6 +86,30 @@ an approach, record it here or in the matching doc below.
    the dashboard, [docs/PREVIEW_FEATURES.md](docs/PREVIEW_FEATURES.md)). Its
    responses are labelled, and operations it can't perform return
    `409 feature_preview`.
+8. **Every feature is 100% real capability, never mimicked or faked** (owner
+   directive, 2026-09-26). A feature must actually do what its UI and API say,
+   end to end, not just look like it does
+   ([docs/SECURITY/REAL_CAPABILITY.md](docs/SECURITY/REAL_CAPABILITY.md)).
+   - Forbidden: simulated or synthetic results, "demo" data shown as real,
+     steps marked passed that never ran, UI-only features with no backend
+     effect, and records presented as enforcement.
+   - A capability that isn't built yet is either removed (preferred) or a
+     labelled preview returning `409 feature_preview`. It never pretends.
+   - Before calling any feature real, follow the data: the secret, the
+     network call, the check. `make conformance` (`real-capability`) fails on
+     `simulate*`, `synthetic*`, `fake*` or `mock*` functions outside tests,
+     and on `Math.random` bytes.
+9. **Never expose a secret** (owner directive, 2026-09-26). Passwords, JWTs
+   and tokens, API keys, private keys and key material, credentialed DSNs and
+   `.env` values never appear in command lines, echoed commands, logs, error
+   messages, tool output, chat, commits or URLs
+   ([docs/SECURITY/SECRET_HANDLING.md](docs/SECURITY/SECRET_HANDLING.md)).
+   - Pass them by environment variable name, file or stdin, never inline.
+   - Wrap commands in shell functions, not word-split strings: zsh prints the
+     whole string on failure.
+   - Redact them in logs and errors.
+   - If one is exposed anyway: say so at once, name the secret (not its
+     value), recommend rotation, and record the cause in learning.md.
 
 ## Crypto and transport standards
 

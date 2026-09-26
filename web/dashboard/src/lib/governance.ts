@@ -292,6 +292,39 @@ export async function downloadGovernanceBackupKey(
   return out.artifact;
 }
 
+// What a verification proved: the backup opened with the key given. Nothing
+// was restored.
+export type GovernanceVerifyBackupResult = {
+  verified: boolean;
+  scope: string;
+  target_tenant_id?: string;
+  backup_captured_at?: string;
+  table_count: number;
+  row_count_total: number;
+  table_row_counts?: Record<string, number>;
+  key_source: "key_file" | "guardian_shares" | string;
+  share_guardians?: string[];
+  elapsed_ms: number;
+  data_modified: boolean;
+};
+
+export async function verifyGovernanceBackup(
+  session: AuthSession,
+  input: {
+    artifact_file_name: string;
+    artifact_content_base64: string;
+    key_file_name?: string;
+    key_content_base64?: string;
+    key_shares?: Array<{ file_name: string; content_base64: string }>;
+  }
+): Promise<GovernanceVerifyBackupResult> {
+  const out = await serviceRequest<{ result: GovernanceVerifyBackupResult }>(session, "governance", "/governance/backups/verify", {
+    method: "POST",
+    body: JSON.stringify({ tenant_id: session.tenantId, ...input })
+  });
+  return out.result;
+}
+
 export async function restoreGovernanceBackup(
   session: AuthSession,
   input: {
