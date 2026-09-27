@@ -1111,30 +1111,47 @@ System-admin refusals are audited as `audit.governance.system_admin_refused`.
 
 ### GET /svc/governance/governance/policies / POST /svc/governance/governance/policies
 
-GovernancePolicy: name, triggerActions[], minApprovers, approverGroups[], timeoutHours, notificationChannels[], emergencyBypassAllowed
+Approval policies decide who approves an action. Reading needs an
+authenticated caller in the tenant; creating, changing or deleting needs a
+tenant administrator.
+
+Policy fields: `name` (unique in the tenant), `description`, `scope`,
+`trigger_actions[]` (exact actions, `domain.*` or `*`), `quorum_mode`
+(`threshold` | `and` | `or`), `required_approvals`, `total_approvers`,
+`approver_roles[]`, `approver_users[]` (emails), `timeout_hours`,
+`escalation_hours`, `escalation_to[]`, `retention_days`,
+`notification_channels[]`, `status` (`active` or inactive). A request uses
+the first active policy whose trigger actions cover its action. Approvers
+are the policy's users plus active holders of its roles (direct or through
+a group), minus the requester.
 
 ```bash
 curl -sk -X POST https://localhost/svc/governance/governance/policies \
-  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: root" -H "Content-Type: application/json" \
-  -d '{"name":"Key Destruction Approval","triggerActions":["audit.key.destroy","audit.key.export"],"minApprovers":2,"approverGroups":["admin","security-team"],"timeoutHours":24,"emergencyBypassAllowed":false}'
+  -H "Authorization: Bearer $TOKEN" -H "X-Tenant-ID: t1" -H "Content-Type: application/json" \
+  -d '{"tenant_id":"t1","name":"Key destruction","scope":"key","trigger_actions":["key.destroy"],"quorum_mode":"threshold","required_approvals":2,"approver_roles":["security-officer"]}'
 ```
 
-Response:
-```json
-{
-  "id": "policy-01ARZ3NDEKTSV4RRFFQ69G5FAV",
-  "name": "Key Destruction Approval",
-  "triggerActions": ["audit.key.destroy", "audit.key.export"],
-  "minApprovers": 2,
-  "approverGroups": ["admin", "security-team"],
-  "timeoutHours": 24,
-  "emergencyBypassAllowed": false
-}
-```
+Response `201`: `policy`, `request_id`. `GET` (query `scope`, `status`)
+returns `items[]`, `request_id`.
+
+**Built-in policies (1.35.0-beta).** When a request's action has no active
+policy, governance creates the built-in policy covering it, once per tenant,
+and audits it as `audit.governance.builtin_policy_created`. Today there is
+one, **Posture escalation (built-in)**:
+- `trigger_actions` `["posture.escalate_remediation"]`
+- `approver_roles` `["admin","tenant-admin"]`, one approval
+- `scope` `posture`
+
+After creation it is an ordinary policy: edit its approvers or quorum, or
+set it inactive (it is then never recreated). It has a fixed ID per tenant.
 
 ---
 
 ### DELETE /svc/governance/governance/policies/{id}
+
+Tenant administrator. Deleting a built-in policy is refused with
+`409 builtin_policy`, audited as `audit.governance.approval_refused` with
+`reason: builtin_policy_delete`. Disable it instead.
 
 ---
 
@@ -1193,7 +1210,7 @@ Services apply the change by a staggered graceful restart.
 Audit:
 - `audit.governance.fips_mode_changed` (critical for a downgrade)
 - `audit.auth.sso_login_refused` (SAML/OIDC callback refused: signature, issuer, audience, recipient, request binding, replay, state), `audit.auth.client_activation_refused` (`reason`; missing or unapproved governance request, cross-tenant)
-- `audit.governance.approval_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `insufficient_privileges`, `not_a_user`, `no_user_email`, and `vote_refused` for a refused vote: not an approver, the requester, a wrong challenge code), `audit.governance.link_refused` (approval page with an invalid or used token)
+- `audit.governance.approval_refused` (`reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `insufficient_privileges`, `not_a_user`, `no_user_email`, `builtin_policy_delete` (deleting a built-in policy), and `vote_refused` for a refused vote: not an approver, the requester, a wrong challenge code), `audit.governance.link_refused` (approval page with an invalid or used token)
 - `audit.hyok.dke_refused` (Microsoft DKE: missing or invalid token, Entra issuer/audience/tenant/user not allowed, anonymous fetch on another host, non-current key version), `audit.hyok.admin_refused` (endpoint administration), `audit.hyok.approval_refused` (retry with an approval that is not approved, for another key/operation/payload, or already used), `audit.hyok.request_denied` with `reason: key_access_unavailable` (fail-closed)
 - `audit.signing.sign_refused` (identity, policy or token refusal, with `code`), `audit.signing.request_refused` (`reason: tenant_mismatch`)
 - `audit.confidential.key_released` (key sealed to the attested recipient key; `recipient_key_binding`, `key_version`, `seal_algorithm`), `audit.confidential.key_release_refused` (`reason`: no binding, verdict, keycore refusal), `audit.confidential.key_release` (kernel), `audit.key.attested_release` (keycore kernel, refusals included)
@@ -1338,7 +1355,9 @@ Runs the action's executor as the verified caller (`executed_by`). An
   from the approvers and refuses their vote), sets the action to
   `awaiting_approval`, and is refused `409 approval_pending` with the
   request ID in the message. Call again once it is approved. Another user
-  can't run on it: they get their own request.
+  can't run on it: they get their own request. With no policy of the
+  tenant's own, the built-in **Posture escalation** policy applies: any
+  other tenant administrator approves (see governance policies).
 - **Body (optional):** `approval_request_id`. It is checked, never
   trusted: it must be one of the approved requests above.
 - **Response `200`:** `ok`, `result` (`action_type`, `finding_id`,
@@ -2650,6 +2669,7 @@ labels or QRNG fields; `fips_tls_profile` (`tls13_minimum`), `fips_rng_mode`
 (`ctr_drbg` in FIPS mode, else `os_csprng`) and `fips_entropy_source`
 (`os-csprng`) report the runtime, and `fips_entropy_bits_per_byte` is gone.
 Refusals: `audit.governance.approval_refused`, `audit.governance.link_refused`.
+Built-in approval policies: `audit.governance.builtin_policy_created` (`policy_id`, `name`, `trigger_actions`, `approver_roles`, `trigger`), emitted once per tenant and policy.
 
 **HYOK.** Crypto routes accept only a verified bearer JWT (no client
 certificate or `X-Client-*` header identity). `auth_mode` is `jwt`; `mtls` is

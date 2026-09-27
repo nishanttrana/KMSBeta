@@ -191,6 +191,9 @@ func (s *Service) UpdatePolicy(ctx context.Context, p ApprovalPolicy) (ApprovalP
 }
 
 func (s *Service) DeletePolicy(ctx context.Context, tenantID string, policyID string) error {
+	if isBuiltinPolicyID(tenantID, policyID) {
+		return errBuiltinPolicyDelete
+	}
 	if err := s.store.DeletePolicy(ctx, tenantID, policyID); err != nil {
 		return err
 	}
@@ -208,6 +211,12 @@ func (s *Service) CreateApprovalRequest(ctx context.Context, in CreateApprovalRe
 		return ApprovalRequest{}, err
 	}
 	policy, err := s.store.FindPolicyForAction(ctx, in.TenantID, in.PolicyID, in.Action)
+	if errors.Is(err, errNotFound) && in.PolicyID == "" {
+		policy, err = s.ensureBuiltinPolicy(ctx, in.TenantID, in.Action)
+	}
+	if errors.Is(err, errNotFound) {
+		return ApprovalRequest{}, errors.New("no active approval policy covers " + in.Action)
+	}
 	if err != nil {
 		return ApprovalRequest{}, err
 	}
@@ -1021,7 +1030,6 @@ func enrichFIPSRuntimeState(in GovernanceSystemState) GovernanceSystemState {
 	}
 	return in
 }
-
 
 func (s *Service) ExpiryCheckInterval(ctx context.Context, tenantID string) time.Duration {
 	settings, err := s.GetSettings(ctx, tenantID)

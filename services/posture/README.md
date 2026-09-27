@@ -73,6 +73,8 @@ Permissions and audit subjects: [docs/API_REFERENCE.md](../../docs/API_REFERENCE
     the overdue finding one severity level, restarts its SLA and resolves the
     SLA-breach finding, after a governance approval opened by the executor
     (`target_type` `posture_action`, action `posture.escalate_remediation`).
+    Approvers come from the tenant's policy, or the built-in Posture
+    escalation policy (tenant admins other than the requester).
   - other open findings raise the corrective score and carry a recommended
     action for an operator; posture has no executor for them, so it creates
     no action records (1.34.0-beta).

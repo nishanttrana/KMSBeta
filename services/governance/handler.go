@@ -581,6 +581,10 @@ func (h *Handler) handleDeletePolicy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.DeletePolicy(r.Context(), tenantID, r.PathValue("id")); err != nil {
+		if errors.Is(err, errBuiltinPolicyDelete) {
+			h.refuseApproval(w, r, reqID, tenantID, http.StatusConflict, "builtin_policy", "builtin_policy_delete", err.Error())
+			return
+		}
 		code := http.StatusInternalServerError
 		if errors.Is(err, errNotFound) {
 			code = http.StatusNotFound

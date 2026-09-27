@@ -4,6 +4,37 @@ All notable changes to Vecta KMS are recorded here. Versions follow the
 `MAJOR.MINOR.PATCH[-beta]` scheme; the canonical version lives in the
 [`VERSION`](VERSION) file and is published as a git tag (`vX.Y.Z`).
 
+## [1.35.0-beta] — 2026-09-27
+
+### Posture escalation approvals work with no setup
+- **Built-in approval policy.** A posture escalation used to be refused on
+  every tenant until an administrator created an approval policy covering
+  `posture.escalate_remediation`. Now governance creates **Posture
+  escalation (built-in)** in a tenant the first time an escalation needs
+  approval and no active policy covers it:
+  - approvers are the tenant's administrators (roles `admin`,
+    `tenant-admin`, direct or through a group) other than the requester;
+  - one approval is enough;
+  - it is audited once as `audit.governance.builtin_policy_created`.
+- **It is an ordinary policy afterwards.** Edit its approvers or quorum, or
+  set it inactive, and it is never recreated. A tenant's own active policy
+  for `posture.escalate_remediation` or `posture.*` takes precedence.
+  Deleting it is refused (`409 builtin_policy`, audited `approval_refused`,
+  `reason: builtin_policy_delete`), because it would be created again.
+- **The requester is left out of the approvers when a service opens the
+  request.** Posture names the requester by user ID only, and governance
+  excluded requesters by email. A requesting admin was therefore sent
+  approval links for their own request (their vote was still refused), and
+  a sole admin got a request nobody could approve. Governance now looks up
+  the email of a requester a service names.
+- **No approvers means a clear refusal.** When no policy is active the
+  message is "no active approval policy covers <action>". A tenant whose
+  only administrator is the requester is refused with "no approvers
+  configured for policy".
+- **Docs:** the governance policy section of the API reference showed fields
+  governance doesn't have (`minApprovers`, `approverGroups`,
+  `emergencyBypassAllowed`); it now lists the real ones.
+
 ## [1.34.0-beta] — 2026-09-27
 
 ### Posture remediation does what it says, after a real approval (breaking)

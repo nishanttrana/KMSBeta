@@ -1228,7 +1228,7 @@ func (s *Service) requireApproval(ctx context.Context, item RemediationAction, e
 		RequesterID: executor,
 	})
 	if err != nil {
-		return "", executionRefusal{409, "approval_unavailable", "governance could not open an approval request (an active approval policy must cover " + approvalAction(item.ActionType) + " or posture.*): " + err.Error()}
+		return "", executionRefusal{409, "approval_unavailable", "governance could not open an approval request: " + err.Error()}
 	}
 	_ = s.store.UpdateActionExecution(ctx, item.TenantID, item.ID, "awaiting_approval", "", "approval requested from governance by "+executor, id)
 	return id, executionRefusal{409, "approval_pending", "approval requested from governance: " + id + "; execute again once it is approved"}

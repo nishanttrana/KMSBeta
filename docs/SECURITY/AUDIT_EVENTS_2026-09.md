@@ -55,6 +55,7 @@ Identity comes only from the verified token (CLAUDE.md rule 4). Proven by
 | Event | When | Severity |
 |---|---|---|
 | `audit.governance.system_admin_refused` | a system-administration route (settings, backups, restore, backup key, system state, FIPS mode, posture controls, network, FDE, SNMP, integrity) was refused (`result: refused`; `reason`: `authentication_required`, `tenant_required`, `tenant_mismatch`, `not_root_tenant`, `token_tenant_not_root` or `insufficient_privileges`; with `route`, `status`, `actor`, `authenticated`) | warning |
+| `audit.governance.builtin_policy_created` | the first approval request for an action with no active policy created the built-in policy covering it (today `posture.escalate_remediation`: approvers are tenant admins other than the requester), once per tenant (`policy_id`, `name`, `trigger_actions`, `approver_roles`, `trigger`). Deleting it is refused (`approval_refused`, `reason: builtin_policy_delete`) | warning |
 | `audit.governance.authentication_refused` | a governance request carried a token that doesn't verify (`result: refused`, `reason: invalid_token`, `route`) | warning |
 
 Only a verified root administrator passes, plus the platform services listed

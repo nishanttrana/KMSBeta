@@ -88,6 +88,13 @@ func (h *Handler) approverEmail(w http.ResponseWriter, r *http.Request, reqID, t
 // name the requester, extra approver emails and a completion callback.
 func (h *Handler) bindRequester(r *http.Request, claims *pkgauth.Claims, in *CreateApprovalRequestInput) {
 	if tenantcheck.IsServicePrincipal(claims) {
+		// A service names the user it serves by ID; their email is looked
+		// up so they are left out of the approvers, as a user's own request.
+		if in.RequesterEmail == "" && in.RequesterID != "" {
+			if email, err := h.svc.store.UserEmail(r.Context(), in.TenantID, in.RequesterID); err == nil {
+				in.RequesterEmail = email
+			}
+		}
 		return
 	}
 	in.RequesterID = firstNonEmpty(claims.UserID, claims.ClientID)

@@ -333,19 +333,29 @@ Examples:
 
 ## Posture Remediation Approvals
 
-Escalating an overdue posture finding is approval-required (1.34.0-beta).
-Before anyone can run one, create an active governance approval policy whose
-trigger actions cover `posture.escalate_remediation` (or `posture.*`), with
-at least one approver other than the people who will execute. Then:
+Escalating an overdue posture finding needs a governance approval. No setup
+is required (1.35.0-beta). The first escalation request in a tenant creates
+the built-in policy **Posture escalation (built-in)**:
+- it covers `posture.escalate_remediation`;
+- any tenant administrator (role `admin` or `tenant-admin`, direct or through
+  a group) other than the requester can approve, and one approval is enough;
+- its creation is audited as `audit.governance.builtin_policy_created`.
 
 1. The operator clicks Execute on the action (or calls
    `POST /svc/posture/posture/actions/{id}/execute`). Posture opens the
    governance request in their name and answers `409 approval_pending`.
-2. Another approver approves it in Governance.
+2. Another tenant administrator approves it in Governance.
 3. The same operator clicks Execute again; the escalation runs.
 
-Without a matching policy, or when governance is unreachable, execution is
-refused (`approval_unavailable`) and nothing changes.
+To change who approves, edit the policy's approver roles or users (or its
+quorum) in Governance. A policy of your own whose trigger actions cover
+`posture.escalate_remediation` or `posture.*` also works; if one is active
+the built-in one isn't created. To stop escalations, set the built-in policy
+to inactive. It can't be deleted, since it would be created again. Execution
+is refused (`approval_unavailable`) and nothing changes when:
+- the built-in policy is disabled and no other policy covers the action;
+- no tenant administrator other than the requester has an email address;
+- governance is unreachable.
 
 ## Troubleshooting By Symptom
 

@@ -5,6 +5,22 @@ Newest entries on top.
 
 ## 2026-09-27
 
+### A dual-control check that matches on one field misses the other (governance requester)
+- **What happened:** governance left the requester out of a request's
+  approvers by comparing emails, and refused a requester's vote by
+  comparing email *or* user ID. Posture opens requests as a service and
+  names the requester by user ID only, so the exclusion missed them. A
+  requesting admin got approval links for their own escalation; only the
+  vote check stopped them.
+- **Why it slipped through:** every earlier request came either from a
+  user (governance filled in the email from the token) or from keycore
+  (which names no user). The first service to name a user by ID exposed it.
+  The vote test passed, so the invariant looked covered.
+- **Rule:** resolve an identity to every form a check uses before running
+  the check. When a service names a user, look up the rest (email) rather
+  than trusting the caller to send each form. Test the approver list, not
+  only the vote refusal.
+
 ### An event with no consumer is not an action (posture remediation)
 - **What happened:** posture's "execute" published
   `audit.posture.runbook.execute` and marked the action `executed`, with an

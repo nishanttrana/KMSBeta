@@ -15,7 +15,8 @@ import (
 
 // approvalHarness is a governance handler whose tokens map to fixed claims:
 // "admin" (tenant admin), "alice"/"bob"/"carol" (users of t1), "other"
-// (a user of t2) and "svc" (the hyok service principal).
+// (a user of t2), "svc" (a hyok client without the service permission) and
+// "posture" (posture's service principal).
 func approvalHarness(t *testing.T) (*Handler, *Service, *capturePublisher, *mockEmailSender) {
 	t.Helper()
 	store := newGovernanceStore(t)
@@ -30,6 +31,8 @@ func approvalHarness(t *testing.T) (*Handler, *Service, *capturePublisher, *mock
 		"carol": {TenantID: "t1", Role: "security", UserID: "u-carol"},
 		"other": {TenantID: "t2", Role: "admin", UserID: "u-other", Permissions: []string{"*"}},
 		"svc":   {TenantID: "t1", Role: "client-service", ClientID: "kms-hyok-proxy"},
+		// posture's real service identity (tenantcheck.IsServicePrincipal).
+		"posture": {TenantID: "root", Role: "client-service", ClientID: "kms-posture", Permissions: []string{"service.internal"}},
 	}
 	h.SetTokenParser(func(tok string) (*pkgauth.Claims, error) {
 		if c, ok := claims[tok]; ok {

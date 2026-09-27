@@ -7,6 +7,34 @@ rejected, and how it's enforced.
 
 ---
 
+## 2026-09-27 — Built-in approval policy for posture escalation (1.35.0-beta)
+
+**Decision.** Governance creates **Posture escalation (built-in)** in a
+tenant on the first escalation that finds no active covering policy. Its
+approvers are tenant administrators (`admin`, `tenant-admin`) other than the
+requester, and one approval is enough. The policy has a fixed per-tenant ID.
+Editing or disabling it is the administrator's choice and is kept (a
+disabled one is never recreated); deleting it is refused.
+
+**Why:** 1.34.0-beta made escalation dual-controlled, but a fresh tenant had
+no policy, so the feature was refused everywhere until someone found the
+setup step. Tenant admins are the one role every tenant has, and requiring
+a second admin keeps the dual control real.
+
+*Rejected:*
+- seeding at tenant creation (tenants live in auth; governance learns of a
+  tenant only when it is used);
+- a code-only fallback with no row (`approval_requests.policy_id` references
+  a policy, and admins could not see or change it);
+- recreating after a delete (it would silently undo an administrator's
+  decision);
+- letting posture create the policy (policy changes need a tenant
+  administrator, never a service).
+
+Creation runs on the primary only (`approval_policies` is replicated).
+
+---
+
 ## 2026-09-27 — Posture remediation: one real executor, governance-bound approvals (1.34.0-beta)
 
 **Decision.** Posture executes only action types it can perform against a
